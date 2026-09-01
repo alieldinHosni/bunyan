@@ -6,22 +6,25 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bunyan">
-<meta name="theme-color" content="#12100C">
+<meta name="theme-color" content="#12100E">
 <title>Bunyan — Train · Fuel · Progress</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon.svg">
+<link rel="icon" href="icon-180.png">
 <style>
 :root{
-  --bg:#12100C; --surface:#1C1813; --raised:#262019;
-  --border:#342C22; --text:#EDE3D2; --dim:#A0937F; --faint:#6F6355;
-  --accent:#B3342A; --accentSoft:#2E1512; --gold:#C9A227; --teal:#1A8079;
-  --blue:#2E6E86;
+  --bg:#F5F1E8; --surface:#FFFFFF; --raised:#EFE9DC;
+  --border:#DFD7C6; --text:#16130F; --dim:#6C6252; --faint:#9A8F7C;
+  --accent:#B8894A; --onAccent:#FFFFFF; --accentSoft:#F2E7D5; --gold:#A8752F;
+  --teal:#5C8A4E; --blue:#3E6E8C;
+  --navbg:#12100E; --navtext:#8F8471; --navon:#D6AF74;
 }
-[data-theme="light"]{
-  --bg:#F5F0E4; --surface:#FFFFFF; --raised:#EBE3D2; --border:#DCD2BE;
-  --text:#191510; --dim:#6B5F4C; --faint:#948873;
-  --accent:#92251D; --accentSoft:#F4E2DF; --gold:#8A6F16; --teal:#12615D;
+[data-theme="dark"]{
+  --bg:#12100E; --surface:#1C1815; --raised:#262119;
+  --border:#332C23; --text:#F1E9DA; --dim:#A2957F; --faint:#6E6355;
+  --accent:#C49A5F; --onAccent:#17130E; --accentSoft:#2C2317; --gold:#D6AF74;
+  --teal:#7BA86B; --blue:#5C8FAE;
+  --navbg:#0C0A08; --navtext:#7E735F; --navon:#D6AF74;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);
@@ -48,7 +51,7 @@ h3{font-size:16px;font-weight:700;margin:0}
 .sec{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
   color:var(--faint);margin:22px 0 9px}
 .btn{width:100%;padding:16px 0;border-radius:14px;border:none;background:var(--accent);
-  color:#fff;font-size:17px;font-weight:700;margin-top:6px}
+  color:var(--onAccent);font-size:17px;font-weight:700;margin-top:6px}
 .btn.g{background:transparent;border:1px solid var(--border);color:var(--text);font-weight:600}
 .btn.o{background:transparent;border:1px solid var(--teal);color:var(--teal)}
 .btn.d{background:transparent;border:none;color:var(--faint);font-size:14px;padding:12px 0}
@@ -77,12 +80,12 @@ td{padding:7px 0;text-align:center;font-variant-numeric:tabular-nums;font-size:1
 .dots{display:flex;gap:6px;align-items:center}
 .dot{width:9px;height:9px;border-radius:5px;border:1.5px solid var(--border)}
 .dot.on{background:var(--teal);border-color:var(--teal)}
-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);
-  border-top:1px solid var(--border);display:flex;
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--navbg);
+  border-top:1px solid #00000022;display:flex;
   padding:9px 0 calc(20px + env(safe-area-inset-bottom));z-index:50}
-nav button{flex:1;background:none;border:none;color:var(--faint);font-size:11px;
+nav button{flex:1;background:none;border:none;color:var(--navtext);font-size:11px;
   padding:4px 0;display:flex;flex-direction:column;align-items:center;gap:4px}
-nav button.on{color:var(--accent)}
+nav button.on{color:var(--navon)}
 nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}
 .sheet{position:fixed;inset:0;background:#0009;z-index:100;display:flex;align-items:flex-end}
@@ -99,13 +102,13 @@ nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;
 .chev{color:var(--faint);font-size:19px;flex-shrink:0}
 .mt{margin-top:14px}
 .hide{display:none}
-.brand{display:flex;align-items:center;gap:12px;padding:14px 15px;margin-bottom:16px;
-  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+.brand{display:flex;align-items:center;gap:13px;padding:15px 16px;margin-bottom:16px;
+  background:#12100E;border:1px solid #2A231B;border-radius:16px;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cg fill='none' stroke='%23C9A227' stroke-width='2' opacity='0.16'%3E%3Cpath d='M36 2 L48 24 L70 36 L48 48 L36 70 L24 48 L2 36 L24 24 Z'/%3E%3C/g%3E%3C/svg%3E");
   background-size:72px 72px}
-.brand img{width:42px;height:42px;flex-shrink:0}
-.brandname{font-size:19px;font-weight:800;letter-spacing:.16em;color:var(--gold)}
-.brandsub{font-size:9.5px;letter-spacing:.22em;color:var(--dim);text-transform:uppercase}
+.brand img{width:46px;height:46px;flex-shrink:0}
+.brandname{font-size:19px;font-weight:800;letter-spacing:.17em;color:#D6AF74}
+.brandsub{font-size:9px;letter-spacing:.22em;color:#8F8471;text-transform:uppercase}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;background:var(--raised);
   border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;
   font-size:14px;z-index:200;max-width:88%;text-align:center}
@@ -317,11 +320,59 @@ var DEF={
   splits:null,currentSplit:"ap",
   sessions:[],active:null,body:[],days:{},foods:[]
 };
-var S=rd("forge:db",null);
-if(!S){S=JSON.parse(JSON.stringify(DEF));S.splits=PRESETS();wr("forge:db",S);}
-if(!S.splits){S.splits=PRESETS();}
+/* ---- profiles: each one is a completely separate log on this device ---- */
+var PROFILES=rd("bunyan:profiles",null);
+if(!PROFILES){
+  var legacy=rd("forge:db",null);
+  PROFILES=[{id:"me",name:"Me",owner:true}];
+  wr("bunyan:profiles",PROFILES);
+  wr("bunyan:current","me");
+  if(legacy)wr("bunyan:db:me",legacy);
+}
+var CUR=rd("bunyan:current","me");
+if(!PROFILES.some(function(p){return p.id===CUR;}))CUR=PROFILES[0].id;
+function curProfile(){for(var i=0;i<PROFILES.length;i++)if(PROFILES[i].id===CUR)return PROFILES[i];return PROFILES[0];}
+function isOwner(){return !!curProfile().owner;}
+function dbKey(){return "bunyan:db:"+CUR;}
+
+var S=rd(dbKey(),null);
+if(!S){S=JSON.parse(JSON.stringify(DEF));S.splits=PRESETS();wr(dbKey(),S);}
+if(!S.splits)S.splits=PRESETS();
 if(!S.foods)S.foods=[];
-function saveDB(){wr("forge:db",S);}
+function saveDB(){wr(dbKey(),S);}
+function switchProfile(id){
+  saveDB();CUR=id;wr("bunyan:current",id);
+  S=rd(dbKey(),null);
+  if(!S){S=JSON.parse(JSON.stringify(DEF));S.splits=PRESETS();wr(dbKey(),S);}
+  if(!S.splits)S.splits=PRESETS();
+  if(!S.foods)S.foods=[];
+  V.tab="home";V.train="days";V.logIdx=0;render();}
+
+/* ---- share snapshot: what a friend hands over, and nothing more ---- */
+function buildSnapshot(){
+  return {v:1,name:curProfile().name,at:today(),
+    goals:S.goals,
+    body:S.body.filter(function(b){return b.weight;}).slice(-90)
+             .map(function(b){return [b.date,b.weight];}),
+    sessions:S.sessions.slice(0,60).map(function(x){
+      return {d:x.date,n:x.dayName,v:Math.round(sessionVolume(x)),
+        e:x.entries.map(function(e){
+          return {n:e.name,s:e.sets.map(function(t){return [t.w,t.r];})};})};})};}
+function friends(){return rd("bunyan:friends",{});}
+function saveFriends(f){wr("bunyan:friends",f);}
+function snapStats(sn){
+  var vol=0,prs={},last=null;
+  sn.sessions.forEach(function(x){
+    vol+=x.v; if(!last||x.d>last)last=x.d;
+    x.e.forEach(function(e){
+      e.s.forEach(function(t){
+        var w=num(t[0]);if(!prs[e.n]||w>prs[e.n][0])prs[e.n]=[w,num(t[1])];});});});
+  var bw=sn.body.map(function(b){return b[1];});
+  var a7=bw.slice(-7);
+  return {vol:vol,count:sn.sessions.length,last:last,prs:prs,
+    weight:bw.length?bw[bw.length-1]:0,
+    avg7:a7.length>=3?r1(a7.reduce(function(p,q){return p+q;},0)/a7.length):0,
+    body:sn.body};}
 function split(){for(var i=0;i<S.splits.length;i++)if(S.splits[i].id===S.currentSplit)return S.splits[i];return S.splits[0];}
 function dayOf(id){var sp=split();for(var i=0;i<sp.days.length;i++)if(sp.days[i].id===id)return sp.days[i];return null;}
 function dayRec(d){d=d||today();if(!S.days[d])S.days[d]={water:0,steps:0,sleep:0,sore:0,energy:0,notes:"",meals:{}};
@@ -454,9 +505,9 @@ function vHome(){
     var d=sp.days[(lastIdx+k+sp.days.length)%sp.days.length];
     if(d.ex.length){nextDay=d;break;}}
 
-  h+='<div class="brand"><img src="icon.svg" alt=""><div>'
+  h+='<div class="brand"><img src="mark.png" alt=""><div>'
    +'<div class="brandname">BUNYAN</div>'
-   +'<div class="brandsub">Train · Fuel · Progress</div></div></div>';
+   +'<div class="brandsub">Foundation · Strength · Discipline</div></div></div>';
   h+='<h1>'+(new Date().getHours()<12?"Good morning":new Date().getHours()<18?"Afternoon":"Evening")+'</h1>';
   h+='<p class="sub">'+pretty(today())+'</p>';
 
@@ -795,6 +846,27 @@ function vProfile(){
   h+='<p class="tiny">Conservative adds 2.5 kg. Standard adds 2.5 on isolation and 5 on the big lifts. '
    +'Aggressive adds 5 and 10.</p>';
 
+  h+='<div class="sec">Profiles on this phone</div><div class="list">';
+  PROFILES.forEach(function(pf){
+    h+='<button class="item" data-switch="'+pf.id+'"><div><div style="font-weight:600">'
+     +esc(pf.name)+(pf.owner?' <span class="pill a">admin</span>':'')+'</div>'
+     +'<div class="tiny">'+(pf.id===CUR?"in use now":"separate log, separate numbers")+'</div></div>'
+     +(pf.id===CUR?'<span class="pill a">current</span>':'<span class="chev">\u203a</span>')+'</button>';});
+  h+='</div>';
+  h+='<div class="rowc"><button class="btn g sm" data-addprofile="1">Add a profile</button>'
+   +'<button class="btn g sm" data-renameprofile="1">Rename this one</button>'
+   +(PROFILES.length>1&&!isOwner()?'<button class="btn d sm" data-delprofile="1">Delete</button>':'')+'</div>';
+  h+='<p class="tiny">Anyone training on your phone gets their own profile. Nothing crosses over.</p>';
+
+  h+='<div class="sec">Sharing</div><div class="list">'
+   +'<button class="item" data-share="1"><div><div style="font-weight:600">Share my progress</div>'
+   +'<div class="tiny">Makes a code you can send on WhatsApp</div></div><span class="chev">\u203a</span></button>';
+  if(isOwner())h+='<button class="item" data-coach="1"><div><div style="font-weight:600">Friends I follow</div>'
+   +'<div class="tiny">'+Object.keys(friends()).length+' shared with you</div></div><span class="chev">\u203a</span></button>';
+  h+='</div>';
+  h+='<p class="tiny">A code is a one-way snapshot. They never see your log, and reading theirs '
+   +'never touches your numbers.</p>';
+
   h+='<div class="sec">Your data</div><div class="list">'
    +'<button class="item" data-export="1"><span>Export a backup</span><span class="chev">›</span></button>'
    +'<button class="item" data-import="1"><span>Restore from a backup</span><span class="chev">›</span></button>'
@@ -899,6 +971,44 @@ function vSheet(){
     b='<h2>'+esc(V.sd.title)+'</h2><p class="tiny" style="margin:2px 0 12px">'+esc(V.sd.note||"")+'</p>'
      +'<input id="txt" value="'+esc(V.sd.value||"")+'" placeholder="'+esc(V.sd.ph||"")+'">'
      +'<button class="btn" data-savetext="1">Save</button>';
+  }
+  else if(V.sheet==="share"){
+    b='<h2>Share your progress</h2><p class="tiny" style="margin:2px 0 12px">'
+     +'Copy all of this and send it. It contains your sessions, lifts and weight. '
+     +'It does not contain your meals or anything else.</p>'
+     +'<textarea id="sn" style="width:100%;height:200px;background:var(--raised);color:var(--text);'
+     +'border:1px solid var(--border);border-radius:11px;padding:12px;font-size:12px">'
+     +esc(JSON.stringify(buildSnapshot()))+'</textarea>'
+     +'<button class="btn g" data-copysn="1">Select all</button>';
+  }
+  else if(V.sheet==="coach"){
+    var F=friends(),names=Object.keys(F);
+    b='<h2>Friends I follow</h2><p class="tiny" style="margin:2px 0 14px">'
+     +'Read only. Nothing here touches your own log.</p>';
+    if(!names.length)b+='<p class="tiny">Nobody yet. Ask a friend to tap Share my progress '
+      +'and send you the code.</p>';
+    names.forEach(function(n){
+      var st=snapStats(F[n]);
+      b+='<div class="card"><div class="row"><h3>'+esc(n)+'</h3>'
+       +'<span class="tiny">'+(F[n].at?shortd(F[n].at):"")+'</span></div>'
+       +'<div class="grid3 mt">'
+       +'<div><div class="tiny">Sessions</div><div class="big" style="font-size:19px">'+st.count+'</div></div>'
+       +'<div><div class="tiny">Volume</div><div class="big" style="font-size:19px">'+Math.round(st.vol/1000)+'k</div></div>'
+       +'<div><div class="tiny">Weight</div><div class="big" style="font-size:19px">'+(st.avg7||st.weight||"—")+'</div></div>'
+       +'</div>';
+      if(st.last)b+='<p class="tiny mt">Last trained '+shortd(st.last)+'</p>';
+      if(st.body.length>1)b+=sparkline(st.body.map(function(x){return x[1];}),
+        st.body.map(function(x){return shortd(x[0]);}),"var(--accent)");
+      var pk=Object.keys(st.prs).slice(0,6);
+      if(pk.length){b+='<div class="tiny mt">Best lifts</div>';
+        pk.forEach(function(k){b+='<div class="row" style="font-size:13px;margin-top:3px">'
+          +'<span class="dim">'+esc(k)+'</span><span class="num">'+st.prs[k][0]+' × '+st.prs[k][1]+'</span></div>';});}
+      b+='<button class="btn d sm mt" data-unfollow="'+esc(n)+'">Remove '+esc(n)+'</button></div>';});
+    b+='<div class="sec">Add or update a friend</div>'
+     +'<textarea id="fp" placeholder="Paste the code they sent you" style="width:100%;height:120px;'
+     +'background:var(--raised);color:var(--text);border:1px solid var(--border);border-radius:11px;'
+     +'padding:12px;font-size:12px"></textarea>'
+     +'<button class="btn" data-addfriend="1">Add them</button>';
   }
   else if(V.sheet==="backup"){
     b='<h2>Backup</h2><p class="tiny" style="margin:2px 0 12px">'
@@ -1140,13 +1250,42 @@ document.addEventListener("click",function(ev){
   if(D.progmode){
     var order=["conservative","standard","aggressive"];
     S.profile.prog=order[(order.indexOf(S.profile.prog)+1)%3];saveDB();render();return;}
+  if(D.switch){if(D.switch!==CUR)switchProfile(D.switch);return;}
+  if(D.addprofile){
+    var pn=prompt("Name for the new profile");if(!pn)return;
+    var np={id:uid(),name:pn,owner:false};
+    PROFILES.push(np);wr("bunyan:profiles",PROFILES);switchProfile(np.id);return;}
+  if(D.renameprofile){
+    var rn=prompt("Rename this profile",curProfile().name);
+    if(rn){curProfile().name=rn;wr("bunyan:profiles",PROFILES);render();}return;}
+  if(D.delprofile){
+    if(isOwner()){toast("The admin profile cannot be deleted.");return;}
+    if(!confirm("Delete this profile and everything in it?"))return;
+    var gone=CUR;
+    PROFILES=PROFILES.filter(function(p){return p.id!==gone;});
+    wr("bunyan:profiles",PROFILES);
+    try{PERSIST?localStorage.removeItem("bunyan:db:"+gone):delete MEM["bunyan:db:"+gone];}catch(e){}
+    switchProfile(PROFILES[0].id);return;}
+  if(D.share){openSheet("share");return;}
+  if(D.copysn){var t2=document.getElementById("sn");t2.select();
+    try{document.execCommand("copy");toast("Copied. Send it on WhatsApp.");}
+    catch(e){toast("Select the text and copy it.");}return;}
+  if(D.coach){openSheet("coach");return;}
+  if(D.addfriend){
+    try{var sn=JSON.parse(val("fp"));
+      if(!sn||!sn.sessions||!sn.name)throw 1;
+      var F=friends();F[sn.name]=sn;saveFriends(F);render();toast(sn.name+" added.");}
+    catch(e){toast("That code did not read properly. Ask them to copy all of it.");}
+    return;}
+  if(D.unfollow){
+    var F2=friends();delete F2[D.unfollow];saveFriends(F2);render();return;}
   if(D.export){openSheet("backup");return;}
   if(D.copybk){var ta=document.getElementById("bk");ta.select();
     try{document.execCommand("copy");toast("Copied.");}catch(e){toast("Select the text and copy it.");}return;}
   if(D.import){openSheet("restore");return;}
   if(D.dorestore){
     try{var o=JSON.parse(val("rs"));if(!o||!o.splits)throw 1;
-      S=o;if(!S.foods)S.foods=[];saveDB();closeSheet();V.tab="home";render();toast("Restored.");}
+      S=o;if(!S.foods)S.foods=[];if(!S.splits)S.splits=PRESETS();saveDB();closeSheet();V.tab="home";render();toast("Restored.");}
     catch(e){toast("That does not look like a backup.");}return;}
   if(D.wipe){
     if(!confirm("Delete every workout, meal and measurement? This cannot be undone."))return;

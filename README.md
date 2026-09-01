@@ -30,10 +30,24 @@ Profile → Export a backup. Copy the text into a note or email it to yourself.
 Do this every few weeks. If you clear Safari's data, change phones, or delete the
 home screen app, the backup is the only way to get your history back.
 
-## Sharing it with friends
+## Profiles and sharing
 
-Send them the same link. Each phone keeps its own separate data, so nobody sees
-anyone else's log. They can pick any of the six splits or build their own.
+**Profiles** live on one device. If a friend trains on your phone, give him his own
+profile in Profile → Add a profile. Separate log, separate weight, separate everything.
+The first profile is the admin and cannot be deleted.
+
+**Share codes** are how you follow a friend on his own phone. He taps
+Profile → Share my progress, copies the text, sends it to you. You open
+Profile → Friends I follow, paste it, and see his sessions, volume, best lifts and
+weight trend, read only.
+
+It is a snapshot, not live sync. He sends a new code when he wants you to see an
+update. He never sees your log, and his numbers never touch yours.
+
+**Live sync is not possible without a server.** For your data to reach his phone it
+would have to pass through one, which means accounts, passwords, a monthly bill past
+the free tier, and you holding someone else's data. The share code gets you most of
+the benefit at none of that cost.
 
 ## Changing the app later
 

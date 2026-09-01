@@ -1,7 +1,7 @@
 /* Offline cache. Bump CACHE when you change index.html. */
-const CACHE = "bunyan-v1";
+const CACHE = "bunyan-v3";
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
-               "./icon.svg", "./icon-180.png", "./icon-512.png", "./logotype.svg"];
+               "./icon-180.png", "./icon-512.png", "./mark.png"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
