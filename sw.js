@@ -1,5 +1,8 @@
-/* Offline cache. Bump CACHE when you change index.html. */
-const CACHE = "bunyan-v3";
+/* Bunyan service worker.
+   Network-first for the app itself, so a new version is picked up on the next
+   load instead of being served from cache. Cache-first for images only.
+   Bump CACHE whenever you change index.html. */
+const CACHE = "bunyan-v5";
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
                "./icon-180.png", "./icon-512.png", "./mark.png"];
 
@@ -15,14 +18,39 @@ self.addEventListener("activate", e => {
   );
 });
 
+self.addEventListener("message", e => {
+  if (e.data === "skipWaiting") self.skipWaiting();
+});
+
 self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET") return;
+  const req = e.request;
+  if (req.method !== "GET") return;
+
+  const isPage = req.mode === "navigate" ||
+                 (req.destination === "" && req.url.endsWith(".html")) ||
+                 req.url.endsWith("/") ||
+                 req.url.endsWith("sw.js") ||
+                 req.url.endsWith("manifest.webmanifest");
+
+  if (isPage) {
+    // Network first: always try for a fresh app, fall back to cache offline.
+    e.respondWith(
+      fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copy));
+        return res;
+      }).catch(() => caches.match(req).then(hit => hit || caches.match("./index.html")))
+    );
+    return;
+  }
+
+  // Images and everything else: cache first, refresh in the background.
   e.respondWith(
-    caches.match(e.request).then(hit => {
-      const net = fetch(e.request).then(res => {
+    caches.match(req).then(hit => {
+      const net = fetch(req).then(res => {
         if (res && res.status === 200 && res.type === "basic") {
           const copy = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy));
+          caches.open(CACHE).then(c => c.put(req, copy));
         }
         return res;
       }).catch(() => hit);
