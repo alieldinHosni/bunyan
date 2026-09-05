@@ -2,13 +2,24 @@
    Network-first for the app itself, so a new version is picked up on the next
    load instead of being served from cache. Cache-first for images only.
    Bump CACHE whenever you change index.html. */
-const CACHE = "bunyan-v13";
+const CACHE = "bunyan-v20";
+/* instructions.json (595 KB) is deliberately absent: it is cached on first use by the
+   catch-all handler below, so it no longer blocks first install. */
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
-               "./exercises.json", "./instructions.json", "./foods.json",
-               "./icon-180.png", "./icon-512.png", "./mark.png", "./splash.jpg"];
+               "./exercises.json", "./foods.json",
+               "./icon-180.png", "./icon-512.png", "./mark.png", "./intro.jpg",
+               /* Every module is required for the app to run at all, unlike an
+                  image, so all of them are precached. */
+               "./js/util.js", "./js/units.js", "./js/db.js", "./js/scan.js", "./js/data/exercises.js", "./js/data/splits.js", "./js/engine/plan.js", "./js/state.js", "./js/engine/formulas.js", "./js/engine/nutrition.js", "./js/i18n/dict.js", "./js/i18n/exnames.js", "./js/ui/view.js", "./js/ui/views/home.js", "./js/ui/views/train.js", "./js/ui/views/session.js", "./js/ui/views/progress.js", "./js/ui/views/food.js", "./js/ui/views/profile.js", "./js/ui/sheets.js", "./js/ui/render.js", "./js/ui/actions.js", "./js/app.js"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  /* Added one at a time on purpose. addAll() rejects the whole install if a single
+     file 404s, which would leave the app with no offline cache at all. */
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => Promise.all(FILES.map(f => c.add(f).catch(() => {}))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", e => {
