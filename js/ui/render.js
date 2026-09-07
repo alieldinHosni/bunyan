@@ -9,8 +9,9 @@ import {vProgress} from "./views/progress.js";
 import {vSheet} from "./sheets.js";
 import {S} from "../state.js";
 import {vTrain} from "./views/train.js";
+import {syncRest} from "./views/session.js";
 import {PERSIST} from "../util.js";
-import {V} from "./view.js";
+import {lockScroll, V} from "./view.js";
 
 /* ============================================================ render */
 function TABSET(){return [
@@ -28,6 +29,13 @@ function render(){
   document.body.classList.toggle("compact",!!(S.prefs&&S.prefs.compact));
   var view=V.tab+"/"+(V.tab==="train"?(S.active?"session":V.train):"");
   var moved=view!==lastView;lastView=view;
+  /* Note what has focus and where the caret sits before the rebuild destroys it.
+     Restoring the caret to the end of the value, which is what this used to do,
+     threw the cursor to the end of the word on every debounced keystroke. */
+  var was=document.activeElement, wasId=was&&was.id?was.id:null, selS=null, selE=null;
+  if(wasId&&was.setSelectionRange){
+    try{selS=was.selectionStart;selE=was.selectionEnd;}catch(e){selS=null;}
+  }
   var h="";
   if(V.tab==="home")h=vHome();
   else if(V.tab==="train")h=vTrain();
@@ -43,17 +51,38 @@ function render(){
     return '<button data-tab="'+tb[0]+'"'+(V.tab===tb[0]?' class="on"':'')+'>'
      +'<svg viewBox="0 0 24 24">'+tb[2]+'</svg>'+tb[1]+'</button>';}).join("");
   document.getElementById("sheet").innerHTML=vSheet();
+  /* Owns its own container and rebuilds only when it is genuinely a different rest
+     screen, so a repaint elsewhere cannot restart the ring. */
+  syncRest();
   /* A sheet is modal, so hide the screen behind it from assistive tech and move
      focus into it the moment it opens. Sheets used to be invisible to both. */
   appEl.setAttribute("aria-hidden",V.sheet?"true":"false");
   document.getElementById("nav").setAttribute("aria-hidden",V.sheet?"true":"false");
+  /* And stop it moving, for the same reason it is hidden from assistive tech: while
+     a sheet is up, the screen behind is not something the user is operating. */
+  lockScroll(V.sheet);
   var opened=V.sheet&&V.sheet!==lastSheet;
   lastSheet=V.sheet;
+  /* Put the user back exactly where they were. Only if that fails do the
+     open-the-sheet focus rules below get a say. */
+  var restored=false;
+  if(wasId){
+    var back=document.getElementById(wasId);
+    if(back){
+      if(back!==document.activeElement){
+        try{back.focus({preventScroll:true});}catch(e){try{back.focus();}catch(e2){}}
+      }
+      if(selS!=null&&back.setSelectionRange){
+        try{back.setSelectionRange(selS,selE);}catch(e){}
+      }
+      restored=true;
+    }
+  }
   var q=document.getElementById("exq");
-  if(q){q.focus();q.setSelectionRange(q.value.length,q.value.length);}
+  if(!restored&&q){q.focus();try{q.setSelectionRange(q.value.length,q.value.length);}catch(e){}}
   var av=document.getElementById("askv");
-  if(av&&document.activeElement!==av){av.focus();try{av.select();}catch(e){}}
-  if(opened&&!q&&!av){
+  if(!restored&&av&&document.activeElement!==av){av.focus();try{av.select();}catch(e){}}
+  if(opened&&!restored&&!q&&!av){
     var sb=document.querySelector(".sheetbox");
     if(sb){sb.setAttribute("tabindex","-1");try{sb.focus({preventScroll:true});}catch(e){}}}
 }

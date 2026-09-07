@@ -1,7 +1,7 @@
 /* Bunyan — session
    The live session surface and rest screen. Execution, not editing. */
 import {t} from "../../i18n/dict.js";
-import {thumb} from "../../data/exercises.js";
+import {loadable, thumb} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
 import {prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
 import {S} from "../../state.js";
@@ -17,7 +17,7 @@ function e0name(a){var e=a.entries[V.logIdx];return e?e.name:"";}
 
 /* Rows an entry shows: the prescription plus any the user added, never fewer than
    the sets already logged. */
-function rowsFor(e){return Math.max((e.planned.sets||3)+(e.extra||0),e.sets.length);}
+function rowsFor(e){return Math.max(1,(e.planned.sets||3)+(e.extra||0),e.sets.length);}
 
 /* ---- supersets ------------------------------------------------------------
    A superset is a shared `grp` tag on exercises that sit next to each other. The
@@ -80,7 +80,7 @@ function vLogger(){
 
   /* --- sticky header: identity, elapsed, overall progress --- */
   var h='<div class="ss-top"><div class="ss-row">'
-   +'<button class="ss-back" data-quit="1" aria-label="'+t("Back")+'">←</button>'
+   +'<button class="ss-back" data-back="1" aria-label="'+t("Back")+'">←</button>'
    +'<div class="ss-title"><div class="ss-name">'+esc(a.dayName)+'</div>'
    +'<div class="ss-meta"><span class="mseg">'+t("Exercise")
    +' <span class="num">'+(V.logIdx+1)+'</span> '+t("of")
@@ -113,10 +113,12 @@ function vLogger(){
    +'</div></div></div>';
 
   /* --- the set grid: prescription, previous performance and entry in one row --- */
-  var cols=timed?(rpeCol?"26px 1fr 84px 46px 40px":"26px 1fr 96px 40px")
-                :(rpeCol?"26px 1fr 60px 54px 44px 40px":"26px 1fr 70px 62px 40px");
-  var hd=timed?[t("Set"),t("Last"),t("Secs")]
-              :[t("Set"),t("Last"),wUnit().toUpperCase(),t("Reps")];
+  /* Delete leads the row, log ends it. Grid columns follow the writing direction, so
+     in Arabic the pair swaps sides without a second rule. */
+  var cols=timed?(rpeCol?"24px 24px 1fr 78px 44px 38px":"24px 24px 1fr 90px 38px")
+                :(rpeCol?"24px 24px 1fr 56px 50px 42px 38px":"24px 24px 1fr 66px 58px 38px");
+  var hd=timed?["",t("Set"),t("Last"),t("Secs")]
+              :["",t("Set"),t("Last"),wUnit().toUpperCase(),t("Reps")];
   if(rpeCol)hd.push("RPE");
   hd.push("");
   h+='<div class="setgrid"><div class="setrow hd" style="grid-template-columns:'+cols+'">'
@@ -133,6 +135,7 @@ function vLogger(){
     var warm=done&&st.wu;
     if(warm)cls2+=" warm";
     h+='<div class="'+cls2+'" style="grid-template-columns:'+cols+'">'
+     +'<button class="delset" data-delset="'+i+'" aria-label="'+t("Delete set")+' '+(i+1)+'">✕</button>'
      +(done?'<button class="setnum wtog" data-warm="'+i+'" aria-label="'+t("Mark as warm-up")
         +' '+(i+1)+'" aria-pressed="'+(warm?"true":"false")+'">'+(warm?"W":(i+1))+'</button>'
        :'<div class="setnum">'+(i+1)+'</div>')
@@ -161,23 +164,22 @@ function vLogger(){
       else h+='<div class="cellmute">'+(V.draft.rpe||8)+'</div>';
     }
 
+    /* One control logs a set, and its colour is the state: red until it is done,
+       green after, with a short pop on the change. */
     if(done)h+='<button class="logbtn done'+(V.fresh===i?" fresh":"")+'" data-unlog="'+i+'" '
       +'aria-label="'+t("Undo set")+' '+(i+1)+'">✓</button>';
     else if(isAct)h+='<button class="logbtn go" data-logset="1" aria-label="'
-      +t("Complete set")+' '+(i+1)+'">+</button>';
-    else h+='<button class="logbtn off" disabled aria-hidden="true">+</button>';
+      +t("Complete set")+' '+(i+1)+'">✓</button>';
+    else h+='<button class="logbtn off" disabled aria-hidden="true">✓</button>';
     h+='</div>';
   }
   h+='</div>';
+  /* Adds a set beyond the prescription, and sits under whatever the last row is. */
+  h+='<div class="addrow"><button class="addset" data-addrow="1" aria-label="'
+   +t("Add a set")+'">+</button></div>';
 
-  /* --- the prescription, restated as a number to hit --- */
-  var tv=timed?(e.planned.hi+"s")
-    :((num(V.draft.w)?fmtW(V.draft.w)+" × ":"")
-      +(e.planned.lo===e.planned.hi?e.planned.lo:e.planned.lo+"–"+e.planned.hi)+" "+t("reps"));
-  if(rpeCol&&active>=0&&rpeWanted(active,rows))tv+=" @ RPE "+(V.draft.rpe||8);
-  h+='<div class="target"><span class="tl">'+t("Bunyan target")+'</span>'
-   +'<span class="tv">'+tv+'</span></div>';
-
+  /* The target band that used to sit here said less than the pill in the header,
+     which carries sets and reps together, and cost a screenful above the fold. */
   var rec=e.sets.length?null:recommend(e);
   if(rec&&rec.note)h+='<p class="tiny" style="margin:8px 2px 0">'+esc(rec.note)+'</p>';
 
@@ -190,29 +192,30 @@ function vLogger(){
     h+='<div class="card mt" style="border-color:var(--gold);margin-bottom:0">'
      +'<h3 style="color:var(--gold);font-size:14px">'+t("New personal record")+'</h3></div>';
 
-  /* --- one obvious primary action, always --- */
-  if(active>=0){
-    /* Inside a superset the button says where it is taking you, because it is not
-       staying on this exercise. */
-    var nxtG=run.length>1?groupNext(a.entries,V.logIdx):null;
-    var wrapsG=nxtG!==null&&run.indexOf(nxtG)<=run.indexOf(V.logIdx);
-    h+='<button class="btn" data-logset="1">'+t("Complete set")+' '+(active+1)
-     +(nxtG!==null&&!wrapsG?' → '+groupLabel(a.entries,nxtG):'')+'</button>';
-  }else{
+  /* The row's own check logs the set now, so the button that duplicated it is gone.
+     What remains is the one thing the row cannot say: where you go when the
+     exercise is finished. */
+  if(active<0){
     h+='<button class="btn ok" data-nextex="1">'
      +(V.logIdx>=a.entries.length-1?t("Finish workout"):t("Next exercise"))+'</button>';
+  }else if(run.length>1){
+    /* Inside a superset the next set is on a different exercise, which the row
+       cannot show on its own. */
+    var nxtG=groupNext(a.entries,V.logIdx);
+    if(nxtG!==null&&run.indexOf(nxtG)>run.indexOf(V.logIdx))
+      h+='<p class="tiny" style="margin:10px 2px 0;text-align:center">'
+       +t("Next")+': '+esc(groupLabel(a.entries,nxtG))+' · '
+       +esc(exName(a.entries[nxtG].name))+'</p>';
   }
-  h+='<button class="btn g" data-addrow="1">+ '+t("Add a set")+'</button>';
 
   h+='<div class="ss-foot">'
    +'<button data-exdetail="'+esc(e.name)+'">'+t("How to")+'</button>'
    +'<button data-swap="1">'+t("Replace")+'</button>'
-   +(timed?'':'<button data-plates="1">'+t("Plates")+'</button>')
+   +(loadable(e.name)?'<button data-plates="1">'+t("Plates")+'</button>':'')
    +'<button data-note="1">'+t("Note")+(a.notes?' •':'')+'</button>'
    +'<button data-finish="1">'+t("Finish")+'</button></div>';
-  h+='<button class="btn d" data-discard="1">'+t("Discard this session")+'</button>';
 
-  if(V.restEnd>Date.now()||V.restPaused)h+=vRest(a,e,rows,timed);
+  /* The rest screen is no longer part of this string; syncRest() owns it. */
   return h;}
 
 /* What to hang on each side of the bar. Greedy from the heaviest plate down, which is
@@ -268,15 +271,58 @@ function vRest(a,e,rows,timed){
    +'<circle id="restRing" cx="118" cy="118" r="104" fill="none" stroke="var(--accent)" '
    +'stroke-width="12" stroke-linecap="round" stroke-dasharray="'+C+'" stroke-dashoffset="'+off+'"/>'
    +'</svg><div class="ct"><div class="restdig" id="restDig" aria-live="polite">'+mmss(left)+'</div>'
-   +'<div class="resttot">'+t("of")+' '+mmss(total)+'</div></div></div>'
+   +'<div class="resttot" id="restTot">'+t("of")+' '+mmss(total)+'</div></div></div>'
    +'<div class="restctl">'
    +'<button class="rbtn" data-rest="-30">−30s</button>'
-   +'<button class="rbtn main" data-rest="'+(paused?"resume":"pause")+'">'
+   +'<button class="rbtn main" id="restMain" data-rest="'+(paused?"resume":"pause")+'">'
    +(paused?t("Resume"):t("Pause"))+'</button>'
    +'<button class="rbtn" data-rest="30">+30s</button></div>'
    +'<div class="upnext"><div class="ul">'+t("Up next")+'</div>'
    +'<div class="uv">'+nx+'</div>'+(nr?'<div class="ur">'+nr+'</div>':'')+'</div>'
    +'<button class="restskip" data-rest="skip">'+t("Skip rest and continue")+'</button></div>';}
 
+/* ---- keeping the rest screen still -------------------------------------------
+   The rest screen lives in its own container outside #app, for the same reason the
+   barcode scanner does: render() replaces innerHTML wholesale, and rebuilding this
+   one restarts the ring's transition from zero, which is the stutter that made
+   every −30s tap flash. Only four things ever change while resting, so only those
+   four are touched. */
+var REST_C=653.45;
+function paintRest(){
+  var paused=V.restPaused;
+  var left=paused?V.restLeft:Math.max(0,Math.ceil((V.restEnd-Date.now())/1000));
+  var total=Math.max(1,V.restTotal||1);
+  var d=document.getElementById("restDig");
+  if(d)d.textContent=mmss(left);
+  var tot=document.getElementById("restTot");
+  if(tot)tot.textContent=t("of")+" "+mmss(total);
+  var ring=document.getElementById("restRing");
+  if(ring)ring.setAttribute("stroke-dashoffset",
+    String(REST_C*(1-Math.max(0,Math.min(1,left/total)))));
+  var main=document.getElementById("restMain");
+  if(main){
+    main.textContent=paused?t("Resume"):t("Pause");
+    main.setAttribute("data-rest",paused?"resume":"pause");
+  }
+}
+/* Rebuilds only when the screen is genuinely a different one — a new exercise, a
+   new set, or a language change. A tick or a ±30s tap keeps the same DOM. */
+function syncRest(){
+  var host=document.getElementById("rest");
+  if(!host)return;
+  var a=S.active;
+  var on=!!a&&(V.restEnd>Date.now()||V.restPaused);
+  if(!on){
+    if(host.firstChild)host.textContent="";
+    host.removeAttribute("data-k");
+    return;
+  }
+  var e=a.entries[V.logIdx];
+  if(!e){host.textContent="";host.removeAttribute("data-k");return;}
+  var key=V.logIdx+"|"+e.sets.length+"|"+(S.prefs&&S.prefs.lang||"en");
+  if(host.getAttribute("data-k")===key){paintRest();return;}
+  host.setAttribute("data-k",key);
+  host.innerHTML=vRest(a,e,rowsFor(e),ex_isTimed(e.name));
+}
 
-export {groupLabel, groupNext, groupRun, mmss, platePlan, vLogger};
+export {groupLabel, groupNext, groupRun, mmss, paintRest, platePlan, rowsFor, syncRest, vLogger};

@@ -9,9 +9,11 @@ import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, o
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
 import {render} from "./ui/render.js";
-import {groupNext, groupRun, mmss} from "./ui/views/session.js";
+import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
+import {initSheetDrag} from "./ui/sheetdrag.js";
+import {groupNext, groupRun, mmss, paintRest} from "./ui/views/session.js";
 import {adoptRestored, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
-import {toDisp, toKg} from "./units.js";
+import {fmtW, toDisp, toKg} from "./units.js";
 import {num, r1, setStorageErrorHandler, today, uid} from "./util.js";
 import {audioOn, beeped, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
 
@@ -24,25 +26,29 @@ document.addEventListener("click",function(ev){
   var D=el.dataset;
 
   if(D.stop!==undefined&&!el.matches("button"))return;
-  if(D.close!==undefined){closeSheet();return;}
+  if(D.close!==undefined){requestCloseSheet();return;}
+  /* Cancelling the discard prompt has to give the half-typed food back, otherwise
+     "Cancel" would throw away exactly what it promised to keep. */
+  if(D.restore!==undefined){var kp=(V.sd||{}).back||{};openSheet("manual",kp);return;}
   if(D.askok!==undefined){
     var ao=V.sd||{},av=val("askv");
     if(ao.required!==false&&!String(av).trim()){toast(t("Enter something first."));return;}
     runAct(ao.act,av);return;}
   if(D.confirmok!==undefined){runAct((V.sd||{}).act,true);return;}
-  if(D.tab){V.tab=D.tab;V.train="days";render();return;}
-  if(D.go){V.tab=D.go;render();return;}
+  /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
+  if(D.tab){resetNav();V.tab=D.tab;V.train="days";render();return;}
+  if(D.go){resetNav();V.tab=D.go;render();return;}
 
   /* ---- splits & days */
-  if(D.train){V.train=D.train;render();return;}
-  if(D.day){V.dayId=D.day;V.train="day";render();return;}
+  if(D.train){pushNav();V.train=D.train;render();return;}
+  if(D.day){pushNav();V.dayId=D.day;V.train="day";render();return;}
   if(D.adopt){
     var pre=allSplits().filter(function(x){return x.id===D.adopt;})[0];
     if(!pre)return;
     askConfirm({title:t("Switch to")+" "+pre.name+"?",
       body:t("This replaces your current plan. Every session you have already logged is kept."),
       cta:t("Make it my training"),act:"adopt",data:D.adopt});return;}
-  if(D.preview){V.previewId=D.preview;V.train="preview";render();return;}
+  if(D.preview){pushNav();V.previewId=D.preview;V.train="preview";render();return;}
   if(D.newsplit){
     askText({title:t("New split"),label:t("Name"),ph:t("For example, Upper / Lower"),
       cta:t("Create"),act:"newsplit"});return;}
@@ -65,13 +71,16 @@ document.addEventListener("click",function(ev){
   if(D.exm){V.exm=D.exm;render();return;}
   if(D.exe){V.exe=D.exe;render();return;}
   if(D.cleardiff){V.exd=null;render();return;}
+  if(D.exsteps){V.exsteps=!V.exsteps;render();return;}
+  if(D.exmiss){V.exmiss=!V.exmiss;render();return;}
   if(D.range){V.range=+D.range;render();return;}
   if(D.showall){V.showAll=!V.showAll;render();return;}
-  if(D.bwsplit){V.train="bodyweight";render();return;}
-  if(D.bwcat){V.exm=D.bwcat==="All"?"All":D.bwcat;V.exe="Bodyweight";V.exq="";
+  if(D.bwsplit){pushNav();V.train="bodyweight";render();return;}
+  if(D.bwcat){pushNav();V.exm=D.bwcat==="All"?"All":D.bwcat;V.exe="Bodyweight";V.exq="";
     V.train="library";render();return;}
-  if(D.bwdiff){V.exd=D.bwdiff;V.exe="Bodyweight";V.exm="All";V.exq="";V.train="library";render();return;}
-  if(D.exdetail){var nm5=D.exdetail;loadInstructions(function(){openSheet("exdetail",{name:nm5});});return;}
+  if(D.bwdiff){pushNav();V.exd=D.bwdiff;V.exe="Bodyweight";V.exm="All";V.exq="";V.train="library";render();return;}
+  if(D.exdetail){var nm5=D.exdetail;V.exsteps=false;V.exmiss=false;
+    loadInstructions(function(){openSheet("exdetail",{name:nm5});});return;}
   /* Reachable again, from the picker's empty state. It was orphaned when the picker
      was rewritten to read exercises.json: the handler survived, the button did not.
      Custom entries have no illustration, which thumb() already renders gracefully. */
@@ -99,7 +108,7 @@ document.addEventListener("click",function(ev){
     var tmp=dd3.ex[i0];dd3.ex[i0]=dd3.ex[j];dd3.ex[j]=tmp;saveDB();closeSheet();return;}
 
   /* ---- logger */
-  if(D.startday){startDay(D.startday);return;}
+  if(D.startday){pushNav();startDay(D.startday);return;}
   if(D.jump!==undefined){
     var n2=+D.jump;
     if(!S.active||n2<0||n2>=S.active.entries.length)return;
@@ -140,6 +149,20 @@ document.addEventListener("click",function(ev){
       saveDB();syncDraft();render();return;
     }
     startRest(e3);saveDB();syncDraft();render();return;}
+  /* Removing a row. An empty one destroys nothing, so it goes at once; one with a
+     logged set asks, and says what it is about to throw away. */
+  if(D.delset!==undefined){
+    var eD=S.active&&S.active.entries[V.logIdx];if(!eD)return;
+    var iD=+D.delset;
+    if(iD<eD.sets.length){
+      var sD=eD.sets[iD];
+      askConfirm({title:t("Delete set")+" "+(iD+1)+"?",
+        body:(num(sD.w)?fmtW(sD.w)+" × "+num(sD.r):num(sD.r)+" "+t("reps"))
+             +" "+t("will be removed."),
+        cta:t("Delete"),act:"delset",data:iD,hard:true});
+      return;}
+    eD.extra=(eD.extra||0)-1;
+    saveDB();syncDraft();render();return;}
   /* Tapping the green tick undoes that set. Reversible, so no confirm. */
   if(D.unlog!==undefined){
     var e4=S.active.entries[V.logIdx];e4.sets.splice(+D.unlog,1);
@@ -148,19 +171,24 @@ document.addEventListener("click",function(ev){
   if(D.addrow){
     var e5=S.active.entries[V.logIdx];
     e5.extra=(e5.extra||0)+1;V.fresh=-1;saveDB();render();return;}
+  /* Pause, resume and ±30s change the countdown and nothing else on the screen, so
+     they repaint the four live parts rather than rebuilding. A full render here was
+     what flashed the previous screen and restarted the ring from zero. Only leaving
+     rest entirely is a real navigation. */
   if(D.rest){
     if(D.rest==="pause"){V.restLeft=Math.max(0,Math.ceil((V.restEnd-Date.now())/1000));
-      V.restPaused=true;V.restEnd=0;render();return;}
+      V.restPaused=true;V.restEnd=0;paintRest();return;}
     if(D.rest==="resume"){V.restPaused=false;V.restEnd=Date.now()+V.restLeft*1000;
-      setBeeped(false);render();return;}
-    if(D.rest==="skip"){V.restEnd=0;V.restPaused=false;}
-    else if(V.restPaused){V.restLeft=Math.max(0,V.restLeft+(+D.rest));
+      setBeeped(false);paintRest();return;}
+    if(D.rest==="skip"){V.restEnd=0;V.restPaused=false;render();return;}
+    if(V.restPaused){V.restLeft=Math.max(0,V.restLeft+(+D.rest));
       V.restTotal=Math.max(15,V.restTotal+(+D.rest));
-      if(!V.restLeft){V.restPaused=false;}}
+      /* Trimming a paused timer to zero ends the rest, which is a real change. */
+      if(!V.restLeft){V.restPaused=false;render();return;}}
     else{V.restEnd=Math.max(Date.now(),V.restEnd+(+D.rest)*1000);
          V.restTotal=Math.max(15,V.restTotal+(+D.rest));
          if(+D.rest>0)setBeeped(false);}
-    render();return;}
+    paintRest();return;}
   if(D.swap){
     var eS=S.active.entries[V.logIdx];
     V.exm="All";V.exe="All";V.exq="";
@@ -171,11 +199,10 @@ document.addEventListener("click",function(ev){
     V.logIdx=V.logIdx+1;
     saveDB();syncDraft();render();return;}
   if(D.finish){finishSession();return;}
-  if(D.quit){V.tab="home";render();return;}
-  if(D.discard){
-    askConfirm({title:t("Discard this session?"),
-      body:t("Every set you logged in this workout is thrown away. This cannot be undone."),
-      cta:t("Discard it"),act:"discard"});return;}
+  /* Every back affordance in the app comes through here, so none of them can drift
+     to a destination of its own. Discarding a session is now part of going back
+     rather than a separate link. */
+  if(D.back!==undefined){goBack();return;}
 
   /* ---- daily logs */
   if(D.water){
@@ -410,8 +437,6 @@ document.addEventListener("click",function(ev){
     return;}
   if(D.fav){var i5=S.favs.indexOf(D.fav);
     if(i5>=0)S.favs.splice(i5,1);else S.favs.push(D.fav);saveDB();render();return;}
-  if(D.skipex){var i6=S.skip.indexOf(D.skipex);
-    if(i6>=0)S.skip.splice(i6,1);else S.skip.push(D.skipex);saveDB();render();return;}
   if(D.gear){
     S.gear=S.gear||[];
     var i7=S.gear.indexOf(D.gear);
@@ -502,6 +527,16 @@ document.addEventListener("click",function(ev){
   if(D.openday){openSheet("dayview",{date:D.openday});return;}
   if(D.jumpfood){V.fdate=(D.jumpfood===today())?null:D.jumpfood;closeSheet();V.tab="food";render();return;}
   if(D.cal!==undefined){V.cal+= +D.cal;render();return;}
+  /* Progress date bar. The chips beside it still own the charts. */
+  if(D.pday!==undefined){
+    if(+D.pday===0){V.pdate=today();}
+    else{var pd=new Date((V.pdate||today())+"T00:00:00");
+      pd.setDate(pd.getDate()+ +D.pday);
+      var iso2=pd.toISOString().slice(0,10);
+      if(iso2<=today())V.pdate=iso2;}
+    render();return;}
+  if(D.pcal!==undefined){V.pcal=!V.pcal;V.cal=0;render();return;}
+  if(D.pick){V.pdate=D.pick;V.pcal=false;render();return;}
 });
 
 
@@ -532,7 +567,7 @@ document.addEventListener("input",function(ev){
 /* Keyboard: Escape closes any sheet, Enter submits the ask sheet. Sheets were
    previously unreachable by keyboard entirely. */
 document.addEventListener("keydown",function(ev){
-  if(ev.key==="Escape"&&V.sheet){ev.preventDefault();closeSheet();return;}
+  if(ev.key==="Escape"&&V.sheet){ev.preventDefault();requestCloseSheet();return;}
   if(ev.key==="Enter"&&V.sheet==="ask"&&ev.target.id==="askv"){
     ev.preventDefault();
     var ao=V.sd||{},av2=val("askv");
@@ -556,19 +591,15 @@ document.addEventListener("change",function(ev){
 /* The clock and the rest ring are the only things that change every second, so they
    are patched directly. Re-rendering the whole screen on a timer threw away scroll
    position and stole focus from the set inputs mid-entry. */
-var REST_C=653.45;
 function tickSession(){
   if(!S.active)return;
   var c=document.getElementById("sessClock");
   if(c)c.textContent=mmss(S.active.started?(Date.now()-S.active.started)/1000:0);
   if(!V.restEnd||V.restPaused)return;
   var left=Math.ceil((V.restEnd-Date.now())/1000);
+  /* Running out is the one tick that changes the screen rather than the numbers. */
   if(left<=0){V.restEnd=0;V.restPaused=false;if(V.tab==="train"&&!V.sheet)render();return;}
-  var d=document.getElementById("restDig");
-  if(d)d.textContent=mmss(left);
-  var ringEl=document.getElementById("restRing");
-  if(ringEl)ringEl.setAttribute("stroke-dashoffset",
-    String(REST_C*(1-Math.max(0,Math.min(1,left/Math.max(1,V.restTotal))))));
+  paintRest();
 }
 setInterval(function(){
   if(V.restEnd&&!V.restPaused&&!beeped){
@@ -614,6 +645,49 @@ function onBarcode(code){
     toast(food.n+(local?" · "+t("remembered on this device"):""));
   });
 }
+/* ---- closing a sheet ------------------------------------------------------ */
+/* Most sheets show what is already stored, so closing them costs nothing. The ones
+   holding typed input that has not been saved anywhere ask first. */
+var MF=["mf_n","mf_k","mf_p","mf_c","mf_f"];
+function sheetDirty(){
+  if(V.sheet!=="manual")return false;
+  return MF.some(function(id){var el=document.getElementById(id);
+    return el&&String(el.value).trim()!=="";});
+}
+/* Every way out of a sheet goes through here: the ✕, a tap outside, a drag down and
+   Escape. One of them skipping the check would make the guard pointless. */
+function requestCloseSheet(){
+  if(sheetDirty()){
+    askConfirm({title:t("Discard what you typed?"),
+      body:t("This food has not been added to your log yet."),
+      cta:t("Discard"),act:"dropsheet",
+      back:{name:val("mf_n"),k:val("mf_k"),p:val("mf_p"),c:val("mf_c"),f:val("mf_f"),
+            meal:val("mf_meal"),bc:(V.sd&&V.sd.bc)||""}});
+    return;}
+  closeSheet();
+}
+ACT.dropsheet=function(){closeSheet();};
+
+/* ---- leaving an active workout ------------------------------------------- */
+/* The only back that asks first. It used to be a separate "Discard this session"
+   link at the bottom of the screen; the arrow now carries it, so there is one way
+   out instead of two. */
+var pendingBack=null;
+ACT.backdiscard=function(){
+  S.active=null;V.restEnd=0;V.restPaused=false;V.fresh=-1;
+  keepAwake(false);saveDB();
+  var go=pendingBack;pendingBack=null;
+  if(go)go(); else render();
+};
+function navGuard(proceed){
+  if(!S.active)return false;
+  pendingBack=proceed;
+  askConfirm({title:t("Discard this session?"),
+    body:t("Every set you logged in this workout is thrown away. This cannot be undone."),
+    cta:t("Discard it"),act:"backdiscard"});
+  return true;
+}
+
 function openBarcodePrompt(){
   askText({title:t("Enter barcode"),label:t("Barcode"),
     body:t("The digits printed under the bars on the packet."),
@@ -625,6 +699,9 @@ ACT.barcode=function(v){ onBarcode(v); };
    in the order it actually happens. */
 initState();
 setStorageErrorHandler(toast);
+/* One back path for the arrow, the edge swipe and the OS gesture. */
+initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet});
+initSheetDrag(requestCloseSheet);
 /* History comes from IndexedDB, so it arrives a tick later than everything else.
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from
    holding the whole app behind the intro; in practice it resolves well inside it. */

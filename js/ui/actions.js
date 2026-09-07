@@ -73,6 +73,9 @@ ACT.customex=function(name,d){
   var landed=!!dayOf(V.dayId)||(V.sd&&V.sd.swaplive&&S.active);
   addExercise(name);
   if(!landed){V.sd=null;render();toast(name+" "+t("is in your library."));}};
+ACT.delset=function(_,i){
+  var e=S.active&&S.active.entries[V.logIdx];if(!e)return;
+  e.sets.splice(i,1);V.fresh=-1;saveDB();syncDraft();render();};
 ACT.discard=function(){
   S.active=null;V.restEnd=0;V.restPaused=false;V.fresh=-1;
   keepAwake(false);saveDB();render();};

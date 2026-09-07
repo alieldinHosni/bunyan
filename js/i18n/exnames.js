@@ -1,6 +1,7 @@
 /* Bunyan — exnames
    Compositional Arabic exercise names, plus applyLang(). */
 import {S} from "../state.js";
+import {exShort} from "../data/exercises.js";
 
 /* ============================================================ exercise names
    873 names built from roughly 300 terms, so the terms are translated and the name
@@ -189,7 +190,9 @@ function exAr(name){
   return (body?body:name)+(equip?" "+equip:"");
 }
 /* Display only. Every lookup, favourite and session entry still keys off the English. */
-function exName(n){return (S.prefs&&S.prefs.lang==="ar")?exAr(n):n;}
+/* Display only: the qualifier is shown separately, never glued back onto the name.
+   The full English name remains the key everywhere it is stored. */
+function exName(n){var s=exShort(n);return (S.prefs&&S.prefs.lang==="ar")?exAr(s):s;}
 function applyLang(){
   var ar=S.prefs&&S.prefs.lang==="ar";
   document.documentElement.setAttribute("lang",ar?"ar":"en");

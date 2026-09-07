@@ -65,6 +65,9 @@ function hydrate(){
   if(!S.userSplits)S.userSplits=[];
   if(!S.prefs)S.prefs=JSON.parse(JSON.stringify(DEF.prefs));
   if(!S.favs)S.favs=[];
+  /* "Never suggest" is gone. Leaving stored exclusions behind would keep filtering
+     results with nothing on screen to say why, or to undo it. */
+  if(S.skip&&S.skip.length)S.skip=[];
   if(!S.skip)S.skip=[];
   if(!S.myFoods)S.myFoods=[];
   if(!S.savedMeals)S.savedMeals=[];

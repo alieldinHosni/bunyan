@@ -65,56 +65,6 @@ function toast(msg,undo){
   document.body.appendChild(d);
   setTimeout(function(){if(d.parentNode)d.remove();},undo?5200:2600);}
 
-var MAPKEY={
- "Chest":["f_chest"],"Front delts":["f_delt"],"Upper chest":["f_chest"],
- "Shoulders":["f_delt","b_delt"],"Biceps":["f_bi"],"Forearms":["f_fore"],
- "Core":["f_abs"],"Hip flexors":["f_abs"],"Quads":["f_quad"],"Adductors":["f_add"],
- "Calves":["f_calf","b_calf"],"Back":["b_lat","b_trap"],"Traps":["b_trap"],
- "Lower back":["b_low"],"Rear delts":["b_delt"],"Triceps":["b_tri"],
- "Glutes":["b_glute"],"Hamstrings":["b_ham"],"Ankle":["f_calf"],
- "Cardio":[],"Mobility":[],"Other":[]};
-function muscleMap(primary,secondary){
-  var on={},dim={};
-  (MAPKEY[primary]||[]).forEach(function(k){on[k]=1;});
-  (secondary||[]).forEach(function(sm){(MAPKEY[sm]||[]).forEach(function(k){if(!on[k])dim[k]=1;});});
-  function f(k){return on[k]?"var(--accent)":dim[k]?"rgba(217,48,63,.34)":"var(--raised)";}
-  var body='fill="var(--raised)" stroke="var(--border)" stroke-width="1"';
-  return '<svg viewBox="0 0 240 200" style="width:100%;height:186px">'
-  // ---- front figure
-  +'<g transform="translate(14 8)">'
-  +'<circle cx="46" cy="13" r="10" '+body+'/>'
-  +'<rect x="30" y="26" width="32" height="30" rx="8" fill="'+f("f_chest")+'"/>'
-  +'<rect x="16" y="26" width="14" height="18" rx="6" fill="'+f("f_delt")+'"/>'
-  +'<rect x="62" y="26" width="14" height="18" rx="6" fill="'+f("f_delt")+'"/>'
-  +'<rect x="14" y="46" width="13" height="20" rx="5" fill="'+f("f_bi")+'"/>'
-  +'<rect x="65" y="46" width="13" height="20" rx="5" fill="'+f("f_bi")+'"/>'
-  +'<rect x="12" y="68" width="12" height="20" rx="5" fill="'+f("f_fore")+'"/>'
-  +'<rect x="68" y="68" width="12" height="20" rx="5" fill="'+f("f_fore")+'"/>'
-  +'<rect x="33" y="58" width="26" height="30" rx="6" fill="'+f("f_abs")+'"/>'
-  +'<rect x="28" y="92" width="17" height="40" rx="7" fill="'+f("f_quad")+'"/>'
-  +'<rect x="47" y="92" width="17" height="40" rx="7" fill="'+f("f_quad")+'"/>'
-  +'<rect x="44" y="92" width="4" height="26" rx="2" fill="'+f("f_add")+'"/>'
-  +'<rect x="30" y="136" width="13" height="30" rx="6" fill="'+f("f_calf")+'"/>'
-  +'<rect x="49" y="136" width="13" height="30" rx="6" fill="'+f("f_calf")+'"/>'
-  +'<text x="46" y="182" text-anchor="middle" font-size="9" fill="var(--faint)">FRONT</text></g>'
-  // ---- back figure
-  +'<g transform="translate(134 8)">'
-  +'<circle cx="46" cy="13" r="10" '+body+'/>'
-  +'<rect x="30" y="24" width="32" height="16" rx="6" fill="'+f("b_trap")+'"/>'
-  +'<rect x="16" y="26" width="14" height="18" rx="6" fill="'+f("b_delt")+'"/>'
-  +'<rect x="62" y="26" width="14" height="18" rx="6" fill="'+f("b_delt")+'"/>'
-  +'<rect x="28" y="41" width="36" height="26" rx="7" fill="'+f("b_lat")+'"/>'
-  +'<rect x="14" y="46" width="13" height="20" rx="5" fill="'+f("b_tri")+'"/>'
-  +'<rect x="65" y="46" width="13" height="20" rx="5" fill="'+f("b_tri")+'"/>'
-  +'<rect x="33" y="69" width="26" height="14" rx="5" fill="'+f("b_low")+'"/>'
-  +'<rect x="29" y="85" width="34" height="20" rx="8" fill="'+f("b_glute")+'"/>'
-  +'<rect x="28" y="107" width="17" height="30" rx="7" fill="'+f("b_ham")+'"/>'
-  +'<rect x="47" y="107" width="17" height="30" rx="7" fill="'+f("b_ham")+'"/>'
-  +'<rect x="30" y="140" width="13" height="26" rx="6" fill="'+f("b_calf")+'"/>'
-  +'<rect x="49" y="140" width="13" height="26" rx="6" fill="'+f("b_calf")+'"/>'
-  +'<text x="46" y="182" text-anchor="middle" font-size="9" fill="var(--faint)">BACK</text></g>'
-  +'</svg>';}
-
 var CUES={
  Push:["Set your shoulder blades down and back before the first rep.",
        "Lower under control, roughly two seconds down.",
@@ -261,4 +211,29 @@ function setRow(sheet,label,value,sub){
 function setBeeped(b){beeped=b;}
 function setLastTick(v){lastTick=v;}
 
-export {audioOn, beeped, CUES, ex_isTimed, head, keepAwake, lastTick, MISTAKES, muscleMap, play, progressBar, recentPR, ring, setBeeped, setLastTick, setRow, sparkline, startRest, stepper, streak, tap, toast, V};
+/* Pinning the page while a sheet is open. overscroll-behavior stops a scroll that
+   starts inside the sheet from chaining outwards, but it does nothing about a drag
+   beginning on the backdrop or on a part of the sheet that does not scroll — that
+   still moves the page underneath. On iOS, overflow:hidden on the body does not hold
+   either. Fixing the body and putting the offset back afterwards is what works. */
+var _lockY=0,_locked=false;
+function lockScroll(on){
+  on=!!on;
+  /* Re-locking would read a scroll position of zero, because the body is already
+     pinned, and the page would jump to the top when the sheet closed. */
+  if(on===_locked)return;
+  _locked=on;
+  var b=document.body;
+  if(on){
+    _lockY=window.pageYOffset||document.documentElement.scrollTop||0;
+    b.style.position="fixed";
+    b.style.top=(-_lockY)+"px";
+    b.style.left="0";b.style.right="0";b.style.width="100%";
+  }else{
+    b.style.position="";b.style.top="";
+    b.style.left="";b.style.right="";b.style.width="";
+    window.scrollTo(0,_lockY);
+  }
+}
+
+export {audioOn, beeped, CUES, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, setBeeped, setLastTick, setRow, sparkline, startRest, stepper, streak, tap, toast, V};

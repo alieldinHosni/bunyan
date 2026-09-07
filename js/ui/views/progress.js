@@ -19,6 +19,12 @@ function vProgress(){
       t("Finish one workout or log your weight, and volume, records, streaks and trends all start here."),
       '<button class="btn" data-go="train">'+t("Start a workout")+'</button>'
       +'<button class="btn g" data-sheet="weigh">'+t("Log weight")+'</button>');
+  /* Two controls, two jobs, and they do not fight. The date bar scopes the one card
+     that is about a single day; the range chips drive the charts, which are about a
+     span and would mean nothing scoped to one date. */
+  h+=vDateBar()+vThatDay();
+
+  h+='<div class="sec">'+t("Trends")+'</div>';
   h+='<div class="rowc" style="gap:var(--s2);overflow-x:auto;padding-bottom:var(--s2)">'
    +[["7","1W"],["30","1M"],["90","3M"],["180","6M"],["365","1Y"]].map(function(r2){
      return '<button class="pill'+(String(V.range||30)===r2[0]?" a":"")+'" data-range="'+r2[0]+'">'+r2[1]+'</button>';
@@ -117,8 +123,54 @@ function vProgress(){
   }else h+='<p class="tiny">'+t("No measurements yet.")+'</p>';
   h+='<button class="btn g sm mt" data-sheet="measure">'+t("Add measurements")+'</button></div>';
 
-  h+='<div class="sec">'+t("Calendar")+'</div>'+vCalendar();
+  /* The month grid used to sit here, below everything, where tapping a day was the
+     only thing it did and the screen it belonged to was elsewhere. It is now behind
+     the date bar at the top. */
   return h;}
+
+/* The same control as the one on Food, so the two tabs read alike. The date itself
+   is the button that expands the month — a tap, not a double tap, which Issue 6's
+   touch-action:manipulation would have swallowed anyway. */
+function pdate(){return V.pdate||today();}
+function vDateBar(){
+  var d=pdate(),isToday=d===today();
+  return '<div class="card" style="padding:var(--s3);margin-bottom:var(--s3)">'
+   +'<div class="row" style="align-items:center">'
+   +'<button class="btn d sm iconbtn" data-pday="-1" aria-label="'+t("Previous day")+'">‹</button>'
+   +'<button class="pdate" data-pcal="1" aria-expanded="'+(V.pcal?"true":"false")+'" '
+   +'aria-label="'+t("Choose a day")+'">'
+   +(isToday?t("Today")+", ":"")+shortd(d)
+   +'<span class="pchev'+(V.pcal?" up":"")+'" aria-hidden="true">›</span></button>'
+   +'<button class="btn d sm iconbtn" data-pday="1"'+(isToday?' disabled':'')
+   +' aria-label="'+t("Next day")+'">›</button>'
+   +'</div>'
+   +(isToday?'':'<div style="text-align:center"><button class="btn d sm" data-pday="0">'
+     +t("Back to today")+'</button></div>')
+   +(V.pcal?vCalendar():'')+'</div>';
+}
+
+/* The only part of this screen that is about one day rather than a span. */
+function vThatDay(){
+  var d=pdate();
+  var sess=S.sessions.filter(function(x){return x.date===d;});
+  var rec=S.days[d]||{};
+  var wRow=(S.body||[]).filter(function(b){return b.date===d&&b.weight;})[0];
+  var meals=Object.keys(rec.meals||{}).reduce(function(n,k){
+    return n+((rec.meals[k].items||[]).length?1:0);},0);
+  var vol=sess.reduce(function(n,x){return n+sessionVolume(x);},0);
+  var bits=[];
+  if(sess.length)bits.push(esc(sess.map(function(x){return x.dayName;}).join(", "))
+    +' · '+Math.round(vol)+' '+t("volume"));
+  if(wRow)bits.push(toDisp(wRow.weight)+wUnit());
+  if(rec.steps)bits.push(rec.steps+' '+t("steps"));
+  if(meals)bits.push(meals+' '+t("meals"));
+  return '<button class="card tap" data-openday="'+d+'" style="width:100%;margin-bottom:var(--s3)">'
+   +'<div class="row"><div style="flex:1;min-width:0">'
+   +'<div class="tiny" style="letter-spacing:.1em">'+t("THAT DAY")+'</div>'
+   +'<div style="font-weight:700;margin-top:3px">'
+   +(bits.length?bits.join(' · '):t("Nothing logged"))+'</div></div>'
+   +'<span class="chev">›</span></div></button>';
+}
 
 function vCalendar(){
   var base=new Date();base.setDate(1);base.setMonth(base.getMonth()+V.cal);
@@ -126,7 +178,7 @@ function vCalendar(){
   var first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
   var marks={};
   S.sessions.forEach(function(s){marks[s.date]=1;});
-  var h='<div class="card"><div class="row" style="align-items:center">'
+  var h='<div style="margin-top:var(--s3);border-top:1px solid var(--border);padding-top:var(--s3)"><div class="row" style="align-items:center">'
    +'<button class="btn d sm iconbtn" data-cal="-1" aria-label="'+t("Previous month")+'">‹</button>'
    +'<strong aria-live="polite">'+base.toLocaleDateString(undefined,{month:"long",year:"numeric"})+'</strong>'
    +'<button class="btn d sm iconbtn" data-cal="1" aria-label="'+t("Next month")+'">›</button></div>'
@@ -139,7 +191,9 @@ function vCalendar(){
     var on=marks[iso],isToday=iso===today();
     var hasFood=S.days[iso]&&Object.keys(S.days[iso].meals||{}).some(function(k){
       return (S.days[iso].meals[k].items||[]).length;});
-    h+='<button data-openday="'+iso+'" style="aspect-ratio:1;display:flex;flex-direction:column;'
+    /* Picking a day scopes the screen and folds the month away; the day card it
+       scopes is what opens the full detail sheet. */
+    h+='<button data-pick="'+iso+'" style="aspect-ratio:1;display:flex;flex-direction:column;'
      +'align-items:center;justify-content:center;border-radius:9px;font-size:13px;border:none;'
      +'padding:0;position:relative;'
      +(on?'background:var(--accent);color:#fff;font-weight:700;':

@@ -1,7 +1,7 @@
 /* Bunyan — sheets
    Every bottom sheet, dispatched by vSheet(). */
 import {t} from "../i18n/dict.js";
-import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isFav, isSkipped, LIB, libFind, muscleOf, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
+import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, muscleOf, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {exName} from "../i18n/exnames.js";
 import {MEALS, srcBadge} from "./views/food.js";
 import {backupAgeDays, bestE1RM, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
@@ -12,7 +12,7 @@ import {groupLabel, groupRun, platePlan} from "./views/session.js";
 import {buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats} from "../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, num, pretty, r1, shortd, today} from "../util.js";
-import {CUES, MISTAKES, muscleMap, sparkline, stepper, V} from "./view.js";
+import {CUES, MISTAKES, sparkline, stepper, V} from "./view.js";
 
 /* ============================================================ sheets */
 function vSheet(){
@@ -37,7 +37,7 @@ function vSheet(){
     b='<h2>'+esc(c.title||"")+'</h2>'
      +(c.body?'<p class="sub" style="margin:8px 0 20px">'+esc(c.body)+'</p>':'<div style="height:14px"></div>')
      +'<button class="btn" data-confirmok="1">'+esc(c.cta||t("Delete"))+'</button>'
-     +'<button class="btn g" data-close="1">'+t("Cancel")+'</button>';
+     +'<button class="btn g" '+(c.back?'data-restore="1"':'data-close="1"')+'>'+t("Cancel")+'</button>';
   }
   else if(V.sheet==="exercise"){
     var q=V.exq.toLowerCase();
@@ -68,7 +68,7 @@ function vSheet(){
     b+='</div><div class="list">';
     list.forEach(function(l){
       b+='<button class="item" data-pickex="'+esc(l[0])+'"><div><div style="font-weight:600">'+esc(exName(l[0]))+'</div>'
-       +'<div class="tiny">'+t(l[1])+' · '+t(l[2])+'</div></div><span class="chev">+</span></button>';});
+       +'<div class="tiny">'+(exVariant(l[0])?esc(exVariant(l[0]))+' · ':'')+t(l[1])+' · '+t(l[2])+'</div></div><span class="chev">+</span></button>';});
     b+='</div>';
     if(!list.length)b+=empty("search",
       V.exq?t("Nothing matches")+" “"+V.exq+"”":t("Nothing matches those filters"),
@@ -179,10 +179,26 @@ function vSheet(){
       t("Open Food Facts has no product under that name. Enter the numbers off the packet and Bunyan will remember it."),
       '<button class="btn" data-manual="'+esc(st.noresult)+'">'+t("Enter it manually")+'</button>');
 
+    /* A near miss is offered, never taken. Even a confident guess is one tap from
+       being wrong, and a wrong food quietly corrupts the day's numbers. */
+    (st.items||[]).forEach(function(it){
+      if(it.status!=="suggest")return;
+      var idx=st.items.indexOf(it);
+      b+='<div class="overline">'+t("Did you mean")+'…</div>'
+       +'<p class="tiny" style="margin:-4px 0 8px">'+t("Nothing matches")+' “'
+       +esc(it.parsed.query)+'”.</p><div class="list">';
+      (it.alts||[]).forEach(function(f,k){
+        b+='<button class="item" data-choose="'+idx+'|'+k+'">'
+         +'<div><div style="font-weight:600">'+esc(f.n)+'</div>'
+         +'<div class="tiny">'+esc(t(f.cat||""))+' · '+f.kcal+' kcal/100 g</div></div>'
+         +'<span class="chev">+</span></button>';});
+      b+='</div><button class="btn g sm" data-dropitem="'+idx+'" '
+       +'style="margin:8px 0 14px">'+t("None of these")+'</button>';
+    });
     if(st.items&&st.items.length){
-      var known=st.items.filter(function(i){return i.status!=="unknown";});
+      var known=st.items.filter(function(i){return i.status!=="unknown"&&i.status!=="suggest";});
       var lost=st.items.filter(function(i){return i.status==="unknown";});
-      b+='<div class="overline">I found</div>';
+      if(known.length)b+='<div class="overline">I found</div>';
       known.forEach(function(it,i){
         b+='<div class="card"><div class="row"><div style="flex:1">'
          +'<div style="font-weight:700">'+esc(it.name)+'</div>'
@@ -240,10 +256,10 @@ function vSheet(){
        +esc(mf.bc)+'</span> — '+t("saving this to your foods will make it scan offline next time.")+'</p>':'')
      +'<input id="mf_n" placeholder="Food name" value="'+esc(mf.name||"")+'">'
      +'<div class="grid2 mt">'
-     +'<div><div class="tiny">'+t("Calories")+'</div><input id="mf_k" type="number" inputmode="numeric"></div>'
-     +'<div><div class="tiny">'+t("Protein (g)")+'</div><input id="mf_p" type="number" inputmode="decimal"></div>'
-     +'<div><div class="tiny">'+t("Carbs (g)")+'</div><input id="mf_c" type="number" inputmode="decimal"></div>'
-     +'<div><div class="tiny">'+t("Fat (g)")+'</div><input id="mf_f" type="number" inputmode="decimal"></div>'
+     +'<div><div class="tiny">'+t("Calories")+'</div><input id="mf_k" type="number" inputmode="numeric" value="'+esc(mf.k||"")+'"></div>'
+     +'<div><div class="tiny">'+t("Protein (g)")+'</div><input id="mf_p" type="number" inputmode="decimal" value="'+esc(mf.p||"")+'"></div>'
+     +'<div><div class="tiny">'+t("Carbs (g)")+'</div><input id="mf_c" type="number" inputmode="decimal" value="'+esc(mf.c||"")+'"></div>'
+     +'<div><div class="tiny">'+t("Fat (g)")+'</div><input id="mf_f" type="number" inputmode="decimal" value="'+esc(mf.f||"")+'"></div>'
      +'</div>'
      +'<p class="tiny mt">'+t("Leave calories blank and Bunyan works them out from the macros.")+'</p>'
      +'<div class="rowc mt"><select id="mf_meal">'
@@ -300,6 +316,7 @@ function vSheet(){
     var prD=prFor(nD), pvD=prevPerf(nD);
     b='<h2>'+esc(exName(nD))+'</h2>'
      +'<div class="rowc" style="margin:8px 0 14px;flex-wrap:wrap">'
+     +(exVariant(nD)?'<span class="pill" style="border-color:var(--accent);color:var(--accentHi)">'+esc(exVariant(nD))+'</span>':'')
      +'<span class="pill a">'+t(mD)+'</span><span class="pill">'+t(lD?lD[2]:"Other")+'</span>'
      +'<span class="pill">'+t(pD)+'</span><span class="pill">'+t(difficultyOf(nD))+'</span></div>';
     var med=exMedia(nD);
@@ -307,33 +324,45 @@ function vSheet(){
       b+='<div class="demo" style="margin-bottom:12px">'
        +'<figure><img src="'+exImg(nD,0)+'" alt=""><figcaption>Start</figcaption></figure>'
        +'<figure><img src="'+exImg(nD,1)+'" alt=""><figcaption>'+t("Finish")+'</figcaption></figure></div>';}
-    b+='<div class="card" style="padding:10px">'+muscleMap(mD,secD)+'</div>';
+    /* The body diagram is gone: both photographs sit right above it and show the
+       same thing better. The two text rows below cost a line each and stay. */
     b+='<div class="row"><span class="tiny">'+t("Primary")+'</span><span style="font-weight:600;color:var(--accent)">'
      +t(mD)+'</span></div>';
     if(secD.length)b+='<div class="row" style="margin-top:4px"><span class="tiny">'+t("Secondary")+'</span>'
      +'<span class="dim">'+secD.join(" \u00b7 ")+'</span></div>';
+    /* Three steps by default. Nobody reads five paragraphs between sets, and the
+       rest is one tap away for anyone who wants them. */
     b+='<div class="sec">'+t("How to do it")+'</div><div class="card">';
     var steps=exSteps(nD)||(CUES[pD]||CUES.Isolation);
-    steps.forEach(function(c,i){
+    var allSteps=!!V.exsteps,shown=allSteps?steps:steps.slice(0,3);
+    shown.forEach(function(c,i){
       b+='<div class="rowc" style="align-items:flex-start;margin-bottom:9px">'
        +'<span class="pill a" style="min-width:22px;text-align:center">'+(i+1)+'</span>'
        +'<span style="font-size:14px;flex:1">'+esc(c)+'</span></div>';});
+    if(steps.length>3)
+      b+='<button class="btn g sm" data-exsteps="1">'
+       +(allSteps?t("Show fewer"):t("Show all")+' '+steps.length+' '+t("steps"))+'</button>';
     b+='</div>';
-    b+='<div class="sec">'+t("Common mistakes")+'</div><div class="card">';
-    (MISTAKES[pD]||MISTAKES.Isolation).forEach(function(c){
-      b+='<div class="rowc" style="align-items:flex-start;margin-bottom:8px">'
-       +'<span style="color:var(--accent);font-weight:700">\u00d7</span>'
-       +'<span style="font-size:14px;flex:1">'+esc(c)+'</span></div>';});
-    b+='</div>';
+    /* Mistakes are generated from the movement pattern, so every push exercise shows
+       the same three lines. Worth keeping for a beginner; not worth the vertical
+       space by default on a screen this issue is trying to shorten. */
+    b+='<button class="btn g sm" data-exmiss="1" style="margin-top:var(--s4)">'
+     +(V.exmiss?t("Hide common mistakes"):t("Common mistakes"))+'</button>';
+    if(V.exmiss){
+      b+='<div class="card mt">';
+      (MISTAKES[pD]||MISTAKES.Isolation).forEach(function(c){
+        b+='<div class="rowc" style="align-items:flex-start;margin-bottom:8px">'
+         +'<span style="color:var(--accent);font-weight:700">\u00d7</span>'
+         +'<span style="font-size:14px;flex:1">'+esc(c)+'</span></div>';});
+      b+='</div>';}
     if(prD.w)b+='<div class="sec">'+t("Your record")+'</div><div class="card"><div class="grid3">'
      +'<div><div class="tiny">'+t("Heaviest")+'</div><div class="big" style="font-size:19px">'+prD.w+'</div></div>'
      +'<div><div class="tiny">'+t("Best 1RM")+'</div><div class="big" style="font-size:19px">'+(prD.e||"\u2014")+'</div></div>'
      +'<div><div class="tiny">'+t("Best set")+'</div><div class="big" style="font-size:19px">'+prD.vol+'</div></div>'
      +'</div></div>';
-    b+='<div class="rowc mt"><button class="btn g sm" data-fav="'+esc(nD)+'">'
-     +(isFav(nD)?"\u2605 Favourite":"\u2606 Favourite")+'</button>'
-     +'<button class="btn '+(isSkipped(nD)?"g":"d")+' sm" data-skipex="'+esc(nD)+'">'
-     +(isSkipped(nD)?"Unhide":"Never suggest this")+'</button></div>';
+    /* The star lives in the sheet header now, beside the \u2715, where a long exercise
+       name wrapping to two lines cannot push it around. "Never suggest" is gone
+       entirely: it hid results with nothing on screen to say why. */
     if(pvD)b+='<button class="btn g" data-exhist="'+esc(nD)+'">'+t("See every session")+'</button>';
     b+='<div class="sec">'+t("Similar exercises")+'</div><div class="list">';
     LIB.filter(function(l){return l[1]===mD&&l[0]!==nD&&patternOf(l[0])===pD;}).slice(0,8)
@@ -391,19 +420,13 @@ function vSheet(){
     b+='</div><p class="tiny">'+t("Leave everything on if you train in a full gym.")+'</p>';
   }
   else if(V.sheet==="likes"){
-    b='<h2>'+t("Favourites and exclusions")+'</h2>';
+    b='<h2>'+t("Favourites")+'</h2>';
     b+='<div class="sec">'+t("Favourites")+'</div>';
     if(!S.favs.length)b+='<p class="tiny">None yet. Star an exercise from its detail page and it '
       +'will be suggested first.</p>';
     else{b+='<div class="list">';
       S.favs.forEach(function(n){b+='<button class="item" data-fav="'+esc(n)+'">'+thumb(n,36)
         +'<span style="flex:1">'+esc(n)+'</span><span class="pill a">'+t("Remove")+'</span></button>';});
-      b+='</div>';}
-    b+='<div class="sec">'+t("Never suggest")+'</div>';
-    if(!S.skip.length)b+='<p class="tiny">'+t("Nothing hidden.")+'</p>';
-    else{b+='<div class="list">';
-      S.skip.forEach(function(n){b+='<button class="item" data-skipex="'+esc(n)+'">'+thumb(n,36)
-        +'<span style="flex:1">'+esc(n)+'</span><span class="pill a">'+t("Unhide")+'</span></button>';});
       b+='</div>';}
   }
   else if(V.sheet==="setup"){
@@ -550,8 +573,8 @@ function vSheet(){
      +'<span class="'+(tp.awake?"pill ok":"dim")+'">'+(tp.awake?t("On"):t("Off"))+'</span></button>'
      +'<button class="item" data-sheet="gear"><span>'+t("My equipment")+'</span><span class="dim">'
      +(S.gear&&S.gear.length?S.gear.length+" "+t("selected"):t("Everything"))+'</span></button>'
-     +'<button class="item" data-sheet="likes"><span>'+t("Favourites and exclusions")+'</span>'
-     +'<span class="dim">'+S.favs.length+" ★ · "+S.skip.length+' '+t("hidden")+'</span></button>'
+     +'<button class="item" data-sheet="likes"><span>'+t("Favourites")+'</span>'
+     +'<span class="dim">'+S.favs.length+" ★"+'</span></button>'
      +'</div>'
      +'<p class="tiny">'+t("Conservative adds 2.5 kg. Standard adds 2.5 on isolation and 5 on the big lifts. Aggressive adds 5 and 10.")+'</p>';
   }
@@ -648,7 +671,11 @@ function vSheet(){
        return '<button class="pill'+(pbar===bw?" a":"")+'" data-bar="'+bw+'">'
          +(bw?toDisp(bw)+wUnit():t("No bar"))+'</button>';}).join("")
      +'</div>';
-    if(plan.under){
+    /* With no weight entered the target is 0, which is not a bar problem — saying so
+       sent people looking for a fault that was not there. */
+    if(!pw){
+      b+='<p class="tiny">'+t("Enter a weight for this set first.")+'</p>';
+    }else if(plan.under){
       b+='<p class="tiny">'+t("The target is lighter than the bar.")+'</p>';
     }else if(!plan.plates.length){
       b+='<p class="tiny">'+t("Just the bar.")+'</p>';
@@ -674,12 +701,27 @@ function vSheet(){
      tapping outside only ever exposed a ~12vh strip, which is why sheets felt trapped. */
   /* ask and confirm already carry their own explicit Cancel, so the wrapper's
      trailing Close would be a third way to dismiss the same sheet. */
-  var terse=(V.sheet==="ask"||V.sheet==="confirm");
-  return '<div class="sheet" data-close="1"><div class="sheetbox" data-stop="1" role="dialog" '
-        +'aria-modal="true">'
-        +'<div class="sheethead"><button class="x" data-close="1" aria-label="'+t("Close")+'">✕</button></div>'
-        +b+(terse?'':'<button class="btn d" data-close="1">'+t("Close")+'</button>')
-        +'</div></div>';}
+  /* A destructive confirmation is the one sheet a stray tap must not dismiss: an
+     ambiguous dismiss on a prompt like that is unsafe. It keeps the ✕ and Cancel. */
+  var hard=(V.sheet==="confirm"&&V.sd&&V.sd.hard);
+  /* Exercise names run long and wrap; a star sitting inline beside one gets shoved
+     around by the wrap, so it belongs in the header where its position is fixed. */
+  var favName=(V.sheet==="exdetail"&&V.sd&&V.sd.name)?V.sd.name:null;
+  var star=favName
+    ?'<button class="favstar'+(isFav(favName)?" on":"")+'" data-fav="'+esc(favName)+'" '
+      +'aria-pressed="'+(isFav(favName)?"true":"false")+'" aria-label="'
+      +(isFav(favName)?t("Remove from favourites"):t("Add to favourites"))+'">'
+      +(isFav(favName)?"★":"☆")+'</button>'
+    :'';
+  return '<div class="sheet"'+(hard?'':' data-close="1"')+'>'
+        +'<div class="sheetbox" data-stop="1" role="dialog" aria-modal="true">'
+        +'<div class="sheethead">'
+        +(hard?'':'<span class="grab" aria-hidden="true"></span>')
+        +star
+        +'<button class="x" data-close="1" aria-label="'+t("Close")+'">✕</button></div>'
+        /* The ✕, a tap outside and a drag down all close this. A fourth control at
+           the end of the scroll was noise. */
+        +b+'</div></div>';}
 
 
 export {vSheet};

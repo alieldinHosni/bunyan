@@ -28,7 +28,10 @@
   --ok:#256B2A; --okSoft:#E3F0E4; --gold:#8A6F16;
   --navbg:#0A0A0C; --navtext:#6B6B73; --navon:#C41E2A;
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* Kills double-tap-to-zoom, which has no place in an installed app, and with it
+   Safari's ~300ms tap delay. Pinch-to-zoom is untouched. user-scalable=no in the
+   viewport meta does not work: iOS has ignored it since iOS 10. */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 html,body{margin:0;background:var(--bg);color:var(--text);
   background-image:radial-gradient(120% 60% at 50% -10%, #2A0F12 0%, rgba(13,13,13,0) 62%);
   background-attachment:fixed;
@@ -148,10 +151,17 @@ body.noanim #app,body.noanim .sheetbox,body.noanim .sheet,
 body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
 nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;
   stroke-linecap:round;stroke-linejoin:round}
-.sheet{position:fixed;inset:0;background:#0009;z-index:100;display:flex;align-items:flex-end}
+/* cursor:pointer is not decoration here. iOS Safari only delivers click events from
+   a plain div when it looks interactive, which is why tapping the dimmed area above
+   a sheet did nothing on a phone while working on a desktop. */
+.sheet{position:fixed;inset:0;background:#0009;z-index:100;display:flex;align-items:flex-end;
+  cursor:pointer}
 .sheetbox{background:var(--bg);width:100%;max-width:560px;margin:0 auto;
   border-radius:22px 22px 0 0;padding:20px 16px calc(28px + env(safe-area-inset-bottom));
-  max-height:88vh;overflow-y:auto;border:1px solid var(--border)}
+  max-height:88vh;overflow-y:auto;border:1px solid var(--border);
+  /* Without this, reaching the top or bottom of a sheet hands the scroll to the
+     page behind it, which then moves under the sheet. */
+  overscroll-behavior:contain}
 /* Icon-only controls need a real hit area even when the glyph is small. */
 .iconbtn{width:44px;min-height:44px;padding:0;font-size:20px;line-height:1}
 button.pill{position:relative;min-height:34px}
@@ -295,10 +305,18 @@ body.noanim #splash .sp-embers{display:none}
 .sheethead{position:sticky;top:-20px;z-index:5;margin:-20px -16px 8px;padding:14px 16px 10px;
   background:var(--bg);border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:flex-end}
-.sheethead .x{width:38px;height:38px;border-radius:19px;border:1px solid var(--border);
+.sheethead .x{flex:0 0 38px;width:38px;height:38px;border-radius:19px;border:1px solid var(--border);
   background:var(--surface);color:var(--dim);font-size:19px;line-height:1;padding:0;
   display:flex;align-items:center;justify-content:center}
 .sheethead .x:active{background:var(--raised)}
+/* The handle now does what it always looked like it did. */
+.grab{position:absolute;left:50%;top:7px;transform:translateX(-50%);
+  width:38px;height:4px;border-radius:2px;background:var(--border)}
+.sheethead:active .grab{background:var(--dim)}
+/* While a finger is on it the sheet follows directly, so no transition; the class is
+   removed on release so the spring-back and the dismiss can animate. */
+.sheetbox.dragging{transition:none!important;animation:none!important}
+.sheetbox.settling{transition:transform .22s cubic-bezier(.2,.8,.25,1)}
 
 /* ================= workout session: execution surface, not an editor */
 .ss-top{position:sticky;top:0;z-index:30;
@@ -357,7 +375,7 @@ body.noanim #splash .sp-embers{display:none}
 .setrow.hd{background:none;border:none;padding:0 9px 6px;margin-bottom:2px}
 .setrow.hd span{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
   color:var(--faint);text-align:center}
-.setrow.hd span:nth-child(1),.setrow.hd span:nth-child(2){text-align:left}
+.setrow.hd span:nth-child(2),.setrow.hd span:nth-child(3){text-align:left}
 .setrow.on{border-color:var(--accent);background:var(--accentSoft)}
 .setrow.pend{opacity:.55}
 .setrow.warm{opacity:.7}
@@ -392,6 +410,32 @@ body.noanim #splash .sp-embers{display:none}
 @keyframes setpop{0%{transform:scale(.6);opacity:0}55%{transform:scale(1.14)}100%{transform:scale(1);opacity:1}}
 .logbtn.done.fresh{animation:setpop .34s cubic-bezier(.2,.8,.3,1)}
 
+/* Row start. No left/right anywhere: the grid follows the writing direction, so this
+   sits on the right in Arabic on its own. */
+.delset{width:24px;height:24px;min-height:24px;padding:0;border:none;background:none;
+  color:var(--faint);font-size:12px;line-height:1;border-radius:12px;position:relative}
+/* The glyph is small; the thing you can hit is not. */
+.delset:after{content:"";position:absolute;left:-10px;right:-10px;top:-10px;bottom:-10px}
+.delset:active{background:var(--accentSoft);color:var(--accentHi)}
+.setrow.hd .delset{visibility:hidden}
+.addrow{display:flex;justify-content:center;margin:2px 0 4px}
+.addset{width:44px;height:44px;border-radius:22px;border:1px dashed var(--border);
+  background:var(--surface);color:var(--dim);font-size:23px;font-weight:300;line-height:1;
+  padding:0;transition:transform .09s ease,background .12s ease,color .12s ease}
+.addset:active{background:var(--accentSoft);color:var(--accentHi);transform:scale(.9)}
+.favstar{flex:0 0 38px;width:38px;height:38px;border-radius:19px;border:1px solid var(--border);
+  background:var(--surface);color:var(--faint);font-size:19px;line-height:1;padding:0;
+  display:flex;align-items:center;justify-content:center;margin-inline-end:8px}
+.favstar.on{color:var(--gold);border-color:var(--gold)}
+.favstar:active{background:var(--raised)}
+.sheethead{justify-content:flex-end}
+.pdate{background:none;border:none;color:var(--text);font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;font-size:13px;padding:8px 10px;border-radius:9px;
+  display:inline-flex;align-items:center;gap:5px;min-height:44px}
+.pdate:active{background:var(--surface)}
+.pchev{display:inline-block;transform:rotate(90deg);transition:transform .18s ease;
+  color:var(--faint);font-size:15px;line-height:1}
+.pchev.up{transform:rotate(-90deg)}
 .target{display:flex;align-items:center;justify-content:space-between;gap:10px;
   border:1px dashed var(--border);border-radius:12px;padding:11px 13px;margin-top:4px}
 .target .tl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
@@ -487,7 +531,8 @@ body.noanim .skel{animation:none}
 /* ================= barcode scanner: full screen, one job. Built outside the render
    tree, so a repaint cannot tear the live video out of the DOM mid-stream. */
 .scanwrap{position:fixed;inset:0;z-index:120;background:#000;display:flex;
-  flex-direction:column;align-items:center;justify-content:center}
+  flex-direction:column;align-items:center;justify-content:center;
+  overscroll-behavior:contain;touch-action:none}
 .scanwrap video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .scanbox{position:relative;width:min(78vw,320px);height:min(46vw,190px);
   border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.55)}
@@ -525,6 +570,7 @@ body.noanim .skel{animation:none}
 <div id="app"></div>
 <nav id="nav"></nav>
 <div id="sheet"></div>
+<div id="rest"></div>
 <script type="module" src="./js/app.js"></script>
 </body>
 </html>

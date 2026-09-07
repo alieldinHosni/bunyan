@@ -63,7 +63,7 @@ the benefit at none of that cost.
 ## Changing the app later
 
 Edit the file you need under `js/` on GitHub and commit. Then open `sw.js`, bump the
-`CACHE` line to the next number (`bunyan-v20` → `bunyan-v21`), and commit that too —
+`CACHE` line to the next number (`bunyan-v24` → `bunyan-v25`), and commit that too —
 otherwise phones keep serving the cached old version. If you add a **new** module, add
 its path to `FILES` in `sw.js` as well.
 
@@ -82,6 +82,8 @@ js/
   units.js      kg/lb display conversion
   db.js         training history and the food log, in IndexedDB
   scan.js       camera barcode scanning, and the overlay it owns
+  ui/nav.js     the back stack: arrow, edge swipe and OS gesture share one path
+  ui/sheetdrag.js  drag a sheet header down to dismiss
   state.js      S, profiles, persistence, migration
   data/         exercises.js, splits.js
   engine/       plan.js, formulas.js, nutrition.js
@@ -109,6 +111,101 @@ Modules export only what something else actually imports, so a short export list
 correct rather than an oversight. Two knots were untied on the way in: `util.js` no
 longer calls `toast()` (app.js injects the handler through `setStorageErrorHandler`), and
 `state.js` no longer calls `render()`.
+
+## Rendering, and what must not be rebuilt
+
+`render()` replaces `#app` and `#sheet` wholesale. That is fine for content and wrong for
+anything with its own live state, so three things sit outside it and are mutated instead:
+
+| Surface | Container | Why |
+| --- | --- | --- |
+| Rest timer | `#rest` | Rebuilding restarts the ring's CSS transition from zero, which is what made every −30s tap stutter |
+| Barcode scanner | its own overlay | A rebuild tears a live `<video>` out of the DOM mid-stream |
+| The focused field | — | Caret and selection are captured before the rebuild and restored after |
+
+`syncRest()` rebuilds the rest screen only when it is genuinely a different one — a new
+exercise, a new set, a language change — and `paintRest()` touches the four things that
+change per tick. ±30s and Pause call `paintRest()`, never `render()`.
+
+Search is debounced at 140 ms, and `render()` restores the caret to **where it was**, not
+to the end of the value. Sending it to the end on every keystroke is what made typing feel
+like the field was fighting back.
+
+## Going back
+
+Every back affordance calls `goBack()` and none of them knows a destination. They used to:
+the session arrow went to Home and the train arrows went to the day list, which is why
+they behaved as home shortcuts wearing a back icon.
+
+`ui/nav.js` keeps a stack of screens. `pushNav()` records where you are before a
+navigation; a tab tap clears the stack, because a tab is a change of place rather than a
+step deeper. The arrow and the edge swipe do not navigate themselves — they call
+`history.back()` and let `popstate` do the work, so the arrow, the swipe and the OS
+gesture cannot drift apart.
+
+The swipe starts within 24 px of the **leading** edge — the right edge in Arabic — and
+gives way to a vertical drag or to any horizontally scrollable ancestor, so a filter chip
+row keeps its own gesture.
+
+Leaving an active workout is the one back that asks first; that is where "discard this
+session" now lives, instead of a separate link at the bottom of the screen.
+
+**A sheet pins the page behind it.** `render()` calls `lockScroll(V.sheet)`, which fixes
+the body and puts the scroll offset back when the sheet closes. `overscroll-behavior:
+contain` on `.sheetbox` is only half the job — it stops a scroll that starts *inside* the
+sheet from chaining outwards, but a drag beginning on the backdrop, or on a part of the
+sheet that does not scroll, still moved the page underneath. On iOS `overflow: hidden` on
+the body does not hold. `lockScroll` ignores a repeat call in the same direction, because
+re-locking would read a scroll position of zero from an already-pinned body and the page
+would jump to the top on close.
+
+**Tapping outside closes a sheet, and `cursor:pointer` on the overlay is what makes that
+work.** iOS Safari only delivers click events from a plain `div` when it looks
+interactive; without it the dimmed area was dead on a phone and fine on a desktop.
+
+Three sheets behave differently on dismissal, and the rule is what the dismissal would
+cost: most close freely; the manual food entry asks first when something has been typed,
+and **Cancel puts the typing back** rather than discarding it; a destructive confirmation
+(`hard:true`) has no `data-close` on its overlay and no drag handle at all, because an
+ambiguous dismiss on a delete prompt is unsafe.
+
+## Names, instructions, and what is a key
+
+**Exercise names are split for display only.** free-exercise-db packs two different things
+into the name field: a dash usually introduces a real variant
+("Triceps Pushdown - Rope Attachment"), brackets usually give an alternate name for the
+same movement ("Hyperextensions (Back Extensions)"). The first becomes a pill beside the
+muscle; the second is just another word for it.
+
+**The full name stays the key.** Nothing stored is rewritten, so saved splits, logged
+sessions, favourites and records keep resolving with no migration — and searching a
+stripped qualifier still finds the exercise, because the filter still runs over the full
+name. Only 15 base names collide across all 873 entries, and those rows carry the variant
+as a subtitle so they stay apart in the picker.
+
+**Instructions are trimmed, not rewritten.** Filler steps go by pattern — "Repeat for the
+recommended amount of repetitions" is the same sentence on hundreds of entries — and some
+padding is stripped from what is left. That makes the text shorter, not better: rewriting
+868 sets by hand is content work, and doing it with a model would need a keyed API this
+app deliberately does not have. Three steps show by default with the rest one tap away,
+and Common Mistakes is collapsed because it is generated from the movement pattern and
+every push exercise shows the same three lines.
+
+## Food search
+
+Exact, substring and alias matching runs first and is unchanged. **Only when that returns
+nothing** does a Levenshtein pass run, with a tolerance that scales with word length — one
+edit for a short word, three for a long one — so good matches are never diluted and the
+common case stays instant. The whole 873-name sweep takes about 35 ms.
+
+Arabic is normalised before any comparison, because Arabic mistyping is character-variant
+confusion rather than transposition: `أ إ آ` fold to `ا`, `ى` to `ي`, `ة` to `ه`, and
+tashkeel is stripped. That catches more real error than edit distance does, and costs
+nothing.
+
+**A guess is offered, never taken.** A near miss appears under "Did you mean…" and has to
+be tapped. Logging the wrong food silently corrupts the day's numbers; one extra tap does
+not.
 
 ## Where your data lives
 

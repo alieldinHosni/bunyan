@@ -1,7 +1,7 @@
 /* Bunyan — train
    Train tab: days, library, splits, bodyweight. */
 import {t} from "../../i18n/dict.js";
-import {empty, EQUIP, LIB, MUSCLES, patternOf, thumb} from "../../data/exercises.js";
+import {empty, EQUIP, LIB, muscleOf, MUSCLES, patternOf, thumb} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
 import {prevPerf, prFor} from "../../engine/formulas.js";
 import {groupLabel, vLogger} from "./session.js";
@@ -28,6 +28,7 @@ function vTrain(){
   if(V.train==="library")return vLibrary();
   if(V.train==="bodyweight")return vBodyweight();
   if(V.train==="day")return vDay();
+  if(V.train==="favs")return vFavs();
 
   var sp=split(),h="";
   var nd=nextDayOf(sp);
@@ -71,8 +72,31 @@ function vTrain(){
    +' exercises and a four day program</div></div><span class="chev">\u203a</span></button>'
    +'<button class="item" data-train="library"><div><div style="font-weight:600">'+t("Exercise library")+'</div>'
    +'<div class="tiny">'+LIB.length+' exercises, filter by muscle and equipment</div></div>'
+   +'<span class="chev">\u203a</span></button>'
+   /* Starring already pushes an exercise to the top of the picker; what was missing
+      was anywhere to see what you had starred. */
+   +'<button class="item" data-train="favs"><div><div style="font-weight:600">'+t("Favourites")+'</div>'
+   +'<div class="tiny">'+(S.favs.length
+      ?S.favs.length+' '+t("starred exercises")
+      :t("Star an exercise and it is suggested first"))+'</div></div>'
    +'<span class="chev">\u203a</span></button></div>';
   return h;}
+
+/* ---- favourites ---------------------------------------------------------- */
+function vFavs(){
+  var h='<button class="btn d sm" data-back="1" style="width:auto">\u2039 Back</button>';
+  h+=head(t("Favourites"),t("Suggested first when you add an exercise"));
+  if(!S.favs.length)
+    return h+empty("star",t("No favourites yet"),
+      t("Open any exercise and tap the star at the top of the sheet. Starred lifts come first in the picker."),
+      '<button class="btn" data-train="library">'+t("Exercise library")+'</button>');
+  h+='<div class="list">';
+  S.favs.forEach(function(n){
+    h+='<button class="item" data-exdetail="'+esc(n)+'">'+thumb(n,36)
+     +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+esc(exName(n))+'</div>'
+     +'<div class="tiny">'+t(muscleOf(n))+'</div></div>'
+     +'<span class="chev">\u203a</span></button>';});
+  return h+'</div>';}
 
 function estMinutes(d){
   var tot=0;
@@ -82,7 +106,7 @@ function estMinutes(d){
 function vPreview(){
   var sp=allSplits().filter(function(x){return x.id===V.previewId;})[0];
   if(!sp){V.train="splits";return vTrain();}
-  var h='<button class="btn d sm" data-train="splits" style="width:auto">\u2039 Back</button>';
+  var h='<button class="btn d sm" data-back="1" style="width:auto">\u2039 Back</button>';
   h+='<h1>'+esc(sp.name)+'</h1><p class="sub">'+esc(sp.tag||"custom")+'</p>';
   sp.days.forEach(function(d){
     if(!d.ex.length){h+='<div class="card"><div class="row"><h3 class="dim">'+esc(d.name)
@@ -100,7 +124,7 @@ function vPreview(){
 
 function vBodyweight(){
   var bw=LIB.filter(function(l){return l[2]==="Bodyweight";});
-  var h='<button class="btn d sm" data-train="days" style="width:auto">\u2039 Back</button>';
+  var h='<button class="btn d sm" data-back="1" style="width:auto">\u2039 Back</button>';
   h+=head(t("Bodyweight"),t("Nothing but the floor"));
   h+='<button class="card tap" data-preview="bw" style="border-color:var(--accent)">'
    +'<div class="row"><h3>'+t("Bodyweight program")+'</h3><span class="pill a">4 days</span></div>'
@@ -132,7 +156,7 @@ function vLibrary(){
         && (V.exe==="All"||l[2]===V.exe)
         && (!V.exd||l[4]===V.exd)
         && (!q||l[0].toLowerCase().indexOf(q)>=0);});
-  var h='<button class="btn d sm" data-train="days" style="width:auto">\u2039 Back</button>';
+  var h='<button class="btn d sm" data-back="1" style="width:auto">\u2039 Back</button>';
   h+=head(t("Exercises"),t("Saber execution, perfect form"));
   h+='<p class="tiny" style="margin:-14px 0 12px">'+list.length+' of '+LIB.length+' shown'
    +(V.exd?' \u00b7 '+V.exd:'')+'</p>';
@@ -159,7 +183,7 @@ function vLibrary(){
   return h;}
 
 function vSplits(){
-  var h='<button class="btn d sm" data-train="days" style="width:auto">\u2039 Back</button>';
+  var h='<button class="btn d sm" data-back="1" style="width:auto">\u2039 Back</button>';
   h+=head(t("Programs"),t("One active at a time"));
   h+='<div class="list">';
   allSplits().forEach(function(sp){
@@ -173,7 +197,7 @@ function vSplits(){
 
 function vDay(){
   var d=dayOf(V.dayId);if(!d){V.train="days";return vTrain();}
-  var h='<div class="row"><button class="btn d sm" data-train="days">‹ Back</button>'
+  var h='<div class="row"><button class="btn d sm" data-back="1">‹ Back</button>'
    +'<button class="btn d sm" data-renameday="'+d.id+'">'+t("Rename")+'</button></div>';
   h+='<h1>'+esc(d.name)+'</h1><p class="sub">'+d.ex.length+' exercises · tap one to edit</p>';
   h+='<div class="list">';
