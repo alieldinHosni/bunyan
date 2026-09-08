@@ -62,6 +62,37 @@ function rpeWanted(i,rows){
 function mmss(s){s=Math.max(0,Math.round(s));
   return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");}
 
+/* ---- the session clock ----------------------------------------------------
+   Seven minutes with no set logged is a break, not a rest. Arbitrary, and it will
+   occasionally clip a genuinely long rest between heavy singles, so it is one
+   constant and one line to change. */
+var IDLE_PAUSE=7*60*1000;
+/* Derived from timestamps, never counted by an interval. iOS suspends the page the
+   moment it is backgrounded, so anything that ticks is wrong the instant the phone
+   is put down; this returns the right number even after hours asleep.
+
+   Inactivity means no set logged — not the app being backgrounded. Someone can sit
+   with the session open between sets, and that time counts. */
+function sessionClock(a){
+  if(!a)return {ms:0,paused:false};
+  var last=a.lastSet||a.started||Date.now();
+  var base=a.activeMs||0;
+  var since=Date.now()-last;
+  if(since<IDLE_PAUSE)return {ms:base+since,paused:false};
+  return {ms:base+IDLE_PAUSE,paused:true};
+}
+/* Wall clock, kept alongside active time. Summing only the active periods would
+   throw away when the session actually happened, which cannot be recovered. */
+function sessionWall(a){ return a&&a.started?Date.now()-a.started:0; }
+/* Called when a set is logged: closes the period that just ended and starts a new
+   one. Anything past the threshold was a break and does not accrue. */
+function noteSet(a){
+  if(!a)return;
+  var now=Date.now(), last=a.lastSet||a.started||now;
+  a.activeMs=(a.activeMs||0)+Math.min(now-last,IDLE_PAUSE);
+  a.lastSet=now;
+}
+
 function vLogger(){
   var a=S.active;
   if(V.logIdx>=a.entries.length)V.logIdx=a.entries.length-1;
@@ -76,7 +107,7 @@ function vLogger(){
   var planTotal=0,doneAll=0;
   a.entries.forEach(function(x){planTotal+=rowsFor(x);doneAll+=x.sets.length;});
   var pct=planTotal?Math.min(100,Math.round(doneAll/planTotal*100)):0;
-  var el=a.started?Math.floor((Date.now()-a.started)/1000):0;
+  var clock=sessionClock(a);
 
   /* --- sticky header: identity, elapsed, overall progress --- */
   var h='<div class="ss-top"><div class="ss-row">'
@@ -87,6 +118,11 @@ function vLogger(){
    +' <span class="num">'+a.entries.length+'</span></span><span class="sep">\u00b7</span>'
    +'<span class="mseg"><span class="num">'+doneAll+'</span> '
    +t("sets logged")+'</span></div></div>'
+   /* A stopped clock with nothing to explain it reads as a bug, so the paused state
+      says so rather than just freezing. */
+   +'<div class="ss-clock"><span class="num" id="sessClock">'+mmss(clock.ms/1000)+'</span>'
+   +'<span class="ss-paused" id="sessPaused"'+(clock.paused?'':' hidden')+'>'
+   +t("Paused")+'</span></div>'
    +'</div><div class="ss-bar"><i style="width:'+pct+'%"></i></div></div>';
 
   /* --- one segment per exercise; members of a superset are tied together --- */
@@ -213,7 +249,10 @@ function vLogger(){
    +'<button data-swap="1">'+t("Replace")+'</button>'
    +(loadable(e.name)?'<button data-plates="1">'+t("Plates")+'</button>':'')
    +'<button data-note="1">'+t("Note")+(a.notes?' •':'')+'</button>'
-   +'<button data-finish="1">'+t("Finish")+'</button></div>';
+   +'<button data-finish="1">'+t("Finish")+'</button>'
+   /* Discarding is an explicit act inside the session now. Leaving the screen no
+      longer asks, so this is the only way to throw a workout away. */
+   +'<button data-discard="1">'+t("Discard")+'</button></div>';
 
   /* The rest screen is no longer part of this string; syncRest() owns it. */
   return h;}
@@ -325,4 +364,4 @@ function syncRest(){
   host.innerHTML=vRest(a,e,rowsFor(e),ex_isTimed(e.name));
 }
 
-export {groupLabel, groupNext, groupRun, mmss, paintRest, platePlan, rowsFor, syncRest, vLogger};
+export {groupLabel, groupNext, groupRun, IDLE_PAUSE, mmss, noteSet, paintRest, platePlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger};

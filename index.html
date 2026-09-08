@@ -20,6 +20,13 @@
   --navbg:#0A0A0C; --navtext:#6B6B73; --navon:#C41E2A;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
   --r1:8px; --r2:12px; --r3:14px;
+  /* Motion tokens. js/ui/motion.js overwrites these at boot and whenever the in-app
+     animation toggle changes; these are the values it writes, repeated here so the
+     first paint before any script runs is not unstyled. */
+  --m-press:90ms; --m-micro:150ms; --m-pop:180ms; --m-comp:240ms;
+  --m-sheet:280ms; --m-screen:300ms; --m-data:420ms; --m-reveal:460ms; --m-fade:200ms;
+  --e-standard:cubic-bezier(.2,.7,.3,1); --e-decel:cubic-bezier(.16,.84,.34,1);
+  --e-accel:cubic-bezier(.5,0,.9,.3); --e-spring:cubic-bezier(.2,.9,.3,1.06);
 }
 [data-theme="light"]{
   --bg:#F4F2EE; --surface:#FFFFFF; --raised:#EDEAE4;
@@ -72,7 +79,7 @@ h3{font-size:16px;font-weight:700;margin:0}
 .btn{width:100%;padding:16px 0;border-radius:var(--r1);border:none;background:var(--accent);
   color:var(--onAccent);font-size:15px;font-weight:800;letter-spacing:.06em;
   text-transform:uppercase;margin-top:var(--s2);
-  transition:transform .09s ease, filter .09s ease}
+  transition:transform var(--m-press) var(--e-standard), filter var(--m-press) var(--e-standard)}
 .btn:active{transform:scale(.975);filter:brightness(1.12)}
 .btn.g{background:var(--surface);border:1px solid var(--border);color:var(--text)}
 .btn.o{background:transparent;border:1px solid var(--ok);color:var(--ok)}
@@ -81,7 +88,7 @@ h3{font-size:16px;font-weight:700;margin:0}
 .btn.sm{width:auto;padding:9px 14px;font-size:14px;border-radius:10px;margin:0}
 .pill{padding:6px 11px;border-radius:var(--r1);background:var(--surface);
   border:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--dim);transition:transform .09s ease}
+  text-transform:uppercase;color:var(--dim);transition:transform var(--m-press) var(--e-standard)}
 .pill:active{transform:scale(.94)}
 .pill.a{background:var(--accent);border-color:var(--accent);color:#fff}
 .pill.gold{background:var(--accentSoft);color:var(--gold);font-weight:600}
@@ -122,27 +129,28 @@ td{padding:7px 0;text-align:center;font-variant-numeric:tabular-nums;font-size:1
 .dot.on{background:var(--ok);border-color:var(--ok)}
 body.kb nav{transform:translateY(120%);pointer-events:none}
 nav{position:fixed;bottom:0;left:0;right:0;background:var(--navbg);
-  transition:transform .18s ease;will-change:transform;
+  transition:transform var(--m-micro) var(--e-standard);will-change:transform;
   border-top:1px solid #00000022;display:flex;
   padding:9px 0 calc(20px + env(safe-area-inset-bottom));z-index:50}
 nav button{flex:1;background:none;border:none;color:var(--navtext);font-size:10px;
   font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   padding:4px 0 8px;display:flex;flex-direction:column;align-items:center;gap:5px;
-  position:relative;transition:color .15s ease}
+  position:relative;transition:color var(--m-micro) var(--e-standard)}
 nav button.on{color:var(--navon)}
 nav button:after{content:"";position:absolute;bottom:0;left:50%;width:0;height:2px;
   background:var(--accent);border-radius:1px;transform:translateX(-50%);
-  transition:width .22s cubic-bezier(.2,.7,.3,1)}
+  transition:width var(--m-micro) var(--e-standard)}
 nav button.on:after{width:26px}
 nav button:active svg{transform:scale(.88)}
-nav svg{transition:transform .12s ease}
+nav svg{transition:transform var(--m-micro) var(--e-standard)}
 /* Gated to real navigation. Left ungated it replayed on every state change, which
    during a workout meant the screen flew in again after every logged set. */
-#app.pagein{animation:pageIn .26s cubic-bezier(.2,.7,.3,1)}
+#app.pagein{animation:pageIn var(--m-screen) var(--e-standard)}
 @keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.sheetbox{animation:sheetIn .28s cubic-bezier(.2,.8,.25,1)}
+/* Gated: entry animations run when a surface appears, never on a re-render. */
+.sheet.entering .sheetbox{animation:sheetIn var(--m-sheet) var(--e-decel)}
 @keyframes sheetIn{from{transform:translateY(14%)}to{transform:none}}
-.sheet{animation:fadeIn .2s ease}
+.sheet.entering{animation:fadeIn var(--m-fade) var(--e-standard)}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){
   #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh{animation:none}
@@ -156,7 +164,9 @@ nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;
    a sheet did nothing on a phone while working on a desktop. */
 .sheet{position:fixed;inset:0;background:#0009;z-index:100;display:flex;align-items:flex-end;
   cursor:pointer}
-.sheetbox{background:var(--bg);width:100%;max-width:560px;margin:0 auto;
+/* Sheets clip, never slide sideways. Even with the food row fixed, one long food or
+   exercise name would reproduce the "corrupted sheet" report. */
+.sheetbox{overflow-x:hidden;background:var(--bg);width:100%;max-width:560px;margin:0 auto;
   border-radius:22px 22px 0 0;padding:20px 16px calc(28px + env(safe-area-inset-bottom));
   max-height:88vh;overflow-y:auto;border:1px solid var(--border);
   /* Without this, reaching the top or bottom of a sheet hands the scroll to the
@@ -169,7 +179,7 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
 .list{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);
   overflow:hidden;margin-bottom:var(--s3)}
 .item{display:flex;justify-content:space-between;align-items:center;gap:var(--s3);
-  padding:var(--s4);transition:background .12s ease;
+  padding:var(--s4);transition:background var(--m-micro) var(--e-standard);
   border-top:1px solid var(--border);width:100%;background:none;
   color:var(--text);text-align:left;border-left:none;border-right:none;border-bottom:none}
 .item:first-child{border-top:none}
@@ -310,13 +320,36 @@ body.noanim #splash .sp-embers{display:none}
   display:flex;align-items:center;justify-content:center}
 .sheethead .x:active{background:var(--raised)}
 /* The handle now does what it always looked like it did. */
+/* Search chrome stays put while the results below it change. */
+.exqbar{position:sticky;top:44px;z-index:4;background:var(--bg);
+  padding:2px 0 8px;margin-bottom:2px}
+.exfilters{display:flex;gap:6px;overflow-x:auto;margin:11px 0 0;padding-bottom:4px}
+/* A floor, so a no-match cannot collapse the sheet and the next keystroke cannot
+   spring it back open under the finger. */
+.exresults{min-height:52vh}
 .grab{position:absolute;left:50%;top:7px;transform:translateX(-50%);
   width:38px;height:4px;border-radius:2px;background:var(--border)}
 .sheethead:active .grab{background:var(--dim)}
 /* While a finger is on it the sheet follows directly, so no transition; the class is
    removed on release so the spring-back and the dismiss can animate. */
+.sheetbox *{max-width:100%}
+.sheetbox img,.sheetbox svg{max-width:100%;height:auto}
+/* The amount, big enough to tap, with its steppers either side. */
+.fqty{display:flex;align-items:center;gap:10px}
+.fqty-v{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);
+  color:var(--text);border-radius:10px;min-height:44px;padding:0 12px;
+  font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.fqty-v:active{background:var(--raised)}
+.facts{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;padding-inline-start:2px}
+.facts button{background:none;border:none;padding:6px 0;min-height:44px;
+  color:var(--dim);font-size:13.5px;font-weight:600;letter-spacing:.02em}
+.facts button.danger{color:var(--faint)}
+.facts button:active{color:var(--accentHi)}
 .sheetbox.dragging{transition:none!important;animation:none!important}
-.sheetbox.settling{transition:transform .22s cubic-bezier(.2,.8,.25,1)}
+/* animation:none on both, not just .dragging. A CSS animation outranks an inline
+   style, so releasing mid-entry handed the sheet back to sheetIn, which pulled it
+   up to its own keyframe before the close ran — the "goes up, then closes" bug. */
+.sheetbox.settling{transition:transform var(--m-comp) var(--e-decel);animation:none!important}
 
 /* ================= workout session: execution surface, not an editor */
 .ss-top{position:sticky;top:0;z-index:30;
@@ -338,9 +371,14 @@ body.noanim #splash .sp-embers{display:none}
 .ss-clock i{width:7px;height:7px;border-radius:4px;background:var(--accentHi);display:block;
   animation:livedot 2.4s ease-in-out infinite}
 @keyframes livedot{0%,100%{opacity:1}50%{opacity:.32}}
+/* The pill already existed; it now carries the paused state under the digits. */
+.ss-clock{margin-inline-start:auto;flex-direction:column;align-items:flex-end;gap:0;padding:6px 12px}
+.ss-clock .num{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text)}
+.ss-paused{display:block;font-size:9px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--accentHi);margin-top:1px}
 .ss-bar{height:3px;background:var(--raised);border-radius:2px;overflow:hidden;margin-top:11px}
 .ss-bar i{display:block;height:3px;background:var(--accent);border-radius:2px;
-  transition:width .35s cubic-bezier(.2,.7,.3,1)}
+  transition:width var(--m-data) var(--e-decel)}
 .ss-seg{display:flex;gap:4px;margin:0 0 18px}
 .ss-seg button{flex:1;padding:9px 0;background:none;border:none;position:relative}
 .ss-seg button:after{content:"";position:absolute;left:0;right:0;top:-11px;bottom:-11px}
@@ -371,7 +409,7 @@ body.noanim #splash .sp-embers{display:none}
 .setgrid{margin-top:16px}
 .setrow{display:grid;align-items:center;gap:6px;padding:7px 9px;border-radius:12px;
   border:1px solid transparent;background:var(--surface);margin-bottom:7px;
-  transition:border-color .16s ease, background .16s ease}
+  transition:border-color var(--m-micro) var(--e-standard), background var(--m-micro) var(--e-standard)}
 .setrow.hd{background:none;border:none;padding:0 9px 6px;margin-bottom:2px}
 .setrow.hd span{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
   color:var(--faint);text-align:center}
@@ -401,14 +439,14 @@ body.noanim #splash .sp-embers{display:none}
   font-size:15px}
 .logbtn{width:38px;height:38px;border-radius:19px;border:1px solid var(--border);
   background:transparent;color:var(--dim);font-size:19px;font-weight:600;padding:0;margin:0 auto;
-  display:flex;align-items:center;justify-content:center;transition:transform .1s ease}
+  display:flex;align-items:center;justify-content:center;transition:transform var(--m-press) var(--e-standard)}
 .logbtn:active{transform:scale(.88)}
 .logbtn.go{border-color:var(--accent);background:var(--accent);color:#fff;
   box-shadow:0 5px 18px rgba(196,30,42,.42)}
 .logbtn.done{border-color:var(--ok);background:var(--ok);color:#fff}
 .logbtn.off{opacity:.3}
 @keyframes setpop{0%{transform:scale(.6);opacity:0}55%{transform:scale(1.14)}100%{transform:scale(1);opacity:1}}
-.logbtn.done.fresh{animation:setpop .34s cubic-bezier(.2,.8,.3,1)}
+.logbtn.done.fresh{animation:setpop var(--m-pop) var(--e-spring)}
 
 /* Row start. No left/right anywhere: the grid follows the writing direction, so this
    sits on the right in Arabic on its own. */
@@ -421,7 +459,7 @@ body.noanim #splash .sp-embers{display:none}
 .addrow{display:flex;justify-content:center;margin:2px 0 4px}
 .addset{width:44px;height:44px;border-radius:22px;border:1px dashed var(--border);
   background:var(--surface);color:var(--dim);font-size:23px;font-weight:300;line-height:1;
-  padding:0;transition:transform .09s ease,background .12s ease,color .12s ease}
+  padding:0;transition:transform var(--m-press) var(--e-standard),background .12s ease,color .12s ease}
 .addset:active{background:var(--accentSoft);color:var(--accentHi);transform:scale(.9)}
 .favstar{flex:0 0 38px;width:38px;height:38px;border-radius:19px;border:1px solid var(--border);
   background:var(--surface);color:var(--faint);font-size:19px;line-height:1;padding:0;
@@ -433,7 +471,7 @@ body.noanim #splash .sp-embers{display:none}
   text-transform:uppercase;font-size:13px;padding:8px 10px;border-radius:9px;
   display:inline-flex;align-items:center;gap:5px;min-height:44px}
 .pdate:active{background:var(--surface)}
-.pchev{display:inline-block;transform:rotate(90deg);transition:transform .18s ease;
+.pchev{display:inline-block;transform:rotate(90deg);transition:transform var(--m-micro) var(--e-standard);
   color:var(--faint);font-size:15px;line-height:1}
 .pchev.up{transform:rotate(-90deg)}
 .target{display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -463,7 +501,7 @@ body.noanim #splash .sp-embers{display:none}
 .restctl{display:flex;align-items:center;gap:12px;margin-top:22px}
 .rbtn{height:52px;min-width:66px;padding:0 18px;border-radius:26px;border:1px solid var(--border);
   background:var(--surface);color:var(--text);font-size:14px;font-weight:700;
-  font-variant-numeric:tabular-nums;transition:transform .1s ease}
+  font-variant-numeric:tabular-nums;transition:transform var(--m-press) var(--e-standard)}
 .rbtn:active{transform:scale(.94)}
 .rbtn.main{background:var(--accent);border-color:var(--accent);color:#fff;min-width:136px;
   font-size:15px;letter-spacing:.05em;text-transform:uppercase;
@@ -545,6 +583,73 @@ body.noanim .skel{animation:none}
   padding:0 24px;text-shadow:0 1px 6px rgba(0,0,0,.9)}
 .scancancel{position:absolute;left:50%;transform:translateX(-50%);
   bottom:calc(28px + env(safe-area-inset-bottom));width:min(70vw,260px);margin:0}
+
+/* ================= motion: applied from the approved map =================
+   Every value here is a token. Anything that enters is gated so it fires when the
+   thing appears and never on a re-render — the patcher keeps nodes alive, so an
+   ungated entry animation would be exactly the bug Phase 1 removed. */
+
+/* A row arriving in, or leaving, a list. Height is animated only on the one row that
+   changed, which is cheap; nothing around it moves. */
+@keyframes rowIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.setrow.rowin,.list .item.rowin,.fitem.rowin{animation:rowIn var(--m-comp) var(--e-decel)}
+@keyframes rowOut{to{opacity:0;transform:translateY(-4px)}}
+.rowout{animation:rowOut var(--m-comp) var(--e-accel) forwards;pointer-events:none}
+
+/* The rest screen is a distinct mode, so it gets a real entrance. */
+@keyframes restIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:none}}
+#rest .restwrap{animation:restIn var(--m-screen) var(--e-decel)}
+
+/* The framing box scaling in is what draws the eye to where the barcode goes. */
+@keyframes boxIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+.scanwrap{animation:fadeIn var(--m-comp) var(--e-standard)}
+.scanwrap .scanbox{animation:boxIn var(--m-comp) var(--e-decel)}
+
+/* Empty states are not failures, so this is gentle and happens once per view. */
+@keyframes softIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.empty[data-anim]{animation:softIn var(--m-comp) var(--e-standard)}
+
+/* The chart draws itself once when the screen is first shown. Changing the range
+   cross-fades instead — replaying the draw on every chip tap is the replay the brief
+   forbids. */
+@keyframes drawOn{to{stroke-dashoffset:0}}
+.spark-draw path.line{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
+@keyframes sparkSwap{from{opacity:0}to{opacity:1}}
+.spark-swap{animation:sparkSwap var(--m-screen) var(--e-standard)}
+
+/* Weekly bars build, so the ranking becomes obvious as they go. Staggered in the
+   markup, capped at five steps. */
+@keyframes barGrow{from{transform:scaleX(0)}to{transform:none}}
+.bar.grow i{transform-origin:left center;animation:barGrow var(--m-data) var(--e-decel) both}
+[dir="rtl"] .bar.grow i{transform-origin:right center}
+
+/* Error: colour and a small settle. No shake — a shake reads as punishment. */
+@keyframes settle{0%{transform:translateY(-3px)}100%{transform:none}}
+.err{border-color:var(--accent)!important;animation:settle var(--m-comp) var(--e-decel)}
+
+/* Toast in and out, both tokenised. */
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,12px)}
+  to{opacity:1;transform:translate(-50%,0)}}
+.toast{animation:toastIn var(--m-comp) var(--e-decel)}
+.toast.leaving{animation:toastOut var(--m-fade) var(--e-accel) forwards}
+@keyframes toastOut{to{opacity:0;transform:translate(-50%,8px)}}
+
+/* Reduced motion, through either route. Movement stops; fades stay, shortened, because
+   a hard cut between screens is disorienting in a different way. */
+:root.reduced #app.pagein,
+:root.reduced .sheet.entering .sheetbox,
+:root.reduced #rest .restwrap,
+:root.reduced .scanwrap .scanbox,
+:root.reduced .setrow.rowin,
+:root.reduced .list .item.rowin,
+:root.reduced .rowout,
+:root.reduced .empty[data-anim],
+:root.reduced .bar.grow i,
+:root.reduced .spark-draw path.line,
+:root.reduced .logbtn.done.fresh,
+:root.reduced .err{animation:none}
+:root.reduced .skel{animation:none}
+:root.reduced .ss-clock i{animation:none}
 </style>
 </head>
 <body>

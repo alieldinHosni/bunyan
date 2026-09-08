@@ -11,8 +11,8 @@ import {buildPlan} from "./engine/plan.js";
 import {render} from "./ui/render.js";
 import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
-import {groupNext, groupRun, mmss, paintRest} from "./ui/views/session.js";
-import {adoptRestored, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
+import {groupNext, groupRun, mmss, noteSet, paintRest, sessionClock} from "./ui/views/session.js";
+import {adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
 import {fmtW, toDisp, toKg} from "./units.js";
 import {num, r1, setStorageErrorHandler, today, uid} from "./util.js";
 import {audioOn, beeped, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
@@ -109,10 +109,16 @@ document.addEventListener("click",function(ev){
 
   /* ---- logger */
   if(D.startday){pushNav();startDay(D.startday);return;}
+  /* Back to the exact exercise and set, not the top of the workout. V is memory only,
+     so the position rides on the session itself and survives a reload. */
+  if(D.continue!==undefined){
+    resetNav();V.tab="train";V.train="days";
+    V.logIdx=Math.min(num(S.active&&S.active.idx,0),(S.active?S.active.entries.length-1:0));
+    V.fresh=-1;syncDraft();render();return;}
   if(D.jump!==undefined){
     var n2=+D.jump;
     if(!S.active||n2<0||n2>=S.active.entries.length)return;
-    V.logIdx=n2;V.restEnd=0;V.restPaused=false;V.fresh=-1;syncDraft();render();return;}
+    V.logIdx=n2;S.active.idx=n2;V.restEnd=0;V.restPaused=false;V.fresh=-1;syncDraft();saveDB();render();return;}
   if(D.stp){
     var id=D.stp,d1=parseFloat(D.d);
     var cur=id==="bw"?(V.draft.bw!=null?V.draft.bw:toDisp(lastWeight()||86))
@@ -133,6 +139,8 @@ document.addEventListener("click",function(ev){
     if(lp&&lp.value!=="")V.draft.rpe=Math.min(10,Math.max(1,num(lp.value,8)));
     if(!V.draft.r){toast(t("Enter reps first."));return;}
     e3.sets.push({w:V.draft.w,r:V.draft.r,rpe:V.draft.rpe});
+    /* Closes the active period and starts a new one; the clock resumes by itself. */
+    noteSet(S.active);
     V.fresh=e3.sets.length-1;
     play("set");tap("ok");
     /* In a superset you move straight to the next exercise and only rest once the
@@ -144,7 +152,7 @@ document.addEventListener("click",function(ev){
       else{
         var wrapped=run.indexOf(nxt)<=run.indexOf(V.logIdx);
         if(wrapped)startRest(e3); else V.restEnd=0;
-        V.logIdx=nxt;V.fresh=-1;
+        V.logIdx=nxt;S.active.idx=nxt;V.fresh=-1;
       }
       saveDB();syncDraft();render();return;
     }
@@ -203,6 +211,12 @@ document.addEventListener("click",function(ev){
      to a destination of its own. Discarding a session is now part of going back
      rather than a separate link. */
   if(D.back!==undefined){goBack();return;}
+  /* Throwing a workout away is only ever deliberate now: a control inside the
+     session, never a question asked because you glanced at another screen. */
+  if(D.discard!==undefined){
+    askConfirm({title:t("Discard this session?"),
+      body:t("Every set you logged in this workout is thrown away. This cannot be undone."),
+      cta:t("Discard it"),act:"discard",hard:true});return;}
 
   /* ---- daily logs */
   if(D.water){
@@ -417,13 +431,31 @@ document.addEventListener("click",function(ev){
     var order=["conservative","standard","aggressive"];
     S.profile.prog=order[(order.indexOf(S.profile.prog)+1)%3];saveDB();render();return;}
   if(D.setup){openSheet("setup");return;}
+  /* Picking one of the offered candidates: same build, chosen split. */
+  if(D.pickplan){
+    var pp=S.profile;
+    pp.level=val("o_level")||pp.level; pp.goal=val("o_goal")||pp.goal;
+    pp.days=num(val("o_days"),pp.days);
+    pp.weight=toKg(num(val("o_weight"),0))||pp.weight;
+    pp.height=num(val("o_height"),0)||pp.height; pp.age=num(val("o_age"),0)||pp.age;
+    if(!(num(pp.height)>0&&num(pp.weight)>0&&num(pp.age)>0)){
+      toast(t("Enter your height, weight and age first."));saveDB();render();return;}
+    var chosen=allSplits().filter(function(x){return x.id===D.pickplan;})[0];
+    if(!chosen){toast(t("That split is no longer available."));return;}
+    S.myPlan=adoptSplit(chosen);S.onboarded=true;saveDB();
+    closeSheet();V.tab="train";V.train="days";render();
+    toast(chosen.name+" "+t("is now your training."));return;}
   if(D.buildplan){
     var p4=S.profile;
     p4.level=val("o_level")||p4.level; p4.goal=val("o_goal")||p4.goal;
     p4.days=num(val("o_days"),3);
-    p4.weight=toKg(num(val("o_weight"),toDisp(p4.weight)));
-    p4.height=num(val("o_height"),p4.height); p4.age=num(val("o_age"),p4.age);
+    p4.weight=toKg(num(val("o_weight"),0))||p4.weight;
+    p4.height=num(val("o_height"),0)||p4.height; p4.age=num(val("o_age"),0)||p4.age;
     p4.sex=val("o_sex")||p4.sex;
+    /* Nothing is calculated from blanks. The button is disabled without these; this
+       is the second gate in case it is ever reached another way. */
+    if(!(num(p4.height)>0&&num(p4.weight)>0&&num(p4.age)>0)){
+      toast(t("Enter your height, weight and age first."));saveDB();render();return;}
     if(p4.weight&&!S.body.some(function(b2){return b2.date===today();}))
       S.body.push({date:today(),weight:p4.weight});
     var kc=targetKcal();
@@ -593,8 +625,13 @@ document.addEventListener("change",function(ev){
    position and stole focus from the set inputs mid-entry. */
 function tickSession(){
   if(!S.active)return;
+  /* Computed from the last logged set, so a suspended page comes back with the right
+     number rather than a counter that stopped when iOS froze the tab. */
+  var ck=sessionClock(S.active);
   var c=document.getElementById("sessClock");
-  if(c)c.textContent=mmss(S.active.started?(Date.now()-S.active.started)/1000:0);
+  if(c)c.textContent=mmss(ck.ms/1000);
+  var pz=document.getElementById("sessPaused");
+  if(pz)pz.hidden=!ck.paused;
   if(!V.restEnd||V.restPaused)return;
   var left=Math.ceil((V.restEnd-Date.now())/1000);
   /* Running out is the one tick that changes the screen rather than the numbers. */
@@ -672,20 +709,11 @@ ACT.dropsheet=function(){closeSheet();};
 /* The only back that asks first. It used to be a separate "Discard this session"
    link at the bottom of the screen; the arrow now carries it, so there is one way
    out instead of two. */
-var pendingBack=null;
-ACT.backdiscard=function(){
-  S.active=null;V.restEnd=0;V.restPaused=false;V.fresh=-1;
-  keepAwake(false);saveDB();
-  var go=pendingBack;pendingBack=null;
-  if(go)go(); else render();
-};
-function navGuard(proceed){
-  if(!S.active)return false;
-  pendingBack=proceed;
-  askConfirm({title:t("Discard this session?"),
-    body:t("Every set you logged in this workout is thrown away. This cannot be undone."),
-    cta:t("Discard it"),act:"backdiscard"});
-  return true;
+function navGuard(){
+  /* Leaving a session no longer ends it. The workout stays exactly where it was and
+     Home and Train offer to continue; discarding is an explicit control inside the
+     session instead of a question asked every time you glance at another screen. */
+  return false;
 }
 
 function openBarcodePrompt(){
@@ -706,7 +734,13 @@ initSheetDrag(requestCloseSheet);
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from
    holding the whole app behind the intro; in practice it resolves well inside it. */
 loadStored(function(){ render(); });
-if(S.prefs&&S.prefs.splash===false)document.body.classList.add("nosplash");
+/* The intro belongs to a cold start, not to every document load. A reload for any
+   reason — a service worker taking over, a crash recovery, the OS reclaiming the
+   tab — used to replay it, which reads as the app restarting. */
+var coldStart=true;
+try{ coldStart=!sessionStorage.getItem("bunyan:seen"); sessionStorage.setItem("bunyan:seen","1"); }
+catch(e){ coldStart=true; }
+if(!coldStart||(S.prefs&&S.prefs.splash===false))document.body.classList.add("nosplash");
 else{
   var reduced=false;
   try{reduced=window.matchMedia("(prefers-reduced-motion:reduce)").matches;}catch(e){}
@@ -734,7 +768,9 @@ if("serviceWorker" in navigator){
           }});});
     }).catch(function(){});
   });
-  var reloaded=false;
-  navigator.serviceWorker.addEventListener("controllerchange",function(){
-    if(reloaded)return;reloaded=true;location.reload();});
+  /* No automatic reload. controllerchange fires on the first install as well as on
+     an update, so this reloaded the page at an arbitrary moment — which replayed the
+     intro and looked exactly like the app restarting under a back gesture. Reloading
+     mid-workout is hostile anyway; the toast above already says what to do, and the
+     new version is picked up on the next open. */
 }

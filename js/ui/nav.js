@@ -1,14 +1,15 @@
 /* Bunyan — nav
-   One back path, shared by the arrow, the leading-edge swipe and the OS gesture.
+   One back path, shared by the in-app arrow and the browser's own back gesture.
 
    Every back affordance used to hardcode where it went: the session arrow went to
    Home, the train arrows went to the day list. That is why they behaved as home
    shortcuts wearing a back icon. Now they all call goBack() and nothing else knows
    a destination.
 
-   The browser's history is the single source of truth for ordering. The arrow and
-   the swipe do not navigate themselves — they call history.back() and let popstate
-   do the work, so the three inputs cannot drift apart. */
+   The browser's history is the single source of truth. The arrow does not navigate
+   itself — it calls history.back() and lets popstate do the work, so the arrow and
+   the hardware gesture are the same code path rather than two that must be kept in
+   step. See the note at the foot of this file. */
 
 import {V} from "./view.js";
 
@@ -72,38 +73,18 @@ window.addEventListener("popstate",function(){
   fallback();
 });
 
-/* ---- leading-edge swipe --------------------------------------------------- */
-/* Leading, not left: in Arabic the app is mirrored and the gesture starts on the
-   right. */
-function rtl(){return document.documentElement.getAttribute("dir")==="rtl";}
-/* A filter chip row scrolls sideways and starts near the screen edge, so a swipe
-   beginning inside one belongs to it, not to us. */
-function hScrollable(el){
-  while(el&&el.nodeType===1&&el!==document.body){
-    if(el.scrollWidth>el.clientWidth+2){
-      var ov=getComputedStyle(el).overflowX;
-      if(ov==="auto"||ov==="scroll")return true;
-    }
-    el=el.parentElement;
-  }
-  return false;
-}
-var sx=0,sy=0,armed=false,fired=false;
-document.addEventListener("touchstart",function(ev){
-  armed=false;
-  if(!ev.touches||ev.touches.length!==1)return;
-  var x=ev.touches[0].clientX,w=window.innerWidth||1;
-  if(!(rtl()?x>w-24:x<24))return;
-  if(hScrollable(ev.target))return;
-  sx=x;sy=ev.touches[0].clientY;armed=true;fired=false;
-},{passive:true});
-document.addEventListener("touchmove",function(ev){
-  if(!armed||fired||!ev.touches||ev.touches.length!==1)return;
-  var dx=ev.touches[0].clientX-sx, dy=ev.touches[0].clientY-sy;
-  /* A mostly-vertical drag is the page scrolling, not a back gesture. */
-  if(Math.abs(dy)>Math.abs(dx)){armed=false;return;}
-  if((rtl()?-dx:dx)>60){fired=true;armed=false;goBack();}
-},{passive:true});
-document.addEventListener("touchend",function(){armed=false;},{passive:true});
+/* ---- the gesture ----------------------------------------------------------
+   There is deliberately no swipe handler here.
+
+   Every view change pushes a same-document history entry, so Safari's own
+   edge-swipe already has something in-document to go back to and fires popstate,
+   which the handler above answers. A second, hand-written gesture on top of that
+   ran alongside the native one rather than instead of it: two backs for one swipe,
+   and on the root screen the native one walked out of the document entirely, which
+   is what reloaded the app and replayed the intro.
+
+   Letting the browser drive costs less code and gets the native rubber-band
+   physics for free, and the arrow and the gesture are the same thing by
+   construction rather than by keeping two implementations in step. */
 
 export {initNav, goBack, pushNav, resetNav};

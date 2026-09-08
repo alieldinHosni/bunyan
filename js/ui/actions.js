@@ -3,6 +3,7 @@
 import {t} from "../i18n/dict.js";
 import {LIB, muscleOf} from "../data/exercises.js";
 import {avgRPE, prevPerf, prFor, recommend, sessionVolume} from "../engine/formulas.js";
+import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {FOODDB, nutritionFor, toLogItem} from "../engine/nutrition.js";
 import {render} from "./render.js";
 import {day, ex} from "../data/splits.js";
@@ -115,7 +116,8 @@ ACT.savemeal=function(name,d){
 
 function startDay(dayId){
   var d=dayOf(dayId);if(!d||!d.ex.length)return;
-  S.active={id:uid(),date:today(),started:Date.now(),splitId:split().id,dayId:d.id,dayName:d.name,
+  S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
+    splitId:split().id,dayId:d.id,dayName:d.name,
     entries:d.ex.map(function(e){
       return {name:e.name,muscle:e.muscle,planned:{sets:e.sets,lo:e.lo,hi:e.hi},
               rest:e.rest,grp:e.grp||null,sets:[]};})};
@@ -155,7 +157,10 @@ function finishSession(){
   var vol=Math.round(sessionVolume(a));
   var allSets=[];a.entries.forEach(function(e){allSets=allSets.concat(e.sets);});
   var summary={dayName:a.dayName,date:a.date,vol:vol,
-    mins:a.started?Math.max(1,Math.round((Date.now()-a.started)/60000)):0,
+    /* Active time, not wall clock: that is what was trained, and it keeps sessions
+       comparable. The wall clock is stored too, since it cannot be recovered later. */
+    mins:Math.max(1,Math.round(sessionClock(a).ms/60000)),
+    wallMins:Math.max(1,Math.round(sessionWall(a)/60000)),
     sets:allSets.length,exs:a.entries.length,rpe:avgRPE(allSets),prs:prs,
     notes:a.notes||"",
     delta:prev?vol-Math.round(sessionVolume(prev)):null};

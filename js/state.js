@@ -10,7 +10,10 @@ import {V} from "./ui/view.js";
 /* ============================================================ state */
 var DEF={
   v:2,theme:"dark",unit:"kg",
-  profile:{age:25,height:165,weight:86,sex:"m",activity:1.4,goal:"lose",prog:"standard",
+  /* No body stats by default. These were one person's real measurements, hardcoded
+     in early development, and everyone else was handed them — along with a macro
+     target that looked calculated before anything had been entered. */
+  profile:{age:null,height:null,weight:null,sex:"m",activity:1.4,goal:"lose",prog:"standard",
            level:"some",days:3},
   onboarded:false,plannedWeekly:14,
   gear:null,favs:[],skip:[],

@@ -6,8 +6,9 @@ import {exName} from "../i18n/exnames.js";
 import {MEALS, srcBadge} from "./views/food.js";
 import {backupAgeDays, bestE1RM, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
+import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {scanSupported} from "../scan.js";
-import {GOALS, LEVELS} from "../engine/plan.js";
+import {GOALS, LEVELS, splitCandidates} from "../engine/plan.js";
 import {groupLabel, groupRun, platePlan} from "./views/session.js";
 import {buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats} from "../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
@@ -42,12 +43,23 @@ function vSheet(){
   else if(V.sheet==="exercise"){
     var q=V.exq.toLowerCase();
     var target=(V.sd&&V.sd.like)||null;
+    /* Token matching, not substring: names carry qualifiers, so "incline bench" has
+       to find "Barbell Incline Bench Press - Medium Grip" whichever order the words
+       are typed in. Same matcher the food search uses. */
     var list=LIB.filter(function(l){
       if(V.exm!=="All"&&l[1]!==V.exm)return false;
       if(V.exe&&V.exe!=="All"&&l[2]!==V.exe)return false;
-      if(q&&l[0].toLowerCase().indexOf(q)<0)return false;
+      if(q&&!tokenMatch(q,l[0]))return false;
       if(!V.showAll&&!pickable(l[0]))return false;
       return true;});
+    /* Zero hits only, exactly as in the food search: a near miss is offered under
+       "Did you mean…", never chosen for you. */
+    var guess=[];
+    if(q&&!list.length){
+      var pool=LIB.filter(function(l){return V.showAll||pickable(l[0]);});
+      guess=fuzzyRank(q,pool,function(l){return [l[0]];},6)
+        .map(function(r){return r.item;});
+    }
     if(target){
       var tp=patternOf(target),tm=muscleOf(target),te=(EXDB[target]||{}).e;
       list.sort(function(a,b){
@@ -61,21 +73,40 @@ function vSheet(){
     b+='<p class="tiny" style="margin:2px 0 12px">'
      +(target?'Best alternatives to '+esc(target)+' first. ':'')
      +list.length+' shown'+(S.gear&&S.gear.length?', matched to your equipment':'')+'.</p>';
-    b+='<input id="exq" placeholder="Search" value="'+esc(V.exq)+'">';
-    b+='<div style="display:flex;gap:6px;overflow-x:auto;margin:11px 0;padding-bottom:4px">';
+    /* The field and the filters stay put while you type; only the results below
+       change. Letting the field scroll away was half of why search felt like it
+       was jumping. */
+    b+='<div class="exqbar">'
+     +'<input id="exq" placeholder="'+t("Search")+'" value="'+esc(V.exq)+'" '
+     +'autocapitalize="none" autocorrect="off" enterkeyhint="search">'
+     +'<div class="exfilters">';
     ["All"].concat(MUSCLES).forEach(function(m){
       b+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'" style="border:none;flex-shrink:0">'+m+'</button>';});
-    b+='</div><div class="list">';
+    b+='</div></div>';
+    /* A floor under the results. Without it the container collapses to nothing on a
+       no-match and springs back on the next character, which moves the whole screen
+       under the user's finger — a separate cause from the re-render. */
+    b+='<div class="exresults"><div class="list">';
     list.forEach(function(l){
-      b+='<button class="item" data-pickex="'+esc(l[0])+'"><div><div style="font-weight:600">'+esc(exName(l[0]))+'</div>'
+      b+='<button class="item" data-k="ex:'+esc(l[0])+'" data-pickex="'+esc(l[0])+'"><div><div style="font-weight:600">'+esc(exName(l[0]))+'</div>'
        +'<div class="tiny">'+(exVariant(l[0])?esc(exVariant(l[0]))+' · ':'')+t(l[1])+' · '+t(l[2])+'</div></div><span class="chev">+</span></button>';});
     b+='</div>';
-    if(!list.length)b+=empty("search",
+    if(!list.length&&guess.length){
+      b+='<div class="overline" style="margin-top:var(--s4)">'+t("Did you mean")+'…</div><div class="list">';
+      guess.forEach(function(l){
+        b+='<button class="item" data-k="gs:'+esc(l[0])+'" data-pickex="'+esc(l[0])+'">'
+         +'<div><div style="font-weight:600">'+esc(exName(l[0]))+'</div>'
+         +'<div class="tiny">'+(exVariant(l[0])?esc(exVariant(l[0]))+' · ':'')+t(l[1])+' · '+t(l[2])+'</div></div>'
+         +'<span class="chev">+</span></button>';});
+      b+='</div>';
+    }
+    if(!list.length&&!guess.length)b+=empty("search",
       V.exq?t("Nothing matches")+" “"+V.exq+"”":t("Nothing matches those filters"),
       S.gear&&S.gear.length&&!V.showAll
         ?t("You may have filtered it out with your equipment, or it may not be in the library.")
         :t("Your gym may call it something else, or it may not be in the library at all."),
       '<button class="btn" data-customex="1">'+t("Add it yourself")+'</button>');
+    b+='</div>';
     b+='<button class="btn g" data-showall="1">'
      +(V.showAll?'Only what I can do':'Show everything, including gear I lack')+'</button>';
   }
@@ -207,11 +238,20 @@ function vSheet(){
          +'<div class="row" style="margin-top:8px"><span class="metric" style="font-size:20px">'
          +it.n.kcal+'<span class="unit">kcal</span></span>'
          +'<span class="tiny num">'+it.n.p+'p \u00b7 '+it.n.c+'c \u00b7 '+it.n.f+'f</span></div>'
-         +'<div class="rowc mt"><button class="btn g sm" data-qty="'+i+'|-1">\u2212</button>'
-         +'<button class="btn g sm" data-qty="'+i+'|1">+</button>'
-         +'<button class="btn g sm" data-gram="'+i+'">'+t("Set grams")+'</button>'
-         +(it.alts&&it.alts.length>1?'<button class="btn g sm" data-swapfood="'+i+'">'+t("Change")+'</button>':'')
-         +'<button class="btn d sm" data-dropitem="'+i+'">'+t("Remove")+'</button></div>'
+         /* Five controls on one line is wider than a phone, which forced the whole
+            sheet to scroll sideways and made it look corrupted. The amount and its
+            steppers are one row; the three text actions sit under it. Tapping the
+            amount opens the same grams prompt the old "Set grams" button did, so
+            nothing is lost by dropping the duplicate. */
+         +'<div class="fqty mt">'
+         +'<button class="btn g sm" data-qty="'+i+'|-1" aria-label="'+t("Less")+'">\u2212</button>'
+         +'<button class="fqty-v" data-gram="'+i+'" aria-label="'+t("Set grams")+'">'
+         +Math.round(it.grams)+' g</button>'
+         +'<button class="btn g sm" data-qty="'+i+'|1" aria-label="'+t("More")+'">+</button></div>'
+         +'<div class="facts">'
+         +(it.alts&&it.alts.length>1?'<button data-swapfood="'+i+'">'+t("Change")+'</button>':'')
+         +'<button data-gram="'+i+'">'+t("Set grams")+'</button>'
+         +'<button class="danger" data-dropitem="'+i+'">'+t("Remove")+'</button></div>'
          +(it.status==="ambiguous"?'<p class="tiny" style="margin:8px 0 0;color:var(--gold)">'
             +'Not certain this is the right match. Tap Change if it is wrong.</p>':'')
          +'</div>';});
@@ -446,16 +486,40 @@ function vSheet(){
      +[2,3,4,5,6].map(function(d){
         return '<option value="'+d+'"'+(+p.days===d?" selected":"")+'>'+d+' days</option>';}).join("")
      +'</select>';
+    /* Empty, not pre-filled. These fields used to arrive carrying one person's real
+       measurements, so everyone else was handed someone else's body and a macro
+       target that looked calculated before anything had been entered. */
+    var lw2=lastWeight();
+    var wv=lw2?toDisp(lw2):(num(p.weight)?toDisp(p.weight):"");
     b+='<div class="grid2 mt"><div><div class="tiny">'+t("Weight")+' ('+wUnit()+')</div>'
-     +'<input id="o_weight" type="number" step="0.1" value="'+toDisp(lastWeight()||p.weight||86)+'"></div>'
-     +'<div><div class="tiny">'+t("Height (cm)")+'</div><input id="o_height" type="number" value="'+p.height+'"></div>'
-     +'<div><div class="tiny">Age</div><input id="o_age" type="number" value="'+p.age+'"></div>'
-     +'<div><div class="tiny">Sex</div><select id="o_sex">'
-     +'<option value="m"'+(p.sex==="m"?" selected":"")+'>Male</option>'
+     +'<input id="o_weight" type="number" step="0.1" inputmode="decimal" placeholder="—" value="'+wv+'"></div>'
+     +'<div><div class="tiny">'+t("Height (cm)")+'</div><input id="o_height" type="number" '
+     +'inputmode="numeric" placeholder="—" value="'+(num(p.height)?p.height:"")+'"></div>'
+     +'<div><div class="tiny">'+t("Age")+'</div><input id="o_age" type="number" '
+     +'inputmode="numeric" placeholder="—" value="'+(num(p.age)?p.age:"")+'"></div>'
+     +'<div><div class="tiny">'+t("Sex")+'</div><select id="o_sex">'
+     +'<option value="m"'+(p.sex==="m"?" selected":"")+'>'+t("Male")+'</option>'
      +'<option value="f"'+(p.sex==="f"?" selected":"")+'>'+t("Female")+'</option></select></div></div>';
+    /* The reasoning, and the runners-up. A silent verdict reads as arbitrary even
+       when it is sound, and the choice should stay the user's. */
+    var cands=[];
+    try{ cands=splitCandidates(num(p.days,3),p.level,p.goal,S.gear); }catch(e){ cands=[]; }
+    if(cands.length){
+      b+='<div class="sec">'+t("What I would give you")+'</div><div class="list">';
+      cands.forEach(function(c,i){
+        b+='<button class="item" data-pickplan="'+esc(c.id)+'">'
+         +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+esc(c.name)
+         +(i===0?' <span class="pill a" style="margin-inline-start:6px">'+t("Recommended")+'</span>':'')
+         +'</div><div class="tiny">'+esc(c.why)+'</div></div></button>';});
+      b+='</div>';
+    }
     b+='<div class="plan mt"><div class="tiny">This replaces your current split with a generated one. '
      +'Splits you already have are kept.</div></div>';
-    b+='<button class="btn" data-buildplan="1">'+t("Build it")+'</button>';
+    /* Nothing is built from blanks. */
+    var ready=num(p.height)>0&&num(p.weight)>0&&num(p.age)>0;
+    b+='<button class="btn" data-buildplan="1"'+(ready?'':' disabled')+'>'+t("Build it")+'</button>'
+     +(ready?'':'<p class="tiny" style="margin:8px 2px 0;text-align:center">'
+       +t("Enter your height, weight and age first.")+'</p>');
   }
   else if(V.sheet==="exhist"){
     var nm3=V.sd.name,rows=[];

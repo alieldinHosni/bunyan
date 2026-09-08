@@ -12,6 +12,8 @@ import {vTrain} from "./views/train.js";
 import {syncRest} from "./views/session.js";
 import {PERSIST} from "../util.js";
 import {lockScroll, V} from "./view.js";
+import {patch, replace} from "./patch.js";
+import {applyMotion, countTo, once} from "./motion.js";
 
 /* ============================================================ render */
 function TABSET(){return [
@@ -25,6 +27,9 @@ var lastView="",lastSheet=null;
 function render(){
   document.documentElement.setAttribute("data-theme",S.theme);
   applyLang();
+  /* Both routes into reduced motion, re-evaluated every render so the in-app toggle
+     takes effect immediately rather than on the next load. */
+  applyMotion(S.prefs&&S.prefs.anim===false);
   document.body.classList.toggle("noanim",S.prefs&&S.prefs.anim===false);
   document.body.classList.toggle("compact",!!(S.prefs&&S.prefs.compact));
   var view=V.tab+"/"+(V.tab==="train"?(S.active?"session":V.train):"");
@@ -44,13 +49,29 @@ function render(){
   else h=vProfile();
   if(!PERSIST)h='<div class="card" style="border-color:var(--accent)"><p class="tiny" style="margin:0">'
     +'This browser is blocking storage, so nothing will be saved. Open the hosted link in Safari or Chrome.</p></div>'+h;
+  /* Whether a surface is *appearing* or merely *changing* decides both how it is
+     written and whether its entry animation runs. A rebuild is for the first case
+     only; the second patches, so unchanged nodes — images, the focused field, an
+     element mid-animation — are never destroyed and recreated. */
   var appEl=document.getElementById("app");
   appEl.classList.toggle("pagein",moved);
-  appEl.innerHTML=h;
-  document.getElementById("nav").innerHTML=TABSET().map(function(tb){
-    return '<button data-tab="'+tb[0]+'"'+(V.tab===tb[0]?' class="on"':'')+'>'
-     +'<svg viewBox="0 0 24 24">'+tb[2]+'</svg>'+tb[1]+'</button>';}).join("");
-  document.getElementById("sheet").innerHTML=vSheet();
+  if(moved)replace(appEl,h); else patch(appEl,h);
+
+  var navEl=document.getElementById("nav");
+  patch(navEl,TABSET().map(function(tb){
+    return '<button data-k="'+tb[0]+'" data-tab="'+tb[0]+'"'+(V.tab===tb[0]?' class="on"':'')+'>'
+     +'<svg viewBox="0 0 24 24">'+tb[2]+'</svg>'+tb[1]+'</button>';}).join(""));
+
+  /* The sheet animates in when it opens and never again. Replaying sheetIn on every
+     render is what made tapping the favourite star look like the sheet was being
+     dragged. #app has been gated this way for a while; this is the same rule. */
+  var sheetEl=document.getElementById("sheet");
+  var appearing=V.sheet&&V.sheet!==lastSheet;
+  var sheetHtml=vSheet();
+  if(appearing||!V.sheet)replace(sheetEl,sheetHtml);
+  else patch(sheetEl,sheetHtml);
+  var boxEl=sheetEl.firstChild;
+  if(boxEl&&boxEl.classList)boxEl.classList.toggle("entering",!!appearing);
   /* Owns its own container and rebuilds only when it is genuinely a different rest
      screen, so a repaint elsewhere cannot restart the ring. */
   syncRest();
@@ -63,10 +84,11 @@ function render(){
   lockScroll(V.sheet);
   var opened=V.sheet&&V.sheet!==lastSheet;
   lastSheet=V.sheet;
-  /* Put the user back exactly where they were. Only if that fails do the
-     open-the-sheet focus rules below get a say. */
-  var restored=false;
-  if(wasId){
+  /* Only a rebuild can lose focus. On the patch path the field the user is typing in
+     was never destroyed, so touching it here would be the caret bug reintroduced. */
+  var rebuilt=moved||appearing||!V.sheet;
+  var restored=!rebuilt&&!!wasId&&document.activeElement===was;
+  if(!restored&&wasId){
     var back=document.getElementById(wasId);
     if(back){
       if(back!==document.activeElement){

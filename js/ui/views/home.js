@@ -41,7 +41,7 @@ function vHome(){
      +'<span class="pill a">'+t("Active")+'</span></div>'
      +'<p class="tiny" style="margin:6px 0 0">'+(S.active.entries.length-doneN)+' of '
      +S.active.entries.length+' exercises left</p>'
-     +'<button class="btn" data-go="train">'+t("Resume workout")+'</button></div>';
+     +'<button class="btn" data-continue="1">'+t("Continue workout")+'</button></div>';
   }else if(nd){
     h+='<div class="card"><div class="row"><h3>'+esc(nd.name)+'</h3>'
      +'<span class="pill">'+esc(sp.name)+'</span></div>'
