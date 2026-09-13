@@ -4,6 +4,7 @@ import {t} from "../i18n/dict.js";
 import {LIB, muscleOf} from "../data/exercises.js";
 import {avgRPE, prevPerf, prFor, recommend, sessionVolume} from "../engine/formulas.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
+import {leave} from "./motion.js";
 import {FOODDB, nutritionFor, toLogItem} from "../engine/nutrition.js";
 import {render} from "./render.js";
 import {day, ex} from "../data/splits.js";
@@ -76,7 +77,10 @@ ACT.customex=function(name,d){
   if(!landed){V.sd=null;render();toast(name+" "+t("is in your library."));}};
 ACT.delset=function(_,i){
   var e=S.active&&S.active.entries[V.logIdx];if(!e)return;
-  e.sets.splice(i,1);V.fresh=-1;saveDB();syncDraft();render();};
+  /* Play the row out before the state change removes it. Splicing first would leave
+     nothing on screen to animate, and the list would appear to jump. */
+  leave(document.querySelector('#app .setrow[data-k="set:'+i+'"]'),function(){
+    e.sets.splice(i,1);V.fresh=-1;saveDB();syncDraft();render();});};
 ACT.discard=function(){
   S.active=null;V.restEnd=0;V.restPaused=false;V.fresh=-1;
   keepAwake(false);saveDB();render();};

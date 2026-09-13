@@ -63,7 +63,13 @@ function toast(msg,undo){
     b.onclick=function(){d.remove();undo();};
     d.appendChild(b);}
   document.body.appendChild(d);
-  setTimeout(function(){if(d.parentNode)d.remove();},undo?5200:2600);}
+  /* Fade out rather than vanish. The keyframes were written for this and nothing was
+     adding the class, so toasts blinked out of existence. */
+  setTimeout(function(){
+    if(!d.parentNode)return;
+    d.classList.add("leaving");
+    setTimeout(function(){if(d.parentNode)d.remove();},260);
+  },undo?5200:2600);}
 
 var CUES={
  Push:["Set your shoulder blades down and back before the first rep.",
@@ -147,6 +153,10 @@ function recentPR(){
         if(num(x.w)&&(!best||num(x.w)>best.w))best={n:e.name,w:num(x.w),r:num(x.r),d:s2.date};});}
     if(best)return best;}
   return null;}
+/* The ring's centre number counts up: it is the one figure on Home that the user just
+   changed by logging food. data-count-to is the opt-in the painter looks for, and the
+   text content is already the final value, so a reduced-motion paint is correct before
+   anything animates. */
 function ring(pct,color,label,value){
   var R=34,C=2*Math.PI*R,off=C*(1-Math.min(1,pct));
   return '<svg viewBox="0 0 80 80" style="width:80px;height:80px">'
@@ -154,7 +164,7 @@ function ring(pct,color,label,value){
    +'<circle cx="40" cy="40" r="'+R+'" stroke="'+color+'" stroke-width="7" fill="none"'
    +' stroke-linecap="round" stroke-dasharray="'+C+'" stroke-dashoffset="'+off+'"'
    +' transform="rotate(-90 40 40)"/>'
-   +'<text x="40" y="38" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)">'+value+'</text>'
+   +'<text x="40" y="38" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" data-count-to="'+value+'">'+value+'</text>'
    +'<text x="40" y="52" text-anchor="middle" font-size="9" fill="var(--dim)">'+label+'</text></svg>';}
 
 function sparkline(vals,labels,color){
@@ -170,7 +180,7 @@ function sparkline(vals,labels,color){
   var area=d+" L"+pts[pts.length-1][0]+" "+h+" L"+pts[0][0]+" "+h+" Z";
   return '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" style="width:100%;height:110px">'
    +'<path d="'+area+'" fill="'+color+'" opacity=".13"/>'
-   +'<path d="'+d+'" fill="none" stroke="'+color+'" stroke-width="2.2" stroke-linejoin="round"/>'
+   +'<path class="line" d="'+d+'" fill="none" stroke="'+color+'" stroke-width="2.2" stroke-linejoin="round"/>'
    +pts.map(function(p){return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="2.6" fill="'+color+'"/>';}).join("")
    +'</svg><div class="row tiny" style="margin-top:2px"><span>'+esc(labels[0])
    +'</span><span>'+esc(labels[labels.length-1])+'</span></div>';}

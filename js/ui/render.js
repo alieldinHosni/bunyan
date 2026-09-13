@@ -16,12 +16,52 @@ import {patch, replace} from "./patch.js";
 import {applyMotion, countTo, once} from "./motion.js";
 
 /* ============================================================ render */
+/* Material Design icons, filled 24px, from google/material-design-icons (Apache 2.0).
+   Inlined as path data: five paths, no dependency and nothing to download. Filled
+   rather than outlined because they read better at 24px on a black bar, which is how
+   Uber draws its own tab bars. */
 function TABSET(){return [
- ["home",t("Home"),'<path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>'],
- ["train",t("Train"),'<path d="M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12"/>'],
- ["progress",t("Progress"),'<path d="M3 17l5-6 4 4 5-7 4 5"/><path d="M3 21h18"/>'],
- ["food",t("Food"),'<path d="M6 3v8a3 3 0 003 3v7M6 3v5M9 3v5M18 3c-1.5 2-2 4-2 7h4V3z"/>'],
- ["profile",t("Profile"),'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>']];}
+ ["home",t("Home"),'<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>'],
+ ["train",t("Train"),'<path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/>'],
+ ["progress",t("Progress"),'<path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4zm2.5 2.1h-15V5h15v14.1zm0-16.1h-15c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>'],
+ ["food",t("Food"),'<path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/>'],
+ ["profile",t("Profile"),'<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88C7.55 15.8 9.68 15 12 15s4.45.8 6.14 2.12C16.43 19.18 14.03 20 12 20z"/>']];}
+
+/* Motion is applied after the DOM has settled, and only to what changed.
+
+   Each entry animation is keyed by the surface it belongs to and marked with once(),
+   because the patcher deliberately keeps nodes alive across renders: without a key a
+   "once per view" reveal would either replay on every repaint or never fire at all.
+   A node that is genuinely new has no marker, so it animates; one that survived a
+   patch keeps its marker and stays still. */
+function paintMotion(root,viewKey){
+  if(!root)return;
+  var i,els;
+
+  /* Marking is the whole mechanism: the CSS keys its entry animations off
+     [data-anim], which the patcher is told to preserve. An earlier version added a
+     class instead and the patcher stripped it every render, because `class` appears
+     in the markup and `data-anim` does not. Marking is also cheaper. */
+  els=root.querySelectorAll(".empty,.setrow[data-k],.list .item[data-k],.bar");
+  for(i=0;i<els.length;i++)once(els[i],viewKey,function(){});
+
+  /* The one that needs more than a marker: a draw-on needs the path's own length,
+     which only the browser can measure. The inline style survives because the view
+     never sets one on this element. */
+  els=root.querySelectorAll("svg path.line");
+  for(i=0;i<els.length;i++)once(els[i],viewKey,function(p){
+    var len=0;
+    try{len=p.getTotalLength();}catch(e){}
+    if(!len)return;
+    p.style.strokeDasharray=len;
+    p.style.strokeDashoffset=len;
+  });
+
+  /* Numbers that changed count to their new value. Opt-in from the view, because
+     only some numbers are the thing the user just altered. */
+  els=root.querySelectorAll("[data-count-to]");
+  for(i=0;i<els.length;i++)countTo(els[i],els[i].getAttribute("data-count-to"));
+}
 
 var lastView="",lastSheet=null;
 function render(){
@@ -100,6 +140,9 @@ function render(){
       restored=true;
     }
   }
+  paintMotion(appEl,view);
+  paintMotion(sheetEl,"sheet:"+(V.sheet||""));
+
   var q=document.getElementById("exq");
   if(!restored&&q){q.focus();try{q.setSelectionRange(q.value.length,q.value.length);}catch(e){}}
   var av=document.getElementById("askv");

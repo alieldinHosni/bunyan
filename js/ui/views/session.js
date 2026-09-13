@@ -170,7 +170,7 @@ function vLogger(){
        toward volume, records and progression. No extra column for it. */
     var warm=done&&st.wu;
     if(warm)cls2+=" warm";
-    h+='<div class="'+cls2+'" style="grid-template-columns:'+cols+'">'
+    h+='<div class="'+cls2+'" data-k="set:'+i+'" style="grid-template-columns:'+cols+'">'
      +'<button class="delset" data-delset="'+i+'" aria-label="'+t("Delete set")+' '+(i+1)+'">✕</button>'
      +(done?'<button class="setnum wtog" data-warm="'+i+'" aria-label="'+t("Mark as warm-up")
         +' '+(i+1)+'" aria-pressed="'+(warm?"true":"false")+'">'+(warm?"W":(i+1))+'</button>'

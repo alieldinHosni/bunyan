@@ -231,7 +231,7 @@ function vSheet(){
       var lost=st.items.filter(function(i){return i.status==="unknown";});
       if(known.length)b+='<div class="overline">I found</div>';
       known.forEach(function(it,i){
-        b+='<div class="card"><div class="row"><div style="flex:1">'
+        b+='<div class="card" data-k="fi:'+i+'"><div class="row"><div style="flex:1">'
          +'<div style="font-weight:700">'+esc(it.name)+'</div>'
          +'<div class="tiny">'+esc(it.label)+' \u00b7 '+Math.round(it.grams)+' g</div></div>'
          +srcBadge(it.src)+'</div>'
@@ -422,15 +422,24 @@ function vSheet(){
      +'<p class="sub" style="margin-top:6px">'+esc(w.dayName)+' \u00b7 '+pretty(w.date)+'</p></div>';
     b+='<div class="card"><div class="tiny" style="letter-spacing:.12em">'+t("PERFORMANCE SUMMARY")+'</div>'
      +'<div class="grid2" style="margin-top:var(--s4)">'
-     +'<div><div class="tiny">'+t("DURATION")+'</div><div class="metric" style="font-size:30px">'+w.mins+'</div>'
+    /* The four summary figures count up from zero as the sheet arrives — this is the
+       one screen whose whole purpose is the numbers. The volume figure keeps its unit
+       in a sibling span, because counting writes textContent and would otherwise eat
+       it. Each span carries the final value as its text too, so reduced motion and a
+       re-render both land on the right number without animating. */
+     +'<div><div class="tiny">'+t("DURATION")+'</div><div class="metric" style="font-size:30px">'
+     +'<span data-count-to="'+w.mins+'">'+w.mins+'</span></div>'
      +'<div class="tiny">'+t("mins total")+'</div></div>'
      +'<div><div class="tiny">'+t("TOTAL VOLUME")+'</div><div class="stat">'
-     +Math.round(toDisp(w.vol)).toLocaleString()
+     +'<span data-count-to="'+Math.round(toDisp(w.vol))+'">'
+     +Math.round(toDisp(w.vol)).toLocaleString()+'</span>'
      +'<span class="unit">'+wUnit()+'</span></div><div class="tiny">'+t("lifted")+'</div></div></div>'
      +'<div class="grid2" style="margin-top:var(--s5)">'
-     +'<div><div class="tiny">'+t("EXERCISES")+'</div><div class="stat">'+w.exs+'</div>'
+     +'<div><div class="tiny">'+t("EXERCISES")+'</div><div class="stat">'
+     +'<span data-count-to="'+w.exs+'">'+w.exs+'</span></div>'
      +'<div class="tiny">'+t("completed")+'</div></div>'
-     +'<div><div class="tiny">'+t("SETS LOGGED")+'</div><div class="stat">'+w.sets+'</div>'
+     +'<div><div class="tiny">'+t("SETS LOGGED")+'</div><div class="stat">'
+     +'<span data-count-to="'+w.sets+'">'+w.sets+'</span></div>'
      +'<div class="tiny">avg RPE '+(w.rpe||"\u2014")+'</div></div></div></div>';
     if(w.delta!==null)b+='<div class="card mt"><div class="row"><span class="tiny">Versus last '
       +esc(w.dayName)+'</span><span style="font-weight:700;color:'

@@ -31,7 +31,10 @@ function vFood(){
 
   h+='<div class="card" style="text-align:center">'
    +'<div class="tiny" style="letter-spacing:.12em">'+t("CALORIES CONSUMED")+'</div>'
-   +'<div class="metric" style="font-size:38px;margin:6px 0 8px">'+e.kcal+' / '+g.kcal
+   +'<div class="metric" style="font-size:38px;margin:6px 0 8px">'
+   /* The number the user just changed by logging something, so it counts rather
+      than snapping. The target beside it is fixed and does not. */
+   +'<span data-k="kcal" data-count-to="'+e.kcal+'">'+e.kcal+'</span> / '+g.kcal
    +'<span class="unit">kcal</span></div>'
    +progressBar(e.kcal,g.kcal,"var(--accent)")
    +'<div class="grid3" style="margin-top:var(--s4)">'

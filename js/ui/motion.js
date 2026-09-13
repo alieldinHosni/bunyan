@@ -10,21 +10,35 @@
    The tokens are written to custom properties on :root, so CSS consumes them directly
    and JS only has to know the names. */
 
+/* Durations are Base Web's timing scale, easings are Material 3's. That split is
+   deliberate: Uber's scale is the coarser and more disciplined one — seven steps you
+   can actually tell apart — while Material's emphasized curves carry more character
+   than Base Web's, which are close to linear at the ends.
+
+   Values are taken from the two sources rather than tuned by eye:
+     baseweb/src/themes/shared/animation.ts
+     material-web/tokens/versions/v0_192/_md-sys-motion.scss */
 var DUR={
-  press:  90,    /* button and chip press — felt more than seen */
-  micro: 150,    /* toggles, indicators, small state changes */
-  pop:   180,    /* a set logged, a meal completed */
-  comp:  240,    /* cards, rows, list insertion and removal */
-  sheet: 280,    /* sheet rise and backdrop */
-  screen:300,    /* tab and page changes */
-  data:  420,    /* rings, counters, bars — the value that changed */
-  reveal:460     /* chart draw-on, once per view */
+  press: 100,    /* baseweb timing100  — button and chip press */
+  micro: 150,    /* baseweb timing150  — toggles, indicators */
+  pop:   200,    /* baseweb timing200  — a set logged, a meal completed */
+  comp:  250,    /* baseweb timing250  — cards, rows, list in and out */
+  sheet: 300,    /* baseweb timing300  — sheet rise and backdrop */
+  screen:300,    /* baseweb timing300  — tab and page changes */
+  data:  400,    /* baseweb timing400  — rings, counters, bars */
+  reveal:500     /* baseweb timing500  — chart draw-on, once per view */
 };
 var EASE={
-  standard:"cubic-bezier(.2,.7,.3,1)",   /* most things */
-  decel:   "cubic-bezier(.16,.84,.34,1)",/* things arriving */
-  accel:   "cubic-bezier(.5,0,.9,.3)",   /* things leaving */
-  spring:  "cubic-bezier(.2,.9,.3,1.06)" /* the only overshoot, and it is slight */
+  /* md-sys-motion easing-standard */
+  standard:"cubic-bezier(0.2, 0, 0, 1)",
+  /* md-sys-motion easing-emphasized-decelerate — things arriving */
+  decel:   "cubic-bezier(0.05, 0.7, 0.1, 1)",
+  /* md-sys-motion easing-emphasized-accelerate — things leaving */
+  accel:   "cubic-bezier(0.3, 0, 0.8, 0.15)",
+  /* The one exception to both systems. Neither Material nor Base Web overshoots, and
+     for good reason, but a logged set is the single moment in this app that earns a
+     touch of life. Used on two things and nothing else. */
+  spring:  "cubic-bezier(.2,.9,.3,1.06)"
 };
 /* Opacity is treated separately under reduced motion: a hard cut between two screens
    is disorienting in its own way, so fades are shortened rather than removed. */
@@ -66,7 +80,10 @@ function ms(name){ return _reduced?1:(DUR[name]||0); }
 function countTo(el,to,opts){
   if(!el)return;
   opts=opts||{};
-  var fmt=opts.format||function(v){return String(Math.round(v));};
+  /* Thousands separators by default. Every number this is used on is a whole count —
+     calories, minutes, sets, kilos moved — and a five-digit volume that gains commas
+     only on the final frame reads as a glitch. */
+  var fmt=opts.format||function(v){return Math.round(v).toLocaleString();};
   var from=num(el.getAttribute("data-count"),opts.from!=null?opts.from:0);
   to=num(to,0);
   el.setAttribute("data-count",to);
@@ -87,6 +104,26 @@ function countTo(el,to,opts){
 }
 function num(v,d){v=parseFloat(v);return isFinite(v)?v:(d||0);}
 
+/* Play an element out, then do the thing that removes it.
+
+   Anything leaving has to outlive the state change that removed it, or there is
+   nothing left to animate. Two call sites use this — deleting a set and dropping a
+   food item — which is what earns it a function rather than four inline lines.
+
+   Under reduced motion, and if the element has gone, it calls straight through: the
+   removal must happen whether or not the animation can. */
+function leave(el,done){
+  if(!el||_reduced||!el.parentNode){ done(); return; }
+  el.classList.add("rowout");
+  var fired=false;
+  var go=function(){ if(fired)return; fired=true;
+    el.removeEventListener("animationend",go); done(); };
+  el.addEventListener("animationend",go);
+  /* animationend does not arrive if the element is hidden or the animation is
+     cancelled, and a row that never disappears is worse than one that vanishes. */
+  setTimeout(go,DUR.comp+60);
+}
+
 /* Runs an entry animation exactly once per element, keyed by a name. The patcher keeps
    nodes alive across re-renders, so without this a "once per view" reveal would only
    ever fire on the very first paint — or, if keyed wrongly, on every one. */
@@ -98,4 +135,4 @@ function once(el,key,fn){
   fn(el);
 }
 
-export {applyMotion, countTo, DUR, EASE, isReduced, motionOff, ms, once};
+export {applyMotion, countTo, DUR, EASE, isReduced, leave, motionOff, ms, once};

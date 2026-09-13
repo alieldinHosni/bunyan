@@ -13,11 +13,32 @@
 <link rel="icon" href="icon-180.png">
 <style>
 :root{
-  --bg:#0A0A0C; --surface:#141418; --raised:#1C1C22;
-  --border:#26262E; --text:#F0EDE8; --dim:#6B6B73; --faint:#55555C;
-  --accent:#C41E2A; --accentHi:#E02534; --onAccent:#FFFFFF; --accentSoft:#261014;
-  --ok:#2E7D32; --okSoft:#1224135e; --gold:#C9A227;
-  --navbg:#0A0A0C; --navtext:#6B6B73; --navon:#C41E2A;
+  /* ---- surfaces and text: Base Web's dark grey ramp -------------------------
+     Taken from baseweb/src/tokens/color-primitive-tokens.ts rather than mixed by
+     eye. Uber grounds a dark UI on true black with the grey ramp above it, which is
+     flatter and more neutral than the warm near-blacks this used before. */
+  --bg:#000000;                 /* Base Web dark app background */
+  --surface:#161616;            /* gray50Dark  */
+  --raised:#292929;             /* gray100Dark */
+  --border:#383838;             /* gray200Dark */
+  --text:#FFFFFF;
+  --dim:#ABABAB;                /* gray700Dark */
+  --faint:#8C8C8C;              /* gray600Dark */
+
+  /* ---- accent -----------------------------------------------------------------
+     The one place Bunyan keeps its own identity. Uber's system is deliberately
+     brand-agnostic about this: swap these four lines for the Base Web brand blue
+     (#276EF1 / #5B91F5 / #0B1B3D) and the whole app becomes Uber-liveried, because
+     nothing else in the stylesheet names a colour. */
+  /* accent is a fill with a white label on it (5.89:1). accentHi is small text on the
+     dark ground and nothing else, so it is tuned for that: Base Web red500 measures
+     5.57:1 on black where the old #E02534 measured 4.48 and missed AA by a hair. */
+  --accent:#C41E2A; --accentHi:#F83446; --onAccent:#FFFFFF; --accentSoft:#2A0E11;
+
+  /* Semantic, and reserved. Green is completed states only; gold is earned only. */
+  --ok:#1A8D3E; --okSoft:#0E2415; --gold:#C9A227;
+  --navbg:#000000; --navtext:#8C8C8C; --navon:#FFFFFF;
+  --glow:#2A0F12;               /* the ember wash behind the app, dark theme only */
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
   --r1:8px; --r2:12px; --r3:14px;
   /* Motion tokens. js/ui/motion.js overwrites these at boot and whenever the in-app
@@ -29,18 +50,33 @@
   --e-accel:cubic-bezier(.5,0,.9,.3); --e-spring:cubic-bezier(.2,.9,.3,1.06);
 }
 [data-theme="light"]{
-  --bg:#F4F2EE; --surface:#FFFFFF; --raised:#EDEAE4;
-  --border:#DDD8D0; --text:#121214; --dim:#61616B; --faint:#8C8C95;
-  --accent:#A5171F; --accentHi:#C41E2A; --onAccent:#FFFFFF; --accentSoft:#F7E4E5;
-  --ok:#256B2A; --okSoft:#E3F0E4; --gold:#8A6F16;
-  --navbg:#0A0A0C; --navtext:#6B6B73; --navon:#C41E2A;
+  /* Base Web light ramp, same source as the dark one above
+     (baseweb/src/tokens/color-primitive-tokens.ts). Uber puts light UI on white with
+     the grey ramp for surfaces, which is the inverse of the dark theme rather than a
+     separately-tuned palette. */
+  --bg:#FFFFFF;
+  --surface:#F3F3F3;            /* gray50  */
+  --raised:#E8E8E8;             /* gray100 */
+  --border:#DDDDDD;             /* gray200 */
+  --text:#000000;
+  /* gray700/600, not the 600/400 that mirrors the dark theme: the light ramp is not
+     symmetric in contrast, and gray400 on gray100 measures 1.99:1. */
+  --dim:#5E5E5E;                /* gray700 */
+  --faint:#727272;              /* gray600 */
+  /* Accent darkened for contrast on white; the dark theme's #C41E2A fails on it. */
+  --accent:#A5171F; --accentHi:#C41E2A; --onAccent:#FFFFFF; --accentSoft:#FBEAEB;
+  --ok:#1A7F35; --okSoft:#E6F2E9; --gold:#8A6F16;
+  /* Uber light UI is flat white. No wash. */
+  --glow:transparent;
+  /* The bar stays dark in both themes: it is chrome, not surface. */
+  --navbg:#000000; --navtext:#8C8C8C; --navon:#FFFFFF;
 }
 /* Kills double-tap-to-zoom, which has no place in an installed app, and with it
    Safari's ~300ms tap delay. Pinch-to-zoom is untouched. user-scalable=no in the
    viewport meta does not work: iOS has ignored it since iOS 10. */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 html,body{margin:0;background:var(--bg);color:var(--text);
-  background-image:radial-gradient(120% 60% at 50% -10%, #2A0F12 0%, rgba(13,13,13,0) 62%);
+  background-image:radial-gradient(120% 60% at 50% -10%, var(--glow) 0%, transparent 62%);
   background-attachment:fixed;
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
@@ -592,7 +628,7 @@ body.noanim .skel{animation:none}
 /* A row arriving in, or leaving, a list. Height is animated only on the one row that
    changed, which is cheap; nothing around it moves. */
 @keyframes rowIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-.setrow.rowin,.list .item.rowin,.fitem.rowin{animation:rowIn var(--m-comp) var(--e-decel)}
+.setrow[data-anim],.list .item[data-anim]{animation:rowIn var(--m-comp) var(--e-decel)}
 @keyframes rowOut{to{opacity:0;transform:translateY(-4px)}}
 .rowout{animation:rowOut var(--m-comp) var(--e-accel) forwards;pointer-events:none}
 
@@ -613,15 +649,15 @@ body.noanim .skel{animation:none}
    cross-fades instead — replaying the draw on every chip tap is the replay the brief
    forbids. */
 @keyframes drawOn{to{stroke-dashoffset:0}}
-.spark-draw path.line{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
+path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 @keyframes sparkSwap{from{opacity:0}to{opacity:1}}
 .spark-swap{animation:sparkSwap var(--m-screen) var(--e-standard)}
 
 /* Weekly bars build, so the ranking becomes obvious as they go. Staggered in the
    markup, capped at five steps. */
 @keyframes barGrow{from{transform:scaleX(0)}to{transform:none}}
-.bar.grow i{transform-origin:left center;animation:barGrow var(--m-data) var(--e-decel) both}
-[dir="rtl"] .bar.grow i{transform-origin:right center}
+.bar[data-anim] i{transform-origin:left center;animation:barGrow var(--m-data) var(--e-decel) both}
+[dir="rtl"] .bar[data-anim] i{transform-origin:right center}
 
 /* Error: colour and a small settle. No shake — a shake reads as punishment. */
 @keyframes settle{0%{transform:translateY(-3px)}100%{transform:none}}
@@ -640,12 +676,12 @@ body.noanim .skel{animation:none}
 :root.reduced .sheet.entering .sheetbox,
 :root.reduced #rest .restwrap,
 :root.reduced .scanwrap .scanbox,
-:root.reduced .setrow.rowin,
-:root.reduced .list .item.rowin,
+:root.reduced .setrow[data-anim],
+:root.reduced .list .item[data-anim],
 :root.reduced .rowout,
 :root.reduced .empty[data-anim],
-:root.reduced .bar.grow i,
-:root.reduced .spark-draw path.line,
+:root.reduced .bar[data-anim] i,
+:root.reduced path.line[data-anim],
 :root.reduced .logbtn.done.fresh,
 :root.reduced .err{animation:none}
 :root.reduced .skel{animation:none}

@@ -11,6 +11,7 @@ import {buildPlan} from "./engine/plan.js";
 import {render} from "./ui/render.js";
 import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
+import {leave} from "./ui/motion.js";
 import {groupNext, groupRun, mmss, noteSet, paintRest, sessionClock} from "./ui/views/session.js";
 import {adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
 import {fmtW, toDisp, toKg} from "./units.js";
@@ -273,7 +274,12 @@ document.addEventListener("click",function(ev){
     it8.food=it8.alts[+pr8[1]]; it8.name=it8.food.n; it8.src=it8.food.src||"db";
     it8.status="ok"; recalcItem(it8);
     V.sheet="addfood"; render();return;}
-  if(D.dropitem){V.food.items.splice(+D.dropitem,1);render();return;}
+  if(D.dropitem){
+    /* Same rule as a deleted set: play it out, then remove it. */
+    var di=+D.dropitem;
+    leave(document.querySelector('#sheet .card[data-k="fi:'+di+'"]'),function(){
+      V.food.items.splice(di,1);render();});
+    return;}
   if(D.online){
     var q9=D.online;
     V.food.busy=true;render();
