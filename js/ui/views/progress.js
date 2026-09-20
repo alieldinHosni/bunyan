@@ -1,5 +1,5 @@
 /* Bunyan — progress
-   Progress tab and calendar. */
+   Progress tab. The date bar and month grid live in js/ui/datebar.js, shared with Food. */
 import {t} from "../../i18n/dict.js";
 import {empty} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
@@ -8,6 +8,7 @@ import {S} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, r1, shortd, today} from "../../util.js";
 import {head, sparkline, streak, V} from "../view.js";
+import {dateBar} from "../datebar.js";
 
 /* ============================================================ PROGRESS */
 function vProgress(){
@@ -132,21 +133,11 @@ function vProgress(){
    is the button that expands the month — a tap, not a double tap, which Issue 6's
    touch-action:manipulation would have swallowed anyway. */
 function pdate(){return V.pdate||today();}
+/* The date bar is shared with Food — js/ui/datebar.js. What differs here is scope, and
+   only scope: this bar drives the day-specific block below, while the 1W/1M/3M chips
+   keep driving every chart. The two controls must not fight. */
 function vDateBar(){
-  var d=pdate(),isToday=d===today();
-  return '<div class="card" style="padding:var(--s3);margin-bottom:var(--s3)">'
-   +'<div class="row" style="align-items:center">'
-   +'<button class="btn d sm iconbtn" data-pday="-1" aria-label="'+t("Previous day")+'">‹</button>'
-   +'<button class="pdate" data-pcal="1" aria-expanded="'+(V.pcal?"true":"false")+'" '
-   +'aria-label="'+t("Choose a day")+'">'
-   +(isToday?t("Today")+", ":"")+shortd(d)
-   +'<span class="pchev'+(V.pcal?" up":"")+'" aria-hidden="true">›</span></button>'
-   +'<button class="btn d sm iconbtn" data-pday="1"'+(isToday?' disabled':'')
-   +' aria-label="'+t("Next day")+'">›</button>'
-   +'</div>'
-   +(isToday?'':'<div style="text-align:center"><button class="btn d sm" data-pday="0">'
-     +t("Back to today")+'</button></div>')
-   +(V.pcal?vCalendar():'')+'</div>';
+  return dateBar({date:pdate(),open:V.pcal,monthOffset:V.cal});
 }
 
 /* The only part of this screen that is about one day rather than a span. */
@@ -172,36 +163,6 @@ function vThatDay(){
    +'<span class="chev">›</span></div></button>';
 }
 
-function vCalendar(){
-  var base=new Date();base.setDate(1);base.setMonth(base.getMonth()+V.cal);
-  var y=base.getFullYear(),m=base.getMonth();
-  var first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
-  var marks={};
-  S.sessions.forEach(function(s){marks[s.date]=1;});
-  var h='<div style="margin-top:var(--s3);border-top:1px solid var(--border);padding-top:var(--s3)"><div class="row" style="align-items:center">'
-   +'<button class="btn d sm iconbtn" data-cal="-1" aria-label="'+t("Previous month")+'">‹</button>'
-   +'<strong aria-live="polite">'+base.toLocaleDateString(undefined,{month:"long",year:"numeric"})+'</strong>'
-   +'<button class="btn d sm iconbtn" data-cal="1" aria-label="'+t("Next month")+'">›</button></div>'
-   +'<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:11px">';
-  ["S","M","T","W","T","F","S"].forEach(function(d){
-    h+='<div class="tiny" style="text-align:center">'+d+'</div>';});
-  for(var i=0;i<first;i++)h+='<div></div>';
-  for(var d=1;d<=days;d++){
-    var iso=y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
-    var on=marks[iso],isToday=iso===today();
-    var hasFood=S.days[iso]&&Object.keys(S.days[iso].meals||{}).some(function(k){
-      return (S.days[iso].meals[k].items||[]).length;});
-    /* Picking a day scopes the screen and folds the month away; the day card it
-       scopes is what opens the full detail sheet. */
-    h+='<button data-pick="'+iso+'" style="aspect-ratio:1;display:flex;flex-direction:column;'
-     +'align-items:center;justify-content:center;border-radius:9px;font-size:13px;border:none;'
-     +'padding:0;position:relative;'
-     +(on?'background:var(--accent);color:#fff;font-weight:700;':
-        isToday?'border:1px solid var(--accent);background:none;color:var(--text);':
-        'background:none;color:var(--faint);')+'">'+d
-     +(hasFood&&!on?'<span style="position:absolute;bottom:4px;width:4px;height:4px;'
-       +'border-radius:2px;background:var(--ok)"></span>':'')+'</button>';}
-  return h+'</div></div>';}
 
 
 export {vProgress};

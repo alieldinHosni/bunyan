@@ -35,9 +35,14 @@ function vSheet(){
   }
   else if(V.sheet==="confirm"){
     var c=V.sd||{};
+    /* An optional second action, between the primary and Cancel. One sheet asks three
+       questions rather than two — used by the leave-workout prompt, where keeping the
+       workout is the primary and discarding it is a real but secondary choice. It is
+       styled .danger rather than .btn so the two cannot be confused at a glance. */
     b='<h2>'+esc(c.title||"")+'</h2>'
      +(c.body?'<p class="sub" style="margin:8px 0 20px">'+esc(c.body)+'</p>':'<div style="height:14px"></div>')
      +'<button class="btn" data-confirmok="1">'+esc(c.cta||t("Delete"))+'</button>'
+     +(c.alt?'<button class="btn danger" data-confirmalt="1">'+esc(c.alt)+'</button>':'')
      +'<button class="btn g" '+(c.back?'data-restore="1"':'data-close="1"')+'>'+t("Cancel")+'</button>';
   }
   else if(V.sheet==="exercise"){
@@ -644,8 +649,15 @@ function vSheet(){
      +'<button class="item" data-toggle="sound"><span>'+t("Sounds")+'</span>'
      +'<span class="'+(tp.sound?"pill ok":"dim")+'">'+(tp.sound?t("On"):t("Off"))+'</span></button>'
      +'<button class="item" data-testsound="1"><div><div>'+t("Test sound")+'</div>'
-     +'<div class="tiny">'+t("Hear nothing? Check the side switch on your phone")+'</div></div>'
+     +'<div class="tiny">'+t("Plays the 8-second rest alarm.")+'</div></div>'
      +'<span class="pill a">'+t("Play")+'</span></button>'
+     /* Said plainly, once, where the sound settings are — so it is learned here rather
+        than in a gym when the timer runs out in silence. Stated as a limit of the
+        phone, not of the app, because that is what it is: iOS applies the hardware
+        switch to all web audio and suspends the page when it is not in front. */
+     +'<p class="tiny" style="margin:6px 2px 0;line-height:1.5;color:var(--faint)">'
+     +t("On iPhone the side switch silences this alarm, and it cannot play while the app is in the background or the phone is locked. The screen turns red when the rest is over, so you can see it with the sound off.")
+     +'</p>'
      +'<button class="item" data-toggle="awake"><span>'+t("Keep screen awake")+'</span>'
      +'<span class="'+(tp.awake?"pill ok":"dim")+'">'+(tp.awake?t("On"):t("Off"))+'</span></button>'
      +'<button class="item" data-sheet="gear"><span>'+t("My equipment")+'</span><span class="dim">'

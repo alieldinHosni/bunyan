@@ -36,6 +36,13 @@ document.addEventListener("touchstart",function(ev){
   if(!head)return;
   /* The close button is a control, not a grip. */
   if(el.closest("button"))return;
+  /* No handle, no drag. A destructive confirmation omits the grab handle precisely
+     because it must not be dismissable by a stray gesture, and the handle is the only
+     thing on the sheet that advertises the gesture in the first place. Keying off it
+     means the affordance and the behaviour cannot disagree: draw the handle and it
+     drags, leave it out and it does not. Before this, a hard confirm blocked the
+     outside tap and then let the same sheet be flung away by the header. */
+  if(!head.querySelector(".grab"))return;
   var b=head.closest(".sheetbox");
   if(!b)return;
   box=b;on=true;vel=0;

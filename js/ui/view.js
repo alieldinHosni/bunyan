@@ -7,10 +7,30 @@ import {esc, fmtN, num, r1, today} from "../util.js";
 /* ============================================================ view state */
 var V={tab:"home",fdate:null,food:null,range:30,exd:null,showAll:false,restPaused:false,restLeft:0,train:"days",dayId:null,sheet:null,sd:null,exq:"",exm:"All",exe:"All",previewId:null,
        logIdx:0,draft:{w:0,r:0,rpe:8},restEnd:0,restTotal:0,chartEx:null,cal:0,fresh:-1,
+       /* Date bar state. Progress and Food keep separate selected days on purpose —
+          Food scopes its whole screen to one day, Progress scopes only the day-specific
+          block while the range chips drive the charts. `cal` is the month-grid page
+          offset and is shared, because only one of the two bars is ever on screen.
+          pdate/pcal were previously created on first use and absent from this literal,
+          which made the view state impossible to read off in one place. */
+       pdate:null,pcal:false,fcal:false,
+       /* The rest timer has three states, not two: counting, paused, and finished-and
+          waiting to be acknowledged. The third is what makes the zero state visible. */
+       restDone:false,
        bar:20};
 
 var AC=null,beeped=true,lastTick=99,wakeLock=null;
+/* One way to end the rest state, because there are ten places that end it — logging a
+   set, skipping, jumping exercise, finishing, discarding, leaving. Each of them used to
+   clear restEnd and restPaused by hand, and adding a third piece of state plus an alarm
+   that must be silenced would have meant getting all ten right and keeping them right.
+   The alarm outliving the screen that raised it is the specific failure this prevents. */
+function endRest(){
+  V.restEnd=0;V.restPaused=false;V.restDone=false;
+  alarmStop();
+}
 function startRest(e){
+  V.restDone=false;alarmStop();   /* a new rest replaces the last one's alert */
   audioOn();
   if(!S.prefs.autorest){V.restEnd=0;return;}
   V.restTotal=e.rest||75;
@@ -25,7 +45,7 @@ function audioOn(){
   try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();
       if(AC.state==="suspended")AC.resume();}catch(err){}}
 function tone(freq,at,dur,vol,type){
-  if(!AC)return;
+  if(!AC)return null;
   try{
     var o=AC.createOscillator(),g=AC.createGain(),t0=AC.currentTime+at;
     o.type=type||"sine";o.frequency.setValueAtTime(freq,t0);
@@ -33,11 +53,50 @@ function tone(freq,at,dur,vol,type){
     g.gain.exponentialRampToValueAtTime(vol||0.22,t0+0.015);
     g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
     o.connect(g);g.connect(AC.destination);o.start(t0);o.stop(t0+dur+0.02);
-  }catch(err){}}
+    return o;
+  }catch(err){return null;}}
+
+/* The rest alarm. Eight seconds of a two-tone pattern rather than one beep, because it
+   has to be noticed from across a gym floor by someone who is not looking at the phone.
+   A single chirp is what the timer had, and it is inaudible at three metres over music.
+
+   Every oscillator is scheduled up front against the audio clock, so the rhythm does not
+   depend on setTimeout drift or on the page getting frames — the tab can be throttled
+   and the pattern still plays correctly. They are kept so the whole thing can be cut
+   short the moment the user acts, which is the common case: nobody waits out eight
+   seconds once they have seen it.
+
+   What this deliberately does NOT do, because it cannot: play through the iPhone's
+   ring/silent switch, or play while the app is backgrounded or the phone is locked.
+   iOS applies the hardware switch to all web audio and suspends the page. There is no
+   workaround, so there is no setting pretending otherwise — the screen carries the
+   alert on its own instead. */
+var ALARM_MS=8000;
+var alarmNodes=[],alarmTimer=0;
+function alarmStop(){
+  for(var i=0;i<alarmNodes.length;i++){try{alarmNodes[i].stop();}catch(e){}}
+  alarmNodes=[];
+  if(alarmTimer){clearTimeout(alarmTimer);alarmTimer=0;}
+}
+function alarmStart(){
+  alarmStop();
+  if(!S.prefs.sound)return;
+  audioOn();
+  if(!AC)return;
+  for(var i=0;i<8;i++){
+    var n1=tone(880,i,0.15,0.30,"square");
+    var n2=tone(1175,i+0.22,0.15,0.30,"square");
+    if(n1)alarmNodes.push(n1);
+    if(n2)alarmNodes.push(n2);
+  }
+  /* Housekeeping only — the oscillators stop themselves. */
+  alarmTimer=setTimeout(alarmStop,ALARM_MS+300);
+}
 var SOUNDS={
   set:     function(){tone(660,0,0.09,0.16);},
   tick:    function(){tone(1046,0,0.05,0.10);},
-  rest:    function(){tone(880,0,0.15);tone(880,0.18,0.15);},
+  /* No rest entry: the timer-zero alert is alarmStart(), which has to run for eight
+     seconds and be cancellable — something a fire-and-forget SOUNDS entry cannot be. */
   pr:      function(){[523,659,784,1046].forEach(function(f,i){tone(f,i*0.09,0.20,0.20);});},
   complete:function(){[392,523,659].forEach(function(f,i){tone(f,i*0.12,0.28,0.20);});}
 };
@@ -45,7 +104,6 @@ function play(name){
   if(!S.prefs.sound)return;
   audioOn();
   var f=SOUNDS[name];if(f)f();}
-function beep(){play("rest");}
 async function keepAwake(on){
   try{
     if(on&&S.prefs.awake&&"wakeLock" in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request("screen");}
@@ -246,4 +304,5 @@ function lockScroll(on){
   }
 }
 
-export {audioOn, beeped, CUES, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, setBeeped, setLastTick, setRow, sparkline, startRest, stepper, streak, tap, toast, V};
+
+export {alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, setBeeped, setLastTick, setRow, sparkline, startRest, stepper, streak, tap, toast, V};

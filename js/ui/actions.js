@@ -10,7 +10,7 @@ import {render} from "./render.js";
 import {day, ex} from "../data/splits.js";
 import {adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
 import {MEM, num, PERSIST, r1, today, uid, wr} from "../util.js";
-import {keepAwake, play, tap, toast, V} from "./view.js";
+import {endRest, keepAwake, play, tap, toast, V} from "./view.js";
 
 /* ============================================================ actions */
 function openSheet(name,data){V.sheet=name;V.sd=data||null;render();}
@@ -82,7 +82,7 @@ ACT.delset=function(_,i){
   leave(document.querySelector('#app .setrow[data-k="set:'+i+'"]'),function(){
     e.sets.splice(i,1);V.fresh=-1;saveDB();syncDraft();render();});};
 ACT.discard=function(){
-  S.active=null;V.restEnd=0;V.restPaused=false;V.fresh=-1;
+  S.active=null;endRest();V.fresh=-1;
   keepAwake(false);saveDB();render();};
 ACT.newprofile=function(name){
   var np={id:uid(),name:name,owner:false};
@@ -125,7 +125,7 @@ function startDay(dayId){
     entries:d.ex.map(function(e){
       return {name:e.name,muscle:e.muscle,planned:{sets:e.sets,lo:e.lo,hi:e.hi},
               rest:e.rest,grp:e.grp||null,sets:[]};})};
-  V.logIdx=0;V.tab="train";V.train="days";V.restEnd=0;V.restPaused=false;V.fresh=-1;
+  V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
 
 /* What the next set reads before the user touches anything. Once a set is logged in
@@ -146,7 +146,7 @@ function syncDraft(){
 function finishSession(){
   var a=S.active;
   a.entries=a.entries.filter(function(e){return e.sets.length;});
-  if(!a.entries.length){S.active=null;V.restEnd=0;keepAwake(false);saveDB();render();return;}
+  if(!a.entries.length){S.active=null;endRest();keepAwake(false);saveDB();render();return;}
 
   var prs=[];
   a.entries.forEach(function(e){
@@ -169,7 +169,7 @@ function finishSession(){
     notes:a.notes||"",
     delta:prev?vol-Math.round(sessionVolume(prev)):null};
 
-  recordSession(a);S.active=null;V.restEnd=0;keepAwake(false);
+  recordSession(a);S.active=null;endRest();keepAwake(false);
   saveDB();V.tab="train";V.train="days";
   play(prs.length?"pr":"complete");tap("ok");
   openSheet("done",summary);}

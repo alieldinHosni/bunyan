@@ -6,7 +6,7 @@ import {avg7, backupAgeDays, backupDue, eatenToday, lastWeight} from "../../engi
 import {curProfile, dayRec, S, split} from "../../state.js";
 import {estMinutes, nextDayOf} from "./train.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
-import {esc, r1, today} from "../../util.js";
+import {esc, num, r1, today} from "../../util.js";
 import {head, progressBar, recentPR, ring, streak} from "../view.js";
 
 /* ============================================================ HOME */
@@ -36,12 +36,15 @@ function vHome(){
 
   h+='<div class="overline">'+t("Training status")+'</div>';
   if(S.active){
-    var doneN=S.active.entries.filter(function(x){return x.sets.length;}).length;
-    h+='<div class="card hot"><div class="row"><h3>'+esc(S.active.dayName)+'</h3>'
+    /* Where the workout actually is, not how much is left. "Exercise 3 of 7" is what
+       tells you whether to pick it up now, and it is the position Continue returns to
+       — S.active.idx rides on the session, so it survives a reload. */
+    var pos=Math.min(num(S.active.idx,0),S.active.entries.length-1)+1;
+    h+='<div class="card hot"><div class="row"><h3>'+t("Workout in progress")+'</h3>'
      +'<span class="pill a">'+t("Active")+'</span></div>'
-     +'<p class="tiny" style="margin:6px 0 0">'+(S.active.entries.length-doneN)+' of '
-     +S.active.entries.length+' exercises left</p>'
-     +'<button class="btn" data-continue="1">'+t("Continue workout")+'</button></div>';
+     +'<p class="tiny" style="margin:6px 0 0">'+esc(S.active.dayName)+' · '
+     +t("Exercise")+' '+pos+' '+t("of")+' '+S.active.entries.length+'</p>'
+     +'<button class="btn" data-continue="1">'+t("Resume workout")+'</button></div>';
   }else if(nd){
     h+='<div class="card"><div class="row"><h3>'+esc(nd.name)+'</h3>'
      +'<span class="pill">'+esc(sp.name)+'</span></div>'

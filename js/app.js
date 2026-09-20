@@ -16,7 +16,8 @@ import {groupNext, groupRun, mmss, noteSet, paintRest, sessionClock} from "./ui/
 import {adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
 import {fmtW, toDisp, toKg} from "./units.js";
 import {num, r1, setStorageErrorHandler, today, uid} from "./util.js";
-import {audioOn, beeped, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
+import {alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
+import {shiftDay} from "./ui/datebar.js";
 
 document.addEventListener("click",function(ev){
   /* Named el, not t: t() is the translator, and shadowing it here made every
@@ -36,6 +37,7 @@ document.addEventListener("click",function(ev){
     if(ao.required!==false&&!String(av).trim()){toast(t("Enter something first."));return;}
     runAct(ao.act,av);return;}
   if(D.confirmok!==undefined){runAct((V.sd||{}).act,true);return;}
+  if(D.confirmalt!==undefined){runAct((V.sd||{}).altact,true);return;}
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
   if(D.tab){resetNav();V.tab=D.tab;V.train="days";render();return;}
   if(D.go){resetNav();V.tab=D.go;render();return;}
@@ -119,7 +121,7 @@ document.addEventListener("click",function(ev){
   if(D.jump!==undefined){
     var n2=+D.jump;
     if(!S.active||n2<0||n2>=S.active.entries.length)return;
-    V.logIdx=n2;S.active.idx=n2;V.restEnd=0;V.restPaused=false;V.fresh=-1;syncDraft();saveDB();render();return;}
+    V.logIdx=n2;S.active.idx=n2;endRest();V.fresh=-1;syncDraft();saveDB();render();return;}
   if(D.stp){
     var id=D.stp,d1=parseFloat(D.d);
     var cur=id==="bw"?(V.draft.bw!=null?V.draft.bw:toDisp(lastWeight()||86))
@@ -152,7 +154,7 @@ document.addEventListener("click",function(ev){
       if(nxt===null){startRest(e3);}
       else{
         var wrapped=run.indexOf(nxt)<=run.indexOf(V.logIdx);
-        if(wrapped)startRest(e3); else V.restEnd=0;
+        if(wrapped)startRest(e3); else endRest();
         V.logIdx=nxt;S.active.idx=nxt;V.fresh=-1;
       }
       saveDB();syncDraft();render();return;
@@ -189,7 +191,7 @@ document.addEventListener("click",function(ev){
       V.restPaused=true;V.restEnd=0;paintRest();return;}
     if(D.rest==="resume"){V.restPaused=false;V.restEnd=Date.now()+V.restLeft*1000;
       setBeeped(false);paintRest();return;}
-    if(D.rest==="skip"){V.restEnd=0;V.restPaused=false;render();return;}
+    if(D.rest==="skip"){endRest();render();return;}
     if(V.restPaused){V.restLeft=Math.max(0,V.restLeft+(+D.rest));
       V.restTotal=Math.max(15,V.restTotal+(+D.rest));
       /* Trimming a paused timer to zero ends the rest, which is a real change. */
@@ -204,7 +206,7 @@ document.addEventListener("click",function(ev){
     openSheet("exercise",{swaplive:true,like:eS?eS.name:null});return;}
   if(D.nextex){
     if(V.logIdx>=S.active.entries.length-1){finishSession();return;}
-    play("set");V.restEnd=0;V.restPaused=false;V.fresh=-1;
+    play("set");endRest();V.fresh=-1;
     V.logIdx=V.logIdx+1;
     saveDB();syncDraft();render();return;}
   if(D.finish){finishSession();return;}
@@ -354,13 +356,6 @@ document.addEventListener("click",function(ev){
       c:nutritionFor(f10,gq.g).c,f:nutritionFor(f10,gq.g).f,fib:nutritionFor(f10,gq.g).fib}],curDate());
     if(V.sheet)closeSheet();
     V.tab="food";render();play("set");toast(f10.n+" added.");return;}
-  if(D.fday){
-    if(D.fday==="0"){V.fdate=null;render();return;}
-    var base=new Date((V.fdate||today())+"T00:00:00");
-    base.setDate(base.getDate()+(+D.fday));
-    var iso=new Date(base-base.getTimezoneOffset()*6e4).toISOString().slice(0,10);
-    if(iso>today())return;
-    V.fdate=(iso===today())?null:iso;render();return;}
   if(D.edititem){
     var prE=D.edititem.split("|"),rE=dayRec(curDate()),mE=rE.meals[prE[0]];
     if(!mE)return;
@@ -417,8 +412,12 @@ document.addEventListener("click",function(ev){
     S.goals.c=num(val("g_c"),S.goals.c);S.goals.f=num(val("g_f"),S.goals.f);
     S.goals.water=num(val("g_water"),S.goals.water);S.goals.steps=num(val("g_steps"),S.goals.steps);
     saveDB();render();toast(t("Saved."));return;}
-  if(D.testsound){audioOn();play("pr");
-    setTimeout(function(){toast("If that was silent, your phone\u2019s ring switch is off.");},400);
+  /* Test Sound plays the actual rest alarm, not a stand-in. A test that plays a
+     different sound from the real one tests nothing the user cares about. */
+  if(D.testsound){
+    if(!S.prefs.sound){toast(t("Turn Sounds on first."));return;}
+    alarmStart();
+    setTimeout(function(){toast(t("If that was silent, the side switch on your phone is set to silent."));},500);
     return;}
   if(D.toggle){S.prefs[D.toggle]=!S.prefs[D.toggle];
     if(D.toggle==="anim")document.body.classList.toggle("noanim",S.prefs.anim===false);
@@ -564,17 +563,31 @@ document.addEventListener("click",function(ev){
       label:t("Type DELETE to confirm"),ph:"DELETE",cta:t("Delete everything"),act:"wipe"});return;}
   if(D.openday){openSheet("dayview",{date:D.openday});return;}
   if(D.jumpfood){V.fdate=(D.jumpfood===today())?null:D.jumpfood;closeSheet();V.tab="food";render();return;}
-  if(D.cal!==undefined){V.cal+= +D.cal;render();return;}
-  /* Progress date bar. The chips beside it still own the charts. */
-  if(D.pday!==undefined){
-    if(+D.pday===0){V.pdate=today();}
-    else{var pd=new Date((V.pdate||today())+"T00:00:00");
-      pd.setDate(pd.getDate()+ +D.pday);
-      var iso2=pd.toISOString().slice(0,10);
-      if(iso2<=today())V.pdate=iso2;}
+
+  /* ---- date bar, both screens ----------------------------------------------
+     One set of handlers for the one component in js/ui/datebar.js. Progress and Food
+     previously had their own, and the copies had drifted: Progress's day arithmetic
+     omitted the timezone correction, so east of UTC "previous day" skipped one.
+     Which day a screen owns is the only thing that differs, so that is the only thing
+     these branches branch on. Food stores null for today because curDate() treats null
+     as "follow the clock", which keeps the tab correct across midnight. */
+  function dbGet(){ return V.tab==="food"?(V.fdate||today()):(V.pdate||today()); }
+  function dbSet(iso){
+    if(iso>today())return;                       /* no logging into the future */
+    if(V.tab==="food")V.fdate=(iso===today())?null:iso;
+    else V.pdate=iso;
+  }
+  if(D.dday!==undefined){
+    dbSet(+D.dday===0?today():shiftDay(dbGet(),+D.dday));
     render();return;}
-  if(D.pcal!==undefined){V.pcal=!V.pcal;V.cal=0;render();return;}
-  if(D.pick){V.pdate=D.pick;V.pcal=false;render();return;}
+  if(D.dopen!==undefined){
+    if(V.tab==="food")V.fcal=!V.fcal; else V.pcal=!V.pcal;
+    V.cal=0;render();return;}
+  if(D.dmonth!==undefined){V.cal+= +D.dmonth;render();return;}
+  if(D.dpick){
+    dbSet(D.dpick);
+    if(V.tab==="food")V.fcal=false; else V.pcal=false;
+    render();return;}
 });
 
 
@@ -640,8 +653,12 @@ function tickSession(){
   if(pz)pz.hidden=!ck.paused;
   if(!V.restEnd||V.restPaused)return;
   var left=Math.ceil((V.restEnd-Date.now())/1000);
-  /* Running out is the one tick that changes the screen rather than the numbers. */
-  if(left<=0){V.restEnd=0;V.restPaused=false;if(V.tab==="train"&&!V.sheet)render();return;}
+  /* Running out is the one tick that changes the screen rather than the numbers. The
+     rest surface does not disappear at zero any more — it turns into the alert, and
+     stays until the user acknowledges it. Sound cannot be relied on (silent switch,
+     backgrounded tab), so the screen has to carry it. */
+  if(left<=0){V.restEnd=0;V.restPaused=false;V.restDone=true;
+    if(V.tab==="train"&&!V.sheet)render();return;}
   paintRest();
 }
 setInterval(function(){
@@ -650,7 +667,7 @@ setInterval(function(){
     var warn=S.prefs.warn||10;
     if(left<=Math.min(3,warn)&&left>0&&left!==lastTick){setLastTick(left);play("tick");}
     if(left===warn&&lastTick!==warn){setLastTick(warn);play("tick");}
-    if(left<=0){setBeeped(true);play("rest");tap("ok");}}
+    if(left<=0){setBeeped(true);alarmStart();tap("ok");}}
   tickSession();},1000);
 document.addEventListener("visibilitychange",function(){
   if(document.visibilityState==="visible"&&S.active)keepAwake(true);});
@@ -712,15 +729,53 @@ function requestCloseSheet(){
 ACT.dropsheet=function(){closeSheet();};
 
 /* ---- leaving an active workout ------------------------------------------- */
-/* The only back that asks first. It used to be a separate "Discard this session"
-   link at the bottom of the screen; the arrow now carries it, so there is one way
-   out instead of two. */
-function navGuard(){
-  /* Leaving a session no longer ends it. The workout stays exactly where it was and
-     Home and Train offer to continue; discarding is an explicit control inside the
-     session instead of a question asked every time you glance at another screen. */
-  return false;
+/* One prompt, reached by every exit. nav.js routes the back arrow, Safari's edge
+   swipe and the OS gesture through this same guard, so no control hardcodes a
+   destination and none of them can behave differently from the others.
+
+   The protocol: return true to cancel this back and take responsibility for it. The
+   guard is handed the function that finishes the job and calls it once the user has
+   chosen, so "Keep workout and exit" leaves exactly where the gesture was going.
+
+   Leaving has not ended a session since Round 2 — the session is saved and resumable
+   either way. The sheet is not there to prevent loss; it is there to say so, because
+   a user who does not know their sets are safe will not risk the gesture. That is why
+   keeping is the primary and discarding is the secondary, outlined rather than filled:
+   the dangerous option should be reachable, not inviting. */
+var leaveResume=null;
+function navGuard(resume){
+  /* Only when the workout is the thing you are actually looking at. vTrain() returns
+     the logger for as long as a session is live, so "the Train tab" and "the workout"
+     are the same screen and that is the whole condition. Without the tab test, every
+     back gesture anywhere in the app — on Food, on Progress — would stop to ask about
+     a workout the user is not currently in. */
+  if(!S.active||V.tab!=="train")return false;
+  leaveResume=resume||null;
+  askConfirm({title:t("Leave workout?"),
+    body:t("Your completed sets are saved. You can resume this workout later."),
+    cta:t("Keep workout and exit"),act:"leavekeep",
+    alt:t("Discard workout"),altact:"leavediscard"});
+  return true;
 }
+/* Cancel needs no handler: closing the sheet without choosing leaves the session and
+   the screen exactly as they were, which is what Cancel means.
+
+   Both outcomes land on Home rather than calling the resume the gesture was carrying.
+   That is not a shortcut — back inside Train resolves to a Train route, and a Train
+   route with a live session renders the logger, so honouring the gesture's own
+   destination would put the user straight back in the workout they just left. Home is
+   also the screen that carries the Resume card, so leaving and returning are adjacent.
+   The destination is decided here, once, for the arrow and the swipe alike. */
+function leaveTo(){
+  leaveResume=null;
+  V.tab="home";V.train="days";render();
+}
+ACT.leavekeep=leaveTo;
+ACT.leavediscard=function(){
+  S.active=null;endRest();V.fresh=-1;
+  keepAwake(false);saveDB();
+  leaveTo();
+};
 
 function openBarcodePrompt(){
   askText({title:t("Enter barcode"),label:t("Barcode"),

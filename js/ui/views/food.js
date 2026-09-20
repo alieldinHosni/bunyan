@@ -4,8 +4,9 @@ import {t} from "../../i18n/dict.js";
 import {curDate, eatenToday, frequentFoods} from "../../engine/formulas.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {dayRec, S} from "../../state.js";
-import {esc, fmtN, r1, shortd, today} from "../../util.js";
-import {head, progressBar} from "../view.js";
+import {esc, fmtN, r1} from "../../util.js";
+import {head, progressBar, V} from "../view.js";
+import {dateBar} from "../datebar.js";
 
 /* ============================================================ FOOD */
 var MEALS=["Breakfast","Lunch","Dinner","Snack"];
@@ -16,18 +17,19 @@ function srcBadge(src){
   return "";}
 
 function vFood(){
-  var dsel=curDate(), isToday=dsel===today();
+  var dsel=curDate();
   var g=S.goals,e=eatenToday(dsel),r=dayRec(dsel);
   var h=head(t("Nutrition"),t("Fuel the fire within"));
-  h+='<div class="card" style="padding:var(--s3);margin-bottom:var(--s3)">'
-   +'<div class="row" style="align-items:center">'
-   +'<button class="btn d sm iconbtn" data-fday="-1" aria-label="'+t("Previous day")+'">\u2039</button>'
-   +'<span aria-live="polite" style="font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:13px">'
-   +(isToday?"Today, ":"")+shortd(dsel)+'</span>'
-   +'<button class="btn d sm iconbtn" data-fday="1"'+(isToday?' disabled':'')
-   +' aria-label="'+t("Next day")+'">\u203a</button>'
-   +'</div>'+(isToday?'':'<div style="text-align:center"><button class="btn d sm" data-fday="0">'
-   +'Back to today</button></div>')+'</div>';
+  /* The same bar Progress uses — js/ui/datebar.js. This screen had a cut-down version
+     with no month view, no markers and two strings that never went through t(). */
+  h+=dateBar({date:dsel,open:V.fcal,monthOffset:V.cal});
+  /* The day-detail sheet, which shows training and nutrition for one day together. It
+     sits outside the bar rather than inside it, so the two bars stay identical: on
+     Progress the same sheet opens from the "THAT DAY" card, which carries a summary
+     this screen does not need, because the day's food is already below. */
+  h+='<button class="card tap dbdetail" data-openday="'+dsel+'">'
+   +'<div class="row"><span class="tiny" style="letter-spacing:.1em">'+t("THAT DAY")+'</span>'
+   +'<span class="chev">›</span></div></button>';
 
   h+='<div class="card" style="text-align:center">'
    +'<div class="tiny" style="letter-spacing:.12em">'+t("CALORIES CONSUMED")+'</div>'

@@ -302,6 +302,18 @@ function vRest(a,e,rows,timed){
     nr=nxe?(nxe.planned.sets+' × '+nxe.planned.lo
       +(nxe.planned.hi!==nxe.planned.lo?'–'+nxe.planned.hi:'')+' '+t("reps")):"";
   }
+  /* Time's up. A separate screen rather than a label on the countdown, because sound is
+     not guaranteed to arrive — the silent switch kills it outright and a backgrounded
+     tab suspends it — so the screen has to be the alert on its own. Full-bleed accent,
+     the ring gone, one control. Nothing here is subtle. */
+  if(V.restDone){
+    return '<div class="restwrap done" role="alertdialog" aria-label="'+t("Rest over")+'">'
+     +'<div class="restlabel">'+t("Rest period")+'</div>'
+     +'<div class="restdone-big" aria-live="assertive">'+t("Rest over")+'</div>'
+     +'<div class="upnext"><div class="ul">'+t("Up next")+'</div>'
+     +'<div class="uv">'+nx+'</div>'+(nr?'<div class="ur">'+nr+'</div>':'')+'</div>'
+     +'<button class="rbtn main restdone-go" data-rest="skip">'+t("I am ready")+'</button></div>';
+  }
   return '<div class="restwrap" role="dialog" aria-label="'+t("Rest")+'">'
    +'<div class="restlabel">'+t("Rest period")+'</div>'
    +'<div class="restsub">'+didTxt+'</div>'
@@ -350,7 +362,9 @@ function syncRest(){
   var host=document.getElementById("rest");
   if(!host)return;
   var a=S.active;
-  var on=!!a&&(V.restEnd>Date.now()||V.restPaused);
+  /* Three states now, not two. restDone keeps the surface up after the clock reaches
+     zero so the alert has somewhere to live — the sound may never arrive. */
+  var on=!!a&&(V.restEnd>Date.now()||V.restPaused||V.restDone);
   if(!on){
     if(host.firstChild)host.textContent="";
     host.removeAttribute("data-k");
@@ -358,7 +372,9 @@ function syncRest(){
   }
   var e=a.entries[V.logIdx];
   if(!e){host.textContent="";host.removeAttribute("data-k");return;}
-  var key=V.logIdx+"|"+e.sets.length+"|"+(S.prefs&&S.prefs.lang||"en");
+  /* The done state is a different screen, so it belongs in the key — otherwise the
+     countdown's DOM is kept and only the digits get repainted. */
+  var key=V.logIdx+"|"+e.sets.length+"|"+(V.restDone?"done":"run")+"|"+(S.prefs&&S.prefs.lang||"en");
   if(host.getAttribute("data-k")===key){paintRest();return;}
   host.setAttribute("data-k",key);
   host.innerHTML=vRest(a,e,rowsFor(e),ex_isTimed(e.name));
