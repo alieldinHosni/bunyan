@@ -1,5 +1,7 @@
 /* Bunyan — motion
    Every duration and easing in the app, in one place.
+   Imports fmtN and num from util so a counted number and a static one are formatted
+   by the same rule; motion.js carried a private copy of num() until now.
 
    Before this there were roughly thirty distinct timing values scattered through the
    stylesheet, most of them chosen once and never compared with anything. The point of
@@ -9,6 +11,7 @@
 
    The tokens are written to custom properties on :root, so CSS consumes them directly
    and JS only has to know the names. */
+import {fmtN, num} from "../util.js";
 
 /* Durations are Base Web's timing scale, easings are Material 3's. That split is
    deliberate: Uber's scale is the coarser and more disciplined one — seven steps you
@@ -80,10 +83,10 @@ function ms(name){ return _reduced?1:(DUR[name]||0); }
 function countTo(el,to,opts){
   if(!el)return;
   opts=opts||{};
-  /* Thousands separators by default. Every number this is used on is a whole count —
-     calories, minutes, sets, kilos moved — and a five-digit volume that gains commas
-     only on the final frame reads as a glitch. */
-  var fmt=opts.format||function(v){return Math.round(v).toLocaleString();};
+  /* Grouped by default, and by the same function the views use. Having a private
+     format here is what let the Food tab render "2,450 / 1950" — the counted half and
+     the static half formatted by different rules. */
+  var fmt=opts.format||fmtN;
   var from=num(el.getAttribute("data-count"),opts.from!=null?opts.from:0);
   to=num(to,0);
   el.setAttribute("data-count",to);
@@ -102,7 +105,6 @@ function countTo(el,to,opts){
   }
   el._countRaf=requestAnimationFrame(step);
 }
-function num(v,d){v=parseFloat(v);return isFinite(v)?v:(d||0);}
 
 /* Play an element out, then do the thing that removes it.
 
@@ -114,10 +116,21 @@ function num(v,d){v=parseFloat(v);return isFinite(v)?v:(d||0);}
    removal must happen whether or not the animation can. */
 function leave(el,done){
   if(!el||_reduced||!el.parentNode){ done(); return; }
+  /* Freeze the measured height so the exit can collapse it and the rows below slide up
+     instead of snapping. An auto height cannot be animated at all, and the usual
+     max-height workaround either clips a tall row or spends the first part of the
+     duration travelling through empty space on a short one. This costs one layout read
+     on an element that is about to be destroyed. */
+  el.style.height=el.getBoundingClientRect().height+"px";
   el.classList.add("rowout");
   var fired=false;
   var go=function(){ if(fired)return; fired=true;
-    el.removeEventListener("animationend",go); done(); };
+    el.removeEventListener("animationend",go);
+    /* Drop the frozen height before the re-render. The patcher preserves style as a
+       runtime attribute and matches nodes by key, so a reused row would otherwise
+       inherit the pixel height of the row that just left. */
+    el.style.height="";
+    done(); };
   el.addEventListener("animationend",go);
   /* animationend does not arrive if the element is hidden or the animation is
      cancelled, and a row that never disappears is worse than one that vanishes. */

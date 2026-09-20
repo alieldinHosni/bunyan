@@ -6,7 +6,7 @@ import {exName} from "../../i18n/exnames.js";
 import {avg7, bestE1RM, consistency, daysSince, lastWeight, prFor, sessionVolume, weeklySets} from "../../engine/formulas.js";
 import {S} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
-import {esc, r1, shortd, today} from "../../util.js";
+import {esc, fmtN, r1, shortd, today} from "../../util.js";
 import {head, sparkline, streak, V} from "../view.js";
 
 /* ============================================================ PROGRESS */
@@ -40,7 +40,7 @@ function vProgress(){
    +'<span class="unit">'+t("days")+'</span></div></div>'
    +'<div class="card" style="margin:0"><div class="tiny">'+t("TOTAL VOLUME")+'</div>'
    +'<div class="stat" style="margin-top:5px">'
-   +(toDisp(rv)>9999?r1(toDisp(rv)/1000)+"k":Math.round(toDisp(rv)))
+   +(toDisp(rv)>9999?r1(toDisp(rv)/1000)+"k":fmtN(toDisp(rv)))
    +'<span class="unit">'+wUnit()+'</span></div></div>'
    +'<div class="card" style="margin:0"><div class="tiny">'+t("BODY WEIGHT")+'</div>'
    +'<div class="stat" style="margin-top:5px">'
@@ -52,7 +52,7 @@ function vProgress(){
     if(e.sets.length&&!seen[e.name]){seen[e.name]=1;if(prFor(e.name).w)prs++;}});});
   h+='<div class="grid2">'
    +'<div class="card"><div class="tiny">'+t("Total volume")+'</div><div class="big">'
-   +Math.round(toDisp(totalVol)).toLocaleString()+'</div><div class="tiny">'+wUnit()+' '+t("moved")+'</div></div>'
+   +fmtN(toDisp(totalVol))+'</div><div class="tiny">'+wUnit()+' '+t("moved")+'</div></div>'
    +'<div class="card"><div class="tiny">'+t("Consistency")+'</div><div class="big">'+consistency()+'%</div><div class="tiny">'+t("last 4 weeks")+'</div></div>'
    +'<div class="card"><div class="tiny">'+t("Exercises tracked")+'</div><div class="big">'+prs+'</div><div class="tiny">'+t("with records")+'</div></div>'
    +'<div class="card"><div class="tiny">'+t("7-day weight")+'</div><div class="big">'

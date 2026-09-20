@@ -12,7 +12,7 @@ import {GOALS, LEVELS, splitCandidates} from "../engine/plan.js";
 import {groupLabel, groupRun, platePlan} from "./views/session.js";
 import {buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats} from "../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
-import {esc, num, pretty, r1, shortd, today} from "../util.js";
+import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
 import {CUES, MISTAKES, sparkline, stepper, V} from "./view.js";
 
 /* ============================================================ sheets */
@@ -236,7 +236,7 @@ function vSheet(){
          +'<div class="tiny">'+esc(it.label)+' \u00b7 '+Math.round(it.grams)+' g</div></div>'
          +srcBadge(it.src)+'</div>'
          +'<div class="row" style="margin-top:8px"><span class="metric" style="font-size:20px">'
-         +it.n.kcal+'<span class="unit">kcal</span></span>'
+         +fmtN(it.n.kcal)+'<span class="unit">kcal</span></span>'
          +'<span class="tiny num">'+it.n.p+'p \u00b7 '+it.n.c+'c \u00b7 '+it.n.f+'f</span></div>'
          /* Five controls on one line is wider than a phone, which forced the whole
             sheet to scroll sideways and made it look corrupted. The amount and its
@@ -258,7 +258,7 @@ function vSheet(){
       if(known.length){
         var tot=sumNutrition(known.map(function(i){return i.n;}));
         b+='<div class="card hot"><div class="tiny" style="letter-spacing:.12em">TOTAL</div>'
-         +'<div class="metric" style="font-size:32px;margin:4px 0 6px">'+tot.kcal
+         +'<div class="metric" style="font-size:32px;margin:4px 0 6px">'+fmtN(tot.kcal)
          +'<span class="unit">kcal</span></div>'
          +'<div class="row"><span class="dim">Protein '+tot.p+'g</span>'
          +'<span class="dim">Carbs '+tot.c+'g</span><span class="dim">Fat '+tot.f+'g</span></div></div>';
@@ -335,17 +335,17 @@ function vSheet(){
     var et=eatenToday(dv);
     if(!et.kcal)b+='<p class="tiny">'+t("No food logged.")+'</p>';
     else{
-      b+='<div class="card"><div class="metric" style="font-size:30px">'+et.kcal+'<span class="unit">kcal</span></div>'
+      b+='<div class="card"><div class="metric" style="font-size:30px">'+fmtN(et.kcal)+'<span class="unit">kcal</span></div>'
        +'<div class="row mt"><span class="dim">Protein '+et.p+'g</span>'
        +'<span class="dim">Carbs '+et.c+'g</span><span class="dim">Fat '+et.f+'g</span></div></div>';
       MEALS.forEach(function(mn){
         var mm=rv2.meals[mn];
         if(!mm||!(mm.items||[]).length)return;
         b+='<div class="card"><div class="row"><h3>'+mn.toUpperCase()+'</h3>'
-         +'<span class="dim num">'+sumNutrition(mm.items).kcal+' kcal</span></div>';
+         +'<span class="dim num">'+fmtN(sumNutrition(mm.items).kcal)+' kcal</span></div>';
         mm.items.forEach(function(it){
           b+='<div class="row" style="margin-top:6px;font-size:13px"><span>'+esc(it.n)+'</span>'
-           +'<span class="dim num">'+it.kcal+'</span></div>';});
+           +'<span class="dim num">'+fmtN(it.kcal)+'</span></div>';});
         b+='</div>';});}
     if(rv2.weight||rv2.steps)b+='<div class="card"><div class="row">'
       +'<span class="dim">Steps '+(rv2.steps||0)+'</span></div></div>';
@@ -427,12 +427,16 @@ function vSheet(){
        in a sibling span, because counting writes textContent and would otherwise eat
        it. Each span carries the final value as its text too, so reduced motion and a
        re-render both land on the right number without animating. */
-     +'<div><div class="tiny">'+t("DURATION")+'</div><div class="metric" style="font-size:30px">'
+    /* All four figures use .stat. DURATION used to be .metric at an overridden 30px,
+       which made it accent red and larger than its three neighbours - four equivalent
+       numbers with the least important one shouting. Nothing here ranks above the
+       others, so nothing here is styled above them. */
+     +'<div><div class="tiny">'+t("DURATION")+'</div><div class="stat">'
      +'<span data-count-to="'+w.mins+'">'+w.mins+'</span></div>'
      +'<div class="tiny">'+t("mins total")+'</div></div>'
      +'<div><div class="tiny">'+t("TOTAL VOLUME")+'</div><div class="stat">'
      +'<span data-count-to="'+Math.round(toDisp(w.vol))+'">'
-     +Math.round(toDisp(w.vol)).toLocaleString()+'</span>'
+     +fmtN(toDisp(w.vol))+'</span>'
      +'<span class="unit">'+wUnit()+'</span></div><div class="tiny">'+t("lifted")+'</div></div></div>'
      +'<div class="grid2" style="margin-top:var(--s5)">'
      +'<div><div class="tiny">'+t("EXERCISES")+'</div><div class="stat">'
@@ -443,7 +447,7 @@ function vSheet(){
      +'<div class="tiny">avg RPE '+(w.rpe||"\u2014")+'</div></div></div></div>';
     if(w.delta!==null)b+='<div class="card mt"><div class="row"><span class="tiny">Versus last '
       +esc(w.dayName)+'</span><span style="font-weight:700;color:'
-      +(w.delta>=0?"var(--ok)":"var(--dim)")+'">'+(w.delta>=0?"+":"")+toDisp(w.delta).toLocaleString()+' '+wUnit()+'</span></div></div>';
+      +(w.delta>=0?"var(--ok)":"var(--dim)")+'">'+(w.delta>=0?"+":"")+fmtN(toDisp(w.delta))+' '+wUnit()+'</span></div></div>';
     if(w.prs.length){
       b+='<div class="card"><div class="row"><span class="tiny" style="letter-spacing:.12em">'
        +'ACHIEVED PERSONAL RECORDS</span><span class="pill a">New</span></div>';
@@ -620,8 +624,8 @@ function vSheet(){
        ["recomp",t("Recomposition")]].map(function(a){
          return '<option value="'+a[0]+'"'+(yp.goal===a[0]?" selected":"")+'>'+a[1]+'</option>';}).join("")
      +'</select></div>'
-     +'<p class="tiny mt">'+t("Maintenance estimate")+' '+tdee()+' kcal. '
-     +t("Suggested target")+' '+targetKcal()+' kcal.</p>'
+     +'<p class="tiny mt">'+t("Maintenance estimate")+' '+fmtN(tdee())+' kcal. '
+     +t("Suggested target")+' '+fmtN(targetKcal())+' kcal.</p>'
      +'<button class="btn" data-saveyou="1">'+t("Save")+'</button>'
      +'<button class="btn g" data-calc="1">'+t("Use the suggested targets")+'</button>';
   }
@@ -668,7 +672,7 @@ function vSheet(){
      +'<input id="g_water" type="number" value="'+ng.water+'"></div>'
      +'<div><label class="tiny" for="g_steps">'+t("Steps")+'</label>'
      +'<input id="g_steps" type="number" value="'+ng.steps+'"></div></div>'
-     +'<p class="tiny mt">'+t("Your macros add up to")+' '+macroKcal(ng.p,ng.c,ng.f)+' kcal.</p>'
+     +'<p class="tiny mt">'+t("Your macros add up to")+' '+fmtN(macroKcal(ng.p,ng.c,ng.f))+' kcal.</p>'
      +'<button class="btn" data-savegoals="1">'+t("Save targets")+'</button>';
   }
   else if(V.sheet==="set_app"){

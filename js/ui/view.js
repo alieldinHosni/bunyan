@@ -2,7 +2,7 @@
    View state V, shared components, sound, haptics, rest timer. */
 import {t} from "../i18n/dict.js";
 import {S} from "../state.js";
-import {esc, num, r1, today} from "../util.js";
+import {esc, fmtN, num, r1, today} from "../util.js";
 
 /* ============================================================ view state */
 var V={tab:"home",fdate:null,food:null,range:30,exd:null,showAll:false,restPaused:false,restLeft:0,train:"days",dayId:null,sheet:null,sd:null,exq:"",exm:"All",exe:"All",previewId:null,
@@ -164,7 +164,7 @@ function ring(pct,color,label,value){
    +'<circle cx="40" cy="40" r="'+R+'" stroke="'+color+'" stroke-width="7" fill="none"'
    +' stroke-linecap="round" stroke-dasharray="'+C+'" stroke-dashoffset="'+off+'"'
    +' transform="rotate(-90 40 40)"/>'
-   +'<text x="40" y="38" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" data-count-to="'+value+'">'+value+'</text>'
+   +'<text x="40" y="38" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" data-count-to="'+value+'">'+fmtN(value)+'</text>'
    +'<text x="40" y="52" text-anchor="middle" font-size="9" fill="var(--dim)">'+label+'</text></svg>';}
 
 function sparkline(vals,labels,color){

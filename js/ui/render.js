@@ -94,8 +94,15 @@ function render(){
      only; the second patches, so unchanged nodes — images, the focused field, an
      element mid-animation — are never destroyed and recreated. */
   var appEl=document.getElementById("app");
-  appEl.classList.toggle("pagein",moved);
+  /* Restarting the animation takes more than leaving the class on. #app itself is
+     never replaced — only its children are — so on two tab changes in a row the class
+     was already present, CSS saw no change, and pageIn did not fire. Tapping straight
+     across the tab bar played no transition at all; it only reappeared after some
+     same-tab render happened to clear the class. Removing it and forcing a reflow
+     before re-adding is the standard way to replay a CSS animation. */
+  appEl.classList.remove("pagein");
   if(moved)replace(appEl,h); else patch(appEl,h);
+  if(moved){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
 
   var navEl=document.getElementById("nav");
   patch(navEl,TABSET().map(function(tb){

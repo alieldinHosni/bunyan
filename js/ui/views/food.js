@@ -4,7 +4,7 @@ import {t} from "../../i18n/dict.js";
 import {curDate, eatenToday, frequentFoods} from "../../engine/formulas.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {dayRec, S} from "../../state.js";
-import {esc, r1, shortd, today} from "../../util.js";
+import {esc, fmtN, r1, shortd, today} from "../../util.js";
 import {head, progressBar} from "../view.js";
 
 /* ============================================================ FOOD */
@@ -34,7 +34,7 @@ function vFood(){
    +'<div class="metric" style="font-size:38px;margin:6px 0 8px">'
    /* The number the user just changed by logging something, so it counts rather
       than snapping. The target beside it is fixed and does not. */
-   +'<span data-k="kcal" data-count-to="'+e.kcal+'">'+e.kcal+'</span> / '+g.kcal
+   +'<span data-k="kcal" data-count-to="'+e.kcal+'">'+fmtN(e.kcal)+'</span> / '+fmtN(g.kcal)
    +'<span class="unit">kcal</span></div>'
    +progressBar(e.kcal,g.kcal,"var(--accent)")
    +'<div class="grid3" style="margin-top:var(--s4)">'
@@ -51,7 +51,7 @@ function vFood(){
     var m=r.meals[name]||{items:[]};
     var tot=sumNutrition(m.items||[]);
     h+='<div class="card"><div class="row"><h3>'+name.toUpperCase()+'</h3>'
-     +(tot.kcal?'<span class="metric" style="font-size:17px">'+tot.kcal+' kcal</span>'
+     +(tot.kcal?'<span class="metric" style="font-size:17px">'+fmtN(tot.kcal)+' kcal</span>'
                :'<span class="dim">\u2014</span>')+'</div>';
     /* Tap the row to change the amount, the \u2715 to remove it. Removal is undoable,
        so it does not stop to ask. */
@@ -61,7 +61,7 @@ function vFood(){
        +'<div style="flex:1;min-width:0"><div style="font-size:14px">'+esc(it.n)+'</div>'
        +'<div class="tiny">'+esc(it.label||"")+(it.src&&it.src!=="db"?" \u00b7 "+
           (it.src==="est"?"estimated":it.src==="you"?"yours":"branded"):"")+'</div></div>'
-       +'<span class="dim num">'+it.kcal+' kcal</span></button>'
+       +'<span class="dim num">'+fmtN(it.kcal)+' kcal</span></button>'
        +'<button class="fitem-x" data-dropfood="'+name+'|'+i+'"'
        +' aria-label="'+t("Remove")+' '+esc(it.n)+'">\u2715</button></div>';});
     h+='<div class="rowc mt"><button class="btn g sm" data-addfood="'+name+'">+ Add food</button>'
@@ -79,7 +79,7 @@ function vFood(){
     S.savedMeals.forEach(function(sm,i){
       var tot=sumNutrition(sm.items);
       h+='<button class="item" data-addsaved="'+i+'"><div><div style="font-weight:600">'+esc(sm.name)+'</div>'
-       +'<div class="tiny">'+sm.items.length+' items \u00b7 '+tot.kcal+' kcal</div></div>'
+       +'<div class="tiny">'+sm.items.length+' items \u00b7 '+fmtN(tot.kcal)+' kcal</div></div>'
        +'<span class="pill a">Add</span></button>';});
     h+='</div>';}
 

@@ -5,7 +5,7 @@ import {lastWeight} from "../../engine/formulas.js";
 import {GOALS, LEVELS} from "../../engine/plan.js";
 import {curProfile, friends, isOwner, PROFILES, S} from "../../state.js";
 import {toDisp, wUnit} from "../../units.js";
-import {esc} from "../../util.js";
+import {esc, fmtN} from "../../util.js";
 import {head, setRow, streak} from "../view.js";
 
 /* ============================================================ PROFILE */
@@ -36,7 +36,7 @@ function vProfile(){
      p.age+" · "+p.height+"cm · "+toDisp(lastWeight()||p.weight||86)+wUnit())
    +setRow("set_training",t("Training"),
      t(p.prog.charAt(0).toUpperCase()+p.prog.slice(1))+" · RPE "+rpeLabel.toLowerCase())
-   +setRow("set_nutrition",t("Nutrition"),g.kcal+" kcal · "+g.p+"g "+t("Protein").toLowerCase())
+   +setRow("set_nutrition",t("Nutrition"),fmtN(g.kcal)+" kcal · "+g.p+"g "+t("Protein").toLowerCase())
    +setRow("set_app",t("App"),
      (S.theme==="dark"?t("Dark"):t("Light"))+" · "
      +(pref.lang==="ar"?"العربية":"English")+" · "+wUnit())

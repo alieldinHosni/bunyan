@@ -625,12 +625,42 @@ body.noanim .skel{animation:none}
    thing appears and never on a re-render — the patcher keeps nodes alive, so an
    ungated entry animation would be exactly the bug Phase 1 removed. */
 
-/* A row arriving in, or leaving, a list. Height is animated only on the one row that
-   changed, which is cheap; nothing around it moves. */
+/* A row arriving in, or leaving, a list. The exit collapses the row's height as well
+   as fading it, so the rows below slide up rather than snapping. The height is frozen
+   in px by leave() first - auto does not animate - which is why the collapse lives
+   partly in JS and partly here. */
 @keyframes rowIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-.setrow[data-anim],.list .item[data-anim]{animation:rowIn var(--m-comp) var(--e-decel)}
-@keyframes rowOut{to{opacity:0;transform:translateY(-4px)}}
-.rowout{animation:rowOut var(--m-comp) var(--e-accel) forwards;pointer-events:none}
+/* A row that is leaving is not arriving. Without the :not(), the entry rule outranks
+   .rowout on specificity - .setrow[data-anim] is a class plus an attribute, .rowout is
+   one class - so a deleted row played its entrance while it was supposed to be leaving,
+   then vanished when leave()'s timeout fired. The toast pair never had this problem
+   because .toast.leaving ties with .toast and wins on order. Excluding the conflict is
+   better than adding weight to outrank it. */
+.setrow[data-anim]:not(.rowout),
+.list .item[data-anim]:not(.rowout){animation:rowIn var(--m-comp) var(--e-decel)}
+/* The row fades out while the space it occupied closes underneath it.
+
+   The 45% stop is opacity only, and it matters: it makes the row fully invisible while
+   the gap is still closing, so what you see is space closing rather than a ghost being
+   squashed. Height is a different story - a property listed only in the 100% block
+   interpolates across the WHOLE animation from its implicit start value, so the 45%
+   stop does not hold it and the collapse runs the entire duration. Measured, not
+   assumed; the first version of this was written believing the opposite.
+
+   Easing is --e-standard, not the --e-accel you would expect for something leaving.
+   Accelerate is correct for the fade but wrong for the collapse: measured, it left the
+   row's empty space sitting open and then slammed it shut over the last third (8px of
+   65 moved by 45%, 43px in the final 30%). Standard front-loads the travel and settles
+   into place - 55px by 45%, easing to 65.
+
+   leave() freezes the starting height in px first, because auto does not animate. Every
+   box property that adds vertical size has to reach zero or the row floors at its own
+   padding and border. */
+@keyframes rowOut{
+  45%{opacity:0;transform:translateY(-4px)}
+  100%{opacity:0;transform:translateY(-4px);height:0;
+       margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;border-top-width:0;border-bottom-width:0}}
+.rowout{animation:rowOut var(--m-comp) var(--e-standard) forwards;pointer-events:none;overflow:hidden}
 
 /* The rest screen is a distinct mode, so it gets a real entrance. */
 @keyframes restIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:none}}
