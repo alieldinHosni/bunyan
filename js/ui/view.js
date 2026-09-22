@@ -17,6 +17,9 @@ var V={tab:"home",fdate:null,food:null,range:30,exd:null,showAll:false,restPause
        /* The rest timer has three states, not two: counting, paused, and finished-and
           waiting to be acknowledged. The third is what makes the zero state visible. */
        restDone:false,
+       /* Whether the day view is showing its plan-editing actions (canvas screen 2
+          keeps them behind one link rather than as three loose buttons). */
+       dayEdit:false,
        bar:20};
 
 var AC=null,beeped=true,lastTick=99,wakeLock=null;

@@ -58,6 +58,7 @@ document.addEventListener("click",function(ev){
   if(D.addday){
     askText({title:t("Add a day"),label:t("Name"),ph:t("For example, Chest & Triceps"),
       cta:t("Add"),act:"addday"});return;}
+  if(D.dayedit!==undefined){V.dayEdit=!V.dayEdit;render();return;}
   if(D.renameday){
     var d0=dayOf(D.renameday);if(!d0)return;
     askText({title:t("Rename day"),label:t("Name"),value:d0.name,

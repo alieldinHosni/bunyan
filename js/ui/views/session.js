@@ -1,7 +1,7 @@
 /* Bunyan — session
    The live session surface and rest screen. Execution, not editing. */
 import {t} from "../../i18n/dict.js";
-import {loadable, thumb} from "../../data/exercises.js";
+import {difficultyOf, exImg, exMedia, muscleOfEntry} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
 import {prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
 import {S} from "../../state.js";
@@ -120,9 +120,11 @@ function vLogger(){
    +t("sets logged")+'</span></div></div>'
    /* A stopped clock with nothing to explain it reads as a bug, so the paused state
       says so rather than just freezing. */
-   +'<div class="ss-clock"><span class="num" id="sessClock">'+mmss(clock.ms/1000)+'</span>'
+   +'<div class="ss-clock"><span class="ico ico-clock" aria-hidden="true"></span>'
+   +'<span class="num" id="sessClock">'+mmss(clock.ms/1000)+'</span>'
    +'<span class="ss-paused" id="sessPaused"'+(clock.paused?'':' hidden')+'>'
    +t("Paused")+'</span></div>'
+   +'<button class="ss-more" data-sessmore="1" aria-label="'+t("More")+'">⋯</button>'
    +'</div><div class="ss-bar"><i style="width:'+pct+'%"></i></div></div>';
 
   /* --- one segment per exercise; members of a superset are tied together --- */
@@ -134,19 +136,42 @@ function vLogger(){
     h+='<button class="'+cls+'" data-jump="'+i+'" aria-label="'+esc(exName(x.name))+'"><span></span></button>';});
   h+='</div>';
 
-  /* --- what am I doing --- */
-  h+='<div class="ex-head">'
-   +'<button class="exth" data-exdetail="'+esc(e.name)+'" aria-label="'+t("How to do it")+'">'
-   +thumb(e.name,56)+'</button>'
-   +'<div style="flex:1;min-width:0"><h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
-   +'<div class="ex-tags">'
+  /* --- what am I doing: canvas screen 3 (Figma node 2:1008) ---
+     Title with an info control, the two form frames, the tag row, then the
+     recommendation. The frame's START/END panels are placeholder rectangles standing in
+     for artwork; the library ships a real photograph of each position, so those are used
+     instead — closer to the design's intent than copying its stand-in would be. */
+  var med=exMedia(e.name),img0=exImg(e.name,0),img1=exImg(e.name,1);
+  h+='<div class="exhead">'
+   +'<h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
+   +'<button class="infobtn" data-exdetail="'+esc(e.name)+'" aria-label="'+t("How to do it")+'">i</button>'
+   +'</div>';
+  if(img0&&img1)
+    h+='<div class="formvis">'
+     +'<figure><img src="'+img0+'" alt="" loading="lazy" decoding="async">'
+     +'<figcaption>'+t("Start")+'</figcaption></figure>'
+     +'<figure><img src="'+img1+'" alt="" loading="lazy" decoding="async">'
+     +'<figcaption>'+t("End")+'</figcaption></figure></div>';
+  h+='<div class="ex-tags">'
    +(run.length>1?'<span class="pill sup">'+t("Superset")+' '+groupLabel(a.entries,V.logIdx)
        +' · '+t("round")+' '+Math.min(rows,e.sets.length+1)+'/'+rows+'</span>':'')
-   +'<span class="pill">'+esc(t(e.muscle))+'</span>'
-   +'<span class="pill">'+e.planned.sets+' × '+e.planned.lo
+   +'<span class="etag">'+esc(t(muscleOfEntry(e)))+'</span>'
+   +(med&&med.e?'<span class="etag">'+esc(t(med.e))+'</span>':'')
+   +'<span class="etag">'+e.planned.sets+' × '+e.planned.lo
    +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+'</span>'
+   +(difficultyOf(e.name)?'<span class="etag hot">'+esc(t(difficultyOf(e.name)))+'</span>':'')
    +(pr.w?'<span class="pill gold">PR '+fmtW(pr.w)+'</span>':'')
-   +'</div></div></div>';
+   +'</div>';
+
+  /* The frame's recommendation banner, above the table where it puts it. The figure is
+     the recommender's own, and it only appears before the first set of the exercise —
+     once you are working, the rows carry the numbers. */
+  var recTop=e.sets.length?null:recommend(e);
+  if(recTop&&recTop.w)
+    h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span>'
+     +'<span>'+t("Recommended")+': <b>'+fmtW(recTop.w)+'</b> × '+e.planned.lo
+     +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+' '+t("reps")
+     +(recTop.note?' · '+esc(recTop.note):'')+'</span></div>';
 
   /* --- the set grid: prescription, previous performance and entry in one row --- */
   /* Delete leads the row, log ends it. Grid columns follow the writing direction, so
@@ -214,11 +239,7 @@ function vLogger(){
   h+='<div class="addrow"><button class="addset" data-addrow="1" aria-label="'
    +t("Add a set")+'">+</button></div>';
 
-  /* The target band that used to sit here said less than the pill in the header,
-     which carries sets and reps together, and cost a screenful above the fold. */
-  var rec=e.sets.length?null:recommend(e);
-  if(rec&&rec.note)h+='<p class="tiny" style="margin:8px 2px 0">'+esc(rec.note)+'</p>';
-
+  /* The recommendation now sits above the table, in the frame's banner. */
   var hint=progressionHint(e);
   if(hint)h+='<div class="card mt" style="border-color:var(--gold);margin-bottom:0">'
     +'<h3 style="color:var(--gold);font-size:14px">'+t("Progression earned")+'</h3>'
@@ -244,15 +265,14 @@ function vLogger(){
        +esc(exName(a.entries[nxtG].name))+'</p>';
   }
 
-  h+='<div class="ss-foot">'
-   +'<button data-exdetail="'+esc(e.name)+'">'+t("How to")+'</button>'
-   +'<button data-swap="1">'+t("Replace")+'</button>'
-   +(loadable(e.name)?'<button data-plates="1">'+t("Plates")+'</button>':'')
-   +'<button data-note="1">'+t("Note")+(a.notes?' •':'')+'</button>'
-   +'<button data-finish="1">'+t("Finish")+'</button>'
-   /* Discarding is an explicit act inside the session now. Leaving the screen no
-      longer asks, so this is the only way to throw a workout away. */
-   +'<button data-discard="1">'+t("Discard")+'</button></div>';
+  /* Canvas screen 4 keeps exactly two secondary actions under the table. The other
+     five — how to, plates, note, finish, discard — are behind the header's overflow,
+     which is also what Round 4 item 1 asks for: one primary action, everything
+     infrequent collapsed. Nothing was removed, only moved. */
+  h+='<div class="ss-links">'
+   +'<button data-swap="1">'+t("Replace Exercise")+'</button>'
+   +(V.logIdx<a.entries.length-1?'<button data-nextex="1">'+t("Skip Exercise")+'</button>':'')
+   +'</div>';
 
   /* The rest screen is no longer part of this string; syncRest() owns it. */
   return h;}

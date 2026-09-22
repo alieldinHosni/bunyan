@@ -1,6 +1,7 @@
 /* Bunyan — formulas
    Training and body maths: volume, 1RM, RPE, BMR, progression. */
 import {FOODDB, sumNutrition} from "./nutrition.js";
+import {muscleOfEntry} from "../data/exercises.js";
 import {dayRec, S, saveDB, split} from "../state.js";
 import {num, r1, today} from "../util.js";
 import {V} from "../ui/view.js";
@@ -91,11 +92,16 @@ function weeklySets(){
     if(new Date(s.date+"T00:00:00").getTime()<cut)return;
     s.entries.forEach(function(e){
       if(!e.sets.length)return;
-      out[e.muscle]=(out[e.muscle]||0)+e.sets.length;});});
+      /* Resolved from the library, not the copy stored on the entry: that copy is
+         written when the exercise joins a plan and is "Other" for any plan built
+         before the library finished loading. Grouping on it silently files a whole
+         programme under "Other". */
+      var m=muscleOfEntry(e);
+      out[m]=(out[m]||0)+e.sets.length;});});
   return out;}
 function daysSince(muscle){
   for(var i=0;i<S.sessions.length;i++){
-    var hit=S.sessions[i].entries.some(function(e){return e.muscle===muscle&&e.sets.length;});
+    var hit=S.sessions[i].entries.some(function(e){return muscleOfEntry(e)===muscle&&e.sets.length;});
     if(hit)return Math.floor((Date.now()-new Date(S.sessions[i].date+"T00:00:00").getTime())/864e5);
   } return null;}
 function consistency(){

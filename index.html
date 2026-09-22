@@ -1029,6 +1029,42 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tlib-n{display:block;font-family:var(--display);font-weight:700;font-size:15px}
 .tlib-s{display:block;font-size:11px;color:var(--dim);margin-top:2px}
 .tlib .ico-chev{color:var(--dim)}
+
+/* ================= A training day — canvas screen 2 (Figma node 2:915) */
+.ico-cleft{--ico:url(icons/chevron-left.svg)}
+[dir="rtl"] .ico-cleft{transform:scaleX(-1)}
+.dhead{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.icobtn.back{color:var(--text);margin-inline-start:-10px;margin-inline-end:0}
+.icobtn.back .ico{width:20px;height:20px;flex-basis:20px}
+.dhead-t{font-size:24px;font-weight:800;min-width:0}
+.dsub{font-size:13px;color:var(--dim);margin:0 0 16px}
+/* The frame's summary strip: hairlines above and below, three measured figures. */
+.dstrip{display:flex;justify-content:space-between;gap:12px;
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+  padding:12px 0;margin-bottom:20px}
+.dstrip b{display:block;font-family:var(--display);font-weight:700;font-size:16px;
+  color:var(--text);margin-top:2px;white-space:nowrap}
+.droutine{font-size:16px;margin:0 0 12px}
+.drows{display:flex;flex-direction:column;gap:12px}
+.drow{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;
+  background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:12px;
+  text-align:start;color:var(--text)}
+.dnum{flex:0 0 auto;font-family:var(--display);font-weight:800;font-size:16px;color:var(--accentHi);
+  font-variant-numeric:tabular-nums}
+.dtext{flex:1;min-width:0}
+.drow-n{display:block;font-family:var(--display);font-weight:700;font-size:14px;
+  overflow:hidden;text-overflow:ellipsis}
+.drow-s{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);margin-top:2px}
+.ddot{width:3px;height:3px;border-radius:1.5px;background:var(--dim);flex:0 0 3px}
+.drow .ico-chev{color:var(--dim)}
+/* The frame's bottom block. Not fixed: the routine above scrolls, and a pinned bar
+   would cover a row on a short screen. */
+.dcta{display:flex;flex-direction:column;gap:16px;align-items:stretch;
+  border-top:1px solid var(--border);margin-top:24px;padding-top:24px}
+.dbegin{min-height:50px;font-size:16px;font-weight:800;margin:0}
+.dedit{background:none;border:none;color:var(--dim);font-size:13px;font-weight:600;
+  text-decoration:underline;min-height:44px;padding:0}
+.dedit-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 </style>
 </head>
 <body>

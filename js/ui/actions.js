@@ -1,7 +1,7 @@
 /* Bunyan — actions
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
-import {LIB, muscleOf} from "../data/exercises.js";
+import {LIB, muscleOf, muscleOfEntry} from "../data/exercises.js";
 import {avgRPE, prevPerf, prFor, recommend, sessionVolume} from "../engine/formulas.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {leave} from "./motion.js";
@@ -123,7 +123,9 @@ function startDay(dayId){
   S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
     splitId:split().id,dayId:d.id,dayName:d.name,
     entries:d.ex.map(function(e){
-      return {name:e.name,muscle:e.muscle,planned:{sets:e.sets,lo:e.lo,hi:e.hi},
+      /* Resolved from the library as the session is created, so the record this
+         workout leaves behind is right even if the plan's cached muscle is not. */
+      return {name:e.name,muscle:muscleOfEntry(e),planned:{sets:e.sets,lo:e.lo,hi:e.hi},
               rest:e.rest,grp:e.grp||null,sets:[]};})};
   V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}

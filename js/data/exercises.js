@@ -181,10 +181,26 @@ function isFav(n){return S.favs.indexOf(n)>=0;}
 /* Exclusions are gone; gear is the only filter left. */
 function pickable(n){return hasGear(n);}
 function muscleOf(n){var v=EXDB&&EXDB[n];return v?v.m:"Other";}
+/* The muscle of a planned or logged exercise, resolved from the library first.
+
+   The copy stored on the exercise is a cache written when it was added to a plan, and
+   it can be wrong: the library loads asynchronously, so a plan built during that first
+   moment stored "Other" for every movement. Real plans have this — the one in this
+   profile has it for all seven exercises of every day. The library is the authority, so
+   read from it and fall back to the cache only for something the library does not know,
+   such as a custom exercise.
+
+   This is not cosmetic. Weekly sets by muscle and "days since" both group on it, so
+   with the cache alone an entire programme is attributed to "Other". */
+function muscleOfEntry(e){
+  if(!e)return "Other";
+  var m=muscleOf(e.name);
+  return (m&&m!=="Other")?m:(e.muscle||"Other");
+}
 function isCompound(n){var v=EXDB&&EXDB[n];return v?!!v.c:/Press|Squat|Deadlift|Row|Pull|Lunge|Dip/i.test(n);}
 
 
-export {exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, muscleOf, MUSCLES, patternOf, pickable, secondaryOf, thumb};
+export {exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
 
 /* Plate maths only means something on a loaded bar. On a machine, a cable or your
    own bodyweight the button was there on every exercise and useful on a handful.

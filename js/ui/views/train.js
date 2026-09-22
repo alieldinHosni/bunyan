@@ -1,17 +1,16 @@
 /* Bunyan — train
    Train tab: days, library, splits, bodyweight. */
 import {t} from "../../i18n/dict.js";
-import {empty, EQUIP, LIB, muscleOf, MUSCLES, patternOf, thumb} from "../../data/exercises.js";
+import {empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, patternOf, thumb} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
-import {prevPerf, prFor} from "../../engine/formulas.js";
 import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, S, split} from "../../state.js";
 import {SPLIT_LEVEL} from "../../engine/plan.js";
-import {toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, shortd, weekDays} from "../../util.js";
 import {head, V} from "../view.js";
 
 /* ============================================================ TRAIN */
+
 function nextDayOf(sp){
   var lastIdx=-1;
   if(S.sessions.length){
@@ -30,7 +29,6 @@ function vTrain(){
   if(V.train==="bodyweight")return vBodyweight();
   if(V.train==="day")return vDay();
   if(V.train==="favs")return vFavs();
-
   /* ---- the hub: canvas screen 1 (Figma node 2:810) ------------------------------
      Built from the canvas's layout in the core frames' tokens, so the app stays one
      system. Every figure is computed from the user's own data; the frame's "Week 4 of
@@ -44,11 +42,9 @@ function vTrain(){
   /* Sessions done this week out of the sessions the split plans for it: 2 of 4 is 50%.
      Capped at 100, because training more than planned is not more than finished. */
   var pct=target?Math.min(100,Math.round(doneWeek/target*100)):0;
-
   h+='<div class="thead"><h1>'+t("Train")+'</h1>'
    +'<button class="icobtn" data-train="favs" aria-label="'+t("Favourites")
    +(S.favs.length?' ('+S.favs.length+')':'')+'"><span class="ico ico-star" aria-hidden="true"></span></button></div>';
-
   h+='<div class="card thero">'
    +'<div><div class="klabel">'+t("Active Program")+'</div>'
    +'<div class="thero-name">'+esc(sp.name)+'</div></div>'
@@ -66,7 +62,6 @@ function vTrain(){
     t("Add exercises to a day and it becomes startable."),
     '<button class="btn" data-addday="1">'+t("Add a day")+'</button>');
   h+='</div>';
-
   /* ---- training days ----
      Not in the canvas, which shows only today's split. It stays because it is the only
      way to open, edit or reorder any other day of the plan. */
@@ -80,7 +75,6 @@ function vTrain(){
      +(nd&&d.id===nd.id?'<span class="tnext">'+t("Next")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
      +'</button>';});
   h+='<button class="trow tadd" data-addday="1"><span class="trow-n">+ '+t("Add a day")+'</span></button></div>';
-
   /* ---- other programs ----
      The app's own preset splits. The canvas's photographs are the design's; they are
      decoration and cycle across programs. No "premium": everything here is free. */
@@ -100,7 +94,6 @@ function vTrain(){
        +(lvl?'<span class="tchip">'+t(lvl)+'</span>':'')+'</span></span></button>';});
     h+='</div>';
   }
-
   /* ---- bodyweight & no equipment ----
      Each pill opens the library on that muscle with bodyweight only (data-bwcat, which
      already existed). The muscles are the ones that actually have bodyweight exercises,
@@ -113,7 +106,6 @@ function vTrain(){
    +'<div class="tscroll tpills">'
    +cats.map(function(c){return '<button class="tpill" data-bwcat="'+esc(c)+'">'+esc(t(c))+'</button>';}).join("")
    +'<button class="tpill" data-bwsplit="1">'+t("Full Body Program")+'</button></div>';
-
   /* ---- library ---- */
   h+='<button class="card tap tlib" data-train="library">'
    +'<span class="tlib-i"><span class="ico ico-search" aria-hidden="true"></span></span>'
@@ -121,12 +113,13 @@ function vTrain(){
    +'<span class="tlib-s">'+t("Search")+' '+fmtN(LIB.length)+' '+t("exercises")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   return h;}
-
 /* The experience level a preset scores best for, from the plan recommender's own
    table rather than a label invented for the card. Ties go to the lower level, so a
    split that suits two levels is shown to the less experienced of them. That lands on
    every preset's own tag: PPL intermediate, Arnold advanced, Full Body beginner. */
+
 var LEVEL_LABEL={new:"Beginner",some:"Intermediate",experienced:"Intermediate",advanced:"Advanced"};
+
 function levelOf(id){
   var best=null,score=-1e9;
   ["new","some","experienced","advanced"].forEach(function(l){
@@ -136,12 +129,14 @@ function levelOf(id){
 }
 /* A preset's tag reads "6 days · advanced"; the day count is shown separately, from
    the plan itself, so only the descriptive half goes under the name. */
+
 function tagNote(tag){
   var p=String(tag||"").split("·");
   return (p[1]||p[0]||"").trim();
 }
 
 /* ---- favourites ---------------------------------------------------------- */
+
 function vFavs(){
   var h='<button class="btn d sm" data-back="1" style="width:auto">\u2039 Back</button>';
   h+=head(t("Favourites"),t("Suggested first when you add an exercise"));
@@ -254,30 +249,55 @@ function vSplits(){
   h+='</div><button class="btn g" data-newsplit="1">'+t("Build one from scratch")+'</button>';
   return h;}
 
+/* ---- a day: canvas screen 2 (Figma node 2:915) ------------------------------
+   The routine as it will be performed, then one button to begin it. The frame shows
+   only the reading view, so the plan-editing the app has always had — add, rename,
+   delete — sits behind its "Edit Workout Routine" link rather than being dropped. */
+
 function vDay(){
   var d=dayOf(V.dayId);if(!d){V.train="days";return vTrain();}
-  var h='<div class="row"><button class="btn d sm" data-back="1">‹ Back</button>'
-   +'<button class="btn d sm" data-renameday="'+d.id+'">'+t("Rename")+'</button></div>';
-  h+='<h1>'+esc(d.name)+'</h1><p class="sub">'+d.ex.length+' exercises · tap one to edit</p>';
-  h+='<div class="list">';
-  d.ex.forEach(function(e,i){
-    var pr=prFor(e.name),p=prevPerf(e.name);
-    var gl=groupLabel(d.ex,i);
-    h+='<button class="item'+(gl?" grouped":"")+'" data-editex="'+e.id+'">'
-     +thumb(e.name,42)
-     +'<div style="flex:1"><div style="font-weight:600">'
-     +(gl?'<span class="glabel">'+gl+'</span> ':'')+esc(exName(e.name))+'</div>'
-     +'<div class="tiny">'+e.sets+' × '+e.lo+(e.hi!==e.lo?"–"+e.hi:"")+' · rest '+e.rest+'s · '+esc(t(e.muscle))
-     +(p?' · last '+p.sets.map(function(x){return x.w?x.w+"×"+x.r:x.r;}).join(" "):"")+'</div></div>'
-     +(pr.w?'<span class="pill gold">'+toDisp(pr.w)+wUnit()+'</span>':'<span class="chev">›</span>')+'</button>';});
+  var sp=split();
+  var pos=sp.days.indexOf(d)+1;
+  var lvl=levelOf(sp.source);
+  var h='<div class="dhead"><button class="icobtn back" data-back="1" aria-label="'+t("Back")+'">'
+   +'<span class="ico ico-cleft" aria-hidden="true"></span></button>'
+   +'<h1 class="dhead-t">'+esc(d.name)+'</h1></div>'
+   +'<p class="dsub">'+esc(sp.name)+(pos?' • '+t("Day")+' '+pos:'')+'</p>';
+  /* Every figure measured from the day itself. */
+  h+='<div class="dstrip">'
+   +'<div><span class="klabel dim">'+t("Exercises")+'</span><b>'+d.ex.length+' '+t("Movements")+'</b></div>'
+   +'<div><span class="klabel dim">'+t("Duration")+'</span><b>~'+estMinutes(d)+' '+t("Min")+'</b></div>'
+   +(lvl?'<div><span class="klabel dim">'+t("Level")+'</span><b>'+t(lvl)+'</b></div>':'')
+   +'</div>';
+  if(!d.ex.length){
+    h+=empty("dumbbell",t("Nothing prescribed yet"),
+      t("Add the exercises, sets and rep ranges you want. You only do this once — the session screen runs it for you."),
+      '<button class="btn" data-addex="'+d.id+'">'+t("Add an exercise")+'</button>');
+  }else{
+    h+='<h2 class="tsec-h droutine">'+t("Session Routine")+'</h2><div class="drows">';
+    d.ex.forEach(function(e,i){
+      var gl=groupLabel(d.ex,i);
+      h+='<button class="drow" data-editex="'+e.id+'">'
+       +'<span class="dnum">'+(i+1)+'</span>'
+       +'<span class="dtext"><span class="drow-n">'
+       +(gl?'<span class="glabel">'+gl+'</span> ':'')+esc(exName(e.name))+'</span>'
+       +'<span class="drow-s">'+e.sets+' × '+e.lo+(e.hi!==e.lo?'–'+e.hi:'')
+       +'<i class="ddot"></i>'+esc(t(muscleOfEntry(e)))+'</span></span>'
+       +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
+    h+='</div>';
+  }
+  /* The frame's bottom block. The edit link opens the actions the frame has no room
+     for; they are the same ones that were loose buttons before. */
+  h+='<div class="dcta">';
+  if(d.ex.length)h+='<button class="btn dbegin" data-startday="'+d.id+'">'+t("Begin Workout")+'</button>';
+  h+='<button class="dedit" data-dayedit="1" aria-expanded="'+(V.dayEdit?"true":"false")+'">'
+   +t("Edit Workout Routine")+'</button>';
+  if(V.dayEdit)
+    h+='<div class="dedit-actions">'
+     +'<button class="btn g sm" data-addex="'+d.id+'">'+t("Add an exercise")+'</button>'
+     +'<button class="btn g sm" data-renameday="'+d.id+'">'+t("Rename")+'</button>'
+     +'<button class="btn d sm" data-delday="'+d.id+'">'+t("Delete this day")+'</button></div>';
   h+='</div>';
-  if(!d.ex.length)h+=empty("dumbbell",t("Nothing prescribed yet"),
-    t("Add the exercises, sets and rep ranges you want. You only do this once — the session screen runs it for you."),
-    '<button class="btn" data-addex="'+d.id+'">'+t("Add an exercise")+'</button>');
-  else h+='<button class="btn g" data-addex="'+d.id+'">'+t("Add an exercise")+'</button>';
-  if(d.ex.length)h+='<button class="btn" data-startday="'+d.id+'">'+t("Start workout")+'</button>';
-  h+='<button class="btn d" data-delday="'+d.id+'">'+t("Delete this day")+'</button>';
   return h;}
-
 
 export {estMinutes, nextDayOf, vTrain};

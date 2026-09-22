@@ -1,7 +1,7 @@
 /* Bunyan — sheets
    Every bottom sheet, dispatched by vSheet(). */
 import {t} from "../i18n/dict.js";
-import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, muscleOf, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
+import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {exName} from "../i18n/exnames.js";
 import {MEALS, srcBadge} from "./views/food.js";
 import {backupAgeDays, bestE1RM, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
@@ -115,11 +115,30 @@ function vSheet(){
     b+='<button class="btn g" data-showall="1">'
      +(V.showAll?'Only what I can do':'Show everything, including gear I lack')+'</button>';
   }
+  /* The session's overflow. Canvas screen 4 leaves two links under the set table and
+     nothing else, so the five infrequent actions live here instead of in a six-button
+     row competing with the set you are trying to log. Nothing was dropped. */
+  else if(V.sheet==="sessmore"){
+    var sm=S.active,smE=sm&&sm.entries[V.logIdx];
+    if(!smE)return "";
+    b='<h2>'+t("Session")+'</h2>'
+     +'<p class="sub" style="margin:2px 0 16px">'+esc(exName(smE.name))+'</p>'
+     +'<div class="list">'
+     +'<button class="item" data-exdetail="'+esc(smE.name)+'"><span>'+t("How to do it")+'</span>'
+     +'<span class="chev">›</span></button>'
+     +(loadable(smE.name)?'<button class="item" data-plates="1"><span>'+t("Plates")+'</span>'
+       +'<span class="chev">›</span></button>':'')
+     +'<button class="item" data-note="1"><span>'+t("Session note")+'</span>'
+     +(sm.notes?'<span class="pill a">'+t("Saved")+'</span>':'<span class="chev">›</span>')+'</button>'
+     +'</div>'
+     +'<button class="btn" data-finish="1">'+t("Finish workout")+'</button>'
+     +'<button class="btn danger" data-discard="1">'+t("Discard workout")+'</button>';
+  }
   else if(V.sheet==="editex"){
     var d=dayOf(V.dayId),e=null;
     if(d)e=d.ex.filter(function(x){return x.id===V.sd.id;})[0];
     if(!e)return "";
-    b='<h2>'+esc(exName(e.name))+'</h2><p class="tiny" style="margin:2px 0 14px">'+esc(t(e.muscle))+'</p>'
+    b='<h2>'+esc(exName(e.name))+'</h2><p class="tiny" style="margin:2px 0 14px">'+esc(t(muscleOfEntry(e)))+'</p>'
      +'<div class="grid2"><div><label class="tiny">Sets</label><input id="e_sets" type="number" value="'+e.sets+'"></div>'
      +'<div><label class="tiny">'+t("Rest (sec)")+'</label><input id="e_rest" type="number" value="'+e.rest+'"></div>'
      +'<div><label class="tiny">'+t("Min reps")+'</label><input id="e_lo" type="number" value="'+e.lo+'"></div>'
