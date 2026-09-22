@@ -6,8 +6,9 @@ import {exName} from "../../i18n/exnames.js";
 import {prevPerf, prFor} from "../../engine/formulas.js";
 import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, S, split} from "../../state.js";
+import {SPLIT_LEVEL} from "../../engine/plan.js";
 import {toDisp, wUnit} from "../../units.js";
-import {esc, shortd} from "../../util.js";
+import {esc, fmtN, shortd, weekDays} from "../../util.js";
 import {head, V} from "../view.js";
 
 /* ============================================================ TRAIN */
@@ -30,57 +31,115 @@ function vTrain(){
   if(V.train==="day")return vDay();
   if(V.train==="favs")return vFavs();
 
+  /* ---- the hub: canvas screen 1 (Figma node 2:810) ------------------------------
+     Built from the canvas's layout in the core frames' tokens, so the app stays one
+     system. Every figure is computed from the user's own data; the frame's "Week 4 of
+     12 · 33%" is placeholder text, and programs here have no fixed length in weeks. */
   var sp=split(),h="";
   var nd=nextDayOf(sp);
-  var doneWeek=S.sessions.filter(function(x){
-    return (Date.now()-new Date(x.date+"T00:00:00").getTime())<7*864e5;}).length;
+  var wk=weekDays(),inWeek={};
+  wk.forEach(function(d){inWeek[d]=1;});
+  var doneWeek=S.sessions.filter(function(x){return inWeek[x.date];}).length;
   var target=sp.days.filter(function(d){return d.ex.length;}).length;
+  /* Sessions done this week out of the sessions the split plans for it: 2 of 4 is 50%.
+     Capped at 100, because training more than planned is not more than finished. */
+  var pct=target?Math.min(100,Math.round(doneWeek/target*100)):0;
 
-  h+=head(t("Training"),t("Choose your battleground"));
-  h+='<div class="overline">'+t("My training")+'</div>';
-  h+='<div class="card" style="border-color:var(--accent)">'
-   +'<div class="row"><div><h2 style="margin:0">'+esc(sp.name)+'</h2>'
-   +'<div class="tiny" style="margin-top:3px">'+esc(sp.tag||"custom")+'</div></div>'
-   +'<span class="pill a">'+doneWeek+' / '+target+' '+t("this week")+'</span></div>';
+  h+='<div class="thead"><h1>'+t("Train")+'</h1>'
+   +'<button class="icobtn" data-train="favs" aria-label="'+t("Favourites")
+   +(S.favs.length?' ('+S.favs.length+')':'')+'"><span class="ico ico-star" aria-hidden="true"></span></button></div>';
+
+  h+='<div class="card thero">'
+   +'<div><div class="klabel">'+t("Active Program")+'</div>'
+   +'<div class="thero-name">'+esc(sp.name)+'</div></div>'
+   +'<div class="tprog"><div class="tprog-l"><span>'+doneWeek+' '+t("of")+' '+target+' '
+   +t("sessions this week")+'</span><b>'+pct+'%</b></div>'
+   +'<div class="tbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"'
+   +' aria-label="'+t("Sessions this week")+'"><i style="width:'+pct+'%"></i></div></div>';
   if(nd){
-    h+='<div class="plan" style="margin:14px 0 0"><div class="tiny">'+t("Up next")+'</div>'
-     +'<div style="font-size:19px;font-weight:700;margin:2px 0 2px">'+esc(nd.name)+'</div>'
-     +'<div class="tiny">'+nd.ex.length+' exercises \u00b7 about '+estMinutes(nd)+' min</div></div>';
-    h+='<button class="btn" data-startday="'+nd.id+'">'+t("Start workout")+'</button>';
+    h+='<button class="tsplit" data-day="'+nd.id+'"><span><span class="klabel dim">'+t("Today's Split")+'</span>'
+     +'<span class="tsplit-n">'+esc(nd.name)+'</span></span>'
+     +'<span class="tsplit-m">~'+estMinutes(nd)+' '+t("min")+'</span></button>'
+     +'<button class="btn" data-startday="'+nd.id+'">'+t("Start Today's Session")
+     +'<span class="ico ico-arrow" aria-hidden="true"></span></button>';
   }else h+=empty("dumbbell",t("This split is empty"),
     t("Add exercises to a day and it becomes startable."),
     '<button class="btn" data-addday="1">'+t("Add a day")+'</button>');
   h+='</div>';
 
-  h+='<div class="sec">'+t("Training days")+'</div><div class="list">';
+  /* ---- training days ----
+     Not in the canvas, which shows only today's split. It stays because it is the only
+     way to open, edit or reorder any other day of the plan. */
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Training Days")+'</h2></div><div class="card tdays">';
   sp.days.forEach(function(d){
     var last=null;
     for(var i=0;i<S.sessions.length;i++)if(S.sessions[i].dayId===d.id){last=S.sessions[i].date;break;}
-    h+='<button class="item" data-day="'+d.id+'"><div><div style="font-weight:600">'+esc(d.name)+'</div>'
-     +'<div class="tiny">'+(d.ex.length?d.ex.length+" exercises":"rest day")
-     +(last?" \u00b7 last "+shortd(last):"")+'</div></div>'
-     +(nd&&d.id===nd.id?'<span class="pill a">next</span>':'<span class="chev">\u203a</span>')+'</button>';});
-  h+='</div>';
-  h+='<button class="btn g sm" data-addday="1" style="width:auto">'+t("Add a day")+'</button>';
+    h+='<button class="trow" data-day="'+d.id+'"><span><span class="trow-n">'+esc(d.name)+'</span>'
+     +'<span class="trow-s">'+(d.ex.length?d.ex.length+' '+t("exercises"):t("rest day"))
+     +(last?' · '+t("last")+' '+shortd(last):'')+'</span></span>'
+     +(nd&&d.id===nd.id?'<span class="tnext">'+t("Next")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
+     +'</button>';});
+  h+='<button class="trow tadd" data-addday="1"><span class="trow-n">+ '+t("Add a day")+'</span></button></div>';
 
-  h+='<div class="sec">'+t("Explore")+'</div><div class="list">'
-   +'<button class="item" data-train="splits"><div><div style="font-weight:600">'+t("Other splits")+'</div>'
-   +'<div class="tiny">'+allSplits().length+' programs, preview before you switch</div></div>'
-   +'<span class="chev">\u203a</span></button>'
-   +'<button class="item" data-bwsplit="1"><div><div style="font-weight:600">'+t("Bodyweight, no equipment")+'</div>'
-   +'<div class="tiny">'+LIB.filter(function(l){return l[2]==="Bodyweight";}).length
-   +' exercises and a four day program</div></div><span class="chev">\u203a</span></button>'
-   +'<button class="item" data-train="library"><div><div style="font-weight:600">'+t("Exercise library")+'</div>'
-   +'<div class="tiny">'+LIB.length+' exercises, filter by muscle and equipment</div></div>'
-   +'<span class="chev">\u203a</span></button>'
-   /* Starring already pushes an exercise to the top of the picker; what was missing
-      was anywhere to see what you had starred. */
-   +'<button class="item" data-train="favs"><div><div style="font-weight:600">'+t("Favourites")+'</div>'
-   +'<div class="tiny">'+(S.favs.length
-      ?S.favs.length+' '+t("starred exercises")
-      :t("Star an exercise and it is suggested first"))+'</div></div>'
-   +'<span class="chev">\u203a</span></button></div>';
+  /* ---- other programs ----
+     The app's own preset splits. The canvas's photographs are the design's; they are
+     decoration and cycle across programs. No "premium": everything here is free. */
+  var others=allSplits().filter(function(o){return o.id!==sp.source&&o.id!==sp.id;});
+  if(others.length){
+    h+='<div class="tsec"><h2 class="tsec-h">'+t("Other Programs")+'</h2>'
+     +'<button class="tlink" data-train="splits">'+t("All")+'</button></div>'
+     +'<div class="tscroll">';
+    others.forEach(function(o,i){
+      var days=o.days.filter(function(d){return d.ex.length;}).length;
+      var lvl=levelOf(o.id);
+      h+='<button class="tprog-card" data-preview="'+o.id+'">'
+       +'<span class="tcover"><img src="img/program-'+(i%3+1)+'.jpg" alt="" loading="lazy"></span>'
+       +'<span class="tpc-body"><span><span class="tpc-n">'+esc(o.name)+'</span>'
+       +'<span class="tpc-s">'+esc(tagNote(o.tag))+'</span></span>'
+       +'<span class="tpc-m"><span>'+days+' '+t("days / week")+'</span>'
+       +(lvl?'<span class="tchip">'+t(lvl)+'</span>':'')+'</span></span></button>';});
+    h+='</div>';
+  }
+
+  /* ---- bodyweight & no equipment ----
+     Each pill opens the library on that muscle with bodyweight only (data-bwcat, which
+     already existed). The muscles are the ones that actually have bodyweight exercises,
+     most first — the canvas's "Abs"/"Mobility" labels are not categories this library has.
+     The last pill is the four-day bodyweight programme. */
+  var bw={};
+  LIB.forEach(function(l){if(l[2]==="Bodyweight")bw[l[1]]=(bw[l[1]]||0)+1;});
+  var cats=Object.keys(bw).sort(function(a,b){return bw[b]-bw[a];}).slice(0,6);
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Bodyweight & No Equipment")+'</h2></div>'
+   +'<div class="tscroll tpills">'
+   +cats.map(function(c){return '<button class="tpill" data-bwcat="'+esc(c)+'">'+esc(t(c))+'</button>';}).join("")
+   +'<button class="tpill" data-bwsplit="1">'+t("Full Body Program")+'</button></div>';
+
+  /* ---- library ---- */
+  h+='<button class="card tap tlib" data-train="library">'
+   +'<span class="tlib-i"><span class="ico ico-search" aria-hidden="true"></span></span>'
+   +'<span class="tlib-t"><span class="tlib-n">'+t("Exercise Library")+'</span>'
+   +'<span class="tlib-s">'+t("Search")+' '+fmtN(LIB.length)+' '+t("exercises")+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   return h;}
+
+/* The experience level a preset scores best for, from the plan recommender's own
+   table rather than a label invented for the card. Ties go to the lower level, so a
+   split that suits two levels is shown to the less experienced of them. That lands on
+   every preset's own tag: PPL intermediate, Arnold advanced, Full Body beginner. */
+var LEVEL_LABEL={new:"Beginner",some:"Intermediate",experienced:"Intermediate",advanced:"Advanced"};
+function levelOf(id){
+  var best=null,score=-1e9;
+  ["new","some","experienced","advanced"].forEach(function(l){
+    var s=(SPLIT_LEVEL[l]||{})[id];
+    if(typeof s==="number"&&s>score){score=s;best=l;}});
+  return best?LEVEL_LABEL[best]:"";
+}
+/* A preset's tag reads "6 days · advanced"; the day count is shown separately, from
+   the plan itself, so only the descriptive half goes under the name. */
+function tagNote(tag){
+  var p=String(tag||"").split("·");
+  return (p[1]||p[0]||"").trim();
+}
 
 /* ---- favourites ---------------------------------------------------------- */
 function vFavs(){

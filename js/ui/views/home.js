@@ -1,21 +1,69 @@
 /* Bunyan — home
-   Home screen. */
+   Home screen, built to the bunyan-home frame of the Bunyan Figma file (node 2:35):
+   a greeting, today's session, daily nutrition and weekly discipline. Every value on
+   it is the user's own — the frame's "Khalid", "2,450 kcal" and "5/7" are placeholder
+   data in the design and are not copied. */
 import {t} from "../../i18n/dict.js";
-import {exName} from "../../i18n/exnames.js";
-import {avg7, backupAgeDays, backupDue, eatenToday, lastWeight} from "../../engine/formulas.js";
+import {backupAgeDays, backupDue, eatenToday} from "../../engine/formulas.js";
 import {curProfile, dayRec, S, split} from "../../state.js";
 import {estMinutes, nextDayOf} from "./train.js";
-import {fmtW, toDisp, wUnit} from "../../units.js";
-import {esc, num, r1, today} from "../../util.js";
-import {head, progressBar, recentPR, ring, streak} from "../view.js";
+import {esc, fmtN, num, weekDays} from "../../util.js";
+
+/* ---- pieces the frame is made of ------------------------------------------ */
+
+/* Time of day decides the greeting, as the design's "Good Morning" implies. */
+function greeting(){
+  var h=new Date().getHours();
+  return h<12?t("Good Morning"):h<17?t("Good Afternoon"):t("Good Evening");
+}
+
+/* The profile's own name. "Me" is the placeholder a fresh profile is created with,
+   so it is treated as no name at all rather than greeted by. */
+function ownName(){
+  var n=(curProfile().name||"").trim();
+  return n&&n!=="Me"?n:"";
+}
+
+/* The 72px ring in the Nutrition card. Geometry is the design's own track (Figma
+   node 2:71): r=33, 6px stroke, on a 72 box. The exported fill is a fixed
+   87% arc, so it cannot show a real value; this draws the same arc live instead. */
+function kcalRing(pct){
+  var R=33,C=2*Math.PI*R,f=Math.max(0,Math.min(1,pct));
+  return '<svg class="hring" viewBox="0 0 72 72" aria-hidden="true">'
+   +'<circle cx="36" cy="36" r="'+R+'" fill="none" stroke="var(--border)" stroke-width="6"/>'
+   +'<circle cx="36" cy="36" r="'+R+'" fill="none" stroke="var(--accent)" stroke-width="6"'
+   +' stroke-dasharray="'+C.toFixed(2)+'" stroke-dashoffset="'+(C*(1-f)).toFixed(2)+'"'
+   +' transform="rotate(-90 36 36)"/></svg>';
+}
+
+/* This week, Sunday first (weekDays() in util.js, shared with the Train hub). A dot is
+   lit when a session was logged that day. The design's example is a Thursday with five
+   lit dots and two dark ones, which is exactly a Sunday-first week, so the order is the
+   design's own rather than a choice made here. */
+function weekDots(){
+  var done={},i;
+  for(i=0;i<S.sessions.length;i++)done[S.sessions[i].date]=1;
+  var dots=weekDays().map(function(iso){return !!done[iso];});
+  return {dots:dots,n:dots.filter(Boolean).length};
+}
 
 /* ============================================================ HOME */
 function vHome(){
   var g=S.goals,e=eatenToday(),r=dayRec(),sp=split(),h="";
-  var nd=nextDayOf(sp);
-  var name=(curProfile().name&&curProfile().name!=="Me")?curProfile().name:"";
-  h+=head(t("Today"),t("Strength starts within")+(name?", "+name:""));
+  var nd=nextDayOf(sp),name=ownName();
 
+  /* ---- greeting ---- */
+  h+='<div class="hgreet"><div>'
+   +'<div class="hdate">'+esc(new Date().toLocaleDateString(undefined,
+      {weekday:"long",day:"numeric",month:"short"}))+'</div>'
+   +'<h1>'+esc(greeting()+(name?", "+name:""))+'</h1></div>'
+   +(name?'<div class="havatar" aria-hidden="true">'+esc(name.charAt(0).toUpperCase())+'</div>':'')
+   +'</div>';
+
+  h+='<div class="hstack">';
+
+  /* Prompts that only appear when they are owed. Not in the frame, because the frame
+     shows a set-up user with a recent backup; they keep the card language. */
   if(!S.onboarded)
     h+='<button class="card tap hot" data-setup="1"><div class="row"><h3>'+t("Build my plan")+'</h3>'
      +'<span class="pill a">'+t("Start here")+'</span></div>'
@@ -24,7 +72,7 @@ function vHome(){
   if(backupDue()){
     var age=backupAgeDays();
     h+='<div class="card" style="border-color:var(--gold)">'
-     +'<div class="row"><h3 style="color:var(--gold)">'+t("Back up your history")+'</h3></div>'
+     +'<h3 style="color:var(--gold)">'+t("Back up your history")+'</h3>'
      +'<p class="tiny" style="margin:6px 0 0">'
      +(age===null
         ?t("You have never exported a backup. Everything lives in this browser — clearing its data would take your whole log with it.")
@@ -34,70 +82,63 @@ function vHome(){
      +'<button class="btn d sm" data-snoozebackup="1">'+t("Not now")+'</button></div></div>';
   }
 
-  h+='<div class="overline">'+t("Training status")+'</div>';
+  /* ---- today's session ----
+     One card, three states. The frame shows only "ready to start"; a session already
+     under way reuses the same component rather than inventing a second one. */
   if(S.active){
-    /* Where the workout actually is, not how much is left. "Exercise 3 of 7" is what
-       tells you whether to pick it up now, and it is the position Continue returns to
-       — S.active.idx rides on the session, so it survives a reload. */
     var pos=Math.min(num(S.active.idx,0),S.active.entries.length-1)+1;
-    h+='<div class="card hot"><div class="row"><h3>'+t("Workout in progress")+'</h3>'
-     +'<span class="pill a">'+t("Active")+'</span></div>'
-     +'<p class="tiny" style="margin:6px 0 0">'+esc(S.active.dayName)+' · '
-     +t("Exercise")+' '+pos+' '+t("of")+' '+S.active.entries.length+'</p>'
-     +'<button class="btn" data-continue="1">'+t("Resume workout")+'</button></div>';
+    h+='<div class="card sess hot">'
+     +'<div class="sess-head"><span class="sbadge">'+t("Workout in progress")+'</span></div>'
+     +'<div><div class="sess-title">'+esc(S.active.dayName)+'</div>'
+     +'<div class="sess-sub">'+t("Exercise")+' '+pos+' '+t("of")+' '+S.active.entries.length+'</div></div>'
+     +'<div class="sdiv" aria-hidden="true"><i></i><b></b></div>'
+     +'<button class="btn" data-continue="1"><span class="ico ico-play" aria-hidden="true"></span>'
+     +t("Resume workout")+'</button></div>';
   }else if(nd){
-    h+='<div class="card"><div class="row"><h3>'+esc(nd.name)+'</h3>'
-     +'<span class="pill">'+esc(sp.name)+'</span></div>'
-     +'<p class="tiny" style="margin:6px 0 0">'+nd.ex.length+' exercises \u00b7 about '
-     +estMinutes(nd)+' min</p>'
-     +'<button class="btn" data-startday="'+nd.id+'">'+t("Start workout")+'</button></div>';
+    h+='<div class="card sess">'
+     +'<div class="sess-head"><span class="sbadge">'+t("Today's Session")+'</span>'
+     +'<span class="sess-min">'+estMinutes(nd)+' '+t("min")+'</span></div>'
+     +'<div><div class="sess-title">'+esc(nd.name)+'</div>'
+     +'<div class="sess-sub">'+esc(sp.name)+' • '+nd.ex.length+' '+t("exercises")+'</div></div>'
+     +'<div class="sdiv" aria-hidden="true"><i></i><b></b></div>'
+     +'<button class="btn" data-startday="'+nd.id+'"><span class="ico ico-play" aria-hidden="true"></span>'
+     +t("Start Training")+'</button></div>';
   }else h+='<div class="card"><p class="tiny" style="margin:0">'+t("No exercises in this split yet.")+'</p></div>';
 
-  h+='<div class="overline">'+t("Fuel log")+'</div>';
-  h+='<div class="card"><div class="rowc" style="gap:var(--s4)">'
-   +ring(g.kcal?e.kcal/g.kcal:0,"var(--accent)","kcal",e.kcal)
-   +'<div style="flex:1">'
-   +'<div class="row" style="margin-bottom:6px"><span class="dim">PRO</span>'
-   +'<span class="num" style="font-weight:700">'+e.p+'g / '+g.p+'g</span></div>'
-   +'<div class="row" style="margin-bottom:6px"><span class="dim">CARB</span>'
-   +'<span class="num" style="font-weight:700">'+e.c+'g / '+g.c+'g</span></div>'
-   +'<div class="row"><span class="dim">FAT</span>'
-   +'<span class="num" style="font-weight:700">'+e.f+'g / '+g.f+'g</span></div>'
-   +'</div></div></div>';
+  /* ---- daily nutrition ---- */
+  var pct=g.kcal?e.kcal/g.kcal:0;
+  h+='<button class="card tap nutri" data-go="food">'
+   +'<div class="nutri-info"><h3 class="nutri-h">'+t("Daily Nutrition")+'</h3>'
+   /* The calories figure is the number logging food changes, so it counts up. The
+      attribute carries the raw value; the text is the grouped one. */
+   +'<div class="nutri-kcal">'+t("Calories")+': <b data-count-to="'+e.kcal+'">'+fmtN(e.kcal)+'</b>'
+   +' / '+fmtN(g.kcal)+' kcal</div>'
+   +'<div class="nutri-pro">'+t("Protein")+': <b>'+e.p+'g</b> / '+g.p+'g</div></div>'
+   +'<div class="nutri-ring">'+kcalRing(pct)
+   +'<span class="nutri-pct">'+Math.round(pct*100)+'%</span></div></button>';
 
-  h+='<div class="overline">'+t("Progress highlight")+'</div>';
-  var pr=recentPR(),st=streak();
-  h+='<div class="grid2">'
-   +'<div class="card" style="margin:0"><div class="tiny">'+t("STREAK")+'</div>'
-   +'<div style="margin-top:4px"><span class="metric">'+st+'</span>'
-   +'<span class="unit">'+(st===1?"DAY":"DAYS")+'</span></div></div>'
-   +'<div class="card" style="margin:0"><div class="tiny">'+t("RECENT PR")+'</div>'
-   +(pr?'<div class="stat" style="font-size:17px;margin-top:5px">'+esc(exName(pr.n).toUpperCase().slice(0,22))+'</div>'
-       +'<div class="metric" style="font-size:22px;margin-top:2px">'+fmtW(pr.w)+'</div>'
-     :'<div class="tiny" style="margin-top:8px">'+t("Log a session to set one.")+'</div>')
+  /* ---- weekly discipline ---- */
+  var wk=weekDots();
+  h+='<div class="card wk">'
+   +'<div class="wk-head"><h3 class="wk-h">'+t("Weekly Discipline")+'</h3>'
+   +'<span class="wk-n">'+wk.n+'/7 '+t("Days Active")+'</span></div>'
+   /* The dots are the design's two exported states. Read as one image with a spoken
+      summary, because seven unlabelled circles mean nothing to a screen reader. */
+   +'<div class="wk-dots" role="img" aria-label="'+wk.n+' '+t("of")+' 7 '+t("days active this week")+'">'
+   +wk.dots.map(function(on){
+      return '<img src="icons/'+(on?'day-on':'day-off')+'.svg" alt="" width="28" height="28">';}).join("")
    +'</div></div>';
 
-  h+='<div class="overline">'+t("Quick actions")+'</div>';
-  h+='<div class="grid2">'
-   +'<button class="card tap" data-go="train" style="margin:0;text-align:center;font-weight:700">'+t("Log workout")+'</button>'
-   +'<button class="card tap" data-go="food" style="margin:0;text-align:center;font-weight:700">'+t("Add food")+'</button>'
-   +'</div>';
+  /* ---- steps ----
+     Not in the frame. It stays because this is the only place in the app that opens
+     the steps sheet: removing it to match the frame would delete a feature, not
+     restyle one. Water and weight did move off Home, because Food and Progress already
+     carry them. */
+  h+='<button class="card tap hsteps" data-sheet="steps">'
+   +'<span class="tiny">'+t("Steps")+'</span>'
+   +'<span class="hsteps-n">'+fmtN(r.steps||0)+'</span></button>';
 
-  h+='<div class="grid2 mt">'
-   +'<button class="card tap" data-sheet="weigh" style="margin:0"><div class="tiny">'+t("WEIGHT")+'</div>'
-   +'<div class="stat" style="margin-top:4px">'
-   +((avg7()||lastWeight())?toDisp(avg7()||lastWeight()):"\u2014")
-   +'<span class="unit">'+wUnit()+'</span></div></button>'
-   +'<button class="card tap" data-sheet="steps" style="margin:0"><div class="tiny">STEPS</div>'
-   +'<div class="stat" style="margin-top:4px">'+(r.steps||0)+'</div></button>'
-   +'</div>';
-
-  h+='<div class="card mt"><div class="row"><h3>Water</h3><span class="num" style="font-weight:700">'
-   +r1(r.water/1000)+' / '+r1(g.water/1000)+' L</span></div>'
-   +progressBar(r.water,g.water,"var(--accent)")
-   +'<div class="rowc mt"><button class="btn g sm" data-water="250" data-wdate="'+today()+'">+250 ml</button>'
-   +'<button class="btn g sm" data-water="500" data-wdate="'+today()+'">+500 ml</button>'
-   +'<button class="btn d sm" data-water="-250" data-wdate="'+today()+'">Undo</button></div></div>';
+  h+='</div>';
   return h;}
 
 

@@ -153,4 +153,4 @@ function buildPlan(){
 }
 
 
-export {splitCandidates, buildPlan, GOALS, LEVELS};
+export {splitCandidates, buildPlan, GOALS, LEVELS, SPLIT_LEVEL};
