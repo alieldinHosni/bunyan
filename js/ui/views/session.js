@@ -111,7 +111,10 @@ function vLogger(){
 
   /* --- sticky header: identity, elapsed, overall progress --- */
   var h='<div class="ss-top"><div class="ss-row">'
-   +'<button class="ss-back" data-back="1" aria-label="'+t("Back")+'">←</button>'
+   /* A close, not a back: the edge-swipe is held off while a session is live, so this
+      is the way out and it should say so. Same data-back handler, so the leave
+      confirmation and everything behind it are untouched. */
+   +'<button class="ss-back" data-back="1" aria-label="'+t("Close workout")+'">✕</button>'
    +'<div class="ss-title"><div class="ss-name">'+esc(a.dayName)+'</div>'
    +'<div class="ss-meta"><span class="mseg">'+t("Exercise")
    +' <span class="num">'+(V.logIdx+1)+'</span> '+t("of")

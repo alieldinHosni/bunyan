@@ -750,6 +750,20 @@ ACT.dropsheet=function(){closeSheet();};
    keeping is the primary and discarding is the secondary, outlined rather than filled:
    the dangerous option should be reachable, not inviting. */
 var leaveResume=null;
+/* While the logger is the screen you are looking at, the back gesture is held off and
+   the ✕ is the way out. Same condition as navGuard below, because it has to be the
+   same screen: anywhere else in the app the gesture keeps working normally.
+
+   A swipe answered by nothing at all reads as a frozen app, so it says once what to
+   do instead. Once, not per swipe — a toast on every attempt is its own annoyance. */
+var lockSaid=false;
+function sessionLock(){
+  if(!S.active){lockSaid=false;return false;}   /* armed again for the next workout */
+  if(V.tab!=="train"||V.sheet)return false;
+  if(!lockSaid){lockSaid=true;toast(t("Tap the close button to leave this workout."));}
+  return true;
+}
+
 function navGuard(resume){
   /* Only when the workout is the thing you are actually looking at. vTrain() returns
      the logger for as long as a session is live, so "the Train tab" and "the workout"
@@ -796,7 +810,7 @@ ACT.barcode=function(v){ onBarcode(v); };
 initState();
 setStorageErrorHandler(toast);
 /* One back path for the arrow, the edge swipe and the OS gesture. */
-initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet});
+initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,lockBack:sessionLock});
 initSheetDrag(requestCloseSheet);
 /* History comes from IndexedDB, so it arrives a tick later than everything else.
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from

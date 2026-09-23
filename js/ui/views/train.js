@@ -11,6 +11,19 @@ import {head, V} from "../view.js";
 
 /* ============================================================ TRAIN */
 
+/* One photograph per preset, keyed by the split's own id rather than by its position
+   in the list. The cards used to read img/program-<i%3+1>.jpg, so six programs shared
+   three pictures and which program got which changed whenever the list reordered —
+   adopting a split drops it out of "Other Programs" and shifted every image along. */
+var SPLIT_IMG={ap:"split-ap",arnold:"split-arnold",ppl:"split-ppl",
+  ul:"split-ul",fb:"split-fb",bw:"split-bw",bro:"split-bro"};
+/* A split the user built themselves has no photograph of its own. It gets the accent
+   field instead of borrowing another programme's picture. */
+function splitCover(id){
+  var f=SPLIT_IMG[id];
+  return f?'<span class="tcover"><img src="img/'+f+'.jpg" alt="" loading="lazy"></span>'
+          :'<span class="tcover tcover-none"></span>';}
+
 function nextDayOf(sp){
   var lastIdx=-1;
   if(S.sessions.length){
@@ -76,18 +89,18 @@ function vTrain(){
      +'</button>';});
   h+='<button class="trow tadd" data-addday="1"><span class="trow-n">+ '+t("Add a day")+'</span></button></div>';
   /* ---- other programs ----
-     The app's own preset splits. The canvas's photographs are the design's; they are
-     decoration and cycle across programs. No "premium": everything here is free. */
+     The app's own preset splits, each with its own photograph — see SPLIT_IMG.
+     No "premium": everything here is free. */
   var others=allSplits().filter(function(o){return o.id!==sp.source&&o.id!==sp.id;});
   if(others.length){
     h+='<div class="tsec"><h2 class="tsec-h">'+t("Other Programs")+'</h2>'
      +'<button class="tlink" data-train="splits">'+t("All")+'</button></div>'
      +'<div class="tscroll">';
-    others.forEach(function(o,i){
+    others.forEach(function(o){
       var days=o.days.filter(function(d){return d.ex.length;}).length;
       var lvl=levelOf(o.id);
       h+='<button class="tprog-card" data-preview="'+o.id+'">'
-       +'<span class="tcover"><img src="img/program-'+(i%3+1)+'.jpg" alt="" loading="lazy"></span>'
+       +splitCover(o.id)
        +'<span class="tpc-body"><span><span class="tpc-n">'+esc(o.name)+'</span>'
        +'<span class="tpc-s">'+esc(tagNote(o.tag))+'</span></span>'
        +'<span class="tpc-m"><span>'+days+' '+t("days / week")+'</span>'

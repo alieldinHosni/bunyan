@@ -2,7 +2,7 @@
    Network-first for the app itself, so a new version is picked up on the next
    load instead of being served from cache. Cache-first for images only.
    Bump CACHE whenever you change index.html. */
-const CACHE = "bunyan-v44";
+const CACHE = "bunyan-v45";
 /* instructions.json (595 KB) is deliberately absent: it is cached on first use by the
    catch-all handler below, so it no longer blocks first install. */
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
@@ -20,7 +20,9 @@ const FILES = ["./", "./index.html", "./manifest.webmanifest",
                "./icons/clock.svg", "./icons/bulb.svg",
                "./icons/droplet.svg", "./icons/plus.svg", "./icons/trash.svg",
                "./icons/check.svg", "./icons/pause.svg",
-               "./img/program-1.jpg", "./img/program-2.jpg", "./img/program-3.jpg",
+               "./img/split-ap.jpg", "./img/split-arnold.jpg", "./img/split-ppl.jpg",
+               "./img/split-ul.jpg", "./img/split-fb.jpg", "./img/split-bw.jpg",
+               "./img/split-bro.jpg",
                /* Every module is required for the app to run at all, unlike an
                   image, so all of them are precached. */
                "./js/util.js", "./js/units.js", "./js/db.js", "./js/scan.js", "./js/data/exercises.js", "./js/data/splits.js", "./js/engine/plan.js", "./js/state.js", "./js/engine/formulas.js", "./js/engine/nutrition.js", "./js/i18n/dict.js", "./js/i18n/exnames.js", "./js/ui/view.js", "./js/ui/views/home.js", "./js/ui/views/train.js", "./js/ui/views/session.js", "./js/ui/views/progress.js", "./js/ui/views/food.js", "./js/ui/views/profile.js", "./js/ui/sheets.js", "./js/ui/render.js", "./js/ui/nav.js", "./js/ui/sheetdrag.js", "./js/ui/patch.js", "./js/ui/motion.js", "./js/ui/datebar.js", "./js/engine/text.js", "./js/ui/actions.js", "./js/app.js"];

@@ -44,6 +44,11 @@ function fallback(){
   else apply(rootOf(V.tab));
   if(H.render)H.render();
 }
+/* Set for the length of one back that an in-app control asked for, so the popstate it
+   causes can be told apart from one the user's edge-swipe caused. Both arrive at the
+   same listener; only the control's is allowed through the lock below. */
+var viaControl=false;
+
 function doBack(){
   /* A sheet is the top-most thing on screen, so it is what back closes first. It
      costs no history entry, so nothing is popped here. */
@@ -52,13 +57,28 @@ function doBack(){
   if(H.guard&&H.guard(fallback))return;
   fallback();
 }
-/* The one entry point. Arrow, swipe and OS gesture all land here. */
-function goBack(){ doBack(); }
+/* The one entry point for the app's own controls — the session's ✕, the screen back
+   arrows. The OS gesture does not come through here; it arrives at popstate directly,
+   which is exactly what lets the lock tell the two apart. */
+function goBack(){ viaControl=true; doBack(); }
 
 window.addEventListener("popstate",function(){
+  var byControl=viaControl; viaControl=false;
   if(V.sheet){
     /* The gesture was spent closing a sheet, so give the entry back. */
     if(H.closeSheet)H.closeSheet();
+    try{history.pushState({bunyan:1},"");}catch(e){}
+    return;
+  }
+  /* A live workout holds the back gesture off entirely: the entry is handed straight
+     back and nothing else runs, so the swipe is a no-op rather than something that
+     stops to ask. The ✕ still gets through, because it set viaControl on its way in.
+
+     This is the most a page can do. The gesture belongs to the browser, and no API
+     cancels it — what is controllable is whether it ends up anywhere. Keeping an
+     entry in front of the user means the swipe has something of ours to consume, so
+     it can neither leave the workout nor walk out of the document. */
+  if(!byControl&&H.lockBack&&H.lockBack()){
     try{history.pushState({bunyan:1},"");}catch(e){}
     return;
   }

@@ -139,6 +139,19 @@ html,body{margin:0;background:var(--bg);color:var(--text);
    --navh is derived in :root from the nav's own geometry; the nav already carries
    env(safe-area-inset-bottom) inside that, so adding it again here would double-count. */
 body{padding-bottom:calc(var(--navh) + 12px)}
+/* The document has to be at least as tall as the viewport, or a short screen — Home
+   with nothing logged is the shortest — leaves the page shorter than the window. The
+   nav is position:fixed and so is pinned either way in a compliant engine, but iOS
+   Safari lays fixed elements out against the LARGE viewport while showing the SMALL
+   one whenever the page cannot scroll, which is what put the bar above the bottom
+   edge with a dead band beneath it. A page that always fills the viewport can always
+   scroll the toolbar away, so the two viewports agree.
+
+   100dvh is the dynamic viewport: it tracks the browser chrome collapsing instead of
+   freezing at its largest. The 100vh line before it is the fallback for engines that
+   do not know dvh — declaration order does the feature test, no @supports needed. */
+html{min-height:100%}
+body{min-height:100vh;min-height:100dvh}
 /* The hidden attribute only carries `display:none` from the UA stylesheet, so any rule
    that sets display on the same element silently outranks it. That is what happened to
    the session's Paused label: .ss-paused{display:block} beat it, the attribute was
@@ -512,8 +525,13 @@ body.noanim #splash .sp-embers{display:none}
   padding:calc(12px + env(safe-area-inset-top)) var(--gutter) 11px;
   background:var(--bg);border-bottom:1px solid var(--border)}
 .ss-row{display:flex;align-items:center;gap:10px}
-.ss-back{width:36px;height:36px;flex-shrink:0;border:none;background:none;color:var(--accent);
-  font-size:22px;padding:0}
+/* A red ✕, not an arrow. The box stays 36px so the title and the rest of the header
+   do not move, and the -4px margins buy the 44px touch target back out of the row's
+   own padding rather than by growing the button. */
+.ss-back{width:44px;height:44px;margin:-4px;flex-shrink:0;border:none;background:none;
+  color:var(--accent);font-size:22px;line-height:1;padding:0;
+  display:flex;align-items:center;justify-content:center}
+.ss-back:active{color:var(--accentHi)}
 .ss-title{flex:1;min-width:0}
 .ss-name{font-size:15px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
@@ -719,7 +737,8 @@ body.noanim #splash .sp-embers{display:none}
 .upnext .ur{font-size:12.5px;color:var(--accentHi);margin-top:3px;font-weight:600}
 .restskip{margin-top:22px;background:none;border:none;color:var(--dim);font-size:13.5px;
   font-weight:700;padding:10px 16px}
-[dir="rtl"] .ss-back{transform:scaleX(-1)}
+/* The arrow this replaced had to mirror in RTL. A ✕ is symmetrical, so flipping it
+   was a no-op that would have silently un-centred it once the box changed size. */
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;background:var(--raised);
   border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;
   font-size:14px;z-index:200;max-width:88%;text-align:center;
@@ -1007,6 +1026,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tcover{position:relative;display:block;height:100px;flex:0 0 100px}
 .tcover img{width:100%;height:100%;object-fit:cover;display:block}
 .tcover::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.4)}
+/* A split the user built has no photograph of its own. The accent field stands in for
+   one, so the card keeps its shape without borrowing another programme's picture. */
+.tcover-none{background:linear-gradient(135deg,var(--accent) 0%,#5c0a0f 55%,var(--raised) 100%)}
 .tpc-body{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:12px;min-width:0}
 .tpc-n,.tpc-s{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tpc-n{font-family:var(--display);font-weight:700;font-size:14px}
@@ -1261,6 +1283,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   letter-spacing:.06em;font-variant-numeric:tabular-nums}
 
 .restctl{display:flex;align-items:center;gap:16px;margin-top:0}
+/* "−30s" begins with a neutral character, which an RTL paragraph reorders to "30s−".
+   The pills keep their own direction; their positions still mirror with the row. */
+.restctl .rbtn:not(.main){direction:ltr}
 /* The ±30s pills of the frame: shorter and lighter than the button they replace. */
 .restwrap:not(.done) .rbtn{height:44px;min-width:66px;padding:0 16px;border-radius:22px;
   font-size:14px}

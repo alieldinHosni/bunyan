@@ -257,7 +257,7 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Superset broken.": "السوبرسِت اتفك.",
 "Superset with": "سوبرسِت مع",
 "Break the superset": "فك السوبرسِت",
-"RPE": "مجهود",
+"Close workout": "اقفل التمرين", "Tap the close button to leave this workout.": "دوس على زر الإقفال عشان تسيب التمرين.", "RPE": "مجهود", "Replace Exercise": "غيّر التمرين", "Skip Exercise": "تخطى التمرين",
 "P:": "بروتين:", "C:": "كارب:", "F:": "دهون:",
 "Eaten": "متأكل", "kcal left": "سعرة باقية", "kcal over": "سعرة زيادة",
 "glasses": "كباية", "L": "لتر", "items": "حاجة", "items logged": "حاجة متسجلة",
