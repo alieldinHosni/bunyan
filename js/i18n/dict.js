@@ -257,6 +257,12 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Superset broken.": "السوبرسِت اتفك.",
 "Superset with": "سوبرسِت مع",
 "Break the superset": "فك السوبرسِت",
+"RPE": "مجهود",
+"P:": "بروتين:", "C:": "كارب:", "F:": "دهون:",
+"Eaten": "متأكل", "kcal left": "سعرة باقية", "kcal over": "سعرة زيادة",
+"glasses": "كباية", "L": "لتر", "items": "حاجة", "items logged": "حاجة متسجلة",
+"No items logged yet": "مفيش حاجة متسجلة لسه", "Logged today": "اتسجل النهاردة",
+"Total calories": "إجمالي السعرات", "Add food to": "ضيف أكل في",
 "No rest until the round is done. Rest comes after the last exercise in the group.": "مفيش راحة لحد ما الجولة تخلص. الراحة بتيجي بعد آخر تمرين في المجموعة."};
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;

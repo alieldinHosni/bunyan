@@ -20,6 +20,9 @@ var V={tab:"home",fdate:null,food:null,range:30,exd:null,showAll:false,restPause
        /* Whether the day view is showing its plan-editing actions (canvas screen 2
           keeps them behind one link rather than as three loose buttons). */
        dayEdit:false,
+       /* Which meal the Food tab has opened, or null for the day's dashboard. It is
+          part of the nav route, so back returns to the dashboard, not to the tab. */
+       meal:null,
        bar:20};
 
 var AC=null,beeped=true,lastTick=99,wakeLock=null;

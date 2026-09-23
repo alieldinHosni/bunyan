@@ -39,12 +39,14 @@ document.addEventListener("click",function(ev){
   if(D.confirmok!==undefined){runAct((V.sd||{}).act,true);return;}
   if(D.confirmalt!==undefined){runAct((V.sd||{}).altact,true);return;}
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
-  if(D.tab){resetNav();V.tab=D.tab;V.train="days";render();return;}
-  if(D.go){resetNav();V.tab=D.go;render();return;}
+  if(D.tab){resetNav();V.tab=D.tab;V.train="days";V.meal=null;render();return;}
+  if(D.go){resetNav();V.tab=D.go;V.meal=null;render();return;}
 
   /* ---- splits & days */
   if(D.train){pushNav();V.train=D.train;render();return;}
   if(D.day){pushNav();V.dayId=D.day;V.train="day";render();return;}
+  /* One meal of the day, on its own screen. */
+  if(D.meal){pushNav();V.meal=D.meal;render();return;}
   if(D.adopt){
     var pre=allSplits().filter(function(x){return x.id===D.adopt;})[0];
     if(!pre)return;
@@ -210,6 +212,7 @@ document.addEventListener("click",function(ev){
     play("set");endRest();V.fresh=-1;
     V.logIdx=V.logIdx+1;
     saveDB();syncDraft();render();return;}
+  if(D.sessmore!==undefined){openSheet("sessmore");return;}
   if(D.finish){finishSession();return;}
   /* Every back affordance in the app comes through here, so none of them can drift
      to a destination of its own. Discarding a session is now part of going back
@@ -226,6 +229,9 @@ document.addEventListener("click",function(ev){
   if(D.water){
     /* Home writes to today explicitly; Food writes to the date it is browsing. */
     var r2=dayRec(D.wdate||curDate());r2.water=Math.max(0,r2.water+ +D.water);saveDB();render();return;}
+  /* A tapped glass sets the day outright, so the glass that filled also empties it. */
+  if(D.wset!==undefined){
+    dayRec(curDate()).water=Math.max(0,+D.wset);saveDB();render();return;}
   if(D.sheet){openSheet(D.sheet);return;}
   if(D.saveweight){
     /* Back to kilograms before it touches storage. */

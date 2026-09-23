@@ -297,12 +297,15 @@ function vRest(a,e,rows,timed){
   var paused=V.restPaused;
   var left=paused?V.restLeft:Math.max(0,Math.ceil((V.restEnd-Date.now())/1000));
   var total=Math.max(1,V.restTotal||1);
-  var C=653.45,off=C*(1-Math.max(0,Math.min(1,left/total)));
+  var C=REST_C,off=C*(1-Math.max(0,Math.min(1,left/total)));
   var lastSet=e.sets[e.sets.length-1];
+  /* The frame's "Set 2: 30kg × 10 @ RPE 7". "of 4" is kept because the banner above
+     now carries the confirmation, which is what that clause used to be doing here. */
   var didTxt=lastSet
-    ?(t("Set")+' '+e.sets.length+' '+t("of")+' '+rows+' '+t("complete")+' · '
+    ?(t("Set")+' '+e.sets.length+' '+t("of")+' '+rows+': '
       +(timed?lastSet.r+'s':(lastSet.w?toDisp(lastSet.w)+wUnit()+' × '+lastSet.r
-                                     :lastSet.r+' '+t("reps"))))
+                                     :lastSet.r+' '+t("reps")))
+      +(S.prefs.rpe!=="off"&&lastSet.rpe?' @ '+t("RPE")+' '+lastSet.rpe:''))
     :esc(exName(e.name));
   var nx,nr="";
   /* After a superset round the next thing is a different exercise, so say which. */
@@ -335,22 +338,32 @@ function vRest(a,e,rows,timed){
      +'<button class="rbtn main restdone-go" data-rest="skip">'+t("I am ready")+'</button></div>';
   }
   return '<div class="restwrap" role="dialog" aria-label="'+t("Rest")+'">'
+   /* The receipt for the set just logged. The frame puts it at the top edge, where it
+      confirms without competing with the clock. */
+   /* The frame carries a tick glyph in the text as well as the icon beside it. One
+      tick is the mark; two read as a typo. */
+   +(lastSet?'<div class="restbanner"><i class="ico ico-check"></i>'
+     +t("Set")+' '+e.sets.length+' '+t("complete")+'</div>':'')
    +'<div class="restlabel">'+t("Rest period")+'</div>'
    +'<div class="restsub">'+didTxt+'</div>'
-   +'<div class="ringwrap"><svg viewBox="0 0 236 236" aria-hidden="true">'
-   +'<circle cx="118" cy="118" r="104" fill="none" stroke="var(--raised)" stroke-width="12"/>'
-   +'<circle id="restRing" cx="118" cy="118" r="104" fill="none" stroke="var(--accent)" '
+   +'<div class="ringwrap"><svg viewBox="0 0 180 180" aria-hidden="true">'
+   +'<circle cx="90" cy="90" r="79" fill="none" stroke="var(--raised)" stroke-width="12"/>'
+   +'<circle id="restRing" cx="90" cy="90" r="79" fill="none" stroke="var(--accent)" '
    +'stroke-width="12" stroke-linecap="round" stroke-dasharray="'+C+'" stroke-dashoffset="'+off+'"/>'
    +'</svg><div class="ct"><div class="restdig" id="restDig" aria-live="polite">'+mmss(left)+'</div>'
+   /* The frame labels this "SECONDS LEFT", which is wrong the moment the clock reads
+      1:30. The total it replaces is the figure that is always true. */
    +'<div class="resttot" id="restTot">'+t("of")+' '+mmss(total)+'</div></div></div>'
    +'<div class="restctl">'
    +'<button class="rbtn" data-rest="-30">−30s</button>'
-   +'<button class="rbtn main" id="restMain" data-rest="'+(paused?"resume":"pause")+'">'
-   +(paused?t("Resume"):t("Pause"))+'</button>'
+   +'<button class="rbtn main" id="restMain" data-rest="'+(paused?"resume":"pause")+'"'
+   +' aria-label="'+(paused?t("Resume"):t("Pause"))+'">'
+   +'<i class="ico ico-'+(paused?"play":"pause")+'" id="restMainIco"></i></button>'
    +'<button class="rbtn" data-rest="30">+30s</button></div>'
    +'<div class="upnext"><div class="ul">'+t("Up next")+'</div>'
    +'<div class="uv">'+nx+'</div>'+(nr?'<div class="ur">'+nr+'</div>':'')+'</div>'
-   +'<button class="restskip" data-rest="skip">'+t("Skip rest and continue")+'</button></div>';}
+   +'<div class="restfoot"><button class="restskip" data-rest="skip">'
+   +t("Skip rest and continue")+'</button></div></div>';}
 
 /* ---- keeping the rest screen still -------------------------------------------
    The rest screen lives in its own container outside #app, for the same reason the
@@ -358,7 +371,8 @@ function vRest(a,e,rows,timed){
    one restarts the ring's transition from zero, which is the stutter that made
    every −30s tap flash. Only four things ever change while resting, so only those
    four are touched. */
-var REST_C=653.45;
+/* 2π × 79 — the frame's 170px ring inside its 180px box, stroke 12. */
+var REST_C=496.37;
 function paintRest(){
   var paused=V.restPaused;
   var left=paused?V.restLeft:Math.max(0,Math.ceil((V.restEnd-Date.now())/1000));
@@ -372,8 +386,12 @@ function paintRest(){
     String(REST_C*(1-Math.max(0,Math.min(1,left/total)))));
   var main=document.getElementById("restMain");
   if(main){
-    main.textContent=paused?t("Resume"):t("Pause");
+    /* The control is an icon now, so the label moves to aria-label and the glyph is
+       swapped by class. Writing textContent here would delete the icon. */
+    main.setAttribute("aria-label",paused?t("Resume"):t("Pause"));
     main.setAttribute("data-rest",paused?"resume":"pause");
+    var mi=document.getElementById("restMainIco");
+    if(mi)mi.className="ico ico-"+(paused?"play":"pause");
   }
 }
 /* Rebuilds only when the screen is genuinely a different one — a new exercise, a
