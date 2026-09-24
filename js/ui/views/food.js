@@ -7,6 +7,7 @@ import {dayRec, S} from "../../state.js";
 import {esc, fmtN, r1, today} from "../../util.js";
 import {progressBar, V} from "../view.js";
 import {dateBar} from "../datebar.js";
+import {backArrow} from "../nav.js";
 
 /* ============================================================ FOOD */
 var MEALS=["Breakfast","Lunch","Dinner","Snack"];
@@ -133,8 +134,7 @@ function vMeal(dsel,name){
     :t("Logged")+" "+new Date(dsel+"T00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"});
   /* The same header the Train day screen uses, so the two "one thing inside a tab"
      screens are the same shape. The two frames disagree on its size; the app does not. */
-  var h='<div class="dhead"><button class="icobtn back" data-back="1" aria-label="'+t("Back")+'">'
-   +'<span class="ico ico-cleft" aria-hidden="true"></span></button>'
+  var h='<div class="dhead">'+backArrow()
    +'<h1 class="dhead-t">'+esc(t(name))+'</h1></div>'
    +'<p class="dsub">'+esc(when)+'</p>';
 

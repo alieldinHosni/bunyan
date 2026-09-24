@@ -2,7 +2,7 @@
    Entry point: event listeners, wiring and boot. */
 import {ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val} from "./ui/actions.js";
 import {t} from "./i18n/dict.js";
-import {loadExDB, loadInstructions} from "./data/exercises.js";
+import {loadExDB, loadInstructions, muscleOf, MUSCLES} from "./data/exercises.js";
 import {applyLang} from "./i18n/exnames.js";
 import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, targetKcal} from "./engine/formulas.js";
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, toLogItem, UNITS} from "./engine/nutrition.js";
@@ -18,6 +18,14 @@ import {fmtW, toDisp, toKg} from "./units.js";
 import {num, r1, setStorageErrorHandler, today, uid} from "./util.js";
 import {alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
 import {shiftDay} from "./ui/datebar.js";
+
+/* The muscle filter a replacement should open on. muscleOf() can answer "Other",
+   which is a real classification but not one the filter row offers — selecting it
+   would filter the list to nothing with no pill lit to explain why. */
+function pickMuscle(name){
+  var m=name?muscleOf(name):null;
+  return (m&&MUSCLES.indexOf(m)>=0)?m:"All";
+}
 
 document.addEventListener("click",function(ev){
   /* Named el, not t: t() is the translator, and shadowing it here made every
@@ -40,7 +48,11 @@ document.addEventListener("click",function(ev){
   if(D.confirmalt!==undefined){runAct((V.sd||{}).altact,true);return;}
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
   if(D.tab){resetNav();V.tab=D.tab;V.train="days";V.meal=null;render();return;}
-  if(D.go){resetNav();V.tab=D.go;V.meal=null;render();return;}
+  /* Same reset as a tab tap: it is the same kind of move. Without V.train it landed
+     on the Train tab still showing whatever sub-view was open, with an empty stack
+     behind it — a day view whose back arrow now correctly hides, and nothing to
+     return to but the tab bar. */
+  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;render();return;}
 
   /* ---- splits & days */
   if(D.train){pushNav();V.train=D.train;render();return;}
@@ -72,7 +84,10 @@ document.addEventListener("click",function(ev){
       cta:t("Delete the day"),act:"delday",data:D.delday});return;}
 
   /* ---- exercises */
-  if(D.addex){V.dayId=D.addex;openSheet("exercise",{});return;}
+  /* Opening to add starts from the whole library. The two replace entries below set
+     the filters to the exercise being replaced, and without this reset the next add
+     inherited them — it always had, but it used to inherit "All", so it never showed. */
+  if(D.addex){V.dayId=D.addex;V.exm="All";V.exe="All";V.exq="";openSheet("exercise",{});return;}
   if(D.editex){openSheet("editex",{id:D.editex});return;}
   if(D.exm){V.exm=D.exm;render();return;}
   if(D.exe){V.exe=D.exe;render();return;}
@@ -97,7 +112,11 @@ document.addEventListener("click",function(ev){
   if(D.pickex){addExercise(D.pickex);return;}
   if(D.replaceex){
     var dR=dayOf(V.dayId),eR2=dR?dR.ex.filter(function(x){return x.id===D.replaceex;})[0]:null;
-    V.exm="All";V.exe="All";V.exq="";
+    /* The frame opens a replacement with the current exercise's muscle already
+       selected — "Chest Selected". Ranking alone put like-for-like first but left the
+       whole library under it; this starts where the answer almost certainly is, and
+       "All" is one tap away. Only a muscle the filter row actually has. */
+    V.exm=pickMuscle(eR2&&eR2.name);V.exe="All";V.exq="";
     openSheet("exercise",{replace:D.replaceex,like:eR2?eR2.name:null});return;}
   if(D.saveex){
     var dd=dayOf(V.dayId),e2=dd.ex.filter(function(x){return x.id===D.saveex;})[0];
@@ -205,7 +224,7 @@ document.addEventListener("click",function(ev){
     paintRest();return;}
   if(D.swap){
     var eS=S.active.entries[V.logIdx];
-    V.exm="All";V.exe="All";V.exq="";
+    V.exm=pickMuscle(eS&&eS.name);V.exe="All";V.exq="";
     openSheet("exercise",{swaplive:true,like:eS?eS.name:null});return;}
   if(D.nextex){
     if(V.logIdx>=S.active.entries.length-1){finishSession();return;}
@@ -754,14 +773,20 @@ var leaveResume=null;
    the ✕ is the way out. Same condition as navGuard below, because it has to be the
    same screen: anywhere else in the app the gesture keeps working normally.
 
-   A swipe answered by nothing at all reads as a frozen app, so it says once what to
-   do instead. Once, not per swipe — a toast on every attempt is its own annoyance. */
+   Pure. canBack() consults it on every render to decide whether to draw a back arrow,
+   so anything with a side effect here would fire on every repaint. */
+function sessionLocked(){
+  return !!(S.active&&V.tab==="train"&&!V.sheet);
+}
+/* A gesture answered by nothing at all reads as a frozen app, so it says what to do
+   instead — once per workout, not per swipe, which would be its own annoyance. Only
+   the session has anything to explain: a swipe at a tab root does nothing because
+   there is nowhere to go, which needs no telling. */
 var lockSaid=false;
-function sessionLock(){
-  if(!S.active){lockSaid=false;return false;}   /* armed again for the next workout */
-  if(V.tab!=="train"||V.sheet)return false;
-  if(!lockSaid){lockSaid=true;toast(t("Tap the close button to leave this workout."));}
-  return true;
+function backBlocked(){
+  if(!S.active){lockSaid=false;return;}         /* armed again for the next workout */
+  if(!sessionLocked()||lockSaid)return;
+  lockSaid=true;toast(t("Tap the close button to leave this workout."));
 }
 
 function navGuard(resume){
@@ -810,7 +835,8 @@ ACT.barcode=function(v){ onBarcode(v); };
 initState();
 setStorageErrorHandler(toast);
 /* One back path for the arrow, the edge swipe and the OS gesture. */
-initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,lockBack:sessionLock});
+initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,
+         locked:sessionLocked,onBlocked:backBlocked});
 initSheetDrag(requestCloseSheet);
 /* History comes from IndexedDB, so it arrives a tick later than everything else.
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from

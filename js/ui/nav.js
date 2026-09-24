@@ -12,6 +12,7 @@
    step. See the note at the foot of this file. */
 
 import {V} from "./view.js";
+import {t} from "../i18n/dict.js";
 
 /* Locations we can return to, oldest first. A location is a screen, not a sheet:
    sheets are modal and close before any of this is consulted. */
@@ -23,7 +24,18 @@ var H={};                       /* render, guard, closeSheet — wired by app.js
 
 function initNav(hooks){
   H=hooks||{};
-  try{history.replaceState({bunyan:1},"");}catch(e){}
+  try{
+    history.replaceState({bunyan:1},"");
+    /* One spare entry, always, in front of wherever the user is. The browser's back
+       gesture has to land on something; with nothing of ours to consume it walks out
+       of the document, and coming back in reloads the app — splash and all, which is
+       what "the swipe restarts the app" was. The spare is consumed by the gesture and
+       pushed again immediately, so it is always there and never navigates anywhere.
+
+       It is not nav depth and is never counted in DEPTH: the in-app controls below
+       must not be able to spend it. */
+    history.pushState({bunyan:1},"");
+  }catch(e){}
 }
 function loc(){return {tab:V.tab,train:V.train,dayId:V.dayId,previewId:V.previewId,meal:V.meal};}
 function apply(l){V.tab=l.tab;V.train=l.train;V.dayId=l.dayId;V.previewId=l.previewId;V.meal=l.meal||null;}
@@ -44,6 +56,37 @@ function fallback(){
   else apply(rootOf(V.tab));
   if(H.render)H.render();
 }
+/* ---- the one predicate ------------------------------------------------------
+   Back is available exactly where there is somewhere in-app to return to, and the
+   screen is not one that holds it off. Both the gesture and the back arrows read
+   this, so the rule "swipe-back is available if and only if a back arrow is shown"
+   holds by construction rather than by keeping two lists in step.
+
+   H.locked must be pure — this runs on every render. Telling the user why the
+   gesture did nothing is H.onBlocked's job, and that only runs on a real attempt. */
+function canBack(){
+  if(V.sheet)return true;                    /* back closes the sheet */
+  if(H.locked&&H.locked())return false;      /* a live workout: the ✕ is the way out */
+  return STACK.length>0;
+}
+function repush(){ try{history.pushState({bunyan:1},"");}catch(e){} }
+/* The back affordance itself, rendered here rather than in each view. That is what
+   makes "the arrow and the gesture read the same state" true by construction: one
+   canBack() decides both, and there is one arrow to keep right instead of six.
+
+   Two shapes because the app has two — a bar above the content on the list screens,
+   an icon in the header row on the two detail screens. The session's ✕ is neither:
+   it is a close, it stays in session.js, and canBack() is false while it is on
+   screen, which is exactly the rule. */
+function backBar(){
+  return canBack()
+    ?'<button class="btn d sm" data-back="1" style="width:auto">‹ '+t("Back")+'</button>'
+    :'';}
+function backArrow(){
+  return canBack()
+    ?'<button class="icobtn back" data-back="1" aria-label="'+t("Back")+'">'
+      +'<span class="ico ico-cleft" aria-hidden="true"></span></button>'
+    :'';}
 /* Set for the length of one back that an in-app control asked for, so the popstate it
    causes can be told apart from one the user's edge-swipe caused. Both arrive at the
    same listener; only the control's is allowed through the lock below. */
@@ -67,19 +110,23 @@ window.addEventListener("popstate",function(){
   if(V.sheet){
     /* The gesture was spent closing a sheet, so give the entry back. */
     if(H.closeSheet)H.closeSheet();
-    try{history.pushState({bunyan:1},"");}catch(e){}
+    repush();
     return;
   }
-  /* A live workout holds the back gesture off entirely: the entry is handed straight
-     back and nothing else runs, so the swipe is a no-op rather than something that
-     stops to ask. The ✕ still gets through, because it set viaControl on its way in.
+  /* The rule, in one place: a gesture is honoured exactly where a back arrow is
+     shown. Everywhere else — a tab root with nothing behind it, a live workout — the
+     entry is handed straight back and nothing else runs, so the swipe is a no-op
+     rather than something that navigates or, at a root, leaves the app entirely.
 
-     This is the most a page can do. The gesture belongs to the browser, and no API
-     cancels it — what is controllable is whether it ends up anywhere. Keeping an
-     entry in front of the user means the swipe has something of ours to consume, so
-     it can neither leave the workout nor walk out of the document. */
-  if(!byControl&&H.lockBack&&H.lockBack()){
-    try{history.pushState({bunyan:1},"");}catch(e){}
+     This is the most a page can do about the gesture itself. It belongs to the
+     browser and no API cancels it; what is controllable is whether it lands anywhere.
+
+     byControl exempts the app's own controls. The session's ✕ is a close, not a back
+     arrow, so canBack() is false there and the gesture is held off — but the ✕ still
+     has to work, and it does, because goBack() set the flag on its way in. */
+  if(!byControl&&!canBack()){
+    repush();
+    if(H.onBlocked)H.onBlocked();
     return;
   }
   if(DEPTH>0)DEPTH--;
@@ -87,7 +134,7 @@ window.addEventListener("popstate",function(){
      guard re-runs doBack() itself once the user has decided. */
   if(H.guard&&H.guard(doBack)){
     DEPTH++;
-    try{history.pushState({bunyan:1},"");}catch(e){}
+    repush();
     return;
   }
   fallback();
@@ -107,4 +154,4 @@ window.addEventListener("popstate",function(){
    physics for free, and the arrow and the gesture are the same thing by
    construction rather than by keeping two implementations in step. */
 
-export {initNav, goBack, pushNav, resetNav};
+export {backArrow, backBar, canBack, initNav, goBack, pushNav, resetNav};

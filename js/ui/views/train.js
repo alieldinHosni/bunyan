@@ -8,6 +8,7 @@ import {allSplits, dayOf, S, split} from "../../state.js";
 import {SPLIT_LEVEL} from "../../engine/plan.js";
 import {esc, fmtN, shortd, weekDays} from "../../util.js";
 import {head, V} from "../view.js";
+import {backArrow, backBar} from "../nav.js";
 
 /* ============================================================ TRAIN */
 
@@ -151,7 +152,7 @@ function tagNote(tag){
 /* ---- favourites ---------------------------------------------------------- */
 
 function vFavs(){
-  var h='<button class="btn d sm" data-back="1" style="width:auto">\u2039 Back</button>';
+  var h=backBar();
   h+=head(t("Favourites"),t("Suggested first when you add an exercise"));
   if(!S.favs.length)
     return h+empty("star",t("No favourites yet"),
@@ -173,7 +174,7 @@ function estMinutes(d){
 function vPreview(){
   var sp=allSplits().filter(function(x){return x.id===V.previewId;})[0];
   if(!sp){V.train="splits";return vTrain();}
-  var h='<button class="btn d sm" data-back="1" style="width:auto">\u2039 Back</button>';
+  var h=backBar();
   h+='<h1>'+esc(sp.name)+'</h1><p class="sub">'+esc(sp.tag||"custom")+'</p>';
   sp.days.forEach(function(d){
     if(!d.ex.length){h+='<div class="card"><div class="row"><h3 class="dim">'+esc(d.name)
@@ -191,7 +192,7 @@ function vPreview(){
 
 function vBodyweight(){
   var bw=LIB.filter(function(l){return l[2]==="Bodyweight";});
-  var h='<button class="btn d sm" data-back="1" style="width:auto">\u2039 Back</button>';
+  var h=backBar();
   h+=head(t("Bodyweight"),t("Nothing but the floor"));
   h+='<button class="card tap" data-preview="bw" style="border-color:var(--accent)">'
    +'<div class="row"><h3>'+t("Bodyweight program")+'</h3><span class="pill a">4 days</span></div>'
@@ -223,7 +224,7 @@ function vLibrary(){
         && (V.exe==="All"||l[2]===V.exe)
         && (!V.exd||l[4]===V.exd)
         && (!q||l[0].toLowerCase().indexOf(q)>=0);});
-  var h='<button class="btn d sm" data-back="1" style="width:auto">\u2039 Back</button>';
+  var h=backBar();
   h+=head(t("Exercises"),t("Saber execution, perfect form"));
   h+='<p class="tiny" style="margin:-14px 0 12px">'+list.length+' of '+LIB.length+' shown'
    +(V.exd?' \u00b7 '+V.exd:'')+'</p>';
@@ -250,7 +251,7 @@ function vLibrary(){
   return h;}
 
 function vSplits(){
-  var h='<button class="btn d sm" data-back="1" style="width:auto">\u2039 Back</button>';
+  var h=backBar();
   h+=head(t("Programs"),t("One active at a time"));
   h+='<div class="list">';
   allSplits().forEach(function(sp){
@@ -272,8 +273,7 @@ function vDay(){
   var sp=split();
   var pos=sp.days.indexOf(d)+1;
   var lvl=levelOf(sp.source);
-  var h='<div class="dhead"><button class="icobtn back" data-back="1" aria-label="'+t("Back")+'">'
-   +'<span class="ico ico-cleft" aria-hidden="true"></span></button>'
+  var h='<div class="dhead">'+backArrow()
    +'<h1 class="dhead-t">'+esc(d.name)+'</h1></div>'
    +'<p class="dsub">'+esc(sp.name)+(pos?' • '+t("Day")+' '+pos:'')+'</p>';
   /* Every figure measured from the day itself. */

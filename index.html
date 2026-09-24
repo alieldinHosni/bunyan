@@ -310,7 +310,7 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
    exercise name would reproduce the "corrupted sheet" report. */
 .sheetbox{overflow-x:hidden;background:var(--bg);width:100%;max-width:560px;margin:0 auto;
   border-radius:22px 22px 0 0;padding:20px 16px calc(28px + env(safe-area-inset-bottom));
-  max-height:88vh;overflow-y:auto;border:1px solid var(--border);
+  max-height:88vh;max-height:88dvh;overflow-y:auto;border:1px solid var(--border);
   /* Without this, reaching the top or bottom of a sheet hands the scroll to the
      page behind it, which then moves under the sheet. */
   overscroll-behavior:contain}
@@ -381,7 +381,7 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
 #splash .sp-em{position:absolute;bottom:-10px;width:3px;height:3px;border-radius:2px;
   background:#E0483A;opacity:0;animation-name:spEm;animation-timing-function:linear;
   animation-iteration-count:infinite}
-#splash .sp-mid{position:relative;z-index:2;text-align:center;margin-bottom:15vh}
+#splash .sp-mid{position:relative;z-index:2;text-align:center;margin-bottom:15vh;margin-bottom:15dvh}
 /* No shaped scrim behind the lockup on purpose: any radial dark enough to help is also
    dark enough to read as an oval painted over the artwork. Legibility comes from the
    frame veil, the text shadows below, and the mark's own glow. */
@@ -430,7 +430,8 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
 @keyframes spTag{to{opacity:1}}
 @keyframes spEm{0%{opacity:0;transform:translateY(0) scale(.7)}
   14%{opacity:.7}70%{opacity:.3}
-  100%{opacity:0;transform:translateY(-80vh) translateX(var(--dx,0)) scale(1.1)}}
+  100%{opacity:0;transform:translateY(-80vh) translateX(var(--dx,0)) scale(1.1);
+       transform:translateY(-80dvh) translateX(var(--dx,0)) scale(1.1)}}
 @keyframes spOut{to{opacity:0;visibility:hidden}}
 body.nosplash #splash{display:none}
 /* Reduced motion keeps the composition, drops the movement. */
@@ -480,6 +481,12 @@ body.noanim #splash .sp-embers{display:none}
   background:var(--surface);color:var(--dim);font-size:19px;line-height:1;padding:0;
   display:flex;align-items:center;justify-content:center}
 .sheethead .x:active{background:var(--raised)}
+/* Both sheet-head controls are drawn as 38px discs, which is the design and is 6px
+   short of the minimum target. The disc stays 38px and an invisible 3px outset takes
+   the tappable area to 44 — growing the circles instead would redraw the header of
+   all 21 sheets to fix a hit area nobody can see. */
+.sheethead .x,.favstar{position:relative}
+.sheethead .x::after,.favstar::after{content:"";position:absolute;inset:-3px}
 /* The handle now does what it always looked like it did. */
 /* Search chrome stays put while the results below it change. */
 .exqbar{position:sticky;top:44px;z-index:4;background:var(--bg);
@@ -487,7 +494,7 @@ body.noanim #splash .sp-embers{display:none}
 .exfilters{display:flex;gap:6px;overflow-x:auto;margin:11px 0 0;padding-bottom:4px}
 /* A floor, so a no-match cannot collapse the sheet and the next keystroke cannot
    spring it back open under the finger. */
-.exresults{min-height:52vh}
+.exresults{min-height:52vh;min-height:52dvh}
 .grab{position:absolute;left:50%;top:7px;transform:translateX(-50%);
   width:38px;height:4px;border-radius:2px;background:var(--border)}
 .sheethead:active .grab{background:var(--dim)}
@@ -1307,6 +1314,95 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .restwrap.done .restfoot{display:none}
 .restskip{margin-top:0;color:var(--accentHi);font-size:14px;font-weight:700;
   text-decoration:underline;min-height:44px}
+
+/* ================= Exercise detail — canvas screen 6 (node 2:1182)
+   The frame is drawn as a full screen with a back arrow and a pinned footer. It stays
+   a sheet here: it opens from the ⓘ mid-workout and from the picker, and a route would
+   have to unmount the logger to show it. The sheet head's ✕ and ★ are the frame's back
+   and star, in the one place a long exercise name cannot shove them around. */
+.ico-cdown{--ico:url(icons/chevron-down.svg)}
+
+.exd-sub{font-size:13px;color:var(--dim);margin:4px 0 16px}
+
+/* Primary / Secondary / Equipment as labelled chips. This replaces both the old pill
+   row and the two Primary/Secondary rows under the photographs, which carried exactly
+   the same three facts a second time. */
+.exd-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
+.exd-chip{background:var(--surface);border:1px solid var(--border);border-radius:4px;
+  padding:6px 10px;font-size:12px;color:var(--dim)}
+.exd-chip b{font-weight:700;color:var(--text)}
+
+/* The frame's two 130px panels. It draws a bar-and-arm diagram inside each; the app
+   has the library's own photograph of that position, which is what the diagram stands
+   in for, so the photograph fills the panel and the label sits under it. */
+.exd-form{display:flex;gap:12px;margin-bottom:20px}
+.exd-form figure{flex:1;min-width:0;margin:0;height:130px;background:var(--raised);
+  border:1px solid var(--border);border-radius:8px;overflow:hidden;
+  display:flex;flex-direction:column}
+.exd-form img{flex:1;min-height:0;width:100%;object-fit:cover;display:block;background:#fff}
+.exd-form figcaption{flex:0 0 auto;font-size:11px;color:var(--text);text-align:center;
+  padding:8px 6px;letter-spacing:.06em}
+
+.exd-h{font-family:var(--display);font-weight:800;font-size:16px;margin:0 0 12px}
+.exd-steps{display:flex;flex-direction:column;gap:12px;margin-bottom:12px}
+.exd-step{display:flex;gap:12px;align-items:flex-start}
+/* 24px ringed numeral, accent-soft fill inside an accent border. */
+.exd-num{flex:0 0 24px;width:24px;height:24px;border-radius:12px;
+  background:var(--accentSoft);border:1px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-weight:800;font-size:12px;color:var(--text)}
+.exd-step p{flex:1;min-width:0;margin:0;font-size:13px;line-height:18px}
+
+/* One row for tips and mistakes together, ruled above and below as the frame has it,
+   in place of the grey button that used to toggle them. */
+.exd-tips{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  width:100%;background:none;border:0;border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);border-radius:0;
+  margin:24px calc(-1 * var(--s4)) 0;padding:20px var(--s4);
+  color:var(--text);text-align:start}
+.exd-tips-l{display:flex;align-items:center;gap:8px;
+  font-family:var(--display);font-weight:800;font-size:14px}
+.exd-tips-l i{font-style:normal;color:var(--gold);font-weight:400}
+.exd-tips .ico-cdown{color:var(--dim);transition:transform var(--m-micro) var(--e-standard)}
+.exd-tips[aria-expanded="true"] .ico-cdown{transform:rotate(180deg)}
+:root.reduced .exd-tips .ico-cdown{transition:none}
+.exd-miss{padding-top:16px}
+.exd-miss div{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:13px}
+.exd-miss b{color:var(--accentHi);font-weight:700;flex:0 0 auto}
+
+/* The frame pins ADD TO WORKOUT to the foot of the screen. Inside a sheet it sits at
+   the end of the content, and it appears only when there is a day open to add to —
+   the same sheet opens mid-set from the logger, where adding is not what it means. */
+.exd-add{margin-top:24px}
+
+/* ================= Exercise replacement — canvas screen 7 (node 2:1244)
+   The frame is the picker in replace mode, so this is the picker sheet with the
+   frame's three additions: the row naming what is being replaced, a second filter
+   row for equipment, and a Swap affordance on each result. */
+
+/* What you are replacing, stated before the list of what you could replace it with.
+   The picker never said, so "Replace exercise" was the only clue on screen. */
+.exswapfrom{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:12px;margin-bottom:16px}
+.exswapfrom-k{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.exswapfrom-n{font-family:var(--display);font-weight:700;font-size:15px;margin-top:2px}
+.exswapfrom-b{flex-shrink:0;background:var(--accentSoft);color:var(--text);
+  border-radius:4px;padding:4px 8px;font-size:10px;font-weight:700;letter-spacing:.06em}
+
+/* Two rows, not the frame's one. It draws the muscle pill and two equipment pills
+   side by side; they filter different things, and mixed into a single unlabelled row
+   there is nothing to say why turning one off widens the list and the other narrows
+   it. Same pills, same scroll, one row each. */
+.exfilters+.exfilters{margin-top:6px}
+
+/* The frame gives every result an explicit Swap button. A button inside the row
+   button is not valid, and two targets stacked on one row is worse to hit than one,
+   so this is a label styled as the frame's button — the whole row remains the tap. */
+.exswap{flex-shrink:0;background:var(--raised);border:1px solid var(--border);
+  border-radius:4px;padding:6px 12px;
+  font-family:var(--display);font-weight:700;font-size:12px;color:var(--accentHi)}
+.item:active .exswap{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
 </style>
 </head>
 <body>

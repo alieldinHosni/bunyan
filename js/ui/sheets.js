@@ -52,6 +52,9 @@ function vSheet(){
        to find "Barbell Incline Bench Press - Medium Grip" whichever order the words
        are typed in. Same matcher the food search uses. */
     var list=LIB.filter(function(l){
+      /* The exercise being replaced is not one of its own alternatives. It ranked
+         near the top of its own list, because it scores full marks against itself. */
+      if(V.sd&&(V.sd.replace||V.sd.swaplive)&&l[0]===target)return false;
       if(V.exm!=="All"&&l[1]!==V.exm)return false;
       if(V.exe&&V.exe!=="All"&&l[2]!==V.exe)return false;
       if(q&&!tokenMatch(q,l[0]))return false;
@@ -74,10 +77,21 @@ function vSheet(){
         return sc(a)-sc(b);});}
     else list.sort(function(a,b){return (isFav(b[0])?1:0)-(isFav(a[0])?1:0);});
     list=list.slice(0,80);
-    b='<h2>'+(V.sd&&V.sd.replace?"Replace exercise":"Add exercise")+'</h2>';
+    /* Swapping the live exercise is a replacement too — it titled itself "Add
+       exercise", which is what the sheet does in its other mode, not this one. */
+    var swapping=!!(V.sd&&(V.sd.replace||V.sd.swaplive));
+    b='<h2>'+t(swapping?"Replace Exercise":"Add exercise")+'</h2>';
+    /* The frame names what is being replaced before listing what could replace it.
+       The picker never did, so the title was the only thing on screen that said a
+       replacement was in progress — and it did not say of what. */
+    if(swapping&&target)
+      b+='<div class="exswapfrom"><div style="min-width:0">'
+       +'<div class="exswapfrom-k">'+t("Current exercise")+'</div>'
+       +'<div class="exswapfrom-n">'+esc(exName(target))+'</div></div>'
+       +'<span class="exswapfrom-b">'+t("SWAPPING")+'</span></div>';
     b+='<p class="tiny" style="margin:2px 0 12px">'
-     +(target?'Best alternatives to '+esc(target)+' first. ':'')
-     +list.length+' shown'+(S.gear&&S.gear.length?', matched to your equipment':'')+'.</p>';
+     +(target?t("Best alternatives first.")+' ':'')
+     +list.length+' '+t("shown")+(S.gear&&S.gear.length?', '+t("matched to your equipment"):'')+'.</p>';
     /* The field and the filters stay put while you type; only the results below
        change. Letting the field scroll away was half of why search felt like it
        was jumping. */
@@ -86,23 +100,36 @@ function vSheet(){
      +'autocapitalize="none" autocorrect="off" enterkeyhint="search">'
      +'<div class="exfilters">';
     ["All"].concat(MUSCLES).forEach(function(m){
-      b+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'" style="border:none;flex-shrink:0">'+m+'</button>';});
+      b+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'" style="border:none;flex-shrink:0">'+t(m)+'</button>';});
+    b+='</div>';
+    /* Equipment, which the frame puts beside the muscle pills. V.exe already filtered
+       the list above — it simply had no control in this sheet, so it could only be set
+       by arriving from the bodyweight entry and never cleared from here. */
+    b+='<div class="exfilters">';
+    ["All"].concat(EQUIP).forEach(function(q2){
+      b+='<button class="pill'+(V.exe===q2?" a":"")+'" data-exe="'+q2+'" style="border:none;flex-shrink:0">'+t(q2)+'</button>';});
     b+='</div></div>';
     /* A floor under the results. Without it the container collapses to nothing on a
        no-match and springs back on the next character, which moves the whole screen
        under the user's finger — a separate cause from the re-render. */
+    /* The frame's result row: name, then equipment · difficulty, then the action. The
+       muscle is only worth a slot when the muscle filter is not already showing it. */
+    function exRow(l,k){
+      var meta=[exVariant(l[0])?esc(exVariant(l[0])):"",
+                V.exm==="All"?t(l[1]):"",
+                t(l[2]),t(difficultyOf(l[0]))].filter(Boolean).join(" · ");
+      return '<button class="item" data-k="'+k+':'+esc(l[0])+'" data-pickex="'+esc(l[0])+'">'
+       +'<div style="min-width:0"><div style="font-weight:600">'+esc(exName(l[0]))+'</div>'
+       +'<div class="tiny">'+meta+'</div></div>'
+       /* Styled as the frame's Swap button rather than being one: a button inside the
+          row button is invalid, and two targets on one row is worse to hit than one. */
+       +'<span class="exswap">'+t(swapping?"Swap":"Add")+'</span></button>';}
     b+='<div class="exresults"><div class="list">';
-    list.forEach(function(l){
-      b+='<button class="item" data-k="ex:'+esc(l[0])+'" data-pickex="'+esc(l[0])+'"><div><div style="font-weight:600">'+esc(exName(l[0]))+'</div>'
-       +'<div class="tiny">'+(exVariant(l[0])?esc(exVariant(l[0]))+' · ':'')+t(l[1])+' · '+t(l[2])+'</div></div><span class="chev">+</span></button>';});
+    list.forEach(function(l){b+=exRow(l,"ex");});
     b+='</div>';
     if(!list.length&&guess.length){
       b+='<div class="overline" style="margin-top:var(--s4)">'+t("Did you mean")+'…</div><div class="list">';
-      guess.forEach(function(l){
-        b+='<button class="item" data-k="gs:'+esc(l[0])+'" data-pickex="'+esc(l[0])+'">'
-         +'<div><div style="font-weight:600">'+esc(exName(l[0]))+'</div>'
-         +'<div class="tiny">'+(exVariant(l[0])?esc(exVariant(l[0]))+' · ':'')+t(l[1])+' · '+t(l[2])+'</div></div>'
-         +'<span class="chev">+</span></button>';});
+      guess.forEach(function(l){b+=exRow(l,"gs");});
       b+='</div>';
     }
     if(!list.length&&!guess.length)b+=empty("search",
@@ -113,7 +140,7 @@ function vSheet(){
       '<button class="btn" data-customex="1">'+t("Add it yourself")+'</button>');
     b+='</div>';
     b+='<button class="btn g" data-showall="1">'
-     +(V.showAll?'Only what I can do':'Show everything, including gear I lack')+'</button>';
+     +t(V.showAll?"Only what I can do":"Show everything, including gear I lack")+'</button>';
   }
   /* The session's overflow. Canvas screen 4 leaves two links under the set table and
      nothing else, so the five infrequent actions live here instead of in a six-button
@@ -378,47 +405,59 @@ function vSheet(){
   else if(V.sheet==="exdetail"){
     var nD=V.sd.name, mD=muscleOf(nD), pD=patternOf(nD), secD=secondaryOf(nD), lD=libFind(nD);
     var prD=prFor(nD), pvD=prevPerf(nD);
-    b='<h2>'+esc(exName(nD))+'</h2>'
-     +'<div class="rowc" style="margin:8px 0 14px;flex-wrap:wrap">'
-     +(exVariant(nD)?'<span class="pill" style="border-color:var(--accent);color:var(--accentHi)">'+esc(exVariant(nD))+'</span>':'')
-     +'<span class="pill a">'+t(mD)+'</span><span class="pill">'+t(lD?lD[2]:"Other")+'</span>'
-     +'<span class="pill">'+t(pD)+'</span><span class="pill">'+t(difficultyOf(nD))+'</span></div>';
+    b='<h2>'+esc(exName(nD))+'</h2>';
+    /* The frame's subtitle \u2014 "Horizontal Push Classic" \u2014 is the movement pattern and
+       the variant, which the app already knows. It replaces the loose variant pill. */
+    var subD=[t(pD),exVariant(nD)?esc(exVariant(nD)):""].filter(Boolean).join(" \u00b7 ");
+    b+='<div class="exd-sub">'+subD+'</div>';
+    /* Three labelled chips, as the frame has. These carry what the old pill row and
+       the two Primary/Secondary rows under the photographs both said, so those rows
+       are gone rather than repeating the same three facts a second time. Difficulty
+       is a fourth: the app has it and the frame had nowhere to put it. */
+    b+='<div class="exd-chips">'
+     +'<span class="exd-chip">'+t("Primary")+': <b>'+t(mD)+'</b></span>'
+     +(secD.length?'<span class="exd-chip">'+t("Secondary")+': <b>'
+        +secD.map(function(s){return t(s);}).join(" \u00b7 ")+'</b></span>':'')
+     +'<span class="exd-chip">'+t("Equipment")+': <b>'+t(lD?lD[2]:"Other")+'</b></span>'
+     +'<span class="exd-chip">'+t("Difficulty")+': <b>'+t(difficultyOf(nD))+'</b></span>'
+     +'</div>';
     var med=exMedia(nD);
     if(med){
-      b+='<div class="demo" style="margin-bottom:12px">'
-       +'<figure><img src="'+exImg(nD,0)+'" alt=""><figcaption>Start</figcaption></figure>'
-       +'<figure><img src="'+exImg(nD,1)+'" alt=""><figcaption>'+t("Finish")+'</figcaption></figure></div>';}
-    /* The body diagram is gone: both photographs sit right above it and show the
-       same thing better. The two text rows below cost a line each and stay. */
-    b+='<div class="row"><span class="tiny">'+t("Primary")+'</span><span style="font-weight:600;color:var(--accent)">'
-     +t(mD)+'</span></div>';
-    if(secD.length)b+='<div class="row" style="margin-top:4px"><span class="tiny">'+t("Secondary")+'</span>'
-     +'<span class="dim">'+secD.join(" \u00b7 ")+'</span></div>';
+      /* The frame draws a bar-and-arm diagram in each panel; these are the library's
+         own photographs of the two positions, which is what the diagram stands for. */
+      b+='<div class="exd-form">'
+       +'<figure><img src="'+exImg(nD,0)+'" alt=""><figcaption>'+t("START")+'</figcaption></figure>'
+       +'<figure><img src="'+exImg(nD,1)+'" alt=""><figcaption>'+t("END")+'</figcaption></figure></div>';}
     /* Three steps by default. Nobody reads five paragraphs between sets, and the
        rest is one tap away for anyone who wants them. */
-    b+='<div class="sec">'+t("How to do it")+'</div><div class="card">';
+    b+='<div class="exd-h">'+t("How to Perform")+'</div><div class="exd-steps">';
     var steps=exSteps(nD)||(CUES[pD]||CUES.Isolation);
     var allSteps=!!V.exsteps,shown=allSteps?steps:steps.slice(0,3);
     shown.forEach(function(c,i){
-      b+='<div class="rowc" style="align-items:flex-start;margin-bottom:9px">'
-       +'<span class="pill a" style="min-width:22px;text-align:center">'+(i+1)+'</span>'
-       +'<span style="font-size:14px;flex:1">'+esc(c)+'</span></div>';});
+      b+='<div class="exd-step"><span class="exd-num">'+(i+1)+'</span>'
+       +'<p>'+esc(c)+'</p></div>';});
+    b+='</div>';
     if(steps.length>3)
       b+='<button class="btn g sm" data-exsteps="1">'
        +(allSteps?t("Show fewer"):t("Show all")+' '+steps.length+' '+t("steps"))+'</button>';
-    b+='</div>';
     /* Mistakes are generated from the movement pattern, so every push exercise shows
-       the same three lines. Worth keeping for a beginner; not worth the vertical
-       space by default on a screen this issue is trying to shorten. */
-    b+='<button class="btn g sm" data-exmiss="1" style="margin-top:var(--s4)">'
-     +(V.exmiss?t("Hide common mistakes"):t("Common mistakes"))+'</button>';
+       the same three lines. Worth keeping for a beginner; not worth the vertical space
+       by default. The frame folds them into one ruled row, which is what this is \u2014
+       the grey button it replaces said the same thing with less of the screen. */
+    b+='<button class="exd-tips" data-exmiss="1" aria-expanded="'+(V.exmiss?"true":"false")+'">'
+     +'<span class="exd-tips-l"><i aria-hidden="true">\u24d8</i>'+t("Tips & Common Mistakes")+'</span>'
+     +'<span class="ico ico-cdown" aria-hidden="true"></span></button>';
     if(V.exmiss){
-      b+='<div class="card mt">';
+      b+='<div class="exd-miss">';
       (MISTAKES[pD]||MISTAKES.Isolation).forEach(function(c){
-        b+='<div class="rowc" style="align-items:flex-start;margin-bottom:8px">'
-         +'<span style="color:var(--accent);font-weight:700">\u00d7</span>'
-         +'<span style="font-size:14px;flex:1">'+esc(c)+'</span></div>';});
+        b+='<div><b>\u00d7</b><span>'+esc(c)+'</span></div>';});
       b+='</div>';}
+    /* The frame pins ADD TO WORKOUT to the foot of the screen. It shows only when
+       there is a day open to put the exercise in and no workout running. V.dayId
+       survives into a live session, so the day test alone would offer "add" from the
+       ⓘ mid-set — and it would add to the plan, not to the workout in front of you. */
+    if(!S.active&&dayOf(V.dayId))
+      b+='<button class="btn exd-add" data-pickex="'+esc(nD)+'">'+t("Add to workout")+'</button>';
     if(prD.w)b+='<div class="sec">'+t("Your record")+'</div><div class="card"><div class="grid3">'
      +'<div><div class="tiny">'+t("Heaviest")+'</div><div class="big" style="font-size:19px">'+prD.w+'</div></div>'
      +'<div><div class="tiny">'+t("Best 1RM")+'</div><div class="big" style="font-size:19px">'+(prD.e||"\u2014")+'</div></div>'

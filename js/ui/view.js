@@ -297,15 +297,27 @@ function lockScroll(on){
      pinned, and the page would jump to the top when the sheet closed. */
   if(on===_locked)return;
   _locked=on;
-  var b=document.body;
+  var b=document.body,d=document.documentElement;
   if(on){
-    _lockY=window.pageYOffset||document.documentElement.scrollTop||0;
+    /* Taking the body out of flow empties the document, so its scroll height drops to
+       one viewport and the page stops being scrollable. Safari reads that as "nothing
+       to scroll", brings its collapsed toolbar back, and the visual viewport shrinks —
+       which moves everything pinned to the bottom of it, the nav included. Closing the
+       sheet makes the page scrollable again, but the toolbar stays out until something
+       scrolls, so the nav is still displaced afterwards. That is the "shifted again
+       after a sheet closes" report, and it is why tapping another tab fixes it.
+
+       Holding the height the document had keeps it exactly as scrollable as it was, so
+       the toolbar never changes state and nothing pinned to the viewport moves. */
+    _lockY=window.pageYOffset||d.scrollTop||0;
+    d.style.height=d.scrollHeight+"px";
     b.style.position="fixed";
     b.style.top=(-_lockY)+"px";
     b.style.left="0";b.style.right="0";b.style.width="100%";
   }else{
     b.style.position="";b.style.top="";
     b.style.left="";b.style.right="";b.style.width="";
+    d.style.height="";
     window.scrollTo(0,_lockY);
   }
 }
