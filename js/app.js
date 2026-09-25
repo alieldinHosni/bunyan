@@ -14,8 +14,8 @@ import {initSheetDrag} from "./ui/sheetdrag.js";
 import {leave} from "./ui/motion.js";
 import {groupNext, groupRun, mmss, noteSet, paintRest, sessionClock} from "./ui/views/session.js";
 import {adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
-import {fmtW, toDisp, toKg} from "./units.js";
-import {num, r1, setStorageErrorHandler, today, uid} from "./util.js";
+import {fmtW, toDisp, toKg, wUnit} from "./units.js";
+import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
 import {alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
 import {shiftDay} from "./ui/datebar.js";
 
@@ -525,6 +525,29 @@ document.addEventListener("click",function(ev){
       body:t("Every workout, meal and measurement on this profile goes with it. This cannot be undone."),
       cta:t("Delete the profile"),act:"delprofile"});return;}
   if(D.share){openSheet("share");return;}
+  /* The complete screen's second button. The OS share sheet where there is one, the
+     clipboard where there is not — both free, neither a dependency. The existing
+     "share" sheet is a progress snapshot for friends, which is a different thing from
+     this one workout, so it is not what this opens. */
+  if(D.sharews!==undefined){
+    var ws=V.sd;if(!ws)return;
+    var line=ws.dayName+" · "+ws.mins+" "+t("min")+" · "
+      +fmtN(toDisp(ws.vol))+" "+wUnit()+" "+t("lifted")+" · "
+      +ws.sets+" "+t("sets")
+      +(ws.prs.length?" · "+ws.prs.length+" "+t(ws.prs.length>1?"new records":"new record"):"")
+      +" — BUNYAN";
+    if(navigator.share){
+      navigator.share({title:"BUNYAN",text:line}).catch(function(){});
+      return;}
+    /* writeText rejects asynchronously — a plain try/catch around it catches nothing,
+       so a blocked clipboard answered the tap with silence. */
+    var wrote=null;
+    try{wrote=navigator.clipboard&&navigator.clipboard.writeText(line);}catch(e){}
+    if(wrote&&wrote.then)
+      wrote.then(function(){toast(t("Copied. Paste it wherever you like."));},
+                 function(){toast(t("Sharing is not available here."));});
+    else toast(t("Sharing is not available here."));
+    return;}
   if(D.copysn){var t2=document.getElementById("sn");t2.select();
     try{document.execCommand("copy");toast("Copied. Send it on WhatsApp.");}
     catch(e){toast("Select the text and copy it.");}return;}

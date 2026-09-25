@@ -4,12 +4,12 @@ import {t} from "../i18n/dict.js";
 import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {exName} from "../i18n/exnames.js";
 import {MEALS, srcBadge} from "./views/food.js";
-import {backupAgeDays, bestE1RM, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
+import {backupAgeDays, bestE1RM, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, sessionKcal, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {scanSupported} from "../scan.js";
 import {GOALS, LEVELS, splitCandidates} from "../engine/plan.js";
-import {groupLabel, groupRun, platePlan} from "./views/session.js";
+import {groupLabel, groupRun, mmss, platePlan} from "./views/session.js";
 import {buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats} from "../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
@@ -478,52 +478,70 @@ function vSheet(){
   }
   else if(V.sheet==="done"){
     var w=V.sd;
-    b='<div style="text-align:center;margin-bottom:var(--s5)">'
-     +'<div style="width:76px;height:76px;border-radius:50%;background:var(--ok);margin:0 auto;'
-     +'display:flex;align-items:center;justify-content:center;font-size:38px;color:#fff">\u2713</div>'
-     +'<h1 style="margin-top:var(--s4)">'+t("Workout complete")+'</h1>'
-     +'<p class="sub" style="margin-top:6px">'+esc(w.dayName)+' \u00b7 '+pretty(w.date)+'</p></div>';
-    b+='<div class="card"><div class="tiny" style="letter-spacing:.12em">'+t("PERFORMANCE SUMMARY")+'</div>'
-     +'<div class="grid2" style="margin-top:var(--s4)">'
-    /* The four summary figures count up from zero as the sheet arrives — this is the
-       one screen whose whole purpose is the numbers. The volume figure keeps its unit
-       in a sibling span, because counting writes textContent and would otherwise eat
-       it. Each span carries the final value as its text too, so reduced motion and a
-       re-render both land on the right number without animating. */
-    /* All four figures use .stat. DURATION used to be .metric at an overridden 30px,
-       which made it accent red and larger than its three neighbours - four equivalent
-       numbers with the least important one shouting. Nothing here ranks above the
-       others, so nothing here is styled above them. */
-     +'<div><div class="tiny">'+t("DURATION")+'</div><div class="stat">'
-     +'<span data-count-to="'+w.mins+'">'+w.mins+'</span></div>'
-     +'<div class="tiny">'+t("mins total")+'</div></div>'
-     +'<div><div class="tiny">'+t("TOTAL VOLUME")+'</div><div class="stat">'
-     +'<span data-count-to="'+Math.round(toDisp(w.vol))+'">'
-     +fmtN(toDisp(w.vol))+'</span>'
-     +'<span class="unit">'+wUnit()+'</span></div><div class="tiny">'+t("lifted")+'</div></div></div>'
-     +'<div class="grid2" style="margin-top:var(--s5)">'
-     +'<div><div class="tiny">'+t("EXERCISES")+'</div><div class="stat">'
-     +'<span data-count-to="'+w.exs+'">'+w.exs+'</span></div>'
-     +'<div class="tiny">'+t("completed")+'</div></div>'
-     +'<div><div class="tiny">'+t("SETS LOGGED")+'</div><div class="stat">'
-     +'<span data-count-to="'+w.sets+'">'+w.sets+'</span></div>'
-     +'<div class="tiny">avg RPE '+(w.rpe||"\u2014")+'</div></div></div></div>';
-    if(w.delta!==null)b+='<div class="card mt"><div class="row"><span class="tiny">Versus last '
-      +esc(w.dayName)+'</span><span style="font-weight:700;color:'
-      +(w.delta>=0?"var(--ok)":"var(--dim)")+'">'+(w.delta>=0?"+":"")+fmtN(toDisp(w.delta))+' '+wUnit()+'</span></div></div>';
+    /* Canvas screen 8 (node 2:1311). Every figure is the session's own; the frame's
+       "Day 3: Chest & Triceps Solidified", "6 of 6" and "+5%" are placeholders for
+       exactly these. */
+    b='<div class="wc-top">'
+     +'<div class="wc-medal"><i class="ico ico-award"></i></div>'
+     +'<h1 class="wc-h">'+t("Workout Complete!")+'</h1>'
+     +'<p class="wc-sub">'+esc(w.dayName)+' · '+pretty(w.date)+'</p></div>';
+
+    /* Four tiles. The counting spans keep their final value as their own text, so a
+       re-render and reduced motion both land on the right number without animating. */
+    function stat(k,v,u){
+      return '<div class="wc-stat"><div class="wc-stat-k">'+k+'</div>'
+       +'<div class="wc-stat-v">'+v+(u?'<span class="unit">'+u+'</span>':'')+'</div></div>';}
+    /* secs is the real elapsed active time; mins is it rounded. Sessions recorded
+       before secs existed fall back to the rounded figure. */
+    var wsecs=w.secs||w.mins*60, kcal=sessionKcal(wsecs/60);
+    b+='<div class="wc-stats">'
+     +stat(t("DURATION"),mmss(wsecs))
+     +stat(t("EXERCISES"),w.exs+' '+t("of")+' '+(w.exsPlanned||w.exs))
+     +stat(t("TOTAL VOLUME"),
+        '<span data-count-to="'+Math.round(toDisp(w.vol))+'">'+fmtN(toDisp(w.vol))+'</span>',
+        wUnit())
+     /* The frame's fourth tile is an estimate off body weight. Without one logged it
+        would be an estimate off a guess, so the tile shows a figure the app measured
+        instead of one it invented. */
+     +(kcal
+        ?stat(t("EST. CALORIES"),'<span data-count-to="'+kcal+'">'+fmtN(kcal)+'</span>',"kcal")
+        :stat(t("SETS LOGGED"),'<span data-count-to="'+w.sets+'">'+w.sets+'</span>'))
+     +'</div>';
+
     if(w.prs.length){
-      b+='<div class="card"><div class="row"><span class="tiny" style="letter-spacing:.12em">'
-       +'ACHIEVED PERSONAL RECORDS</span><span class="pill a">New</span></div>';
-      w.prs.forEach(function(p){
-        b+='<div class="row" style="margin-top:var(--s4);align-items:center">'
-         +'<div><div style="font-weight:800;text-transform:uppercase;font-size:15px">'+esc(exName(p.n))+'</div>'
-         +'<div class="tiny">New '+p.r+'-rep max</div></div>'
-         +'<div class="metric" style="font-size:22px">'+fmtW(p.w)+'</div></div>';});
+      b+='<div class="wc-pr"><span class="wc-pr-i" aria-hidden="true">🏆</span>'
+       +'<div style="min-width:0"><div class="wc-pr-k">'
+       +t(w.prs.length>1?"NEW PERSONAL RECORDS":"NEW PERSONAL RECORD")+'</div>';
+      /* A first-ever workout sets a record on every lift in it, which would turn the
+         banner into a second summary as long as the screen. Heaviest first, three
+         named, the rest counted. */
+      var prs=w.prs.slice().sort(function(x,y){return y.w-x.w;});
+      prs.slice(0,3).forEach(function(p){
+        b+='<div class="wc-pr-v">'+esc(exName(p.n))+': '+fmtW(p.w)
+         +' × '+p.r+' '+t("reps")+'</div>';});
+      if(prs.length>3)
+        b+='<div class="wc-pr-v">+'+(prs.length-3)+' '+t("more")+'</div>';
+      b+='</div></div>';}
+
+    /* Each line is printed only when it is true of this session. */
+    var ach=[];
+    if(w.setsPlanned&&w.sets>=w.setsPlanned)ach.push(t("Every planned set logged"));
+    if(w.exsPlanned&&w.exs>=w.exsPlanned)ach.push(t("Every exercise completed"));
+    if(w.prevVol&&w.delta>0)
+      ach.push(t("Volume up")+' '+Math.round(w.delta/w.prevVol*100)+'% '+t("on last session"));
+    if(w.rpe&&w.rpe>=8.5)ach.push(t("Trained near your limit")+' — RPE '+w.rpe);
+    if(ach.length){
+      b+='<h2 class="wc-ach-h">'+t("Key Achievements")+'</h2><div class="wc-ach">';
+      ach.forEach(function(x){
+        b+='<div><i class="ico ico-check"></i><span>'+esc(x)+'</span></div>';});
       b+='</div>';}
+
     if(w.notes)b+='<div class="card"><div class="tiny" style="letter-spacing:.12em">'
       +t("SESSION NOTE")+'</div><p style="margin:8px 0 0;font-size:14.5px;line-height:1.5">'
       +esc(w.notes)+'</p></div>';
-    b+='<button class="btn" data-close="1">'+t("Done")+'</button>';
+
+    b+='<div class="wc-foot"><button class="btn" data-close="1">'+t("Done")+'</button>'
+     +'<button class="btn g" data-sharews="1">'+t("Share workout stats")+'</button></div>';
   }
   else if(V.sheet==="gear"){
     b='<h2>'+t("My equipment")+'</h2><p class="tiny" style="margin:2px 0 14px">'

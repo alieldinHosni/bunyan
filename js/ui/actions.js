@@ -147,6 +147,12 @@ function syncDraft(){
 
 function finishSession(){
   var a=S.active;
+  /* Counted before the filter below drops untouched exercises, because "6 of 6" and
+     "every planned set logged" are about what the day asked for, not about what
+     survived. */
+  var exsPlanned=a.entries.length;
+  var setsPlanned=a.entries.reduce(function(n,e){
+    return n+((e.planned&&e.planned.sets)||0);},0);
   a.entries=a.entries.filter(function(e){return e.sets.length;});
   if(!a.entries.length){S.active=null;endRest();keepAwake(false);saveDB();render();return;}
 
@@ -166,9 +172,17 @@ function finishSession(){
     /* Active time, not wall clock: that is what was trained, and it keeps sessions
        comparable. The wall clock is stored too, since it cannot be recovered later. */
     mins:Math.max(1,Math.round(sessionClock(a).ms/60000)),
+    /* The complete screen prints mm:ss. Deriving that from the rounded minutes would
+       have put :00 after every workout ever logged — the format promising a precision
+       the figure did not have. */
+    secs:Math.max(1,Math.round(sessionClock(a).ms/1000)),
     wallMins:Math.max(1,Math.round(sessionWall(a)/60000)),
     sets:allSets.length,exs:a.entries.length,rpe:avgRPE(allSets),prs:prs,
     notes:a.notes||"",
+    /* What the complete screen needs to state an achievement rather than a number:
+       the plan it is being measured against, and the session it is being compared to. */
+    exsPlanned:exsPlanned,setsPlanned:setsPlanned,
+    prevVol:prev?Math.round(sessionVolume(prev)):null,
     delta:prev?vol-Math.round(sessionVolume(prev)):null};
 
   recordSession(a);S.active=null;endRest();keepAwake(false);

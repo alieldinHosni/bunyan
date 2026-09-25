@@ -1403,6 +1403,109 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   border-radius:4px;padding:6px 12px;
   font-family:var(--display);font-weight:700;font-size:12px;color:var(--accentHi)}
 .item:active .exswap{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
+
+/* ================= Workout complete — canvas screen 8 (node 2:1311)
+   Measured off the 2× frame export, so every figure here is half what that file
+   shows. It stays a sheet, like screens 6 and 7: finishSession() opens it, and a
+   route would have to unmount the logger underneath to show it. */
+.ico-award{--ico:url(icons/award.svg)}
+
+/* The medal. The green tick this replaces was the pre-Figma design's; the frame
+   rings it in accent over accent-soft, which is the same treatment the rest of the
+   canvas gives anything it wants read as earned. */
+.wc-top{text-align:center;margin-bottom:20px}
+.wc-medal{width:70px;height:70px;margin:0 auto 16px;border-radius:35px;
+  background:var(--accentSoft);border:2px solid var(--accent);
+  display:flex;align-items:center;justify-content:center}
+.wc-medal .ico-award{width:28px;height:28px;flex-basis:28px;color:var(--text)}
+.wc-h{font-family:var(--display);font-weight:800;font-size:32px;letter-spacing:-.02em;
+  line-height:1.1;margin:0}
+.wc-sub{font-size:16px;color:var(--dim);margin:8px 0 0}
+
+/* Four tiles, two up. */
+.wc-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.wc-stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:16px}
+.wc-stat-k{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
+.wc-stat-v{font-family:var(--display);font-weight:800;font-size:20px;margin-top:6px;
+  font-variant-numeric:tabular-nums}
+.wc-stat-v .unit{font-size:20px;font-weight:800;color:var(--text);margin-inline-start:4px}
+
+/* The record. Gold, because it is the one thing on this screen that is not simply
+   what happened — it is the best that has ever happened. */
+.wc-pr{display:flex;align-items:center;gap:14px;
+  background:var(--surface);border:1.5px solid var(--gold);border-radius:8px;
+  padding:16px;margin-bottom:24px}
+.wc-pr-i{font-size:26px;line-height:1;flex-shrink:0}
+.wc-pr-k{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold)}
+.wc-pr-v{font-family:var(--display);font-weight:800;font-size:16px;margin-top:2px}
+.wc-pr-v+.wc-pr-v{margin-top:6px}
+
+/* Derived facts, not decoration: each line is only printed when it is true. */
+.wc-ach-h{font-family:var(--display);font-weight:800;font-size:17px;margin:0 0 12px}
+.wc-ach{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.wc-ach div{display:flex;align-items:flex-start;gap:10px;font-size:15px}
+.wc-ach .ico-check{color:var(--ok);flex-basis:16px;margin-top:2px}
+
+/* The frame pins these under a rule at the foot of the screen. */
+.wc-foot{border-top:1px solid var(--border);
+  margin:0 calc(-1 * var(--s4));padding:20px var(--s4) 0}
+.wc-foot .btn{margin-top:0}
+.wc-foot .btn+.btn{margin-top:12px}
+
+/* ================= Exercise library — canvas screen 9 (node 2:1360)
+   Measured off the 2× PNG export at 804×1748 and halved; the Figma connector was
+   still capped. Same caveat as screen 8: spacing is read to a couple of pixels
+   rather than taken literally. */
+
+/* Title, subtitle and the favourites star, which is where the frame puts it. The
+   shared head() renders a BUNYAN watermark in that corner instead, so this screen
+   has its own header rather than a watermark with a star stacked on it. */
+.libhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  margin-bottom:16px}
+.libhead h1{margin:0}
+.libhead .sub{margin:5px 0 0;color:var(--dim);font-size:14px}
+
+/* The frame's search field: the icon lives inside it, in accent. The bare input this
+   replaces gave no hint of what could be searched. */
+.libq{position:relative;margin-bottom:12px}
+.libq .ico-search{position:absolute;inset-inline-start:14px;top:50%;margin-top:-8px;
+  color:var(--accent);pointer-events:none}
+.libq input{width:100%;height:48px;border-radius:12px;padding-inline:40px 14px;
+  background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:15px}
+.libq input::placeholder{color:var(--dim)}
+
+.libfilters{display:flex;gap:8px;overflow-x:auto;margin-bottom:8px;padding-bottom:4px}
+/* The frame's selected pill is outlined in accent, not filled — filled is what this
+   app's .pill.a does, and the two together would have read as two different states.
+   Scoped here so the filled pill everywhere else is untouched. */
+.libfilters .pill{flex-shrink:0;border:1px solid var(--border);min-height:44px;
+  padding:0 16px;display:flex;align-items:center;border-radius:22px;
+  /* The base pill is an 11px uppercase tag. These are filter controls meant to be
+     read, which is how the frame draws them — sentence case, legible size. */
+  font-size:13px;font-weight:600;letter-spacing:0;text-transform:none}
+.libfilters .pill.a{background:transparent;border-color:var(--accent);color:var(--accentHi)}
+
+/* "Chest Exercises (4)" — the filter and the count, which the tiny "N of M shown"
+   line it replaces said less clearly and in the wrong place. */
+.libcount{font-family:var(--display);font-weight:800;font-size:20px;margin:16px 0 12px}
+
+.librow{display:flex;align-items:center;gap:16px;width:100%;text-align:start;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:12px;margin-bottom:10px;color:var(--text)}
+.librow .thumbwrap,.librow .thumb,.librow .thumb.ph{border-radius:8px;flex-shrink:0}
+/* Spans, so they need telling they are blocks — inline they ran the name and the
+   detail together on one line and collapsed the row onto the thumbnail. */
+.librow-t{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.librow-n{display:block;font-family:var(--display);font-weight:700;font-size:17px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.librow-s{display:block;font-size:13px;color:var(--dim);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The equipment is the one part of that line the frame colours — it is what decides
+   whether you can do the exercise at all. */
+.librow-s b{font-weight:400;color:var(--accentHi)}
+.librow .ico-chev{color:var(--dim);flex-shrink:0}
+[dir="rtl"] .librow .ico-chev{transform:scaleX(-1)}
 </style>
 </head>
 <body>

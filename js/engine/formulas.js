@@ -35,6 +35,22 @@ function backupAgeDays(){
   return Math.floor((Date.now()-S.lastBackup)/864e5);}
 
 function lastWeight(){for(var i=S.body.length-1;i>=0;i--)if(S.body[i].weight)return S.body[i].weight;return 0;}
+/* Calories burned by a session, the standard MET equation:
+     kcal = MET × 3.5 × kg / 200 × minutes
+   5.0 METs is the middle of the Compendium of Physical Activities' band for
+   resistance training — its own values run from 3.5 for moderate multi-exercise work
+   to 6.0 for vigorous effort. That is a band, not a measurement, which is why the
+   screen prints "EST." beside it.
+
+   Active minutes, not wall clock: time spent sitting between sets is not training.
+
+   Returns 0 when no body weight has ever been logged. There is no sensible default —
+   the figure scales linearly with it — so the caller shows something it actually
+   knows instead of a number derived from a guess. */
+function sessionKcal(mins){
+  var kg=lastWeight();
+  if(!kg||!mins)return 0;
+  return Math.round(5.0*3.5*kg/200*mins);}
 function avg7(){var v=S.body.slice(-7).map(function(b){return b.weight;}).filter(function(x){return x>0;});
   return v.length>=3?r1(v.reduce(function(a,b){return a+b;},0)/v.length):0;}
 /* Working sets only. The "last time" column and the recommendation engine would both
@@ -135,4 +151,4 @@ function addItems(meal,items,d){
 
 
 
-export {addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionVolume, targetKcal, tdee, volume, weeklySets};
+export {addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets};

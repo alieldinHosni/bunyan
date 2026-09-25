@@ -1,7 +1,7 @@
 /* Bunyan — train
    Train tab: days, library, splits, bodyweight. */
 import {t} from "../../i18n/dict.js";
-import {empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, patternOf, thumb} from "../../data/exercises.js";
+import {empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, S, split} from "../../state.js";
@@ -225,25 +225,37 @@ function vLibrary(){
         && (!V.exd||l[4]===V.exd)
         && (!q||l[0].toLowerCase().indexOf(q)>=0);});
   var h=backBar();
-  h+=head(t("Exercises"),t("Saber execution, perfect form"));
-  h+='<p class="tiny" style="margin:-14px 0 12px">'+list.length+' of '+LIB.length+' shown'
-   +(V.exd?' \u00b7 '+V.exd:'')+'</p>';
-  if(V.exd)h+='<button class="btn d sm" data-cleardiff="1" style="width:auto">'+t("Clear difficulty filter")+'</button>';
-  h+='<input id="exq" placeholder="Search" value="'+esc(V.exq)+'">';
-  h+='<div style="display:flex;gap:6px;overflow-x:auto;margin:11px 0 8px;padding-bottom:4px">';
+  /* Canvas screen 9. The frame's "Search 400+ targeted tutorials" is a placeholder;
+     the library's real size goes there, the same figure the Train hub's card shows. */
+  h+='<div class="libhead"><div><h1>'+t("Exercise Library")+'</h1>'
+   +'<p class="sub">'+t("Search")+' '+fmtN(LIB.length)+' '+t("exercises")+'</p></div>'
+   +'<button class="icobtn" data-train="favs" aria-label="'+t("Favourites")
+   +(S.favs.length?' ('+S.favs.length+')':'')+'">'
+   +'<span class="ico ico-star" aria-hidden="true"></span></button></div>';
+  if(V.exd)h+='<button class="btn d sm" data-cleardiff="1" style="width:auto">'
+   +t("Clear difficulty filter")+' \u00b7 '+t(V.exd)+'</button>';
+  h+='<div class="libq"><span class="ico ico-search" aria-hidden="true"></span>'
+   +'<input id="exq" placeholder="'+t("Search exercises, muscles, gear")+'\u2026" '
+   +'value="'+esc(V.exq)+'" autocapitalize="none" autocorrect="off" enterkeyhint="search"></div>';
+  h+='<div class="libfilters">';
   ["All"].concat(MUSCLES).forEach(function(m){
-    h+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'" style="border:none;flex-shrink:0">'+m+'</button>';});
-  h+='</div><div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:4px">';
+    h+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'">'+t(m)+'</button>';});
+  h+='</div><div class="libfilters">';
   ["All"].concat(EQUIP).forEach(function(q2){
-    h+='<button class="pill'+(V.exe===q2?" a":"")+'" data-exe="'+q2+'" style="border:none;flex-shrink:0">'+q2+'</button>';});
-  h+='</div><div class="list">';
-  list.slice(0,150).forEach(function(l){
-    h+='<button class="item" data-exdetail="'+esc(l[0])+'">'+thumb(l[0],42)
-     +'<div style="flex:1"><div style="font-weight:600">'+esc(exName(l[0]))+'</div>'
-     +'<div class="tiny">'+t(l[1])+' \u00b7 '+t(l[2])+' \u00b7 '+t(patternOf(l[0]))+'</div></div>'
-     +'<span class="chev">\u203a</span></button>';});
-  if(list.length>150)h+='<div class="item"><span class="tiny">'+t("Showing the first 150. Narrow the filters.")+'</span></div>';
+    h+='<button class="pill'+(V.exe===q2?" a":"")+'" data-exe="'+q2+'">'+t(q2)+'</button>';});
   h+='</div>';
+  /* "Chest Exercises (4)": what is being shown and how many of it. The frame names
+     the muscle; with no muscle filter on, the honest heading is the whole library. */
+  if(list.length)
+    h+='<h2 class="libcount">'
+     +(V.exm==="All"?t("All Exercises"):t(V.exm)+' '+t("Exercises"))
+     +' ('+fmtN(list.length)+')</h2>';
+  list.slice(0,150).forEach(function(l){
+    h+='<button class="librow" data-exdetail="'+esc(l[0])+'">'+thumb(l[0],62)
+     +'<span class="librow-t"><span class="librow-n">'+esc(exName(l[0]))+'</span>'
+     +'<span class="librow-s">'+t(l[1])+' \u00b7 <b>'+t(l[2])+'</b></span></span>'
+     +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
+  if(list.length>150)h+='<p class="tiny">'+t("Showing the first 150. Narrow the filters.")+'</p>';
   if(!list.length)h+=empty("search",
     q?t("Nothing matches")+" “"+V.exq+"”":t("Nothing matches those filters"),
     t("Your gym may call it something else, or it may not be in the library at all."),
