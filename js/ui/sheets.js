@@ -870,7 +870,7 @@ function vSheet(){
      +t("Saved with the workout. How you felt, what hurt, what to change next time.")+'</p>'
      +'<textarea id="snote" rows="5" placeholder="'+t("Left shoulder tight on the second set…")+'" '
      +'style="width:100%;background:var(--raised);color:var(--text);border:1px solid var(--border);'
-     +'border-radius:11px;padding:12px;font-size:15px;resize:none">'
+     +'border-radius:11px;padding:12px;font-size:16px;resize:none">'
      +esc((S.active&&S.active.notes)||"")+'</textarea>'
      +'<button class="btn" data-savenote="1">'+t("Save")+'</button>';
   }

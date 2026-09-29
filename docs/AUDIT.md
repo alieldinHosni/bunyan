@@ -18,6 +18,8 @@ No application code was changed during this audit.
 
 Chromium is not iOS Safari. Nothing in this report claims iOS behaviour unless it is labelled that way.
 
+> **Implementation status (29 Sep 2026, PR #9).** Phases 1–5 and 7 of section P are implemented and covered by `tests/regression.mjs`: B1–B17, the programming and schedule fixes (B6, B7), honest RPE (B8), weekly volume, equipment-based increments, plateau hint, nutrition targets, safety notes, food and preset data fixes, wake lock and late-alarm handling, and the service-worker launch timeout. **Still open:** stable exercise ids (K/M14, phase 3.3); typed activity records with pace, intervals and heart rate (M6); a readiness check and session RPE (M7); a per-exercise pain flag (M8); undoing the history-entry growth from tab taps (C); and the iPhone manual pass (H1–H12). Existing plans that were adopted before this change keep their own day order; re-adopt a preset to get the new rest-day spacing.
+
 ---
 
 ## A. Executive summary

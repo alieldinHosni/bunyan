@@ -116,11 +116,17 @@ function play(name){
   if(!S.prefs.sound)return;
   audioOn();
   var f=SOUNDS[name];if(f)f();}
+/* The browser drops the lock whenever the page is hidden (app switch, lock screen)
+   and the old handle then stays set, so the lock was never taken again after the
+   first time the phone left the app. The release listener clears it, and the
+   visibility handler in app.js asks again. */
 async function keepAwake(on){
   try{
-    if(on&&S.prefs.awake&&"wakeLock" in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request("screen");}
-    else if(!on&&wakeLock){wakeLock.release();wakeLock=null;}
-  }catch(err){}}
+    if(on&&S.prefs.awake&&"wakeLock" in navigator&&!wakeLock&&document.visibilityState==="visible"){
+      wakeLock=await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release",function(){wakeLock=null;});}
+    else if(!on&&wakeLock){var w=wakeLock;wakeLock=null;w.release();}
+  }catch(err){wakeLock=null;}}
 /* Reversible actions get an undo toast instead of a confirmation dialog. Only things
    that cannot be undone stop to ask. */
 function toast(msg,undo){

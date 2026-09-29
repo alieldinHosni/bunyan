@@ -152,9 +152,9 @@ function muscleShare(n){
    sets per muscle per week, with roughly ten as a sensible floor and twenty as a
    practical ceiling for most people. The target comes from the plan's level. Monday
    to today; warm-ups and cardio do not count. */
-var WGROUP={Chest:"Chest",Back:"Back",Shoulders:"Shoulders",Quads:"Quads",Hamstrings:"Hamstrings & glutes",
-  Glutes:"Hamstrings & glutes",Biceps:"Biceps",Triceps:"Triceps"};
-var WORDER=["Chest","Back","Shoulders","Quads","Hamstrings & glutes","Biceps","Triceps"];
+var WGROUP={Chest:"Chest",Back:"Back",Shoulders:"Shoulders",Quads:"Quads",Hamstrings:"Hams & glutes",
+  Glutes:"Hams & glutes",Biceps:"Biceps",Triceps:"Triceps"};
+var WORDER=["Chest","Back","Shoulders","Quads","Hams & glutes","Biceps","Triceps"];
 function weekStartISO(){var d=new Date();var k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);
   return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
 function weeklyVolume(){

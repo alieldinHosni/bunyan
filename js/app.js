@@ -69,7 +69,11 @@ document.addEventListener("click",function(ev){
   if(D.confirmok!==undefined){runAct((V.sd||{}).act,true);return;}
   if(D.confirmalt!==undefined){runAct((V.sd||{}).altact,true);return;}
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
-  if(D.tab){resetNav();V.tab=D.tab;V.train="days";V.meal=null;V.dnavDir=0;render();return;}
+  /* A tab tap is a fresh start: the top of the page, and Food on today — a past
+     date left selected from earlier was where a meal logged later could land. */
+  if(D.tab){resetNav();var same=V.tab===D.tab;V.tab=D.tab;V.train="days";V.meal=null;V.dnavDir=0;
+    if(D.tab==="food"&&!same)V.fdate=null;
+    render();if(!same)window.scrollTo(0,0);return;}
   /* Same reset as a tab tap: it is the same kind of move. Without V.train it landed
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
@@ -564,7 +568,7 @@ document.addEventListener("click",function(ev){
   if(D.addsaved){
     var sm=S.savedMeals[+D.addsaved];
     if(!sm)return;
-    var ms=mealNow();
+    var ms=(V.sheet==="addfood"&&V.sd&&V.sd.meal)||mealNow();
     addItems(ms,JSON.parse(JSON.stringify(sm.items)),curDate());
     render();play("set");toast(sm.name+" "+t("added to")+" "+t(ms)+".");return;}
   /* A frequent-food pill on the dashboard, or the + beside a result in the sheet.
@@ -826,7 +830,10 @@ document.addEventListener("click",function(ev){
     if(!wk2.entries.length){askDelSession(V.sd.id);return;}
     var ix=S.sessions.findIndex(function(x){return x.id===V.sd.id;});
     if(ix<0){closeSheet();return;}
-    S.sessions[ix]=wk2;saveSession(wk2);closeSheet();toast(t("Workout updated"));return;}
+    S.sessions[ix]=wk2;
+    /* Keep history newest-first by date, as loading it does. */
+    S.sessions.sort(function(x,y){return x.date<y.date?1:x.date>y.date?-1:0;});
+    saveSession(wk2);closeSheet();toast(t("Workout updated"));return;}
   if(D.sessdel){askDelSession(V.sd&&V.sd.id);return;}
   if(D.openday){openSheet("dayview",{date:D.openday});return;}
   if(D.jumpfood){V.fdate=(D.jumpfood===today())?null:D.jumpfood;closeSheet();V.tab="food";render();return;}
@@ -1054,11 +1061,19 @@ setInterval(function(){
     var warn=S.prefs.warn||10;
     if(left<=Math.min(3,warn)&&left>0&&left!==lastTick){setLastTick(left);play("tick");}
     if(left===warn&&lastTick!==warn){setLastTick(warn);play("tick");}
-    if(left<=0){setBeeped(true);alarmStart();tap("ok");}}
+    /* A rest that ran out while the page was frozen (phone locked, app in the
+       background) is not announced minutes later: the screen shows it is over, and
+       the eight-second alarm is only for a rest ending in front of you. */
+    if(left<=0){setBeeped(true);if(Date.now()-V.restEnd<5000){alarmStart();tap("ok");}}}
   tickSession();
   if(syncWorkoutState())saveDB();},1000);
 document.addEventListener("visibilitychange",function(){
-  if(document.visibilityState==="visible"&&S.active)keepAwake(true);});
+  if(document.visibilityState!=="visible")return;
+  if(S.active)keepAwake(true);
+  /* Catch up at once instead of on the next one-second tick: a rest that ended while
+     away shows as over the moment the app is back. */
+  if(S.active&&V.restEnd&&!V.restPaused&&Date.now()>=V.restEnd){setBeeped(true);tickSession();}
+  else tickSession();});
 
 /* The intro is skippable — a tap ends it immediately. It also runs short when the
    user has asked for less motion, either in the OS or in App settings. */

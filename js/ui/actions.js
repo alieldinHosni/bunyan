@@ -12,7 +12,7 @@ import {render} from "./render.js";
 import {day, ex} from "../data/splits.js";
 import {adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
 import {MEM, num, PERSIST, r1, today, uid, wr} from "../util.js";
-import {endRest, keepAwake, play, tap, toast, V} from "./view.js";
+import {audioOn, endRest, keepAwake, play, tap, toast, V} from "./view.js";
 
 /* ============================================================ actions */
 function openSheet(name,data){V.sheet=name;V.sd=data||null;render();}
@@ -124,6 +124,9 @@ ACT.savemeal=function(name,d){
 
 function startDay(dayId){
   var d=dayOf(dayId);if(!d||!d.ex.length)return;
+  /* Created on the tap that starts the workout (a user gesture, which iOS requires),
+     so logging the first set does not pay for it. */
+  audioOn();
   S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
     splitId:split().id,dayId:d.id,dayName:d.name,
     entries:d.ex.map(function(e){

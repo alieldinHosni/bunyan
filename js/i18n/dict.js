@@ -77,7 +77,7 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "This week": "الأسبوع ده",
 "hard sets per muscle": "مجموعات فعّالة لكل عضلة",
 "target": "الهدف",
-"Hamstrings & glutes": "الخلفية والمؤخرة",
+"Hams & glutes": "الخلفية والمؤخرة",
 "Around 10–20 hard sets per muscle each week is what most people grow on. Monday to today.": "حوالي 10–20 مجموعة فعّالة لكل عضلة في الأسبوع هو اللي معظم الناس بتكبر عليه. من الإتنين للنهارده.",
 "This already counts your activity level, training included, so workouts you log are not added on top. Every figure here is an estimate; your weight trend over a few weeks is the real test.": "ده محسوب فيه مستوى نشاطك والتمرين كمان، فالتمارين اللي بتسجلها مش بتتضاف فوقه. كل الأرقام دي تقديرية؛ اتجاه وزنك على كام أسبوع هو المقياس الحقيقي.",
 "Bunyan is a training log, not medical advice. If you have an injury or a health condition, check with a professional first, and stop any exercise that causes sharp pain.": "بنيان سجل تمرين، مش نصيحة طبية. لو عندك إصابة أو حالة صحية، استشير متخصص الأول، ووقّف أي تمرين يسبب ألم حاد.",
