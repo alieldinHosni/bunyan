@@ -38,11 +38,11 @@ var AC=null,beeped=true,lastTick=99,wakeLock=null;
    that must be silenced would have meant getting all ten right and keeping them right.
    The alarm outliving the screen that raised it is the specific failure this prevents. */
 function endRest(){
-  V.restEnd=0;V.restPaused=false;V.restDone=false;
+  V.restEnd=0;V.restPaused=false;V.restDone=false;V.restMin=false;
   alarmStop();
 }
 function startRest(e){
-  V.restDone=false;alarmStop();   /* a new rest replaces the last one's alert */
+  V.restDone=false;V.restMin=false;alarmStop();   /* a new rest replaces the last one's alert */
   audioOn();
   if(!S.prefs.autorest){V.restEnd=0;return;}
   V.restTotal=e.rest||75;
@@ -116,11 +116,17 @@ function play(name){
   if(!S.prefs.sound)return;
   audioOn();
   var f=SOUNDS[name];if(f)f();}
+/* The browser drops the lock whenever the page is hidden (app switch, lock screen)
+   and the old handle then stays set, so the lock was never taken again after the
+   first time the phone left the app. The release listener clears it, and the
+   visibility handler in app.js asks again. */
 async function keepAwake(on){
   try{
-    if(on&&S.prefs.awake&&"wakeLock" in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request("screen");}
-    else if(!on&&wakeLock){wakeLock.release();wakeLock=null;}
-  }catch(err){}}
+    if(on&&S.prefs.awake&&"wakeLock" in navigator&&!wakeLock&&document.visibilityState==="visible"){
+      wakeLock=await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release",function(){wakeLock=null;});}
+    else if(!on&&wakeLock){var w=wakeLock;wakeLock=null;w.release();}
+  }catch(err){wakeLock=null;}}
 /* Reversible actions get an undo toast instead of a confirmation dialog. Only things
    that cannot be undone stop to ask. */
 function toast(msg,undo){
@@ -308,6 +314,34 @@ function progressBar(cur,goal,color){
 /* Rest-timer bookkeeping lives here with the timer it belongs to; app.js drives it
    through these rather than assigning to an imported binding. */
 function setBeeped(b){beeped=b;}
+/* ---- the live workout's position and rest, kept with the workout ----------------
+   V is memory only, so the exercise you were on and a running rest used to vanish on
+   a reload or when iOS reclaimed the tab. They are written onto S.active whenever
+   they change, and read back when the app starts. Returns true when something
+   changed, so the caller knows to save. */
+function syncWorkoutState(){
+  var a=S.active;if(!a)return false;
+  var changed=false;
+  if(a.idx!==V.logIdx){a.idx=V.logIdx;changed=true;}
+  var r=(V.restEnd||V.restPaused||V.restDone)
+    ?{end:V.restEnd,total:V.restTotal,paused:!!V.restPaused,left:V.restLeft||0,done:!!V.restDone}:null;
+  var was=a.rest?JSON.stringify(a.rest):"null",now=r?JSON.stringify(r):"null";
+  if(was!==now){a.rest=r;changed=true;}
+  return changed;
+}
+/* On start-up: put the workout back where it was. A rest that ran out while the app
+   was closed comes back as finished, silently — the moment for the alarm has passed. */
+function restoreWorkoutState(){
+  var a=S.active;if(!a)return;
+  V.logIdx=Math.max(0,Math.min(a.entries.length-1,Math.round(num(a.idx,0))));
+  var r=a.rest;
+  if(r){
+    V.restTotal=num(r.total,75);
+    if(r.paused){V.restPaused=true;V.restLeft=num(r.left,0);V.restEnd=0;}
+    else if(r.done||num(r.end)<=Date.now()){V.restEnd=0;V.restDone=true;beeped=true;}
+    else{V.restEnd=num(r.end);beeped=false;lastTick=99;}
+  }
+}
 function setLastTick(v){lastTick=v;}
 
 /* Pinning the page while a sheet is open. overscroll-behavior stops a scroll that
@@ -348,4 +382,4 @@ function lockScroll(on){
 }
 
 
-export {alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};
+export {syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};

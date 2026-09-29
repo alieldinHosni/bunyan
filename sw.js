@@ -5,7 +5,7 @@
    previous release's JS for one launch: markup the stylesheet no longer styles.
    Cache-first for images only.
    Bump CACHE whenever you change index.html. */
-const CACHE = "bunyan-v61";
+const CACHE = "bunyan-v67";
 /* instructions.json (595 KB) is deliberately absent: it is cached on first use by the
    catch-all handler below, so it no longer blocks first install. */
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
@@ -60,6 +60,36 @@ self.addEventListener("message", e => {
   if (e.data === "skipWaiting") self.skipWaiting();
 });
 
+const NAV_TIMEOUT = 3000;
+let cacheModeUntil = 0;
+function fresh(req) {
+  return fetch(req.mode === "navigate" ? new Request(req.url, {cache: "no-cache", credentials: "same-origin"})
+                                     : new Request(req, {cache: "no-cache"})).then(res => {
+    if (res && res.status === 200) {
+      const copy = res.clone();
+      caches.open(CACHE).then(c => c.put(req, copy));
+    }
+    return res;
+  });
+}
+function appFetch(req) {
+  const nav = req.mode === "navigate";
+  /* index.html is only ever a stand-in for a page, never for a script or data file. */
+  const fallback = () => caches.match(req).then(hit => hit || (nav ? caches.match("./index.html") : Response.error()));
+  if (!nav && Date.now() < cacheModeUntil)
+    return caches.match(req).then(hit => hit || fresh(req).catch(fallback));
+  if (!nav) return fresh(req).catch(fallback);
+  return caches.match(req).then(h => h || caches.match("./index.html")).then(cached => {
+    const net = fresh(req).then(res => { cacheModeUntil = 0; return res; });
+    if (!cached) return net.catch(fallback);
+    const slow = new Promise(r => setTimeout(r, NAV_TIMEOUT, "slow"));
+    return Promise.race([net.catch(() => "fail"), slow]).then(v => {
+      if (v === "slow" || v === "fail") { cacheModeUntil = Date.now() + 20000; return cached; }
+      return v;
+    });
+  });
+}
+
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
@@ -70,18 +100,13 @@ self.addEventListener("fetch", e => {
                 (own && /(\/|\.html|\.js|\.json|\.webmanifest)$/.test(url.pathname));
 
   if (isApp) {
-    /* Network first: always try for a fresh app, fall back to cache offline.
-       cache:"no-cache" revalidates with the server (a cheap 304 when unchanged)
-       instead of trusting the HTTP cache's heuristic freshness. */
-    e.respondWith(
-      fetch(req.mode === "navigate" ? new Request(req.url, {cache: "no-cache", credentials: "same-origin"})
-                                  : new Request(req, {cache: "no-cache"})).then(res => {
-        if (!res || res.status !== 200) return res;
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copy));
-        return res;
-      }).catch(() => caches.match(req).then(hit => hit || caches.match("./index.html")))
-    );
+    /* Network first, so a new version is picked up whole — but not forever. On a
+       weak gym signal the launch used to wait on every revalidation. If the page
+       itself does not arrive within NAV_TIMEOUT and a cached copy exists, that copy is
+       served and, for a short window, so is everything the page asks for next: the
+       page and its modules must come from the same release, or the stylesheet and the
+       screens disagree (the PR #5 bug). */
+    e.respondWith(appFetch(req));
     return;
   }
 

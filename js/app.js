@@ -3,9 +3,9 @@
 import {ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startActivity, startDay, syncDraft, val} from "./ui/actions.js";
 import {actKcal, isActivity} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
-import {loadExDB, loadInstructions, muscleOf, MUSCLES} from "./data/exercises.js";
+import {loadExDB, loadInstructions, muscleOf, MUSCLES, reconcileExercises} from "./data/exercises.js";
 import {applyLang} from "./i18n/exnames.js";
-import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, targetKcal} from "./engine/formulas.js";
+import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, prFor, proteinTarget, targetKcal} from "./engine/formulas.js";
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
@@ -13,11 +13,11 @@ import {render, syncKeyboard} from "./ui/render.js";
 import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
 import {leave} from "./ui/motion.js";
-import {groupNext, groupRun, mmss, noteSet, paintRest, sessionClock} from "./ui/views/session.js";
-import {ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
+import {groupNext, groupRun, mmss, noteSet, paintRest, rowsFor, sessionClock} from "./ui/views/session.js";
+import {refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
 import {fmtW, toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
-import {alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
+import {restoreWorkoutState, syncWorkoutState, ex_isTimed, alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
 import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
 import {mealNow} from "./ui/views/food.js";
@@ -69,7 +69,11 @@ document.addEventListener("click",function(ev){
   if(D.confirmok!==undefined){runAct((V.sd||{}).act,true);return;}
   if(D.confirmalt!==undefined){runAct((V.sd||{}).altact,true);return;}
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
-  if(D.tab){resetNav();V.tab=D.tab;V.train="days";V.meal=null;V.dnavDir=0;render();return;}
+  /* A tab tap is a fresh start: the top of the page, and Food on today — a past
+     date left selected from earlier was where a meal logged later could land. */
+  if(D.tab){resetNav();var same=V.tab===D.tab;V.tab=D.tab;V.train="days";V.meal=null;V.dnavDir=0;
+    if(D.tab==="food"&&!same)V.fdate=null;
+    render();if(!same)window.scrollTo(0,0);return;}
   /* Same reset as a tab tap: it is the same kind of move. Without V.train it landed
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
@@ -78,6 +82,23 @@ document.addEventListener("click",function(ev){
 
   /* ---- splits & days */
   if(D.mydays){openSheet("mydays");return;}
+  /* ---- readiness, session effort, pain */
+  if(D.ready!==undefined&&S.active){S.active.ready=+D.ready;saveDB();render();return;}
+  if(D.srpe){
+    var sw9=V.sd&&sessionById(V.sd.id);if(!sw9)return;
+    sw9.srpe=+D.srpe;saveSession(sw9);render();return;}
+  if(D.hurt){openSheet("hurt");return;}
+  if(D.hurtdo){
+    var eh=S.active&&S.active.entries[V.logIdx];if(!eh){closeSheet();return;}
+    eh.pain=true;saveDB();
+    if(D.hurtdo==="swap"){
+      V.exm=pickMuscle(eh.name);V.exe="All";V.exq="";
+      openSheet("exercise",{swaplive:true,like:eh.name});return;}
+    closeSheet();
+    if(D.hurtdo==="skip"){
+      if(V.logIdx>=S.active.entries.length-1){confirmFinish();return;}
+      endRest();V.fresh=-1;V.logIdx=V.logIdx+1;syncDraft();saveDB();render();return;}
+    toast(t("Noted. Stop if it gets worse."));return;}
   if(D.clearexq){V.exq="";render();var qq=document.getElementById("exq");if(qq)qq.focus();return;}
   if(D.swapday){openSheet("swapday",{date:D.swapday});return;}
   if(D.swapto!==undefined&&V.sheet==="swapday"){
@@ -152,7 +173,16 @@ document.addEventListener("click",function(ev){
     V.train="library";render();return;}
   if(D.bwdiff){pushNav();V.exd=D.bwdiff;V.exe="Bodyweight";V.exm="All";V.exq="";V.train="library";render();return;}
   if(D.exdetail){var nm5=D.exdetail;V.exsteps=false;V.exmiss=false;
-    loadInstructions(function(){openSheet("exdetail",{name:nm5});});return;}
+    /* Opened from inside the sheet (a similar exercise): remember the trail, so back
+       returns to the exercise this one was reached from instead of closing. */
+    var trail=(V.sheet==="exdetail"&&V.sd&&V.sd.name&&V.sd.name!==nm5)
+      ?((V.sd.prev||[]).concat(V.sd.name)).slice(-8):null;
+    loadInstructions(function(){openSheet("exdetail",trail?{name:nm5,prev:trail}:{name:nm5});});return;}
+  if(D.exback!==undefined){
+    var tr=(V.sd&&V.sd.prev||[]).slice();
+    if(!tr.length){requestCloseSheet();return;}
+    var back5=tr.pop();V.exsteps=false;V.exmiss=false;
+    openSheet("exdetail",tr.length?{name:back5,prev:tr}:{name:back5});return;}
   /* Reachable again, from the picker's empty state. It was orphaned when the picker
      was rewritten to read exercises.json: the handler survived, the button did not.
      Custom entries have no illustration, which thumb() already renders gracefully. */
@@ -214,26 +244,44 @@ document.addEventListener("click",function(ev){
   if(D.actint){V.draft.rpe=+D.actint;render();return;}
   if(D.logact){
     var ea=S.active&&S.active.entries[V.logIdx];if(!ea)return;
-    var mEl=document.getElementById("in_min"),kEl=document.getElementById("in_km");
-    var amin=Math.max(1,Math.round(num(mEl&&mEl.value!==""?mEl.value:V.draft.min,30)));
-    var akm=kEl&&kEl.value!==""?Math.max(0,r1(num(kEl.value))):0;
+    var mEl=document.getElementById("in_min"),kEl=document.getElementById("in_km"),hEl=document.getElementById("in_hr");
+    var amin=Math.max(1,Math.min(1440,Math.round(num(mEl&&mEl.value!==""?mEl.value:V.draft.min,30))));
+    var akm=kEl&&kEl.value!==""?Math.min(500,Math.max(0,r1(num(kEl.value)))):0;
+    var ahr=hEl&&hEl.value!==""?Math.min(240,Math.max(30,Math.round(num(hEl.value)))):0;
     var arpe=V.draft.rpe||6;
-    ea.sets.push({w:0,r:0,min:amin,km:akm,rpe:arpe,kcal:actKcal(ea.name,amin,arpe,lastWeight())});
-    V.draft.min=amin;V.draft.km=akm;
+    var bout={w:0,r:0,min:amin,km:akm,rpe:arpe,kcal:actKcal(ea.name,amin,arpe,lastWeight())};
+    if(ahr)bout.hr=ahr;
+    ea.sets.push(bout);
+    V.draft.min=amin;V.draft.km=akm;V.draft.hr=ahr;
     noteSet(S.active);V.fresh=ea.sets.length-1;play("set");tap("ok");saveDB();render();return;}
   if(D.quickact){V.sheet=null;V.sd=null;startActivity(D.quickact);return;}
   if(D.actsheet){openSheet("acts");return;}
   /* Complete the active set. Reads the live inputs first so a value typed but not
      blurred is never lost. */
   if(D.logset){
-    var e3=S.active.entries[V.logIdx];
+    /* No two sets are logged inside a second. The recommendation banner above the
+       table goes away after the first set, the rows move up, and the second tap of a
+       double tap would land on the next row's button and log a phantom set. */
+    if(V.loggedAt&&Date.now()-V.loggedAt<700)return;
+    var e3=S.active&&S.active.entries[V.logIdx];if(!e3)return;
     var lw=document.getElementById("in_w"),lr=document.getElementById("in_r"),
         lp=document.getElementById("in_rpe");
-    if(lw&&lw.value!=="")V.draft.w=toKg(lw.value);
-    if(lr&&lr.value!=="")V.draft.r=num(lr.value);
-    if(lp&&lp.value!=="")V.draft.rpe=Math.min(10,Math.max(1,num(lp.value,8)));
-    if(!V.draft.r){toast(t("Enter reps first."));return;}
-    e3.sets.push({w:V.draft.w,r:V.draft.r,rpe:V.draft.rpe});
+    /* What is in the fields is what gets logged. A cleared weight is bodyweight (0),
+       not the previous set's load, which is what an empty field used to log. */
+    if(lw)V.draft.w=lw.value===""?0:toKg(lw.value);
+    if(lr)V.draft.r=lr.value===""?0:num(lr.value);
+    if(lp)V.draft.rpe=lp.value===""?null:Math.min(10,Math.max(1,Math.round(num(lp.value,8)*2)/2));
+    var bad=setProblem(V.draft.w,V.draft.r,ex_isTimed(e3));
+    if(bad){toast(bad);return;}
+    var ns={w:V.draft.w,r:V.draft.r};if(V.draft.rpe)ns.rpe=V.draft.rpe;
+    e3.sets.push(ns);
+    /* A slipped digit (80 → 800) would become a record and drive every suggestion
+       after it. Far above the lifter's best, say so — the set is logged, and the tick
+       undoes it. */
+    var bestW=prFor(e3.name).w;
+    if(bestW>=20&&ns.w>bestW*1.3)setTimeout(function(){
+      toast(t("That is well above your best of")+" "+fmtW(bestW)+". "+t("Check the weight. Tap the tick to undo."));},50);
+    V.loggedAt=Date.now();
     /* Closes the active period and starts a new one; the clock resumes by itself. */
     noteSet(S.active);
     V.fresh=e3.sets.length-1;
@@ -268,9 +316,15 @@ document.addEventListener("click",function(ev){
     saveDB();syncDraft();render();return;}
   /* Tapping the green tick undoes that set. Reversible, so no confirm. */
   if(D.unlog!==undefined){
-    var e4=S.active.entries[V.logIdx];e4.sets.splice(+D.unlog,1);
+    /* The log button turns into this one under the finger, so the second tap of a
+       double tap would remove the set it had just logged. Ignored for a moment. */
+    if(V.loggedAt&&Date.now()-V.loggedAt<800&&+D.unlog===V.fresh)return;
+    var e4=S.active.entries[V.logIdx],i4=+D.unlog,gone=e4.sets.splice(i4,1)[0];
+    if(!gone)return;
     V.fresh=-1;saveDB();syncDraft();render();
-    toast(t("Set removed."));return;}
+    toast(t("Set removed."),function(){
+      if(!S.active||S.active.entries.indexOf(e4)<0)return;
+      e4.sets.splice(Math.min(i4,e4.sets.length),0,gone);saveDB();syncDraft();render();});return;}
   if(D.addrow){
     var e5=S.active.entries[V.logIdx];
     e5.extra=(e5.extra||0)+1;V.fresh=-1;saveDB();render();return;}
@@ -280,10 +334,12 @@ document.addEventListener("click",function(ev){
      rest entirely is a real navigation. */
   if(D.rest){
     if(D.rest==="pause"){V.restLeft=Math.max(0,Math.ceil((V.restEnd-Date.now())/1000));
-      V.restPaused=true;V.restEnd=0;paintRest();return;}
+      V.restPaused=true;V.restEnd=0;paintRest();persistRest();return;}
     if(D.rest==="resume"){V.restPaused=false;V.restEnd=Date.now()+V.restLeft*1000;
-      setBeeped(false);paintRest();return;}
+      setBeeped(false);paintRest();persistRest();return;}
     if(D.rest==="skip"){endRest();render();return;}
+    if(D.rest==="hide"){V.restMin=true;render();return;}
+    if(D.rest==="show"){V.restMin=false;render();return;}
     /* From the rest-over screen: start another countdown of that length. */
     if(D.rest==="ext30"||D.rest==="ext60"){
       var ext=D.rest==="ext30"?30:60;
@@ -297,18 +353,18 @@ document.addEventListener("click",function(ev){
     else{V.restEnd=Math.max(Date.now(),V.restEnd+(+D.rest)*1000);
          V.restTotal=Math.max(15,V.restTotal+(+D.rest));
          if(+D.rest>0)setBeeped(false);}
-    paintRest();return;}
+    paintRest();persistRest();return;}
   if(D.swap){
     var eS=S.active.entries[V.logIdx];
     V.exm=pickMuscle(eS&&eS.name);V.exe="All";V.exq="";
     openSheet("exercise",{swaplive:true,like:eS?eS.name:null});return;}
   if(D.nextex){
-    if(V.logIdx>=S.active.entries.length-1){finishSession();return;}
+    if(V.logIdx>=S.active.entries.length-1){confirmFinish();return;}
     play("set");endRest();V.fresh=-1;
     V.logIdx=V.logIdx+1;
     saveDB();syncDraft();render();return;}
   if(D.sessmore!==undefined){openSheet("sessmore");return;}
-  if(D.finish){finishSession();return;}
+  if(D.finish){confirmFinish();return;}
   /* Every back affordance in the app comes through here, so none of them can drift
      to a destination of its own. Discarding a session is now part of going back
      rather than a separate link. */
@@ -334,7 +390,7 @@ document.addEventListener("click",function(ev){
     var ex0=S.body.filter(function(b){return b.date===today();})[0];
     if(ex0)ex0.weight=w2;else S.body.push({date:today(),weight:w2});
     S.body.sort(function(a,b){return a.date<b.date?-1:1;});
-    V.draft.bw=null;saveDB();closeSheet();toast("Weight saved.");return;}
+    V.draft.bw=null;saveDB();closeSheet();toast(t("Weight saved."));return;}
   if(D.savesteps){
     dayRec().steps=V.draft.st||0;V.draft.st=null;saveDB();closeSheet();return;}
   if(D.saverec){
@@ -352,7 +408,7 @@ document.addEventListener("click",function(ev){
     var e5=S.body.filter(function(b){return b.date===today();})[0];
     if(e5)Object.assign(e5,rec);else S.body.push(rec);
     S.body.sort(function(a,b){return a.date<b.date?-1:1;});
-    saveDB();closeSheet();toast("Measurements saved.");return;}
+    saveDB();closeSheet();toast(t("Measurements saved."));return;}
 
   /* ---------------- food ---------------- */
   if(D.addfood){
@@ -541,7 +597,7 @@ document.addEventListener("click",function(ev){
   if(D.addsaved){
     var sm=S.savedMeals[+D.addsaved];
     if(!sm)return;
-    var ms=mealNow();
+    var ms=(V.sheet==="addfood"&&V.sd&&V.sd.meal)||mealNow();
     addItems(ms,JSON.parse(JSON.stringify(sm.items)),curDate());
     render();play("set");toast(sm.name+" "+t("added to")+" "+t(ms)+".");return;}
   /* A frequent-food pill on the dashboard, or the + beside a result in the sheet.
@@ -589,10 +645,10 @@ document.addEventListener("click",function(ev){
       S.body.push({date:today(),weight:p3.weight});
     var kc=targetKcal(),w3=lastWeight()||p3.weight||86;
     S.goals.kcal=Math.round(kc/10)*10;
-    S.goals.p=Math.round(w3*2);
+    S.goals.p=proteinTarget(w3);
     S.goals.f=Math.round(kc*0.28/9);
     S.goals.c=Math.max(50,Math.round((kc-S.goals.p*4-S.goals.f*9)/4));
-    saveDB();render();toast("Targets updated.");return;}
+    saveDB();render();toast(t("Targets updated."));return;}
   /* The two settings sheets save independently now that they are separate screens. */
   if(D.saveyou){
     var py=S.profile;
@@ -661,12 +717,12 @@ document.addEventListener("click",function(ev){
       S.body.push({date:today(),weight:p4.weight});
     var kc=targetKcal();
     S.goals.kcal=Math.round(kc/10)*10;
-    S.goals.p=Math.round(p4.weight*2);
+    S.goals.p=proteinTarget(p4.weight);
     S.goals.f=Math.round(kc*0.28/9);
     S.goals.c=Math.max(50,Math.round((kc-S.goals.p*4-S.goals.f*9)/4));
     buildPlan(); S.onboarded=true; saveDB();
     closeSheet(); V.tab="train"; V.train="days"; render();
-    toast("Plan built. "+split().name+".");
+    toast(t("Plan built.")+" "+split().name+".");
     return;}
   if(D.fav){var i5=S.favs.indexOf(D.fav);
     if(i5>=0)S.favs.splice(i5,1);else S.favs.push(D.fav);saveDB();render();return;}
@@ -719,14 +775,14 @@ document.addEventListener("click",function(ev){
     else toast(t("Sharing is not available here."));
     return;}
   if(D.copysn){var t2=document.getElementById("sn");t2.select();
-    try{document.execCommand("copy");toast("Copied. Send it on WhatsApp.");}
-    catch(e){toast("Select the text and copy it.");}return;}
+    try{document.execCommand("copy");toast(t("Copied. Send it on WhatsApp."));}
+    catch(e){toast(t("Select the text and copy it."));}return;}
   if(D.coach){openSheet("coach");return;}
   if(D.addfriend){
     try{var sn=JSON.parse(val("fp"));
       if(!sn||!sn.sessions||!sn.name)throw 1;
       var F=friends();F[sn.name]=sn;saveFriends(F);render();toast(sn.name+" added.");}
-    catch(e){toast("That code did not read properly. Ask them to copy all of it.");}
+    catch(e){toast(t("That code did not read properly. Ask them to copy all of it."));}
     return;}
   if(D.unfollow){
     var F2=friends();delete F2[D.unfollow];saveFriends(F2);render();return;}
@@ -769,11 +825,18 @@ document.addEventListener("click",function(ev){
       toast(t("Copied. Your backup is up to date."));render();}
     catch(e){toast(t("Select the text and copy it."));}return;}
   if(D.import){openSheet("restore");return;}
+  /* Restore: read, check it is one of ours, say what is in it, and only then replace.
+     It used to insist on a `splits` key that migrate() deletes on every start, so no
+     backup this version wrote could ever be restored. */
   if(D.dorestore){
-    try{var o=JSON.parse(val("rs"));if(!o||!o.splits)throw 1;
-      setS(o);if(!S.myFoods)S.myFoods=[];if(!S.userSplits)S.userSplits=[];if(!S.sessions)S.sessions=[];
-      migrate();adoptRestored(render);saveDB();closeSheet();V.tab="home";render();toast("Restored.");}
-    catch(e){toast("That does not look like a backup.");}return;}
+    var parsed=parseBackup(val("rs"));
+    if(!parsed){toast(t("That does not look like a Bunyan backup."));return;}
+    var nd=Object.keys(parsed.days||{}).length;
+    askConfirm({title:t("Replace everything with this backup?"),icon:"leave",
+      body:(parsed.sessions||[]).length+" "+t("workouts")+", "+nd+" "+t("food days")+". "
+        +t("Everything currently on this profile is replaced."),
+      cta:t("Restore"),act:"restore",data:parsed,hard:true});return;}
+  if(D.bkfile!==undefined){downloadBackup();return;}
   /* The one place a typed confirmation is warranted: nothing here is recoverable
      without a backup, and the button sits in a list of harmless ones. */
   if(D.wipe){
@@ -792,11 +855,14 @@ document.addEventListener("click",function(ev){
     readSE();var en3=V.sd.work.entries[+D.sexdel];if(en3)en3.sets=[];render();return;}
   if(D.sesssave){
     readSE();var wk2=V.sd.work;
-    wk2.entries=wk2.entries.filter(function(e){return e.sets.length;});
-    if(!wk2.entries.length){askDelSession(V.sd.id);return;}
+    wk2.entries=wk2.entries.filter(function(e){return e.sets.length||e.pain;});
+    if(!wk2.entries.some(function(e){return e.sets.length;})){askDelSession(V.sd.id);return;}
     var ix=S.sessions.findIndex(function(x){return x.id===V.sd.id;});
     if(ix<0){closeSheet();return;}
-    S.sessions[ix]=wk2;saveSession(wk2);closeSheet();toast(t("Workout updated"));return;}
+    S.sessions[ix]=wk2;
+    /* Keep history newest-first by date, as loading it does. */
+    S.sessions.sort(function(x,y){return x.date<y.date?1:x.date>y.date?-1:0;});
+    saveSession(wk2);closeSheet();toast(t("Workout updated"));return;}
   if(D.sessdel){askDelSession(V.sd&&V.sd.id);return;}
   if(D.openday){openSheet("dayview",{date:D.openday});return;}
   if(D.jumpfood){V.fdate=(D.jumpfood===today())?null:D.jumpfood;closeSheet();V.tab="food";render();return;}
@@ -966,6 +1032,13 @@ document.addEventListener("change",function(ev){
     else{var s9=servs(it9.food)[0];
       it9.parsed.unit=null;it9.parsed.qty=Math.max(0.5,Math.round(it9.grams/s9[1]*2)/2);}
     recalcItem(it9);render();return;}
+  /* A backup file picked on the Restore sheet fills the text box; Restore then checks
+     it like pasted text. */
+  if(ev.target.id==="rsfile"&&ev.target.files&&ev.target.files[0]){
+    var fr=new FileReader();
+    fr.onload=function(){var ta=document.getElementById("rs");if(ta)ta.value=String(fr.result||"");
+      toast(t("Backup loaded. Tap Restore to continue."));};
+    fr.readAsText(ev.target.files[0]);return;}
   /* The manual sheet's button says what it will do. Changed in place rather than by
      re-rendering, which would put the typed values back to what the sheet opened with. */
   if(ev.target.id==="mf_save"){
@@ -981,8 +1054,11 @@ document.addEventListener("change",function(ev){
     if(!en||!en.sets[+si])return;
     var k=ev.target.dataset.k,v=num(ev.target.value,0);
     if(k==="rpe")v=v?Math.min(10,Math.max(1,v)):0;
-    else if(k==="w")v=Math.max(0,toKg(v));
-    else v=Math.max(0,v);
+    else if(k==="w")v=Math.min(1000,Math.max(0,toKg(v)));
+    else{
+      v=Math.round(Math.max(0,v));
+      /* A logged set keeps at least one rep: zero is not a set. */
+      if(!v||v>(ex_isTimed(en)?3600:100)){toast(t(v?"That is more than Bunyan accepts.":"A set needs at least one rep."));render();return;}}
     en.sets[+si][k]=v;
     V.fresh=-1;saveDB();syncDraft();render();}});
 
@@ -1004,8 +1080,8 @@ function tickSession(){
      rest surface does not disappear at zero any more — it turns into the alert, and
      stays until the user acknowledges it. Sound cannot be relied on (silent switch,
      backgrounded tab), so the screen has to carry it. */
-  if(left<=0){V.restEnd=0;V.restPaused=false;V.restDone=true;
-    if(V.tab==="train"&&!V.sheet)render();return;}
+  if(left<=0){V.restEnd=0;V.restPaused=false;V.restDone=true;V.restMin=false;
+    if(!V.sheet)render();return;}
   paintRest();
 }
 setInterval(function(){
@@ -1014,10 +1090,19 @@ setInterval(function(){
     var warn=S.prefs.warn||10;
     if(left<=Math.min(3,warn)&&left>0&&left!==lastTick){setLastTick(left);play("tick");}
     if(left===warn&&lastTick!==warn){setLastTick(warn);play("tick");}
-    if(left<=0){setBeeped(true);alarmStart();tap("ok");}}
-  tickSession();},1000);
+    /* A rest that ran out while the page was frozen (phone locked, app in the
+       background) is not announced minutes later: the screen shows it is over, and
+       the eight-second alarm is only for a rest ending in front of you. */
+    if(left<=0){setBeeped(true);if(Date.now()-V.restEnd<5000){alarmStart();tap("ok");}}}
+  tickSession();
+  if(syncWorkoutState())saveDB();},1000);
 document.addEventListener("visibilitychange",function(){
-  if(document.visibilityState==="visible"&&S.active)keepAwake(true);});
+  if(document.visibilityState!=="visible")return;
+  if(S.active)keepAwake(true);
+  /* Catch up at once instead of on the next one-second tick: a rest that ended while
+     away shows as over the moment the app is back. */
+  if(S.active&&V.restEnd&&!V.restPaused&&Date.now()>=V.restEnd){setBeeped(true);tickSession();}
+  else tickSession();});
 
 /* The intro is skippable — a tap ends it immediately. It also runs short when the
    user has asked for less motion, either in the OS or in App settings. */
@@ -1134,6 +1219,67 @@ function askDelSession(id){
     body:t("Its sets are removed from your history and records. This cannot be undone."),
     cta:t("Delete workout"),act:"delsess",data:id,hard:true});
 }
+/* A backup is ours if it is an object carrying at least one thing only Bunyan writes.
+   Old backups (with `splits`) still qualify; migrate() upgrades them. */
+function parseBackup(txt){
+  var o;try{o=JSON.parse(String(txt||"").trim());}catch(e){return null;}
+  if(!o||typeof o!=="object"||Array.isArray(o))return null;
+  var ours=Array.isArray(o.sessions)||o.myPlan||Array.isArray(o.splits)||(o.prefs&&typeof o.prefs==="object")||o.profile;
+  return ours?o:null;
+}
+ACT.restore=function(_,o){
+  setS(normalize(JSON.parse(JSON.stringify(o))));
+  migrate();saveDB();V.tab="home";V.train="days";
+  adoptRestored(function(){render();toast(t("Restored."));});
+};
+/* A backup as a file: the share sheet where it can take files (iPhone: Save to
+   Files, AirDrop, Mail), a download elsewhere. Copying tens of kilobytes of text out
+   of a textarea on a phone was the only way before. */
+function downloadBackup(){
+  var name="bunyan-backup-"+today()+".json";
+  var blob=new Blob([JSON.stringify(S)],{type:"application/json"});
+  var done=function(){S.lastBackup=Date.now();S.backupSnooze=0;saveDB();render();toast(t("Backup saved."));};
+  try{
+    var file=new File([blob],name,{type:"application/json"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:"Bunyan backup"}).then(done).catch(function(){});return;}
+  }catch(e){}
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
+  done();
+}
+/* Finishing early is a choice worth one question: nothing logged means the workout
+   would simply vanish, and sets still planned are left out of the record. When every
+   planned set is logged there is nothing to ask. */
+function confirmFinish(){
+  var a=S.active;if(!a)return;
+  var logged=0,left=0;
+  a.entries.forEach(function(e){logged+=e.sets.length;left+=Math.max(0,rowsFor(e)-e.sets.length);});
+  if(!logged){
+    askConfirm({title:t("Nothing logged yet"),icon:"trash",
+      body:t("Finishing now throws this workout away."),
+      cta:t("Discard workout"),act:"discard",cancel:t("Keep training")});return;}
+  if(left>0){
+    askConfirm({title:t("Finish workout?"),icon:"leave",
+      body:left+" "+t(left===1?"planned set is not logged. It is left out of this workout.":"planned sets are not logged. They are left out of this workout."),
+      cta:t("Finish now"),act:"finishnow",cancel:t("Keep training")});return;}
+  finishSession();
+}
+ACT.finishnow=function(){finishSession();};
+/* Pause, resume and ±30s only repaint the rest screen, so they save here rather
+   than waiting for the next tick — a reload a moment later keeps them. */
+function persistRest(){if(syncWorkoutState())saveDB();}
+/* Bounds for a logged set, in storage units (kg). Wide enough for any real lifter,
+   narrow enough to catch a slipped digit before it becomes a record. */
+function setProblem(w,r,timed){
+  if(!isFinite(w)||w<0)return t("Weight cannot be negative.");
+  if(w>1000)return t("That weight is more than Bunyan accepts. Check it.");
+  if(!r||r<1)return t(timed?"Enter the seconds first.":"Enter reps first.");
+  if(r!==Math.round(r))return t("Reps are whole numbers.");
+  if(r>(timed?3600:100))return t(timed?"That is longer than an hour.":"That is more than 100 reps. Check it.");
+  return null;
+}
 ACT.delsess=function(_,id){if(removeSession(id))toast(t("Workout deleted"));render();};
 
 function navGuard(resume){
@@ -1179,6 +1325,15 @@ function openBarcodePrompt(){
 }
 ACT.barcode=function(v){ onBarcode(v); };
 
+/* Ids and names agree once both the library and the history have arrived; run on
+   each of the two callbacks, whichever lands last does the work. A rename in the
+   library is persisted only for the sessions it actually touched. */
+function applyExReconcile(){
+  var r=reconcileExercises(S);
+  if(r.plansChanged)saveDB();
+  r.changedSessions.forEach(function(s){saveSession(s);});
+}
+
 /* Boot. Nothing above ran on import, so this is the whole startup sequence
    in the order it actually happens. */
 /* The installed app gets the full-screen page height (see "The Home Screen app" in
@@ -1193,7 +1348,7 @@ initSheetDrag(requestCloseSheet);
 /* History comes from IndexedDB, so it arrives a tick later than everything else.
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from
    holding the whole app behind the intro; in practice it resolves well inside it. */
-loadStored(function(){ render(); });
+loadStored(function(){ applyExReconcile(); render(); });
 /* The intro belongs to a cold start, not to every document load. A reload for any
    reason — a service worker taking over, a crash recovery, the OS reclaiming the
    tab — used to replay it, which reads as the app restarting. */
@@ -1209,8 +1364,20 @@ else{
   var spEl=document.getElementById("splash");
   if(spEl)spEl.addEventListener("click",endSplash);
 }
-loadExDB(function(){render();});
-if(S.active)syncDraft();
+loadExDB(function(){applyExReconcile();render();});
+if(startupNote()==="corrupt")setTimeout(function(){
+  toast(t("Your saved data could not be read, so Bunyan started fresh. A copy of it was kept on this phone."));},1200);
+/* Ask the browser not to evict this origin's data under storage pressure. Everything
+   Bunyan knows lives only here; this is free and silent where it is granted. */
+try{if(navigator.storage&&navigator.storage.persist&&S.onboarded)
+  navigator.storage.persisted().then(function(p){if(!p)navigator.storage.persist();}).catch(function(){});}catch(e){}
+window.addEventListener("storage",function(ev){
+  if(ev.key!==storageKey())return;
+  refreshFromStorage(function(){if(S.active)syncDraft();render();});
+});
+/* Reopened mid-workout (a reload, or iOS having reclaimed the tab): straight back to
+   the exercise and the rest that were on screen, not to Home. */
+if(S.active){restoreWorkoutState();syncDraft();V.tab="train";V.train="days";}
 if(!S.onboarded){V.tab="home";V.sheet="setup";}
 render();
 
@@ -1224,7 +1391,7 @@ if("serviceWorker" in navigator){
         nw.addEventListener("statechange",function(){
           if(nw.state==="installed"&&navigator.serviceWorker.controller){
             nw.postMessage("skipWaiting");
-            toast("Updated. Reopen the app to finish.");
+            toast(t("Updated. Reopen the app to finish."));
           }});});
     }).catch(function(){});
   });

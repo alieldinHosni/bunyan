@@ -112,7 +112,12 @@ function ensureId(s,i){ if(!s.id)s.id="s"+Date.now().toString(36)+(i||0); return
 function loadSessions(pid,cb){
   rowsFor(SESS,pid,function(rows){
     if(rows===null)return cb(null);
-    rows.sort(function(a,b){ return (b.ord||0)-(a.ord||0); });
+    /* Newest date first; order of logging breaks ties within a day. An edited date
+       used to keep its old place, so "last time" and the rotation read the wrong
+       session. */
+    rows.sort(function(a,b){
+      var da=(a.s&&a.s.date)||"",dbb=(b.s&&b.s.date)||"";
+      return da<dbb?1:da>dbb?-1:(b.ord||0)-(a.ord||0); });
     var out=[];
     for(var i=0;i<rows.length;i++){
       if((rows[i].ord||0)>_maxOrd)_maxOrd=rows[i].ord||0;

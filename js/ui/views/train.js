@@ -28,18 +28,30 @@ function splitCover(id){
   return f?'<span class="tcover"><img src="img/'+f+'.jpg" alt="" loading="lazy"></span>'
           :'<span class="tcover tcover-none"></span>';}
 
-function nextDayOf(sp){
-  /* The latest planned session sets the rotation; a run or a match logged on its
-     own (no day id) does not move it. */
-  var lastIdx=-1,ls=null;
-  for(var j=0;j<S.sessions.length;j++)if(S.sessions[j].dayId){ls=S.sessions[j];break;}
-  if(ls){
-    for(var i=0;i<sp.days.length;i++)
-      if(sp.days[i].id===ls.dayId){lastIdx=i;break;}}
-  for(var k=1;k<=sp.days.length;k++){
-    var d=sp.days[(lastIdx+k+sp.days.length)%sp.days.length];
-    if(d.ex.length)return d;}
-  return null;}
+/* ---- where the rotation stands ------------------------------------------------
+   The latest planned session sets it; a run or a match logged on its own (no day id)
+   does not move it. The next training day is due once the rest days that follow the
+   last session in the cycle have passed on the calendar — rest days used to be skipped
+   over, so three full-body sessions landed on consecutive days. A missed day is never
+   skipped: once due, the next session stays due until it is done. */
+function addDaysISO(iso,n){var d=new Date(iso+"T00:00:00");d.setDate(d.getDate()+n);
+  return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
+function rotation(sp){
+  var len=sp.days.length,now=today();if(!len)return null;
+  var ls=null,li=-1;
+  for(var j=0;j<S.sessions.length&&!ls;j++){
+    var s=S.sessions[j];if(!s.dayId)continue;
+    for(var i=0;i<len;i++)if(sp.days[i].id===s.dayId){ls=s;li=i;break;}}
+  var start=ls?li+1:0,rests=0,idx=-1;
+  for(var k=0;k<len;k++){
+    var d=sp.days[(start+k)%len];
+    if(d.ex.length){idx=(start+k)%len;break;}
+    rests++;}
+  if(idx<0)return null;
+  var due=ls?addDaysISO(ls.date,rests+1):now;
+  if(due<now)due=now;
+  return {idx:idx,due:due,last:ls,li:li};}
+function nextDayOf(sp){var r=rotation(sp);return r?sp.days[r.idx]:null;}
 
 /* ---- the plan on a date --------------------------------------------------------
    The split is a rotation, not a calendar, so "what is on Thursday" is a projection:
@@ -65,13 +77,15 @@ function planOn(sp,iso){
   var sw=S.daySwap&&S.daySwap[iso];
   if(sw){var od=sp.days.filter(function(d){return d.id===sw;})[0];
     if(od)return {kind:iso===now?"today":"plan",day:od,name:od.name,rest:!od.ex.length,swapped:true};}
-  var nd=nextDayOf(sp);
-  if(!nd)return {kind:"none"};
-  var len=sp.days.length,base=sp.days.indexOf(nd);
-  var doneToday=S.sessions.some(function(x){return x.date===now&&x.dayId;});
-  var k=daysApart(now,iso)-(doneToday?1:0);
-  var d=sp.days[((base+k)%len+len)%len];
-  return {kind:iso===now?"today":"plan",day:d,name:d.name,rest:!d.ex.length};}
+  var r=rotation(sp);
+  if(!r)return {kind:"none"};
+  var len=sp.days.length,kind=iso===now?"today":"plan",d;
+  /* Still inside the rest that follows the last session. */
+  if(iso<r.due&&r.last){
+    d=sp.days[(r.li+daysApart(r.last.date,iso))%len];
+    return {kind:kind,day:d,name:d.name,rest:true,next:sp.days[r.idx]};}
+  d=sp.days[(r.idx+daysApart(r.due,iso))%len];
+  return {kind:kind,day:d,name:d.name,rest:!d.ex.length,next:sp.days[r.idx]};}
 function planNote(p){
   if(p.kind==="past")return t("Nothing logged");
   if(p.kind==="none")return t("Nothing planned");
@@ -93,6 +107,9 @@ function dayHero(sp,p,iso){
   }else if(p.rest){
     label=p.kind==="today"?t("Today"):t("Planned");
     meta=t("Recover. The plan picks up the day after.");
+    /* A rest day is advice, not a lock: someone who feels good can train anyway. */
+    if(p.kind==="today"&&p.next)
+      cta='<button class="btn g" data-startday="'+p.next.id+'">'+t("Train anyway")+' · '+esc(p.next.name)+'</button>';
   }else{
     label=p.kind==="today"?t("Current workout"):t("Planned");
     meta=p.day.ex.length+' '+t("exercises")+' · ~'+estMinutes(p.day)+' '+t("min");

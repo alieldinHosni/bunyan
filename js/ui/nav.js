@@ -48,8 +48,23 @@ function pushNav(){
   try{history.pushState({bunyan:1},"");}catch(e){}
 }
 /* A tab tap is not a navigation into depth — it is a change of place. Keeping the
-   stack would let back walk through every tab the user had ever touched. */
-function resetNav(){ STACK.length=0; }
+   stack would let back walk through every tab the user had ever touched.
+
+   The history entries those locations used are given back as well. They were left
+   behind before, so a session of tab-hopping grew the browser history without
+   bound — harmless in memory, but the browser's long-press back list filled with
+   dozens of identical entries. history.go() is asynchronous, so the traversal's
+   popstate is swallowed by count rather than by flag, and pushNav during the gap
+   simply lands after the traversal and prunes forward entries as any push does. */
+var SWALLOW=0;
+function resetNav(){
+  STACK.length=0;
+  if(DEPTH>0){
+    SWALLOW++;
+    try{history.go(-DEPTH);}catch(e){SWALLOW--;}
+    DEPTH=0;
+  }
+}
 
 function fallback(){
   if(STACK.length)apply(STACK.pop());
@@ -106,6 +121,7 @@ function doBack(){
 function goBack(){ viaControl=true; doBack(); }
 
 window.addEventListener("popstate",function(){
+  if(SWALLOW>0){SWALLOW--;return;}   /* resetNav's own unwind, not a user gesture */
   var byControl=viaControl; viaControl=false;
   if(V.sheet){
     /* The gesture was spent closing a sheet, so give the entry back. */

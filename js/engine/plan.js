@@ -1,6 +1,7 @@
 /* Bunyan — plan
    Split recommendation and plan generation. */
-import {EXDB, isCompound} from "../data/exercises.js";
+import {EXDB, isCompound, muscleOf} from "../data/exercises.js";
+import {isActivity} from "../data/activities.js";
 import {PRESETS} from "../data/splits.js";
 import {adoptSplit, S, saveDB} from "../state.js";
 import {num} from "../util.js";
@@ -13,11 +14,17 @@ var LEVELS={
   experienced:{label:"A couple of years",sets:[4,3], reps:[6,12], rest:[150,90], weekly:17},
   advanced:   {label:"Long term lifter", sets:[4,3], reps:[5,12], rest:[180,90], weekly:20}
 };
+/* What a goal changes, and only that:
+     strength  the day's main lift moves to low reps with longer rest;
+     everything else keeps the preset's hypertrophy ranges.
+   Fat loss does not raise reps: there is no evidence that higher reps burn more fat,
+   and in a deficit the aim is to keep the loads that keep the muscle. The deficit
+   itself lives in the nutrition targets. */
 var GOALS={
-  lose:    {label:"Lose fat",        shift:[1,3],  rest:1.0},
-  gain:    {label:"Build muscle",    shift:[0,0],  rest:1.0},
-  strength:{label:"Get stronger",    shift:[-2,-4],rest:1.3},
-  maintain:{label:"Maintain",        shift:[0,0],  rest:1.0}
+  lose:    {label:"Lose fat",        main:null},
+  gain:    {label:"Build muscle",    main:null},
+  strength:{label:"Get stronger",    main:{shift:-2,rest:1.3}},
+  maintain:{label:"Maintain",        main:null}
 };
 /* Days used to decide this almost alone: experience split one branch, goal was barely
    consulted, and equipment was ignored entirely — which could hand someone training at
@@ -129,20 +136,35 @@ function whyThisSplit(days,level,goal,id){
     :"";
   return (byId[id]||"")+" "+d+" days a week."+goalNote;
 }
+var TIMED=/Hold|Plank|Wall Sit|Balance|Isometric|Stretch|Dead Hang|L-Sit|Carry|Farmer|Bridge/i;
+function round30(v){return Math.max(30,Math.round(v/30)*30);}
 function buildPlan(){
   var p=S.profile, L=LEVELS[p.level]||LEVELS.some, G=GOALS[p.goal]||GOALS.lose;
   var id=recommendSplit(num(p.days,3),p.level,p.goal,S.gear);
   var base=PRESETS().filter(function(x){return x.id===id;})[0];
   var plan=adoptSplit(base);
   plan.tag=L.label.toLowerCase()+" \u00b7 "+G.label.toLowerCase()+" \u00b7 "+p.days+" days";
+  /* Level sets the volume and the main lift's range. Only what a level or goal
+     actually changes is touched: timed holds (a plank is seconds, not reps), core,
+     calves, mobility and cardio keep the preset's own prescription, and so do the
+     accessories' rep ranges. The first compound of each day is its main lift. */
   plan.days.forEach(function(d){
+    var mainDone=false;
     d.ex.forEach(function(e){
-      var comp=isCompound(e.name);
-      if(e.muscle!=="Ankle"&&e.muscle!=="Mobility"&&e.muscle!=="Cardio"){
-        e.sets=comp?L.sets[0]:L.sets[1];
-        e.lo=Math.max(3,(comp?L.reps[0]:8)+G.shift[0]);
-        e.hi=Math.max(e.lo+1,(comp?L.reps[0]+2:L.reps[1])+G.shift[1]);
-        e.rest=Math.round((comp?L.rest[0]:L.rest[1])*G.rest/5)*5;
+      var mu=muscleOf(e.name);if(!mu||mu==="Other")mu=e.muscle||"";
+      if(isActivity(e.name)||/^(Ankle|Mobility|Cardio|Sports|Core|Calves|Neck)$/.test(mu)||
+         TIMED.test(e.name))return;
+      var comp=isCompound(e.name),main=comp&&!mainDone;
+      if(main)mainDone=true;
+      e.sets=comp?L.sets[0]:L.sets[1];
+      if(main){
+        var sh=G.main?G.main.shift:0;
+        e.lo=Math.max(3,L.reps[0]+sh);e.hi=e.lo+2;
+        e.rest=round30(L.rest[0]*(G.main?G.main.rest:1));
+      }else if(comp){
+        e.rest=round30(Math.max(90,L.rest[0]-30));
+      }else{
+        e.rest=round30(L.rest[1]);
       }
     });
   });

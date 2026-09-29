@@ -6,11 +6,11 @@ import {vHome} from "./views/home.js";
 import {vProfile} from "./views/profile.js";
 import {vProgress} from "./views/progress.js";
 import {vSheet} from "./sheets.js";
-import {S} from "../state.js";
+import {S, saveDB} from "../state.js";
 import {vTrain} from "./views/train.js";
 import {syncRest} from "./views/session.js";
 import {PERSIST} from "../util.js";
-import {lockScroll, V} from "./view.js";
+import {lockScroll, syncWorkoutState, V} from "./view.js";
 import {patch, replace} from "./patch.js";
 import {syncDock} from "./dock.js";
 import {applyMotion, countTo, once} from "./motion.js";
@@ -54,6 +54,7 @@ function paintMotion(root,viewKey){
 
 var lastView="",lastSheet=null;
 function render(){
+  if(syncWorkoutState())saveDB();
   document.documentElement.setAttribute("data-theme",S.theme);
   applyLang();
   /* Both routes into reduced motion, re-evaluated every render so the in-app toggle
@@ -168,6 +169,19 @@ function isTyping(el){
   if(el.matches("textarea,[contenteditable=true]"))return true;
   return el.matches("input")&&!el.matches("[type=checkbox],[type=radio],[type=range],[type=file],[type=button],[type=submit],[type=color]");
 }
-function syncKeyboard(){document.body.classList.toggle("kb",isTyping(document.activeElement));}
+/* When the keyboard goes away the dock fades back in — right where a finger may be
+   landing on the button that dismissed it (the ✓ of a set typed near the bottom of
+   the screen). For a moment after it returns the dock lets taps through, so that tap
+   reaches the button under it instead of a tab. */
+var kbLeaveTimer=0;
+function syncKeyboard(){
+  var b=document.body,typing=isTyping(document.activeElement),was=b.classList.contains("kb");
+  b.classList.toggle("kb",typing);
+  if(was&&!typing){
+    b.classList.add("kbleave");
+    clearTimeout(kbLeaveTimer);
+    kbLeaveTimer=setTimeout(function(){b.classList.remove("kbleave");},450);
+  }
+}
 
 export {isTyping, render, syncKeyboard};

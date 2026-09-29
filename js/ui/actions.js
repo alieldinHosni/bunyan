@@ -1,7 +1,7 @@
 /* Bunyan — actions
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
-import {LIB, muscleOf, muscleOfEntry} from "../data/exercises.js";
+import {exIdOf, kindOf, LIB, muscleOf, muscleOfEntry} from "../data/exercises.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
 import {avgRPE, prevPerf, prFor, recommend, sessionVolume} from "../engine/formulas.js";
@@ -12,7 +12,7 @@ import {render} from "./render.js";
 import {day, ex} from "../data/splits.js";
 import {adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
 import {MEM, num, PERSIST, r1, today, uid, wr} from "../util.js";
-import {endRest, keepAwake, play, tap, toast, V} from "./view.js";
+import {audioOn, endRest, keepAwake, play, tap, toast, V} from "./view.js";
 
 /* ============================================================ actions */
 function openSheet(name,data){V.sheet=name;V.sd=data||null;render();}
@@ -69,7 +69,7 @@ ACT.customex=function(name,d){
     toast(t("That exercise is already in your library."));return;}
   var m=V.exm&&V.exm!=="All"?V.exm:"Other";
   LIB.push([name,m,"Other",0]);
-  (S.myEx=S.myEx||[]).push({n:name,m:m});
+  (S.myEx=S.myEx||[]).push({id:"u_"+uid(),n:name,m:m});
   saveDB();
   /* Put the picker's context back so a custom exercise can still land in the day or
      replace the live one, exactly like a library pick. */
@@ -124,12 +124,15 @@ ACT.savemeal=function(name,d){
 
 function startDay(dayId){
   var d=dayOf(dayId);if(!d||!d.ex.length)return;
+  /* Created on the tap that starts the workout (a user gesture, which iOS requires),
+     so logging the first set does not pay for it. */
+  audioOn();
   S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
     splitId:split().id,dayId:d.id,dayName:d.name,
     entries:d.ex.map(function(e){
       /* Resolved from the library as the session is created, so the record this
          workout leaves behind is right even if the plan's cached muscle is not. */
-      return {name:e.name,muscle:muscleOfEntry(e),planned:{sets:e.sets,lo:e.lo,hi:e.hi,min:e.min||0,rpe:e.rpe||0,km:e.km||0},
+      return {name:e.name,exId:e.exId||exIdOf(e.name),kind:kindOf(e.name),muscle:muscleOfEntry(e),planned:{sets:e.sets,lo:e.lo,hi:e.hi,min:e.min||0,rpe:e.rpe||0,km:e.km||0},
               rest:e.rest,grp:e.grp||null,sets:[]};})};
   V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
@@ -140,7 +143,7 @@ function startActivity(name){
   if(S.active)return;
   S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
     splitId:split().id,dayId:null,dayName:exName(name),
-    entries:[{name:name,muscle:actMuscle(name)||"Cardio",planned:{sets:1,lo:0,hi:0},rest:0,grp:null,sets:[]}]};
+    entries:[{name:name,exId:exIdOf(name),kind:"activity",muscle:actMuscle(name)||"Cardio",planned:{sets:1,lo:0,hi:0},rest:0,grp:null,sets:[]}]};
   V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
 
@@ -156,13 +159,16 @@ function syncDraft(){
     var pl=e.planned||{},pa=last||(pl.min?null:(prevPerf(e.name)||{sets:[]}).sets[0]);
     V.draft.min=pa&&pa.min?num(pa.min):pl.min||(actInfo(e.name).grp==="Sports"?60:30);
     V.draft.km=pa&&pa.km?num(pa.km):pl.km||0;V.draft.rpe=pa&&pa.rpe?pa.rpe:pl.rpe||6;return;}
-  if(last){V.draft.w=num(last.w);V.draft.r=num(last.r);V.draft.rpe=last.rpe||8;return;}
+  /* RPE starts empty on every set. It is how that set felt, which nothing can know
+     in advance; a pre-filled 8 was being saved as if the lifter had said it, and the
+     progression rule then trusted it. */
+  if(last){V.draft.w=num(last.w);V.draft.r=num(last.r);V.draft.rpe=null;return;}
   var p=prevPerf(e.name);
   var src=p?p.sets[0]:null;
   var rec=recommend(e);
   V.draft.w=rec&&rec.w?rec.w:(src?num(src.w):0);
   V.draft.r=src?num(src.r):e.planned.hi||8;
-  V.draft.rpe=src&&src.rpe?src.rpe:8;}
+  V.draft.rpe=null;}
 
 function finishSession(){
   var a=S.active;
@@ -172,8 +178,10 @@ function finishSession(){
   var exsPlanned=a.entries.length;
   var setsPlanned=a.entries.reduce(function(n,e){
     return n+((e.planned&&e.planned.sets)||0);},0);
-  a.entries=a.entries.filter(function(e){return e.sets.length;});
-  if(!a.entries.length){S.active=null;endRest();keepAwake(false);saveDB();render();return;}
+  /* Untouched exercises are dropped — except one flagged as painful: that flag is
+     history worth keeping, so a pattern can be noticed next time. */
+  a.entries=a.entries.filter(function(e){return e.sets.length||e.pain;});
+  if(!a.entries.some(function(e){return e.sets.length;})){S.active=null;endRest();keepAwake(false);saveDB();render();return;}
 
   var prs=[];
   a.entries.forEach(function(e){
@@ -203,7 +211,7 @@ function finishSession(){
        the figure did not have. */
     secs:Math.max(1,Math.round(sessionClock(a).ms/1000)),
     wallMins:Math.max(1,Math.round(sessionWall(a)/60000)),
-    sets:allSets.length,exs:a.entries.length,rpe:avgRPE(allSets),prs:prs,
+    sets:allSets.length,exs:a.entries.filter(function(e){return e.sets.length;}).length,rpe:avgRPE(allSets),prs:prs,
     notes:a.notes||"",
     /* What the complete screen needs to state an achievement rather than a number:
        the plan it is being measured against, and the session it is being compared to. */
@@ -221,13 +229,25 @@ function finishSession(){
    other state-changing actions rather than in the entry point. */
 function addExercise(name){
   var e=ex(name,3,8,12);
+  e.exId=exIdOf(name);
   /* A match or a run is planned as time and effort, not sets and reps. */
   if(isActivity(name)){e.sets=1;e.lo=0;e.hi=0;e.rest=0;
     e.min=actInfo(name).grp==="Sports"?60:30;e.rpe=6;}
   if(V.sd&&V.sd.swaplive&&S.active){
     var cur=S.active.entries[V.logIdx];
-    cur.name=name;cur.muscle=muscleOf(name);cur.sets=[];
-    saveDB();closeSheet();syncDraft();render();return;}
+    var planned=isActivity(name)?{sets:1,lo:0,hi:0,min:e.min,rpe:e.rpe}
+      :(isActivity(cur.name)?{sets:3,lo:8,hi:12}:{sets:cur.planned.sets,lo:cur.planned.lo,hi:cur.planned.hi});
+    if(cur.sets.length){
+      /* Sets already done stay with the exercise they were done on. The replacement
+         comes in as the next exercise instead of overwriting them. */
+      var fresh={name:name,exId:exIdOf(name),kind:kindOf(name),muscle:muscleOf(name),planned:planned,rest:isActivity(name)?0:cur.rest,grp:null,sets:[]};
+      S.active.entries.splice(V.logIdx+1,0,fresh);
+      V.logIdx=V.logIdx+1;S.active.idx=V.logIdx;
+      toast(t("Your logged sets were kept. Next up:")+" "+exName(name));
+    }else{
+      cur.name=name;cur.exId=exIdOf(name);cur.kind=kindOf(name);cur.muscle=muscleOf(name);cur.planned=planned;cur.extra=0;
+      if(isActivity(name))cur.rest=0;}
+    endRest();V.fresh=-1;saveDB();closeSheet();syncDraft();render();return;}
   var d=dayOf(V.dayId);if(!d){closeSheet();return;}
   if(V.sd&&V.sd.replace){
     var i=d.ex.findIndex(function(x){return x.id===V.sd.replace;});

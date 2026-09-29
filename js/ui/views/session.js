@@ -4,7 +4,7 @@ import {t} from "../../i18n/dict.js";
 import {difficultyOf, exImg, exMedia, muscleOfEntry} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
 import {lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
-import {actIcon, actInfo, actKcal, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
+import {actIcon, actInfo, actKcal, actPace, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
 import {S} from "../../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num} from "../../util.js";
@@ -14,6 +14,14 @@ import {ex_isTimed, stepperInput, V} from "../view.js";
    Execution surface, not an editor. vDay() prescribes the work; this screen only
    runs it. Every control answers one of: what am I doing, which set am I on, what
    did I do last time, am I resting, what is next. */
+var LOADED=/Carry|Farmer|Yoke/i;
+var READY=[[1,"Drained"],[2,"Low"],[3,"OK"],[4,"Good"],[5,"Great"]];
+function painRecent(name){
+  var n=0,seen=0;
+  for(var i=0;i<S.sessions.length&&seen<3;i++){
+    var e=S.sessions[i].entries.filter(function(x){return x.name===name;})[0];
+    if(!e)continue;seen++;if(e.pain)n++;}
+  return n>=2;}
 function e0name(a){var e=a.entries[V.logIdx];return e?e.name:"";}
 
 /* Rows an entry shows: the prescription plus any the user added, never fewer than
@@ -103,7 +111,9 @@ function vLogger(){
   if(V.logIdx<0)V.logIdx=0;
   var e=a.entries[V.logIdx];
   if(!e){V.logIdx=0;e=a.entries[0];}
-  var timed=ex_isTimed(e),rows=rowsFor(e),rpeCol=S.prefs.rpe!=="off";
+  /* A carry is timed but loaded: it keeps the weight column and counts seconds. */
+  var loaded=ex_isTimed(e)&&LOADED.test(e.name);
+  var timed=ex_isTimed(e)&&!loaded,rows=rowsFor(e),rpeCol=S.prefs.rpe!=="off";
   var active=e.sets.length<rows?e.sets.length:-1;
   var p=prevPerf(e.name),pr=prFor(e.name);
   var run=groupRun(a.entries,V.logIdx);
@@ -132,7 +142,13 @@ function vLogger(){
    +'<span class="ss-paused" id="sessPaused"'+(clock.paused?'':' hidden')+'>'
    +t("Paused")+'</span></div>'
    +'<button class="ss-more" data-sessmore="1" aria-label="'+t("More")+'">⋯</button>'
-   +'</div><div class="ss-bar"><i style="width:'+pct+'%"></i></div></div>';
+   +'</div><div class="ss-bar"><i style="width:'+pct+'%"></i></div>'
+   /* The hidden rest, still counting. Tap to bring the full screen back. */
+   +(V.restMin&&(V.restEnd>Date.now()||V.restPaused)
+     ?'<button class="restbar" data-rest="show"><span>'+t(V.restPaused?"Rest paused":"Resting")+'</span>'
+      +'<b id="restBarDig">'+mmss(V.restPaused?V.restLeft:Math.max(0,Math.ceil((V.restEnd-Date.now())/1000)))+'</b>'
+      +'<i>'+t("Show")+'</i></button>':'')
+   +'</div>';
 
   /* --- one segment per exercise; members of a superset are tied together --- */
   h+='<div class="ss-seg">';
@@ -148,6 +164,20 @@ function vLogger(){
      recommendation. The frame's START/END panels are placeholder rectangles standing in
      for artwork; the library ships a real photograph of each position, so those are used
      instead — closer to the design's intent than copying its stand-in would be. */
+  /* How the lifter feels today, asked once before the first set. It changes nothing
+     on its own; a low answer only says, plainly, that doing less still counts. */
+  if(doneAll===0&&a.ready==null){
+    h+='<section class="ready"><div class="ready-h">'+t("How do you feel today?")+'</div><div class="ready-c">'
+     +READY.map(function(x){return '<button data-ready="'+x[0]+'">'+t(x[1])+'</button>';}).join("")
+     +'</div><button class="ready-skip" data-ready="0">'+t("Skip")+'</button></section>';
+  }else if(a.ready&&a.ready<=2&&doneAll===0){
+    h+='<div class="readynote">'+t("A low day. Keep the weights you know, drop a set if you need to, or stop early. It still counts.")+'</div>';
+  }
+  /* Pain flagged on this exercise in two of its last three sessions: say so before
+     the first set, once, and point at a substitute. */
+  if(!e.sets.length&&painRecent(e.name))
+    h+='<div class="painnote">'+t("You flagged pain on this exercise recently. Consider a substitute, and if it keeps coming back, get it looked at.")
+     +' <button class="linkbtn" data-swap="1">'+t("Replace it")+'</button></div>';
   if(isActivity(e.name))h+=actBody(a,e,rows,active);
   else{
   var med=exMedia(e.name),img0=exImg(e.name,0),img1=exImg(e.name,1);
@@ -184,7 +214,7 @@ function vLogger(){
     h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span>'
      +'<span>'+t("Recommended")+': <b>'+fmtW(recTop.w)+'</b> × '+e.planned.lo
      +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+' '+t("reps")
-     +(recTop.note?' · '+esc(recTop.note):'')+'</span></div>';
+     +(recTop.note?' · '+esc(t(recTop.note)):'')+'</span></div>';
 
   /* --- the set grid: prescription, previous performance and entry in one row --- */
   /* Delete leads the row, log ends it. Grid columns follow the writing direction, so
@@ -192,7 +222,7 @@ function vLogger(){
   var cols=timed?(rpeCol?"24px 24px 1fr 78px 44px 38px":"24px 24px 1fr 90px 38px")
                 :(rpeCol?"24px 24px 1fr 56px 50px 42px 38px":"24px 24px 1fr 66px 58px 38px");
   var hd=timed?["",t("Set"),t("Last"),t("Secs")]
-              :["",t("Set"),t("Last"),wUnit().toUpperCase(),t("Reps")];
+              :["",t("Set"),t("Last"),wUnit().toUpperCase(),loaded?t("Secs"):t("Reps")];
   if(rpeCol)hd.push("RPE");
   hd.push("");
   var doneHere=e.sets.length;
@@ -237,8 +267,8 @@ function vLogger(){
       else if(done)h+='<input class="cell rp" type="number" inputmode="numeric" min="1" max="10" '
         +'value="'+(st.rpe||"")+'" data-setidx="'+i+'" data-k="rpe" aria-label="RPE, set '+(i+1)+'">';
       else if(isAct)h+='<input class="cell rp" type="number" inputmode="numeric" min="1" max="10" '
-        +'id="in_rpe" value="'+(V.draft.rpe||8)+'" aria-label="RPE">';
-      else h+='<div class="cellmute">'+(V.draft.rpe||8)+'</div>';
+        +'id="in_rpe" value="'+(V.draft.rpe||"")+'" placeholder="–" aria-label="RPE">';
+      else h+='<div class="cellmute">–</div>';
     }
 
     /* One control logs a set, and its colour is the state: red until it is done,
@@ -289,6 +319,7 @@ function vLogger(){
   h+='<div class="ss-acts">'
    +'<button class="ss-act" data-swap="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>'+t("Replace Exercise")+'</button>'
    +(V.logIdx<a.entries.length-1?'<button class="ss-act" data-nextex="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l10 7-10 7zM19 5v14"/></svg>'+t("Skip Exercise")+'</button>':'')
+   +'<button class="ss-act'+(e.pain?' on':'')+'" data-hurt="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg>'+t(e.pain?"Pain noted":"Something hurts?")+'</button>'
    +'</div></div>';
 
   /* The rest screen is no longer part of this string; syncRest() owns it. */
@@ -317,6 +348,9 @@ function actBody(a,e,rows,active){
      +(info.dist?'<div class="act-lbl">'+t("Distance")+' <i>'+t("optional")+'</i></div>'
        +'<div class="act-km"><input id="in_km" type="number" inputmode="decimal" step="0.1" min="0" value="'
        +(num(V.draft.km)?V.draft.km:"")+'" placeholder="0.0" aria-label="'+t("Distance")+' km"><span>km</span></div>':'')
+     +'<div class="act-lbl">'+t("Avg heart rate")+' <i>'+t("optional")+'</i></div>'
+     +'<div class="act-km"><input id="in_hr" type="number" inputmode="numeric" min="30" max="240" value="'
+     +(num(V.draft.hr)?V.draft.hr:"")+'" placeholder="—" aria-label="'+t("Avg heart rate")+'"><span>bpm</span></div>'
      +'<div class="act-lbl">'+t("Intensity")+'</div><div class="act-int" role="group" aria-label="'+t("Intensity")+'">'
      +INTENSITY.map(function(x){
         return '<button class="'+(cur===x[0]?'on':'')+'" data-actint="'+x[0]+'" aria-pressed="'+(cur===x[0])+'">'+t(x[1])+'</button>';}).join("")
@@ -329,8 +363,9 @@ function actBody(a,e,rows,active){
     h+='<div class="act-done">';
     e.sets.forEach(function(st,i){
       h+='<div class="act-row'+(V.fresh===i?' fresh':'')+'" data-k="act:'+i+'"><span class="act-ok" aria-hidden="true">'+TICK+'</span>'
-       +'<span class="act-t"><b>'+num(st.min)+' '+t("min")+(num(st.km)?' · '+st.km+' km':'')+'</b>'
-       +'<span>'+t(intensityOf(st.rpe||6)[1])+(st.kcal?' · '+fmtN(st.kcal)+' kcal':'')+'</span></span>'
+       +'<span class="act-t"><b>'+num(st.min)+' '+t("min")+(num(st.km)?' · '+st.km+' km':'')
+         +(actPace(num(st.min),num(st.km))?' · '+actPace(num(st.min),num(st.km)):'')+'</b>'
+       +'<span>'+t(intensityOf(st.rpe||6)[1])+(num(st.hr)?' · '+num(st.hr)+' bpm':'')+(st.kcal?' · '+fmtN(st.kcal)+' kcal':'')+'</span></span>'
        +'<button class="delset" data-delset="'+i+'" aria-label="'+t("Delete")+' '+(i+1)+'">✕</button></div>';});
     h+='</div>';
     if(active<0)h+='<div class="addrow"><button class="addset2" data-addrow="1"><span aria-hidden="true">+</span>'+t("Add another bout")+'</button></div>';
@@ -380,7 +415,7 @@ function vRest(a,e,rows,timed){
       +(timed?num(V.draft.r)+'s'
         :(num(V.draft.w)?fmtW(V.draft.w)+' × '+num(V.draft.r)+' '+t("reps")
                         :num(V.draft.r)+' '+t("reps")));
-    if(S.prefs.rpe!=="off")nr=t("Target RPE")+' '+(V.draft.rpe||8);
+    if(S.prefs.rpe!=="off")nr=t("Target RPE")+' 8';
   }else{
     var nxe=a.entries[V.logIdx+1];
     nx=nxe?esc(exName(nxe.name)):t("Finish workout");
@@ -426,6 +461,7 @@ function vRest(a,e,rows,timed){
      +'</div></div>';
   }
   return '<div class="restwrap rt" role="dialog" aria-label="'+t("Rest")+'">'+art
+   +'<button class="rt-hide" data-rest="hide"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>'+t("Hide")+'</button>'
    +'<div class="rt-k">'+t("Rest period")+'</div><div class="rt-sub">'+doneTxt+'</div>'
    +'<div class="rt-ring"><svg viewBox="0 0 180 180" aria-hidden="true">'
    +'<circle cx="90" cy="90" r="79" class="rt-ring-t"/>'
@@ -460,6 +496,8 @@ function paintRest(){
   if(d)d.textContent=mmss(left);
   var tot=document.getElementById("restTot");
   if(tot)tot.textContent=t("of")+" "+mmss(total);
+  var bar=document.getElementById("restBarDig");
+  if(bar)bar.textContent=mmss(left);
   var ring=document.getElementById("restRing");
   if(ring)ring.setAttribute("stroke-dashoffset",
     String(REST_C*(1-Math.max(0,Math.min(1,left/total)))));
@@ -484,6 +522,10 @@ function syncRest(){
   /* Three states now, not two. restDone keeps the surface up after the clock reaches
      zero so the alert has somewhere to live — the sound may never arrive. */
   var on=!!a&&(V.restEnd>Date.now()||V.restPaused||V.restDone);
+  /* Hidden: the countdown carries on in a bar on the workout screen, so the set just
+     logged can be corrected or the next exercise read. It comes back full screen the
+     moment the rest is over. */
+  if(on&&V.restMin&&!V.restDone)on=false;
   if(!on){
     if(host.firstChild)host.textContent="";
     host.removeAttribute("data-k");
@@ -496,7 +538,7 @@ function syncRest(){
   var key=V.logIdx+"|"+e.sets.length+"|"+(V.restDone?"done":"run")+"|"+(S.prefs&&S.prefs.lang||"en");
   if(host.getAttribute("data-k")===key){paintRest();return;}
   host.setAttribute("data-k",key);
-  host.innerHTML=vRest(a,e,rowsFor(e),ex_isTimed(e.name));
+  host.innerHTML=vRest(a,e,rowsFor(e),ex_isTimed(e)&&!LOADED.test(e.name));
 }
 
 export {groupLabel, groupNext, groupRun, IDLE_PAUSE, mmss, noteSet, paintRest, platePlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger};

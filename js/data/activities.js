@@ -72,6 +72,12 @@ function intensityOf(rpe){
   var best=INTENSITY[1];
   INTENSITY.forEach(function(x){if(Math.abs(x[0]-rpe)<Math.abs(best[0]-rpe))best=x;});
   return best;}
+/* Pace as runners read it: minutes per kilometre, from what was logged. Nothing is
+   asked for that a watch would have measured — it falls out of duration and distance. */
+function actPace(min,km){
+  if(!(min>0&&km>0))return "";
+  var s=Math.round(min*60/km);
+  return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")+" /km";}
 function actKcal(n,mins,rpe,kg){
   var a=BY[n];if(!a||!mins)return 0;
   return Math.round(a.met*(kg||70)*(mins/60)*intensityOf(rpe||6)[2]);}
@@ -92,4 +98,4 @@ function actIcon(n,size){
   var a=BY[n],k=a?a.ico:"pulse";
   return '<svg viewBox="0 0 24 24" width="'+(size||22)+'" height="'+(size||22)+'" aria-hidden="true" class="acticon">'+ICO[k]+'</svg>';}
 
-export {ACT_GROUPS, ACTS, actIcon, actInfo, actKcal, actMuscle, actsIn, INTENSITY, intensityOf, isActivity};
+export {actPace, ACT_GROUPS, ACTS, actIcon, actInfo, actKcal, actMuscle, actsIn, INTENSITY, intensityOf, isActivity};
