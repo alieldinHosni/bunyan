@@ -2300,6 +2300,27 @@ button.pgrow:active{background:var(--surface)}
   border:1px solid var(--hair-hi);background:rgba(255,255,255,.04);color:var(--text);font-weight:600;font-size:14px}
 .ss-act svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--accentHi)}
 .ss-act:active{transform:scale(.97)}
+/* ---- Confirm sheets: centred, compact, pill buttons in sentence case. The ✕ in the
+   head is dropped here — Cancel (or "Keep training") sits right beside the choice,
+   and a drag or a tap outside still closes a non-destructive one. */
+.cfbox .sheethead{border-bottom:none;background:none;margin-bottom:0;padding-bottom:4px;min-height:0}
+.cfbox .sheethead .x{display:none}
+.cf{text-align:center;padding:6px 8px 4px}
+.cf-i{display:grid;place-items:center;width:64px;height:64px;margin:4px auto 16px;border-radius:50%;
+  background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.08),rgba(255,255,255,.02) 70%);
+  border:1px solid var(--border);box-shadow:0 10px 30px -12px rgba(230,30,40,.45)}
+.cf-i svg{width:28px;height:28px;fill:none;stroke:var(--text);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cf-i.bad svg{stroke:var(--accentHi)}
+.cf h2{font-size:24px;margin:0}
+.cf-b{color:var(--dim);font-size:15px;line-height:1.45;margin:8px auto 22px;max-width:30ch}
+.cf-acts{display:flex;flex-direction:column;gap:10px}
+.cf-acts .btn{margin:0;border-radius:var(--rpill);text-transform:none;letter-spacing:0;font-size:16px;min-height:54px}
+.cf-acts .cf-ok{background:linear-gradient(180deg,var(--accentHi),var(--accent));
+  box-shadow:0 10px 26px -12px rgba(230,30,40,.7),inset 0 1px 0 rgba(255,255,255,.18)}
+.cf-acts .cf-no{background:var(--raised);border:1px solid var(--border)}
+.cf-alt{background:none;border:none;color:var(--accentHi);font-family:inherit;font-weight:600;font-size:15px;
+  padding:12px 0 2px;min-height:44px;cursor:pointer}
+.cf-alt:active{opacity:.6}
 </style>
 </head>
 <body>
