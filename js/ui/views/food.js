@@ -11,11 +11,13 @@ import {backArrow} from "../nav.js";
 
 /* ============================================================ FOOD */
 var MEALS=["Breakfast","Lunch","Dinner","Snack"];
-function srcBadge(src){
-  if(src==="you")return '<span class="pill">Yours</span>';
-  if(src==="est")return '<span class="pill" style="color:var(--gold);border-color:var(--gold)">'+t("Estimated")+'</span>';
-  if(src==="off")return '<span class="pill">'+t("Branded")+'</span>';
-  return "";}
+/* The meal an add belongs to when nothing on screen says which — the floating button,
+   the frequent-food pills, a saved meal. Every one of those used to go to Snack, so a
+   breakfast logged from the button at 8 a.m. was filed as a snack. The meal rows each
+   carry their own meal and never come here. */
+function mealNow(){
+  var h=new Date().getHours();
+  return h>=5&&h<11?"Breakfast":h>=11&&h<15?"Lunch":h>=17&&h<22?"Dinner":"Snack";}
 
 /* The 180px hero ring. The frame draws it as a full 6px border, which can only ever
    read 100%; here it is an arc of eaten/goal, so it agrees with the number inside it. */
@@ -91,9 +93,9 @@ function vFood(){
     var m=r.meals[name]||{items:[]},items=m.items||[],tot=sumNutrition(items);
     if(items.length)
       h+='<button class="mealrow logged" data-meal="'+name+'" aria-label="'
-       +esc(t(name)+" — "+fmtN(tot.kcal)+" kcal, "+items.length+" "+t("items logged"))+'">'
+       +esc(t(name)+" — "+fmtN(tot.kcal)+" kcal, "+items.length+" "+t(items.length===1?"item logged":"items logged"))+'">'
        +'<div style="min-width:0"><div class="mealrow-n">'+esc(t(name))+'</div>'
-       +'<div class="mealrow-s">'+items.length+' '+esc(t("items logged"))+'</div></div>'
+       +'<div class="mealrow-s">'+items.length+' '+esc(t(items.length===1?"item logged":"items logged"))+'</div></div>'
        +'<div class="mealrow-r"><span class="mealrow-k">'+fmtN(tot.kcal)+' kcal</span>'
        +'<i class="ico ico-chev"></i></div></button>';
     else
@@ -123,7 +125,7 @@ function vFood(){
      list. The spacer keeps it off the last row at rest; while scrolling it passes over
      the rows, which is what a floating button does and what scrolling past undoes. */
   h+='<div class="ffab-pad"></div>'
-   +'<button class="ffab" data-addfood="Snack" aria-label="'+esc(t("Add food"))+'">'
+   +'<button class="ffab" data-addfood="'+mealNow()+'" aria-label="'+esc(t("Add food"))+'">'
    +'<i class="ico ico-plus"></i></button>';
   return h;}
 
@@ -166,4 +168,4 @@ function vMeal(dsel,name){
   return h;}
 
 
-export {MEALS, srcBadge, vFood};
+export {MEALS, mealNow, vFood};

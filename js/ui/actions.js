@@ -5,7 +5,7 @@ import {LIB, muscleOf, muscleOfEntry} from "../data/exercises.js";
 import {avgRPE, prevPerf, prFor, recommend, sessionVolume} from "../engine/formulas.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {leave} from "./motion.js";
-import {FOODDB, nutritionFor, toLogItem} from "../engine/nutrition.js";
+import {FOODDB, nutritionFor, recalcItem, toLogItem} from "../engine/nutrition.js";
 import {render} from "./render.js";
 import {day, ex} from "../data/splits.js";
 import {adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
@@ -107,12 +107,14 @@ ACT.wipe=function(word){
 ACT.grams=function(v,d){
   var g=num(v,0),it=V.food&&V.food.items[d.idx];
   openSheet("addfood",{meal:d.meal});
-  if(g<=0){toast(t("Enter a number of grams."));return;}
+  if(g<=0){toast(t(d.unit?"Enter an amount first.":"Enter a number of grams."));return;}
   if(!it)return;
-  it.grams=g;it.label=g+" g";it.parsed.unit="g";it.parsed.qty=g;
-  it.n=nutritionFor(it.food,g);render();};
+  /* An amount in the item's own measure keeps that measure; grams become grams. */
+  it.parsed.unit=d.unit||"g";it.parsed.qty=g;
+  recalcItem(it);render();};
 ACT.savemeal=function(name,d){
-  var good=V.food.items.filter(function(i){return i.status!=="unknown";}).map(toLogItem);
+  /* A pending "Did you mean" has no food yet; toLogItem would throw on it. */
+  var good=V.food.items.filter(function(i){return i.status!=="unknown"&&i.status!=="suggest";}).map(toLogItem);
   openSheet("addfood",{meal:d.meal});
   if(!good.length){toast(t("Nothing to save."));return;}
   S.savedMeals.push({id:uid(),name:name,items:good});saveDB();

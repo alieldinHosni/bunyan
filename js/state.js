@@ -5,6 +5,7 @@ import {PRESETS} from "./data/splits.js";
 import {num, r1, rd, today, uid, wr} from "./util.js";
 import {clearProfile, loadDays, loadSessions, putAll, putDays, putSession,
         replaceAll, replaceAllDays} from "./db.js";
+import {clearPhotos} from "./photostore.js";
 import {V} from "./ui/view.js";
 
 /* ============================================================ state */
@@ -189,7 +190,10 @@ function adoptRestored(cb){
     });
   });
 }
-function dropProfileData(pid,cb){ clearProfile(pid||CUR,function(){ cb&&cb(); }); }
+function dropProfileData(pid,cb){
+  var p=pid||CUR;
+  clearProfile(p,function(){ clearPhotos(p,function(){ cb&&cb(); }); });
+}
 /* migrate() is defined further down; function declarations hoist, so initState can call it. */
 /* done runs once the new profile's history and food log are in memory, so callers
    repaint then rather than showing the previous profile's numbers or an empty log. */

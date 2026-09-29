@@ -270,14 +270,6 @@ function progressBar(cur,goal,color){
   var p=goal?Math.min(1,cur/goal):0;
   return '<div class="bar"><i style="width:'+(p*100)+'%;background:'+color+'"></i></div>';}
 
-/* A settings row that carries its own value, so the hub answers most questions
-   without the user having to open anything. */
-function setRow(sheet,label,value,sub){
-  return '<button class="item" data-sheet="'+sheet+'">'
-   +'<div style="min-width:0"><div style="font-weight:600">'+esc(label)+'</div>'
-   +(sub?'<div class="tiny">'+esc(sub)+'</div>':'')+'</div>'
-   +(value?'<span class="rowval">'+esc(value)+'</span>':'')
-   +'<span class="chev">›</span></button>';}
 
 
 /* Rest-timer bookkeeping lives here with the timer it belongs to; app.js drives it
@@ -323,4 +315,4 @@ function lockScroll(on){
 }
 
 
-export {alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, setBeeped, setLastTick, setRow, sparkline, startRest, stepper, streak, tap, toast, V};
+export {alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, setBeeped, setLastTick, sparkline, startRest, stepper, streak, tap, toast, V};

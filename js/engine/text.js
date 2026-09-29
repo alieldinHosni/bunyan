@@ -19,9 +19,13 @@ function fold(s){
     .replace(/ؤ/g,"و").replace(/ئ/g,"ي")
     .replace(/ة/g,"ه");
 }
+/* A point survives only between two digits. Stripping every one, as this used to,
+   turned "1.5 L water" into "1 5 l water" — logged as one of something — and made
+   every decimal quantity typed into Quick Add wrong. */
 function norm(s){
   return fold(String(s||"").toLowerCase()
-    .replace(/[^\w\s؀-ۿ/]/g," ")
+    .replace(/[^\w\s؀-ۿ/.]/g," ")
+    .replace(/(^|\D)\.+|\.+(?=\D|$)/g,"$1 ")
     .replace(/\s+/g," ").trim());
 }
 function tokens(s){ return norm(s).split(" ").filter(Boolean); }

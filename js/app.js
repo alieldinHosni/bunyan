@@ -5,7 +5,7 @@ import {t} from "./i18n/dict.js";
 import {loadExDB, loadInstructions, muscleOf, MUSCLES} from "./data/exercises.js";
 import {applyLang} from "./i18n/exnames.js";
 import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, targetKcal} from "./engine/formulas.js";
-import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, toLogItem, UNITS} from "./engine/nutrition.js";
+import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
 import {render} from "./ui/render.js";
@@ -18,6 +18,20 @@ import {fmtW, toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
 import {alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
 import {shiftDay} from "./ui/datebar.js";
+import {mealNow} from "./ui/views/food.js";
+import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
+
+/* Logs one food to the add-food sheet's meal and closes it. The single path for the
+   servings screen, the + beside a result, an Open Food Facts result and the
+   frequent-food pills — which all had, or would have had, their own copy. With no
+   sheet open (the dashboard's pills) the meal is the time of day's. */
+function logFood(food,grams,label){
+  var meal=(V.sheet==="addfood"&&V.sd&&V.sd.meal)||mealNow(),n=nutritionFor(food,grams);
+  addItems(meal,[{fid:food.id,n:food.n,label:label,grams:grams,src:food.src||"db",
+    kcal:n.kcal,p:n.p,c:n.c,f:n.f,fib:n.fib}],curDate());
+  if(V.sheet)closeSheet();
+  V.tab="food";render();play("set");
+  toast(food.n+" "+t("added to")+" "+t(meal)+".");}
 
 /* The muscle filter a replacement should open on. muscleOf() can answer "Other",
    which is a real classification but not one the filter row offers — selecting it
@@ -277,26 +291,100 @@ document.addEventListener("click",function(ev){
 
   /* ---------------- food ---------------- */
   if(D.addfood){
-    loadFoods(function(){V.food={q:"",items:null};openSheet("addfood",{meal:D.addfood});});
+    loadFoods(function(){
+      V.food={mode:"search",tab:"search",sq:"",q:"",items:null,edit:-1};
+      openSheet("addfood",{meal:D.addfood});});
     return;}
   if(D.parse){
     var q6=val("nlq").trim();
-    if(!q6){toast("Type what you ate first.");return;}
-    V.food={q:q6,items:parseFoodInput(q6).map(resolveItem)};
+    if(!q6){toast(t("Type what you ate first."));return;}
+    /* Updated in place. This used to replace V.food outright, which was harmless while
+       it held nothing else; it now holds the mode and the search tab as well. */
+    V.food.q=q6;V.food.items=parseFoodInput(q6).map(resolveItem);V.food.mode="quick";
+    V.food.edit=-1;V.food.busy=false;V.food.offline=false;V.food.noresult=false;
     render();return;}
+  /* ---- the add-food sheet's own navigation */
+  if(D.fmode){V.food.mode=D.fmode;render();return;}
+  if(D.fback!==undefined){V.food.mode=(V.food.pick&&V.food.pick.from)||"search";render();return;}
+  if(D.ftab){V.food.tab=D.ftab;render();return;}
+  if(D.fpick||D.fpickoff!==undefined){
+    var fp=D.fpick?(S.myFoods||[]).concat(FOODDB||[]).filter(function(x){return x.id===D.fpick;})[0]
+                  :(V.food.off&&V.food.off.list[+D.fpickoff]);
+    if(!fp)return;
+    /* u/amt: a measure picked from the chooser (ml, L, oz…) and the amount in it.
+       Null means the amount is a count of the serving at si. */
+    V.food.pick={food:fp,si:0,n:1,u:null,amt:null,more:false,
+                 from:V.food.mode==="detail"?"search":V.food.mode};
+    V.food.mode="detail";render();return;}
+  /* Whole servings, with a half below one — "3 eggs" is two taps, not five. A
+     measure steps by its own unit's step instead: 50 ml, a quarter litre. */
+  if(D.fcount){
+    var pk=V.food.pick;if(!pk)return;
+    var up=+D.fcount>0;
+    if(pk.u){
+      var stp=UNIT_STEP[pk.u];
+      pk.amt=Math.max(stp,roundUnit(pk.u,(up?Math.floor:Math.ceil)(pk.amt/stp+(up?1e-9:-1e-9))*stp+(up?stp:-stp)));
+    }else pk.n=up?(pk.n<1?1:pk.n+1):(pk.n>1?pk.n-1:0.5);
+    render();return;}
+  if(D.fmore!==undefined){V.food.pick.more=!V.food.pick.more;render();return;}
+  if(D.faddpick!==undefined){
+    var pk2=V.food.pick,am2=pickAmount(pk2);
+    if(!(am2.g>0)){toast(t("Enter an amount first."));return;}
+    logFood(pk2.food,am2.g,am2.label);return;}
+  if(D.fadd1off!==undefined){
+    var fo=V.food.off&&V.food.off.list[+D.fadd1off];if(!fo)return;
+    var so=servs(fo)[0];logFood(fo,so[1],"1 × "+so[0]);return;}
+  if(D.fedit!==undefined){V.food.edit=V.food.edit===+D.fedit?-1:+D.fedit;render();return;}
+  /* Puts the cursor on the phrase that was not understood, so more can be typed about
+     it and the whole line parsed again. */
+  if(D.adddetail!==undefined){
+    var ta=document.getElementById("nlq");if(!ta)return;
+    var at=ta.value.indexOf(D.adddetail);
+    ta.focus();
+    if(at>=0)ta.setSelectionRange(at+D.adddetail.length,at+D.adddetail.length);
+    toast(t("Add the brand, a serving size or what is in it, then Find it again."));
+    return;}
+  /* Open Food Facts from the search screen: its results list beside the local ones.
+     The Quick Add screen has its own path (data-online), which slots a result into the
+     parsed meal instead. */
+  if(D.offq!==undefined){
+    var oq=(V.food.sq||"").trim();if(!oq)return;
+    V.food.offBusy=true;V.food.offFail=false;render();
+    offSearch(oq,function(found,failed){
+      V.food.offBusy=false;
+      if(failed)V.food.offFail=true;
+      else V.food.off={q:oq,list:found||[]};
+      render();});
+    return;}
+  if(D.bc){onBarcode(D.bc);return;}
+  if(D.fbackadd!==undefined){openSheet("addfood",{meal:(V.sd&&V.sd.meal)||mealNow()});return;}
   if(D.qty){
-    var pr6=D.qty.split("|"),it6=V.food.items[+pr6[0]];
-    var step=(it6.parsed.unit&&UNITS[it6.parsed.unit])?
-      (UNITS[it6.parsed.unit]>=100?50:UNITS[it6.parsed.unit]>=15?1:10):1;
+    /* A step this worked out and then never used: every tap moved the amount by one,
+       so "300 ml milk" went to 301 ml and "200g chicken" to 201 g. A measure now
+       steps by its unit's own step; a count steps as the servings screen does. */
+    var pr6=D.qty.split("|"),it6=V.food.items[+pr6[0]];if(!it6)return;
+    var k6=unitKey(it6.parsed.unit),dir6=+pr6[1];
     var cur6=it6.parsed.qty==null?1:it6.parsed.qty;
-    it6.parsed.qty=Math.max(step<1?0.5:0.5,r1(cur6+(+pr6[1])*(step<1?0.5:1)));
+    if(isMeasure(k6)){
+      var st6=UNIT_STEP[k6];
+      it6.parsed.qty=Math.max(st6,roundUnit(k6,(dir6>0?Math.floor:Math.ceil)(cur6/st6+(dir6>0?1e-9:-1e-9))*st6+dir6*st6));
+    }else it6.parsed.qty=dir6>0?(cur6<1?1:cur6+1):(cur6>1?cur6-1:0.5);
     recalcItem(it6);render();return;}
   if(D.gram){
+    /* In the unit the item is measured in: a drink typed as 330 ml is corrected in
+       millilitres, not converted to grams first. */
     var it7=V.food.items[+D.gram];if(!it7)return;
+    var k7=unitKey(it7.parsed&&it7.parsed.unit);
+    if(isMeasure(k7)&&k7!=="g"){
+      askText({title:it7.name,label:t(unitLabel(k7,2)),numeric:true,
+        value:it7.parsed.qty,cta:t("Set amount"),
+        act:"grams",data:{idx:+D.gram,meal:V.sd&&V.sd.meal,unit:k7}});return;}
     askText({title:it7.name,label:t("Grams"),numeric:true,
       value:Math.round(it7.grams),cta:t("Set grams"),
       act:"grams",data:{idx:+D.gram,meal:V.sd&&V.sd.meal}});return;}
-  if(D.swapfood){openSheet("pickfood",{idx:+D.swapfood});return;}
+  /* The meal rides along. openSheet replaces the sheet's data, so "Change" used to
+     drop the meal the user had picked, and the add went wherever the default fell. */
+  if(D.swapfood){openSheet("pickfood",{idx:+D.swapfood,meal:V.sd&&V.sd.meal});return;}
   if(D.choose){
     var pr8=D.choose.split("|"),it8=V.food.items[+pr8[0]];
     it8.food=it8.alts[+pr8[1]]; it8.name=it8.food.n; it8.src=it8.food.src||"db";
@@ -305,12 +393,18 @@ document.addEventListener("click",function(ev){
   if(D.dropitem){
     /* Same rule as a deleted set: play it out, then remove it. */
     var di=+D.dropitem;
-    leave(document.querySelector('#sheet .card[data-k="fi:'+di+'"]'),function(){
-      V.food.items.splice(di,1);render();});
+    leave(document.querySelector('#sheet [data-k="fi:'+di+'"]'),function(){
+      V.food.items.splice(di,1);
+      /* The open editor follows its item: removing one above it shifts it up one. */
+      if(V.food.edit===di)V.food.edit=-1; else if(V.food.edit>di)V.food.edit--;
+      render();});
     return;}
   if(D.online){
     var q9=D.online;
-    V.food.busy=true;render();
+    /* "Search online instead" is on the Which-one sheet, where the result would have
+       landed out of sight behind it. The meal is already on V.sd: it was carried in. */
+    if(V.sheet==="pickfood")V.sheet="addfood";
+    V.food.mode="quick";V.food.busy=true;render();
     offSearch(q9,function(found,failed){
       V.food.busy=false;
       V.food.offline=false;V.food.noresult=false;
@@ -339,30 +433,42 @@ document.addEventListener("click",function(ev){
        loading:t("Starting the scanner…")});
     return;}
   if(D.typecode){openBarcodePrompt();return;}
-  if(D.manual!==undefined){openSheet("manual",{name:D.manual||"",bc:(V.sd&&V.sd.bc)||""});return;}
+  if(D.manual!==undefined){
+    openSheet("manual",{name:D.manual||"",bc:(V.sd&&V.sd.bc)||"",meal:(V.sd&&V.sd.meal)||mealNow()});
+    return;}
   if(D.savemanual||D.savemyfood){
-    var nm9=val("mf_n").trim()||"Manual entry";
+    var nm9=val("mf_n").trim()||t("Manual entry");
+    var sv9=val("mf_s").trim()||t("1 serving");
     var p9=num(val("mf_p")),c9=num(val("mf_c")),f9b=num(val("mf_f"));
     var k9=num(val("mf_k"))||macroKcal(p9,c9,f9b);
-    if(!k9&&!p9&&!c9&&!f9b){toast("Enter at least one number.");return;}
-    var item9={fid:"manual_"+uid(),n:nm9,label:"1 serving",grams:0,src:"you",
+    if(!k9&&!p9&&!c9&&!f9b){toast(t("Enter at least one number."));return;}
+    var item9={fid:"manual_"+uid(),n:nm9,label:sv9,grams:0,src:"you",
       kcal:k9,p:p9,c:c9,f:f9b,fib:0};
-    if(D.savemyfood){
+    /* The switch decides. data-savemyfood is the old second button's name, still
+       honoured in case anything outside this sheet sends it. */
+    var keep9=D.savemyfood||(document.getElementById("mf_save")||{}).checked;
+    if(keep9){
       /* Carrying the barcode through means the next scan of this packet resolves
          locally, with no network and no second trip through manual entry. */
       var bc9=normBarcode((V.sd&&V.sd.bc)||"");
+      /* The serving the user named becomes the food's own serving, so the next time
+         it is logged from Custom it reads "1 × 1 bowl", not "1 × 1 serving". */
       S.myFoods.push({id:"my_"+uid(),n:nm9,cat:"My Foods",per:100,
-        kcal:k9,p:p9,c:c9,f:f9b,fib:0,s:[["1 serving",100]],a:[],src:"you",
+        kcal:k9,p:p9,c:c9,f:f9b,fib:0,s:[[sv9,100]],a:[],src:"you",
         bc:bc9||undefined});}
-    addItems(val("mf_meal")||"Snack",[item9],curDate());
-    closeSheet();V.tab="food";render();toast(nm9+" added.");return;}
+    var mm9=(V.sd&&V.sd.meal)||mealNow();
+    addItems(mm9,[item9],curDate());
+    closeSheet();V.tab="food";render();play("set");
+    toast(nm9+" "+t("added to")+" "+t(mm9)+".");return;}
   if(D.commit){
-    var meal9=val("mealsel")||(V.sd&&V.sd.meal)||"Snack";
-    var good9=V.food.items.filter(function(i){return i.status!=="unknown";});
-    if(!good9.length){toast("Nothing to add yet.");return;}
+    /* The meal is the one in the sheet's header. There used to be a second chooser
+       at the foot, which could disagree with it. */
+    var meal9=(V.sd&&V.sd.meal)||mealNow();
+    var good9=V.food.items.filter(function(i){return i.status!=="unknown"&&i.status!=="suggest";});
+    if(!good9.length){toast(t("Nothing to add yet."));return;}
     addItems(meal9,good9.map(toLogItem),curDate());
     closeSheet();V.tab="food";render();
-    play("set");toast(meal9+" updated.");return;}
+    play("set");toast(t(meal9)+" "+t("updated."));return;}
   if(D.savemeal){
     askText({title:t("Save this as a meal"),label:t("Name"),value:t("My meal"),
       body:t("It goes into Saved meals so you can log the whole thing in one tap."),
@@ -370,18 +476,17 @@ document.addEventListener("click",function(ev){
   if(D.addsaved){
     var sm=S.savedMeals[+D.addsaved];
     if(!sm)return;
-    addItems("Snack",JSON.parse(JSON.stringify(sm.items)),curDate());
-    render();play("set");toast(sm.name+" added.");return;}
+    var ms=mealNow();
+    addItems(ms,JSON.parse(JSON.stringify(sm.items)),curDate());
+    render();play("set");toast(sm.name+" "+t("added to")+" "+t(ms)+".");return;}
+  /* A frequent-food pill on the dashboard, or the + beside a result in the sheet.
+     Both used to go to Snack whatever the meal — including from a sheet opened for
+     Breakfast. logFood takes the sheet's meal, or the time of day's without one. */
   if(D.quickfood){
-    var pool9=(S.myFoods||[]).concat(FOODDB||[]);
-    var f10=pool9.filter(function(x){return x.id===D.quickfood;})[0];
+    var f10=(S.myFoods||[]).concat(FOODDB||[]).filter(function(x){return x.id===D.quickfood;})[0];
     if(!f10)return;
     var gq=gramsFor(f10,1,null);
-    addItems("Snack",[{fid:f10.id,n:f10.n,label:gq.label,grams:gq.g,src:f10.src||"db",
-      kcal:nutritionFor(f10,gq.g).kcal,p:nutritionFor(f10,gq.g).p,
-      c:nutritionFor(f10,gq.g).c,f:nutritionFor(f10,gq.g).f,fib:nutritionFor(f10,gq.g).fib}],curDate());
-    if(V.sheet)closeSheet();
-    V.tab="food";render();play("set");toast(f10.n+" added.");return;}
+    logFood(f10,gq.g,gq.label);return;}
   if(D.edititem){
     var prE=D.edititem.split("|"),rE=dayRec(curDate()),mE=rE.meals[prE[0]];
     if(!mE)return;
@@ -659,6 +764,27 @@ document.addEventListener("input",function(ev){
     clearTimeout(exqTimer);
     exqTimer=setTimeout(function(){exqTimer=null;render();},140);
     return;}
+  /* The number tiles are sized to their content so the unit stays beside the figure;
+     this keeps them sized as it changes. */
+  if(ev.target.closest&&ev.target.closest(".aftile-v,.ngbig,.afamt")){
+    ev.target.style.width=fitCh(ev.target.value,ev.target.placeholder)+"ch";}
+  /* The servings screen's typed amount. Captured now, drawn after a pause; the
+     patcher leaves the focused field's value alone, so the caret stays put. */
+  if(id==="afamt"&&V.food&&V.food.pick){
+    /* A cleared field is zero, not the last amount: adding then asks for one rather
+       than logging a figure no longer on screen. */
+    var a0=parseFloat(ev.target.value);
+    V.food.pick.amt=isFinite(a0)&&a0>0?a0:0;
+    clearTimeout(exqTimer);
+    exqTimer=setTimeout(function(){exqTimer=null;render();},140);
+    return;}
+  /* Food search, the same way: captured now, drawn after a pause. Typing on another
+     tab means searching, so it moves to Search. */
+  if(id==="fq"&&V.food){
+    V.food.sq=ev.target.value;V.food.tab="search";
+    clearTimeout(exqTimer);
+    exqTimer=setTimeout(function(){exqTimer=null;render();},140);
+    return;}
   if(id.indexOf("in_")===0){
     var k=id.slice(3),v=parseFloat(ev.target.value);
     /* The field shows the user's unit; the draft is always kilograms. */
@@ -675,6 +801,37 @@ document.addEventListener("keydown",function(ev){
     runAct(ao.act,av2);}});
 document.addEventListener("change",function(ev){
   if(ev.target.id==="chartsel"){V.chartEx=ev.target.value;render();return;}
+  /* The meal in the add-food header. */
+  if(ev.target.id==="afmeal"&&V.sd){V.sd.meal=ev.target.value;render();return;}
+  /* The chooser holds servings ("s2") and measures ("uml"). Moving between them keeps
+     the amount: a mug (250 g) becomes 250 ml, 0.25 L, or back to one mug. */
+  if(ev.target.id==="afsrv"&&V.food&&V.food.pick){
+    var pk3=V.food.pick,v3=ev.target.value,g3=pickAmount(pk3).g;
+    if(v3.charAt(0)==="u"){
+      var k3=v3.slice(1),per3=unitGrams(pk3.food,k3);
+      pk3.u=k3;pk3.amt=per3?Math.max(UNIT_STEP[k3]/10,roundUnit(k3,g3/per3)):UNIT_STEP[k3];
+    }else{
+      var si3=+v3.slice(1),sv3=servs(pk3.food),s3=sv3[si3]||sv3[0];
+      /* From a measure back to a serving: the nearest half serving. Serving to
+         serving keeps the count, as it always has. */
+      if(pk3.u)pk3.n=Math.max(0.5,Math.round(g3/s3[1]*2)/2);
+      pk3.u=null;pk3.amt=null;pk3.si=si3;}
+    render();return;}
+  /* Quick Add's unit chooser: the same conversion, on a parsed item. */
+  if(ev.target.dataset&&ev.target.dataset.qunit!==undefined&&V.food&&V.food.items){
+    var it9=V.food.items[+ev.target.dataset.qunit];if(!it9||!it9.food)return;
+    var k9=ev.target.value,per9=k9?unitGrams(it9.food,k9):0;
+    if(k9&&per9){it9.parsed.unit=k9;it9.parsed.qty=Math.max(UNIT_STEP[k9]/10,roundUnit(k9,it9.grams/per9));}
+    else{var s9=servs(it9.food)[0];
+      it9.parsed.unit=null;it9.parsed.qty=Math.max(0.5,Math.round(it9.grams/s9[1]*2)/2);}
+    recalcItem(it9);render();return;}
+  /* The manual sheet's button says what it will do. Changed in place rather than by
+     re-rendering, which would put the typed values back to what the sheet opened with. */
+  if(ev.target.id==="mf_save"){
+    var go=document.getElementById("mf_go");
+    if(go)go.textContent=t(ev.target.checked?"Save and add to":"Add to")+" "
+      +t((V.sd&&V.sd.meal)||mealNow());
+    return;}
   /* Editing a set that is already logged, in place. Previously the only way to fix
      a typo was to delete the set and re-enter it. */
   var si=ev.target.dataset?ev.target.dataset.setidx:undefined;
@@ -730,25 +887,28 @@ function endSplash(){var sp=document.getElementById("splash");if(sp)sp.remove();
 function onBarcode(code){
   code=normBarcode(code);
   if(!code){toast(t("That barcode could not be read."));return;}
-  if(V.sheet!=="addfood")openSheet("addfood",{meal:(V.sd&&V.sd.meal)||"Snack"});
-  if(!V.food)V.food={q:"",items:[]};
-  if(!V.food.items)V.food.items=[];
-  V.food.busy=true;V.food.offline=false;V.food.noresult=false;render();
+  if(V.sheet!=="addfood")openSheet("addfood",{meal:(V.sd&&V.sd.meal)||mealNow()});
+  if(!V.food)V.food={mode:"search",tab:"search",sq:"",q:"",items:null,edit:-1};
+  /* The camera is in the search field now, so a lookup runs on the search screen and
+     its busy and failed states show there. */
+  V.food.mode="search";V.food.busy=true;V.food.bcFail=false;render();
   lookupBarcode(code,function(food,failed,local){
     V.food.busy=false;
     if(failed){
-      V.food.offline=code;render();
+      V.food.bcFail=code;render();
       toast(t("Could not reach the food database."));return;}
     if(!food){
       /* Not a failure of the scan: the product simply is not in the database. Hand
          the barcode to manual entry so saving it teaches this device. */
       render();
       toast(t("That product is not in the database yet."));
-      openSheet("manual",{name:"",bc:code,meal:(V.sd&&V.sd.meal)||"Snack"});return;}
-    var g=gramsFor(food,100,"g");
-    V.food.items.push({status:"ok",parsed:{raw:code,query:food.n,qty:100,unit:"g"},
-      food:food,alts:[food],grams:g,label:"100 g",src:food.src||"off",
-      n:nutritionFor(food,100),name:food.n});
+      openSheet("manual",{name:"",bc:code,meal:(V.sd&&V.sd.meal)||mealNow()});return;}
+    /* A scanned packet is one product, which is exactly what the servings screen is
+       for. It used to be pushed into the Quick Add list with grams set to the whole
+       object gramsFor() returns — {g:100,label:"100 g"} rather than 100 — so the card
+       read "NaN g" and the log stored an object as the weight. */
+    V.food.pick={food:food,si:0,n:1,u:null,amt:null,more:false,from:"search"};
+    V.food.mode="detail";
     saveDB();render();
     play("set");
     toast(food.n+(local?" · "+t("remembered on this device"):""));
@@ -757,7 +917,7 @@ function onBarcode(code){
 /* ---- closing a sheet ------------------------------------------------------ */
 /* Most sheets show what is already stored, so closing them costs nothing. The ones
    holding typed input that has not been saved anywhere ask first. */
-var MF=["mf_n","mf_k","mf_p","mf_c","mf_f"];
+var MF=["mf_n","mf_s","mf_k","mf_p","mf_c","mf_f"];
 function sheetDirty(){
   if(V.sheet!=="manual")return false;
   return MF.some(function(id){var el=document.getElementById(id);
@@ -770,8 +930,8 @@ function requestCloseSheet(){
     askConfirm({title:t("Discard what you typed?"),
       body:t("This food has not been added to your log yet."),
       cta:t("Discard"),act:"dropsheet",
-      back:{name:val("mf_n"),k:val("mf_k"),p:val("mf_p"),c:val("mf_c"),f:val("mf_f"),
-            meal:val("mf_meal"),bc:(V.sd&&V.sd.bc)||""}});
+      back:{name:val("mf_n"),s:val("mf_s"),k:val("mf_k"),p:val("mf_p"),c:val("mf_c"),f:val("mf_f"),
+            meal:(V.sd&&V.sd.meal)||"",bc:(V.sd&&V.sd.bc)||""}});
     return;}
   closeSheet();
 }
