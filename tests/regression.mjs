@@ -211,17 +211,35 @@ await test("exercise sheet: steppers apply at once and keep the range in order",
   await page.tap('[data-exincr="1"]');await pause(page,150);
   if(!(await ev(page,"Object.keys(S.incr).length")))throw new Error("weight step not stored");
 });
-await test("picker: stays open to add several, a second tap takes one back, Done closes",async page=>{
+await test("picker: picking an exercise adds it and returns to the day",async page=>{
   await openDay(page);
   const n0=(await dayNames(page)).length;
   await page.tap(".dadd");await pause(page,400);
   eq(await page.evaluate(()=>document.activeElement&&document.activeElement.id==="exq"),false,"no keyboard on open");
-  await page.tap(".pkrow >> nth=0");await pause(page);await page.tap(".pkrow >> nth=1");await pause(page);
-  eq(await ev(page,"V.sheet"),"exercise","still open");
-  await page.tap(".pkrow >> nth=0");await pause(page);
-  if(!/1/.test(await page.textContent(".srch-foot")))throw new Error("count not updated");
-  await page.tap(".srch-foot .btn");await pause(page,400);
-  eq((await dayNames(page)).length,n0+1,"one net add");
+  await page.tap(".pkrow >> nth=0");await pause(page,400);
+  eq(await ev(page,"V.sheet"),null,"back on the day");
+  eq((await dayNames(page)).length,n0+1,"added");
+});
+await test("split builder: build from scratch, set days, fill one, adopt, and it stays saved",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");V.train="splits";render();});await pause(page);
+  await page.tap('[data-newsplit]');await pause(page);await page.fill('#askv','Test split');await page.tap('[data-askok]');await pause(page,400);
+  eq(await ev(page,"V.train"),"builder","opens the builder");
+  await page.tap('[data-bdays="4"]');await pause(page);
+  eq(await page.$$eval(".drow",a=>a.length),4,"four days");
+  await page.tap('.drow:nth-child(1) .dmain');await pause(page);
+  await page.tap('.dadd');await pause(page,400);await page.tap('.pkrow >> nth=0');await pause(page,400);
+  await page.evaluate(()=>history.back());await pause(page,500);
+  eq(await ev(page,"V.train"),"builder","back to the builder");
+  await page.tap('.drow:nth-child(4) .drm');await pause(page);
+  eq(await page.$$eval(".drow",a=>a.length),3,"a day removed");
+  await page.tap('[data-adopt]');await pause(page);await page.tap('[data-confirmok]');await pause(page,400);
+  await page.evaluate(async()=>{const s=await import("/js/state.js");s.S.myPlan.days[1].ex.push({id:"q1",name:"Plank",sets:3,lo:30,hi:45,rest:45});s.saveDB();});
+  eq(await ev(page,"(function(){var u=S.userSplits.find(x=>x.name==='Test split');return [u.days.length,u.days[0].ex.length,u.days[1].ex.length]})()"),[3,1,1],"saved split follows the active copy");
+  await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");V.train="splits";render();});await pause(page);
+  if(await page.$('.card.tdays [data-delsplit]'))throw new Error("a ready-made split can be deleted");
+  await page.tap('[data-delsplit]');await pause(page);await page.tap('[data-confirmok]');await pause(page);
+  eq(await ev(page,"S.userSplits.length"),0,"deleted after confirming");
 });
 await test("picker: search finds by muscle, and no row ever sits above the field",async page=>{
   await openDay(page);await page.tap(".dadd");await pause(page,400);

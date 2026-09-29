@@ -9,8 +9,9 @@ import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {leave} from "./motion.js";
 import {FOODDB, nutritionFor, recalcItem, toLogItem} from "../engine/nutrition.js";
 import {render} from "./render.js";
+import {pushNav} from "./nav.js";
 import {day, ex} from "../data/splits.js";
-import {adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
+import {editSplit, ownerOf, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
 import {MEM, num, PERSIST, r1, today, uid, wr} from "../util.js";
 import {audioOn, endRest, keepAwake, play, tap, toast, V} from "./view.js";
 
@@ -29,10 +30,16 @@ function runAct(name,value){
   closeSheet();
   if(f)f(value,d);}
 
+/* A new split opens straight in its builder, with three days to start from. It is
+   not made your training until you say so — the builder's button does that. */
 ACT.newsplit=function(name){
-  var sp={id:uid(),name:name,tag:"custom",custom:true,days:[day("Day 1",[])]};
+  var sp={id:uid(),name:String(name).trim(),tag:"custom",custom:true,days:[day("Day 1",[]),day("Day 2",[]),day("Day 3",[])]};
   (S.userSplits=S.userSplits||[]).push(sp);
-  S.myPlan=adoptSplit(sp);saveDB();V.train="days";render();};
+  saveDB();pushNav();V.previewId=sp.id;V.train="builder";render();window.scrollTo(0,0);};
+ACT.renamesplit=function(name,id){
+  var sp=editSplit(id);if(!sp)return;sp.name=String(name).trim();
+  var us=(S.userSplits||[]).filter(function(x){return x.id===id;})[0];if(us)us.name=sp.name;
+  saveDB();render();};
 ACT.addday=function(name){split().days.push(day(name,[]));saveDB();render();};
 ACT.renameday=function(name,id){
   var d=dayOf(id);if(!d)return;d.name=name;saveDB();render();};
@@ -42,11 +49,15 @@ ACT.adopt=function(_,id){
   S.myPlan=adoptSplit(pre);saveDB();V.train="days";render();
   toast(pre.name+" "+t("is now your training."));};
 ACT.delday=function(_,id){
-  var sp=split();sp.days=sp.days.filter(function(x){return x.id!==id;});
-  V.train="days";saveDB();render();};
+  var sp=ownerOf(id)||split();sp.days=sp.days.filter(function(x){return x.id!==id;});
+  V.train=V.previewId&&editSplit(V.previewId)===sp?"builder":"days";saveDB();render();};
 ACT.delsplit=function(_,id){
+  var gone=(S.userSplits||[]).filter(function(x){return x.id===id;})[0];
   S.userSplits=(S.userSplits||[]).filter(function(x){return x.id!==id;});
-  saveDB();render();};
+  /* Its active copy stays your training, but stops mirroring into a split that is gone. */
+  if(S.myPlan&&S.myPlan.source===id)S.myPlan.source=null;
+  if(V.train==="builder"&&V.previewId===id){V.train="splits";V.previewId=null;}
+  saveDB();render();if(gone)toast(gone.name+" "+t("deleted."));};
 /* Editing a logged food item: recompute from the source food where we still have it,
    scale what was stored where we do not. */
 ACT.editgrams=function(v,d){
@@ -259,18 +270,7 @@ function addExercise(name){
     d.ex.push(e);
     /* Added from the picker itself: it stays open so the next one can go straight in,
        and remembers what it added so a second tap can take it back out. */
-    if(V.sheet==="exercise"&&V.sd){
-      (V.sd.added=V.sd.added||[]).push({id:e.id,name:name});
-      saveDB();render();return;}
+    saveDB();closeSheet();toast(exName(name)+" "+t("added to")+" "+d.name+".");return;
   }
   saveDB();closeSheet();}
-/* A second tap on a row the picker has just added takes that one back out. */
-function unaddExercise(name){
-  var d=dayOf(V.dayId),ad=(V.sd&&V.sd.added)||[];
-  var k=-1;for(var i=ad.length-1;i>=0;i--)if(ad[i].name===name){k=i;break;}
-  if(!d||k<0)return false;
-  var id=ad[k].id;ad.splice(k,1);
-  d.ex=d.ex.filter(function(x){return x.id!==id;});
-  saveDB();render();return true;}
-
-export {unaddExercise, startActivity, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};
+export {startActivity, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};

@@ -4,7 +4,7 @@ import {t} from "../../i18n/dict.js";
 import {empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
-import {allSplits, dayOf, S, split} from "../../state.js";
+import {allSplits, dayOf, editSplit, ownerOf, S, split} from "../../state.js";
 import {SPLIT_LEVEL} from "../../engine/plan.js";
 import {deloadDue, inDeload} from "../../engine/formulas.js";
 import {esc, fmtN, shortd, today, weekDays} from "../../util.js";
@@ -135,6 +135,7 @@ function dayHero(sp,p,iso){
 function vTrain(){
   if(S.active)return vLogger();
   if(V.train==="splits")return vSplits();
+  if(V.train==="builder")return vBuilder();
   if(V.train==="preview")return vPreview();
   if(V.train==="library")return vLibrary();
   if(V.train==="bodyweight")return vBodyweight();
@@ -396,17 +397,70 @@ function vLibrary(){
     '<button class="btn" data-customex="1">'+t("Add it yourself")+'</button>');
   return h;}
 
+/* ---- programs: the ready-made splits (fixed) and yours (editable) -------------
+   Ready-made splits cannot be changed or deleted, only previewed and adopted. Yours
+   open in the builder, and each has an ✕ that deletes it after one question. */
 function vSplits(){
-  var h=backBar();
+  var h=backBar(),mine=split().source;
   h+=head(t("Programs"),t("One active at a time"));
-  h+='<div class="list">';
-  allSplits().forEach(function(sp){
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Your splits")+'</h2></div>';
+  var us=S.userSplits||[];
+  h+='<div class="drows">';
+  us.forEach(function(sp){
+    var src=editSplit(sp.id)||sp,tr=src.days.filter(function(d){return d.ex.length;}).length;
+    h+='<div class="drow" data-k="us:'+sp.id+'">'
+     +'<button class="drm" data-delsplit="'+sp.id+'" aria-label="'+esc(t("Delete")+" "+src.name)+'"><i>'+XSVG+'</i></button>'
+     +'<button class="dmain" data-editsplit="'+sp.id+'"><span class="dtext"><span class="drow-n">'+esc(src.name)+'</span>'
+     +'<span class="drow-s">'+src.days.length+' '+t(src.days.length===1?"day":"days")+'<i class="ddot"></i>'
+     +tr+' '+t(tr===1?"training day":"training days")+'</span></span>'
+     +(mine===sp.id?'<span class="pill a">'+t("yours")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
+     +'</button></div>';});
+  h+='</div><button class="dadd" data-newsplit="1"><span aria-hidden="true">+</span>'+t("Build a split from scratch")+'</button>';
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Ready-made")+'</h2><span class="dhint">'+t("Fixed — adopt one to train on it")+'</span></div>';
+  h+='<div class="card tdays">';
+  allSplits().filter(function(sp){return !sp.custom;}).forEach(function(sp){
     var days=sp.days.filter(function(d){return d.ex.length;}).length;
-    h+='<button class="item" data-preview="'+sp.id+'"><div><div style="font-weight:600">'+esc(sp.name)+'</div>'
-     +'<div class="tiny">'+days+' training days \u00b7 '+esc(sp.tag||"custom")+'</div></div>'
-     +(split().source===sp.id?'<span class="pill a">yours</span>':'<span class="chev">\u203a</span>')
+    h+='<button class="trow" data-preview="'+sp.id+'"><span><span class="trow-n">'+esc(sp.name)+'</span>'
+     +'<span class="trow-s">'+days+' '+t("training days")+(tagNote(sp.tag)?' · '+esc(t(tagNote(sp.tag))):'')+'</span></span>'
+     +(mine===sp.id?'<span class="pill a">'+t("yours")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
      +'</button>';});
-  h+='</div><button class="btn g" data-newsplit="1">'+t("Build one from scratch")+'</button>';
+  return h+'</div>';}
+
+/* ---- the split builder ------------------------------------------------------------
+   One screen per split you made: how many days, each day with an ✕ and a grip, a +
+   for another, and a tap into any day to fill it from the library. */
+function vBuilder(){
+  var sp=editSplit(V.previewId);if(!sp){V.train="splits";return vSplits();}
+  var active=split().source===V.previewId;
+  var tr=sp.days.filter(function(d){return d.ex.length;}).length;
+  var h='<div class="dhead">'+backArrow()
+   +'<button class="dname" data-renamesplit="'+V.previewId+'" aria-label="'+esc(t("Rename split"))+': '+esc(sp.name)+'">'
+   +'<h1 class="dhead-t">'+esc(sp.name)+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button></div>'
+   +'<p class="dsub">'+(active?t("Your training")+' • ':'')+tr+' '+t(tr===1?"training day":"training days")
+   +' • '+(sp.days.length-tr)+' '+t("rest")+'</p>';
+  /* Until anything is in it, the number of days is one tap. */
+  if(!tr){
+    h+='<div class="bcount"><span class="klabel dim">'+t("How many days in the cycle?")+'</span><div class="bcount-c">'
+     +[2,3,4,5,6,7].map(function(n){return '<button class="'+(sp.days.length===n?'on':'')+'" data-bdays="'+n+'" aria-pressed="'+(sp.days.length===n)+'">'+n+'</button>';}).join("")
+     +'</div></div>';}
+  h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Days")+'</h2>'
+   +(sp.days.length>1?'<span class="dhint">'+t("Hold the grip to reorder")+'</span>':'')+'</div>';
+  h+='<div class="drows">';
+  sp.days.forEach(function(d,i){
+    h+='<div class="drow" data-k="bd:'+d.id+'" data-rowid="'+d.id+'">'
+     +'<button class="drm" data-rmday="'+d.id+'" aria-label="'+esc(t("Remove")+" "+d.name)+'"><i>'+XSVG+'</i></button>'
+     +'<button class="dmain" data-day="'+d.id+'"><span class="dnum">'+(i+1)+'</span>'
+     +'<span class="dtext"><span class="drow-n">'+esc(d.name)+'</span>'
+     +'<span class="drow-s">'+(d.ex.length?d.ex.length+' '+t(d.ex.length===1?"exercise":"exercises")+'<i class="ddot"></i>~'+estMinutes(d)+' '+t("min")
+        :t("Tap to add exercises"))+'</span></span>'
+     +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
+     +(sp.days.length>1?'<button class="dgrip" data-grip="'+d.id+'" aria-label="'+esc(t("Move")+" "+d.name)+'">'+GRIPSVG+'</button>':'')
+     +'</div>';});
+  h+='</div><button class="dadd" data-bday="1"><span aria-hidden="true">+</span>'+t("Add day")+'</button>';
+  h+='<div class="dcta">'
+   +(active?'<p class="bactive">\u2713 '+t("This is your training")+'</p>'
+      :'<button class="btn dbegin" data-adopt="'+V.previewId+'"'+(tr?'':' disabled')+'>'+t("Make this my training")+'</button>')
+   +'<button class="ddel" data-delsplit="'+V.previewId+'">'+t("Delete this split")+'</button></div>';
   return h;}
 
 /* ---- a day: the routine, built in place --------------------------------------
@@ -419,7 +473,7 @@ var GRIPSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r
   +'<circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
 function vDay(){
   var d=dayOf(V.dayId);if(!d){V.train="days";return vTrain();}
-  var sp=split();
+  var sp=ownerOf(d.id)||split(),live=sp===split();
   var pos=sp.days.indexOf(d)+1;
   var lvl=levelOf(sp.source);
   var h='<div class="dhead">'+backArrow()
@@ -456,7 +510,9 @@ function vDay(){
   if(d.ex.length>1)h+='<span id="dgriphelp" class="sr">'+t("Drag, or use the arrow keys, to move it up or down.")+'</span>';
   h+='<button class="dadd" data-addex="'+d.id+'"><span aria-hidden="true">+</span>'+t("Add exercise")+'</button>';
   h+='<div class="dcta">';
-  if(d.ex.length)h+='<button class="btn dbegin" data-startday="'+d.id+'">'+t("Begin Workout")+'</button>';
+  /* A day of a split you are not training on is built here but not started: the
+     workout would be filed against the wrong plan. */
+  if(d.ex.length&&live)h+='<button class="btn dbegin" data-startday="'+d.id+'">'+t("Begin Workout")+'</button>';
   h+='<button class="ddel" data-delday="'+d.id+'">'+t("Delete this day")+'</button>';
   h+='</div>';
   return h;}
