@@ -55,6 +55,12 @@ var S=null;
    read, which is how a profile still holding data in localStorage is told apart from
    one already moved. The two move independently, so one can fall back alone. */
 var HIST_IDB=false, BLOB_SAID_IDB=false;
+/* Set when the history (or food log) is known to live in IndexedDB but IndexedDB would
+   not open on this launch. The screen would otherwise show an empty history as if it
+   were gone. The marker is kept in the blob while this lasts, so a second failed
+   launch still knows, and a working one merges what was logged in between. */
+var WARN={hist:false,days:false};
+function storeWarning(){return WARN.hist?"hist":WARN.days?"days":null;}
 var DAYS_IDB=false, BLOB_SAID_DAYS=false;
 /* Dates whose record has been handed out since the last save. dayRec() is the only
    way to get one, so marking here cannot miss a change; it over-approximates
@@ -74,7 +80,7 @@ function normalize(o){
     o[k]=Object.assign({},d[k],(v&&typeof v==="object"&&!Array.isArray(v))?v:{});});
   ["favs","skip","myFoods","savedMeals","userSplits","myEx","body","sessions"].forEach(function(k){
     if(!Array.isArray(o[k]))o[k]=[];});
-  ["freq","days","daySwap"].forEach(function(k){
+  ["freq","days","daySwap","incr","deload"].forEach(function(k){
     if(!o[k]||typeof o[k]!=="object"||Array.isArray(o[k]))o[k]={};});
   Object.keys(d).forEach(function(k){if(!(k in o))o[k]=d[k];});
   if(o.myPlan&&!Array.isArray(o.myPlan.days))o.myPlan=null;
@@ -85,6 +91,8 @@ function normalize(o){
       if(!e.planned||typeof e.planned!=="object")e.planned={sets:3,lo:8,hi:12};});}
   o.sessions=o.sessions.filter(function(s){return s&&Array.isArray(s.entries)&&typeof s.date==="string";});
   o.body=o.body.filter(function(b){return b&&typeof b.date==="string";});
+  /* A weight step per exercise, in kg: only real positive numbers survive. */
+  Object.keys(o.incr).forEach(function(n){var v=+o.incr[n];if(!(v>0&&v<=50))delete o.incr[n];});
   return o;
 }
 /* Set when the stored blob could not be read at start-up, so the app can say so once
@@ -115,7 +123,7 @@ function hydrate(){
   /* Absent once they have moved out of the blob. */
   if(!S.sessions)S.sessions=[];
   if(!S.days)S.days={};
-  BLOB_SAID_IDB=!!S.histIDB; BLOB_SAID_DAYS=!!S.daysIDB;
+  BLOB_SAID_IDB=!!S.histIDB; BLOB_SAID_DAYS=!!S.daysIDB;WARN={hist:false,days:false};
   delete S.histIDB; delete S.daysIDB;   /* markers about storage, not part of the state */
   /* Assume what the blob said until the loaders prove otherwise, so a save that
      lands before they finish writes the same shape the blob already had. */
@@ -131,9 +139,14 @@ function flushDays(){
   if(!list.length)return;
   putDays(CUR,list,function(ok){ if(!ok){ DAYS_IDB=false; wr(dbKey(),S); } });
 }
+/* Bumped on every save: derived figures cached against it are recomputed after any
+   change, and only then. */
+var REV=0;
+function dataRev(){return REV;}
 function saveDB(){
+  REV++;
   if(DAYS_IDB)flushDays();
-  if(!HIST_IDB&&!DAYS_IDB){ wr(dbKey(),S); return; }
+  if(!HIST_IDB&&!DAYS_IDB&&!WARN.hist&&!WARN.days){ wr(dbKey(),S); return; }
   /* The whole point: neither history nor the food log is serialised on the hot path. */
   var lite={},k;
   for(k in S){
@@ -142,8 +155,8 @@ function saveDB(){
     if(k==="days"&&DAYS_IDB)continue;
     lite[k]=S[k];
   }
-  if(HIST_IDB)lite.histIDB=true;
-  if(DAYS_IDB)lite.daysIDB=true;
+  if(HIST_IDB||WARN.hist)lite.histIDB=true;
+  if(DAYS_IDB||WARN.days)lite.daysIDB=true;
   wr(dbKey(),lite);
 }
 
@@ -159,7 +172,7 @@ function loadHistory(cb){
   var pending=S.sessions||[];
   loadSessions(CUR,function(list){
     if(list===null){                       /* unusable: keep history in the blob */
-      HIST_IDB=false; cb&&cb(); return; }
+      HIST_IDB=false; if(BLOB_SAID_IDB)WARN.hist=true; cb&&cb(); return; }
     HIST_IDB=true;
     if(pending.length){
       /* Write across, read back, and only then drop the localStorage copy. */
@@ -181,7 +194,7 @@ function loadHistory(cb){
 function loadFoodLog(cb){
   var pending=S.days||{}, keys=Object.keys(pending);
   loadDays(CUR,function(map){
-    if(map===null){ DAYS_IDB=false; cb&&cb(); return; }
+    if(map===null){ DAYS_IDB=false; if(BLOB_SAID_DAYS)WARN.days=true; cb&&cb(); return; }
     DAYS_IDB=true;
     if(keys.length){
       var list=keys.map(function(d){ return {d:d,r:pending[d]}; });
@@ -344,4 +357,4 @@ function dayRec(d){d=d||today();if(!S.days[d])S.days[d]={water:0,steps:0,sleep:0
 function setS(v){S=v;}
 function setProfiles(v){PROFILES=v;}
 
-export {refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, buildSnapshot, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, friends, initState, isOwner, loadStored, migrate, PROFILES, recordSession, S, saveDB, saveFriends, setProfiles, setS, snapStats, split, switchProfile};
+export {dataRev, storeWarning, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, buildSnapshot, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, friends, initState, isOwner, loadStored, migrate, PROFILES, recordSession, S, saveDB, saveFriends, setProfiles, setS, snapStats, split, switchProfile};

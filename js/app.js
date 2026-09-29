@@ -1,23 +1,24 @@
 /* Bunyan — app
    Entry point: event listeners, wiring and boot. */
-import {ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startActivity, startDay, syncDraft, val} from "./ui/actions.js";
+import {unaddExercise, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startActivity, startDay, syncDraft, val} from "./ui/actions.js";
 import {actKcal, isActivity} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
 import {loadExDB, loadInstructions, muscleOf, MUSCLES, reconcileExercises} from "./data/exercises.js";
-import {applyLang} from "./i18n/exnames.js";
-import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, prFor, proteinTarget, targetKcal} from "./engine/formulas.js";
+import {applyLang, exName} from "./i18n/exnames.js";
+import {recordOf, recordText, addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, prFor, proteinTarget, targetKcal} from "./engine/formulas.js";
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
 import {render, syncKeyboard} from "./ui/render.js";
 import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
+import {initReorder} from "./ui/reorder.js";
 import {leave} from "./ui/motion.js";
 import {groupNext, groupRun, mmss, noteSet, paintRest, rowsFor, sessionClock} from "./ui/views/session.js";
 import {refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
 import {fmtW, toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
-import {restoreWorkoutState, syncWorkoutState, ex_isTimed, alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
+import {syncViewport, restoreWorkoutState, syncWorkoutState, ex_isTimed, alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
 import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
 import {mealNow} from "./ui/views/food.js";
@@ -42,6 +43,53 @@ function pickMuscle(name){
   var m=name?muscleOf(name):null;
   return (m&&MUSCLES.indexOf(m)>=0)?m:"All";
 }
+
+/* The exercise open in the edit sheet, and the one place its numbers are bounded:
+   at least one set and one rep, the range never inverted, rest in whole seconds. */
+function editedEx(){
+  var d=dayOf(V.dayId);if(!d||V.sheet!=="editex"||!V.sd)return null;
+  return d.ex.filter(function(x){return x.id===V.sd.id;})[0]||null;}
+function setExField(e,k,v){
+  if(k==="km"&&String(v).trim()===""){e.km=0;return;}
+  v=parseFloat(v);if(!isFinite(v))return;
+  if(k==="sets")e.sets=Math.max(1,Math.min(20,Math.round(v)));
+  else if(k==="rest")e.rest=Math.max(0,Math.min(900,Math.round(v)));
+  else if(k==="lo"){e.lo=Math.max(1,Math.min(100,Math.round(v)));if(e.hi<e.lo)e.hi=e.lo;}
+  else if(k==="hi"){e.hi=Math.max(1,Math.min(100,Math.round(v)));if(e.lo>e.hi)e.lo=e.hi;}
+  else if(k==="min"){e.min=Math.max(1,Math.min(1440,Math.round(v)));}
+  else if(k==="km"){e.km=Math.max(0,Math.min(500,r1(v)));}
+  if(isActivity(e.name)){e.sets=1;e.rest=0;}}
+function addDaysISO(iso,n){var d=new Date(iso+"T00:00:00");d.setDate(d.getDate()+n);
+  return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
+/* A new query or filter shows its results from the top: the list scrolls on its own
+   inside a search sheet, and would otherwise stay wherever the last one was left. */
+function topOfResults(){var sb=document.querySelector(".srch-body");if(sb)sb.scrollTop=0;}
+/* A superset is a run of neighbours sharing a group id. After a row is removed or
+   moved, a run can be split in two or left with one member: each separate run gets
+   its own id, and a lone member stops being a superset. */
+function tidyGroups(list){
+  var ended={};
+  for(var i=0;i<list.length;i++){
+    var g=list[i].grp;if(!g)continue;
+    if(i>0&&list[i-1].grp===g)continue;
+    var e=i;while(e+1<list.length&&list[e+1].grp===g)e++;
+    var id=ended[g]?"g"+uid():g;ended[g]=1;
+    for(var k=i;k<=e;k++)list[k].grp=e>i?id:null;
+    i=e;}}
+function removeDayEx(id){
+  var d=dayOf(V.dayId);if(!d)return;
+  var i=d.ex.findIndex(function(x){return x.id===id;});if(i<0)return;
+  var before=d.ex.map(function(x){return Object.assign({},x);});
+  var gone=d.ex.splice(i,1)[0];tidyGroups(d.ex);saveDB();render();
+  toast(exName(gone.name)+" "+t("removed."),function(){
+    var d2=dayOf(d.id);if(!d2)return;d2.ex=before;saveDB();render();});}
+function moveDayEx(id,to){
+  var d=dayOf(V.dayId);if(!d)return;
+  var i=d.ex.findIndex(function(x){return x.id===id;});
+  to=Math.max(0,Math.min(d.ex.length-1,to));
+  if(i<0||to===i)return;
+  d.ex.splice(to,0,d.ex.splice(i,1)[0]);
+  tidyGroups(d.ex);saveDB();render();}
 
 /* Deleting a progress photo. Asked first: the photo is on this phone only, so there
    is nothing to undo from. */
@@ -82,6 +130,14 @@ document.addEventListener("click",function(ev){
 
   /* ---- splits & days */
   if(D.mydays){openSheet("mydays");return;}
+  /* A lighter week: started, put off for a week, or ended early. */
+  if(D.deload){
+    var dl=S.deload=S.deload||{};
+    if(D.deload==="start"){dl.until=addDaysISO(today(),6);dl.last=today();delete dl.snooze;
+      toast(t("Lighter week on. Your next workouts have fewer sets and lighter suggestions."));}
+    else if(D.deload==="later"){dl.snooze=addDaysISO(today(),7);}
+    else if(D.deload==="end"){dl.until=addDaysISO(today(),-1);}
+    saveDB();render();return;}
   /* ---- readiness, session effort, pain */
   if(D.ready!==undefined&&S.active){S.active.ready=+D.ready;saveDB();render();return;}
   if(D.srpe){
@@ -99,7 +155,8 @@ document.addEventListener("click",function(ev){
       if(V.logIdx>=S.active.entries.length-1){confirmFinish();return;}
       endRest();V.fresh=-1;V.logIdx=V.logIdx+1;syncDraft();saveDB();render();return;}
     toast(t("Noted. Stop if it gets worse."));return;}
-  if(D.clearexq){V.exq="";render();var qq=document.getElementById("exq");if(qq)qq.focus();return;}
+  if(D.clearexq){V.exq="";render();topOfResults();var qq=document.getElementById("exq");if(qq)qq.focus();return;}
+  if(D.clearfq){if(V.food)V.food.sq="";render();topOfResults();var fq0=document.getElementById("fq");if(fq0)fq0.focus();return;}
   if(D.swapday){openSheet("swapday",{date:D.swapday});return;}
   if(D.swapto!==undefined&&V.sheet==="swapday"){
     var swd=V.sd.date;S.daySwap=S.daySwap||{};
@@ -126,7 +183,6 @@ document.addEventListener("click",function(ev){
   if(D.addday){
     askText({title:t("Add a day"),label:t("Name"),ph:t("For example, Chest & Triceps"),
       cta:t("Add"),act:"addday"});return;}
-  if(D.dayedit!==undefined){V.dayEdit=!V.dayEdit;render();return;}
   if(D.renameday){
     var d0=dayOf(D.renameday);if(!d0)return;
     askText({title:t("Rename day"),label:t("Name"),value:d0.name,
@@ -143,8 +199,8 @@ document.addEventListener("click",function(ev){
      inherited them — it always had, but it used to inherit "All", so it never showed. */
   if(D.addex){V.dayId=D.addex;V.exm="All";V.exe="All";V.exq="";openSheet("exercise",{});return;}
   if(D.editex){openSheet("editex",{id:D.editex});return;}
-  if(D.exm){V.exm=D.exm;render();return;}
-  if(D.exe){V.exe=D.exe;render();return;}
+  if(D.exm){V.exm=D.exm;render();topOfResults();return;}
+  if(D.exe){V.exe=D.exe;render();topOfResults();return;}
   if(D.cleardiff){V.exd=null;render();return;}
   if(D.exsteps){V.exsteps=!V.exsteps;render();return;}
   if(D.exmiss){V.exmiss=!V.exmiss;render();return;}
@@ -190,7 +246,7 @@ document.addEventListener("click",function(ev){
     askText({title:t("Add your own exercise"),label:t("Name"),value:V.exq||"",
       body:t("It joins your library under the muscle you have filtered to. No illustration, everything else works."),
       cta:t("Add it"),act:"customex",data:{from:V.sd}});return;}
-  if(D.pickex){addExercise(D.pickex);return;}
+  if(D.pickex){if(el.getAttribute("aria-pressed")==="true"&&unaddExercise(D.pickex))return;addExercise(D.pickex);return;}
   if(D.replaceex){
     var dR=dayOf(V.dayId),eR2=dR?dR.ex.filter(function(x){return x.id===D.replaceex;})[0]:null;
     /* The frame opens a replacement with the current exercise's muscle already
@@ -199,25 +255,31 @@ document.addEventListener("click",function(ev){
        "All" is one tap away. Only a muscle the filter row actually has. */
     V.exm=pickMuscle(eR2&&eR2.name);V.exe="All";V.exq="";
     openSheet("exercise",{replace:D.replaceex,like:eR2?eR2.name:null});return;}
-  if(D.exint){V.sd.rpe=+D.exint;render();return;}
+  if(D.exint){var ei=editedEx();if(!ei)return;ei.rpe=+D.exint;saveDB();render();return;}
+  if(D.exstp){
+    var es=editedEx();if(!es)return;
+    var stepBy={sets:1,lo:1,hi:1,rest:15,min:5}[D.exstp]||1;
+    setExField(es,D.exstp,num(es[D.exstp],0)+stepBy*(+D.d));
+    saveDB();render();return;}
+  if(D.exincr){
+    var ec=editedEx();if(!ec)return;
+    var lbU=S.prefs.unit==="lb";
+    var steps=lbU?[0,1,2.5,5,10,20].map(function(x){return x/2.2046;}):[0,0.5,1,1.25,2,2.5,4,5,10];
+    var cur=num(S.incr[ec.name],0),at=0;
+    steps.forEach(function(x,i){if(Math.abs(x-cur)<Math.abs(steps[at]-cur))at=i;});
+    at=Math.max(0,Math.min(steps.length-1,at+(+D.exincr)));
+    if(steps[at])S.incr[ec.name]=Math.round(steps[at]*1000)/1000;else delete S.incr[ec.name];
+    saveDB();render();return;}
+  if(D.dbload){S.prefs.dbLoad=S.prefs.dbLoad==="total"?"hand":"total";saveDB();render();return;}
   if(D.saveex){
-    var dd=dayOf(V.dayId),e2=dd.ex.filter(function(x){return x.id===D.saveex;})[0];
-    if(isActivity(e2.name)){
-      e2.min=Math.max(1,Math.round(num(val("e_min"),e2.min||30)));
-      e2.rpe=V.sd.rpe||e2.rpe||6;
-      if(document.getElementById("e_km"))e2.km=Math.max(0,r1(num(val("e_km"),0)));
-      e2.sets=1;e2.rest=0;saveDB();closeSheet();return;}
-    e2.sets=Math.max(1,num(val("e_sets"),3));e2.rest=Math.max(0,num(val("e_rest"),75));
-    e2.lo=Math.max(1,num(val("e_lo"),8));e2.hi=Math.max(e2.lo,num(val("e_hi"),e2.lo));
+    var e2=editedEx();
+    if(e2)["sets","rest","lo","hi","min","km"].forEach(function(k){
+      var f=document.getElementById("e_"+k);if(f)setExField(e2,k,f.value);});
     saveDB();closeSheet();return;}
-  if(D.delex){
-    var dd2=dayOf(V.dayId);dd2.ex=dd2.ex.filter(function(x){return x.id!==D.delex;});
-    saveDB();closeSheet();return;}
-  if(D.moveex){
-    var pr=D.moveex.split("|"),dd3=dayOf(V.dayId);
-    var i0=dd3.ex.findIndex(function(x){return x.id===pr[0];}),j=i0+ +pr[1];
-    if(j<0||j>=dd3.ex.length)return;
-    var tmp=dd3.ex[i0];dd3.ex[i0]=dd3.ex[j];dd3.ex[j]=tmp;saveDB();closeSheet();return;}
+  if(D.delex){if(V.sheet)closeSheet();removeDayEx(D.delex);return;}
+  /* The ✕ on the row: gone at once, with Undo rather than a question. */
+  if(D.rmex){removeDayEx(D.rmex);return;}
+  if(D.grip)return;
 
   /* ---- logger */
   if(D.startday){pushNav();startDay(D.startday);return;}
@@ -251,9 +313,14 @@ document.addEventListener("click",function(ev){
     var arpe=V.draft.rpe||6;
     var bout={w:0,r:0,min:amin,km:akm,rpe:arpe,kcal:actKcal(ea.name,amin,arpe,lastWeight())};
     if(ahr)bout.hr=ahr;
+    var ivN=val("in_ivn"),ivOn=val("in_ivon"),ivOff=val("in_ivoff");
+    ivN=Math.round(num(ivN,0));ivOn=Math.round(num(ivOn,0));ivOff=Math.round(num(ivOff,0));
+    if(ivN>0&&ivN<100&&ivOn>0&&ivOn<=3600)bout.iv={n:ivN,on:ivOn,off:Math.max(0,Math.min(3600,ivOff))};
     ea.sets.push(bout);
     V.draft.min=amin;V.draft.km=akm;V.draft.hr=ahr;
+    if(bout.iv){V.draft.ivn=bout.iv.n;V.draft.ivon=bout.iv.on;V.draft.ivoff=bout.iv.off;}
     noteSet(S.active);V.fresh=ea.sets.length-1;play("set");tap("ok");saveDB();render();return;}
+  if(D.activ){V.actIv=true;render();var ivf=document.getElementById("in_ivn");if(ivf)ivf.focus();return;}
   if(D.quickact){V.sheet=null;V.sd=null;startActivity(D.quickact);return;}
   if(D.actsheet){openSheet("acts");return;}
   /* Complete the active set. Reads the live inputs first so a value typed but not
@@ -274,6 +341,8 @@ document.addEventListener("click",function(ev){
     var bad=setProblem(V.draft.w,V.draft.r,ex_isTimed(e3));
     if(bad){toast(bad);return;}
     var ns={w:V.draft.w,r:V.draft.r};if(V.draft.rpe)ns.rpe=V.draft.rpe;
+    if(V.draftSg)ns.sg=1;
+    var rec3=recordOf(e3.name,ns,e3.sets);
     e3.sets.push(ns);
     /* A slipped digit (80 → 800) would become a record and drive every suggestion
        after it. Far above the lifter's best, say so — the set is logged, and the tick
@@ -281,6 +350,7 @@ document.addEventListener("click",function(ev){
     var bestW=prFor(e3.name).w;
     if(bestW>=20&&ns.w>bestW*1.3)setTimeout(function(){
       toast(t("That is well above your best of")+" "+fmtW(bestW)+". "+t("Check the weight. Tap the tick to undo."));},50);
+    else if(rec3)setTimeout(function(){toast("\ud83c\udfc6 "+recordText(rec3));},50);
     V.loggedAt=Date.now();
     /* Closes the active period and starts a new one; the clock resumes by itself. */
     noteSet(S.active);
@@ -947,7 +1017,7 @@ document.addEventListener("input",function(ev){
   if(id==="exq"){
     V.exq=ev.target.value;
     clearTimeout(exqTimer);
-    exqTimer=setTimeout(function(){exqTimer=null;render();},140);
+    exqTimer=setTimeout(function(){exqTimer=null;render();topOfResults();},140);
     return;}
   /* The number tiles are sized to their content so the unit stays beside the figure;
      this keeps them sized as it changes. */
@@ -968,10 +1038,12 @@ document.addEventListener("input",function(ev){
   if(id==="fq"&&V.food){
     V.food.sq=ev.target.value;V.food.tab="search";
     clearTimeout(exqTimer);
-    exqTimer=setTimeout(function(){exqTimer=null;render();},140);
+    exqTimer=setTimeout(function(){exqTimer=null;render();topOfResults();},140);
     return;}
   if(id.indexOf("in_")===0){
     var k=id.slice(3),v=parseFloat(ev.target.value);
+    if((k==="w"||k==="r")&&V.draftSg){V.draftSg=false;
+      [].forEach.call(document.querySelectorAll("#in_w,#in_r"),function(f){f.classList.remove("sg");});}
     /* The field shows the user's unit; the draft is always kilograms. */
     if(isFinite(v))V.draft[k]=(k==="w")?toKg(v):v;
     if(k==="min"){var ak=document.getElementById("actKcal"),ae2=S.active&&S.active.entries[V.logIdx];
@@ -982,6 +1054,15 @@ document.addEventListener("input",function(ev){
 document.addEventListener("keydown",function(ev){
   if(ev.key==="Escape"&&V.sheet){ev.preventDefault();requestCloseSheet();return;}
   /* Arrow keys move along any tablist (the segmented controls), as they do natively. */
+  /* The grip moves its row with the arrow keys too, so reordering never needs a drag. */
+  var gp=(ev.key==="ArrowUp"||ev.key==="ArrowDown")&&ev.target.closest&&ev.target.closest("[data-grip]");
+  if(gp){
+    ev.preventDefault();
+    var gid=gp.getAttribute("data-grip"),gd=dayOf(V.dayId),gi=gd?gd.ex.findIndex(function(x){return x.id===gid;}):-1;
+    if(gi<0)return;
+    moveDayEx(gid,gi+(ev.key==="ArrowUp"?-1:1));
+    var ng=document.querySelector('[data-grip="'+gid+'"]');if(ng)ng.focus();
+    return;}
   var tlist=(ev.key==="ArrowRight"||ev.key==="ArrowLeft")&&ev.target.closest&&ev.target.getAttribute("role")==="tab"
     &&ev.target.closest('[role="tablist"]');
   if(tlist){
@@ -997,6 +1078,8 @@ document.addEventListener("keydown",function(ev){
     runAct(ao.act,av2);}});
 document.addEventListener("change",function(ev){
   if(ev.target.id==="chartsel"){V.chartEx=ev.target.value;render();return;}
+  var ek=/^e_(sets|rest|lo|hi|min|km)$/.exec(ev.target.id||"");
+  if(ek){var ee=editedEx();if(ee){setExField(ee,ek[1],ev.target.value);saveDB();render();}return;}
   /* A progress photo, picked from the camera or the library. Shrunk and stored on
      this phone by js/ui/photos.js; the Body view re-reads the list once it lands. */
   if(ev.target.id==="pg_photo"){
@@ -1345,6 +1428,11 @@ setStorageErrorHandler(toast);
 initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,
          locked:sessionLocked,onBlocked:backBlocked});
 initSheetDrag(requestCloseSheet);
+syncViewport();
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize",syncViewport);
+  window.visualViewport.addEventListener("scroll",syncViewport);}
+initReorder(moveDayEx,function(){tap("light");});
 /* History comes from IndexedDB, so it arrives a tick later than everything else.
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from
    holding the whole app behind the intro; in practice it resolves well inside it. */

@@ -1,9 +1,9 @@
 /* Bunyan — session
    The live session surface and rest screen. Execution, not editing. */
 import {t} from "../../i18n/dict.js";
-import {difficultyOf, exImg, exMedia, muscleOfEntry} from "../../data/exercises.js";
+import {difficultyOf, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
-import {lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
+import {dbTotal, inDeload, lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
 import {actIcon, actInfo, actKcal, actPace, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
 import {S} from "../../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
@@ -198,8 +198,13 @@ function vLogger(){
   h+='<div class="ex-tags">'
    +(run.length>1?'<span class="pill sup">'+t("Superset")+' '+groupLabel(a.entries,V.logIdx)
        +' · '+t("round")+' '+Math.min(rows,e.sets.length+1)+'/'+rows+'</span>':'')
+   +(inDeload()?'<span class="pill gold">'+t("Lighter week")+'</span>':'')
    +'<span class="etag">'+esc(t(muscleOfEntry(e)))+'</span>'
-   +(med&&med.e?'<span class="etag">'+esc(t(med.e))+'</span>':'')
+   /* How to read the numbers: a dumbbell's weight is per hand unless the lifter chose
+      totals, and a one-sided exercise's reps are for one side. */
+   +(med&&med.e?'<span class="etag">'+esc(t(med.e))
+     +(med.e==="Dumbbell"?' · '+esc(t(dbTotal()&&!isUnilateral(e.name)?"both together":"per hand")):'')+'</span>':'')
+   +(isUnilateral(e.name)?'<span class="etag">'+t("Each side")+'</span>':'')
    +'<span class="etag">'+e.planned.sets+' × '+e.planned.lo
    +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+'</span>'
    +(difficultyOf(e.name)?'<span class="etag hot">'+esc(t(difficultyOf(e.name)))+'</span>':'')
@@ -210,6 +215,13 @@ function vLogger(){
      the recommender's own, and it only appears before the first set of the exercise —
      once you are working, the rows carry the numbers. */
   var recTop=e.sets.length?null:recommend(e);
+  /* Nothing logged on this exercise before, so nothing to recommend from: say how to
+     find the first weight instead. A beginner gets the fuller version. */
+  if(!e.sets.length&&!p&&!timed)
+    h+='<div class="recbar first"><span class="ico ico-bulb" aria-hidden="true"></span><span>'
+     +esc(t(S.profile&&S.profile.level==="new"
+        ?"First time on this one. Pick a weight you could lift three or four more times than the reps asked, and learn the movement before adding load."
+        :"First time on this one. Use the first set to find a working weight, then settle in."))+'</span></div>';
   if(recTop&&recTop.w)
     h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span>'
      +'<span>'+t("Recommended")+': <b>'+fmtW(recTop.w)+'</b> × '+e.planned.lo
@@ -252,14 +264,14 @@ function vLogger(){
       if(done)h+='<input class="cell" type="number" inputmode="decimal" step="0.5" '
         +'value="'+toDisp(st.w)+'" data-setidx="'+i+'" data-k="w" '
         +'aria-label="Weight in '+wUnit()+', set '+(i+1)+'">';
-      else if(isAct)h+='<input class="cell" type="number" inputmode="decimal" step="0.5" '
-        +'id="in_w" value="'+toDisp(V.draft.w)+'" aria-label="Weight in '+wUnit()+'">';
+      else if(isAct)h+='<input class="cell'+(V.draftSg?' sg':'')+'" type="number" inputmode="decimal" step="0.5" '
+        +'id="in_w" value="'+toDisp(V.draft.w)+'" aria-label="Weight in '+wUnit()+(V.draftSg?', '+t("suggested"):'')+'">';
       else h+='<div class="cellmute">'+(num(V.draft.w)?toDisp(V.draft.w):"—")+'</div>';
     }
     if(done)h+='<input class="cell" type="number" inputmode="numeric" '
       +'value="'+num(st.r)+'" data-setidx="'+i+'" data-k="r" aria-label="Reps, set '+(i+1)+'">';
-    else if(isAct)h+='<input class="cell" type="number" inputmode="numeric" '
-      +'id="in_r" value="'+num(V.draft.r)+'" aria-label="Reps">';
+    else if(isAct)h+='<input class="cell'+(V.draftSg?' sg':'')+'" type="number" inputmode="numeric" '
+      +'id="in_r" value="'+num(V.draft.r)+'" aria-label="Reps'+(V.draftSg?', '+t("suggested"):'')+'">';
     else h+='<div class="cellmute">'+(num(V.draft.r)||"—")+'</div>';
 
     if(rpeCol){
@@ -329,6 +341,8 @@ function vLogger(){
    Logged as what they are: how long, how far where that means anything, how hard.
    Calories come from the activity's MET and the latest weigh-in. */
 var TICK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+/* "8 × 30s / 90s" */
+function ivText(iv){return iv&&iv.n?iv.n+' \u00d7 '+iv.on+'s'+(iv.off?' / '+iv.off+'s':''):"";}
 function actBody(a,e,rows,active){
   var info=actInfo(e.name),kg=lastWeight()||0,last=V.logIdx>=a.entries.length-1;
   var h='<section class="exhero acthero"><img class="exhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">'
@@ -348,6 +362,13 @@ function actBody(a,e,rows,active){
      +(info.dist?'<div class="act-lbl">'+t("Distance")+' <i>'+t("optional")+'</i></div>'
        +'<div class="act-km"><input id="in_km" type="number" inputmode="decimal" step="0.1" min="0" value="'
        +(num(V.draft.km)?V.draft.km:"")+'" placeholder="0.0" aria-label="'+t("Distance")+' km"><span>km</span></div>':'')
+     /* Intervals are optional and folded away: rounds × work / rest, in seconds. */
+     +(V.actIv||num(V.draft.ivn)
+       ?'<div class="act-lbl">'+t("Intervals")+' <i>'+t("optional")+'</i></div>'
+         +'<div class="act-iv"><input id="in_ivn" type="number" inputmode="numeric" min="1" max="99" value="'+(num(V.draft.ivn)||"")+'" placeholder="8" aria-label="'+t("Rounds")+'">'
+         +'<span>\u00d7</span><input id="in_ivon" type="number" inputmode="numeric" min="1" max="3600" value="'+(num(V.draft.ivon)||"")+'" placeholder="30" aria-label="'+t("Work, seconds")+'">'
+         +'<span>/</span><input id="in_ivoff" type="number" inputmode="numeric" min="0" max="3600" value="'+(num(V.draft.ivoff)||"")+'" placeholder="90" aria-label="'+t("Rest, seconds")+'"><i>'+t("sec")+'</i></div>'
+       :'<button class="linkbtn act-ivon" data-activ="1">+ '+t("Intervals")+'</button>')
      +'<div class="act-lbl">'+t("Avg heart rate")+' <i>'+t("optional")+'</i></div>'
      +'<div class="act-km"><input id="in_hr" type="number" inputmode="numeric" min="30" max="240" value="'
      +(num(V.draft.hr)?V.draft.hr:"")+'" placeholder="—" aria-label="'+t("Avg heart rate")+'"><span>bpm</span></div>'
@@ -365,7 +386,7 @@ function actBody(a,e,rows,active){
       h+='<div class="act-row'+(V.fresh===i?' fresh':'')+'" data-k="act:'+i+'"><span class="act-ok" aria-hidden="true">'+TICK+'</span>'
        +'<span class="act-t"><b>'+num(st.min)+' '+t("min")+(num(st.km)?' · '+st.km+' km':'')
          +(actPace(num(st.min),num(st.km))?' · '+actPace(num(st.min),num(st.km)):'')+'</b>'
-       +'<span>'+t(intensityOf(st.rpe||6)[1])+(num(st.hr)?' · '+num(st.hr)+' bpm':'')+(st.kcal?' · '+fmtN(st.kcal)+' kcal':'')+'</span></span>'
+       +'<span>'+t(intensityOf(st.rpe||6)[1])+(st.iv?' · '+ivText(st.iv):'')+(num(st.hr)?' · '+num(st.hr)+' bpm':'')+(st.kcal?' · '+fmtN(st.kcal)+' kcal':'')+'</span></span>'
        +'<button class="delset" data-delset="'+i+'" aria-label="'+t("Delete")+' '+(i+1)+'">✕</button></div>';});
     h+='</div>';
     if(active<0)h+='<div class="addrow"><button class="addset2" data-addrow="1"><span aria-hidden="true">+</span>'+t("Add another bout")+'</button></div>';
@@ -541,4 +562,4 @@ function syncRest(){
   host.innerHTML=vRest(a,e,rowsFor(e),ex_isTimed(e)&&!LOADED.test(e.name));
 }
 
-export {groupLabel, groupNext, groupRun, IDLE_PAUSE, mmss, noteSet, paintRest, platePlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger};
+export {ivText, groupLabel, groupNext, groupRun, IDLE_PAUSE, mmss, noteSet, paintRest, platePlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger};

@@ -1,11 +1,13 @@
 /* Bunyan — formulas
    Training and body maths: volume, 1RM, RPE, BMR, progression. */
 import {FOODDB, sumNutrition} from "./nutrition.js";
-import {EXDB, muscleOfEntry} from "../data/exercises.js";
+import {EXDB, isUnilateral, muscleOfEntry} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {dayRec, S, saveDB, split} from "../state.js";
 import {num, r1, today} from "../util.js";
 import {V} from "../ui/view.js";
+import {t} from "../i18n/dict.js";
+import {fmtW} from "../units.js";
 
 /* ============================================================ formulas */
 /* A warm-up counts for nothing: not volume, not average RPE, not a record, and not
@@ -96,12 +98,18 @@ function prFor(name){
    is real on that equipment — and never more than about a tenth of the load, so a
    10 kg lateral raise does not jump 25%. In pounds the steps are pound-sized plates.
    Bodyweight work progresses by reps, not load. */
-function incrementFor(name,top){
+/* A step set on the exercise itself (S.incr, kg) wins over all of this: a gym whose
+   stack moves in 7 kg, or a lifter with 0.5 kg micro plates, knows better. */
+function incrementFor(name,top,auto){
+  var own=!auto&&S.incr&&num(S.incr[name]);
+  if(own>0)return own;
   var v=EXDB&&EXDB[name],eq=v&&v.e||"Other",lb=S.prefs&&S.prefs.unit==="lb";
   var heavy=/Squat|Deadlift|Leg Press|Hack|Hip Thrust/i.test(name);
   var base=eq==="Barbell"?(heavy?5:2.5):eq==="Dumbbell"?2:eq==="Kettlebell"?4:eq==="Bodyweight"?0:2.5;
   if(lb)base=eq==="Barbell"?(heavy?10:5)/2.2046:eq==="Kettlebell"?9/2.2046:eq==="Bodyweight"?0:5/2.2046;
   if(!base)return 0;
+  /* Dumbbells logged as the pair's total move two dumbbells at once. */
+  if(eq==="Dumbbell"&&dbTotal()&&!isUnilateral(name))base*=2;
   var mode=S.profile.prog;
   if(mode==="conservative")base=base/2;else if(mode==="aggressive")base=base*2;
   var cap=Math.max(lb?2.5/2.2046:1,(top||0)*0.1);
@@ -118,6 +126,94 @@ function plateauOf(name){
     if(b)best.push(b);}
   if(best.length<4)return false;
   return Math.max(best[0],best[1],best[2])<=best[3];}
+/* How dumbbell loads are entered: per hand (the default, and what the numbers on the
+   dumbbells say) or as the pair's total. */
+function dbTotal(){return !!(S.prefs&&S.prefs.dbLoad==="total");}
+/* To the nearest real step, so a suggestion is always a weight that exists. */
+function snapDown(x,step){step=step||1.25;return Math.max(0,Math.round(Math.round(x/step)*step*100)/100);}
+/* Short of the bottom of the range twice in a row at the same load. Holding the
+   weight would mean a third failed session; about a tenth lighter is the usual
+   reset, and the reps build back from there. */
+function missedTwice(name,lo){
+  if(!lo)return 0;
+  var seen=[];
+  for(var i=0;i<S.sessions.length&&seen.length<2;i++){
+    var e=S.sessions[i].entries.filter(function(x){return x.name===name&&x.sets&&x.sets.length;})[0];
+    if(!e)continue;
+    var work=e.sets.filter(function(x){return !x.wu&&num(x.w)>0;});
+    if(!work.length)return 0;
+    var top=Math.max.apply(null,work.map(function(x){return num(x.w);}));
+    var best=Math.max.apply(null,work.filter(function(x){return num(x.w)===top;}).map(function(x){return num(x.r);}));
+    seen.push({w:top,r:best});}
+  if(seen.length<2||seen[0].w!==seen[1].w)return 0;
+  return seen[0].r<lo&&seen[1].r<lo?seen[0].w:0;}
+
+/* ---- a lighter week ----------------------------------------------------------
+   Suggested, never imposed. Due when there has been a solid block of training (five
+   weeks since the last one, or since the start) and the log shows it: two or more
+   lifts stalled, or two weeks of sets close to failure. While it runs the plan's
+   sets drop by about 40% and suggested loads by about 10%. */
+function isoDays(a,b){return Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/864e5);}
+function inDeload(){return !!(S.deload&&S.deload.until&&today()<=S.deload.until);}
+function deloadDue(){
+  if(inDeload()||S.sessions.length<12)return null;
+  var now=today(),dl=S.deload||{};
+  if(dl.snooze&&now<dl.snooze)return null;
+  var since=dl.last||S.sessions[S.sessions.length-1].date;
+  if(isoDays(since,now)<35)return null;
+  var recent=S.sessions.filter(function(s){var d=isoDays(s.date,now);return d>=0&&d<=14;});
+  if(recent.length<3)return null;
+  var names={},rp=[],sr=[];
+  recent.forEach(function(s){
+    if(s.srpe)sr.push(s.srpe);
+    s.entries.forEach(function(e){
+      if(!e.sets||!e.sets.length||isActivity(e.name))return;
+      names[e.name]=1;
+      e.sets.forEach(function(x){if(!x.wu&&x.rpe)rp.push(x.rpe);});});});
+  var flat=Object.keys(names).filter(plateauOf).length;
+  if(flat>=2)return {why:"plateau",n:flat};
+  var mean=function(a){return a.reduce(function(x,y){return x+y;},0)/a.length;};
+  if((rp.length>=6&&mean(rp)>=9)||(sr.length>=3&&mean(sr)>=8.5))return {why:"effort"};
+  return null;}
+function deloadSets(n){return Math.max(1,Math.round(num(n,3)*0.6));}
+
+/* ---- records -------------------------------------------------------------------
+   A set is a record when it beats everything before it — earlier sessions and the
+   sets already done today — by weight, by estimated max, or by reps at that weight
+   or heavier. The first time a lift is ever logged there is nothing to beat, so it is
+   not called a record. */
+function repsAt(name,w){
+  var best=0;
+  S.sessions.forEach(function(s){s.entries.forEach(function(e){
+    if(e.name!==name)return;
+    e.sets.forEach(function(x){if(!x.wu&&num(x.w)>=w&&num(x.r)>best)best=num(x.r);});});});
+  return best;}
+function recordOf(name,x,earlier){
+  if(!x||x.wu||!(num(x.w)>0)||!(num(x.r)>0)||isActivity(name))return null;
+  var h=prFor(name);if(!h.date)return null;
+  var w=num(x.w),r=num(x.r),pw=h.w,pe=h.e,pr=repsAt(name,w);
+  (earlier||[]).forEach(function(y){
+    if(y.wu)return;var yw=num(y.w),yr=num(y.r);
+    if(yw>pw)pw=yw;var ye=e1RM(yw,yr);if(ye>pe)pe=ye;if(yw>=w&&yr>pr)pr=yr;});
+  if(w>pw)return {k:"w",n:name,w:w,r:r};
+  var er=e1RM(w,r);
+  if(er&&er>pe)return {k:"e",n:name,w:w,r:r,e:er};
+  if(pr>0&&r>pr)return {k:"r",n:name,w:w,r:r};
+  return null;}
+/* The best record in one exercise's sets: weight first, then estimated max, then reps. */
+var RANK={w:3,e:2,r:1};
+function recordsIn(e){
+  var best=null;
+  (e.sets||[]).forEach(function(x,i){
+    var rec=recordOf(e.name,x,e.sets.slice(0,i));
+    if(rec&&(!best||RANK[rec.k]>RANK[best.k]||(rec.k===best.k&&rec.w>best.w)))best=rec;});
+  return best;}
+
+function recordText(rec){
+  if(!rec)return "";
+  if(rec.k==="e")return t("New best estimated max")+": "+fmtW(rec.e)+" ("+fmtW(rec.w)+" \u00d7 "+rec.r+")";
+  if(rec.k==="r")return t("Rep record")+": "+rec.r+" \u00d7 "+fmtW(rec.w);
+  return t("New record")+": "+fmtW(rec.w)+" \u00d7 "+rec.r;}
 function recommend(e){
   var p=prevPerf(e.name);
   if(!p||!p.sets.length)return null;
@@ -130,7 +226,15 @@ function recommend(e){
   var inc=incrementFor(e.name,top);
   var w=top,note;
   if(!top){return {w:0,lo:e.planned.lo,hi:e.planned.hi,note:"Find a weight you can control for "+e.planned.lo+" reps."};}
-  if(hitTop&&(!avg||avg<=9)&&inc){w=Math.round((top+inc)*100)/100;note="You hit the top of the range last time.";}
+  var miss=missedTwice(e.name,e.planned.lo);
+  if(inDeload()){w=snapDown(top*0.9,inc)||top;note="Lighter week: about 10% less and fewer sets. Leave three or four reps in the tank.";}
+  else if(miss){w=snapDown(miss*0.9,inc)||top;note="Short of the range twice at this weight. About 10% lighter, then build back up.";}
+  /* Reported effort earns a bigger step only when it was reported: the top of the
+     range at RPE 7 or less means reps to spare. Still no more than a tenth. */
+  else if(hitTop&&avg&&avg<=7&&inc){
+    w=Math.round((top+Math.min(inc*2,Math.max(inc,top*0.1)))*100)/100;
+    note="Top of the range with reps to spare. A bigger step this time.";}
+  else if(hitTop&&(!avg||avg<=9)&&inc){w=Math.round((top+inc)*100)/100;note="You hit the top of the range last time.";}
   else if(plateauOf(e.name)){w=top;note="No gain in three sessions. Hold this weight and chase a rep, or take a lighter week.";}
   else if(avg&&avg>=9.5){w=top;note="Last session was near failure. Hold this weight.";}
   else note="Same weight, aim for more reps.";
@@ -194,4 +298,4 @@ function addItems(meal,items,d){
 
 
 
-export {proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets};
+export {recordText, dbTotal, deloadDue, deloadSets, inDeload, missedTwice, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets};

@@ -142,12 +142,15 @@ function customTab(){
     t("Anything you enter by hand and save lands here, ready to log again in one tap."),"");
   return h+localCards(mine);}
 
+/* Laid out as a search sheet (see .srch in index.html): the title, the field and the
+   four tabs stay put, and only what is under them scrolls. */
 function vSearch(){
   var st=V.food||{},q=(st.sq||"").trim(),tab=st.tab||"search";
-  var h=afHead(t("Add Food"));
+  var h='<div class="srch-top"><div class="srch-title">'+afHead(t("Add Food"))+'</div>';
   h+='<div class="afq"><span class="ico ico-search" aria-hidden="true"></span>'
-   +'<input id="fq" placeholder="'+esc(t("Search food or scan barcode"))+'" value="'+esc(st.sq||"")+'"'
-   +' autocapitalize="none" autocorrect="off" enterkeyhint="search" aria-label="'+esc(t("Search food"))+'">'
+   +'<input id="fq" type="search" placeholder="'+esc(t("Search food or scan barcode"))+'" value="'+esc(st.sq||"")+'"'
+   +' autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-label="'+esc(t("Search food"))+'">'
+   +(st.sq?'<button class="libq-x" data-clearfq="1" aria-label="'+esc(t("Clear"))+'">\u2715</button>':'')
    /* The frame's camera sits inside the field. Where the browser cannot decode a
       barcode, the same button opens the typed-barcode prompt instead. */
    +'<button class="afcam" '+(scanSupported()?'data-scan="1"':'data-typecode="1"')
@@ -156,6 +159,7 @@ function vSearch(){
   var TABS=[["search","Search"],["recent","Recent"],["frequent","Frequent"],["custom","Custom"]];
   h+=seg({items:TABS.map(function(x){return [x[0],t(x[1])];}),value:tab,attr:"ftab",
     tabs:true,soft:true,cls:"aftabs",label:t("Find food"),key:"aftabs"});
+  h+='</div><div class="srch-body">';
   /* A barcode lookup runs from this screen, so its states show here. */
   if(st.busy)h+=shimmer(t("Checking the online food database…"));
   else if(st.bcFail)h+=errCard(t("Unable to load nutrition data"),
@@ -169,7 +173,7 @@ function vSearch(){
     h+=ff.length?localCards(ff):empty("search",t("Nothing frequent yet"),
       t("The foods you log most often collect here."),"");}
   else h+=customTab();
-  return h;}
+  return h+'</div>';}
 
 /* ---- Add Food: one food, its servings (13:266) ------------------------------ */
 /* What the servings screen will log: grams and the label the log keeps. A picked
