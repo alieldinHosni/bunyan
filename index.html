@@ -62,31 +62,43 @@
   /* Semantic, and reserved. Green is completed states only; gold is earned only. */
   --ok:#1A8D3E; --okSoft:#0E2415; --gold:#C9A227;
   --navbg:#141418; --navtext:#888580; --navon:#faf6ee;
-  /* The design is a flat ground. The ember wash that used to sit behind the app is
-     not in any frame, so it is off. */
-  --glow:transparent;
+  /* The ember wash behind the top of every screen, as the redesign frames have it:
+     one soft red glow under the header, fading out long before the content. */
+  --glow:rgba(227,27,35,.20);
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
   --r1:8px; --r2:12px; --r3:14px;
-  /* Nav geometry. The page has to reserve the nav's height, because the nav is fixed to
-     the viewport and would otherwise sit on top of the last card. That reserve used to
-     be a hardcoded 92px while the nav measured 81.6px — two unrelated numbers that had
-     to be kept in step by hand, and the kind that fails silently: change the nav's
-     padding and content slides underneath with nothing to catch it.
+  /* ---- the dock and the surfaces that borrow from it --------------------------
+     One visual language, taken from the floating dock: large radii, a translucent
+     dark surface with a hairline edge, depth from a soft shadow rather than from
+     borders, and the accent as a tinted glow rather than a fill. Components that are
+     the same kind of control — segmented tabs, range chips, the date navigator —
+     read these rather than carrying their own numbers.
 
-     So --navh is derived from the same three values the nav lays itself out with, plus
-     its 1px top border. Change any of them and the reserve follows. env() sits inside
-     the calc, so a device with a home indicator widens both together.
-
-     This was a ResizeObserver measuring the real element first. That is the more
-     obviously correct approach and it was deleted, because ResizeObserver delivers its
-     callbacks at the end of a frame and the automated pane has no frames — not one
-     callback ever arrived, so the mechanism could not be verified at all. An exact
-     derivation that can be checked beats a measurement that cannot. */
-  /* 1 + 14 + 44 + 13 = 72, the design's bar height. The tab is 44px rather than the
-     40px its content needs so every tab meets the minimum hit area. */
-  --nav-pad-t:14px; --nav-pad-b:13px; --nav-btn:44px;
-  --navh:calc(1px + var(--nav-pad-t) + var(--nav-btn) + var(--nav-pad-b) + env(safe-area-inset-bottom));
-  /* Motion tokens. js/ui/motion.js writes all thirteen of these onto documentElement at
+     Radii run 8 / 12 / 14 (--r1–r3, cards and fields), 18 for controls inside a
+     surface, 28 for floating surfaces, and a pill. */
+  --r4:18px; --r5:28px; --rpill:999px;
+  --glass:rgba(22,22,28,.78);            /* floating surfaces over content */
+  --glass-solid:rgba(22,22,28,.96);      /* the same where blur is unavailable */
+  --hair:rgba(255,255,255,.08);          /* the hairline edge on glass */
+  --hair-hi:rgba(255,255,255,.14);       /* its lit top edge */
+  --dock-hair:rgba(255,255,255,.08);     /* the dock's own, the same in both themes */
+  --shadow-float:0 18px 48px rgba(0,0,0,.45),0 4px 14px rgba(0,0,0,.28);
+  --shadow-card:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.25);
+  --accent-tint:rgba(227,27,35,.16);     /* a selected state's fill */
+  --accent-edge:rgba(248,52,70,.30);     /* its edge */
+  --accent-glow:rgba(248,52,70,.22);     /* its glow */
+  --ico-size:24px; --hit:44px;
+  --seg-track:rgba(255,255,255,.04);    /* the recessed track under a segmented control */
+  --bar-track:rgba(255,255,255,.14);    /* an unlit bar in a mini chart */
+  /* The dock's geometry, and the one reserve every screen keeps for it. The dock
+     floats --dock-lift above the bottom edge, which is the safe area on a phone with
+     a home indicator and 12px on anything else; --navh is everything from the bottom
+     of the viewport to the top of the dock. The body pads by it, and the toast and
+     the floating add button sit above it, so no screen carries its own number. */
+  --dock-h:64px; --dock-mx:16px;
+  --dock-lift:max(12px, env(safe-area-inset-bottom));
+  --navh:calc(var(--dock-h) + var(--dock-lift));
+  /* Motion tokens. js/ui/motion.js writes all fourteen of these onto documentElement at
      boot and whenever the in-app animation toggle changes, and an inline property beats
      a stylesheet rule, so these values apply only to the first paint before the module
      runs — and to any load where it fails to.
@@ -100,6 +112,7 @@
   --m-sheet:300ms; --m-screen:300ms; --m-data:400ms; --m-reveal:500ms; --m-fade:200ms;
   --e-standard:cubic-bezier(0.2, 0, 0, 1); --e-decel:cubic-bezier(0.05, 0.7, 0.1, 1);
   --e-accel:cubic-bezier(0.3, 0, 0.8, 0.15); --e-spring:cubic-bezier(.2,.9,.3,1.06);
+  --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
 }
 [data-theme="light"]{
   /* Base Web light ramp, same source as the dark one above
@@ -125,6 +138,10 @@
   --glow:transparent;
   /* The bar stays dark in both themes: it is chrome, not surface. */
   --navbg:#000000; --navtext:#8C8C8C; --navon:#FFFFFF;
+  --seg-track:rgba(0,0,0,.05); --hair:rgba(0,0,0,.08); --bar-track:rgba(0,0,0,.10);
+  /* So does the dock, and so the glass it is made of. */
+  --glass:rgba(18,18,22,.84); --glass-solid:rgba(18,18,22,.97);
+  --accent-tint:rgba(248,52,70,.18);
 }
 /* Kills double-tap-to-zoom, which has no place in an installed app, and with it
    Safari's ~300ms tap delay. Pinch-to-zoom is untouched. user-scalable=no in the
@@ -135,10 +152,10 @@ html,body{margin:0;background:var(--bg);color:var(--text);
   background-attachment:fixed;
   font-family:"Manrope",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
-/* Reserve the nav's height plus breathing room, so the last card never sits under it.
-   --navh is derived in :root from the nav's own geometry; the nav already carries
-   env(safe-area-inset-bottom) inside that, so adding it again here would double-count. */
-body{padding-bottom:calc(var(--navh) + 12px)}
+/* Reserve the dock's height plus breathing room, so the last card never sits under it.
+   --navh already includes the safe area (through --dock-lift), so adding it again here
+   would double-count. This is the only place the reserve is applied. */
+body{padding-bottom:calc(var(--navh) + 20px)}
 /* The document has to be at least as tall as the viewport, or a short screen — Home
    with nothing logged is the shortest — leaves the page shorter than the window. The
    nav is position:fixed and so is pinned either way in a compliant engine, but iOS
@@ -264,30 +281,74 @@ td{padding:7px 0;text-align:center;font-variant-numeric:tabular-nums;font-size:1
 .dots{display:flex;gap:6px;align-items:center}
 .dot{width:9px;height:9px;border-radius:5px;border:1.5px solid var(--border)}
 .dot.on{background:var(--ok);border-color:var(--ok)}
-body.kb nav{transform:translateY(120%);pointer-events:none}
-/* The design's tab bar: #141418 with a hairline top edge, 72px tall, five fixed-width
-   tabs spread across 16px of side padding. Icons are Figma's own exported vectors
-   (icons/nav-*.svg), used as masks so the active one can be tinted red without the
-   artwork being edited — the files carry their grey baked in. */
-nav{position:fixed;bottom:0;left:0;right:0;background:var(--navbg);
-  transition:transform var(--m-micro) var(--e-standard);will-change:transform;
-  border-top:1px solid var(--border);display:flex;justify-content:space-between;
-  padding:var(--nav-pad-t) 16px calc(var(--nav-pad-b) + env(safe-area-inset-bottom));z-index:50}
-nav button{flex:0 0 64px;min-height:var(--nav-btn);background:none;border:none;
-  color:var(--navtext);font-size:10px;font-weight:500;padding:0;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  transition:color var(--m-micro) var(--e-standard)}
-nav button.on{color:var(--navon);font-weight:700}
-.navico{width:22px;height:22px;background:var(--navtext);
-  -webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat;
-  transition:background var(--m-micro) var(--e-standard),transform var(--m-micro) var(--e-standard)}
-nav button.on .navico{background:var(--accent)}
-nav button:active .navico{transform:scale(.88)}
-nav [data-tab="home"] .navico{--ico:url(icons/nav-home.svg)}
-nav [data-tab="train"] .navico{--ico:url(icons/nav-train.svg)}
-nav [data-tab="food"] .navico{--ico:url(icons/nav-food.svg)}
-nav [data-tab="progress"] .navico{--ico:url(icons/nav-progress.svg)}
-nav [data-tab="profile"] .navico{--ico:url(icons/nav-profile.svg)}
+/* ---- The dock ----------------------------------------------------------------
+   Fixed to the viewport and to nothing else: left, right and bottom are 0 and never
+   change, it has no transform, no transition on its position and no will-change, and
+   no script measures or moves it. The float above the home indicator is padding
+   inside the fixed box (--dock-lift), so Safari's toolbar collapsing, a sheet locking
+   the page, or the keyboard coming and going cannot leave it somewhere else.
+
+   It is a direct child of <body>, beside #app rather than inside it: #app animates a
+   transform on every tab change, and a transformed ancestor would turn "fixed" into
+   "fixed to that ancestor". Keep it outside anything that transforms.
+
+   While a text field has focus it fades out in place (body.kb, see syncKeyboard) —
+   iOS would otherwise float a bottom-fixed bar over the keyboard. It fades, it does
+   not slide, so there is no position for it to be left at. */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
+  padding:0 var(--dock-mx) var(--dock-lift);pointer-events:none;
+  transition:opacity var(--m-micro) var(--e-standard),visibility 0s}
+body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--e-standard),visibility 0s var(--m-micro)}
+.dock{--i:0;position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  max-width:520px;height:var(--dock-h);margin:0 auto;padding:0 6px;
+  border-radius:var(--r5);background:var(--glass-solid);
+  border:1px solid var(--dock-hair);border-top-color:var(--hair-hi);
+  box-shadow:var(--shadow-float);pointer-events:auto;isolation:isolate}
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  .dock{background:var(--glass);-webkit-backdrop-filter:saturate(160%) blur(22px);backdrop-filter:saturate(160%) blur(22px)}}
+/* One indicator, slid between the five cells by transform alone. Its cell is a fifth
+   of the dock's inner width, so --i × 100% is exactly one item per step. */
+.dock-ind{position:absolute;top:0;bottom:0;inset-inline-start:6px;width:calc((100% - 12px) / 5);
+  transform:translateX(calc(var(--i) * 100%));pointer-events:none;z-index:0;
+  transition:transform var(--m-screen) var(--e-ios)}
+[dir="rtl"] .dock-ind{transform:translateX(calc(var(--i) * -100%))}
+.dock-ind::before{content:"";position:absolute;inset:0;margin:auto;width:min(62px,90%);height:48px;
+  border-radius:var(--rpill);background:var(--accent-tint);
+  box-shadow:inset 0 0 0 1px var(--accent-edge),0 0 22px var(--accent-glow)}
+.dock-b{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;
+  min-width:var(--hit);min-height:var(--hit);height:100%;padding:0;margin:0;border:0;background:none;
+  color:var(--navtext);cursor:pointer;
+  transition:color var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
+.dock-b svg{width:var(--ico-size);height:var(--ico-size);fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+  transition:transform var(--m-comp) var(--e-ios),stroke-width var(--m-micro) var(--e-standard)}
+.dock-b.on{color:var(--accentHi)}
+.dock-b.on svg{transform:scale(1.06);stroke-width:2}
+.dock-b:active{transform:scale(.94)}
+.dock-b:focus-visible{outline:2px solid rgba(255,255,255,.8);outline-offset:-6px;border-radius:var(--r4)}
+/* ---- The segmented control (seg() in js/ui/view.js) ---------------------------
+   The dock's language for any row of equal choices: a recessed track, one indicator
+   sliding between equal cells by transform, a press that gives. Solid accent for a
+   primary switch (it changes what the screen is showing); .soft, tinted, for a
+   secondary one inside it, so the two never compete. */
+.seg{--i:0;--n:2;position:relative;display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));
+  padding:4px;border-radius:var(--r4);background:var(--seg-track);border:1px solid var(--hair);isolation:isolate}
+.seg-ind{position:absolute;top:4px;bottom:4px;inset-inline-start:4px;width:calc((100% - 8px) / var(--n));
+  transform:translateX(calc(var(--i) * 100%));z-index:0;pointer-events:none;
+  border-radius:14px;background:linear-gradient(180deg,var(--accentHi),var(--accent));
+  box-shadow:0 6px 18px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,.16);
+  transition:transform var(--m-screen) var(--e-ios)}
+[dir="rtl"] .seg-ind{transform:translateX(calc(var(--i) * -100%))}
+.seg-b{position:relative;z-index:1;min-width:0;min-height:40px;padding:0 4px;border:0;border-radius:14px;
+  background:none;color:var(--dim);font-size:13.5px;font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:color var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
+.seg-b.on{color:var(--onAccent)}
+.seg-b:active{transform:scale(.96)}
+.seg-b:focus-visible{outline:2px solid var(--accentHi);outline-offset:-2px}
+.seg.soft .seg-ind{background:var(--accent-tint);box-shadow:inset 0 0 0 1px var(--accent-edge)}
+.seg.soft .seg-b.on{color:var(--accentHi)}
+@media (max-width:360px){.seg-b{font-size:12px}}
 /* Gated to real navigation. Left ungated it replayed on every state change, which
    during a workout meant the screen flew in again after every logged set. */
 #app.pagein{animation:pageIn var(--m-screen) var(--e-standard)}
@@ -644,42 +705,88 @@ body.noanim #splash .sp-embers{display:none}
   display:flex;align-items:center;justify-content:center;margin-inline-end:8px}
 .favstar.on{color:var(--gold);border-color:var(--gold)}
 .favstar:active{background:var(--raised)}
-/* Date bar and month grid — js/ui/datebar.js, shared by Progress and Food.
-   These were inline styles inside the Progress view. Moving them here is what lets the
-   two screens be identical by construction rather than by somebody remembering. */
-.dbwrap{padding:var(--s3);margin-bottom:var(--s3)}
-.dbcal{margin-top:var(--s3);border-top:1px solid var(--border);padding-top:var(--s3)}
-.dbgrid{display:grid;grid-template-columns:repeat(7,1fr);margin-top:11px;
-  /* Full-bleed inside the card, so the grid gets the card's whole width. margin-inline
-     so RTL needs no second rule.
-
-     The gap is derived from the constraint rather than fixed: as wide as 5px where
-     there is room, and never so wide that a day falls under the 44px hit-area minimum.
-     A fixed 5px held at the old 16px page gutter (44.5px cells) and broke the moment
-     the design's 24px gutter narrowed every card — cells measured 42.2px at 375. A
-     breakpoint would have encoded that one width; this encodes the rule itself, so a
-     future gutter or padding change cannot silently break it again. */
-  gap:max(0px,min(5px,calc((100% - 7 * 44px) / 6)));
-  margin-inline:calc(-1 * var(--s3))}
-.dbday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;border-radius:9px;font-size:13px;border:none;padding:0;
-  position:relative;background:none;color:var(--faint);
+/* ---- The date navigator (js/ui/datebar.js) — Food, Progress and Train ------------
+   A capsule in the dock's language: glass-dark surface, hairline edge, round arrow
+   buttons at either end, the date as the tappable centre. Today reads warmest — a
+   soft accent edge and glow — so "am I looking at today?" is answered before the
+   words are read. Only the date text slides when the day changes; the surface never
+   moves. */
+.dnav-wrap{margin-bottom:var(--s3)}
+.seg+.dnav-wrap{margin-top:12px}
+.dnav{position:relative;display:flex;align-items:center;gap:6px;min-height:76px;padding:8px;
+  border-radius:var(--r5);overflow:hidden;isolation:isolate;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)) ,var(--raised);
+  border:1px solid var(--border);box-shadow:var(--shadow-card);touch-action:pan-y}
+.dnav.now{border-color:var(--accent-edge);
+  box-shadow:var(--shadow-card),0 0 0 1px rgba(248,52,70,.06),0 8px 30px -12px var(--accent-glow)}
+/* The drawing: the Bunyan horse, faint, bleeding off the right edge in a red haze. */
+.dnav.art{min-height:104px}
+.dnav.art::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(60% 120% at 88% 40%,rgba(227,27,35,.28),transparent 70%)}
+.dnav-art{position:absolute;z-index:-1;inset-inline-end:-26px;top:50%;width:136px;height:auto;
+  transform:translateY(-50%);opacity:.26;pointer-events:none;
+  filter:drop-shadow(0 0 18px rgba(248,52,70,.55)) saturate(1.1);
+  -webkit-mask:linear-gradient(90deg,transparent,#000 45%);mask:linear-gradient(90deg,transparent,#000 45%)}
+[dir="rtl"] .dnav-art{transform:translateY(-50%) scaleX(-1);
+  -webkit-mask:linear-gradient(270deg,transparent,#000 45%);mask:linear-gradient(270deg,transparent,#000 45%)}
+.dnav-arrow{flex:0 0 44px;width:44px;height:44px;border-radius:var(--rpill);padding:0;
+  display:flex;align-items:center;justify-content:center;color:var(--text);
+  background:rgba(255,255,255,.05);border:1px solid var(--hair);
+  transition:transform var(--m-press) var(--e-standard),background var(--m-micro) var(--e-standard)}
+.dnav-arrow svg,.dnav-back svg,.dnav-d svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dnav-arrow svg{width:20px;height:20px}
+[dir="rtl"] .dnav-arrow svg{transform:scaleX(-1)}
+.dnav-arrow:active{transform:scale(.92);background:rgba(255,255,255,.09)}
+.dnav-arrow:disabled{opacity:.3}
+.dnav-arrow.sm{flex-basis:40px;width:40px;height:40px}
+.dnav-mid{flex:1;min-width:0;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;padding:6px 4px;border:0;border-radius:var(--r4);background:none;color:var(--text);
   transition:background var(--m-micro) var(--e-standard)}
-.dbday.trained{background:var(--accent);color:var(--onAccent);font-weight:700}
-.dbday.today{border:1px solid var(--accent);color:var(--text)}
-/* Selection has to outrank both, or the day you picked is invisible on a trained day. */
-.dbday.sel{outline:2px solid var(--text);outline-offset:1px;color:var(--text)}
-.dbday.sel.trained{color:var(--onAccent)}
-.dbdot{position:absolute;bottom:4px;width:4px;height:4px;border-radius:2px;background:var(--ok)}
-/* The bar's own arrows, scoped so the shared .iconbtn elsewhere is untouched. */
-.dbwrap .iconbtn,.dbcal .iconbtn{min-width:44px}
-.pdate{background:none;border:none;color:var(--text);font-weight:800;letter-spacing:.06em;
-  text-transform:uppercase;font-size:13px;padding:8px 10px;border-radius:9px;
-  display:inline-flex;align-items:center;gap:5px;min-height:44px}
-.pdate:active{background:var(--surface)}
-.pchev{display:inline-block;transform:rotate(90deg);transition:transform var(--m-micro) var(--e-standard);
-  color:var(--faint);font-size:15px;line-height:1}
-.pchev.up{transform:rotate(-90deg)}
+.dnav-mid:active{background:rgba(255,255,255,.04)}
+.dnav-mid:focus-visible,.dnav-arrow:focus-visible,.dnav-back:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
+.dnav-k{font-size:10.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.dnav-d{display:inline-flex;align-items:center;gap:8px;max-width:100%}
+.dnav-d>svg{width:18px;height:18px;flex-shrink:0;color:var(--dim)}
+.dnav-t{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.dnav.art .dnav-t{font-size:20px;letter-spacing:.01em;text-transform:none}
+.dnav-c{display:inline-flex;color:var(--dim);transition:transform var(--m-micro) var(--e-standard)}
+.dnav-c svg{width:16px;height:16px}
+.dnav-c.up{transform:rotate(180deg)}
+.dnav-s{font-size:12.5px;color:var(--dim);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The date slides in from the side it came from; the second line fades with it. */
+.dnav-d.fwd{animation:dnavFwd var(--m-comp) var(--e-ios)}
+.dnav-d.back{animation:dnavBack var(--m-comp) var(--e-ios)}
+@keyframes dnavFwd{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@keyframes dnavBack{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+[dir="rtl"] .dnav-d.fwd{animation-name:dnavBack}
+[dir="rtl"] .dnav-d.back{animation-name:dnavFwd}
+.dnav-back{display:flex;align-items:center;justify-content:center;gap:6px;margin:6px auto 0;min-height:36px;
+  padding:0 14px;border:0;border-radius:var(--rpill);background:none;color:var(--accentHi);
+  font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.dnav-back svg{width:14px;height:14px}
+.dnav-back:active{background:var(--accent-tint)}
+[dir="rtl"] .dnav-k,[dir="rtl"] .dnav-t,[dir="rtl"] .dnav-back{letter-spacing:0}
+/* The month, when the date is tapped. */
+.dbcal{margin-top:10px;padding:12px;border-radius:var(--r5);background:var(--raised);border:1px solid var(--border)}
+.dbcal-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dbgrid{display:grid;grid-template-columns:repeat(7,1fr);margin-top:10px;
+  /* As wide as 5px where there is room, and never so wide that a day falls under the
+     44px hit-area minimum. */
+  gap:max(0px,min(5px,calc((100% - 7 * 44px) / 6)))}
+.dbwk{text-align:center;font-size:11px;font-weight:700;color:var(--dim);padding-bottom:4px}
+.dbday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:12px;font-size:13.5px;border:1px solid transparent;padding:0;position:relative;
+  background:none;color:var(--sub);font-variant-numeric:tabular-nums;
+  transition:background var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
+.dbday:active{transform:scale(.92)}
+.dbday:disabled{opacity:.3}
+.dbday.today{border-color:var(--accent-edge);color:var(--text);font-weight:700}
+.dbday.sel{background:linear-gradient(180deg,var(--accentHi),var(--accent));color:var(--onAccent);font-weight:800;
+  box-shadow:0 6px 16px var(--accent-glow)}
+.dbdot{position:absolute;bottom:5px;width:4px;height:4px;border-radius:2px;background:var(--ok)}
+.dbdot.t{background:var(--accentHi)}
+.dbday.sel .dbdot{background:var(--onAccent)}
 .target{display:flex;align-items:center;justify-content:space-between;gap:10px;
   border:1px dashed var(--border);border-radius:12px;padding:11px 13px;margin-top:4px}
 .target .tl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
@@ -744,7 +851,7 @@ body.noanim #splash .sp-embers{display:none}
   font-weight:700;padding:10px 16px}
 /* The arrow this replaced had to mirror in RTL. A ✕ is symmetrical, so flipping it
    was a no-op that would have silently un-centred it once the box changed size. */
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;background:var(--raised);
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + 14px);background:var(--raised);
   border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;
   font-size:14px;z-index:200;max-width:88%;text-align:center;
   display:flex;align-items:center;gap:14px}
@@ -1014,9 +1121,57 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .trow-n{display:block;font-family:var(--display);font-weight:700;font-size:15px}
 .trow-s{display:block;font-size:12px;color:var(--dim);margin-top:2px}
 .trow .ico-chev{color:var(--dim)}
-.tnext{background:var(--accentSoft);color:var(--accentHi);border-radius:6px;padding:3px 8px;
-  font-size:11px;font-weight:700;text-transform:uppercase}
+.tnext{background:linear-gradient(180deg,var(--accentHi),var(--accent));color:var(--onAccent);border-radius:var(--rpill);
+  padding:4px 10px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;
+  box-shadow:0 4px 12px -4px var(--accent-glow)}
 .tadd .trow-n{color:var(--accentHi)}
+.trow>span:first-child{flex:1;min-width:0}
+/* Train's header line under the title, as Food and Progress have. */
+.thead-s{margin:4px 0 0;color:var(--dim);font-size:14px}
+/* ---- Train: the selected day over the Bunyan artwork ------------------------------
+   The rider (intro.jpg) is screen-blended into the card, so its black ground drops
+   out and only the red light and the silhouette show; a mask fades it out toward the
+   text. Decorative: alt="" and hidden from assistive tech. */
+.thero2{position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;gap:18px;
+  padding:20px;border-radius:var(--r5);border:1px solid var(--border);
+  background:linear-gradient(135deg,rgba(227,27,35,.10),rgba(0,0,0,0) 55%),var(--raised);box-shadow:var(--shadow-card)}
+.thero2.live{border-color:var(--accent-edge);
+  background:linear-gradient(135deg,rgba(227,27,35,.26),rgba(227,27,35,.04) 60%),var(--raised);
+  box-shadow:var(--shadow-card),0 14px 40px -18px var(--accent-glow)}
+.thero2-art{position:absolute;z-index:-1;top:-26%;inset-inline-end:-18%;width:78%;height:auto;opacity:.62;
+  mix-blend-mode:screen;pointer-events:none;
+  -webkit-mask:radial-gradient(70% 70% at 60% 45%,#000 30%,transparent 75%);mask:radial-gradient(70% 70% at 60% 45%,#000 30%,transparent 75%)}
+[dir="rtl"] .thero2-art{transform:scaleX(-1)}
+.thero2-top{display:flex;align-items:center;gap:14px}
+.thero2-t{min-width:0}
+.thero2-n{font-family:var(--display);font-weight:800;font-size:22px;line-height:1.15;margin-top:3px;overflow-wrap:anywhere}
+.thero2-m{font-size:13px;color:var(--sub);margin-top:4px}
+.thero2 .btn{margin:0}
+.thero2 .btn .ico{margin-inline-start:0}
+.thero2 .btn:not(.g){background:linear-gradient(180deg,var(--accentHi),var(--accent));box-shadow:0 10px 26px -10px var(--accent-glow)}
+.tbadge{flex:0 0 52px;width:52px;height:52px;border-radius:var(--rpill);display:flex;align-items:center;justify-content:center;
+  color:var(--onAccent);background:radial-gradient(circle at 35% 30%,var(--accentHi),var(--accent) 70%);
+  box-shadow:0 0 0 6px rgba(227,27,35,.12),0 8px 22px -8px var(--accent-glow)}
+.tbadge.rest{background:var(--surface);color:var(--dim);box-shadow:0 0 0 6px rgba(255,255,255,.03)}
+.tbadge svg,.tday-i svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tprog-wk{margin:12px 2px 0}
+/* The two days after the selected one. */
+.tnextpair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+.tday{display:flex;align-items:center;gap:10px;min-height:72px;padding:12px;border-radius:var(--r4);text-align:start;
+  background:var(--raised);border:1px solid var(--border);color:var(--text);min-width:0;
+  transition:transform var(--m-press) var(--e-standard),border-color var(--m-micro) var(--e-standard)}
+.tday:active{transform:scale(.97)}
+.tday:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
+.tday-i{flex:0 0 36px;width:36px;height:36px;border-radius:var(--rpill);display:flex;align-items:center;justify-content:center;
+  background:var(--accent-tint);color:var(--accentHi);box-shadow:inset 0 0 0 1px var(--accent-edge)}
+.tday-i.rest{background:var(--surface);color:var(--dim);box-shadow:none}
+.tday-i svg{width:20px;height:20px}
+.tday-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.tday-k{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.tday-n{font-family:var(--display);font-weight:700;font-size:14.5px;line-height:1.2;overflow-wrap:anywhere}
+.tday-m{font-size:11.5px;color:var(--dim)}
+[dir="rtl"] .tday-k{letter-spacing:0}
+@media (max-width:360px){.tnextpair{grid-template-columns:1fr}}
 
 /* Horizontal rows bleed to the screen edge, as the design's do, so the next card is
    visibly cut off and reads as scrollable. */
@@ -1146,31 +1301,6 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .ico-plus{--ico:url(icons/plus.svg)}
 .ico-trash{--ico:url(icons/trash.svg)}
 
-/* The hero. The frame draws the ring as a full 6px border, which cannot show a
-   fraction; it is an SVG arc here so the number and the ring say the same thing. */
-.fhero{display:flex;flex-direction:column;align-items:center;gap:20px;margin:4px 0 20px}
-.fring{position:relative;width:180px;height:180px;flex:0 0 180px;
-  border-radius:90px;background:var(--surface);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
-.fring svg{position:absolute;inset:0;width:180px;height:180px}
-.fring-n{position:relative;font-family:var(--display);font-weight:800;font-size:32px;
-  color:var(--text);font-variant-numeric:tabular-nums;line-height:1}
-.fring-g{position:relative;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--dim)}
-.fring-r{position:relative;width:60px;height:1px;background:var(--border);margin:2px 0}
-.fring-l{position:relative;font-weight:700;font-size:16px;color:var(--accentHi)}
-.fring-l.over{color:var(--gold)}
-
-.fmacros{display:flex;gap:12px;width:100%}
-.fmacro{flex:1;min-width:0;background:var(--surface);border-radius:12px;padding:12px}
-.fmacro-k{font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--dim)}
-.fmacro-v{font-family:var(--display);font-weight:800;font-size:15px;color:var(--text);
-  margin:6px 0;font-variant-numeric:tabular-nums}
-.fmacro-v span{font-weight:400;font-size:11px;color:var(--dim)}
-.fmacro .bar,.fmacro .bar i{height:4px;border-radius:2px}
-.fmacro .bar{margin-top:0;background:var(--border)}
-
 /* Water. The frame's eight glasses are a fixed row; the goal is the user's, so the
    count comes from it and the glasses shrink to fit however many that is. */
 .fwater{background:var(--surface);border-radius:16px;padding:12px var(--gutter);
@@ -1197,31 +1327,73 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   display:flex;align-items:center;justify-content:center}
 .fwater-add .ico-plus{width:16px;height:16px;flex-basis:16px}
 
-/* One row per meal, the day's four in order. A logged meal carries the accent edge
-   the frame gives it; an empty one offers the shortcut instead of a total. */
-.mealrow{display:flex;align-items:center;justify-content:space-between;gap:12px;
-  width:100%;text-align:start;background:var(--surface);border:1px solid var(--border);
-  border-radius:12px;padding:16px;margin-bottom:12px;color:var(--text)}
-.mealrow.logged{border-inline-start:4px solid var(--ok);padding-inline-start:13px}
-.mealrow-n{font-weight:700;font-size:16px}
-.mealrow.empty .mealrow-n{color:var(--dim)}
-.mealrow-s{font-size:12px;color:var(--dim);margin-top:4px}
-.mealrow.empty .mealrow-s{color:var(--faint)}
-.mealrow-r{display:flex;align-items:center;gap:12px;flex-shrink:0}
-.mealrow-k{font-weight:700;font-size:16px;color:var(--ok);font-variant-numeric:tabular-nums}
-.mealrow-r .ico-chev{color:var(--dim)}
-[dir="rtl"] .mealrow-r .ico-chev{transform:scaleX(-1)}
-.mealrow-add{background:var(--accent);color:var(--onAccent);border:none;border-radius:8px;
-  min-height:44px;padding:0 12px;font-weight:700;font-size:12px;letter-spacing:.04em}
-
-/* The add-food button the frame floats over the list. */
-.ffab{position:fixed;inset-inline-end:var(--gutter);
-  bottom:calc(var(--navh) + 16px);width:56px;height:56px;border-radius:28px;border:none;
-  background:var(--accent);color:var(--onAccent);box-shadow:0 4px 12px rgba(0,0,0,.55);
-  display:flex;align-items:center;justify-content:center;z-index:40}
-.ffab .ico-plus{width:24px;height:24px;flex-basis:24px}
-/* So the end of the meal list clears the floating button at rest. */
-.ffab-pad{height:56px}
+/* ---- Food, redesign frame: the day's summary, meal tiles, today's meals --------- */
+.fsum{display:grid;grid-template-columns:136px minmax(0,1fr);align-items:center;gap:18px;padding:18px;
+  margin-bottom:var(--s3);border-radius:var(--r5);border:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 40%),var(--raised);box-shadow:var(--shadow-card)}
+.fring2{position:relative;width:136px;height:136px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.fring2 svg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 0 10px rgba(227,27,35,.25))}
+.fring2-n{position:relative;font-family:var(--display);font-weight:800;font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
+.fring2-u{position:relative;font-size:12px;color:var(--sub);margin-top:2px}
+.fring2-g{position:relative;font-size:11.5px;color:var(--dim);margin-top:4px}
+.fmac2{display:flex;flex-direction:column;gap:12px;min-width:0}
+.fmac2-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fmac2-k{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--sub)}
+.fmac2-k i{width:8px;height:8px;border-radius:4px;background:var(--mac)}
+.fmac2-p{font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+.fmac2-v{font-family:var(--display);font-weight:700;font-size:16px;margin:2px 0 6px;font-variant-numeric:tabular-nums}
+.fmac2-v span{font-family:inherit;font-weight:500;font-size:12px;color:var(--dim)}
+.fmac2-b{height:5px;border-radius:3px;background:var(--surface);overflow:hidden}
+.fmac2-b i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accentHi))}
+.fmac2-r.p{--mac:var(--accentHi)} .fmac2-r.c{--mac:#5AA9E6} .fmac2-r.f{--mac:#E8C547}
+.fleft{font-size:12.5px;font-weight:700;color:var(--accentHi)}
+.fleft.over{color:var(--gold)}
+@media (max-width:360px){.fsum{grid-template-columns:1fr;justify-items:center}.fmac2{width:100%}}
+/* The four meals as tiles. The one for now is lit like the dock's active item. */
+.fmt{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:var(--s3)}
+.fmt-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;min-height:92px;
+  padding:12px 4px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);color:var(--text);
+  transition:transform var(--m-press) var(--e-standard),border-color var(--m-micro) var(--e-standard)}
+.fmt-c:active{transform:scale(.96)}
+.fmt-c:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
+.fmt-c.now{border-color:var(--accent);background:linear-gradient(180deg,rgba(227,27,35,.28),rgba(227,27,35,.08)),var(--raised);
+  box-shadow:0 0 0 1px rgba(248,52,70,.12),0 10px 26px -12px var(--accent-glow)}
+.fmt-i svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fmt-i{color:var(--sub)}
+.fmt-c.now .fmt-i{color:var(--text)}
+.fmt-n{font-size:13px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fmt-k{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.fmt-c.now .fmt-k{color:var(--sub)}
+.fmt-ok{position:absolute;top:6px;inset-inline-end:6px;width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  background:var(--ok);color:#fff}
+.fmt-ok svg,.fml-ok svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+/* Today's meals: a glyph tile, what is in the meal, and its numbers. */
+.fml{display:flex;align-items:center;gap:12px;width:100%;min-height:76px;padding:12px 14px;margin-bottom:8px;
+  border-radius:var(--r3);border:1px solid var(--border);color:var(--text);text-align:start;
+  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 40%),var(--raised)}
+button.fml{transition:transform var(--m-press) var(--e-standard)}
+button.fml:active{transform:scale(.98)}
+.fml-i{flex:0 0 52px;width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;
+  background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.18),transparent 60%),var(--mi,#3a2b20)}
+.fml-i svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fml-i.breakfast{--mi:linear-gradient(135deg,#b8741a,#6e3b0c)}
+.fml-i.lunch{--mi:linear-gradient(135deg,#8a4a1b,#4a2410)}
+.fml-i.dinner{--mi:linear-gradient(135deg,#3b3f73,#1c1e3d)}
+.fml-i.snack{--mi:linear-gradient(135deg,#8c1d24,#45090d)}
+.fml-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.fml-n{font-weight:700;font-size:15.5px}
+.fml-s{font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+div.fml .fml-s{color:var(--dim)}
+.fml-m{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+.fml-ok{flex:0 0 24px;width:24px;height:24px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--ok);color:#fff}
+.fml-ok svg{width:14px;height:14px}
+.fml-add{flex:0 0 44px;width:44px;height:44px;border-radius:22px;border:1px solid var(--hair);background:rgba(255,255,255,.05);
+  color:var(--text);display:flex;align-items:center;justify-content:center;padding:0}
+.fml-add:active{transform:scale(.92)}
+.fml-add .ico-plus{width:16px;height:16px;flex-basis:16px}
+.btn.fadd{margin:8px 0 var(--s5);border-radius:var(--rpill);background:linear-gradient(180deg,var(--accentHi),var(--accent));
+  box-shadow:0 12px 28px -12px var(--accent-glow);text-transform:none;font-size:16px;letter-spacing:0}
+.btn.fadd svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
 
 /* ---- meal detail */
 .mealbanner{background:var(--surface);padding:20px var(--gutter);
@@ -1579,12 +1751,8 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .afcam .ico{width:20px;height:20px;flex-basis:20px}
 .afcam:active{color:var(--accentHi)}
 
-.aftabs{display:flex;gap:6px;margin:12px 0 4px;overflow-x:auto}
-.aftabs button{position:relative;flex-shrink:0;background:none;border:none;min-height:44px;padding:0 8px;
-  color:var(--dim);font-size:14px;font-weight:500}
-.aftabs button.on{color:var(--text);font-weight:700}
-.aftabs button.on::after{content:"";position:absolute;left:50%;bottom:4px;width:32px;height:2px;
-  transform:translateX(-50%);background:var(--accent)}
+/* The four ways to find a food: the shared segmented control (.seg, soft). */
+.aftabs{margin:12px 0 4px}
 
 .afpills{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
 .afpill{background:var(--surface);border:1px solid var(--border);border-radius:22px;min-height:44px;
@@ -1794,20 +1962,10 @@ textarea.afnl.warn{border-color:var(--gold)}
    The four "Progress —" frames and 2:484's segmented control. The view shipped
    without any of these rules, so it rendered as unstyled text and default buttons.
    Surfaces, type and spacing are the app's tokens; nothing here introduces a colour. */
-.pgseg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;
-  background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:12px}
-.pgseg button{min-height:40px;border:none;border-radius:9px;background:none;color:var(--dim);
-  font-size:13.5px;font-weight:700;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  transition:background var(--m-press) var(--e-standard),color var(--m-press) var(--e-standard)}
-.pgseg button.on{background:var(--surface);color:var(--text)}
-.pgrange{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-.pgrange button{min-height:40px;border-radius:var(--r1);border:1px solid var(--border);background:var(--raised);
-  color:var(--sub);font-family:var(--display);font-size:15px;font-weight:700;
-  transition:transform var(--m-press) var(--e-standard)}
-.pgrange button:active{transform:scale(.95)}
+/* The section switch and the range are the shared segmented control (.seg). */
+.pgrange{margin-top:10px}
 .pgrange+.pgcard,.pgrange+.empty{margin-top:var(--s4)}
-.pgrange button.on{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
-.pgseg button:focus-visible,.pgrange button:focus-visible,.pglink:focus-visible,.pgrow:focus-visible,
+.pglink:focus-visible,.pgrow:focus-visible,
 .pgph:focus-visible,.pgaddph:focus-within{outline:2px solid var(--accentHi);outline-offset:2px}
 /* Section labels: the frames' small grey capitals, with an action or note opposite. */
 .pglbl{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:var(--s5) 0 var(--s3);min-height:24px}
@@ -1848,7 +2006,9 @@ textarea.afnl.warn{border-color:var(--gold)}
 .pgchart-r{stroke:var(--dim);stroke-width:1.2;stroke-dasharray:5 5;vector-effect:non-scaling-stroke}
 .pgchart-l{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;
   vector-effect:non-scaling-stroke}
-.pgchart-p{fill:var(--accent);stroke:var(--text);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.pgchart-p,.pgchart-po{fill:none;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.pgchart-po{stroke:var(--text);stroke-width:9}
+.pgchart-p{stroke:var(--accent);stroke-width:5.5}
 .pgaxis{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--dim);margin-top:8px}
 /* Rows: records, workouts, top lifts, the day card. */
 .pgrow{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:14px 16px;margin-bottom:8px;
@@ -1919,10 +2079,97 @@ button.pgrow:active{background:var(--surface)}
 .pgring-v{fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round}
 [dir="rtl"] .pglbl h2,[dir="rtl"] .pgstat-k,[dir="rtl"] .pgrow-k,[dir="rtl"] .pgbadge{letter-spacing:0}
 @media (max-width:360px){
-  .pgseg button{font-size:12px}
+
   .pgmacs{grid-template-columns:1fr}
   .pgbig{font-size:34px}
 }
+/* ---- Progress, redesign frames -------------------------------------------------
+   Key metrics, exercise progress and the rest share one card surface (a faint top
+   light over --raised, the card shadow) and one badge: an accent disc with a glyph,
+   the dock's active state made solid. */
+.pgcard,.pgstat,.pgkm-c,.pgpr,.pgex,.pginsight,.pgm,.pgrow{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 40%),var(--raised);
+  box-shadow:var(--shadow-card)}
+.pgki{flex:0 0 36px;width:36px;height:36px;border-radius:var(--rpill);display:inline-flex;align-items:center;justify-content:center;
+  color:var(--onAccent);background:radial-gradient(circle at 35% 30%,var(--accentHi),var(--accent) 72%);
+  box-shadow:0 6px 16px -6px var(--accent-glow)}
+.pgki svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pgkm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.pgkm-c{display:flex;flex-direction:column;gap:6px;min-width:0;padding:14px;border-radius:var(--r3);text-align:start;
+  border:1px solid var(--border);color:var(--text);transition:transform var(--m-press) var(--e-standard)}
+.pgkm-c:active{transform:scale(.97)}
+.pgkm-c:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
+.pgkm-h{display:flex;align-items:center;gap:10px;min-width:0}
+.pgkm-k{font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pgkm-v{font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums;margin-top:2px}
+.pgkm-v small{font-family:inherit;font-size:13px;font-weight:600;color:var(--dim);margin-inline-start:3px}
+.pgkm-s{font-size:12px;color:var(--dim);min-height:16px}
+.pgspark{display:block;width:100%;height:28px;margin-top:2px;overflow:visible}
+.pgspark path{fill:none;stroke:var(--dim);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.pgspark.ok path{stroke:var(--ok)}
+.pgbars{display:flex;align-items:flex-end;gap:5px;height:28px;margin-top:2px}
+.pgbars i{flex:1;border-radius:3px;background:var(--bar-track)}
+.pgbars i.now{background:var(--accent)}
+.pgcard-i{display:flex;align-items:center;gap:10px}
+.pgcard-i .pgki{flex-basis:32px;width:32px;height:32px}
+.pgcard-i .pgki svg{width:17px;height:17px}
+.pgcard-r{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.pgcard-r b{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums;color:var(--text)}
+.pgmeas-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:14px}
+.pgmeas-c{display:flex;flex-direction:column;gap:4px;min-width:0;padding:0 12px}
+.pgmeas-c:first-child{padding-inline-start:0}
+.pgmeas-c+.pgmeas-c{border-inline-start:1px solid var(--border)}
+.pgmeas-c span:first-child{font-size:12.5px;color:var(--dim)}
+.pgmeas-c b{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+.pgmeas-c .pgd{font-size:12px}
+/* The closing banner over the rider. */
+.pgbanner{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;
+  min-height:84px;margin-top:var(--s5);padding:16px 18px;border-radius:var(--r4);text-align:start;color:var(--text);
+  border:1px solid var(--accent-edge);background:linear-gradient(90deg,rgba(227,27,35,.35),rgba(20,20,26,.2) 60%),var(--raised)}
+.pgbanner img{position:absolute;z-index:-1;inset-inline-start:0;top:0;width:42%;height:100%;object-fit:cover;object-position:52% 30%;
+  mix-blend-mode:screen;opacity:.75;pointer-events:none;
+  -webkit-mask:linear-gradient(90deg,#000 50%,transparent);mask:linear-gradient(90deg,#000 50%,transparent)}
+[dir="rtl"] .pgbanner img{transform:scaleX(-1);-webkit-mask:linear-gradient(270deg,#000 50%,transparent);mask:linear-gradient(270deg,#000 50%,transparent)}
+.pgbanner-t{flex:1;display:flex;flex-direction:column;gap:3px;padding-inline-start:30%}
+.pgbanner-t b{font-family:var(--display);font-size:16px}
+.pgbanner-t span{font-size:12.5px;color:var(--sub)}
+.pgbanner .ico-chev{color:var(--text)}
+/* Strength: the filter, record cards, exercise rows, the insight. */
+.pghalf{margin-top:12px}
+.pgprs{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 2px 6px;margin:0 -2px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.pgprs::-webkit-scrollbar{display:none}
+.pgpr{flex:0 0 132px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+  padding:14px;border-radius:var(--r3);border:1px solid var(--border);color:var(--text);text-align:start;
+  transition:transform var(--m-press) var(--e-standard),border-color var(--m-micro) var(--e-standard)}
+.pgpr.on{border-color:var(--accent-edge)}
+.pgpr:active{transform:scale(.97)}
+.pgpr .pgki{margin-bottom:4px}
+.pgpr-n{font-size:13px;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pgpr-v{font-family:var(--display);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.pgpr-v small{font-family:inherit;font-size:12px;color:var(--dim);margin-inline-start:3px;font-weight:600}
+.pgpr-d{font-size:11.5px;color:var(--dim)}
+.pgex{display:flex;align-items:center;gap:12px;width:100%;min-height:76px;padding:12px 14px;margin-bottom:8px;
+  border-radius:var(--r2);border:1px solid var(--border);color:var(--text);text-align:start;
+  transition:transform var(--m-press) var(--e-standard)}
+.pgex.on{border-color:var(--accent-edge)}
+.pgex:active{transform:scale(.98)}
+.pgex .thumbwrap,.pgex .thumb.ph,.pgex img.thumb{border-radius:12px;flex-shrink:0}
+.pgex-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.pgex-n{font-weight:700;font-size:15px;overflow-wrap:anywhere}
+.pgex-s{font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+.pgex .pgspark{flex:0 0 56px;width:56px;height:24px;margin:0}
+.pgex-p{flex:0 0 42px;text-align:end;font-size:12.5px;font-weight:700;color:var(--dim);font-variant-numeric:tabular-nums}
+.pgex-p.ok{color:var(--ok)}
+.pgex .ico-chev{color:var(--dim);flex-shrink:0}
+.pginsight{display:flex;gap:12px;align-items:flex-start;margin-top:var(--s4);padding:16px;border-radius:var(--r3);border:1px solid var(--border)}
+.pginsight-i{flex:0 0 36px;width:36px;height:36px;border-radius:var(--rpill);display:flex;align-items:center;justify-content:center;
+  background:var(--accent-tint);color:var(--accentHi);box-shadow:inset 0 0 0 1px var(--accent-edge)}
+.pginsight-i svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.pginsight>span:last-child{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pginsight b{font-size:14.5px}
+.pginsight span span{font-size:13.5px;color:var(--sub)}
+.pginsight small{font-size:11.5px;color:var(--dim)}
+@media (max-width:360px){.pgex .pgspark{display:none}.pgbanner-t{padding-inline-start:24%}}
 </style>
 </head>
 <body>

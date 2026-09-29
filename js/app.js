@@ -8,7 +8,7 @@ import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, targetKcal} fro
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
-import {render} from "./ui/render.js";
+import {render, syncKeyboard} from "./ui/render.js";
 import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
 import {leave} from "./ui/motion.js";
@@ -68,7 +68,7 @@ document.addEventListener("click",function(ev){
   if(D.confirmok!==undefined){runAct((V.sd||{}).act,true);return;}
   if(D.confirmalt!==undefined){runAct((V.sd||{}).altact,true);return;}
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
-  if(D.tab){resetNav();V.tab=D.tab;V.train="days";V.meal=null;render();return;}
+  if(D.tab){resetNav();V.tab=D.tab;V.train="days";V.meal=null;V.dnavDir=0;render();return;}
   /* Same reset as a tab tap: it is the same kind of move. Without V.train it landed
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
@@ -123,6 +123,7 @@ document.addEventListener("click",function(ev){
     return;}
   if(D.seeall){V.ptab="strength";render();window.scrollTo(0,0);return;}
   if(D.pall){V.pall=!V.pall;render();return;}
+  if(D.phalf){V.phalf=D.phalf;V.pall=false;render();return;}
   /* A lift in the list is charted above it, so bring the chart into view. */
   if(D.chartex){V.chartEx=D.chartex;render();
     var pk=document.querySelector(".pgpick");
@@ -752,34 +753,70 @@ document.addEventListener("click",function(ev){
      Which day a screen owns is the only thing that differs, so that is the only thing
      these branches branch on. Food stores null for today because curDate() treats null
      as "follow the clock", which keeps the tab correct across midnight. */
-  function dbGet(){ return V.tab==="food"?(V.fdate||today()):(V.pdate||today()); }
+  /* Train has its own day too, and is the one screen that looks ahead: it shows what
+     the plan holds for tomorrow and after. Food and Progress stop at today. */
+  function dbGet(){ return V.tab==="food"?(V.fdate||today()):V.tab==="train"?(V.tdate||today()):(V.pdate||today()); }
   function dbSet(iso){
-    if(iso>today())return;                       /* no logging into the future */
+    if(iso>today()&&V.tab!=="train")return;      /* no logging into the future */
+    var was=dbGet();
+    V.dnavDir=iso>was?1:iso<was?-1:0;
     if(V.tab==="food")V.fdate=(iso===today())?null:iso;
+    else if(V.tab==="train")V.tdate=(iso===today())?null:iso;
     else V.pdate=iso;
   }
+  function calOpen(on){
+    if(V.tab==="food")V.fcal=on; else if(V.tab==="train")V.tcal=on; else V.pcal=on;}
+  function calIsOpen(){return V.tab==="food"?V.fcal:V.tab==="train"?V.tcal:V.pcal;}
+  /* A day card on Train moves the date navigator to that day. */
+  if(D.tday){dbSet(D.tday);calOpen(false);render();window.scrollTo(0,0);return;}
   if(D.dday!==undefined){
     dbSet(+D.dday===0?today():shiftDay(dbGet(),+D.dday));
     render();return;}
   if(D.dopen!==undefined){
-    if(V.tab==="food")V.fcal=!V.fcal; else V.pcal=!V.pcal;
+    calOpen(!calIsOpen());
     V.cal=0;render();return;}
   if(D.dmonth!==undefined){V.cal+= +D.dmonth;render();return;}
   if(D.dpick){
     dbSet(D.dpick);
-    if(V.tab==="food")V.fcal=false; else V.pcal=false;
+    calOpen(false);
     render();return;}
 });
 
 
 
-document.addEventListener("focusin",function(ev){
-  if(ev.target.matches("input,select,textarea"))document.body.classList.add("kb");});
-document.addEventListener("focusout",function(){
-  setTimeout(function(){
-    var a=document.activeElement;
-    if(!a||!a.matches||!a.matches("input,select,textarea"))document.body.classList.remove("kb");
-  },60);});
+/* Swiping the date navigator moves the day, as the arrows do — it presses the arrow,
+   so the rule for which days are reachable lives in one place. A swipe is a quick,
+   mostly horizontal drag of at least 48px; anything else is left to scrolling, which
+   these listeners never block (passive). */
+var swipe=null;
+document.addEventListener("touchstart",function(ev){
+  var el=ev.touches.length===1&&ev.target.closest&&ev.target.closest('[data-swipe="day"]');
+  swipe=el?{el:el,x:ev.touches[0].clientX,y:ev.touches[0].clientY,at:Date.now()}:null;
+},{passive:true});
+document.addEventListener("touchend",function(ev){
+  var sw=swipe;swipe=null;
+  if(!sw||!ev.changedTouches.length)return;
+  var dx=ev.changedTouches[0].clientX-sw.x,dy=ev.changedTouches[0].clientY-sw.y;
+  if(Math.abs(dx)<48||Math.abs(dx)<Math.abs(dy)*1.5||Date.now()-sw.at>700)return;
+  /* Content follows the finger: dragging left brings the next day in. */
+  var step=dx<0?1:-1;
+  if(document.documentElement.getAttribute("dir")==="rtl")step=-step;
+  var btn=sw.el.querySelector('[data-dday="'+step+'"]');
+  if(btn&&!btn.disabled){swipedAt=Date.now();btn.click();}
+},{passive:true});
+/* A handled swipe must not also count as a tap on whatever the finger ended over —
+   the date itself would open the month. Only the click that immediately follows. */
+var swipedAt=0;
+document.addEventListener("click",function(ev){
+  if(swipedAt&&Date.now()-swipedAt<400&&!(ev.target.closest&&ev.target.closest("[data-dday]"))){
+    swipedAt=0;ev.preventDefault();ev.stopPropagation();}
+},true);
+
+/* The dock steps aside while the keyboard is up (see syncKeyboard in render.js). The
+   same test decides both directions, and render() re-checks it, so the flag cannot be
+   left behind by a field that was destroyed rather than blurred. */
+document.addEventListener("focusin",syncKeyboard);
+document.addEventListener("focusout",function(){setTimeout(syncKeyboard,60);});
 /* Every keystroke used to re-render the whole screen, which meant a linear scan of 873
    exercises plus a full innerHTML rebuild per character. The value is captured
    immediately; the redraw waits for a pause in typing. */
@@ -821,9 +858,11 @@ document.addEventListener("input",function(ev){
    previously unreachable by keyboard entirely. */
 document.addEventListener("keydown",function(ev){
   if(ev.key==="Escape"&&V.sheet){ev.preventDefault();requestCloseSheet();return;}
-  /* Arrow keys move along the Progress tabs, as they do in any tablist. */
-  if((ev.key==="ArrowRight"||ev.key==="ArrowLeft")&&ev.target.dataset&&ev.target.dataset.ptab){
-    var tl=[].slice.call(document.querySelectorAll("[data-ptab]")),ti=tl.indexOf(ev.target);
+  /* Arrow keys move along any tablist (the segmented controls), as they do natively. */
+  var tlist=(ev.key==="ArrowRight"||ev.key==="ArrowLeft")&&ev.target.closest&&ev.target.getAttribute("role")==="tab"
+    &&ev.target.closest('[role="tablist"]');
+  if(tlist){
+    var tl=[].slice.call(tlist.querySelectorAll('[role="tab"]')),ti=tl.indexOf(ev.target);
     var fw=(ev.key==="ArrowRight")!==(document.documentElement.dir==="rtl");
     var nx=tl[(ti+(fw?1:-1)+tl.length)%tl.length];
     if(nx){ev.preventDefault();nx.click();}

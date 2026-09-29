@@ -14,7 +14,8 @@
    None of those needed finding twice. That is the whole argument for this file. */
 import {t} from "../i18n/dict.js";
 import {S} from "../state.js";
-import {shortd, today} from "../util.js";
+import {esc, today} from "../util.js";
+import {V} from "./view.js";
 
 /* Local midnight, shifted, then read back as a local date rather than a UTC one.
    `new Date(iso+"T00:00:00")` is local, but toISOString() converts to UTC, so east of
@@ -44,63 +45,94 @@ function marksFor(){
   return m;
 }
 
-/* The arrows are glyphs, not icons, so they have to be swapped by hand in RTL: the row
-   reverses on its own but a left-pointing chevron stays left-pointing. Reading the dir
-   attribute rather than the language keeps this true for anything else that sets it. */
-function rtl(){
-  try{ return document.documentElement.getAttribute("dir")==="rtl"; }
-  catch(e){ return false; }
-}
-var PREV_G="‹", NEXT_G="›";
+/* Chevrons and the calendar, drawn inline so they take the text colour. In RTL the
+   row reverses on its own and CSS mirrors the chevrons, so "previous" still points
+   back along the reading direction. */
+var CHEV_L='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14.5 6 8.5 12l6 6"/></svg>';
+var CHEV_R='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.5 6l6 6-6 6"/></svg>';
+var CHEV_D='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 10l5 5 5-5"/></svg>';
+var CAL='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+var BACK='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9"/><path d="M4.5 4.5V9H9"/></svg>';
 
-/* The month grid. Only rendered when the bar is expanded. */
-function monthGrid(sel,monthOffset){
+/* The week's initials in the reader's language, Sunday first, from a known Sunday
+   (4 Jan 1970). A table of letters would be English only, and "S" is two days. */
+function weekInitials(){
+  var out=[];
+  for(var i=0;i<7;i++)out.push(new Date(1970,0,4+i).toLocaleDateString(undefined,{weekday:"narrow"}));
+  return out;}
+
+/* The month grid. Only rendered when the navigator is open. Past and today are
+   pickable everywhere; the future only where the screen plans ahead (Train). */
+function monthGrid(sel,monthOffset,future){
   var base=new Date();base.setDate(1);base.setMonth(base.getMonth()+(monthOffset||0));
   var y=base.getFullYear(),m=base.getMonth();
   var first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
-  var marks=marksFor(),back=rtl()?NEXT_G:PREV_G,fwd=rtl()?PREV_G:NEXT_G;
-  var h='<div class="dbcal"><div class="row" style="align-items:center">'
-   +'<button class="btn d sm iconbtn" data-dmonth="-1" aria-label="'+t("Previous month")+'">'+back+'</button>'
+  var marks=marksFor(),now=today();
+  var h='<div class="dbcal"><div class="dbcal-h">'
+   +'<button class="dnav-arrow sm" data-dmonth="-1" aria-label="'+t("Previous month")+'">'+CHEV_L+'</button>'
    +'<strong aria-live="polite">'+base.toLocaleDateString(undefined,{month:"long",year:"numeric"})+'</strong>'
-   +'<button class="btn d sm iconbtn" data-dmonth="1" aria-label="'+t("Next month")+'">'+fwd+'</button></div>'
+   +'<button class="dnav-arrow sm" data-dmonth="1" aria-label="'+t("Next month")+'">'+CHEV_R+'</button></div>'
    +'<div class="dbgrid">';
-  ["S","M","T","W","T","F","S"].forEach(function(d){
-    h+='<div class="tiny" style="text-align:center">'+d+'</div>';});
+  weekInitials().forEach(function(d){h+='<div class="dbwk" aria-hidden="true">'+esc(d)+'</div>';});
   for(var i=0;i<first;i++)h+='<div></div>';
   for(var d=1;d<=days;d++){
     var iso=y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
     var mk=marks[iso]||0, trained=mk&TRAINED, ate=mk&ATE;
-    var isToday=iso===today(), isSel=iso===sel;
     var cls="dbday";
     if(trained)cls+=" trained";
-    if(isToday)cls+=" today";
-    if(isSel)cls+=" sel";
-    /* Picking a day folds the month away and scopes the screen. The full day detail is
-       a separate control on each screen, because what "that day" means differs. */
-    h+='<button class="'+cls+'" data-dpick="'+iso+'"'
-     +' aria-label="'+iso+'"'+(isSel?' aria-current="date"':'')+'>'+d
-     +(ate&&!trained?'<span class="dbdot" aria-hidden="true"></span>':'')+'</button>';}
+    if(iso===now)cls+=" today";
+    if(iso===sel)cls+=" sel";
+    var off=!future&&iso>now;
+    /* Picking a day folds the month away and scopes the screen. */
+    h+='<button class="'+cls+'" data-dpick="'+iso+'"'+(off?' disabled':'')
+     +' aria-label="'+new Date(iso+"T00:00:00").toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"})
+     +(trained?", "+t("trained"):"")+(ate?", "+t("food logged"):"")+'"'
+     +(iso===sel?' aria-current="date"':'')+'>'+d
+     +(trained||ate?'<span class="dbdot'+(trained?' t':'')+'" aria-hidden="true"></span>':'')+'</button>';}
   return h+'</div></div>';
 }
 
-/* The bar itself. `date` is the selected ISO day, `open` whether the month is showing,
-   `monthOffset` how many months the grid has been paged from this one. */
+/* The navigator. One component on Food, Progress and Train:
+
+     ‹   [cal] TODAY · 29 SEP ⌄   ›
+             Monday · Today
+
+   o.date         the selected ISO day
+   o.open         whether the month is showing
+   o.monthOffset  how many months the grid has been paged from this one
+   o.future       whether days after today can be chosen (only Train plans ahead)
+   o.kicker       a small label above the date ("Workout plan")
+   o.note         what the day holds, in place of "Today" on the second line
+   o.art          the Bunyan horse drawn into the right of the surface
+
+   The date text is keyed by the date, so a change replaces it and its short slide
+   plays in the direction the day moved (V.dnavDir). The surface itself stays put.
+   It swipes: data-swipe="day" is picked up in app.js and presses the matching arrow. */
 function dateBar(o){
-  var sel=o.date||today(), isToday=sel===today();
-  var back=rtl()?NEXT_G:PREV_G, fwd=rtl()?PREV_G:NEXT_G;
-  return '<div class="card dbwrap">'
-   +'<div class="row" style="align-items:center">'
-   +'<button class="btn d sm iconbtn" data-dday="-1" aria-label="'+t("Previous day")+'">'+back+'</button>'
-   +'<button class="pdate" data-dopen="1" aria-expanded="'+(o.open?"true":"false")+'"'
-   +' aria-label="'+t("Choose a day")+'">'
-   +(isToday?t("Today")+", ":"")+shortd(sel)
-   +'<span class="pchev'+(o.open?" up":"")+'" aria-hidden="true">›</span></button>'
-   +'<button class="btn d sm iconbtn" data-dday="1"'+(isToday?' disabled':'')
-   +' aria-label="'+t("Next day")+'">'+fwd+'</button>'
+  var sel=o.date||today(), now=today(), isToday=sel===now;
+  var d=new Date(sel+"T00:00:00");
+  var day=d.toLocaleDateString(undefined,{day:"numeric",month:"short"});
+  var big=(isToday?t("Today"):d.toLocaleDateString(undefined,{weekday:"short"}))+" · "+day;
+  var wk=d.toLocaleDateString(undefined,{weekday:"long"});
+  var sub=wk+(o.note?" · "+o.note:isToday?" · "+t("Today"):"");
+  var nextOff=!o.future&&sel>=now;
+  var dir=V.dnavDir>0?" fwd":V.dnavDir<0?" back":"";
+  var full=d.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  return '<div class="dnav-wrap" data-k="dnav-wrap">'
+   +'<div class="dnav'+(isToday?' now':'')+(o.art?' art':'')+'" data-swipe="day">'
+   +(o.art?'<img class="dnav-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">':'')
+   +'<button class="dnav-arrow" data-dday="-1" aria-label="'+t("Previous day")+'">'+CHEV_L+'</button>'
+   +'<button class="dnav-mid" data-dopen="1" aria-expanded="'+(o.open?"true":"false")+'"'
+   +' aria-label="'+esc(t("Choose a day")+", "+full)+'">'
+   +(o.kicker?'<span class="dnav-k">'+esc(o.kicker)+'</span>':'')
+   +'<span class="dnav-d'+dir+'" data-k="dd-'+sel+'">'+CAL+'<span class="dnav-t">'+esc(big)+'</span>'
+   +'<span class="dnav-c'+(o.open?' up':'')+'">'+CHEV_D+'</span></span>'
+   +'<span class="dnav-s" data-k="ds-'+sel+'">'+esc(sub)+'</span></button>'
+   +'<button class="dnav-arrow" data-dday="1"'+(nextOff?' disabled':'')
+   +' aria-label="'+t("Next day")+'">'+CHEV_R+'</button>'
    +'</div>'
-   +(isToday?'':'<div style="text-align:center"><button class="btn d sm" data-dday="0">'
-     +t("Back to today")+'</button></div>')
-   +(o.open?monthGrid(sel,o.monthOffset):'')
+   +(isToday?'':'<button class="dnav-back" data-dday="0">'+BACK+'<span>'+t("Back to today")+'</span></button>')
+   +(o.open?monthGrid(sel,o.monthOffset,o.future):'')
    +'</div>';
 }
 

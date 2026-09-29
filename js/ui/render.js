@@ -1,6 +1,5 @@
 /* Bunyan — render
    The single render entry point. */
-import {t} from "../i18n/dict.js";
 import {applyLang} from "../i18n/exnames.js";
 import {vFood} from "./views/food.js";
 import {vHome} from "./views/home.js";
@@ -13,20 +12,10 @@ import {syncRest} from "./views/session.js";
 import {PERSIST} from "../util.js";
 import {lockScroll, V} from "./view.js";
 import {patch, replace} from "./patch.js";
+import {syncDock} from "./dock.js";
 import {applyMotion, countTo, once} from "./motion.js";
 
 /* ============================================================ render */
-/* The five tabs. The icons are the Bunyan design's own vectors, exported from Figma
-   into icons/ and applied in CSS as masks — there is no path data here any more.
-   The Material icons that stood in before are gone; the design names these
-   activity, pie-chart and trending-up, not a dumbbell, a list and a bar chart. */
-function TABSET(){return [
- ["home",t("Home")],
- ["train",t("Train")],
- ["food",t("Food")],
- ["progress",t("Progress")],
- ["profile",t("Profile")]];}
-
 /* Motion is applied after the DOM has settled, and only to what changed.
 
    Each entry animation is keyed by the surface it belongs to and marked with once(),
@@ -104,10 +93,8 @@ function render(){
   if(moved)replace(appEl,h); else patch(appEl,h);
   if(moved){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
 
-  var navEl=document.getElementById("nav");
-  patch(navEl,TABSET().map(function(tb){
-    return '<button data-k="'+tb[0]+'" data-tab="'+tb[0]+'"'+(V.tab===tb[0]?' class="on"':'')+'>'
-     +'<span class="navico" aria-hidden="true"></span>'+tb[1]+'</button>';}).join(""));
+  /* The dock is built once and only its state changes after that — see dock.js. */
+  syncDock(document.getElementById("nav"),V.tab);
 
   /* The sheet animates in when it opens and never again. Replaying sheetIn on every
      render is what made tapping the favourite star look like the sheet was being
@@ -147,6 +134,10 @@ function render(){
       restored=true;
     }
   }
+  /* The keyboard flag follows the focused element, not the focus events alone. A
+     render that replaces the field being typed in destroys it without a focusout,
+     which left "kb" on the body and the dock hidden on the next screen. */
+  syncKeyboard();
   paintMotion(appEl,view);
   paintMotion(sheetEl,"sheet:"+(V.sheet||""));
 
@@ -160,4 +151,14 @@ function render(){
 }
 
 
-export {render};
+/* Whether a text field has focus — the one time the dock steps aside, because iOS lays
+   a fixed bar out against the layout viewport and would float it over the keyboard.
+   Pickers, checkboxes and file inputs raise no keyboard and leave it alone. */
+function isTyping(el){
+  if(!el||!el.matches)return false;
+  if(el.matches("textarea,[contenteditable=true]"))return true;
+  return el.matches("input")&&!el.matches("[type=checkbox],[type=radio],[type=range],[type=file],[type=button],[type=submit],[type=color]");
+}
+function syncKeyboard(){document.body.classList.toggle("kb",isTyping(document.activeElement));}
+
+export {isTyping, render, syncKeyboard};

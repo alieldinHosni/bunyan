@@ -15,7 +15,7 @@ import {density, FOODDB, isMeasure, nutritionFor, searchFoods, sumNutrition, uni
 import {scanSupported} from "../../scan.js";
 import {S} from "../../state.js";
 import {esc, fmtN, r1} from "../../util.js";
-import {V} from "../view.js";
+import {seg, V} from "../view.js";
 import {MEALS, mealNow} from "./food.js";
 
 /* ---- shared pieces --------------------------------------------------------- */
@@ -154,10 +154,8 @@ function vSearch(){
    +' aria-label="'+esc(t(scanSupported()?"Scan barcode":"Enter barcode"))+'">'
    +'<span class="ico ico-camera" aria-hidden="true"></span></button></div>';
   var TABS=[["search","Search"],["recent","Recent"],["frequent","Frequent"],["custom","Custom"]];
-  h+='<div class="aftabs" role="tablist">'+TABS.map(function(x){
-    var on=tab===x[0];
-    return '<button role="tab" aria-selected="'+on+'"'+(on?' class="on"':'')
-     +' data-ftab="'+x[0]+'">'+esc(t(x[1]))+'</button>';}).join("")+'</div>';
+  h+=seg({items:TABS.map(function(x){return [x[0],t(x[1])];}),value:tab,attr:"ftab",
+    tabs:true,soft:true,cls:"aftabs",label:t("Find food"),key:"aftabs"});
   /* A barcode lookup runs from this screen, so its states show here. */
   if(st.busy)h+=shimmer(t("Checking the online food database…"));
   else if(st.bcFail)h+=errCard(t("Unable to load nutrition data"),

@@ -249,5 +249,67 @@ function runOf(test){
   return n;}
 function streaks(){return {protein:runOf(proteinMet),kcal:runOf(kcalMet)};}
 
-export {bodyFat, daysBetween, e1rmSeries, isoAgo, measurements, muscleShare, nutrition, overview,
-        recentRecords, streaks, TOL, topLifts, volumeSeries, weighIns, weightChange};
+/* ---- the redesign's summary cards ------------------------------------------ */
+/* Upper or lower body, for the Strength filter. Core and anything unclassified is
+   neither and shows only under All. */
+var UPPER={Chest:1,Back:1,Shoulders:1,Biceps:1,Triceps:1,Forearms:1,Neck:1};
+var LOWER={Quads:1,Hamstrings:1,Glutes:1,Adductors:1,Calves:1};
+function liftHalf(entryOrName){
+  var m=typeof entryOrName==="string"?muscleOfEntry({name:entryOrName}):muscleOfEntry(entryOrName);
+  return UPPER[m]?"upper":LOWER[m]?"lower":"";}
+
+/* One lift over the window: its e1RM trend, the change from the first estimate to the
+   last, and what the latest session did (sets × typical reps · top weight). */
+function liftProgress(name,n){
+  var ser=e1rmSeries(name,n),pct=null;
+  if(ser.length>=2&&ser[0].v>0)pct=(ser[ser.length-1].v-ser[0].v)/ser[0].v*100;
+  var last=null;
+  for(var i=0;i<S.sessions.length&&!last;i++){
+    S.sessions[i].entries.forEach(function(e){
+      if(last||e.name!==name)return;
+      var work=working(e);if(!work.length)return;
+      var top=0,reps={};
+      work.forEach(function(x){var w=num(x.w);if(w>top)top=w;reps[num(x.r)]=(reps[num(x.r)]||0)+1;});
+      var common=+Object.keys(reps).sort(function(a,b){return reps[b]-reps[a]||b-a;})[0];
+      last={sets:work.length,reps:common,w:top,date:S.sessions[i].date};});}
+  return {series:ser,pct:pct,last:last};}
+
+/* The frame's "Strength +12% since start": how far the estimated maxes of the lifts
+   trained most have moved across the window, averaged so one lift cannot carry it.
+   Only lifts with two estimates in the window count. The series is the same figure
+   session by session, 100 at the start, for the card's sparkline. */
+function strengthIndex(n,k){
+  var names=topLifts().slice(0,k||5).map(function(L){return L.name;});
+  var base={},pcts=[],byDate={};
+  names.forEach(function(nm){
+    var ser=e1rmSeries(nm,n);
+    if(ser.length<2)return;
+    base[nm]=ser[0].v;
+    pcts.push((ser[ser.length-1].v-ser[0].v)/ser[0].v*100);
+    ser.forEach(function(p){(byDate[p.d]=byDate[p.d]||[]).push(p.v/base[nm]*100);});});
+  var series=Object.keys(byDate).sort().map(function(d){
+    var a=byDate[d];return {d:d,v:a.reduce(function(x,y){return x+y;},0)/a.length};});
+  return {pct:pcts.length?pcts.reduce(function(a,b){return a+b;},0)/pcts.length:null,
+    lifts:pcts.length,series:series};}
+
+/* Days trained this calendar month, and sessions per week for the last six weeks
+   (oldest first) for the card's bars. */
+function consistencyMonth(){
+  var now=today(),mo=now.slice(0,7),days={};
+  S.sessions.forEach(function(s){if(s.date.slice(0,7)===mo)days[s.date]=1;});
+  var weeks=[];
+  for(var b=5;b>=0;b--){
+    var to=isoAgo(b*7),from=isoAgo(b*7+6),c=0;
+    S.sessions.forEach(function(s){if(inWin(s.date,from,to))c++;});
+    weeks.push(c);}
+  return {days:Object.keys(days).length,weeks:weeks};}
+
+/* Body-fat figures the user entered, in the window, oldest first. */
+function bodyFatSeries(n){
+  var w=n?win(n):null;
+  return (S.body||[]).filter(function(b){return num(b.bf)>0&&(!w||inWin(b.date,w.from,w.to));})
+    .map(function(b){return {d:b.date,v:num(b.bf)};});}
+
+export {bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, isoAgo, liftHalf, liftProgress,
+        measurements, muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL,
+        topLifts, volumeSeries, weighIns, weightChange};

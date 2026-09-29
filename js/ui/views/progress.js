@@ -19,18 +19,19 @@
    - The gear is gone: settings are the Profile tab.
    - The range chips drive every span on every view, not only Overview's, so no
      chart is scoped by a control that is off screen.
-   - The date bar and its "that day" card, which the app already had, sit at the
-     foot of Overview under "Day by day". */
+   - The date navigator and its "that day" card, which the app already had, open
+     Overview, above the range, as Food has them; they scope only that card. */
 import {t} from "../../i18n/dict.js";
-import {empty} from "../../data/exercises.js";
+import {empty, thumb} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
-import {bodyFat, daysBetween, e1rmSeries, measurements, muscleShare, nutrition, overview,
-        recentRecords, streaks, TOL, topLifts, volumeSeries, weighIns, weightChange} from "../../engine/stats.js";
+import {bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftHalf, liftProgress, measurements,
+        muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL, topLifts, volumeSeries,
+        weighIns, weightChange} from "../../engine/stats.js";
 import {sessionVolume} from "../../engine/formulas.js";
 import {S} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, r1, shortd, today} from "../../util.js";
-import {streak, V} from "../view.js";
+import {seg, streak, V} from "../view.js";
 import {dateBar} from "../datebar.js";
 import {photoList} from "../photos.js";
 import {render} from "../render.js";
@@ -91,8 +92,14 @@ function lineChart(pts,o){
   if(o.fill)h+='<path d="'+d+' L'+X(last)+' '+H+' L'+X(0)+' '+H+' Z" class="pgchart-a"/>';
   if(o.ref!=null){var ry=Y(o.ref);
     h+='<line x1="0" y1="'+ry+'" x2="'+W+'" y2="'+ry+'" class="pgchart-r"/>';}
+  /* Points are zero-length round-capped strokes, not circles: the box stretches to
+     the card (preserveAspectRatio none), which would squash a circle into an ellipse,
+     while a non-scaling stroke stays round at any size. o.dots marks every point; the
+     last is always marked. */
+  function dot(i){var m='M'+X(i)+' '+Y(pts[i].v)+'h0';
+    return '<path class="pgchart-po" d="'+m+'"/><path class="pgchart-p" d="'+m+'"/>';}
   h+='<path class="line pgchart-l" d="'+d+'"/>'
-   +'<circle cx="'+X(last)+'" cy="'+Y(pts[last].v)+'" r="3" class="pgchart-p"/></svg>'
+   +(o.dots&&pts.length<=24?pts.map(function(p,i){return dot(i);}).join(""):dot(last))+'</svg>'
    +'<figcaption class="pgaxis"><span>'+esc(shortd(pts[0].d))+'</span>'
    +(last>1?'<span>'+esc(shortd(pts[mid].d))+'</span>':'')
    +'<span>'+esc(shortd(pts[last].d))+'</span></figcaption></figure>';
@@ -108,7 +115,8 @@ function anything(){
   return false;}
 
 function vProgress(){
-  var h='<div class="thead"><h1>'+t("Progress")+'</h1></div>';
+  var h='<div class="thead"><div><h1>'+t("Progress")+'</h1>'
+   +'<p class="thead-s">'+t("Track. Improve. Get stronger.")+'</p></div></div>';
   /* A wall of zeroes tells a new user nothing. Show the two things that start
      filling this screen instead. */
   if(!anything())
@@ -117,14 +125,18 @@ function vProgress(){
       '<button class="btn" data-go="train">'+t("Start a workout")+'</button>'
       +'<button class="btn g" data-sheet="weigh">'+t("Log weight")+'</button>');
   var tab=V.ptab||"overview";
-  h+='<div class="pgseg" role="tablist" aria-label="'+esc(t("Progress views"))+'">'
-   +TABS.map(function(x){var on=tab===x[0];
-     return '<button role="tab" aria-selected="'+on+'"'+(on?' class="on"':'')
-      +' data-ptab="'+x[0]+'">'+esc(t(x[1]))+'</button>';}).join("")+'</div>';
+  h+=seg({items:TABS.map(function(x){return [x[0],t(x[1])];}),value:tab,attr:"ptab",
+    tabs:true,label:t("Progress views"),key:"pgtabs"});
   var r=range();
-  h+='<div class="pgrange">'+RANGES.map(function(x){var on=r===x[0];
-    return '<button data-range="'+x[0]+'" aria-pressed="'+on+'"'+(on?' class="on"':'')
-     +' aria-label="'+esc(t(PAST[x[0]]))+'">'+esc(t(x[1]))+'</button>';}).join("")+'</div>';
+  /* Overview opens with the day, as Food does: the date navigator and what that one
+     day held. It scopes only that card. The range below drives everything else, and
+     neither ever moves the other. */
+  if(tab==="overview")h+=dateBar({date:pdate(),open:V.pcal,monthOffset:V.cal})+vThatDay();
+  /* The range is the secondary control: same component, tinted rather than filled,
+     so the section switch above stays the one that reads as navigation. Each chip's
+     accessible name is the span it stands for — "1W" read aloud says nothing. */
+  h+=seg({items:RANGES.map(function(x){return [x[0],t(x[1]),t(PAST[x[0]])];}),value:r,attr:"range",
+    soft:true,cls:"pgrange",label:t("Time range"),key:"pgrange"});
   if(tab==="strength")h+=vStrength(r);
   else if(tab==="body")h+=vBody(r);
   else if(tab==="nutrition")h+=vNutrition(r);
@@ -137,8 +149,62 @@ function stat(k,v,unit,sub){
    +'<div class="pgstat-v">'+v+(unit?'<span>'+esc(unit)+'</span>':'')+'</div>'
    +(sub?'<div class="pgstat-d">'+sub+'</div>':'')+'</div>';}
 
+/* Small inline icons for the metric badges, on the dock's 24 grid and stroke. */
+var KI={
+  weight:'<path d="M5 20h14a1 1 0 0 0 1-1.1l-1.4-10A2 2 0 0 0 16.6 7H7.4a2 2 0 0 0-2 1.9L4 18.9A1 1 0 0 0 5 20z"/><path d="M12 7V4.5M9.5 12.5 12 10"/>',
+  bf:'<path d="M9 3.5c-1 2.5-1 4.5 0 7-2 2-3 4.5-3 7.5v2.5h12V18c0-3-1-5.5-3-7.5 1-2.5 1-4.5 0-7"/><path d="M9 10.5h6"/>',
+  strength:'<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
+  cons:'<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15l2 2 4-4"/>',
+  ruler:'<path d="M3.5 16.5 16.5 3.5l4 4-13 13z"/><path d="M7 13l1.5 1.5M9.5 10.5l2 2M12 8l1.5 1.5M14.5 5.5l2 2"/>'};
+function kicon(k){return '<span class="pgki" aria-hidden="true"><svg viewBox="0 0 24 24">'+KI[k]+'</svg></span>';}
+/* A sparkline for a metric card: no axes, no dots, just the shape. Coloured when the
+   shape is progress, plain when it is not, as the deltas are. */
+function spark(vals,good){
+  if(vals.length<2)return '';
+  var W=100,H=28,mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+  if(mx===mn){mx+=1;mn-=1;}
+  var d=vals.map(function(v,i){return (i?"L":"M")+r1(i*W/(vals.length-1))+" "+r1(3+(H-6)*(1-(v-mn)/(mx-mn)));}).join(" ");
+  return '<svg class="pgspark'+(good?' ok':'')+'" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true">'
+   +'<path d="'+d+'"/></svg>';}
+function bars(vals){
+  var mx=Math.max.apply(null,vals.concat([1]));
+  return '<div class="pgbars" aria-hidden="true">'+vals.map(function(v,i){
+    return '<i class="'+(i===vals.length-1?'now':'')+'" style="height:'+Math.max(10,v/mx*100)+'%"></i>';}).join("")+'</div>';}
+function kcard(icon,label,value,unit,sub,visual,go,aria){
+  return '<button class="pgkm-c" data-ptab="'+go+'" aria-label="'+esc(aria)+'">'
+   +'<span class="pgkm-h">'+kicon(icon)+'<span class="pgkm-k">'+esc(label)+'</span></span>'
+   +'<span class="pgkm-v">'+value+(unit?'<small>'+esc(unit)+'</small>':'')+'</span>'
+   +'<span class="pgkm-s">'+sub+'</span>'+visual+'</button>';}
+
 function vOverview(r){
-  var o=overview(r),h=lbl(t(PAST[r]));
+  var h="",goal=(S.profile||{}).goal;
+  /* ---- key metrics: the frame's four cards, each a way into its own view */
+  var gw=goal==="lose"?-1:goal==="gain"?1:0;
+  var wi=weighIns(r),wc=weightChange(),bfv=bodyFat(),bfs=bodyFatSeries(r),si=strengthIndex(r),cm=consistencyMonth();
+  var wFirst=wi.length?wi[0].weight:null,wLast=wc?wc.cur.weight:null;
+  var wd=wi.length>=2?toDisp(wLast)-toDisp(wFirst):null;
+  var bfd=bfs.length>=2?bfs[bfs.length-1].v-bfs[0].v:null;
+  h+=lbl(t("Key metrics"),'<button class="pglink" data-ptab="body">'+esc(t("See details"))+'</button>');
+  h+='<div class="pgkm">'
+   +kcard("weight",t("Weight"),wLast?String(toDisp(wLast)):"—",wLast?wUnit():"",
+      wd!=null?delta(wd,true,gw," "+wUnit()):esc(t(wLast?"One weigh-in in range":"Not logged yet")),
+      spark(wi.map(function(b){return b.weight;}),gw!==0&&wd!=null&&(wd<0)===(gw<0)),"body",
+      t("Weight")+" "+(wLast?toDisp(wLast)+" "+wUnit():t("Not logged yet")))
+   +kcard("bf",t("Body fat"),bfv.bf!=null?String(bfv.bf):"—",bfv.bf!=null?"%":"",
+      bfd!=null?delta(bfd,true,-1,"%"):esc(t(bfv.bf!=null?(bfv.src==="navy"?"Estimated":"Entered"):"Add measurements")),
+      spark(bfs.map(function(p){return p.v;}),bfd!=null&&bfd<0),"body",
+      t("Body fat")+" "+(bfv.bf!=null?bfv.bf+"%":t("Add measurements")))
+   +kcard("strength",t("Strength"),si.pct!=null?(si.pct>0?"+":si.pct<0?"−":"")+Math.abs(Math.round(si.pct))+"%":"—","",
+      esc(si.pct!=null?t(PAST[r]):t("Log a lift twice in range")),
+      spark(si.series.map(function(p){return p.v;}),si.pct!=null&&si.pct>0),"strength",
+      t("Strength")+" "+(si.pct!=null?Math.round(si.pct)+"% "+t(PAST[r]):t("Log a lift twice in range")))
+   +kcard("cons",t("Consistency"),String(cm.days),t(cm.days===1?"day":"days"),
+      esc(t("This month")),bars(cm.weeks),"overview",
+      t("Consistency")+" "+cm.days+" "+t("days")+" "+t("This month"))
+   +'</div>';
+
+  var o=overview(r);
+  h+=lbl(t(PAST[r]));
   var wk=o.compare?delta(o.n-o.pn,false,1,"",t(VS[r])):"";
   var vp=o.vpct!=null?delta(o.vpct,Math.abs(o.vpct)<10,1,"%",t(VS[r])):"";
   var st=streak();
@@ -150,6 +216,14 @@ function vOverview(r){
    +stat(t("Streak"),String(st),t(st===1?"day":"days"),esc(t("in a row")))
    +'</div>';
 
+  /* ---- recent progress: the weight trend, as the frame leads with it */
+  if(wi.length>=2){
+    var wp=wi.map(function(b){return {d:b.date,v:toDisp(b.weight)};});
+    h+=lbl(t("Recent progress"),'<button class="pglink" data-ptab="body">'+esc(t("View all"))+'</button>');
+    h+='<div class="pgcard"><div class="pgcard-h"><h3 class="pgcard-i">'+kicon("weight")+esc(t("Weight"))+'</h3>'
+     +'<span class="pgcard-r"><b>'+toDisp(wLast)+' '+esc(wUnit())+'</b>'+(wd!=null?delta(wd,true,gw," "+wUnit()):'')+'</span></div>'
+     +lineChart(wp,{fill:true,dots:true,aria:t("Body weight")+", "+wp[0].v+" → "+wp[wp.length-1].v+" "+wUnit()})+'</div>';}
+
   var vs=volumeSeries(r);
   h+='<div class="pgcard"><div class="pgcard-h"><h3>'+esc(t("Training volume"))+'</h3>'
    +'<span>'+esc(t(r<=31?"per training day":"per week"))+'</span></div>'
@@ -158,6 +232,16 @@ function vOverview(r){
          +fmtN(toDisp(vs[0].v))+" → "+fmtN(toDisp(vs[vs.length-1].v))+" "+wUnit()})
      :tooFew(t("Train on two different days in this range and the trend draws here.")))
    +'</div>';
+
+  /* ---- body measurements, three across, as the frame has them */
+  var ms=measurements().slice(0,3);
+  if(ms.length){
+    h+='<div class="pgcard pgmeas"><div class="pgcard-h"><h3 class="pgcard-i">'+kicon("ruler")+esc(t("Body measurements"))+'</h3>'
+     +'<button class="pglink" data-ptab="body">'+esc(t("View all"))+'</button></div><div class="pgmeas-g">'
+     +ms.map(function(m){
+       return '<div class="pgmeas-c"><span>'+esc(t(m.name))+'</span><b>'+r1(m.v)+' '+esc(t("cm"))+'</b>'
+        +(m.delta!=null?delta(m.delta,true,m.good," "+t("cm")):'<span class="pgd">—</span>')+'</div>';}).join("")
+     +'</div></div>';}
 
   var rec=recentRecords(3);
   h+=lbl(t("Personal records"),rec.length?'<button class="pglink" data-seeall="1">'+esc(t("See all"))+'</button>':'');
@@ -181,9 +265,13 @@ function vOverview(r){
        +'<span class="pgrow-e">'+esc(ago(s.date))+'</span>'
        +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});}
 
-  /* The one part of the tab about a single day rather than a span. Its own control,
-     the shared date bar; the chips above never move it, and it never moves them. */
-  h+=lbl(t("Day by day"))+dateBar({date:pdate(),open:V.pcal,monthOffset:V.cal})+vThatDay();
+  /* ---- the frame's closing banner, over the Bunyan artwork. It only says "you are
+     getting stronger" when the numbers above say so. */
+  h+='<button class="pgbanner" data-ptab="strength">'
+   +'<img src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async" loading="lazy">'
+   +'<span class="pgbanner-t"><b>'+esc(t("Progress takes time"))+'</b>'
+   +'<span>'+esc(si.pct>0?t("Stay consistent. You're getting stronger."):t("Stay consistent. It adds up."))+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   return h;}
 
 function pdate(){return V.pdate||today();}
@@ -208,22 +296,42 @@ function vThatDay(){
 
 /* ---- Strength ------------------------------------------------------------------ */
 function vStrength(r){
-  var lifts=topLifts();
-  if(!lifts.length)return empty("chart",t("No strength history"),
+  var all=topLifts();
+  if(!all.length)return empty("chart",t("No strength history"),
     t("Log the same lift twice and Bunyan starts plotting your estimated one-rep max."),
     '<button class="btn" data-go="train">'+t("Start a workout")+'</button>');
+  /* All / Upper / Lower, the frame's filter. It narrows every list on this view and
+     the lift picker with them. */
+  var half=V.phalf||"all";
+  var lifts=half==="all"?all:all.filter(function(L){return liftHalf(L.name)===half;});
+  var h=seg({items:[["all",t("All")],["upper",t("Upper")],["lower",t("Lower")]],value:half,attr:"phalf",
+    soft:true,cls:"pghalf",label:t("Body part"),key:"pghalf"});
+  if(!lifts.length)return h+tooFew(t("Nothing logged for this half of the body yet."));
   var names=lifts.map(function(L){return L.name;});
   if(!V.chartEx||names.indexOf(V.chartEx)<0)V.chartEx=names[0];
-  var h='<label class="afsel pgpick"><b class="afsel-v">'+esc(exName(V.chartEx))+'</b>'
+
+  /* ---- personal records, side by side */
+  var recs=lifts.filter(function(L){return L.date&&(L.w>0||L.reps>0);})
+    .sort(function(a,b){return (b.w-a.w)||(b.sets-a.sets);}).slice(0,8);
+  if(recs.length){
+    h+=lbl(t("Personal records"));
+    h+='<div class="pgprs" role="list">'+recs.map(function(L){
+      return '<button class="pgpr'+(L.name===V.chartEx?' on':'')+'" role="listitem" data-chartex="'+esc(L.name)+'"'
+       +' aria-label="'+esc(exName(L.name)+": "+(L.w?fmtW(L.w)+" × "+L.reps:L.reps+" "+t("reps"))+", "+dateStr(L.date))+'">'
+       +kicon("strength")+'<span class="pgpr-n">'+esc(exName(L.name))+'</span>'
+       +'<span class="pgpr-v">'+(L.w?toDisp(L.w)+'<small>'+esc(wUnit())+'</small>':L.reps+'<small>'+esc(t("reps"))+'</small>')+'</span>'
+       +'<span class="pgpr-d">'+esc(dateStr(L.date))+'</span></button>';}).join("")+'</div>';}
+
+  /* ---- the charted lift */
+  h+='<label class="afsel pgpick"><b class="afsel-v">'+esc(exName(V.chartEx))+'</b>'
    +'<span class="ico ico-cdown" aria-hidden="true"></span>'
    +'<select id="chartsel" aria-label="'+esc(t("Lift"))+'">'
    +names.map(function(n){return '<option value="'+esc(n)+'"'+(n===V.chartEx?' selected':'')+'>'
      +esc(exName(n))+'</option>';}).join("")+'</select></label>';
-
-  var pts=e1rmSeries(V.chartEx,r),all=e1rmSeries(V.chartEx);
-  var curV=all.length?all[all.length-1].v:0;
+  var pts=e1rmSeries(V.chartEx,r),full=e1rmSeries(V.chartEx);
+  var curV=full.length?full[full.length-1].v:0;
   h+='<div class="pgcard"><div class="pgstat-k">'+esc(t("Estimated 1RM"))+'</div>';
-  if(!all.length)h+=tooFew(t("No estimate for this lift: only loaded sets of 12 reps or fewer give one."));
+  if(!full.length)h+=tooFew(t("No estimate for this lift: only loaded sets of 12 reps or fewer give one."));
   else{
     h+='<div class="pgbig">'+toDisp(curV)+'<span>'+esc(wUnit())+'</span></div>';
     if(pts.length>=2)h+='<div class="pgsub">'
@@ -235,6 +343,36 @@ function vStrength(r){
     h+='<p class="pgnote">'+esc(t("Epley formula, from working sets of 12 reps or fewer."))+'</p>';}
   h+='</div>';
 
+  /* ---- exercise progress: every lift, most trained first, with its latest session,
+     its trend and how far it moved in the range. Tapping one charts it above. */
+  var shown=V.pall?lifts:lifts.slice(0,5);
+  h+=lbl(t("Exercise progress"),'<span class="pgaside">'+esc(t(PAST[r]))+'</span>');
+  shown.forEach(function(L){
+    var lp=liftProgress(L.name,r),on=L.name===V.chartEx,ls=lp.last;
+    var line=ls?(ls.sets+' × '+ls.reps+(ls.w?' · '+toDisp(ls.w)+' '+wUnit():'')):fmtN(L.sets)+' '+t("total sets");
+    h+='<button class="pgex'+(on?' on':'')+'" data-chartex="'+esc(L.name)+'" aria-pressed="'+on+'"'
+     +' aria-label="'+esc(exName(L.name)+", "+line+(lp.pct!=null?", "+Math.round(lp.pct)+"%":""))+'">'
+     +thumb(L.name,52)
+     +'<span class="pgex-t"><span class="pgex-n">'+esc(exName(L.name))+'</span>'
+     +'<span class="pgex-s">'+esc(line)+'</span></span>'
+     +spark(lp.series.map(function(p){return p.v;}),lp.pct!=null&&lp.pct>0)
+     +'<span class="pgex-p'+(lp.pct>0?' ok':'')+'">'+(lp.pct!=null?(lp.pct>0?"+":lp.pct<0?"−":"±")+Math.abs(Math.round(lp.pct))+"%":"—")+'</span>'
+     +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
+  if(lifts.length>5)h+='<button class="btn g" data-pall="1">'
+    +esc(V.pall?t("Show fewer"):t("Show all")+" "+lifts.length)+'</button>';
+
+  /* ---- a quick insight, only ever what the figures above support */
+  var si=strengthIndex(r);
+  if(si.pct!=null){
+    var up=si.pct>=0.5,down=si.pct<=-0.5;
+    h+='<div class="pginsight"><span class="pginsight-i" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg></span>'
+     +'<span><b>'+esc(t("Quick insight"))+'</b><span>'
+     +esc(up?t("Your top lifts are up {n}% across this range.").replace("{n}",Math.round(si.pct))
+        :down?t("Your top lifts are down {n}% across this range. A lighter week can be the point.").replace("{n}",Math.abs(Math.round(si.pct)))
+        :t("Your top lifts are holding steady across this range."))+'</span>'
+     +'<small>'+esc(t("From the estimated maxes of your most-trained lifts."))+'</small></span></div>';}
+
+  /* ---- share of working sets by muscle group */
   var ms=muscleShare(r);
   h+=lbl(t("Volume by muscle group"),'<span class="pgaside">'+esc(t("working sets"))+'</span>');
   if(!ms.tot)h+=tooFew(t("No sets logged in this range."));
@@ -245,19 +383,6 @@ function vStrength(r){
        +'<span>'+esc(gname(x.g))+'</span>'
        +'<div class="bar" aria-hidden="true"><i style="width:'+Math.max(2,x.pct/top*100)+'%"></i></div>'
        +'<b>'+x.pct+'%</b></div>';}).join("")+'</div>';}
-
-  /* Every lift, most trained first, with its record set. Tapping one charts it, so
-     this list is also the way to the lift the picker would take scrolling to find. */
-  var shown=V.pall?lifts:lifts.slice(0,5);
-  h+=lbl(t("Top lifts"),'<span class="pgaside">'+esc(t("all time"))+'</span>');
-  shown.forEach(function(L){
-    var on=L.name===V.chartEx;
-    h+='<button class="pgrow'+(on?' on':'')+'" data-chartex="'+esc(L.name)+'" aria-pressed="'+on+'">'
-     +'<span class="pgrow-t"><span class="pgrow-n"><span>'+esc(exName(L.name))+'</span></span>'
-     +'<span class="pgrow-s">'+fmtN(L.sets)+' '+esc(t("total sets"))+'</span></span>'
-     +'<span class="pgrow-v">'+(L.w?esc(toDisp(L.w)+' '+wUnit())+' × '+L.reps:L.reps+' '+esc(t("reps")))+'</span></button>';});
-  if(lifts.length>5)h+='<button class="btn g" data-pall="1">'
-    +esc(V.pall?t("Show fewer"):t("Show all")+" "+lifts.length)+'</button>';
   return h;}
 
 /* ---- Body ---------------------------------------------------------------------- */
