@@ -255,7 +255,7 @@ function vSheet(){
      +'<div class="grid2"><div><label class="tiny">'+t("Sleep (hours)")+'</label><input id="r_sleep" type="number" step="0.25" value="'+(r.sleep||"")+'"></div>'
      +'<div><label class="tiny">'+t("Soreness 0-10")+'</label><input id="r_sore" type="number" value="'+(r.sore||"")+'"></div>'
      +'<div><label class="tiny">'+t("Energy 0-10")+'</label><input id="r_energy" type="number" value="'+(r.energy||"")+'"></div>'
-     +'<div><label class="tiny">'+t("Ankle pain 0-10")+'</label><input id="r_ankle" type="number" value="'+(r.ankle||"")+'"></div></div>'
+     +'<div><label class="tiny">'+t("Pain or discomfort 0-10")+'</label><input id="r_ankle" type="number" value="'+(r.ankle||"")+'"></div></div>'
      +'<div class="mt"><label class="tiny">Notes</label><input id="r_notes" value="'+esc(r.notes||"")+'"></div>'
      +'<button class="btn" data-saverec="1">Save</button>';
   }
@@ -582,6 +582,7 @@ function vSheet(){
      +'Splits you already have are kept.</div></div>';
     /* Nothing is built from blanks. */
     var ready=num(p.height)>0&&num(p.weight)>0&&num(p.age)>0;
+    b+='<p class="tiny" style="margin:12px 0 0">'+t("Bunyan is a training log, not medical advice. If you have an injury or a health condition, check with a professional first, and stop any exercise that causes sharp pain.")+'</p>'
     b+='<button class="btn" data-buildplan="1"'+(ready?'':' disabled')+'>'+t("Build it")+'</button>'
      +(ready?'':'<p class="tiny" style="margin:8px 2px 0;text-align:center">'
        +t("Enter your height, weight and age first.")+'</p>');
@@ -688,6 +689,7 @@ function vSheet(){
      +'</select></div>'
      +'<p class="tiny mt">'+t("Maintenance estimate")+' '+fmtN(tdee())+' kcal. '
      +t("Suggested target")+' '+fmtN(targetKcal())+' kcal.</p>'
+     +'<p class="tiny" style="margin-top:6px">'+t("This already counts your activity level, training included, so workouts you log are not added on top. Every figure here is an estimate; your weight trend over a few weeks is the real test.")+'</p>'
      +'<button class="btn" data-saveyou="1">'+t("Save")+'</button>'
      +'<button class="btn g" data-calc="1">'+t("Use the suggested targets")+'</button>';
   }

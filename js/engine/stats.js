@@ -147,6 +147,28 @@ function muscleShare(n){
   rows.forEach(function(r,i){r.pct=p[i];});
   return {tot:tot,rows:rows};}
 
+/* ---- this week's hard sets per muscle ---------------------------------------
+   The one volume figure with solid evidence behind it for muscle growth: working
+   sets per muscle per week, with roughly ten as a sensible floor and twenty as a
+   practical ceiling for most people. The target comes from the plan's level. Monday
+   to today; warm-ups and cardio do not count. */
+var WGROUP={Chest:"Chest",Back:"Back",Shoulders:"Shoulders",Quads:"Quads",Hamstrings:"Hamstrings & glutes",
+  Glutes:"Hamstrings & glutes",Biceps:"Biceps",Triceps:"Triceps"};
+var WORDER=["Chest","Back","Shoulders","Quads","Hamstrings & glutes","Biceps","Triceps"];
+function weekStartISO(){var d=new Date();var k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);
+  return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
+function weeklyVolume(){
+  var from=weekStartISO(),c={};
+  WORDER.forEach(function(g){c[g]=0;});
+  S.sessions.forEach(function(s){
+    if(s.date<from)return;
+    s.entries.forEach(function(e){
+      if(isActivity(e.name))return;
+      var g=WGROUP[muscleOfEntry(e)];if(!g)return;
+      c[g]+=working(e).length;});});
+  var target=Math.max(8,Math.min(20,num(S.plannedWeekly,12)));
+  return {from:from,target:target,rows:WORDER.map(function(g){return {g:g,sets:c[g]};})};}
+
 /* ---- body ------------------------------------------------------------------- */
 function weighIns(n){
   var list=(S.body||[]).filter(function(b){return num(b.weight)>0;});
@@ -312,6 +334,6 @@ function bodyFatSeries(n){
   return (S.body||[]).filter(function(b){return num(b.bf)>0&&(!w||inWin(b.date,w.from,w.to));})
     .map(function(b){return {d:b.date,v:num(b.bf)};});}
 
-export {bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, isoAgo, liftHalf, liftProgress,
+export {weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, isoAgo, liftHalf, liftProgress,
         measurements, muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL,
         topLifts, volumeSeries, weighIns, weightChange};

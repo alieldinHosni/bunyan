@@ -5,7 +5,7 @@ import {actKcal, isActivity} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
 import {loadExDB, loadInstructions, muscleOf, MUSCLES} from "./data/exercises.js";
 import {applyLang} from "./i18n/exnames.js";
-import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, targetKcal} from "./engine/formulas.js";
+import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, prFor, proteinTarget, targetKcal} from "./engine/formulas.js";
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
@@ -242,6 +242,12 @@ document.addEventListener("click",function(ev){
     if(bad){toast(bad);return;}
     var ns={w:V.draft.w,r:V.draft.r};if(V.draft.rpe)ns.rpe=V.draft.rpe;
     e3.sets.push(ns);
+    /* A slipped digit (80 → 800) would become a record and drive every suggestion
+       after it. Far above the lifter's best, say so — the set is logged, and the tick
+       undoes it. */
+    var bestW=prFor(e3.name).w;
+    if(bestW>=20&&ns.w>bestW*1.3)setTimeout(function(){
+      toast(t("That is well above your best of")+" "+fmtW(bestW)+". "+t("Check the weight. Tap the tick to undo."));},50);
     V.loggedAt=Date.now();
     /* Closes the active period and starts a new one; the clock resumes by itself. */
     noteSet(S.active);
@@ -606,7 +612,7 @@ document.addEventListener("click",function(ev){
       S.body.push({date:today(),weight:p3.weight});
     var kc=targetKcal(),w3=lastWeight()||p3.weight||86;
     S.goals.kcal=Math.round(kc/10)*10;
-    S.goals.p=Math.round(w3*2);
+    S.goals.p=proteinTarget(w3);
     S.goals.f=Math.round(kc*0.28/9);
     S.goals.c=Math.max(50,Math.round((kc-S.goals.p*4-S.goals.f*9)/4));
     saveDB();render();toast(t("Targets updated."));return;}
@@ -678,7 +684,7 @@ document.addEventListener("click",function(ev){
       S.body.push({date:today(),weight:p4.weight});
     var kc=targetKcal();
     S.goals.kcal=Math.round(kc/10)*10;
-    S.goals.p=Math.round(p4.weight*2);
+    S.goals.p=proteinTarget(p4.weight);
     S.goals.f=Math.round(kc*0.28/9);
     S.goals.c=Math.max(50,Math.round((kc-S.goals.p*4-S.goals.f*9)/4));
     buildPlan(); S.onboarded=true; saveDB();

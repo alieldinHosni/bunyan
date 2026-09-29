@@ -1,7 +1,7 @@
 /* Bunyan — formulas
    Training and body maths: volume, 1RM, RPE, BMR, progression. */
 import {FOODDB, sumNutrition} from "./nutrition.js";
-import {muscleOfEntry} from "../data/exercises.js";
+import {EXDB, muscleOfEntry} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {dayRec, S, saveDB, split} from "../state.js";
 import {num, r1, today} from "../util.js";
@@ -20,8 +20,25 @@ function macroKcal(p,c,f){return Math.round(num(p)*4+num(c)*4+num(f)*9);}
 function bmr(){var p=S.profile,w=lastWeight()||num(p.weight,86);
   return Math.round(10*w+6.25*num(p.height)-5*num(p.age)+(p.sex==="f"?-161:5));}
 function tdee(){return Math.round(bmr()*num(S.profile.activity,1.4));}
-function targetKcal(){var td=tdee(),g=S.profile.goal;
-  return g==="lose"?td-500:g==="gain"?td+250:g==="recomp"?td-250:td;}
+/* A deficit sized to the person (20% of maintenance, at most 750 kcal) rather than
+   a flat 500 that is gentle for one body and harsh for another, and never below a
+   floor: roughly the resting burn, and not under 1200/1500 kcal. A surplus for
+   muscle gain stays small, since most of a large one is stored as fat. */
+function targetKcal(){
+  var td=tdee(),b=bmr(),g=S.profile.goal,fem=S.profile.sex==="f";
+  var t=g==="lose"?td-Math.min(750,Math.round(td*0.2))
+       :g==="gain"?td+Math.min(300,Math.round(td*0.1))
+       :g==="recomp"?td-Math.round(td*0.1):td;
+  var floor=Math.max(fem?1200:1500,g==="lose"?Math.round(b*0.95):0);
+  return Math.max(floor,t);}
+/* Protein, g/day: 2.0 g/kg while losing fat (it protects muscle in a deficit), 1.8
+   otherwise — both inside the 1.6–2.2 g/kg range the research supports. Above a BMI
+   of 30 it is scaled from the weight at a BMI of 27, since protein needs follow lean
+   mass, not total mass. */
+function proteinTarget(w){
+  var h=num(S.profile.height)/100,kg=num(w);
+  if(h>1&&kg/(h*h)>30)kg=27*h*h;
+  return Math.round(kg*(S.profile.goal==="lose"?2.0:1.8));}
 /* Clearing Safari's data wipes everything and there is no server copy, so losing a
    history is the most likely real harm this app can do. Once there is enough logged to
    be worth protecting, ask — quietly, and only every so often. */
@@ -75,6 +92,32 @@ function prFor(name){
       if(w*r>best.vol)best.vol=w*r;
     });});});
   return best;}
+/* The next load step, in kg, by what the load is made of — the smallest jump that
+   is real on that equipment — and never more than about a tenth of the load, so a
+   10 kg lateral raise does not jump 25%. In pounds the steps are pound-sized plates.
+   Bodyweight work progresses by reps, not load. */
+function incrementFor(name,top){
+  var v=EXDB&&EXDB[name],eq=v&&v.e||"Other",lb=S.prefs&&S.prefs.unit==="lb";
+  var heavy=/Squat|Deadlift|Leg Press|Hack|Hip Thrust/i.test(name);
+  var base=eq==="Barbell"?(heavy?5:2.5):eq==="Dumbbell"?2:eq==="Kettlebell"?4:eq==="Bodyweight"?0:2.5;
+  if(lb)base=eq==="Barbell"?(heavy?10:5)/2.2046:eq==="Kettlebell"?9/2.2046:eq==="Bodyweight"?0:5/2.2046;
+  if(!base)return 0;
+  var mode=S.profile.prog;
+  if(mode==="conservative")base=base/2;else if(mode==="aggressive")base=base*2;
+  var cap=Math.max(lb?2.5/2.2046:1,(top||0)*0.1);
+  return Math.round(Math.min(base,cap)*100)/100;}
+/* No gain in estimated max across the last three sessions of a lift, compared with
+   the one before them. Deliberately conservative: four sessions of history, working
+   sets only, and it only ever suggests. */
+function plateauOf(name){
+  var best=[];
+  for(var i=0;i<S.sessions.length&&best.length<4;i++){
+    var e=S.sessions[i].entries.filter(function(x){return x.name===name&&x.sets&&x.sets.length;})[0];
+    if(!e)continue;
+    var b=0;e.sets.forEach(function(x){if(x.wu)return;var v=e1RM(num(x.w),num(x.r));if(v>b)b=v;});
+    if(b)best.push(b);}
+  if(best.length<4)return false;
+  return Math.max(best[0],best[1],best[2])<=best[3];}
 function recommend(e){
   var p=prevPerf(e.name);
   if(!p||!p.sets.length)return null;
@@ -84,11 +127,11 @@ function recommend(e){
     if(x.rpe)rpes.push(x.rpe);});
   var avg=rpes.length?rpes.reduce(function(a,b){return a+b;},0)/rpes.length:0;
   var hitTop=p.sets.filter(function(x){return num(x.r)>=e.planned.hi;}).length>=Math.max(1,p.sets.length-1);
-  var mode=S.profile.prog,heavy=/Squat|Deadlift|Leg Press|Hack|Hip Thrust/i.test(e.name);
-  var inc=mode==="conservative"?2.5:mode==="aggressive"?(heavy?10:5):(heavy?5:2.5);
+  var inc=incrementFor(e.name,top);
   var w=top,note;
   if(!top){return {w:0,lo:e.planned.lo,hi:e.planned.hi,note:"Find a weight you can control for "+e.planned.lo+" reps."};}
-  if(hitTop&&(!avg||avg<=9)){w=r1(top+inc);note="You hit the top of the range last time.";}
+  if(hitTop&&(!avg||avg<=9)&&inc){w=Math.round((top+inc)*100)/100;note="You hit the top of the range last time.";}
+  else if(plateauOf(e.name)){w=top;note="No gain in three sessions. Hold this weight and chase a rep, or take a lighter week.";}
   else if(avg&&avg>=9.5){w=top;note="Last session was near failure. Hold this weight.";}
   else note="Same weight, aim for more reps.";
   return {w:w,lo:e.planned.lo,hi:e.planned.hi,note:note,last:top+" \u00d7 "+topR};}
@@ -98,11 +141,10 @@ function progressionHint(e){
   if(work.length<Math.max(2,e.planned.sets-1))return null;
   var allTop=work.every(function(x){return num(x.r)>=e.planned.hi;});
   if(!allTop)return null;
-  var mode=S.profile.prog,heavy=/Squat|Deadlift|Leg Press|Hack|Hip Thrust/.test(e.name);
-  var inc=mode==="conservative"?2.5:mode==="aggressive"?(heavy?10:5):(heavy?5:2.5);
   var w=Math.max.apply(null,work.map(function(x){return num(x.w);}));
   if(!w)return null;
-  return {inc:inc,next:r1(w+inc)};}
+  var inc=incrementFor(e.name,w);if(!inc)return null;
+  return {inc:inc,next:Math.round((w+inc)*100)/100};}
 function weeklySets(){
   var cut=Date.now()-7*864e5,out={};
   S.sessions.forEach(function(s){
@@ -152,4 +194,4 @@ function addItems(meal,items,d){
 
 
 
-export {addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets};
+export {proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets};

@@ -24,7 +24,7 @@
 import {t} from "../../i18n/dict.js";
 import {empty, thumb} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
-import {bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftHalf, liftProgress, measurements,
+import {weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftHalf, liftProgress, measurements,
         muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL, topLifts, volumeSeries,
         weighIns, weightChange} from "../../engine/stats.js";
 import {sessionVolume} from "../../engine/formulas.js";
@@ -372,6 +372,17 @@ function vStrength(r){
         :down?t("Your top lifts are down {n}% across this range. A lighter week can be the point.").replace("{n}",Math.abs(Math.round(si.pct)))
         :t("Your top lifts are holding steady across this range."))+'</span>'
      +'<small>'+esc(t("From the estimated maxes of your most-trained lifts."))+'</small></span></div>';}
+
+  /* ---- this week, per muscle, against the plan's target */
+  var wv=weeklyVolume();
+  h+=lbl(t("This week"),'<span class="pgaside">'+esc(t("hard sets per muscle"))+' · '+esc(t("target"))+' '+wv.target+'</span>');
+  h+='<div class="pgcard pgshare">'+wv.rows.map(function(x){
+    var pct=Math.min(100,x.sets/wv.target*100),cls=x.sets>=wv.target?' ok':x.sets>=wv.target/2?'':' low';
+    return '<div class="pgshare-r wv'+cls+'" aria-label="'+esc(t(x.g)+": "+x.sets+" "+t("of")+" "+wv.target+" "+t("sets"))+'">'
+     +'<span>'+esc(t(x.g))+'</span>'
+     +'<div class="bar" aria-hidden="true"><i style="width:'+Math.max(2,pct)+'%"></i></div>'
+     +'<b>'+x.sets+'</b></div>';}).join("")
+   +'<p class="pgnote">'+esc(t("Around 10–20 hard sets per muscle each week is what most people grow on. Monday to today."))+'</p></div>';
 
   /* ---- share of working sets by muscle group */
   var ms=muscleShare(r);

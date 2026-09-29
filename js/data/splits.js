@@ -18,7 +18,7 @@ function PRESETS(){return [
     ex("Triceps Pushdown - Rope Attachment",2,10,12),ex("Weighted Sissy Squat",2,10,15,60)]),
   day("Day B — Posterior",[ex("Romanian Deadlift",3,8,10),ex("V-Bar Pulldown",3,8,10),
     ex("Lying T-Bar Row",3,8,10),ex("Seated Leg Curl",3,10,12),ex("Reverse Flyes",3,12,15),
-    ex("Standing Biceps Cable Curl",2,10,12),ex("Butt Lift (Bridge)",3,30,45,45)]),
+    ex("Standing Biceps Cable Curl",2,10,12),ex("Butt Lift (Bridge)",3,12,15,60)]),
   day("Day C — Full Body",[ex("Machine Bench Press",3,8,10),ex("Pullups",3,6,12),
     ex("Split Squat with Dumbbells",3,10,12),ex("Standing Calf Raises",3,12,15),ex("Plank",3,40,40,45)]),
   rest()]},
@@ -86,22 +86,22 @@ function PRESETS(){return [
     ex("Side Lateral Raise",2,12,15),ex("Hanging Leg Raise",3,12,15)]),
   rest(),rest()]},
 
-{id:"bw",name:"Bodyweight",tag:"4 days · nothing but the floor",level:"new",goal:"gain",days:[
+{id:"bw",name:"Bodyweight",tag:"4 days · a pull-up bar and the floor",level:"new",goal:"gain",days:[
   day("Push",[ex("Pushups",4,8,20,75),ex("Bent Press",3,6,12,75),
     ex("Incline Push-Up Close-Grip",3,6,15,60),ex("Bench Dips",3,10,20,60),ex("Plank",3,45,45,45)]),
   day("Pull",[ex("Pullups",4,3,10,90),ex("Inverted Row",3,8,15,75),
     ex("Chin-Up",3,3,10,90),ex("Hanging Leg Raise",3,20,40,60),ex("Superman",3,10,10,45)]),
   rest(),
-  day("Legs",[ex("Bodyweight Squat",4,15,25,60),ex("Split Squat with Dumbbells",3,10,15,75),
+  day("Legs",[ex("Bodyweight Squat",4,15,25,60),ex("Split Squats",3,10,15,75),
     ex("Butt Lift (Bridge)",3,10,15,60),ex("Standing Calf Raises",3,12,20,45),
-    ex("Weighted Sissy Squat",2,10,15,60)]),
+    ex("Bodyweight Walking Lunge",2,10,15,60)]),
   day("Core & Conditioning",[ex("Butt-Ups",3,20,40,45),ex("Hanging Leg Raise",3,8,15,60),
     ex("Mountain Climbers",3,20,30,45),ex("Freehand Jump Squat",3,8,15,60),ex("Side Bridge",3,30,45,45)]),
   rest(),rest()]},
 
 {id:"bro",name:"Bro Split",tag:"5 days · one muscle a day",days:[
   day("Chest",[ex("Barbell Bench Press - Medium Grip",4,6,8),ex("Incline Dumbbell Press",4,8,10),
-    ex("Butterfly",3,10,12),ex("Reverse Flyes",3,12,15),ex("Pushups",2,15,25,60)]),
+    ex("Butterfly",3,10,12),ex("Dips - Chest Version",3,8,12),ex("Pushups",2,15,25,60)]),
   day("Back",[ex("Barbell Deadlift",4,5,7),ex("Pullups",4,6,10),ex("Bent Over Barbell Row",3,8,10),
     ex("Wide-Grip Lat Pulldown",3,10,12),ex("Seated Cable Rows",3,10,12),ex("Dumbbell Shrug",3,12,15)]),
   day("Shoulders",[ex("Standing Military Press",4,6,8),ex("Side Lateral Raise",4,12,15),

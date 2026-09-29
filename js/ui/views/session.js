@@ -193,7 +193,7 @@ function vLogger(){
     h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span>'
      +'<span>'+t("Recommended")+': <b>'+fmtW(recTop.w)+'</b> × '+e.planned.lo
      +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+' '+t("reps")
-     +(recTop.note?' · '+esc(recTop.note):'')+'</span></div>';
+     +(recTop.note?' · '+esc(t(recTop.note)):'')+'</span></div>';
 
   /* --- the set grid: prescription, previous performance and entry in one row --- */
   /* Delete leads the row, log ends it. Grid columns follow the writing direction, so
