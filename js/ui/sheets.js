@@ -17,6 +17,10 @@ import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 
 /* ============================================================ sheets */
+var CFICON={
+  leave:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M9 16l-4-4 4-4M5 12h11"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>'
+};
 function vSheet(){
   if(!V.sheet)return "";
   var b="";
@@ -40,11 +44,19 @@ function vSheet(){
        questions rather than two — used by the leave-workout prompt, where keeping the
        workout is the primary and discarding it is a real but secondary choice. It is
        styled .danger rather than .btn so the two cannot be confused at a glance. */
-    b='<h2>'+esc(c.title||"")+'</h2>'
-     +(c.body?'<p class="sub" style="margin:8px 0 20px">'+esc(c.body)+'</p>':'<div style="height:14px"></div>')
-     +'<button class="btn" data-confirmok="1">'+esc(c.cta||t("Delete"))+'</button>'
-     +(c.alt?'<button class="btn danger" data-confirmalt="1">'+esc(c.alt)+'</button>':'')
-     +'<button class="btn g" '+(c.back?'data-restore="1"':'data-close="1"')+'>'+t("Cancel")+'</button>';
+    /* Centred, with an optional icon, pill buttons in sentence case. The secondary
+       action is a quiet red text button under the other two, so it reads as the real
+       but rarer choice it is; Cancel can be renamed ("Keep training") where plain
+       Cancel would be ambiguous. */
+    b='<div class="cf">'
+     +(c.icon&&CFICON[c.icon]?'<span class="cf-i'+(c.icon==="trash"?' bad':'')+'" aria-hidden="true"><svg viewBox="0 0 24 24">'+CFICON[c.icon]+'</svg></span>':'')
+     +'<h2>'+esc(c.title||"")+'</h2>'
+     +(c.body?'<p class="cf-b">'+esc(c.body)+'</p>':'')
+     +'<div class="cf-acts">'
+     +'<button class="btn cf-ok" data-confirmok="1">'+esc(c.cta||t("Delete"))+'</button>'
+     +'<button class="btn g cf-no" '+(c.back?'data-restore="1"':'data-close="1"')+'>'+esc(c.cancel||t("Cancel"))+'</button>'
+     +(c.alt?'<button class="cf-alt" data-confirmalt="1">'+esc(c.alt)+'</button>':'')
+     +'</div></div>';
   }
   else if(V.sheet==="exercise"){
     var q=V.exq.toLowerCase();
@@ -808,8 +820,9 @@ function vSheet(){
       +(isFav(favName)?t("Remove from favourites"):t("Add to favourites"))+'">'
       +(isFav(favName)?"★":"☆")+'</button>'
     :'';
+  var cf=V.sheet==="confirm";
   return '<div class="sheet"'+(hard?'':' data-close="1"')+'>'
-        +'<div class="sheetbox" data-stop="1" role="dialog" aria-modal="true">'
+        +'<div class="sheetbox'+(cf?' cfbox':'')+'" data-stop="1" role="dialog" aria-modal="true">'
         +'<div class="sheethead">'
         +(hard?'':'<span class="grab" aria-hidden="true"></span>')
         +star

@@ -1,8 +1,11 @@
 /* Bunyan service worker.
-   Network-first for the app itself, so a new version is picked up on the next
-   load instead of being served from cache. Cache-first for images only.
+   Network-first for the app itself — the page AND its modules and data — so a new
+   version is picked up whole on the next load. The modules used to be cache-first
+   with a background refresh, which paired a fresh index.html (new CSS) with the
+   previous release's JS for one launch: markup the stylesheet no longer styles.
+   Cache-first for images only.
    Bump CACHE whenever you change index.html. */
-const CACHE = "bunyan-v57";
+const CACHE = "bunyan-v58";
 /* instructions.json (595 KB) is deliberately absent: it is cached on first use by the
    catch-all handler below, so it no longer blocks first install. */
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
@@ -38,7 +41,9 @@ self.addEventListener("install", e => {
      file 404s, which would leave the app with no offline cache at all. */
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => Promise.all(FILES.map(f => c.add(f).catch(() => {}))))
+      /* cache:"reload" skips the browser's HTTP cache, which would otherwise hand a
+         just-released worker the previous release's files for a few minutes. */
+      .then(c => Promise.all(FILES.map(f => c.add(new Request(f, {cache: "reload"})).catch(() => {}))))
       .then(() => self.skipWaiting())
   );
 });
@@ -59,16 +64,19 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
 
-  const isPage = req.mode === "navigate" ||
-                 (req.destination === "" && req.url.endsWith(".html")) ||
-                 req.url.endsWith("/") ||
-                 req.url.endsWith("sw.js") ||
-                 req.url.endsWith("manifest.webmanifest");
+  const url = new URL(req.url);
+  const own = url.origin === self.location.origin;
+  const isApp = req.mode === "navigate" ||
+                (own && /(\/|\.html|\.js|\.json|\.webmanifest)$/.test(url.pathname));
 
-  if (isPage) {
-    // Network first: always try for a fresh app, fall back to cache offline.
+  if (isApp) {
+    /* Network first: always try for a fresh app, fall back to cache offline.
+       cache:"no-cache" revalidates with the server (a cheap 304 when unchanged)
+       instead of trusting the HTTP cache's heuristic freshness. */
     e.respondWith(
-      fetch(req).then(res => {
+      fetch(req.mode === "navigate" ? new Request(req.url, {cache: "no-cache", credentials: "same-origin"})
+                                  : new Request(req, {cache: "no-cache"})).then(res => {
+        if (!res || res.status !== 200) return res;
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(req, copy));
         return res;

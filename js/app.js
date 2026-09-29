@@ -285,7 +285,7 @@ document.addEventListener("click",function(ev){
   /* Throwing a workout away is only ever deliberate now: a control inside the
      session, never a question asked because you glanced at another screen. */
   if(D.discard!==undefined){
-    askConfirm({title:t("Discard this session?"),
+    askConfirm({title:t("Discard this session?"),icon:"trash",
       body:t("Every set you logged in this workout is thrown away. This cannot be undone."),
       cta:t("Discard it"),act:"discard",hard:true});return;}
 
@@ -1070,9 +1070,9 @@ function navGuard(resume){
      a workout the user is not currently in. */
   if(!S.active||V.tab!=="train")return false;
   leaveResume=resume||null;
-  askConfirm({title:t("Leave workout?"),
-    body:t("Your completed sets are saved. You can resume this workout later."),
-    cta:t("Keep workout and exit"),act:"leavekeep",
+  askConfirm({title:t("Leave workout?"),icon:"leave",
+    body:t("Your sets are saved. Pick up where you left off any time."),
+    cta:t("Save and exit"),act:"leavekeep",cancel:t("Keep training"),
     alt:t("Discard workout"),altact:"leavediscard"});
   return true;
 }
