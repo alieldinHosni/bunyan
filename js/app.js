@@ -14,10 +14,10 @@ import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
 import {leave} from "./ui/motion.js";
 import {groupNext, groupRun, mmss, noteSet, paintRest, sessionClock} from "./ui/views/session.js";
-import {ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
+import {refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
 import {fmtW, toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
-import {alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
+import {ex_isTimed, alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
 import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
 import {mealNow} from "./ui/views/food.js";
@@ -226,14 +226,22 @@ document.addEventListener("click",function(ev){
   /* Complete the active set. Reads the live inputs first so a value typed but not
      blurred is never lost. */
   if(D.logset){
-    var e3=S.active.entries[V.logIdx];
+    /* No two sets are logged inside a second. The recommendation banner above the
+       table goes away after the first set, the rows move up, and the second tap of a
+       double tap would land on the next row's button and log a phantom set. */
+    if(V.loggedAt&&Date.now()-V.loggedAt<700)return;
+    var e3=S.active&&S.active.entries[V.logIdx];if(!e3)return;
     var lw=document.getElementById("in_w"),lr=document.getElementById("in_r"),
         lp=document.getElementById("in_rpe");
-    if(lw&&lw.value!=="")V.draft.w=toKg(lw.value);
-    if(lr&&lr.value!=="")V.draft.r=num(lr.value);
+    /* What is in the fields is what gets logged. A cleared weight is bodyweight (0),
+       not the previous set's load, which is what an empty field used to log. */
+    if(lw)V.draft.w=lw.value===""?0:toKg(lw.value);
+    if(lr)V.draft.r=lr.value===""?0:num(lr.value);
     if(lp&&lp.value!=="")V.draft.rpe=Math.min(10,Math.max(1,num(lp.value,8)));
-    if(!V.draft.r){toast(t("Enter reps first."));return;}
+    var bad=setProblem(V.draft.w,V.draft.r,ex_isTimed(e3));
+    if(bad){toast(bad);return;}
     e3.sets.push({w:V.draft.w,r:V.draft.r,rpe:V.draft.rpe});
+    V.loggedAt=Date.now();
     /* Closes the active period and starts a new one; the clock resumes by itself. */
     noteSet(S.active);
     V.fresh=e3.sets.length-1;
@@ -268,9 +276,15 @@ document.addEventListener("click",function(ev){
     saveDB();syncDraft();render();return;}
   /* Tapping the green tick undoes that set. Reversible, so no confirm. */
   if(D.unlog!==undefined){
-    var e4=S.active.entries[V.logIdx];e4.sets.splice(+D.unlog,1);
+    /* The log button turns into this one under the finger, so the second tap of a
+       double tap would remove the set it had just logged. Ignored for a moment. */
+    if(V.loggedAt&&Date.now()-V.loggedAt<800&&+D.unlog===V.fresh)return;
+    var e4=S.active.entries[V.logIdx],i4=+D.unlog,gone=e4.sets.splice(i4,1)[0];
+    if(!gone)return;
     V.fresh=-1;saveDB();syncDraft();render();
-    toast(t("Set removed."));return;}
+    toast(t("Set removed."),function(){
+      if(!S.active||S.active.entries.indexOf(e4)<0)return;
+      e4.sets.splice(Math.min(i4,e4.sets.length),0,gone);saveDB();syncDraft();render();});return;}
   if(D.addrow){
     var e5=S.active.entries[V.logIdx];
     e5.extra=(e5.extra||0)+1;V.fresh=-1;saveDB();render();return;}
@@ -769,11 +783,18 @@ document.addEventListener("click",function(ev){
       toast(t("Copied. Your backup is up to date."));render();}
     catch(e){toast(t("Select the text and copy it."));}return;}
   if(D.import){openSheet("restore");return;}
+  /* Restore: read, check it is one of ours, say what is in it, and only then replace.
+     It used to insist on a `splits` key that migrate() deletes on every start, so no
+     backup this version wrote could ever be restored. */
   if(D.dorestore){
-    try{var o=JSON.parse(val("rs"));if(!o||!o.splits)throw 1;
-      setS(o);if(!S.myFoods)S.myFoods=[];if(!S.userSplits)S.userSplits=[];if(!S.sessions)S.sessions=[];
-      migrate();adoptRestored(render);saveDB();closeSheet();V.tab="home";render();toast("Restored.");}
-    catch(e){toast("That does not look like a backup.");}return;}
+    var parsed=parseBackup(val("rs"));
+    if(!parsed){toast(t("That does not look like a Bunyan backup."));return;}
+    var nd=Object.keys(parsed.days||{}).length;
+    askConfirm({title:t("Replace everything with this backup?"),icon:"leave",
+      body:(parsed.sessions||[]).length+" "+t("workouts")+", "+nd+" "+t("food days")+". "
+        +t("Everything currently on this profile is replaced."),
+      cta:t("Restore"),act:"restore",data:parsed,hard:true});return;}
+  if(D.bkfile!==undefined){downloadBackup();return;}
   /* The one place a typed confirmation is warranted: nothing here is recoverable
      without a backup, and the button sits in a list of harmless ones. */
   if(D.wipe){
@@ -966,6 +987,13 @@ document.addEventListener("change",function(ev){
     else{var s9=servs(it9.food)[0];
       it9.parsed.unit=null;it9.parsed.qty=Math.max(0.5,Math.round(it9.grams/s9[1]*2)/2);}
     recalcItem(it9);render();return;}
+  /* A backup file picked on the Restore sheet fills the text box; Restore then checks
+     it like pasted text. */
+  if(ev.target.id==="rsfile"&&ev.target.files&&ev.target.files[0]){
+    var fr=new FileReader();
+    fr.onload=function(){var ta=document.getElementById("rs");if(ta)ta.value=String(fr.result||"");
+      toast(t("Backup loaded. Tap Restore to continue."));};
+    fr.readAsText(ev.target.files[0]);return;}
   /* The manual sheet's button says what it will do. Changed in place rather than by
      re-rendering, which would put the typed values back to what the sheet opened with. */
   if(ev.target.id==="mf_save"){
@@ -981,8 +1009,11 @@ document.addEventListener("change",function(ev){
     if(!en||!en.sets[+si])return;
     var k=ev.target.dataset.k,v=num(ev.target.value,0);
     if(k==="rpe")v=v?Math.min(10,Math.max(1,v)):0;
-    else if(k==="w")v=Math.max(0,toKg(v));
-    else v=Math.max(0,v);
+    else if(k==="w")v=Math.min(1000,Math.max(0,toKg(v)));
+    else{
+      v=Math.round(Math.max(0,v));
+      /* A logged set keeps at least one rep: zero is not a set. */
+      if(!v||v>(ex_isTimed(en)?3600:100)){toast(t(v?"That is more than Bunyan accepts.":"A set needs at least one rep."));render();return;}}
     en.sets[+si][k]=v;
     V.fresh=-1;saveDB();syncDraft();render();}});
 
@@ -1134,6 +1165,46 @@ function askDelSession(id){
     body:t("Its sets are removed from your history and records. This cannot be undone."),
     cta:t("Delete workout"),act:"delsess",data:id,hard:true});
 }
+/* A backup is ours if it is an object carrying at least one thing only Bunyan writes.
+   Old backups (with `splits`) still qualify; migrate() upgrades them. */
+function parseBackup(txt){
+  var o;try{o=JSON.parse(String(txt||"").trim());}catch(e){return null;}
+  if(!o||typeof o!=="object"||Array.isArray(o))return null;
+  var ours=Array.isArray(o.sessions)||o.myPlan||Array.isArray(o.splits)||(o.prefs&&typeof o.prefs==="object")||o.profile;
+  return ours?o:null;
+}
+ACT.restore=function(_,o){
+  setS(normalize(JSON.parse(JSON.stringify(o))));
+  migrate();saveDB();V.tab="home";V.train="days";
+  adoptRestored(function(){render();toast(t("Restored."));});
+};
+/* A backup as a file: the share sheet where it can take files (iPhone: Save to
+   Files, AirDrop, Mail), a download elsewhere. Copying tens of kilobytes of text out
+   of a textarea on a phone was the only way before. */
+function downloadBackup(){
+  var name="bunyan-backup-"+today()+".json";
+  var blob=new Blob([JSON.stringify(S)],{type:"application/json"});
+  var done=function(){S.lastBackup=Date.now();S.backupSnooze=0;saveDB();render();toast(t("Backup saved."));};
+  try{
+    var file=new File([blob],name,{type:"application/json"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:"Bunyan backup"}).then(done).catch(function(){});return;}
+  }catch(e){}
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
+  done();
+}
+/* Bounds for a logged set, in storage units (kg). Wide enough for any real lifter,
+   narrow enough to catch a slipped digit before it becomes a record. */
+function setProblem(w,r,timed){
+  if(!isFinite(w)||w<0)return t("Weight cannot be negative.");
+  if(w>1000)return t("That weight is more than Bunyan accepts. Check it.");
+  if(!r||r<1)return t(timed?"Enter the seconds first.":"Enter reps first.");
+  if(r!==Math.round(r))return t("Reps are whole numbers.");
+  if(r>(timed?3600:100))return t(timed?"That is longer than an hour.":"That is more than 100 reps. Check it.");
+  return null;
+}
 ACT.delsess=function(_,id){if(removeSession(id))toast(t("Workout deleted"));render();};
 
 function navGuard(resume){
@@ -1210,6 +1281,16 @@ else{
   if(spEl)spEl.addEventListener("click",endSplash);
 }
 loadExDB(function(){render();});
+if(startupNote()==="corrupt")setTimeout(function(){
+  toast(t("Your saved data could not be read, so Bunyan started fresh. A copy of it was kept on this phone."));},1200);
+/* Ask the browser not to evict this origin's data under storage pressure. Everything
+   Bunyan knows lives only here; this is free and silent where it is granted. */
+try{if(navigator.storage&&navigator.storage.persist&&S.onboarded)
+  navigator.storage.persisted().then(function(p){if(!p)navigator.storage.persist();}).catch(function(){});}catch(e){}
+window.addEventListener("storage",function(ev){
+  if(ev.key!==storageKey())return;
+  refreshFromStorage(function(){if(S.active)syncDraft();render();});
+});
 if(S.active)syncDraft();
 if(!S.onboarded){V.tab="home";V.sheet="setup";}
 render();

@@ -2,7 +2,7 @@
    S, profiles, persistence and migration. The single source of truth. */
 import {sessionVolume} from "./engine/formulas.js";
 import {PRESETS} from "./data/splits.js";
-import {num, r1, rd, today, uid, wr} from "./util.js";
+import {num, r1, rd, rdRaw, today, uid, wr, wrRaw} from "./util.js";
 import {clearProfile, deleteSession, loadDays, loadSessions, putAll, putDays, putSession, updateSession,
         replaceAll, replaceAllDays} from "./db.js";
 import {clearPhotos} from "./photostore.js";
@@ -63,9 +63,45 @@ var DIRTY=Object.create(null);
 
 /* Loading S and filling in missing defaults is the same work on boot and on
    profile switch, so both go through hydrate(). */
+/* Whatever the blob holds, the rest of the app gets every section it reads, of the
+   type it expects. A blob from an older version, a partial restore or a hand-edited
+   backup used to leave, say, S.goals undefined — and every render then threw. */
+function normalize(o){
+  if(!o||typeof o!=="object"||Array.isArray(o))o={};
+  var d=JSON.parse(JSON.stringify(DEF));
+  ["profile","prefs","goals"].forEach(function(k){
+    var v=o[k];
+    o[k]=Object.assign({},d[k],(v&&typeof v==="object"&&!Array.isArray(v))?v:{});});
+  ["favs","skip","myFoods","savedMeals","userSplits","myEx","body","sessions"].forEach(function(k){
+    if(!Array.isArray(o[k]))o[k]=[];});
+  ["freq","days","daySwap"].forEach(function(k){
+    if(!o[k]||typeof o[k]!=="object"||Array.isArray(o[k]))o[k]={};});
+  Object.keys(d).forEach(function(k){if(!(k in o))o[k]=d[k];});
+  if(o.myPlan&&!Array.isArray(o.myPlan.days))o.myPlan=null;
+  if(o.active){
+    if(typeof o.active!=="object"||!Array.isArray(o.active.entries))o.active=null;
+    else o.active.entries.forEach(function(e){
+      if(!Array.isArray(e.sets))e.sets=[];
+      if(!e.planned||typeof e.planned!=="object")e.planned={sets:3,lo:8,hi:12};});}
+  o.sessions=o.sessions.filter(function(s){return s&&Array.isArray(s.entries)&&typeof s.date==="string";});
+  o.body=o.body.filter(function(b){return b&&typeof b.date==="string";});
+  return o;
+}
+/* Set when the stored blob could not be read at start-up, so the app can say so once
+   instead of silently starting over. */
+var STARTUP_NOTE=null;
+function startupNote(){var n=STARTUP_NOTE;STARTUP_NOTE=null;return n;}
 function hydrate(){
+  var raw=rdRaw(dbKey());
   S=rd(dbKey(),null);
+  if(!S&&raw){
+    /* It exists but does not parse. Keep the original beside it — it may be
+       recoverable by hand — rather than overwriting the only copy with defaults. */
+    wrRaw(dbKey()+":corrupt:"+Date.now(),raw);
+    STARTUP_NOTE="corrupt";
+  }
   if(!S){S=JSON.parse(JSON.stringify(DEF));wr(dbKey(),S);}
+  S=normalize(S);
   if(!S.userSplits)S.userSplits=[];
   if(!S.prefs)S.prefs=JSON.parse(JSON.stringify(DEF.prefs));
   if(!S.favs)S.favs=[];
@@ -225,6 +261,13 @@ function switchProfile(id,done){
   V.tab="home";V.train="days";V.logIdx=0;
   loadStored(done);}
 
+/* Another open copy of the app (a second tab, or Safari beside the installed app on
+   desktop) saved. Re-read rather than keep a stale copy in memory: the next save from
+   here would otherwise overwrite what the other copy just wrote — which is how a
+   stale tab erased an active workout. */
+function refreshFromStorage(cb){hydrate();migrate();loadStored(cb);}
+function storageKey(){return dbKey();}
+
 /* ---- share snapshot: what a friend hands over, and nothing more ---- */
 function buildSnapshot(){
   return {v:1,name:curProfile().name,at:today(),
@@ -264,7 +307,9 @@ function migrate(){
     S.myPlan.source=S.myPlan.source||(S.myPlan.id==="plan"?"ap":S.myPlan.id);
     S.myPlan.id="mine";
   }else{
-    S.myPlan=adoptSplit(PRESETS().filter(function(p){return p.id==="ap";})[0]);
+    /* Full Body is the plan any newcomer can run. The setup flow replaces it with a
+       recommended one as soon as the questions are answered. */
+    S.myPlan=adoptSplit(PRESETS().filter(function(p){return p.id==="fb";})[0]);
   }
   delete S.splits; delete S.currentSplit;
   saveDB();
@@ -276,7 +321,7 @@ function adoptSplit(preset){
   return c;
 }
 function split(){
-  if(!S.myPlan)S.myPlan=adoptSplit(PRESETS().filter(function(p){return p.id==="ap";})[0]);
+  if(!S.myPlan)S.myPlan=adoptSplit(PRESETS().filter(function(p){return p.id==="fb";})[0]);
   return S.myPlan;}
 function allSplits(){return PRESETS().concat(S.userSplits||[]);}
 function dayOf(id){
@@ -296,4 +341,4 @@ function dayRec(d){d=d||today();if(!S.days[d])S.days[d]={water:0,steps:0,sleep:0
 function setS(v){S=v;}
 function setProfiles(v){PROFILES=v;}
 
-export {ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, buildSnapshot, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, friends, initState, isOwner, loadStored, migrate, PROFILES, recordSession, S, saveDB, saveFriends, setProfiles, setS, snapStats, split, switchProfile};
+export {refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, buildSnapshot, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, friends, initState, isOwner, loadStored, migrate, PROFILES, recordSession, S, saveDB, saveFriends, setProfiles, setS, snapStats, split, switchProfile};

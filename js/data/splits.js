@@ -19,11 +19,9 @@ function PRESETS(){return [
   day("Day B — Posterior",[ex("Romanian Deadlift",3,8,10),ex("V-Bar Pulldown",3,8,10),
     ex("Lying T-Bar Row",3,8,10),ex("Seated Leg Curl",3,10,12),ex("Reverse Flyes",3,12,15),
     ex("Standing Biceps Cable Curl",2,10,12),ex("Butt Lift (Bridge)",3,30,45,45)]),
-  day("Day C — Ankle + Full Body",[ex("Calf Stretch Hands Against Wall",2,10,10,30),
-    ex("Balance Board",3,30,30,30),ex("Ankle Circles",5,30,30,20),
-    ex("Machine Bench Press",3,8,10),ex("Pullups",3,6,12),ex("Split Squat with Dumbbells",3,10,12),
-    ex("Standing Calf Raises",3,12,15),ex("Plank",3,40,40,45)]),
-  rest("Rest / Football")]},
+  day("Day C — Full Body",[ex("Machine Bench Press",3,8,10),ex("Pullups",3,6,12),
+    ex("Split Squat with Dumbbells",3,10,12),ex("Standing Calf Raises",3,12,15),ex("Plank",3,40,40,45)]),
+  rest()]},
 
 {id:"arnold",name:"Arnold Split",tag:"6 days · advanced",days:[
   day("Chest & Back",[ex("Barbell Incline Bench Press - Medium Grip",4,8,10),ex("Pullups",4,6,10),

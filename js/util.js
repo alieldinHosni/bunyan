@@ -6,6 +6,10 @@
 var MEM={},PERSIST=true;
 try{localStorage.setItem("_t","1");localStorage.removeItem("_t");}catch(e){PERSIST=false;}
 function rd(k,f){try{var v=PERSIST?localStorage.getItem(k):MEM[k];return v?JSON.parse(v):f;}catch(e){return f;}}
+/* The stored string as it is, unparsed — so a blob that no longer parses can be kept
+   aside instead of being overwritten by defaults. */
+function rdRaw(k){try{return PERSIST?localStorage.getItem(k):(MEM[k]||null);}catch(e){return null;}}
+function wrRaw(k,s){try{if(PERSIST)localStorage.setItem(k,s);else MEM[k]=s;return true;}catch(e){return false;}}
 function wr(k,v){try{var s=JSON.stringify(v);if(PERSIST)localStorage.setItem(k,s);else MEM[k]=s;}catch(e){onStorageError("Storage is full. Export a backup and clear old data.");}}
 function uid(){return Math.random().toString(36).slice(2,9);}
 function today(){var d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
@@ -46,4 +50,4 @@ function fmtN(v){v=Math.round(num(v,0));return v.toLocaleString();}
 var onStorageError=function(){};
 function setStorageErrorHandler(f){onStorageError=f;}
 
-export {esc, fmtN, MEM, num, PERSIST, pretty, r1, rd, setStorageErrorHandler, shortd, today, uid, weekDays, wr};
+export {esc, fmtN, MEM, num, PERSIST, pretty, r1, rd, rdRaw, wrRaw, setStorageErrorHandler, shortd, today, uid, weekDays, wr};

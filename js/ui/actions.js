@@ -226,8 +226,19 @@ function addExercise(name){
     e.min=actInfo(name).grp==="Sports"?60:30;e.rpe=6;}
   if(V.sd&&V.sd.swaplive&&S.active){
     var cur=S.active.entries[V.logIdx];
-    cur.name=name;cur.muscle=muscleOf(name);cur.sets=[];
-    saveDB();closeSheet();syncDraft();render();return;}
+    var planned=isActivity(name)?{sets:1,lo:0,hi:0,min:e.min,rpe:e.rpe}
+      :(isActivity(cur.name)?{sets:3,lo:8,hi:12}:{sets:cur.planned.sets,lo:cur.planned.lo,hi:cur.planned.hi});
+    if(cur.sets.length){
+      /* Sets already done stay with the exercise they were done on. The replacement
+         comes in as the next exercise instead of overwriting them. */
+      var fresh={name:name,muscle:muscleOf(name),planned:planned,rest:isActivity(name)?0:cur.rest,grp:null,sets:[]};
+      S.active.entries.splice(V.logIdx+1,0,fresh);
+      V.logIdx=V.logIdx+1;S.active.idx=V.logIdx;
+      toast(t("Your logged sets were kept. Next up:")+" "+exName(name));
+    }else{
+      cur.name=name;cur.muscle=muscleOf(name);cur.planned=planned;cur.extra=0;
+      if(isActivity(name))cur.rest=0;}
+    endRest();V.fresh=-1;saveDB();closeSheet();syncDraft();render();return;}
   var d=dayOf(V.dayId);if(!d){closeSheet();return;}
   if(V.sd&&V.sd.replace){
     var i=d.ex.findIndex(function(x){return x.id===V.sd.replace;});

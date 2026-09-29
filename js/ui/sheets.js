@@ -650,12 +650,16 @@ function vSheet(){
      +'<textarea id="bk" style="width:100%;height:220px;background:var(--raised);color:var(--text);'
      +'border:1px solid var(--border);border-radius:11px;padding:12px;font-size:12px">'
      +esc(JSON.stringify(S))+'</textarea>'
-     +'<button class="btn g" data-copybk="1">'+t("Select all")+'</button>';
+     +'<button class="btn" data-bkfile="1">'+t("Save backup file")+'</button>'
+     +'<button class="btn g" data-copybk="1">'+t("Copy as text")+'</button>'
+     +'<p class="tiny" style="margin-top:10px">'+t("Photos are not included. They stay on this phone.")+'</p>';
   }
   else if(V.sheet==="restore"){
     b='<h2>'+t("Restore")+'</h2><p class="tiny" style="margin:2px 0 12px">'+t("Paste a backup. This replaces everything currently in the app.")+'</p>'
-     +'<textarea id="rs" style="width:100%;height:180px;background:var(--raised);color:var(--text);'
-     +'border:1px solid var(--border);border-radius:11px;padding:12px;font-size:12px"></textarea>'
+     +'<label class="btn g" style="cursor:pointer">'+t("Choose backup file")
+     +'<input type="file" id="rsfile" accept="application/json,.json,text/plain" style="display:none"></label>'
+     +'<textarea id="rs" placeholder="'+esc(t("…or paste the backup text here"))+'" style="width:100%;height:160px;margin-top:10px;background:var(--raised);color:var(--text);'
+     +'border:1px solid var(--border);border-radius:11px;padding:12px;font-size:16px"></textarea>'
      +'<button class="btn" data-dorestore="1">'+t("Restore")+'</button>';
   }
   /* ---- grouped settings. One sheet per section, opened from the Profile hub. ---- */
