@@ -6,7 +6,7 @@ import {exName} from "../i18n/exnames.js";
 import {MEALS} from "./views/food.js";
 import {myDaysList, planOn} from "./views/train.js";
 import {ACT_GROUPS, actIcon, actInfo, actsIn, INTENSITY, intensityOf, isActivity} from "../data/activities.js";
-import {backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionKcal, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
+import {backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {GOALS, LEVELS, splitCandidates} from "../engine/plan.js";

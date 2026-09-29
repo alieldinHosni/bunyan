@@ -6,11 +6,11 @@ import {vHome} from "./views/home.js";
 import {vProfile} from "./views/profile.js";
 import {vProgress} from "./views/progress.js";
 import {vSheet} from "./sheets.js";
-import {S} from "../state.js";
+import {S, saveDB} from "../state.js";
 import {vTrain} from "./views/train.js";
 import {syncRest} from "./views/session.js";
 import {PERSIST} from "../util.js";
-import {lockScroll, V} from "./view.js";
+import {lockScroll, syncWorkoutState, V} from "./view.js";
 import {patch, replace} from "./patch.js";
 import {syncDock} from "./dock.js";
 import {applyMotion, countTo, once} from "./motion.js";
@@ -54,6 +54,7 @@ function paintMotion(root,viewKey){
 
 var lastView="",lastSheet=null;
 function render(){
+  if(syncWorkoutState())saveDB();
   document.documentElement.setAttribute("data-theme",S.theme);
   applyLang();
   /* Both routes into reduced motion, re-evaluated every render so the in-app toggle

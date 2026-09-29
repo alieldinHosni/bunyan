@@ -308,6 +308,34 @@ function progressBar(cur,goal,color){
 /* Rest-timer bookkeeping lives here with the timer it belongs to; app.js drives it
    through these rather than assigning to an imported binding. */
 function setBeeped(b){beeped=b;}
+/* ---- the live workout's position and rest, kept with the workout ----------------
+   V is memory only, so the exercise you were on and a running rest used to vanish on
+   a reload or when iOS reclaimed the tab. They are written onto S.active whenever
+   they change, and read back when the app starts. Returns true when something
+   changed, so the caller knows to save. */
+function syncWorkoutState(){
+  var a=S.active;if(!a)return false;
+  var changed=false;
+  if(a.idx!==V.logIdx){a.idx=V.logIdx;changed=true;}
+  var r=(V.restEnd||V.restPaused||V.restDone)
+    ?{end:V.restEnd,total:V.restTotal,paused:!!V.restPaused,left:V.restLeft||0,done:!!V.restDone}:null;
+  var was=a.rest?JSON.stringify(a.rest):"null",now=r?JSON.stringify(r):"null";
+  if(was!==now){a.rest=r;changed=true;}
+  return changed;
+}
+/* On start-up: put the workout back where it was. A rest that ran out while the app
+   was closed comes back as finished, silently — the moment for the alarm has passed. */
+function restoreWorkoutState(){
+  var a=S.active;if(!a)return;
+  V.logIdx=Math.max(0,Math.min(a.entries.length-1,Math.round(num(a.idx,0))));
+  var r=a.rest;
+  if(r){
+    V.restTotal=num(r.total,75);
+    if(r.paused){V.restPaused=true;V.restLeft=num(r.left,0);V.restEnd=0;}
+    else if(r.done||num(r.end)<=Date.now()){V.restEnd=0;V.restDone=true;beeped=true;}
+    else{V.restEnd=num(r.end);beeped=false;lastTick=99;}
+  }
+}
 function setLastTick(v){lastTick=v;}
 
 /* Pinning the page while a sheet is open. overscroll-behavior stops a scroll that
@@ -348,4 +376,4 @@ function lockScroll(on){
 }
 
 
-export {alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};
+export {syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};

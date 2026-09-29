@@ -6,8 +6,8 @@
 import {t} from "../../i18n/dict.js";
 import {backupAgeDays, backupDue, eatenToday} from "../../engine/formulas.js";
 import {curProfile, dayRec, S, split} from "../../state.js";
-import {estMinutes, nextDayOf} from "./train.js";
-import {esc, fmtN, num, weekDays} from "../../util.js";
+import {estMinutes, nextDayOf, planOn} from "./train.js";
+import {esc, fmtN, num, today, weekDays} from "../../util.js";
 
 /* ---- pieces the frame is made of ------------------------------------------ */
 
@@ -50,7 +50,9 @@ function weekDots(){
 /* ============================================================ HOME */
 function vHome(){
   var g=S.goals,e=eatenToday(),r=dayRec(),sp=split(),h="";
-  var nd=nextDayOf(sp),name=ownName();
+  var nd=nextDayOf(sp),name=ownName(),todayPlan=planOn(sp,today());
+  /* Something swapped in for today wins over the rotation's pick. */
+  if(todayPlan.kind==="today"&&todayPlan.swapped&&todayPlan.day&&todayPlan.day.ex.length)nd=todayPlan.day;
 
   /* ---- greeting ---- */
   h+='<div class="hgreet"><div>'
@@ -94,6 +96,14 @@ function vHome(){
      +'<div class="sdiv" aria-hidden="true"><i></i><b></b></div>'
      +'<button class="btn" data-continue="1"><span class="ico ico-play" aria-hidden="true"></span>'
      +t("Resume workout")+'</button></div>';
+  }else if(nd&&todayPlan.rest&&todayPlan.kind==="today"){
+    /* Rest is part of the plan now; the card says so and still lets you train. */
+    h+='<div class="card sess">'
+     +'<div class="sess-head"><span class="sbadge">'+t("Rest day")+'</span></div>'
+     +'<div><div class="sess-title">'+t("Recover today")+'</div>'
+     +'<div class="sess-sub">'+t("Next up")+': '+esc(nd.name)+'</div></div>'
+     +'<div class="sdiv" aria-hidden="true"><i></i><b></b></div>'
+     +'<button class="btn g" data-startday="'+nd.id+'">'+t("Train anyway")+'</button></div>';
   }else if(nd){
     h+='<div class="card sess">'
      +'<div class="sess-head"><span class="sbadge">'+t("Today's Session")+'</span>'

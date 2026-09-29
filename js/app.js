@@ -17,7 +17,7 @@ import {groupNext, groupRun, mmss, noteSet, paintRest, sessionClock} from "./ui/
 import {refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
 import {fmtW, toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
-import {ex_isTimed, alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
+import {restoreWorkoutState, syncWorkoutState, ex_isTimed, alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
 import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
 import {mealNow} from "./ui/views/food.js";
@@ -294,9 +294,9 @@ document.addEventListener("click",function(ev){
      rest entirely is a real navigation. */
   if(D.rest){
     if(D.rest==="pause"){V.restLeft=Math.max(0,Math.ceil((V.restEnd-Date.now())/1000));
-      V.restPaused=true;V.restEnd=0;paintRest();return;}
+      V.restPaused=true;V.restEnd=0;paintRest();persistRest();return;}
     if(D.rest==="resume"){V.restPaused=false;V.restEnd=Date.now()+V.restLeft*1000;
-      setBeeped(false);paintRest();return;}
+      setBeeped(false);paintRest();persistRest();return;}
     if(D.rest==="skip"){endRest();render();return;}
     /* From the rest-over screen: start another countdown of that length. */
     if(D.rest==="ext30"||D.rest==="ext60"){
@@ -311,7 +311,7 @@ document.addEventListener("click",function(ev){
     else{V.restEnd=Math.max(Date.now(),V.restEnd+(+D.rest)*1000);
          V.restTotal=Math.max(15,V.restTotal+(+D.rest));
          if(+D.rest>0)setBeeped(false);}
-    paintRest();return;}
+    paintRest();persistRest();return;}
   if(D.swap){
     var eS=S.active.entries[V.logIdx];
     V.exm=pickMuscle(eS&&eS.name);V.exe="All";V.exq="";
@@ -1046,7 +1046,8 @@ setInterval(function(){
     if(left<=Math.min(3,warn)&&left>0&&left!==lastTick){setLastTick(left);play("tick");}
     if(left===warn&&lastTick!==warn){setLastTick(warn);play("tick");}
     if(left<=0){setBeeped(true);alarmStart();tap("ok");}}
-  tickSession();},1000);
+  tickSession();
+  if(syncWorkoutState())saveDB();},1000);
 document.addEventListener("visibilitychange",function(){
   if(document.visibilityState==="visible"&&S.active)keepAwake(true);});
 
@@ -1195,6 +1196,9 @@ function downloadBackup(){
   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
   done();
 }
+/* Pause, resume and ±30s only repaint the rest screen, so they save here rather
+   than waiting for the next tick — a reload a moment later keeps them. */
+function persistRest(){if(syncWorkoutState())saveDB();}
 /* Bounds for a logged set, in storage units (kg). Wide enough for any real lifter,
    narrow enough to catch a slipped digit before it becomes a record. */
 function setProblem(w,r,timed){
@@ -1291,7 +1295,9 @@ window.addEventListener("storage",function(ev){
   if(ev.key!==storageKey())return;
   refreshFromStorage(function(){if(S.active)syncDraft();render();});
 });
-if(S.active)syncDraft();
+/* Reopened mid-workout (a reload, or iOS having reclaimed the tab): straight back to
+   the exercise and the rest that were on screen, not to Home. */
+if(S.active){restoreWorkoutState();syncDraft();V.tab="train";V.train="days";}
 if(!S.onboarded){V.tab="home";V.sheet="setup";}
 render();
 

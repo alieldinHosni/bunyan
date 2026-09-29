@@ -6,7 +6,7 @@ import {num, r1, rd, rdRaw, today, uid, wr, wrRaw} from "./util.js";
 import {clearProfile, deleteSession, loadDays, loadSessions, putAll, putDays, putSession, updateSession,
         replaceAll, replaceAllDays} from "./db.js";
 import {clearPhotos} from "./photostore.js";
-import {V} from "./ui/view.js";
+import {restoreWorkoutState, V} from "./ui/view.js";
 
 /* ============================================================ state */
 var DEF={
@@ -259,6 +259,9 @@ function switchProfile(id,done){
   hydrate();
   migrate();
   V.tab="home";V.train="days";V.logIdx=0;
+  /* The rest and position in memory belong to the profile being left. */
+  V.restEnd=0;V.restPaused=false;V.restDone=false;
+  restoreWorkoutState();
   loadStored(done);}
 
 /* Another open copy of the app (a second tab, or Safari beside the installed app on

@@ -1188,7 +1188,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tday-n{font-family:var(--display);font-weight:700;font-size:14.5px;line-height:1.2;overflow-wrap:anywhere}
 .tday-m{font-size:11.5px;color:var(--dim)}
 [dir="rtl"] .tday-k{letter-spacing:0}
-@media (max-width:360px){.tnextpair{grid-template-columns:1fr}}
+@media (max-width:360px){}
 
 /* Horizontal rows bleed to the screen edge, as the design's do, so the next card is
    visibly cut off and reads as scrollable. */
@@ -1220,14 +1220,13 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   font-size:13px;font-weight:600;white-space:nowrap}
 .tpill:active{border-color:var(--accent);color:var(--text)}
 
-.card.tlib{display:flex;align-items:center;gap:12px;padding:16px;margin:24px 0 0;text-align:start}
-.tlib-i{flex:0 0 36px;width:36px;height:32px;border-radius:6px;background:var(--bg);
-  display:flex;align-items:center;justify-content:center;color:var(--accent)}
-.tlib-i .ico{width:18px;height:18px;flex-basis:18px}
-.tlib-t{flex:1;min-width:0}
-.tlib-n{display:block;font-family:var(--display);font-weight:700;font-size:15px}
-.tlib-s{display:block;font-size:11px;color:var(--dim);margin-top:2px}
-.tlib .ico-chev{color:var(--dim)}
+
+
+
+
+
+
+
 
 /* ================= A training day — canvas screen 2 (Figma node 2:915) */
 .ico-cleft{--ico:url(icons/chevron-left.svg)}
@@ -1574,47 +1573,36 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .ico-award{--ico:url(icons/award.svg)}
 
 /* The medal. The green tick this replaces was the pre-Figma design's; the frame
-   rings it in accent over accent-soft, which is the same treatment the rest of the
-   canvas gives anything it wants read as earned. */
-.wc-top{text-align:center;margin-bottom:20px}
-.wc-medal{width:70px;height:70px;margin:0 auto 16px;border-radius:35px;
-  background:var(--accentSoft);border:2px solid var(--accent);
-  display:flex;align-items:center;justify-content:center}
-.wc-medal .ico-award{width:28px;height:28px;flex-basis:28px;color:var(--text)}
-.wc-h{font-family:var(--display);font-weight:800;font-size:32px;letter-spacing:-.02em;
-  line-height:1.1;margin:0}
-.wc-sub{font-size:16px;color:var(--dim);margin:8px 0 0}
+   rings it in accent over accent-soft{text-align:center;margin-bottom:20px}
 
-/* Four tiles, two up. */
-.wc-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
-.wc-stat{background:var(--surface);border:1px solid var(--border);border-radius:8px;
-  padding:16px}
-.wc-stat-k{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
-.wc-stat-v{font-family:var(--display);font-weight:800;font-size:20px;margin-top:6px;
-  font-variant-numeric:tabular-nums}
-.wc-stat-v .unit{font-size:20px;font-weight:800;color:var(--text);margin-inline-start:4px}
 
-/* The record. Gold, because it is the one thing on this screen that is not simply
-   what happened — it is the best that has ever happened. */
-.wc-pr{display:flex;align-items:center;gap:14px;
+
+
+
+/* Four tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+
+
+
+
+
+/* The record. Gold{display:flex;align-items:center;gap:14px;
   background:var(--surface);border:1.5px solid var(--gold);border-radius:8px;
   padding:16px;margin-bottom:24px}
-.wc-pr-i{font-size:26px;line-height:1;flex-shrink:0}
-.wc-pr-k{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--gold)}
-.wc-pr-v{font-family:var(--display);font-weight:800;font-size:16px;margin-top:2px}
-.wc-pr-v+.wc-pr-v{margin-top:6px}
 
-/* Derived facts, not decoration: each line is only printed when it is true. */
-.wc-ach-h{font-family:var(--display);font-weight:800;font-size:17px;margin:0 0 12px}
-.wc-ach{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
-.wc-ach div{display:flex;align-items:flex-start;gap:10px;font-size:15px}
-.wc-ach .ico-check{color:var(--ok);flex-basis:16px;margin-top:2px}
+
+
+
+
+/* Derived facts{font-family:var(--display);font-weight:800;font-size:17px;margin:0 0 12px}
+
+
+
 
 /* The frame pins these under a rule at the foot of the screen. */
 .wc-foot{border-top:1px solid var(--border);
   margin:0 calc(-1 * var(--s4));padding:20px var(--s4) 0}
-.wc-foot .btn{margin-top:0}
-.wc-foot .btn+.btn{margin-top:12px}
+
+
 
 /* ================= Exercise library — canvas screen 9 (node 2:1360)
    Measured off the 2× PNG export at 804×1748 and halved; the Figma connector was
@@ -2198,7 +2186,7 @@ button.pgrow:active{background:var(--surface)}
   border-radius:var(--rpill);background:linear-gradient(180deg,var(--accentHi),var(--accent));color:#fff;font-family:var(--display);
   font-size:18px;font-weight:700;box-shadow:0 12px 30px -10px var(--accent-glow);transition:transform var(--m-press) var(--e-standard)}
 .rt-main .ico{width:20px;height:20px;flex-basis:20px}
-.rt-rnd:active,.rt-main:active,.rt-go:active,.rt-opt:active{transform:scale(.95)}
+.rt-rnd:active,.rt-main:active,.rt-go:active{transform:scale(.95)}
 .rt-next{width:100%;max-width:420px;margin-top:34px;padding:18px;border-radius:var(--r4);text-align:center;
   background:rgba(20,20,26,.78);border:1px solid var(--hair);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .rt-next.sm{margin:14px 0 4px;padding:12px}
@@ -2221,26 +2209,20 @@ button.pgrow:active{background:var(--surface)}
   border-radius:var(--r4);background:linear-gradient(180deg,var(--accentHi),var(--accent));color:#fff;font-family:var(--display);
   font-size:16px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 14px 34px -12px var(--accent-glow);
   transition:transform var(--m-press) var(--e-standard)}
-.rt-go svg,.rt-opt svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.rt-opt{display:flex;align-items:center;gap:14px;width:100%;max-width:420px;min-height:76px;margin-top:12px;padding:14px 16px;
-  border-radius:var(--r4);border:1px solid var(--hair);background:rgba(20,20,26,.8);color:var(--text);text-align:start;
-  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);transition:transform var(--m-press) var(--e-standard)}
-.rt-opt-i{flex:0 0 48px;width:48px;height:48px;border-radius:var(--rpill);display:flex;align-items:center;justify-content:center;
-  background:var(--accent-tint);color:var(--text);box-shadow:inset 0 0 0 1px var(--accent-edge)}
-.rt-opt-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.rt-opt-t b{font-size:14.5px;letter-spacing:.06em;text-transform:uppercase}
-.rt-opt-t span{font-size:13px;color:var(--dim)}
-.rt-opt-b{display:flex;gap:8px;flex-shrink:0}
-.rt-opt-b button{min-width:58px;height:40px;padding:0 12px;border-radius:var(--rpill);border:1px solid var(--hair-hi);
-  background:rgba(255,255,255,.04);color:var(--text);font-weight:700;font-size:14px}
-.rt-opt-b button:active{transform:scale(.94)}
-.rt-chev{color:var(--dim);display:flex}
-.rt-end{display:flex;align-items:center;gap:14px;width:100%;max-width:300px;margin-top:22px;min-height:44px;border:0;background:none;
-  color:var(--dim);font-size:13px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;justify-content:center}
-.rt-end::before,.rt-end::after{content:"";flex:1;height:1px;background:var(--hair-hi)}
-[dir="rtl"] .rt-k,[dir="rtl"] .rt-go,[dir="rtl"] .rt-opt-t b,[dir="rtl"] .rt-end{letter-spacing:0}
-[dir="rtl"] .rt-chev svg,[dir="rtl"] .rt-go svg{transform:scaleX(-1)}
-@media (max-width:360px){.rt-opt-b button{min-width:50px;padding:0 8px}.rt-opt-t span{display:none}}
+.rt-go svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+
+
+
+
+
+
+
+
+
+
+[dir="rtl"] .rt-k,[dir="rtl"] .rt-go{letter-spacing:0}[dir="rtl"] .rt-go svg{transform:scaleX(-1)}
+@media (max-width:360px){}
 /* ---- The workout (session.js vLogger), in the other tabs' language -------------------
    Same content, same controls; a glass header, the exercise as a hero card over the
    horse, the sets in one card, and the ember glow behind it all. Scoped to .sess. */
