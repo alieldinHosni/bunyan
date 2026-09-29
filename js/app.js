@@ -18,6 +18,7 @@ import {fmtW, toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
 import {alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
 import {shiftDay} from "./ui/datebar.js";
+import {addPhoto, removePhoto} from "./ui/photos.js";
 import {mealNow} from "./ui/views/food.js";
 import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
 
@@ -40,6 +41,12 @@ function pickMuscle(name){
   var m=name?muscleOf(name):null;
   return (m&&MUSCLES.indexOf(m)>=0)?m:"All";
 }
+
+/* Deleting a progress photo. Asked first: the photo is on this phone only, so there
+   is nothing to undo from. */
+ACT.delphoto=function(_,id){
+  removePhoto(id,function(ok){
+    render();toast(ok?t("Photo deleted."):t("That photo could not be deleted."));});};
 
 document.addEventListener("click",function(ev){
   /* Named el, not t: t() is the translator, and shadowing it here made every
@@ -109,6 +116,23 @@ document.addEventListener("click",function(ev){
   if(D.exsteps){V.exsteps=!V.exsteps;render();return;}
   if(D.exmiss){V.exmiss=!V.exmiss;render();return;}
   if(D.range){V.range=+D.range;render();return;}
+  /* ---- Progress. The view rendered these controls with nothing listening, so its
+     tabs never switched and Strength, Body and Nutrition could not be reached. */
+  if(D.ptab){V.ptab=D.ptab;render();
+    var pt=document.querySelector('[data-ptab="'+D.ptab+'"]');if(pt)pt.focus();
+    return;}
+  if(D.seeall){V.ptab="strength";render();window.scrollTo(0,0);return;}
+  if(D.pall){V.pall=!V.pall;render();return;}
+  /* A lift in the list is charted above it, so bring the chart into view. */
+  if(D.chartex){V.chartEx=D.chartex;render();
+    var pk=document.querySelector(".pgpick");
+    if(pk)pk.scrollIntoView({block:"start",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+    return;}
+  if(D.photo){openSheet("photo",{id:D.photo});return;}
+  if(D.delphoto){
+    askConfirm({title:t("Delete this photo?"),
+      body:t("It is removed from this phone. This cannot be undone."),
+      cta:t("Delete photo"),act:"delphoto",data:D.delphoto});return;}
   if(D.showall){V.showAll=!V.showAll;render();return;}
   if(D.bwsplit){pushNav();V.train="bodyweight";render();return;}
   if(D.bwcat){pushNav();V.exm=D.bwcat==="All"?"All":D.bwcat;V.exe="Bodyweight";V.exq="";
@@ -281,9 +305,12 @@ document.addEventListener("click",function(ev){
     saveDB();closeSheet();return;}
   if(D.savemeasure){
     var rec={date:today()};
-    [["m_chest","chest"],["m_waist","waist"],["m_arms","arms"],["m_thighs","thighs"],
-     ["m_calves","calves"],["m_neck","neck"]].forEach(function(m){
-      var v=num(val(m[0]));if(v)rec[m[1]]=v;});
+    [["m_chest","chest"],["m_waist","waist"],["m_hips","hips"],["m_arms","arms"],["m_thighs","thighs"],
+     ["m_calves","calves"],["m_neck","neck"],["m_bf","bf"]].forEach(function(m){
+      var v=num(val(m[0]));if(v>0)rec[m[1]]=v;});
+    /* A percentage, not a tape reading: anything outside 2–70 is a typo. */
+    if(rec.bf&&(rec.bf<2||rec.bf>70)){toast(t("Body fat should be a percentage between 2 and 70."));return;}
+    if(Object.keys(rec).length<2){toast(t("Enter at least one measurement."));return;}
     var e5=S.body.filter(function(b){return b.date===today();})[0];
     if(e5)Object.assign(e5,rec);else S.body.push(rec);
     S.body.sort(function(a,b){return a.date<b.date?-1:1;});
@@ -794,6 +821,13 @@ document.addEventListener("input",function(ev){
    previously unreachable by keyboard entirely. */
 document.addEventListener("keydown",function(ev){
   if(ev.key==="Escape"&&V.sheet){ev.preventDefault();requestCloseSheet();return;}
+  /* Arrow keys move along the Progress tabs, as they do in any tablist. */
+  if((ev.key==="ArrowRight"||ev.key==="ArrowLeft")&&ev.target.dataset&&ev.target.dataset.ptab){
+    var tl=[].slice.call(document.querySelectorAll("[data-ptab]")),ti=tl.indexOf(ev.target);
+    var fw=(ev.key==="ArrowRight")!==(document.documentElement.dir==="rtl");
+    var nx=tl[(ti+(fw?1:-1)+tl.length)%tl.length];
+    if(nx){ev.preventDefault();nx.click();}
+    return;}
   if(ev.key==="Enter"&&V.sheet==="ask"&&ev.target.id==="askv"){
     ev.preventDefault();
     var ao=V.sd||{},av2=val("askv");
@@ -801,6 +835,17 @@ document.addEventListener("keydown",function(ev){
     runAct(ao.act,av2);}});
 document.addEventListener("change",function(ev){
   if(ev.target.id==="chartsel"){V.chartEx=ev.target.value;render();return;}
+  /* A progress photo, picked from the camera or the library. Shrunk and stored on
+     this phone by js/ui/photos.js; the Body view re-reads the list once it lands. */
+  if(ev.target.id==="pg_photo"){
+    var file=ev.target.files&&ev.target.files[0];
+    ev.target.value="";
+    if(!file)return;
+    toast(t("Saving photo…"));
+    addPhoto(file,function(ok){
+      render();
+      toast(ok?t("Photo saved on this phone."):t("That photo could not be saved."));});
+    return;}
   /* The meal in the add-food header. */
   if(ev.target.id==="afmeal"&&V.sd){V.sd.meal=ev.target.value;render();return;}
   /* The chooser holds servings ("s2") and measures ("uml"). Moving between them keeps

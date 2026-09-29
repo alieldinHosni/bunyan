@@ -1790,6 +1790,139 @@ textarea.afnl.warn{border-color:var(--gold)}
 .ngrem-r span.over{color:var(--gold)}
 .ngrem .bar,.ngrem .bar i{height:4px;border-radius:2px}
 .ngrem .bar{margin-top:8px;background:var(--border)}
+/* ---- Progress (js/ui/views/progress.js) ---------------------------------------
+   The four "Progress —" frames and 2:484's segmented control. The view shipped
+   without any of these rules, so it rendered as unstyled text and default buttons.
+   Surfaces, type and spacing are the app's tokens; nothing here introduces a colour. */
+.pgseg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;
+  background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:12px}
+.pgseg button{min-height:40px;border:none;border-radius:9px;background:none;color:var(--dim);
+  font-size:13.5px;font-weight:700;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:background var(--m-press) var(--e-standard),color var(--m-press) var(--e-standard)}
+.pgseg button.on{background:var(--surface);color:var(--text)}
+.pgrange{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.pgrange button{min-height:40px;border-radius:var(--r1);border:1px solid var(--border);background:var(--raised);
+  color:var(--sub);font-family:var(--display);font-size:15px;font-weight:700;
+  transition:transform var(--m-press) var(--e-standard)}
+.pgrange button:active{transform:scale(.95)}
+.pgrange+.pgcard,.pgrange+.empty{margin-top:var(--s4)}
+.pgrange button.on{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
+.pgseg button:focus-visible,.pgrange button:focus-visible,.pglink:focus-visible,.pgrow:focus-visible,
+.pgph:focus-visible,.pgaddph:focus-within{outline:2px solid var(--accentHi);outline-offset:2px}
+/* Section labels: the frames' small grey capitals, with an action or note opposite. */
+.pglbl{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:var(--s5) 0 var(--s3);min-height:24px}
+.pglbl h2{font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dim);margin:0}
+.pglink{background:none;border:none;color:var(--accentHi);font-weight:700;font-size:14px;
+  min-height:44px;margin:-10px -2px;padding:0 2px}
+.pgaside{font-size:12px;color:var(--dim)}
+/* Stat tiles. A grid, so a long figure grows its tile instead of sliding under the
+   row below — the Overview frame's overlap. */
+.pgstats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-bottom:var(--s3)}
+.pgstat{background:var(--raised);border:1px solid var(--border);border-radius:var(--r3);padding:16px;min-width:0}
+.pgstat-k{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.pgstat-v{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.1;
+  margin-top:6px;font-variant-numeric:tabular-nums;overflow-wrap:break-word}
+.pgstat-v span,.pgbig span,.pgcomp-v span{font-family:inherit;font-size:13px;font-weight:600;color:var(--dim);
+  margin-inline-start:3px;letter-spacing:0;white-space:nowrap}
+.pgstat-d{font-size:12.5px;color:var(--dim);margin-top:6px}
+.pgd{font-variant-numeric:tabular-nums;color:var(--dim)}
+.pgd.ok{color:var(--ok)}
+.pgcard{background:var(--raised);border:1px solid var(--border);border-radius:var(--r3);padding:20px;margin-bottom:var(--s3)}
+.pgcard>.btn{margin-top:14px}
+.pgcard-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.pgcard-h h3{font-size:16px;margin:0}
+.pgcard-h span{font-size:12.5px;color:var(--dim);text-align:end}
+.pgbig{font-family:var(--display);font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:1.05;
+  margin-top:4px;color:var(--accentHi);font-variant-numeric:tabular-nums}
+.pgbig.w,.pgbig.a{color:var(--text)}
+.pgsub{font-size:13px;color:var(--dim);margin-top:6px}
+.pgnote{font-size:12.5px;color:var(--dim);margin:10px 0 0}
+.pgnone{font-size:13.5px;color:var(--dim);margin:10px 0 0;line-height:1.45}
+.pgdash{display:inline-block;width:18px;border-top:1.5px dashed var(--dim);vertical-align:middle;margin-inline-end:6px}
+/* The chart. Its box is stretched to the card, so strokes do not scale with it. */
+.pgchart{margin:14px 0 0}
+.pgchart svg{display:block;width:100%;height:120px;overflow:visible}
+.pgchart-g{stroke:var(--border);stroke-width:1;vector-effect:non-scaling-stroke}
+.pgchart-a{fill:var(--accent);opacity:.1}
+.pgchart-r{stroke:var(--dim);stroke-width:1.2;stroke-dasharray:5 5;vector-effect:non-scaling-stroke}
+.pgchart-l{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;
+  vector-effect:non-scaling-stroke}
+.pgchart-p{fill:var(--accent);stroke:var(--text);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.pgaxis{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--dim);margin-top:8px}
+/* Rows: records, workouts, top lifts, the day card. */
+.pgrow{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:14px 16px;margin-bottom:8px;
+  background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);text-align:start}
+button.pgrow:active{background:var(--surface)}
+.pgrow.on{border-color:var(--accent)}
+.pgrow-t{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.pgrow-k{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.pgrow-n{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15.5px;min-width:0}
+.pgrow-n>span{min-width:0;overflow-wrap:anywhere}
+.pgrow-s{font-size:13px;color:var(--dim);font-variant-numeric:tabular-nums}
+.pgrow-e{font-size:13px;color:var(--dim);white-space:nowrap;flex-shrink:0}
+.pgrow-v{font-weight:700;white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums}
+.pgrow .ico-chev{color:var(--dim);flex-shrink:0}
+.pgbadge{flex-shrink:0;padding:2px 6px;border-radius:4px;background:var(--accent);color:var(--onAccent);
+  font-size:10.5px;font-weight:800;letter-spacing:.06em}
+.pgpick{margin:var(--s4) 0 var(--s3)}
+/* Share of working sets by muscle group. */
+.pgshare-r{display:grid;grid-template-columns:minmax(0,7.5em) 1fr 3em;align-items:center;gap:12px;min-height:32px}
+.pgshare-r>span{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pgshare-r .bar{height:8px;margin:0;background:var(--surface);border-radius:4px}
+.pgshare-r .bar i{height:8px;border-radius:4px;background:var(--accent)}
+.pgshare-r b{text-align:end;font-size:13.5px;font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums}
+/* Body. */
+.pgwhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.pgwd{font-size:13.5px;text-align:end;padding-top:2px}
+.pgm{display:flex;align-items:center;gap:12px;min-height:56px;padding:12px 16px;margin-bottom:8px;
+  background:var(--raised);border:1px solid var(--border);border-radius:var(--r2)}
+.pgm>span:first-child{flex:1;min-width:0;font-size:15.5px}
+.pgm b{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pgm-d{min-width:68px;text-align:end;font-size:13px}
+.pgm.tall>span:first-child{display:flex;flex-direction:column;gap:2px}
+.pgm small{font-size:12.5px;color:var(--dim)}
+.pgm b.acc{color:var(--accentHi)}
+.pgcomp{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.pgcomp-e{text-align:end}
+.pgcomp-v{font-family:var(--display);font-size:30px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
+.pgtrack{height:10px;border-radius:5px;background:var(--surface);overflow:hidden;margin-top:14px}
+.pgtrack i{display:block;height:100%;border-radius:5px;background:var(--accent)}
+.pgtrack.sm{height:5px;margin-top:10px}
+.pgtrack.c i{background:var(--text)}
+.pgtrack.f i{background:var(--dim)}
+/* Progress photos: an add tile, then the photos newest first. */
+.pgphotos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pgaddph{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  min-height:150px;border:1px dashed var(--border);border-radius:var(--r2);background:var(--raised);
+  color:var(--dim);font-weight:600;cursor:pointer}
+.pgaddph .ico{width:24px;height:24px;flex-basis:24px}
+.pgaddph.sm{min-height:0;aspect-ratio:3/4;font-size:12.5px;text-align:center;padding:6px}
+.pgfile{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:0}
+.pgph{position:relative;display:block;padding:0;border:1px solid var(--border);border-radius:var(--r2);
+  overflow:hidden;background:var(--surface);aspect-ratio:3/4}
+.pgph img{display:block;width:100%;height:100%;object-fit:cover}
+.pgph span{position:absolute;inset-inline-start:6px;bottom:6px;padding:2px 6px;border-radius:4px;
+  background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600}
+.pgph-sk{aspect-ratio:3/4;border-radius:var(--r2)}
+.pgphoto-img{display:block;width:100%;height:auto;border-radius:var(--r2);margin:4px 0 12px}
+/* Nutrition. */
+.pgmacs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.pgmac{background:var(--raised);border:1px solid var(--border);border-radius:var(--r3);padding:14px 12px;min-width:0}
+.pgmac-k{font-size:13px;color:var(--dim)}
+.pgmac-v{font-family:var(--display);font-size:22px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
+.pgmac-s{font-size:12.5px;color:var(--dim);margin-top:2px}
+.pgadh{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.pgring{flex-shrink:0;width:64px;height:64px}
+.pgring svg{width:100%;height:100%}
+.pgring-t{fill:none;stroke:var(--surface);stroke-width:5}
+.pgring-v{fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round}
+[dir="rtl"] .pglbl h2,[dir="rtl"] .pgstat-k,[dir="rtl"] .pgrow-k,[dir="rtl"] .pgbadge{letter-spacing:0}
+@media (max-width:360px){
+  .pgseg button{font-size:12px}
+  .pgmacs{grid-template-columns:1fr}
+  .pgbig{font-size:34px}
+}
 </style>
 </head>
 <body>

@@ -13,6 +13,7 @@ import {buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapSt
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
 import {CUES, MISTAKES, progressBar, sparkline, stepper, V} from "./view.js";
+import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 
 /* ============================================================ sheets */
@@ -221,14 +222,31 @@ function vSheet(){
      +'<button class="btn" data-saverec="1">Save</button>';
   }
   else if(V.sheet==="measure"){
-    var last=S.body.filter(function(x){return x.chest||x.waist;}).slice(-1)[0]||{};
+    /* Each field shows its own last reading as a hint, not as a value. Prefilled
+       values were saved again as today's reading, so measuring only the waist also
+       logged an unchanged chest, and Progress reported "±0" against it.
+
+       Hips and body fat are here because Progress reads both (engine/stats.js):
+       hips for the circumference body-fat estimate, which needs them for women, and
+       an entered body-fat figure from a scale or scan, which it prefers. Neither
+       could be entered before, so a woman never got an estimate at all. */
+    var lastOf=function(k){var r=S.body.filter(function(x){return num(x[k])>0;}).slice(-1)[0];return r?r[k]:"";};
     b='<h2>'+t("Measurements")+'</h2><p class="tiny" style="margin:2px 0 14px">'+t("In centimetres. Leave blank to skip.")+'</p>'
      +'<div class="grid2">'
-     +[["Chest","m_chest","chest"],["Waist","m_waist","waist"],["Arms","m_arms","arms"],
-       ["Thighs","m_thighs","thighs"],["Calves","m_calves","calves"],["Neck","m_neck","neck"]]
-      .map(function(m){return '<div><label class="tiny">'+m[0]+'</label>'
-        +'<input id="'+m[1]+'" type="number" step="0.5" value="'+(last[m[2]]||"")+'"></div>';}).join("")
+     +[["Chest","m_chest","chest"],["Waist","m_waist","waist"],["Hips","m_hips","hips"],["Arms","m_arms","arms"],
+       ["Thighs","m_thighs","thighs"],["Calves","m_calves","calves"],["Neck","m_neck","neck"],["Body fat %","m_bf","bf"]]
+      .map(function(m){return '<div><label class="tiny" for="'+m[1]+'">'+esc(t(m[0]))+'</label>'
+        +'<input id="'+m[1]+'" type="number" inputmode="decimal" step="0.1" placeholder="'+esc(lastOf(m[2]))+'"></div>';}).join("")
      +'</div><button class="btn" data-savemeasure="1">'+t("Save for today")+'</button>';
+  }
+  else if(V.sheet==="photo"){
+    /* One progress photo, large, with its date and the way to delete it. */
+    var ph=photoById(V.sd&&V.sd.id);
+    if(!ph)b='<h2>'+t("Progress photo")+'</h2><p class="sub">'+t("This photo is no longer on this phone.")+'</p>';
+    else b='<h2>'+t("Progress photo")+'</h2><p class="tiny" style="margin:2px 0 12px">'+esc(pretty(ph.d))+'</p>'
+     +'<img class="pgphoto-img" src="'+ph.url+'" alt="'+esc(t("Progress photo")+", "+pretty(ph.d))+'"'
+     +' width="'+(ph.w||300)+'" height="'+(ph.h||400)+'">'
+     +'<button class="btn danger" data-delphoto="'+esc(ph.id)+'">'+t("Delete photo")+'</button>';
   }
   else if(V.sheet==="text"){
     b='<h2>'+esc(V.sd.title)+'</h2><p class="tiny" style="margin:2px 0 12px">'+esc(V.sd.note||"")+'</p>'
