@@ -235,18 +235,18 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
 /* The design's primary action: 48px, radius 8, Outfit Bold 15 in caps, an optional
    16px icon 8px before the label. min-height rather than height so a translated label
    that wraps grows the button instead of spilling out of it. */
-.btn{width:100%;padding:0 16px;border-radius:var(--r1);border:none;
-  background:var(--accent);color:var(--onAccent);
-  font-family:var(--display);font-size:15px;font-weight:700;letter-spacing:.02em;
-  text-transform:uppercase;margin-top:var(--s2);
+.btn{width:100%;padding:0 18px;border-radius:var(--rpill);border:none;
+  background:linear-gradient(180deg,var(--accentHi),var(--accent));color:var(--onAccent);
+  font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:0;
+  text-transform:none;margin-top:var(--s2);
   display:flex;align-items:center;justify-content:center;gap:8px;
   transition:transform var(--m-press) var(--e-standard), filter var(--m-press) var(--e-standard)}
 /* The 48px floor belongs to the full-width primary action only. Scoped with :not()
    rather than overridden per variant, because zeroing it on .btn.sm would outrank
    .iconbtn's own 44px minimum on specificity and shrink the date-bar arrows. */
-.btn:not(.sm):not(.d){min-height:48px}
+.btn:not(.sm):not(.d){min-height:52px}
 .btn:active{transform:scale(.975);filter:brightness(1.12)}
-.btn.g{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+.btn.g{background:var(--raised);border:1px solid var(--border);color:var(--text)}
 .btn.o{background:transparent;border:1px solid var(--ok);color:var(--ok)}
 .btn.ok{background:var(--ok);color:#fff;border:none}
 /* Destructive, for a sheet where the destructive option is NOT the primary one. The
@@ -256,10 +256,10 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
    one — both pass AA for text, which a filled accent would not at this size. */
 .btn.danger{background:transparent;border:1px solid var(--accentHi);color:var(--accentHi)}
 .btn.d{background:transparent;border:none;color:var(--faint);font-size:14px;padding:12px 0}
-.btn.sm{width:auto;padding:9px 14px;font-size:14px;border-radius:10px;margin:0}
-.pill{padding:6px 11px;border-radius:var(--r1);background:var(--surface);
-  border:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--dim);transition:transform var(--m-press) var(--e-standard)}
+.btn.sm{width:auto;padding:9px 16px;font-size:14px;border-radius:var(--rpill);margin:0}
+.pill{padding:6px 13px;border-radius:var(--rpill);background:var(--surface);
+  border:1px solid var(--border);font-size:12.5px;font-weight:600;letter-spacing:0;
+  text-transform:none;color:var(--dim);transition:transform var(--m-press) var(--e-standard)}
 .pill:active{transform:scale(.94)}
 .pill.a{background:var(--accent);border-color:var(--accent);color:#fff}
 .pill.gold{background:var(--accentSoft);color:var(--gold);font-weight:600}
@@ -2321,6 +2321,112 @@ button.pgrow:active{background:var(--surface)}
 .cf-alt{background:none;border:none;color:var(--accentHi);font-family:inherit;font-weight:600;font-size:15px;
   padding:12px 0 2px;min-height:44px;cursor:pointer}
 .cf-alt:active{opacity:.6}
+/* ---- One button language for every sheet and sub-page ------------------------------
+   Pills, sentence case, the accent gradient on the primary; .g is the tonal secondary.
+   Sheets lose the hairline under their head and gain the app's glow at the top. */
+.btn:not(.g):not(.o):not(.ok):not(.danger):not(.d){box-shadow:0 10px 26px -14px rgba(230,30,40,.75),inset 0 1px 0 rgba(255,255,255,.16)}
+.btn.danger{border-radius:var(--rpill)}
+.sheethead{border-bottom:none}
+.sheethead .x{width:34px;height:34px;flex-basis:34px;background:var(--raised)}
+.sheetbox{background:radial-gradient(120% 50% at 50% 0%,rgba(230,30,40,.10),transparent 60%),var(--bg)}
+
+/* ---- Rest over (session.js vRest, restDone): built for a glance mid-workout ------- */
+#rest .rt2{justify-content:space-between}
+.rt2-top{display:flex;flex-direction:column;align-items:center;width:100%;margin-top:auto}
+.rt2 .rt-check{width:92px;height:92px;margin:18px 0 14px}
+.rt2 .rt-h{margin:0;font-size:clamp(28px,8vw,34px)}
+.rt2-next{margin:10px 0 0;font-size:17px;color:var(--text);text-align:center;font-variant-numeric:tabular-nums;opacity:.85}
+.rt2-acts{display:flex;flex-direction:column;align-items:stretch;gap:12px;width:100%;max-width:420px;margin:28px auto 0}
+.rt2 .rt-go{max-width:none;min-height:68px;border-radius:var(--rpill);font-size:19px;letter-spacing:0;text-transform:none}
+.rt2-k{margin-top:10px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-align:center}
+.rt2-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rt2-b{display:flex;align-items:center;justify-content:center;gap:10px;min-height:60px;border-radius:var(--rpill);
+  background:rgba(28,28,34,.78);border:1px solid var(--hair-hi);color:var(--text);font-family:var(--display);
+  font-size:18px;font-weight:700;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  transition:transform var(--m-press) var(--e-standard)}
+.rt2-b.wide{font-size:16px}
+.rt2-b svg,.rt2-end svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rt2-end{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;margin-top:6px;border-radius:var(--rpill);
+  background:rgba(230,30,40,.08);border:1px solid rgba(248,52,70,.45);color:var(--accentHi);font-family:var(--display);
+  font-size:16px;font-weight:700;transition:transform var(--m-press) var(--e-standard)}
+.rt2-b:active,.rt2-end:active{transform:scale(.96)}
+[dir="rtl"] .rt2-b svg,[dir="rtl"] .rt2-end svg{transform:scaleX(-1)}
+/* The countdown's own labels in the same case as everything else. */
+.rt-skip,.rt-main{text-transform:none;letter-spacing:0}
+
+/* ---- Workout complete (sheets.js "done") ------------------------------------------ */
+.wc2{position:relative;text-align:center;padding:8px 4px 0;isolation:isolate}
+.wc2-art{position:absolute;z-index:-1;top:-40px;left:50%;width:300px;height:auto;transform:translateX(-50%);opacity:.10;pointer-events:none}
+.wc2-medal{display:grid;place-items:center;width:84px;height:84px;margin:6px auto 16px;border-radius:50%;
+  background:radial-gradient(circle at 50% 35%,rgba(248,52,70,.35),rgba(120,10,16,.35) 70%);border:1.5px solid var(--accentHi);
+  box-shadow:0 0 0 8px rgba(230,30,40,.08),0 18px 40px -14px rgba(230,30,40,.8)}
+.wc2-medal svg{width:38px;height:38px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.wc2-h{margin:0;font-size:28px}
+.wc2-sub{margin:6px 0 20px;color:var(--dim);font-size:15px}
+.wc2-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--border);border-radius:var(--r4);
+  background:var(--raised);overflow:hidden}
+.wc2-stats>div{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 6px}
+.wc2-stats>div+div{border-inline-start:1px solid var(--border)}
+.wc2-stats b{font-family:var(--display);font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.wc2-stats small{font-size:13px;font-weight:600;color:var(--dim);margin-inline-start:3px}
+.wc2-stats>div>span{font-size:12px;color:var(--dim)}
+.wc2-hl{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:12px 14px;border-radius:var(--rpill);
+  background:rgba(230,30,40,.08);border:1px solid rgba(248,52,70,.3);font-size:14px;font-weight:600}
+.wc2-acts{margin-top:22px}
+.wc2-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px}
+.wc2-row .btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---- Edit a logged workout (sheets.js "sessedit") ---------------------------------- */
+.se-top{margin-bottom:14px}
+.se-k{font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accentHi)}
+.se-top h2{margin:4px 0 12px;font-size:24px}
+.se-date{display:inline-flex;align-items:center;gap:10px;padding:6px 6px 6px 16px;border-radius:var(--rpill);
+  background:var(--raised);border:1px solid var(--border);font-size:14px;color:var(--dim)}
+.se-date input{width:auto;min-height:38px;margin:0;padding:0 12px;border-radius:var(--rpill);background:var(--surface);color-scheme:dark}
+.se-ex{margin-top:12px;padding:14px;border-radius:var(--r4);background:var(--raised);border:1px solid var(--border)}
+.se-exh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.se-exh h3{margin:0;font-size:16px;min-width:0}
+.se-rm{flex:0 0 40px;width:40px;height:40px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--border);background:none;color:var(--dim)}
+.se-rm svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.se-hd,.se-row{display:grid;grid-template-columns:28px minmax(0,1fr) 16px minmax(0,1fr) 40px;align-items:center;gap:8px}
+.se-hd{margin:10px 0 4px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-align:center}
+.se-row{margin-top:8px}
+.se-n{font-family:var(--display);font-weight:800;color:var(--accentHi);text-align:center}
+.se-row input{margin:0;min-height:46px;text-align:center;font-size:17px;font-weight:700;border-radius:14px;font-variant-numeric:tabular-nums}
+.se-x{color:var(--dim);text-align:center}
+.se-del{width:40px;height:40px;border-radius:50%;border:none;background:none;color:var(--dim);font-size:15px}
+.se-empty{text-align:center;color:var(--dim);margin:24px 0}
+.se-acts{margin-top:20px}
+.se-edit{display:block;width:100%;margin-top:12px;min-height:44px;border-radius:var(--rpill);border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-weight:600;font-size:14px}
+/* ---- Train: My Training and the library as two equal tiles ------------------------- */
+.ttiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.ttile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;min-height:128px;
+  padding:16px;border-radius:var(--r4);border:1px solid var(--border);text-align:start;color:var(--text);overflow:hidden;
+  background:radial-gradient(90% 70% at 100% 0%,rgba(230,30,40,.14),transparent 70%),var(--raised);
+  transition:transform var(--m-press) var(--e-standard)}
+.ttile:active{transform:scale(.97)}
+.ttile:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
+.ttile-i{display:grid;place-items:center;width:40px;height:40px;margin-bottom:auto;border-radius:50%;
+  background:rgba(230,30,40,.14);border:1px solid rgba(248,52,70,.35);color:var(--accentHi)}
+.ttile-i svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ttile-i .ico{width:18px;height:18px;background:currentColor}
+.ttile-n{margin-top:14px;font-family:var(--display);font-weight:800;font-size:16px}
+.ttile-s{font-size:12.5px;color:var(--dim);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ---- Day details (sheets.js "dayview") ----------------------------------------------- */
+.dv-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+.dv-stats b{font-size:19px}
+.dv-h{margin:22px 0 10px;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.dv-card{display:block;width:100%;margin-top:10px;padding:14px 16px;border-radius:var(--r4);border:1px solid var(--border);
+  background:var(--raised);color:var(--text);text-align:start;transition:transform var(--m-press) var(--e-standard)}
+button.dv-card:active{transform:scale(.98)}
+.dv-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dv-row b{font-family:var(--display);font-size:15.5px}
+.dv-k{font-variant-numeric:tabular-nums;color:var(--sub);font-size:14px}
+.dv-it{margin-top:6px;font-size:13.5px;color:var(--dim)}
+.dv-it span:last-child{font-variant-numeric:tabular-nums}
+.dv-edit{color:var(--accentHi);font-weight:600}
+.dv-none{margin:4px 0 0;color:var(--dim);font-size:14px}
 </style>
 </head>
 <body>
