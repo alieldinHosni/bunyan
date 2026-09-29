@@ -1099,6 +1099,9 @@ ACT.barcode=function(v){ onBarcode(v); };
 
 /* Boot. Nothing above ran on import, so this is the whole startup sequence
    in the order it actually happens. */
+/* The installed app gets the full-screen page height (see "The Home Screen app" in
+   index.html). The display-mode query covers current iOS; this covers older ones. */
+try{if(navigator.standalone)document.documentElement.classList.add("standalone");}catch(e){}
 initState();
 setStorageErrorHandler(toast);
 /* One back path for the arrow, the edge swipe and the OS gesture. */
