@@ -76,6 +76,7 @@ function vProfile(){
     +(isOwner()?prow('data-coach="1"',t("Friends I follow"),
        Object.keys(friends()).length+" "+t("shared with you")):""));
 
+  h+=group(t("Recovery"),prow('data-sheet="recovery"',t("Recovery log"),t("Sleep, soreness, energy, pain")));
   h+=group(t("Your data"),prow('data-sheet="set_data"',t("Backup and reset"),""));
 
   h+='<p class="pnote">'+t("Everything lives on this phone only. Nothing is uploaded anywhere. Export a backup every few weeks so a cleared browser cannot cost you your history.")+'</p>';

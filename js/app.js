@@ -82,6 +82,23 @@ document.addEventListener("click",function(ev){
 
   /* ---- splits & days */
   if(D.mydays){openSheet("mydays");return;}
+  /* ---- readiness, session effort, pain */
+  if(D.ready!==undefined&&S.active){S.active.ready=+D.ready;saveDB();render();return;}
+  if(D.srpe){
+    var sw9=V.sd&&sessionById(V.sd.id);if(!sw9)return;
+    sw9.srpe=+D.srpe;saveSession(sw9);render();return;}
+  if(D.hurt){openSheet("hurt");return;}
+  if(D.hurtdo){
+    var eh=S.active&&S.active.entries[V.logIdx];if(!eh){closeSheet();return;}
+    eh.pain=true;saveDB();
+    if(D.hurtdo==="swap"){
+      V.exm=pickMuscle(eh.name);V.exe="All";V.exq="";
+      openSheet("exercise",{swaplive:true,like:eh.name});return;}
+    closeSheet();
+    if(D.hurtdo==="skip"){
+      if(V.logIdx>=S.active.entries.length-1){confirmFinish();return;}
+      endRest();V.fresh=-1;V.logIdx=V.logIdx+1;syncDraft();saveDB();render();return;}
+    toast(t("Noted. Stop if it gets worse."));return;}
   if(D.clearexq){V.exq="";render();var qq=document.getElementById("exq");if(qq)qq.focus();return;}
   if(D.swapday){openSheet("swapday",{date:D.swapday});return;}
   if(D.swapto!==undefined&&V.sheet==="swapday"){
@@ -838,8 +855,8 @@ document.addEventListener("click",function(ev){
     readSE();var en3=V.sd.work.entries[+D.sexdel];if(en3)en3.sets=[];render();return;}
   if(D.sesssave){
     readSE();var wk2=V.sd.work;
-    wk2.entries=wk2.entries.filter(function(e){return e.sets.length;});
-    if(!wk2.entries.length){askDelSession(V.sd.id);return;}
+    wk2.entries=wk2.entries.filter(function(e){return e.sets.length||e.pain;});
+    if(!wk2.entries.some(function(e){return e.sets.length;})){askDelSession(V.sd.id);return;}
     var ix=S.sessions.findIndex(function(x){return x.id===V.sd.id;});
     if(ix<0){closeSheet();return;}
     S.sessions[ix]=wk2;

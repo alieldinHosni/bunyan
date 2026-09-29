@@ -11,7 +11,7 @@ import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {GOALS, LEVELS, splitCandidates} from "../engine/plan.js";
 import {groupLabel, groupRun, mmss, platePlan} from "./views/session.js";
-import {ensureSessionIds, buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats, split} from "../state.js";
+import {sessionById, ensureSessionIds, buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats, split} from "../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
 import {CUES, MISTAKES, progressBar, sparkline, stepper, V} from "./view.js";
@@ -19,7 +19,7 @@ import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 
 /* ============================================================ sheets */
-var SHEET_KICK={weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
+var SHEET_KICK={recovery:"Recovery",weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
   gear:"Training",likes:"Training",exercise:"Training",exhist:"History",share:"Sharing",coach:"Sharing",
   backup:"Your data",restore:"Your data",set_you:"Settings",set_training:"Settings",set_app:"Settings",
   set_profiles:"Settings",set_data:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
@@ -334,9 +334,13 @@ function vSheet(){
     if(!sess.length)b+='<p class="dv-none">'+t("No session logged.")+'</p>';
     sess.forEach(function(x){
       var n=x.entries.filter(function(e){return e.sets.length;}).length;
+      var extra=[];
+      if(x.srpe)extra.push(t("Effort")+" "+x.srpe+"/10");
+      if(x.ready)extra.push(t("Felt")+" "+t(["","Drained","Low","OK","Good","Great"][x.ready]||""));
+      if(x.entries.some(function(e){return e.pain;}))extra.push(t("pain noted"));
       b+='<button class="dv-card dv-sess" data-sessedit="'+esc(x.id)+'" aria-label="'+esc(t("Edit workout")+": "+x.dayName)+'">'
        +'<span class="dv-row"><b>'+esc(x.dayName)+'</b><span class="dv-k">'+fmtW(Math.round(sessionVolume(x)))+'</span></span>'
-       +'<span class="dv-row dv-it"><span>'+n+' '+t(n===1?"exercise":"exercises")+'</span>'
+       +'<span class="dv-row dv-it"><span>'+n+' '+t(n===1?"exercise":"exercises")+(extra.length?' · '+esc(extra.join(" · ")):'')+'</span>'
        +'<span class="dv-edit">'+t("Edit")+' ›</span></span></button>';});
     if(rv2.steps)b+='<div class="dv-card dv-row"><b>'+t("Steps")+'</b><span class="dv-k">'+fmtN(rv2.steps)+'</span></div>';
     b+='<div class="cf-acts se-acts"><button class="btn g cf-no" data-jumpfood="'+dv+'">'+t("Open this day in Food")+'</button></div>';
@@ -367,6 +371,19 @@ function vSheet(){
        +(on?'<span class="tnext">'+t("Selected")+'</span>':'')+'</button>';});
     b+='</div>';
     if((S.daySwap||{})[sd2])b+='<button class="btn g" data-swapto="">'+t("Back to the plan")+'</button>';
+  }
+  else if(V.sheet==="hurt"){
+    /* Not a diagnosis and never advice to push through. Three honest choices, and the
+       flag stays on the exercise so a pattern can be noticed later. */
+    b='<div class="cf">'
+     +'<span class="cf-i bad" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg></span>'
+     +'<h2>'+t("Something hurts?")+'</h2>'
+     +'<p class="cf-b">'+t("Stop this exercise. Sharp, sudden or lasting pain is a reason to see a professional, not to push through. Bunyan cannot tell what it is.")+'</p>'
+     +'<div class="cf-acts">'
+     +'<button class="btn cf-ok" data-hurtdo="swap">'+t("Replace this exercise")+'</button>'
+     +'<button class="btn g cf-no" data-hurtdo="skip">'+t("Skip it today")+'</button>'
+     +'<button class="cf-alt" data-hurtdo="keep">'+t("It was minor, keep going")+'</button>'
+     +'</div></div>';
   }
   else if(V.sheet==="mydays"){
     b='<div class="se-top"><span class="se-k">'+esc(split().name)+'</span><h2>'+t("My Training")+'</h2></div>'
@@ -509,6 +526,13 @@ function vSheet(){
     else if(w.prevVol&&w.delta>0)
       b+='<div class="wc2-hl"><span aria-hidden="true">↑</span><span>'+t("Volume up")+' '
        +Math.round(w.delta/w.prevVol*100)+'% '+t("on last session")+'</span></div>';
+    /* One tap for how hard the whole session was. It is the one number that tracks
+       training load across lifting, cardio and sport alike. */
+    var sr=(sessionById(w.id)||{}).srpe||0;
+    b+='<div class="wc2-effort"><div class="wc2-effort-h">'+t("How hard was the session?")+'</div><div class="ready-c">'
+     +[[3,"Easy"],[5,"Moderate"],[7,"Hard"],[9,"Very hard"],[10,"Max"]].map(function(x){
+        return '<button class="'+(sr===x[0]?'on':'')+'" data-srpe="'+x[0]+'" aria-pressed="'+(sr===x[0])+'">'+t(x[1])+'</button>';}).join("")
+     +'</div></div>';
     b+='</div><div class="cf-acts wc2-acts">'
      +'<button class="btn cf-ok" data-close="1">'+t("Done")+'</button>'
      +'<div class="wc2-row">'
@@ -904,7 +928,7 @@ function vSheet(){
     function(m,at,title,sub){
       return '<div class="shh"><span class="shk">'+esc(t(kick))+'</span><h2'+at+'>'+title+'</h2>'
         +(sub?sub.replace(/<p class="(?:tiny|sub)"[^>]*>/,'<p class="shsub">'):'')+'</div>';});
-  var cf=V.sheet==="confirm"||V.sheet==="done";
+  var cf=V.sheet==="confirm"||V.sheet==="done"||V.sheet==="hurt";
   return '<div class="sheet"'+(hard?'':' data-close="1"')+'>'
         +'<div class="sheetbox'+(cf?' cfbox':'')+'" data-stop="1" role="dialog" aria-modal="true">'
         +'<div class="sheethead">'

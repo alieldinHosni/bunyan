@@ -178,8 +178,10 @@ function finishSession(){
   var exsPlanned=a.entries.length;
   var setsPlanned=a.entries.reduce(function(n,e){
     return n+((e.planned&&e.planned.sets)||0);},0);
-  a.entries=a.entries.filter(function(e){return e.sets.length;});
-  if(!a.entries.length){S.active=null;endRest();keepAwake(false);saveDB();render();return;}
+  /* Untouched exercises are dropped — except one flagged as painful: that flag is
+     history worth keeping, so a pattern can be noticed next time. */
+  a.entries=a.entries.filter(function(e){return e.sets.length||e.pain;});
+  if(!a.entries.some(function(e){return e.sets.length;})){S.active=null;endRest();keepAwake(false);saveDB();render();return;}
 
   var prs=[];
   a.entries.forEach(function(e){
@@ -209,7 +211,7 @@ function finishSession(){
        the figure did not have. */
     secs:Math.max(1,Math.round(sessionClock(a).ms/1000)),
     wallMins:Math.max(1,Math.round(sessionWall(a)/60000)),
-    sets:allSets.length,exs:a.entries.length,rpe:avgRPE(allSets),prs:prs,
+    sets:allSets.length,exs:a.entries.filter(function(e){return e.sets.length;}).length,rpe:avgRPE(allSets),prs:prs,
     notes:a.notes||"",
     /* What the complete screen needs to state an achievement rather than a number:
        the plan it is being measured against, and the session it is being compared to. */

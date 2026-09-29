@@ -137,6 +137,44 @@ await test("a rest day follows a full-body session",async page=>{
   eq(r,true);
 });
 
+await test("tab taps do not grow the browser history",async page=>{
+  const h0=await page.evaluate(()=>history.length);
+  for(let i=0;i<10;i++){await page.tap('nav [data-tab="train"]');await page.tap('[data-train="library"]');await page.tap('nav [data-tab="home"]');}
+  await pause(page,500);
+  const h1=await page.evaluate(()=>history.length);
+  if(h1-h0>2)throw new Error("grew by "+(h1-h0));
+  await page.evaluate(()=>history.back());await pause(page,400);
+  eq(await page.evaluate(()=>location.pathname),"/index.html","still in the app");
+});
+await test("new workout entries carry a stable exercise id, and ids heal renamed names",async page=>{
+  await startWorkout(page);
+  const id=await ev(page,"S.active.entries[0].exId");
+  if(!id)throw new Error("no exId");
+  const healed=await page.evaluate(async()=>{const ex=await import("/js/data/exercises.js");const s=await import("/js/state.js");
+    const e=s.S.active.entries[0],orig=e.name;e.name="Renamed";ex.reconcileExercises(s.S);return e.name===orig;});
+  eq(healed,true);
+});
+await test("readiness, pain flag and session effort are kept with the workout",async page=>{
+  await startWorkout(page);
+  await page.tap('[data-ready="4"]');await pause(page);
+  await page.tap('[data-hurt]');await pause(page);await page.tap('[data-hurtdo="skip"]');await pause(page);
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-finish]');await pause(page);
+  await page.tap('[data-confirmok]');await pause(page,600);
+  await page.tap('[data-srpe="7"]');await pause(page);
+  eq(await ev(page,"[S.sessions[0].ready,S.sessions[0].srpe,S.sessions[0].entries.some(e=>e.pain)]"),[4,7,true]);
+},{prefs:{autorest:false}});
+await test("an activity logs pace inputs and heart rate",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  await page.tap('[data-actsheet]');await pause(page);await page.tap('#sheet [data-quickact="Running"]');await pause(page,500);
+  await page.fill('#in_min','30');await page.fill('#in_km','6');await page.fill('#in_hr','150');
+  await page.evaluate(()=>document.activeElement.blur());
+  await page.$eval('[data-logact]',e=>e.scrollIntoView({block:"center"}));
+  await page.$eval('[data-logact]',e=>e.click());await pause(page);
+  eq(await ev(page,"[S.active.entries[0].sets[0].min,S.active.entries[0].sets[0].km,S.active.entries[0].sets[0].hr]"),[30,6,150]);
+  if(!/5:00 \/km/.test(await page.$eval('.act-row',e=>e.innerText)))throw new Error("pace not shown");
+});
+
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

@@ -315,6 +315,7 @@ td{padding:7px 0;text-align:center;font-variant-numeric:tabular-nums;font-size:1
 nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
   padding:0 var(--dock-mx) var(--dock-lift);pointer-events:none;
   transition:opacity var(--m-micro) var(--e-standard),visibility 0s}
+body.kbleave nav,body.kbleave nav *{pointer-events:none!important}
 body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--e-standard),visibility 0s var(--m-micro)}
 .dock{--i:0;position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
   max-width:520px;height:var(--dock-h);margin:0 auto;padding:0 6px;
@@ -2533,6 +2534,20 @@ button.dv-card:active{transform:scale(.98)}
 .pgshare-r.wv.ok .bar i{background:var(--ok)}
 .pgshare-r.wv.low .bar i{opacity:.55}
 .pgnote{margin:10px 0 0;font-size:12.5px;color:var(--dim);line-height:1.45}
+/* ---- readiness, session effort, pain (session.js, sheets.js) ------------------------- */
+.ready{margin:14px 0 0;padding:14px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+.ready-h,.wc2-effort-h{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+.ready-c{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.ready-c button{min-height:44px;padding:0 2px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
+  color:var(--sub);font-size:12.5px;font-weight:700}
+.ready-c button.on{background:rgba(230,30,40,.16);border-color:rgba(248,52,70,.7);color:var(--text)}
+.ready-skip{display:block;margin:10px auto 0;border:none;background:none;color:var(--dim);font-size:13px;font-weight:600;min-height:32px}
+.readynote,.painnote{margin:14px 0 0;padding:12px 14px;border-radius:var(--r4);font-size:13.5px;line-height:1.45}
+.readynote{background:var(--raised);border:1px solid var(--border);color:var(--sub)}
+.painnote{background:rgba(212,160,60,.10);border:1px solid rgba(212,160,60,.45);color:var(--text)}
+.linkbtn{border:none;background:none;padding:0;color:var(--accentHi);font-weight:700;font-size:inherit;text-decoration:underline}
+.ss-act.on{color:var(--gold);border-color:rgba(212,160,60,.5)}
+.wc2-effort{margin-top:14px;text-align:start}
 </style>
 </head>
 <body>

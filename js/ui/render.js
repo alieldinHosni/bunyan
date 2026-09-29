@@ -169,6 +169,19 @@ function isTyping(el){
   if(el.matches("textarea,[contenteditable=true]"))return true;
   return el.matches("input")&&!el.matches("[type=checkbox],[type=radio],[type=range],[type=file],[type=button],[type=submit],[type=color]");
 }
-function syncKeyboard(){document.body.classList.toggle("kb",isTyping(document.activeElement));}
+/* When the keyboard goes away the dock fades back in — right where a finger may be
+   landing on the button that dismissed it (the ✓ of a set typed near the bottom of
+   the screen). For a moment after it returns the dock lets taps through, so that tap
+   reaches the button under it instead of a tab. */
+var kbLeaveTimer=0;
+function syncKeyboard(){
+  var b=document.body,typing=isTyping(document.activeElement),was=b.classList.contains("kb");
+  b.classList.toggle("kb",typing);
+  if(was&&!typing){
+    b.classList.add("kbleave");
+    clearTimeout(kbLeaveTimer);
+    kbLeaveTimer=setTimeout(function(){b.classList.remove("kbleave");},450);
+  }
+}
 
 export {isTyping, render, syncKeyboard};

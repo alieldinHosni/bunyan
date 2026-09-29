@@ -15,6 +15,13 @@ import {ex_isTimed, stepperInput, V} from "../view.js";
    runs it. Every control answers one of: what am I doing, which set am I on, what
    did I do last time, am I resting, what is next. */
 var LOADED=/Carry|Farmer|Yoke/i;
+var READY=[[1,"Drained"],[2,"Low"],[3,"OK"],[4,"Good"],[5,"Great"]];
+function painRecent(name){
+  var n=0,seen=0;
+  for(var i=0;i<S.sessions.length&&seen<3;i++){
+    var e=S.sessions[i].entries.filter(function(x){return x.name===name;})[0];
+    if(!e)continue;seen++;if(e.pain)n++;}
+  return n>=2;}
 function e0name(a){var e=a.entries[V.logIdx];return e?e.name:"";}
 
 /* Rows an entry shows: the prescription plus any the user added, never fewer than
@@ -157,6 +164,20 @@ function vLogger(){
      recommendation. The frame's START/END panels are placeholder rectangles standing in
      for artwork; the library ships a real photograph of each position, so those are used
      instead — closer to the design's intent than copying its stand-in would be. */
+  /* How the lifter feels today, asked once before the first set. It changes nothing
+     on its own; a low answer only says, plainly, that doing less still counts. */
+  if(doneAll===0&&a.ready==null){
+    h+='<section class="ready"><div class="ready-h">'+t("How do you feel today?")+'</div><div class="ready-c">'
+     +READY.map(function(x){return '<button data-ready="'+x[0]+'">'+t(x[1])+'</button>';}).join("")
+     +'</div><button class="ready-skip" data-ready="0">'+t("Skip")+'</button></section>';
+  }else if(a.ready&&a.ready<=2&&doneAll===0){
+    h+='<div class="readynote">'+t("A low day. Keep the weights you know, drop a set if you need to, or stop early. It still counts.")+'</div>';
+  }
+  /* Pain flagged on this exercise in two of its last three sessions: say so before
+     the first set, once, and point at a substitute. */
+  if(!e.sets.length&&painRecent(e.name))
+    h+='<div class="painnote">'+t("You flagged pain on this exercise recently. Consider a substitute, and if it keeps coming back, get it looked at.")
+     +' <button class="linkbtn" data-swap="1">'+t("Replace it")+'</button></div>';
   if(isActivity(e.name))h+=actBody(a,e,rows,active);
   else{
   var med=exMedia(e.name),img0=exImg(e.name,0),img1=exImg(e.name,1);
@@ -298,6 +319,7 @@ function vLogger(){
   h+='<div class="ss-acts">'
    +'<button class="ss-act" data-swap="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>'+t("Replace Exercise")+'</button>'
    +(V.logIdx<a.entries.length-1?'<button class="ss-act" data-nextex="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l10 7-10 7zM19 5v14"/></svg>'+t("Skip Exercise")+'</button>':'')
+   +'<button class="ss-act'+(e.pain?' on':'')+'" data-hurt="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg>'+t(e.pain?"Pain noted":"Something hurts?")+'</button>'
    +'</div></div>';
 
   /* The rest screen is no longer part of this string; syncRest() owns it. */
