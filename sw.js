@@ -2,7 +2,7 @@
    Network-first for the app itself, so a new version is picked up on the next
    load instead of being served from cache. Cache-first for images only.
    Bump CACHE whenever you change index.html. */
-const CACHE = "bunyan-v56";
+const CACHE = "bunyan-v57";
 /* instructions.json (595 KB) is deliberately absent: it is cached on first use by the
    catch-all handler below, so it no longer blocks first install. */
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
@@ -23,7 +23,7 @@ const FILES = ["./", "./index.html", "./manifest.webmanifest",
                "./icons/award.svg", "./icons/camera.svg", "./icons/info.svg",
                "./icons/edit.svg", "./icons/warn.svg", "./icons/alert.svg",
                "./img/split-ap.jpg", "./img/split-arnold.jpg", "./img/split-ppl.jpg",
-               "./img/split-ul.jpg", "./img/split-fb.jpg", "./img/split-bw.jpg",
+               "./img/split-ul.jpg", "./img/split-fb.jpg", "./img/split-bw.jpg", "./img/rest-swirl.jpg",
                "./img/split-bro.jpg",
                /* Every module is required for the app to run at all, unlike an
                   image, so all of them are precached. */

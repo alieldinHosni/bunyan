@@ -76,6 +76,10 @@ function vFood(){
   /* ---- the four meals as tiles: the one for now is lit, a logged one is ticked. A
      logged tile opens the meal, an empty one adds to it. */
   var now=dsel===today()?mealNow():null;
+  /* The tiles are the day's meals: a logged one opens the meal, an empty one adds to
+     it. The list that repeated them underneath is gone. */
+  h+='<div class="tsec"><h2 class="tsec-h">'+t(dsel===today()?"Today's Meals":"Meals")+'</h2>'
+   +'<button class="tlink" data-openday="'+dsel+'">'+t("Day details")+'</button></div>';
   h+='<div class="fmt">';
   MEALS.forEach(function(name){
     var items=((r.meals[name]||{}).items)||[],tot=sumNutrition(items),done=items.length>0;
@@ -88,25 +92,6 @@ function vFood(){
      +(done?'<span class="fmt-ok" aria-hidden="true">'+TICK+'</span>':'')+'</button>';});
   h+='</div>';
 
-  /* ---- today's meals: what is in each, and its numbers */
-  h+='<div class="tsec"><h2 class="tsec-h">'+t(dsel===today()?"Today's Meals":"Meals")+'</h2>'
-   +'<button class="tlink" data-openday="'+dsel+'">'+t("Day details")+'</button></div>';
-  MEALS.forEach(function(name){
-    var m=r.meals[name]||{items:[]},items=m.items||[],tot=sumNutrition(items);
-    var ic='<span class="fml-i '+name.toLowerCase()+'" aria-hidden="true">'+MICON[name]+'</span>';
-    if(items.length){
-      var list=items.map(function(it){return it.n;}).join(", ");
-      h+='<button class="fml done" data-meal="'+name+'" aria-label="'
-       +esc(t(name)+" — "+fmtN(tot.kcal)+" kcal, "+items.length+" "+t(items.length===1?"item logged":"items logged"))+'">'
-       +ic+'<span class="fml-t"><span class="fml-n">'+esc(t(name))+'</span>'
-       +'<span class="fml-s">'+esc(list)+'</span>'
-       +'<span class="fml-m">'+fmtN(tot.kcal)+' kcal · '+tot.p+'g P · '+tot.c+'g C · '+tot.f+'g F</span></span>'
-       +'<span class="fml-ok" aria-hidden="true">'+TICK+'</span></button>';}
-    else
-      h+='<div class="fml">'+ic+'<span class="fml-t"><span class="fml-n">'+esc(t(name))+'</span>'
-       +'<span class="fml-s">'+esc(t("Not logged yet"))+'</span></span>'
-       +'<button class="fml-add" data-addfood="'+name+'" aria-label="'+esc(t("Add food to")+" "+t(name))+'">'
-       +'<i class="ico ico-plus" aria-hidden="true"></i></button></div>';});
   /* In the page, not floating: the dock is the one floating control. */
   h+='<button class="btn fadd" data-addfood="'+(now||mealNow())+'">'
    +'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>'
