@@ -819,9 +819,11 @@ document.addEventListener("input",function(ev){
    previously unreachable by keyboard entirely. */
 document.addEventListener("keydown",function(ev){
   if(ev.key==="Escape"&&V.sheet){ev.preventDefault();requestCloseSheet();return;}
-  /* Arrow keys move along the Progress tabs, as they do in any tablist. */
-  if((ev.key==="ArrowRight"||ev.key==="ArrowLeft")&&ev.target.dataset&&ev.target.dataset.ptab){
-    var tl=[].slice.call(document.querySelectorAll("[data-ptab]")),ti=tl.indexOf(ev.target);
+  /* Arrow keys move along any tablist (the segmented controls), as they do natively. */
+  var tlist=(ev.key==="ArrowRight"||ev.key==="ArrowLeft")&&ev.target.closest&&ev.target.getAttribute("role")==="tab"
+    &&ev.target.closest('[role="tablist"]');
+  if(tlist){
+    var tl=[].slice.call(tlist.querySelectorAll('[role="tab"]')),ti=tl.indexOf(ev.target);
     var fw=(ev.key==="ArrowRight")!==(document.documentElement.dir==="rtl");
     var nx=tl[(ti+(fw?1:-1)+tl.length)%tl.length];
     if(nx){ev.preventDefault();nx.click();}

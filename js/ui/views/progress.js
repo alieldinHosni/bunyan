@@ -30,7 +30,7 @@ import {sessionVolume} from "../../engine/formulas.js";
 import {S} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, r1, shortd, today} from "../../util.js";
-import {streak, V} from "../view.js";
+import {seg, streak, V} from "../view.js";
 import {dateBar} from "../datebar.js";
 import {photoList} from "../photos.js";
 import {render} from "../render.js";
@@ -117,14 +117,14 @@ function vProgress(){
       '<button class="btn" data-go="train">'+t("Start a workout")+'</button>'
       +'<button class="btn g" data-sheet="weigh">'+t("Log weight")+'</button>');
   var tab=V.ptab||"overview";
-  h+='<div class="pgseg" role="tablist" aria-label="'+esc(t("Progress views"))+'">'
-   +TABS.map(function(x){var on=tab===x[0];
-     return '<button role="tab" aria-selected="'+on+'"'+(on?' class="on"':'')
-      +' data-ptab="'+x[0]+'">'+esc(t(x[1]))+'</button>';}).join("")+'</div>';
+  h+=seg({items:TABS.map(function(x){return [x[0],t(x[1])];}),value:tab,attr:"ptab",
+    tabs:true,label:t("Progress views"),key:"pgtabs"});
   var r=range();
-  h+='<div class="pgrange">'+RANGES.map(function(x){var on=r===x[0];
-    return '<button data-range="'+x[0]+'" aria-pressed="'+on+'"'+(on?' class="on"':'')
-     +' aria-label="'+esc(t(PAST[x[0]]))+'">'+esc(t(x[1]))+'</button>';}).join("")+'</div>';
+  /* The range is the secondary control: same component, tinted rather than filled,
+     so the section switch above stays the one that reads as navigation. Each chip's
+     accessible name is the span it stands for — "1W" read aloud says nothing. */
+  h+=seg({items:RANGES.map(function(x){return [x[0],t(x[1]),t(PAST[x[0]])];}),value:r,attr:"range",
+    soft:true,cls:"pgrange",label:t("Time range"),key:"pgrange"});
   if(tab==="strength")h+=vStrength(r);
   else if(tab==="body")h+=vBody(r);
   else if(tab==="nutrition")h+=vNutrition(r);
