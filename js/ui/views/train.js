@@ -9,6 +9,7 @@ import {SPLIT_LEVEL} from "../../engine/plan.js";
 import {esc, fmtN, shortd, today, weekDays} from "../../util.js";
 import {dateBar, shiftDay} from "../datebar.js";
 import {tokenMatch} from "../../engine/text.js";
+import {actInfo, intensityOf, isActivity} from "../../data/activities.js";
 import {head, V} from "../view.js";
 import {backArrow, backBar} from "../nav.js";
 
@@ -256,7 +257,8 @@ function vFavs(){
 
 function estMinutes(d){
   var tot=0;
-  d.ex.forEach(function(e){tot+=e.sets*((e.rest||75)+35);});
+  d.ex.forEach(function(e){
+    tot+=isActivity(e.name)?(e.min||(actInfo(e.name).grp==="Sports"?60:30))*60:e.sets*((e.rest||75)+35);});
   return Math.round(tot/60/5)*5;}
 
 function vPreview(){
@@ -380,9 +382,9 @@ function vDay(){
    +'<p class="dsub">'+esc(sp.name)+(pos?' • '+t("Day")+' '+pos:'')+'</p>';
   /* Every figure measured from the day itself. */
   h+='<div class="dstrip">'
-   +'<div><span class="klabel dim">'+t("Exercises")+'</span><b>'+d.ex.length+' '+t("Movements")+'</b></div>'
+   +'<div><span class="klabel dim">'+t("Exercises")+'</span><b>'+d.ex.length+' '+t(d.ex.length===1?"Movement":"Movements")+'</b></div>'
    +'<div><span class="klabel dim">'+t("Duration")+'</span><b>~'+estMinutes(d)+' '+t("Min")+'</b></div>'
-   +(lvl?'<div><span class="klabel dim">'+t("Level")+'</span><b>'+t(lvl)+'</b></div>':'')
+   +(lvl&&!d.ex.every(function(e){return isActivity(e.name);})?'<div><span class="klabel dim">'+t("Level")+'</span><b>'+t(lvl)+'</b></div>':'')
    +'</div>';
   if(!d.ex.length){
     h+=empty("dumbbell",t("Nothing prescribed yet"),
@@ -396,7 +398,9 @@ function vDay(){
        +'<span class="dnum">'+(i+1)+'</span>'
        +'<span class="dtext"><span class="drow-n">'
        +(gl?'<span class="glabel">'+gl+'</span> ':'')+esc(exName(e.name))+'</span>'
-       +'<span class="drow-s">'+e.sets+' × '+e.lo+(e.hi!==e.lo?'–'+e.hi:'')
+       +'<span class="drow-s">'+(isActivity(e.name)
+          ?(e.min||(actInfo(e.name).grp==="Sports"?60:30))+' '+t("min")+(e.km?' · '+e.km+' km':'')+'<i class="ddot"></i>'+esc(t(intensityOf(e.rpe||6)[1]))
+          :e.sets+' × '+e.lo+(e.hi!==e.lo?'–'+e.hi:''))
        +'<i class="ddot"></i>'+esc(t(muscleOfEntry(e)))+'</span></span>'
        +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
     h+='</div>';

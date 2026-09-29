@@ -85,7 +85,7 @@ ACT.delset=function(_,i){
     e.sets.splice(i,1);V.fresh=-1;saveDB();syncDraft();render();});};
 ACT.discard=function(){
   S.active=null;endRest();V.fresh=-1;
-  keepAwake(false);saveDB();render();};
+  keepAwake(false);saveDB();V.tab="train";V.train="days";render();window.scrollTo(0,0);};
 ACT.newprofile=function(name){
   var np={id:uid(),name:name,owner:false};
   PROFILES.push(np);wr("bunyan:profiles",PROFILES);switchProfile(np.id,render);render();};
@@ -129,7 +129,7 @@ function startDay(dayId){
     entries:d.ex.map(function(e){
       /* Resolved from the library as the session is created, so the record this
          workout leaves behind is right even if the plan's cached muscle is not. */
-      return {name:e.name,muscle:muscleOfEntry(e),planned:{sets:e.sets,lo:e.lo,hi:e.hi},
+      return {name:e.name,muscle:muscleOfEntry(e),planned:{sets:e.sets,lo:e.lo,hi:e.hi,min:e.min||0,rpe:e.rpe||0,km:e.km||0},
               rest:e.rest,grp:e.grp||null,sets:[]};})};
   V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
@@ -152,9 +152,10 @@ function syncDraft(){
   var e=S.active.entries[V.logIdx];if(!e)return;
   var last=e.sets.length?e.sets[e.sets.length-1]:null;
   if(isActivity(e.name)){
-    var pa=last||(prevPerf(e.name)||{sets:[]}).sets[0];
-    V.draft.min=pa&&pa.min?num(pa.min):(isActivity(e.name)&&actInfo(e.name).grp==="Sports"?60:30);
-    V.draft.km=pa&&pa.km?num(pa.km):0;V.draft.rpe=pa&&pa.rpe?pa.rpe:6;return;}
+    /* The plan's target first, then the last time, then a sensible default. */
+    var pl=e.planned||{},pa=last||(pl.min?null:(prevPerf(e.name)||{sets:[]}).sets[0]);
+    V.draft.min=pa&&pa.min?num(pa.min):pl.min||(actInfo(e.name).grp==="Sports"?60:30);
+    V.draft.km=pa&&pa.km?num(pa.km):pl.km||0;V.draft.rpe=pa&&pa.rpe?pa.rpe:pl.rpe||6;return;}
   if(last){V.draft.w=num(last.w);V.draft.r=num(last.r);V.draft.rpe=last.rpe||8;return;}
   var p=prevPerf(e.name);
   var src=p?p.sets[0]:null;
@@ -220,6 +221,9 @@ function finishSession(){
    other state-changing actions rather than in the entry point. */
 function addExercise(name){
   var e=ex(name,3,8,12);
+  /* A match or a run is planned as time and effort, not sets and reps. */
+  if(isActivity(name)){e.sets=1;e.lo=0;e.hi=0;e.rest=0;
+    e.min=actInfo(name).grp==="Sports"?60:30;e.rpe=6;}
   if(V.sd&&V.sd.swaplive&&S.active){
     var cur=S.active.entries[V.logIdx];
     cur.name=name;cur.muscle=muscleOf(name);cur.sets=[];
@@ -227,7 +231,7 @@ function addExercise(name){
   var d=dayOf(V.dayId);if(!d){closeSheet();return;}
   if(V.sd&&V.sd.replace){
     var i=d.ex.findIndex(function(x){return x.id===V.sd.replace;});
-    if(i>=0){e.sets=d.ex[i].sets;e.lo=d.ex[i].lo;e.hi=d.ex[i].hi;e.rest=d.ex[i].rest;d.ex[i]=e;}
+    if(i>=0){if(!isActivity(name)&&!isActivity(d.ex[i].name)){e.sets=d.ex[i].sets;e.lo=d.ex[i].lo;e.hi=d.ex[i].hi;e.rest=d.ex[i].rest;}d.ex[i]=e;}
   }else d.ex.push(e);
   saveDB();closeSheet();}
 
