@@ -5,7 +5,7 @@ import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, is
 import {exName} from "../i18n/exnames.js";
 import {MEALS} from "./views/food.js";
 import {myDaysList, planOn} from "./views/train.js";
-import {ACT_GROUPS, actIcon, actsIn, isActivity} from "../data/activities.js";
+import {ACT_GROUPS, actIcon, actInfo, actsIn, INTENSITY, intensityOf, isActivity} from "../data/activities.js";
 import {backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionKcal, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
@@ -184,6 +184,25 @@ function vSheet(){
     var d=dayOf(V.dayId),e=null;
     if(d)e=d.ex.filter(function(x){return x.id===V.sd.id;})[0];
     if(!e)return "";
+    if(isActivity(e.name)){
+      /* A match or a run: planned as how long, how hard, and how far where that
+         applies — the same three things the session logs. */
+      var aiE=actInfo(e.name),rpeE=V.sd.rpe||e.rpe||6,curE=intensityOf(rpeE)[0];
+      b='<h2>'+esc(exName(e.name))+'</h2><p class="tiny">'+esc(t(aiE.grp))+'</p>'
+       +'<div class="act-lbl">'+t("Planned duration")+'</div>'
+       +'<div class="act-km"><input id="e_min" type="number" inputmode="numeric" min="1" value="'+(e.min||(aiE.grp==="Sports"?60:30))+'" aria-label="'+t("Planned duration")+'"><span>'+t("min")+'</span></div>'
+       +(aiE.dist?'<div class="act-lbl">'+t("Target distance")+' <i>'+t("optional")+'</i></div>'
+         +'<div class="act-km"><input id="e_km" type="number" inputmode="decimal" step="0.1" min="0" value="'+(e.km||"")+'" placeholder="0.0" aria-label="'+t("Target distance")+'"><span>km</span></div>':'')
+       +'<div class="act-lbl">'+t("Intensity")+'</div><div class="act-int">'
+       +INTENSITY.map(function(x){return '<button class="'+(curE===x[0]?'on':'')+'" data-exint="'+x[0]+'" aria-pressed="'+(curE===x[0])+'">'+t(x[1])+'</button>';}).join("")
+       +'</div>'
+       +'<button class="btn" data-saveex="'+e.id+'" style="margin-top:18px">'+t("Save")+'</button>'
+       +'<div class="rowc mt"><button class="btn g sm" data-moveex="'+e.id+'|-1">'+t("Move up")+'</button>'
+       +'<button class="btn g sm" data-moveex="'+e.id+'|1">'+t("Move down")+'</button>'
+       +'<button class="btn g sm" data-replaceex="'+e.id+'">'+t("Replace")+'</button></div>'
+       +'<button class="btn g" data-exhist="'+esc(e.name)+'" style="margin-top:10px">'+t("See my history")+'</button>'
+       +'<button class="btn d" data-delex="'+e.id+'">'+t("Remove from this day")+'</button>';
+    }else{
     b='<h2>'+esc(exName(e.name))+'</h2><p class="tiny" style="margin:2px 0 14px">'+esc(t(muscleOfEntry(e)))+'</p>'
      +'<div class="grid2"><div><label class="tiny">Sets</label><input id="e_sets" type="number" value="'+e.sets+'"></div>'
      +'<div><label class="tiny">'+t("Rest (sec)")+'</label><input id="e_rest" type="number" value="'+e.rest+'"></div>'
@@ -213,6 +232,7 @@ function vSheet(){
      +'<button class="btn g sm" data-replaceex="'+e.id+'">'+t("Replace")+'</button></div>'
      +'<button class="btn g" data-exhist="'+esc(e.name)+'" style="margin-top:10px">'+t("See my history for this lift")+'</button>'
      +'<button class="btn d" data-delex="'+e.id+'">'+t("Remove from this day")+'</button>';
+    }
   }
   else if(V.sheet==="weigh"){
     var lw=lastWeight()||86;
@@ -572,7 +592,13 @@ function vSheet(){
       if(en.name===nm3&&en.sets.length)rows.push({d:ss.date,s:en.sets});});});
     b='<h2>'+esc(exName(nm3))+'</h2><p class="tiny" style="margin:2px 0 14px">'+rows.length+' sessions logged</p>';
     if(!rows.length)b+='<p class="tiny">'+t("Nothing recorded yet.")+'</p>';
+    var hA=isActivity(nm3);
     rows.forEach(function(r){
+      if(hA){
+        b+='<div class="card"><div class="row"><span class="tiny">'+pretty(r.d)+'</span></div>'
+         +'<div class="num mt" style="font-size:15px">'+r.s.map(function(x){
+            return num(x.min)+' '+t("min")+(num(x.km)?' · '+x.km+' km':'')+' · '+t(intensityOf(x.rpe||6)[1])+(x.kcal?' · '+fmtN(x.kcal)+' kcal':'');}).join('<br>')+'</div></div>';
+        return;}
       b+='<div class="card"><div class="row"><span class="tiny">'+pretty(r.d)+'</span>'
        +'<span class="tiny">'+fmtW(volume(r.s))+' \u00b7 1RM '
        +(bestE1RM(r.s)?toDisp(bestE1RM(r.s)):"\u2014")+'</span></div>'

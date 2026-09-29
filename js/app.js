@@ -1,7 +1,7 @@
 /* Bunyan — app
    Entry point: event listeners, wiring and boot. */
 import {ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startActivity, startDay, syncDraft, val} from "./ui/actions.js";
-import {actKcal} from "./data/activities.js";
+import {actKcal, isActivity} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
 import {loadExDB, loadInstructions, muscleOf, MUSCLES} from "./data/exercises.js";
 import {applyLang} from "./i18n/exnames.js";
@@ -169,8 +169,14 @@ document.addEventListener("click",function(ev){
        "All" is one tap away. Only a muscle the filter row actually has. */
     V.exm=pickMuscle(eR2&&eR2.name);V.exe="All";V.exq="";
     openSheet("exercise",{replace:D.replaceex,like:eR2?eR2.name:null});return;}
+  if(D.exint){V.sd.rpe=+D.exint;render();return;}
   if(D.saveex){
     var dd=dayOf(V.dayId),e2=dd.ex.filter(function(x){return x.id===D.saveex;})[0];
+    if(isActivity(e2.name)){
+      e2.min=Math.max(1,Math.round(num(val("e_min"),e2.min||30)));
+      e2.rpe=V.sd.rpe||e2.rpe||6;
+      if(document.getElementById("e_km"))e2.km=Math.max(0,r1(num(val("e_km"),0)));
+      e2.sets=1;e2.rest=0;saveDB();closeSheet();return;}
     e2.sets=Math.max(1,num(val("e_sets"),3));e2.rest=Math.max(0,num(val("e_rest"),75));
     e2.lo=Math.max(1,num(val("e_lo"),8));e2.hi=Math.max(e2.lo,num(val("e_hi"),e2.lo));
     saveDB();closeSheet();return;}
@@ -1153,15 +1159,17 @@ function navGuard(resume){
    destination would put the user straight back in the workout they just left. Home is
    also the screen that carries the Resume card, so leaving and returning are adjacent.
    The destination is decided here, once, for the arrow and the swipe alike. */
-function leaveTo(){
+function leaveTo(tab){
   leaveResume=null;
-  V.tab="home";V.train="days";render();
+  resetNav();V.tab=tab||"home";V.train="days";render();window.scrollTo(0,0);
 }
-ACT.leavekeep=leaveTo;
+ACT.leavekeep=function(){leaveTo("home");};
+/* Discarding ends the workout, so there is nothing to resume and no reason to leave
+   Train: you stay on the Train hub, ready to pick another day. */
 ACT.leavediscard=function(){
   S.active=null;endRest();V.fresh=-1;
   keepAwake(false);saveDB();
-  leaveTo();
+  leaveTo("train");
 };
 
 function openBarcodePrompt(){
