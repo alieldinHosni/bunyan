@@ -766,6 +766,8 @@ document.addEventListener("click",function(ev){
   function calOpen(on){
     if(V.tab==="food")V.fcal=on; else if(V.tab==="train")V.tcal=on; else V.pcal=on;}
   function calIsOpen(){return V.tab==="food"?V.fcal:V.tab==="train"?V.tcal:V.pcal;}
+  /* A day card on Train moves the date navigator to that day. */
+  if(D.tday){dbSet(D.tday);calOpen(false);render();window.scrollTo(0,0);return;}
   if(D.dday!==undefined){
     dbSet(+D.dday===0?today():shiftDay(dbGet(),+D.dday));
     render();return;}

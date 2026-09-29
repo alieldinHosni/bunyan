@@ -6,7 +6,8 @@ import {exName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, S, split} from "../../state.js";
 import {SPLIT_LEVEL} from "../../engine/plan.js";
-import {esc, fmtN, shortd, weekDays} from "../../util.js";
+import {esc, fmtN, shortd, today, weekDays} from "../../util.js";
+import {dateBar, shiftDay} from "../datebar.js";
 import {head, V} from "../view.js";
 import {backArrow, backBar} from "../nav.js";
 
@@ -35,6 +36,66 @@ function nextDayOf(sp){
     if(d.ex.length)return d;}
   return null;}
 
+/* ---- the plan on a date --------------------------------------------------------
+   The split is a rotation, not a calendar, so "what is on Thursday" is a projection:
+   today is the next day of the rotation (or the one already trained today), and each
+   day after takes the next one in order, rest days included. A past day is whatever
+   was logged. */
+var DUMBBELL='<svg viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>';
+var MOON='<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
+function daysApart(a,b){return Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/864e5);}
+function planOn(sp,iso){
+  var now=today();
+  var logged=S.sessions.filter(function(x){return x.date===iso;});
+  if(logged.length){
+    var ld=sp.days.filter(function(d){return d.id===logged[0].dayId;})[0]||null;
+    return {kind:"done",session:logged[0],day:ld,name:logged[0].dayName};}
+  if(iso<now)return {kind:"past"};
+  var nd=nextDayOf(sp);
+  if(!nd)return {kind:"none"};
+  var len=sp.days.length,base=sp.days.indexOf(nd);
+  var doneToday=S.sessions.length&&S.sessions[0].date===now;
+  var k=daysApart(now,iso)-(doneToday?1:0);
+  var d=sp.days[((base+k)%len+len)%len];
+  return {kind:iso===now?"today":"plan",day:d,name:d.name,rest:!d.ex.length};}
+function planNote(p){
+  if(p.kind==="past")return t("Nothing logged");
+  if(p.kind==="none")return t("Nothing planned");
+  if(p.rest)return t("Rest day");
+  return p.name||"";}
+/* The selected day's card. What it offers depends on when the day is: today can be
+   started, a future day previewed, a finished one opened. */
+function dayHero(sp,p,iso){
+  var label,cta="",meta="";
+  if(p.kind==="done"){
+    var sv=p.session;
+    label=iso===today()?t("Done today"):t("Completed");
+    meta=(sv.mins?sv.mins+' '+t("min")+' · ':'')+sv.entries.filter(function(e){return (e.sets||[]).length;}).length+' '+t("exercises");
+    cta='<button class="btn g" data-openday="'+iso+'">'+t("View session")+'</button>';
+  }else if(p.kind==="past"||p.kind==="none"){
+    label=p.kind==="past"?t("No session"):t("Nothing planned");
+    meta=p.kind==="past"?t("Nothing was logged on this day."):t("Add exercises to a day and it becomes startable.");
+    if(p.kind==="none")cta='<button class="btn" data-addday="1">'+t("Add a day")+'</button>';
+  }else if(p.rest){
+    label=p.kind==="today"?t("Today"):t("Planned");
+    meta=t("Recover. The plan picks up the day after.");
+  }else{
+    label=p.kind==="today"?t("Current workout"):t("Planned");
+    meta=p.day.ex.length+' '+t("exercises")+' · ~'+estMinutes(p.day)+' '+t("min");
+    cta=p.kind==="today"
+      ?'<button class="btn" data-startday="'+p.day.id+'"><span class="ico ico-play" aria-hidden="true"></span>'+t("Start workout")+'</button>'
+      :'<button class="btn g" data-day="'+p.day.id+'">'+t("Preview the day")+'</button>';
+  }
+  var name=p.kind==="past"?t("Rest or unlogged"):p.kind==="none"?esc(sp.name):(p.rest?t("Rest day"):p.name);
+  return '<div class="thero2'+(p.kind==="today"&&!p.rest?' live':'')+'">'
+   +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'
+   +'<div class="thero2-top"><span class="tbadge'+(p.rest||p.kind==="past"?' rest':'')+'" aria-hidden="true">'
+   +(p.rest||p.kind==="past"?MOON:DUMBBELL)+'</span>'
+   +'<div class="thero2-t"><span class="klabel">'+esc(label)+'</span>'
+   +'<div class="thero2-n">'+esc(name)+'</div>'
+   +'<div class="thero2-m">'+esc(meta)+'</div></div></div>'
+   +cta+'</div>';}
+
 function vTrain(){
   if(S.active)return vLogger();
   if(V.train==="splits")return vSplits();
@@ -56,38 +117,51 @@ function vTrain(){
   /* Sessions done this week out of the sessions the split plans for it: 2 of 4 is 50%.
      Capped at 100, because training more than planned is not more than finished. */
   var pct=target?Math.min(100,Math.round(doneWeek/target*100)):0;
-  h+='<div class="thead"><h1>'+t("Train")+'</h1>'
+  var sel=V.tdate||today(), on=planOn(sp,sel);
+  h+='<div class="thead"><div><h1>'+t("Workout Plan")+'</h1>'
+   +'<p class="thead-s">'+t("Keep pushing. You got this.")+'</p></div>'
    +'<button class="icobtn" data-train="favs" aria-label="'+t("Favourites")
    +(S.favs.length?' ('+S.favs.length+')':'')+'"><span class="ico ico-star" aria-hidden="true"></span></button></div>';
-  h+='<div class="card thero">'
-   +'<div><div class="klabel">'+t("Active Program")+'</div>'
-   +'<div class="thero-name">'+esc(sp.name)+'</div></div>'
-   +'<div class="tprog"><div class="tprog-l"><span>'+doneWeek+' '+t("of")+' '+target+' '
+
+  /* ---- the day: the shared date navigator, looking ahead. Its second line says what
+     the plan holds that day, so paging through the week reads the plan out. */
+  h+=dateBar({date:sel,open:V.tcal,monthOffset:V.cal,future:true,art:true,
+    kicker:t("Workout plan"),note:planNote(on)});
+
+  /* ---- the selected day, over the Bunyan artwork (the frame's "Current Workout") */
+  h+=dayHero(sp,on,sel);
+  h+='<div class="tprog tprog-wk"><div class="tprog-l"><span>'+esc(sp.name)+' · '+doneWeek+' '+t("of")+' '+target+' '
    +t("sessions this week")+'</span><b>'+pct+'%</b></div>'
    +'<div class="tbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"'
    +' aria-label="'+t("Sessions this week")+'"><i style="width:'+pct+'%"></i></div></div>';
-  if(nd){
-    h+='<button class="tsplit" data-day="'+nd.id+'"><span><span class="klabel dim">'+t("Today's Split")+'</span>'
-     +'<span class="tsplit-n">'+esc(nd.name)+'</span></span>'
-     +'<span class="tsplit-m">~'+estMinutes(nd)+' '+t("min")+'</span></button>'
-     +'<button class="btn" data-startday="'+nd.id+'">'+t("Start Today's Session")
-     +'<span class="ico ico-arrow" aria-hidden="true"></span></button>';
-  }else h+=empty("dumbbell",t("This split is empty"),
-    t("Add exercises to a day and it becomes startable."),
-    '<button class="btn" data-addday="1">'+t("Add a day")+'</button>');
+
+  /* ---- the two days after it, as the frame's Today / Tomorrow cards. Tapping one
+     moves the navigator there, so the calendar stays the one thing driving this. */
+  h+='<div class="tnextpair">';
+  [1,2].forEach(function(k){
+    var iso=shiftDay(sel,k),p=planOn(sp,iso);
+    var lbl=iso===today()?t("Today"):iso===shiftDay(today(),1)?t("Tomorrow")
+      :new Date(iso+"T00:00:00").toLocaleDateString(undefined,{weekday:"long"});
+    h+='<button class="tday" data-tday="'+iso+'" aria-label="'+esc(lbl+": "+planNote(p))+'">'
+     +'<span class="tday-i'+(p.rest||!p.day?' rest':'')+'" aria-hidden="true">'+(p.rest||!p.day?MOON:DUMBBELL)+'</span>'
+     +'<span class="tday-t"><span class="tday-k">'+esc(lbl)+'</span>'
+     +'<span class="tday-n">'+esc(planNote(p))+'</span>'
+     +(p.day&&!p.rest?'<span class="tday-m">'+p.day.ex.length+' '+t("exercises")+' · ~'+estMinutes(p.day)+' '+t("min")+'</span>':'')
+     +'</span></button>';});
   h+='</div>';
-  /* ---- training days ----
-     Not in the canvas, which shows only today's split. It stays because it is the only
-     way to open, edit or reorder any other day of the plan. */
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Training Days")+'</h2></div><div class="card tdays">';
+
+  /* ---- my training: every day of the plan. The only way to open, edit or reorder
+     any day but today's. */
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("My Training")+'</h2></div><div class="card tdays">';
+  var todayId=(planOn(sp,today()).day||{}).id;
   sp.days.forEach(function(d){
     var last=null;
     for(var i=0;i<S.sessions.length;i++)if(S.sessions[i].dayId===d.id){last=S.sessions[i].date;break;}
     h+='<button class="trow" data-day="'+d.id+'"><span><span class="trow-n">'+esc(d.name)+'</span>'
      +'<span class="trow-s">'+(d.ex.length?d.ex.length+' '+t("exercises"):t("rest day"))
      +(last?' · '+t("last")+' '+shortd(last):'')+'</span></span>'
-     +(nd&&d.id===nd.id?'<span class="tnext">'+t("Next")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
-     +'</button>';});
+     +(d.id===todayId?'<span class="tnext">'+t("Today")+'</span>':'')
+     +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
   h+='<button class="trow tadd" data-addday="1"><span class="trow-n">+ '+t("Add a day")+'</span></button></div>';
   /* ---- other programs ----
      The app's own preset splits, each with its own photograph — see SPLIT_IMG.
