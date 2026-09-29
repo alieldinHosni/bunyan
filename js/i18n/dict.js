@@ -318,6 +318,8 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Body fat %": "نسبة الدهون %",
 "Body fat should be a percentage between 2 and 70.": "نسبة الدهون لازم تكون بين 2 و 70.",
 "Enter at least one measurement.": "دخّل قياس واحد على الأقل.",
+/* The dock */
+"Main navigation": "التنقل الرئيسي",
 /* Progress (js/ui/views/progress.js) and its photos */
 "Update": "حدّث",
 "day": "يوم",

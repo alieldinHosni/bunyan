@@ -41,7 +41,10 @@ var EASE={
   /* The one exception to both systems. Neither Material nor Base Web overshoots, and
      for good reason, but a logged set is the single moment in this app that earns a
      touch of life. Used on two things and nothing else. */
-  spring:  "cubic-bezier(.2,.9,.3,1.06)"
+  spring:  "cubic-bezier(.2,.9,.3,1.06)",
+  /* The dock's glide, and everything that slides the way it does — a shared
+     indicator moving between cells. Quick off the mark, long settle, no overshoot. */
+  ios:     "cubic-bezier(0.22, 1, 0.36, 1)"
 };
 /* Opacity is treated separately under reduced motion: a hard cut between two screens
    is disorienting in its own way, so fades are shortened rather than removed. */

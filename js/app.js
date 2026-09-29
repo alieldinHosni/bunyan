@@ -8,7 +8,7 @@ import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, targetKcal} fro
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
-import {render} from "./ui/render.js";
+import {render, syncKeyboard} from "./ui/render.js";
 import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
 import {leave} from "./ui/motion.js";
@@ -773,13 +773,11 @@ document.addEventListener("click",function(ev){
 
 
 
-document.addEventListener("focusin",function(ev){
-  if(ev.target.matches("input,select,textarea"))document.body.classList.add("kb");});
-document.addEventListener("focusout",function(){
-  setTimeout(function(){
-    var a=document.activeElement;
-    if(!a||!a.matches||!a.matches("input,select,textarea"))document.body.classList.remove("kb");
-  },60);});
+/* The dock steps aside while the keyboard is up (see syncKeyboard in render.js). The
+   same test decides both directions, and render() re-checks it, so the flag cannot be
+   left behind by a field that was destroyed rather than blurred. */
+document.addEventListener("focusin",syncKeyboard);
+document.addEventListener("focusout",function(){setTimeout(syncKeyboard,60);});
 /* Every keystroke used to re-render the whole screen, which meant a linear scan of 873
    exercises plus a full innerHTML rebuild per character. The value is captured
    immediately; the redraw waits for a pause in typing. */

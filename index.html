@@ -67,26 +67,35 @@
   --glow:transparent;
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
   --r1:8px; --r2:12px; --r3:14px;
-  /* Nav geometry. The page has to reserve the nav's height, because the nav is fixed to
-     the viewport and would otherwise sit on top of the last card. That reserve used to
-     be a hardcoded 92px while the nav measured 81.6px — two unrelated numbers that had
-     to be kept in step by hand, and the kind that fails silently: change the nav's
-     padding and content slides underneath with nothing to catch it.
+  /* ---- the dock and the surfaces that borrow from it --------------------------
+     One visual language, taken from the floating dock: large radii, a translucent
+     dark surface with a hairline edge, depth from a soft shadow rather than from
+     borders, and the accent as a tinted glow rather than a fill. Components that are
+     the same kind of control — segmented tabs, range chips, the date navigator —
+     read these rather than carrying their own numbers.
 
-     So --navh is derived from the same three values the nav lays itself out with, plus
-     its 1px top border. Change any of them and the reserve follows. env() sits inside
-     the calc, so a device with a home indicator widens both together.
-
-     This was a ResizeObserver measuring the real element first. That is the more
-     obviously correct approach and it was deleted, because ResizeObserver delivers its
-     callbacks at the end of a frame and the automated pane has no frames — not one
-     callback ever arrived, so the mechanism could not be verified at all. An exact
-     derivation that can be checked beats a measurement that cannot. */
-  /* 1 + 14 + 44 + 13 = 72, the design's bar height. The tab is 44px rather than the
-     40px its content needs so every tab meets the minimum hit area. */
-  --nav-pad-t:14px; --nav-pad-b:13px; --nav-btn:44px;
-  --navh:calc(1px + var(--nav-pad-t) + var(--nav-btn) + var(--nav-pad-b) + env(safe-area-inset-bottom));
-  /* Motion tokens. js/ui/motion.js writes all thirteen of these onto documentElement at
+     Radii run 8 / 12 / 14 (--r1–r3, cards and fields), 18 for controls inside a
+     surface, 28 for floating surfaces, and a pill. */
+  --r4:18px; --r5:28px; --rpill:999px;
+  --glass:rgba(22,22,28,.78);            /* floating surfaces over content */
+  --glass-solid:rgba(22,22,28,.96);      /* the same where blur is unavailable */
+  --hair:rgba(255,255,255,.08);          /* the hairline edge on glass */
+  --hair-hi:rgba(255,255,255,.14);       /* its lit top edge */
+  --shadow-float:0 18px 48px rgba(0,0,0,.45),0 4px 14px rgba(0,0,0,.28);
+  --shadow-card:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.25);
+  --accent-tint:rgba(227,27,35,.16);     /* a selected state's fill */
+  --accent-edge:rgba(248,52,70,.30);     /* its edge */
+  --accent-glow:rgba(248,52,70,.22);     /* its glow */
+  --ico-size:24px; --hit:44px;
+  /* The dock's geometry, and the one reserve every screen keeps for it. The dock
+     floats --dock-lift above the bottom edge, which is the safe area on a phone with
+     a home indicator and 12px on anything else; --navh is everything from the bottom
+     of the viewport to the top of the dock. The body pads by it, and the toast and
+     the floating add button sit above it, so no screen carries its own number. */
+  --dock-h:64px; --dock-mx:16px;
+  --dock-lift:max(12px, env(safe-area-inset-bottom));
+  --navh:calc(var(--dock-h) + var(--dock-lift));
+  /* Motion tokens. js/ui/motion.js writes all fourteen of these onto documentElement at
      boot and whenever the in-app animation toggle changes, and an inline property beats
      a stylesheet rule, so these values apply only to the first paint before the module
      runs — and to any load where it fails to.
@@ -100,6 +109,7 @@
   --m-sheet:300ms; --m-screen:300ms; --m-data:400ms; --m-reveal:500ms; --m-fade:200ms;
   --e-standard:cubic-bezier(0.2, 0, 0, 1); --e-decel:cubic-bezier(0.05, 0.7, 0.1, 1);
   --e-accel:cubic-bezier(0.3, 0, 0.8, 0.15); --e-spring:cubic-bezier(.2,.9,.3,1.06);
+  --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
 }
 [data-theme="light"]{
   /* Base Web light ramp, same source as the dark one above
@@ -125,6 +135,9 @@
   --glow:transparent;
   /* The bar stays dark in both themes: it is chrome, not surface. */
   --navbg:#000000; --navtext:#8C8C8C; --navon:#FFFFFF;
+  /* So does the dock, and so the glass it is made of. */
+  --glass:rgba(18,18,22,.84); --glass-solid:rgba(18,18,22,.97);
+  --accent-tint:rgba(248,52,70,.18);
 }
 /* Kills double-tap-to-zoom, which has no place in an installed app, and with it
    Safari's ~300ms tap delay. Pinch-to-zoom is untouched. user-scalable=no in the
@@ -135,10 +148,10 @@ html,body{margin:0;background:var(--bg);color:var(--text);
   background-attachment:fixed;
   font-family:"Manrope",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
-/* Reserve the nav's height plus breathing room, so the last card never sits under it.
-   --navh is derived in :root from the nav's own geometry; the nav already carries
-   env(safe-area-inset-bottom) inside that, so adding it again here would double-count. */
-body{padding-bottom:calc(var(--navh) + 12px)}
+/* Reserve the dock's height plus breathing room, so the last card never sits under it.
+   --navh already includes the safe area (through --dock-lift), so adding it again here
+   would double-count. This is the only place the reserve is applied. */
+body{padding-bottom:calc(var(--navh) + 20px)}
 /* The document has to be at least as tall as the viewport, or a short screen — Home
    with nothing logged is the shortest — leaves the page shorter than the window. The
    nav is position:fixed and so is pinned either way in a compliant engine, but iOS
@@ -264,30 +277,51 @@ td{padding:7px 0;text-align:center;font-variant-numeric:tabular-nums;font-size:1
 .dots{display:flex;gap:6px;align-items:center}
 .dot{width:9px;height:9px;border-radius:5px;border:1.5px solid var(--border)}
 .dot.on{background:var(--ok);border-color:var(--ok)}
-body.kb nav{transform:translateY(120%);pointer-events:none}
-/* The design's tab bar: #141418 with a hairline top edge, 72px tall, five fixed-width
-   tabs spread across 16px of side padding. Icons are Figma's own exported vectors
-   (icons/nav-*.svg), used as masks so the active one can be tinted red without the
-   artwork being edited — the files carry their grey baked in. */
-nav{position:fixed;bottom:0;left:0;right:0;background:var(--navbg);
-  transition:transform var(--m-micro) var(--e-standard);will-change:transform;
-  border-top:1px solid var(--border);display:flex;justify-content:space-between;
-  padding:var(--nav-pad-t) 16px calc(var(--nav-pad-b) + env(safe-area-inset-bottom));z-index:50}
-nav button{flex:0 0 64px;min-height:var(--nav-btn);background:none;border:none;
-  color:var(--navtext);font-size:10px;font-weight:500;padding:0;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  transition:color var(--m-micro) var(--e-standard)}
-nav button.on{color:var(--navon);font-weight:700}
-.navico{width:22px;height:22px;background:var(--navtext);
-  -webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat;
-  transition:background var(--m-micro) var(--e-standard),transform var(--m-micro) var(--e-standard)}
-nav button.on .navico{background:var(--accent)}
-nav button:active .navico{transform:scale(.88)}
-nav [data-tab="home"] .navico{--ico:url(icons/nav-home.svg)}
-nav [data-tab="train"] .navico{--ico:url(icons/nav-train.svg)}
-nav [data-tab="food"] .navico{--ico:url(icons/nav-food.svg)}
-nav [data-tab="progress"] .navico{--ico:url(icons/nav-progress.svg)}
-nav [data-tab="profile"] .navico{--ico:url(icons/nav-profile.svg)}
+/* ---- The dock ----------------------------------------------------------------
+   Fixed to the viewport and to nothing else: left, right and bottom are 0 and never
+   change, it has no transform, no transition on its position and no will-change, and
+   no script measures or moves it. The float above the home indicator is padding
+   inside the fixed box (--dock-lift), so Safari's toolbar collapsing, a sheet locking
+   the page, or the keyboard coming and going cannot leave it somewhere else.
+
+   It is a direct child of <body>, beside #app rather than inside it: #app animates a
+   transform on every tab change, and a transformed ancestor would turn "fixed" into
+   "fixed to that ancestor". Keep it outside anything that transforms.
+
+   While a text field has focus it fades out in place (body.kb, see syncKeyboard) —
+   iOS would otherwise float a bottom-fixed bar over the keyboard. It fades, it does
+   not slide, so there is no position for it to be left at. */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
+  padding:0 var(--dock-mx) var(--dock-lift);pointer-events:none;
+  transition:opacity var(--m-micro) var(--e-standard),visibility 0s}
+body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--e-standard),visibility 0s var(--m-micro)}
+.dock{--i:0;position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  max-width:520px;height:var(--dock-h);margin:0 auto;padding:0 6px;
+  border-radius:var(--r5);background:var(--glass-solid);
+  border:1px solid var(--hair);border-top-color:var(--hair-hi);
+  box-shadow:var(--shadow-float);pointer-events:auto;isolation:isolate}
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  .dock{background:var(--glass);-webkit-backdrop-filter:saturate(160%) blur(22px);backdrop-filter:saturate(160%) blur(22px)}}
+/* One indicator, slid between the five cells by transform alone. Its cell is a fifth
+   of the dock's inner width, so --i × 100% is exactly one item per step. */
+.dock-ind{position:absolute;top:0;bottom:0;inset-inline-start:6px;width:calc((100% - 12px) / 5);
+  transform:translateX(calc(var(--i) * 100%));pointer-events:none;z-index:0;
+  transition:transform var(--m-screen) var(--e-ios)}
+[dir="rtl"] .dock-ind{transform:translateX(calc(var(--i) * -100%))}
+.dock-ind::before{content:"";position:absolute;inset:0;margin:auto;width:min(62px,90%);height:48px;
+  border-radius:var(--rpill);background:var(--accent-tint);
+  box-shadow:inset 0 0 0 1px var(--accent-edge),0 0 22px var(--accent-glow)}
+.dock-b{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;
+  min-width:var(--hit);min-height:var(--hit);height:100%;padding:0;margin:0;border:0;background:none;
+  color:var(--navtext);cursor:pointer;
+  transition:color var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
+.dock-b svg{width:var(--ico-size);height:var(--ico-size);fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+  transition:transform var(--m-comp) var(--e-ios),stroke-width var(--m-micro) var(--e-standard)}
+.dock-b.on{color:var(--accentHi)}
+.dock-b.on svg{transform:scale(1.06);stroke-width:2}
+.dock-b:active{transform:scale(.94)}
+.dock-b:focus-visible{outline:2px solid rgba(255,255,255,.8);outline-offset:-6px;border-radius:var(--r4)}
 /* Gated to real navigation. Left ungated it replayed on every state change, which
    during a workout meant the screen flew in again after every logged set. */
 #app.pagein{animation:pageIn var(--m-screen) var(--e-standard)}
@@ -744,7 +778,7 @@ body.noanim #splash .sp-embers{display:none}
   font-weight:700;padding:10px 16px}
 /* The arrow this replaced had to mirror in RTL. A ✕ is symmetrical, so flipping it
    was a no-op that would have silently un-centred it once the box changed size. */
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;background:var(--raised);
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + 14px);background:var(--raised);
   border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;
   font-size:14px;z-index:200;max-width:88%;text-align:center;
   display:flex;align-items:center;gap:14px}
