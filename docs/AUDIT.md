@@ -18,7 +18,7 @@ No application code was changed during this audit.
 
 Chromium is not iOS Safari. Nothing in this report claims iOS behaviour unless it is labelled that way.
 
-> **Implementation status (29 Sep 2026, PR #9).** Every phase of section P and every open item is implemented and covered by `tests/regression.mjs` (18 scenarios, all passing): B1–B17, the programming and schedule fixes (B6, B7), honest RPE (B8), weekly volume, equipment-based increments, plateau hint, nutrition targets, safety notes, food and preset data fixes, wake lock and late-alarm handling, the service-worker launch timeout, stable exercise ids with name healing, pace and heart rate for activities, a readiness check before the first set, session effort on the complete screen, a per-exercise pain flag with a repeat warning, the Recovery log reachable from Profile, the exercise sheet's back trail, and tab taps no longer growing the browser history. Found and fixed along the way: a tap on ✓ right after typing could land on the dock as it reappeared. **Still needs a person:** the iPhone manual pass (H1–H12). Plans adopted before this change keep their own day order; re-adopt a preset to get the new rest-day spacing.
+> **Implementation status (29 Sep 2026).** PR #9 fixed every bug in section B (B1–B16, plus one found later) and built phases 1 and 3–7 of section P. It also built part of phase 2: the workout position and rest timer now survive a reload, plan templates have exercise roles, and rest days are respected. An earlier version of this note said *every* phase was done. That was wrong: plan item 2.1 (moving workout logic out of the click handler) and several items in sections L and M were still missing. **Section Q** covers the follow-up that builds them, and states what is still open. `tests/regression.mjs` now has 31 scenarios, all passing. **Still needs a person:** the iPhone manual pass (H1–H12).
 
 ---
 
@@ -783,3 +783,73 @@ See M13 (classification) and M11 (intelligence). The core product is complete en
 - 2.1 makes 1.4–1.6 permanent. The Phase 1 versions can be small patches first.
 - 2.3 before 4.2.
 - 3.2 before cardio metrics.
+
+---
+
+## Q. Follow-up: what was still missing, now built
+
+Each item below was built, then checked in the running app. The ones marked † also have a scenario in `tests/regression.mjs`.
+
+### Plan items that were open
+
+- **2.1 Workout actions out of the click handler.** `js/ui/workout.js` owns everything that changes a live workout: log a set or a bout, remove and undo, warm-ups, editing a logged set, next and jump, rest controls, readiness, the pain flag, finish and discard. `app.js` only dispatches to it. The code moved as it was, and every existing scenario still passes.
+- **4.2 Load convention and per-exercise increments.**
+  - A setting says whether dumbbell weights are entered per hand (the default) or as the pair's total. With totals, the automatic dumbbell step doubles.
+  - Each exercise can have its own weight step, set in its plan. It overrides the automatic step.
+  - Volume is still counted as entered, so existing history stays comparable. †
+- **4.3 Plateau → deload.**
+  - A lighter week is offered on Train when two or more lifts have stalled, or when two weeks of sets were near failure. It needs 5+ weeks of training since the last one and at least 12 sessions.
+  - While it runs, planned sets drop by about 40% and suggested loads by about 10%.
+  - It can be put off for a week or ended early. †
+- **M2.5 Regression rule.** Missing the bottom of the rep range twice in a row at the same load suggests about 10% lighter. †
+- **4.4 Weight trend against the goal.** A least-squares line through four weeks of weigh-ins is shown beside the goal's rate:
+  - losing: 0.5–1% of body weight a week
+  - gaining: 0.25–0.5%
+  - maintaining: within ±0.25%
+
+  Each state gets one line of advice. It needs at least four weigh-ins over two weeks. †
+- **L7 History unavailable.** If the saved history lives in IndexedDB but it won't open, a banner says so. Nothing has been deleted. The marker is kept, so a later launch that works merges anything logged in between. †
+- **6.2 Progress aggregates cached.** The cache is keyed on a data revision (bumped on every save), the state object, and today's date.
+
+### Fitness items from section M
+
+- **M2.6 Records.**
+  - A set is now a record if it beats everything before it by weight, by estimated max, or by reps at that weight or heavier.
+  - It is announced when you log it and shown on the Workout complete sheet.
+  - The first time you log a lift is no longer called a record. †
+- **Reported effort.** Hitting the top of the range at RPE 7 or less earns a bigger step, capped at about 10%.
+- **M3 Execution.**
+  - One-sided exercises (single-arm, split squats, lunges and so on) are labelled "Each side".
+  - Dumbbell exercises say "per hand" or "both together".
+  - Common mistakes are listed per movement (overhead press, rows, pulldowns, hip thrusts and so on) instead of one list per pattern, and are now translated.
+- **M4 Level.** An exercise with no history shows how to find a first working weight. Beginners get the fuller version.
+- **M5 / M6 Cardio.**
+  - Bouts can record intervals (rounds × work / rest). †
+  - Progress shows cardio and sport minutes this week against 150.
+- **L3 Suggestions marked.** Pre-filled weight and reps are dimmed until you edit them. A set logged untouched is stored with `sg: 1`. †
+
+### From user feedback in the same round
+
+- **Day screen.**
+  - Each row has an ✕ that removes it straight away, with Undo.
+  - A grip drags the row to a new place. Arrow keys also work.
+  - A dashed + adds an exercise, and tapping the title renames the day.
+  - The "Edit Workout Routine" gate is gone.
+  - The exercise sheet uses − / + steppers that save as you tap, and Move up / Move down are gone. †
+- **Search sheets.** In the old picker the list scrolled as one piece under a transparent header. Rows slid up into view above the search field, and the ✕ sat on top of them. Now:
+  - The exercise picker and Add Food have a fixed top over a list that scrolls on its own.
+  - The sheet is sized to what the keyboard leaves (`visualViewport`).
+  - The picker matches the Library's look.
+  - It searches muscle and equipment as well as name, in both languages.
+  - It no longer opens the keyboard by itself.
+  - In add mode it stays open, so several exercises can go in at once. †
+
+### Still open
+
+- The iPhone manual pass, H1–H12. This needs a device.
+- A shorter exercise list for beginners (M4). Beginners currently see the same picker as everyone else.
+- Body-weight and measurement records are still one list (M10, marked "Later").
+- Session-duration and rest-time trends (M11, marked "Later").
+- Per-sport metrics such as score or minutes played (M6, marked optional).
+- The click handler still holds food, settings and navigation logic. Only the workout part (plan item 2.1) was moved.
+

@@ -38,6 +38,7 @@ async function open(o={}){
     localStorage.setItem("bunyan:profiles",JSON.stringify([{id:"me",name:"Me",owner:true}]));
     localStorage.setItem("bunyan:current",'"me"');
     localStorage.setItem("bunyan:db:me",raw!=null?raw:JSON.stringify(db));localStorage.setItem("t:seeded","1");}},[db,o.raw==null?null:o.raw]);
+  if(o.blockIDB)await ctx.addInitScript(()=>{try{Object.defineProperty(window,"indexedDB",{get(){return {open(){throw new Error("blocked");}};}});}catch(e){}});
   const page=await ctx.newPage();const errs=[];
   page.on("pageerror",e=>errs.push(e.message));
   await page.goto(URL_);await page.waitForTimeout(1000);
@@ -174,6 +175,130 @@ await test("an activity logs pace inputs and heart rate",async page=>{
   eq(await ev(page,"[S.active.entries[0].sets[0].min,S.active.entries[0].sets[0].km,S.active.entries[0].sets[0].hr]"),[30,6,150]);
   if(!/5:00 \/km/.test(await page.$eval('.act-row',e=>e.innerText)))throw new Error("pace not shown");
 });
+
+/* ---- the day builder and the picker ---------------------------------------------- */
+async function openDay(page){
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  await page.tap('[data-mydays]');await pause(page);
+  await page.tap('#sheet [data-day]');await pause(page,400);}
+const dayNames=page=>page.$$eval(".drow .drow-n",a=>a.map(x=>x.textContent));
+await test("day builder: ✕ removes with undo, the grip drags, arrow keys move",async page=>{
+  await openDay(page);
+  const n0=await dayNames(page);if(n0.length<3)throw new Error("seed day too short");
+  await page.tap(".drow:nth-child(2) .drm");await pause(page);
+  eq((await dayNames(page)).length,n0.length-1,"removed");
+  await page.tap(".toast-undo");await pause(page);
+  eq(await dayNames(page),n0,"undo restores order");
+  const g=await (await page.$(".drow:nth-child(1) .dgrip")).boundingBox(),r3=await (await page.$(".drow:nth-child(3)")).boundingBox();
+  await page.mouse.move(g.x+g.width/2,g.y+g.height/2);await page.mouse.down();
+  for(let i=1;i<=8;i++){await page.mouse.move(g.x+g.width/2,g.y+g.height/2+(r3.y+r3.height/2+6-(g.y+g.height/2))*i/8);await pause(page,20);}
+  await page.mouse.up();await pause(page);
+  eq((await dayNames(page))[2],n0[0],"dragged to third");
+  await page.focus(".drow:nth-child(3) .dgrip");await page.keyboard.press("ArrowUp");await pause(page);
+  eq((await dayNames(page))[1],n0[0],"arrow key moved it up");
+});
+await test("exercise sheet: steppers apply at once and keep the range in order",async page=>{
+  await openDay(page);
+  await page.tap(".drow:nth-child(1) .dmain");await pause(page);
+  const id=await ev(page,"V.sd.id");
+  const get=k=>ev(page,"(function(){var d=S.myPlan.days.find(x=>x.id===V.dayId);return d.ex.find(e=>e.id==='"+id+"')."+k+"})()");
+  const s0=await get("sets");
+  await page.tap('[data-exstp="sets"][data-d="1"]');await pause(page,150);
+  eq(await get("sets"),s0+1,"sets +1 saved without Done");
+  await page.fill("#e_hi","5");await page.$eval("#e_hi",e=>e.dispatchEvent(new Event("change",{bubbles:true})));await pause(page);
+  const lo=await get("lo"),hi=await get("hi");
+  if(lo>hi)throw new Error("range inverted "+lo+"–"+hi);
+  await page.tap('[data-exincr="1"]');await pause(page,150);
+  if(!(await ev(page,"Object.keys(S.incr).length")))throw new Error("weight step not stored");
+});
+await test("picker: stays open to add several, a second tap takes one back, Done closes",async page=>{
+  await openDay(page);
+  const n0=(await dayNames(page)).length;
+  await page.tap(".dadd");await pause(page,400);
+  eq(await page.evaluate(()=>document.activeElement&&document.activeElement.id==="exq"),false,"no keyboard on open");
+  await page.tap(".pkrow >> nth=0");await pause(page);await page.tap(".pkrow >> nth=1");await pause(page);
+  eq(await ev(page,"V.sheet"),"exercise","still open");
+  await page.tap(".pkrow >> nth=0");await pause(page);
+  if(!/1/.test(await page.textContent(".srch-foot")))throw new Error("count not updated");
+  await page.tap(".srch-foot .btn");await pause(page,400);
+  eq((await dayNames(page)).length,n0+1,"one net add");
+});
+await test("picker: search finds by muscle, and no row ever sits above the field",async page=>{
+  await openDay(page);await page.tap(".dadd");await pause(page,400);
+  await page.fill("#exq","biceps");await pause(page,500);
+  const muscles=await page.$$eval(".pkrow .trow-s",a=>a.slice(0,5).map(x=>x.textContent));
+  if(!muscles.length||!muscles.every(m=>/Biceps/.test(m)))throw new Error("muscle search: "+muscles.join(" / "));
+  await page.fill("#exq","");await pause(page,400);
+  await page.$eval(".srch-body",e=>e.scrollTop=900);await pause(page);
+  const bad=await page.evaluate(()=>{const top=document.querySelector(".srch-body").getBoundingClientRect().top;
+    return [...document.querySelectorAll(".srch-body .pkrow")].filter(r=>{const b=r.getBoundingClientRect();return b.bottom>0&&b.top<top-1&&getComputedStyle(r).visibility!=="hidden"&&document.elementFromPoint(b.left+10,Math.max(b.top+2,1))===r;}).length;});
+  eq(bad,0,"rows visible above the list");
+});
+
+/* ---- coaching --------------------------------------------------------------------- */
+const F=(page,fn)=>page.evaluate(async src=>{const F=await import("/js/engine/formulas.js");const {S}=await import("/js/state.js");
+  const mk=(d,name,sets)=>({id:"x"+d+name,date:d,dayId:"x",entries:[{name,sets}]});return eval(src);},fn);
+await test("missing the range twice suggests about 10% lighter",async page=>{
+  const r=await F(page,`(S.sessions=[mk("2099-01-05","Barbell Squat",[{w:100,r:6},{w:100,r:5}]),mk("2099-01-02","Barbell Squat",[{w:100,r:7}])],
+    F.recommend({name:"Barbell Squat",planned:{sets:3,lo:8,hi:10}}).w)`);
+  eq(r,90);
+});
+await test("records: weight, estimated max and reps count; the first time does not",async page=>{
+  const r=await F(page,`(S.sessions=[mk("2099-01-01","Barbell Bench Press",[{w:80,r:5},{w:70,r:8}])],
+    [F.recordOf("Barbell Bench Press",{w:82.5,r:3},[]).k,F.recordOf("Barbell Bench Press",{w:80,r:7},[]).k,
+     F.recordOf("Barbell Bench Press",{w:70,r:9},[]).k,F.recordOf("Barbell Bench Press",{w:70,r:8},[]),F.recordOf("Leg Press",{w:200,r:10},[])])`);
+  eq(r,["w","e","r",null,null]);
+});
+await test("a lighter week cuts planned sets and suggested load, and ends",async page=>{
+  await page.evaluate(async()=>{const s=await import("/js/state.js");s.S.deload={until:"2099-01-01",last:"2026-01-01"};s.saveDB();});
+  await startWorkout(page);
+  const cut=await ev(page,"S.active.entries.map(e=>e.planned.sets)");
+  const plan=await ev(page,"(function(){var sp=S.myPlan;var d=sp.days.find(x=>x.id===S.active.dayId);return d.ex.map(e=>e.sets)})()");
+  if(!cut.every((n,i)=>n<plan[i]||n===1))throw new Error("sets not cut: "+cut+" vs "+plan);
+  if(!/Lighter week/.test(await page.textContent(".ex-tags")))throw new Error("no lighter-week tag");
+});
+await test("weight steps: own step wins; dumbbell totals double the step",async page=>{
+  const r=await F(page,`(function(){var a=F.incrementFor("Dumbbell Bench Press",30);S.prefs.dbLoad="total";var b=F.incrementFor("Dumbbell Bench Press",60);
+    S.prefs.dbLoad="hand";S.incr={"Dumbbell Bench Press":1};var c=F.incrementFor("Dumbbell Bench Press",30);S.incr={};return [a,b,c];})()`);
+  eq(r,[2,4,1]);
+});
+await test("weight trend against a fat-loss goal says when it is too slow",async page=>{
+  const r=await page.evaluate(async()=>{const st=await import("/js/engine/stats.js");const {S}=await import("/js/state.js");
+    const d=n=>{const x=new Date(Date.now()-n*864e5);return new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+    S.profile.goal="lose";S.body=[0,5,10,15,20,25].map((n,i)=>({date:d(25-n),weight:90-i*0.02}));
+    const tr=st.weightTrend();return [tr.status,tr.lo<0&&tr.hi<0];});
+  eq(r,["slow",true]);
+});
+await test("a suggested set is marked, and logged untouched it says so",async page=>{
+  await startWorkout(page);
+  if(!(await page.$eval("#in_w",e=>e.classList.contains("sg"))))throw new Error("not marked");
+  await page.tap('[data-logset]');await pause(page,900);
+  eq(await ev(page,"S.active.entries[0].sets[0].sg"),1);
+  await page.fill('#in_r','9');
+  if(await page.$eval("#in_r",e=>e.classList.contains("sg")))throw new Error("still marked after typing");
+},{prefs:{autorest:false}});
+await test("intervals are kept on a cardio bout",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  await page.tap('[data-actsheet]');await pause(page);await page.tap('#sheet [data-quickact="Running"]');await pause(page,500);
+  await page.$eval('[data-activ]',e=>e.click());await pause(page);
+  await page.fill('#in_ivn','8');await page.fill('#in_ivon','30');await page.fill('#in_ivoff','90');
+  await page.evaluate(()=>document.activeElement.blur());
+  await page.$eval('[data-logact]',e=>e.click());await pause(page);
+  eq(await ev(page,"S.active.entries[0].sets[0].iv"),{n:8,on:30,off:90});
+});
+await test("rest controls: pause, resume and +30 survive a reload",async page=>{
+  await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  await page.tap('[data-rest="pause"]');await pause(page);
+  eq(await ev(page,"!!(S.active.rest&&S.active.rest.paused)"),true,"paused saved");
+  await page.tap('[data-rest="resume"]');await pause(page);await page.tap('[data-rest="30"]');await pause(page);
+  const left=await ev(page,"Math.round((V.restEnd-Date.now())/1000)");
+  await page.reload();await pause(page,1200);
+  const after=await ev(page,"Math.round((V.restEnd-Date.now())/1000)");
+  if(!(after>0&&Math.abs(after-left)<6))throw new Error("rest "+left+" → "+after);
+});
+await test("stored history that will not open is reported, not shown as empty",async page=>{
+  if(!(await page.$(".warnbar")))throw new Error("no warning");
+},{raw:(()=>{const d=seed();delete d.sessions;d.histIDB=true;return JSON.stringify(d);})(),blockIDB:true});
 
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();

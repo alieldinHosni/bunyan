@@ -216,7 +216,7 @@ function vSheet(){
     }else{
       b+='<div class="exsg">'
        +exStep("sets",t("Sets"),e.sets,"")
-       +exStep("rest",t("Rest"),e.rest,"s")
+       +exStep("rest",t("Rest"),e.rest,t("s"))
        +exStep("lo",t("Min reps"),e.lo,"")
        +exStep("hi",t("Max reps"),e.hi,"")
        +'</div>';
@@ -485,7 +485,7 @@ function vSheet(){
     if(V.exmiss){
       b+='<div class="exd-miss">';
       mistakesFor(nD,pD).forEach(function(c){
-        b+='<div><b>\u00d7</b><span>'+esc(c)+'</span></div>';});
+        b+='<div><b>\u00d7</b><span>'+esc(t(c))+'</span></div>';});
       b+='</div>';}
     /* The frame pins ADD TO WORKOUT to the foot of the screen. It shows only when
        there is a day open to put the exercise in and no workout running. V.dayId

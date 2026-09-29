@@ -4,6 +4,16 @@
 in headless Chromium and asserts the outcomes: backup/restore, double taps,
 undo, replace, input bounds, honest RPE, reload mid-workout, finishing early,
 corrupted and partial saves, two open copies, the plan generator, and rest days.
+Also covered:
+
+- the day builder (remove with Undo, drag and arrow-key reorder, steppers)
+- the picker (multi-add, muscle search, nothing above the field)
+- missed-rep and lighter-week rules
+- records, weight steps, the weight trend and suggested-value marking
+- intervals and rest controls across a reload
+- the history-unavailable warning
+
+31 scenarios in all.
 
 ```sh
 python3 -m http.server 8765 &      # from the repo root
