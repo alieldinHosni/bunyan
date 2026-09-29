@@ -2,6 +2,7 @@
    The exercise library and its lookups, loaded from exercises.json. */
 import {S} from "../state.js";
 import {esc} from "../util.js";
+import {ACTS, actIcon, actMuscle, isActivity} from "./activities.js";
 
 /* ============================================================ exercise library */
 /* n=name m=muscle e=equipment c=compound */
@@ -11,8 +12,10 @@ function buildLIB(){
   if(!EXDB)return;
   Object.keys(EXDB).sort().forEach(function(n){
     var v=EXDB[n];
-    LIB.push([n,v.m,v.e,v.c,v.d,v.p,v.x||[]]);
+    LIB.push([n,actMuscle(n)||v.m,v.e,v.c,v.d,v.p,v.x||[]]);
   });
+  /* Cardio, sports and classes: logged as time and effort. No photographs. */
+  ACTS.forEach(function(a){if(!EXDB[a[0]])LIB.push([a[0],actMuscle(a[0]),"Other",0,"","Conditioning",[]]);});
   /* LIB is rebuilt from exercises.json on every load, so anything the user added
      has to be folded back in or it disappears on the next open. */
   ((typeof S!=="undefined"&&S.myEx)||[]).forEach(function(m){
@@ -21,7 +24,7 @@ function buildLIB(){
 }
 var EQUIP=["Bodyweight","Barbell","Dumbbell","Cable","Machine","Kettlebell","Band","Other"];
 var MUSCLES=["Chest","Back","Shoulders","Biceps","Triceps","Forearms","Quads",
-             "Hamstrings","Glutes","Adductors","Calves","Core","Neck"];
+             "Hamstrings","Glutes","Adductors","Calves","Core","Neck","Cardio","Sports"];
 var PATTERNS=[
  [/Deadlift|Romanian|RDL|Good Morning|Hip Thrust|Pull Through|Swing|Back Extension|Hyperext/i,"Hinge"],
  [/Squat|Leg Press|Lunge|Step[- ]?Up|Split Squat|Hack|Pistol|Sissy/i,"Squat"],
@@ -36,6 +39,7 @@ var PATTERNS=[
  [/Run|Bike|Row Machine|Jump|Burpee|Sled|Rope|Walk|Swim|Elliptical|Stair/i,"Conditioning"]
 ];
 function patternOf(n){
+  if(isActivity(n))return "Conditioning";
   var v=EXDB&&EXDB[n];
   if(v&&v.p)return v.p;
   for(var i=0;i<PATTERNS.length;i++)if(PATTERNS[i][0].test(n))return PATTERNS[i][1];
@@ -63,6 +67,7 @@ function secondaryOf(n){
 var HARD=/Pistol|Handstand|Nordic|Muscle-Up|Snatch|Deficit|Sissy|L-Sit|Ab Wheel|Archer|Zercher|Wall Walk|Glute Ham/i;
 var EASY=/Machine|Cable|Assisted|Seated|Smith|Band|Stretch|Walk|Plank|Bodyweight Squat|Push-Ups/i;
 function difficultyOf(n){
+  if(isActivity(n))return "";
   var v=EXDB&&EXDB[n];
   if(v&&v.d)return v.d;
   if(HARD.test(n))return "Advanced";
@@ -159,8 +164,11 @@ function dumbbellIcon(px){
    Hold the space with a shimmer instead of letting the layout jump, and fall back to
    the dumbbell glyph when the image never arrives. */
 function thumb(n,size){
-  var u=exImg(n,0);
   size=size||44;
+  /* An activity reads better as its own glyph than as a treadmill photograph. */
+  if(isActivity(n))return '<span class="thumb ph act" style="width:'+size+'px;height:'+size+'px">'
+    +actIcon(n,Math.round(size*0.5))+'</span>';
+  var u=exImg(n,0);
   if(!u)return '<div class="thumb ph" style="width:'+size+'px;height:'+size+'px">'
     +dumbbellIcon(Math.round(size*0.5))+'</div>';
   return '<span class="thumbwrap skel" style="width:'+size+'px;height:'+size+'px">'
@@ -180,7 +188,7 @@ function isFav(n){return S.favs.indexOf(n)>=0;}
 
 /* Exclusions are gone; gear is the only filter left. */
 function pickable(n){return hasGear(n);}
-function muscleOf(n){var v=EXDB&&EXDB[n];return v?v.m:"Other";}
+function muscleOf(n){var a=actMuscle(n);if(a)return a;var v=EXDB&&EXDB[n];return v?v.m:"Other";}
 /* The muscle of a planned or logged exercise, resolved from the library first.
 
    The copy stored on the exercise is a cache written when it was added to a plan, and

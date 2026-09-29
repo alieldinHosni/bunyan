@@ -1,5 +1,6 @@
 /* Bunyan — exnames
    Compositional Arabic exercise names, plus applyLang(). */
+import {actInfo} from "../data/activities.js";
 import {S} from "../state.js";
 import {exShort} from "../data/exercises.js";
 
@@ -192,7 +193,10 @@ function exAr(name){
 /* Display only. Every lookup, favourite and session entry still keys off the English. */
 /* Display only: the qualifier is shown separately, never glued back onto the name.
    The full English name remains the key everywhere it is stored. */
-function exName(n){var s=exShort(n);return (S.prefs&&S.prefs.lang==="ar")?exAr(s):s;}
+function exName(n){
+  var ar=S.prefs&&S.prefs.lang==="ar",a=actInfo(n);
+  if(a)return ar&&a.ar?a.ar:(a.lib?exShort(n):n);
+  var s=exShort(n);return ar?exAr(s):s;}
 function applyLang(){
   var ar=S.prefs&&S.prefs.lang==="ar";
   document.documentElement.setAttribute("lang",ar?"ar":"en");

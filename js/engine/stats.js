@@ -10,6 +10,7 @@
      - A food day counts once it is over. Today is still going, so it is never
        averaged, never judged against a target, and never breaks a streak. */
 import {muscleOfEntry} from "../data/exercises.js";
+import {isActivity} from "../data/activities.js";
 import {e1RM, lastWeight, sessionVolume} from "./formulas.js";
 import {sumNutrition} from "./nutrition.js";
 import {S} from "../state.js";
@@ -136,6 +137,7 @@ function muscleShare(n){
   S.sessions.forEach(function(s){
     if(!inWin(s.date,w.from,w.to))return;
     s.entries.forEach(function(e){
+      if(isActivity(e.name))return;          /* cardio and sports are not muscle sets */
       var k=working(e).length;if(!k)return;
       var g=GROUP[muscleOfEntry(e)]||"Other";
       c[g]=(c[g]||0)+k;tot+=k;});});

@@ -1784,7 +1784,8 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 
 /* ---- one food, its servings (13:266) */
 .afmono{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;
-  background:var(--surface);margin:0 calc(-1 * var(--s4));padding:28px var(--s4)}
+  margin:0;padding:26px var(--s4);border-radius:var(--r4);border:1px solid var(--border);
+  background:radial-gradient(80% 70% at 50% 0%,rgba(230,30,40,.14),transparent 70%),var(--raised)}
 .afmono-k{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
 .afmono-v{font-family:var(--display);font-weight:800;font-size:64px;line-height:1;
   font-variant-numeric:tabular-nums}
@@ -1829,7 +1830,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 
 /* The frames' 56px call to action. Scoped through .sheetbox because .btn's own height
    rule is .btn:not(.sm):not(.d), which outranks a bare .btn.afcta. */
-.sheetbox .btn.afcta{min-height:56px;border-radius:12px;font-size:16px;margin-top:20px}
+.sheetbox .btn.afcta{min-height:56px;border-radius:var(--rpill);font-size:16px;margin-top:20px}
 
 /* ---- Quick Add (13:337, 13:403) */
 textarea.afnl{display:block;width:100%;min-height:112px;resize:none;background:var(--surface);
@@ -2427,6 +2428,116 @@ button.dv-card:active{transform:scale(.98)}
 .dv-it span:last-child{font-variant-numeric:tabular-nums}
 .dv-edit{color:var(--accentHi);font-weight:600}
 .dv-none{margin:4px 0 0;color:var(--dim);font-size:14px}
+/* ---- Every sheet, one structure (after My Training) ---------------------------------
+   Kicker, large title, subtitle; grouped rows in one rounded card; labels in the same
+   small caps; the head carries only the grab and the close, with no band behind it. */
+.sheethead{background:transparent}
+.shh,.se-top{margin:0 0 18px}
+.shk,.se-k{display:block;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--accentHi);margin-bottom:6px}
+.shh h2,.se-top h2{font-family:var(--display);font-size:28px;font-weight:800;line-height:1.15;margin:0}
+.shsub{color:var(--dim);font-size:14.5px;line-height:1.45;margin:6px 0 0}
+.afhead-t h2{font-size:24px}
+.sheetbox .list{border-radius:var(--r4)}
+.sheetbox .list .item{min-height:58px;padding-top:14px;padding-bottom:14px}
+.sheetbox .sec,.sheetbox .overline,.sheetbox .aflbl{font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--dim)}
+.sheetbox .card{border-radius:var(--r4)}
+.se-date{margin-top:12px}
+.sheetbox input:not([type=checkbox]):not([type=radio]):not([type=range]),.sheetbox select,.sheetbox textarea{border-radius:14px}
+/* ---- Train: switch the day's workout ----------------------------------------------- */
+.thero2-swap{position:absolute;top:14px;inset-inline-end:14px;z-index:2;display:flex;align-items:center;gap:6px;
+  min-height:36px;padding:0 14px;border-radius:var(--rpill);border:1px solid var(--hair-hi);
+  background:rgba(12,12,16,.55);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  color:var(--text);font-size:13px;font-weight:700;transition:transform var(--m-press) var(--e-standard)}
+.thero2-swap:active{transform:scale(.95)}
+.thero2-swap svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.thero2:has(.thero2-swap) .thero2-t{padding-inline-end:86px}
+.trow.on{background:rgba(230,30,40,.08)}
+.trow.on .trow-n{color:var(--accentHi)}
+/* ---- Exercise library (train.js vLibrary) and exercise sheet ------------------------ */
+.libhero{position:relative;isolation:isolate;margin:0 0 14px;padding:18px 16px 16px;border-radius:var(--r5);
+  border:1px solid var(--border);overflow:hidden;
+  background:radial-gradient(90% 80% at 100% 0%,rgba(230,30,40,.18),transparent 65%),var(--raised)}
+.libhero-art{position:absolute;z-index:-1;top:-30px;inset-inline-end:-40px;width:210px;height:auto;opacity:.12;pointer-events:none}
+.libhero .libhead{margin-bottom:14px}
+.libhero .shk{margin-bottom:4px}
+.libhero h1{font-size:30px}
+.libq{margin-bottom:0}
+.libq input{height:52px;border-radius:var(--rpill);padding-inline:46px 46px;font-size:16px;background:var(--bg);
+  -webkit-appearance:none;appearance:none}
+.libq input::-webkit-search-cancel-button,.libq input::-webkit-search-decoration{-webkit-appearance:none;display:none}
+.libq input:focus{border-color:var(--accentHi);box-shadow:0 0 0 3px rgba(230,30,40,.18);outline:none}
+.libq .ico-search{inset-inline-start:18px}
+.libq-x{position:absolute;inset-inline-end:8px;top:50%;margin-top:-18px;width:36px;height:36px;border-radius:50%;
+  border:none;background:var(--surface);color:var(--dim);font-size:13px}
+.libfilters{gap:8px;margin:0 -16px 6px;padding:2px 16px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.libfilters::-webkit-scrollbar{display:none}
+.libfilters .pill{min-height:38px;padding:0 15px;border-radius:var(--rpill);font-size:13.5px;background:var(--raised)}
+.libfilters .pill.a{background:rgba(230,30,40,.14);border-color:rgba(248,52,70,.6);color:var(--text)}
+.libn{font-size:13px;font-weight:700;color:var(--dim);font-variant-numeric:tabular-nums}
+.libtrow{gap:14px}
+.libtrow>span:first-child{flex:0 0 auto}
+.libtrow>span:nth-child(2){flex:1;min-width:0;text-align:start}
+.libtrow .thumbwrap,.libtrow .thumb,.libtrow .thumb.ph{flex:0 0 auto;border-radius:12px;overflow:hidden}
+.libtrow .trow-s b{font-weight:500;color:var(--accentHi)}
+.libtrow .trow-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exd-form2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
+.exd-form2 figure{position:relative;margin:0;border-radius:var(--r4);overflow:hidden;border:1px solid var(--border);background:var(--raised);aspect-ratio:4/3}
+.exd-form2 img{width:100%;height:100%;object-fit:cover;display:block}
+.exd-form2 figcaption{position:absolute;inset-inline-start:8px;bottom:8px;padding:4px 10px;border-radius:var(--rpill);
+  background:rgba(8,8,10,.72);font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff}
+.exd-facts{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);border-radius:var(--r4);background:var(--raised);overflow:hidden;margin-bottom:20px}
+.exd-facts>div{display:flex;flex-direction:column;gap:3px;padding:12px 14px;min-width:0}
+.exd-facts>div:nth-child(even){border-inline-start:1px solid var(--border)}
+.exd-facts>div:nth-child(n+3){border-top:1px solid var(--border)}
+.exd-facts span{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.exd-facts b{font-size:14.5px;font-weight:700;overflow-wrap:anywhere}
+.exd-card{padding:14px;border:1px solid var(--border);border-radius:var(--r4);background:var(--raised)}
+.sheetbox .exd-h{margin:20px 0 10px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-family:inherit}
+.exd-tips{border-radius:var(--r4)}
+/* ---- Cardio & sports (session.js actBody, sheets "acts") ---------------------------- */
+.acthead{justify-content:flex-start;gap:14px}
+.actbadge{flex:0 0 52px;width:52px;height:52px;display:grid;place-items:center;border-radius:50%;
+  background:radial-gradient(circle at 50% 35%,rgba(248,52,70,.35),rgba(120,10,16,.35) 70%);border:1px solid rgba(248,52,70,.6);color:#fff}
+.acticon{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.actcard .steps{margin:0}
+.act-lbl{margin:16px 0 8px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.act-lbl i{font-style:normal;letter-spacing:0;text-transform:none;font-weight:500;opacity:.8}
+.actcard .setcard-h+.act-lbl{margin-top:4px}
+.act-km{display:flex;align-items:center;gap:10px;padding:0 16px;min-height:56px;border-radius:var(--r4);border:1px solid var(--border);background:var(--surface)}
+.act-km input{flex:1;min-width:0;margin:0;border:none;background:none;font-family:var(--display);font-size:22px;font-weight:800;padding:0;min-height:54px}
+.act-km input:focus{outline:none}
+.act-km span{color:var(--dim);font-weight:700}
+.act-int{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.act-int button{min-height:48px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);color:var(--sub);font-size:13.5px;font-weight:700;padding:0 4px}
+.act-int button.on{background:rgba(230,30,40,.16);border-color:rgba(248,52,70,.7);color:var(--text)}
+.act-kcal{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding:14px 16px;border-radius:var(--r4);
+  background:rgba(230,30,40,.07);border:1px solid rgba(248,52,70,.25)}
+.act-kcal span{color:var(--dim);font-size:14px}
+.act-kcal b{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+.act-note{margin:14px 0 0;color:var(--dim);font-size:13px}
+.act-log{margin-top:16px;min-height:58px;font-size:17px}
+.act-log svg,.act-ok svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.act-done{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.act-row{display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;border-radius:var(--r4);background:var(--surface);border:1px solid var(--border)}
+.act-row.fresh{animation:rowIn var(--m-comp) var(--e-decel)}
+.act-ok{flex:0 0 34px;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:var(--ok);color:#fff}
+.act-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.act-t b{font-family:var(--display);font-size:16px}
+.act-t span{font-size:13px;color:var(--dim)}
+.ttile.wide{grid-column:1/-1;flex-direction:row;align-items:center;min-height:0;gap:14px}
+.ttile.wide .ttile-i{margin:0;flex:0 0 40px}
+.ttile-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.ttile.wide .ttile-n{margin:0}
+.ttile.wide .ico-chev{color:var(--dim)}
+[dir="rtl"] .ttile.wide .ico-chev{transform:scaleX(-1)}
+.actgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.actbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:88px;padding:10px 6px;
+  border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);color:var(--text);font-size:13px;font-weight:600;text-align:center;
+  transition:transform var(--m-press) var(--e-standard)}
+.actbtn:active{transform:scale(.95)}
+.actbtn .acticon{color:var(--accentHi)}
+.actbtn span{line-height:1.2;overflow-wrap:anywhere}
+.thumb.ph.act{display:grid;place-items:center;border-radius:12px;background:rgba(230,30,40,.12);color:var(--accentHi)}
 </style>
 </head>
 <body>

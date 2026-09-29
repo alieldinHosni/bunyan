@@ -2,6 +2,8 @@
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
 import {LIB, muscleOf, muscleOfEntry} from "../data/exercises.js";
+import {actInfo, actMuscle, isActivity} from "../data/activities.js";
+import {exName} from "../i18n/exnames.js";
 import {avgRPE, prevPerf, prFor, recommend, sessionVolume} from "../engine/formulas.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {leave} from "./motion.js";
@@ -132,6 +134,16 @@ function startDay(dayId){
   V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
 
+/* A run, a match, a class — logged on its own, outside the plan. It carries no day
+   id, so the rotation carries on from the last planned day as if it had not happened. */
+function startActivity(name){
+  if(S.active)return;
+  S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
+    splitId:split().id,dayId:null,dayName:exName(name),
+    entries:[{name:name,muscle:actMuscle(name)||"Cardio",planned:{sets:1,lo:0,hi:0},rest:0,grp:null,sets:[]}]};
+  V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
+  keepAwake(true);syncDraft();saveDB();render();}
+
 /* What the next set reads before the user touches anything. Once a set is logged in
    this session the next one inherits it, so straight sets cost one tap. The
    recommendation engine drives only the opening set. */
@@ -139,6 +151,10 @@ function syncDraft(){
   if(!S.active)return;
   var e=S.active.entries[V.logIdx];if(!e)return;
   var last=e.sets.length?e.sets[e.sets.length-1]:null;
+  if(isActivity(e.name)){
+    var pa=last||(prevPerf(e.name)||{sets:[]}).sets[0];
+    V.draft.min=pa&&pa.min?num(pa.min):(isActivity(e.name)&&actInfo(e.name).grp==="Sports"?60:30);
+    V.draft.km=pa&&pa.km?num(pa.km):0;V.draft.rpe=pa&&pa.rpe?pa.rpe:6;return;}
   if(last){V.draft.w=num(last.w);V.draft.r=num(last.r);V.draft.rpe=last.rpe||8;return;}
   var p=prevPerf(e.name);
   var src=p?p.sets[0]:null;
@@ -168,10 +184,16 @@ function finishSession(){
   for(var i=0;i<S.sessions.length;i++)
     if(S.sessions[i].dayId===a.dayId){prev=S.sessions[i];break;}
 
+  /* A match logged after the fact lasted as long as it says, not as long as the
+     screen was open. */
+  var actMin=0,actKcalT=0,actKm=0;
+  a.entries.forEach(function(e){if(!isActivity(e.name))return;
+    e.sets.forEach(function(x){actMin+=num(x.min);actKcalT+=num(x.kcal);actKm+=num(x.km);});});
+  if(actMin*60000>(sessionClock(a).ms||0)){a.activeMs=actMin*60000;a.lastSet=Date.now();}
   var vol=Math.round(sessionVolume(a));
   var allSets=[];a.entries.forEach(function(e){allSets=allSets.concat(e.sets);});
   if(!a.id)a.id="s"+Date.now().toString(36);
-  var summary={id:a.id,dayName:a.dayName,date:a.date,vol:vol,
+  var summary={id:a.id,actKcal:actKcalT,actKm:Math.round(actKm*10)/10,dayName:a.dayName,date:a.date,vol:vol,
     /* Active time, not wall clock: that is what was trained, and it keeps sessions
        comparable. The wall clock is stored too, since it cannot be recovered later. */
     mins:Math.max(1,Math.round(sessionClock(a).ms/60000)),
@@ -209,4 +231,4 @@ function addExercise(name){
   }else d.ex.push(e);
   saveDB();closeSheet();}
 
-export {ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};
+export {startActivity, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};

@@ -3,11 +3,12 @@
 import {t} from "../../i18n/dict.js";
 import {difficultyOf, exImg, exMedia, muscleOfEntry} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
-import {prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
+import {lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
+import {actIcon, actInfo, actKcal, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
 import {S} from "../../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
-import {esc, num} from "../../util.js";
-import {ex_isTimed, V} from "../view.js";
+import {esc, fmtN, num} from "../../util.js";
+import {ex_isTimed, stepperInput, V} from "../view.js";
 
 /* ============================================================ SESSION
    Execution surface, not an editor. vDay() prescribes the work; this screen only
@@ -17,7 +18,10 @@ function e0name(a){var e=a.entries[V.logIdx];return e?e.name:"";}
 
 /* Rows an entry shows: the prescription plus any the user added, never fewer than
    the sets already logged. */
-function rowsFor(e){return Math.max(1,(e.planned.sets||3)+(e.extra||0),e.sets.length);}
+function rowsFor(e){
+  /* An activity is one bout unless another is added. */
+  if(isActivity(e.name))return Math.max(1+(e.extra||0),e.sets.length);
+  return Math.max(1,(e.planned.sets||3)+(e.extra||0),e.sets.length);}
 
 /* ---- supersets ------------------------------------------------------------
    A superset is a shared `grp` tag on exercises that sit next to each other. The
@@ -144,6 +148,8 @@ function vLogger(){
      recommendation. The frame's START/END panels are placeholder rectangles standing in
      for artwork; the library ships a real photograph of each position, so those are used
      instead — closer to the design's intent than copying its stand-in would be. */
+  if(isActivity(e.name))h+=actBody(a,e,rows,active);
+  else{
   var med=exMedia(e.name),img0=exImg(e.name,0),img1=exImg(e.name,1);
   /* The exercise as one card over the Bunyan horse, as the other tabs set their
      heroes: what it is, how it looks, what it asks for. */
@@ -275,6 +281,7 @@ function vLogger(){
        +esc(exName(a.entries[nxtG].name))+'</p>';
   }
 
+  }
   /* Canvas screen 4 keeps exactly two secondary actions under the table. The other
      five — how to, plates, note, finish, discard — are behind the header's overflow,
      which is also what Round 4 item 1 asks for: one primary action, everything
@@ -285,6 +292,51 @@ function vLogger(){
    +'</div></div>';
 
   /* The rest screen is no longer part of this string; syncRest() owns it. */
+  return h;}
+
+/* ---- cardio, sports, classes ----------------------------------------------------
+   Logged as what they are: how long, how far where that means anything, how hard.
+   Calories come from the activity's MET and the latest weigh-in. */
+var TICK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+function actBody(a,e,rows,active){
+  var info=actInfo(e.name),kg=lastWeight()||0,last=V.logIdx>=a.entries.length-1;
+  var h='<section class="exhero acthero"><img class="exhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">'
+   +'<div class="exhero-k">'+t("Exercise")+' '+(V.logIdx+1)+' '+t("of")+' '+a.entries.length+'</div>'
+   +'<div class="exhead acthead"><span class="actbadge">'+actIcon(e.name,28)+'</span>'
+   +'<h1 class="ex-name">'+esc(exName(e.name))+'</h1></div>'
+   +'<div class="ex-tags"><span class="etag">'+esc(t(info.grp))+'</span>'
+   +(info.dist?'<span class="etag">'+t("Time and distance")+'</span>':'<span class="etag">'+t("Time and effort")+'</span>')
+   +'</div></section>';
+  h+='<section class="setcard actcard">';
+  if(active>=0){
+    var mins=num(V.draft.min)||30,rpe=V.draft.rpe||6,cur=intensityOf(rpe)[0];
+    h+='<div class="setcard-h"><h2>'+t("Log activity")+'</h2>'
+     +(e.sets.length?'<span class="setcard-c">'+t("Bout")+' '+(e.sets.length+1)+'</span>':'')+'</div>'
+     +'<div class="act-lbl">'+t("Duration")+'</div>'
+     +stepperInput("min",mins,5,t("min"))
+     +(info.dist?'<div class="act-lbl">'+t("Distance")+' <i>'+t("optional")+'</i></div>'
+       +'<div class="act-km"><input id="in_km" type="number" inputmode="decimal" step="0.1" min="0" value="'
+       +(num(V.draft.km)?V.draft.km:"")+'" placeholder="0.0" aria-label="'+t("Distance")+' km"><span>km</span></div>':'')
+     +'<div class="act-lbl">'+t("Intensity")+'</div><div class="act-int" role="group" aria-label="'+t("Intensity")+'">'
+     +INTENSITY.map(function(x){
+        return '<button class="'+(cur===x[0]?'on':'')+'" data-actint="'+x[0]+'" aria-pressed="'+(cur===x[0])+'">'+t(x[1])+'</button>';}).join("")
+     +'</div>'
+     +(kg?'<div class="act-kcal"><span>'+t("Estimated burn")+'</span><b id="actKcal">'+fmtN(actKcal(e.name,mins,rpe,kg))+' kcal</b></div>'
+        :'<p class="act-note">'+t("Log a weigh-in and Bunyan estimates the calories burned.")+'</p>')
+     +'<button class="btn act-log" data-logact="1">'+TICK+t("Log activity")+'</button>';
+  }
+  if(e.sets.length){
+    h+='<div class="act-done">';
+    e.sets.forEach(function(st,i){
+      h+='<div class="act-row'+(V.fresh===i?' fresh':'')+'" data-k="act:'+i+'"><span class="act-ok" aria-hidden="true">'+TICK+'</span>'
+       +'<span class="act-t"><b>'+num(st.min)+' '+t("min")+(num(st.km)?' · '+st.km+' km':'')+'</b>'
+       +'<span>'+t(intensityOf(st.rpe||6)[1])+(st.kcal?' · '+fmtN(st.kcal)+' kcal':'')+'</span></span>'
+       +'<button class="delset" data-delset="'+i+'" aria-label="'+t("Delete")+' '+(i+1)+'">✕</button></div>';});
+    h+='</div>';
+    if(active<0)h+='<div class="addrow"><button class="addset2" data-addrow="1"><span aria-hidden="true">+</span>'+t("Add another bout")+'</button></div>';
+  }
+  h+='</section>';
+  if(active<0)h+='<button class="btn ss-next" data-nextex="1">'+(last?t("Finish workout"):t("Next exercise"))+'</button>';
   return h;}
 
 /* What to hang on each side of the bar. Greedy from the heaviest plate down, which is
