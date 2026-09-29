@@ -4,7 +4,8 @@ import {t} from "../i18n/dict.js";
 import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {exName} from "../i18n/exnames.js";
 import {MEALS} from "./views/food.js";
-import {myDaysList} from "./views/train.js";
+import {myDaysList, planOn} from "./views/train.js";
+import {ACT_GROUPS, actIcon, actsIn, isActivity} from "../data/activities.js";
 import {backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionKcal, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
@@ -18,6 +19,10 @@ import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 
 /* ============================================================ sheets */
+var SHEET_KICK={weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
+  gear:"Training",likes:"Training",exercise:"Training",exhist:"History",share:"Sharing",coach:"Sharing",
+  backup:"Your data",restore:"Your data",set_you:"Settings",set_training:"Settings",set_app:"Settings",
+  set_profiles:"Settings",set_data:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
 var CFICON={
   leave:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M9 16l-4-4 4-4M5 12h11"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>'
@@ -316,6 +321,33 @@ function vSheet(){
     if(rv2.steps)b+='<div class="dv-card dv-row"><b>'+t("Steps")+'</b><span class="dv-k">'+fmtN(rv2.steps)+'</span></div>';
     b+='<div class="cf-acts se-acts"><button class="btn g cf-no" data-jumpfood="'+dv+'">'+t("Open this day in Food")+'</button></div>';
   }
+  else if(V.sheet==="acts"){
+    /* A run, a match, a class: pick one and it opens straight into logging it. */
+    b='<div class="se-top"><span class="se-k">'+t("Training")+'</span><h2>'+t("Cardio & Sports")+'</h2>'
+     +'<p class="shsub">'+t("Log time, distance and effort instead of sets.")+'</p></div>';
+    ACT_GROUPS.forEach(function(g){
+      b+='<div class="exd-h">'+t(g)+'</div><div class="actgrid">';
+      actsIn(g).forEach(function(n){
+        b+='<button class="actbtn" data-quickact="'+esc(n)+'">'+actIcon(n,24)+'<span>'+esc(exName(n))+'</span></button>';});
+      b+='</div>';});
+  }
+  else if(V.sheet==="swapday"){
+    /* Which day of the plan this date runs. The rotation's own pick is marked, and
+       choosing it again clears the swap. */
+    var sd2=V.sd.date,spx=split(),cur=planOn(spx,sd2);
+    var auto=(S.daySwap||{})[sd2]?null:(cur.day||{}).id;
+    b='<div class="se-top"><span class="se-k">'+esc(pretty(sd2))+'</span><h2>'+t("Change workout")+'</h2>'
+     +'<p class="shsub">'+t("Pick what you want to do on this day. The rest of the plan moves on from what you actually train.")+'</p></div>'
+     +'<div class="card tdays">';
+    spx.days.forEach(function(d){
+      var on=cur.day&&cur.day.id===d.id;
+      b+='<button class="trow'+(on?' on':'')+'" data-swapto="'+d.id+'" aria-pressed="'+(on?"true":"false")+'">'
+       +'<span><span class="trow-n">'+esc(d.name)+'</span>'
+       +'<span class="trow-s">'+(d.ex.length?d.ex.length+' '+t("exercises"):t("rest day"))+'</span></span>'
+       +(on?'<span class="tnext">'+t("Selected")+'</span>':'')+'</button>';});
+    b+='</div>';
+    if((S.daySwap||{})[sd2])b+='<button class="btn g" data-swapto="">'+t("Back to the plan")+'</button>';
+  }
   else if(V.sheet==="mydays"){
     b='<div class="se-top"><span class="se-k">'+esc(split().name)+'</span><h2>'+t("My Training")+'</h2></div>'
      +myDaysList()
@@ -334,11 +366,19 @@ function vSheet(){
     var any=false;
     ws2.entries.forEach(function(en,ei){
       if(!en.sets.length)return;any=true;
+      var isA=isActivity(en.name);
       b+='<section class="se-ex"><div class="se-exh"><h3>'+esc(exName(en.name))+'</h3>'
        +'<button class="se-rm" data-sexdel="'+ei+'" aria-label="'+esc(t("Remove exercise"))+'">'
        +'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button></div>'
-       +'<div class="se-hd" aria-hidden="true"><span>'+t("Set")+'</span><span>'+wUnit()+'</span><span></span><span>'+t("Reps")+'</span><span></span></div>';
+       +'<div class="se-hd" aria-hidden="true"><span>'+t(isA?"Bout":"Set")+'</span><span>'+(isA?t("min"):wUnit())+'</span><span></span><span>'+(isA?"km":t("Reps"))+'</span><span></span></div>';
       en.sets.forEach(function(st,si){
+        if(isA){
+          b+='<div class="se-row"><span class="se-n">'+(si+1)+'</span>'
+           +'<input id="se_m_'+ei+'_'+si+'" type="number" inputmode="numeric" min="1" value="'+num(st.min)+'" aria-label="'+esc(t("Duration"))+'">'
+           +'<span class="se-x" aria-hidden="true">·</span>'
+           +'<input id="se_k_'+ei+'_'+si+'" type="number" inputmode="decimal" step="0.1" min="0" value="'+(num(st.km)||"")+'" placeholder="—" aria-label="'+esc(t("Distance"))+'">'
+           +'<button class="se-del" data-ssetdel="'+ei+':'+si+'" aria-label="'+esc(t("Delete")+" "+(si+1))+'">✕</button></div>';
+          return;}
         b+='<div class="se-row"><span class="se-n">'+(si+1)+'</span>'
          +'<input id="se_w_'+ei+'_'+si+'" type="number" inputmode="decimal" step="any" min="0" value="'+(st.w?toDisp(st.w):"")+'" placeholder="—" aria-label="'+esc(t("Set")+" "+(si+1)+" "+wUnit())+'">'
          +'<span class="se-x" aria-hidden="true">×</span>'
@@ -355,31 +395,23 @@ function vSheet(){
     var nD=V.sd.name, mD=muscleOf(nD), pD=patternOf(nD), secD=secondaryOf(nD), lD=libFind(nD);
     var prD=prFor(nD), pvD=prevPerf(nD);
     b='<h2>'+esc(exName(nD))+'</h2>';
-    /* The frame's subtitle \u2014 "Horizontal Push Classic" \u2014 is the movement pattern and
-       the variant, which the app already knows. It replaces the loose variant pill. */
     var subD=[t(pD),exVariant(nD)?esc(exVariant(nD)):""].filter(Boolean).join(" \u00b7 ");
-    b+='<div class="exd-sub">'+subD+'</div>';
-    /* Three labelled chips, as the frame has. These carry what the old pill row and
-       the two Primary/Secondary rows under the photographs both said, so those rows
-       are gone rather than repeating the same three facts a second time. Difficulty
-       is a fourth: the app has it and the frame had nowhere to put it. */
-    b+='<div class="exd-chips">'
-     +'<span class="exd-chip">'+t("Primary")+': <b>'+t(mD)+'</b></span>'
-     +(secD.length?'<span class="exd-chip">'+t("Secondary")+': <b>'
-        +secD.map(function(s){return t(s);}).join(" \u00b7 ")+'</b></span>':'')
-     +'<span class="exd-chip">'+t("Equipment")+': <b>'+t(lD?lD[2]:"Other")+'</b></span>'
-     +'<span class="exd-chip">'+t("Difficulty")+': <b>'+t(difficultyOf(nD))+'</b></span>'
-     +'</div>';
+    b+='<p class="tiny">'+subD+'</p>';
+    /* The two positions first — what the movement looks like is what someone opening
+       this between sets wants — then the four facts as one even grid. */
     var med=exMedia(nD);
-    if(med){
-      /* The frame draws a bar-and-arm diagram in each panel; these are the library's
-         own photographs of the two positions, which is what the diagram stands for. */
-      b+='<div class="exd-form">'
-       +'<figure><img src="'+exImg(nD,0)+'" alt=""><figcaption>'+t("START")+'</figcaption></figure>'
-       +'<figure><img src="'+exImg(nD,1)+'" alt=""><figcaption>'+t("END")+'</figcaption></figure></div>';}
+    if(med)
+      b+='<div class="exd-form2">'
+       +'<figure><img src="'+exImg(nD,0)+'" alt="" decoding="async"><figcaption>'+t("Start")+'</figcaption></figure>'
+       +'<figure><img src="'+exImg(nD,1)+'" alt="" decoding="async"><figcaption>'+t("End")+'</figcaption></figure></div>';
+    b+='<div class="exd-facts">'
+     +'<div><span>'+t("Primary")+'</span><b>'+t(mD)+'</b></div>'
+     +'<div><span>'+t("Secondary")+'</span><b>'+(secD.length?secD.map(function(s){return t(s);}).join(" \u00b7 "):"—")+'</b></div>'
+     +'<div><span>'+t("Equipment")+'</span><b>'+t(lD?lD[2]:"Other")+'</b></div>'
+     +'<div><span>'+t("Difficulty")+'</span><b>'+t(difficultyOf(nD))+'</b></div></div>';
     /* Three steps by default. Nobody reads five paragraphs between sets, and the
        rest is one tap away for anyone who wants them. */
-    b+='<div class="exd-h">'+t("How to Perform")+'</div><div class="exd-steps">';
+    b+='<div class="exd-h">'+t("How to Perform")+'</div><div class="exd-steps exd-card">';
     var steps=exSteps(nD)||(CUES[pD]||CUES.Isolation);
     var allSteps=!!V.exsteps,shown=allSteps?steps:steps.slice(0,3);
     shown.forEach(function(c,i){
@@ -407,23 +439,23 @@ function vSheet(){
        ⓘ mid-set — and it would add to the plan, not to the workout in front of you. */
     if(!S.active&&dayOf(V.dayId))
       b+='<button class="btn exd-add" data-pickex="'+esc(nD)+'">'+t("Add to workout")+'</button>';
-    if(prD.w)b+='<div class="sec">'+t("Your record")+'</div><div class="card"><div class="grid3">'
-     +'<div><div class="tiny">'+t("Heaviest")+'</div><div class="big" style="font-size:19px">'+prD.w+'</div></div>'
-     +'<div><div class="tiny">'+t("Best 1RM")+'</div><div class="big" style="font-size:19px">'+(prD.e||"\u2014")+'</div></div>'
-     +'<div><div class="tiny">'+t("Best set")+'</div><div class="big" style="font-size:19px">'+prD.vol+'</div></div>'
-     +'</div></div>';
+    if(prD.w)b+='<div class="exd-h">'+t("Your record")+'</div><div class="wc2-stats">'
+     +'<div><b>'+fmtW(prD.w)+'</b><span>'+t("Heaviest")+'</span></div>'
+     +'<div><b>'+(prD.e?fmtW(prD.e):"\u2014")+'</b><span>'+t("Best 1RM")+'</span></div>'
+     +'<div><b>'+fmtN(prD.vol)+'</b><span>'+t("Best set")+'</span></div></div>';
     /* The star lives in the sheet header now, beside the \u2715, where a long exercise
        name wrapping to two lines cannot push it around. "Never suggest" is gone
        entirely: it hid results with nothing on screen to say why. */
     if(pvD)b+='<button class="btn g" data-exhist="'+esc(nD)+'">'+t("See every session")+'</button>';
-    b+='<div class="sec">'+t("Similar exercises")+'</div><div class="list">';
-    LIB.filter(function(l){return l[1]===mD&&l[0]!==nD&&patternOf(l[0])===pD;}).slice(0,8)
-      .forEach(function(l){
-        b+='<button class="item" data-exdetail="'+esc(l[0])+'">'+thumb(l[0],38)
-         +'<div style="flex:1"><div style="font-weight:600">'+esc(exName(l[0]))+'</div>'
-         +'<div class="tiny">'+l[2]+' \u00b7 '+difficultyOf(l[0])+'</div></div>'
-         +'<span class="chev">\u203a</span></button>';});
-    b+='</div>';
+    var simD=LIB.filter(function(l){return l[1]===mD&&l[0]!==nD&&patternOf(l[0])===pD;}).slice(0,6);
+    if(simD.length){
+      b+='<div class="exd-h">'+t("Similar exercises")+'</div><div class="card tdays">';
+      simD.forEach(function(l){
+        b+='<button class="trow libtrow" data-exdetail="'+esc(l[0])+'">'+thumb(l[0],44)
+         +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span>'
+         +'<span class="trow-s">'+t(l[2])+' \u00b7 '+t(difficultyOf(l[0]))+'</span></span>'
+         +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
+      b+='</div>';}
   }
   else if(V.sheet==="done"){
     var w=V.sd;
@@ -437,9 +469,14 @@ function vSheet(){
      +'<h1 class="wc2-h">'+t("Workout complete")+'</h1>'
      +'<p class="wc2-sub">'+esc(w.dayName)+' · '+pretty(w.date)+'</p>'
      +'<div class="wc2-stats">'
-     +'<div><b>'+mmss(wsecs)+'</b><span>'+t("Time")+'</span></div>'
-     +'<div><b><span data-count-to="'+Math.round(toDisp(w.vol))+'">'+fmtN(toDisp(w.vol))+'</span><small>'+wUnit()+'</small></b><span>'+t("Volume")+'</span></div>'
-     +'<div><b><span data-count-to="'+w.sets+'">'+w.sets+'</span></b><span>'+t("Sets")+'</span></div>'
+     +'<div><b>'+(wsecs>=3600?Math.floor(wsecs/3600)+'<small>h</small> '+Math.round(wsecs%3600/60)+'<small>m</small>':mmss(wsecs))+'</b><span>'+t("Time")+'</span></div>'
+     /* A lifting day shows its tonnage; a run or a match shows what it burned. */
+     +(w.vol||!w.actKcal
+       ?'<div><b><span data-count-to="'+Math.round(toDisp(w.vol))+'">'+fmtN(toDisp(w.vol))+'</span><small>'+wUnit()+'</small></b><span>'+t("Volume")+'</span></div>'
+       :'<div><b><span data-count-to="'+w.actKcal+'">'+fmtN(w.actKcal)+'</span><small>kcal</small></b><span>'+t("Burned")+'</span></div>')
+     +(w.actKm&&!w.vol
+       ?'<div><b>'+w.actKm+'<small>km</small></b><span>'+t("Distance")+'</span></div>'
+       :'<div><b><span data-count-to="'+w.sets+'">'+w.sets+'</span></b><span>'+t("Sets")+'</span></div>')
      +'</div>';
     /* One highlight line at most: a record beats a volume gain. */
     var prs=w.prs.slice().sort(function(x,y){return y.w-x.w;});
@@ -821,6 +858,15 @@ function vSheet(){
       +(isFav(favName)?t("Remove from favourites"):t("Add to favourites"))+'">'
       +(isFav(favName)?"★":"☆")+'</button>'
     :'';
+  /* Every sheet opens the same way as My Training: a red kicker naming where it
+     belongs, a large title, then its subtitle. The sheets write a plain <h2> and a
+     p.tiny; this lifts that pair into the shared header rather than editing thirty
+     templates that would then drift apart again. */
+  var kick=SHEET_KICK[V.sheet];
+  if(kick)b=b.replace(/^\s*<h2([^>]*)>([\s\S]*?)<\/h2>(\s*<p class="(?:tiny|sub)"[^>]*>[\s\S]*?<\/p>)?/,
+    function(m,at,title,sub){
+      return '<div class="shh"><span class="shk">'+esc(t(kick))+'</span><h2'+at+'>'+title+'</h2>'
+        +(sub?sub.replace(/<p class="(?:tiny|sub)"[^>]*>/,'<p class="shsub">'):'')+'</div>';});
   var cf=V.sheet==="confirm"||V.sheet==="done";
   return '<div class="sheet"'+(hard?'':' data-close="1"')+'>'
         +'<div class="sheetbox'+(cf?' cfbox':'')+'" data-stop="1" role="dialog" aria-modal="true">'

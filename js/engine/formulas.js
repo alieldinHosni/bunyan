@@ -2,6 +2,7 @@
    Training and body maths: volume, 1RM, RPE, BMR, progression. */
 import {FOODDB, sumNutrition} from "./nutrition.js";
 import {muscleOfEntry} from "../data/exercises.js";
+import {isActivity} from "../data/activities.js";
 import {dayRec, S, saveDB, split} from "../state.js";
 import {num, r1, today} from "../util.js";
 import {V} from "../ui/view.js";
@@ -107,7 +108,7 @@ function weeklySets(){
   S.sessions.forEach(function(s){
     if(new Date(s.date+"T00:00:00").getTime()<cut)return;
     s.entries.forEach(function(e){
-      if(!e.sets.length)return;
+      if(!e.sets.length||isActivity(e.name))return;
       /* Resolved from the library, not the copy stored on the entry: that copy is
          written when the exercise joins a plan and is "Other" for any plan built
          before the library finished loading. Grouping on it silently files a whole

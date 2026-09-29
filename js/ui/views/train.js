@@ -8,6 +8,7 @@ import {allSplits, dayOf, S, split} from "../../state.js";
 import {SPLIT_LEVEL} from "../../engine/plan.js";
 import {esc, fmtN, shortd, today, weekDays} from "../../util.js";
 import {dateBar, shiftDay} from "../datebar.js";
+import {tokenMatch} from "../../engine/text.js";
 import {head, V} from "../view.js";
 import {backArrow, backBar} from "../nav.js";
 
@@ -27,10 +28,13 @@ function splitCover(id){
           :'<span class="tcover tcover-none"></span>';}
 
 function nextDayOf(sp){
-  var lastIdx=-1;
-  if(S.sessions.length){
+  /* The latest planned session sets the rotation; a run or a match logged on its
+     own (no day id) does not move it. */
+  var lastIdx=-1,ls=null;
+  for(var j=0;j<S.sessions.length;j++)if(S.sessions[j].dayId){ls=S.sessions[j];break;}
+  if(ls){
     for(var i=0;i<sp.days.length;i++)
-      if(sp.days[i].id===S.sessions[0].dayId){lastIdx=i;break;}}
+      if(sp.days[i].id===ls.dayId){lastIdx=i;break;}}
   for(var k=1;k<=sp.days.length;k++){
     var d=sp.days[(lastIdx+k+sp.days.length)%sp.days.length];
     if(d.ex.length)return d;}
@@ -41,20 +45,29 @@ function nextDayOf(sp){
    today is the next day of the rotation (or the one already trained today), and each
    day after takes the next one in order, rest days included. A past day is whatever
    was logged. */
+var ACTIVITY='<svg viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>';
 var DUMBBELL='<svg viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/></svg>';
 var MOON='<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
 function daysApart(a,b){return Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/864e5);}
 function planOn(sp,iso){
   var now=today();
-  var logged=S.sessions.filter(function(x){return x.date===iso;});
+  var logged=S.sessions.filter(function(x){return x.date===iso&&x.dayId;});
+  /* Today, a run on its own does not stand in for the day's workout. */
+  if(!logged.length&&iso<now)logged=S.sessions.filter(function(x){return x.date===iso;});
   if(logged.length){
     var ld=sp.days.filter(function(d){return d.id===logged[0].dayId;})[0]||null;
     return {kind:"done",session:logged[0],day:ld,name:logged[0].dayName};}
   if(iso<now)return {kind:"past"};
+  /* A day the user has swapped by hand ("today I'd rather do Anterior") wins over
+     the rotation for that date only; the rotation carries on from whatever is
+     actually trained. */
+  var sw=S.daySwap&&S.daySwap[iso];
+  if(sw){var od=sp.days.filter(function(d){return d.id===sw;})[0];
+    if(od)return {kind:iso===now?"today":"plan",day:od,name:od.name,rest:!od.ex.length,swapped:true};}
   var nd=nextDayOf(sp);
   if(!nd)return {kind:"none"};
   var len=sp.days.length,base=sp.days.indexOf(nd);
-  var doneToday=S.sessions.length&&S.sessions[0].date===now;
+  var doneToday=S.sessions.some(function(x){return x.date===now&&x.dayId;});
   var k=daysApart(now,iso)-(doneToday?1:0);
   var d=sp.days[((base+k)%len+len)%len];
   return {kind:iso===now?"today":"plan",day:d,name:d.name,rest:!d.ex.length};}
@@ -87,8 +100,12 @@ function dayHero(sp,p,iso){
       :'<button class="btn g" data-day="'+p.day.id+'">'+t("Preview the day")+'</button>';
   }
   var name=p.kind==="past"?t("Rest or unlogged"):p.kind==="none"?esc(sp.name):(p.rest?t("Rest day"):p.name);
+  /* Any day still ahead can be switched to another day of the plan. */
+  var swap=(p.kind==="today"||p.kind==="plan")&&sp.days.length>1
+    ?'<button class="thero2-swap" data-swapday="'+iso+'" aria-label="'+esc(t("Change this day's workout"))+'">'
+      +'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg><span>'+t("Change")+'</span></button>':'';
   return '<div class="thero2'+(p.kind==="today"&&!p.rest?' live':'')+'">'
-   +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'
+   +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'+swap
    +'<div class="thero2-top"><span class="tbadge'+(p.rest||p.kind==="past"?' rest':'')+'" aria-hidden="true">'
    +(p.rest||p.kind==="past"?MOON:DUMBBELL)+'</span>'
    +'<div class="thero2-t"><span class="klabel">'+esc(label)+'</span>'
@@ -144,7 +161,12 @@ function vTrain(){
    +'<span class="ttile-s">'+nDays+' '+t(nDays===1?"day":"days")+' · '+esc(sp.name)+'</span></button>'
    +'<button class="ttile" data-train="library"><span class="ttile-i" aria-hidden="true"><span class="ico ico-search"></span></span>'
    +'<span class="ttile-n">'+t("Exercise Library")+'</span>'
-   +'<span class="ttile-s">'+fmtN(LIB.length)+' '+t("exercises")+'</span></button></div>';
+   +'<span class="ttile-s">'+fmtN(LIB.length)+' '+t("exercises")+'</span></button>'
+   /* Cardio and sports, logged as time and effort — a run, a match, a class. */
+   +'<button class="ttile wide" data-actsheet="1"><span class="ttile-i" aria-hidden="true">'+ACTIVITY+'</span>'
+   +'<span class="ttile-tx"><span class="ttile-n">'+t("Cardio & Sports")+'</span>'
+   +'<span class="ttile-s">'+t("Running, football, padel, tennis, classes…")+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button></div>';
   /* ---- other programs ----
      The app's own preset splits, each with its own photograph — see SPLIT_IMG.
      No "premium": everything here is free. */
@@ -284,46 +306,48 @@ function vBodyweight(){
   return h;}
 
 function vLibrary(){
-  var q=V.exq.toLowerCase();
+  var q=V.exq.trim().toLowerCase();
+  /* Token matching, as the picker sheet and the food search do: "incline db" finds
+     "Dumbbell Incline Bench Press" in any word order. */
   var list=LIB.filter(function(l){
     return (V.exm==="All"||l[1]===V.exm)
         && (V.exe==="All"||l[2]===V.exe)
         && (!V.exd||l[4]===V.exd)
-        && (!q||l[0].toLowerCase().indexOf(q)>=0);});
+        && (!q||tokenMatch(q,l[0]+" "+l[1]+" "+l[2]));});
   var h=backBar();
-  /* Canvas screen 9. The frame's "Search 400+ targeted tutorials" is a placeholder;
-     the library's real size goes there, the same figure the Train hub's card shows. */
-  h+='<div class="libhead"><div><h1>'+t("Exercise Library")+'</h1>'
-   +'<p class="sub">'+t("Search")+' '+fmtN(LIB.length)+' '+t("exercises")+'</p></div>'
+  h+='<div class="libhero"><img class="libhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">'
+   +'<div class="libhead"><div><span class="shk">'+t("Training")+'</span><h1>'+t("Exercise Library")+'</h1>'
+   +'<p class="sub">'+fmtN(LIB.length)+' '+t("exercises")+'</p></div>'
    +'<button class="icobtn" data-train="favs" aria-label="'+t("Favourites")
    +(S.favs.length?' ('+S.favs.length+')':'')+'">'
-   +'<span class="ico ico-star" aria-hidden="true"></span></button></div>';
+   +'<span class="ico ico-star" aria-hidden="true"></span></button></div>'
+   +'<div class="libq"><span class="ico ico-search" aria-hidden="true"></span>'
+   +'<input id="exq" type="search" placeholder="'+t("Search exercises, muscles, gear")+'\u2026" '
+   +'value="'+esc(V.exq)+'" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" enterkeyhint="search"'
+   +' aria-label="'+t("Search exercises, muscles, gear")+'">'
+   +(V.exq?'<button class="libq-x" data-clearexq="1" aria-label="'+t("Clear")+'">✕</button>':'')+'</div></div>';
   if(V.exd)h+='<button class="btn d sm" data-cleardiff="1" style="width:auto">'
    +t("Clear difficulty filter")+' \u00b7 '+t(V.exd)+'</button>';
-  h+='<div class="libq"><span class="ico ico-search" aria-hidden="true"></span>'
-   +'<input id="exq" placeholder="'+t("Search exercises, muscles, gear")+'\u2026" '
-   +'value="'+esc(V.exq)+'" autocapitalize="none" autocorrect="off" enterkeyhint="search"></div>';
-  h+='<div class="libfilters">';
+  h+='<div class="libfilters" role="group" aria-label="'+t("Muscle")+'">';
   ["All"].concat(MUSCLES).forEach(function(m){
-    h+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'">'+t(m)+'</button>';});
-  h+='</div><div class="libfilters">';
+    h+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'" aria-pressed="'+(V.exm===m)+'">'+t(m)+'</button>';});
+  h+='</div><div class="libfilters" role="group" aria-label="'+t("Equipment")+'">';
   ["All"].concat(EQUIP).forEach(function(q2){
-    h+='<button class="pill'+(V.exe===q2?" a":"")+'" data-exe="'+q2+'">'+t(q2)+'</button>';});
+    h+='<button class="pill'+(V.exe===q2?" a":"")+'" data-exe="'+q2+'" aria-pressed="'+(V.exe===q2)+'">'+t(q2)+'</button>';});
   h+='</div>';
-  /* "Chest Exercises (4)": what is being shown and how many of it. The frame names
-     the muscle; with no muscle filter on, the honest heading is the whole library. */
-  if(list.length)
-    h+='<h2 class="libcount">'
-     +(V.exm==="All"?t("All Exercises"):t(V.exm)+' '+t("Exercises"))
-     +' ('+fmtN(list.length)+')</h2>';
-  list.slice(0,150).forEach(function(l){
-    h+='<button class="librow" data-exdetail="'+esc(l[0])+'">'+thumb(l[0],62)
-     +'<span class="librow-t"><span class="librow-n">'+esc(exName(l[0]))+'</span>'
-     +'<span class="librow-s">'+t(l[1])+' \u00b7 <b>'+t(l[2])+'</b></span></span>'
-     +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
-  if(list.length>150)h+='<p class="tiny">'+t("Showing the first 150. Narrow the filters.")+'</p>';
+  if(list.length){
+    h+='<div class="tsec"><h2 class="tsec-h">'
+     +(V.exm==="All"?t("All Exercises"):t(V.exm)+' '+t("Exercises"))+'</h2>'
+     +'<span class="libn">'+fmtN(list.length)+'</span></div><div class="card tdays">';
+    list.slice(0,120).forEach(function(l){
+      h+='<button class="trow libtrow" data-exdetail="'+esc(l[0])+'">'+thumb(l[0],52)
+       +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span>'
+       +'<span class="trow-s">'+t(l[1])+(l[2]==="Other"&&(l[1]==="Cardio"||l[1]==="Sports")?'':' \u00b7 <b>'+t(l[2])+'</b>')+'</span></span>'
+       +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
+    h+='</div>';}
+  if(list.length>120)h+='<p class="tiny" style="text-align:center">'+t("Showing the first 120. Narrow the filters.")+'</p>';
   if(!list.length)h+=empty("search",
-    q?t("Nothing matches")+" “"+V.exq+"”":t("Nothing matches those filters"),
+    q?t("Nothing matches")+" “"+esc(V.exq)+"”":t("Nothing matches those filters"),
     t("Your gym may call it something else, or it may not be in the library at all."),
     '<button class="btn" data-customex="1">'+t("Add it yourself")+'</button>');
   return h;}
@@ -391,4 +415,4 @@ function vDay(){
   h+='</div>';
   return h;}
 
-export {estMinutes, myDaysList, nextDayOf, vTrain};
+export {estMinutes, myDaysList, nextDayOf, planOn, vTrain};

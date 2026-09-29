@@ -124,6 +124,9 @@ function render(){
   var restored=!rebuilt&&!!wasId&&document.activeElement===was;
   if(!restored&&wasId){
     var back=document.getElementById(wasId);
+    /* Never back into the screen behind an open sheet: that is how the library's
+       search field kept the keyboard up over the exercise sheet. */
+    if(back&&V.sheet&&!sheetEl.contains(back))back=null;
     if(back){
       if(back!==document.activeElement){
         try{back.focus({preventScroll:true});}catch(e){try{back.focus();}catch(e2){}}
@@ -141,8 +144,14 @@ function render(){
   paintMotion(appEl,view);
   paintMotion(sheetEl,"sheet:"+(V.sheet||""));
 
-  var q=document.getElementById("exq");
-  if(!restored&&q){q.focus();try{q.setSelectionRange(q.value.length,q.value.length);}catch(e){}}
+  /* A search field is focused for you only when a picker sheet has just opened on
+     it. The library page used to grab focus on every render, so the keyboard rose
+     the moment it opened and again after anything that repainted it. */
+  var q=V.sheet?sheetEl.querySelector("#exq"):null;
+  if(appearing&&V.sheet){
+    var ae=document.activeElement;
+    if(ae&&ae!==document.body&&!sheetEl.contains(ae)&&ae.blur)ae.blur();}
+  if(opened&&!restored&&q){q.focus();try{q.setSelectionRange(q.value.length,q.value.length);}catch(e){}}
   var av=document.getElementById("askv");
   if(!restored&&av&&document.activeElement!==av){av.focus();try{av.select();}catch(e){}}
   if(opened&&!restored&&!q&&!av){

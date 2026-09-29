@@ -348,4 +348,4 @@ function lockScroll(on){
 }
 
 
-export {alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, streak, tap, toast, V};
+export {alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};

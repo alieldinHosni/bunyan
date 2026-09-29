@@ -1,6 +1,7 @@
 /* Bunyan — app
    Entry point: event listeners, wiring and boot. */
-import {ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val} from "./ui/actions.js";
+import {ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startActivity, startDay, syncDraft, val} from "./ui/actions.js";
+import {actKcal} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
 import {loadExDB, loadInstructions, muscleOf, MUSCLES} from "./data/exercises.js";
 import {applyLang} from "./i18n/exnames.js";
@@ -77,6 +78,14 @@ document.addEventListener("click",function(ev){
 
   /* ---- splits & days */
   if(D.mydays){openSheet("mydays");return;}
+  if(D.clearexq){V.exq="";render();var qq=document.getElementById("exq");if(qq)qq.focus();return;}
+  if(D.swapday){openSheet("swapday",{date:D.swapday});return;}
+  if(D.swapto!==undefined&&V.sheet==="swapday"){
+    var swd=V.sd.date;S.daySwap=S.daySwap||{};
+    /* Old swaps are dropped as they pass; only dates still ahead mean anything. */
+    Object.keys(S.daySwap).forEach(function(k){if(k<today())delete S.daySwap[k];});
+    if(D.swapto)S.daySwap[swd]=D.swapto;else delete S.daySwap[swd];
+    saveDB();closeSheet();toast(t("Workout changed"));return;}
   /* From the My Training sheet, a day or the programs list replaces the sheet. */
   if((D.train||D.day)&&V.sheet){V.sheet=null;V.sd=null;}
   if(D.train){pushNav();V.train=D.train;render();return;}
@@ -195,6 +204,19 @@ document.addEventListener("click",function(ev){
     V.draft[id]=Math.min(max,Math.max(min,r1(num(cur)+d1)));
     render();return;}
   if(D.rpe){V.draft.rpe=+D.rpe;render();return;}
+  /* ---- cardio and sports: one bout of time and effort */
+  if(D.actint){V.draft.rpe=+D.actint;render();return;}
+  if(D.logact){
+    var ea=S.active&&S.active.entries[V.logIdx];if(!ea)return;
+    var mEl=document.getElementById("in_min"),kEl=document.getElementById("in_km");
+    var amin=Math.max(1,Math.round(num(mEl&&mEl.value!==""?mEl.value:V.draft.min,30)));
+    var akm=kEl&&kEl.value!==""?Math.max(0,r1(num(kEl.value))):0;
+    var arpe=V.draft.rpe||6;
+    ea.sets.push({w:0,r:0,min:amin,km:akm,rpe:arpe,kcal:actKcal(ea.name,amin,arpe,lastWeight())});
+    V.draft.min=amin;V.draft.km=akm;
+    noteSet(S.active);V.fresh=ea.sets.length-1;play("set");tap("ok");saveDB();render();return;}
+  if(D.quickact){V.sheet=null;V.sd=null;startActivity(D.quickact);return;}
+  if(D.actsheet){openSheet("acts");return;}
   /* Complete the active set. Reads the live inputs first so a value typed but not
      blurred is never lost. */
   if(D.logset){
@@ -880,6 +902,8 @@ document.addEventListener("input",function(ev){
     var k=id.slice(3),v=parseFloat(ev.target.value);
     /* The field shows the user's unit; the draft is always kilograms. */
     if(isFinite(v))V.draft[k]=(k==="w")?toKg(v):v;
+    if(k==="min"){var ak=document.getElementById("actKcal"),ae2=S.active&&S.active.entries[V.logIdx];
+      if(ak&&ae2)ak.textContent=fmtN(actKcal(ae2.name,num(V.draft.min),V.draft.rpe||6,lastWeight()))+" kcal";}
     return;}});
 /* Keyboard: Escape closes any sheet, Enter submits the ask sheet. Sheets were
    previously unreachable by keyboard entirely. */
@@ -1092,7 +1116,11 @@ function readSE(){
     e.sets.forEach(function(st,si){
       var a=document.getElementById("se_w_"+ei+"_"+si),b=document.getElementById("se_r_"+ei+"_"+si);
       if(a)st.w=a.value===""?0:toKg(a.value);
-      if(b&&b.value!=="")st.r=Math.max(0,Math.round(num(b.value)));});});
+      if(b&&b.value!=="")st.r=Math.max(0,Math.round(num(b.value)));
+      var m=document.getElementById("se_m_"+ei+"_"+si),k=document.getElementById("se_k_"+ei+"_"+si);
+      if(m&&m.value!==""){st.min=Math.max(1,Math.round(num(m.value)));
+        st.kcal=actKcal(e.name,st.min,st.rpe||6,lastWeight())||st.kcal||0;}
+      if(k)st.km=k.value===""?0:Math.max(0,r1(num(k.value)));});});
 }
 function askDelSession(id){
   if(!id)return;
