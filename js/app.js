@@ -5,7 +5,7 @@ import {t} from "./i18n/dict.js";
 import {loadExDB, loadInstructions, muscleOf, MUSCLES} from "./data/exercises.js";
 import {applyLang} from "./i18n/exnames.js";
 import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, targetKcal} from "./engine/formulas.js";
-import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, toLogItem, UNITS} from "./engine/nutrition.js";
+import {amountLabel, convertItem, defaultUnit, FOODDB, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundQty, toLogItem, unitOf, unitStep} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
 import {render} from "./ui/render.js";
@@ -95,6 +95,12 @@ document.addEventListener("click",function(ev){
   if(D.exsteps){V.exsteps=!V.exsteps;render();return;}
   if(D.exmiss){V.exmiss=!V.exmiss;render();return;}
   if(D.range){V.range=+D.range;render();return;}
+  if(D.psec){V.psec=D.psec;render();
+    /* Keep focus on the tab that was chosen, as a tablist should. */
+    var pt=document.getElementById("pt-"+D.psec);
+    if(pt&&el.getAttribute("role")==="tab")pt.focus();
+    else window.scrollTo(0,0);            /* "See all" lands at the top of Strength */
+    return;}
   if(D.showall){V.showAll=!V.showAll;render();return;}
   if(D.bwsplit){pushNav();V.train="bodyweight";render();return;}
   if(D.bwcat){pushNav();V.exm=D.bwcat==="All"?"All":D.bwcat;V.exe="Bodyweight";V.exq="";
@@ -267,9 +273,11 @@ document.addEventListener("click",function(ev){
     saveDB();closeSheet();return;}
   if(D.savemeasure){
     var rec={date:today()};
-    [["m_chest","chest"],["m_waist","waist"],["m_arms","arms"],["m_thighs","thighs"],
-     ["m_calves","calves"],["m_neck","neck"]].forEach(function(m){
+    [["m_chest","chest"],["m_waist","waist"],["m_hips","hips"],["m_arms","arms"],["m_thighs","thighs"],
+     ["m_calves","calves"],["m_neck","neck"],["m_bf","bf"]].forEach(function(m){
       var v=num(val(m[0]));if(v)rec[m[1]]=v;});
+    /* A percentage, not a tape reading: anything outside 2-70 is a typo. */
+    if(rec.bf&&(rec.bf<2||rec.bf>70)){toast(t("Body fat should be a percentage between 2 and 70."));return;}
     var e5=S.body.filter(function(b){return b.date===today();})[0];
     if(e5)Object.assign(e5,rec);else S.body.push(rec);
     S.body.sort(function(a,b){return a.date<b.date?-1:1;});
@@ -286,15 +294,19 @@ document.addEventListener("click",function(ev){
     render();return;}
   if(D.qty){
     var pr6=D.qty.split("|"),it6=V.food.items[+pr6[0]];
-    var step=(it6.parsed.unit&&UNITS[it6.parsed.unit])?
-      (UNITS[it6.parsed.unit]>=100?50:UNITS[it6.parsed.unit]>=15?1:10):1;
-    var cur6=it6.parsed.qty==null?1:it6.parsed.qty;
-    it6.parsed.qty=Math.max(step<1?0.5:0.5,r1(cur6+(+pr6[1])*(step<1?0.5:1)));
+    if(!it6)return;
+    /* A step that suits the unit: 25 ml, 10 g, a tenth of a litre, one serving. */
+    var u6=it6.parsed.unit||"g",dir=+pr6[1],cur6=it6.parsed.qty==null?1:+it6.parsed.qty;
+    var serv=/^s\d+$/.test(u6),step=unitStep(u6),next6;
+    if(serv)next6=dir<0?(cur6<=1?0.5:cur6-1):(cur6<1?1:cur6+1);
+    else next6=roundQty(Math.max(step,Math.round((cur6+dir*step)/step)*step),u6);
+    it6.parsed.qty=next6;
     recalcItem(it6);render();return;}
   if(D.gram){
     var it7=V.food.items[+D.gram];if(!it7)return;
-    askText({title:it7.name,label:t("Grams"),numeric:true,
-      value:Math.round(it7.grams),cta:t("Set grams"),
+    var uu7=unitOf(it7.food,it7.parsed.unit);
+    askText({title:it7.name,label:t("Amount")+(uu7?" ("+t(uu7.label)+")":""),numeric:true,
+      value:it7.parsed.qty==null?Math.round(it7.grams):it7.parsed.qty,cta:t("Set amount"),
       act:"grams",data:{idx:+D.gram,meal:V.sd&&V.sd.meal}});return;}
   if(D.swapfood){openSheet("pickfood",{idx:+D.swapfood});return;}
   if(D.choose){
@@ -319,9 +331,8 @@ document.addEventListener("click",function(ev){
       if(!found.length){V.food.noresult=q9;render();
         toast(t("Nothing found online for that."));return;}
       var f9=found[0];
-      var g9=gramsFor(f9,100,"g");
-      var newItem={status:"ok",parsed:{raw:q9,query:q9,qty:100,unit:"g"},
-        food:f9,alts:found,grams:100,label:"100 g",src:"off",n:nutritionFor(f9,100),name:f9.n};
+      var newItem=recalcItem({status:"ok",parsed:{raw:q9,query:q9,qty:100,unit:defaultUnit(f9)},
+        food:f9,alts:found,src:"off",name:f9.n});
       var idx9=-1;
       V.food.items.forEach(function(x,i){if(x.status==="unknown"&&x.parsed.query===q9)idx9=i;});
       if(idx9>=0)V.food.items[idx9]=newItem; else V.food.items.push(newItem);
@@ -376,10 +387,8 @@ document.addEventListener("click",function(ev){
     var pool9=(S.myFoods||[]).concat(FOODDB||[]);
     var f10=pool9.filter(function(x){return x.id===D.quickfood;})[0];
     if(!f10)return;
-    var gq=gramsFor(f10,1,null);
-    addItems("Snack",[{fid:f10.id,n:f10.n,label:gq.label,grams:gq.g,src:f10.src||"db",
-      kcal:nutritionFor(f10,gq.g).kcal,p:nutritionFor(f10,gq.g).p,
-      c:nutritionFor(f10,gq.g).c,f:nutritionFor(f10,gq.g).f,fib:nutritionFor(f10,gq.g).fib}],curDate());
+    var q10=recalcItem({parsed:{qty:1,unit:null},food:f10,name:f10.n,src:f10.src||"db"});
+    addItems("Snack",[toLogItem(q10)],curDate());
     if(V.sheet)closeSheet();
     V.tab="food";render();play("set");toast(f10.n+" added.");return;}
   if(D.edititem){
@@ -387,9 +396,33 @@ document.addEventListener("click",function(ev){
     if(!mE)return;
     var itE=mE.items[+prE[1]];
     if(!itE)return;
-    askText({title:itE.n,label:t("Grams"),numeric:true,value:Math.round(itE.grams||0),
-      body:t("Everything recalculates from the amount."),cta:t("Save"),act:"editgrams",
-      data:{meal:prE[0],idx:+prE[1],date:curDate()}});return;}
+    var fE=((S.myFoods||[]).concat(FOODDB||[])).filter(function(x){return x.id===itE.fid;})[0]||null;
+    /* Items logged before units existed have grams and nothing else: they open in
+       the food's natural unit, ml for a drink. */
+    var uE=fE&&(unitOf(fE,itE.unit)||unitOf(fE,defaultUnit(fE)));
+    var qE=fE?(itE.unit&&uE&&uE.k===itE.unit&&itE.qty!=null?itE.qty:roundQty((itE.grams||0)/uE.g,uE.k))
+             :(itE.qty||1);
+    openSheet("edititem",{meal:prE[0],idx:+prE[1],date:curDate(),name:itE.n,
+      food:fE,unit:uE?uE.k:null,qty:qE});
+    return;}
+  if(D.saveedit){
+    var sd=V.sd||{},qS=num(val("ei_q"),0);
+    if(qS<=0){toast(t("Enter an amount."));return;}
+    var mS=dayRec(sd.date).meals[sd.meal],itS=mS&&mS.items[sd.idx];
+    if(!itS){closeSheet();return;}
+    if(sd.food){
+      var uS=unitOf(sd.food,val("ei_u")||sd.unit)||unitOf(sd.food,defaultUnit(sd.food));
+      var gS=qS*uS.g,nS=nutritionFor(sd.food,gS);
+      itS.kcal=nS.kcal;itS.p=nS.p;itS.c=nS.c;itS.f=nS.f;itS.fib=nS.fib;
+      itS.grams=gS;itS.qty=qS;itS.unit=uS.k;itS.label=amountLabel(qS,uS);
+    }else{
+      /* A manual entry has no food behind it, so it scales by servings. */
+      var k=qS/(itS.qty||1);
+      itS.kcal=Math.round(itS.kcal*k);itS.p=r1(itS.p*k);itS.c=r1(itS.c*k);
+      itS.f=r1(itS.f*k);itS.fib=r1((itS.fib||0)*k);
+      itS.grams=(itS.grams||0)*k;itS.qty=qS;itS.label=qS+" \u00d7 "+t("serving");
+    }
+    saveDB();closeSheet();render();return;}
   if(D.dropfood){
     var prF=D.dropfood.split("|"),dF=curDate(),mF=dayRec(dF).meals[prF[0]];
     if(!mF)return;
@@ -668,6 +701,15 @@ document.addEventListener("input",function(ev){
    previously unreachable by keyboard entirely. */
 document.addEventListener("keydown",function(ev){
   if(ev.key==="Escape"&&V.sheet){ev.preventDefault();requestCloseSheet();return;}
+  /* Arrow keys move along the Progress tabs, as they do in any tablist. */
+  if((ev.key==="ArrowRight"||ev.key==="ArrowLeft")&&ev.target.getAttribute&&ev.target.getAttribute("role")==="tab"){
+    var tl=[].slice.call(ev.target.parentNode.querySelectorAll('[role="tab"]')),ti=tl.indexOf(ev.target);
+    var rtl=document.documentElement.dir==="rtl",fw=(ev.key==="ArrowRight")!==rtl;
+    var nx=tl[(ti+(fw?1:-1)+tl.length)%tl.length];
+    if(nx){ev.preventDefault();nx.click();}
+    return;}
+  if(ev.key==="Enter"&&V.sheet==="edititem"&&ev.target.id==="ei_q"){
+    ev.preventDefault();var sb=document.querySelector("[data-saveedit]");if(sb)sb.click();return;}
   if(ev.key==="Enter"&&V.sheet==="ask"&&ev.target.id==="askv"){
     ev.preventDefault();
     var ao=V.sd||{},av2=val("askv");
@@ -675,6 +717,19 @@ document.addEventListener("keydown",function(ev){
     runAct(ao.act,av2);}});
 document.addEventListener("change",function(ev){
   if(ev.target.id==="chartsel"){V.chartEx=ev.target.value;render();return;}
+  /* The unit picker on a draft item: same amount, read in another unit. */
+  var us=ev.target.dataset?ev.target.dataset.unitsel:undefined;
+  if(us!==undefined&&V.food&&V.food.items&&V.food.items[+us]){
+    convertItem(V.food.items[+us],ev.target.value);render();return;}
+  /* ...and on a logged one, where the field is converted in place so a half-typed
+     figure is not lost to a re-render. */
+  if(ev.target.id==="ei_u"&&V.sheet==="edititem"&&V.sd&&V.sd.food){
+    var from=unitOf(V.sd.food,V.sd.unit),to=unitOf(V.sd.food,ev.target.value),qf=document.getElementById("ei_q");
+    if(from&&to&&qf){
+      var qv=num(qf.value,0);
+      if(qv>0)qf.value=roundQty(qv*from.g/to.g,to.k);
+      V.sd.unit=to.k;V.sd.qty=num(qf.value,0);}
+    return;}
   /* Editing a set that is already logged, in place. Previously the only way to fix
      a typo was to delete the set and re-enter it. */
   var si=ev.target.dataset?ev.target.dataset.setidx:undefined;
@@ -745,10 +800,10 @@ function onBarcode(code){
       render();
       toast(t("That product is not in the database yet."));
       openSheet("manual",{name:"",bc:code,meal:(V.sd&&V.sd.meal)||"Snack"});return;}
-    var g=gramsFor(food,100,"g");
-    V.food.items.push({status:"ok",parsed:{raw:code,query:food.n,qty:100,unit:"g"},
-      food:food,alts:[food],grams:g,label:"100 g",src:food.src||"off",
-      n:nutritionFor(food,100),name:food.n});
+    /* recalcItem, not a hand-built item: this used to store gramsFor()'s whole
+       {g,label} object as the grams, so a scanned product showed "NaN g". */
+    V.food.items.push(recalcItem({status:"ok",parsed:{raw:code,query:food.n,qty:100,unit:defaultUnit(food)},
+      food:food,alts:[food],src:food.src||"off",name:food.n}));
     saveDB();render();
     play("set");
     toast(food.n+(local?" · "+t("remembered on this device"):""));

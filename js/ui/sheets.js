@@ -5,7 +5,7 @@ import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, is
 import {exName} from "../i18n/exnames.js";
 import {MEALS, srcBadge} from "./views/food.js";
 import {backupAgeDays, bestE1RM, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, sessionKcal, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
-import {sumNutrition} from "../engine/nutrition.js";
+import {isLiquid, liquidDensity, sumNutrition, unitOf, unitsFor} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {scanSupported} from "../scan.js";
 import {GOALS, LEVELS, splitCandidates} from "../engine/plan.js";
@@ -14,6 +14,28 @@ import {buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapSt
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
 import {CUES, MISTAKES, sparkline, stepper, V} from "./view.js";
+
+/* ---- amounts: shared by the draft cards and the edit sheet ---------------------- */
+/* The unit picker. Every unit the food can be measured in, its own servings last. */
+function unitSelect(food,cur,attr){
+  return '<select class="fqty-u" '+attr+' aria-label="'+t("Unit")+'">'
+   +unitsFor(food).map(function(u){
+     return '<option value="'+esc(u.k)+'"'+(u.k===cur?" selected":"")+'>'+esc(t(u.label))+'</option>';
+   }).join("")+'</select>';}
+/* What the amount button reads: "250", "0.25", "2" — the unit is the picker's job. */
+function qtyText(it){
+  var q=it.parsed&&it.parsed.qty;
+  return q==null?String(Math.round(it.grams)):String(q);}
+/* The line under the food name. A plain unit says only that; a serving ("1 × glass")
+   also says what it comes to — millilitres for a drink, grams for anything else. */
+function amountNote(it){
+  var u=it.food&&unitOf(it.food,it.parsed&&it.parsed.unit);
+  var liq=isLiquid(it.food),g=Math.round(it.grams);
+  if(u&&!/^s\d+$/.test(u.k))return it.label;
+  return it.label+' \u00b7 '+(liq?"\u2248 "+g+" ml":g+" g");}
+/* Per 100 ml only where that is the same figure as per 100 g. Oil is a liquid, but its
+   database value is per 100 g and a millilitre of it weighs 0.92 g. */
+function per100(f){return isLiquid(f)&&liquidDensity(f)===1?"100 ml":"100 g";}
 
 /* ============================================================ sheets */
 function vSheet(){
@@ -221,13 +243,16 @@ function vSheet(){
      +'<button class="btn" data-saverec="1">Save</button>';
   }
   else if(V.sheet==="measure"){
-    var last=S.body.filter(function(x){return x.chest||x.waist;}).slice(-1)[0]||{};
+    /* Each field shows its own last reading as a hint rather than a value. Prefilled
+       values were saved again as today's reading, so measuring only the waist logged
+       an unchanged chest too and Progress reported "±0.0 cm" for it. */
+    var lastOf=function(k){var r=S.body.filter(function(x){return num(x[k]);}).slice(-1)[0];return r?r[k]:"";};
     b='<h2>'+t("Measurements")+'</h2><p class="tiny" style="margin:2px 0 14px">'+t("In centimetres. Leave blank to skip.")+'</p>'
      +'<div class="grid2">'
-     +[["Chest","m_chest","chest"],["Waist","m_waist","waist"],["Arms","m_arms","arms"],
-       ["Thighs","m_thighs","thighs"],["Calves","m_calves","calves"],["Neck","m_neck","neck"]]
-      .map(function(m){return '<div><label class="tiny">'+m[0]+'</label>'
-        +'<input id="'+m[1]+'" type="number" step="0.5" value="'+(last[m[2]]||"")+'"></div>';}).join("")
+     +[["Chest","m_chest","chest"],["Waist","m_waist","waist"],["Hips","m_hips","hips"],["Arms","m_arms","arms"],
+       ["Thighs","m_thighs","thighs"],["Calves","m_calves","calves"],["Neck","m_neck","neck"],["Body fat %","m_bf","bf"]]
+      .map(function(m){return '<div><label class="tiny" for="'+m[1]+'">'+t(m[0])+'</label>'
+        +'<input id="'+m[1]+'" type="number" inputmode="decimal" step="0.1" placeholder="'+esc(lastOf(m[2]))+'"></div>';}).join("")
      +'</div><button class="btn" data-savemeasure="1">'+t("Save for today")+'</button>';
   }
   else if(V.sheet==="text"){
@@ -272,7 +297,7 @@ function vSheet(){
       (it.alts||[]).forEach(function(f,k){
         b+='<button class="item" data-choose="'+idx+'|'+k+'">'
          +'<div><div style="font-weight:600">'+esc(f.n)+'</div>'
-         +'<div class="tiny">'+esc(t(f.cat||""))+' · '+f.kcal+' kcal/100 g</div></div>'
+         +'<div class="tiny">'+esc(t(f.cat||""))+' · '+f.kcal+' kcal/'+per100(f)+'</div></div>'
          +'<span class="chev">+</span></button>';});
       b+='</div><button class="btn g sm" data-dropitem="'+idx+'" '
        +'style="margin:8px 0 14px">'+t("None of these")+'</button>';
@@ -284,7 +309,7 @@ function vSheet(){
       known.forEach(function(it,i){
         b+='<div class="card" data-k="fi:'+i+'"><div class="row"><div style="flex:1">'
          +'<div style="font-weight:700">'+esc(it.name)+'</div>'
-         +'<div class="tiny">'+esc(it.label)+' \u00b7 '+Math.round(it.grams)+' g</div></div>'
+         +'<div class="tiny">'+esc(amountNote(it))+'</div></div>'
          +srcBadge(it.src)+'</div>'
          +'<div class="row" style="margin-top:8px"><span class="metric" style="font-size:20px">'
          +fmtN(it.n.kcal)+'<span class="unit">kcal</span></span>'
@@ -292,16 +317,17 @@ function vSheet(){
          /* Five controls on one line is wider than a phone, which forced the whole
             sheet to scroll sideways and made it look corrupted. The amount and its
             steppers are one row; the three text actions sit under it. Tapping the
-            amount opens the same grams prompt the old "Set grams" button did, so
+            amount opens the same amount prompt the old "Set grams" button did, so
             nothing is lost by dropping the duplicate. */
          +'<div class="fqty mt">'
          +'<button class="btn g sm" data-qty="'+i+'|-1" aria-label="'+t("Less")+'">\u2212</button>'
-         +'<button class="fqty-v" data-gram="'+i+'" aria-label="'+t("Set grams")+'">'
-         +Math.round(it.grams)+' g</button>'
-         +'<button class="btn g sm" data-qty="'+i+'|1" aria-label="'+t("More")+'">+</button></div>'
+         +'<button class="fqty-v" data-gram="'+i+'" aria-label="'+t("Set amount")+'">'
+         +esc(qtyText(it))+'</button>'
+         +'<button class="btn g sm" data-qty="'+i+'|1" aria-label="'+t("More")+'">+</button>'
+         +unitSelect(it.food,it.parsed.unit,'data-unitsel="'+i+'"')+'</div>'
          +'<div class="facts">'
          +(it.alts&&it.alts.length>1?'<button data-swapfood="'+i+'">'+t("Change")+'</button>':'')
-         +'<button data-gram="'+i+'">'+t("Set grams")+'</button>'
+         +'<button data-gram="'+i+'">'+t("Set amount")+'</button>'
          +'<button class="danger" data-dropitem="'+i+'">'+t("Remove")+'</button></div>'
          +(it.status==="ambiguous"?'<p class="tiny" style="margin:8px 0 0;color:var(--gold)">'
             +'Not certain this is the right match. Tap Change if it is wrong.</p>':'')
@@ -333,7 +359,7 @@ function vSheet(){
       b+='<div class="overline">'+t("Frequent")+'</div><div class="list">';
       fq.forEach(function(f){
         b+='<button class="item" data-quickfood="'+esc(f.id)+'"><div><div style="font-weight:600">'
-         +esc(f.n)+'</div><div class="tiny">'+f.kcal+' kcal / 100 g</div></div>'
+         +esc(f.n)+'</div><div class="tiny">'+f.kcal+' kcal / '+per100(f)+'</div></div>'
          +'<span class="pill a">Add</span></button>';});
       b+='</div>';}
     b+='<button class="btn g" data-manual="">'+t("Enter nutrition manually")+'</button>';
@@ -358,13 +384,28 @@ function vSheet(){
      +'<button class="btn" data-savemanual="1">'+t("Add it")+'</button>'
      +'<button class="btn g" data-savemyfood="1">'+t("Save to my foods and add")+'</button>';
   }
+  else if(V.sheet==="edititem"){
+    /* A logged item's amount, in the unit it was logged in — or any other. Changing
+       the unit converts the figure in the field, so 250 ml becomes 0.25 L rather
+       than 250 L. */
+    var ed=V.sd||{};
+    b='<h2>'+esc(ed.name||"")+'</h2>'
+     +'<p class="sub" style="margin:6px 0 16px">'+t("Everything recalculates from the amount.")+'</p>'
+     +'<label class="sec" for="ei_q" style="margin-top:0;display:block">'+t("Amount")+'</label>'
+     +'<div class="fqty"><input id="ei_q" type="number" inputmode="decimal" step="any" min="0"'
+     +' value="'+esc(ed.qty)+'" autocomplete="off" enterkeyhint="done" style="flex:1;min-width:0">'
+     +(ed.food?unitSelect(ed.food,ed.unit,'id="ei_u"')
+       :'<span class="fqty-u fqty-fixed">'+t("serving")+'</span>')
+     +'</div>'
+     +'<button class="btn" data-saveedit="1">'+t("Save")+'</button>';
+  }
   else if(V.sheet==="pickfood"){
     var pi=V.sd.idx, cur=V.food.items[pi];
     b='<h2>'+t("Which one?")+'</h2><p class="tiny" style="margin:2px 0 12px">You typed \u201c'
      +esc(cur.parsed.raw)+'\u201d</p><div class="list">';
     cur.alts.forEach(function(f,i){
       b+='<button class="item" data-choose="'+pi+'|'+i+'"><div><div style="font-weight:600">'
-       +esc(f.n)+'</div><div class="tiny">'+f.kcal+' kcal / 100 g \u00b7 '+esc(f.cat||"")+'</div></div>'
+       +esc(f.n)+'</div><div class="tiny">'+f.kcal+' kcal / '+per100(f)+' \u00b7 '+esc(f.cat||"")+'</div></div>'
        +(f.id===cur.food.id?'<span class="pill a">'+t("Current")+'</span>':'<span class="chev">\u203a</span>')
        +'</button>';});
     b+='</div><button class="btn g" data-online="'+esc(cur.parsed.query)+'">'+t("Search online instead")+'</button>';

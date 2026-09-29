@@ -389,6 +389,14 @@ and how typed input is read, nothing else — so switching units re-displays you
 rather than rewriting it. Convert at the edges with `toDisp()` and `toKg()`; never
 convert anything on its way into storage.
 
+**Food amounts** are stored as grams plus the amount and unit the user chose (`qty`,
+`unit` on each logged item). Drinks — the Beverages category, or anything whose name is
+plainly a drink, soup or oil (`isLiquid()` in `engine/nutrition.js`) — default to ml and
+offer ml, L, fl oz, cup, tbsp and tsp; solids offer g, kg, oz and lb. Each food's own
+servings ("large egg", "can") are listed after those. Volume becomes grams through the
+food's density: 1 for water-based drinks, 0.92 for oils. Switching unit re-reads the same
+amount (250 ml becomes 0.25 L); it never changes what was eaten.
+
 ## The identity
 
 **Bunyan (بنيان)** means a structure or edifice — something built deliberately, course

@@ -5,10 +5,10 @@ import {LIB, muscleOf, muscleOfEntry} from "../data/exercises.js";
 import {avgRPE, prevPerf, prFor, recommend, sessionVolume} from "../engine/formulas.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {leave} from "./motion.js";
-import {FOODDB, nutritionFor, toLogItem} from "../engine/nutrition.js";
+import {defaultUnit, recalcItem, toLogItem} from "../engine/nutrition.js";
 import {render} from "./render.js";
 import {day, ex} from "../data/splits.js";
-import {adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
+import {adoptSplit, allSplits, CUR, curProfile, dayOf, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
 import {MEM, num, PERSIST, r1, today, uid, wr} from "../util.js";
 import {endRest, keepAwake, play, tap, toast, V} from "./view.js";
 
@@ -44,22 +44,6 @@ ACT.delday=function(_,id){
   V.train="days";saveDB();render();};
 ACT.delsplit=function(_,id){
   S.userSplits=(S.userSplits||[]).filter(function(x){return x.id!==id;});
-  saveDB();render();};
-/* Editing a logged food item: recompute from the source food where we still have it,
-   scale what was stored where we do not. */
-ACT.editgrams=function(v,d){
-  var g=num(v,0);
-  if(g<=0){toast(t("Enter a number of grams."));return;}
-  var m=dayRec(d.date).meals[d.meal],it=m&&m.items[d.idx];
-  if(!it)return;
-  var f=((S.myFoods||[]).concat(FOODDB||[]))
-        .filter(function(x){return x.id===it.fid;})[0];
-  if(f){var n=nutritionFor(f,g);
-    it.kcal=n.kcal;it.p=n.p;it.c=n.c;it.f=n.f;it.fib=n.fib;}
-  else{var k=it.grams?g/it.grams:1;
-    it.kcal=Math.round(it.kcal*k);it.p=r1(it.p*k);it.c=r1(it.c*k);
-    it.f=r1(it.f*k);it.fib=r1((it.fib||0)*k);}
-  it.grams=g;it.label=g+" g";
   saveDB();render();};
 ACT.customex=function(name,d){
   name=String(name).trim();
@@ -104,13 +88,15 @@ ACT.wipe=function(word){
   toast(t("Everything was deleted."));};
 /* Both of these are reached from inside the food sheet, so they hand control back
    to it rather than dropping the user on the screen behind. */
+/* The amount is read in the item's current unit — typing 0.5 against litres is half a
+   litre, not half a gram. */
 ACT.grams=function(v,d){
-  var g=num(v,0),it=V.food&&V.food.items[d.idx];
+  var q=num(v,0),it=V.food&&V.food.items[d.idx];
   openSheet("addfood",{meal:d.meal});
-  if(g<=0){toast(t("Enter a number of grams."));return;}
+  if(q<=0){toast(t("Enter an amount."));return;}
   if(!it)return;
-  it.grams=g;it.label=g+" g";it.parsed.unit="g";it.parsed.qty=g;
-  it.n=nutritionFor(it.food,g);render();};
+  if(!it.parsed.unit)it.parsed.unit=defaultUnit(it.food);
+  it.parsed.qty=q;recalcItem(it);render();};
 ACT.savemeal=function(name,d){
   var good=V.food.items.filter(function(i){return i.status!=="unknown";}).map(toLogItem);
   openSheet("addfood",{meal:d.meal});
