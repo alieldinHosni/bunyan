@@ -253,6 +253,12 @@ document.addEventListener("click",function(ev){
     if(D.rest==="resume"){V.restPaused=false;V.restEnd=Date.now()+V.restLeft*1000;
       setBeeped(false);paintRest();return;}
     if(D.rest==="skip"){endRest();render();return;}
+    /* From the rest-over screen: start another countdown of that length. */
+    if(D.rest==="ext30"||D.rest==="ext60"){
+      var ext=D.rest==="ext30"?30:60;
+      alarmStop();V.restDone=false;V.restPaused=false;
+      V.restTotal=ext;V.restEnd=Date.now()+ext*1000;setBeeped(false);setLastTick(99);
+      render();return;}
     if(V.restPaused){V.restLeft=Math.max(0,V.restLeft+(+D.rest));
       V.restTotal=Math.max(15,V.restTotal+(+D.rest));
       /* Trimming a paused timer to zero ends the rest, which is a real change. */

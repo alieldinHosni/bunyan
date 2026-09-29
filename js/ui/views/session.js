@@ -110,7 +110,7 @@ function vLogger(){
   var clock=sessionClock(a);
 
   /* --- sticky header: identity, elapsed, overall progress --- */
-  var h='<div class="ss-top"><div class="ss-row">'
+  var h='<div class="sess"><div class="sess-glow" aria-hidden="true"></div><div class="ss-top"><div class="ss-row">'
    /* A close, not a back: the edge-swipe is held off while a session is live, so this
       is the way out and it should say so. Same data-back handler, so the leave
       confirmation and everything behind it are untouched. */
@@ -145,6 +145,10 @@ function vLogger(){
      for artwork; the library ships a real photograph of each position, so those are used
      instead — closer to the design's intent than copying its stand-in would be. */
   var med=exMedia(e.name),img0=exImg(e.name,0),img1=exImg(e.name,1);
+  /* The exercise as one card over the Bunyan horse, as the other tabs set their
+     heroes: what it is, how it looks, what it asks for. */
+  h+='<section class="exhero"><img class="exhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">'
+   +'<div class="exhero-k">'+t("Exercise")+' '+(V.logIdx+1)+' '+t("of")+' '+a.entries.length+'</div>';
   h+='<div class="exhead">'
    +'<h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
    +'<button class="infobtn" data-exdetail="'+esc(e.name)+'" aria-label="'+t("How to do it")+'">i</button>'
@@ -164,7 +168,7 @@ function vLogger(){
    +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+'</span>'
    +(difficultyOf(e.name)?'<span class="etag hot">'+esc(t(difficultyOf(e.name)))+'</span>':'')
    +(pr.w?'<span class="pill gold">PR '+fmtW(pr.w)+'</span>':'')
-   +'</div>';
+   +'</div></section>';
 
   /* The frame's recommendation banner, above the table where it puts it. The figure is
      the recommender's own, and it only appears before the first set of the exercise —
@@ -185,6 +189,9 @@ function vLogger(){
               :["",t("Set"),t("Last"),wUnit().toUpperCase(),t("Reps")];
   if(rpeCol)hd.push("RPE");
   hd.push("");
+  var doneHere=e.sets.length;
+  h+='<section class="setcard"><div class="setcard-h"><h2>'+t("Sets")+'</h2>'
+   +'<span class="setcard-c"><b>'+Math.min(doneHere,rows)+'</b> / '+rows+' '+t("done")+'</span></div>';
   h+='<div class="setgrid"><div class="setrow hd" style="grid-template-columns:'+cols+'">'
    +hd.map(function(x){return '<span>'+x+'</span>';}).join("")+'</div>';
 
@@ -239,8 +246,8 @@ function vLogger(){
   }
   h+='</div>';
   /* Adds a set beyond the prescription, and sits under whatever the last row is. */
-  h+='<div class="addrow"><button class="addset" data-addrow="1" aria-label="'
-   +t("Add a set")+'">+</button></div>';
+  h+='<div class="addrow"><button class="addset2" data-addrow="1">'
+   +'<span aria-hidden="true">+</span>'+t("Add a set")+'</button></div></section>';
 
   /* The recommendation now sits above the table, in the frame's banner. */
   var hint=progressionHint(e);
@@ -256,7 +263,7 @@ function vLogger(){
      What remains is the one thing the row cannot say: where you go when the
      exercise is finished. */
   if(active<0){
-    h+='<button class="btn ok" data-nextex="1">'
+    h+='<button class="btn ss-next" data-nextex="1">'
      +(V.logIdx>=a.entries.length-1?t("Finish workout"):t("Next exercise"))+'</button>';
   }else if(run.length>1){
     /* Inside a superset the next set is on a different exercise, which the row
@@ -272,10 +279,10 @@ function vLogger(){
      five — how to, plates, note, finish, discard — are behind the header's overflow,
      which is also what Round 4 item 1 asks for: one primary action, everything
      infrequent collapsed. Nothing was removed, only moved. */
-  h+='<div class="ss-links">'
-   +'<button data-swap="1">'+t("Replace Exercise")+'</button>'
-   +(V.logIdx<a.entries.length-1?'<button data-nextex="1">'+t("Skip Exercise")+'</button>':'')
-   +'</div>';
+  h+='<div class="ss-acts">'
+   +'<button class="ss-act" data-swap="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>'+t("Replace Exercise")+'</button>'
+   +(V.logIdx<a.entries.length-1?'<button class="ss-act" data-nextex="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l10 7-10 7zM19 5v14"/></svg>'+t("Skip Exercise")+'</button>':'')
+   +'</div></div>';
 
   /* The rest screen is no longer part of this string; syncRest() owns it. */
   return h;}
@@ -328,45 +335,64 @@ function vRest(a,e,rows,timed){
     nr=nxe?(nxe.planned.sets+' × '+nxe.planned.lo
       +(nxe.planned.hi!==nxe.planned.lo?'–'+nxe.planned.hi:'')+' '+t("reps")):"";
   }
-  /* Time's up. A separate screen rather than a label on the countdown, because sound is
-     not guaranteed to arrive — the silent switch kills it outright and a backgrounded
-     tab suspends it — so the screen has to be the alert on its own. Full-bleed accent,
-     the ring gone, one control. Nothing here is subtle. */
+  /* What the set just logged was, for the line under REST PERIOD: "Set 2 of 4
+     complete · 85 kg × 8". */
+  var doneTxt=lastSet?(t("Set")+' '+e.sets.length+' '+t("of")+' '+rows+' '+t("complete")
+      +(timed?' · '+lastSet.r+'s':lastSet.w?' · '+toDisp(lastSet.w)+' '+wUnit()+' × '+lastSet.r
+                                          :' · '+lastSet.r+' '+t("reps"))):esc(exName(e.name));
+  var art='<div class="rt-art" aria-hidden="true"><img src="img/rest-swirl.jpg" alt="" decoding="async"></div>';
+  var upnext='<div class="rt-next"><div class="rt-next-k">'+t("Up next")+'</div>'
+     +'<div class="rt-next-v">'+nx+'</div>'+(nr?'<div class="rt-next-r">'+nr+'</div>':'')+'</div>';
+
+  /* Time's up. Its own screen rather than a label on the countdown, because sound is
+     not guaranteed to arrive — the silent switch kills it and a backgrounded tab
+     suspends it — so the screen has to be the alert. And it asks what is next rather
+     than offering one button: the next set, a little more rest, the next exercise, or,
+     after the last set of the day, the finish. */
   if(V.restDone){
-    return '<div class="restwrap done" role="alertdialog" aria-label="'+t("Rest over")+'">'
-     +'<div class="restlabel">'+t("Rest period")+'</div>'
-     +'<div class="restdone-big" aria-live="assertive">'+t("Rest over")+'</div>'
-     +'<div class="upnext"><div class="ul">'+t("Up next")+'</div>'
-     +'<div class="uv">'+nx+'</div>'+(nr?'<div class="ur">'+nr+'</div>':'')+'</div>'
-     +'<button class="rbtn main restdone-go" data-rest="skip">'+t("I am ready")+'</button></div>';
+    var more=e.sets.length<rows, last=V.logIdx>=a.entries.length-1;
+    var primary=more
+      ?'<button class="rt-go" data-rest="skip">'+ARROW+'<span>'+t("Start next set")+'</span></button>'
+      :last?'<button class="rt-go" data-finish="1">'+FLAG+'<span>'+t("Finish workout")+'</span></button>'
+      :'<button class="rt-go" data-nextex="1">'+ARROW+'<span>'+t("Next exercise")+'</span></button>';
+    return '<div class="restwrap rt rt-done" role="alertdialog" aria-labelledby="rtDoneH">'+art
+     +'<div class="rt-k">'+t("Rest period")+'</div><div class="rt-sub">'+doneTxt+'</div>'
+     +'<div class="rt-check" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="rt-check-t"/>'
+     +'<circle cx="60" cy="60" r="52" class="rt-check-r"/><path d="M40 61l13 13 27-29" class="rt-check-m"/></svg></div>'
+     +'<div class="rt-k">'+t(more?"Rest complete":last?"Last set done":"Exercise complete")+'</div>'
+     +'<h2 class="rt-h" id="rtDoneH" aria-live="assertive">'
+     +t(more?"Ready for the next set?":last?"That was the last set.":"Ready for the next exercise?")+'</h2>'
+     +(more?upnext.replace('rt-next"','rt-next sm"'):'')
+     +primary
+     +'<div class="rt-opt"><span class="rt-opt-i" aria-hidden="true">'+CLOCKPLUS+'</span>'
+     +'<span class="rt-opt-t"><b>'+t("Extend rest")+'</b><span>'+t("Add more time to your rest")+'</span></span>'
+     +'<span class="rt-opt-b"><button dir="ltr" data-rest="ext30">+30s</button><button dir="ltr" data-rest="ext60">+60s</button></span></div>'
+     +(more&&!last?'<button class="rt-opt" data-nextex="1"><span class="rt-opt-i" aria-hidden="true">'+SKIP+'</span>'
+       +'<span class="rt-opt-t"><b>'+t("Next exercise")+'</b><span>'+t("Skip remaining sets")+'</span></span>'
+       +'<span class="rt-chev" aria-hidden="true">'+CHEV+'</span></button>':'')
+     +(!last||more?'<button class="rt-end" data-finish="1"><span>'+t("End workout")+'</span></button>':'')
+     +'</div>';
   }
-  return '<div class="restwrap" role="dialog" aria-label="'+t("Rest")+'">'
-   /* The receipt for the set just logged. The frame puts it at the top edge, where it
-      confirms without competing with the clock. */
-   /* The frame carries a tick glyph in the text as well as the icon beside it. One
-      tick is the mark; two read as a typo. */
-   +(lastSet?'<div class="restbanner"><i class="ico ico-check"></i>'
-     +t("Set")+' '+e.sets.length+' '+t("complete")+'</div>':'')
-   +'<div class="restlabel">'+t("Rest period")+'</div>'
-   +'<div class="restsub">'+didTxt+'</div>'
-   +'<div class="ringwrap"><svg viewBox="0 0 180 180" aria-hidden="true">'
-   +'<circle cx="90" cy="90" r="79" fill="none" stroke="var(--raised)" stroke-width="12"/>'
-   +'<circle id="restRing" cx="90" cy="90" r="79" fill="none" stroke="var(--accent)" '
-   +'stroke-width="12" stroke-linecap="round" stroke-dasharray="'+C+'" stroke-dashoffset="'+off+'"/>'
-   +'</svg><div class="ct"><div class="restdig" id="restDig" aria-live="polite">'+mmss(left)+'</div>'
-   /* The frame labels this "SECONDS LEFT", which is wrong the moment the clock reads
-      1:30. The total it replaces is the figure that is always true. */
-   +'<div class="resttot" id="restTot">'+t("of")+' '+mmss(total)+'</div></div></div>'
-   +'<div class="restctl">'
-   +'<button class="rbtn" data-rest="-30">−30s</button>'
-   +'<button class="rbtn main" id="restMain" data-rest="'+(paused?"resume":"pause")+'"'
-   +' aria-label="'+(paused?t("Resume"):t("Pause"))+'">'
-   +'<i class="ico ico-'+(paused?"play":"pause")+'" id="restMainIco"></i></button>'
-   +'<button class="rbtn" data-rest="30">+30s</button></div>'
-   +'<div class="upnext"><div class="ul">'+t("Up next")+'</div>'
-   +'<div class="uv">'+nx+'</div>'+(nr?'<div class="ur">'+nr+'</div>':'')+'</div>'
-   +'<div class="restfoot"><button class="restskip" data-rest="skip">'
-   +t("Skip rest and continue")+'</button></div></div>';}
+  return '<div class="restwrap rt" role="dialog" aria-label="'+t("Rest")+'">'+art
+   +'<div class="rt-k">'+t("Rest period")+'</div><div class="rt-sub">'+doneTxt+'</div>'
+   +'<div class="rt-ring"><svg viewBox="0 0 180 180" aria-hidden="true">'
+   +'<circle cx="90" cy="90" r="79" class="rt-ring-t"/>'
+   +'<circle id="restRing" cx="90" cy="90" r="79" class="rt-ring-v" stroke-dasharray="'+C+'" stroke-dashoffset="'+off+'"/>'
+   +'</svg><div class="rt-ct"><div class="rt-dig" id="restDig" aria-live="polite">'+mmss(left)+'</div>'
+   +'<div class="rt-tot" id="restTot">'+t("of")+' '+mmss(total)+'</div></div></div>'
+   +'<div class="rt-ctl">'
+   +'<button class="rt-rnd" dir="ltr" data-rest="-30" aria-label="'+t("30 seconds less")+'">−30s</button>'
+   +'<button class="rt-main" id="restMain" data-rest="'+(paused?"resume":"pause")+'" aria-label="'+(paused?t("Resume"):t("Pause"))+'">'
+   +'<i class="ico ico-'+(paused?"play":"pause")+'" id="restMainIco"></i><span id="restMainTxt">'+(paused?t("Resume"):t("Pause"))+'</span></button>'
+   +'<button class="rt-rnd" dir="ltr" data-rest="30" aria-label="'+t("30 seconds more")+'">+30s</button></div>'
+   +upnext
+   +'<button class="rt-skip" data-rest="skip">'+t("Skip rest")+'</button></div>';}
+
+var ARROW='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>';
+var FLAG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>';
+var CLOCKPLUS='<svg viewBox="0 0 24 24"><path d="M20 11.5A8.5 8.5 0 1 0 11.5 20"/><path d="M11.5 7v5l3 2M18 15v6M15 18h6"/></svg>';
+var SKIP='<svg viewBox="0 0 24 24"><path d="M5 5l10 7-10 7zM19 5v14"/></svg>';
+var CHEV='<svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>';
 
 /* ---- keeping the rest screen still -------------------------------------------
    The rest screen lives in its own container outside #app, for the same reason the
@@ -395,6 +421,8 @@ function paintRest(){
     main.setAttribute("data-rest",paused?"resume":"pause");
     var mi=document.getElementById("restMainIco");
     if(mi)mi.className="ico ico-"+(paused?"play":"pause");
+    var mt=document.getElementById("restMainTxt");
+    if(mt)mt.textContent=paused?t("Resume"):t("Pause");
   }
 }
 /* Rebuilds only when the screen is genuinely a different one — a new exercise, a
