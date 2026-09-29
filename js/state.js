@@ -143,8 +143,18 @@ function flushDays(){
    change, and only then. */
 var REV=0;
 function dataRev(){return REV;}
+/* A custom split you are training on exists twice: the saved split, and the active
+   copy the Train tab works on. Edits land on the copy, so every save carries them
+   back to the saved split — before, a split built in the app kept the one empty day
+   it was created with however it was edited, and showed "0 training days". */
+function mirrorPlan(){
+  var mp=S&&S.myPlan;if(!mp||!mp.source)return;
+  var us=(S.userSplits||[]).filter(function(x){return x.id===mp.source;})[0];
+  if(!us)return;
+  us.days=JSON.parse(JSON.stringify(mp.days));us.name=mp.name;}
 function saveDB(){
   REV++;
+  mirrorPlan();
   if(DAYS_IDB)flushDays();
   if(!HIST_IDB&&!DAYS_IDB&&!WARN.hist&&!WARN.days){ wr(dbKey(),S); return; }
   /* The whole point: neither history nor the food log is serialised on the hot path. */
@@ -340,6 +350,17 @@ function split(){
   if(!S.myPlan)S.myPlan=adoptSplit(PRESETS().filter(function(p){return p.id==="fb";})[0]);
   return S.myPlan;}
 function allSplits(){return PRESETS().concat(S.userSplits||[]);}
+/* The split a builder edits: the active copy when it is the one you train on, so the
+   two can never disagree; the saved split otherwise. */
+function editSplit(id){
+  if(S.myPlan&&S.myPlan.source===id&&(S.userSplits||[]).some(function(x){return x.id===id;}))return S.myPlan;
+  return (S.userSplits||[]).filter(function(x){return x.id===id;})[0]||null;}
+/* Which split a day belongs to, and that split's saved id. */
+function ownerOf(dayId){
+  var pools=[split()].concat(S.userSplits||[]);
+  for(var p=0;p<pools.length;p++){var sp=pools[p];
+    if(sp&&sp.days.some(function(d){return d.id===dayId;}))return sp;}
+  return null;}
 function dayOf(id){
   var pools=[split()].concat(S.userSplits||[]);
   for(var p=0;p<pools.length;p++){var sp=pools[p];if(!sp)continue;
@@ -357,4 +378,4 @@ function dayRec(d){d=d||today();if(!S.days[d])S.days[d]={water:0,steps:0,sleep:0
 function setS(v){S=v;}
 function setProfiles(v){PROFILES=v;}
 
-export {dataRev, storeWarning, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, buildSnapshot, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, friends, initState, isOwner, loadStored, migrate, PROFILES, recordSession, S, saveDB, saveFriends, setProfiles, setS, snapStats, split, switchProfile};
+export {editSplit, ownerOf, dataRev, storeWarning, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, buildSnapshot, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, friends, initState, isOwner, loadStored, migrate, PROFILES, recordSession, S, saveDB, saveFriends, setProfiles, setS, snapStats, split, switchProfile};

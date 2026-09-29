@@ -73,7 +73,8 @@ function vFood(){
    +'<div class="fleft'+(over?' over':'')+'">'+esc(fmtN(diff)+" "+t(over?"kcal over":"kcal left"))+'</div>'
    +'</div></div>';
 
-  /* ---- the four meals as tiles: the one for now is lit, a logged one is ticked. A
+  /* ---- the four meals as tiles: the one for now carries a small "Now" label (it is
+     what Add Food logs to), a logged one is ticked. A
      logged tile opens the meal, an empty one adds to it. */
   var now=dsel===today()?mealNow():null;
   /* The tiles are the day's meals: a logged one opens the meal, an empty one adds to
@@ -89,13 +90,14 @@ function vFood(){
      +'<span class="fmt-i" aria-hidden="true">'+MICON[name]+'</span>'
      +'<span class="fmt-n">'+esc(t(name==="Snack"?"Snacks":name))+'</span>'
      +'<span class="fmt-k">'+fmtN(tot.kcal)+' kcal</span>'
+     +(name===now?'<span class="fmt-now">'+esc(t("Now"))+'</span>':'')
      +(done?'<span class="fmt-ok" aria-hidden="true">'+TICK+'</span>':'')+'</button>';});
   h+='</div>';
 
   /* In the page, not floating: the dock is the one floating control. */
   h+='<button class="btn fadd" data-addfood="'+(now||mealNow())+'">'
    +'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>'
-   +esc(t("Add Food"))+'</button>';
+   +esc(t("Add Food"))+' <span class="fadd-m">· '+esc(t((now||mealNow())==="Snack"?"Snacks":(now||mealNow())))+'</span></button>';
 
   /* ---- water */
   var unit=glassUnit(g.water),ng=Math.max(1,Math.round(g.water/unit)),

@@ -1,6 +1,6 @@
 /* Bunyan — app
    Entry point: event listeners, wiring and boot. */
-import {unaddExercise, ACT, addExercise, askConfirm, askText, closeSheet, openSheet, runAct, startActivity, startDay, syncDraft, val} from "./ui/actions.js";
+import {ACT, addExercise, askConfirm, askText, closeSheet, openSheet, runAct, startActivity, startDay, syncDraft, val} from "./ui/actions.js";
 import {actKcal, isActivity} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
 import {loadExDB, loadInstructions, reconcileExercises} from "./data/exercises.js";
@@ -9,6 +9,7 @@ import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, proteinTarget, 
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
+import {day} from "./data/splits.js";
 import {render, syncKeyboard} from "./ui/render.js";
 import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
@@ -16,7 +17,7 @@ import {initReorder} from "./ui/reorder.js";
 import * as W from "./ui/workout.js";
 import {leave} from "./ui/motion.js";
 import {groupRun, mmss, paintRest, sessionClock} from "./ui/views/session.js";
-import {refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
+import {editSplit, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
 import {toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
 import {syncViewport, restoreWorkoutState, syncWorkoutState, alarmStart, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, tap, toast, V} from "./ui/view.js";
@@ -77,6 +78,16 @@ function removeDayEx(id){
   var gone=d.ex.splice(i,1)[0];tidyGroups(d.ex);saveDB();render();
   toast(exName(gone.name)+" "+t("removed."),function(){
     var d2=dayOf(d.id);if(!d2)return;d2.ex=before;saveDB();render();});}
+/* Drag and the arrow keys both land here: a day in the split builder, or an
+   exercise in a day. */
+function moveRow(id,to){
+  if(V.train==="builder"){
+    var sp=editSplit(V.previewId);if(!sp)return;
+    var k=sp.days.findIndex(function(x){return x.id===id;});
+    to=Math.max(0,Math.min(sp.days.length-1,to));
+    if(k<0||to===k)return;
+    sp.days.splice(to,0,sp.days.splice(k,1)[0]);saveDB();render();return;}
+  moveDayEx(id,to);}
 function moveDayEx(id,to){
   var d=dayOf(V.dayId);if(!d)return;
   var i=d.ex.findIndex(function(x){return x.id===id;});
@@ -161,6 +172,22 @@ document.addEventListener("click",function(ev){
       body:t("This replaces your current plan. Every session you have already logged is kept."),
       cta:t("Make it my training"),act:"adopt",data:D.adopt});return;}
   if(D.preview){pushNav();V.previewId=D.preview;V.train="preview";render();return;}
+  /* ---- the split builder */
+  if(D.editsplit){pushNav();V.previewId=D.editsplit;V.train="builder";render();window.scrollTo(0,0);return;}
+  if(D.renamesplit){var rs=editSplit(D.renamesplit);if(!rs)return;
+    askText({title:t("Rename split"),label:t("Name"),value:rs.name,act:"renamesplit",data:D.renamesplit});return;}
+  if(D.bday!==undefined){var bs=editSplit(V.previewId);if(!bs)return;
+    bs.days.push(day(t("Day")+" "+(bs.days.length+1),[]));saveDB();render();return;}
+  if(D.bdays){var bn=editSplit(V.previewId);if(!bn)return;var want=+D.bdays;
+    while(bn.days.length<want)bn.days.push(day(t("Day")+" "+(bn.days.length+1),[]));
+    while(bn.days.length>want&&!bn.days[bn.days.length-1].ex.length)bn.days.pop();
+    saveDB();render();return;}
+  /* A day's ✕ in the builder: gone at once, with Undo, like an exercise's. */
+  if(D.rmday){var rd=editSplit(V.previewId);if(!rd)return;
+    var ri=rd.days.findIndex(function(x){return x.id===D.rmday;});if(ri<0)return;
+    var rgone=rd.days.splice(ri,1)[0];saveDB();render();
+    toast(rgone.name+" "+t("removed."),function(){var r2=editSplit(V.previewId)||rd;r2.days.splice(Math.min(ri,r2.days.length),0,rgone);saveDB();render();});
+    return;}
   if(D.newsplit){
     askText({title:t("New split"),label:t("Name"),ph:t("For example, Upper / Lower"),
       cta:t("Create"),act:"newsplit"});return;}
@@ -230,7 +257,7 @@ document.addEventListener("click",function(ev){
     askText({title:t("Add your own exercise"),label:t("Name"),value:V.exq||"",
       body:t("It joins your library under the muscle you have filtered to. No illustration, everything else works."),
       cta:t("Add it"),act:"customex",data:{from:V.sd}});return;}
-  if(D.pickex){if(el.getAttribute("aria-pressed")==="true"&&unaddExercise(D.pickex))return;addExercise(D.pickex);return;}
+  if(D.pickex){addExercise(D.pickex);return;}
   if(D.replaceex){
     var dR=dayOf(V.dayId),eR2=dR?dR.ex.filter(function(x){return x.id===D.replaceex;})[0]:null;
     /* The frame opens a replacement with the current exercise's muscle already
@@ -910,9 +937,10 @@ document.addEventListener("keydown",function(ev){
   var gp=(ev.key==="ArrowUp"||ev.key==="ArrowDown")&&ev.target.closest&&ev.target.closest("[data-grip]");
   if(gp){
     ev.preventDefault();
-    var gid=gp.getAttribute("data-grip"),gd=dayOf(V.dayId),gi=gd?gd.ex.findIndex(function(x){return x.id===gid;}):-1;
+    var gid=gp.getAttribute("data-grip"),gl=V.train==="builder"?(editSplit(V.previewId)||{days:[]}).days:((dayOf(V.dayId)||{ex:[]}).ex);
+    var gi=gl.findIndex(function(x){return x.id===gid;});
     if(gi<0)return;
-    moveDayEx(gid,gi+(ev.key==="ArrowUp"?-1:1));
+    moveRow(gid,gi+(ev.key==="ArrowUp"?-1:1));
     var ng=document.querySelector('[data-grip="'+gid+'"]');if(ng)ng.focus();
     return;}
   var tlist=(ev.key==="ArrowRight"||ev.key==="ArrowLeft")&&ev.target.closest&&ev.target.getAttribute("role")==="tab"
@@ -1240,7 +1268,7 @@ syncViewport();
 if(window.visualViewport){
   window.visualViewport.addEventListener("resize",syncViewport);
   window.visualViewport.addEventListener("scroll",syncViewport);}
-initReorder(moveDayEx,function(){tap("light");});
+initReorder(moveRow,function(){tap("light");});
 /* History comes from IndexedDB, so it arrives a tick later than everything else.
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from
    holding the whole app behind the intro; in practice it resolves well inside it. */

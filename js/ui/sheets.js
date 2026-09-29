@@ -108,7 +108,6 @@ function vSheet(){
     /* Swapping the live exercise is a replacement too — it titled itself "Add
        exercise", which is what the sheet does in its other mode, not this one. */
     var swapping=!!(V.sd&&(V.sd.replace||V.sd.swaplive));
-    var added=(V.sd&&V.sd.added)||[];
     /* The same search as the library page: the pill field, the two filter rows, the
        rows with their pictures. Everything above the results is fixed in place and
        only the results scroll, so nothing can slide up behind the field. */
@@ -134,19 +133,15 @@ function vSheet(){
     b+='</div></div>';
     /* The frame's result row: picture, name, then variant · muscle · equipment ·
        difficulty, then the action. The muscle only earns a slot when the muscle
-       filter is not already showing it. In add mode the sheet stays open, so several
-       exercises go in one after another; an added row shows its tick, and tapping it
-       again takes it back out. */
+       filter is not already showing it. Picking one adds it and returns to the day. */
     function exRow(l,k){
-      var on=!swapping&&added.some(function(a){return a.name===l[0];});
       var meta=[exVariant(l[0])?esc(exVariant(l[0])):"",
                 V.exm==="All"?t(l[1]):"",
                 t(l[2]),t(difficultyOf(l[0]))].filter(Boolean).join(" \u00b7 ");
-      return '<button class="trow libtrow pkrow'+(on?' on':'')+'" data-k="'+k+':'+esc(l[0])+'" data-pickex="'+esc(l[0])+'"'
-       +(swapping?'':' aria-pressed="'+on+'"')+'>'+thumb(l[0],48)
+      return '<button class="trow libtrow pkrow" data-k="'+k+':'+esc(l[0])+'" data-pickex="'+esc(l[0])+'">'+thumb(l[0],48)
        +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span><span class="trow-s">'+meta+'</span></span>'
        +(swapping?'<span class="pkswap">'+t("Swap")+'</span>'
-          :'<span class="pkadd" aria-hidden="true">'+(on?'\u2713':'+')+'</span>')+'</button>';}
+          :'<span class="pkadd" aria-hidden="true">+</span>')+'</button>';}
     b+='<div class="srch-body"><p class="srch-n srch-hide">'
      +(target?t("Best alternatives first.")+' ':'')
      +list.length+' '+t("shown")+(S.gear&&S.gear.length&&!V.showAll?', '+t("matched to your equipment"):'')+'.</p>';
@@ -167,9 +162,6 @@ function vSheet(){
       '<button class="btn" data-customex="1">'+t("Add it yourself")+'</button>');
     b+='<button class="btn g" data-showall="1">'
      +t(V.showAll?"Only what I can do":"Show everything, including gear I lack")+'</button></div>';
-    if(added.length)
-      b+='<div class="srch-foot"><button class="btn" data-close="1">'+t("Done")+' \u00b7 '
-       +added.length+' '+t("added")+'</button></div>';
   }
   /* The session's overflow. Canvas screen 4 leaves two links under the set table and
      nothing else, so the five infrequent actions live here instead of in a six-button
