@@ -1,12 +1,13 @@
 /* Bunyan — render
    The single render entry point. */
 import {applyLang} from "../i18n/exnames.js";
+import {t} from "../i18n/dict.js";
 import {vFood} from "./views/food.js";
 import {vHome} from "./views/home.js";
 import {vProfile} from "./views/profile.js";
 import {vProgress} from "./views/progress.js";
 import {vSheet} from "./sheets.js";
-import {S, saveDB} from "../state.js";
+import {S, saveDB, storeWarning} from "../state.js";
 import {vTrain} from "./views/train.js";
 import {syncRest} from "./views/session.js";
 import {PERSIST} from "../util.js";
@@ -79,6 +80,11 @@ function render(){
   else h=vProfile();
   if(!PERSIST)h='<div class="card" style="border-color:var(--accent)"><p class="tiny" style="margin:0">'
     +'This browser is blocking storage, so nothing will be saved. Open the hosted link in Safari or Chrome.</p></div>'+h;
+  /* Not during a workout: that screen has one job, and nothing logged there is at risk. */
+  var sw=storeWarning();
+  if(sw&&!(V.tab==="train"&&S.active))
+    h='<div class="warnbar" role="alert"><b>'+t(sw==="hist"?"Your workout history did not open":"Your food log did not open")+'</b>'
+     +'<span>'+t("Nothing has been deleted; it is still on this phone. Close the app fully and open it again. Anything you log meanwhile is kept and joins it.")+'</span></div>'+h;
   /* Whether a surface is *appearing* or merely *changing* decides both how it is
      written and whether its entry animation runs. A rebuild is for the first case
      only; the second patches, so unchanged nodes — images, the focused field, an
@@ -145,17 +151,15 @@ function render(){
   paintMotion(appEl,view);
   paintMotion(sheetEl,"sheet:"+(V.sheet||""));
 
-  /* A search field is focused for you only when a picker sheet has just opened on
-     it. The library page used to grab focus on every render, so the keyboard rose
-     the moment it opened and again after anything that repainted it. */
-  var q=V.sheet?sheetEl.querySelector("#exq"):null;
+  /* No search field is focused for you. Opening the picker with the keyboard already
+     up hid half the list behind it before anything was typed; browsing by muscle
+     needs no keyboard, and the field is one tap away. */
   if(appearing&&V.sheet){
     var ae=document.activeElement;
     if(ae&&ae!==document.body&&!sheetEl.contains(ae)&&ae.blur)ae.blur();}
-  if(opened&&!restored&&q){q.focus();try{q.setSelectionRange(q.value.length,q.value.length);}catch(e){}}
   var av=document.getElementById("askv");
   if(!restored&&av&&document.activeElement!==av){av.focus();try{av.select();}catch(e){}}
-  if(opened&&!restored&&!q&&!av){
+  if(opened&&!restored&&!av){
     var sb=document.querySelector(".sheetbox");
     if(sb){sb.setAttribute("tabindex","-1");try{sb.focus({preventScroll:true});}catch(e){}}}
 }

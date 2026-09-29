@@ -4,7 +4,7 @@ import {t} from "../i18n/dict.js";
 import {exIdOf, kindOf, LIB, muscleOf, muscleOfEntry} from "../data/exercises.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
-import {avgRPE, prevPerf, prFor, recommend, sessionVolume} from "../engine/formulas.js";
+import {deloadSets, inDeload, recordsIn, avgRPE, prevPerf, recommend, sessionVolume} from "../engine/formulas.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {leave} from "./motion.js";
 import {FOODDB, nutritionFor, recalcItem, toLogItem} from "../engine/nutrition.js";
@@ -132,7 +132,7 @@ function startDay(dayId){
     entries:d.ex.map(function(e){
       /* Resolved from the library as the session is created, so the record this
          workout leaves behind is right even if the plan's cached muscle is not. */
-      return {name:e.name,exId:e.exId||exIdOf(e.name),kind:kindOf(e.name),muscle:muscleOfEntry(e),planned:{sets:e.sets,lo:e.lo,hi:e.hi,min:e.min||0,rpe:e.rpe||0,km:e.km||0},
+      return {name:e.name,exId:e.exId||exIdOf(e.name),kind:kindOf(e.name),muscle:muscleOfEntry(e),planned:{sets:isActivity(e.name)||!inDeload()?e.sets:deloadSets(e.sets),lo:e.lo,hi:e.hi,min:e.min||0,rpe:e.rpe||0,km:e.km||0},
               rest:e.rest,grp:e.grp||null,sets:[]};})};
   V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
@@ -162,13 +162,17 @@ function syncDraft(){
   /* RPE starts empty on every set. It is how that set felt, which nothing can know
      in advance; a pre-filled 8 was being saved as if the lifter had said it, and the
      progression rule then trusted it. */
+  /* Whatever goes in the fields here is a suggestion, and is shown as one until the
+     lifter touches it; a set logged untouched is marked as such. */
+  V.draftSg=true;
   if(last){V.draft.w=num(last.w);V.draft.r=num(last.r);V.draft.rpe=null;return;}
   var p=prevPerf(e.name);
   var src=p?p.sets[0]:null;
   var rec=recommend(e);
   V.draft.w=rec&&rec.w?rec.w:(src?num(src.w):0);
   V.draft.r=src?num(src.r):e.planned.hi||8;
-  V.draft.rpe=null;}
+  V.draft.rpe=null;
+  if(!p)V.draftSg=false;}
 
 function finishSession(){
   var a=S.active;
@@ -183,11 +187,10 @@ function finishSession(){
   a.entries=a.entries.filter(function(e){return e.sets.length||e.pain;});
   if(!a.entries.some(function(e){return e.sets.length;})){S.active=null;endRest();keepAwake(false);saveDB();render();return;}
 
+  /* A record by weight, by estimated max, or by reps at a weight — the best one per
+     exercise. Measured against history, which this session has not joined yet. */
   var prs=[];
-  a.entries.forEach(function(e){
-    var before=prFor(e.name).w, best=0, bestR=0;
-    e.sets.forEach(function(x){if(!x.wu&&num(x.w)>best){best=num(x.w);bestR=num(x.r);}});
-    if(best>0&&best>before)prs.push({n:e.name,w:best,r:bestR});});
+  a.entries.forEach(function(e){var rec=recordsIn(e);if(rec)prs.push(rec);});
 
   var prev=null;
   for(var i=0;i<S.sessions.length;i++)
@@ -252,7 +255,22 @@ function addExercise(name){
   if(V.sd&&V.sd.replace){
     var i=d.ex.findIndex(function(x){return x.id===V.sd.replace;});
     if(i>=0){if(!isActivity(name)&&!isActivity(d.ex[i].name)){e.sets=d.ex[i].sets;e.lo=d.ex[i].lo;e.hi=d.ex[i].hi;e.rest=d.ex[i].rest;}d.ex[i]=e;}
-  }else d.ex.push(e);
+  }else{
+    d.ex.push(e);
+    /* Added from the picker itself: it stays open so the next one can go straight in,
+       and remembers what it added so a second tap can take it back out. */
+    if(V.sheet==="exercise"&&V.sd){
+      (V.sd.added=V.sd.added||[]).push({id:e.id,name:name});
+      saveDB();render();return;}
+  }
   saveDB();closeSheet();}
+/* A second tap on a row the picker has just added takes that one back out. */
+function unaddExercise(name){
+  var d=dayOf(V.dayId),ad=(V.sd&&V.sd.added)||[];
+  var k=-1;for(var i=ad.length-1;i>=0;i--)if(ad[i].name===name){k=i;break;}
+  if(!d||k<0)return false;
+  var id=ad[k].id;ad.splice(k,1);
+  d.ex=d.ex.filter(function(x){return x.id!==id;});
+  saveDB();render();return true;}
 
-export {startActivity, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};
+export {unaddExercise, startActivity, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};

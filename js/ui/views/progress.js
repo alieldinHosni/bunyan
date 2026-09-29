@@ -24,7 +24,7 @@
 import {t} from "../../i18n/dict.js";
 import {empty, thumb} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
-import {weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftHalf, liftProgress, measurements,
+import {weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftHalf, liftProgress, measurements,
         muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL, topLifts, volumeSeries,
         weighIns, weightChange} from "../../engine/stats.js";
 import {sessionVolume} from "../../engine/formulas.js";
@@ -383,6 +383,17 @@ function vStrength(r){
      +'<div class="bar" aria-hidden="true"><i style="width:'+Math.max(2,pct)+'%"></i></div>'
      +'<b>'+x.sets+'</b></div>';}).join("")
    +'<p class="pgnote">'+esc(t("Around 10–20 hard sets per muscle each week is what most people grow on. Monday to today."))+'</p></div>';
+  /* Cardio and sport minutes against 150 a week — shown to anyone who does some, and
+     to anyone whose goal it serves. */
+  var wcd=weeklyCardio(),g5=(S.profile||{}).goal;
+  if(wcd.recent||wcd.min||g5==="lose"||g5==="maintain"){
+    var cp=Math.min(100,wcd.min/wcd.target*100);
+    h+='<div class="pgcard pgshare"><div class="pgshare-r wv'+(wcd.min>=wcd.target?' ok':wcd.min>=wcd.target/2?'':' low')+'"'
+     +' aria-label="'+esc(t("Cardio & Sports")+": "+wcd.min+" "+t("of")+" "+wcd.target+" "+t("min"))+'">'
+     +'<span>'+esc(t("Cardio & Sports"))+'</span>'
+     +'<div class="bar" aria-hidden="true"><i style="width:'+Math.max(2,cp)+'%"></i></div>'
+     +'<b>'+wcd.min+'</b></div>'
+     +'<p class="pgnote">'+esc(t("Minutes this week. 150 minutes of moderate activity a week is the common health guideline."))+'</p></div>';}
 
   /* ---- share of working sets by muscle group */
   var ms=muscleShare(r);
@@ -396,6 +407,35 @@ function vStrength(r){
        +'<div class="bar" aria-hidden="true"><i style="width:'+Math.max(2,x.pct/top*100)+'%"></i></div>'
        +'<b>'+x.pct+'%</b></div>';}).join("")+'</div>';}
   return h;}
+
+/* ---- the weight trend against the goal ------------------------------------------ */
+var TREND={
+  lose:{ok:"On track for fat loss.",
+        slow:"Slower than the goal. If it holds for two more weeks, eat about 100–200 kcal a day less.",
+        fast:"Faster than it needs to be. Eating a little more protects muscle and is easier to keep up.",
+        wrong:"The trend is going up. Check that the meals you log match what you eat, and give it two weeks."},
+  gain:{ok:"On track to build muscle with little fat.",
+        slow:"Slower than the goal. Add about 100–200 kcal a day.",
+        fast:"Faster than muscle can be built, so most of the extra is fat. Trim about 100–200 kcal a day.",
+        wrong:"The trend is going down. Eat about 200 kcal a day more."},
+  hold:{ok:"Holding steady.",
+        down:"Drifting down. If that is not the plan, eat a little more.",
+        up:"Drifting up. If that is not the plan, eat a little less."}};
+function sgn(kg){return (kg>0.004?"+":kg<-0.004?"\u2212":"\u00b1")+toDisp(Math.abs(kg));}
+function perWk(){return wUnit()+" / "+t("week");}
+function trendCard(){
+  var tr=weightTrend();
+  if(!tr)return "";
+  var key=tr.goal==="lose"||tr.goal==="gain"?tr.goal:"hold",msg=(TREND[key]||{})[tr.status]||"";
+  var good=tr.status==="ok";
+  return lbl(t("Trend against your goal"))
+   +'<div class="pgcard pgtrend'+(good?' ok':'')+'"><div class="pgtrend-r"><div><div class="pgstat-k">'
+   +esc(t("Last"))+' '+tr.weeks+' '+esc(t(tr.weeks===1?"week":"weeks"))+'</div>'
+   +'<div class="pgbig">'+esc(sgn(tr.perWk))+'<span>'+esc(perWk())+'</span></div></div>'
+   +'<div class="pgtrend-g"><div class="pgstat-k">'+esc(t("Goal"))+'</div><b>'
+   +esc(key==="hold"?"\u00b1"+toDisp(Math.abs(tr.hi))
+      :sgn(key==="lose"?tr.hi:tr.lo)+" "+t("to")+" "+sgn(key==="lose"?tr.lo:tr.hi))+'</b><small>'+esc(perWk())+'</small></div></div>'
+   +'<p class="pgnote">'+esc(t(msg))+'</p></div>';}
 
 /* ---- Body ---------------------------------------------------------------------- */
 function vBody(r){
@@ -419,6 +459,7 @@ function vBody(r){
        +esc(t("Average for the range"))+' · '+avg+' '+esc(wUnit())+'</p>';}
     else h+=tooFew(t("Fewer than two weigh-ins in this range. Pick a longer one, or weigh in again."));}
   h+='<button class="btn g" data-sheet="weigh">'+esc(t("Log weight"))+'</button></div>';
+  h+=trendCard();
 
   var ms=measurements();
   h+=lbl(t("Measurements"),'<button class="pglink" data-sheet="measure">'+esc(t(ms.length?"Update":"Add"))+'</button>');

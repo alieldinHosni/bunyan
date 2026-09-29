@@ -13,12 +13,24 @@ import {muscleOfEntry} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {e1RM, lastWeight, sessionVolume} from "./formulas.js";
 import {sumNutrition} from "./nutrition.js";
-import {S} from "../state.js";
+import {dataRev, S} from "../state.js";
 import {num, r1, today} from "../util.js";
 
 /* ---- dates ---------------------------------------------------------------- */
 /* Local calendar dates, with the same timezone correction as shiftDay(): without it
    "7 days ago" is off by one east of Greenwich. */
+/* Progress re-renders on every tap — a range, a tab, a chart — and each figure below
+   is a sweep over the whole history. They are kept until the data changes: a save
+   (dataRev), a different state object (profile switch, restore), history arriving from
+   storage, or a new day, since every range is counted back from today. */
+var MC={k:null,m:{}};
+function memo(name,fn){
+  return function(){
+    var k=dataRev()+"|"+S.sessions.length+"|"+(S.body||[]).length+"|"+today();
+    if(MC.k!==k||MC.s!==S||MC.ss!==S.sessions||MC.b!==S.body)MC={k:k,s:S,ss:S.sessions,b:S.body,m:{}};
+    var key=name+"|"+Array.prototype.join.call(arguments,"|");
+    if(!(key in MC.m))MC.m[key]=fn.apply(null,arguments);
+    return MC.m[key];};}
 function isoAgo(n){
   var d=new Date();d.setDate(d.getDate()-n);
   return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
@@ -44,7 +56,7 @@ function working(e){
   return (e.sets||[]).filter(function(x){return !x.wu&&(num(x.r)>0||num(x.w)>0);});}
 
 /* ---- overview --------------------------------------------------------------- */
-function overview(n){
+function overview_raw(n){
   var w=win(n),cur=[],prev=[],earlier=false;
   S.sessions.forEach(function(s){
     if(inWin(s.date,w.from,w.to))cur.push(s);
@@ -65,7 +77,7 @@ function overview(n){
 /* Volume across the window. Up to a month, one point per training day; longer, one
    per week, weeks without training included as zero — a gap is part of the trend.
    Weeks before the first session ever logged are not a gap and are left off. */
-function volumeSeries(n){
+function volumeSeries_raw(n){
   var w=win(n),out=[];
   if(n<=31){
     var by={};
@@ -87,7 +99,7 @@ function volumeSeries(n){
 /* One pass over history, oldest first, so a record's date is the day it was first
    set, not the latest day it was equalled. The heaviest set is the record, as
    prFor() has it, with reps breaking a tie; a lift never loaded is scored by reps. */
-function lifts(){
+function lifts_raw(){
   var m={},order=[];
   for(var i=S.sessions.length-1;i>=0;i--){
     var s=S.sessions[i];
@@ -106,7 +118,7 @@ function lifts(){
     if(!L.w){L.reps=L.br;L.date=L.bdate;}
     return L;});}
 function topLifts(){
-  return lifts().sort(function(a,b){return b.sets-a.sets||(b.last>a.last?1:-1);});}
+  return lifts().slice().sort(function(a,b){return b.sets-a.sets||(b.last>a.last?1:-1);});}
 function recentRecords(k){
   return lifts().filter(function(L){return L.date&&(L.w>0||L.reps>0);})
     .sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:b.w-a.w;}).slice(0,k||3);}
@@ -114,7 +126,7 @@ function recentRecords(k){
 /* Estimated one-rep max per session for one lift, oldest first. Epley, working
    sets of twelve reps or fewer — e1RM() returns 0 past that, and those are skipped
    rather than plotted as a collapse to zero. */
-function e1rmSeries(name,n){
+function e1rmSeries_raw(name,n){
   var w=n?win(n):null,out=[];
   for(var i=S.sessions.length-1;i>=0;i--){
     var s=S.sessions[i];
@@ -132,7 +144,7 @@ var GROUP={Chest:"Chest",Back:"Back",Shoulders:"Shoulders",Biceps:"Arms",Triceps
   Forearms:"Arms",Quads:"Legs",Hamstrings:"Legs",Glutes:"Legs",Adductors:"Legs",Calves:"Legs",
   Core:"Core"};
 var GORDER=["Chest","Back","Legs","Shoulders","Arms","Core","Other"];
-function muscleShare(n){
+function muscleShare_raw(n){
   var w=win(n),c={},tot=0;
   S.sessions.forEach(function(s){
     if(!inWin(s.date,w.from,w.to))return;
@@ -169,7 +181,40 @@ function weeklyVolume(){
   var target=Math.max(8,Math.min(20,num(S.plannedWeekly,12)));
   return {from:from,target:target,rows:WORDER.map(function(g){return {g:g,sets:c[g]};})};}
 
+/* Cardio and sport this week, in minutes, against the widely used guideline of 150
+   minutes of moderate activity a week. Counted from Monday, as the sets above are. */
+function weeklyCardio(){
+  var from=weekStartISO(),min=0,recent=false,cut=isoAgo(28);
+  S.sessions.forEach(function(s){
+    s.entries.forEach(function(e){
+      if(!isActivity(e.name))return;
+      if(s.date>=cut)recent=true;
+      if(s.date<from)return;
+      (e.sets||[]).forEach(function(x){min+=num(x.min);});});});
+  return {min:Math.round(min),target:150,recent:recent};}
+
 /* ---- body ------------------------------------------------------------------- */
+/* The weight trend against the goal: a least-squares line through the last four weeks
+   of weigh-ins, as kg per week, beside the rate the goal calls for. Needs at least
+   four weigh-ins spread over two weeks, because day-to-day water swings are larger
+   than a week of real change. Rates are the usual evidence-based ones: losing fat at
+   0.5–1% of body weight a week, gaining at 0.25–0.5%, maintaining within ±0.25%. */
+function weightTrend(){
+  var list=weighIns();if(list.length<4)return null;
+  var last=list[list.length-1].date;
+  var pts=list.filter(function(b){return daysBetween(b.date,last)<=28;});
+  if(pts.length<4||daysBetween(pts[0].date,last)<14)return null;
+  var x0=pts[0].date,n=pts.length,sx=0,sy=0,sxx=0,sxy=0;
+  pts.forEach(function(b){var x=daysBetween(x0,b.date),y=num(b.weight);sx+=x;sy+=y;sxx+=x*x;sxy+=x*y;});
+  var den=n*sxx-sx*sx;if(!den)return null;
+  var perWk=(n*sxy-sx*sy)/den*7,mean=sy/n;
+  var g=(S.profile||{}).goal,band=g==="lose"?[-0.01,-0.005]:g==="gain"?[0.0025,0.005]:[-0.0025,0.0025];
+  var lo=band[0]*mean,hi=band[1]*mean,status;
+  if(g==="lose")status=perWk>0.05?"wrong":perWk>hi?"slow":perWk<lo?"fast":"ok";
+  else if(g==="gain")status=perWk<-0.05?"wrong":perWk<lo?"slow":perWk>hi?"fast":"ok";
+  else status=perWk<lo?"down":perWk>hi?"up":"ok";
+  return {perWk:Math.round(perWk*100)/100,lo:Math.round(lo*100)/100,hi:Math.round(hi*100)/100,
+    goal:g,status:status,weeks:Math.round(daysBetween(pts[0].date,last)/7)};}
 function weighIns(n){
   var list=(S.body||[]).filter(function(b){return num(b.weight)>0;});
   if(!n)return list;
@@ -284,7 +329,7 @@ function liftHalf(entryOrName){
 
 /* One lift over the window: its e1RM trend, the change from the first estimate to the
    last, and what the latest session did (sets × typical reps · top weight). */
-function liftProgress(name,n){
+function liftProgress_raw(name,n){
   var ser=e1rmSeries(name,n),pct=null;
   if(ser.length>=2&&ser[0].v>0)pct=(ser[ser.length-1].v-ser[0].v)/ser[0].v*100;
   var last=null;
@@ -302,7 +347,7 @@ function liftProgress(name,n){
    trained most have moved across the window, averaged so one lift cannot carry it.
    Only lifts with two estimates in the window count. The series is the same figure
    session by session, 100 at the start, for the card's sparkline. */
-function strengthIndex(n,k){
+function strengthIndex_raw(n,k){
   var names=topLifts().slice(0,k||5).map(function(L){return L.name;});
   var base={},pcts=[],byDate={};
   names.forEach(function(nm){
@@ -318,7 +363,7 @@ function strengthIndex(n,k){
 
 /* Days trained this calendar month, and sessions per week for the last six weeks
    (oldest first) for the card's bars. */
-function consistencyMonth(){
+function consistencyMonth_raw(){
   var now=today(),mo=now.slice(0,7),days={};
   S.sessions.forEach(function(s){if(s.date.slice(0,7)===mo)days[s.date]=1;});
   var weeks=[];
@@ -334,6 +379,15 @@ function bodyFatSeries(n){
   return (S.body||[]).filter(function(b){return num(b.bf)>0&&(!w||inWin(b.date,w.from,w.to));})
     .map(function(b){return {d:b.date,v:num(b.bf)};});}
 
-export {weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, isoAgo, liftHalf, liftProgress,
+export {weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, isoAgo, liftHalf, liftProgress,
         measurements, muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL,
         topLifts, volumeSeries, weighIns, weightChange};
+
+var lifts=memo("lifts",lifts_raw);
+var e1rmSeries=memo("e1rmSeries",e1rmSeries_raw);
+var volumeSeries=memo("volumeSeries",volumeSeries_raw);
+var overview=memo("overview",overview_raw);
+var muscleShare=memo("muscleShare",muscleShare_raw);
+var strengthIndex=memo("strengthIndex",strengthIndex_raw);
+var liftProgress=memo("liftProgress",liftProgress_raw);
+var consistencyMonth=memo("consistencyMonth",consistencyMonth_raw);

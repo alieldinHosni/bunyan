@@ -23,9 +23,6 @@ var V={tab:"home",fdate:null,food:null,range:30,exd:null,showAll:false,restPause
        /* The rest timer has three states, not two: counting, paused, and finished-and
           waiting to be acknowledged. The third is what makes the zero state visible. */
        restDone:false,
-       /* Whether the day view is showing its plan-editing actions (canvas screen 2
-          keeps them behind one link rather than as three loose buttons). */
-       dayEdit:false,
        /* Which meal the Food tab has opened, or null for the day's dashboard. It is
           part of the nav route, so back returns to the dashboard, not to the tab. */
        meal:null,
@@ -129,6 +126,14 @@ async function keepAwake(on){
   }catch(err){wakeLock=null;}}
 /* Reversible actions get an undo toast instead of a confirmation dialog. Only things
    that cannot be undone stop to ask. */
+/* The part of the screen the keyboard leaves visible, as CSS variables the sheets size
+   themselves from. iOS lays fixed elements out against the layout viewport, which the
+   keyboard does not shrink, so without this a sheet ran on underneath the keyboard. */
+function syncViewport(){
+  var vv=window.visualViewport;if(!vv)return;
+  var r=document.documentElement.style;
+  r.setProperty("--vvh",Math.round(vv.height)+"px");
+  r.setProperty("--vvt",Math.round(vv.offsetTop)+"px");}
 function toast(msg,undo){
   var old=document.querySelector(".toast");if(old)old.remove();
   var d=document.createElement("div");d.className="toast";d.setAttribute("role","status");
@@ -206,6 +211,33 @@ var MISTAKES={
  Mobility:["Bouncing","Forcing past pain","Holding the breath"],
  Conditioning:["Starting too hard","Landing stiff-legged","Ignoring form once tired"]
 };
+/* The pattern's list is the fallback. Where the name says which movement it is, its
+   own mistakes are listed instead — "bouncing the weight off the chest" is a bench
+   press fault, not an overhead press one. First match wins, so the order matters. */
+var MISTAKE_BY_NAME=[
+ [/overhead|shoulder press|military|arnold|push press|landmine press/i,
+  ["Arching the lower back to finish the rep","Pressing forward instead of straight up","Stopping short of lockout overhead"]],
+ [/push-?up/i,["Hips sagging","Flaring the elbows straight out","Half reps at the bottom"]],
+ [/\bdips?\b/i,["Sinking so deep the shoulders roll forward","Swinging the legs","Shrugging at the top"]],
+ [/fly|flye|pec deck/i,["Bending and straightening the elbows until it becomes a press","Stretching past what the shoulder can control","Swinging the weight together"]],
+ [/lateral raise|side raise|upright row/i,["Swinging up with the hips","Shrugging the shoulders to the ears","Raising the hands above the elbows"]],
+ [/face pull|rear delt|reverse fl/i,["Pulling with the lower back","Shrugging","Going too heavy to feel the back of the shoulder"]],
+ [/pulldown|pull-?up|chin-?up/i,["Leaning far back and rowing it down","Cutting the stretch at the top","Pulling with the hands instead of driving the elbows down"]],
+ [/\brow/i,["Standing up out of the hinge to move the weight","Shrugging instead of pulling the elbows back","Cutting the stretch short"]],
+ [/hip thrust|glute bridge|\bbridge/i,["Arching the lower back at the top","Pushing through the toes","Rushing past the squeeze at the top"]],
+ [/deadlift|\brdl\b|romanian|good morning/i,["Rounding the lower back","Letting the bar drift away from the legs","Turning it into a squat"]],
+ [/lunge|split squat|step-?up|bulgarian/i,["Front knee caving inward","Pushing off the back foot","Stance so narrow the balance goes"]],
+ [/leg press|hack/i,["Lower back peeling off the pad","Locking the knees hard at the top","Knees caving inward"]],
+ [/leg extension/i,["Kicking the weight up","Lifting the hips off the seat","Dropping it on the way down"]],
+ [/leg curl/i,["Hips lifting off the pad","Swinging the weight up","Stopping short of the full curl"]],
+ [/calf/i,["Bouncing at the bottom","Half range, no full stretch","Bending the knees to help"]],
+ [/shrug/i,["Rolling the shoulders","Bending the elbows","A weight too heavy to hold at the top"]],
+ [/curl/i,["Swinging the torso","Elbows drifting forward","Stopping halfway down"]],
+ [/tricep|pushdown|skull|extension/i,["Elbows flaring out","Moving the shoulder","Losing the lockout to go heavier"]]
+];
+function mistakesFor(name,pattern){
+  for(var i=0;i<MISTAKE_BY_NAME.length;i++)if(MISTAKE_BY_NAME[i][0].test(name||""))return MISTAKE_BY_NAME[i][1];
+  return MISTAKES[pattern]||MISTAKES.Isolation;}
 function head(title,sub){
   return '<div class="screen"><div><h1>'+esc(title)+'</h1>'
    +(sub?'<p class="sub">'+esc(sub)+'</p>':'')+'</div>'
@@ -382,4 +414,4 @@ function lockScroll(on){
 }
 
 
-export {syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};
+export {mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};

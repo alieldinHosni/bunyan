@@ -1,25 +1,34 @@
 /* Bunyan — sheets
    Every bottom sheet, dispatched by vSheet(). */
 import {t} from "../i18n/dict.js";
-import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
+import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {exName} from "../i18n/exnames.js";
 import {MEALS} from "./views/food.js";
-import {myDaysList, planOn} from "./views/train.js";
+import {exHay, myDaysList, planOn} from "./views/train.js";
 import {ACT_GROUPS, actIcon, actInfo, actPace, actsIn, INTENSITY, intensityOf, isActivity} from "../data/activities.js";
-import {backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
+import {incrementFor, backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {GOALS, LEVELS, splitCandidates} from "../engine/plan.js";
-import {groupLabel, groupRun, mmss, platePlan} from "./views/session.js";
+import {groupLabel, groupRun, ivText, mmss, platePlan} from "./views/session.js";
 import {sessionById, ensureSessionIds, buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats, split} from "../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
-import {CUES, MISTAKES, progressBar, sparkline, stepper, V} from "./view.js";
+import {CUES, mistakesFor, progressBar, sparkline, stepper, V} from "./view.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 
+/* One figure in the exercise sheet: a label, the number (typeable), and − / + either
+   side. The steps are the plan's own: a set, a rep, fifteen seconds of rest. */
+function exStep(k,label,v,unit){
+  return '<div class="exs"><span class="exs-l">'+esc(label)+'</span><div class="exs-c">'
+   +'<button class="exs-b" data-exstp="'+k+'" data-d="-1" aria-label="'+esc(t("Less")+" "+label)+'">&minus;</button>'
+   +'<span class="exs-v"><input id="e_'+k+'" type="number" inputmode="numeric" value="'+v+'" aria-label="'+esc(label)+'">'
+   +(unit?'<i>'+esc(unit)+'</i>':'')+'</span>'
+   +'<button class="exs-b" data-exstp="'+k+'" data-d="1" aria-label="'+esc(t("More")+" "+label)+'">+</button></div></div>';}
+
 /* ============================================================ sheets */
-var SHEET_KICK={recovery:"Recovery",weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
+var SHEET_KICK={editex:"Exercise",recovery:"Recovery",weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
   gear:"Training",likes:"Training",exercise:"Training",exhist:"History",share:"Sharing",coach:"Sharing",
   backup:"Your data",restore:"Your data",set_you:"Settings",set_training:"Settings",set_app:"Settings",
   set_profiles:"Settings",set_data:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
@@ -76,7 +85,7 @@ function vSheet(){
       if(V.sd&&(V.sd.replace||V.sd.swaplive)&&l[0]===target)return false;
       if(V.exm!=="All"&&l[1]!==V.exm)return false;
       if(V.exe&&V.exe!=="All"&&l[2]!==V.exe)return false;
-      if(q&&!tokenMatch(q,l[0]))return false;
+      if(q&&!tokenMatch(q,exHay(l)))return false;
       if(!V.showAll&&!pickable(l[0]))return false;
       return true;});
     /* Zero hits only, exactly as in the food search: a near miss is offered under
@@ -99,67 +108,68 @@ function vSheet(){
     /* Swapping the live exercise is a replacement too — it titled itself "Add
        exercise", which is what the sheet does in its other mode, not this one. */
     var swapping=!!(V.sd&&(V.sd.replace||V.sd.swaplive));
-    b='<h2>'+t(swapping?"Replace Exercise":"Add exercise")+'</h2>';
-    /* The frame names what is being replaced before listing what could replace it.
-       The picker never did, so the title was the only thing on screen that said a
-       replacement was in progress — and it did not say of what. */
+    var added=(V.sd&&V.sd.added)||[];
+    /* The same search as the library page: the pill field, the two filter rows, the
+       rows with their pictures. Everything above the results is fixed in place and
+       only the results scroll, so nothing can slide up behind the field. */
+    b='<div class="srch-top"><div class="shh srch-title"><span class="shk">'+t("Training")+'</span>'
+     +'<h2>'+t(swapping?"Replace Exercise":"Add exercise")+'</h2></div>';
+    /* The frame names what is being replaced before listing what could replace it. */
     if(swapping&&target)
-      b+='<div class="exswapfrom"><div style="min-width:0">'
+      b+='<div class="exswapfrom srch-hide"><div style="min-width:0">'
        +'<div class="exswapfrom-k">'+t("Current exercise")+'</div>'
        +'<div class="exswapfrom-n">'+esc(exName(target))+'</div></div>'
        +'<span class="exswapfrom-b">'+t("SWAPPING")+'</span></div>';
-    b+='<p class="tiny" style="margin:2px 0 12px">'
-     +(target?t("Best alternatives first.")+' ':'')
-     +list.length+' '+t("shown")+(S.gear&&S.gear.length?', '+t("matched to your equipment"):'')+'.</p>';
-    /* The field and the filters stay put while you type; only the results below
-       change. Letting the field scroll away was half of why search felt like it
-       was jumping. */
-    b+='<div class="exqbar">'
-     +'<input id="exq" placeholder="'+t("Search")+'" value="'+esc(V.exq)+'" '
-     +'autocapitalize="none" autocorrect="off" enterkeyhint="search">'
-     +'<div class="exfilters">';
+    b+='<div class="libq"><span class="ico ico-search" aria-hidden="true"></span>'
+     +'<input id="exq" type="search" placeholder="'+t("Search exercises, muscles, gear")+'\u2026" value="'+esc(V.exq)+'" '
+     +'autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" enterkeyhint="search"'
+     +' aria-label="'+t("Search exercises, muscles, gear")+'">'
+     +(V.exq?'<button class="libq-x" data-clearexq="1" aria-label="'+t("Clear")+'">\u2715</button>':'')+'</div>'
+     +'<div class="libfilters" role="group" aria-label="'+t("Muscle")+'">';
     ["All"].concat(MUSCLES).forEach(function(m){
-      b+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'" style="border:none;flex-shrink:0">'+t(m)+'</button>';});
-    b+='</div>';
-    /* Equipment, which the frame puts beside the muscle pills. V.exe already filtered
-       the list above — it simply had no control in this sheet, so it could only be set
-       by arriving from the bodyweight entry and never cleared from here. */
-    b+='<div class="exfilters">';
+      b+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'" aria-pressed="'+(V.exm===m)+'">'+t(m)+'</button>';});
+    b+='</div><div class="libfilters" role="group" aria-label="'+t("Equipment")+'">';
     ["All"].concat(EQUIP).forEach(function(q2){
-      b+='<button class="pill'+(V.exe===q2?" a":"")+'" data-exe="'+q2+'" style="border:none;flex-shrink:0">'+t(q2)+'</button>';});
+      b+='<button class="pill'+(V.exe===q2?" a":"")+'" data-exe="'+q2+'" aria-pressed="'+(V.exe===q2)+'">'+t(q2)+'</button>';});
     b+='</div></div>';
-    /* A floor under the results. Without it the container collapses to nothing on a
-       no-match and springs back on the next character, which moves the whole screen
-       under the user's finger — a separate cause from the re-render. */
-    /* The frame's result row: name, then equipment · difficulty, then the action. The
-       muscle is only worth a slot when the muscle filter is not already showing it. */
+    /* The frame's result row: picture, name, then variant · muscle · equipment ·
+       difficulty, then the action. The muscle only earns a slot when the muscle
+       filter is not already showing it. In add mode the sheet stays open, so several
+       exercises go in one after another; an added row shows its tick, and tapping it
+       again takes it back out. */
     function exRow(l,k){
+      var on=!swapping&&added.some(function(a){return a.name===l[0];});
       var meta=[exVariant(l[0])?esc(exVariant(l[0])):"",
                 V.exm==="All"?t(l[1]):"",
-                t(l[2]),t(difficultyOf(l[0]))].filter(Boolean).join(" · ");
-      return '<button class="item" data-k="'+k+':'+esc(l[0])+'" data-pickex="'+esc(l[0])+'">'
-       +'<div style="min-width:0"><div style="font-weight:600">'+esc(exName(l[0]))+'</div>'
-       +'<div class="tiny">'+meta+'</div></div>'
-       /* Styled as the frame's Swap button rather than being one: a button inside the
-          row button is invalid, and two targets on one row is worse to hit than one. */
-       +'<span class="exswap">'+t(swapping?"Swap":"Add")+'</span></button>';}
-    b+='<div class="exresults"><div class="list">';
-    list.forEach(function(l){b+=exRow(l,"ex");});
-    b+='</div>';
+                t(l[2]),t(difficultyOf(l[0]))].filter(Boolean).join(" \u00b7 ");
+      return '<button class="trow libtrow pkrow'+(on?' on':'')+'" data-k="'+k+':'+esc(l[0])+'" data-pickex="'+esc(l[0])+'"'
+       +(swapping?'':' aria-pressed="'+on+'"')+'>'+thumb(l[0],48)
+       +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span><span class="trow-s">'+meta+'</span></span>'
+       +(swapping?'<span class="pkswap">'+t("Swap")+'</span>'
+          :'<span class="pkadd" aria-hidden="true">'+(on?'\u2713':'+')+'</span>')+'</button>';}
+    b+='<div class="srch-body"><p class="srch-n srch-hide">'
+     +(target?t("Best alternatives first.")+' ':'')
+     +list.length+' '+t("shown")+(S.gear&&S.gear.length&&!V.showAll?', '+t("matched to your equipment"):'')+'.</p>';
+    if(list.length){
+      b+='<div class="card tdays">';
+      list.forEach(function(l){b+=exRow(l,"ex");});
+      b+='</div>';}
     if(!list.length&&guess.length){
-      b+='<div class="overline" style="margin-top:var(--s4)">'+t("Did you mean")+'…</div><div class="list">';
+      b+='<div class="overline" style="margin-top:var(--s2)">'+t("Did you mean")+'\u2026</div><div class="card tdays">';
       guess.forEach(function(l){b+=exRow(l,"gs");});
       b+='</div>';
     }
     if(!list.length&&!guess.length)b+=empty("search",
-      V.exq?t("Nothing matches")+" “"+V.exq+"”":t("Nothing matches those filters"),
+      V.exq?t("Nothing matches")+" \u201c"+esc(V.exq)+"\u201d":t("Nothing matches those filters"),
       S.gear&&S.gear.length&&!V.showAll
         ?t("You may have filtered it out with your equipment, or it may not be in the library.")
         :t("Your gym may call it something else, or it may not be in the library at all."),
       '<button class="btn" data-customex="1">'+t("Add it yourself")+'</button>');
-    b+='</div>';
     b+='<button class="btn g" data-showall="1">'
-     +t(V.showAll?"Only what I can do":"Show everything, including gear I lack")+'</button>';
+     +t(V.showAll?"Only what I can do":"Show everything, including gear I lack")+'</button></div>';
+    if(added.length)
+      b+='<div class="srch-foot"><button class="btn" data-close="1">'+t("Done")+' \u00b7 '
+       +added.length+' '+t("added")+'</button></div>';
   }
   /* The session's overflow. Canvas screen 4 leaves two links under the set table and
      nothing else, so the five infrequent actions live here instead of in a six-button
@@ -184,55 +194,59 @@ function vSheet(){
     var d=dayOf(V.dayId),e=null;
     if(d)e=d.ex.filter(function(x){return x.id===V.sd.id;})[0];
     if(!e)return "";
+    /* Changes apply as they are made — a stepper tap, a typed number — so Done only
+       closes. Order is changed on the day screen itself, by dragging the row. */
+    var eIdx=d.ex.findIndex(function(x){return x.id===e.id;});
+    var eqE=(EXDB[e.name]||{}).e;
+    b='<h2>'+esc(exName(e.name))+'</h2><p class="tiny">'+esc(t(muscleOfEntry(e)))
+     +(eqE&&!isActivity(e.name)?' · '+esc(t(eqE)):'')+'</p>';
+    var acts=[];
     if(isActivity(e.name)){
       /* A match or a run: planned as how long, how hard, and how far where that
          applies — the same three things the session logs. */
-      var aiE=actInfo(e.name),rpeE=V.sd.rpe||e.rpe||6,curE=intensityOf(rpeE)[0];
-      b='<h2>'+esc(exName(e.name))+'</h2><p class="tiny">'+esc(t(aiE.grp))+'</p>'
-       +'<div class="act-lbl">'+t("Planned duration")+'</div>'
-       +'<div class="act-km"><input id="e_min" type="number" inputmode="numeric" min="1" value="'+(e.min||(aiE.grp==="Sports"?60:30))+'" aria-label="'+t("Planned duration")+'"><span>'+t("min")+'</span></div>'
+      var aiE=actInfo(e.name),curE=intensityOf(e.rpe||6)[0];
+      b+='<div class="exsg one">'+exStep("min",t("Planned duration"),e.min||(aiE.grp==="Sports"?60:30),t("min"))+'</div>'
        +(aiE.dist?'<div class="act-lbl">'+t("Target distance")+' <i>'+t("optional")+'</i></div>'
          +'<div class="act-km"><input id="e_km" type="number" inputmode="decimal" step="0.1" min="0" value="'+(e.km||"")+'" placeholder="0.0" aria-label="'+t("Target distance")+'"><span>km</span></div>':'')
        +'<div class="act-lbl">'+t("Intensity")+'</div><div class="act-int">'
        +INTENSITY.map(function(x){return '<button class="'+(curE===x[0]?'on':'')+'" data-exint="'+x[0]+'" aria-pressed="'+(curE===x[0])+'">'+t(x[1])+'</button>';}).join("")
-       +'</div>'
-       +'<button class="btn" data-saveex="'+e.id+'" style="margin-top:18px">'+t("Save")+'</button>'
-       +'<div class="rowc mt"><button class="btn g sm" data-moveex="'+e.id+'|-1">'+t("Move up")+'</button>'
-       +'<button class="btn g sm" data-moveex="'+e.id+'|1">'+t("Move down")+'</button>'
-       +'<button class="btn g sm" data-replaceex="'+e.id+'">'+t("Replace")+'</button></div>'
-       +'<button class="btn g" data-exhist="'+esc(e.name)+'" style="margin-top:10px">'+t("See my history")+'</button>'
-       +'<button class="btn d" data-delex="'+e.id+'">'+t("Remove from this day")+'</button>';
+       +'</div>';
+      acts.push(['data-replaceex="'+e.id+'"',t("Replace with another activity")]);
+      acts.push(['data-exhist="'+esc(e.name)+'"',t("See my history")]);
     }else{
-    b='<h2>'+esc(exName(e.name))+'</h2><p class="tiny" style="margin:2px 0 14px">'+esc(t(muscleOfEntry(e)))+'</p>'
-     +'<div class="grid2"><div><label class="tiny">Sets</label><input id="e_sets" type="number" value="'+e.sets+'"></div>'
-     +'<div><label class="tiny">'+t("Rest (sec)")+'</label><input id="e_rest" type="number" value="'+e.rest+'"></div>'
-     +'<div><label class="tiny">'+t("Min reps")+'</label><input id="e_lo" type="number" value="'+e.lo+'"></div>'
-     +'<div><label class="tiny">'+t("Max reps")+'</label><input id="e_hi" type="number" value="'+e.hi+'"></div></div>'
-     +'<button class="btn" data-saveex="'+e.id+'">'+t("Save")+'</button>';
-    /* Supersets are built by pairing an exercise with the one under it, which is how
-       they read on paper: A1 then A2. Chain three and you have a triset. */
-    var eIdx=d.ex.findIndex(function(x){return x.id===e.id;});
-    var eRun=groupRun(d.ex,eIdx),paired=eRun.length>1;
-    var nextEx=d.ex[eIdx+1];
-    if(paired)
-      b+='<div class="card mt" style="border-color:var(--gold)">'
-       +'<div class="row"><h3 style="color:var(--gold);font-size:14px">'+t("Superset")+' '
-       +groupLabel(d.ex,eIdx)+'</h3></div>'
-       +'<p class="tiny" style="margin:5px 0 0">'
-       +t("No rest until the round is done. Rest comes after the last exercise in the group.")
-       +'</p>'
-       +'<button class="btn g sm mt" data-ungroup="'+e.id+'">'+t("Break the superset")+'</button></div>';
-    /* Offered whenever the exercise below is not already part of this run, so a pair
-       can be extended into a triset by walking down the list. */
-    if(nextEx&&eRun.indexOf(eIdx+1)<0)
-      b+='<button class="btn g mt" data-group="'+e.id+'">'
-       +t("Superset with")+' '+esc(nextEx.name)+'</button>';
-    b+='<div class="rowc mt"><button class="btn g sm" data-moveex="'+e.id+'|-1">'+t("Move up")+'</button>'
-     +'<button class="btn g sm" data-moveex="'+e.id+'|1">'+t("Move down")+'</button>'
-     +'<button class="btn g sm" data-replaceex="'+e.id+'">'+t("Replace")+'</button></div>'
-     +'<button class="btn g" data-exhist="'+esc(e.name)+'" style="margin-top:10px">'+t("See my history for this lift")+'</button>'
-     +'<button class="btn d" data-delex="'+e.id+'">'+t("Remove from this day")+'</button>';
+      b+='<div class="exsg">'
+       +exStep("sets",t("Sets"),e.sets,"")
+       +exStep("rest",t("Rest"),e.rest,t("s"))
+       +exStep("lo",t("Min reps"),e.lo,"")
+       +exStep("hi",t("Max reps"),e.hi,"")
+       +'</div>';
+      /* The load step this exercise progresses by: automatic from its equipment, or
+         the lifter's own — a stack that moves in 7 kg, micro plates at 0.5. */
+      if(eqE&&eqE!=="Bodyweight"){
+        var own=S.incr&&S.incr[e.name],auto=incrementFor(e.name,prFor(e.name).w,true);
+        b+='<div class="exsg one"><div class="exs"><span class="exs-l">'+t("Weight step")+'</span><div class="exs-c">'
+         +'<button class="exs-b" data-exincr="-1" aria-label="'+esc(t("Smaller step"))+'">&minus;</button>'
+         +'<span class="exs-v exs-step"><b>'+(own?fmtW(own):t("Auto"))+'</b>'
+         +(own?'':'<i>'+(auto?fmtW(auto):"—")+'</i>')+'</span>'
+         +'<button class="exs-b" data-exincr="1" aria-label="'+esc(t("Bigger step"))+'">+</button></div></div></div>';}
+      /* Supersets are built by pairing an exercise with the one under it, which is how
+         they read on paper: A1 then A2. Chain three and you have a triset. */
+      var eRun=groupRun(d.ex,eIdx),paired=eRun.length>1,nextEx=d.ex[eIdx+1];
+      if(paired)
+        b+='<div class="exsuper"><b>'+t("Superset")+' '+groupLabel(d.ex,eIdx)+'</b>'
+         +'<span>'+t("No rest until the round is done. Rest comes after the last exercise in the group.")+'</span></div>';
+      acts.push(['data-replaceex="'+e.id+'"',t("Replace exercise")]);
+      if(paired)acts.push(['data-ungroup="'+e.id+'"',t("Break the superset")]);
+      /* Offered whenever the exercise below is not already part of this run, so a pair
+         can be extended into a triset by walking down the list. */
+      else if(nextEx&&!isActivity(nextEx.name))acts.push(['data-group="'+e.id+'"',t("Superset with")+' '+esc(exName(nextEx.name))]);
+      acts.push(['data-exdetail="'+esc(e.name)+'"',t("How to do it")]);
+      acts.push(['data-exhist="'+esc(e.name)+'"',t("See my history for this lift")]);
     }
+    b+='<div class="list exacts">'+acts.map(function(a){
+      return '<button class="item" '+a[0]+'><span>'+a[1]+'</span><span class="chev">\u203a</span></button>';}).join("")+'</div>'
+     +'<button class="btn" data-saveex="'+e.id+'">'+t("Done")+'</button>'
+     +'<button class="ddel exrm" data-delex="'+e.id+'">'+t("Remove from this day")+'</button>';
   }
   else if(V.sheet==="weigh"){
     var lw=lastWeight()||86;
@@ -448,6 +462,7 @@ function vSheet(){
      +'<div><span>'+t("Secondary")+'</span><b>'+(secD.length?secD.map(function(s){return t(s);}).join(" \u00b7 "):"—")+'</b></div>'
      +'<div><span>'+t("Equipment")+'</span><b>'+t(lD?lD[2]:"Other")+'</b></div>'
      +'<div><span>'+t("Difficulty")+'</span><b>'+t(difficultyOf(nD))+'</b></div></div>';
+    if(isUnilateral(nD))b+='<p class="exd-uni">'+t("One side at a time. Log the reps for one side; with dumbbells, the weight in one hand.")+'</p>';
     /* Three steps by default. Nobody reads five paragraphs between sets, and the
        rest is one tap away for anyone who wants them. */
     b+='<div class="exd-h">'+t("How to Perform")+'</div><div class="exd-steps exd-card">';
@@ -469,8 +484,8 @@ function vSheet(){
      +'<span class="ico ico-cdown" aria-hidden="true"></span></button>';
     if(V.exmiss){
       b+='<div class="exd-miss">';
-      (MISTAKES[pD]||MISTAKES.Isolation).forEach(function(c){
-        b+='<div><b>\u00d7</b><span>'+esc(c)+'</span></div>';});
+      mistakesFor(nD,pD).forEach(function(c){
+        b+='<div><b>\u00d7</b><span>'+esc(t(c))+'</span></div>';});
       b+='</div>';}
     /* The frame pins ADD TO WORKOUT to the foot of the screen. It shows only when
        there is a day open to put the exercise in and no workout running. V.dayId
@@ -518,11 +533,13 @@ function vSheet(){
        :'<div><b><span data-count-to="'+w.sets+'">'+w.sets+'</span></b><span>'+t("Sets")+'</span></div>')
      +'</div>';
     /* One highlight line at most: a record beats a volume gain. */
-    var prs=w.prs.slice().sort(function(x,y){return y.w-x.w;});
-    if(prs.length)
+    var RK={w:3,e:2,r:1};
+    var prs=w.prs.slice().sort(function(x,y){return (RK[y.k||"w"]-RK[x.k||"w"])||(y.w-x.w);});
+    if(prs.length){
+      var p0=prs[0],k0=p0.k||"w";
       b+='<div class="wc2-hl"><span aria-hidden="true">🏆</span><span>'
-       +(prs.length>1?prs.length+' '+t("new records")+' · ':t("New record")+' · ')
-       +esc(exName(prs[0].n))+' '+fmtW(prs[0].w)+' × '+prs[0].r+'</span></div>';
+       +(prs.length>1?prs.length+' '+t("new records")+' · ':t(k0==="e"?"New best estimated max":k0==="r"?"Rep record":"New record")+' · ')
+       +esc(exName(p0.n))+' '+(k0==="e"?fmtW(p0.e):k0==="r"?p0.r+' × '+fmtW(p0.w):fmtW(p0.w)+' × '+p0.r)+'</span></div>';}
     else if(w.prevVol&&w.delta>0)
       b+='<div class="wc2-hl"><span aria-hidden="true">↑</span><span>'+t("Volume up")+' '
        +Math.round(w.delta/w.prevVol*100)+'% '+t("on last session")+'</span></div>';
@@ -626,7 +643,7 @@ function vSheet(){
          +'<div class="num mt" style="font-size:15px">'+r.s.map(function(x){
             return num(x.min)+' '+t("min")+(num(x.km)?' · '+x.km+' km':'')
              +(actPace(num(x.min),num(x.km))?' · '+actPace(num(x.min),num(x.km)):'')
-             +' · '+t(intensityOf(x.rpe||6)[1])+(num(x.hr)?' · '+num(x.hr)+' bpm':'')
+             +' · '+t(intensityOf(x.rpe||6)[1])+(x.iv?' · '+ivText(x.iv):'')+(num(x.hr)?' · '+num(x.hr)+' bpm':'')
              +(x.kcal?' · '+fmtN(x.kcal)+' kcal':'');}).join('<br>')+'</div></div>';
         return;}
       b+='<div class="card"><div class="row"><span class="tiny">'+pretty(r.d)+'</span>'
@@ -752,8 +769,11 @@ function vSheet(){
      +(S.gear&&S.gear.length?S.gear.length+" "+t("selected"):t("Everything"))+'</span></button>'
      +'<button class="item" data-sheet="likes"><span>'+t("Favourites")+'</span>'
      +'<span class="dim">'+S.favs.length+" ★"+'</span></button>'
+     +'<button class="item" data-dbload="1"><div><div>'+t("Dumbbell weights")+'</div>'
+     +'<div class="tiny">'+t("How you enter them")+'</div></div><span class="dim">'
+     +t(tp.dbLoad==="total"?"Both together":"Per hand")+'</span></button>'
      +'</div>'
-     +'<p class="tiny">'+t("Conservative adds 2.5 kg. Standard adds 2.5 on isolation and 5 on the big lifts. Aggressive adds 5 and 10.")+'</p>';
+     +'<p class="tiny">'+t("Steps follow the equipment: 2.5 kg on a barbell (5 on the big leg lifts), 2 kg on dumbbells, never more than about a tenth of the load. Conservative halves them, aggressive doubles them. Any exercise can have its own step, set in its plan.")+'</p>';
   }
   else if(V.sheet==="set_nutrition"){
     /* Nutrition Goals, frame 13:531. "Tap any value to customize" is literally true:
@@ -929,8 +949,11 @@ function vSheet(){
       return '<div class="shh"><span class="shk">'+esc(t(kick))+'</span><h2'+at+'>'+title+'</h2>'
         +(sub?sub.replace(/<p class="(?:tiny|sub)"[^>]*>/,'<p class="shsub">'):'')+'</div>';});
   var cf=V.sheet==="confirm"||V.sheet==="done"||V.sheet==="hurt";
+  /* A search sheet is laid out differently from the rest: a fixed top (title, field,
+     filters) over a list that scrolls on its own, sized to what the keyboard leaves. */
+  var srch=b.indexOf('<div class="srch-top">')===0;
   return '<div class="sheet"'+(hard?'':' data-close="1"')+'>'
-        +'<div class="sheetbox'+(cf?' cfbox':'')+'" data-stop="1" role="dialog" aria-modal="true">'
+        +'<div class="sheetbox'+(cf?' cfbox':'')+(srch?' srch':'')+'" data-stop="1" role="dialog" aria-modal="true">'
         +'<div class="sheethead">'
         +(hard?'':'<span class="grab" aria-hidden="true"></span>')
         +star

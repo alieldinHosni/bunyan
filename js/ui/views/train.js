@@ -6,6 +6,7 @@ import {exName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, S, split} from "../../state.js";
 import {SPLIT_LEVEL} from "../../engine/plan.js";
+import {deloadDue, inDeload} from "../../engine/formulas.js";
 import {esc, fmtN, shortd, today, weekDays} from "../../util.js";
 import {dateBar, shiftDay} from "../datebar.js";
 import {tokenMatch} from "../../engine/text.js";
@@ -170,6 +171,8 @@ function vTrain(){
    +'<div class="tbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"'
    +' aria-label="'+t("Sessions this week")+'"><i style="width:'+pct+'%"></i></div></div>';
 
+  /* ---- a lighter week: offered when the log shows it is due, shown while it runs */
+  h+=deloadCard();
   /* ---- two tiles, side by side: the plan's days (in a sheet, so the page stays
      short) and the library. The next two days are one swipe of the date bar away. */
   var nDays=sp.days.length;
@@ -217,6 +220,25 @@ function vTrain(){
    +cats.map(function(c){return '<button class="tpill" data-bwcat="'+esc(c)+'">'+esc(t(c))+'</button>';}).join("")
    +'<button class="tpill" data-bwsplit="1">'+t("Full Body Program")+'</button></div>';
   return h;}
+/* A suggestion with its reason and two answers, or — during the week — a quiet line
+   saying it is on and until when, with a way out. Never shown mid-workout. */
+function deloadCard(){
+  if(inDeload()){
+    return '<div class="dlcard on"><span class="dlcard-i" aria-hidden="true">'+FEATHER+'</span>'
+     +'<span class="dlcard-t"><b>'+t("Lighter week")+'</b><span>'+t("Until")+' '+shortd(S.deload.until)
+     +' · '+t("fewer sets, about 10% lighter")+'</span></span>'
+     +'<button class="dlcard-x" data-deload="end">'+t("End it")+'</button></div>';}
+  var due=deloadDue();
+  if(!due)return "";
+  return '<div class="dlcard"><div class="dlcard-h"><span class="dlcard-i" aria-hidden="true">'+FEATHER+'</span>'
+   +'<b>'+t("Time for a lighter week")+'</b></div>'
+   +'<p>'+t(due.why==="plateau"?"Several of your lifts have stalled for three sessions in a row."
+      :"Your sets have been close to failure for two weeks running.")+' '
+   +t("One lighter week — fewer sets, about 10% less weight — usually brings progress back.")+'</p>'
+   +'<div class="dlcard-a"><button class="btn" data-deload="start">'+t("Start a lighter week")+'</button>'
+   +'<button class="dlcard-later" data-deload="later">'+t("Not now")+'</button></div></div>';}
+var FEATHER='<svg viewBox="0 0 24 24"><path d="M20 4c-7 0-13 5-13 12v4M7 16c3 0 8-1 11-6M4 20l3-4"/></svg>';
+
 /* Every day of the plan, for the My Training sheet. The only way to open, edit or
    reorder any day but today's. */
 function myDaysList(){
@@ -324,6 +346,9 @@ function vBodyweight(){
   h+='<button class="btn g" data-bwcat="All">See all '+bw.length+' bodyweight exercises</button>';
   return h;}
 
+/* What a search matches an exercise on: its name in English and in the language on
+   screen, its muscle and its equipment, so "incline db", "صدر" and "cable" all work. */
+function exHay(l){return l[0]+" "+exName(l[0])+" "+l[1]+" "+t(l[1])+" "+l[2]+" "+t(l[2]);}
 function vLibrary(){
   var q=V.exq.trim().toLowerCase();
   /* Token matching, as the picker sheet and the food search do: "incline db" finds
@@ -332,7 +357,7 @@ function vLibrary(){
     return (V.exm==="All"||l[1]===V.exm)
         && (V.exe==="All"||l[2]===V.exe)
         && (!V.exd||l[4]===V.exd)
-        && (!q||tokenMatch(q,l[0]+" "+l[1]+" "+l[2]));});
+        && (!q||tokenMatch(q,exHay(l)));});
   var h=backBar();
   h+='<div class="libhero"><img class="libhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">'
    +'<div class="libhead"><div><span class="shk">'+t("Training")+'</span><h1>'+t("Exercise Library")+'</h1>'
@@ -384,18 +409,22 @@ function vSplits(){
   h+='</div><button class="btn g" data-newsplit="1">'+t("Build one from scratch")+'</button>';
   return h;}
 
-/* ---- a day: canvas screen 2 (Figma node 2:915) ------------------------------
-   The routine as it will be performed, then one button to begin it. The frame shows
-   only the reading view, so the plan-editing the app has always had — add, rename,
-   delete — sits behind its "Edit Workout Routine" link rather than being dropped. */
-
+/* ---- a day: the routine, built in place --------------------------------------
+   Everything that shapes the day is on the screen itself: ✕ on a row removes it (with
+   Undo), the grip on its other end drags it to a new place, the dashed + under the
+   list adds, and the title renames. Tapping the exercise opens its sets, reps and
+   rest. There is no edit mode to find first. */
+var XSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+var GRIPSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>'
+  +'<circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
 function vDay(){
   var d=dayOf(V.dayId);if(!d){V.train="days";return vTrain();}
   var sp=split();
   var pos=sp.days.indexOf(d)+1;
   var lvl=levelOf(sp.source);
   var h='<div class="dhead">'+backArrow()
-   +'<h1 class="dhead-t">'+esc(d.name)+'</h1></div>'
+   +'<button class="dname" data-renameday="'+d.id+'" aria-label="'+esc(t("Rename day"))+': '+esc(d.name)+'">'
+   +'<h1 class="dhead-t">'+esc(d.name)+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button></div>'
    +'<p class="dsub">'+esc(sp.name)+(pos?' • '+t("Day")+' '+pos:'')+'</p>';
   /* Every figure measured from the day itself. */
   h+='<div class="dstrip">'
@@ -403,37 +432,33 @@ function vDay(){
    +'<div><span class="klabel dim">'+t("Duration")+'</span><b>~'+estMinutes(d)+' '+t("Min")+'</b></div>'
    +(lvl&&!d.ex.every(function(e){return isActivity(e.name);})?'<div><span class="klabel dim">'+t("Level")+'</span><b>'+t(lvl)+'</b></div>':'')
    +'</div>';
-  if(!d.ex.length){
-    h+=empty("dumbbell",t("Nothing prescribed yet"),
-      t("Add the exercises, sets and rep ranges you want. You only do this once — the session screen runs it for you."),
-      '<button class="btn" data-addex="'+d.id+'">'+t("Add an exercise")+'</button>');
-  }else{
-    h+='<h2 class="tsec-h droutine">'+t("Session Routine")+'</h2><div class="drows">';
-    d.ex.forEach(function(e,i){
-      var gl=groupLabel(d.ex,i);
-      h+='<button class="drow" data-editex="'+e.id+'">'
-       +'<span class="dnum">'+(i+1)+'</span>'
-       +'<span class="dtext"><span class="drow-n">'
-       +(gl?'<span class="glabel">'+gl+'</span> ':'')+esc(exName(e.name))+'</span>'
-       +'<span class="drow-s">'+(isActivity(e.name)
-          ?(e.min||(actInfo(e.name).grp==="Sports"?60:30))+' '+t("min")+(e.km?' · '+e.km+' km':'')+'<i class="ddot"></i>'+esc(t(intensityOf(e.rpe||6)[1]))
-          :e.sets+' × '+e.lo+(e.hi!==e.lo?'–'+e.hi:''))
-       +'<i class="ddot"></i>'+esc(t(muscleOfEntry(e)))+'</span></span>'
-       +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
-    h+='</div>';
-  }
-  /* The frame's bottom block. The edit link opens the actions the frame has no room
-     for; they are the same ones that were loose buttons before. */
+  h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Session Routine")+'</h2>'
+   +(d.ex.length>1?'<span class="dhint">'+t("Hold the grip to reorder")+'</span>':'')+'</div>';
+  if(!d.ex.length)
+    h+='<p class="dempty">'+t("A rest day for now. Add exercises and it becomes a training day — sets, reps and rest are filled in for you and can be changed any time.")+'</p>';
+  h+='<div class="drows">';
+  d.ex.forEach(function(e,i){
+    var gl=groupLabel(d.ex,i),nm=exName(e.name);
+    h+='<div class="drow" data-k="dx:'+e.id+'" data-rowid="'+e.id+'">'
+     +'<button class="drm" data-rmex="'+e.id+'" aria-label="'+esc(t("Remove")+" "+nm)+'"><i>'+XSVG+'</i></button>'
+     +'<button class="dmain" data-editex="'+e.id+'">'
+     +'<span class="dnum">'+(i+1)+'</span>'
+     +'<span class="dtext"><span class="drow-n">'
+     +(gl?'<span class="glabel">'+gl+'</span> ':'')+esc(nm)+'</span>'
+     +'<span class="drow-s">'+(isActivity(e.name)
+        ?(e.min||(actInfo(e.name).grp==="Sports"?60:30))+' '+t("min")+(e.km?' · '+e.km+' km':'')+'<i class="ddot"></i>'+esc(t(intensityOf(e.rpe||6)[1]))
+        :e.sets+' × '+e.lo+(e.hi!==e.lo?'–'+e.hi:'')+'<i class="ddot"></i>'+(e.rest||0)+'s')
+     +'<i class="ddot"></i>'+esc(t(muscleOfEntry(e)))+'</span></span></button>'
+     +(d.ex.length>1?'<button class="dgrip" data-grip="'+e.id+'" aria-label="'+esc(t("Move")+" "+nm)
+       +'" aria-describedby="dgriphelp">'+GRIPSVG+'</button>':'')
+     +'</div>';});
+  h+='</div>';
+  if(d.ex.length>1)h+='<span id="dgriphelp" class="sr">'+t("Drag, or use the arrow keys, to move it up or down.")+'</span>';
+  h+='<button class="dadd" data-addex="'+d.id+'"><span aria-hidden="true">+</span>'+t("Add exercise")+'</button>';
   h+='<div class="dcta">';
   if(d.ex.length)h+='<button class="btn dbegin" data-startday="'+d.id+'">'+t("Begin Workout")+'</button>';
-  h+='<button class="dedit" data-dayedit="1" aria-expanded="'+(V.dayEdit?"true":"false")+'">'
-   +t("Edit Workout Routine")+'</button>';
-  if(V.dayEdit)
-    h+='<div class="dedit-actions">'
-     +'<button class="btn g sm" data-addex="'+d.id+'">'+t("Add an exercise")+'</button>'
-     +'<button class="btn g sm" data-renameday="'+d.id+'">'+t("Rename")+'</button>'
-     +'<button class="btn d sm" data-delday="'+d.id+'">'+t("Delete this day")+'</button></div>';
+  h+='<button class="ddel" data-delday="'+d.id+'">'+t("Delete this day")+'</button>';
   h+='</div>';
   return h;}
 
-export {estMinutes, myDaysList, nextDayOf, planOn, vTrain};
+export {estMinutes, exHay, myDaysList, nextDayOf, planOn, vTrain};
