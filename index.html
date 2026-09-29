@@ -704,42 +704,87 @@ body.noanim #splash .sp-embers{display:none}
   display:flex;align-items:center;justify-content:center;margin-inline-end:8px}
 .favstar.on{color:var(--gold);border-color:var(--gold)}
 .favstar:active{background:var(--raised)}
-/* Date bar and month grid — js/ui/datebar.js, shared by Progress and Food.
-   These were inline styles inside the Progress view. Moving them here is what lets the
-   two screens be identical by construction rather than by somebody remembering. */
-.dbwrap{padding:var(--s3);margin-bottom:var(--s3)}
-.dbcal{margin-top:var(--s3);border-top:1px solid var(--border);padding-top:var(--s3)}
-.dbgrid{display:grid;grid-template-columns:repeat(7,1fr);margin-top:11px;
-  /* Full-bleed inside the card, so the grid gets the card's whole width. margin-inline
-     so RTL needs no second rule.
-
-     The gap is derived from the constraint rather than fixed: as wide as 5px where
-     there is room, and never so wide that a day falls under the 44px hit-area minimum.
-     A fixed 5px held at the old 16px page gutter (44.5px cells) and broke the moment
-     the design's 24px gutter narrowed every card — cells measured 42.2px at 375. A
-     breakpoint would have encoded that one width; this encodes the rule itself, so a
-     future gutter or padding change cannot silently break it again. */
-  gap:max(0px,min(5px,calc((100% - 7 * 44px) / 6)));
-  margin-inline:calc(-1 * var(--s3))}
-.dbday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;border-radius:9px;font-size:13px;border:none;padding:0;
-  position:relative;background:none;color:var(--faint);
+/* ---- The date navigator (js/ui/datebar.js) — Food, Progress and Train ------------
+   A capsule in the dock's language: glass-dark surface, hairline edge, round arrow
+   buttons at either end, the date as the tappable centre. Today reads warmest — a
+   soft accent edge and glow — so "am I looking at today?" is answered before the
+   words are read. Only the date text slides when the day changes; the surface never
+   moves. */
+.dnav-wrap{margin-bottom:var(--s3)}
+.dnav{position:relative;display:flex;align-items:center;gap:6px;min-height:76px;padding:8px;
+  border-radius:var(--r5);overflow:hidden;isolation:isolate;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)) ,var(--raised);
+  border:1px solid var(--border);box-shadow:var(--shadow-card);touch-action:pan-y}
+.dnav.now{border-color:var(--accent-edge);
+  box-shadow:var(--shadow-card),0 0 0 1px rgba(248,52,70,.06),0 8px 30px -12px var(--accent-glow)}
+/* The drawing: the Bunyan horse, faint, bleeding off the right edge in a red haze. */
+.dnav.art{min-height:104px}
+.dnav.art::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(60% 120% at 88% 40%,rgba(227,27,35,.28),transparent 70%)}
+.dnav-art{position:absolute;z-index:-1;inset-inline-end:-18px;top:50%;width:150px;height:auto;
+  transform:translateY(-50%);opacity:.34;pointer-events:none;
+  filter:drop-shadow(0 0 18px rgba(248,52,70,.55)) saturate(1.1);
+  -webkit-mask:linear-gradient(90deg,transparent,#000 45%);mask:linear-gradient(90deg,transparent,#000 45%)}
+[dir="rtl"] .dnav-art{transform:translateY(-50%) scaleX(-1);
+  -webkit-mask:linear-gradient(270deg,transparent,#000 45%);mask:linear-gradient(270deg,transparent,#000 45%)}
+.dnav-arrow{flex:0 0 44px;width:44px;height:44px;border-radius:var(--rpill);padding:0;
+  display:flex;align-items:center;justify-content:center;color:var(--text);
+  background:rgba(255,255,255,.05);border:1px solid var(--hair);
+  transition:transform var(--m-press) var(--e-standard),background var(--m-micro) var(--e-standard)}
+.dnav-arrow svg,.dnav-back svg,.dnav-d svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dnav-arrow svg{width:20px;height:20px}
+[dir="rtl"] .dnav-arrow svg{transform:scaleX(-1)}
+.dnav-arrow:active{transform:scale(.92);background:rgba(255,255,255,.09)}
+.dnav-arrow:disabled{opacity:.3}
+.dnav-arrow.sm{flex-basis:40px;width:40px;height:40px}
+.dnav-mid{flex:1;min-width:0;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:4px;padding:6px 4px;border:0;border-radius:var(--r4);background:none;color:var(--text);
   transition:background var(--m-micro) var(--e-standard)}
-.dbday.trained{background:var(--accent);color:var(--onAccent);font-weight:700}
-.dbday.today{border:1px solid var(--accent);color:var(--text)}
-/* Selection has to outrank both, or the day you picked is invisible on a trained day. */
-.dbday.sel{outline:2px solid var(--text);outline-offset:1px;color:var(--text)}
-.dbday.sel.trained{color:var(--onAccent)}
-.dbdot{position:absolute;bottom:4px;width:4px;height:4px;border-radius:2px;background:var(--ok)}
-/* The bar's own arrows, scoped so the shared .iconbtn elsewhere is untouched. */
-.dbwrap .iconbtn,.dbcal .iconbtn{min-width:44px}
-.pdate{background:none;border:none;color:var(--text);font-weight:800;letter-spacing:.06em;
-  text-transform:uppercase;font-size:13px;padding:8px 10px;border-radius:9px;
-  display:inline-flex;align-items:center;gap:5px;min-height:44px}
-.pdate:active{background:var(--surface)}
-.pchev{display:inline-block;transform:rotate(90deg);transition:transform var(--m-micro) var(--e-standard);
-  color:var(--faint);font-size:15px;line-height:1}
-.pchev.up{transform:rotate(-90deg)}
+.dnav-mid:active{background:rgba(255,255,255,.04)}
+.dnav-mid:focus-visible,.dnav-arrow:focus-visible,.dnav-back:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
+.dnav-k{font-size:10.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.dnav-d{display:inline-flex;align-items:center;gap:8px;max-width:100%}
+.dnav-d>svg{width:18px;height:18px;flex-shrink:0;color:var(--dim)}
+.dnav-t{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.dnav.art .dnav-t{font-size:20px;letter-spacing:.01em;text-transform:none}
+.dnav-c{display:inline-flex;color:var(--dim);transition:transform var(--m-micro) var(--e-standard)}
+.dnav-c svg{width:16px;height:16px}
+.dnav-c.up{transform:rotate(180deg)}
+.dnav-s{font-size:12.5px;color:var(--dim);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The date slides in from the side it came from; the second line fades with it. */
+.dnav-d.fwd{animation:dnavFwd var(--m-comp) var(--e-ios)}
+.dnav-d.back{animation:dnavBack var(--m-comp) var(--e-ios)}
+@keyframes dnavFwd{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+@keyframes dnavBack{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+[dir="rtl"] .dnav-d.fwd{animation-name:dnavBack}
+[dir="rtl"] .dnav-d.back{animation-name:dnavFwd}
+.dnav-back{display:flex;align-items:center;justify-content:center;gap:6px;margin:6px auto 0;min-height:36px;
+  padding:0 14px;border:0;border-radius:var(--rpill);background:none;color:var(--accentHi);
+  font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.dnav-back svg{width:14px;height:14px}
+.dnav-back:active{background:var(--accent-tint)}
+[dir="rtl"] .dnav-k,[dir="rtl"] .dnav-t,[dir="rtl"] .dnav-back{letter-spacing:0}
+/* The month, when the date is tapped. */
+.dbcal{margin-top:10px;padding:12px;border-radius:var(--r5);background:var(--raised);border:1px solid var(--border)}
+.dbcal-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.dbgrid{display:grid;grid-template-columns:repeat(7,1fr);margin-top:10px;
+  /* As wide as 5px where there is room, and never so wide that a day falls under the
+     44px hit-area minimum. */
+  gap:max(0px,min(5px,calc((100% - 7 * 44px) / 6)))}
+.dbwk{text-align:center;font-size:11px;font-weight:700;color:var(--dim);padding-bottom:4px}
+.dbday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:12px;font-size:13.5px;border:1px solid transparent;padding:0;position:relative;
+  background:none;color:var(--sub);font-variant-numeric:tabular-nums;
+  transition:background var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
+.dbday:active{transform:scale(.92)}
+.dbday:disabled{opacity:.3}
+.dbday.today{border-color:var(--accent-edge);color:var(--text);font-weight:700}
+.dbday.sel{background:linear-gradient(180deg,var(--accentHi),var(--accent));color:var(--onAccent);font-weight:800;
+  box-shadow:0 6px 16px var(--accent-glow)}
+.dbdot{position:absolute;bottom:5px;width:4px;height:4px;border-radius:2px;background:var(--ok)}
+.dbdot.t{background:var(--accentHi)}
+.dbday.sel .dbdot{background:var(--onAccent)}
 .target{display:flex;align-items:center;justify-content:space-between;gap:10px;
   border:1px dashed var(--border);border-radius:12px;padding:11px 13px;margin-top:4px}
 .target .tl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;

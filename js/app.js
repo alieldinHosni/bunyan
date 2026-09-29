@@ -68,7 +68,7 @@ document.addEventListener("click",function(ev){
   if(D.confirmok!==undefined){runAct((V.sd||{}).act,true);return;}
   if(D.confirmalt!==undefined){runAct((V.sd||{}).altact,true);return;}
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
-  if(D.tab){resetNav();V.tab=D.tab;V.train="days";V.meal=null;render();return;}
+  if(D.tab){resetNav();V.tab=D.tab;V.train="days";V.meal=null;V.dnavDir=0;render();return;}
   /* Same reset as a tab tap: it is the same kind of move. Without V.train it landed
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
@@ -752,26 +752,62 @@ document.addEventListener("click",function(ev){
      Which day a screen owns is the only thing that differs, so that is the only thing
      these branches branch on. Food stores null for today because curDate() treats null
      as "follow the clock", which keeps the tab correct across midnight. */
-  function dbGet(){ return V.tab==="food"?(V.fdate||today()):(V.pdate||today()); }
+  /* Train has its own day too, and is the one screen that looks ahead: it shows what
+     the plan holds for tomorrow and after. Food and Progress stop at today. */
+  function dbGet(){ return V.tab==="food"?(V.fdate||today()):V.tab==="train"?(V.tdate||today()):(V.pdate||today()); }
   function dbSet(iso){
-    if(iso>today())return;                       /* no logging into the future */
+    if(iso>today()&&V.tab!=="train")return;      /* no logging into the future */
+    var was=dbGet();
+    V.dnavDir=iso>was?1:iso<was?-1:0;
     if(V.tab==="food")V.fdate=(iso===today())?null:iso;
+    else if(V.tab==="train")V.tdate=(iso===today())?null:iso;
     else V.pdate=iso;
   }
+  function calOpen(on){
+    if(V.tab==="food")V.fcal=on; else if(V.tab==="train")V.tcal=on; else V.pcal=on;}
+  function calIsOpen(){return V.tab==="food"?V.fcal:V.tab==="train"?V.tcal:V.pcal;}
   if(D.dday!==undefined){
     dbSet(+D.dday===0?today():shiftDay(dbGet(),+D.dday));
     render();return;}
   if(D.dopen!==undefined){
-    if(V.tab==="food")V.fcal=!V.fcal; else V.pcal=!V.pcal;
+    calOpen(!calIsOpen());
     V.cal=0;render();return;}
   if(D.dmonth!==undefined){V.cal+= +D.dmonth;render();return;}
   if(D.dpick){
     dbSet(D.dpick);
-    if(V.tab==="food")V.fcal=false; else V.pcal=false;
+    calOpen(false);
     render();return;}
 });
 
 
+
+/* Swiping the date navigator moves the day, as the arrows do — it presses the arrow,
+   so the rule for which days are reachable lives in one place. A swipe is a quick,
+   mostly horizontal drag of at least 48px; anything else is left to scrolling, which
+   these listeners never block (passive). */
+var swipe=null;
+document.addEventListener("touchstart",function(ev){
+  var el=ev.touches.length===1&&ev.target.closest&&ev.target.closest('[data-swipe="day"]');
+  swipe=el?{el:el,x:ev.touches[0].clientX,y:ev.touches[0].clientY,at:Date.now()}:null;
+},{passive:true});
+document.addEventListener("touchend",function(ev){
+  var sw=swipe;swipe=null;
+  if(!sw||!ev.changedTouches.length)return;
+  var dx=ev.changedTouches[0].clientX-sw.x,dy=ev.changedTouches[0].clientY-sw.y;
+  if(Math.abs(dx)<48||Math.abs(dx)<Math.abs(dy)*1.5||Date.now()-sw.at>700)return;
+  /* Content follows the finger: dragging left brings the next day in. */
+  var step=dx<0?1:-1;
+  if(document.documentElement.getAttribute("dir")==="rtl")step=-step;
+  var btn=sw.el.querySelector('[data-dday="'+step+'"]');
+  if(btn&&!btn.disabled){swipedAt=Date.now();btn.click();}
+},{passive:true});
+/* A handled swipe must not also count as a tap on whatever the finger ended over —
+   the date itself would open the month. Only the click that immediately follows. */
+var swipedAt=0;
+document.addEventListener("click",function(ev){
+  if(swipedAt&&Date.now()-swipedAt<400&&!(ev.target.closest&&ev.target.closest("[data-dday]"))){
+    swipedAt=0;ev.preventDefault();ev.stopPropagation();}
+},true);
 
 /* The dock steps aside while the keyboard is up (see syncKeyboard in render.js). The
    same test decides both directions, and render() re-checks it, so the flag cannot be

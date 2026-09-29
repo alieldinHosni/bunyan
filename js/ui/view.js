@@ -14,6 +14,9 @@ var V={tab:"home",fdate:null,food:null,range:30,exd:null,showAll:false,restPause
           pdate/pcal were previously created on first use and absent from this literal,
           which made the view state impossible to read off in one place. */
        pdate:null,pcal:false,fcal:false,
+       /* Train's day (null follows the clock), its open month, and which way the date
+          navigator last moved, so the new date slides in from the right side. */
+       tdate:null,tcal:false,dnavDir:0,
        /* The Progress tab's view (overview, strength, body, nutrition) and whether
           Strength's top lifts list shows every lift or the first five. */
        ptab:"overview",pall:false,
