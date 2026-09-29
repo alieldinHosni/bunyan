@@ -169,6 +169,23 @@ body{padding-bottom:calc(var(--navh) + 20px)}
    do not know dvh — declaration order does the feature test, no @supports needed. */
 html{min-height:100%}
 body{min-height:100vh;min-height:100dvh}
+/* The Home Screen app. iOS 26 standalone, with viewport-fit=cover and the translucent
+   status bar this app uses, resolves 100%, 100svh and 100dvh to the screen height
+   MINUS the top safe-area inset — about 50pt short. On a screen with little on it
+   (Home, mostly) the document therefore ends above the bottom of the display, and
+   iOS pins fixed elements to the end of the document rather than of the screen: the
+   dock sat a status bar's height too high over a dead band, and dropped into place
+   only when a long screen (Train) made the document taller than the display.
+
+   100lvh is the one unit iOS reports as the full screen there, so the document is
+   made at least that tall — in the installed app only. A Safari tab keeps 100dvh,
+   because there the toolbar really does take that space. html.standalone is the
+   same rule for iOS versions that do not match the display-mode query; app.js sets
+   it from navigator.standalone before the first render. Nothing here positions the
+   dock itself: it is still fixed to the bottom by CSS alone. */
+@media (display-mode:standalone),(display-mode:fullscreen){
+  html,body{min-height:100vh;min-height:100lvh}}
+html.standalone,html.standalone body{min-height:100vh;min-height:100lvh}
 /* The hidden attribute only carries `display:none` from the UA stylesheet, so any rule
    that sets display on the same element silently outranks it. That is what happened to
    the session's Paused label: .ss-paused{display:block} beat it, the attribute was
