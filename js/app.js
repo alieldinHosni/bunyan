@@ -1,11 +1,11 @@
 /* Bunyan — app
    Entry point: event listeners, wiring and boot. */
-import {unaddExercise, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startActivity, startDay, syncDraft, val} from "./ui/actions.js";
+import {unaddExercise, ACT, addExercise, askConfirm, askText, closeSheet, openSheet, runAct, startActivity, startDay, syncDraft, val} from "./ui/actions.js";
 import {actKcal, isActivity} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
-import {loadExDB, loadInstructions, muscleOf, MUSCLES, reconcileExercises} from "./data/exercises.js";
+import {loadExDB, loadInstructions, reconcileExercises} from "./data/exercises.js";
 import {applyLang, exName} from "./i18n/exnames.js";
-import {recordOf, recordText, addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, prFor, proteinTarget, targetKcal} from "./engine/formulas.js";
+import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, proteinTarget, targetKcal} from "./engine/formulas.js";
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
@@ -13,12 +13,13 @@ import {render, syncKeyboard} from "./ui/render.js";
 import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
 import {initReorder} from "./ui/reorder.js";
+import * as W from "./ui/workout.js";
 import {leave} from "./ui/motion.js";
-import {groupNext, groupRun, mmss, noteSet, paintRest, rowsFor, sessionClock} from "./ui/views/session.js";
+import {groupRun, mmss, paintRest, sessionClock} from "./ui/views/session.js";
 import {refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
-import {fmtW, toDisp, toKg, wUnit} from "./units.js";
+import {toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
-import {syncViewport, restoreWorkoutState, syncWorkoutState, ex_isTimed, alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
+import {syncViewport, restoreWorkoutState, syncWorkoutState, alarmStart, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, tap, toast, V} from "./ui/view.js";
 import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
 import {mealNow} from "./ui/views/food.js";
@@ -36,13 +37,6 @@ function logFood(food,grams,label){
   V.tab="food";render();play("set");
   toast(food.n+" "+t("added to")+" "+t(meal)+".");}
 
-/* The muscle filter a replacement should open on. muscleOf() can answer "Other",
-   which is a real classification but not one the filter row offers — selecting it
-   would filter the list to nothing with no pill lit to explain why. */
-function pickMuscle(name){
-  var m=name?muscleOf(name):null;
-  return (m&&MUSCLES.indexOf(m)>=0)?m:"All";
-}
 
 /* The exercise open in the edit sheet, and the one place its numbers are bounded:
    at least one set and one rep, the range never inverted, rest in whole seconds. */
@@ -139,22 +133,12 @@ document.addEventListener("click",function(ev){
     else if(D.deload==="end"){dl.until=addDaysISO(today(),-1);}
     saveDB();render();return;}
   /* ---- readiness, session effort, pain */
-  if(D.ready!==undefined&&S.active){S.active.ready=+D.ready;saveDB();render();return;}
+  if(D.ready!==undefined&&S.active){W.setReady(+D.ready);return;}
   if(D.srpe){
     var sw9=V.sd&&sessionById(V.sd.id);if(!sw9)return;
     sw9.srpe=+D.srpe;saveSession(sw9);render();return;}
   if(D.hurt){openSheet("hurt");return;}
-  if(D.hurtdo){
-    var eh=S.active&&S.active.entries[V.logIdx];if(!eh){closeSheet();return;}
-    eh.pain=true;saveDB();
-    if(D.hurtdo==="swap"){
-      V.exm=pickMuscle(eh.name);V.exe="All";V.exq="";
-      openSheet("exercise",{swaplive:true,like:eh.name});return;}
-    closeSheet();
-    if(D.hurtdo==="skip"){
-      if(V.logIdx>=S.active.entries.length-1){confirmFinish();return;}
-      endRest();V.fresh=-1;V.logIdx=V.logIdx+1;syncDraft();saveDB();render();return;}
-    toast(t("Noted. Stop if it gets worse."));return;}
+  if(D.hurtdo){W.flagPain(D.hurtdo);return;}
   if(D.clearexq){V.exq="";render();topOfResults();var qq=document.getElementById("exq");if(qq)qq.focus();return;}
   if(D.clearfq){if(V.food)V.food.sq="";render();topOfResults();var fq0=document.getElementById("fq");if(fq0)fq0.focus();return;}
   if(D.swapday){openSheet("swapday",{date:D.swapday});return;}
@@ -253,7 +237,7 @@ document.addEventListener("click",function(ev){
        selected — "Chest Selected". Ranking alone put like-for-like first but left the
        whole library under it; this starts where the answer almost certainly is, and
        "All" is one tap away. Only a muscle the filter row actually has. */
-    V.exm=pickMuscle(eR2&&eR2.name);V.exe="All";V.exq="";
+    V.exm=W.pickMuscle(eR2&&eR2.name);V.exe="All";V.exq="";
     openSheet("exercise",{replace:D.replaceex,like:eR2?eR2.name:null});return;}
   if(D.exint){var ei=editedEx();if(!ei)return;ei.rpe=+D.exint;saveDB();render();return;}
   if(D.exstp){
@@ -283,16 +267,8 @@ document.addEventListener("click",function(ev){
 
   /* ---- logger */
   if(D.startday){pushNav();startDay(D.startday);return;}
-  /* Back to the exact exercise and set, not the top of the workout. V is memory only,
-     so the position rides on the session itself and survives a reload. */
-  if(D.continue!==undefined){
-    resetNav();V.tab="train";V.train="days";
-    V.logIdx=Math.min(num(S.active&&S.active.idx,0),(S.active?S.active.entries.length-1:0));
-    V.fresh=-1;syncDraft();render();return;}
-  if(D.jump!==undefined){
-    var n2=+D.jump;
-    if(!S.active||n2<0||n2>=S.active.entries.length)return;
-    V.logIdx=n2;S.active.idx=n2;endRest();V.fresh=-1;syncDraft();saveDB();render();return;}
+  if(D.continue!==undefined){W.resume();return;}
+  if(D.jump!==undefined){W.jumpTo(+D.jump);return;}
   if(D.stp){
     var id=D.stp,d1=parseFloat(D.d);
     var cur=id==="bw"?(V.draft.bw!=null?V.draft.bw:toDisp(lastWeight()||86))
@@ -304,147 +280,27 @@ document.addEventListener("click",function(ev){
   if(D.rpe){V.draft.rpe=+D.rpe;render();return;}
   /* ---- cardio and sports: one bout of time and effort */
   if(D.actint){V.draft.rpe=+D.actint;render();return;}
-  if(D.logact){
-    var ea=S.active&&S.active.entries[V.logIdx];if(!ea)return;
-    var mEl=document.getElementById("in_min"),kEl=document.getElementById("in_km"),hEl=document.getElementById("in_hr");
-    var amin=Math.max(1,Math.min(1440,Math.round(num(mEl&&mEl.value!==""?mEl.value:V.draft.min,30))));
-    var akm=kEl&&kEl.value!==""?Math.min(500,Math.max(0,r1(num(kEl.value)))):0;
-    var ahr=hEl&&hEl.value!==""?Math.min(240,Math.max(30,Math.round(num(hEl.value)))):0;
-    var arpe=V.draft.rpe||6;
-    var bout={w:0,r:0,min:amin,km:akm,rpe:arpe,kcal:actKcal(ea.name,amin,arpe,lastWeight())};
-    if(ahr)bout.hr=ahr;
-    var ivN=val("in_ivn"),ivOn=val("in_ivon"),ivOff=val("in_ivoff");
-    ivN=Math.round(num(ivN,0));ivOn=Math.round(num(ivOn,0));ivOff=Math.round(num(ivOff,0));
-    if(ivN>0&&ivN<100&&ivOn>0&&ivOn<=3600)bout.iv={n:ivN,on:ivOn,off:Math.max(0,Math.min(3600,ivOff))};
-    ea.sets.push(bout);
-    V.draft.min=amin;V.draft.km=akm;V.draft.hr=ahr;
-    if(bout.iv){V.draft.ivn=bout.iv.n;V.draft.ivon=bout.iv.on;V.draft.ivoff=bout.iv.off;}
-    noteSet(S.active);V.fresh=ea.sets.length-1;play("set");tap("ok");saveDB();render();return;}
+  if(D.logact){W.logBout();return;}
   if(D.activ){V.actIv=true;render();var ivf=document.getElementById("in_ivn");if(ivf)ivf.focus();return;}
   if(D.quickact){V.sheet=null;V.sd=null;startActivity(D.quickact);return;}
   if(D.actsheet){openSheet("acts");return;}
-  /* Complete the active set. Reads the live inputs first so a value typed but not
-     blurred is never lost. */
-  if(D.logset){
-    /* No two sets are logged inside a second. The recommendation banner above the
-       table goes away after the first set, the rows move up, and the second tap of a
-       double tap would land on the next row's button and log a phantom set. */
-    if(V.loggedAt&&Date.now()-V.loggedAt<700)return;
-    var e3=S.active&&S.active.entries[V.logIdx];if(!e3)return;
-    var lw=document.getElementById("in_w"),lr=document.getElementById("in_r"),
-        lp=document.getElementById("in_rpe");
-    /* What is in the fields is what gets logged. A cleared weight is bodyweight (0),
-       not the previous set's load, which is what an empty field used to log. */
-    if(lw)V.draft.w=lw.value===""?0:toKg(lw.value);
-    if(lr)V.draft.r=lr.value===""?0:num(lr.value);
-    if(lp)V.draft.rpe=lp.value===""?null:Math.min(10,Math.max(1,Math.round(num(lp.value,8)*2)/2));
-    var bad=setProblem(V.draft.w,V.draft.r,ex_isTimed(e3));
-    if(bad){toast(bad);return;}
-    var ns={w:V.draft.w,r:V.draft.r};if(V.draft.rpe)ns.rpe=V.draft.rpe;
-    if(V.draftSg)ns.sg=1;
-    var rec3=recordOf(e3.name,ns,e3.sets);
-    e3.sets.push(ns);
-    /* A slipped digit (80 → 800) would become a record and drive every suggestion
-       after it. Far above the lifter's best, say so — the set is logged, and the tick
-       undoes it. */
-    var bestW=prFor(e3.name).w;
-    if(bestW>=20&&ns.w>bestW*1.3)setTimeout(function(){
-      toast(t("That is well above your best of")+" "+fmtW(bestW)+". "+t("Check the weight. Tap the tick to undo."));},50);
-    else if(rec3)setTimeout(function(){toast("\ud83c\udfc6 "+recordText(rec3));},50);
-    V.loggedAt=Date.now();
-    /* Closes the active period and starts a new one; the clock resumes by itself. */
-    noteSet(S.active);
-    V.fresh=e3.sets.length-1;
-    play("set");tap("ok");
-    /* In a superset you move straight to the next exercise and only rest once the
-       round is finished. Resting between the pair would make it two exercises. */
-    var run=groupRun(S.active.entries,V.logIdx);
-    if(run.length>1){
-      var nxt=groupNext(S.active.entries,V.logIdx);
-      if(nxt===null){startRest(e3);}
-      else{
-        var wrapped=run.indexOf(nxt)<=run.indexOf(V.logIdx);
-        if(wrapped)startRest(e3); else endRest();
-        V.logIdx=nxt;S.active.idx=nxt;V.fresh=-1;
-      }
-      saveDB();syncDraft();render();return;
-    }
-    startRest(e3);saveDB();syncDraft();render();return;}
-  /* Removing a row. An empty one destroys nothing, so it goes at once; one with a
-     logged set asks, and says what it is about to throw away. */
-  if(D.delset!==undefined){
-    var eD=S.active&&S.active.entries[V.logIdx];if(!eD)return;
-    var iD=+D.delset;
-    if(iD<eD.sets.length){
-      var sD=eD.sets[iD];
-      askConfirm({title:t("Delete set")+" "+(iD+1)+"?",
-        body:(num(sD.w)?fmtW(sD.w)+" × "+num(sD.r):num(sD.r)+" "+t("reps"))
-             +" "+t("will be removed."),
-        cta:t("Delete"),act:"delset",data:iD,hard:true});
-      return;}
-    eD.extra=(eD.extra||0)-1;
-    saveDB();syncDraft();render();return;}
-  /* Tapping the green tick undoes that set. Reversible, so no confirm. */
-  if(D.unlog!==undefined){
-    /* The log button turns into this one under the finger, so the second tap of a
-       double tap would remove the set it had just logged. Ignored for a moment. */
-    if(V.loggedAt&&Date.now()-V.loggedAt<800&&+D.unlog===V.fresh)return;
-    var e4=S.active.entries[V.logIdx],i4=+D.unlog,gone=e4.sets.splice(i4,1)[0];
-    if(!gone)return;
-    V.fresh=-1;saveDB();syncDraft();render();
-    toast(t("Set removed."),function(){
-      if(!S.active||S.active.entries.indexOf(e4)<0)return;
-      e4.sets.splice(Math.min(i4,e4.sets.length),0,gone);saveDB();syncDraft();render();});return;}
-  if(D.addrow){
-    var e5=S.active.entries[V.logIdx];
-    e5.extra=(e5.extra||0)+1;V.fresh=-1;saveDB();render();return;}
-  /* Pause, resume and ±30s change the countdown and nothing else on the screen, so
-     they repaint the four live parts rather than rebuilding. A full render here was
-     what flashed the previous screen and restarted the ring from zero. Only leaving
-     rest entirely is a real navigation. */
-  if(D.rest){
-    if(D.rest==="pause"){V.restLeft=Math.max(0,Math.ceil((V.restEnd-Date.now())/1000));
-      V.restPaused=true;V.restEnd=0;paintRest();persistRest();return;}
-    if(D.rest==="resume"){V.restPaused=false;V.restEnd=Date.now()+V.restLeft*1000;
-      setBeeped(false);paintRest();persistRest();return;}
-    if(D.rest==="skip"){endRest();render();return;}
-    if(D.rest==="hide"){V.restMin=true;render();return;}
-    if(D.rest==="show"){V.restMin=false;render();return;}
-    /* From the rest-over screen: start another countdown of that length. */
-    if(D.rest==="ext30"||D.rest==="ext60"){
-      var ext=D.rest==="ext30"?30:60;
-      alarmStop();V.restDone=false;V.restPaused=false;
-      V.restTotal=ext;V.restEnd=Date.now()+ext*1000;setBeeped(false);setLastTick(99);
-      render();return;}
-    if(V.restPaused){V.restLeft=Math.max(0,V.restLeft+(+D.rest));
-      V.restTotal=Math.max(15,V.restTotal+(+D.rest));
-      /* Trimming a paused timer to zero ends the rest, which is a real change. */
-      if(!V.restLeft){V.restPaused=false;render();return;}}
-    else{V.restEnd=Math.max(Date.now(),V.restEnd+(+D.rest)*1000);
-         V.restTotal=Math.max(15,V.restTotal+(+D.rest));
-         if(+D.rest>0)setBeeped(false);}
-    paintRest();persistRest();return;}
+  if(D.logset){W.logSet();return;}
+  if(D.delset!==undefined){W.removeRow(+D.delset);return;}
+  if(D.unlog!==undefined){W.unlogSet(+D.unlog);return;}
+  if(D.addrow){W.addRow();return;}
+  if(D.rest){W.restControl(D.rest);return;}
   if(D.swap){
     var eS=S.active.entries[V.logIdx];
-    V.exm=pickMuscle(eS&&eS.name);V.exe="All";V.exq="";
+    V.exm=W.pickMuscle(eS&&eS.name);V.exe="All";V.exq="";
     openSheet("exercise",{swaplive:true,like:eS?eS.name:null});return;}
-  if(D.nextex){
-    if(V.logIdx>=S.active.entries.length-1){confirmFinish();return;}
-    play("set");endRest();V.fresh=-1;
-    V.logIdx=V.logIdx+1;
-    saveDB();syncDraft();render();return;}
+  if(D.nextex){W.nextExercise();return;}
   if(D.sessmore!==undefined){openSheet("sessmore");return;}
-  if(D.finish){confirmFinish();return;}
+  if(D.finish){W.confirmFinish();return;}
   /* Every back affordance in the app comes through here, so none of them can drift
      to a destination of its own. Discarding a session is now part of going back
      rather than a separate link. */
   if(D.back!==undefined){goBack();return;}
-  /* Throwing a workout away is only ever deliberate now: a control inside the
-     session, never a question asked because you glanced at another screen. */
-  if(D.discard!==undefined){
-    askConfirm({title:t("Discard this session?"),icon:"trash",
-      body:t("Every set you logged in this workout is thrown away. This cannot be undone."),
-      cta:t("Discard it"),act:"discard",hard:true});return;}
+  if(D.discard!==undefined){W.askDiscard();return;}
 
   /* ---- daily logs */
   if(D.water){
@@ -857,11 +713,7 @@ document.addEventListener("click",function(ev){
   if(D.unfollow){
     var F2=friends();delete F2[D.unfollow];saveFriends(F2);render();return;}
   if(D.export){openSheet("backup");return;}
-  if(D.warm!==undefined&&S.active){
-    var ew=S.active.entries[V.logIdx],sw=ew&&ew.sets[+D.warm];
-    if(!sw)return;
-    sw.wu=!sw.wu;V.fresh=-1;saveDB();syncDraft();render();
-    toast(sw.wu?t("Marked as a warm-up."):t("Counting as a working set."));return;}
+  if(D.warm!==undefined&&S.active){W.toggleWarm(+D.warm);return;}
   /* Pair with the exercise below. If that one is already in a group, join it, so
      tapping down the list chains A1 → A2 → A3. */
   if(D.group){
@@ -1129,21 +981,8 @@ document.addEventListener("change",function(ev){
     if(go)go.textContent=t(ev.target.checked?"Save and add to":"Add to")+" "
       +t((V.sd&&V.sd.meal)||mealNow());
     return;}
-  /* Editing a set that is already logged, in place. Previously the only way to fix
-     a typo was to delete the set and re-enter it. */
   var si=ev.target.dataset?ev.target.dataset.setidx:undefined;
-  if(si!==undefined&&S.active){
-    var en=S.active.entries[V.logIdx];
-    if(!en||!en.sets[+si])return;
-    var k=ev.target.dataset.k,v=num(ev.target.value,0);
-    if(k==="rpe")v=v?Math.min(10,Math.max(1,v)):0;
-    else if(k==="w")v=Math.min(1000,Math.max(0,toKg(v)));
-    else{
-      v=Math.round(Math.max(0,v));
-      /* A logged set keeps at least one rep: zero is not a set. */
-      if(!v||v>(ex_isTimed(en)?3600:100)){toast(t(v?"That is more than Bunyan accepts.":"A set needs at least one rep."));render();return;}}
-    en.sets[+si][k]=v;
-    V.fresh=-1;saveDB();syncDraft();render();}});
+  if(si!==undefined&&S.active)W.editLoggedSet(+si,ev.target.dataset.k,ev.target.value);});
 
 /* The clock and the rest ring are the only things that change every second, so they
    are patched directly. Re-rendering the whole screen on a timer threw away scroll
@@ -1331,37 +1170,6 @@ function downloadBackup(){
   document.body.appendChild(a);a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
   done();
-}
-/* Finishing early is a choice worth one question: nothing logged means the workout
-   would simply vanish, and sets still planned are left out of the record. When every
-   planned set is logged there is nothing to ask. */
-function confirmFinish(){
-  var a=S.active;if(!a)return;
-  var logged=0,left=0;
-  a.entries.forEach(function(e){logged+=e.sets.length;left+=Math.max(0,rowsFor(e)-e.sets.length);});
-  if(!logged){
-    askConfirm({title:t("Nothing logged yet"),icon:"trash",
-      body:t("Finishing now throws this workout away."),
-      cta:t("Discard workout"),act:"discard",cancel:t("Keep training")});return;}
-  if(left>0){
-    askConfirm({title:t("Finish workout?"),icon:"leave",
-      body:left+" "+t(left===1?"planned set is not logged. It is left out of this workout.":"planned sets are not logged. They are left out of this workout."),
-      cta:t("Finish now"),act:"finishnow",cancel:t("Keep training")});return;}
-  finishSession();
-}
-ACT.finishnow=function(){finishSession();};
-/* Pause, resume and ±30s only repaint the rest screen, so they save here rather
-   than waiting for the next tick — a reload a moment later keeps them. */
-function persistRest(){if(syncWorkoutState())saveDB();}
-/* Bounds for a logged set, in storage units (kg). Wide enough for any real lifter,
-   narrow enough to catch a slipped digit before it becomes a record. */
-function setProblem(w,r,timed){
-  if(!isFinite(w)||w<0)return t("Weight cannot be negative.");
-  if(w>1000)return t("That weight is more than Bunyan accepts. Check it.");
-  if(!r||r<1)return t(timed?"Enter the seconds first.":"Enter reps first.");
-  if(r!==Math.round(r))return t("Reps are whole numbers.");
-  if(r>(timed?3600:100))return t(timed?"That is longer than an hour.":"That is more than 100 reps. Check it.");
-  return null;
 }
 ACT.delsess=function(_,id){if(removeSession(id))toast(t("Workout deleted"));render();};
 
