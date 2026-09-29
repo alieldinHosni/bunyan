@@ -21,6 +21,60 @@ function buildLIB(){
   ((typeof S!=="undefined"&&S.myEx)||[]).forEach(function(m){
     if(EXDB[m.n])return;
     LIB.push([m.n,m.m||"Other","Other",0]);});
+  buildIds();
+}
+/* ---- stable identity --------------------------------------------------------
+   History and plans used to know an exercise only by its display name, so renaming
+   one in exercises.json would have orphaned every set ever logged on it. Each
+   library entry carries a unique slug (v.i); custom exercises get one when created;
+   a pure activity's id is its name behind a prefix. New records store exId next to
+   name, and reconcileExercises() heals names from ids on load. */
+var ID2NAME={};
+function buildIds(){
+  ID2NAME={};
+  if(EXDB)Object.keys(EXDB).forEach(function(n){if(EXDB[n].i)ID2NAME[EXDB[n].i]=n;});
+  ((typeof S!=="undefined"&&S&&S.myEx)||[]).forEach(function(m){if(m.id)ID2NAME[m.id]=m.n;});
+}
+function exIdOf(name){
+  if(!name)return null;
+  var v=EXDB&&EXDB[name];
+  if(v&&v.i)return v.i;
+  var mine=((typeof S!=="undefined"&&S&&S.myEx)||[]).filter(function(m){return m.n===name;})[0];
+  if(mine&&mine.id)return mine.id;
+  if(isActivity(name))return "act:"+name;
+  return null;
+}
+function nameOfExId(id){
+  if(!id)return null;
+  if(id.indexOf("act:")===0)return id.slice(4);
+  return ID2NAME[id]||null;
+}
+/* Fill missing ids and heal renamed names, in memory. Returns the sessions whose
+   names actually changed, so the caller can persist just those; filled-in ids ride
+   along on each record's next ordinary save. */
+function reconcileExercises(state){
+  if(!EXDB||!state)return {changedSessions:[],plansChanged:false};
+  buildIds();
+  var changed=[],plans=false;
+  function fix(e,onRename){
+    if(!e||!e.name)return;
+    if(e.exId){
+      var real=nameOfExId(e.exId);
+      if(real&&real!==e.name){e.name=real;onRename();}
+    }else{
+      var id=exIdOf(e.name);
+      if(id)e.exId=id;
+    }
+  }
+  var pools=[state.myPlan].concat(state.userSplits||[]);
+  pools.forEach(function(sp){if(!sp)return;
+    (sp.days||[]).forEach(function(d){(d.ex||[]).forEach(function(e){fix(e,function(){plans=true;});});});});
+  if(state.active)(state.active.entries||[]).forEach(function(e){fix(e,function(){plans=true;});});
+  (state.sessions||[]).forEach(function(s){
+    var hit=false;
+    (s.entries||[]).forEach(function(e){fix(e,function(){hit=true;});});
+    if(hit)changed.push(s);});
+  return {changedSessions:changed,plansChanged:plans};
 }
 var EQUIP=["Bodyweight","Barbell","Dumbbell","Cable","Machine","Kettlebell","Band","Other"];
 var MUSCLES=["Chest","Back","Shoulders","Biceps","Triceps","Forearms","Quads",
@@ -213,7 +267,7 @@ function muscleOfEntry(e){
 function isCompound(n){var v=EXDB&&EXDB[n];return v?!!v.c:/Press|Squat|Deadlift|Row|Pull|Lunge|Dip/i.test(n);}
 
 
-export {kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
+export {exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
 
 /* Plate maths only means something on a loaded bar. On a machine, a cable or your
    own bodyweight the button was there on every exercise and useful on a handful.

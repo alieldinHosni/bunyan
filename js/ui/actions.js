@@ -1,7 +1,7 @@
 /* Bunyan — actions
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
-import {kindOf, LIB, muscleOf, muscleOfEntry} from "../data/exercises.js";
+import {exIdOf, kindOf, LIB, muscleOf, muscleOfEntry} from "../data/exercises.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
 import {avgRPE, prevPerf, prFor, recommend, sessionVolume} from "../engine/formulas.js";
@@ -69,7 +69,7 @@ ACT.customex=function(name,d){
     toast(t("That exercise is already in your library."));return;}
   var m=V.exm&&V.exm!=="All"?V.exm:"Other";
   LIB.push([name,m,"Other",0]);
-  (S.myEx=S.myEx||[]).push({n:name,m:m});
+  (S.myEx=S.myEx||[]).push({id:"u_"+uid(),n:name,m:m});
   saveDB();
   /* Put the picker's context back so a custom exercise can still land in the day or
      replace the live one, exactly like a library pick. */
@@ -132,7 +132,7 @@ function startDay(dayId){
     entries:d.ex.map(function(e){
       /* Resolved from the library as the session is created, so the record this
          workout leaves behind is right even if the plan's cached muscle is not. */
-      return {name:e.name,kind:kindOf(e.name),muscle:muscleOfEntry(e),planned:{sets:e.sets,lo:e.lo,hi:e.hi,min:e.min||0,rpe:e.rpe||0,km:e.km||0},
+      return {name:e.name,exId:e.exId||exIdOf(e.name),kind:kindOf(e.name),muscle:muscleOfEntry(e),planned:{sets:e.sets,lo:e.lo,hi:e.hi,min:e.min||0,rpe:e.rpe||0,km:e.km||0},
               rest:e.rest,grp:e.grp||null,sets:[]};})};
   V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
@@ -143,7 +143,7 @@ function startActivity(name){
   if(S.active)return;
   S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
     splitId:split().id,dayId:null,dayName:exName(name),
-    entries:[{name:name,kind:"activity",muscle:actMuscle(name)||"Cardio",planned:{sets:1,lo:0,hi:0},rest:0,grp:null,sets:[]}]};
+    entries:[{name:name,exId:exIdOf(name),kind:"activity",muscle:actMuscle(name)||"Cardio",planned:{sets:1,lo:0,hi:0},rest:0,grp:null,sets:[]}]};
   V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
 
@@ -227,6 +227,7 @@ function finishSession(){
    other state-changing actions rather than in the entry point. */
 function addExercise(name){
   var e=ex(name,3,8,12);
+  e.exId=exIdOf(name);
   /* A match or a run is planned as time and effort, not sets and reps. */
   if(isActivity(name)){e.sets=1;e.lo=0;e.hi=0;e.rest=0;
     e.min=actInfo(name).grp==="Sports"?60:30;e.rpe=6;}
@@ -237,12 +238,12 @@ function addExercise(name){
     if(cur.sets.length){
       /* Sets already done stay with the exercise they were done on. The replacement
          comes in as the next exercise instead of overwriting them. */
-      var fresh={name:name,kind:kindOf(name),muscle:muscleOf(name),planned:planned,rest:isActivity(name)?0:cur.rest,grp:null,sets:[]};
+      var fresh={name:name,exId:exIdOf(name),kind:kindOf(name),muscle:muscleOf(name),planned:planned,rest:isActivity(name)?0:cur.rest,grp:null,sets:[]};
       S.active.entries.splice(V.logIdx+1,0,fresh);
       V.logIdx=V.logIdx+1;S.active.idx=V.logIdx;
       toast(t("Your logged sets were kept. Next up:")+" "+exName(name));
     }else{
-      cur.name=name;cur.kind=kindOf(name);cur.muscle=muscleOf(name);cur.planned=planned;cur.extra=0;
+      cur.name=name;cur.exId=exIdOf(name);cur.kind=kindOf(name);cur.muscle=muscleOf(name);cur.planned=planned;cur.extra=0;
       if(isActivity(name))cur.rest=0;}
     endRest();V.fresh=-1;saveDB();closeSheet();syncDraft();render();return;}
   var d=dayOf(V.dayId);if(!d){closeSheet();return;}

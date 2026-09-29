@@ -70,6 +70,7 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Your sets are saved. Pick up where you left off any time.": "مجموعاتك متسجلة. تقدر تكمّل من مكانك في أي وقت.",
 "Save and exit": "احفظ واخرج",
 "Keep training": "كمّل التمرين",
+"Avg heart rate": "متوسط نبض القلب",
 "You hit the top of the range last time.": "وصلت لأعلى العدات المرة اللي فاتت.",
 "Last session was near failure. Hold this weight.": "الجلسة اللي فاتت كانت قريبة من أقصى مجهود. ثبّت الوزن ده.",
 "Same weight, aim for more reps.": "نفس الوزن، حاول تزوّد العدات.",

@@ -3,7 +3,7 @@
 import {ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startActivity, startDay, syncDraft, val} from "./ui/actions.js";
 import {actKcal, isActivity} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
-import {loadExDB, loadInstructions, muscleOf, MUSCLES} from "./data/exercises.js";
+import {loadExDB, loadInstructions, muscleOf, MUSCLES, reconcileExercises} from "./data/exercises.js";
 import {applyLang} from "./i18n/exnames.js";
 import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, prFor, proteinTarget, targetKcal} from "./engine/formulas.js";
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
@@ -156,7 +156,16 @@ document.addEventListener("click",function(ev){
     V.train="library";render();return;}
   if(D.bwdiff){pushNav();V.exd=D.bwdiff;V.exe="Bodyweight";V.exm="All";V.exq="";V.train="library";render();return;}
   if(D.exdetail){var nm5=D.exdetail;V.exsteps=false;V.exmiss=false;
-    loadInstructions(function(){openSheet("exdetail",{name:nm5});});return;}
+    /* Opened from inside the sheet (a similar exercise): remember the trail, so back
+       returns to the exercise this one was reached from instead of closing. */
+    var trail=(V.sheet==="exdetail"&&V.sd&&V.sd.name&&V.sd.name!==nm5)
+      ?((V.sd.prev||[]).concat(V.sd.name)).slice(-8):null;
+    loadInstructions(function(){openSheet("exdetail",trail?{name:nm5,prev:trail}:{name:nm5});});return;}
+  if(D.exback!==undefined){
+    var tr=(V.sd&&V.sd.prev||[]).slice();
+    if(!tr.length){requestCloseSheet();return;}
+    var back5=tr.pop();V.exsteps=false;V.exmiss=false;
+    openSheet("exdetail",tr.length?{name:back5,prev:tr}:{name:back5});return;}
   /* Reachable again, from the picker's empty state. It was orphaned when the picker
      was rewritten to read exercises.json: the handler survived, the button did not.
      Custom entries have no illustration, which thumb() already renders gracefully. */
@@ -218,12 +227,15 @@ document.addEventListener("click",function(ev){
   if(D.actint){V.draft.rpe=+D.actint;render();return;}
   if(D.logact){
     var ea=S.active&&S.active.entries[V.logIdx];if(!ea)return;
-    var mEl=document.getElementById("in_min"),kEl=document.getElementById("in_km");
-    var amin=Math.max(1,Math.round(num(mEl&&mEl.value!==""?mEl.value:V.draft.min,30)));
-    var akm=kEl&&kEl.value!==""?Math.max(0,r1(num(kEl.value))):0;
+    var mEl=document.getElementById("in_min"),kEl=document.getElementById("in_km"),hEl=document.getElementById("in_hr");
+    var amin=Math.max(1,Math.min(1440,Math.round(num(mEl&&mEl.value!==""?mEl.value:V.draft.min,30))));
+    var akm=kEl&&kEl.value!==""?Math.min(500,Math.max(0,r1(num(kEl.value)))):0;
+    var ahr=hEl&&hEl.value!==""?Math.min(240,Math.max(30,Math.round(num(hEl.value)))):0;
     var arpe=V.draft.rpe||6;
-    ea.sets.push({w:0,r:0,min:amin,km:akm,rpe:arpe,kcal:actKcal(ea.name,amin,arpe,lastWeight())});
-    V.draft.min=amin;V.draft.km=akm;
+    var bout={w:0,r:0,min:amin,km:akm,rpe:arpe,kcal:actKcal(ea.name,amin,arpe,lastWeight())};
+    if(ahr)bout.hr=ahr;
+    ea.sets.push(bout);
+    V.draft.min=amin;V.draft.km=akm;V.draft.hr=ahr;
     noteSet(S.active);V.fresh=ea.sets.length-1;play("set");tap("ok");saveDB();render();return;}
   if(D.quickact){V.sheet=null;V.sd=null;startActivity(D.quickact);return;}
   if(D.actsheet){openSheet("acts");return;}
@@ -1296,6 +1308,15 @@ function openBarcodePrompt(){
 }
 ACT.barcode=function(v){ onBarcode(v); };
 
+/* Ids and names agree once both the library and the history have arrived; run on
+   each of the two callbacks, whichever lands last does the work. A rename in the
+   library is persisted only for the sessions it actually touched. */
+function applyExReconcile(){
+  var r=reconcileExercises(S);
+  if(r.plansChanged)saveDB();
+  r.changedSessions.forEach(function(s){saveSession(s);});
+}
+
 /* Boot. Nothing above ran on import, so this is the whole startup sequence
    in the order it actually happens. */
 /* The installed app gets the full-screen page height (see "The Home Screen app" in
@@ -1310,7 +1331,7 @@ initSheetDrag(requestCloseSheet);
 /* History comes from IndexedDB, so it arrives a tick later than everything else.
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from
    holding the whole app behind the intro; in practice it resolves well inside it. */
-loadStored(function(){ render(); });
+loadStored(function(){ applyExReconcile(); render(); });
 /* The intro belongs to a cold start, not to every document load. A reload for any
    reason — a service worker taking over, a crash recovery, the OS reclaiming the
    tab — used to replay it, which reads as the app restarting. */
@@ -1326,7 +1347,7 @@ else{
   var spEl=document.getElementById("splash");
   if(spEl)spEl.addEventListener("click",endSplash);
 }
-loadExDB(function(){render();});
+loadExDB(function(){applyExReconcile();render();});
 if(startupNote()==="corrupt")setTimeout(function(){
   toast(t("Your saved data could not be read, so Bunyan started fresh. A copy of it was kept on this phone."));},1200);
 /* Ask the browser not to evict this origin's data under storage pressure. Everything

@@ -4,7 +4,7 @@ import {t} from "../../i18n/dict.js";
 import {difficultyOf, exImg, exMedia, muscleOfEntry} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
 import {lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
-import {actIcon, actInfo, actKcal, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
+import {actIcon, actInfo, actKcal, actPace, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
 import {S} from "../../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num} from "../../util.js";
@@ -326,6 +326,9 @@ function actBody(a,e,rows,active){
      +(info.dist?'<div class="act-lbl">'+t("Distance")+' <i>'+t("optional")+'</i></div>'
        +'<div class="act-km"><input id="in_km" type="number" inputmode="decimal" step="0.1" min="0" value="'
        +(num(V.draft.km)?V.draft.km:"")+'" placeholder="0.0" aria-label="'+t("Distance")+' km"><span>km</span></div>':'')
+     +'<div class="act-lbl">'+t("Avg heart rate")+' <i>'+t("optional")+'</i></div>'
+     +'<div class="act-km"><input id="in_hr" type="number" inputmode="numeric" min="30" max="240" value="'
+     +(num(V.draft.hr)?V.draft.hr:"")+'" placeholder="—" aria-label="'+t("Avg heart rate")+'"><span>bpm</span></div>'
      +'<div class="act-lbl">'+t("Intensity")+'</div><div class="act-int" role="group" aria-label="'+t("Intensity")+'">'
      +INTENSITY.map(function(x){
         return '<button class="'+(cur===x[0]?'on':'')+'" data-actint="'+x[0]+'" aria-pressed="'+(cur===x[0])+'">'+t(x[1])+'</button>';}).join("")
@@ -338,8 +341,9 @@ function actBody(a,e,rows,active){
     h+='<div class="act-done">';
     e.sets.forEach(function(st,i){
       h+='<div class="act-row'+(V.fresh===i?' fresh':'')+'" data-k="act:'+i+'"><span class="act-ok" aria-hidden="true">'+TICK+'</span>'
-       +'<span class="act-t"><b>'+num(st.min)+' '+t("min")+(num(st.km)?' · '+st.km+' km':'')+'</b>'
-       +'<span>'+t(intensityOf(st.rpe||6)[1])+(st.kcal?' · '+fmtN(st.kcal)+' kcal':'')+'</span></span>'
+       +'<span class="act-t"><b>'+num(st.min)+' '+t("min")+(num(st.km)?' · '+st.km+' km':'')
+         +(actPace(num(st.min),num(st.km))?' · '+actPace(num(st.min),num(st.km)):'')+'</b>'
+       +'<span>'+t(intensityOf(st.rpe||6)[1])+(num(st.hr)?' · '+num(st.hr)+' bpm':'')+(st.kcal?' · '+fmtN(st.kcal)+' kcal':'')+'</span></span>'
        +'<button class="delset" data-delset="'+i+'" aria-label="'+t("Delete")+' '+(i+1)+'">✕</button></div>';});
     h+='</div>';
     if(active<0)h+='<div class="addrow"><button class="addset2" data-addrow="1"><span aria-hidden="true">+</span>'+t("Add another bout")+'</button></div>';

@@ -5,7 +5,7 @@ import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, is
 import {exName} from "../i18n/exnames.js";
 import {MEALS} from "./views/food.js";
 import {myDaysList, planOn} from "./views/train.js";
-import {ACT_GROUPS, actIcon, actInfo, actsIn, INTENSITY, intensityOf, isActivity} from "../data/activities.js";
+import {ACT_GROUPS, actIcon, actInfo, actPace, actsIn, INTENSITY, intensityOf, isActivity} from "../data/activities.js";
 import {backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
@@ -414,7 +414,9 @@ function vSheet(){
   else if(V.sheet==="exdetail"){
     var nD=V.sd.name, mD=muscleOf(nD), pD=patternOf(nD), secD=secondaryOf(nD), lD=libFind(nD);
     var prD=prFor(nD), pvD=prevPerf(nD);
-    b='<h2>'+esc(exName(nD))+'</h2>';
+    b=(V.sd.prev&&V.sd.prev.length
+        ?'<button class="btn d sm" data-exback="1" style="width:auto;margin:0 0 8px;padding-inline-start:0">\u2039 '+esc(exName(V.sd.prev[V.sd.prev.length-1]))+'</button>':'')
+     +'<h2>'+esc(exName(nD))+'</h2>';
     var subD=[t(pD),exVariant(nD)?esc(exVariant(nD)):""].filter(Boolean).join(" \u00b7 ");
     b+='<p class="tiny">'+subD+'</p>';
     /* The two positions first — what the movement looks like is what someone opening
@@ -598,7 +600,10 @@ function vSheet(){
       if(hA){
         b+='<div class="card"><div class="row"><span class="tiny">'+pretty(r.d)+'</span></div>'
          +'<div class="num mt" style="font-size:15px">'+r.s.map(function(x){
-            return num(x.min)+' '+t("min")+(num(x.km)?' · '+x.km+' km':'')+' · '+t(intensityOf(x.rpe||6)[1])+(x.kcal?' · '+fmtN(x.kcal)+' kcal':'');}).join('<br>')+'</div></div>';
+            return num(x.min)+' '+t("min")+(num(x.km)?' · '+x.km+' km':'')
+             +(actPace(num(x.min),num(x.km))?' · '+actPace(num(x.min),num(x.km)):'')
+             +' · '+t(intensityOf(x.rpe||6)[1])+(num(x.hr)?' · '+num(x.hr)+' bpm':'')
+             +(x.kcal?' · '+fmtN(x.kcal)+' kcal':'');}).join('<br>')+'</div></div>';
         return;}
       b+='<div class="card"><div class="row"><span class="tiny">'+pretty(r.d)+'</span>'
        +'<span class="tiny">'+fmtW(volume(r.s))+' \u00b7 1RM '
