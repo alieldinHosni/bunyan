@@ -4,12 +4,13 @@ import {t} from "../i18n/dict.js";
 import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {exName} from "../i18n/exnames.js";
 import {MEALS} from "./views/food.js";
+import {myDaysList} from "./views/train.js";
 import {backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionKcal, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {GOALS, LEVELS, splitCandidates} from "../engine/plan.js";
 import {groupLabel, groupRun, mmss, platePlan} from "./views/session.js";
-import {buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats} from "../state.js";
+import {ensureSessionIds, buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats, split} from "../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
 import {CUES, MISTAKES, progressBar, sparkline, stepper, V} from "./view.js";
@@ -283,37 +284,72 @@ function vSheet(){
     b+='</div><button class="btn g" data-online="'+esc(cur.parsed.query)+'">'+esc(t("Search online instead"))+'</button>';
   }
   else if(V.sheet==="dayview"){
+    ensureSessionIds();
     var dv=V.sd.date, rv2=S.days[dv]||{meals:{}}, sess=S.sessions.filter(function(x){return x.date===dv;});
-    b='<h2>'+pretty(dv)+'</h2>';
-    b+='<div class="overline">'+t("Training")+'</div>';
-    if(!sess.length)b+='<p class="tiny">'+t("No session logged.")+'</p>';
-    sess.forEach(function(x){
-      b+='<div class="card"><div class="row"><h3>'+esc(x.dayName)+'</h3>'
-       +'<span class="metric" style="font-size:17px">'+fmtW(Math.round(sessionVolume(x)))+'</span></div>';
-      x.entries.forEach(function(en){
-        if(!en.sets.length)return;
-        b+='<div class="row" style="margin-top:7px;font-size:13px"><span class="dim">'+esc(exName(en.name))+'</span>'
-         +'<span class="num">'+en.sets.map(function(st){return st.w?st.w+"\u00d7"+st.r:st.r;}).join("  ")+'</span></div>';});
-      b+='</div>';});
-    b+='<div class="overline">'+t("Nutrition")+'</div>';
     var et=eatenToday(dv);
-    if(!et.kcal)b+='<p class="tiny">'+t("No food logged.")+'</p>';
-    else{
-      b+='<div class="card"><div class="metric" style="font-size:30px">'+fmtN(et.kcal)+'<span class="unit">kcal</span></div>'
-       +'<div class="row mt"><span class="dim">Protein '+et.p+'g</span>'
-       +'<span class="dim">Carbs '+et.c+'g</span><span class="dim">Fat '+et.f+'g</span></div></div>';
-      MEALS.forEach(function(mn){
-        var mm=rv2.meals[mn];
-        if(!mm||!(mm.items||[]).length)return;
-        b+='<div class="card"><div class="row"><h3>'+mn.toUpperCase()+'</h3>'
-         +'<span class="dim num">'+fmtN(sumNutrition(mm.items).kcal)+' kcal</span></div>';
-        mm.items.forEach(function(it){
-          b+='<div class="row" style="margin-top:6px;font-size:13px"><span>'+esc(it.n)+'</span>'
-           +'<span class="dim num">'+fmtN(it.kcal)+'</span></div>';});
-        b+='</div>';});}
-    if(rv2.weight||rv2.steps)b+='<div class="card"><div class="row">'
-      +'<span class="dim">Steps '+(rv2.steps||0)+'</span></div></div>';
-    b+='<button class="btn g" data-jumpfood="'+dv+'">'+t("Open this day in Food")+'</button>';
+    /* One day at a glance, in the same order as the tabs: food, then training. */
+    b='<div class="se-top"><span class="se-k">'+t("Day details")+'</span><h2>'+pretty(dv)+'</h2></div>';
+    b+='<div class="wc2-stats dv-stats">'
+     +'<div><b>'+fmtN(et.kcal||0)+'</b><span>kcal</span></div>'
+     +'<div><b>'+(et.p||0)+'<small>g</small></b><span>'+t("Protein")+'</span></div>'
+     +'<div><b>'+(et.c||0)+'<small>g</small></b><span>'+t("Carbs")+'</span></div>'
+     +'<div><b>'+(et.f||0)+'<small>g</small></b><span>'+t("Fat")+'</span></div></div>';
+    b+='<h3 class="dv-h">'+t("Meals")+'</h3>';
+    var anyMeal=false;
+    MEALS.forEach(function(mn){
+      var mm=rv2.meals[mn];
+      if(!mm||!(mm.items||[]).length)return;anyMeal=true;
+      b+='<div class="dv-card"><div class="dv-row"><b>'+esc(t(mn))+'</b>'
+       +'<span class="dv-k">'+fmtN(sumNutrition(mm.items).kcal)+' kcal</span></div>';
+      mm.items.forEach(function(it){
+        b+='<div class="dv-row dv-it"><span>'+esc(it.n)+'</span><span>'+fmtN(it.kcal)+'</span></div>';});
+      b+='</div>';});
+    if(!anyMeal)b+='<p class="dv-none">'+t("No food logged.")+'</p>';
+    b+='<h3 class="dv-h">'+t("Training")+'</h3>';
+    if(!sess.length)b+='<p class="dv-none">'+t("No session logged.")+'</p>';
+    sess.forEach(function(x){
+      var n=x.entries.filter(function(e){return e.sets.length;}).length;
+      b+='<button class="dv-card dv-sess" data-sessedit="'+esc(x.id)+'" aria-label="'+esc(t("Edit workout")+": "+x.dayName)+'">'
+       +'<span class="dv-row"><b>'+esc(x.dayName)+'</b><span class="dv-k">'+fmtW(Math.round(sessionVolume(x)))+'</span></span>'
+       +'<span class="dv-row dv-it"><span>'+n+' '+t(n===1?"exercise":"exercises")+'</span>'
+       +'<span class="dv-edit">'+t("Edit")+' ›</span></span></button>';});
+    if(rv2.steps)b+='<div class="dv-card dv-row"><b>'+t("Steps")+'</b><span class="dv-k">'+fmtN(rv2.steps)+'</span></div>';
+    b+='<div class="cf-acts se-acts"><button class="btn g cf-no" data-jumpfood="'+dv+'">'+t("Open this day in Food")+'</button></div>';
+  }
+  else if(V.sheet==="mydays"){
+    b='<div class="se-top"><span class="se-k">'+esc(split().name)+'</span><h2>'+t("My Training")+'</h2></div>'
+     +myDaysList()
+     +'<button class="btn g" data-train="splits">'+t("Change program")+'</button>';
+  }
+  else if(V.sheet==="sessedit"){
+    /* A logged workout, correctable after the fact: the date, every set's load and
+       reps, a set or a whole exercise removed — or the session thrown away. It edits a
+       working copy (V.sd.work) and writes only on Save, so backing out changes nothing. */
+    var ws2=V.sd.work;
+    b='<div class="se">'
+     +'<div class="se-top"><span class="se-k">'+t("Edit workout")+'</span>'
+     +'<h2>'+esc(ws2.dayName||t("Workout"))+'</h2>'
+     +'<label class="se-date"><span>'+t("Date")+'</span>'
+     +'<input type="date" id="se_date" value="'+esc(ws2.date)+'" max="'+today()+'"></label></div>';
+    var any=false;
+    ws2.entries.forEach(function(en,ei){
+      if(!en.sets.length)return;any=true;
+      b+='<section class="se-ex"><div class="se-exh"><h3>'+esc(exName(en.name))+'</h3>'
+       +'<button class="se-rm" data-sexdel="'+ei+'" aria-label="'+esc(t("Remove exercise"))+'">'
+       +'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button></div>'
+       +'<div class="se-hd" aria-hidden="true"><span>'+t("Set")+'</span><span>'+wUnit()+'</span><span></span><span>'+t("Reps")+'</span><span></span></div>';
+      en.sets.forEach(function(st,si){
+        b+='<div class="se-row"><span class="se-n">'+(si+1)+'</span>'
+         +'<input id="se_w_'+ei+'_'+si+'" type="number" inputmode="decimal" step="any" min="0" value="'+(st.w?toDisp(st.w):"")+'" placeholder="—" aria-label="'+esc(t("Set")+" "+(si+1)+" "+wUnit())+'">'
+         +'<span class="se-x" aria-hidden="true">×</span>'
+         +'<input id="se_r_'+ei+'_'+si+'" type="number" inputmode="numeric" min="0" value="'+(st.r||"")+'" aria-label="'+esc(t("Set")+" "+(si+1)+" "+t("Reps"))+'">'
+         +'<button class="se-del" data-ssetdel="'+ei+':'+si+'" aria-label="'+esc(t("Delete set")+" "+(si+1))+'">✕</button></div>';});
+      b+='</section>';});
+    if(!any)b+='<p class="se-empty">'+t("No sets left in this workout.")+'</p>';
+    b+='<div class="cf-acts se-acts">'
+     +'<button class="btn cf-ok" data-sesssave="1">'+t("Save changes")+'</button>'
+     +'<button class="btn g cf-no" data-close="1">'+t("Cancel")+'</button>'
+     +'<button class="cf-alt" data-sessdel="1">'+t("Delete workout")+'</button></div></div>';
   }
   else if(V.sheet==="exdetail"){
     var nD=V.sd.name, mD=muscleOf(nD), pD=patternOf(nD), secD=secondaryOf(nD), lD=libFind(nD);
@@ -391,70 +427,35 @@ function vSheet(){
   }
   else if(V.sheet==="done"){
     var w=V.sd;
-    /* Canvas screen 8 (node 2:1311). Every figure is the session's own; the frame's
-       "Day 3: Chest & Triceps Solidified", "6 of 6" and "+5%" are placeholders for
-       exactly these. */
-    b='<div class="wc-top">'
-     +'<div class="wc-medal"><i class="ico ico-award"></i></div>'
-     +'<h1 class="wc-h">'+t("Workout Complete!")+'</h1>'
-     +'<p class="wc-sub">'+esc(w.dayName)+' · '+pretty(w.date)+'</p></div>';
-
-    /* Four tiles. The counting spans keep their final value as their own text, so a
-       re-render and reduced motion both land on the right number without animating. */
-    function stat(k,v,u){
-      return '<div class="wc-stat"><div class="wc-stat-k">'+k+'</div>'
-       +'<div class="wc-stat-v">'+v+(u?'<span class="unit">'+u+'</span>':'')+'</div></div>';}
-    /* secs is the real elapsed active time; mins is it rounded. Sessions recorded
-       before secs existed fall back to the rounded figure. */
-    var wsecs=w.secs||w.mins*60, kcal=sessionKcal(wsecs/60);
-    b+='<div class="wc-stats">'
-     +stat(t("DURATION"),mmss(wsecs))
-     +stat(t("EXERCISES"),w.exs+' '+t("of")+' '+(w.exsPlanned||w.exs))
-     +stat(t("TOTAL VOLUME"),
-        '<span data-count-to="'+Math.round(toDisp(w.vol))+'">'+fmtN(toDisp(w.vol))+'</span>',
-        wUnit())
-     /* The frame's fourth tile is an estimate off body weight. Without one logged it
-        would be an estimate off a guess, so the tile shows a figure the app measured
-        instead of one it invented. */
-     +(kcal
-        ?stat(t("EST. CALORIES"),'<span data-count-to="'+kcal+'">'+fmtN(kcal)+'</span>',"kcal")
-        :stat(t("SETS LOGGED"),'<span data-count-to="'+w.sets+'">'+w.sets+'</span>'))
+    /* Kept to what matters straight after a workout: that it is done, three figures,
+       a record if there was one — and what to do next. Everything else lives in
+       Progress. */
+    var wsecs=w.secs||w.mins*60;
+    b='<div class="wc2">'
+     +'<img class="wc2-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">'
+     +'<div class="wc2-medal" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M8.5 13.9 7 22l5-3 5 3-1.5-8.1"/></svg></div>'
+     +'<h1 class="wc2-h">'+t("Workout complete")+'</h1>'
+     +'<p class="wc2-sub">'+esc(w.dayName)+' · '+pretty(w.date)+'</p>'
+     +'<div class="wc2-stats">'
+     +'<div><b>'+mmss(wsecs)+'</b><span>'+t("Time")+'</span></div>'
+     +'<div><b><span data-count-to="'+Math.round(toDisp(w.vol))+'">'+fmtN(toDisp(w.vol))+'</span><small>'+wUnit()+'</small></b><span>'+t("Volume")+'</span></div>'
+     +'<div><b><span data-count-to="'+w.sets+'">'+w.sets+'</span></b><span>'+t("Sets")+'</span></div>'
      +'</div>';
-
-    if(w.prs.length){
-      b+='<div class="wc-pr"><span class="wc-pr-i" aria-hidden="true">🏆</span>'
-       +'<div style="min-width:0"><div class="wc-pr-k">'
-       +t(w.prs.length>1?"NEW PERSONAL RECORDS":"NEW PERSONAL RECORD")+'</div>';
-      /* A first-ever workout sets a record on every lift in it, which would turn the
-         banner into a second summary as long as the screen. Heaviest first, three
-         named, the rest counted. */
-      var prs=w.prs.slice().sort(function(x,y){return y.w-x.w;});
-      prs.slice(0,3).forEach(function(p){
-        b+='<div class="wc-pr-v">'+esc(exName(p.n))+': '+fmtW(p.w)
-         +' × '+p.r+' '+t("reps")+'</div>';});
-      if(prs.length>3)
-        b+='<div class="wc-pr-v">+'+(prs.length-3)+' '+t("more")+'</div>';
-      b+='</div></div>';}
-
-    /* Each line is printed only when it is true of this session. */
-    var ach=[];
-    if(w.setsPlanned&&w.sets>=w.setsPlanned)ach.push(t("Every planned set logged"));
-    if(w.exsPlanned&&w.exs>=w.exsPlanned)ach.push(t("Every exercise completed"));
-    if(w.prevVol&&w.delta>0)
-      ach.push(t("Volume up")+' '+Math.round(w.delta/w.prevVol*100)+'% '+t("on last session"));
-    if(w.rpe&&w.rpe>=8.5)ach.push(t("Trained near your limit")+' — RPE '+w.rpe);
-    if(ach.length){
-      b+='<h2 class="wc-ach-h">'+t("Key Achievements")+'</h2><div class="wc-ach">';
-      ach.forEach(function(x){
-        b+='<div><i class="ico ico-check"></i><span>'+esc(x)+'</span></div>';});
-      b+='</div>';}
-
-    if(w.notes)b+='<div class="card"><div class="tiny" style="letter-spacing:.12em">'
-      +t("SESSION NOTE")+'</div><p style="margin:8px 0 0;font-size:14.5px;line-height:1.5">'
-      +esc(w.notes)+'</p></div>';
-
-    b+='<div class="wc-foot"><button class="btn" data-close="1">'+t("Done")+'</button>'
-     +'<button class="btn g" data-sharews="1">'+t("Share workout stats")+'</button></div>';
+    /* One highlight line at most: a record beats a volume gain. */
+    var prs=w.prs.slice().sort(function(x,y){return y.w-x.w;});
+    if(prs.length)
+      b+='<div class="wc2-hl"><span aria-hidden="true">🏆</span><span>'
+       +(prs.length>1?prs.length+' '+t("new records")+' · ':t("New record")+' · ')
+       +esc(exName(prs[0].n))+' '+fmtW(prs[0].w)+' × '+prs[0].r+'</span></div>';
+    else if(w.prevVol&&w.delta>0)
+      b+='<div class="wc2-hl"><span aria-hidden="true">↑</span><span>'+t("Volume up")+' '
+       +Math.round(w.delta/w.prevVol*100)+'% '+t("on last session")+'</span></div>';
+    b+='</div><div class="cf-acts wc2-acts">'
+     +'<button class="btn cf-ok" data-close="1">'+t("Done")+'</button>'
+     +'<div class="wc2-row">'
+     +(w.id?'<button class="btn g cf-no" data-sessedit="'+esc(w.id)+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>'+t("Edit")+'</button>':'')
+     +'<button class="btn g cf-no" data-sharews="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>'+t("Share")+'</button>'
+     +'</div></div>';
   }
   else if(V.sheet==="gear"){
     b='<h2>'+t("My equipment")+'</h2><p class="tiny" style="margin:2px 0 14px">'
@@ -820,7 +821,7 @@ function vSheet(){
       +(isFav(favName)?t("Remove from favourites"):t("Add to favourites"))+'">'
       +(isFav(favName)?"★":"☆")+'</button>'
     :'';
-  var cf=V.sheet==="confirm";
+  var cf=V.sheet==="confirm"||V.sheet==="done";
   return '<div class="sheet"'+(hard?'':' data-close="1"')+'>'
         +'<div class="sheetbox'+(cf?' cfbox':'')+'" data-stop="1" role="dialog" aria-modal="true">'
         +'<div class="sheethead">'

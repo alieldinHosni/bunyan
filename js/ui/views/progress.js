@@ -28,7 +28,7 @@ import {bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftH
         muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL, topLifts, volumeSeries,
         weighIns, weightChange} from "../../engine/stats.js";
 import {sessionVolume} from "../../engine/formulas.js";
-import {S} from "../../state.js";
+import {ensureSessionIds, S} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, r1, shortd, today} from "../../util.js";
 import {seg, streak, V} from "../view.js";
@@ -252,13 +252,14 @@ function vOverview(r){
      +'<div class="pgrow-s">'+(L.w?esc(fmtW(L.w))+' × '+L.reps+' '+esc(t("reps")):L.reps+' '+esc(t("reps")))+'</div></div>'
      +'<span class="pgrow-e">'+esc(dateStr(L.date))+'</span></div>';});
 
+  ensureSessionIds();
   var recent=S.sessions.slice(0,3);
   if(recent.length){
     h+=lbl(t("Recent workouts"));
     recent.forEach(function(s){
       var n=s.entries.filter(function(e){return (e.sets||[]).length;}).length;
       var mins=s.activeMs>0?Math.round(s.activeMs/60000):null;
-      h+='<button class="pgrow" data-openday="'+s.date+'"><span class="pgrow-t">'
+      h+='<button class="pgrow" data-sessedit="'+esc(s.id)+'" aria-label="'+esc(t("Edit workout")+": "+(s.dayName||t("Workout")))+'"><span class="pgrow-t">'
        +'<span class="pgrow-n"><span>'+esc(s.dayName||t("Workout"))+'</span></span>'
        +'<span class="pgrow-s">'+(mins!=null?mins+' '+esc(t("min"))+' · ':'')
        +n+' '+esc(t(n===1?"exercise":"exercises"))+'</span></span>'

@@ -15,6 +15,9 @@
 
 var NAME="bunyan", VER=2, SESS="sessions", DAYS="days";
 var _db=null, _st="idle", _waiting=[], _maxOrd=0;
+/* Each stored session's ord, by key, so an edit rewrites a session in its place in
+   the history instead of moving it to the top. */
+var _ords=Object.create(null);
 
 function settle(ok){ var q=_waiting; _waiting=[]; _st=ok?"ready":"off"; if(!ok)_db=null;
   for(var i=0;i<q.length;i++)q[i](ok); }
@@ -113,6 +116,7 @@ function loadSessions(pid,cb){
     var out=[];
     for(var i=0;i<rows.length;i++){
       if((rows[i].ord||0)>_maxOrd)_maxOrd=rows[i].ord||0;
+      _ords[rows[i].k]=rows[i].ord||0;
       out.push(rows[i].s);
     }
     cb(out);
@@ -120,7 +124,24 @@ function loadSessions(pid,cb){
 }
 function putSession(pid,s,cb){
   ensureId(s,0);
-  putRecs(SESS,[{k:pid+"|"+s.id,pid:pid,ord:++_maxOrd,s:s}],function(ok){cb&&cb(ok);});
+  var k=pid+"|"+s.id;_ords[k]=++_maxOrd;
+  putRecs(SESS,[{k:k,pid:pid,ord:_ords[k],s:s}],function(ok){cb&&cb(ok);});
+}
+/* An edited session keeps its place. */
+function updateSession(pid,s,cb){
+  ensureId(s,0);
+  var k=pid+"|"+s.id;if(!_ords[k])_ords[k]=++_maxOrd;
+  putRecs(SESS,[{k:k,pid:pid,ord:_ords[k],s:s}],function(ok){cb&&cb(ok);});
+}
+function deleteSession(pid,id,cb){
+  store(SESS,"readwrite",function(os,t){
+    if(!os)return cb&&cb(false);
+    try{ os.delete(pid+"|"+id); }catch(e){ return cb&&cb(false); }
+    delete _ords[pid+"|"+id];
+    t.oncomplete=function(){cb&&cb(true);};
+    t.onerror=function(){cb&&cb(false);};
+    t.onabort=function(){cb&&cb(false);};
+  });
 }
 /* Merges; it never clears first. list is newest-first, so it is walked backwards to
    give the oldest session the lowest ord. */
@@ -128,7 +149,8 @@ function putAll(pid,list,cb){
   var recs=[];
   for(var i=list.length-1;i>=0;i--){
     var s=ensureId(list[i],i);
-    recs.push({k:pid+"|"+s.id,pid:pid,ord:++_maxOrd,s:s});
+    var k=pid+"|"+s.id;_ords[k]=++_maxOrd;
+    recs.push({k:k,pid:pid,ord:_ords[k],s:s});
   }
   putRecs(SESS,recs,cb);
 }
@@ -162,5 +184,5 @@ function clearProfile(pid,cb){
   clearFor(SESS,pid,function(a){ clearFor(DAYS,pid,function(b){ cb&&cb(a&&b); }); });
 }
 
-export {loadSessions, putSession, putAll, replaceAll,
+export {loadSessions, putSession, updateSession, deleteSession, putAll, replaceAll,
         loadDays, putDays, replaceAllDays, clearProfile};

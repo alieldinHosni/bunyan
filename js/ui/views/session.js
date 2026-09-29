@@ -355,23 +355,23 @@ function vRest(a,e,rows,timed){
       ?'<button class="rt-go" data-rest="skip">'+ARROW+'<span>'+t("Start next set")+'</span></button>'
       :last?'<button class="rt-go" data-finish="1">'+FLAG+'<span>'+t("Finish workout")+'</span></button>'
       :'<button class="rt-go" data-nextex="1">'+ARROW+'<span>'+t("Next exercise")+'</span></button>';
-    return '<div class="restwrap rt rt-done" role="alertdialog" aria-labelledby="rtDoneH">'+art
-     +'<div class="rt-k">'+t("Rest period")+'</div><div class="rt-sub">'+doneTxt+'</div>'
+    /* Built for a glance between sets: one line of context, one large answer, then
+       the alternatives as big, equal buttons — no descriptions to read. */
+    var nextLine=more?t("Up next")+' · '+nx
+      :last?t("That was the last set."):t("Up next")+' · '+nx;
+    return '<div class="restwrap rt rt-done rt2" role="alertdialog" aria-labelledby="rtDoneH">'+art
+     +'<div class="rt2-top"><div class="rt-sub">'+doneTxt+'</div>'
      +'<div class="rt-check" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="rt-check-t"/>'
      +'<circle cx="60" cy="60" r="52" class="rt-check-r"/><path d="M40 61l13 13 27-29" class="rt-check-m"/></svg></div>'
-     +'<div class="rt-k">'+t(more?"Rest complete":last?"Last set done":"Exercise complete")+'</div>'
-     +'<h2 class="rt-h" id="rtDoneH" aria-live="assertive">'
-     +t(more?"Ready for the next set?":last?"That was the last set.":"Ready for the next exercise?")+'</h2>'
-     +(more?upnext.replace('rt-next"','rt-next sm"'):'')
-     +primary
-     +'<div class="rt-opt"><span class="rt-opt-i" aria-hidden="true">'+CLOCKPLUS+'</span>'
-     +'<span class="rt-opt-t"><b>'+t("Extend rest")+'</b><span>'+t("Add more time to your rest")+'</span></span>'
-     +'<span class="rt-opt-b"><button dir="ltr" data-rest="ext30">+30s</button><button dir="ltr" data-rest="ext60">+60s</button></span></div>'
-     +(more&&!last?'<button class="rt-opt" data-nextex="1"><span class="rt-opt-i" aria-hidden="true">'+SKIP+'</span>'
-       +'<span class="rt-opt-t"><b>'+t("Next exercise")+'</b><span>'+t("Skip remaining sets")+'</span></span>'
-       +'<span class="rt-chev" aria-hidden="true">'+CHEV+'</span></button>':'')
-     +(!last||more?'<button class="rt-end" data-finish="1"><span>'+t("End workout")+'</span></button>':'')
-     +'</div>';
+     +'<h2 class="rt-h" id="rtDoneH" aria-live="assertive">'+t(more?"Rest complete":last?"Last set done":"Exercise complete")+'</h2>'
+     +'<p class="rt2-next">'+nextLine+'</p></div>'
+     +'<div class="rt2-acts">'+primary
+     +'<div class="rt2-k">'+t("Add rest")+'</div>'
+     +'<div class="rt2-pair"><button class="rt2-b" dir="ltr" data-rest="ext30">+30s</button>'
+     +'<button class="rt2-b" dir="ltr" data-rest="ext60">+60s</button></div>'
+     +(more&&!last?'<button class="rt2-b wide" data-nextex="1">'+SKIP+'<span>'+t("Skip to next exercise")+'</span></button>':'')
+     +(!last||more?'<button class="rt2-end" data-finish="1">'+FLAG+'<span>'+t("End workout")+'</span></button>':'')
+     +'</div></div>';
   }
   return '<div class="restwrap rt" role="dialog" aria-label="'+t("Rest")+'">'+art
    +'<div class="rt-k">'+t("Rest period")+'</div><div class="rt-sub">'+doneTxt+'</div>'
@@ -390,9 +390,7 @@ function vRest(a,e,rows,timed){
 
 var ARROW='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>';
 var FLAG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>';
-var CLOCKPLUS='<svg viewBox="0 0 24 24"><path d="M20 11.5A8.5 8.5 0 1 0 11.5 20"/><path d="M11.5 7v5l3 2M18 15v6M15 18h6"/></svg>';
 var SKIP='<svg viewBox="0 0 24 24"><path d="M5 5l10 7-10 7zM19 5v14"/></svg>';
-var CHEV='<svg viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></svg>';
 
 /* ---- keeping the rest screen still -------------------------------------------
    The rest screen lives in its own container outside #app, for the same reason the

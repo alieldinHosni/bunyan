@@ -135,34 +135,16 @@ function vTrain(){
    +'<div class="tbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"'
    +' aria-label="'+t("Sessions this week")+'"><i style="width:'+pct+'%"></i></div></div>';
 
-  /* ---- the two days after it, as the frame's Today / Tomorrow cards. Tapping one
-     moves the navigator there, so the calendar stays the one thing driving this. */
-  h+='<div class="tnextpair">';
-  [1,2].forEach(function(k){
-    var iso=shiftDay(sel,k),p=planOn(sp,iso);
-    var lbl=iso===today()?t("Today"):iso===shiftDay(today(),1)?t("Tomorrow")
-      :new Date(iso+"T00:00:00").toLocaleDateString(undefined,{weekday:"long"});
-    h+='<button class="tday" data-tday="'+iso+'" aria-label="'+esc(lbl+": "+planNote(p))+'">'
-     +'<span class="tday-i'+(p.rest||!p.day?' rest':'')+'" aria-hidden="true">'+(p.rest||!p.day?MOON:DUMBBELL)+'</span>'
-     +'<span class="tday-t"><span class="tday-k">'+esc(lbl)+'</span>'
-     +'<span class="tday-n">'+esc(planNote(p))+'</span>'
-     +(p.day&&!p.rest?'<span class="tday-m">'+p.day.ex.length+' '+t("exercises")+' · ~'+estMinutes(p.day)+' '+t("min")+'</span>':'')
-     +'</span></button>';});
-  h+='</div>';
-
-  /* ---- my training: every day of the plan. The only way to open, edit or reorder
-     any day but today's. */
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("My Training")+'</h2></div><div class="card tdays">';
-  var todayId=(planOn(sp,today()).day||{}).id;
-  sp.days.forEach(function(d){
-    var last=null;
-    for(var i=0;i<S.sessions.length;i++)if(S.sessions[i].dayId===d.id){last=S.sessions[i].date;break;}
-    h+='<button class="trow" data-day="'+d.id+'"><span><span class="trow-n">'+esc(d.name)+'</span>'
-     +'<span class="trow-s">'+(d.ex.length?d.ex.length+' '+t("exercises"):t("rest day"))
-     +(last?' · '+t("last")+' '+shortd(last):'')+'</span></span>'
-     +(d.id===todayId?'<span class="tnext">'+t("Today")+'</span>':'')
-     +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
-  h+='<button class="trow tadd" data-addday="1"><span class="trow-n">+ '+t("Add a day")+'</span></button></div>';
+  /* ---- two tiles, side by side: the plan's days (in a sheet, so the page stays
+     short) and the library. The next two days are one swipe of the date bar away. */
+  var nDays=sp.days.length;
+  h+='<div class="ttiles">'
+   +'<button class="ttile" data-mydays="1"><span class="ttile-i" aria-hidden="true">'+DUMBBELL+'</span>'
+   +'<span class="ttile-n">'+t("My Training")+'</span>'
+   +'<span class="ttile-s">'+nDays+' '+t(nDays===1?"day":"days")+' · '+esc(sp.name)+'</span></button>'
+   +'<button class="ttile" data-train="library"><span class="ttile-i" aria-hidden="true"><span class="ico ico-search"></span></span>'
+   +'<span class="ttile-n">'+t("Exercise Library")+'</span>'
+   +'<span class="ttile-s">'+fmtN(LIB.length)+' '+t("exercises")+'</span></button></div>';
   /* ---- other programs ----
      The app's own preset splits, each with its own photograph — see SPLIT_IMG.
      No "premium": everything here is free. */
@@ -194,13 +176,23 @@ function vTrain(){
    +'<div class="tscroll tpills">'
    +cats.map(function(c){return '<button class="tpill" data-bwcat="'+esc(c)+'">'+esc(t(c))+'</button>';}).join("")
    +'<button class="tpill" data-bwsplit="1">'+t("Full Body Program")+'</button></div>';
-  /* ---- library ---- */
-  h+='<button class="card tap tlib" data-train="library">'
-   +'<span class="tlib-i"><span class="ico ico-search" aria-hidden="true"></span></span>'
-   +'<span class="tlib-t"><span class="tlib-n">'+t("Exercise Library")+'</span>'
-   +'<span class="tlib-s">'+t("Search")+' '+fmtN(LIB.length)+' '+t("exercises")+'</span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   return h;}
+/* Every day of the plan, for the My Training sheet. The only way to open, edit or
+   reorder any day but today's. */
+function myDaysList(){
+  var sp=split(),h='<div class="card tdays">';
+  var todayId=(planOn(sp,today()).day||{}).id;
+  sp.days.forEach(function(d){
+    var last=null;
+    for(var i=0;i<S.sessions.length;i++)if(S.sessions[i].dayId===d.id){last=S.sessions[i].date;break;}
+    h+='<button class="trow" data-day="'+d.id+'"><span><span class="trow-n">'+esc(d.name)+'</span>'
+     +'<span class="trow-s">'+(d.ex.length?d.ex.length+' '+t("exercises"):t("rest day"))
+     +(last?' · '+t("last")+' '+shortd(last):'')+'</span></span>'
+     +(d.id===todayId?'<span class="tnext">'+t("Today")+'</span>':'')
+     +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
+  return h+'<button class="trow tadd" data-addday="1"><span class="trow-n">+ '+t("Add a day")+'</span></button></div>';
+}
+
 /* The experience level a preset scores best for, from the plan recommender's own
    table rather than a label invented for the card. Ties go to the lower level, so a
    split that suits two levels is shown to the less experienced of them. That lands on
@@ -399,4 +391,4 @@ function vDay(){
   h+='</div>';
   return h;}
 
-export {estMinutes, nextDayOf, vTrain};
+export {estMinutes, myDaysList, nextDayOf, vTrain};

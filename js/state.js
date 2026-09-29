@@ -3,7 +3,7 @@
 import {sessionVolume} from "./engine/formulas.js";
 import {PRESETS} from "./data/splits.js";
 import {num, r1, rd, today, uid, wr} from "./util.js";
-import {clearProfile, loadDays, loadSessions, putAll, putDays, putSession,
+import {clearProfile, deleteSession, loadDays, loadSessions, putAll, putDays, putSession, updateSession,
         replaceAll, replaceAllDays} from "./db.js";
 import {clearPhotos} from "./photostore.js";
 import {V} from "./ui/view.js";
@@ -177,6 +177,27 @@ function recordSession(s){
   if(HIST_IDB)putSession(CUR,s,function(ok){ if(!ok){ HIST_IDB=false; saveDB(); } });
   saveDB();
 }
+/* A logged workout can be corrected or thrown away afterwards. Sessions stored before
+   ids existed get one here, the same way the IndexedDB writer would give them one. */
+function sessionById(id){
+  for(var i=0;i<S.sessions.length;i++)if(S.sessions[i].id===id)return S.sessions[i];
+  return null;
+}
+function ensureSessionIds(){
+  S.sessions.forEach(function(s,i){if(!s.id)s.id="s"+Date.now().toString(36)+"x"+i;});
+}
+function saveSession(s){
+  if(HIST_IDB)updateSession(CUR,s,function(ok){ if(!ok){ HIST_IDB=false; saveDB(); } });
+  saveDB();
+}
+function removeSession(id){
+  var i=S.sessions.findIndex(function(s){return s.id===id;});
+  if(i<0)return false;
+  S.sessions.splice(i,1);
+  if(HIST_IDB)deleteSession(CUR,id,function(ok){ if(!ok){ HIST_IDB=false; saveDB(); } });
+  saveDB();
+  return true;
+}
 /* Restore replaces everything: history and food log, not just the blob. */
 function adoptRestored(cb){
   var list=S.sessions||[], days=S.days||{};
@@ -275,4 +296,4 @@ function dayRec(d){d=d||today();if(!S.days[d])S.days[d]={water:0,steps:0,sleep:0
 function setS(v){S=v;}
 function setProfiles(v){PROFILES=v;}
 
-export {adoptRestored, adoptSplit, allSplits, buildSnapshot, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, friends, initState, isOwner, loadStored, migrate, PROFILES, recordSession, S, saveDB, saveFriends, setProfiles, setS, snapStats, split, switchProfile};
+export {ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, buildSnapshot, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, friends, initState, isOwner, loadStored, migrate, PROFILES, recordSession, S, saveDB, saveFriends, setProfiles, setS, snapStats, split, switchProfile};

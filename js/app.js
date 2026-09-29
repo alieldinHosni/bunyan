@@ -13,7 +13,7 @@ import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
 import {leave} from "./ui/motion.js";
 import {groupNext, groupRun, mmss, noteSet, paintRest, sessionClock} from "./ui/views/session.js";
-import {adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
+import {ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
 import {fmtW, toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
 import {alarmStart, alarmStop, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, startRest, tap, toast, V} from "./ui/view.js";
@@ -76,6 +76,9 @@ document.addEventListener("click",function(ev){
   if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;render();return;}
 
   /* ---- splits & days */
+  if(D.mydays){openSheet("mydays");return;}
+  /* From the My Training sheet, a day or the programs list replaces the sheet. */
+  if((D.train||D.day)&&V.sheet){V.sheet=null;V.sd=null;}
   if(D.train){pushNav();V.train=D.train;render();return;}
   if(D.day){pushNav();V.dayId=D.day;V.train="day";render();return;}
   /* One meal of the day, on its own screen. */
@@ -749,6 +752,24 @@ document.addEventListener("click",function(ev){
     askText({title:t("Delete everything?"),
       body:t("Every workout, meal, measurement and setting on this profile. There is no undo. Export a backup first if you are not certain."),
       label:t("Type DELETE to confirm"),ph:"DELETE",cta:t("Delete everything"),act:"wipe"});return;}
+  /* ---- a logged workout, after the fact: edit or delete it */
+  if(D.sessedit){
+    ensureSessionIds();
+    var se0=sessionById(D.sessedit);if(!se0)return;
+    openSheet("sessedit",{id:se0.id,work:JSON.parse(JSON.stringify(se0))});return;}
+  if(D.ssetdel){
+    readSE();var sp2=D.ssetdel.split(":"),en2=V.sd.work.entries[+sp2[0]];
+    if(en2)en2.sets.splice(+sp2[1],1);render();return;}
+  if(D.sexdel!==undefined){
+    readSE();var en3=V.sd.work.entries[+D.sexdel];if(en3)en3.sets=[];render();return;}
+  if(D.sesssave){
+    readSE();var wk2=V.sd.work;
+    wk2.entries=wk2.entries.filter(function(e){return e.sets.length;});
+    if(!wk2.entries.length){askDelSession(V.sd.id);return;}
+    var ix=S.sessions.findIndex(function(x){return x.id===V.sd.id;});
+    if(ix<0){closeSheet();return;}
+    S.sessions[ix]=wk2;saveSession(wk2);closeSheet();toast(t("Workout updated"));return;}
+  if(D.sessdel){askDelSession(V.sd&&V.sd.id);return;}
   if(D.openday){openSheet("dayview",{date:D.openday});return;}
   if(D.jumpfood){V.fdate=(D.jumpfood===today())?null:D.jumpfood;closeSheet();V.tab="food";render();return;}
 
@@ -1061,6 +1082,25 @@ function backBlocked(){
   if(!sessionLocked()||lockSaid)return;
   lockSaid=true;toast(t("Tap the close button to leave this workout."));
 }
+
+/* The edit sheet's inputs into its working copy, before anything re-renders it. */
+function readSE(){
+  var w=V.sd&&V.sd.work;if(!w)return;
+  var dEl=document.getElementById("se_date");
+  if(dEl&&/^\d{4}-\d{2}-\d{2}$/.test(dEl.value))w.date=dEl.value;
+  w.entries.forEach(function(e,ei){
+    e.sets.forEach(function(st,si){
+      var a=document.getElementById("se_w_"+ei+"_"+si),b=document.getElementById("se_r_"+ei+"_"+si);
+      if(a)st.w=a.value===""?0:toKg(a.value);
+      if(b&&b.value!=="")st.r=Math.max(0,Math.round(num(b.value)));});});
+}
+function askDelSession(id){
+  if(!id)return;
+  askConfirm({title:t("Delete this workout?"),icon:"trash",
+    body:t("Its sets are removed from your history and records. This cannot be undone."),
+    cta:t("Delete workout"),act:"delsess",data:id,hard:true});
+}
+ACT.delsess=function(_,id){if(removeSession(id))toast(t("Workout deleted"));render();};
 
 function navGuard(resume){
   /* Only when the workout is the thing you are actually looking at. vTrain() returns

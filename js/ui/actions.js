@@ -170,7 +170,8 @@ function finishSession(){
 
   var vol=Math.round(sessionVolume(a));
   var allSets=[];a.entries.forEach(function(e){allSets=allSets.concat(e.sets);});
-  var summary={dayName:a.dayName,date:a.date,vol:vol,
+  if(!a.id)a.id="s"+Date.now().toString(36);
+  var summary={id:a.id,dayName:a.dayName,date:a.date,vol:vol,
     /* Active time, not wall clock: that is what was trained, and it keeps sessions
        comparable. The wall clock is stored too, since it cannot be recovered later. */
     mins:Math.max(1,Math.round(sessionClock(a).ms/60000)),
