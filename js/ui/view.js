@@ -19,7 +19,7 @@ var V={tab:"home",fdate:null,food:null,range:30,exd:null,showAll:false,restPause
        tdate:null,tcal:false,dnavDir:0,
        /* The Progress tab's view (overview, strength, body, nutrition) and whether
           Strength's top lifts list shows every lift or the first five. */
-       ptab:"overview",pall:false,
+       ptab:"overview",pall:false,phalf:"all",
        /* The rest timer has three states, not two: counting, paused, and finished-and
           waiting to be acknowledged. The third is what makes the zero state visible. */
        restDone:false,

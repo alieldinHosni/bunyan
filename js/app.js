@@ -123,6 +123,7 @@ document.addEventListener("click",function(ev){
     return;}
   if(D.seeall){V.ptab="strength";render();window.scrollTo(0,0);return;}
   if(D.pall){V.pall=!V.pall;render();return;}
+  if(D.phalf){V.phalf=D.phalf;V.pall=false;render();return;}
   /* A lift in the list is charted above it, so bring the chart into view. */
   if(D.chartex){V.chartEx=D.chartex;render();
     var pk=document.querySelector(".pgpick");

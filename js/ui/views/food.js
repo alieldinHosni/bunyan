@@ -5,12 +5,19 @@ import {curDate, eatenToday, frequentFoods} from "../../engine/formulas.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {dayRec, S} from "../../state.js";
 import {esc, fmtN, r1, today} from "../../util.js";
-import {progressBar, V} from "../view.js";
+import {V} from "../view.js";
 import {dateBar} from "../datebar.js";
 import {backArrow} from "../nav.js";
 
 /* ============================================================ FOOD */
 var MEALS=["Breakfast","Lunch","Dinner","Snack"];
+/* Meal glyphs, on the dock's grid and stroke: sun, sun on the horizon, moon, apple. */
+var MICON={
+  Breakfast:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg>',
+  Lunch:'<svg viewBox="0 0 24 24"><path d="M7 16a5 5 0 0 1 10 0M3 16h18M12 5v3M5.2 9.2l1.4 1.4M18.8 9.2l-1.4 1.4M6 20h12"/></svg>',
+  Dinner:'<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+  Snack:'<svg viewBox="0 0 24 24"><path d="M12 8c-1.5-1.3-4.5-1.5-6 .5-1.8 2.4-.8 7 1.5 9.5 1.3 1.4 2.8 1.6 4.5.8 1.7.8 3.2.6 4.5-.8 2.3-2.5 3.3-7.1 1.5-9.5-1.5-2-4.5-1.8-6-.5z"/><path d="M12 8c0-2 1-3.5 3-4"/></svg>'};
+var TICK='<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>';
 /* The meal an add belongs to when nothing on screen says which — the floating button,
    the frequent-food pills, a saved meal. Every one of those used to go to Snack, so a
    breakfast logged from the button at 8 a.m. was filed as a snack. The meal rows each
@@ -43,31 +50,67 @@ function vFood(){
   if(V.meal)return vMeal(dsel,V.meal);
 
   var g=S.goals,e=eatenToday(dsel),r=dayRec(dsel);
-  /* The same bar Progress uses — js/ui/datebar.js. The frame's own date selector is
-     this bar's collapsed state; the month view and the markers are kept. */
-  var h=dateBar({date:dsel,open:V.fcal,monthOffset:V.cal});
-  /* The day-detail sheet, which shows training and nutrition for one day together. */
-  h+='<button class="card tap dbdetail" data-openday="'+dsel+'">'
-   +'<div class="row"><span class="tiny" style="letter-spacing:.1em">'+t("THAT DAY")+'</span>'
-   +'<span class="chev">›</span></div></button>';
+  var h='<div class="thead"><div><h1>'+t("Nutrition")+'</h1>'
+   +'<p class="thead-s">'+t("Fuel your progress")+'</p></div></div>';
+  /* The same navigator Progress and Train use — js/ui/datebar.js. */
+  h+=dateBar({date:dsel,open:V.fcal,monthOffset:V.cal});
 
-  /* ---- hero */
+  /* ---- the day at a glance: the ring beside the three macros, as the frame has it */
   var pct=g.kcal?e.kcal/g.kcal:0, over=e.kcal>g.kcal, diff=Math.abs(g.kcal-e.kcal);
-  h+='<div class="fhero"><div class="fring" role="img" aria-label="'
-   +esc(fmtN(e.kcal)+" "+t("of")+" "+fmtN(g.kcal)+" kcal — "+Math.round(pct*100)+"%")+'">'
+  h+='<div class="fsum"><div class="fring2" role="img" aria-label="'
+   +esc(fmtN(e.kcal)+" "+t("of")+" "+fmtN(g.kcal)+" kcal — "+Math.round(pct*100)+"%, "+fmtN(diff)+" "+t(over?"kcal over":"kcal left"))+'">'
    +heroRing(pct)
-   +'<span class="fring-n" data-k="kcal" data-count-to="'+e.kcal+'">'+fmtN(e.kcal)+'</span>'
-   +'<span class="fring-g">'+esc(t("Eaten")+" / "+fmtN(g.kcal)+" "+t("Goal"))+'</span>'
-   +'<span class="fring-r"></span>'
-   +'<span class="fring-l'+(over?' over':'')+'">'
-   +esc(fmtN(diff)+" "+t(over?"kcal over":"kcal left"))+'</span></div>';
-
-  h+='<div class="fmacros">'
-   +[[t("Protein"),e.p,g.p],[t("Carbs"),e.c,g.c],[t("Fat"),e.f,g.f]].map(function(m){
-      return '<div class="fmacro"><div class="fmacro-k">'+esc(m[0])+'</div>'
-       +'<div class="fmacro-v">'+m[1]+'g <span>/ '+m[2]+'g</span></div>'
-       +progressBar(m[1],m[2],m[1]>=m[2]?"var(--ok)":"var(--accent)")+'</div>';}).join("")
+   +'<span class="fring2-n" data-k="kcal" data-count-to="'+e.kcal+'">'+fmtN(e.kcal)+'</span>'
+   +'<span class="fring2-u">kcal</span>'
+   +'<span class="fring2-g">'+esc(t("of")+" "+fmtN(g.kcal))+'</span></div>'
+   +'<div class="fmac2">'
+   +[["p",t("Protein"),e.p,g.p],["c",t("Carbs"),e.c,g.c],["f",t("Fat"),e.f,g.f]].map(function(m){
+      var mp=m[3]?Math.round(m[2]/m[3]*100):0;
+      return '<div class="fmac2-r '+m[0]+'"><div class="fmac2-h"><span class="fmac2-k"><i aria-hidden="true"></i>'+esc(m[1])+'</span>'
+       +'<span class="fmac2-p">'+mp+'%</span></div>'
+       +'<div class="fmac2-v">'+m[2]+' g <span>/ '+m[3]+' g</span></div>'
+       +'<div class="fmac2-b" aria-hidden="true"><i style="width:'+Math.min(100,mp)+'%"></i></div></div>';}).join("")
+   +'<div class="fleft'+(over?' over':'')+'">'+esc(fmtN(diff)+" "+t(over?"kcal over":"kcal left"))+'</div>'
    +'</div></div>';
+
+  /* ---- the four meals as tiles: the one for now is lit, a logged one is ticked. A
+     logged tile opens the meal, an empty one adds to it. */
+  var now=dsel===today()?mealNow():null;
+  h+='<div class="fmt">';
+  MEALS.forEach(function(name){
+    var items=((r.meals[name]||{}).items)||[],tot=sumNutrition(items),done=items.length>0;
+    h+='<button class="fmt-c'+(name===now?' now':'')+(done?' done':'')+'" '
+     +(done?'data-meal="'+name+'"':'data-addfood="'+name+'"')
+     +' aria-label="'+esc(t(name)+", "+fmtN(tot.kcal)+" kcal"+(done?"":", "+t("Add")))+'">'
+     +'<span class="fmt-i" aria-hidden="true">'+MICON[name]+'</span>'
+     +'<span class="fmt-n">'+esc(t(name==="Snack"?"Snacks":name))+'</span>'
+     +'<span class="fmt-k">'+fmtN(tot.kcal)+' kcal</span>'
+     +(done?'<span class="fmt-ok" aria-hidden="true">'+TICK+'</span>':'')+'</button>';});
+  h+='</div>';
+
+  /* ---- today's meals: what is in each, and its numbers */
+  h+='<div class="tsec"><h2 class="tsec-h">'+t(dsel===today()?"Today's Meals":"Meals")+'</h2>'
+   +'<button class="tlink" data-openday="'+dsel+'">'+t("Day details")+'</button></div>';
+  MEALS.forEach(function(name){
+    var m=r.meals[name]||{items:[]},items=m.items||[],tot=sumNutrition(items);
+    var ic='<span class="fml-i '+name.toLowerCase()+'" aria-hidden="true">'+MICON[name]+'</span>';
+    if(items.length){
+      var list=items.map(function(it){return it.n;}).join(", ");
+      h+='<button class="fml done" data-meal="'+name+'" aria-label="'
+       +esc(t(name)+" — "+fmtN(tot.kcal)+" kcal, "+items.length+" "+t(items.length===1?"item logged":"items logged"))+'">'
+       +ic+'<span class="fml-t"><span class="fml-n">'+esc(t(name))+'</span>'
+       +'<span class="fml-s">'+esc(list)+'</span>'
+       +'<span class="fml-m">'+fmtN(tot.kcal)+' kcal · '+tot.p+'g P · '+tot.c+'g C · '+tot.f+'g F</span></span>'
+       +'<span class="fml-ok" aria-hidden="true">'+TICK+'</span></button>';}
+    else
+      h+='<div class="fml">'+ic+'<span class="fml-t"><span class="fml-n">'+esc(t(name))+'</span>'
+       +'<span class="fml-s">'+esc(t("Not logged yet"))+'</span></span>'
+       +'<button class="fml-add" data-addfood="'+name+'" aria-label="'+esc(t("Add food to")+" "+t(name))+'">'
+       +'<i class="ico ico-plus" aria-hidden="true"></i></button></div>';});
+  /* In the page, not floating: the dock is the one floating control. */
+  h+='<button class="btn fadd" data-addfood="'+(now||mealNow())+'">'
+   +'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>'
+   +esc(t("Add Food"))+'</button>';
 
   /* ---- water */
   var unit=glassUnit(g.water),ng=Math.max(1,Math.round(g.water/unit)),
@@ -87,23 +130,6 @@ function vFood(){
    +' aria-label="'+esc(t("Add")+" "+unit+" ml "+t("Water"))+'">'
    +'<i class="ico ico-plus"></i></button></div></div>';
 
-  /* ---- meals */
-  h+='<div class="overline">'+t("Meals logged")+'</div>';
-  MEALS.forEach(function(name){
-    var m=r.meals[name]||{items:[]},items=m.items||[],tot=sumNutrition(items);
-    if(items.length)
-      h+='<button class="mealrow logged" data-meal="'+name+'" aria-label="'
-       +esc(t(name)+" — "+fmtN(tot.kcal)+" kcal, "+items.length+" "+t(items.length===1?"item logged":"items logged"))+'">'
-       +'<div style="min-width:0"><div class="mealrow-n">'+esc(t(name))+'</div>'
-       +'<div class="mealrow-s">'+items.length+' '+esc(t(items.length===1?"item logged":"items logged"))+'</div></div>'
-       +'<div class="mealrow-r"><span class="mealrow-k">'+fmtN(tot.kcal)+' kcal</span>'
-       +'<i class="ico ico-chev"></i></div></button>';
-    else
-      h+='<div class="mealrow empty"><div style="min-width:0">'
-       +'<div class="mealrow-n">'+esc(t(name))+'</div>'
-       +'<div class="mealrow-s">'+esc(t("No items logged yet"))+'</div></div>'
-       +'<button class="mealrow-add" data-addfood="'+name+'">+ '+esc(t("Add"))+'</button></div>';});
-
   /* ---- the shortcuts the frame has no room for, kept below the fold */
   var freq=frequentFoods(6);
   if(freq.length){
@@ -121,12 +147,6 @@ function vFood(){
        +'<span class="pill a">'+t("Add")+'</span></button>';});
     h+='</div>';}
 
-  /* The floating button is the frame's, and like any floating button it sits over the
-     list. The spacer keeps it off the last row at rest; while scrolling it passes over
-     the rows, which is what a floating button does and what scrolling past undoes. */
-  h+='<div class="ffab-pad"></div>'
-   +'<button class="ffab" data-addfood="'+mealNow()+'" aria-label="'+esc(t("Add food"))+'">'
-   +'<i class="ico ico-plus"></i></button>';
   return h;}
 
 /* ---- one meal (node 13:118). Reached from a logged row above; back returns here. */
