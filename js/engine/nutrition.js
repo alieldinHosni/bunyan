@@ -19,114 +19,85 @@ function loadFoods(cb){
 }
 
 /* ---- unit handling -------------------------------------------------- */
-/* Grams per unit. Volume units are millilitres and are converted to grams through the
-   food's density (liquidDensity below), so "250 ml olive oil" is not logged as 250 g.
-   Zero means countable: the amount comes from the food's own servings instead. */
 var UNITS={
-  g:1,gram:1,grams:1,gm:1,gms:1,gr:1,
-  kg:1000,kilo:1000,kilos:1000,kilogram:1000,kilograms:1000,
-  oz:28.35,ounce:28.35,ounces:28.35,lb:453.6,lbs:453.6,pound:453.6,pounds:453.6,
-  ml:1,millilitre:1,milliliter:1,millilitres:1,milliliters:1,
-  l:1000,litre:1000,liter:1000,litres:1000,liters:1000,ltr:1000,
-  floz:29.57,
+  g:1,gram:1,grams:1,gm:1,gr:1,
+  kg:1000,kilo:1000,kilos:1000,kilogram:1000,
+  ml:1,millilitre:1,milliliter:1,l:1000,litre:1000,liter:1000,
   tbsp:15,tablespoon:15,tablespoons:15,
   tsp:5,teaspoon:5,teaspoons:5,
   cup:240,cups:240,
-  scoop:30,scoops:30,slice:0,slices:0,piece:0,pieces:0,can:0,cans:0,
-  glass:0,glasses:0,bottle:0,bottles:0,mug:0,mugs:0
+  scoop:30,scoops:30,slice:0,slices:0,piece:0,pieces:0,can:0,cans:0
 };
-/* The units measured by volume. Everything else in UNITS with a value is a mass. */
-var VOLUME={ml:1,millilitre:1,milliliter:1,millilitres:1,milliliters:1,l:1,litre:1,liter:1,
-  litres:1,liters:1,ltr:1,floz:1,tbsp:1,tablespoon:1,tablespoons:1,tsp:1,teaspoon:1,
-  teaspoons:1,cup:1,cups:1};
-/* A drink ordered by the glass or the can, when the food lists no serving by that
-   name. Only ever used for liquids: "a can of tuna" is not 330 ml. */
-var DRINK_SERVINGS={glass:250,bottle:500,can:330,mug:300,cup:240};
-/* The one place a typed unit becomes a canonical key, so "Litres", "ltr" and "L" are
-   the same unit everywhere — the parser, the picker and the stored item. */
-var CANON={g:"g",gram:"g",grams:"g",gm:"g",gms:"g",gr:"g",
-  kg:"kg",kilo:"kg",kilos:"kg",kilogram:"kg",kilograms:"kg",
-  oz:"oz",ounce:"oz",ounces:"oz",lb:"lb",lbs:"lb",pound:"lb",pounds:"lb",
-  ml:"ml",millilitre:"ml",milliliter:"ml",millilitres:"ml",milliliters:"ml",
-  l:"l",litre:"l",liter:"l",litres:"l",liters:"l",ltr:"l",floz:"floz",
-  tbsp:"tbsp",tablespoon:"tbsp",tablespoons:"tbsp",tsp:"tsp",teaspoon:"tsp",teaspoons:"tsp",
-  cup:"cup",cups:"cup"};
-function canonUnit(u){
-  if(!u)return null;
-  u=String(u).toLowerCase().replace(/[\s.]/g,"");
-  if(u==="fl"||u==="fluidounce"||u==="fluidounces")u="floz";
-  return CANON[u]||null;}
-
-/* Drinks are logged by volume. The food database has no liquid flag, so it is read
-   off the category and the name — a Beverages entry, or anything that is plainly a
-   drink, a soup or an oil. Branded products from Open Food Facts carry neither, which
-   is why the picker still offers volume for them: better one unit too many than a
-   carton of milk that can only be weighed. */
-var LIQUID_RE=/\b(milk|juice|drink|coffee|latte|cappuccino|espresso|tea|cola|soda|water|shake|smoothie|soup|broth|oil|laban|kefir|buttermilk|lemonade|syrup|vinegar|sauce|nectar|beer|wine)\b|عصير|لبن|قهوة|شاي|مياه|شوربة|زيت|مشروب/i;
-function isLiquid(food){
-  if(!food)return false;
-  if(food.liq!=null)return !!food.liq;
-  if(food.cat==="Beverages")return true;
-  if(LIQUID_RE.test(food.n||""))return true;
-  return (food.s||[]).some(function(s){return /\bml\b|\blitre|\bliter/i.test(s[0]);});}
-/* Grams per millilitre. Close enough to 1 for anything water-based; oils are the one
-   common case where it is not, and a tablespoon of oil is where people log by volume. */
-function liquidDensity(food){
-  if(food&&food.dens)return food.dens;
-  if(/\boil\b|زيت/i.test((food&&food.n)||""))return 0.92;
-  if(/\b(honey|syrup|molasses)\b|عسل/i.test((food&&food.n)||""))return 1.4;
-  return 1;}
-
-/* The units a food can be measured in, for the picker beside the amount. Each one is
-   {k, label, g} — g being grams per one of it for this food. Liquids lead with volume,
-   solids with mass, and the food's own servings ("large egg", "can") come after. */
-var UNIT_LABEL={g:"g",kg:"kg",oz:"oz",lb:"lb",ml:"ml",l:"L",floz:"fl oz",cup:"cup",tbsp:"tbsp",tsp:"tsp"};
-function unitsFor(food){
-  var out=[],liq=isLiquid(food),d=liquidDensity(food),seen={};
-  function add(k,g,label){
-    if(seen[k]||!(g>0))return;seen[k]=1;
-    out.push({k:k,g:Math.round(g*1000)/1000,label:label||UNIT_LABEL[k]||k});}
-  var vol=[["ml",1],["l",1000],["floz",29.57],["cup",240],["tbsp",15],["tsp",5]];
-  var mass=[["g",1],["kg",1000],["oz",28.35],["lb",453.6]];
-  if(liq){
-    vol.forEach(function(u){add(u[0],u[1]*d);});
-    add("g",1);
-  }else{
-    mass.forEach(function(u){add(u[0],u[1]);});
-    /* Branded products: see isLiquid. */
-    if(food&&food.src==="off"){add("ml",d);add("l",1000*d);}
-  }
-  (food&&food.s||[]).forEach(function(s,i){
-    /* "100 g" and "250 ml" are the units already listed, not servings of their own. */
-    if(/^\s*\d+(\.\d+)?\s*(g|ml)\s*$/i.test(s[0]))return;
-    /* A serving that IS a unit — milk's "cup" of 244 g, oil's 13.5 g "tbsp" — is the
-       food's own measure of that unit, so it replaces the generic one rather than
-       appearing twice in the picker with two different weights. */
-    var ck=canonUnit(s[0]);
-    if(ck&&seen[ck]){out.forEach(function(u){if(u.k===ck)u.g=s[1];});return;}
-    add("s"+i,s[1],s[0]);});
-  return out;}
-function unitOf(food,k){
-  var list=unitsFor(food);
-  for(var i=0;i<list.length;i++)if(list[i].k===k)return list[i];
-  return null;}
-/* The unit an amount is shown in when nobody has picked one. */
-function defaultUnit(food){return isLiquid(food)?"ml":"g";}
-/* A sensible increment for the steppers, per unit. */
-function unitStep(k){
-  return {g:10,ml:25,kg:0.1,l:0.1,oz:1,lb:0.25,floz:1,cup:0.25,tbsp:1,tsp:1}[k]||0.5;}
-/* Rounding for display, so 250 ml in litres reads 0.25 and not 0.250000001. */
-function roundQty(v,k){
-  if(k==="g"||k==="ml")return Math.round(v);
-  if(k==="kg"||k==="l"||k==="lb"||k==="cup")return Math.round(v*100)/100;
-  return Math.round(v*10)/10;}
-function amountLabel(qty,u){
-  if(!u)return qty+" g";
-  if(/^s\d+$/.test(u.k))return qty+" \u00d7 "+u.label;
-  return qty+" "+u.label;}
-
 var COUNT_WORDS={a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,
   eight:8,nine:9,ten:10,half:0.5,"1/2":0.5,"quarter":0.25};
+
+/* Measures, as opposed to the countable units above (slice, piece, can), which mean
+   whatever the food's own serving of that name says. Mass converts exactly. Volume
+   needs the food's density: a cup of water is 240 g, a cup of cooked rice about 160 g
+   and a cup of spinach 30 g, so a volume is only offered where the food says what one
+   of its cups, spoons or millilitres weighs — or where it is a drink, taken as water.
+
+   Before this, "1 cup rice" logged 240 g whatever the database said a cup weighed, and
+   the servings screen had no way to log a drink by volume at all. */
+var MASS={g:1,kg:1000,oz:28.3495,lb:453.592};
+var VOL={ml:1,l:1000,cup:240,tbsp:15,tsp:5,floz:29.5735};
+var UNIT_ALIAS={gram:"g",grams:"g",gm:"g",gms:"g",gr:"g",
+  kilo:"kg",kilos:"kg",kilogram:"kg",kilograms:"kg",
+  ounce:"oz",ounces:"oz",lbs:"lb",pound:"lb",pounds:"lb",
+  millilitre:"ml",milliliter:"ml",millilitres:"ml",milliliters:"ml",mls:"ml",
+  litre:"l",liter:"l",litres:"l",liters:"l",
+  cups:"cup",tablespoon:"tbsp",tablespoons:"tbsp",teaspoon:"tsp",teaspoons:"tsp",
+  "fl oz":"floz",floz:"floz","fluid ounce":"floz","fluid ounces":"floz",
+  /* Arabic, as people type it. These arrive folded by norm(). */
+  "جرام":"g","جم":"g","كيلو":"kg","مل":"ml","ملي":"ml","لتر":"l","كوب":"cup"};
+/* The label a measure is written with. Stored in the log, so it is not translated. */
+var UNIT_LABEL={g:"g",kg:"kg",oz:"oz",lb:"lb",ml:"ml",l:"L",cup:"cup",tbsp:"tbsp",tsp:"tsp",floz:"fl oz"};
+/* What one tap of + or − moves each by: a splash of milk, not a millilitre. */
+var UNIT_STEP={g:10,kg:0.1,oz:1,lb:0.25,ml:50,l:0.25,cup:0.25,tbsp:1,tsp:1,floz:1};
+function unitKey(u){
+  u=String(u==null?"":u).toLowerCase().replace(/\./g,"").replace(/\s+/g," ").trim();
+  return UNIT_ALIAS[u]||u;}
+function isMeasure(k){return !!(MASS[k]||VOL[k]);}
+function unitLabel(k,qty){
+  return k==="cup"&&qty!=null&&qty!==1?"cups":(UNIT_LABEL[k]||k);}
+/* Amounts are kept to the precision the unit is read in: whole grams and
+   millilitres, hundredths of a litre or a cup, tenths of a spoon. */
+function roundUnit(k,v){
+  if(k==="g"||k==="ml")return Math.round(v);
+  if(k==="kg"||k==="l"||k==="cup"||k==="lb")return Math.round(v*100)/100;
+  return Math.round(v*10)/10;}
+
+var DRINK_RE=/\b(coffee|espresso|latte|cappuccino|mocha|americano|macchiato|tea|juice|milk|water|soda|cola|drink|lemonade|smoothie|shake|beer|wine|kefir|ayran|laban|broth|soup|syrup|karkade|hibiscus|sobia|sahlab|tamarind)\b|قهوه|شاي|عصير|لبن|حليب|مياه|ماء|مشروب|شوربه|كركديه|سوبيا|سحلب|تمر هندي|خروب|ينسون|نسكافيه|كابتشينو/;
+function isDrink(f){
+  if(!f)return false;
+  if(f.cat==="Beverages")return true;
+  if((f.s||[]).some(function(s){return /\b(ml|glass|mug|bottle|shot)\b/i.test(String(s&&s[0]));}))return true;
+  return DRINK_RE.test(normFood(f.n));}
+/* Grams per millilitre, read off the food's own servings: "cup" at 245 g is 245/240.
+   A drink with no such serving is taken as water. 0 means volume cannot be offered. */
+function density(f){
+  var s=(f&&f.s)||[];
+  for(var i=0;i<s.length;i++){
+    var l=String(s[i]&&s[i][0]||"").toLowerCase(),g=+(s[i]&&s[i][1]),m;
+    if(!(g>0))continue;
+    m=l.match(/(\d+(?:\.\d+)?)\s*ml\b/);
+    if(m&&+m[1]>0)return g/parseFloat(m[1]);
+    m=l.match(/^(?:(\d+(?:\.\d+)?)\s*)?(cup|tbsp|tsp)s?\b/);
+    if(m)return g/((m[1]?parseFloat(m[1]):1)*VOL[m[2]]);
+  }
+  return isDrink(f)?1:0;}
+/* Grams in one of a measure, for this food. */
+function unitGrams(f,k){
+  if(MASS[k])return MASS[k];
+  if(VOL[k])return VOL[k]*(density(f)||1);
+  return 0;}
+/* The measures the servings screen offers for a food: every mass, and volume only
+   with a density — less any spoon or cup the food already lists as a serving. */
+function unitsFor(f){
+  var own=(f.s||[]).map(function(s){return String(s[0]||"").toLowerCase();});
+  var vol=density(f)?Object.keys(VOL).filter(function(k){
+    return !own.some(function(l){return new RegExp("^(1\\s*)?"+k+"s?\\b").test(l);});}):[];
+  return {mass:Object.keys(MASS),vol:vol};}
 
 /* Matching lives in engine/text.js so the exercise picker and this share one
    implementation. It was duplicated here first and the two immediately drifted. */
@@ -152,20 +123,13 @@ function parseFoodInput(text){
   return chunks.map(parseChunk).filter(Boolean);
 }
 
-/* Longest first, so "ml" is not read as "m" + "l" and "fl oz" wins over "oz". */
-var UNIT_WORDS="fl\\.?\\s?oz|kilograms?|kilos?|kg|grams?|gms?|gm|gr|g|ounces?|oz|pounds?|lbs?|lb"
-  +"|millilit(?:re|er)s?|ml|lit(?:re|er)s?|ltr|l|tablespoons?|tbsp|teaspoons?|tsp|cups?"
-  +"|scoops?|slices?|pieces?|cans?|glass(?:es)?|bottles?|mugs?";
 function parseChunk(chunk){
-  /* The matcher's normaliser drops punctuation, which turned "1.5 kg rice" into
-     "1 5 kg rice" — one of whatever the food's first serving was — and "0.5 l milk"
-     into nothing at all. The decimal point is held through it. */
-  var q=normFood(String(chunk).replace(/(\d)[.](\d)/g,"$1_$2")).replace(/(\d)_(\d)/g,"$1.$2");
+  var q=normFood(chunk);
   if(!q)return null;
   var qty=null,unit=null;
 
-  /* "200g chicken" / "250 ml milk" / "1.5 kg rice" */
-  var m=q.match(new RegExp("^(\\d+(?:\\.\\d+)?)\\s*("+UNIT_WORDS+")\\b\\s*(?:of\\s+)?(.*)$"));
+  /* "200g chicken" / "250 ml milk" / "1.5 kg rice" / "8 oz steak" / "330 مل عصير" */
+  var m=q.match(/^(\d+(?:\.\d+)?)\s*(kg|kilos?|kilograms?|g|gm|gms|gr|grams?|oz|ounces?|lbs?|pounds?|fl oz|ml|mls|millilit(?:re|er)s?|l|litres?|liters?|tbsp|tablespoons?|tsp|teaspoons?|cups?|scoops?|slices?|pieces?|cans?|جرام|جم|كيلو|ملي|مل|لتر|كوب)(?=\s|$)\s*(.*)$/);
   if(m){qty=parseFloat(m[1]);unit=m[2];q=m[3];}
   else{
     /* "3 eggs" / "two bananas" */
@@ -175,12 +139,8 @@ function parseChunk(chunk){
       var m3=q.match(/^(a|an|one|two|three|four|five|six|seven|eight|nine|ten|half)\s+(.*)$/);
       if(m3){qty=COUNT_WORDS[m3[1]];q=m3[2];}
     }
-    /* "a glass of juice" / "2 cups of coffee" / "half a litre of milk": the count
-       word was read above, the unit follows it. */
-    var m5=q.match(new RegExp("^(?:a\\s+)?("+UNIT_WORDS+")\\s+(?:of\\s+)?(.+)$"));
-    if(m5&&qty!=null){unit=m5[1];q=m5[2];}
     /* trailing unit: "chicken 200g" */
-    var m4=q.match(new RegExp("^(.*?)\\s+(\\d+(?:\\.\\d+)?)\\s*("+UNIT_WORDS+")$"));
+    var m4=q.match(/^(.*?)\s+(\d+(?:\.\d+)?)\s*(kg|g|gm|oz|lbs?|fl oz|ml|l|cups?|tbsp|tsp|جرام|جم|كيلو|ملي|مل|لتر|كوب)$/);
     if(m4){q=m4[1];qty=parseFloat(m4[2]);unit=m4[3];}
   }
   q=q.replace(/\b(of|the|some|my|a|an)\b/g," ").replace(/\s+/g," ").trim();
@@ -230,37 +190,21 @@ function searchFoods(q,limit){
 function gramsFor(food,qty,unit){
   if(qty==null)qty=1;
   if(unit){
-    /* A unit picked in the sheet: a key from unitsFor(), servings included. */
-    var ck=canonUnit(unit),picked=unitOf(food,unit)||(ck&&unitOf(food,ck));
-    if(picked)return {g:qty*picked.g,label:amountLabel(qty,picked),unit:picked.k};
-    if(ck&&UNITS[ck]>0){
-      var per=UNITS[ck]*(VOLUME[ck]?liquidDensity(food):1);
-      return {g:qty*per,label:amountLabel(qty,unitOf(food,ck)||{k:ck,label:UNIT_LABEL[ck]}),unit:ck};}
-    /* countable units fall through to the food's own servings */
+    /* A measure converts through the food: exactly for mass, by its density for
+       volume. Typed volume of a food with no density is taken as water, which is
+       what this did for every food before. */
+    var k=unitKey(unit);
+    if(isMeasure(k))return {g:Math.round(qty*unitGrams(food,k)*10)/10,label:qty+" "+unitLabel(k,qty)};
+    /* A countable unit is the food's own serving of that name, where it has one:
+       a scoop of this powder, not a generic 30 g. */
+    var own=(food.s||[]).filter(function(s){
+      return s[1]>0&&normFood(s[0]).indexOf(normFood(unit).replace(/s$/,""))>-1;})[0];
+    if(own)return {g:qty*own[1],label:qty+" × "+own[0]};
+    var u=UNITS[unit]||UNITS[unit.replace(/s$/,"")];
+    if(u&&u>0)return {g:qty*u,label:qty+" "+unit};
   }
-  var s=(food.s&&food.s[0])||["100 g",100],si=0;
-  if(unit){
-    /* Singular, without mangling "glass" into "glas". */
-    var raw=normFood(unit),base=DRINK_SERVINGS[raw]||raw.length<4?raw
-          :/(ss|sh|ch|x)es$/.test(raw)?raw.slice(0,-2):raw.replace(/s$/,""),hit=-1;
-    for(var i=0;i<(food.s||[]).length;i++){
-      if(normFood(food.s[i][0]).indexOf(base)>-1){hit=i;break;}
-    }
-    if(hit>=0){s=food.s[hit];si=hit;}
-    else if(isLiquid(food)&&DRINK_SERVINGS[base]){
-      /* "a glass of milk" when milk only lists a cup: a glass is still a glass. */
-      var ml=DRINK_SERVINGS[base];
-      return {g:qty*ml*liquidDensity(food),label:qty+" \u00d7 "+base+" ("+ml+" ml)",unit:"ml",
-        qtyIn:qty*ml};
-    }
-  }
-  /* "100 g" as the only serving is grams in all but name; say so, so the picker
-     shows 100 g rather than 1 × 100 g. */
-  if(/^\s*100\s*g\s*$/i.test(s[0]))return {g:qty*s[1],label:amountLabel(qty*s[1],{k:"g",label:"g"}),unit:"g",qtyIn:qty*s[1]};
-  /* Milk's "cup" serving is listed in the picker as the cup unit itself (see
-     unitsFor), so it has to come back under that key or the picker cannot find it. */
-  var ck2=canonUnit(s[0]),uk=ck2&&unitOf(food,ck2)?ck2:"s"+si;
-  return {g:qty*s[1],label:qty+" \u00d7 "+s[0],unit:uk};
+  var s=(food.s&&food.s[0])||["100 g",100];
+  return {g:qty*s[1],label:qty+" \u00d7 "+s[0]};
 }
 
 /* ---- the calculation engine ------------------------------------------ */
@@ -283,34 +227,12 @@ function sumNutrition(items){
 }
 
 /* ---- resolve a parsed chunk into a logged item ----------------------- */
-/* Every draft item carries its amount as (qty, unit key) from here on, so the picker,
-   the steppers and the stored log all agree on what the user asked for. A typed
-   "a glass of milk" becomes 250 ml; "3 eggs" stays 3 × large egg. */
-function settleUnit(it,g){
-  it.parsed.unit=g.unit||it.parsed.unit;
-  if(g.qtyIn!=null)it.parsed.qty=roundQty(g.qtyIn,it.parsed.unit);
-  else if(it.parsed.qty==null)it.parsed.qty=1;
-  return it;}
 function recalcItem(it){
   var g=gramsFor(it.food,it.parsed.qty,it.parsed.unit);
-  settleUnit(it,g);
   it.grams=g.g; it.label=g.label; it.n=nutritionFor(it.food,g.g);
-  return it;}
-/* The same amount, expressed in another unit. Switching 250 ml to litres shows 0.25 L
-   and changes nothing else: the unit is how it is read, not how much was drunk. */
-function convertItem(it,k){
-  var u=unitOf(it.food,k);
-  if(!u)return it;
-  it.parsed.unit=k;
-  it.parsed.qty=Math.max(roundQty(it.grams/u.g,k),k==="g"||k==="ml"?1:0.01);
-  /* The grams, and so the macros, stay exactly as they were; only the reading of
-     them changes. Recalculating from the rounded figure would drift a few grams on
-     every switch. */
-  it.label=amountLabel(it.parsed.qty,u);
   return it;}
 function toLogItem(it){
   return {fid:it.food.id,n:it.name,label:it.label,grams:it.grams,src:it.src,
-          qty:it.parsed?it.parsed.qty:null,unit:it.parsed?it.parsed.unit:null,
           kcal:it.n.kcal,p:it.n.p,c:it.n.c,f:it.n.f,fib:it.n.fib};}
 function resolveItem(parsed){
   var hits=searchFoods(parsed.query,5);
@@ -326,7 +248,6 @@ function resolveItem(parsed){
   var ambiguous=hits.length>1&&hits[1].score>=top.score-8&&top.score<95;
   var g=gramsFor(top.f,parsed.qty,parsed.unit);
   var n=nutritionFor(top.f,g.g);
-  settleUnit({parsed:parsed},g);
   return {
     status:ambiguous?"ambiguous":"ok",
     parsed:parsed, food:top.f, alts:hits.slice(0,5).map(function(x){return x.f;}),
@@ -423,4 +344,4 @@ function lookupBarcode(code,cb){
   });
 }
 
-export {amountLabel, convertItem, defaultUnit, FOODDB, findByBarcode, fuzzyFoods, gramsFor, isLiquid, liquidDensity, loadFoods, lookupBarcode, normBarcode, normFood, nutritionFor, offBarcode, offSearch, parseFoodInput, recalcItem, rememberBarcode, resolveItem, roundQty, sumNutrition, toLogItem, UNITS, unitOf, unitsFor, unitStep};
+export {density, FOODDB, findByBarcode, fuzzyFoods, gramsFor, isDrink, isMeasure, loadFoods, lookupBarcode, normBarcode, normFood, nutritionFor, offBarcode, offSearch, parseFoodInput, recalcItem, rememberBarcode, resolveItem, roundUnit, searchFoods, sumNutrition, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, unitsFor};

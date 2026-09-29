@@ -3,39 +3,18 @@
 import {t} from "../i18n/dict.js";
 import {difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {exName} from "../i18n/exnames.js";
-import {MEALS, srcBadge} from "./views/food.js";
-import {backupAgeDays, bestE1RM, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, sessionKcal, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
-import {isLiquid, liquidDensity, sumNutrition, unitOf, unitsFor} from "../engine/nutrition.js";
+import {MEALS} from "./views/food.js";
+import {backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionKcal, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
+import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
-import {scanSupported} from "../scan.js";
 import {GOALS, LEVELS, splitCandidates} from "../engine/plan.js";
 import {groupLabel, groupRun, mmss, platePlan} from "./views/session.js";
 import {buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats} from "../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
-import {CUES, MISTAKES, sparkline, stepper, V} from "./view.js";
-
-/* ---- amounts: shared by the draft cards and the edit sheet ---------------------- */
-/* The unit picker. Every unit the food can be measured in, its own servings last. */
-function unitSelect(food,cur,attr){
-  return '<select class="fqty-u" '+attr+' aria-label="'+t("Unit")+'">'
-   +unitsFor(food).map(function(u){
-     return '<option value="'+esc(u.k)+'"'+(u.k===cur?" selected":"")+'>'+esc(t(u.label))+'</option>';
-   }).join("")+'</select>';}
-/* What the amount button reads: "250", "0.25", "2" — the unit is the picker's job. */
-function qtyText(it){
-  var q=it.parsed&&it.parsed.qty;
-  return q==null?String(Math.round(it.grams)):String(q);}
-/* The line under the food name. A plain unit says only that; a serving ("1 × glass")
-   also says what it comes to — millilitres for a drink, grams for anything else. */
-function amountNote(it){
-  var u=it.food&&unitOf(it.food,it.parsed&&it.parsed.unit);
-  var liq=isLiquid(it.food),g=Math.round(it.grams);
-  if(u&&!/^s\d+$/.test(u.k))return it.label;
-  return it.label+' \u00b7 '+(liq?"\u2248 "+g+" ml":g+" g");}
-/* Per 100 ml only where that is the same figure as per 100 g. Oil is a liquid, but its
-   database value is per 100 g and a millilitre of it weighs 0.92 g. */
-function per100(f){return isLiquid(f)&&liquidDensity(f)===1?"100 ml":"100 g";}
+import {CUES, MISTAKES, progressBar, sparkline, stepper, V} from "./view.js";
+import {photoById} from "./photos.js";
+import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 
 /* ============================================================ sheets */
 function vSheet(){
@@ -243,172 +222,53 @@ function vSheet(){
      +'<button class="btn" data-saverec="1">Save</button>';
   }
   else if(V.sheet==="measure"){
-    /* Each field shows its own last reading as a hint rather than a value. Prefilled
-       values were saved again as today's reading, so measuring only the waist logged
-       an unchanged chest too and Progress reported "±0.0 cm" for it. */
-    var lastOf=function(k){var r=S.body.filter(function(x){return num(x[k]);}).slice(-1)[0];return r?r[k]:"";};
+    /* Each field shows its own last reading as a hint, not as a value. Prefilled
+       values were saved again as today's reading, so measuring only the waist also
+       logged an unchanged chest, and Progress reported "±0" against it.
+
+       Hips and body fat are here because Progress reads both (engine/stats.js):
+       hips for the circumference body-fat estimate, which needs them for women, and
+       an entered body-fat figure from a scale or scan, which it prefers. Neither
+       could be entered before, so a woman never got an estimate at all. */
+    var lastOf=function(k){var r=S.body.filter(function(x){return num(x[k])>0;}).slice(-1)[0];return r?r[k]:"";};
     b='<h2>'+t("Measurements")+'</h2><p class="tiny" style="margin:2px 0 14px">'+t("In centimetres. Leave blank to skip.")+'</p>'
      +'<div class="grid2">'
      +[["Chest","m_chest","chest"],["Waist","m_waist","waist"],["Hips","m_hips","hips"],["Arms","m_arms","arms"],
        ["Thighs","m_thighs","thighs"],["Calves","m_calves","calves"],["Neck","m_neck","neck"],["Body fat %","m_bf","bf"]]
-      .map(function(m){return '<div><label class="tiny" for="'+m[1]+'">'+t(m[0])+'</label>'
+      .map(function(m){return '<div><label class="tiny" for="'+m[1]+'">'+esc(t(m[0]))+'</label>'
         +'<input id="'+m[1]+'" type="number" inputmode="decimal" step="0.1" placeholder="'+esc(lastOf(m[2]))+'"></div>';}).join("")
      +'</div><button class="btn" data-savemeasure="1">'+t("Save for today")+'</button>';
+  }
+  else if(V.sheet==="photo"){
+    /* One progress photo, large, with its date and the way to delete it. */
+    var ph=photoById(V.sd&&V.sd.id);
+    if(!ph)b='<h2>'+t("Progress photo")+'</h2><p class="sub">'+t("This photo is no longer on this phone.")+'</p>';
+    else b='<h2>'+t("Progress photo")+'</h2><p class="tiny" style="margin:2px 0 12px">'+esc(pretty(ph.d))+'</p>'
+     +'<img class="pgphoto-img" src="'+ph.url+'" alt="'+esc(t("Progress photo")+", "+pretty(ph.d))+'"'
+     +' width="'+(ph.w||300)+'" height="'+(ph.h||400)+'">'
+     +'<button class="btn danger" data-delphoto="'+esc(ph.id)+'">'+t("Delete photo")+'</button>';
   }
   else if(V.sheet==="text"){
     b='<h2>'+esc(V.sd.title)+'</h2><p class="tiny" style="margin:2px 0 12px">'+esc(V.sd.note||"")+'</p>'
      +'<input id="txt" value="'+esc(V.sd.value||"")+'" placeholder="'+esc(V.sd.ph||"")+'">'
      +'<button class="btn" data-savetext="1">Save</button>';
   }
-  else if(V.sheet==="addfood"){
-    var meal=V.sd.meal, st=V.food||{};
-    b='<h2>'+t("Log fuel")+'</h2><p class="tiny" style="margin:2px 0 12px">'
-     +'Type what you ate. "3 eggs, 2 brown toast" works.</p>';
-    b+='<input id="nlq" placeholder="3 eggs, 2 brown toast" value="'+esc(st.q||"")+'" '
-     +'autocapitalize="none" autocorrect="off">';
-    b+='<div class="rowc mt"><button class="btn" data-parse="1" style="margin:0">'+t("Find it")+'</button></div>';
-    /* Scanning shows only where the browser can actually decode. Typing the digits
-       off the packet runs the same lookup and works everywhere. */
-    b+='<div class="rowc" style="margin-top:8px">'
-     +(scanSupported()?'<button class="btn g" data-scan="1" style="margin:0">'+t("Scan barcode")+'</button>':'')
-     +'<button class="btn g" data-typecode="1" style="margin:0">'+t("Enter barcode")+'</button></div>';
-
-    /* Three distinct outcomes, three distinct messages: still working, no match,
-       could not reach the service at all. */
-    if(st.busy)b+='<div class="card mt"><div class="skel skelbar" style="width:58%"></div>'
-     +'<div class="skel skelbar" style="width:34%"></div>'
-     +'<p class="tiny" style="margin:6px 0 0">'+t("Checking the online food database…")+'</p></div>';
-    else if(st.offline)b+=empty("cloud",t("No connection to the food database"),
-      t("Bunyan works offline, but branded products come from Open Food Facts. Your own foods and the built-in database still work."),
-      '<button class="btn g" data-online="'+esc(st.offline)+'">'+t("Try again")+'</button>'
-      +'<button class="btn" data-manual="'+esc(st.offline)+'">'+t("Enter it manually")+'</button>');
-    else if(st.noresult)b+=empty("search",t("Nothing found online"),
-      t("Open Food Facts has no product under that name. Enter the numbers off the packet and Bunyan will remember it."),
-      '<button class="btn" data-manual="'+esc(st.noresult)+'">'+t("Enter it manually")+'</button>');
-
-    /* A near miss is offered, never taken. Even a confident guess is one tap from
-       being wrong, and a wrong food quietly corrupts the day's numbers. */
-    (st.items||[]).forEach(function(it){
-      if(it.status!=="suggest")return;
-      var idx=st.items.indexOf(it);
-      b+='<div class="overline">'+t("Did you mean")+'…</div>'
-       +'<p class="tiny" style="margin:-4px 0 8px">'+t("Nothing matches")+' “'
-       +esc(it.parsed.query)+'”.</p><div class="list">';
-      (it.alts||[]).forEach(function(f,k){
-        b+='<button class="item" data-choose="'+idx+'|'+k+'">'
-         +'<div><div style="font-weight:600">'+esc(f.n)+'</div>'
-         +'<div class="tiny">'+esc(t(f.cat||""))+' · '+f.kcal+' kcal/'+per100(f)+'</div></div>'
-         +'<span class="chev">+</span></button>';});
-      b+='</div><button class="btn g sm" data-dropitem="'+idx+'" '
-       +'style="margin:8px 0 14px">'+t("None of these")+'</button>';
-    });
-    if(st.items&&st.items.length){
-      var known=st.items.filter(function(i){return i.status!=="unknown"&&i.status!=="suggest";});
-      var lost=st.items.filter(function(i){return i.status==="unknown";});
-      if(known.length)b+='<div class="overline">I found</div>';
-      known.forEach(function(it,i){
-        b+='<div class="card" data-k="fi:'+i+'"><div class="row"><div style="flex:1">'
-         +'<div style="font-weight:700">'+esc(it.name)+'</div>'
-         +'<div class="tiny">'+esc(amountNote(it))+'</div></div>'
-         +srcBadge(it.src)+'</div>'
-         +'<div class="row" style="margin-top:8px"><span class="metric" style="font-size:20px">'
-         +fmtN(it.n.kcal)+'<span class="unit">kcal</span></span>'
-         +'<span class="tiny num">'+it.n.p+'p \u00b7 '+it.n.c+'c \u00b7 '+it.n.f+'f</span></div>'
-         /* Five controls on one line is wider than a phone, which forced the whole
-            sheet to scroll sideways and made it look corrupted. The amount and its
-            steppers are one row; the three text actions sit under it. Tapping the
-            amount opens the same amount prompt the old "Set grams" button did, so
-            nothing is lost by dropping the duplicate. */
-         +'<div class="fqty mt">'
-         +'<button class="btn g sm" data-qty="'+i+'|-1" aria-label="'+t("Less")+'">\u2212</button>'
-         +'<button class="fqty-v" data-gram="'+i+'" aria-label="'+t("Set amount")+'">'
-         +esc(qtyText(it))+'</button>'
-         +'<button class="btn g sm" data-qty="'+i+'|1" aria-label="'+t("More")+'">+</button>'
-         +unitSelect(it.food,it.parsed.unit,'data-unitsel="'+i+'"')+'</div>'
-         +'<div class="facts">'
-         +(it.alts&&it.alts.length>1?'<button data-swapfood="'+i+'">'+t("Change")+'</button>':'')
-         +'<button data-gram="'+i+'">'+t("Set amount")+'</button>'
-         +'<button class="danger" data-dropitem="'+i+'">'+t("Remove")+'</button></div>'
-         +(it.status==="ambiguous"?'<p class="tiny" style="margin:8px 0 0;color:var(--gold)">'
-            +'Not certain this is the right match. Tap Change if it is wrong.</p>':'')
-         +'</div>';});
-      if(known.length){
-        var tot=sumNutrition(known.map(function(i){return i.n;}));
-        b+='<div class="card hot"><div class="tiny" style="letter-spacing:.12em">TOTAL</div>'
-         +'<div class="metric" style="font-size:32px;margin:4px 0 6px">'+fmtN(tot.kcal)
-         +'<span class="unit">kcal</span></div>'
-         +'<div class="row"><span class="dim">Protein '+tot.p+'g</span>'
-         +'<span class="dim">Carbs '+tot.c+'g</span><span class="dim">Fat '+tot.f+'g</span></div></div>';
-        b+='<div class="rowc"><select id="mealsel">'
-         +MEALS.map(function(m){return '<option'+(m===meal?" selected":"")+'>'+m+'</option>';}).join("")
-         +'</select></div>';
-        b+='<button class="btn" data-commit="1">'+t("Add to meal")+'</button>';
-        b+='<button class="btn g" data-savemeal="1">'+t("Save this as a meal")+'</button>';}
-      if(lost.length){
-        b+='<div class="overline">We couldn\u2019t calculate this yet</div>';
-        lost.forEach(function(it){
-          b+='<div class="card"><div style="font-weight:700">'+esc(it.parsed.raw)+'</div>'
-           +'<p class="tiny" style="margin:6px 0 0">We couldn\u2019t find reliable nutrition for this. '
-           +'Try adding the brand, a serving size, or the ingredients.</p>'
-           +'<div class="rowc mt"><button class="btn g sm" data-online="'+esc(it.parsed.query)+'">'+t("Search online")+'</button>'
-           +'<button class="btn g sm" data-manual="'+esc(it.parsed.raw)+'">'+t("Enter it manually")+'</button></div></div>';});}
-    }
-
-    var fq=frequentFoods(8);
-    if(fq.length&&!(st.items&&st.items.length)){
-      b+='<div class="overline">'+t("Frequent")+'</div><div class="list">';
-      fq.forEach(function(f){
-        b+='<button class="item" data-quickfood="'+esc(f.id)+'"><div><div style="font-weight:600">'
-         +esc(f.n)+'</div><div class="tiny">'+f.kcal+' kcal / '+per100(f)+'</div></div>'
-         +'<span class="pill a">Add</span></button>';});
-      b+='</div>';}
-    b+='<button class="btn g" data-manual="">'+t("Enter nutrition manually")+'</button>';
-  }
-  else if(V.sheet==="manual"){
-    var mf=V.sd||{};
-    b='<h2>'+t("Enter it manually")+'</h2><p class="tiny" style="margin:2px 0 12px">'
-     +'Read the numbers off the packet, or your best estimate.</p>'
-     /* Saving to My Foods attaches this, so the same packet scans locally next time. */
-     +(mf.bc?'<p class="tiny" style="margin:0 0 10px">'+t("Barcode")+' <span class="num">'
-       +esc(mf.bc)+'</span> — '+t("saving this to your foods will make it scan offline next time.")+'</p>':'')
-     +'<input id="mf_n" placeholder="Food name" value="'+esc(mf.name||"")+'">'
-     +'<div class="grid2 mt">'
-     +'<div><div class="tiny">'+t("Calories")+'</div><input id="mf_k" type="number" inputmode="numeric" value="'+esc(mf.k||"")+'"></div>'
-     +'<div><div class="tiny">'+t("Protein (g)")+'</div><input id="mf_p" type="number" inputmode="decimal" value="'+esc(mf.p||"")+'"></div>'
-     +'<div><div class="tiny">'+t("Carbs (g)")+'</div><input id="mf_c" type="number" inputmode="decimal" value="'+esc(mf.c||"")+'"></div>'
-     +'<div><div class="tiny">'+t("Fat (g)")+'</div><input id="mf_f" type="number" inputmode="decimal" value="'+esc(mf.f||"")+'"></div>'
-     +'</div>'
-     +'<p class="tiny mt">'+t("Leave calories blank and Bunyan works them out from the macros.")+'</p>'
-     +'<div class="rowc mt"><select id="mf_meal">'
-     +MEALS.map(function(m){return '<option>'+m+'</option>';}).join("")+'</select></div>'
-     +'<button class="btn" data-savemanual="1">'+t("Add it")+'</button>'
-     +'<button class="btn g" data-savemyfood="1">'+t("Save to my foods and add")+'</button>';
-  }
-  else if(V.sheet==="edititem"){
-    /* A logged item's amount, in the unit it was logged in — or any other. Changing
-       the unit converts the figure in the field, so 250 ml becomes 0.25 L rather
-       than 250 L. */
-    var ed=V.sd||{};
-    b='<h2>'+esc(ed.name||"")+'</h2>'
-     +'<p class="sub" style="margin:6px 0 16px">'+t("Everything recalculates from the amount.")+'</p>'
-     +'<label class="sec" for="ei_q" style="margin-top:0;display:block">'+t("Amount")+'</label>'
-     +'<div class="fqty"><input id="ei_q" type="number" inputmode="decimal" step="any" min="0"'
-     +' value="'+esc(ed.qty)+'" autocomplete="off" enterkeyhint="done" style="flex:1;min-width:0">'
-     +(ed.food?unitSelect(ed.food,ed.unit,'id="ei_u"')
-       :'<span class="fqty-u fqty-fixed">'+t("serving")+'</span>')
-     +'</div>'
-     +'<button class="btn" data-saveedit="1">'+t("Save")+'</button>';
-  }
+  /* The food group's sheets live in views/addfood.js — three modes and the manual
+     entry are more than belongs inline among twenty others. */
+  else if(V.sheet==="addfood"){b=vAddFood();}
+  else if(V.sheet==="manual"){b=vManual();}
   else if(V.sheet==="pickfood"){
     var pi=V.sd.idx, cur=V.food.items[pi];
-    b='<h2>'+t("Which one?")+'</h2><p class="tiny" style="margin:2px 0 12px">You typed \u201c'
-     +esc(cur.parsed.raw)+'\u201d</p><div class="list">';
+    b=afHead(t("Which one?"),{sub:'<span class="afsub">'+esc(t("You typed"))+' “'
+       +esc(cur.parsed.raw)+'”</span>'})
+     +'<div class="afresults">';
     cur.alts.forEach(function(f,i){
-      b+='<button class="item" data-choose="'+pi+'|'+i+'"><div><div style="font-weight:600">'
-       +esc(f.n)+'</div><div class="tiny">'+f.kcal+' kcal / '+per100(f)+' \u00b7 '+esc(f.cat||"")+'</div></div>'
-       +(f.id===cur.food.id?'<span class="pill a">'+t("Current")+'</span>':'<span class="chev">\u203a</span>')
-       +'</button>';});
-    b+='</div><button class="btn g" data-online="'+esc(cur.parsed.query)+'">'+t("Search online instead")+'</button>';
+      var on=f.id===cur.food.id;
+      b+='<div class="afres"><button class="afres-b" data-choose="'+pi+'|'+i+'">'
+       +'<span class="afres-n">'+esc(f.n)+'</span>'
+       +'<span class="afres-m">'+fmtN(f.kcal)+' kcal / 100 g'+(f.cat?' · '+esc(t(f.cat)):'')+'</span></button>'
+       +(on?'<span class="afcur">'+esc(t("Current"))+'</span>':'')+'</div>';});
+    b+='</div><button class="btn g" data-online="'+esc(cur.parsed.query)+'">'+esc(t("Search online instead"))+'</button>';
   }
   else if(V.sheet==="dayview"){
     var dv=V.sd.date, rv2=S.days[dv]||{meals:{}}, sess=S.sessions.filter(function(x){return x.date===dv;});
@@ -785,24 +645,53 @@ function vSheet(){
      +'<p class="tiny">'+t("Conservative adds 2.5 kg. Standard adds 2.5 on isolation and 5 on the big lifts. Aggressive adds 5 and 10.")+'</p>';
   }
   else if(V.sheet==="set_nutrition"){
-    var ng=S.goals;
-    b='<h2>'+t("Nutrition")+'</h2><p class="tiny" style="margin:2px 0 14px">'
-     +t("Your daily targets. The rings on Home and Food measure against these.")+'</p>'
-     +'<div class="grid2">'
-     +'<div><label class="tiny" for="g_kcal">'+t("Calories")+'</label>'
-     +'<input id="g_kcal" type="number" value="'+ng.kcal+'"></div>'
-     +'<div><label class="tiny" for="g_p">'+t("Protein")+' (g)</label>'
-     +'<input id="g_p" type="number" value="'+ng.p+'"></div>'
-     +'<div><label class="tiny" for="g_c">'+t("Carbs")+' (g)</label>'
-     +'<input id="g_c" type="number" value="'+ng.c+'"></div>'
-     +'<div><label class="tiny" for="g_f">'+t("Fat")+' (g)</label>'
-     +'<input id="g_f" type="number" value="'+ng.f+'"></div>'
-     +'<div><label class="tiny" for="g_water">'+t("Water")+' (ml)</label>'
-     +'<input id="g_water" type="number" value="'+ng.water+'"></div>'
-     +'<div><label class="tiny" for="g_steps">'+t("Steps")+'</label>'
-     +'<input id="g_steps" type="number" value="'+ng.steps+'"></div></div>'
-     +'<p class="tiny mt">'+t("Your macros add up to")+' '+fmtN(macroKcal(ng.p,ng.c,ng.f))+' kcal.</p>'
-     +'<button class="btn" data-savegoals="1">'+t("Save targets")+'</button>';
+    /* Nutrition Goals, frame 13:531. "Tap any value to customize" is literally true:
+       every figure on the card is its own input, so there is no separate edit mode. */
+    var ng=S.goals, eN=eatenToday(today());
+    /* The share of calories from each macro, rounded so the three always sum to
+       exactly 100. The frame's own figures — 26, 44 and 25 — summed to 95. */
+    var kc=[ng.p*4,ng.c*4,ng.f*9], kt=kc[0]+kc[1]+kc[2], pc=[0,0,0];
+    if(kt){
+      var raw=kc.map(function(x){return x/kt*100;});
+      pc=raw.map(Math.floor);
+      var rest=100-pc[0]-pc[1]-pc[2];
+      raw.map(function(x,i){return [x-Math.floor(x),i];})
+        .sort(function(a,c){return c[0]-a[0];}).slice(0,rest)
+        .forEach(function(r){pc[r[1]]++;});}
+    /* Remaining is goal minus eaten, the same arithmetic as the Food ring. */
+    function remRow(label,eaten,goal,isKcal){
+      var d=goal-eaten, over=d<0;
+      return '<div class="ngrem-r"><b>'+esc(label)+'</b><span'+(over?' class="over"':'')+'>'
+       +fmtN(Math.abs(d))+(isKcal?' '+t(over?"kcal over":"kcal left"):t(over?"g over":"g left"))
+       +'</span></div>'+progressBar(eaten,goal,over?"var(--gold)":"var(--accent)");}
+    b=afHead(t("Nutrition Goals"),{sub:'<span class="afsub">'+esc(t("Daily targets & macros"))+'</span>'})
+     +'<div class="aflbl">'+esc(t("Daily targets"))+'</div>'
+     +'<label class="ngcard ngenergy" for="g_kcal"><span class="ngenergy-t">'
+     +'<span class="aflbl">'+esc(t("Daily energy goal"))+'</span>'
+     +'<span class="ngbig"><input id="g_kcal" type="number" inputmode="numeric" style="width:'+fitCh(ng.kcal,"")+'ch" value="'+ng.kcal+'"><i>kcal</i></span></span>'
+     +'<span class="ico ico-edit" aria-hidden="true"></span></label>'
+     +'<div class="ngcard"><div class="aflbl">'+esc(t("Macronutrient split"))+'</div>'
+     +'<div class="ngsplit" role="img" aria-label="'
+     +esc(t("Protein")+" "+pc[0]+"%, "+t("Carbs")+" "+pc[1]+"%, "+t("Fat")+" "+pc[2]+"%")+'">'
+     +(pc[0]?'<i class="p" style="flex-grow:'+pc[0]+'"></i>':'')
+     +(pc[1]?'<i class="c" style="flex-grow:'+pc[1]+'"></i>':'')
+     +(pc[2]?'<i class="f" style="flex-grow:'+pc[2]+'"></i>':'')+'</div>'
+     +'<div class="nglegend"><span>'+esc(t("Protein"))+': '+pc[0]+'%</span>'
+     +'<span>'+esc(t("Carbs"))+': '+pc[1]+'%</span><span>'+esc(t("Fat"))+': '+pc[2]+'%</span></div>'
+     +'<div class="aftiles ng3">'
+     +afTile("g_p",t("Protein"),"g",ng.p,"0","numeric")
+     +afTile("g_c",t("Carbs"),"g",ng.c,"0","numeric")
+     +afTile("g_f",t("Fat"),"g",ng.f,"0","numeric")+'</div>'
+     +'<p class="afnote">'+esc(t("Your macros add up to"))+' '+fmtN(macroKcal(ng.p,ng.c,ng.f))+' kcal.</p></div>'
+     +'<div class="ngcard ngrem"><div class="aflbl">'+esc(t("Remaining today"))+'</div>'
+     +remRow(t("Calories"),eN.kcal,ng.kcal,true)
+     +remRow(t("Protein"),eN.p,ng.p,false)+'</div>'
+     /* Not in the frame, and still targets the app measures against. */
+     +'<div class="ngcard"><div class="aflbl">'+esc(t("Other targets"))+'</div><div class="aftiles">'
+     +afTile("g_water",t("Water"),"ml",ng.water,"0","numeric")
+     +afTile("g_steps",t("Steps"),"",ng.steps,"0","numeric")+'</div></div>'
+     +'<p class="afnote">'+esc(t("Your daily targets. The rings on Home and Food measure against these."))+'</p>'
+     +'<button class="btn afcta" data-savegoals="1">'+esc(t("Save targets"))+'</button>';
   }
   else if(V.sheet==="set_app"){
     var ap=S.prefs;

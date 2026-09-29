@@ -327,8 +327,6 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
 .item:first-child{border-top:none}
 .item:active{background:var(--surface)}
 .chev{color:var(--faint);font-size:19px;flex-shrink:0}
-.rowval{color:var(--dim);font-size:13px;text-align:right;margin-left:auto;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%}
 .mt{margin-top:14px}
 .hide{display:none}
 .brand{display:flex;align-items:center;gap:13px;padding:16px;margin-bottom:16px;
@@ -515,11 +513,6 @@ body.noanim #splash .sp-embers{display:none}
   color:var(--text);border-radius:10px;min-height:44px;padding:0 12px;
   font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
 .fqty-v:active{background:var(--raised)}
-/* The unit beside the amount: ml, L, g, a serving. A native select, so iOS gives it
-   its own wheel and a screen reader announces it as a choice. */
-.fqty-u{flex:0 0 auto;width:auto;max-width:42%;min-height:44px;padding:0 28px 0 12px;
-  border-radius:10px;font-weight:600;text-overflow:ellipsis}
-.fqty-fixed{display:flex;align-items:center;color:var(--dim);padding:0 12px}
 .facts{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;padding-inline-start:2px}
 .facts button{background:none;border:none;padding:6px 0;min-height:44px;
   color:var(--dim);font-size:13.5px;font-weight:600;letter-spacing:.02em}
@@ -1511,89 +1504,424 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .librow-s b{font-weight:400;color:var(--accentHi)}
 .librow .ico-chev{color:var(--dim);flex-shrink:0}
 [dir="rtl"] .librow .ico-chev{transform:scaleX(-1)}
-/* ---- Progress (the four "Progress —" frames) ---------------------------------
-   Visually hidden, still read aloud: the label for the lift picker. */
-.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
-  clip:rect(0 0 0 0);white-space:nowrap;border:0}
-/* The section switch. The frames' own tab bar, one segment raised. */
-.pseg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;
-  background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);
-  margin-bottom:var(--s4)}
-.pseg-b{min-height:40px;border:none;border-radius:9px;background:none;color:var(--dim);
-  font-size:13.5px;font-weight:700;padding:0 4px;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;transition:background var(--m-press) var(--e-standard),color var(--m-press) var(--e-standard)}
-.pseg-b.a{background:var(--surface);color:var(--text)}
-.pseg-b:focus-visible,.pchip:focus-visible,.plink:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
-/* Range chips: five equal cells, the active one filled. */
-.pchips{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:0 0 var(--s2)}
-.pchip{min-height:40px;border-radius:var(--r1);border:1px solid var(--border);background:var(--raised);
+
+/* ================= Profile
+   The one tab with no frame: none of the nineteen top-level frames in the file is a
+   profile screen. So this is built from the language the eleven built frames share
+   rather than from a design of its own — Home's accent-ringed avatar, the Train hub's
+   hero card, and its grouped rows, which put each setting's value under its name
+   instead of squeezed against the chevron. */
+
+/* Identity. The avatar is Home's, larger, because here it is the subject. */
+.card.phero{display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:24px 20px 0;margin-bottom:0;overflow:hidden}
+.pavatar{width:72px;height:72px;border-radius:36px;background:var(--accentSoft);
+  border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-weight:800;font-size:24px;color:var(--text)}
+.pname{font-family:var(--display);font-weight:800;font-size:22px;margin-top:12px;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pprog{font-size:13px;color:var(--dim);margin-top:4px}
+
+/* Three figures, ruled off the card's edges. Equal weight: none of them outranks the
+   others, so none is styled as if it did — the streak used to be the accent-red one. */
+.pstats{display:grid;grid-template-columns:repeat(3,1fr);
+  width:calc(100% + 40px);margin:20px -20px 0;border-top:1px solid var(--border)}
+.pstats>div{padding:14px 4px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.pstats>div+div{border-inline-start:1px solid var(--border)}
+.pstats b{font-family:var(--display);font-weight:800;font-size:20px;
+  font-variant-numeric:tabular-nums}
+.pstats span{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
+
+/* The small print, kept — it is the only place the app says where its data lives. */
+.pnote{font-size:12px;color:var(--dim);line-height:1.55;margin:16px 0 0}
+
+/* ================= Food sheets — frames 13:188 13:266 13:337 13:403 13:464 13:531,
+   with the state styles of 13:599. Read from Figma for the first two and from the
+   user's 2× PNG exports for the rest, so those five are accurate to a couple of px. */
+.ico-camera{--ico:url(icons/camera.svg)}
+.ico-info{--ico:url(icons/info.svg)}
+.ico-edit{--ico:url(icons/edit.svg)}
+.ico-warn{--ico:url(icons/warn.svg)}
+.ico-alert{--ico:url(icons/alert.svg)}
+
+/* The frames' header, inside the sheet: back, then title over subtitle. */
+.afhead{display:flex;align-items:center;gap:6px;margin:0 0 16px}
+.afhead .icobtn.back{margin-inline-start:-10px;flex-shrink:0}
+.afhead-t{min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.afhead-t h2{margin:0;font-family:var(--display);font-weight:800;font-size:20px;line-height:1.2;
+  max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.afsub{font-size:13px;color:var(--dim);margin-top:2px}
+/* The meal is the subtitle and the chooser both: an invisible native select over the
+   text. The padding and matching negative margin give it a 44px target without making
+   the header any taller. */
+.afmeal{position:relative;display:inline-flex;align-items:center;gap:4px;margin:-10px 0;
+  padding:12px 0;font-size:13px;color:var(--dim)}
+.afmeal b{font-weight:600}
+.afmeal .ico-cdown{width:14px;height:14px;flex-basis:14px}
+.afmeal select{position:absolute;inset:0;opacity:0;width:100%;height:100%;padding:0;font-size:16px}
+.afmeal:focus-within{color:var(--text)}
+
+.aflbl{display:block;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--dim);margin:20px 0 8px}
+.afq-echo{text-transform:none;font-weight:600;color:var(--text)}
+.afnote{font-size:12px;line-height:1.5;color:var(--dim);margin:10px 0 0}
+
+/* ---- search (13:188) */
+.afq{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding-inline:14px 2px;min-height:52px}
+.afq:focus-within{border-color:var(--accent)}
+.afq>.ico-search{width:20px;height:20px;flex:0 0 20px;color:var(--dim)}
+.afq input{flex:1;min-width:0;width:auto;background:none;border:none;border-radius:0;padding:14px 0;
+  font-size:16px;color:var(--text)}
+.afq input:focus{border:none}
+.afcam{flex:0 0 44px;width:44px;height:44px;border:none;background:none;color:var(--dim);
+  display:flex;align-items:center;justify-content:center}
+.afcam .ico{width:20px;height:20px;flex-basis:20px}
+.afcam:active{color:var(--accentHi)}
+
+.aftabs{display:flex;gap:6px;margin:12px 0 4px;overflow-x:auto}
+.aftabs button{position:relative;flex-shrink:0;background:none;border:none;min-height:44px;padding:0 8px;
+  color:var(--dim);font-size:14px;font-weight:500}
+.aftabs button.on{color:var(--text);font-weight:700}
+.aftabs button.on::after{content:"";position:absolute;left:50%;bottom:4px;width:32px;height:2px;
+  transform:translateX(-50%);background:var(--accent)}
+
+.afpills{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+.afpill{background:var(--surface);border:1px solid var(--border);border-radius:22px;min-height:44px;
+  padding:0 16px;color:var(--text);font-size:13px}
+.afpill:active{border-color:var(--accent)}
+
+/* The way into Quick Add, under an empty search. */
+.afquick{display:flex;align-items:center;gap:12px;width:100%;text-align:start;margin-top:16px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;
+  color:var(--text)}
+.afquick>.ico-edit{width:20px;height:20px;flex:0 0 20px;color:var(--accentHi)}
+.afquick-t{flex:1;min-width:0}
+.afquick-t b{display:block;font-family:var(--display);font-weight:700;font-size:15px}
+.afquick-t span{display:block;font-size:12px;color:var(--dim);margin-top:2px}
+.afquick>.ico-chev{color:var(--dim)}
+
+.afresults{display:flex;flex-direction:column;gap:10px}
+.afres{display:flex;align-items:center;gap:6px;background:var(--surface);border-radius:12px;
+  padding-inline-end:10px}
+.afres-b{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;background:none;border:none;
+  text-align:start;color:var(--text);padding:14px 16px;min-height:60px}
+.afres-n{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.afres-n span{font-weight:400;color:var(--dim)}
+.afres-m{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+/* 32px, as drawn, with the outset that makes it a 44px target. */
+.afadd{position:relative;flex:0 0 32px;width:32px;height:32px;border:none;border-radius:8px;
+  background:var(--accentSoft);color:var(--accentHi);display:flex;align-items:center;justify-content:center}
+.afadd::after{content:"";position:absolute;inset:-6px}
+.afadd .ico{width:16px;height:16px;flex-basis:16px}
+.afadd:active{background:var(--accent);color:var(--onAccent)}
+.afcur{flex-shrink:0;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--accentHi)}
+.afmore2{display:flex;gap:10px;margin-top:14px}
+.afmore2 .btn{flex:1;margin:0;font-size:13px;letter-spacing:.02em;padding:0 10px}
+.sheetbox .btn.afcreate{margin:12px 0}
+
+/* ---- one food, its servings (13:266) */
+.afmono{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;
+  background:var(--surface);margin:0 calc(-1 * var(--s4));padding:28px var(--s4)}
+.afmono-k{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
+.afmono-v{font-family:var(--display);font-weight:800;font-size:64px;line-height:1;
+  font-variant-numeric:tabular-nums}
+.afmono-u{font-weight:700;font-size:16px;color:var(--accentHi)}
+.afmono-m{display:flex;gap:28px;margin-top:10px}
+.afmono-m div{display:flex;flex-direction:column;align-items:center;gap:4px}
+.afmono-m b{font-family:var(--display);font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
+.afmono-m span{font-size:11px;text-transform:uppercase;color:var(--dim)}
+
+.afsel{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:0 16px;min-height:52px}
+.afsel:focus-within{border-color:var(--accent)}
+.afsel-v{font-weight:700;font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.afsel-v i{font-style:normal;font-weight:400;font-size:14px;color:var(--dim)}
+.afsel .ico-cdown{color:var(--dim);flex-shrink:0}
+.afsel select{position:absolute;inset:0;opacity:0;width:100%;height:100%;padding:0;font-size:16px}
+
+.afstep{display:flex;align-items:center;justify-content:space-between;background:var(--surface);
+  border-radius:12px;padding:10px 12px}
+.afstep button{width:44px;height:44px;border:none;border-radius:8px;font-size:20px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.afstep-m{background:var(--border);color:var(--text)}
+.afstep-p{background:var(--accentSoft);color:var(--accentHi)}
+.afstep button:disabled{opacity:.4}
+.afstep b{font-family:var(--display);font-weight:800;font-size:24px;font-variant-numeric:tabular-nums}
+
+.afmore{display:flex;align-items:center;gap:10px;width:100%;margin-top:16px;text-align:start;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:0 16px;min-height:52px;
+  color:var(--text);font-weight:700;font-size:14px}
+.afmore>span:nth-child(2){flex:1}
+.afmore>.ico-info{width:20px;height:20px;flex:0 0 20px;color:var(--dim)}
+.afmore>.ico-plus{width:16px;height:16px;flex:0 0 16px;color:var(--dim);
+  transition:transform var(--m-micro) var(--e-standard)}
+.afmore[aria-expanded="true"]>.ico-plus{transform:rotate(45deg)}
+:root.reduced .afmore>.ico-plus{transition:none}
+.afmore-b{padding:4px 16px 0}
+.afmore-b div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;font-size:13px;
+  border-bottom:1px solid var(--border)}
+.afmore-b div:last-child{border-bottom:none}
+.afmore-b span{color:var(--dim)}
+.afmore-b b{font-weight:600;text-align:end;font-variant-numeric:tabular-nums}
+
+/* The frames' 56px call to action. Scoped through .sheetbox because .btn's own height
+   rule is .btn:not(.sm):not(.d), which outranks a bare .btn.afcta. */
+.sheetbox .btn.afcta{min-height:56px;border-radius:12px;font-size:16px;margin-top:20px}
+
+/* ---- Quick Add (13:337, 13:403) */
+textarea.afnl{display:block;width:100%;min-height:112px;resize:none;background:var(--surface);
+  border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);
+  font:inherit;font-size:16px;line-height:1.45}
+textarea.afnl:focus{outline:none;border-color:var(--accent)}
+textarea.afnl.warn{border-color:var(--gold)}
+.sheetbox .btn.afparse{margin-top:10px}
+.afstat{display:flex;align-items:center;gap:6px;font-size:12px;margin:10px 0 0}
+.afstat .ico{width:14px;height:14px;flex-basis:14px}
+.afstat.ok{color:var(--ok)}
+.afstat.warn{color:var(--gold)}
+
+.afitem{background:var(--surface);border:1px solid transparent;border-radius:12px;padding:12px 16px;
+  margin-bottom:10px}
+.afitem.warn{border-color:var(--gold)}
+.afitem-r{display:flex;align-items:center;gap:8px}
+.afitem-t{flex:1;min-width:0}
+.afitem-n{font-weight:700;font-size:16px}
+.afitem-n span{font-weight:400;color:var(--dim)}
+.afitem-m{font-size:12px;color:var(--dim);margin-top:4px;font-variant-numeric:tabular-nums}
+.afwarn{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--gold)}
+.afwarn.tag{text-transform:uppercase;letter-spacing:.03em}
+.afwarn .ico{width:14px;height:14px;flex-basis:14px}
+.afedit{flex:0 0 44px;width:44px;height:44px;margin-inline-end:-10px;border:none;background:none;
+  color:var(--dim);display:flex;align-items:center;justify-content:center}
+.afedit[aria-expanded="true"]{color:var(--accentHi)}
+.afedit .ico{width:22px;height:22px;flex-basis:22px}
+.afitem-q{margin-top:12px}
+
+/* The unrecognised line: amber, three ways forward. */
+.afunk{background:rgba(201,162,39,.12);border:1.5px solid var(--gold);border-radius:12px;padding:16px;
+  margin-bottom:10px}
+.afunk-r{display:flex;gap:12px;align-items:flex-start}
+.afunk-r>.ico-warn{width:24px;height:24px;flex:0 0 24px;color:var(--gold);margin-top:1px}
+.afunk-t{min-width:0}
+.afunk-n{font-family:var(--display);font-weight:700;font-size:16px;color:var(--gold);overflow-wrap:anywhere}
+.afunk-s{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--sub);margin-top:4px}
+.afunk-a{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:12px}
+.afunk-a button{background:none;border:none;min-height:44px;padding:0 4px;color:var(--sub);
+  font-weight:700;font-size:14px}
+.afunk-a .afunk-p{border:1.5px solid var(--gold);border-radius:8px;padding:0 14px;color:var(--text)}
+
+.aftotal{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;
+  background:var(--okSoft);border-radius:12px;padding:16px;margin-top:6px;color:var(--ok)}
+.aftotal b{font-family:var(--display);font-weight:800;font-size:16px}
+.aftotal span{font-size:13px;font-variant-numeric:tabular-nums}
+.sheetbox .btn.afnone{margin:10px 0 4px}
+
+/* ---- states (13:599) */
+.afshim{background:var(--surface);border-radius:12px;padding:18px 16px 14px;margin-top:14px}
+.afshim .skelbar{height:14px;margin:0 0 12px}
+/* .skel is drawn in --surface, which is this card's own colour: the bars would only
+   show while the highlight passed. The reference frame draws them in the border tone.
+   Only the colours change, so the shared animation and its reduced-motion rule stay. */
+.afshim .skel{background-image:linear-gradient(90deg,var(--border) 25%,var(--raised) 50%,var(--border) 75%)}
+.afshim p{margin:4px 0 0;font-size:12px;color:var(--dim)}
+.aferr{background:rgba(227,27,35,.12);border:1.5px solid var(--accent);border-radius:12px;
+  padding:20px 16px;margin-top:14px;text-align:center}
+.aferr b{display:block;font-family:var(--display);font-weight:700;font-size:16px}
+.aferr p{margin:6px 0 12px;font-size:13px;line-height:1.45;color:var(--sub)}
+.sheetbox .aferr .btn{display:inline-flex;width:auto;margin:0;padding:0 24px}
+
+/* ---- Enter manually (13:464) */
+.affield{min-height:48px;border-radius:12px;padding:0 16px;font-size:16px}
+.aftiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.aftiles.ng3{grid-template-columns:repeat(3,1fr);margin-top:14px}
+.aftile{display:flex;flex-direction:column;gap:6px;min-width:0;background:var(--surface);
+  border:1px solid transparent;border-radius:12px;padding:14px 16px}
+.aftile:focus-within{border-color:var(--accent)}
+.aftile-k{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
+.aftile-v{display:flex;align-items:baseline;gap:6px;min-width:0}
+.aftile-v input{flex:0 1 auto;min-width:1ch;max-width:100%;background:none;border:none;border-radius:0;padding:0;
+  color:var(--text);font-family:var(--display);font-weight:800;font-size:24px;-moz-appearance:textfield}
+.aftile-v input:focus{border:none}
+.aftile-v input::placeholder{color:var(--faint);font-weight:700}
+.aftile-v input::-webkit-inner-spin-button,.aftile-v input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.aftile-v i{font-style:normal;font-weight:700;font-size:13px;color:var(--dim);flex-shrink:0}
+/* Nutrition goals sits the tiles inside a card; a card on a card needs the step. */
+.ngcard .aftile{background:var(--raised)}
+
+.aftoggle{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--surface);border-radius:12px;padding:0 16px;min-height:60px;margin-top:16px;
+  font-weight:700;font-size:15px}
+.aftoggle input{position:absolute;opacity:0;width:1px;height:1px;padding:0}
+.aftoggle i{position:relative;flex:0 0 48px;width:48px;height:28px;border-radius:14px;background:var(--border);
+  transition:background var(--m-micro) var(--e-standard)}
+.aftoggle i::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:22px;height:22px;
+  border-radius:11px;background:#fff;transition:transform var(--m-micro) var(--e-standard)}
+.aftoggle input:checked+i{background:var(--accent)}
+.aftoggle input:checked+i::after{transform:translateX(20px)}
+[dir="rtl"] .aftoggle input:checked+i::after{transform:translateX(-20px)}
+.aftoggle input:focus-visible+i{outline:2px solid var(--accentHi);outline-offset:2px}
+:root.reduced .aftoggle i,:root.reduced .aftoggle i::after{transition:none}
+
+/* ---- Nutrition goals (13:531) */
+.ngcard{display:block;background:var(--surface);border-radius:12px;padding:16px;margin-bottom:12px}
+.ngcard>.aflbl:first-child{margin-top:0}
+.ngenergy{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ngenergy-t{min-width:0}
+.ngenergy .aflbl{margin:0 0 6px}
+.ngbig{display:flex;align-items:baseline;gap:8px}
+.ngbig input{background:none;border:none;border-radius:0;padding:0;color:var(--text);
+  font-family:var(--display);font-weight:800;font-size:30px;-moz-appearance:textfield}
+.ngbig input:focus{border:none}
+.ngbig input::-webkit-inner-spin-button,.ngbig input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.ngbig i{font-style:normal;font-family:var(--display);font-weight:800;font-size:30px}
+.ngenergy>.ico-edit{width:22px;height:22px;flex:0 0 22px;color:var(--accentHi)}
+.ngsplit{display:flex;gap:8px;height:16px;margin:4px 0 12px}
+.ngsplit i{display:block;min-width:8px;border-radius:8px}
+.ngsplit .p{background:var(--accent)}
+.ngsplit .c{background:var(--ok)}
+.ngsplit .f{background:var(--gold)}
+.nglegend{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-variant-numeric:tabular-nums}
+.ngrem-r{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:14px;
+  font-size:15px}
+.ngrem-r b{font-weight:700}
+.ngrem-r span{font-weight:700;font-variant-numeric:tabular-nums}
+.ngrem-r span.over{color:var(--gold)}
+.ngrem .bar,.ngrem .bar i{height:4px;border-radius:2px}
+.ngrem .bar{margin-top:8px;background:var(--border)}
+/* ---- Progress (js/ui/views/progress.js) ---------------------------------------
+   The four "Progress —" frames and 2:484's segmented control. The view shipped
+   without any of these rules, so it rendered as unstyled text and default buttons.
+   Surfaces, type and spacing are the app's tokens; nothing here introduces a colour. */
+.pgseg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;
+  background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:12px}
+.pgseg button{min-height:40px;border:none;border-radius:9px;background:none;color:var(--dim);
+  font-size:13.5px;font-weight:700;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:background var(--m-press) var(--e-standard),color var(--m-press) var(--e-standard)}
+.pgseg button.on{background:var(--surface);color:var(--text)}
+.pgrange{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.pgrange button{min-height:40px;border-radius:var(--r1);border:1px solid var(--border);background:var(--raised);
   color:var(--sub);font-family:var(--display);font-size:15px;font-weight:700;
   transition:transform var(--m-press) var(--e-standard)}
-.pchip:active{transform:scale(.95)}
-.pchip.a{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
-/* Stat tiles in a grid that flows, so a long figure grows the tile instead of
-   sliding under the one below it — the Overview frame's overlap. */
-.pgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-bottom:var(--s3)}
-.pstat{margin:0;padding:16px;min-width:0}
-.pstat-k{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-.pstat-v{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;
-  font-variant-numeric:tabular-nums;margin-top:6px;line-height:1.1;overflow-wrap:anywhere}
-.pdelta{font-size:12.5px;color:var(--dim);margin-top:6px;font-variant-numeric:tabular-nums}
-.pdelta.ok{color:var(--ok)}
-.phero{font-family:var(--display);font-size:40px;font-weight:700;letter-spacing:-.02em;
-  font-variant-numeric:tabular-nums;line-height:1.05;margin-top:4px}
-.phero.accent{color:var(--accentHi)}
-.pcard{margin-bottom:var(--s3)}
-.pcard-t{font-size:16px;margin:0 0 12px}
-/* The chart. Strokes do not scale with the box, so a narrow phone keeps a 2px line. */
-.pchart{display:block;width:100%;height:auto;margin-top:10px;overflow:visible}
-.pchart-g line{stroke:var(--border);stroke-width:1;vector-effect:non-scaling-stroke}
-.pchart-l{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;
+.pgrange button:active{transform:scale(.95)}
+.pgrange+.pgcard,.pgrange+.empty{margin-top:var(--s4)}
+.pgrange button.on{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
+.pgseg button:focus-visible,.pgrange button:focus-visible,.pglink:focus-visible,.pgrow:focus-visible,
+.pgph:focus-visible,.pgaddph:focus-within{outline:2px solid var(--accentHi);outline-offset:2px}
+/* Section labels: the frames' small grey capitals, with an action or note opposite. */
+.pglbl{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:var(--s5) 0 var(--s3);min-height:24px}
+.pglbl h2{font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dim);margin:0}
+.pglink{background:none;border:none;color:var(--accentHi);font-weight:700;font-size:14px;
+  min-height:44px;margin:-10px -2px;padding:0 2px}
+.pgaside{font-size:12px;color:var(--dim)}
+/* Stat tiles. A grid, so a long figure grows its tile instead of sliding under the
+   row below — the Overview frame's overlap. */
+.pgstats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-bottom:var(--s3)}
+.pgstat{background:var(--raised);border:1px solid var(--border);border-radius:var(--r3);padding:16px;min-width:0}
+.pgstat-k{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.pgstat-v{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:-.02em;line-height:1.1;
+  margin-top:6px;font-variant-numeric:tabular-nums;overflow-wrap:break-word}
+.pgstat-v span,.pgbig span,.pgcomp-v span{font-family:inherit;font-size:13px;font-weight:600;color:var(--dim);
+  margin-inline-start:3px;letter-spacing:0;white-space:nowrap}
+.pgstat-d{font-size:12.5px;color:var(--dim);margin-top:6px}
+.pgd{font-variant-numeric:tabular-nums;color:var(--dim)}
+.pgd.ok{color:var(--ok)}
+.pgcard{background:var(--raised);border:1px solid var(--border);border-radius:var(--r3);padding:20px;margin-bottom:var(--s3)}
+.pgcard>.btn{margin-top:14px}
+.pgcard-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.pgcard-h h3{font-size:16px;margin:0}
+.pgcard-h span{font-size:12.5px;color:var(--dim);text-align:end}
+.pgbig{font-family:var(--display);font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:1.05;
+  margin-top:4px;color:var(--accentHi);font-variant-numeric:tabular-nums}
+.pgbig.w,.pgbig.a{color:var(--text)}
+.pgsub{font-size:13px;color:var(--dim);margin-top:6px}
+.pgnote{font-size:12.5px;color:var(--dim);margin:10px 0 0}
+.pgnone{font-size:13.5px;color:var(--dim);margin:10px 0 0;line-height:1.45}
+.pgdash{display:inline-block;width:18px;border-top:1.5px dashed var(--dim);vertical-align:middle;margin-inline-end:6px}
+/* The chart. Its box is stretched to the card, so strokes do not scale with it. */
+.pgchart{margin:14px 0 0}
+.pgchart svg{display:block;width:100%;height:120px;overflow:visible}
+.pgchart-g{stroke:var(--border);stroke-width:1;vector-effect:non-scaling-stroke}
+.pgchart-a{fill:var(--accent);opacity:.1}
+.pgchart-r{stroke:var(--dim);stroke-width:1.2;stroke-dasharray:5 5;vector-effect:non-scaling-stroke}
+.pgchart-l{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;
   vector-effect:non-scaling-stroke}
-.pchart-a{fill:var(--accent);opacity:.1}
-.pchart-r{stroke:var(--dim);stroke-width:1.2;stroke-dasharray:5 5;vector-effect:non-scaling-stroke}
-.pchart-d circle{fill:var(--accent);stroke:var(--text);stroke-width:1.5;vector-effect:non-scaling-stroke}
-.pchart-x{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--dim);margin-top:6px}
-.pchart-none{margin:10px 0 0}
-/* List rows: records, workouts, measurements, streaks. */
-.prow{display:flex;align-items:center;gap:12px;width:100%;background:var(--raised);
-  border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:8px;
-  color:var(--text);text-align:start;min-height:56px}
-.prow-m{flex:1;min-width:0}
-.prow-n{font-weight:700;font-size:15.5px;overflow-wrap:anywhere}
-.prow-s{font-size:13px;color:var(--dim);margin-top:2px;font-variant-numeric:tabular-nums}
-.prow-r{font-size:13px;color:var(--dim);flex-shrink:0;white-space:nowrap}
-.prow-b{font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0;white-space:nowrap}
-.prow-b.accent{color:var(--accentHi)}
-.prow-h{display:flex;align-items:baseline;justify-content:space-between}
-.plink{background:none;border:none;color:var(--accentHi);font-weight:700;font-size:14px;
-  min-height:44px;padding:0 2px}
-.pbadge{display:inline-block;vertical-align:2px;margin-inline-start:6px;padding:2px 6px;border-radius:4px;
-  background:var(--accent);color:var(--onAccent);font-size:10.5px;font-weight:800;letter-spacing:.06em}
-.pm-d{min-width:64px;text-align:end;font-size:13px;color:var(--dim);font-variant-numeric:tabular-nums}
-.pm-d.ok{color:var(--ok)}
-/* Share of sets by muscle. */
-.pbar{display:grid;grid-template-columns:minmax(0,7.5em) 1fr 3em;align-items:center;gap:12px;
-  min-height:30px}
-.pbar-k{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pbar-t{height:8px;border-radius:4px;background:var(--surface);overflow:hidden}
-.pbar-t i{display:block;height:100%;border-radius:4px;background:var(--accent)}
-.pbar-v{text-align:end;font-size:13.5px;color:var(--dim);font-variant-numeric:tabular-nums}
-/* Macro averages, three across, and the lean-mass bar. */
-.pmac{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
-.pmac-c{margin:0;padding:14px 12px}
-.pmac-v{font-family:var(--display);font-size:22px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
-.pcomp{height:10px;border-radius:5px;background:var(--surface);overflow:hidden;margin-top:14px}
-.pcomp i{display:block;height:100%;background:var(--accent);border-radius:5px}
-.pring{width:64px;height:64px;flex-shrink:0}
-.pring-b{fill:none;stroke:var(--surface);stroke-width:6}
-.pring-f{fill:none;stroke:var(--accent);stroke-width:6;stroke-linecap:round}
-.psel{margin-bottom:var(--s3);font-weight:700}
-[dir="rtl"] .pstat-k,[dir="rtl"] .pbadge{letter-spacing:0}
+.pgchart-p{fill:var(--accent);stroke:var(--text);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.pgaxis{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--dim);margin-top:8px}
+/* Rows: records, workouts, top lifts, the day card. */
+.pgrow{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:14px 16px;margin-bottom:8px;
+  background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);text-align:start}
+button.pgrow:active{background:var(--surface)}
+.pgrow.on{border-color:var(--accent)}
+.pgrow-t{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.pgrow-k{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.pgrow-n{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15.5px;min-width:0}
+.pgrow-n>span{min-width:0;overflow-wrap:anywhere}
+.pgrow-s{font-size:13px;color:var(--dim);font-variant-numeric:tabular-nums}
+.pgrow-e{font-size:13px;color:var(--dim);white-space:nowrap;flex-shrink:0}
+.pgrow-v{font-weight:700;white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums}
+.pgrow .ico-chev{color:var(--dim);flex-shrink:0}
+.pgbadge{flex-shrink:0;padding:2px 6px;border-radius:4px;background:var(--accent);color:var(--onAccent);
+  font-size:10.5px;font-weight:800;letter-spacing:.06em}
+.pgpick{margin:var(--s4) 0 var(--s3)}
+/* Share of working sets by muscle group. */
+.pgshare-r{display:grid;grid-template-columns:minmax(0,7.5em) 1fr 3em;align-items:center;gap:12px;min-height:32px}
+.pgshare-r>span{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pgshare-r .bar{height:8px;margin:0;background:var(--surface);border-radius:4px}
+.pgshare-r .bar i{height:8px;border-radius:4px;background:var(--accent)}
+.pgshare-r b{text-align:end;font-size:13.5px;font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums}
+/* Body. */
+.pgwhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.pgwd{font-size:13.5px;text-align:end;padding-top:2px}
+.pgm{display:flex;align-items:center;gap:12px;min-height:56px;padding:12px 16px;margin-bottom:8px;
+  background:var(--raised);border:1px solid var(--border);border-radius:var(--r2)}
+.pgm>span:first-child{flex:1;min-width:0;font-size:15.5px}
+.pgm b{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pgm-d{min-width:68px;text-align:end;font-size:13px}
+.pgm.tall>span:first-child{display:flex;flex-direction:column;gap:2px}
+.pgm small{font-size:12.5px;color:var(--dim)}
+.pgm b.acc{color:var(--accentHi)}
+.pgcomp{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.pgcomp-e{text-align:end}
+.pgcomp-v{font-family:var(--display);font-size:30px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
+.pgtrack{height:10px;border-radius:5px;background:var(--surface);overflow:hidden;margin-top:14px}
+.pgtrack i{display:block;height:100%;border-radius:5px;background:var(--accent)}
+.pgtrack.sm{height:5px;margin-top:10px}
+.pgtrack.c i{background:var(--text)}
+.pgtrack.f i{background:var(--dim)}
+/* Progress photos: an add tile, then the photos newest first. */
+.pgphotos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pgaddph{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  min-height:150px;border:1px dashed var(--border);border-radius:var(--r2);background:var(--raised);
+  color:var(--dim);font-weight:600;cursor:pointer}
+.pgaddph .ico{width:24px;height:24px;flex-basis:24px}
+.pgaddph.sm{min-height:0;aspect-ratio:3/4;font-size:12.5px;text-align:center;padding:6px}
+.pgfile{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:0}
+.pgph{position:relative;display:block;padding:0;border:1px solid var(--border);border-radius:var(--r2);
+  overflow:hidden;background:var(--surface);aspect-ratio:3/4}
+.pgph img{display:block;width:100%;height:100%;object-fit:cover}
+.pgph span{position:absolute;inset-inline-start:6px;bottom:6px;padding:2px 6px;border-radius:4px;
+  background:rgba(0,0,0,.6);color:#fff;font-size:11px;font-weight:600}
+.pgph-sk{aspect-ratio:3/4;border-radius:var(--r2)}
+.pgphoto-img{display:block;width:100%;height:auto;border-radius:var(--r2);margin:4px 0 12px}
+/* Nutrition. */
+.pgmacs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.pgmac{background:var(--raised);border:1px solid var(--border);border-radius:var(--r3);padding:14px 12px;min-width:0}
+.pgmac-k{font-size:13px;color:var(--dim)}
+.pgmac-v{font-family:var(--display);font-size:22px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
+.pgmac-s{font-size:12.5px;color:var(--dim);margin-top:2px}
+.pgadh{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.pgring{flex-shrink:0;width:64px;height:64px}
+.pgring svg{width:100%;height:100%}
+.pgring-t{fill:none;stroke:var(--surface);stroke-width:5}
+.pgring-v{fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round}
+[dir="rtl"] .pglbl h2,[dir="rtl"] .pgstat-k,[dir="rtl"] .pgrow-k,[dir="rtl"] .pgbadge{letter-spacing:0}
 @media (max-width:360px){
-  .pseg-b{font-size:12px}
-  .pmac{grid-template-columns:1fr}
-  .phero{font-size:34px}
+  .pgseg button{font-size:12px}
+  .pgmacs{grid-template-columns:1fr}
+  .pgbig{font-size:34px}
 }
 </style>
 </head>
