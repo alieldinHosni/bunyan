@@ -400,29 +400,37 @@ function vLibrary(){
 /* ---- programs: the ready-made splits (fixed) and yours (editable) -------------
    Ready-made splits cannot be changed or deleted, only previewed and adopted. Yours
    open in the builder, and each has an ✕ that deletes it after one question. */
+var HERO_ART='<img class="libhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">';
+var PLUS='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 function vSplits(){
-  var h=backBar(),mine=split().source;
-  h+=head(t("Programs"),t("One active at a time"));
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Your splits")+'</h2></div>';
-  var us=S.userSplits||[];
-  h+='<div class="drows">';
-  us.forEach(function(sp){
-    var src=editSplit(sp.id)||sp,tr=src.days.filter(function(d){return d.ex.length;}).length;
-    h+='<div class="drow" data-k="us:'+sp.id+'">'
-     +'<button class="drm" data-delsplit="'+sp.id+'" aria-label="'+esc(t("Delete")+" "+src.name)+'"><i>'+XSVG+'</i></button>'
-     +'<button class="dmain" data-editsplit="'+sp.id+'"><span class="dtext"><span class="drow-n">'+esc(src.name)+'</span>'
-     +'<span class="drow-s">'+src.days.length+' '+t(src.days.length===1?"day":"days")+'<i class="ddot"></i>'
-     +tr+' '+t(tr===1?"training day":"training days")+'</span></span>'
-     +(mine===sp.id?'<span class="pill a">'+t("yours")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
-     +'</button></div>';});
-  h+='</div><button class="dadd" data-newsplit="1"><span aria-hidden="true">+</span>'+t("Build a split from scratch")+'</button>';
+  var h=backBar(),mine=split().source,us=S.userSplits||[];
+  /* The same hero as the library: the Bunyan mark over the red glow. */
+  h+='<div class="libhero bhero">'+HERO_ART
+   +'<span class="shk">'+t("Training")+'</span><h1>'+t("Programs")+'</h1>'
+   +'<p class="sub">'+t("One active at a time. Build your own, or start from a proven split.")+'</p>'
+   +'<button class="bnew" data-newsplit="1"><span class="bnew-i">'+PLUS+'</span>'
+   +'<span class="bnew-t"><b>'+t("Build a split from scratch")+'</b><span>'+t("Name it, pick the days, fill them from the library")+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button></div>';
+  if(us.length){
+    h+='<div class="tsec"><h2 class="tsec-h">'+t("Your splits")+'</h2><span class="libn">'+us.length+'</span></div><div class="drows">';
+    us.forEach(function(sp){
+      var src=editSplit(sp.id)||sp,tr=src.days.filter(function(d){return d.ex.length;}).length,on=mine===sp.id;
+      h+='<div class="drow bsp'+(on?' on':'')+'" data-k="us:'+sp.id+'">'
+       +'<button class="drm" data-delsplit="'+sp.id+'" aria-label="'+esc(t("Delete")+" "+src.name)+'"><i>'+XSVG+'</i></button>'
+       +'<button class="dmain" data-editsplit="'+sp.id+'"><span class="dtext"><span class="drow-n">'+esc(src.name)+'</span>'
+       +'<span class="drow-s">'+src.days.length+' '+t(src.days.length===1?"day":"days")+'<i class="ddot"></i>'
+       +tr+' '+t(tr===1?"training day":"training days")+'</span></span>'
+       +(on?'<span class="bpill">'+t("Active")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
+       +'</button></div>';});
+    h+='</div>';}
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Ready-made")+'</h2><span class="dhint">'+t("Fixed — adopt one to train on it")+'</span></div>';
   h+='<div class="card tdays">';
   allSplits().filter(function(sp){return !sp.custom;}).forEach(function(sp){
     var days=sp.days.filter(function(d){return d.ex.length;}).length;
-    h+='<button class="trow" data-preview="'+sp.id+'"><span><span class="trow-n">'+esc(sp.name)+'</span>'
-     +'<span class="trow-s">'+days+' '+t("training days")+(tagNote(sp.tag)?' · '+esc(t(tagNote(sp.tag))):'')+'</span></span>'
-     +(mine===sp.id?'<span class="pill a">'+t("yours")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
+    h+='<button class="trow" data-preview="'+sp.id+'"><span class="bdays" aria-hidden="true"><b>'+days+'</b>'+t("days")+'</span>'
+     +'<span><span class="trow-n">'+esc(sp.name)+'</span>'
+     +'<span class="trow-s">'+(tagNote(sp.tag)?esc(t(tagNote(sp.tag))):'')+'</span></span>'
+     +(mine===sp.id?'<span class="bpill">'+t("Active")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
      +'</button>';});
   return h+'</div>';}
 
@@ -433,33 +441,40 @@ function vBuilder(){
   var sp=editSplit(V.previewId);if(!sp){V.train="splits";return vSplits();}
   var active=split().source===V.previewId;
   var tr=sp.days.filter(function(d){return d.ex.length;}).length;
-  var h='<div class="dhead">'+backArrow()
+  var nEx=sp.days.reduce(function(n,d){return n+d.ex.length;},0);
+  var h=backBar();
+  h+='<div class="libhero bhero">'+HERO_ART
+   +'<span class="shk">'+t(active?"Your training":"Split builder")+'</span>'
    +'<button class="dname" data-renamesplit="'+V.previewId+'" aria-label="'+esc(t("Rename split"))+': '+esc(sp.name)+'">'
-   +'<h1 class="dhead-t">'+esc(sp.name)+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button></div>'
-   +'<p class="dsub">'+(active?t("Your training")+' • ':'')+tr+' '+t(tr===1?"training day":"training days")
-   +' • '+(sp.days.length-tr)+' '+t("rest")+'</p>';
+   +'<h1 class="dhead-t">'+esc(sp.name)+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button>'
+   +'<div class="bstats"><span><b>'+sp.days.length+'</b>'+t(sp.days.length===1?"day":"days")+'</span>'
+   +'<span><b>'+tr+'</b>'+t(tr===1?"training day":"training days")+'</span>'
+   +'<span><b>'+nEx+'</b>'+t(nEx===1?"exercise":"exercises")+'</span></div>';
   /* Until anything is in it, the number of days is one tap. */
-  if(!tr){
-    h+='<div class="bcount"><span class="klabel dim">'+t("How many days in the cycle?")+'</span><div class="bcount-c">'
+  if(!tr)
+    h+='<div class="bcount"><span class="bcount-l">'+t("How many days in the cycle?")+'</span><div class="bcount-c">'
      +[2,3,4,5,6,7].map(function(n){return '<button class="'+(sp.days.length===n?'on':'')+'" data-bdays="'+n+'" aria-pressed="'+(sp.days.length===n)+'">'+n+'</button>';}).join("")
-     +'</div></div>';}
+     +'</div></div>';
+  h+='</div>';
   h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Days")+'</h2>'
    +(sp.days.length>1?'<span class="dhint">'+t("Hold the grip to reorder")+'</span>':'')+'</div>';
   h+='<div class="drows">';
   sp.days.forEach(function(d,i){
-    h+='<div class="drow" data-k="bd:'+d.id+'" data-rowid="'+d.id+'">'
+    var full=d.ex.length>0;
+    h+='<div class="drow bkday'+(full?'':' blank')+'" data-k="bd:'+d.id+'" data-rowid="'+d.id+'">'
      +'<button class="drm" data-rmday="'+d.id+'" aria-label="'+esc(t("Remove")+" "+d.name)+'"><i>'+XSVG+'</i></button>'
-     +'<button class="dmain" data-day="'+d.id+'"><span class="dnum">'+(i+1)+'</span>'
+     +'<button class="dmain" data-day="'+d.id+'"><span class="bnum">'+(i+1)+'</span>'
      +'<span class="dtext"><span class="drow-n">'+esc(d.name)+'</span>'
-     +'<span class="drow-s">'+(d.ex.length?d.ex.length+' '+t(d.ex.length===1?"exercise":"exercises")+'<i class="ddot"></i>~'+estMinutes(d)+' '+t("min")
-        :t("Tap to add exercises"))+'</span></span>'
+     +'<span class="drow-s">'+(full?d.ex.length+' '+t(d.ex.length===1?"exercise":"exercises")+'<i class="ddot"></i>~'+estMinutes(d)+' '+t("min")
+        :'<em>'+t("Tap to add exercises")+'</em>')+'</span></span>'
      +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
      +(sp.days.length>1?'<button class="dgrip" data-grip="'+d.id+'" aria-label="'+esc(t("Move")+" "+d.name)+'">'+GRIPSVG+'</button>':'')
      +'</div>';});
   h+='</div><button class="dadd" data-bday="1"><span aria-hidden="true">+</span>'+t("Add day")+'</button>';
   h+='<div class="dcta">'
-   +(active?'<p class="bactive">\u2713 '+t("This is your training")+'</p>'
-      :'<button class="btn dbegin" data-adopt="'+V.previewId+'"'+(tr?'':' disabled')+'>'+t("Make this my training")+'</button>')
+   +(active?'<p class="bactive">✓ '+t("This is your training")+'</p>'
+      :'<button class="btn dbegin" data-adopt="'+V.previewId+'"'+(tr?'':' disabled')+'>'+t("Make this my training")+'</button>'
+       +(tr?'':'<p class="bnote">'+t("Add exercises to at least one day first.")+'</p>'))
    +'<button class="ddel" data-delsplit="'+V.previewId+'">'+t("Delete this split")+'</button></div>';
   return h;}
 

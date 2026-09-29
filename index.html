@@ -1333,15 +1333,54 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   color:var(--accentHi);font-size:14px;font-weight:600;opacity:.85}
 .ddel:active{opacity:.5}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-/* The split builder: the day count as one row of choices, and the chevron inside a row. */
-.bcount{margin:0 0 6px;padding:14px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+/* ---- Programs and the split builder: the library's hero, Bunyan mark and all ---- */
+.bhero h1{font-size:30px;margin:0}
+.bhero .sub{margin:6px 0 0;color:var(--dim);font-size:14px;line-height:1.45;max-width:30ch}
+.bhero .dname{margin-top:2px}
+.bhero .dname .dhead-t{font-size:30px}
+.bnew{display:flex;align-items:center;gap:12px;width:100%;margin-top:16px;padding:14px;border-radius:var(--r4);
+  border:1px solid rgba(248,52,70,.45);background:linear-gradient(180deg,rgba(230,30,40,.22),rgba(230,30,40,.08));
+  color:var(--text);text-align:start;transition:transform var(--m-press) var(--e-standard)}
+.bnew:active{transform:scale(.98)}
+.bnew-i{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:50%;
+  background:linear-gradient(180deg,var(--accentHi),var(--accent));box-shadow:0 8px 20px -8px var(--accent-glow)}
+.bnew-i svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round}
+.bnew-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.bnew-t b{font-family:var(--display);font-size:16px}
+.bnew-t span{font-size:12.5px;color:var(--dim)}
+.bnew .ico-chev{color:var(--dim)}
+.bstats{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.bstats span{display:flex;align-items:baseline;gap:5px;padding:6px 12px;border-radius:var(--rpill);
+  background:rgba(8,8,10,.45);border:1px solid var(--border);font-size:12.5px;color:var(--dim)}
+.bstats b{font-family:var(--display);font-size:16px;color:var(--text);font-variant-numeric:tabular-nums}
+.bcount{margin:14px 0 0;padding:12px;border-radius:var(--r4);border:1px solid var(--border);background:rgba(8,8,10,.45)}
+.bcount-l{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 .bcount-c{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:10px}
-.bcount-c button{min-height:44px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);
-  font-family:var(--display);font-size:17px;font-weight:800}
-.bcount-c button.on{background:rgba(230,30,40,.16);border-color:rgba(248,52,70,.6);color:var(--accentHi)}
-.dmain .ico-chev,.dmain .pill{flex:0 0 auto;margin-inline-end:10px;color:var(--dim)}
+.bcount-c button{min-height:46px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);
+  font-family:var(--display);font-size:18px;font-weight:800;transition:transform var(--m-press) var(--e-standard)}
+.bcount-c button:active{transform:scale(.94)}
+.bcount-c button.on{background:linear-gradient(180deg,var(--accentHi),var(--accent));border-color:transparent;color:#fff;
+  box-shadow:0 8px 18px -10px var(--accent-glow)}
+.bnum{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:12px;
+  background:rgba(230,30,40,.14);border:1px solid rgba(248,52,70,.4);color:var(--accentHi);
+  font-family:var(--display);font-weight:800;font-size:15px}
+.bkday.blank .bnum{background:var(--surface);border-color:var(--border);color:var(--dim)}
+.bkday.blank{border-style:dashed}
+.drow-s em{font-style:normal;color:var(--accentHi);font-weight:600}
+.dmain .ico-chev{flex:0 0 auto;margin-inline-end:6px;color:var(--dim)}
+.bsp.on{border-color:rgba(248,52,70,.55);background:linear-gradient(180deg,rgba(230,30,40,.10),transparent),var(--raised)}
+.bpill{flex:0 0 auto;margin-inline-end:10px;padding:5px 12px;border-radius:var(--rpill);font-size:12px;font-weight:700;
+  background:linear-gradient(180deg,var(--accentHi),var(--accent));color:#fff}
+.trow .bpill{margin-inline-end:0}
+.bdays{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:0 0 46px;height:46px;border-radius:12px;
+  background:rgba(230,30,40,.10);border:1px solid rgba(248,52,70,.3);font-size:10px;color:var(--dim);line-height:1.1}
+.bdays b{font-family:var(--display);font-size:17px;color:var(--accentHi)}
+.trow:has(.bdays){gap:14px}
+.trow>.bdays:first-child{flex:0 0 46px}
+.trow:has(.bdays)>span:nth-child(2){flex:1;min-width:0;text-align:start}
 .bactive{margin:0;text-align:center;color:var(--ok);font-weight:700;font-size:15px}
-.dbegin:disabled{opacity:.45}
+.bnote{margin:0;text-align:center;color:var(--dim);font-size:13px}
+.dbegin:disabled{opacity:.45;box-shadow:none}
 /* The exercise sheet: four figures as − value + tiles in one rounded card. */
 .exsg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid var(--border);border-radius:var(--r4);
   background:var(--raised);overflow:hidden;margin-bottom:14px}
