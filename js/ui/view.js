@@ -38,11 +38,11 @@ var AC=null,beeped=true,lastTick=99,wakeLock=null;
    that must be silenced would have meant getting all ten right and keeping them right.
    The alarm outliving the screen that raised it is the specific failure this prevents. */
 function endRest(){
-  V.restEnd=0;V.restPaused=false;V.restDone=false;
+  V.restEnd=0;V.restPaused=false;V.restDone=false;V.restMin=false;
   alarmStop();
 }
 function startRest(e){
-  V.restDone=false;alarmStop();   /* a new rest replaces the last one's alert */
+  V.restDone=false;V.restMin=false;alarmStop();   /* a new rest replaces the last one's alert */
   audioOn();
   if(!S.prefs.autorest){V.restEnd=0;return;}
   V.restTotal=e.rest||75;

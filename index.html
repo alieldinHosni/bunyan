@@ -2520,6 +2520,15 @@ button.dv-card:active{transform:scale(.98)}
 .actbtn .acticon{color:var(--accentHi)}
 .actbtn span{line-height:1.2;overflow-wrap:anywhere}
 .thumb.ph.act{display:grid;place-items:center;border-radius:12px;background:rgba(230,30,40,.12);color:var(--accentHi)}
+/* ---- Rest: hide to a bar (session.js) ------------------------------------------------ */
+.rt-hide{position:absolute;top:calc(14px + env(safe-area-inset-top));inset-inline-start:16px;z-index:2;display:flex;align-items:center;gap:6px;
+  min-height:40px;padding:0 14px;border-radius:var(--rpill);border:1px solid var(--hair-hi);background:rgba(20,20,26,.7);
+  color:var(--text);font-size:14px;font-weight:700}
+.rt-hide svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.restbar{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;min-height:48px;padding:0 16px;border-radius:var(--rpill);
+  border:1px solid rgba(248,52,70,.5);background:rgba(230,30,40,.12);color:var(--text);font-size:14px;font-weight:700}
+.restbar b{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums;color:var(--accentHi)}
+.restbar i{margin-inline-start:auto;font-style:normal;color:var(--dim);font-weight:600}
 </style>
 </head>
 <body>

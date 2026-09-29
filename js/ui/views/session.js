@@ -14,6 +14,7 @@ import {ex_isTimed, stepperInput, V} from "../view.js";
    Execution surface, not an editor. vDay() prescribes the work; this screen only
    runs it. Every control answers one of: what am I doing, which set am I on, what
    did I do last time, am I resting, what is next. */
+var LOADED=/Carry|Farmer|Yoke/i;
 function e0name(a){var e=a.entries[V.logIdx];return e?e.name:"";}
 
 /* Rows an entry shows: the prescription plus any the user added, never fewer than
@@ -103,7 +104,9 @@ function vLogger(){
   if(V.logIdx<0)V.logIdx=0;
   var e=a.entries[V.logIdx];
   if(!e){V.logIdx=0;e=a.entries[0];}
-  var timed=ex_isTimed(e),rows=rowsFor(e),rpeCol=S.prefs.rpe!=="off";
+  /* A carry is timed but loaded: it keeps the weight column and counts seconds. */
+  var loaded=ex_isTimed(e)&&LOADED.test(e.name);
+  var timed=ex_isTimed(e)&&!loaded,rows=rowsFor(e),rpeCol=S.prefs.rpe!=="off";
   var active=e.sets.length<rows?e.sets.length:-1;
   var p=prevPerf(e.name),pr=prFor(e.name);
   var run=groupRun(a.entries,V.logIdx);
@@ -132,7 +135,13 @@ function vLogger(){
    +'<span class="ss-paused" id="sessPaused"'+(clock.paused?'':' hidden')+'>'
    +t("Paused")+'</span></div>'
    +'<button class="ss-more" data-sessmore="1" aria-label="'+t("More")+'">⋯</button>'
-   +'</div><div class="ss-bar"><i style="width:'+pct+'%"></i></div></div>';
+   +'</div><div class="ss-bar"><i style="width:'+pct+'%"></i></div>'
+   /* The hidden rest, still counting. Tap to bring the full screen back. */
+   +(V.restMin&&(V.restEnd>Date.now()||V.restPaused)
+     ?'<button class="restbar" data-rest="show"><span>'+t(V.restPaused?"Rest paused":"Resting")+'</span>'
+      +'<b id="restBarDig">'+mmss(V.restPaused?V.restLeft:Math.max(0,Math.ceil((V.restEnd-Date.now())/1000)))+'</b>'
+      +'<i>'+t("Show")+'</i></button>':'')
+   +'</div>';
 
   /* --- one segment per exercise; members of a superset are tied together --- */
   h+='<div class="ss-seg">';
@@ -192,7 +201,7 @@ function vLogger(){
   var cols=timed?(rpeCol?"24px 24px 1fr 78px 44px 38px":"24px 24px 1fr 90px 38px")
                 :(rpeCol?"24px 24px 1fr 56px 50px 42px 38px":"24px 24px 1fr 66px 58px 38px");
   var hd=timed?["",t("Set"),t("Last"),t("Secs")]
-              :["",t("Set"),t("Last"),wUnit().toUpperCase(),t("Reps")];
+              :["",t("Set"),t("Last"),wUnit().toUpperCase(),loaded?t("Secs"):t("Reps")];
   if(rpeCol)hd.push("RPE");
   hd.push("");
   var doneHere=e.sets.length;
@@ -237,8 +246,8 @@ function vLogger(){
       else if(done)h+='<input class="cell rp" type="number" inputmode="numeric" min="1" max="10" '
         +'value="'+(st.rpe||"")+'" data-setidx="'+i+'" data-k="rpe" aria-label="RPE, set '+(i+1)+'">';
       else if(isAct)h+='<input class="cell rp" type="number" inputmode="numeric" min="1" max="10" '
-        +'id="in_rpe" value="'+(V.draft.rpe||8)+'" aria-label="RPE">';
-      else h+='<div class="cellmute">'+(V.draft.rpe||8)+'</div>';
+        +'id="in_rpe" value="'+(V.draft.rpe||"")+'" placeholder="–" aria-label="RPE">';
+      else h+='<div class="cellmute">–</div>';
     }
 
     /* One control logs a set, and its colour is the state: red until it is done,
@@ -380,7 +389,7 @@ function vRest(a,e,rows,timed){
       +(timed?num(V.draft.r)+'s'
         :(num(V.draft.w)?fmtW(V.draft.w)+' × '+num(V.draft.r)+' '+t("reps")
                         :num(V.draft.r)+' '+t("reps")));
-    if(S.prefs.rpe!=="off")nr=t("Target RPE")+' '+(V.draft.rpe||8);
+    if(S.prefs.rpe!=="off")nr=t("Target RPE")+' 8';
   }else{
     var nxe=a.entries[V.logIdx+1];
     nx=nxe?esc(exName(nxe.name)):t("Finish workout");
@@ -426,6 +435,7 @@ function vRest(a,e,rows,timed){
      +'</div></div>';
   }
   return '<div class="restwrap rt" role="dialog" aria-label="'+t("Rest")+'">'+art
+   +'<button class="rt-hide" data-rest="hide"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>'+t("Hide")+'</button>'
    +'<div class="rt-k">'+t("Rest period")+'</div><div class="rt-sub">'+doneTxt+'</div>'
    +'<div class="rt-ring"><svg viewBox="0 0 180 180" aria-hidden="true">'
    +'<circle cx="90" cy="90" r="79" class="rt-ring-t"/>'
@@ -460,6 +470,8 @@ function paintRest(){
   if(d)d.textContent=mmss(left);
   var tot=document.getElementById("restTot");
   if(tot)tot.textContent=t("of")+" "+mmss(total);
+  var bar=document.getElementById("restBarDig");
+  if(bar)bar.textContent=mmss(left);
   var ring=document.getElementById("restRing");
   if(ring)ring.setAttribute("stroke-dashoffset",
     String(REST_C*(1-Math.max(0,Math.min(1,left/total)))));
@@ -484,6 +496,10 @@ function syncRest(){
   /* Three states now, not two. restDone keeps the surface up after the clock reaches
      zero so the alert has somewhere to live — the sound may never arrive. */
   var on=!!a&&(V.restEnd>Date.now()||V.restPaused||V.restDone);
+  /* Hidden: the countdown carries on in a bar on the workout screen, so the set just
+     logged can be corrected or the next exercise read. It comes back full screen the
+     moment the rest is over. */
+  if(on&&V.restMin&&!V.restDone)on=false;
   if(!on){
     if(host.firstChild)host.textContent="";
     host.removeAttribute("data-k");
@@ -496,7 +512,7 @@ function syncRest(){
   var key=V.logIdx+"|"+e.sets.length+"|"+(V.restDone?"done":"run")+"|"+(S.prefs&&S.prefs.lang||"en");
   if(host.getAttribute("data-k")===key){paintRest();return;}
   host.setAttribute("data-k",key);
-  host.innerHTML=vRest(a,e,rowsFor(e),ex_isTimed(e.name));
+  host.innerHTML=vRest(a,e,rowsFor(e),ex_isTimed(e)&&!LOADED.test(e.name));
 }
 
 export {groupLabel, groupNext, groupRun, IDLE_PAUSE, mmss, noteSet, paintRest, platePlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger};

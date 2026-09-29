@@ -188,6 +188,11 @@ function isFav(n){return S.favs.indexOf(n)>=0;}
 
 /* Exclusions are gone; gear is the only filter left. */
 function pickable(n){return hasGear(n);}
+/* What kind of record an exercise produces, stored on every new workout entry so
+   later readers do not have to infer it from the name: sets of load × reps, timed
+   holds (seconds), or an activity (minutes, distance, effort). */
+var TIMED_RE=/Hold|Plank|Wall Sit|Balance|Isometric|Stretch|Dead Hang|L-Sit|Carry|Farmer/i;
+function kindOf(n){return isActivity(n)?"activity":TIMED_RE.test(n||"")?"timed":"strength";}
 function muscleOf(n){var a=actMuscle(n);if(a)return a;var v=EXDB&&EXDB[n];return v?v.m:"Other";}
 /* The muscle of a planned or logged exercise, resolved from the library first.
 
@@ -208,7 +213,7 @@ function muscleOfEntry(e){
 function isCompound(n){var v=EXDB&&EXDB[n];return v?!!v.c:/Press|Squat|Deadlift|Row|Pull|Lunge|Dip/i.test(n);}
 
 
-export {exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
+export {kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
 
 /* Plate maths only means something on a loaded bar. On a machine, a cable or your
    own bodyweight the button was there on every exercise and useful on a handful.

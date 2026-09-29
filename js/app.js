@@ -13,7 +13,7 @@ import {render, syncKeyboard} from "./ui/render.js";
 import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
 import {leave} from "./ui/motion.js";
-import {groupNext, groupRun, mmss, noteSet, paintRest, sessionClock} from "./ui/views/session.js";
+import {groupNext, groupRun, mmss, noteSet, paintRest, rowsFor, sessionClock} from "./ui/views/session.js";
 import {refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
 import {fmtW, toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
@@ -237,10 +237,11 @@ document.addEventListener("click",function(ev){
        not the previous set's load, which is what an empty field used to log. */
     if(lw)V.draft.w=lw.value===""?0:toKg(lw.value);
     if(lr)V.draft.r=lr.value===""?0:num(lr.value);
-    if(lp&&lp.value!=="")V.draft.rpe=Math.min(10,Math.max(1,num(lp.value,8)));
+    if(lp)V.draft.rpe=lp.value===""?null:Math.min(10,Math.max(1,Math.round(num(lp.value,8)*2)/2));
     var bad=setProblem(V.draft.w,V.draft.r,ex_isTimed(e3));
     if(bad){toast(bad);return;}
-    e3.sets.push({w:V.draft.w,r:V.draft.r,rpe:V.draft.rpe});
+    var ns={w:V.draft.w,r:V.draft.r};if(V.draft.rpe)ns.rpe=V.draft.rpe;
+    e3.sets.push(ns);
     V.loggedAt=Date.now();
     /* Closes the active period and starts a new one; the clock resumes by itself. */
     noteSet(S.active);
@@ -298,6 +299,8 @@ document.addEventListener("click",function(ev){
     if(D.rest==="resume"){V.restPaused=false;V.restEnd=Date.now()+V.restLeft*1000;
       setBeeped(false);paintRest();persistRest();return;}
     if(D.rest==="skip"){endRest();render();return;}
+    if(D.rest==="hide"){V.restMin=true;render();return;}
+    if(D.rest==="show"){V.restMin=false;render();return;}
     /* From the rest-over screen: start another countdown of that length. */
     if(D.rest==="ext30"||D.rest==="ext60"){
       var ext=D.rest==="ext30"?30:60;
@@ -317,12 +320,12 @@ document.addEventListener("click",function(ev){
     V.exm=pickMuscle(eS&&eS.name);V.exe="All";V.exq="";
     openSheet("exercise",{swaplive:true,like:eS?eS.name:null});return;}
   if(D.nextex){
-    if(V.logIdx>=S.active.entries.length-1){finishSession();return;}
+    if(V.logIdx>=S.active.entries.length-1){confirmFinish();return;}
     play("set");endRest();V.fresh=-1;
     V.logIdx=V.logIdx+1;
     saveDB();syncDraft();render();return;}
   if(D.sessmore!==undefined){openSheet("sessmore");return;}
-  if(D.finish){finishSession();return;}
+  if(D.finish){confirmFinish();return;}
   /* Every back affordance in the app comes through here, so none of them can drift
      to a destination of its own. Discarding a session is now part of going back
      rather than a separate link. */
@@ -348,7 +351,7 @@ document.addEventListener("click",function(ev){
     var ex0=S.body.filter(function(b){return b.date===today();})[0];
     if(ex0)ex0.weight=w2;else S.body.push({date:today(),weight:w2});
     S.body.sort(function(a,b){return a.date<b.date?-1:1;});
-    V.draft.bw=null;saveDB();closeSheet();toast("Weight saved.");return;}
+    V.draft.bw=null;saveDB();closeSheet();toast(t("Weight saved."));return;}
   if(D.savesteps){
     dayRec().steps=V.draft.st||0;V.draft.st=null;saveDB();closeSheet();return;}
   if(D.saverec){
@@ -366,7 +369,7 @@ document.addEventListener("click",function(ev){
     var e5=S.body.filter(function(b){return b.date===today();})[0];
     if(e5)Object.assign(e5,rec);else S.body.push(rec);
     S.body.sort(function(a,b){return a.date<b.date?-1:1;});
-    saveDB();closeSheet();toast("Measurements saved.");return;}
+    saveDB();closeSheet();toast(t("Measurements saved."));return;}
 
   /* ---------------- food ---------------- */
   if(D.addfood){
@@ -606,7 +609,7 @@ document.addEventListener("click",function(ev){
     S.goals.p=Math.round(w3*2);
     S.goals.f=Math.round(kc*0.28/9);
     S.goals.c=Math.max(50,Math.round((kc-S.goals.p*4-S.goals.f*9)/4));
-    saveDB();render();toast("Targets updated.");return;}
+    saveDB();render();toast(t("Targets updated."));return;}
   /* The two settings sheets save independently now that they are separate screens. */
   if(D.saveyou){
     var py=S.profile;
@@ -680,7 +683,7 @@ document.addEventListener("click",function(ev){
     S.goals.c=Math.max(50,Math.round((kc-S.goals.p*4-S.goals.f*9)/4));
     buildPlan(); S.onboarded=true; saveDB();
     closeSheet(); V.tab="train"; V.train="days"; render();
-    toast("Plan built. "+split().name+".");
+    toast(t("Plan built.")+" "+split().name+".");
     return;}
   if(D.fav){var i5=S.favs.indexOf(D.fav);
     if(i5>=0)S.favs.splice(i5,1);else S.favs.push(D.fav);saveDB();render();return;}
@@ -733,14 +736,14 @@ document.addEventListener("click",function(ev){
     else toast(t("Sharing is not available here."));
     return;}
   if(D.copysn){var t2=document.getElementById("sn");t2.select();
-    try{document.execCommand("copy");toast("Copied. Send it on WhatsApp.");}
-    catch(e){toast("Select the text and copy it.");}return;}
+    try{document.execCommand("copy");toast(t("Copied. Send it on WhatsApp."));}
+    catch(e){toast(t("Select the text and copy it."));}return;}
   if(D.coach){openSheet("coach");return;}
   if(D.addfriend){
     try{var sn=JSON.parse(val("fp"));
       if(!sn||!sn.sessions||!sn.name)throw 1;
       var F=friends();F[sn.name]=sn;saveFriends(F);render();toast(sn.name+" added.");}
-    catch(e){toast("That code did not read properly. Ask them to copy all of it.");}
+    catch(e){toast(t("That code did not read properly. Ask them to copy all of it."));}
     return;}
   if(D.unfollow){
     var F2=friends();delete F2[D.unfollow];saveFriends(F2);render();return;}
@@ -1035,8 +1038,8 @@ function tickSession(){
      rest surface does not disappear at zero any more — it turns into the alert, and
      stays until the user acknowledges it. Sound cannot be relied on (silent switch,
      backgrounded tab), so the screen has to carry it. */
-  if(left<=0){V.restEnd=0;V.restPaused=false;V.restDone=true;
-    if(V.tab==="train"&&!V.sheet)render();return;}
+  if(left<=0){V.restEnd=0;V.restPaused=false;V.restDone=true;V.restMin=false;
+    if(!V.sheet)render();return;}
   paintRest();
 }
 setInterval(function(){
@@ -1196,6 +1199,24 @@ function downloadBackup(){
   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
   done();
 }
+/* Finishing early is a choice worth one question: nothing logged means the workout
+   would simply vanish, and sets still planned are left out of the record. When every
+   planned set is logged there is nothing to ask. */
+function confirmFinish(){
+  var a=S.active;if(!a)return;
+  var logged=0,left=0;
+  a.entries.forEach(function(e){logged+=e.sets.length;left+=Math.max(0,rowsFor(e)-e.sets.length);});
+  if(!logged){
+    askConfirm({title:t("Nothing logged yet"),icon:"trash",
+      body:t("Finishing now throws this workout away."),
+      cta:t("Discard workout"),act:"discard",cancel:t("Keep training")});return;}
+  if(left>0){
+    askConfirm({title:t("Finish workout?"),icon:"leave",
+      body:left+" "+t(left===1?"planned set is not logged. It is left out of this workout.":"planned sets are not logged. They are left out of this workout."),
+      cta:t("Finish now"),act:"finishnow",cancel:t("Keep training")});return;}
+  finishSession();
+}
+ACT.finishnow=function(){finishSession();};
 /* Pause, resume and ±30s only repaint the rest screen, so they save here rather
    than waiting for the next tick — a reload a moment later keeps them. */
 function persistRest(){if(syncWorkoutState())saveDB();}
@@ -1311,7 +1332,7 @@ if("serviceWorker" in navigator){
         nw.addEventListener("statechange",function(){
           if(nw.state==="installed"&&navigator.serviceWorker.controller){
             nw.postMessage("skipWaiting");
-            toast("Updated. Reopen the app to finish.");
+            toast(t("Updated. Reopen the app to finish."));
           }});});
     }).catch(function(){});
   });
