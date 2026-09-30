@@ -98,6 +98,10 @@
   --dock-h:64px; --dock-mx:16px;
   --dock-lift:max(12px, env(safe-area-inset-bottom));
   --navh:calc(var(--dock-h) + var(--dock-lift));
+  /* The workout bar above the dock (see "The workout bar"). While it shows, --navh
+     grows by it, so the page, the toast and anything else that clears the dock clear
+     the bar too. */
+  --wbar-h:48px; --wbar-gap:8px;
   /* Motion tokens. js/ui/motion.js writes all fourteen of these onto documentElement at
      boot and whenever the in-app animation toggle changes, and an inline property beats
      a stylesheet rule, so these values apply only to the first paint before the module
@@ -343,6 +347,41 @@ body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--
 .dock-b.on{color:var(--accentHi)}
 .dock-b.on svg{transform:scale(1.06);stroke-width:2}
 .dock-b:active{transform:scale(.94)}
+/* ---- The workout bar --------------------------------------------------------
+   A workout under way, seen from another tab: one pill just above the dock, fixed the
+   same way the dock is and faded the same way when the keyboard is up. Tapping it goes
+   back to the logger. */
+body.wb{--navh:calc(var(--dock-h) + var(--dock-lift) + var(--wbar-h) + var(--wbar-gap))}
+#wbar{position:fixed;left:0;right:0;bottom:calc(var(--dock-h) + var(--dock-lift) + var(--wbar-gap));z-index:50;
+  padding:0 var(--dock-mx);pointer-events:none;
+  transition:opacity var(--m-micro) var(--e-standard),visibility 0s}
+#wbar:empty{display:none}
+body.kbleave #wbar,body.kbleave #wbar *{pointer-events:none!important}
+body.kb #wbar{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--e-standard),visibility 0s var(--m-micro)}
+.wbar{display:flex;align-items:center;gap:10px;width:100%;max-width:520px;height:var(--wbar-h);margin:0 auto;
+  padding:0 12px 0 16px;border-radius:var(--rpill);border:1px solid var(--accent-edge);
+  background:var(--glass-solid);box-shadow:var(--shadow-float),0 0 24px var(--accent-glow);
+  color:var(--text);font:inherit;text-align:start;cursor:pointer;pointer-events:auto;
+  transition:transform var(--m-press) var(--e-standard)}
+.wbar.in{animation:wbIn var(--m-comp) var(--e-decel)}
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  .wbar{background:var(--glass);-webkit-backdrop-filter:saturate(160%) blur(22px);backdrop-filter:saturate(160%) blur(22px)}}
+.wbar:active{transform:scale(.98)}
+.wbar:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
+.wbar-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--accentHi);
+  box-shadow:0 0 0 4px var(--accent-tint);animation:wbPulse 1.8s ease-in-out infinite}
+.wbar-k{flex:none;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accentHi)}
+.wbar-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:600}
+.wbar-t{flex:none;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.wbar-go{flex:none;font-size:13px;font-weight:700}
+.wbar .ico-chev{flex:none;color:var(--dim)}
+.wbar.done{background:var(--accent);border-color:transparent;color:var(--onAccent);box-shadow:var(--shadow-float),0 0 28px var(--accent-glow)}
+.wbar.done .wbar-k,.wbar.done .ico-chev{color:var(--onAccent)}
+.wbar.done .wbar-dot{background:var(--onAccent);box-shadow:0 0 0 4px rgba(255,255,255,.22)}
+@keyframes wbIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes wbPulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.wbar,.wbar-dot{animation:none}}
+body.noanim .wbar,body.noanim .wbar-dot{animation:none}
 .dock-b:focus-visible{outline:2px solid rgba(255,255,255,.8);outline-offset:-6px;border-radius:var(--r4)}
 /* ---- The segmented control (seg() in js/ui/view.js) ---------------------------
    The dock's language for any row of equal choices: a recessed track, one indicator
@@ -1378,6 +1417,28 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .trow:has(.bdays){gap:14px}
 .trow>.bdays:first-child{flex:0 0 46px}
 .trow:has(.bdays)>span:nth-child(2){flex:1;min-width:0;text-align:start}
+/* ---- Train: Today · My Program · Explore ------------------------------------------ */
+.tsecs{margin:4px 0 16px}
+.twk{margin:0 0 14px;padding:12px;border-radius:var(--r4);border:1px solid var(--border);
+  background:radial-gradient(90% 90% at 100% 0%,rgba(230,30,40,.10),transparent 70%),var(--raised)}
+.twk-h{display:flex;align-items:baseline;justify-content:space-between;margin:0 2px 10px}
+.twk-h b{font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}
+.twk-r{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.twk-d{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 9px;border-radius:14px;
+  border:1px solid transparent;background:var(--surface);color:var(--text);transition:transform var(--m-press) var(--e-standard)}
+.twk-d:active{transform:scale(.94)}
+.twk-w{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--dim);text-transform:uppercase}
+.twk-n{font-family:var(--display);font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+.twk-d i{display:grid;place-items:center;width:16px;height:16px;border-radius:50%}
+.twk-d.plan i{width:7px;height:7px;margin:4.5px;background:var(--accentHi)}
+.twk-d.done i{background:var(--ok);color:#fff}
+.twk-d.done i svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.twk-d.rest,.twk-d.past{background:transparent}
+.twk-d.rest .twk-n,.twk-d.past .twk-n{color:var(--dim)}
+.twk-d.today{border-color:rgba(248,52,70,.55)}
+.twk-d.sel{background:linear-gradient(180deg,rgba(230,30,40,.26),rgba(230,30,40,.10));border-color:rgba(248,52,70,.7)}
+.twk-d.sel .twk-w{color:var(--sub)}
+.tquick{width:100%;margin-top:14px}
 /* Schedule: two choices side by side; weekday chips under each day. */
 .bsched{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 4px}
 .bsched button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;border-radius:var(--r4);
@@ -2771,6 +2832,7 @@ button.dv-card:active{transform:scale(.98)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
+<div id="wbar"></div>
 <div id="sheet"></div>
 <div id="rest"></div>
 <script type="module" src="./js/app.js"></script>

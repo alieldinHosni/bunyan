@@ -140,7 +140,7 @@ await test("a rest day follows a full-body session",async page=>{
 
 await test("tab taps do not grow the browser history",async page=>{
   const h0=await page.evaluate(()=>history.length);
-  for(let i=0;i<10;i++){await page.tap('nav [data-tab="train"]');await page.tap('[data-train="library"]');await page.tap('nav [data-tab="home"]');}
+  for(let i=0;i<10;i++){await page.tap('nav [data-tab="train"]');await page.tap('[data-tsec="explore"]');await page.tap('[data-train="library"]');await page.tap('nav [data-tab="home"]');}
   await pause(page,500);
   const h1=await page.evaluate(()=>history.length);
   if(h1-h0>2)throw new Error("grew by "+(h1-h0));
@@ -179,8 +179,8 @@ await test("an activity logs pace inputs and heart rate",async page=>{
 /* ---- the day builder and the picker ---------------------------------------------- */
 async function openDay(page){
   await page.tap('nav [data-tab="train"]');await pause(page);
-  await page.tap('[data-mydays]');await pause(page);
-  await page.tap('#sheet [data-day]');await pause(page,400);}
+  await page.tap('[data-tsec="program"]');await pause(page);
+  await page.tap('.drows [data-day]');await pause(page,400);}
 const dayNames=page=>page.$$eval(".drow .drow-n",a=>a.map(x=>x.textContent));
 await test("day builder: ✕ removes with undo, the grip drags, arrow keys move",async page=>{
   await openDay(page);
@@ -377,6 +377,66 @@ await test("library and food data: every template exercise exists, extras load, 
     return [miss,!!X.EXDB["Bulgarian Split Squat"],X.exImg("Bulgarian Split Squat",0),N.searchFoods("كشك",1).map(x=>x.f.id)[0],N.searchFoods("jalash",1).length>0];});
   eq(r,[[],true,null,"kishk",true]);
 });
+
+/* ---- the Train tab: Today · My Program · Explore, and the workout bar -------------- */
+await test("Train sections switch, are remembered after a reload, and a Train tap at the top goes to Today",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  if(!(await page.$('.twk'))||!(await page.$('[data-startday]')))throw new Error("Today has no week strip or start");
+  await page.tap('[data-tsec="program"]');await pause(page);
+  if(!(await page.$('.bsched'))||!(await page.$('.drows [data-day]')))throw new Error("My Program is not the builder");
+  await page.reload();await pause(page,1000);
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  eq(await ev(page,"[V.tsec,!!document.querySelector('.bsched')]"),["program",true],"remembered");
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  eq(await ev(page,"[V.tsec,S.prefs.tsec,!!document.querySelector('.twk')]"),["today","today",true],"tap at the top");
+});
+await test("Back goes up one level: a day to My Program, a template to Explore",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  await page.tap('[data-tsec="program"]');await pause(page);
+  await page.tap('.drows [data-day]');await pause(page,400);
+  eq(await ev(page,"V.train"),"day");
+  await page.tap('[data-back]');await pause(page,500);
+  eq(await ev(page,"[V.train,V.tsec,!!document.querySelector('.bsched')]"),["days","program",true],"day → My Program");
+  await page.tap('[data-tsec="explore"]');await pause(page);
+  await page.tap('.tprog-card[data-preview]');await pause(page,400);
+  eq(await ev(page,"V.train"),"preview");
+  await page.tap('[data-back]');await pause(page,500);
+  eq(await ev(page,"[V.train,V.tsec,!!document.querySelector('.tprog-card')]"),["days","explore",true],"template → Explore");
+});
+await test("week strip: a tapped day shows its plan, today returns to now",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  eq(await page.$$eval('.twk-d',a=>a.length),7);
+  const other=await page.$eval('.twk-d:not(.today)',b=>b.getAttribute("data-tweek"));
+  await page.tap('.twk-d[data-tweek="'+other+'"]');await pause(page);
+  eq(await ev(page,"[V.tdate,document.querySelector('.twk-d.sel').getAttribute('data-tweek')]"),[other,other]);
+  await page.tap('.twk-d.today');await pause(page);
+  eq(await ev(page,"V.tdate"),null);
+});
+await test("My Program edits the active program in place",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  await page.tap('[data-tsec="program"]');await pause(page);
+  const n=await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days.length");
+  await page.tap('.dadd[data-bday]');await pause(page);
+  eq(await ev(page,"[S.programs.find(p=>p.id===S.activeProgram).days.length,V.train,V.tsec]"),[n+1,"days","program"]);
+});
+await test("workout bar: the clock on other tabs, rest counts down there, rest over, and back to the workout",async page=>{
+  await startWorkout(page);
+  eq(await page.$eval('#wbar',e=>!e.firstChild),true,"not on Train");
+  await page.tap('nav [data-tab="home"]');await pause(page,1200);
+  if(!/Workout/i.test(await page.$eval('#wbar',e=>e.innerText)))throw new Error("no bar on Home");
+  eq(await ev(page,"document.body.classList.contains('wb')"),true);
+  await page.tap('#wbar .wbar');await pause(page,500);
+  eq(await ev(page,"[V.tab,!document.getElementById('wbar').firstChild]"),["train",true],"tap returns");
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  await page.tap('[data-rest="hide"]');await pause(page);
+  await page.tap('nav [data-tab="food"]');await pause(page,1200);
+  eq(await page.$eval('#rest',e=>!e.firstChild),true,"no full-screen rest on Food");
+  if(!/Rest/i.test(await page.$eval('#wbar',e=>e.innerText))||!/\d:\d\d/.test(await page.$eval('#wbarT',e=>e.textContent)))throw new Error("no rest countdown");
+  await page.evaluate(async()=>{(await import("/js/ui/view.js")).V.restEnd=Date.now()+1000;});await pause(page,2500);
+  eq(await page.$eval('#wbar .wbar',e=>e.classList.contains("done")),true,"rest over");
+  await page.tap('#wbar .wbar');await pause(page,500);
+  eq(await ev(page,"[V.tab,V.restDone,!!document.getElementById('rest').firstChild]"),["train",true,true],"rest-over screen on return");
+},{prefs:{autorest:true}});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

@@ -14,6 +14,7 @@ import {PERSIST} from "../util.js";
 import {lockScroll, syncWorkoutState, V} from "./view.js";
 import {patch, replace} from "./patch.js";
 import {syncDock} from "./dock.js";
+import {syncWbar} from "./wbar.js";
 import {applyMotion, countTo, once} from "./motion.js";
 
 /* ============================================================ render */
@@ -102,6 +103,8 @@ function render(){
 
   /* The dock is built once and only its state changes after that — see dock.js. */
   syncDock(document.getElementById("nav"),V.tab);
+  /* A workout under way, seen from another tab. */
+  syncWbar();
 
   /* The sheet animates in when it opens and never again. Replaying sheetIn on every
      render is what made tapping the favourite star look like the sheet was being
@@ -120,6 +123,7 @@ function render(){
      focus into it the moment it opens. Sheets used to be invisible to both. */
   appEl.setAttribute("aria-hidden",V.sheet?"true":"false");
   document.getElementById("nav").setAttribute("aria-hidden",V.sheet?"true":"false");
+  document.getElementById("wbar").setAttribute("aria-hidden",V.sheet?"true":"false");
   /* And stop it moving, for the same reason it is hidden from assistive tech: while
      a sheet is up, the screen behind is not something the user is operating. */
   lockScroll(V.sheet);

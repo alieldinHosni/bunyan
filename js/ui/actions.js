@@ -9,7 +9,7 @@ import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {leave} from "./motion.js";
 import {FOODDB, nutritionFor, recalcItem, toLogItem} from "../engine/nutrition.js";
 import {render} from "./render.js";
-import {pushNav} from "./nav.js";
+import {pushNav, resetNav} from "./nav.js";
 import {spreadWd} from "../engine/schedule.js";
 import {day, ex} from "../data/splits.js";
 import {addProgram, makeProgram, editSplit, ownerOf, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
@@ -53,7 +53,8 @@ ACT.adopt=function(_,id){
   var own=editSplit(id);
   if(own)S.activeProgram=own.id;else own=useTemplate(id,true);
   if(!own)return;
-  saveDB();V.train="days";render();
+  V.tsec="today";S.prefs.tsec="today";V.tdate=null;
+  saveDB();V.train="days";render();window.scrollTo(0,0);
   toast(own.name+" "+t("is now your training."));};
 ACT.addprog=function(_,id){
   var own=useTemplate(id,false);if(!own)return;
@@ -66,7 +67,7 @@ ACT.delsplit=function(_,id){
   if(id===S.activeProgram){toast(t("Switch to another program first."));return;}
   var gone=editSplit(id);
   S.programs=(S.programs||[]).filter(function(x){return x.id!==id;});
-  if(V.train==="builder"&&V.previewId===id){V.train="splits";V.previewId=null;}
+  if(V.train==="builder"&&V.previewId===id){resetNav();V.train="days";V.tsec="explore";V.previewId=null;}
   saveDB();render();if(gone)toast(gone.name+" "+t("deleted."));};
 /* Editing a logged food item: recompute from the source food where we still have it,
    scale what was stored where we do not. */
