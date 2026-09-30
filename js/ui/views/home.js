@@ -4,11 +4,14 @@
    it is the user's own — the frame's "Khalid", "2,450 kcal" and "5/7" are placeholder
    data in the design and are not copied. */
 import {t} from "../../i18n/dict.js";
-import {backupAgeDays, backupDue, eatenToday} from "../../engine/formulas.js";
+import {backupAgeDays, backupDue, deloadDue, eatenToday, lastWeight} from "../../engine/formulas.js";
+import {daysBetween, weightChange} from "../../engine/stats.js";
 import {curProfile, dayRec, S, split} from "../../state.js";
-import {estMinutes, nextDayOf, planOn} from "./train.js";
+import {dayHero, planOn, resumeHero, weekStrip} from "./train.js";
+import {glassUnit} from "./food.js";
+import {toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num, today} from "../../util.js";
-import {weekDates} from "../../engine/schedule.js";
+import {art} from "../art.js";
 
 /* ---- pieces the frame is made of ------------------------------------------ */
 
@@ -25,128 +28,79 @@ function ownName(){
   return n&&n!=="Me"?n:"";
 }
 
-/* The 72px ring in the Nutrition card. Geometry is the design's own track (Figma
-   node 2:71): r=33, 6px stroke, on a 72 box. The exported fill is a fixed
-   87% arc, so it cannot show a real value; this draws the same arc live instead. */
-function kcalRing(pct){
-  var R=33,C=2*Math.PI*R,f=Math.max(0,Math.min(1,pct));
-  return '<svg class="hring" viewBox="0 0 72 72" aria-hidden="true">'
-   +'<circle cx="36" cy="36" r="'+R+'" fill="none" stroke="var(--border)" stroke-width="6"/>'
-   +'<circle cx="36" cy="36" r="'+R+'" fill="none" stroke="var(--accent)" stroke-width="6"'
-   +' stroke-dasharray="'+C.toFixed(2)+'" stroke-dashoffset="'+(C*(1-f)).toFixed(2)+'"'
-   +' transform="rotate(-90 36 36)"/></svg>';
-}
-
-/* This week, from the first day of the user's week (Saturday unless changed), the
-   same seven days the Train strip shows. A dot is lit when a session was logged. */
-function weekDots(){
-  var done={},i;
-  for(i=0;i<S.sessions.length;i++)done[S.sessions[i].date]=1;
-  var dots=weekDates(today()).map(function(iso){return !!done[iso];});
-  return {dots:dots,n:dots.filter(Boolean).length};
-}
-
-/* ============================================================ HOME */
+/* ============================================================ HOME
+   "How is today going?" — a dashboard, not a toolbox, so it has no sections. From
+   the top: the greeting under a drawing for the time of day, one reminder at most,
+   the day's training in the same card Train → Today uses, four tiles that each log in
+   one tap, and the same week strip as Train. */
+function reminder(){
+  /* Only the most pressing thing owed, so a backup nag cannot sit above everything
+     for weeks. Set-up first, then the backup, a lighter week, a weigh-in. */
+  if(!S.onboarded)
+    return '<button class="card tap hot hnote" data-setup="1"><div class="row"><h3>'+t("Build my plan")+'</h3>'
+     +'<span class="pill a">'+t("Start here")+'</span></div>'
+     +'<p class="tiny" style="margin:6px 0 0">'+t("Four questions and Bunyan sets your program, sets, reps and rest.")+'</p></button>';
+  if(backupDue()){
+    var age=backupAgeDays();
+    return '<div class="card hnote gold"><h3>'+t("Back up your history")+'</h3>'
+     +'<p class="tiny" style="margin:6px 0 0">'
+     +(age===null?t("You have never exported a backup. Everything lives in this browser — clearing its data would take your whole log with it.")
+        :t("Your last backup was")+' '+age+' '+t("days ago."))+'</p>'
+     +'<div class="rowc mt"><button class="btn sm" data-export="1">'+t("Export a backup")+'</button>'
+     +'<button class="btn d sm" data-snoozebackup="1">'+t("Not now")+'</button></div></div>';}
+  if(deloadDue())
+    return '<button class="card tap hnote" data-tsec="today"><h3>'+t("Time for a lighter week")+'</h3>'
+     +'<p class="tiny" style="margin:6px 0 0">'+t("One lighter week — fewer sets, about 10% less weight — usually brings progress back.")+'</p></button>';
+  var w=(S.body||[]).filter(function(b){return num(b.weight)>0;}).map(function(b){return b.date;}).sort().pop();
+  if(S.sessions.length&&(!w||daysBetween(w,today())>=7))
+    return '<button class="card tap hnote" data-sheet="weigh"><h3>'+t("Time to weigh in")+'</h3>'
+     +'<p class="tiny" style="margin:6px 0 0">'+t(w?"A week since the last one. Mornings, before eating, compare best.":"One weigh-in starts your trend. Mornings, before eating, compare best.")+'</p></button>';
+  return "";}
+function tile(attr,cls,icon,label,value,sub,aria){
+  return '<button class="htile '+cls+'" '+attr+' aria-label="'+esc(aria)+'">'
+   +'<span class="htile-i" aria-hidden="true"><svg viewBox="0 0 24 24">'+icon+'</svg></span>'
+   +'<span class="htile-k">'+esc(label)+'</span><span class="htile-v">'+value+'</span>'
+   +'<span class="htile-s">'+sub+'</span></button>';}
+var HI={
+  kcal:'<path d="M12 21a6 6 0 0 0 6-6c0-4-2.5-6-3.5-10-1.2 2.2-2 3.2-3 3.4-.8-.9-1-2-1-3.4-2.2 2.4-4.5 5.4-4.5 10a6 6 0 0 0 6 6z"/><path d="M12 21a2.5 2.5 0 0 1-2.5-2.5c0-1.6 1.2-2.6 2.5-4 1.3 1.4 2.5 2.4 2.5 4A2.5 2.5 0 0 1 12 21z"/>',
+  water:'<path d="M12 3.5s6 6.3 6 10.5a6 6 0 0 1-12 0c0-4.2 6-10.5 6-10.5z"/>',
+  steps:'<path d="M8 3c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM6 16h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM14 20h4"/>',
+  weight:'<path d="M5 20h14l-2-12H7zM9 8a3 3 0 0 1 6 0M12 12v3"/>'};
 function vHome(){
-  var g=S.goals,e=eatenToday(),r=dayRec(),sp=split(),h="";
-  var nd=nextDayOf(sp),name=ownName(),todayPlan=planOn(sp,today());
-  /* Something swapped in for today wins over the rotation's pick. */
-  if(todayPlan.kind==="today"&&todayPlan.swapped&&todayPlan.day&&todayPlan.day.ex.length)nd=todayPlan.day;
+  var g=S.goals,e=eatenToday(today()),r=dayRec(today()),sp=split(),h="",name=ownName();
+  var hr=new Date().getHours(),scene=hr<12?"sunrise":hr<17?"sun":"moon";
 
-  /* ---- greeting ---- */
-  h+='<div class="hgreet"><div>'
-   +'<div class="hdate">'+esc(new Date().toLocaleDateString(undefined,
-      {weekday:"long",day:"numeric",month:"short"}))+'</div>'
+  h+='<div class="hgreet">'+art(scene,{cls:"hgreet-art"})+'<div>'
+   +'<div class="hdate">'+esc(new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"short"}))+'</div>'
    +'<h1>'+esc(greeting()+(name?", "+name:""))+'</h1></div>'
    +(name?'<div class="havatar" aria-hidden="true">'+esc(name.charAt(0).toUpperCase())+'</div>':'')
    +'</div>';
 
   h+='<div class="hstack">';
+  h+=reminder();
+  h+=S.active?resumeHero():dayHero(sp,planOn(sp,today()),today());
 
-  /* Prompts that only appear when they are owed. Not in the frame, because the frame
-     shows a set-up user with a recent backup; they keep the card language. */
-  if(!S.onboarded)
-    h+='<button class="card tap hot" data-setup="1"><div class="row"><h3>'+t("Build my plan")+'</h3>'
-     +'<span class="pill a">'+t("Start here")+'</span></div>'
-     +'<p class="tiny" style="margin:6px 0 0">'+t("Four questions and Bunyan sets your program, sets, reps and rest.")+'</p></button>';
+  /* Four tiles, each one tap: the day's food opens Food, water adds a glass, steps and
+     weight open their one-field sheets. */
+  var unit=glassUnit(g.water),ng=Math.max(1,Math.round(g.water/unit)),gl=Math.floor(r.water/unit);
+  var kg=lastWeight(),wc=weightChange();
+  h+='<div class="htiles">'
+   +tile('data-fsec="today"','kcal',HI.kcal,t("Calories"),
+      '<b data-count-to="'+e.kcal+'">'+fmtN(e.kcal)+'</b><small>/ '+fmtN(g.kcal)+'</small>',
+      esc(t("Protein"))+' '+e.p+' / '+g.p+' g',t("Calories")+" "+fmtN(e.kcal)+" "+t("of")+" "+fmtN(g.kcal))
+   +tile('data-water="'+unit+'" data-wdate="'+today()+'"','water',HI.water,t("Water"),
+      '<b>'+gl+'</b><small>/ '+ng+'</small>','+ '+esc(t("Add a glass")),t("Water")+" "+gl+" "+t("of")+" "+ng+". "+t("Add a glass"))
+   +tile('data-sheet="steps"','steps',HI.steps,t("Steps"),
+      '<b>'+fmtN(r.steps||0)+'</b>',esc(t("Goal")+" "+fmtN(g.steps)),t("Steps")+" "+fmtN(r.steps||0))
+   +tile('data-sheet="weigh"','weight',HI.weight,t("Weight"),
+      kg?'<b>'+toDisp(kg)+'</b><small>'+esc(wUnit())+'</small>':'<b>—</b>',
+      wc&&wc.d!=null?esc((wc.d>0?"+":wc.d<0?"−":"±")+toDisp(Math.abs(wc.d))+" · "+wc.days+" "+t("days")):esc(t(kg?"Tap to weigh in":"Log a weigh-in")),
+      t("Weight")+" "+(kg?toDisp(kg)+" "+wUnit():t("Log a weigh-in")))
+   +'</div>';
 
-  if(backupDue()){
-    var age=backupAgeDays();
-    h+='<div class="card" style="border-color:var(--gold)">'
-     +'<h3 style="color:var(--gold)">'+t("Back up your history")+'</h3>'
-     +'<p class="tiny" style="margin:6px 0 0">'
-     +(age===null
-        ?t("You have never exported a backup. Everything lives in this browser — clearing its data would take your whole log with it.")
-        :t("Your last backup was")+' '+age+' '+t("days ago."))
-     +'</p>'
-     +'<div class="rowc mt"><button class="btn sm" data-export="1">'+t("Export a backup")+'</button>'
-     +'<button class="btn d sm" data-snoozebackup="1">'+t("Not now")+'</button></div></div>';
-  }
-
-  /* ---- today's session ----
-     One card, three states. The frame shows only "ready to start"; a session already
-     under way reuses the same component rather than inventing a second one. */
-  if(S.active){
-    var pos=Math.min(num(S.active.idx,0),S.active.entries.length-1)+1;
-    h+='<div class="card sess hot">'
-     +'<div class="sess-head"><span class="sbadge">'+t("Workout in progress")+'</span></div>'
-     +'<div><div class="sess-title">'+esc(S.active.dayName)+'</div>'
-     +'<div class="sess-sub">'+t("Exercise")+' '+pos+' '+t("of")+' '+S.active.entries.length+'</div></div>'
-     +'<div class="sdiv" aria-hidden="true"><i></i><b></b></div>'
-     +'<button class="btn" data-continue="1"><span class="ico ico-play" aria-hidden="true"></span>'
-     +t("Resume workout")+'</button></div>';
-  }else if(nd&&todayPlan.rest&&todayPlan.kind==="today"){
-    /* Rest is part of the plan now; the card says so and still lets you train. */
-    h+='<div class="card sess">'
-     +'<div class="sess-head"><span class="sbadge">'+t("Rest day")+'</span></div>'
-     +'<div><div class="sess-title">'+t("Recover today")+'</div>'
-     +'<div class="sess-sub">'+t("Next up")+': '+esc(nd.name)+'</div></div>'
-     +'<div class="sdiv" aria-hidden="true"><i></i><b></b></div>'
-     +'<button class="btn g" data-startday="'+nd.id+'">'+t("Train anyway")+'</button></div>';
-  }else if(nd){
-    h+='<div class="card sess">'
-     +'<div class="sess-head"><span class="sbadge">'+t("Today's Session")+'</span>'
-     +'<span class="sess-min">'+estMinutes(nd)+' '+t("min")+'</span></div>'
-     +'<div><div class="sess-title">'+esc(nd.name)+'</div>'
-     +'<div class="sess-sub">'+esc(sp.name)+' • '+nd.ex.length+' '+t("exercises")+'</div></div>'
-     +'<div class="sdiv" aria-hidden="true"><i></i><b></b></div>'
-     +'<button class="btn" data-startday="'+nd.id+'"><span class="ico ico-play" aria-hidden="true"></span>'
-     +t("Start Training")+'</button></div>';
-  }else h+='<div class="card"><p class="tiny" style="margin:0">'+t("No exercises in this program yet.")+'</p></div>';
-
-  /* ---- daily nutrition ---- */
-  var pct=g.kcal?e.kcal/g.kcal:0;
-  h+='<button class="card tap nutri" data-fsec="today">'
-   +'<div class="nutri-info"><h3 class="nutri-h">'+t("Daily Nutrition")+'</h3>'
-   /* The calories figure is the number logging food changes, so it counts up. The
-      attribute carries the raw value; the text is the grouped one. */
-   +'<div class="nutri-kcal">'+t("Calories")+': <b data-count-to="'+e.kcal+'">'+fmtN(e.kcal)+'</b>'
-   +' / '+fmtN(g.kcal)+' kcal</div>'
-   +'<div class="nutri-pro">'+t("Protein")+': <b>'+e.p+'g</b> / '+g.p+'g</div></div>'
-   +'<div class="nutri-ring">'+kcalRing(pct)
-   +'<span class="nutri-pct">'+Math.round(pct*100)+'%</span></div></button>';
-
-  /* ---- weekly discipline ---- */
-  var wk=weekDots();
-  h+='<div class="card wk">'
-   +'<div class="wk-head"><h3 class="wk-h">'+t("Weekly Discipline")+'</h3>'
-   +'<span class="wk-n">'+wk.n+'/7 '+t("Days Active")+'</span></div>'
-   /* The dots are the design's two exported states. Read as one image with a spoken
-      summary, because seven unlabelled circles mean nothing to a screen reader. */
-   +'<div class="wk-dots" role="img" aria-label="'+wk.n+' '+t("of")+' 7 '+t("days active this week")+'">'
-   +wk.dots.map(function(on){
-      return '<img src="icons/'+(on?'day-on':'day-off')+'.svg" alt="" width="28" height="28">';}).join("")
-   +'</div></div>';
-
-  /* ---- steps ----
-     Not in the frame. It stays because this is the only place in the app that opens
-     the steps sheet: removing it to match the frame would delete a feature, not
-     restyle one. Water and weight did move off Home, because Food and Progress already
-     carry them. */
-  h+='<button class="card tap hsteps" data-sheet="steps">'
-   +'<span class="tiny">'+t("Steps")+'</span>'
-   +'<span class="hsteps-n">'+fmtN(r.steps||0)+'</span></button>';
-
+  /* The same seven days as Train, from the first day of the week; a tap opens that
+     day's details. */
+  h+=weekStrip(sp,null,"openday");
   h+='</div>';
   return h;}
 

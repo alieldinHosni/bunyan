@@ -31,10 +31,11 @@ import {weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consist
 import {sessionVolume} from "../../engine/formulas.js";
 import {ensureSessionIds, S} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
-import {esc, fmtN, r1, shortd, today} from "../../util.js";
+import {esc, fmtN, pretty, r1, shortd, today} from "../../util.js";
 import {seg, streak, V} from "../view.js";
-import {dateBar} from "../datebar.js";
-import {wdName, weekStart} from "../../engine/schedule.js";
+import {art} from "../art.js";
+import {backArrow} from "../nav.js";
+import {wdName, weekOrder, weekStart} from "../../engine/schedule.js";
 import {photoList} from "../photos.js";
 import {render} from "../render.js";
 
@@ -118,13 +119,56 @@ function anything(){
     for(var m in S.days[d].meals)if((S.days[d].meals[m].items||[]).length)return true;
   return false;}
 
+/* An empty state with its drawing, in place of the small icon. */
+function artEmpty(name,title,line,cta){
+  return '<div class="empty artempty">'+art(name,{cls:"empty-art"})+'<h3>'+esc(title)+'</h3>'
+   +(line?'<p class="tiny">'+esc(line)+'</p>':'')+(cta?'<div class="empty-a">'+cta+'</div>':'')+'</div>';}
+
+/* ---- History: every workout, a month at a time --------------------------------
+   Reached from Recent workouts → See all. The month is a calendar with a dot on each
+   day something was trained; a day opens its details, a workout opens to be edited. */
+function vHistory(){
+  ensureSessionIds();
+  var base=new Date();base.setDate(1);base.setMonth(base.getMonth()+(+V.hmonth||0));
+  var y=base.getFullYear(),m=base.getMonth(),mo=y+"-"+String(m+1).padStart(2,"0");
+  var list=S.sessions.filter(function(s){return s.date.slice(0,7)===mo;});
+  var on={};list.forEach(function(s){on[s.date]=1;});
+  var first=((new Date(y,m,1).getDay()||7)-weekStart()+7)%7,days=new Date(y,m+1,0).getDate(),now=today();
+  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("History"))+'</h1></div>'
+   +'<p class="dsub">'+esc(S.sessions.length+" "+t(S.sessions.length===1?"workout":"workouts"))+'</p>';
+  h+='<div class="dbcal phcal"><div class="dbcal-h">'
+   +'<button class="dnav-arrow sm" data-hmonth="-1" aria-label="'+esc(t("Previous month"))+'">‹</button>'
+   +'<strong aria-live="polite">'+esc(base.toLocaleDateString(undefined,{month:"long",year:"numeric"}))+'</strong>'
+   +'<button class="dnav-arrow sm" data-hmonth="1" aria-label="'+esc(t("Next month"))+'"'+((+V.hmonth||0)>=0?' disabled':'')+'>›</button></div>'
+   +'<div class="dbgrid">'+weekOrder().map(function(n){return '<div class="dbwk" aria-hidden="true">'
+      +esc(new Date(2024,0,n).toLocaleDateString(undefined,{weekday:"narrow"}))+'</div>';}).join("");
+  for(var i=0;i<first;i++)h+='<div></div>';
+  for(var d=1;d<=days;d++){
+    var iso=mo+"-"+String(d).padStart(2,"0");
+    h+='<button class="dbday'+(on[iso]?' trained':'')+(iso===now?' today':'')+'" data-openday="'+iso+'"'+(iso>now?' disabled':'')
+     +' aria-label="'+esc(pretty(iso)+(on[iso]?", "+t("trained"):""))+'">'+d
+     +(on[iso]?'<span class="dbdot t" aria-hidden="true"></span>':'')+'</button>';}
+  h+='</div></div>';
+  if(!list.length)return h+artEmpty("calendar",t("No workouts this month"),t("Train and each session lands on its day here."),"");
+  h+=lbl(t("Workouts"),'<span class="pgaside">'+list.length+'</span>');
+  list.forEach(function(s){
+    var n=s.entries.filter(function(e){return (e.sets||[]).length;}).length;
+    var mins=s.activeMs>0?Math.round(s.activeMs/60000):null;
+    h+='<button class="pgrow" data-sessedit="'+esc(s.id)+'" aria-label="'+esc(t("Edit workout")+": "+(s.dayName||t("Workout")))+'"><span class="pgrow-t">'
+     +'<span class="pgrow-n"><span>'+esc(s.dayName||t("Workout"))+'</span></span>'
+     +'<span class="pgrow-s">'+(mins!=null?mins+' '+esc(t("min"))+' · ':'')+n+' '+esc(t(n===1?"exercise":"exercises"))+'</span></span>'
+     +'<span class="pgrow-e">'+esc(shortd(s.date))+'</span>'
+     +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
+  return h;}
+
 function vProgress(){
+  if(V.phist)return vHistory();
   var h='<div class="thead"><div><h1>'+t("Progress")+'</h1>'
    +'<p class="thead-s">'+t("Track. Improve. Get stronger.")+'</p></div></div>';
   /* A wall of zeroes tells a new user nothing. Show the two things that start
      filling this screen instead. */
   if(!anything())
-    return h+empty("chart",t("Nothing to chart yet"),
+    return h+artEmpty("mane",t("Nothing to chart yet"),
       t("Finish one workout or log your weight, and volume, records, streaks and trends all start here."),
       '<button class="btn" data-go="train">'+t("Start a workout")+'</button>'
       +'<button class="btn g" data-sheet="weigh">'+t("Log weight")+'</button>');
@@ -135,7 +179,6 @@ function vProgress(){
   /* Overview opens with the day, as Food does: the date navigator and what that one
      day held. It scopes only that card. The range below drives everything else, and
      neither ever moves the other. */
-  if(tab==="overview")h+=dateBar({date:pdate(),open:V.pcal,monthOffset:V.cal})+vThatDay();
   /* The range is the secondary control: same component, tinted rather than filled,
      so the section switch above stays the one that reads as navigation. Each chip's
      accessible name is the span it stands for — "1W" read aloud says nothing. */
@@ -258,7 +301,7 @@ function vOverview(r){
   ensureSessionIds();
   var recent=S.sessions.slice(0,3);
   if(recent.length){
-    h+=lbl(t("Recent workouts"));
+    h+=lbl(t("Recent workouts"),'<button class="pglink" data-phist="1">'+esc(t("See all"))+'</button>');
     recent.forEach(function(s){
       var n=s.entries.filter(function(e){return (e.sets||[]).length;}).length;
       var mins=s.activeMs>0?Math.round(s.activeMs/60000):null;
@@ -271,37 +314,16 @@ function vOverview(r){
 
   /* ---- the frame's closing banner, over the Bunyan artwork. It only says "you are
      getting stronger" when the numbers above say so. */
-  h+='<button class="pgbanner" data-ptab="strength">'
-   +'<img src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async" loading="lazy">'
+  h+='<button class="pgbanner" data-ptab="strength">'+art("mane",{cls:"pgbanner-art"})
    +'<span class="pgbanner-t"><b>'+esc(t("Progress takes time"))+'</b>'
    +'<span>'+esc(si.pct>0?t("Stay consistent. You're getting stronger."):t("Stay consistent. It adds up."))+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   return h;}
 
-function pdate(){return V.pdate||today();}
-function vThatDay(){
-  var d=pdate();
-  var sess=S.sessions.filter(function(x){return x.date===d;});
-  var rec=S.days[d]||{};
-  var wRow=(S.body||[]).filter(function(b){return b.date===d&&b.weight;})[0];
-  var meals=Object.keys(rec.meals||{}).reduce(function(n,k){
-    return n+((rec.meals[k].items||[]).length?1:0);},0);
-  var vol=sess.reduce(function(n,x){return n+sessionVolume(x);},0);
-  var bits=[];
-  if(sess.length)bits.push(esc(sess.map(function(x){return x.dayName;}).join(", "))
-    +' · '+fmtN(toDisp(vol))+' '+wUnit());
-  if(wRow)bits.push(esc(fmtW(wRow.weight)));
-  if(rec.steps)bits.push(fmtN(rec.steps)+' '+t("steps"));
-  if(meals)bits.push(meals+' '+t(meals===1?"meal":"meals"));
-  return '<button class="pgrow" data-openday="'+d+'"><span class="pgrow-t">'
-   +'<span class="pgrow-k">'+t("THAT DAY")+'</span>'
-   +'<span class="pgrow-n"><span>'+(bits.length?bits.join(' · '):t("Nothing logged"))+'</span></span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';}
-
 /* ---- Strength ------------------------------------------------------------------ */
 function vStrength(r){
   var all=topLifts();
-  if(!all.length)return empty("chart",t("No strength history"),
+  if(!all.length)return artEmpty("barbell",t("No strength history"),
     t("Log the same lift twice and Bunyan starts plotting your estimated one-rep max."),
     '<button class="btn" data-go="train">'+t("Start a workout")+'</button>');
   /* All / Upper / Lower, the frame's filter. It narrows every list on this view and
@@ -448,7 +470,7 @@ function vBody(r){
   /* Which way is progress for the scale depends on the goal. Maintaining, neither. */
   var gw=goal==="lose"?-1:goal==="gain"?1:0;
   h+='<div class="pgcard">';
-  if(!wc)h+='<div class="pgstat-k">'+esc(t("Body weight"))+'</div>'
+  if(!wc)h+='<div class="pgstat-k">'+esc(t("Body weight"))+'</div>'+art("body",{cls:"pgbody-art"})
     +tooFew(t("Weigh in and the trend starts here. Mornings, before eating, are the most comparable."));
   else{
     var since=wc.ref?(wc.days>=7&&wc.days<14?t("vs last week"):t("since")+" "+dateStr(wc.ref.date)):"";
