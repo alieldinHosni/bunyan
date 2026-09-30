@@ -118,6 +118,8 @@ function hydrate(){
   if(!S.skip)S.skip=[];
   if(!S.myFoods)S.myFoods=[];
   if(!S.savedMeals)S.savedMeals=[];
+  /* My Foods opens a saved meal by id; meals saved before it had none. */
+  S.savedMeals.forEach(function(m){if(m&&!m.id)m.id=uid();if(m&&!m.items)m.items=[];});
   if(!S.freq)S.freq={};
   /* Absent once they have moved out of the blob. */
   if(!S.sessions)S.sessions=[];

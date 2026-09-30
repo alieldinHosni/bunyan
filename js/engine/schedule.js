@@ -8,10 +8,30 @@ function isoWeekday(iso){var d=new Date(iso+"T00:00:00").getDay();return d===0?7
 function addDays(iso,n){var d=new Date(iso+"T00:00:00");d.setDate(d.getDate()+n);
   return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
 
+/* ---- the week ------------------------------------------------------------------
+   Where a week begins is the user's: Saturday by default, as the Egyptian week runs,
+   with Sunday or Monday in Profile → App. Stored weekdays never change with it — a
+   day pinned to Tuesday stays on Tuesday — only which seven dates "this week" means,
+   and the order the days are shown in. */
+function weekStart(){var w=+(S.prefs&&S.prefs.wkstart);return w>=1&&w<=7?w:6;}
+/* The seven ISO weekdays in the order they are shown, first day of the week first. */
+function weekOrder(){var s=weekStart(),o=[];for(var i=0;i<7;i++)o.push((s-1+i)%7+1);return o;}
+/* The date the week holding iso begins on, and that week's seven dates. */
+function weekStartOf(iso){return addDays(iso,-((isoWeekday(iso)-weekStart()+7)%7));}
+function weekDates(iso){var f=weekStartOf(iso),o=[];for(var i=0;i<7;i++)o.push(addDays(f,i));return o;}
+/* Weekday names in the app's language, Monday = 1. */
+function wdName(n,long){
+  var d=new Date(2024,0,n);/* 1 Jan 2024 was a Monday */
+  try{return d.toLocaleDateString(S.prefs&&S.prefs.lang==="ar"?"ar-EG":"en-GB",{weekday:long?"long":"short"});}
+  catch(e){return ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][n-1];}}
+
 /* A sensible week for n training days: spread out, never three in a row when it can
-   be helped. */
-var SPREAD={1:[1],2:[1,4],3:[1,3,5],4:[1,2,4,5],5:[1,2,3,5,6],6:[1,2,3,4,5,6],7:[1,2,3,4,5,6,7]};
-function spreadWd(n){return (SPREAD[Math.max(1,Math.min(7,n))]||[]).slice();}
+   be helped, counted from the first day of the week. From Saturday that leaves Friday
+   free up to six days: two is Saturday and Tuesday, three Saturday, Monday and
+   Wednesday. From Monday it is the familiar Monday, Wednesday, Friday. */
+var SPREAD={1:[0],2:[0,3],3:[0,2,4],4:[0,1,3,4],5:[0,1,2,4,5],6:[0,1,2,3,4,5],7:[0,1,2,3,4,5,6]};
+function spreadWd(n){var s=weekStart();
+  return (SPREAD[Math.max(1,Math.min(7,n))]||[]).map(function(o){return (s-1+o)%7+1;});}
 
 /* The training day pinned to this date's weekday, or null for a rest day. */
 function pinnedOn(sp,iso){
@@ -39,9 +59,9 @@ function suggestWd(sp){
       .sort(function(a,b){return c[b]-c[a]||a-b;})[0];
     if(best){out[d.id]=[best];taken[best]=1;}});
   var free=spreadWd(train.length).filter(function(w){return !taken[w];});
-  var rest=[1,2,3,4,5,6,7].filter(function(w){return !taken[w]&&free.indexOf(w)<0;});
+  var rest=weekOrder().filter(function(w){return !taken[w]&&free.indexOf(w)<0;});
   free=free.concat(rest);
   train.forEach(function(d){if(!out[d.id]){var w=free.shift();if(w){out[d.id]=[w];taken[w]=1;}}});
   return out;}
 
-export {addDays, isoWeekday, nextPinned, pinnedOn, spreadWd, suggestWd};
+export {addDays, isoWeekday, nextPinned, pinnedOn, spreadWd, suggestWd, wdName, weekDates, weekOrder, weekStart, weekStartOf};

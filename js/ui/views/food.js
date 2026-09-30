@@ -1,13 +1,19 @@
 /* Bunyan — food
-   Food tab: the day's dashboard (node 13:12) and one meal's detail (node 13:118). */
+   Food tab, in three sections behind one control, as Train is: Today (the day's
+   dashboard, node 13:12, and one meal's detail, node 13:118), My Foods (the meals you
+   saved and the foods you made, kept and edited here) and Targets (what the day is
+   measured against, with the evidence for whether it is working beside it). */
 import {t} from "../../i18n/dict.js";
-import {curDate, eatenToday, frequentFoods} from "../../engine/formulas.js";
+import {curDate, eatenToday, lastWeight, macroKcal, proteinTarget, targetKcal, tdee} from "../../engine/formulas.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {dayRec, S} from "../../state.js";
 import {esc, fmtN, r1, today} from "../../util.js";
-import {V} from "../view.js";
+import {progressBar, seg, V} from "../view.js";
 import {dateBar} from "../datebar.js";
 import {backArrow} from "../nav.js";
+import {art, gaugeArt, waterArt} from "../art.js";
+import {fitCh, afTile} from "./addfood.js";
+import {trendCard, vNutrition} from "./progress.js";
 
 /* ============================================================ FOOD */
 var MEALS=["Breakfast","Lunch","Dinner","Snack"];
@@ -45,15 +51,27 @@ function glassUnit(goal){
   if(goal/u>16)u=Math.ceil(goal/16/50)*50;
   return u;}
 
+var FSECS=[["today","Today"],["foods","My Foods"],["targets","Targets"]];
+function fsec(){var v=V.fsec||S.prefs.fsec||"today";return v==="foods"||v==="targets"?v:"today";}
 function vFood(){
   var dsel=curDate();
   if(V.meal)return vMeal(dsel,V.meal);
+  if(V.smeal)return vSavedMeal(V.smeal);
+  var sec=fsec();
+  /* The drawing is Today's: a baladi loaf and a palm frond at the header's edge. */
+  var h='<div class="thead fthead"><div><h1>'+t("Nutrition")+'</h1>'
+   +'<p class="thead-s">'+t("Fuel your progress")+'</p></div>'
+   +(sec==="today"?art("loaf",{cls:"fthead-art"}):'')+'</div>';
+  h+=seg({items:FSECS.map(function(x){return [x[0],t(x[1])];}),value:sec,attr:"fsec",tabs:true,
+    cls:"tsecs",label:t("Nutrition"),key:"fsecs"});
+  if(sec==="foods")return h+vMyFoods();
+  if(sec==="targets")return h+vTargets();
+  return h+vFoodToday(dsel);}
 
+function vFoodToday(dsel){
   var g=S.goals,e=eatenToday(dsel),r=dayRec(dsel);
-  var h='<div class="thead"><div><h1>'+t("Nutrition")+'</h1>'
-   +'<p class="thead-s">'+t("Fuel your progress")+'</p></div></div>';
   /* The same navigator Progress and Train use — js/ui/datebar.js. */
-  h+=dateBar({date:dsel,open:V.fcal,monthOffset:V.cal});
+  var h=dateBar({date:dsel,open:V.fcal,monthOffset:V.cal});
 
   /* ---- the day at a glance: the ring beside the three macros, as the frame has it */
   var pct=g.kcal?e.kcal/g.kcal:0, over=e.kcal>g.kcal, diff=Math.abs(g.kcal-e.kcal);
@@ -115,25 +133,9 @@ function vFood(){
      +' aria-label="'+esc(i+" "+t("glasses"))+'"'+(full?' aria-pressed="true"':'')+'><i></i></button>';}
   h+='</div><button class="fwater-add" data-water="'+unit+'"'
    +' aria-label="'+esc(t("Add")+" "+unit+" ml "+t("Water"))+'">'
-   +'<i class="ico ico-plus"></i></button></div></div>';
-
-  /* ---- the shortcuts the frame has no room for, kept below the fold */
-  var freq=frequentFoods(6);
-  if(freq.length){
-    h+='<div class="overline">'+t("Frequent")+'</div><div class="rowc" style="flex-wrap:wrap;gap:var(--s2)">';
-    freq.forEach(function(f){
-      h+='<button class="pill" data-quickfood="'+esc(f.id)+'">'+esc(f.n)+'</button>';});
-    h+='</div>';}
-
-  if((S.savedMeals||[]).length){
-    h+='<div class="overline">'+t("Saved meals")+'</div><div class="list">';
-    S.savedMeals.forEach(function(sm,i){
-      var st=sumNutrition(sm.items);
-      h+='<button class="item" data-addsaved="'+i+'"><div><div style="font-weight:600">'+esc(sm.name)+'</div>'
-       +'<div class="tiny">'+sm.items.length+' '+t("items")+' · '+fmtN(st.kcal)+' kcal</div></div>'
-       +'<span class="pill a">'+t("Add")+'</span></button>';});
-    h+='</div>';}
-
+   +'<i class="ico ico-plus"></i></button></div>'
+   /* The strands are the day's water: the bright one runs as far as the goal is met. */
+   +'<div class="fwater-art">'+waterArt(g.water?r.water/g.water:0)+'</div></div>';
   return h;}
 
 /* ---- one meal (node 13:118). Reached from a logged row above; back returns here. */
@@ -174,5 +176,158 @@ function vMeal(dsel,name){
    +esc(t("Add food to")+" "+t(name))+'</button>';
   return h;}
 
+/* ---- My Foods: the meals you saved and the foods you made ------------------------
+   Each row is the builder's: ✕ on the leading edge removes it (with Undo), the row
+   opens it, and a saved meal carries a + to log the whole thing into the meal of the
+   moment. A new meal is built the way a training day is: name it, then add to it. */
+var XSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+var PLUS='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+function vMyFoods(){
+  var sm=S.savedMeals||[],mf=S.myFoods||[],now=mealNow(),h='';
+  h+='<button class="bnew" data-newmeal="1"><span class="bnew-i">'+PLUS+'</span>'
+   +'<span class="bnew-t"><b>'+t("Build a meal")+'</b><span>'+t("Name it, then add what goes in it")+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  if(!sm.length&&!mf.length){
+    return h+'<div class="empty artempty">'+art("idra",{cls:"empty-art"})
+     +'<h3>'+esc(t("Nothing saved yet"))+'</h3>'
+     +'<p class="tiny">'+esc(t("Save a meal you eat often, or add a food of your own, and it is one tap away when you log."))+'</p>'
+     +'<div class="empty-a"><button class="btn g" data-myfood="new">'+esc(t("Add your own food"))+'</button></div></div>';}
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Saved meals")+'</h2>'
+   +(sm.length?'<span class="dhint">'+sm.length+'</span>':'')+'</div>';
+  if(!sm.length)h+='<p class="dempty">'+esc(t("A saved meal logs everything in it in one tap."))+'</p>';
+  else{
+    h+='<div class="drows">';
+    sm.forEach(function(m){
+      var tot=sumNutrition(m.items||[]),n=(m.items||[]).length;
+      h+='<div class="drow" data-k="sm:'+m.id+'">'
+       +'<button class="drm" data-rmsaved="'+m.id+'" aria-label="'+esc(t("Remove")+" "+m.name)+'"><i>'+XSVG+'</i></button>'
+       +'<button class="dmain" data-smeal="'+m.id+'"><span class="dtext"><span class="drow-n">'+esc(m.name)+'</span>'
+       +'<span class="drow-s">'+n+' '+t(n===1?"item":"items")+'<i class="ddot"></i>'+fmtN(tot.kcal)+' kcal<i class="ddot"></i>'
+       +esc(t("P:"))+' '+r1(tot.p)+'g</span></span></button>'
+       +(n?'<button class="dquick" data-addsaved="'+m.id+'" aria-label="'+esc(t("Add")+" "+m.name+" "+t("to")+" "+t(now))+'">'+PLUS+'</button>':'')
+       +'</div>';});
+    h+='</div>';}
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Your foods")+'</h2>'
+   +(mf.length?'<span class="dhint">'+mf.length+'</span>':'')+'</div>';
+  if(mf.length){
+    h+='<div class="drows">';
+    mf.slice().reverse().forEach(function(f){
+      var sv=(f.s&&f.s[0]&&f.s[0][0])||"100 g";
+      h+='<div class="drow" data-k="mf:'+esc(f.id)+'">'
+       +'<button class="drm" data-rmmyfood="'+esc(f.id)+'" aria-label="'+esc(t("Remove")+" "+f.n)+'"><i>'+XSVG+'</i></button>'
+       +'<button class="dmain" data-myfood="'+esc(f.id)+'"><span class="dtext"><span class="drow-n">'+esc(f.n)+'</span>'
+       +'<span class="drow-s">'+esc(sv)+'<i class="ddot"></i>'+fmtN(f.kcal)+' kcal<i class="ddot"></i>'
+       +esc(t("P:"))+' '+r1(f.p)+'g</span></span><span class="ico ico-chev" aria-hidden="true"></span></button></div>';});
+    h+='</div>';}
+  h+='<button class="dadd" data-myfood="new"><span aria-hidden="true">+</span>'+t("Add your own food")+'</button>';
+  return h;}
 
-export {MEALS, mealNow, vFood};
+/* One saved meal, built in place: the title renames it, ✕ takes an item out, the
+   dashed + adds from the same search as logging. Level two of the Food tab. */
+function savedById(id){return (S.savedMeals||[]).filter(function(m){return m.id===id;})[0]||null;}
+function vSavedMeal(id){
+  var m=savedById(id);if(!m){V.smeal=null;return vFood();}
+  var items=m.items||[],tot=sumNutrition(items),now=mealNow();
+  var h='<div class="dhead">'+backArrow()
+   +'<button class="dname" data-renamemeal="'+m.id+'" aria-label="'+esc(t("Rename meal")+": "+m.name)+'">'
+   +'<h1 class="dhead-t">'+esc(m.name)+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button></div>'
+   +'<p class="dsub">'+esc(t("Saved meal"))+'</p>';
+  h+='<div class="mealbanner"><div><div class="mealbanner-k">'+esc(t("Total calories"))+'</div>'
+   +'<div class="mealbanner-v">'+fmtN(tot.kcal)+' kcal</div></div>'
+   +'<div class="mealbanner-m"><span>'+esc(t("P:"))+' '+r1(tot.p)+'g</span>'
+   +'<span>'+esc(t("C:"))+' '+r1(tot.c)+'g</span>'
+   +'<span>'+esc(t("F:"))+' '+r1(tot.f)+'g</span></div></div>';
+  h+='<div class="drows">';
+  items.forEach(function(it,i){
+    h+='<div class="drow" data-k="si:'+i+':'+esc(it.n)+'">'
+     +'<button class="drm" data-rmsmitem="'+m.id+'|'+i+'" aria-label="'+esc(t("Remove")+" "+it.n)+'"><i>'+XSVG+'</i></button>'
+     +'<div class="dmain"><span class="dtext"><span class="drow-n">'+esc(it.n)+'</span>'
+     +'<span class="drow-s">'+(it.label?esc(it.label)+'<i class="ddot"></i>':'')+fmtN(it.kcal)+' kcal<i class="ddot"></i>'
+     +esc(t("P:"))+' '+r1(it.p)+'g</span></span></div></div>';});
+  h+='</div>';
+  if(!items.length)h+='<p class="dempty">'+esc(t("Add the foods that go in it. They are logged together, in these amounts."))+'</p>';
+  h+='<button class="dadd" data-smadd="'+m.id+'"><span aria-hidden="true">+</span>'+t("Add food")+'</button>';
+  h+='<div class="dcta">'
+   +'<button class="btn dbegin" data-addsaved="'+m.id+'"'+(items.length?'':' disabled')+'>'
+   +esc(t("Add to")+" "+t(now==="Snack"?"Snacks":now))+'</button>'
+   +'<button class="ddel" data-delsaved="'+m.id+'">'+t("Delete this meal")+'</button></div>';
+  return h;}
+
+/* ---- Targets: what the day is measured against, and whether it is working ------
+   The gauge's sword stands upright on a day that meets the calorie target. Every
+   figure below it is its own input, as the old Nutrition Goals sheet had them; the
+   suggestion from your profile, the weight trend against your goal and how you have
+   actually been eating sit under them, so a target is changed where its evidence is. */
+function macroPct(p,c,f){
+  var kc=[p*4,c*4,f*9],kt=kc[0]+kc[1]+kc[2],pc=[0,0,0];
+  if(!kt)return pc;
+  var raw=kc.map(function(x){return x/kt*100;});
+  pc=raw.map(Math.floor);
+  var rest=100-pc[0]-pc[1]-pc[2];
+  raw.map(function(x,i){return [x-Math.floor(x),i];})
+    .sort(function(a,c2){return c2[0]-a[0];}).slice(0,rest)
+    .forEach(function(x){pc[x[1]]++;});
+  return pc;}
+function suggested(){
+  var p=S.profile||{};
+  if(!p.age||!p.height||!(lastWeight()||p.weight))return null;
+  var kc=Math.round(targetKcal()/10)*10,w=lastWeight()||p.weight,pr=proteinTarget(w),f=Math.round(kc*0.28/9);
+  return {tdee:tdee(),kcal:kc,p:pr,f:f,c:Math.max(50,Math.round((kc-pr*4-f*9)/4))};}
+var TRANGES=[[7,"1W"],[30,"1M"],[90,"3M"]];
+var TPAST={7:"Past 7 days",30:"Past 30 days",90:"Past 90 days"};
+function vTargets(){
+  var g=S.goals,e=eatenToday(today()),frac=g.kcal?e.kcal/g.kcal:0,over=e.kcal>g.kcal,h='';
+  h+='<div class="libhero tghero">'+gaugeArt(frac,{cls:"tghero-art"})
+   +'<span class="shk">'+t("Today")+'</span>'
+   +'<div class="tghero-n"><b>'+fmtN(e.kcal)+'</b><span>/ '+fmtN(g.kcal)+' kcal</span></div>'
+   +'<p class="tghero-s'+(over?' over':'')+'">'+esc(fmtN(Math.abs(g.kcal-e.kcal))+" "+t(over?"kcal over":"kcal left"))
+   +' · '+esc(t("Protein"))+' '+e.p+' / '+g.p+' g</p></div>';
+  var pc=macroPct(g.p,g.c,g.f);
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Daily targets")+'</h2></div>'
+   +'<label class="ngcard ngenergy" for="g_kcal"><span class="ngenergy-t">'
+   +'<span class="aflbl">'+esc(t("Daily energy goal"))+'</span>'
+   +'<span class="ngbig"><input id="g_kcal" type="number" inputmode="numeric" style="width:'+fitCh(g.kcal,"")+'ch" value="'+g.kcal+'"><i>kcal</i></span></span>'
+   +'<span class="ico ico-edit" aria-hidden="true"></span></label>'
+   +'<div class="ngcard"><div class="aflbl">'+esc(t("Macronutrient split"))+'</div>'
+   +'<div class="ngsplit" role="img" aria-label="'
+   +esc(t("Protein")+" "+pc[0]+"%, "+t("Carbs")+" "+pc[1]+"%, "+t("Fat")+" "+pc[2]+"%")+'">'
+   +(pc[0]?'<i class="p" style="flex-grow:'+pc[0]+'"></i>':'')
+   +(pc[1]?'<i class="c" style="flex-grow:'+pc[1]+'"></i>':'')
+   +(pc[2]?'<i class="f" style="flex-grow:'+pc[2]+'"></i>':'')+'</div>'
+   +'<div class="nglegend"><span>'+esc(t("Protein"))+': '+pc[0]+'%</span>'
+   +'<span>'+esc(t("Carbs"))+': '+pc[1]+'%</span><span>'+esc(t("Fat"))+': '+pc[2]+'%</span></div>'
+   +'<div class="aftiles ng3">'
+   +afTile("g_p",t("Protein"),"g",g.p,"0","numeric")
+   +afTile("g_c",t("Carbs"),"g",g.c,"0","numeric")
+   +afTile("g_f",t("Fat"),"g",g.f,"0","numeric")+'</div>'
+   +'<p class="afnote">'+esc(t("Your macros add up to"))+' '+fmtN(macroKcal(g.p,g.c,g.f))+' kcal.</p></div>'
+   +'<div class="ngcard"><div class="aflbl">'+esc(t("Other targets"))+'</div><div class="aftiles">'
+   +afTile("g_water",t("Water"),"ml",g.water,"0","numeric")
+   +afTile("g_steps",t("Steps"),"",g.steps,"0","numeric")+'</div></div>'
+   +'<button class="btn afcta" data-savegoals="1">'+esc(t("Save targets"))+'</button>';
+  /* From the profile: maintenance and a target sized to the goal. */
+  var sg=suggested();
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Suggested for you")+'</h2></div>';
+  if(!sg)h+='<div class="pgcard"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Add your age, height and weight, and Bunyan works out a target for your goal."))+'</p>'
+    +'<button class="btn g" data-sheet="set_you">'+esc(t("Add your details"))+'</button></div>';
+  else{
+    var same=sg.kcal===g.kcal&&sg.p===g.p&&sg.c===g.c&&sg.f===g.f;
+    h+='<div class="pgcard tgsug"><div class="tgsug-r"><div><div class="pgstat-k">'+esc(t("Maintenance"))+'</div><b>'+fmtN(sg.tdee)+'</b><small>kcal</small></div>'
+     +'<div><div class="pgstat-k">'+esc(t("For your goal"))+'</div><b class="a">'+fmtN(sg.kcal)+'</b><small>kcal</small></div>'
+     +'<div><div class="pgstat-k">'+esc(t("Protein"))+'</div><b>'+sg.p+'</b><small>g</small></div></div>'
+     +(same?'<p class="pgnote">✓ '+esc(t("These are your targets."))+'</p>'
+       :'<button class="btn g" data-usesug="1">'+esc(t("Use these targets"))+'</button>')+'</div>';}
+  /* Is it working: the weigh-ins against the goal. */
+  var tc=trendCard(true);
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Is it working?")+'</h2></div>'
+   +(tc||('<div class="pgcard"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Weigh in a few times over two weeks and this says whether the target is working."))+'</p>'
+    +'<button class="btn g" data-sheet="weigh">'+esc(t("Log weight"))+'</button></div>'));
+  /* And how the eating has actually gone, over a range of its own. */
+  var r=[7,30,90].indexOf(+V.frange)>=0?+V.frange:30;
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("How you have been eating")+'</h2></div>';
+  h+=seg({items:TRANGES.map(function(x){return [x[0],t(x[1]),t(TPAST[x[0]])];}),value:r,attr:"frange",
+    soft:true,cls:"pgrange",label:t("Time range"),key:"frange"});
+  h+=vNutrition(r);
+  return h;}
+
+export {MEALS, mealNow, savedById, vFood};

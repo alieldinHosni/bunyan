@@ -2699,6 +2699,55 @@ button.dv-card:active{transform:scale(.98)}
   border:1px solid var(--border);overflow:hidden;
   background:radial-gradient(90% 80% at 100% 0%,rgba(230,30,40,.18),transparent 65%),var(--raised)}
 .libhero-art{position:absolute;z-index:-1;top:-30px;inset-inline-end:-40px;width:210px;height:auto;opacity:.12;pointer-events:none}
+/* ---- The drawings (js/ui/art.js) ----------------------------------------------
+   The mark's single red stroke, a fainter second line, a few embers, a soft glow.
+   Placement is the screen's own rule; this is only how a line looks and arrives. */
+.art{display:block;overflow:visible;fill:none;stroke:var(--accentHi);stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;pointer-events:none;
+  filter:drop-shadow(0 0 6px var(--accent-glow))}
+.art .b{opacity:.42}
+.art .e{fill:var(--accentHi);stroke:none;opacity:.8}
+.art .lvl{stroke-width:2.6;opacity:1}
+.art.draw path{stroke-dasharray:1 1;stroke-dashoffset:1;animation:artDraw 1.6s var(--e-decel) forwards}
+.art.draw path.b{animation-delay:.18s}
+.art.draw .sword path{animation-delay:.3s}
+.art.draw .e{opacity:0;animation:artEmber .9s var(--e-standard) .9s forwards}
+@keyframes artDraw{to{stroke-dashoffset:0}}
+@keyframes artEmber{to{opacity:.8}}
+.art .sword{transition:transform var(--m-screen) var(--e-ios)}
+@media (prefers-reduced-motion:reduce){.art.draw path{animation:none;stroke-dashoffset:0}.art.draw .e{animation:none;opacity:.8}}
+body.noanim .art.draw path{animation:none;stroke-dashoffset:0}
+body.noanim .art.draw .e{animation:none;opacity:.8}
+/* Food. Today's loaf and frond sit at the header's far edge, clear of the title. */
+.fthead{position:relative;isolation:isolate}
+.fthead-art{position:absolute;z-index:-1;inset-inline-end:-6px;top:-10px;width:118px;height:auto;opacity:.75}
+[dir="rtl"] .fthead-art{transform:scaleX(-1)}
+/* The water's strands, the day's share bright. */
+.fwater-art{margin:10px -4px -2px}
+.fwater-art .art{width:100%;height:30px}
+.art-wave .lvl{animation:none!important;stroke-dashoffset:0!important;transition:stroke-dasharray var(--m-screen) var(--e-ios)}
+[dir="rtl"] .fwater-art .art{transform:scaleX(-1)}
+/* A saved meal's + : one tap logs it whole. */
+.dquick{flex:0 0 52px;display:grid;place-items:center;padding:0;background:none;border:none;color:var(--accentHi)}
+.dquick svg{width:30px;height:30px;padding:7px;border-radius:50%;fill:none;stroke:currentColor;stroke-width:2.4;
+  stroke-linecap:round;background:var(--accent-tint);box-shadow:inset 0 0 0 1px var(--accent-edge)}
+.dquick:active svg{transform:scale(.92)}
+/* An empty state with a drawing in place of the small icon. */
+.artempty{padding-top:18px}
+.empty-art{width:132px;height:auto;margin:0 auto 6px}
+/* Targets: the gauge and its sword over today's numbers. */
+.tghero{text-align:center;padding-top:14px}
+.tghero-art{width:210px;max-width:70%;height:auto;margin:0 auto 4px}
+.tghero-n{display:flex;align-items:baseline;justify-content:center;gap:8px;font-variant-numeric:tabular-nums}
+.tghero-n b{font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-.02em}
+.tghero-n span{color:var(--dim);font-size:14px}
+.tghero-s{margin:4px 0 0;color:var(--sub);font-size:13px;font-variant-numeric:tabular-nums}
+.tghero-s.over{color:var(--gold)}
+.tgsug-r{display:flex;justify-content:space-between;gap:10px;margin-bottom:14px}
+.tgsug-r b{display:block;font-family:var(--display);font-size:24px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+.tgsug-r b.a{color:var(--accentHi)}
+.tgsug-r small{color:var(--dim);font-size:12px}
+.tgsug .pgnote{margin:0;color:var(--ok)}
 .libhero .libhead{margin-bottom:14px}
 .libhero .shk{margin-bottom:4px}
 .libhero h1{font-size:30px}

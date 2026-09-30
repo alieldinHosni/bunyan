@@ -1,7 +1,8 @@
 /* Bunyan — progress
-   Progress tab: the four Progress frames from the user's export (Overview, Strength,
-   Body, Nutrition Trends), with the Body / Strength / Nutrition segmented control
-   from frame 2:484 as the way between them.
+   Progress tab: the Progress frames from the user's export (Overview, Strength,
+   Body), with the segmented control from frame 2:484 as the way between them. The
+   fourth frame, Nutrition Trends, is drawn here (vNutrition) but shown in Food →
+   Targets, next to the targets it measures.
 
    The four frames each draw a back chevron, as pushed screens, and none shows how
    they are reached. 2:484 answers that: they are views of one tab, switched in
@@ -33,6 +34,7 @@ import {fmtW, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, r1, shortd, today} from "../../util.js";
 import {seg, streak, V} from "../view.js";
 import {dateBar} from "../datebar.js";
+import {wdName, weekStart} from "../../engine/schedule.js";
 import {photoList} from "../photos.js";
 import {render} from "../render.js";
 
@@ -107,7 +109,9 @@ function lineChart(pts,o){
 function tooFew(text){return '<p class="pgnone">'+esc(text)+'</p>';}
 
 /* ---- the tab ------------------------------------------------------------------- */
-var TABS=[["overview","Overview"],["strength","Strength"],["body","Body"],["nutrition","Nutrition"]];
+/* Nutrition trends and the weight trend against the goal moved to Food → Targets,
+   beside the targets they judge. */
+var TABS=[["overview","Overview"],["strength","Strength"],["body","Body"]];
 function anything(){
   if(S.sessions.length||weighIns().length||measurements().length)return true;
   for(var d in S.days)if(S.days[d]&&S.days[d].meals)
@@ -124,7 +128,7 @@ function vProgress(){
       t("Finish one workout or log your weight, and volume, records, streaks and trends all start here."),
       '<button class="btn" data-go="train">'+t("Start a workout")+'</button>'
       +'<button class="btn g" data-sheet="weigh">'+t("Log weight")+'</button>');
-  var tab=V.ptab||"overview";
+  var tab=V.ptab==="strength"||V.ptab==="body"?V.ptab:"overview";
   h+=seg({items:TABS.map(function(x){return [x[0],t(x[1])];}),value:tab,attr:"ptab",
     tabs:true,label:t("Progress views"),key:"pgtabs"});
   var r=range();
@@ -139,7 +143,6 @@ function vProgress(){
     soft:true,cls:"pgrange",label:t("Time range"),key:"pgrange"});
   if(tab==="strength")h+=vStrength(r);
   else if(tab==="body")h+=vBody(r);
-  else if(tab==="nutrition")h+=vNutrition(r);
   else h+=vOverview(r);
   return h;}
 
@@ -382,7 +385,8 @@ function vStrength(r){
      +'<span>'+esc(t(x.g))+'</span>'
      +'<div class="bar" aria-hidden="true"><i style="width:'+Math.max(2,pct)+'%"></i></div>'
      +'<b>'+x.sets+'</b></div>';}).join("")
-   +'<p class="pgnote">'+esc(t("Around 10–20 hard sets per muscle each week is what most people grow on. Monday to today."))+'</p></div>';
+   +'<p class="pgnote">'+esc(t("Around 10–20 hard sets per muscle each week is what most people grow on."))+' '
+   +esc(t("From {d} to today.").replace("{d}",wdName(weekStart(),true)))+'</p></div>';
   /* Cardio and sport minutes against 150 a week — shown to anyone who does some, and
      to anyone whose goal it serves. */
   var wcd=weeklyCardio(),g5=(S.profile||{}).goal;
@@ -423,12 +427,13 @@ var TREND={
         up:"Drifting up. If that is not the plan, eat a little less."}};
 function sgn(kg){return (kg>0.004?"+":kg<-0.004?"\u2212":"\u00b1")+toDisp(Math.abs(kg));}
 function perWk(){return wUnit()+" / "+t("week");}
-function trendCard(){
+/* bare: without its own heading, for a screen that heads it in its own style. */
+function trendCard(bare){
   var tr=weightTrend();
   if(!tr)return "";
   var key=tr.goal==="lose"||tr.goal==="gain"?tr.goal:"hold",msg=(TREND[key]||{})[tr.status]||"";
   var good=tr.status==="ok";
-  return lbl(t("Trend against your goal"))
+  return (bare?'':lbl(t("Trend against your goal")))
    +'<div class="pgcard pgtrend'+(good?' ok':'')+'"><div class="pgtrend-r"><div><div class="pgstat-k">'
    +esc(t("Last"))+' '+tr.weeks+' '+esc(t(tr.weeks===1?"week":"weeks"))+'</div>'
    +'<div class="pgbig">'+esc(sgn(tr.perWk))+'<span>'+esc(perWk())+'</span></div></div>'
@@ -459,7 +464,6 @@ function vBody(r){
        +esc(t("Average for the range"))+' · '+avg+' '+esc(wUnit())+'</p>';}
     else h+=tooFew(t("Fewer than two weigh-ins in this range. Pick a longer one, or weigh in again."));}
   h+='<button class="btn g" data-sheet="weigh">'+esc(t("Log weight"))+'</button></div>';
-  h+=trendCard();
 
   var ms=measurements();
   h+=lbl(t("Measurements"),'<button class="pglink" data-sheet="measure">'+esc(t(ms.length?"Update":"Add"))+'</button>');
@@ -554,4 +558,4 @@ function vNutrition(r){
    +'<b class="acc">'+sk.kcal+' '+esc(t(sk.kcal===1?"day":"days"))+'</b></div>';
   return h;}
 
-export {vProgress};
+export {trendCard, vNutrition, vProgress};

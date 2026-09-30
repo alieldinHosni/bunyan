@@ -15,6 +15,7 @@ import {e1RM, lastWeight, sessionVolume} from "./formulas.js";
 import {sumNutrition} from "./nutrition.js";
 import {dataRev, S} from "../state.js";
 import {num, r1, today} from "../util.js";
+import {weekStartOf} from "./schedule.js";
 
 /* ---- dates ---------------------------------------------------------------- */
 /* Local calendar dates, with the same timezone correction as shiftDay(): without it
@@ -162,13 +163,13 @@ function muscleShare_raw(n){
 /* ---- this week's hard sets per muscle ---------------------------------------
    The one volume figure with solid evidence behind it for muscle growth: working
    sets per muscle per week, with roughly ten as a sensible floor and twenty as a
-   practical ceiling for most people. The target comes from the plan's level. Monday
-   to today; warm-ups and cardio do not count. */
+   practical ceiling for most people. The target comes from the plan's level. From
+   the first day of the week to today; warm-ups and cardio do not count. */
 var WGROUP={Chest:"Chest",Back:"Back",Shoulders:"Shoulders",Quads:"Quads",Hamstrings:"Hams & glutes",
   Glutes:"Hams & glutes",Biceps:"Biceps",Triceps:"Triceps"};
 var WORDER=["Chest","Back","Shoulders","Quads","Hams & glutes","Biceps","Triceps"];
-function weekStartISO(){var d=new Date();var k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);
-  return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
+/* The first day of this week, as the user's week runs (Saturday unless changed). */
+function weekStartISO(){return weekStartOf(today());}
 function weeklyVolume(){
   var from=weekStartISO(),c={};
   WORDER.forEach(function(g){c[g]=0;});
@@ -182,7 +183,7 @@ function weeklyVolume(){
   return {from:from,target:target,rows:WORDER.map(function(g){return {g:g,sets:c[g]};})};}
 
 /* Cardio and sport this week, in minutes, against the widely used guideline of 150
-   minutes of moderate activity a week. Counted from Monday, as the sets above are. */
+   minutes of moderate activity a week. Counted from the first day of the week, as the sets above are. */
 function weeklyCardio(){
   var from=weekStartISO(),min=0,recent=false,cut=isoAgo(28);
   S.sessions.forEach(function(s){

@@ -7,7 +7,7 @@ import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, editSplit, ownerOf, S, split} from "../../state.js";
 import {SPLIT_LEVEL} from "../../engine/plan.js";
 import {deloadDue, inDeload} from "../../engine/formulas.js";
-import {isoWeekday, nextPinned, pinnedOn, suggestWd} from "../../engine/schedule.js";
+import {isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder} from "../../engine/schedule.js";
 import {esc, fmtN, pretty, shortd, today} from "../../util.js";
 import {tokenMatch} from "../../engine/text.js";
 import {actInfo, intensityOf, isActivity} from "../../data/activities.js";
@@ -59,11 +59,6 @@ function nextDayOf(sp){
     var now=today(),done=S.sessions.some(function(s){return s.date===now&&s.dayId;});
     var n=nextPinned(sp,done?addDaysISO(now,1):now);return n?n.day:null;}
   var r=rotation(sp);return r?sp.days[r.idx]:null;}
-/* Short weekday names in the app's language, Monday = 1. */
-function wdName(n){
-  var d=new Date(2024,0,n);/* 1 Jan 2024 was a Monday */
-  try{return d.toLocaleDateString(S.prefs&&S.prefs.lang==="ar"?"ar-EG":"en-GB",{weekday:"short"});}
-  catch(e){return ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][n-1];}}
 
 /* ---- the plan on a date --------------------------------------------------------
    The split is a rotation, not a calendar, so "what is on Thursday" is a projection:
@@ -194,16 +189,11 @@ function vToday(sp){
   h+=deloadCard();
   h+=weekOffer(sp);
   return h;}
-/* Monday to Sunday of this week, as the weekly figures in Progress count it. */
-function thisWeek(){
-  var d=new Date(),k=(d.getDay()+6)%7,out=[];d.setDate(d.getDate()-k);
-  for(var i=0;i<7;i++){out.push(new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10));d.setDate(d.getDate()+1);}
-  return out;}
 /* Seven days: done (a tick), planned (a dot), rest or missed (quiet), today ringed. A
    tap shows that day in the card below; tapping today again goes back to it. */
 function weekStrip(sp,sel){
   var now=today(),done=0,plan=0,h="";
-  thisWeek().forEach(function(iso){
+  weekDates(now).forEach(function(iso){
     var p=planOn(sp,iso),st=p.kind==="done"?"done":p.kind==="past"?"past":(p.rest||p.kind==="none")?"rest":"plan";
     if(st==="done")done++;if(st==="done"||st==="plan")plan++;
     var lbl=pretty(iso)+", "+t({done:"Done",past:"Nothing logged",rest:"Rest day",plan:"Planned"}[st])+(p.name&&st!=="rest"&&st!=="past"?", "+p.name:"");
@@ -499,7 +489,7 @@ function builderBody(sp,id,inline){
      /* By weekday, each day carries the week: tap a weekday to pin it here. One taken
         by another day is dimmed, and tapping it moves it to this one. */
      +(week?'<div class="bwd" role="group" aria-label="'+esc(t("Weekdays for")+" "+d.name)+'">'
-       +[1,2,3,4,5,6,7].map(function(n){
+       +weekOrder().map(function(n){
          var mine=(d.wd||[]).indexOf(n)>=0,other=!mine&&sp.days.some(function(o){return o!==d&&(o.wd||[]).indexOf(n)>=0;});
          return '<button class="'+(mine?'on':other?'taken':'')+'" data-wd="'+d.id+'|'+n+'" aria-pressed="'+mine+'">'+esc(wdName(n))+'</button>';}).join("")
        +'</div>':'')

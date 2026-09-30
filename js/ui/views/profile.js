@@ -57,7 +57,7 @@ function vProfile(){
     +prow('data-sheet="set_training"',t("Training"),
        t(p.prog.charAt(0).toUpperCase()+p.prog.slice(1))+" · "+t("RPE")+" "
        +rpeLabel.toLowerCase())
-    +prow('data-sheet="set_nutrition"',t("Nutrition"),
+    +prow('data-fsec="targets"',t("Nutrition"),
        fmtN(g.kcal)+" kcal · "+g.p+"g "+t("Protein").toLowerCase())
     +prow('data-sheet="set_app"',t("App"),
        [S.theme==="dark"?t("Dark"):t("Light"),

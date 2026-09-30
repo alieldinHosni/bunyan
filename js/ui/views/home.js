@@ -7,7 +7,8 @@ import {t} from "../../i18n/dict.js";
 import {backupAgeDays, backupDue, eatenToday} from "../../engine/formulas.js";
 import {curProfile, dayRec, S, split} from "../../state.js";
 import {estMinutes, nextDayOf, planOn} from "./train.js";
-import {esc, fmtN, num, today, weekDays} from "../../util.js";
+import {esc, fmtN, num, today} from "../../util.js";
+import {weekDates} from "../../engine/schedule.js";
 
 /* ---- pieces the frame is made of ------------------------------------------ */
 
@@ -36,14 +37,12 @@ function kcalRing(pct){
    +' transform="rotate(-90 36 36)"/></svg>';
 }
 
-/* This week, Sunday first (weekDays() in util.js, shared with the Train hub). A dot is
-   lit when a session was logged that day. The design's example is a Thursday with five
-   lit dots and two dark ones, which is exactly a Sunday-first week, so the order is the
-   design's own rather than a choice made here. */
+/* This week, from the first day of the user's week (Saturday unless changed), the
+   same seven days the Train strip shows. A dot is lit when a session was logged. */
 function weekDots(){
   var done={},i;
   for(i=0;i<S.sessions.length;i++)done[S.sessions[i].date]=1;
-  var dots=weekDays().map(function(iso){return !!done[iso];});
+  var dots=weekDates(today()).map(function(iso){return !!done[iso];});
   return {dots:dots,n:dots.filter(Boolean).length};
 }
 
@@ -117,7 +116,7 @@ function vHome(){
 
   /* ---- daily nutrition ---- */
   var pct=g.kcal?e.kcal/g.kcal:0;
-  h+='<button class="card tap nutri" data-go="food">'
+  h+='<button class="card tap nutri" data-fsec="today">'
    +'<div class="nutri-info"><h3 class="nutri-h">'+t("Daily Nutrition")+'</h3>'
    /* The calories figure is the number logging food changes, so it counts up. The
       attribute carries the raw value; the text is the grouped one. */

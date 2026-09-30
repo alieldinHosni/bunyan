@@ -437,6 +437,80 @@ await test("workout bar: the clock on other tabs, rest counts down there, rest o
   await page.tap('#wbar .wbar');await pause(page,500);
   eq(await ev(page,"[V.tab,V.restDone,!!document.getElementById('rest').firstChild]"),["train",true,true],"rest-over screen on return");
 },{prefs:{autorest:true}});
+
+/* ---- the week, and Food in three sections -------------------------------------------- */
+await test("the week starts on Saturday everywhere, and the setting moves it",async page=>{
+  const r=await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");const st=await import("/js/engine/stats.js");const u=await import("/js/util.js");
+    const f=sc.weekStartOf(u.today());return [sc.isoWeekday(f),sc.weekDates(u.today()).length,st.weeklyVolume().from===f,sc.spreadWd(3),sc.weekOrder()[6]];});
+  eq(r,[6,7,true,[6,1,3],5],"Saturday first, Friday last and free");
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");return sc.isoWeekday(document.querySelector('.twk-d').getAttribute('data-tweek'));}),6,"strip opens on Saturday");
+  await page.tap('nav [data-tab="profile"]');await pause(page);await page.tap('[data-sheet="set_app"]');await pause(page);
+  await page.tap('[data-wkstart]');await pause(page);
+  eq(await ev(page,"S.prefs.wkstart"),7,"then Sunday");
+  eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");const u=await import("/js/util.js");return sc.isoWeekday(sc.weekStartOf(u.today()));}),7);
+});
+await test("Food sections switch, are remembered, and a Food tap at the top returns to Today",async page=>{
+  await page.tap('nav [data-tab="food"]');await pause(page);
+  if(!(await page.$('.fsum'))||!(await page.$('.fwater-art')))throw new Error("Today is not the dashboard");
+  if(await page.$('[data-quickfood].pill'))throw new Error("frequent pills still on the page");
+  await page.tap('[data-fsec="targets"]');await pause(page);
+  if(!(await page.$('#g_kcal'))||!(await page.$('.tghero .art-gauge')))throw new Error("Targets has no inline goals");
+  await page.reload();await pause(page,1000);
+  await page.tap('nav [data-tab="food"]');await pause(page);
+  eq(await ev(page,"[V.fsec,!!document.getElementById('g_kcal')]"),["targets",true],"remembered");
+  await page.tap('nav [data-tab="food"]');await pause(page);
+  eq(await ev(page,"[V.fsec,S.prefs.fsec,!!document.querySelector('.fsum')]"),["today","today",true],"tap at the top");
+});
+await test("My Foods: build a meal from search, log it whole, and ✕ removes it with Undo",async page=>{
+  await page.tap('nav [data-tab="food"]');await pause(page);
+  await page.tap('[data-fsec="foods"]');await pause(page);
+  await page.tap('[data-newmeal]');await pause(page);await page.fill('#askv','Ful breakfast');await page.tap('[data-askok]');await pause(page,400);
+  const id=await ev(page,"V.smeal");if(!id)throw new Error("no meal screen");
+  await page.tap('[data-smadd]');await pause(page,1200);
+  eq(await ev(page,"[V.sheet,V.sd.into]"),["addfood",id],"sheet adds into the meal");
+  await page.fill('#fq','ful');await pause(page,900);
+  await page.evaluate(()=>document.activeElement.blur());await pause(page,200);
+  await page.tap('#sheet .afadd');await pause(page,500);
+  eq(await ev(page,"[S.savedMeals.find(m=>m.id==='"+id+"').items.length,V.sheet,V.smeal]"),[1,null,id],"into the meal, back on its screen");
+  await page.tap('.dcta [data-addsaved]');await pause(page,400);
+  eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");
+    return Object.values(s.dayRec(u.today()).meals).reduce((n,m)=>n+m.items.length,0)>0;}),true,"logged whole");
+  await page.tap('[data-back]');await pause(page,500);
+  eq(await ev(page,"[V.fsec,V.smeal]"),["foods",null],"back to My Foods");
+  await page.tap('[data-rmsaved="'+id+'"]');await pause(page);
+  eq(await ev(page,"S.savedMeals.length"),0,"removed");
+  await page.tap('.toast-undo');await pause(page);
+  eq(await ev(page,"S.savedMeals.length"),1,"undo");
+});
+await test("your own food: edited in My Foods, blank calories come from the macros, ✕ with Undo",async page=>{
+  await page.tap('nav [data-tab="food"]');await pause(page);
+  await page.tap('[data-fsec="foods"]');await pause(page);
+  await page.tap('[data-myfood="new"]');await pause(page);
+  await page.fill('#mf_n','Koshari');await page.fill('#mf_s','1 plate');
+  await page.fill('#mf_p','20');await page.fill('#mf_c','100');await page.fill('#mf_f','10');
+  await page.tap('[data-savemyfoodx]');await pause(page);
+  eq(await ev(page,"[S.myFoods.length,S.myFoods[0].kcal,S.myFoods[0].s[0][0]]"),[1,570,"1 plate"],"made, kcal from macros");
+  await page.tap('[data-myfood^="my_"]');await pause(page);
+  await page.fill('#mf_k','600');await page.tap('[data-savemyfoodx]');await pause(page);
+  eq(await ev(page,"[S.myFoods.length,S.myFoods[0].kcal]"),[1,600],"edited in place");
+  await page.tap('[data-rmmyfood]');await pause(page);
+  eq(await ev(page,"S.myFoods.length"),0);
+  await page.tap('.toast-undo');await pause(page);
+  eq(await ev(page,"S.myFoods.length"),1);
+});
+await test("Targets: goals save in place, the suggestion applies, and Progress no longer has Nutrition",async page=>{
+  await page.tap('nav [data-tab="food"]');await pause(page);
+  await page.tap('[data-fsec="targets"]');await pause(page);
+  await page.fill('#g_kcal','2222');await page.tap('[data-savegoals]');await pause(page);
+  eq(await ev(page,"S.goals.kcal"),2222);
+  await page.tap('[data-usesug]');await pause(page);
+  eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const f=await import("/js/engine/formulas.js");
+    return s.S.goals.kcal===Math.round(f.targetKcal()/10)*10&&s.S.goals.kcal!==2222;}),true,"suggested applied");
+  if(!(await page.$('.pgadh'))&&!(await page.$('.empty')))throw new Error("no eating trends");
+  await page.tap('nav [data-tab="progress"]');await pause(page);
+  eq(await page.$$eval('[data-ptab]',a=>a.map(b=>b.getAttribute("data-ptab")).filter((v,i,x)=>x.indexOf(v)===i).sort()),["body","overview","strength"]);
+});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);
