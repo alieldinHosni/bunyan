@@ -3,7 +3,7 @@
 import {EXDB, isCompound, muscleOf} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {PRESETS} from "../data/splits.js";
-import {adoptSplit, S, saveDB} from "../state.js";
+import {addProgram, makeProgram, S, saveDB} from "../state.js";
 import {num} from "../util.js";
 
 /* ============================================================ plan engine */
@@ -55,10 +55,10 @@ var SPLIT_GOAL={
   maintain:{fb:2,ul:3,ap:3,ppl:1,bro:0,arnold:0,bw:2}
 };
 var SPLIT_LEVEL={
-  new:        {fb:4,ul:3,ap:1,ppl:-1,bro:-3,arnold:-4,bw:3},
-  some:       {fb:1,ul:2,ap:2,ppl:1,bro:0,arnold:-1,bw:0},
-  experienced:{fb:0,ul:1,ap:2,ppl:2,bro:1,arnold:1,bw:-1},
-  advanced:   {fb:-1,ul:1,ap:1,ppl:2,bro:2,arnold:2,bw:-1}
+  new:        {fb:4,ul:3,ap:1,ppl:-1,bro:-3,arnold:-4,bw:3,sl5:2,db:3,glute:0,ppl3:1,foot:1,fl:3},
+  some:       {fb:1,ul:2,ap:2,ppl:1,bro:0,arnold:-1,bw:0,sl5:3,db:1,glute:2,ppl3:3,foot:2,fl:2},
+  experienced:{fb:0,ul:1,ap:2,ppl:2,bro:1,arnold:1,bw:-1,sl5:1,db:0,glute:3,ppl3:1,foot:3,fl:0},
+  advanced:   {fb:-1,ul:1,ap:1,ppl:2,bro:2,arnold:2,bw:-1,sl5:0,db:-1,glute:1,ppl3:0,foot:1,fl:-1}
 };
 /* Measured, not assumed. Guessing which split "shapes" need a barbell is wrong —
    Upper/Lower is perfectly good with dumbbells; what matters is how much of a given
@@ -142,7 +142,7 @@ function buildPlan(){
   var p=S.profile, L=LEVELS[p.level]||LEVELS.some, G=GOALS[p.goal]||GOALS.lose;
   var id=recommendSplit(num(p.days,3),p.level,p.goal,S.gear);
   var base=PRESETS().filter(function(x){return x.id===id;})[0];
-  var plan=adoptSplit(base);
+  var plan=makeProgram(base);
   plan.tag=L.label.toLowerCase()+" \u00b7 "+G.label.toLowerCase()+" \u00b7 "+p.days+" days";
   /* Level sets the volume and the main lift's range. Only what a level or goal
      actually changes is touched: timed holds (a plank is seconds, not reps), core,
@@ -168,7 +168,7 @@ function buildPlan(){
       }
     });
   });
-  S.myPlan=plan;
+  addProgram(plan,true);
   S.plannedWeekly=L.weekly;
   saveDB();
   return plan;

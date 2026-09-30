@@ -2,7 +2,7 @@
    Compositional Arabic exercise names, plus applyLang(). */
 import {actInfo} from "../data/activities.js";
 import {S} from "../state.js";
-import {exShort} from "../data/exercises.js";
+import {EXDB, exShort} from "../data/exercises.js";
 
 /* ============================================================ exercise names
    873 names built from roughly 300 terms, so the terms are translated and the name
@@ -196,6 +196,7 @@ function exAr(name){
 function exName(n){
   var ar=S.prefs&&S.prefs.lang==="ar",a=actInfo(n);
   if(a)return ar&&a.ar?a.ar:(a.lib?exShort(n):n);
+  if(ar&&EXDB&&EXDB[n]&&EXDB[n].ar)return EXDB[n].ar;
   var s=exShort(n);return ar?exAr(s):s;}
 function applyLang(){
   var ar=S.prefs&&S.prefs.lang==="ar";

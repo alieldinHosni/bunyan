@@ -7,6 +7,7 @@ import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, editSplit, ownerOf, S, split} from "../../state.js";
 import {SPLIT_LEVEL} from "../../engine/plan.js";
 import {deloadDue, inDeload} from "../../engine/formulas.js";
+import {nextPinned, pinnedOn, suggestWd} from "../../engine/schedule.js";
 import {esc, fmtN, shortd, today, weekDays} from "../../util.js";
 import {dateBar, shiftDay} from "../datebar.js";
 import {tokenMatch} from "../../engine/text.js";
@@ -52,7 +53,18 @@ function rotation(sp){
   var due=ls?addDaysISO(ls.date,rests+1):now;
   if(due<now)due=now;
   return {idx:idx,due:due,last:ls,li:li};}
-function nextDayOf(sp){var r=rotation(sp);return r?sp.days[r.idx]:null;}
+/* The next day to train. By weekday: today's pinned day unless it is already done,
+   else the next pinned one. In rotation: the next in order. */
+function nextDayOf(sp){
+  if(sp.schedule==="week"){
+    var now=today(),done=S.sessions.some(function(s){return s.date===now&&s.dayId;});
+    var n=nextPinned(sp,done?addDaysISO(now,1):now);return n?n.day:null;}
+  var r=rotation(sp);return r?sp.days[r.idx]:null;}
+/* Short weekday names in the app's language, Monday = 1. */
+function wdName(n){
+  var d=new Date(2024,0,n);/* 1 Jan 2024 was a Monday */
+  try{return d.toLocaleDateString(S.prefs&&S.prefs.lang==="ar"?"ar-EG":"en-GB",{weekday:"short"});}
+  catch(e){return ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][n-1];}}
 
 /* ---- the plan on a date --------------------------------------------------------
    The split is a rotation, not a calendar, so "what is on Thursday" is a projection:
@@ -78,6 +90,13 @@ function planOn(sp,iso){
   var sw=S.daySwap&&S.daySwap[iso];
   if(sw){var od=sp.days.filter(function(d){return d.id===sw;})[0];
     if(od)return {kind:iso===now?"today":"plan",day:od,name:od.name,rest:!od.ex.length,swapped:true};}
+  /* By weekday: whatever is pinned to that weekday, and a rest day otherwise. */
+  if(sp.schedule==="week"){
+    var pd=pinnedOn(sp,iso),kw=iso===now?"today":"plan";
+    if(!sp.days.some(function(d){return d.ex.length&&(d.wd||[]).length;}))return {kind:"none"};
+    if(pd)return {kind:kw,day:pd,name:pd.name,rest:false};
+    var nx=nextPinned(sp,iso);
+    return {kind:kw,day:null,name:t("Rest day"),rest:true,next:nx&&nx.day};}
   var r=rotation(sp);
   if(!r)return {kind:"none"};
   var len=sp.days.length,kind=iso===now?"today":"plan",d;
@@ -174,6 +193,7 @@ function vTrain(){
 
   /* ---- a lighter week: offered when the log shows it is due, shown while it runs */
   h+=deloadCard();
+  h+=weekOffer(sp);
   /* ---- two tiles, side by side: the plan's days (in a sheet, so the page stays
      short) and the library. The next two days are one swipe of the date bar away. */
   var nDays=sp.days.length;
@@ -192,7 +212,7 @@ function vTrain(){
   /* ---- other programs ----
      The app's own preset splits, each with its own photograph — see SPLIT_IMG.
      No "premium": everything here is free. */
-  var others=allSplits().filter(function(o){return o.id!==sp.source&&o.id!==sp.id;});
+  var others=allSplits().filter(function(o){return !editSplit(o.id)&&o.id!==sp.from;});
   if(others.length){
     h+='<div class="tsec"><h2 class="tsec-h">'+t("Other Programs")+'</h2>'
      +'<button class="tlink" data-train="splits">'+t("All")+'</button></div>'
@@ -238,6 +258,21 @@ function deloadCard(){
    +t("One lighter week — fewer sets, about 10% less weight — usually brings progress back.")+'</p>'
    +'<div class="dlcard-a"><button class="btn" data-deload="start">'+t("Start a lighter week")+'</button>'
    +'<button class="dlcard-later" data-deload="later">'+t("Not now")+'</button></div></div>';}
+/* Offered once, for a program running in rotation: fixed weekdays, suggested from
+   when each day has actually been trained. */
+function weekOffer(sp){
+  if(sp.schedule==="week"||S.wdOffered)return "";
+  var train=sp.days.filter(function(d){return d.ex.length;});
+  if(train.length<2)return "";
+  var sug=suggestWd(sp);
+  var line=train.map(function(d){return esc(d.name)+' · '+(sug[d.id]||[]).map(wdName).join(", ");}).join('<br>');
+  return '<div class="dlcard wkoffer"><div class="dlcard-h"><span class="dlcard-i" aria-hidden="true">'+CAL+'</span>'
+   +'<b>'+t("Train on fixed weekdays?")+'</b></div>'
+   +'<p>'+t("Your program runs in rotation. Pinned to weekdays, from when you usually train:")+'</p>'
+   +'<p class="wkoffer-l">'+line+'</p>'
+   +'<div class="dlcard-a"><button class="btn" data-wdoffer="yes">'+t("Switch to weekdays")+'</button>'
+   +'<button class="dlcard-later" data-wdoffer="no">'+t("Keep rotation")+'</button></div></div>';}
+var CAL='<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
 var FEATHER='<svg viewBox="0 0 24 24"><path d="M20 4c-7 0-13 5-13 12v4M7 16c3 0 8-1 11-6M4 20l3-4"/></svg>';
 
 /* Every day of the plan, for the My Training sheet. The only way to open, edit or
@@ -316,8 +351,8 @@ function vPreview(){
        +esc(exName(e.name))+'</span><span class="tiny num">'+e.sets+' \u00d7 '+e.lo
        +(e.hi!==e.lo?"\u2013"+e.hi:"")+'</span></div>';});
     h+='</div>';});
-  h+='<button class="btn" data-adopt="'+sp.id+'">'+t("Make this my training")+'</button>';
-  if(sp.custom)h+='<button class="btn d" data-delsplit="'+sp.id+'">'+t("Delete this saved split")+'</button>';
+  h+='<button class="btn" data-adopt="'+sp.id+'">'+t("Use this program")+'</button>'
+   +'<p class="bnote">'+t("You get your own copy to change as you like.")+'</p>';
   return h;}
 
 function vBodyweight(){
@@ -403,20 +438,22 @@ function vLibrary(){
 var HERO_ART='<img class="libhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">';
 var PLUS='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 function vSplits(){
-  var h=backBar(),mine=split().source,us=S.userSplits||[];
+  var h=backBar(),mine=S.activeProgram,us=S.programs||[];
   /* The same hero as the library: the Bunyan mark over the red glow. */
   h+='<div class="libhero bhero">'+HERO_ART
    +'<span class="shk">'+t("Training")+'</span><h1>'+t("Programs")+'</h1>'
-   +'<p class="sub">'+t("One active at a time. Build your own, or start from a proven split.")+'</p>'
+   +'<p class="sub">'+t("One active at a time. Build your own, or start from a proven program.")+'</p>'
    +'<button class="bnew" data-newsplit="1"><span class="bnew-i">'+PLUS+'</span>'
-   +'<span class="bnew-t"><b>'+t("Build a split from scratch")+'</b><span>'+t("Name it, pick the days, fill them from the library")+'</span></span>'
+   +'<span class="bnew-t"><b>'+t("Build a program from scratch")+'</b><span>'+t("Name it, pick the days, fill them from the library")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button></div>';
   if(us.length){
-    h+='<div class="tsec"><h2 class="tsec-h">'+t("Your splits")+'</h2><span class="libn">'+us.length+'</span></div><div class="drows">';
+    h+='<div class="tsec"><h2 class="tsec-h">'+t("My programs")+'</h2><span class="libn">'+us.length+'</span></div><div class="drows">';
     us.forEach(function(sp){
       var src=editSplit(sp.id)||sp,tr=src.days.filter(function(d){return d.ex.length;}).length,on=mine===sp.id;
       h+='<div class="drow bsp'+(on?' on':'')+'" data-k="us:'+sp.id+'">'
-       +'<button class="drm" data-delsplit="'+sp.id+'" aria-label="'+esc(t("Delete")+" "+src.name)+'"><i>'+XSVG+'</i></button>'
+       /* The active program cannot be deleted from here: switch away from it first. */
+       +(on?'<span class="drm" aria-hidden="true"></span>'
+          :'<button class="drm" data-delsplit="'+sp.id+'" aria-label="'+esc(t("Delete")+" "+src.name)+'"><i>'+XSVG+'</i></button>')
        +'<button class="dmain" data-editsplit="'+sp.id+'"><span class="dtext"><span class="drow-n">'+esc(src.name)+'</span>'
        +'<span class="drow-s">'+src.days.length+' '+t(src.days.length===1?"day":"days")+'<i class="ddot"></i>'
        +tr+' '+t(tr===1?"training day":"training days")+'</span></span>'
@@ -425,13 +462,12 @@ function vSplits(){
     h+='</div>';}
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Ready-made")+'</h2><span class="dhint">'+t("Fixed — adopt one to train on it")+'</span></div>';
   h+='<div class="card tdays">';
-  allSplits().filter(function(sp){return !sp.custom;}).forEach(function(sp){
+  allSplits().filter(function(sp){return !editSplit(sp.id);}).forEach(function(sp){
     var days=sp.days.filter(function(d){return d.ex.length;}).length;
     h+='<button class="trow" data-preview="'+sp.id+'"><span class="bdays" aria-hidden="true"><b>'+days+'</b>'+t("days")+'</span>'
      +'<span><span class="trow-n">'+esc(sp.name)+'</span>'
      +'<span class="trow-s">'+(tagNote(sp.tag)?esc(t(tagNote(sp.tag))):'')+'</span></span>'
-     +(mine===sp.id?'<span class="bpill">'+t("Active")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
-     +'</button>';});
+     +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
   return h+'</div>';}
 
 /* ---- the split builder ------------------------------------------------------------
@@ -439,13 +475,13 @@ function vSplits(){
    for another, and a tap into any day to fill it from the library. */
 function vBuilder(){
   var sp=editSplit(V.previewId);if(!sp){V.train="splits";return vSplits();}
-  var active=split().source===V.previewId;
+  var active=S.activeProgram===V.previewId,week=sp.schedule=="week";
   var tr=sp.days.filter(function(d){return d.ex.length;}).length;
   var nEx=sp.days.reduce(function(n,d){return n+d.ex.length;},0);
   var h=backBar();
   h+='<div class="libhero bhero">'+HERO_ART
-   +'<span class="shk">'+t(active?"Your training":"Split builder")+'</span>'
-   +'<button class="dname" data-renamesplit="'+V.previewId+'" aria-label="'+esc(t("Rename split"))+': '+esc(sp.name)+'">'
+   +'<span class="shk">'+t(active?"Your training":"Program builder")+'</span>'
+   +'<button class="dname" data-renamesplit="'+V.previewId+'" aria-label="'+esc(t("Rename program"))+': '+esc(sp.name)+'">'
    +'<h1 class="dhead-t">'+esc(sp.name)+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button>'
    +'<div class="bstats"><span><b>'+sp.days.length+'</b>'+t(sp.days.length===1?"day":"days")+'</span>'
    +'<span><b>'+tr+'</b>'+t(tr===1?"training day":"training days")+'</span>'
@@ -456,6 +492,10 @@ function vBuilder(){
      +[2,3,4,5,6,7].map(function(n){return '<button class="'+(sp.days.length===n?'on':'')+'" data-bdays="'+n+'" aria-pressed="'+(sp.days.length===n)+'">'+n+'</button>';}).join("")
      +'</div></div>';
   h+='</div>';
+  /* How the days fall: pinned to weekdays, or one after another whenever you train. */
+  h+='<div class="bsched" role="group" aria-label="'+esc(t("Schedule"))+'">'
+   +'<button class="'+(week?'on':'')+'" data-sched="week" aria-pressed="'+week+'"><b>'+t("By weekday")+'</b><span>'+t("Same days every week")+'</span></button>'
+   +'<button class="'+(week?'':'on')+'" data-sched="cycle" aria-pressed="'+!week+'"><b>'+t("In rotation")+'</b><span>'+t("Next day whenever you train")+'</span></button></div>';
   h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Days")+'</h2>'
    +(sp.days.length>1?'<span class="dhint">'+t("Hold the grip to reorder")+'</span>':'')+'</div>';
   h+='<div class="drows">';
@@ -469,13 +509,20 @@ function vBuilder(){
         :'<em>'+t("Tap to add exercises")+'</em>')+'</span></span>'
      +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
      +(sp.days.length>1?'<button class="dgrip" data-grip="'+d.id+'" aria-label="'+esc(t("Move")+" "+d.name)+'">'+GRIPSVG+'</button>':'')
+     /* By weekday, each day carries the week: tap a weekday to pin it here. One taken
+        by another day is dimmed, and tapping it moves it to this one. */
+     +(week?'<div class="bwd" role="group" aria-label="'+esc(t("Weekdays for")+" "+d.name)+'">'
+       +[1,2,3,4,5,6,7].map(function(n){
+         var mine=(d.wd||[]).indexOf(n)>=0,other=!mine&&sp.days.some(function(o){return o!==d&&(o.wd||[]).indexOf(n)>=0;});
+         return '<button class="'+(mine?'on':other?'taken':'')+'" data-wd="'+d.id+'|'+n+'" aria-pressed="'+mine+'">'+esc(wdName(n))+'</button>';}).join("")
+       +'</div>':'')
      +'</div>';});
   h+='</div><button class="dadd" data-bday="1"><span aria-hidden="true">+</span>'+t("Add day")+'</button>';
   h+='<div class="dcta">'
    +(active?'<p class="bactive">✓ '+t("This is your training")+'</p>'
-      :'<button class="btn dbegin" data-adopt="'+V.previewId+'"'+(tr?'':' disabled')+'>'+t("Make this my training")+'</button>'
+      :'<button class="btn dbegin" data-adopt="'+V.previewId+'"'+(tr?'':' disabled')+'>'+t("Make it active")+'</button>'
        +(tr?'':'<p class="bnote">'+t("Add exercises to at least one day first.")+'</p>'))
-   +'<button class="ddel" data-delsplit="'+V.previewId+'">'+t("Delete this split")+'</button></div>';
+   +'<button class="ddel" data-delsplit="'+V.previewId+'">'+t("Delete this program")+'</button></div>';
   return h;}
 
 /* ---- a day: the routine, built in place --------------------------------------
@@ -490,7 +537,7 @@ function vDay(){
   var d=dayOf(V.dayId);if(!d){V.train="days";return vTrain();}
   var sp=ownerOf(d.id)||split(),live=sp===split();
   var pos=sp.days.indexOf(d)+1;
-  var lvl=levelOf(sp.source);
+  var lvl=levelOf(sp.from);
   var h='<div class="dhead">'+backArrow()
    +'<button class="dname" data-renameday="'+d.id+'" aria-label="'+esc(t("Rename day"))+': '+esc(d.name)+'">'
    +'<h1 class="dhead-t">'+esc(d.name)+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button></div>'
@@ -532,4 +579,4 @@ function vDay(){
   h+='</div>';
   return h;}
 
-export {estMinutes, exHay, myDaysList, nextDayOf, planOn, vTrain};
+export {estMinutes, exHay, myDaysList, nextDayOf, planOn, vTrain, wdName};

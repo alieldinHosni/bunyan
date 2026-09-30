@@ -3,6 +3,7 @@
 import {S} from "../state.js";
 import {esc} from "../util.js";
 import {ACTS, actIcon, actMuscle, isActivity} from "./activities.js";
+import {EXTRA} from "./extra.js";
 
 /* ============================================================ exercise library */
 /* n=name m=muscle e=equipment c=compound */
@@ -66,7 +67,7 @@ function reconcileExercises(state){
       if(id)e.exId=id;
     }
   }
-  var pools=[state.myPlan].concat(state.userSplits||[]);
+  var pools=(state.programs||[]).concat(state.myPlan?[state.myPlan]:[],state.userSplits||[]);
   pools.forEach(function(sp){if(!sp)return;
     (sp.days||[]).forEach(function(d){(d.ex||[]).forEach(function(e){fix(e,function(){plans=true;});});});});
   if(state.active)(state.active.entries||[]).forEach(function(e){fix(e,function(){plans=true;});});
@@ -136,8 +137,8 @@ function loadExDB(cb){
   if(EXDB_TRIED){cb&&cb();return;}
   EXDB_TRIED=true;
   fetch("exercises.json").then(function(r){return r.json();})
-    .then(function(j){EXDB=j;buildLIB();cb&&cb();})
-    .catch(function(){EXDB={};buildLIB();cb&&cb();});
+    .then(function(j){EXDB=j;Object.keys(EXTRA).forEach(function(n){if(!EXDB[n])EXDB[n]=EXTRA[n];});buildLIB();cb&&cb();})
+    .catch(function(){EXDB=Object.assign({},EXTRA);buildLIB();cb&&cb();});
 }
 function loadInstructions(cb){
   if(EXINS){cb();return;}
@@ -178,7 +179,7 @@ function trimStep(s){
   return s;
 }
 function exSteps(n){
-  var raw=(EXINS&&EXINS[n])||null;
+  var raw=(EXINS&&EXINS[n])||(EXDB&&EXDB[n]&&EXDB[n].s)||null;
   if(!raw)return null;
   var out=[];
   for(var i=0;i<raw.length;i++){
@@ -191,7 +192,7 @@ function exSteps(n){
   return out.length?out:null;
 }
 function exImg(n,idx){
-  var m=exMedia(n); if(!m)return null;
+  var m=exMedia(n); if(!m||m.own)return null;
   return IMG_BASE+m.i+"/"+(idx||0)+".jpg";}
 /* One shape for every empty state: an icon, what is missing, and the action that
    fixes it. cta is raw markup so callers can pass whatever button they need. */

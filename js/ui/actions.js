@@ -10,8 +10,9 @@ import {leave} from "./motion.js";
 import {FOODDB, nutritionFor, recalcItem, toLogItem} from "../engine/nutrition.js";
 import {render} from "./render.js";
 import {pushNav} from "./nav.js";
+import {spreadWd} from "../engine/schedule.js";
 import {day, ex} from "../data/splits.js";
-import {editSplit, ownerOf, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
+import {addProgram, makeProgram, editSplit, ownerOf, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
 import {MEM, num, PERSIST, r1, today, uid, wr} from "../util.js";
 import {audioOn, endRest, keepAwake, play, tap, toast, V} from "./view.js";
 
@@ -30,32 +31,41 @@ function runAct(name,value){
   closeSheet();
   if(f)f(value,d);}
 
-/* A new split opens straight in its builder, with three days to start from. It is
-   not made your training until you say so — the builder's button does that. */
+/* A new program opens straight in its builder: three days, by weekday, spread over
+   the week. It is not made active until you say so — the builder's button does that. */
 ACT.newsplit=function(name){
-  var sp={id:uid(),name:String(name).trim(),tag:"custom",custom:true,days:[day("Day 1",[]),day("Day 2",[]),day("Day 3",[])]};
-  (S.userSplits=S.userSplits||[]).push(sp);
+  var wd=spreadWd(3);
+  var sp={id:uid(),name:String(name).trim(),from:null,schedule:"week",
+    days:[1,2,3].map(function(n,i){var d=day(t("Day")+" "+n,[]);d.wd=[wd[i]];return d;})};
+  (S.programs=S.programs||[]).push(sp);
   saveDB();pushNav();V.previewId=sp.id;V.train="builder";render();window.scrollTo(0,0);};
 ACT.renamesplit=function(name,id){
-  var sp=editSplit(id);if(!sp)return;sp.name=String(name).trim();
-  var us=(S.userSplits||[]).filter(function(x){return x.id===id;})[0];if(us)us.name=sp.name;
-  saveDB();render();};
-ACT.addday=function(name){split().days.push(day(name,[]));saveDB();render();};
+  var sp=editSplit(id);if(!sp)return;sp.name=String(name).trim();saveDB();render();};
+ACT.addday=function(name){var d=day(name,[]);d.wd=[];split().days.push(d);saveDB();render();};
 ACT.renameday=function(name,id){
   var d=dayOf(id);if(!d)return;d.name=name;saveDB();render();};
+/* A template becomes your own program; one of yours becomes the active one. */
+function useTemplate(id,activate){
+  var tp=allSplits().filter(function(x){return x.id===id&&!editSplit(x.id);})[0];
+  if(!tp)return null;
+  return addProgram(makeProgram(tp),activate);}
 ACT.adopt=function(_,id){
-  var pre=allSplits().filter(function(x){return x.id===id;})[0];
-  if(!pre)return;
-  S.myPlan=adoptSplit(pre);saveDB();V.train="days";render();
-  toast(pre.name+" "+t("is now your training."));};
+  var own=editSplit(id);
+  if(own)S.activeProgram=own.id;else own=useTemplate(id,true);
+  if(!own)return;
+  saveDB();V.train="days";render();
+  toast(own.name+" "+t("is now your training."));};
+ACT.addprog=function(_,id){
+  var own=useTemplate(id,false);if(!own)return;
+  saveDB();V.previewId=own.id;V.train="builder";render();window.scrollTo(0,0);
+  toast(own.name+" "+t("is in My programs."));};
 ACT.delday=function(_,id){
   var sp=ownerOf(id)||split();sp.days=sp.days.filter(function(x){return x.id!==id;});
   V.train=V.previewId&&editSplit(V.previewId)===sp?"builder":"days";saveDB();render();};
 ACT.delsplit=function(_,id){
-  var gone=(S.userSplits||[]).filter(function(x){return x.id===id;})[0];
-  S.userSplits=(S.userSplits||[]).filter(function(x){return x.id!==id;});
-  /* Its active copy stays your training, but stops mirroring into a split that is gone. */
-  if(S.myPlan&&S.myPlan.source===id)S.myPlan.source=null;
+  if(id===S.activeProgram){toast(t("Switch to another program first."));return;}
+  var gone=editSplit(id);
+  S.programs=(S.programs||[]).filter(function(x){return x.id!==id;});
   if(V.train==="builder"&&V.previewId===id){V.train="splits";V.previewId=null;}
   saveDB();render();if(gone)toast(gone.name+" "+t("deleted."));};
 /* Editing a logged food item: recompute from the source food where we still have it,
