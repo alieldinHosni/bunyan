@@ -24,6 +24,7 @@ import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
 import {syncViewport, restoreWorkoutState, syncWorkoutState, alarmStart, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, tap, toast, V} from "./ui/view.js";
 import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
+import {syncWbar} from "./ui/wbar.js";
 import {mealNow} from "./ui/views/food.js";
 import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
 
@@ -86,11 +87,18 @@ function removeDayEx(id){
   var gone=d.ex.splice(i,1)[0];tidyGroups(d.ex);saveDB();render();
   toast(exName(gone.name)+" "+t("removed."),function(){
     var d2=dayOf(d.id);if(!d2)return;d2.ex=before;saveDB();render();});}
+/* The program a builder control acts on: the one open in the builder, or the active
+   one when My Program shows it inline on the Train tab. */
+function builderId(){
+  if(V.tab!=="train"||S.active)return null;
+  if(V.train==="builder")return V.previewId;
+  if(V.train==="days"&&(V.tsec||S.prefs.tsec)==="program")return S.activeProgram;
+  return null;}
 /* Drag and the arrow keys both land here: a day in the split builder, or an
    exercise in a day. */
 function moveRow(id,to){
-  if(V.train==="builder"){
-    var sp=editSplit(V.previewId);if(!sp)return;
+  if(builderId()){
+    var sp=editSplit(builderId());if(!sp)return;
     var k=sp.days.findIndex(function(x){return x.id===id;});
     to=Math.max(0,Math.min(sp.days.length-1,to));
     if(k<0||to===k)return;
@@ -132,7 +140,9 @@ document.addEventListener("click",function(ev){
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
   /* A tab tap is a fresh start: the top of the page, and Food on today — a past
      date left selected from earlier was where a meal logged later could land. */
-  if(D.tab){resetNav();var same=V.tab===D.tab;V.tab=D.tab;V.train="days";V.meal=null;V.dnavDir=0;
+  if(D.tab){resetNav();var same=V.tab===D.tab,top=same&&V.train==="days";V.tab=D.tab;V.train="days";V.meal=null;V.dnavDir=0;
+    /* Tapping Train while already at its top goes back to Today. */
+    if(D.tab==="train"&&top){V.tsec="today";S.prefs.tsec="today";V.tdate=null;saveDB();}
     if(D.tab==="food"&&!same)V.fdate=null;
     render();if(!same)window.scrollTo(0,0);return;}
   /* Same reset as a tab tap: it is the same kind of move. Without V.train it landed
@@ -142,7 +152,10 @@ document.addEventListener("click",function(ev){
   if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;render();return;}
 
   /* ---- splits & days */
-  if(D.mydays){openSheet("mydays");return;}
+  /* The Train tab's three sections. Remembered, so the tab opens where you left it. */
+  if(D.tsec){if(V.sheet)closeSheet();V.tab="train";if(V.train!=="days"){resetNav();V.train="days";}
+    V.tsec=D.tsec;S.prefs.tsec=D.tsec;saveDB();render();window.scrollTo(0,0);return;}
+  if(D.tweek){V.tdate=D.tweek===today()?null:D.tweek;render();return;}
   /* A lighter week: started, put off for a week, or ended early. */
   if(D.deload){
     var dl=S.deload=S.deload||{};
@@ -190,26 +203,26 @@ document.addEventListener("click",function(ev){
   if(D.editsplit){pushNav();V.previewId=D.editsplit;V.train="builder";render();window.scrollTo(0,0);return;}
   if(D.renamesplit){var rs=editSplit(D.renamesplit);if(!rs)return;
     askText({title:t("Rename program"),label:t("Name"),value:rs.name,act:"renamesplit",data:D.renamesplit});return;}
-  if(D.bday!==undefined){var bs=editSplit(V.previewId);if(!bs)return;
+  if(D.bday!==undefined){var bs=editSplit(builderId());if(!bs)return;
     var nd0=day(t("Day")+" "+(bs.days.length+1),[]);nd0.wd=[];
     /* By weekday, a new day takes the first weekday no other day has. */
     if(bs.schedule==="week"){var used={};bs.days.forEach(function(d){(d.wd||[]).forEach(function(w){used[w]=1;});});
       var fw=spreadWd(bs.days.length+1).concat([1,2,3,4,5,6,7]).filter(function(w){return !used[w];})[0];if(fw)nd0.wd=[fw];}
     bs.days.push(nd0);saveDB();render();return;}
-  if(D.bdays){var bn=editSplit(V.previewId);if(!bn)return;var want=+D.bdays;
+  if(D.bdays){var bn=editSplit(builderId());if(!bn)return;var want=+D.bdays;
     while(bn.days.length<want){var nd1=day(t("Day")+" "+(bn.days.length+1),[]);nd1.wd=[];bn.days.push(nd1);}
     while(bn.days.length>want&&!bn.days[bn.days.length-1].ex.length)bn.days.pop();
     if(bn.schedule==="week"){var sp1=spreadWd(bn.days.length);bn.days.forEach(function(d,i){d.wd=sp1[i]?[sp1[i]]:[];});}
     saveDB();render();return;}
   /* Weekdays or rotation. Moving to weekdays pins each training day to the weekday it
      is usually trained on (or an even spread); moving back keeps the order. */
-  if(D.sched){var sc=editSplit(V.previewId);if(!sc||sc.schedule===D.sched)return;
+  if(D.sched){var sc=editSplit(builderId());if(!sc||sc.schedule===D.sched)return;
     sc.schedule=D.sched==="week"?"week":"cycle";
     if(sc.schedule==="week"){toWeekdays(sc);}
     saveDB();render();
     toast(t(sc.schedule==="week"?"Scheduled by weekday. Tap the weekdays under each day to change them.":"Scheduled in rotation: the next day comes up whenever you train."));return;}
   /* A weekday is one day's at a time: pinning it here takes it from any other day. */
-  if(D.wd){var pw=D.wd.split("|"),ws=editSplit(V.previewId),wday=ws&&ws.days.filter(function(d){return d.id===pw[0];})[0];
+  if(D.wd){var pw=D.wd.split("|"),ws=editSplit(builderId()),wday=ws&&ws.days.filter(function(d){return d.id===pw[0];})[0];
     if(!wday)return;var wn=+pw[1];
     if((wday.wd||[]).indexOf(wn)>=0)wday.wd=wday.wd.filter(function(x){return x!==wn;});
     else{ws.days.forEach(function(d){d.wd=(d.wd||[]).filter(function(x){return x!==wn;});});
@@ -220,10 +233,10 @@ document.addEventListener("click",function(ev){
       toast(t("Now by weekday. Change the days any time in the program."));}
     saveDB();render();return;}
   /* A day's ✕ in the builder: gone at once, with Undo, like an exercise's. */
-  if(D.rmday){var rd=editSplit(V.previewId);if(!rd)return;
+  if(D.rmday){var rd=editSplit(builderId());if(!rd)return;
     var ri=rd.days.findIndex(function(x){return x.id===D.rmday;});if(ri<0)return;
     var rgone=rd.days.splice(ri,1)[0];saveDB();render();
-    toast(rgone.name+" "+t("removed."),function(){var r2=editSplit(V.previewId)||rd;r2.days.splice(Math.min(ri,r2.days.length),0,rgone);saveDB();render();});
+    toast(rgone.name+" "+t("removed."),function(){var r2=editSplit(builderId())||rd;r2.days.splice(Math.min(ri,r2.days.length),0,rgone);saveDB();render();});
     return;}
   if(D.newsplit){
     askText({title:t("New program"),label:t("Name"),ph:t("For example, Push / Pull / Legs"),
@@ -975,7 +988,7 @@ document.addEventListener("keydown",function(ev){
   var gp=(ev.key==="ArrowUp"||ev.key==="ArrowDown")&&ev.target.closest&&ev.target.closest("[data-grip]");
   if(gp){
     ev.preventDefault();
-    var gid=gp.getAttribute("data-grip"),gl=V.train==="builder"?(editSplit(V.previewId)||{days:[]}).days:((dayOf(V.dayId)||{ex:[]}).ex);
+    var gid=gp.getAttribute("data-grip"),gl=builderId()?(editSplit(builderId())||{days:[]}).days:((dayOf(V.dayId)||{ex:[]}).ex);
     var gi=gl.findIndex(function(x){return x.id===gid;});
     if(gi<0)return;
     moveRow(gid,gi+(ev.key==="ArrowUp"?-1:1));
@@ -1062,6 +1075,7 @@ function tickSession(){
   if(c)c.textContent=mmss(ck.ms/1000);
   var pz=document.getElementById("sessPaused");
   if(pz)pz.hidden=!ck.paused;
+  syncWbar();
   if(!V.restEnd||V.restPaused)return;
   var left=Math.ceil((V.restEnd-Date.now())/1000);
   /* Running out is the one tick that changes the screen rather than the numbers. The
@@ -1069,7 +1083,7 @@ function tickSession(){
      stays until the user acknowledges it. Sound cannot be relied on (silent switch,
      backgrounded tab), so the screen has to carry it. */
   if(left<=0){V.restEnd=0;V.restPaused=false;V.restDone=true;V.restMin=false;
-    if(!V.sheet)render();return;}
+    if(!V.sheet)render();else syncWbar();return;}
   paintRest();
 }
 setInterval(function(){
@@ -1339,6 +1353,7 @@ window.addEventListener("storage",function(ev){
 });
 /* Reopened mid-workout (a reload, or iOS having reclaimed the tab): straight back to
    the exercise and the rest that were on screen, not to Home. */
+V.tsec=(S.prefs&&S.prefs.tsec)||"today";
 if(S.active){restoreWorkoutState();syncDraft();V.tab="train";V.train="days";}
 if(!S.onboarded){V.tab="home";V.sheet="setup";}
 render();

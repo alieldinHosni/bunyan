@@ -547,6 +547,9 @@ function syncRest(){
      logged can be corrected or the next exercise read. It comes back full screen the
      moment the rest is over. */
   if(on&&V.restMin&&!V.restDone)on=false;
+  /* On another tab the rest is the workout bar above the dock, counting down there;
+     the full screen is the Train tab's. Tapping the bar brings it back. */
+  if(on&&V.tab!=="train")on=false;
   if(!on){
     if(host.firstChild)host.textContent="";
     host.removeAttribute("data-k");

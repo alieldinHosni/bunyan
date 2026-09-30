@@ -4,7 +4,7 @@ import {t} from "../i18n/dict.js";
 import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {exName} from "../i18n/exnames.js";
 import {MEALS} from "./views/food.js";
-import {exHay, myDaysList, planOn} from "./views/train.js";
+import {exHay, planOn} from "./views/train.js";
 import {ACT_GROUPS, actIcon, actInfo, actPace, actsIn, INTENSITY, intensityOf, isActivity} from "../data/activities.js";
 import {incrementFor, backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
@@ -390,11 +390,6 @@ function vSheet(){
      +'<button class="btn g cf-no" data-hurtdo="skip">'+t("Skip it today")+'</button>'
      +'<button class="cf-alt" data-hurtdo="keep">'+t("It was minor, keep going")+'</button>'
      +'</div></div>';
-  }
-  else if(V.sheet==="mydays"){
-    b='<div class="se-top"><span class="se-k">'+esc(split().name)+'</span><h2>'+t("My Training")+'</h2></div>'
-     +myDaysList()
-     +'<button class="btn g" data-train="splits">'+t("Change program")+'</button>';
   }
   else if(V.sheet==="sessedit"){
     /* A logged workout, correctable after the fact: the date, every set's load and
