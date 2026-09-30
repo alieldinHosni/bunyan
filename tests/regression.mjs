@@ -131,7 +131,7 @@ await test("plan generator keeps timed holds timed and strength on the main lift
 });
 await test("a rest day follows a full-body session",async page=>{
   const r=await page.evaluate(async()=>{const s=await import("/js/state.js");const T=await import("/js/ui/views/train.js");
-    const P=(await import("/js/data/splits.js")).PRESETS().filter(p=>p.id==="fb")[0];s.S.myPlan=s.adoptSplit(P);
+    const P=(await import("/js/data/splits.js")).PRESETS().filter(p=>p.id==="fb")[0];s.addProgram(s.makeProgram(P),true);
     const a=s.split().days[0];s.S.sessions.unshift({id:"t",date:(await import("/js/util.js")).today(),dayId:a.id,dayName:a.name,entries:[]});
     const d=new Date();d.setDate(d.getDate()+1);const tom=new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
     return T.planOn(s.split(),tom).rest;});
@@ -201,7 +201,7 @@ await test("exercise sheet: steppers apply at once and keep the range in order",
   await openDay(page);
   await page.tap(".drow:nth-child(1) .dmain");await pause(page);
   const id=await ev(page,"V.sd.id");
-  const get=k=>ev(page,"(function(){var d=S.myPlan.days.find(x=>x.id===V.dayId);return d.ex.find(e=>e.id==='"+id+"')."+k+"})()");
+  const get=k=>ev(page,"(function(){var d=S.programs.flatMap(p=>p.days).find(x=>x.id===V.dayId);return d.ex.find(e=>e.id==='"+id+"')."+k+"})()");
   const s0=await get("sets");
   await page.tap('[data-exstp="sets"][data-d="1"]');await pause(page,150);
   eq(await get("sets"),s0+1,"sets +1 saved without Done");
@@ -234,12 +234,13 @@ await test("split builder: build from scratch, set days, fill one, adopt, and it
   await page.tap('.drow:nth-child(4) .drm');await pause(page);
   eq(await page.$$eval(".drow",a=>a.length),3,"a day removed");
   await page.tap('[data-adopt]');await pause(page);await page.tap('[data-confirmok]');await pause(page,400);
-  await page.evaluate(async()=>{const s=await import("/js/state.js");s.S.myPlan.days[1].ex.push({id:"q1",name:"Plank",sets:3,lo:30,hi:45,rest:45});s.saveDB();});
-  eq(await ev(page,"(function(){var u=S.userSplits.find(x=>x.name==='Test split');return [u.days.length,u.days[0].ex.length,u.days[1].ex.length]})()"),[3,1,1],"saved split follows the active copy");
+  eq(await ev(page,"(function(){var u=S.programs.find(x=>x.name==='Test split');return [S.activeProgram===u.id,u.days.length,u.days[0].ex.length]})()"),[true,3,1],"active, one copy");
   await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");V.train="splits";render();});await pause(page);
-  if(await page.$('.card.tdays [data-delsplit]'))throw new Error("a ready-made split can be deleted");
-  await page.tap('[data-delsplit]');await pause(page);await page.tap('[data-confirmok]');await pause(page);
-  eq(await ev(page,"S.userSplits.length"),0,"deleted after confirming");
+  if(await page.$('.card.tdays [data-delsplit]'))throw new Error("a template can be deleted");
+  eq(await page.$$eval("[data-delsplit]",a=>a.length),1,"the active program has no ✕");
+  await page.evaluate(async()=>{const s=await import("/js/state.js");const {render}=await import("/js/ui/render.js");s.S.activeProgram=s.S.programs.find(x=>x.name!=="Test split").id;s.saveDB();render();});await pause(page);
+  await page.tap('.drow:has-text("Test split") [data-delsplit]');await pause(page);await page.tap('[data-confirmok]');await pause(page);
+  eq(await ev(page,"S.programs.some(x=>x.name==='Test split')"),false,"deleted after confirming");
 });
 await test("picker: search finds by muscle, and no row ever sits above the field",async page=>{
   await openDay(page);await page.tap(".dadd");await pause(page,400);
@@ -271,7 +272,7 @@ await test("a lighter week cuts planned sets and suggested load, and ends",async
   await page.evaluate(async()=>{const s=await import("/js/state.js");s.S.deload={until:"2099-01-01",last:"2026-01-01"};s.saveDB();});
   await startWorkout(page);
   const cut=await ev(page,"S.active.entries.map(e=>e.planned.sets)");
-  const plan=await ev(page,"(function(){var sp=S.myPlan;var d=sp.days.find(x=>x.id===S.active.dayId);return d.ex.map(e=>e.sets)})()");
+  const plan=await ev(page,"(function(){var sp=S.programs.find(p=>p.id===S.activeProgram);var d=sp.days.find(x=>x.id===S.active.dayId);return d.ex.map(e=>e.sets)})()");
   if(!cut.every((n,i)=>n<plan[i]||n===1))throw new Error("sets not cut: "+cut+" vs "+plan);
   if(!/Lighter week/.test(await page.textContent(".ex-tags")))throw new Error("no lighter-week tag");
 });
@@ -317,6 +318,56 @@ await test("rest controls: pause, resume and +30 survive a reload",async page=>{
 await test("stored history that will not open is reported, not shown as empty",async page=>{
   if(!(await page.$(".warnbar")))throw new Error("no warning");
 },{raw:(()=>{const d=seed();delete d.sessions;d.histIDB=true;return JSON.stringify(d);})(),blockIDB:true});
+
+/* ---- programs and weekday scheduling ---------------------------------------------- */
+await test("migration: the active copy and a duplicate saved split become one program, ids kept",async page=>{
+  eq(await ev(page,"[S.programs.length,!!S.programs.find(p=>p.id===S.activeProgram),S.myPlan===undefined]"),[1,true,true],"seed");
+  const r=await page.evaluate(async()=>{const s=await import("/js/state.js");
+    const S=s.S;delete S.programs;delete S.activeProgram;
+    S.userSplits=[{id:"joe",name:"Joe",custom:true,days:[{id:"j1",name:"Day 1",ex:[]}]},{id:"x2",name:"Other",custom:true,days:[{id:"o1",name:"A",ex:[]}]}];
+    S.myPlan={id:"mine",source:"joe",name:"Joe",days:[{id:"k1",name:"Push",ex:[{id:"e",name:"Plank",sets:3,lo:30,hi:45,rest:45}]},{id:"k2",name:"Pull",ex:[]}]};
+    s.migrate();
+    const a=S.programs.find(p=>p.id===S.activeProgram);
+    return [S.programs.length,a.id,a.name,a.days.map(d=>d.id).join(),a.schedule,S.myPlan===undefined&&S.userSplits===undefined];});
+  eq(r,[2,"joe","Joe","k1,k2","cycle",true]);
+});
+await test("by weekday: pinned days fall on their weekdays, others are rest, and a pin moves",async page=>{
+  const r=await page.evaluate(async()=>{const s=await import("/js/state.js");const T=await import("/js/ui/views/train.js");const Sc=await import("/js/engine/schedule.js");
+    const sp=s.split();sp.schedule="week";const tr=sp.days.filter(d=>d.ex.length);tr.forEach(d=>d.wd=[]);tr[0].wd=[2];tr[1].wd=[5];
+    const d=new Date();const iso=n=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);return new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+    let tue=null,wed=null;for(let k=0;k<7;k++){const w=Sc.isoWeekday(iso(k));if(w===2)tue=iso(k);if(w===3)wed=iso(k);}
+    const a=T.planOn(sp,tue),b=T.planOn(sp,wed);
+    return [a.day&&a.day.id===tr[0].id,b.rest,b.next&&b.next.id===tr[1].id];});
+  eq(r,[true,true,true]);
+});
+await test("templates: Use it now makes an active copy; Just add it keeps the current one",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  const act0=await ev(page,"S.activeProgram");
+  await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");V.train="preview";V.previewId="ppl";render();});await pause(page);
+  await page.tap('[data-adopt]');await pause(page);await page.tap('[data-confirmalt]');await pause(page,400);
+  eq(await ev(page,"[S.activeProgram,S.programs.filter(p=>p.from==='ppl').length,V.train]"),[act0,1,"builder"],"added, not active");
+  await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");V.train="preview";V.previewId="ul";render();});await pause(page);
+  await page.tap('[data-adopt]');await pause(page);await page.tap('[data-confirmok]');await pause(page,400);
+  eq(await ev(page,"S.programs.find(p=>p.id===S.activeProgram).from"),"ul","active copy of the template");
+});
+await test("builder: switching to weekdays pins the days, and weekday chips move a pin",async page=>{
+  await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");const s=await import("/js/state.js");
+    V.tab="train";V.train="builder";V.previewId=s.S.activeProgram;render();});await pause(page);
+  await page.tap('[data-sched="week"]');await pause(page);
+  const pinned=await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days.filter(d=>d.ex.length).every(d=>d.wd.length===1)");
+  eq(pinned,true,"each training day pinned");
+  const first=await page.$eval('.bkday .bwd button:not(.on)',b=>b.getAttribute("data-wd"));
+  await page.tap('[data-wd="'+first+'"]');await pause(page);
+  const [id,n]=first.split("|");
+  eq(await ev(page,"(function(){var p=S.programs.find(p=>p.id===S.activeProgram);return p.days.filter(d=>d.wd.indexOf("+n+")>=0).map(d=>d.id)})()"),[id],"weekday belongs to one day");
+});
+await test("a rotation program is offered weekdays once",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  if(!(await page.$('[data-wdoffer]')))throw new Error("no offer");
+  await page.tap('[data-wdoffer="no"]');await pause(page);
+  eq(await ev(page,"[!!S.wdOffered,S.programs.find(p=>p.id===S.activeProgram).schedule]"),[true,"cycle"]);
+  if(await page.$('[data-wdoffer]'))throw new Error("offered twice");
+});
 
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();

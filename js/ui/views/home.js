@@ -69,7 +69,7 @@ function vHome(){
   if(!S.onboarded)
     h+='<button class="card tap hot" data-setup="1"><div class="row"><h3>'+t("Build my plan")+'</h3>'
      +'<span class="pill a">'+t("Start here")+'</span></div>'
-     +'<p class="tiny" style="margin:6px 0 0">'+t("Four questions and Bunyan sets your split, sets, reps and rest.")+'</p></button>';
+     +'<p class="tiny" style="margin:6px 0 0">'+t("Four questions and Bunyan sets your program, sets, reps and rest.")+'</p></button>';
 
   if(backupDue()){
     var age=backupAgeDays();
@@ -113,7 +113,7 @@ function vHome(){
      +'<div class="sdiv" aria-hidden="true"><i></i><b></b></div>'
      +'<button class="btn" data-startday="'+nd.id+'"><span class="ico ico-play" aria-hidden="true"></span>'
      +t("Start Training")+'</button></div>';
-  }else h+='<div class="card"><p class="tiny" style="margin:0">'+t("No exercises in this split yet.")+'</p></div>';
+  }else h+='<div class="card"><p class="tiny" style="margin:0">'+t("No exercises in this program yet.")+'</p></div>';
 
   /* ---- daily nutrition ---- */
   var pct=g.kcal?e.kcal/g.kcal:0;

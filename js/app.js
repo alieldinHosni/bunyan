@@ -10,6 +10,7 @@ import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, o
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
 import {day} from "./data/splits.js";
+import {spreadWd, suggestWd} from "./engine/schedule.js";
 import {render, syncKeyboard} from "./ui/render.js";
 import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
@@ -17,7 +18,7 @@ import {initReorder} from "./ui/reorder.js";
 import * as W from "./ui/workout.js";
 import {leave} from "./ui/motion.js";
 import {groupRun, mmss, paintRest, sessionClock} from "./ui/views/session.js";
-import {editSplit, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
+import {editSplit, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, allSplits, addProgram, makeProgram, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
 import {toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
 import {syncViewport, restoreWorkoutState, syncWorkoutState, alarmStart, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, tap, toast, V} from "./ui/view.js";
@@ -54,6 +55,13 @@ function setExField(e,k,v){
   else if(k==="min"){e.min=Math.max(1,Math.min(1440,Math.round(v)));}
   else if(k==="km"){e.km=Math.max(0,Math.min(500,r1(v)));}
   if(isActivity(e.name)){e.sets=1;e.rest=0;}}
+/* Moving a program to weekdays: the empty "Rest" days that spaced out a rotation
+   mean nothing once any unpinned weekday is a rest day, so they go, and each training
+   day is pinned to the weekday it is usually trained on. */
+function toWeekdays(sp){
+  if(sp.days.some(function(d){return d.ex.length;}))sp.days=sp.days.filter(function(d){return d.ex.length;});
+  if(!sp.days.some(function(d){return (d.wd||[]).length;})){
+    var sg=suggestWd(sp);sp.days.forEach(function(d){d.wd=sg[d.id]||[];});}}
 function addDaysISO(iso,n){var d=new Date(iso+"T00:00:00");d.setDate(d.getDate()+n);
   return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
 /* A new query or filter shows its results from the top: the list scrolls on its own
@@ -165,22 +173,51 @@ document.addEventListener("click",function(ev){
   if(D.day){pushNav();V.dayId=D.day;V.train="day";render();return;}
   /* One meal of the day, on its own screen. */
   if(D.meal){pushNav();V.meal=D.meal;render();return;}
+  /* A template asks whether to start on it now (the default) or only add your copy
+     to My programs; one of yours asks only whether to switch. */
   if(D.adopt){
-    var pre=allSplits().filter(function(x){return x.id===D.adopt;})[0];
+    var own=editSplit(D.adopt),pre=own||allSplits().filter(function(x){return x.id===D.adopt;})[0];
     if(!pre)return;
-    askConfirm({title:t("Switch to")+" "+pre.name+"?",
-      body:t("This replaces your current plan. Every session you have already logged is kept."),
-      cta:t("Make it my training"),act:"adopt",data:D.adopt});return;}
+    if(own)askConfirm({title:t("Switch to")+" "+pre.name+"?",
+      body:t("It becomes the program you train on. Your other programs and every logged session are kept."),
+      cta:t("Make it active"),act:"adopt",data:D.adopt});
+    else askConfirm({title:t("Use")+" "+pre.name+"?",
+      body:t("You get your own copy to change as you like. Every session you have already logged is kept."),
+      cta:t("Use it now"),act:"adopt",data:D.adopt,alt:t("Just add it to My programs"),altact:"addprog"});
+    return;}
   if(D.preview){pushNav();V.previewId=D.preview;V.train="preview";render();return;}
   /* ---- the split builder */
   if(D.editsplit){pushNav();V.previewId=D.editsplit;V.train="builder";render();window.scrollTo(0,0);return;}
   if(D.renamesplit){var rs=editSplit(D.renamesplit);if(!rs)return;
-    askText({title:t("Rename split"),label:t("Name"),value:rs.name,act:"renamesplit",data:D.renamesplit});return;}
+    askText({title:t("Rename program"),label:t("Name"),value:rs.name,act:"renamesplit",data:D.renamesplit});return;}
   if(D.bday!==undefined){var bs=editSplit(V.previewId);if(!bs)return;
-    bs.days.push(day(t("Day")+" "+(bs.days.length+1),[]));saveDB();render();return;}
+    var nd0=day(t("Day")+" "+(bs.days.length+1),[]);nd0.wd=[];
+    /* By weekday, a new day takes the first weekday no other day has. */
+    if(bs.schedule==="week"){var used={};bs.days.forEach(function(d){(d.wd||[]).forEach(function(w){used[w]=1;});});
+      var fw=spreadWd(bs.days.length+1).concat([1,2,3,4,5,6,7]).filter(function(w){return !used[w];})[0];if(fw)nd0.wd=[fw];}
+    bs.days.push(nd0);saveDB();render();return;}
   if(D.bdays){var bn=editSplit(V.previewId);if(!bn)return;var want=+D.bdays;
-    while(bn.days.length<want)bn.days.push(day(t("Day")+" "+(bn.days.length+1),[]));
+    while(bn.days.length<want){var nd1=day(t("Day")+" "+(bn.days.length+1),[]);nd1.wd=[];bn.days.push(nd1);}
     while(bn.days.length>want&&!bn.days[bn.days.length-1].ex.length)bn.days.pop();
+    if(bn.schedule==="week"){var sp1=spreadWd(bn.days.length);bn.days.forEach(function(d,i){d.wd=sp1[i]?[sp1[i]]:[];});}
+    saveDB();render();return;}
+  /* Weekdays or rotation. Moving to weekdays pins each training day to the weekday it
+     is usually trained on (or an even spread); moving back keeps the order. */
+  if(D.sched){var sc=editSplit(V.previewId);if(!sc||sc.schedule===D.sched)return;
+    sc.schedule=D.sched==="week"?"week":"cycle";
+    if(sc.schedule==="week"){toWeekdays(sc);}
+    saveDB();render();
+    toast(t(sc.schedule==="week"?"Scheduled by weekday. Tap the weekdays under each day to change them.":"Scheduled in rotation: the next day comes up whenever you train."));return;}
+  /* A weekday is one day's at a time: pinning it here takes it from any other day. */
+  if(D.wd){var pw=D.wd.split("|"),ws=editSplit(V.previewId),wday=ws&&ws.days.filter(function(d){return d.id===pw[0];})[0];
+    if(!wday)return;var wn=+pw[1];
+    if((wday.wd||[]).indexOf(wn)>=0)wday.wd=wday.wd.filter(function(x){return x!==wn;});
+    else{ws.days.forEach(function(d){d.wd=(d.wd||[]).filter(function(x){return x!==wn;});});
+      wday.wd=(wday.wd||[]).concat(wn).sort();}
+    saveDB();render();return;}
+  if(D.wdoffer){var wo=split();S.wdOffered=true;
+    if(D.wdoffer==="yes"){wo.schedule="week";toWeekdays(wo);
+      toast(t("Now by weekday. Change the days any time in the program."));}
     saveDB();render();return;}
   /* A day's ✕ in the builder: gone at once, with Undo, like an exercise's. */
   if(D.rmday){var rd=editSplit(V.previewId);if(!rd)return;
@@ -189,7 +226,7 @@ document.addEventListener("click",function(ev){
     toast(rgone.name+" "+t("removed."),function(){var r2=editSplit(V.previewId)||rd;r2.days.splice(Math.min(ri,r2.days.length),0,rgone);saveDB();render();});
     return;}
   if(D.newsplit){
-    askText({title:t("New split"),label:t("Name"),ph:t("For example, Upper / Lower"),
+    askText({title:t("New program"),label:t("Name"),ph:t("For example, Push / Pull / Legs"),
       cta:t("Create"),act:"newsplit"});return;}
   if(D.addday){
     askText({title:t("Add a day"),label:t("Name"),ph:t("For example, Chest & Triceps"),
@@ -201,7 +238,7 @@ document.addEventListener("click",function(ev){
   if(D.delday){
     var dD=dayOf(D.delday);
     askConfirm({title:t("Delete")+" "+(dD?dD.name:t("this day"))+"?",
-      body:t("The day is removed from your split. Sessions you already logged are kept."),
+      body:t("The day is removed from your program. Sessions you already logged are kept."),
       cta:t("Delete the day"),act:"delday",data:D.delday});return;}
 
   /* ---- exercises */
@@ -651,8 +688,8 @@ document.addEventListener("click",function(ev){
     if(!(num(pp.height)>0&&num(pp.weight)>0&&num(pp.age)>0)){
       toast(t("Enter your height, weight and age first."));saveDB();render();return;}
     var chosen=allSplits().filter(function(x){return x.id===D.pickplan;})[0];
-    if(!chosen){toast(t("That split is no longer available."));return;}
-    S.myPlan=adoptSplit(chosen);S.onboarded=true;saveDB();
+    if(!chosen){toast(t("That program is no longer available."));return;}
+    addProgram(makeProgram(chosen),true);S.onboarded=true;saveDB();
     closeSheet();V.tab="train";V.train="days";render();
     toast(chosen.name+" "+t("is now your training."));return;}
   if(D.buildplan){
@@ -686,10 +723,11 @@ document.addEventListener("click",function(ev){
     saveDB();render();return;}
   if(D.exhist){openSheet("exhist",{name:D.exhist});return;}
   if(D.delsplit){
-    var spD=(S.userSplits||[]).filter(function(x){return x.id===D.delsplit;})[0];
-    askConfirm({title:t("Delete")+" "+(spD?spD.name:t("this split"))+"?",
-      body:t("Your active plan and every logged session are kept."),
-      cta:t("Delete the split"),act:"delsplit",data:D.delsplit});return;}
+    if(D.delsplit===S.activeProgram){toast(t("This is the program you train on. Switch to another one first."));return;}
+    var spD=editSplit(D.delsplit);
+    askConfirm({title:t("Delete")+" "+(spD?spD.name:t("this program"))+"?",icon:"trash",
+      body:t("The program is removed. Every session you logged with it is kept."),
+      cta:t("Delete the program"),act:"delsplit",data:D.delsplit});return;}
   if(D.switch){if(D.switch!==CUR){switchProfile(D.switch,render);render();}return;}
   if(D.addprofile){
     askText({title:t("Add a profile"),label:t("Name"),
@@ -1174,7 +1212,7 @@ function askDelSession(id){
 function parseBackup(txt){
   var o;try{o=JSON.parse(String(txt||"").trim());}catch(e){return null;}
   if(!o||typeof o!=="object"||Array.isArray(o))return null;
-  var ours=Array.isArray(o.sessions)||o.myPlan||Array.isArray(o.splits)||(o.prefs&&typeof o.prefs==="object")||o.profile;
+  var ours=Array.isArray(o.sessions)||Array.isArray(o.programs)||o.myPlan||Array.isArray(o.splits)||(o.prefs&&typeof o.prefs==="object")||o.profile;
   return ours?o:null;
 }
 ACT.restore=function(_,o){

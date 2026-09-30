@@ -22,7 +22,7 @@ var DEF={
   prefs:{rpe:"last",autorest:true,sound:true,awake:true,compact:false,splash:true,
          warn:10,unit:"kg",view:"set",haptic:true,anim:true,lang:"en"},
   goals:{kcal:1950,p:175,c:170,f:62,water:3000,steps:9000},
-  myPlan:null,userSplits:[],myEx:[],
+  programs:[],activeProgram:null,myEx:[],
   lastBackup:0,backupSnooze:0,
   sessions:[],active:null,body:[],days:{}
 };
@@ -78,7 +78,7 @@ function normalize(o){
   ["profile","prefs","goals"].forEach(function(k){
     var v=o[k];
     o[k]=Object.assign({},d[k],(v&&typeof v==="object"&&!Array.isArray(v))?v:{});});
-  ["favs","skip","myFoods","savedMeals","userSplits","myEx","body","sessions"].forEach(function(k){
+  ["favs","skip","myFoods","savedMeals","programs","myEx","body","sessions"].forEach(function(k){
     if(!Array.isArray(o[k]))o[k]=[];});
   ["freq","days","daySwap","incr","deload"].forEach(function(k){
     if(!o[k]||typeof o[k]!=="object"||Array.isArray(o[k]))o[k]={};});
@@ -110,7 +110,6 @@ function hydrate(){
   }
   if(!S){S=JSON.parse(JSON.stringify(DEF));wr(dbKey(),S);}
   S=normalize(S);
-  if(!S.userSplits)S.userSplits=[];
   if(!S.prefs)S.prefs=JSON.parse(JSON.stringify(DEF.prefs));
   if(!S.favs)S.favs=[];
   /* "Never suggest" is gone. Leaving stored exclusions behind would keep filtering
@@ -143,18 +142,8 @@ function flushDays(){
    change, and only then. */
 var REV=0;
 function dataRev(){return REV;}
-/* A custom split you are training on exists twice: the saved split, and the active
-   copy the Train tab works on. Edits land on the copy, so every save carries them
-   back to the saved split — before, a split built in the app kept the one empty day
-   it was created with however it was edited, and showed "0 training days". */
-function mirrorPlan(){
-  var mp=S&&S.myPlan;if(!mp||!mp.source)return;
-  var us=(S.userSplits||[]).filter(function(x){return x.id===mp.source;})[0];
-  if(!us)return;
-  us.days=JSON.parse(JSON.stringify(mp.days));us.name=mp.name;}
 function saveDB(){
   REV++;
-  mirrorPlan();
   if(DAYS_IDB)flushDays();
   if(!HIST_IDB&&!DAYS_IDB&&!WARN.hist&&!WARN.days){ wr(dbKey(),S); return; }
   /* The whole point: neither history nor the food log is serialised on the hot path. */
@@ -319,52 +308,84 @@ function snapStats(sn){
     weight:bw.length?bw[bw.length-1]:0,
     avg7:a7.length>=3?r1(a7.reduce(function(p,q){return p+q;},0)/a7.length):0,
     body:sn.body};}
-/* One active plan. Presets are a read-only library and are never copied into it,
-   which is what used to produce duplicate splits. */
+/* ---- programs ---------------------------------------------------------------
+   A program is yours: its days, their exercises, and how it is scheduled. The
+   ready-made ones in splits.js are templates — you never train on a template itself;
+   "Use this program" makes your own copy, which is then edited like any other. One
+   program is active. There is one copy of each, so nothing has to be kept in step.
+
+     S.programs       every program you own
+     S.activeProgram  the id of the one you train on
+     program.schedule "week" (days pinned to weekdays, day.wd = [1..7], Monday = 1)
+                      or "cycle" (the next day in order, whenever you train) */
+function tpl(id){return PRESETS().filter(function(p){return p.id===id;})[0]||null;}
+function normProg(p){
+  p.schedule=p.schedule==="week"?"week":"cycle";
+  (p.days||(p.days=[])).forEach(function(d){
+    if(!Array.isArray(d.wd))d.wd=[];if(!Array.isArray(d.ex))d.ex=[];});
+  delete p.source;delete p.custom;
+  return p;}
+/* Your own copy of a template (or of any program), with fresh ids. */
+function makeProgram(src,opts){
+  opts=opts||{};
+  var c=JSON.parse(JSON.stringify(src));
+  c.from=src.from||(tpl(src.id)?src.id:null);
+  c.id=uid();
+  c.days.forEach(function(d){d.id=uid();d.ex.forEach(function(e){e.id=uid();});});
+  normProg(c);
+  if(opts.schedule)c.schedule=opts.schedule;
+  return c;}
+function programById(id){return (S.programs||[]).filter(function(p){return p.id===id;})[0]||null;}
+/* Adds a program, optionally making it the active one. Re-running setup or picking
+   the same template again replaces an untouched copy instead of piling up duplicates. */
+function addProgram(p,activate){
+  var trained={};S.sessions.forEach(function(s){if(s.dayId)trained[s.dayId]=1;});
+  S.programs=(S.programs||[]).filter(function(q){
+    if(!p.from||q.from!==p.from||q.id===S.activeProgram&&!activate)return true;
+    return q.days.some(function(d){return trained[d.id];});});
+  S.programs.push(p);
+  if(activate||!S.activeProgram||!programById(S.activeProgram))S.activeProgram=p.id;
+  return p;}
+/* Older saves: the v1 list of splits, then the v2 "active copy + saved splits". Both
+   become owned programs. The active copy keeps its day ids, which history and the
+   schedule are keyed on; a saved split it was a copy of is merged into it. */
 function migrate(){
-  if(S.myPlan)return;
-  var old=S.splits||[], cur=S.currentSplit;
-  var active=old.filter(function(x){return x.id===cur;})[0]||old[0];
-  var presetIds=PRESETS().map(function(p){return p.id;});
-  S.userSplits=old.filter(function(x){
-    return x.custom&&x.id!=="plan"&&presetIds.indexOf(x.id)<0&&(!active||x.id!==active.id);});
-  if(active){
-    S.myPlan=JSON.parse(JSON.stringify(active));
-    S.myPlan.source=S.myPlan.source||(S.myPlan.id==="plan"?"ap":S.myPlan.id);
-    S.myPlan.id="mine";
-  }else{
-    /* Full Body is the plan any newcomer can run. The setup flow replaces it with a
-       recommended one as soon as the questions are answered. */
-    S.myPlan=adoptSplit(PRESETS().filter(function(p){return p.id==="fb";})[0]);
-  }
-  delete S.splits; delete S.currentSplit;
+  if(Array.isArray(S.programs)&&S.programs.length){
+    S.programs.forEach(normProg);
+    if(!programById(S.activeProgram))S.activeProgram=S.programs[0].id;
+    delete S.myPlan;delete S.userSplits;return;}
+  var legacy=[],mp=S.myPlan&&Array.isArray(S.myPlan.days)?S.myPlan:null;
+  if(!mp&&Array.isArray(S.splits)&&S.splits.length){
+    var act=S.splits.filter(function(x){return x.id===S.currentSplit;})[0]||S.splits[0];
+    mp=JSON.parse(JSON.stringify(act));mp.source=mp.source||(mp.id==="plan"?"ap":mp.id);
+    legacy=S.splits.filter(function(x){return x.custom&&x!==act&&!tpl(x.id)&&x.id!=="plan";});}
+  var progs=(S.userSplits||[]).concat(legacy).map(function(u){return normProg(JSON.parse(JSON.stringify(u)));});
+  var active=null;
+  if(mp){
+    var same=progs.filter(function(q){return q.id===mp.source;})[0];
+    if(same){same.days=JSON.parse(JSON.stringify(mp.days));same.name=mp.name;normProg(same);active=same.id;}
+    else{var np=normProg(JSON.parse(JSON.stringify(mp)));np.from=tpl(mp.source)?mp.source:null;np.id=uid();
+      progs.unshift(np);active=np.id;}}
+  if(!progs.length){var fb=makeProgram(tpl("fb"));progs.push(fb);active=fb.id;}
+  S.programs=progs;S.activeProgram=active||progs[0].id;
+  delete S.myPlan;delete S.userSplits;delete S.splits;delete S.currentSplit;
   saveDB();
 }
-function adoptSplit(preset){
-  var c=JSON.parse(JSON.stringify(preset));
-  c.source=preset.id; c.id="mine";
-  c.days.forEach(function(d){d.id=uid();d.ex.forEach(function(e){e.id=uid();});});
-  return c;
-}
+/* The active program. Named split() for the many callers that already use it. */
 function split(){
-  if(!S.myPlan)S.myPlan=adoptSplit(PRESETS().filter(function(p){return p.id==="fb";})[0]);
-  return S.myPlan;}
-function allSplits(){return PRESETS().concat(S.userSplits||[]);}
-/* The split a builder edits: the active copy when it is the one you train on, so the
-   two can never disagree; the saved split otherwise. */
-function editSplit(id){
-  if(S.myPlan&&S.myPlan.source===id&&(S.userSplits||[]).some(function(x){return x.id===id;}))return S.myPlan;
-  return (S.userSplits||[]).filter(function(x){return x.id===id;})[0]||null;}
-/* Which split a day belongs to, and that split's saved id. */
+  var p=programById(S.activeProgram);
+  if(!p){p=(S.programs||[])[0]||addProgram(makeProgram(tpl("fb")),true);S.activeProgram=p.id;}
+  return p;}
+function allSplits(){return PRESETS().concat(S.programs||[]);}
+function editSplit(id){return programById(id);}
+/* Which program a day belongs to. */
 function ownerOf(dayId){
-  var pools=[split()].concat(S.userSplits||[]);
-  for(var p=0;p<pools.length;p++){var sp=pools[p];
-    if(sp&&sp.days.some(function(d){return d.id===dayId;}))return sp;}
+  var ps=S.programs||[];
+  for(var p=0;p<ps.length;p++)if(ps[p].days.some(function(d){return d.id===dayId;}))return ps[p];
   return null;}
 function dayOf(id){
-  var pools=[split()].concat(S.userSplits||[]);
-  for(var p=0;p<pools.length;p++){var sp=pools[p];if(!sp)continue;
-    for(var i=0;i<sp.days.length;i++)if(sp.days[i].id===id)return sp.days[i];}
+  var ps=S.programs||[];
+  for(var p=0;p<ps.length;p++)for(var i=0;i<ps[p].days.length;i++)if(ps[p].days[i].id===id)return ps[p].days[i];
   return null;}
 /* The only way to get a day's record, which is what makes it a safe place to mark
    the date for writing. Callers mutate what they get back and then call saveDB(). */
@@ -378,4 +399,4 @@ function dayRec(d){d=d||today();if(!S.days[d])S.days[d]={water:0,steps:0,sleep:0
 function setS(v){S=v;}
 function setProfiles(v){PROFILES=v;}
 
-export {editSplit, ownerOf, dataRev, storeWarning, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, adoptSplit, allSplits, buildSnapshot, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, friends, initState, isOwner, loadStored, migrate, PROFILES, recordSession, S, saveDB, saveFriends, setProfiles, setS, snapStats, split, switchProfile};
+export {makeProgram, addProgram, programById, editSplit, ownerOf, dataRev, storeWarning, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, allSplits, buildSnapshot, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, friends, initState, isOwner, loadStored, migrate, PROFILES, recordSession, S, saveDB, saveFriends, setProfiles, setS, snapStats, split, switchProfile};

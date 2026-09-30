@@ -3,7 +3,7 @@
 import {EXDB, isCompound, muscleOf} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {PRESETS} from "../data/splits.js";
-import {adoptSplit, S, saveDB} from "../state.js";
+import {addProgram, makeProgram, S, saveDB} from "../state.js";
 import {num} from "../util.js";
 
 /* ============================================================ plan engine */
@@ -142,7 +142,7 @@ function buildPlan(){
   var p=S.profile, L=LEVELS[p.level]||LEVELS.some, G=GOALS[p.goal]||GOALS.lose;
   var id=recommendSplit(num(p.days,3),p.level,p.goal,S.gear);
   var base=PRESETS().filter(function(x){return x.id===id;})[0];
-  var plan=adoptSplit(base);
+  var plan=makeProgram(base);
   plan.tag=L.label.toLowerCase()+" \u00b7 "+G.label.toLowerCase()+" \u00b7 "+p.days+" days";
   /* Level sets the volume and the main lift's range. Only what a level or goal
      actually changes is touched: timed holds (a plank is seconds, not reps), core,
@@ -168,7 +168,7 @@ function buildPlan(){
       }
     });
   });
-  S.myPlan=plan;
+  addProgram(plan,true);
   S.plannedWeekly=L.weekly;
   saveDB();
   return plan;

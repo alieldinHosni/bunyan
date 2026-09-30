@@ -66,7 +66,7 @@ function reconcileExercises(state){
       if(id)e.exId=id;
     }
   }
-  var pools=[state.myPlan].concat(state.userSplits||[]);
+  var pools=(state.programs||[]).concat(state.myPlan?[state.myPlan]:[],state.userSplits||[]);
   pools.forEach(function(sp){if(!sp)return;
     (sp.days||[]).forEach(function(d){(d.ex||[]).forEach(function(e){fix(e,function(){plans=true;});});});});
   if(state.active)(state.active.entries||[]).forEach(function(e){fix(e,function(){plans=true;});});
