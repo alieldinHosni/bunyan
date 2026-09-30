@@ -369,6 +369,14 @@ await test("a rotation program is offered weekdays once",async page=>{
   if(await page.$('[data-wdoffer]'))throw new Error("offered twice");
 });
 
+await test("library and food data: every template exercise exists, extras load, Egyptian foods are found",async page=>{
+  await pause(page,800);
+  const r=await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");const P=(await import("/js/data/splits.js")).PRESETS();const A=await import("/js/data/activities.js");
+    const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods?N.loadFoods(r):r());
+    const miss=[];P.forEach(p=>p.days.forEach(d=>d.ex.forEach(e=>{if(!X.EXDB[e.name]&&!A.isActivity(e.name))miss.push(e.name);})));
+    return [miss,!!X.EXDB["Bulgarian Split Squat"],X.exImg("Bulgarian Split Squat",0),N.searchFoods("كشك",1).map(x=>x.f.id)[0],N.searchFoods("jalash",1).length>0];});
+  eq(r,[[],true,null,"kishk",true]);
+});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

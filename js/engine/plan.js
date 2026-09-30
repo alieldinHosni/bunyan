@@ -55,10 +55,10 @@ var SPLIT_GOAL={
   maintain:{fb:2,ul:3,ap:3,ppl:1,bro:0,arnold:0,bw:2}
 };
 var SPLIT_LEVEL={
-  new:        {fb:4,ul:3,ap:1,ppl:-1,bro:-3,arnold:-4,bw:3},
-  some:       {fb:1,ul:2,ap:2,ppl:1,bro:0,arnold:-1,bw:0},
-  experienced:{fb:0,ul:1,ap:2,ppl:2,bro:1,arnold:1,bw:-1},
-  advanced:   {fb:-1,ul:1,ap:1,ppl:2,bro:2,arnold:2,bw:-1}
+  new:        {fb:4,ul:3,ap:1,ppl:-1,bro:-3,arnold:-4,bw:3,sl5:2,db:3,glute:0,ppl3:1,foot:1,fl:3},
+  some:       {fb:1,ul:2,ap:2,ppl:1,bro:0,arnold:-1,bw:0,sl5:3,db:1,glute:2,ppl3:3,foot:2,fl:2},
+  experienced:{fb:0,ul:1,ap:2,ppl:2,bro:1,arnold:1,bw:-1,sl5:1,db:0,glute:3,ppl3:1,foot:3,fl:0},
+  advanced:   {fb:-1,ul:1,ap:1,ppl:2,bro:2,arnold:2,bw:-1,sl5:0,db:-1,glute:1,ppl3:0,foot:1,fl:-1}
 };
 /* Measured, not assumed. Guessing which split "shapes" need a barbell is wrong —
    Upper/Lower is perfectly good with dumbbells; what matters is how much of a given
