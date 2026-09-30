@@ -37,9 +37,9 @@ function initNav(hooks){
     history.pushState({bunyan:1},"");
   }catch(e){}
 }
-function loc(){return {tab:V.tab,train:V.train,dayId:V.dayId,previewId:V.previewId,meal:V.meal};}
-function apply(l){V.tab=l.tab;V.train=l.train;V.dayId=l.dayId;V.previewId=l.previewId;V.meal=l.meal||null;}
-function rootOf(tab){return {tab:tab||"home",train:"days",dayId:null,previewId:null,meal:null};}
+function loc(){return {tab:V.tab,train:V.train,dayId:V.dayId,previewId:V.previewId,meal:V.meal,smeal:V.smeal};}
+function apply(l){V.tab=l.tab;V.train=l.train;V.dayId=l.dayId;V.previewId=l.previewId;V.meal=l.meal||null;V.smeal=l.smeal||null;}
+function rootOf(tab){return {tab:tab||"home",train:"days",dayId:null,previewId:null,meal:null,smeal:null};}
 
 /* Call before mutating V for a genuine navigation: it records where you are now. */
 function pushNav(){

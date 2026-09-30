@@ -15,6 +15,7 @@
 import {t} from "../i18n/dict.js";
 import {S} from "../state.js";
 import {esc, today} from "../util.js";
+import {weekOrder, weekStart} from "../engine/schedule.js";
 import {V} from "./view.js";
 
 /* Local midnight, shifted, then read back as a local date rather than a UTC one.
@@ -54,19 +55,18 @@ var CHEV_D='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path 
 var CAL='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
 var BACK='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3L4.5 9"/><path d="M4.5 4.5V9H9"/></svg>';
 
-/* The week's initials in the reader's language, Sunday first, from a known Sunday
-   (4 Jan 1970). A table of letters would be English only, and "S" is two days. */
+/* The week's initials in the reader's language, from the first day of the user's
+   week, taken from a known Monday (1 Jan 2024). A table of letters would be English
+   only, and "S" is two days. */
 function weekInitials(){
-  var out=[];
-  for(var i=0;i<7;i++)out.push(new Date(1970,0,4+i).toLocaleDateString(undefined,{weekday:"narrow"}));
-  return out;}
+  return weekOrder().map(function(n){return new Date(2024,0,n).toLocaleDateString(undefined,{weekday:"narrow"});});}
 
 /* The month grid. Only rendered when the navigator is open. Past and today are
    pickable everywhere; the future only where the screen plans ahead (Train). */
 function monthGrid(sel,monthOffset,future){
   var base=new Date();base.setDate(1);base.setMonth(base.getMonth()+(monthOffset||0));
   var y=base.getFullYear(),m=base.getMonth();
-  var first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();
+  var first=((new Date(y,m,1).getDay()||7)-weekStart()+7)%7,days=new Date(y,m+1,0).getDate();
   var marks=marksFor(),now=today();
   var h='<div class="dbcal"><div class="dbcal-h">'
    +'<button class="dnav-arrow sm" data-dmonth="-1" aria-label="'+t("Previous month")+'">'+CHEV_L+'</button>'

@@ -17,6 +17,7 @@ import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
 import {CUES, mistakesFor, progressBar, sparkline, stepper, V} from "./view.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
+import {wdName, weekStart} from "../engine/schedule.js";
 
 /* One figure in the exercise sheet: a label, the number (typeable), and − / + either
    side. The steps are the plan's own: a set, a rep, fifteen seconds of rest. */
@@ -762,54 +763,24 @@ function vSheet(){
      +'</div>'
      +'<p class="tiny">'+t("Steps follow the equipment: 2.5 kg on a barbell (5 on the big leg lifts), 2 kg on dumbbells, never more than about a tenth of the load. Conservative halves them, aggressive doubles them. Any exercise can have its own step, set in its plan.")+'</p>';
   }
-  else if(V.sheet==="set_nutrition"){
-    /* Nutrition Goals, frame 13:531. "Tap any value to customize" is literally true:
-       every figure on the card is its own input, so there is no separate edit mode. */
-    var ng=S.goals, eN=eatenToday(today());
-    /* The share of calories from each macro, rounded so the three always sum to
-       exactly 100. The frame's own figures — 26, 44 and 25 — summed to 95. */
-    var kc=[ng.p*4,ng.c*4,ng.f*9], kt=kc[0]+kc[1]+kc[2], pc=[0,0,0];
-    if(kt){
-      var raw=kc.map(function(x){return x/kt*100;});
-      pc=raw.map(Math.floor);
-      var rest=100-pc[0]-pc[1]-pc[2];
-      raw.map(function(x,i){return [x-Math.floor(x),i];})
-        .sort(function(a,c){return c[0]-a[0];}).slice(0,rest)
-        .forEach(function(r){pc[r[1]]++;});}
-    /* Remaining is goal minus eaten, the same arithmetic as the Food ring. */
-    function remRow(label,eaten,goal,isKcal){
-      var d=goal-eaten, over=d<0;
-      return '<div class="ngrem-r"><b>'+esc(label)+'</b><span'+(over?' class="over"':'')+'>'
-       +fmtN(Math.abs(d))+(isKcal?' '+t(over?"kcal over":"kcal left"):t(over?"g over":"g left"))
-       +'</span></div>'+progressBar(eaten,goal,over?"var(--gold)":"var(--accent)");}
-    b=afHead(t("Nutrition Goals"),{sub:'<span class="afsub">'+esc(t("Daily targets & macros"))+'</span>'})
-     +'<div class="aflbl">'+esc(t("Daily targets"))+'</div>'
-     +'<label class="ngcard ngenergy" for="g_kcal"><span class="ngenergy-t">'
-     +'<span class="aflbl">'+esc(t("Daily energy goal"))+'</span>'
-     +'<span class="ngbig"><input id="g_kcal" type="number" inputmode="numeric" style="width:'+fitCh(ng.kcal,"")+'ch" value="'+ng.kcal+'"><i>kcal</i></span></span>'
-     +'<span class="ico ico-edit" aria-hidden="true"></span></label>'
-     +'<div class="ngcard"><div class="aflbl">'+esc(t("Macronutrient split"))+'</div>'
-     +'<div class="ngsplit" role="img" aria-label="'
-     +esc(t("Protein")+" "+pc[0]+"%, "+t("Carbs")+" "+pc[1]+"%, "+t("Fat")+" "+pc[2]+"%")+'">'
-     +(pc[0]?'<i class="p" style="flex-grow:'+pc[0]+'"></i>':'')
-     +(pc[1]?'<i class="c" style="flex-grow:'+pc[1]+'"></i>':'')
-     +(pc[2]?'<i class="f" style="flex-grow:'+pc[2]+'"></i>':'')+'</div>'
-     +'<div class="nglegend"><span>'+esc(t("Protein"))+': '+pc[0]+'%</span>'
-     +'<span>'+esc(t("Carbs"))+': '+pc[1]+'%</span><span>'+esc(t("Fat"))+': '+pc[2]+'%</span></div>'
-     +'<div class="aftiles ng3">'
-     +afTile("g_p",t("Protein"),"g",ng.p,"0","numeric")
-     +afTile("g_c",t("Carbs"),"g",ng.c,"0","numeric")
-     +afTile("g_f",t("Fat"),"g",ng.f,"0","numeric")+'</div>'
-     +'<p class="afnote">'+esc(t("Your macros add up to"))+' '+fmtN(macroKcal(ng.p,ng.c,ng.f))+' kcal.</p></div>'
-     +'<div class="ngcard ngrem"><div class="aflbl">'+esc(t("Remaining today"))+'</div>'
-     +remRow(t("Calories"),eN.kcal,ng.kcal,true)
-     +remRow(t("Protein"),eN.p,ng.p,false)+'</div>'
-     /* Not in the frame, and still targets the app measures against. */
-     +'<div class="ngcard"><div class="aflbl">'+esc(t("Other targets"))+'</div><div class="aftiles">'
-     +afTile("g_water",t("Water"),"ml",ng.water,"0","numeric")
-     +afTile("g_steps",t("Steps"),"",ng.steps,"0","numeric")+'</div></div>'
-     +'<p class="afnote">'+esc(t("Your daily targets. The rings on Home and Food measure against these."))+'</p>'
-     +'<button class="btn afcta" data-savegoals="1">'+esc(t("Save targets"))+'</button>';
+  /* One of your own foods, per serving: the name, what a serving is, and what is in
+     it. Opened from My Foods, for a new food or one you made before. */
+  else if(V.sheet==="myfood"){
+    var mid=V.sd&&V.sd.id,mfx=mid&&mid!=="new"?(S.myFoods||[]).filter(function(x){return x.id===mid;})[0]:null;
+    var mv=mfx||{n:"",kcal:"",p:"",c:"",f:"",s:[[""]]};
+    b=afHead(t(mfx?"Edit food":"New food"),{sub:'<span class="afsub">'+esc(t("Per serving"))+'</span>'})
+     +'<label class="aflbl" for="mf_n">'+esc(t("Food name"))+'</label>'
+     +'<input id="mf_n" class="affield" value="'+esc(mv.n)+'" placeholder="'+esc(t("Food name"))+'" autocomplete="off">'
+     +'<label class="aflbl" for="mf_s">'+esc(t("Serving size"))+'</label>'
+     +'<input id="mf_s" class="affield" value="'+esc((mv.s&&mv.s[0]&&mv.s[0][0])||"")+'" placeholder="'+esc(t("1 serving"))+'" autocomplete="off">'
+     +'<div class="aflbl">'+esc(t("Macronutrients"))+'</div>'
+     +'<div class="aftiles">'
+     +afTile("mf_k",t("Calories"),"kcal",mv.kcal,t("Auto"),"numeric")
+     +afTile("mf_p",t("Protein"),"g",mv.p,"0","decimal")
+     +afTile("mf_c",t("Carbs"),"g",mv.c,"0","decimal")
+     +afTile("mf_f",t("Fat"),"g",mv.f,"0","decimal")+'</div>'
+     +(mfx?'<p class="afnote">'+esc(t("Anything already logged keeps the numbers it was logged with."))+'</p>':'')
+     +'<button class="btn afcta" data-savemyfoodx="'+esc(mfx?mfx.id:"new")+'">'+esc(t("Save"))+'</button>';
   }
   else if(V.sheet==="set_app"){
     var ap=S.prefs;
@@ -818,6 +789,9 @@ function vSheet(){
      +(S.theme==="dark"?t("Dark"):t("Light"))+'</span></button>'
      +'<button class="item" data-langmode="1"><span>'+t("Language")+'</span><span class="dim">'
      +(ap.lang==="ar"?"العربية":"English")+'</span></button>'
+     +'<button class="item" data-wkstart="1"><div><div>'+t("Week starts on")+'</div>'
+     +'<div class="tiny">'+t("Where \"this week\" begins, on every screen.")+'</div></div>'
+     +'<span class="dim">'+esc(wdName(weekStart(),true))+'</span></button>'
      +'<button class="item" data-unitmode="1"><div><div>'+t("Units")+'</div>'
      +'<div class="tiny">'+t("Display only. Your history is never rewritten.")+'</div></div>'
      +'<span class="dim">'+(ap.unit==="lb"?t("Pounds (lb)"):t("Kilograms (kg)"))+'</span></button>'

@@ -10,7 +10,7 @@ import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, o
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
 import {day} from "./data/splits.js";
-import {spreadWd, suggestWd} from "./engine/schedule.js";
+import {spreadWd, suggestWd, weekOrder, weekStart} from "./engine/schedule.js";
 import {render, syncKeyboard} from "./ui/render.js";
 import {goBack, initNav, pushNav, resetNav} from "./ui/nav.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
@@ -25,7 +25,7 @@ import {syncViewport, restoreWorkoutState, syncWorkoutState, alarmStart, audioOn
 import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
 import {syncWbar} from "./ui/wbar.js";
-import {mealNow} from "./ui/views/food.js";
+import {mealNow, savedById} from "./ui/views/food.js";
 import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
 
 /* Logs one food to the add-food sheet's meal and closes it. The single path for the
@@ -34,11 +34,18 @@ import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
    sheet open (the dashboard's pills) the meal is the time of day's. */
 function logFood(food,grams,label){
   var meal=(V.sheet==="addfood"&&V.sd&&V.sd.meal)||mealNow(),n=nutritionFor(food,grams);
-  addItems(meal,[{fid:food.id,n:food.n,label:label,grams:grams,src:food.src||"db",
-    kcal:n.kcal,p:n.p,c:n.c,f:n.f,fib:n.fib}],curDate());
+  var where=addTo(meal,[{fid:food.id,n:food.n,label:label,grams:grams,src:food.src||"db",
+    kcal:n.kcal,p:n.p,c:n.c,f:n.f,fib:n.fib}]);
   if(V.sheet)closeSheet();
   V.tab="food";render();play("set");
-  toast(food.n+" "+t("added to")+" "+t(meal)+".");}
+  toast(food.n+" "+t("added to")+" "+where+".");}
+/* Where an add from the sheet lands: the day's meal, or — when the sheet was opened
+   from a saved meal in My Foods — that saved meal, in the same amounts. Returns the
+   name the toast should say. */
+function addTo(meal,items,d){
+  var into=V.sheet==="addfood"&&V.sd&&V.sd.into?savedById(V.sd.into):null;
+  if(into){items.forEach(function(i){into.items.push(i);});saveDB();return into.name;}
+  addItems(meal,items,d||curDate());return t(meal);}
 
 
 /* The exercise open in the edit sheet, and the one place its numbers are bounded:
@@ -140,16 +147,27 @@ document.addEventListener("click",function(ev){
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
   /* A tab tap is a fresh start: the top of the page, and Food on today — a past
      date left selected from earlier was where a meal logged later could land. */
-  if(D.tab){resetNav();var same=V.tab===D.tab,top=same&&V.train==="days";V.tab=D.tab;V.train="days";V.meal=null;V.dnavDir=0;
-    /* Tapping Train while already at its top goes back to Today. */
+  if(D.tab){resetNav();var same=V.tab===D.tab,top=same&&V.train==="days"&&!V.meal&&!V.smeal;
+    V.tab=D.tab;V.train="days";V.meal=null;V.smeal=null;V.dnavDir=0;
+    /* Tapping a tab while already at its top goes back to its first section. */
     if(D.tab==="train"&&top){V.tsec="today";S.prefs.tsec="today";V.tdate=null;saveDB();}
+    if(D.tab==="food"&&top){V.fsec="today";S.prefs.fsec="today";V.fdate=null;saveDB();}
     if(D.tab==="food"&&!same)V.fdate=null;
     render();if(!same)window.scrollTo(0,0);return;}
   /* Same reset as a tab tap: it is the same kind of move. Without V.train it landed
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
      return to but the tab bar. */
-  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;render();return;}
+  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;render();return;}
+  /* Food's three sections, remembered as Train's are. */
+  if(D.fsec){if(V.sheet)closeSheet();
+    /* From another tab (Home's nutrition card, Profile's targets row) it is a change of
+       place, so it starts a fresh trail, on today's date. */
+    if(V.tab!=="food"){V.fdate=null;V.train="days";}
+    if(V.tab!=="food"||V.meal||V.smeal){resetNav();V.meal=null;V.smeal=null;}
+    V.tab="food";
+    V.fsec=D.fsec;S.prefs.fsec=D.fsec;saveDB();render();window.scrollTo(0,0);return;}
+  if(D.frange){V.frange=+D.frange;render();return;}
 
   /* ---- splits & days */
   /* The Train tab's three sections. Remembered, so the tab opens where you left it. */
@@ -207,7 +225,7 @@ document.addEventListener("click",function(ev){
     var nd0=day(t("Day")+" "+(bs.days.length+1),[]);nd0.wd=[];
     /* By weekday, a new day takes the first weekday no other day has. */
     if(bs.schedule==="week"){var used={};bs.days.forEach(function(d){(d.wd||[]).forEach(function(w){used[w]=1;});});
-      var fw=spreadWd(bs.days.length+1).concat([1,2,3,4,5,6,7]).filter(function(w){return !used[w];})[0];if(fw)nd0.wd=[fw];}
+      var fw=spreadWd(bs.days.length+1).concat(weekOrder()).filter(function(w){return !used[w];})[0];if(fw)nd0.wd=[fw];}
     bs.days.push(nd0);saveDB();render();return;}
   if(D.bdays){var bn=editSplit(builderId());if(!bn)return;var want=+D.bdays;
     while(bn.days.length<want){var nd1=day(t("Day")+" "+(bn.days.length+1),[]);nd1.wd=[];bn.days.push(nd1);}
@@ -581,28 +599,73 @@ document.addEventListener("click",function(ev){
         kcal:k9,p:p9,c:c9,f:f9b,fib:0,s:[[sv9,100]],a:[],src:"you",
         bc:bc9||undefined});}
     var mm9=(V.sd&&V.sd.meal)||mealNow();
-    addItems(mm9,[item9],curDate());
+    var at9=addTo(mm9,[item9]);
     closeSheet();V.tab="food";render();play("set");
-    toast(nm9+" "+t("added to")+" "+t(mm9)+".");return;}
+    toast(nm9+" "+t("added to")+" "+at9+".");return;}
   if(D.commit){
     /* The meal is the one in the sheet's header. There used to be a second chooser
        at the foot, which could disagree with it. */
     var meal9=(V.sd&&V.sd.meal)||mealNow();
     var good9=V.food.items.filter(function(i){return i.status!=="unknown"&&i.status!=="suggest";});
     if(!good9.length){toast(t("Nothing to add yet."));return;}
-    addItems(meal9,good9.map(toLogItem),curDate());
+    var at10=addTo(meal9,good9.map(toLogItem));
     closeSheet();V.tab="food";render();
-    play("set");toast(t(meal9)+" "+t("updated."));return;}
+    play("set");toast(at10+" "+t("updated."));return;}
   if(D.savemeal){
     askText({title:t("Save this as a meal"),label:t("Name"),value:t("My meal"),
       body:t("It goes into Saved meals so you can log the whole thing in one tap."),
       cta:t("Save"),act:"savemeal",data:{meal:V.sd&&V.sd.meal}});return;}
+  /* A saved meal, logged whole: from My Foods, its own screen, or the sheet's Meals
+     tab (which logs into the sheet's meal and closes it). */
   if(D.addsaved){
-    var sm=S.savedMeals[+D.addsaved];
-    if(!sm)return;
+    var sm=savedById(D.addsaved)||(S.savedMeals||[])[+D.addsaved];
+    if(!sm||!(sm.items||[]).length)return;
     var ms=(V.sheet==="addfood"&&V.sd&&V.sd.meal)||mealNow();
-    addItems(ms,JSON.parse(JSON.stringify(sm.items)),curDate());
-    render();play("set");toast(sm.name+" "+t("added to")+" "+t(ms)+".");return;}
+    /* From My Foods, where no date is on screen, it is today's. */
+    var atS=addTo(ms,JSON.parse(JSON.stringify(sm.items)),V.sheet?null:today());
+    if(V.sheet)closeSheet();
+    render();play("set");toast(sm.name+" "+t("added to")+" "+atS+".");return;}
+  /* ---- My Foods */
+  if(D.smeal){pushNav();V.smeal=D.smeal;render();window.scrollTo(0,0);return;}
+  if(D.newmeal){askText({title:t("New meal"),label:t("Name"),ph:t("For example, Ful breakfast"),act:"newmeal"});return;}
+  if(D.renamemeal){var rm=savedById(D.renamemeal);if(!rm)return;
+    askText({title:t("Rename meal"),label:t("Name"),value:rm.name,act:"renamemeal",data:D.renamemeal});return;}
+  if(D.delsaved){var dm=savedById(D.delsaved);if(!dm)return;
+    askConfirm({title:t("Delete")+" "+dm.name+"?",icon:"trash",
+      body:t("The saved meal is removed. Anything you already logged with it stays in your log."),
+      cta:t("Delete the meal"),act:"delsaved",data:D.delsaved});return;}
+  /* ✕ on a row: gone at once, with Undo, like a day or an exercise. What was already
+     logged keeps its own numbers, so nothing in the log changes. */
+  if(D.rmsaved){var ri2=(S.savedMeals||[]).findIndex(function(x){return x.id===D.rmsaved;});if(ri2<0)return;
+    var gone2=S.savedMeals.splice(ri2,1)[0];saveDB();render();
+    toast(gone2.name+" "+t("removed."),function(){S.savedMeals.splice(Math.min(ri2,S.savedMeals.length),0,gone2);saveDB();render();});return;}
+  if(D.rmmyfood){var fi2=(S.myFoods||[]).findIndex(function(x){return x.id===D.rmmyfood;});if(fi2<0)return;
+    var goneF=S.myFoods.splice(fi2,1)[0];saveDB();render();
+    toast(goneF.n+" "+t("removed."),function(){S.myFoods.splice(Math.min(fi2,S.myFoods.length),0,goneF);saveDB();render();});return;}
+  if(D.rmsmitem){var pi=D.rmsmitem.split("|"),smI=savedById(pi[0]);if(!smI)return;
+    var ii=+pi[1],goneI=smI.items.splice(ii,1)[0];if(!goneI)return;saveDB();render();
+    toast(goneI.n+" "+t("removed."),function(){smI.items.splice(Math.min(ii,smI.items.length),0,goneI);saveDB();render();});return;}
+  if(D.smadd){var sa=D.smadd;
+    loadFoods(function(){
+      V.food={mode:"search",tab:"search",sq:"",q:"",items:null,edit:-1};
+      openSheet("addfood",{meal:mealNow(),into:sa});});
+    return;}
+  if(D.myfood){openSheet("myfood",{id:D.myfood});return;}
+  if(D.savemyfoodx){
+    var nmX=val("mf_n").trim();if(!nmX){toast(t("Give it a name first."));return;}
+    var fx=D.savemyfoodx==="new"?null:(S.myFoods||[]).filter(function(x){return x.id===D.savemyfoodx;})[0];
+    var svX=val("mf_s").trim()||t("1 serving");
+    var rec={n:nmX,p:Math.max(0,r1(num(val("mf_p")))),c:Math.max(0,r1(num(val("mf_c")))),f:Math.max(0,r1(num(val("mf_f"))))};
+    /* Blank calories are worked out from the macros, as manual entry does. */
+    rec.kcal=String(val("mf_k")).trim()===""?macroKcal(rec.p,rec.c,rec.f):Math.max(0,Math.round(num(val("mf_k"))));
+    if(fx){Object.assign(fx,rec);fx.s=[[svX,100]];}
+    else S.myFoods.push(Object.assign({id:"my_"+uid(),cat:"My Foods",per:100,fib:0,s:[[svX,100]],a:[],src:"you"},rec));
+    saveDB();closeSheet();render();toast(nmX+" "+t("saved."));return;}
+  if(D.usesug){
+    var kS=Math.round(targetKcal()/10)*10,wS=lastWeight()||S.profile.weight;
+    S.goals.kcal=kS;S.goals.p=proteinTarget(wS);S.goals.f=Math.round(kS*0.28/9);
+    S.goals.c=Math.max(50,Math.round((kS-S.goals.p*4-S.goals.f*9)/4));
+    saveDB();render();toast(t("Targets updated."));return;}
   /* A frequent-food pill on the dashboard, or the + beside a result in the sheet.
      Both used to go to Snack whatever the meal — including from a sheet opened for
      Breakfast. logFood takes the sheet's meal, or the time of day's without one. */
@@ -674,6 +737,8 @@ document.addEventListener("click",function(ev){
     alarmStart();
     setTimeout(function(){toast(t("If that was silent, the side switch on your phone is set to silent."));},500);
     return;}
+  /* Saturday, Sunday or Monday: the three a week is commonly started on. */
+  if(D.wkstart){var wo=[6,7,1];S.prefs.wkstart=wo[(wo.indexOf(weekStart())+1)%wo.length];saveDB();render();return;}
   if(D.toggle){S.prefs[D.toggle]=!S.prefs[D.toggle];
     if(D.toggle==="anim")document.body.classList.toggle("noanim",S.prefs.anim===false);
     if(D.toggle==="awake")keepAwake(S.prefs.awake&&!!S.active);
@@ -1354,6 +1419,7 @@ window.addEventListener("storage",function(ev){
 /* Reopened mid-workout (a reload, or iOS having reclaimed the tab): straight back to
    the exercise and the rest that were on screen, not to Home. */
 V.tsec=(S.prefs&&S.prefs.tsec)||"today";
+V.fsec=(S.prefs&&S.prefs.fsec)||"today";
 if(S.active){restoreWorkoutState();syncDraft();V.tab="train";V.train="days";}
 if(!S.onboarded){V.tab="home";V.sheet="setup";}
 render();

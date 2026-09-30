@@ -41,6 +41,20 @@ ACT.newsplit=function(name){
   saveDB();pushNav();V.previewId=sp.id;V.train="builder";render();window.scrollTo(0,0);};
 ACT.renamesplit=function(name,id){
   var sp=editSplit(id);if(!sp)return;sp.name=String(name).trim();saveDB();render();};
+/* A saved meal is made the way a program is: named first, then filled in its own
+   screen from the same search as logging. */
+ACT.newmeal=function(name){
+  var m={id:uid(),name:String(name).trim(),items:[]};
+  (S.savedMeals=S.savedMeals||[]).push(m);
+  saveDB();pushNav();V.tab="food";V.meal=null;V.smeal=m.id;render();window.scrollTo(0,0);};
+ACT.renamemeal=function(name,id){
+  var m=(S.savedMeals||[]).filter(function(x){return x.id===id;})[0];if(!m)return;
+  m.name=String(name).trim();saveDB();render();};
+ACT.delsaved=function(_,id){
+  var m=(S.savedMeals||[]).filter(function(x){return x.id===id;})[0];
+  S.savedMeals=(S.savedMeals||[]).filter(function(x){return x.id!==id;});
+  if(V.smeal===id){resetNav();V.smeal=null;V.fsec="foods";}
+  saveDB();render();if(m)toast(m.name+" "+t("deleted."));};
 ACT.addday=function(name){var d=day(name,[]);d.wd=[];split().days.push(d);saveDB();render();};
 ACT.renameday=function(name,id){
   var d=dayOf(id);if(!d)return;d.name=name;saveDB();render();};

@@ -45,6 +45,9 @@ function macroLine(n,noKcal){
 function afHead(title,opts){
   opts=opts||{};
   var sub=opts.sub;
+  /* Opened from a saved meal in My Foods: everything goes into that meal. */
+  var into=V.sd&&V.sd.into&&(S.savedMeals||[]).filter(function(m){return m.id===V.sd.into;})[0];
+  if(sub===undefined&&into)sub='<span class="afsub">'+esc(t("Into"))+' <b>'+esc(into.name)+'</b></span>';
   if(sub===undefined){
     var meal=curMeal();
     sub='<label class="afmeal">'+(opts.pre?esc(opts.pre)+' ':'')+'<b>'+esc(t(meal))+'</b>'
@@ -156,7 +159,7 @@ function vSearch(){
    +'<button class="afcam" '+(scanSupported()?'data-scan="1"':'data-typecode="1"')
    +' aria-label="'+esc(t(scanSupported()?"Scan barcode":"Enter barcode"))+'">'
    +'<span class="ico ico-camera" aria-hidden="true"></span></button></div>';
-  var TABS=[["search","Search"],["recent","Recent"],["frequent","Frequent"],["custom","Custom"]];
+  var TABS=[["search","Search"],["recent","Recent"],["frequent","Frequent"],["meals","Meals"],["custom","Custom"]];
   h+=seg({items:TABS.map(function(x){return [x[0],t(x[1])];}),value:tab,attr:"ftab",
     tabs:true,soft:true,cls:"aftabs",label:t("Find food"),key:"aftabs"});
   h+='</div><div class="srch-body">';
@@ -172,8 +175,19 @@ function vSearch(){
   else if(tab==="frequent"){var ff=frequentFoods(20);
     h+=ff.length?localCards(ff):empty("search",t("Nothing frequent yet"),
       t("The foods you log most often collect here."),"");}
+  else if(tab==="meals")h+=mealsTab();
   else h+=customTab();
   return h+'</div>';}
+/* The meals saved in My Foods, each logged whole with its +. */
+function mealsTab(){
+  var sm=(S.savedMeals||[]).filter(function(m){return (m.items||[]).length&&!(V.sd&&V.sd.into===m.id);});
+  if(!sm.length)return empty("search",t("No saved meals yet"),
+    t("Build one in Food → My Foods, or save what you are logging as a meal."),"");
+  return '<div class="list">'+sm.map(function(m){
+    var st=sumNutrition(m.items);
+    return '<button class="item" data-addsaved="'+esc(m.id)+'"><div><div style="font-weight:600">'+esc(m.name)+'</div>'
+     +'<div class="tiny">'+m.items.length+' '+t("items")+' · '+fmtN(st.kcal)+' kcal</div></div>'
+     +'<span class="pill a">'+t("Add")+'</span></button>';}).join("")+'</div>';}
 
 /* ---- Add Food: one food, its servings (13:266) ------------------------------ */
 /* What the servings screen will log: grams and the label the log keeps. A picked
