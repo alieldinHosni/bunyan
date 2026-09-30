@@ -330,4 +330,4 @@ function vTargets(){
   h+=vNutrition(r);
   return h;}
 
-export {MEALS, mealNow, savedById, vFood};
+export {glassUnit, MEALS, mealNow, savedById, vFood};

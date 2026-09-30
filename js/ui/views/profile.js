@@ -7,6 +7,7 @@ import {curProfile, friends, isOwner, PROFILES, S, split} from "../../state.js";
 import {fmtW, wUnit} from "../../units.js";
 import {esc, fmtN} from "../../util.js";
 import {streak} from "../view.js";
+import {art} from "../art.js";
 
 /* ============================================================ PROFILE
    No frame exists for this tab — none of the file's nineteen top-level frames is a
@@ -32,7 +33,7 @@ function vProfile(){
   var h='<div class="thead"><h1>'+t("Profile")+'</h1></div>';
 
   h+='<div class="card phero">'
-   +'<div class="pavatar" aria-hidden="true">'+esc(initials)+'</div>'
+   +'<div class="pavwrap">'+art("ring",{cls:"pring"})+'<div class="pavatar" aria-hidden="true">'+esc(initials)+'</div></div>'
    +'<div class="pname">'+esc(name)+'</div>'
    +'<div class="pprog">'+esc(split().name)+'</div>'
    +'<div class="pstats">'
@@ -63,11 +64,6 @@ function vProfile(){
        [S.theme==="dark"?t("Dark"):t("Light"),
         pref.lang==="ar"?"العربية":"English",wUnit()].join(" · ")));
 
-  h+=group(t("Your plan"),
-     prow('data-setup="1"',t("Rebuild my plan"),
-       [LEVELS[p.level]?t(LEVELS[p.level].label):"",
-        GOALS[p.goal]?t(GOALS[p.goal].label):"",
-        p.days?p.days+" "+t("days a week"):""].filter(Boolean).join(" · ")));
 
   h+=group(t("People"),
      prow('data-sheet="set_profiles"',t("Profiles on this phone"),
@@ -76,7 +72,6 @@ function vProfile(){
     +(isOwner()?prow('data-coach="1"',t("Friends I follow"),
        Object.keys(friends()).length+" "+t("shared with you")):""));
 
-  h+=group(t("Recovery"),prow('data-sheet="recovery"',t("Recovery log"),t("Sleep, soreness, energy, pain")));
   h+=group(t("Your data"),prow('data-sheet="set_data"',t("Backup and reset"),""));
 
   h+='<p class="pnote">'+t("Everything lives on this phone only. Nothing is uploaded anywhere. Export a backup every few weeks so a cleared browser cannot cost you your history.")+'</p>';

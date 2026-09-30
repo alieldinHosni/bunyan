@@ -263,8 +263,8 @@ function vSheet(){
      +'<div><label class="tiny">'+t("Soreness 0-10")+'</label><input id="r_sore" type="number" value="'+(r.sore||"")+'"></div>'
      +'<div><label class="tiny">'+t("Energy 0-10")+'</label><input id="r_energy" type="number" value="'+(r.energy||"")+'"></div>'
      +'<div><label class="tiny">'+t("Pain or discomfort 0-10")+'</label><input id="r_ankle" type="number" value="'+(r.ankle||"")+'"></div></div>'
-     +'<div class="mt"><label class="tiny">Notes</label><input id="r_notes" value="'+esc(r.notes||"")+'"></div>'
-     +'<button class="btn" data-saverec="1">Save</button>';
+     +'<div class="mt"><label class="tiny">'+t("Notes")+'</label><input id="r_notes" value="'+esc(r.notes||"")+'"></div>'
+     +'<button class="btn" data-saverec="1">'+t("Save")+'</button>';
   }
   else if(V.sheet==="measure"){
     /* Each field shows its own last reading as a hint, not as a value. Prefilled
@@ -721,11 +721,9 @@ function vSheet(){
        ["recomp",t("Recomposition")]].map(function(a){
          return '<option value="'+a[0]+'"'+(yp.goal===a[0]?" selected":"")+'>'+a[1]+'</option>';}).join("")
      +'</select></div>'
-     +'<p class="tiny mt">'+t("Maintenance estimate")+' '+fmtN(tdee())+' kcal. '
-     +t("Suggested target")+' '+fmtN(targetKcal())+' kcal.</p>'
-     +'<p class="tiny" style="margin-top:6px">'+t("This already counts your activity level, training included, so workouts you log are not added on top. Every figure here is an estimate; your weight trend over a few weeks is the real test.")+'</p>'
+     +'<p class="tiny mt">'+t("Your calorie and protein targets are worked out from these, in Food → Targets.")+'</p>'
      +'<button class="btn" data-saveyou="1">'+t("Save")+'</button>'
-     +'<button class="btn g" data-calc="1">'+t("Use the suggested targets")+'</button>';
+     +'<button class="btn g" data-fsec="targets">'+t("See my targets")+'</button>';
   }
   else if(V.sheet==="set_training"){
     var tp=S.prefs,tpr=S.profile;

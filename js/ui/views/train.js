@@ -4,7 +4,7 @@ import {t} from "../../i18n/dict.js";
 import {empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
-import {allSplits, dayOf, editSplit, ownerOf, S, split} from "../../state.js";
+import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../state.js";
 import {SPLIT_LEVEL} from "../../engine/plan.js";
 import {deloadDue, inDeload} from "../../engine/formulas.js";
 import {isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder} from "../../engine/schedule.js";
@@ -145,6 +145,17 @@ function dayHero(sp,p,iso){
    +'<div class="thero2-m">'+esc(meta)+'</div></div></div>'
    +cta+'</div>';}
 
+/* The same card for a workout already under way: Home shows it in place of Next up. */
+function resumeHero(){
+  var a=S.active,pos=Math.min(+a.idx||0,a.entries.length-1)+1;
+  return '<div class="thero2 live">'
+   +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'
+   +'<div class="thero2-top"><span class="tbadge" aria-hidden="true">'+DUMBBELL+'</span>'
+   +'<div class="thero2-t"><span class="klabel">'+esc(t("Workout in progress"))+'</span>'
+   +'<div class="thero2-n">'+esc(a.dayName)+'</div>'
+   +'<div class="thero2-m">'+esc(t("Exercise")+" "+pos+" "+t("of")+" "+a.entries.length)+'</div></div></div>'
+   +'<button class="btn" data-continue="1"><span class="ico ico-play" aria-hidden="true"></span>'+t("Resume workout")+'</button></div>';}
+
 function vTrain(){
   if(S.active)return vLogger();
   /* The old Programs screen is Explore now; anything still sending there lands on it. */
@@ -186,18 +197,38 @@ function vToday(sp){
    +'<span class="ttile-tx"><span class="ttile-n">'+t("Log cardio or a sport")+'</span>'
    +'<span class="ttile-s">'+t("Running, football, padel, tennis, classes…")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  h+=recoveryCard(sel);
   h+=deloadCard();
   h+=weekOffer(sp);
   return h;}
+/* Once a day, three taps: how you slept, how sore, how much energy. Raw inputs, as the
+   full log has them; it goes once all three are in or you wave it off. */
+var RCHK=[["sleep","Sleep",[["<6",5.5],["6–7",6.5],["7–8",7.5],["8+",8.5]]],
+  ["sore","Soreness",[["Barely",2],["Some",5],["High",8]]],
+  ["energy","Energy",[["Flat",3],["OK",6],["Good",9]]]];
+function recoveryCard(sel){
+  var now=today();if(sel!==now||S.recSkip===now)return "";
+  var r=dayRec(now);
+  if(r.sleep&&r.sore&&r.energy)return "";
+  return '<div class="rchk"><div class="rchk-h"><b>'+t("How did you recover?")+'</b>'
+   +'<button class="rchk-x" data-rchkskip="1">'+t("Not today")+'</button></div>'
+   +RCHK.map(function(q){
+     return '<div class="rchk-r"><span>'+t(q[1])+'</span><div class="rchk-c" role="group" aria-label="'+esc(t(q[1]))+'">'
+      +q[2].map(function(o){var on=+r[q[0]]===o[1];
+        return '<button class="'+(on?'on':'')+'" data-rchk="'+q[0]+'|'+o[1]+'" aria-pressed="'+on+'">'+esc(t(o[0]))+'</button>';}).join("")
+      +'</div></div>';}).join("")
+   +'<button class="tlink rchk-more" data-sheet="recovery">'+t("Full recovery log")+'</button></div>';}
 /* Seven days: done (a tick), planned (a dot), rest or missed (quiet), today ringed. A
    tap shows that day in the card below; tapping today again goes back to it. */
-function weekStrip(sp,sel){
+/* attr: what a day's tap does — "tweek" shows it here; Home passes "openday" for the
+   day's details. */
+function weekStrip(sp,sel,attr){
   var now=today(),done=0,plan=0,h="";
   weekDates(now).forEach(function(iso){
     var p=planOn(sp,iso),st=p.kind==="done"?"done":p.kind==="past"?"past":(p.rest||p.kind==="none")?"rest":"plan";
     if(st==="done")done++;if(st==="done"||st==="plan")plan++;
     var lbl=pretty(iso)+", "+t({done:"Done",past:"Nothing logged",rest:"Rest day",plan:"Planned"}[st])+(p.name&&st!=="rest"&&st!=="past"?", "+p.name:"");
-    h+='<button class="twk-d '+st+(iso===now?' today':'')+(iso===sel?' sel':'')+'" data-tweek="'+iso+'" aria-pressed="'+(iso===sel)+'" aria-label="'+esc(lbl)+'">'
+    h+='<button class="twk-d '+st+(iso===now?' today':'')+(iso===sel?' sel':'')+'" data-'+(attr||"tweek")+'="'+iso+'" aria-pressed="'+(iso===sel)+'" aria-label="'+esc(lbl)+'">'
      +'<span class="twk-w">'+esc(wdName(isoWeekday(iso)))+'</span>'
      +'<span class="twk-n">'+new Date(iso+"T00:00:00").getDate()+'</span>'
      +'<i aria-hidden="true">'+(st==="done"?TICKSVG:'')+'</i></button>';});
@@ -210,6 +241,10 @@ var TICKSVG='<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>';
 function vExplore(sp){
   var h='<button class="bnew" data-newsplit="1"><span class="bnew-i">'+PLUS+'</span>'
    +'<span class="bnew-t"><b>'+t("Build a program from scratch")+'</b><span>'+t("Name it, pick the days, fill them from the library")+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  /* Or let Bunyan build it: four questions, and the plan is made for you. */
+  h+='<button class="bnew bauto" data-setup="1"><span class="bnew-i">'+SPARK+'</span>'
+   +'<span class="bnew-t"><b>'+t("Let Bunyan build it")+'</b><span>'+t("Four questions: your goal, level, days and equipment")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   h+=programsList();
   var tpls=allSplits().filter(function(o){return !editSplit(o.id);});
@@ -442,6 +477,7 @@ function vLibrary(){
    open in the builder, and each has an ✕ that deletes it after one question. */
 var HERO_ART='<img class="libhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">';
 var PLUS='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+var SPARK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>';
 /* ---- the split builder ------------------------------------------------------------
    One screen per split you made: how many days, each day with an ✕ and a grip, a +
    for another, and a tap into any day to fill it from the library. */
@@ -497,6 +533,7 @@ function builderBody(sp,id,inline){
   h+='</div><button class="dadd" data-bday="1"><span aria-hidden="true">+</span>'+t("Add day")+'</button>';
   h+='<div class="dcta">'
    +(active?(inline?'<button class="btn g dbegin" data-tsec="explore">'+t("Switch program")+'</button>'
+             +'<button class="ddel dset" data-sheet="set_training">'+t("Workout settings")+'</button>'
              :'<p class="bactive">✓ '+t("This is your training")+'</p>')
       :'<button class="btn dbegin" data-adopt="'+id+'"'+(tr?'':' disabled')+'>'+t("Make it active")+'</button>'
        +(tr?'':'<p class="bnote">'+t("Add exercises to at least one day first.")+'</p>')
@@ -558,4 +595,4 @@ function vDay(){
   h+='</div>';
   return h;}
 
-export {estMinutes, exHay, nextDayOf, planOn, vTrain, wdName};
+export {dayHero, estMinutes, exHay, nextDayOf, planOn, resumeHero, vTrain, wdName, weekStrip};

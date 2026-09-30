@@ -511,6 +511,45 @@ await test("Targets: goals save in place, the suggestion applies, and Progress n
   await page.tap('nav [data-tab="progress"]');await pause(page);
   eq(await page.$$eval('[data-ptab]',a=>a.map(b=>b.getAttribute("data-ptab")).filter((v,i,x)=>x.indexOf(v)===i).sort()),["body","overview","strength"]);
 });
+
+/* ---- Home, Progress, Profile ------------------------------------------------------------ */
+await test("Home: one reminder at most, Train's card, one-tap water, and the Saturday week",async page=>{
+  eq(await page.$$eval('.hnote',a=>a.length)<=1,true,"one reminder");
+  if(!(await page.$('.hstack .thero2 [data-startday]')))throw new Error("no Next up card");
+  const w0=await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;});
+  await page.tap('.htile.water');await pause(page);
+  const w1=await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;});
+  if(!(w1>w0))throw new Error("water tile did not add");
+  eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");return sc.isoWeekday(document.querySelector('.hstack .twk-d').getAttribute('data-openday'));}),6);
+  await page.tap('.htile.kcal');await pause(page);
+  eq(await ev(page,"[V.tab,V.fsec]"),["food","today"]);
+});
+await test("Home shows the workout in progress in the same card, with Resume",async page=>{
+  await startWorkout(page);
+  await page.tap('nav [data-tab="home"]');await pause(page);
+  if(!(await page.$('.hstack .thero2 [data-continue]')))throw new Error("no resume card");
+});
+await test("Progress: no date bar, History by month opens and Back returns",async page=>{
+  await page.tap('nav [data-tab="progress"]');await pause(page);
+  if(await page.$('.dnav'))throw new Error("date bar still on Progress");
+  await page.tap('[data-phist]');await pause(page);
+  if(!(await page.$('.phcal .dbday.trained')))throw new Error("no trained day in History");
+  await page.tap('[data-hmonth="-1"]');await pause(page);
+  eq(await ev(page,"V.hmonth"),-1);
+  await page.tap('[data-back]');await pause(page,500);
+  eq(await ev(page,"[V.tab,!!V.phist]"),["progress",false]);
+});
+await test("Train Today's recovery check-in logs in taps; Profile has moved its plan and recovery rows",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  await page.tap('[data-rchk="sleep|7.5"]');await page.tap('[data-rchk="sore|5"]');await page.tap('[data-rchk="energy|9"]');await pause(page);
+  eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");const r=s.dayRec(u.today());return [r.sleep,r.sore,r.energy];}),[7.5,5,9]);
+  if(await page.$('.rchk'))throw new Error("check-in still showing");
+  await page.tap('[data-tsec="explore"]');await pause(page);
+  if(!(await page.$('.bauto[data-setup]')))throw new Error("no Let Bunyan build it");
+  await page.tap('nav [data-tab="profile"]');await pause(page);
+  eq(await page.$$eval('#app [data-setup],#app [data-sheet="recovery"]',a=>a.length),0);
+  if(!(await page.$('.pring')))throw new Error("no ring");
+});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

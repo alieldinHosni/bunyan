@@ -147,18 +147,19 @@ document.addEventListener("click",function(ev){
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
   /* A tab tap is a fresh start: the top of the page, and Food on today — a past
      date left selected from earlier was where a meal logged later could land. */
-  if(D.tab){resetNav();var same=V.tab===D.tab,top=same&&V.train==="days"&&!V.meal&&!V.smeal;
-    V.tab=D.tab;V.train="days";V.meal=null;V.smeal=null;V.dnavDir=0;
+  if(D.tab){resetNav();var same=V.tab===D.tab,top=same&&V.train==="days"&&!V.meal&&!V.smeal&&!V.phist;
+    V.tab=D.tab;V.train="days";V.meal=null;V.smeal=null;V.phist=false;V.dnavDir=0;
     /* Tapping a tab while already at its top goes back to its first section. */
     if(D.tab==="train"&&top){V.tsec="today";S.prefs.tsec="today";V.tdate=null;saveDB();}
     if(D.tab==="food"&&top){V.fsec="today";S.prefs.fsec="today";V.fdate=null;saveDB();}
+    if(D.tab==="progress"&&top)V.ptab="overview";
     if(D.tab==="food"&&!same)V.fdate=null;
     render();if(!same)window.scrollTo(0,0);return;}
   /* Same reset as a tab tap: it is the same kind of move. Without V.train it landed
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
      return to but the tab bar. */
-  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;render();return;}
+  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.phist=false;render();return;}
   /* Food's three sections, remembered as Train's are. */
   if(D.fsec){if(V.sheet)closeSheet();
     /* From another tab (Home's nutrition card, Profile's targets row) it is a change of
@@ -168,10 +169,17 @@ document.addEventListener("click",function(ev){
     V.tab="food";
     V.fsec=D.fsec;S.prefs.fsec=D.fsec;saveDB();render();window.scrollTo(0,0);return;}
   if(D.frange){V.frange=+D.frange;render();return;}
+  /* Train → Today's recovery check-in: one tap per answer, into today's record. */
+  if(D.rchk){var rq=D.rchk.split("|"),rr=dayRec(today());rr[rq[0]]=+rq[1];saveDB();render();
+    if(rr.sleep&&rr.sore&&rr.energy)toast(t("Recovery logged."));return;}
+  if(D.rchkskip){S.recSkip=today();saveDB();render();return;}
+  /* Progress → History, level two; its month steps back from this one. */
+  if(D.phist){pushNav();V.phist=true;V.hmonth=0;render();window.scrollTo(0,0);return;}
+  if(D.hmonth){V.hmonth=Math.min(0,(+V.hmonth||0)+ +D.hmonth);render();return;}
 
   /* ---- splits & days */
   /* The Train tab's three sections. Remembered, so the tab opens where you left it. */
-  if(D.tsec){if(V.sheet)closeSheet();V.tab="train";if(V.train!=="days"){resetNav();V.train="days";}
+  if(D.tsec){if(V.sheet)closeSheet();if(V.tab!=="train"||V.train!=="days"){resetNav();V.train="days";V.meal=null;V.smeal=null;}V.tab="train";
     V.tsec=D.tsec;S.prefs.tsec=D.tsec;saveDB();render();window.scrollTo(0,0);return;}
   if(D.tweek){V.tdate=D.tweek===today()?null:D.tweek;render();return;}
   /* A lighter week: started, put off for a week, or ended early. */

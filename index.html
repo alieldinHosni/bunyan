@@ -2748,6 +2748,52 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .tgsug-r b.a{color:var(--accentHi)}
 .tgsug-r small{color:var(--dim);font-size:12px}
 .tgsug .pgnote{margin:0;color:var(--ok)}
+/* Home. The time of day's drawing rises behind the greeting's far side. */
+.hgreet{position:relative;isolation:isolate}
+.hgreet-art{position:absolute;z-index:-1;inset-inline-end:-10px;top:-18px;width:190px;height:auto;opacity:.7}
+.hnote.gold{border-color:var(--gold)}
+.hnote.gold h3{color:var(--gold)}
+.hstack>.thero2,.hstack>.twk{margin:0}
+/* Four tiles, each one tap. */
+.htiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.htile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:112px;padding:14px;
+  border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);color:var(--text);text-align:start;
+  box-shadow:var(--shadow-card);transition:transform var(--m-press) var(--e-standard)}
+.htile:active{transform:scale(.97)}
+.htile-i{display:grid;place-items:center;width:32px;height:32px;margin-bottom:6px;border-radius:50%;
+  background:var(--accent-tint);box-shadow:inset 0 0 0 1px var(--accent-edge);color:var(--accentHi)}
+.htile-i svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.htile-k{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.htile-v{display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums}
+.htile-v b{font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:-.01em}
+.htile-v small{font-size:12.5px;color:var(--dim)}
+.htile-s{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+.htile.water .htile-s{color:var(--accentHi);font-weight:700}
+/* Progress: the trend running into the mane, where the banner's photo was. */
+.pgbanner-art{position:absolute;z-index:-1;inset-inline-start:8px;top:50%;width:34%;height:auto;transform:translateY(-50%);opacity:.9}
+[dir="rtl"] .pgbanner-art{transform:translateY(-50%) scaleX(-1)}
+.pgbody-art{width:64px;height:auto;margin:10px auto 0;opacity:.8}
+.phcal{margin-bottom:18px}
+.phcal .dbday:disabled{opacity:.3}
+/* Profile: the swirl as a ring around the initials. */
+.pavwrap{position:relative;width:112px;height:112px;margin:0 auto;display:grid;place-items:center}
+.pring{position:absolute;inset:0;width:100%;height:100%}
+/* Train → Today: the recovery check-in. */
+.rchk{margin-top:14px;padding:14px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+.rchk-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.rchk-h b{font-family:var(--display);font-size:15px}
+.rchk-x{min-height:36px;padding:0 4px;background:none;border:none;color:var(--dim);font-size:13px}
+.rchk-r{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}
+.rchk-r>span{font-size:13px;color:var(--sub);flex:0 0 auto}
+.rchk-c{display:flex;gap:6px}
+.rchk-c button{min-width:44px;min-height:36px;padding:0 10px;border-radius:var(--rpill);border:1px solid var(--border);
+  background:rgba(255,255,255,.04);color:var(--text);font-size:13px;font-weight:600}
+.rchk-c button.on{background:var(--accent-tint);border-color:var(--accent-edge);color:var(--accentHi)}
+.rchk-more{margin-top:6px}
+.bauto{margin-top:10px}
+.bauto .bnew-i{background:var(--surface);box-shadow:inset 0 0 0 1px var(--accent-edge)}
+.bauto .bnew-i svg{fill:var(--accentHi);stroke:none}
+.dset{color:var(--sub)}
 .libhero .libhead{margin-bottom:14px}
 .libhero .shk{margin-bottom:4px}
 .libhero h1{font-size:30px}
