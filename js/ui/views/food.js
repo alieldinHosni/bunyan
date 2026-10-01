@@ -8,7 +8,8 @@ import {curDate, eatenToday, lastWeight, macroKcal, proteinTarget, targetKcal, t
 import {sumNutrition} from "../../engine/nutrition.js";
 import {dayRec, S} from "../../state.js";
 import {dfmt, esc, fmtN, r1, today} from "../../util.js";
-import {progressBar, seg, V} from "../view.js";
+import {GRIPSVG, progressBar, reorderBtn, seg, V} from "../view.js";
+import {dayMeals, mealName, mealSlots, mealStyle, nextMeal, planOf, slotOf} from "../../engine/meals.js";
 import {dateBar} from "../datebar.js";
 import {backArrow} from "../nav.js";
 import {art, gaugeArt, waterArt} from "../art.js";
@@ -16,21 +17,22 @@ import {fitCh, afTile} from "./addfood.js";
 import {trendCard, vNutrition} from "./progress.js";
 
 /* ============================================================ FOOD */
-var MEALS=["Breakfast","Lunch","Dinner","Snack"];
-/* Meal glyphs, on the dock's grid and stroke: sun, sun on the horizon, moon, apple. */
+/* Meal glyphs, on the dock's grid and stroke: sun, sun on the horizon, moon, apple. A
+   meal of the user's own carries its place in the day instead (js/engine/meals.js). */
 var MICON={
   Breakfast:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg>',
   Lunch:'<svg viewBox="0 0 24 24"><path d="M7 16a5 5 0 0 1 10 0M3 16h18M12 5v3M5.2 9.2l1.4 1.4M18.8 9.2l-1.4 1.4M6 20h12"/></svg>',
   Dinner:'<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
   Snack:'<svg viewBox="0 0 24 24"><path d="M12 8c-1.5-1.3-4.5-1.5-6 .5-1.8 2.4-.8 7 1.5 9.5 1.3 1.4 2.8 1.6 4.5.8 1.7.8 3.2.6 4.5-.8 2.3-2.5 3.3-7.1 1.5-9.5-1.5-2-4.5-1.8-6-.5z"/><path d="M12 8c0-2 1-3.5 3-4"/></svg>'};
+function mealIcon(id){
+  if(MICON[id])return '<span class="fmt-i" aria-hidden="true">'+MICON[id]+'</span>';
+  var i=mealSlots().map(function(s){return s.id;}).indexOf(id);
+  return '<span class="fmt-i fmt-no" aria-hidden="true">'+(i>=0?i+1:"·")+'</span>';}
 var TICK='<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>';
-/* The meal an add belongs to when nothing on screen says which — the floating button,
-   the frequent-food pills, a saved meal. Every one of those used to go to Snack, so a
-   breakfast logged from the button at 8 a.m. was filed as a snack. The meal rows each
-   carry their own meal and never come here. */
-function mealNow(){
-  var h=new Date().getHours();
-  return h>=5&&h<11?"Breakfast":h>=11&&h<15?"Lunch":h>=17&&h<22?"Dinner":"Snack";}
+/* The meal an add belongs to when nothing on screen says which — the Add Food button,
+   the frequent-food pills, a saved meal: the one after the last with food in it. It
+   was the clock's guess, which a late start or a numbered day made wrong. */
+function mealNow(d){return nextMeal(d||curDate());}
 
 /* The 180px hero ring. The frame draws it as a full 6px border, which can only ever
    read 100%; here it is an arc of eaten/goal, so it agrees with the number inside it. */
@@ -51,12 +53,14 @@ function glassUnit(goal){
   if(goal/u>16)u=Math.ceil(goal/16/50)*50;
   return u;}
 
-var FSECS=[["today","Today"],["foods","My Foods"],["targets","Targets"]];
-function fsec(){var v=V.fsec||S.prefs.fsec||"today";return v==="foods"||v==="targets"?v:"today";}
+var FSECS=[["today","Today"],["plan","Plan"],["foods","My Foods"],["targets","Targets"]];
+function fsec(){var v=V.fsec||S.prefs.fsec||"today";return v==="foods"||v==="targets"||v==="plan"?v:"today";}
 function vFood(){
   var dsel=curDate();
   if(V.meal)return vMeal(dsel,V.meal);
   if(V.smeal)return vSavedMeal(V.smeal);
+  if(V.pslot)return vPlanSlot(V.pslot);
+  if(V.pimport)return vImport();
   var sec=fsec();
   /* The drawing is Today's: a baladi loaf and a palm frond at the header's edge. */
   var h='<div class="thead fthead"><div><h1>'+t("Nutrition")+'</h1>'
@@ -64,6 +68,7 @@ function vFood(){
    +(sec==="today"?art("loaf",{cls:"fthead-art"}):'')+'</div>';
   h+=seg({items:FSECS.map(function(x){return [x[0],t(x[1])];}),value:sec,attr:"fsec",tabs:true,
     cls:"tsecs",label:t("Nutrition"),key:"fsecs"});
+  if(sec==="plan")return h+vPlan();
   if(sec==="foods")return h+vMyFoods();
   if(sec==="targets")return h+vTargets();
   return h+vFoodToday(dsel);}
@@ -91,31 +96,29 @@ function vFoodToday(dsel){
    +'<div class="fleft'+(over?' over':'')+'">'+esc(fmtN(diff)+" "+t(over?"kcal over":"kcal left"))+'</div>'
    +'</div></div>';
 
-  /* ---- the four meals as tiles: the one for now carries a small "Now" label (it is
-     what Add Food logs to), a logged one is ticked. A
-     logged tile opens the meal, an empty one adds to it. */
-  var now=dsel===today()?mealNow():null;
-  /* The tiles are the day's meals: a logged one opens the meal, an empty one adds to
-     it. The list that repeated them underneath is gone. */
+  /* ---- the day's meals as tiles: a logged one is ticked and opens the meal, an empty
+     one adds to it — or, when it has a plan, opens it so the plan is one tap away.
+     Nothing is marked "Now": the day is the user's, not the clock's. */
+  var ids=dayMeals(dsel),next=nextMeal(dsel),n=ids.length;
   h+='<div class="tsec"><h2 class="tsec-h">'+t(dsel===today()?"Today's Meals":"Meals")+'</h2>'
    +'<button class="tlink" data-openday="'+dsel+'">'+t("Day details")+'</button></div>';
-  h+='<div class="fmt">';
-  MEALS.forEach(function(name){
-    var items=((r.meals[name]||{}).items)||[],tot=sumNutrition(items),done=items.length>0;
-    h+='<button class="fmt-c'+(name===now?' now':'')+(done?' done':'')+'" '
-     +(done?'data-meal="'+name+'"':'data-addfood="'+name+'"')
-     +' aria-label="'+esc(t(name)+", "+fmtN(tot.kcal)+" kcal"+(done?"":", "+t("Add")))+'">'
-     +'<span class="fmt-i" aria-hidden="true">'+MICON[name]+'</span>'
-     +'<span class="fmt-n">'+esc(t(name==="Snack"?"Snacks":name))+'</span>'
+  h+='<div class="fmt" style="--cols:'+(n<=4?n:n<=6?3:4)+'">';
+  ids.forEach(function(id){
+    var items=((r.meals[id]||{}).items)||[],tot=sumNutrition(items),done=items.length>0,plan=planOf(id).length>0;
+    h+='<button class="fmt-c'+(done?' done':'')+'" '
+     +(done||plan?'data-meal="'+esc(id)+'"':'data-addfood="'+esc(id)+'"')
+     +' aria-label="'+esc(mealName(id)+", "+fmtN(tot.kcal)+" kcal"+(done?"":plan?", "+t("planned"):", "+t("Add")))+'">'
+     +mealIcon(id)
+     +'<span class="fmt-n">'+esc(mealName(id))+'</span>'
      +'<span class="fmt-k">'+fmtN(tot.kcal)+' kcal</span>'
-     +(name===now?'<span class="fmt-now">'+esc(t("Now"))+'</span>':'')
+     +(!done&&plan?'<span class="fmt-plan" aria-hidden="true"></span>':'')
      +(done?'<span class="fmt-ok" aria-hidden="true">'+TICK+'</span>':'')+'</button>';});
   h+='</div>';
 
   /* In the page, not floating: the dock is the one floating control. */
-  h+='<button class="btn fadd" data-addfood="'+(now||mealNow())+'">'
+  h+='<button class="btn fadd" data-addfood="'+esc(next)+'">'
    +'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>'
-   +esc(t("Add Food"))+' <span class="fadd-m">· '+esc(t((now||mealNow())==="Snack"?"Snacks":(now||mealNow())))+'</span></button>';
+   +esc(t("Add Food"))+' <span class="fadd-m">· '+esc(mealName(next))+'</span></button>';
 
   /* ---- water */
   var unit=glassUnit(g.water),ng=Math.max(1,Math.round(g.water/unit)),
@@ -146,7 +149,7 @@ function vMeal(dsel,name){
   /* The same header the Train day screen uses, so the two "one thing inside a tab"
      screens are the same shape. The two frames disagree on its size; the app does not. */
   var h='<div class="dhead">'+backArrow()
-   +'<h1 class="dhead-t">'+esc(t(name))+'</h1></div>'
+   +'<h1 class="dhead-t">'+esc(mealName(name))+'</h1></div>'
    +'<p class="dsub">'+esc(when)+'</p>';
 
   h+='<div class="mealbanner"><div><div class="mealbanner-k">'+esc(t("Total calories"))+'</div>'
@@ -172,8 +175,16 @@ function vMeal(dsel,name){
      +'<button class="fitemrow-x" data-dropfood="'+name+'|'+i+'" aria-label="'
      +esc(t("Remove")+" "+it.n)+'"><i class="ico ico-trash"></i></button></div>';});
 
-  h+='<button class="btn" data-addfood="'+name+'">+ '
-   +esc(t("Add food to")+" "+t(name))+'</button>';
+  /* The plan for this meal, under what was eaten: one tap logs it as written. */
+  var plan=planOf(name);
+  if(plan.length){
+    var pt=sumNutrition(plan);
+    h+='<div class="tsec"><h2 class="tsec-h">'+t("Your plan")+'</h2><span class="dhint">'+fmtN(pt.kcal)+' kcal</span></div>'
+     +'<div class="plist">'+plan.map(function(it){
+        return '<div class="plist-r"><span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')+'</span><b>'+fmtN(it.kcal)+'</b></div>';}).join("")+'</div>'
+     +'<button class="btn'+(items.length?' g':'')+' plog" data-logplan="'+esc(name)+'">'+esc(t(items.length?"Add the plan again":"Log as planned"))+'</button>';}
+  h+='<button class="btn'+(plan.length&&!items.length?' g':'')+'" data-addfood="'+esc(name)+'">+ '
+   +esc(t("Add food to")+" "+mealName(name))+'</button>';
   return h;}
 
 /* ---- My Foods: the meals you saved and the foods you made ------------------------
@@ -183,7 +194,7 @@ function vMeal(dsel,name){
 var XSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 var PLUS='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 function vMyFoods(){
-  var sm=S.savedMeals||[],mf=S.myFoods||[],now=mealNow(),h='';
+  var sm=S.savedMeals||[],mf=S.myFoods||[],now=mealNow(today()),h='';
   h+='<button class="bnew" data-newmeal="1">'+art("plate",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
    +'<span class="bnew-t"><b>'+t("Build a meal")+'</b><span>'+t("Name it, then add what goes in it")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
@@ -204,7 +215,7 @@ function vMyFoods(){
        +'<button class="dmain" data-smeal="'+m.id+'"><span class="dtext"><span class="drow-n">'+esc(m.name)+'</span>'
        +'<span class="drow-s">'+n+' '+t(n===1?"item":"items")+'<i class="ddot"></i>'+fmtN(tot.kcal)+' kcal<i class="ddot"></i>'
        +esc(t("P:"))+' '+r1(tot.p)+'g</span></span></button>'
-       +(n?'<button class="dquick" data-addsaved="'+m.id+'" aria-label="'+esc(t("Add")+" "+m.name+" "+t("to")+" "+t(now))+'">'+PLUS+'</button>':'')
+       +(n?'<button class="dquick" data-addsaved="'+m.id+'" aria-label="'+esc(t("Add")+" "+m.name+" "+t("to")+" "+mealName(now))+'">'+PLUS+'</button>':'')
        +'</div>';});
     h+='</div>';}
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Your foods")+'</h2>'
@@ -227,7 +238,7 @@ function vMyFoods(){
 function savedById(id){return (S.savedMeals||[]).filter(function(m){return m.id===id;})[0]||null;}
 function vSavedMeal(id){
   var m=savedById(id);if(!m){V.smeal=null;return vFood();}
-  var items=m.items||[],tot=sumNutrition(items),now=mealNow();
+  var items=m.items||[],tot=sumNutrition(items),now=mealNow(today());
   var h='<div class="dhead">'+backArrow()
    +'<button class="dname" data-renamemeal="'+m.id+'" aria-label="'+esc(t("Rename meal")+": "+m.name)+'">'
    +'<h1 class="dhead-t">'+esc(m.name)+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button></div>'
@@ -249,7 +260,7 @@ function vSavedMeal(id){
   h+='<button class="dadd" data-smadd="'+m.id+'"><span aria-hidden="true">+</span>'+t("Add food")+'</button>';
   h+='<div class="dcta">'
    +'<button class="btn dbegin" data-addsaved="'+m.id+'"'+(items.length?'':' disabled')+'>'
-   +esc(t("Add to")+" "+t(now==="Snack"?"Snacks":now))+'</button>'
+   +esc(t("Add to")+" "+mealName(now))+'</button>'
    +'<button class="ddel" data-delsaved="'+m.id+'">'+t("Delete this meal")+'</button></div>';
   return h;}
 
@@ -330,4 +341,122 @@ function vTargets(){
   h+=vNutrition(r);
   return h;}
 
-export {glassUnit, MEALS, mealNow, savedById, vFood};
+/* ---- Plan: the day's meals and what is planned for each ---------------------------
+   Built the way Train's My Program is: the day at the top, how its meals are named,
+   then the meals as rows (✕ removes with Undo, Reorder moves, the row opens its plan),
+   + to add one, and the day's plan logged in one tap. Import reads a plan from text. */
+function slotLine(id){
+  var s=slotOf(id)||{},pl=s.plan||[],td=(s.todo||[]).length,tot=sumNutrition(pl),bits=[];
+  if(pl.length)bits.push(pl.length+' '+t(pl.length===1?"food":"foods"),fmtN(tot.kcal)+' kcal',t("P:")+' '+tot.p+'g');
+  if(td)bits.push(td+' '+t("to find"));
+  return bits.length?bits.map(esc).join('<i class="ddot"></i>'):'<em>'+esc(t("No plan yet — tap to add foods"))+'</em>';}
+function vPlan(){
+  var sl=mealSlots(),g=S.goals,all=[],h='',style=mealStyle(),ro=sl.length>1&&V.reorder==="ms";
+  sl.forEach(function(x){all=all.concat(x.plan||[]);});
+  var tot=sumNutrition(all);
+  h+='<div class="plhero"><span class="shk">'+esc(t("Your day"))+'</span>'
+   +'<h2 class="plhero-t">'+esc(t(sl.length===1?"1 meal":"{n} meals").replace("{n}",sl.length))+'</h2>'
+   +'<div class="plchips"><span><b>'+fmtN(tot.kcal)+'</b> / '+fmtN(g.kcal)+' kcal</span>'
+   +'<span><b>'+tot.p+'</b> / '+g.p+' g '+esc(t("Protein"))+'</span></div>'
+   +(all.length?'':'<p class="plhero-s">'+esc(t("Plan what goes in each meal, or import a plan you already have."))+'</p>')
+   +'</div>';
+  /* How the meals are called: the four named ones, or numbered as a coach writes them. */
+  h+='<div class="bsched" role="group" aria-label="'+esc(t("Meal names"))+'">'
+   +'<button class="'+(style==="named"?'on':'')+'" data-mstyle="named" aria-pressed="'+(style==="named")+'"><b>'+t("Named meals")+'</b><span>'+t("Breakfast, lunch, dinner, snacks")+'</span></button>'
+   +'<button class="'+(style==="numbered"?'on':'')+'" data-mstyle="numbered" aria-pressed="'+(style==="numbered")+'"><b>'+t("Numbered meals")+'</b><span>'+t("Meal 1, Meal 2, Meal 3…")+'</span></button></div>';
+  h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Meals")+'</h2>'
+   +(sl.length>1?reorderBtn("ms",ro):'')+'</div>';
+  h+='<div class="drows'+(ro?' ro':'')+'">';
+  sl.forEach(function(x,i){
+    h+='<div class="drow" data-k="ms:'+esc(x.id)+'" data-rowid="'+esc(x.id)+'">'
+     +'<button class="drm" data-rmslot="'+esc(x.id)+'" aria-label="'+esc(t("Remove")+" "+mealName(x.id))+'"><i>'+XSVG+'</i></button>'
+     +'<button class="dmain" data-pslot="'+esc(x.id)+'">'
+     +(MICON[x.id]?'<span class="bnum pli" aria-hidden="true">'+MICON[x.id]+'</span>':'<span class="bnum">'+(i+1)+'</span>')
+     +'<span class="dtext"><span class="drow-n">'+esc(mealName(x.id))+'</span>'
+     +'<span class="drow-s">'+slotLine(x.id)+'</span></span>'
+     +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
+     +(ro?'<button class="dgrip" data-grip="'+esc(x.id)+'" aria-label="'+esc(t("Move")+" "+mealName(x.id))+'">'+GRIPSVG+'</button>':'')
+     +'</div>';});
+  h+='</div><button class="dadd" data-paddslot="1"><span aria-hidden="true">+</span>'+t("Add a meal")+'</button>';
+  h+='<div class="dcta"><button class="btn dbegin" data-logday="1"'+(all.length?'':' disabled')+'>'+esc(t("Log today's plan"))+'</button>'
+   +(all.length?'<p class="bnote">'+esc(t("Fills each meal you have not logged yet today."))+'</p>':'')+'</div>';
+  h+='<button class="bnew" data-pimport="1">'+art("loaf",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
+   +'<span class="bnew-t"><b>'+t("Import a plan")+'</b><span>'+t("Paste it or open a file, and it is sorted into meals")+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  return h;}
+
+/* One meal's plan, built in place like a saved meal: the title renames it, ✕ takes a
+   food out, + adds from the same search as logging. Lines an import could not match
+   wait under the list, each with Find, which opens the search already typed. */
+function vPlanSlot(id){
+  var x=slotOf(id);if(!x){V.pslot=null;return vFood();}
+  var sl=mealSlots(),pos=sl.findIndex(function(s){return s.id===id;})+1,pl=x.plan||[],todo=x.todo||[],tot=sumNutrition(pl);
+  var h='<div class="dhead">'+backArrow()
+   +'<button class="dname" data-prename="'+esc(id)+'" aria-label="'+esc(t("Rename meal")+": "+mealName(id))+'">'
+   +'<h1 class="dhead-t">'+esc(mealName(id))+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button></div>'
+   +'<p class="dsub">'+esc(t("Meal {n} of {m}").replace("{n}",pos).replace("{m}",sl.length))+' · '+esc(t("Your plan"))+'</p>';
+  h+='<div class="mealbanner"><div><div class="mealbanner-k">'+esc(t("Total calories"))+'</div>'
+   +'<div class="mealbanner-v">'+fmtN(tot.kcal)+' kcal</div></div>'
+   +'<div class="mealbanner-m"><span>'+esc(t("P:"))+' '+r1(tot.p)+'g</span>'
+   +'<span>'+esc(t("C:"))+' '+r1(tot.c)+'g</span>'
+   +'<span>'+esc(t("F:"))+' '+r1(tot.f)+'g</span></div></div>';
+  h+='<div class="drows">';
+  pl.forEach(function(it,i){
+    h+='<div class="drow" data-k="pi:'+i+':'+esc(it.n)+'">'
+     +'<button class="drm" data-prmitem="'+esc(id)+'|'+i+'" aria-label="'+esc(t("Remove")+" "+it.n)+'"><i>'+XSVG+'</i></button>'
+     +'<div class="dmain"><span class="dtext"><span class="drow-n">'+esc(it.n)+'</span>'
+     +'<span class="drow-s">'+(it.label?esc(it.label)+'<i class="ddot"></i>':'')+fmtN(it.kcal)+' kcal<i class="ddot"></i>'
+     +esc(t("P:"))+' '+r1(it.p)+'g</span></span></div></div>';});
+  h+='</div>';
+  if(!pl.length&&!todo.length)h+='<p class="dempty">'+esc(t("Add what this meal should be. Logging it is then one tap, from here or from the meal on Today."))+'</p>';
+  if(todo.length){
+    h+='<div class="tsec"><h2 class="tsec-h">'+t("Still to find")+'</h2><span class="dhint">'+todo.length+'</span></div>'
+     +'<p class="dempty">'+esc(t("These lines of your plan matched no food. Find each one, or drop it."))+'</p><div class="drows">';
+    todo.forEach(function(raw,i){
+      h+='<div class="drow ptodo" data-k="pt:'+i+':'+esc(raw)+'">'
+       +'<button class="drm" data-pdrop="'+esc(id)+'|'+i+'" aria-label="'+esc(t("Remove")+" "+raw)+'"><i>'+XSVG+'</i></button>'
+       +'<div class="dmain"><span class="dtext"><span class="drow-n">'+esc(raw)+'</span></span></div>'
+       +'<button class="btn sm g ptodo-b" data-pfind="'+esc(id)+'|'+i+'">'+esc(t("Find"))+'</button></div>';});
+    h+='</div>';}
+  h+='<button class="dadd" data-padd="'+esc(id)+'"><span aria-hidden="true">+</span>'+t("Add food")+'</button>';
+  h+='<div class="dcta">'
+   +'<button class="btn dbegin" data-logplan="'+esc(id)+'"'+(pl.length?'':' disabled')+'>'+esc(t("Log it for today"))+'</button>'
+   +'<button class="ddel" data-rmslot="'+esc(id)+'">'+t("Remove this meal")+'</button></div>';
+  return h;}
+
+/* Import: the plan as text, read into meals before anything changes. What it found is
+   shown meal by meal — matched foods with their amounts, and what matched nothing —
+   and only "Use this plan" replaces the day's meals. */
+function vImport(){
+  var pp=V.pparse,h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Import a plan"))+'</h1></div>'
+   +'<p class="dsub">'+esc(t("Paste it from WhatsApp, Notes or a PDF — on iPhone you can copy the text straight out of a photo of it. Or open a text file."))+'</p>';
+  h+='<textarea id="pi_text" class="pitext" rows="9" spellcheck="false" placeholder="'
+   +esc(t("Meal 1: 3 eggs, 2 slices toast\nMeal 2: 150g chicken, 200g rice\nMeal 3: 200g yogurt, 30g almonds"))+'">'+esc(V.pitext||"")+'</textarea>'
+   +'<div class="piacts"><label class="btn g pifile"><input id="pi_file" type="file" accept=".txt,.csv,.md,text/plain,text/csv">'
+   +esc(t("Open a file"))+'</label>'
+   +'<button class="btn" data-pread="1">'+esc(t("Read the plan"))+'</button></div>';
+  if(pp){
+    if(!pp.length)h+='<div class="empty"><p>'+esc(t("No meals or foods were found in that text."))+'</p></div>';
+    else{
+      var nItems=0,nTodo=0,kc=0;
+      pp.forEach(function(m){nItems+=m.items.length;nTodo+=m.todo.length;kc+=sumNutrition(m.items).kcal;});
+      h+='<div class="tsec"><h2 class="tsec-h">'+t("What Bunyan found")+'</h2><span class="dhint">'
+       +esc(pp.length+" "+t(pp.length===1?"meal":"meals")+" · "+fmtN(kc)+" kcal")+'</span></div>';
+      pp.forEach(function(m,i){
+        var mt=sumNutrition(m.items);
+        h+='<div class="picard"><div class="picard-h"><b>'+esc(importName(m,i))+'</b><span>'+fmtN(mt.kcal)+' kcal</span></div>'
+         +m.items.map(function(it){return '<div class="plist-r"><span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')+'</span><b>'+fmtN(it.kcal)+'</b></div>';}).join("")
+         +m.todo.map(function(raw){return '<div class="plist-r miss"><span>'+esc(raw)+'</span><b>'+esc(t("not found"))+'</b></div>';}).join("")
+         +'</div>';});
+      if(nTodo)h+='<p class="bnote">'+esc(t("Lines that matched no food are kept with their meal, to find one by one."))+'</p>';
+      h+='<div class="dcta"><button class="btn dbegin" data-puse="1">'+esc(t("Use this plan"))+'</button>'
+       +'<p class="bnote">'+esc(t("It replaces your meals and their plans. What you have already logged stays as it is."))+'</p></div>';}}
+  return h;}
+/* What an imported meal will be called in the app: one of the four named meals in
+   the language of the app, a numbered meal by its place, otherwise its own heading. */
+function importName(m,i){
+  if(m.named)return t(m.named==="Snack"?"Snacks":m.named);
+  if(m.n||!m.name)return t("Meal {n}").replace("{n}",i+1);
+  return m.name;}
+
+export {glassUnit, importName, mealNow, MICON, savedById, vFood};

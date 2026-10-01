@@ -457,6 +457,29 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
   /* Without this, reaching the top or bottom of a sheet hands the scroll to the
      page behind it, which then moves under the sheet. */
   overscroll-behavior:contain}
+/* The ask dialog: a card rounded on every corner, never a sheet with an edge to show.
+   It hangs in the upper part of what the keyboard leaves (--vvh), centred only when
+   there is room, so the keyboard coming and going moves it a little, smoothly, rather
+   than throwing it from the middle of the screen to above the keys. */
+.sheet.dlg{align-items:flex-start;padding:0 16px}
+.sheetbox.dlgbox{max-width:400px;border-radius:var(--r5);background:var(--raised);
+  padding:24px 20px 20px;margin:min(18vh,max(12px,calc((var(--vvh,100dvh) - 260px) / 2))) auto 0;
+  max-height:calc(var(--vvh,100dvh) - 24px);
+  box-shadow:0 24px 60px -12px #000c,0 0 0 1px var(--border);border:none;
+  transition:margin-top 260ms var(--e-decel)}
+.sheet.dlg.entering .sheetbox{animation:dlgIn 240ms var(--e-decel)}
+@keyframes dlgIn{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:none}}
+.dlgbox h2{font-family:var(--display);font-size:22px;line-height:1.2;margin:0}
+.dlg-b{margin:8px 0 0;color:var(--dim);font-size:14px;line-height:1.45}
+.dlg-l{display:block;margin:16px 0 0;font-size:12px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--dim)}
+.dlgbox .dlg-in{display:block;width:100%;margin:16px 0 0;min-height:52px;border-radius:var(--r4);
+  font-size:17px;padding:0 16px;background:var(--surface)}
+.dlg-l+.dlg-in{margin-top:8px}
+.dlgbox .dlg-in:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--glow)}
+.dlg-acts{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:20px}
+.dlg-acts .btn{margin:0;min-height:50px}
+.dlg-acts .btn.g{background:var(--surface)}
 /* Icon-only controls need a real hit area even when the glyph is small. */
 .iconbtn{width:44px;min-height:44px;padding:0;font-size:20px;line-height:1}
 button.pill{position:relative;min-height:34px}
@@ -1357,6 +1380,13 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .dname:active .ico{color:var(--accentHi)}
 .droutine{margin:0 0 12px}
 .dhint{font-size:12px;color:var(--dim)}
+/* Reorder / Done, at the list's head. While it is on, the ✕s step aside so a row can
+   only be moved, and the grips are the only new thing on the row. */
+.dreorder{min-height:36px;padding:0 2px}
+.dreorder.on{color:var(--text);background:var(--raised);border:1px solid var(--border);
+  border-radius:var(--rpill);padding:0 14px;min-height:34px;margin-inline-end:0}
+.drows.ro .drm{display:none}
+.drows.ro .dmain{padding-inline-start:16px}
 .dempty{color:var(--dim);font-size:14px;line-height:1.5;margin:0 0 14px}
 .drows{display:flex;flex-direction:column;gap:10px}
 /* ✕ · the exercise · grip: three targets side by side, never one inside another. */
@@ -1616,7 +1646,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .fleft.over{color:var(--gold)}
 @media (max-width:360px){.fsum{grid-template-columns:1fr;justify-items:center}.fmac2{width:100%}}
 /* The four meals as tiles. The one for now is lit like the dock's active item. */
-.fmt{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:var(--s3)}
+.fmt{display:grid;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));gap:8px;margin-bottom:var(--s3)}
 .fmt-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;min-height:92px;
   padding:12px 4px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);color:var(--text);
   transition:transform var(--m-press) var(--e-standard),border-color var(--m-micro) var(--e-standard)}
@@ -1627,8 +1657,54 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .fmt-n{font-size:13px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fmt-k{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
 .fadd-m{font-weight:600;opacity:.85}
-.fmt-now{position:absolute;top:6px;inset-inline-start:6px;padding:1px 6px;border-radius:var(--rpill);
-  background:rgba(230,30,40,.16);color:var(--accentHi);font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+/* Food → Plan. The day at the top, as Train's program card is: a red kicker, the count
+   of meals as the title, and what the plan adds up to against the day's targets. */
+.plhero{position:relative;padding:18px;margin:4px 0 14px;border-radius:var(--r4);
+  background:var(--raised);border:1px solid var(--border);box-shadow:var(--shadow-card)}
+.plhero-t{font-family:var(--display);font-size:26px;font-weight:800;margin:6px 0 12px}
+.plchips{display:flex;flex-wrap:wrap;gap:8px}
+.plchips span{padding:6px 12px;border-radius:var(--rpill);border:1px solid var(--border);
+  font-size:13px;color:var(--dim);font-variant-numeric:tabular-nums}
+.plchips b{font-family:var(--display);font-size:15px;color:var(--text)}
+.plhero-s{margin:12px 0 0;font-size:13px;line-height:1.45;color:var(--dim)}
+.bnum.pli{color:var(--sub)}
+.bnum.pli svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* A plan's foods, read-only: name and amount, calories at the end. */
+.plist{display:flex;flex-direction:column;gap:2px;margin:0 0 12px;padding:6px 14px;
+  border-radius:var(--r3);background:var(--raised);border:1px solid var(--border)}
+.plist-r{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 0;font-size:14px}
+.plist-r+.plist-r{border-top:1px solid var(--border)}
+.plist-r i{font-style:normal;color:var(--dim);font-size:12.5px}
+.plist-r b{font-variant-numeric:tabular-nums;color:var(--sub);font-weight:600;white-space:nowrap}
+.plist-r.miss span{color:var(--dim)}
+.plist-r.miss b{color:var(--gold);font-weight:600;font-size:12px}
+.btn.plog{margin-bottom:8px}
+/* Import: a box to paste into, a file button beside the read button, then the meals it
+   found as cards. */
+.pitext{display:block;width:100%;min-height:200px;padding:14px;border-radius:var(--r3);resize:vertical;
+  background:var(--surface);border:1px solid var(--border);color:var(--text);font:inherit;font-size:15px;line-height:1.5}
+.pitext:focus{outline:none;border-color:var(--accent)}
+.piacts{display:grid;grid-template-columns:1fr 1.3fr;gap:10px;margin:12px 0 4px}
+.piacts .btn{margin:0}
+.pifile{position:relative;cursor:pointer}
+.pifile input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.picard{margin:0 0 10px;padding:12px 14px 6px;border-radius:var(--r3);background:var(--raised);border:1px solid var(--border)}
+.picard-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.picard-h b{font-family:var(--display);font-size:16px}
+.picard-h span{font-size:13px;color:var(--dim);font-variant-numeric:tabular-nums}
+.picard .plist-r{font-size:13.5px;padding:7px 0}
+/* A line an import could not match, waiting with Find. */
+.drow.ptodo{align-items:center}
+.drow.ptodo .drow-n{white-space:normal;color:var(--sub);font-weight:600}
+.btn.ptodo-b{width:auto;margin:0 12px 0 0;padding:0 16px;min-height:36px;flex:0 0 auto}
+[dir="rtl"] .btn.ptodo-b{margin:0 0 0 12px}
+/* A meal of the user's own wears its place in the day where the named four have a glyph. */
+.fmt-no{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;
+  font-family:var(--display);font-weight:800;font-size:13px;color:var(--sub);
+  background:var(--surface);box-shadow:inset 0 0 0 1px var(--border)}
+/* A meal with a plan and nothing logged: a small ring where the tick will go. */
+.fmt-plan{position:absolute;top:8px;inset-inline-end:8px;width:12px;height:12px;border-radius:50%;
+  border:2px solid var(--dim)}
 .fmt-ok{position:absolute;top:6px;inset-inline-end:6px;width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;
   background:var(--ok);color:#fff}
 .fmt-ok svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
@@ -2816,6 +2892,23 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .htile-v small{font-size:12.5px;color:var(--dim)}
 .htile-s{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
 .htile.water .htile-s{color:var(--accentHi);font-weight:700}
+/* The water tile, split: two buttons stacked in the tile's frame, each the full width.
+   The tile itself no longer presses as one; each half lights on its own. */
+.htile.hsplit{padding:0;gap:0;overflow:hidden}
+.htile.hsplit:active{transform:none}
+.hsplit-b{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;
+  flex:1 1 50%;margin:0;border:none;background:none;color:inherit;text-align:start;font:inherit;
+  transition:background var(--m-press) var(--e-standard)}
+.hsplit-top{padding:14px 14px 4px}
+.hsplit-bot{padding:4px 14px 14px;justify-content:flex-end}
+.hsplit-b:active{background:var(--surface)}
+.hsplit-top .htile-i{margin-bottom:6px}
+.hsplit-m{position:absolute;top:14px;inset-inline-end:14px;display:grid;place-items:center;width:32px;height:32px;
+  border-radius:50%;background:var(--surface);box-shadow:inset 0 0 0 1px var(--border);
+  color:var(--sub);font-size:20px;font-weight:600;line-height:1}
+.hsplit-top:active .hsplit-m{color:var(--text)}
+.hsplit-top:disabled{opacity:1}
+.hsplit-top:disabled .hsplit-m{opacity:.35}
 /* Progress: the trend running into the mane, where the banner's photo was. */
 .pgbanner-art{position:absolute;z-index:-1;inset-inline-start:8px;top:50%;width:34%;height:auto;transform:translateY(-50%);opacity:.9}
 [dir="rtl"] .pgbanner-art{transform:translateY(-50%) scaleX(-1)}

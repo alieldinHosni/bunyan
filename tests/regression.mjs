@@ -182,13 +182,18 @@ async function openDay(page){
   await page.tap('[data-tsec="program"]');await pause(page);
   await page.tap('.drows [data-day]');await pause(page,400);}
 const dayNames=page=>page.$$eval(".drow .drow-n",a=>a.map(x=>x.textContent));
-await test("day builder: ✕ removes with undo, the grip drags, arrow keys move",async page=>{
+await test("day builder: ✕ removes with undo, Reorder shows the grips, the grip drags, arrow keys move",async page=>{
   await openDay(page);
   const n0=await dayNames(page);if(n0.length<3)throw new Error("seed day too short");
   await page.tap(".drow:nth-child(2) .drm");await pause(page);
   eq((await dayNames(page)).length,n0.length-1,"removed");
   await page.tap(".toast-undo");await pause(page);
   eq(await dayNames(page),n0,"undo restores order");
+  /* No grip until Reorder is on: a scroll that starts on a row cannot move it. */
+  eq(await page.$$eval(".dgrip",a=>a.length),0,"no grips before Reorder");
+  await page.tap("[data-reorder]");await pause(page);
+  eq(await page.$$eval(".dgrip",a=>a.length),n0.length,"Reorder shows a grip per row");
+  eq(await page.$eval(".drows .drm",e=>getComputedStyle(e).display),"none","the ✕s step aside");
   const g=await (await page.$(".drow:nth-child(1) .dgrip")).boundingBox(),r3=await (await page.$(".drow:nth-child(3)")).boundingBox();
   await page.mouse.move(g.x+g.width/2,g.y+g.height/2);await page.mouse.down();
   for(let i=1;i<=8;i++){await page.mouse.move(g.x+g.width/2,g.y+g.height/2+(r3.y+r3.height/2+6-(g.y+g.height/2))*i/8);await pause(page,20);}
@@ -196,6 +201,8 @@ await test("day builder: ✕ removes with undo, the grip drags, arrow keys move"
   eq((await dayNames(page))[2],n0[0],"dragged to third");
   await page.focus(".drow:nth-child(3) .dgrip");await page.keyboard.press("ArrowUp");await pause(page);
   eq((await dayNames(page))[1],n0[0],"arrow key moved it up");
+  await page.tap("[data-reorder]");await pause(page);
+  eq(await page.$$eval(".dgrip",a=>a.length),0,"Done puts the grips away");
 });
 await test("exercise sheet: steppers apply at once and keep the range in order",async page=>{
   await openDay(page);
@@ -513,13 +520,17 @@ await test("Targets: goals save in place, the suggestion applies, and Progress n
 });
 
 /* ---- Home, Progress, Profile ------------------------------------------------------------ */
-await test("Home: one reminder at most, Train's card, one-tap water, and the Saturday week",async page=>{
+await test("Home: one reminder at most, Train's card, water adds and takes back, and the Saturday week",async page=>{
   eq(await page.$$eval('.hnote',a=>a.length)<=1,true,"one reminder");
   if(!(await page.$('.hstack .thero2 [data-startday]')))throw new Error("no Next up card");
   const w0=await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;});
-  await page.tap('.htile.water');await pause(page);
+  /* The tile is split: the bottom half adds a glass, the top half takes one back. */
+  await page.tap('.htile.water .hsplit-bot');await pause(page);
   const w1=await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;});
   if(!(w1>w0))throw new Error("water tile did not add");
+  await page.tap('.htile.water .hsplit-top');await pause(page);
+  eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;}),w0,"the top half takes the glass back");
+  await page.tap('.htile.water .hsplit-bot');await pause(page);
   eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");return sc.isoWeekday(document.querySelector('.hstack .twk-d').getAttribute('data-openday'));}),6);
   await page.tap('.htile.kcal');await pause(page);
   eq(await ev(page,"[V.tab,V.fsec]"),["food","today"]);
@@ -582,6 +593,75 @@ await test("Train Today's recovery check-in logs in taps; Profile has moved its 
   await page.tap('nav [data-tab="profile"]');await pause(page);
   eq(await page.$$eval('#app [data-setup],#app [data-sheet="recovery"]',a=>a.length),0);
   if(!(await page.$('.pring')))throw new Error("no ring");
+});
+/* ---- the name dialog, meals of your own, and a plan ------------------------------------- */
+await test("Name prompt: a rounded dialog with no Name label; a tap outside lowers the keyboard before it closes",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  await page.tap('[data-tsec="explore"]');await pause(page);
+  await page.$eval('[data-newsplit]',e=>e.click());await pause(page,400);
+  if(!(await page.$('.sheet.dlg .dlgbox')))throw new Error("no dialog");
+  eq(await page.$$eval('.dlgbox label',a=>a.length),0,"no Name label");
+  eq(await page.evaluate(()=>document.activeElement.id),"askv","field focused");
+  await page.mouse.click(6,420);await pause(page);
+  eq([!!(await page.$('.sheet.dlg')),await page.evaluate(()=>document.activeElement.id)],[true,""],"first tap only lowers the keyboard");
+  await page.mouse.click(6,420);await pause(page,400);
+  eq(!!(await page.$('.sheet.dlg')),false,"second tap closes");
+  await page.$eval('[data-newsplit]',e=>e.click());await pause(page,400);
+  await page.fill('#askv','My Split');await page.keyboard.press("Enter");await pause(page,400);
+  eq(await ev(page,"S.programs[S.programs.length-1].name"),"My Split","Enter creates");
+});
+await test("Food: no Now label; Add Food goes to the meal after the last one logged",async page=>{
+  await page.evaluate(async()=>{const s=await import("/js/state.js"),u=await import("/js/util.js");
+    s.dayRec(u.today()).meals={Lunch:{done:true,items:[{n:"Koshari",kcal:700,p:20,c:110,f:12}]}};s.saveDB();});
+  await page.tap('nav [data-tab="food"]');await pause(page,400);
+  eq(await page.$$eval('.fmt-now',a=>a.length),0,"no Now");
+  eq(await page.$eval('.btn.fadd',e=>e.getAttribute("data-addfood")),"Dinner","after Lunch comes Dinner");
+});
+await test("Plan: numbered meals, add and rename a meal, reorder them, and every name reaches Today",async page=>{
+  await page.tap('nav [data-tab="food"]');await pause(page);
+  await page.tap('[data-fsec="plan"]');await pause(page);
+  await page.tap('[data-mstyle="numbered"]');await pause(page);
+  eq(await page.$$eval('.drows .drow-n',a=>a.map(x=>x.textContent)),["Meal 1","Meal 2","Meal 3","Meal 4"],"numbered");
+  await page.tap('[data-paddslot]');await pause(page,400);
+  await page.fill('#askv','Pre-workout');await page.tap('[data-askok]');await pause(page);
+  await page.$$eval('.drows [data-pslot]',a=>a[1].click());await pause(page);
+  await page.tap('[data-prename]');await pause(page,400);
+  await page.fill('#askv','Lunch at work');await page.tap('[data-askok]');await pause(page);
+  eq(await page.$eval('.dhead-t',e=>e.textContent),"Lunch at work","renamed");
+  await page.evaluate(()=>history.back());await pause(page,500);
+  eq(await page.$$eval('.dgrip',a=>a.length),0,"no grips before Reorder");
+  await page.tap('[data-reorder="ms"]');await pause(page);
+  await page.focus('.drow:nth-child(5) .dgrip');await page.keyboard.press("ArrowUp");await pause(page);
+  eq(await page.$$eval('.drows .drow-n',a=>a.map(x=>x.textContent)),["Meal 1","Lunch at work","Meal 3","Pre-workout","Meal 5"],"moved up; a numbered meal is called by its place");
+  await page.tap('[data-fsec="today"]');await pause(page);
+  eq(await page.$$eval('.fmt-c .fmt-n',a=>a.map(x=>x.textContent)),["Meal 1","Lunch at work","Meal 3","Pre-workout","Meal 5"],"Today's tiles");
+});
+await test("Plan import: pasted text becomes meals with foods; an unmatched line waits with Find; the plan logs in one tap",async page=>{
+  await page.tap('nav [data-tab="food"]');await pause(page);
+  await page.tap('[data-fsec="plan"]');await pause(page);
+  await page.tap('[data-pimport]');await pause(page);
+  await page.fill('#pi_text',"Meal 1 (8am):\n- 3 eggs\n- 2 slices toast\nMeal 2: 150g chicken breast, 200g rice\nSnack:\n200g greek yogurt\n1 cup zorblax");
+  await page.tap('[data-pread]');await pause(page,1200);
+  eq(await page.$$eval('.picard',a=>a.length),3,"three meals found");
+  await page.tap('[data-puse]');await pause(page,500);
+  eq(await ev(page,"S.mealSlots.map(x=>[x.id.startsWith('m_')?'m':x.id,(x.plan||[]).length,(x.todo||[]).length])"),[["m",2,0],["m",2,0],["Snack",1,1]],"slots with plans");
+  eq(await page.$$eval('.drows .drow-n',a=>a.map(x=>x.textContent)),["Meal 1","Meal 2","Snacks"],"named as the app names them");
+  await page.$$eval('.drows [data-pslot]',a=>a[2].click());await pause(page);
+  await page.tap('[data-pfind]');await pause(page,600);
+  eq(await ev(page,"[V.sheet,V.food.sq,V.sd.plan!=null]"),["addfood","1 cup zorblax",true],"Find opens search with the line typed");
+  await page.keyboard.press("Escape");await pause(page);
+  await page.tap('[data-logplan]');await pause(page);
+  eq(await page.evaluate(async()=>{const s=await import("/js/state.js"),u=await import("/js/util.js");return (s.dayRec(u.today()).meals.Snack||{items:[]}).items.length;}),1,"logged as planned");
+  await page.evaluate(()=>history.back());await pause(page,500);
+  await page.tap('[data-logday]');await pause(page);
+  eq(await page.evaluate(async()=>{const s=await import("/js/state.js"),u=await import("/js/util.js"),r=s.dayRec(u.today());
+    return s.S.mealSlots.map(x=>((r.meals[x.id]||{}).items||[]).length);}),[2,2,1],"the rest of the day from the plan, the snack not twice");
+});
+await test("Arabic plan: Arabic digits, the dual and spoons are read",async page=>{
+  const r=await page.evaluate(async()=>{const n=await import("/js/engine/nutrition.js");await new Promise(f=>n.loadFoods(f));
+    const pp=await import("/js/engine/planparse.js");
+    return pp.parsePlan("الوجبة الأولى:\n٣ بيض\nبيضتين\nمعلقتين زبدة فول سوداني\nالعشا: ١٥٠ جم فراخ").map(m=>[m.named,m.n,m.items.map(i=>i.label)]);});
+  eq(r,[[null,1,["3 × large egg","2 × large egg","2 tbsp"]],["Dinner",null,["150 g"]]]);
 });
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();

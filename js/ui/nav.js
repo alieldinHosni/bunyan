@@ -37,9 +37,10 @@ function initNav(hooks){
     history.pushState({bunyan:1},"");
   }catch(e){}
 }
-function loc(){return {tab:V.tab,train:V.train,dayId:V.dayId,previewId:V.previewId,meal:V.meal,smeal:V.smeal,phist:V.phist};}
-function apply(l){V.tab=l.tab;V.train=l.train;V.dayId=l.dayId;V.previewId=l.previewId;V.meal=l.meal||null;V.smeal=l.smeal||null;V.phist=!!l.phist;}
-function rootOf(tab){return {tab:tab||"home",train:"days",dayId:null,previewId:null,meal:null,smeal:null,phist:false};}
+function loc(){return {tab:V.tab,train:V.train,dayId:V.dayId,previewId:V.previewId,meal:V.meal,smeal:V.smeal,pslot:V.pslot,pimport:V.pimport,phist:V.phist};}
+function apply(l){V.tab=l.tab;V.train=l.train;V.dayId=l.dayId;V.previewId=l.previewId;V.meal=l.meal||null;V.smeal=l.smeal||null;
+  V.pslot=l.pslot||null;V.pimport=!!l.pimport;V.phist=!!l.phist;}
+function rootOf(tab){return {tab:tab||"home",train:"days",dayId:null,previewId:null,meal:null,smeal:null,pslot:null,pimport:false,phist:false};}
 
 /* Call before mutating V for a genuine navigation: it records where you are now. */
 function pushNav(){

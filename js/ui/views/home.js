@@ -61,6 +61,21 @@ function tile(attr,cls,icon,label,value,sub,aria){
    +'<span class="htile-i" aria-hidden="true"><svg viewBox="0 0 24 24">'+icon+'</svg></span>'
    +'<span class="htile-k">'+esc(label)+'</span><span class="htile-v">'+value+'</span>'
    +'<span class="htile-s">'+sub+'</span></button>';}
+/* Water is two buttons in one tile: the top half takes a glass back, the bottom half
+   adds one. A glass added by mistake used to stay until it was found again in Food.
+   The − at the top and the + at the bottom say which half does what; each half lights
+   on its own when pressed, and the top one rests once the day is at nought. */
+function waterTile(unit,gl,ng){
+  var when=' data-wdate="'+today()+'"';
+  return '<div class="htile water hsplit" role="group" aria-label="'+esc(t("Water")+" "+gl+" "+t("of")+" "+ng)+'">'
+   +'<button class="hsplit-b hsplit-top" data-water="-'+unit+'"'+when+(gl?'':' disabled')
+   +' aria-label="'+esc(t("Remove a glass"))+'">'
+   +'<span class="htile-i" aria-hidden="true"><svg viewBox="0 0 24 24">'+HI.water+'</svg></span>'
+   +'<span class="htile-k">'+esc(t("Water"))+'</span>'
+   +'<span class="hsplit-m" aria-hidden="true">−</span></button>'
+   +'<button class="hsplit-b hsplit-bot" data-water="'+unit+'"'+when+' aria-label="'+esc(t("Add a glass"))+'">'
+   +'<span class="htile-v"><b>'+gl+'</b><small>/ '+ng+'</small></span>'
+   +'<span class="htile-s">+ '+esc(t("Add a glass"))+'</span></button></div>';}
 var HI={
   kcal:'<path d="M12 21a6 6 0 0 0 6-6c0-4-2.5-6-3.5-10-1.2 2.2-2 3.2-3 3.4-.8-.9-1-2-1-3.4-2.2 2.4-4.5 5.4-4.5 10a6 6 0 0 0 6 6z"/><path d="M12 21a2.5 2.5 0 0 1-2.5-2.5c0-1.6 1.2-2.6 2.5-4 1.3 1.4 2.5 2.4 2.5 4A2.5 2.5 0 0 1 12 21z"/>',
   water:'<path d="M12 3.5s6 6.3 6 10.5a6 6 0 0 1-12 0c0-4.2 6-10.5 6-10.5z"/>',
@@ -90,8 +105,7 @@ function vHome(){
    +tile('data-fsec="today"','kcal',HI.kcal,t("Calories"),
       '<b data-count-to="'+e.kcal+'">'+fmtN(e.kcal)+'</b><small>/ '+fmtN(g.kcal)+'</small>',
       esc(t("Protein"))+' '+e.p+' / '+g.p+' g',t("Calories")+" "+fmtN(e.kcal)+" "+t("of")+" "+fmtN(g.kcal))
-   +tile('data-water="'+unit+'" data-wdate="'+today()+'"','water',HI.water,t("Water"),
-      '<b>'+gl+'</b><small>/ '+ng+'</small>','+ '+esc(t("Add a glass")),t("Water")+" "+gl+" "+t("of")+" "+ng+". "+t("Add a glass"))
+   +waterTile(unit,gl,ng)
    +tile('data-sheet="steps"','steps',HI.steps,t("Steps"),
       '<b>'+fmtN(r.steps||0)+'</b>',esc(t("Goal")+" "+fmtN(g.steps)),t("Steps")+" "+fmtN(r.steps||0))
    +tile('data-sheet="weigh"','weight',HI.weight,t("Weight"),

@@ -25,7 +25,9 @@ import {syncViewport, restoreWorkoutState, syncWorkoutState, alarmStart, audioOn
 import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
 import {syncWbar} from "./ui/wbar.js";
-import {mealNow, savedById} from "./ui/views/food.js";
+import {importName, mealNow, savedById} from "./ui/views/food.js";
+import {mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "./engine/meals.js";
+import {parsePlan} from "./engine/planparse.js";
 import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
 
 /* Logs one food to the add-food sheet's meal and closes it. The single path for the
@@ -45,7 +47,14 @@ function logFood(food,grams,label){
 function addTo(meal,items,d){
   var into=V.sheet==="addfood"&&V.sd&&V.sd.into?savedById(V.sd.into):null;
   if(into){items.forEach(function(i){into.items.push(i);});saveDB();return into.name;}
-  addItems(meal,items,d||curDate());return t(meal);}
+  /* Into a meal's plan, from Food → Plan. Found from a line an import could not match,
+     the line is crossed off as it is found. */
+  var plan=V.sheet==="addfood"&&V.sd&&V.sd.plan?ownSlot(V.sd.plan):null;
+  if(plan){
+    plan.plan=(plan.plan||[]).concat(items);
+    if(V.sd.todo!=null&&plan.todo){plan.todo.splice(+V.sd.todo,1);if(!plan.todo.length)delete plan.todo;V.sd.todo=null;}
+    saveDB();return t("the plan for")+" "+mealName(plan.id);}
+  addItems(meal,items,d||curDate());return mealName(meal);}
 
 
 /* The exercise open in the edit sheet, and the one place its numbers are bounded:
@@ -104,6 +113,11 @@ function builderId(){
 /* Drag and the arrow keys both land here: a day in the split builder, or an
    exercise in a day. */
 function moveRow(id,to){
+  if(V.tab==="food"&&V.reorder==="ms"){
+    var sl=ownSlots(),k0=sl.findIndex(function(x){return x.id===id;});
+    to=Math.max(0,Math.min(sl.length-1,to));
+    if(k0<0||to===k0)return;
+    sl.splice(to,0,sl.splice(k0,1)[0]);saveDB();render();return;}
   if(builderId()){
     var sp=editSplit(builderId());if(!sp)return;
     var k=sp.days.findIndex(function(x){return x.id===id;});
@@ -121,10 +135,24 @@ function moveDayEx(id,to){
 
 /* Deleting a progress photo. Asked first: the photo is on this phone only, so there
    is nothing to undo from. */
+/* A meal of the day, added or renamed from Food → Plan. A blank name numbers it by its
+   place; a name that is just what it would be called anyway is not stored, so a
+   numbered meal keeps renumbering itself when the meals around it move. */
+ACT.addslot=function(name){newSlot(name);saveDB();render();};
+ACT.renameslot=function(name,id){
+  var x=ownSlot(id);if(!x)return;
+  name=String(name||"").trim();delete x.name;
+  if(name&&name!==mealName(id))x.name=name;
+  saveDB();render();};
 ACT.delphoto=function(_,id){
   removePhoto(id,function(ok){
     render();toast(ok?t("Photo deleted."):t("That photo could not be deleted."));});};
 
+/* Read as the finger lands, not on the click: by then Chrome has already taken the
+   focus off the field for a tap outside it, and iOS has not. */
+var askTyping=false;
+document.addEventListener("pointerdown",function(){
+  askTyping=V.sheet==="ask"&&!!document.activeElement&&document.activeElement.id==="askv";},true);
 document.addEventListener("click",function(ev){
   /* Named el, not t: t() is the translator, and shadowing it here made every
      translated string inside this handler throw. */
@@ -133,8 +161,17 @@ document.addEventListener("click",function(ev){
   if(el.matches("button"))tap(el.classList.contains("btn")?"heavy":"light");
   var D=el.dataset;
 
-  if(D.stop!==undefined&&!el.matches("button"))return;
-  if(D.close!==undefined){requestCloseSheet();return;}
+  /* In the ask dialog a tap that misses the field lowers the keyboard first: on the
+     card's blank space, and on the dimmed screen around it, which only closes the
+     dialog once nothing is being typed. Closing on that first tap is what made the
+     prompt seem to glitch away while someone was only trying to see past the keyboard. */
+  var typingAsk=V.sheet==="ask"&&askTyping;askTyping=false;
+  if(D.stop!==undefined&&!el.matches("button")){
+    if(typingAsk&&ev.target.id!=="askv")document.activeElement.blur();
+    return;}
+  if(D.close!==undefined){
+    if(typingAsk&&!el.matches("button")){document.activeElement.blur();return;}
+    requestCloseSheet();return;}
   /* Cancelling the discard prompt has to give the half-typed food back, otherwise
      "Cancel" would throw away exactly what it promised to keep. */
   if(D.restore!==undefined){var kp=(V.sd||{}).back||{};openSheet("manual",kp);return;}
@@ -148,7 +185,7 @@ document.addEventListener("click",function(ev){
   /* A tab tap is a fresh start: the top of the page, and Food on today — a past
      date left selected from earlier was where a meal logged later could land. */
   if(D.tab){resetNav();var same=V.tab===D.tab,top=same&&V.train==="days"&&!V.meal&&!V.smeal&&!V.phist;
-    V.tab=D.tab;V.train="days";V.meal=null;V.smeal=null;V.phist=false;V.dnavDir=0;
+    V.tab=D.tab;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.dnavDir=0;
     /* Tapping a tab while already at its top goes back to its first section. */
     if(D.tab==="train"&&top){V.tsec="today";S.prefs.tsec="today";V.tdate=null;saveDB();}
     if(D.tab==="food"&&top){V.fsec="today";S.prefs.fsec="today";V.fdate=null;saveDB();}
@@ -159,16 +196,17 @@ document.addEventListener("click",function(ev){
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
      return to but the tab bar. */
-  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.phist=false;render();return;}
+  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;render();return;}
   /* Food's three sections, remembered as Train's are. */
   if(D.fsec){if(V.sheet)closeSheet();
     /* From another tab (Home's nutrition card, Profile's targets row) it is a change of
        place, so it starts a fresh trail, on today's date. */
     if(V.tab!=="food"){V.fdate=null;V.train="days";}
-    if(V.tab!=="food"||V.meal||V.smeal){resetNav();V.meal=null;V.smeal=null;}
+    if(V.tab!=="food"||V.meal||V.smeal||V.pslot||V.pimport){resetNav();V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;}
     V.tab="food";
     V.fsec=D.fsec;S.prefs.fsec=D.fsec;saveDB();render();window.scrollTo(0,0);return;}
   if(D.frange){V.frange=+D.frange;render();return;}
+  if(D.reorder){V.reorder=V.reorder===D.reorder?null:D.reorder;render();return;}
   /* Train → Today's recovery check-in: one tap per answer, into today's record. */
   if(D.rchk){var rq=D.rchk.split("|"),rr=dayRec(today());rr[rq[0]]=+rq[1];saveDB();render();
     if(rr.sleep&&rr.sore&&rr.energy)toast(t("Recovery logged."));return;}
@@ -228,7 +266,7 @@ document.addEventListener("click",function(ev){
   /* ---- the split builder */
   if(D.editsplit){pushNav();V.previewId=D.editsplit;V.train="builder";render();window.scrollTo(0,0);return;}
   if(D.renamesplit){var rs=editSplit(D.renamesplit);if(!rs)return;
-    askText({title:t("Rename program"),label:t("Name"),value:planName(rs.name),act:"renamesplit",data:D.renamesplit});return;}
+    askText({title:t("Rename program"),value:planName(rs.name),act:"renamesplit",data:D.renamesplit});return;}
   if(D.bday!==undefined){var bs=editSplit(builderId());if(!bs)return;
     var nd0=day(t("Day")+" "+(bs.days.length+1),[]);nd0.wd=[];
     /* By weekday, a new day takes the first weekday no other day has. */
@@ -265,14 +303,14 @@ document.addEventListener("click",function(ev){
     toast(rgone.name+" "+t("removed."),function(){var r2=editSplit(builderId())||rd;r2.days.splice(Math.min(ri,r2.days.length),0,rgone);saveDB();render();});
     return;}
   if(D.newsplit){
-    askText({title:t("New program"),label:t("Name"),ph:t("For example, Push / Pull / Legs"),
+    askText({title:t("New program"),ph:t("For example, Push / Pull / Legs"),
       cta:t("Create"),act:"newsplit"});return;}
   if(D.addday){
-    askText({title:t("Add a day"),label:t("Name"),ph:t("For example, Chest & Triceps"),
+    askText({title:t("Add a day"),ph:t("For example, Chest & Triceps"),
       cta:t("Add"),act:"addday"});return;}
   if(D.renameday){
     var d0=dayOf(D.renameday);if(!d0)return;
-    askText({title:t("Rename day"),label:t("Name"),value:planName(d0.name),
+    askText({title:t("Rename day"),value:planName(d0.name),
       act:"renameday",data:D.renameday});return;}
   if(D.delday){
     var dD=dayOf(D.delday);
@@ -330,7 +368,7 @@ document.addEventListener("click",function(ev){
      was rewritten to read exercises.json: the handler survived, the button did not.
      Custom entries have no illustration, which thumb() already renders gracefully. */
   if(D.customex){
-    askText({title:t("Add your own exercise"),label:t("Name"),value:V.exq||"",
+    askText({title:t("Add your own exercise"),value:V.exq||"",
       body:t("It joins your library under the muscle you have filtered to. No illustration, everything else works."),
       cta:t("Add it"),act:"customex",data:{from:V.sd}});return;}
   if(D.pickex){addExercise(D.pickex);return;}
@@ -620,7 +658,7 @@ document.addEventListener("click",function(ev){
     closeSheet();V.tab="food";render();
     play("set");toast(at10+" "+t("updated."));return;}
   if(D.savemeal){
-    askText({title:t("Save this as a meal"),label:t("Name"),value:t("My meal"),
+    askText({title:t("Save this as a meal"),value:t("My meal"),
       body:t("It goes into Saved meals so you can log the whole thing in one tap."),
       cta:t("Save"),act:"savemeal",data:{meal:V.sd&&V.sd.meal}});return;}
   /* A saved meal, logged whole: from My Foods, its own screen, or the sheet's Meals
@@ -633,11 +671,85 @@ document.addEventListener("click",function(ev){
     var atS=addTo(ms,JSON.parse(JSON.stringify(sm.items)),V.sheet?null:today());
     if(V.sheet)closeSheet();
     render();play("set");toast(sm.name+" "+t("added to")+" "+atS+".");return;}
+  /* ---- Food → Plan: the day's meals and their plans */
+  if(D.mstyle){
+    if(D.mstyle===mealStyle())return;
+    var keepS=JSON.parse(JSON.stringify(mealSlots()));
+    setStyle(D.mstyle);V.reorder=null;saveDB();render();
+    toast(t(D.mstyle==="named"?"Meals are named.":"Meals are numbered."),function(){S.mealSlots=keepS;saveDB();render();});return;}
+  if(D.pslot){pushNav();V.pslot=D.pslot;render();window.scrollTo(0,0);return;}
+  if(D.paddslot){askText({title:t("Add a meal"),ph:t("For example, Pre-workout"),
+    body:t("Leave it blank and it is numbered by its place in the day."),required:false,cta:t("Add"),act:"addslot"});return;}
+  if(D.prename){var rsl=slotOf(D.prename);if(!rsl)return;
+    askText({title:t("Rename meal"),value:mealName(rsl.id),required:false,
+      body:t("Leave it blank to go back to its usual name."),act:"renameslot",data:rsl.id});return;}
+  /* ✕ on a meal: gone at once, with Undo. What was logged under it stays in the log
+     and still shows on the days it was logged. One meal always stays. */
+  if(D.rmslot){
+    var sl2=ownSlots(),ri3=sl2.findIndex(function(x){return x.id===D.rmslot;});if(ri3<0)return;
+    if(sl2.length<2){toast(t("A day needs at least one meal."));return;}
+    var goneS=sl2.splice(ri3,1)[0],nmS=mealName(goneS.id);
+    if(V.pslot===goneS.id){goBack();V.pslot=null;}
+    saveDB();render();
+    toast(nmS+" "+t("removed."),function(){ownSlots().splice(Math.min(ri3,ownSlots().length),0,goneS);saveDB();render();});return;}
+  if(D.padd){var pa=D.padd;
+    loadFoods(function(){
+      V.food={mode:"search",tab:"search",sq:"",q:"",items:null,edit:-1};
+      openSheet("addfood",{meal:pa,plan:pa});});
+    return;}
+  /* A line of an imported plan that matched nothing: the search opens with it typed. */
+  if(D.pfind){var pf=D.pfind.split("|"),pfs=slotOf(pf[0]),raw=pfs&&(pfs.todo||[])[+pf[1]];if(!raw)return;
+    loadFoods(function(){
+      V.food={mode:"search",tab:"search",sq:raw,q:"",items:null,edit:-1};
+      openSheet("addfood",{meal:pf[0],plan:pf[0],todo:+pf[1]});});
+    return;}
+  if(D.prmitem||D.pdrop){
+    var key=D.prmitem?"plan":"todo",pr=(D.prmitem||D.pdrop).split("|"),ps=ownSlot(pr[0]);if(!ps||!ps[key])return;
+    var pi2=+pr[1],goneP=ps[key].splice(pi2,1)[0];if(goneP==null)return;
+    if(!ps[key].length)delete ps[key];
+    saveDB();render();
+    toast((goneP.n||goneP)+" "+t("removed."),function(){
+      var o2=ownSlot(pr[0]);if(!o2)return;(o2[key]=o2[key]||[]).splice(Math.min(pi2,o2[key].length),0,goneP);saveDB();render();});return;}
+  /* The plan, logged: one meal from its own screen or the meal on Today; the whole
+     day from Plan, into each meal not yet logged so nothing is counted twice. */
+  if(D.logplan){
+    var lp=planOf(D.logplan);if(!lp.length)return;
+    var dL=V.pslot?today():curDate();
+    addItems(D.logplan,JSON.parse(JSON.stringify(lp)),dL);render();play("set");
+    toast(mealName(D.logplan)+" "+t("logged as planned."));return;}
+  if(D.logday){
+    var rL=dayRec(today()),nL=0;
+    mealSlots().forEach(function(x){
+      if(!(x.plan||[]).length||((rL.meals[x.id]||{}).items||[]).length)return;
+      addItems(x.id,JSON.parse(JSON.stringify(x.plan)),today());nL++;});
+    render();
+    if(nL){play("set");toast(t(nL===1?"1 meal logged from your plan.":"{n} meals logged from your plan.").replace("{n}",nL));}
+    else toast(t("Every planned meal is already logged today."));return;}
+  if(D.pimport){pushNav();V.pimport=true;V.pparse=null;render();window.scrollTo(0,0);return;}
+  if(D.pread){
+    var txt=val("pi_text");V.pitext=txt;
+    if(!txt.trim()){toast(t("Paste your plan first."));return;}
+    loadFoods(function(){V.pparse=parsePlan(txt);render();
+      var res=document.querySelector(".picard");if(res)res.scrollIntoView({behavior:"smooth",block:"start"});});
+    return;}
+  if(D.puse){
+    var pp=V.pparse;if(!pp||!pp.length)return;
+    var before=JSON.parse(JSON.stringify(mealSlots())),used={};
+    S.mealSlots=pp.map(function(m,i){
+      var x={};
+      if(m.named&&!used[m.named]){x.id=m.named;used[m.named]=1;}
+      else{x.id="m_"+uid();var nm=importName(m,i);if(m.named||(!m.n&&m.name))x.name=nm;}
+      if(m.items.length)x.plan=m.items;
+      if(m.todo.length)x.todo=m.todo;
+      return x;});
+    V.pparse=null;V.pitext="";V.reorder=null;saveDB();
+    goBack();V.pimport=false;V.fsec="plan";S.prefs.fsec="plan";render();window.scrollTo(0,0);
+    toast(t("Your plan is in."),function(){S.mealSlots=before;saveDB();render();});return;}
   /* ---- My Foods */
   if(D.smeal){pushNav();V.smeal=D.smeal;render();window.scrollTo(0,0);return;}
-  if(D.newmeal){askText({title:t("New meal"),label:t("Name"),ph:t("For example, Ful breakfast"),act:"newmeal"});return;}
+  if(D.newmeal){askText({title:t("New meal"),ph:t("For example, Ful breakfast"),act:"newmeal"});return;}
   if(D.renamemeal){var rm=savedById(D.renamemeal);if(!rm)return;
-    askText({title:t("Rename meal"),label:t("Name"),value:rm.name,act:"renamemeal",data:D.renamemeal});return;}
+    askText({title:t("Rename meal"),value:rm.name,act:"renamemeal",data:D.renamemeal});return;}
   if(D.delsaved){var dm=savedById(D.delsaved);if(!dm)return;
     askConfirm({title:t("Delete")+" "+dm.name+"?",icon:"trash",
       body:t("The saved meal is removed. Anything you already logged with it stays in your log."),
@@ -816,11 +928,11 @@ document.addEventListener("click",function(ev){
       cta:t("Delete the program"),act:"delsplit",data:D.delsplit});return;}
   if(D.switch){if(D.switch!==CUR){switchProfile(D.switch,render);render();}return;}
   if(D.addprofile){
-    askText({title:t("Add a profile"),label:t("Name"),
+    askText({title:t("Add a profile"),
       body:t("A separate log, weight and plan. Nothing crosses over."),
       cta:t("Create"),act:"newprofile"});return;}
   if(D.renameprofile){
-    askText({title:t("Rename this profile"),label:t("Name"),value:curProfile().name,
+    askText({title:t("Rename this profile"),value:curProfile().name,
       act:"renameprofile"});return;}
   if(D.delprofile){
     if(isOwner()){toast(t("The admin profile cannot be deleted."));return;}
@@ -1017,6 +1129,7 @@ document.addEventListener("focusout",function(){setTimeout(syncKeyboard,60);});
 var exqTimer=null;
 document.addEventListener("input",function(ev){
   var id=ev.target.id||"";
+  if(id==="pi_text"){V.pitext=ev.target.value;return;}
   if(id==="exq"){
     V.exq=ev.target.value;
     clearTimeout(exqTimer);
@@ -1061,7 +1174,8 @@ document.addEventListener("keydown",function(ev){
   var gp=(ev.key==="ArrowUp"||ev.key==="ArrowDown")&&ev.target.closest&&ev.target.closest("[data-grip]");
   if(gp){
     ev.preventDefault();
-    var gid=gp.getAttribute("data-grip"),gl=builderId()?(editSplit(builderId())||{days:[]}).days:((dayOf(V.dayId)||{ex:[]}).ex);
+    var gid=gp.getAttribute("data-grip"),gl=V.tab==="food"&&V.reorder==="ms"?mealSlots()
+      :builderId()?(editSplit(builderId())||{days:[]}).days:((dayOf(V.dayId)||{ex:[]}).ex);
     var gi=gl.findIndex(function(x){return x.id===gid;});
     if(gi<0)return;
     moveRow(gid,gi+(ev.key==="ArrowUp"?-1:1));
@@ -1086,6 +1200,13 @@ document.addEventListener("change",function(ev){
   if(ek){var ee=editedEx();if(ee){setExField(ee,ek[1],ev.target.value);saveDB();render();}return;}
   /* A progress photo, picked from the camera or the library. Shrunk and stored on
      this phone by js/ui/photos.js; the Body view re-reads the list once it lands. */
+  /* A plan from a file: read as text into the box, then read as a plan straight away. */
+  if(ev.target.id==="pi_file"){
+    var pfile=ev.target.files&&ev.target.files[0];if(!pfile)return;
+    var pfr=new FileReader();
+    pfr.onload=function(){V.pitext=String(pfr.result||"");
+      loadFoods(function(){V.pparse=parsePlan(V.pitext);render();});};
+    pfr.readAsText(pfile);ev.target.value="";return;}
   if(ev.target.id==="pg_photo"){
     var file=ev.target.files&&ev.target.files[0];
     ev.target.value="";
@@ -1131,7 +1252,7 @@ document.addEventListener("change",function(ev){
   if(ev.target.id==="mf_save"){
     var go=document.getElementById("mf_go");
     if(go)go.textContent=t(ev.target.checked?"Save and add to":"Add to")+" "
-      +t((V.sd&&V.sd.meal)||mealNow());
+      +mealName((V.sd&&V.sd.meal)||mealNow());
     return;}
   var si=ev.target.dataset?ev.target.dataset.setidx:undefined;
   if(si!==undefined&&S.active)W.editLoggedSet(+si,ev.target.dataset.k,ev.target.value);});

@@ -9,14 +9,15 @@
    One sheet, three modes (V.food.mode): "search", "detail" and "quick". */
 import {t} from "../../i18n/dict.js";
 import {empty} from "../../data/exercises.js";
-import {frequentFoods} from "../../engine/formulas.js";
+import {curDate, frequentFoods} from "../../engine/formulas.js";
 import {density, FOODDB, isMeasure, nutritionFor, searchFoods, sumNutrition, unitGrams, unitKey,
         unitLabel, UNIT_STEP, unitsFor} from "../../engine/nutrition.js";
 import {scanSupported} from "../../scan.js";
 import {S} from "../../state.js";
 import {esc, fmtN, r1} from "../../util.js";
 import {seg, V} from "../view.js";
-import {MEALS, mealNow} from "./food.js";
+import {mealNow} from "./food.js";
+import {dayMeals, mealName, slotOf} from "../../engine/meals.js";
 
 /* ---- shared pieces --------------------------------------------------------- */
 function pool(){return (S.myFoods||[]).concat(FOODDB||[]);}
@@ -48,13 +49,17 @@ function afHead(title,opts){
   /* Opened from a saved meal in My Foods: everything goes into that meal. */
   var into=V.sd&&V.sd.into&&(S.savedMeals||[]).filter(function(m){return m.id===V.sd.into;})[0];
   if(sub===undefined&&into)sub='<span class="afsub">'+esc(t("Into"))+' <b>'+esc(into.name)+'</b></span>';
+  /* Opened from a meal's plan in Food → Plan: everything goes into that plan. */
+  var plan=V.sd&&V.sd.plan&&slotOf(V.sd.plan);
+  if(sub===undefined&&plan)sub='<span class="afsub">'+esc(t("Into the plan for"))+' <b>'+esc(mealName(plan.id))+'</b></span>';
   if(sub===undefined){
-    var meal=curMeal();
-    sub='<label class="afmeal">'+(opts.pre?esc(opts.pre)+' ':'')+'<b>'+esc(t(meal))+'</b>'
+    var meal=curMeal(),ids=dayMeals(curDate());
+    if(ids.indexOf(meal)<0)ids.push(meal);
+    sub='<label class="afmeal">'+(opts.pre?esc(opts.pre)+' ':'')+'<b>'+esc(mealName(meal))+'</b>'
      +'<span class="ico ico-cdown" aria-hidden="true"></span>'
      +'<select id="afmeal" aria-label="'+esc(t("Meal"))+'">'
-     +MEALS.map(function(m){
-        return '<option value="'+m+'"'+(m===meal?' selected':'')+'>'+esc(t(m))+'</option>';}).join("")
+     +ids.map(function(m){
+        return '<option value="'+esc(m)+'"'+(m===meal?' selected':'')+'>'+esc(mealName(m))+'</option>';}).join("")
      +'</select></label>';}
   return '<div class="afhead">'
    +(opts.back?'<button class="icobtn back" '+opts.back+' aria-label="'+esc(t("Back"))+'">'
