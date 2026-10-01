@@ -533,12 +533,29 @@ await test("Progress: no date bar, History by month opens and Back returns",asyn
   await page.tap('nav [data-tab="progress"]');await pause(page);
   if(await page.$('.dnav'))throw new Error("date bar still on Progress");
   await page.tap('[data-phist]');await pause(page);
-  if(!(await page.$('.phcal .dbday.trained')))throw new Error("no trained day in History");
+  /* The seed trains from two days ago back, so on the 1st and 2nd of a month every
+     trained day is in the previous one: look in both months the test visits. */
+  let trained=!!(await page.$('.phcal .dbday.trained'));
   await page.tap('[data-hmonth="-1"]');await pause(page);
   eq(await ev(page,"V.hmonth"),-1);
+  trained=trained||!!(await page.$('.phcal .dbday.trained'));
+  if(!trained)throw new Error("no trained day in History");
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.tab,!!V.phist]"),["progress",false]);
 });
+await test("Arabic: the dock keeps its order, dates are Arabic, figures stay one run",async page=>{
+  const r=await page.evaluate(()=>{
+    const b=[...document.querySelectorAll("nav .dock-b")].map(x=>x.getBoundingClientRect().left);
+    const tabs=[...document.querySelectorAll("nav .dock-b")].map(x=>x.getAttribute("data-tab"));
+    return {dir:document.documentElement.dir,dock:getComputedStyle(document.querySelector(".dock")).direction,
+      leftToRight:b.every((x,i)=>!i||x>b[i-1]),first:tabs[0],
+      date:document.querySelector(".hdate").textContent,
+      runs:[...document.querySelectorAll('#app bdi[dir="ltr"]')].map(x=>x.textContent)};});
+  eq([r.dir,r.dock,r.leftToRight,r.first],["rtl","ltr",true,"home"],"dock");
+  if(!/[\u0600-\u06FF]/.test(r.date)||/[A-Za-z]/.test(r.date))throw new Error("date not Arabic: "+r.date);
+  if(/[\u0660-\u0669]/.test(r.date))throw new Error("Arabic-Indic digits in date: "+r.date);
+  if(!r.runs.some(x=>/^\d[\d,]* \/ \d/.test(x)))throw new Error("no isolated fraction among "+JSON.stringify(r.runs));
+},{prefs:{lang:"ar"}});
 await test("Train Today's recovery check-in logs in taps; Profile has moved its plan and recovery rows",async page=>{
   await page.tap('nav [data-tab="train"]');await pause(page);
   await page.tap('[data-rchk="sleep|7.5"]');await page.tap('[data-rchk="sore|5"]');await page.tap('[data-rchk="energy|9"]');await pause(page);

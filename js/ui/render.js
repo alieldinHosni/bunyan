@@ -1,6 +1,7 @@
 /* Bunyan — render
    The single render entry point. */
 import {applyLang} from "../i18n/exnames.js";
+import {isolateNums} from "../i18n/bidi.js";
 import {t} from "../i18n/dict.js";
 import {vFood} from "./views/food.js";
 import {vHome} from "./views/home.js";
@@ -90,6 +91,9 @@ function render(){
      written and whether its entry animation runs. A rebuild is for the first case
      only; the second patches, so unchanged nodes — images, the focused field, an
      element mid-animation — are never destroyed and recreated. */
+  /* Arabic: every figure is one left-to-right run (see i18n/bidi.js). */
+  var rtl=S.prefs&&S.prefs.lang==="ar";
+  if(rtl)h=isolateNums(h);
   var appEl=document.getElementById("app");
   /* Restarting the animation takes more than leaving the class on. #app itself is
      never replaced — only its children are — so on two tab changes in a row the class
@@ -112,6 +116,7 @@ function render(){
   var sheetEl=document.getElementById("sheet");
   var appearing=V.sheet&&V.sheet!==lastSheet;
   var sheetHtml=vSheet();
+  if(rtl)sheetHtml=isolateNums(sheetHtml);
   if(appearing||!V.sheet)replace(sheetEl,sheetHtml);
   else patch(sheetEl,sheetHtml);
   var boxEl=sheetEl.firstChild;

@@ -1,6 +1,7 @@
 /* Bunyan — session
    The live session surface and rest screen. Execution, not editing. */
 import {t} from "../../i18n/dict.js";
+import {isolateNums} from "../../i18n/bidi.js";
 import {difficultyOf, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
 import {exName} from "../../i18n/exnames.js";
 import {dbTotal, inDeload, lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
@@ -239,7 +240,7 @@ function vLogger(){
   hd.push("");
   var doneHere=e.sets.length;
   h+='<section class="setcard"><div class="setcard-h"><h2>'+t("Sets")+'</h2>'
-   +'<span class="setcard-c"><b>'+Math.min(doneHere,rows)+'</b> / '+rows+' '+t("done")+'</span></div>';
+   +'<span class="setcard-c"><bdi class="num"><b>'+Math.min(doneHere,rows)+'</b> / '+rows+'</bdi> '+t("done")+'</span></div>';
   h+='<div class="setgrid"><div class="setrow hd" style="grid-template-columns:'+cols+'">'
    +hd.map(function(x){return '<span>'+x+'</span>';}).join("")+'</div>';
 
@@ -562,7 +563,8 @@ function syncRest(){
   var key=V.logIdx+"|"+e.sets.length+"|"+(V.restDone?"done":"run")+"|"+(S.prefs&&S.prefs.lang||"en");
   if(host.getAttribute("data-k")===key){paintRest();return;}
   host.setAttribute("data-k",key);
-  host.innerHTML=vRest(a,e,rowsFor(e),ex_isTimed(e)&&!LOADED.test(e.name));
+  var rh=vRest(a,e,rowsFor(e),ex_isTimed(e)&&!LOADED.test(e.name));
+  host.innerHTML=S.prefs&&S.prefs.lang==="ar"?isolateNums(rh):rh;
 }
 
 export {ivText, groupLabel, groupNext, groupRun, IDLE_PAUSE, mmss, noteSet, paintRest, platePlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger};

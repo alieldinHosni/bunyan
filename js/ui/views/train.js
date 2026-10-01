@@ -13,6 +13,7 @@ import {tokenMatch} from "../../engine/text.js";
 import {actInfo, intensityOf, isActivity} from "../../data/activities.js";
 import {head, seg, V} from "../view.js";
 import {backArrow, backBar} from "../nav.js";
+import {art} from "../art.js";
 
 /* ============================================================ TRAIN */
 
@@ -21,7 +22,10 @@ import {backArrow, backBar} from "../nav.js";
    three pictures and which program got which changed whenever the list reordered —
    adopting a split drops it out of "Other Programs" and shifted every image along. */
 var SPLIT_IMG={ap:"split-ap",arnold:"split-arnold",ppl:"split-ppl",
-  ul:"split-ul",fb:"split-fb",bw:"split-bw",bro:"split-bro"};
+  ul:"split-ul",fb:"split-fb",bw:"split-bw",bro:"split-bro",
+  /* Drawn in the Bunyan pen until each has a photograph; a photo saved under the same
+     name replaces the drawing with no change here (docs/COVERS.md has the prompts). */
+  sl5:"split-sl5",db:"split-db",glute:"split-glute",ppl3:"split-ppl3",foot:"split-foot",fl:"split-fl"};
 /* A split the user built themselves has no photograph of its own. It gets the accent
    field instead of borrowing another programme's picture. */
 function splitCover(id){
@@ -193,7 +197,7 @@ function vToday(sp){
   var sel=V.tdate||today(),on=planOn(sp,sel),h="";
   h+=weekStrip(sp,sel);
   h+=dayHero(sp,on,sel);
-  h+='<button class="ttile wide tquick" data-actsheet="1"><span class="ttile-i" aria-hidden="true">'+ACTIVITY+'</span>'
+  h+='<button class="ttile wide tquick" data-actsheet="1">'+art("track",{cls:"btn-art"})+'<span class="ttile-i" aria-hidden="true">'+ACTIVITY+'</span>'
    +'<span class="ttile-tx"><span class="ttile-n">'+t("Log cardio or a sport")+'</span>'
    +'<span class="ttile-s">'+t("Running, football, padel, tennis, classes…")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
@@ -239,7 +243,7 @@ var TICKSVG='<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>';
 /* Explore: every program you own (✕ on all but the active one), a new one from
    scratch, the templates, and the library. */
 function vExplore(sp){
-  var h='<button class="bnew" data-newsplit="1"><span class="bnew-i">'+PLUS+'</span>'
+  var h='<button class="bnew" data-newsplit="1">'+art("wall",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
    +'<span class="bnew-t"><b>'+t("Build a program from scratch")+'</b><span>'+t("Name it, pick the days, fill them from the library")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   /* Or let Bunyan build it: four questions, and the plan is made for you. */
@@ -260,11 +264,11 @@ function vExplore(sp){
   h+='</div>';
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Exercises & activities")+'</h2></div>'
    +'<div class="ttiles">'
-   +'<button class="ttile" data-train="library"><span class="ttile-i" aria-hidden="true"><span class="ico ico-search"></span></span>'
+   +'<button class="ttile" data-train="library">'+art("barbell",{cls:"btn-art"})+'<span class="ttile-i" aria-hidden="true"><span class="ico ico-search"></span></span>'
    +'<span class="ttile-n">'+t("Exercise Library")+'</span><span class="ttile-s">'+fmtN(LIB.length)+' '+t("exercises")+'</span></button>'
-   +'<button class="ttile" data-train="favs"><span class="ttile-i" aria-hidden="true"><span class="ico ico-star"></span></span>'
+   +'<button class="ttile" data-train="favs">'+art("star",{cls:"btn-art"})+'<span class="ttile-i" aria-hidden="true"><span class="ico ico-star"></span></span>'
    +'<span class="ttile-n">'+t("Favourites")+'</span><span class="ttile-s">'+S.favs.length+' '+t(S.favs.length===1?"exercise":"exercises")+'</span></button>'
-   +'<button class="ttile wide" data-actsheet="1"><span class="ttile-i" aria-hidden="true">'+ACTIVITY+'</span>'
+   +'<button class="ttile wide" data-actsheet="1">'+art("track",{cls:"btn-art"})+'<span class="ttile-i" aria-hidden="true">'+ACTIVITY+'</span>'
    +'<span class="ttile-tx"><span class="ttile-n">'+t("Cardio & Sports")+'</span>'
    +'<span class="ttile-s">'+t("Running, football, padel, tennis, classes…")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button></div>';

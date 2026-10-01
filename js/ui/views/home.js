@@ -10,7 +10,7 @@ import {curProfile, dayRec, S, split} from "../../state.js";
 import {dayHero, planOn, resumeHero, weekStrip} from "./train.js";
 import {glassUnit} from "./food.js";
 import {toDisp, wUnit} from "../../units.js";
-import {esc, fmtN, num, today} from "../../util.js";
+import {dfmt, esc, fmtN, num, today} from "../../util.js";
 import {art} from "../art.js";
 
 /* ---- pieces the frame is made of ------------------------------------------ */
@@ -71,8 +71,10 @@ function vHome(){
   var hr=new Date().getHours(),scene=hr<12?"sunrise":hr<17?"sun":"moon";
 
   h+='<div class="hgreet">'+art(scene,{cls:"hgreet-art"})+'<div>'
-   +'<div class="hdate">'+esc(new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"short"}))+'</div>'
-   +'<h1>'+esc(greeting()+(name?", "+name:""))+'</h1></div>'
+   +'<div class="hdate">'+esc(dfmt(new Date(),{weekday:"long",day:"numeric",month:"short"}))+'</div>'
+   /* The name is its own run: a Latin name beside an Arabic greeting otherwise drags
+      the comma to the wrong side ("Khalid ,صباح الخير"). Arabic takes its own comma. */
+   +'<h1>'+esc(greeting())+(name?esc(S.prefs.lang==="ar"?"، ":", ")+'<bdi>'+esc(name)+'</bdi>':'')+'</h1></div>'
    +(name?'<div class="havatar" aria-hidden="true">'+esc(name.charAt(0).toUpperCase())+'</div>':'')
    +'</div>';
 

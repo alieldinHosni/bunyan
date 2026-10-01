@@ -7,7 +7,7 @@ import {t} from "../../i18n/dict.js";
 import {curDate, eatenToday, lastWeight, macroKcal, proteinTarget, targetKcal, tdee} from "../../engine/formulas.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {dayRec, S} from "../../state.js";
-import {esc, fmtN, r1, today} from "../../util.js";
+import {dfmt, esc, fmtN, r1, today} from "../../util.js";
 import {progressBar, seg, V} from "../view.js";
 import {dateBar} from "../datebar.js";
 import {backArrow} from "../nav.js";
@@ -142,7 +142,7 @@ function vFoodToday(dsel){
 function vMeal(dsel,name){
   var r=dayRec(dsel),m=r.meals[name]||{items:[]},items=m.items||[],tot=sumNutrition(items);
   var when=dsel===today()?t("Logged today")
-    :t("Logged")+" "+new Date(dsel+"T00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"});
+    :t("Logged")+" "+dfmt(new Date(dsel+"T00:00"),{month:"short",day:"numeric"});
   /* The same header the Train day screen uses, so the two "one thing inside a tab"
      screens are the same shape. The two frames disagree on its size; the app does not. */
   var h='<div class="dhead">'+backArrow()
@@ -184,7 +184,7 @@ var XSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6
 var PLUS='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 function vMyFoods(){
   var sm=S.savedMeals||[],mf=S.myFoods||[],now=mealNow(),h='';
-  h+='<button class="bnew" data-newmeal="1"><span class="bnew-i">'+PLUS+'</span>'
+  h+='<button class="bnew" data-newmeal="1">'+art("plate",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
    +'<span class="bnew-t"><b>'+t("Build a meal")+'</b><span>'+t("Name it, then add what goes in it")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   if(!sm.length&&!mf.length){
