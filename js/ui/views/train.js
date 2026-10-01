@@ -23,8 +23,6 @@ import {art} from "../art.js";
    adopting a split drops it out of "Other Programs" and shifted every image along. */
 var SPLIT_IMG={ap:"split-ap",arnold:"split-arnold",ppl:"split-ppl",
   ul:"split-ul",fb:"split-fb",bw:"split-bw",bro:"split-bro",
-  /* Drawn in the Bunyan pen until each has a photograph; a photo saved under the same
-     name replaces the drawing with no change here (docs/COVERS.md has the prompts). */
   sl5:"split-sl5",db:"split-db",glute:"split-glute",ppl3:"split-ppl3",foot:"split-foot",fl:"split-fl"};
 /* A split the user built themselves has no photograph of its own. It gets the accent
    field instead of borrowing another programme's picture. */
