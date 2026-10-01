@@ -9,7 +9,7 @@
    over, a new day or language); every other second tickSession repaints the digits. */
 import {S} from "../state.js";
 import {t} from "../i18n/dict.js";
-import {exName} from "../i18n/exnames.js";
+import {exName, planName} from "../i18n/exnames.js";
 import {esc} from "../util.js";
 import {V} from "./view.js";
 import {mmss, sessionClock} from "./views/session.js";
@@ -36,7 +36,7 @@ function syncWbar(){
   document.body.classList.toggle("wb",!!m);
   if(!m){if(host.firstChild)host.textContent="";host.removeAttribute("data-k");return;}
   var e=a.entries[V.logIdx]||a.entries[a.idx||0];
-  var name=m==="work"||!e?a.dayName:exName(e.name);
+  var name=m==="work"||!e?planName(a.dayName):exName(e.name);
   var kick=t(m==="done"?"Rest over":m==="rest"?(V.restPaused?"Rest paused":"Rest"):"Workout");
   var key=m+"|"+(V.restPaused?1:0)+"|"+name+"|"+(S.prefs&&S.prefs.lang||"en");
   if(host.getAttribute("data-k")!==key){

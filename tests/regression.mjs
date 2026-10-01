@@ -556,6 +556,22 @@ await test("Arabic: the dock keeps its order, dates are Arabic, figures stay one
   if(/[\u0660-\u0669]/.test(r.date))throw new Error("Arabic-Indic digits in date: "+r.date);
   if(!r.runs.some(x=>/^\d[\d,]* \/ \d/.test(x)))throw new Error("no isolated fraction among "+JSON.stringify(r.runs));
 },{prefs:{lang:"ar"}});
+await test("Arabic: template program and day names are shown in Arabic, fractions keep their slash",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);await page.tap('[data-tsec="program"]');await pause(page,400);
+  const r=await page.evaluate(async()=>{const x=await import("/js/i18n/exnames.js");
+    return {rows:[...document.querySelectorAll(".drow-n")].map(e=>e.textContent),
+      head:(document.querySelector(".bhero .dhead-t, .dname .dhead-t")||{}).textContent||"",
+      frac:x.exName("3/4 Sit-Up"),own:x.planName("My Monday")};});
+  if(!r.rows.some(n=>/^جسم كامل [أبج]$/.test(n)))throw new Error("day names not Arabic: "+JSON.stringify(r.rows));
+  if(!r.rows.includes("راحة"))throw new Error("rest day not Arabic: "+JSON.stringify(r.rows));
+  if(/[A-Za-z]/.test(r.head))throw new Error("program name not Arabic: "+r.head);
+  if(r.frac.indexOf("3/4")<0)throw new Error("fraction lost its slash: "+r.frac);
+  eq(r.own,"My Monday","a name the user typed passes through");
+},{prefs:{lang:"ar"}});
+await test("Light: the active dock icon reads on the dark dock",async page=>{
+  const c=await page.$eval('nav .dock-b.on',e=>getComputedStyle(e).color);
+  eq(c,"rgb(255, 92, 106)");
+},{db:Object.assign(seed(),{theme:"light"})});
 await test("Train Today's recovery check-in logs in taps; Profile has moved its plan and recovery rows",async page=>{
   await page.tap('nav [data-tab="train"]');await pause(page);
   await page.tap('[data-rchk="sleep|7.5"]');await page.tap('[data-rchk="sore|5"]');await page.tap('[data-rchk="energy|9"]');await pause(page);

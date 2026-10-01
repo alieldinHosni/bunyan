@@ -59,9 +59,15 @@
   --accent:#e31b23; --accentHi:#F83446; --onAccent:#faf6ee;
   --accentSoft:rgba(227,27,35,.12);   /* the design's badge and avatar fill */
 
-  /* Semantic, and reserved. Green is completed states only; gold is earned only. */
-  --ok:#1A8D3E; --okSoft:#0E2415; --gold:#C9A227;
+  /* Semantic, and reserved. Green is completed states only; gold is earned only.
+     ok is bright enough to be read as text on a card (5.6:1 on raised, 5.0:1 on okSoft;
+     #1A8D3E was 4.31 and 3.84). Words on a green fill take onOk, because white on this
+     green is 3.28:1 — enough for the ✓ glyphs, not for "Done". */
+  --ok:#22a34b; --okSoft:#0E2415; --gold:#C9A227; --onOk:#0b0b0c;
   --navbg:#141418; --navtext:#888580; --navon:#faf6ee;
+  /* The active dock icon. The dock is dark glass in both themes, so this is a red that
+     reads on the selected tint there, not the theme's accentHi (1.73:1 in Light). */
+  --dock-on:#f83446;
   /* The ember wash behind the top of every screen, as the redesign frames have it:
      one soft red glow under the header, fading out long before the content. */
   --glow:rgba(227,27,35,.16);
@@ -141,16 +147,19 @@
   /* The design is dark-only and has no light values, so secondary text keeps the
      darkest light-theme tone that already passes AA rather than an invented one. */
   --sub:#5E5E5E;
-  --faint:#727272;              /* gray600 */
+  --faint:#686868;              /* 4.55:1 on raised; gray600 #727272 was 3.93 */
   /* Accent darkened for contrast on white; the dark theme's #C41E2A fails on it. */
   --accent:#A5171F; --accentHi:#C41E2A; --onAccent:#FFFFFF; --accentSoft:#FBEAEB;
-  --ok:#1A7F35; --okSoft:#E6F2E9; --gold:#8A6F16;
+  /* ok and gold darkened so they read as text on a card (4.73 and 4.78:1 on raised;
+     they were 4.15 and 3.93). */
+  --ok:#177530; --okSoft:#E6F2E9; --gold:#7a6213; --onOk:#ffffff;
   --accent-deep:#8e121a;
   --mac-p:#c41e2a; --mac-c:#0a9396; --mac-f:#6d5fe6;
   /* Uber light UI is flat white. No wash. */
   --glow:transparent;
   /* The bar stays dark in both themes: it is chrome, not surface. */
   --navbg:#000000; --navtext:#8C8C8C; --navon:#FFFFFF;
+  --dock-on:#ff5c6a;            /* 3.40:1 on the selected tint over the dark glass */
   --seg-track:rgba(0,0,0,.05); --hair:rgba(0,0,0,.08); --bar-track:rgba(0,0,0,.10);
   /* So does the dock, and so the glass it is made of. */
   --glass:rgba(18,18,22,.84); --glass-solid:rgba(18,18,22,.97);
@@ -261,7 +270,7 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
 .btn:active{transform:scale(.975);filter:brightness(1.12)}
 .btn.g{background:var(--raised);border:1px solid var(--border);color:var(--text)}
 .btn.o{background:transparent;border:1px solid var(--ok);color:var(--ok)}
-.btn.ok{background:var(--ok);color:#fff;border:none}
+.btn.ok{background:var(--ok);color:var(--onOk);border:none}
 /* Destructive, for a sheet where the destructive option is NOT the primary one. The
    plain .btn is accent-filled and reads as "the thing to do"; on the leave-workout
    sheet the thing to do is keep the workout, so discarding cannot wear the same fill.
@@ -276,7 +285,7 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
 .pill:active{transform:scale(.94)}
 .pill.a{background:var(--accent);border-color:var(--accent);color:#fff}
 .pill.gold{background:var(--accentSoft);color:var(--gold);font-weight:600}
-.pill.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.pill.ok{background:var(--ok);border-color:var(--ok);color:var(--onOk)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
 .big{font-family:var(--display);font-size:27px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
@@ -358,7 +367,7 @@ body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--
 .dock-b svg{width:var(--ico-size);height:var(--ico-size);fill:none;stroke:currentColor;
   stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
   transition:transform var(--m-comp) var(--e-ios),stroke-width var(--m-micro) var(--e-standard)}
-.dock-b.on{color:var(--accentHi)}
+.dock-b.on{color:var(--dock-on)}
 .dock-b.on svg{transform:scale(1.06);stroke-width:2}
 .dock-b:active{transform:scale(.94)}
 /* ---- The workout bar --------------------------------------------------------

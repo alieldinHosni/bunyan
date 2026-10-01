@@ -24,7 +24,7 @@
      Overview, above the range, as Food has them; they scope only that card. */
 import {t} from "../../i18n/dict.js";
 import {empty, thumb} from "../../data/exercises.js";
-import {exName} from "../../i18n/exnames.js";
+import {exName, planName} from "../../i18n/exnames.js";
 import {weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftHalf, liftProgress, measurements,
         muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL, topLifts, volumeSeries,
         weighIns, weightChange} from "../../engine/stats.js";
@@ -154,8 +154,8 @@ function vHistory(){
   list.forEach(function(s){
     var n=s.entries.filter(function(e){return (e.sets||[]).length;}).length;
     var mins=s.activeMs>0?Math.round(s.activeMs/60000):null;
-    h+='<button class="pgrow" data-sessedit="'+esc(s.id)+'" aria-label="'+esc(t("Edit workout")+": "+(s.dayName||t("Workout")))+'"><span class="pgrow-t">'
-     +'<span class="pgrow-n"><span>'+esc(s.dayName||t("Workout"))+'</span></span>'
+    h+='<button class="pgrow" data-sessedit="'+esc(s.id)+'" aria-label="'+esc(t("Edit workout")+": "+(planName(s.dayName)||t("Workout")))+'"><span class="pgrow-t">'
+     +'<span class="pgrow-n"><span>'+esc(planName(s.dayName)||t("Workout"))+'</span></span>'
      +'<span class="pgrow-s">'+(mins!=null?mins+' '+esc(t("min"))+' · ':'')+n+' '+esc(t(n===1?"exercise":"exercises"))+'</span></span>'
      +'<span class="pgrow-e">'+esc(shortd(s.date))+'</span>'
      +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
@@ -305,8 +305,8 @@ function vOverview(r){
     recent.forEach(function(s){
       var n=s.entries.filter(function(e){return (e.sets||[]).length;}).length;
       var mins=s.activeMs>0?Math.round(s.activeMs/60000):null;
-      h+='<button class="pgrow" data-sessedit="'+esc(s.id)+'" aria-label="'+esc(t("Edit workout")+": "+(s.dayName||t("Workout")))+'"><span class="pgrow-t">'
-       +'<span class="pgrow-n"><span>'+esc(s.dayName||t("Workout"))+'</span></span>'
+      h+='<button class="pgrow" data-sessedit="'+esc(s.id)+'" aria-label="'+esc(t("Edit workout")+": "+(planName(s.dayName)||t("Workout")))+'"><span class="pgrow-t">'
+       +'<span class="pgrow-n"><span>'+esc(planName(s.dayName)||t("Workout"))+'</span></span>'
        +'<span class="pgrow-s">'+(mins!=null?mins+' '+esc(t("min"))+' · ':'')
        +n+' '+esc(t(n===1?"exercise":"exercises"))+'</span></span>'
        +'<span class="pgrow-e">'+esc(ago(s.date))+'</span>'

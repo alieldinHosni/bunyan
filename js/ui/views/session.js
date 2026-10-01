@@ -3,7 +3,7 @@
 import {t} from "../../i18n/dict.js";
 import {isolateNums} from "../../i18n/bidi.js";
 import {difficultyOf, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
-import {exName} from "../../i18n/exnames.js";
+import {exName, planName} from "../../i18n/exnames.js";
 import {dbTotal, inDeload, lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
 import {actIcon, actInfo, actKcal, actPace, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
 import {S} from "../../state.js";
@@ -130,7 +130,7 @@ function vLogger(){
       is the way out and it should say so. Same data-back handler, so the leave
       confirmation and everything behind it are untouched. */
    +'<button class="ss-back" data-back="1" aria-label="'+t("Close workout")+'">✕</button>'
-   +'<div class="ss-title"><div class="ss-name">'+esc(a.dayName)+'</div>'
+   +'<div class="ss-title"><div class="ss-name">'+esc(planName(a.dayName))+'</div>'
    +'<div class="ss-meta"><span class="mseg">'+t("Exercise")
    +' <span class="num">'+(V.logIdx+1)+'</span> '+t("of")
    +' <span class="num">'+a.entries.length+'</span></span><span class="sep">\u00b7</span>'
@@ -209,7 +209,7 @@ function vLogger(){
    +'<span class="etag">'+e.planned.sets+' × '+e.planned.lo
    +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+'</span>'
    +(difficultyOf(e.name)?'<span class="etag hot">'+esc(t(difficultyOf(e.name)))+'</span>':'')
-   +(pr.w?'<span class="pill gold">PR '+fmtW(pr.w)+'</span>':'')
+   +(pr.w?'<span class="pill gold">'+esc(t("PR"))+' '+fmtW(pr.w)+'</span>':'')
    +'</div></section>';
 
   /* The frame's recommendation banner, above the table where it puts it. The figure is

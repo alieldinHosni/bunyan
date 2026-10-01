@@ -2,7 +2,7 @@
    Train tab: days, library, splits, bodyweight. */
 import {t} from "../../i18n/dict.js";
 import {empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} from "../../data/exercises.js";
-import {exName} from "../../i18n/exnames.js";
+import {exName, planName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../state.js";
 import {SPLIT_LEVEL} from "../../engine/plan.js";
@@ -108,7 +108,7 @@ function planNote(p){
   if(p.kind==="past")return t("Nothing logged");
   if(p.kind==="none")return t("Nothing planned");
   if(p.rest)return t("Rest day");
-  return p.name||"";}
+  return planName(p.name)||"";}
 /* The selected day's card. What it offers depends on when the day is: today can be
    started, a future day previewed, a finished one opened. */
 function dayHero(sp,p,iso){
@@ -135,7 +135,7 @@ function dayHero(sp,p,iso){
       ?'<button class="btn" data-startday="'+p.day.id+'"><span class="ico ico-play" aria-hidden="true"></span>'+t("Start workout")+'</button>'
       :'<button class="btn g" data-day="'+p.day.id+'">'+t("Preview the day")+'</button>';
   }
-  var name=p.kind==="past"?t("Rest or unlogged"):p.kind==="none"?esc(sp.name):(p.rest?t("Rest day"):p.name);
+  var name=p.kind==="past"?t("Rest or unlogged"):p.kind==="none"?esc(planName(sp.name)):(p.rest?t("Rest day"):planName(p.name));
   /* Any day still ahead can be switched to another day of the plan. */
   var swap=(p.kind==="today"||p.kind==="plan")&&sp.days.length>1
     ?'<button class="thero2-swap" data-swapday="'+iso+'" aria-label="'+esc(t("Change this day's workout"))+'">'
@@ -156,7 +156,7 @@ function resumeHero(){
    +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'
    +'<div class="thero2-top"><span class="tbadge" aria-hidden="true">'+DUMBBELL+'</span>'
    +'<div class="thero2-t"><span class="klabel">'+esc(t("Workout in progress"))+'</span>'
-   +'<div class="thero2-n">'+esc(a.dayName)+'</div>'
+   +'<div class="thero2-n">'+esc(planName(a.dayName))+'</div>'
    +'<div class="thero2-m">'+esc(t("Exercise")+" "+pos+" "+t("of")+" "+a.entries.length)+'</div></div></div>'
    +'<button class="btn" data-continue="1"><span class="ico ico-play" aria-hidden="true"></span>'+t("Resume workout")+'</button></div>';}
 
@@ -181,7 +181,7 @@ var TSECS=[["today","Today"],["program","My Program"],["explore","Explore"]];
 function vHub(){
   var sp=split(),sec=V.tsec||S.prefs.tsec||"today",h="";
   h+='<div class="thead"><div><h1>'+t("Train")+'</h1>'
-   +'<p class="thead-s">'+esc(sp.name)+' · '+t(sp.schedule==="week"?"By weekday":"In rotation")+'</p></div>'
+   +'<p class="thead-s">'+esc(planName(sp.name))+' · '+t(sp.schedule==="week"?"By weekday":"In rotation")+'</p></div>'
    +'<button class="icobtn" data-train="favs" aria-label="'+t("Favourites")
    +(S.favs.length?' ('+S.favs.length+')':'')+'"><span class="ico ico-star" aria-hidden="true"></span></button></div>';
   h+=seg({items:TSECS.map(function(x){return [x[0],t(x[1])];}),value:sec,attr:"tsec",tabs:true,
@@ -231,7 +231,7 @@ function weekStrip(sp,sel,attr){
   weekDates(now).forEach(function(iso){
     var p=planOn(sp,iso),st=p.kind==="done"?"done":p.kind==="past"?"past":(p.rest||p.kind==="none")?"rest":"plan";
     if(st==="done")done++;if(st==="done"||st==="plan")plan++;
-    var lbl=pretty(iso)+", "+t({done:"Done",past:"Nothing logged",rest:"Rest day",plan:"Planned"}[st])+(p.name&&st!=="rest"&&st!=="past"?", "+p.name:"");
+    var lbl=pretty(iso)+", "+t({done:"Done",past:"Nothing logged",rest:"Rest day",plan:"Planned"}[st])+(p.name&&st!=="rest"&&st!=="past"?", "+planName(p.name):"");
     h+='<button class="twk-d '+st+(iso===now?' today':'')+(iso===sel?' sel':'')+'" data-'+(attr||"tweek")+'="'+iso+'" aria-pressed="'+(iso===sel)+'" aria-label="'+esc(lbl)+'">'
      +'<span class="twk-w">'+esc(wdName(isoWeekday(iso)))+'</span>'
      +'<span class="twk-n">'+new Date(iso+"T00:00:00").getDate()+'</span>'
@@ -257,7 +257,7 @@ function vExplore(sp){
   tpls.forEach(function(o){
     var days=o.days.filter(function(d){return d.ex.length;}).length,lvl=levelOf(o.id);
     h+='<button class="tprog-card" data-preview="'+o.id+'">'+splitCover(o.id)
-     +'<span class="tpc-body"><span><span class="tpc-n">'+esc(o.name)+'</span>'
+     +'<span class="tpc-body"><span><span class="tpc-n">'+esc(planName(o.name))+'</span>'
      +'<span class="tpc-s">'+esc(t(tagNote(o.tag)))+'</span></span>'
      +'<span class="tpc-m"><span>'+days+' '+t("days / week")+'</span>'
      +(lvl?'<span class="tchip">'+t(lvl)+'</span>':'')+'</span></span></button>';});
@@ -291,8 +291,8 @@ function programsList(){
     h+='<div class="drow bsp'+(on?' on':'')+'" data-k="us:'+sp.id+'">'
      /* The active program cannot be deleted from here: switch away from it first. */
      +(on?'<span class="drm" aria-hidden="true"></span>'
-        :'<button class="drm" data-delsplit="'+sp.id+'" aria-label="'+esc(t("Delete")+" "+sp.name)+'"><i>'+XSVG+'</i></button>')
-     +'<button class="dmain" '+(on?'data-tsec="program"':'data-editsplit="'+sp.id+'"')+'><span class="dtext"><span class="drow-n">'+esc(sp.name)+'</span>'
+        :'<button class="drm" data-delsplit="'+sp.id+'" aria-label="'+esc(t("Delete")+" "+planName(sp.name))+'"><i>'+XSVG+'</i></button>')
+     +'<button class="dmain" '+(on?'data-tsec="program"':'data-editsplit="'+sp.id+'"')+'><span class="dtext"><span class="drow-n">'+esc(planName(sp.name))+'</span>'
      +'<span class="drow-s">'+tr+' '+t(tr===1?"training day":"training days")+'<i class="ddot"></i>'
      +t(sp.schedule==="week"?"By weekday":"In rotation")+'</span></span>'
      +(on?'<span class="bpill">'+t("Active")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
@@ -323,7 +323,7 @@ function weekOffer(sp){
   var train=sp.days.filter(function(d){return d.ex.length;});
   if(train.length<2)return "";
   var sug=suggestWd(sp);
-  var line=train.map(function(d){return esc(d.name)+' · '+(sug[d.id]||[]).map(wdName).join(", ");}).join('<br>');
+  var line=train.map(function(d){return esc(planName(d.name))+' · '+(sug[d.id]||[]).map(wdName).join(", ");}).join('<br>');
   return '<div class="dlcard wkoffer"><div class="dlcard-h"><span class="dlcard-i" aria-hidden="true">'+CAL+'</span>'
    +'<b>'+t("Train on fixed weekdays?")+'</b></div>'
    +'<p>'+t("Your program runs in rotation. Pinned to weekdays, from when you usually train:")+'</p>'
@@ -384,11 +384,11 @@ function vPreview(){
   var sp=allSplits().filter(function(x){return x.id===V.previewId;})[0];
   if(!sp){V.train="days";V.tsec="explore";return vTrain();}
   var h=backBar();
-  h+='<h1>'+esc(sp.name)+'</h1><p class="sub">'+esc(sp.tag||"custom")+'</p>';
+  h+='<h1>'+esc(planName(sp.name))+'</h1><p class="sub">'+esc(sp.tag||"custom")+'</p>';
   sp.days.forEach(function(d){
-    if(!d.ex.length){h+='<div class="card"><div class="row"><h3 class="dim">'+esc(d.name)
+    if(!d.ex.length){h+='<div class="card"><div class="row"><h3 class="dim">'+esc(planName(d.name))
       +'</h3><span class="tiny">rest</span></div></div>';return;}
-    h+='<div class="card"><div class="row"><h3>'+esc(d.name)+'</h3>'
+    h+='<div class="card"><div class="row"><h3>'+esc(planName(d.name))+'</h3>'
      +'<span class="tiny">'+estMinutes(d)+' min</span></div>';
     d.ex.forEach(function(e,i){
       h+='<div class="row" style="margin-top:8px"><span style="font-size:14px">'+(i+1)+'. '
@@ -498,8 +498,8 @@ function builderBody(sp,id,inline){
   var h='';
   h+='<div class="libhero bhero">'+HERO_ART
    +'<span class="shk">'+t(active?"Your training":"Program builder")+'</span>'
-   +'<button class="dname" data-renamesplit="'+id+'" aria-label="'+esc(t("Rename program"))+': '+esc(sp.name)+'">'
-   +'<h1 class="dhead-t">'+esc(sp.name)+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button>'
+   +'<button class="dname" data-renamesplit="'+id+'" aria-label="'+esc(t("Rename program"))+': '+esc(planName(sp.name))+'">'
+   +'<h1 class="dhead-t">'+esc(planName(sp.name))+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button>'
    +'<div class="bstats"><span><b>'+sp.days.length+'</b>'+t(sp.days.length===1?"day":"days")+'</span>'
    +'<span><b>'+tr+'</b>'+t(tr===1?"training day":"training days")+'</span>'
    +'<span><b>'+nEx+'</b>'+t(nEx===1?"exercise":"exercises")+'</span></div>';
@@ -519,16 +519,16 @@ function builderBody(sp,id,inline){
   sp.days.forEach(function(d,i){
     var full=d.ex.length>0;
     h+='<div class="drow bkday'+(full?'':' blank')+'" data-k="bd:'+d.id+'" data-rowid="'+d.id+'">'
-     +'<button class="drm" data-rmday="'+d.id+'" aria-label="'+esc(t("Remove")+" "+d.name)+'"><i>'+XSVG+'</i></button>'
+     +'<button class="drm" data-rmday="'+d.id+'" aria-label="'+esc(t("Remove")+" "+planName(d.name))+'"><i>'+XSVG+'</i></button>'
      +'<button class="dmain" data-day="'+d.id+'"><span class="bnum">'+(i+1)+'</span>'
-     +'<span class="dtext"><span class="drow-n">'+esc(d.name)+'</span>'
+     +'<span class="dtext"><span class="drow-n">'+esc(planName(d.name))+'</span>'
      +'<span class="drow-s">'+(full?d.ex.length+' '+t(d.ex.length===1?"exercise":"exercises")+'<i class="ddot"></i>~'+estMinutes(d)+' '+t("min")
         :'<em>'+t("Tap to add exercises")+'</em>')+'</span></span>'
      +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
-     +(sp.days.length>1?'<button class="dgrip" data-grip="'+d.id+'" aria-label="'+esc(t("Move")+" "+d.name)+'">'+GRIPSVG+'</button>':'')
+     +(sp.days.length>1?'<button class="dgrip" data-grip="'+d.id+'" aria-label="'+esc(t("Move")+" "+planName(d.name))+'">'+GRIPSVG+'</button>':'')
      /* By weekday, each day carries the week: tap a weekday to pin it here. One taken
         by another day is dimmed, and tapping it moves it to this one. */
-     +(week?'<div class="bwd" role="group" aria-label="'+esc(t("Weekdays for")+" "+d.name)+'">'
+     +(week?'<div class="bwd" role="group" aria-label="'+esc(t("Weekdays for")+" "+planName(d.name))+'">'
        +weekOrder().map(function(n){
          var mine=(d.wd||[]).indexOf(n)>=0,other=!mine&&sp.days.some(function(o){return o!==d&&(o.wd||[]).indexOf(n)>=0;});
          return '<button class="'+(mine?'on':other?'taken':'')+'" data-wd="'+d.id+'|'+n+'" aria-pressed="'+mine+'">'+esc(wdName(n))+'</button>';}).join("")
@@ -559,9 +559,9 @@ function vDay(){
   var pos=sp.days.indexOf(d)+1;
   var lvl=levelOf(sp.from);
   var h='<div class="dhead">'+backArrow()
-   +'<button class="dname" data-renameday="'+d.id+'" aria-label="'+esc(t("Rename day"))+': '+esc(d.name)+'">'
-   +'<h1 class="dhead-t">'+esc(d.name)+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button></div>'
-   +'<p class="dsub">'+esc(sp.name)+(pos?' • '+t("Day")+' '+pos:'')+'</p>';
+   +'<button class="dname" data-renameday="'+d.id+'" aria-label="'+esc(t("Rename day"))+': '+esc(planName(d.name))+'">'
+   +'<h1 class="dhead-t">'+esc(planName(d.name))+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button></div>'
+   +'<p class="dsub">'+esc(planName(sp.name))+(pos?' • '+t("Day")+' '+pos:'')+'</p>';
   /* Every figure measured from the day itself. */
   h+='<div class="dstrip">'
    +'<div><span class="klabel dim">'+t("Exercises")+'</span><b>'+d.ex.length+' '+t(d.ex.length===1?"Movement":"Movements")+'</b></div>'

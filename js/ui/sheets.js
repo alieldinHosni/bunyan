@@ -2,7 +2,7 @@
    Every bottom sheet, dispatched by vSheet(). */
 import {t} from "../i18n/dict.js";
 import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
-import {exName} from "../i18n/exnames.js";
+import {exName, planName} from "../i18n/exnames.js";
 import {MEALS} from "./views/food.js";
 import {exHay, planOn} from "./views/train.js";
 import {ACT_GROUPS, actIcon, actInfo, actPace, actsIn, INTENSITY, intensityOf, isActivity} from "../data/activities.js";
@@ -345,8 +345,8 @@ function vSheet(){
       if(x.srpe)extra.push(t("Effort")+" "+x.srpe+"/10");
       if(x.ready)extra.push(t("Felt")+" "+t(["","Drained","Low","OK","Good","Great"][x.ready]||""));
       if(x.entries.some(function(e){return e.pain;}))extra.push(t("pain noted"));
-      b+='<button class="dv-card dv-sess" data-sessedit="'+esc(x.id)+'" aria-label="'+esc(t("Edit workout")+": "+x.dayName)+'">'
-       +'<span class="dv-row"><b>'+esc(x.dayName)+'</b><span class="dv-k">'+fmtW(Math.round(sessionVolume(x)))+'</span></span>'
+      b+='<button class="dv-card dv-sess" data-sessedit="'+esc(x.id)+'" aria-label="'+esc(t("Edit workout")+": "+planName(x.dayName))+'">'
+       +'<span class="dv-row"><b>'+esc(planName(x.dayName))+'</b><span class="dv-k">'+fmtW(Math.round(sessionVolume(x)))+'</span></span>'
        +'<span class="dv-row dv-it"><span>'+n+' '+t(n===1?"exercise":"exercises")+(extra.length?' · '+esc(extra.join(" · ")):'')+'</span>'
        +'<span class="dv-edit">'+t("Edit")+' ›</span></span></button>';});
     if(rv2.steps)b+='<div class="dv-card dv-row"><b>'+t("Steps")+'</b><span class="dv-k">'+fmtN(rv2.steps)+'</span></div>';
@@ -373,7 +373,7 @@ function vSheet(){
     spx.days.forEach(function(d){
       var on=cur.day&&cur.day.id===d.id;
       b+='<button class="trow'+(on?' on':'')+'" data-swapto="'+d.id+'" aria-pressed="'+(on?"true":"false")+'">'
-       +'<span><span class="trow-n">'+esc(d.name)+'</span>'
+       +'<span><span class="trow-n">'+esc(planName(d.name))+'</span>'
        +'<span class="trow-s">'+(d.ex.length?d.ex.length+' '+t("exercises"):t("rest day"))+'</span></span>'
        +(on?'<span class="tnext">'+t("Selected")+'</span>':'')+'</button>';});
     b+='</div>';
@@ -399,7 +399,7 @@ function vSheet(){
     var ws2=V.sd.work;
     b='<div class="se">'
      +'<div class="se-top"><span class="se-k">'+t("Edit workout")+'</span>'
-     +'<h2>'+esc(ws2.dayName||t("Workout"))+'</h2>'
+     +'<h2>'+esc(planName(ws2.dayName)||t("Workout"))+'</h2>'
      +'<label class="se-date"><span>'+t("Date")+'</span>'
      +'<input type="date" id="se_date" value="'+esc(ws2.date)+'" max="'+today()+'"></label></div>';
     var any=false;
@@ -509,7 +509,7 @@ function vSheet(){
      +'<img class="wc2-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">'
      +'<div class="wc2-medal" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M8.5 13.9 7 22l5-3 5 3-1.5-8.1"/></svg></div>'
      +'<h1 class="wc2-h">'+t("Workout complete")+'</h1>'
-     +'<p class="wc2-sub">'+esc(w.dayName)+' · '+pretty(w.date)+'</p>'
+     +'<p class="wc2-sub">'+esc(planName(w.dayName))+' · '+pretty(w.date)+'</p>'
      +'<div class="wc2-stats">'
      +'<div><b>'+(wsecs>=3600?Math.floor(wsecs/3600)+'<small>h</small> '+Math.round(wsecs%3600/60)+'<small>m</small>':mmss(wsecs))+'</b><span>'+t("Time")+'</span></div>'
      /* A lifting day shows its tonnage; a run or a match shows what it burned. */
@@ -604,7 +604,7 @@ function vSheet(){
       b+='<div class="sec">'+t("What I would give you")+'</div><div class="list">';
       cands.forEach(function(c,i){
         b+='<button class="item" data-pickplan="'+esc(c.id)+'">'
-         +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+esc(c.name)
+         +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+esc(planName(c.name))
          +(i===0?' <span class="pill a" style="margin-inline-start:6px">'+t("Recommended")+'</span>':'')
          +'</div><div class="tiny">'+esc(c.why)+'</div></div></button>';});
       b+='</div>';

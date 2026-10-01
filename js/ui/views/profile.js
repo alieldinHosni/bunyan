@@ -8,6 +8,7 @@ import {fmtW, wUnit} from "../../units.js";
 import {esc, fmtN} from "../../util.js";
 import {streak} from "../view.js";
 import {art} from "../art.js";
+import {planName} from "../../i18n/exnames.js";
 
 /* ============================================================ PROFILE
    No frame exists for this tab — none of the file's nineteen top-level frames is a
@@ -35,7 +36,7 @@ function vProfile(){
   h+='<div class="card phero">'
    +'<div class="pavwrap">'+art("ring",{cls:"pring"})+'<div class="pavatar" aria-hidden="true">'+esc(initials)+'</div></div>'
    +'<div class="pname">'+esc(name)+'</div>'
-   +'<div class="pprog">'+esc(split().name)+'</div>'
+   +'<div class="pprog">'+esc(planName(split().name))+'</div>'
    +'<div class="pstats">'
    +'<div><b>'+fmtN(S.sessions.length)+'</b><span>'+t("SESSIONS")+'</span></div>'
    +'<div><b>'+streak()+'</b><span>'+t("STREAK")+'</span></div>'
