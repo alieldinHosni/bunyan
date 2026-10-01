@@ -1,11 +1,15 @@
 # Program covers
 
 Every preset program has a cover at `img/split-<id>.jpg`, mapped in `SPLIT_IMG` in
-`js/ui/views/train.js`. Seven are photographs. Six are drawn in the Bunyan pen until
-they get one: `sl5`, `db`, `glute`, `ppl3`, `foot`, `fl`.
+`js/ui/views/train.js`. All thirteen are photographs.
 
-To replace a drawing, save a photo over the file with the same name and bump `CACHE`
-in `sw.js`. No code changes.
+To replace one, save a photo over the file with the same name and bump `CACHE` in
+`sw.js`. No code changes.
+
+The six made from the prompts below (`sl5`, `db`, `glute`, `ppl3`, `foot`, `fl`) were
+generated with their titles in the picture. The titles were painted out, because the
+card already prints the program's name in the app's language. The icon strip was scaled
+to fit whole and the photo cropped beside it.
 
 ## What a cover has to be
 
