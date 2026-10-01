@@ -84,6 +84,17 @@ function normalize(o){
     if(!o[k]||typeof o[k]!=="object"||Array.isArray(o[k]))o[k]={};});
   Object.keys(d).forEach(function(k){if(!(k in o))o[k]=d[k];});
   if(o.myPlan&&!Array.isArray(o.myPlan.days))o.myPlan=null;
+  /* The day's meals (js/engine/meals.js): a list of {id, name?, plan?, todo?}, or
+     absent for the usual four. Anything else is dropped rather than half-trusted. */
+  if(o.mealSlots!=null){
+    if(!Array.isArray(o.mealSlots))delete o.mealSlots;
+    else{
+      o.mealSlots=o.mealSlots.filter(function(x){return x&&typeof x.id==="string"&&x.id;});
+      o.mealSlots.forEach(function(x){
+        if(x.name!=null&&typeof x.name!=="string")delete x.name;
+        if(x.plan!=null&&!Array.isArray(x.plan))delete x.plan;
+        if(x.todo!=null&&!Array.isArray(x.todo))delete x.todo;});
+      if(!o.mealSlots.length)delete o.mealSlots;}}
   if(o.active){
     if(typeof o.active!=="object"||!Array.isArray(o.active.entries))o.active=null;
     else o.active.entries.forEach(function(e){

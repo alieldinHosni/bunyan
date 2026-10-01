@@ -3,7 +3,7 @@
 import {t} from "../i18n/dict.js";
 import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {exName, planName} from "../i18n/exnames.js";
-import {MEALS} from "./views/food.js";
+import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay, planOn} from "./views/train.js";
 import {ACT_GROUPS, actIcon, actInfo, actPace, actsIn, INTENSITY, intensityOf, isActivity} from "../data/activities.js";
 import {incrementFor, backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
@@ -43,16 +43,27 @@ function vSheet(){
   /* Two generic sheets stand in for every native prompt() and confirm(). Native
      dialogs cannot be styled, look wrong in a standalone PWA, and are blocked
      outright in some embedded browsers. */
+  /* The ask prompt is a dialog, not a sheet: a card rounded all the way round, held in
+     the part of the screen the keyboard leaves. As a bottom sheet the keyboard pushed it
+     up the screen with its square bottom edge showing, and it jumped when the keyboard
+     went. Cancel and the main action sit side by side under the field.
+     A name needs no "Name" label over it — the title says what is being named — and the
+     word is what made iOS offer to fill the field from your contacts. */
   if(V.sheet==="ask"){
     var o=V.sd||{};
-    b='<h2>'+esc(o.title||"")+'</h2>'
-     +(o.body?'<p class="sub" style="margin:6px 0 16px">'+esc(o.body)+'</p>':'<div style="height:12px"></div>')
-     +(o.label?'<label class="sec" for="askv" style="margin-top:0;display:block">'+esc(o.label)+'</label>':'')
-     +'<input id="askv" type="'+(o.numeric?"number":"text")+'"'
+    return '<div class="sheet dlg" data-close="1">'
+     +'<div class="sheetbox dlgbox" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="askt">'
+     +'<h2 id="askt">'+esc(o.title||"")+'</h2>'
+     +(o.body?'<p class="dlg-b">'+esc(o.body)+'</p>':'')
+     +(o.label?'<label class="dlg-l" for="askv">'+esc(o.label)+'</label>':'')
+     +'<input id="askv" class="dlg-in" type="'+(o.numeric?"number":"text")+'"'
      +(o.numeric?' inputmode="decimal"':'')
+     +(o.label?'':' aria-labelledby="askt"')
      +' value="'+esc(o.value==null?"":o.value)+'" placeholder="'+esc(o.ph||"")+'"'
-     +' autocomplete="off" enterkeyhint="done">'
-     +'<button class="btn" data-askok="1">'+esc(o.cta||t("Save"))+'</button>';
+     +' autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done">'
+     +'<div class="dlg-acts"><button class="btn g" data-close="1">'+esc(t("Cancel"))+'</button>'
+     +'<button class="btn" data-askok="1">'+esc(o.cta||t("Save"))+'</button></div>'
+     +'</div></div>';
   }
   else if(V.sheet==="confirm"){
     var c=V.sd||{};
@@ -328,10 +339,10 @@ function vSheet(){
      +'<div><b>'+(et.f||0)+'<small>g</small></b><span>'+t("Fat")+'</span></div></div>';
     b+='<h3 class="dv-h">'+t("Meals")+'</h3>';
     var anyMeal=false;
-    MEALS.forEach(function(mn){
+    dayMeals(dv).forEach(function(mn){
       var mm=rv2.meals[mn];
       if(!mm||!(mm.items||[]).length)return;anyMeal=true;
-      b+='<div class="dv-card"><div class="dv-row"><b>'+esc(t(mn))+'</b>'
+      b+='<div class="dv-card"><div class="dv-row"><b>'+esc(mealName(mn))+'</b>'
        +'<span class="dv-k">'+fmtN(sumNutrition(mm.items).kcal)+' kcal</span></div>';
       mm.items.forEach(function(it){
         b+='<div class="dv-row dv-it"><span>'+esc(it.n)+'</span><span>'+fmtN(it.kcal)+'</span></div>';});

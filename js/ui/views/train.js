@@ -11,7 +11,7 @@ import {isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrde
 import {esc, fmtN, pretty, shortd, today} from "../../util.js";
 import {tokenMatch} from "../../engine/text.js";
 import {actInfo, intensityOf, isActivity} from "../../data/activities.js";
-import {head, seg, V} from "../view.js";
+import {head, reorderBtn, seg, V} from "../view.js";
 import {backArrow, backBar} from "../nav.js";
 import {art} from "../art.js";
 
@@ -511,9 +511,10 @@ function builderBody(sp,id,inline){
   h+='<div class="bsched" role="group" aria-label="'+esc(t("Schedule"))+'">'
    +'<button class="'+(week?'on':'')+'" data-sched="week" aria-pressed="'+week+'"><b>'+t("By weekday")+'</b><span>'+t("Same days every week")+'</span></button>'
    +'<button class="'+(week?'':'on')+'" data-sched="cycle" aria-pressed="'+!week+'"><b>'+t("In rotation")+'</b><span>'+t("Next day whenever you train")+'</span></button></div>';
+  var roD=sp.days.length>1&&V.reorder==="bd:"+sp.id;
   h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Days")+'</h2>'
-   +(sp.days.length>1?'<span class="dhint">'+t("Hold the grip to reorder")+'</span>':'')+'</div>';
-  h+='<div class="drows">';
+   +(sp.days.length>1?reorderBtn("bd:"+sp.id,roD):'')+'</div>';
+  h+='<div class="drows'+(roD?' ro':'')+'">';
   sp.days.forEach(function(d,i){
     var full=d.ex.length>0;
     h+='<div class="drow bkday'+(full?'':' blank')+'" data-k="bd:'+d.id+'" data-rowid="'+d.id+'">'
@@ -523,7 +524,7 @@ function builderBody(sp,id,inline){
      +'<span class="drow-s">'+(full?d.ex.length+' '+t(d.ex.length===1?"exercise":"exercises")+'<i class="ddot"></i>~'+estMinutes(d)+' '+t("min")
         :'<em>'+t("Tap to add exercises")+'</em>')+'</span></span>'
      +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
-     +(sp.days.length>1?'<button class="dgrip" data-grip="'+d.id+'" aria-label="'+esc(t("Move")+" "+planName(d.name))+'">'+GRIPSVG+'</button>':'')
+     +(roD?'<button class="dgrip" data-grip="'+d.id+'" aria-label="'+esc(t("Move")+" "+planName(d.name))+'">'+GRIPSVG+'</button>':'')
      /* By weekday, each day carries the week: tap a weekday to pin it here. One taken
         by another day is dimmed, and tapping it moves it to this one. */
      +(week?'<div class="bwd" role="group" aria-label="'+esc(t("Weekdays for")+" "+planName(d.name))+'">'
@@ -545,7 +546,7 @@ function builderBody(sp,id,inline){
 
 /* ---- a day: the routine, built in place --------------------------------------
    Everything that shapes the day is on the screen itself: ✕ on a row removes it (with
-   Undo), the grip on its other end drags it to a new place, the dashed + under the
+   Undo), Reorder shows the grips that drag a row to a new place, the dashed + under the
    list adds, and the title renames. Tapping the exercise opens its sets, reps and
    rest. There is no edit mode to find first. */
 var XSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
@@ -566,11 +567,12 @@ function vDay(){
    +'<div><span class="klabel dim">'+t("Duration")+'</span><b>~'+estMinutes(d)+' '+t("Min")+'</b></div>'
    +(lvl&&!d.ex.every(function(e){return isActivity(e.name);})?'<div><span class="klabel dim">'+t("Level")+'</span><b>'+t(lvl)+'</b></div>':'')
    +'</div>';
+  var roX=d.ex.length>1&&V.reorder==="dx:"+d.id;
   h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Session Routine")+'</h2>'
-   +(d.ex.length>1?'<span class="dhint">'+t("Hold the grip to reorder")+'</span>':'')+'</div>';
+   +(d.ex.length>1?reorderBtn("dx:"+d.id,roX):'')+'</div>';
   if(!d.ex.length)
     h+='<p class="dempty">'+t("A rest day for now. Add exercises and it becomes a training day — sets, reps and rest are filled in for you and can be changed any time.")+'</p>';
-  h+='<div class="drows">';
+  h+='<div class="drows'+(roX?' ro':'')+'">';
   d.ex.forEach(function(e,i){
     var gl=groupLabel(d.ex,i),nm=exName(e.name);
     h+='<div class="drow" data-k="dx:'+e.id+'" data-rowid="'+e.id+'">'
@@ -583,11 +585,11 @@ function vDay(){
         ?(e.min||(actInfo(e.name).grp==="Sports"?60:30))+' '+t("min")+(e.km?' · '+e.km+' km':'')+'<i class="ddot"></i>'+esc(t(intensityOf(e.rpe||6)[1]))
         :e.sets+' × '+e.lo+(e.hi!==e.lo?'–'+e.hi:'')+'<i class="ddot"></i>'+(e.rest||0)+'s')
      +'<i class="ddot"></i>'+esc(t(muscleOfEntry(e)))+'</span></span></button>'
-     +(d.ex.length>1?'<button class="dgrip" data-grip="'+e.id+'" aria-label="'+esc(t("Move")+" "+nm)
+     +(roX?'<button class="dgrip" data-grip="'+e.id+'" aria-label="'+esc(t("Move")+" "+nm)
        +'" aria-describedby="dgriphelp">'+GRIPSVG+'</button>':'')
      +'</div>';});
   h+='</div>';
-  if(d.ex.length>1)h+='<span id="dgriphelp" class="sr">'+t("Drag, or use the arrow keys, to move it up or down.")+'</span>';
+  if(roX)h+='<span id="dgriphelp" class="sr">'+t("Drag, or use the arrow keys, to move it up or down.")+'</span>';
   h+='<button class="dadd" data-addex="'+d.id+'"><span aria-hidden="true">+</span>'+t("Add exercise")+'</button>';
   h+='<div class="dcta">';
   /* A day of a split you are not training on is built here but not started: the

@@ -414,4 +414,14 @@ function lockScroll(on){
 }
 
 
-export {mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};
+/* Reordering is a mode you turn on. The grips used to sit on every row, at the right
+   edge where a thumb scrolls, and took the touch outright — so a scroll that began on
+   one moved the row. Now a list shows its grips only after Reorder; the ✕s step aside
+   while it is on, and Done puts the list back. Train's days and exercises and Food's
+   meals all use it. */
+function reorderBtn(key,on){
+  return '<button class="tlink dreorder'+(on?' on':'')+'" data-reorder="'+key+'" aria-pressed="'+on+'">'
+   +esc(t(on?"Done":"Reorder"))+'</button>';}
+var GRIPSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>'
+  +'<circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+export {GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};
