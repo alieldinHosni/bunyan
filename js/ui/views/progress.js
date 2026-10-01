@@ -31,7 +31,7 @@ import {weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consist
 import {sessionVolume} from "../../engine/formulas.js";
 import {ensureSessionIds, S} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
-import {esc, fmtN, pretty, r1, shortd, today} from "../../util.js";
+import {dfmt, esc, fmtN, pretty, r1, shortd, today} from "../../util.js";
 import {seg, streak, V} from "../view.js";
 import {art} from "../art.js";
 import {backArrow} from "../nav.js";
@@ -52,7 +52,7 @@ function lbl(text,aside){
 function dateStr(iso){
   var d=new Date(iso+"T00:00:00"),o={day:"numeric",month:"short"};
   if(d.getFullYear()!==new Date().getFullYear())o.year="numeric";
-  return d.toLocaleDateString(undefined,o);}
+  return dfmt(d,o);}
 function ago(iso){
   var n=daysBetween(iso,today());
   if(n<=0)return t("Today");
@@ -138,10 +138,10 @@ function vHistory(){
    +'<p class="dsub">'+esc(S.sessions.length+" "+t(S.sessions.length===1?"workout":"workouts"))+'</p>';
   h+='<div class="dbcal phcal"><div class="dbcal-h">'
    +'<button class="dnav-arrow sm" data-hmonth="-1" aria-label="'+esc(t("Previous month"))+'">‹</button>'
-   +'<strong aria-live="polite">'+esc(base.toLocaleDateString(undefined,{month:"long",year:"numeric"}))+'</strong>'
+   +'<strong aria-live="polite">'+esc(dfmt(base,{month:"long",year:"numeric"}))+'</strong>'
    +'<button class="dnav-arrow sm" data-hmonth="1" aria-label="'+esc(t("Next month"))+'"'+((+V.hmonth||0)>=0?' disabled':'')+'>›</button></div>'
    +'<div class="dbgrid">'+weekOrder().map(function(n){return '<div class="dbwk" aria-hidden="true">'
-      +esc(new Date(2024,0,n).toLocaleDateString(undefined,{weekday:"narrow"}))+'</div>';}).join("");
+      +esc(dfmt(new Date(2024,0,n),{weekday:"narrow"}))+'</div>';}).join("");
   for(var i=0;i<first;i++)h+='<div></div>';
   for(var d=1;d<=days;d++){
     var iso=mo+"-"+String(d).padStart(2,"0");

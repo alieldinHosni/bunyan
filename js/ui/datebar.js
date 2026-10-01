@@ -14,7 +14,7 @@
    None of those needed finding twice. That is the whole argument for this file. */
 import {t} from "../i18n/dict.js";
 import {S} from "../state.js";
-import {esc, today} from "../util.js";
+import {dfmt, esc, today} from "../util.js";
 import {weekOrder, weekStart} from "../engine/schedule.js";
 import {V} from "./view.js";
 
@@ -59,7 +59,7 @@ var BACK='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d=
    week, taken from a known Monday (1 Jan 2024). A table of letters would be English
    only, and "S" is two days. */
 function weekInitials(){
-  return weekOrder().map(function(n){return new Date(2024,0,n).toLocaleDateString(undefined,{weekday:"narrow"});});}
+  return weekOrder().map(function(n){return dfmt(new Date(2024,0,n),{weekday:"narrow"});});}
 
 /* The month grid. Only rendered when the navigator is open. Past and today are
    pickable everywhere; the future only where the screen plans ahead (Train). */
@@ -70,7 +70,7 @@ function monthGrid(sel,monthOffset,future){
   var marks=marksFor(),now=today();
   var h='<div class="dbcal"><div class="dbcal-h">'
    +'<button class="dnav-arrow sm" data-dmonth="-1" aria-label="'+t("Previous month")+'">'+CHEV_L+'</button>'
-   +'<strong aria-live="polite">'+base.toLocaleDateString(undefined,{month:"long",year:"numeric"})+'</strong>'
+   +'<strong aria-live="polite">'+dfmt(base,{month:"long",year:"numeric"})+'</strong>'
    +'<button class="dnav-arrow sm" data-dmonth="1" aria-label="'+t("Next month")+'">'+CHEV_R+'</button></div>'
    +'<div class="dbgrid">';
   weekInitials().forEach(function(d){h+='<div class="dbwk" aria-hidden="true">'+esc(d)+'</div>';});
@@ -85,7 +85,7 @@ function monthGrid(sel,monthOffset,future){
     var off=!future&&iso>now;
     /* Picking a day folds the month away and scopes the screen. */
     h+='<button class="'+cls+'" data-dpick="'+iso+'"'+(off?' disabled':'')
-     +' aria-label="'+new Date(iso+"T00:00:00").toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"})
+     +' aria-label="'+dfmt(new Date(iso+"T00:00:00"),{weekday:"long",day:"numeric",month:"long"})
      +(trained?", "+t("trained"):"")+(ate?", "+t("food logged"):"")+'"'
      +(iso===sel?' aria-current="date"':'')+'>'+d
      +(trained||ate?'<span class="dbdot'+(trained?' t':'')+'" aria-hidden="true"></span>':'')+'</button>';}
@@ -111,13 +111,13 @@ function monthGrid(sel,monthOffset,future){
 function dateBar(o){
   var sel=o.date||today(), now=today(), isToday=sel===now;
   var d=new Date(sel+"T00:00:00");
-  var day=d.toLocaleDateString(undefined,{day:"numeric",month:"short"});
-  var big=(isToday?t("Today"):d.toLocaleDateString(undefined,{weekday:"short"}))+" · "+day;
-  var wk=d.toLocaleDateString(undefined,{weekday:"long"});
+  var day=dfmt(d,{day:"numeric",month:"short"});
+  var big=(isToday?t("Today"):dfmt(d,{weekday:"short"}))+" · "+day;
+  var wk=dfmt(d,{weekday:"long"});
   var sub=wk+(o.note?" · "+o.note:isToday?" · "+t("Today"):"");
   var nextOff=!o.future&&sel>=now;
   var dir=V.dnavDir>0?" fwd":V.dnavDir<0?" back":"";
-  var full=d.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  var full=dfmt(d,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   return '<div class="dnav-wrap" data-k="dnav-wrap">'
    +'<div class="dnav'+(isToday?' now':'')+(o.art?' art':'')+'" data-swipe="day">'
    +(o.art?'<img class="dnav-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">':'')

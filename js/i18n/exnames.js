@@ -3,6 +3,7 @@
 import {actInfo} from "../data/activities.js";
 import {S} from "../state.js";
 import {EXDB, exShort} from "../data/exercises.js";
+import {setLang} from "../util.js";
 
 /* ============================================================ exercise names
    873 names built from roughly 300 terms, so the terms are translated and the name
@@ -200,6 +201,7 @@ function exName(n){
   var s=exShort(n);return ar?exAr(s):s;}
 function applyLang(){
   var ar=S.prefs&&S.prefs.lang==="ar";
+  setLang(ar?"ar":"en");
   document.documentElement.setAttribute("lang",ar?"ar":"en");
   document.documentElement.setAttribute("dir",ar?"rtl":"ltr");
 }
