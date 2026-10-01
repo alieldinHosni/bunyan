@@ -168,7 +168,9 @@ var EX_MODS={};
 var EX_EQ_ORDER=Object.keys(EX_EQUIP).sort(function(a,b){return b.length-a.length;});
 function exAr(name){
   if(!name)return name;
-  var s=" "+String(name).replace(/[\-\/]/g," ").replace(/\s+/g," ").trim()+" ";
+  /* A fraction (3/4, 90/90) is one figure, not two words: it rides through the split
+     on a division slash and comes back as "/". Any other "/" or "-" separates words. */
+  var s=" "+String(name).replace(/(\d)\s*\/\s*(\d)/g,"$1\u2215$2").replace(/[\-\/]/g," ").replace(/\s+/g," ").trim()+" ";
   /* equipment moves to the end as a prepositional phrase */
   var equip="";
   for(var i=0;i<EX_EQ_ORDER.length;i++){
@@ -189,7 +191,7 @@ function exAr(name){
     if(!hit){core.push(tok[i2]);i2++;}
   }
   var body=(core.length?core:mods).concat(core.length?mods:[]).join(" ").replace(/\s+/g," ").trim();
-  return (body?body:name)+(equip?" "+equip:"");
+  return ((body?body:name)+(equip?" "+equip:"")).replace(/\u2215/g,"/");
 }
 /* Display only. Every lookup, favourite and session entry still keys off the English. */
 /* Display only: the qualifier is shown separately, never glued back onto the name.
@@ -199,6 +201,39 @@ function exName(n){
   if(a)return ar&&a.ar?a.ar:(a.lib?exShort(n):n);
   if(ar&&EXDB&&EXDB[n]&&EXDB[n].ar)return EXDB[n].ar;
   var s=exShort(n);return ar?exAr(s):s;}
+/* ---- program and day names -------------------------------------------------
+   The template programs and their days are named in English, and a copy of the
+   template keeps those names, so "Full Body A" and "Rest" showed in English inside the
+   Arabic interface. Like exName, this is display only: the stored name never changes,
+   and a name the user typed — in either language — passes through as it is.
+
+   An exact template name first; then "Base A" (a lettered day: A–C become أ–ج); then
+   the two halves of "Day A — Anterior". Anything else is the user's own name. */
+var PLAN_AR={
+  "Upper / Lower":"علوي / سفلي","Strength 5×5":"قوة 5×5","Push / Pull / Legs":"دفع / سحب / رجلين",
+  "Push / Pull / Legs × 3":"دفع / سحب / رجلين × 3","Home Dumbbells":"دمبل في البيت",
+  "Glutes & Legs Focus":"تركيز على المؤخرة والرجلين","Full Body":"جسم كامل",
+  "Footballer: Strength & Conditioning":"لاعب كورة: قوة ولياقة","Fat Loss: Lift + Cardio":"حرق دهون: حديد + كارديو",
+  "Bro Split":"برو سبليت","Bodyweight":"وزن الجسم","Arnold Split":"تقسيمة أرنولد","Anterior / Posterior":"أمامي / خلفي",
+  "Rest":"راحة","Legs":"رجلين","Push":"دفع","Pull":"سحب","Upper":"علوي","Lower":"سفلي",
+  "Shoulders & Arms":"أكتاف ودراعات","Chest & Back":"صدر وظهر","Cardio":"كارديو","Workout":"تمرين",
+  "Strength":"قوة","Shoulders":"أكتاف","Power & Upper":"قوة انفجارية وعلوي","Glutes":"مؤخرة",
+  "Anterior":"أمامي","Posterior":"خلفي","Core & Conditioning":"وسط ولياقة","Conditioning":"لياقة",
+  "Chest":"صدر","Back":"ظهر","Arms":"دراعات","Day":"يوم"};
+var LETTER_AR={A:"أ",B:"ب",C:"ج"};
+function planPart(n){
+  if(PLAN_AR[n])return PLAN_AR[n];
+  var m=/^(.+) ([ABC])$/.exec(n);
+  if(m&&PLAN_AR[m[1]])return PLAN_AR[m[1]]+" "+LETTER_AR[m[2]];
+  return null;}
+function planName(n){
+  if(!n||!(S.prefs&&S.prefs.lang==="ar"))return n;
+  var whole=planPart(n);if(whole)return whole;
+  var parts=String(n).split(" — ");
+  if(parts.length>1){
+    var tr=parts.map(planPart);
+    if(tr.every(function(x){return x;}))return tr.join(" — ");}
+  return n;}
 function applyLang(){
   var ar=S.prefs&&S.prefs.lang==="ar";
   setLang(ar?"ar":"en");
@@ -207,4 +242,4 @@ function applyLang(){
 }
 
 
-export {applyLang, exName};
+export {applyLang, exName, planName};

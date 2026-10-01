@@ -4,7 +4,7 @@ import {ACT, addExercise, askConfirm, askText, closeSheet, openSheet, runAct, st
 import {actKcal, isActivity} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
 import {loadExDB, loadInstructions, reconcileExercises} from "./data/exercises.js";
-import {applyLang, exName} from "./i18n/exnames.js";
+import {applyLang, exName, planName} from "./i18n/exnames.js";
 import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, proteinTarget, targetKcal} from "./engine/formulas.js";
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
@@ -228,7 +228,7 @@ document.addEventListener("click",function(ev){
   /* ---- the split builder */
   if(D.editsplit){pushNav();V.previewId=D.editsplit;V.train="builder";render();window.scrollTo(0,0);return;}
   if(D.renamesplit){var rs=editSplit(D.renamesplit);if(!rs)return;
-    askText({title:t("Rename program"),label:t("Name"),value:rs.name,act:"renamesplit",data:D.renamesplit});return;}
+    askText({title:t("Rename program"),label:t("Name"),value:planName(rs.name),act:"renamesplit",data:D.renamesplit});return;}
   if(D.bday!==undefined){var bs=editSplit(builderId());if(!bs)return;
     var nd0=day(t("Day")+" "+(bs.days.length+1),[]);nd0.wd=[];
     /* By weekday, a new day takes the first weekday no other day has. */
@@ -272,7 +272,7 @@ document.addEventListener("click",function(ev){
       cta:t("Add"),act:"addday"});return;}
   if(D.renameday){
     var d0=dayOf(D.renameday);if(!d0)return;
-    askText({title:t("Rename day"),label:t("Name"),value:d0.name,
+    askText({title:t("Rename day"),label:t("Name"),value:planName(d0.name),
       act:"renameday",data:D.renameday});return;}
   if(D.delday){
     var dD=dayOf(D.delday);
