@@ -51,7 +51,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
      Radii run 8 / 12 / 14 (--r1–r3, cards and fields), 18 for controls inside a
      surface, 28 for floating surfaces, and a pill. */
   --r4:18px; --r5:28px; --rpill:999px;
-  --dock-hair:rgba(255,255,255,.08);     /* the dock's own, the same in both themes */
+  --dock-hair:rgba(255,255,255,.08);     /* the dock's own, the same in every theme */
   --shadow-float:0 18px 48px rgba(0,0,0,.45),0 4px 14px rgba(0,0,0,.28);
   --ico-size:24px; --hit:44px;
   /* The dock's geometry, and the one reserve every screen keeps for it. The dock
@@ -2177,7 +2177,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 /* One search field across the app: the library's pill, its red glass, its focus ring. */
 .afq{border-radius:var(--rpill);background:var(--bg);padding-inline:18px 4px;min-height:52px}
 .afq>.ico-search{width:16px;height:16px;flex-basis:16px;color:var(--accentHi)}
-.afq:focus-within{border-color:var(--accentHi);box-shadow:0 0 0 3px rgba(var(--glow-rgb),.18)}
+.afq:focus-within{border-color:var(--accentHi);box-shadow:0 0 0 3px rgba(var(--accentHi-rgb),.18)}
 .afq .libq-x{position:static;margin:0;flex:0 0 36px}
 
 /* The four ways to find a food: the shared segmented control (.seg, soft). */
@@ -3064,7 +3064,7 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .libq input{height:52px;border-radius:var(--rpill);padding-inline:46px 46px;font-size:16px;background:var(--bg);
   -webkit-appearance:none;appearance:none}
 .libq input::-webkit-search-cancel-button,.libq input::-webkit-search-decoration{-webkit-appearance:none;display:none}
-.libq input:focus{border-color:var(--accentHi);box-shadow:0 0 0 3px rgba(var(--glow-rgb),.18);outline:none}
+.libq input:focus{border-color:var(--accentHi);box-shadow:0 0 0 3px rgba(var(--accentHi-rgb),.18);outline:none}
 .libq .ico-search{inset-inline-start:18px}
 .libq-x{position:absolute;inset-inline-end:8px;top:50%;margin-top:-18px;width:36px;height:36px;border-radius:50%;
   border:none;background:var(--surface);color:var(--dim);font-size:13px}
