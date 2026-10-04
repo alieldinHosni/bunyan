@@ -6,7 +6,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bunyan">
-<meta name="theme-color" content="#0D0D0D">
+<meta name="theme-color" content="#0A0B0E">
+<script>
+/* The theme before the first paint. render() sets it from the profile, but only after
+   the stylesheet has already painted the default once, so a Pink or Monochrome user saw
+   a flash of red on every launch. bunyan:look is the last theme and mode, kept small for
+   exactly this read (js/ui/theme.js writes it). */
+try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.documentElement;
+  if(/^(red|pink|mono)$/.test(l[0]))d.setAttribute("data-palette",l[0]);
+  if(/^(dark|light)$/.test(l[1]))d.setAttribute("data-theme",l[1]);}catch(e){}
+</script>
 <title>Bunyan — Train · Fuel · Progress</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -28,56 +37,8 @@
 @font-face{font-family:"Outfit";src:url(fonts/outfit-latin.woff2) format("woff2");
   font-weight:700 800;font-style:normal;font-display:swap}
 :root{
-  /* ---- surfaces and text: the Bunyan Figma file ------------------------------
-     Taken from the design itself (Figma file q6AJ6YJmBYfU35RktEfQOg, the bunyan-home
-     frame), not mixed by eye. It replaces the Base Web grey ramp that stood in before
-     the original design was reachable. The design has no Figma variables, so these
-     are the literal values its frames use.
-
-     The design grounds on a warm near-black rather than true black, with cards one
-     step up and inner elements (chips, idle day dots) one step above that. Its text
-     is a warm off-white rather than pure white, which is most of why it reads as
-     Bunyan rather than as a generic dark UI. */
-  --bg:#0b0b0c;                 /* page ground */
-  --surface:#1c1c22;            /* chips, idle markers, inner elements */
-  --raised:#141418;             /* cards and the nav bar */
-  --border:#25252c;
-  --text:#faf6ee;               /* primary */
-  --sub:#d5d1c9;                /* secondary body text: subtitles, stat lines */
-  --dim:#888580;                /* tertiary: dates, durations, meta, idle nav */
-  --faint:#888580;
-
-  /* ---- accent -----------------------------------------------------------------
-     #e31b23 is the design's red and it is used here as a FILL — buttons, the ring,
-     the active nav icon, borders — which is what it does in every frame.
-
-     It is deliberately NOT used for small red text, although the frames use it that
-     way ("5/7 Days Active", the session badge). Measured, #e31b23 is 3.92:1 on the
-     card and 4.15:1 on the page ground, both under WCAG AA for text that size.
-     accentHi stays #F83446, which reads as the same red at a glance and measures
-     5.57:1. That is the one place this file departs from the design on purpose. */
-  --accent:#e31b23; --accentHi:#F83446; --onAccent:#faf6ee;
-  --accentSoft:rgba(227,27,35,.12);   /* the design's badge and avatar fill */
-
-  /* Semantic, and reserved. Green is completed states only; gold is earned only.
-     ok is bright enough to be read as text on a card (5.6:1 on raised, 5.0:1 on okSoft;
-     #1A8D3E was 4.31 and 3.84). Words on a green fill take onOk, because white on this
-     green is 3.28:1 — enough for the ✓ glyphs, not for "Done". */
-  --ok:#22a34b; --okSoft:#0E2415; --gold:#C9A227; --onOk:#0b0b0c;
-  --navbg:#141418; --navtext:#888580; --navon:#faf6ee;
-  /* The active dock icon. The dock is dark glass in both themes, so this is a red that
-     reads on the selected tint there, not the theme's accentHi (1.73:1 in Light). */
-  --dock-on:#f83446;
-  /* The ember wash behind the top of every screen, as the redesign frames have it:
-     one soft red glow under the header, fading out long before the content. */
-  --glow:rgba(227,27,35,.16);
-  /* The primary fill runs from the brand red down to this, so its label sits on red
-     that holds 4.5:1 (it measured 3.50:1 where the fill began at accentHi). */
-  --accent-deep:#b3131b;
-  /* Macros: one palette everywhere, validated as a categorical set on the dark grounds
-     (colour-blind separation ≥ 8, normal vision ≥ 15). Protein keeps the brand red;
-     carbs and fat stay clear of ok (done) and gold (earned), which are reserved. */
-  --mac-p:#f83446; --mac-c:#22a6b3; --mac-f:#7f78f2;
+  /* Colours are not here: every colour token is set by the theme blocks that follow this
+     one (---- themes), so a theme is one place to read and one place to change. */
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
   --r1:8px; --r2:12px; --r3:14px;
   /* ---- the dock and the surfaces that borrow from it --------------------------
@@ -90,19 +51,9 @@
      Radii run 8 / 12 / 14 (--r1–r3, cards and fields), 18 for controls inside a
      surface, 28 for floating surfaces, and a pill. */
   --r4:18px; --r5:28px; --rpill:999px;
-  --glass:rgba(22,22,28,.78);            /* floating surfaces over content */
-  --glass-solid:rgba(22,22,28,.96);      /* the same where blur is unavailable */
-  --hair:rgba(255,255,255,.08);          /* the hairline edge on glass */
-  --hair-hi:rgba(255,255,255,.14);       /* its lit top edge */
   --dock-hair:rgba(255,255,255,.08);     /* the dock's own, the same in both themes */
   --shadow-float:0 18px 48px rgba(0,0,0,.45),0 4px 14px rgba(0,0,0,.28);
-  --shadow-card:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.25);
-  --accent-tint:rgba(227,27,35,.16);     /* a selected state's fill */
-  --accent-edge:rgba(248,52,70,.30);     /* its edge */
-  --accent-glow:rgba(248,52,70,.22);     /* its glow */
   --ico-size:24px; --hit:44px;
-  --seg-track:rgba(255,255,255,.04);    /* the recessed track under a segmented control */
-  --bar-track:rgba(255,255,255,.14);    /* an unlit bar in a mini chart */
   /* The dock's geometry, and the one reserve every screen keeps for it. The dock
      floats --dock-lift above the bottom edge, which is the safe area on a phone with
      a home indicator and 12px on anything else; --navh is everything from the bottom
@@ -131,40 +82,179 @@
   --e-accel:cubic-bezier(0.3, 0, 0.8, 0.15); --e-spring:cubic-bezier(.2,.9,.3,1.06);
   --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
 }
-[data-theme="light"]{
-  /* Base Web light ramp, same source as the dark one above
-     (baseweb/src/tokens/color-primitive-tokens.ts). Uber puts light UI on white with
-     the grey ramp for surfaces, which is the inverse of the dark theme rather than a
-     separately-tuned palette. */
-  --bg:#FFFFFF;
-  --surface:#F3F3F3;            /* gray50  */
-  --raised:#E8E8E8;             /* gray100 */
-  --border:#DDDDDD;             /* gray200 */
-  --text:#000000;
-  /* gray700/600, not the 600/400 that mirrors the dark theme: the light ramp is not
-     symmetric in contrast, and gray400 on gray100 measures 1.99:1. */
-  --dim:#5E5E5E;                /* gray700 */
-  /* The design is dark-only and has no light values, so secondary text keeps the
-     darkest light-theme tone that already passes AA rather than an invented one. */
-  --sub:#5E5E5E;
-  --faint:#686868;              /* 4.55:1 on raised; gray600 #727272 was 3.93 */
-  /* Accent darkened for contrast on white; the dark theme's #C41E2A fails on it. */
-  --accent:#A5171F; --accentHi:#C41E2A; --onAccent:#FFFFFF; --accentSoft:#FBEAEB;
-  /* ok and gold darkened so they read as text on a card (4.73 and 4.78:1 on raised;
-     they were 4.15 and 3.93). */
-  --ok:#177530; --okSoft:#E6F2E9; --gold:#7a6213; --onOk:#ffffff;
-  --accent-deep:#8e121a;
-  --mac-p:#c41e2a; --mac-c:#0a9396; --mac-f:#6d5fe6;
-  /* Uber light UI is flat white. No wash. */
-  --glow:transparent;
-  /* The bar stays dark in both themes: it is chrome, not surface. */
-  --navbg:#000000; --navtext:#8C8C8C; --navon:#FFFFFF;
-  --dock-on:#ff5c6a;            /* 3.40:1 on the selected tint over the dark glass */
-  --seg-track:rgba(0,0,0,.05); --hair:rgba(0,0,0,.08); --bar-track:rgba(0,0,0,.10);
-  /* So does the dock, and so the glass it is made of. */
-  --glass:rgba(18,18,22,.84); --glass-solid:rgba(18,18,22,.97);
-  --accent-tint:rgba(248,52,70,.18);
+/* ---- themes ---------------------------------------------------------------------
+   Three BUNYAN themes — Red (the default), Pink and Monochrome — each in dark and light,
+   chosen in App settings (Theme, and Mode). A theme is a block of the same tokens below;
+   nothing else in this stylesheet names a colour, so every surface, control, chart,
+   drawing and photo follows the one that is on. html carries data-palette (red, pink,
+   mono) and data-theme (dark, light); any element can carry them too, which is how the
+   theme picker draws each theme's preview inside whichever theme is on.
+
+   Roles, for anyone adding a screen: bg the page · raised a card (elevated surface) ·
+   surface a chip or well inside one · border, hair the edges and dividers · text, sub,
+   dim the three levels of type · accent the primary (fills, rings, the active tab) and
+   accent-deep its pressed/lower stop · onAccent type on it · accentHi accent as text ·
+   secondary and figure the theme's highlight · ok done · warning a caution · danger
+   destructive and error · gold earned · scrim the overlay · glow-rgb coloured light ·
+   img-tone how photos are recoloured · mac-p/c/f the macro series, validated as a set.
+
+   The six brand colours are used exactly as the reference swatches give them. */
+:root{
+  --machine-red:#FF2E3A; --glacier-blue:#DBF6FF;
+  --dark-aubergine:#2E0F35; --electric-pink:#FF7FEC;
+  --zero-black:#050505; --ghost-green:#D7FFE0;
 }
+/* BUNYAN Red, dark — the signature, and the default. Machine Red is the one action
+   colour: primary buttons, the active tab, progress, selection, never a whole surface.
+   Structure is cool near-black; Glacier Blue is the controlled highlight — the label on
+   red, and the big figures. Red is also the accent text on dark, where it measures
+   4.96:1 on a card. The primary fill runs from Machine Red to accent-deep, so its Glacier
+   label holds 4.64:1 where it sits. */
+:root,[data-palette="red"],[data-theme="dark"]:not([data-palette]){
+  --bg:#0A0B0E; --raised:#13151A; --surface:#1B1E25; --border:#262A33; --text:#F1F5F8;
+  --sub:#C4CCD2; --dim:#8A939B; --faint:#8A939B; --accent:var(--machine-red);
+  --accentHi:var(--machine-red); --onAccent:var(--glacier-blue); --accent-deep:#A80E19;
+  --accentSoft:rgba(255,46,58,.12); --secondary:var(--glacier-blue); --figure:var(--glacier-blue);
+  --ok:#22A34B; --okSoft:#0E2415; --onOk:#0A0B0E; --gold:#C9A227; --warning:#E8A33A;
+  --danger:var(--machine-red); --danger-fill:var(--machine-red); --danger-deep:#A80E19;
+  --navbg:#13151A; --navtext:#8A939B; --navon:#F1F5F8; --dock-on:var(--machine-red);
+  --glow:rgba(255,46,58,.14); --glow-rgb:255,46,58; --mac-p:var(--machine-red); --mac-c:#22A6B3;
+  --mac-f:#7F78F2; --glass:rgba(19,21,26,.78); --glass-solid:rgba(19,21,26,.96);
+  --hair:rgba(255,255,255,.08); --hair-hi:rgba(255,255,255,.14); --seg-track:rgba(255,255,255,.04);
+  --bar-track:rgba(255,255,255,.14); --accent-tint:rgba(255,46,58,.16);
+  --accent-edge:rgba(255,46,58,.32); --accent-glow:rgba(255,46,58,.22); --accent-dark:#4A0910;
+  --scrim:rgba(4,5,8,.62); --img-tone:saturate(1);
+  --shadow-card:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.28);
+  --well:rgba(8,8,10,.45); --mark-tone:saturate(1); --bg-rgb:10,11,14; --accent-rgb:255,46,58;
+  --accentHi-rgb:255,46,58; --danger-rgb:255,46,58; --warning-rgb:232,163,58; --gold-rgb:201,162,39;
+}
+/* BUNYAN Red, light — the Glacier Blue swatch: Glacier Blue is the page, cards are a
+   whiter glacier, Machine Red stays the fill. Red text on glacier would be 3.27:1, so
+   accent text (accentHi) and danger use a deeper red; icons and fills keep Machine Red.
+   The dock stays dark glass, as chrome. */
+[data-theme="light"],[data-palette="red"][data-theme="light"]{
+  --bg:var(--glacier-blue); --raised:#F5FCFF; --surface:#E4F5FC; --border:#BCDCE8; --text:#0A0B0E;
+  --sub:#334750; --dim:#465B65; --faint:#465B65; --accent:var(--machine-red); --accentHi:#C30F1C;
+  --onAccent:var(--glacier-blue); --accent-deep:#A80E19; --accentSoft:#FFE3E5; --secondary:#0A0B0E;
+  --figure:#0A0B0E; --ok:#177530; --okSoft:#DDF2E5; --onOk:#FFFFFF; --gold:#7A6213;
+  --warning:#8A5600; --danger:#C30F1C; --danger-fill:var(--machine-red); --danger-deep:#A80E19;
+  --navbg:#0A0B0E; --navtext:#8E99A1; --navon:#F1F5F8; --dock-on:#FF5C66; --glow:transparent;
+  --glow-rgb:255,46,58; --mac-p:#D41E2A; --mac-c:#009AA6; --mac-f:#6D5FE6;
+  --glass:rgba(10,11,14,.86); --glass-solid:rgba(10,11,14,.97); --hair:rgba(10,40,60,.10);
+  --hair-hi:rgba(255,255,255,.14); --seg-track:rgba(10,40,60,.06); --bar-track:rgba(10,40,60,.12);
+  --accent-tint:rgba(255,46,58,.14); --accent-edge:rgba(255,46,58,.32);
+  --accent-glow:rgba(255,46,58,.20); --accent-dark:#5A0B12; --scrim:rgba(6,22,32,.42);
+  --img-tone:saturate(1);
+  --shadow-card:0 1px 0 rgba(255,255,255,.6) inset,0 10px 30px rgba(10,40,60,.10);
+  --well:rgba(10,40,60,.07); --mark-tone:saturate(1); --bg-rgb:219,246,255; --accent-rgb:255,46,58;
+  --accentHi-rgb:195,15,28; --danger-rgb:255,46,58; --warning-rgb:138,86,0; --gold-rgb:122,98,19;
+}
+/* BUNYAN Pink, dark — feminine, athletic, premium. Dark Aubergine is the card, on a deeper
+   aubergine-black ground; Electric Pink is the action and accent colour, with Dark
+   Aubergine labels on it (7.69:1). Blush is the highlight for figures. Shadows are
+   aubergine, not black. Destructive actions stay red: danger is a meaning, not a theme
+   colour. Photos and the mark turn from red to pink through --img-tone. */
+[data-palette="pink"],[data-palette="pink"] [data-theme="dark"]:not([data-palette]){
+  --bg:#1C0821; --raised:var(--dark-aubergine); --surface:#3B1843; --border:#4C2656; --text:#FFEBFB;
+  --sub:#EAC6E4; --dim:#BC92B8; --faint:#BC92B8; --accent:var(--electric-pink);
+  --accentHi:var(--electric-pink); --onAccent:var(--dark-aubergine); --accent-deep:#F05ADB;
+  --accentSoft:rgba(255,127,236,.13); --secondary:#FFD6F6; --figure:#FFD6F6; --ok:#28A85B;
+  --okSoft:#12301F; --onOk:var(--dark-aubergine); --gold:#F0C658; --warning:#FFB561;
+  --danger:#FF6B70; --danger-fill:#E5323E; --danger-deep:#B3131B; --navbg:var(--dark-aubergine);
+  --navtext:#BC92B8; --navon:#FFEBFB; --dock-on:var(--electric-pink); --glow:rgba(255,127,236,.15);
+  --glow-rgb:255,127,236; --mac-p:#E04FCB; --mac-c:#27A58C; --mac-f:#8C7BFF;
+  --glass:rgba(30,9,36,.80); --glass-solid:rgba(30,9,36,.96); --hair:rgba(255,235,251,.09);
+  --hair-hi:rgba(255,235,251,.16); --seg-track:rgba(255,235,251,.05);
+  --bar-track:rgba(255,235,251,.16); --accent-tint:rgba(255,127,236,.16);
+  --accent-edge:rgba(255,127,236,.34); --accent-glow:rgba(255,127,236,.24); --accent-dark:#5C1E66;
+  --scrim:rgba(14,3,18,.66); --img-tone:hue-rotate(-50deg) saturate(1.12) brightness(1.08);
+  --shadow-card:0 1px 0 rgba(255,235,251,.04) inset,0 10px 30px rgba(10,0,14,.38);
+  --well:rgba(14,3,18,.45); --mark-tone:hue-rotate(-50deg) saturate(1.12) brightness(1.08);
+  --bg-rgb:28,8,33; --accent-rgb:255,127,236; --accentHi-rgb:255,127,236; --danger-rgb:229,50,62;
+  --warning-rgb:255,181,97; --gold-rgb:240,198,88;
+}
+/* BUNYAN Pink, light — Dark Aubergine type on a blush page with white cards, Electric Pink
+   fills with aubergine labels. Pink text on blush would be 2:1, so accent text is a deep
+   magenta. The dock is aubergine glass. */
+[data-palette="pink"][data-theme="light"]{
+  --bg:#FFF0FB; --raised:#FFFFFF; --surface:#FBE1F5; --border:#EFC5E5; --text:var(--dark-aubergine);
+  --sub:#583A5F; --dim:#6C4C72; --faint:#6C4C72; --accent:var(--electric-pink); --accentHi:#A3148B;
+  --onAccent:var(--dark-aubergine); --accent-deep:#F05ADB; --accentSoft:#FFE0F9;
+  --secondary:var(--dark-aubergine); --figure:var(--dark-aubergine); --ok:#177530; --okSoft:#E2F3E8;
+  --onOk:#FFFFFF; --gold:#7A6213; --warning:#8A5300; --danger:#C41E2A; --danger-fill:#E5323E;
+  --danger-deep:#B3131B; --navbg:var(--dark-aubergine); --navtext:#CFA8CB; --navon:#FFEBFB;
+  --dock-on:var(--electric-pink); --glow:rgba(255,127,236,.20); --glow-rgb:255,127,236;
+  --mac-p:#B8309F; --mac-c:#14936B; --mac-f:#5B4FD6; --glass:rgba(46,15,53,.90);
+  --glass-solid:rgba(46,15,53,.97); --hair:rgba(46,15,53,.10); --hair-hi:rgba(255,255,255,.16);
+  --seg-track:rgba(46,15,53,.05); --bar-track:rgba(46,15,53,.12);
+  --accent-tint:rgba(255,127,236,.22); --accent-edge:rgba(211,57,188,.34);
+  --accent-glow:rgba(255,127,236,.30); --accent-dark:#6E2168; --scrim:rgba(46,15,53,.40);
+  --img-tone:hue-rotate(-50deg) saturate(1.12) brightness(1.08);
+  --shadow-card:0 1px 0 rgba(255,255,255,.7) inset,0 10px 30px rgba(46,15,53,.10);
+  --well:rgba(46,15,53,.06); --mark-tone:hue-rotate(-50deg) saturate(1.12) brightness(1.08);
+  --bg-rgb:255,240,251; --accent-rgb:255,127,236; --accentHi-rgb:163,20,139; --danger-rgb:229,50,62;
+  --warning-rgb:138,83,0; --gold-rgb:122,98,19;
+}
+/* Monochrome, dark — minimal, editorial. Zero Black ground, Ghost Green as the off-white:
+   text, the primary fill (Zero Black labels on it, 18.7:1) and the active tab. A grey
+   hierarchy does the rest. No coloured glow, no card shadow, flat buttons: depth comes
+   from hairlines. Colour only where it means something: done (a muted green), warning,
+   danger. Photos and the mark are shown in greyscale. */
+[data-palette="mono"],[data-palette="mono"] [data-theme="dark"]:not([data-palette]){
+  --bg:var(--zero-black); --raised:#111211; --surface:#1A1B1A; --border:#272927;
+  --text:var(--ghost-green); --sub:#BCCDC0; --dim:#86918A; --faint:#86918A;
+  --accent:var(--ghost-green); --accentHi:var(--ghost-green); --onAccent:var(--zero-black);
+  --accent-deep:var(--ghost-green); --accentSoft:rgba(215,255,224,.10); --secondary:#FFFFFF;
+  --figure:#FFFFFF; --ok:#4C9E6B; --okSoft:#0F2116; --onOk:var(--zero-black);
+  --gold:var(--ghost-green); --warning:#E3B04B; --danger:#FF5C61; --danger-fill:#E5323E;
+  --danger-deep:#B3131B; --navbg:#111211; --navtext:#86918A; --navon:var(--ghost-green);
+  --dock-on:var(--ghost-green); --glow:transparent; --glow-rgb:5,5,5; --mac-p:var(--ghost-green);
+  --mac-c:#8FAA98; --mac-f:#58695D; --glass:rgba(17,18,17,.82); --glass-solid:rgba(17,18,17,.96);
+  --hair:rgba(215,255,224,.09); --hair-hi:rgba(215,255,224,.15); --seg-track:rgba(215,255,224,.04);
+  --bar-track:rgba(215,255,224,.14); --accent-tint:rgba(215,255,224,.12);
+  --accent-edge:rgba(215,255,224,.30); --accent-glow:rgba(215,255,224,.10); --accent-dark:#1E2A22;
+  --scrim:rgba(0,0,0,.72); --img-tone:grayscale(1) contrast(1.08); --shadow-card:0 0 #0000;
+  --well:rgba(0,0,0,.5); --mark-tone:grayscale(1) brightness(2.6); --bg-rgb:5,5,5;
+  --accent-rgb:215,255,224; --accentHi-rgb:215,255,224; --danger-rgb:229,50,62;
+  --warning-rgb:227,176,75; --gold-rgb:215,255,224;
+}
+/* Monochrome, light — the Ghost Green swatch: Ghost Green page, white cards, Zero Black
+   type and Zero Black fills with Ghost Green labels. The dock is black glass. */
+[data-palette="mono"][data-theme="light"]{
+  --bg:var(--ghost-green); --raised:#FFFFFF; --surface:#EAFFEF; --border:#B5DCBE;
+  --text:var(--zero-black); --sub:#2B352E; --dim:#46524A; --faint:#46524A;
+  --accent:var(--zero-black); --accentHi:var(--zero-black); --onAccent:var(--ghost-green);
+  --accent-deep:var(--zero-black); --accentSoft:#E3F5E7; --secondary:var(--zero-black);
+  --figure:var(--zero-black); --ok:#177530; --okSoft:#DCF3E2; --onOk:#FFFFFF;
+  --gold:var(--zero-black); --warning:#8A5600; --danger:#C41E2A; --danger-fill:#E5323E;
+  --danger-deep:#B3131B; --navbg:var(--zero-black); --navtext:#8E9A92; --navon:var(--ghost-green);
+  --dock-on:var(--ghost-green); --glow:transparent; --glow-rgb:215,255,224;
+  --mac-p:var(--zero-black); --mac-c:#34443A; --mac-f:#74917D; --glass:rgba(5,5,5,.90);
+  --glass-solid:rgba(5,5,5,.97); --hair:rgba(5,5,5,.10); --hair-hi:rgba(255,255,255,.16);
+  --seg-track:rgba(5,5,5,.05); --bar-track:rgba(5,5,5,.12); --accent-tint:rgba(5,5,5,.08);
+  --accent-edge:rgba(5,5,5,.30); --accent-glow:rgba(5,5,5,.10); --accent-dark:#3E4A42;
+  --scrim:rgba(5,5,5,.45); --img-tone:grayscale(1) contrast(1.05); --shadow-card:0 0 #0000;
+  --well:rgba(5,5,5,.06); --mark-tone:grayscale(1) brightness(.35); --bg-rgb:215,255,224;
+  --accent-rgb:5,5,5; --accentHi-rgb:5,5,5; --danger-rgb:229,50,62; --warning-rgb:138,86,0;
+  --gold-rgb:5,5,5;
+}
+/* An element that carries its own theme or mode (the rest screen, the splash, a theme
+   preview) restates its text colour: color is resolved once on body and then inherited
+   as a finished colour, so without this the rest screen's figures stayed light-mode
+   black on its dark artwork. */
+[data-theme]:not(html),[data-palette]:not(html){color:var(--text)}
+/* Photos and the mark are drawn in Bunyan red. A theme that is not red recolours them on
+   the way to the screen with --img-tone: Pink turns their red to its pink, Monochrome
+   takes the colour out, Red leaves them alone. :where() keeps this at no specificity, so
+   a rule that gives one of them its own filter (a glow) still applies — and every such
+   rule starts its filter with var(--img-tone) too. */
+:where(img[src$="intro.jpg"],img[src$="rest-swirl.jpg"],.tcover img,#splash .sp-art){filter:var(--img-tone)}
+/* The mark is a flat red shape, so it can be recoloured outright: in Monochrome it is the
+   off-white (or near-black in light) rather than the mid grey a plain greyscale gives. */
+:where(img[src$="mark.png"]){filter:var(--mark-tone)}
+/* The big figures — a day's calories, a tile's number, a record — take the theme's
+   highlight: Glacier Blue in Red, blush in Pink, white in Monochrome; plain text in light. */
+.fring2-n,.htile-v b,.pgkm-v,.tghero-n b,.mealbanner-v,.wc2-stats b,.pgstat-v{color:var(--figure)}
 /* Kills double-tap-to-zoom, which has no place in an installed app, and with it
    Safari's ~300ms tap delay. Pinch-to-zoom is untouched. user-scalable=no in the
    viewport meta does not work: iOS has ignored it since iOS 10. */
@@ -276,14 +366,15 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
    sheet the thing to do is keep the workout, so discarding cannot wear the same fill.
    Outlined in --accentHi, which measures 5.57 on the dark ground and 5.89 on the light
    one — both pass AA for text, which a filled accent would not at this size. */
-.btn.danger{background:transparent;border:1px solid var(--accentHi);color:var(--accentHi)}
+.btn.danger{background:transparent;border:1px solid var(--danger);color:var(--danger)}
 .btn.d{background:transparent;border:none;color:var(--faint);font-size:14px;padding:12px 0}
 .btn.sm{width:auto;padding:9px 16px;font-size:14px;border-radius:var(--rpill);margin:0}
 .pill{padding:6px 13px;border-radius:var(--rpill);background:var(--surface);
   border:1px solid var(--border);font-size:12.5px;font-weight:600;letter-spacing:0;
   text-transform:none;color:var(--dim);transition:transform var(--m-press) var(--e-standard)}
 .pill:active{transform:scale(.94)}
-.pill.a{background:var(--accent);border-color:var(--accent);color:#fff}
+/* Small type on the accent sits on its gradient, where the label measures 4.64:1 in Red. */
+.pill.a{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:var(--accent);color:var(--onAccent)}
 .pill.gold{background:var(--accentSoft);color:var(--gold);font-weight:600}
 .pill.ok{background:var(--ok);border-color:var(--ok);color:var(--onOk)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
@@ -445,7 +536,7 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
 /* cursor:pointer is not decoration here. iOS Safari only delivers click events from
    a plain div when it looks interactive, which is why tapping the dimmed area above
    a sheet did nothing on a phone while working on a desktop. */
-.sheet{position:fixed;inset:0;background:#0009;z-index:100;display:flex;align-items:flex-end;
+.sheet{position:fixed;inset:0;background:var(--scrim);z-index:100;display:flex;align-items:flex-end;
   cursor:pointer}
 /* The overlay covers what is actually visible: above the keyboard when it is up. */
 .sheet{bottom:auto;top:var(--vvt,0px);height:var(--vvh,100%)}
@@ -480,6 +571,43 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
 .dlg-acts{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin-top:20px}
 .dlg-acts .btn{margin:0;min-height:50px}
 .dlg-acts .btn.g{background:var(--surface)}
+/* Settings → Theme. Each choice is drawn in its own theme — the preview carries
+   data-palette and data-theme, so the theme blocks colour it whatever theme is on — as a
+   small screen: the ground and its glow, a card with the accent, a figure and a bar, the
+   primary button, and the dock. The chosen one is ringed in the current accent. */
+.thlbl{margin:18px 2px 8px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.thpicks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.thpick{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;margin:0;
+  padding:8px 8px 12px;border-radius:var(--r4);border:1.5px solid var(--border);background:var(--raised);color:var(--text);
+  font:inherit;transition:border-color var(--m-micro) var(--e-standard),box-shadow var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
+.thpick:active{transform:scale(.97)}
+.thpick.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.thpv{position:relative;display:flex;flex-direction:column;gap:7px;width:100%;aspect-ratio:3/4;padding:9px 7px 30px;
+  border-radius:12px;overflow:hidden;background:var(--bg);color:var(--text);
+  background-image:radial-gradient(120% 60% at 50% -10%,var(--glow) 0%,transparent 62%);
+  box-shadow:inset 0 0 0 1px var(--hair)}
+.thpv-card{display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:9px;background:var(--raised);
+  border:1px solid var(--border);box-shadow:var(--shadow-card)}
+.thpv-k{width:46%;height:4px;border-radius:2px;background:var(--accentHi)}
+.thpv-n{font-family:var(--display);font-weight:800;font-size:15px;line-height:1;color:var(--figure);font-variant-numeric:tabular-nums}
+.thpv-bar{height:5px;border-radius:3px;background:var(--bar-track);overflow:hidden}
+.thpv-bar i{display:block;width:64%;height:100%;border-radius:3px;background:var(--accent)}
+.thpv-btn{height:16px;border-radius:999px;background:linear-gradient(180deg,var(--accent),var(--accent-deep));
+  box-shadow:0 6px 14px -8px rgba(var(--glow-rgb),.9)}
+.thpv-dock{position:absolute;left:7px;right:7px;bottom:7px;height:16px;display:flex;align-items:center;justify-content:space-around;
+  border-radius:999px;background:var(--glass-solid);box-shadow:inset 0 0 0 1px var(--dock-hair)}
+.thpv-dock i{width:5px;height:5px;border-radius:50%;background:var(--navtext)}
+.thpv-dock i.on{width:12px;border-radius:3px;background:var(--dock-on)}
+.thpick-n{font-size:12.5px;font-weight:700;line-height:1.2;text-align:center}
+.thpick-sw{display:flex;gap:4px}
+.thpick-sw i{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
+.thpick-ok{position:absolute;top:14px;inset-inline-end:14px;display:grid;place-items:center;width:20px;height:20px;
+  border-radius:50%;background:var(--accent);color:var(--onAccent);box-shadow:0 0 0 2px var(--raised)}
+.thpick-ok svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.seg.thmode{margin:0}
+/* The theme change itself: one cross-fade of the whole screen (js/ui/theme.js), quick
+   enough to read as a response, not a performance. */
+::view-transition-old(root),::view-transition-new(root){animation-duration:280ms;animation-timing-function:var(--e-standard)}
 /* Icon-only controls need a real hit area even when the glyph is small. */
 .iconbtn{width:44px;min-height:44px;padding:0;font-size:20px;line-height:1}
 button.pill{position:relative;min-height:34px}
@@ -495,15 +623,6 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
 .chev{color:var(--faint);font-size:19px;flex-shrink:0}
 .mt{margin-top:14px}
 .hide{display:none}
-.brand{display:flex;align-items:center;gap:13px;padding:16px;margin-bottom:16px;
-  background:linear-gradient(140deg,#1A1A1A,#0D0D0D 70%);
-  border:1px solid #33191C;border-radius:16px;
-  box-shadow:0 10px 30px rgba(230,57,70,.10);
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cg fill='none' stroke='%23C9A227' stroke-width='2' opacity='0.16'%3E%3Cpath d='M36 2 L48 24 L70 36 L48 48 L36 70 L24 48 L2 36 L24 24 Z'/%3E%3C/g%3E%3C/svg%3E");
-  background-size:72px 72px}
-.brand img{width:46px;height:46px;flex-shrink:0}
-.brandname{font-size:19px;font-weight:800;letter-spacing:.18em;color:var(--accentHi)}
-.brandsub{font-size:9px;letter-spacing:.24em;color:var(--dim);text-transform:uppercase}
 /* ================= intro
    The warrior and horse in shadow, the mark settling over it. Slow and atmospheric:
    a push-in that comes to rest, a mark that breathes, tracking that tightens. No
@@ -532,7 +651,7 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
   animation:spArt 2.7s cubic-bezier(.16,.72,.24,1) .12s forwards}
 #splash .sp-glow{position:absolute;left:50%;top:60%;width:132vw;height:132vw;
   transform:translate(-50%,-50%);pointer-events:none;opacity:0;
-  background:radial-gradient(closest-side,rgba(214,36,48,.34),rgba(4,4,6,0) 70%);
+  background:radial-gradient(closest-side,rgba(var(--glow-rgb),.34),rgba(4,4,6,0) 70%);
   animation:spGlowIn 1.9s ease .25s forwards, spBreathe 5s ease-in-out 2s infinite alternate}
 /* Open through the middle so the rider reads, closed at the edges and the foot so the
    frame stays in shadow and the tagline stays legible. */
@@ -543,7 +662,7 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
       rgba(4,4,6,0) 56%,rgba(4,4,6,.78) 86%,#040406 100%)}
 #splash .sp-embers{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 #splash .sp-em{position:absolute;bottom:-10px;width:3px;height:3px;border-radius:2px;
-  background:#E0483A;opacity:0;animation-name:spEm;animation-timing-function:linear;
+  background:var(--accentHi);opacity:0;animation-name:spEm;animation-timing-function:linear;
   animation-iteration-count:infinite}
 #splash .sp-mid{position:relative;z-index:2;text-align:center;margin-bottom:15vh;margin-bottom:15dvh}
 /* No shaped scrim behind the lockup on purpose: any radial dark enough to help is also
@@ -566,7 +685,7 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
 #splash .sp-rule{display:flex;align-items:center;justify-content:center;width:180px;height:2px;
   margin:14px auto 0;transform:scaleX(0);
   animation:spRule .95s cubic-bezier(.2,.7,.3,1) 1.55s forwards}
-#splash .sp-rule i{display:block;height:2px;width:30px;background:#e31b23}
+#splash .sp-rule i{display:block;height:2px;width:30px;background:var(--accent)}
 #splash .sp-rule b{display:block;height:1px;width:120px;background:#888580}
 #splash .sp-tag{font-size:14px;font-weight:600;text-transform:uppercase;color:#d5d1c9;
   letter-spacing:.06em;text-indent:.06em;
@@ -586,8 +705,8 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
                      to{transform:translate(-50%,-50%) scale(1.09)}}
 @keyframes spMark{0%{opacity:0;transform:translateY(14px) scale(.82)}
   55%{opacity:1}100%{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes spMarkGlow{from{filter:drop-shadow(0 4px 18px rgba(214,36,48,.28))}
-                      to{filter:drop-shadow(0 4px 34px rgba(214,36,48,.60))}}
+@keyframes spMarkGlow{from{filter:var(--mark-tone) drop-shadow(0 4px 18px rgba(var(--glow-rgb),.28))}
+                      to{filter:var(--mark-tone) drop-shadow(0 4px 34px rgba(var(--glow-rgb),.60))}}
 @keyframes spName{from{opacity:0;letter-spacing:.42em;text-indent:.42em;filter:blur(3px)}
                   to{opacity:1;letter-spacing:.04em;text-indent:.04em;filter:blur(0)}}
 @keyframes spRule{to{transform:scaleX(1)}}
@@ -604,7 +723,7 @@ body.nosplash #splash{display:none}
   #splash .sp-art{opacity:.92;transform:none;animation:none}
   #splash .sp-glow{opacity:1;animation:none}
   #splash .sp-mark{opacity:1;transform:none;animation:none;
-    filter:drop-shadow(0 4px 24px rgba(214,36,48,.42))}
+    filter:var(--mark-tone) drop-shadow(0 4px 24px rgba(var(--glow-rgb),.42))}
   #splash .sp-name{opacity:1;animation:none}
   #splash .sp-rule{transform:none;animation:none}
   #splash .sp-tag{opacity:1;animation:none}
@@ -614,7 +733,7 @@ body.noanim #splash{animation:spOut .45s ease 1.6s forwards}
 body.noanim #splash .sp-art{opacity:.92;transform:none;animation:none}
 body.noanim #splash .sp-glow{opacity:1;animation:none}
 body.noanim #splash .sp-mark{opacity:1;transform:none;animation:none;
-  filter:drop-shadow(0 4px 24px rgba(214,36,48,.42))}
+  filter:var(--mark-tone) drop-shadow(0 4px 24px rgba(var(--glow-rgb),.42))}
 body.noanim #splash .sp-name{opacity:1;animation:none}
 body.noanim #splash .sp-rule{transform:none;animation:none}
 body.noanim #splash .sp-tag{opacity:1;animation:none}
@@ -628,7 +747,7 @@ body.noanim #splash .sp-embers{display:none}
 [dir="rtl"] .tap,[dir="rtl"] .item{text-align:right}
 [dir="rtl"] .topbar button:first-child{transform:scaleX(-1)}
 [dir="rtl"] h1,[dir="rtl"] h2,[dir="rtl"] h3{letter-spacing:0}
-[dir="rtl"] .overline,[dir="rtl"] .sec,[dir="rtl"] .brandsub,[dir="rtl"] nav button{letter-spacing:0}
+[dir="rtl"] .overline,[dir="rtl"] .sec,[dir="rtl"] nav button{letter-spacing:0}
 /* Numbers run LTR inside RTL text. isolate keeps each one a self-contained run so an
    adjacent pair separated only by a neutral cannot be reordered into each other. */
 [dir="rtl"] .num,[dir="rtl"] .metric,[dir="rtl"] .stat{direction:ltr;display:inline-block;
@@ -694,12 +813,12 @@ body.noanim #splash .sp-embers{display:none}
    aside and the results keep the room. */
 body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
 .pkrow .pkadd{flex:0 0 36px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
-  background:rgba(230,30,40,.14);border:1px solid rgba(248,52,70,.45);color:var(--accentHi);
+  background:rgba(var(--accent-rgb),.14);border:1px solid rgba(var(--accentHi-rgb),.45);color:var(--accentHi);
   font-size:20px;font-weight:600;line-height:1;transition:transform var(--m-press) var(--e-standard)}
 .pkrow:active .pkadd{transform:scale(.9)}
-.pkrow.on{background:rgba(230,30,40,.06)}
-.pkrow.on .pkadd{background:var(--accent);border-color:var(--accent);color:#fff;font-size:16px}
-.pkswap{flex:0 0 auto;padding:7px 14px;border-radius:var(--rpill);border:1px solid rgba(248,52,70,.5);
+.pkrow.on{background:rgba(var(--accent-rgb),.06)}
+.pkrow.on .pkadd{background:var(--accent);border-color:var(--accent);color:var(--onAccent);font-size:16px}
+.pkswap{flex:0 0 auto;padding:7px 14px;border-radius:var(--rpill);border:1px solid rgba(var(--accentHi-rgb),.5);
   color:var(--accentHi);font-size:13px;font-weight:700}
 .grab{position:absolute;left:50%;top:7px;transform:translateX(-50%);
   width:38px;height:4px;border-radius:2px;background:var(--border)}
@@ -827,8 +946,8 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
   background:transparent;color:var(--dim);font-size:19px;font-weight:600;padding:0;margin:0 auto;
   display:flex;align-items:center;justify-content:center;transition:transform var(--m-press) var(--e-standard)}
 .logbtn:active{transform:scale(.88)}
-.logbtn.go{border-color:var(--accent);background:var(--accent);color:#fff;
-  box-shadow:0 5px 18px rgba(196,30,42,.42)}
+.logbtn.go{border-color:var(--accent);background:var(--accent);color:var(--onAccent);
+  box-shadow:0 5px 18px rgba(var(--glow-rgb),.42)}
 .logbtn.done{border-color:var(--ok);background:var(--ok);color:#fff}
 .logbtn.off{opacity:.3}
 @keyframes setpop{0%{transform:scale(.6);opacity:0}55%{transform:scale(1.14)}100%{transform:scale(1);opacity:1}}
@@ -865,14 +984,14 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
   background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)) ,var(--raised);
   border:1px solid var(--border);box-shadow:var(--shadow-card);touch-action:pan-y}
 .dnav.now{border-color:var(--accent-edge);
-  box-shadow:var(--shadow-card),0 0 0 1px rgba(248,52,70,.06),0 8px 30px -12px var(--accent-glow)}
+  box-shadow:var(--shadow-card),0 0 0 1px rgba(var(--glow-rgb),.06),0 8px 30px -12px var(--accent-glow)}
 /* The drawing: the Bunyan horse, faint, bleeding off the right edge in a red haze. */
 .dnav.art{min-height:104px}
 .dnav.art::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
-  background:radial-gradient(60% 120% at 88% 40%,rgba(227,27,35,.28),transparent 70%)}
+  background:radial-gradient(60% 120% at 88% 40%,rgba(var(--glow-rgb),.28),transparent 70%)}
 .dnav-art{position:absolute;z-index:-1;inset-inline-end:-26px;top:50%;width:136px;height:auto;
   transform:translateY(-50%);opacity:.26;pointer-events:none;
-  filter:drop-shadow(0 0 18px rgba(248,52,70,.55)) saturate(1.1);
+  filter:var(--mark-tone) drop-shadow(0 0 18px rgba(var(--glow-rgb),.55)) saturate(1.1);
   -webkit-mask:linear-gradient(90deg,transparent,#000 45%);mask:linear-gradient(90deg,transparent,#000 45%)}
 [dir="rtl"] .dnav-art{transform:translateY(-50%) scaleX(-1);
   -webkit-mask:linear-gradient(270deg,transparent,#000 45%);mask:linear-gradient(270deg,transparent,#000 45%)}
@@ -967,7 +1086,7 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
 .restwrap.done .restdone-go{background:var(--onAccent);color:var(--accent);
   border-color:var(--onAccent);min-width:min(78vw,320px)}
 .restwrap{position:fixed;inset:0;z-index:90;background:var(--bg);
-  background-image:radial-gradient(76% 44% at 50% 45%,rgba(196,30,42,.28) 0%,rgba(10,10,12,0) 70%);
+  background-image:radial-gradient(76% 44% at 50% 45%,rgba(var(--glow-rgb),.28) 0%,rgba(10,10,12,0) 70%);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:24px 20px calc(28px + env(safe-area-inset-bottom));animation:fadeIn .22s ease}
 .restlabel{font-size:12px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;
@@ -985,9 +1104,9 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
   background:var(--surface);color:var(--text);font-size:14px;font-weight:700;
   font-variant-numeric:tabular-nums;transition:transform var(--m-press) var(--e-standard)}
 .rbtn:active{transform:scale(.94)}
-.rbtn.main{background:var(--accent);border-color:var(--accent);color:#fff;min-width:136px;
+.rbtn.main{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:var(--accent);color:var(--onAccent);min-width:136px;
   font-size:15px;letter-spacing:.05em;text-transform:uppercase;
-  box-shadow:0 8px 26px rgba(196,30,42,.34)}
+  box-shadow:0 8px 26px rgba(var(--glow-rgb),.34)}
 .upnext{margin-top:30px;width:100%;max-width:380px;background:var(--surface);
   border:1px solid var(--border);border-radius:16px;padding:14px;text-align:center}
 .upnext .ul{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
@@ -1281,9 +1400,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
    text. Decorative: alt="" and hidden from assistive tech. */
 .thero2{position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;gap:18px;
   padding:20px;border-radius:var(--r5);border:1px solid var(--border);
-  background:linear-gradient(135deg,rgba(227,27,35,.10),rgba(0,0,0,0) 55%),var(--raised);box-shadow:var(--shadow-card)}
+  background:linear-gradient(135deg,rgba(var(--accent-rgb),.10),rgba(0,0,0,0) 55%),var(--raised);box-shadow:var(--shadow-card)}
 .thero2.live{border-color:var(--accent-edge);
-  background:linear-gradient(135deg,rgba(227,27,35,.26),rgba(227,27,35,.04) 60%),var(--raised);
+  background:linear-gradient(135deg,rgba(var(--accent-rgb),.26),rgba(var(--accent-rgb),.04) 60%),var(--raised);
   box-shadow:var(--shadow-card),0 14px 40px -18px var(--accent-glow)}
 .thero2-art{position:absolute;z-index:-1;top:-26%;inset-inline-end:-18%;width:78%;height:auto;opacity:.62;
   mix-blend-mode:screen;pointer-events:none;
@@ -1298,7 +1417,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .thero2 .btn:not(.g){background:linear-gradient(180deg,var(--accent),var(--accent-deep));box-shadow:0 10px 26px -10px var(--accent-glow)}
 .tbadge{flex:0 0 52px;width:52px;height:52px;border-radius:var(--rpill);display:flex;align-items:center;justify-content:center;
   color:var(--onAccent);background:radial-gradient(circle at 35% 30%,var(--accentHi),var(--accent) 70%);
-  box-shadow:0 0 0 6px rgba(227,27,35,.12),0 8px 22px -8px var(--accent-glow)}
+  box-shadow:0 0 0 6px rgba(var(--glow-rgb),.12),0 8px 22px -8px var(--accent-glow)}
 .tbadge.rest{background:var(--surface);color:var(--dim);box-shadow:0 0 0 6px rgba(255,255,255,.03)}
 .tbadge svg,.tday-i svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tprog-wk{margin:12px 2px 0}
@@ -1335,7 +1454,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tcover::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.4)}
 /* A split the user built has no photograph of its own. The accent field stands in for
    one, so the card keeps its shape without borrowing another programme's picture. */
-.tcover-none{background:linear-gradient(135deg,var(--accent) 0%,#5c0a0f 55%,var(--raised) 100%)}
+.tcover-none{background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 55%,var(--raised) 100%)}
 .tpc-body{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:12px;min-width:0}
 .tpc-n,.tpc-s{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tpc-n{font-family:var(--display);font-weight:700;font-size:14px}
@@ -1396,7 +1515,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .drm i{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;
   background:rgba(255,255,255,.05);border:1px solid var(--border)}
 .drm svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
-.drm:active i{background:rgba(230,30,40,.18);border-color:rgba(248,52,70,.6);color:var(--accentHi)}
+.drm:active i{background:rgba(var(--danger-rgb),.18);border-color:rgba(var(--danger-rgb),.6);color:var(--danger)}
 .dmain{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:12px 6px 12px 2px;
   background:none;border:none;color:var(--text);text-align:start}
 .dmain:active .drow-n{color:var(--accentHi)}
@@ -1416,7 +1535,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .dgrip:active{color:var(--accentHi)}
 .drows.sorting{-webkit-user-select:none;user-select:none}
 .drows.sorting .drow:not(.lifted){transition:transform .18s var(--e-standard)}
-.drow.lifted{z-index:5;background:var(--surface);border-color:rgba(248,52,70,.6);
+.drow.lifted{z-index:5;background:var(--surface);border-color:rgba(var(--accentHi-rgb),.6);
   box-shadow:0 20px 40px -14px rgba(0,0,0,.85);cursor:grabbing}
 .drow.lifted .dgrip{color:var(--accentHi)}
 /* Adding is the same dashed + as adding a set. */
@@ -1424,14 +1543,14 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   border-radius:14px;border:1px dashed var(--hair-hi);background:none;color:var(--sub);font-weight:700;font-size:15px;
   transition:transform var(--m-press) var(--e-standard)}
 .dadd span{font-size:20px;line-height:1;color:var(--accentHi)}
-.dadd:active{transform:scale(.98);background:rgba(230,30,40,.06)}
+.dadd:active{transform:scale(.98);background:rgba(var(--accent-rgb),.06)}
 /* The frame's bottom block. Not fixed: the routine above scrolls, and a pinned bar
    would cover a row on a short screen. */
 .dcta{display:flex;flex-direction:column;gap:8px;align-items:stretch;
   border-top:1px solid var(--border);margin-top:24px;padding-top:24px}
 .dbegin{min-height:54px;font-size:16px;font-weight:800;margin:0}
 .ddel{align-self:center;min-height:44px;padding:0 16px;background:none;border:none;
-  color:var(--accentHi);font-size:14px;font-weight:600;opacity:.85}
+  color:var(--danger);font-size:14px;font-weight:600;opacity:.85}
 .ddel:active{opacity:.5}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 /* ---- Programs and the split builder: the library's hero, Bunyan mark and all ---- */
@@ -1440,27 +1559,27 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .bhero .dname{margin-top:2px}
 .bhero .dname .dhead-t{font-size:30px}
 .bnew{display:flex;align-items:center;gap:12px;width:100%;margin-top:16px;padding:14px;border-radius:var(--r4);
-  border:1px solid rgba(248,52,70,.45);background:linear-gradient(180deg,rgba(230,30,40,.22),rgba(230,30,40,.08));
+  border:1px solid rgba(var(--accentHi-rgb),.45);background:linear-gradient(180deg,rgba(var(--accent-rgb),.22),rgba(var(--accent-rgb),.08));
   color:var(--text);text-align:start;transition:transform var(--m-press) var(--e-standard)}
 .bnew:active{transform:scale(.98)}
 .bnew-i{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:50%;
   background:linear-gradient(180deg,var(--accent),var(--accent-deep));box-shadow:0 8px 20px -8px var(--accent-glow)}
-.bnew-i svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2.6;stroke-linecap:round}
+.bnew-i svg{width:20px;height:20px;fill:none;stroke:var(--onAccent);stroke-width:2.6;stroke-linecap:round}
 .bnew-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .bnew-t b{font-family:var(--display);font-size:16px}
 .bnew-t span{font-size:12.5px;color:var(--dim)}
 .bnew .ico-chev{color:var(--dim)}
 .bstats{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .bstats span{display:flex;align-items:baseline;gap:5px;padding:6px 12px;border-radius:var(--rpill);
-  background:rgba(8,8,10,.45);border:1px solid var(--border);font-size:12.5px;color:var(--dim)}
+  background:var(--well);border:1px solid var(--border);font-size:12.5px;color:var(--dim)}
 .bstats b{font-family:var(--display);font-size:16px;color:var(--text);font-variant-numeric:tabular-nums}
-.bcount{margin:14px 0 0;padding:12px;border-radius:var(--r4);border:1px solid var(--border);background:rgba(8,8,10,.45)}
+.bcount{margin:14px 0 0;padding:12px;border-radius:var(--r4);border:1px solid var(--border);background:var(--well)}
 .bcount-l{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 .bcount-c{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:10px}
 .bcount-c button{min-height:46px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);
   font-family:var(--display);font-size:18px;font-weight:800;transition:transform var(--m-press) var(--e-standard)}
 .bcount-c button:active{transform:scale(.94)}
-.bcount-c button.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:transparent;color:#fff;
+.bcount-c button.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:transparent;color:var(--onAccent);
   box-shadow:0 8px 18px -10px var(--accent-glow)}
 .bnum{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:12px;
   background:var(--surface);border:1px solid var(--border);color:var(--text);
@@ -1469,9 +1588,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .bkday.blank{border-style:dashed}
 .drow-s em{font-style:normal;color:var(--accentHi);font-weight:600}
 .dmain .ico-chev{flex:0 0 auto;margin-inline-end:6px;color:var(--dim)}
-.bsp.on{border-color:rgba(248,52,70,.55);background:linear-gradient(180deg,rgba(230,30,40,.10),transparent),var(--raised)}
+.bsp.on{border-color:rgba(var(--accentHi-rgb),.55);background:linear-gradient(180deg,rgba(var(--accent-rgb),.10),transparent),var(--raised)}
 .bpill{flex:0 0 auto;margin-inline-end:10px;padding:5px 12px;border-radius:var(--rpill);font-size:12px;font-weight:700;
-  background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:#fff}
+  background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent)}
 .trow .bpill{margin-inline-end:0}
 .bdays{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:0 0 46px;height:46px;border-radius:12px;
   background:var(--surface);border:1px solid var(--border);font-size:10px;color:var(--dim);line-height:1.1}
@@ -1482,7 +1601,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 /* ---- Train: Today · My Program · Explore ------------------------------------------ */
 .tsecs{margin:4px 0 16px}
 .twk{margin:0 0 14px;padding:12px;border-radius:var(--r4);border:1px solid var(--border);
-  background:radial-gradient(90% 90% at 100% 0%,rgba(230,30,40,.10),transparent 70%),var(--raised)}
+  background:radial-gradient(90% 90% at 100% 0%,rgba(var(--glow-rgb),.10),transparent 70%),var(--raised)}
 .twk-h{display:flex;align-items:baseline;justify-content:space-between;margin:0 2px 10px}
 .twk-h b{font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}
 .twk-r{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
@@ -1497,8 +1616,8 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .twk-d.done i svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .twk-d.rest,.twk-d.past{background:transparent}
 .twk-d.rest .twk-n,.twk-d.past .twk-n{color:var(--dim)}
-.twk-d.today{border-color:rgba(248,52,70,.55)}
-.twk-d.sel{background:linear-gradient(180deg,rgba(230,30,40,.26),rgba(230,30,40,.10));border-color:rgba(248,52,70,.7)}
+.twk-d.today{border-color:rgba(var(--accentHi-rgb),.55)}
+.twk-d.sel{background:linear-gradient(180deg,rgba(var(--accent-rgb),.26),rgba(var(--accent-rgb),.10));border-color:rgba(var(--accentHi-rgb),.7)}
 .twk-d.sel .twk-w{color:var(--sub)}
 .tquick{width:100%;margin-top:14px}
 /* Schedule: two choices side by side; weekday chips under each day. */
@@ -1507,13 +1626,13 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   border:1px solid var(--border);background:var(--raised);color:var(--text);text-align:start}
 .bsched button b{font-family:var(--display);font-size:15px}
 .bsched button span{font-size:12px;color:var(--dim)}
-.bsched button.on{border-color:rgba(248,52,70,.6);background:linear-gradient(180deg,rgba(230,30,40,.18),rgba(230,30,40,.05)),var(--raised)}
+.bsched button.on{border-color:rgba(var(--accentHi-rgb),.6);background:linear-gradient(180deg,rgba(var(--accent-rgb),.18),rgba(var(--accent-rgb),.05)),var(--raised)}
 .bsched button.on b{color:var(--accentHi)}
 .bkday{flex-wrap:wrap}
 .bwd{flex:1 0 100%;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;padding:0 12px 12px 12px}
 .bwd button{min-height:34px;padding:0;border-radius:10px;border:1px solid var(--border);background:var(--surface);
   color:var(--sub);font-size:11.5px;font-weight:700}
-.bwd button.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:transparent;color:#fff}
+.bwd button.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:transparent;color:var(--onAccent)}
 .bwd button.taken{opacity:.35}
 .wkoffer-l{margin:-4px 0 12px;font-weight:600;color:var(--text);font-size:14px;line-height:1.6}
 .bactive{margin:0;text-align:center;color:var(--ok);font-weight:700;font-size:15px}
@@ -1530,7 +1649,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .exs-c{display:flex;align-items:center;gap:6px}
 .exs-b{flex:0 0 40px;width:40px;height:40px;border-radius:50%;padding:0;border:1px solid var(--border);
   background:var(--surface);color:var(--text);font-size:20px;line-height:1;transition:transform var(--m-press) var(--e-standard)}
-.exs-b:active{transform:scale(.9);background:rgba(230,30,40,.16);border-color:rgba(248,52,70,.5)}
+.exs-b:active{transform:scale(.9);background:rgba(var(--accent-rgb),.16);border-color:rgba(var(--accentHi-rgb),.5)}
 .exs-v{flex:1;min-width:0;display:flex;align-items:baseline;justify-content:center;gap:2px}
 .sheetbox .exs-v input{width:100%;min-width:0;min-height:40px;margin:0;padding:0;border:none;background:none;
   text-align:center;font-family:var(--display);font-size:24px;font-weight:800;color:var(--text);
@@ -1539,7 +1658,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .exs-v input:focus{outline:none;box-shadow:inset 0 -2px 0 var(--accentHi)}
 .exs-v i{font-style:normal;font-size:13px;font-weight:700;color:var(--dim)}
 .exsuper{display:flex;flex-direction:column;gap:4px;margin:0 0 14px;padding:12px 14px;border-radius:var(--r4);
-  border:1px solid rgba(201,162,39,.45);background:rgba(201,162,39,.06);font-size:13px;color:var(--dim)}
+  border:1px solid rgba(var(--gold-rgb),.45);background:rgba(var(--gold-rgb),.06);font-size:13px;color:var(--dim)}
 .exsuper b{color:var(--gold);font-size:14px}
 .exacts{margin-bottom:16px}
 .exrm{display:block;margin:10px auto 0}
@@ -1628,7 +1747,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   margin-bottom:var(--s3);border-radius:var(--r5);border:1px solid var(--border);
   background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 40%),var(--raised);box-shadow:var(--shadow-card)}
 .fring2{position:relative;width:136px;height:136px;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.fring2 svg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 0 10px rgba(227,27,35,.25))}
+.fring2 svg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 0 10px rgba(var(--glow-rgb),.25))}
 .fring2-n{position:relative;font-family:var(--display);font-weight:800;font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
 .fring2-u{position:relative;font-size:12px;color:var(--sub);margin-top:2px}
 .fring2-g{position:relative;font-size:11.5px;color:var(--dim);margin-top:4px}
@@ -1643,7 +1762,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .fmac2-b i{display:block;height:100%;border-radius:3px;background:var(--mac)}
 .fmac2-r.p{--mac:var(--mac-p)} .fmac2-r.c{--mac:var(--mac-c)} .fmac2-r.f{--mac:var(--mac-f)}
 .fleft{font-size:12.5px;font-weight:700;color:var(--sub)}
-.fleft.over{color:var(--gold)}
+.fleft.over{color:var(--warning)}
 @media (max-width:360px){.fsum{grid-template-columns:1fr;justify-items:center}.fmac2{width:100%}}
 /* The four meals as tiles. The one for now is lit like the dock's active item. */
 .fmt{display:grid;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));gap:8px;margin-bottom:var(--s3)}
@@ -1677,7 +1796,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .plist-r i{font-style:normal;color:var(--dim);font-size:12.5px}
 .plist-r b{font-variant-numeric:tabular-nums;color:var(--sub);font-weight:600;white-space:nowrap}
 .plist-r.miss span{color:var(--dim)}
-.plist-r.miss b{color:var(--gold);font-weight:600;font-size:12px}
+.plist-r.miss b{color:var(--warning);font-weight:600;font-size:12px}
 .btn.plog{margin-bottom:8px}
 /* Import: a box to paste into, a file button beside the read button, then the meals it
    found as cards. */
@@ -1717,7 +1836,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   margin-inline:calc(-1 * var(--gutter));margin-bottom:20px;
   display:flex;align-items:center;justify-content:space-between;gap:12px}
 .mealbanner-k{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
-.mealbanner-v{font-family:var(--display);font-weight:800;font-size:36px;color:var(--text);
+.mealbanner-v{font-family:var(--display);font-weight:800;font-size:36px;color:var(--figure);
   margin-top:4px;font-variant-numeric:tabular-nums;line-height:1}
 .mealbanner-m{display:flex;gap:12px;font-size:13px;color:var(--dim);flex-shrink:0;
   font-variant-numeric:tabular-nums}
@@ -1732,9 +1851,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 /* The frame shows this revealed by a swipe. It is a permanent button instead: the app
    has no list-swipe anywhere else, and a delete that has to be discovered by dragging
    is a delete some users never find. */
-.fitemrow-x{flex:0 0 52px;background:var(--accentSoft);border:none;color:var(--accentHi);
+.fitemrow-x{flex:0 0 52px;background:rgba(var(--danger-rgb),.12);border:none;color:var(--danger);
   display:flex;align-items:center;justify-content:center}
-.fitemrow-x:active{background:var(--accent);color:var(--onAccent)}
+.fitemrow-x:active{background:var(--danger);color:#fff}
 .fitemrow-x .ico-trash{width:20px;height:20px;flex-basis:20px}
 
 /* ================= Rest — canvas screen 5, set completion (node 2:1149)
@@ -1787,7 +1906,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
    otherwise be turned into a 60px circle by this rule. */
 .restwrap:not(.done) .rbtn.main{width:60px;min-width:60px;height:60px;border-radius:30px;
   padding:0;display:flex;align-items:center;justify-content:center;
-  box-shadow:0 8px 26px rgba(196,30,42,.34)}
+  box-shadow:0 8px 26px rgba(var(--glow-rgb),.34)}
 .restwrap:not(.done) .rbtn.main .ico{width:24px;height:24px;flex-basis:24px}
 
 .upnext{margin-top:32px;border-radius:8px;padding:16px}
@@ -2058,7 +2177,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 /* One search field across the app: the library's pill, its red glass, its focus ring. */
 .afq{border-radius:var(--rpill);background:var(--bg);padding-inline:18px 4px;min-height:52px}
 .afq>.ico-search{width:16px;height:16px;flex-basis:16px;color:var(--accentHi)}
-.afq:focus-within{border-color:var(--accentHi);box-shadow:0 0 0 3px rgba(230,30,40,.18)}
+.afq:focus-within{border-color:var(--accentHi);box-shadow:0 0 0 3px rgba(var(--glow-rgb),.18)}
 .afq .libq-x{position:static;margin:0;flex:0 0 36px}
 
 /* The four ways to find a food: the shared segmented control (.seg, soft). */
@@ -2102,7 +2221,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 /* ---- one food, its servings (13:266) */
 .afmono{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;
   margin:0;padding:26px var(--s4);border-radius:var(--r4);border:1px solid var(--border);
-  background:radial-gradient(80% 70% at 50% 0%,rgba(230,30,40,.14),transparent 70%),var(--raised)}
+  background:radial-gradient(80% 70% at 50% 0%,rgba(var(--glow-rgb),.14),transparent 70%),var(--raised)}
 .afmono-k{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
 .afmono-v{font-family:var(--display);font-weight:800;font-size:64px;line-height:1;
   font-variant-numeric:tabular-nums}
@@ -2154,22 +2273,22 @@ textarea.afnl{display:block;width:100%;min-height:112px;resize:none;background:v
   border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);
   font:inherit;font-size:16px;line-height:1.45}
 textarea.afnl:focus{outline:none;border-color:var(--accent)}
-textarea.afnl.warn{border-color:var(--gold)}
+textarea.afnl.warn{border-color:var(--warning)}
 .sheetbox .btn.afparse{margin-top:10px}
 .afstat{display:flex;align-items:center;gap:6px;font-size:12px;margin:10px 0 0}
 .afstat .ico{width:14px;height:14px;flex-basis:14px}
 .afstat.ok{color:var(--ok)}
-.afstat.warn{color:var(--gold)}
+.afstat.warn{color:var(--warning)}
 
 .afitem{background:var(--surface);border:1px solid transparent;border-radius:12px;padding:12px 16px;
   margin-bottom:10px}
-.afitem.warn{border-color:var(--gold)}
+.afitem.warn{border-color:var(--warning)}
 .afitem-r{display:flex;align-items:center;gap:8px}
 .afitem-t{flex:1;min-width:0}
 .afitem-n{font-weight:700;font-size:16px}
 .afitem-n span{font-weight:400;color:var(--dim)}
 .afitem-m{font-size:12px;color:var(--dim);margin-top:4px;font-variant-numeric:tabular-nums}
-.afwarn{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--gold)}
+.afwarn{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--warning)}
 .afwarn.tag{text-transform:uppercase;letter-spacing:.03em}
 .afwarn .ico{width:14px;height:14px;flex-basis:14px}
 .afedit{flex:0 0 44px;width:44px;height:44px;margin-inline-end:-10px;border:none;background:none;
@@ -2179,12 +2298,12 @@ textarea.afnl.warn{border-color:var(--gold)}
 .afitem-q{margin-top:12px}
 
 /* The unrecognised line: amber, three ways forward. */
-.afunk{background:rgba(201,162,39,.12);border:1.5px solid var(--gold);border-radius:12px;padding:16px;
+.afunk{background:rgba(var(--warning-rgb),.12);border:1.5px solid var(--warning);border-radius:12px;padding:16px;
   margin-bottom:10px}
 .afunk-r{display:flex;gap:12px;align-items:flex-start}
-.afunk-r>.ico-warn{width:24px;height:24px;flex:0 0 24px;color:var(--gold);margin-top:1px}
+.afunk-r>.ico-warn{width:24px;height:24px;flex:0 0 24px;color:var(--warning);margin-top:1px}
 .afunk-t{min-width:0}
-.afunk-n{font-family:var(--display);font-weight:700;font-size:16px;color:var(--gold);overflow-wrap:anywhere}
+.afunk-n{font-family:var(--display);font-weight:700;font-size:16px;color:var(--warning);overflow-wrap:anywhere}
 .afunk-s{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--sub);margin-top:4px}
 .afunk-a{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:12px}
 .afunk-a button{background:none;border:none;min-height:44px;padding:0 4px;color:var(--sub);
@@ -2205,7 +2324,7 @@ textarea.afnl.warn{border-color:var(--gold)}
    Only the colours change, so the shared animation and its reduced-motion rule stay. */
 .afshim .skel{background-image:linear-gradient(90deg,var(--border) 25%,var(--raised) 50%,var(--border) 75%)}
 .afshim p{margin:4px 0 0;font-size:12px;color:var(--dim)}
-.aferr{background:rgba(227,27,35,.12);border:1.5px solid var(--accent);border-radius:12px;
+.aferr{background:rgba(var(--danger-rgb),.12);border:1.5px solid var(--danger);border-radius:12px;
   padding:20px 16px;margin-top:14px;text-align:center}
 .aferr b{display:block;font-family:var(--display);font-weight:700;font-size:16px}
 .aferr p{margin:6px 0 12px;font-size:13px;line-height:1.45;color:var(--sub)}
@@ -2438,7 +2557,7 @@ button.pgrow:active{background:var(--surface)}
 /* The closing banner over the rider. */
 .pgbanner{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;
   min-height:84px;margin-top:var(--s5);padding:16px 18px;border-radius:var(--r4);text-align:start;color:var(--text);
-  border:1px solid var(--accent-edge);background:linear-gradient(90deg,rgba(227,27,35,.35),rgba(20,20,26,.2) 60%),var(--raised)}
+  border:1px solid var(--accent-edge);background:linear-gradient(90deg,rgba(var(--accent-rgb),.35),rgba(20,20,26,.2) 60%),var(--raised)}
 .pgbanner img{position:absolute;z-index:-1;inset-inline-start:0;top:0;width:42%;height:100%;object-fit:cover;object-position:52% 30%;
   mix-blend-mode:screen;opacity:.75;pointer-events:none;
   -webkit-mask:linear-gradient(90deg,#000 50%,transparent);mask:linear-gradient(90deg,#000 50%,transparent)}
@@ -2500,7 +2619,7 @@ button.pgrow:active{background:var(--surface)}
 .rt-k{font-family:var(--display);font-size:13px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--accentHi);text-align:center}
 .rt-sub{margin-top:8px;font-size:15px;color:var(--sub);text-align:center;font-variant-numeric:tabular-nums}
 .rt-ring{position:relative;width:min(64vw,260px);aspect-ratio:1;margin:30px 0 26px}
-.rt-ring svg{width:100%;height:100%;transform:rotate(-90deg);display:block;filter:drop-shadow(0 0 14px rgba(248,52,70,.35))}
+.rt-ring svg{width:100%;height:100%;transform:rotate(-90deg);display:block;filter:drop-shadow(0 0 14px rgba(var(--glow-rgb),.35))}
 .rt-ring-t{fill:none;stroke:rgba(255,255,255,.12);stroke-width:9}
 .rt-ring-v{fill:none;stroke:var(--accent);stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset .9s linear}
 .rt-ct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
@@ -2515,7 +2634,7 @@ button.pgrow:active{background:var(--surface)}
   color:var(--text);font-size:15px;font-weight:700;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
   transition:transform var(--m-press) var(--e-standard)}
 .rt-main{display:flex;align-items:center;justify-content:center;gap:10px;min-width:150px;height:60px;padding:0 26px;border:0;
-  border-radius:var(--rpill);background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:#fff;font-family:var(--display);
+  border-radius:var(--rpill);background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent);font-family:var(--display);
   font-size:18px;font-weight:700;box-shadow:0 12px 30px -10px var(--accent-glow);transition:transform var(--m-press) var(--e-standard)}
 .rt-main .ico{width:20px;height:20px;flex-basis:20px}
 .rt-rnd:active,.rt-main:active,.rt-go:active{transform:scale(.95)}
@@ -2528,7 +2647,7 @@ button.pgrow:active{background:var(--surface)}
 .rt-skip{margin-top:18px;min-height:44px;padding:0 16px;border:0;background:none;color:var(--dim);font-size:14px;font-weight:600}
 /* Rest over */
 .rt-check{width:112px;height:112px;margin:22px 0 18px}
-.rt-check svg{width:100%;height:100%;filter:drop-shadow(0 0 16px rgba(248,52,70,.45))}
+.rt-check svg{width:100%;height:100%;filter:drop-shadow(0 0 16px rgba(var(--glow-rgb),.45))}
 .rt-check-t{fill:rgba(20,20,26,.6);stroke:rgba(255,255,255,.1);stroke-width:7}
 .rt-check-r{fill:none;stroke:var(--accent);stroke-width:7;stroke-linecap:round;stroke-dasharray:327;stroke-dashoffset:40;
   transform:rotate(-90deg);transform-origin:60px 60px}
@@ -2538,7 +2657,7 @@ button.pgrow:active{background:var(--surface)}
 :root.reduced .rt-check-m{animation:none}
 .rt-h{margin:8px 0 18px;font-family:var(--display);font-size:clamp(24px,7vw,30px);font-weight:800;text-align:center;line-height:1.15}
 .rt-go{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:420px;min-height:58px;border:0;
-  border-radius:var(--r4);background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:#fff;font-family:var(--display);
+  border-radius:var(--r4);background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent);font-family:var(--display);
   font-size:16px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 14px 34px -12px var(--accent-glow);
   transition:transform var(--m-press) var(--e-standard)}
 .rt-go svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -2560,8 +2679,8 @@ button.pgrow:active{background:var(--surface)}
    horse, the sets in one card, and the ember glow behind it all. Scoped to .sess. */
 .sess{position:relative;isolation:isolate}
 .sess-glow{position:absolute;z-index:-1;left:0;right:0;top:-40px;height:520px;pointer-events:none;
-  background:radial-gradient(50% 50% at 50% 30%,rgba(227,27,35,.22),transparent 70%)}
-.sess .ss-top{background:rgba(11,11,12,.72);-webkit-backdrop-filter:saturate(150%) blur(18px);backdrop-filter:saturate(150%) blur(18px);
+  background:radial-gradient(50% 50% at 50% 30%,rgba(var(--glow-rgb),.22),transparent 70%)}
+.sess .ss-top{background:rgba(var(--bg-rgb),.72);-webkit-backdrop-filter:saturate(150%) blur(18px);backdrop-filter:saturate(150%) blur(18px);
   border-bottom:1px solid var(--hair)}
 .sess .ss-back,.sess .ss-more{width:44px;height:44px;border-radius:var(--rpill);border:1px solid var(--hair-hi);
   background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;padding:0}
@@ -2573,10 +2692,10 @@ button.pgrow:active{background:var(--surface)}
 .sess .ss-bar i{background:linear-gradient(90deg,var(--accent),var(--accentHi));border-radius:2px}
 .exhero{position:relative;isolation:isolate;overflow:hidden;margin:4px 0 var(--s4);padding:18px 16px 16px;border-radius:var(--r5);
   border:1px solid var(--border);box-shadow:var(--shadow-card);
-  background:radial-gradient(90% 70% at 100% 0%,rgba(227,27,35,.20),transparent 60%),
+  background:radial-gradient(90% 70% at 100% 0%,rgba(var(--glow-rgb),.20),transparent 60%),
     linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 40%),var(--raised)}
 .exhero-art{position:absolute;z-index:-1;top:-24px;inset-inline-end:-40px;width:190px;height:auto;opacity:.16;pointer-events:none;
-  filter:drop-shadow(0 0 20px rgba(248,52,70,.5));-webkit-mask:linear-gradient(200deg,#000 20%,transparent 75%);mask:linear-gradient(200deg,#000 20%,transparent 75%)}
+  filter:var(--mark-tone) drop-shadow(0 0 20px rgba(var(--glow-rgb),.5));-webkit-mask:linear-gradient(200deg,#000 20%,transparent 75%);mask:linear-gradient(200deg,#000 20%,transparent 75%)}
 [dir="rtl"] .exhero-art{transform:scaleX(-1)}
 .exhero-k{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--accentHi);margin-bottom:6px}
 .exhero .exhead{margin:0 0 14px}
@@ -2603,7 +2722,7 @@ button.pgrow:active{background:var(--surface)}
 .setcard .setgrid{margin-top:4px}
 .setcard .setrow{border-radius:var(--r3);background:rgba(255,255,255,.035);border:1px solid var(--hair)}
 .setcard .setrow.hd{background:none;border:0}
-.setcard .setrow.on{border-color:var(--accent);background:linear-gradient(180deg,rgba(227,27,35,.18),rgba(227,27,35,.06));
+.setcard .setrow.on{border-color:var(--accent);background:linear-gradient(180deg,rgba(var(--accent-rgb),.18),rgba(var(--accent-rgb),.06));
   box-shadow:0 10px 26px -14px var(--accent-glow)}
 .setcard .setrow.pend{opacity:.5}
 .setcard .cell{border-radius:12px;background:rgba(0,0,0,.35);border-color:var(--hair-hi)}
@@ -2627,27 +2746,31 @@ button.pgrow:active{background:var(--surface)}
 .cf{text-align:center;padding:6px 8px 4px}
 .cf-i{display:grid;place-items:center;width:64px;height:64px;margin:4px auto 16px;border-radius:50%;
   background:radial-gradient(circle at 50% 35%,rgba(255,255,255,.08),rgba(255,255,255,.02) 70%);
-  border:1px solid var(--border);box-shadow:0 10px 30px -12px rgba(230,30,40,.45)}
+  border:1px solid var(--border);box-shadow:0 10px 30px -12px rgba(var(--glow-rgb),.45)}
 .cf-i svg{width:28px;height:28px;fill:none;stroke:var(--text);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.cf-i.bad svg{stroke:var(--accentHi)}
+.cf-i.bad svg{stroke:var(--danger)}
 .cf h2{font-size:24px;margin:0}
 .cf-b{color:var(--dim);font-size:15px;line-height:1.45;margin:8px auto 22px;max-width:30ch}
 .cf-acts{display:flex;flex-direction:column;gap:10px}
 .cf-acts .btn{margin:0;border-radius:var(--rpill);text-transform:none;letter-spacing:0;font-size:16px;min-height:54px}
 .cf-acts .cf-ok{background:linear-gradient(180deg,var(--accent),var(--accent-deep));
-  box-shadow:0 10px 26px -12px rgba(230,30,40,.7),inset 0 1px 0 rgba(255,255,255,.18)}
+  box-shadow:0 10px 26px -12px rgba(var(--glow-rgb),.7),inset 0 1px 0 rgba(255,255,255,.18)}
 .cf-acts .cf-no{background:var(--raised);border:1px solid var(--border)}
+/* A confirm that deletes (its icon is the bin) asks in the danger colour, which stays
+   red in every theme; any other confirm's action is the theme's own primary. */
+.cf.bad .cf-acts .cf-ok{background:linear-gradient(180deg,var(--danger-fill),var(--danger-deep));color:#fff;
+  box-shadow:0 10px 26px -12px rgba(var(--danger-rgb),.6),inset 0 1px 0 rgba(255,255,255,.18)}
 .cf-alt{background:none;border:none;color:var(--accentHi);font-family:inherit;font-weight:600;font-size:15px;
   padding:12px 0 2px;min-height:44px;cursor:pointer}
 .cf-alt:active{opacity:.6}
 /* ---- One button language for every sheet and sub-page ------------------------------
    Pills, sentence case, the accent gradient on the primary; .g is the tonal secondary.
    Sheets lose the hairline under their head and gain the app's glow at the top. */
-.btn:not(.g):not(.o):not(.ok):not(.danger):not(.d){box-shadow:0 10px 26px -14px rgba(230,30,40,.75),inset 0 1px 0 rgba(255,255,255,.16)}
+.btn:not(.g):not(.o):not(.ok):not(.danger):not(.d){box-shadow:0 10px 26px -14px rgba(var(--accent-rgb),.75),inset 0 1px 0 rgba(255,255,255,.16)}
 .btn.danger{border-radius:var(--rpill)}
 .sheethead{border-bottom:none}
 .sheethead .x{width:34px;height:34px;flex-basis:34px;background:var(--raised)}
-.sheetbox{background:radial-gradient(120% 50% at 50% 0%,rgba(230,30,40,.10),transparent 60%),var(--bg)}
+.sheetbox{background:radial-gradient(120% 50% at 50% 0%,rgba(var(--glow-rgb),.10),transparent 60%),var(--bg)}
 
 /* ---- Rest over (session.js vRest, restDone): built for a glance mid-workout ------- */
 #rest .rt2{justify-content:space-between}
@@ -2666,7 +2789,7 @@ button.pgrow:active{background:var(--surface)}
 .rt2-b.wide{font-size:16px}
 .rt2-b svg,.rt2-end svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .rt2-end{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;margin-top:6px;border-radius:var(--rpill);
-  background:rgba(230,30,40,.08);border:1px solid rgba(248,52,70,.45);color:var(--accentHi);font-family:var(--display);
+  background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accentHi-rgb),.45);color:var(--accentHi);font-family:var(--display);
   font-size:16px;font-weight:700;transition:transform var(--m-press) var(--e-standard)}
 .rt2-b:active,.rt2-end:active{transform:scale(.96)}
 [dir="rtl"] .rt2-b svg,[dir="rtl"] .rt2-end svg{transform:scaleX(-1)}
@@ -2677,9 +2800,9 @@ button.pgrow:active{background:var(--surface)}
 .wc2{position:relative;text-align:center;padding:8px 4px 0;isolation:isolate}
 .wc2-art{position:absolute;z-index:-1;top:-40px;left:50%;width:300px;height:auto;transform:translateX(-50%);opacity:.10;pointer-events:none}
 .wc2-medal{display:grid;place-items:center;width:84px;height:84px;margin:6px auto 16px;border-radius:50%;
-  background:radial-gradient(circle at 50% 35%,rgba(248,52,70,.35),rgba(120,10,16,.35) 70%);border:1.5px solid var(--accentHi);
-  box-shadow:0 0 0 8px rgba(230,30,40,.08),0 18px 40px -14px rgba(230,30,40,.8)}
-.wc2-medal svg{width:38px;height:38px;fill:none;stroke:#fff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  background:radial-gradient(circle at 50% 30%,var(--accent),var(--accent-deep) 78%);border:1.5px solid var(--accentHi);
+  box-shadow:0 0 0 8px rgba(var(--accent-rgb),.10),0 18px 40px -14px rgba(var(--glow-rgb),.8)}
+.wc2-medal svg{width:38px;height:38px;fill:none;stroke:var(--onAccent);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .wc2-h{margin:0;font-size:28px}
 .wc2-sub{margin:6px 0 20px;color:var(--dim);font-size:15px}
 .wc2-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--border);border-radius:var(--r4);
@@ -2690,7 +2813,7 @@ button.pgrow:active{background:var(--surface)}
 .wc2-stats small{font-size:13px;font-weight:600;color:var(--dim);margin-inline-start:3px}
 .wc2-stats>div>span{font-size:12px;color:var(--dim)}
 .wc2-hl{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;padding:12px 14px;border-radius:var(--rpill);
-  background:rgba(230,30,40,.08);border:1px solid rgba(248,52,70,.3);font-size:14px;font-weight:600}
+  background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accentHi-rgb),.3);font-size:14px;font-weight:600}
 .wc2-acts{margin-top:22px}
 .wc2-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px}
 .wc2-row .btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -2722,7 +2845,7 @@ button.pgrow:active{background:var(--surface)}
 .ttiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
 .ttile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;min-height:128px;
   padding:16px;border-radius:var(--r4);border:1px solid var(--border);text-align:start;color:var(--text);overflow:hidden;
-  background:radial-gradient(90% 70% at 100% 0%,rgba(230,30,40,.14),transparent 70%),var(--raised);
+  background:radial-gradient(90% 70% at 100% 0%,rgba(var(--glow-rgb),.14),transparent 70%),var(--raised);
   transition:transform var(--m-press) var(--e-standard)}
 .ttile:active{transform:scale(.97)}
 .ttile:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
@@ -2769,7 +2892,7 @@ button.dv-card:active{transform:scale(.98)}
 .act-ivon{display:block;margin:14px 0 0}
 /* Storage could not open: said once, at the top, calmly. */
 .warnbar{display:flex;flex-direction:column;gap:4px;margin:0 0 14px;padding:12px 14px;border-radius:var(--r4);
-  border:1px solid rgba(201,162,39,.5);background:rgba(201,162,39,.08);font-size:13px;line-height:1.45;color:var(--dim)}
+  border:1px solid rgba(var(--gold-rgb),.5);background:rgba(var(--gold-rgb),.08);font-size:13px;line-height:1.45;color:var(--dim)}
 .warnbar b{color:var(--text);font-size:14px}
 /* ---- Progress: the weight trend against the goal ----------------------------------- */
 .pgtrend-r{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
@@ -2779,13 +2902,13 @@ button.dv-card:active{transform:scale(.98)}
 .pgtrend-g small{font-size:12px;color:var(--dim)}
 .pgtrend.ok .pgnote{color:var(--ok)}
 /* ---- Train: a lighter week, suggested or running ----------------------------------- */
-.dlcard{margin-top:14px;padding:16px;border-radius:var(--r4);border:1px solid rgba(201,162,39,.45);
-  background:radial-gradient(90% 90% at 100% 0%,rgba(201,162,39,.12),transparent 70%),var(--raised)}
+.dlcard{margin-top:14px;padding:16px;border-radius:var(--r4);border:1px solid rgba(var(--gold-rgb),.45);
+  background:radial-gradient(90% 90% at 100% 0%,rgba(var(--gold-rgb),.12),transparent 70%),var(--raised)}
 .dlcard-h{display:flex;align-items:center;gap:10px}
 .dlcard-h b,.dlcard-t b{font-family:var(--display);font-size:16px}
 .dlcard p{margin:8px 0 12px;color:var(--dim);font-size:14px;line-height:1.45}
 .dlcard-i{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:50%;
-  background:rgba(201,162,39,.14);color:var(--gold)}
+  background:rgba(var(--gold-rgb),.14);color:var(--gold)}
 .dlcard-i svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .dlcard-a{display:flex;flex-direction:column;align-items:stretch;gap:2px}
 .dlcard-a .btn{margin:0}
@@ -2798,17 +2921,17 @@ button.dv-card:active{transform:scale(.98)}
 /* ---- Train: switch the day's workout ----------------------------------------------- */
 .thero2-swap{position:absolute;top:14px;inset-inline-end:14px;z-index:2;display:flex;align-items:center;gap:6px;
   min-height:36px;padding:0 14px;border-radius:var(--rpill);border:1px solid var(--hair-hi);
-  background:rgba(12,12,16,.55);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  background:rgba(var(--bg-rgb),.55);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
   color:var(--text);font-size:13px;font-weight:700;transition:transform var(--m-press) var(--e-standard)}
 .thero2-swap:active{transform:scale(.95)}
 .thero2-swap svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .thero2:has(.thero2-swap) .thero2-t{padding-inline-end:86px}
-.trow.on{background:rgba(230,30,40,.08)}
+.trow.on{background:rgba(var(--accent-rgb),.08)}
 .trow.on .trow-n{color:var(--accentHi)}
 /* ---- Exercise library (train.js vLibrary) and exercise sheet ------------------------ */
 .libhero{position:relative;isolation:isolate;margin:0 0 14px;padding:18px 16px 16px;border-radius:var(--r5);
   border:1px solid var(--border);overflow:hidden;
-  background:radial-gradient(90% 80% at 100% 0%,rgba(230,30,40,.18),transparent 65%),var(--raised)}
+  background:radial-gradient(90% 80% at 100% 0%,rgba(var(--glow-rgb),.18),transparent 65%),var(--raised)}
 .libhero-art{position:absolute;z-index:-1;top:-30px;inset-inline-end:-40px;width:210px;height:auto;opacity:.12;pointer-events:none}
 /* ---- The drawings (js/ui/art.js) ----------------------------------------------
    The mark's single red stroke, a fainter second line, a few embers, a soft glow.
@@ -2941,14 +3064,14 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .libq input{height:52px;border-radius:var(--rpill);padding-inline:46px 46px;font-size:16px;background:var(--bg);
   -webkit-appearance:none;appearance:none}
 .libq input::-webkit-search-cancel-button,.libq input::-webkit-search-decoration{-webkit-appearance:none;display:none}
-.libq input:focus{border-color:var(--accentHi);box-shadow:0 0 0 3px rgba(230,30,40,.18);outline:none}
+.libq input:focus{border-color:var(--accentHi);box-shadow:0 0 0 3px rgba(var(--glow-rgb),.18);outline:none}
 .libq .ico-search{inset-inline-start:18px}
 .libq-x{position:absolute;inset-inline-end:8px;top:50%;margin-top:-18px;width:36px;height:36px;border-radius:50%;
   border:none;background:var(--surface);color:var(--dim);font-size:13px}
 .libfilters{gap:8px;margin:0 -16px 6px;padding:2px 16px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .libfilters::-webkit-scrollbar{display:none}
 .libfilters .pill{min-height:38px;padding:0 15px;border-radius:var(--rpill);font-size:13.5px;background:var(--raised)}
-.libfilters .pill.a{background:rgba(230,30,40,.14);border-color:rgba(248,52,70,.6);color:var(--text)}
+.libfilters .pill.a{background:rgba(var(--accent-rgb),.14);border-color:rgba(var(--accentHi-rgb),.6);color:var(--text)}
 .libn{font-size:13px;font-weight:700;color:var(--dim);font-variant-numeric:tabular-nums}
 .libtrow{gap:14px}
 .libtrow>span:first-child{flex:0 0 auto}
@@ -2974,7 +3097,7 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 /* ---- Cardio & sports (session.js actBody, sheets "acts") ---------------------------- */
 .acthead{justify-content:flex-start;gap:14px}
 .actbadge{flex:0 0 52px;width:52px;height:52px;display:grid;place-items:center;border-radius:50%;
-  background:radial-gradient(circle at 50% 35%,rgba(248,52,70,.35),rgba(120,10,16,.35) 70%);border:1px solid rgba(248,52,70,.6);color:#fff}
+  background:radial-gradient(circle at 50% 30%,var(--accent),var(--accent-deep) 78%);border:1px solid rgba(var(--accentHi-rgb),.6);color:var(--onAccent)}
 .acticon{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .actcard .steps{margin:0}
 .act-lbl{margin:16px 0 8px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
@@ -2986,9 +3109,9 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .act-km span{color:var(--dim);font-weight:700}
 .act-int{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .act-int button{min-height:48px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);color:var(--sub);font-size:13.5px;font-weight:700;padding:0 4px}
-.act-int button.on{background:rgba(230,30,40,.16);border-color:rgba(248,52,70,.7);color:var(--text)}
+.act-int button.on{background:rgba(var(--accent-rgb),.16);border-color:rgba(var(--accentHi-rgb),.7);color:var(--text)}
 .act-kcal{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding:14px 16px;border-radius:var(--r4);
-  background:rgba(230,30,40,.07);border:1px solid rgba(248,52,70,.25)}
+  background:rgba(var(--accent-rgb),.07);border:1px solid rgba(var(--accentHi-rgb),.25)}
 .act-kcal span{color:var(--dim);font-size:14px}
 .act-kcal b{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
 .act-note{margin:14px 0 0;color:var(--dim);font-size:13px}
@@ -3014,14 +3137,14 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .actbtn:active{transform:scale(.95)}
 .actbtn .acticon{color:var(--accentHi)}
 .actbtn span{line-height:1.2;overflow-wrap:anywhere}
-.thumb.ph.act{display:grid;place-items:center;border-radius:12px;background:rgba(230,30,40,.12);color:var(--accentHi)}
+.thumb.ph.act{display:grid;place-items:center;border-radius:12px;background:rgba(var(--accent-rgb),.12);color:var(--accentHi)}
 /* ---- Rest: hide to a bar (session.js) ------------------------------------------------ */
 .rt-hide{position:absolute;top:calc(14px + env(safe-area-inset-top));inset-inline-start:16px;z-index:2;display:flex;align-items:center;gap:6px;
   min-height:40px;padding:0 14px;border-radius:var(--rpill);border:1px solid var(--hair-hi);background:rgba(20,20,26,.7);
   color:var(--text);font-size:14px;font-weight:700}
 .rt-hide svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .restbar{display:flex;align-items:center;gap:10px;width:100%;margin-top:10px;min-height:48px;padding:0 16px;border-radius:var(--rpill);
-  border:1px solid rgba(248,52,70,.5);background:rgba(230,30,40,.12);color:var(--text);font-size:14px;font-weight:700}
+  border:1px solid rgba(var(--accentHi-rgb),.5);background:rgba(var(--accent-rgb),.12);color:var(--text);font-size:14px;font-weight:700}
 .restbar b{font-family:var(--display);font-size:20px;font-variant-numeric:tabular-nums;color:var(--accentHi)}
 .restbar i{margin-inline-start:auto;font-style:normal;color:var(--dim);font-weight:600}
 /* ---- Progress: this week's sets per muscle ------------------------------------------ */
@@ -3034,18 +3157,18 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .ready-c{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .ready-c button{min-height:44px;padding:0 2px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
   color:var(--sub);font-size:12.5px;font-weight:700}
-.ready-c button.on{background:rgba(230,30,40,.16);border-color:rgba(248,52,70,.7);color:var(--text)}
+.ready-c button.on{background:rgba(var(--accent-rgb),.16);border-color:rgba(var(--accentHi-rgb),.7);color:var(--text)}
 .ready-skip{display:block;margin:10px auto 0;border:none;background:none;color:var(--dim);font-size:13px;font-weight:600;min-height:32px}
 .readynote,.painnote{margin:14px 0 0;padding:12px 14px;border-radius:var(--r4);font-size:13.5px;line-height:1.45}
 .readynote{background:var(--raised);border:1px solid var(--border);color:var(--sub)}
-.painnote{background:rgba(212,160,60,.10);border:1px solid rgba(212,160,60,.45);color:var(--text)}
+.painnote{background:rgba(var(--warning-rgb),.10);border:1px solid rgba(var(--warning-rgb),.45);color:var(--text)}
 .linkbtn{border:none;background:none;padding:0;color:var(--accentHi);font-weight:700;font-size:inherit;text-decoration:underline}
-.ss-act.on{color:var(--gold);border-color:rgba(212,160,60,.5)}
+.ss-act.on{color:var(--gold);border-color:rgba(var(--gold-rgb),.5)}
 .wc2-effort{margin-top:14px;text-align:start}
 </style>
 </head>
 <body>
-<div id="splash" aria-hidden="true">
+<div id="splash" aria-hidden="true" data-theme="dark">
   <div class="sp-art"></div>
   <div class="sp-glow"></div>
   <div class="sp-veil"></div>
@@ -3069,7 +3192,7 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 <nav id="nav"></nav>
 <div id="wbar"></div>
 <div id="sheet"></div>
-<div id="rest"></div>
+<div id="rest" data-theme="dark"></div>
 <script type="module" src="./js/app.js"></script>
 </body>
 </html>

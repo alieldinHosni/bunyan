@@ -28,6 +28,7 @@ import {syncWbar} from "./ui/wbar.js";
 import {importName, mealNow, savedById} from "./ui/views/food.js";
 import {mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "./engine/meals.js";
 import {parsePlan} from "./engine/planparse.js";
+import {changeLook, themeOf} from "./ui/theme.js";
 import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
 
 /* Logs one food to the add-food sheet's meal and closes it. The single path for the
@@ -314,7 +315,7 @@ document.addEventListener("click",function(ev){
       act:"renameday",data:D.renameday});return;}
   if(D.delday){
     var dD=dayOf(D.delday);
-    askConfirm({title:t("Delete")+" "+(dD?dD.name:t("this day"))+"?",
+    askConfirm({title:t("Delete")+" "+(dD?dD.name:t("this day"))+"?",icon:"trash",
       body:t("The day is removed from your program. Sessions you already logged are kept."),
       cta:t("Delete the day"),act:"delday",data:D.delday});return;}
 
@@ -345,7 +346,7 @@ document.addEventListener("click",function(ev){
     return;}
   if(D.photo){openSheet("photo",{id:D.photo});return;}
   if(D.delphoto){
-    askConfirm({title:t("Delete this photo?"),
+    askConfirm({title:t("Delete this photo?"),icon:"trash",
       body:t("It is removed from this phone. This cannot be undone."),
       cta:t("Delete photo"),act:"delphoto",data:D.delphoto});return;}
   if(D.showall){V.showAll=!V.showAll;render();return;}
@@ -871,7 +872,12 @@ document.addEventListener("click",function(ev){
   if(D.rpemode){
     var rm=["every","last","off"];
     S.prefs.rpe=rm[(rm.indexOf(S.prefs.rpe)+1)%3];saveDB();render();return;}
-  if(D.theme){S.theme=S.theme==="dark"?"light":"dark";saveDB();render();return;}
+  if(D.theme){changeLook(function(){S.theme=S.theme==="dark"?"light":"dark";saveDB();render();});return;}
+  /* Settings → Theme and Mode. The whole screen cross-fades into the new look. */
+  if(D.settheme){if(D.settheme===themeOf())return;
+    changeLook(function(){S.prefs.palette=D.settheme;saveDB();render();});return;}
+  if(D.lookmode){if(D.lookmode===S.theme)return;
+    changeLook(function(){S.theme=D.lookmode;saveDB();render();});return;}
   if(D.progmode){
     var order=["conservative","standard","aggressive"];
     S.profile.prog=order[(order.indexOf(S.profile.prog)+1)%3];saveDB();render();return;}
@@ -936,7 +942,7 @@ document.addEventListener("click",function(ev){
       act:"renameprofile"});return;}
   if(D.delprofile){
     if(isOwner()){toast(t("The admin profile cannot be deleted."));return;}
-    askConfirm({title:t("Delete")+" "+curProfile().name+"?",
+    askConfirm({title:t("Delete")+" "+curProfile().name+"?",icon:"trash",
       body:t("Every workout, meal and measurement on this profile goes with it. This cannot be undone."),
       cta:t("Delete the profile"),act:"delprofile"});return;}
   if(D.share){openSheet("share");return;}
@@ -1017,7 +1023,7 @@ document.addEventListener("click",function(ev){
     var parsed=parseBackup(val("rs"));
     if(!parsed){toast(t("That does not look like a Bunyan backup."));return;}
     var nd=Object.keys(parsed.days||{}).length;
-    askConfirm({title:t("Replace everything with this backup?"),icon:"leave",
+    askConfirm({title:t("Replace everything with this backup?"),icon:"leave",danger:true,
       body:(parsed.sessions||[]).length+" "+t("workouts")+", "+nd+" "+t("food days")+". "
         +t("Everything currently on this profile is replaced."),
       cta:t("Restore"),act:"restore",data:parsed,hard:true});return;}
@@ -1349,7 +1355,7 @@ function sheetDirty(){
    Escape. One of them skipping the check would make the guard pointless. */
 function requestCloseSheet(){
   if(sheetDirty()){
-    askConfirm({title:t("Discard what you typed?"),
+    askConfirm({title:t("Discard what you typed?"),icon:"trash",
       body:t("This food has not been added to your log yet."),
       cta:t("Discard"),act:"dropsheet",
       back:{name:val("mf_n"),s:val("mf_s"),k:val("mf_k"),p:val("mf_p"),c:val("mf_c"),f:val("mf_f"),

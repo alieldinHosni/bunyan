@@ -17,6 +17,7 @@ import {patch, replace} from "./patch.js";
 import {syncDock} from "./dock.js";
 import {syncWbar} from "./wbar.js";
 import {applyMotion, countTo, once} from "./motion.js";
+import {applyLook} from "./theme.js";
 
 /* ============================================================ render */
 /* Motion is applied after the DOM has settled, and only to what changed.
@@ -58,7 +59,7 @@ function paintMotion(root,viewKey){
 var lastView="",lastSheet=null;
 function render(){
   if(syncWorkoutState())saveDB();
-  document.documentElement.setAttribute("data-theme",S.theme);
+  applyLook();
   applyLang();
   /* Both routes into reduced motion, re-evaluated every render so the in-app toggle
      takes effect immediately rather than on the next load. */

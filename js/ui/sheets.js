@@ -14,7 +14,8 @@ import {groupLabel, groupRun, ivText, mmss, platePlan} from "./views/session.js"
 import {sessionById, ensureSessionIds, buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats, split} from "../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
-import {CUES, mistakesFor, progressBar, sparkline, stepper, V} from "./view.js";
+import {CUES, mistakesFor, progressBar, seg, sparkline, stepper, V} from "./view.js";
+import {modeOf, themeOf, THEMES} from "./theme.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 import {wdName, weekStart} from "../engine/schedule.js";
@@ -75,7 +76,7 @@ function vSheet(){
        action is a quiet red text button under the other two, so it reads as the real
        but rarer choice it is; Cancel can be renamed ("Keep training") where plain
        Cancel would be ambiguous. */
-    b='<div class="cf">'
+    b='<div class="cf'+(c.icon==="trash"||c.danger?' bad':'')+'">'
      +(c.icon&&CFICON[c.icon]?'<span class="cf-i'+(c.icon==="trash"?' bad':'')+'" aria-hidden="true"><svg viewBox="0 0 24 24">'+CFICON[c.icon]+'</svg></span>':'')
      +'<h2>'+esc(c.title||"")+'</h2>'
      +(c.body?'<p class="cf-b">'+esc(c.body)+'</p>':'')
@@ -792,10 +793,29 @@ function vSheet(){
      +'<button class="btn afcta" data-savemyfoodx="'+esc(mfx?mfx.id:"new")+'">'+esc(t("Save"))+'</button>';
   }
   else if(V.sheet==="set_app"){
-    var ap=S.prefs;
-    b='<h2>'+t("App")+'</h2><div class="list mt">'
-     +'<button class="item" data-theme="1"><span>'+t("Theme")+'</span><span class="dim">'
-     +(S.theme==="dark"?t("Dark"):t("Light"))+'</span></button>'
+    var ap=S.prefs,thCur=themeOf(),thMode=modeOf();
+    /* Appearance first. Each theme is drawn as itself: its preview carries data-palette and
+       data-theme, so index.html's theme blocks colour it whichever theme is on. Mode is
+       dark or light, for any theme. */
+    b='<h2>'+t("App")+'</h2>'
+     +'<div class="thlbl" id="thlbl">'+t("Theme")+'</div>'
+     +'<div class="thpicks" role="radiogroup" aria-labelledby="thlbl">'
+     +THEMES.map(function(th){
+        var on=th.id===thCur;
+        return '<button class="thpick'+(on?' on':'')+'" role="radio" aria-checked="'+on+'" data-settheme="'+th.id+'">'
+         +'<span class="thpv" data-palette="'+th.id+'" data-theme="'+thMode+'" aria-hidden="true">'
+         +'<span class="thpv-card"><span class="thpv-k"></span><b class="thpv-n">1,980</b>'
+         +'<span class="thpv-bar"><i></i></span></span>'
+         +'<span class="thpv-btn"></span>'
+         +'<span class="thpv-dock"><i class="on"></i><i></i><i></i></span></span>'
+         +'<span class="thpick-n">'+esc(t(th.name))+'</span>'
+         +'<span class="thpick-sw" aria-hidden="true">'+th.sw.map(function(c){return '<i style="background:'+c+'"></i>';}).join("")+'</span>'
+         +(on?'<span class="thpick-ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></span>':'')
+         +'</button>';}).join("")
+     +'</div>'
+     +'<div class="thlbl">'+t("Mode")+'</div>'
+     +seg({items:[["dark",t("Dark")],["light",t("Light")]],value:thMode,attr:"lookmode",cls:"thmode",label:t("Mode"),key:"lookmode"})
+     +'<div class="list mt">'
      +'<button class="item" data-langmode="1"><span>'+t("Language")+'</span><span class="dim">'
      +(ap.lang==="ar"?"العربية":"English")+'</span></button>'
      +'<button class="item" data-wkstart="1"><div><div>'+t("Week starts on")+'</div>'

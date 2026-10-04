@@ -983,7 +983,11 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "{n} meals logged from your plan.": "اتسجلت {n} وجبات من خطتك.",
 "Every planned meal is already logged today.": "كل الوجبات اللي في الخطة متسجلة النهاردة.",
 "Paste your plan first.": "الصق خطتك الأول.",
-"Your plan is in.": "خطتك اتضافت."
+"Your plan is in.": "خطتك اتضافت.",
+"Mode": "الوضع",
+"BUNYAN Red": "بنيان الأحمر",
+"BUNYAN Pink": "بنيان الوردي",
+"Monochrome": "أبيض وأسود"
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;
