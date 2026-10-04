@@ -19,7 +19,7 @@ var DEF={
   onboarded:false,plannedWeekly:14,
   gear:null,favs:[],skip:[],
   myFoods:[],savedMeals:[],freq:{},
-  prefs:{rpe:"last",autorest:true,sound:true,awake:true,compact:false,splash:true,
+  prefs:{palette:"red",rpe:"last",autorest:true,sound:true,awake:true,compact:false,splash:true,
          warn:10,unit:"kg",view:"set",haptic:true,anim:true,lang:"en"},
   goals:{kcal:1950,p:175,c:170,f:62,water:3000,steps:9000},
   programs:[],activeProgram:null,myEx:[],

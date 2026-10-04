@@ -113,6 +113,8 @@ function stopScan(){
 function overlay(labels){
   var d=document.createElement("div");
   d.className="scanwrap";
+  /* The camera view is dark whatever the mode: it takes the theme's dark tokens. */
+  d.setAttribute("data-theme","dark");
   d.innerHTML='<video playsinline muted autoplay></video>'
     +'<div class="scanbox"><span></span><span></span><span></span><span></span></div>'
     +'<p class="scanhint"></p>'

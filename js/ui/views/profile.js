@@ -7,6 +7,7 @@ import {curProfile, friends, isOwner, PROFILES, S, split} from "../../state.js";
 import {fmtW, wUnit} from "../../units.js";
 import {esc, fmtN} from "../../util.js";
 import {streak} from "../view.js";
+import {themeName, themeOf} from "../theme.js";
 import {art} from "../art.js";
 import {planName} from "../../i18n/exnames.js";
 
@@ -62,7 +63,7 @@ function vProfile(){
     +prow('data-fsec="targets"',t("Nutrition"),
        fmtN(g.kcal)+" kcal · "+g.p+"g "+t("Protein").toLowerCase())
     +prow('data-sheet="set_app"',t("App"),
-       [S.theme==="dark"?t("Dark"):t("Light"),
+       [t(themeName(themeOf()))+" · "+(S.theme==="light"?t("Light"):t("Dark")),
         pref.lang==="ar"?"العربية":"English",wUnit()].join(" · ")));
 
 

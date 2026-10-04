@@ -5,7 +5,7 @@
    previous release's JS for one launch: markup the stylesheet no longer styles.
    Cache-first for images only.
    Bump CACHE whenever you change index.html. */
-const CACHE = "bunyan-v80";
+const CACHE = "bunyan-v82";
 /* instructions.json (595 KB) is deliberately absent: it is cached on first use by the
    catch-all handler below, so it no longer blocks first install. */
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
@@ -36,7 +36,7 @@ const FILES = ["./", "./index.html", "./manifest.webmanifest",
                   rest, so the app cannot start offline without them. */
                "./js/engine/stats.js", "./js/photostore.js", "./js/ui/photos.js", "./js/ui/views/addfood.js",
                "./js/ui/dock.js", "./js/data/activities.js", "./js/ui/reorder.js", "./js/ui/workout.js", "./js/engine/schedule.js", "./js/data/extra.js", "./js/ui/wbar.js", "./js/ui/art.js", "./js/i18n/bidi.js",
-               "./js/engine/meals.js", "./js/engine/planparse.js"];
+               "./js/engine/meals.js", "./js/engine/planparse.js", "./js/ui/theme.js"];
 
 self.addEventListener("install", e => {
   /* Added one at a time on purpose. addAll() rejects the whole install if a single

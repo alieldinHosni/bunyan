@@ -148,7 +148,7 @@ function removeRow(i){
   var eD=current();if(!eD)return;
   if(i<eD.sets.length){
     var sD=eD.sets[i];
-    askConfirm({title:t("Delete set")+" "+(i+1)+"?",
+    askConfirm({title:t("Delete set")+" "+(i+1)+"?",icon:"trash",
       body:(num(sD.w)?fmtW(sD.w)+" × "+num(sD.r):num(sD.r)+" "+t("reps"))
            +" "+t("will be removed."),
       cta:t("Delete"),act:"delset",data:i,hard:true});

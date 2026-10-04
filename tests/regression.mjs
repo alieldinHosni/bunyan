@@ -581,7 +581,7 @@ await test("Arabic: template program and day names are shown in Arabic, fraction
 },{prefs:{lang:"ar"}});
 await test("Light: the active dock icon reads on the dark dock",async page=>{
   const c=await page.$eval('nav .dock-b.on',e=>getComputedStyle(e).color);
-  eq(c,"rgb(255, 92, 106)");
+  eq(c,"rgb(255, 92, 102)");
 },{db:Object.assign(seed(),{theme:"light"})});
 await test("Train Today's recovery check-in logs in taps; Profile has moved its plan and recovery rows",async page=>{
   await page.tap('nav [data-tab="train"]');await pause(page);
@@ -662,6 +662,69 @@ await test("Arabic plan: Arabic digits, the dual and spoons are read",async page
     const pp=await import("/js/engine/planparse.js");
     return pp.parsePlan("الوجبة الأولى:\n٣ بيض\nبيضتين\nمعلقتين زبدة فول سوداني\nالعشا: ١٥٠ جم فراخ").map(m=>[m.named,m.n,m.items.map(i=>i.label)]);});
   eq(r,[[null,1,["3 × large egg","2 × large egg","2 tbsp"]],["Dinner",null,["150 g"]]]);
+});
+/* ---- themes: BUNYAN Red, BUNYAN Pink, Monochrome, each dark and light ------------------- */
+await test("Themes: the picker switches the whole app, and the choice outlives a reload",async page=>{
+  await page.tap('nav [data-tab="profile"]');await pause(page);
+  await page.tap('[data-sheet="set_app"]');await pause(page,400);
+  eq(await page.$$eval('.thpick',a=>a.map(b=>b.getAttribute("data-settheme"))),["red","pink","mono"],"three themes");
+  eq(await page.$eval('.thpick.on',e=>e.getAttribute("data-settheme")),"red","red by default");
+  await page.tap('[data-settheme="pink"]');await pause(page,500);
+  eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"pink","html is pink");
+  eq(await ev(page,"S.prefs.palette"),"pink","saved to the profile");
+  eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#FF7FEC","Electric Pink is the accent");
+  await page.tap('[data-lookmode="light"]');await pause(page,500);
+  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","pink|light"],"mode and the early copy");
+  await page.reload();await page.waitForTimeout(60);
+  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-palette"),document.documentElement.getAttribute("data-theme")]),["pink","light"],"applied before the app runs");
+  await pause(page,1000);
+  await page.tap('nav [data-tab="profile"]');await pause(page);
+  if(!(await page.$eval('[data-sheet="set_app"]',e=>e.textContent)).includes("BUNYAN Pink"))throw new Error("the Profile row does not name the theme");
+  eq(await page.$eval('meta[name="theme-color"]',e=>e.content.toUpperCase()),"#FFF0FB","the status bar takes the theme's ground");
+});
+await test("Themes: every theme and mode uses its reference colours exactly",async page=>{
+  const r=await page.evaluate(()=>{
+    const de=document.documentElement,out={};
+    for(const p of ["red","pink","mono"])for(const m of ["dark","light"]){
+      de.setAttribute("data-palette",p);de.setAttribute("data-theme",m);
+      const cs=getComputedStyle(de);out[p+"-"+m]=["--accent","--bg","--onAccent","--raised"].map(k=>cs.getPropertyValue(k).trim().toUpperCase());}
+    return out;});
+  eq(r["red-dark"][0],"#FF2E3A","Machine Red");eq(r["red-dark"][2],"#DBF6FF","Glacier Blue on red");
+  eq(r["red-light"].slice(0,2),["#FF2E3A","#DBF6FF"],"Glacier Blue ground");
+  eq([r["pink-dark"][0],r["pink-dark"][2],r["pink-dark"][3]],["#FF7FEC","#2E0F35","#2E0F35"],"Electric Pink on Dark Aubergine");
+  eq(r["mono-dark"].slice(0,3),["#D7FFE0","#050505","#050505"],"Ghost Green on Zero Black");
+  eq(r["mono-light"].slice(0,3),["#050505","#D7FFE0","#D7FFE0"],"Zero Black on Ghost Green");
+});
+await test("Themes: a delete asks in red whatever the theme",async page=>{
+  await page.tap('nav [data-tab="train"]');await pause(page);
+  await page.tap('[data-tsec="program"]');await pause(page);
+  await page.$$eval('.drows [data-day]',a=>a[0].click());await pause(page,400);
+  await page.$eval('[data-delday]',e=>e.click());await pause(page,500);
+  const bg=await page.$eval('.cf.bad .cf-ok',e=>getComputedStyle(e).backgroundImage);
+  if(!/229, 50, 62/.test(bg))throw new Error("delete is not red: "+bg);
+},{prefs:{palette:"pink"}});
+await test("Themes: the rest screen stays dark in light mode, with readable figures",async page=>{
+  await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  const r=await page.evaluate(()=>{const v=document.querySelector("#rest .rt-next-v");
+    return v?getComputedStyle(v).color:null;});
+  eq(r,"rgb(215, 255, 224)","Ghost Green on the dark rest screen");
+},{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
+await test("Themes: the stylesheet names no colour outside the theme blocks",async page=>{
+  const bad=await page.evaluate(async()=>{
+    const html=await (await fetch("/index.html")).text();
+    let css=html.slice(html.indexOf("<style>"),html.indexOf("</style>")).replace(/\/\*[\s\S]*?\*\//g,"");
+    /* The theme blocks are the one place colours live. */
+    css=css.replace(/(?<=^|\})\s*(?::root|\[data-(?:palette|theme))[^{]*\{[^}]*\}/g,"");
+    const out=[];
+    for(const m of css.matchAll(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+[^)]*\)/g)){
+      let c;
+      if(m[0][0]==="#"){let h=m[0].slice(1);if(h.length===3)h=[...h].map(x=>x+x).join("");c=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));}
+      else c=m[0].match(/\d+/g).slice(0,3).map(Number);
+      /* Neutral blacks, whites and greys are overlays that suit every theme; anything with
+         a hue is a theme colour and belongs in a theme block. */
+      if(Math.max(...c)-Math.min(...c)>24)out.push(m[0]);}
+    return out;});
+  eq(bad,[],"coloured literals outside the themes");
 });
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
