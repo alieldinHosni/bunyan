@@ -987,7 +987,22 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Mode": "الوضع",
 "BUNYAN Red": "بنيان الأحمر",
 "BUNYAN Pink": "بنيان الوردي",
-"Monochrome": "أبيض وأسود"
+"Monochrome": "أبيض وأسود",
+"Remove this exercise": "شيل التمرين ده",
+"Skip this exercise": "تخطّى التمرين ده",
+"Replace {ex}?": "تغيّر {ex}؟",
+"You logged 1 set on it. Keep it, with {new} next, or replace the exercise and delete the set.": "سجّلت مجموعة واحدة عليه. سيبها ويبقى {new} اللي بعده، أو غيّر التمرين وامسح المجموعة.",
+"You logged {n} sets on it. Keep them, with {new} next, or replace the exercise and delete the sets.": "سجّلت {n} مجموعات عليه. سيبهم ويبقى {new} اللي بعده، أو غيّر التمرين وامسح المجموعات.",
+"Keep my set": "سيب المجموعة",
+"Keep my sets": "سيب المجموعات",
+"Replace it and delete the set": "غيّره وامسح المجموعة",
+"Replace it and delete the sets": "غيّره وامسح المجموعات",
+"{ex} added as exercise {n}.": "{ex} اتضاف تمرين رقم {n}.",
+"Remove {ex}?": "تشيل {ex}؟",
+"The set you logged on it is deleted with it.": "المجموعة اللي سجّلتها عليه هتتمسح معاه.",
+"The {n} sets you logged on it are deleted with it.": "الـ{n} مجموعات اللي سجّلتها عليه هتتمسح معاه.",
+"{ex} removed from this workout.": "{ex} اتشال من التمرين ده.",
+"set logged": "مجموعة مسجلة"
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;

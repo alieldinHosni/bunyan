@@ -12,6 +12,7 @@ import {t} from "../i18n/dict.js";
 import {actKcal} from "../data/activities.js";
 import {muscleOf, MUSCLES} from "../data/exercises.js";
 import {lastWeight, prFor, recordOf, recordText} from "../engine/formulas.js";
+import {exName} from "../i18n/exnames.js";
 import {S, saveDB} from "../state.js";
 import {fmtW, toKg} from "../units.js";
 import {num, r1} from "../util.js";
@@ -58,6 +59,34 @@ function nextExercise(){
   play("set");endRest();V.fresh=-1;
   V.logIdx=V.logIdx+1;
   saveDB();syncDraft();render();}
+
+/* ---- dropping an exercise from today ------------------------------------------
+   Today only: the program keeps it. With nothing logged it goes at once, and the
+   toast can bring it back; with sets logged it asks first, since they go with it. */
+function removeExercise(){
+  var a=S.active,i=V.logIdx,e=current();
+  if(!e||a.entries.length<2)return;
+  if(e.sets.length){
+    var n=e.sets.length;
+    askConfirm({title:t("Remove {ex}?").replace("{ex}",exName(e.name)),icon:"trash",
+      body:t(n===1?"The set you logged on it is deleted with it.":"The {n} sets you logged on it are deleted with it.").replace("{n}",n),
+      cta:t("Remove"),act:"rmex",data:i,hard:true});
+    return;}
+  dropExercise(i);}
+function dropExercise(i){
+  var a=S.active;if(!a||!a.entries[i]||a.entries.length<2)return;
+  var e=a.entries.splice(i,1)[0],stamp=a.started;
+  /* The next exercise moves up into its place; the last one hands over to the one
+     before it. */
+  if(V.logIdx>=a.entries.length)V.logIdx=a.entries.length-1;
+  a.idx=V.logIdx;V.fresh=-1;
+  saveDB();syncDraft();render();
+  toast(t("{ex} removed from this workout.").replace("{ex}",exName(e.name)),function(){
+    var b=S.active;if(!b||b.started!==stamp)return;
+    var k=Math.min(i,b.entries.length);
+    b.entries.splice(k,0,e);V.logIdx=k;b.idx=k;V.fresh=-1;
+    saveDB();syncDraft();render();});}
+ACT.rmex=function(_,i){dropExercise(i);};
 
 /* ---- before the first set ---------------------------------------------------- */
 function setReady(v){if(!S.active)return;S.active.ready=v;saveDB();render();}
@@ -248,5 +277,5 @@ function askDiscard(){
     body:t("Every set you logged in this workout is thrown away. This cannot be undone."),
     cta:t("Discard it"),act:"discard",hard:true});}
 
-export {addRow, askDiscard, confirmFinish, editLoggedSet, flagPain, jumpTo, logBout, logSet, nextExercise,
+export {addRow, askDiscard, confirmFinish, removeExercise, editLoggedSet, flagPain, jumpTo, logBout, logSet, nextExercise,
         persistRest, pickMuscle, removeRow, restControl, resume, setProblem, setReady, toggleWarm, unlogSet};

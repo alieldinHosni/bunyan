@@ -135,7 +135,7 @@ function vLogger(){
    +' <span class="num">'+(V.logIdx+1)+'</span> '+t("of")
    +' <span class="num">'+a.entries.length+'</span></span><span class="sep">\u00b7</span>'
    +'<span class="mseg"><span class="num">'+doneAll+'</span> '
-   +t("sets logged")+'</span></div></div>'
+   +t(doneAll===1?"set logged":"sets logged")+'</span></div></div>'
    /* A stopped clock with nothing to explain it reads as a bug, so the paused state
       says so rather than just freezing. */
    +'<div class="ss-clock"><span class="ico ico-clock" aria-hidden="true"></span>'
@@ -329,10 +329,19 @@ function vLogger(){
      five — how to, plates, note, finish, discard — are behind the header's overflow,
      which is also what Round 4 item 1 asks for: one primary action, everything
      infrequent collapsed. Nothing was removed, only moved. */
-  h+='<div class="ss-acts">'
-   +'<button class="ss-act" data-swap="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>'+t("Replace Exercise")+'</button>'
-   +(V.logIdx<a.entries.length-1?'<button class="ss-act" data-nextex="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l10 7-10 7zM19 5v14"/></svg>'+t("Skip Exercise")+'</button>':'')
-   +'<button class="ss-act'+(e.pain?' on':'')+'" data-hurt="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg>'+t(e.pain?"Pain noted":"Something hurts?")+'</button>'
+  /* What can happen to today's workout, one tap each: this exercise swapped, dropped
+     or skipped, or another one added. Today only — the program keeps its plan. Remove
+     needs another exercise to leave behind; Skip, one to move on to. */
+  function tool(attr,path,label,aria){
+    return '<button class="ss-tool" '+attr+' aria-label="'+aria+'"><svg viewBox="0 0 24 24" aria-hidden="true">'+path+'</svg>'
+     +'<span>'+label+'</span></button>';}
+  h+='<div class="ss-tools">'
+   +tool('data-swap="1"','<path d="M4 8h13l-3-3M20 16H7l3 3"/>',t("Replace"),t("Replace this exercise"))
+   +(a.entries.length>1?tool('data-rmlive="1"','<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',t("Remove"),t("Remove this exercise")):'')
+   +(V.logIdx<a.entries.length-1?tool('data-nextex="1"','<path d="M5 5l10 7-10 7zM19 5v14"/>',t("Skip"),t("Skip this exercise")):'')
+   +tool('data-addlive="1"','<path d="M12 5v14M5 12h14"/>',t("Add"),t("Add an exercise"))
+   +'</div>'
+   +'<div class="ss-acts"><button class="ss-act'+(e.pain?' on':'')+'" data-hurt="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg>'+t(e.pain?"Pain noted":"Something hurts?")+'</button>'
    +'</div></div>';
 
   /* The rest screen is no longer part of this string; syncRest() owns it. */

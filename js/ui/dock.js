@@ -9,8 +9,9 @@
    touches three things — the active class, aria-current and the --i index the
    indicator slides to.
 
-   Position is CSS alone (see "The dock" in index.html). Nothing here reads the
-   viewport or the keyboard, and nothing here moves the bar. */
+   Position is CSS alone (see "The dock" in index.html). Nothing here moves the fixed
+   bar; the one thing that moves is the dock inside it, out of the way on scroll (see
+   "out of the way while reading" below). */
 import {t} from "../i18n/dict.js";
 
 /* Icons on one grid (22), one stroke, one cap. Home, activity, trending-up and user
@@ -44,6 +45,93 @@ function build(el){
   built=list.map(function(it){return it[1];}).join("|");
 }
 
+/* ---- out of the way while reading ------------------------------------------------
+   As in the feed apps, scrolling down slides the dock off the bottom with the
+   content and scrolling up brings it back. It follows the finger, then settles fully
+   in or fully out once the scroll stops. It is always there at the top of a page, at
+   the bottom of one, on a new screen, and when focus moves into it.
+
+   Only the dock inside <nav> moves, and only by the translate property, which the
+   stylesheet scales by --dh (0 shown … 1 hidden) on nav and on the workout bar: the
+   fixed boxes themselves never move (see "The dock" in index.html). The workout bar
+   drops into the dock's place rather than leaving, so a workout in progress stays
+   one tap away. */
+var navEl=null,wbEl=null,hid=0,travel=0,lastY=null,dir=0,acc=0,settleT=0,frame=0;
+var TOP=56;     /* scrolled less than this, the dock stays */
+function measure(){
+  var d=navEl&&navEl.firstChild;if(!d)return;
+  var lift=parseFloat(getComputedStyle(navEl).paddingBottom)||12;
+  /* Its height, the gap under it, and room for its shadow. */
+  travel=d.offsetHeight+lift+24;}
+function reducedMotion(){
+  try{return document.body.classList.contains("noanim")||matchMedia("(prefers-reduced-motion: reduce)").matches;}
+  catch(e){return false;}}
+function paintHide(settle){
+  var p=travel?Math.min(1,Math.max(0,hid/travel)):0,fade=reducedMotion();
+  [navEl,wbEl].forEach(function(el){
+    if(!el)return;
+    el.classList.toggle("dsettle",!!settle);
+    el.classList.toggle("dfade",fade);
+    el.classList.toggle("dhid",p>=1);
+    el.style.setProperty("--dh",String(Math.round(p*1000)/1000));});}
+function showDock(){
+  clearTimeout(settleT);
+  if(hid===0)return;
+  hid=0;paintHide(true);}
+function settle(){
+  if(!travel||hid===0||hid===travel)return;
+  /* Finish the way it was going, unless it had barely started. */
+  hid=dir>0?(hid>travel*.25?travel:0):(hid<travel*.75?0:travel);
+  paintHide(true);}
+function onScroll(){
+  /* A sheet pins the page (lockScroll), which reads as a jump to the top and, when it
+     closes, back down again. Neither is the user scrolling. */
+  if(document.body.style.position==="fixed"){lastY=null;return;}
+  var y=window.pageYOffset||0;
+  if(lastY===null){lastY=y;return;}
+  var dy=y-lastY;lastY=y;
+  if(!travel)measure();
+  var max=Math.max(0,document.documentElement.scrollHeight-window.innerHeight);
+  if(y<=TOP||y>=max-4){showDock();return;}
+  if(!dy)return;
+  dir=dy>0?1:-1;
+  clearTimeout(settleT);
+  if(reducedMotion()){
+    /* No sliding: it fades out going down and back in going up, once the scroll has
+       gone far enough in one direction to mean it — a layout shift of a pixel or two
+       is not a scroll. */
+    acc=(acc*dir>0?acc:0)+dy;
+    if(Math.abs(acc)<16)return;
+    var to=dir>0?travel:0;
+    if(hid!==to){hid=to;paintHide(true);}
+    return;}
+  var nh=Math.min(travel,Math.max(0,hid+dy));
+  if(nh!==hid){
+    hid=nh;
+    if(!frame)frame=requestAnimationFrame(function(){frame=0;paintHide(false);});}
+  settleT=setTimeout(settle,140);}
+function initDockScroll(){
+  navEl=document.getElementById("nav");wbEl=document.getElementById("wbar");
+  window.addEventListener("scroll",onScroll,{passive:true});
+  /* Only re-measured: Safari fires resize as its toolbar collapses mid-scroll, and
+     showing the dock then would bring it back while scrolling down. */
+  window.addEventListener("resize",measure);
+  /* Keyboard and screen-reader users reach the dock by focus, not by scrolling. */
+  if(navEl)navEl.addEventListener("focusin",showDock);}
+/* After every render. A new screen — another tab, or a page inside one, like a day or
+   the exercise library — always opens with the dock in view, and a page too short to
+   scroll has nothing to make room for. */
+var lastScreen=null;
+function checkDock(screen){
+  var moved=lastScreen!==null&&screen!==lastScreen;
+  lastScreen=screen;
+  /* A new screen starts its own scroll: whatever position it lands on, or an event
+     still in flight from the old one, is not the user scrolling it. */
+  if(moved)lastY=null;
+  if(hid===0)return;
+  var max=document.documentElement.scrollHeight-window.innerHeight;
+  if(moved||max<=TOP)showDock();}
+
 /* The whole of what changes when the tab does. */
 function syncDock(el,tab){
   if(!el)return;
@@ -61,4 +149,4 @@ function syncDock(el,tab){
   if(dock&&dock.style.getPropertyValue("--i")!==String(idx))dock.style.setProperty("--i",idx);
 }
 
-export {syncDock};
+export {checkDock, initDockScroll, syncDock};

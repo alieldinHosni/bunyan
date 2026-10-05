@@ -25,6 +25,7 @@ import {syncViewport, restoreWorkoutState, syncWorkoutState, alarmStart, audioOn
 import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
 import {syncWbar} from "./ui/wbar.js";
+import {initDockScroll} from "./ui/dock.js";
 import {importName, mealNow, savedById} from "./ui/views/food.js";
 import {mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "./engine/meals.js";
 import {parsePlan} from "./engine/planparse.js";
@@ -436,6 +437,9 @@ document.addEventListener("click",function(ev){
     V.exm=W.pickMuscle(eS&&eS.name);V.exe="All";V.exq="";
     openSheet("exercise",{swaplive:true,like:eS?eS.name:null});return;}
   if(D.nextex){W.nextExercise();return;}
+  if(D.rmlive){W.removeExercise();return;}
+  /* Added to this workout only: the picker starts from the whole library. */
+  if(D.addlive){V.exm="All";V.exe="All";V.exq="";openSheet("exercise",{addlive:true});return;}
   if(D.sessmore!==undefined){openSheet("sessmore");return;}
   if(D.finish){W.confirmFinish();return;}
   /* Every back affordance in the app comes through here, so none of them can drift
@@ -1521,6 +1525,7 @@ if(window.visualViewport){
   window.visualViewport.addEventListener("resize",syncViewport);
   window.visualViewport.addEventListener("scroll",syncViewport);}
 initReorder(moveRow,function(){tap("light");});
+initDockScroll();
 /* History comes from IndexedDB, so it arrives a tick later than everything else.
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from
    holding the whole app behind the intro; in practice it resolves well inside it. */

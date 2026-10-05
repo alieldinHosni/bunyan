@@ -414,7 +414,8 @@ td{padding:7px 0;text-align:center;font-variant-numeric:tabular-nums;font-size:1
 /* ---- The dock ----------------------------------------------------------------
    Fixed to the viewport and to nothing else: left, right and bottom are 0 and never
    change, it has no transform, no transition on its position and no will-change, and
-   no script measures or moves it. The float above the home indicator is padding
+   no script moves it. (What slides out of the way on scroll is the dock inside it —
+   see "Out of the way while reading" below.) The float above the home indicator is padding
    inside the fixed box (--dock-lift), so Safari's toolbar collapsing, a sheet locking
    the page, or the keyboard coming and going cannot leave it somewhere else.
 
@@ -461,6 +462,17 @@ body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--
 .dock-b.on{color:var(--dock-on)}
 .dock-b.on svg{transform:scale(1.06);stroke-width:2}
 .dock-b:active{transform:scale(.94)}
+/* Out of the way while reading (js/ui/dock.js): --dh runs from 0 to 1 as the page is
+   scrolled down, and back as it is scrolled up. The dock inside the fixed bar slides
+   below the screen edge; the workout bar drops into the dock's place. translate, not
+   transform, so the press scale and the bar's entry animation still apply, and the
+   fixed boxes themselves never move. It follows the finger with no transition and
+   eases only when it settles (.dsettle). With reduced motion it fades instead. */
+.dock{translate:0 calc(var(--dh,0) * (100% + var(--dock-lift) + 24px))}
+nav.dsettle .dock{transition:translate var(--m-comp) var(--e-standard)}
+nav.dhid .dock{pointer-events:none}
+nav.dfade .dock{translate:none;opacity:calc(1 - var(--dh,0))}
+nav.dfade.dsettle .dock{transition:opacity var(--m-micro) var(--e-standard)}
 /* ---- The workout bar --------------------------------------------------------
    A workout under way, seen from another tab: one pill just above the dock, fixed the
    same way the dock is and faded the same way when the keyboard is up. Tapping it goes
@@ -478,6 +490,9 @@ body.kb #wbar{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(
   color:var(--text);font:inherit;text-align:start;cursor:pointer;pointer-events:auto;
   transition:transform var(--m-press) var(--e-standard)}
 .wbar.in{animation:wbIn var(--m-comp) var(--e-decel)}
+.wbar{translate:0 calc(var(--dh,0) * (var(--dock-h) + var(--wbar-gap)))}
+#wbar.dsettle .wbar{transition:translate var(--m-comp) var(--e-standard),transform var(--m-press) var(--e-standard)}
+#wbar.dfade.dsettle .wbar{transition:transform var(--m-press) var(--e-standard)}
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
   .wbar{background:var(--glass);-webkit-backdrop-filter:saturate(160%) blur(22px);backdrop-filter:saturate(160%) blur(22px)}}
 .wbar:active{transform:scale(.98)}
@@ -2735,9 +2750,22 @@ button.pgrow:active{background:var(--surface)}
 .btn.ss-next{border-radius:var(--r4);background:linear-gradient(180deg,var(--accent),var(--accent-deep));box-shadow:0 14px 30px -14px var(--accent-glow);margin-top:var(--s4)}
 .ss-acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;margin:var(--s4) 0 8px}
 .ss-act{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 12px;border-radius:var(--r4);
-  border:1px solid var(--hair-hi);background:rgba(255,255,255,.04);color:var(--text);font-weight:600;font-size:14px}
+  border:1px solid var(--border);background:var(--raised);color:var(--text);font-weight:600;font-size:14px}
 .ss-act svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--accentHi)}
 .ss-act:active{transform:scale(.97)}
+/* The workout's own tools — Replace, Remove, Skip, Add — as one row of equal tiles,
+   icon over a one-word label, so four fit a phone without wrapping. The row takes
+   however many are offered (Remove and Skip come and go). */
+.ss-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;margin:var(--s4) 0 0}
+.ss-tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:64px;
+  padding:8px 4px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);
+  color:var(--text);font:inherit;font-weight:600;font-size:13px;line-height:1.15;cursor:pointer;
+  transition:transform var(--m-press) var(--e-standard)}
+.ss-tool svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--accentHi)}
+.ss-tool span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-tool[data-rmlive] svg{color:var(--danger)}
+.ss-tool:active{transform:scale(.96)}
+.ss-tools+.ss-acts{margin-top:8px}
 /* ---- Confirm sheets: centred, compact, pill buttons in sentence case. The ✕ in the
    head is dropped here — Cancel (or "Keep training") sits right beside the choice,
    and a drag or a tap outside still closes a non-destructive one. */
@@ -2763,6 +2791,7 @@ button.pgrow:active{background:var(--surface)}
 .cf-alt{background:none;border:none;color:var(--accentHi);font-family:inherit;font-weight:600;font-size:15px;
   padding:12px 0 2px;min-height:44px;cursor:pointer}
 .cf-alt:active{opacity:.6}
+.cf-alt.bad{color:var(--danger)}
 /* ---- One button language for every sheet and sub-page ------------------------------
    Pills, sentence case, the accent gradient on the primary; .g is the tonal secondary.
    Sheets lose the hairline under their head and gain the app's glow at the top. */
