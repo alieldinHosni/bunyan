@@ -6,11 +6,11 @@ import {exName, planName} from "../i18n/exnames.js";
 import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay, planOn} from "./views/train.js";
 import {ACT_GROUPS, actIcon, actInfo, actPace, actsIn, INTENSITY, intensityOf, isActivity} from "../data/activities.js";
-import {incrementFor, backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
+import {bwShare, incrementFor, backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {GOALS, LEVELS, splitCandidates} from "../engine/plan.js";
-import {groupLabel, groupRun, ivText, mmss, platePlan} from "./views/session.js";
+import {groupLabel, groupRun, ivText, mmss, platePlan, rowsFor} from "./views/session.js";
 import {sessionById, ensureSessionIds, buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats, split} from "../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
@@ -181,6 +181,24 @@ function vSheet(){
   /* The session's overflow. Canvas screen 4 leaves two links under the set table and
      nothing else, so the five infrequent actions live here instead of in a six-button
      row competing with the set you are trying to log. Nothing was dropped. */
+  /* Today's exercises at a glance, from the session title: where each one stands, and
+     a tap to go to it. The order is the workout's; supersets keep their letters. */
+  else if(V.sheet==="exlist"){
+    var la=S.active;
+    if(!la)return "";
+    b='<h2>'+t("Today's exercises")+'</h2>'
+     +'<p class="sub" style="margin:2px 0 14px">'+esc(planName(la.dayName))+'</p><div class="exl">';
+    la.entries.forEach(function(x,i){
+      var rws=rowsFor(x),dn=Math.min(x.sets.length,rws),cur=i===V.logIdx,fin=x.sets.length>=rws;
+      var gl=groupLabel(la.entries,i);
+      b+='<button class="exl-row'+(cur?' on':'')+(fin?' did':'')+'" data-jumpl="'+i+'"'+(cur?' aria-current="step"':'')+'>'
+       +'<span class="exl-n" aria-hidden="true">'+(fin?'<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>':(gl||(i+1)))+'</span>'
+       +'<span class="exl-t"><b>'+esc(exName(x.name))+'</b><small>'+esc(t(muscleOfEntry(x)))
+       +' \u00b7 <bdi class="num">'+dn+'/'+rws+'</bdi> '+t(isActivity(x.name)?"bouts":"sets")+'</small></span>'
+       +(cur?'<span class="exl-cur">'+t("Current")+'</span>':'')
+       +'</button>';});
+    b+='</div><button class="btn g" data-addlive="1">'+t("Add an exercise")+'</button>';
+  }
   else if(V.sheet==="sessmore"){
     var sm=S.active,smE=sm&&sm.entries[V.logIdx];
     if(!smE)return "";
@@ -649,10 +667,11 @@ function vSheet(){
              +(x.kcal?' · '+fmtN(x.kcal)+' kcal':'');}).join('<br>')+'</div></div>';
         return;}
       b+='<div class="card"><div class="row"><span class="tiny">'+pretty(r.d)+'</span>'
-       +'<span class="tiny">'+fmtW(volume(r.s))+' \u00b7 1RM '
-       +(bestE1RM(r.s)?toDisp(bestE1RM(r.s)):"\u2014")+'</span></div>'
+       +'<span class="tiny">'+fmtW(volume(r.s,nm3,r.d))+' \u00b7 1RM '
+       +(bestE1RM(r.s,nm3,r.d)?toDisp(bestE1RM(r.s,nm3,r.d)):"\u2014")+'</span></div>'
        +'<div class="num mt" style="font-size:15px">'+r.s.map(function(x){
-          return x.w?toDisp(x.w)+' \u00d7 '+x.r+(x.rpe?' <span class="tiny">@'+x.rpe+'</span>':''):x.r;
+          /* A bodyweight lift shows what was added: "+10 × 6". */
+          return x.w?(bwShare(nm3)?'+':'')+toDisp(x.w)+' \u00d7 '+x.r+(x.rpe?' <span class="tiny">@'+x.rpe+'</span>':''):x.r;
          }).join(' &nbsp; ')+'</div></div>';});
   }
   else if(V.sheet==="share"){

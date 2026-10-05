@@ -11,7 +11,7 @@
        averaged, never judged against a target, and never breaks a streak. */
 import {muscleOfEntry} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
-import {e1RM, lastWeight, sessionVolume} from "./formulas.js";
+import {e1RM, lastWeight, loadOf, sessionVolume} from "./formulas.js";
 import {sumNutrition} from "./nutrition.js";
 import {dataRev, S} from "../state.js";
 import {num, r1, today} from "../util.js";
@@ -135,7 +135,7 @@ function e1rmSeries_raw(name,n){
     var best=0;
     s.entries.forEach(function(e){
       if(e.name!==name)return;
-      working(e).forEach(function(x){var v=e1RM(num(x.w),num(x.r));if(v>best)best=v;});});
+      working(e).forEach(function(x){var v=e1RM(loadOf(name,x.w,s.date),num(x.r));if(v>best)best=v;});});
     if(best)out.push({d:s.date,v:best});}
   return out;}
 

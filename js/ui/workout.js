@@ -50,9 +50,11 @@ function resume(){
   resetNav();V.tab="train";V.train="days";
   V.logIdx=Math.min(num(S.active&&S.active.idx,0),(S.active?S.active.entries.length-1:0));
   V.fresh=-1;syncDraft();render();}
+/* Looking at another exercise — by swipe, the arrows, the segments or the list. The
+   rest timer keeps running: checking what is next is not the end of a rest. */
 function jumpTo(n){
-  if(!S.active||n<0||n>=S.active.entries.length)return;
-  V.logIdx=n;S.active.idx=n;endRest();V.fresh=-1;syncDraft();saveDB();render();}
+  if(!S.active||n<0||n>=S.active.entries.length||n===V.logIdx)return;
+  V.logIdx=n;S.active.idx=n;V.fresh=-1;syncDraft();saveDB();render();}
 function nextExercise(){
   if(!S.active)return;
   if(V.logIdx>=S.active.entries.length-1){confirmFinish();return;}

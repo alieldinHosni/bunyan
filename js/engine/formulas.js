@@ -12,12 +12,48 @@ import {fmtW} from "../units.js";
 /* ============================================================ formulas */
 /* A warm-up counts for nothing: not volume, not average RPE, not a record, and not
    the progression check. It is there so the row exists, not so it scores. */
-function setVol(x){return x.wu?0:num(x.w)*num(x.r);}
-function volume(sets){var tot=0;for(var i=0;i<sets.length;i++)tot+=setVol(sets[i]);return tot;}
-function sessionVolume(s){var tot=0;s.entries.forEach(function(e){tot+=volume(e.sets||[]);});return tot;}
+/* ---- bodyweight lifts ------------------------------------------------------------
+   On a bodyweight exercise the weight box is what is ADDED to you — a belt, a vest, a
+   dumbbell between the feet — and 0 is you alone. The load that counts for volume,
+   estimated max and records is the share of the body the movement lifts, at the
+   weight logged on or before that day, plus what was added. Before this a pull-up
+   logged at 0 scored nothing: no volume, no estimated max, no strength line.
+
+   The shares are the commonly measured ones: a pull-up, chin-up or dip lifts about the
+   whole body; a push-up about two thirds of it, less on an incline and more with the
+   feet raised; an inverted row a little over half; a squat or lunge everything above
+   the shins. Bodyweight core work (planks, crunches, leg raises) is not in the table
+   and stays scored by reps and time, as it was. */
+var BW_SHARE=[[/handstand push/i,1],[/bench dip/i,.6],[/incline push/i,.45],[/decline push|push-?ups? with feet elevated/i,.75],
+  [/pull-?ups?|chin-?ups?|muscle-?ups?|\bdips?\b/i,1],[/push-?ups?|press-?ups?/i,.65],[/inverted row/i,.6],
+  [/squat|lunge|step-?ups?|pistol/i,.85]];
+function bwShare(name){
+  var v=EXDB&&EXDB[name];
+  if(!v||v.e!=="Bodyweight"||!name)return 0;
+  for(var i=0;i<BW_SHARE.length;i++)if(BW_SHARE[i][0].test(name))return BW_SHARE[i][1];
+  return 0;}
+/* The body weight on a day: the last weigh-in on or before it, else the first one
+   after, else the profile's. */
+function bodyAt(date){
+  var b=S.body||[],before=0,after=0;
+  for(var i=0;i<b.length;i++){
+    if(!b[i].weight)continue;
+    if(!date||b[i].date<=date)before=b[i].weight;else if(!after)after=b[i].weight;}
+  return before||after||num(S.profile&&S.profile.weight,0);}
+/* The load a set moved. A figure close to the lifter's own weight was the whole load —
+   logged before the box said "added" — and is taken as it stands. */
+function loadOf(name,w,date){
+  var k=bwShare(name),add=num(w);
+  if(!k)return add;
+  var bw=bodyAt(date);
+  if(!bw||add>=bw*0.8)return add;
+  return r1(bw*k+add);}
+function setVol(x,name,date){return x.wu?0:loadOf(name,x.w,date)*num(x.r);}
+function volume(sets,name,date){var tot=0;for(var i=0;i<sets.length;i++)tot+=setVol(sets[i],name,date);return tot;}
+function sessionVolume(s){var tot=0;s.entries.forEach(function(e){tot+=volume(e.sets||[],e.name,s.date);});return tot;}
 function avgRPE(sets){var n=0,tot=0;sets.forEach(function(x){if(x.wu||!x.rpe)return;tot+=x.rpe;n++;});return n?r1(tot/n):0;}
 function e1RM(w,r){if(!w||!r||r>12)return 0;return r1(w*(1+r/30));}
-function bestE1RM(sets){var b=0;sets.forEach(function(x){var e=e1RM(num(x.w),num(x.r));if(e>b)b=e;});return b;}
+function bestE1RM(sets,name,date){var b=0;sets.forEach(function(x){if(x.wu)return;var e=e1RM(loadOf(name,x.w,date),num(x.r));if(e>b)b=e;});return b;}
 function macroKcal(p,c,f){return Math.round(num(p)*4+num(c)*4+num(f)*9);}
 function bmr(){var p=S.profile,w=lastWeight()||num(p.weight,86);
   return Math.round(10*w+6.25*num(p.height)-5*num(p.age)+(p.sex==="f"?-161:5));}
@@ -90,8 +126,8 @@ function prFor(name){
       if(x.wu)return;
       var w=num(x.w),r=num(x.r);
       if(w>best.w){best.w=w;best.reps=r;best.date=s.date;}
-      var er=e1RM(w,r);if(er>best.e)best.e=er;
-      if(w*r>best.vol)best.vol=w*r;
+      var ld=loadOf(name,w,s.date),er=e1RM(ld,r);if(er>best.e)best.e=er;
+      if(ld*r>best.vol)best.vol=ld*r;
     });});});
   return best;}
 /* The next load step, in kg, by what the load is made of — the smallest jump that
@@ -122,7 +158,7 @@ function plateauOf(name){
   for(var i=0;i<S.sessions.length&&best.length<4;i++){
     var e=S.sessions[i].entries.filter(function(x){return x.name===name&&x.sets&&x.sets.length;})[0];
     if(!e)continue;
-    var b=0;e.sets.forEach(function(x){if(x.wu)return;var v=e1RM(num(x.w),num(x.r));if(v>b)b=v;});
+    var b=0,d=S.sessions[i].date;e.sets.forEach(function(x){if(x.wu)return;var v=e1RM(loadOf(name,x.w,d),num(x.r));if(v>b)b=v;});
     if(b)best.push(b);}
   if(best.length<4)return false;
   return Math.max(best[0],best[1],best[2])<=best[3];}
@@ -188,15 +224,19 @@ function repsAt(name,w){
     if(e.name!==name)return;
     e.sets.forEach(function(x){if(!x.wu&&num(x.w)>=w&&num(x.r)>best)best=num(x.r);});});});
   return best;}
+/* A bodyweight lift can set a record with nothing added: more reps, or a better
+   estimated max as the lifter gets lighter or stronger. */
 function recordOf(name,x,earlier){
-  if(!x||x.wu||!(num(x.w)>0)||!(num(x.r)>0)||isActivity(name))return null;
+  var bwl=bwShare(name)>0;
+  if(!x||x.wu||!(num(x.r)>0)||isActivity(name))return null;
+  if(!(num(x.w)>0)&&!bwl)return null;
   var h=prFor(name);if(!h.date)return null;
-  var w=num(x.w),r=num(x.r),pw=h.w,pe=h.e,pr=repsAt(name,w);
+  var w=num(x.w),r=num(x.r),pw=h.w,pe=h.e,pr=repsAt(name,w),now=today();
   (earlier||[]).forEach(function(y){
     if(y.wu)return;var yw=num(y.w),yr=num(y.r);
-    if(yw>pw)pw=yw;var ye=e1RM(yw,yr);if(ye>pe)pe=ye;if(yw>=w&&yr>pr)pr=yr;});
+    if(yw>pw)pw=yw;var ye=e1RM(loadOf(name,yw,now),yr);if(ye>pe)pe=ye;if(yw>=w&&yr>pr)pr=yr;});
   if(w>pw)return {k:"w",n:name,w:w,r:r};
-  var er=e1RM(w,r);
+  var er=e1RM(loadOf(name,w,now),r);
   if(er&&er>pe)return {k:"e",n:name,w:w,r:r,e:er};
   if(pr>0&&r>pr)return {k:"r",n:name,w:w,r:r};
   return null;}
@@ -209,11 +249,15 @@ function recordsIn(e){
     if(rec&&(!best||RANK[rec.k]>RANK[best.k]||(rec.k===best.k&&rec.w>best.w)))best=rec;});
   return best;}
 
+/* How a set's weight reads: "BW + 10 kg" or "BW" on a bodyweight lift. */
+function loadText(name,w){
+  if(bwShare(name)>0)return num(w)>0?t("BW")+" + "+fmtW(w):t("BW");
+  return fmtW(w);}
 function recordText(rec){
   if(!rec)return "";
-  if(rec.k==="e")return t("New best estimated max")+": "+fmtW(rec.e)+" ("+fmtW(rec.w)+" \u00d7 "+rec.r+")";
-  if(rec.k==="r")return t("Rep record")+": "+rec.r+" \u00d7 "+fmtW(rec.w);
-  return t("New record")+": "+fmtW(rec.w)+" \u00d7 "+rec.r;}
+  if(rec.k==="e")return t("New best estimated max")+": "+fmtW(rec.e)+" ("+loadText(rec.n,rec.w)+" \u00d7 "+rec.r+")";
+  if(rec.k==="r")return t("Rep record")+": "+rec.r+" \u00d7 "+loadText(rec.n,rec.w);
+  return t("New record")+": "+loadText(rec.n,rec.w)+" \u00d7 "+rec.r;}
 function recommend(e){
   var p=prevPerf(e.name);
   if(!p||!p.sets.length)return null;
@@ -298,4 +342,4 @@ function addItems(meal,items,d){
 
 
 
-export {recordText, dbTotal, deloadDue, deloadSets, inDeload, missedTwice, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets};
+export {bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, missedTwice, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets};

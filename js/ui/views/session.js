@@ -4,7 +4,7 @@ import {t} from "../../i18n/dict.js";
 import {isolateNums} from "../../i18n/bidi.js";
 import {difficultyOf, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
-import {dbTotal, inDeload, lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
+import {bodyAt, bwShare, loadText, dbTotal, inDeload, lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
 import {actIcon, actInfo, actKcal, actPace, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
 import {S} from "../../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
@@ -130,12 +130,16 @@ function vLogger(){
       is the way out and it should say so. Same data-back handler, so the leave
       confirmation and everything behind it are untouched. */
    +'<button class="ss-back" data-back="1" aria-label="'+t("Close workout")+'">✕</button>'
-   +'<div class="ss-title"><div class="ss-name">'+esc(planName(a.dayName))+'</div>'
-   +'<div class="ss-meta"><span class="mseg">'+t("Exercise")
+   /* The title opens today's exercises as a list: the overview, and a way to go
+      straight to any of them. */
+   +'<button class="ss-title" data-exlist="1" aria-haspopup="dialog" aria-label="'+t("Today's exercises")+'">'
+   +'<span class="ss-name">'+esc(planName(a.dayName))+'</span>'
+   +'<span class="ss-meta"><span class="mseg">'+t("Exercise")
    +' <span class="num">'+(V.logIdx+1)+'</span> '+t("of")
-   +' <span class="num">'+a.entries.length+'</span></span><span class="sep">\u00b7</span>'
+   +' <span class="num">'+a.entries.length+'</span>'
+   +'<svg class="ss-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></span><span class="sep">\u00b7</span>'
    +'<span class="mseg"><span class="num">'+doneAll+'</span> '
-   +t(doneAll===1?"set logged":"sets logged")+'</span></div></div>'
+   +t(doneAll===1?"set logged":"sets logged")+'</span></span></button>'
    /* A stopped clock with nothing to explain it reads as a bug, so the paused state
       says so rather than just freezing. */
    +'<div class="ss-clock"><span class="ico ico-clock" aria-hidden="true"></span>'
@@ -151,14 +155,21 @@ function vLogger(){
       +'<i>'+t("Show")+'</i></button>':'')
    +'</div>';
 
-  /* --- one segment per exercise; members of a superset are tied together --- */
-  h+='<div class="ss-seg">';
+  /* --- one segment per exercise; members of a superset are tied together. The
+     arrows either side step through them; so does a swipe on the exercise below. --- */
+  var NAVP='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>',
+      NAVN='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>';
+  h+='<div class="ss-nav"><button class="ss-navb" data-exnav="-1" aria-label="'+t("Previous exercise")+'"'
+   +(V.logIdx>0?'':' disabled')+'>'+NAVP+'</button><div class="ss-seg">';
   a.entries.forEach(function(x,i){
     var cls=i===V.logIdx?"on":(x.sets.length>=rowsFor(x)?"did":"");
     var srun=groupRun(a.entries,i);
     if(srun.length>1)cls+=" gp"+(i===srun[0]?" gp1":"")+(i===srun[srun.length-1]?" gpN":"");
     h+='<button class="'+cls+'" data-jump="'+i+'" aria-label="'+esc(exName(x.name))+'"><span></span></button>';});
-  h+='</div>';
+  h+='</div><button class="ss-navb" data-exnav="1" aria-label="'+t("Next exercise")+'"'
+   +(V.logIdx<a.entries.length-1?'':' disabled')+'>'+NAVN+'</button></div>';
+  /* Everything about this exercise, as one pane the swipe moves (js/ui/exswipe.js). */
+  h+='<div class="ex-pane" data-exswipe="1">';
 
   /* --- what am I doing: canvas screen 3 (Figma node 2:1008) ---
      Title with an info control, the two form frames, the tag row, then the
@@ -209,7 +220,7 @@ function vLogger(){
    +'<span class="etag">'+e.planned.sets+' × '+e.planned.lo
    +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+'</span>'
    +(difficultyOf(e.name)?'<span class="etag hot">'+esc(t(difficultyOf(e.name)))+'</span>':'')
-   +(pr.w?'<span class="pill gold">'+esc(t("PR"))+' '+fmtW(pr.w)+'</span>':'')
+   +(pr.w?'<span class="pill gold">'+esc(t("PR"))+' '+esc(loadText(e.name,pr.w))+'</span>':'')
    +'</div></section>';
 
   /* The frame's recommendation banner, above the table where it puts it. The figure is
@@ -234,8 +245,11 @@ function vLogger(){
      in Arabic the pair swaps sides without a second rule. */
   var cols=timed?(rpeCol?"24px 24px 1fr 78px 44px 38px":"24px 24px 1fr 90px 38px")
                 :(rpeCol?"24px 24px 1fr 56px 50px 42px 38px":"24px 24px 1fr 66px 58px 38px");
+  /* On a bodyweight lift the box is what is added to you, so the column says so: +KG,
+     and 0 is you alone. The body's own share is counted in volume and records. */
+  var bwl=bwShare(e.name)>0,wHead=(bwl?"+":"")+wUnit().toUpperCase();
   var hd=timed?["",t("Set"),t("Last"),t("Secs")]
-              :["",t("Set"),t("Last"),wUnit().toUpperCase(),loaded?t("Secs"):t("Reps")];
+              :["",t("Set"),t("Last"),wHead,loaded?t("Secs"):t("Reps")];
   if(rpeCol)hd.push("RPE");
   hd.push("");
   var doneHere=e.sets.length;
@@ -249,7 +263,7 @@ function vLogger(){
     var cls2="setrow "+(done?"did":isAct?"on":"pend");
     var pv="—";
     if(p&&p.sets[i])pv=timed?(p.sets[i].r+"s")
-      :((p.sets[i].w?toDisp(p.sets[i].w)+wUnit()+" × ":"")+p.sets[i].r);
+      :((p.sets[i].w?(bwl?"+":"")+toDisp(p.sets[i].w)+wUnit()+" × ":"")+p.sets[i].r);
     /* The set number doubles as the warm-up toggle: tap it and the row stops counting
        toward volume, records and progression. No extra column for it. */
     var warm=done&&st.wu;
@@ -264,9 +278,9 @@ function vLogger(){
     if(!timed){
       if(done)h+='<input class="cell" type="number" inputmode="decimal" step="0.5" '
         +'value="'+toDisp(st.w)+'" data-setidx="'+i+'" data-k="w" '
-        +'aria-label="Weight in '+wUnit()+', set '+(i+1)+'">';
+        +'aria-label="'+(bwl?'Added weight in ':'Weight in ')+wUnit()+', set '+(i+1)+'">';
       else if(isAct)h+='<input class="cell'+(V.draftSg?' sg':'')+'" type="number" inputmode="decimal" step="0.5" '
-        +'id="in_w" value="'+toDisp(V.draft.w)+'" aria-label="Weight in '+wUnit()+(V.draftSg?', '+t("suggested"):'')+'">';
+        +'id="in_w" value="'+toDisp(V.draft.w)+'" aria-label="'+(bwl?'Added weight in ':'Weight in ')+wUnit()+(V.draftSg?', '+t("suggested"):'')+'">';
       else h+='<div class="cellmute">'+(num(V.draft.w)?toDisp(V.draft.w):"—")+'</div>';
     }
     if(done)h+='<input class="cell" type="number" inputmode="numeric" '
@@ -296,7 +310,14 @@ function vLogger(){
   h+='</div>';
   /* Adds a set beyond the prescription, and sits under whatever the last row is. */
   h+='<div class="addrow"><button class="addset2" data-addrow="1">'
-   +'<span aria-hidden="true">+</span>'+t("Add a set")+'</button></div></section>';
+   +'<span aria-hidden="true">+</span>'+t("Add a set")+'</button></div>';
+  /* Said once, under the table, so +KG is never a guess. */
+  if(bwl&&!timed){
+    var bwNow=bodyAt(null);
+    h+='<p class="bwnote">'+(bwNow
+      ?t("+KG is weight added to you, like a belt or vest; leave it at 0 for bodyweight. Your {w} is counted in volume and records.").replace("{w}",fmtW(bwNow))
+      :t("+KG is weight added to you, like a belt or vest; leave it at 0 for bodyweight. Log your weight and it is counted in volume and records."))+'</p>';}
+  h+='</section>';
 
   /* The recommendation now sits above the table, in the frame's banner. */
   var hint=progressionHint(e);
@@ -342,7 +363,7 @@ function vLogger(){
    +tool('data-addlive="1"','<path d="M12 5v14M5 12h14"/>',t("Add"),t("Add an exercise"))
    +'</div>'
    +'<div class="ss-acts"><button class="ss-act'+(e.pain?' on':'')+'" data-hurt="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg>'+t(e.pain?"Pain noted":"Something hurts?")+'</button>'
-   +'</div></div>';
+   +'</div></div></div>';
 
   /* The rest screen is no longer part of this string; syncRest() owns it. */
   return h;}
@@ -431,7 +452,7 @@ function vRest(a,e,rows,timed){
      now carries the confirmation, which is what that clause used to be doing here. */
   var didTxt=lastSet
     ?(t("Set")+' '+e.sets.length+' '+t("of")+' '+rows+': '
-      +(timed?lastSet.r+'s':(lastSet.w?toDisp(lastSet.w)+wUnit()+' × '+lastSet.r
+      +(timed?lastSet.r+'s':(lastSet.w?(bwShare(e.name)?'+':'')+toDisp(lastSet.w)+wUnit()+' × '+lastSet.r
                                      :lastSet.r+' '+t("reps")))
       +(S.prefs.rpe!=="off"&&lastSet.rpe?' @ '+t("RPE")+' '+lastSet.rpe:''))
     :esc(exName(e.name));
@@ -456,7 +477,7 @@ function vRest(a,e,rows,timed){
   /* What the set just logged was, for the line under REST PERIOD: "Set 2 of 4
      complete · 85 kg × 8". */
   var doneTxt=lastSet?(t("Set")+' '+e.sets.length+' '+t("of")+' '+rows+' '+t("complete")
-      +(timed?' · '+lastSet.r+'s':lastSet.w?' · '+toDisp(lastSet.w)+' '+wUnit()+' × '+lastSet.r
+      +(timed?' · '+lastSet.r+'s':lastSet.w?' · '+(bwShare(e.name)?'+':'')+toDisp(lastSet.w)+' '+wUnit()+' × '+lastSet.r
                                           :' · '+lastSet.r+' '+t("reps"))):esc(exName(e.name));
   var art='<div class="rt-art" aria-hidden="true"><img src="img/rest-swirl.jpg" alt="" decoding="async"></div>';
   var upnext='<div class="rt-next"><div class="rt-next-k">'+t("Up next")+'</div>'

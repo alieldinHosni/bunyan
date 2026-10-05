@@ -26,6 +26,7 @@ import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
 import {syncWbar} from "./ui/wbar.js";
 import {initDockScroll} from "./ui/dock.js";
+import {enter as enterEx, fromOf, initExSwipe} from "./ui/exswipe.js";
 import {importName, mealNow, savedById} from "./ui/views/food.js";
 import {mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "./engine/meals.js";
 import {parsePlan} from "./engine/planparse.js";
@@ -155,6 +156,18 @@ ACT.delphoto=function(_,id){
 var askTyping=false;
 document.addEventListener("pointerdown",function(){
   askTyping=V.sheet==="ask"&&!!document.activeElement&&document.activeElement.id==="askv";},true);
+/* A PDF's supplement table says when each one is taken; that rides on the plan's
+   supplement items as a note. Matched by name, the table's order as the fallback. */
+function withNotes(pp){
+  var su=V.psupps||[];if(!su.length)return pp;
+  pp.forEach(function(m){
+    if(!/^supplements?$/i.test(String(m.name||"").trim()))return;
+    m.items.forEach(function(it,i){
+      var nm=String(it.n||"").toLowerCase();
+      var hit=su.filter(function(x){return nm.indexOf(String(x.name).toLowerCase())>-1;})[0]
+        ||su.filter(function(x){return nm.indexOf(String(x.name).toLowerCase().split(/\s+/)[0])>-1;})[0]||su[i];
+      if(hit)it.note=[hit.when,hit.note].filter(Boolean).join(" \u00b7 ");});});
+  return pp;}
 document.addEventListener("click",function(ev){
   /* Named el, not t: t() is the translator, and shadowing it here made every
      translated string inside this handler throw. */
@@ -411,7 +424,12 @@ document.addEventListener("click",function(ev){
   /* ---- logger */
   if(D.startday){pushNav();startDay(D.startday);return;}
   if(D.continue!==undefined){W.resume();return;}
-  if(D.jump!==undefined){W.jumpTo(+D.jump);return;}
+  /* Moving between exercises: the segments, the arrows either side of them, and the
+     list from the title all slide the new one in from the side it lies on. */
+  if(D.jump!==undefined){var jF=+D.jump-V.logIdx;W.jumpTo(+D.jump);if(jF)enterEx(fromOf(jF));return;}
+  if(D.exnav!==undefined){var nS=+D.exnav,nT=V.logIdx+nS;if(S.active&&nT>=0&&nT<S.active.entries.length){W.jumpTo(nT);enterEx(fromOf(nS));}return;}
+  if(D.exlist!==undefined){openSheet("exlist");return;}
+  if(D.jumpl!==undefined){closeSheet();W.jumpTo(+D.jumpl);return;}
   if(D.stp){
     var id=D.stp,d1=parseFloat(D.d);
     var cur=id==="bw"?(V.draft.bw!=null?V.draft.bw:toDisp(lastWeight()||86))
@@ -731,25 +749,33 @@ document.addEventListener("click",function(ev){
     if(nL){play("set");toast(t(nL===1?"1 meal logged from your plan.":"{n} meals logged from your plan.").replace("{n}",nL));}
     else toast(t("Every planned meal is already logged today."));return;}
   if(D.pimport){pushNav();V.pimport=true;V.pparse=null;render();window.scrollTo(0,0);return;}
+  if(D.papplyt!==undefined){V.papplyT=V.papplyT===false;render();return;}
   if(D.pread){
     var txt=val("pi_text");V.pitext=txt;
     if(!txt.trim()){toast(t("Paste your plan first."));return;}
-    loadFoods(function(){V.pparse=parsePlan(txt);render();
+    loadFoods(function(){V.pparse=withNotes(parsePlan(txt));render();
       var res=document.querySelector(".picard");if(res)res.scrollIntoView({behavior:"smooth",block:"start"});});
     return;}
   if(D.puse){
     var pp=V.pparse;if(!pp||!pp.length)return;
     var before=JSON.parse(JSON.stringify(mealSlots())),used={};
+    var goalsBefore=JSON.parse(JSON.stringify(S.goals||{})),tg=V.ptargets;
     S.mealSlots=pp.map(function(m,i){
       var x={};
       if(m.named&&!used[m.named]){x.id=m.named;used[m.named]=1;}
-      else{x.id="m_"+uid();var nm=importName(m,i);if(m.named||(!m.n&&m.name))x.name=nm;}
+      else{x.id="m_"+uid();var nm=importName(m,i);
+        /* A numbered meal out of place (Meal 3 after a snack) keeps its number by name. */
+        if(m.named||(!m.n&&m.name)||(m.n&&m.n!==i+1))x.name=nm;}
       if(m.items.length)x.plan=m.items;
       if(m.todo.length)x.todo=m.todo;
       return x;});
-    V.pparse=null;V.pitext="";V.reorder=null;saveDB();
+    /* The targets a PDF set, unless the switch was turned off. */
+    var tSet=0;
+    if(tg&&V.papplyT!==false)["kcal","p","c","f","water","steps"].forEach(function(k){
+      if(tg[k]>0){S.goals[k]=tg[k];tSet++;}});
+    V.pparse=null;V.pitext="";V.reorder=null;V.ptargets=null;V.psupps=null;saveDB();
     goBack();V.pimport=false;V.fsec="plan";S.prefs.fsec="plan";render();window.scrollTo(0,0);
-    toast(t("Your plan is in."),function(){S.mealSlots=before;saveDB();render();});return;}
+    toast(t(tSet?"Your plan and its daily targets are in.":"Your plan is in."),function(){S.mealSlots=before;S.goals=goalsBefore;saveDB();render();});return;}
   /* ---- My Foods */
   if(D.smeal){pushNav();V.smeal=D.smeal;render();window.scrollTo(0,0);return;}
   if(D.newmeal){askText({title:t("New meal"),ph:t("For example, Ful breakfast"),act:"newmeal"});return;}
@@ -1213,9 +1239,26 @@ document.addEventListener("change",function(ev){
   /* A plan from a file: read as text into the box, then read as a plan straight away. */
   if(ev.target.id==="pi_file"){
     var pfile=ev.target.files&&ev.target.files[0];if(!pfile)return;
+    /* A PDF is read on the phone (js/engine/pdfplan.js, loaded only when one is opened):
+       its meals become the text in the box, and its targets and supplements ride along
+       for the review below it. */
+    if(pfile.type==="application/pdf"||/\.pdf$/i.test(pfile.name||"")){
+      ev.target.value="";V.pibusy=true;V.pparse=null;render();
+      import("./engine/pdfplan.js").then(function(m){return m.readPdfPlan(pfile);}).then(function(r){
+        V.pibusy=false;V.pitext=r.text;V.ptargets=r.targets;V.psupps=r.supps;V.papplyT=true;
+        var box=document.getElementById("pi_text");
+        if(!r.text&&!Object.keys(r.targets||{}).length){render();if(box)box.value="";
+          toast(t("No meals were found in that PDF. Copy its text and paste it instead."));return;}
+        loadFoods(function(){V.pparse=withNotes(parsePlan(V.pitext));render();
+          var b2=document.getElementById("pi_text");if(b2)b2.value=V.pitext;
+          var res=document.querySelector(".pitg,.picard");if(res)res.scrollIntoView({behavior:"smooth",block:"start"});});
+      }).catch(function(){V.pibusy=false;render();
+        toast(t("That PDF could not be read. Copy its text and paste it instead."));});
+      return;}
+    V.ptargets=null;V.psupps=null;
     var pfr=new FileReader();
     pfr.onload=function(){V.pitext=String(pfr.result||"");
-      loadFoods(function(){V.pparse=parsePlan(V.pitext);render();});};
+      loadFoods(function(){V.pparse=withNotes(parsePlan(V.pitext));render();});};
     pfr.readAsText(pfile);ev.target.value="";return;}
   if(ev.target.id==="pg_photo"){
     var file=ev.target.files&&ev.target.files[0];
@@ -1526,6 +1569,10 @@ if(window.visualViewport){
   window.visualViewport.addEventListener("scroll",syncViewport);}
 initReorder(moveRow,function(){tap("light");});
 initDockScroll();
+/* A swipe on the exercise moves through the workout (js/ui/exswipe.js). */
+initExSwipe({
+  can:function(step){var a=S.active,n=V.logIdx+step;return !!(a&&!V.sheet&&V.tab==="train"&&n>=0&&n<a.entries.length);},
+  go:function(step){W.jumpTo(V.logIdx+step);tap("light");}});
 /* History comes from IndexedDB, so it arrives a tick later than everything else.
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from
    holding the whole app behind the intro; in practice it resolves well inside it. */
