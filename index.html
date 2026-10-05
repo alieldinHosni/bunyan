@@ -3183,6 +3183,11 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .libtrow>span:nth-child(2){flex:1;min-width:0;text-align:start}
 .libtrow .thumbwrap,.libtrow .thumb,.libtrow .thumb.ph{flex:0 0 auto;border-radius:12px;overflow:hidden}
 .libtrow .trow-s b{font-weight:500;color:var(--sub)}
+/* A row out of sight is not laid out or painted until it comes near the screen, so a
+   long list costs what is in view. The size it held last stands in for it meanwhile,
+   so the scrollbar does not jump. */
+.libtrow,.pkrow{content-visibility:auto;contain-intrinsic-size:auto 76px}
+.libmore{display:block;margin:14px auto 0}
 .libtrow .trow-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .exd-form2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 12px}
 .exd-form2 figure{position:relative;margin:0;border-radius:var(--r4);overflow:hidden;border:1px solid var(--border);background:var(--raised);aspect-ratio:4/3}

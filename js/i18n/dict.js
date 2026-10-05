@@ -488,7 +488,7 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Burned": "محروقة",
 "Clear": "امسح",
 "Muscle": "العضلة",
-"Showing the first 120. Narrow the filters.": "معروض أول 120. ضيّق الفلاتر.",
+"Show more": "اعرض أكتر",
 "Change this day's workout": "غيّر تمرين اليوم ده",
 "Change workout": "غيّر التمرين",
 "Pick what you want to do on this day. The rest of the plan moves on from what you actually train.": "اختار اللي عايز تعمله في اليوم ده. باقي الخطة بيكمّل من اللي اتمرنته فعلاً.",

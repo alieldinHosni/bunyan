@@ -32,7 +32,7 @@ function initNav(hooks){
      covers every entry. */
   try{history.scrollRestoration="manual";}catch(e){}
   try{
-    history.replaceState({bunyan:1},"");
+    history.replaceState({bunyan:1,d:-1},"");
     /* One spare entry, always, in front of wherever the user is. The browser's back
        gesture has to land on something; with nothing of ours to consume it walks out
        of the document, and coming back in reloads the app — splash and all, which is
@@ -40,8 +40,12 @@ function initNav(hooks){
        pushed again immediately, so it is always there and never navigates anywhere.
 
        It is not nav depth and is never counted in DEPTH: the in-app controls below
-       must not be able to spend it. */
-    history.pushState({bunyan:1},"");
+       must not be able to spend it.
+
+       Every entry carries its depth (d): -1 the app's own entry, 0 the spare, k a
+       screen k deep. A popstate says where it landed, so the handler can tell a back
+       from the landing of resetNav's own unwind, or from a forward, by looking. */
+    history.pushState({bunyan:1,d:0},"");
   }catch(e){}
 }
 function loc(){return {tab:V.tab,train:V.train,dayId:V.dayId,previewId:V.previewId,meal:V.meal,smeal:V.smeal,pslot:V.pslot,pimport:V.pimport,phist:V.phist};}
@@ -54,24 +58,43 @@ function pushNav(){
   var l=loc();l.y=window.pageYOffset||0;
   STACK.push(l);
   DEPTH++;
-  try{history.pushState({bunyan:1},"");}catch(e){}
+  /* While an unwind is on its way, the entry waits for it (see resetNav). */
+  if(UNWIND)HELD++;
+  else entry(DEPTH);
 }
+function entry(d){ try{history.pushState({bunyan:1,d:d},"");}catch(e){} }
 /* A tab tap is not a navigation into depth — it is a change of place. Keeping the
    stack would let back walk through every tab the user had ever touched.
 
    The history entries those locations used are given back as well. They were left
    behind before, so a session of tab-hopping grew the browser history without
    bound — harmless in memory, but the browser's long-press back list filled with
-   dozens of identical entries. history.go() is asynchronous, so the traversal's
-   popstate is swallowed by count rather than by flag, and pushNav during the gap
-   simply lands after the traversal and prunes forward entries as any push does. */
-var SWALLOW=0;
+   dozens of identical entries.
+
+   history.go() is asynchronous, and a pushState made before it lands can cancel it
+   outright. That used to happen when a tab tap was followed quickly by a tap into a
+   screen: the unwind never landed, the popstate the app was waiting to swallow never
+   came, and it swallowed the user's next back instead — which spent the spare, so the
+   back after that walked out of the app. Now nothing is pushed while an unwind is on
+   its way: pushNav holds its entries (HELD) and they are written the moment it lands,
+   or after UNWIND_MS if it never does. */
+var UNWIND=false,HELD=0,unwindT=0,UNWIND_MS=600;
+function landed(){
+  if(!UNWIND)return;
+  UNWIND=false;clearTimeout(unwindT);
+  /* The held screens, each at its own depth. */
+  for(var d=DEPTH-HELD+1;d<=DEPTH;d++)entry(d);
+  HELD=0;
+}
 function resetNav(){
   STACK.length=0;
+  /* Screens opened during an unwind and still held were never written, so there is
+     nothing of theirs to unwind. */
+  if(UNWIND){DEPTH-=HELD;HELD=0;}
   if(DEPTH>0){
-    SWALLOW++;
-    try{history.go(-DEPTH);}catch(e){SWALLOW--;}
-    DEPTH=0;
+    var n=DEPTH;DEPTH=0;
+    UNWIND=true;clearTimeout(unwindT);unwindT=setTimeout(landed,UNWIND_MS);
+    try{history.go(-n);}catch(e){landed();}
   }
 }
 
@@ -95,7 +118,8 @@ function canBack(){
   if(H.locked&&H.locked())return false;      /* a live workout: the ✕ is the way out */
   return STACK.length>0;
 }
-function repush(){ try{history.pushState({bunyan:1},"");}catch(e){} }
+/* Give back the entry a back spent, so the position in history stays where the app is. */
+function repush(){ entry(DEPTH); }
 /* The back affordance itself, rendered here rather than in each view. That is what
    makes "the arrow and the gesture read the same state" true by construction: one
    canBack() decides both, and there is one arrow to keep right instead of six.
@@ -131,8 +155,14 @@ function doBack(){
    which is exactly what lets the lock tell the two apart. */
 function goBack(){ viaControl=true; doBack(); }
 
-window.addEventListener("popstate",function(){
-  if(SWALLOW>0){SWALLOW--;return;}   /* resetNav's own unwind, not a user gesture */
+window.addEventListener("popstate",function(ev){
+  var st=ev.state,d=st&&st.bunyan&&typeof st.d==="number"?st.d:-1;
+  /* resetNav's own unwind, landing where it was sent. */
+  if(UNWIND&&d===0){landed();return;}
+  landed();
+  /* At or above where the app already is, this is not a back: the browser's forward,
+     or an unwind landing late. Nothing to do. */
+  if(d>=DEPTH)return;
   var byControl=viaControl; viaControl=false;
   if(V.sheet){
     /* The gesture was spent closing a sheet, so give the entry back. */
@@ -156,15 +186,19 @@ window.addEventListener("popstate",function(){
     if(H.onBlocked)H.onBlocked();
     return;
   }
-  if(DEPTH>0)DEPTH--;
+  var was=DEPTH;
+  DEPTH=Math.max(0,d);
   /* An active workout is the one thing that asks before it is left behind. The
      guard re-runs doBack() itself once the user has decided. */
   if(H.guard&&H.guard(doBack)){
-    DEPTH++;
+    DEPTH=was;
     repush();
     return;
   }
   fallback();
+  /* A back that landed on the app's own entry spent the spare: put it back, or the
+     next back would leave the app. */
+  if(d<0)repush();
 });
 
 /* ---- the gesture ----------------------------------------------------------
