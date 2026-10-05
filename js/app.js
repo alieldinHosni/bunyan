@@ -27,6 +27,7 @@ import {addPhoto, removePhoto} from "./ui/photos.js";
 import {syncWbar} from "./ui/wbar.js";
 import {initDockScroll} from "./ui/dock.js";
 import {initPress} from "./ui/press.js";
+import {grow} from "./ui/more.js";
 import {enter as enterEx, fromOf, initExSwipe} from "./ui/exswipe.js";
 import {importName, mealNow, savedById} from "./ui/views/food.js";
 import {mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "./engine/meals.js";
@@ -340,6 +341,8 @@ document.addEventListener("click",function(ev){
      inherited them — it always had, but it used to inherit "All", so it never showed. */
   if(D.addex){V.dayId=D.addex;V.exm="All";V.exe="All";V.exq="";openSheet("exercise",{});return;}
   if(D.editex){openSheet("editex",{id:D.editex});return;}
+  /* The marker at the end of a long list, if it is ever tapped before it is seen. */
+  if(D.more){grow(D.more,+D.step||40);render();return;}
   if(D.exm){V.exm=D.exm;render();topOfResults();return;}
   if(D.exe){V.exe=D.exe;render();topOfResults();return;}
   if(D.cleardiff){V.exd=null;render();return;}

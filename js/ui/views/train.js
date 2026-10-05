@@ -14,6 +14,7 @@ import {actInfo, intensityOf, isActivity} from "../../data/activities.js";
 import {head, reorderBtn, seg, V} from "../view.js";
 import {backArrow, backBar} from "../nav.js";
 import {art} from "../art.js";
+import {shown} from "../more.js";
 
 /* ============================================================ TRAIN */
 
@@ -461,13 +462,18 @@ function vLibrary(){
     h+='<div class="tsec"><h2 class="tsec-h">'
      +(V.exm==="All"?t("All Exercises"):t(V.exm)+' '+t("Exercises"))+'</h2>'
      +'<span class="libn">'+fmtN(list.length)+'</span></div><div class="card tdays">';
-    list.slice(0,120).forEach(function(l){
-      h+='<button class="trow libtrow" data-exdetail="'+esc(l[0])+'">'+thumb(l[0],52)
+    /* Forty rows, and forty more each time the end comes into view (js/ui/more.js).
+       Keyed, so a filter change swaps whole rows rather than rewriting each one in
+       place — which showed the last exercise's photo under the new name until the
+       new one arrived. */
+    var n=shown("lib",[V.exm,V.exe,V.exd||"",q].join("|"),40);
+    list.slice(0,n).forEach(function(l){
+      h+='<button class="trow libtrow" data-k="lib:'+esc(l[0])+'" data-exdetail="'+esc(l[0])+'">'+thumb(l[0],52)
        +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span>'
        +'<span class="trow-s">'+t(l[1])+(l[2]==="Other"&&(l[1]==="Cardio"||l[1]==="Sports")?'':' \u00b7 <b>'+t(l[2])+'</b>')+'</span></span>'
        +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
-    h+='</div>';}
-  if(list.length>120)h+='<p class="tiny" style="text-align:center">'+t("Showing the first 120. Narrow the filters.")+'</p>';
+    h+='</div>';
+    if(list.length>n)h+='<button class="btn d sm libmore" data-more="lib" data-step="40">'+t("Show more")+'</button>';}
   if(!list.length)h+=empty("search",
     q?t("Nothing matches")+" “"+esc(V.exq)+"”":t("Nothing matches those filters"),
     t("Your gym may call it something else, or it may not be in the library at all."),

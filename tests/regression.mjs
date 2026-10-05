@@ -982,6 +982,44 @@ for(const online of [false,true])await test("Exercise photos: a re-render keeps 
   await pause(page,600);
   eq([await st(),fetches],[before,f0],"and after");
 });
+await test("Exercise library: draws 40 rows and more as the end comes into view; a filter starts it over",async page=>{
+  await tapTab(page,"train");await pause(page);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.train="library";(await import("/js/ui/render.js")).render();});
+  await pause(page,400);
+  const rows=()=>page.evaluate(()=>document.querySelectorAll(".libtrow").length);
+  eq(await rows(),40,"first draw");
+  await page.evaluate(()=>{document.querySelector(".libtrow")._mark=1;});
+  for(let i=0;i<6;i++){await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));await pause(page,250);}
+  const grown=await rows();
+  if(!(grown>=80))throw new Error("expected the list to grow on scroll, got "+grown);
+  eq(await page.evaluate(()=>{const r=document.querySelectorAll(".libtrow");return new Set([...r].map(e=>e.dataset.k)).size===r.length;}),true,"no row twice");
+  /* The rows already drawn were kept, not redrawn. */
+  eq(await page.evaluate(()=>document.querySelector(".libtrow")._mark),1,"first row kept");
+  await page.evaluate(()=>window.scrollTo(0,0));
+  await page.tap('[data-exm="Chest"]');await pause(page,400);
+  eq(await rows(),40,"a filter starts the list over");
+  /* The marker works as a button too, should it ever be tapped before it is seen. */
+  const before=await rows();
+  await page.evaluate(()=>document.querySelector("[data-more]").click());await pause(page,300);
+  if(!((await rows())>before))throw new Error("Show more did nothing");
+});
+await test("Back never walks out of the app, even when a screen opens while a tab tap is still unwinding",async page=>{
+  const ix=()=>page.evaluate(()=>navigation.currentEntry.index);
+  const base=await ix();
+  const run=f=>page.evaluate(async f=>{const N=await import("/js/ui/nav.js");const V=(await import("/js/ui/view.js")).V;const R=await import("/js/ui/render.js");eval(f);},f);
+  await run("N.pushNav();V.tab='train';V.train='library';R.render();N.pushNav();V.train='favs';R.render();");
+  await pause(page,200);
+  eq(await ix(),base+2,"two screens deep");
+  /* A tab tap, and a screen opened before its unwind has landed. */
+  await run("N.resetNav();V.tab='progress';V.train='days';R.render();N.pushNav();V.phist=true;R.render();");
+  await pause(page,900);
+  eq(await ix(),base+1,"one screen deep, written after the unwind");
+  await page.evaluate(()=>history.back());await pause(page,400);
+  eq([await ix(),await ev(page,"!!V.phist")],[base,false],"back returns to Progress");
+  /* At the root, back is held off and the spare entry stays, however often it is tried. */
+  for(let i=0;i<3;i++){await page.evaluate(()=>history.back());await pause(page,400);}
+  eq([await ix(),await ev(page,"V.tab")],[base,"progress"],"still in the app");
+});
 await test("Dock: a page with little to scroll keeps its dock",async page=>{
   await tapTab(page,"home");await pause(page);
   const max=await page.evaluate(()=>document.documentElement.scrollHeight-innerHeight);
