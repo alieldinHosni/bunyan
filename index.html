@@ -462,19 +462,20 @@ body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--
 .dock-b.on{color:var(--dock-on)}
 .dock-b.on svg{transform:scale(1.06);stroke-width:2}
 .dock-b:active{transform:scale(.94)}
-/* Out of the way while reading (js/ui/dock.js): --dh runs from 0 to 1 as the page is
-   scrolled down, and back as it is scrolled up. The dock inside the fixed bar slides
-   below the screen edge; the workout bar drops into the dock's place. translate, not
-   transform, so the press scale and the bar's entry animation still apply, and the
-   fixed boxes themselves never move. It follows the finger with no transition and
-   eases only when it settles (.dsettle), over --dt — set from the distance left, so
-   the finish matches the scroll's pace — with a decelerating curve. With reduced
-   motion it fades instead. */
-.dock{translate:0 calc(var(--dh,0) * (100% + var(--dock-lift) + 24px))}
-nav.dsettle .dock{transition:translate var(--dt,var(--m-comp)) var(--e-decel)}
-nav.dhid .dock{pointer-events:none}
-nav.dfade .dock{translate:none;opacity:calc(1 - var(--dh,0))}
-nav.dfade.dsettle .dock{transition:opacity var(--m-micro) var(--e-standard)}
+/* Out of the way while reading (js/ui/dock.js): scrolling down adds .dhid and the
+   dock inside the fixed bar slides below the screen edge; scrolling up takes it off
+   and the dock slides back. Each move is one transition of transform, which the
+   compositor runs on its own — smooth however busy the page is, and the dock is not
+   repainted on the way, so its icons cannot flicker. --dt, set by the script from the
+   scroll's speed, is how long the move takes. Leaving it starts gently and gathers
+   pace; coming back it arrives quickly and settles slowly. With reduced motion it
+   fades instead. */
+:root{--e-dock-out:cubic-bezier(.4,0,.2,1);--e-dock-in:cubic-bezier(.22,1,.36,1)}
+.dock{transform:translate3d(0,0,0);transition:transform var(--dt,var(--m-data)) var(--e-dock-in)}
+nav.dhid .dock{transform:translate3d(0,calc(100% + var(--dock-lift) + 24px),0);
+  transition-timing-function:var(--e-dock-out);pointer-events:none}
+nav.dfade .dock,nav.dfade.dhid .dock{transform:none;transition:opacity var(--dt,var(--m-micro)) var(--e-standard)}
+nav.dfade.dhid .dock{opacity:0}
 /* ---- The workout bar --------------------------------------------------------
    A workout under way, seen from another tab: one pill just above the dock, fixed the
    same way the dock is and faded the same way when the keyboard is up. Tapping it goes
@@ -490,14 +491,18 @@ body.kb #wbar{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(
   padding:0 12px 0 16px;border-radius:var(--rpill);border:1px solid var(--accent-edge);
   background:var(--glass-solid);box-shadow:var(--shadow-float),0 0 24px var(--accent-glow);
   color:var(--text);font:inherit;text-align:start;cursor:pointer;pointer-events:auto;
-  transition:transform var(--m-press) var(--e-standard)}
+  transform:translate3d(0,0,0);
+  transition:transform var(--dt,var(--m-data)) var(--e-dock-in),scale var(--m-press) var(--e-standard)}
 .wbar.in{animation:wbIn var(--m-comp) var(--e-decel)}
-.wbar{translate:0 calc(var(--dh,0) * (var(--dock-h) + var(--wbar-gap)))}
-#wbar.dsettle .wbar{transition:translate var(--dt,var(--m-comp)) var(--e-decel),transform var(--m-press) var(--e-standard)}
-#wbar.dfade.dsettle .wbar{transition:transform var(--m-press) var(--e-standard)}
+/* While the dock is away the pill drops into its place, on the dock's own timing. The
+   press is scale, a property of its own, so it never interrupts the slide. With
+   reduced motion it moves without sliding. */
+#wbar.dhid .wbar{transform:translate3d(0,calc(var(--dock-h) + var(--wbar-gap)),0);
+  transition-timing-function:var(--e-dock-out),var(--e-standard)}
+#wbar.dfade .wbar{transition:scale var(--m-press) var(--e-standard)}
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
   .wbar{background:var(--glass);-webkit-backdrop-filter:saturate(160%) blur(22px);backdrop-filter:saturate(160%) blur(22px)}}
-.wbar:active{transform:scale(.98)}
+.wbar:active{scale:.98}
 .wbar:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
 .wbar-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--accentHi);
   box-shadow:0 0 0 4px var(--accent-tint);animation:wbPulse 1.8s ease-in-out infinite}
