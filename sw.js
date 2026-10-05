@@ -5,26 +5,17 @@
    previous release's JS for one launch: markup the stylesheet no longer styles.
    Cache-first for images only.
    Bump CACHE whenever you change index.html. */
-const CACHE = "bunyan-v85";
+const CACHE = "bunyan-v86";
 /* instructions.json (595 KB) is deliberately absent: it is cached on first use by the
    catch-all handler below, so it no longer blocks first install. */
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
                "./exercises.json", "./foods.json",
                "./icon-180.png", "./icon-512.png", "./mark.png", "./intro.jpg",
-               /* The design's typefaces and icons. Precached because the app draws
-                  its whole identity from them — offline without the fonts falls back
-                  to system type, and without the icons the tab bar is blank. */
+               /* The design's typefaces. Precached because the app draws its whole
+                  identity from them — offline without the fonts falls back to system
+                  type. (The icons are drawn from the stylesheet itself now, so there
+                  is nothing of theirs to fetch.) */
                "./fonts/manrope-latin.woff2", "./fonts/outfit-latin.woff2",
-               "./icons/nav-home.svg", "./icons/nav-train.svg", "./icons/nav-food.svg",
-               "./icons/nav-progress.svg", "./icons/nav-profile.svg", "./icons/play.svg",
-               "./icons/day-on.svg", "./icons/day-off.svg",
-               "./icons/star.svg", "./icons/arrow-right.svg", "./icons/search.svg",
-               "./icons/chevron-right.svg", "./icons/chevron-left.svg",
-               "./icons/clock.svg", "./icons/bulb.svg",
-               "./icons/droplet.svg", "./icons/plus.svg", "./icons/trash.svg",
-               "./icons/check.svg", "./icons/pause.svg", "./icons/chevron-down.svg",
-               "./icons/award.svg", "./icons/camera.svg", "./icons/info.svg",
-               "./icons/edit.svg", "./icons/warn.svg", "./icons/alert.svg",
                "./img/split-ap.jpg", "./img/split-arnold.jpg", "./img/split-ppl.jpg",
                "./img/split-ul.jpg", "./img/split-fb.jpg", "./img/split-bw.jpg", "./img/rest-swirl.jpg",
                "./img/split-bro.jpg", "./img/split-sl5.jpg", "./img/split-db.jpg", "./img/split-glute.jpg",
@@ -36,7 +27,7 @@ const FILES = ["./", "./index.html", "./manifest.webmanifest",
                   rest, so the app cannot start offline without them. */
                "./js/engine/stats.js", "./js/photostore.js", "./js/ui/photos.js", "./js/ui/views/addfood.js",
                "./js/ui/dock.js", "./js/data/activities.js", "./js/ui/reorder.js", "./js/ui/workout.js", "./js/engine/schedule.js", "./js/data/extra.js", "./js/ui/wbar.js", "./js/ui/art.js", "./js/i18n/bidi.js",
-               "./js/engine/meals.js", "./js/engine/planparse.js", "./js/ui/theme.js", "./js/ui/exswipe.js",
+               "./js/engine/meals.js", "./js/engine/planparse.js", "./js/ui/theme.js", "./js/ui/exswipe.js", "./js/ui/press.js",
                /* Reading a plan from a PDF works offline: the reader and Mozilla's pdf.js
                   (about 1.8 MB) are precached with everything else. */
                "./js/engine/pdfplan.js", "./js/vendor/pdfjs/pdf.min.mjs", "./js/vendor/pdfjs/pdf.worker.min.mjs"];

@@ -20,7 +20,15 @@ function today(){var d=new Date();return new Date(d.getTime()-d.getTimezoneOffse
    app is written in Latin digits. applyLang() calls setLang on every render. */
 var LOC;
 function setLang(l){LOC=l==="ar"?"ar-EG-u-nu-latn":undefined;}
-function dfmt(d,o){return d.toLocaleDateString(LOC,o);}
+/* One formatter per language and set of options, kept. toLocaleDateString builds a
+   new one on every call — the costliest thing a render did, a few hundred times on a
+   screen with a calendar. Every call here asks for date parts, which a formatter
+   given only those writes exactly as toLocaleDateString would. */
+var FMT={};
+function dfmt(d,o){
+  var k=(LOC||"")+(o?JSON.stringify(o):""),f=FMT[k];
+  if(!f){try{f=FMT[k]=new Intl.DateTimeFormat(LOC,o);}catch(e){return d.toLocaleDateString(LOC,o);}}
+  return f.format(d);}
 function pretty(iso){return dfmt(new Date(iso+"T00:00:00"),{weekday:"short",day:"numeric",month:"short"});}
 function shortd(iso){return dfmt(new Date(iso+"T00:00:00"),{day:"numeric",month:"short"});}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}

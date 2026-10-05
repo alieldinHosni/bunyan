@@ -26,6 +26,7 @@ import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
 import {syncWbar} from "./ui/wbar.js";
 import {initDockScroll} from "./ui/dock.js";
+import {initPress} from "./ui/press.js";
 import {enter as enterEx, fromOf, initExSwipe} from "./ui/exswipe.js";
 import {importName, mealNow, savedById} from "./ui/views/food.js";
 import {mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "./engine/meals.js";
@@ -1569,6 +1570,7 @@ if(window.visualViewport){
   window.visualViewport.addEventListener("scroll",syncViewport);}
 initReorder(moveRow,function(){tap("light");});
 initDockScroll();
+initPress();
 /* A swipe on the exercise moves through the workout (js/ui/exswipe.js). */
 initExSwipe({
   can:function(step){var a=S.active,n=V.logIdx+step;return !!(a&&!V.sheet&&V.tab==="train"&&n>=0&&n<a.entries.length);},
