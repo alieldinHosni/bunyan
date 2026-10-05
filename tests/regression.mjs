@@ -54,7 +54,10 @@ async function tapTab(page,tab){
   if(!b||b.y>=page.viewportSize().height)throw new Error("the dock is out of view");
   await page.touchscreen.tap(b.x+b.width/2,b.y+b.height/2);await page.waitForTimeout(60);}
 async function startWorkout(page){await tapTab(page,"train");await pause(page);await page.tap('[data-startday]');await pause(page,400);}
+/* ONLY=<text> runs just the tests whose names contain it. */
+const ONLY=process.env.ONLY||"";
 async function test(name,fn,o){
+  if(ONLY&&name.indexOf(ONLY)<0)return;
   const env=await open(o);
   try{await fn(env.page,env);if(env.errs.length)throw new Error("page errors: "+env.errs.join(" | "));passes++;console.log("PASS",name);}
   catch(e){fails++;console.log("FAIL",name,"—",e.message);}
@@ -866,47 +869,52 @@ await test("Exercises: a sideways swipe moves between them; a nudge or a vertica
 },{prefs:{autorest:true,anim:true}});
 async function dockTest(page,slide){
   const st=()=>page.evaluate(()=>{const n=document.getElementById("nav"),d=n.querySelector(".dock");
-    return {dh:n.style.getPropertyValue("--dh")||"0",gone:d.getBoundingClientRect().top>=innerHeight||getComputedStyle(d).opacity==="0",
-      taps:getComputedStyle(d).pointerEvents!=="none",y:Math.round(scrollY)};});
+    return {away:n.classList.contains("dhid")?"1":"0",gone:d.getBoundingClientRect().top>=innerHeight||getComputedStyle(d).opacity==="0",
+      taps:getComputedStyle(d).pointerEvents!=="none",y:Math.round(scrollY),dt:parseInt(n.style.getPropertyValue("--dt"))||0};});
   const scroll=async(dy,n)=>{for(let i=0;i<n;i++){await page.evaluate(d=>window.scrollBy(0,d),dy);await page.waitForTimeout(16);}};
+  const settle=()=>pause(page,650);
   await tapTab(page,"progress");await pause(page);
-  await scroll(10,3);await pause(page,400);
-  eq((await st()).dh,"0","a little scroll near the top leaves it");
-  await scroll(15,10);await pause(page,450);
-  let s=await st();eq([s.dh,s.gone,s.taps],["1",true,false],"scrolling down takes it away");
-  if(slide){
-    await scroll(-10,2);eq((await st()).dh!=="1",true,"it follows the finger back");
-  }
-  await scroll(-15,4);await pause(page,450);
-  s=await st();eq([s.dh,s.gone,s.taps],["0",false,true],"scrolling up brings it back");
-  await scroll(15,10);await pause(page,450);eq((await st()).dh,"1","down again");
+  await scroll(10,3);await settle();
+  eq((await st()).away,"0","a little scroll near the top leaves it");
+  await scroll(15,10);await settle();
+  let s=await st();eq([s.away,s.gone,s.taps],["1",true,false],"scrolling down takes it away");
+  /* A thumb adjusting is not asking for the dock. */
+  await scroll(-10,3);await settle();eq((await st()).away,"1","a small turn back leaves it away");
+  await scroll(-15,4);await settle();
+  s=await st();eq([s.away,s.gone,s.taps],["0",false,true],"scrolling up brings it back");
+  await scroll(15,10);await settle();eq((await st()).away,"1","down again");
   /* Safari resizes the viewport as its toolbar collapses on the way down. */
   await page.setViewportSize({width:390,height:900});await pause(page,300);
-  eq((await st()).dh,"1","a viewport resize mid-scroll leaves it away");
+  eq((await st()).away,"1","a viewport resize mid-scroll leaves it away");
   await page.setViewportSize({width:390,height:844});await pause(page,300);
   /* A sheet pins the page and puts it back; neither jump is the user scrolling. */
   const y=(await st()).y;
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("backup");});await pause(page,400);
-  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,450);
-  s=await st();eq([s.dh,s.y],["1",y],"a sheet opening and closing leaves it as it was");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await settle();
+  s=await st();eq([s.away,s.y],["1",y],"a sheet opening and closing leaves it as it was");
   /* The bottom of the page is not a request for the dock; scrolling up is. */
-  await scroll(40,40);await pause(page,450);
-  s=await st();eq([s.dh,s.y>=await page.evaluate(()=>document.documentElement.scrollHeight-innerHeight-1)],["1",true],"at the bottom it stays away");
-  await scroll(-15,4);await pause(page,450);eq((await st()).dh,"0","scrolling up from the bottom brings it back");
-  await scroll(15,10);await pause(page,450);
-  await page.evaluate(()=>window.scrollTo(0,0));await pause(page,450);
-  eq((await st()).dh,"0","at the top it is back");
+  await scroll(40,40);await settle();
+  s=await st();eq([s.away,s.y>=await page.evaluate(()=>document.documentElement.scrollHeight-innerHeight-1)],["1",true],"at the bottom it stays away");
+  /* The page getting shorter under the reader carries the position up with it. */
+  await page.evaluate(()=>{const d=document.createElement("div");d.id="tallpad";d.style.height="700px";document.getElementById("app").appendChild(d);});
+  await scroll(40,25);await settle();
+  await page.evaluate(()=>document.getElementById("tallpad").remove());await settle();
+  eq((await st()).away,"1","a page that shrinks at the bottom leaves it away");
+  await scroll(-15,4);await settle();eq((await st()).away,"0","scrolling up from the bottom brings it back");
+  await scroll(15,10);await settle();
+  await page.evaluate(()=>window.scrollTo(0,0));await settle();
+  eq((await st()).away,"0","at the top it is back");
   if(slide){
-    /* While a finger is down it only follows, however long the pause; it settles once
-       the finger lifts, and at a pace set by the distance left. */
-    const touch=n=>page.evaluate(n=>window.dispatchEvent(new Event(n)),n);
-    await touch("touchstart");await scroll(10,10);await scroll(4,1);await pause(page,400);
-    const mid=+(await st()).dh;
-    if(!(mid>0&&mid<1))throw new Error("expected it part-way while the finger rests, got "+mid);
-    await touch("touchend");await pause(page,500);
-    eq((await st()).dh,"1","settles once the finger lifts");
-    const dt=await page.evaluate(()=>document.getElementById("nav").style.getPropertyValue("--dt"));
-    if(!(parseInt(dt)>=110&&parseInt(dt)<=240))throw new Error("settle pace "+dt);
+    /* It moves by a transition of transform alone, which the compositor runs. */
+    eq(await page.evaluate(()=>getComputedStyle(document.querySelector("#nav .dock")).transitionProperty),"transform","what moves");
+    /* The move keeps the scroll's pace: slower for a slow scroll, quicker for a flick. */
+    await scroll(3,45);await settle();
+    s=await st();eq(s.away,"1","a slow scroll takes it away too");
+    const slow=s.dt;
+    await scroll(-60,3);await settle();
+    s=await st();eq(s.away,"0","a flick up brings it back");
+    const quick=s.dt;
+    if(!(slow>quick&&slow<=520&&quick>=300))throw new Error("pace: slow "+slow+"ms, quick "+quick+"ms");
   }
 }
 await test("Dock: a page with little to scroll keeps its dock",async page=>{
@@ -914,17 +922,17 @@ await test("Dock: a page with little to scroll keeps its dock",async page=>{
   const max=await page.evaluate(()=>document.documentElement.scrollHeight-innerHeight);
   if(max<=0||max>=290)throw new Error("Home is not a short page here ("+max+"px)");
   for(let i=0;i<12;i++){await page.evaluate(()=>window.scrollBy(0,15));await page.waitForTimeout(16);}
-  await pause(page,450);
-  eq(await page.evaluate(()=>document.getElementById("nav").style.getPropertyValue("--dh")||"0"),"0");
+  await pause(page,650);
+  eq(await page.evaluate(()=>document.getElementById("nav").classList.contains("dhid")),false);
 },{prefs:{anim:true}});
-await test("Dock: slides off scrolling down and back scrolling up, following the finger",async page=>{await dockTest(page,true);},{prefs:{anim:true}});
+await test("Dock: slides off scrolling down and back scrolling up, at the scroll's pace",async page=>{await dockTest(page,true);},{prefs:{anim:true}});
 await test("Dock: with animations off it fades out and back instead",async page=>{await dockTest(page,false);});
 await test("Dock: the workout bar takes the dock's place while it is away, and still opens the workout",async page=>{
   await startWorkout(page);await tapTab(page,"profile");await pause(page);
   const pos=()=>page.evaluate(()=>Math.round(document.querySelector("#wbar .wbar").getBoundingClientRect().bottom));
   const p0=await pos();
   for(let i=0;i<12;i++){await page.evaluate(()=>window.scrollBy(0,15));await page.waitForTimeout(16);}
-  await pause(page,450);
+  await pause(page,650);
   eq(await pos()-p0,64+8,"it drops by the dock's height and the gap");
   await page.tap("#wbar .wbar");await pause(page,500);
   eq(await ev(page,"V.tab"),"train");

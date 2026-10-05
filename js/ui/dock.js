@@ -46,30 +46,40 @@ function build(el){
 }
 
 /* ---- out of the way while reading ------------------------------------------------
-   Scrolling down slides the dock off the bottom and scrolling up brings it back. It
-   moves exactly as far as the page does, so it travels at the finger's pace, and it
-   only settles — fully in or fully out — once the finger is off the glass and the
-   page has stopped moving, finishing the last few pixels at a speed that matches the
-   distance left rather than a fixed animation.
+   Scrolling down slides the dock away and scrolling up brings it back.
 
-   These are short pages, not a feed, so three rules keep it calm:
-   - The rubber band past either end is not scrolling. The position is clamped to the
-     page, so the bounce at the bottom can never read as a scroll up and pull the
-     dock back in.
-   - Reaching the bottom does not bring it back. Only scrolling up does: that is the
-     user asking for it.
+   Each move is one CSS transition, handed to the compositor whole. It used to be a
+   position written from script on every scroll event, and on a phone that lands a
+   frame behind the page — the dock judders against the content it is meant to move
+   with — and a layer pushed off the screen that way is repainted when it comes back,
+   so its icons flicker in. A transition runs off the main thread: it is smooth however
+   busy the page is, and the dock is never repainted while it moves.
+
+   It still keeps the scroll's pace. The move is slower for a slow scroll and quicker
+   for a flick (SLOW…QUICK ms), and it always eases out, so it never snaps. A change of
+   mind half-way turns it round from where it is.
+
+   When it moves:
+   - Away once the page has gone AWAY px down in one go, past the first TOP px.
+   - Back once it has come BACK px up in one go. A small reversal — a thumb adjusting,
+     a flick settling — is not someone asking for the dock.
+
+   These are short pages, not a feed, so:
+   - The rubber band past either end is not scrolling: positions are clamped to the
+     page, so the bounce at the bottom can never read as a scroll up.
+   - Reaching the bottom does not bring it back. Only scrolling up does.
+   - A page that gets shorter under the reader (a set deleted at the end) carries the
+     position up with it. That is not a scroll up either.
    - A page with less than about a third of a screen to scroll keeps its dock. Hiding
      it there buys almost nothing and only makes it flicker.
    It is always there at the top of a page, on a new screen, and when focus moves into
    it.
 
-   Only the dock inside <nav> moves, and only by the translate property, which the
-   stylesheet scales by --dh (0 shown … 1 hidden) on nav and on the workout bar: the
-   fixed boxes themselves never move (see "The dock" in index.html). The workout bar
-   drops into the dock's place rather than leaving, so a workout in progress stays
-   one tap away. */
-var navEl=null,wbEl=null,hid=0,travel=0,lastY=null,dir=0,acc=0,settleT=0,frame=0,touching=false;
-var TOP=56;     /* scrolled less than this, the dock stays */
+   Only the dock inside <nav> moves, and the workout bar's pill, which drops into the
+   dock's place rather than leaving, so a workout in progress stays one tap away. The
+   fixed boxes themselves never move (see "The dock" in index.html). */
+var TOP=56,AWAY=24,BACK=40,QUICK=300,SLOW=520;
+var navEl=null,wbEl=null,away=false,travel=0,lastY=null,lastMax=0,acc=0,trail=[];
 function measure(){
   var d=navEl&&navEl.firstChild;if(!d)return;
   var lift=parseFloat(getComputedStyle(navEl).paddingBottom)||12;
@@ -80,67 +90,58 @@ function reducedMotion(){
   catch(e){return false;}}
 function maxScroll(){return Math.max(0,document.documentElement.scrollHeight-window.innerHeight);}
 function tooShort(){return maxScroll()<Math.max(travel*2,window.innerHeight*.35);}
-/* ms: how long the move to the new position takes; 0 while it follows the finger. */
-function paintHide(ms){
-  var p=travel?Math.min(1,Math.max(0,hid/travel)):0,fade=reducedMotion();
+/* How fast the page is moving, px/ms, over about the last tenth of a second. */
+function speed(){
+  if(trail.length<2)return 0;
+  var a=trail[0],b=trail[trail.length-1];
+  return b[0]>a[0]?Math.abs(b[1]-a[1])/(b[0]-a[0]):0;}
+/* A slow scroll (0.15 px/ms and under) gets the slow move, a flick (1.5 and over) the
+   quick one, and everything between is in proportion. */
+function paceFor(v){
+  var k=Math.min(1,Math.max(0,(v-.15)/1.35));
+  return Math.round(SLOW-(SLOW-QUICK)*k);}
+function setAway(on,ms){
+  if(away===on)return;
+  away=on;
+  var fade=reducedMotion();
   [navEl,wbEl].forEach(function(el){
     if(!el)return;
-    el.classList.toggle("dsettle",ms>0);
-    if(ms>0)el.style.setProperty("--dt",ms+"ms");
+    /* Duration first, in the same style change as the class: a transition takes the
+       timing of the style it is going to. */
+    el.style.setProperty("--dt",(fade?150:ms||SLOW)+"ms");
     el.classList.toggle("dfade",fade);
-    el.classList.toggle("dhid",p>=1);
-    el.style.setProperty("--dh",String(Math.round(p*1000)/1000));});}
-/* The pace of a settle: about as fast as a gentle scroll covers the same ground. */
-function paceFor(dist){return Math.round(Math.min(240,Math.max(110,Math.abs(dist)*2.4)));}
-function moveTo(to){
-  clearTimeout(settleT);
-  if(hid===to)return;
-  var ms=paceFor(to-hid);
-  hid=to;paintHide(ms);}
-function showDock(){moveTo(0);}
-function settle(){
-  if(touching||!travel||hid===0||hid===travel)return;
-  /* Finish the way it was going, unless it had barely started. */
-  moveTo(dir>0?(hid>travel*.25?travel:0):(hid<travel*.75?0:travel));}
-function armSettle(){clearTimeout(settleT);if(!touching)settleT=setTimeout(settle,110);}
+    el.classList.toggle("dhid",on);});}
+function showDock(){acc=0;setAway(false,paceFor(speed()));}
 function onScroll(){
   /* A sheet pins the page (lockScroll), which reads as a jump to the top and, when it
      closes, back down again. Neither is the user scrolling. */
   if(document.body.style.position==="fixed"){lastY=null;return;}
-  var max=maxScroll();
+  var max=maxScroll(),now=performance.now();
   /* Clamped: iOS reports positions past either end while the page bounces. */
   var y=Math.min(max,Math.max(0,window.pageYOffset||0));
-  if(lastY===null){lastY=y;return;}
-  var dy=y-lastY;lastY=y;
+  var shrank=max<lastMax&&y>=max-1;
+  lastMax=max;
+  if(lastY===null||shrank){lastY=y;acc=0;trail=[[now,y]];return;}
+  var dy=y-lastY;
   if(!travel)measure();
+  /* The first event of a new scroll is measured over one frame: the one before it
+     belongs to the last scroll, however long ago that was. */
+  if(!trail.length||now-trail[trail.length-1][0]>100)trail=[[now-16,lastY]];
+  lastY=y;
+  trail.push([now,y]);
+  while(trail.length>2&&now-trail[0][0]>110)trail.shift();
   if(y<=TOP||tooShort()){showDock();return;}
   if(!dy)return;
-  dir=dy>0?1:-1;
-  if(reducedMotion()){
-    /* No sliding: it fades out going down and back in going up, once the scroll has
-       gone far enough in one direction to mean it — a layout shift of a pixel or two
-       is not a scroll. */
-    acc=(acc*dir>0?acc:0)+dy;
-    if(Math.abs(acc)<16)return;
-    moveTo(dir>0?travel:0);
-    return;}
-  clearTimeout(settleT);
-  var nh=Math.min(travel,Math.max(0,hid+dy));
-  if(nh!==hid){
-    hid=nh;
-    if(!frame)frame=requestAnimationFrame(function(){frame=0;paintHide(0);});}
-  armSettle();}
+  /* Distance in one direction; turning round starts the count again. */
+  acc=(acc*dy>0?acc:0)+dy;
+  if(!away&&acc>=AWAY)setAway(true,paceFor(speed()));
+  else if(away&&acc<=-BACK)setAway(false,paceFor(speed()));}
 function initDockScroll(){
   navEl=document.getElementById("nav");wbEl=document.getElementById("wbar");
   window.addEventListener("scroll",onScroll,{passive:true});
-  /* While a finger is down the dock only follows; it settles once the finger lifts and
-     any momentum has run out (the scroll events stop). */
-  window.addEventListener("touchstart",function(){touching=true;clearTimeout(settleT);},{passive:true});
-  ["touchend","touchcancel"].forEach(function(n){
-    window.addEventListener(n,function(e){touching=!!(e.touches&&e.touches.length);armSettle();},{passive:true});});
   /* Only re-measured: Safari fires resize as its toolbar collapses mid-scroll, and
      showing the dock then would bring it back while scrolling down. */
-  window.addEventListener("resize",measure);
+  window.addEventListener("resize",function(){measure();lastMax=maxScroll();});
   /* Keyboard and screen-reader users reach the dock by focus, not by scrolling. */
   if(navEl)navEl.addEventListener("focusin",showDock);}
 /* After every render. A new screen — another tab, or a page inside one, like a day or
@@ -152,8 +153,8 @@ function checkDock(screen){
   lastScreen=screen;
   /* A new screen starts its own scroll: whatever position it lands on, or an event
      still in flight from the old one, is not the user scrolling it. */
-  if(moved)lastY=null;
-  if(hid===0)return;
+  if(moved){lastY=null;acc=0;}
+  if(!away)return;
   if(!travel)measure();
   if(moved||tooShort())showDock();}
 
