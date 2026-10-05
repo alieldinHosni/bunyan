@@ -467,9 +467,11 @@ body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--
    below the screen edge; the workout bar drops into the dock's place. translate, not
    transform, so the press scale and the bar's entry animation still apply, and the
    fixed boxes themselves never move. It follows the finger with no transition and
-   eases only when it settles (.dsettle). With reduced motion it fades instead. */
+   eases only when it settles (.dsettle), over --dt — set from the distance left, so
+   the finish matches the scroll's pace — with a decelerating curve. With reduced
+   motion it fades instead. */
 .dock{translate:0 calc(var(--dh,0) * (100% + var(--dock-lift) + 24px))}
-nav.dsettle .dock{transition:translate var(--m-comp) var(--e-standard)}
+nav.dsettle .dock{transition:translate var(--dt,var(--m-comp)) var(--e-decel)}
 nav.dhid .dock{pointer-events:none}
 nav.dfade .dock{translate:none;opacity:calc(1 - var(--dh,0))}
 nav.dfade.dsettle .dock{transition:opacity var(--m-micro) var(--e-standard)}
@@ -491,7 +493,7 @@ body.kb #wbar{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(
   transition:transform var(--m-press) var(--e-standard)}
 .wbar.in{animation:wbIn var(--m-comp) var(--e-decel)}
 .wbar{translate:0 calc(var(--dh,0) * (var(--dock-h) + var(--wbar-gap)))}
-#wbar.dsettle .wbar{transition:translate var(--m-comp) var(--e-standard),transform var(--m-press) var(--e-standard)}
+#wbar.dsettle .wbar{transition:translate var(--dt,var(--m-comp)) var(--e-decel),transform var(--m-press) var(--e-standard)}
 #wbar.dfade.dsettle .wbar{transition:transform var(--m-press) var(--e-standard)}
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
   .wbar{background:var(--glass);-webkit-backdrop-filter:saturate(160%) blur(22px);backdrop-filter:saturate(160%) blur(22px)}}
@@ -879,7 +881,14 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
   color:var(--accent);font-size:22px;line-height:1;padding:0;
   display:flex;align-items:center;justify-content:center}
 .ss-back:active{color:var(--accentHi)}
-.ss-title{flex:1;min-width:0}
+/* The title is a button: it opens today's exercises (the "exlist" sheet). */
+.ss-title{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;margin:0;padding:2px 0;
+  border:none;background:none;color:var(--text);font:inherit;text-align:start;cursor:pointer;border-radius:var(--r1)}
+.ss-title:active{opacity:.7}
+.ss-name{display:block;max-width:100%}
+.ss-meta{display:block}
+.ss-caret{width:13px;height:13px;margin-inline-start:2px;vertical-align:-2px;fill:none;stroke:currentColor;
+  stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .ss-name{font-size:15px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
 .ss-meta{font-size:11.5px;color:var(--dim);margin-top:1px}
@@ -899,6 +908,18 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
 .ss-bar{height:3px;background:var(--raised);border-radius:2px;overflow:hidden;margin-top:11px}
 .ss-bar i{display:block;height:3px;background:var(--accent);border-radius:2px;
   transition:width var(--m-data) var(--e-decel)}
+/* The segments with a step either side: ‹ ▬▬▬ ›. */
+.ss-nav{display:flex;align-items:center;gap:6px;margin:0 -10px 18px}
+.ss-nav .ss-seg{flex:1;min-width:0;margin:0}
+.ss-navb{flex:none;display:grid;place-items:center;width:44px;height:44px;margin:-6px 0;padding:0;border:none;
+  background:none;color:var(--sub);border-radius:50%;cursor:pointer;transition:color var(--m-micro) var(--e-standard)}
+.ss-navb svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ss-navb:active:not(:disabled){color:var(--accentHi);transform:scale(.92)}
+.ss-navb:disabled{opacity:.28;cursor:default}
+[dir="rtl"] .ss-navb svg{transform:scaleX(-1)}
+/* The exercise itself, as one pane a sideways swipe moves (js/ui/exswipe.js). Vertical
+   panning stays the browser's; sideways is the swipe's. */
+.ex-pane{touch-action:pan-y;will-change:auto}
 .ss-seg{display:flex;gap:4px;margin:0 0 18px}
 .ss-seg button{flex:1;padding:9px 0;background:none;border:none;position:relative}
 .ss-seg button:after{content:"";position:absolute;left:0;right:0;top:-11px;bottom:-11px}
@@ -1822,6 +1843,29 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .piacts .btn{margin:0}
 .pifile{position:relative;cursor:pointer}
 .pifile input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+/* Reading a PDF, and the targets it sets (js/engine/pdfplan.js). */
+.pibusy{display:flex;align-items:center;gap:10px;margin:var(--s4) 2px 0;font-size:14px;color:var(--sub)}
+.pispin{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);
+  animation:pispin .8s linear infinite}
+@keyframes pispin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.pispin{animation-duration:2.4s}}
+.pitg{margin:0 0 var(--s4);padding:6px 14px 0;border-radius:var(--r3);background:var(--raised);border:1px solid var(--border)}
+.pitg-r{display:grid;grid-template-columns:1fr auto;align-items:baseline;column-gap:12px;padding:9px 0;font-size:14px}
+.pitg-r+.pitg-r{border-top:1px solid var(--border)}
+.pitg-r b{font-weight:700;font-variant-numeric:tabular-nums}
+.pitg-r i{grid-column:1/-1;font-style:normal;font-size:12px;color:var(--dim)}
+.pitg-r i:empty{display:none}
+.pitg-use{display:flex;align-items:center;justify-content:space-between;gap:12px;width:calc(100% + 28px);margin:6px -14px 0;
+  min-height:56px;padding:0 14px;border:none;border-top:1px solid var(--border);background:none;color:var(--text);
+  font:inherit;font-weight:700;font-size:14.5px;text-align:start;cursor:pointer}
+.tgl{position:relative;flex:0 0 48px;width:48px;height:28px;border-radius:14px;background:var(--border);
+  transition:background var(--m-micro) var(--e-standard)}
+.tgl i{position:absolute;top:3px;inset-inline-start:3px;width:22px;height:22px;border-radius:11px;background:#fff;
+  transition:transform var(--m-micro) var(--e-standard)}
+.tgl.on{background:var(--accent)}
+.tgl.on i{transform:translateX(20px)}
+[dir="rtl"] .tgl.on i{transform:translateX(-20px)}
+.plist-note{display:block;margin-top:2px;font-size:12px;color:var(--dim)}
 .picard{margin:0 0 10px;padding:12px 14px 6px;border-radius:var(--r3);background:var(--raised);border:1px solid var(--border)}
 .picard-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
 .picard-h b{font-family:var(--display);font-size:16px}
@@ -2756,6 +2800,23 @@ button.pgrow:active{background:var(--surface)}
 /* The workout's own tools — Replace, Remove, Skip, Add — as one row of equal tiles,
    icon over a one-word label, so four fit a phone without wrapping. The row takes
    however many are offered (Remove and Skip come and go). */
+.bwnote{margin:12px 2px 0;font-size:12.5px;line-height:1.45;color:var(--dim)}
+/* Today's exercises, from the session title. */
+.exl{display:flex;flex-direction:column;gap:8px;margin-bottom:var(--s4)}
+.exl-row{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 14px;margin:0;
+  border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);color:var(--text);
+  font:inherit;text-align:start;cursor:pointer}
+.exl-row:active{transform:scale(.99)}
+.exl-row.on{border-color:var(--accent-edge);background:var(--accent-tint)}
+.exl-n{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;
+  background:var(--surface);color:var(--sub);font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.exl-row.on .exl-n{background:var(--accent);color:var(--onAccent)}
+.exl-row.did .exl-n{background:var(--ok);color:var(--onOk)}
+.exl-n svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.exl-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.exl-t b{font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exl-t small{font-size:12.5px;color:var(--dim)}
+.exl-cur{flex:none;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accentHi)}
 .ss-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;margin:var(--s4) 0 0}
 .ss-tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:64px;
   padding:8px 4px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);

@@ -789,6 +789,81 @@ await test("Back returns to where you were on the screen before; a tab tap alway
   await tapTab(page,"progress");await pause(page,700);
   eq(await page.evaluate(()=>Math.round(scrollY)),0,"a tab opens at its top, not where the browser last saw it");
 });
+await test("PDF plan: meals, daily targets and supplements are read, reviewed and applied, and Undo puts it all back",async page=>{
+  await tapTab(page,"food");await pause(page);await page.tap('[data-fsec="plan"]');await pause(page);
+  await page.tap('[data-pimport]');await pause(page);
+  const before=await ev(page,"JSON.stringify(S.goals)");
+  await page.setInputFiles("#pi_file",new URL("./fixtures/plan-sample.pdf",import.meta.url).pathname);
+  for(let i=0;i<60&&!(await page.$(".picard"));i++)await pause(page,250);
+  eq(await page.$$eval(".picard .picard-h b",a=>a.map(e=>e.textContent)),["Meal 1","Meal 2","Snacks","Meal 3","Supplements"],"meals");
+  eq(await page.$$eval(".plist-r.miss",a=>a.length),0,"every line matched a food");
+  eq(await page.$$eval(".pitg-r b",a=>a.map(e=>e.textContent)),["2,200 kcal","160 g","230 g","70 g","2.75 L","9,000"],"targets");
+  const supp=await page.$$eval(".picard",a=>a[4].innerText);
+  for(const w of ["Vitamin D3","1,000 IU","With a fatty meal","Magnesium","200 mg","Before bed","Zinc","15 mg"])
+    if(supp.indexOf(w)<0)throw new Error("supplements lack "+w+": "+supp);
+  const box=await page.$eval("#pi_text",e=>e.value);
+  if(!/^Meal 1 \(Breakfast\):/.test(box))throw new Error("the plan text is not in the box: "+box.slice(0,60));
+  await page.tap("[data-puse]");await pause(page,500);
+  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.goals.c,S.goals.f,S.goals.water,S.goals.steps]"),[2200,160,230,70,2750,9000],"applied");
+  eq(await page.evaluate(async()=>{const M=await import("/js/engine/meals.js");return M.mealSlots().map(x=>M.mealName(x.id));}),
+    ["Meal 1","Meal 2","Snacks","Meal 3","Supplements"],"Meal 3 keeps its number after the snack");
+  eq(await page.$$eval(".bnum",a=>a.map(e=>e.textContent)),["1","2","","3",""],"badges follow the names");
+  await page.tap(".toast-undo");await pause(page);
+  eq(await ev(page,"JSON.stringify(S.goals)"),before,"Undo restores the targets");
+});
+await test("Supplement doses: mg, mcg and IU are read as doses",async page=>{
+  const r=await page.evaluate(async()=>{
+    const N=await import("/js/engine/nutrition.js"),P=await import("/js/engine/planparse.js");
+    await new Promise(res=>N.loadFoods(res));
+    return P.parsePlan("Supplements:\n200 mg magnesium\n2000 IU vitamin D3\n100 mcg vitamin K2\n1 softgel omega 3\n1 tablet zinc")[0].items.map(i=>i.n+"|"+i.label);});
+  eq(r,["Magnesium (Glycinate or Citrate)|200 mg","Vitamin D3|2,000 IU","Vitamin K2 (MK-7)|100 mcg","Omega-3 Fish Oil|1 × softgel","Zinc|1 × tablet"]);
+});
+await test("Bodyweight lifts: the box is added weight, and body weight counts in volume and records",async page=>{
+  const r=await page.evaluate(async()=>{
+    const F=await import("/js/engine/formulas.js"),X=await import("/js/data/exercises.js");
+    await new Promise(res=>X.loadExDB(res));
+    const s={date:"2030-01-01",entries:[{name:"Pullups",sets:[{w:0,r:8},{w:10,r:5}]},{name:"Pushups",sets:[{w:0,r:20}]},{name:"Plank",sets:[{w:0,r:60}]}]};
+    return [F.loadOf("Pullups",0,"2030-01-01"),F.loadOf("Pullups",10,"2030-01-01"),F.loadOf("Pullups",84,"2030-01-01"),
+      Math.round(F.sessionVolume(s)),F.loadText("Pullups",0),F.loadText("Pullups",10),F.bwShare("Plank")];});
+  /* Body weight 84 (the seed): 84×8 + 94×5 + 84×0.65×20, and the plank scores nothing. */
+  eq(r,[84,94,84,Math.round(84*8+94*5+54.6*20),"BW","BW + 10 kg",0]);
+  await startWorkout(page);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.sd={addlive:true};(await import("/js/ui/actions.js")).addExercise("Pullups");});
+  await pause(page,400);
+  const last=await ev(page,"S.active.entries.length-1");
+  await page.tap('[data-exlist]');await pause(page,400);await page.tap('#sheet [data-jumpl="'+last+'"]');await pause(page,400);
+  eq(await page.$eval(".setrow.hd",e=>e.innerText.indexOf("+KG")>-1),true,"the column says +KG");
+  if(!(await page.$(".bwnote")))throw new Error("no note on what +KG means");
+  await page.fill('#in_w','0');await page.fill('#in_r','9');await page.tap('[data-logset]');await pause(page,900);
+  eq(await ev(page,"S.active.entries[S.active.entries.length-1].sets[0].w"),0,"logged as body weight alone");
+},{prefs:{autorest:false}});
+await test("Exercises: a sideways swipe moves between them; a nudge or a vertical drag does not; arrows, list and segments agree",async(page,env)=>{
+  await startWorkout(page);
+  const cdp=await env.ctx.newCDPSession(page);
+  const drag=async(x0,y0,x1,y1,steps=12)=>{
+    await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x0,y:y0}]});
+    for(let i=1;i<=steps;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x0+(x1-x0)*i/steps,y:y0+(y1-y0)*i/steps}]});await page.waitForTimeout(16);}
+    await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(650);};
+  const idx=()=>ev(page,"V.logIdx");
+  await drag(300,520,80,525);eq(await idx(),1,"swipe left: next");
+  await drag(300,520,250,522);eq(await idx(),1,"a nudge springs back");
+  await drag(200,420,240,720);eq(await idx(),1,"a vertical drag scrolls");
+  await drag(80,520,320,525);eq(await idx(),0,"swipe right: previous");
+  await drag(80,520,320,525);eq(await idx(),0,"the first exercise resists");
+  await drag(10,520,300,525);eq(await idx(),0,"not from the screen edge");
+  await page.tap('[data-exnav="1"]');await pause(page,400);eq(await idx(),1,"next arrow");
+  await page.tap('[data-exnav="-1"]');await pause(page,400);eq(await idx(),0,"previous arrow");
+  eq(await page.$eval('[data-exnav="-1"]',e=>e.disabled),true,"no previous at the first");
+  await page.tap('[data-exlist]');await pause(page,400);
+  eq(await page.$$eval("#sheet .exl-row",a=>a.length),await ev(page,"S.active.entries.length"),"the list has every exercise");
+  await page.tap('#sheet [data-jumpl="2"]');await pause(page,400);eq([await idx(),await ev(page,"!!V.sheet")],[2,false],"list jump");
+  await page.tap('[data-jump="1"]');await pause(page,400);eq(await idx(),1,"segment");
+  /* Looking ahead does not end a rest. */
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  await page.evaluate(async()=>{(await import("/js/ui/workout.js")).restControl("hide");});await pause(page,300);
+  await page.tap('[data-exnav="1"]');await pause(page,400);
+  eq(await ev(page,"V.restEnd>Date.now()"),true,"the rest keeps running");
+},{prefs:{autorest:true,anim:true}});
 async function dockTest(page,slide){
   const st=()=>page.evaluate(()=>{const n=document.getElementById("nav"),d=n.querySelector(".dock");
     return {dh:n.style.getPropertyValue("--dh")||"0",gone:d.getBoundingClientRect().top>=innerHeight||getComputedStyle(d).opacity==="0",
@@ -814,12 +889,34 @@ async function dockTest(page,slide){
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("backup");});await pause(page,400);
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,450);
   s=await st();eq([s.dh,s.y],["1",y],"a sheet opening and closing leaves it as it was");
-  await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));await pause(page,450);
-  eq((await st()).dh,"0","at the bottom of the page it is back");
-  await scroll(-20,10);await scroll(15,8);await pause(page,450);eq((await st()).dh,"1","away from the bottom");
+  /* The bottom of the page is not a request for the dock; scrolling up is. */
+  await scroll(40,40);await pause(page,450);
+  s=await st();eq([s.dh,s.y>=await page.evaluate(()=>document.documentElement.scrollHeight-innerHeight-1)],["1",true],"at the bottom it stays away");
+  await scroll(-15,4);await pause(page,450);eq((await st()).dh,"0","scrolling up from the bottom brings it back");
+  await scroll(15,10);await pause(page,450);
   await page.evaluate(()=>window.scrollTo(0,0));await pause(page,450);
   eq((await st()).dh,"0","at the top it is back");
+  if(slide){
+    /* While a finger is down it only follows, however long the pause; it settles once
+       the finger lifts, and at a pace set by the distance left. */
+    const touch=n=>page.evaluate(n=>window.dispatchEvent(new Event(n)),n);
+    await touch("touchstart");await scroll(10,10);await scroll(4,1);await pause(page,400);
+    const mid=+(await st()).dh;
+    if(!(mid>0&&mid<1))throw new Error("expected it part-way while the finger rests, got "+mid);
+    await touch("touchend");await pause(page,500);
+    eq((await st()).dh,"1","settles once the finger lifts");
+    const dt=await page.evaluate(()=>document.getElementById("nav").style.getPropertyValue("--dt"));
+    if(!(parseInt(dt)>=110&&parseInt(dt)<=240))throw new Error("settle pace "+dt);
+  }
 }
+await test("Dock: a page with little to scroll keeps its dock",async page=>{
+  await tapTab(page,"home");await pause(page);
+  const max=await page.evaluate(()=>document.documentElement.scrollHeight-innerHeight);
+  if(max<=0||max>=290)throw new Error("Home is not a short page here ("+max+"px)");
+  for(let i=0;i<12;i++){await page.evaluate(()=>window.scrollBy(0,15));await page.waitForTimeout(16);}
+  await pause(page,450);
+  eq(await page.evaluate(()=>document.getElementById("nav").style.getPropertyValue("--dh")||"0"),"0");
+},{prefs:{anim:true}});
 await test("Dock: slides off scrolling down and back scrolling up, following the finger",async page=>{await dockTest(page,true);},{prefs:{anim:true}});
 await test("Dock: with animations off it fades out and back instead",async page=>{await dockTest(page,false);});
 await test("Dock: the workout bar takes the dock's place while it is away, and still opens the workout",async page=>{

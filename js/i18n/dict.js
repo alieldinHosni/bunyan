@@ -1002,7 +1002,22 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "The set you logged on it is deleted with it.": "المجموعة اللي سجّلتها عليه هتتمسح معاه.",
 "The {n} sets you logged on it are deleted with it.": "الـ{n} مجموعات اللي سجّلتها عليه هتتمسح معاه.",
 "{ex} removed from this workout.": "{ex} اتشال من التمرين ده.",
-"set logged": "مجموعة مسجلة"
+"set logged": "مجموعة مسجلة",
+"BW": "وزن الجسم",
+"Today's exercises": "تمارين النهارده",
+"Previous exercise": "التمرين اللي قبله",
+"bouts": "جولات",
+"Open the PDF your plan came in, or paste it from WhatsApp or Notes. The PDF is read on this phone; nothing is uploaded.": "افتح ملف الـPDF اللي جالك فيه النظام، أو الصقه من واتساب أو النوتس. الملف بيتقري على الموبايل ده ومش بيترفع في أي حتة.",
+"Reading the PDF…": "بنقرا الملف…",
+"Daily targets in the PDF": "الأهداف اليومية في الملف",
+"as now": "زي دلوقتي",
+"now": "دلوقتي",
+"Use these as my daily targets": "خليها أهدافي اليومية",
+"Your plan and its daily targets are in.": "خطتك وأهدافها اليومية اتضافت.",
+"No meals were found in that PDF. Copy its text and paste it instead.": "ملقيناش وجبات في الملف ده. انسخ النص والصقه بدل كده.",
+"That PDF could not be read. Copy its text and paste it instead.": "مقدرناش نقرا الملف ده. انسخ النص والصقه بدل كده.",
+"+KG is weight added to you, like a belt or vest; leave it at 0 for bodyweight. Your {w} is counted in volume and records.": "+كجم هو الوزن اللي بتضيفه على جسمك، زي حزام أو جاكيت أوزان؛ سيبه 0 لو بوزن جسمك بس. وزنك {w} بيتحسب في الحجم والأرقام القياسية.",
+"+KG is weight added to you, like a belt or vest; leave it at 0 for bodyweight. Log your weight and it is counted in volume and records.": "+كجم هو الوزن اللي بتضيفه على جسمك، زي حزام أو جاكيت أوزان؛ سيبه 0 لو بوزن جسمك بس. سجّل وزنك وهيتحسب في الحجم والأرقام القياسية."
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;

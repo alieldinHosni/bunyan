@@ -26,7 +26,10 @@ var UNITS={
   tbsp:15,tablespoon:15,tablespoons:15,
   tsp:5,teaspoon:5,teaspoons:5,
   cup:240,cups:240,
-  scoop:30,scoops:30,slice:0,slices:0,piece:0,pieces:0,can:0,cans:0
+  scoop:30,scoops:30,slice:0,slices:0,piece:0,pieces:0,can:0,cans:0,
+  /* A supplement's own unit: its capsule, softgel or tablet where the food lists one,
+     about a gram otherwise. */
+  capsule:1,capsules:1,softgel:1,softgels:1,tablet:1,tablets:1
 };
 var COUNT_WORDS={a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,
   eight:8,nine:9,ten:10,half:0.5,"1/2":0.5,"quarter":0.25};
@@ -39,11 +42,14 @@ var COUNT_WORDS={a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,
 
    Before this, "1 cup rice" logged 240 g whatever the database said a cup weighed, and
    the servings screen had no way to log a drink by volume at all. */
-var MASS={g:1,kg:1000,oz:28.3495,lb:453.592};
+/* mg and mcg are how supplements are dosed: 200 mg of magnesium, 100 mcg of K2. */
+var MASS={g:1,kg:1000,oz:28.3495,lb:453.592,mg:0.001,mcg:0.000001};
 var VOL={ml:1,l:1000,cup:240,tbsp:15,tsp:5,floz:29.5735};
 var UNIT_ALIAS={gram:"g",grams:"g",gm:"g",gms:"g",gr:"g",
   kilo:"kg",kilos:"kg",kilogram:"kg",kilograms:"kg",
   ounce:"oz",ounces:"oz",lbs:"lb",pound:"lb",pounds:"lb",
+  milligram:"mg",milligrams:"mg",mgs:"mg",microgram:"mcg",micrograms:"mcg","µg":"mcg",ug:"mcg",
+  "i.u.":"iu",ius:"iu",
   millilitre:"ml",milliliter:"ml",millilitres:"ml",milliliters:"ml",mls:"ml",
   litre:"l",liter:"l",litres:"l",liters:"l",
   cups:"cup",tablespoon:"tbsp",tablespoons:"tbsp",teaspoon:"tsp",teaspoons:"tsp",
@@ -51,9 +57,9 @@ var UNIT_ALIAS={gram:"g",grams:"g",gm:"g",gms:"g",gr:"g",
   /* Arabic, as people type it. These arrive folded by norm(). */
   "جرام":"g","جم":"g","كيلو":"kg","مل":"ml","ملي":"ml","لتر":"l","كوب":"cup"};
 /* The label a measure is written with. Stored in the log, so it is not translated. */
-var UNIT_LABEL={g:"g",kg:"kg",oz:"oz",lb:"lb",ml:"ml",l:"L",cup:"cup",tbsp:"tbsp",tsp:"tsp",floz:"fl oz"};
+var UNIT_LABEL={g:"g",kg:"kg",oz:"oz",lb:"lb",ml:"ml",l:"L",cup:"cup",tbsp:"tbsp",tsp:"tsp",floz:"fl oz",mg:"mg",mcg:"mcg",iu:"IU"};
 /* What one tap of + or − moves each by: a splash of milk, not a millilitre. */
-var UNIT_STEP={g:10,kg:0.1,oz:1,lb:0.25,ml:50,l:0.25,cup:0.25,tbsp:1,tsp:1,floz:1};
+var UNIT_STEP={g:10,kg:0.1,oz:1,lb:0.25,ml:50,l:0.25,cup:0.25,tbsp:1,tsp:1,floz:1,mg:50,mcg:25,iu:500};
 function unitKey(u){
   u=String(u==null?"":u).toLowerCase().replace(/\./g,"").replace(/\s+/g," ").trim();
   return UNIT_ALIAS[u]||u;}
@@ -97,7 +103,9 @@ function unitsFor(f){
   var own=(f.s||[]).map(function(s){return String(s[0]||"").toLowerCase();});
   var vol=density(f)?Object.keys(VOL).filter(function(k){
     return !own.some(function(l){return new RegExp("^(1\\s*)?"+k+"s?\\b").test(l);});}):[];
-  return {mass:Object.keys(MASS),vol:vol};}
+  /* mg and mcg are for supplements; nobody weighs chicken in milligrams. */
+  var supp=f.cat==="Supplements";
+  return {mass:Object.keys(MASS).filter(function(k){return supp||(k!=="mg"&&k!=="mcg");}),vol:vol};}
 
 /* Matching lives in engine/text.js so the exercise picker and this share one
    implementation. It was duplicated here first and the two immediately drifted. */
@@ -129,7 +137,7 @@ function parseChunk(chunk){
   var qty=null,unit=null;
 
   /* "200g chicken" / "250 ml milk" / "1.5 kg rice" / "8 oz steak" / "330 مل عصير" */
-  var m=q.match(/^(\d+(?:\.\d+)?)\s*(kg|kilos?|kilograms?|g|gm|gms|gr|grams?|oz|ounces?|lbs?|pounds?|fl oz|ml|mls|millilit(?:re|er)s?|l|litres?|liters?|tbsp|tablespoons?|tsp|teaspoons?|cups?|scoops?|slices?|pieces?|cans?|جرام|جم|كيلو|ملي|مل|لتر|كوب)(?=\s|$)\s*(.*)$/);
+  var m=q.match(/^(\d+(?:\.\d+)?)\s*(kg|kilos?|kilograms?|mg|mgs|milligrams?|mcg|µg|ug|micrograms?|iu|g|gm|gms|gr|grams?|oz|ounces?|lbs?|pounds?|fl oz|ml|mls|millilit(?:re|er)s?|l|litres?|liters?|tbsp|tablespoons?|tsp|teaspoons?|cups?|scoops?|slices?|pieces?|cans?|capsules?|softgels?|tablets?|جرام|جم|كيلو|ملي|مل|لتر|كوب)(?=\s|$)\s*(.*)$/);
   if(m){qty=parseFloat(m[1]);unit=m[2];q=m[3];}
   else{
     /* "3 eggs" / "two bananas" */
@@ -189,6 +197,9 @@ function searchFoods(q,limit){
 /* ---- serving resolution --------------------------------------------- */
 function gramsFor(food,qty,unit){
   if(qty==null)qty=1;
+  /* International units measure a vitamin's effect, not its mass; a dose of D3 weighs
+     next to nothing and carries no calories, so it is kept as its dose. */
+  if(unit&&unitKey(unit)==="iu")return {g:0,label:fmtIU(qty)+" IU"};
   if(unit){
     /* A measure converts through the food: exactly for mass, by its density for
        volume. Typed volume of a food with no density is taken as water, which is
@@ -206,6 +217,8 @@ function gramsFor(food,qty,unit){
   var s=(food.s&&food.s[0])||["100 g",100];
   return {g:qty*s[1],label:qty+" \u00d7 "+s[0]};
 }
+
+function fmtIU(q){return String(Math.round(q)).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
 
 /* ---- the calculation engine ------------------------------------------ */
 function nutritionFor(food,grams){

@@ -24,10 +24,20 @@ var MICON={
   Lunch:'<svg viewBox="0 0 24 24"><path d="M7 16a5 5 0 0 1 10 0M3 16h18M12 5v3M5.2 9.2l1.4 1.4M18.8 9.2l-1.4 1.4M6 20h12"/></svg>',
   Dinner:'<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
   Snack:'<svg viewBox="0 0 24 24"><path d="M12 8c-1.5-1.3-4.5-1.5-6 .5-1.8 2.4-.8 7 1.5 9.5 1.3 1.4 2.8 1.6 4.5.8 1.7.8 3.2.6 4.5-.8 2.3-2.5 3.3-7.1 1.5-9.5-1.5-2-4.5-1.8-6-.5z"/><path d="M12 8c0-2 1-3.5 3-4"/></svg>'};
+/* A meal's badge: its icon if it is one of the four or the supplements, else its
+   number — the one in its name ("Meal 3", kept from an imported plan) before its place. */
+var PILL='<svg viewBox="0 0 24 24"><rect x="3.5" y="8.5" width="17" height="7" rx="3.5" transform="rotate(-35 12 12)"/><path d="M9.6 8.6l4.8 6.8"/></svg>';
+function badgeOf(x,i){
+  if(MICON[x.id])return {icon:MICON[x.id]};
+  var nm=String(x.name||"");
+  if(/^(supplements?|vitamins?|مكملات|فيتامينات)$/i.test(nm.trim()))return {icon:PILL};
+  var m=/(?:^|\s)(\d{1,2})$/.exec(nm.trim());
+  return {n:m?+m[1]:i+1};}
 function mealIcon(id){
-  if(MICON[id])return '<span class="fmt-i" aria-hidden="true">'+MICON[id]+'</span>';
-  var i=mealSlots().map(function(s){return s.id;}).indexOf(id);
-  return '<span class="fmt-i fmt-no" aria-hidden="true">'+(i>=0?i+1:"·")+'</span>';}
+  var sl=mealSlots(),i=sl.map(function(s){return s.id;}).indexOf(id);
+  var bd=i>=0?badgeOf(sl[i],i):(MICON[id]?{icon:MICON[id]}:{n:"·"});
+  if(bd.icon)return '<span class="fmt-i" aria-hidden="true">'+bd.icon+'</span>';
+  return '<span class="fmt-i fmt-no" aria-hidden="true">'+bd.n+'</span>';}
 var TICK='<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>';
 /* The meal an add belongs to when nothing on screen says which — the Add Food button,
    the frequent-food pills, a saved meal: the one after the last with food in it. It
@@ -181,7 +191,8 @@ function vMeal(dsel,name){
     var pt=sumNutrition(plan);
     h+='<div class="tsec"><h2 class="tsec-h">'+t("Your plan")+'</h2><span class="dhint">'+fmtN(pt.kcal)+' kcal</span></div>'
      +'<div class="plist">'+plan.map(function(it){
-        return '<div class="plist-r"><span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')+'</span><b>'+fmtN(it.kcal)+'</b></div>';}).join("")+'</div>'
+        return '<div class="plist-r"><span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')
+          +(it.note?'<small class="plist-note">'+esc(it.note)+'</small>':'')+'</span><b>'+fmtN(it.kcal)+'</b></div>';}).join("")+'</div>'
      +'<button class="btn'+(items.length?' g':'')+' plog" data-logplan="'+esc(name)+'">'+esc(t(items.length?"Add the plan again":"Log as planned"))+'</button>';}
   h+='<button class="btn'+(plan.length&&!items.length?' g':'')+'" data-addfood="'+esc(name)+'">+ '
    +esc(t("Add food to")+" "+mealName(name))+'</button>';
@@ -371,7 +382,7 @@ function vPlan(){
     h+='<div class="drow" data-k="ms:'+esc(x.id)+'" data-rowid="'+esc(x.id)+'">'
      +'<button class="drm" data-rmslot="'+esc(x.id)+'" aria-label="'+esc(t("Remove")+" "+mealName(x.id))+'"><i>'+XSVG+'</i></button>'
      +'<button class="dmain" data-pslot="'+esc(x.id)+'">'
-     +(MICON[x.id]?'<span class="bnum pli" aria-hidden="true">'+MICON[x.id]+'</span>':'<span class="bnum">'+(i+1)+'</span>')
+     +(function(bd){return bd.icon?'<span class="bnum pli" aria-hidden="true">'+bd.icon+'</span>':'<span class="bnum">'+bd.n+'</span>';})(badgeOf(x,i))
      +'<span class="dtext"><span class="drow-n">'+esc(mealName(x.id))+'</span>'
      +'<span class="drow-s">'+slotLine(x.id)+'</span></span>'
      +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
@@ -429,13 +440,26 @@ function vPlanSlot(id){
    and only "Use this plan" replaces the day's meals. */
 function vImport(){
   var pp=V.pparse,h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Import a plan"))+'</h1></div>'
-   +'<p class="dsub">'+esc(t("Paste it from WhatsApp, Notes or a PDF — on iPhone you can copy the text straight out of a photo of it. Or open a text file."))+'</p>';
+   +'<p class="dsub">'+esc(t("Open the PDF your plan came in, or paste it from WhatsApp or Notes. The PDF is read on this phone; nothing is uploaded."))+'</p>';
   h+='<textarea id="pi_text" class="pitext" rows="9" spellcheck="false" placeholder="'
    +esc(t("Meal 1: 3 eggs, 2 slices toast\nMeal 2: 150g chicken, 200g rice\nMeal 3: 200g yogurt, 30g almonds"))+'">'+esc(V.pitext||"")+'</textarea>'
-   +'<div class="piacts"><label class="btn g pifile"><input id="pi_file" type="file" accept=".txt,.csv,.md,text/plain,text/csv">'
+   +'<div class="piacts"><label class="btn g pifile"><input id="pi_file" type="file" accept=".pdf,application/pdf,.txt,.csv,.md,text/plain,text/csv">'
    +esc(t("Open a file"))+'</label>'
    +'<button class="btn" data-pread="1">'+esc(t("Read the plan"))+'</button></div>';
+  if(V.pibusy)h+='<p class="pibusy" role="status"><span class="pispin" aria-hidden="true"></span>'+esc(t("Reading the PDF…"))+'</p>';
   if(pp){
+    /* What the PDF sets for the day, beside what the app uses now. Applied with the plan
+       unless switched off. */
+    var tg=V.ptargets,tk=tg?["kcal","p","c","f","water","steps"].filter(function(k){return tg[k]>0;}):[];
+    if(tk.length){
+      var TL={kcal:["Calories","kcal"],p:["Protein","g"],c:["Carbs","g"],f:["Fat","g"],water:["Water","L"],steps:["Steps",""]};
+      var fv=function(k,v){return k==="water"?String(Math.round(v/50)*50/1000)+" L":fmtN(v)+(TL[k][1]?" "+TL[k][1]:"");};
+      h+='<div class="tsec"><h2 class="tsec-h">'+t("Daily targets in the PDF")+'</h2></div><div class="pitg">'
+       +tk.map(function(k){var cur=S.goals&&S.goals[k],same=cur===tg[k];
+          return '<div class="pitg-r"><span>'+esc(t(TL[k][0]))+'</span><b>'+esc(fv(k,tg[k]))+'</b>'
+           +'<i>'+(same?esc(t("as now")):cur?esc(t("now"))+' '+esc(fv(k,cur)):'')+'</i></div>';}).join("")
+       +'<button class="pitg-use" role="switch" aria-checked="'+(V.papplyT!==false)+'" data-papplyt="1">'
+       +'<span>'+esc(t("Use these as my daily targets"))+'</span><span class="tgl'+(V.papplyT!==false?' on':'')+'" aria-hidden="true"><i></i></span></button></div>';}
     if(!pp.length)h+='<div class="empty"><p>'+esc(t("No meals or foods were found in that text."))+'</p></div>';
     else{
       var nItems=0,nTodo=0,kc=0;
@@ -445,7 +469,8 @@ function vImport(){
       pp.forEach(function(m,i){
         var mt=sumNutrition(m.items);
         h+='<div class="picard"><div class="picard-h"><b>'+esc(importName(m,i))+'</b><span>'+fmtN(mt.kcal)+' kcal</span></div>'
-         +m.items.map(function(it){return '<div class="plist-r"><span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')+'</span><b>'+fmtN(it.kcal)+'</b></div>';}).join("")
+         +m.items.map(function(it){return '<div class="plist-r"><span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')
+           +(it.note?'<small class="plist-note">'+esc(it.note)+'</small>':'')+'</span><b>'+fmtN(it.kcal)+'</b></div>';}).join("")
          +m.todo.map(function(raw){return '<div class="plist-r miss"><span>'+esc(raw)+'</span><b>'+esc(t("not found"))+'</b></div>';}).join("")
          +'</div>';});
       if(nTodo)h+='<p class="bnote">'+esc(t("Lines that matched no food are kept with their meal, to find one by one."))+'</p>';
@@ -454,9 +479,12 @@ function vImport(){
   return h;}
 /* What an imported meal will be called in the app: one of the four named meals in
    the language of the app, a numbered meal by its place, otherwise its own heading. */
+/* A meal the plan numbered keeps its number: a plan's Meal 3 after its snack is still
+   Meal 3, not the fourth meal of the day. */
 function importName(m,i){
   if(m.named)return t(m.named==="Snack"?"Snacks":m.named);
-  if(m.n||!m.name)return t("Meal {n}").replace("{n}",i+1);
+  if(m.n)return t("Meal {n}").replace("{n}",m.n);
+  if(!m.name)return t("Meal {n}").replace("{n}",i+1);
   return m.name;}
 
 export {glassUnit, importName, mealNow, MICON, savedById, vFood};
