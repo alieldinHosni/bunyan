@@ -12,6 +12,7 @@
    Every test starts from a fresh browser context seeded with a known profile, so the
    tests are independent and can run in any order. Exit code is the number of failures. */
 import {createRequire} from "module";
+import fs from "fs";
 const require=createRequire(process.env.PW_PATH||import.meta.url);
 const {chromium}=require("playwright");
 
@@ -917,6 +918,70 @@ async function dockTest(page,slide){
     if(!(slow>quick&&slow<=520&&quick>=300))throw new Error("pace: slow "+slow+"ms, quick "+quick+"ms");
   }
 }
+await test("Press: a finger starting a scroll never flashes what it lands on; a held press and a quick tap still show",async(page,env)=>{
+  await tapTab(page,"train");await pause(page,500);
+  const cdp=await env.ctx.newCDPSession(page);
+  const touch=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
+  const b=await (await page.$(".ttile")).boundingBox();
+  const x=b.x+b.width/2,y=b.y+b.height/2;
+  const lit=()=>page.evaluate(()=>document.querySelector(".ttile").classList.contains("tapd"));
+  /* A scroll: the finger lands and moves at once. */
+  await page.evaluate(()=>{window.__clk=0;document.addEventListener("click",()=>window.__clk++,true);});
+  await touch("touchStart",x,y);await page.waitForTimeout(30);
+  eq(await lit(),false,"not on landing");
+  for(let i=1;i<=6;i++){await touch("touchMove",x,y-i*8);await page.waitForTimeout(16);}
+  await page.waitForTimeout(150);eq(await lit(),false,"never, once it moved");
+  await touch("touchEnd");await page.waitForTimeout(200);
+  eq(await page.evaluate(()=>window.__clk),0,"the scroll was not a tap");
+  /* A held press shows once the finger has rested. */
+  await touch("touchStart",x,y);await page.waitForTimeout(150);
+  eq(await lit(),true,"a resting finger presses");
+  eq(await page.evaluate(()=>getComputedStyle(document.querySelector(".ttile")).transform!=="none"),true,"the press look applies");
+  await touch("touchMove",x,y-30);await page.waitForTimeout(30);
+  eq(await lit(),false,"and lets go when it turns into a scroll");
+  await touch("touchEnd");await page.waitForTimeout(200);
+  eq(await page.evaluate(()=>window.__clk),0,"no tap came of it");
+  /* A quick tap answers as it lifts, then the tap goes through. */
+  await page.evaluate(()=>{window.__lit=0;new MutationObserver(m=>{if(m.some(r=>r.target.classList.contains("tapd")))window.__lit++;})
+    .observe(document.getElementById("app"),{attributes:true,attributeFilter:["class"],subtree:true});});
+  await touch("touchStart",x,y);await page.waitForTimeout(20);await touch("touchEnd");
+  await page.waitForTimeout(500);
+  eq([await page.evaluate(()=>window.__lit>0),await page.evaluate(()=>window.__clk),await page.evaluate(()=>document.querySelectorAll(".tapd").length)],[true,1,0],"a quick tap flashes once and goes through");
+  /* With a mouse it is plain :active again. */
+  eq(await page.evaluate(()=>document.documentElement.classList.contains("tch")),true);
+},{prefs:{anim:true}});
+await test("Scrolling never waits on script: no page-wide touch or wheel listener can block it",async(page,env)=>{
+  await startWorkout(page);
+  const cdp=await env.ctx.newCDPSession(page);
+  const urls={};cdp.on("Debugger.scriptParsed",e=>{urls[e.scriptId]=e.url||"(inline)";});
+  await cdp.send("Debugger.enable");
+  const bad=[];
+  for(const expr of ["document","window","document.body","document.getElementById('app')"]){
+    const {result}=await cdp.send("Runtime.evaluate",{expression:expr});
+    const {listeners}=await cdp.send("DOMDebugger.getEventListeners",{objectId:result.objectId});
+    /* The app's own listeners only: the test driver injects scripts with no address. */
+    listeners.filter(l=>/^(touchstart|touchmove|wheel|mousewheel)$/.test(l.type)&&!l.passive&&/^http/.test(urls[l.scriptId]||""))
+      .forEach(l=>bad.push(expr+" "+l.type+" @"+urls[l.scriptId]+":"+l.lineNumber));}
+  eq(bad,[],"blocking listeners");
+  /* The exercise pane is the one place that may hold a scroll, for a sideways drag. */
+  const {result}=await cdp.send("Runtime.evaluate",{expression:"document.querySelector('[data-exswipe]')"});
+  const {listeners}=await cdp.send("DOMDebugger.getEventListeners",{objectId:result.objectId});
+  eq(listeners.filter(l=>l.type==="touchmove"&&!l.passive).length,1,"the pane's own");
+});
+for(const online of [false,true])await test("Exercise photos: a re-render keeps each one as it was — "+(online?"loaded photos get no shimmer back":"offline, the glyphs do not blink and nothing is fetched again"),async(page,env)=>{
+  const png=fs.readFileSync(new URL("../icon-180.png",import.meta.url));
+  await env.ctx.route(/cdn\.jsdelivr\.net/,r=>online?r.fulfill({status:200,contentType:"image/png",body:png}):r.abort());
+  let fetches=0;page.on("request",r=>{if(/jsdelivr/.test(r.url()))fetches++;});
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="library";(await import("/js/ui/render.js")).render();});
+  await pause(page,2000);
+  const st=()=>page.evaluate(()=>[...document.querySelectorAll(".thumbwrap")].slice(0,10).map(w=>w.className).join());
+  const before=await st(),f0=fetches;
+  if(!/failed|thumbwrap(,|$)/.test(before))throw new Error("photos did not settle: "+before);
+  await page.evaluate(async()=>{(await import("/js/ui/render.js")).render();});
+  eq(await st(),before,"right after a render");
+  await pause(page,600);
+  eq([await st(),fetches],[before,f0],"and after");
+});
 await test("Dock: a page with little to scroll keeps its dock",async page=>{
   await tapTab(page,"home");await pause(page);
   const max=await page.evaluate(()=>document.documentElement.scrollHeight-innerHeight);

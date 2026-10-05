@@ -357,7 +357,7 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
    rather than overridden per variant, because zeroing it on .btn.sm would outrank
    .iconbtn's own 44px minimum on specificity and shrink the date-bar arrows. */
 .btn:not(.sm):not(.d){min-height:52px}
-.btn:active{transform:scale(.975);filter:brightness(1.12)}
+:root:not(.tch) .btn:active,.btn.tapd{transform:scale(.975);filter:brightness(1.12)}
 .btn.g{background:var(--raised);border:1px solid var(--border);color:var(--text)}
 .btn.o{background:transparent;border:1px solid var(--ok);color:var(--ok)}
 .btn.ok{background:var(--ok);color:var(--onOk);border:none}
@@ -372,7 +372,7 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
 .pill{padding:6px 13px;border-radius:var(--rpill);background:var(--surface);
   border:1px solid var(--border);font-size:12.5px;font-weight:600;letter-spacing:0;
   text-transform:none;color:var(--dim);transition:transform var(--m-press) var(--e-standard)}
-.pill:active{transform:scale(.94)}
+:root:not(.tch) .pill:active,.pill.tapd{transform:scale(.94)}
 /* Small type on the accent sits on its gradient, where the label measures 4.64:1 in Red. */
 .pill.a{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:var(--accent);color:var(--onAccent)}
 .pill.gold{background:var(--accentSoft);color:var(--gold);font-weight:600}
@@ -385,7 +385,7 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
 .steps{display:flex;align-items:center;gap:9px}
 .stp{width:52px;height:52px;border-radius:13px;background:var(--raised);color:var(--text);
   border:1px solid var(--border);font-size:24px;font-weight:300;flex-shrink:0}
-.stp:active{background:var(--accentSoft)}
+:root:not(.tch) .stp:active,.stp.tapd{background:var(--accentSoft)}
 .stv{flex:1;text-align:center}
 .stn{font-size:34px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
   background:transparent;border:none;text-align:center;width:100%;padding:0;color:var(--text);
@@ -461,7 +461,7 @@ body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--
   transition:transform var(--m-comp) var(--e-ios),stroke-width var(--m-micro) var(--e-standard)}
 .dock-b.on{color:var(--dock-on)}
 .dock-b.on svg{transform:scale(1.06);stroke-width:2}
-.dock-b:active{transform:scale(.94)}
+:root:not(.tch) .dock-b:active,.dock-b.tapd{transform:scale(.94)}
 /* Out of the way while reading (js/ui/dock.js): scrolling down adds .dhid and the
    dock inside the fixed bar slides below the screen edge; scrolling up takes it off
    and the dock slides back. Each move is one transition of transform, which the
@@ -502,7 +502,7 @@ body.kb #wbar{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(
 #wbar.dfade .wbar{transition:scale var(--m-press) var(--e-standard)}
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
   .wbar{background:var(--glass);-webkit-backdrop-filter:saturate(160%) blur(22px);backdrop-filter:saturate(160%) blur(22px)}}
-.wbar:active{scale:.98}
+:root:not(.tch) .wbar:active,.wbar.tapd{scale:.98}
 .wbar:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
 .wbar-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--accentHi);
   box-shadow:0 0 0 4px var(--accent-tint);animation:wbPulse 1.8s ease-in-out infinite}
@@ -537,7 +537,7 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   transition:color var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
 .seg-b.on{color:var(--onAccent)}
-.seg-b:active{transform:scale(.96)}
+:root:not(.tch) .seg-b:active,.seg-b.tapd{transform:scale(.96)}
 .seg-b:focus-visible{outline:2px solid var(--accentHi);outline-offset:-2px}
 .seg.soft .seg-ind{background:var(--accent-tint);box-shadow:inset 0 0 0 1px var(--accent-edge)}
 .seg.soft .seg-b.on{color:var(--accentHi)}
@@ -602,7 +602,7 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
 .thpick{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;margin:0;
   padding:8px 8px 12px;border-radius:var(--r4);border:1.5px solid var(--border);background:var(--raised);color:var(--text);
   font:inherit;transition:border-color var(--m-micro) var(--e-standard),box-shadow var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
-.thpick:active{transform:scale(.97)}
+:root:not(.tch) .thpick:active,.thpick.tapd{transform:scale(.97)}
 .thpick.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
 .thpv{position:relative;display:flex;flex-direction:column;gap:7px;width:100%;aspect-ratio:3/4;padding:9px 7px 30px;
   border-radius:12px;overflow:hidden;background:var(--bg);color:var(--text);
@@ -641,7 +641,7 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
   border-top:1px solid var(--border);width:100%;background:none;
   color:var(--text);text-align:left;border-left:none;border-right:none;border-bottom:none}
 .item:first-child{border-top:none}
-.item:active{background:var(--surface)}
+:root:not(.tch) .item:active,.item.tapd{background:var(--surface)}
 .chev{color:var(--faint);font-size:19px;flex-shrink:0}
 .mt{margin-top:14px}
 .hide{display:none}
@@ -794,7 +794,7 @@ body.noanim #splash .sp-embers{display:none}
 .sheethead .x{flex:0 0 38px;width:38px;height:38px;border-radius:19px;border:1px solid var(--border);
   background:var(--surface);color:var(--dim);font-size:19px;line-height:1;padding:0;
   display:flex;align-items:center;justify-content:center}
-.sheethead .x:active{background:var(--raised)}
+:root:not(.tch) .sheethead .x:active,.sheethead .x.tapd{background:var(--raised)}
 /* Both sheet-head controls are drawn as 38px discs, which is the design and is 6px
    short of the minimum target. The disc stays 38px and an invisible 3px outset takes
    the tappable area to 44 — growing the circles instead would redraw the header of
@@ -837,14 +837,14 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
 .pkrow .pkadd{flex:0 0 36px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
   background:rgba(var(--accent-rgb),.14);border:1px solid rgba(var(--accentHi-rgb),.45);color:var(--accentHi);
   font-size:20px;font-weight:600;line-height:1;transition:transform var(--m-press) var(--e-standard)}
-.pkrow:active .pkadd{transform:scale(.9)}
+:root:not(.tch) .pkrow:active .pkadd,.pkrow.tapd .pkadd{transform:scale(.9)}
 .pkrow.on{background:rgba(var(--accent-rgb),.06)}
 .pkrow.on .pkadd{background:var(--accent);border-color:var(--accent);color:var(--onAccent);font-size:16px}
 .pkswap{flex:0 0 auto;padding:7px 14px;border-radius:var(--rpill);border:1px solid rgba(var(--accentHi-rgb),.5);
   color:var(--accentHi);font-size:13px;font-weight:700}
 .grab{position:absolute;left:50%;top:7px;transform:translateX(-50%);
   width:38px;height:4px;border-radius:2px;background:var(--border)}
-.sheethead:active .grab{background:var(--dim)}
+:root:not(.tch) .sheethead:active .grab,.sheethead.tapd .grab{background:var(--dim)}
 /* While a finger is on it the sheet follows directly, so no transition; the class is
    removed on release so the spring-back and the dismiss can animate. */
 .sheetbox *{max-width:100%}
@@ -861,12 +861,12 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
 .fqty-v{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);
   color:var(--text);border-radius:10px;min-height:44px;padding:0 12px;
   font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
-.fqty-v:active{background:var(--raised)}
+:root:not(.tch) .fqty-v:active,.fqty-v.tapd{background:var(--raised)}
 .facts{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;padding-inline-start:2px}
 .facts button{background:none;border:none;padding:6px 0;min-height:44px;
   color:var(--dim);font-size:13.5px;font-weight:600;letter-spacing:.02em}
 .facts button.danger{color:var(--faint)}
-.facts button:active{color:var(--accentHi)}
+:root:not(.tch) .facts button:active,.facts button.tapd{color:var(--accentHi)}
 .sheetbox.dragging{transition:none!important;animation:none!important}
 /* animation:none on both, not just .dragging. A CSS animation outranks an inline
    style, so releasing mid-entry handed the sheet back to sheetIn, which pulled it
@@ -885,11 +885,11 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
 .ss-back{width:44px;height:44px;margin:-4px;flex-shrink:0;border:none;background:none;
   color:var(--accent);font-size:22px;line-height:1;padding:0;
   display:flex;align-items:center;justify-content:center}
-.ss-back:active{color:var(--accentHi)}
+:root:not(.tch) .ss-back:active,.ss-back.tapd{color:var(--accentHi)}
 /* The title is a button: it opens today's exercises (the "exlist" sheet). */
 .ss-title{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;margin:0;padding:2px 0;
   border:none;background:none;color:var(--text);font:inherit;text-align:start;cursor:pointer;border-radius:var(--r1)}
-.ss-title:active{opacity:.7}
+:root:not(.tch) .ss-title:active,.ss-title.tapd{opacity:.7}
 .ss-name{display:block;max-width:100%}
 .ss-meta{display:block}
 .ss-caret{width:13px;height:13px;margin-inline-start:2px;vertical-align:-2px;fill:none;stroke:currentColor;
@@ -919,7 +919,7 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
 .ss-navb{flex:none;display:grid;place-items:center;width:44px;height:44px;margin:-6px 0;padding:0;border:none;
   background:none;color:var(--sub);border-radius:50%;cursor:pointer;transition:color var(--m-micro) var(--e-standard)}
 .ss-navb svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-.ss-navb:active:not(:disabled){color:var(--accentHi);transform:scale(.92)}
+:root:not(.tch) .ss-navb:active:not(:disabled),.ss-navb.tapd:not(:disabled){color:var(--accentHi);transform:scale(.92)}
 .ss-navb:disabled{opacity:.28;cursor:default}
 [dir="rtl"] .ss-navb svg{transform:scaleX(-1)}
 /* The exercise itself, as one pane a sideways swipe moves (js/ui/exswipe.js). Vertical
@@ -986,7 +986,7 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
 .logbtn{width:38px;height:38px;border-radius:19px;border:1px solid var(--border);
   background:transparent;color:var(--dim);font-size:19px;font-weight:600;padding:0;margin:0 auto;
   display:flex;align-items:center;justify-content:center;transition:transform var(--m-press) var(--e-standard)}
-.logbtn:active{transform:scale(.88)}
+:root:not(.tch) .logbtn:active,.logbtn.tapd{transform:scale(.88)}
 .logbtn.go{border-color:var(--accent);background:var(--accent);color:var(--onAccent);
   box-shadow:0 5px 18px rgba(var(--glow-rgb),.42)}
 .logbtn.done{border-color:var(--ok);background:var(--ok);color:#fff}
@@ -1000,18 +1000,18 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
   color:var(--faint);font-size:12px;line-height:1;border-radius:12px;position:relative}
 /* The glyph is small; the thing you can hit is not. */
 .delset:after{content:"";position:absolute;left:-10px;right:-10px;top:-10px;bottom:-10px}
-.delset:active{background:var(--accentSoft);color:var(--accentHi)}
+:root:not(.tch) .delset:active,.delset.tapd{background:var(--accentSoft);color:var(--accentHi)}
 .setrow.hd .delset{visibility:hidden}
 .addrow{display:flex;justify-content:center;margin:2px 0 4px}
 .addset{width:44px;height:44px;border-radius:22px;border:1px dashed var(--border);
   background:var(--surface);color:var(--dim);font-size:23px;font-weight:300;line-height:1;
   padding:0;transition:transform var(--m-press) var(--e-standard),background .12s ease,color .12s ease}
-.addset:active{background:var(--accentSoft);color:var(--accentHi);transform:scale(.9)}
+:root:not(.tch) .addset:active,.addset.tapd{background:var(--accentSoft);color:var(--accentHi);transform:scale(.9)}
 .favstar{flex:0 0 38px;width:38px;height:38px;border-radius:19px;border:1px solid var(--border);
   background:var(--surface);color:var(--faint);font-size:19px;line-height:1;padding:0;
   display:flex;align-items:center;justify-content:center;margin-inline-end:8px}
 .favstar.on{color:var(--gold);border-color:var(--gold)}
-.favstar:active{background:var(--raised)}
+:root:not(.tch) .favstar:active,.favstar.tapd{background:var(--raised)}
 /* ---- The date navigator (js/ui/datebar.js) — Food, Progress and Train ------------
    A capsule in the dock's language: glass-dark surface, hairline edge, round arrow
    buttons at either end, the date as the tappable centre. Today reads warmest — a
@@ -1043,13 +1043,13 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
 .dnav-arrow svg,.dnav-back svg,.dnav-d svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .dnav-arrow svg{width:20px;height:20px}
 [dir="rtl"] .dnav-arrow svg{transform:scaleX(-1)}
-.dnav-arrow:active{transform:scale(.92);background:rgba(255,255,255,.09)}
+:root:not(.tch) .dnav-arrow:active,.dnav-arrow.tapd{transform:scale(.92);background:rgba(255,255,255,.09)}
 .dnav-arrow:disabled{opacity:.3}
 .dnav-arrow.sm{flex-basis:40px;width:40px;height:40px}
 .dnav-mid{flex:1;min-width:0;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:4px;padding:6px 4px;border:0;border-radius:var(--r4);background:none;color:var(--text);
   transition:background var(--m-micro) var(--e-standard)}
-.dnav-mid:active{background:rgba(255,255,255,.04)}
+:root:not(.tch) .dnav-mid:active,.dnav-mid.tapd{background:rgba(255,255,255,.04)}
 .dnav-mid:focus-visible,.dnav-arrow:focus-visible,.dnav-back:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
 .dnav-k{font-size:10.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
 .dnav-d{display:inline-flex;align-items:center;gap:8px;max-width:100%}
@@ -1072,7 +1072,7 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
   padding:0 14px;border:0;border-radius:var(--rpill);background:none;color:var(--accentHi);
   font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
 .dnav-back svg{width:14px;height:14px}
-.dnav-back:active{background:var(--accent-tint)}
+:root:not(.tch) .dnav-back:active,.dnav-back.tapd{background:var(--accent-tint)}
 [dir="rtl"] .dnav-k,[dir="rtl"] .dnav-t,[dir="rtl"] .dnav-back{letter-spacing:0}
 /* The month, when the date is tapped. */
 .dbcal{margin-top:10px;padding:12px;border-radius:var(--r5);background:var(--raised);border:1px solid var(--border)}
@@ -1086,7 +1086,7 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
   border-radius:12px;font-size:13.5px;border:1px solid transparent;padding:0;position:relative;
   background:none;color:var(--sub);font-variant-numeric:tabular-nums;
   transition:background var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
-.dbday:active{transform:scale(.92)}
+:root:not(.tch) .dbday:active,.dbday.tapd{transform:scale(.92)}
 .dbday:disabled{opacity:.3}
 .dbday.today{border-color:var(--accent-edge);color:var(--text);font-weight:700}
 .dbday.sel{background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent);font-weight:800;
@@ -1144,7 +1144,7 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
 .rbtn{height:52px;min-width:66px;padding:0 18px;border-radius:26px;border:1px solid var(--border);
   background:var(--surface);color:var(--text);font-size:14px;font-weight:700;
   font-variant-numeric:tabular-nums;transition:transform var(--m-press) var(--e-standard)}
-.rbtn:active{transform:scale(.94)}
+:root:not(.tch) .rbtn:active,.rbtn.tapd{transform:scale(.94)}
 .rbtn.main{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:var(--accent);color:var(--onAccent);min-width:136px;
   font-size:15px;letter-spacing:.05em;text-transform:uppercase;
   box-shadow:0 8px 26px rgba(var(--glow-rgb),.34)}
@@ -1198,6 +1198,13 @@ body.compact .setrow{padding:5px 8px;margin-bottom:5px}
 .thumbwrap .thumbfall{display:none;color:var(--faint)}
 .thumbwrap.failed{background:var(--raised)}
 .thumbwrap.failed .thumbfall{display:flex}
+/* A photo still on its way holds its square in a still tone, and fades in when it
+   lands. A list scrolls a dozen of these into view at once, and a shimmer under each —
+   repainted every frame — read as the list flickering, and cost the scroll its
+   smoothness. */
+.thumbwrap.skel{animation:none;background:var(--raised)}
+.thumbwrap img.thumb{transition:opacity var(--m-comp) var(--e-standard)}
+.thumbwrap.skel img.thumb{opacity:0}
 body.noanim .skel{animation:none}
 @media (prefers-reduced-motion:reduce){.skel{animation:none}}
 
@@ -1207,7 +1214,7 @@ body.noanim .skel{animation:none}
   gap:10px;background:none;border:none;padding:10px 0;color:var(--text);text-align:left}
 .fitem-x{width:44px;height:44px;flex-shrink:0;background:none;border:none;color:var(--faint);
   font-size:15px;padding:0;border-radius:11px}
-.fitem-x:active{background:var(--surface);color:var(--accentHi)}
+:root:not(.tch) .fitem-x:active,.fitem-x.tapd{background:var(--surface);color:var(--accentHi)}
 
 /* ================= barcode scanner: full screen, one job. Built outside the render
    tree, so a repaint cannot tear the live video out of the DOM mid-stream. */
@@ -1329,11 +1336,14 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
    card), Outfit for titles and figures, Manrope for everything else. Text-align is
    `start` rather than `left` so every block mirrors in Arabic without a second rule. */
 
-/* A 16px icon drawn from one of the design's exported vectors, tinted by the text
-   colour it sits in — the same mask technique as the tab bar. */
+/* A 16px icon drawn from one of the design's exported vectors (icons/), tinted by the
+   text colour it sits in. The vectors are written into the stylesheet as data URLs
+   rather than linked: a linked mask is fetched and decoded after the element is
+   painted, so a screen's icons came in a beat after the rest of it, and could go blank
+   offline if the cache missed one. */
 .ico{display:inline-block;width:16px;height:16px;flex:0 0 16px;background:currentColor;
   -webkit-mask:var(--ico) center/contain no-repeat;mask:var(--ico) center/contain no-repeat}
-.ico-play{--ico:url(icons/play.svg)}
+.ico-play{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M3.51208 2.66554C3.39457 2.8686 3.33273 3.09905 3.3328 3.33364V12.6664C3.33273 12.9009 3.39457 13.1314 3.51208 13.3345C3.62958 13.5375 3.7986 13.706 4.00205 13.8228C4.2055 13.9397 4.43619 14.0008 4.67082 14C4.90546 13.9992 5.13573 13.9365 5.33838 13.8183L13.3394 9.15192C13.541 9.03446 13.7083 8.86614 13.8245 8.66378C13.9407 8.46142 14.0018 8.2321 14.0016 7.99876C14.0014 7.76541 13.9399 7.53621 13.8234 7.33405C13.7068 7.13189 13.5392 6.96385 13.3374 6.84674L5.33838 2.18172C5.13573 2.06348 4.90546 2.0008 4.67082 2.00001C4.43619 1.99921 4.2055 2.06033 4.00205 2.17718C3.7986 2.29404 3.62958 2.46249 3.51208 2.66554Z' stroke='%23FAF6EE' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
 [dir="rtl"] .ico-play{transform:scaleX(-1)}
 
 .hgreet{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
@@ -1385,10 +1395,10 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 /* ================= Train hub — canvas screen 1 (Figma node 2:810)
    The canvas's layout in the core frames' tokens: the canvas was drawn in a separate
    pass with Inter, #d6222e and #1c1c22 cards, and one app cannot wear two systems. */
-.ico-star{--ico:url(icons/star.svg)}
-.ico-arrow{--ico:url(icons/arrow-right.svg)}
-.ico-search{--ico:url(icons/search.svg)}
-.ico-chev{--ico:url(icons/chevron-right.svg)}
+.ico-star{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M11.7215 2.07892C11.6375 2.13103 11.5698 2.20555 11.526 2.29409L9.217 6.97309C9.0647 7.28136 8.83978 7.54801 8.56158 7.75008C8.28339 7.95215 7.96026 8.08359 7.62 8.13309L2.455 8.88809C2.3567 8.90199 2.26429 8.94322 2.18828 9.00708C2.11227 9.07094 2.05572 9.15486 2.02508 9.24928C1.99444 9.34371 1.99093 9.44485 2.01496 9.54117C2.03899 9.63749 2.08959 9.72513 2.161 9.79409L5.897 13.4311C6.14361 13.6712 6.32809 13.9678 6.43454 14.2951C6.54098 14.6225 6.5662 14.9708 6.508 15.3101L5.627 20.4491C5.60986 20.5468 5.62048 20.6473 5.65766 20.7393C5.69483 20.8313 5.75707 20.911 5.83729 20.9693C5.91752 21.0277 6.0125 21.0623 6.11145 21.0693C6.2104 21.0764 6.30933 21.0555 6.397 21.0091L11.014 18.5811C11.3183 18.4213 11.6568 18.3378 12.0005 18.3378C12.3442 18.3378 12.6827 18.4213 12.987 18.5811L17.605 21.0091C17.6927 21.0558 17.7918 21.0769 17.8909 21.07C17.99 21.0631 18.0852 21.0285 18.1655 20.9701C18.2459 20.9117 18.3083 20.8319 18.3455 20.7398C18.3827 20.6477 18.3933 20.5469 18.376 20.4491L17.494 15.3091C17.4361 14.97 17.4614 14.6219 17.5678 14.2947C17.6743 13.9676 17.8586 13.6712 18.105 13.4311L21.841 9.79309C21.9118 9.72405 21.9619 9.63656 21.9856 9.54053C22.0093 9.4445 22.0056 9.34376 21.975 9.2497C21.9444 9.15564 21.8881 9.07202 21.8125 9.00829C21.7368 8.94457 21.6449 8.90328 21.547 8.88909L16.381 8.13309C16.0411 8.08321 15.7184 7.95159 15.4406 7.74955C15.1628 7.5475 14.9382 7.28106 14.786 6.97309L12.476 2.29409C12.4322 2.20555 12.3645 2.13103 12.2805 2.07892C12.1966 2.02681 12.0998 1.9992 12.001 1.9992C11.9022 1.9992 11.8054 2.02681 11.7215 2.07892Z' stroke='%23D6222E' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
+.ico-arrow{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M3.3328 8H12.6672M8 12.6672L12.6672 8L8 3.3328' stroke='%23F3F4F6' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
+.ico-search{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='18' height='18' viewBox='0 0 18 18' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M15.7501 15.7501L12.4951 12.4951M14.25 8.25C14.25 11.5637 11.5637 14.25 8.25 14.25C4.93629 14.25 2.25 11.5637 2.25 8.25C2.25 4.93629 4.93629 2.25 8.25 2.25C11.5637 2.25 14.25 4.93629 14.25 8.25Z' stroke='%23D6222E' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
+.ico-chev{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M6 12L10 8L6 4' stroke='%238E8E93' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
 [dir="rtl"] .ico-arrow,[dir="rtl"] .ico-chev{transform:scaleX(-1)}
 
 .thead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
@@ -1467,7 +1477,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tday{display:flex;align-items:center;gap:10px;min-height:72px;padding:12px;border-radius:var(--r4);text-align:start;
   background:var(--raised);border:1px solid var(--border);color:var(--text);min-width:0;
   transition:transform var(--m-press) var(--e-standard),border-color var(--m-micro) var(--e-standard)}
-.tday:active{transform:scale(.97)}
+:root:not(.tch) .tday:active,.tday.tapd{transform:scale(.97)}
 .tday:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
 .tday-i{flex:0 0 36px;width:36px;height:36px;border-radius:var(--rpill);display:flex;align-items:center;justify-content:center;
   background:var(--surface);color:var(--sub);box-shadow:inset 0 0 0 1px var(--border)}
@@ -1508,7 +1518,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tpill{flex:0 0 auto;min-height:44px;padding:8px 16px;border-radius:22px;
   background:var(--surface);border:1px solid var(--border);color:var(--dim);
   font-size:13px;font-weight:600;white-space:nowrap}
-.tpill:active{border-color:var(--accent);color:var(--text)}
+:root:not(.tch) .tpill:active,.tpill.tapd{border-color:var(--accent);color:var(--text)}
 
 
 
@@ -1519,7 +1529,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 
 
 /* ================= A training day — canvas screen 2 (Figma node 2:915) */
-.ico-cleft{--ico:url(icons/chevron-left.svg)}
+.ico-cleft{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M12.5 15L7.5 10L12.5 5' stroke='%23F3F4F6' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
 [dir="rtl"] .ico-cleft{transform:scaleX(-1)}
 .dhead{display:flex;align-items:center;gap:12px;margin-bottom:4px}
 .icobtn.back{color:var(--text);margin-inline-start:-10px;margin-inline-end:0}
@@ -1537,7 +1547,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   background:none;border:none;color:var(--text);text-align:start}
 .dname .dhead-t{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dname .ico{width:16px;height:16px;flex:0 0 16px;color:var(--dim)}
-.dname:active .ico{color:var(--accentHi)}
+:root:not(.tch) .dname:active .ico,.dname.tapd .ico{color:var(--accentHi)}
 .droutine{margin:0 0 12px}
 .dhint{font-size:12px;color:var(--dim)}
 /* Reorder / Done, at the list's head. While it is on, the ✕s step aside so a row can
@@ -1556,10 +1566,10 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .drm i{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;
   background:rgba(255,255,255,.05);border:1px solid var(--border)}
 .drm svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
-.drm:active i{background:rgba(var(--danger-rgb),.18);border-color:rgba(var(--danger-rgb),.6);color:var(--danger)}
+:root:not(.tch) .drm:active i,.drm.tapd i{background:rgba(var(--danger-rgb),.18);border-color:rgba(var(--danger-rgb),.6);color:var(--danger)}
 .dmain{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:12px 6px 12px 2px;
   background:none;border:none;color:var(--text);text-align:start}
-.dmain:active .drow-n{color:var(--accentHi)}
+:root:not(.tch) .dmain:active .drow-n,.dmain.tapd .drow-n{color:var(--accentHi)}
 .dnum{flex:0 0 auto;font-family:var(--display);font-weight:800;font-size:16px;color:var(--dim);
   font-variant-numeric:tabular-nums}
 .dtext{flex:1;min-width:0}
@@ -1573,7 +1583,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .dgrip{flex:0 0 48px;display:grid;place-items:center;padding:0;background:none;border:none;color:var(--faint);
   touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;cursor:grab}
 .dgrip svg{width:20px;height:20px;fill:currentColor}
-.dgrip:active{color:var(--accentHi)}
+:root:not(.tch) .dgrip:active,.dgrip.tapd{color:var(--accentHi)}
 .drows.sorting{-webkit-user-select:none;user-select:none}
 .drows.sorting .drow:not(.lifted){transition:transform .18s var(--e-standard)}
 .drow.lifted{z-index:5;background:var(--surface);border-color:rgba(var(--accentHi-rgb),.6);
@@ -1584,7 +1594,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   border-radius:14px;border:1px dashed var(--hair-hi);background:none;color:var(--sub);font-weight:700;font-size:15px;
   transition:transform var(--m-press) var(--e-standard)}
 .dadd span{font-size:20px;line-height:1;color:var(--accentHi)}
-.dadd:active{transform:scale(.98);background:rgba(var(--accent-rgb),.06)}
+:root:not(.tch) .dadd:active,.dadd.tapd{transform:scale(.98);background:rgba(var(--accent-rgb),.06)}
 /* The frame's bottom block. Not fixed: the routine above scrolls, and a pinned bar
    would cover a row on a short screen. */
 .dcta{display:flex;flex-direction:column;gap:8px;align-items:stretch;
@@ -1592,7 +1602,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .dbegin{min-height:54px;font-size:16px;font-weight:800;margin:0}
 .ddel{align-self:center;min-height:44px;padding:0 16px;background:none;border:none;
   color:var(--danger);font-size:14px;font-weight:600;opacity:.85}
-.ddel:active{opacity:.5}
+:root:not(.tch) .ddel:active,.ddel.tapd{opacity:.5}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 /* ---- Programs and the split builder: the library's hero, Bunyan mark and all ---- */
 .bhero h1{font-size:30px;margin:0}
@@ -1602,7 +1612,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .bnew{display:flex;align-items:center;gap:12px;width:100%;margin-top:16px;padding:14px;border-radius:var(--r4);
   border:1px solid rgba(var(--accentHi-rgb),.45);background:linear-gradient(180deg,rgba(var(--accent-rgb),.22),rgba(var(--accent-rgb),.08));
   color:var(--text);text-align:start;transition:transform var(--m-press) var(--e-standard)}
-.bnew:active{transform:scale(.98)}
+:root:not(.tch) .bnew:active,.bnew.tapd{transform:scale(.98)}
 .bnew-i{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:50%;
   background:linear-gradient(180deg,var(--accent),var(--accent-deep));box-shadow:0 8px 20px -8px var(--accent-glow)}
 .bnew-i svg{width:20px;height:20px;fill:none;stroke:var(--onAccent);stroke-width:2.6;stroke-linecap:round}
@@ -1619,7 +1629,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .bcount-c{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:10px}
 .bcount-c button{min-height:46px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);
   font-family:var(--display);font-size:18px;font-weight:800;transition:transform var(--m-press) var(--e-standard)}
-.bcount-c button:active{transform:scale(.94)}
+:root:not(.tch) .bcount-c button:active,.bcount-c button.tapd{transform:scale(.94)}
 .bcount-c button.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:transparent;color:var(--onAccent);
   box-shadow:0 8px 18px -10px var(--accent-glow)}
 .bnum{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:12px;
@@ -1648,7 +1658,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .twk-r{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
 .twk-d{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 9px;border-radius:14px;
   border:1px solid transparent;background:var(--surface);color:var(--text);transition:transform var(--m-press) var(--e-standard)}
-.twk-d:active{transform:scale(.94)}
+:root:not(.tch) .twk-d:active,.twk-d.tapd{transform:scale(.94)}
 .twk-w{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--dim);text-transform:uppercase}
 .twk-n{font-family:var(--display);font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
 .twk-d i{display:grid;place-items:center;width:16px;height:16px;border-radius:50%}
@@ -1690,7 +1700,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .exs-c{display:flex;align-items:center;gap:6px}
 .exs-b{flex:0 0 40px;width:40px;height:40px;border-radius:50%;padding:0;border:1px solid var(--border);
   background:var(--surface);color:var(--text);font-size:20px;line-height:1;transition:transform var(--m-press) var(--e-standard)}
-.exs-b:active{transform:scale(.9);background:rgba(var(--accent-rgb),.16);border-color:rgba(var(--accentHi-rgb),.5)}
+:root:not(.tch) .exs-b:active,.exs-b.tapd{transform:scale(.9);background:rgba(var(--accent-rgb),.16);border-color:rgba(var(--accentHi-rgb),.5)}
 .exs-v{flex:1;min-width:0;display:flex;align-items:baseline;justify-content:center;gap:2px}
 .sheetbox .exs-v input{width:100%;min-width:0;min-height:40px;margin:0;padding:0;border:none;background:none;
   text-align:center;font-family:var(--display);font-size:24px;font-weight:800;color:var(--text);
@@ -1708,8 +1718,8 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
    The two frames are one screen here: screen 3 is the context above the table and
    screen 4 is the table itself, which the app has always shown together. Splitting
    them would add a mode to the one screen that has to work one-handed between sets. */
-.ico-clock{--ico:url(icons/clock.svg)}
-.ico-bulb{--ico:url(icons/bulb.svg)}
+.ico-clock{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg clip-path='url(%23clip0_0_4)'%3E%3Cpath d='M8 3.99968V8L10.6669 9.33344M14.6672 8C14.6672 11.6822 11.6822 14.6672 8 14.6672C4.31781 14.6672 1.3328 11.6822 1.3328 8C1.3328 4.31781 4.31781 1.3328 8 1.3328C11.6822 1.3328 14.6672 4.31781 14.6672 8Z' stroke='%23D6222E' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3Cdefs%3E%3CclipPath%3E%3Crect width='16' height='16' fill='white'/%3E%3C/clipPath%3E%3C/defs%3E%3C/svg%3E")}
+.ico-bulb{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M10 9.33344C10.1333 8.66672 10.4667 8.20002 11 7.66664C11.6667 7.06659 12 6.19986 12 5.33312C12 4.27217 11.5786 3.25467 10.8284 2.50447C10.0783 1.75426 9.06087 1.3328 8 1.3328C6.93913 1.3328 5.92172 1.75426 5.17157 2.50447C4.42143 3.25467 4 4.27217 4 5.33312C4 5.99984 4.13333 6.7999 5 7.66664C5.46667 8.13334 5.86667 8.66672 6 9.33344M6 12.0003H10M6.66667 14.6672H9.33333' stroke='%23F59E0B' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
 .ss-clock{display:flex;align-items:center;gap:6px}
 .ss-clock .ico-clock{color:var(--accent);width:16px;height:16px;flex-basis:16px}
 .ss-more{background:none;border:none;color:var(--dim);font-size:22px;line-height:1;
@@ -1753,9 +1763,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   text-decoration:underline;min-height:44px;padding:0 4px}
 
 /* ================= Food — dashboard and meal detail (nodes 13:12, 13:118) */
-.ico-drop{--ico:url(icons/droplet.svg)}
-.ico-plus{--ico:url(icons/plus.svg)}
-.ico-trash{--ico:url(icons/trash.svg)}
+.ico-drop{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M14.1253 16.6254C13.0312 17.7194 11.5473 18.334 10 18.334C8.45273 18.334 6.96883 17.7194 5.87474 16.6254C4.78065 15.5314 4.166 14.0476 4.166 12.5004C4.166 10.8337 4.99943 9.25028 6.66629 7.91689C8.33314 6.58351 9.58329 4.58342 10 2.5C10.4167 4.58342 11.6669 6.58351 13.3337 7.91689C15.0006 9.25028 15.834 10.8337 15.834 12.5004C15.834 14.0476 15.2193 15.5314 14.1253 16.6254Z' stroke='%23E31B23' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
+.ico-plus{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M4.9992 12H19.0008M12 4.9992V19.0008' stroke='%23ECEAE6' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
+.ico-trash{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M15.8333 4.9996V16.6672C15.8333 17.1093 15.6577 17.5332 15.3452 17.8458C15.0326 18.1584 14.6087 18.334 14.1667 18.334H5.83333C5.39131 18.334 4.96738 18.1584 4.65482 17.8458C4.34226 17.5332 4.16667 17.1093 4.16667 16.6672V4.9996M2.5 4.9996H17.5M6.66667 4.9996V3.3328C6.66667 2.89074 6.84226 2.46678 7.15482 2.15419C7.46738 1.84161 7.89131 1.666 8.33333 1.666H11.6667C12.1087 1.666 12.5326 1.84161 12.8452 2.15419C13.1577 2.46678 13.3333 2.89074 13.3333 3.3328V4.9996' stroke='%23ECEAE6' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
 
 /* Water. The frame's eight glasses are a fixed row; the goal is the user's, so the
    count comes from it and the glasses shrink to fit however many that is. */
@@ -1777,7 +1787,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   border:1px solid var(--border);border-radius:2px;
   clip-path:polygon(0 0,100% 0,80% 100%,20% 100%)}
 .fglass.full i{background:var(--accent);border-color:var(--accent)}
-.fglass:active i{border-color:var(--accentHi)}
+:root:not(.tch) .fglass:active i,.fglass.tapd i{border-color:var(--accentHi)}
 .fwater-add{flex:0 0 44px;width:44px;height:44px;padding:0;border:none;border-radius:8px;
   background:var(--accentSoft);color:var(--accentHi);
   display:flex;align-items:center;justify-content:center}
@@ -1810,7 +1820,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .fmt-c{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;min-height:92px;
   padding:12px 4px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);color:var(--text);
   transition:transform var(--m-press) var(--e-standard),border-color var(--m-micro) var(--e-standard)}
-.fmt-c:active{transform:scale(.96)}
+:root:not(.tch) .fmt-c:active,.fmt-c.tapd{transform:scale(.96)}
 .fmt-c:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
 .fmt-i svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .fmt-i{color:var(--sub)}
@@ -1917,7 +1927,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
    is a delete some users never find. */
 .fitemrow-x{flex:0 0 52px;background:rgba(var(--danger-rgb),.12);border:none;color:var(--danger);
   display:flex;align-items:center;justify-content:center}
-.fitemrow-x:active{background:var(--danger);color:#fff}
+:root:not(.tch) .fitemrow-x:active,.fitemrow-x.tapd{background:var(--danger);color:#fff}
 .fitemrow-x .ico-trash{width:20px;height:20px;flex-basis:20px}
 
 /* ================= Rest — canvas screen 5, set completion (node 2:1149)
@@ -1926,8 +1936,8 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
    rather than words. What it leaves out — the total beside the digits, the superset
    label, the RPE target — is kept, because each is a figure the frame had no data
    for and the screen is the only place it appears. */
-.ico-check{--ico:url(icons/check.svg)}
-.ico-pause{--ico:url(icons/pause.svg)}
+.ico-check{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='18' height='18' viewBox='0 0 18 18' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M14.9994 4.5L6.75023 12.7494L3.0006 8.99967' stroke='%2310B981' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
+.ico-pause{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cg%3E%3Cpath d='M18.0007 3H15.0003C14.448 3 14.0002 3.44772 14.0002 4V20C14.0002 20.5523 14.448 21 15.0003 21H18.0007C18.553 21 19.0008 20.5523 19.0008 20V4C19.0008 3.44772 18.553 3 18.0007 3Z' stroke='%23F3F4F6' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M8.99966 3H5.99931C5.44697 3 4.9992 3.44772 4.9992 4V20C4.9992 20.5523 5.44697 21 5.99931 21H8.99966C9.552 21 9.99977 20.5523 9.99977 20V4C9.99977 3.44772 9.552 3 8.99966 3Z' stroke='%23F3F4F6' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
 
 /* "SET 2 COMPLETE" — the receipt for the set just logged, which the surface never
    gave before. It sits at the top edge, out of the timer's way. */
@@ -1990,7 +2000,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
    a sheet here: it opens from the ⓘ mid-workout and from the picker, and a route would
    have to unmount the logger to show it. The sheet head's ✕ and ★ are the frame's back
    and star, in the one place a long exercise name cannot shove them around. */
-.ico-cdown{--ico:url(icons/chevron-down.svg)}
+.ico-cdown{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M4 6L8 10L12 6' stroke='%238E8E93' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
 
 .exd-sub{font-size:13px;color:var(--dim);margin:4px 0 16px}
 
@@ -2071,13 +2081,13 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .exswap{flex-shrink:0;background:var(--raised);border:1px solid var(--border);
   border-radius:4px;padding:6px 12px;
   font-family:var(--display);font-weight:700;font-size:12px;color:var(--accentHi)}
-.item:active .exswap{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
+:root:not(.tch) .item:active .exswap,.item.tapd .exswap{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
 
 /* ================= Workout complete — canvas screen 8 (node 2:1311)
    Measured off the 2× frame export, so every figure here is half what that file
    shows. It stays a sheet, like screens 6 and 7: finishSession() opens it, and a
    route would have to unmount the logger underneath to show it. */
-.ico-award{--ico:url(icons/award.svg)}
+.ico-award{--ico:url("data:image/svg+xml,%3C!-- lucide-static v1.48.0 'award' — ISC licence. The frame's medal glyph; the rest of this folder is the same Lucide set, exported from Figma. Used as a CSS mask, so the stroke colour here is irrelevant — only its alpha coverage is. --%3E%3Csvg preserveAspectRatio='none' overflow='visible' width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526' stroke='%23F3F4F6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='12' cy='8' r='6' stroke='%23F3F4F6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E")}
 
 /* The medal. The green tick this replaces was the pre-Figma design's; the frame
    rings it in accent over accent-soft{text-align:center;margin-bottom:20px}
@@ -2198,11 +2208,11 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 /* ================= Food sheets — frames 13:188 13:266 13:337 13:403 13:464 13:531,
    with the state styles of 13:599. Read from Figma for the first two and from the
    user's 2× PNG exports for the rest, so those five are accurate to a couple of px. */
-.ico-camera{--ico:url(icons/camera.svg)}
-.ico-info{--ico:url(icons/info.svg)}
-.ico-edit{--ico:url(icons/edit.svg)}
-.ico-warn{--ico:url(icons/warn.svg)}
-.ico-alert{--ico:url(icons/alert.svg)}
+.ico-camera{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M12.5183 3.56934C12.2601 3.41531 11.965 3.334 11.6643 3.334H8.33653C8.03616 3.33398 7.74136 3.41512 7.48331 3.56884C7.22527 3.72255 7.01356 3.94313 6.87058 4.20725L6.46305 4.9605C6.32007 5.22462 6.10837 5.4452 5.85032 5.59891C5.59227 5.75263 5.29747 5.83377 4.9971 5.83375H3.3328C2.89074 5.83375 2.46678 6.00933 2.15419 6.32186C1.84161 6.63439 1.666 7.05827 1.666 7.50025V14.9995C1.666 15.4415 1.84161 15.8654 2.15419 16.1779C2.46678 16.4904 2.89074 16.666 3.3328 16.666H16.6672C17.1093 16.666 17.5332 16.4904 17.8458 16.1779C18.1584 15.8654 18.334 15.4415 18.334 14.9995V7.50025C18.334 7.05827 18.1584 6.63439 17.8458 6.32186C17.5332 6.00933 17.1093 5.83375 16.6672 5.83375H15.0029C14.7022 5.83375 14.4071 5.75244 14.1489 5.59841C13.8907 5.44438 13.6789 5.22339 13.5361 4.95884L13.1311 4.20891C12.9883 3.94436 12.7765 3.72337 12.5183 3.56934Z' stroke='%23E31B23' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E")}
+.ico-info{--ico:url("data:image/svg+xml,%3Csvg preserveAspectRatio='none' overflow='visible' width='20' height='20' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg clip-path='url(%23clip0_0_14)'%3E%3Cpath d='M10 13.3336V10M10 6.6664H10.0083M18.334 10C18.334 14.6027 14.6027 18.334 10 18.334C5.39726 18.334 1.666 14.6027 1.666 10C1.666 5.39726 5.39726 1.666 10 1.666C14.6027 1.666 18.334 5.39726 18.334 10Z' stroke='%23E31B23' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3Cdefs%3E%3CclipPath%3E%3Crect width='20' height='20' fill='white'/%3E%3C/clipPath%3E%3C/defs%3E%3C/svg%3E")}
+.ico-edit{--ico:url("data:image/svg+xml,%3C!-- lucide-static v1.48.0 'square-pen' — ISC licence. Same set as the rest of this folder. --%3E%3Csvg preserveAspectRatio='none' overflow='visible' width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' stroke='%23ECEAE6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z' stroke='%23ECEAE6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E")}
+.ico-warn{--ico:url("data:image/svg+xml,%3C!-- lucide-static v1.48.0 'triangle-alert' — ISC licence. Same set as the rest of this folder. --%3E%3Csvg preserveAspectRatio='none' overflow='visible' width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3' stroke='%23ECEAE6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M12 9v4' stroke='%23ECEAE6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M12 17h.01' stroke='%23ECEAE6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E")}
+.ico-alert{--ico:url("data:image/svg+xml,%3C!-- lucide-static v1.48.0 'circle-alert' — ISC licence. Same set as the rest of this folder. --%3E%3Csvg preserveAspectRatio='none' overflow='visible' width='24' height='24' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg%3E%3Ccircle cx='12' cy='12' r='10' stroke='%23ECEAE6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='12' x2='12' y1='8' y2='12' stroke='%23ECEAE6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='12' x2='12.01' y1='16' y2='16' stroke='%23ECEAE6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3C/svg%3E")}
 
 /* The frames' header, inside the sheet: back, then title over subtitle. */
 .afhead{display:flex;align-items:center;gap:6px;margin:0 0 16px}
@@ -2237,7 +2247,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .afcam{flex:0 0 44px;width:44px;height:44px;border:none;background:none;color:var(--dim);
   display:flex;align-items:center;justify-content:center}
 .afcam .ico{width:20px;height:20px;flex-basis:20px}
-.afcam:active{color:var(--accentHi)}
+:root:not(.tch) .afcam:active,.afcam.tapd{color:var(--accentHi)}
 /* One search field across the app: the library's pill, its red glass, its focus ring. */
 .afq{border-radius:var(--rpill);background:var(--bg);padding-inline:18px 4px;min-height:52px}
 .afq>.ico-search{width:16px;height:16px;flex-basis:16px;color:var(--accentHi)}
@@ -2250,7 +2260,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .afpills{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
 .afpill{background:var(--surface);border:1px solid var(--border);border-radius:22px;min-height:44px;
   padding:0 16px;color:var(--text);font-size:13px}
-.afpill:active{border-color:var(--accent)}
+:root:not(.tch) .afpill:active,.afpill.tapd{border-color:var(--accent)}
 
 /* The way into Quick Add, under an empty search. */
 .afquick{display:flex;align-items:center;gap:12px;width:100%;text-align:start;margin-top:16px;
@@ -2276,7 +2286,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   background:var(--accentSoft);color:var(--accentHi);display:flex;align-items:center;justify-content:center}
 .afadd::after{content:"";position:absolute;inset:-6px}
 .afadd .ico{width:16px;height:16px;flex-basis:16px}
-.afadd:active{background:var(--accent);color:var(--onAccent)}
+:root:not(.tch) .afadd:active,.afadd.tapd{background:var(--accent);color:var(--onAccent)}
 .afcur{flex-shrink:0;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--accentHi)}
 .afmore2{display:flex;gap:10px;margin-top:14px}
 .afmore2 .btn{flex:1;margin:0;font-size:13px;letter-spacing:.02em;padding:0 10px}
@@ -2507,7 +2517,7 @@ textarea.afnl.warn{border-color:var(--warning)}
 /* Rows: records, workouts, top lifts, the day card. */
 .pgrow{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:14px 16px;margin-bottom:8px;
   background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);text-align:start}
-button.pgrow:active{background:var(--surface)}
+:root:not(.tch) button.pgrow:active,button.pgrow.tapd{background:var(--surface)}
 .pgrow.on{border-color:var(--accent)}
 .pgrow-t{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
 .pgrow-k{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
@@ -2593,7 +2603,7 @@ button.pgrow:active{background:var(--surface)}
 .pgkm{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
 .pgkm-c{display:flex;flex-direction:column;gap:6px;min-width:0;padding:14px;border-radius:var(--r3);text-align:start;
   border:1px solid var(--border);color:var(--text);transition:transform var(--m-press) var(--e-standard)}
-.pgkm-c:active{transform:scale(.97)}
+:root:not(.tch) .pgkm-c:active,.pgkm-c.tapd{transform:scale(.97)}
 .pgkm-c:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
 .pgkm-h{display:flex;align-items:center;gap:10px;min-width:0}
 .pgkm-k{font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2639,7 +2649,7 @@ button.pgrow:active{background:var(--surface)}
   padding:14px;border-radius:var(--r3);border:1px solid var(--border);color:var(--text);text-align:start;
   transition:transform var(--m-press) var(--e-standard),border-color var(--m-micro) var(--e-standard)}
 .pgpr.on{border-color:var(--accent-edge)}
-.pgpr:active{transform:scale(.97)}
+:root:not(.tch) .pgpr:active,.pgpr.tapd{transform:scale(.97)}
 .pgpr .pgki{margin-bottom:4px}
 .pgpr-n{font-size:13px;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .pgpr-v{font-family:var(--display);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -2649,7 +2659,7 @@ button.pgrow:active{background:var(--surface)}
   border-radius:var(--r2);border:1px solid var(--border);color:var(--text);text-align:start;
   transition:transform var(--m-press) var(--e-standard)}
 .pgex.on{border-color:var(--accent-edge)}
-.pgex:active{transform:scale(.98)}
+:root:not(.tch) .pgex:active,.pgex.tapd{transform:scale(.98)}
 .pgex .thumbwrap,.pgex .thumb.ph,.pgex img.thumb{border-radius:12px;flex-shrink:0}
 .pgex-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .pgex-n{font-weight:700;font-size:15px;overflow-wrap:anywhere}
@@ -2701,7 +2711,7 @@ button.pgrow:active{background:var(--surface)}
   border-radius:var(--rpill);background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent);font-family:var(--display);
   font-size:18px;font-weight:700;box-shadow:0 12px 30px -10px var(--accent-glow);transition:transform var(--m-press) var(--e-standard)}
 .rt-main .ico{width:20px;height:20px;flex-basis:20px}
-.rt-rnd:active,.rt-main:active,.rt-go:active{transform:scale(.95)}
+:root:not(.tch) .rt-rnd:active,.rt-rnd.tapd,:root:not(.tch) .rt-main:active,.rt-main.tapd,:root:not(.tch) .rt-go:active,.rt-go.tapd{transform:scale(.95)}
 .rt-next{width:100%;max-width:420px;margin-top:34px;padding:18px;border-radius:var(--r4);text-align:center;
   background:rgba(20,20,26,.78);border:1px solid var(--hair);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .rt-next.sm{margin:14px 0 4px;padding:12px}
@@ -2795,13 +2805,13 @@ button.pgrow:active{background:var(--surface)}
 .addset2{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:var(--rpill);border:1px dashed var(--hair-hi);
   background:none;color:var(--sub);font-weight:700;font-size:14px}
 .addset2 span{font-size:18px;color:var(--accentHi)}
-.addset2:active{transform:scale(.96)}
+:root:not(.tch) .addset2:active,.addset2.tapd{transform:scale(.96)}
 .btn.ss-next{border-radius:var(--r4);background:linear-gradient(180deg,var(--accent),var(--accent-deep));box-shadow:0 14px 30px -14px var(--accent-glow);margin-top:var(--s4)}
 .ss-acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;margin:var(--s4) 0 8px}
 .ss-act{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 12px;border-radius:var(--r4);
   border:1px solid var(--border);background:var(--raised);color:var(--text);font-weight:600;font-size:14px}
 .ss-act svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--accentHi)}
-.ss-act:active{transform:scale(.97)}
+:root:not(.tch) .ss-act:active,.ss-act.tapd{transform:scale(.97)}
 /* The workout's own tools — Replace, Remove, Skip, Add — as one row of equal tiles,
    icon over a one-word label, so four fit a phone without wrapping. The row takes
    however many are offered (Remove and Skip come and go). */
@@ -2811,7 +2821,7 @@ button.pgrow:active{background:var(--surface)}
 .exl-row{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:10px 14px;margin:0;
   border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);color:var(--text);
   font:inherit;text-align:start;cursor:pointer}
-.exl-row:active{transform:scale(.99)}
+:root:not(.tch) .exl-row:active,.exl-row.tapd{transform:scale(.99)}
 .exl-row.on{border-color:var(--accent-edge);background:var(--accent-tint)}
 .exl-n{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;
   background:var(--surface);color:var(--sub);font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
@@ -2830,7 +2840,7 @@ button.pgrow:active{background:var(--surface)}
 .ss-tool svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--accentHi)}
 .ss-tool span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ss-tool[data-rmlive] svg{color:var(--danger)}
-.ss-tool:active{transform:scale(.96)}
+:root:not(.tch) .ss-tool:active,.ss-tool.tapd{transform:scale(.96)}
 .ss-tools+.ss-acts{margin-top:8px}
 /* ---- Confirm sheets: centred, compact, pill buttons in sentence case. The ✕ in the
    head is dropped here — Cancel (or "Keep training") sits right beside the choice,
@@ -2856,7 +2866,7 @@ button.pgrow:active{background:var(--surface)}
   box-shadow:0 10px 26px -12px rgba(var(--danger-rgb),.6),inset 0 1px 0 rgba(255,255,255,.18)}
 .cf-alt{background:none;border:none;color:var(--accentHi);font-family:inherit;font-weight:600;font-size:15px;
   padding:12px 0 2px;min-height:44px;cursor:pointer}
-.cf-alt:active{opacity:.6}
+:root:not(.tch) .cf-alt:active,.cf-alt.tapd{opacity:.6}
 .cf-alt.bad{color:var(--danger)}
 /* ---- One button language for every sheet and sub-page ------------------------------
    Pills, sentence case, the accent gradient on the primary; .g is the tonal secondary.
@@ -2886,7 +2896,7 @@ button.pgrow:active{background:var(--surface)}
 .rt2-end{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;margin-top:6px;border-radius:var(--rpill);
   background:rgba(var(--accent-rgb),.08);border:1px solid rgba(var(--accentHi-rgb),.45);color:var(--accentHi);font-family:var(--display);
   font-size:16px;font-weight:700;transition:transform var(--m-press) var(--e-standard)}
-.rt2-b:active,.rt2-end:active{transform:scale(.96)}
+:root:not(.tch) .rt2-b:active,.rt2-b.tapd,:root:not(.tch) .rt2-end:active,.rt2-end.tapd{transform:scale(.96)}
 [dir="rtl"] .rt2-b svg,[dir="rtl"] .rt2-end svg{transform:scaleX(-1)}
 /* The countdown's own labels in the same case as everything else. */
 .rt-skip,.rt-main{text-transform:none;letter-spacing:0}
@@ -2942,7 +2952,7 @@ button.pgrow:active{background:var(--surface)}
   padding:16px;border-radius:var(--r4);border:1px solid var(--border);text-align:start;color:var(--text);overflow:hidden;
   background:radial-gradient(90% 70% at 100% 0%,rgba(var(--glow-rgb),.14),transparent 70%),var(--raised);
   transition:transform var(--m-press) var(--e-standard)}
-.ttile:active{transform:scale(.97)}
+:root:not(.tch) .ttile:active,.ttile.tapd{transform:scale(.97)}
 .ttile:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
 .ttile-i{display:grid;place-items:center;width:40px;height:40px;margin-bottom:auto;border-radius:50%;
   background:var(--surface);border:1px solid var(--border);color:var(--sub)}
@@ -2956,7 +2966,7 @@ button.pgrow:active{background:var(--surface)}
 .dv-h{margin:22px 0 10px;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
 .dv-card{display:block;width:100%;margin-top:10px;padding:14px 16px;border-radius:var(--r4);border:1px solid var(--border);
   background:var(--raised);color:var(--text);text-align:start;transition:transform var(--m-press) var(--e-standard)}
-button.dv-card:active{transform:scale(.98)}
+:root:not(.tch) button.dv-card:active,button.dv-card.tapd{transform:scale(.98)}
 .dv-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .dv-row b{font-family:var(--display);font-size:15.5px}
 .dv-k{font-variant-numeric:tabular-nums;color:var(--sub);font-size:14px}
@@ -3018,7 +3028,7 @@ button.dv-card:active{transform:scale(.98)}
   min-height:36px;padding:0 14px;border-radius:var(--rpill);border:1px solid var(--hair-hi);
   background:rgba(var(--bg-rgb),.55);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
   color:var(--text);font-size:13px;font-weight:700;transition:transform var(--m-press) var(--e-standard)}
-.thero2-swap:active{transform:scale(.95)}
+:root:not(.tch) .thero2-swap:active,.thero2-swap.tapd{transform:scale(.95)}
 .thero2-swap svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .thero2:has(.thero2-swap) .thero2-t{padding-inline-end:86px}
 .trow.on{background:rgba(var(--accent-rgb),.08)}
@@ -3072,7 +3082,7 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .dquick{flex:0 0 52px;display:grid;place-items:center;padding:0;background:none;border:none;color:var(--accentHi)}
 .dquick svg{width:30px;height:30px;padding:7px;border-radius:50%;fill:none;stroke:currentColor;stroke-width:2.4;
   stroke-linecap:round;background:var(--accent-tint);box-shadow:inset 0 0 0 1px var(--accent-edge)}
-.dquick:active svg{transform:scale(.92)}
+:root:not(.tch) .dquick:active svg,.dquick.tapd svg{transform:scale(.92)}
 /* An empty state with a drawing in place of the small icon. */
 .artempty{padding-top:18px}
 .empty-art{width:132px;height:auto;margin:0 auto 6px}
@@ -3100,7 +3110,7 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .htile{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:112px;padding:14px;
   border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);color:var(--text);text-align:start;
   box-shadow:var(--shadow-card);transition:transform var(--m-press) var(--e-standard)}
-.htile:active{transform:scale(.97)}
+:root:not(.tch) .htile:active,.htile.tapd{transform:scale(.97)}
 .htile-i{display:grid;place-items:center;width:32px;height:32px;margin-bottom:6px;border-radius:50%;
   background:var(--surface);box-shadow:inset 0 0 0 1px var(--border);color:var(--sub)}
 .htile-i svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -3113,18 +3123,18 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 /* The water tile, split: two buttons stacked in the tile's frame, each the full width.
    The tile itself no longer presses as one; each half lights on its own. */
 .htile.hsplit{padding:0;gap:0;overflow:hidden}
-.htile.hsplit:active{transform:none}
+:root:not(.tch) .htile.hsplit:active,.htile.hsplit.tapd{transform:none}
 .hsplit-b{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;
   flex:1 1 50%;margin:0;border:none;background:none;color:inherit;text-align:start;font:inherit;
   transition:background var(--m-press) var(--e-standard)}
 .hsplit-top{padding:14px 14px 4px}
 .hsplit-bot{padding:4px 14px 14px;justify-content:flex-end}
-.hsplit-b:active{background:var(--surface)}
+:root:not(.tch) .hsplit-b:active,.hsplit-b.tapd{background:var(--surface)}
 .hsplit-top .htile-i{margin-bottom:6px}
 .hsplit-m{position:absolute;top:14px;inset-inline-end:14px;display:grid;place-items:center;width:32px;height:32px;
   border-radius:50%;background:var(--surface);box-shadow:inset 0 0 0 1px var(--border);
   color:var(--sub);font-size:20px;font-weight:600;line-height:1}
-.hsplit-top:active .hsplit-m{color:var(--text)}
+:root:not(.tch) .hsplit-top:active .hsplit-m,.hsplit-top.tapd .hsplit-m{color:var(--text)}
 .hsplit-top:disabled{opacity:1}
 .hsplit-top:disabled .hsplit-m{opacity:.35}
 /* Progress: the trend running into the mane, where the banner's photo was. */
@@ -3229,7 +3239,7 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .actbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:88px;padding:10px 6px;
   border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);color:var(--text);font-size:13px;font-weight:600;text-align:center;
   transition:transform var(--m-press) var(--e-standard)}
-.actbtn:active{transform:scale(.95)}
+:root:not(.tch) .actbtn:active,.actbtn.tapd{transform:scale(.95)}
 .actbtn .acticon{color:var(--accentHi)}
 .actbtn span{line-height:1.2;overflow-wrap:anywhere}
 .thumb.ph.act{display:grid;place-items:center;border-radius:12px;background:rgba(var(--accent-rgb),.12);color:var(--accentHi)}

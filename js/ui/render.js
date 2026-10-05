@@ -18,6 +18,7 @@ import {checkDock, syncDock} from "./dock.js";
 import {syncWbar} from "./wbar.js";
 import {applyMotion, countTo, once} from "./motion.js";
 import {applyLook} from "./theme.js";
+import {bindExSwipe} from "./exswipe.js";
 
 /* ============================================================ render */
 /* Motion is applied after the DOM has settled, and only to what changed.
@@ -105,6 +106,7 @@ function render(){
   appEl.classList.remove("pagein");
   if(moved)replace(appEl,h); else patch(appEl,h);
   if(moved){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
+  bindExSwipe();
 
   /* The dock is built once and only its state changes after that — see dock.js. */
   syncDock(document.getElementById("nav"),V.tab);

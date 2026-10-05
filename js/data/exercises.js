@@ -217,22 +217,44 @@ function dumbbellIcon(px){
     +'stroke-width="1.8" stroke-linecap="round"/></svg>';}
 /* Photos come off a CDN, so the first view of any exercise is a network round trip.
    Hold the space with a shimmer instead of letting the layout jump, and fall back to
-   the dumbbell glyph when the image never arrives. */
+   the dumbbell glyph when the image never arrives.
+
+   What each photo did is remembered (IMG), and the markup says so: a photo that has
+   loaded is written without the shimmer, one that failed is written as the glyph with
+   no <img> at all. The markup used to say "loading" every time, and the patcher, which
+   makes the page match the markup, put the shimmer back behind every loaded photo on
+   each render — to run there for good — and put every failed photo back to be fetched
+   and fail again: offline, the glyphs blinked on every tap. A failed photo is tried
+   again when the phone comes back online. */
+var IMG={};
+function onImg(ev){
+  var im=ev.target;
+  if(!im||im.tagName!=="IMG"||!im.classList.contains("thumb"))return;
+  var ok=ev.type==="load",w=im.parentNode;
+  IMG[im.getAttribute("src")]=ok?"ok":"x";
+  /* It can finish after its row has gone. */
+  if(!w||!w.classList)return;
+  w.classList.remove("skel");
+  if(!ok){w.classList.add("failed");im.remove();}}
+if(typeof document!=="undefined"){
+  /* load and error do not bubble, but they can be caught on the way down. */
+  document.addEventListener("load",onImg,true);
+  document.addEventListener("error",onImg,true);
+  window.addEventListener("online",function(){
+    for(var k in IMG)if(IMG[k]==="x")delete IMG[k];});}
 function thumb(n,size){
   size=size||44;
+  var box='width:'+size+'px;height:'+size+'px';
   /* An activity reads better as its own glyph than as a treadmill photograph. */
-  if(isActivity(n))return '<span class="thumb ph act" style="width:'+size+'px;height:'+size+'px">'
+  if(isActivity(n))return '<span class="thumb ph act" style="'+box+'">'
     +actIcon(n,Math.round(size*0.5))+'</span>';
   var u=exImg(n,0);
-  if(!u)return '<div class="thumb ph" style="width:'+size+'px;height:'+size+'px">'
+  if(!u)return '<div class="thumb ph" style="'+box+'">'
     +dumbbellIcon(Math.round(size*0.5))+'</div>';
-  return '<span class="thumbwrap skel" style="width:'+size+'px;height:'+size+'px">'
-    +'<i class="thumbfall">'+dumbbellIcon(Math.round(size*0.5))+'</i>'
-    +'<img class="thumb" loading="lazy" src="'+u+'" alt="" '
-    +'style="width:'+size+'px;height:'+size+'px" '
-    +'onload="this.parentNode.classList.remove(\'skel\')" '
-    +'onerror="this.parentNode.classList.remove(\'skel\');'
-    +'this.parentNode.classList.add(\'failed\');this.remove()"></span>';}
+  var st=IMG[u],fall='<i class="thumbfall">'+dumbbellIcon(Math.round(size*0.5))+'</i>';
+  if(st==="x")return '<span class="thumbwrap failed" style="'+box+'">'+fall+'</span>';
+  return '<span class="thumbwrap'+(st==="ok"?'':' skel')+'" style="'+box+'">'+fall
+    +'<img class="thumb" loading="lazy" src="'+u+'" alt="" style="'+box+'"></span>';}
 function libFind(n){var v=EXDB&&EXDB[n];return v?[n,v.m,v.e,v.c]:null;}
 function hasGear(n){
   if(!S.gear||!S.gear.length)return true;

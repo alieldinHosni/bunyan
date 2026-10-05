@@ -96,13 +96,20 @@ function enter(from){
 /* Where an exercise change by step comes in from, on screen. */
 function fromOf(step){return (rtl()?-1:1)*(step>0?1:-1);}
 
+/* The one listener here that can stop a scroll — it has to, to keep a sideways drag
+   from also scrolling the page — sits on the exercise pane alone. On the document it
+   made every scroll in the app wait for script before it could start, on every tab.
+   render() calls this after each paint; a pane already bound is left alone. */
+function bindExSwipe(){
+  var p=pane();
+  if(p&&!p._exswipe){p._exswipe=true;p.addEventListener("touchmove",onMove,{passive:false});}}
+
 function initExSwipe(hooks){
   H=hooks;
   document.addEventListener("touchstart",onStart,{passive:true});
-  document.addEventListener("touchmove",onMove,{passive:false});
   document.addEventListener("touchend",onEnd,{passive:true});
   document.addEventListener("touchcancel",cancel,{passive:true});
   document.addEventListener("click",function(ev){
     if(swallowUntil&&Date.now()<swallowUntil){swallowUntil=0;ev.preventDefault();ev.stopPropagation();}},true);}
 
-export {enter, fromOf, initExSwipe};
+export {bindExSwipe, enter, fromOf, initExSwipe};

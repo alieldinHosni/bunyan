@@ -20,9 +20,12 @@ function weekOrder(){var s=weekStart(),o=[];for(var i=0;i<7;i++)o.push((s-1+i)%7
 function weekStartOf(iso){return addDays(iso,-((isoWeekday(iso)-weekStart()+7)%7));}
 function weekDates(iso){var f=weekStartOf(iso),o=[];for(var i=0;i<7;i++)o.push(addDays(f,i));return o;}
 /* Weekday names in the app's language, Monday = 1. */
+var WD={};   /* names already written, by language, length and day */
 function wdName(n,long){
+  var lang=S.prefs&&S.prefs.lang==="ar"?"ar-EG":"en-GB",k=lang+(long?"L":"S")+n;
+  if(WD[k])return WD[k];
   var d=new Date(2024,0,n);/* 1 Jan 2024 was a Monday */
-  try{return d.toLocaleDateString(S.prefs&&S.prefs.lang==="ar"?"ar-EG":"en-GB",{weekday:long?"long":"short"});}
+  try{return (WD[k]=d.toLocaleDateString(lang,{weekday:long?"long":"short"}));}
   catch(e){return ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][n-1];}}
 
 /* A sensible week for n training days: spread out, never three in a row when it can
