@@ -24,6 +24,13 @@ var H={};                       /* render, guard, closeSheet — wired by app.js
 
 function initNav(hooks){
   H=hooks||{};
+  /* Scroll position is the app's to restore, not the browser's. The browser put back
+     whatever it had saved for a history entry once a traversal finished — after the
+     screen had been drawn — so a tab tap, which unwinds the trail, could open Progress
+     halfway down. Each step deeper now remembers its own position (pushNav), and back
+     returns to it (fallback). Pushed entries inherit the mode, so setting it once
+     covers every entry. */
+  try{history.scrollRestoration="manual";}catch(e){}
   try{
     history.replaceState({bunyan:1},"");
     /* One spare entry, always, in front of wherever the user is. The browser's back
@@ -44,7 +51,8 @@ function rootOf(tab){return {tab:tab||"home",train:"days",dayId:null,previewId:n
 
 /* Call before mutating V for a genuine navigation: it records where you are now. */
 function pushNav(){
-  STACK.push(loc());
+  var l=loc();l.y=window.pageYOffset||0;
+  STACK.push(l);
   DEPTH++;
   try{history.pushState({bunyan:1},"");}catch(e){}
 }
@@ -68,9 +76,11 @@ function resetNav(){
 }
 
 function fallback(){
-  if(STACK.length)apply(STACK.pop());
-  else apply(rootOf(V.tab));
+  var l=STACK.length?STACK.pop():rootOf(V.tab);
+  apply(l);
   if(H.render)H.render();
+  /* Back to where it was on the screen it returns to; a root starts at the top. */
+  try{window.scrollTo(0,l.y||0);}catch(e){}
 }
 /* ---- the one predicate ------------------------------------------------------
    Back is available exactly where there is somewhere in-app to return to, and the

@@ -14,7 +14,7 @@ import {syncRest} from "./views/session.js";
 import {PERSIST} from "../util.js";
 import {lockScroll, syncWorkoutState, V} from "./view.js";
 import {patch, replace} from "./patch.js";
-import {syncDock} from "./dock.js";
+import {checkDock, syncDock} from "./dock.js";
 import {syncWbar} from "./wbar.js";
 import {applyMotion, countTo, once} from "./motion.js";
 import {applyLook} from "./theme.js";
@@ -110,6 +110,9 @@ function render(){
   syncDock(document.getElementById("nav"),V.tab);
   /* A workout under way, seen from another tab. */
   syncWbar();
+  /* A new screen opens with the dock in view (see dock.js). */
+  checkDock([V.tab,V.tab==="train"?(S.active?"session":V.train):"",V.previewId,V.dayId,V.meal,V.smeal,V.pslot,
+    V.pimport,V.phist].join("|"));
 
   /* The sheet animates in when it opens and never again. Replaying sheetIn on every
      render is what made tapping the favourite star look like the sheet was being

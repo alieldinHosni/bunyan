@@ -36,7 +36,8 @@ var SHEET_KICK={editex:"Exercise",recovery:"Recovery",weigh:"Body",measure:"Body
   set_profiles:"Settings",set_data:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
 var CFICON={
   leave:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M9 16l-4-4 4-4M5 12h11"/>',
-  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>'
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+  swap:'<path d="M4 8h13l-3-3M20 16H7l3 3"/>'
 };
 function vSheet(){
   if(!V.sheet)return "";
@@ -83,7 +84,8 @@ function vSheet(){
      +'<div class="cf-acts">'
      +'<button class="btn cf-ok" data-confirmok="1">'+esc(c.cta||t("Delete"))+'</button>'
      +'<button class="btn g cf-no" '+(c.back?'data-restore="1"':'data-close="1"')+'>'+esc(c.cancel||t("Cancel"))+'</button>'
-     +(c.alt?'<button class="cf-alt" data-confirmalt="1">'+esc(c.alt)+'</button>':'')
+     /* altbad: the second choice is the one that deletes, so it reads in danger red. */
+     +(c.alt?'<button class="cf-alt'+(c.altbad?' bad':'')+'" data-confirmalt="1">'+esc(c.alt)+'</button>':'')
      +'</div></div>';
   }
   else if(V.sheet==="exercise"){

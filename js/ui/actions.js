@@ -110,7 +110,7 @@ ACT.customex=function(name,d){
   /* Put the picker's context back so a custom exercise can still land in the day or
      replace the live one, exactly like a library pick. */
   V.sd=(d&&d.from)||null;
-  var landed=!!dayOf(V.dayId)||(V.sd&&V.sd.swaplive&&S.active);
+  var landed=!!dayOf(V.dayId)||(V.sd&&(V.sd.swaplive||V.sd.addlive)&&S.active);
   addExercise(name);
   if(!landed){V.sd=null;render();toast(name+" "+t("is in your library."));}};
 ACT.delset=function(_,i){
@@ -264,6 +264,36 @@ function finishSession(){
   openSheet("done",summary);}
 
 
+/* ---- changing the live workout --------------------------------------------------
+   On the day, the plan is a starting point: an exercise can be swapped, dropped or
+   added. Every one of these changes this session only; the program is untouched. */
+/* A session entry for an exercise that was not in the plan. A replacement inherits the
+   sets, reps and rest it replaces; anything else starts from 3 × 8–12. */
+function liveEntry(name,like){
+  var e=ex(name,3,8,12),act=isActivity(name);
+  var planned=act?{sets:1,lo:0,hi:0,min:actInfo(name).grp==="Sports"?60:30,rpe:6}
+    :(like&&!isActivity(like.name)?{sets:like.planned.sets,lo:like.planned.lo,hi:like.planned.hi}:{sets:3,lo:8,hi:12});
+  return {name:name,exId:exIdOf(name),kind:kindOf(name),muscle:muscleOf(name),planned:planned,
+    rest:act?0:(like&&!isActivity(like.name)?like.rest:e.rest),grp:null,sets:[]};}
+/* keep: the sets logged on the old exercise stay with it, and the replacement comes
+   in as the next exercise. Otherwise the replacement takes its place, and anything
+   logged on it goes with it. */
+function swapLive(name,i,keep){
+  var a=S.active,cur=a&&a.entries[i];if(!cur){closeSheet();return;}
+  var fresh=liveEntry(name,cur);
+  if(keep){
+    a.entries.splice(i+1,0,fresh);
+    V.logIdx=i+1;
+    toast(t("Your logged sets were kept. Next up:")+" "+exName(name));
+  }else{
+    /* The group stays: a replacement in a superset is still in the superset. */
+    fresh.grp=cur.grp||null;
+    a.entries[i]=fresh;V.logIdx=i;}
+  a.idx=V.logIdx;
+  endRest();V.fresh=-1;saveDB();closeSheet();syncDraft();render();}
+ACT.swapkeep=function(_,d){if(d)swapLive(d.name,d.i,true);};
+ACT.swapdrop=function(_,d){if(d)swapLive(d.name,d.i,false);};
+
 /* Adding an exercise mutates the plan or the live session, so it belongs with the
    other state-changing actions rather than in the entry point. */
 function addExercise(name){
@@ -273,20 +303,32 @@ function addExercise(name){
   if(isActivity(name)){e.sets=1;e.lo=0;e.hi=0;e.rest=0;
     e.min=actInfo(name).grp==="Sports"?60:30;e.rpe=6;}
   if(V.sd&&V.sd.swaplive&&S.active){
-    var cur=S.active.entries[V.logIdx];
-    var planned=isActivity(name)?{sets:1,lo:0,hi:0,min:e.min,rpe:e.rpe}
-      :(isActivity(cur.name)?{sets:3,lo:8,hi:12}:{sets:cur.planned.sets,lo:cur.planned.lo,hi:cur.planned.hi});
+    var cur=S.active.entries[V.logIdx];if(!cur){closeSheet();return;}
     if(cur.sets.length){
-      /* Sets already done stay with the exercise they were done on. The replacement
-         comes in as the next exercise instead of overwriting them. */
-      var fresh={name:name,exId:exIdOf(name),kind:kindOf(name),muscle:muscleOf(name),planned:planned,rest:isActivity(name)?0:cur.rest,grp:null,sets:[]};
-      S.active.entries.splice(V.logIdx+1,0,fresh);
-      V.logIdx=V.logIdx+1;S.active.idx=V.logIdx;
-      toast(t("Your logged sets were kept. Next up:")+" "+exName(name));
-    }else{
-      cur.name=name;cur.exId=exIdOf(name);cur.kind=kindOf(name);cur.muscle=muscleOf(name);cur.planned=planned;cur.extra=0;
-      if(isActivity(name))cur.rest=0;}
-    endRest();V.fresh=-1;saveDB();closeSheet();syncDraft();render();return;}
+      /* Sets already done on it: the lifter says what happens to them, rather than
+         the app quietly keeping the old exercise in the workout. */
+      var nS=cur.sets.length;
+      askConfirm({title:t("Replace {ex}?").replace("{ex}",exName(cur.name)),icon:"swap",
+        body:t(nS===1?"You logged 1 set on it. Keep it, with {new} next, or replace the exercise and delete the set."
+                     :"You logged {n} sets on it. Keep them, with {new} next, or replace the exercise and delete the sets.")
+             .replace("{n}",nS).replace("{new}",exName(name)),
+        cta:t(nS===1?"Keep my set":"Keep my sets"),act:"swapkeep",
+        alt:t(nS===1?"Replace it and delete the set":"Replace it and delete the sets"),altact:"swapdrop",altbad:true,
+        data:{name:name,i:V.logIdx}});
+      return;}
+    swapLive(name,V.logIdx,false);return;}
+  /* Added during a workout: it joins this session only, at the end, and the plan is
+     left as it was. */
+  if(V.sd&&V.sd.addlive&&S.active){
+    var a=S.active,stamp=a.started,fresh=liveEntry(name,null);
+    a.entries.push(fresh);
+    saveDB();closeSheet();syncDraft();render();
+    toast(t("{ex} added as exercise {n}.").replace("{ex}",exName(name)).replace("{n}",a.entries.length),function(){
+      var b=S.active;if(!b||b.started!==stamp)return;
+      var k=b.entries.indexOf(fresh);if(k<0||fresh.sets.length)return;
+      b.entries.splice(k,1);if(V.logIdx>=b.entries.length)V.logIdx=b.entries.length-1;b.idx=V.logIdx;
+      saveDB();syncDraft();render();});
+    return;}
   var d=dayOf(V.dayId);if(!d){closeSheet();return;}
   if(V.sd&&V.sd.replace){
     var i=d.ex.findIndex(function(x){return x.id===V.sd.replace;});
