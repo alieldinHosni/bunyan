@@ -29,6 +29,7 @@ import {weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consist
         muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL, topLifts, volumeSeries,
         weighIns, weightChange} from "../../engine/stats.js";
 import {sessionVolume} from "../../engine/formulas.js";
+import {standingNow} from "../../engine/coachinfo.js";
 import {ensureSessionIds, S} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
 import {dfmt, esc, fmtN, pretty, r1, shortd, today} from "../../util.js";
@@ -321,6 +322,25 @@ function vOverview(r){
   return h;}
 
 /* ---- Strength ------------------------------------------------------------------ */
+var OPL_NAME={squat:"Squat",bench:"Bench press",deadlift:"Deadlift"};
+function oplCard(){
+  var st=standingNow(),ok=(st.lifts||[]).filter(function(x){return x.kind==="ok";});
+  if(!ok.length)return "";
+  var h=lbl(t("Among powerlifters"),'<span class="pgaside">'+esc(t("raw · {c} kg class").replace("{c}",ok[0].cls))+'</span>');
+  h+='<div class="pgcard pgshare pgopl">'+ok.map(function(x){
+    var name=t(OPL_NAME[x.lift]),shown=x.edge==="below"?"<10":x.edge==="above"?">90":String(x.pct);
+    var say=x.edge==="below"?t("{lift}: ahead of fewer than 10 in 100"):x.edge==="above"?t("{lift}: ahead of more than 90 in 100")
+      :t("{lift}: ahead of about {n} in 100");
+    return '<div class="pgshare-r" aria-label="'+esc(say.replace("{lift}",name).replace("{n}",x.pct))+'">'
+     +'<span>'+esc(name)+'</span>'
+     +'<div class="bar" aria-hidden="true"><i style="width:'+Math.max(2,Math.min(100,x.pct))+'%"></i></div>'
+     +'<b class="num"><bdi dir="ltr">'+esc(shown)+'</bdi></b></div>';}).join("")
+   +'<p class="pgnote">'+esc(t("How many in 100 raw powerlifting competitors in your class you are ahead of: people who train for these three lifts and enter meets. Anywhere on this scale is strong."))+'</p>'
+   +'<p class="pgnote">'+esc(t("From your best estimated max in the last 12 weeks: {list}. A meet lift is a judged single, so take this as a rough guide.")
+      .replace("{list}",ok.map(function(x){return t(OPL_NAME[x.lift])+" "+fmtW(x.kg);}).join(S.prefs.lang==="ar"?"، ":", ")))
+   +' '+esc(t("Data: OpenPowerlifting."))+'</p></div>';
+  return h;}
+
 function vStrength(r){
   var all=topLifts();
   if(!all.length)return artEmpty("barbell",t("No strength history"),
@@ -368,6 +388,10 @@ function vStrength(r){
     else h+=tooFew(t("Log this lift on two days in this range to see the trend."));
     h+='<p class="pgnote">'+esc(t("Epley formula, from working sets of 12 reps or fewer."))+'</p>';}
   h+='</div>';
+
+  /* ---- the three judged lifts among raw powerlifting competitors. Shown only when one
+     was logged in the last 12 weeks; the comparison is said on the card, not left out. */
+  if(half==="all")h+=oplCard();
 
   /* ---- exercise progress: every lift, most trained first, with its latest session,
      its trend and how far it moved in the range. Tapping one charts it above. */
