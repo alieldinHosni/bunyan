@@ -300,7 +300,17 @@ function recommend(e){
   else if(plateauOf(e.name)){w=top;note="No gain in three sessions. Hold this weight and chase a rep, or take a lighter week.";}
   else if(avg&&avg>=9.5){w=top;note="Last session was near failure. Hold this weight.";}
   else note="Same weight, aim for more reps.";
-  return {w:w,lo:e.planned.lo,hi:e.planned.hi,note:note,last:top+" \u00d7 "+topR};}
+  /* How the lifter feels today (asked as the workout starts) moves today's number, and
+     says so. A lighter week or a planned deload already sets it lighter. Drained: about
+     5% under last time. Low: last time's weight, never more. Great, after a session
+     with reps to spare: the bigger step. */
+  var rd=S.active&&num(S.active.ready);
+  if(rd&&!inDeload()&&adv.kind!=="deload"){
+    if(rd===1){w=snapDown(top*0.95,inc)||top;note="A drained day: about 5% under last time, same reps. It still counts.";}
+    else if(rd===2&&w>top){w=top;note="A low day: last time's weight, not more. The step can wait for next time.";}
+    else if(rd===5&&hitTop&&avg&&avg<=8&&inc&&w<=Math.round((top+inc)*100)/100){
+      w=Math.round((top+Math.min(inc*2,Math.max(inc,top*0.1)))*100)/100;note="A great day after reps to spare last time: a bigger step.";}}
+  return {w:w,lo:e.planned.lo,hi:e.planned.hi,note:note,last:top+" \u00d7 "+topR,ready:rd||0};}
 function progressionHint(e){
   if(!e.sets.length)return null;
   var work=e.sets.filter(function(x){return !x.wu&&num(x.r)>0;});

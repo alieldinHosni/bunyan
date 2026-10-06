@@ -380,7 +380,6 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Good": "كويس",
 "Great": "ممتاز",
 "Skip": "تخطّي",
-"A low day. Keep the weights you know, drop a set if you need to, or stop early. It still counts.": "يوم تقيل. خليك على الأوزان اللي تعرفها، شيل مجموعة لو محتاج، أو خلّص بدري. برضه بيتحسب.",
 "You flagged pain on this exercise recently. Consider a substitute, and if it keeps coming back, get it looked at.": "سجّلت ألم في التمرين ده قريب. فكّر في بديل، ولو الألم بيرجع اكشف عليه.",
 "Replace it": "غيّره",
 "Pain noted": "الألم اتسجل",
@@ -1526,7 +1525,14 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "A formula is an estimate. Log your food on most days and weigh in a few mornings a week, and after two weeks I can measure what your body actually uses.": "المعادلة تقدير. سجّل أكلك أغلب الأيام واوزن نفسك كام يوم الصبح في الأسبوع، وبعد أسبوعين أقدر أقيس جسمك بيصرف قد إيه فعلًا.",
 "Maintenance measured from your own log (the formula says {f}).": "الاحتياج متقاس من سجلك (المعادلة بتقول {f}).",
 "Maintenance by formula. Your own log measures about {k} ({lo}–{hi}).": "الاحتياج بالمعادلة. سجلك بيقيس حوالي {k}، ما بين {lo} و{hi}.",
-"Maintenance by formula. After two weeks of logged food and a few weigh-ins, your own log measures it.": "الاحتياج بالمعادلة. بعد أسبوعين من تسجيل الأكل وكام وزنة، سجلك هيقيسه."
+"Maintenance by formula. After two weeks of logged food and a few weigh-ins, your own log measures it.": "الاحتياج بالمعادلة. بعد أسبوعين من تسجيل الأكل وكام وزنة، سجلك هيقيسه.",
+"A drained day: about 5% under last time, same reps. It still counts.": "يوم مرهق: حوالي 5% أقل من آخر مرة، بنفس العدات. وبرضه بيتحسب.",
+"A low day: last time's weight, not more. The step can wait for next time.": "يوم طاقته قليلة: نفس وزن آخر مرة، مش أكتر. الزيادة تستنى المرة الجاية.",
+"A great day after reps to spare last time: a bigger step.": "يوم ممتاز وآخر مرة كان فاضل عندك عدات: خطوة أكبر.",
+"A low day. Today's suggestions are lighter; drop a set if you need to, or stop early. It still counts.": "يوم طاقته قليلة. اقتراحات النهاردة أخف؛ شيل مجموعة لو محتاج، أو وقّف بدري. وبرضه بيتحسب.",
+"One set fewer on each exercise": "مجموعة أقل في كل تمرين",
+"One set fewer on 1 exercise.": "مجموعة أقل في تمرين واحد.",
+"One set fewer on {n} exercises.": "مجموعة أقل في {n} تمارين."
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;

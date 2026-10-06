@@ -193,7 +193,9 @@ function vLogger(){
      +READY.map(function(x){return '<button data-ready="'+x[0]+'">'+t(x[1])+'</button>';}).join("")
      +'</div><button class="ready-skip" data-ready="0">'+t("Skip")+'</button></section>';
   }else if(a.ready&&a.ready<=2&&doneAll===0){
-    h+='<div class="readynote">'+t("A low day. Keep the weights you know, drop a set if you need to, or stop early. It still counts.")+'</div>';
+    /* Today's suggestions are already lighter (see recommend()); fewer sets is offered. */
+    h+='<div class="readynote">'+t("A low day. Today's suggestions are lighter; drop a set if you need to, or stop early. It still counts.")
+     +(a.lighter?'':'<button class="btn g sm readyless" data-readyless="1">'+t("One set fewer on each exercise")+'</button>')+'</div>';
   }
   /* The day's notes from the plan, before anything is logged: how long it should
      take, what to cut if time runs short. Folded, so they cost a line. */

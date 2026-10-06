@@ -350,6 +350,11 @@ otherwise they would outlive the blob that was supposed to own them.
 - **Seven-day weight average** = the mean of your last seven weigh-ins. Use this,
   not the daily number.
 - **Progression** fires when every working set reaches the top of its rep range.
+- **How you feel today** (asked as a workout starts) moves today's suggestions, and each
+  says why. Drained: about 5% under last time, same reps. Low: last time's weight, no
+  increase, and "One set fewer on each exercise" is offered, with Undo. Great, after a
+  session with reps to spare: the bigger step (two steps, at most 10%). A lighter week
+  already sets the load, so it wins. Nothing changes unless the lifter answers.
 - **Warm-up sets** count for nothing. Tap a logged set's number to mark it `W` and it
   drops out of volume, average RPE, personal records, the "last time" column and the
   progression check. The row stays so you can see what you actually did.

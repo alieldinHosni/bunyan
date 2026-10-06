@@ -444,6 +444,7 @@ document.addEventListener("click",function(ev){
     saveDB();render();return;}
   /* ---- readiness, session effort, pain */
   if(D.ready!==undefined&&S.active){W.setReady(+D.ready);return;}
+  if(D.readyless&&S.active){W.lighterDay();return;}
   if(D.srpe){
     var sw9=V.sd&&sessionById(V.sd.id);if(!sw9)return;
     sw9.srpe=+D.srpe;saveSession(sw9);render();return;}

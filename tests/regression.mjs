@@ -1507,6 +1507,32 @@ await test("Maintenance learned: too little logged says how much more is needed,
   await coach(page,"food","targets");
   if(!/After two weeks of logged food/.test(await page.$eval('.tgsrc',e=>e.textContent)))throw new Error("Targets does not say what it needs");
 },{db:Object.assign(seed(),{days:Object.fromEntries([1,2,3].map(d=>[iso(d),{meals:{Lunch:{done:true,items:[{n:"x",kcal:2000,p:150,c:200,f:67}]}}}]))})});
+/* ---- readiness that acts (roadmap B3) ------------------------------------------------ */
+await test("Readiness: drained takes about 5% off today's suggestion, low holds last time's weight, great allows the bigger step; one set fewer on each exercise, with Undo",async page=>{
+  const r=await page.evaluate(async()=>{
+    const F=await import("/js/engine/formulas.js"),S=(await import("/js/state.js")).S,U=await import("/js/util.js");
+    const y=new Date(Date.now()-864e5),yd=new Date(y-y.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+    /* Last time: 100 × 8 three times, at the top of 6–8, at about RPE 7.7. */
+    S.sessions.unshift({id:"rd",date:yd,dayName:"T",entries:[{name:"Barbell Squat",muscle:"Quads",sets:[{w:100,r:8,rpe:7.5},{w:100,r:8,rpe:7.5},{w:100,r:8,rpe:8}]}]});
+    const e={name:"Barbell Squat",planned:{lo:6,hi:8,sets:3}},out={};
+    const was=S.active;
+    for(const rd of [0,1,2,5]){S.active={entries:[],ready:rd};const x=F.recommend(e);out[rd]=[x.w,x.note];}
+    S.active=was;return out;});
+  /* A squat steps 5 kg at 100: the usual step is 105; great takes the bigger one (two
+     steps, at most 10%), 110; low holds 100; drained is about 5% under, 95. */
+  eq([r[0][0],r[1][0],r[2][0],r[5][0]],[105,95,100,110],"normal step, drained, low, great");
+  if(!/drained day/.test(r[1][1])||!/low day/.test(r[2][1])||!/great day/.test(r[5][1]))throw new Error("each says why: "+JSON.stringify(r));
+  /* In a workout: a low answer offers one set fewer, with Undo. */
+  await startWorkout(page);
+  await page.tap('[data-ready="2"]');await pause(page,300);
+  const before=await ev(page,"S.active.entries.map(e=>e.planned.sets)");
+  await page.tap('[data-readyless]');await pause(page,300);
+  const after=await ev(page,"S.active.entries.map(e=>e.planned.sets)");
+  eq(after,before.map(n=>n>1?n-1:n),"one set fewer on each, never under one");
+  eq(await page.$$eval('[data-readyless]',a=>a.length),0,"offered once");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"S.active.entries.map(e=>e.planned.sets)"),before,"Undo");
+});
 /* ---- how coaching is surfaced (coach phase 4) ---------------------------------------- */
 await test("Phase 4: Coach AI shows the most important thing first, the rest behind a tap; the dot still counts them all",async page=>{
   const n=await page.evaluate(async()=>(await import("/js/ui/views/pcheck.js")).adviceCount());
