@@ -294,7 +294,7 @@ function muscleOfEntry(e){
 function isCompound(n){var v=EXDB&&EXDB[n];return v?!!v.c:/Press|Squat|Deadlift|Row|Pull|Lunge|Dip/i.test(n);}
 
 
-export {isUnilateral, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
+export {alsoKnown, isUnilateral, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
 
 /* Plate maths only means something on a loaded bar. On a machine, a cable or your
    own bodyweight the button was there on every exercise and useful on a handful.
@@ -328,6 +328,15 @@ function nameParts(full){
   n=n.replace(/\s+/g," ").trim();
   return (NPARTS[k]={name:n||k,variant:variant,alias:alias});
 }
+/* What else people call a library exercise, for search only: a coach's sheet says
+   "broad jump", the library has free-exercise-db's "Standing Long Jump". */
+var ALSO={
+  "Standing Long Jump":"broad jump",
+  "Lateral Bound":"skater jumps skaters",
+  "Freehand Jump Squat":"squat jump",
+  "Lateral Cone Hops":"lateral hurdle hops",
+  "Rope Jumping":"skipping jump rope"};
+function alsoKnown(n){return ALSO[n]||"";}
 function exShort(n){return nameParts(n).name;}
 function exVariant(n){return nameParts(n).variant;}
 function exAlias(n){return nameParts(n).alias;}

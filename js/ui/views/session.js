@@ -1,6 +1,6 @@
 /* Bunyan — session
    The live session surface and rest screen. Execution, not editing. */
-import {t} from "../../i18n/dict.js";
+import {t, tm} from "../../i18n/dict.js";
 import {isolateNums} from "../../i18n/bidi.js";
 import {difficultyOf, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
@@ -10,6 +10,8 @@ import {S} from "../../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num} from "../../util.js";
 import {ex_isTimed, stepperInput, V} from "../view.js";
+import {doseText} from "../dose.js";
+import {vWarm, warmShown} from "./warmup.js";
 
 /* ============================================================ SESSION
    Execution surface, not an editor. vDay() prescribes the work; this screen only
@@ -106,6 +108,10 @@ function noteSet(a){
   a.lastSet=now;
 }
 
+/* The prescription of a live entry, as the plan wrote it. */
+function plannedDose(e){
+  var p=e.planned||{};
+  return doseText({sets:p.sets,lo:p.lo,hi:p.hi,amrap:p.amrap,side:p.side,rir:p.rir,timed:ex_isTimed(e)&&!LOADED.test(e.name)});}
 function vLogger(){
   var a=S.active;
   if(V.logIdx>=a.entries.length)V.logIdx=a.entries.length-1;
@@ -155,6 +161,10 @@ function vLogger(){
       +'<i>'+t("Show")+'</i></button>':'')
    +'</div>';
 
+  /* The warm-up comes first, in place of the first exercise, until it is done or
+     skipped (js/ui/views/warmup.js). */
+  if(warmShown(a))return h+vWarm(a)+'</div>';
+
   /* --- one segment per exercise; members of a superset are tied together. The
      arrows either side step through them; so does a swipe on the exercise below. --- */
   var NAVP='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>',
@@ -185,6 +195,11 @@ function vLogger(){
   }else if(a.ready&&a.ready<=2&&doneAll===0){
     h+='<div class="readynote">'+t("A low day. Keep the weights you know, drop a set if you need to, or stop early. It still counts.")+'</div>';
   }
+  /* The day's notes from the plan, before anything is logged: how long it should
+     take, what to cut if time runs short. Folded, so they cost a line. */
+  if(doneAll===0&&a.dayNotes&&a.dayNotes.length)
+    h+='<details class="daynotes"><summary>'+t("Notes for today")+'</summary>'
+     +a.dayNotes.map(function(l){return '<p>'+esc(l)+'</p>';}).join("")+'</details>';
   /* Pain flagged on this exercise in two of its last three sessions: say so before
      the first set, once, and point at a substitute. */
   if(!e.sets.length&&painRecent(e.name))
@@ -211,17 +226,22 @@ function vLogger(){
    +(run.length>1?'<span class="pill sup">'+t("Superset")+' '+groupLabel(a.entries,V.logIdx)
        +' · '+t("round")+' '+Math.min(rows,e.sets.length+1)+'/'+rows+'</span>':'')
    +(inDeload()?'<span class="pill gold">'+t("Lighter week")+'</span>':'')
-   +'<span class="etag">'+esc(t(muscleOfEntry(e)))+'</span>'
+   +'<span class="etag">'+esc(tm(muscleOfEntry(e)))+'</span>'
    /* How to read the numbers: a dumbbell's weight is per hand unless the lifter chose
       totals, and a one-sided exercise's reps are for one side. */
    +(med&&med.e?'<span class="etag">'+esc(t(med.e))
      +(med.e==="Dumbbell"?' · '+esc(t(dbTotal()&&!isUnilateral(e.name)?"both together":"per hand")):'')+'</span>':'')
-   +(isUnilateral(e.name)?'<span class="etag">'+t("Each side")+'</span>':'')
-   +'<span class="etag">'+e.planned.sets+' × '+e.planned.lo
-   +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+'</span>'
+   +(isUnilateral(e.name)&&!e.planned.side?'<span class="etag">'+t("Each side")+'</span>':'')
+   +'<span class="etag">'+esc(plannedDose(e))+'</span>'
    +(difficultyOf(e.name)?'<span class="etag hot">'+esc(t(difficultyOf(e.name)))+'</span>':'')
    +(pr.w?'<span class="pill gold">'+esc(t("PR"))+' '+esc(loadText(e.name,pr.w))+'</span>':'')
-   +'</div></section>';
+   +'</div>'
+   /* The coach's cue for it, from an imported plan or a note of your own. */
+   +(e.planned.note?'<p class="ex-cue">'+esc(e.planned.note)+'</p>':'')
+   /* The plan's other choice for this slot ("Pull-Ups or Seated Row"), one tap away
+      until a set is logged. */
+   +(e.alt&&!e.sets.length?'<button class="linkbtn exalt" data-swapalt="1">'+esc(t("Or"))+' '+esc(exName(e.alt))+'</button>':'')
+   +'</section>';
 
   /* The frame's recommendation banner, above the table where it puts it. The figure is
      the recommender's own, and it only appears before the first set of the exercise —
@@ -231,10 +251,17 @@ function vLogger(){
      find the first weight instead. A beginner gets the fuller version. */
   if(!e.sets.length&&!p&&!timed)
     h+='<div class="recbar first"><span class="ico ico-bulb" aria-hidden="true"></span><span>'
-     +esc(t(S.profile&&S.profile.level==="new"
-        ?"First time on this one. Pick a weight you could lift three or four more times than the reps asked, and learn the movement before adding load."
-        :"First time on this one. Use the first set to find a working weight, then settle in."))+'</span></div>';
-  if(recTop&&recTop.w)
+     +(num(e.planned.w0)
+        /* The plan said where to start. */
+        ?esc(t("First time on this one. Your plan starts it at"))+' <b>'+fmtW(e.planned.w0)+'</b>.'
+        :esc(t(S.profile&&S.profile.level==="new"
+          ?"First time on this one. Pick a weight you could lift three or four more times than the reps asked, and learn the movement before adding load."
+          :"First time on this one. Use the first set to find a working weight, then settle in.")))+'</span></div>';
+  if(recTop&&recTop.amrap)
+    h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span><span>'
+     +(recTop.w?t("Recommended")+': <b>'+fmtW(recTop.w)+'</b> · ':'')
+     +esc(t("As many clean reps as you can. Beat last time."))+(recTop.last?' ('+esc(recTop.last)+')':'')+'</span></div>';
+  else if(recTop&&recTop.w)
     h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span>'
      +'<span>'+t("Recommended")+': <b>'+fmtW(recTop.w)+'</b> × '+e.planned.lo
      +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+' '+t("reps")
@@ -471,8 +498,7 @@ function vRest(a,e,rows,timed){
   }else{
     var nxe=a.entries[V.logIdx+1];
     nx=nxe?esc(exName(nxe.name)):t("Finish workout");
-    nr=nxe?(nxe.planned.sets+' × '+nxe.planned.lo
-      +(nxe.planned.hi!==nxe.planned.lo?'–'+nxe.planned.hi:'')+' '+t("reps")):"";
+    nr=nxe?esc(plannedDose(nxe))+(nxe.planned.amrap||ex_isTimed(nxe)?'':' '+t("reps")):"";
   }
   /* What the set just logged was, for the line under REST PERIOD: "Set 2 of 4
      complete · 85 kg × 8". */

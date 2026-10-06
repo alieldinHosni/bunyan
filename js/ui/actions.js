@@ -6,6 +6,8 @@ import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
 import {deloadSets, inDeload, recordsIn, avgRPE, prevPerf, recommend, sessionVolume} from "../engine/formulas.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
+import {coolFor} from "./views/warmup.js";
+import {stopHold} from "./hold.js";
 import {leave} from "./motion.js";
 import {FOODDB, nutritionFor, recalcItem, toLogItem} from "../engine/nutrition.js";
 import {render} from "./render.js";
@@ -83,6 +85,21 @@ ACT.delsplit=function(_,id){
   S.programs=(S.programs||[]).filter(function(x){return x.id!==id;});
   if(V.train==="builder"&&V.previewId===id){resetNav();V.train="days";V.tsec="explore";V.previewId=null;}
   saveDB();render();if(gone)toast(gone.name+" "+t("deleted."));};
+/* An amount changed on the diet import's review screen: the same sum as below, on the
+   draft, which is not saved until the plan is used. */
+ACT.pigrams=function(v,d){
+  var g=num(v,0);
+  if(g<=0){toast(t("Enter a number of grams."));return;}
+  var m=V.pparse&&V.pparse[d.m],it=m&&m.items[d.i];if(!it)return;
+  scaleItem(it,g);render();};
+function scaleItem(it,g){
+  var f=((S.myFoods||[]).concat(FOODDB||[])).filter(function(x){return x.id===it.fid;})[0];
+  if(f){var n=nutritionFor(f,g);
+    it.kcal=n.kcal;it.p=n.p;it.c=n.c;it.f=n.f;it.fib=n.fib;}
+  else{var k=it.grams?g/it.grams:1;
+    it.kcal=Math.round(it.kcal*k);it.p=r1(it.p*k);it.c=r1(it.c*k);
+    it.f=r1(it.f*k);it.fib=r1((it.fib||0)*k);}
+  it.grams=g;it.label=g+" g";}
 /* Editing a logged food item: recompute from the source food where we still have it,
    scale what was stored where we do not. */
 ACT.editgrams=function(v,d){
@@ -90,14 +107,7 @@ ACT.editgrams=function(v,d){
   if(g<=0){toast(t("Enter a number of grams."));return;}
   var m=dayRec(d.date).meals[d.meal],it=m&&m.items[d.idx];
   if(!it)return;
-  var f=((S.myFoods||[]).concat(FOODDB||[]))
-        .filter(function(x){return x.id===it.fid;})[0];
-  if(f){var n=nutritionFor(f,g);
-    it.kcal=n.kcal;it.p=n.p;it.c=n.c;it.f=n.f;it.fib=n.fib;}
-  else{var k=it.grams?g/it.grams:1;
-    it.kcal=Math.round(it.kcal*k);it.p=r1(it.p*k);it.c=r1(it.c*k);
-    it.f=r1(it.f*k);it.fib=r1((it.fib||0)*k);}
-  it.grams=g;it.label=g+" g";
+  scaleItem(it,g);
   saveDB();render();};
 ACT.customex=function(name,d){
   name=String(name).trim();
@@ -110,7 +120,7 @@ ACT.customex=function(name,d){
   /* Put the picker's context back so a custom exercise can still land in the day or
      replace the live one, exactly like a library pick. */
   V.sd=(d&&d.from)||null;
-  var landed=!!dayOf(V.dayId)||(V.sd&&(V.sd.swaplive||V.sd.addlive)&&S.active);
+  var landed=!!dayOf(V.dayId)||(V.sd&&(V.sd.swaplive||V.sd.addlive)&&S.active)||!!(V.sd&&V.sd.timp&&V.tp);
   addExercise(name);
   if(!landed){V.sd=null;render();toast(name+" "+t("is in your library."));}};
 ACT.delset=function(_,i){
@@ -158,19 +168,40 @@ ACT.savemeal=function(name,d){
   S.savedMeals.push({id:uid(),name:name,items:good});saveDB();
   render();toast(t("Saved as")+" “"+name+"”.");};
 
+/* Which week of its program today falls in, from the day it was imported or built
+   with a start: 1 for the first seven days. 0 when the program has no start. */
+function programWeek(sp){
+  if(!sp||!sp.start)return 0;
+  var ms=Date.parse(today()+"T00:00:00")-Date.parse(sp.start+"T00:00:00");
+  return ms>=0?Math.floor(ms/6048e5)+1:0;}
+/* An exercise kept for some weeks of a program — balance work in weeks 1–4, hops from
+   week 9 — joins a workout only in those weeks. */
+function inWeek(e,wk){return !(e.wk&&wk&&(wk<e.wk[0]||wk>e.wk[1]));}
 function startDay(dayId){
   var d=dayOf(dayId);if(!d||!d.ex.length)return;
+  var sp=ownerOf(d.id)||split(),wk=programWeek(sp);
+  var list=d.ex.filter(function(e){return inWeek(e,wk);});
+  if(!list.length)list=d.ex;
   /* Created on the tap that starts the workout (a user gesture, which iOS requires),
      so logging the first set does not pay for it. */
   audioOn();
   S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
-    splitId:split().id,dayId:d.id,dayName:d.name,
-    entries:d.ex.map(function(e){
+    splitId:split().id,dayId:d.id,dayName:d.name,dayNotes:(d.notes||[]).slice(),
+    entries:list.map(function(e){
       /* Resolved from the library as the session is created, so the record this
-         workout leaves behind is right even if the plan's cached muscle is not. */
-      return {name:e.name,exId:e.exId||exIdOf(e.name),kind:kindOf(e.name),muscle:muscleOfEntry(e),planned:{sets:isActivity(e.name)||!inDeload()?e.sets:deloadSets(e.sets),lo:e.lo,hi:e.hi,min:e.min||0,rpe:e.rpe||0,km:e.km||0},
-              rest:e.rest,grp:e.grp||null,sets:[]};})};
-  V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
+         workout leaves behind is right even if the plan's cached muscle is not. What
+         the plan says about doing it — the cue, the starting weight, seconds or reps,
+         one side at a time, as many as you can — travels with it. */
+      var pl={sets:isActivity(e.name)||!inDeload()?e.sets:deloadSets(e.sets),lo:e.lo,hi:e.hi,min:e.min||0,rpe:e.rpe||0,km:e.km||0};
+      if(e.note)pl.note=e.note;
+      if(e.w0!=null)pl.w0=e.w0;
+      if(e.timed)pl.timed=true;
+      if(e.side)pl.side=true;
+      if(e.amrap)pl.amrap=true;
+      if(e.rir!=null)pl.rir=e.rir;
+      return {name:e.name,exId:e.exId||exIdOf(e.name),kind:e.timed&&!isActivity(e.name)?"timed":kindOf(e.name),muscle:muscleOfEntry(e),planned:pl,
+              rest:e.rest,grp:e.grp||null,alt:e.alt||null,sets:[]};})};
+  V.logIdx=0;V.tab="train";V.train="days";endRest();stopHold();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
 
 /* A run, a match, a class — logged on its own, outside the plan. It carries no day
@@ -180,7 +211,7 @@ function startActivity(name){
   S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
     splitId:split().id,dayId:null,dayName:exName(name),
     entries:[{name:name,exId:exIdOf(name),kind:"activity",muscle:actMuscle(name)||"Cardio",planned:{sets:1,lo:0,hi:0},rest:0,grp:null,sets:[]}]};
-  V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
+  V.logIdx=0;V.tab="train";V.train="days";endRest();stopHold();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
 
 /* What the next set reads before the user touches anything. Once a set is logged in
@@ -205,7 +236,8 @@ function syncDraft(){
   var p=prevPerf(e.name);
   var src=p?p.sets[0]:null;
   var rec=recommend(e);
-  V.draft.w=rec&&rec.w?rec.w:(src?num(src.w):0);
+  /* Never done before: the plan's own starting weight, if it gave one. */
+  V.draft.w=rec&&rec.w?rec.w:(src?num(src.w):num(e.planned&&e.planned.w0));
   V.draft.r=src?num(src.r):e.planned.hi||8;
   V.draft.rpe=null;
   if(!p)V.draftSg=false;}
@@ -256,9 +288,15 @@ function finishSession(){
        the plan it is being measured against, and the session it is being compared to. */
     exsPlanned:exsPlanned,setsPlanned:setsPlanned,
     prevVol:prev?Math.round(sessionVolume(prev)):null,
-    delta:prev?vol-Math.round(sessionVolume(prev)):null};
+    delta:prev?vol-Math.round(sessionVolume(prev)):null,
+    /* The cool-down for what was actually trained, shown on the complete sheet. */
+    cool:coolFor(a.entries)};
 
-  recordSession(a);S.active=null;endRest();keepAwake(false);
+  /* The plan's words for the day and each exercise were for doing it, not for the
+     record: history keeps what describes the sets, not the cues. */
+  delete a.dayNotes;delete a.warm;delete a.wuDone;
+  a.entries.forEach(function(e){delete e.alt;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
+  recordSession(a);S.active=null;endRest();keepAwake(false);stopHold();V.cdDone={};
   saveDB();V.tab="train";V.train="days";
   play(prs.length?"pr":"complete");tap("ok");
   openSheet("done",summary);}
@@ -275,6 +313,16 @@ function liveEntry(name,like){
     :(like&&!isActivity(like.name)?{sets:like.planned.sets,lo:like.planned.lo,hi:like.planned.hi}:{sets:3,lo:8,hi:12});
   return {name:name,exId:exIdOf(name),kind:kindOf(name),muscle:muscleOf(name),planned:planned,
     rest:act?0:(like&&!isActivity(like.name)?like.rest:e.rest),grp:null,sets:[]};}
+/* The plan's other choice for a slot ("Pull-Ups or Seated Row"), swapped in before a
+   set is logged. It keeps the slot's prescription and its grouping, and the first
+   choice becomes its alternative, so the swap can be taken back. */
+function swapAlt(alt,i,was){
+  var a=S.active,cur=a&&a.entries[i];if(!cur||cur.sets.length)return;
+  var fresh=liveEntry(alt,cur);
+  if(!isActivity(alt))fresh.planned=JSON.parse(JSON.stringify(cur.planned));
+  fresh.grp=cur.grp;fresh.alt=was;
+  a.entries[i]=fresh;saveDB();syncDraft();render();
+  toast(t("Swapped for {ex}.").replace("{ex}",exName(alt)));}
 /* keep: the sets logged on the old exercise stay with it, and the replacement comes
    in as the next exercise. Otherwise the replacement takes its place, and anything
    logged on it goes with it. */
@@ -297,6 +345,20 @@ ACT.swapdrop=function(_,d){if(d)swapLive(d.name,d.i,false);};
 /* Adding an exercise mutates the plan or the live session, so it belongs with the
    other state-changing actions rather than in the entry point. */
 function addExercise(name){
+  /* Picked for a program still being imported (js/ui/views/timport.js): it goes into
+     the draft, never into a saved day. */
+  if(V.sd&&V.sd.timp&&V.tp){
+    var ti=V.sd.timp,td=V.tp.days[ti.d],act=isActivity(name);
+    if(!td){closeSheet();return;}
+    if(ti.j!=null){
+      var ce=ti.e||td.ex[ti.j];if(!ce){closeSheet();return;}
+      ce.name=name;ce.conf="exact";if(!ce.raw)ce.raw=name;
+      if(act){ce.min=ce.min||30;ce.sets=1;ce.lo=0;ce.hi=0;ce.rest=0;}
+      openSheet("tiex",{d:ti.d,j:ti.j,e:ce});return;}
+    td.ex.push({id:uid(),raw:name,name:name,conf:"exact",sets:act?1:3,lo:act?0:8,hi:act?0:12,rest:act?0:90,note:"",min:act?30:undefined});
+    closeSheet();
+    toast(t("{ex} added to {day}.").replace("{ex}",exName(name)).replace("{day}",td.name));
+    return;}
   var e=ex(name,3,8,12);
   e.exId=exIdOf(name);
   /* A match or a run is planned as time and effort, not sets and reps. */
@@ -340,4 +402,4 @@ function addExercise(name){
     saveDB();closeSheet();toast(exName(name)+" "+t("added to")+" "+d.name+".");return;
   }
   saveDB();closeSheet();}
-export {startActivity, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};
+export {startActivity, swapAlt, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};

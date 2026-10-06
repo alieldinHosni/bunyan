@@ -5,6 +5,8 @@ import {isolateNums} from "../i18n/bidi.js";
 import {t} from "../i18n/dict.js";
 import {vFood} from "./views/food.js";
 import {vHome} from "./views/home.js";
+import {vAssess} from "./views/assess.js";
+import {vPlanCheck} from "./views/pcheck.js";
 import {vProfile} from "./views/profile.js";
 import {vProgress} from "./views/progress.js";
 import {vSheet} from "./sheets.js";
@@ -68,7 +70,7 @@ function render(){
   applyMotion(S.prefs&&S.prefs.anim===false);
   document.body.classList.toggle("noanim",S.prefs&&S.prefs.anim===false);
   document.body.classList.toggle("compact",!!(S.prefs&&S.prefs.compact));
-  var view=V.tab+"/"+(V.tab==="train"?(S.active?"session":V.train):"");
+  var view=V.assess?"assess":V.pcheck?"pcheck":V.tab+"/"+(V.tab==="train"?(S.active?"session":V.train):"");
   var moved=view!==lastView;lastView=view;
   /* Note what has focus and where the caret sits before the rebuild destroys it.
      Restoring the caret to the end of the value, which is what this used to do,
@@ -78,7 +80,9 @@ function render(){
     try{selS=was.selectionStart;selE=was.selectionEnd;}catch(e){selS=null;}
   }
   var h="";
-  if(V.tab==="home")h=vHome();
+  if(V.assess)h=vAssess();
+  else if(V.pcheck)h=vPlanCheck();
+  else if(V.tab==="home")h=vHome();
   else if(V.tab==="train")h=vTrain();
   else if(V.tab==="progress")h=vProgress();
   else if(V.tab==="food")h=vFood();

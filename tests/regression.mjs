@@ -24,7 +24,10 @@ function seed(){
   const sessions=[];
   for(let d=2;d<40;d+=3)sessions.push({id:"s"+d,date:iso(d),dayName:"Seed",activeMs:45*6e4,
     entries:lifts.map(([n,m],i)=>({name:n,muscle:m,sets:[1,2,3].map(()=>({w:60+i*20,r:8,rpe:8}))}))});
-  return {v:2,onboarded:true,prefs:{rpe:"last",autorest:true,sound:false,awake:false,splash:false,unit:"kg",lang:"en",anim:false,haptic:false,view:"set",warn:10},
+  return {v:2,onboarded:true,prefs:{rpe:"last",autorest:true,sound:false,awake:false,splash:false,unit:"kg",lang:"en",anim:false,haptic:false,view:"set",warn:10,
+      /* The warm-up is its own screen before the first exercise; the tests about it
+         turn it back on. */
+      nowarm:true},
     profile:{age:30,height:180,weight:84,sex:"m",activity:1.4,goal:"gain",prog:"standard",level:"some",days:3},
     goals:{kcal:2500,p:150,c:300,f:70,water:3000,steps:9000},sessions,body:[{date:iso(3),weight:84}],days:{},
     myFoods:[],savedMeals:[],freq:{},favs:[],skip:[],userSplits:[],myEx:[]};
@@ -317,10 +320,13 @@ await test("picker: search finds by muscle, and no row ever sits above the field
 /* ---- coaching --------------------------------------------------------------------- */
 const F=(page,fn)=>page.evaluate(async src=>{const F=await import("/js/engine/formulas.js");const {S}=await import("/js/state.js");
   const mk=(d,name,sets)=>({id:"x"+d+name,date:d,dayId:"x",entries:[{name,sets}]});return eval(src);},fn);
-await test("missing the range twice suggests about 10% lighter",async page=>{
+await test("missing the range twice holds the weight; a third miss suggests about 10% lighter",async page=>{
   const r=await F(page,`(S.sessions=[mk("2099-01-05","Barbell Squat",[{w:100,r:6},{w:100,r:5}]),mk("2099-01-02","Barbell Squat",[{w:100,r:7}])],
     F.recommend({name:"Barbell Squat",planned:{sets:3,lo:8,hi:10}}).w)`);
-  eq(r,90);
+  eq(r,100,"twice: hold");
+  const r3=await F(page,`(S.sessions=[mk("2099-01-08","Barbell Squat",[{w:100,r:6}]),mk("2099-01-05","Barbell Squat",[{w:100,r:6},{w:100,r:5}]),mk("2099-01-02","Barbell Squat",[{w:100,r:7}])],
+    F.recommend({name:"Barbell Squat",planned:{sets:3,lo:8,hi:10}}).w)`);
+  eq(r3,90,"three times: lighter");
 });
 await test("records: weight, estimated max and reps count; the first time does not",async page=>{
   const r=await F(page,`(S.sessions=[mk("2099-01-01","Barbell Bench Press",[{w:80,r:5},{w:70,r:8}])],
@@ -436,6 +442,19 @@ await test("library and food data: every template exercise exists, extras load, 
     const miss=[];P.forEach(p=>p.days.forEach(d=>d.ex.forEach(e=>{if(!X.EXDB[e.name]&&!A.isActivity(e.name))miss.push(e.name);})));
     return [miss,!!X.EXDB["Bulgarian Split Squat"],X.exImg("Bulgarian Split Squat",0),N.searchFoods("كشك",1).map(x=>x.f.id)[0],N.searchFoods("jalash",1).length>0];});
   eq(r,[[],true,null,"kishk",true]);
+});
+await test("library growth: plyometrics, holds, drills and stretches load; kinds and other names find them; new foods are found",async page=>{
+  await pause(page,800);
+  const r=await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods?N.loadFoods(r):r());
+    const T=(await import("/js/engine/text.js")).tokenMatch,H=(await import("/js/ui/views/train.js")).exHay;
+    const find=q=>X.LIB.filter(l=>T(q,H(l))).map(l=>l[0]);
+    const SP=await import("/js/engine/splitparse.js");
+    const have=["Pogo Hops","Dead Hang","Spanish Squat Hold","Front-to-Back Leg Swings","Pigeon Stretch","Doorway Chest Stretch"].filter(n=>!X.EXDB[n]);
+    return [have,find("broad jump"),find("plyometric").includes("Box Jump (Multiple Response)"),find("isometric").includes("Wall Sit"),
+      (SP.matchExercise("Broad Jumps")||{}).name||SP.matchExercise("Broad Jumps"),
+      N.searchFoods("skyr",1).map(x=>x.f.id)[0],N.searchFoods("indomie",1).map(x=>x.f.id)[0]];});
+  eq(r,[[],["Standing Long Jump"],true,true,"Standing Long Jump","skyr","noodles_instant"]);
 });
 
 /* ---- the Train tab: Today · My Program · Explore, and the workout bar -------------- */
@@ -799,9 +818,9 @@ await test("PDF plan: meals, daily targets and supplements are read, reviewed an
   const before=await ev(page,"JSON.stringify(S.goals)");
   await page.setInputFiles("#pi_file",new URL("./fixtures/plan-sample.pdf",import.meta.url).pathname);
   for(let i=0;i<60&&!(await page.$(".picard"));i++)await pause(page,250);
-  eq(await page.$$eval(".picard .picard-h b",a=>a.map(e=>e.textContent)),["Meal 1","Meal 2","Snacks","Meal 3","Supplements"],"meals");
+  eq(await page.$$eval(".picard .picard-h .tiday",a=>a.map(e=>e.value)),["Meal 1","Meal 2","Snacks","Meal 3","Supplements"],"meals");
   eq(await page.$$eval(".plist-r.miss",a=>a.length),0,"every line matched a food");
-  eq(await page.$$eval(".pitg-r b",a=>a.map(e=>e.textContent)),["2,200 kcal","160 g","230 g","70 g","2.75 L","9,000"],"targets");
+  eq(await page.$$eval(".pitg-r input",a=>a.map(e=>e.value)),["2200","160","230","70","2.75","9000"],"targets");
   const supp=await page.$$eval(".picard",a=>a[4].innerText);
   for(const w of ["Vitamin D3","1,000 IU","With a fatty meal","Magnesium","200 mg","Before bed","Zinc","15 mg"])
     if(supp.indexOf(w)<0)throw new Error("supplements lack "+w+": "+supp);
@@ -814,6 +833,32 @@ await test("PDF plan: meals, daily targets and supplements are read, reviewed an
   eq(await page.$$eval(".bnum",a=>a.map(e=>e.textContent)),["1","2","","3",""],"badges follow the names");
   await page.tap(".toast-undo");await pause(page);
   eq(await ev(page,"JSON.stringify(S.goals)"),before,"Undo restores the targets");
+});
+await test("PDF plan: everything can be changed on the review before it is used",async page=>{
+  await tapTab(page,"food");await pause(page);await page.tap('[data-fsec="plan"]');await pause(page);
+  await page.tap('[data-pimport]');await pause(page);
+  await page.setInputFiles("#pi_file",new URL("./fixtures/plan-sample.pdf",import.meta.url).pathname);
+  for(let i=0;i<60&&!(await page.$(".picard"));i++)await pause(page,250);
+  /* A meal renamed, a food dropped, an amount changed, a target changed. */
+  await page.fill("#pm_n_0","Breakfast bowl");
+  const dropped=await ev(page,"V.pparse[1].items[0].n");
+  await page.evaluate(()=>document.querySelector('[data-pirm="1|0"]').click());await pause(page,200);
+  eq(await ev(page,"V.pparse[1].items.map(i=>i.n).indexOf("+JSON.stringify(dropped)+")"),-1,"dropped");
+  const k0=await ev(page,"V.pparse[0].items[0].kcal"),g0=await ev(page,"V.pparse[0].items[0].grams");
+  await page.evaluate(()=>document.querySelector('[data-pigram="0|0"]').click());await pause(page,300);
+  await page.fill("#askv",String(g0*2));await page.evaluate(()=>document.querySelector("[data-askok]").click());await pause(page,300);
+  eq(await ev(page,"[V.pparse[0].items[0].grams,Math.abs(V.pparse[0].items[0].kcal-"+(k0*2)+")<=2]"),[g0*2,true],"the amount and its calories");
+  await page.fill("#pt_kcal","2100");
+  /* A food added to a meal of the draft, from the same search as logging. */
+  const n2=await ev(page,"V.pparse[2].items.length");
+  await page.evaluate(()=>document.querySelector('[data-piadd="2"]').click());await pause(page,500);
+  eq(await page.$eval(".afsub",e=>e.textContent),"Into the plan for Snacks","the sheet says where it goes");
+  await page.fill("#fq","banana");await pause(page,600);
+  await page.evaluate(()=>document.querySelector("[data-quickfood]").click());await pause(page,400);
+  eq(await ev(page,"[V.pparse[2].items.length,V.pimport,!!V.sheet]"),[n2+1,true,false],"added to the draft, still reviewing");
+  await page.tap("[data-puse]");await pause(page,500);
+  eq(await ev(page,"S.goals.kcal"),2100,"the changed target");
+  eq(await page.evaluate(async()=>{const M=await import("/js/engine/meals.js");return M.mealName(M.mealSlots()[0].id);}),"Breakfast bowl","the renamed meal");
 });
 await test("Supplement doses: mg, mcg and IU are read as doses",async page=>{
   const r=await page.evaluate(async()=>{
@@ -1019,6 +1064,276 @@ await test("Back never walks out of the app, even when a screen opens while a ta
   /* At the root, back is held off and the spare entry stays, however often it is tried. */
   for(let i=0;i<3;i++){await page.evaluate(()=>history.back());await pause(page,400);}
   eq([await ix(),await ev(page,"V.tab")],[base,"progress"],"still in the app");
+});
+await test("Training import: a coach's PDF becomes a draft — days, week, cues, start weights, a block — edited, then a program",async page=>{
+  await tapTab(page,"train");await pause(page);
+  await page.evaluate(()=>document.querySelector('[data-tsec="explore"]').click());await pause(page,300);
+  await page.evaluate(()=>document.querySelector("[data-timport]").click());await pause(page,300);
+  await page.setInputFiles("#ti_file",new URL("./fixtures/split-sample.pdf",import.meta.url).pathname);
+  await page.waitForSelector(".tisum",{timeout:20000});await pause(page,300);
+  const tp=await ev(page,"V.tp");
+  eq([tp.name,tp.meta.phase,tp.meta.weeks],["Upper / Lower","Muscle gain",8],"cover");
+  eq(tp.days.map(d=>[d.name,d.wd]),[["Day A — Upper",[1]],["Day B — Lower",[4]]],"days and weekdays");
+  eq(tp.acts.map(a=>[a.name,a.wd]),[["Walking",[2]],["Running",[6]]],"the week's activities");
+  const A=tp.days[0].ex,B=tp.days[1].ex;
+  eq([A[0].name,A[0].sets,A[0].lo,A[0].hi,A[0].rest,A[0].w0,A[0].note],["Barbell Incline Bench Press - Medium Grip",3,6,8,120,50,"Two warm-up sets first"],"a row and its cue");
+  eq([A[3].name,A[3].amrap,A[3].altName],["Chin-Up",true,"Standing Biceps Cable Curl"],"max reps, and the other choice");
+  eq([A[4].timed,A[4].side,A[4].lo,A[4].hi],[true,true,30,45],"a timed hold, each side");
+  eq([A[5].conf,A[6].name,A[6].raw],["close","","Tib Raise"],"a close match is marked; an unknown name is kept as written");
+  eq(B.slice(0,3).map(e=>[e.name,e.wk||null]),[["Knee-to-Wall Ankle Mobilisation",[1,8]],["Single-Leg Balance",[5,8]],["Couch Stretch",null]],"the block, in its place, with its weeks");
+  eq(B[0].note.indexOf("First, while you are fresh")===0,true,"the block row's cue goes to its first exercise");
+  eq(tp.notes.map(n=>n.h),["THE THREE RULES","BEFORE YOU START"],"the coach's notes");
+  /* Edited before it is saved: an exercise, a weekday, an activity. */
+  await page.evaluate(()=>document.querySelector('[data-tiex="0|1"]').click());await pause(page,300);
+  await page.fill("#tie_sets","4");await page.fill("#tie_note","Pause at the top");
+  await page.evaluate(()=>document.querySelector("[data-tiexsave]").click());await pause(page,300);
+  eq(await ev(page,"[V.tp.days[0].ex[1].sets,V.tp.days[0].ex[1].note]"),[4,"Pause at the top"],"edited");
+  await page.selectOption("#ti_wd_5","d:1");await pause(page,200);
+  eq(await ev(page,"V.tp.days[1].wd"),[4,5],"a weekday moved to a day");
+  await page.evaluate(()=>document.querySelector('[data-tirmact="1"]').click());await pause(page,200);
+  eq(await ev(page,"V.tp.acts.map(a=>a.name)"),["Walking"],"an activity dropped");
+  const before=await ev(page,"S.activeProgram");
+  await page.evaluate(()=>document.querySelector("[data-tiuse]").click());await pause(page,500);
+  const p=await ev(page,"(()=>{const p=S.programs.filter(x=>x.id===S.activeProgram)[0];return {name:p.name,sched:p.schedule,days:p.days.map(d=>[d.name,d.wd,d.ex.length]),notes:p.notes.length,start:!!p.start}})()");
+  eq(p,{name:"Upper / Lower",sched:"week",days:[["Day A — Upper",[1],7],["Day B — Lower",[4,5],6],["Walking",[2],1]],notes:2,start:true},"the program");
+  eq(await ev(page,"S.myEx.map(m=>[m.n,m.m])"),[["Tib Raise","Calves"]],"the unknown name joins as your own");
+  eq(await ev(page,"[V.tab,V.tsec]"),["train","program"],"lands on My Program");
+  /* In a workout: week 1 leaves out what belongs to weeks 5–8; the plan's start
+     weight and cue are there; the other choice is one tap. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,p=S.programs.filter(x=>x.id===S.activeProgram)[0];(await import("/js/ui/actions.js")).startDay(p.days[1].id);});await pause(page,400);
+  eq(await ev(page,"S.active.entries.map(e=>e.name).indexOf('Single-Leg Balance')"),-1,"not before week 5");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).ACT.discard();});await pause(page,200);
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,p=S.programs.filter(x=>x.id===S.activeProgram)[0];(await import("/js/ui/actions.js")).startDay(p.days[0].id);});await pause(page,400);
+  eq(await ev(page,"[V.draft.w,S.active.entries[0].planned.note]"),[50,"Two warm-up sets first"],"start weight and cue");
+  eq(await page.$eval(".ex-cue",e=>e.textContent),"Two warm-up sets first");
+  await page.evaluate(async()=>{(await import("/js/ui/workout.js")).jumpTo(3);});await pause(page,300);
+  await page.evaluate(()=>document.querySelector("[data-swapalt]").click());await pause(page,300);
+  eq(await ev(page,"[S.active.entries[3].name,S.active.entries[3].alt,S.active.entries[3].planned.amrap]"),["Standing Biceps Cable Curl","Chin-Up",true],"swapped for the other choice");
+  eq(before!==await ev(page,"S.activeProgram"),true);
+});
+/* ---- warm-up and cool-down --------------------------------------------------------- */
+await test("Warm-up engine: drills follow what the day trains, ramp sets lead to the working weight, a walk needs none",async page=>{
+  const r=await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const W=await import("/js/engine/warmup.js");
+    const day=n=>n.map(x=>({name:x,planned:{sets:3}}));
+    const push=W.warmupFor(day(["Barbell Bench Press - Medium Grip","Seated Dumbbell Press","Triceps Pushdown"]),{work:e=>/Bench/.test(e.name)?80:0});
+    const legs=W.warmupFor(day(["Barbell Squat","Romanian Deadlift","Standing Calf Raises"]),{work:()=>0});
+    const LOW=/Leg Swings|Knee Hug|Quad Pull|Lateral Lunge|Bodyweight Squat|Ankle|Spiderman|Glute|Pogo/;
+    const cool=W.cooldownFor(day(["Barbell Squat","Romanian Deadlift"]));
+    return [push.drills.some(d=>LOW.test(d.name)),push.drills.length>=4,push.ramp.name,push.ramp.sets.map(s=>s.w+"x"+s.r).join(","),
+      legs.drills.filter(d=>LOW.test(d.name)).length>=3,legs.ramp.sets.length,
+      W.warmupFor(day(["Walking"])),cool.stretches.map(s=>s.name).includes("Hamstring Stretch"),
+      cool.stretches.some(s=>/Chest|Triceps|Shoulder/.test(s.name)),
+      W.warmupFor(day(["Football"])).drills.some(d=>d.name==="High Knees")];});
+  eq(r,[false,true,"Barbell Bench Press - Medium Grip","20x10,40x5,60x3",true,0,null,true,false,true]);
+});
+await test("Warm-up: shown before the first exercise; ticks and a hold timer; Start goes to the work; ⋯ brings it back",async page=>{
+  await startWorkout(page);
+  if(!(await page.$('.wu'))||(await page.$('.setcard')))throw new Error("the warm-up is not the first screen");
+  eq(await page.$$eval('.wu-rs',a=>a[0].textContent),"20 kg × 10","ramp starts with the bar");
+  await page.tap('.wu [data-wutick]:not([data-wutick="wp"])');await pause(page);
+  eq(await page.$eval('.wu [data-wutick]:not([data-wutick="wp"])',b=>b.getAttribute("aria-pressed")),"true","ticked");
+  /* The pulse raiser's timer, shortened so the test does not wait four minutes. */
+  await page.$eval('[data-hold="wp"]',b=>b.setAttribute("data-secs","1"));
+  await page.tap('[data-hold="wp"]');await pause(page,300);
+  eq(await page.$eval('[data-hold="wp"]',b=>b.classList.contains("run")),true,"counting");
+  await pause(page,1200);
+  eq(await ev(page,"[S.active.wuDone.wp,document.querySelector('.wu-pulse').classList.contains('did')]"),[1,true],"ticked when it ends");
+  await page.tap('[data-wugo]');await pause(page);
+  eq(await ev(page,"[S.active.warm,!!document.querySelector('.setcard'),!!document.querySelector('.wu')]"),[1,true,false],"started");
+  await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-wuopen]');await pause(page);
+  if(!(await page.$('.wu')))throw new Error("the menu did not bring the warm-up back");
+  await page.tap('[data-wuskip]');await pause(page);
+  eq(await ev(page,"[S.active.warm,!!document.querySelector('.setcard')]"),[0,true],"back to the work");
+},{prefs:{nowarm:false}});
+await test("Cool-down: stretches for what was trained on Workout complete, timed, with the how-to one tap away; both switch off",async page=>{
+  await startWorkout(page);
+  await page.tap('[data-wuskip]');await pause(page);
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,500);
+  await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-finish]');await pause(page);
+  await page.tap('[data-confirmok]');await pause(page,600);
+  const names=await page.$$eval('.cd .wu-n',a=>a.map(e=>e.textContent));
+  if(!names.includes("Doorway Chest Stretch")||names.some(n=>/Quad|Hamstring|Calf|Pigeon/.test(n)))
+    throw new Error("a bench set should end on upper-body stretches, got "+names.join(", "));
+  await page.$eval('.cd [data-hold]',b=>b.setAttribute("data-secs","1"));
+  await page.tap('.cd [data-hold]');await pause(page,1500);
+  eq(await page.$eval('.cd .wu-row',r=>r.classList.contains("did")),true,"ticked when the hold ends");
+  await page.tap('.cd .wu-ex');await pause(page,500);
+  eq(await ev(page,"V.sheet"),"exdetail");
+  await page.tap('[data-exback]');await pause(page,400);
+  eq(await ev(page,"[V.sheet,!!document.querySelector('.cd .wu-row.did')]"),["done",true],"back to the summary, tick kept");
+  await page.tap('#sheet .cf-ok');await pause(page);
+  /* Both are on by default and switched off in Training settings. */
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page);
+  await page.tap('[data-toggle="nowarm"]');await pause(page);await page.tap('[data-toggle="nocool"]');await pause(page);
+  eq(await ev(page,"[S.prefs.nowarm,S.prefs.nocool]"),[true,true]);
+  await page.tap('#sheet button[data-close]');await pause(page);
+  /* Today is trained already, so the second workout is started directly. */
+  await page.evaluate(async()=>{const St=await import("/js/state.js");(await import("/js/ui/actions.js")).startDay(St.split().days[0].id);});
+  await pause(page,400);
+  eq(await ev(page,"[!!S.active,!!document.querySelector('.wu')]"),[true,false],"no warm-up when off");
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,500);
+  await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-finish]');await pause(page);
+  await page.tap('[data-confirmok]');await pause(page,600);
+  eq(await ev(page,"[V.sheet,!!document.querySelector('.cd')]"),["done",false],"no cool-down when off");
+},{prefs:{nowarm:false,autorest:false}});
+await test("Arabic: the muscle Back reads ظهر, not the back button's رجوع",async page=>{
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="library";V.exm="Back";(await import("/js/ui/render.js")).render();});
+  await pause(page,500);
+  const s=await page.$eval('.libtrow .trow-s',e=>e.textContent);
+  if(s.indexOf("ظهر")<0||s.indexOf("رجوع")>=0)throw new Error("library row reads "+s);
+},{prefs:{lang:"ar"}});
+/* ---- goals, the assessment and the generated plans ------------------------------- */
+await test("Goals: one list drives the targets — deficit, surplus and protein follow the goal",async page=>{
+  const r=await page.evaluate(async()=>{
+    const S=(await import("/js/state.js")).S,F=await import("/js/engine/formulas.js");
+    Object.assign(S.profile,{age:30,height:180,weight:84,sex:"m",activity:1.4});
+    const out={};
+    for(const g of ["lose","recomp","gain","strength","endurance","mobility","maintain"]){
+      S.profile.goal=g;const m=F.macroTargets(),td=F.tdee();
+      out[g]=[Math.round((m.kcal-td)/td*100),Math.round(m.p/84*10)/10,Math.abs(m.p*4+m.c*4+m.f*9-m.kcal)<=30];}
+    return out;});
+  eq(r.lose[0],-20,"lose");eq(r.recomp[0]<0&&r.recomp[0]>-15,true,"recomp");eq(r.gain[0]>0&&r.gain[0]<=11,true,"gain");eq(r.maintain[0],0,"maintain");
+  eq([r.lose[1],r.recomp[1],r.gain[1],r.endurance[1]],[2,2.2,1.8,1.6],"protein g/kg");
+  eq(Object.values(r).every(x=>x[2]),true,"macros add up to the energy");
+},{db:Object.assign(seed(),{body:[]})});
+await test("Workout generator: kit and sore spots swapped, volume in range, effort set, goal extras, time kept",async page=>{
+  const r=await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const S=(await import("/js/state.js")).S,P=await import("/js/engine/plan.js"),Vo=await import("/js/engine/volume.js");
+    const gen=(prof,gear)=>{Object.assign(S.profile,{age:30,height:180,weight:84,sex:"m",level:"some",days:4,mins:60,limits:[],sleep:0},prof);S.gear=gear||null;return P.generatePlan();};
+    const all=pl=>pl.days.flatMap(d=>d.ex);
+    const back=gen({goal:"recomp",limits:["back","knee"]});
+    const home=gen({goal:"gain"},["Dumbbell","Band"]);
+    const gain=gen({goal:"gain"});
+    const ath=gen({goal:"athletic",days:3}),end=gen({goal:"endurance",days:3}),mob=gen({goal:"mobility",days:3});
+    const lose45=gen({goal:"lose",days:3,mins:45});
+    const usable=n=>{const v=X.EXDB[n];return !v||!v.e||["Bodyweight","Dumbbell","Band"].includes(v.e);};
+    return [all(back).some(e=>P.AVOID.back.test(e.name)||P.AVOID.knee.test(e.name)),
+      all(home).every(e=>usable(e.name)),
+      Vo.volumeCheck(gain,"some").every(v=>v.status==="ok"),
+      all(gain).filter(e=>e.rir!=null).length>10,
+      ath.days.filter(d=>d.ex.length).every(d=>/Jump|Plyo|Medicine Ball/.test(d.ex[0].name)),
+      end.days.filter(d=>d.ex.length).every(d=>d.ex[d.ex.length-1].name==="Rowing, Stationary"),
+      mob.days.filter(d=>d.ex.length).every(d=>d.ex.some(e=>/Stretch|Rotation/.test(e.name))),
+      lose45.days.every(d=>P.dayMinutes(d)<=45-8+5)];});
+  eq(r,[false,true,true,true,true,true,true,true]);
+});
+await test("Meal plan: a day built from the targets, within 5%, servings as labels, diet and leave-outs respected",async page=>{
+  const r=await page.evaluate(async()=>{
+    const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods?N.loadFoods(r):r());
+    const M=await import("/js/engine/mealplan.js");
+    const tg={kcal:2200,p:170,c:220,f:70};
+    const kc=ms=>ms.reduce((a,m)=>a+m.items.reduce((b,i)=>b+i.kcal,0),0);
+    const plain=M.buildMealPlan(tg,{meals:4}),veg=M.buildMealPlan(tg,{meals:3,diet:"veg"}),
+          free=M.buildMealPlan(tg,{meals:5,avoid:["dairy","gluten"]}),again=M.buildMealPlan(tg,{meals:4,variant:1});
+    const ids=ms=>ms.flatMap(m=>m.items.map(i=>i.fid));
+    return [plain.length,Math.abs(kc(plain)-tg.kcal)/tg.kcal<0.05,plain.every(m=>m.items.length>=2),
+      ids(veg).some(id=>/chicken|beef|fish|tilapia|tuna|lamb|turkey/.test(id)),
+      ids(free).some(id=>/bread|baladi|oats|pasta|yog|cheese|milk|areesh|cottage|skyr/.test(id)),
+      free.every(m=>m.items.length>=2),
+      plain.some(m=>m.items.some(i=>/×/.test(i.label))),
+      JSON.stringify(ids(plain))!==JSON.stringify(ids(again))];});
+  eq(r,[4,true,true,false,false,true,true,true]);
+});
+await test("Assessment: first run opens it; answers become targets and training with one Undo; a meal plan follows",async page=>{
+  if(!(await page.$('.as')))throw new Error("first run did not open the assessment");
+  await page.tap('[data-asnext]');await pause(page,200);
+  /* The saved profile fills the numbers in; emptied, Next will not go on. */
+  await page.fill('#as_age','');await page.fill('#as_height','');
+  await page.tap('[data-asnext]');await pause(page,200);
+  eq(await ev(page,"V.asd.step"),1,"no numbers, no next");
+  await page.fill('#as_age','31');await page.fill('#as_height','178');await page.fill('#as_weight','84');
+  await page.tap('[data-asnext]');await pause(page,200);
+  await page.tap('[data-as="goal|recomp"]');await pause(page,150);
+  for(let i=0;i<5;i++){await page.tap('[data-asnext]');await pause(page,150);}
+  await page.tap('[data-asm="limits|back"]');await pause(page,150);
+  await page.tap('[data-asnext]');await pause(page,150);
+  await page.tap('[data-asm="avoid|nuts"]');await pause(page,150);
+  await page.tap('[data-asnext]');await pause(page,150);await page.tap('[data-asnext]');await pause(page,800);
+  if(!(await page.$('[data-asuse]')))throw new Error("no result screen");
+  const shown=await page.$eval('.as-kcal b',e=>e.textContent.replace(/\D/g,""));
+  await page.tap('[data-asuse]');await pause(page,500);
+  eq(await ev(page,"[S.onboarded,S.profile.goal,S.profile.limits,String(S.goals.kcal),S.prefs.avoid,!!S.activeProgram]"),
+    [true,"recomp",["back"],shown,["nuts"],true],"applied as shown");
+  const prog=await ev(page,"S.activeProgram");
+  await page.tap('.toast-undo');await pause(page,400);
+  eq(await ev(page,"[S.onboarded,S.profile.goal,S.activeProgram===\""+prog+"\"]"),[false,"gain",false],"one Undo puts it all back");
+  await page.tap('[data-asuse]');await pause(page,500);
+  await page.tap('[data-asmeals]');await pause(page,1200);
+  eq(await ev(page,"[V.tab,V.pimport,!!V.pgen,(V.pparse||[]).length]"),["food",true,true,4],"meal plan review");
+  await page.tap('[data-puse]');await pause(page,500);
+  eq(await ev(page,"S.mealSlots.length===4&&S.mealSlots.every(s=>(s.plan||[]).length>=2)"),true,"meals planned");
+},{db:Object.assign(seed(),{onboarded:false})});
+await test("Plan check: targets that work against the goal are found on Home, fixed with Undo, and kept as they are until the numbers change",async page=>{
+  /* Building muscle on 2,500 kcal against about 2,550 maintenance, and 110 g of protein. */
+  const card=await page.$eval('.pchome .pcf h3',e=>e.textContent);
+  eq(card,"Your calories will not build muscle");
+  eq(await ev(page,"S.goals.kcal"),2500);
+  await page.tap('.pchome [data-pcfix]');await pause(page,300);
+  const fixed=await ev(page,"[S.goals.kcal>2550,S.goals.p>=145]");
+  eq(fixed,[true,true],"Use … kcal sets the targets for the goal");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[S.goals.kcal,S.goals.p]"),[2500,110],"Undo");
+  /* Kept as it is: gone, and back once the numbers behind it change. */
+  await page.tap('.pchome [data-pckeep]');await pause(page,300);
+  eq(await page.$$eval('.pchome h3',a=>a.map(e=>e.textContent).includes("Your calories will not build muscle")),false,"kept");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.goals.kcal=2400;(await import("/js/ui/render.js")).render();});await pause(page,200);
+  eq(await page.$eval('.pchome .pcf h3',e=>e.textContent),"Your calories will not build muscle","back when the numbers change");
+},{db:Object.assign(seed(),{goals:{kcal:2500,p:110,c:300,f:70,water:3000,steps:9000}})});
+await test("Plan check: a meal plan off its targets and a thin program are found; the screen fixes both; a used plan is checked",async page=>{
+  await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const S=(await import("/js/state.js")).S;
+    S.mealSlots=[{id:"Breakfast",plan:[{fid:"egg",n:"Eggs",grams:100,kcal:143,p:12.6,c:0.7,f:9.5}]},{id:"Lunch",plan:[{fid:"rice_ck",n:"Rice",grams:300,kcal:390,p:8,c:84,f:1}]}];});
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.pcheck=true;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  const ids=await page.$$eval('.pcf',a=>a.map(e=>e.dataset.k));
+  if(!ids.includes("pc:meals-off")||!ids.includes("pc:vol-low"))throw new Error("expected the meal plan and the volume findings, got "+ids.join(","));
+  await page.tap('[data-k="pc:vol-low"] [data-pcfix]');await pause(page,400);
+  eq(await page.evaluate(async()=>{const St=await import("/js/state.js"),Vo=await import("/js/engine/volume.js");
+    return Vo.volumeCheck(St.split(),"some").filter(v=>v.status==="low").length;}),0,"balanced");
+  await page.tap('[data-k="pc:meals-off"] [data-pcfix]');await pause(page,1200);
+  eq(await ev(page,"[V.tab,V.pimport,!!V.pgen]"),["food",true,true],"rebuild opens a generated plan");
+  await page.tap('[data-puse]');await pause(page,300);
+  eq(await page.evaluate(async()=>(await import("/js/engine/plancheck.js")).checkPlans().map(f=>f.id).includes("meals-off")),false,"fixed");
+},{db:Object.assign(seed(),{goals:{kcal:2800,p:150,c:350,f:85,water:3000,steps:9000}})});
+/* ---- the coach (js/coach/) -------------------------------------------------------- */
+await test("Coach engine: every test on the runner page passes",async page=>{
+  await page.goto(URL_.replace(/\/[^/]*$/,"/")+"js/coach/test/index.html");await page.waitForTimeout(800);
+  const r=await page.evaluate(()=>window.COACH_TESTS);
+  if(!r||r.failed||r.passed<50)throw new Error("coach tests: "+JSON.stringify(r&&{passed:r.passed,failed:r.failed,first:r.failures&&r.failures[0]}));
+});
+const B_="Barbell Bench Press - Medium Grip";
+function coachLog(rpes,step){
+  return rpes.map((rpe,i)=>({id:"c"+i,date:iso(7*(rpes.length-1-i)),dayName:"Full Body A",activeMs:40*6e4,
+    entries:[{name:B_,muscle:"Chest",sets:[1,2,3].map(()=>({w:80+(step||0)*i,r:8,rpe}))},
+             {name:"Leg Press",muscle:"Quads",sets:[1,2,3].map(()=>({w:150+(step||0)*2*i,r:10,rpe:8}))}]}));}
+await test("Coach: a lift getting harder at the same weight is raised with its reason; a lighter week from it, or set aside",async page=>{
+  const card=await page.$eval('.pchome .coach',e=>e.innerText);
+  if(!/feeling harder/.test(card)||!/RPE 7 to 9/.test(card))throw new Error("card: "+card);
+  await page.tap('.pchome [data-cofix]');await pause(page,300);
+  eq(await ev(page,"[!!(S.deload&&S.deload.until),Object.keys(S.coachDismiss||{}).length]"),[true,1],"lighter week on, insight quiet");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[!!(S.deload&&S.deload.until),Object.keys(S.coachDismiss||{}).length]"),[false,0],"Undo");
+  await page.tap('.pchome [data-cokeep]');await pause(page,300);
+  eq(await page.$$eval('.pchome .coach',a=>a.length),0,"set aside: gone from Home");
+},{db:Object.assign(seed(),{sessions:coachLog([7,7.5,8.5,9]),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+await test("Coach: a log that is on track gets no coach card — silence is earned",async page=>{
+  eq(await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().filter(c=>c.pri>=2).length),0,"nothing important");
+  eq(await page.$$eval('.pchome .coach',a=>a.length),0,"no coach card on Home");
+},{db:Object.assign(seed(),{sessions:coachLog([8,8,8,8,8],2.5),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+await test("Training import: a program pasted as text is read the same way",async page=>{
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="import";V.tp=null;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  await page.fill("#ti_text","Day 1 — Push\nBench press 4x6-8 @ 80kg, 2 min rest — pause on the chest\nLateral raises 3 x 12-15\n\nPull day\nLat pulldown 3x10\nFace pull 3 × 15 (light)\nPlank 3 x 45s");
+  await page.evaluate(()=>document.querySelector("[data-tiread]").click());await pause(page,500);
+  const tp=await ev(page,"V.tp");
+  eq(tp.days.map(d=>d.name),["Day 1 — Push","Pull day"],"days");
+  const b=tp.days[0].ex[0];
+  eq([b.name,b.sets,b.lo,b.hi,b.w0,b.rest,b.note],["Barbell Bench Press - Medium Grip",4,6,8,80,120,"pause on the chest"],"a full line");
+  eq(tp.days[0].ex[1].name,"Side Lateral Raise");
+  eq(tp.days[1].ex.map(e=>[e.name,e.lo,e.timed]),[["Wide-Grip Lat Pulldown",10,false],["Face Pull",15,false],["Plank",45,true]],"the second day");
+  eq(tp.days[1].ex[1].note,"light");
 });
 await test("Dock: a page with little to scroll keeps its dock",async page=>{
   await tapTab(page,"home");await pause(page);

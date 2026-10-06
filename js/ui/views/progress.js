@@ -22,7 +22,7 @@
      chart is scoped by a control that is off screen.
    - The date navigator and its "that day" card, which the app already had, open
      Overview, above the range, as Food has them; they scope only that card. */
-import {t} from "../../i18n/dict.js";
+import {t, tm} from "../../i18n/dict.js";
 import {empty, thumb} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftHalf, liftProgress, measurements,
@@ -72,7 +72,7 @@ function bigW(kg){
   return v>=100000?fmtN(v/1000)+"k":fmtN(v);}
 /* A muscle group's name. "Back" is also the navigation word, and the dictionary
    keeps the muscle under "Back " for that reason. */
-function gname(g){return g==="Back"?t("Back "):t(g);}
+function gname(g){return tm(g);}
 
 /* The frames' line chart. Drawn left to right in both languages — time runs that way
    on a chart whatever the script — with three dates under it. `ref` is a dashed

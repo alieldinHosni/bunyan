@@ -134,13 +134,15 @@ function syncViewport(){
   var r=document.documentElement.style;
   r.setProperty("--vvh",Math.round(vv.height)+"px");
   r.setProperty("--vvt",Math.round(vv.offsetTop)+"px");}
-function toast(msg,undo){
+/* undo: a function for the toast's button, which says Undo unless label says
+   otherwise ("Show me" for a plan check). */
+function toast(msg,undo,label){
   var old=document.querySelector(".toast");if(old)old.remove();
   var d=document.createElement("div");d.className="toast";d.setAttribute("role","status");
   var s=document.createElement("span");s.textContent=msg;d.appendChild(s);
   if(undo){
     var b=document.createElement("button");
-    b.className="toast-undo";b.type="button";b.textContent=t("Undo");
+    b.className="toast-undo";b.type="button";b.textContent=label||t("Undo");
     b.onclick=function(){d.remove();undo();};
     d.appendChild(b);}
   document.body.appendChild(d);
@@ -293,8 +295,10 @@ function sparkline(vals,labels,color){
    +'</svg><div class="row tiny" style="margin-top:2px"><span>'+esc(labels[0])
    +'</span><span>'+esc(labels[labels.length-1])+'</span></div>';}
 
+/* Held for seconds: by its name, or because the plan said so (an imported "3 × 40s"). */
 function ex_isTimed(e){
-  return /Hold|Plank|Wall Sit|Balance|Isometric|Stretch|Dead Hang|L-Sit|Carry|Farmer/i.test(e.name);}
+  return e.kind==="timed"||!!e.timed||!!(e.planned&&e.planned.timed)
+    ||/Hold|Plank|Wall Sit|Balance|Isometric|Stretch|Dead Hang|L-Sit|Carry|Farmer/i.test(e.name);}
 function stepperInput(id,val,step,unit){
   return '<div class="steps"><button class="stp" data-stp="'+id+'" data-d="-'+step+'"'
    +' aria-label="'+t("Less")+' '+esc(unit)+'">&minus;</button>'
