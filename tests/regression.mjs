@@ -1298,6 +1298,48 @@ await test("Plan check: a meal plan off its targets and a thin program are found
   await page.tap('[data-puse]');await pause(page,300);
   eq(await page.evaluate(async()=>(await import("/js/engine/plancheck.js")).checkPlans().map(f=>f.id).includes("meals-off")),false,"fixed");
 },{db:Object.assign(seed(),{goals:{kcal:2800,p:150,c:350,f:85,water:3000,steps:9000}})});
+await test("Plan check: one tap on a fix always settles its card — the goal follows a coach's program, and what balancing cannot reach is kept",async page=>{
+  /* A coach's program written for fat loss, on a profile set to build muscle. */
+  await page.evaluate(async()=>{const St=await import("/js/state.js");const p=St.split();p.meta=Object.assign({},p.meta,{phase:"Fat loss"});
+    (await import("/js/ui/render.js")).render();});await pause(page,300);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.pcheck=true;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$eval('[data-k="pc:phase"] [data-pcfix]',b=>b.textContent),"Set my goal to lose fat","the fix names what it does");
+  await page.tap('[data-k="pc:phase"] [data-pcfix]');await pause(page,400);
+  const after=await ev(page,"[S.profile.goal,V.assess||false,document.querySelectorAll('[data-k=\"pc:phase\"]').length]");
+  eq(after,["lose",false,0],"goal changed in place, program kept, card gone");
+  const ids=await page.evaluate(async()=>(await import("/js/engine/plancheck.js")).checkPlans().map(f=>f.id));
+  if(ids.includes("kcal-up"))throw new Error("the targets did not follow the new goal: "+ids.join(","));
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[S.profile.goal,document.querySelectorAll('[data-k=\"pc:phase\"]').length]"),["gain",1],"Undo: goal and card back");
+  /* Short sessions on a thin program: balancing reaches what fits and keeps the rest,
+     so the card still goes in one tap. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.profile.mins=25;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  if(await page.$('[data-k="pc:vol-low"] [data-pcfix]')){
+    await page.tap('[data-k="pc:vol-low"] [data-pcfix]');await pause(page,400);
+    eq(await page.$$eval('[data-k="pc:vol-low"]',a=>a.length),0,"the volume card goes in one tap");
+    await page.tap('.toast-undo');await pause(page,300);
+    eq(await page.$$eval('[data-k="pc:vol-low"]',a=>a.length),1,"Undo brings it back");}
+},{db:Object.assign(seed(),{goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+await test("Coaching maths: strength grows on maintenance, warm-ups are not volume, a single is its own max, body weight progresses by reps",async page=>{
+  const r=await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const S=(await import("/js/state.js")).S,F=await import("/js/engine/formulas.js"),PC=await import("/js/engine/plancheck.js"),U=await import("/js/coach/util.js");
+    /* Strength at maintenance: nothing about building muscle. */
+    S.profile.goal="strength";const td=F.tdee();S.goals.kcal=td;S.goals.p=F.macroTargets().p;
+    const strengthIds=PC.checkPlans().map(f=>f.id);
+    /* Warm-ups out of the weekly count. */
+    const d=new Date().toISOString().slice(0,10);
+    S.sessions.unshift({id:"w1",date:d,dayName:"T",activeMs:1,entries:[{name:"Barbell Curl",muscle:"Biceps",sets:[{w:20,r:10,wu:true},{w:20,r:10,wu:true},{w:30,r:8},{w:30,r:8}]}]});
+    const curls=F.weeklySets().Biceps||0;
+    /* Pull-ups with nothing added. */
+    S.sessions.unshift({id:"w2",date:d,dayName:"T",activeMs:1,entries:[{name:"Pullups",muscle:"Back",sets:[{w:0,r:8},{w:0,r:8},{w:0,r:8}]}]});
+    const bw=F.recommend({name:"Pullups",planned:{lo:6,hi:8,sets:3}});
+    return {strengthIds,curls,single:[F.e1RM(100,1),U.e1rm(100,1),F.e1RM(100,5)],bw:bw&&[bw.bw,bw.w,/body weight alone/.test(bw.note)]};});
+  if(r.strengthIds.includes("kcal-down"))throw new Error("strength at maintenance flagged: "+r.strengthIds.join(","));
+  eq(r.curls,2,"two working sets of curls, two warm-ups not counted");
+  eq(r.single,[100,100,116.7],"a single is its own max; five reps still estimate up");
+  eq(r.bw,[true,0,true],"pull-ups on body weight: reps, then a little load");
+});
 /* ---- the coach (js/coach/) -------------------------------------------------------- */
 await test("Coach engine: every test on the runner page passes",async page=>{
   await page.goto(URL_.replace(/\/[^/]*$/,"/")+"js/coach/test/index.html");await page.waitForTimeout(800);
@@ -1319,6 +1361,18 @@ await test("Coach: a lift getting harder at the same weight is raised with its r
   await page.tap('.pchome [data-cokeep]');await pause(page,300);
   eq(await page.$$eval('.pchome .coach',a=>a.length),0,"set aside: gone from Home");
 },{db:Object.assign(seed(),{sessions:coachLog([7,7.5,8.5,9]),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+await test("Coach: an insight set aside stays aside when the next workout changes its details",async page=>{
+  const under=await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().filter(c=>c.kind==="under").map(c=>c.id));
+  eq(under,["under"],"one id for the kind, not a list of muscles");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.pcheck=true;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  await page.tap('[data-k="co:under"] [data-cokeep]');await pause(page,300);
+  /* A new session moves the numbers behind it. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;
+    S.sessions.unshift({id:"n1",date:new Date().toISOString().slice(0,10),dayName:"Extra",activeMs:3e6,entries:[{name:"Barbell Curl",muscle:"Biceps",sets:[{w:30,r:10,rpe:8}]}]});
+    (await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().filter(c=>c.kind==="under").length),0,"still set aside");
+},{db:Object.assign(seed(),{sessions:[0,7,14,21,28].map(d=>({id:"u"+d,date:iso(d+1),dayName:"Full Body A",activeMs:3e6,
+  entries:[{name:"Barbell Bench Press - Medium Grip",muscle:"Chest",sets:[{w:80,r:8,rpe:8}]}]})),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
 await test("Coach: a log that is on track gets no coach card — silence is earned",async page=>{
   eq(await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().filter(c=>c.pri>=2).length),0,"nothing important");
   eq(await page.$$eval('.pchome .coach',a=>a.length),0,"no coach card on Home");

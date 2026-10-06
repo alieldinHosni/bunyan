@@ -54,7 +54,8 @@ function setVol(x,name,date){return x.wu?0:loadOf(name,x.w,date)*num(x.r);}
 function volume(sets,name,date){var tot=0;for(var i=0;i<sets.length;i++)tot+=setVol(sets[i],name,date);return tot;}
 function sessionVolume(s){var tot=0;s.entries.forEach(function(e){tot+=volume(e.sets||[],e.name,s.date);});return tot;}
 function avgRPE(sets){var n=0,tot=0;sets.forEach(function(x){if(x.wu||!x.rpe)return;tot+=x.rpe;n++;});return n?r1(tot/n):0;}
-function e1RM(w,r){if(!w||!r||r>12)return 0;return r1(w*(1+r/30));}
+/* Epley, capped at 12 reps. A single is a max already: Epley would add 3% to it. */
+function e1RM(w,r){if(!w||!r||r>12)return 0;return r===1?r1(w):r1(w*(1+r/30));}
 function bestE1RM(sets,name,date){var b=0;sets.forEach(function(x){if(x.wu)return;var e=e1RM(loadOf(name,x.w,date),num(x.r));if(e>b)b=e;});return b;}
 function macroKcal(p,c,f){return Math.round(num(p)*4+num(c)*4+num(f)*9);}
 function bmr(){var p=S.profile,w=lastWeight()||num(p.weight,86);
@@ -269,7 +270,13 @@ function recommend(e){
   var w=top,note;
   /* As many as you can: the target is last time's best, not a range. */
   if(e.planned.amrap)return {w:top,lo:0,hi:0,amrap:true,last:(top?top+" \u00d7 ":"")+topR};
-  if(!top){return {w:0,lo:e.planned.lo,hi:e.planned.hi,note:"Find a weight you can control for "+e.planned.lo+" reps."};}
+  if(!top){
+    /* Body weight alone: progress by reps, then by a little added load. */
+    var bwOnly=!e.planned.timed&&(bwShare(e.name)>0||(EXDB&&EXDB[e.name]&&EXDB[e.name].e==="Bodyweight"));
+    if(bwOnly)return {w:0,bw:true,lo:e.planned.lo,hi:e.planned.hi,last:topR+"",
+      note:hitTop?"Top of the range on body weight alone. Add a rep or two, or a little weight if you have a belt or vest."
+        :"Same as last time, and aim for one more rep on each set."};
+    return {w:0,lo:e.planned.lo,hi:e.planned.hi,note:"Find a weight you can control for "+e.planned.lo+" reps."};}
   /* Short of the range: held twice, lighter the third time (js/coach/autoreg.js). The
      load is the logged one, so a suggestion is a weight on the bar, not body weight. */
   var adv=progressionAdvice(S.sessions,e.name,{lo:e.planned.lo,hi:e.planned.hi},{load:function(n,x){return num(x);}});
@@ -308,8 +315,10 @@ function weeklySets(){
          written when the exercise joins a plan and is "Other" for any plan built
          before the library finished loading. Grouping on it silently files a whole
          programme under "Other". */
+      /* Working sets: a warm-up is not training volume. */
+      var n=e.sets.filter(function(x){return x&&!x.wu;}).length;if(!n)return;
       var m=muscleOfEntry(e);
-      out[m]=(out[m]||0)+e.sets.length;});});
+      out[m]=(out[m]||0)+n;});});
   return out;}
 function daysSince(muscle){
   for(var i=0;i<S.sessions.length;i++){

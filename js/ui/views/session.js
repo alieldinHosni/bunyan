@@ -261,6 +261,11 @@ function vLogger(){
     h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span><span>'
      +(recTop.w?t("Recommended")+': <b>'+fmtW(recTop.w)+'</b> · ':'')
      +esc(t("As many clean reps as you can. Beat last time."))+(recTop.last?' ('+esc(recTop.last)+')':'')+'</span></div>';
+  else if(recTop&&recTop.bw)
+    h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span>'
+     +'<span>'+t("Recommended")+': <b>'+t("BW")+'</b> × '+e.planned.lo
+     +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+' '+t("reps")
+     +(recTop.note?' · '+esc(t(recTop.note)):'')+'</span></div>';
   else if(recTop&&recTop.w)
     h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span>'
      +'<span>'+t("Recommended")+': <b>'+fmtW(recTop.w)+'</b> × '+e.planned.lo

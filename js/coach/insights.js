@@ -55,8 +55,10 @@ function insights(sessions,info,opts){
       var v=vol.muscles[m];
       if(v.status==="over")over.push({m:m,avg:v.avg,mrv:v.mrv});
       if(v.status==="under"&&(opts.planned||[]).indexOf(m)>=0)under.push({m:m,avg:v.avg,mev:v.mev});});
-    if(over.length)out.push({id:"over:"+over.map(function(x){return x.m;}).join(","),kind:"over",pri:2,muscles:over,weeks:vol.complete});
-    if(under.length)out.push({id:"under:"+under.map(function(x){return x.m;}).join(","),kind:"under",pri:1,muscles:under,weeks:vol.complete});}
+    /* One id per kind, not per list of muscles: the list changes with every session,
+       and an insight set aside must stay set aside when it does. */
+    if(over.length)out.push({id:"over",kind:"over",pri:2,muscles:over,weeks:vol.complete});
+    if(under.length)out.push({id:"under",kind:"under",pri:1,muscles:under,weeks:vol.complete});}
 
   weakPoints(log,info,{today:today}).slice(0,1).forEach(function(w){
     out.push({id:"weak:"+w.a+"/"+w.b,kind:"weak",pri:1,a:w.a,b:w.b,ratio:w.ratio,lo:w.lo,hi:w.hi,side:w.side});});

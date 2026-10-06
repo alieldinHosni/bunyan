@@ -270,7 +270,12 @@ otherwise they would outlive the blob that was supposed to own them.
 - **Volume** = the sum of weight × reps for every set. Not weight × reps × sets,
   which is only right when every set is identical.
 - **Estimated 1RM** = weight × (1 + reps ÷ 30), the Epley formula. Shown only for
-  sets of 12 reps or fewer, where it is reasonably accurate.
+  sets of 12 reps or fewer, where it is reasonably accurate. A single is its own max:
+  Epley would add 3% to it, so one rep counts as the weight lifted.
+- **Weekly sets** count working sets only; a warm-up is not training volume.
+- **Bodyweight lifts with nothing added** progress by reps: the suggestion is body
+  weight for the plan's reps, and once the top of the range is reached, a rep or two
+  more or a little added load.
 - **Average RPE** = total RPE ÷ number of sets.
 - **Calories from macros** = protein × 4 + carbs × 4 + fat × 9.
 - **Remaining macros** = your daily target minus everything in meals you marked
@@ -321,13 +326,17 @@ otherwise they would outlive the blob that was supposed to own them.
   target. It goes to the same review as an imported plan before anything is saved.
 - **The plan check** (`js/engine/plancheck.js`) reads the targets, the meal plan and the
   active program against the goal, whoever wrote them, and says where they disagree:
-  - energy on the wrong side of maintenance for the goal, or more than 30% under it;
+  - energy on the wrong side of maintenance for the goal, or more than 30% under it.
+    Only building muscle needs a surplus; strength, sport, mobility and staying fit are
+    checked against maintenance (more than 15% away from it);
   - protein under 85% of the goal's amount;
   - a meal plan more than 10% off the energy target, or 15% short on protein;
   - a main muscle well outside its weekly range;
   - main lifts too light for a strength goal, rests too long for endurance, no mobility
     work for a mobility goal;
-  - a coach's program written for the opposite phase ("fat loss" while eating to grow);
+  - a coach's program written for the opposite phase ("fat loss" while eating to grow).
+    The fix sets the goal, and the targets with it, to match the program: the program
+    is the plan being followed, so it is not replaced;
   - a steep deficit under a heavy week, a surplus over thin training, a lot of cardio
     and sport on under 3 g of carbs per kg.
 
@@ -335,7 +344,12 @@ otherwise they would outlive the blob that was supposed to own them.
   move protein or carbs while keeping the calories, rebuild the meal plan from the
   targets, or balance the program's volume (main lifts untouched, no day made longer
   than the longest already is). "Keep it as it is" hides a finding until the numbers
-  behind it change. Home shows the most important one; Plan check shows them all.
+  behind it change. A fix made in place always settles its card in one tap: whatever
+  it could not reach (a muscle that would need longer sessions) is kept as it is, so
+  the card goes and comes back only if those numbers change; Undo restores both. Home
+  shows the most important one; Plan check shows them all. The coach's insights are
+  set aside by kind ("over", "under", or one lift), not by a list of muscles that
+  changes with every session, so a set-aside one stays aside.
 - **The coach** (`js/coach/`) reads the training log the way a coach would. Every file
   there is a pure function — plain data in, plain data out, no DOM, no storage, no
   network, no imports from the app — and has a test file beside it:

@@ -1317,6 +1317,11 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "How many in 100 raw powerlifting competitors in your class you are ahead of: people who train for these three lifts and enter meets. Anywhere on this scale is strong.": "إنت قدّام كام واحد من كل 100 لاعب باورليفتنج رو في فئتك: ناس بيتمرنوا على الثلاث رفعات دول وبيدخلوا بطولات. أي مكان على المقياس ده يعتبر قوة.",
 "From your best estimated max in the last 12 weeks: {list}. A meet lift is a judged single, so take this as a rough guide.": "من أعلى أقصى وزن متوقع ليك في آخر 12 أسبوع: {list}. رفعة البطولة بتتعمل مرة واحدة وبيحكم عليها حكام، فاعتبر ده تقدير تقريبي.",
 "Data: OpenPowerlifting.": "البيانات: OpenPowerlifting.",
+"Set my goal to {g}": "خلّي هدفي {g}",
+"Goal and targets now match your program.": "الهدف والأرقام بقوا مناسبين لبرنامجك.",
+"The rest is kept as it is.": "والباقي سيبناه زي ما هو.",
+"Top of the range on body weight alone. Add a rep or two, or a little weight if you have a belt or vest.": "وصلت لأعلى العدات بوزن جسمك بس. زوّد عدة أو اتنين، أو وزن صغير لو عندك حزام أو فيست.",
+"Same as last time, and aim for one more rep on each set.": "زي المرة اللي فاتت، وحاول تزوّد عدة في كل مجموعة.",
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;

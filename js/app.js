@@ -238,30 +238,37 @@ function useAssessment(){
   S.onboarded=true;A.done=true;saveDB();render();window.scrollTo(0,0);
   toast(t("Your plan is in."),function(){
     keys.forEach(function(k){S[k]=before[k];});A.done=false;saveDB();render();});}
-/* The plan check's fixes. Each one is what the finding offered, with Undo. */
+/* The plan check's fixes. Each one is what the finding offered, with Undo. A fix done
+   here (targets, protein, carbs, the goal, the volume) always settles its card: if
+   something is still off afterwards (a muscle that would need longer sessions), what
+   is left is kept as it is, so the card goes, and comes back only if those numbers
+   change. Undo puts everything back, the card included. */
 function pcFix(id){
   var f=checkPlans().filter(function(x){return x.id===id;})[0];if(!f)return;
-  var act=f.fix.act,g=S.goals,goalsBefore=JSON.parse(JSON.stringify(g));
-  var undoGoals=function(){S.goals=goalsBefore;saveDB();render();};
-  var w=lastWeight()||num(S.profile.weight);
-  if(act==="targets"){var m=macroTargets();g.kcal=m.kcal;g.p=m.p;g.c=m.c;g.f=m.f;
-    saveDB();render();toast(t("Targets updated."),undoGoals);return;}
-  /* Protein or carbs up, the other two moved so the calories stay where they are. */
-  if(act==="protein"){g.p=macroTargets().p;g.c=Math.max(50,Math.round((g.kcal-g.p*4-g.f*9)/4));
-    saveDB();render();toast(t("Protein raised; carbs moved to keep your calories."),undoGoals);return;}
-  if(act==="carbs"){g.c=Math.round(w*3/5)*5;g.f=Math.max(Math.round(w*0.6),Math.round((g.kcal-g.p*4-g.c*4)/9));
-    saveDB();render();toast(t("Carbs raised; fat moved to keep your calories."),undoGoals);return;}
+  var act=f.fix.act;
   if(act==="meals"){openMealPlan(mealPrefs());return;}
-  if(act==="balance"){balanceNow();return;}
   if(act==="program"){V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);return;}
-  if(act==="assess"){V.pcheck=false;pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);}}
-/* Balance the active program's volume, with Undo (js/engine/plan.js rebalance). */
-function balanceNow(){
-  var prog=split();if(!prog)return;
-  var daysBefore=JSON.parse(JSON.stringify(prog.days));
-  var r=rebalance(prog,S.profile,S.gear);saveDB();render();
-  toast(r.sets||r.added?t("Volume balanced: {s} sets moved, {a} exercises added.").replace("{s}",r.sets).replace("{a}",r.added)
-    :t("Nothing could be moved without making sessions longer."),function(){prog.days=daysBefore;saveDB();render();});}
+  if(act==="assess"){V.pcheck=false;pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);return;}
+  var prog=split(),before={goals:JSON.parse(JSON.stringify(S.goals)),goal:S.profile.goal,
+    days:prog?JSON.parse(JSON.stringify(prog.days)):null,dis:JSON.parse(JSON.stringify(S.pcDismiss||{}))};
+  var g=S.goals,w=lastWeight()||num(S.profile.weight),msg="";
+  if(act==="targets"){var m=macroTargets();g.kcal=m.kcal;g.p=m.p;g.c=m.c;g.f=m.f;msg=t("Targets updated.");}
+  /* Protein or carbs up, the other two moved so the calories stay where they are. */
+  else if(act==="protein"){g.p=macroTargets().p;g.c=Math.max(50,Math.round((g.kcal-g.p*4-g.f*9)/4));
+    msg=t("Protein raised; carbs moved to keep your calories.");}
+  else if(act==="carbs"){g.c=Math.round(w*3/5)*5;g.f=Math.max(Math.round(w*0.6),Math.round((g.kcal-g.p*4-g.c*4)/9));
+    msg=t("Carbs raised; fat moved to keep your calories.");}
+  else if(act==="phasegoal"){S.profile.goal=f.fix.goal;var m2=macroTargets();g.kcal=m2.kcal;g.p=m2.p;g.c=m2.c;g.f=m2.f;
+    msg=t("Goal and targets now match your program.");}
+  else if(act==="balance"){var r=prog?rebalance(prog,S.profile,S.gear):{sets:0,added:0};
+    msg=r.sets||r.added?t("Volume balanced: {s} sets moved, {a} exercises added.").replace("{s}",r.sets).replace("{a}",r.added)
+      :t("Nothing could be moved without making sessions longer.");}
+  else return;
+  var still=checkPlans().filter(function(x){return x.id===id;})[0];
+  if(still){S.pcDismiss=S.pcDismiss||{};S.pcDismiss[id]=JSON.stringify(still.sig);msg+=" "+t("The rest is kept as it is.");}
+  saveDB();render();
+  toast(msg,function(){S.goals=before.goals;S.profile.goal=before.goal;if(prog&&before.days)prog.days=before.days;
+    S.pcDismiss=before.dis;saveDB();render();});}
 /* The coach's insights: act on one, or set it aside for two weeks. Taking a lighter
    week also quiets the insight that asked for it until well after the week ends. */
 function coachSetAside(id,days){S.coachDismiss=S.coachDismiss||{};S.coachDismiss[id]=addDaysISO(today(),days);}
@@ -274,13 +281,21 @@ function coachFix(id){
     coachSetAside(id,14);saveDB();render();
     toast(t("Lighter week on. Your next workouts have fewer sets and lighter suggestions."),function(){
       S.deload=dlBefore;S.coachDismiss=disBefore;saveDB();render();});return;}
-  if(act==="balance"){coachSetAside(id,14);balanceNow();return;}
+  if(act==="balance"){
+    var prog=split();if(!prog)return;
+    var daysBefore=JSON.parse(JSON.stringify(prog.days)),disB=JSON.parse(JSON.stringify(S.coachDismiss||{}));
+    var r=rebalance(prog,S.profile,S.gear);coachSetAside(id,14);saveDB();render();
+    toast(r.sets||r.added?t("Volume balanced: {s} sets moved, {a} exercises added.").replace("{s}",r.sets).replace("{a}",r.added)
+      :t("Nothing could be moved without making sessions longer."),function(){prog.days=daysBefore;S.coachDismiss=disB;saveDB();render();});
+    return;}
   if(act==="program"){coachSetAside(id,14);saveDB();V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);return;}
   coachSetAside(id,28);saveDB();render();}
 /* After a plan is used, say what the check found, one tap from the details. */
 function pcAfter(){
-  var n=checkPlans().length;if(!n)return;
+  if(!checkPlans().length)return;
+  /* Counted when it shows, not when the plan was used: fixes made in between count. */
   setTimeout(function(){
+    var n=checkPlans().length;if(!n||V.pcheck)return;
     toast(t(n===1?"Plan check: 1 thing to look at":"Plan check: {n} things to look at").replace("{n}",n),
       function(){pushNav();V.pcheck=true;render();window.scrollTo(0,0);},t("Show me"));},5600);}
 /* A meal plan built from the daily targets, opened on the same review an imported
