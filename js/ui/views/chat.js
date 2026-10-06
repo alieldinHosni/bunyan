@@ -136,8 +136,8 @@ function aEat(a){
     var m=open[0],tot=sumNutrition(m.plan);
     p(a,fill(t("Next on your plan, {m}: {f}. {k} kcal, {p} g protein."),{m:mealName(m.id),
       f:list(m.plan.slice(0,4).map(function(i){return i.n||i.label||"";})),k:fmtN(tot.kcal),p:Math.round(tot.p)}));
-    act(a,t("Open Food"),{"data-tab":"food"});
-    act(a,open.length>1?t("Log today's plan"):fill(t("Log {m}"),{m:mealName(m.id)}),{"data-logday":"1"});}
+    act(a,open.length>1?t("Log today's plan"):fill(t("Log {m}"),{m:mealName(m.id)}),{"data-logday":"1"});
+    act(a,t("Open Food"),{"data-tab":"food"});}
   else if(kl>0&&e.kcal){
     if(pl>25&&kl<pl*8)p(a,t("Protein is the gap, with few calories left: chicken, tuna, eggs, Greek yogurt or cottage cheese close it best."));
     else if(pl>25)p(a,t("A meal built around protein closes both gaps: a palm of chicken, fish, meat or eggs, with rice, bread or potatoes, and vegetables."));
