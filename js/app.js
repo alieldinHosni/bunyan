@@ -40,6 +40,7 @@ import {buildMealPlan} from "./engine/mealplan.js";
 import {checkPlans} from "./engine/plancheck.js";
 import {coachNow} from "./engine/coachinfo.js";
 import {coachAct} from "./ui/views/pcheck.js";
+import {ask} from "./ui/views/chat.js";
 import {holding, startHold, stopHold} from "./ui/hold.js";
 import {changeLook, themeOf} from "./ui/theme.js";
 import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
@@ -275,6 +276,16 @@ function pcFix(id){
   saveDB();render();
   toast(msg,function(){S.goals=before.goals;S.profile.goal=before.goal;if(prog&&before.days)prog.days=before.days;
     S.pcDismiss=before.dis;saveDB();render();});}
+/* The question typed into the chat, asked; and the newest question brought into view
+   with its answer under it. */
+function chatSend(){
+  var el=document.getElementById("chatq"),q=el?String(el.value||"").trim():"";
+  if(!q){if(el)el.focus();return;}
+  ask(q);saveDB();render();chatEnd();}
+function chatEnd(){
+  requestAnimationFrame(function(){
+    var qs=document.querySelectorAll(".chat-q"),q=qs[qs.length-1];
+    if(q)window.scrollTo(0,Math.max(0,q.getBoundingClientRect().top+window.pageYOffset-72));});}
 /* The coach's insights: act on one, or set it aside for two weeks. Taking a lighter
    week also quiets the insight that asked for it until well after the week ends. */
 function coachSetAside(id,days){S.coachDismiss=S.coachDismiss||{};S.coachDismiss[id]=addDaysISO(today(),days);}
@@ -314,7 +325,7 @@ function slotsFrom(pp){
 /* Coach, at a section and the view inside it: a change of place, so a fresh trail. */
 function toCoach(sec,sub){
   if(V.sheet)closeSheet();
-  resetNav();V.tab="coach";V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.assess=false;V.pcheck=false;
+  resetNav();V.tab="coach";V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.assess=false;V.pcheck=false;
   if(sec){V.csec=sec;S.prefs.csec=sec;}
   if(sub){if(V.csec==="train")V.ctsub=sub;else if(V.csec==="food")V.cfsub=sub;}
   saveDB();render();window.scrollTo(0,0);}
@@ -383,8 +394,8 @@ document.addEventListener("click",function(ev){
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
   /* A tab tap is a fresh start: the top of the page, and Food on today — a past
      date left selected from earlier was where a meal logged later could land. */
-  if(D.tab){resetNav();var tb=D.tab==="home"?"train":D.tab,same=V.tab===tb,top=same&&V.train==="days"&&!V.meal&&!V.smeal&&!V.phist&&!V.pslot&&!V.pimport;
-    V.tab=tb;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.dnavDir=0;V.assess=false;V.pcheck=false;
+  if(D.tab){resetNav();var tb=D.tab==="home"?"train":D.tab,same=V.tab===tb,top=same&&V.train==="days"&&!V.meal&&!V.smeal&&!V.phist&&!V.pslot&&!V.pimport&&!V.chat;
+    V.tab=tb;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.phist=false;V.dnavDir=0;V.assess=false;V.pcheck=false;
     /* Tapping a tab while already at its top goes back to its first view. */
     if(tb==="train"&&top)V.tdate=null;
     if(tb==="food"&&top)V.fdate=null;
@@ -395,11 +406,11 @@ document.addEventListener("click",function(ev){
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
      return to but the tab bar. */
-  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.assess=false;V.pcheck=false;render();return;}
+  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.phist=false;V.assess=false;V.pcheck=false;render();return;}
   /* Food's old sections: today is the Food page; the plan, targets and foods of your
      own are planned in Coach → Nutrition. */
   if(D.fsec){if(D.fsec==="today"){if(V.sheet)closeSheet();resetNav();V.tab="food";V.fdate=null;V.train="days";
-      V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.assess=false;V.pcheck=false;render();window.scrollTo(0,0);return;}
+      V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.assess=false;V.pcheck=false;render();window.scrollTo(0,0);return;}
     toCoach("food",D.fsec==="foods"?"foods":D.fsec==="targets"?"targets":"plan");return;}
   /* Coach's sections, and the views inside Training and Nutrition. A line of Coach AI's
      plan carries both, so it lands on the very view. */
@@ -1020,7 +1031,7 @@ document.addEventListener("click",function(ev){
     if(tg&&V.papplyT!==false)["kcal","p","c","f","water","steps"].forEach(function(k){
       if(tg[k]>0){S.goals[k]=tg[k];tSet++;}});
     V.pparse=null;V.pitext="";V.reorder=null;V.ptargets=null;V.psupps=null;V.pgen=null;saveDB();
-    goBack();V.pimport=false;V.tab="coach";V.csec="food";V.cfsub="plan";render();window.scrollTo(0,0);
+    goBack();V.pimport=false;V.chat=false;V.tab="coach";V.csec="food";V.cfsub="plan";render();window.scrollTo(0,0);
     toast(t(tSet?"Your plan and its daily targets are in.":"Your plan is in."),function(){S.mealSlots=before;S.goals=goalsBefore;saveDB();render();});
     pcAfter();return;}
   /* ---- My Foods */
@@ -1181,6 +1192,24 @@ document.addEventListener("click",function(ev){
       toast(t("Kept as it is."),function(){delete S.pcDismiss[fk.id];saveDB();render();});}return;}
   if(D.pcreset){S.pcDismiss={};S.coachDismiss={};saveDB();render();return;}
   if(D.cofix){coachFix(D.cofix);return;}
+  /* Ask the coach (js/ui/views/chat.js): open the conversation, ask a suggestion or what
+     was typed, clear it with Undo. */
+  if(D.chat){pushNav();V.chat=true;render();chatEnd();return;}
+  if(D.chatq){if(!V.chat){pushNav();V.chat=true;}ask("",D.chatq);saveDB();render();chatEnd();return;}
+  if(D.chatsend){chatSend();return;}
+  if(D.chatclear){var chB=S.chat||[];S.chat=[];saveDB();render();window.scrollTo(0,0);
+    toast(t("Conversation cleared."),function(){S.chat=chB;saveDB();render();});return;}
+  /* What an answer offers to change: a small step on the calorie target, carbs moving
+     with it so protein and fat stay where they are; or the goal, with its targets. */
+  if(D.chatkcal){var gB=JSON.parse(JSON.stringify(S.goals)),gK=S.goals,dK=+D.chatkcal||0,flK=S.profile.sex==="f"?1200:1500;
+    gK.kcal=Math.max(flK,Math.round((num(gK.kcal)+dK)/10)*10);gK.c=Math.max(50,Math.round((gK.kcal-num(gK.p)*4-num(gK.f)*9)/4));
+    saveDB();render();
+    toast(t(dK<0?"Target lowered to {k} kcal; carbs moved with it.":"Target raised to {k} kcal; carbs moved with it.").replace("{k}",fmtN(gK.kcal)),
+      function(){S.goals=gB;saveDB();render();});return;}
+  if(D.chatgoal){var cgB={goals:JSON.parse(JSON.stringify(S.goals)),goal:S.profile.goal};
+    S.profile.goal=D.chatgoal;var cgM=macroTargets();S.goals.kcal=cgM.kcal;S.goals.p=cgM.p;S.goals.c=cgM.c;S.goals.f=cgM.f;
+    saveDB();render();
+    toast(t("Goal and targets updated."),function(){S.goals=cgB.goals;S.profile.goal=cgB.goal;saveDB();render();});return;}
   if(D.cokeep){var ck=D.cokeep,cb=JSON.parse(JSON.stringify(S.coachDismiss||{}));coachSetAside(ck,14);saveDB();render();
     toast(t("Set aside for two weeks."),function(){S.coachDismiss=cb;saveDB();render();});return;}
   /* A meal plan from the targets, from Food's plan section, and another version of it. */
@@ -1473,6 +1502,7 @@ document.addEventListener("keydown",function(ev){
     var nx=tl[(ti+(fw?1:-1)+tl.length)%tl.length];
     if(nx){ev.preventDefault();nx.click();}
     return;}
+  if(ev.key==="Enter"&&ev.target.id==="chatq"){ev.preventDefault();chatSend();return;}
   if(ev.key==="Enter"&&V.sheet==="ask"&&ev.target.id==="askv"){
     ev.preventDefault();
     var ao=V.sd||{},av2=val("askv");

@@ -84,6 +84,8 @@ function normalize(o){
     if(!o[k]||typeof o[k]!=="object"||Array.isArray(o[k]))o[k]={};});
   Object.keys(d).forEach(function(k){if(!(k in o))o[k]=d[k];});
   if(o.myPlan&&!Array.isArray(o.myPlan.days))o.myPlan=null;
+  /* The coach chat's kept conversation (js/ui/views/chat.js): a list, or nothing. */
+  if(o.chat!=null&&!Array.isArray(o.chat))delete o.chat;
   /* The day's meals (js/engine/meals.js): a list of {id, name?, plan?, todo?}, or
      absent for the usual four. Anything else is dropped rather than half-trusted. */
   if(o.mealSlots!=null){

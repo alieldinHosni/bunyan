@@ -655,6 +655,64 @@ await test("Progress: Simple answers in plain words, and each goal's weight tren
   w=await say("gain",0.8);
   eq([w[0],/Trim about 100–200 kcal/.test(w[1]),/protects your muscle/.test(w[1])],["warn",true,false],"gaining too fast: a little less food");
 });
+/* ---- Coach AI: ask the coach (js/ui/views/chat.js, js/coach/intent.js) ------------- */
+await test("Coach chat: suggestions and typed questions, English and Arabic, answered from the log on the phone; buttons act with Undo; Back and Clear",async page=>{
+  /* Nothing goes over the network: every answer is worked out here. */
+  const out=[];page.on("request",r=>{if(!r.url().startsWith("http://localhost"))out.push(r.url());});
+  await coach(page,"ai");
+  if(!(await page.$('.chatcard')))throw new Error("no Ask the coach card in Coach AI");
+  await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
+  eq(await ev(page,"[V.tab,V.chat,S.chat.length,S.chat[0].id]"),["coach",true,1,"today"],"a suggestion opens the chat and is answered");
+  if(!(await page.$('.chat-a .chat-acts [data-startday]')))throw new Error("today's answer offers no Start workout");
+  const ask=async q=>{await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,300);
+    return page.evaluate(()=>{const a=[...document.querySelectorAll(".chat-a")].pop();return a?a.innerText:"";});};
+  let a=await ask("how much protein do I need?");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"protein","typed: protein");
+  if(!/150 g a day/.test(a))throw new Error("protein answer not from the targets: "+a);
+  a=await ask("اكل ايه دلوقتي");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"eat","typed in Arabic: what to eat");
+  if(!/2,500/.test(a))throw new Error("food answer not from the targets: "+a);
+  eq(await page.$$eval('.chat-acts',x=>x.length),1,"only the newest answer carries buttons");
+  a=await ask("asdf qwer");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"unknown","nonsense is said to be outside what it knows");
+  if(!/can't answer/.test(a)||!(await page.$('.chat-chips [data-chatq]')))throw new Error("unknown has no way on: "+a);
+  /* The weight stalled while losing fat, and the log matches the target: a step on the target, with Undo. */
+  a=await ask("why is my weight stuck");
+  if(!/Eat 150 kcal less a day/.test(a))throw new Error("no step offered: "+a);
+  await page.tap('.chat-acts [data-chatkcal="-150"]');await pause(page);
+  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.goals.f,S.goals.c]"),[2350,150,70,280],"150 kcal less, from carbs");
+  await page.tap('.toast-undo');await pause(page);
+  eq(await ev(page,"[S.goals.kcal,S.goals.c]"),[2500,300],"Undo");
+  /* A goal named in the question, set with its targets, and Undo. */
+  a=await ask("I want to bulk");
+  await page.tap('.chat-acts [data-chatgoal="gain"]');await pause(page);
+  eq(await ev(page,"S.profile.goal"),"gain","goal set");
+  await page.tap('.toast-undo');await pause(page);
+  eq(await ev(page,"[S.profile.goal,S.goals.kcal]"),["lose",2500],"Undo puts goal and targets back");
+  /* Kept, cleared with Undo, and Back returns to Coach AI. */
+  const n=await ev(page,"S.chat.length");
+  await page.tap('[data-chatclear]');await pause(page);
+  eq(await ev(page,"(S.chat||[]).length"),0,"cleared");
+  await page.tap('.toast-undo');await pause(page);
+  eq(await ev(page,"S.chat.length"),n,"Undo brings it back");
+  await page.tap('[data-back]');await pause(page,500);
+  eq(await ev(page,"[V.tab,!!V.chat,V.csec]"),["coach",false,"ai"],"Back to Coach AI");
+  if(!/Continue the conversation/.test(await page.$eval('.chatcard',e=>e.innerText)))throw new Error("the card does not offer to continue");
+  eq(out,[],"no network requests");
+},{db:Object.assign(seed(),{
+  profile:{age:30,height:180,weight:84,sex:"m",activity:1.4,goal:"lose",prog:"standard",level:"some",days:3},
+  body:[21,18,15,12,9,6,3,0].map(d=>({date:iso(d),weight:84})),
+  days:Object.fromEntries([1,2,3,4,5,6,7,8,9,10].map(d=>[iso(d),{water:2000,steps:8000,meals:{Lunch:{done:true,
+    items:[{n:"Day's food",fid:"x",grams:100,label:"1 serving",kcal:2480,p:150,c:300,f:70}]}}}]))})});
+await test("Coach chat: a saved conversation that is not the app's own renders as text only",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;
+    S.chat=[null,7,{q:"<img src=x onerror=alert(1)>",id:"today",b:[{p:"<b>hi</b>"},{l:["<i>x</i>",3]},null],
+      acts:[{l:"Go",a:{"onclick":"alert(1)","data-tab":"food","data-x\" onmouseover=\"alert(1)":"1"}}]}];});
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  const r=await page.evaluate(()=>({img:!!document.querySelector(".chat img"),b:!!document.querySelector(".chat-a b"),
+    btn:[...document.querySelectorAll(".chat-acts button")].map(b=>b.getAttributeNames().sort().join(","))}));
+  eq(r,{img:false,b:false,btn:["class,data-tab"]},"markup stays text; a button keeps only data-* the app knows");
+});
 await test("Arabic: the dock keeps its order, dates are Arabic, figures stay one run",async page=>{
   const r=await page.evaluate(()=>{
     const b=[...document.querySelectorAll("nav .dock-b")].map(x=>x.getBoundingClientRect().left);

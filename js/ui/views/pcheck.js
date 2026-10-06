@@ -89,4 +89,4 @@ function adviceBody(){
   h+='<p class="as-note">'+esc(t("Ranges and targets here are starting points from the research, not rules. How you feel, recover and progress over a few weeks says more."))+'</p>';
   return h;}
 
-export {adviceBody, adviceCount, coachAct};
+export {adviceBody, adviceCount, coachAct, words};

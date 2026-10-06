@@ -74,7 +74,9 @@ function render(){
      route to either lands on its new place. */
   if(V.tab==="home"||!V.tab)V.tab="train";
   if(V.pcheck){V.pcheck=false;V.tab="coach";V.csec="ai";}
-  var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":V.train):V.tab==="coach"?(V.train!=="days"?V.train:V.pslot?"pslot":V.pimport?"pimport":V.smeal?"smeal":"hub"):"");
+  /* The chat is a Coach screen; leaving Coach leaves it (back restores it from the trail). */
+  if(V.tab!=="coach")V.chat=false;
+  var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":V.train):V.tab==="coach"?(V.train!=="days"?V.train:V.pslot?"pslot":V.pimport?"pimport":V.smeal?"smeal":V.chat?"chat":"hub"):"");
   var moved=view!==lastView;lastView=view;
   /* Note what has focus and where the caret sits before the rebuild destroys it.
      Restoring the caret to the end of the value, which is what this used to do,
@@ -123,7 +125,7 @@ function render(){
   syncWbar();
   /* A new screen opens with the dock in view (see dock.js). */
   checkDock([V.tab,V.tab==="train"?(S.active?"session":V.train):"",V.previewId,V.dayId,V.meal,V.smeal,V.pslot,
-    V.pimport,V.phist].join("|"));
+    V.pimport,V.phist,V.chat].join("|"));
 
   /* The sheet animates in when it opens and never again. Replaying sheetIn on every
      render is what made tapping the favourite star look like the sheet was being

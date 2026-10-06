@@ -87,7 +87,19 @@ Five tabs. Two are for the day, one is for planning, one for looking back, one f
   - *Nutrition*: the meal plan, the daily targets, foods of your own, a plan brought in;
   - *Coach AI*: the assessment, which builds the daily targets, the training and the
     meal plan in one step, with one Undo, and puts them on Training and Food; then
-    what the plan check and the coach see (`views/pcheck.js`).
+    *Ask the coach*; then what the plan check and the coach see (`views/pcheck.js`).
+
+**Ask the coach** (`views/chat.js`, with `coach/intent.js`) is a guided chat, not a
+chatbot. A question, tapped from the suggestions or typed in English or Arabic, is
+matched to one of a fixed set of things the coach can answer: today's workout, what to
+lift, what to eat now, how things are going, the weight trend, protein, where the
+calories come from, soreness or pain, a missed day or little time, the program's
+balance, strength, the goal, a new plan, water, steps. The answer is worked out on the
+phone from the person's own log, plan and targets, with the same engines as the rest of
+the app, so it never says more than the app knows; a question outside that set is
+told so. Nothing is sent anywhere and no model writes the text. The newest answer
+carries its buttons (start the workout, log the plan, a 150 kcal step on the target,
+set the goal), each with Undo; the last 30 questions are kept.
 - **Progress** (`views/progress.js`) has two slides: *Simple*, five plain answers
   (training this week, weight, strength, food, records), and *Detailed*, the charts
   and numbers a coach reads.
@@ -117,7 +129,7 @@ js/
                 volume.js, mealplan.js, plancheck.js, coachinfo.js
   i18n/         dict.js (the AR dictionary and t), exnames.js (Arabic exercise names)
   ui/           view.js, render.js, actions.js, sheets.js, views/{train,home,session,
-                food,coach,progress,profile,assess,warmup,pcheck}.js
+                food,coach,chat,progress,profile,assess,warmup,pcheck}.js
   app.js        entry point: event listeners, wiring, boot
 tools/          one-off build scripts that never ship or run in the browser
 ```
@@ -395,6 +407,10 @@ otherwise they would outlive the blob that was supposed to own them.
     more than 15% outside the usual range, and always as an observation.
   - `insights.js`: what is worth saying, most important first, one per lift — and
     nothing at all when training is on track.
+  - `intent.js`: what a question to the coach chat is asking, in English or Egyptian
+    Arabic: phrases scored by the letters they match, so the more specific one wins
+    ("how much weight" is the load, "my weight" the scale), and "unknown" rather than
+    a guess.
 
   Coach AI shows them with the plan check's findings, most important first. Each one
   says what it saw, offers one thing to do, and can be set aside for two weeks. Run the tests with `node tests/coach.mjs`, or by

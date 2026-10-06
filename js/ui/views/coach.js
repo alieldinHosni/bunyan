@@ -5,8 +5,9 @@
      Nutrition  planned by hand: the meal plan, the daily targets, foods of your own,
                 a meal plan brought in.
      Coach AI   planned for you: the assessment reads the person and builds both plans
-                at once, and they land on the Training and Food pages. Then what the plan
-                check and the coach see, one card each.
+                at once, and they land on the Training and Food pages. Then questions to
+                ask the coach (js/ui/views/chat.js), and what the plan check and the coach
+                see, one card each.
    A screen opened from a section (a program's builder, the library, one meal's plan, an
    import) opens over it, and back returns to the section. */
 import {t} from "../../i18n/dict.js";
@@ -22,6 +23,7 @@ import {art} from "../art.js";
 import {builderBody, exercisesPage, programsPage, trainSub, weekOffer} from "./train.js";
 import {foodSub, vMyFoods, vPlan, vTargets} from "./food.js";
 import {adviceBody, adviceCount} from "./pcheck.js";
+import {chatCard, vChat} from "./chat.js";
 
 var CSECS=[["train","Training"],["food","Nutrition"],["ai","Coach AI"]];
 var TSUBS=[["program","My program"],["programs","Programs"],["exercises","Exercises"]];
@@ -32,6 +34,8 @@ function csec(){return pick(V.csec||S.prefs.csec,CSECS,"ai");}
 function vCoach(){
   var sub=trainSub();if(sub!=null)return sub;
   sub=foodSub();if(sub!=null)return sub;
+  /* The conversation, under anything an answer opened over it. */
+  if(V.chat)return vChat();
   var sec=csec(),n=adviceCount(),h='';
   h+='<div class="thead"><div><h1>'+t("Coach")+'</h1>'
    +'<p class="thead-s">'+t("Plan it here. Do it in Training and Food.")+'</p></div></div>';
@@ -79,6 +83,7 @@ function vCoachAI(){
    +'</div>'
    +'<div class="coachplan-a"><button class="btn g sm" data-setup="1">'+t("Retake the assessment")+'</button>'
    +'<button class="btn g sm" data-pgen="1">'+t("New meal plan from my targets")+'</button></div></section>';
+  h+=chatCard();
   h+=adviceBody();
   return h;}
 /* A line of the plan; tapping it opens where it is planned. */
