@@ -1,9 +1,9 @@
 /* Bunyan — app
    Entry point: event listeners, wiring and boot. */
-import {ACT, addExercise, askConfirm, askText, closeSheet, openSheet, runAct, startActivity, startDay, syncDraft, val} from "./ui/actions.js";
+import {ACT, addExercise, askConfirm, askText, closeSheet, openSheet, runAct, startActivity, startDay, swapAlt, syncDraft, val} from "./ui/actions.js";
 import {actKcal, isActivity} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
-import {loadExDB, loadInstructions, reconcileExercises} from "./data/exercises.js";
+import {LIB, loadExDB, loadInstructions, reconcileExercises} from "./data/exercises.js";
 import {applyLang, exName, planName} from "./i18n/exnames.js";
 import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, proteinTarget, targetKcal} from "./engine/formulas.js";
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
@@ -32,6 +32,8 @@ import {enter as enterEx, fromOf, initExSwipe} from "./ui/exswipe.js";
 import {importName, mealNow, savedById} from "./ui/views/food.js";
 import {mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "./engine/meals.js";
 import {parsePlan} from "./engine/planparse.js";
+import {readSplit} from "./engine/splitparse.js";
+import {newNames, programFromDraft, withIds} from "./ui/views/timport.js";
 import {changeLook, themeOf} from "./ui/theme.js";
 import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
 
@@ -50,6 +52,13 @@ function logFood(food,grams,label){
    from a saved meal in My Foods — that saved meal, in the same amounts. Returns the
    name the toast should say. */
 function addTo(meal,items,d){
+  /* Into a meal of a plan still being imported (the review screen's draft). Found from
+     a line that matched nothing, the line is crossed off as it is found. */
+  if(V.sheet==="addfood"&&V.sd&&V.sd.pimp!=null&&V.pparse){
+    var pm=V.pparse[+V.sd.pimp];
+    if(pm){pm.items=pm.items.concat(items);
+      if(V.sd.ptodo!=null){pm.todo.splice(+V.sd.ptodo,1);V.sd.ptodo=null;}
+      return importName(pm,+V.sd.pimp);}}
   var into=V.sheet==="addfood"&&V.sd&&V.sd.into?savedById(V.sd.into):null;
   if(into){items.forEach(function(i){into.items.push(i);});saveDB();return into.name;}
   /* Into a meal's plan, from Food → Plan. Found from a line an import could not match,
@@ -170,6 +179,55 @@ function withNotes(pp){
         ||su.filter(function(x){return nm.indexOf(String(x.name).toLowerCase().split(/\s+/)[0])>-1;})[0]||su[i];
       if(hit)it.note=[hit.when,hit.note].filter(Boolean).join(" \u00b7 ");});});
   return pp;}
+/* ---- reading and saving an imported program ------------------------------------ */
+/* Pages from a PDF, or pasted text, into the draft the import screen shows. */
+function readTraining(src){
+  V.tierr="";V.tibusy=false;
+  loadExDB(function(){
+    var r=null;
+    try{r=readSplit(src);}catch(e){r=null;}
+    if(!r||!r.days.length){V.tp=null;
+      V.tierr="No training days or exercises were found in that file. If it is a meal plan, import it under Food.";
+      render();return;}
+    V.tp=withIds(r);render();window.scrollTo(0,0);});}
+/* The open exercise editor's fields into its working copy (V.sd.e). */
+function tieRead(){
+  var e=V.sd&&V.sd.e;if(!e)return;
+  var g=function(k){var el=document.getElementById("tie_"+k);return el?String(el.value).trim():null;};
+  var n=function(k){var v=g(k);return v===null||v===""?null:num(v);};
+  if(n("sets")!=null)e.sets=Math.max(1,Math.min(12,Math.round(n("sets"))));
+  if(n("rest")!=null)e.rest=Math.max(0,Math.min(900,Math.round(n("rest"))));
+  if(n("lo")!=null)e.lo=Math.max(0,Math.round(n("lo")));
+  if(n("hi")!=null)e.hi=Math.max(e.lo||0,Math.round(n("hi")));
+  if(n("min")!=null)e.min=Math.max(1,Math.round(n("min")));
+  var w=g("w0");
+  if(w!==null){if(w===""||!(num(w)>0))delete e.w0;else e.w0=r1(toKg(num(w)));}
+  if(g("wk0")!==null){var a=n("wk0"),b=n("wk1");
+    if(a>0)e.wk=[Math.round(a),b>=a?Math.round(b):99];else delete e.wk;}
+  var nt=g("note");if(nt!==null)e.note=nt;
+  e.check=false;}
+/* A weekday holds one thing: a day of the program, an activity, or rest. */
+function assignWd(n,val){
+  var tp=V.tp;if(!tp)return;
+  tp.days.forEach(function(d){d.wd=d.wd.filter(function(x){return x!==n;});});
+  (tp.acts||[]).forEach(function(a){a.wd=(a.wd||[]).filter(function(x){return x!==n;});});
+  var m=/^([da]):(\d+)$/.exec(val||"");if(!m)return;
+  var it=m[1]==="d"?tp.days[+m[2]]:(tp.acts||[])[+m[2]];
+  if(it){(it.wd=it.wd||[]).push(n);it.wd.sort();}}
+/* The draft becomes a program, the active one, with Undo. Names the library does not
+   know join it as the lifter's own exercises, as the plan wrote them. */
+function useDraft(){
+  var tp=V.tp;if(!tp||!tp.days.length)return;
+  var added=newNames(tp);
+  added.forEach(function(x){LIB.push([x.n,x.m,"Other",0]);(S.myEx=S.myEx||[]).push({id:"u_"+uid(),n:x.n,m:x.m});});
+  var p=makeProgram(programFromDraft(tp,today())),before=S.activeProgram;
+  addProgram(p,true);saveDB();
+  V.tp=null;V.titext="";
+  resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);
+  toast(t("{name} is your program now.").replace("{name}",p.name),function(){
+    S.programs=(S.programs||[]).filter(function(q){return q.id!==p.id;});
+    if(before)S.activeProgram=before;saveDB();render();});}
+
 document.addEventListener("click",function(ev){
   /* Named el, not t: t() is the translator, and shadowing it here made every
      translated string inside this handler throw. */
@@ -752,7 +810,55 @@ document.addEventListener("click",function(ev){
     render();
     if(nL){play("set");toast(t(nL===1?"1 meal logged from your plan.":"{n} meals logged from your plan.").replace("{n}",nL));}
     else toast(t("Every planned meal is already logged today."));return;}
+  /* ---- a training program, imported (js/ui/views/timport.js) */
+  if(D.timport){pushNav();V.tab="train";V.train="import";V.tp=null;V.tierr="";render();window.scrollTo(0,0);return;}
+  if(D.tiread){var tt=val("ti_text");V.titext=tt;
+    if(!tt.trim()){toast(t("Paste your program first."));return;}
+    readTraining(tt);return;}
+  if(D.tirestart){V.tp=null;V.tierr="";render();window.scrollTo(0,0);return;}
+  if(D.tiex){var tx=D.tiex.split("|"),tdy=V.tp&&V.tp.days[+tx[0]],te=tdy&&tdy.ex[+tx[1]];if(!te)return;
+    openSheet("tiex",{d:+tx[0],j:+tx[1],e:JSON.parse(JSON.stringify(te))});return;}
+  if(D.titgl){tieRead();var tg2=V.sd&&V.sd.e;if(!tg2)return;
+    tg2[D.titgl]=!tg2[D.titgl];
+    /* Switching between reps and seconds carries a sensible figure across. */
+    if(D.titgl==="timed"){if(tg2.timed&&tg2.lo<15){tg2.lo=30;tg2.hi=45;}else if(!tg2.timed&&tg2.lo>=20){tg2.lo=8;tg2.hi=12;}}
+    if(D.titgl==="amrap"&&!tg2.amrap&&!tg2.lo){tg2.lo=8;tg2.hi=12;}
+    render();return;}
+  if(D.tiswap){tieRead();var sw0=V.sd;if(!sw0||!sw0.e)return;
+    V.exm=sw0.e.name?W.pickMuscle(sw0.e.name):"All";V.exe="All";V.exq=sw0.e.name?"":(sw0.e.raw||"");
+    openSheet("exercise",{timp:{d:sw0.d,j:sw0.j,e:sw0.e}});return;}
+  if(D.tiexsave){tieRead();var sv0=V.sd,dS=sv0&&V.tp&&V.tp.days[sv0.d];
+    if(dS&&dS.ex[sv0.j])dS.ex[sv0.j]=sv0.e;
+    closeSheet();return;}
+  if(D.tiexrm){var sr0=V.sd,dR0=sr0&&V.tp&&V.tp.days[sr0.d];if(!dR0)return;
+    var goneE=dR0.ex.splice(sr0.j,1)[0];closeSheet();
+    toast(t("Removed from the day."),function(){dR0.ex.splice(Math.min(sr0.j,dR0.ex.length),0,goneE);render();});return;}
+  if(D.tiadd!==undefined&&V.tp){V.exm="All";V.exe="All";V.exq="";openSheet("exercise",{timp:{d:+D.tiadd}});return;}
+  if(D.tirmday!==undefined&&V.tp){var rdi=+D.tirmday,gd=V.tp.days.splice(rdi,1)[0];if(!gd)return;render();
+    toast(gd.name+" "+t("removed."),function(){V.tp.days.splice(Math.min(rdi,V.tp.days.length),0,gd);render();});return;}
+  if(D.tirmact!==undefined&&V.tp){var rai=+D.tirmact,ga=(V.tp.acts||[]).splice(rai,1)[0];if(!ga)return;render();
+    toast(exName(ga.name)+" "+t("removed."),function(){V.tp.acts.splice(Math.min(rai,V.tp.acts.length),0,ga);render();});return;}
+  if(D.tiuse){useDraft();return;}
+  /* The plan's other choice for this exercise, before anything is logged on it. */
+  if(D.swapalt&&S.active){var ea=S.active.entries[V.logIdx];if(!ea||!ea.alt||ea.sets.length)return;
+    swapAlt(ea.alt,V.logIdx,ea.name);return;}
   if(D.pimport){pushNav();V.pimport=true;V.pparse=null;render();window.scrollTo(0,0);return;}
+  /* ---- editing the diet plan draft before it is used */
+  if(D.pirm||D.pidrop){
+    var pk=D.pirm?"items":"todo",pa2=(D.pirm||D.pidrop).split("|"),pmd=V.pparse&&V.pparse[+pa2[0]];if(!pmd)return;
+    var pj=+pa2[1],gonePI=pmd[pk].splice(pj,1)[0];if(gonePI==null)return;render();
+    toast((gonePI.n||gonePI)+" "+t("removed."),function(){pmd[pk].splice(Math.min(pj,pmd[pk].length),0,gonePI);render();});return;}
+  if(D.pmrm!==undefined&&V.pparse){var pmi=+D.pmrm,goneM=V.pparse.splice(pmi,1)[0];if(!goneM)return;render();
+    toast(importName(goneM,pmi)+" "+t("removed."),function(){V.pparse.splice(Math.min(pmi,V.pparse.length),0,goneM);render();});return;}
+  if(D.pigram){var pg=D.pigram.split("|"),pmg=V.pparse&&V.pparse[+pg[0]],itg=pmg&&pmg.items[+pg[1]];if(!itg)return;
+    askText({title:itg.n,label:t("Grams"),numeric:true,value:itg.grams||"",cta:t("Save"),act:"pigrams",data:{m:+pg[0],i:+pg[1]}});return;}
+  if(D.pifind||D.piadd!==undefined){
+    var pfa=D.pifind?D.pifind.split("|"):[D.piadd],pmf=V.pparse&&V.pparse[+pfa[0]];if(!pmf)return;
+    var rawF=D.pifind?pmf.todo[+pfa[1]]:"";if(D.pifind&&!rawF)return;
+    loadFoods(function(){
+      V.food={mode:"search",tab:"search",sq:rawF||"",q:"",items:null,edit:-1};
+      openSheet("addfood",{pimp:+pfa[0],ptodo:D.pifind?+pfa[1]:null,pname:importName(pmf,+pfa[0])});});
+    return;}
   if(D.papplyt!==undefined){V.papplyT=V.papplyT===false;render();return;}
   if(D.pread){
     var txt=val("pi_text");V.pitext=txt;
@@ -766,7 +872,9 @@ document.addEventListener("click",function(ev){
     var goalsBefore=JSON.parse(JSON.stringify(S.goals||{})),tg=V.ptargets;
     S.mealSlots=pp.map(function(m,i){
       var x={};
-      if(m.named&&!used[m.named]){x.id=m.named;used[m.named]=1;}
+      /* Renamed on the review screen: its own meal, by that name. */
+      if(m.custom){x.id="m_"+uid();x.name=m.custom;}
+      else if(m.named&&!used[m.named]){x.id=m.named;used[m.named]=1;}
       else{x.id="m_"+uid();var nm=importName(m,i);
         /* A numbered meal out of place (Meal 3 after a snack) keeps its number by name. */
         if(m.named||(!m.n&&m.name)||(m.n&&m.n!==i+1))x.name=nm;}
@@ -1170,6 +1278,13 @@ var exqTimer=null;
 document.addEventListener("input",function(ev){
   var id=ev.target.id||"";
   if(id==="pi_text"){V.pitext=ev.target.value;return;}
+  if(id==="ti_text"){V.titext=ev.target.value;return;}
+  var ptk=/^pt_(kcal|p|c|f|water|steps)$/.exec(id);
+  if(ptk&&V.ptargets){var pv=num(ev.target.value,0);V.ptargets[ptk[1]]=ptk[1]==="water"?Math.round(pv*1000):Math.round(pv);return;}
+  var pmn=/^pm_n_(\d+)$/.exec(id);
+  if(pmn&&V.pparse&&V.pparse[+pmn[1]]){var nmv=ev.target.value.trim();V.pparse[+pmn[1]].custom=nmv||null;return;}
+  if(id==="ti_name"&&V.tp){V.tp.name=ev.target.value;return;}
+  var dnm=/^ti_dn_(\d+)$/.exec(id);if(dnm&&V.tp&&V.tp.days[+dnm[1]]){V.tp.days[+dnm[1]].name=ev.target.value;return;}
   if(id==="exq"){
     V.exq=ev.target.value;
     clearTimeout(exqTimer);
@@ -1241,6 +1356,20 @@ document.addEventListener("change",function(ev){
   /* A progress photo, picked from the camera or the library. Shrunk and stored on
      this phone by js/ui/photos.js; the Body view re-reads the list once it lands. */
   /* A plan from a file: read as text into the box, then read as a plan straight away. */
+  var wdm=/^ti_wd_(\d)$/.exec(ev.target.id||"");
+  if(wdm&&V.tp){assignWd(+wdm[1],ev.target.value);render();return;}
+  /* A training program from a file: a PDF is read on the phone, a text file as text. */
+  if(ev.target.id==="ti_file"){
+    var tf=ev.target.files&&ev.target.files[0];ev.target.value="";if(!tf)return;
+    if(tf.type==="application/pdf"||/\.pdf$/i.test(tf.name||"")){
+      V.tibusy=true;V.tierr="";render();
+      import("./engine/pdfplan.js").then(function(m){return m.readPdfLines(tf);})
+        .then(function(src){V.tibusy=false;readTraining(src);})
+        .catch(function(){V.tibusy=false;V.tierr="That PDF could not be read. Copy its text and paste it instead.";render();});
+      return;}
+    var tfr=new FileReader();
+    tfr.onload=function(){V.titext=String(tfr.result||"");readTraining(V.titext);};
+    tfr.readAsText(tf);return;}
   if(ev.target.id==="pi_file"){
     var pfile=ev.target.files&&ev.target.files[0];if(!pfile)return;
     /* A PDF is read on the phone (js/engine/pdfplan.js, loaded only when one is opened):
@@ -1252,7 +1381,7 @@ document.addEventListener("change",function(ev){
         V.pibusy=false;V.pitext=r.text;V.ptargets=r.targets;V.psupps=r.supps;V.papplyT=true;
         var box=document.getElementById("pi_text");
         if(!r.text&&!Object.keys(r.targets||{}).length){render();if(box)box.value="";
-          toast(t("No meals were found in that PDF. Copy its text and paste it instead."));return;}
+          toast(t("No meals were found in that PDF. If it is a training program, import it under Train → Explore."));return;}
         loadFoods(function(){V.pparse=withNotes(parsePlan(V.pitext));render();
           var b2=document.getElementById("pi_text");if(b2)b2.value=V.pitext;
           var res=document.querySelector(".pitg,.picard");if(res)res.scrollIntoView({behavior:"smooth",block:"start"});});

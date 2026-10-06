@@ -15,6 +15,8 @@ import {head, reorderBtn, seg, V} from "../view.js";
 import {backArrow, backBar} from "../nav.js";
 import {art} from "../art.js";
 import {shown} from "../more.js";
+import {vTImport} from "./timport.js";
+import {doseText, weeksText} from "../dose.js";
 
 /* ============================================================ TRAIN */
 
@@ -170,6 +172,7 @@ function vTrain(){
   if(V.train==="bodyweight")return vBodyweight();
   if(V.train==="day")return vDay();
   if(V.train==="favs")return vFavs();
+  if(V.train==="import")return vTImport();
   return vHub();}
 
 /* ---- the Train tab: Today · My Program · Explore ------------------------------
@@ -248,6 +251,10 @@ function vExplore(sp){
   /* Or let Bunyan build it: four questions, and the plan is made for you. */
   h+='<button class="bnew bauto" data-setup="1"><span class="bnew-i">'+SPARK+'</span>'
    +'<span class="bnew-t"><b>'+t("Let Bunyan build it")+'</b><span>'+t("Four questions: your goal, level, days and equipment")+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  /* Or bring one in: the PDF a coach sent, or a program pasted from a chat. */
+  h+='<button class="bnew" data-timport="1">'+art("calendar",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
+   +'<span class="bnew-t"><b>'+t("Import a program")+'</b><span>'+t("Open your coach's PDF or paste it, check every day, then use it")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   h+=programsList();
   var tpls=allSplits().filter(function(o){return !editSplit(o.id);});
@@ -540,6 +547,15 @@ function builderBody(sp,id,inline){
        +'</div>':'')
      +'</div>';});
   h+='</div><button class="dadd" data-bday="1"><span aria-hidden="true">+</span>'+t("Add day")+'</button>';
+  /* What an imported program came with: its phase and length, and the coach's notes —
+     the rules, the reasons, the warnings — kept with it rather than thrown away. */
+  if(sp.meta&&(sp.meta.phase||sp.meta.weeks))
+    h+='<p class="bmeta">'+esc([sp.meta.phase,sp.meta.weeks?sp.meta.weeks+" "+t("weeks"):""].filter(Boolean).join(" · "))
+     +(sp.start&&sp.meta.weeks?' · '+t("week")+' '+Math.min(sp.meta.weeks,Math.max(1,Math.floor((Date.parse(today()+"T00:00:00")-Date.parse(sp.start+"T00:00:00"))/6048e5)+1)):'')+'</p>';
+  if(sp.notes&&sp.notes.length)
+    h+='<details class="tinotes bnotes"><summary>'+t("Coach's notes")+' <span class="num">'+sp.notes.length+'</span></summary>'
+     +sp.notes.map(function(n){return (n.h?'<h3>'+esc(n.h)+'</h3>':'')+(n.t||[]).map(function(l){return '<p>'+esc(l)+'</p>';}).join("");}).join("")
+     +'</details>';
   h+='<div class="dcta">'
    +(active?(inline?'<button class="btn g dbegin" data-tsec="explore">'+t("Switch program")+'</button>'
              +'<button class="ddel dset" data-sheet="set_training">'+t("Workout settings")+'</button>'
@@ -589,13 +605,20 @@ function vDay(){
      +(gl?'<span class="glabel">'+gl+'</span> ':'')+esc(nm)+'</span>'
      +'<span class="drow-s">'+(isActivity(e.name)
         ?(e.min||(actInfo(e.name).grp==="Sports"?60:30))+' '+t("min")+(e.km?' · '+e.km+' km':'')+'<i class="ddot"></i>'+esc(t(intensityOf(e.rpe||6)[1]))
-        :e.sets+' × '+e.lo+(e.hi!==e.lo?'–'+e.hi:'')+'<i class="ddot"></i>'+(e.rest||0)+'s')
-     +'<i class="ddot"></i>'+esc(t(muscleOfEntry(e)))+'</span></span></button>'
+        :esc(doseText(e))+'<i class="ddot"></i>'+(e.rest||0)+'s')
+     +'<i class="ddot"></i>'+esc(t(muscleOfEntry(e)))+'</span>'
+     /* What the plan says about it, and the weeks it belongs to. */
+     +(e.note?'<small class="drow-note">'+esc(e.note)+'</small>':'')
+     +(e.wk?'<small class="drow-wk">'+esc(weeksText(e.wk))+'</small>':'')
+     +'</span></button>'
      +(roX?'<button class="dgrip" data-grip="'+e.id+'" aria-label="'+esc(t("Move")+" "+nm)
        +'" aria-describedby="dgriphelp">'+GRIPSVG+'</button>':'')
      +'</div>';});
   h+='</div>';
   if(roX)h+='<span id="dgriphelp" class="sr">'+t("Drag, or use the arrow keys, to move it up or down.")+'</span>';
+  if(d.notes&&d.notes.length)
+    h+='<details class="daynotes"><summary>'+t("Session notes")+'</summary>'
+     +d.notes.map(function(l){return '<p>'+esc(l)+'</p>';}).join("")+'</details>';
   h+='<button class="dadd" data-addex="'+d.id+'"><span aria-hidden="true">+</span>'+t("Add exercise")+'</button>';
   h+='<div class="dcta">';
   /* A day of a split you are not training on is built here but not started: the

@@ -1880,11 +1880,103 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tgl.on{background:var(--accent)}
 .tgl.on i{transform:translateX(20px)}
 [dir="rtl"] .tgl.on i{transform:translateX(-20px)}
+/* ---- Importing a training program (js/ui/views/timport.js) ------------------------
+   The draft before it is a program: a summary, the name, the week, a card per day with
+   a row per exercise, and the coach's notes folded away. A row is a button that opens
+   its editor; what wants a look says so in the warning colour. */
+.tisum{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin:0 0 var(--s4);font-size:14px;color:var(--sub)}
+.tisum b{color:var(--text);font-size:15px}
+.tiwarn{color:var(--warning);font-style:normal;font-weight:600}
+.tilbl{display:block;margin:0 2px 6px;font-size:12px;font-weight:600;color:var(--dim)}
+.tiin,.tiday{width:100%;min-height:46px;padding:10px 14px;border-radius:var(--r2);border:1px solid var(--border);
+  background:var(--raised);color:var(--text);font:inherit;font-size:16px}
+.tiin:focus,.tiday:focus{outline:none;border-color:var(--accent)}
+.ticard{margin:0 0 var(--s4);padding:12px 14px;border-radius:var(--r3);background:var(--surface);border:1px solid var(--border)}
+.ticard-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.ticard-h .tiday{flex:1;min-width:0;font-weight:700;background:transparent;border-color:transparent;padding-inline:4px}
+.ticard-h .tiday:focus{border-color:var(--accent);background:var(--raised)}
+.ticard-x{flex:none;width:44px;height:44px;border:0;border-radius:22px;background:none;color:var(--dim);font-size:16px}
+.tifocus{margin:0 4px 8px;font-size:12.5px;color:var(--dim)}
+.tirow{display:flex;align-items:center;gap:12px;width:100%;padding:10px 2px;border:0;border-top:1px solid var(--border);
+  background:none;color:var(--text);font:inherit;text-align:start}
+.tirow .thumbwrap,.tirow .thumb{flex:none;border-radius:10px}
+.tirow-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.tirow-t b{font-size:15px;font-weight:600;line-height:1.3}
+.tirow-raw{font-size:12px;color:var(--dim)}
+.tirow-s{font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}
+.tirow-n{font-size:12.5px;color:var(--dim);line-height:1.4}
+.tirow-c{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px}
+.tirow-c:empty{display:none}
+.tirow-c i{font-style:normal;color:var(--accentHi)}
+.tirow-c i.tiwarn{color:var(--warning)}
+.tirow .ico-chev{flex:none;color:var(--dim)}
+.ticard .dadd{margin-top:6px;min-height:48px}
+.tiwk{padding-block:4px}
+.tiwk-r{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;font-size:15px}
+.tiwk-r+.tiwk-r{border-top:1px solid var(--border)}
+.tiwk-r select{max-width:60%;min-height:40px;padding:6px 10px;border-radius:var(--r1);border:1px solid var(--border);
+  background:var(--raised);color:var(--text);font:inherit;font-size:14px}
+.tiact{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px}
+.tiact+.tiact{border-top:1px solid var(--border)}
+.tiact span{display:flex;flex-direction:column;gap:2px}
+.tiact i{font-style:normal;font-size:12.5px;color:var(--dim)}
+.tinotes{margin:0 0 var(--s4);padding:12px 14px;border-radius:var(--r3);background:var(--raised);border:1px solid var(--border)}
+.ticard .tinotes{margin:8px 0 0;padding:10px 12px}
+.tinotes summary{cursor:pointer;font-weight:600;font-size:14px;min-height:28px;display:flex;align-items:center;gap:8px}
+.tinotes summary .num{color:var(--dim);font-weight:500}
+.tinotes h3{margin:14px 0 4px;font-size:13px;font-weight:700;color:var(--sub)}
+.tinotes p{margin:6px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
+.tinotes .bnote{margin-top:12px;text-align:start}
+/* Its editor sheet. */
+.tiswap{width:auto;margin:10px 0 4px}
+.tigrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 0}
+.tif{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--dim)}
+.tif input{min-height:46px;padding:8px 12px;border-radius:var(--r2);border:1px solid var(--border);background:var(--raised);
+  color:var(--text);font:inherit;font-size:16px;font-variant-numeric:tabular-nums}
+.tif input:focus,.tinote:focus{outline:none;border-color:var(--accent)}
+.titgls{margin:12px 0 0;border-radius:var(--r2);border:1px solid var(--border);background:var(--raised);padding:0 12px}
+.tit{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:50px;padding:0;border:0;
+  background:none;color:var(--text);font:inherit;font-size:15px;text-align:start}
+.tit+.tit{border-top:1px solid var(--border)}
+.tinote{width:100%;padding:10px 12px;border-radius:var(--r2);border:1px solid var(--border);background:var(--raised);
+  color:var(--text);font:inherit;font-size:15px;line-height:1.45;resize:vertical}
+.tiacts{display:flex;flex-direction:column;gap:6px;margin-top:14px}
+.tiacts .btn{margin:0}
+/* An imported exercise's cue under its name, its alternative, and the day's notes. */
+.ex-cue{margin:10px 0 0;font-size:13.5px;line-height:1.45;color:var(--sub)}
+.exalt{display:inline-block;margin-top:10px;font-size:13.5px;min-height:32px}
+.daynotes{margin:0 0 12px;padding:10px 14px;border-radius:var(--r3);background:var(--raised);border:1px solid var(--border)}
+.daynotes summary{cursor:pointer;font-weight:600;font-size:14px;min-height:28px;display:flex;align-items:center}
+.daynotes p{margin:6px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
+.drow-note{display:block;margin-top:3px;font-size:12px;line-height:1.4;color:var(--dim)}
+.drow-wk{display:inline-block;margin-top:3px;font-size:11.5px;font-weight:600;color:var(--accentHi)}
+.bmeta{margin:6px 2px 12px;font-size:13px;color:var(--dim)}
+.bnotes{margin-top:var(--s4)}
 .plist-note{display:block;margin-top:2px;font-size:12px;color:var(--dim)}
 .picard{margin:0 0 10px;padding:12px 14px 6px;border-radius:var(--r3);background:var(--raised);border:1px solid var(--border)}
 .picard-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
 .picard-h b{font-family:var(--display);font-size:16px}
 .picard-h span{font-size:13px;color:var(--dim);font-variant-numeric:tabular-nums}
+/* Editing the draft: the meal's name is a field, each food a button (its amount) with
+   an ✕, each unmatched line a Find. */
+.picard-h.ticard-h{align-items:center;gap:6px}
+.picard-h .tiday{font-family:var(--display);font-size:16px}
+.picard-k{flex:none;font-size:13px;color:var(--dim);font-variant-numeric:tabular-nums}
+.pied{align-items:center;gap:6px;padding:0}
+.pied>span{flex:1;min-width:0;padding:8px 0}
+.pied-b{flex:1;min-width:0;display:flex;justify-content:space-between;align-items:baseline;gap:12px;min-height:44px;
+  padding:8px 0;border:0;background:none;color:var(--text);font:inherit;font-size:14px;text-align:start}
+.pied-b:disabled{opacity:1}
+.pied-b i{font-style:normal;color:var(--dim);font-size:12.5px}
+.pied-b b{font-variant-numeric:tabular-nums;color:var(--sub);font-weight:600;white-space:nowrap}
+.pied-x{flex:none;width:40px;height:40px;border:0;border-radius:20px;background:none;color:var(--dim);font-size:14px}
+.pied .ptodo-b{flex:none;width:auto;margin:0}
+.picard .piadd{min-height:44px;margin:6px 0 8px}
+.pitg-v{display:flex;align-items:baseline;gap:6px}
+.pitg-v input{width:90px;min-height:38px;padding:4px 10px;border-radius:var(--r1);border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font:inherit;font-size:15px;font-weight:700;text-align:end;font-variant-numeric:tabular-nums}
+.pitg-v input:focus{outline:none;border-color:var(--accent)}
+.pitg-v em{font-style:normal;font-size:12.5px;color:var(--dim);min-width:22px}
 .picard .plist-r{font-size:13.5px;padding:7px 0}
 /* A line an import could not match, waiting with Find. */
 .drow.ptodo{align-items:center}

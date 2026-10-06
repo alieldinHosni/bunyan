@@ -293,8 +293,10 @@ function sparkline(vals,labels,color){
    +'</svg><div class="row tiny" style="margin-top:2px"><span>'+esc(labels[0])
    +'</span><span>'+esc(labels[labels.length-1])+'</span></div>';}
 
+/* Held for seconds: by its name, or because the plan said so (an imported "3 × 40s"). */
 function ex_isTimed(e){
-  return /Hold|Plank|Wall Sit|Balance|Isometric|Stretch|Dead Hang|L-Sit|Carry|Farmer/i.test(e.name);}
+  return e.kind==="timed"||!!e.timed||!!(e.planned&&e.planned.timed)
+    ||/Hold|Plank|Wall Sit|Balance|Isometric|Stretch|Dead Hang|L-Sit|Carry|Farmer/i.test(e.name);}
 function stepperInput(id,val,step,unit){
   return '<div class="steps"><button class="stp" data-stp="'+id+'" data-d="-'+step+'"'
    +' aria-label="'+t("Less")+' '+esc(unit)+'">&minus;</button>'

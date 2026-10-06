@@ -799,9 +799,9 @@ await test("PDF plan: meals, daily targets and supplements are read, reviewed an
   const before=await ev(page,"JSON.stringify(S.goals)");
   await page.setInputFiles("#pi_file",new URL("./fixtures/plan-sample.pdf",import.meta.url).pathname);
   for(let i=0;i<60&&!(await page.$(".picard"));i++)await pause(page,250);
-  eq(await page.$$eval(".picard .picard-h b",a=>a.map(e=>e.textContent)),["Meal 1","Meal 2","Snacks","Meal 3","Supplements"],"meals");
+  eq(await page.$$eval(".picard .picard-h .tiday",a=>a.map(e=>e.value)),["Meal 1","Meal 2","Snacks","Meal 3","Supplements"],"meals");
   eq(await page.$$eval(".plist-r.miss",a=>a.length),0,"every line matched a food");
-  eq(await page.$$eval(".pitg-r b",a=>a.map(e=>e.textContent)),["2,200 kcal","160 g","230 g","70 g","2.75 L","9,000"],"targets");
+  eq(await page.$$eval(".pitg-r input",a=>a.map(e=>e.value)),["2200","160","230","70","2.75","9000"],"targets");
   const supp=await page.$$eval(".picard",a=>a[4].innerText);
   for(const w of ["Vitamin D3","1,000 IU","With a fatty meal","Magnesium","200 mg","Before bed","Zinc","15 mg"])
     if(supp.indexOf(w)<0)throw new Error("supplements lack "+w+": "+supp);
@@ -814,6 +814,32 @@ await test("PDF plan: meals, daily targets and supplements are read, reviewed an
   eq(await page.$$eval(".bnum",a=>a.map(e=>e.textContent)),["1","2","","3",""],"badges follow the names");
   await page.tap(".toast-undo");await pause(page);
   eq(await ev(page,"JSON.stringify(S.goals)"),before,"Undo restores the targets");
+});
+await test("PDF plan: everything can be changed on the review before it is used",async page=>{
+  await tapTab(page,"food");await pause(page);await page.tap('[data-fsec="plan"]');await pause(page);
+  await page.tap('[data-pimport]');await pause(page);
+  await page.setInputFiles("#pi_file",new URL("./fixtures/plan-sample.pdf",import.meta.url).pathname);
+  for(let i=0;i<60&&!(await page.$(".picard"));i++)await pause(page,250);
+  /* A meal renamed, a food dropped, an amount changed, a target changed. */
+  await page.fill("#pm_n_0","Breakfast bowl");
+  const dropped=await ev(page,"V.pparse[1].items[0].n");
+  await page.evaluate(()=>document.querySelector('[data-pirm="1|0"]').click());await pause(page,200);
+  eq(await ev(page,"V.pparse[1].items.map(i=>i.n).indexOf("+JSON.stringify(dropped)+")"),-1,"dropped");
+  const k0=await ev(page,"V.pparse[0].items[0].kcal"),g0=await ev(page,"V.pparse[0].items[0].grams");
+  await page.evaluate(()=>document.querySelector('[data-pigram="0|0"]').click());await pause(page,300);
+  await page.fill("#askv",String(g0*2));await page.evaluate(()=>document.querySelector("[data-askok]").click());await pause(page,300);
+  eq(await ev(page,"[V.pparse[0].items[0].grams,Math.abs(V.pparse[0].items[0].kcal-"+(k0*2)+")<=2]"),[g0*2,true],"the amount and its calories");
+  await page.fill("#pt_kcal","2100");
+  /* A food added to a meal of the draft, from the same search as logging. */
+  const n2=await ev(page,"V.pparse[2].items.length");
+  await page.evaluate(()=>document.querySelector('[data-piadd="2"]').click());await pause(page,500);
+  eq(await page.$eval(".afsub",e=>e.textContent),"Into the plan for Snacks","the sheet says where it goes");
+  await page.fill("#fq","banana");await pause(page,600);
+  await page.evaluate(()=>document.querySelector("[data-quickfood]").click());await pause(page,400);
+  eq(await ev(page,"[V.pparse[2].items.length,V.pimport,!!V.sheet]"),[n2+1,true,false],"added to the draft, still reviewing");
+  await page.tap("[data-puse]");await pause(page,500);
+  eq(await ev(page,"S.goals.kcal"),2100,"the changed target");
+  eq(await page.evaluate(async()=>{const M=await import("/js/engine/meals.js");return M.mealName(M.mealSlots()[0].id);}),"Breakfast bowl","the renamed meal");
 });
 await test("Supplement doses: mg, mcg and IU are read as doses",async page=>{
   const r=await page.evaluate(async()=>{
@@ -1019,6 +1045,64 @@ await test("Back never walks out of the app, even when a screen opens while a ta
   /* At the root, back is held off and the spare entry stays, however often it is tried. */
   for(let i=0;i<3;i++){await page.evaluate(()=>history.back());await pause(page,400);}
   eq([await ix(),await ev(page,"V.tab")],[base,"progress"],"still in the app");
+});
+await test("Training import: a coach's PDF becomes a draft — days, week, cues, start weights, a block — edited, then a program",async page=>{
+  await tapTab(page,"train");await pause(page);
+  await page.evaluate(()=>document.querySelector('[data-tsec="explore"]').click());await pause(page,300);
+  await page.evaluate(()=>document.querySelector("[data-timport]").click());await pause(page,300);
+  await page.setInputFiles("#ti_file",new URL("./fixtures/split-sample.pdf",import.meta.url).pathname);
+  await page.waitForSelector(".tisum",{timeout:20000});await pause(page,300);
+  const tp=await ev(page,"V.tp");
+  eq([tp.name,tp.meta.phase,tp.meta.weeks],["Upper / Lower","Muscle gain",8],"cover");
+  eq(tp.days.map(d=>[d.name,d.wd]),[["Day A — Upper",[1]],["Day B — Lower",[4]]],"days and weekdays");
+  eq(tp.acts.map(a=>[a.name,a.wd]),[["Walking",[2]],["Running",[6]]],"the week's activities");
+  const A=tp.days[0].ex,B=tp.days[1].ex;
+  eq([A[0].name,A[0].sets,A[0].lo,A[0].hi,A[0].rest,A[0].w0,A[0].note],["Barbell Incline Bench Press - Medium Grip",3,6,8,120,50,"Two warm-up sets first"],"a row and its cue");
+  eq([A[3].name,A[3].amrap,A[3].altName],["Chin-Up",true,"Standing Biceps Cable Curl"],"max reps, and the other choice");
+  eq([A[4].timed,A[4].side,A[4].lo,A[4].hi],[true,true,30,45],"a timed hold, each side");
+  eq([A[5].conf,A[6].name,A[6].raw],["close","","Tib Raise"],"a close match is marked; an unknown name is kept as written");
+  eq(B.slice(0,3).map(e=>[e.name,e.wk||null]),[["Knee-to-Wall Ankle Mobilisation",[1,8]],["Single-Leg Balance",[5,8]],["Couch Stretch",null]],"the block, in its place, with its weeks");
+  eq(B[0].note.indexOf("First, while you are fresh")===0,true,"the block row's cue goes to its first exercise");
+  eq(tp.notes.map(n=>n.h),["THE THREE RULES","BEFORE YOU START"],"the coach's notes");
+  /* Edited before it is saved: an exercise, a weekday, an activity. */
+  await page.evaluate(()=>document.querySelector('[data-tiex="0|1"]').click());await pause(page,300);
+  await page.fill("#tie_sets","4");await page.fill("#tie_note","Pause at the top");
+  await page.evaluate(()=>document.querySelector("[data-tiexsave]").click());await pause(page,300);
+  eq(await ev(page,"[V.tp.days[0].ex[1].sets,V.tp.days[0].ex[1].note]"),[4,"Pause at the top"],"edited");
+  await page.selectOption("#ti_wd_5","d:1");await pause(page,200);
+  eq(await ev(page,"V.tp.days[1].wd"),[4,5],"a weekday moved to a day");
+  await page.evaluate(()=>document.querySelector('[data-tirmact="1"]').click());await pause(page,200);
+  eq(await ev(page,"V.tp.acts.map(a=>a.name)"),["Walking"],"an activity dropped");
+  const before=await ev(page,"S.activeProgram");
+  await page.evaluate(()=>document.querySelector("[data-tiuse]").click());await pause(page,500);
+  const p=await ev(page,"(()=>{const p=S.programs.filter(x=>x.id===S.activeProgram)[0];return {name:p.name,sched:p.schedule,days:p.days.map(d=>[d.name,d.wd,d.ex.length]),notes:p.notes.length,start:!!p.start}})()");
+  eq(p,{name:"Upper / Lower",sched:"week",days:[["Day A — Upper",[1],7],["Day B — Lower",[4,5],6],["Walking",[2],1]],notes:2,start:true},"the program");
+  eq(await ev(page,"S.myEx.map(m=>[m.n,m.m])"),[["Tib Raise","Calves"]],"the unknown name joins as your own");
+  eq(await ev(page,"[V.tab,V.tsec]"),["train","program"],"lands on My Program");
+  /* In a workout: week 1 leaves out what belongs to weeks 5–8; the plan's start
+     weight and cue are there; the other choice is one tap. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,p=S.programs.filter(x=>x.id===S.activeProgram)[0];(await import("/js/ui/actions.js")).startDay(p.days[1].id);});await pause(page,400);
+  eq(await ev(page,"S.active.entries.map(e=>e.name).indexOf('Single-Leg Balance')"),-1,"not before week 5");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).ACT.discard();});await pause(page,200);
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,p=S.programs.filter(x=>x.id===S.activeProgram)[0];(await import("/js/ui/actions.js")).startDay(p.days[0].id);});await pause(page,400);
+  eq(await ev(page,"[V.draft.w,S.active.entries[0].planned.note]"),[50,"Two warm-up sets first"],"start weight and cue");
+  eq(await page.$eval(".ex-cue",e=>e.textContent),"Two warm-up sets first");
+  await page.evaluate(async()=>{(await import("/js/ui/workout.js")).jumpTo(3);});await pause(page,300);
+  await page.evaluate(()=>document.querySelector("[data-swapalt]").click());await pause(page,300);
+  eq(await ev(page,"[S.active.entries[3].name,S.active.entries[3].alt,S.active.entries[3].planned.amrap]"),["Standing Biceps Cable Curl","Chin-Up",true],"swapped for the other choice");
+  eq(before!==await ev(page,"S.activeProgram"),true);
+});
+await test("Training import: a program pasted as text is read the same way",async page=>{
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="import";V.tp=null;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  await page.fill("#ti_text","Day 1 — Push\nBench press 4x6-8 @ 80kg, 2 min rest — pause on the chest\nLateral raises 3 x 12-15\n\nPull day\nLat pulldown 3x10\nFace pull 3 × 15 (light)\nPlank 3 x 45s");
+  await page.evaluate(()=>document.querySelector("[data-tiread]").click());await pause(page,500);
+  const tp=await ev(page,"V.tp");
+  eq(tp.days.map(d=>d.name),["Day 1 — Push","Pull day"],"days");
+  const b=tp.days[0].ex[0];
+  eq([b.name,b.sets,b.lo,b.hi,b.w0,b.rest,b.note],["Barbell Bench Press - Medium Grip",4,6,8,80,120,"pause on the chest"],"a full line");
+  eq(tp.days[0].ex[1].name,"Side Lateral Raise");
+  eq(tp.days[1].ex.map(e=>[e.name,e.lo,e.timed]),[["Wide-Grip Lat Pulldown",10,false],["Face Pull",15,false],["Plank",45,true]],"the second day");
+  eq(tp.days[1].ex[1].note,"light");
 });
 await test("Dock: a page with little to scroll keeps its dock",async page=>{
   await tapTab(page,"home");await pause(page);

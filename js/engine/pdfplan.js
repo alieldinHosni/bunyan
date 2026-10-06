@@ -48,16 +48,24 @@ function linesOf(items){
     return {y:r.y,segs:segs,t:segs.map(function(sg){return sg.t;}).join(" "),
       head:segs.every(function(sg){return sg.spaced;})};});}
 
-function readPages(data){
+function readPages(data,meta){
   return loadLib().then(function(lib){
     return lib.getDocument({data:data,isEvalSupported:false,disableFontFace:true}).promise;
   }).then(function(doc){
     var out=[],chain=Promise.resolve();
+    /* The document's own title, when it has one worth reading. */
+    if(meta)chain=chain.then(function(){return doc.getMetadata().then(function(m){
+      meta.title=m&&m.info&&m.info.Title||"";},function(){});});
     for(var p=1;p<=doc.numPages;p++)(function(p){
       chain=chain.then(function(){return doc.getPage(p);})
         .then(function(pg){return pg.getTextContent();})
         .then(function(tc){out.push(linesOf(tc.items));});})(p);
     return chain.then(function(){return out;});});}
+/* The lines of every page, and the title, for a reader of another kind of plan. */
+function readPdfLines(file){
+  var buf=file.arrayBuffer?file.arrayBuffer():Promise.resolve(file),meta={};
+  return buf.then(function(ab){return readPages(new Uint8Array(ab),meta);})
+    .then(function(pages){return {pages:pages,title:meta.title||""};});}
 
 /* ---- numbers -------------------------------------------------------------------- */
 function n(s){return parseFloat(String(s).replace(/,/g,""));}
@@ -168,4 +176,4 @@ function readPdfPlan(file){
     var r=interpret(pages);
     return {text:planText(r),targets:r.targets,supps:r.supps,meals:r.meals,pages:pages.length};});}
 
-export {interpret, linesOf, planText, readPdfPlan};
+export {interpret, linesOf, planText, readPdfLines, readPdfPlan};

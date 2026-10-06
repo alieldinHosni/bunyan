@@ -19,6 +19,7 @@ import {modeOf, themeOf, THEMES} from "./theme.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 import {wdName, weekStart} from "../engine/schedule.js";
+import {tiexSheet} from "./views/timport.js";
 
 /* One figure in the exercise sheet: a label, the number (typeable), and − / + either
    side. The steps are the plan's own: a set, a rep, fifteen seconds of rest. */
@@ -30,7 +31,7 @@ function exStep(k,label,v,unit){
    +'<button class="exs-b" data-exstp="'+k+'" data-d="1" aria-label="'+esc(t("More")+" "+label)+'">+</button></div></div>';}
 
 /* ============================================================ sheets */
-var SHEET_KICK={editex:"Exercise",recovery:"Recovery",weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
+var SHEET_KICK={editex:"Exercise",tiex:"Import",recovery:"Recovery",weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
   gear:"Training",likes:"Training",exercise:"Training",exhist:"History",share:"Sharing",coach:"Sharing",
   backup:"Your data",restore:"Your data",set_you:"Settings",set_training:"Settings",set_app:"Settings",
   set_profiles:"Settings",set_data:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
@@ -215,6 +216,7 @@ function vSheet(){
      +'<button class="btn" data-finish="1">'+t("Finish workout")+'</button>'
      +'<button class="btn danger" data-discard="1">'+t("Discard workout")+'</button>';
   }
+  else if(V.sheet==="tiex"){b=tiexSheet();}
   else if(V.sheet==="editex"){
     var d=dayOf(V.dayId),e=null;
     if(d)e=d.ex.filter(function(x){return x.id===V.sd.id;})[0];

@@ -454,10 +454,15 @@ function vImport(){
     if(tk.length){
       var TL={kcal:["Calories","kcal"],p:["Protein","g"],c:["Carbs","g"],f:["Fat","g"],water:["Water","L"],steps:["Steps",""]};
       var fv=function(k,v){return k==="water"?String(Math.round(v/50)*50/1000)+" L":fmtN(v)+(TL[k][1]?" "+TL[k][1]:"");};
+      /* Each figure is a field: what the PDF said, to keep or to change. Water is
+         typed in litres and kept in millilitres. */
       h+='<div class="tsec"><h2 class="tsec-h">'+t("Daily targets in the PDF")+'</h2></div><div class="pitg">'
        +tk.map(function(k){var cur=S.goals&&S.goals[k],same=cur===tg[k];
-          return '<div class="pitg-r"><span>'+esc(t(TL[k][0]))+'</span><b>'+esc(fv(k,tg[k]))+'</b>'
-           +'<i>'+(same?esc(t("as now")):cur?esc(t("now"))+' '+esc(fv(k,cur)):'')+'</i></div>';}).join("")
+          var v=k==="water"?String(Math.round(tg[k]/50)*50/1000):String(tg[k]);
+          return '<label class="pitg-r"><span>'+esc(t(TL[k][0]))+'</span>'
+           +'<span class="pitg-v"><input id="pt_'+k+'" type="number" inputmode="decimal" step="'+(k==="water"?"0.05":"1")+'" value="'+v+'">'
+           +'<em>'+esc(k==="water"?"L":TL[k][1])+'</em></span>'
+           +'<i>'+(same?esc(t("as now")):cur?esc(t("now"))+' '+esc(fv(k,cur)):'')+'</i></label>';}).join("")
        +'<button class="pitg-use" role="switch" aria-checked="'+(V.papplyT!==false)+'" data-papplyt="1">'
        +'<span>'+esc(t("Use these as my daily targets"))+'</span><span class="tgl'+(V.papplyT!==false?' on':'')+'" aria-hidden="true"><i></i></span></button></div>';}
     if(!pp.length)h+='<div class="empty"><p>'+esc(t("No meals or foods were found in that text."))+'</p></div>';
@@ -466,12 +471,24 @@ function vImport(){
       pp.forEach(function(m){nItems+=m.items.length;nTodo+=m.todo.length;kc+=sumNutrition(m.items).kcal;});
       h+='<div class="tsec"><h2 class="tsec-h">'+t("What Bunyan found")+'</h2><span class="dhint">'
        +esc(pp.length+" "+t(pp.length===1?"meal":"meals")+" · "+fmtN(kc)+" kcal")+'</span></div>';
+      /* Every meal, every food and every unmatched line can be changed here, before
+         anything is saved: rename or drop a meal, tap a food to change its amount, ✕
+         to drop it, Find for a line that matched nothing, + for something missing. */
+      h+='<p class="dsub">'+esc(t("Change anything before you use it: rename a meal, tap a food to change the amount, Find what was not matched."))+'</p>';
       pp.forEach(function(m,i){
         var mt=sumNutrition(m.items);
-        h+='<div class="picard"><div class="picard-h"><b>'+esc(importName(m,i))+'</b><span>'+fmtN(mt.kcal)+' kcal</span></div>'
-         +m.items.map(function(it){return '<div class="plist-r"><span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')
-           +(it.note?'<small class="plist-note">'+esc(it.note)+'</small>':'')+'</span><b>'+fmtN(it.kcal)+'</b></div>';}).join("")
-         +m.todo.map(function(raw){return '<div class="plist-r miss"><span>'+esc(raw)+'</span><b>'+esc(t("not found"))+'</b></div>';}).join("")
+        h+='<div class="picard"><div class="picard-h ticard-h">'
+         +'<input id="pm_n_'+i+'" class="tiday" type="text" value="'+esc(importName(m,i))+'" aria-label="'+esc(t("Meal name"))+'" autocomplete="off" spellcheck="false">'
+         +'<span class="picard-k">'+fmtN(mt.kcal)+' kcal</span>'
+         +'<button class="ticard-x" data-pmrm="'+i+'" aria-label="'+esc(t("Remove")+" "+importName(m,i))+'">✕</button></div>'
+         +m.items.map(function(it,j){return '<div class="plist-r pied"><button class="pied-b" data-pigram="'+i+'|'+j+'"'+(it.grams?'':' disabled')+'>'
+           +'<span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')
+           +(it.note?'<small class="plist-note">'+esc(it.note)+'</small>':'')+'</span><b>'+fmtN(it.kcal)+'</b></button>'
+           +'<button class="pied-x" data-pirm="'+i+'|'+j+'" aria-label="'+esc(t("Remove")+" "+it.n)+'">✕</button></div>';}).join("")
+         +m.todo.map(function(raw,j){return '<div class="plist-r miss pied"><span>'+esc(raw)+'</span>'
+           +'<button class="btn sm g ptodo-b" data-pifind="'+i+'|'+j+'">'+esc(t("Find"))+'</button>'
+           +'<button class="pied-x" data-pidrop="'+i+'|'+j+'" aria-label="'+esc(t("Remove")+" "+raw)+'">✕</button></div>';}).join("")
+         +'<button class="dadd piadd" data-piadd="'+i+'"><span aria-hidden="true">+</span>'+esc(t("Add food"))+'</button>'
          +'</div>';});
       if(nTodo)h+='<p class="bnote">'+esc(t("Lines that matched no food are kept with their meal, to find one by one."))+'</p>';
       h+='<div class="dcta"><button class="btn dbegin" data-puse="1">'+esc(t("Use this plan"))+'</button>'
@@ -482,6 +499,8 @@ function vImport(){
 /* A meal the plan numbered keeps its number: a plan's Meal 3 after its snack is still
    Meal 3, not the fourth meal of the day. */
 function importName(m,i){
+  /* Renamed on the review screen. */
+  if(m.custom)return m.custom;
   if(m.named)return t(m.named==="Snack"?"Snacks":m.named);
   if(m.n)return t("Meal {n}").replace("{n}",m.n);
   if(!m.name)return t("Meal {n}").replace("{n}",i+1);

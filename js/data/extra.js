@@ -85,7 +85,27 @@ var X=[
  ["Couch Stretch","Quads","Bodyweight","Beginner","Mobility",0,[],"إطالة الكنبة",
   ["Kneel with one knee against a wall or couch, shin up it, the other foot forward.","Squeeze the glute on the kneeling side and lift the chest until you feel the front of the hip stretch.","Hold, breathing slowly, then switch sides."]],
  ["World's Greatest Stretch","Hamstrings","Bodyweight","Beginner","Mobility",0,["Glutes","Quads"],"أعظم إطالة",
-  ["Step into a long lunge and put both hands on the floor inside the front foot.","Drop the back knee, then rotate the inside arm up toward the ceiling.","Return, straighten the front leg for a hamstring stretch, then switch sides."]]
+  ["Step into a long lunge and put both hands on the floor inside the front foot.","Drop the back knee, then rotate the inside arm up toward the ceiling.","Return, straighten the front leg for a hamstring stretch, then switch sides."]],
+ /* Isometric holds and ankle work: common in rehab and football programs, and named
+    the way coaches write them, so an imported plan finds them. */
+ ["Wall Sit","Quads","Bodyweight","Beginner","Isometric",0,["Glutes"],"وول سيت",
+  ["Stand with your back flat against a wall, feet a stride out in front.","Slide down until the thighs are about parallel to the floor, knees over the ankles.","Hold the position, breathing steadily, with the back flat on the wall the whole time."]],
+ ["Glute Bridge Hold","Glutes","Bodyweight","Beginner","Isometric",0,["Hamstrings"],"ثبات الجسر",
+  ["Lie on your back, knees bent and feet flat, hip-width apart.","Drive through the heels and lift the hips until knees, hips and shoulders line up.","Squeeze the glutes and hold at the top with the ribs down, not arching the lower back."]],
+ ["Single-Leg Calf Raise","Calves","Bodyweight","Beginner","Push",0,[],"رفع سمانة برجل واحدة",
+  ["Stand on one foot on the edge of a step, holding something for balance.","Rise as high as you can onto the ball of the foot.","Lower slowly, about three seconds, until the heel is below the step. Finish the side, then switch."]],
+ ["Knee-to-Wall Ankle Mobilisation","Calves","Bodyweight","Beginner","Mobility",0,[],"مرونة الكاحل للحيطة",
+  ["Face a wall in a half-kneeling stance, front toes a hand's width from the wall.","Keeping the heel down, drive the knee forward over the toes until it touches the wall.","Return and repeat. Move the foot back a little as the ankle loosens."]],
+ ["Single-Leg Balance","Calves","Bodyweight","Beginner","Isometric",0,["Core"],"توازن على رجل واحدة",
+  ["Stand barefoot on one leg, knee soft, arms crossed over the chest.","Hold steady without the lifted foot touching down.","Make it harder by closing the eyes or standing on a folded towel."]],
+ ["Isometric Ankle Eversion","Calves","Bodyweight","Beginner","Isometric",0,[],"ثبات الكاحل للخارج",
+  ["Sit or stand side-on to a wall with the outside of the foot against it.","Push the foot outward into the wall without letting it move.","Hold the push at a firm but pain-free effort, then relax."]],
+ ["Isometric Ankle Inversion","Calves","Bodyweight","Beginner","Isometric",0,[],"ثبات الكاحل للداخل",
+  ["Sit or stand with the inside of the foot against a wall or a fixed object.","Push the foot inward into it without letting it move.","Hold the push at a firm but pain-free effort, then relax."]],
+ ["Single-Leg RDL Reach","Hamstrings","Bodyweight","Beginner","Hinge",0,["Glutes","Calves"],"رومانيان برجل واحدة بالمد",
+  ["Stand on one leg with a soft knee.","Hinge at the hips and reach the hands toward the floor while the free leg extends behind you.","Return slowly to standing, keeping the hips level. Control matters more than depth."]],
+ ["Mini Hops","Calves","Bodyweight","Beginner","Plyometric",0,["Quads"],"نطّات صغيرة",
+  ["Stand tall on both feet, or one foot as it gets easier.","Make small, quick, springy hops forward and back, then side to side.","Land softly on the balls of the feet with the knee over the toes."]]
 ];
 var EXTRA={};
 X.forEach(function(r){

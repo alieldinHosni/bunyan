@@ -269,6 +269,8 @@ function recommend(e){
   var hitTop=p.sets.filter(function(x){return num(x.r)>=e.planned.hi;}).length>=Math.max(1,p.sets.length-1);
   var inc=incrementFor(e.name,top);
   var w=top,note;
+  /* As many as you can: the target is last time's best, not a range. */
+  if(e.planned.amrap)return {w:top,lo:0,hi:0,amrap:true,last:(top?top+" \u00d7 ":"")+topR};
   if(!top){return {w:0,lo:e.planned.lo,hi:e.planned.hi,note:"Find a weight you can control for "+e.planned.lo+" reps."};}
   var miss=missedTwice(e.name,e.planned.lo);
   if(inDeload()){w=snapDown(top*0.9,inc)||top;note="Lighter week: about 10% less and fewer sets. Leave three or four reps in the tank.";}

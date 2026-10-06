@@ -52,6 +52,8 @@ function afHead(title,opts){
   /* Opened from a meal's plan in Food → Plan: everything goes into that plan. */
   var plan=V.sd&&V.sd.plan&&slotOf(V.sd.plan);
   if(sub===undefined&&plan)sub='<span class="afsub">'+esc(t("Into the plan for"))+' <b>'+esc(mealName(plan.id))+'</b></span>';
+  /* Opened from a plan still being imported: into that meal of the draft. */
+  if(sub===undefined&&V.sd&&V.sd.pname)sub='<span class="afsub">'+esc(t("Into the plan for"))+' <b>'+esc(V.sd.pname)+'</b></span>';
   if(sub===undefined){
     var meal=curMeal(),ids=dayMeals(curDate());
     if(ids.indexOf(meal)<0)ids.push(meal);
