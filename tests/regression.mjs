@@ -1323,6 +1323,31 @@ await test("Coach: a log that is on track gets no coach card — silence is earn
   eq(await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().filter(c=>c.pri>=2).length),0,"nothing important");
   eq(await page.$$eval('.pchome .coach',a=>a.length),0,"no coach card on Home");
 },{db:Object.assign(seed(),{sessions:coachLog([8,8,8,8,8],2.5),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+/* ---- where the three judged lifts sit among raw competitors (coach phase 3) ------- */
+async function strengthTab(page){
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.ptab="strength";V.phalf="all";
+    (await import("/js/ui/render.js")).render();});await pause(page,400);}
+await test("Among powerlifters: squat and bench placed against raw competitors of the same class, said as such; silent without data",async page=>{
+  await strengthTab(page);
+  /* The seed: 84 kg (the 93 class), squat 80 × 8 and bench 60 × 8, no deadlift. */
+  const card=await page.$eval('.pgopl',e=>({rows:[...e.querySelectorAll('.pgshare-r')].map(r=>[r.querySelector('span').textContent,r.querySelector('b').textContent]),
+    text:e.innerText,aside:e.previousElementSibling.innerText}));
+  const want=await page.evaluate(async()=>{const P=await import("/js/coach/percentile.js");
+    return ["squat","bench"].map((l,i)=>{const x=P.percentileOf("m",84,l,[80,60][i]*(1+8/30));return x.edge==="below"?"<10":x.edge==="above"?">90":String(x.pct);});});
+  eq(card.rows,[["Squat",want[0]],["Bench press",want[1]]],"two lifts logged, two rows, from the table");
+  if(!/93 kg class/.test(card.aside)||!/raw/i.test(card.aside))throw new Error("class and raw not said: "+card.aside);
+  if(!/competitors/.test(card.text)||!/Anywhere on this scale is strong/.test(card.text)||!/rough guide/.test(card.text))
+    throw new Error("the comparison is not explained: "+card.text);
+  /* Arabic, mirrored. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.lang="ar";document.documentElement.dir="rtl";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$eval('.pgopl',e=>e.previousElementSibling.querySelector('h2,b,span').textContent.trim()),"وسط لاعبي الباورليفتنج","in Arabic");
+  /* No sex on the profile, or nothing from the last 12 weeks: nothing shown. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.lang="en";document.documentElement.dir="ltr";S.profile.sex="";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$$eval('.pgopl',a=>a.length),0,"no sex, no comparison");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.profile.sex="m";
+    const d=new Date(Date.now()-120*864e5).toISOString().slice(0,10);S.sessions.forEach(x=>{x.date=d;});(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$$eval('.pgopl',a=>a.length),0,"an edited log with nothing recent: gone");
+});
 await test("Training import: a program pasted as text is read the same way",async page=>{
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="import";V.tp=null;(await import("/js/ui/render.js")).render();});await pause(page,300);
   await page.fill("#ti_text","Day 1 — Push\nBench press 4x6-8 @ 80kg, 2 min rest — pause on the chest\nLateral raises 3 x 12-15\n\nPull day\nLat pulldown 3x10\nFace pull 3 × 15 (light)\nPlank 3 x 45s");

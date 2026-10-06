@@ -15,7 +15,7 @@ or Creative Commons licence may be used directly, with credit (`CREDITS.md`).
 | Source | Licence | Reachable from the build machine | Verdict |
 | --- | --- | --- | --- |
 | **free-exercise-db** (yuhonas) | **Unlicense** (public domain; the brief said CC0, the repository says Unlicense, which is at least as open) | Yes | The basis of the exercise library. Upstream added three since Bunyan's copy (Kettlebell Halo, Kettlebell Halo with Overhead Extension, Kettlebell Overhead Triceps Extension); all three are now in, mapped the same way as the rest, so the library matches upstream's 876. Upstream has no photographs for them yet, so they show the placeholder. The halos are filed as non-compound so a light shoulder circle never becomes a day's main lift. Its movement-pattern field is unreliable (it files Lying Leg Curls as elbow flexion), which Bunyan already works around. |
-| **OpenPowerlifting** | CC0 | **No** — `openpowerlifting.gitlab.io` is not reachable from here | The right source for strength percentiles (Phase 3). Needs a one-off reduction on a machine that can download the ~250 MB CSV; the app ships only the tables. Blocked here, not abandoned. |
+| **OpenPowerlifting** | Public domain (the data, per `LICENSE-DATA`; the brief said CC0). Its code is AGPL-3 and is not used | Yes, from `gitlab.com` (the bulk CSV host, `openpowerlifting.gitlab.io`, is not reachable from here) | The source for strength percentiles (Phase 3), now built: `tools/opl-percentiles.py` reads the published meet results directly (about 1 GB, never committed) and writes a table of under 4 KB, `js/coach/powerlifting.js`. |
 | **USDA FoodData Central** | CC0 | **No** — `fdc.nal.usda.gov` refuses connections from here | The reference for checking and extending `foods.json`: Foundation Foods and SR Legacy only, as the brief says. Same situation: a developer-machine job. |
 | **Compendium of Physical Activities** | Free to use with citation | **No** — not reachable from here | Already the source of the MET values in `js/data/activities.js`, cited in its header comment. |
 
@@ -162,8 +162,8 @@ the logger into a coach with no new data and no network. It is the highest value
 least risk, and it gives the Home card something better to say than a reminder.
 
 Second: per-exercise progression rules (Liftosaur's idea, reimplemented as a few named
-rules). Third: OpenPowerlifting percentiles, once the source can be downloaded on a
-machine that reaches it.
+rules). Third: OpenPowerlifting percentiles. Done: the meet results turned out to be
+reachable from `gitlab.com`.
 
 ## Note on sequence
 

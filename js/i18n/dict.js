@@ -1307,6 +1307,16 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Short of the range three sessions running. About 10% lighter for a week, same reps, then build back up.": "تحت المدى تلات جلسات ورا بعض. حوالي 10% أخف لمدة أسبوع، بنفس العدات، وبعدين اطلع تاني.",
 "Short of the range twice at this weight. Hold it and chase the reps; a third miss means a lighter week.": "تحت المدى مرتين على الوزن ده. ثبّته وحاول تزوّد العدات؛ لو حصلت تالت مرة يبقى أسبوع أخف.",
 "Top of the range, but close to failure. The weight goes up; if it was a grind, hold it instead.": "وصلت لآخر المدى، بس قريب من الفشل. الوزن هيزيد؛ لو كانت طالعة بالعافية، ثبّته بدل كده.",
+"Among powerlifters": "وسط لاعبي الباورليفتنج",
+"raw · {c} kg class": "رو · فئة {c} كجم",
+"Bench press": "بنش بريس",
+"Deadlift": "ديدليفت",
+"{lift}: ahead of about {n} in 100": "{lift}: قدّام حوالي {n} من كل 100",
+"{lift}: ahead of fewer than 10 in 100": "{lift}: قدّام أقل من 10 من كل 100",
+"{lift}: ahead of more than 90 in 100": "{lift}: قدّام أكتر من 90 من كل 100",
+"How many in 100 raw powerlifting competitors in your class you are ahead of: people who train for these three lifts and enter meets. Anywhere on this scale is strong.": "إنت قدّام كام واحد من كل 100 لاعب باورليفتنج رو في فئتك: ناس بيتمرنوا على الثلاث رفعات دول وبيدخلوا بطولات. أي مكان على المقياس ده يعتبر قوة.",
+"From your best estimated max in the last 12 weeks: {list}. A meet lift is a judged single, so take this as a rough guide.": "من أعلى أقصى وزن متوقع ليك في آخر 12 أسبوع: {list}. رفعة البطولة بتتعمل مرة واحدة وبيحكم عليها حكام، فاعتبر ده تقدير تقريبي.",
+"Data: OpenPowerlifting.": "البيانات: OpenPowerlifting.",
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;
