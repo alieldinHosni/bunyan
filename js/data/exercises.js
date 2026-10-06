@@ -1,9 +1,15 @@
 /* Bunyan — exercises
    The exercise library and its lookups, loaded from exercises.json. */
-import {S} from "../state.js";
 import {esc} from "../util.js";
 import {ACTS, actIcon, actMuscle, isActivity} from "./activities.js";
 import {EXTRA} from "./extra.js";
+
+/* The person's own data the library needs: exercises they added (myEx), their
+   equipment (gear) and favourites (favs). Handed in by app.js at boot, so this data
+   module never imports state: the dependency points down, not round in a circle. */
+var user=function(){return {};};
+function useUserData(get){user=get;}
+function myEx(){return user().myEx||[];}
 
 /* ============================================================ exercise library */
 /* n=name m=muscle e=equipment c=compound */
@@ -19,7 +25,7 @@ function buildLIB(){
   ACTS.forEach(function(a){if(!EXDB[a[0]])LIB.push([a[0],actMuscle(a[0]),"Other",0,"","Conditioning",[]]);});
   /* LIB is rebuilt from exercises.json on every load, so anything the user added
      has to be folded back in or it disappears on the next open. */
-  ((typeof S!=="undefined"&&S.myEx)||[]).forEach(function(m){
+  myEx().forEach(function(m){
     if(EXDB[m.n])return;
     LIB.push([m.n,m.m||"Other","Other",0]);});
   buildIds();
@@ -34,13 +40,13 @@ var ID2NAME={};
 function buildIds(){
   ID2NAME={};
   if(EXDB)Object.keys(EXDB).forEach(function(n){if(EXDB[n].i)ID2NAME[EXDB[n].i]=n;});
-  ((typeof S!=="undefined"&&S&&S.myEx)||[]).forEach(function(m){if(m.id)ID2NAME[m.id]=m.n;});
+  myEx().forEach(function(m){if(m.id)ID2NAME[m.id]=m.n;});
 }
 function exIdOf(name){
   if(!name)return null;
   var v=EXDB&&EXDB[name];
   if(v&&v.i)return v.i;
-  var mine=((typeof S!=="undefined"&&S&&S.myEx)||[]).filter(function(m){return m.n===name;})[0];
+  var mine=myEx().filter(function(m){return m.n===name;})[0];
   if(mine&&mine.id)return mine.id;
   if(isActivity(name))return "act:"+name;
   return null;
@@ -257,11 +263,12 @@ function thumb(n,size){
     +'<img class="thumb" loading="lazy" src="'+u+'" alt="" style="'+box+'"></span>';}
 function libFind(n){var v=EXDB&&EXDB[n];return v?[n,v.m,v.e,v.c]:null;}
 function hasGear(n){
-  if(!S.gear||!S.gear.length)return true;
+  var gear=user().gear;
+  if(!gear||!gear.length)return true;
   var v=EXDB&&EXDB[n]; if(!v)return true;
   if(v.e==="Bodyweight")return true;
-  return S.gear.indexOf(v.e)>=0;}
-function isFav(n){return S.favs.indexOf(n)>=0;}
+  return gear.indexOf(v.e)>=0;}
+function isFav(n){return (user().favs||[]).indexOf(n)>=0;}
 
 /* Exclusions are gone; gear is the only filter left. */
 function pickable(n){return hasGear(n);}
@@ -294,7 +301,7 @@ function muscleOfEntry(e){
 function isCompound(n){var v=EXDB&&EXDB[n];return v?!!v.c:/Press|Squat|Deadlift|Row|Pull|Lunge|Dip/i.test(n);}
 
 
-export {alsoKnown, isUnilateral, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
+export {useUserData, alsoKnown, isUnilateral, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
 
 /* Plate maths only means something on a loaded bar. On a machine, a cable or your
    own bodyweight the button was there on every exercise and useful on a handful.

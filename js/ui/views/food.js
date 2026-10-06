@@ -4,12 +4,14 @@
    saved and the foods you made, kept and edited here) and Targets (what the day is
    measured against, with the evidence for whether it is working beside it). */
 import {t} from "../../i18n/dict.js";
-import {curDate, eatenToday, lastWeight, macroKcal, macroTargets, tdee} from "../../engine/formulas.js";
+import {eatenToday, lastWeight, macroKcal, macroTargets, tdee, tdeeFormula} from "../../engine/formulas.js";
+import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
+import {checkPlans} from "../../engine/plancheck.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {dayRec, S} from "../../state.js";
 import {dfmt, esc, fmtN, r1, today} from "../../util.js";
-import {GRIPSVG, progressBar, reorderBtn, seg, V} from "../view.js";
-import {dayMeals, mealName, mealSlots, mealStyle, nextMeal, planOf, slotOf} from "../../engine/meals.js";
+import {curDate, GRIPSVG, mealNow, progressBar, reorderBtn, seg, V} from "../view.js";
+import {dayMeals, importName, mealName, mealSlots, mealStyle, nextMeal, planOf, slotOf} from "../../engine/meals.js";
 import {dateBar} from "../datebar.js";
 import {backArrow} from "../nav.js";
 import {art, waterArt} from "../art.js";
@@ -42,7 +44,6 @@ var TICK='<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>';
 /* The meal an add belongs to when nothing on screen says which — the Add Food button,
    the frequent-food pills, a saved meal: the one after the last with food in it. It
    was the clock's guess, which a late start or a numbered day made wrong. */
-function mealNow(d){return nextMeal(d||curDate());}
 
 /* The 180px hero ring. The frame draws it as a full 6px border, which can only ever
    read 100%; here it is an arc of eaten/goal, so it agrees with the number inside it. */
@@ -296,6 +297,17 @@ function suggested(){
   if(!p.age||!p.height||!(lastWeight()||p.weight))return null;
   var m=macroTargets();
   return {tdee:tdee(),kcal:m.kcal,p:m.p,f:m.f,c:m.c};}
+/* Where the maintenance figure comes from, and what the log measures. */
+function maintSource(){
+  var use=maintenanceInUse(),L=learnedNow(),h='<p class="pgnote tgsrc">';
+  var ld=checkPlans().some(function(f){return f.id==="maint-learned";})?learnedDiffers():null;
+  if(use.source==="learned")h+=esc(t("Maintenance measured from your own log (the formula says {f}).").replace("{f}",fmtN(tdeeFormula())));
+  else if(L.kind==="ok")h+=esc(t("Maintenance by formula. Your own log measures about {k} ({lo}–{hi}).")
+    .replace("{k}",fmtN(L.kcal)).replace("{lo}",fmtN(L.low)).replace("{hi}",fmtN(L.high)));
+  else h+=esc(t("Maintenance by formula. After two weeks of logged food and a few weigh-ins, your own log measures it."));
+  h+='</p>';
+  if(ld)h+='<button class="btn g sm tgsrc-b" data-pcfix="maint-learned">'+esc(t("Build my targets on {k} kcal").replace("{k}",fmtN(ld.learned.kcal)))+'</button>';
+  return h;}
 var TRANGES=[[7,"1W"],[30,"1M"],[90,"3M"]];
 var TPAST={7:"Past 7 days",30:"Past 30 days",90:"Past 90 days"};
 function vTargets(){
@@ -333,6 +345,7 @@ function vTargets(){
     h+='<div class="pgcard tgsug"><div class="tgsug-r"><div><div class="pgstat-k">'+esc(t("Maintenance"))+'</div><b>'+fmtN(sg.tdee)+'</b><small>kcal</small></div>'
      +'<div><div class="pgstat-k">'+esc(t("For your goal"))+'</div><b class="a">'+fmtN(sg.kcal)+'</b><small>kcal</small></div>'
      +'<div><div class="pgstat-k">'+esc(t("Protein"))+'</div><b>'+sg.p+'</b><small>g</small></div></div>'
+     +maintSource()
      +(same?'<p class="pgnote">✓ '+esc(t("These are your targets."))+'</p>'
        :'<button class="btn g" data-usesug="1">'+esc(t("Use these targets"))+'</button>')+'</div>';}
   /* Is it working: the weigh-ins against the goal. */
@@ -497,12 +510,5 @@ function vImport(){
    the language of the app, a numbered meal by its place, otherwise its own heading. */
 /* A meal the plan numbered keeps its number: a plan's Meal 3 after its snack is still
    Meal 3, not the fourth meal of the day. */
-function importName(m,i){
-  /* Renamed on the review screen. */
-  if(m.custom)return m.custom;
-  if(m.named)return t(m.named==="Snack"?"Snacks":m.named);
-  if(m.n)return t("Meal {n}").replace("{n}",m.n);
-  if(!m.name)return t("Meal {n}").replace("{n}",i+1);
-  return m.name;}
 
-export {foodSub, glassUnit, importName, mealNow, MICON, savedById, vFood, vMyFoods, vPlan, vTargets};
+export {foodSub, glassUnit, MICON, savedById, vFood, vMyFoods, vPlan, vTargets};

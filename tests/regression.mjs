@@ -191,7 +191,7 @@ await test("plan generator keeps timed holds timed and strength on the main lift
   if(pl&&pl[0]<30)throw new Error("plank "+pl);
 });
 await test("a rest day follows a full-body session",async page=>{
-  const r=await page.evaluate(async()=>{const s=await import("/js/state.js");const T=await import("/js/ui/views/train.js");
+  const r=await page.evaluate(async()=>{const s=await import("/js/state.js");const T=await import("/js/engine/dayplan.js");
     const P=(await import("/js/data/splits.js")).PRESETS().filter(p=>p.id==="fb")[0];s.addProgram(s.makeProgram(P),true);
     const a=s.split().days[0];s.S.sessions.unshift({id:"t",date:(await import("/js/util.js")).today(),dayId:a.id,dayName:a.name,entries:[]});
     const d=new Date();d.setDate(d.getDate()+1);const tom=new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
@@ -401,7 +401,7 @@ await test("migration: the active copy and a duplicate saved split become one pr
   eq(r,[2,"joe","Joe","k1,k2","cycle",true]);
 });
 await test("by weekday: pinned days fall on their weekdays, others are rest, and a pin moves",async page=>{
-  const r=await page.evaluate(async()=>{const s=await import("/js/state.js");const T=await import("/js/ui/views/train.js");const Sc=await import("/js/engine/schedule.js");
+  const r=await page.evaluate(async()=>{const s=await import("/js/state.js");const T=await import("/js/engine/dayplan.js");const Sc=await import("/js/engine/schedule.js");
     const sp=s.split();sp.schedule="week";const tr=sp.days.filter(d=>d.ex.length);tr.forEach(d=>d.wd=[]);tr[0].wd=[2];tr[1].wd=[5];
     const d=new Date();const iso=n=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);return new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
     let tue=null,wed=null;for(let k=0;k<7;k++){const w=Sc.isoWeekday(iso(k));if(w===2)tue=iso(k);if(w===3)wed=iso(k);}
@@ -1470,6 +1470,69 @@ await test("Coach: a log that is on track gets no coach card — silence is earn
   await coach(page,"ai");
   eq(await page.$$eval('#app .coach.sev3,#app .coach.sev2',a=>a.length),0,"nothing important in Coach AI");
 },{db:Object.assign(seed(),{sessions:coachLog([8,8,8,8,8],2.5),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+/* ---- maintenance learned from the log (roadmap B1) ----------------------------------- */
+await test("Maintenance learned: four weeks at 2,000 kcal and a steady weight measure about 2,000, not the formula's 2,548; one tap builds the targets on it, with Undo; the chat and Targets say where it comes from",async page=>{
+  const L=await page.evaluate(async()=>{const E=await import("/js/engine/energy.js"),F=await import("/js/engine/formulas.js");
+    const l=E.learnedNow();return {kind:l.kind,kcal:l.kcal,formula:F.tdeeFormula(),days:l.foodDays,share:l.share};});
+  eq([L.kind,Math.abs(L.kcal-2000)<=30,L.formula,L.days],["ok",true,2548,27],"measured from the log, against the formula");
+  await coach(page,"ai");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.advall=true;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  const card=await page.$eval('[data-k="pc:maint-learned"]',e=>e.innerText);
+  if(!/Your body uses about 2,0[0-3]0 kcal a day/.test(card)||!/the 2,548 the formula estimated/.test(card)||!/27 full days/.test(card))
+    throw new Error("the card does not show its numbers: "+card);
+  await page.tap('[data-k="pc:maint-learned"] [data-pcfix]');await pause(page,400);
+  const after=await ev(page,"[S.energy&&S.energy.kcal,S.goals.kcal,document.querySelectorAll('[data-k=\"pc:maint-learned\"]').length]");
+  eq([after[0]===L.kcal,after[1]===L.kcal,after[2]],[true,true,0],"targets built on it (holding weight: the target is the measured maintenance), card gone");
+  /* Targets says where maintenance now comes from. */
+  await coach(page,"food","targets");
+  if(!/Maintenance measured from your own log \(the formula says 2,548\)/.test(await page.$eval('.tgsrc',e=>e.textContent)))
+    throw new Error("Targets: "+await page.$eval('.tgsrc',e=>e.textContent));
+  await page.tap('.toast-undo').catch(()=>{});await pause(page,300);
+  eq(await ev(page,"[!!S.energy,S.goals.kcal]"),[false,2500],"Undo: the formula and the old target back");
+  /* The chat, asked about calories, says what the log measures and offers the same fix. */
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page);
+  await page.fill('#chatq','why are my calories like this');await page.press('#chatq','Enter');await pause(page,300);
+  const a=await page.evaluate(()=>[...document.querySelectorAll(".chat-a")].pop().innerText);
+  if(!/Your own log says your body uses about 2,0[0-3]0 kcal a day/.test(a)||!(await page.$('.chat-acts [data-pcfix="maint-learned"]')))
+    throw new Error("chat: "+a);
+},{db:Object.assign(seed(),{
+  profile:{age:30,height:180,weight:84,sex:"m",activity:1.4,goal:"maintain",prog:"standard",level:"some",days:3},
+  body:Array.from({length:14},(_,i)=>({date:iso(i*2),weight:84})),
+  days:Object.fromEntries(Array.from({length:27},(_,i)=>[iso(i+1),{water:2000,steps:8000,meals:{Lunch:{done:true,
+    items:[{n:"Day's food",fid:"x",grams:100,label:"1 serving",kcal:2000,p:150,c:200,f:67}]}}}]))})});
+await test("Maintenance learned: too little logged says how much more is needed, and never offers a number",async page=>{
+  const L=await page.evaluate(async()=>(await import("/js/engine/energy.js")).learnedNow());
+  eq([L.kind,L.why],["insufficient","food"],"a few days are not enough");
+  eq(await page.evaluate(async()=>(await import("/js/engine/plancheck.js")).checkPlans().some(f=>f.id==="maint-learned")),false,"no card");
+  await coach(page,"food","targets");
+  if(!/After two weeks of logged food/.test(await page.$eval('.tgsrc',e=>e.textContent)))throw new Error("Targets does not say what it needs");
+},{db:Object.assign(seed(),{days:Object.fromEntries([1,2,3].map(d=>[iso(d),{meals:{Lunch:{done:true,items:[{n:"x",kcal:2000,p:150,c:200,f:67}]}}}]))})});
+/* ---- readiness that acts (roadmap B3) ------------------------------------------------ */
+await test("Readiness: drained takes about 5% off today's suggestion, low holds last time's weight, great allows the bigger step; one set fewer on each exercise, with Undo",async page=>{
+  const r=await page.evaluate(async()=>{
+    const F=await import("/js/engine/formulas.js"),S=(await import("/js/state.js")).S,U=await import("/js/util.js");
+    const y=new Date(Date.now()-864e5),yd=new Date(y-y.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+    /* Last time: 100 × 8 three times, at the top of 6–8, at about RPE 7.7. */
+    S.sessions.unshift({id:"rd",date:yd,dayName:"T",entries:[{name:"Barbell Squat",muscle:"Quads",sets:[{w:100,r:8,rpe:7.5},{w:100,r:8,rpe:7.5},{w:100,r:8,rpe:8}]}]});
+    const e={name:"Barbell Squat",planned:{lo:6,hi:8,sets:3}},out={};
+    const was=S.active;
+    for(const rd of [0,1,2,5]){S.active={entries:[],ready:rd};const x=F.recommend(e);out[rd]=[x.w,x.note];}
+    S.active=was;return out;});
+  /* A squat steps 5 kg at 100: the usual step is 105; great takes the bigger one (two
+     steps, at most 10%), 110; low holds 100; drained is about 5% under, 95. */
+  eq([r[0][0],r[1][0],r[2][0],r[5][0]],[105,95,100,110],"normal step, drained, low, great");
+  if(!/drained day/.test(r[1][1])||!/low day/.test(r[2][1])||!/great day/.test(r[5][1]))throw new Error("each says why: "+JSON.stringify(r));
+  /* In a workout: a low answer offers one set fewer, with Undo. */
+  await startWorkout(page);
+  await page.tap('[data-ready="2"]');await pause(page,300);
+  const before=await ev(page,"S.active.entries.map(e=>e.planned.sets)");
+  await page.tap('[data-readyless]');await pause(page,300);
+  const after=await ev(page,"S.active.entries.map(e=>e.planned.sets)");
+  eq(after,before.map(n=>n>1?n-1:n),"one set fewer on each, never under one");
+  eq(await page.$$eval('[data-readyless]',a=>a.length),0,"offered once");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"S.active.entries.map(e=>e.planned.sets)"),before,"Undo");
+});
 /* ---- how coaching is surfaced (coach phase 4) ---------------------------------------- */
 await test("Phase 4: Coach AI shows the most important thing first, the rest behind a tap; the dot still counts them all",async page=>{
   const n=await page.evaluate(async()=>(await import("/js/ui/views/pcheck.js")).adviceCount());
@@ -1537,7 +1600,8 @@ await test("Among powerlifters: squat and bench placed against raw competitors o
   const card=await page.$eval('.pgopl',e=>({rows:[...e.querySelectorAll('.pgshare-r')].map(r=>[r.querySelector('span').textContent,r.querySelector('b').textContent]),
     text:e.innerText,aside:e.previousElementSibling.innerText}));
   const want=await page.evaluate(async()=>{const P=await import("/js/coach/percentile.js");
-    return ["squat","bench"].map((l,i)=>{const x=P.percentileOf("m",84,l,[80,60][i]*(1+8/30));return x.edge==="below"?"<10":x.edge==="above"?">90":String(x.pct);});});
+    /* 8 reps at RPE 8 is 10 reps of effort: the estimate counts the two left in reserve. */
+    return ["squat","bench"].map((l,i)=>{const x=P.percentileOf("m",84,l,[80,60][i]*(1+10/30));return x.edge==="below"?"<10":x.edge==="above"?">90":String(x.pct);});});
   eq(card.rows,[["Squat",want[0]],["Bench press",want[1]]],"two lifts logged, two rows, from the table");
   if(!/93 kg class/.test(card.aside)||!/raw/i.test(card.aside))throw new Error("class and raw not said: "+card.aside);
   if(!/competitors/.test(card.text)||!/Anywhere on this scale is strong/.test(card.text)||!/rough guide/.test(card.text))

@@ -16,7 +16,8 @@ import {isActivity} from "../../data/activities.js";
 import {fold, intentOf} from "../../coach/intent.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
-import {bmr, bwShare, deloadDue, e1RM, eatenToday, inDeload, lastWeight, loadText, macroTargets, recommend, targetKcal, tdee} from "../../engine/formulas.js";
+import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
+import {bmr, bwShare, deloadDue, e1RM, eatenToday, inDeload, lastWeight, loadText, macroTargets, recommend, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {mealName, mealSlots} from "../../engine/meals.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {nutrition, topLifts, weeklyCardio, weighIns, weightChange, weightTrend} from "../../engine/stats.js";
@@ -25,9 +26,9 @@ import {fmtW, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num, r1, today} from "../../util.js";
 import {backArrow} from "../nav.js";
 import {doseText} from "../dose.js";
-import {estMinutes, nextDayOf, planOn} from "./train.js";
-import {OPL_NAME, simpleFacts, trendSays} from "./progress.js";
-import {words} from "./pcheck.js";
+import {estMinutes, nextDayOf, planOn} from "../../engine/dayplan.js";
+import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
+import {words} from "../coachwords.js";
 
 var KEEP=30;
 /* The suggestions: what each asks, as the person would ask it. */
@@ -56,6 +57,9 @@ function l(a,items){if(items.length)a.b.push({l:items});return a;}
 function n(a,s){a.b.push({n:s});return a;}
 function act(a,label,attrs){a.acts.push({l:label,a:attrs});return a;}
 function noTags(s){return String(s||"").replace(/<[^>]+>/g,"");}
+
+/* What the log measured, while the plan check still offers it (not kept as it is). */
+function liveLearned(){return checkPlans().some(function(f){return f.id==="maint-learned";})?learnedDiffers():null;}
 
 /* ---- the answers ---------------------------------------------------------------- */
 function aToday(a,q){
@@ -179,7 +183,13 @@ function aWeight(a){
   if(Math.abs(off)>Math.max(150,gk*0.08)){
     p(a,fill(t("On the days you logged, you averaged {a} kcal against a target of {k}. Getting closer to the target comes before changing it."),{a:fmtN(nu.avg.kcal),k:fmtN(gk)}));
     return act(a,t("Open Food"),{"data-tab":"food"});}
-  /* Logged and on target: then the target is what to move, by a small step. */
+  /* Logged and on target: then the target is what to move. Measured from the log, if
+     the log can say what the body uses; otherwise by a small step. */
+  var ld=liveLearned();
+  if(ld){
+    p(a,fill(t("Your logging matches your target, so the target is what to move. Your own log says your body uses about {k} kcal a day, not the {f} your targets are built on; building them on that fixes it at the root."),
+      {k:fmtN(ld.learned.kcal),f:fmtN(ld.use.kcal)}));
+    return act(a,fill(t("Build my targets on {k} kcal"),{k:fmtN(ld.learned.kcal)}),{"data-pcfix":"maint-learned"});}
   var want=tr.kind==="lose"?(tr.status==="slow"||tr.status==="wrong"?-1:1):tr.kind==="gain"?(tr.status==="fast"?-1:1):(tr.status==="up"?-1:1);
   var step=tr.status==="wrong"?200:150;
   p(a,fill(t("Your logging matches your target, so the target is what to move: about {s} kcal a day {d}, then two more weeks before judging again."),
@@ -203,14 +213,24 @@ function aCalories(a){
   if(!num(pr.age)||!num(pr.height)){p(a,t("I need your age and height to work out your calories. The assessment asks for both."));
     return act(a,t("Start the assessment"),{"data-setup":"1"});}
   p(a,fill(t("At rest your body uses about {b} kcal a day, from your age, height, weight and sex (the Mifflin–St Jeor formula)."),{b:fmtN(b)}));
-  p(a,fill(t("With your activity, maintaining your weight takes about {t} kcal."),{t:fmtN(td)}));
+  var use=maintenanceInUse();
+  if(use.source==="learned")p(a,fill(t("By formula, maintaining your weight would take about {f} kcal. Your targets are built on what your own log measured instead: {t} kcal."),{f:fmtN(tdeeFormula()),t:fmtN(td)}));
+  else p(a,fill(t("With your activity, maintaining your weight takes about {t} kcal."),{t:fmtN(td)}));
   var pct=Math.round(Math.abs(G.kcal)*100);
   p(a,G.kcal?fill(t(G.kcal<0?"{g} takes {p}% below that, capped at {c} kcal: {k} kcal.":"{g} adds {p}% to that, capped at {c} kcal: {k} kcal."),
       {g:t(G.label),p:pct,c:G.cap||"—",k:fmtN(tk)})
     :fill(t("{g} eats at maintenance: {k} kcal."),{g:t(G.label),k:fmtN(tk)}));
   p(a,fill(t("Then protein {p} g, fat {f} g, and carbs take the rest: {c} g."),{p:g.p,f:g.f,c:g.c}));
   if(Math.abs(num(g.kcal)-tk)>=50)n(a,fill(t("Your target now is {k} kcal, set by hand or by a plan you used. Targets in Coach can put it back."),{k:fmtN(g.kcal)}));
-  n(a,t("A formula is an estimate. Two to three weeks of weigh-ins show what your body actually does with it."));
+  /* What the log measures: the honest check on any formula. */
+  var L=learnedNow(),ld=liveLearned();
+  if(ld){
+    p(a,fill(t("Your own log says your body uses about {k} kcal a day ({lo}–{hi}), from {d} fully logged days and your weight's trend over four weeks."),
+      {k:fmtN(ld.learned.kcal),lo:fmtN(ld.learned.low),hi:fmtN(ld.learned.high),d:ld.learned.foodDays}));
+    act(a,fill(t("Build my targets on {k} kcal"),{k:fmtN(ld.learned.kcal)}),{"data-pcfix":"maint-learned"});}
+  else if(L.kind==="ok")n(a,fill(t("Your own log agrees: about {k} kcal a day ({lo}–{hi})."),{k:fmtN(L.kcal),lo:fmtN(L.low),hi:fmtN(L.high)}));
+  else if(L.why==="implausible")n(a,t("Some of your logged days look incomplete, so I can't measure your maintenance from them yet. Log whole days, including drinks and snacks."));
+  else n(a,t("A formula is an estimate. Log your food on most days and weigh in a few mornings a week, and after two weeks I can measure what your body actually uses."));
   return act(a,t("Targets"),{"data-csec":"food","data-cfsub":"targets"});}
 
 function aSore(a,q){
@@ -272,7 +292,7 @@ function aStrong(a){
   l(a,top.map(function(L){
     if(!L.w)return exName(L.name)+": "+L.reps+" "+t("reps");
     /* Body weight plus a belt: the added load is not the lift, so no max from it. */
-    var bw=bwShare(L.name)>0,e=bw?0:e1RM(L.w,L.reps);
+    var bw=bwShare(L.name)>0,e=bw?0:e1RM(L.w,L.reps,L.rpe);
     return exName(L.name)+": "+loadText(L.name,L.w)+" × "+L.reps+(e&&L.reps>1?" · "+fill(t("about {e} for one"),{e:fmtW(e)}):"");}));
   var st=standingNow(),ok=(st.lifts||[]).filter(function(x){return x.kind==="ok";});
   if(ok.length){

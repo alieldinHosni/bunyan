@@ -3,9 +3,9 @@
 import {ACT, addExercise, askConfirm, askText, closeSheet, openSheet, runAct, startActivity, startDay, swapAlt, syncDraft, val} from "./ui/actions.js";
 import {actKcal, isActivity} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
-import {LIB, loadExDB, loadInstructions, reconcileExercises} from "./data/exercises.js";
+import {LIB, loadExDB, loadInstructions, reconcileExercises, useUserData} from "./data/exercises.js";
 import {applyLang, exName, planName} from "./i18n/exnames.js";
-import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, macroTargets} from "./engine/formulas.js";
+import {addItems, BACKUP_SNOOZE, lastWeight, macroKcal, macroTargets} from "./engine/formulas.js";
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan, rebalance} from "./engine/plan.js";
@@ -18,10 +18,12 @@ import {initReorder} from "./ui/reorder.js";
 import * as W from "./ui/workout.js";
 import {leave} from "./ui/motion.js";
 import {groupRun, mmss, paintRest, sessionClock} from "./ui/views/session.js";
-import {editSplit, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, allSplits, addProgram, makeProgram, CUR, curProfile, dayOf, dayRec, friends, initState, isOwner, loadStored, migrate, S, saveDB, saveFriends, setS, split, switchProfile} from "./state.js";
+import {editSplit, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, allSplits, addProgram, makeProgram, CUR, curProfile, dayOf, dayRec, initState, isOwner, loadStored, migrate, S, saveDB, setS, split, switchProfile, onProfileSwitch} from "./state.js";
+import {friends, saveFriends} from "./engine/share.js";
+import {addDaysISO} from "./engine/dayplan.js";
 import {toDisp, toKg, wUnit} from "./units.js";
 import {fmtN, num, r1, setStorageErrorHandler, today, uid} from "./util.js";
-import {syncViewport, restoreWorkoutState, syncWorkoutState, alarmStart, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, tap, toast, V} from "./ui/view.js";
+import {curDate, mealNow, syncViewport, restoreWorkoutState, syncWorkoutState, alarmStart, audioOn, beeped, endRest, keepAwake, lastTick, play, setBeeped, setLastTick, tap, toast, V} from "./ui/view.js";
 import {shiftDay} from "./ui/datebar.js";
 import {addPhoto, removePhoto} from "./ui/photos.js";
 import {syncWbar} from "./ui/wbar.js";
@@ -29,8 +31,8 @@ import {initDockScroll} from "./ui/dock.js";
 import {initPress} from "./ui/press.js";
 import {grow} from "./ui/more.js";
 import {enter as enterEx, fromOf, initExSwipe} from "./ui/exswipe.js";
-import {importName, mealNow, savedById} from "./ui/views/food.js";
-import {mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "./engine/meals.js";
+import {savedById} from "./ui/views/food.js";
+import {importName, mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "./engine/meals.js";
 import {parsePlan} from "./engine/planparse.js";
 import {readSplit} from "./engine/splitparse.js";
 import {newNames, programFromDraft, withIds} from "./ui/views/timport.js";
@@ -105,8 +107,6 @@ function toWeekdays(sp){
   if(sp.days.some(function(d){return d.ex.length;}))sp.days=sp.days.filter(function(d){return d.ex.length;});
   if(!sp.days.some(function(d){return (d.wd||[]).length;})){
     var sg=suggestWd(sp);sp.days.forEach(function(d){d.wd=sg[d.id]||[];});}}
-function addDaysISO(iso,n){var d=new Date(iso+"T00:00:00");d.setDate(d.getDate()+n);
-  return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
 /* A new query or filter shows its results from the top: the list scrolls on its own
    inside a search sheet, and would otherwise stay wherever the last one was left. */
 function topOfResults(){var sb=document.querySelector(".srch-body");if(sb)sb.scrollTop=0;}
@@ -257,7 +257,8 @@ function pcFix(id){
   if(act==="program"){toCoach("train","program");return;}
   if(act==="assess"){V.pcheck=false;pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);return;}
   var prog=split(),before={goals:JSON.parse(JSON.stringify(S.goals)),goal:S.profile.goal,
-    days:prog?JSON.parse(JSON.stringify(prog.days)):null,dis:JSON.parse(JSON.stringify(S.pcDismiss||{}))};
+    days:prog?JSON.parse(JSON.stringify(prog.days)):null,dis:JSON.parse(JSON.stringify(S.pcDismiss||{})),
+    energy:S.energy?JSON.parse(JSON.stringify(S.energy)):null};
   var g=S.goals,w=lastWeight()||num(S.profile.weight),msg="";
   if(act==="targets"){var m=macroTargets();g.kcal=m.kcal;g.p=m.p;g.c=m.c;g.f=m.f;msg=t("Targets updated.");}
   /* Protein or carbs up, the other two moved so the calories stay where they are. */
@@ -265,6 +266,9 @@ function pcFix(id){
     msg=t("Protein raised; carbs moved to keep your calories.");}
   else if(act==="carbs"){g.c=Math.round(w*3/5)*5;g.f=Math.max(Math.round(w*0.6),Math.round((g.kcal-g.p*4-g.c*4)/9));
     msg=t("Carbs raised; fat moved to keep your calories.");}
+  /* What the log measured becomes the maintenance the targets are built on. */
+  else if(act==="learned"){S.energy={kcal:f.fix.kcal,at:today()};var m4=macroTargets();g.kcal=m4.kcal;g.p=m4.p;g.c=m4.c;g.f=m4.f;
+    msg=t("Targets rebuilt on what your log measured.");}
   else if(act==="phasegoal"){S.profile.goal=f.fix.goal;var m2=macroTargets();g.kcal=m2.kcal;g.p=m2.p;g.c=m2.c;g.f=m2.f;
     msg=t("Goal and targets now match your program.");}
   else if(act==="balance"){var r=prog?rebalance(prog,S.profile,S.gear):{sets:0,added:0};
@@ -275,7 +279,7 @@ function pcFix(id){
   if(still){S.pcDismiss=S.pcDismiss||{};S.pcDismiss[id]=JSON.stringify(still.sig);msg+=" "+t("The rest is kept as it is.");}
   saveDB();render();
   toast(msg,function(){S.goals=before.goals;S.profile.goal=before.goal;if(prog&&before.days)prog.days=before.days;
-    S.pcDismiss=before.dis;saveDB();render();});}
+    S.pcDismiss=before.dis;if(before.energy)S.energy=before.energy;else delete S.energy;saveDB();render();});}
 /* The question typed into the chat, asked; and the newest question brought into view
    with its answer under it. */
 function chatSend(){
@@ -440,6 +444,7 @@ document.addEventListener("click",function(ev){
     saveDB();render();return;}
   /* ---- readiness, session effort, pain */
   if(D.ready!==undefined&&S.active){W.setReady(+D.ready);return;}
+  if(D.readyless&&S.active){W.lighterDay();return;}
   if(D.srpe){
     var sw9=V.sd&&sessionById(V.sd.id);if(!sw9)return;
     sw9.srpe=+D.srpe;saveSession(sw9);render();return;}
@@ -1852,6 +1857,15 @@ function applyExReconcile(){
 /* The installed app gets the full-screen page height (see "The Home Screen app" in
    index.html). The display-mode query covers current iOS; this covers older ones. */
 try{if(navigator.standalone)document.documentElement.classList.add("standalone");}catch(e){}
+/* The exercise library reads the person's own exercises, equipment and favourites
+   through this, rather than importing state (js/data/exercises.js). */
+useUserData(function(){return S;});
+/* A profile switch leaves the screen, the rest timer and the workout in memory with the
+   profile being left (state.js calls this rather than reaching into the view). */
+onProfileSwitch(function(){
+  V.tab="train";V.train="days";V.logIdx=0;
+  V.restEnd=0;V.restPaused=false;V.restDone=false;
+  restoreWorkoutState();});
 initState();
 setStorageErrorHandler(toast);
 /* One back path for the arrow, the edge swipe and the OS gesture. */

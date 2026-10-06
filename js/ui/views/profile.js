@@ -3,7 +3,8 @@
 import {t} from "../../i18n/dict.js";
 import {lastWeight} from "../../engine/formulas.js";
 import {GOALS, LEVELS} from "../../engine/plan.js";
-import {curProfile, friends, isOwner, PROFILES, S, split} from "../../state.js";
+import {curProfile, isOwner, PROFILES, S, split} from "../../state.js";
+import {friends} from "../../engine/share.js";
 import {fmtW, wUnit} from "../../units.js";
 import {esc, fmtN} from "../../util.js";
 import {streak} from "../view.js";

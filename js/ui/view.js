@@ -3,6 +3,7 @@
 import {t} from "../i18n/dict.js";
 import {S} from "../state.js";
 import {esc, fmtN, num, r1, today} from "../util.js";
+import {nextMeal} from "../engine/meals.js";
 
 /* ============================================================ view state */
 var V={tab:"train",fdate:null,food:null,range:30,exd:null,showAll:false,restPaused:false,restLeft:0,train:"days",dayId:null,sheet:null,sd:null,exq:"",exm:"All",exe:"All",previewId:null,
@@ -428,4 +429,10 @@ function reorderBtn(key,on){
    +esc(t(on?"Done":"Reorder"))+'</button>';}
 var GRIPSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>'
   +'<circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
-export {GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};
+/* The date Food is showing: today unless another day was picked. UI state, so it
+   lives here and not in the engine. */
+function curDate(){return V.fdate||today();}
+/* The meal a quick add goes into: the next one not yet logged on that date. */
+function mealNow(d){return nextMeal(d||curDate());}
+
+export {curDate, mealNow, GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};

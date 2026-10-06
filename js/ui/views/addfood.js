@@ -9,14 +9,13 @@
    One sheet, three modes (V.food.mode): "search", "detail" and "quick". */
 import {t} from "../../i18n/dict.js";
 import {empty} from "../../data/exercises.js";
-import {curDate, frequentFoods} from "../../engine/formulas.js";
+import {frequentFoods} from "../../engine/formulas.js";
 import {density, FOODDB, isMeasure, nutritionFor, searchFoods, sumNutrition, unitGrams, unitKey,
         unitLabel, UNIT_STEP, unitsFor} from "../../engine/nutrition.js";
 import {scanSupported} from "../../scan.js";
 import {S} from "../../state.js";
 import {esc, fmtN, r1} from "../../util.js";
-import {seg, V} from "../view.js";
-import {mealNow} from "./food.js";
+import {curDate, mealNow, seg, V} from "../view.js";
 import {dayMeals, mealName, slotOf} from "../../engine/meals.js";
 
 /* ---- shared pieces --------------------------------------------------------- */

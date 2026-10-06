@@ -1,12 +1,10 @@
 /* Bunyan — state
    S, profiles, persistence and migration. The single source of truth. */
-import {sessionVolume} from "./engine/formulas.js";
 import {PRESETS} from "./data/splits.js";
-import {num, r1, rd, rdRaw, today, uid, wr, wrRaw} from "./util.js";
+import {rd, rdRaw, today, uid, wr, wrRaw} from "./util.js";
 import {clearProfile, deleteSession, loadDays, loadSessions, putAll, putDays, putSession, updateSession,
         replaceAll, replaceAllDays} from "./db.js";
 import {clearPhotos} from "./photostore.js";
-import {restoreWorkoutState, V} from "./ui/view.js";
 
 /* ============================================================ state */
 var DEF={
@@ -84,6 +82,9 @@ function normalize(o){
     if(!o[k]||typeof o[k]!=="object"||Array.isArray(o[k]))o[k]={};});
   Object.keys(d).forEach(function(k){if(!(k in o))o[k]=d[k];});
   if(o.myPlan&&!Array.isArray(o.myPlan.days))o.myPlan=null;
+  /* Maintenance measured from the log and chosen as the base for the targets
+     (js/engine/energy.js): a plausible number of kcal, or nothing. */
+  if(o.energy!=null&&!(o.energy&&typeof o.energy==="object"&&+o.energy.kcal>=1000&&+o.energy.kcal<=6000))delete o.energy;
   /* The coach chat's kept conversation (js/ui/views/chat.js): a list, or nothing. */
   if(o.chat!=null&&!Array.isArray(o.chat))delete o.chat;
   /* The day's meals (js/engine/meals.js): a list of {id, name?, plan?, todo?}, or
@@ -285,11 +286,12 @@ function switchProfile(id,done){
   saveDB();CUR=id;wr("bunyan:current",id);
   hydrate();
   migrate();
-  V.tab="train";V.train="days";V.logIdx=0;
-  /* The rest and position in memory belong to the profile being left. */
-  V.restEnd=0;V.restPaused=false;V.restDone=false;
-  restoreWorkoutState();
+  /* The screen and the workout in memory belong to the profile being left; the UI
+     resets them (app.js registers it), so state never reaches up into the view. */
+  if(onSwitch)onSwitch();
   loadStored(done);}
+var onSwitch=null;
+function onProfileSwitch(fn){onSwitch=fn;}
 
 /* Another open copy of the app (a second tab, or Safari beside the installed app on
    desktop) saved. Re-read rather than keep a stale copy in memory: the next save from
@@ -298,31 +300,6 @@ function switchProfile(id,done){
 function refreshFromStorage(cb){hydrate();migrate();loadStored(cb);}
 function storageKey(){return dbKey();}
 
-/* ---- share snapshot: what a friend hands over, and nothing more ---- */
-function buildSnapshot(){
-  return {v:1,name:curProfile().name,at:today(),
-    goals:S.goals,
-    body:S.body.filter(function(b){return b.weight;}).slice(-90)
-             .map(function(b){return [b.date,b.weight];}),
-    sessions:S.sessions.slice(0,60).map(function(x){
-      return {d:x.date,n:x.dayName,v:Math.round(sessionVolume(x)),
-        e:x.entries.map(function(e){
-          return {n:e.name,s:e.sets.map(function(st){return [st.w,st.r];})};})};})};}
-function friends(){return rd("bunyan:friends",{});}
-function saveFriends(f){wr("bunyan:friends",f);}
-function snapStats(sn){
-  var vol=0,prs={},last=null;
-  sn.sessions.forEach(function(x){
-    vol+=x.v; if(!last||x.d>last)last=x.d;
-    x.e.forEach(function(e){
-      e.s.forEach(function(st){
-        var w=num(st[0]);if(!prs[e.n]||w>prs[e.n][0])prs[e.n]=[w,num(st[1])];});});});
-  var bw=sn.body.map(function(b){return b[1];});
-  var a7=bw.slice(-7);
-  return {vol:vol,count:sn.sessions.length,last:last,prs:prs,
-    weight:bw.length?bw[bw.length-1]:0,
-    avg7:a7.length>=3?r1(a7.reduce(function(p,q){return p+q;},0)/a7.length):0,
-    body:sn.body};}
 /* ---- programs ---------------------------------------------------------------
    A program is yours: its days, their exercises, and how it is scheduled. The
    ready-made ones in splits.js are templates — you never train on a template itself;
@@ -414,4 +391,4 @@ function dayRec(d){d=d||today();if(!S.days[d])S.days[d]={water:0,steps:0,sleep:0
 function setS(v){S=v;}
 function setProfiles(v){PROFILES=v;}
 
-export {makeProgram, addProgram, programById, editSplit, ownerOf, dataRev, storeWarning, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, allSplits, buildSnapshot, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, friends, initState, isOwner, loadStored, migrate, PROFILES, recordSession, S, saveDB, saveFriends, setProfiles, setS, snapStats, split, switchProfile};
+export {makeProgram, addProgram, programById, editSplit, ownerOf, dataRev, storeWarning, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, initState, isOwner, loadStored, migrate, PROFILES, onProfileSwitch, recordSession, S, saveDB, setProfiles, setS, split, switchProfile};

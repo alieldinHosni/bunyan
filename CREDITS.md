@@ -19,11 +19,13 @@ adds one (see `COACHING-INTELLIGENCE.md`, Phase 0).
 | What | Source | Used for |
 | --- | --- | --- |
 | Resting energy | Mifflin–St Jeor equation (1990) | `bmr()` in `js/engine/formulas.js` |
-| Estimated one-rep max | Epley formula, capped at 12 reps | `e1RM()` in `js/engine/formulas.js` |
+| Estimated one-rep max | Epley formula, counting reps in reserve from logged RPE (the RIR-based RPE scale: Zourdos et al. 2016, Helms et al. 2016), capped at 12 reps of effort | `e1rm()` in `js/coach/util.js`, used by `e1RM()` in `js/engine/formulas.js` |
 | Protein 1.6–2.2 g/kg | Morton et al. 2018 meta-analysis and the ISSN position stands | `js/data/goals.js` |
 | Weekly sets per muscle as ranges | Practitioner heuristics in the style of Renaissance Periodization's published volume landmarks, cross-checked against Schoenfeld et al. 2017 on weekly volume | `js/engine/volume.js` — shown in the app as a starting point, not a rule |
 | Reps in reserve | Zourdos et al. 2016, the RIR-based RPE scale | effort targets in generated plans |
 | Energy in food | Atwater factors with the fibre correction | the build-time check on `foods.json` |
+| 7,700 kcal per kg of body-weight change | Wishnofsky (1958), 3,500 kcal per pound, the usual practical figure; a simplification over weeks, not days | `js/coach/energy.js`, maintenance measured from the log |
+| Combining the log's measurement with the formula | The normal–normal (inverse-variance) update: each estimate weighted by one over its variance. The formula taken as ±15%, the spread published comparisons of resting-energy equations report | `js/coach/energy.js` |
 | Weight-change rates by goal | The usual evidence-based ranges: losing fat at 0.5–1% of body weight a week (Helms et al. 2014), gaining at 0.25–0.5%, steady within ±0.25% | `weightTrend()` in `js/engine/stats.js`, each goal judged by its own rate |
 | 150 minutes of moderate activity a week | WHO guidelines on physical activity and sedentary behaviour (2020) | the weekly cardio figure on Progress and in the coach chat |
 | Water about 35 ml per kg | A common rule of thumb for adults, not a clinical requirement; the app says to drink more on training days and in the heat | the daily water target, and the coach chat's answer |

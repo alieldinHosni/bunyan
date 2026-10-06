@@ -92,6 +92,17 @@ ACT.rmex=function(_,i){dropExercise(i);};
 
 /* ---- before the first set ---------------------------------------------------- */
 function setReady(v){if(!S.active)return;S.active.ready=v;saveDB();render();}
+/* A low day, taken lighter: one set fewer on every exercise not yet started (never
+   below one), with Undo. Asked for, never done on its own. */
+function lighterDay(){
+  var a=S.active;if(!a)return;
+  var before=a.entries.map(function(e){return e.planned?e.planned.sets:0;}),n=0;
+  a.entries.forEach(function(e){
+    if(!e.planned||(e.sets||[]).length||num(e.planned.sets)<=1)return;
+    e.planned.sets=num(e.planned.sets)-1;n++;});
+  a.lighter=true;saveDB();render();
+  toast(t(n===1?"One set fewer on 1 exercise.":"One set fewer on {n} exercises.").replace("{n}",n),function(){
+    a.entries.forEach(function(e,i){if(e.planned)e.planned.sets=before[i];});a.lighter=false;saveDB();render();});}
 /* "Something hurts": the flag stays on the entry either way; then replace it, skip
    it for today, or note it and carry on. */
 function flagPain(mode){
@@ -280,4 +291,4 @@ function askDiscard(){
     cta:t("Discard it"),act:"discard",hard:true});}
 
 export {addRow, askDiscard, confirmFinish, removeExercise, editLoggedSet, flagPain, jumpTo, logBout, logSet, nextExercise,
-        persistRest, pickMuscle, removeRow, restControl, resume, setProblem, setReady, toggleWarm, unlogSet};
+        lighterDay, persistRest, pickMuscle, removeRow, restControl, resume, setProblem, setReady, toggleWarm, unlogSet};

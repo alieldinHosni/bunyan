@@ -55,7 +55,7 @@ function standing(sessions,info,opts){
       OPL.lifts.forEach(function(k){
         if(!JUDGED[k].test(e.name))return;
         workSets(e).forEach(function(x){
-          var v=e1rm(I.load(e.name,x.w,s.date),x.r);
+          var v=e1rm(I.load(e.name,x.w,s.date),x.r,x.rpe);
           if(v>((best[k]&&best[k].kg)||0))best[k]={kg:v,name:e.name,date:s.date,w:num(x.w),r:num(x.r)};});});});});
   var lifts=OPL.lifts.map(function(k){
     var b=best[k],p=percentileOf(opts.sex,opts.bodyweight,k,b?b.kg:0);

@@ -33,7 +33,7 @@ function bests(sessions,info,today,days){
     (s.entries||[]).forEach(function(e){
       if(!e||!e.name)return;
       var k=Object.keys(LIFTS).filter(function(x){return LIFTS[x].test(e.name);})[0];if(!k)return;
-      workSets(e).forEach(function(x){var v=e1rm(I.load(e.name,x.w,s.date),x.r);if(v>(out[k]||0))out[k]=v;});});});
+      workSets(e).forEach(function(x){var v=e1rm(I.load(e.name,x.w,s.date),x.r,x.rpe);if(v>(out[k]||0))out[k]=v;});});});
   return out;}
 
 function weakPoints(sessions,info,opts){
