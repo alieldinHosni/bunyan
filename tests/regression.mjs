@@ -1470,6 +1470,63 @@ await test("Coach: a log that is on track gets no coach card — silence is earn
   await coach(page,"ai");
   eq(await page.$$eval('#app .coach.sev3,#app .coach.sev2',a=>a.length),0,"nothing important in Coach AI");
 },{db:Object.assign(seed(),{sessions:coachLog([8,8,8,8,8],2.5),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+/* ---- how coaching is surfaced (coach phase 4) ---------------------------------------- */
+await test("Phase 4: Coach AI shows the most important thing first, the rest behind a tap; the dot still counts them all",async page=>{
+  const n=await page.evaluate(async()=>(await import("/js/ui/views/pcheck.js")).adviceCount());
+  if(n<2)throw new Error("the seed should give at least two findings, got "+n);
+  await coach(page,"ai");
+  eq(await page.$$eval('#app .pcf',a=>a.length),1,"one card");
+  eq(await page.$eval('#app .pcf h3',e=>e.textContent),"Your calories will not build muscle","the most important one");
+  eq(await page.$eval('[data-advall="1"]',b=>b.textContent),n===2?"1 more thing the coach sees":(n-1)+" more things the coach sees","the rest, counted");
+  await page.tap('[data-advall="1"]');await pause(page);
+  eq(await page.$$eval('#app .pcf',a=>a.length),n,"all of them");
+  await page.tap('[data-advall="0"]');await pause(page);
+  eq(await page.$$eval('#app .pcf',a=>a.length),1,"folded again");
+  eq(await page.$eval('nav [data-tab="coach"]',e=>e.getAttribute("aria-label")).then(x=>x.includes(String(n))),true,"the dock still counts all of them");
+},{db:Object.assign(seed(),{goals:{kcal:2500,p:110,c:300,f:70,water:3000,steps:9000}})});
+await test("Phase 4: one card at a time until there is nothing to say, and then one quiet line",async page=>{
+  await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));});
+  const n=await page.evaluate(async()=>(await import("/js/ui/views/pcheck.js")).adviceCount());
+  if(n<1)throw new Error("the seed should have something to say");
+  await coach(page,"ai");
+  /* Set aside what there is, one card at a time: each time the next one takes its place. */
+  for(let i=0;i<n;i++){
+    eq(await page.$$eval('#app .pcf',a=>a.length),1,"one card at a time");
+    await page.tap('#app .pcf [data-pckeep],#app .pcf [data-cokeep]');await pause(page,300);
+    await page.evaluate(()=>{const x=document.querySelector('.toast');if(x)x.remove();});}
+  eq(await page.$$eval('#app .pcf,#app .as-note,#app .tsec-h',a=>a.length),0,"no cards, heading or footnote");
+  eq(await page.$eval('#app .pcquiet',e=>e.textContent.trim()),"On track. Nothing to change.","one quiet line");
+  eq(await page.$eval('nav [data-tab="coach"]',e=>e.classList.contains("advice")),false,"no dot");
+  /* What was set aside can be brought back. */
+  await page.tap('[data-pcreset]');await pause(page,300);
+  eq(await page.$$eval('#app .pcf',a=>a.length),1,"back, one at a time");
+},{db:Object.assign(seed(),{sessions:coachLog([8,8,8,8,8],2.5),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+await test("Phase 4: one session and one weigh-in say \"not enough yet\" everywhere, never a trend",async page=>{
+  await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));});
+  eq(await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().length),0,"the coach says nothing");
+  await tapTab(page,"progress");await pause(page);
+  const cards=await page.$$eval('.psimple',a=>Object.fromEntries(a.map(x=>[x.querySelector('.psimple-k').textContent,x.innerText])));
+  if(!/Not enough yet/.test(cards.Strength))throw new Error("strength: "+cards.Strength);
+  if(!/A few more weigh-ins/.test(cards.Weight))throw new Error("weight: "+cards.Weight);
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page);
+  await page.fill('#chatq','is my weight on track');await page.press('#chatq','Enter');await pause(page,300);
+  const a=await page.evaluate(()=>[...document.querySelectorAll(".chat-a")].pop().innerText);
+  if(!/^1 weigh-in so far/.test(a)||!/four weigh-ins over two weeks/.test(a)||/a week\./.test(a))throw new Error("weight answer: "+a);
+},{db:Object.assign(seed(),{sessions:seed().sessions.slice(0,1)})});
+await test("Offline: with the network off, the installed app opens, every tab works, food search and the coach chat answer",async(page,env)=>{
+  /* Installed: the service worker has cached everything and controls the page. */
+  await page.evaluate(()=>navigator.serviceWorker.ready);
+  await page.reload();await pause(page,1200);
+  eq(await page.evaluate(()=>!!navigator.serviceWorker.controller),true,"the service worker controls the page");
+  await env.ctx.setOffline(true);
+  await page.reload();await pause(page,1500);
+  for(const tab of ["train","food","coach","progress","profile"]){await tapTab(page,tab);await pause(page,300);
+    if(!(await page.$eval('#app',e=>e.children.length)))throw new Error(tab+" is empty offline");}
+  await coach(page,"ai");await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
+  if(!/Today is|rest day|Done for today/.test(await page.evaluate(()=>[...document.querySelectorAll(".chat-a")].pop().innerText)))throw new Error("the chat did not answer offline");
+  eq(await page.evaluate(async()=>{const n=await import("/js/engine/nutrition.js");await new Promise(f=>n.loadFoods(f));return n.searchFoods("chicken").length>0;}),true,"food search works offline");
+  await env.ctx.setOffline(false);
+},{sw:true});
 /* ---- where the three judged lifts sit among raw competitors (coach phase 3) ------- */
 async function strengthTab(page){
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.pview="detail";V.ptab="strength";V.phalf="all";

@@ -1969,9 +1969,12 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .pcrow-d{flex:none;width:8px;height:8px;border-radius:4px;background:var(--ok)}
 .pcrow.has .pcrow-d{background:var(--warning)}
 .pcrow .ico-chev{color:var(--dim)}
-.pcok{margin:4px 0 16px;padding:14px;border-radius:var(--r3);background:var(--okSoft);border:1px solid var(--ok)}
-.pcok b{font-size:15px}
-.pcok p{margin:6px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
+/* Nothing to say: one quiet line, not a card. */
+.pcquiet{display:flex;align-items:center;gap:8px;margin:2px 2px 12px;font-size:14px;line-height:1.45;color:var(--sub)}
+.pcquiet .ico{flex:none;width:16px;height:16px;color:var(--ok)}
+.pcagain{display:block;margin:0 2px 16px;padding:0}
+/* The rest of the advice, one tap away. */
+.btn.pcmore{margin:2px 0 14px}
 /* The assessment (js/ui/views/assess.js): one question a screen, then the plan. */
 .as-prog{height:4px;border-radius:2px;background:var(--bar-track);overflow:hidden;margin:6px 0 6px}
 .as-prog i{display:block;height:100%;background:var(--accent);border-radius:2px;transition:width var(--m-base,240ms) var(--e-standard)}

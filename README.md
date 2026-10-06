@@ -412,8 +412,11 @@ otherwise they would outlive the blob that was supposed to own them.
     ("how much weight" is the load, "my weight" the scale), and "unknown" rather than
     a guess.
 
-  Coach AI shows them with the plan check's findings, most important first. Each one
-  says what it saw, offers one thing to do, and can be set aside for two weeks. Run the tests with `node tests/coach.mjs`, or by
+  Coach AI shows them with the plan check's findings, one at a time: the most
+  important, and "N more things the coach sees" behind a tap (the plan check, opened on
+  purpose, shows them all). Each one says what it saw, offers one thing to do, and can
+  be set aside for two weeks. With nothing worth saying, the section is one quiet line,
+  "On track. Nothing to change.", and the Coach tab has no dot. Run the tests with `node tests/coach.mjs`, or by
   opening `js/coach/test/index.html` on the local server.
 - **Among powerlifters** (Progress → Strength) places the squat, bench press and
   deadlift against raw powerlifting competitors of the same sex and IPF weight class,

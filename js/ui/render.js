@@ -73,7 +73,8 @@ function render(){
   /* Home is gone (Training opens the app) and the plan check lives in Coach AI; an old
      route to either lands on its new place. */
   if(V.tab==="home"||!V.tab)V.tab="train";
-  if(V.pcheck){V.pcheck=false;V.tab="coach";V.csec="ai";}
+  /* The plan check, asked for: Coach AI with every finding open. */
+  if(V.pcheck){V.pcheck=false;V.tab="coach";V.csec="ai";V.advall=true;}
   /* The chat is a Coach screen; leaving Coach leaves it (back restores it from the trail). */
   if(V.tab!=="coach")V.chat=false;
   var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":V.train):V.tab==="coach"?(V.train!=="days"?V.train:V.pslot?"pslot":V.pimport?"pimport":V.smeal?"smeal":V.chat?"chat":"hub"):"");

@@ -395,7 +395,7 @@ document.addEventListener("click",function(ev){
   /* A tab tap is a fresh start: the top of the page, and Food on today — a past
      date left selected from earlier was where a meal logged later could land. */
   if(D.tab){resetNav();var tb=D.tab==="home"?"train":D.tab,same=V.tab===tb,top=same&&V.train==="days"&&!V.meal&&!V.smeal&&!V.phist&&!V.pslot&&!V.pimport&&!V.chat;
-    V.tab=tb;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.phist=false;V.dnavDir=0;V.assess=false;V.pcheck=false;
+    V.tab=tb;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.advall=false;V.phist=false;V.dnavDir=0;V.assess=false;V.pcheck=false;
     /* Tapping a tab while already at its top goes back to its first view. */
     if(tb==="train"&&top)V.tdate=null;
     if(tb==="food"&&top)V.fdate=null;
@@ -1185,7 +1185,9 @@ document.addEventListener("click",function(ev){
   if(D.astrain){V.assess=false;V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tdate=null;render();window.scrollTo(0,0);return;}
   if(D.asfood){V.assess=false;V.pcheck=false;resetNav();V.tab="food";V.train="days";V.fdate=null;render();window.scrollTo(0,0);return;}
   /* The plan check: open it, fix a finding, keep one as it is, look at kept ones again. */
-  if(D.pcopen){toCoach("ai");return;}
+  if(D.pcopen){toCoach("ai");V.advall=true;render();return;}
+  /* Coach AI's advice: the most important thing, or all of it. */
+  if(D.advall){V.advall=D.advall==="1";render();return;}
   if(D.pcfix){pcFix(D.pcfix);return;}
   if(D.pckeep){var fk=checkPlans().filter(function(x){return x.id===D.pckeep;})[0];
     if(fk){S.pcDismiss=S.pcDismiss||{};S.pcDismiss[fk.id]=JSON.stringify(fk.sig);saveDB();render();

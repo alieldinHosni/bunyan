@@ -1264,11 +1264,9 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Plan check": "مراجعة الخطة",
 "Nutrition and training": "التغذية والتمرين",
 "Your targets, meal plan and training, side by side with your goal: where they pull different ways, why it matters, and a fix. Nothing changes unless you choose it.": "أهدافك وخطة أكلك وتمرينك جنب هدفك: فين بيشدّوا في اتجاهات مختلفة، وليه ده مهم، وإزاي تصلّحه. مفيش حاجة بتتغير غير لو اخترت.",
-"Everything fits together": "كله متناسق",
 "Calories and protein suit your goal, the meal plan matches the targets, and every main muscle gets a fair share of training.": "السعرات والبروتين مناسبين لهدفك، وخطة الأكل متفقة مع الأهداف، وكل عضلة أساسية واخدة نصيبها من التمرين.",
 "Kept as they are": "متسابين زي ما هما",
 "You chose to keep these. They come back here if the numbers behind them change.": "انت اخترت تسيبهم. هيرجعوا هنا لو الأرقام اللي وراهم اتغيرت.",
-"Check them all again": "راجعهم كلهم تاني",
 "Ranges and targets here are starting points from the research, not rules. How you feel, recover and progress over a few weeks says more.": "المدى والأهداف هنا نقط بداية من الأبحاث، مش قواعد. إحساسك واستشفاؤك وتقدمك على كام أسبوع بيقولوا أكتر.",
 "Plan check: 1 thing to look at": "مراجعة الخطة: حاجة واحدة تبص عليها",
 "Plan check: {n} things to look at": "مراجعة الخطة: {n} حاجات تبص عليها",
@@ -1508,7 +1506,14 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Conversation cleared.": "المحادثة اتمسحت.",
 "Target lowered to {k} kcal; carbs moved with it.": "الهدف نزل لـ{k} سعر؛ والكارب اتحرك معاه.",
 "Target raised to {k} kcal; carbs moved with it.": "الهدف زاد لـ{k} سعر؛ والكارب اتحرك معاه.",
-"Goal and targets updated.": "الهدف والأهداف اتحدّثوا."
+"Goal and targets updated.": "الهدف والأهداف اتحدّثوا.",
+"1 weigh-in so far, {w}.": "وزنة واحدة لحد دلوقتي، {w}.",
+"Check the ones you kept again": "راجع اللي سبتهم زي ما هم تاني",
+"Nothing to change. After a few weeks of sessions the coach reads your training too.": "مفيش حاجة تتغيّر. بعد كام أسبوع من الجلسات الكوتش هيقرا تمرينك كمان.",
+"On track. Nothing to change.": "ماشي صح. مفيش حاجة تتغيّر.",
+"Show only the most important": "اعرض الأهم بس",
+"1 more thing the coach sees": "حاجة كمان الكوتش شايفها",
+"{n} more things the coach sees": "{n} حاجات كمان الكوتش شايفها"
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;

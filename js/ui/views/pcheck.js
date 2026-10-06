@@ -14,6 +14,7 @@ import {exName} from "../../i18n/exnames.js";
 import {S} from "../../state.js";
 import {fmtW} from "../../units.js";
 import {esc} from "../../util.js";
+import {V} from "../view.js";
 
 var AREA={food:"Nutrition",train:"Training",both:"Nutrition and training"};
 
@@ -74,18 +75,24 @@ function allAdvice(){
 /* How many: the dot on the Coach tab. */
 function adviceCount(){return S.onboarded?allAdvice().length:0;}
 
-/* Coach AI's advice: every finding and insight, most important first, then what was
-   kept as it is. */
+/* Coach AI's advice. One thing at a time: the most important finding or insight, and
+   the rest behind a tap, because a dozen at once is noise that gets ignored. Every card
+   says what it saw and why, and nothing changes without a tap. When there is nothing
+   worth saying the section is one quiet line, so a day that is on track looks like
+   it. The plan check, opened on purpose (V.advall), shows them all. */
 function adviceBody(){
   var all=allAdvice(),kept=Object.keys(S.pcDismiss||{}).length+Object.keys(S.coachDismiss||{}).length;
+  var again=kept?'<button class="pglink pcagain" data-pcreset="1">'+esc(t("Check the ones you kept again"))+'</button>':'';
+  if(!all.length)return '<p class="pcquiet"><span class="ico ico-check" aria-hidden="true"></span>'
+    +esc(t((S.sessions||[]).length<3?"Nothing to change. After a few weeks of sessions the coach reads your training too.":"On track. Nothing to change."))+'</p>'+again;
+  var open=V.advall||all.length===1;
   var h='<div class="tsec"><h2 class="tsec-h">'+t("What the coach sees")+'</h2>'
-   +(all.length?'<span class="libn">'+all.length+'</span>':'')+'</div>';
-  if(!all.length)h+='<div class="pcok"><b>'+t("Everything fits together")+'</b><p>'
-    +esc(t((S.sessions||[]).length<3?"Your targets, meal plan and training suit your goal. A few weeks of logged sessions and the coach reads trends from them too."
-      :"Calories and protein suit your goal, the meal plan matches the targets, every main muscle gets a fair share, and your lifts are moving."))+'</p></div>';
-  else h+=all.map(function(x){return x.html();}).join("");
-  if(kept)h+='<p class="dsub">'+esc(t("You chose to keep some as they are. They come back here if the numbers behind them change."))+'</p>'
-    +'<button class="btn g" data-pcreset="1">'+t("Check them all again")+'</button>';
+   +'<span class="libn">'+all.length+'</span></div>';
+  h+=(open?all:all.slice(0,1)).map(function(x){return x.html();}).join("");
+  if(all.length>1)h+=open
+    ?'<button class="btn g sm pcmore" data-advall="0">'+esc(t("Show only the most important"))+'</button>'
+    :'<button class="btn g pcmore" data-advall="1">'+esc(t(all.length===2?"1 more thing the coach sees":"{n} more things the coach sees").replace("{n}",all.length-1))+'</button>';
+  if(kept)h+='<p class="dsub">'+esc(t("You chose to keep some as they are. They come back here if the numbers behind them change."))+'</p>'+again;
   h+='<p class="as-note">'+esc(t("Ranges and targets here are starting points from the research, not rules. How you feel, recover and progress over a few weeks says more."))+'</p>';
   return h;}
 
