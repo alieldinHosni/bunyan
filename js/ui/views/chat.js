@@ -292,7 +292,7 @@ function aStrong(a){
   l(a,top.map(function(L){
     if(!L.w)return exName(L.name)+": "+L.reps+" "+t("reps");
     /* Body weight plus a belt: the added load is not the lift, so no max from it. */
-    var bw=bwShare(L.name)>0,e=bw?0:e1RM(L.w,L.reps);
+    var bw=bwShare(L.name)>0,e=bw?0:e1RM(L.w,L.reps,L.rpe);
     return exName(L.name)+": "+loadText(L.name,L.w)+" × "+L.reps+(e&&L.reps>1?" · "+fill(t("about {e} for one"),{e:fmtW(e)}):"");}));
   var st=standingNow(),ok=(st.lifts||[]).filter(function(x){return x.kind==="ok";});
   if(ok.length){

@@ -1574,7 +1574,8 @@ await test("Among powerlifters: squat and bench placed against raw competitors o
   const card=await page.$eval('.pgopl',e=>({rows:[...e.querySelectorAll('.pgshare-r')].map(r=>[r.querySelector('span').textContent,r.querySelector('b').textContent]),
     text:e.innerText,aside:e.previousElementSibling.innerText}));
   const want=await page.evaluate(async()=>{const P=await import("/js/coach/percentile.js");
-    return ["squat","bench"].map((l,i)=>{const x=P.percentileOf("m",84,l,[80,60][i]*(1+8/30));return x.edge==="below"?"<10":x.edge==="above"?">90":String(x.pct);});});
+    /* 8 reps at RPE 8 is 10 reps of effort: the estimate counts the two left in reserve. */
+    return ["squat","bench"].map((l,i)=>{const x=P.percentileOf("m",84,l,[80,60][i]*(1+10/30));return x.edge==="below"?"<10":x.edge==="above"?">90":String(x.pct);});});
   eq(card.rows,[["Squat",want[0]],["Bench press",want[1]]],"two lifts logged, two rows, from the table");
   if(!/93 kg class/.test(card.aside)||!/raw/i.test(card.aside))throw new Error("class and raw not said: "+card.aside);
   if(!/competitors/.test(card.text)||!/Anywhere on this scale is strong/.test(card.text)||!/rough guide/.test(card.text))

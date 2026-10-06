@@ -9,6 +9,7 @@ import {t} from "../i18n/dict.js";
 import {fmtW} from "../units.js";
 import {goalOf} from "../data/goals.js";
 import {progressionAdvice} from "../coach/autoreg.js";
+import {e1rm} from "../coach/util.js";
 
 /* ============================================================ formulas */
 /* A warm-up counts for nothing: not volume, not average RPE, not a record, and not
@@ -54,8 +55,10 @@ function volume(sets,name,date){var tot=0;for(var i=0;i<sets.length;i++)tot+=set
 function sessionVolume(s){var tot=0;s.entries.forEach(function(e){tot+=volume(e.sets||[],e.name,s.date);});return tot;}
 function avgRPE(sets){var n=0,tot=0;sets.forEach(function(x){if(x.wu||!x.rpe)return;tot+=x.rpe;n++;});return n?r1(tot/n):0;}
 /* Epley, capped at 12 reps. A single is a max already: Epley would add 3% to it. */
-function e1RM(w,r){if(!w||!r||r>12)return 0;return r===1?r1(w):r1(w*(1+r/30));}
-function bestE1RM(sets,name,date){var b=0;sets.forEach(function(x){if(x.wu)return;var e=e1RM(loadOf(name,x.w,date),num(x.r));if(e>b)b=e;});return b;}
+/* The estimated one-rep max, counting reps in reserve from RPE: one formula, the
+   coach's (js/coach/util.js), used everywhere. */
+function e1RM(w,r,rpe){return e1rm(w,r,rpe);}
+function bestE1RM(sets,name,date){var b=0;sets.forEach(function(x){if(x.wu)return;var e=e1RM(loadOf(name,x.w,date),num(x.r),x.rpe);if(e>b)b=e;});return b;}
 function macroKcal(p,c,f){return Math.round(num(p)*4+num(c)*4+num(f)*9);}
 function bmr(){var p=S.profile,w=lastWeight()||num(p.weight,86);
   return Math.round(10*w+6.25*num(p.height)-5*num(p.age)+(p.sex==="f"?-161:5));}
@@ -145,7 +148,7 @@ function prFor(name){
       if(x.wu)return;
       var w=num(x.w),r=num(x.r);
       if(w>best.w){best.w=w;best.reps=r;best.date=s.date;}
-      var ld=loadOf(name,w,s.date),er=e1RM(ld,r);if(er>best.e)best.e=er;
+      var ld=loadOf(name,w,s.date),er=e1RM(ld,r,x.rpe);if(er>best.e)best.e=er;
       if(ld*r>best.vol)best.vol=ld*r;
     });});});
   return best;}
@@ -177,7 +180,7 @@ function plateauOf(name){
   for(var i=0;i<S.sessions.length&&best.length<4;i++){
     var e=S.sessions[i].entries.filter(function(x){return x.name===name&&x.sets&&x.sets.length;})[0];
     if(!e)continue;
-    var b=0,d=S.sessions[i].date;e.sets.forEach(function(x){if(x.wu)return;var v=e1RM(loadOf(name,x.w,d),num(x.r));if(v>b)b=v;});
+    var b=0,d=S.sessions[i].date;e.sets.forEach(function(x){if(x.wu)return;var v=e1RM(loadOf(name,x.w,d),num(x.r),x.rpe);if(v>b)b=v;});
     if(b)best.push(b);}
   if(best.length<4)return false;
   return Math.max(best[0],best[1],best[2])<=best[3];}
@@ -236,9 +239,9 @@ function recordOf(name,x,earlier){
   var w=num(x.w),r=num(x.r),pw=h.w,pe=h.e,pr=repsAt(name,w),now=today();
   (earlier||[]).forEach(function(y){
     if(y.wu)return;var yw=num(y.w),yr=num(y.r);
-    if(yw>pw)pw=yw;var ye=e1RM(loadOf(name,yw,now),yr);if(ye>pe)pe=ye;if(yw>=w&&yr>pr)pr=yr;});
+    if(yw>pw)pw=yw;var ye=e1RM(loadOf(name,yw,now),yr,y.rpe);if(ye>pe)pe=ye;if(yw>=w&&yr>pr)pr=yr;});
   if(w>pw)return {k:"w",n:name,w:w,r:r};
-  var er=e1RM(loadOf(name,w,now),r);
+  var er=e1RM(loadOf(name,w,now),r,x.rpe);
   if(er&&er>pe)return {k:"e",n:name,w:w,r:r,e:er};
   if(pr>0&&r>pr)return {k:"r",n:name,w:w,r:r};
   return null;}

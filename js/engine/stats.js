@@ -111,7 +111,7 @@ function lifts_raw(){
       L.sets+=work.length;L.last=s.date;
       work.forEach(function(x){
         var wt=num(x.w),r=num(x.r);
-        if(wt>L.w||(wt===L.w&&wt>0&&r>L.reps)){L.w=wt;L.reps=r;L.date=s.date;}
+        if(wt>L.w||(wt===L.w&&wt>0&&r>L.reps)){L.w=wt;L.reps=r;L.rpe=num(x.rpe);L.date=s.date;}
         if(r>L.br){L.br=r;L.bdate=s.date;}});});}
   return order.map(function(k){
     var L=m[k];
@@ -125,7 +125,8 @@ function recentRecords(k){
     .sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:b.w-a.w;}).slice(0,k||3);}
 
 /* Estimated one-rep max per session for one lift, oldest first. Epley, working
-   sets of twelve reps or fewer — e1RM() returns 0 past that, and those are skipped
+   sets of twelve reps or fewer, counting reps in reserve from RPE — e1RM() returns 0
+   past that, and those are skipped
    rather than plotted as a collapse to zero. */
 function e1rmSeries_raw(name,n){
   var w=n?win(n):null,out=[];
@@ -135,7 +136,7 @@ function e1rmSeries_raw(name,n){
     var best=0;
     s.entries.forEach(function(e){
       if(e.name!==name)return;
-      working(e).forEach(function(x){var v=e1RM(loadOf(name,x.w,s.date),num(x.r));if(v>best)best=v;});});
+      working(e).forEach(function(x){var v=e1RM(loadOf(name,x.w,s.date),num(x.r),x.rpe);if(v>best)best=v;});});
     if(best)out.push({d:s.date,v:best});}
   return out;}
 

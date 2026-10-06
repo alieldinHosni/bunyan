@@ -322,9 +322,13 @@ otherwise they would outlive the blob that was supposed to own them.
 
 - **Volume** = the sum of weight × reps for every set. Not weight × reps × sets,
   which is only right when every set is identical.
-- **Estimated 1RM** = weight × (1 + reps ÷ 30), the Epley formula. Shown only for
-  sets of 12 reps or fewer, where it is reasonably accurate. A single is its own max:
-  Epley would add 3% to it, so one rep counts as the weight lifted.
+- **Estimated 1RM** = weight × (1 + (reps + reps in reserve) ÷ 30): Epley, counting the
+  effort left. Reps in reserve come from the RPE you log (RPE 8 is two left, down to RPE
+  6, four left; below that it is not trusted), so 8 reps at RPE 8 is worth 10 reps of
+  effort and an easy set reads stronger than a grinder at the same weight. With no RPE a
+  set counts as taken to failure. Up to 12 reps of effort; a single at RPE 10 is its own
+  max. One formula (`js/coach/util.js`) used everywhere: Progress, records, trends and
+  the powerlifting standing.
 - **Weekly sets** count working sets only; a warm-up is not training volume.
 - **Bodyweight lifts with nothing added** progress by reps: the suggestion is body
   weight for the plan's reps, and once the top of the range is reached, a rep or two

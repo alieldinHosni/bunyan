@@ -19,7 +19,7 @@ adds one (see `COACHING-INTELLIGENCE.md`, Phase 0).
 | What | Source | Used for |
 | --- | --- | --- |
 | Resting energy | Mifflin–St Jeor equation (1990) | `bmr()` in `js/engine/formulas.js` |
-| Estimated one-rep max | Epley formula, capped at 12 reps | `e1RM()` in `js/engine/formulas.js` |
+| Estimated one-rep max | Epley formula, counting reps in reserve from logged RPE (the RIR-based RPE scale: Zourdos et al. 2016, Helms et al. 2016), capped at 12 reps of effort | `e1rm()` in `js/coach/util.js`, used by `e1RM()` in `js/engine/formulas.js` |
 | Protein 1.6–2.2 g/kg | Morton et al. 2018 meta-analysis and the ISSN position stands | `js/data/goals.js` |
 | Weekly sets per muscle as ranges | Practitioner heuristics in the style of Renaissance Periodization's published volume landmarks, cross-checked against Schoenfeld et al. 2017 on weekly volume | `js/engine/volume.js` — shown in the app as a starting point, not a rule |
 | Reps in reserve | Zourdos et al. 2016, the RIR-based RPE scale | effort targets in generated plans |

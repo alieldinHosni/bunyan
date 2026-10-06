@@ -22,7 +22,7 @@ function e1rmTrend(sessions,name,info,opts){
     (s.entries||[]).forEach(function(e){
       if(!e||e.name!==name)return;
       workSets(e).forEach(function(x){
-        var v=e1rm(I.load(name,x.w,s.date),x.r),k=weekOf(s.date);
+        var v=e1rm(I.load(name,x.w,s.date),x.r,x.rpe),k=weekOf(s.date);
         if(v>(best[k]||0))best[k]=v;});});});
   var ws=Object.keys(best).sort().map(function(k){return {start:k,best:r1(best[k])};}).filter(function(w){return w.best>0;});
   var out={weeks:ws,direction:"insufficient",flatWeeks:0,fallingWeeks:0,latest:ws.length?ws[ws.length-1].best:0,peak:0};
