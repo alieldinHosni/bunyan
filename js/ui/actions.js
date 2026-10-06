@@ -48,7 +48,7 @@ ACT.renamesplit=function(name,id){
 ACT.newmeal=function(name){
   var m={id:uid(),name:String(name).trim(),items:[]};
   (S.savedMeals=S.savedMeals||[]).push(m);
-  saveDB();pushNav();V.tab="food";V.meal=null;V.smeal=m.id;render();window.scrollTo(0,0);};
+  saveDB();pushNav();V.tab="coach";V.meal=null;V.smeal=m.id;render();window.scrollTo(0,0);};
 ACT.renamemeal=function(name,id){
   var m=(S.savedMeals||[]).filter(function(x){return x.id===id;})[0];if(!m)return;
   m.name=String(name).trim();saveDB();render();};

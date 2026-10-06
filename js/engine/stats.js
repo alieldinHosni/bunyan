@@ -199,7 +199,14 @@ function weeklyCardio(){
    of weigh-ins, as kg per week, beside the rate the goal calls for. Needs at least
    four weigh-ins spread over two weeks, because day-to-day water swings are larger
    than a week of real change. Rates are the usual evidence-based ones: losing fat at
-   0.5–1% of body weight a week, gaining at 0.25–0.5%, maintaining within ±0.25%. */
+   0.5–1% of body weight a week, gaining at 0.25–0.5%, maintaining within ±0.25%.
+   Every goal is judged by its own rate. Losing fat while building muscle runs a small
+   deficit, so a slow loss or a steady scale is on plan; getting stronger runs a small
+   surplus, so a slow gain is. Judging those two as "maintain" told the first to eat
+   more when it was working. kind says which way the goal leans. */
+var RATE={lose:["lose",-0.01,-0.005],recomp:["lose",-0.005,0.001],
+  gain:["gain",0.0025,0.005],strength:["gain",-0.001,0.0035]};
+function rateOf(goal){return RATE[goal]||["hold",-0.0025,0.0025];}
 function weightTrend(){
   var list=weighIns();if(list.length<4)return null;
   var last=list[list.length-1].date;
@@ -209,13 +216,13 @@ function weightTrend(){
   pts.forEach(function(b){var x=daysBetween(x0,b.date),y=num(b.weight);sx+=x;sy+=y;sxx+=x*x;sxy+=x*y;});
   var den=n*sxx-sx*sx;if(!den)return null;
   var perWk=(n*sxy-sx*sy)/den*7,mean=sy/n;
-  var g=(S.profile||{}).goal,band=g==="lose"?[-0.01,-0.005]:g==="gain"?[0.0025,0.005]:[-0.0025,0.0025];
-  var lo=band[0]*mean,hi=band[1]*mean,status;
-  if(g==="lose")status=perWk>0.05?"wrong":perWk>hi?"slow":perWk<lo?"fast":"ok";
-  else if(g==="gain")status=perWk<-0.05?"wrong":perWk<lo?"slow":perWk>hi?"fast":"ok";
+  var g=(S.profile||{}).goal,rt=rateOf(g),kind=rt[0];
+  var lo=rt[1]*mean,hi=rt[2]*mean,status="ok";
+  if(kind==="lose"){if(perWk>hi)status=perWk>0.05?"wrong":"slow";else if(perWk<lo)status="fast";}
+  else if(kind==="gain"){if(perWk<lo)status=perWk<-0.05?"wrong":"slow";else if(perWk>hi)status="fast";}
   else status=perWk<lo?"down":perWk>hi?"up":"ok";
   return {perWk:Math.round(perWk*100)/100,lo:Math.round(lo*100)/100,hi:Math.round(hi*100)/100,
-    goal:g,status:status,weeks:Math.round(daysBetween(pts[0].date,last)/7)};}
+    goal:g,kind:kind,status:status,weeks:Math.round(daysBetween(pts[0].date,last)/7)};}
 function weighIns(n){
   var list=(S.body||[]).filter(function(b){return num(b.weight)>0;});
   if(!n)return list;
@@ -380,7 +387,7 @@ function bodyFatSeries(n){
   return (S.body||[]).filter(function(b){return num(b.bf)>0&&(!w||inWin(b.date,w.from,w.to));})
     .map(function(b){return {d:b.date,v:num(b.bf)};});}
 
-export {weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, isoAgo, liftHalf, liftProgress,
+export {rateOf, weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, isoAgo, liftHalf, liftProgress,
         measurements, muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL,
         topLifts, volumeSeries, weighIns, weightChange};
 

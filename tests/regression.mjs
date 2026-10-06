@@ -63,10 +63,10 @@ async function coach(page,sec,sub){
   if(sec){await page.tap('[data-csec="'+sec+'"]');await page.waitForTimeout(200);}
   if(sub){await page.tap('[data-'+(sec==="train"?"ctsub":"cfsub")+'="'+sub+'"]');await page.waitForTimeout(250);}}
 async function startWorkout(page){await tapTab(page,"train");await pause(page);await page.tap('[data-startday]');await pause(page,400);}
-/* ONLY=<text> runs just the tests whose names contain it. */
-const ONLY=process.env.ONLY||"";
+/* ONLY=<text> runs just the tests whose names contain it; ONLY=<a>|<b> runs either. */
+const ONLY=(process.env.ONLY||"").split("|").filter(Boolean);
 async function test(name,fn,o){
-  if(ONLY&&name.indexOf(ONLY)<0)return;
+  if(ONLY.length&&!ONLY.some(x=>name.indexOf(x)>=0))return;
   const env=await open(o);
   try{await fn(env.page,env);if(env.errs.length)throw new Error("page errors: "+env.errs.join(" | "));passes++;console.log("PASS",name);}
   catch(e){fails++;console.log("FAIL",name,"—",e.message);}
@@ -614,6 +614,7 @@ await test("Leaving a workout for later lands on Training's Resume card, and Res
 await test("Progress: no date bar, History by month opens and Back returns",async page=>{
   await tapTab(page,"progress");await pause(page);
   if(await page.$('.dnav'))throw new Error("date bar still on Progress");
+  await page.tap('[data-pview="detail"]');await pause(page);
   await page.tap('[data-phist]');await pause(page);
   /* The seed trains from two days ago back, so on the 1st and 2nd of a month every
      trained day is in the previous one: look in both months the test visits. */
@@ -624,6 +625,35 @@ await test("Progress: no date bar, History by month opens and Back returns",asyn
   if(!trained)throw new Error("no trained day in History");
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.tab,!!V.phist]"),["progress",false]);
+});
+await test("Progress: Simple answers in plain words, and each goal's weight trend is judged by its own rate",async page=>{
+  await tapTab(page,"progress");await pause(page);
+  eq((await page.$$eval('.psimple .psimple-k',a=>a.map(x=>x.textContent))).slice(0,4),["Training","Weight","Strength","Food"],"plain answers, in order");
+  if(await page.$('.pgtabs2'))throw new Error("Detailed's views on Simple");
+  await page.tap('[data-pview="detail"]');await pause(page);
+  if(!(await page.$('.pgtabs2')))throw new Error("no views on Detailed");
+  /* Three weeks of weigh-ins at a set rate, under each goal. */
+  const r=await page.evaluate(async()=>{
+    const S=(await import("/js/state.js")).S,ST=await import("/js/engine/stats.js");
+    const iso=d=>{const x=new Date(Date.now()-d*864e5);return new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+    const out={};
+    for(const [g,rate] of [["recomp",-0.3],["recomp",0],["lose",-0.2],["gain",0.8],["strength",0.15],["maintain",-0.3]]){
+      S.profile.goal=g;S.body=[];for(let d=21;d>=0;d-=3)S.body.push({date:iso(d),weight:Math.round((84-rate*d/7)*100)/100});
+      const tr=ST.weightTrend();out[g+" "+rate]=[tr.kind,tr.status];}
+    return out;});
+  eq(r,{"recomp -0.3":["lose","ok"],"recomp 0":["lose","ok"],"lose -0.2":["lose","slow"],"gain 0.8":["gain","fast"],
+    "strength 0.15":["gain","ok"],"maintain -0.3":["hold","down"]},"each goal by its own rate");
+  /* What Simple says: losing slowly while building muscle is on plan; gaining fast is not "more food". */
+  const say=async(g,rate)=>{await page.evaluate(async([g,rate])=>{
+    const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;
+    const iso=d=>{const x=new Date(Date.now()-d*864e5);return new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+    S.profile.goal=g;S.body=[];for(let d=21;d>=0;d-=3)S.body.push({date:iso(d),weight:Math.round((84-rate*d/7)*100)/100});
+    V.pview="simple";(await import("/js/ui/render.js")).render();},[g,rate]);await pause(page,300);
+    return page.$$eval('.psimple',a=>{const w=a.find(x=>x.querySelector('.psimple-k').textContent==="Weight");return [w.className.split(" ")[1],w.querySelector('p').textContent];});};
+  let w=await say("recomp",-0.3);
+  eq([w[0],/On track for your goal/.test(w[1])],["ok",true],"a slow loss is on plan for losing fat and building muscle");
+  w=await say("gain",0.8);
+  eq([w[0],/Trim about 100–200 kcal/.test(w[1]),/protects your muscle/.test(w[1])],["warn",true,false],"gaining too fast: a little less food");
 });
 await test("Arabic: the dock keeps its order, dates are Arabic, figures stay one run",async page=>{
   const r=await page.evaluate(()=>{
@@ -797,17 +827,17 @@ await test("Themes: the stylesheet names no colour outside the theme blocks",asy
   eq(bad,[],"coloured literals outside the themes");
 });
 await test("Back returns to where you were on the screen before; a tab tap always opens at the top",async page=>{
-  await coach(page,"train","programs");
-  const y0=await page.evaluate(()=>{const e=[...document.querySelectorAll("[data-preview]")].pop();e.scrollIntoView({block:"center"});return Math.round(scrollY);});
-  if(y0<100)throw new Error("Programs too short to test");
-  await page.evaluate(()=>[...document.querySelectorAll("[data-preview]")].pop().click());await pause(page,500);
-  eq(await ev(page,"V.train"),"preview");
+  await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page);
+  const y0=await page.evaluate(()=>{document.querySelector("[data-phist]").scrollIntoView({block:"center"});return Math.round(scrollY);});
+  if(y0<100)throw new Error("Progress → Detailed too short to test");
+  await page.evaluate(()=>document.querySelector("[data-phist]").click());await pause(page,500);
+  eq(await ev(page,"V.phist"),true);
   await page.evaluate(()=>window.scrollTo(0,200));await pause(page);
   await page.evaluate(async()=>{(await import("/js/ui/nav.js")).goBack();});await pause(page,600);
-  eq([await ev(page,"V.train"),await page.evaluate(()=>Math.round(scrollY))],["days",y0],"back to the same place");
-  await page.evaluate(()=>[...document.querySelectorAll("[data-preview]")].pop().click());await pause(page,500);
+  eq([await ev(page,"!!V.phist"),await page.evaluate(()=>Math.round(scrollY))],[false,y0],"back to the same place");
+  await page.evaluate(()=>document.querySelector("[data-phist]").click());await pause(page,500);
   await page.evaluate(()=>window.scrollTo(0,300));await pause(page);
-  await tapTab(page,"progress");await pause(page,700);
+  await tapTab(page,"train");await pause(page,700);
   eq(await page.evaluate(()=>Math.round(scrollY)),0,"a tab opens at its top, not where the browser last saw it");
 });
 await test("PDF plan: meals, daily targets and supplements are read, reviewed and applied, and Undo puts it all back",async page=>{
@@ -917,7 +947,7 @@ async function dockTest(page,slide){
       taps:getComputedStyle(d).pointerEvents!=="none",y:Math.round(scrollY),dt:parseInt(n.style.getPropertyValue("--dt"))||0};});
   const scroll=async(dy,n)=>{for(let i=0;i<n;i++){await page.evaluate(d=>window.scrollBy(0,d),dy);await page.waitForTimeout(16);}};
   const settle=()=>pause(page,650);
-  await tapTab(page,"progress");await pause(page);
+  await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page);
   await scroll(10,3);await settle();
   eq((await st()).away,"0","a little scroll near the top leaves it");
   await scroll(15,10);await settle();
@@ -962,7 +992,7 @@ async function dockTest(page,slide){
   }
 }
 await test("Press: a finger starting a scroll never flashes what it lands on; a held press and a quick tap still show",async(page,env)=>{
-  await tapTab(page,"train");await pause(page,500);
+  await coach(page,"train","exercises");await pause(page,500);
   const cdp=await env.ctx.newCDPSession(page);
   const touch=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
   const b=await (await page.$(".ttile")).boundingBox();
@@ -1260,7 +1290,7 @@ await test("Assessment: first run opens it; answers become targets and training 
   const prog=await ev(page,"S.activeProgram");
   await page.tap('.toast-undo');await pause(page,400);
   eq(await ev(page,"[S.onboarded,S.profile.goal,S.activeProgram===\""+prog+"\"]"),[false,"gain",false],"one Undo puts it all back");
-  eq(await ev(page,"S.mealSlots.every(s=>!(s.plan||[]).length)"),true,"Undo took the meals back too");
+  eq(await ev(page,"(S.mealSlots||[]).every(s=>!(s.plan||[]).length)"),true,"Undo took the meals back too");
   await page.tap('[data-asuse]');await pause(page,500);
   await page.tap('[data-asfood]');await pause(page,500);
   eq(await ev(page,"V.tab"),"food","today's food");
@@ -1384,7 +1414,7 @@ await test("Coach: a log that is on track gets no coach card — silence is earn
 },{db:Object.assign(seed(),{sessions:coachLog([8,8,8,8,8],2.5),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
 /* ---- where the three judged lifts sit among raw competitors (coach phase 3) ------- */
 async function strengthTab(page){
-  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.ptab="strength";V.phalf="all";
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.pview="detail";V.ptab="strength";V.phalf="all";
     (await import("/js/ui/render.js")).render();});await pause(page,400);}
 await test("Among powerlifters: squat and bench placed against raw competitors of the same class, said as such; silent without data",async page=>{
   await strengthTab(page);
@@ -1420,9 +1450,9 @@ await test("Training import: a program pasted as text is read the same way",asyn
   eq(tp.days[1].ex[1].note,"light");
 });
 await test("Dock: a page with little to scroll keeps its dock",async page=>{
-  await coach(page,"train","exercises");await pause(page);
+  await tapTab(page,"food");await pause(page);
   const max=await page.evaluate(()=>document.documentElement.scrollHeight-innerHeight);
-  if(max<=0||max>=290)throw new Error("Coach → Exercises is not a short page here ("+max+"px)");
+  if(max<=0||max>=290)throw new Error("Food is not a short page here ("+max+"px)");
   for(let i=0;i<12;i++){await page.evaluate(()=>window.scrollBy(0,15));await page.waitForTimeout(16);}
   await pause(page,650);
   eq(await page.evaluate(()=>document.getElementById("nav").classList.contains("dhid")),false);

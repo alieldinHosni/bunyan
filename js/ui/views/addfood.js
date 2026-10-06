@@ -189,7 +189,7 @@ function vSearch(){
 function mealsTab(){
   var sm=(S.savedMeals||[]).filter(function(m){return (m.items||[]).length&&!(V.sd&&V.sd.into===m.id);});
   if(!sm.length)return empty("search",t("No saved meals yet"),
-    t("Build one in Food → My Foods, or save what you are logging as a meal."),"");
+    t("Build one in Coach → Nutrition → My foods, or save what you are logging as a meal."),"");
   return '<div class="list">'+sm.map(function(m){
     var st=sumNutrition(m.items);
     return '<button class="item" data-addsaved="'+esc(m.id)+'"><div><div style="font-weight:600">'+esc(m.name)+'</div>'

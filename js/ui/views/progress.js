@@ -25,7 +25,7 @@
 import {t, tm} from "../../i18n/dict.js";
 import {empty, thumb} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
-import {weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftHalf, liftProgress, measurements,
+import {rateOf, weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftHalf, liftProgress, measurements,
         muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL, topLifts, volumeSeries,
         weighIns, weightChange} from "../../engine/stats.js";
 import {sessionVolume} from "../../engine/formulas.js";
@@ -227,9 +227,7 @@ function vSimple(){
     '<button class="btn g sm" data-sheet="weigh">'+t("Log weight")+'</button>');
   else{
     var ch=wc.d==null?"":(wc.d<0?t("Down {w} in {n} days."):wc.d>0?t("Up {w} in {n} days."):t("The same as {n} days ago.")).replace("{w}",fmtW(Math.abs(wc.d))).replace("{n}",wc.days);
-    var TRW={ok:["ok","On track for your goal."],slow:["warn","Slower than planned for your goal."],fast:["warn","Faster than planned. A little more food protects your muscle."],
-      wrong:["bad","Moving the wrong way for your goal."],up:["warn","Creeping up. If that is not the plan, eat a little less."],down:["warn","Drifting down. If that is not the plan, eat a little more."]};
-    var tw=tr?TRW[tr.status]:null;
+    var tw=tr?[tr.status==="ok"?"ok":tr.status==="wrong"?"bad":"warn",trendSays(tr)]:null;
     h+=scard(t("Weight"),tw?tw[0]:"none",'<b>'+toDisp(wc.cur.weight)+'</b> '+esc(wUnit()),
       (ch?ch+" ":"")+(tw?t(tw[1]):t("A few more weigh-ins over two weeks show your trend.")));}
   /* Strength: the most trained lifts' estimated maxes over the month. */
@@ -288,7 +286,7 @@ function kcard(icon,label,value,unit,sub,visual,go,aria){
 function vOverview(r){
   var h="",goal=(S.profile||{}).goal;
   /* ---- key metrics: the frame's four cards, each a way into its own view */
-  var gw=goal==="lose"?-1:goal==="gain"?1:0;
+  var gw={lose:-1,gain:1}[rateOf(goal)[0]]||0;
   var wi=weighIns(r),wc=weightChange(),bfv=bodyFat(),bfs=bodyFatSeries(r),si=strengthIndex(r),cm=consistencyMonth();
   var wFirst=wi.length?wi[0].weight:null,wLast=wc?wc.cur.weight:null;
   var wd=wi.length>=2?toDisp(wLast)-toDisp(wFirst):null;
@@ -533,13 +531,19 @@ var TREND={
   hold:{ok:"Holding steady.",
         down:"Drifting down. If that is not the plan, eat a little more.",
         up:"Drifting up. If that is not the plan, eat a little less."}};
+/* What the trend says, by the way the goal leans. On plan, a goal that only leans that
+   way (losing fat while building muscle, getting stronger) is not told it is losing
+   fat or building muscle. */
+function trendSays(tr){
+  if(tr.status==="ok"&&tr.goal!==tr.kind)return "On track for your goal.";
+  return (TREND[tr.kind]||{})[tr.status]||"";}
 function sgn(kg){return (kg>0.004?"+":kg<-0.004?"\u2212":"\u00b1")+toDisp(Math.abs(kg));}
 function perWk(){return wUnit()+" / "+t("week");}
 /* bare: without its own heading, for a screen that heads it in its own style. */
 function trendCard(bare){
   var tr=weightTrend();
   if(!tr)return "";
-  var key=tr.goal==="lose"||tr.goal==="gain"?tr.goal:"hold",msg=(TREND[key]||{})[tr.status]||"";
+  var key=tr.kind,msg=trendSays(tr);
   var good=tr.status==="ok";
   return (bare?'':lbl(t("Trend against your goal")))
    +'<div class="pgcard pgtrend'+(good?' ok':'')+'"><div class="pgtrend-r"><div><div class="pgstat-k">'
@@ -554,7 +558,7 @@ function trendCard(bare){
 function vBody(r){
   var h="",wc=weightChange(),goal=(S.profile||{}).goal;
   /* Which way is progress for the scale depends on the goal. Maintaining, neither. */
-  var gw=goal==="lose"?-1:goal==="gain"?1:0;
+  var gw={lose:-1,gain:1}[rateOf(goal)[0]]||0;
   h+='<div class="pgcard">';
   if(!wc)h+='<div class="pgstat-k">'+esc(t("Body weight"))+'</div>'+art("body",{cls:"pgbody-art"})
     +tooFew(t("Weigh in and the trend starts here. Mornings, before eating, are the most comparable."));

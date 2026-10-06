@@ -50,14 +50,18 @@ import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
    sheet open (the dashboard's pills) the meal is the time of day's. */
 function logFood(food,grams,label){
   var meal=(V.sheet==="addfood"&&V.sd&&V.sd.meal)||mealNow(),n=nutritionFor(food,grams);
-  var where=addTo(meal,[{fid:food.id,n:food.n,label:label,grams:grams,src:food.src||"db",
+  var day=!intoPlan(),where=addTo(meal,[{fid:food.id,n:food.n,label:label,grams:grams,src:food.src||"db",
     kcal:n.kcal,p:n.p,c:n.c,f:n.f,fib:n.fib}]);
   if(V.sheet)closeSheet();
-  V.tab="food";render();play("set");
+  if(day)V.tab="food";render();play("set");
   toast(food.n+" "+t("added to")+" "+where+".");}
 /* Where an add from the sheet lands: the day's meal, or — when the sheet was opened
    from a saved meal in My Foods — that saved meal, in the same amounts. Returns the
    name the toast should say. */
+/* The add-food sheet is filling a plan (a saved meal, a meal's plan, an import under
+   review) rather than the day: those live in Coach, and the sheet closes back onto them. */
+function intoPlan(){
+  return !!(V.sheet==="addfood"&&V.sd&&(V.sd.into||V.sd.plan||(V.sd.pimp!=null&&V.pparse)));}
 function addTo(meal,items,d){
   /* Into a meal of a plan still being imported (the review screen's draft). Found from
      a line that matched nothing, the line is crossed off as it is found. */
@@ -134,7 +138,7 @@ function builderId(){
 /* Drag and the arrow keys both land here: a day in the split builder, or an
    exercise in a day. */
 function moveRow(id,to){
-  if(V.tab==="food"&&V.reorder==="ms"){
+  if(V.tab==="coach"&&V.reorder==="ms"){
     var sl=ownSlots(),k0=sl.findIndex(function(x){return x.id===id;});
     to=Math.max(0,Math.min(sl.length-1,to));
     if(k0<0||to===k0)return;
@@ -870,8 +874,8 @@ document.addEventListener("click",function(ev){
         kcal:k9,p:p9,c:c9,f:f9b,fib:0,s:[[sv9,100]],a:[],src:"you",
         bc:bc9||undefined});}
     var mm9=(V.sd&&V.sd.meal)||mealNow();
-    var at9=addTo(mm9,[item9]);
-    closeSheet();V.tab="food";render();play("set");
+    var day9=!intoPlan(),at9=addTo(mm9,[item9]);
+    closeSheet();if(day9)V.tab="food";render();play("set");
     toast(nm9+" "+t("added to")+" "+at9+".");return;}
   if(D.commit){
     /* The meal is the one in the sheet's header. There used to be a second chooser
@@ -879,8 +883,8 @@ document.addEventListener("click",function(ev){
     var meal9=(V.sd&&V.sd.meal)||mealNow();
     var good9=V.food.items.filter(function(i){return i.status!=="unknown"&&i.status!=="suggest";});
     if(!good9.length){toast(t("Nothing to add yet."));return;}
-    var at10=addTo(meal9,good9.map(toLogItem));
-    closeSheet();V.tab="food";render();
+    var day10=!intoPlan(),at10=addTo(meal9,good9.map(toLogItem));
+    closeSheet();if(day10)V.tab="food";render();
     play("set");toast(at10+" "+t("updated."));return;}
   if(D.savemeal){
     askText({title:t("Save this as a meal"),value:t("My meal"),
@@ -1454,7 +1458,7 @@ document.addEventListener("keydown",function(ev){
   var gp=(ev.key==="ArrowUp"||ev.key==="ArrowDown")&&ev.target.closest&&ev.target.closest("[data-grip]");
   if(gp){
     ev.preventDefault();
-    var gid=gp.getAttribute("data-grip"),gl=V.tab==="food"&&V.reorder==="ms"?mealSlots()
+    var gid=gp.getAttribute("data-grip"),gl=V.tab==="coach"&&V.reorder==="ms"?mealSlots()
       :builderId()?(editSplit(builderId())||{days:[]}).days:((dayOf(V.dayId)||{ex:[]}).ex);
     var gi=gl.findIndex(function(x){return x.id===gid;});
     if(gi<0)return;
@@ -1506,7 +1510,7 @@ document.addEventListener("change",function(ev){
         V.pibusy=false;V.pitext=r.text;V.ptargets=r.targets;V.psupps=r.supps;V.papplyT=true;
         var box=document.getElementById("pi_text");
         if(!r.text&&!Object.keys(r.targets||{}).length){render();if(box)box.value="";
-          toast(t("No meals were found in that PDF. If it is a training program, import it under Train → Explore."));return;}
+          toast(t("No meals were found in that PDF. If it is a training program, import it under Coach → Training → Programs."));return;}
         loadFoods(function(){V.pparse=withNotes(parsePlan(V.pitext));render();
           var b2=document.getElementById("pi_text");if(b2)b2.value=V.pitext;
           var res=document.querySelector(".pitg,.picard");if(res)res.scrollIntoView({behavior:"smooth",block:"start"});});
