@@ -5,7 +5,7 @@ import {S} from "../state.js";
 import {esc, fmtN, num, r1, today} from "../util.js";
 
 /* ============================================================ view state */
-var V={tab:"home",fdate:null,food:null,range:30,exd:null,showAll:false,restPaused:false,restLeft:0,train:"days",dayId:null,sheet:null,sd:null,exq:"",exm:"All",exe:"All",previewId:null,
+var V={tab:"train",fdate:null,food:null,range:30,exd:null,showAll:false,restPaused:false,restLeft:0,train:"days",dayId:null,sheet:null,sd:null,exq:"",exm:"All",exe:"All",previewId:null,
        logIdx:0,draft:{w:0,r:0,rpe:8},restEnd:0,restTotal:0,chartEx:null,cal:0,fresh:-1,
        /* Date bar state. Progress and Food keep separate selected days on purpose —
           Food scopes its whole screen to one day, Progress scopes only the day-specific

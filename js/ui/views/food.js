@@ -12,8 +12,7 @@ import {GRIPSVG, progressBar, reorderBtn, seg, V} from "../view.js";
 import {dayMeals, mealName, mealSlots, mealStyle, nextMeal, planOf, slotOf} from "../../engine/meals.js";
 import {dateBar} from "../datebar.js";
 import {backArrow} from "../nav.js";
-import {art, gaugeArt, waterArt} from "../art.js";
-import {pcRow} from "./pcheck.js";
+import {art, waterArt} from "../art.js";
 import {fitCh, afTile} from "./addfood.js";
 import {trendCard, vNutrition} from "./progress.js";
 
@@ -64,25 +63,23 @@ function glassUnit(goal){
   if(goal/u>16)u=Math.ceil(goal/16/50)*50;
   return u;}
 
-var FSECS=[["today","Today"],["plan","Plan"],["foods","My Foods"],["targets","Targets"]];
-function fsec(){var v=V.fsec||S.prefs.fsec||"today";return v==="foods"||v==="targets"||v==="plan"?v:"today";}
+/* The Food page is for the day: log what you eat and see where you are. Planning it
+   (the meal plan, the targets, foods of your own, imports) is Coach → Nutrition
+   (js/ui/views/coach.js), which draws the pieces exported at the foot. */
 function vFood(){
   var dsel=curDate();
   if(V.meal)return vMeal(dsel,V.meal);
-  if(V.smeal)return vSavedMeal(V.smeal);
-  if(V.pslot)return vPlanSlot(V.pslot);
-  if(V.pimport)return vImport();
-  var sec=fsec();
-  /* The drawing is Today's: a baladi loaf and a palm frond at the header's edge. */
-  var h='<div class="thead fthead"><div><h1>'+t("Nutrition")+'</h1>'
+  /* The drawing is the page's: a baladi loaf and a palm frond at the header's edge. */
+  var h='<div class="thead fthead"><div><h1>'+t("Food")+'</h1>'
    +'<p class="thead-s">'+t("Fuel your progress")+'</p></div>'
-   +(sec==="today"?art("loaf",{cls:"fthead-art"}):'')+'</div>';
-  h+=seg({items:FSECS.map(function(x){return [x[0],t(x[1])];}),value:sec,attr:"fsec",tabs:true,
-    cls:"tsecs",label:t("Nutrition"),key:"fsecs"});
-  if(sec==="plan")return h+vPlan();
-  if(sec==="foods")return h+vMyFoods();
-  if(sec==="targets")return h+vTargets();
+   +art("loaf",{cls:"fthead-art"})+'</div>';
   return h+vFoodToday(dsel);}
+/* The planning screens, for Coach: null when none is open. */
+function foodSub(){
+  if(V.smeal){var a=vSavedMeal(V.smeal);if(a!=null)return a;}
+  if(V.pslot){var b=vPlanSlot(V.pslot);if(b!=null)return b;}
+  if(V.pimport)return vImport();
+  return null;}
 
 function vFoodToday(dsel){
   var g=S.goals,e=eatenToday(dsel),r=dayRec(dsel);
@@ -126,6 +123,9 @@ function vFoodToday(dsel){
      +(done?'<span class="fmt-ok" aria-hidden="true">'+TICK+'</span>':'')+'</button>';});
   h+='</div>';
 
+  /* The coach's meal plan, one tap into the meals not logged yet today. */
+  if(dsel===today()&&ids.some(function(id){return planOf(id).length&&!(((r.meals[id]||{}).items)||[]).length;}))
+    h+='<button class="btn g flogplan" data-logday="1">'+esc(t("Log today's plan"))+'</button>';
   /* In the page, not floating: the dock is the one floating control. */
   h+='<button class="btn fadd" data-addfood="'+esc(next)+'">'
    +'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>'
@@ -249,7 +249,7 @@ function vMyFoods(){
    dashed + adds from the same search as logging. Level two of the Food tab. */
 function savedById(id){return (S.savedMeals||[]).filter(function(m){return m.id===id;})[0]||null;}
 function vSavedMeal(id){
-  var m=savedById(id);if(!m){V.smeal=null;return vFood();}
+  var m=savedById(id);if(!m){V.smeal=null;return null;}
   var items=m.items||[],tot=sumNutrition(items),now=mealNow(today());
   var h='<div class="dhead">'+backArrow()
    +'<button class="dname" data-renamemeal="'+m.id+'" aria-label="'+esc(t("Rename meal")+": "+m.name)+'">'
@@ -299,12 +299,7 @@ function suggested(){
 var TRANGES=[[7,"1W"],[30,"1M"],[90,"3M"]];
 var TPAST={7:"Past 7 days",30:"Past 30 days",90:"Past 90 days"};
 function vTargets(){
-  var g=S.goals,e=eatenToday(today()),frac=g.kcal?e.kcal/g.kcal:0,over=e.kcal>g.kcal,h='';
-  h+='<div class="libhero tghero">'+gaugeArt(frac,{cls:"tghero-art"})
-   +'<span class="shk">'+t("Today")+'</span>'
-   +'<div class="tghero-n"><b>'+fmtN(e.kcal)+'</b><span>/ '+fmtN(g.kcal)+' kcal</span></div>'
-   +'<p class="tghero-s'+(over?' over':'')+'">'+esc(fmtN(Math.abs(g.kcal-e.kcal))+" "+t(over?"kcal over":"kcal left"))
-   +' · '+esc(t("Protein"))+' '+e.p+' / '+g.p+' g</p></div>';
+  var g=S.goals,h='';
   var pc=macroPct(g.p,g.c,g.f);
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Daily targets")+'</h2></div>'
    +'<label class="ngcard ngenergy" for="g_kcal"><span class="ngenergy-t">'
@@ -327,8 +322,7 @@ function vTargets(){
    +'<div class="ngcard"><div class="aflbl">'+esc(t("Other targets"))+'</div><div class="aftiles">'
    +afTile("g_water",t("Water"),"ml",g.water,"0","numeric")
    +afTile("g_steps",t("Steps"),"",g.steps,"0","numeric")+'</div></div>'
-   +'<button class="btn afcta" data-savegoals="1">'+esc(t("Save targets"))+'</button>'
-   +(S.onboarded?pcRow():'');
+   +'<button class="btn afcta" data-savegoals="1">'+esc(t("Save targets"))+'</button>';
   /* From the profile: maintenance and a target sized to the goal. */
   var sg=suggested();
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Suggested for you")+'</h2></div>';
@@ -391,12 +385,6 @@ function vPlan(){
      +(ro?'<button class="dgrip" data-grip="'+esc(x.id)+'" aria-label="'+esc(t("Move")+" "+mealName(x.id))+'">'+GRIPSVG+'</button>':'')
      +'</div>';});
   h+='</div><button class="dadd" data-paddslot="1"><span aria-hidden="true">+</span>'+t("Add a meal")+'</button>';
-  h+='<div class="dcta"><button class="btn dbegin" data-logday="1"'+(all.length?'':' disabled')+'>'+esc(t("Log today's plan"))+'</button>'
-   +(all.length?'<p class="bnote">'+esc(t("Fills each meal you have not logged yet today."))+'</p>':'')+'</div>';
-  /* Or let Bunyan build one from the targets and the foods you eat. */
-  h+='<button class="bnew bauto" data-pgen="1"><span class="bnew-i">'+SPARK+'</span>'
-   +'<span class="bnew-t"><b>'+t("Build me a meal plan")+'</b><span>'+t("From your daily targets, with foods you eat. Check it before you use it")+'</span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   h+='<button class="bnew" data-pimport="1">'+art("loaf",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
    +'<span class="bnew-t"><b>'+t("Import a plan")+'</b><span>'+t("Paste it or open a file, and it is sorted into meals")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
@@ -406,7 +394,7 @@ function vPlan(){
    food out, + adds from the same search as logging. Lines an import could not match
    wait under the list, each with Find, which opens the search already typed. */
 function vPlanSlot(id){
-  var x=slotOf(id);if(!x){V.pslot=null;return vFood();}
+  var x=slotOf(id);if(!x){V.pslot=null;return null;}
   var sl=mealSlots(),pos=sl.findIndex(function(s){return s.id===id;})+1,pl=x.plan||[],todo=x.todo||[],tot=sumNutrition(pl);
   var h='<div class="dhead">'+backArrow()
    +'<button class="dname" data-prename="'+esc(id)+'" aria-label="'+esc(t("Rename meal")+": "+mealName(id))+'">'
@@ -436,15 +424,13 @@ function vPlanSlot(id){
        +'<button class="btn sm g ptodo-b" data-pfind="'+esc(id)+'|'+i+'">'+esc(t("Find"))+'</button></div>';});
     h+='</div>';}
   h+='<button class="dadd" data-padd="'+esc(id)+'"><span aria-hidden="true">+</span>'+t("Add food")+'</button>';
-  h+='<div class="dcta">'
-   +'<button class="btn dbegin" data-logplan="'+esc(id)+'"'+(pl.length?'':' disabled')+'>'+esc(t("Log it for today"))+'</button>'
-   +'<button class="ddel" data-rmslot="'+esc(id)+'">'+t("Remove this meal")+'</button></div>';
+  /* Planning only: the meal is logged from Food, where the day is. */
+  h+='<div class="dcta"><button class="ddel" data-rmslot="'+esc(id)+'">'+t("Remove this meal")+'</button></div>';
   return h;}
 
 /* Import: the plan as text, read into meals before anything changes. What it found is
    shown meal by meal — matched foods with their amounts, and what matched nothing —
    and only "Use this plan" replaces the day's meals. */
-var SPARK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>';
 function vImport(){
   var pp=V.pparse,h;
   /* A plan Bunyan built from the targets: the same review, without the paste box. */
@@ -519,4 +505,4 @@ function importName(m,i){
   if(!m.name)return t("Meal {n}").replace("{n}",i+1);
   return m.name;}
 
-export {glassUnit, importName, mealNow, MICON, savedById, vFood};
+export {foodSub, glassUnit, importName, mealNow, MICON, savedById, vFood, vMyFoods, vPlan, vTargets};

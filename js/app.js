@@ -125,11 +125,11 @@ function removeDayEx(id){
   toast(exName(gone.name)+" "+t("removed."),function(){
     var d2=dayOf(d.id);if(!d2)return;d2.ex=before;saveDB();render();});}
 /* The program a builder control acts on: the one open in the builder, or the active
-   one when My Program shows it inline on the Train tab. */
+   one when Coach → Training → My program shows it inline. */
 function builderId(){
-  if(V.tab!=="train"||S.active)return null;
+  if(V.tab!=="coach")return null;
   if(V.train==="builder")return V.previewId;
-  if(V.train==="days"&&(V.tsec||S.prefs.tsec)==="program")return S.activeProgram;
+  if(V.train==="days"&&(V.csec||S.prefs.csec)==="train"&&(V.ctsub||"program")==="program")return S.activeProgram;
   return null;}
 /* Drag and the arrow keys both land here: a day in the split builder, or an
    exercise in a day. */
@@ -225,7 +225,7 @@ function assignWd(n,val){
    plan, all at once and all with one Undo. */
 function useAssessment(){
   var A=V.asd;if(!A)return;
-  var keys=["profile","prefs","gear","goals","programs","activeProgram","onboarded","plannedWeekly","body"];
+  var keys=["profile","prefs","gear","goals","programs","activeProgram","onboarded","plannedWeekly","body","mealSlots"];
   var before=JSON.parse(JSON.stringify(keys.reduce(function(o,k){o[k]=S[k];return o;},{})));
   Object.assign(S.profile,profileOf(A));
   S.prefs.meals=num(A.meals);S.prefs.diet=A.diet;S.prefs.avoid=A.avoid.slice();S.prefs.powder=!!A.powder;S.prefs.fstyle=A.style;
@@ -235,8 +235,10 @@ function useAssessment(){
   var m=macroTargets();
   ["kcal","p","c","f","water","steps"].forEach(function(k){if(m[k])S.goals[k]=m[k];});
   buildPlan(A.split||undefined);
+  /* The meals the result showed, worked out again from the targets just set. */
+  if(FOODDB){var mp=buildMealPlan(S.goals,foodPrefs(A));if(mp&&mp.length)S.mealSlots=slotsFrom(mp);}
   S.onboarded=true;A.done=true;saveDB();render();window.scrollTo(0,0);
-  toast(t("Your plan is in."),function(){
+  toast(t("Your plan is in: training and meals."),function(){
     keys.forEach(function(k){S[k]=before[k];});A.done=false;saveDB();render();});}
 /* The plan check's fixes. Each one is what the finding offered, with Undo. A fix done
    here (targets, protein, carbs, the goal, the volume) always settles its card: if
@@ -247,7 +249,7 @@ function pcFix(id){
   var f=checkPlans().filter(function(x){return x.id===id;})[0];if(!f)return;
   var act=f.fix.act;
   if(act==="meals"){openMealPlan(mealPrefs());return;}
-  if(act==="program"){V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);return;}
+  if(act==="program"){toCoach("train","program");return;}
   if(act==="assess"){V.pcheck=false;pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);return;}
   var prog=split(),before={goals:JSON.parse(JSON.stringify(S.goals)),goal:S.profile.goal,
     days:prog?JSON.parse(JSON.stringify(prog.days)):null,dis:JSON.parse(JSON.stringify(S.pcDismiss||{}))};
@@ -288,8 +290,30 @@ function coachFix(id){
     toast(r.sets||r.added?t("Volume balanced: {s} sets moved, {a} exercises added.").replace("{s}",r.sets).replace("{a}",r.added)
       :t("Nothing could be moved without making sessions longer."),function(){prog.days=daysBefore;S.coachDismiss=disB;saveDB();render();});
     return;}
-  if(act==="program"){coachSetAside(id,14);saveDB();V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);return;}
+  if(act==="program"){coachSetAside(id,14);saveDB();toCoach("train","program");return;}
   coachSetAside(id,28);saveDB();render();}
+/* A plan, reviewed or built by the coach, as the day's meals: the four named ones by
+   their names, the rest numbered, each with its foods and whatever is still to find. */
+function slotsFrom(pp){
+  var used={};
+  return pp.map(function(m,i){
+    var x={};
+    /* Renamed on the review screen: its own meal, by that name. */
+    if(m.custom){x.id="m_"+uid();x.name=m.custom;}
+    else if(m.named&&!used[m.named]){x.id=m.named;used[m.named]=1;}
+    else{x.id="m_"+uid();var nm=importName(m,i);
+      /* A numbered meal out of place (Meal 3 after a snack) keeps its number by name. */
+      if(m.named||(!m.n&&m.name)||(m.n&&m.n!==i+1))x.name=nm;}
+    if(m.items.length)x.plan=m.items;
+    if(m.todo&&m.todo.length)x.todo=m.todo;
+    return x;});}
+/* Coach, at a section and the view inside it: a change of place, so a fresh trail. */
+function toCoach(sec,sub){
+  if(V.sheet)closeSheet();
+  resetNav();V.tab="coach";V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.assess=false;V.pcheck=false;
+  if(sec){V.csec=sec;S.prefs.csec=sec;}
+  if(sub){if(V.csec==="train")V.ctsub=sub;else if(V.csec==="food")V.cfsub=sub;}
+  saveDB();render();window.scrollTo(0,0);}
 /* After a plan is used, say what the check found, one tap from the details. */
 function pcAfter(){
   if(!checkPlans().length)return;
@@ -297,12 +321,12 @@ function pcAfter(){
   setTimeout(function(){
     var n=checkPlans().length;if(!n||V.pcheck)return;
     toast(t(n===1?"Plan check: 1 thing to look at":"Plan check: {n} things to look at").replace("{n}",n),
-      function(){pushNav();V.pcheck=true;render();window.scrollTo(0,0);},t("Show me"));},5600);}
+      function(){toCoach("ai");},t("Show me"));},5600);}
 /* A meal plan built from the daily targets, opened on the same review an imported
    plan gets: every food and amount can be changed before it is used. */
 function openMealPlan(prefs){
   loadFoods(function(){
-    V.assess=false;V.pcheck=false;resetNav();V.tab="food";V.fsec="plan";S.prefs.fsec="plan";saveDB();pushNav();
+    V.assess=false;V.pcheck=false;resetNav();V.tab="coach";V.csec="food";V.cfsub="plan";S.prefs.csec="food";saveDB();pushNav();
     V.pimport=true;V.pgen=prefs;V.pitext="";V.ptargets=null;
     V.pparse=buildMealPlan(S.goals,prefs);
     render();window.scrollTo(0,0);});}
@@ -318,7 +342,7 @@ function useDraft(){
   var p=makeProgram(programFromDraft(tp,today())),before=S.activeProgram;
   addProgram(p,true);saveDB();
   V.tp=null;V.titext="";
-  resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);
+  toCoach("train","program");
   toast(t("{name} is your program now.").replace("{name}",p.name),function(){
     S.programs=(S.programs||[]).filter(function(q){return q.id!==p.id;});
     if(before)S.activeProgram=before;saveDB();render();});
@@ -355,41 +379,41 @@ document.addEventListener("click",function(ev){
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
   /* A tab tap is a fresh start: the top of the page, and Food on today — a past
      date left selected from earlier was where a meal logged later could land. */
-  if(D.tab){resetNav();var same=V.tab===D.tab,top=same&&V.train==="days"&&!V.meal&&!V.smeal&&!V.phist;
-    V.tab=D.tab;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.dnavDir=0;V.assess=false;V.pcheck=false;
-    /* Tapping a tab while already at its top goes back to its first section. */
-    if(D.tab==="train"&&top){V.tsec="today";S.prefs.tsec="today";V.tdate=null;saveDB();}
-    if(D.tab==="food"&&top){V.fsec="today";S.prefs.fsec="today";V.fdate=null;saveDB();}
-    if(D.tab==="progress"&&top)V.ptab="overview";
-    if(D.tab==="food"&&!same)V.fdate=null;
+  if(D.tab){resetNav();var tb=D.tab==="home"?"train":D.tab,same=V.tab===tb,top=same&&V.train==="days"&&!V.meal&&!V.smeal&&!V.phist&&!V.pslot&&!V.pimport;
+    V.tab=tb;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.dnavDir=0;V.assess=false;V.pcheck=false;
+    /* Tapping a tab while already at its top goes back to its first view. */
+    if(tb==="train"&&top)V.tdate=null;
+    if(tb==="food"&&top)V.fdate=null;
+    if(tb==="progress"&&top){V.ptab="overview";V.pview="simple";}
+    if(tb==="food"&&!same)V.fdate=null;
     render();if(!same)window.scrollTo(0,0);return;}
   /* Same reset as a tab tap: it is the same kind of move. Without V.train it landed
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
      return to but the tab bar. */
   if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.assess=false;V.pcheck=false;render();return;}
-  /* Food's three sections, remembered as Train's are. */
-  if(D.fsec){if(V.sheet)closeSheet();
-    /* From another tab (Home's nutrition card, Profile's targets row) it is a change of
-       place, so it starts a fresh trail, on today's date. */
-    if(V.tab!=="food"){V.fdate=null;V.train="days";}
-    if(V.tab!=="food"||V.meal||V.smeal||V.pslot||V.pimport||V.assess||V.pcheck){resetNav();V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.assess=false;V.pcheck=false;}
-    V.tab="food";
-    V.fsec=D.fsec;S.prefs.fsec=D.fsec;saveDB();render();window.scrollTo(0,0);return;}
+  /* Food's old sections: today is the Food page; the plan, targets and foods of your
+     own are planned in Coach → Nutrition. */
+  if(D.fsec){if(D.fsec==="today"){if(V.sheet)closeSheet();resetNav();V.tab="food";V.fdate=null;V.train="days";
+      V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.assess=false;V.pcheck=false;render();window.scrollTo(0,0);return;}
+    toCoach("food",D.fsec==="foods"?"foods":D.fsec==="targets"?"targets":"plan");return;}
+  /* Coach's sections, and the views inside Training and Nutrition. A line of Coach AI's
+     plan carries both, so it lands on the very view. */
+  if(D.csec||D.ctsub||D.cfsub){toCoach(D.csec||(D.ctsub?"train":D.cfsub?"food":null),D.ctsub||D.cfsub);return;}
   if(D.frange){V.frange=+D.frange;render();return;}
+  /* Progress: the Simple slide or the Detailed one. */
+  if(D.pview){V.pview=D.pview==="detail"?"detail":"simple";render();window.scrollTo(0,0);return;}
   if(D.reorder){V.reorder=V.reorder===D.reorder?null:D.reorder;render();return;}
-  /* Train → Today's recovery check-in: one tap per answer, into today's record. */
-  if(D.rchk){var rq=D.rchk.split("|"),rr=dayRec(today());rr[rq[0]]=+rq[1];saveDB();render();
-    if(rr.sleep&&rr.sore&&rr.energy)toast(t("Recovery logged."));return;}
-  if(D.rchkskip){S.recSkip=today();saveDB();render();return;}
   /* Progress → History, level two; its month steps back from this one. */
   if(D.phist){pushNav();V.phist=true;V.hmonth=0;render();window.scrollTo(0,0);return;}
   if(D.hmonth){V.hmonth=Math.min(0,(+V.hmonth||0)+ +D.hmonth);render();return;}
 
   /* ---- splits & days */
-  /* The Train tab's three sections. Remembered, so the tab opens where you left it. */
-  if(D.tsec){if(V.sheet)closeSheet();if(V.tab!=="train"||V.train!=="days"){resetNav();V.train="days";V.meal=null;V.smeal=null;}V.tab="train";
-    V.tsec=D.tsec;S.prefs.tsec=D.tsec;saveDB();render();window.scrollTo(0,0);return;}
+  /* Train's old sections: today is the Training page; the program and the others are
+     planned in Coach → Training. */
+  if(D.tsec){if(D.tsec==="today"){if(V.sheet)closeSheet();resetNav();V.tab="train";V.train="days";V.tdate=null;
+      V.meal=null;V.smeal=null;V.assess=false;V.pcheck=false;render();window.scrollTo(0,0);return;}
+    toCoach("train",D.tsec==="explore"?"programs":"program");return;}
   if(D.tweek){V.tdate=D.tweek===today()?null:D.tweek;render();return;}
   /* A lighter week: started, put off for a week, or ended early. */
   if(D.deload){
@@ -417,7 +441,7 @@ document.addEventListener("click",function(ev){
     saveDB();closeSheet();toast(t("Workout changed"));return;}
   /* From the My Training sheet, a day or the programs list replaces the sheet. */
   if((D.train||D.day)&&V.sheet){V.sheet=null;V.sd=null;}
-  if(D.train){pushNav();V.train=D.train;render();return;}
+  if(D.train){pushNav();V.tab="coach";V.train=D.train;render();window.scrollTo(0,0);return;}
   if(D.day){pushNav();V.dayId=D.day;V.train="day";render();return;}
   /* One meal of the day, on its own screen. */
   if(D.meal){pushNav();V.meal=D.meal;render();return;}
@@ -433,9 +457,9 @@ document.addEventListener("click",function(ev){
       body:t("You get your own copy to change as you like. Every session you have already logged is kept."),
       cta:t("Use it now"),act:"adopt",data:D.adopt,alt:t("Just add it to My programs"),altact:"addprog"});
     return;}
-  if(D.preview){pushNav();V.previewId=D.preview;V.train="preview";render();return;}
+  if(D.preview){pushNav();V.tab="coach";V.previewId=D.preview;V.train="preview";render();window.scrollTo(0,0);return;}
   /* ---- the split builder */
-  if(D.editsplit){pushNav();V.previewId=D.editsplit;V.train="builder";render();window.scrollTo(0,0);return;}
+  if(D.editsplit){pushNav();V.tab="coach";V.previewId=D.editsplit;V.train="builder";render();window.scrollTo(0,0);return;}
   if(D.renamesplit){var rs=editSplit(D.renamesplit);if(!rs)return;
     askText({title:t("Rename program"),value:planName(rs.name),act:"renamesplit",data:D.renamesplit});return;}
   if(D.bday!==undefined){var bs=editSplit(builderId());if(!bs)return;
@@ -522,10 +546,10 @@ document.addEventListener("click",function(ev){
       body:t("It is removed from this phone. This cannot be undone."),
       cta:t("Delete photo"),act:"delphoto",data:D.delphoto});return;}
   if(D.showall){V.showAll=!V.showAll;render();return;}
-  if(D.bwsplit){pushNav();V.train="bodyweight";render();return;}
-  if(D.bwcat){pushNav();V.exm=D.bwcat==="All"?"All":D.bwcat;V.exe="Bodyweight";V.exq="";
+  if(D.bwsplit){pushNav();V.tab="coach";V.train="bodyweight";render();return;}
+  if(D.bwcat){pushNav();V.tab="coach";V.exm=D.bwcat==="All"?"All":D.bwcat;V.exe="Bodyweight";V.exq="";
     V.train="library";render();return;}
-  if(D.bwdiff){pushNav();V.exd=D.bwdiff;V.exe="Bodyweight";V.exm="All";V.exq="";V.train="library";render();return;}
+  if(D.bwdiff){pushNav();V.tab="coach";V.exd=D.bwdiff;V.exe="Bodyweight";V.exm="All";V.exq="";V.train="library";render();return;}
   if(D.exdetail){var nm5=D.exdetail;V.exsteps=false;V.exmiss=false;
     /* Opened from inside the sheet (a similar exercise): remember the trail, so back
        returns to the exercise this one was reached from instead of closing. */
@@ -878,7 +902,7 @@ document.addEventListener("click",function(ev){
     var keepS=JSON.parse(JSON.stringify(mealSlots()));
     setStyle(D.mstyle);V.reorder=null;saveDB();render();
     toast(t(D.mstyle==="named"?"Meals are named.":"Meals are numbered."),function(){S.mealSlots=keepS;saveDB();render();});return;}
-  if(D.pslot){pushNav();V.pslot=D.pslot;render();window.scrollTo(0,0);return;}
+  if(D.pslot){pushNav();V.tab="coach";V.pslot=D.pslot;render();window.scrollTo(0,0);return;}
   if(D.paddslot){askText({title:t("Add a meal"),ph:t("For example, Pre-workout"),
     body:t("Leave it blank and it is numbered by its place in the day."),required:false,cta:t("Add"),act:"addslot"});return;}
   if(D.prename){var rsl=slotOf(D.prename);if(!rsl)return;
@@ -927,7 +951,7 @@ document.addEventListener("click",function(ev){
     if(nL){play("set");toast(t(nL===1?"1 meal logged from your plan.":"{n} meals logged from your plan.").replace("{n}",nL));}
     else toast(t("Every planned meal is already logged today."));return;}
   /* ---- a training program, imported (js/ui/views/timport.js) */
-  if(D.timport){pushNav();V.tab="train";V.train="import";V.tp=null;V.tierr="";render();window.scrollTo(0,0);return;}
+  if(D.timport){pushNav();V.tab="coach";V.train="import";V.tp=null;V.tierr="";render();window.scrollTo(0,0);return;}
   if(D.tiread){var tt=val("ti_text");V.titext=tt;
     if(!tt.trim()){toast(t("Paste your program first."));return;}
     readTraining(tt);return;}
@@ -958,7 +982,7 @@ document.addEventListener("click",function(ev){
   /* The plan's other choice for this exercise, before anything is logged on it. */
   if(D.swapalt&&S.active){var ea=S.active.entries[V.logIdx];if(!ea||!ea.alt||ea.sets.length)return;
     swapAlt(ea.alt,V.logIdx,ea.name);return;}
-  if(D.pimport){pushNav();V.pimport=true;V.pparse=null;V.pgen=null;render();window.scrollTo(0,0);return;}
+  if(D.pimport){pushNav();V.tab="coach";V.pimport=true;V.pparse=null;V.pgen=null;render();window.scrollTo(0,0);return;}
   /* ---- editing the diet plan draft before it is used */
   if(D.pirm||D.pidrop){
     var pk=D.pirm?"items":"todo",pa2=(D.pirm||D.pidrop).split("|"),pmd=V.pparse&&V.pparse[+pa2[0]];if(!pmd)return;
@@ -984,29 +1008,19 @@ document.addEventListener("click",function(ev){
     return;}
   if(D.puse){
     var pp=V.pparse;if(!pp||!pp.length)return;
-    var before=JSON.parse(JSON.stringify(mealSlots())),used={};
+    var before=JSON.parse(JSON.stringify(mealSlots()));
     var goalsBefore=JSON.parse(JSON.stringify(S.goals||{})),tg=V.ptargets;
-    S.mealSlots=pp.map(function(m,i){
-      var x={};
-      /* Renamed on the review screen: its own meal, by that name. */
-      if(m.custom){x.id="m_"+uid();x.name=m.custom;}
-      else if(m.named&&!used[m.named]){x.id=m.named;used[m.named]=1;}
-      else{x.id="m_"+uid();var nm=importName(m,i);
-        /* A numbered meal out of place (Meal 3 after a snack) keeps its number by name. */
-        if(m.named||(!m.n&&m.name)||(m.n&&m.n!==i+1))x.name=nm;}
-      if(m.items.length)x.plan=m.items;
-      if(m.todo.length)x.todo=m.todo;
-      return x;});
+    S.mealSlots=slotsFrom(pp);
     /* The targets a PDF set, unless the switch was turned off. */
     var tSet=0;
     if(tg&&V.papplyT!==false)["kcal","p","c","f","water","steps"].forEach(function(k){
       if(tg[k]>0){S.goals[k]=tg[k];tSet++;}});
     V.pparse=null;V.pitext="";V.reorder=null;V.ptargets=null;V.psupps=null;V.pgen=null;saveDB();
-    goBack();V.pimport=false;V.fsec="plan";S.prefs.fsec="plan";render();window.scrollTo(0,0);
+    goBack();V.pimport=false;V.tab="coach";V.csec="food";V.cfsub="plan";render();window.scrollTo(0,0);
     toast(t(tSet?"Your plan and its daily targets are in.":"Your plan is in."),function(){S.mealSlots=before;S.goals=goalsBefore;saveDB();render();});
     pcAfter();return;}
   /* ---- My Foods */
-  if(D.smeal){pushNav();V.smeal=D.smeal;render();window.scrollTo(0,0);return;}
+  if(D.smeal){pushNav();V.tab="coach";V.smeal=D.smeal;render();window.scrollTo(0,0);return;}
   if(D.newmeal){askText({title:t("New meal"),ph:t("For example, Ful breakfast"),act:"newmeal"});return;}
   if(D.renamemeal){var rm=savedById(D.renamemeal);if(!rm)return;
     askText({title:t("Rename meal"),value:rm.name,act:"renamemeal",data:D.renamemeal});return;}
@@ -1147,14 +1161,16 @@ document.addEventListener("click",function(ev){
     if(mi>=0)ml.splice(mi,1);else ml.push(mp[1]);render();return;}
   if(D.asnext&&V.asd){
     if(STEPS[V.asd.step]==="you"&&!youOk(V.asd)){toast(t("Enter your age, height and weight to go on."));return;}
-    V.asd.step=Math.min(STEPS.length-1,V.asd.step+1);render();window.scrollTo(0,0);return;}
+    V.asd.step=Math.min(STEPS.length-1,V.asd.step+1);render();window.scrollTo(0,0);
+    if(STEPS[V.asd.step]==="result"&&!FOODDB)loadFoods(function(){render();});
+    return;}
   if(D.asback&&V.asd){V.asd.step=Math.max(0,V.asd.step-1);render();window.scrollTo(0,0);return;}
   if(D.assplit&&V.asd){V.asd.split=D.assplit;render();return;}
   if(D.asuse){useAssessment();return;}
-  if(D.asmeals&&V.asd){openMealPlan(foodPrefs(V.asd));return;}
-  if(D.astrain){V.assess=false;V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);return;}
+  if(D.astrain){V.assess=false;V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tdate=null;render();window.scrollTo(0,0);return;}
+  if(D.asfood){V.assess=false;V.pcheck=false;resetNav();V.tab="food";V.train="days";V.fdate=null;render();window.scrollTo(0,0);return;}
   /* The plan check: open it, fix a finding, keep one as it is, look at kept ones again. */
-  if(D.pcopen){if(V.sheet)closeSheet();pushNav();V.pcheck=true;render();window.scrollTo(0,0);return;}
+  if(D.pcopen){toCoach("ai");return;}
   if(D.pcfix){pcFix(D.pcfix);return;}
   if(D.pckeep){var fk=checkPlans().filter(function(x){return x.id===D.pckeep;})[0];
     if(fk){S.pcDismiss=S.pcDismiss||{};S.pcDismiss[fk.id]=JSON.stringify(fk.sig);saveDB();render();
@@ -1676,7 +1692,8 @@ var leaveResume=null;
    Pure. canBack() consults it on every render to decide whether to draw a back arrow,
    so anything with a side effect here would fire on every repaint. */
 function sessionLocked(){
-  return !!(S.active&&V.tab==="train"&&!V.sheet);
+  /* The workout itself, not its Resume card on the Training page ("hub"). */
+  return !!(S.active&&V.tab==="train"&&V.train!=="hub"&&!V.sheet);
 }
 /* A gesture answered by nothing at all reads as a frozen app, so it says what to do
    instead — once per workout, not per swipe, which would be its own annoyance. Only
@@ -1720,7 +1737,7 @@ function parseBackup(txt){
 }
 ACT.restore=function(_,o){
   setS(normalize(JSON.parse(JSON.stringify(o))));
-  migrate();saveDB();V.tab="home";V.train="days";
+  migrate();saveDB();V.tab="train";V.train="days";
   adoptRestored(function(){render();toast(t("Restored."));});
 };
 /* A backup as a file: the share sheet where it can take files (iPhone: Save to
@@ -1748,7 +1765,7 @@ function navGuard(resume){
      are the same screen and that is the whole condition. Without the tab test, every
      back gesture anywhere in the app — on Food, on Progress — would stop to ask about
      a workout the user is not currently in. */
-  if(!S.active||V.tab!=="train")return false;
+  if(!S.active||V.tab!=="train"||V.train==="hub")return false;
   leaveResume=resume||null;
   askConfirm({title:t("Leave workout?"),icon:"leave",
     body:t("Your sets are saved. Pick up where you left off any time."),
@@ -1767,9 +1784,9 @@ function navGuard(resume){
    The destination is decided here, once, for the arrow and the swipe alike. */
 function leaveTo(tab){
   leaveResume=null;
-  resetNav();V.tab=tab||"home";V.train="days";render();window.scrollTo(0,0);
+  resetNav();V.tab=tab||"train";V.train=V.tab==="train"&&S.active?"hub":"days";render();window.scrollTo(0,0);
 }
-ACT.leavekeep=function(){leaveTo("home");};
+ACT.leavekeep=function(){leaveTo("train");};
 /* Discarding ends the workout, so there is nothing to resume and no reason to leave
    Train: you stay on the Train hub, ready to pick another day. */
 ACT.leavediscard=function(){
@@ -1848,10 +1865,9 @@ window.addEventListener("storage",function(ev){
 });
 /* Reopened mid-workout (a reload, or iOS having reclaimed the tab): straight back to
    the exercise and the rest that were on screen, not to Home. */
-V.tsec=(S.prefs&&S.prefs.tsec)||"today";
-V.fsec=(S.prefs&&S.prefs.fsec)||"today";
+V.csec=(S.prefs&&S.prefs.csec)||"ai";
 if(S.active){restoreWorkoutState();syncDraft();V.tab="train";V.train="days";}
-if(!S.onboarded){V.tab="home";V.assess=true;V.asd=draftFrom();}
+if(!S.onboarded){V.tab="coach";V.csec="ai";V.assess=true;V.asd=draftFrom();}
 render();
 
 if("serviceWorker" in navigator){

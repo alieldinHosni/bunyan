@@ -23,11 +23,13 @@ var ICON={
   train:'<path d="M20.17 11h-2.28a1.83 1.83 0 0 0-1.77 1.34l-2.15 7.66a.23.23 0 0 1-.44 0L8.47 2a.23.23 0 0 0-.44 0L5.88 9.66A1.83 1.83 0 0 1 4.12 11H1.83"/>',
   food:'<path d="M11 2.4a8.6 8.6 0 1 0 8.6 8.6H11z"/><path d="M13.4 8.6c0-3.6 2.4-6 6.2-6 0 3.7-2.5 6-6.2 6z"/><path d="M13.4 8.6l3.2-3.2"/>',
   progress:'<path d="M20.17 11.92V6.42h-5.5m5.5 0-7.8 7.79-4.58-4.58-5.96 5.95"/>',
+  /* A speech bubble with a spark: the coach that plans for you. */
+  coach:'<path d="M4.58 2.75h12.84a1.83 1.83 0 0 1 1.83 1.83v9.17a1.83 1.83 0 0 1-1.83 1.83H9.17l-4.59 3.67v-3.67a1.83 1.83 0 0 1-1.83-1.83V4.58a1.83 1.83 0 0 1 1.83-1.83z"/><path d="M11 5.96l.92 2.37 2.37.92-2.37.92L11 12.54l-.92-2.37-2.37-.92 2.37-.92z"/>',
   profile:'<path d="M17.42 19.25v-1.83a3.67 3.67 0 0 0-3.67-3.67h-5.5a3.67 3.67 0 0 0-3.67 3.67v1.83M14.67 6.42a3.67 3.67 0 1 1-7.34 0 3.67 3.67 0 0 1 7.34 0z"/>'
 };
 /* id, what a screen reader announces. The names are the sections', not the icons'. */
 function items(){return [
-  ["home",t("Home")],["train",t("Training")],["food",t("Nutrition")],
+  ["train",t("Training")],["food",t("Food")],["coach",t("Coach")],
   ["progress",t("Progress")],["profile",t("Profile")]];}
 
 var built=null;   /* the label set the markup was written with */
@@ -159,17 +161,24 @@ function checkDock(screen){
   if(moved||tooShort())showDock();}
 
 /* The whole of what changes when the tab does. */
-function syncDock(el,tab){
+/* advice: how many things Coach AI has to say. A dot on Coach says there is
+   something; the number is in its accessible name. */
+function syncDock(el,tab,advice){
   if(!el)return;
   var list=items(),key=list.map(function(it){return it[1];}).join("|");
   if(built!==key||!el.firstChild)build(el);
   var idx=0,btns=el.querySelectorAll(".dock-b");
   for(var i=0;i<btns.length;i++){
-    var on=btns[i].getAttribute("data-tab")===tab;
+    var id=btns[i].getAttribute("data-tab"),on=id===tab;
     if(on)idx=i;
     btns[i].classList.toggle("on",on);
     if(on)btns[i].setAttribute("aria-current","page");
     else btns[i].removeAttribute("aria-current");
+    if(id==="coach"){
+      var dot=!!advice;
+      if(btns[i].classList.contains("advice")!==dot)btns[i].classList.toggle("advice",dot);
+      var lbl=t("Coach")+(dot?", "+t(advice===1?"1 thing to look at":"{n} things to look at").replace("{n}",advice):"");
+      if(btns[i].getAttribute("aria-label")!==lbl)btns[i].setAttribute("aria-label",lbl);}
   }
   var dock=el.firstChild;
   if(dock&&dock.style.getPropertyValue("--i")!==String(idx))dock.style.setProperty("--i",idx);

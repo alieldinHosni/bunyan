@@ -37,7 +37,7 @@ yourself. If you clear Safari's data, change phones, or delete the home screen a
 backup is the only way to get your history back. Clearing site data now wipes both
 localStorage and IndexedDB, so it is no less important than before.
 
-Once you have five sessions logged, Home reminds you if it has been more than a month
+Once you have five sessions logged, the Training page reminds you if it has been more than a month
 since your last backup. "Not now" hides it for a week. The reminder only clears when a
 copy actually succeeds, so dismissing the sheet does not count.
 
@@ -71,6 +71,31 @@ its path to `FILES` in `sw.js` as well.
 load ES modules over `file://`. Use the GitHub Pages link, or run any local static
 server from the project folder.
 
+## How the app is laid out
+
+Five tabs. Two are for the day, one is for planning, one for looking back, one for you.
+
+- **Training** (`views/train.js`, with its top in `views/home.js`) opens the app: the
+  greeting, one reminder at most, the week, today's workout (start it, or change the
+  day to another of the plan), weigh-in and steps, and a run or a match to log. A
+  workout left for later shows here as a Resume card.
+- **Food** (`views/food.js`) is the day: what you have eaten against the targets, the
+  meals (a planned one is a tap from logging), water, and "Log today's plan".
+- **Coach** (`views/coach.js`) is where the planning lives, in three sections:
+  - *Training*: the active program's days, other programs, templates, a coach's PDF
+    brought in, the exercise library;
+  - *Nutrition*: the meal plan, the daily targets, foods of your own, a plan brought in;
+  - *Coach AI*: the assessment, which builds the daily targets, the training and the
+    meal plan in one step, with one Undo, and puts them on Training and Food; then
+    what the plan check and the coach see (`views/pcheck.js`).
+- **Progress** (`views/progress.js`) has two slides: *Simple*, five plain answers
+  (training this week, weight, strength, food, records), and *Detailed*, the charts
+  and numbers a coach reads.
+- **Profile**: settings, profiles, backups.
+
+Each thing has one place. Planning screens open over Coach and back returns there;
+logging happens on Training and Food only.
+
 ## How the code is laid out
 
 No build step, no framework, no dependencies — the browser loads the modules directly.
@@ -91,8 +116,8 @@ js/
   engine/       plan.js, formulas.js, nutrition.js, warmup.js, splitparse.js,
                 volume.js, mealplan.js, plancheck.js, coachinfo.js
   i18n/         dict.js (the AR dictionary and t), exnames.js (Arabic exercise names)
-  ui/           view.js, render.js, actions.js, sheets.js, views/{home,train,session,
-                progress,food,profile,assess,warmup,pcheck}.js
+  ui/           view.js, render.js, actions.js, sheets.js, views/{train,home,session,
+                food,coach,progress,profile,assess,warmup,pcheck}.js
   app.js        entry point: event listeners, wiring, boot
 tools/          one-off build scripts that never ship or run in the browser
 ```
@@ -346,8 +371,9 @@ otherwise they would outlive the blob that was supposed to own them.
   than the longest already is). "Keep it as it is" hides a finding until the numbers
   behind it change. A fix made in place always settles its card in one tap: whatever
   it could not reach (a muscle that would need longer sessions) is kept as it is, so
-  the card goes and comes back only if those numbers change; Undo restores both. Home
-  shows the most important one; Plan check shows them all. The coach's insights are
+  the card goes and comes back only if those numbers change; Undo restores both. They
+  all live in Coach → Coach AI, with a dot on the Coach tab while there is something
+  to look at. The coach's insights are
   set aside by kind ("over", "under", or one lift), not by a list of muscles that
   changes with every session, so a set-aside one stays aside.
 - **The coach** (`js/coach/`) reads the training log the way a coach would. Every file
@@ -370,9 +396,8 @@ otherwise they would outlive the blob that was supposed to own them.
   - `insights.js`: what is worth saying, most important first, one per lift — and
     nothing at all when training is on track.
 
-  Home shows the single most important piece of advice, coach or plan check; the rest
-  wait on the Plan check screen. Each one says what it saw, offers one thing to do,
-  and can be set aside for two weeks. Run the tests with `node tests/coach.mjs`, or by
+  Coach AI shows them with the plan check's findings, most important first. Each one
+  says what it saw, offers one thing to do, and can be set aside for two weeks. Run the tests with `node tests/coach.mjs`, or by
   opening `js/coach/test/index.html` on the local server.
 - **Among powerlifters** (Progress → Strength) places the squat, bench press and
   deadlift against raw powerlifting competitors of the same sex and IPF weight class,

@@ -283,7 +283,7 @@ function switchProfile(id,done){
   saveDB();CUR=id;wr("bunyan:current",id);
   hydrate();
   migrate();
-  V.tab="home";V.train="days";V.logIdx=0;
+  V.tab="train";V.train="days";V.logIdx=0;
   /* The rest and position in memory belong to the profile being left. */
   V.restEnd=0;V.restPaused=false;V.restDone=false;
   restoreWorkoutState();
