@@ -17,6 +17,7 @@ import {art} from "../art.js";
 import {shown} from "../more.js";
 import {vTImport} from "./timport.js";
 import {doseText, weeksText} from "../dose.js";
+import {pcRow} from "./pcheck.js";
 
 /* ============================================================ TRAIN */
 
@@ -563,6 +564,8 @@ function builderBody(sp,id,inline){
     h+='<details class="tinotes bnotes"><summary>'+t("Coach's notes")+' <span class="num">'+sp.notes.length+'</span></summary>'
      +sp.notes.map(function(n){return (n.h?'<h3>'+esc(n.h)+'</h3>':'')+(n.t||[]).map(function(l){return '<p>'+esc(l)+'</p>';}).join("");}).join("")
      +'</details>';
+  /* The active program, checked against the goal and the targets. */
+  if(active&&S.onboarded)h+=pcRow();
   h+='<div class="dcta">'
    +(active?(inline?'<button class="btn g dbegin" data-tsec="explore">'+t("Switch program")+'</button>'
              +'<button class="ddel dset" data-sheet="set_training">'+t("Workout settings")+'</button>'

@@ -1263,6 +1263,38 @@ await test("Assessment: first run opens it; answers become targets and training 
   await page.tap('[data-puse]');await pause(page,500);
   eq(await ev(page,"S.mealSlots.length===4&&S.mealSlots.every(s=>(s.plan||[]).length>=2)"),true,"meals planned");
 },{db:Object.assign(seed(),{onboarded:false})});
+await test("Plan check: targets that work against the goal are found on Home, fixed with Undo, and kept as they are until the numbers change",async page=>{
+  /* Building muscle on 2,500 kcal against about 2,550 maintenance, and 110 g of protein. */
+  const card=await page.$eval('.pchome .pcf h3',e=>e.textContent);
+  eq(card,"Your calories will not build muscle");
+  eq(await ev(page,"S.goals.kcal"),2500);
+  await page.tap('.pchome [data-pcfix]');await pause(page,300);
+  const fixed=await ev(page,"[S.goals.kcal>2550,S.goals.p>=145]");
+  eq(fixed,[true,true],"Use … kcal sets the targets for the goal");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[S.goals.kcal,S.goals.p]"),[2500,110],"Undo");
+  /* Kept as it is: gone, and back once the numbers behind it change. */
+  await page.tap('.pchome [data-pckeep]');await pause(page,300);
+  eq(await page.$$eval('.pchome h3',a=>a.map(e=>e.textContent).includes("Your calories will not build muscle")),false,"kept");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.goals.kcal=2400;(await import("/js/ui/render.js")).render();});await pause(page,200);
+  eq(await page.$eval('.pchome .pcf h3',e=>e.textContent),"Your calories will not build muscle","back when the numbers change");
+},{db:Object.assign(seed(),{goals:{kcal:2500,p:110,c:300,f:70,water:3000,steps:9000}})});
+await test("Plan check: a meal plan off its targets and a thin program are found; the screen fixes both; a used plan is checked",async page=>{
+  await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const S=(await import("/js/state.js")).S;
+    S.mealSlots=[{id:"Breakfast",plan:[{fid:"egg",n:"Eggs",grams:100,kcal:143,p:12.6,c:0.7,f:9.5}]},{id:"Lunch",plan:[{fid:"rice_ck",n:"Rice",grams:300,kcal:390,p:8,c:84,f:1}]}];});
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.pcheck=true;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  const ids=await page.$$eval('.pcf',a=>a.map(e=>e.dataset.k));
+  if(!ids.includes("pc:meals-off")||!ids.includes("pc:vol-low"))throw new Error("expected the meal plan and the volume findings, got "+ids.join(","));
+  await page.tap('[data-k="pc:vol-low"] [data-pcfix]');await pause(page,400);
+  eq(await page.evaluate(async()=>{const St=await import("/js/state.js"),Vo=await import("/js/engine/volume.js");
+    return Vo.volumeCheck(St.split(),"some").filter(v=>v.status==="low").length;}),0,"balanced");
+  await page.tap('[data-k="pc:meals-off"] [data-pcfix]');await pause(page,1200);
+  eq(await ev(page,"[V.tab,V.pimport,!!V.pgen]"),["food",true,true],"rebuild opens a generated plan");
+  await page.tap('[data-puse]');await pause(page,300);
+  eq(await page.evaluate(async()=>(await import("/js/engine/plancheck.js")).checkPlans().map(f=>f.id).includes("meals-off")),false,"fixed");
+},{db:Object.assign(seed(),{goals:{kcal:2800,p:150,c:350,f:85,water:3000,steps:9000}})});
 await test("Training import: a program pasted as text is read the same way",async page=>{
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="import";V.tp=null;(await import("/js/ui/render.js")).render();});await pause(page,300);
   await page.fill("#ti_text","Day 1 — Push\nBench press 4x6-8 @ 80kg, 2 min rest — pause on the chest\nLateral raises 3 x 12-15\n\nPull day\nLat pulldown 3x10\nFace pull 3 × 15 (light)\nPlank 3 x 45s");

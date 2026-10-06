@@ -13,6 +13,7 @@ import {dayMeals, mealName, mealSlots, mealStyle, nextMeal, planOf, slotOf} from
 import {dateBar} from "../datebar.js";
 import {backArrow} from "../nav.js";
 import {art, gaugeArt, waterArt} from "../art.js";
+import {pcRow} from "./pcheck.js";
 import {fitCh, afTile} from "./addfood.js";
 import {trendCard, vNutrition} from "./progress.js";
 
@@ -326,7 +327,8 @@ function vTargets(){
    +'<div class="ngcard"><div class="aflbl">'+esc(t("Other targets"))+'</div><div class="aftiles">'
    +afTile("g_water",t("Water"),"ml",g.water,"0","numeric")
    +afTile("g_steps",t("Steps"),"",g.steps,"0","numeric")+'</div></div>'
-   +'<button class="btn afcta" data-savegoals="1">'+esc(t("Save targets"))+'</button>';
+   +'<button class="btn afcta" data-savegoals="1">'+esc(t("Save targets"))+'</button>'
+   +(S.onboarded?pcRow():'');
   /* From the profile: maintenance and a target sized to the goal. */
   var sg=suggested();
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Suggested for you")+'</h2></div>';

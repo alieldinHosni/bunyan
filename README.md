@@ -87,10 +87,10 @@ js/
   state.js      S, profiles, persistence, migration
   data/         exercises.js, splits.js, goals.js
   engine/       plan.js, formulas.js, nutrition.js, warmup.js, splitparse.js,
-                volume.js, mealplan.js
+                volume.js, mealplan.js, plancheck.js
   i18n/         dict.js (the AR dictionary and t), exnames.js (Arabic exercise names)
   ui/           view.js, render.js, actions.js, sheets.js, views/{home,train,session,
-                progress,food,profile,assess,warmup}.js
+                progress,food,profile,assess,warmup,pcheck}.js
   app.js        entry point: event listeners, wiring, boot
 ```
 
@@ -316,6 +316,23 @@ otherwise they would outlive the blob that was supposed to own them.
   out, solves its amounts for the meal's macros a few rounds, rounds every amount to a
   serving, and finally nudges the carbs so the day lands within about 4% of the energy
   target. It goes to the same review as an imported plan before anything is saved.
+- **The plan check** (`js/engine/plancheck.js`) reads the targets, the meal plan and the
+  active program against the goal, whoever wrote them, and says where they disagree:
+  - energy on the wrong side of maintenance for the goal, or more than 30% under it;
+  - protein under 85% of the goal's amount;
+  - a meal plan more than 10% off the energy target, or 15% short on protein;
+  - a main muscle well outside its weekly range;
+  - main lifts too light for a strength goal, rests too long for endurance, no mobility
+    work for a mobility goal;
+  - a coach's program written for the opposite phase ("fat loss" while eating to grow);
+  - a steep deficit under a heavy week, a surplus over thin training, a lot of cardio
+    and sport on under 3 g of carbs per kg.
+
+  Each finding has one fix the app can make, with Undo: set the targets for the goal,
+  move protein or carbs while keeping the calories, rebuild the meal plan from the
+  targets, or balance the program's volume (main lifts untouched, no day made longer
+  than the longest already is). "Keep it as it is" hides a finding until the numbers
+  behind it change. Home shows the most important one; Plan check shows them all.
 - **The cool-down** holds one static stretch for each of the muscles worked, 30 seconds
   (each side where it is one-sided), up to five. Static holds come after the session,
   not before: a long hold just before lifting can take a little off strength for a while.

@@ -349,6 +349,26 @@ function balance(plan,p,gear,budget,T){
         if(cut.length){cut[0].sets--;changed=true;}}}
     if(!changed)break;}}
 
+/* The plan check's "Balance the volume", on any program, a coach's included: the
+   first compound of each day is its main lift and is left alone; sets go where
+   there is time; nothing makes a day longer than the longest one already is, or
+   the session length, whichever is more. Returns how many sets and exercises moved. */
+function rebalance(prog,p,gear){
+  p=p||S.profile;
+  var T=trainOf(p.goal),before={};
+  KEEP=[];MAINS=[];SKILLED=p.level==="experienced"||p.level==="advanced";SUBS={};
+  prog.days.forEach(function(d){var first=true;
+    d.ex.forEach(function(e){before[e.id||e.name]=e.sets;
+      if(first&&!isActivity(e.name)&&isCompound(e.name)){MAINS.push(e);KEEP.push(e);first=false;}});});
+  var longest=Math.max.apply(null,prog.days.map(dayMinutes).concat([0]));
+  balance(prog,p,gear,Math.max(longest-5,(num(p.mins)||60)-8),T);
+  KEEP=[];MAINS=[];SKILLED=true;SUBS={};
+  var sets=0,added=0;
+  prog.days.forEach(function(d){d.ex.forEach(function(e){
+    if(!e.id){e.id=uid();added++;return;}
+    sets+=Math.abs(e.sets-(before[e.id]||0));});});
+  return {sets:sets,added:added};}
+
 /* The plan for the profile as it stands, not yet saved: what the assessment shows
    before anything is used. id picks a split other than the recommended one. */
 function generatePlan(id){
@@ -369,4 +389,4 @@ function buildPlan(id){
 }
 
 
-export {AVOID, buildPlan, dayMinutes, generatePlan, GOALS, LEVELS, shapePlan, splitCandidates, SPLIT_LEVEL};
+export {AVOID, buildPlan, dayMinutes, generatePlan, GOALS, LEVELS, rebalance, shapePlan, splitCandidates, SPLIT_LEVEL};

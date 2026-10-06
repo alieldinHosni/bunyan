@@ -8,7 +8,7 @@ import {applyLang, exName, planName} from "./i18n/exnames.js";
 import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, macroTargets} from "./engine/formulas.js";
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
-import {buildPlan} from "./engine/plan.js";
+import {buildPlan, rebalance} from "./engine/plan.js";
 import {day} from "./data/splits.js";
 import {spreadWd, suggestWd, weekOrder, weekStart} from "./engine/schedule.js";
 import {render, syncKeyboard} from "./ui/render.js";
@@ -37,6 +37,7 @@ import {newNames, programFromDraft, withIds} from "./ui/views/timport.js";
 import {warmShown} from "./ui/views/warmup.js";
 import {draftFrom, foodPrefs, GEARS, profileOf, STEPS, youOk} from "./ui/views/assess.js";
 import {buildMealPlan} from "./engine/mealplan.js";
+import {checkPlans} from "./engine/plancheck.js";
 import {holding, startHold, stopHold} from "./ui/hold.js";
 import {changeLook, themeOf} from "./ui/theme.js";
 import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
@@ -235,11 +236,38 @@ function useAssessment(){
   S.onboarded=true;A.done=true;saveDB();render();window.scrollTo(0,0);
   toast(t("Your plan is in."),function(){
     keys.forEach(function(k){S[k]=before[k];});A.done=false;saveDB();render();});}
+/* The plan check's fixes. Each one is what the finding offered, with Undo. */
+function pcFix(id){
+  var f=checkPlans().filter(function(x){return x.id===id;})[0];if(!f)return;
+  var act=f.fix.act,g=S.goals,goalsBefore=JSON.parse(JSON.stringify(g));
+  var undoGoals=function(){S.goals=goalsBefore;saveDB();render();};
+  var w=lastWeight()||num(S.profile.weight);
+  if(act==="targets"){var m=macroTargets();g.kcal=m.kcal;g.p=m.p;g.c=m.c;g.f=m.f;
+    saveDB();render();toast(t("Targets updated."),undoGoals);return;}
+  /* Protein or carbs up, the other two moved so the calories stay where they are. */
+  if(act==="protein"){g.p=macroTargets().p;g.c=Math.max(50,Math.round((g.kcal-g.p*4-g.f*9)/4));
+    saveDB();render();toast(t("Protein raised; carbs moved to keep your calories."),undoGoals);return;}
+  if(act==="carbs"){g.c=Math.round(w*3/5)*5;g.f=Math.max(Math.round(w*0.6),Math.round((g.kcal-g.p*4-g.c*4)/9));
+    saveDB();render();toast(t("Carbs raised; fat moved to keep your calories."),undoGoals);return;}
+  if(act==="meals"){openMealPlan(mealPrefs());return;}
+  if(act==="balance"){var prog=split();if(!prog)return;
+    var daysBefore=JSON.parse(JSON.stringify(prog.days));
+    var r=rebalance(prog,S.profile,S.gear);saveDB();render();
+    toast(r.sets||r.added?t("Volume balanced: {s} sets moved, {a} exercises added.").replace("{s}",r.sets).replace("{a}",r.added)
+      :t("Nothing could be moved without making sessions longer."),function(){prog.days=daysBefore;saveDB();render();});return;}
+  if(act==="program"){V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);return;}
+  if(act==="assess"){V.pcheck=false;pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);}}
+/* After a plan is used, say what the check found, one tap from the details. */
+function pcAfter(){
+  var n=checkPlans().length;if(!n)return;
+  setTimeout(function(){
+    toast(t(n===1?"Plan check: 1 thing to look at":"Plan check: {n} things to look at").replace("{n}",n),
+      function(){pushNav();V.pcheck=true;render();window.scrollTo(0,0);},t("Show me"));},5600);}
 /* A meal plan built from the daily targets, opened on the same review an imported
    plan gets: every food and amount can be changed before it is used. */
 function openMealPlan(prefs){
   loadFoods(function(){
-    V.assess=false;resetNav();V.tab="food";V.fsec="plan";S.prefs.fsec="plan";saveDB();pushNav();
+    V.assess=false;V.pcheck=false;resetNav();V.tab="food";V.fsec="plan";S.prefs.fsec="plan";saveDB();pushNav();
     V.pimport=true;V.pgen=prefs;V.pitext="";V.ptargets=null;
     V.pparse=buildMealPlan(S.goals,prefs);
     render();window.scrollTo(0,0);});}
@@ -258,7 +286,8 @@ function useDraft(){
   resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);
   toast(t("{name} is your program now.").replace("{name}",p.name),function(){
     S.programs=(S.programs||[]).filter(function(q){return q.id!==p.id;});
-    if(before)S.activeProgram=before;saveDB();render();});}
+    if(before)S.activeProgram=before;saveDB();render();});
+  pcAfter();}
 
 document.addEventListener("click",function(ev){
   /* Named el, not t: t() is the translator, and shadowing it here made every
@@ -292,7 +321,7 @@ document.addEventListener("click",function(ev){
   /* A tab tap is a fresh start: the top of the page, and Food on today — a past
      date left selected from earlier was where a meal logged later could land. */
   if(D.tab){resetNav();var same=V.tab===D.tab,top=same&&V.train==="days"&&!V.meal&&!V.smeal&&!V.phist;
-    V.tab=D.tab;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.dnavDir=0;V.assess=false;
+    V.tab=D.tab;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.dnavDir=0;V.assess=false;V.pcheck=false;
     /* Tapping a tab while already at its top goes back to its first section. */
     if(D.tab==="train"&&top){V.tsec="today";S.prefs.tsec="today";V.tdate=null;saveDB();}
     if(D.tab==="food"&&top){V.fsec="today";S.prefs.fsec="today";V.fdate=null;saveDB();}
@@ -303,13 +332,13 @@ document.addEventListener("click",function(ev){
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
      return to but the tab bar. */
-  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.assess=false;render();return;}
+  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.assess=false;V.pcheck=false;render();return;}
   /* Food's three sections, remembered as Train's are. */
   if(D.fsec){if(V.sheet)closeSheet();
     /* From another tab (Home's nutrition card, Profile's targets row) it is a change of
        place, so it starts a fresh trail, on today's date. */
     if(V.tab!=="food"){V.fdate=null;V.train="days";}
-    if(V.tab!=="food"||V.meal||V.smeal||V.pslot||V.pimport||V.assess){resetNav();V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.assess=false;}
+    if(V.tab!=="food"||V.meal||V.smeal||V.pslot||V.pimport||V.assess||V.pcheck){resetNav();V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.assess=false;V.pcheck=false;}
     V.tab="food";
     V.fsec=D.fsec;S.prefs.fsec=D.fsec;saveDB();render();window.scrollTo(0,0);return;}
   if(D.frange){V.frange=+D.frange;render();return;}
@@ -939,7 +968,8 @@ document.addEventListener("click",function(ev){
       if(tg[k]>0){S.goals[k]=tg[k];tSet++;}});
     V.pparse=null;V.pitext="";V.reorder=null;V.ptargets=null;V.psupps=null;V.pgen=null;saveDB();
     goBack();V.pimport=false;V.fsec="plan";S.prefs.fsec="plan";render();window.scrollTo(0,0);
-    toast(t(tSet?"Your plan and its daily targets are in.":"Your plan is in."),function(){S.mealSlots=before;S.goals=goalsBefore;saveDB();render();});return;}
+    toast(t(tSet?"Your plan and its daily targets are in.":"Your plan is in."),function(){S.mealSlots=before;S.goals=goalsBefore;saveDB();render();});
+    pcAfter();return;}
   /* ---- My Foods */
   if(D.smeal){pushNav();V.smeal=D.smeal;render();window.scrollTo(0,0);return;}
   if(D.newmeal){askText({title:t("New meal"),ph:t("For example, Ful breakfast"),act:"newmeal"});return;}
@@ -1087,7 +1117,14 @@ document.addEventListener("click",function(ev){
   if(D.assplit&&V.asd){V.asd.split=D.assplit;render();return;}
   if(D.asuse){useAssessment();return;}
   if(D.asmeals&&V.asd){openMealPlan(foodPrefs(V.asd));return;}
-  if(D.astrain){V.assess=false;resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);return;}
+  if(D.astrain){V.assess=false;V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);return;}
+  /* The plan check: open it, fix a finding, keep one as it is, look at kept ones again. */
+  if(D.pcopen){if(V.sheet)closeSheet();pushNav();V.pcheck=true;render();window.scrollTo(0,0);return;}
+  if(D.pcfix){pcFix(D.pcfix);return;}
+  if(D.pckeep){var fk=checkPlans().filter(function(x){return x.id===D.pckeep;})[0];
+    if(fk){S.pcDismiss=S.pcDismiss||{};S.pcDismiss[fk.id]=JSON.stringify(fk.sig);saveDB();render();
+      toast(t("Kept as it is."),function(){delete S.pcDismiss[fk.id];saveDB();render();});}return;}
+  if(D.pcreset){S.pcDismiss={};saveDB();render();return;}
   /* A meal plan from the targets, from Food's plan section, and another version of it. */
   if(D.pgen){openMealPlan(mealPrefs());return;}
   if(D.pgenmore&&V.pgen){V.pgen.variant=(V.pgen.variant||0)+1;V.pparse=buildMealPlan(S.goals,V.pgen);render();return;}

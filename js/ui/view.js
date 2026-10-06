@@ -134,13 +134,15 @@ function syncViewport(){
   var r=document.documentElement.style;
   r.setProperty("--vvh",Math.round(vv.height)+"px");
   r.setProperty("--vvt",Math.round(vv.offsetTop)+"px");}
-function toast(msg,undo){
+/* undo: a function for the toast's button, which says Undo unless label says
+   otherwise ("Show me" for a plan check). */
+function toast(msg,undo,label){
   var old=document.querySelector(".toast");if(old)old.remove();
   var d=document.createElement("div");d.className="toast";d.setAttribute("role","status");
   var s=document.createElement("span");s.textContent=msg;d.appendChild(s);
   if(undo){
     var b=document.createElement("button");
-    b.className="toast-undo";b.type="button";b.textContent=t("Undo");
+    b.className="toast-undo";b.type="button";b.textContent=label||t("Undo");
     b.onclick=function(){d.remove();undo();};
     d.appendChild(b);}
   document.body.appendChild(d);

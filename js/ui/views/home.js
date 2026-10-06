@@ -12,6 +12,7 @@ import {glassUnit} from "./food.js";
 import {toDisp, wUnit} from "../../units.js";
 import {dfmt, esc, fmtN, num, today} from "../../util.js";
 import {art} from "../art.js";
+import {pcHome} from "./pcheck.js";
 
 /* ---- pieces the frame is made of ------------------------------------------ */
 
@@ -40,6 +41,8 @@ function reminder(){
     return '<button class="card tap hot hnote" data-setup="1"><div class="row"><h3>'+t("Build my plan")+'</h3>'
      +'<span class="pill a">'+t("Start here")+'</span></div>'
      +'<p class="tiny" style="margin:6px 0 0">'+t("A short assessment, and Bunyan sets your daily targets, your training and a meal plan.")+'</p></button>';
+  /* What does not fit between the targets, the meal plan, the training and the goal. */
+  var pc=pcHome();if(pc)return pc;
   if(backupDue()){
     var age=backupAgeDays();
     return '<div class="card hnote gold"><h3>'+t("Back up your history")+'</h3>'
