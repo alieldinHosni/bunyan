@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coach tests</title>
+<style>
+  :root{color-scheme:light dark;--bg:#fff;--fg:#111;--ok:#1a7f37;--bad:#cf222e;--dim:#666}
+  @media (prefers-color-scheme: dark){:root{--bg:#0d1117;--fg:#e6edf3;--ok:#3fb950;--bad:#f85149;--dim:#8b949e}}
+  body{margin:0;padding:16px;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif}
+  h1{font-size:18px;margin:0 0 8px}
+  .sum{margin:0 0 14px;font-weight:700}
+  .r{display:flex;gap:8px;padding:2px 0}
+  .r b{flex:none;width:3em}
+  .pass b{color:var(--ok)}.fail b{color:var(--bad)}
+  .r small{color:var(--dim)}
+</style>
+</head>
+<body>
+<h1>Coach tests</h1>
+<p class="sum" id="sum">Running…</p>
+<div id="out"></div>
+<script type="module">
+/* Open this page (served, not from file://) to run every js/coach test. No framework:
+   each test file exports run(t). The result is also left on window.COACH_TESTS for the
+   regression suite. */
+import {makeT} from "./assert.js";
+import * as volume from "./volume.test.js";
+import * as fatigue from "./fatigue.test.js";
+import * as strength from "./strength.test.js";
+import * as autoreg from "./autoreg.test.js";
+import * as weakpoints from "./weakpoints.test.js";
+import * as insights from "./insights.test.js";
+var files={volume:volume,fatigue:fatigue,strength:strength,autoreg:autoreg,weakpoints:weakpoints,insights:insights};
+var all=[];
+Object.keys(files).forEach(function(k){
+  var t=makeT(k);
+  try{files[k].run(t);}catch(e){t.results.push({file:k,pass:false,label:"threw",detail:String(e&&e.stack||e)});}
+  all=all.concat(t.results);});
+var fail=all.filter(function(r){return !r.pass;});
+document.getElementById("sum").textContent=(all.length-fail.length)+" passed, "+fail.length+" failed";
+document.getElementById("out").innerHTML=all.map(function(r){
+  return '<div class="r '+(r.pass?"pass":"fail")+'"><b>'+(r.pass?"PASS":"FAIL")+'</b><span>'+r.file+': '
+   +r.label.replace(/</g,"&lt;")+(r.detail?' <small>'+r.detail.replace(/</g,"&lt;")+'</small>':'')+'</span></div>';}).join("");
+window.COACH_TESTS={passed:all.length-fail.length,failed:fail.length,failures:fail};
+</script>
+</body>
+</html>

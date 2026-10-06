@@ -9,6 +9,7 @@ import {V} from "../ui/view.js";
 import {t} from "../i18n/dict.js";
 import {fmtW} from "../units.js";
 import {goalOf} from "../data/goals.js";
+import {progressionAdvice} from "../coach/autoreg.js";
 
 /* ============================================================ formulas */
 /* A warm-up counts for nothing: not volume, not average RPE, not a record, and not
@@ -181,23 +182,6 @@ function plateauOf(name){
 function dbTotal(){return !!(S.prefs&&S.prefs.dbLoad==="total");}
 /* To the nearest real step, so a suggestion is always a weight that exists. */
 function snapDown(x,step){step=step||1.25;return Math.max(0,Math.round(Math.round(x/step)*step*100)/100);}
-/* Short of the bottom of the range twice in a row at the same load. Holding the
-   weight would mean a third failed session; about a tenth lighter is the usual
-   reset, and the reps build back from there. */
-function missedTwice(name,lo){
-  if(!lo)return 0;
-  var seen=[];
-  for(var i=0;i<S.sessions.length&&seen.length<2;i++){
-    var e=S.sessions[i].entries.filter(function(x){return x.name===name&&x.sets&&x.sets.length;})[0];
-    if(!e)continue;
-    var work=e.sets.filter(function(x){return !x.wu&&num(x.w)>0;});
-    if(!work.length)return 0;
-    var top=Math.max.apply(null,work.map(function(x){return num(x.w);}));
-    var best=Math.max.apply(null,work.filter(function(x){return num(x.w)===top;}).map(function(x){return num(x.r);}));
-    seen.push({w:top,r:best});}
-  if(seen.length<2||seen[0].w!==seen[1].w)return 0;
-  return seen[0].r<lo&&seen[1].r<lo?seen[0].w:0;}
-
 /* ---- a lighter week ----------------------------------------------------------
    Suggested, never imposed. Due when there has been a solid block of training (five
    weeks since the last one, or since the start) and the log shows it: two or more
@@ -286,15 +270,20 @@ function recommend(e){
   /* As many as you can: the target is last time's best, not a range. */
   if(e.planned.amrap)return {w:top,lo:0,hi:0,amrap:true,last:(top?top+" \u00d7 ":"")+topR};
   if(!top){return {w:0,lo:e.planned.lo,hi:e.planned.hi,note:"Find a weight you can control for "+e.planned.lo+" reps."};}
-  var miss=missedTwice(e.name,e.planned.lo);
+  /* Short of the range: held twice, lighter the third time (js/coach/autoreg.js). The
+     load is the logged one, so a suggestion is a weight on the bar, not body weight. */
+  var adv=progressionAdvice(S.sessions,e.name,{lo:e.planned.lo,hi:e.planned.hi},{load:function(n,x){return num(x);}});
   if(inDeload()){w=snapDown(top*0.9,inc)||top;note="Lighter week: about 10% less and fewer sets. Leave three or four reps in the tank.";}
-  else if(miss){w=snapDown(miss*0.9,inc)||top;note="Short of the range twice at this weight. About 10% lighter, then build back up.";}
+  else if(adv.kind==="deload"){w=snapDown(adv.w*0.9,inc)||top;note="Short of the range three sessions running. About 10% lighter for a week, same reps, then build back up.";}
+  else if(adv.kind==="hold"){w=adv.w;note="Short of the range twice at this weight. Hold it and chase the reps; a third miss means a lighter week.";}
   /* Reported effort earns a bigger step only when it was reported: the top of the
      range at RPE 7 or less means reps to spare. Still no more than a tenth. */
   else if(hitTop&&avg&&avg<=7&&inc){
     w=Math.round((top+Math.min(inc*2,Math.max(inc,top*0.1)))*100)/100;
     note="Top of the range with reps to spare. A bigger step this time.";}
-  else if(hitTop&&(!avg||avg<=9)&&inc){w=Math.round((top+inc)*100)/100;note="You hit the top of the range last time.";}
+  /* At the top but close to failure: the step is earned, the recovery is not certain. */
+  else if(hitTop&&avg>=9&&inc){w=Math.round((top+inc)*100)/100;note="Top of the range, but close to failure. The weight goes up; if it was a grind, hold it instead.";}
+  else if(hitTop&&inc){w=Math.round((top+inc)*100)/100;note="You hit the top of the range last time.";}
   else if(plateauOf(e.name)){w=top;note="No gain in three sessions. Hold this weight and chase a rep, or take a lighter week.";}
   else if(avg&&avg>=9.5){w=top;note="Last session was near failure. Hold this weight.";}
   else note="Same weight, aim for more reps.";
@@ -358,4 +347,4 @@ function addItems(meal,items,d){
 
 
 
-export {bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, missedTwice, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets, macroTargets};
+export {bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets, macroTargets};

@@ -38,6 +38,8 @@ import {warmShown} from "./ui/views/warmup.js";
 import {draftFrom, foodPrefs, GEARS, profileOf, STEPS, youOk} from "./ui/views/assess.js";
 import {buildMealPlan} from "./engine/mealplan.js";
 import {checkPlans} from "./engine/plancheck.js";
+import {coachNow} from "./engine/coachinfo.js";
+import {coachAct} from "./ui/views/pcheck.js";
 import {holding, startHold, stopHold} from "./ui/hold.js";
 import {changeLook, themeOf} from "./ui/theme.js";
 import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
@@ -250,13 +252,31 @@ function pcFix(id){
   if(act==="carbs"){g.c=Math.round(w*3/5)*5;g.f=Math.max(Math.round(w*0.6),Math.round((g.kcal-g.p*4-g.c*4)/9));
     saveDB();render();toast(t("Carbs raised; fat moved to keep your calories."),undoGoals);return;}
   if(act==="meals"){openMealPlan(mealPrefs());return;}
-  if(act==="balance"){var prog=split();if(!prog)return;
-    var daysBefore=JSON.parse(JSON.stringify(prog.days));
-    var r=rebalance(prog,S.profile,S.gear);saveDB();render();
-    toast(r.sets||r.added?t("Volume balanced: {s} sets moved, {a} exercises added.").replace("{s}",r.sets).replace("{a}",r.added)
-      :t("Nothing could be moved without making sessions longer."),function(){prog.days=daysBefore;saveDB();render();});return;}
+  if(act==="balance"){balanceNow();return;}
   if(act==="program"){V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);return;}
   if(act==="assess"){V.pcheck=false;pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);}}
+/* Balance the active program's volume, with Undo (js/engine/plan.js rebalance). */
+function balanceNow(){
+  var prog=split();if(!prog)return;
+  var daysBefore=JSON.parse(JSON.stringify(prog.days));
+  var r=rebalance(prog,S.profile,S.gear);saveDB();render();
+  toast(r.sets||r.added?t("Volume balanced: {s} sets moved, {a} exercises added.").replace("{s}",r.sets).replace("{a}",r.added)
+    :t("Nothing could be moved without making sessions longer."),function(){prog.days=daysBefore;saveDB();render();});}
+/* The coach's insights: act on one, or set it aside for two weeks. Taking a lighter
+   week also quiets the insight that asked for it until well after the week ends. */
+function coachSetAside(id,days){S.coachDismiss=S.coachDismiss||{};S.coachDismiss[id]=addDaysISO(today(),days);}
+function coachFix(id){
+  var c=coachNow().filter(function(x){return x.id===id;})[0];if(!c)return;
+  var act=coachAct(c);
+  if(act==="deload"){
+    var dlBefore=JSON.parse(JSON.stringify(S.deload||{})),disBefore=JSON.parse(JSON.stringify(S.coachDismiss||{}));
+    var dl=S.deload=S.deload||{};dl.until=addDaysISO(today(),6);dl.last=today();delete dl.snooze;
+    coachSetAside(id,14);saveDB();render();
+    toast(t("Lighter week on. Your next workouts have fewer sets and lighter suggestions."),function(){
+      S.deload=dlBefore;S.coachDismiss=disBefore;saveDB();render();});return;}
+  if(act==="balance"){coachSetAside(id,14);balanceNow();return;}
+  if(act==="program"){coachSetAside(id,14);saveDB();V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);return;}
+  coachSetAside(id,28);saveDB();render();}
 /* After a plan is used, say what the check found, one tap from the details. */
 function pcAfter(){
   var n=checkPlans().length;if(!n)return;
@@ -1124,7 +1144,10 @@ document.addEventListener("click",function(ev){
   if(D.pckeep){var fk=checkPlans().filter(function(x){return x.id===D.pckeep;})[0];
     if(fk){S.pcDismiss=S.pcDismiss||{};S.pcDismiss[fk.id]=JSON.stringify(fk.sig);saveDB();render();
       toast(t("Kept as it is."),function(){delete S.pcDismiss[fk.id];saveDB();render();});}return;}
-  if(D.pcreset){S.pcDismiss={};saveDB();render();return;}
+  if(D.pcreset){S.pcDismiss={};S.coachDismiss={};saveDB();render();return;}
+  if(D.cofix){coachFix(D.cofix);return;}
+  if(D.cokeep){var ck=D.cokeep,cb=JSON.parse(JSON.stringify(S.coachDismiss||{}));coachSetAside(ck,14);saveDB();render();
+    toast(t("Set aside for two weeks."),function(){S.coachDismiss=cb;saveDB();render();});return;}
   /* A meal plan from the targets, from Food's plan section, and another version of it. */
   if(D.pgen){openMealPlan(mealPrefs());return;}
   if(D.pgenmore&&V.pgen){V.pgen.variant=(V.pgen.variant||0)+1;V.pparse=buildMealPlan(S.goals,V.pgen);render();return;}

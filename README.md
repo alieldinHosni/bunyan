@@ -86,8 +86,9 @@ js/
   ui/sheetdrag.js  drag a sheet header down to dismiss
   state.js      S, profiles, persistence, migration
   data/         exercises.js, splits.js, goals.js
+  coach/        the coaching engine: pure functions over the log, with tests in coach/test/
   engine/       plan.js, formulas.js, nutrition.js, warmup.js, splitparse.js,
-                volume.js, mealplan.js, plancheck.js
+                volume.js, mealplan.js, plancheck.js, coachinfo.js
   i18n/         dict.js (the AR dictionary and t), exnames.js (Arabic exercise names)
   ui/           view.js, render.js, actions.js, sheets.js, views/{home,train,session,
                 progress,food,profile,assess,warmup,pcheck}.js
@@ -333,6 +334,30 @@ otherwise they would outlive the blob that was supposed to own them.
   targets, or balance the program's volume (main lifts untouched, no day made longer
   than the longest already is). "Keep it as it is" hides a finding until the numbers
   behind it change. Home shows the most important one; Plan check shows them all.
+- **The coach** (`js/coach/`) reads the training log the way a coach would. Every file
+  there is a pure function — plain data in, plain data out, no DOM, no storage, no
+  network, no imports from the app — and has a test file beside it:
+  - `volume.js`: hard sets per muscle per week, from what was logged, against the
+    landmarks in `landmarks.js` (minimum effective, adaptive, maximum recoverable).
+    These come from Renaissance Periodization's published guidelines and are
+    heuristics; the app says so.
+  - `fatigue.js`: the same load for the same reps getting harder. Needs three sessions
+    with RPE logged before it says anything.
+  - `strength.js`: the best estimated max per week (Epley, 12 reps or fewer) and its
+    direction. Three flat weeks on a main lift is a stall; two falling weeks a warning.
+  - `autoreg.js`: around the progression rule — a bigger step at RPE 7 or less, a step
+    with a caution at 9 or more, hold after two misses of the range, a lighter week
+    after three. `recommend()` in `js/engine/formulas.js` uses it.
+  - `weakpoints.js`: a lift far out of proportion with the others (squat against
+    deadlift, bench against squat, press against bench, row against bench), only when
+    more than 15% outside the usual range, and always as an observation.
+  - `insights.js`: what is worth saying, most important first, one per lift — and
+    nothing at all when training is on track.
+
+  Home shows the single most important piece of advice, coach or plan check; the rest
+  wait on the Plan check screen. Each one says what it saw, offers one thing to do,
+  and can be set aside for two weeks. Run the tests with `node tests/coach.mjs`, or by
+  opening `js/coach/test/index.html` on the local server.
 - **The cool-down** holds one static stretch for each of the muscles worked, 30 seconds
   (each side where it is one-sided), up to five. Static holds come after the session,
   not before: a long hold just before lifting can take a little off strength for a while.

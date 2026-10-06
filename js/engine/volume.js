@@ -15,8 +15,9 @@
    differences, and the app says so where it shows them. */
 import {isActivity} from "../data/activities.js";
 import {muscleOf, secondaryOf} from "../data/exercises.js";
+import {RANGE} from "../coach/landmarks.js";
 
-var RANGE={new:[8,12],some:[10,16],experienced:[12,20],advanced:[14,22]};
+/* The ranges themselves live with the landmarks, in js/coach/landmarks.js. */
 /* The muscles a program is judged on. Forearms, neck and calves are trained by
    plenty of people on purpose and left alone by plenty of others; they are counted,
    not judged. */

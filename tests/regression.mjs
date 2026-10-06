@@ -320,10 +320,13 @@ await test("picker: search finds by muscle, and no row ever sits above the field
 /* ---- coaching --------------------------------------------------------------------- */
 const F=(page,fn)=>page.evaluate(async src=>{const F=await import("/js/engine/formulas.js");const {S}=await import("/js/state.js");
   const mk=(d,name,sets)=>({id:"x"+d+name,date:d,dayId:"x",entries:[{name,sets}]});return eval(src);},fn);
-await test("missing the range twice suggests about 10% lighter",async page=>{
+await test("missing the range twice holds the weight; a third miss suggests about 10% lighter",async page=>{
   const r=await F(page,`(S.sessions=[mk("2099-01-05","Barbell Squat",[{w:100,r:6},{w:100,r:5}]),mk("2099-01-02","Barbell Squat",[{w:100,r:7}])],
     F.recommend({name:"Barbell Squat",planned:{sets:3,lo:8,hi:10}}).w)`);
-  eq(r,90);
+  eq(r,100,"twice: hold");
+  const r3=await F(page,`(S.sessions=[mk("2099-01-08","Barbell Squat",[{w:100,r:6}]),mk("2099-01-05","Barbell Squat",[{w:100,r:6},{w:100,r:5}]),mk("2099-01-02","Barbell Squat",[{w:100,r:7}])],
+    F.recommend({name:"Barbell Squat",planned:{sets:3,lo:8,hi:10}}).w)`);
+  eq(r3,90,"three times: lighter");
 });
 await test("records: weight, estimated max and reps count; the first time does not",async page=>{
   const r=await F(page,`(S.sessions=[mk("2099-01-01","Barbell Bench Press",[{w:80,r:5},{w:70,r:8}])],
@@ -1295,6 +1298,31 @@ await test("Plan check: a meal plan off its targets and a thin program are found
   await page.tap('[data-puse]');await pause(page,300);
   eq(await page.evaluate(async()=>(await import("/js/engine/plancheck.js")).checkPlans().map(f=>f.id).includes("meals-off")),false,"fixed");
 },{db:Object.assign(seed(),{goals:{kcal:2800,p:150,c:350,f:85,water:3000,steps:9000}})});
+/* ---- the coach (js/coach/) -------------------------------------------------------- */
+await test("Coach engine: every test on the runner page passes",async page=>{
+  await page.goto(URL_.replace(/\/[^/]*$/,"/")+"js/coach/test/index.html");await page.waitForTimeout(800);
+  const r=await page.evaluate(()=>window.COACH_TESTS);
+  if(!r||r.failed||r.passed<50)throw new Error("coach tests: "+JSON.stringify(r&&{passed:r.passed,failed:r.failed,first:r.failures&&r.failures[0]}));
+});
+const B_="Barbell Bench Press - Medium Grip";
+function coachLog(rpes,step){
+  return rpes.map((rpe,i)=>({id:"c"+i,date:iso(7*(rpes.length-1-i)),dayName:"Full Body A",activeMs:40*6e4,
+    entries:[{name:B_,muscle:"Chest",sets:[1,2,3].map(()=>({w:80+(step||0)*i,r:8,rpe}))},
+             {name:"Leg Press",muscle:"Quads",sets:[1,2,3].map(()=>({w:150+(step||0)*2*i,r:10,rpe:8}))}]}));}
+await test("Coach: a lift getting harder at the same weight is raised with its reason; a lighter week from it, or set aside",async page=>{
+  const card=await page.$eval('.pchome .coach',e=>e.innerText);
+  if(!/feeling harder/.test(card)||!/RPE 7 to 9/.test(card))throw new Error("card: "+card);
+  await page.tap('.pchome [data-cofix]');await pause(page,300);
+  eq(await ev(page,"[!!(S.deload&&S.deload.until),Object.keys(S.coachDismiss||{}).length]"),[true,1],"lighter week on, insight quiet");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[!!(S.deload&&S.deload.until),Object.keys(S.coachDismiss||{}).length]"),[false,0],"Undo");
+  await page.tap('.pchome [data-cokeep]');await pause(page,300);
+  eq(await page.$$eval('.pchome .coach',a=>a.length),0,"set aside: gone from Home");
+},{db:Object.assign(seed(),{sessions:coachLog([7,7.5,8.5,9]),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+await test("Coach: a log that is on track gets no coach card — silence is earned",async page=>{
+  eq(await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().filter(c=>c.pri>=2).length),0,"nothing important");
+  eq(await page.$$eval('.pchome .coach',a=>a.length),0,"no coach card on Home");
+},{db:Object.assign(seed(),{sessions:coachLog([8,8,8,8,8],2.5),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
 await test("Training import: a program pasted as text is read the same way",async page=>{
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="import";V.tp=null;(await import("/js/ui/render.js")).render();});await pause(page,300);
   await page.fill("#ti_text","Day 1 — Push\nBench press 4x6-8 @ 80kg, 2 min rest — pause on the chest\nLateral raises 3 x 12-15\n\nPull day\nLat pulldown 3x10\nFace pull 3 × 15 (light)\nPlank 3 x 45s");
