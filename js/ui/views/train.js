@@ -250,7 +250,7 @@ function vExplore(sp){
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   /* Or let Bunyan build it: four questions, and the plan is made for you. */
   h+='<button class="bnew bauto" data-setup="1"><span class="bnew-i">'+SPARK+'</span>'
-   +'<span class="bnew-t"><b>'+t("Let Bunyan build it")+'</b><span>'+t("Four questions: your goal, level, days and equipment")+'</span></span>'
+   +'<span class="bnew-t"><b>'+t("Let Bunyan build it")+'</b><span>'+t("A short assessment: your goal, body, week, kit and food")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   /* Or bring one in: the PDF a coach sent, or a program pasted from a chat. */
   h+='<button class="bnew" data-timport="1">'+art("calendar",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'

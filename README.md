@@ -85,11 +85,12 @@ js/
   ui/nav.js     the back stack: arrow, edge swipe and OS gesture share one path
   ui/sheetdrag.js  drag a sheet header down to dismiss
   state.js      S, profiles, persistence, migration
-  data/         exercises.js, splits.js
-  engine/       plan.js, formulas.js, nutrition.js, warmup.js, splitparse.js
+  data/         exercises.js, splits.js, goals.js
+  engine/       plan.js, formulas.js, nutrition.js, warmup.js, splitparse.js,
+                volume.js, mealplan.js
   i18n/         dict.js (the AR dictionary and t), exnames.js (Arabic exercise names)
   ui/           view.js, render.js, actions.js, sheets.js, views/{home,train,session,
-                progress,food,profile}.js
+                progress,food,profile,assess,warmup}.js
   app.js        entry point: event listeners, wiring, boot
 ```
 
@@ -288,6 +289,33 @@ otherwise they would outlive the blob that was supposed to own them.
   barbell, then 50% × 5 and 75% × 3 of the working weight (40%, 60% and 80% from 100 kg
   up), rounded to 2.5 kg. The working weight is the recommendation from last time, or
   the plan's starting weight. They are not logged.
+- **Goals** are one list (`js/data/goals.js`): lose fat; lose fat and build muscle;
+  build muscle; get stronger; power and athleticism; endurance and fitness; mobility and
+  flexibility; stay fit and healthy. Each says only what it changes: energy against
+  maintenance (−20% capped at 750 kcal for fat loss, −10% for both at once, +10% capped
+  at 300 for muscle), protein per kg (2.0, 2.2, 1.8 or 1.6), the share of energy from fat,
+  and the training style. Carbs take what is left, never under 50 g. Water is 35 ml per kg.
+- **Activity** comes from two answers in the assessment: daily life sets the base (1.2
+  mostly sitting to 1.5 for physical work) and each training day adds 0.05, so a desk job
+  with three sessions is 1.35 and a physical job with five is 1.75.
+- **Weekly volume** (`js/engine/volume.js`) counts a set in full for its main muscle and
+  half for each muscle it also works, times how often the day comes round in a week. The
+  ranges (8–12 sets a beginner, 10–16, 12–20, 14–22 for years of training) are a heuristic
+  starting point, and the app says so where it shows them.
+- **The workout generator** (`js/engine/plan.js`) shapes the recommended split to the
+  person. In order: exercises they cannot do with their equipment, or that load a sore
+  spot, are swapped for the closest stand-in (same muscle, same movement read from the
+  name, compound for compound, familiar exercises first, nothing advanced for someone in
+  their first years); sets come from experience, and reps, rest and reps in reserve from
+  the goal; the goal's additions go on (jumps first, intervals or mobility last); each
+  muscle's weekly sets are brought into its range; the day is trimmed to the time there
+  is, accessories first, main lifts never.
+- **The meal plan** (`js/engine/mealplan.js`) splits the day's targets into three to six
+  meals (protein spread more evenly than energy), picks a plate for each from a set
+  written for that meal — Egyptian home food first — that fits the diet and what is left
+  out, solves its amounts for the meal's macros a few rounds, rounds every amount to a
+  serving, and finally nudges the carbs so the day lands within about 4% of the energy
+  target. It goes to the same review as an imported plan before anything is saved.
 - **The cool-down** holds one static stretch for each of the muscles worked, 30 seconds
   (each side where it is one-sided), up to five. Static holds come after the session,
   not before: a long hold just before lifting can take a little off strength for a while.

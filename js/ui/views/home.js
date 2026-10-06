@@ -39,7 +39,7 @@ function reminder(){
   if(!S.onboarded)
     return '<button class="card tap hot hnote" data-setup="1"><div class="row"><h3>'+t("Build my plan")+'</h3>'
      +'<span class="pill a">'+t("Start here")+'</span></div>'
-     +'<p class="tiny" style="margin:6px 0 0">'+t("Four questions and Bunyan sets your program, sets, reps and rest.")+'</p></button>';
+     +'<p class="tiny" style="margin:6px 0 0">'+t("A short assessment, and Bunyan sets your daily targets, your training and a meal plan.")+'</p></button>';
   if(backupDue()){
     var age=backupAgeDays();
     return '<div class="card hnote gold"><h3>'+t("Back up your history")+'</h3>'

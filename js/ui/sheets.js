@@ -9,7 +9,7 @@ import {ACT_GROUPS, actIcon, actInfo, actPace, actsIn, INTENSITY, intensityOf, i
 import {bwShare, incrementFor, backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
-import {GOALS, LEVELS, splitCandidates} from "../engine/plan.js";
+import {GOAL_ORDER, GOALS} from "../data/goals.js";
 import {groupLabel, groupRun, ivText, mmss, platePlan, rowsFor} from "./views/session.js";
 import {sessionById, ensureSessionIds, buildSnapshot, CUR, dayOf, dayRec, friends, isOwner, PROFILES, S, snapStats, split} from "../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
@@ -607,59 +607,6 @@ function vSheet(){
         +'<span style="flex:1">'+esc(n)+'</span><span class="pill a">'+t("Remove")+'</span></button>';});
       b+='</div>';}
   }
-  else if(V.sheet==="setup"){
-    var p=S.profile;
-    b='<h2>'+t("Build my plan")+'</h2><p class="tiny" style="margin:2px 0 14px">'
-     +'Four answers. I pick the split, the sets, the rep ranges and the rest times from them, '
-     +'and you can change any of it afterwards.</p>';
-    b+='<div class="tiny">'+t("How long have you been training?")+'</div><select id="o_level">'
-     +Object.keys(LEVELS).map(function(k){
-        return '<option value="'+k+'"'+(p.level===k?" selected":"")+'>'+LEVELS[k].label+'</option>';}).join("")
-     +'</select>';
-    b+='<div class="tiny mt">'+t("What are you after?")+'</div><select id="o_goal">'
-     +Object.keys(GOALS).map(function(k){
-        return '<option value="'+k+'"'+(p.goal===k?" selected":"")+'>'+GOALS[k].label+'</option>';}).join("")
-     +'</select>';
-    b+='<div class="tiny mt">'+t("Days a week you can actually train")+'</div><select id="o_days">'
-     +[2,3,4,5,6].map(function(d){
-        return '<option value="'+d+'"'+(+p.days===d?" selected":"")+'>'+d+' days</option>';}).join("")
-     +'</select>';
-    /* Empty, not pre-filled. These fields used to arrive carrying one person's real
-       measurements, so everyone else was handed someone else's body and a macro
-       target that looked calculated before anything had been entered. */
-    var lw2=lastWeight();
-    var wv=lw2?toDisp(lw2):(num(p.weight)?toDisp(p.weight):"");
-    b+='<div class="grid2 mt"><div><div class="tiny">'+t("Weight")+' ('+wUnit()+')</div>'
-     +'<input id="o_weight" type="number" step="0.1" inputmode="decimal" placeholder="—" value="'+wv+'"></div>'
-     +'<div><div class="tiny">'+t("Height (cm)")+'</div><input id="o_height" type="number" '
-     +'inputmode="numeric" placeholder="—" value="'+(num(p.height)?p.height:"")+'"></div>'
-     +'<div><div class="tiny">'+t("Age")+'</div><input id="o_age" type="number" '
-     +'inputmode="numeric" placeholder="—" value="'+(num(p.age)?p.age:"")+'"></div>'
-     +'<div><div class="tiny">'+t("Sex")+'</div><select id="o_sex">'
-     +'<option value="m"'+(p.sex==="m"?" selected":"")+'>'+t("Male")+'</option>'
-     +'<option value="f"'+(p.sex==="f"?" selected":"")+'>'+t("Female")+'</option></select></div></div>';
-    /* The reasoning, and the runners-up. A silent verdict reads as arbitrary even
-       when it is sound, and the choice should stay the user's. */
-    var cands=[];
-    try{ cands=splitCandidates(num(p.days,3),p.level,p.goal,S.gear); }catch(e){ cands=[]; }
-    if(cands.length){
-      b+='<div class="sec">'+t("What I would give you")+'</div><div class="list">';
-      cands.forEach(function(c,i){
-        b+='<button class="item" data-pickplan="'+esc(c.id)+'">'
-         +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+esc(planName(c.name))
-         +(i===0?' <span class="pill a" style="margin-inline-start:6px">'+t("Recommended")+'</span>':'')
-         +'</div><div class="tiny">'+esc(c.why)+'</div></div></button>';});
-      b+='</div>';
-    }
-    b+='<div class="plan mt"><div class="tiny">This replaces your current split with a generated one. '
-     +'Splits you already have are kept.</div></div>';
-    /* Nothing is built from blanks. */
-    var ready=num(p.height)>0&&num(p.weight)>0&&num(p.age)>0;
-    b+='<p class="tiny" style="margin:12px 0 0">'+t("Bunyan is a training log, not medical advice. If you have an injury or a health condition, check with a professional first, and stop any exercise that causes sharp pain.")+'</p>'
-    b+='<button class="btn" data-buildplan="1"'+(ready?'':' disabled')+'>'+t("Build it")+'</button>'
-     +(ready?'':'<p class="tiny" style="margin:8px 2px 0;text-align:center">'
-       +t("Enter your height, weight and age first.")+'</p>');
-  }
   else if(V.sheet==="exhist"){
     var nm3=V.sd.name,rows=[];
     S.sessions.forEach(function(ss){ss.entries.forEach(function(en){
@@ -760,9 +707,9 @@ function vSheet(){
          return '<option value="'+a[0]+'"'+(+yp.activity===a[0]?" selected":"")+'>'+a[1]+'</option>';}).join("")
      +'</select></div>'
      +'<div class="mt"><label class="tiny" for="p_goal">'+t("Goal")+'</label><select id="p_goal">'
-     +[["lose",t("Lose fat")],["maintain",t("Maintain")],["gain",t("Build muscle")],
-       ["recomp",t("Recomposition")]].map(function(a){
-         return '<option value="'+a[0]+'"'+(yp.goal===a[0]?" selected":"")+'>'+a[1]+'</option>';}).join("")
+     /* The one list of goals (js/data/goals.js), the same the assessment offers. */
+     +GOAL_ORDER.map(function(k){
+         return '<option value="'+k+'"'+(yp.goal===k?" selected":"")+'>'+esc(t(GOALS[k].label))+'</option>';}).join("")
      +'</select></div>'
      +'<p class="tiny mt">'+t("Your calorie and protein targets are worked out from these, in Food → Targets.")+'</p>'
      +'<button class="btn" data-saveyou="1">'+t("Save")+'</button>'

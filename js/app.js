@@ -5,7 +5,7 @@ import {actKcal, isActivity} from "./data/activities.js";
 import {t} from "./i18n/dict.js";
 import {LIB, loadExDB, loadInstructions, reconcileExercises} from "./data/exercises.js";
 import {applyLang, exName, planName} from "./i18n/exnames.js";
-import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, proteinTarget, targetKcal} from "./engine/formulas.js";
+import {addItems, BACKUP_SNOOZE, curDate, lastWeight, macroKcal, macroTargets} from "./engine/formulas.js";
 import {FOODDB, gramsFor, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, isMeasure} from "./engine/nutrition.js";
 import {startScan, stopScan} from "./scan.js";
 import {buildPlan} from "./engine/plan.js";
@@ -35,6 +35,8 @@ import {parsePlan} from "./engine/planparse.js";
 import {readSplit} from "./engine/splitparse.js";
 import {newNames, programFromDraft, withIds} from "./ui/views/timport.js";
 import {warmShown} from "./ui/views/warmup.js";
+import {draftFrom, foodPrefs, GEARS, profileOf, STEPS, youOk} from "./ui/views/assess.js";
+import {buildMealPlan} from "./engine/mealplan.js";
 import {holding, startHold, stopHold} from "./ui/hold.js";
 import {changeLook, themeOf} from "./ui/theme.js";
 import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
@@ -216,6 +218,34 @@ function assignWd(n,val){
   var m=/^([da]):(\d+)$/.exec(val||"");if(!m)return;
   var it=m[1]==="d"?tp.days[+m[2]]:(tp.acts||[])[+m[2]];
   if(it){(it.wd=it.wd||[]).push(n);it.wd.sort();}}
+/* The assessment's answers become the profile, the daily targets and the training
+   plan, all at once and all with one Undo. */
+function useAssessment(){
+  var A=V.asd;if(!A)return;
+  var keys=["profile","prefs","gear","goals","programs","activeProgram","onboarded","plannedWeekly","body"];
+  var before=JSON.parse(JSON.stringify(keys.reduce(function(o,k){o[k]=S[k];return o;},{})));
+  Object.assign(S.profile,profileOf(A));
+  S.prefs.meals=num(A.meals);S.prefs.diet=A.diet;S.prefs.avoid=A.avoid.slice();S.prefs.powder=!!A.powder;S.prefs.fstyle=A.style;
+  S.gear=GEARS[A.gear]?GEARS[A.gear].slice():null;
+  var bt=S.body.filter(function(b){return b.date===today();})[0];
+  if(bt)bt.weight=S.profile.weight;else S.body.push({date:today(),weight:S.profile.weight});
+  var m=macroTargets();
+  ["kcal","p","c","f","water","steps"].forEach(function(k){if(m[k])S.goals[k]=m[k];});
+  buildPlan(A.split||undefined);
+  S.onboarded=true;A.done=true;saveDB();render();window.scrollTo(0,0);
+  toast(t("Your plan is in."),function(){
+    keys.forEach(function(k){S[k]=before[k];});A.done=false;saveDB();render();});}
+/* A meal plan built from the daily targets, opened on the same review an imported
+   plan gets: every food and amount can be changed before it is used. */
+function openMealPlan(prefs){
+  loadFoods(function(){
+    V.assess=false;resetNav();V.tab="food";V.fsec="plan";S.prefs.fsec="plan";saveDB();pushNav();
+    V.pimport=true;V.pgen=prefs;V.pitext="";V.ptargets=null;
+    V.pparse=buildMealPlan(S.goals,prefs);
+    render();window.scrollTo(0,0);});}
+function mealPrefs(){
+  var pr=S.prefs;
+  return {meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",variant:0};}
 /* The draft becomes a program, the active one, with Undo. Names the library does not
    know join it as the lifter's own exercises, as the plan wrote them. */
 function useDraft(){
@@ -262,7 +292,7 @@ document.addEventListener("click",function(ev){
   /* A tab tap is a fresh start: the top of the page, and Food on today — a past
      date left selected from earlier was where a meal logged later could land. */
   if(D.tab){resetNav();var same=V.tab===D.tab,top=same&&V.train==="days"&&!V.meal&&!V.smeal&&!V.phist;
-    V.tab=D.tab;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.dnavDir=0;
+    V.tab=D.tab;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.dnavDir=0;V.assess=false;
     /* Tapping a tab while already at its top goes back to its first section. */
     if(D.tab==="train"&&top){V.tsec="today";S.prefs.tsec="today";V.tdate=null;saveDB();}
     if(D.tab==="food"&&top){V.fsec="today";S.prefs.fsec="today";V.fdate=null;saveDB();}
@@ -273,13 +303,13 @@ document.addEventListener("click",function(ev){
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
      return to but the tab bar. */
-  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;render();return;}
+  if(D.go){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.phist=false;V.assess=false;render();return;}
   /* Food's three sections, remembered as Train's are. */
   if(D.fsec){if(V.sheet)closeSheet();
     /* From another tab (Home's nutrition card, Profile's targets row) it is a change of
        place, so it starts a fresh trail, on today's date. */
     if(V.tab!=="food"){V.fdate=null;V.train="days";}
-    if(V.tab!=="food"||V.meal||V.smeal||V.pslot||V.pimport){resetNav();V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;}
+    if(V.tab!=="food"||V.meal||V.smeal||V.pslot||V.pimport||V.assess){resetNav();V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.assess=false;}
     V.tab="food";
     V.fsec=D.fsec;S.prefs.fsec=D.fsec;saveDB();render();window.scrollTo(0,0);return;}
   if(D.frange){V.frange=+D.frange;render();return;}
@@ -864,7 +894,7 @@ document.addEventListener("click",function(ev){
   /* The plan's other choice for this exercise, before anything is logged on it. */
   if(D.swapalt&&S.active){var ea=S.active.entries[V.logIdx];if(!ea||!ea.alt||ea.sets.length)return;
     swapAlt(ea.alt,V.logIdx,ea.name);return;}
-  if(D.pimport){pushNav();V.pimport=true;V.pparse=null;render();window.scrollTo(0,0);return;}
+  if(D.pimport){pushNav();V.pimport=true;V.pparse=null;V.pgen=null;render();window.scrollTo(0,0);return;}
   /* ---- editing the diet plan draft before it is used */
   if(D.pirm||D.pidrop){
     var pk=D.pirm?"items":"todo",pa2=(D.pirm||D.pidrop).split("|"),pmd=V.pparse&&V.pparse[+pa2[0]];if(!pmd)return;
@@ -907,7 +937,7 @@ document.addEventListener("click",function(ev){
     var tSet=0;
     if(tg&&V.papplyT!==false)["kcal","p","c","f","water","steps"].forEach(function(k){
       if(tg[k]>0){S.goals[k]=tg[k];tSet++;}});
-    V.pparse=null;V.pitext="";V.reorder=null;V.ptargets=null;V.psupps=null;saveDB();
+    V.pparse=null;V.pitext="";V.reorder=null;V.ptargets=null;V.psupps=null;V.pgen=null;saveDB();
     goBack();V.pimport=false;V.fsec="plan";S.prefs.fsec="plan";render();window.scrollTo(0,0);
     toast(t(tSet?"Your plan and its daily targets are in.":"Your plan is in."),function(){S.mealSlots=before;S.goals=goalsBefore;saveDB();render();});return;}
   /* ---- My Foods */
@@ -947,9 +977,8 @@ document.addEventListener("click",function(ev){
     else S.myFoods.push(Object.assign({id:"my_"+uid(),cat:"My Foods",per:100,fib:0,s:[[svX,100]],a:[],src:"you"},rec));
     saveDB();closeSheet();render();toast(nmX+" "+t("saved."));return;}
   if(D.usesug){
-    var kS=Math.round(targetKcal()/10)*10,wS=lastWeight()||S.profile.weight;
-    S.goals.kcal=kS;S.goals.p=proteinTarget(wS);S.goals.f=Math.round(kS*0.28/9);
-    S.goals.c=Math.max(50,Math.round((kS-S.goals.p*4-S.goals.f*9)/4));
+    var mS=macroTargets();
+    S.goals.kcal=mS.kcal;S.goals.p=mS.p;S.goals.f=mS.f;S.goals.c=mS.c;
     saveDB();render();toast(t("Targets updated."));return;}
   /* A frequent-food pill on the dashboard, or the + beside a result in the sheet.
      Both used to go to Snack whatever the meal — including from a sheet opened for
@@ -994,11 +1023,8 @@ document.addEventListener("click",function(ev){
     p3.weight=toKg(num(val("p_weight"),toDisp(p3.weight)));
     if(p3.weight&&!S.body.some(function(b3){return b3.date===today();}))
       S.body.push({date:today(),weight:p3.weight});
-    var kc=targetKcal(),w3=lastWeight()||p3.weight||86;
-    S.goals.kcal=Math.round(kc/10)*10;
-    S.goals.p=proteinTarget(w3);
-    S.goals.f=Math.round(kc*0.28/9);
-    S.goals.c=Math.max(50,Math.round((kc-S.goals.p*4-S.goals.f*9)/4));
+    var m3=macroTargets();
+    S.goals.kcal=m3.kcal;S.goals.p=m3.p;S.goals.f=m3.f;S.goals.c=m3.c;
     saveDB();render();toast(t("Targets updated."));return;}
   /* The two settings sheets save independently now that they are separate screens. */
   if(D.saveyou){
@@ -1045,43 +1071,26 @@ document.addEventListener("click",function(ev){
   if(D.progmode){
     var order=["conservative","standard","aggressive"];
     S.profile.prog=order[(order.indexOf(S.profile.prog)+1)%3];saveDB();render();return;}
-  if(D.setup){openSheet("setup");return;}
-  /* Picking one of the offered candidates: same build, chosen split. */
-  if(D.pickplan){
-    var pp=S.profile;
-    pp.level=val("o_level")||pp.level; pp.goal=val("o_goal")||pp.goal;
-    pp.days=num(val("o_days"),pp.days);
-    pp.weight=toKg(num(val("o_weight"),0))||pp.weight;
-    pp.height=num(val("o_height"),0)||pp.height; pp.age=num(val("o_age"),0)||pp.age;
-    if(!(num(pp.height)>0&&num(pp.weight)>0&&num(pp.age)>0)){
-      toast(t("Enter your height, weight and age first."));saveDB();render();return;}
-    var chosen=allSplits().filter(function(x){return x.id===D.pickplan;})[0];
-    if(!chosen){toast(t("That program is no longer available."));return;}
-    addProgram(makeProgram(chosen),true);S.onboarded=true;saveDB();
-    closeSheet();V.tab="train";V.train="days";render();
-    toast(chosen.name+" "+t("is now your training."));return;}
-  if(D.buildplan){
-    var p4=S.profile;
-    p4.level=val("o_level")||p4.level; p4.goal=val("o_goal")||p4.goal;
-    p4.days=num(val("o_days"),3);
-    p4.weight=toKg(num(val("o_weight"),0))||p4.weight;
-    p4.height=num(val("o_height"),0)||p4.height; p4.age=num(val("o_age"),0)||p4.age;
-    p4.sex=val("o_sex")||p4.sex;
-    /* Nothing is calculated from blanks. The button is disabled without these; this
-       is the second gate in case it is ever reached another way. */
-    if(!(num(p4.height)>0&&num(p4.weight)>0&&num(p4.age)>0)){
-      toast(t("Enter your height, weight and age first."));saveDB();render();return;}
-    if(p4.weight&&!S.body.some(function(b2){return b2.date===today();}))
-      S.body.push({date:today(),weight:p4.weight});
-    var kc=targetKcal();
-    S.goals.kcal=Math.round(kc/10)*10;
-    S.goals.p=proteinTarget(p4.weight);
-    S.goals.f=Math.round(kc*0.28/9);
-    S.goals.c=Math.max(50,Math.round((kc-S.goals.p*4-S.goals.f*9)/4));
-    buildPlan(); S.onboarded=true; saveDB();
-    closeSheet(); V.tab="train"; V.train="days"; render();
-    toast(t("Plan built.")+" "+split().name+".");
-    return;}
+  /* The assessment, from Explore, Home or Profile: a fresh draft from what is saved. */
+  if(D.setup){if(V.sheet)closeSheet();pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);return;}
+  if(D.as!==undefined&&V.asd){var ap=D.as.split("|"),af=ap[0],av=ap[1];
+    V.asd[af]=/^(days|mins|meals|sleep)$/.test(af)?num(av):af==="powder"?av==="1":av;
+    /* A different goal, level, week or kit can change which splits are on offer. */
+    if(/^(goal|level|days|gear)$/.test(af))V.asd.split=null;
+    render();return;}
+  if(D.asm!==undefined&&V.asd){var mp=D.asm.split("|"),ml=V.asd[mp[0]],mi=ml.indexOf(mp[1]);
+    if(mi>=0)ml.splice(mi,1);else ml.push(mp[1]);render();return;}
+  if(D.asnext&&V.asd){
+    if(STEPS[V.asd.step]==="you"&&!youOk(V.asd)){toast(t("Enter your age, height and weight to go on."));return;}
+    V.asd.step=Math.min(STEPS.length-1,V.asd.step+1);render();window.scrollTo(0,0);return;}
+  if(D.asback&&V.asd){V.asd.step=Math.max(0,V.asd.step-1);render();window.scrollTo(0,0);return;}
+  if(D.assplit&&V.asd){V.asd.split=D.assplit;render();return;}
+  if(D.asuse){useAssessment();return;}
+  if(D.asmeals&&V.asd){openMealPlan(foodPrefs(V.asd));return;}
+  if(D.astrain){V.assess=false;resetNav();V.tab="train";V.train="days";V.tsec="program";S.prefs.tsec="program";saveDB();render();window.scrollTo(0,0);return;}
+  /* A meal plan from the targets, from Food's plan section, and another version of it. */
+  if(D.pgen){openMealPlan(mealPrefs());return;}
+  if(D.pgenmore&&V.pgen){V.pgen.variant=(V.pgen.variant||0)+1;V.pparse=buildMealPlan(S.goals,V.pgen);render();return;}
   if(D.fav){var i5=S.favs.indexOf(D.fav);
     if(i5>=0)S.favs.splice(i5,1);else S.favs.push(D.fav);saveDB();render();return;}
   if(D.gear){
@@ -1306,6 +1315,9 @@ document.addEventListener("input",function(ev){
   var pmn=/^pm_n_(\d+)$/.exec(id);
   if(pmn&&V.pparse&&V.pparse[+pmn[1]]){var nmv=ev.target.value.trim();V.pparse[+pmn[1]].custom=nmv||null;return;}
   if(id==="ti_name"&&V.tp){V.tp.name=ev.target.value;return;}
+  /* The assessment's numbers, kept as typed; weight in kilograms whatever is shown. */
+  if(V.asd&&(id==="as_age"||id==="as_height")){V.asd[id.slice(3)]=num(ev.target.value,0)||"";return;}
+  if(V.asd&&id==="as_weight"){V.asd.weight=toKg(num(ev.target.value,0))||"";return;}
   var dnm=/^ti_dn_(\d+)$/.exec(id);if(dnm&&V.tp&&V.tp.days[+dnm[1]]){V.tp.days[+dnm[1]].name=ev.target.value;return;}
   if(id==="exq"){
     V.exq=ev.target.value;
@@ -1764,7 +1776,7 @@ window.addEventListener("storage",function(ev){
 V.tsec=(S.prefs&&S.prefs.tsec)||"today";
 V.fsec=(S.prefs&&S.prefs.fsec)||"today";
 if(S.active){restoreWorkoutState();syncDraft();V.tab="train";V.train="days";}
-if(!S.onboarded){V.tab="home";V.sheet="setup";}
+if(!S.onboarded){V.tab="home";V.assess=true;V.asd=draftFrom();}
 render();
 
 if("serviceWorker" in navigator){

@@ -198,6 +198,7 @@ function startDay(dayId){
       if(e.timed)pl.timed=true;
       if(e.side)pl.side=true;
       if(e.amrap)pl.amrap=true;
+      if(e.rir!=null)pl.rir=e.rir;
       return {name:e.name,exId:e.exId||exIdOf(e.name),kind:e.timed&&!isActivity(e.name)?"timed":kindOf(e.name),muscle:muscleOfEntry(e),planned:pl,
               rest:e.rest,grp:e.grp||null,alt:e.alt||null,sets:[]};})};
   V.logIdx=0;V.tab="train";V.train="days";endRest();stopHold();V.fresh=-1;

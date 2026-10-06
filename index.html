@@ -1948,6 +1948,67 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .daynotes{margin:0 0 12px;padding:10px 14px;border-radius:var(--r3);background:var(--raised);border:1px solid var(--border)}
 .daynotes summary{cursor:pointer;font-weight:600;font-size:14px;min-height:28px;display:flex;align-items:center}
 .daynotes p{margin:6px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
+/* The assessment (js/ui/views/assess.js): one question a screen, then the plan. */
+.as-prog{height:4px;border-radius:2px;background:var(--bar-track);overflow:hidden;margin:6px 0 6px}
+.as-prog i{display:block;height:100%;background:var(--accent);border-radius:2px;transition:width var(--m-base,240ms) var(--e-standard)}
+.as-count{margin:0 0 14px;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+.as-hero{padding:6px 2px 4px}
+.as-hero h1{font-family:var(--display);font-size:clamp(24px,7vw,30px);line-height:1.12;margin:4px 0 8px}
+.as-q{font-family:var(--display);font-size:21px;line-height:1.2;margin:4px 0 6px}
+.as-sub{margin:0 0 14px;font-size:14px;line-height:1.5;color:var(--sub)}
+.as-l{margin:16px 2px 8px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.as-note{margin:12px 2px 0;font-size:12.5px;line-height:1.5;color:var(--dim)}
+.aschips{display:flex;flex-wrap:wrap;gap:8px}
+.aschip{min-height:42px;padding:0 16px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
+  color:var(--text);font-size:14px;font-weight:600;transition:transform var(--m-press) var(--e-standard)}
+.aschip.on{background:rgba(var(--accent-rgb),.16);border-color:var(--accent-edge);color:var(--text)}
+:root:not(.tch) .aschip:active,.aschip.tapd{transform:scale(.96)}
+.ascards{display:flex;flex-direction:column;gap:8px}
+.ascard{display:flex;flex-direction:column;gap:3px;width:100%;padding:13px 14px;border-radius:var(--r3);border:1px solid var(--border);
+  background:var(--surface);color:var(--text);text-align:start;transition:transform var(--m-press) var(--e-standard)}
+.ascard b{font-size:15.5px;font-weight:700}
+.ascard span{font-size:13px;line-height:1.4;color:var(--sub)}
+.ascard.on{background:rgba(var(--accent-rgb),.12);border-color:var(--accent-edge);box-shadow:inset 3px 0 0 var(--accent)}
+[dir="rtl"] .ascard.on{box-shadow:inset -3px 0 0 var(--accent)}
+:root:not(.tch) .ascard:active,.ascard.tapd{transform:scale(.985)}
+.as-in{margin-top:14px}
+.as-in label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--dim)}
+.as-in input{width:100%;min-width:0;font-size:17px;font-weight:600;text-align:center}
+.as-nav{display:flex;gap:10px;margin-top:22px}
+.as-nav .btn{flex:1;width:auto;min-width:0;margin:0}
+.as-nav .btn.g{flex:0 0 auto;min-width:96px}
+.as-done{margin:6px 0 12px;padding:12px 14px;border-radius:var(--r3);background:var(--okSoft);border:1px solid var(--ok);font-size:14px;line-height:1.45}
+.ascard2{margin:0 0 var(--s4);padding:14px 14px 12px;border-radius:var(--r5);border:1px solid var(--border);box-shadow:var(--shadow-card);
+  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 40%),var(--raised)}
+.ascard2 h3{margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.as-kcal{display:flex;align-items:baseline;gap:6px}
+.as-kcal b{font-family:var(--display);font-size:38px;line-height:1;font-variant-numeric:tabular-nums}
+.as-kcal span{color:var(--sub);font-weight:600}
+.as-why{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--sub)}
+.as-macros{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin-top:12px}
+.as-macros div{padding:9px 10px;border-radius:var(--r3);background:var(--surface);border:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.as-macros b{font-size:16px;font-variant-numeric:tabular-nums}
+.as-macros span{font-size:11.5px;color:var(--dim)}
+.as-split{display:flex;flex-direction:column;gap:4px}
+.as-split b{font-size:18px}
+.as-split span{font-size:13px;line-height:1.45;color:var(--sub)}
+.as-alt{margin-top:10px}
+.as-alt .aschip{min-height:36px;font-size:13px;padding:0 12px}
+.as-days{display:flex;flex-direction:column;margin-top:12px;border-top:1px solid var(--hair)}
+.as-days div{display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--hair);font-size:14px}
+.as-days span{color:var(--dim);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.as-vol{display:flex;flex-direction:column;gap:7px}
+.as-vr{display:grid;grid-template-columns:84px 1fr 34px;align-items:center;gap:10px;font-size:13px}
+.as-vr i{position:relative;height:8px;border-radius:4px;background:var(--bar-track);overflow:hidden}
+.as-vr em{position:absolute;top:0;bottom:0;background:rgba(var(--accent-rgb),.18)}
+.as-vr i b{position:absolute;inset-inline-start:0;top:2px;bottom:2px;border-radius:2px;background:var(--ok)}
+.as-vr.low i b,.as-vr.high i b{background:var(--warning)}
+.as-vr .num{text-align:end;font-variant-numeric:tabular-nums;color:var(--sub)}
+.as-swaps{margin:0;padding-inline-start:18px;font-size:13px;line-height:1.6;color:var(--sub)}
+.as-swaps b{color:var(--text);font-weight:600}
+.pgen-acts{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 6px}
+.pgen-acts .btn{width:auto;margin:0;padding:0 16px;min-height:40px}
+.pgen-tg{font-size:13px;color:var(--dim);font-variant-numeric:tabular-nums}
 /* The warm-up step before the first exercise, and the cool-down card on the
    Workout complete sheet (js/ui/views/warmup.js). */
 .wu{position:relative;isolation:isolate;overflow:hidden;margin:4px 0 var(--s4);padding:18px 14px 14px;border-radius:var(--r5);

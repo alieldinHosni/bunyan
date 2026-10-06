@@ -8,6 +8,7 @@ import {num, r1, today} from "../util.js";
 import {V} from "../ui/view.js";
 import {t} from "../i18n/dict.js";
 import {fmtW} from "../units.js";
+import {goalOf} from "../data/goals.js";
 
 /* ============================================================ formulas */
 /* A warm-up counts for nothing: not volume, not average RPE, not a record, and not
@@ -63,20 +64,33 @@ function tdee(){return Math.round(bmr()*num(S.profile.activity,1.4));}
    floor: roughly the resting burn, and not under 1200/1500 kcal. A surplus for
    muscle gain stays small, since most of a large one is stored as fat. */
 function targetKcal(){
-  var td=tdee(),b=bmr(),g=S.profile.goal,fem=S.profile.sex==="f";
-  var t=g==="lose"?td-Math.min(750,Math.round(td*0.2))
-       :g==="gain"?td+Math.min(300,Math.round(td*0.1))
-       :g==="recomp"?td-Math.round(td*0.1):td;
-  var floor=Math.max(fem?1200:1500,g==="lose"?Math.round(b*0.95):0);
+  var td=tdee(),b=bmr(),G=goalOf(S.profile.goal),fem=S.profile.sex==="f";
+  /* The goal's share of maintenance, no more than its cap either way (js/data/goals.js). */
+  var d=Math.round(td*G.kcal);
+  if(G.cap)d=Math.max(-G.cap,Math.min(G.cap,d));
+  var t=td+d;
+  var floor=Math.max(fem?1200:1500,G.kcal<0?Math.round(b*0.95):0);
   return Math.max(floor,t);}
-/* Protein, g/day: 2.0 g/kg while losing fat (it protects muscle in a deficit), 1.8
-   otherwise — both inside the 1.6–2.2 g/kg range the research supports. Above a BMI
-   of 30 it is scaled from the weight at a BMI of 27, since protein needs follow lean
-   mass, not total mass. */
+/* Protein, g/day, from the goal: 2.0 g/kg while losing fat (it protects muscle in a
+   deficit), 2.2 when losing fat and building muscle at once, 1.6–1.8 otherwise — all
+   inside the 1.6–2.2 g/kg range the research supports. Above a BMI of 30 it is
+   scaled from the weight at a BMI of 27, since protein needs follow lean mass, not
+   total mass. */
 function proteinTarget(w){
   var h=num(S.profile.height)/100,kg=num(w);
   if(h>1&&kg/(h*h)>30)kg=27*h*h;
-  return Math.round(kg*(S.profile.goal==="lose"?2.0:1.8));}
+  return Math.round(kg*goalOf(S.profile.goal).protein);}
+/* The whole day's targets from the profile: energy, then protein, then fat as the
+   goal's share of the energy, carbs with what is left (never under 50 g). Water is
+   35 ml per kg, rounded to a glass. Steps only where the goal leans on them. Four
+   screens used to work this out each in their own copy. */
+function macroTargets(){
+  var G=goalOf(S.profile.goal),w=lastWeight()||num(S.profile.weight);
+  var kc=Math.round(targetKcal()/10)*10,p=proteinTarget(w),f=Math.round(kc*(G.fat||0.28)/9);
+  var out={kcal:kc,p:p,f:f,c:Math.max(50,Math.round((kc-p*4-f*9)/4))};
+  if(w)out.water=Math.max(2000,Math.round(w*35/250)*250);
+  if(G.steps)out.steps=G.steps;
+  return out;}
 /* Clearing Safari's data wipes everything and there is no server copy, so losing a
    history is the most likely real harm this app can do. Once there is enough logged to
    be worth protecting, ask — quietly, and only every so often. */
@@ -344,4 +358,4 @@ function addItems(meal,items,d){
 
 
 
-export {bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, missedTwice, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets};
+export {bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, missedTwice, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets, macroTargets};

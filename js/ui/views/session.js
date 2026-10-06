@@ -111,7 +111,7 @@ function noteSet(a){
 /* The prescription of a live entry, as the plan wrote it. */
 function plannedDose(e){
   var p=e.planned||{};
-  return doseText({sets:p.sets,lo:p.lo,hi:p.hi,amrap:p.amrap,side:p.side,timed:ex_isTimed(e)&&!LOADED.test(e.name)});}
+  return doseText({sets:p.sets,lo:p.lo,hi:p.hi,amrap:p.amrap,side:p.side,rir:p.rir,timed:ex_isTimed(e)&&!LOADED.test(e.name)});}
 function vLogger(){
   var a=S.active;
   if(V.logIdx>=a.entries.length)V.logIdx=a.entries.length-1;

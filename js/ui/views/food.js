@@ -4,7 +4,7 @@
    saved and the foods you made, kept and edited here) and Targets (what the day is
    measured against, with the evidence for whether it is working beside it). */
 import {t} from "../../i18n/dict.js";
-import {curDate, eatenToday, lastWeight, macroKcal, proteinTarget, targetKcal, tdee} from "../../engine/formulas.js";
+import {curDate, eatenToday, lastWeight, macroKcal, macroTargets, tdee} from "../../engine/formulas.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {dayRec, S} from "../../state.js";
 import {dfmt, esc, fmtN, r1, today} from "../../util.js";
@@ -293,8 +293,8 @@ function macroPct(p,c,f){
 function suggested(){
   var p=S.profile||{};
   if(!p.age||!p.height||!(lastWeight()||p.weight))return null;
-  var kc=Math.round(targetKcal()/10)*10,w=lastWeight()||p.weight,pr=proteinTarget(w),f=Math.round(kc*0.28/9);
-  return {tdee:tdee(),kcal:kc,p:pr,f:f,c:Math.max(50,Math.round((kc-pr*4-f*9)/4))};}
+  var m=macroTargets();
+  return {tdee:tdee(),kcal:m.kcal,p:m.p,f:m.f,c:m.c};}
 var TRANGES=[[7,"1W"],[30,"1M"],[90,"3M"]];
 var TPAST={7:"Past 7 days",30:"Past 30 days",90:"Past 90 days"};
 function vTargets(){
@@ -391,6 +391,10 @@ function vPlan(){
   h+='</div><button class="dadd" data-paddslot="1"><span aria-hidden="true">+</span>'+t("Add a meal")+'</button>';
   h+='<div class="dcta"><button class="btn dbegin" data-logday="1"'+(all.length?'':' disabled')+'>'+esc(t("Log today's plan"))+'</button>'
    +(all.length?'<p class="bnote">'+esc(t("Fills each meal you have not logged yet today."))+'</p>':'')+'</div>';
+  /* Or let Bunyan build one from the targets and the foods you eat. */
+  h+='<button class="bnew bauto" data-pgen="1"><span class="bnew-i">'+SPARK+'</span>'
+   +'<span class="bnew-t"><b>'+t("Build me a meal plan")+'</b><span>'+t("From your daily targets, with foods you eat. Check it before you use it")+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   h+='<button class="bnew" data-pimport="1">'+art("loaf",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
    +'<span class="bnew-t"><b>'+t("Import a plan")+'</b><span>'+t("Paste it or open a file, and it is sorted into meals")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
@@ -438,10 +442,17 @@ function vPlanSlot(id){
 /* Import: the plan as text, read into meals before anything changes. What it found is
    shown meal by meal — matched foods with their amounts, and what matched nothing —
    and only "Use this plan" replaces the day's meals. */
+var SPARK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>';
 function vImport(){
-  var pp=V.pparse,h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Import a plan"))+'</h1></div>'
+  var pp=V.pparse,h;
+  /* A plan Bunyan built from the targets: the same review, without the paste box. */
+  if(V.pgen)h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Your meal plan"))+'</h1></div>'
+   +'<p class="dsub">'+esc(t("Built from your daily targets and the foods you eat, Egyptian home food first. Change anything before you use it, or ask for another version."))+'</p>'
+   +'<div class="pgen-acts"><button class="btn g" data-pgenmore="1">'+esc(t("Another version"))+'</button>'
+   +'<span class="pgen-tg">'+esc(fmtN(S.goals.kcal)+" kcal · "+t("Protein")+" "+S.goals.p+" g")+'</span></div>';
+  else h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Import a plan"))+'</h1></div>'
    +'<p class="dsub">'+esc(t("Open the PDF your plan came in, or paste it from WhatsApp or Notes. The PDF is read on this phone; nothing is uploaded."))+'</p>';
-  h+='<textarea id="pi_text" class="pitext" rows="9" spellcheck="false" placeholder="'
+  if(!V.pgen)h+='<textarea id="pi_text" class="pitext" rows="9" spellcheck="false" placeholder="'
    +esc(t("Meal 1: 3 eggs, 2 slices toast\nMeal 2: 150g chicken, 200g rice\nMeal 3: 200g yogurt, 30g almonds"))+'">'+esc(V.pitext||"")+'</textarea>'
    +'<div class="piacts"><label class="btn g pifile"><input id="pi_file" type="file" accept=".pdf,application/pdf,.txt,.csv,.md,text/plain,text/csv">'
    +esc(t("Open a file"))+'</label>'
@@ -469,7 +480,7 @@ function vImport(){
     else{
       var nItems=0,nTodo=0,kc=0;
       pp.forEach(function(m){nItems+=m.items.length;nTodo+=m.todo.length;kc+=sumNutrition(m.items).kcal;});
-      h+='<div class="tsec"><h2 class="tsec-h">'+t("What Bunyan found")+'</h2><span class="dhint">'
+      h+='<div class="tsec"><h2 class="tsec-h">'+t(V.pgen?"Your day":"What Bunyan found")+'</h2><span class="dhint">'
        +esc(pp.length+" "+t(pp.length===1?"meal":"meals")+" · "+fmtN(kc)+" kcal")+'</span></div>';
       /* Every meal, every food and every unmatched line can be changed here, before
          anything is saved: rename or drop a meal, tap a food to change its amount, ✕

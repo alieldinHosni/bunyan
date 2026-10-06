@@ -1181,6 +1181,88 @@ await test("Arabic: the muscle Back reads ظهر, not the back button's رجوع
   const s=await page.$eval('.libtrow .trow-s',e=>e.textContent);
   if(s.indexOf("ظهر")<0||s.indexOf("رجوع")>=0)throw new Error("library row reads "+s);
 },{prefs:{lang:"ar"}});
+/* ---- goals, the assessment and the generated plans ------------------------------- */
+await test("Goals: one list drives the targets — deficit, surplus and protein follow the goal",async page=>{
+  const r=await page.evaluate(async()=>{
+    const S=(await import("/js/state.js")).S,F=await import("/js/engine/formulas.js");
+    Object.assign(S.profile,{age:30,height:180,weight:84,sex:"m",activity:1.4});
+    const out={};
+    for(const g of ["lose","recomp","gain","strength","endurance","mobility","maintain"]){
+      S.profile.goal=g;const m=F.macroTargets(),td=F.tdee();
+      out[g]=[Math.round((m.kcal-td)/td*100),Math.round(m.p/84*10)/10,Math.abs(m.p*4+m.c*4+m.f*9-m.kcal)<=30];}
+    return out;});
+  eq(r.lose[0],-20,"lose");eq(r.recomp[0]<0&&r.recomp[0]>-15,true,"recomp");eq(r.gain[0]>0&&r.gain[0]<=11,true,"gain");eq(r.maintain[0],0,"maintain");
+  eq([r.lose[1],r.recomp[1],r.gain[1],r.endurance[1]],[2,2.2,1.8,1.6],"protein g/kg");
+  eq(Object.values(r).every(x=>x[2]),true,"macros add up to the energy");
+},{db:Object.assign(seed(),{body:[]})});
+await test("Workout generator: kit and sore spots swapped, volume in range, effort set, goal extras, time kept",async page=>{
+  const r=await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const S=(await import("/js/state.js")).S,P=await import("/js/engine/plan.js"),Vo=await import("/js/engine/volume.js");
+    const gen=(prof,gear)=>{Object.assign(S.profile,{age:30,height:180,weight:84,sex:"m",level:"some",days:4,mins:60,limits:[],sleep:0},prof);S.gear=gear||null;return P.generatePlan();};
+    const all=pl=>pl.days.flatMap(d=>d.ex);
+    const back=gen({goal:"recomp",limits:["back","knee"]});
+    const home=gen({goal:"gain"},["Dumbbell","Band"]);
+    const gain=gen({goal:"gain"});
+    const ath=gen({goal:"athletic",days:3}),end=gen({goal:"endurance",days:3}),mob=gen({goal:"mobility",days:3});
+    const lose45=gen({goal:"lose",days:3,mins:45});
+    const usable=n=>{const v=X.EXDB[n];return !v||!v.e||["Bodyweight","Dumbbell","Band"].includes(v.e);};
+    return [all(back).some(e=>P.AVOID.back.test(e.name)||P.AVOID.knee.test(e.name)),
+      all(home).every(e=>usable(e.name)),
+      Vo.volumeCheck(gain,"some").every(v=>v.status==="ok"),
+      all(gain).filter(e=>e.rir!=null).length>10,
+      ath.days.filter(d=>d.ex.length).every(d=>/Jump|Plyo|Medicine Ball/.test(d.ex[0].name)),
+      end.days.filter(d=>d.ex.length).every(d=>d.ex[d.ex.length-1].name==="Rowing, Stationary"),
+      mob.days.filter(d=>d.ex.length).every(d=>d.ex.some(e=>/Stretch|Rotation/.test(e.name))),
+      lose45.days.every(d=>P.dayMinutes(d)<=45-8+5)];});
+  eq(r,[false,true,true,true,true,true,true,true]);
+});
+await test("Meal plan: a day built from the targets, within 5%, servings as labels, diet and leave-outs respected",async page=>{
+  const r=await page.evaluate(async()=>{
+    const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods?N.loadFoods(r):r());
+    const M=await import("/js/engine/mealplan.js");
+    const tg={kcal:2200,p:170,c:220,f:70};
+    const kc=ms=>ms.reduce((a,m)=>a+m.items.reduce((b,i)=>b+i.kcal,0),0);
+    const plain=M.buildMealPlan(tg,{meals:4}),veg=M.buildMealPlan(tg,{meals:3,diet:"veg"}),
+          free=M.buildMealPlan(tg,{meals:5,avoid:["dairy","gluten"]}),again=M.buildMealPlan(tg,{meals:4,variant:1});
+    const ids=ms=>ms.flatMap(m=>m.items.map(i=>i.fid));
+    return [plain.length,Math.abs(kc(plain)-tg.kcal)/tg.kcal<0.05,plain.every(m=>m.items.length>=2),
+      ids(veg).some(id=>/chicken|beef|fish|tilapia|tuna|lamb|turkey/.test(id)),
+      ids(free).some(id=>/bread|baladi|oats|pasta|yog|cheese|milk|areesh|cottage|skyr/.test(id)),
+      free.every(m=>m.items.length>=2),
+      plain.some(m=>m.items.some(i=>/×/.test(i.label))),
+      JSON.stringify(ids(plain))!==JSON.stringify(ids(again))];});
+  eq(r,[4,true,true,false,false,true,true,true]);
+});
+await test("Assessment: first run opens it; answers become targets and training with one Undo; a meal plan follows",async page=>{
+  if(!(await page.$('.as')))throw new Error("first run did not open the assessment");
+  await page.tap('[data-asnext]');await pause(page,200);
+  /* The saved profile fills the numbers in; emptied, Next will not go on. */
+  await page.fill('#as_age','');await page.fill('#as_height','');
+  await page.tap('[data-asnext]');await pause(page,200);
+  eq(await ev(page,"V.asd.step"),1,"no numbers, no next");
+  await page.fill('#as_age','31');await page.fill('#as_height','178');await page.fill('#as_weight','84');
+  await page.tap('[data-asnext]');await pause(page,200);
+  await page.tap('[data-as="goal|recomp"]');await pause(page,150);
+  for(let i=0;i<5;i++){await page.tap('[data-asnext]');await pause(page,150);}
+  await page.tap('[data-asm="limits|back"]');await pause(page,150);
+  await page.tap('[data-asnext]');await pause(page,150);
+  await page.tap('[data-asm="avoid|nuts"]');await pause(page,150);
+  await page.tap('[data-asnext]');await pause(page,150);await page.tap('[data-asnext]');await pause(page,800);
+  if(!(await page.$('[data-asuse]')))throw new Error("no result screen");
+  const shown=await page.$eval('.as-kcal b',e=>e.textContent.replace(/\D/g,""));
+  await page.tap('[data-asuse]');await pause(page,500);
+  eq(await ev(page,"[S.onboarded,S.profile.goal,S.profile.limits,String(S.goals.kcal),S.prefs.avoid,!!S.activeProgram]"),
+    [true,"recomp",["back"],shown,["nuts"],true],"applied as shown");
+  const prog=await ev(page,"S.activeProgram");
+  await page.tap('.toast-undo');await pause(page,400);
+  eq(await ev(page,"[S.onboarded,S.profile.goal,S.activeProgram===\""+prog+"\"]"),[false,"gain",false],"one Undo puts it all back");
+  await page.tap('[data-asuse]');await pause(page,500);
+  await page.tap('[data-asmeals]');await pause(page,1200);
+  eq(await ev(page,"[V.tab,V.pimport,!!V.pgen,(V.pparse||[]).length]"),["food",true,true,4],"meal plan review");
+  await page.tap('[data-puse]');await pause(page,500);
+  eq(await ev(page,"S.mealSlots.length===4&&S.mealSlots.every(s=>(s.plan||[]).length>=2)"),true,"meals planned");
+},{db:Object.assign(seed(),{onboarded:false})});
 await test("Training import: a program pasted as text is read the same way",async page=>{
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="import";V.tp=null;(await import("/js/ui/render.js")).render();});await pause(page,300);
   await page.fill("#ti_text","Day 1 — Push\nBench press 4x6-8 @ 80kg, 2 min rest — pause on the chest\nLateral raises 3 x 12-15\n\nPull day\nLat pulldown 3x10\nFace pull 3 × 15 (light)\nPlank 3 x 45s");

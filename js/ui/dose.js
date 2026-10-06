@@ -8,7 +8,9 @@ function doseText(e){
   var sets=e.sets||1;
   if(e.amrap)return sets+" × "+t("max");
   var r=e.lo+(e.hi&&e.hi!==e.lo?"–"+e.hi:"");
-  return sets+" × "+r+(e.timed?" "+t("s"):"")+(e.side?" "+t("/ side"):"");}
+  return sets+" × "+r+(e.timed?" "+t("s"):"")+(e.side?" "+t("/ side"):"")
+    /* How hard: reps left in reserve when the set stops, from a generated plan. */
+    +(e.rir!=null&&!e.timed?" · "+t("{n} in reserve").replace("{n}",e.rir):"");}
 
 /* The weeks of a program an exercise belongs to: "Weeks 5–12", "From week 9". */
 function weeksText(wk){
