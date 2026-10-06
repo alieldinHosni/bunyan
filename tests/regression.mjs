@@ -191,7 +191,7 @@ await test("plan generator keeps timed holds timed and strength on the main lift
   if(pl&&pl[0]<30)throw new Error("plank "+pl);
 });
 await test("a rest day follows a full-body session",async page=>{
-  const r=await page.evaluate(async()=>{const s=await import("/js/state.js");const T=await import("/js/ui/views/train.js");
+  const r=await page.evaluate(async()=>{const s=await import("/js/state.js");const T=await import("/js/engine/dayplan.js");
     const P=(await import("/js/data/splits.js")).PRESETS().filter(p=>p.id==="fb")[0];s.addProgram(s.makeProgram(P),true);
     const a=s.split().days[0];s.S.sessions.unshift({id:"t",date:(await import("/js/util.js")).today(),dayId:a.id,dayName:a.name,entries:[]});
     const d=new Date();d.setDate(d.getDate()+1);const tom=new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
@@ -401,7 +401,7 @@ await test("migration: the active copy and a duplicate saved split become one pr
   eq(r,[2,"joe","Joe","k1,k2","cycle",true]);
 });
 await test("by weekday: pinned days fall on their weekdays, others are rest, and a pin moves",async page=>{
-  const r=await page.evaluate(async()=>{const s=await import("/js/state.js");const T=await import("/js/ui/views/train.js");const Sc=await import("/js/engine/schedule.js");
+  const r=await page.evaluate(async()=>{const s=await import("/js/state.js");const T=await import("/js/engine/dayplan.js");const Sc=await import("/js/engine/schedule.js");
     const sp=s.split();sp.schedule="week";const tr=sp.days.filter(d=>d.ex.length);tr.forEach(d=>d.wd=[]);tr[0].wd=[2];tr[1].wd=[5];
     const d=new Date();const iso=n=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);return new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
     let tue=null,wed=null;for(let k=0;k<7;k++){const w=Sc.isoWeekday(iso(k));if(w===2)tue=iso(k);if(w===3)wed=iso(k);}

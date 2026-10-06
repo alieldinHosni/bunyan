@@ -5,7 +5,6 @@ import {EXDB, isUnilateral, muscleOfEntry} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {dayRec, S, saveDB, split} from "../state.js";
 import {num, r1, today} from "../util.js";
-import {V} from "../ui/view.js";
 import {t} from "../i18n/dict.js";
 import {fmtW} from "../units.js";
 import {goalOf} from "../data/goals.js";
@@ -333,7 +332,6 @@ function consistency(){
 function mealTotal(name,d){
   var r=dayRec(d),m=r.meals[name];
   return sumNutrition(m&&m.items||[]);}
-function curDate(){return V.fdate||today();}
 function eatenToday(d){
   var r=dayRec(d),all=[];
   Object.keys(r.meals).forEach(function(k){
@@ -356,4 +354,4 @@ function addItems(meal,items,d){
 
 
 
-export {bmr, bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, curDate, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets, macroTargets};
+export {bmr, bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets, macroTargets};

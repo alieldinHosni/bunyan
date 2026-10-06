@@ -22,7 +22,7 @@ import {toDisp, toKg, wUnit} from "../../units.js";
 import {esc, fmtN, num, today} from "../../util.js";
 import {V} from "../view.js";
 import {backArrow} from "../nav.js";
-import {importName} from "./food.js";
+import {importName} from "../../engine/meals.js";
 
 /* Equipment as a choice of three, and what each means in the equipment list. */
 var GEARS={gym:null,home:["Dumbbell","Band","Kettlebell"],bw:["Bodyweight"]};

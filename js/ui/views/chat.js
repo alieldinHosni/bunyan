@@ -25,9 +25,9 @@ import {fmtW, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num, r1, today} from "../../util.js";
 import {backArrow} from "../nav.js";
 import {doseText} from "../dose.js";
-import {estMinutes, nextDayOf, planOn} from "./train.js";
-import {OPL_NAME, simpleFacts, trendSays} from "./progress.js";
-import {words} from "./pcheck.js";
+import {estMinutes, nextDayOf, planOn} from "../../engine/dayplan.js";
+import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
+import {words} from "../coachwords.js";
 
 var KEEP=30;
 /* The suggestions: what each asks, as the person would ask it. */

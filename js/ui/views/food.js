@@ -4,12 +4,12 @@
    saved and the foods you made, kept and edited here) and Targets (what the day is
    measured against, with the evidence for whether it is working beside it). */
 import {t} from "../../i18n/dict.js";
-import {curDate, eatenToday, lastWeight, macroKcal, macroTargets, tdee} from "../../engine/formulas.js";
+import {eatenToday, lastWeight, macroKcal, macroTargets, tdee} from "../../engine/formulas.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {dayRec, S} from "../../state.js";
 import {dfmt, esc, fmtN, r1, today} from "../../util.js";
-import {GRIPSVG, progressBar, reorderBtn, seg, V} from "../view.js";
-import {dayMeals, mealName, mealSlots, mealStyle, nextMeal, planOf, slotOf} from "../../engine/meals.js";
+import {curDate, GRIPSVG, mealNow, progressBar, reorderBtn, seg, V} from "../view.js";
+import {dayMeals, importName, mealName, mealSlots, mealStyle, nextMeal, planOf, slotOf} from "../../engine/meals.js";
 import {dateBar} from "../datebar.js";
 import {backArrow} from "../nav.js";
 import {art, waterArt} from "../art.js";
@@ -42,7 +42,6 @@ var TICK='<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>';
 /* The meal an add belongs to when nothing on screen says which — the Add Food button,
    the frequent-food pills, a saved meal: the one after the last with food in it. It
    was the clock's guess, which a late start or a numbered day made wrong. */
-function mealNow(d){return nextMeal(d||curDate());}
 
 /* The 180px hero ring. The frame draws it as a full 6px border, which can only ever
    read 100%; here it is an arc of eaten/goal, so it agrees with the number inside it. */
@@ -497,12 +496,5 @@ function vImport(){
    the language of the app, a numbered meal by its place, otherwise its own heading. */
 /* A meal the plan numbered keeps its number: a plan's Meal 3 after its snack is still
    Meal 3, not the fourth meal of the day. */
-function importName(m,i){
-  /* Renamed on the review screen. */
-  if(m.custom)return m.custom;
-  if(m.named)return t(m.named==="Snack"?"Snacks":m.named);
-  if(m.n)return t("Meal {n}").replace("{n}",m.n);
-  if(!m.name)return t("Meal {n}").replace("{n}",i+1);
-  return m.name;}
 
-export {foodSub, glassUnit, importName, mealNow, MICON, savedById, vFood, vMyFoods, vPlan, vTargets};
+export {foodSub, glassUnit, MICON, savedById, vFood, vMyFoods, vPlan, vTargets};

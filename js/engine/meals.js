@@ -86,4 +86,14 @@ function newSlot(name){
   var s={id:"m_"+uid()};name=String(name||"").trim();if(name)s.name=name;
   ownSlots().push(s);return s;}
 
-export {dayMeals, hasPlan, isNamedId, mealName, mealSlots, mealStyle, NAMED, newSlot, nextMeal, numberedName, ownSlot, ownSlots, planOf, setStyle, slotOf};
+/* What a meal read from an imported plan is called: the name it was given on the
+   review screen, one of the four named meals, or its number. */
+function importName(m,i){
+  /* Renamed on the review screen. */
+  if(m.custom)return m.custom;
+  if(m.named)return t(m.named==="Snack"?"Snacks":m.named);
+  if(m.n)return t("Meal {n}").replace("{n}",m.n);
+  if(!m.name)return t("Meal {n}").replace("{n}",i+1);
+  return m.name;}
+
+export {importName, dayMeals, hasPlan, isNamedId, mealName, mealSlots, mealStyle, NAMED, newSlot, nextMeal, numberedName, ownSlot, ownSlots, planOf, setStyle, slotOf};
