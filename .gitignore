@@ -1,0 +1,5 @@
+
+# OpenPowerlifting bulk CSV (~250 MB): downloaded on a developer machine to build the
+# percentile tables in tools/, never committed. See COACHING-INTELLIGENCE phase 3.
+tools/opl-source/
+*.opl.csv
