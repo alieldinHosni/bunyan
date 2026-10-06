@@ -182,7 +182,7 @@ muscle; the second is just another word for it.
 **The full name stays the key.** Nothing stored is rewritten, so saved splits, logged
 sessions, favourites and records keep resolving with no migration — and searching a
 stripped qualifier still finds the exercise, because the filter still runs over the full
-name. Only 15 base names collide across all 873 entries, and those rows carry the variant
+name. Only 15 base names collide across all 876 entries, and those rows carry the variant
 as a subtitle so they stay apart in the picker.
 
 **Instructions are trimmed, not rewritten.** Filler steps go by pattern — "Repeat for the
@@ -198,7 +198,7 @@ every push exercise shows the same three lines.
 Exact, substring and alias matching runs first and is unchanged. **Only when that returns
 nothing** does a Levenshtein pass run, with a tolerance that scales with word length — one
 edit for a short word, three for a long one — so good matches are never diluted and the
-common case stays instant. The whole 873-name sweep takes about 35 ms.
+common case stays instant. The whole 876-name sweep takes about 35 ms.
 
 Arabic is normalised before any comparison, because Arabic mistyping is character-variant
 confusion rather than transposition: `أ إ آ` fold to `ا`, `ى` to `ي`, `ة` to `ه`, and
@@ -452,7 +452,7 @@ entry in the `AR` dictionary at the top of the script, and the layout flips to R
 the language. **If you add a string, add its `AR` entry in the same commit** — `t()`
 falls back to the English key, so a missing entry is silent.
 
-**Exercise names** are translated by composition rather than by phrase. The 873 names
+**Exercise names** are translated by composition rather than by phrase. The 876 names
 are built from roughly 350 terms, so `EX_TERMS` translates the terms and `exAr()`
 assembles the name the way it is said in a gym: movement first, modifiers after it,
 equipment last behind `بالـ`. "Barbell Bench Press" becomes "بنش بريس بالبار",

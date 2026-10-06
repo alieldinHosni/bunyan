@@ -8,7 +8,7 @@ adds one (see `COACHING-INTELLIGENCE.md`, Phase 0).
 
 | What | Source | Licence | Used for |
 | --- | --- | --- | --- |
-| **Exercise library** — 873 exercises with muscles, equipment, level, steps and two photographs each | [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by yuhonas | Unlicense (public domain) | `exercises.json`, `instructions.json`; photos loaded from the repository through jsDelivr. Bunyan adds Arabic names and its own extra exercises (`js/data/extra.js`). |
+| **Exercise library** — 876 exercises with muscles, equipment, level and steps, and two photographs each for all but the three newest (Kettlebell Halo, Halo with Overhead Extension, Overhead Triceps Extension), which upstream has not photographed yet | [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by yuhonas | Unlicense (public domain) | `exercises.json`, `instructions.json`; photos loaded from the repository through jsDelivr. Bunyan adds Arabic names and its own extra exercises (`js/data/extra.js`). |
 | **MET values** for cardio, sports and classes | Compendium of Physical Activities (Herrmann, Willis, Ainsworth et al., 2024 adult edition) | Free to use with citation | `js/data/activities.js`: calories burned by activities. |
 | **Food composition** — 568 foods per 100 g | Widely published composition figures, compiled for Bunyan and checked against Atwater energy (see README, "The food database") | Bunyan's own compilation | `foods.json`. Not a copy of any one database. USDA FoodData Central (CC0) is the intended reference for checking it. |
 | **Barcode lookups**, when online | Open Food Facts | ODbL (database), content per product | Optional, only when the user scans a barcode not already saved; results are remembered on the phone. |

@@ -52,7 +52,7 @@ var EX_TERMS={
 "twist":"لف","russian twist":"لف روسي","woodchop":"وود تشوب","stretch":"إطالة",
 "smr":"تدليك عضلي","rotation":"دوران","external rotation":"دوران خارجي",
 "internal rotation":"دوران داخلي","pull through":"بول ثرو","pull":"سحب","press up":"ضغط",
-"windmill":"طاحونة","turkish get up":"توركيش جيت أب","hyperextension":"فرد الظهر",
+"windmill":"طاحونة","halo":"هالو","halo with overhead extension":"هالو مع إكستينشن علوي","turkish get up":"توركيش جيت أب","hyperextension":"فرد الظهر",
 "reverse crunch":"كرانش عكسي","flutter kick":"رفرفة الرجلين","scissor kick":"مقص",
 "leg curl":"ليج كيرل","wrist curl":"كيرل معصم","shoulder raise":"رفع الكتف",
 "bridge":"جسر","superman":"سوبرمان","bird dog":"بيرد دوج","dead bug":"ديد باج",
