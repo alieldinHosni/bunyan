@@ -1076,6 +1076,7 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Change anything before you use it: rename a meal, tap a food to change the amount, Find what was not matched.": "غيّر أي حاجة قبل ما تستخدمه: سمّي الوجبة، دوس على أكلة تغيّر كميتها، ودوّر على اللي ملقيناهوش.",
 "Meal name": "اسم الوجبة",
 "No meals were found in that PDF. If it is a training program, import it under Train → Explore.": "ملقيناش وجبات في الملف ده. لو ده برنامج تمرين، استورده من التمرين ← استكشف.",
+"Plyometric": "بليومتريك",
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;

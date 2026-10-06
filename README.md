@@ -291,7 +291,7 @@ otherwise they would outlive the blob that was supposed to own them.
 
 ## The food database
 
-`foods.json` holds **501 foods**, every one with an Arabic alias, weighted towards what
+`foods.json` holds **568 foods**, every one with an Arabic alias, weighted towards what
 is actually eaten in Egypt and the Levant: ful, ta'meya, koshari, molokhia, hawawshi,
 mahshi, kofta, fatta, feteer, basbousa, konafa, om ali, sahlab, karkade, sugarcane
 juice, and the Gulf and Levantine plates alongside them.

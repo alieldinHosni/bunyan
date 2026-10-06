@@ -123,7 +123,14 @@ var KNOWN={
   "calf raise straight and bent knee":"Standing Calf Raises",
   "single leg rdl reach":"Single-Leg RDL Reach","single leg rdl":"Single-Leg RDL Reach",
   "mini hop":"Mini Hops","calf stretch":"Standing Gastrocnemius Calf Stretch",
-  "nordic curl":"Nordic Hamstring Curl","nordic hamstring curl":"Nordic Hamstring Curl"
+  "nordic curl":"Nordic Hamstring Curl","nordic hamstring curl":"Nordic Hamstring Curl",
+  "broad jump":"Standing Long Jump","skater jump":"Lateral Bound","skater":"Lateral Bound",
+  "squat jump":"Freehand Jump Squat","jump squat":"Freehand Jump Squat",
+  "lateral hurdle hop":"Lateral Cone Hops","pogo":"Pogo Hops","pogo jump":"Pogo Hops",
+  "jump rope":"Rope Jumping","skipping":"Rope Jumping",
+  "leg swing":"Front-to-Back Leg Swings","lateral leg swing":"Side-to-Side Leg Swings",
+  "side leg swing":"Side-to-Side Leg Swings","band pass through":"Shoulder Pass-Through",
+  "scap push up":"Scapular Push-Up","spiderman stretch":"Spiderman Lunge"
 };
 /* Words that describe how, not what: kept in the note, left out of the match. */
 var NOISE=/\b(isometric|slow|paused?|tempo|light|heavy|controlled|eyes (?:open|closed)|barefoot|forward and lateral|into a wall|with a pause)\b/gi;

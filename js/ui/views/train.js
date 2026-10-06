@@ -1,7 +1,7 @@
 /* Bunyan — train
    Train tab: days, library, splits, bodyweight. */
 import {t} from "../../i18n/dict.js";
-import {empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} from "../../data/exercises.js";
+import {alsoKnown, empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../state.js";
@@ -434,7 +434,14 @@ function vBodyweight(){
 
 /* What a search matches an exercise on: its name in English and in the language on
    screen, its muscle and its equipment, so "incline db", "صدر" and "cable" all work. */
-function exHay(l){return l[0]+" "+exName(l[0])+" "+l[1]+" "+t(l[1])+" "+l[2]+" "+t(l[2]);}
+/* The kinds of training a library has no muscle or gear filter for are found by
+   their word: "plyometric", "isometric", "mobility", in either language. Jumps and
+   hops from free-exercise-db are filed as conditioning, so their names place them. */
+var KINDWORD={Isometric:1,Mobility:1,Plyometric:1},PLYO=/\b(jumps?|hops?|bounds?|plyo)\b/i;
+function kindWords(l){
+  var k=KINDWORD[l[5]]?l[5]:PLYO.test(l[0])?"Plyometric":"";
+  return k?" "+k+" "+t(k):"";}
+function exHay(l){return l[0]+" "+exName(l[0])+" "+l[1]+" "+t(l[1])+" "+l[2]+" "+t(l[2])+kindWords(l)+" "+alsoKnown(l[0]);}
 function vLibrary(){
   var q=V.exq.trim().toLowerCase();
   /* Token matching, as the picker sheet and the food search do: "incline db" finds

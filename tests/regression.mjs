@@ -437,6 +437,19 @@ await test("library and food data: every template exercise exists, extras load, 
     return [miss,!!X.EXDB["Bulgarian Split Squat"],X.exImg("Bulgarian Split Squat",0),N.searchFoods("كشك",1).map(x=>x.f.id)[0],N.searchFoods("jalash",1).length>0];});
   eq(r,[[],true,null,"kishk",true]);
 });
+await test("library growth: plyometrics, holds, drills and stretches load; kinds and other names find them; new foods are found",async page=>{
+  await pause(page,800);
+  const r=await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods?N.loadFoods(r):r());
+    const T=(await import("/js/engine/text.js")).tokenMatch,H=(await import("/js/ui/views/train.js")).exHay;
+    const find=q=>X.LIB.filter(l=>T(q,H(l))).map(l=>l[0]);
+    const SP=await import("/js/engine/splitparse.js");
+    const have=["Pogo Hops","Dead Hang","Spanish Squat Hold","Front-to-Back Leg Swings","Pigeon Stretch","Doorway Chest Stretch"].filter(n=>!X.EXDB[n]);
+    return [have,find("broad jump"),find("plyometric").includes("Box Jump (Multiple Response)"),find("isometric").includes("Wall Sit"),
+      (SP.matchExercise("Broad Jumps")||{}).name||SP.matchExercise("Broad Jumps"),
+      N.searchFoods("skyr",1).map(x=>x.f.id)[0],N.searchFoods("indomie",1).map(x=>x.f.id)[0]];});
+  eq(r,[[],["Standing Long Jump"],true,true,"Standing Long Jump","skyr","noodles_instant"]);
+});
 
 /* ---- the Train tab: Today · My Program · Explore, and the workout bar -------------- */
 await test("Train sections switch, are remembered after a reload, and a Train tap at the top goes to Today",async page=>{
