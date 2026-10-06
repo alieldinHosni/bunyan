@@ -27,7 +27,9 @@ import {t, tm} from "../i18n/dict.js";
 function r50(v){return Math.round(v/50)*50;}
 /* Shown with thousands separators: 2,800 kcal. */
 function k50(v){return fmtN(r50(v));}
-function list(ms){return ms.map(function(m){return tm(m).toLowerCase();}).join(S.prefs.lang==="ar"?"، ":", ");}
+/* Opens a sentence, so the first name keeps its capital: "Biceps, calves: fewer than…". */
+function list(ms){var s=ms.map(function(m){return tm(m).trim().toLowerCase();}).join(S.prefs.lang==="ar"?"، ":", ");
+  return s.charAt(0).toUpperCase()+s.slice(1);}
 function fill(s,o){Object.keys(o).forEach(function(k){s=s.split("{"+k+"}").join(o[k]);});return s;}
 
 /* What the meal plan adds up to, across every meal that has one. */
