@@ -24,7 +24,10 @@ function seed(){
   const sessions=[];
   for(let d=2;d<40;d+=3)sessions.push({id:"s"+d,date:iso(d),dayName:"Seed",activeMs:45*6e4,
     entries:lifts.map(([n,m],i)=>({name:n,muscle:m,sets:[1,2,3].map(()=>({w:60+i*20,r:8,rpe:8}))}))});
-  return {v:2,onboarded:true,prefs:{rpe:"last",autorest:true,sound:false,awake:false,splash:false,unit:"kg",lang:"en",anim:false,haptic:false,view:"set",warn:10},
+  return {v:2,onboarded:true,prefs:{rpe:"last",autorest:true,sound:false,awake:false,splash:false,unit:"kg",lang:"en",anim:false,haptic:false,view:"set",warn:10,
+      /* The warm-up is its own screen before the first exercise; the tests about it
+         turn it back on. */
+      nowarm:true},
     profile:{age:30,height:180,weight:84,sex:"m",activity:1.4,goal:"gain",prog:"standard",level:"some",days:3},
     goals:{kcal:2500,p:150,c:300,f:70,water:3000,steps:9000},sessions,body:[{date:iso(3),weight:84}],days:{},
     myFoods:[],savedMeals:[],freq:{},favs:[],skip:[],userSplits:[],myEx:[]};
@@ -1105,6 +1108,79 @@ await test("Training import: a coach's PDF becomes a draft — days, week, cues,
   eq(await ev(page,"[S.active.entries[3].name,S.active.entries[3].alt,S.active.entries[3].planned.amrap]"),["Standing Biceps Cable Curl","Chin-Up",true],"swapped for the other choice");
   eq(before!==await ev(page,"S.activeProgram"),true);
 });
+/* ---- warm-up and cool-down --------------------------------------------------------- */
+await test("Warm-up engine: drills follow what the day trains, ramp sets lead to the working weight, a walk needs none",async page=>{
+  const r=await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const W=await import("/js/engine/warmup.js");
+    const day=n=>n.map(x=>({name:x,planned:{sets:3}}));
+    const push=W.warmupFor(day(["Barbell Bench Press - Medium Grip","Seated Dumbbell Press","Triceps Pushdown"]),{work:e=>/Bench/.test(e.name)?80:0});
+    const legs=W.warmupFor(day(["Barbell Squat","Romanian Deadlift","Standing Calf Raises"]),{work:()=>0});
+    const LOW=/Leg Swings|Knee Hug|Quad Pull|Lateral Lunge|Bodyweight Squat|Ankle|Spiderman|Glute|Pogo/;
+    const cool=W.cooldownFor(day(["Barbell Squat","Romanian Deadlift"]));
+    return [push.drills.some(d=>LOW.test(d.name)),push.drills.length>=4,push.ramp.name,push.ramp.sets.map(s=>s.w+"x"+s.r).join(","),
+      legs.drills.filter(d=>LOW.test(d.name)).length>=3,legs.ramp.sets.length,
+      W.warmupFor(day(["Walking"])),cool.stretches.map(s=>s.name).includes("Hamstring Stretch"),
+      cool.stretches.some(s=>/Chest|Triceps|Shoulder/.test(s.name)),
+      W.warmupFor(day(["Football"])).drills.some(d=>d.name==="High Knees")];});
+  eq(r,[false,true,"Barbell Bench Press - Medium Grip","20x10,40x5,60x3",true,0,null,true,false,true]);
+});
+await test("Warm-up: shown before the first exercise; ticks and a hold timer; Start goes to the work; ⋯ brings it back",async page=>{
+  await startWorkout(page);
+  if(!(await page.$('.wu'))||(await page.$('.setcard')))throw new Error("the warm-up is not the first screen");
+  eq(await page.$$eval('.wu-rs',a=>a[0].textContent),"20 kg × 10","ramp starts with the bar");
+  await page.tap('.wu [data-wutick]:not([data-wutick="wp"])');await pause(page);
+  eq(await page.$eval('.wu [data-wutick]:not([data-wutick="wp"])',b=>b.getAttribute("aria-pressed")),"true","ticked");
+  /* The pulse raiser's timer, shortened so the test does not wait four minutes. */
+  await page.$eval('[data-hold="wp"]',b=>b.setAttribute("data-secs","1"));
+  await page.tap('[data-hold="wp"]');await pause(page,300);
+  eq(await page.$eval('[data-hold="wp"]',b=>b.classList.contains("run")),true,"counting");
+  await pause(page,1200);
+  eq(await ev(page,"[S.active.wuDone.wp,document.querySelector('.wu-pulse').classList.contains('did')]"),[1,true],"ticked when it ends");
+  await page.tap('[data-wugo]');await pause(page);
+  eq(await ev(page,"[S.active.warm,!!document.querySelector('.setcard'),!!document.querySelector('.wu')]"),[1,true,false],"started");
+  await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-wuopen]');await pause(page);
+  if(!(await page.$('.wu')))throw new Error("the menu did not bring the warm-up back");
+  await page.tap('[data-wuskip]');await pause(page);
+  eq(await ev(page,"[S.active.warm,!!document.querySelector('.setcard')]"),[0,true],"back to the work");
+},{prefs:{nowarm:false}});
+await test("Cool-down: stretches for what was trained on Workout complete, timed, with the how-to one tap away; both switch off",async page=>{
+  await startWorkout(page);
+  await page.tap('[data-wuskip]');await pause(page);
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,500);
+  await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-finish]');await pause(page);
+  await page.tap('[data-confirmok]');await pause(page,600);
+  const names=await page.$$eval('.cd .wu-n',a=>a.map(e=>e.textContent));
+  if(!names.includes("Doorway Chest Stretch")||names.some(n=>/Quad|Hamstring|Calf|Pigeon/.test(n)))
+    throw new Error("a bench set should end on upper-body stretches, got "+names.join(", "));
+  await page.$eval('.cd [data-hold]',b=>b.setAttribute("data-secs","1"));
+  await page.tap('.cd [data-hold]');await pause(page,1500);
+  eq(await page.$eval('.cd .wu-row',r=>r.classList.contains("did")),true,"ticked when the hold ends");
+  await page.tap('.cd .wu-ex');await pause(page,500);
+  eq(await ev(page,"V.sheet"),"exdetail");
+  await page.tap('[data-exback]');await pause(page,400);
+  eq(await ev(page,"[V.sheet,!!document.querySelector('.cd .wu-row.did')]"),["done",true],"back to the summary, tick kept");
+  await page.tap('#sheet .cf-ok');await pause(page);
+  /* Both are on by default and switched off in Training settings. */
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page);
+  await page.tap('[data-toggle="nowarm"]');await pause(page);await page.tap('[data-toggle="nocool"]');await pause(page);
+  eq(await ev(page,"[S.prefs.nowarm,S.prefs.nocool]"),[true,true]);
+  await page.tap('#sheet button[data-close]');await pause(page);
+  /* Today is trained already, so the second workout is started directly. */
+  await page.evaluate(async()=>{const St=await import("/js/state.js");(await import("/js/ui/actions.js")).startDay(St.split().days[0].id);});
+  await pause(page,400);
+  eq(await ev(page,"[!!S.active,!!document.querySelector('.wu')]"),[true,false],"no warm-up when off");
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,500);
+  await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-finish]');await pause(page);
+  await page.tap('[data-confirmok]');await pause(page,600);
+  eq(await ev(page,"[V.sheet,!!document.querySelector('.cd')]"),["done",false],"no cool-down when off");
+},{prefs:{nowarm:false,autorest:false}});
+await test("Arabic: the muscle Back reads ظهر, not the back button's رجوع",async page=>{
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="library";V.exm="Back";(await import("/js/ui/render.js")).render();});
+  await pause(page,500);
+  const s=await page.$eval('.libtrow .trow-s',e=>e.textContent);
+  if(s.indexOf("ظهر")<0||s.indexOf("رجوع")>=0)throw new Error("library row reads "+s);
+},{prefs:{lang:"ar"}});
 await test("Training import: a program pasted as text is read the same way",async page=>{
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="import";V.tp=null;(await import("/js/ui/render.js")).render();});await pause(page,300);
   await page.fill("#ti_text","Day 1 — Push\nBench press 4x6-8 @ 80kg, 2 min rest — pause on the chest\nLateral raises 3 x 12-15\n\nPull day\nLat pulldown 3x10\nFace pull 3 × 15 (light)\nPlank 3 x 45s");

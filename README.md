@@ -86,7 +86,7 @@ js/
   ui/sheetdrag.js  drag a sheet header down to dismiss
   state.js      S, profiles, persistence, migration
   data/         exercises.js, splits.js
-  engine/       plan.js, formulas.js, nutrition.js
+  engine/       plan.js, formulas.js, nutrition.js, warmup.js, splitparse.js
   i18n/         dict.js (the AR dictionary and t), exnames.js (Arabic exercise names)
   ui/           view.js, render.js, actions.js, sheets.js, views/{home,train,session,
                 progress,food,profile}.js
@@ -278,6 +278,19 @@ otherwise they would outlive the blob that was supposed to own them.
 - **Warm-up sets** count for nothing. Tap a logged set's number to mark it `W` and it
   drops out of volume, average RPE, personal records, the "last time" column and the
   progression check. The row stays so you can see what you actually did.
+- **The warm-up** (`js/engine/warmup.js`) is built from the day. Each exercise counts its
+  sets toward its main muscle and half of them toward the muscles it also works; any
+  muscle with at least a fifth of the top one's work is part of the day. Those muscles,
+  in order, choose four or five moving drills (an opener first, quick hops last on a day
+  that jumps or sprints), after a few minutes of easy cardio. A walk or yoga gets none,
+  and a plan that opens with its own mobility work keeps it.
+- **Ramp-up sets** lead to the first heavy compound lift: the empty bar × 10 on a
+  barbell, then 50% × 5 and 75% × 3 of the working weight (40%, 60% and 80% from 100 kg
+  up), rounded to 2.5 kg. The working weight is the recommendation from last time, or
+  the plan's starting weight. They are not logged.
+- **The cool-down** holds one static stretch for each of the muscles worked, 30 seconds
+  (each side where it is one-sided), up to five. Static holds come after the session,
+  not before: a long hold just before lifting can take a little off strength for a while.
 - **Supersets** are a shared tag on exercises that sit next to each other in a day. Open
   an exercise in the day editor and pair it with the one below; pair again from the
   second and you have a triset. In a session Bunyan hands you straight to the next

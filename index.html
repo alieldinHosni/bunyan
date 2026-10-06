@@ -1948,6 +1948,59 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .daynotes{margin:0 0 12px;padding:10px 14px;border-radius:var(--r3);background:var(--raised);border:1px solid var(--border)}
 .daynotes summary{cursor:pointer;font-weight:600;font-size:14px;min-height:28px;display:flex;align-items:center}
 .daynotes p{margin:6px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
+/* The warm-up step before the first exercise, and the cool-down card on the
+   Workout complete sheet (js/ui/views/warmup.js). */
+.wu{position:relative;isolation:isolate;overflow:hidden;margin:4px 0 var(--s4);padding:18px 14px 14px;border-radius:var(--r5);
+  border:1px solid var(--border);box-shadow:var(--shadow-card);
+  background:radial-gradient(90% 60% at 100% 0%,rgba(var(--glow-rgb),.16),transparent 60%),
+    linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 40%),var(--raised)}
+.wu-head{padding:0 2px 6px}
+.wu-head h1{font-family:var(--display);font-size:clamp(22px,6.6vw,27px);line-height:1.12;margin:2px 0 4px}
+.wu-head .sub{margin:0;font-size:13.5px;color:var(--sub)}
+.wu-step{margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.wu-sh{display:flex;align-items:center;gap:10px;margin:0 2px 6px;font-weight:700;font-size:15px}
+.wu-sh b{flex:none;width:22px;height:22px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;background:var(--accent-tint);color:var(--accentHi);border:1px solid var(--accent-edge)}
+.wu-row{display:flex;align-items:center;gap:10px;padding:6px 0}
+.wu-row+.wu-row{border-top:1px solid var(--hair)}
+.wu-tick{flex:none;width:32px;height:32px;border-radius:16px;padding:0;border:1px solid var(--border);background:transparent;
+  color:transparent;display:flex;align-items:center;justify-content:center;transition:transform var(--m-press) var(--e-standard)}
+.wu-tick svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.wu-row.did .wu-tick{background:var(--ok);border-color:var(--ok);color:#fff}
+:root:not(.tch) .wu-tick:active,.wu-tick.tapd{transform:scale(.88)}
+.wu-ex{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:2px 0;border:0;background:transparent;color:inherit;text-align:start}
+.wu-ex .thumbwrap,.wu-ex .thumb{flex:none;border-radius:10px}
+.wu-t{min-width:0;display:flex;flex-direction:column;gap:2px}
+.wu-n{font-size:14.5px;font-weight:600;line-height:1.3}
+.wu-d{font-size:12.5px;color:var(--sub);font-variant-numeric:tabular-nums}
+.wu-row.did .wu-n{color:var(--sub)}
+:root:not(.tch) .wu-ex:active .wu-n,.wu-ex.tapd .wu-n{color:var(--accentHi)}
+.wu-txt{flex:1;margin:0;font-size:13.5px;line-height:1.45;color:var(--sub)}
+/* The hold timer fills from the start edge as it counts. */
+.wu-hold{--p:0;flex:none;position:relative;overflow:hidden;isolation:isolate;min-width:76px;height:34px;padding:0 10px;
+  border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);color:var(--text);
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;
+  transition:transform var(--m-press) var(--e-standard)}
+.wu-hold svg{width:13px;height:13px;fill:currentColor}
+.wu-hold::before{content:"";position:absolute;z-index:-1;inset:0;background:var(--accent-tint);transform-origin:0 50%;transform:scaleX(var(--p))}
+[dir="rtl"] .wu-hold::before{transform-origin:100% 50%}
+.wu-hold.run{border-color:var(--accent-edge);color:var(--accentHi)}
+.wu-hold.run svg{display:none}
+:root:not(.tch) .wu-hold:active,.wu-hold.tapd{transform:scale(.94)}
+.wu-ramp{display:flex;flex-wrap:wrap;gap:6px;margin:4px 2px 2px}
+.wu-rs{padding:6px 10px;border-radius:var(--rpill);background:var(--surface);border:1px solid var(--border);font-size:13px;
+  color:var(--sub);font-variant-numeric:tabular-nums}
+.wu-rs b{color:var(--text);font-weight:700}
+.wu-rs.work{background:var(--accent-tint);border-color:var(--accent-edge)}
+.wu-note{margin:6px 2px 0;font-size:12.5px;line-height:1.45;color:var(--dim)}
+.wu-why{margin:16px 2px 14px;padding-top:12px;border-top:1px solid var(--border);font-size:12.5px;line-height:1.5;color:var(--dim)}
+.wu-skip{margin-top:8px}
+.cd{margin-top:14px;padding:12px 12px 6px;border-radius:var(--r3);background:var(--surface);border:1px solid var(--border);text-align:start}
+.cd-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim)}
+.cd-m{letter-spacing:0;text-transform:none;font-weight:600}
+.cd-sub{margin:4px 0 4px;font-size:12.5px;line-height:1.45;color:var(--sub)}
+.cd .wu-hold{background:var(--raised)}
 .drow-note{display:block;margin-top:3px;font-size:12px;line-height:1.4;color:var(--dim)}
 .drow-wk{display:inline-block;margin-top:3px;font-size:11.5px;font-weight:600;color:var(--accentHi)}
 .bmeta{margin:6px 2px 12px;font-size:13px;color:var(--dim)}

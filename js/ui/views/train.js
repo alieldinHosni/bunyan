@@ -1,6 +1,6 @@
 /* Bunyan — train
    Train tab: days, library, splits, bodyweight. */
-import {t} from "../../i18n/dict.js";
+import {t, tm} from "../../i18n/dict.js";
 import {alsoKnown, empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
@@ -376,7 +376,7 @@ function vFavs(){
   S.favs.forEach(function(n){
     h+='<button class="item" data-exdetail="'+esc(n)+'">'+thumb(n,36)
      +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+esc(exName(n))+'</div>'
-     +'<div class="tiny">'+t(muscleOf(n))+'</div></div>'
+     +'<div class="tiny">'+tm(muscleOf(n))+'</div></div>'
      +'<span class="chev">\u203a</span></button>';});
   return h+'</div>';}
 
@@ -441,7 +441,7 @@ var KINDWORD={Isometric:1,Mobility:1,Plyometric:1},PLYO=/\b(jumps?|hops?|bounds?
 function kindWords(l){
   var k=KINDWORD[l[5]]?l[5]:PLYO.test(l[0])?"Plyometric":"";
   return k?" "+k+" "+t(k):"";}
-function exHay(l){return l[0]+" "+exName(l[0])+" "+l[1]+" "+t(l[1])+" "+l[2]+" "+t(l[2])+kindWords(l)+" "+alsoKnown(l[0]);}
+function exHay(l){return l[0]+" "+exName(l[0])+" "+l[1]+" "+tm(l[1])+" "+l[2]+" "+t(l[2])+kindWords(l)+" "+alsoKnown(l[0]);}
 function vLibrary(){
   var q=V.exq.trim().toLowerCase();
   /* Token matching, as the picker sheet and the food search do: "incline db" finds
@@ -467,7 +467,7 @@ function vLibrary(){
    +t("Clear difficulty filter")+' \u00b7 '+t(V.exd)+'</button>';
   h+='<div class="libfilters" role="group" aria-label="'+t("Muscle")+'">';
   ["All"].concat(MUSCLES).forEach(function(m){
-    h+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'" aria-pressed="'+(V.exm===m)+'">'+t(m)+'</button>';});
+    h+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'" aria-pressed="'+(V.exm===m)+'">'+tm(m)+'</button>';});
   h+='</div><div class="libfilters" role="group" aria-label="'+t("Equipment")+'">';
   ["All"].concat(EQUIP).forEach(function(q2){
     h+='<button class="pill'+(V.exe===q2?" a":"")+'" data-exe="'+q2+'" aria-pressed="'+(V.exe===q2)+'">'+t(q2)+'</button>';});
@@ -484,7 +484,7 @@ function vLibrary(){
     list.slice(0,n).forEach(function(l){
       h+='<button class="trow libtrow" data-k="lib:'+esc(l[0])+'" data-exdetail="'+esc(l[0])+'">'+thumb(l[0],52)
        +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span>'
-       +'<span class="trow-s">'+t(l[1])+(l[2]==="Other"&&(l[1]==="Cardio"||l[1]==="Sports")?'':' \u00b7 <b>'+t(l[2])+'</b>')+'</span></span>'
+       +'<span class="trow-s">'+tm(l[1])+(l[2]==="Other"&&(l[1]==="Cardio"||l[1]==="Sports")?'':' \u00b7 <b>'+t(l[2])+'</b>')+'</span></span>'
        +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
     h+='</div>';
     if(list.length>n)h+='<button class="btn d sm libmore" data-more="lib" data-step="40">'+t("Show more")+'</button>';}
@@ -613,7 +613,7 @@ function vDay(){
      +'<span class="drow-s">'+(isActivity(e.name)
         ?(e.min||(actInfo(e.name).grp==="Sports"?60:30))+' '+t("min")+(e.km?' · '+e.km+' km':'')+'<i class="ddot"></i>'+esc(t(intensityOf(e.rpe||6)[1]))
         :esc(doseText(e))+'<i class="ddot"></i>'+(e.rest||0)+'s')
-     +'<i class="ddot"></i>'+esc(t(muscleOfEntry(e)))+'</span>'
+     +'<i class="ddot"></i>'+esc(tm(muscleOfEntry(e)))+'</span>'
      /* What the plan says about it, and the weeks it belongs to. */
      +(e.note?'<small class="drow-note">'+esc(e.note)+'</small>':'')
      +(e.wk?'<small class="drow-wk">'+esc(weeksText(e.wk))+'</small>':'')

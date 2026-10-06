@@ -1,6 +1,6 @@
 /* Bunyan — session
    The live session surface and rest screen. Execution, not editing. */
-import {t} from "../../i18n/dict.js";
+import {t, tm} from "../../i18n/dict.js";
 import {isolateNums} from "../../i18n/bidi.js";
 import {difficultyOf, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
@@ -11,6 +11,7 @@ import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num} from "../../util.js";
 import {ex_isTimed, stepperInput, V} from "../view.js";
 import {doseText} from "../dose.js";
+import {vWarm, warmShown} from "./warmup.js";
 
 /* ============================================================ SESSION
    Execution surface, not an editor. vDay() prescribes the work; this screen only
@@ -160,6 +161,10 @@ function vLogger(){
       +'<i>'+t("Show")+'</i></button>':'')
    +'</div>';
 
+  /* The warm-up comes first, in place of the first exercise, until it is done or
+     skipped (js/ui/views/warmup.js). */
+  if(warmShown(a))return h+vWarm(a)+'</div>';
+
   /* --- one segment per exercise; members of a superset are tied together. The
      arrows either side step through them; so does a swipe on the exercise below. --- */
   var NAVP='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>',
@@ -221,7 +226,7 @@ function vLogger(){
    +(run.length>1?'<span class="pill sup">'+t("Superset")+' '+groupLabel(a.entries,V.logIdx)
        +' · '+t("round")+' '+Math.min(rows,e.sets.length+1)+'/'+rows+'</span>':'')
    +(inDeload()?'<span class="pill gold">'+t("Lighter week")+'</span>':'')
-   +'<span class="etag">'+esc(t(muscleOfEntry(e)))+'</span>'
+   +'<span class="etag">'+esc(tm(muscleOfEntry(e)))+'</span>'
    /* How to read the numbers: a dumbbell's weight is per hand unless the lifter chose
       totals, and a one-sided exercise's reps are for one side. */
    +(med&&med.e?'<span class="etag">'+esc(t(med.e))

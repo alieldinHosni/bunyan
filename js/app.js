@@ -34,6 +34,8 @@ import {mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setS
 import {parsePlan} from "./engine/planparse.js";
 import {readSplit} from "./engine/splitparse.js";
 import {newNames, programFromDraft, withIds} from "./ui/views/timport.js";
+import {warmShown} from "./ui/views/warmup.js";
+import {holding, startHold, stopHold} from "./ui/hold.js";
 import {changeLook, themeOf} from "./ui/theme.js";
 import {fitCh, pickAmount, servs} from "./ui/views/addfood.js";
 
@@ -435,12 +437,15 @@ document.addEventListener("click",function(ev){
        returns to the exercise this one was reached from instead of closing. */
     var trail=(V.sheet==="exdetail"&&V.sd&&V.sd.name&&V.sd.name!==nm5)
       ?((V.sd.prev||[]).concat(V.sd.name)).slice(-8):null;
-    loadInstructions(function(){openSheet("exdetail",trail?{name:nm5,prev:trail}:{name:nm5});});return;}
+    /* From the Workout complete sheet (a cool-down stretch), back returns to it. */
+    var ret5=V.sheet==="done"?{s:"done",d:V.sd}:V.sheet==="exdetail"&&V.sd&&V.sd.ret||null;
+    loadInstructions(function(){var o={name:nm5};if(trail)o.prev=trail;if(ret5)o.ret=ret5;openSheet("exdetail",o);});return;}
   if(D.exback!==undefined){
-    var tr=(V.sd&&V.sd.prev||[]).slice();
-    if(!tr.length){requestCloseSheet();return;}
+    var tr=(V.sd&&V.sd.prev||[]).slice(),rt=V.sd&&V.sd.ret;
+    if(!tr.length){if(rt){openSheet(rt.s,rt.d);return;}requestCloseSheet();return;}
     var back5=tr.pop();V.exsteps=false;V.exmiss=false;
-    openSheet("exdetail",tr.length?{name:back5,prev:tr}:{name:back5});return;}
+    var o5={name:back5};if(tr.length)o5.prev=tr;if(rt)o5.ret=rt;
+    openSheet("exdetail",o5);return;}
   /* Reachable again, from the picker's empty state. It was orphaned when the picker
      was rewritten to read exercises.json: the handler survived, the button did not.
      Custom entries have no illustration, which thumb() already renders gracefully. */
@@ -488,6 +493,23 @@ document.addEventListener("click",function(ev){
   if(D.continue!==undefined){W.resume();return;}
   /* Moving between exercises: the segments, the arrows either side of them, and the
      list from the title all slide the new one in from the side it lies on. */
+  /* The warm-up: done, skipped, brought back from the ⋯ menu; its ticks and timers,
+     and the cool-down's on the complete sheet. */
+  if(D.wugo||D.wuskip){if(S.active){S.active.warm=D.wugo?1:0;stopHold();saveDB();window.scrollTo(0,0);render();}return;}
+  if(D.wuopen){if(S.active){S.active.warm="open";closeSheet();window.scrollTo(0,0);}return;}
+  if(D.wutick!==undefined){var wa=S.active;if(wa){wa.wuDone=wa.wuDone||{};
+    if(wa.wuDone[D.wutick])delete wa.wuDone[D.wutick];else wa.wuDone[D.wutick]=1;saveDB();render();}return;}
+  if(D.cdtick!==undefined){V.cdDone=V.cdDone||{};
+    if(V.cdDone[D.cdtick])delete V.cdDone[D.cdtick];else V.cdDone[D.cdtick]=1;render();return;}
+  if(D.hold){var hk=D.hold,hn=D.holdn;
+    if(holding(hk)){stopHold();render();return;}
+    startHold(hk,+D.secs||30,D.side==="1",function(){
+      if(hk.indexOf("cd")===0){V.cdDone=V.cdDone||{};V.cdDone[hn]=1;}
+      else if(S.active){S.active.wuDone=S.active.wuDone||{};S.active.wuDone[hn]=1;saveDB();}
+      render();});
+    return;}
+  if((D.jump!==undefined||D.exnav!==undefined||D.jumpl!==undefined)&&S.active&&warmShown(S.active)){
+    S.active.warm=S.active.warm==="open"?1:0;stopHold();}
   if(D.jump!==undefined){var jF=+D.jump-V.logIdx;W.jumpTo(+D.jump);if(jF)enterEx(fromOf(jF));return;}
   if(D.exnav!==undefined){var nS=+D.exnav,nT=V.logIdx+nS;if(S.active&&nT>=0&&nT<S.active.entries.length){W.jumpTo(nT);enterEx(fromOf(nS));}return;}
   if(D.exlist!==undefined){openSheet("exlist");return;}

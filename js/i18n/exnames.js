@@ -147,7 +147,12 @@ var EX_TERMS={
 "delt":"دالية","delts":"دالية","rear delt":"دالية خلفية","spine":"عمود فقري",
 "groin":"أربية","chest and back":"صدر وظهر","upper":"علوي","lower":"سفلي","mid":"أوسط",
 /* fillers */
-"with":"بـ","and":"و","the":"","to":"","on":"على","in":"في","of":"","a":"","or":"أو"
+"with":"بـ","and":"و","the":"","to":"","on":"على","in":"في","of":"","a":"","or":"أو",
+/* whole names the warm-up and cool-down use, which word order alone gets wrong */
+"world's greatest stretch":"أعظم إطالة","arm circles":"دوائر بالدراع","scapular pull up":"عقلة لوح الكتف",
+"bodyweight squat":"سكوات بوزن الجسم","inchworm":"مشية الدودة","triceps stretch":"إطالة الترايسبس",
+"child's pose":"وضعية الطفل","hip flexor":"إطالة ثني الورك","kneeling hip flexor":"إطالة ثني الورك على ركبة",
+"hamstring stretch":"إطالة الخلفية","gastrocnemius calf stretch":"إطالة السمانة","calf stretch":"إطالة السمانة"
 };
 /* In Arabic the modifier follows the noun, so these are collected and appended rather
    than left where English put them: "Standing Calf Raise" is "رفع سمانة واقف", not

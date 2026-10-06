@@ -1,6 +1,6 @@
 /* Bunyan — sheets
    Every bottom sheet, dispatched by vSheet(). */
-import {t} from "../i18n/dict.js";
+import {t, tm} from "../i18n/dict.js";
 import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {exName, planName} from "../i18n/exnames.js";
 import {dayMeals, mealName} from "../engine/meals.js";
@@ -20,6 +20,7 @@ import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 import {wdName, weekStart} from "../engine/schedule.js";
 import {tiexSheet} from "./views/timport.js";
+import {coolCard, warmOf} from "./views/warmup.js";
 
 /* One figure in the exercise sheet: a label, the number (typeable), and − / + either
    side. The steps are the plan's own: a set, a rep, fifteen seconds of rest. */
@@ -113,10 +114,10 @@ function vSheet(){
         .map(function(r){return r.item;});
     }
     if(target){
-      var tp=patternOf(target),tm=muscleOf(target),te=(EXDB[target]||{}).e;
+      var tp=patternOf(target),tmus=muscleOf(target),te=(EXDB[target]||{}).e;
       list.sort(function(a,b){
         function sc(l){var s2=0;
-          if(l[1]===tm)s2+=4; if(patternOf(l[0])===tp)s2+=3;
+          if(l[1]===tmus)s2+=4; if(patternOf(l[0])===tp)s2+=3;
           if(l[2]===te)s2+=2; if(isFav(l[0]))s2+=2; return -s2;}
         return sc(a)-sc(b);});}
     else list.sort(function(a,b){return (isFav(b[0])?1:0)-(isFav(a[0])?1:0);});
@@ -142,7 +143,7 @@ function vSheet(){
      +(V.exq?'<button class="libq-x" data-clearexq="1" aria-label="'+t("Clear")+'">\u2715</button>':'')+'</div>'
      +'<div class="libfilters" role="group" aria-label="'+t("Muscle")+'">';
     ["All"].concat(MUSCLES).forEach(function(m){
-      b+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'" aria-pressed="'+(V.exm===m)+'">'+t(m)+'</button>';});
+      b+='<button class="pill'+(V.exm===m?" a":"")+'" data-exm="'+m+'" aria-pressed="'+(V.exm===m)+'">'+tm(m)+'</button>';});
     b+='</div><div class="libfilters" role="group" aria-label="'+t("Equipment")+'">';
     ["All"].concat(EQUIP).forEach(function(q2){
       b+='<button class="pill'+(V.exe===q2?" a":"")+'" data-exe="'+q2+'" aria-pressed="'+(V.exe===q2)+'">'+t(q2)+'</button>';});
@@ -152,7 +153,7 @@ function vSheet(){
        filter is not already showing it. Picking one adds it and returns to the day. */
     function exRow(l,k){
       var meta=[exVariant(l[0])?esc(exVariant(l[0])):"",
-                V.exm==="All"?t(l[1]):"",
+                V.exm==="All"?tm(l[1]):"",
                 t(l[2]),t(difficultyOf(l[0]))].filter(Boolean).join(" \u00b7 ");
       return '<button class="trow libtrow pkrow" data-k="'+k+':'+esc(l[0])+'" data-pickex="'+esc(l[0])+'">'+thumb(l[0],48)
        +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span><span class="trow-s">'+meta+'</span></span>'
@@ -194,7 +195,7 @@ function vSheet(){
       var gl=groupLabel(la.entries,i);
       b+='<button class="exl-row'+(cur?' on':'')+(fin?' did':'')+'" data-jumpl="'+i+'"'+(cur?' aria-current="step"':'')+'>'
        +'<span class="exl-n" aria-hidden="true">'+(fin?'<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>':(gl||(i+1)))+'</span>'
-       +'<span class="exl-t"><b>'+esc(exName(x.name))+'</b><small>'+esc(t(muscleOfEntry(x)))
+       +'<span class="exl-t"><b>'+esc(exName(x.name))+'</b><small>'+esc(tm(muscleOfEntry(x)))
        +' \u00b7 <bdi class="num">'+dn+'/'+rws+'</bdi> '+t(isActivity(x.name)?"bouts":"sets")+'</small></span>'
        +(cur?'<span class="exl-cur">'+t("Current")+'</span>':'')
        +'</button>';});
@@ -212,6 +213,9 @@ function vSheet(){
        +'<span class="chev">›</span></button>':'')
      +'<button class="item" data-note="1"><span>'+t("Session note")+'</span>'
      +(sm.notes?'<span class="pill a">'+t("Saved")+'</span>':'<span class="chev">›</span>')+'</button>'
+     /* The warm-up again, whenever it is wanted: after skipping it, or before a
+        second heavy lift. */
+     +(warmOf(sm)?'<button class="item" data-wuopen="1"><span>'+t("Warm-up")+'</span><span class="chev">›</span></button>':'')
      +'</div>'
      +'<button class="btn" data-finish="1">'+t("Finish workout")+'</button>'
      +'<button class="btn danger" data-discard="1">'+t("Discard workout")+'</button>';
@@ -225,7 +229,7 @@ function vSheet(){
        closes. Order is changed on the day screen itself, by dragging the row. */
     var eIdx=d.ex.findIndex(function(x){return x.id===e.id;});
     var eqE=(EXDB[e.name]||{}).e;
-    b='<h2>'+esc(exName(e.name))+'</h2><p class="tiny">'+esc(t(muscleOfEntry(e)))
+    b='<h2>'+esc(exName(e.name))+'</h2><p class="tiny">'+esc(tm(muscleOfEntry(e)))
      +(eqE&&!isActivity(e.name)?' · '+esc(t(eqE)):'')+'</p>';
     var acts=[];
     if(isActivity(e.name)){
@@ -468,20 +472,22 @@ function vSheet(){
     var nD=V.sd.name, mD=muscleOf(nD), pD=patternOf(nD), secD=secondaryOf(nD), lD=libFind(nD);
     var prD=prFor(nD), pvD=prevPerf(nD);
     b=(V.sd.prev&&V.sd.prev.length
-        ?'<button class="btn d sm" data-exback="1" style="width:auto;margin:0 0 8px;padding-inline-start:0">\u2039 '+esc(exName(V.sd.prev[V.sd.prev.length-1]))+'</button>':'')
+        ?'<button class="btn d sm" data-exback="1" style="width:auto;margin:0 0 8px;padding-inline-start:0">\u2039 '+esc(exName(V.sd.prev[V.sd.prev.length-1]))+'</button>'
+        /* Opened from the cool-down: back to the workout's summary. */
+        :V.sd.ret?'<button class="btn d sm" data-exback="1" style="width:auto;margin:0 0 8px;padding-inline-start:0">\u2039 '+esc(t("Cool down"))+'</button>':'')
      +'<h2>'+esc(exName(nD))+'</h2>';
     var subD=[t(pD),exVariant(nD)?esc(exVariant(nD)):""].filter(Boolean).join(" \u00b7 ");
     b+='<p class="tiny">'+subD+'</p>';
     /* The two positions first — what the movement looks like is what someone opening
        this between sets wants — then the four facts as one even grid. */
     var med=exMedia(nD);
-    if(med)
+    if(med&&exImg(nD,0))
       b+='<div class="exd-form2">'
        +'<figure><img src="'+exImg(nD,0)+'" alt="" decoding="async"><figcaption>'+t("Start")+'</figcaption></figure>'
        +'<figure><img src="'+exImg(nD,1)+'" alt="" decoding="async"><figcaption>'+t("End")+'</figcaption></figure></div>';
     b+='<div class="exd-facts">'
-     +'<div><span>'+t("Primary")+'</span><b>'+t(mD)+'</b></div>'
-     +'<div><span>'+t("Secondary")+'</span><b>'+(secD.length?secD.map(function(s){return t(s);}).join(" \u00b7 "):"—")+'</b></div>'
+     +'<div><span>'+t("Primary")+'</span><b>'+tm(mD)+'</b></div>'
+     +'<div><span>'+t("Secondary")+'</span><b>'+(secD.length?secD.map(function(s){return tm(s);}).join(" \u00b7 "):"—")+'</b></div>'
      +'<div><span>'+t("Equipment")+'</span><b>'+t(lD?lD[2]:"Other")+'</b></div>'
      +'<div><span>'+t("Difficulty")+'</span><b>'+t(difficultyOf(nD))+'</b></div></div>';
     if(isUnilateral(nD))b+='<p class="exd-uni">'+t("One side at a time. Log the reps for one side; with dumbbells, the weight in one hand.")+'</p>';
@@ -572,6 +578,8 @@ function vSheet(){
      +[[3,"Easy"],[5,"Moderate"],[7,"Hard"],[9,"Very hard"],[10,"Max"]].map(function(x){
         return '<button class="'+(sr===x[0]?'on':'')+'" data-srpe="'+x[0]+'" aria-pressed="'+(sr===x[0])+'">'+t(x[1])+'</button>';}).join("")
      +'</div></div>';
+    /* Stretches for what was trained, with a timer each. */
+    b+=coolCard(w.cool);
     b+='</div><div class="cf-acts wc2-acts">'
      +'<button class="btn cf-ok" data-close="1">'+t("Done")+'</button>'
      +'<div class="wc2-row">'
@@ -768,6 +776,14 @@ function vSheet(){
      +t(tpr.prog.charAt(0).toUpperCase()+tpr.prog.slice(1))+'</span></button>'
      +'<button class="item" data-rpemode="1"><span>'+t("Ask for RPE")+'</span><span class="dim">'
      +({every:t("Every set"),last:t("Last set only"),off:t("Never")})[tp.rpe]+'</span></button>'
+     /* Stored as "off" flags, so everyone who had the app before these existed
+        gets them on. */
+     +'<button class="item" data-toggle="nowarm"><div><div>'+t("Warm-up before a workout")+'</div>'
+     +'<div class="tiny">'+t("Drills for what the day trains, and ramp-up sets")+'</div></div>'
+     +'<span class="'+(!tp.nowarm?"pill ok":"dim")+'">'+(!tp.nowarm?t("On"):t("Off"))+'</span></button>'
+     +'<button class="item" data-toggle="nocool"><div><div>'+t("Cool-down after a workout")+'</div>'
+     +'<div class="tiny">'+t("Stretches for what you trained")+'</div></div>'
+     +'<span class="'+(!tp.nocool?"pill ok":"dim")+'">'+(!tp.nocool?t("On"):t("Off"))+'</span></button>'
      +'<button class="item" data-toggle="autorest"><span>'+t("Auto-start rest timer")+'</span>'
      +'<span class="'+(tp.autorest?"pill ok":"dim")+'">'+(tp.autorest?t("On"):t("Off"))+'</span></button>'
      +'<button class="item" data-warnmode="1"><span>'+t("Countdown warning")+'</span><span class="dim">'

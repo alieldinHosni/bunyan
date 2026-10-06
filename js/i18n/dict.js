@@ -1077,9 +1077,39 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Meal name": "اسم الوجبة",
 "No meals were found in that PDF. If it is a training program, import it under Train → Explore.": "ملقيناش وجبات في الملف ده. لو ده برنامج تمرين، استورده من التمرين ← استكشف.",
 "Plyometric": "بليومتريك",
+"Before you start": "قبل ما تبدأ",
+"Warm-up": "الإحماء",
+"About {n} min": "حوالي {n} دقيقة",
+"for {m}": "للعضلات: {m}",
+"Raise your pulse": "ارفع نبضك",
+"Easy bike, rower or a brisk walk. Breathing harder, still able to talk.": "عجلة أو جهاز تجديف على خفيف، أو مشي سريع. نَفَسك يعلى بس لسه تقدر تتكلم.",
+"March or jog on the spot, then a few jumping jacks. Breathing harder, still able to talk.": "امشي أو اجري في مكانك، وبعدها شوية جامبنج جاك. نَفَسك يعلى بس لسه تقدر تتكلم.",
+"Walk briskly, then jog easily. Breathing harder, still able to talk.": "امشي بسرعة، وبعدها اجري على خفيف. نَفَسك يعلى بس لسه تقدر تتكلم.",
+"Move what you'll train": "حرّك اللي هتمرّنه",
+"Your plan opens with its own mobility work. Do that next, as the session lists it.": "برنامجك بيبدأ بتمارين مرونة خاصة بيه. اعملها بعد كده زي ما هي في الجلسة.",
+"Ramp up to {ex}": "اطلع تدريجي لحد {ex}",
+"then": "وبعدها",
+"Build up over two or three lighter sets to your first working weight.": "اطلع على مجموعتين أو تلاتة أخف لحد وزن أول مجموعة أساسية.",
+"Lighter sets, short rests, nothing near failure. They get you ready; they are not logged.": "مجموعات أخف وراحة قصيرة ومن غير ما تقرب من الفشل. دي بتجهّزك ومش بتتسجل.",
+"Each big lift after it: one lighter set of five first.": "وكل تمرين كبير بعده: مجموعة أخف من 5 عدات الأول.",
+"Moving drills now, held stretches at the end: a long hold just before lifting can take a little off your strength for a while.": "حركات متحركة دلوقتي، والإطالات الثابتة في الآخر: الثبات الطويل قبل الرفع على طول ممكن ياخد شوية من قوتك لفترة.",
+"Start the workout": "ابدأ التمرين",
+"Skip the warm-up": "تخطّى الإحماء",
+"Cool down": "التهدئة",
+"Hold each stretch and breathe slowly. Ease into it: a pull, never pain.": "اثبت في كل إطالة واتنفس بهدوء. ادخل فيها براحة: شد، مش وجع.",
+"Stop the timer": "وقّف المؤقت",
+"Start the timer": "شغّل المؤقت",
+"Other side": "الجنب التاني",
+"Warm-up before a workout": "إحماء قبل التمرين",
+"Drills for what the day trains, and ramp-up sets": "حركات للعضلات اللي هتتمرن، ومجموعات تدريجية",
+"Cool-down after a workout": "تهدئة بعد التمرين",
+"Stretches for what you trained": "إطالات للعضلات اللي اتمرنت",
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;
   return AR[k]||k;}
+/* A muscle's name. "Back" is also the back button, and they are different words in
+   Arabic, so the muscle is kept under "Back " (with the space). */
+function tm(m){return m==="Back"?t("Back "):t(m);}
 
-export {t};
+export {t, tm};

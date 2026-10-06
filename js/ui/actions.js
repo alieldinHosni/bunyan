@@ -6,6 +6,8 @@ import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
 import {deloadSets, inDeload, recordsIn, avgRPE, prevPerf, recommend, sessionVolume} from "../engine/formulas.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
+import {coolFor} from "./views/warmup.js";
+import {stopHold} from "./hold.js";
 import {leave} from "./motion.js";
 import {FOODDB, nutritionFor, recalcItem, toLogItem} from "../engine/nutrition.js";
 import {render} from "./render.js";
@@ -198,7 +200,7 @@ function startDay(dayId){
       if(e.amrap)pl.amrap=true;
       return {name:e.name,exId:e.exId||exIdOf(e.name),kind:e.timed&&!isActivity(e.name)?"timed":kindOf(e.name),muscle:muscleOfEntry(e),planned:pl,
               rest:e.rest,grp:e.grp||null,alt:e.alt||null,sets:[]};})};
-  V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
+  V.logIdx=0;V.tab="train";V.train="days";endRest();stopHold();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
 
 /* A run, a match, a class — logged on its own, outside the plan. It carries no day
@@ -208,7 +210,7 @@ function startActivity(name){
   S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
     splitId:split().id,dayId:null,dayName:exName(name),
     entries:[{name:name,exId:exIdOf(name),kind:"activity",muscle:actMuscle(name)||"Cardio",planned:{sets:1,lo:0,hi:0},rest:0,grp:null,sets:[]}]};
-  V.logIdx=0;V.tab="train";V.train="days";endRest();V.fresh=-1;
+  V.logIdx=0;V.tab="train";V.train="days";endRest();stopHold();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
 
 /* What the next set reads before the user touches anything. Once a set is logged in
@@ -285,13 +287,15 @@ function finishSession(){
        the plan it is being measured against, and the session it is being compared to. */
     exsPlanned:exsPlanned,setsPlanned:setsPlanned,
     prevVol:prev?Math.round(sessionVolume(prev)):null,
-    delta:prev?vol-Math.round(sessionVolume(prev)):null};
+    delta:prev?vol-Math.round(sessionVolume(prev)):null,
+    /* The cool-down for what was actually trained, shown on the complete sheet. */
+    cool:coolFor(a.entries)};
 
   /* The plan's words for the day and each exercise were for doing it, not for the
      record: history keeps what describes the sets, not the cues. */
-  delete a.dayNotes;
+  delete a.dayNotes;delete a.warm;delete a.wuDone;
   a.entries.forEach(function(e){delete e.alt;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
-  recordSession(a);S.active=null;endRest();keepAwake(false);
+  recordSession(a);S.active=null;endRest();keepAwake(false);stopHold();V.cdDone={};
   saveDB();V.tab="train";V.train="days";
   play(prs.length?"pr":"complete");tap("ok");
   openSheet("done",summary);}
