@@ -65,7 +65,9 @@ function checkPlans(){
       out.push({id:"kcal-up",area:"food",sev:3,title:t("Your calories will not lose fat"),
         why:fill(t("Your target is {cur} kcal and maintenance is about {td}. Fat loss needs less than maintenance: {sug} kcal fits your goal."),{cur:k50(cur),td:k50(td),sug:fmtN(sug.kcal)}),
         fix:{label:fill(t("Use {sug} kcal"),{sug:fmtN(sug.kcal)}),act:"targets"},sig:[r50(cur),r50(td),p.goal]});
-    else if(G.kcal>0&&cur<=td)
+    /* Only building muscle needs a surplus. Strength, sport and the rest grow on
+       maintenance, so they get the "far from maintenance" check below instead. */
+    else if(G.kcal>=0.08&&cur<=td)
       out.push({id:"kcal-down",area:"food",sev:3,title:t("Your calories will not build muscle"),
         why:fill(t("Your target is {cur} kcal and maintenance is about {td}. Building needs a little more than maintenance: {sug} kcal fits your goal."),{cur:k50(cur),td:k50(td),sug:fmtN(sug.kcal)}),
         fix:{label:fill(t("Use {sug} kcal"),{sug:fmtN(sug.kcal)}),act:"targets"},sig:[r50(cur),r50(td),p.goal]});
@@ -73,7 +75,7 @@ function checkPlans(){
       out.push({id:"kcal-steep",area:"food",sev:3,title:t("That deficit is steep"),
         why:fill(t("{cur} kcal is more than 30% under your maintenance of about {td}. Muscle, energy and training go with the fat that fast. {sug} kcal still loses fat."),{cur:k50(cur),td:k50(td),sug:fmtN(sug.kcal)}),
         fix:{label:fill(t("Use {sug} kcal"),{sug:fmtN(sug.kcal)}),act:"targets"},sig:[r50(cur),r50(td)]});
-    else if(G.kcal===0&&Math.abs(cur-td)>td*0.15)
+    else if(G.kcal>-0.08&&G.kcal<0.08&&Math.abs(cur-td)>td*0.15)
       out.push({id:"kcal-off",area:"food",sev:2,title:t("Your calories are far from maintenance"),
         why:fill(t("Your goal holds your weight, but {cur} kcal is {d} kcal from your maintenance of about {td}."),{cur:k50(cur),td:k50(td),d:k50(Math.abs(cur-td))}),
         fix:{label:fill(t("Use {sug} kcal"),{sug:fmtN(sug.kcal)}),act:"targets"},sig:[r50(cur),r50(td),p.goal]});
@@ -120,10 +122,14 @@ function checkPlans(){
         fix:{label:t("Rebuild my plan"),act:"assess"},sig:[f.mob]});
     /* A coach's PDF names its phase; it may not be the goal set here. */
     var ph=prog.meta&&prog.meta.phase||"";
-    if(ph&&(/fat|cut|shred|loss|lean/i.test(ph)&&G.kcal>0||/bulk|mass|gain|size/i.test(ph)&&G.kcal<0))
+    var cutPh=/fat|cut|shred|loss|lean/i.test(ph),bulkPh=/bulk|mass|gain|size/i.test(ph);
+    if(ph&&(cutPh&&G.kcal>0||bulkPh&&G.kcal<0)){
+      /* The coach's program is the plan being followed, so the fix is the goal (and the
+         targets with it), not a new program. */
+      var pg=cutPh?"lose":"gain";
       out.push({id:"phase",area:"both",sev:2,title:t("Your program and your goal point different ways"),
         why:fill(t("The program says “{ph}”; your goal is {g}. Training like that while eating for the other works against both."),{ph:ph,g:t(G.label).toLowerCase()}),
-        fix:{label:t("Change my goal"),act:"assess"},sig:[ph,p.goal]});
+        fix:{label:fill(t("Set my goal to {g}"),{g:t(goalOf(pg).label).toLowerCase()}),act:"phasegoal",goal:pg},sig:[ph,p.goal]});}
 
     /* ---- the two together ---- */
     if(known&&cur){

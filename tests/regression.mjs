@@ -57,11 +57,16 @@ async function tapTab(page,tab){
   const b=await (await page.$('nav [data-tab="'+tab+'"]')).boundingBox();
   if(!b||b.y>=page.viewportSize().height)throw new Error("the dock is out of view");
   await page.touchscreen.tap(b.x+b.width/2,b.y+b.height/2);await page.waitForTimeout(60);}
+/* Coach, at a section ("train", "food", "ai") and the view inside it. */
+async function coach(page,sec,sub){
+  await tapTab(page,"coach");await page.waitForTimeout(200);
+  if(sec){await page.tap('[data-csec="'+sec+'"]');await page.waitForTimeout(200);}
+  if(sub){await page.tap('[data-'+(sec==="train"?"ctsub":"cfsub")+'="'+sub+'"]');await page.waitForTimeout(250);}}
 async function startWorkout(page){await tapTab(page,"train");await pause(page);await page.tap('[data-startday]');await pause(page,400);}
-/* ONLY=<text> runs just the tests whose names contain it. */
-const ONLY=process.env.ONLY||"";
+/* ONLY=<text> runs just the tests whose names contain it; ONLY=<a>|<b> runs either. */
+const ONLY=(process.env.ONLY||"").split("|").filter(Boolean);
 async function test(name,fn,o){
-  if(ONLY&&name.indexOf(ONLY)<0)return;
+  if(ONLY.length&&!ONLY.some(x=>name.indexOf(x)>=0))return;
   const env=await open(o);
   try{await fn(env.page,env);if(env.errs.length)throw new Error("page errors: "+env.errs.join(" | "));passes++;console.log("PASS",name);}
   catch(e){fails++;console.log("FAIL",name,"—",e.message);}
@@ -166,7 +171,7 @@ await test("a corrupted save is kept aside, not overwritten",async page=>{
   eq(keys,1);
 },{raw:'{"v":2,"onboarded":true,"profile":{"age":30'});
 await test("a partial save does not crash rendering",async page=>{
-  for(const tab of ["food","progress","train","profile","home"]){await tapTab(page,tab);await pause(page,200);}
+  for(const tab of ["food","progress","train","profile","coach"]){await tapTab(page,tab);await pause(page,200);}
 },{raw:JSON.stringify({v:2,onboarded:true,prefs:{sound:false,splash:false},sessions:[],body:[]})});
 await test("another open copy saving does not wipe an active workout",async (page,env)=>{
   const b=await env.ctx.newPage();await b.goto(URL_);await b.waitForTimeout(1000);
@@ -196,7 +201,7 @@ await test("a rest day follows a full-body session",async page=>{
 
 await test("tab taps do not grow the browser history",async page=>{
   const h0=await page.evaluate(()=>history.length);
-  for(let i=0;i<10;i++){await tapTab(page,"train");await page.tap('[data-tsec="explore"]');await page.tap('[data-train="library"]');await tapTab(page,"home");}
+  for(let i=0;i<10;i++){await coach(page,"train","exercises");await page.tap('[data-train="library"]');await tapTab(page,"train");}
   await pause(page,500);
   const h1=await page.evaluate(()=>history.length);
   if(h1-h0>2)throw new Error("grew by "+(h1-h0));
@@ -234,8 +239,7 @@ await test("an activity logs pace inputs and heart rate",async page=>{
 
 /* ---- the day builder and the picker ---------------------------------------------- */
 async function openDay(page){
-  await tapTab(page,"train");await pause(page);
-  await page.tap('[data-tsec="program"]');await pause(page);
+  await coach(page,"train","program");
   await page.tap('.drows [data-day]');await pause(page,400);}
 const dayNames=page=>page.$$eval(".drow .drow-n",a=>a.map(x=>x.textContent));
 await test("day builder: ✕ removes with undo, Reorder shows the grips, the grip drags, arrow keys move",async page=>{
@@ -284,8 +288,7 @@ await test("picker: picking an exercise adds it and returns to the day",async pa
   eq((await dayNames(page)).length,n0+1,"added");
 });
 await test("split builder: build from scratch, set days, fill one, adopt, and it stays saved",async page=>{
-  await tapTab(page,"train");await pause(page);
-  await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");V.train="splits";render();});await pause(page);
+  await coach(page,"train","programs");
   await page.tap('[data-newsplit]');await pause(page);await page.fill('#askv','Test split');await page.tap('[data-askok]');await pause(page,400);
   eq(await ev(page,"V.train"),"builder","opens the builder");
   await page.tap('[data-bdays="4"]');await pause(page);
@@ -298,7 +301,7 @@ await test("split builder: build from scratch, set days, fill one, adopt, and it
   eq(await page.$$eval(".drow",a=>a.length),3,"a day removed");
   await page.tap('[data-adopt]');await pause(page);await page.tap('[data-confirmok]');await pause(page,400);
   eq(await ev(page,"(function(){var u=S.programs.find(x=>x.name==='Test split');return [S.activeProgram===u.id,u.days.length,u.days[0].ex.length]})()"),[true,3,1],"active, one copy");
-  await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");V.train="splits";render();});await pause(page);
+  await coach(page,"train","programs");
   if(await page.$('.card.tdays [data-delsplit]'))throw new Error("a template can be deleted");
   eq(await page.$$eval("[data-delsplit]",a=>a.length),1,"the active program has no ✕");
   await page.evaluate(async()=>{const s=await import("/js/state.js");const {render}=await import("/js/ui/render.js");s.S.activeProgram=s.S.programs.find(x=>x.name!=="Test split").id;s.saveDB();render();});await pause(page);
@@ -409,16 +412,16 @@ await test("by weekday: pinned days fall on their weekdays, others are rest, and
 await test("templates: Use it now makes an active copy; Just add it keeps the current one",async page=>{
   await tapTab(page,"train");await pause(page);
   const act0=await ev(page,"S.activeProgram");
-  await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");V.train="preview";V.previewId="ppl";render();});await pause(page);
+  await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");V.tab="coach";V.train="preview";V.previewId="ppl";render();});await pause(page);
   await page.tap('[data-adopt]');await pause(page);await page.tap('[data-confirmalt]');await pause(page,400);
   eq(await ev(page,"[S.activeProgram,S.programs.filter(p=>p.from==='ppl').length,V.train]"),[act0,1,"builder"],"added, not active");
-  await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");V.train="preview";V.previewId="ul";render();});await pause(page);
+  await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");V.tab="coach";V.train="preview";V.previewId="ul";render();});await pause(page);
   await page.tap('[data-adopt]');await pause(page);await page.tap('[data-confirmok]');await pause(page,400);
   eq(await ev(page,"S.programs.find(p=>p.id===S.activeProgram).from"),"ul","active copy of the template");
 });
 await test("builder: switching to weekdays pins the days, and weekday chips move a pin",async page=>{
   await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");const s=await import("/js/state.js");
-    V.tab="train";V.train="builder";V.previewId=s.S.activeProgram;render();});await pause(page);
+    V.tab="coach";V.train="builder";V.previewId=s.S.activeProgram;render();});await pause(page);
   await page.tap('[data-sched="week"]');await pause(page);
   const pinned=await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days.filter(d=>d.ex.length).every(d=>d.wd.length===1)");
   eq(pinned,true,"each training day pinned");
@@ -427,8 +430,8 @@ await test("builder: switching to weekdays pins the days, and weekday chips move
   const [id,n]=first.split("|");
   eq(await ev(page,"(function(){var p=S.programs.find(p=>p.id===S.activeProgram);return p.days.filter(d=>d.wd.indexOf("+n+")>=0).map(d=>d.id)})()"),[id],"weekday belongs to one day");
 });
-await test("a rotation program is offered weekdays once",async page=>{
-  await tapTab(page,"train");await pause(page);
+await test("a rotation program is offered weekdays once, where the program is planned",async page=>{
+  await coach(page,"train","program");
   if(!(await page.$('[data-wdoffer]')))throw new Error("no offer");
   await page.tap('[data-wdoffer="no"]');await pause(page);
   eq(await ev(page,"[!!S.wdOffered,S.programs.find(p=>p.id===S.activeProgram).schedule]"),[true,"cycle"]);
@@ -457,30 +460,28 @@ await test("library growth: plyometrics, holds, drills and stretches load; kinds
   eq(r,[[],["Standing Long Jump"],true,true,"Standing Long Jump","skyr","noodles_instant"]);
 });
 
-/* ---- the Train tab: Today · My Program · Explore, and the workout bar -------------- */
-await test("Train sections switch, are remembered after a reload, and a Train tap at the top goes to Today",async page=>{
+/* ---- the Training page, Coach's sections, and the workout bar ----------------------- */
+await test("Training opens on today with no sections; Coach's sections switch and are remembered after a reload",async page=>{
   await tapTab(page,"train");await pause(page);
-  if(!(await page.$('.twk'))||!(await page.$('[data-startday]')))throw new Error("Today has no week strip or start");
-  await page.tap('[data-tsec="program"]');await pause(page);
-  if(!(await page.$('.bsched'))||!(await page.$('.drows [data-day]')))throw new Error("My Program is not the builder");
+  if(!(await page.$('.twk'))||!(await page.$('[data-startday]')))throw new Error("Training has no week strip or start");
+  eq(await page.$$eval('#app .tsecs,#app [data-tsec]',a=>a.length),0,"no sections on Training");
+  await coach(page,"train","program");
+  if(!(await page.$('.bsched'))||!(await page.$('.drows [data-day]')))throw new Error("My program is not the builder");
   await page.reload();await pause(page,1000);
-  await tapTab(page,"train");await pause(page);
-  eq(await ev(page,"[V.tsec,!!document.querySelector('.bsched')]"),["program",true],"remembered");
-  await tapTab(page,"train");await pause(page);
-  eq(await ev(page,"[V.tsec,S.prefs.tsec,!!document.querySelector('.twk')]"),["today","today",true],"tap at the top");
+  await tapTab(page,"coach");await pause(page);
+  eq(await ev(page,"[S.prefs.csec,!!document.querySelector('.bsched')]"),["train",true],"remembered");
 });
-await test("Back goes up one level: a day to My Program, a template to Explore",async page=>{
-  await tapTab(page,"train");await pause(page);
-  await page.tap('[data-tsec="program"]');await pause(page);
+await test("Back goes up one level: a day to My program, a template to Programs",async page=>{
+  await coach(page,"train","program");
   await page.tap('.drows [data-day]');await pause(page,400);
-  eq(await ev(page,"V.train"),"day");
+  eq(await ev(page,"[V.tab,V.train]"),["coach","day"]);
   await page.tap('[data-back]');await pause(page,500);
-  eq(await ev(page,"[V.train,V.tsec,!!document.querySelector('.bsched')]"),["days","program",true],"day → My Program");
-  await page.tap('[data-tsec="explore"]');await pause(page);
+  eq(await ev(page,"[V.tab,V.train,!!document.querySelector('.bsched')]"),["coach","days",true],"day → My program");
+  await page.tap('[data-ctsub="programs"]');await pause(page);
   await page.tap('.tprog-card[data-preview]');await pause(page,400);
   eq(await ev(page,"V.train"),"preview");
   await page.tap('[data-back]');await pause(page,500);
-  eq(await ev(page,"[V.train,V.tsec,!!document.querySelector('.tprog-card')]"),["days","explore",true],"template → Explore");
+  eq(await ev(page,"[V.train,V.ctsub,!!document.querySelector('.tprog-card')]"),["days","programs",true],"template → Programs");
 });
 await test("week strip: a tapped day shows its plan, today returns to now",async page=>{
   await tapTab(page,"train");await pause(page);
@@ -491,18 +492,17 @@ await test("week strip: a tapped day shows its plan, today returns to now",async
   await page.tap('.twk-d.today');await pause(page);
   eq(await ev(page,"V.tdate"),null);
 });
-await test("My Program edits the active program in place",async page=>{
-  await tapTab(page,"train");await pause(page);
-  await page.tap('[data-tsec="program"]');await pause(page);
+await test("My program edits the active program in place",async page=>{
+  await coach(page,"train","program");
   const n=await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days.length");
   await page.tap('.dadd[data-bday]');await pause(page);
-  eq(await ev(page,"[S.programs.find(p=>p.id===S.activeProgram).days.length,V.train,V.tsec]"),[n+1,"days","program"]);
+  eq(await ev(page,"[S.programs.find(p=>p.id===S.activeProgram).days.length,V.tab,V.train,V.ctsub]"),[n+1,"coach","days","program"]);
 });
 await test("workout bar: the clock on other tabs, rest counts down there, rest over, and back to the workout",async page=>{
   await startWorkout(page);
   eq(await page.$eval('#wbar',e=>!e.firstChild),true,"not on Train");
-  await tapTab(page,"home");await pause(page,1200);
-  if(!/Workout/i.test(await page.$eval('#wbar',e=>e.innerText)))throw new Error("no bar on Home");
+  await tapTab(page,"progress");await pause(page,1200);
+  if(!/Workout/i.test(await page.$eval('#wbar',e=>e.innerText)))throw new Error("no bar on Progress");
   eq(await ev(page,"document.body.classList.contains('wb')"),true);
   await page.tap('#wbar .wbar');await pause(page,500);
   eq(await ev(page,"[V.tab,!document.getElementById('wbar').firstChild]"),["train",true],"tap returns");
@@ -529,21 +529,20 @@ await test("the week starts on Saturday everywhere, and the setting moves it",as
   eq(await ev(page,"S.prefs.wkstart"),7,"then Sunday");
   eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");const u=await import("/js/util.js");return sc.isoWeekday(sc.weekStartOf(u.today()));}),7);
 });
-await test("Food sections switch, are remembered, and a Food tap at the top returns to Today",async page=>{
+await test("Food is the day only; the plan, targets and your own foods are planned in Coach → Nutrition",async page=>{
   await tapTab(page,"food");await pause(page);
-  if(!(await page.$('.fsum'))||!(await page.$('.fwater-art')))throw new Error("Today is not the dashboard");
+  if(!(await page.$('.fsum'))||!(await page.$('.fwater-art')))throw new Error("Food is not the day");
+  eq(await page.$$eval('#app .tsecs,#app [data-fsec]',a=>a.length),0,"no sections on Food");
   if(await page.$('[data-quickfood].pill'))throw new Error("frequent pills still on the page");
-  await page.tap('[data-fsec="targets"]');await pause(page);
-  if(!(await page.$('#g_kcal'))||!(await page.$('.tghero .art-gauge')))throw new Error("Targets has no inline goals");
+  await coach(page,"food","targets");
+  if(!(await page.$('#g_kcal')))throw new Error("Targets has no inline goals");
+  eq(await page.$$eval('.tghero',a=>a.length),0,"no copy of Food's day summary");
   await page.reload();await pause(page,1000);
-  await tapTab(page,"food");await pause(page);
-  eq(await ev(page,"[V.fsec,!!document.getElementById('g_kcal')]"),["targets",true],"remembered");
-  await tapTab(page,"food");await pause(page);
-  eq(await ev(page,"[V.fsec,S.prefs.fsec,!!document.querySelector('.fsum')]"),["today","today",true],"tap at the top");
+  await tapTab(page,"coach");await pause(page);
+  eq(await ev(page,"S.prefs.csec"),"food","remembered");
 });
 await test("My Foods: build a meal from search, log it whole, and ✕ removes it with Undo",async page=>{
-  await tapTab(page,"food");await pause(page);
-  await page.tap('[data-fsec="foods"]');await pause(page);
+  await coach(page,"food","foods");
   await page.tap('[data-newmeal]');await pause(page);await page.fill('#askv','Ful breakfast');await page.tap('[data-askok]');await pause(page,400);
   const id=await ev(page,"V.smeal");if(!id)throw new Error("no meal screen");
   await page.tap('[data-smadd]');await pause(page,1200);
@@ -556,15 +555,14 @@ await test("My Foods: build a meal from search, log it whole, and ✕ removes it
   eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");
     return Object.values(s.dayRec(u.today()).meals).reduce((n,m)=>n+m.items.length,0)>0;}),true,"logged whole");
   await page.tap('[data-back]');await pause(page,500);
-  eq(await ev(page,"[V.fsec,V.smeal]"),["foods",null],"back to My Foods");
+  eq(await ev(page,"[V.tab,V.cfsub,V.smeal]"),["coach","foods",null],"back to My foods");
   await page.tap('[data-rmsaved="'+id+'"]');await pause(page);
   eq(await ev(page,"S.savedMeals.length"),0,"removed");
   await page.tap('.toast-undo');await pause(page);
   eq(await ev(page,"S.savedMeals.length"),1,"undo");
 });
 await test("your own food: edited in My Foods, blank calories come from the macros, ✕ with Undo",async page=>{
-  await tapTab(page,"food");await pause(page);
-  await page.tap('[data-fsec="foods"]');await pause(page);
+  await coach(page,"food","foods");
   await page.tap('[data-myfood="new"]');await pause(page);
   await page.fill('#mf_n','Koshari');await page.fill('#mf_s','1 plate');
   await page.fill('#mf_p','20');await page.fill('#mf_c','100');await page.fill('#mf_f','10');
@@ -579,42 +577,44 @@ await test("your own food: edited in My Foods, blank calories come from the macr
   eq(await ev(page,"S.myFoods.length"),1);
 });
 await test("Targets: goals save in place, the suggestion applies, and Progress no longer has Nutrition",async page=>{
-  await tapTab(page,"food");await pause(page);
-  await page.tap('[data-fsec="targets"]');await pause(page);
+  await coach(page,"food","targets");
   await page.fill('#g_kcal','2222');await page.tap('[data-savegoals]');await pause(page);
   eq(await ev(page,"S.goals.kcal"),2222);
   await page.tap('[data-usesug]');await pause(page);
   eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const f=await import("/js/engine/formulas.js");
     return s.S.goals.kcal===Math.round(f.targetKcal()/10)*10&&s.S.goals.kcal!==2222;}),true,"suggested applied");
   if(!(await page.$('.pgadh'))&&!(await page.$('.empty')))throw new Error("no eating trends");
-  await tapTab(page,"progress");await pause(page);
+  await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page);
   eq(await page.$$eval('[data-ptab]',a=>a.map(b=>b.getAttribute("data-ptab")).filter((v,i,x)=>x.indexOf(v)===i).sort()),["body","overview","strength"]);
 });
 
-/* ---- Home, Progress, Profile ------------------------------------------------------------ */
-await test("Home: one reminder at most, Train's card, water adds and takes back, and the Saturday week",async page=>{
+/* ---- Training's top, Progress, Profile ------------------------------------------------ */
+await test("Training: opens the app, one reminder at most, today's card, weigh-in and steps, the Saturday week; water is on Food",async page=>{
+  eq(await ev(page,"V.tab"),"train","the app opens on Training");
   eq(await page.$$eval('.hnote',a=>a.length)<=1,true,"one reminder");
-  if(!(await page.$('.hstack .thero2 [data-startday]')))throw new Error("no Next up card");
+  if(!(await page.$('#app .thero2 [data-startday]')))throw new Error("no today card");
+  eq(await page.$$eval('#app .htile',a=>a.map(e=>e.classList[1])),["weight","steps"],"weigh-in and steps");
+  eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");return sc.isoWeekday(document.querySelector('.twk-d').getAttribute('data-tweek'));}),6,"Saturday first");
+  await tapTab(page,"food");await pause(page);
   const w0=await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;});
-  /* The tile is split: the bottom half adds a glass, the top half takes one back. */
-  await page.tap('.htile.water .hsplit-bot');await pause(page);
+  await page.tap('.fwater-add');await pause(page);
   const w1=await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;});
-  if(!(w1>w0))throw new Error("water tile did not add");
-  await page.tap('.htile.water .hsplit-top');await pause(page);
-  eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;}),w0,"the top half takes the glass back");
-  await page.tap('.htile.water .hsplit-bot');await pause(page);
-  eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");return sc.isoWeekday(document.querySelector('.hstack .twk-d').getAttribute('data-openday'));}),6);
-  await page.tap('.htile.kcal');await pause(page);
-  eq(await ev(page,"[V.tab,V.fsec]"),["food","today"]);
+  if(!(w1>w0))throw new Error("water did not add");
 });
-await test("Home shows the workout in progress in the same card, with Resume",async page=>{
+await test("Leaving a workout for later lands on Training's Resume card, and Resume goes back into it",async page=>{
   await startWorkout(page);
-  await tapTab(page,"home");await pause(page);
-  if(!(await page.$('.hstack .thero2 [data-continue]')))throw new Error("no resume card");
+  await page.evaluate(async()=>{(await import("/js/ui/nav.js")).goBack();});await pause(page,500);
+  await page.tap('[data-confirmok]');await pause(page,500);
+  eq(await ev(page,"[V.tab,V.train,!!S.active]"),["train","hub",true],"on Training, workout kept");
+  if(!(await page.$('#app .thero2 [data-continue]')))throw new Error("no resume card");
+  await page.tap('[data-continue]');await pause(page,500);
+  eq(await ev(page,"[V.tab,V.train]"),["train","days"],"back in the workout");
+  if(!(await page.$('[data-logset]')))throw new Error("not the workout");
 });
 await test("Progress: no date bar, History by month opens and Back returns",async page=>{
   await tapTab(page,"progress");await pause(page);
   if(await page.$('.dnav'))throw new Error("date bar still on Progress");
+  await page.tap('[data-pview="detail"]');await pause(page);
   await page.tap('[data-phist]');await pause(page);
   /* The seed trains from two days ago back, so on the 1st and 2nd of a month every
      trained day is in the previous one: look in both months the test visits. */
@@ -626,6 +626,93 @@ await test("Progress: no date bar, History by month opens and Back returns",asyn
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.tab,!!V.phist]"),["progress",false]);
 });
+await test("Progress: Simple answers in plain words, and each goal's weight trend is judged by its own rate",async page=>{
+  await tapTab(page,"progress");await pause(page);
+  eq((await page.$$eval('.psimple .psimple-k',a=>a.map(x=>x.textContent))).slice(0,4),["Training","Weight","Strength","Food"],"plain answers, in order");
+  if(await page.$('.pgtabs2'))throw new Error("Detailed's views on Simple");
+  await page.tap('[data-pview="detail"]');await pause(page);
+  if(!(await page.$('.pgtabs2')))throw new Error("no views on Detailed");
+  /* Three weeks of weigh-ins at a set rate, under each goal. */
+  const r=await page.evaluate(async()=>{
+    const S=(await import("/js/state.js")).S,ST=await import("/js/engine/stats.js");
+    const iso=d=>{const x=new Date(Date.now()-d*864e5);return new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+    const out={};
+    for(const [g,rate] of [["recomp",-0.3],["recomp",0],["lose",-0.2],["gain",0.8],["strength",0.15],["maintain",-0.3]]){
+      S.profile.goal=g;S.body=[];for(let d=21;d>=0;d-=3)S.body.push({date:iso(d),weight:Math.round((84-rate*d/7)*100)/100});
+      const tr=ST.weightTrend();out[g+" "+rate]=[tr.kind,tr.status];}
+    return out;});
+  eq(r,{"recomp -0.3":["lose","ok"],"recomp 0":["lose","ok"],"lose -0.2":["lose","slow"],"gain 0.8":["gain","fast"],
+    "strength 0.15":["gain","ok"],"maintain -0.3":["hold","down"]},"each goal by its own rate");
+  /* What Simple says: losing slowly while building muscle is on plan; gaining fast is not "more food". */
+  const say=async(g,rate)=>{await page.evaluate(async([g,rate])=>{
+    const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;
+    const iso=d=>{const x=new Date(Date.now()-d*864e5);return new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+    S.profile.goal=g;S.body=[];for(let d=21;d>=0;d-=3)S.body.push({date:iso(d),weight:Math.round((84-rate*d/7)*100)/100});
+    V.pview="simple";(await import("/js/ui/render.js")).render();},[g,rate]);await pause(page,300);
+    return page.$$eval('.psimple',a=>{const w=a.find(x=>x.querySelector('.psimple-k').textContent==="Weight");return [w.className.split(" ")[1],w.querySelector('p').textContent];});};
+  let w=await say("recomp",-0.3);
+  eq([w[0],/On track for your goal/.test(w[1])],["ok",true],"a slow loss is on plan for losing fat and building muscle");
+  w=await say("gain",0.8);
+  eq([w[0],/Trim about 100–200 kcal/.test(w[1]),/protects your muscle/.test(w[1])],["warn",true,false],"gaining too fast: a little less food");
+});
+/* ---- Coach AI: ask the coach (js/ui/views/chat.js, js/coach/intent.js) ------------- */
+await test("Coach chat: suggestions and typed questions, English and Arabic, answered from the log on the phone; buttons act with Undo; Back and Clear",async page=>{
+  /* Nothing goes over the network: every answer is worked out here. */
+  const out=[];page.on("request",r=>{if(!r.url().startsWith("http://localhost"))out.push(r.url());});
+  await coach(page,"ai");
+  if(!(await page.$('.chatcard')))throw new Error("no Ask the coach card in Coach AI");
+  await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
+  eq(await ev(page,"[V.tab,V.chat,S.chat.length,S.chat[0].id]"),["coach",true,1,"today"],"a suggestion opens the chat and is answered");
+  if(!(await page.$('.chat-a .chat-acts [data-startday]')))throw new Error("today's answer offers no Start workout");
+  const ask=async q=>{await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,300);
+    return page.evaluate(()=>{const a=[...document.querySelectorAll(".chat-a")].pop();return a?a.innerText:"";});};
+  let a=await ask("how much protein do I need?");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"protein","typed: protein");
+  if(!/150 g a day/.test(a))throw new Error("protein answer not from the targets: "+a);
+  a=await ask("اكل ايه دلوقتي");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"eat","typed in Arabic: what to eat");
+  if(!/2,500/.test(a))throw new Error("food answer not from the targets: "+a);
+  eq(await page.$$eval('.chat-acts',x=>x.length),1,"only the newest answer carries buttons");
+  a=await ask("asdf qwer");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"unknown","nonsense is said to be outside what it knows");
+  if(!/can't answer/.test(a)||!(await page.$('.chat-chips [data-chatq]')))throw new Error("unknown has no way on: "+a);
+  /* The weight stalled while losing fat, and the log matches the target: a step on the target, with Undo. */
+  a=await ask("why is my weight stuck");
+  if(!/Eat 150 kcal less a day/.test(a))throw new Error("no step offered: "+a);
+  await page.tap('.chat-acts [data-chatkcal="-150"]');await pause(page);
+  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.goals.f,S.goals.c]"),[2350,150,70,280],"150 kcal less, from carbs");
+  await page.tap('.toast-undo');await pause(page);
+  eq(await ev(page,"[S.goals.kcal,S.goals.c]"),[2500,300],"Undo");
+  /* A goal named in the question, set with its targets, and Undo. */
+  a=await ask("I want to bulk");
+  await page.tap('.chat-acts [data-chatgoal="gain"]');await pause(page);
+  eq(await ev(page,"S.profile.goal"),"gain","goal set");
+  await page.tap('.toast-undo');await pause(page);
+  eq(await ev(page,"[S.profile.goal,S.goals.kcal]"),["lose",2500],"Undo puts goal and targets back");
+  /* Kept, cleared with Undo, and Back returns to Coach AI. */
+  const n=await ev(page,"S.chat.length");
+  await page.tap('[data-chatclear]');await pause(page);
+  eq(await ev(page,"(S.chat||[]).length"),0,"cleared");
+  await page.tap('.toast-undo');await pause(page);
+  eq(await ev(page,"S.chat.length"),n,"Undo brings it back");
+  await page.tap('[data-back]');await pause(page,500);
+  eq(await ev(page,"[V.tab,!!V.chat,V.csec]"),["coach",false,"ai"],"Back to Coach AI");
+  if(!/Continue the conversation/.test(await page.$eval('.chatcard',e=>e.innerText)))throw new Error("the card does not offer to continue");
+  eq(out,[],"no network requests");
+},{db:Object.assign(seed(),{
+  profile:{age:30,height:180,weight:84,sex:"m",activity:1.4,goal:"lose",prog:"standard",level:"some",days:3},
+  body:[21,18,15,12,9,6,3,0].map(d=>({date:iso(d),weight:84})),
+  days:Object.fromEntries([1,2,3,4,5,6,7,8,9,10].map(d=>[iso(d),{water:2000,steps:8000,meals:{Lunch:{done:true,
+    items:[{n:"Day's food",fid:"x",grams:100,label:"1 serving",kcal:2480,p:150,c:300,f:70}]}}}]))})});
+await test("Coach chat: a saved conversation that is not the app's own renders as text only",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;
+    S.chat=[null,7,{q:"<img src=x onerror=alert(1)>",id:"today",b:[{p:"<b>hi</b>"},{l:["<i>x</i>",3]},null],
+      acts:[{l:"Go",a:{"onclick":"alert(1)","data-tab":"food","data-x\" onmouseover=\"alert(1)":"1"}}]}];});
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  const r=await page.evaluate(()=>({img:!!document.querySelector(".chat img"),b:!!document.querySelector(".chat-a b"),
+    btn:[...document.querySelectorAll(".chat-acts button")].map(b=>b.getAttributeNames().sort().join(","))}));
+  eq(r,{img:false,b:false,btn:["class,data-tab"]},"markup stays text; a button keeps only data-* the app knows");
+});
 await test("Arabic: the dock keeps its order, dates are Arabic, figures stay one run",async page=>{
   const r=await page.evaluate(()=>{
     const b=[...document.querySelectorAll("nav .dock-b")].map(x=>x.getBoundingClientRect().left);
@@ -634,13 +721,13 @@ await test("Arabic: the dock keeps its order, dates are Arabic, figures stay one
       leftToRight:b.every((x,i)=>!i||x>b[i-1]),first:tabs[0],
       date:document.querySelector(".hdate").textContent,
       runs:[...document.querySelectorAll('#app bdi[dir="ltr"]')].map(x=>x.textContent)};});
-  eq([r.dir,r.dock,r.leftToRight,r.first],["rtl","ltr",true,"home"],"dock");
+  eq([r.dir,r.dock,r.leftToRight,r.first],["rtl","ltr",true,"train"],"dock");
   if(!/[\u0600-\u06FF]/.test(r.date)||/[A-Za-z]/.test(r.date))throw new Error("date not Arabic: "+r.date);
   if(/[\u0660-\u0669]/.test(r.date))throw new Error("Arabic-Indic digits in date: "+r.date);
   if(!r.runs.some(x=>/^\d[\d,]* \/ \d/.test(x)))throw new Error("no isolated fraction among "+JSON.stringify(r.runs));
 },{prefs:{lang:"ar"}});
 await test("Arabic: template program and day names are shown in Arabic, fractions keep their slash",async page=>{
-  await tapTab(page,"train");await pause(page);await page.tap('[data-tsec="program"]');await pause(page,400);
+  await coach(page,"train","program");await pause(page,200);
   const r=await page.evaluate(async()=>{const x=await import("/js/i18n/exnames.js");
     return {rows:[...document.querySelectorAll(".drow-n")].map(e=>e.textContent),
       head:(document.querySelector(".bhero .dhead-t, .dname .dhead-t")||{}).textContent||"",
@@ -655,21 +742,20 @@ await test("Light: the active dock icon reads on the dark dock",async page=>{
   const c=await page.$eval('nav .dock-b.on',e=>getComputedStyle(e).color);
   eq(c,"rgb(255, 92, 102)");
 },{db:Object.assign(seed(),{theme:"light"})});
-await test("Train Today's recovery check-in logs in taps; Profile has moved its plan and recovery rows",async page=>{
+await test("One place for each thing: the assessment in Coach AI only, how you feel asked when a workout starts, nothing of it on Profile",async page=>{
   await tapTab(page,"train");await pause(page);
-  await page.tap('[data-rchk="sleep|7.5"]');await page.tap('[data-rchk="sore|5"]');await page.tap('[data-rchk="energy|9"]');await pause(page);
-  eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");const r=s.dayRec(u.today());return [r.sleep,r.sore,r.energy];}),[7.5,5,9]);
-  if(await page.$('.rchk'))throw new Error("check-in still showing");
-  await page.tap('[data-tsec="explore"]');await pause(page);
-  if(!(await page.$('.bauto[data-setup]')))throw new Error("no Let Bunyan build it");
+  eq(await page.$$eval('#app .rchk,#app [data-rchk]',a=>a.length),0,"no recovery check-in on Training");
+  await coach(page,"train","programs");
+  eq(await page.$$eval('#app [data-setup]',a=>a.length),0,"no assessment in Training planning");
+  await coach(page,"ai");
+  eq(await page.$$eval('#app [data-setup]',a=>a.length)>=1,true,"Coach AI has it");
   await tapTab(page,"profile");await pause(page);
   eq(await page.$$eval('#app [data-setup],#app [data-sheet="recovery"]',a=>a.length),0);
   if(!(await page.$('.pring')))throw new Error("no ring");
 });
 /* ---- the name dialog, meals of your own, and a plan ------------------------------------- */
 await test("Name prompt: a rounded dialog with no Name label; a tap outside lowers the keyboard before it closes",async page=>{
-  await tapTab(page,"train");await pause(page);
-  await page.tap('[data-tsec="explore"]');await pause(page);
+  await coach(page,"train","programs");
   await page.$eval('[data-newsplit]',e=>e.click());await pause(page,400);
   if(!(await page.$('.sheet.dlg .dlgbox')))throw new Error("no dialog");
   eq(await page.$$eval('.dlgbox label',a=>a.length),0,"no Name label");
@@ -690,8 +776,7 @@ await test("Food: no Now label; Add Food goes to the meal after the last one log
   eq(await page.$eval('.btn.fadd',e=>e.getAttribute("data-addfood")),"Dinner","after Lunch comes Dinner");
 });
 await test("Plan: numbered meals, add and rename a meal, reorder them, and every name reaches Today",async page=>{
-  await tapTab(page,"food");await pause(page);
-  await page.tap('[data-fsec="plan"]');await pause(page);
+  await coach(page,"food","plan");
   await page.tap('[data-mstyle="numbered"]');await pause(page);
   eq(await page.$$eval('.drows .drow-n',a=>a.map(x=>x.textContent)),["Meal 1","Meal 2","Meal 3","Meal 4"],"numbered");
   await page.tap('[data-paddslot]');await pause(page,400);
@@ -705,12 +790,11 @@ await test("Plan: numbered meals, add and rename a meal, reorder them, and every
   await page.tap('[data-reorder="ms"]');await pause(page);
   await page.focus('.drow:nth-child(5) .dgrip');await page.keyboard.press("ArrowUp");await pause(page);
   eq(await page.$$eval('.drows .drow-n',a=>a.map(x=>x.textContent)),["Meal 1","Lunch at work","Meal 3","Pre-workout","Meal 5"],"moved up; a numbered meal is called by its place");
-  await page.tap('[data-fsec="today"]');await pause(page);
+  await tapTab(page,"food");await pause(page);
   eq(await page.$$eval('.fmt-c .fmt-n',a=>a.map(x=>x.textContent)),["Meal 1","Lunch at work","Meal 3","Pre-workout","Meal 5"],"Today's tiles");
 });
 await test("Plan import: pasted text becomes meals with foods; an unmatched line waits with Find; the plan logs in one tap",async page=>{
-  await tapTab(page,"food");await pause(page);
-  await page.tap('[data-fsec="plan"]');await pause(page);
+  await coach(page,"food","plan");
   await page.tap('[data-pimport]');await pause(page);
   await page.fill('#pi_text',"Meal 1 (8am):\n- 3 eggs\n- 2 slices toast\nMeal 2: 150g chicken breast, 200g rice\nSnack:\n200g greek yogurt\n1 cup zorblax");
   await page.tap('[data-pread]');await pause(page,1200);
@@ -722,6 +806,9 @@ await test("Plan import: pasted text becomes meals with foods; an unmatched line
   await page.tap('[data-pfind]');await pause(page,600);
   eq(await ev(page,"[V.sheet,V.food.sq,V.sd.plan!=null]"),["addfood","1 cup zorblax",true],"Find opens search with the line typed");
   await page.keyboard.press("Escape");await pause(page);
+  eq(await page.$$eval('#app [data-logplan]',a=>a.length),0,"planning only: no logging in Coach");
+  await tapTab(page,"food");await pause(page);
+  await page.tap('.fmt-c[data-meal="Snack"]');await pause(page,400);
   await page.tap('[data-logplan]');await pause(page);
   eq(await page.evaluate(async()=>{const s=await import("/js/state.js"),u=await import("/js/util.js");return (s.dayRec(u.today()).meals.Snack||{items:[]}).items.length;}),1,"logged as planned");
   await page.evaluate(()=>history.back());await pause(page,500);
@@ -768,8 +855,7 @@ await test("Themes: every theme and mode uses its reference colours exactly",asy
   eq(r["mono-light"].slice(0,3),["#050505","#D7FFE0","#D7FFE0"],"Zero Black on Ghost Green");
 });
 await test("Themes: a delete asks in red whatever the theme",async page=>{
-  await tapTab(page,"train");await pause(page);
-  await page.tap('[data-tsec="program"]');await pause(page);
+  await coach(page,"train","program");
   await page.$$eval('.drows [data-day]',a=>a[0].click());await pause(page,400);
   await page.$eval('[data-delday]',e=>e.click());await pause(page,500);
   const bg=await page.$eval('.cf.bad .cf-ok',e=>getComputedStyle(e).backgroundImage);
@@ -799,21 +885,21 @@ await test("Themes: the stylesheet names no colour outside the theme blocks",asy
   eq(bad,[],"coloured literals outside the themes");
 });
 await test("Back returns to where you were on the screen before; a tab tap always opens at the top",async page=>{
-  await tapTab(page,"train");await pause(page);await page.tap('[data-tsec="explore"]');await pause(page);
-  const y0=await page.evaluate(()=>{const e=[...document.querySelectorAll("[data-preview]")].pop();e.scrollIntoView({block:"center"});return Math.round(scrollY);});
-  if(y0<100)throw new Error("Explore too short to test");
-  await page.evaluate(()=>[...document.querySelectorAll("[data-preview]")].pop().click());await pause(page,500);
-  eq(await ev(page,"V.train"),"preview");
+  await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page);
+  const y0=await page.evaluate(()=>{document.querySelector("[data-phist]").scrollIntoView({block:"center"});return Math.round(scrollY);});
+  if(y0<100)throw new Error("Progress → Detailed too short to test");
+  await page.evaluate(()=>document.querySelector("[data-phist]").click());await pause(page,500);
+  eq(await ev(page,"V.phist"),true);
   await page.evaluate(()=>window.scrollTo(0,200));await pause(page);
   await page.evaluate(async()=>{(await import("/js/ui/nav.js")).goBack();});await pause(page,600);
-  eq([await ev(page,"V.train"),await page.evaluate(()=>Math.round(scrollY))],["days",y0],"back to the same place");
-  await page.evaluate(()=>[...document.querySelectorAll("[data-preview]")].pop().click());await pause(page,500);
+  eq([await ev(page,"!!V.phist"),await page.evaluate(()=>Math.round(scrollY))],[false,y0],"back to the same place");
+  await page.evaluate(()=>document.querySelector("[data-phist]").click());await pause(page,500);
   await page.evaluate(()=>window.scrollTo(0,300));await pause(page);
-  await tapTab(page,"progress");await pause(page,700);
+  await tapTab(page,"train");await pause(page,700);
   eq(await page.evaluate(()=>Math.round(scrollY)),0,"a tab opens at its top, not where the browser last saw it");
 });
 await test("PDF plan: meals, daily targets and supplements are read, reviewed and applied, and Undo puts it all back",async page=>{
-  await tapTab(page,"food");await pause(page);await page.tap('[data-fsec="plan"]');await pause(page);
+  await coach(page,"food","plan");
   await page.tap('[data-pimport]');await pause(page);
   const before=await ev(page,"JSON.stringify(S.goals)");
   await page.setInputFiles("#pi_file",new URL("./fixtures/plan-sample.pdf",import.meta.url).pathname);
@@ -835,7 +921,7 @@ await test("PDF plan: meals, daily targets and supplements are read, reviewed an
   eq(await ev(page,"JSON.stringify(S.goals)"),before,"Undo restores the targets");
 });
 await test("PDF plan: everything can be changed on the review before it is used",async page=>{
-  await tapTab(page,"food");await pause(page);await page.tap('[data-fsec="plan"]');await pause(page);
+  await coach(page,"food","plan");
   await page.tap('[data-pimport]');await pause(page);
   await page.setInputFiles("#pi_file",new URL("./fixtures/plan-sample.pdf",import.meta.url).pathname);
   for(let i=0;i<60&&!(await page.$(".picard"));i++)await pause(page,250);
@@ -919,7 +1005,7 @@ async function dockTest(page,slide){
       taps:getComputedStyle(d).pointerEvents!=="none",y:Math.round(scrollY),dt:parseInt(n.style.getPropertyValue("--dt"))||0};});
   const scroll=async(dy,n)=>{for(let i=0;i<n;i++){await page.evaluate(d=>window.scrollBy(0,d),dy);await page.waitForTimeout(16);}};
   const settle=()=>pause(page,650);
-  await tapTab(page,"progress");await pause(page);
+  await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page);
   await scroll(10,3);await settle();
   eq((await st()).away,"0","a little scroll near the top leaves it");
   await scroll(15,10);await settle();
@@ -964,7 +1050,7 @@ async function dockTest(page,slide){
   }
 }
 await test("Press: a finger starting a scroll never flashes what it lands on; a held press and a quick tap still show",async(page,env)=>{
-  await tapTab(page,"train");await pause(page,500);
+  await coach(page,"train","exercises");await pause(page,500);
   const cdp=await env.ctx.newCDPSession(page);
   const touch=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
   const b=await (await page.$(".ttile")).boundingBox();
@@ -1017,7 +1103,7 @@ for(const online of [false,true])await test("Exercise photos: a re-render keeps 
   const png=fs.readFileSync(new URL("../icon-180.png",import.meta.url));
   await env.ctx.route(/cdn\.jsdelivr\.net/,r=>online?r.fulfill({status:200,contentType:"image/png",body:png}):r.abort());
   let fetches=0;page.on("request",r=>{if(/jsdelivr/.test(r.url()))fetches++;});
-  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="library";(await import("/js/ui/render.js")).render();});
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.train="library";(await import("/js/ui/render.js")).render();});
   await pause(page,2000);
   const st=()=>page.evaluate(()=>[...document.querySelectorAll(".thumbwrap")].slice(0,10).map(w=>w.className).join());
   const before=await st(),f0=fetches;
@@ -1029,7 +1115,7 @@ for(const online of [false,true])await test("Exercise photos: a re-render keeps 
 });
 await test("Exercise library: draws 40 rows and more as the end comes into view; a filter starts it over",async page=>{
   await tapTab(page,"train");await pause(page);
-  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.train="library";(await import("/js/ui/render.js")).render();});
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.train="library";(await import("/js/ui/render.js")).render();});
   await pause(page,400);
   const rows=()=>page.evaluate(()=>document.querySelectorAll(".libtrow").length);
   eq(await rows(),40,"first draw");
@@ -1066,8 +1152,7 @@ await test("Back never walks out of the app, even when a screen opens while a ta
   eq([await ix(),await ev(page,"V.tab")],[base,"progress"],"still in the app");
 });
 await test("Training import: a coach's PDF becomes a draft — days, week, cues, start weights, a block — edited, then a program",async page=>{
-  await tapTab(page,"train");await pause(page);
-  await page.evaluate(()=>document.querySelector('[data-tsec="explore"]').click());await pause(page,300);
+  await coach(page,"train","programs");
   await page.evaluate(()=>document.querySelector("[data-timport]").click());await pause(page,300);
   await page.setInputFiles("#ti_file",new URL("./fixtures/split-sample.pdf",import.meta.url).pathname);
   await page.waitForSelector(".tisum",{timeout:20000});await pause(page,300);
@@ -1097,7 +1182,7 @@ await test("Training import: a coach's PDF becomes a draft — days, week, cues,
   const p=await ev(page,"(()=>{const p=S.programs.filter(x=>x.id===S.activeProgram)[0];return {name:p.name,sched:p.schedule,days:p.days.map(d=>[d.name,d.wd,d.ex.length]),notes:p.notes.length,start:!!p.start}})()");
   eq(p,{name:"Upper / Lower",sched:"week",days:[["Day A — Upper",[1],7],["Day B — Lower",[4,5],6],["Walking",[2],1]],notes:2,start:true},"the program");
   eq(await ev(page,"S.myEx.map(m=>[m.n,m.m])"),[["Tib Raise","Calves"]],"the unknown name joins as your own");
-  eq(await ev(page,"[V.tab,V.tsec]"),["train","program"],"lands on My Program");
+  eq(await ev(page,"[V.tab,V.csec,V.ctsub]"),["coach","train","program"],"lands on My program");
   /* In a workout: week 1 leaves out what belongs to weeks 5–8; the plan's start
      weight and cue are there; the other choice is one tap. */
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,p=S.programs.filter(x=>x.id===S.activeProgram)[0];(await import("/js/ui/actions.js")).startDay(p.days[1].id);});await pause(page,400);
@@ -1179,7 +1264,7 @@ await test("Cool-down: stretches for what was trained on Workout complete, timed
   eq(await ev(page,"[V.sheet,!!document.querySelector('.cd')]"),["done",false],"no cool-down when off");
 },{prefs:{nowarm:false,autorest:false}});
 await test("Arabic: the muscle Back reads ظهر, not the back button's رجوع",async page=>{
-  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="library";V.exm="Back";(await import("/js/ui/render.js")).render();});
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.train="library";V.exm="Back";(await import("/js/ui/render.js")).render();});
   await pause(page,500);
   const s=await page.$eval('.libtrow .trow-s',e=>e.textContent);
   if(s.indexOf("ظهر")<0||s.indexOf("رجوع")>=0)throw new Error("library row reads "+s);
@@ -1253,34 +1338,40 @@ await test("Assessment: first run opens it; answers become targets and training 
   await page.tap('[data-asm="avoid|nuts"]');await pause(page,150);
   await page.tap('[data-asnext]');await pause(page,150);await page.tap('[data-asnext]');await pause(page,800);
   if(!(await page.$('[data-asuse]')))throw new Error("no result screen");
+  for(let i=0;i<20&&!(await page.$('.as-meals'));i++)await pause(page,250);
+  eq(await page.$$eval('.as-meals > div',a=>a.length),4,"the meals are on the result, with the training");
   const shown=await page.$eval('.as-kcal b',e=>e.textContent.replace(/\D/g,""));
   await page.tap('[data-asuse]');await pause(page,500);
   eq(await ev(page,"[S.onboarded,S.profile.goal,S.profile.limits,String(S.goals.kcal),S.prefs.avoid,!!S.activeProgram]"),
     [true,"recomp",["back"],shown,["nuts"],true],"applied as shown");
+  eq(await ev(page,"S.mealSlots.length===4&&S.mealSlots.every(s=>(s.plan||[]).length>=2)"),true,"meals planned in the same step");
   const prog=await ev(page,"S.activeProgram");
   await page.tap('.toast-undo');await pause(page,400);
   eq(await ev(page,"[S.onboarded,S.profile.goal,S.activeProgram===\""+prog+"\"]"),[false,"gain",false],"one Undo puts it all back");
+  eq(await ev(page,"(S.mealSlots||[]).every(s=>!(s.plan||[]).length)"),true,"Undo took the meals back too");
   await page.tap('[data-asuse]');await pause(page,500);
-  await page.tap('[data-asmeals]');await pause(page,1200);
-  eq(await ev(page,"[V.tab,V.pimport,!!V.pgen,(V.pparse||[]).length]"),["food",true,true,4],"meal plan review");
-  await page.tap('[data-puse]');await pause(page,500);
-  eq(await ev(page,"S.mealSlots.length===4&&S.mealSlots.every(s=>(s.plan||[]).length>=2)"),true,"meals planned");
+  await page.tap('[data-asfood]');await pause(page,500);
+  eq(await ev(page,"V.tab"),"food","today's food");
+  eq(await page.$$eval('.fmt-c .fmt-plan',a=>a.length),4,"every meal of the day shows its plan");
+  if(!(await page.$('[data-logday]')))throw new Error("no Log today's plan on Food");
 },{db:Object.assign(seed(),{onboarded:false})});
-await test("Plan check: targets that work against the goal are found on Home, fixed with Undo, and kept as they are until the numbers change",async page=>{
+await test("Plan check: targets that work against the goal are found in Coach AI with a dot on Coach, fixed with Undo, and kept until the numbers change",async page=>{
   /* Building muscle on 2,500 kcal against about 2,550 maintenance, and 110 g of protein. */
-  const card=await page.$eval('.pchome .pcf h3',e=>e.textContent);
+  eq(await page.$eval('nav [data-tab="coach"]',e=>e.classList.contains("advice")),true,"a dot on Coach");
+  await coach(page,"ai");
+  const card=await page.$eval('#app .pcf h3',e=>e.textContent);
   eq(card,"Your calories will not build muscle");
   eq(await ev(page,"S.goals.kcal"),2500);
-  await page.tap('.pchome [data-pcfix]');await pause(page,300);
+  await page.tap('[data-k="pc:kcal-down"] [data-pcfix]');await pause(page,300);
   const fixed=await ev(page,"[S.goals.kcal>2550,S.goals.p>=145]");
   eq(fixed,[true,true],"Use … kcal sets the targets for the goal");
   await page.tap('.toast-undo');await pause(page,300);
   eq(await ev(page,"[S.goals.kcal,S.goals.p]"),[2500,110],"Undo");
   /* Kept as it is: gone, and back once the numbers behind it change. */
-  await page.tap('.pchome [data-pckeep]');await pause(page,300);
-  eq(await page.$$eval('.pchome h3',a=>a.map(e=>e.textContent).includes("Your calories will not build muscle")),false,"kept");
+  await page.tap('[data-k="pc:kcal-down"] [data-pckeep]');await pause(page,300);
+  eq(await page.$$eval('#app .pcf h3',a=>a.map(e=>e.textContent).includes("Your calories will not build muscle")),false,"kept");
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.goals.kcal=2400;(await import("/js/ui/render.js")).render();});await pause(page,200);
-  eq(await page.$eval('.pchome .pcf h3',e=>e.textContent),"Your calories will not build muscle","back when the numbers change");
+  eq(await page.$eval('#app .pcf h3',e=>e.textContent),"Your calories will not build muscle","back when the numbers change");
 },{db:Object.assign(seed(),{goals:{kcal:2500,p:110,c:300,f:70,water:3000,steps:9000}})});
 await test("Plan check: a meal plan off its targets and a thin program are found; the screen fixes both; a used plan is checked",async page=>{
   await page.evaluate(async()=>{
@@ -1294,10 +1385,52 @@ await test("Plan check: a meal plan off its targets and a thin program are found
   eq(await page.evaluate(async()=>{const St=await import("/js/state.js"),Vo=await import("/js/engine/volume.js");
     return Vo.volumeCheck(St.split(),"some").filter(v=>v.status==="low").length;}),0,"balanced");
   await page.tap('[data-k="pc:meals-off"] [data-pcfix]');await pause(page,1200);
-  eq(await ev(page,"[V.tab,V.pimport,!!V.pgen]"),["food",true,true],"rebuild opens a generated plan");
+  eq(await ev(page,"[V.tab,V.pimport,!!V.pgen]"),["coach",true,true],"rebuild opens a generated plan");
   await page.tap('[data-puse]');await pause(page,300);
   eq(await page.evaluate(async()=>(await import("/js/engine/plancheck.js")).checkPlans().map(f=>f.id).includes("meals-off")),false,"fixed");
 },{db:Object.assign(seed(),{goals:{kcal:2800,p:150,c:350,f:85,water:3000,steps:9000}})});
+await test("Plan check: one tap on a fix always settles its card — the goal follows a coach's program, and what balancing cannot reach is kept",async page=>{
+  /* A coach's program written for fat loss, on a profile set to build muscle. */
+  await page.evaluate(async()=>{const St=await import("/js/state.js");const p=St.split();p.meta=Object.assign({},p.meta,{phase:"Fat loss"});
+    (await import("/js/ui/render.js")).render();});await pause(page,300);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.pcheck=true;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$eval('[data-k="pc:phase"] [data-pcfix]',b=>b.textContent),"Set my goal to lose fat","the fix names what it does");
+  await page.tap('[data-k="pc:phase"] [data-pcfix]');await pause(page,400);
+  const after=await ev(page,"[S.profile.goal,V.assess||false,document.querySelectorAll('[data-k=\"pc:phase\"]').length]");
+  eq(after,["lose",false,0],"goal changed in place, program kept, card gone");
+  const ids=await page.evaluate(async()=>(await import("/js/engine/plancheck.js")).checkPlans().map(f=>f.id));
+  if(ids.includes("kcal-up"))throw new Error("the targets did not follow the new goal: "+ids.join(","));
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[S.profile.goal,document.querySelectorAll('[data-k=\"pc:phase\"]').length]"),["gain",1],"Undo: goal and card back");
+  /* Short sessions on a thin program: balancing reaches what fits and keeps the rest,
+     so the card still goes in one tap. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.profile.mins=25;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  if(await page.$('[data-k="pc:vol-low"] [data-pcfix]')){
+    await page.tap('[data-k="pc:vol-low"] [data-pcfix]');await pause(page,400);
+    eq(await page.$$eval('[data-k="pc:vol-low"]',a=>a.length),0,"the volume card goes in one tap");
+    await page.tap('.toast-undo');await pause(page,300);
+    eq(await page.$$eval('[data-k="pc:vol-low"]',a=>a.length),1,"Undo brings it back");}
+},{db:Object.assign(seed(),{goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+await test("Coaching maths: strength grows on maintenance, warm-ups are not volume, a single is its own max, body weight progresses by reps",async page=>{
+  const r=await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const S=(await import("/js/state.js")).S,F=await import("/js/engine/formulas.js"),PC=await import("/js/engine/plancheck.js"),U=await import("/js/coach/util.js");
+    /* Strength at maintenance: nothing about building muscle. */
+    S.profile.goal="strength";const td=F.tdee();S.goals.kcal=td;S.goals.p=F.macroTargets().p;
+    const strengthIds=PC.checkPlans().map(f=>f.id);
+    /* Warm-ups out of the weekly count. */
+    const d=new Date().toISOString().slice(0,10);
+    S.sessions.unshift({id:"w1",date:d,dayName:"T",activeMs:1,entries:[{name:"Barbell Curl",muscle:"Biceps",sets:[{w:20,r:10,wu:true},{w:20,r:10,wu:true},{w:30,r:8},{w:30,r:8}]}]});
+    const curls=F.weeklySets().Biceps||0;
+    /* Pull-ups with nothing added. */
+    S.sessions.unshift({id:"w2",date:d,dayName:"T",activeMs:1,entries:[{name:"Pullups",muscle:"Back",sets:[{w:0,r:8},{w:0,r:8},{w:0,r:8}]}]});
+    const bw=F.recommend({name:"Pullups",planned:{lo:6,hi:8,sets:3}});
+    return {strengthIds,curls,single:[F.e1RM(100,1),U.e1rm(100,1),F.e1RM(100,5)],bw:bw&&[bw.bw,bw.w,/body weight alone/.test(bw.note)]};});
+  if(r.strengthIds.includes("kcal-down"))throw new Error("strength at maintenance flagged: "+r.strengthIds.join(","));
+  eq(r.curls,2,"two working sets of curls, two warm-ups not counted");
+  eq(r.single,[100,100,116.7],"a single is its own max; five reps still estimate up");
+  eq(r.bw,[true,0,true],"pull-ups on body weight: reps, then a little load");
+});
 /* ---- the coach (js/coach/) -------------------------------------------------------- */
 await test("Coach engine: every test on the runner page passes",async page=>{
   await page.goto(URL_.replace(/\/[^/]*$/,"/")+"js/coach/test/index.html");await page.waitForTimeout(800);
@@ -1310,22 +1443,93 @@ function coachLog(rpes,step){
     entries:[{name:B_,muscle:"Chest",sets:[1,2,3].map(()=>({w:80+(step||0)*i,r:8,rpe}))},
              {name:"Leg Press",muscle:"Quads",sets:[1,2,3].map(()=>({w:150+(step||0)*2*i,r:10,rpe:8}))}]}));}
 await test("Coach: a lift getting harder at the same weight is raised with its reason; a lighter week from it, or set aside",async page=>{
-  const card=await page.$eval('.pchome .coach',e=>e.innerText);
+  await coach(page,"ai");
+  const card=await page.$eval('#app .coach',e=>e.innerText);
   if(!/feeling harder/.test(card)||!/RPE 7 to 9/.test(card))throw new Error("card: "+card);
-  await page.tap('.pchome [data-cofix]');await pause(page,300);
+  await page.tap('#app .coach [data-cofix]');await pause(page,300);
   eq(await ev(page,"[!!(S.deload&&S.deload.until),Object.keys(S.coachDismiss||{}).length]"),[true,1],"lighter week on, insight quiet");
   await page.tap('.toast-undo');await pause(page,300);
   eq(await ev(page,"[!!(S.deload&&S.deload.until),Object.keys(S.coachDismiss||{}).length]"),[false,0],"Undo");
-  await page.tap('.pchome [data-cokeep]');await pause(page,300);
-  eq(await page.$$eval('.pchome .coach',a=>a.length),0,"set aside: gone from Home");
+  await page.tap('#app .coach [data-cokeep]');await pause(page,300);
+  eq(await page.$$eval('#app .coach h3',a=>a.some(e=>/feeling harder/.test(e.textContent))),false,"set aside: gone");
 },{db:Object.assign(seed(),{sessions:coachLog([7,7.5,8.5,9]),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+await test("Coach: an insight set aside stays aside when the next workout changes its details",async page=>{
+  const under=await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().filter(c=>c.kind==="under").map(c=>c.id));
+  eq(under,["under"],"one id for the kind, not a list of muscles");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.pcheck=true;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  await page.tap('[data-k="co:under"] [data-cokeep]');await pause(page,300);
+  /* A new session moves the numbers behind it. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;
+    S.sessions.unshift({id:"n1",date:new Date().toISOString().slice(0,10),dayName:"Extra",activeMs:3e6,entries:[{name:"Barbell Curl",muscle:"Biceps",sets:[{w:30,r:10,rpe:8}]}]});
+    (await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().filter(c=>c.kind==="under").length),0,"still set aside");
+},{db:Object.assign(seed(),{sessions:[0,7,14,21,28].map(d=>({id:"u"+d,date:iso(d+1),dayName:"Full Body A",activeMs:3e6,
+  entries:[{name:"Barbell Bench Press - Medium Grip",muscle:"Chest",sets:[{w:80,r:8,rpe:8}]}]})),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
 await test("Coach: a log that is on track gets no coach card — silence is earned",async page=>{
   eq(await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().filter(c=>c.pri>=2).length),0,"nothing important");
-  eq(await page.$$eval('.pchome .coach',a=>a.length),0,"no coach card on Home");
+  await coach(page,"ai");
+  eq(await page.$$eval('#app .coach.sev3,#app .coach.sev2',a=>a.length),0,"nothing important in Coach AI");
 },{db:Object.assign(seed(),{sessions:coachLog([8,8,8,8,8],2.5),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+/* ---- how coaching is surfaced (coach phase 4) ---------------------------------------- */
+await test("Phase 4: Coach AI shows the most important thing first, the rest behind a tap; the dot still counts them all",async page=>{
+  const n=await page.evaluate(async()=>(await import("/js/ui/views/pcheck.js")).adviceCount());
+  if(n<2)throw new Error("the seed should give at least two findings, got "+n);
+  await coach(page,"ai");
+  eq(await page.$$eval('#app .pcf',a=>a.length),1,"one card");
+  eq(await page.$eval('#app .pcf h3',e=>e.textContent),"Your calories will not build muscle","the most important one");
+  eq(await page.$eval('[data-advall="1"]',b=>b.textContent),n===2?"1 more thing the coach sees":(n-1)+" more things the coach sees","the rest, counted");
+  await page.tap('[data-advall="1"]');await pause(page);
+  eq(await page.$$eval('#app .pcf',a=>a.length),n,"all of them");
+  await page.tap('[data-advall="0"]');await pause(page);
+  eq(await page.$$eval('#app .pcf',a=>a.length),1,"folded again");
+  eq(await page.$eval('nav [data-tab="coach"]',e=>e.getAttribute("aria-label")).then(x=>x.includes(String(n))),true,"the dock still counts all of them");
+},{db:Object.assign(seed(),{goals:{kcal:2500,p:110,c:300,f:70,water:3000,steps:9000}})});
+await test("Phase 4: one card at a time until there is nothing to say, and then one quiet line",async page=>{
+  await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));});
+  const n=await page.evaluate(async()=>(await import("/js/ui/views/pcheck.js")).adviceCount());
+  if(n<1)throw new Error("the seed should have something to say");
+  await coach(page,"ai");
+  /* Set aside what there is, one card at a time: each time the next one takes its place. */
+  for(let i=0;i<n;i++){
+    eq(await page.$$eval('#app .pcf',a=>a.length),1,"one card at a time");
+    await page.tap('#app .pcf [data-pckeep],#app .pcf [data-cokeep]');await pause(page,300);
+    await page.evaluate(()=>{const x=document.querySelector('.toast');if(x)x.remove();});}
+  eq(await page.$$eval('#app .pcf,#app .as-note,#app .tsec-h',a=>a.length),0,"no cards, heading or footnote");
+  eq(await page.$eval('#app .pcquiet',e=>e.textContent.trim()),"On track. Nothing to change.","one quiet line");
+  eq(await page.$eval('nav [data-tab="coach"]',e=>e.classList.contains("advice")),false,"no dot");
+  /* What was set aside can be brought back. */
+  await page.tap('[data-pcreset]');await pause(page,300);
+  eq(await page.$$eval('#app .pcf',a=>a.length),1,"back, one at a time");
+},{db:Object.assign(seed(),{sessions:coachLog([8,8,8,8,8],2.5),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+await test("Phase 4: one session and one weigh-in say \"not enough yet\" everywhere, never a trend",async page=>{
+  await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));});
+  eq(await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().length),0,"the coach says nothing");
+  await tapTab(page,"progress");await pause(page);
+  const cards=await page.$$eval('.psimple',a=>Object.fromEntries(a.map(x=>[x.querySelector('.psimple-k').textContent,x.innerText])));
+  if(!/Not enough yet/.test(cards.Strength))throw new Error("strength: "+cards.Strength);
+  if(!/A few more weigh-ins/.test(cards.Weight))throw new Error("weight: "+cards.Weight);
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page);
+  await page.fill('#chatq','is my weight on track');await page.press('#chatq','Enter');await pause(page,300);
+  const a=await page.evaluate(()=>[...document.querySelectorAll(".chat-a")].pop().innerText);
+  if(!/^1 weigh-in so far/.test(a)||!/four weigh-ins over two weeks/.test(a)||/a week\./.test(a))throw new Error("weight answer: "+a);
+},{db:Object.assign(seed(),{sessions:seed().sessions.slice(0,1)})});
+await test("Offline: with the network off, the installed app opens, every tab works, food search and the coach chat answer",async(page,env)=>{
+  /* Installed: the service worker has cached everything and controls the page. */
+  await page.evaluate(()=>navigator.serviceWorker.ready);
+  await page.reload();await pause(page,1200);
+  eq(await page.evaluate(()=>!!navigator.serviceWorker.controller),true,"the service worker controls the page");
+  await env.ctx.setOffline(true);
+  await page.reload();await pause(page,1500);
+  for(const tab of ["train","food","coach","progress","profile"]){await tapTab(page,tab);await pause(page,300);
+    if(!(await page.$eval('#app',e=>e.children.length)))throw new Error(tab+" is empty offline");}
+  await coach(page,"ai");await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
+  if(!/Today is|rest day|Done for today/.test(await page.evaluate(()=>[...document.querySelectorAll(".chat-a")].pop().innerText)))throw new Error("the chat did not answer offline");
+  eq(await page.evaluate(async()=>{const n=await import("/js/engine/nutrition.js");await new Promise(f=>n.loadFoods(f));return n.searchFoods("chicken").length>0;}),true,"food search works offline");
+  await env.ctx.setOffline(false);
+},{sw:true});
 /* ---- where the three judged lifts sit among raw competitors (coach phase 3) ------- */
 async function strengthTab(page){
-  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.ptab="strength";V.phalf="all";
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.pview="detail";V.ptab="strength";V.phalf="all";
     (await import("/js/ui/render.js")).render();});await pause(page,400);}
 await test("Among powerlifters: squat and bench placed against raw competitors of the same class, said as such; silent without data",async page=>{
   await strengthTab(page);
@@ -1349,7 +1553,7 @@ await test("Among powerlifters: squat and bench placed against raw competitors o
   eq(await page.$$eval('.pgopl',a=>a.length),0,"an edited log with nothing recent: gone");
 });
 await test("Training import: a program pasted as text is read the same way",async page=>{
-  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="import";V.tp=null;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.train="import";V.tp=null;(await import("/js/ui/render.js")).render();});await pause(page,300);
   await page.fill("#ti_text","Day 1 — Push\nBench press 4x6-8 @ 80kg, 2 min rest — pause on the chest\nLateral raises 3 x 12-15\n\nPull day\nLat pulldown 3x10\nFace pull 3 × 15 (light)\nPlank 3 x 45s");
   await page.evaluate(()=>document.querySelector("[data-tiread]").click());await pause(page,500);
   const tp=await ev(page,"V.tp");
@@ -1361,9 +1565,9 @@ await test("Training import: a program pasted as text is read the same way",asyn
   eq(tp.days[1].ex[1].note,"light");
 });
 await test("Dock: a page with little to scroll keeps its dock",async page=>{
-  await tapTab(page,"home");await pause(page);
+  await tapTab(page,"food");await pause(page);
   const max=await page.evaluate(()=>document.documentElement.scrollHeight-innerHeight);
-  if(max<=0||max>=290)throw new Error("Home is not a short page here ("+max+"px)");
+  if(max<=0||max>=290)throw new Error("Food is not a short page here ("+max+"px)");
   for(let i=0;i<12;i++){await page.evaluate(()=>window.scrollBy(0,15));await page.waitForTimeout(16);}
   await pause(page,650);
   eq(await page.evaluate(()=>document.getElementById("nav").classList.contains("dhid")),false);

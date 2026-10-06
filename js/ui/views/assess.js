@@ -14,12 +14,15 @@ import {GOAL_ORDER, GOALS, goalOf, trainOf} from "../../data/goals.js";
 import {dayMinutes, generatePlan, LEVELS, splitCandidates} from "../../engine/plan.js";
 import {lastWeight, macroTargets, tdee} from "../../engine/formulas.js";
 import {volumeCheck} from "../../engine/volume.js";
+import {buildMealPlan} from "../../engine/mealplan.js";
+import {FOODDB, sumNutrition} from "../../engine/nutrition.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {S} from "../../state.js";
 import {toDisp, toKg, wUnit} from "../../units.js";
 import {esc, fmtN, num, today} from "../../util.js";
 import {V} from "../view.js";
 import {backArrow} from "../nav.js";
+import {importName} from "./food.js";
 
 /* Equipment as a choice of three, and what each means in the equipment list. */
 var GEARS={gym:null,home:["Dumbbell","Band","Kettlebell"],bw:["Bodyweight"]};
@@ -55,7 +58,7 @@ function foodPrefs(a,variant){
    is saved, then put back. Cached on the answers. */
 var CACHE={k:null,v:null};
 function preview(a){
-  var key=JSON.stringify([profileOf(a),a.gear,a.split]);
+  var key=JSON.stringify([profileOf(a),a.gear,a.split,foodPrefs(a),!!FOODDB]);
   if(CACHE.k===key)return CACHE.v;
   var keep={profile:S.profile,gear:S.gear,body:S.body},out=null;
   try{
@@ -64,7 +67,10 @@ function preview(a){
     S.body=[{date:today(),weight:num(a.weight)}];
     var cands=[];try{cands=splitCandidates(num(a.days),a.level,a.goal,S.gear);}catch(e){}
     var plan=generatePlan(a.split||(cands[0]&&cands[0].id));
-    out={tg:macroTargets(),td:tdee(),plan:plan,cands:cands,vol:volumeCheck(plan,a.level)};
+    var tg=macroTargets(),meals=null;
+    /* The meals need the food database, which loads on the way to this screen. */
+    if(FOODDB)try{meals=buildMealPlan(tg,foodPrefs(a));}catch(e){meals=null;}
+    out={tg:tg,td:tdee(),plan:plan,cands:cands,vol:volumeCheck(plan,a.level),meals:meals};
   }finally{S.profile=keep.profile;S.gear=keep.gear;S.body=keep.body;}
   CACHE={k:key,v:out};
   return out;}
@@ -157,7 +163,7 @@ function result(a){
   var G=goalOf(a.goal),T=trainOf(a.goal),tg=r.tg,plan=r.plan,h='';
   h+='<div class="as-hero"><span class="shk">'+t("Your plan")+'</span><h1>'+esc(t(G.label))+'</h1>'
    +'<p class="as-sub">'+esc(t(LEVELS[a.level].label)+" · "+a.days+" "+t("days a week")+" · "+a.mins+" "+t("min"))+'</p></div>';
-  if(a.done)h+='<div class="as-done" role="status">'+t("Your plan is in: daily targets and training. Next, a meal plan to match.")+'</div>';
+  if(a.done)h+='<div class="as-done" role="status">'+t("Your plan is in: today's training is on the Training page and today's meals on the Food page. Change anything in Coach.")+'</div>';
   /* Daily targets. */
   h+='<section class="ascard2"><h3>'+t("Daily targets")+'</h3>'
    +'<div class="as-kcal"><b>'+fmtN(tg.kcal)+'</b><span>kcal</span></div>'
@@ -192,11 +198,23 @@ function result(a){
   if(sw.length)h+='<div class="as-l">'+t("Swapped for your equipment and sore spots")+'</div><ul class="as-swaps">'
     +sw.map(function(x){return '<li>'+esc(exName(x[0]))+' → <b>'+esc(exName(x[1]))+'</b></li>';}).join("")+'</ul>';
   h+='</section>';
+  /* Meals: the day's targets as food, in the meals and style asked for. */
+  h+='<section class="ascard2"><h3>'+t("Meals")+'</h3>';
+  if(!r.meals)h+='<p class="as-why">'+esc(t("Putting your meals together…"))+'</p>';
+  else{
+    var all=[];r.meals.forEach(function(m){all=all.concat(m.items);});
+    var mt=sumNutrition(all);
+    h+='<div class="as-days as-meals">'+r.meals.map(function(m,i){
+        var tot=sumNutrition(m.items);
+        return '<div><b>'+esc(importName(m,i))+'</b><span>'+fmtN(tot.kcal)+' kcal · '+t("P:")+' '+tot.p+'g</span>'
+         +'<small>'+esc(m.items.map(function(x){return x.n;}).join(", "))+'</small></div>';}).join("")+'</div>'
+     +'<p class="as-why">'+esc(t("The day comes to {k} kcal and {p} g of protein. Every food and amount can be changed in Coach → Nutrition.").replace("{k}",fmtN(mt.kcal)).replace("{p}",mt.p))+'</p>';}
+  h+='</section>';
   h+='<p class="as-note">'+t("Bunyan is a training log, not medical advice. If you have an injury or a health condition, check with a professional first, and stop any exercise that causes sharp pain.")+'</p>';
   if(!a.done)h+='<div class="dcta"><button class="btn dbegin" data-asuse="1">'+t("Use this plan")+'</button>'
-    +'<p class="bnote">'+t("Sets your daily targets and makes this your training. Your history stays as it is.")+'</p></div>';
-  else h+='<div class="dcta"><button class="btn dbegin" data-asmeals="1">'+t("Build my meal plan")+'</button>'
-    +'<button class="btn g" data-astrain="1">'+t("See my training")+'</button></div>';
+    +'<p class="bnote">'+t("Sets your daily targets, makes this your training and fills your meals. Your history stays as it is.")+'</p></div>';
+  else h+='<div class="dcta"><button class="btn dbegin" data-astrain="1">'+t("Today's training")+'</button>'
+    +'<button class="btn g" data-asfood="1">'+t("Today's food")+'</button></div>';
   return h;}
 
 function vAssess(){

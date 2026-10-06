@@ -4,9 +4,9 @@ import {applyLang} from "../i18n/exnames.js";
 import {isolateNums} from "../i18n/bidi.js";
 import {t} from "../i18n/dict.js";
 import {vFood} from "./views/food.js";
-import {vHome} from "./views/home.js";
+import {vCoach} from "./views/coach.js";
 import {vAssess} from "./views/assess.js";
-import {vPlanCheck} from "./views/pcheck.js";
+import {adviceCount} from "./views/pcheck.js";
 import {vProfile} from "./views/profile.js";
 import {vProgress} from "./views/progress.js";
 import {vSheet} from "./sheets.js";
@@ -70,7 +70,14 @@ function render(){
   applyMotion(S.prefs&&S.prefs.anim===false);
   document.body.classList.toggle("noanim",S.prefs&&S.prefs.anim===false);
   document.body.classList.toggle("compact",!!(S.prefs&&S.prefs.compact));
-  var view=V.assess?"assess":V.pcheck?"pcheck":V.tab+"/"+(V.tab==="train"?(S.active?"session":V.train):"");
+  /* Home is gone (Training opens the app) and the plan check lives in Coach AI; an old
+     route to either lands on its new place. */
+  if(V.tab==="home"||!V.tab)V.tab="train";
+  /* The plan check, asked for: Coach AI with every finding open. */
+  if(V.pcheck){V.pcheck=false;V.tab="coach";V.csec="ai";V.advall=true;}
+  /* The chat is a Coach screen; leaving Coach leaves it (back restores it from the trail). */
+  if(V.tab!=="coach")V.chat=false;
+  var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":V.train):V.tab==="coach"?(V.train!=="days"?V.train:V.pslot?"pslot":V.pimport?"pimport":V.smeal?"smeal":V.chat?"chat":"hub"):"");
   var moved=view!==lastView;lastView=view;
   /* Note what has focus and where the caret sits before the rebuild destroys it.
      Restoring the caret to the end of the value, which is what this used to do,
@@ -81,9 +88,8 @@ function render(){
   }
   var h="";
   if(V.assess)h=vAssess();
-  else if(V.pcheck)h=vPlanCheck();
-  else if(V.tab==="home")h=vHome();
   else if(V.tab==="train")h=vTrain();
+  else if(V.tab==="coach")h=vCoach();
   else if(V.tab==="progress")h=vProgress();
   else if(V.tab==="food")h=vFood();
   else h=vProfile();
@@ -115,12 +121,12 @@ function render(){
   bindMore(render);
 
   /* The dock is built once and only its state changes after that — see dock.js. */
-  syncDock(document.getElementById("nav"),V.tab);
+  syncDock(document.getElementById("nav"),V.tab,adviceCount());
   /* A workout under way, seen from another tab. */
   syncWbar();
   /* A new screen opens with the dock in view (see dock.js). */
   checkDock([V.tab,V.tab==="train"?(S.active?"session":V.train):"",V.previewId,V.dayId,V.meal,V.smeal,V.pslot,
-    V.pimport,V.phist].join("|"));
+    V.pimport,V.phist,V.chat].join("|"));
 
   /* The sheet animates in when it opens and never again. Replaying sheetIn on every
      render is what made tapping the favourite star look like the sheet was being

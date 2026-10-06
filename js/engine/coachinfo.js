@@ -10,7 +10,7 @@
 import {insights} from "../coach/insights.js";
 import {standing} from "../coach/percentile.js";
 import {isActivity} from "../data/activities.js";
-import {isCompound, muscleOf, secondaryOf} from "../data/exercises.js";
+import {EXDB, isCompound, muscleOf, secondaryOf} from "../data/exercises.js";
 import {lastWeight, loadOf} from "./formulas.js";
 import {S, split} from "../state.js";
 import {today} from "../util.js";
@@ -28,6 +28,17 @@ function logSig(ss){
         h=(h*31+Math.round((+z.w||0)*10)*7+(+z.r||0)*3+(z.wu?1:0)+Math.round((+z.rpe||0)*2))%1000000007;});});});
   return h;}
 var MEMO={k:null,v:[]};
+/* The program's shape, so a balanced or edited program is noticed too. */
+function progSig(prog){
+  return ((prog&&prog.days)||[]).map(function(d){
+    return (d.ex||[]).map(function(e){return e?e.name+"×"+(e.sets||0):"";}).join(",");}).join("|");}
+/* Set-asides from before over/under had one id each ("over:Chest,Back") still count. */
+function dismissals(){
+  var d=S.coachDismiss||{},out={};
+  Object.keys(d).forEach(function(k){
+    var m=/^(over|under):/.exec(k),key=m?m[1]:k;
+    if(!out[key]||d[k]>out[key])out[key]=d[k];});
+  return out;}
 
 function programFacts(){
   var prog=split(),mains=[],ranges={},planned={};
@@ -42,10 +53,13 @@ function programFacts(){
 
 function coachNow(){
   var ss=S.sessions||[],pf=programFacts();
-  var k=[today(),logSig(ss),pf.id,pf.mains.join(","),JSON.stringify(S.coachDismiss||{})].join("|");
+  var dis=dismissals();
+  /* The library loads after the first render; until it has, muscles are guesses, so
+     the answer is worked out again once it is in. */
+  var k=[!!EXDB,today(),logSig(ss),pf.id,progSig(split()),JSON.stringify(dis)].join("|");
   if(MEMO.k===k)return MEMO.v;
   var v=[];
-  try{v=insights(ss,INFO,{today:today(),mains:pf.mains,ranges:pf.ranges,planned:pf.planned,dismissed:S.coachDismiss||{}});}
+  try{v=insights(ss,INFO,{today:today(),mains:pf.mains,ranges:pf.ranges,planned:pf.planned,dismissed:dis});}
   catch(e){v=[];}
   MEMO={k:k,v:v};
   return v;}
@@ -55,7 +69,7 @@ function coachNow(){
 var SMEMO={k:null,v:null};
 function standingNow(){
   var ss=S.sessions||[],p=S.profile||{},bw=lastWeight()||+p.weight||0;
-  var k=[today(),logSig(ss),p.sex,bw].join("|");
+  var k=[!!EXDB,today(),logSig(ss),p.sex,bw].join("|");
   if(SMEMO.k===k)return SMEMO.v;
   var v;
   try{v=standing(ss,INFO,{today:today(),sex:p.sex,bodyweight:bw});}

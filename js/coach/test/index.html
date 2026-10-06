@@ -32,7 +32,8 @@ import * as autoreg from "./autoreg.test.js";
 import * as weakpoints from "./weakpoints.test.js";
 import * as insights from "./insights.test.js";
 import * as percentile from "./percentile.test.js";
-var files={volume:volume,fatigue:fatigue,strength:strength,autoreg:autoreg,weakpoints:weakpoints,insights:insights,percentile:percentile};
+import * as intent from "./intent.test.js";
+var files={volume:volume,fatigue:fatigue,strength:strength,autoreg:autoreg,weakpoints:weakpoints,insights:insights,percentile:percentile,intent:intent};
 var all=[];
 Object.keys(files).forEach(function(k){
   var t=makeT(k);

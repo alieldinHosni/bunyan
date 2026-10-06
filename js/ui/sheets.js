@@ -711,7 +711,7 @@ function vSheet(){
      +GOAL_ORDER.map(function(k){
          return '<option value="'+k+'"'+(yp.goal===k?" selected":"")+'>'+esc(t(GOALS[k].label))+'</option>';}).join("")
      +'</select></div>'
-     +'<p class="tiny mt">'+t("Your calorie and protein targets are worked out from these, in Food → Targets.")+'</p>'
+     +'<p class="tiny mt">'+t("Your calorie and protein targets are worked out from these, in Coach → Nutrition → Targets.")+'</p>'
      +'<button class="btn" data-saveyou="1">'+t("Save")+'</button>'
      +'<button class="btn g" data-fsec="targets">'+t("See my targets")+'</button>';
   }

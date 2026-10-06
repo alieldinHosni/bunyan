@@ -1,13 +1,12 @@
 /* Bunyan — the plan check and the coach, on screen
-   Two sources of advice share one place:
+   Two sources of advice share one place, Coach → Coach AI:
      the plan check (js/engine/plancheck.js): targets, meal plan and program against
        the goal — "your plan will not get you there";
      the coach (js/coach/, through js/engine/coachinfo.js): what the training log shows
        — fatigue, a stalled or falling lift, volume well off, a lift out of proportion.
-   Home shows the single most important of them, never a list. The Plan check screen
-   has the rest. Each says what it saw and why it matters, offers one thing to do, and
-   can be set aside; nothing changes without a tap. When there is nothing worth saying,
-   nothing is said. */
+   Each says what it saw and why it matters, offers one thing to do, and can be set
+   aside; nothing changes without a tap. When there is nothing worth saying, nothing is
+   said, and the dot on the Coach tab is gone. */
 import {t, tm} from "../../i18n/dict.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow} from "../../engine/coachinfo.js";
@@ -15,7 +14,7 @@ import {exName} from "../../i18n/exnames.js";
 import {S} from "../../state.js";
 import {fmtW} from "../../units.js";
 import {esc} from "../../util.js";
-import {backArrow} from "../nav.js";
+import {V} from "../view.js";
 
 var AREA={food:"Nutrition",train:"Training",both:"Nutrition and training"};
 
@@ -73,37 +72,28 @@ function allAdvice(){
   checkPlans().forEach(function(f){out.push({sev:f.sev,html:function(cls){return findingCard(f,cls);}});});
   coachNow().forEach(function(c){out.push({sev:c.pri-0.1,html:function(cls){return coachCard(c,cls);}});});
   return out.sort(function(a,b){return b.sev-a.sev;});}
+/* How many: the dot on the Coach tab. */
+function adviceCount(){return S.onboarded?allAdvice().length:0;}
 
-/* Home: one at most, so it never becomes a list of chores. */
-function pcHome(){
-  if(!S.onboarded)return "";
-  var all=allAdvice();if(!all.length)return "";
-  return '<div class="pchome">'+all[0].html("card")
-   +(all.length>1?'<button class="linkbtn pcmore" data-pcopen="1">'+esc(t("{n} more in Plan check").replace("{n}",all.length-1))+'</button>':'')+'</div>';}
-
-/* A row that opens the screen, for My Program and Food → Targets. */
-function pcRow(){
-  var n=checkPlans().length+coachNow().length;
-  return '<button class="pcrow'+(n?' has':'')+'" data-pcopen="1"><span class="pcrow-d" aria-hidden="true"></span>'
-   +'<span>'+esc(n?t(n===1?"Plan check: 1 thing to look at":"Plan check: {n} things to look at").replace("{n}",n):t("Plan check: everything fits"))+'</span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';}
-
-function vPlanCheck(){
-  var all=checkPlans(),co=coachNow(),kept=Object.keys(S.pcDismiss||{}).length+Object.keys(S.coachDismiss||{}).length;
-  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+t("Plan check")+'</h1></div>'
-   +'<p class="dsub">'+esc(t("Your targets, meal plan and training, side by side with your goal: where they pull different ways, why it matters, and a fix. Nothing changes unless you choose it."))+'</p>';
-  if(!all.length)h+='<div class="pcok"><b>'+t("Everything fits together")+'</b><p>'
-    +esc(t("Calories and protein suit your goal, the meal plan matches the targets, and every main muscle gets a fair share of training."))+'</p></div>';
-  else h+=all.map(function(f){return findingCard(f);}).join("");
-  /* The log, read like a coach would. Quiet when there is nothing to say. */
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("From your training")+'</h2></div>';
-  h+=co.length?co.map(function(c){return coachCard(c);}).join("")
-    :'<p class="dsub">'+esc(t((S.sessions||[]).length<3?"Not enough training logged yet to read trends from. A few weeks of sessions, with effort logged, is enough."
-      :"Nothing to flag: your lifts are moving and your volume is in a sensible range."))+'</p>';
-  if(kept)h+='<div class="tsec"><h2 class="tsec-h">'+t("Kept as they are")+'</h2></div>'
-    +'<p class="dsub">'+esc(t("You chose to keep these. They come back here if the numbers behind them change."))+'</p>'
-    +'<button class="btn g" data-pcreset="1">'+t("Check them all again")+'</button>';
+/* Coach AI's advice. One thing at a time: the most important finding or insight, and
+   the rest behind a tap, because a dozen at once is noise that gets ignored. Every card
+   says what it saw and why, and nothing changes without a tap. When there is nothing
+   worth saying the section is one quiet line, so a day that is on track looks like
+   it. The plan check, opened on purpose (V.advall), shows them all. */
+function adviceBody(){
+  var all=allAdvice(),kept=Object.keys(S.pcDismiss||{}).length+Object.keys(S.coachDismiss||{}).length;
+  var again=kept?'<button class="pglink pcagain" data-pcreset="1">'+esc(t("Check the ones you kept again"))+'</button>':'';
+  if(!all.length)return '<p class="pcquiet"><span class="ico ico-check" aria-hidden="true"></span>'
+    +esc(t((S.sessions||[]).length<3?"Nothing to change. After a few weeks of sessions the coach reads your training too.":"On track. Nothing to change."))+'</p>'+again;
+  var open=V.advall||all.length===1;
+  var h='<div class="tsec"><h2 class="tsec-h">'+t("What the coach sees")+'</h2>'
+   +'<span class="libn">'+all.length+'</span></div>';
+  h+=(open?all:all.slice(0,1)).map(function(x){return x.html();}).join("");
+  if(all.length>1)h+=open
+    ?'<button class="btn g sm pcmore" data-advall="0">'+esc(t("Show only the most important"))+'</button>'
+    :'<button class="btn g pcmore" data-advall="1">'+esc(t(all.length===2?"1 more thing the coach sees":"{n} more things the coach sees").replace("{n}",all.length-1))+'</button>';
+  if(kept)h+='<p class="dsub">'+esc(t("You chose to keep some as they are. They come back here if the numbers behind them change."))+'</p>'+again;
   h+='<p class="as-note">'+esc(t("Ranges and targets here are starting points from the research, not rules. How you feel, recover and progress over a few weeks says more."))+'</p>';
   return h;}
 
-export {coachAct, pcHome, pcRow, vPlanCheck};
+export {adviceBody, adviceCount, coachAct, words};

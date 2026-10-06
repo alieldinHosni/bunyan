@@ -37,7 +37,7 @@ yourself. If you clear Safari's data, change phones, or delete the home screen a
 backup is the only way to get your history back. Clearing site data now wipes both
 localStorage and IndexedDB, so it is no less important than before.
 
-Once you have five sessions logged, Home reminds you if it has been more than a month
+Once you have five sessions logged, the Training page reminds you if it has been more than a month
 since your last backup. "Not now" hides it for a week. The reminder only clears when a
 copy actually succeeds, so dismissing the sheet does not count.
 
@@ -71,6 +71,43 @@ its path to `FILES` in `sw.js` as well.
 load ES modules over `file://`. Use the GitHub Pages link, or run any local static
 server from the project folder.
 
+## How the app is laid out
+
+Five tabs. Two are for the day, one is for planning, one for looking back, one for you.
+
+- **Training** (`views/train.js`, with its top in `views/home.js`) opens the app: the
+  greeting, one reminder at most, the week, today's workout (start it, or change the
+  day to another of the plan), weigh-in and steps, and a run or a match to log. A
+  workout left for later shows here as a Resume card.
+- **Food** (`views/food.js`) is the day: what you have eaten against the targets, the
+  meals (a planned one is a tap from logging), water, and "Log today's plan".
+- **Coach** (`views/coach.js`) is where the planning lives, in three sections:
+  - *Training*: the active program's days, other programs, templates, a coach's PDF
+    brought in, the exercise library;
+  - *Nutrition*: the meal plan, the daily targets, foods of your own, a plan brought in;
+  - *Coach AI*: the assessment, which builds the daily targets, the training and the
+    meal plan in one step, with one Undo, and puts them on Training and Food; then
+    *Ask the coach*; then what the plan check and the coach see (`views/pcheck.js`).
+
+**Ask the coach** (`views/chat.js`, with `coach/intent.js`) is a guided chat, not a
+chatbot. A question, tapped from the suggestions or typed in English or Arabic, is
+matched to one of a fixed set of things the coach can answer: today's workout, what to
+lift, what to eat now, how things are going, the weight trend, protein, where the
+calories come from, soreness or pain, a missed day or little time, the program's
+balance, strength, the goal, a new plan, water, steps. The answer is worked out on the
+phone from the person's own log, plan and targets, with the same engines as the rest of
+the app, so it never says more than the app knows; a question outside that set is
+told so. Nothing is sent anywhere and no model writes the text. The newest answer
+carries its buttons (start the workout, log the plan, a 150 kcal step on the target,
+set the goal), each with Undo; the last 30 questions are kept.
+- **Progress** (`views/progress.js`) has two slides: *Simple*, five plain answers
+  (training this week, weight, strength, food, records), and *Detailed*, the charts
+  and numbers a coach reads.
+- **Profile**: settings, profiles, backups.
+
+Each thing has one place. Planning screens open over Coach and back returns there;
+logging happens on Training and Food only.
+
 ## How the code is laid out
 
 No build step, no framework, no dependencies — the browser loads the modules directly.
@@ -91,8 +128,8 @@ js/
   engine/       plan.js, formulas.js, nutrition.js, warmup.js, splitparse.js,
                 volume.js, mealplan.js, plancheck.js, coachinfo.js
   i18n/         dict.js (the AR dictionary and t), exnames.js (Arabic exercise names)
-  ui/           view.js, render.js, actions.js, sheets.js, views/{home,train,session,
-                progress,food,profile,assess,warmup,pcheck}.js
+  ui/           view.js, render.js, actions.js, sheets.js, views/{train,home,session,
+                food,coach,chat,progress,profile,assess,warmup,pcheck}.js
   app.js        entry point: event listeners, wiring, boot
 tools/          one-off build scripts that never ship or run in the browser
 ```
@@ -270,7 +307,12 @@ otherwise they would outlive the blob that was supposed to own them.
 - **Volume** = the sum of weight × reps for every set. Not weight × reps × sets,
   which is only right when every set is identical.
 - **Estimated 1RM** = weight × (1 + reps ÷ 30), the Epley formula. Shown only for
-  sets of 12 reps or fewer, where it is reasonably accurate.
+  sets of 12 reps or fewer, where it is reasonably accurate. A single is its own max:
+  Epley would add 3% to it, so one rep counts as the weight lifted.
+- **Weekly sets** count working sets only; a warm-up is not training volume.
+- **Bodyweight lifts with nothing added** progress by reps: the suggestion is body
+  weight for the plan's reps, and once the top of the range is reached, a rep or two
+  more or a little added load.
 - **Average RPE** = total RPE ÷ number of sets.
 - **Calories from macros** = protein × 4 + carbs × 4 + fat × 9.
 - **Remaining macros** = your daily target minus everything in meals you marked
@@ -321,13 +363,17 @@ otherwise they would outlive the blob that was supposed to own them.
   target. It goes to the same review as an imported plan before anything is saved.
 - **The plan check** (`js/engine/plancheck.js`) reads the targets, the meal plan and the
   active program against the goal, whoever wrote them, and says where they disagree:
-  - energy on the wrong side of maintenance for the goal, or more than 30% under it;
+  - energy on the wrong side of maintenance for the goal, or more than 30% under it.
+    Only building muscle needs a surplus; strength, sport, mobility and staying fit are
+    checked against maintenance (more than 15% away from it);
   - protein under 85% of the goal's amount;
   - a meal plan more than 10% off the energy target, or 15% short on protein;
   - a main muscle well outside its weekly range;
   - main lifts too light for a strength goal, rests too long for endurance, no mobility
     work for a mobility goal;
-  - a coach's program written for the opposite phase ("fat loss" while eating to grow);
+  - a coach's program written for the opposite phase ("fat loss" while eating to grow).
+    The fix sets the goal, and the targets with it, to match the program: the program
+    is the plan being followed, so it is not replaced;
   - a steep deficit under a heavy week, a surplus over thin training, a lot of cardio
     and sport on under 3 g of carbs per kg.
 
@@ -335,7 +381,13 @@ otherwise they would outlive the blob that was supposed to own them.
   move protein or carbs while keeping the calories, rebuild the meal plan from the
   targets, or balance the program's volume (main lifts untouched, no day made longer
   than the longest already is). "Keep it as it is" hides a finding until the numbers
-  behind it change. Home shows the most important one; Plan check shows them all.
+  behind it change. A fix made in place always settles its card in one tap: whatever
+  it could not reach (a muscle that would need longer sessions) is kept as it is, so
+  the card goes and comes back only if those numbers change; Undo restores both. They
+  all live in Coach → Coach AI, with a dot on the Coach tab while there is something
+  to look at. The coach's insights are
+  set aside by kind ("over", "under", or one lift), not by a list of muscles that
+  changes with every session, so a set-aside one stays aside.
 - **The coach** (`js/coach/`) reads the training log the way a coach would. Every file
   there is a pure function — plain data in, plain data out, no DOM, no storage, no
   network, no imports from the app — and has a test file beside it:
@@ -355,10 +407,16 @@ otherwise they would outlive the blob that was supposed to own them.
     more than 15% outside the usual range, and always as an observation.
   - `insights.js`: what is worth saying, most important first, one per lift — and
     nothing at all when training is on track.
+  - `intent.js`: what a question to the coach chat is asking, in English or Egyptian
+    Arabic: phrases scored by the letters they match, so the more specific one wins
+    ("how much weight" is the load, "my weight" the scale), and "unknown" rather than
+    a guess.
 
-  Home shows the single most important piece of advice, coach or plan check; the rest
-  wait on the Plan check screen. Each one says what it saw, offers one thing to do,
-  and can be set aside for two weeks. Run the tests with `node tests/coach.mjs`, or by
+  Coach AI shows them with the plan check's findings, one at a time: the most
+  important, and "N more things the coach sees" behind a tap (the plan check, opened on
+  purpose, shows them all). Each one says what it saw, offers one thing to do, and can
+  be set aside for two weeks. With nothing worth saying, the section is one quiet line,
+  "On track. Nothing to change.", and the Coach tab has no dot. Run the tests with `node tests/coach.mjs`, or by
   opening `js/coach/test/index.html` on the local server.
 - **Among powerlifters** (Progress → Strength) places the squat, bench press and
   deadlift against raw powerlifting competitors of the same sex and IPF weight class,

@@ -31,8 +31,9 @@ function weekOf(iso){var d=dayNo(iso),dow=(d+3)%7;return isoOf(d-dow);}
 /* The working sets of an entry: not warm-ups, with reps or seconds logged. */
 function workSets(e){return ((e&&e.sets)||[]).filter(function(x){return x&&!x.wu&&num(x.r)>0;});}
 
-/* Epley, as the app computes it, capped at 12 reps: above that it degrades badly. */
-function e1rm(w,r){w=num(w);r=num(r);if(!w||!r||r>12)return 0;return r1(w*(1+r/30));}
+/* Epley, as the app computes it, capped at 12 reps: above that it degrades badly. A
+   single is a max already, not 3% under one. */
+function e1rm(w,r){w=num(w);r=num(r);if(!w||!r||r>12)return 0;return r===1?r1(w):r1(w*(1+r/30));}
 
 /* Sessions in date order, oldest first, whatever order they came in. */
 function byDate(sessions){

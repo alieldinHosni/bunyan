@@ -1969,9 +1969,12 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .pcrow-d{flex:none;width:8px;height:8px;border-radius:4px;background:var(--ok)}
 .pcrow.has .pcrow-d{background:var(--warning)}
 .pcrow .ico-chev{color:var(--dim)}
-.pcok{margin:4px 0 16px;padding:14px;border-radius:var(--r3);background:var(--okSoft);border:1px solid var(--ok)}
-.pcok b{font-size:15px}
-.pcok p{margin:6px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
+/* Nothing to say: one quiet line, not a card. */
+.pcquiet{display:flex;align-items:center;gap:8px;margin:2px 2px 12px;font-size:14px;line-height:1.45;color:var(--sub)}
+.pcquiet .ico{flex:none;width:16px;height:16px;color:var(--ok)}
+.pcagain{display:block;margin:0 2px 16px;padding:0}
+/* The rest of the advice, one tap away. */
+.btn.pcmore{margin:2px 0 14px}
 /* The assessment (js/ui/views/assess.js): one question a screen, then the plan. */
 .as-prog{height:4px;border-radius:2px;background:var(--bar-track);overflow:hidden;margin:6px 0 6px}
 .as-prog i{display:block;height:100%;background:var(--accent);border-radius:2px;transition:width var(--m-base,240ms) var(--e-standard)}
@@ -3505,6 +3508,83 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .linkbtn{border:none;background:none;padding:0;color:var(--accentHi);font-weight:700;font-size:inherit;text-decoration:underline}
 .ss-act.on{color:var(--gold);border-color:rgba(var(--gold-rgb),.5)}
 .wc2-effort{margin-top:14px;text-align:start}
+/* ---- Training, Food, Coach, Progress: the simple pages and the planning hub -------------
+   Training and Food are for the day; Coach (js/ui/views/coach.js) holds the planning in
+   three sections; Progress opens on a plain-words slide. */
+.htiles.two{margin:4px 0 14px}
+.btn.flogplan{margin:10px 0 0}
+/* Coach has something to say: a dot on its tab, its count in the accessible name. */
+.dock-b.advice::after{content:"";position:absolute;top:calc(50% - 15px);inset-inline-start:calc(50% + 6px);width:8px;height:8px;
+  border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--glass-solid);pointer-events:none}
+.csub{margin:-4px 0 16px}
+.coachhero{position:relative;isolation:isolate;overflow:hidden;margin:0 0 var(--s4);padding:18px 16px 16px;border-radius:var(--r5);
+  border:1px solid var(--accent-edge);background:linear-gradient(160deg,var(--accent-tint),rgba(255,255,255,0) 60%),var(--raised);box-shadow:var(--shadow-card)}
+.coachhero h2{margin:6px 0 8px;font-family:var(--display);font-size:24px;line-height:1.15}
+.coachhero p{margin:0 0 16px;font-size:14px;line-height:1.55;color:var(--sub);max-width:36ch}
+.coachhero .btn{margin:0}
+.coachhero-art{position:absolute;inset-inline-end:-12px;top:-6px;width:140px;opacity:.28;z-index:-1;pointer-events:none}
+[dir="rtl"] .coachhero-art{transform:scaleX(-1)}
+.coachplan{margin:0 0 var(--s4);padding:16px 14px 14px;border-radius:var(--r5);border:1px solid var(--border);box-shadow:var(--shadow-card);
+  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 40%),var(--raised)}
+.coachplan h2{margin:4px 0 2px;font-family:var(--display);font-size:22px}
+.coachplan-s{margin:0 0 10px;font-size:13px;color:var(--dim)}
+.coachplan-r{display:flex;flex-direction:column;border-top:1px solid var(--hair)}
+.coachplan-l{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:10px;align-items:center;
+  width:100%;min-height:56px;padding:9px 2px;border:0;border-bottom:1px solid var(--hair);background:none;color:var(--text);font:inherit;text-align:start;cursor:pointer}
+.coachplan-k{grid-column:1;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.coachplan-v{grid-column:1;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.coachplan-l .ico{grid-column:2;grid-row:1/3;color:var(--dim)}
+:root:not(.tch) .coachplan-l:active,.coachplan-l.tapd{background:var(--surface)}
+.coachplan-a{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.coachplan-a .btn{margin:0}
+/* The assessment's meals: each with its foods under it. */
+.as-meals div{flex-wrap:wrap}
+.as-meals small{flex-basis:100%;margin-top:2px;font-size:12.5px;line-height:1.45;color:var(--sub)}
+/* Progress → Simple: one card per question, coloured only where the answer says something. */
+.pgview{margin:4px 0 14px}
+.pgtabs2{margin:0 0 6px}
+.psimple{margin:0 0 12px;padding:14px 14px 14px 16px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);
+  box-shadow:inset 3px 0 0 var(--dim)}
+[dir="rtl"] .psimple{box-shadow:inset -3px 0 0 var(--dim)}
+.psimple.ok{box-shadow:inset 3px 0 0 var(--ok)}
+.psimple.warn{box-shadow:inset 3px 0 0 var(--warning)}
+.psimple.bad{box-shadow:inset 3px 0 0 var(--accent)}
+[dir="rtl"] .psimple.ok{box-shadow:inset -3px 0 0 var(--ok)}
+[dir="rtl"] .psimple.warn{box-shadow:inset -3px 0 0 var(--warning)}
+[dir="rtl"] .psimple.bad{box-shadow:inset -3px 0 0 var(--accent)}
+.psimple-k{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.psimple-h{margin:4px 0 4px;font-family:var(--display);font-size:20px;line-height:1.25}
+.psimple-h b{font-variant-numeric:tabular-nums}
+.psimple p{margin:0;font-size:14px;line-height:1.5;color:var(--sub)}
+.psimple .btn{margin:12px 0 0}
+/* Coach AI → Ask the coach (js/ui/views/chat.js): a guided conversation. The question
+   sits at the end of the line, the answer at the start, as messages do; the newest
+   answer carries its buttons. */
+.chatcard{margin:0 0 var(--s4);padding:14px 14px 14px;border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card)}
+.chatcard-h p{margin:4px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
+.chatcard>.btn{margin:0}
+.chat-chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 16px}
+.chat-chips.tight{margin:12px 0}
+.chat-chip{min-height:36px;padding:7px 13px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
+  color:var(--text);font:inherit;font-size:13.5px;font-weight:600;line-height:1.3;text-align:start;cursor:pointer}
+:root:not(.tch) .chat-chip:active,.chat-chip.tapd{border-color:var(--accent-edge);background:var(--accent-tint)}
+.chat-clear{margin-inline-start:auto}
+.chat{display:flex;flex-direction:column;gap:10px;margin:14px 0 0}
+.chat-q{align-self:flex-end;max-width:84%;padding:10px 14px;border-radius:18px;border-end-end-radius:5px;
+  border:1px solid var(--accent-edge);background:var(--accent-tint)}
+.chat-q p{margin:0;font-size:15px;line-height:1.45;overflow-wrap:anywhere}
+.chat-a{align-self:flex-start;max-width:94%;padding:12px 14px;border-radius:18px;border-end-start-radius:5px;
+  border:1px solid var(--border);background:var(--raised)}
+.chat-a p{margin:0 0 8px;font-size:14.5px;line-height:1.55}
+.chat-a ul{margin:0 0 8px;padding-inline-start:18px}
+.chat-a li{margin:0 0 4px;font-size:14px;line-height:1.5;font-variant-numeric:tabular-nums}
+.chat-a>:last-child{margin-bottom:0}
+.chat-a .chat-n{font-size:13px;color:var(--sub)}
+.chat-hi p{margin:0}
+.chat-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chat-form{display:flex;gap:8px;align-items:center;margin:0 0 8px}
+.chat-form input{flex:1;min-width:0;min-height:48px;margin:0;font-size:16px}
+.btn.chat-send{flex:none;width:auto;min-height:48px;margin:0;padding:0 20px}
 </style>
 </head>
 <body>

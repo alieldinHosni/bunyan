@@ -25,18 +25,19 @@
 import {t, tm} from "../../i18n/dict.js";
 import {empty, thumb} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
-import {weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftHalf, liftProgress, measurements,
+import {rateOf, weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, liftHalf, liftProgress, measurements,
         muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL, topLifts, volumeSeries,
         weighIns, weightChange} from "../../engine/stats.js";
 import {sessionVolume} from "../../engine/formulas.js";
 import {standingNow} from "../../engine/coachinfo.js";
-import {ensureSessionIds, S} from "../../state.js";
+import {ensureSessionIds, S, split} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
-import {dfmt, esc, fmtN, pretty, r1, shortd, today} from "../../util.js";
+import {dfmt, esc, fmtN, num, pretty, r1, shortd, today} from "../../util.js";
 import {seg, streak, V} from "../view.js";
 import {art} from "../art.js";
 import {backArrow} from "../nav.js";
-import {wdName, weekOrder, weekStart} from "../../engine/schedule.js";
+import {wdName, weekDates, weekOrder, weekStart} from "../../engine/schedule.js";
+import {planOn} from "./train.js";
 import {photoList} from "../photos.js";
 import {render} from "../render.js";
 
@@ -173,9 +174,15 @@ function vProgress(){
       t("Finish one workout or log your weight, and volume, records, streaks and trends all start here."),
       '<button class="btn" data-go="train">'+t("Start a workout")+'</button>'
       +'<button class="btn g" data-sheet="weigh">'+t("Log weight")+'</button>');
+  /* Two slides: Simple, where you are in plain words, for anyone; Detailed, the
+     charts, records and per-muscle numbers a coach reads. */
+  var pv=V.pview==="detail"?"detail":"simple";
+  h+=seg({items:[["simple",t("Simple")],["detail",t("Detailed")]],value:pv,attr:"pview",
+    tabs:true,cls:"pgview",label:t("Progress"),key:"pgview"});
+  if(pv==="simple")return h+vSimple();
   var tab=V.ptab==="strength"||V.ptab==="body"?V.ptab:"overview";
   h+=seg({items:TABS.map(function(x){return [x[0],t(x[1])];}),value:tab,attr:"ptab",
-    tabs:true,label:t("Progress views"),key:"pgtabs"});
+    soft:true,cls:"pgtabs2",label:t("Progress views"),key:"pgtabs"});
   var r=range();
   /* Overview opens with the day, as Food does: the date navigator and what that one
      day held. It scopes only that card. The range below drives everything else, and
@@ -191,6 +198,65 @@ function vProgress(){
   return h;}
 
 /* ---- Overview ------------------------------------------------------------------ */
+/* ---- the Simple slide ------------------------------------------------------------------
+   Five plain answers: am I training as planned, where is my weight going, am I getting
+   stronger, am I eating to plan, anything new. Each is a word or two, one sentence, and a
+   colour only where it says something: on track, needs a look. */
+function scard(k,state,head,line,cta){
+  return '<div class="psimple '+state+'"><div class="psimple-k">'+esc(k)+'</div>'
+   +'<div class="psimple-h">'+head+'</div><p>'+esc(line)+'</p>'+(cta||'')+'</div>';}
+function vSimple(){
+  return '<p class="dsub">'+esc(t("Where you are, in plain words. Detailed has the charts and the numbers behind them."))+'</p>'
+   +simpleFacts().map(function(f){return scard(f.k,f.state,f.head,f.line,f.cta);}).join("");}
+/* The five answers, as data: Simple shows them as cards, and the coach chat says them
+   when asked how things are going, so the two never disagree. head may hold <b>. */
+function simpleFacts(){
+  var now=today(),sp=split(),h=[];
+  function scard(k,state,head,line,cta){h.push({k:k,state:state,head:head,line:line,cta:cta||""});}
+  /* Training: this week's planned days, and how many are done. */
+  var done=0,plan=0,due=0;
+  weekDates(now).forEach(function(iso){var p=planOn(sp,iso);
+    if(p.kind==="done"){done++;plan++;due++;return;}
+    if(p.kind==="past"||p.kind==="none"||p.rest)return;
+    plan++;if(iso<=now)due++;});
+  var month=S.sessions.filter(function(x){return daysBetween(x.date,now)<28&&x.date<=now;}).length;
+  if(!plan)scard(t("Training"),"none",esc(t("Nothing planned this week")),t("Plan your week in Coach, and it shows here."),
+    '<button class="btn g sm" data-csec="train">'+t("Plan my training")+'</button>');
+  else scard(t("Training"),done>=due?"ok":"warn",
+    '<b>'+done+'</b> '+esc(t("of"))+' <b>'+plan+'</b> '+esc(t("workouts this week")),
+    (done>=plan?t("Every planned workout this week is done."):done>=due?t("On schedule. {n} to go this week.").replace("{n}",plan-done)
+      :t("Behind this week: {n} planned so far, {d} done.").replace("{n}",due).replace("{d}",done))
+    +" "+t("{n} in the last four weeks.").replace("{n}",month));
+  /* Weight: where it is and which way it is going, against the goal. */
+  var wc=weightChange(),tr=weightTrend();
+  if(!wc)scard(t("Weight"),"none",esc(t("No weigh-ins yet")),t("Weigh in once a week, in the morning before eating, and your trend starts here."),
+    '<button class="btn g sm" data-sheet="weigh">'+t("Log weight")+'</button>');
+  else{
+    var ch=wc.d==null?"":(wc.d<0?t("Down {w} in {n} days."):wc.d>0?t("Up {w} in {n} days."):t("The same as {n} days ago.")).replace("{w}",fmtW(Math.abs(wc.d))).replace("{n}",wc.days);
+    var tw=tr?[tr.status==="ok"?"ok":tr.status==="wrong"?"bad":"warn",trendSays(tr)]:null;
+    scard(t("Weight"),tw?tw[0]:"none",'<b>'+toDisp(wc.cur.weight)+'</b> '+esc(wUnit()),
+      (ch?ch+" ":"")+(tw?t(tw[1]):t("A few more weigh-ins over two weeks show your trend.")));}
+  /* Strength: the most trained lifts' estimated maxes over the month. */
+  var si=strengthIndex(30);
+  if(si.pct==null)scard(t("Strength"),"none",esc(t("Not enough yet")),t("Log the same lifts a few times and this shows whether you are getting stronger."));
+  else{var up=si.pct>=0.5,down=si.pct<=-0.5;
+    scard(t("Strength"),up?"ok":down?"warn":"ok",esc(t(up?"Getting stronger":down?"A little down":"Holding steady")),
+      up?t("Your main lifts are up {n}% this month.").replace("{n}",Math.round(si.pct))
+        :down?t("Your main lifts are down {n}% this month. A lighter week often brings them back.").replace("{n}",Math.abs(Math.round(si.pct)))
+        :t("Your main lifts are about where they were a month ago."));}
+  /* Food: days logged in the last week, and protein on them. */
+  var nu=nutrition(7),g=S.goals||{},pdays=nu.days.filter(function(x){return g.p>0&&num(x.p)>=g.p*0.9;}).length;
+  if(!nu.count)scard(t("Food"),"none",esc(t("Nothing logged this week")),t("Log what you eat and this shows how close you are to your targets."),
+    '<button class="btn g sm" data-tab="food">'+t("Log food")+'</button>');
+  else scard(t("Food"),nu.count>=5&&pdays>=nu.count*0.7?"ok":"warn",
+    '<b>'+nu.count+'</b> '+esc(t("of"))+' <b>7</b> '+esc(t("days logged")),
+    t("Protein reached on {p} of them; calories, protein, carbs and fat all close to target on {m}.").replace("{p}",pdays).replace("{m}",nu.met));
+  /* Records: anything new this month. */
+  var rec=recentRecords(3).filter(function(L){return daysBetween(L.date,now)<=30;});
+  if(rec.length)scard(t("New records"),"ok",'<b>'+rec.length+'</b> '+esc(t("new this month")),
+    rec.map(function(L){return exName(L.name)+" "+(L.w?fmtW(L.w)+" × "+L.reps:L.reps+" "+t("reps"));}).join(" · "));
+  return h;}
+
 function stat(k,v,unit,sub){
   return '<div class="pgstat"><div class="pgstat-k">'+esc(k)+'</div>'
    +'<div class="pgstat-v">'+v+(unit?'<span>'+esc(unit)+'</span>':'')+'</div>'
@@ -226,7 +292,7 @@ function kcard(icon,label,value,unit,sub,visual,go,aria){
 function vOverview(r){
   var h="",goal=(S.profile||{}).goal;
   /* ---- key metrics: the frame's four cards, each a way into its own view */
-  var gw=goal==="lose"?-1:goal==="gain"?1:0;
+  var gw={lose:-1,gain:1}[rateOf(goal)[0]]||0;
   var wi=weighIns(r),wc=weightChange(),bfv=bodyFat(),bfs=bodyFatSeries(r),si=strengthIndex(r),cm=consistencyMonth();
   var wFirst=wi.length?wi[0].weight:null,wLast=wc?wc.cur.weight:null;
   var wd=wi.length>=2?toDisp(wLast)-toDisp(wFirst):null;
@@ -471,13 +537,19 @@ var TREND={
   hold:{ok:"Holding steady.",
         down:"Drifting down. If that is not the plan, eat a little more.",
         up:"Drifting up. If that is not the plan, eat a little less."}};
+/* What the trend says, by the way the goal leans. On plan, a goal that only leans that
+   way (losing fat while building muscle, getting stronger) is not told it is losing
+   fat or building muscle. */
+function trendSays(tr){
+  if(tr.status==="ok"&&tr.goal!==tr.kind)return "On track for your goal.";
+  return (TREND[tr.kind]||{})[tr.status]||"";}
 function sgn(kg){return (kg>0.004?"+":kg<-0.004?"\u2212":"\u00b1")+toDisp(Math.abs(kg));}
 function perWk(){return wUnit()+" / "+t("week");}
 /* bare: without its own heading, for a screen that heads it in its own style. */
 function trendCard(bare){
   var tr=weightTrend();
   if(!tr)return "";
-  var key=tr.goal==="lose"||tr.goal==="gain"?tr.goal:"hold",msg=(TREND[key]||{})[tr.status]||"";
+  var key=tr.kind,msg=trendSays(tr);
   var good=tr.status==="ok";
   return (bare?'':lbl(t("Trend against your goal")))
    +'<div class="pgcard pgtrend'+(good?' ok':'')+'"><div class="pgtrend-r"><div><div class="pgstat-k">'
@@ -492,7 +564,7 @@ function trendCard(bare){
 function vBody(r){
   var h="",wc=weightChange(),goal=(S.profile||{}).goal;
   /* Which way is progress for the scale depends on the goal. Maintaining, neither. */
-  var gw=goal==="lose"?-1:goal==="gain"?1:0;
+  var gw={lose:-1,gain:1}[rateOf(goal)[0]]||0;
   h+='<div class="pgcard">';
   if(!wc)h+='<div class="pgstat-k">'+esc(t("Body weight"))+'</div>'+art("body",{cls:"pgbody-art"})
     +tooFew(t("Weigh in and the trend starts here. Mornings, before eating, are the most comparable."));
@@ -604,4 +676,4 @@ function vNutrition(r){
    +'<b class="acc">'+sk.kcal+' '+esc(t(sk.kcal===1?"day":"days"))+'</b></div>';
   return h;}
 
-export {trendCard, vNutrition, vProgress};
+export {OPL_NAME, simpleFacts, trendCard, trendSays, vNutrition, vProgress};

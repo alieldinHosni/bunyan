@@ -67,7 +67,7 @@ function vTImport(){
   if(tp.notes&&tp.notes.length){
     h+='<details class="tinotes"><summary>'+esc(t("Coach's notes"))+' <span class="num">'+tp.notes.length+'</span></summary>'
      +tp.notes.map(function(n){return (n.h?'<h3>'+esc(cap(n.h))+'</h3>':'')+n.t.map(function(l){return '<p>'+esc(l)+'</p>';}).join("");}).join("")
-     +'<p class="bnote">'+esc(t("Kept with the program, under My Program."))+'</p></details>';}
+     +'<p class="bnote">'+esc(t("Kept with the program, under Coach → Training → My program."))+'</p></details>';}
   h+='<div class="dcta"><button class="btn dbegin" data-tiuse="1">'+esc(t("Use this program"))+'</button>'
    +'<p class="bnote">'+esc(t("It becomes your active program. The one you have now stays in My programs."))+'</p>'
    +'<button class="ddel" data-tirestart="1">'+esc(t("Start over"))+'</button></div>';
