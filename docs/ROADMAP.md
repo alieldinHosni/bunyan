@@ -29,17 +29,17 @@ things are still fixed when they should be learned:
 
 ## Phases
 
-| # | Track | Phase | What it gives |
-| --- | --- | --- | --- |
-| A1 | Architecture | **Layer rules, enforced** | A Node test that fails when a module imports across a layer it shouldn't (`coach` imports only `coach`; `engine` never imports `ui`; a view never takes logic from another view). The current breaks fixed: the day's plan moves from the Training view to `engine/`, Progress's plain answers to `engine/`. |
-| B1 | Coaching | **Maintenance that learns** | From two to four weeks of logged food and weigh-ins, the calories your body actually uses (energy balance, with how sure it is). Coach AI and the chat say "your maintenance looks like 2,450, not the 2,600 the formula guessed" and offer targets from it, with Undo. Pure, in `coach/`, with tests. |
-| B2 | Coaching | **Effort-aware strength** | Max estimates count the reps left in reserve (8 reps at RPE 8 is 10 reps' worth), so a hard set and an easy one stop reading the same. Used by trends, progression and the powerlifting standing. |
-| B3 | Coaching | **Readiness that acts** | A low "how do you feel" answer turns today's suggestions into a lighter day (hold the weight, one set fewer), shown and overridable; a great day allows the bigger step. |
-| A2 | Architecture | **`app.js` split by domain** | The 275-branch handler becomes a registry, with handlers in `ui/handlers/{train,session,food,coach,progress,profile}.js`. `app.js` keeps only boot and wiring. Mechanical, guarded by the full suite and stress runs. |
-| A3 | Architecture | **A testable engine** | Engine functions take what they need (profile, sessions, goals) instead of reading `S`, starting with energy, protein, the weight trend and nutrition. A Node test suite for the engine like the coach's. |
-| B4 | Coaching | **Blocks, not just weeks** | A program runs in blocks: effort builds week by week (reps in reserve 3 → 2 → 1), then a planned lighter week, then the next block. Sets per muscle move from one tap after each session ("too easy / about right / too much") plus the soreness already asked. |
-| B5 | Coaching | **Swaps that understand movement** | Every exercise tagged by movement pattern (squat, hinge, push, pull, carry, …). Pain, missing equipment or "replace" offers swaps that train the same thing. The chat's pain answer uses it. |
-| A4 | Architecture | **State with a schema** | Documented types for what is stored (JSDoc), versioned migrations with tests, and a check that a restored backup is the app's own shape. |
+| # | Track | Phase | What it gives | State |
+| --- | --- | --- | --- | --- |
+| A1 | Architecture | **Layer rules, enforced** | A Node test that fails when a module imports across a layer it shouldn't (`coach` imports only `coach`; `engine` never imports `ui`; a view never takes logic from another view). The current breaks fixed: the day's plan moves from the Training view to `engine/`, Progress's plain answers to `engine/`. | Done: `tests/architecture.mjs` |
+| B1 | Coaching | **Maintenance that learns** | From two to four weeks of logged food and weigh-ins, the calories your body actually uses (energy balance, with how sure it is). Coach AI and the chat say "your maintenance looks like 2,450, not the 2,600 the formula guessed" and offer targets from it, with Undo. Pure, in `coach/`, with tests. | Done: `js/coach/energy.js` |
+| B2 | Coaching | **Effort-aware strength** | Max estimates count the reps left in reserve (8 reps at RPE 8 is 10 reps' worth), so a hard set and an easy one stop reading the same. Used by trends, progression and the powerlifting standing. | Next |
+| B3 | Coaching | **Readiness that acts** | A low "how do you feel" answer turns today's suggestions into a lighter day (hold the weight, one set fewer), shown and overridable; a great day allows the bigger step. | |
+| A2 | Architecture | **`app.js` split by domain** | The 275-branch handler becomes a registry, with handlers in `ui/handlers/{train,session,food,coach,progress,profile}.js`. `app.js` keeps only boot and wiring. Mechanical, guarded by the full suite and stress runs. | |
+| A3 | Architecture | **A testable engine** | Engine functions take what they need (profile, sessions, goals) instead of reading `S`, starting with energy, protein, the weight trend and nutrition. A Node test suite for the engine like the coach's. | |
+| B4 | Coaching | **Blocks, not just weeks** | A program runs in blocks: effort builds week by week (reps in reserve 3 → 2 → 1), then a planned lighter week, then the next block. Sets per muscle move from one tap after each session ("too easy / about right / too much") plus the soreness already asked. | |
+| B5 | Coaching | **Swaps that understand movement** | Every exercise tagged by movement pattern (squat, hinge, push, pull, carry, …). Pain, missing equipment or "replace" offers swaps that train the same thing. The chat's pain answer uses it. | |
+| A4 | Architecture | **State with a schema** | Documented types for what is stored (JSDoc), versioned migrations with tests, and a check that a restored backup is the app's own shape. | |
 
 ## Rules for every phase
 

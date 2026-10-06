@@ -1470,6 +1470,43 @@ await test("Coach: a log that is on track gets no coach card — silence is earn
   await coach(page,"ai");
   eq(await page.$$eval('#app .coach.sev3,#app .coach.sev2',a=>a.length),0,"nothing important in Coach AI");
 },{db:Object.assign(seed(),{sessions:coachLog([8,8,8,8,8],2.5),goals:{kcal:2800,p:151,c:353,f:87,water:3000,steps:9000}})});
+/* ---- maintenance learned from the log (roadmap B1) ----------------------------------- */
+await test("Maintenance learned: four weeks at 2,000 kcal and a steady weight measure about 2,000, not the formula's 2,548; one tap builds the targets on it, with Undo; the chat and Targets say where it comes from",async page=>{
+  const L=await page.evaluate(async()=>{const E=await import("/js/engine/energy.js"),F=await import("/js/engine/formulas.js");
+    const l=E.learnedNow();return {kind:l.kind,kcal:l.kcal,formula:F.tdeeFormula(),days:l.foodDays,share:l.share};});
+  eq([L.kind,Math.abs(L.kcal-2000)<=30,L.formula,L.days],["ok",true,2548,27],"measured from the log, against the formula");
+  await coach(page,"ai");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.advall=true;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  const card=await page.$eval('[data-k="pc:maint-learned"]',e=>e.innerText);
+  if(!/Your body uses about 2,0[0-3]0 kcal a day/.test(card)||!/the 2,548 the formula estimated/.test(card)||!/27 full days/.test(card))
+    throw new Error("the card does not show its numbers: "+card);
+  await page.tap('[data-k="pc:maint-learned"] [data-pcfix]');await pause(page,400);
+  const after=await ev(page,"[S.energy&&S.energy.kcal,S.goals.kcal,document.querySelectorAll('[data-k=\"pc:maint-learned\"]').length]");
+  eq([after[0]===L.kcal,after[1]===L.kcal,after[2]],[true,true,0],"targets built on it (holding weight: the target is the measured maintenance), card gone");
+  /* Targets says where maintenance now comes from. */
+  await coach(page,"food","targets");
+  if(!/Maintenance measured from your own log \(the formula says 2,548\)/.test(await page.$eval('.tgsrc',e=>e.textContent)))
+    throw new Error("Targets: "+await page.$eval('.tgsrc',e=>e.textContent));
+  await page.tap('.toast-undo').catch(()=>{});await pause(page,300);
+  eq(await ev(page,"[!!S.energy,S.goals.kcal]"),[false,2500],"Undo: the formula and the old target back");
+  /* The chat, asked about calories, says what the log measures and offers the same fix. */
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page);
+  await page.fill('#chatq','why are my calories like this');await page.press('#chatq','Enter');await pause(page,300);
+  const a=await page.evaluate(()=>[...document.querySelectorAll(".chat-a")].pop().innerText);
+  if(!/Your own log says your body uses about 2,0[0-3]0 kcal a day/.test(a)||!(await page.$('.chat-acts [data-pcfix="maint-learned"]')))
+    throw new Error("chat: "+a);
+},{db:Object.assign(seed(),{
+  profile:{age:30,height:180,weight:84,sex:"m",activity:1.4,goal:"maintain",prog:"standard",level:"some",days:3},
+  body:Array.from({length:14},(_,i)=>({date:iso(i*2),weight:84})),
+  days:Object.fromEntries(Array.from({length:27},(_,i)=>[iso(i+1),{water:2000,steps:8000,meals:{Lunch:{done:true,
+    items:[{n:"Day's food",fid:"x",grams:100,label:"1 serving",kcal:2000,p:150,c:200,f:67}]}}}]))})});
+await test("Maintenance learned: too little logged says how much more is needed, and never offers a number",async page=>{
+  const L=await page.evaluate(async()=>(await import("/js/engine/energy.js")).learnedNow());
+  eq([L.kind,L.why],["insufficient","food"],"a few days are not enough");
+  eq(await page.evaluate(async()=>(await import("/js/engine/plancheck.js")).checkPlans().some(f=>f.id==="maint-learned")),false,"no card");
+  await coach(page,"food","targets");
+  if(!/After two weeks of logged food/.test(await page.$eval('.tgsrc',e=>e.textContent)))throw new Error("Targets does not say what it needs");
+},{db:Object.assign(seed(),{days:Object.fromEntries([1,2,3].map(d=>[iso(d),{meals:{Lunch:{done:true,items:[{n:"x",kcal:2000,p:150,c:200,f:67}]}}}]))})});
 /* ---- how coaching is surfaced (coach phase 4) ---------------------------------------- */
 await test("Phase 4: Coach AI shows the most important thing first, the rest behind a tap; the dot still counts them all",async page=>{
   const n=await page.evaluate(async()=>(await import("/js/ui/views/pcheck.js")).adviceCount());

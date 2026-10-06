@@ -257,7 +257,8 @@ function pcFix(id){
   if(act==="program"){toCoach("train","program");return;}
   if(act==="assess"){V.pcheck=false;pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);return;}
   var prog=split(),before={goals:JSON.parse(JSON.stringify(S.goals)),goal:S.profile.goal,
-    days:prog?JSON.parse(JSON.stringify(prog.days)):null,dis:JSON.parse(JSON.stringify(S.pcDismiss||{}))};
+    days:prog?JSON.parse(JSON.stringify(prog.days)):null,dis:JSON.parse(JSON.stringify(S.pcDismiss||{})),
+    energy:S.energy?JSON.parse(JSON.stringify(S.energy)):null};
   var g=S.goals,w=lastWeight()||num(S.profile.weight),msg="";
   if(act==="targets"){var m=macroTargets();g.kcal=m.kcal;g.p=m.p;g.c=m.c;g.f=m.f;msg=t("Targets updated.");}
   /* Protein or carbs up, the other two moved so the calories stay where they are. */
@@ -265,6 +266,9 @@ function pcFix(id){
     msg=t("Protein raised; carbs moved to keep your calories.");}
   else if(act==="carbs"){g.c=Math.round(w*3/5)*5;g.f=Math.max(Math.round(w*0.6),Math.round((g.kcal-g.p*4-g.c*4)/9));
     msg=t("Carbs raised; fat moved to keep your calories.");}
+  /* What the log measured becomes the maintenance the targets are built on. */
+  else if(act==="learned"){S.energy={kcal:f.fix.kcal,at:today()};var m4=macroTargets();g.kcal=m4.kcal;g.p=m4.p;g.c=m4.c;g.f=m4.f;
+    msg=t("Targets rebuilt on what your log measured.");}
   else if(act==="phasegoal"){S.profile.goal=f.fix.goal;var m2=macroTargets();g.kcal=m2.kcal;g.p=m2.p;g.c=m2.c;g.f=m2.f;
     msg=t("Goal and targets now match your program.");}
   else if(act==="balance"){var r=prog?rebalance(prog,S.profile,S.gear):{sets:0,added:0};
@@ -275,7 +279,7 @@ function pcFix(id){
   if(still){S.pcDismiss=S.pcDismiss||{};S.pcDismiss[id]=JSON.stringify(still.sig);msg+=" "+t("The rest is kept as it is.");}
   saveDB();render();
   toast(msg,function(){S.goals=before.goals;S.profile.goal=before.goal;if(prog&&before.days)prog.days=before.days;
-    S.pcDismiss=before.dis;saveDB();render();});}
+    S.pcDismiss=before.dis;if(before.energy)S.energy=before.energy;else delete S.energy;saveDB();render();});}
 /* The question typed into the chat, asked; and the newest question brought into view
    with its answer under it. */
 function chatSend(){

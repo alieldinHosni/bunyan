@@ -1434,7 +1434,6 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "{g} eats at maintenance: {k} kcal.": "{g} بياكل على قد الحفاظ على الوزن: {k} سعر.",
 "Then protein {p} g, fat {f} g, and carbs take the rest: {c} g.": "وبعدين بروتين {p} جم، ودهون {f} جم، والكارب ياخد الباقي: {c} جم.",
 "Your target now is {k} kcal, set by hand or by a plan you used. Targets in Coach can put it back.": "هدفك دلوقتي {k} سعر، اتحط بإيدك أو من خطة استخدمتها. الأهداف في الكوتش تقدر ترجّعه.",
-"A formula is an estimate. Two to three weeks of weigh-ins show what your body actually does with it.": "المعادلة تقدير. وزنات أسبوعين أو تلاتة بتوري جسمك بيعمل إيه فعلًا.",
 "Pain that is sharp, or that changes how you move, is a reason to stop the exercise that causes it. Train around it with exercises that don't hurt.": "الألم الحاد، أو اللي بيغيّر طريقة حركتك، سبب إنك توقف التمرين اللي بيعمله. اتمرن حواليه بتمارين مش بتوجع.",
 "If it lasts more than a few days, swells, or wakes you at night, see a doctor or a physiotherapist. I can't tell what it is.": "لو فضل أكتر من كام يوم، أو ورم، أو بيصحّيك بالليل، روح لدكتور أو أخصائي علاج طبيعي. أنا مقدرش أعرف هو إيه.",
 "Tell the assessment about it under sore spots, and the plan it builds avoids loading it.": "قول للتقييم عليه في الأماكن اللي بتوجعك، والخطة اللي بيبنيها هتبعد عن الضغط عليه.",
@@ -1513,7 +1512,21 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "On track. Nothing to change.": "ماشي صح. مفيش حاجة تتغيّر.",
 "Show only the most important": "اعرض الأهم بس",
 "1 more thing the coach sees": "حاجة كمان الكوتش شايفها",
-"{n} more things the coach sees": "{n} حاجات كمان الكوتش شايفها"
+"{n} more things the coach sees": "{n} حاجات كمان الكوتش شايفها",
+"Your body uses about {k} kcal a day": "جسمك بيصرف حوالي {k} سعر في اليوم",
+"Over the last four weeks you logged about {i} kcal on {d} full days, and your weight moved {r} a week. That means your body now uses about {k} kcal a day ({lo}–{hi}), not the {f} your targets are built on.": "في آخر أربع أسابيع سجّلت حوالي {i} سعر في {d} يوم كامل، ووزنك اتحرك {r} في الأسبوع. يعني جسمك دلوقتي بيصرف حوالي {k} سعر في اليوم، ما بين {lo} و{hi}، مش الـ{f} اللي أهدافك مبنية عليها.",
+"Over the last four weeks you logged about {i} kcal on {d} full days, and your weight moved {r} a week. That means your body uses about {k} kcal a day ({lo}–{hi}), not the {f} the formula estimated.": "في آخر أربع أسابيع سجّلت حوالي {i} سعر في {d} يوم كامل، ووزنك اتحرك {r} في الأسبوع. يعني جسمك بيصرف حوالي {k} سعر في اليوم، ما بين {lo} و{hi}، مش الـ{f} اللي المعادلة قدّرتها.",
+"Build my targets on {k} kcal": "ابني أهدافي على {k} سعر",
+"Targets rebuilt on what your log measured.": "الأهداف اتبنت على اللي سجلك قاسه.",
+"Your logging matches your target, so the target is what to move. Your own log says your body uses about {k} kcal a day, not the {f} your targets are built on; building them on that fixes it at the root.": "تسجيلك ماشي مع هدفك، يبقى الهدف هو اللي يتغيّر. سجلك بيقول إن جسمك بيصرف حوالي {k} سعر في اليوم، مش الـ{f} اللي أهدافك مبنية عليها؛ وبناؤها على كده بيحل المشكلة من أساسها.",
+"By formula, maintaining your weight would take about {f} kcal. Your targets are built on what your own log measured instead: {t} kcal.": "بالمعادلة، الحفاظ على وزنك محتاج حوالي {f} سعر. لكن أهدافك مبنية على اللي سجلك قاسه: {t} سعر.",
+"Your own log says your body uses about {k} kcal a day ({lo}–{hi}), from {d} fully logged days and your weight's trend over four weeks.": "سجلك بيقول إن جسمك بيصرف حوالي {k} سعر في اليوم، ما بين {lo} و{hi}، من {d} يوم متسجّل كامل واتجاه وزنك على مدار أربع أسابيع.",
+"Your own log agrees: about {k} kcal a day ({lo}–{hi}).": "سجلك متفق معاها: حوالي {k} سعر في اليوم، ما بين {lo} و{hi}.",
+"Some of your logged days look incomplete, so I can't measure your maintenance from them yet. Log whole days, including drinks and snacks.": "شوية من أيامك المتسجلة شكلها ناقصة، فمش هقدر أقيس احتياجك منها لسه. سجّل الأيام كاملة، بالمشروبات والسناكس.",
+"A formula is an estimate. Log your food on most days and weigh in a few mornings a week, and after two weeks I can measure what your body actually uses.": "المعادلة تقدير. سجّل أكلك أغلب الأيام واوزن نفسك كام يوم الصبح في الأسبوع، وبعد أسبوعين أقدر أقيس جسمك بيصرف قد إيه فعلًا.",
+"Maintenance measured from your own log (the formula says {f}).": "الاحتياج متقاس من سجلك (المعادلة بتقول {f}).",
+"Maintenance by formula. Your own log measures about {k} ({lo}–{hi}).": "الاحتياج بالمعادلة. سجلك بيقيس حوالي {k}، ما بين {lo} و{hi}.",
+"Maintenance by formula. After two weeks of logged food and a few weigh-ins, your own log measures it.": "الاحتياج بالمعادلة. بعد أسبوعين من تسجيل الأكل وكام وزنة، سجلك هيقيسه."
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;

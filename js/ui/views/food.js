@@ -4,7 +4,9 @@
    saved and the foods you made, kept and edited here) and Targets (what the day is
    measured against, with the evidence for whether it is working beside it). */
 import {t} from "../../i18n/dict.js";
-import {eatenToday, lastWeight, macroKcal, macroTargets, tdee} from "../../engine/formulas.js";
+import {eatenToday, lastWeight, macroKcal, macroTargets, tdee, tdeeFormula} from "../../engine/formulas.js";
+import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
+import {checkPlans} from "../../engine/plancheck.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {dayRec, S} from "../../state.js";
 import {dfmt, esc, fmtN, r1, today} from "../../util.js";
@@ -295,6 +297,17 @@ function suggested(){
   if(!p.age||!p.height||!(lastWeight()||p.weight))return null;
   var m=macroTargets();
   return {tdee:tdee(),kcal:m.kcal,p:m.p,f:m.f,c:m.c};}
+/* Where the maintenance figure comes from, and what the log measures. */
+function maintSource(){
+  var use=maintenanceInUse(),L=learnedNow(),h='<p class="pgnote tgsrc">';
+  var ld=checkPlans().some(function(f){return f.id==="maint-learned";})?learnedDiffers():null;
+  if(use.source==="learned")h+=esc(t("Maintenance measured from your own log (the formula says {f}).").replace("{f}",fmtN(tdeeFormula())));
+  else if(L.kind==="ok")h+=esc(t("Maintenance by formula. Your own log measures about {k} ({lo}–{hi}).")
+    .replace("{k}",fmtN(L.kcal)).replace("{lo}",fmtN(L.low)).replace("{hi}",fmtN(L.high)));
+  else h+=esc(t("Maintenance by formula. After two weeks of logged food and a few weigh-ins, your own log measures it."));
+  h+='</p>';
+  if(ld)h+='<button class="btn g sm tgsrc-b" data-pcfix="maint-learned">'+esc(t("Build my targets on {k} kcal").replace("{k}",fmtN(ld.learned.kcal)))+'</button>';
+  return h;}
 var TRANGES=[[7,"1W"],[30,"1M"],[90,"3M"]];
 var TPAST={7:"Past 7 days",30:"Past 30 days",90:"Past 90 days"};
 function vTargets(){
@@ -332,6 +345,7 @@ function vTargets(){
     h+='<div class="pgcard tgsug"><div class="tgsug-r"><div><div class="pgstat-k">'+esc(t("Maintenance"))+'</div><b>'+fmtN(sg.tdee)+'</b><small>kcal</small></div>'
      +'<div><div class="pgstat-k">'+esc(t("For your goal"))+'</div><b class="a">'+fmtN(sg.kcal)+'</b><small>kcal</small></div>'
      +'<div><div class="pgstat-k">'+esc(t("Protein"))+'</div><b>'+sg.p+'</b><small>g</small></div></div>'
+     +maintSource()
      +(same?'<p class="pgnote">✓ '+esc(t("These are your targets."))+'</p>'
        :'<button class="btn g" data-usesug="1">'+esc(t("Use these targets"))+'</button>')+'</div>';}
   /* Is it working: the weigh-ins against the goal. */

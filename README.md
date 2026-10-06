@@ -333,7 +333,16 @@ otherwise they would outlive the blob that was supposed to own them.
 - **Calories from macros** = protein × 4 + carbs × 4 + fat × 9.
 - **Remaining macros** = your daily target minus everything in meals you marked
   complete.
-- **Maintenance calories** = Mifflin-St Jeor BMR × your activity multiplier.
+- **Maintenance calories** start as Mifflin-St Jeor BMR × your activity multiplier, a
+  guess that is often 10–15% off for one person. After two weeks of logged food and a
+  few weigh-ins, the log measures it instead (`js/coach/energy.js`): average intake on
+  fully logged days, minus the weight change at 7,700 kcal per kg, over the last four
+  weeks. Days far under your usual logged day are left out as partly logged; the weight
+  change is the slope of a line through every weigh-in; and the answer is combined with
+  the formula by how sure each is, so a short noisy log stays near the formula and a
+  long clean one is the log's own. When it differs from what your targets are built on
+  by 150 kcal or 6%, Coach AI says so with the numbers, and one tap builds the targets on
+  it (kept as `S.energy`, with Undo). Coach → Nutrition → Targets says which one is in use.
 - **Seven-day weight average** = the mean of your last seven weigh-ins. Use this,
   not the daily number.
 - **Progression** fires when every working set reaches the top of its rep range.

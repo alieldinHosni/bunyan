@@ -18,6 +18,8 @@ import {isCompound, muscleOf} from "../data/exercises.js";
 import {goalOf} from "../data/goals.js";
 import {hasPlan, mealSlots} from "./meals.js";
 import {lastWeight, macroTargets, tdee} from "./formulas.js";
+import {learnedDiffers} from "./energy.js";
+import {fmtW} from "../units.js";
 import {perWeek, RANGE, volumeCheck} from "./volume.js";
 import {LEVELS} from "./plan.js";
 import {S, split} from "../state.js";
@@ -58,6 +60,17 @@ function checkPlans(){
   var known=num(p.age)>0&&num(p.height)>0&&w>0;
   var g=S.goals||{},cur=num(g.kcal);
   var sug=known?macroTargets():null,td=known?tdee():0;
+
+  /* ---- what the log says the body uses, against what the targets are built on ---- */
+  var ld=known?learnedDiffers():null;
+  if(ld){
+    var L=ld.learned,pw=L.perWeek,rate=(pw>0.004?"+":pw<-0.004?"−":"±")+fmtW(Math.abs(pw));
+    out.push({id:"maint-learned",area:"food",sev:2,title:fill(t("Your body uses about {k} kcal a day"),{k:fmtN(L.kcal)}),
+      why:fill(t(ld.use.source==="learned"
+          ?"Over the last four weeks you logged about {i} kcal on {d} full days, and your weight moved {r} a week. That means your body now uses about {k} kcal a day ({lo}–{hi}), not the {f} your targets are built on."
+          :"Over the last four weeks you logged about {i} kcal on {d} full days, and your weight moved {r} a week. That means your body uses about {k} kcal a day ({lo}–{hi}), not the {f} the formula estimated."),
+        {i:fmtN(L.intake),d:L.foodDays,r:rate,k:fmtN(L.kcal),lo:fmtN(L.low),hi:fmtN(L.high),f:fmtN(ld.use.kcal)}),
+      fix:{label:fill(t("Build my targets on {k} kcal"),{k:fmtN(L.kcal)}),act:"learned",kcal:L.kcal},sig:[r50(L.kcal),r50(ld.use.kcal)]});}
 
   /* ---- the targets against the goal ---- */
   if(known&&cur){

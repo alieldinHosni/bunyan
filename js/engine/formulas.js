@@ -59,7 +59,11 @@ function bestE1RM(sets,name,date){var b=0;sets.forEach(function(x){if(x.wu)retur
 function macroKcal(p,c,f){return Math.round(num(p)*4+num(c)*4+num(f)*9);}
 function bmr(){var p=S.profile,w=lastWeight()||num(p.weight,86);
   return Math.round(10*w+6.25*num(p.height)-5*num(p.age)+(p.sex==="f"?-161:5));}
-function tdee(){return Math.round(bmr()*num(S.profile.activity,1.4));}
+/* Maintenance by formula: resting energy × the activity factor. */
+function tdeeFormula(){return Math.round(bmr()*num(S.profile.activity,1.4));}
+/* Maintenance in use: what the log measured, once the person chose to build their
+   targets on it (S.energy, set from js/engine/energy.js); otherwise the formula. */
+function tdee(){var e=S.energy;return e&&num(e.kcal)>0?Math.round(num(e.kcal)):tdeeFormula();}
 /* A deficit sized to the person (20% of maintenance, at most 750 kcal) rather than
    a flat 500 that is gentle for one body and harsh for another, and never below a
    floor: roughly the resting burn, and not under 1200/1500 kcal. A surplus for
@@ -354,4 +358,4 @@ function addItems(meal,items,d){
 
 
 
-export {bmr, bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, volume, weeklySets, macroTargets};
+export {bmr, bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, tdeeFormula, volume, weeklySets, macroTargets};
