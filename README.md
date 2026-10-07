@@ -133,7 +133,10 @@ js/
                 answers, shared with the chat), coachwords.js (the coach's insights in
                 words), views/{train,home,session,food,coach,chat,progress,profile,
                 assess,warmup,pcheck}.js
-  app.js        entry point: event listeners, wiring, boot
+  ui/handlers/  what every tap does, by domain: shell (moving around, sheets, the date
+                bar), train, session, food, coach, progress, profile; fields.js for
+                typing; common.js for what they share; registry.js tries the branches
+  app.js        entry point: event listeners, wiring, boot (about 240 lines)
 tools/          one-off build scripts that never ship or run in the browser
 ```
 
@@ -147,8 +150,12 @@ when one crosses a line it shouldn't (it runs in Node in under a second):
 - A view may use another view only to show it (Coach shows the planning screens,
   Training the logger). Logic two screens need lives in the engine or in a shared ui
   module (`facts.js`, `coachwords.js`), never in a view.
-- No import cycles outside the UI, nothing imports `app.js`, and every module the app
-  loads is in the service worker's precache.
+- No import cycles outside the UI, nothing imports `app.js`, every import names a file
+  that exists (dynamic ones included), and every module the app loads is in the
+  service worker's precache.
+- `app.js` answers no tap itself. Each tap is a branch in one of `js/ui/handlers/`,
+  registered at boot by `app.js` in a fixed order; handler modules share code only
+  through `common.js`, never by importing each other.
 
 Four more rules hold this together. Each one is a bug that has already happened here:
 
