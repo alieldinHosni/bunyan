@@ -108,10 +108,12 @@ function noteSet(a){
   a.lastSet=now;
 }
 
-/* The prescription of a live entry, as the plan wrote it. */
+/* The prescription of a live entry, as the plan wrote it — and, inside a training
+   block, how many sets the answers after earlier workouts moved it by. */
 function plannedDose(e){
-  var p=e.planned||{};
-  return doseText({sets:p.sets,lo:p.lo,hi:p.hi,amrap:p.amrap,side:p.side,rir:p.rir,timed:ex_isTimed(e)&&!LOADED.test(e.name)});}
+  var p=e.planned||{},d=p.plan!=null?num(p.sets)-num(p.plan):0;
+  return doseText({sets:p.sets,lo:p.lo,hi:p.hi,amrap:p.amrap,side:p.side,rir:p.rir,timed:ex_isTimed(e)&&!LOADED.test(e.name)})
+    +(d?" · "+t(d>0?"{n} more than the plan":"{n} fewer than the plan").replace("{n}",Math.abs(d)):"");}
 function vLogger(){
   var a=S.active;
   if(V.logIdx>=a.entries.length)V.logIdx=a.entries.length-1;
@@ -242,7 +244,7 @@ function vLogger(){
    +(e.planned.note?'<p class="ex-cue">'+esc(e.planned.note)+'</p>':'')
    /* The plan's other choice for this slot ("Pull-Ups or Seated Row"), one tap away
       until a set is logged. */
-   +(e.alt&&!e.sets.length?'<button class="linkbtn exalt" data-swapalt="1">'+esc(t("Or"))+' '+esc(exName(e.alt))+'</button>':'')
+   +(e.alt&&!e.sets.length?'<button class="linkbtn exalt" data-swapalt="1">'+esc(t(e.altWhy==="gear"?"Don't have the kit?":"Or"))+' '+esc(exName(e.alt))+'</button>':'')
    +'</section>';
 
   /* The frame's recommendation banner, above the table where it puts it. The figure is

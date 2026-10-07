@@ -10,6 +10,7 @@ import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../state.js";
 import {SPLIT_LEVEL} from "../../engine/plan.js";
 import {deloadDue, inDeload} from "../../engine/formulas.js";
+import {blockNow, offPlanLight, shiftNow} from "../../engine/blocks.js";
 import {isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder} from "../../engine/schedule.js";
 import {esc, fmtN, pretty, shortd, today} from "../../util.js";
 import {tokenMatch} from "../../engine/text.js";
@@ -117,6 +118,7 @@ function vTrainHome(){
   h+=trainTop();
   if(S.active)h+=resumeHero();
   else{h+=weekStrip(sp,sel);h+=dayHero(sp,planOn(sp,sel),sel);}
+  if(!S.active)h+=blockCard();
   h+=deloadCard();
   h+=bodyTiles();
   h+='<button class="ttile wide tquick" data-actsheet="1">'+art("track",{cls:"btn-art"})+'<span class="ttile-i" aria-hidden="true">'+ACTIVITY+'</span>'
@@ -218,6 +220,8 @@ function programsList(){
 /* A suggestion with its reason and two answers, or — during the week — a quiet line
    saying it is on and until when, with a way out. Never shown mid-workout. */
 function deloadCard(){
+  /* The planned lighter week of a training block is shown by its own card. */
+  if(inDeload()&&!offPlanLight())return "";
   if(inDeload()){
     return '<div class="dlcard on"><span class="dlcard-i" aria-hidden="true">'+FEATHER+'</span>'
      +'<span class="dlcard-t"><b>'+t("Lighter week")+'</b><span>'+t("Until")+' '+shortd(S.deload.until)
@@ -232,6 +236,26 @@ function deloadCard(){
    +t("One lighter week — fewer sets, about 10% less weight — usually brings progress back.")+'</p>'
    +'<div class="dlcard-a"><button class="btn" data-deload="start">'+t("Start a lighter week")+'</button>'
    +'<button class="dlcard-later" data-deload="later">'+t("Not now")+'</button></div></div>';}
+/* Where the training block stands: four segments for its weeks, this one lit, and
+   what this week asks — reps to leave in reserve, or the lighter week with a way to
+   end it early. Then what the answers after earlier workouts have moved, if anything.
+   Quiet: a line and a bar, not a card asking for anything. */
+function blockCard(){
+  var b=blockNow();if(!b||offPlanLight())return "";
+  var segs="";
+  for(var i=1;i<=b.of;i++)segs+='<i class="'+(i<b.week?'done':i===b.week?'on':'')+(i===b.of?' lt':'')+'"></i>';
+  var line=b.light
+    ?t("Lighter week: fewer sets, about 10% lighter.")+" "+t("Block {n} starts {d}.").replace("{n}",b.block+1).replace("{d}",shortd(b.next))
+    :t(b.rir===1?"Stop each set with 1 rep in reserve.":"Stop each set with {n} reps in reserve.").replace("{n}",b.rir);
+  var sh=b.light?{}:shiftNow().shift,moved=Object.keys(sh).sort().map(function(m){
+    return tm(m)+" "+(sh[m]>0?"+":"\u2212")+Math.abs(sh[m]);});
+  return '<div class="blk'+(b.light?' light':'')+'" role="group" aria-label="'+esc(t("Training block"))+'">'
+   +'<div class="blk-h"><b>'+esc(t("Block {b} · Week {w} of {n}").replace("{b}",b.block).replace("{w}",b.week).replace("{n}",b.of))+'</b>'
+   +(b.light?'<button class="dlcard-x" data-deload="end">'+t("End it")+'</button>':'')+'</div>'
+   +'<div class="blk-bar" aria-hidden="true">'+segs+'</div>'
+   +'<p class="blk-l">'+esc(line)+'</p>'
+   +(moved.length?'<p class="blk-m">'+esc(t("Sets per workout, from your answers:"))+' '+esc(moved.join(", "))+'</p>':'')
+   +'</div>';}
 /* Offered once, for a program running in rotation: fixed weekdays, suggested from
    when each day has actually been trained. */
 function weekOffer(sp){

@@ -11,8 +11,9 @@
        averaged, never judged against a target, and never breaks a streak. */
 import {muscleOfEntry} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
-import {e1RM, lastWeight, loadOf, sessionVolume} from "./formulas.js";
-import {sumNutrition} from "./nutrition.js";
+import {bodyFatOf, daysBetween, measurementsOf, rateOf, weighInsOf, weightChangeOf, weightTrendOf} from "./body.js";
+import {e1RM, loadOf, sessionVolume} from "./formulas.js";
+import {nutritionOf, streaksOf, TOL} from "./intake.js";
 import {dataRev, S} from "../state.js";
 import {num, r1, today} from "../util.js";
 import {weekStartOf} from "./schedule.js";
@@ -35,8 +36,6 @@ function memo(name,fn){
 function isoAgo(n){
   var d=new Date();d.setDate(d.getDate()-n);
   return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
-function daysBetween(a,b){
-  return Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/864e5);}
 function win(n){return {from:isoAgo(n-1),to:today(),pfrom:isoAgo(2*n-1),pto:isoAgo(n)};}
 function inWin(d,a,b){return d>=a&&d<=b;}
 
@@ -196,136 +195,27 @@ function weeklyCardio(){
   return {min:Math.round(min),target:150,recent:recent};}
 
 /* ---- body ------------------------------------------------------------------- */
-/* The weight trend against the goal: a least-squares line through the last four weeks
-   of weigh-ins, as kg per week, beside the rate the goal calls for. Needs at least
-   four weigh-ins spread over two weeks, because day-to-day water swings are larger
-   than a week of real change. Rates are the usual evidence-based ones: losing fat at
-   0.5–1% of body weight a week, gaining at 0.25–0.5%, maintaining within ±0.25%.
-   Every goal is judged by its own rate. Losing fat while building muscle runs a small
-   deficit, so a slow loss or a steady scale is on plan; getting stronger runs a small
-   surplus, so a slow gain is. Judging those two as "maintain" told the first to eat
-   more when it was working. kind says which way the goal leans. */
-var RATE={lose:["lose",-0.01,-0.005],recomp:["lose",-0.005,0.001],
-  gain:["gain",0.0025,0.005],strength:["gain",-0.001,0.0035]};
-function rateOf(goal){return RATE[goal]||["hold",-0.0025,0.0025];}
-function weightTrend(){
-  var list=weighIns();if(list.length<4)return null;
-  var last=list[list.length-1].date;
-  var pts=list.filter(function(b){return daysBetween(b.date,last)<=28;});
-  if(pts.length<4||daysBetween(pts[0].date,last)<14)return null;
-  var x0=pts[0].date,n=pts.length,sx=0,sy=0,sxx=0,sxy=0;
-  pts.forEach(function(b){var x=daysBetween(x0,b.date),y=num(b.weight);sx+=x;sy+=y;sxx+=x*x;sxy+=x*y;});
-  var den=n*sxx-sx*sx;if(!den)return null;
-  var perWk=(n*sxy-sx*sy)/den*7,mean=sy/n;
-  var g=(S.profile||{}).goal,rt=rateOf(g),kind=rt[0];
-  var lo=rt[1]*mean,hi=rt[2]*mean,status="ok";
-  if(kind==="lose"){if(perWk>hi)status=perWk>0.05?"wrong":"slow";else if(perWk<lo)status="fast";}
-  else if(kind==="gain"){if(perWk<lo)status=perWk<-0.05?"wrong":"slow";else if(perWk>hi)status="fast";}
-  else status=perWk<lo?"down":perWk>hi?"up":"ok";
-  return {perWk:Math.round(perWk*100)/100,lo:Math.round(lo*100)/100,hi:Math.round(hi*100)/100,
-    goal:g,kind:kind,status:status,weeks:Math.round(daysBetween(pts[0].date,last)/7)};}
+/* The weight trend against the goal, the change since last week, the tape
+   measurements and body fat: body.js works them out from what it is handed (the
+   rates, the regression and the Navy formula are documented there); these pass in
+   this profile's weigh-ins and goal. */
+function weightTrend(){return weightTrendOf(S.body,(S.profile||{}).goal);}
 function weighIns(n){
-  var list=(S.body||[]).filter(function(b){return num(b.weight)>0;});
+  var list=weighInsOf(S.body);
   if(!n)return list;
   var w=win(n);
   return list.filter(function(b){return inWin(b.date,w.from,w.to);});}
-/* The latest weigh-in against the most recent one at least a week older, which is
-   what "vs last week" means. Without one that old, against the earliest there is,
-   and the view says since when. */
-function weightChange(){
-  var list=weighIns();
-  if(!list.length)return null;
-  var cur=list[list.length-1],ref=null;
-  for(var i=list.length-2;i>=0;i--)
-    if(daysBetween(list[i].date,cur.date)>=7){ref=list[i];break;}
-  if(!ref&&list.length>1)ref=list[0];
-  return {cur:cur,ref:ref,d:ref?r1(cur.weight-ref.weight):null,
-    days:ref?daysBetween(ref.date,cur.date):null};}
-
-/* good: which way is progress for this measure. +1 up, -1 down, 0 neither. Only
-   progress is coloured; the other way is plain text, not red. */
-var MEASURES=[["chest","Chest",1],["waist","Waist",-1],["hips","Hips",-1],["arms","Arms",1],
-  ["thighs","Thighs",1],["calves","Calves",1],["neck","Neck",0]];
-function latestOf(k){
-  for(var i=(S.body||[]).length-1;i>=0;i--){var v=num(S.body[i][k]);if(v>0)return {v:v,d:S.body[i].date};}
-  return null;}
-function measurements(){
-  return MEASURES.map(function(m){
-    var cur=null,prev=null;
-    for(var i=(S.body||[]).length-1;i>=0;i--){
-      var v=num(S.body[i][m[0]]);
-      if(!(v>0))continue;
-      if(!cur)cur={v:v,d:S.body[i].date};else{prev={v:v,d:S.body[i].date};break;}}
-    return cur?{k:m[0],name:m[1],good:m[2],v:cur.v,d:cur.d,
-      delta:prev?r1(cur.v-prev.v):null}:null;}).filter(Boolean);}
-
-/* Body fat: a figure the user entered (a scale, a DEXA scan) where there is one at
-   least as recent as the tape measurements; otherwise the US Navy circumference
-   method, which needs height, waist and neck, and hips as well for women:
-     men    495 / (1.0324 − 0.19077·log10(waist − neck) + 0.15456·log10(height)) − 450
-     women  495 / (1.29579 − 0.35004·log10(waist + hip − neck) + 0.22100·log10(height)) − 450
-   All in centimetres. It is an estimate, typically within 3–4 points of a lab
-   measurement, and the screen says which of the two it is showing. */
-function bodyFat(){
-  var p=S.profile||{},h=num(p.height),fem=p.sex==="f";
-  var waist=latestOf("waist"),neck=latestOf("neck"),hips=latestOf("hips"),own=latestOf("bf");
-  var need=[];
-  if(!h)need.push("height");
-  if(!waist)need.push("waist");
-  if(!neck)need.push("neck");
-  if(fem&&!hips)need.push("hips");
-  var navy=null;
-  if(!need.length){
-    var x=fem?waist.v+hips.v-neck.v:waist.v-neck.v;
-    if(x>0){
-      var L=Math.log10||function(v){return Math.log(v)/Math.LN10;};
-      navy=fem?495/(1.29579-0.35004*L(x)+0.22100*L(h))-450
-              :495/(1.0324-0.19077*L(x)+0.15456*L(h))-450;
-      if(!(navy>=2&&navy<=60))navy=null;}}
-  var bf=null,src=null,date=null;
-  if(own&&(!navy||own.d>=waist.d)){bf=own.v;src="entered";date=own.d;}
-  else if(navy){bf=navy;src="navy";date=waist.d;}
-  var wt=lastWeight();
-  return {bf:bf==null?null:r1(bf),src:src,date:date,need:own?[]:need,
-    lean:bf!=null&&wt?r1(wt*(1-bf/100)):null};}
+function weightChange(){return weightChangeOf(S.body);}
+function measurements(){return measurementsOf(S.body);}
+function bodyFat(){return bodyFatOf(S.profile,S.body);}
 
 /* ---- nutrition -------------------------------------------------------------- */
-/* A day's totals, or null for a day with nothing eaten logged. Read from S.days
-   directly: dayRec() would create an empty record for every day it was asked about. */
-function foodDay(d){
-  var r=S.days&&S.days[d];
-  if(!r||!r.meals)return null;
-  var all=[];
-  Object.keys(r.meals).forEach(function(k){(r.meals[k].items||[]).forEach(function(i){all.push(i);});});
-  return all.length?sumNutrition(all):null;}
-/* The finished days in the window: yesterday and the n−1 before it. */
-function foodDays(n){
-  var out=[];
-  for(var i=n;i>=1;i--){var d=isoAgo(i),x=foodDay(d);if(x){x.d=d;out.push(x);}}
-  return out;}
-/* Within 10% of the target, both ways — the tolerance a food log can honestly
-   claim, given what a portion estimate is worth. Protein counts as met at 90% or
-   more: over on protein is not a miss. */
-var TOL=0.10;
-function nearTarget(v,g){return g>0&&Math.abs(v-g)<=g*TOL;}
-function macrosMet(x,g){return nearTarget(x.p,g.p)&&nearTarget(x.c,g.c)&&nearTarget(x.f,g.f);}
-function proteinMet(x,g){return g.p>0&&x.p>=g.p*(1-TOL);}
-function kcalMet(x,g){return nearTarget(x.kcal,g.kcal);}
-function nutrition(n){
-  var g=S.goals||{},days=foodDays(n),k=days.length;
-  function avg(key){return k?Math.round(days.reduce(function(a,x){return a+num(x[key]);},0)/k):0;}
-  var met=days.filter(function(x){return macrosMet(x,g);}).length;
-  return {days:days,count:k,
-    avg:{kcal:avg("kcal"),p:avg("p"),c:avg("c"),f:avg("f")},
-    met:met,adherence:k?Math.round(met/k*100):null};}
-/* Consecutive days back from yesterday. Today joins the run once it qualifies and
-   never breaks it before then; a day with nothing logged does break it. */
-function runOf(test){
-  var g=S.goals||{},n=0,t0=foodDay(today());
-  if(t0&&test(t0,g))n++;
-  for(var i=1;i<1000;i++){var x=foodDay(isoAgo(i));if(x&&test(x,g))n++;else break;}
-  return n;}
-function streaks(){return {protein:runOf(proteinMet),kcal:runOf(kcalMet)};}
+/* A food day counts once it is over, within 10% of a target is met, and a streak runs
+   back from yesterday: intake.js has the rules, handed this profile's log, targets and
+   today. Read from S.days directly: dayRec() would create an empty record for every
+   day it was asked about. */
+function nutrition(n){return nutritionOf(S.days,S.goals,n,today());}
+function streaks(){return streaksOf(S.days,S.goals,today());}
 
 /* ---- the redesign's summary cards ------------------------------------------ */
 /* Upper or lower body, for the Strength filter. Core and anything unclassified is

@@ -7,9 +7,11 @@ import {dayRec, S, saveDB, split} from "../state.js";
 import {num, r1, today} from "../util.js";
 import {t} from "../i18n/dict.js";
 import {fmtW} from "../units.js";
-import {goalOf} from "../data/goals.js";
 import {progressionAdvice} from "../coach/autoreg.js";
 import {e1rm} from "../coach/util.js";
+import {blockNow, plannedLight} from "./blocks.js";
+import {avg7Of, bmrOf, lastWeightOf, macroTargetsOf, proteinFor, sessionKcalOf, targetKcalOf, tdeeFormulaOf,
+        tdeeOf} from "./body.js";
 
 /* ============================================================ formulas */
 /* A warm-up counts for nothing: not volume, not average RPE, not a record, and not
@@ -60,45 +62,16 @@ function avgRPE(sets){var n=0,tot=0;sets.forEach(function(x){if(x.wu||!x.rpe)ret
 function e1RM(w,r,rpe){return e1rm(w,r,rpe);}
 function bestE1RM(sets,name,date){var b=0;sets.forEach(function(x){if(x.wu)return;var e=e1RM(loadOf(name,x.w,date),num(x.r),x.rpe);if(e>b)b=e;});return b;}
 function macroKcal(p,c,f){return Math.round(num(p)*4+num(c)*4+num(f)*9);}
-function bmr(){var p=S.profile,w=lastWeight()||num(p.weight,86);
-  return Math.round(10*w+6.25*num(p.height)-5*num(p.age)+(p.sex==="f"?-161:5));}
-/* Maintenance by formula: resting energy × the activity factor. */
-function tdeeFormula(){return Math.round(bmr()*num(S.profile.activity,1.4));}
+/* The body's maths lives in body.js, which is handed what it needs; these pass in
+   this profile's state, so the screens and the coach keep calling them as before. */
+function bmr(){return bmrOf(S.profile,S.body);}
+function tdeeFormula(){return tdeeFormulaOf(S.profile,S.body);}
 /* Maintenance in use: what the log measured, once the person chose to build their
    targets on it (S.energy, set from js/engine/energy.js); otherwise the formula. */
-function tdee(){var e=S.energy;return e&&num(e.kcal)>0?Math.round(num(e.kcal)):tdeeFormula();}
-/* A deficit sized to the person (20% of maintenance, at most 750 kcal) rather than
-   a flat 500 that is gentle for one body and harsh for another, and never below a
-   floor: roughly the resting burn, and not under 1200/1500 kcal. A surplus for
-   muscle gain stays small, since most of a large one is stored as fat. */
-function targetKcal(){
-  var td=tdee(),b=bmr(),G=goalOf(S.profile.goal),fem=S.profile.sex==="f";
-  /* The goal's share of maintenance, no more than its cap either way (js/data/goals.js). */
-  var d=Math.round(td*G.kcal);
-  if(G.cap)d=Math.max(-G.cap,Math.min(G.cap,d));
-  var t=td+d;
-  var floor=Math.max(fem?1200:1500,G.kcal<0?Math.round(b*0.95):0);
-  return Math.max(floor,t);}
-/* Protein, g/day, from the goal: 2.0 g/kg while losing fat (it protects muscle in a
-   deficit), 2.2 when losing fat and building muscle at once, 1.6–1.8 otherwise — all
-   inside the 1.6–2.2 g/kg range the research supports. Above a BMI of 30 it is
-   scaled from the weight at a BMI of 27, since protein needs follow lean mass, not
-   total mass. */
-function proteinTarget(w){
-  var h=num(S.profile.height)/100,kg=num(w);
-  if(h>1&&kg/(h*h)>30)kg=27*h*h;
-  return Math.round(kg*goalOf(S.profile.goal).protein);}
-/* The whole day's targets from the profile: energy, then protein, then fat as the
-   goal's share of the energy, carbs with what is left (never under 50 g). Water is
-   35 ml per kg, rounded to a glass. Steps only where the goal leans on them. Four
-   screens used to work this out each in their own copy. */
-function macroTargets(){
-  var G=goalOf(S.profile.goal),w=lastWeight()||num(S.profile.weight);
-  var kc=Math.round(targetKcal()/10)*10,p=proteinTarget(w),f=Math.round(kc*(G.fat||0.28)/9);
-  var out={kcal:kc,p:p,f:f,c:Math.max(50,Math.round((kc-p*4-f*9)/4))};
-  if(w)out.water=Math.max(2000,Math.round(w*35/250)*250);
-  if(G.steps)out.steps=G.steps;
-  return out;}
+function tdee(){return tdeeOf(S.profile,S.body,S.energy);}
+function targetKcal(){return targetKcalOf(S.profile,S.body,S.energy);}
+function proteinTarget(w){return proteinFor(S.profile,w);}
+function macroTargets(){return macroTargetsOf(S.profile,S.body,S.energy);}
 /* Clearing Safari's data wipes everything and there is no server copy, so losing a
    history is the most likely real harm this app can do. Once there is enough logged to
    be worth protecting, ask — quietly, and only every so often. */
@@ -112,25 +85,11 @@ function backupAgeDays(){
   if(!S.lastBackup)return null;
   return Math.floor((Date.now()-S.lastBackup)/864e5);}
 
-function lastWeight(){for(var i=S.body.length-1;i>=0;i--)if(S.body[i].weight)return S.body[i].weight;return 0;}
-/* Calories burned by a session, the standard MET equation:
-     kcal = MET × 3.5 × kg / 200 × minutes
-   5.0 METs is the middle of the Compendium of Physical Activities' band for
-   resistance training — its own values run from 3.5 for moderate multi-exercise work
-   to 6.0 for vigorous effort. That is a band, not a measurement, which is why the
-   screen prints "EST." beside it.
-
-   Active minutes, not wall clock: time spent sitting between sets is not training.
-
-   Returns 0 when no body weight has ever been logged. There is no sensible default —
-   the figure scales linearly with it — so the caller shows something it actually
-   knows instead of a number derived from a guess. */
-function sessionKcal(mins){
-  var kg=lastWeight();
-  if(!kg||!mins)return 0;
-  return Math.round(5.0*3.5*kg/200*mins);}
-function avg7(){var v=S.body.slice(-7).map(function(b){return b.weight;}).filter(function(x){return x>0;});
-  return v.length>=3?r1(v.reduce(function(a,b){return a+b;},0)/v.length):0;}
+function lastWeight(){return lastWeightOf(S.body);}
+/* Calories burned by a session (body.js has the equation), at the latest weigh-in.
+   0 when no body weight has ever been logged: the caller shows something it knows. */
+function sessionKcal(mins){return sessionKcalOf(lastWeight(),mins);}
+function avg7(){return avg7Of(S.body);}
 /* Working sets only. The "last time" column and the recommendation engine would both
    be misled by a warm-up. */
 function prevPerf(name){
@@ -195,9 +154,12 @@ function snapDown(x,step){step=step||1.25;return Math.max(0,Math.round(Math.roun
    lifts stalled, or two weeks of sets close to failure. While it runs the plan's
    sets drop by about 40% and suggested loads by about 10%. */
 function isoDays(a,b){return Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/864e5);}
-function inDeload(){return !!(S.deload&&S.deload.until&&today()<=S.deload.until);}
+/* A lighter week runs when one was started from the card, or when a training block
+   reaches its planned one (js/engine/blocks.js). */
+function inDeload(){return !!(S.deload&&S.deload.until&&today()<=S.deload.until)||plannedLight();}
 function deloadDue(){
-  if(inDeload()||S.sessions.length<12)return null;
+  /* Blocks bring their own lighter week every fourth, so none is suggested on top. */
+  if(inDeload()||blockNow()||S.sessions.length<12)return null;
   var now=today(),dl=S.deload||{};
   if(dl.snooze&&now<dl.snooze)return null;
   var since=dl.last||S.sessions[S.sessions.length-1].date;

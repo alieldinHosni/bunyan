@@ -1,10 +1,12 @@
 /* Bunyan — actions
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
-import {exIdOf, kindOf, LIB, muscleOf, muscleOfEntry} from "../data/exercises.js";
+import {exIdOf, kindOf, LIB, muscleOf, muscleOfEntry, pickable} from "../data/exercises.js";
+import {standIn} from "../engine/plan.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
 import {deloadSets, inDeload, recordsIn, avgRPE, prevPerf, recommend, sessionVolume} from "../engine/formulas.js";
+import {blockDay, blockNow, ensureBlock} from "../engine/blocks.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {coolFor} from "./views/warmup.js";
 import {stopHold} from "./hold.js";
@@ -183,11 +185,17 @@ function startDay(dayId){
   var sp=ownerOf(d.id)||split(),wk=programWeek(sp);
   var list=d.ex.filter(function(e){return inWeek(e,wk);});
   if(!list.length)list=d.ex;
+  /* This week of the block: how many reps to leave, and sets moved by the answers
+     after earlier workouts. The plan itself is not changed. */
+  ensureBlock();
+  var blk=blockNow();
+  list=blockDay(list);
   /* Created on the tap that starts the workout (a user gesture, which iOS requires),
      so logging the first set does not pay for it. */
   audioOn();
   S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
     splitId:split().id,dayId:d.id,dayName:d.name,dayNotes:(d.notes||[]).slice(),
+    block:blk?{n:blk.block,week:blk.week,light:blk.light}:undefined,
     entries:list.map(function(e){
       /* Resolved from the library as the session is created, so the record this
          workout leaves behind is right even if the plan's cached muscle is not. What
@@ -200,8 +208,13 @@ function startDay(dayId){
       if(e.side)pl.side=true;
       if(e.amrap)pl.amrap=true;
       if(e.rir!=null)pl.rir=e.rir;
+      if(e.plan!=null)pl.plan=e.plan;
+      /* Kit you do not have: the same movement on what you do, offered beside it
+         (the plan's own other choice wins where it gave one). */
+      var alt=e.alt||null,altWhy=null;
+      if(!alt&&!isActivity(e.name)&&!pickable(e.name)){alt=standIn(e.name,S.gear,(S.profile||{}).limits)||null;if(alt)altWhy="gear";}
       return {name:e.name,exId:e.exId||exIdOf(e.name),kind:e.timed&&!isActivity(e.name)?"timed":kindOf(e.name),muscle:muscleOfEntry(e),planned:pl,
-              rest:e.rest,grp:e.grp||null,alt:e.alt||null,sets:[]};})};
+              rest:e.rest,grp:e.grp||null,alt:alt,altWhy:altWhy||undefined,sets:[]};})};
   V.logIdx=0;V.tab="train";V.train="days";endRest();stopHold();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
 
@@ -283,7 +296,10 @@ function finishSession(){
        the figure did not have. */
     secs:Math.max(1,Math.round(sessionClock(a).ms/1000)),
     wallMins:Math.max(1,Math.round(sessionWall(a)/60000)),
-    sets:allSets.length,exs:a.entries.filter(function(e){return e.sets.length;}).length,rpe:avgRPE(allSets),prs:prs,
+    sets:allSets.length,
+    /* Lifting was done, so "how was the amount" means something. */
+    lift:a.entries.some(function(e){return !isActivity(e.name)&&(e.sets||[]).some(function(x){return !x.wu;});}),
+    exs:a.entries.filter(function(e){return e.sets.length;}).length,rpe:avgRPE(allSets),prs:prs,
     notes:a.notes||"",
     /* What the complete screen needs to state an achievement rather than a number:
        the plan it is being measured against, and the session it is being compared to. */
@@ -296,7 +312,7 @@ function finishSession(){
   /* The plan's words for the day and each exercise were for doing it, not for the
      record: history keeps what describes the sets, not the cues. */
   delete a.dayNotes;delete a.warm;delete a.wuDone;
-  a.entries.forEach(function(e){delete e.alt;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
+  a.entries.forEach(function(e){delete e.alt;delete e.altWhy;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
   recordSession(a);S.active=null;endRest();keepAwake(false);stopHold();V.cdDone={};
   saveDB();V.tab="train";V.train="days";
   play(prs.length?"pr":"complete");tap("ok");

@@ -8,13 +8,16 @@
      i18n    js/i18n/            words: data, state and util at most
      engine  js/engine/          the app's logic: never the UI or app.js
      ui      js/ui/ and js/ui/views/
-     app     js/app.js           boot and wiring: nothing imports it
+     app     js/app.js           boot and wiring: nothing imports it, and it answers no tap itself
+             (taps are answered in js/ui/handlers/, one module per domain)
      vendor  js/vendor/          third-party code as shipped (pdf.js), for the engine only
 
    A view may use another view only to show it (Coach shows the planning screens,
    Training shows the logger): the list below. Logic two views need lives in the
    engine, or in a shared ui module (facts.js, coachwords.js), never in a view.
-   No import cycles outside the UI. Every module the app loads is precached for offline.
+   No import cycles outside the UI. Every import names a file that exists. Every module
+   the app loads is precached for offline. The pure engine modules (PURE below) never
+   reach state.js, however indirectly.
 
      node tests/architecture.mjs */
 import fs from "fs";
@@ -75,6 +78,9 @@ for (const f of files){
     if (!spec.startsWith(".")) continue;
     const to = rel(path.resolve(path.dirname(path.join(ROOT, f)), spec));
     graph[f].push(to);
+    /* A path is relative to the module that names it: code moved to another folder
+       keeps working only if its imports move with it, dynamic ones included. */
+    if (!fs.existsSync(path.join(ROOT, to))){bad.push(`${f} imports ${spec}, which is not a file (${to})`); continue;}
     const A = layer(f), B = layer(to);
     if (to === "js/app.js"){bad.push(`${f} imports app.js: nothing may`); continue;}
     if (A === "core"){
@@ -90,6 +96,31 @@ for (const f of files){
         bad.push(`${f} takes from the view ${into}: move what it needs to engine/ or a shared ui module, or list it in EMBEDS if it shows that screen`);}}
   if (layer(f) === "coach" && /\b(document|window|localStorage|sessionStorage|indexedDB|fetch|XMLHttpRequest|navigator)\b\s*[.(]/.test(src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "")))
     bad.push(`${f} (coach) touches the DOM, storage or the network`);}
+
+/* app.js is boot and wiring. Taps are answered in js/ui/handlers/, one module per
+   domain, registered by app.js at boot; those modules do not import each other (only
+   the registry and the helpers they share), so the order their branches are tried in
+   is written in one place, app.js. */
+{
+  const app = fs.readFileSync(path.join(ROOT, "js/app.js"), "utf8");
+  if (/\bif\s*\(\s*D\.[A-Za-z]/.test(app)) bad.push("js/app.js answers a tap itself: tap branches belong in js/ui/handlers/");
+  for (const f of files.filter(f => f.startsWith("js/ui/handlers/")))
+    for (const to of graph[f])
+      if (to.startsWith("js/ui/handlers/") && !/\/(registry|common)\.js$/.test(to))
+        bad.push(`${f} imports ${to}: handler modules share code through common.js only`);
+}
+
+/* The pure engine: handed what it needs, it reads no state, so tests/engine.mjs can run
+   it in Node with plain data. Nothing these modules import, directly or through
+   another module, may be state.js (units.js and the words read it too). The coach is
+   held to the same, through its own rule above. */
+const PURE = ["js/engine/body.js", "js/engine/intake.js"];
+for (const f of PURE){
+  const seen = new Set(), todo = [f];
+  while (todo.length){
+    const g = todo.pop(); if (seen.has(g)) continue; seen.add(g);
+    if (g === "js/state.js"){bad.push(`${f} reaches js/state.js: a pure module is handed what it needs`); break;}
+    todo.push(...(graph[g] || []));}}
 
 /* Cycles: strongly connected groups of more than one module, unless all of it is UI. */
 let n = 0; const st = [], on = new Set(), ix = {}, low = {}, cycles = [];

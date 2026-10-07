@@ -3,6 +3,7 @@
 import {esc} from "../util.js";
 import {ACTS, actIcon, actMuscle, isActivity} from "./activities.js";
 import {EXTRA} from "./extra.js";
+import {movementOf} from "./movement.js";
 
 /* The person's own data the library needs: exercises they added (myEx), their
    equipment (gear) and favourites (favs). Handed in by app.js at boot, so this data
@@ -15,7 +16,7 @@ function myEx(){return user().myEx||[];}
 /* n=name m=muscle e=equipment c=compound */
 var LIB=[];            /* built from exercises.json: every entry has illustrations */
 function buildLIB(){
-  LIB.length=0;
+  LIB.length=0;MOVE={};
   if(!EXDB)return;
   Object.keys(EXDB).sort().forEach(function(n){
     var v=EXDB[n];
@@ -299,9 +300,17 @@ function muscleOfEntry(e){
   return (m&&m!=="Other")?m:(e.muscle||"Other");
 }
 function isCompound(n){var v=EXDB&&EXDB[n];return v?!!v.c:/Press|Squat|Deadlift|Row|Pull|Lunge|Dip/i.test(n);}
+/* What an exercise does, as a coach says it (js/data/movement.js): "hinge",
+   "hpush", "vpull" … Two exercises with the same movement and main muscle train the
+   same thing, which is what a swap has to keep. Read once per name, cleared when the
+   library reloads. */
+var MOVE={};
+function movementOfEx(n){
+  if(!(n in MOVE))MOVE[n]=movementOf(n,muscleOf(n),(EXDB&&EXDB[n]||{}).p);
+  return MOVE[n];}
 
 
-export {useUserData, alsoKnown, isUnilateral, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
+export {useUserData, alsoKnown, isUnilateral, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
 
 /* Plate maths only means something on a loaded bar. On a machine, a cable or your
    own bodyweight the button was there on every exercise and useful on a handful.

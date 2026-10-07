@@ -1696,6 +1696,159 @@ await test("Covers: a program of your own gets a cover drawn from its week",asyn
   const c=await page.$eval(".drow-cov .pc-t",e=>getComputedStyle(e).fill);
   eq(c,"rgb(255, 46, 58)","its top course is Machine Red");
 });
+/* ---- training blocks (js/coach/block.js, js/engine/blocks.js) ---- */
+const blockAt=(page,start)=>page.evaluate(async st=>{const s=await import("/js/state.js");s.S.block={start:st};s.saveDB();
+  (await import("/js/ui/render.js")).render();},start);
+await test("Blocks: the first workout starts block 1, and week 1 leaves three in reserve",async page=>{
+  await startWorkout(page);
+  const r=await page.evaluate(async()=>{const s=(await import("/js/state.js")).S;const sc=await import("/js/engine/schedule.js");const u=await import("/js/util.js");
+    return [s.block.start===sc.weekStartOf(u.today()),s.active.block,
+      s.active.entries.filter(e=>e.kind!=="activity"&&!e.planned.timed).every(e=>e.planned.rir===3)];});
+  eq(r,[true,{n:1,week:1,light:false},true]);
+  if(!/3 in reserve/.test(await page.textContent("#app")))throw new Error("the dose does not say 3 in reserve");
+});
+await test("Blocks: the Train page shows the week, and week 3 asks for one in reserve",async page=>{
+  await blockAt(page,iso(15));
+  await tapTab(page,"train");await pause(page);
+  const t=await page.$eval(".blk",e=>e.innerText);
+  if(!/Block 1 · Week 3 of 4/.test(t)||!/1 rep in reserve/.test(t))throw new Error("card: "+t);
+  eq(await page.$$eval(".blk-bar i",a=>a.map(i=>i.className)),["done","done","on"," lt"],"two weeks done, this one lit, the lighter one last");
+  await page.tap("[data-startday]");await pause(page,400);
+  eq(await ev(page,"S.active.entries.filter(e=>e.kind!=='activity'&&!e.planned.timed).every(e=>e.planned.rir===1)"),true,"one in reserve");
+});
+await test("Blocks: the planned lighter week thins the sets, and ending it starts the next block",async page=>{
+  await blockAt(page,iso(23));
+  await tapTab(page,"train");await pause(page);
+  if(!(await page.$(".blk.light")))throw new Error("no lighter-week card");
+  if(await page.$(".dlcard.on"))throw new Error("the deload card shows as well");
+  eq(await ev(page,"S.block.start"),iso(23));
+  await page.tap('.blk [data-deload="end"]');await pause(page);
+  eq(await ev(page,"S.block.start"),iso(0),"the next block starts today");
+  const t=await page.$eval(".blk",e=>e.innerText);
+  if(!/Block 1 · Week 1 of 4/.test(t))throw new Error("after ending: "+t);
+});
+await test("Blocks: the lighter week's workout has fewer sets than the plan",async page=>{
+  await blockAt(page,iso(23));
+  await startWorkout(page);
+  const cut=await ev(page,"S.active.entries.map(e=>e.planned.sets)");
+  const plan=await page.evaluate(async()=>{const s=await import("/js/state.js");return s.dayOf(s.S.active.dayId).ex.map(e=>e.sets);});
+  if(!cut.every((n,i)=>n<plan[i]||n===1))throw new Error("sets not cut: "+cut+" vs "+plan);
+  eq(await ev(page,"[S.active.block.light,S.active.entries.filter(e=>e.kind!=='activity'&&!e.planned.timed).every(e=>e.planned.rir===4)]"),[true,true]);
+});
+await test("Blocks: 'too easy' after a workout adds a set for the muscle it trained",async page=>{
+  await startWorkout(page);
+  const m=await ev(page,"S.active.entries[0].muscle");
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-finish]');await pause(page);
+  await page.tap('[data-confirmok]');await pause(page,600);
+  if(!(await page.$('[data-sfeel="easy"]')))throw new Error("the complete sheet does not ask");
+  await page.tap('[data-sfeel="easy"]');await pause(page);
+  eq(await ev(page,"[S.sessions[0].feel,document.querySelector('[data-sfeel=\"easy\"]').getAttribute('aria-pressed')]"),["easy","true"]);
+  const sh=await page.evaluate(async()=>(await import("/js/engine/blocks.js")).shiftNow().shift);
+  eq(sh[m],1,"one more set of "+m+" per workout");
+  /* The next workout with that muscle carries it, and says so. */
+  const r=await page.evaluate(async mu=>{const s=await import("/js/state.js");const a=await import("/js/ui/actions.js");
+    const ex=await import("/js/data/exercises.js");
+    const sp=s.split(),d=sp.days.find(x=>x.ex.some(e=>ex.muscleOf(e.name)===mu));if(!d)return null;
+    (await import("/js/ui/view.js")).V.sheet=null;
+    a.startDay(d.id);const e=s.S.active.entries.find(x=>x.muscle===mu);return [e.planned.sets-e.planned.plan];},m);
+  eq(r,[1],"the first "+m+" exercise has one set more than the plan");
+  await pause(page,300);
+  if(!/1 more than the plan/.test(await page.textContent("#app")))throw new Error("the logger does not say so");
+},{prefs:{autorest:false}});
+await test("Blocks: answering again takes the answer back",async page=>{
+  await startWorkout(page);
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-finish]');await pause(page);
+  await page.tap('[data-confirmok]');await pause(page,600);
+  await page.tap('[data-sfeel="much"]');await pause(page);
+  await page.tap('[data-sfeel="much"]');await pause(page);
+  eq(await ev(page,"S.sessions[0].feel===undefined"),true);
+},{prefs:{autorest:false}});
+await test("Blocks: turned off in Settings, no block, no card, the plan's own effort",async page=>{
+  await blockAt(page,iso(15));
+  await tapTab(page,"profile");await pause(page);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page);
+  await page.tap('[data-toggle="noblocks"]');await pause(page);
+  eq(await ev(page,"[S.prefs.noblocks,S.block===undefined]"),[true,true],"off, and the block forgotten");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page);
+  await tapTab(page,"train");await pause(page);
+  if(await page.$(".blk"))throw new Error("a block card while off");
+  await page.tap("[data-startday]");await pause(page,400);
+  eq(await ev(page,"[S.block===undefined,S.active.block===undefined]"),[true,true],"no block started");
+});
+await test("Blocks: a program with its own weeks keeps them, with no block on top",async page=>{
+  const r=await page.evaluate(async()=>{const s=await import("/js/state.js");const b=await import("/js/engine/blocks.js");
+    const on1=b.blocksOn();const sp=s.split();sp.days.find(d=>d.ex.length).ex[0].wk=[1,4];const on2=b.blocksOn();delete sp.days.find(d=>d.ex.length).ex[0].wk;return [on1,on2];});
+  eq(r,[true,false]);
+});
+/* ---- movement patterns (js/data/movement.js) ---- */
+const mv=(page,names)=>page.evaluate(async ns=>{const ex=await import("/js/data/exercises.js");return ns.map(n=>ex.movementOfEx(n));},names);
+await test("Movement: Replace lists what trains the same thing first, set apart",async page=>{
+  await startWorkout(page);
+  const cur=await ev(page,"S.active.entries[0].name");
+  await page.tap('[data-swap]');await pause(page,500);
+  const h=await page.$eval('#sheet .pksame-h',e=>e.innerText);
+  if(!/Trains the same thing/i.test(h))throw new Error("heading: "+h);
+  const same=await page.$$eval('#sheet .pksame [data-pickex]',a=>a.map(b=>b.getAttribute("data-pickex")));
+  if(!same.length)throw new Error("nothing in the same-movement group");
+  const want=(await mv(page,[cur]))[0];
+  eq((await mv(page,same)).every(m=>m===want),true,"every one is a "+want);
+  if(same.indexOf(cur)>=0)throw new Error("the exercise is its own alternative");
+  /* A search is a search: the group steps aside. */
+  await page.fill('#exq','curl');await pause(page,500);
+  eq(await page.$('#sheet .pksame'),null,"no group while searching");
+},{prefs:{autorest:false}});
+await test("Movement: pain opens Replace on the same movement, loaded another way",async page=>{
+  await startWorkout(page);
+  const cur=await ev(page,"S.active.entries[0].name");
+  await page.tap('[data-hurt]');await pause(page);await page.tap('[data-hurtdo="swap"]');await pause(page,500);
+  const h=await page.$eval('#sheet .pksame-h',e=>e.innerText);
+  if(!/loaded another way/i.test(h))throw new Error("heading: "+h);
+  const r=await page.evaluate(async c=>{const ex=await import("/js/data/exercises.js");
+    const first=document.querySelector('#sheet .pksame [data-pickex]').getAttribute("data-pickex");
+    const e0=(ex.EXDB[c]||{}).e,e1=(ex.EXDB[first]||{}).e;
+    const others=[...document.querySelectorAll('#sheet .pksame [data-pickex]')].some(b=>(ex.EXDB[b.getAttribute("data-pickex")]||{}).e!==e0);
+    return [ex.movementOfEx(first)===ex.movementOfEx(c),!others||e1!==e0];},cur);
+  eq(r,[true,true],"same movement, and other equipment first where there is any");
+  eq(await ev(page,"S.active.entries[0].pain"),true,"the pain is still noted");
+},{prefs:{autorest:false}});
+await test("Movement: kit you don't have is offered as the same movement on what you do",async page=>{
+  await page.evaluate(async()=>{const s=await import("/js/state.js");s.S.gear=["Dumbbell"];s.saveDB();});
+  await startWorkout(page);
+  const r=await page.evaluate(async()=>{const s=(await import("/js/state.js")).S;const ex=await import("/js/data/exercises.js");
+    const need=s.active.entries.filter(e=>e.kind!=="activity"&&!ex.pickable(e.name));
+    return need.map(e=>[e.altWhy,!!e.alt&&ex.movementOfEx(e.alt)===ex.movementOfEx(e.name),!!e.alt&&ex.pickable(e.alt)]);});
+  if(!r.length)throw new Error("the day needs nothing the person lacks: the test proves nothing");
+  const offered=r.filter(x=>x[0]==="gear");
+  if(!offered.length)throw new Error("nothing offered: "+JSON.stringify(r));
+  eq(offered.every(x=>x[1]&&x[2]),true,"same movement, on kit they have");
+  const i=await ev(page,"S.active.entries.findIndex(e=>e.altWhy==='gear')");
+  await page.evaluate(async i=>{(await import("/js/ui/workout.js")).jumpTo(i);},i);await pause(page,400);
+  if(!/Don't have the kit\?/.test(await page.$eval('.exalt',e=>e.innerText)))throw new Error("no offer in the logger");
+});
+await test("Movement: the exercise sheet says what movement it is",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Romanian Deadlift"});});await pause(page,400);
+  const t=await page.$eval('.exd-facts .wide',e=>e.innerText);
+  if(!/Movement/i.test(t)||!/Hinge/.test(t))throw new Error("facts: "+t);
+});
+await test("Movement: the plan builder's stand-ins keep the movement",async page=>{
+  const r=await page.evaluate(async()=>{const pl=await import("/js/engine/plan.js");const ex=await import("/js/data/exercises.js");
+    const cases=[["Barbell Squat",["Dumbbell"]],["Barbell Bench Press - Medium Grip",["Dumbbell"]],["Bent Over Barbell Row",["Dumbbell"]],["Pullups",["Cable"]],["Standing Military Press",["Dumbbell"]]];
+    return cases.map(([n,g])=>{const s=pl.standIn(n,g,[]);return [n,s,!!s&&ex.movementOfEx(s)===ex.movementOfEx(n)];});});
+  const bad=r.filter(x=>!x[2]);
+  if(bad.length)throw new Error("lost the movement or found none: "+JSON.stringify(bad));
+  const knee=await page.evaluate(async()=>{const pl=await import("/js/engine/plan.js");return pl.standIn("Freehand Jump Squat",[],["knee"]);});
+  if(knee&&/Jump|Hop|Bound/i.test(knee))throw new Error("a sore knee was given another jump: "+knee);
+});
+await test("Movement: the chat's pain answer names swaps for the sore area",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
+  await page.fill('#chatq',"my knee hurts");await page.press('#chatq','Enter');await pause(page,400);
+  const a=await page.evaluate(()=>{const x=[...document.querySelectorAll(".chat-a")].pop();return x?x.innerText:"";});
+  if(!/load the knee|loads the knee/.test(a))throw new Error("no area answer: "+a);
+  await page.fill('#chatq',"ركبتي بتوجعني");await page.press('#chatq','Enter');await pause(page,400);
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"sore","Arabic: the sore answer");
+});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

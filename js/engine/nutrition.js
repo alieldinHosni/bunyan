@@ -3,6 +3,8 @@
 import {S} from "../state.js";
 import {num, uid} from "../util.js";
 import {fuzzyRank, matchScore, norm, tokenMatch} from "./text.js";
+/* An item list's totals live with the rest of the intake maths, which reads no state. */
+import {sumNutrition} from "./intake.js";
 
 /* ============================================================================
    NUTRITION ENGINE — pure functions, no DOM, no side effects.
@@ -230,13 +232,6 @@ function nutritionFor(food,grams){
     f:Math.round(food.f*k*10)/10,
     fib:Math.round((food.fib||0)*k*10)/10
   };
-}
-function sumNutrition(items){
-  var tot={kcal:0,p:0,c:0,f:0,fib:0};
-  (items||[]).forEach(function(i){
-    tot.kcal+=num(i.kcal);tot.p+=num(i.p);tot.c+=num(i.c);tot.f+=num(i.f);tot.fib+=num(i.fib);});
-  return {kcal:Math.round(tot.kcal),p:Math.round(tot.p),c:Math.round(tot.c),
-          f:Math.round(tot.f),fib:Math.round(tot.fib)};
 }
 
 /* ---- resolve a parsed chunk into a logged item ----------------------- */
