@@ -24,6 +24,9 @@ var V={tab:"train",fdate:null,food:null,range:30,exd:null,showAll:false,restPaus
        /* The rest timer has three states, not two: counting, paused, and finished-and
           waiting to be acknowledged. The third is what makes the zero state visible. */
        restDone:false,
+       /* When the rest ran out (ms), so the finished screen can count up how long ago:
+          a lifter back from a locked phone sees "+1:40", not a frozen 0:00. */
+       restOver:0,
        /* Which meal the Food tab has opened, or null for the day's dashboard. It is
           part of the nav route, so back returns to the dashboard, not to the tab. */
        meal:null,
@@ -36,11 +39,11 @@ var AC=null,beeped=true,lastTick=99,wakeLock=null;
    that must be silenced would have meant getting all ten right and keeping them right.
    The alarm outliving the screen that raised it is the specific failure this prevents. */
 function endRest(){
-  V.restEnd=0;V.restPaused=false;V.restDone=false;V.restMin=false;
+  V.restEnd=0;V.restPaused=false;V.restDone=false;V.restMin=false;V.restOver=0;
   alarmStop();
 }
 function startRest(e){
-  V.restDone=false;V.restMin=false;alarmStop();   /* a new rest replaces the last one's alert */
+  V.restDone=false;V.restMin=false;V.restOver=0;alarmStop();   /* a new rest replaces the last one's alert */
   audioOn();
   if(!S.prefs.autorest){V.restEnd=0;return;}
   V.restTotal=e.rest||75;
@@ -361,7 +364,7 @@ function syncWorkoutState(){
   var changed=false;
   if(a.idx!==V.logIdx){a.idx=V.logIdx;changed=true;}
   var r=(V.restEnd||V.restPaused||V.restDone)
-    ?{end:V.restEnd,total:V.restTotal,paused:!!V.restPaused,left:V.restLeft||0,done:!!V.restDone}:null;
+    ?{end:V.restEnd,total:V.restTotal,paused:!!V.restPaused,left:V.restLeft||0,done:!!V.restDone,over:V.restOver||0}:null;
   var was=a.rest?JSON.stringify(a.rest):"null",now=r?JSON.stringify(r):"null";
   if(was!==now){a.rest=r;changed=true;}
   return changed;
@@ -375,7 +378,8 @@ function restoreWorkoutState(){
   if(r){
     V.restTotal=num(r.total,75);
     if(r.paused){V.restPaused=true;V.restLeft=num(r.left,0);V.restEnd=0;}
-    else if(r.done||num(r.end)<=Date.now()){V.restEnd=0;V.restDone=true;beeped=true;}
+    /* When it ran out is kept, so the screen can say how long ago (restOver). */
+    else if(r.done||num(r.end)<=Date.now()){V.restOver=num(r.over)||num(r.end)||0;V.restEnd=0;V.restDone=true;beeped=true;}
     else{V.restEnd=num(r.end);beeped=false;lastTick=99;}
   }
 }

@@ -243,6 +243,31 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
    as a finished colour, so without this the rest screen's figures stayed light-mode
    black on its dark artwork. */
 [data-theme]:not(html),[data-palette]:not(html){color:var(--text)}
+/* ---- Semantic tokens -----------------------------------------------------------
+   Names that say what a colour is for, not what it looks like, laid over the palette
+   tokens above so every theme gets them for free. New and redesigned CSS uses these;
+   the short names stay for what already uses them, and move over as screens are
+   redesigned. Restated on any element that carries its own theme or mode, so a
+   preview or the rest screen resolves them against its own palette.
+   - bg / surface: page, raised card, inset well
+   - text: primary, secondary, tertiary, accent (accent as text, contrast-safe)
+   - action: the one primary action, its pressed stop, the type on it
+   - status: success, warning, danger (destructive), record (earned)
+   - data: the macro series
+   - set: the live workout's three states — the target (suggested, not yet yours),
+     the set being logged, a set that is done */
+:root,[data-theme],[data-palette]{
+  --color-bg-base:var(--bg); --color-surface-1:var(--raised); --color-surface-2:var(--surface);
+  --color-surface-well:var(--well); --color-border:var(--border); --color-border-subtle:var(--hair);
+  --color-text-primary:var(--text); --color-text-secondary:var(--sub); --color-text-tertiary:var(--dim);
+  --color-text-accent:var(--accentHi);
+  --color-action-primary:var(--accent); --color-action-primary-deep:var(--accent-deep);
+  --color-on-action-primary:var(--onAccent);
+  --color-success:var(--ok); --color-warning:var(--warning); --color-danger:var(--danger);
+  --color-danger-fill:var(--danger-fill); --color-record:var(--gold);
+  --color-data-protein:var(--mac-p); --color-data-carbs:var(--mac-c); --color-data-fat:var(--mac-f);
+  --color-set-target:var(--dim); --color-set-active:var(--accent); --color-set-done:var(--ok);
+}
 /* Photos and the mark are drawn in Bunyan red. A theme that is not red recolours them on
    the way to the screen with --img-tone: Pink turns their red to its pink, Monochrome
    takes the colour out, Red leaves them alone. :where() keeps this at no specificity, so
@@ -431,6 +456,12 @@ nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
   transition:opacity var(--m-micro) var(--e-standard),visibility 0s}
 body.kbleave nav,body.kbleave nav *{pointer-events:none!important}
 body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--e-standard),visibility 0s var(--m-micro)}
+/* A live workout is a focused mode (render() sets body.focus): the dock leaves, and
+   the page stops keeping room for it. It fades rather than slides, like the keyboard
+   case, so there is no position for it to be left at. */
+body.focus{--navh:var(--dock-lift)}
+body.focus nav{opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity var(--m-micro) var(--e-standard),visibility 0s var(--m-micro)}
 .dock{--i:0;position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
   max-width:520px;height:var(--dock-h);margin:0 auto;padding:0 6px;
   border-radius:var(--r5);background:var(--glass-solid);
@@ -449,18 +480,24 @@ body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--
 .dock-ind{position:absolute;top:0;bottom:0;inset-inline-start:6px;width:calc((100% - 12px) / 5);
   transform:translateX(calc(var(--i) * 100%));pointer-events:none;z-index:0;
   transition:transform var(--m-screen) var(--e-ios)}
-.dock-ind::before{content:"";position:absolute;inset:0;margin:auto;width:min(62px,90%);height:48px;
+.dock-ind::before{content:"";position:absolute;inset:0;margin:auto;width:min(66px,92%);height:52px;
   border-radius:var(--rpill);background:var(--accent-tint);
   box-shadow:inset 0 0 0 1px var(--accent-edge),0 0 22px var(--accent-glow)}
-.dock-b{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;
-  min-width:var(--hit);min-height:var(--hit);height:100%;padding:0;margin:0;border:0;background:none;
+.dock-b{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  min-width:var(--hit);min-height:var(--hit);height:100%;padding:0 2px;margin:0;border:0;background:none;
   color:var(--navtext);cursor:pointer;
   transition:color var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
-.dock-b svg{width:var(--ico-size);height:var(--ico-size);fill:none;stroke:currentColor;
-  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+/* Square ends and mitred corners: the structural cut the icon set is moving to. */
+.dock-b svg{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;
+  stroke-width:1.8;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;
   transition:transform var(--m-comp) var(--e-ios),stroke-width var(--m-micro) var(--e-standard)}
+/* The word under each icon. One line, never wider than its fifth of the dock. */
+.dock-l{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:10.5px;line-height:1.2;font-weight:600;letter-spacing:.01em}
+[dir="rtl"] .dock-l{font-size:11px;letter-spacing:0}
 .dock-b.on{color:var(--dock-on)}
-.dock-b.on svg{transform:scale(1.06);stroke-width:2}
+.dock-b.on svg{transform:scale(1.04);stroke-width:2}
+.dock-b.on .dock-l{font-weight:700}
 :root:not(.tch) .dock-b:active,.dock-b.tapd{transform:scale(.94)}
 /* Out of the way while reading (js/ui/dock.js): scrolling down adds .dhid and the
    dock inside the fixed bar slides below the screen edge; scrolling up takes it off
@@ -1503,9 +1540,19 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tcover{position:relative;display:block;height:100px;flex:0 0 100px}
 .tcover img{width:100%;height:100%;object-fit:cover;display:block}
 .tcover::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.4)}
-/* A split the user built has no photograph of its own. The accent field stands in for
-   one, so the card keeps its shape without borrowing another programme's picture. */
-.tcover-none{background:linear-gradient(135deg,var(--accent) 0%,var(--accent-dark) 55%,var(--raised) 100%)}
+/* ---- Program covers (js/ui/cover.js) -------------------------------------------
+   A program without a photograph is drawn from its own week: one column per day, one
+   block per exercise, the top course in the accent, rest days a single low course.
+   Colour comes only from the palette tokens, so it is right in all six themes. */
+.tcover-gen{background:var(--color-surface-well)}
+.tcover-gen::after{display:none}
+.tcover-gen .pcov,.drow-cov .pcov{display:block;width:100%;height:100%}
+.pcov .pc-b{fill:var(--color-text-primary);fill-opacity:.2}
+.pcov .pc-t{fill:var(--color-action-primary)}
+.pcov .pc-r{fill:var(--color-text-primary);fill-opacity:.08}
+.pcov .pc-g{fill:none;stroke:var(--color-border);stroke-width:1}
+.drow-cov{flex:none;width:52px;height:40px;border-radius:var(--r1);background:var(--color-surface-well);
+  box-shadow:inset 0 0 0 1px var(--color-border-subtle);overflow:hidden}
 .tpc-body{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:12px;min-width:0}
 .tpc-n,.tpc-s{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tpc-n{font-family:var(--display);font-weight:700;font-size:14px}
@@ -3116,6 +3163,11 @@ textarea.afnl.warn{border-color:var(--warning)}
 .rt2 .rt-check{width:92px;height:92px;margin:18px 0 14px}
 .rt2 .rt-h{margin:0;font-size:clamp(28px,8vw,34px)}
 .rt2-next{margin:10px 0 0;font-size:17px;color:var(--text);text-align:center;font-variant-numeric:tabular-nums;opacity:.85}
+/* How long ago the rest ran out, counting up (paintOver). Quiet: a number to glance at,
+   not a second alarm, so the next action stays the loudest thing on the screen. */
+.rt-over{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:10px 0 0}
+.rt-over-t{font-family:var(--display);font-size:24px;font-weight:700;color:var(--color-text-primary);font-variant-numeric:tabular-nums}
+.rt-over-k{font-size:14px;color:var(--color-text-secondary)}
 .rt2-acts{display:flex;flex-direction:column;align-items:stretch;gap:12px;width:100%;max-width:420px;margin:28px auto 0}
 .rt2 .rt-go{max-width:none;min-height:68px;border-radius:var(--rpill);font-size:19px;letter-spacing:0;text-transform:none}
 .rt2-k{margin-top:10px;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);text-align:center}
@@ -3515,7 +3567,7 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .htiles.two{margin:4px 0 14px}
 .btn.flogplan{margin:10px 0 0}
 /* Coach has something to say: a dot on its tab, its count in the accessible name. */
-.dock-b.advice::after{content:"";position:absolute;top:calc(50% - 15px);inset-inline-start:calc(50% + 6px);width:8px;height:8px;
+.dock-b.advice::after{content:"";position:absolute;top:calc(50% - 21px);inset-inline-start:calc(50% + 6px);width:8px;height:8px;
   border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--glass-solid);pointer-events:none}
 .csub{margin:-4px 0 16px}
 .coachhero{position:relative;isolation:isolate;overflow:hidden;margin:0 0 var(--s4);padding:18px 16px 16px;border-radius:var(--r5);

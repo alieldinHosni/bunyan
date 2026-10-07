@@ -63,6 +63,9 @@ async function coach(page,sec,sub){
   if(sec){await page.tap('[data-csec="'+sec+'"]');await page.waitForTimeout(200);}
   if(sub){await page.tap('[data-'+(sec==="train"?"ctsub":"cfsub")+'="'+sub+'"]');await page.waitForTimeout(250);}}
 async function startWorkout(page){await tapTab(page,"train");await pause(page);await page.tap('[data-startday]');await pause(page,400);}
+/* The live workout has no dock: its ✕ and Save and exit are the way to the other tabs,
+   and the session carries on (Resume card on Train, the workout bar elsewhere). */
+async function leaveWorkout(page){await page.tap('[data-back]');await pause(page);await page.tap('[data-confirmok]');await pause(page,400);}
 /* ONLY=<text> runs just the tests whose names contain it; ONLY=<a>|<b> runs either. */
 const ONLY=(process.env.ONLY||"").split("|").filter(Boolean);
 async function test(name,fn,o){
@@ -501,6 +504,7 @@ await test("My program edits the active program in place",async page=>{
 await test("workout bar: the clock on other tabs, rest counts down there, rest over, and back to the workout",async page=>{
   await startWorkout(page);
   eq(await page.$eval('#wbar',e=>!e.firstChild),true,"not on Train");
+  await leaveWorkout(page);
   await tapTab(page,"progress");await pause(page,1200);
   if(!/Workout/i.test(await page.$eval('#wbar',e=>e.innerText)))throw new Error("no bar on Progress");
   eq(await ev(page,"document.body.classList.contains('wb')"),true);
@@ -508,11 +512,13 @@ await test("workout bar: the clock on other tabs, rest counts down there, rest o
   eq(await ev(page,"[V.tab,!document.getElementById('wbar').firstChild]"),["train",true],"tap returns");
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
   await page.tap('[data-rest="hide"]');await pause(page);
+  await leaveWorkout(page);
   await tapTab(page,"food");await pause(page,1200);
   eq(await page.$eval('#rest',e=>!e.firstChild),true,"no full-screen rest on Food");
   if(!/Rest/i.test(await page.$eval('#wbar',e=>e.innerText))||!/\d:\d\d/.test(await page.$eval('#wbarT',e=>e.textContent)))throw new Error("no rest countdown");
   await page.evaluate(async()=>{(await import("/js/ui/view.js")).V.restEnd=Date.now()+1000;});await pause(page,2500);
   eq(await page.$eval('#wbar .wbar',e=>e.classList.contains("done")),true,"rest over");
+  if(!/^\+\d+:\d\d$/.test(await page.$eval('#wbarT',e=>e.textContent)))throw new Error("the bar does not count up past the rest");
   await page.tap('#wbar .wbar');await pause(page,500);
   eq(await ev(page,"[V.tab,V.restDone,!!document.getElementById('rest').firstChild]"),["train",true,true],"rest-over screen on return");
 },{prefs:{autorest:true}});
@@ -1639,7 +1645,7 @@ await test("Dock: a page with little to scroll keeps its dock",async page=>{
 await test("Dock: slides off scrolling down and back scrolling up, at the scroll's pace",async page=>{await dockTest(page,true);},{prefs:{anim:true}});
 await test("Dock: with animations off it fades out and back instead",async page=>{await dockTest(page,false);});
 await test("Dock: the workout bar takes the dock's place while it is away, and still opens the workout",async page=>{
-  await startWorkout(page);await tapTab(page,"profile");await pause(page);
+  await startWorkout(page);await leaveWorkout(page);await tapTab(page,"profile");await pause(page);
   const pos=()=>page.evaluate(()=>Math.round(document.querySelector("#wbar .wbar").getBoundingClientRect().bottom));
   const p0=await pos();
   for(let i=0;i<12;i++){await page.evaluate(()=>window.scrollBy(0,15));await page.waitForTimeout(16);}
@@ -1648,6 +1654,48 @@ await test("Dock: the workout bar takes the dock's place while it is away, and s
   await page.tap("#wbar .wbar");await pause(page,500);
   eq(await ev(page,"V.tab"),"train");
 },{prefs:{anim:true}});
+/* ---- the good parts of an outside proposal, built in ---------------------------------- */
+await test("Dock: every tab is labelled, in English and Arabic, and the label starts its accessible name",async page=>{
+  const lab=()=>page.$$eval("nav .dock-b",a=>a.map(b=>[b.querySelector(".dock-l").textContent,b.getAttribute("aria-label").indexOf(b.querySelector(".dock-l").textContent)===0]));
+  eq(await lab(),[["Train",true],["Food",true],["Coach",true],["Progress",true],["Profile",true]],"English");
+  await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});await pause(page);
+  eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الكوتش","التقدم","حسابي"],"Arabic");
+  eq(await page.$$eval("nav .dock-l",a=>a.every(l=>l.scrollWidth<=l.clientWidth+1)),true,"no label is cut off");
+});
+await test("Focus: the live workout has no dock; Save and exit brings it back with the session kept",async page=>{
+  await startWorkout(page);
+  eq(await page.evaluate(()=>[document.body.classList.contains("focus"),getComputedStyle(document.getElementById("nav")).visibility,document.getElementById("nav").getAttribute("aria-hidden")]),[true,"hidden","true"],"no dock while training");
+  /* The warm-up's last button, at the very bottom of the page, is reachable: nothing
+     sits over it any more. */
+  eq(await page.evaluate(async()=>{window.scrollTo(0,document.documentElement.scrollHeight);await new Promise(r=>setTimeout(r,300));
+    const s=document.querySelectorAll("#app button"),b=s[s.length-1],r=b.getBoundingClientRect();
+    const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);return !!hit&&(hit===b||b.contains(hit));}),true,"the last button is not covered");
+  await leaveWorkout(page);
+  eq(await page.evaluate(()=>[document.body.classList.contains("focus"),getComputedStyle(document.getElementById("nav")).visibility]),[false,"visible"],"dock back");
+  eq(await ev(page,"[!!S.active,V.train]"),[true,"hub"],"the session is kept, Resume on Train");
+  await page.tap("[data-continue]");await pause(page);
+  eq(await page.evaluate(()=>document.body.classList.contains("focus")),true,"and resuming is focus again");
+});
+await test("Rest: once it runs out it counts up how long ago, and that survives a reload",async page=>{
+  await startWorkout(page);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.restTotal=90;V.restEnd=Date.now()-95000;V.restDone=false;});
+  await pause(page,1600);
+  const over=()=>page.$eval("#restOver",e=>e.textContent);
+  if(!/^\+1:3\d$/.test(await over()))throw new Error("expected about +1:35, got "+await over());
+  await page.reload();await pause(page,1500);
+  if(!/^\+1:3\d$/.test(await over()))throw new Error("after a reload: "+await over());
+  await page.tap('[data-rest="skip"]');await pause(page);
+  eq(await ev(page,"[V.restDone,V.restOver]"),[false,0],"the next set clears it");
+},{prefs:{autorest:true}});
+await test("Covers: a program of your own gets a cover drawn from its week",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");
+    st.S.programs.push({id:"mine1",name:"Mine",schedule:"cycle",days:[{id:"a",name:"A",wd:[],ex:[{id:"1",name:"Push-Up",sets:3,lo:8,hi:12},{id:"2",name:"Pullups",sets:3,lo:5,hi:8}]},{id:"b",name:"Rest",wd:[],ex:[]}]});st.saveDB();});
+  await coach(page,"train","programs");
+  const r=await page.$$eval(".drow-cov svg",a=>a.map(s=>[s.querySelectorAll(".pc-t").length,s.querySelectorAll(".pc-b").length,s.querySelectorAll(".pc-r").length]));
+  eq(r[r.length-1],[1,1,1],"one day of two exercises (a top course and one below), one rest day");
+  const c=await page.$eval(".drow-cov .pc-t",e=>getComputedStyle(e).fill);
+  eq(c,"rgb(255, 46, 58)","its top course is Machine Red");
+});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

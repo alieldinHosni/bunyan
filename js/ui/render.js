@@ -120,6 +120,11 @@ function render(){
   bindExSwipe();
   bindMore(render);
 
+  /* The live workout owns the screen, so the dock leaves while it is up. Its own ✕ is
+     the way out: Save and exit lands on Train with the Resume card, where the dock is
+     back. The page stops keeping room for the dock too (body.focus in index.html). */
+  var focus=!V.assess&&V.tab==="train"&&!!S.active&&V.train!=="hub";
+  document.body.classList.toggle("focus",focus);
   /* The dock is built once and only its state changes after that — see dock.js. */
   syncDock(document.getElementById("nav"),V.tab,adviceCount());
   /* A workout under way, seen from another tab. */
@@ -145,7 +150,7 @@ function render(){
   /* A sheet is modal, so hide the screen behind it from assistive tech and move
      focus into it the moment it opens. Sheets used to be invisible to both. */
   appEl.setAttribute("aria-hidden",V.sheet?"true":"false");
-  document.getElementById("nav").setAttribute("aria-hidden",V.sheet?"true":"false");
+  document.getElementById("nav").setAttribute("aria-hidden",V.sheet||focus?"true":"false");
   document.getElementById("wbar").setAttribute("aria-hidden",V.sheet?"true":"false");
   /* And stop it moving, for the same reason it is hidden from assistive tech: while
      a sheet is up, the screen behind is not something the user is operating. */
