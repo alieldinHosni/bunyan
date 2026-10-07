@@ -1782,6 +1782,73 @@ await test("Blocks: a program with its own weeks keeps them, with no block on to
     const on1=b.blocksOn();const sp=s.split();sp.days.find(d=>d.ex.length).ex[0].wk=[1,4];const on2=b.blocksOn();delete sp.days.find(d=>d.ex.length).ex[0].wk;return [on1,on2];});
   eq(r,[true,false]);
 });
+/* ---- movement patterns (js/data/movement.js) ---- */
+const mv=(page,names)=>page.evaluate(async ns=>{const ex=await import("/js/data/exercises.js");return ns.map(n=>ex.movementOfEx(n));},names);
+await test("Movement: Replace lists what trains the same thing first, set apart",async page=>{
+  await startWorkout(page);
+  const cur=await ev(page,"S.active.entries[0].name");
+  await page.tap('[data-swap]');await pause(page,500);
+  const h=await page.$eval('#sheet .pksame-h',e=>e.innerText);
+  if(!/Trains the same thing/i.test(h))throw new Error("heading: "+h);
+  const same=await page.$$eval('#sheet .pksame [data-pickex]',a=>a.map(b=>b.getAttribute("data-pickex")));
+  if(!same.length)throw new Error("nothing in the same-movement group");
+  const want=(await mv(page,[cur]))[0];
+  eq((await mv(page,same)).every(m=>m===want),true,"every one is a "+want);
+  if(same.indexOf(cur)>=0)throw new Error("the exercise is its own alternative");
+  /* A search is a search: the group steps aside. */
+  await page.fill('#exq','curl');await pause(page,500);
+  eq(await page.$('#sheet .pksame'),null,"no group while searching");
+},{prefs:{autorest:false}});
+await test("Movement: pain opens Replace on the same movement, loaded another way",async page=>{
+  await startWorkout(page);
+  const cur=await ev(page,"S.active.entries[0].name");
+  await page.tap('[data-hurt]');await pause(page);await page.tap('[data-hurtdo="swap"]');await pause(page,500);
+  const h=await page.$eval('#sheet .pksame-h',e=>e.innerText);
+  if(!/loaded another way/i.test(h))throw new Error("heading: "+h);
+  const r=await page.evaluate(async c=>{const ex=await import("/js/data/exercises.js");
+    const first=document.querySelector('#sheet .pksame [data-pickex]').getAttribute("data-pickex");
+    const e0=(ex.EXDB[c]||{}).e,e1=(ex.EXDB[first]||{}).e;
+    const others=[...document.querySelectorAll('#sheet .pksame [data-pickex]')].some(b=>(ex.EXDB[b.getAttribute("data-pickex")]||{}).e!==e0);
+    return [ex.movementOfEx(first)===ex.movementOfEx(c),!others||e1!==e0];},cur);
+  eq(r,[true,true],"same movement, and other equipment first where there is any");
+  eq(await ev(page,"S.active.entries[0].pain"),true,"the pain is still noted");
+},{prefs:{autorest:false}});
+await test("Movement: kit you don't have is offered as the same movement on what you do",async page=>{
+  await page.evaluate(async()=>{const s=await import("/js/state.js");s.S.gear=["Dumbbell"];s.saveDB();});
+  await startWorkout(page);
+  const r=await page.evaluate(async()=>{const s=(await import("/js/state.js")).S;const ex=await import("/js/data/exercises.js");
+    const need=s.active.entries.filter(e=>e.kind!=="activity"&&!ex.pickable(e.name));
+    return need.map(e=>[e.altWhy,!!e.alt&&ex.movementOfEx(e.alt)===ex.movementOfEx(e.name),!!e.alt&&ex.pickable(e.alt)]);});
+  if(!r.length)throw new Error("the day needs nothing the person lacks: the test proves nothing");
+  const offered=r.filter(x=>x[0]==="gear");
+  if(!offered.length)throw new Error("nothing offered: "+JSON.stringify(r));
+  eq(offered.every(x=>x[1]&&x[2]),true,"same movement, on kit they have");
+  const i=await ev(page,"S.active.entries.findIndex(e=>e.altWhy==='gear')");
+  await page.evaluate(async i=>{(await import("/js/ui/workout.js")).jumpTo(i);},i);await pause(page,400);
+  if(!/Don't have the kit\?/.test(await page.$eval('.exalt',e=>e.innerText)))throw new Error("no offer in the logger");
+});
+await test("Movement: the exercise sheet says what movement it is",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Romanian Deadlift"});});await pause(page,400);
+  const t=await page.$eval('.exd-facts .wide',e=>e.innerText);
+  if(!/Movement/i.test(t)||!/Hinge/.test(t))throw new Error("facts: "+t);
+});
+await test("Movement: the plan builder's stand-ins keep the movement",async page=>{
+  const r=await page.evaluate(async()=>{const pl=await import("/js/engine/plan.js");const ex=await import("/js/data/exercises.js");
+    const cases=[["Barbell Squat",["Dumbbell"]],["Barbell Bench Press - Medium Grip",["Dumbbell"]],["Bent Over Barbell Row",["Dumbbell"]],["Pullups",["Cable"]],["Standing Military Press",["Dumbbell"]]];
+    return cases.map(([n,g])=>{const s=pl.standIn(n,g,[]);return [n,s,!!s&&ex.movementOfEx(s)===ex.movementOfEx(n)];});});
+  const bad=r.filter(x=>!x[2]);
+  if(bad.length)throw new Error("lost the movement or found none: "+JSON.stringify(bad));
+  const knee=await page.evaluate(async()=>{const pl=await import("/js/engine/plan.js");return pl.standIn("Freehand Jump Squat",[],["knee"]);});
+  if(knee&&/Jump|Hop|Bound/i.test(knee))throw new Error("a sore knee was given another jump: "+knee);
+});
+await test("Movement: the chat's pain answer names swaps for the sore area",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
+  await page.fill('#chatq',"my knee hurts");await page.press('#chatq','Enter');await pause(page,400);
+  const a=await page.evaluate(()=>{const x=[...document.querySelectorAll(".chat-a")].pop();return x?x.innerText:"";});
+  if(!/load the knee|loads the knee/.test(a))throw new Error("no area answer: "+a);
+  await page.fill('#chatq',"ركبتي بتوجعني");await page.press('#chatq','Enter');await pause(page,400);
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"sore","Arabic: the sore answer");
+});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

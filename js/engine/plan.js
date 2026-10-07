@@ -1,6 +1,6 @@
 /* Bunyan — plan
    Split recommendation and plan generation. */
-import {EXDB, isCompound, LIB, muscleOf, patternOf} from "../data/exercises.js";
+import {EXDB, isCompound, LIB, movementOfEx, muscleOf, patternOf} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {PRESETS} from "../data/splits.js";
 import {addProgram, makeProgram, S, saveDB} from "../state.js";
@@ -147,13 +147,13 @@ function usable(name,gear){
   var v=EXDB&&EXDB[name];if(!v)return true;
   if(!gear||!gear.length||!v.e||v.e==="Bodyweight")return true;
   return gear.indexOf(v.e)>=0;}
-/* The closest stand-in: same muscle, same movement, compound for compound, something
-   you own and nothing that loads a sore spot. The library's movement patterns are
-   not reliable enough to match on alone (it files a leg curl as elbow flexion), so
-   the movement is read from the name too: a row for a row, a press for a press.
-   Exercises the built-in programs use come first, being the familiar ones, then
-   the same equipment, then the library's own over ones the app added. No match is
-   better than a strange one: the exercise is then left out. */
+/* The closest stand-in: same muscle, same movement pattern (js/data/movement.js: a
+   hinge for a hinge, a horizontal pull for a horizontal pull), compound for compound,
+   something you own and nothing that loads a sore spot. Within that, the same word
+   in the name scores (a row for a row, a press for a press), exercises the built-in
+   programs use come first, being the familiar ones, then the same equipment, then
+   the library's own over ones the app added. No match is better than a strange one:
+   the exercise is then left out. */
 var MOVE=/face pull|pull apart|press|row|curl|squat|lunge|raise|extension|fly|flye|pulldown|pull-?up|chin|deadlift|bridge|thrust|dip|push-?up|pushdown|shrug|crunch|kickback|pullover|good morning|swing|step/i;
 function moveOf(n){var m=String(n).match(MOVE);return m?m[0].toLowerCase().replace(/-/g,"").replace(/flye/,"fly"):"";}
 var FAMILIAR=null,SUBS={},SKILLED=true;
@@ -163,15 +163,15 @@ function familiar(){
 function standIn(name,gear,limits,taken){
   var key=name+"|"+(gear||[]).join(",")+"|"+(limits||[]).join(",");
   if(!taken&&SUBS[key]!==undefined)return SUBS[key];
-  var m=muscleOf(name),pt=patternOf(name),c=isCompound(name),e0=(EXDB&&EXDB[name]||{}).e,mv=moveOf(name),
+  var m=muscleOf(name),pt=patternOf(name),c=isCompound(name),e0=(EXDB&&EXDB[name]||{}).e,mv=moveOf(name),mo=movementOfEx(name),
       fam=familiar(),best=null,bs=-1,tk=taken||{};
   LIB.forEach(function(l){
     var n=l[0];
     if(n===name||tk[n]||isActivity(n)||l[1]!==m||!usable(n,gear)||avoids(n,limits))return;
     if(isCompound(n)!==c||TIMED.test(n)!==TIMED.test(name))return;
-    /* No movement word to go by: the pattern has to match instead. */
-    if(mv?moveOf(n)!==mv:patternOf(n)!==pt)return;
+    if(movementOfEx(n)!==mo)return;
     var v=EXDB&&EXDB[n]||{},sc=0;
+    if(mv&&moveOf(n)===mv)sc+=2;
     if(fam[n])sc+=3;
     /* A loaded exercise is replaced by a loaded one where there is the kit for it:
        a squat with dumbbells, not with nothing. */
@@ -389,4 +389,4 @@ function buildPlan(id){
 }
 
 
-export {AVOID, buildPlan, dayMinutes, generatePlan, GOALS, LEVELS, rebalance, shapePlan, splitCandidates, SPLIT_LEVEL};
+export {AVOID, avoids, buildPlan, dayMinutes, generatePlan, GOALS, LEVELS, rebalance, shapePlan, splitCandidates, SPLIT_LEVEL, standIn};

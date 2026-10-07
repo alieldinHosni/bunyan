@@ -108,9 +108,10 @@ function lighterDay(){
 function flagPain(mode){
   var eh=current();if(!eh){closeSheet();return;}
   eh.pain=true;saveDB();
+  /* The replacement for something that hurts: the same movement, loaded another way. */
   if(mode==="swap"){
     V.exm=pickMuscle(eh.name);V.exe="All";V.exq="";
-    openSheet("exercise",{swaplive:true,like:eh.name});return;}
+    openSheet("exercise",{swaplive:true,like:eh.name,pain:true});return;}
   closeSheet();
   if(mode==="skip"){
     if(V.logIdx>=S.active.entries.length-1){confirmFinish();return;}

@@ -1,7 +1,8 @@
 /* Bunyan — actions
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
-import {exIdOf, kindOf, LIB, muscleOf, muscleOfEntry} from "../data/exercises.js";
+import {exIdOf, kindOf, LIB, muscleOf, muscleOfEntry, pickable} from "../data/exercises.js";
+import {standIn} from "../engine/plan.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
 import {deloadSets, inDeload, recordsIn, avgRPE, prevPerf, recommend, sessionVolume} from "../engine/formulas.js";
@@ -208,8 +209,12 @@ function startDay(dayId){
       if(e.amrap)pl.amrap=true;
       if(e.rir!=null)pl.rir=e.rir;
       if(e.plan!=null)pl.plan=e.plan;
+      /* Kit you do not have: the same movement on what you do, offered beside it
+         (the plan's own other choice wins where it gave one). */
+      var alt=e.alt||null,altWhy=null;
+      if(!alt&&!isActivity(e.name)&&!pickable(e.name)){alt=standIn(e.name,S.gear,(S.profile||{}).limits)||null;if(alt)altWhy="gear";}
       return {name:e.name,exId:e.exId||exIdOf(e.name),kind:e.timed&&!isActivity(e.name)?"timed":kindOf(e.name),muscle:muscleOfEntry(e),planned:pl,
-              rest:e.rest,grp:e.grp||null,alt:e.alt||null,sets:[]};})};
+              rest:e.rest,grp:e.grp||null,alt:alt,altWhy:altWhy||undefined,sets:[]};})};
   V.logIdx=0;V.tab="train";V.train="days";endRest();stopHold();V.fresh=-1;
   keepAwake(true);syncDraft();saveDB();render();}
 
@@ -307,7 +312,7 @@ function finishSession(){
   /* The plan's words for the day and each exercise were for doing it, not for the
      record: history keeps what describes the sets, not the cues. */
   delete a.dayNotes;delete a.warm;delete a.wuDone;
-  a.entries.forEach(function(e){delete e.alt;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
+  a.entries.forEach(function(e){delete e.alt;delete e.altWhy;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
   recordSession(a);S.active=null;endRest();keepAwake(false);stopHold();V.cdDone={};
   saveDB();V.tab="train";V.train="days";
   play(prs.length?"pr":"complete");tap("ok");

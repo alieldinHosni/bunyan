@@ -244,7 +244,7 @@ function vLogger(){
    +(e.planned.note?'<p class="ex-cue">'+esc(e.planned.note)+'</p>':'')
    /* The plan's other choice for this slot ("Pull-Ups or Seated Row"), one tap away
       until a set is logged. */
-   +(e.alt&&!e.sets.length?'<button class="linkbtn exalt" data-swapalt="1">'+esc(t("Or"))+' '+esc(exName(e.alt))+'</button>':'')
+   +(e.alt&&!e.sets.length?'<button class="linkbtn exalt" data-swapalt="1">'+esc(t(e.altWhy==="gear"?"Don't have the kit?":"Or"))+' '+esc(exName(e.alt))+'</button>':'')
    +'</section>';
 
   /* The frame's recommendation banner, above the table where it puts it. The figure is

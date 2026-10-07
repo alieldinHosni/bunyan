@@ -47,8 +47,8 @@ things are still fixed when they should be learned:
 | A2 | Architecture | **`app.js` split by domain** | The 275-branch handler becomes a registry, with handlers in `ui/handlers/{train,session,food,coach,progress,profile}.js`. `app.js` keeps only boot and wiring. Mechanical, guarded by the full suite and stress runs. | Done: `js/ui/handlers/`, `app.js` 1,942 → about 240 lines |
 | A3 | Architecture | **A testable engine** | Engine functions take what they need (profile, sessions, goals) instead of reading `S`, starting with energy, protein, the weight trend and nutrition. A Node test suite for the engine like the coach's. | Done: `js/engine/body.js`, `intake.js`, `tests/engine.mjs` |
 | B4 | Coaching | **Blocks, not just weeks** | A program runs in blocks: effort builds week by week (reps in reserve 3 → 2 → 1), then a planned lighter week, then the next block. Sets per muscle move from one tap after each session ("too easy / about right / too much") plus the soreness already asked. | Done: `js/coach/block.js`, `js/engine/blocks.js` |
-| B5 | Coaching | **Swaps that understand movement** | Every exercise tagged by movement pattern (squat, hinge, push, pull, carry, …). Pain, missing equipment or "replace" offers swaps that train the same thing. The chat's pain answer uses it. | Next |
-| A4 | Architecture | **State with a schema** | Documented types for what is stored (JSDoc), versioned migrations with tests, and a check that a restored backup is the app's own shape. | |
+| B5 | Coaching | **Swaps that understand movement** | Every exercise tagged by movement pattern (squat, hinge, push, pull, carry, …). Pain, missing equipment or "replace" offers swaps that train the same thing. The chat's pain answer uses it. | Done: `js/data/movement.js` |
+| A4 | Architecture | **State with a schema** | Documented types for what is stored (JSDoc), versioned migrations with tests, and a check that a restored backup is the app's own shape. | Next |
 
 ## Rules for every phase
 

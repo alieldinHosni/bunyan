@@ -28,6 +28,7 @@ import {backArrow} from "../nav.js";
 import {doseText} from "../dose.js";
 import {blockDay, blockNow} from "../../engine/blocks.js";
 import {estMinutes, nextDayOf, planOn} from "../../engine/dayplan.js";
+import {avoids, standIn} from "../../engine/plan.js";
 import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
 import {words} from "../coachwords.js";
 
@@ -240,10 +241,28 @@ function aCalories(a){
   else n(a,t("A formula is an estimate. Log your food on most days and weigh in a few mornings a week, and after two weeks I can measure what your body actually uses."));
   return act(a,t("Targets"),{"data-csec":"food","data-cfsub":"targets"});}
 
+/* Where it hurts, from what was typed: the areas the plan builder knows how to train
+   around (js/engine/plan.js AVOID). Folded text, so Arabic spellings match too. */
+var AREAS=[["knee","knee",/knee|ركب/],["back","lower back",/\bback\b|spine|ضهر|ظهر|فقرات/],["shoulder","shoulder",/shoulder|كتف/],
+  ["wrist","wrist",/wrist|رسغ|معصم/],["ankle","ankle",/ankle|كاحل|كعب/]];
+function areaOf(fq){for(var i=0;i<AREAS.length;i++)if(AREAS[i][2].test(fq))return AREAS[i];return null;}
+/* The next workout's exercises that load that area, each with the closest exercise
+   that trains the same movement without it (js/data/movement.js), or none. */
+function trainAround(a,ar){
+  var sp=split(),pl=planOn(sp,today()),d=pl.day&&!pl.rest&&pl.kind!=="done"?pl.day:nextDayOf(sp);
+  if(!d||!d.ex.length)return;
+  var hit=d.ex.filter(function(e){return !isActivity(e.name)&&avoids(e.name,[ar[0]]);});
+  if(!hit.length){p(a,fill(t("Nothing in {d} loads the {area} much. Train as planned, and stop anything that hurts."),{d:planName(d.name),area:t(ar[1])}));return;}
+  p(a,fill(t("In {d}, these load the {area}. What trains the same movement without it:"),{d:planName(d.name),area:t(ar[1])}));
+  var taken={};d.ex.forEach(function(e){taken[e.name]=1;});
+  l(a,hit.map(function(e){var s=standIn(e.name,S.gear,[ar[0]],taken);if(s)taken[s]=1;
+    return exName(e.name)+" \u2192 "+(s?exName(s):t("leave it out for now"));}));
+  n(a,t("In the workout, Something hurts? then Replace this exercise shows these first."));}
 function aSore(a,q){
-  var fq=fold(q),pain=/(pain|hurt|injur|sharp|swollen|الم|وجع|يوجع|بيوجع|بتوجع|واجع|مصاب|اصابه)/.test(fq);
+  var fq=fold(q),pain=/(pain|hurt|injur|sharp|swollen|الم|وجع|يوجع|بيوجع|بتوجع|واجع|مصاب|اصابه)/.test(fq),ar=areaOf(fq);
   if(pain){
     p(a,t("Pain that is sharp, or that changes how you move, is a reason to stop the exercise that causes it. Train around it with exercises that don't hurt."));
+    if(ar)trainAround(a,ar);
     p(a,t("If it lasts more than a few days, swells, or wakes you at night, see a doctor or a physiotherapist. I can't tell what it is."));
     n(a,t("Tell the assessment about it under sore spots, and the plan it builds avoids loading it."));
     act(a,t("Swap exercises in my program"),{"data-csec":"train","data-ctsub":"program"});

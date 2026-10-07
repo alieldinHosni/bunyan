@@ -23,6 +23,7 @@ adds one (see `COACHING-INTELLIGENCE.md`, Phase 0).
 | Protein 1.6–2.2 g/kg | Morton et al. 2018 meta-analysis and the ISSN position stands | `js/data/goals.js` |
 | Weekly sets per muscle as ranges | Practitioner heuristics in the style of Renaissance Periodization's published volume landmarks, cross-checked against Schoenfeld et al. 2017 on weekly volume | `js/engine/volume.js` — shown in the app as a starting point, not a rule |
 | Reps in reserve | Zourdos et al. 2016, the RIR-based RPE scale | effort targets in generated plans |
+| Movement patterns for swaps | The fundamental human movements as strength coaches teach them (push, pull, hinge, squat, lunge, carry; Dan John, *Intervention*, and the NSCA's *Essentials of Strength Training and Conditioning*), with horizontal and vertical planes and the isolation patterns added | `js/data/movement.js` |
 | Training blocks: effort building over a mesocycle, then a lighter week; sets moved by how the last sessions felt | The mesocycle structure in Israetel, Hoffmann and Smith, *Scientific Principles of Hypertrophy Training* (Renaissance Periodization), and Helms, Morgan and Valdez, *The Muscle and Strength Pyramid: Training*; simplified to four weeks and one-set steps | `js/coach/block.js` |
 | Energy in food | Atwater factors with the fibre correction | the build-time check on `foods.json` |
 | 7,700 kcal per kg of body-weight change | Wishnofsky (1958), 3,500 kcal per pound, the usual practical figure; a simplification over weeks, not days | `js/coach/energy.js`, maintenance measured from the log |

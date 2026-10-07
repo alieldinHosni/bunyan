@@ -1,7 +1,8 @@
 /* Bunyan — sheets
    Every bottom sheet, dispatched by vSheet(). */
 import {t, tm} from "../i18n/dict.js";
-import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
+import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
+import {movementLabel} from "../data/movement.js";
 import {exName, planName} from "../i18n/exnames.js";
 import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay} from "./views/train.js";
@@ -95,7 +96,7 @@ function vSheet(){
   }
   else if(V.sheet==="exercise"){
     var q=V.exq.toLowerCase();
-    var target=(V.sd&&V.sd.like)||null;
+    var target=(V.sd&&V.sd.like)||null,swapping0=!!(V.sd&&(V.sd.replace||V.sd.swaplive));
     /* Token matching, not substring: names carry qualifiers, so "incline bench" has
        to find "Barbell Incline Bench Press - Medium Grip" whichever order the words
        are typed in. Same matcher the food search uses. */
@@ -116,14 +117,25 @@ function vSheet(){
       guess=fuzzyRank(q,pool,function(l){return [l[0]];},6)
         .map(function(r){return r.item;});
     }
+    /* Replacing: what trains the same thing comes first — the same movement pattern
+       (js/data/movement.js) on the same main muscle — and is set apart above the rest.
+       It follows the filters like everything else, so "Dumbbell" with no dumbbell bench
+       to hand shows the dumbbell ways to do the same push. For pain, the same movement
+       loaded another way ranks first: other equipment, then the steadier machines and
+       cables. */
+    var same=[],tmv=target?movementOfEx(target):"",pain=!!(V.sd&&V.sd.pain);
     if(target){
-      var tp=patternOf(target),tmus=muscleOf(target),te=(EXDB[target]||{}).e;
+      var tmus=muscleOf(target),te=(EXDB[target]||{}).e;
       list.sort(function(a,b){
         function sc(l){var s2=0;
-          if(l[1]===tmus)s2+=4; if(patternOf(l[0])===tp)s2+=3;
-          if(l[2]===te)s2+=2; if(isFav(l[0]))s2+=2; return -s2;}
-        return sc(a)-sc(b);});}
+          if(l[1]===tmus)s2+=4; if(movementOfEx(l[0])===tmv)s2+=3;
+          if(pain){if(l[2]!==te)s2+=2;if(l[2]==="Machine"||l[2]==="Cable")s2+=1;}
+          else if(l[2]===te)s2+=2;
+          if(isFav(l[0]))s2+=2; return -s2;}
+        return sc(a)-sc(b);});
+      if(swapping0&&tmv&&!V.exq)same=list.filter(function(l){return l[1]===tmus&&movementOfEx(l[0])===tmv;}).slice(0,8);}
     else list.sort(function(a,b){return (isFav(b[0])?1:0)-(isFav(a[0])?1:0);});
+    if(same.length)list=list.filter(function(l){return same.indexOf(l)<0;});
     list=list.slice(0,80);
     /* Swapping the live exercise is a replacement too — it titled itself "Add
        exercise", which is what the sheet does in its other mode, not this one. */
@@ -164,17 +176,23 @@ function vSheet(){
           :'<span class="pkadd" aria-hidden="true">+</span>')+'</button>';}
     b+='<div class="srch-body"><p class="srch-n srch-hide">'
      +(target?t("Best alternatives first.")+' ':'')
-     +list.length+' '+t("shown")+(S.gear&&S.gear.length&&!V.showAll?', '+t("matched to your equipment"):'')+'.</p>';
+     +(list.length+same.length)+' '+t("shown")+(S.gear&&S.gear.length&&!V.showAll?', '+t("matched to your equipment"):'')+'.</p>';
+    if(same.length){
+      b+='<div class="overline pksame-h">'+esc(t(pain?"The same movement, loaded another way":"Trains the same thing"))
+       +' · '+esc(t(movementLabel(tmv)))+'</div><div class="card tdays pksame">';
+      same.forEach(function(l){b+=exRow(l,"sm");});
+      b+='</div>';
+      if(list.length)b+='<div class="overline pksame-h">'+t("Everything else")+'</div>';}
     if(list.length){
       b+='<div class="card tdays">';
       list.forEach(function(l){b+=exRow(l,"ex");});
       b+='</div>';}
-    if(!list.length&&guess.length){
+    if(!list.length&&!same.length&&guess.length){
       b+='<div class="overline" style="margin-top:var(--s2)">'+t("Did you mean")+'\u2026</div><div class="card tdays">';
       guess.forEach(function(l){b+=exRow(l,"gs");});
       b+='</div>';
     }
-    if(!list.length&&!guess.length)b+=empty("search",
+    if(!list.length&&!same.length&&!guess.length)b+=empty("search",
       V.exq?t("Nothing matches")+" \u201c"+esc(V.exq)+"\u201d":t("Nothing matches those filters"),
       S.gear&&S.gear.length&&!V.showAll
         ?t("You may have filtered it out with your equipment, or it may not be in the library.")
@@ -492,7 +510,9 @@ function vSheet(){
      +'<div><span>'+t("Primary")+'</span><b>'+tm(mD)+'</b></div>'
      +'<div><span>'+t("Secondary")+'</span><b>'+(secD.length?secD.map(function(s){return tm(s);}).join(" \u00b7 "):"—")+'</b></div>'
      +'<div><span>'+t("Equipment")+'</span><b>'+t(lD?lD[2]:"Other")+'</b></div>'
-     +'<div><span>'+t("Difficulty")+'</span><b>'+t(difficultyOf(nD))+'</b></div></div>';
+     +'<div><span>'+t("Difficulty")+'</span><b>'+t(difficultyOf(nD))+'</b></div>'
+     /* What it trains as a coach would say it: what a replacement keeps. */
+     +(movementOfEx(nD)?'<div class="wide"><span>'+t("Movement")+'</span><b>'+t(movementLabel(movementOfEx(nD)))+'</b></div>':'')+'</div>';
     if(isUnilateral(nD))b+='<p class="exd-uni">'+t("One side at a time. Log the reps for one side; with dumbbells, the weight in one hand.")+'</p>';
     /* Three steps by default. Nobody reads five paragraphs between sets, and the
        rest is one tap away for anyone who wants them. */
