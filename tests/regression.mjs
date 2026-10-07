@@ -1849,6 +1849,31 @@ await test("Movement: the chat's pain answer names swaps for the sore area",asyn
   await page.fill('#chatq',"ركبتي بتوجعني");await page.press('#chatq','Enter');await pause(page,400);
   eq(await ev(page,"S.chat[S.chat.length-1].id"),"sore","Arabic: the sore answer");
 });
+/* ---- state with a schema (js/schema.js) ---- */
+await test("Schema: a backup from a newer version of the app is refused, and says why",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("restore");});await pause(page);
+  await page.fill('#rs','{"v":99,"profile":{},"sessions":[]}');await page.tap('[data-dorestore]');await pause(page);
+  eq(await ev(page,"V.sheet"),"restore","nothing replaced");
+  if(!/newer version/.test(await page.textContent(".toast")))throw new Error("no reason given");
+  await page.fill('#rs','{"prefs":{},"sessions":{"a":1}}');await page.tap('[data-dorestore]');await pause(page);
+  if(!/damaged/.test(await page.textContent(".toast")))throw new Error("a damaged backup is not called damaged");
+});
+await test("Schema: a damaged workout in a backup is left out, and the confirm says so",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("restore");});await pause(page);
+  const bk={v:3,profile:{age:30},prefs:{lang:"en",splash:false,anim:false},sessions:[{id:"a",date:"2026-10-01",entries:[{name:"Pullups",sets:[{w:0,r:8}]}]},{id:"b",date:7,entries:"x"}],days:{}};
+  await page.fill('#rs',JSON.stringify(bk));await page.tap('[data-dorestore]');await pause(page);
+  const body=await page.textContent("#sheet");
+  if(!/1 workouts/.test(body)||!/1 damaged workout is left out/.test(body))throw new Error("confirm: "+body.slice(0,300));
+  await page.tap('[data-confirmok]');await pause(page,1000);
+  eq(await ev(page,"[S.sessions.length,S.sessions[0].id,S.v]"),[1,"a",3],"restored, without the damaged one, at the current version");
+});
+await test("Schema: an old profile (v1 splits) opens as programs you own and is saved as v3",async page=>{
+  eq(await ev(page,"[S.v,S.programs.length>=1,!!S.activeProgram,'splits' in S,'currentSplit' in S]"),[3,true,true,false,false]);
+  eq(await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days[0].id"),"keep1","the day ids history is keyed on are kept");
+  const stored=await page.evaluate(()=>JSON.parse(localStorage.getItem("bunyan:db:me")).v);
+  eq(stored,3,"and saved that way");
+},{db:(()=>{const d=seed();delete d.v;delete d.programs;delete d.activeProgram;delete d.userSplits;
+  d.splits=[{id:"ppl",name:"Push Pull Legs",days:[{id:"keep1",name:"Push",ex:[{id:"e1",name:"Pushups",sets:3,lo:8,hi:12}]}]}];d.currentSplit="ppl";return d;})()});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

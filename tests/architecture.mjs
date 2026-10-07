@@ -3,7 +3,7 @@
    is a bug that already happened here, or a door it would open:
 
      coach   js/coach/           pure coaching: imports only itself; no DOM, storage or network
-     core    util, db, photostore, scan, state, units
+     core    util, db, photostore, scan, state, units, schema (what S holds: pure, imports nothing)
      data    js/data/            the libraries: imports only data and util
      i18n    js/i18n/            words: data, state and util at most
      engine  js/engine/          the app's logic: never the UI or app.js
@@ -33,7 +33,7 @@ function walk(d){
     return p.endsWith(".js") ? [p] : [];});}
 
 const files = walk(path.join(ROOT, "js")).map(rel);
-const CORE = new Set(["js/util.js", "js/db.js", "js/photostore.js", "js/scan.js", "js/state.js", "js/units.js"]);
+const CORE = new Set(["js/util.js", "js/db.js", "js/photostore.js", "js/scan.js", "js/state.js", "js/units.js", "js/schema.js"]);
 function layer(f){
   if (f === "js/app.js") return "app";
   if (CORE.has(f)) return "core";
@@ -59,8 +59,8 @@ const MAY = {
 /* Core modules, one by one: state may read the libraries (for templates) but nothing
    above them; units and words read state. */
 const CORE_MAY = {
-  "js/util.js": [], "js/db.js": [], "js/photostore.js": [], "js/scan.js": [],
-  "js/state.js": ["js/util.js", "js/db.js", "js/photostore.js", "data"],
+  "js/util.js": [], "js/db.js": [], "js/photostore.js": [], "js/scan.js": [], "js/schema.js": [],
+  "js/state.js": ["js/util.js", "js/db.js", "js/photostore.js", "js/schema.js", "data"],
   "js/units.js": ["js/util.js", "js/state.js", "i18n"]};
 /* A view showing another view: the whole list. */
 const EMBEDS = {
@@ -114,7 +114,7 @@ for (const f of files){
    it in Node with plain data. Nothing these modules import, directly or through
    another module, may be state.js (units.js and the words read it too). The coach is
    held to the same, through its own rule above. */
-const PURE = ["js/engine/body.js", "js/engine/intake.js"];
+const PURE = ["js/engine/body.js", "js/engine/intake.js", "js/schema.js"];
 for (const f of PURE){
   const seen = new Set(), todo = [f];
   while (todo.length){
