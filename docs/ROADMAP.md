@@ -6,7 +6,7 @@ that stays easy to change as it grows. Each phase ships on its own with its test
 order, and the constraints do not move: offline, no paid or external API, every string
 in Arabic, nothing changes the plan without a tap.
 
-## Where the code stands (measured October 2026, updated after A3)
+## Where the code stands (measured October 2026, updated after A4)
 
 - `js/app.js` was 1,927 lines with one click handler of 275 branches. It is now about
   240 lines of boot and wiring; the branches live by domain in `js/ui/handlers/`,
@@ -21,20 +21,29 @@ in Arabic, nothing changes the plan without a tap.
   in `formulas.js`, `stats.js` and `energy.js` are one-line wrappers that pass `S` in.
   The rest of the engine (sessions, records, progression, the plan builder) still reads
   `S` and is next in line as it is touched.
-- The guard is the regression suite (118 browser tests), the coach tests (114), the
-  engine tests (`tests/engine.mjs`), the architecture test and random-tap stress runs
-  in both languages.
+- What a profile stores is written down in `js/schema.js` (JSDoc types), with its
+  defaults, the shape check every load runs, versioned migrations (the blob records
+  `v`; each step runs once, in order) and the check a restored backup must pass (A4).
+- The guard is the regression suite (135 browser tests), the coach tests (143), the
+  engine, data and schema tests (`tests/engine.mjs`, 145), the architecture test and
+  random-tap stress runs in both languages.
 
 ## Where the coaching stands
 
-It reads the log well (fatigue, stalls, volume, proportions, progression), but two
-things are still fixed when they should be learned:
-- **Calories** come from a formula (Mifflin–St Jeor × activity). A formula can be off by
-  10–15% for a given person, and the app has the data to see it: logged intake and the
-  weight trend.
-- **Effort.** RPE is logged but the max estimates ignore it. The "how do you feel today"
-  answer shows a note and changes nothing. A program's effort target is the same every
-  week, with no planned build and no planned lighter week. (B2, B3 and B4 answer these.)
+It reads the log (fatigue, stalls, volume, proportions, progression), and what was
+fixed now learns from the person:
+- **Calories**: maintenance is measured from logged intake and the weight trend once
+  there is enough of both, and offered in place of the formula (B1).
+- **Effort**: max estimates count the reps left in reserve (B2); how the lifter feels
+  today moves today's suggestions (B3); a program runs in four-week blocks that build
+  effort and end in a planned lighter week, with sets per muscle moved by a tap after
+  each workout and the soreness already asked (B4).
+- **Swaps** keep the movement: every exercise has a pattern, and pain, missing kit, the
+  Replace sheet and the chat all offer what trains the same thing (B5).
+
+The phases below are all done. What comes next is chosen from use: the engine's other
+modules move to the pure style as they are touched, and new coaching earns its place by
+the same rules.
 
 ## Phases
 
@@ -48,7 +57,7 @@ things are still fixed when they should be learned:
 | A3 | Architecture | **A testable engine** | Engine functions take what they need (profile, sessions, goals) instead of reading `S`, starting with energy, protein, the weight trend and nutrition. A Node test suite for the engine like the coach's. | Done: `js/engine/body.js`, `intake.js`, `tests/engine.mjs` |
 | B4 | Coaching | **Blocks, not just weeks** | A program runs in blocks: effort builds week by week (reps in reserve 3 → 2 → 1), then a planned lighter week, then the next block. Sets per muscle move from one tap after each session ("too easy / about right / too much") plus the soreness already asked. | Done: `js/coach/block.js`, `js/engine/blocks.js` |
 | B5 | Coaching | **Swaps that understand movement** | Every exercise tagged by movement pattern (squat, hinge, push, pull, carry, …). Pain, missing equipment or "replace" offers swaps that train the same thing. The chat's pain answer uses it. | Done: `js/data/movement.js` |
-| A4 | Architecture | **State with a schema** | Documented types for what is stored (JSDoc), versioned migrations with tests, and a check that a restored backup is the app's own shape. | Next |
+| A4 | Architecture | **State with a schema** | Documented types for what is stored (JSDoc), versioned migrations with tests, and a check that a restored backup is the app's own shape. | Done: `js/schema.js` |
 
 ## Rules for every phase
 

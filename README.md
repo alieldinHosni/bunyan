@@ -121,7 +121,8 @@ js/
   scan.js       camera barcode scanning, and the overlay it owns
   ui/nav.js     the back stack: arrow, edge swipe and OS gesture share one path
   ui/sheetdrag.js  drag a sheet header down to dismiss
-  state.js      S, profiles, persistence, migration
+  state.js      S, profiles, persistence; what S holds, its defaults and its versioned
+                migrations are in schema.js (pure, tests in js/test/)
   data/         exercises.js, splits.js, goals.js, movement.js (each exercise's movement
                 pattern, read from its name and muscle), with tests in data/test/
   coach/        the coaching engine: pure functions over the log, with tests in coach/test/;
@@ -284,6 +285,19 @@ not.
 
 **Settings, your plan, weigh-ins and the current workout** are one JSON blob in
 localStorage per profile, at `bunyan:db:<profile>`. It stays a few kilobytes.
+
+**What it holds is written down**, in `js/schema.js`: JSDoc types for the profile, the
+programs, a workout and its sets, the body log, a day's food, and the smaller sections.
+The same module fills in what an old blob or a hand-edited backup is missing
+(`normalize`), and carries old shapes forward one numbered version at a time
+(`migrateDB`): the blob records its version (`v`, now 3), each step runs once, in order,
+and a new shape is a new step at the end with its test, never an edit to an old one —
+blobs and backups in the old shapes are out there. Version 3 is the move from the v1
+list of splits and v2's "active copy" to programs you own; it keeps the day ids history
+is keyed on. A **restored backup is checked first** (`checkBackup`): a file that is not
+ours, or from a newer version of the app, is refused with the reason, and a damaged
+workout is left out and counted in the confirmation rather than refusing the lot. All of
+it is pure and runs in `node tests/engine.mjs`.
 
 **The two things that grow without limit are in IndexedDB**, in database `bunyan`:
 
