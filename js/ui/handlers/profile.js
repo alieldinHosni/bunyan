@@ -71,6 +71,9 @@ function register(){
   key("toggle",function(D){S.prefs[D.toggle]=!S.prefs[D.toggle];
     if(D.toggle==="anim")document.body.classList.toggle("noanim",S.prefs.anim===false);
     if(D.toggle==="awake")keepAwake(S.prefs.awake&&!!S.active);
+    /* Turned off, the block is forgotten: turned on again, the next workout starts a
+       fresh one rather than landing mid-block on old dates. */
+    if(D.toggle==="noblocks"&&S.prefs.noblocks)delete S.block;
     saveDB();render();return;});
   key("warnmode",function(){var w4=[5,10,15];S.prefs.warn=w4[(w4.indexOf(S.prefs.warn)+1)%3];saveDB();render();return;});
   key("langmode",function(){S.prefs.lang=S.prefs.lang==="ar"?"en":"ar";saveDB();applyLang();render();

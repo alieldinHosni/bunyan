@@ -9,6 +9,7 @@ import {t} from "../i18n/dict.js";
 import {fmtW} from "../units.js";
 import {progressionAdvice} from "../coach/autoreg.js";
 import {e1rm} from "../coach/util.js";
+import {blockNow, plannedLight} from "./blocks.js";
 import {avg7Of, bmrOf, lastWeightOf, macroTargetsOf, proteinFor, sessionKcalOf, targetKcalOf, tdeeFormulaOf,
         tdeeOf} from "./body.js";
 
@@ -153,9 +154,12 @@ function snapDown(x,step){step=step||1.25;return Math.max(0,Math.round(Math.roun
    lifts stalled, or two weeks of sets close to failure. While it runs the plan's
    sets drop by about 40% and suggested loads by about 10%. */
 function isoDays(a,b){return Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/864e5);}
-function inDeload(){return !!(S.deload&&S.deload.until&&today()<=S.deload.until);}
+/* A lighter week runs when one was started from the card, or when a training block
+   reaches its planned one (js/engine/blocks.js). */
+function inDeload(){return !!(S.deload&&S.deload.until&&today()<=S.deload.until)||plannedLight();}
 function deloadDue(){
-  if(inDeload()||S.sessions.length<12)return null;
+  /* Blocks bring their own lighter week every fourth, so none is suggested on top. */
+  if(inDeload()||blockNow()||S.sessions.length<12)return null;
   var now=today(),dl=S.deload||{};
   if(dl.snooze&&now<dl.snooze)return null;
   var since=dl.last||S.sessions[S.sessions.length-1].date;

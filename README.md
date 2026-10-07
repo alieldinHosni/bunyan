@@ -369,6 +369,22 @@ otherwise they would outlive the blob that was supposed to own them.
   increase, and "One set fewer on each exercise" is offered, with Undo. Great, after a
   session with reps to spare: the bigger step (two steps, at most 10%). A lighter week
   already sets the load, so it wins. Nothing changes unless the lifter answers.
+- **Training blocks** (`js/coach/block.js`, wired in `js/engine/blocks.js`). A program
+  runs in blocks of four weeks: three that build effort, each set stopped with 3, then
+  2, then 1 rep in reserve, then the usual lighter week (fewer sets, about 10% less
+  weight), arriving on schedule instead of only once the log shows a stall. Block 1
+  starts on the first day of the week of the first workout with blocks on; after that
+  they roll on four weeks at a time. Ending the lighter week early, or taking an
+  unplanned one, starts the next block after it. The Train page shows a four-part bar
+  for the weeks and what this one asks.
+  After each lifting workout the complete sheet asks one more thing: was the amount of
+  work too easy, about right or too much? With the soreness from the recovery sheet
+  (7 or more in the two days after overrides the answer), that moves sets per workout
+  for the muscles trained: one more for too easy, one fewer for too much, never more
+  than three over or two under the plan, never past the weekly maximum the landmarks
+  give, and not below the minimum for a muscle the plan has above it. The logger says
+  "1 more than the plan" where it applies. Each block starts from the plan again.
+  Off in Settings → Training, and left out for a program that brings its own weeks.
 - **Warm-up sets** count for nothing. Tap a logged set's number to mark it `W` and it
   drops out of volume, average RPE, personal records, the "last time" column and the
   progression check. The row stays so you can see what you actually did.
@@ -450,6 +466,8 @@ otherwise they would outlive the blob that was supposed to own them.
   - `autoreg.js`: around the progression rule — a bigger step at RPE 7 or less, a step
     with a caution at 9 or more, hold after two misses of the range, a lighter week
     after three. `recommend()` in `js/engine/formulas.js` uses it.
+  - `block.js`: where a date falls in four-week training blocks, and how the answers
+    after each workout (with soreness) move sets per muscle inside one.
   - `weakpoints.js`: a lift far out of proportion with the others (squat against
     deadlift, bench against squat, press against bench, row against bench), only when
     more than 15% outside the usual range, and always as an observation.

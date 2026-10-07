@@ -26,6 +26,7 @@ import {fmtW, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num, r1, today} from "../../util.js";
 import {backArrow} from "../nav.js";
 import {doseText} from "../dose.js";
+import {blockDay, blockNow} from "../../engine/blocks.js";
 import {estMinutes, nextDayOf, planOn} from "../../engine/dayplan.js";
 import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
 import {words} from "../coachwords.js";
@@ -83,10 +84,16 @@ function aToday(a,q){
     return a;}
   var d=pl.day,ex=d.ex.filter(function(e){return !isActivity(e.name);});
   p(a,fill(t("Today is {d}: {n} exercises, about {m} min."),{d:planName(d.name),n:d.ex.length,m:estMinutes(d)}));
-  l(a,d.ex.slice(0,6).map(function(e){return exName(e.name)+(isActivity(e.name)?"":" · "+doseText(e));})
+  /* As the workout will start: this week of the block's effort, and sets moved by the
+     answers after earlier workouts. */
+  var bl=blockNow(),dx=blockDay(d.ex);
+  l(a,dx.slice(0,6).map(function(e){return exName(e.name)+(isActivity(e.name)?"":" · "+doseText(e));})
     .concat(d.ex.length>6?[fill(t("and {n} more"),{n:d.ex.length-6})]:[]));
   if(inDeload())n(a,t("This is a lighter week: fewer sets and lighter weights. That is the plan, not a step back."));
-  else if(ex.length)n(a,t("Each exercise shows a suggested weight when you get to it, from what you lifted last time."));
+  else{
+    if(bl&&ex.length)n(a,fill(t("Block {b} · Week {w} of {n}"),{b:bl.block,w:bl.week,n:bl.of})+". "
+      +t(bl.rir===1?"Stop each set with 1 rep in reserve.":"Stop each set with {n} reps in reserve.").replace("{n}",bl.rir));
+    if(ex.length)n(a,t("Each exercise shows a suggested weight when you get to it, from what you lifted last time."));}
   act(a,t("Start workout"),{"data-startday":d.id});
   return act(a,t("Change the day"),{"data-tab":"train"});}
 

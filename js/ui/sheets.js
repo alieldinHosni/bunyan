@@ -13,6 +13,7 @@ import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {GOAL_ORDER, GOALS} from "../data/goals.js";
 import {groupLabel, groupRun, ivText, mmss, platePlan, rowsFor} from "./views/session.js";
 import {sessionById, ensureSessionIds, CUR, dayOf, dayRec, isOwner, PROFILES, S, split} from "../state.js";
+import {blockNow} from "../engine/blocks.js";
 import {buildSnapshot, friends, snapStats} from "../engine/share.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
@@ -580,6 +581,15 @@ function vSheet(){
      +[[3,"Easy"],[5,"Moderate"],[7,"Hard"],[9,"Very hard"],[10,"Max"]].map(function(x){
         return '<button class="'+(sr===x[0]?'on':'')+'" data-srpe="'+x[0]+'" aria-pressed="'+(sr===x[0])+'">'+t(x[1])+'</button>';}).join("")
      +'</div></div>';
+    /* Inside a training block, one more tap: how the amount of work felt. It moves the
+       sets for the muscles this workout trained, next time and for the rest of the
+       block (js/coach/block.js). Not asked of a run or a match. */
+    if(w.lift&&blockNow()){
+      var fl=(sessionById(w.id)||{}).feel||"";
+      b+='<div class="wc2-effort wc2-feel"><div class="wc2-effort-h">'+t("How was the amount of work?")+'</div><div class="ready-c feel-c">'
+       +[["easy","Too easy"],["right","About right"],["much","Too much"]].map(function(x){
+          return '<button class="'+(fl===x[0]?'on':'')+'" data-sfeel="'+x[0]+'" aria-pressed="'+(fl===x[0])+'">'+t(x[1])+'</button>';}).join("")
+       +'</div><p class="wc2-feel-n">'+t("Your answer adjusts the sets for these muscles for the rest of this block.")+'</p></div>';}
     /* Stretches for what was trained, with a timer each. */
     b+=coolCard(w.cool);
     b+='</div><div class="cf-acts wc2-acts">'
@@ -733,6 +743,9 @@ function vSheet(){
      +'<button class="item" data-toggle="nocool"><div><div>'+t("Cool-down after a workout")+'</div>'
      +'<div class="tiny">'+t("Stretches for what you trained")+'</div></div>'
      +'<span class="'+(!tp.nocool?"pill ok":"dim")+'">'+(!tp.nocool?t("On"):t("Off"))+'</span></button>'
+     +'<button class="item" data-toggle="noblocks"><div><div>'+t("Training blocks")+'</div>'
+     +'<div class="tiny">'+t("Effort builds for three weeks, then a lighter week")+'</div></div>'
+     +'<span class="'+(!tp.noblocks?"pill ok":"dim")+'">'+(!tp.noblocks?t("On"):t("Off"))+'</span></button>'
      +'<button class="item" data-toggle="autorest"><span>'+t("Auto-start rest timer")+'</span>'
      +'<span class="'+(tp.autorest?"pill ok":"dim")+'">'+(tp.autorest?t("On"):t("Off"))+'</span></button>'
      +'<button class="item" data-warnmode="1"><span>'+t("Countdown warning")+'</span><span class="dim">'

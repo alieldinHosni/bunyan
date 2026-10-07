@@ -3308,6 +3308,24 @@ textarea.afnl.warn{border-color:var(--warning)}
 .dlcard-t span{font-size:13px;color:var(--dim)}
 .dlcard-x{flex:0 0 auto;min-height:40px;padding:0 14px;border-radius:var(--rpill);border:1px solid var(--border);
   background:none;color:var(--text);font-size:13px;font-weight:600}
+/* ---- Train: where the training block stands ------------------------------------------
+   Four segments, one per week: done ones filled, this one in the accent, the lighter
+   week (the fourth) drawn in the deload card's gold so the two read as one idea. */
+.blk{margin-top:14px;padding:14px 16px;border-radius:var(--r4);border:1px solid var(--color-border-subtle);background:var(--color-surface-1)}
+.blk-h{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:28px}
+.blk-h b{font-family:var(--display);font-size:15px;letter-spacing:.01em}
+.blk-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:10px 0 8px}
+.blk-bar i{height:6px;border-radius:2px;background:var(--color-surface-well)}
+.blk-bar i.done{background:rgba(var(--accent-rgb),.45)}
+.blk-bar i.on{background:var(--color-action-primary)}
+.blk-bar i.lt{background:rgba(var(--gold-rgb),.25)}
+.blk-bar i.lt.on{background:var(--gold)}
+.blk-l{margin:0;font-size:14px;color:var(--color-text-secondary);line-height:1.45}
+.blk-m{margin:6px 0 0;font-size:13px;color:var(--color-text-tertiary);line-height:1.4}
+.blk.light{border-color:rgba(var(--gold-rgb),.45);background:radial-gradient(90% 90% at 100% 0%,rgba(var(--gold-rgb),.10),transparent 70%),var(--color-surface-1)}
+/* The complete sheet's second question: three answers, not five. */
+.ready-c.feel-c{grid-template-columns:repeat(3,minmax(0,1fr))}
+.wc2-feel-n{margin:8px 0 0;font-size:12px;color:var(--color-text-tertiary);line-height:1.4}
 /* ---- Train: switch the day's workout ----------------------------------------------- */
 .thero2-swap{position:absolute;top:14px;inset-inline-end:14px;z-index:2;display:flex;align-items:center;gap:6px;
   min-height:36px;padding:0 14px;border-radius:var(--rpill);border:1px solid var(--hair-hi);

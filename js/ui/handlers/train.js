@@ -7,6 +7,7 @@ import {LIB, loadInstructions} from "../../data/exercises.js";
 import {day} from "../../data/splits.js";
 import {addDaysISO} from "../../engine/dayplan.js";
 import {spreadWd, suggestWd, weekOrder} from "../../engine/schedule.js";
+import {restartAfter, restartBlock} from "../../engine/blocks.js";
 import {t} from "../../i18n/dict.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {addProgram, allSplits, dayOf, editSplit, makeProgram, S, saveDB, split} from "../../state.js";
@@ -71,13 +72,18 @@ function useDraft(){
    the branches are tried in (see registry.js). */
 function register(){
   key("tweek",function(D){V.tdate=D.tweek===today()?null:D.tweek;render();return;});
-  /* A lighter week: started, put off for a week, or ended early. */
+  /* A lighter week: started, put off for a week, or ended early. With training blocks
+     running, the next block starts after it: the day after an unplanned one ends, or
+     today when either kind is ended early. */
   key("deload",function(D){
     var dl=S.deload=S.deload||{};
     if(D.deload==="start"){dl.until=addDaysISO(today(),6);dl.last=today();delete dl.snooze;
+      if(S.block)restartAfter(dl.until);
       toast(t("Lighter week on. Your next workouts have fewer sets and lighter suggestions."));}
     else if(D.deload==="later"){dl.snooze=addDaysISO(today(),7);}
-    else if(D.deload==="end"){dl.until=addDaysISO(today(),-1);}
+    else if(D.deload==="end"){
+      if(dl.until&&today()<=dl.until)dl.until=addDaysISO(today(),-1);
+      if(S.block){restartBlock(today());toast(t("A new training block starts today."));}}
     saveDB();render();return;});
   key("clearexq",function(){V.exq="";render();topOfResults();var qq=document.getElementById("exq");if(qq)qq.focus();return;});
   key("swapday",function(D){openSheet("swapday",{date:D.swapday});return;});

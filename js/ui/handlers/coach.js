@@ -10,6 +10,7 @@ import {buildPlan, rebalance} from "../../engine/plan.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {t} from "../../i18n/dict.js";
 import {S, saveDB, split} from "../../state.js";
+import {restartAfter} from "../../engine/blocks.js";
 import {fmtN, num, today} from "../../util.js";
 import {closeSheet} from "../actions.js";
 import {pushNav, resetNav} from "../nav.js";
@@ -82,11 +83,14 @@ function coachFix(id){
   var c=coachNow().filter(function(x){return x.id===id;})[0];if(!c)return;
   var act=coachAct(c);
   if(act==="deload"){
-    var dlBefore=JSON.parse(JSON.stringify(S.deload||{})),disBefore=JSON.parse(JSON.stringify(S.coachDismiss||{}));
+    var dlBefore=JSON.parse(JSON.stringify(S.deload||{})),disBefore=JSON.parse(JSON.stringify(S.coachDismiss||{})),
+        blBefore=S.block?JSON.parse(JSON.stringify(S.block)):null;
     var dl=S.deload=S.deload||{};dl.until=addDaysISO(today(),6);dl.last=today();delete dl.snooze;
+    /* A training block starts again after it, as from the Train page's card. */
+    if(S.block)restartAfter(dl.until);
     coachSetAside(id,14);saveDB();render();
     toast(t("Lighter week on. Your next workouts have fewer sets and lighter suggestions."),function(){
-      S.deload=dlBefore;S.coachDismiss=disBefore;saveDB();render();});return;}
+      S.deload=dlBefore;S.coachDismiss=disBefore;if(blBefore)S.block=blBefore;saveDB();render();});return;}
   if(act==="balance"){
     var prog=split();if(!prog)return;
     var daysBefore=JSON.parse(JSON.stringify(prog.days)),disB=JSON.parse(JSON.stringify(S.coachDismiss||{}));

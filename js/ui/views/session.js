@@ -108,10 +108,12 @@ function noteSet(a){
   a.lastSet=now;
 }
 
-/* The prescription of a live entry, as the plan wrote it. */
+/* The prescription of a live entry, as the plan wrote it — and, inside a training
+   block, how many sets the answers after earlier workouts moved it by. */
 function plannedDose(e){
-  var p=e.planned||{};
-  return doseText({sets:p.sets,lo:p.lo,hi:p.hi,amrap:p.amrap,side:p.side,rir:p.rir,timed:ex_isTimed(e)&&!LOADED.test(e.name)});}
+  var p=e.planned||{},d=p.plan!=null?num(p.sets)-num(p.plan):0;
+  return doseText({sets:p.sets,lo:p.lo,hi:p.hi,amrap:p.amrap,side:p.side,rir:p.rir,timed:ex_isTimed(e)&&!LOADED.test(e.name)})
+    +(d?" · "+t(d>0?"{n} more than the plan":"{n} fewer than the plan").replace("{n}",Math.abs(d)):"");}
 function vLogger(){
   var a=S.active;
   if(V.logIdx>=a.entries.length)V.logIdx=a.entries.length-1;

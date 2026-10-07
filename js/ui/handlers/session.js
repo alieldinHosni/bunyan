@@ -94,6 +94,12 @@ function register(){
   };
   on(function(D){return D.ready!==undefined&&S.active;},function(D){W.setReady(+D.ready);return;});
   on(function(D){return D.readyless&&S.active;},function(){W.lighterDay();return;});
+  /* How the amount of work felt, inside a training block. Tapping the chosen answer
+     again takes it back. */
+  key("sfeel",function(D){
+    var sf=V.sd&&sessionById(V.sd.id);if(!sf)return;
+    if(sf.feel===D.sfeel)delete sf.feel;else sf.feel=D.sfeel;
+    saveSession(sf);render();return;});
   key("srpe",function(D){
     var sw9=V.sd&&sessionById(V.sd.id);if(!sw9)return;
     sw9.srpe=+D.srpe;saveSession(sw9);render();return;});
