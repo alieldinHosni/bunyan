@@ -17,6 +17,7 @@ import {actInfo, intensityOf, isActivity} from "../../data/activities.js";
 import {head, reorderBtn, seg, V} from "../view.js";
 import {backArrow, backBar} from "../nav.js";
 import {art} from "../art.js";
+import {programCover} from "../cover.js";
 import {shown} from "../more.js";
 import {vTImport} from "./timport.js";
 import {doseText, weeksText} from "../dose.js";
@@ -32,12 +33,12 @@ import {bodyTiles, trainTop} from "./home.js";
 var SPLIT_IMG={ap:"split-ap",arnold:"split-arnold",ppl:"split-ppl",
   ul:"split-ul",fb:"split-fb",bw:"split-bw",bro:"split-bro",
   sl5:"split-sl5",db:"split-db",glute:"split-glute",ppl3:"split-ppl3",foot:"split-foot",fl:"split-fl"};
-/* A split the user built themselves has no photograph of its own. It gets the accent
-   field instead of borrowing another programme's picture. */
-function splitCover(id){
-  var f=SPLIT_IMG[id];
+/* A program without a photograph of its own is drawn from its own structure (see
+   js/ui/cover.js) instead of borrowing another programme's picture. */
+function splitCover(sp){
+  var f=SPLIT_IMG[sp.id];
   return f?'<span class="tcover"><img src="img/'+f+'.jpg" alt="" loading="lazy"></span>'
-          :'<span class="tcover tcover-none"></span>';}
+          :'<span class="tcover tcover-gen">'+programCover(sp,180,100)+'</span>';}
 
 
 var ACTIVITY='<svg viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>';
@@ -171,7 +172,7 @@ function programsPage(){
    +'<div class="tscroll">';
   tpls.forEach(function(o){
     var days=o.days.filter(function(d){return d.ex.length;}).length,lvl=levelOf(o.id);
-    h+='<button class="tprog-card" data-preview="'+o.id+'">'+splitCover(o.id)
+    h+='<button class="tprog-card" data-preview="'+o.id+'">'+splitCover(o)
      +'<span class="tpc-body"><span><span class="tpc-n">'+esc(planName(o.name))+'</span>'
      +'<span class="tpc-s">'+esc(t(tagNote(o.tag)))+'</span></span>'
      +'<span class="tpc-m"><span>'+days+' '+t("days / week")+'</span>'
@@ -204,7 +205,10 @@ function programsList(){
      /* The active program cannot be deleted from here: switch away from it first. */
      +(on?'<span class="drm" aria-hidden="true"></span>'
         :'<button class="drm" data-delsplit="'+sp.id+'" aria-label="'+esc(t("Delete")+" "+planName(sp.name))+'"><i>'+XSVG+'</i></button>')
-     +'<button class="dmain" '+(on?'data-ctsub="program"':'data-editsplit="'+sp.id+'"')+'><span class="dtext"><span class="drow-n">'+esc(planName(sp.name))+'</span>'
+     +'<button class="dmain" '+(on?'data-ctsub="program"':'data-editsplit="'+sp.id+'"')+'>'
+     /* Its own cover: the program's week, drawn from its days. */
+     +'<span class="drow-cov">'+programCover(sp,64,48)+'</span>'
+     +'<span class="dtext"><span class="drow-n">'+esc(planName(sp.name))+'</span>'
      +'<span class="drow-s">'+tr+' '+t(tr===1?"training day":"training days")+'<i class="ddot"></i>'
      +t(sp.schedule==="week"?"By weekday":"In rotation")+'</span></span>'
      +(on?'<span class="bpill">'+t("Active")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')

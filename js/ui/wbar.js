@@ -12,7 +12,7 @@ import {t} from "../i18n/dict.js";
 import {exName, planName} from "../i18n/exnames.js";
 import {esc} from "../util.js";
 import {V} from "./view.js";
-import {mmss, sessionClock} from "./views/session.js";
+import {mmss, overText, sessionClock} from "./views/session.js";
 
 function mode(){
   var a=S.active;
@@ -26,6 +26,8 @@ function paintWbar(){
   if(!el||!S.active)return;
   var m=mode(),s;
   if(m==="rest")s=mmss(V.restPaused?V.restLeft:Math.max(0,Math.ceil((V.restEnd-Date.now())/1000)));
+  /* Rest over: how long ago, counting up, so the bar says how long the break has run. */
+  else if(m==="done")s=overText();
   else s=mmss(sessionClock(S.active).ms/1000);
   if(el.textContent!==s)el.textContent=s;}
 
@@ -48,8 +50,8 @@ function syncWbar(){
       +'<span class="wbar-dot" aria-hidden="true"></span>'
       +'<span class="wbar-k" aria-hidden="true">'+esc(kick)+'</span>'
       +'<span class="wbar-n" aria-hidden="true">'+esc(name)+'</span>'
-      +(m==="done"?'<span class="wbar-go" aria-hidden="true">'+esc(t("Next set"))+'</span>'
-        :'<span class="wbar-t num" id="wbarT" aria-hidden="true"></span>')
+      +(m==="done"&&!V.restOver?'<span class="wbar-go" aria-hidden="true">'+esc(t("Next set"))+'</span>'
+        :'<span class="wbar-t num" id="wbarT" dir="ltr" aria-hidden="true"></span>')
       +'<span class="ico ico-chev" aria-hidden="true"></span></button>';}
   paintWbar();}
 

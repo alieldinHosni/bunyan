@@ -17,7 +17,7 @@ import {initSheetDrag} from "./ui/sheetdrag.js";
 import {initReorder} from "./ui/reorder.js";
 import * as W from "./ui/workout.js";
 import {leave} from "./ui/motion.js";
-import {groupRun, mmss, paintRest, sessionClock} from "./ui/views/session.js";
+import {groupRun, mmss, paintOver, paintRest, sessionClock} from "./ui/views/session.js";
 import {editSplit, refreshFromStorage, storageKey, normalize, startupNote, ensureSessionIds, removeSession, saveSession, sessionById, adoptRestored, allSplits, addProgram, makeProgram, CUR, curProfile, dayOf, dayRec, initState, isOwner, loadStored, migrate, S, saveDB, setS, split, switchProfile, onProfileSwitch} from "./state.js";
 import {friends, saveFriends} from "./engine/share.js";
 import {addDaysISO} from "./engine/dayplan.js";
@@ -1622,13 +1622,14 @@ function tickSession(){
   var pz=document.getElementById("sessPaused");
   if(pz)pz.hidden=!ck.paused;
   syncWbar();
+  if(V.restDone)paintOver();
   if(!V.restEnd||V.restPaused)return;
   var left=Math.ceil((V.restEnd-Date.now())/1000);
   /* Running out is the one tick that changes the screen rather than the numbers. The
      rest surface does not disappear at zero any more — it turns into the alert, and
      stays until the user acknowledges it. Sound cannot be relied on (silent switch,
      backgrounded tab), so the screen has to carry it. */
-  if(left<=0){V.restEnd=0;V.restPaused=false;V.restDone=true;V.restMin=false;
+  if(left<=0){V.restOver=V.restEnd;V.restEnd=0;V.restPaused=false;V.restDone=true;V.restMin=false;
     if(!V.sheet)render();else syncWbar();return;}
   paintRest();
 }

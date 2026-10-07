@@ -536,6 +536,10 @@ function vRest(a,e,rows,timed){
      +'<div class="rt-check" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="rt-check-t"/>'
      +'<circle cx="60" cy="60" r="52" class="rt-check-r"/><path d="M40 61l13 13 27-29" class="rt-check-m"/></svg></div>'
      +'<h2 class="rt-h" id="rtDoneH" aria-live="assertive">'+t(more?"Rest complete":last?"Last set done":"Exercise complete")+'</h2>'
+     /* How long ago it ran out, counting up: someone back from a locked phone sees how
+        long they actually rested. Quiet, so the next action stays the loudest thing. */
+     +(V.restOver?'<p class="rt-over"><span class="rt-over-t num" id="restOver" dir="ltr">'+overText()+'</span>'
+       +'<span class="rt-over-k">'+t("over your rest")+'</span></p>':'')
      +'<p class="rt2-next">'+nextLine+'</p></div>'
      +'<div class="rt2-acts">'+primary
      +'<div class="rt2-k">'+t("Add rest")+'</div>'
@@ -598,6 +602,16 @@ function paintRest(){
     if(mt)mt.textContent=paused?t("Resume"):t("Pause");
   }
 }
+/* Time since the rest ran out, as "+m:ss". Empty when it is not known. */
+function overText(){
+  if(!V.restOver)return "";
+  return "+"+mmss(Math.max(0,Math.floor((Date.now()-V.restOver)/1000)));}
+/* The count-up on the finished screen, repainted each second by tickSession. */
+function paintOver(){
+  var el=document.getElementById("restOver");
+  if(!el)return;
+  var s=overText();
+  if(el.textContent!==s)el.textContent=s;}
 /* Rebuilds only when the screen is genuinely a different one — a new exercise, a
    new set, or a language change. A tick or a ±30s tap keeps the same DOM. */
 function syncRest(){
@@ -630,4 +644,4 @@ function syncRest(){
   host.innerHTML=S.prefs&&S.prefs.lang==="ar"?isolateNums(rh):rh;
 }
 
-export {ivText, groupLabel, groupNext, groupRun, IDLE_PAUSE, mmss, noteSet, paintRest, platePlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger};
+export {ivText, groupLabel, groupNext, groupRun, IDLE_PAUSE, mmss, noteSet, overText, paintOver, paintRest, platePlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger};

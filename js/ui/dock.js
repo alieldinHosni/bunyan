@@ -14,23 +14,28 @@
    "out of the way while reading" below). */
 import {t} from "../i18n/dict.js";
 
-/* Icons on one grid (22), one stroke, one cap. Home, activity, trending-up and user
-   are the Bunyan Figma file's own vectors (they were icons/nav-*.svg); food is its
-   pie chart with the dock reference's leaf set into the open quarter. Inline rather
-   than masks, so the stroke itself can take the accent and thicken when active. */
+/* Icons on one grid (22), one stroke, one cut: square ends and mitred corners, the
+   structural style the brand is moving to. Home, activity and user are the Bunyan
+   Figma file's own vectors (they were icons/nav-*.svg); food is its pie chart with the
+   dock reference's leaf set into the open quarter; Progress is three rising bars, a
+   structure built course by course. Inline rather than masks, so the stroke itself
+   can take the accent and thicken when active. */
 var ICON={
   home:'<path d="M13.75 19.25v-7.33a.92.92 0 0 0-.92-.92H9.17a.92.92 0 0 0-.92.92v7.33M2.75 9.17a1.83 1.83 0 0 1 .65-1.4l6.42-5.5a1.83 1.83 0 0 1 2.36 0l6.42 5.5a1.83 1.83 0 0 1 .65 1.4v8.25a1.83 1.83 0 0 1-1.83 1.83H4.58a1.83 1.83 0 0 1-1.83-1.83z"/>',
   train:'<path d="M20.17 11h-2.28a1.83 1.83 0 0 0-1.77 1.34l-2.15 7.66a.23.23 0 0 1-.44 0L8.47 2a.23.23 0 0 0-.44 0L5.88 9.66A1.83 1.83 0 0 1 4.12 11H1.83"/>',
   food:'<path d="M11 2.4a8.6 8.6 0 1 0 8.6 8.6H11z"/><path d="M13.4 8.6c0-3.6 2.4-6 6.2-6 0 3.7-2.5 6-6.2 6z"/><path d="M13.4 8.6l3.2-3.2"/>',
-  progress:'<path d="M20.17 11.92V6.42h-5.5m5.5 0-7.8 7.79-4.58-4.58-5.96 5.95"/>',
+  progress:'<path d="M3.5 19V13.5h4V19zM9 19V8.5h4V19zM14.5 19V3h4v16z"/>',
   /* A speech bubble with a spark: the coach that plans for you. */
   coach:'<path d="M4.58 2.75h12.84a1.83 1.83 0 0 1 1.83 1.83v9.17a1.83 1.83 0 0 1-1.83 1.83H9.17l-4.59 3.67v-3.67a1.83 1.83 0 0 1-1.83-1.83V4.58a1.83 1.83 0 0 1 1.83-1.83z"/><path d="M11 5.96l.92 2.37 2.37.92-2.37.92L11 12.54l-.92-2.37-2.37-.92 2.37-.92z"/>',
   profile:'<path d="M17.42 19.25v-1.83a3.67 3.67 0 0 0-3.67-3.67h-5.5a3.67 3.67 0 0 0-3.67 3.67v1.83M14.67 6.42a3.67 3.67 0 1 1-7.34 0 3.67 3.67 0 0 1 7.34 0z"/>'
 };
-/* id, what a screen reader announces. The names are the sections', not the icons'. */
+/* id, what a screen reader announces, and the word under the icon. The names are
+   the sections', not the icons'; each label is the start of its accessible name, so
+   what is read aloud matches what is seen. Short enough for a fifth of the dock in
+   either language. */
 function items(){return [
-  ["train",t("Training")],["food",t("Food")],["coach",t("Coach")],
-  ["progress",t("Progress")],["profile",t("Profile")]];}
+  ["train",t("Training"),t("Train")],["food",t("Food"),t("Food")],["coach",t("Coach"),t("Coach")],
+  ["progress",t("Progress"),t("Progress")],["profile",t("Profile"),t("Profile")]];}
 
 var built=null;   /* the label set the markup was written with */
 
@@ -42,10 +47,11 @@ function build(el){
    +list.map(function(it){
      return '<button type="button" class="dock-b" data-tab="'+it[0]+'" aria-label="'+it[1]+'">'
       +'<svg viewBox="0 0 22 22" width="24" height="24" aria-hidden="true" focusable="false">'
-      +ICON[it[0]]+'</svg></button>';}).join("")
+      +ICON[it[0]]+'</svg><span class="dock-l" aria-hidden="true">'+it[2]+'</span></button>';}).join("")
    +'</div>';
-  built=list.map(function(it){return it[1];}).join("|");
+  built=key(list);
 }
+function key(list){return list.map(function(it){return it[1]+"/"+it[2];}).join("|");}
 
 /* ---- out of the way while reading ------------------------------------------------
    Scrolling down slides the dock away and scrolling up brings it back.
@@ -165,8 +171,7 @@ function checkDock(screen){
    something; the number is in its accessible name. */
 function syncDock(el,tab,advice){
   if(!el)return;
-  var list=items(),key=list.map(function(it){return it[1];}).join("|");
-  if(built!==key||!el.firstChild)build(el);
+  if(built!==key(items())||!el.firstChild)build(el);
   var idx=0,btns=el.querySelectorAll(".dock-b");
   for(var i=0;i<btns.length;i++){
     var id=btns[i].getAttribute("data-tab"),on=id===tab;

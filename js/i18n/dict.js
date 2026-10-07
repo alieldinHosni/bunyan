@@ -1532,7 +1532,8 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "A low day. Today's suggestions are lighter; drop a set if you need to, or stop early. It still counts.": "يوم طاقته قليلة. اقتراحات النهاردة أخف؛ شيل مجموعة لو محتاج، أو وقّف بدري. وبرضه بيتحسب.",
 "One set fewer on each exercise": "مجموعة أقل في كل تمرين",
 "One set fewer on 1 exercise.": "مجموعة أقل في تمرين واحد.",
-"One set fewer on {n} exercises.": "مجموعة أقل في {n} تمارين."
+"One set fewer on {n} exercises.": "مجموعة أقل في {n} تمارين.",
+"over your rest": "زيادة عن وقت الراحة"
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;
