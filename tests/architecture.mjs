@@ -16,7 +16,8 @@
    Training shows the logger): the list below. Logic two views need lives in the
    engine, or in a shared ui module (facts.js, coachwords.js), never in a view.
    No import cycles outside the UI. Every import names a file that exists. Every module
-   the app loads is precached for offline.
+   the app loads is precached for offline. The pure engine modules (PURE below) never
+   reach state.js, however indirectly.
 
      node tests/architecture.mjs */
 import fs from "fs";
@@ -108,6 +109,18 @@ for (const f of files){
       if (to.startsWith("js/ui/handlers/") && !/\/(registry|common)\.js$/.test(to))
         bad.push(`${f} imports ${to}: handler modules share code through common.js only`);
 }
+
+/* The pure engine: handed what it needs, it reads no state, so tests/engine.mjs can run
+   it in Node with plain data. Nothing these modules import, directly or through
+   another module, may be state.js (units.js and the words read it too). The coach is
+   held to the same, through its own rule above. */
+const PURE = ["js/engine/body.js", "js/engine/intake.js"];
+for (const f of PURE){
+  const seen = new Set(), todo = [f];
+  while (todo.length){
+    const g = todo.pop(); if (seen.has(g)) continue; seen.add(g);
+    if (g === "js/state.js"){bad.push(`${f} reaches js/state.js: a pure module is handed what it needs`); break;}
+    todo.push(...(graph[g] || []));}}
 
 /* Cycles: strongly connected groups of more than one module, unless all of it is UI. */
 let n = 0; const st = [], on = new Set(), ix = {}, low = {}, cycles = [];

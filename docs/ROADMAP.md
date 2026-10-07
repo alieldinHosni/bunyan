@@ -6,7 +6,7 @@ that stays easy to change as it grows. Each phase ships on its own with its test
 order, and the constraints do not move: offline, no paid or external API, every string
 in Arabic, nothing changes the plan without a tap.
 
-## Where the code stands (measured October 2026, updated after A2)
+## Where the code stands (measured October 2026, updated after A3)
 
 - `js/app.js` was 1,927 lines with one click handler of 275 branches. It is now about
   240 lines of boot and wiring; the branches live by domain in `js/ui/handlers/`,
@@ -14,11 +14,16 @@ in Arabic, nothing changes the plan without a tap.
 - The engine no longer imports the UI, and views no longer borrow logic from each other
   (A1). Both are enforced by `tests/architecture.mjs`, which also fails on an import of
   a file that does not exist and on a tap answered in `app.js`.
-- 8 of the 11 engine modules still read the global state `S` directly, so they can only
-  be tested in a browser. `js/coach/` is pure and has 114 Node tests; the engine has
-  none yet (A3).
-- The guard is the regression suite (118 browser tests), the coach tests, the
-  architecture test and random-tap stress runs in both languages.
+- The body and intake maths (energy, the calorie and protein targets, the weight trend,
+  measurements and body fat, the food log's averages and streaks) lives in
+  `js/engine/body.js` and `js/engine/intake.js`, which are handed what they need and
+  never reach `state.js`; the architecture test holds them to that (A3). The old names
+  in `formulas.js`, `stats.js` and `energy.js` are one-line wrappers that pass `S` in.
+  The rest of the engine (sessions, records, progression, the plan builder) still reads
+  `S` and is next in line as it is touched.
+- The guard is the regression suite (118 browser tests), the coach tests (114), the
+  engine tests (`tests/engine.mjs`), the architecture test and random-tap stress runs
+  in both languages.
 
 ## Where the coaching stands
 
@@ -40,8 +45,8 @@ things are still fixed when they should be learned:
 | B2 | Coaching | **Effort-aware strength** | Max estimates count the reps left in reserve (8 reps at RPE 8 is 10 reps' worth), so a hard set and an easy one stop reading the same. Used by trends, progression and the powerlifting standing. | Done: effort-aware `e1rm()` |
 | B3 | Coaching | **Readiness that acts** | A low "how do you feel" answer turns today's suggestions into a lighter day (hold the weight, one set fewer), shown and overridable; a great day allows the bigger step. | Done: readiness in `recommend()` |
 | A2 | Architecture | **`app.js` split by domain** | The 275-branch handler becomes a registry, with handlers in `ui/handlers/{train,session,food,coach,progress,profile}.js`. `app.js` keeps only boot and wiring. Mechanical, guarded by the full suite and stress runs. | Done: `js/ui/handlers/`, `app.js` 1,942 → about 240 lines |
-| A3 | Architecture | **A testable engine** | Engine functions take what they need (profile, sessions, goals) instead of reading `S`, starting with energy, protein, the weight trend and nutrition. A Node test suite for the engine like the coach's. | Next |
-| B4 | Coaching | **Blocks, not just weeks** | A program runs in blocks: effort builds week by week (reps in reserve 3 → 2 → 1), then a planned lighter week, then the next block. Sets per muscle move from one tap after each session ("too easy / about right / too much") plus the soreness already asked. | |
+| A3 | Architecture | **A testable engine** | Engine functions take what they need (profile, sessions, goals) instead of reading `S`, starting with energy, protein, the weight trend and nutrition. A Node test suite for the engine like the coach's. | Done: `js/engine/body.js`, `intake.js`, `tests/engine.mjs` |
+| B4 | Coaching | **Blocks, not just weeks** | A program runs in blocks: effort builds week by week (reps in reserve 3 → 2 → 1), then a planned lighter week, then the next block. Sets per muscle move from one tap after each session ("too easy / about right / too much") plus the soreness already asked. | Next |
 | B5 | Coaching | **Swaps that understand movement** | Every exercise tagged by movement pattern (squat, hinge, push, pull, carry, …). Pain, missing equipment or "replace" offers swaps that train the same thing. The chat's pain answer uses it. | |
 | A4 | Architecture | **State with a schema** | Documented types for what is stored (JSDoc), versioned migrations with tests, and a check that a restored backup is the app's own shape. | |
 

@@ -5,16 +5,14 @@
    in S.energy and used everywhere maintenance is (formulas.js tdee()), until a later
    measurement differs and they choose to update it. */
 import {learnMaintenance} from "../coach/energy.js";
+import {maintenanceInUseOf} from "./body.js";
 import {tdeeFormula} from "./formulas.js";
+import {intakeDaysOf} from "./intake.js";
 import {dataRev, S} from "../state.js";
 import {num, today} from "../util.js";
 
-/* Each day's logged intake, from every meal's items. */
-function intakeDays(){
-  return Object.keys(S.days||{}).map(function(d){
-    var meals=(S.days[d]||{}).meals||{},k=0;
-    Object.keys(meals).forEach(function(m){((meals[m]||{}).items||[]).forEach(function(i){k+=num(i.kcal);});});
-    return {date:d,kcal:Math.round(k)};});}
+/* Each day's logged intake, from every meal's items (intake.js). */
+function intakeDays(){return intakeDaysOf(S.days);}
 
 var MEMO={k:null,v:null};
 /* What the log measures now, against the formula. Kept until the data changes. */
@@ -29,9 +27,7 @@ function learnedNow(){
   return v;}
 
 /* The maintenance in use: the one the person built their targets on, else the formula. */
-function maintenanceInUse(){
-  var e=S.energy;
-  return e&&num(e.kcal)>0?{kcal:num(e.kcal),source:"learned",at:e.at||""}:{kcal:tdeeFormula(),source:"formula"};}
+function maintenanceInUse(){return maintenanceInUseOf(S.profile,S.body,S.energy);}
 
 /* Worth saying: the log is sure enough (most of the answer is its own) and it differs
    from what the targets are built on by at least 150 kcal or 6%. */
