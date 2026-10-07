@@ -130,9 +130,11 @@ js/
   engine/       plan.js, formulas.js, nutrition.js, warmup.js, splitparse.js,
                 volume.js, mealplan.js, plancheck.js, coachinfo.js, dayplan.js (the
                 plan on a date, the next day to train), share.js (what a friend sees);
-                body.js (energy, targets, the weight trend, body fat) and intake.js
-                (the food log's totals, averages and streaks) are handed what they
-                need and read no state, with tests in engine/test/
+                body.js (energy, targets, the weight trend, body fat), intake.js
+                (the food log's totals, averages and streaks) and lifts.js (loads,
+                volume, maxes, records, stalls, the next weight, the lighter week's
+                case) are handed what they need and read no state, with tests in
+                engine/test/
   i18n/         dict.js (the AR dictionary and t), exnames.js (Arabic exercise names)
   ui/           view.js, render.js, actions.js, sheets.js, facts.js (Progress's plain
                 answers, shared with the chat), coachwords.js (the coach's insights in
@@ -161,10 +163,10 @@ when one crosses a line it shouldn't (it runs in Node in under a second):
 - `app.js` answers no tap itself. Each tap is a branch in one of `js/ui/handlers/`,
   registered at boot by `app.js` in a fixed order; handler modules share code only
   through `common.js`, never by importing each other.
-- The pure engine modules (`body.js`, `intake.js`) never reach `state.js`, directly or
-  through anything they import. They are handed the profile, the weigh-ins, the food log
-  and today's date, and `formulas.js`, `stats.js` and `energy.js` keep their old names as
-  one-line wrappers that pass `S` in. `node tests/engine.mjs` runs their tests in Node,
+- The pure engine modules (`body.js`, `intake.js`, `lifts.js`) and `schema.js` never
+  reach `state.js`, directly or through anything they import. They are handed the
+  profile, the workouts, the weigh-ins, the food log and today's date, and `formulas.js`,
+  `stats.js` and `energy.js` keep their old names as one-line wrappers that pass `S` in. `node tests/engine.mjs` runs their tests in Node,
   along with the movement-pattern check over the whole exercise library.
 
 Four more rules hold this together. Each one is a bug that has already happened here:

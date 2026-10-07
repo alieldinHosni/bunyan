@@ -8,11 +8,16 @@
 import fs from "node:fs";
 import {makeT} from "../js/coach/test/assert.js";
 import {EXTRA} from "../js/data/extra.js";
+import {loadExDB} from "../js/data/exercises.js";
 
 const lib=JSON.parse(fs.readFileSync(new URL("../exercises.json",import.meta.url),"utf8"));
 for(const n of Object.keys(EXTRA))if(!lib[n])lib[n]=EXTRA[n];
+/* The engine reads what an exercise is (its equipment, whether it is bodyweight) from
+   the library, which the app fetches at boot: here it is handed the same file. */
+globalThis.fetch=async()=>({json:async()=>JSON.parse(fs.readFileSync(new URL("../exercises.json",import.meta.url),"utf8"))});
+await new Promise(r=>loadExDB(r));
 
-const files=["engine/test/body","engine/test/intake","data/test/movement","test/schema"];
+const files=["engine/test/body","engine/test/intake","engine/test/lifts","data/test/movement","test/schema"];
 let pass=0,fail=0;
 for(const f of files){
   const n=f.split("/").pop();
