@@ -634,7 +634,6 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
    data-palette and data-theme, so the theme blocks colour it whatever theme is on — as a
    small screen: the ground and its glow, a card with the accent, a figure and a bar, the
    primary button, and the dock. The chosen one is ringed in the current accent. */
-.thlbl{margin:18px 2px 8px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
 .thpicks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .thpick{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;margin:0;
   padding:8px 8px 12px;border-radius:var(--r4);border:1.5px solid var(--border);background:var(--raised);color:var(--text);
@@ -664,6 +663,7 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
   border-radius:50%;background:var(--accent);color:var(--onAccent);box-shadow:0 0 0 2px var(--raised)}
 .thpick-ok svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .seg.thmode{margin:0}
+.thpicks+.seg.thmode{margin-top:12px}
 /* The theme change itself: one cross-fade of the whole screen (js/ui/theme.js), quick
    enough to read as a response, not a performance. */
 ::view-transition-old(root),::view-transition-new(root){animation-duration:280ms;animation-timing-function:var(--e-standard)}
@@ -1925,6 +1925,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tgl i{position:absolute;top:3px;inset-inline-start:3px;width:22px;height:22px;border-radius:11px;background:#fff;
   transition:transform var(--m-micro) var(--e-standard)}
 .tgl.on{background:var(--accent)}
+/* The knob on the accent takes the ink made for it: white on Ghost Green barely
+   showed in Monochrome. */
+.tgl.on i{background:var(--onAccent)}
 .tgl.on i{transform:translateX(20px)}
 [dir="rtl"] .tgl.on i{transform:translateX(-20px)}
 /* ---- Importing a training program (js/ui/views/timport.js) ------------------------
@@ -2455,35 +2458,105 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .librow .ico-chev{color:var(--dim);flex-shrink:0}
 [dir="rtl"] .librow .ico-chev{transform:scaleX(-1)}
 
-/* ================= Profile
-   The one tab with no frame: none of the nineteen top-level frames in the file is a
-   profile screen. So this is built from the language the eleven built frames share
-   rather than from a design of its own — Home's accent-ringed avatar, the Train hub's
-   hero card, and its grouped rows, which put each setting's value under its name
-   instead of squeezed against the chevron. */
+/* ================= Profile and its settings (js/ui/views/profile.js, js/ui/settings.js)
+   One grammar, as a phone's own settings have: groups of rows on a card, a small
+   heading over each, a footnote under it where one is needed. A row's trailing part
+   says what it is: a switch flips, a segmented control shows every choice, a tick
+   marks the chosen one in a longer list, a chevron goes somewhere. Glyph tiles carry
+   the theme's highlight colour, not the accent; the accent is the switch that is on,
+   the chosen segment, and the main button. */
+.sg{margin:22px 0 0}
+.sg-h{margin:0 0 8px;padding-inline-start:4px;font-family:inherit;font-size:11.5px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .sg-h{letter-spacing:0;font-size:12.5px}
+.sg-list{border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);overflow:hidden}
+.sg-f{margin:8px 4px 0;font-size:12.5px;line-height:1.55;color:var(--dim)}
+.srow{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;margin:0;padding:10px 14px;border:0;
+  border-bottom:1px solid var(--border);border-radius:0;background:none;color:var(--text);font:inherit;text-align:start;cursor:pointer;
+  transition:background var(--m-micro) var(--e-standard)}
+.srow:last-child{border-bottom:0}
+button.srow:not(.srow-pick):active,button.srow.tapd{background:var(--surface)}
+.srow-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.srow-n{font-size:15px;font-weight:600;line-height:1.3}
+.srow-s{font-size:12.5px;line-height:1.4;color:var(--dim)}
+.srow-v{flex:none;max-width:45%;font-size:14px;color:var(--dim);text-align:end;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow .ico-chev{flex:none;color:var(--dim)}
+.srow .tgl{flex:none}
+.srow .gtile{width:34px;height:34px;border-radius:10px}
+.gtile .gl{width:19px;height:19px}
+.gtile.warn{color:var(--warning);background:rgba(var(--warning-rgb),.12);box-shadow:inset 0 0 0 1px rgba(var(--warning-rgb),.28)}
+/* A choice among a few: the name over a full-width segmented control. */
+.srow-pick{flex-direction:column;align-items:stretch;gap:10px;padding:12px 14px 14px;cursor:default}
+.srow-pick .seg{margin:0}
+/* A longer choice: the chosen row ticked in the accent. */
+.srow-opt .srow-n{font-weight:500}
+.srow-opt.on .srow-n{font-weight:700}
+.srow-tick{flex:none;display:grid;place-items:center;width:24px;height:24px;color:var(--accentHi)}
+.srow-tick .gl{width:20px;height:20px;stroke-width:2.2}
+.srow-play{flex:none;display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:0 12px;border-radius:var(--rpill);
+  background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair-hi);font-size:13.5px;font-weight:700;color:var(--text)}
+.srow-play .gl{width:16px;height:16px}
+/* Destructive: its own card, apart from the safe rows, in the danger colour. */
+.srow-danger{color:var(--danger)}
+.srow-danger .srow-n{font-weight:700}
+.srow-danger .gtile{color:var(--danger);background:rgba(var(--danger-rgb),.1);box-shadow:inset 0 0 0 1px rgba(var(--danger-rgb),.24)}
+.sg-card{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+.sg-card p{margin:0;font-size:14px;line-height:1.55;color:var(--sub)}
+.sacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.sacts .btn{flex:1 1 auto;width:auto;margin:0}
+/* A monogram: the person's initials on a tile, in the highlight colour. */
+.pmono{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--surface);
+  box-shadow:inset 0 0 0 1px var(--hair-hi);color:var(--secondary);font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:.02em}
+.pmono.lg{width:60px;height:60px;border-radius:18px;font-size:22px}
+.srow.on .pmono{box-shadow:inset 0 0 0 1.5px var(--accent-edge)}
 
-/* Identity. The avatar is Home's, larger, because here it is the subject. */
-.card.phero{display:flex;flex-direction:column;align-items:center;text-align:center;
-  padding:24px 20px 0;margin-bottom:0;overflow:hidden}
-.pavatar{width:72px;height:72px;border-radius:36px;background:var(--accentSoft);
-  border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;
-  font-family:var(--display);font-weight:800;font-size:24px;color:var(--text)}
-.pname{font-family:var(--display);font-weight:800;font-size:22px;margin-top:12px;
-  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pprog{font-size:13px;color:var(--dim);margin-top:4px}
+/* Who this is: a monogram, the name, the goal and the program, and three figures. */
+.pid{border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card);overflow:hidden}
+.pid-top{display:flex;align-items:center;gap:14px;width:100%;margin:0;padding:16px;border:0;background:none;color:var(--text);
+  font:inherit;text-align:start;cursor:pointer}
+.pid-top .ico-chev{flex:none;color:var(--dim)}
+.pid-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.pid-n{font-family:var(--display);font-weight:800;font-size:22px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pid-s{font-size:13px;color:var(--dim);line-height:1.4}
+.pid-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--border)}
+.pid-stats>div{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px}
+.pid-stats>div+div{border-inline-start:1px solid var(--border)}
+.pid-stats b{font-family:var(--display);font-weight:800;font-size:19px;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.pid-stats span{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .pid-stats span{letter-spacing:0;font-size:12px}
 
-/* Three figures, ruled off the card's edges. Equal weight: none of them outranks the
-   others, so none is styled as if it did — the streak used to be the accent-red one. */
-.pstats{display:grid;grid-template-columns:repeat(3,1fr);
-  width:calc(100% + 40px);margin:20px -20px 0;border-top:1px solid var(--border)}
-.pstats>div{padding:14px 4px;display:flex;flex-direction:column;align-items:center;gap:2px}
-.pstats>div+div{border-inline-start:1px solid var(--border)}
-.pstats b{font-family:var(--display);font-weight:800;font-size:20px;
-  font-variant-numeric:tabular-nums}
-.pstats span{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--dim)}
-
-/* The small print, kept — it is the only place the app says where its data lives. */
-.pnote{font-size:12px;color:var(--dim);line-height:1.55;margin:16px 0 0}
+/* Backup: how old the last one is, and what a backup holds, counted. */
+.bk-card{margin:16px 0 0;padding:14px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+.bk-card.warn{border-color:rgba(var(--warning-rgb),.45)}
+.bk-card.warn .gtile{color:var(--warning);background:rgba(var(--warning-rgb),.12)}
+.bk-top{display:flex;gap:12px;align-items:flex-start}
+.bk-top .srow-s{font-size:13px;line-height:1.5;margin-top:2px}
+.bk-holds{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:8px;margin-top:14px}
+.bk-holds>div{display:flex;flex-direction:column;gap:2px;padding:10px 8px;border-radius:var(--r2);background:var(--surface);text-align:center}
+.bk-holds b{font-family:var(--display);font-weight:800;font-size:18px;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.bk-holds span{font-size:11.5px;color:var(--dim)}
+.bk-card>.sg-h{margin:0}
+.bk-card+.btn{margin-top:16px}
+.shc-l{margin-top:12px;border-top:1px solid var(--border)}
+.shc-l>div{display:flex;justify-content:space-between;gap:12px;padding:8px 2px;border-bottom:1px solid var(--border);font-size:13.5px}
+.shc-l>div:last-child{border-bottom:0}
+.shc-l span{color:var(--sub);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shc-l b{flex:none;font-variant-numeric:tabular-nums}
+/* The raw text, for whoever wants it, folded away. */
+details.adv{margin-top:12px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+details.adv>summary{display:flex;align-items:center;justify-content:space-between;min-height:52px;padding:0 14px;
+  font-size:14.5px;font-weight:600;cursor:pointer;list-style:none}
+details.adv>summary::-webkit-details-marker{display:none}
+details.adv>summary::after{content:"";width:8px;height:8px;border:solid var(--dim);border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-4px}
+details.adv[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+details.adv>.btn{margin:0 14px 14px;width:calc(100% - 28px)}
+.adv-t{display:block;width:calc(100% - 28px);height:160px;margin:0 14px 12px;padding:12px;resize:none;border-radius:var(--r2);
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
+/* You: three figures in a row. */
+.aftiles.yt{margin-top:4px}
+/* A sheet takes focus when it opens so a screen reader starts in it; it is not a
+   control, so it draws no focus ring (its controls keep theirs). */
+.sheetbox[tabindex="-1"]:focus{outline:none}
 
 /* ================= Food sheets — frames 13:188 13:266 13:337 13:403 13:464 13:531,
    with the state styles of 13:599. Read from Figma for the first two and from the
@@ -3446,9 +3519,6 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .pgbody-art{width:64px;height:auto;margin:10px auto 0;opacity:.8}
 .phcal{margin-bottom:18px}
 .phcal .dbday:disabled{opacity:.3}
-/* Profile: the swirl as a ring around the initials. */
-.pavwrap{position:relative;width:112px;height:112px;margin:0 auto;display:grid;place-items:center}
-.pring{position:absolute;inset:0;width:100%;height:100%}
 /* Train → Today: the recovery check-in. */
 .rchk{margin-top:14px;padding:14px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
 .rchk-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -3629,34 +3699,91 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .psimple-h b{font-variant-numeric:tabular-nums}
 .psimple p{margin:0;font-size:14px;line-height:1.5;color:var(--sub)}
 .psimple .btn{margin:12px 0 0}
-/* Coach AI → Ask the coach (js/ui/views/chat.js): a guided conversation. The question
-   sits at the end of the line, the answer at the start, as messages do; the newest
-   answer carries its buttons. */
-.chatcard{margin:0 0 var(--s4);padding:14px 14px 14px;border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card)}
-.chatcard-h p{margin:4px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
-.chatcard>.btn{margin:0}
-.chat-chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 16px}
-.chat-chips.tight{margin:12px 0}
-.chat-chip{min-height:36px;padding:7px 13px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
-  color:var(--text);font:inherit;font-size:13.5px;font-weight:600;line-height:1.3;text-align:start;cursor:pointer}
-:root:not(.tch) .chat-chip:active,.chat-chip.tapd{border-color:var(--accent-edge);background:var(--accent-tint)}
-.chat-clear{margin-inline-start:auto}
-.chat{display:flex;flex-direction:column;gap:10px;margin:14px 0 0}
-.chat-q{align-self:flex-end;max-width:84%;padding:10px 14px;border-radius:18px;border-end-end-radius:5px;
-  border:1px solid var(--accent-edge);background:var(--accent-tint)}
+/* ---- glyphs (js/ui/glyphs.js) --------------------------------------------------
+   Line icons on the 24px grid: a 1.75 stroke in the text colour, square caps, mitred
+   joins. A glyph tile is the square they sit in, in the theme's highlight colour
+   (Glacier Blue on Red dark) rather than the accent, which stays for actions. */
+.gl{display:block;width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;
+  stroke-linecap:square;stroke-linejoin:miter}
+.gtile,.chat-gl{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:var(--r2);
+  background:var(--surface);color:var(--secondary);box-shadow:inset 0 0 0 1px var(--hair)}
+/* An eyebrow: small, spaced capitals in the quiet ink. Arabic has no capitals, and
+   spacing pulls its joined letters apart, so it is set plain. */
+.eyebrow,.chat-grp-h,.chat-next-h,.chat-ak{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .eyebrow,[dir="rtl"] .chat-grp-h,[dir="rtl"] .chat-next-h,[dir="rtl"] .chat-ak{letter-spacing:0;font-size:12.5px}
+
+/* ---- Coach AI → Ask the coach (js/ui/views/chat.js) ------------------------------
+   A guided coach, not a chatbot: the header says where answers come from; the opening
+   screen lists what can be asked, by subject; a question is a short neutral line on
+   the reading side and an answer a card that names its subject, with lists as ruled
+   rows, notes set apart and its buttons last. The box to type in floats above the
+   dock, so it stays in reach in a long conversation; it is glass of the page's own
+   ground, not the dock's dark chrome, because what is typed in it is page ink. */
+.chat-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.chat-head-t{flex:1;min-width:0}
+.chat-head h1{font-size:26px;line-height:1.15}
+.chat-priv{display:flex;align-items:center;gap:6px;margin:3px 0 0;font-size:12.5px;color:var(--dim)}
+.chat-priv .gl{width:14px;height:14px;stroke-width:2}
+.chat-clear{flex:none;color:var(--dim);margin-inline-end:-8px}
+.chat-clear .gl{width:22px;height:22px}
+.chat{display:flex;flex-direction:column;gap:22px;margin:14px 0 0}
+.chat-hi{margin:2px 0 0;font-size:15px;line-height:1.55;color:var(--sub)}
+.chat-grp-h{margin:0 0 8px;padding-inline-start:4px}
+.chat-topics{border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);overflow:hidden}
+.chat-topic{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:10px 14px;border:0;
+  border-bottom:1px solid var(--border);background:none;color:var(--text);font:inherit;font-size:15px;font-weight:600;
+  line-height:1.35;text-align:start;cursor:pointer;transition:background var(--m-micro) var(--e-standard)}
+.chat-topic:last-child{border-bottom:0}
+.chat-topic .chat-gl{width:34px;height:34px}
+.chat-topic-q{flex:1;min-width:0}
+.chat-topic .ico-chev{color:var(--dim)}
+:root:not(.tch) .chat-topic:active,.chat-topic.tapd{background:var(--surface)}
+.chat-dis{margin:-8px 4px 0;font-size:12.5px;line-height:1.55;color:var(--dim)}
+.chat-x{display:flex;flex-direction:column;gap:8px}
+.chat-q{align-self:flex-end;max-width:84%;padding:9px 14px;border-radius:18px;border-end-end-radius:6px;
+  background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair-hi)}
 .chat-q p{margin:0;font-size:15px;line-height:1.45;overflow-wrap:anywhere}
-.chat-a{align-self:flex-start;max-width:94%;padding:12px 14px;border-radius:18px;border-end-start-radius:5px;
-  border:1px solid var(--border);background:var(--raised)}
-.chat-a p{margin:0 0 8px;font-size:14.5px;line-height:1.55}
-.chat-a ul{margin:0 0 8px;padding-inline-start:18px}
-.chat-a li{margin:0 0 4px;font-size:14px;line-height:1.5;font-variant-numeric:tabular-nums}
+.chat-a{padding:14px 16px 16px;border-radius:22px;border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card)}
+.chat-x:not(.live) .chat-a{box-shadow:none}
+.chat-ah{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+.chat-ah .chat-gl{width:32px;height:32px;border-radius:10px}
+.chat-ah .gl{width:18px;height:18px}
+.chat-ah-t{display:flex;flex-direction:column;min-width:0;gap:1px}
+.chat-at{font-family:var(--display);font-weight:700;font-size:16px;line-height:1.25}
+.chat-a p{margin:0 0 10px;font-size:15px;line-height:1.55}
+.chat-l{list-style:none;margin:2px 0 12px;padding:0;border-top:1px solid var(--border)}
+.chat-l li{padding:9px 0;border-bottom:1px solid var(--border);font-size:14.5px;line-height:1.45;font-variant-numeric:tabular-nums}
+.chat-a .chat-n{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:var(--r2);
+  background:var(--surface);font-size:13.5px;line-height:1.5;color:var(--sub)}
+.chat-n .gl{width:16px;height:16px;margin-top:2px;color:var(--dim)}
 .chat-a>:last-child{margin-bottom:0}
-.chat-a .chat-n{font-size:13px;color:var(--sub)}
-.chat-hi p{margin:0}
-.chat-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.chat-form{display:flex;gap:8px;align-items:center;margin:0 0 8px}
-.chat-form input{flex:1;min-width:0;min-height:48px;margin:0;font-size:16px}
-.btn.chat-send{flex:none;width:auto;min-height:48px;margin:0;padding:0 20px}
+.chat-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chat-acts .btn{flex:1 1 auto;width:auto;margin:0}
+.chat-next{margin:22px 0 0}
+.chat-next-h{margin:0 0 8px;padding-inline-start:4px}
+.chat-chips{display:flex;flex-wrap:wrap;gap:8px}
+.chat-chip{min-height:40px;padding:8px 14px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--raised);
+  color:var(--text);font:inherit;font-size:14px;font-weight:600;line-height:1.3;text-align:start;cursor:pointer}
+:root:not(.tch) .chat-chip:active,.chat-chip.tapd{background:var(--surface);border-color:var(--hair-hi)}
+.chat-form{position:sticky;z-index:5;bottom:calc(var(--navh) + 10px);display:flex;align-items:center;gap:8px;
+  margin:20px 0 10px;padding:5px;padding-inline-start:18px;border-radius:var(--rpill);border:1px solid var(--hair-hi);
+  background:rgba(var(--bg-rgb),.84);box-shadow:var(--shadow-float);-webkit-backdrop-filter:blur(20px) saturate(1.5);backdrop-filter:blur(20px) saturate(1.5);
+  transition:bottom var(--m-screen) var(--e-ios),border-color var(--m-micro) var(--e-standard)}
+body.kb .chat-form,body:has(nav.dhid) .chat-form{bottom:max(10px,env(safe-area-inset-bottom))}
+.chat-form:focus-within{border-color:var(--accent-edge)}
+.chat-form input{flex:1;min-width:0;min-height:44px;margin:0;padding:0;border:0;border-radius:0;background:none;font-size:16px}
+.chat-form input:focus{border:0}
+.chat-send{flex:none;display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:22px;
+  background:var(--accent);color:var(--onAccent);cursor:pointer}
+.chat-send .gl{width:20px;height:20px;stroke-width:2.1}
+:root:not(.tch) .chat-send:active,.chat-send.tapd{transform:scale(.94)}
+/* Coach AI's card: what it is, three questions, and the rest of the conversation. */
+.chatcard{margin:0 0 var(--s4);padding:16px;border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card)}
+.chatcard-h{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+.chatcard-t{display:block;font-family:var(--display);font-weight:700;font-size:17px;line-height:1.2}
+.chatcard-s{display:block;margin-top:3px;font-size:13px;line-height:1.45;color:var(--sub)}
+.chatcard .chat-topics{margin:0 0 12px;background:var(--well)}
+.chatcard>.btn{margin:0}
 </style>
 </head>
 <body>

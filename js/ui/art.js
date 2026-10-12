@@ -118,16 +118,10 @@ var ART={
     ["M140 34C150 50 150 66 140 72V110","a"],
     ["M74 26C68 18 80 12 74 4M86 28C92 20 80 14 86 6","b"]],
     e:[[60,14,1.2],[100,12,1],[132,24,1.1]]},
-  /* Profile: the swirl as a ring around the initials. */
-  ring:{vb:"0 0 160 160",s:[
-    ["M12 80A68 56 0 1 0 148 80A68 56 0 1 0 12 80","a"],
-    ["M12 80A68 56 0 1 0 148 80A68 56 0 1 0 12 80","b",60],
-    ["M12 80A68 56 0 1 0 148 80A68 56 0 1 0 12 80","b",120],
-    ["M20 80A60 52 0 1 0 140 80A60 52 0 1 0 20 80","b",30],
-    ["M20 80A60 52 0 1 0 140 80A60 52 0 1 0 20 80","b",150]],
-    e:[[148,62,1.6],[18,108,1.2]]}
 };
-var CX={ring:[80,80]};
+/* The point a stroke's rotation (its third field) turns about, per drawing; the
+   origin where a drawing has none. */
+var CX={};
 
 function strokes(name){
   var a=ART[name],c=CX[name]||[0,0];

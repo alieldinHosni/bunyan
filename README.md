@@ -32,8 +32,9 @@ opens full screen and works with no signal.
 
 ## Back up your data
 
-Profile → Backup and reset → Export a backup. Copy the text into a note or email it to
-yourself. If you clear Safari's data, change phones, or delete the home screen app, the
+Profile → Backup and reset → Save a backup. It shows what the backup holds (workouts,
+food days, weigh-ins, programs) and saves it as a file; the text itself, to paste into a
+note or an email, is under Copy as text. If you clear Safari's data, change phones, or delete the home screen app, the
 backup is the only way to get your history back. Clearing site data now wipes both
 localStorage and IndexedDB, so it is no less important than before.
 
@@ -48,7 +49,8 @@ profile in Profile → Add a profile. Separate log, separate weight, separate ev
 The first profile is the admin and cannot be deleted.
 
 **Share codes** are how you follow a friend on his own phone. He taps
-Profile → Share my progress, copies the text, sends it to you. You open
+Profile → Share my progress, sees what it holds (sessions, volume, weight, best lifts),
+taps Copy the code and sends it to you. You open
 Profile → Friends I follow, paste it, and see his sessions, volume, best lifts and
 weight trend, read only.
 
@@ -99,11 +101,19 @@ phone from the person's own log, plan and targets, with the same engines as the 
 the app, so it never says more than the app knows; a question outside that set is
 told so. Nothing is sent anywhere and no model writes the text. The newest answer
 carries its buttons (start the workout, log the plan, a 150 kcal step on the target,
-set the goal), each with Undo; the last 30 questions are kept.
+set the goal), each with Undo; the last 30 questions are kept. It opens on what can be
+asked, by subject (training, food, progress); each answer is a card that names its
+subject, with its lists as ruled rows and its notes set apart; the box to type in stays
+above the dock.
 - **Progress** (`views/progress.js`) has two slides: *Simple*, five plain answers
   (training this week, weight, strength, food, records), and *Detailed*, the charts
   and numbers a coach reads.
-- **Profile**: settings, profiles, backups.
+- **Profile** (`views/profile.js`, `settings.js`): who this is (the goal, the program,
+  workouts, streak, weight), then grouped rows that each say what is set: You, Training,
+  Nutrition, App; the profiles on the phone, sharing, friends; the backup (how old it
+  is, and a warning when there is none) and About. Every setting is a switch, a
+  segmented choice with every option in sight, or a ticked list; none is a drop-down,
+  and a backup is shown as what it holds, not as its text.
 
 Each thing has one place. Planning screens open over Coach and back returns there;
 logging happens on Training and Food only.
@@ -137,9 +147,10 @@ js/
                 and keeps each answer until the data changes) are handed what they
                 need and read no state, with tests in engine/test/
   i18n/         dict.js (the AR dictionary and t), exnames.js (Arabic exercise names)
-  ui/           view.js, render.js, actions.js, sheets.js, facts.js (Progress's plain
-                answers, shared with the chat), coachwords.js (the coach's insights in
-                words), views/{train,home,session,food,coach,chat,progress,profile,
+  ui/           view.js, render.js, actions.js, sheets.js, settings.js (Profile's
+                settings sheets), glyphs.js (the line icons of the chat and Profile),
+                facts.js (Progress's plain answers, shared with the chat), coachwords.js
+                (the coach's insights in words), views/{train,home,session,food,coach,chat,progress,profile,
                 assess,warmup,pcheck}.js
   ui/handlers/  what every tap does, by domain: shell (moving around, sheets, the date
                 bar), train, session, food, coach, progress, profile; fields.js for
