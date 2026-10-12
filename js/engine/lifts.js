@@ -88,6 +88,9 @@ function prIn(log,name){
       if(x.wu)return;
       var w=num(x.w),r=num(x.r);
       if(w>best.w){best.w=w;best.reps=r;best.date=s.date;}
+      /* A lift only ever done at body weight has history too: without a date here it
+         could never set a record. */
+      if(!best.date)best.date=s.date;
       var ld=loadIn(log,name,w,s.date),er=e1RM(ld,r,x.rpe);if(er>best.e)best.e=er;
       if(ld*r>best.vol)best.vol=ld*r;
     });});});
@@ -204,6 +207,7 @@ function recommendIn(log,e,ctx){
   var top=0,topR=0,rpes=[];
   p.sets.forEach(function(x){
     if(num(x.w)>top){top=num(x.w);topR=num(x.r);}
+    else if(!top&&num(x.r)>topR)topR=num(x.r);   /* body weight alone: the best reps */
     if(x.rpe)rpes.push(x.rpe);});
   var avg=rpes.length?rpes.reduce(function(a,b){return a+b;},0)/rpes.length:0;
   var hitTop=p.sets.filter(function(x){return num(x.r)>=e.planned.hi;}).length>=Math.max(1,p.sets.length-1);

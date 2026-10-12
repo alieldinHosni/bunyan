@@ -38,6 +38,9 @@ function run(t){
   t.eq(recordIn(log,SQ,set(108,6),[],NOW),{k:"e",n:SQ,w:108,r:6,e:129.6},"a better estimated max");
   t.eq(recordIn(log,SQ,set(100,6),[],NOW),{k:"r",n:SQ,w:100,r:6},"more reps at that weight or heavier");
   t.eq(recordIn(log,SQ,set(100,6),[set(100,7)],NOW),null,"not when a set earlier today already did it");
+  var pu={body:[],weight:80,sessions:[sess(4,[[PU,[set(0,10),set(0,8)]]])]};
+  t.eq([prIn(pu,PU).date,recordIn(pu,PU,set(0,12),[],NOW),recordIn(pu,PU,set(0,10),[],NOW)],[back(4),{k:"e",n:PU,w:0,r:12,e:112},null],
+    "a lift only done at body weight has history: more reps is a record, the same is not");
   t.eq([recordIn(log,"Leg Press",set(200,10),[],NOW),recordIn(log,SQ,set(150,3,0,true),[],NOW),recordIn(log,SQ,set(150,0),[],NOW)],[null,null,null],
     "the first time, a warm-up, or no reps: no record");
 
@@ -80,7 +83,7 @@ function run(t){
   var am=recommendIn(hist,{name:BP,planned:{sets:1,lo:0,hi:0,amrap:true}},ctx);
   t.eq(am,{w:80,lo:0,hi:0,amrap:true,last:"80 × 10"},"as many as you can: last time's best is the target");
   var bw=recommendIn({body:[],weight:80,sessions:[sess(3,[[PU,[set(0,8),set(0,8)]]])]},{name:PU,planned:{sets:3,lo:6,hi:10}},ctx);
-  t.eq([bw.w,bw.bw],[0,true],"body weight alone: progress by reps");
+  t.eq([bw.w,bw.bw,bw.last],[0,true,"8"],"body weight alone: progress by reps, from last time's reps");
   t.clean(up,"a suggestion: no NaN or undefined");
 
   /* ---- the next weight once the top is reached ---- */

@@ -978,6 +978,19 @@ await test("Bodyweight lifts: the box is added weight, and body weight counts in
   await page.fill('#in_w','0');await page.fill('#in_r','9');await page.tap('[data-logset]');await pause(page,900);
   eq(await ev(page,"S.active.entries[S.active.entries.length-1].sets[0].w"),0,"logged as body weight alone");
 },{prefs:{autorest:false}});
+await test("Bodyweight lifts: done only at body weight, more reps is a record, and last time reads in reps",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");
+    st.S.sessions=[{id:"bw1",date:"2026-01-05",dayId:"x",entries:[{name:"Pullups",sets:[{w:0,r:10},{w:0,r:8}]}]}];st.saveDB();});
+  eq(await F(page,`F.recommend({name:"Pullups",planned:{sets:3,lo:6,hi:12}}).last`),"10","last time: the best reps, not the 0 added");
+  await startWorkout(page);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.sd={addlive:true};(await import("/js/ui/actions.js")).addExercise("Pullups");});
+  await pause(page,400);
+  const last=await ev(page,"S.active.entries.length-1");
+  await page.tap('[data-exlist]');await pause(page,400);await page.tap('#sheet [data-jumpl="'+last+'"]');await pause(page,400);
+  await page.fill('#in_w','0');await page.fill('#in_r','12');await page.tap('[data-logset]');await pause(page,300);
+  const msg=await page.$eval(".toast",e=>e.innerText);
+  if(msg.indexOf("\u{1F3C6}")<0||msg.indexOf("BW \u00d7 12")<0)throw new Error("no record toast for 0 × 12 after 0 × 10: "+msg);
+},{prefs:{autorest:false}});
 await test("Exercises: a sideways swipe moves between them; a nudge or a vertical drag does not; arrows, list and segments agree",async(page,env)=>{
   await startWorkout(page);
   const cdp=await env.ctx.newCDPSession(page);
