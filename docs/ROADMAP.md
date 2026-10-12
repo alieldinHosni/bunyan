@@ -22,13 +22,16 @@ in Arabic, nothing changes the plan without a tap.
   The lifts' maths followed (A5): `js/engine/lifts.js` has the load a set moved,
   volume, estimated maxes, last time, records, stalls, the next weight step, the
   lighter week's case, weekly sets and the suggestion for the next set, handed the log.
-  Progress's figures (`stats.js`), the plan builder and the meal plan still read `S`
-  and are next as they are touched.
+  Then Progress's figures: `js/engine/figures.js` has the overview, volume over time,
+  each lift's record and estimated max, where the sets went, this week's sets and
+  cardio, and the summary cards; `stats.js` passes the log in and keeps each answer
+  until the data changes. The plan builder and the meal plan still read `S` and are
+  next as they are touched.
 - What a profile stores is written down in `js/schema.js` (JSDoc types), with its
   defaults, the shape check every load runs, versioned migrations (the blob records
   `v`; each step runs once, in order) and the check a restored backup must pass (A4).
 - The guard is the regression suite (136 browser tests), the coach tests (143), the
-  engine, data and schema tests (`tests/engine.mjs`, 185), the architecture test and
+  engine, data and schema tests (`tests/engine.mjs`, 214), the architecture test and
   random-tap stress runs in both languages.
 
 ## Where the coaching stands
@@ -44,8 +47,7 @@ fixed now learns from the person:
 - **Swaps** keep the movement: every exercise has a pattern, and pain, missing kit, the
   Replace sheet and the chat all offer what trains the same thing (B5).
 
-The phases below are done but the last, which continues A3 through the rest of the
-engine. New coaching earns its place by the same rules.
+Every phase below is done. New coaching earns its place by the same rules.
 
 ## Phases
 
@@ -60,7 +62,7 @@ engine. New coaching earns its place by the same rules.
 | B4 | Coaching | **Blocks, not just weeks** | A program runs in blocks: effort builds week by week (reps in reserve 3 → 2 → 1), then a planned lighter week, then the next block. Sets per muscle move from one tap after each session ("too easy / about right / too much") plus the soreness already asked. | Done: `js/coach/block.js`, `js/engine/blocks.js` |
 | B5 | Coaching | **Swaps that understand movement** | Every exercise tagged by movement pattern (squat, hinge, push, pull, carry, …). Pain, missing equipment or "replace" offers swaps that train the same thing. The chat's pain answer uses it. | Done: `js/data/movement.js` |
 | A4 | Architecture | **State with a schema** | Documented types for what is stored (JSDoc), versioned migrations with tests, and a check that a restored backup is the app's own shape. | Done: `js/schema.js` |
-| A5 | Architecture | **The lifts' maths, testable** | A3 for the workout history: the load a set moved, volume, estimated maxes, last time, records, stalls, the next weight step, the lighter week's case and the suggestion for the next set take the log instead of reading `S`, with Node tests. Then Progress's figures (`stats.js`). | Lifts done: `js/engine/lifts.js`; `stats.js` next |
+| A5 | Architecture | **The lifts' maths, testable** | A3 for the workout history: the load a set moved, volume, estimated maxes, last time, records, stalls, the next weight step, the lighter week's case and the suggestion for the next set take the log instead of reading `S`, with Node tests. Then Progress's figures (`stats.js`). | Done: `js/engine/lifts.js`, `js/engine/figures.js` |
 
 ## Rules for every phase
 
