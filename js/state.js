@@ -5,25 +5,12 @@ import {rd, rdRaw, today, uid, wr, wrRaw} from "./util.js";
 import {clearProfile, deleteSession, loadDays, loadSessions, putAll, putDays, putSession, updateSession,
         replaceAll, replaceAllDays} from "./db.js";
 import {clearPhotos} from "./photostore.js";
+import {copyProgram, DEF, migrateDB, normalize} from "./schema.js";
 
 /* ============================================================ state */
-var DEF={
-  v:2,theme:"dark",unit:"kg",
-  /* No body stats by default. These were one person's real measurements, hardcoded
-     in early development, and everyone else was handed them — along with a macro
-     target that looked calculated before anything had been entered. */
-  profile:{age:null,height:null,weight:null,sex:"m",activity:1.4,goal:"lose",prog:"standard",
-           level:"some",days:3},
-  onboarded:false,plannedWeekly:14,
-  gear:null,favs:[],skip:[],
-  myFoods:[],savedMeals:[],freq:{},
-  prefs:{palette:"red",rpe:"last",autorest:true,sound:true,awake:true,compact:false,splash:true,
-         warn:10,unit:"kg",view:"set",haptic:true,anim:true,lang:"en"},
-  goals:{kcal:1950,p:175,c:170,f:62,water:3000,steps:9000},
-  programs:[],activeProgram:null,myEx:[],
-  lastBackup:0,backupSnooze:0,
-  sessions:[],active:null,body:[],days:{}
-};
+/* What S holds, its defaults (DEF), filling in what a blob is missing (normalize) and
+   carrying old shapes forward (migrateDB) live in js/schema.js, which is pure and
+   tested in Node. */
 /* ---- profiles: each one is a completely separate log on this device ---- */
 var PROFILES=null,CUR=null;
 /* Nothing here runs on import: app.js calls initState() before its first
@@ -65,50 +52,6 @@ var DAYS_IDB=false, BLOB_SAID_DAYS=false;
    instead, and a spare write of one small day record costs nothing. */
 var DIRTY=Object.create(null);
 
-/* Loading S and filling in missing defaults is the same work on boot and on
-   profile switch, so both go through hydrate(). */
-/* Whatever the blob holds, the rest of the app gets every section it reads, of the
-   type it expects. A blob from an older version, a partial restore or a hand-edited
-   backup used to leave, say, S.goals undefined — and every render then threw. */
-function normalize(o){
-  if(!o||typeof o!=="object"||Array.isArray(o))o={};
-  var d=JSON.parse(JSON.stringify(DEF));
-  ["profile","prefs","goals"].forEach(function(k){
-    var v=o[k];
-    o[k]=Object.assign({},d[k],(v&&typeof v==="object"&&!Array.isArray(v))?v:{});});
-  ["favs","skip","myFoods","savedMeals","programs","myEx","body","sessions"].forEach(function(k){
-    if(!Array.isArray(o[k]))o[k]=[];});
-  ["freq","days","daySwap","incr","deload"].forEach(function(k){
-    if(!o[k]||typeof o[k]!=="object"||Array.isArray(o[k]))o[k]={};});
-  Object.keys(d).forEach(function(k){if(!(k in o))o[k]=d[k];});
-  if(o.myPlan&&!Array.isArray(o.myPlan.days))o.myPlan=null;
-  /* Maintenance measured from the log and chosen as the base for the targets
-     (js/engine/energy.js): a plausible number of kcal, or nothing. */
-  if(o.energy!=null&&!(o.energy&&typeof o.energy==="object"&&+o.energy.kcal>=1000&&+o.energy.kcal<=6000))delete o.energy;
-  /* The coach chat's kept conversation (js/ui/views/chat.js): a list, or nothing. */
-  if(o.chat!=null&&!Array.isArray(o.chat))delete o.chat;
-  /* The day's meals (js/engine/meals.js): a list of {id, name?, plan?, todo?}, or
-     absent for the usual four. Anything else is dropped rather than half-trusted. */
-  if(o.mealSlots!=null){
-    if(!Array.isArray(o.mealSlots))delete o.mealSlots;
-    else{
-      o.mealSlots=o.mealSlots.filter(function(x){return x&&typeof x.id==="string"&&x.id;});
-      o.mealSlots.forEach(function(x){
-        if(x.name!=null&&typeof x.name!=="string")delete x.name;
-        if(x.plan!=null&&!Array.isArray(x.plan))delete x.plan;
-        if(x.todo!=null&&!Array.isArray(x.todo))delete x.todo;});
-      if(!o.mealSlots.length)delete o.mealSlots;}}
-  if(o.active){
-    if(typeof o.active!=="object"||!Array.isArray(o.active.entries))o.active=null;
-    else o.active.entries.forEach(function(e){
-      if(!Array.isArray(e.sets))e.sets=[];
-      if(!e.planned||typeof e.planned!=="object")e.planned={sets:3,lo:8,hi:12};});}
-  o.sessions=o.sessions.filter(function(s){return s&&Array.isArray(s.entries)&&typeof s.date==="string";});
-  o.body=o.body.filter(function(b){return b&&typeof b.date==="string";});
-  /* A weight step per exercise, in kg: only real positive numbers survive. */
-  Object.keys(o.incr).forEach(function(n){var v=+o.incr[n];if(!(v>0&&v<=50))delete o.incr[n];});
-  return o;
-}
 /* Set when the stored blob could not be read at start-up, so the app can say so once
    instead of silently starting over. */
 var STARTUP_NOTE=null;
@@ -311,21 +254,10 @@ function storageKey(){return dbKey();}
      program.schedule "week" (days pinned to weekdays, day.wd = [1..7], Monday = 1)
                       or "cycle" (the next day in order, whenever you train) */
 function tpl(id){return PRESETS().filter(function(p){return p.id===id;})[0]||null;}
-function normProg(p){
-  p.schedule=p.schedule==="week"?"week":"cycle";
-  (p.days||(p.days=[])).forEach(function(d){
-    if(!Array.isArray(d.wd))d.wd=[];if(!Array.isArray(d.ex))d.ex=[];});
-  delete p.source;delete p.custom;
-  return p;}
 /* Your own copy of a template (or of any program), with fresh ids. */
 function makeProgram(src,opts){
-  opts=opts||{};
-  var c=JSON.parse(JSON.stringify(src));
-  c.from=src.from||(tpl(src.id)?src.id:null);
-  c.id=uid();
-  c.days.forEach(function(d){d.id=uid();d.ex.forEach(function(e){e.id=uid();});});
-  normProg(c);
-  if(opts.schedule)c.schedule=opts.schedule;
+  var c=copyProgram(src,{uid:uid,template:tpl});
+  if(opts&&opts.schedule)c.schedule=opts.schedule;
   return c;}
 function programById(id){return (S.programs||[]).filter(function(p){return p.id===id;})[0]||null;}
 /* Adds a program, optionally making it the active one. Re-running setup or picking
@@ -338,30 +270,14 @@ function addProgram(p,activate){
   S.programs.push(p);
   if(activate||!S.activeProgram||!programById(S.activeProgram))S.activeProgram=p.id;
   return p;}
-/* Older saves: the v1 list of splits, then the v2 "active copy + saved splits". Both
-   become owned programs. The active copy keeps its day ids, which history and the
-   schedule are keyed on; a saved split it was a copy of is merged into it. */
+/* Older saves are carried forward one numbered version at a time (js/schema.js
+   migrateDB: v1 splits and v2's active copy become programs you own), and every load
+   leaves at least one program and an active one that exists. Saved when anything was
+   carried forward or created. */
 function migrate(){
-  if(Array.isArray(S.programs)&&S.programs.length){
-    S.programs.forEach(normProg);
-    if(!programById(S.activeProgram))S.activeProgram=S.programs[0].id;
-    delete S.myPlan;delete S.userSplits;return;}
-  var legacy=[],mp=S.myPlan&&Array.isArray(S.myPlan.days)?S.myPlan:null;
-  if(!mp&&Array.isArray(S.splits)&&S.splits.length){
-    var act=S.splits.filter(function(x){return x.id===S.currentSplit;})[0]||S.splits[0];
-    mp=JSON.parse(JSON.stringify(act));mp.source=mp.source||(mp.id==="plan"?"ap":mp.id);
-    legacy=S.splits.filter(function(x){return x.custom&&x!==act&&!tpl(x.id)&&x.id!=="plan";});}
-  var progs=(S.userSplits||[]).concat(legacy).map(function(u){return normProg(JSON.parse(JSON.stringify(u)));});
-  var active=null;
-  if(mp){
-    var same=progs.filter(function(q){return q.id===mp.source;})[0];
-    if(same){same.days=JSON.parse(JSON.stringify(mp.days));same.name=mp.name;normProg(same);active=same.id;}
-    else{var np=normProg(JSON.parse(JSON.stringify(mp)));np.from=tpl(mp.source)?mp.source:null;np.id=uid();
-      progs.unshift(np);active=np.id;}}
-  if(!progs.length){var fb=makeProgram(tpl("fb"));progs.push(fb);active=fb.id;}
-  S.programs=progs;S.activeProgram=active||progs[0].id;
-  delete S.myPlan;delete S.userSplits;delete S.splits;delete S.currentSplit;
-  saveDB();
+  var had=(S.programs||[]).length;
+  var ran=migrateDB(S,{uid:uid,template:tpl});
+  if(ran.length||!had)saveDB();
 }
 /* The active program. Named split() for the many callers that already use it. */
 function split(){

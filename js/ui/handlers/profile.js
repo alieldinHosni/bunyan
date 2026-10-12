@@ -7,6 +7,7 @@ import {friends, saveFriends} from "../../engine/share.js";
 import {t} from "../../i18n/dict.js";
 import {applyLang} from "../../i18n/exnames.js";
 import {adoptRestored, CUR, curProfile, isOwner, migrate, normalize, S, saveDB, setS, switchProfile} from "../../state.js";
+import {checkBackup} from "../../schema.js";
 import {toDisp, toKg, wUnit} from "../../units.js";
 import {fmtN, num, today} from "../../util.js";
 import {ACT, askConfirm, askText, openSheet, val} from "../actions.js";
@@ -15,13 +16,13 @@ import {changeLook, themeOf} from "../theme.js";
 import {alarmStart, keepAwake, toast, V} from "../view.js";
 import {has, key} from "./registry.js";
 
-/* A backup is ours if it is an object carrying at least one thing only Bunyan writes.
-   Old backups (with `splits`) still qualify; migrate() upgrades them. */
+/* The text of a backup, read and checked (js/schema.js checkBackup): {o, check}, or
+   null when it is not JSON at all. A backup is ours if it carries at least one thing
+   only Bunyan writes; old ones (with `splits`) still qualify, and migrate() carries
+   them forward. One from a newer version of the app, or damaged, is refused. */
 function parseBackup(txt){
   var o;try{o=JSON.parse(String(txt||"").trim());}catch(e){return null;}
-  if(!o||typeof o!=="object"||Array.isArray(o))return null;
-  var ours=Array.isArray(o.sessions)||Array.isArray(o.programs)||o.myPlan||Array.isArray(o.splits)||(o.prefs&&typeof o.prefs==="object")||o.profile;
-  return ours?o:null;
+  return {o:o,check:checkBackup(o)};
 }
 /* A backup as a file: the share sheet where it can take files (iPhone: Save to
    Files, AirDrop, Mail), a download elsewhere. Copying tens of kilobytes of text out
@@ -154,13 +155,16 @@ function register(){
      It used to insist on a `splits` key that migrate() deletes on every start, so no
      backup this version wrote could ever be restored. */
   key("dorestore",function(){
-    var parsed=parseBackup(val("rs"));
-    if(!parsed){toast(t("That does not look like a Bunyan backup."));return;}
-    var nd=Object.keys(parsed.days||{}).length;
+    var parsed=parseBackup(val("rs")),ck=parsed&&parsed.check;
+    if(!ck||!ck.ok){
+      toast(t(ck&&ck.why==="newer"?"This backup is from a newer version of Bunyan. Update the app, then restore it."
+        :ck&&ck.why==="damaged"?"This backup is damaged and can't be restored."
+        :"That does not look like a Bunyan backup."));return;}
     askConfirm({title:t("Replace everything with this backup?"),icon:"leave",danger:true,
-      body:(parsed.sessions||[]).length+" "+t("workouts")+", "+nd+" "+t("food days")+". "
+      body:ck.sessions+" "+t("workouts")+", "+ck.days+" "+t("food days")+". "
+        +(ck.dropped?ck.dropped+" "+t(ck.dropped===1?"damaged workout is left out.":"damaged workouts are left out.")+" ":"")
         +t("Everything currently on this profile is replaced."),
-      cta:t("Restore"),act:"restore",data:parsed,hard:true});return;});
+      cta:t("Restore"),act:"restore",data:parsed.o,hard:true});return;});
   has("bkfile",function(){downloadBackup();return;});
   /* The one place a typed confirmation is warranted: nothing here is recoverable
      without a backup, and the button sits in a list of harmless ones. */

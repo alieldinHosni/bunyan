@@ -411,6 +411,11 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "A new training block starts today.": "بلوك تمرين جديد بيبدأ النهارده.",
 "{n} more than the plan": "{n} زيادة عن الخطة",
 "{n} fewer than the plan": "{n} أقل من الخطة",
+/* Restoring a backup (js/schema.js checkBackup) */
+"This backup is from a newer version of Bunyan. Update the app, then restore it.": "النسخة دي من إصدار أحدث من بنيان. حدّث التطبيق، وبعدين استرجعها.",
+"This backup is damaged and can't be restored.": "النسخة دي بايظة ومينفعش تترجع.",
+"damaged workout is left out.": "تمرينة بايظة هتتساب.",
+"damaged workouts are left out.": "تمرينات بايظة هتتساب.",
 /* Movement patterns (js/data/movement.js) */
 "Lunge and single leg": "طعن ورجل واحدة",
 "Hip thrust and bridge": "رفع الحوض والكوبري",

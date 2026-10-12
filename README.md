@@ -121,7 +121,8 @@ js/
   scan.js       camera barcode scanning, and the overlay it owns
   ui/nav.js     the back stack: arrow, edge swipe and OS gesture share one path
   ui/sheetdrag.js  drag a sheet header down to dismiss
-  state.js      S, profiles, persistence, migration
+  state.js      S, profiles, persistence; what S holds, its defaults and its versioned
+                migrations are in schema.js (pure, tests in js/test/)
   data/         exercises.js, splits.js, goals.js, movement.js (each exercise's movement
                 pattern, read from its name and muscle), with tests in data/test/
   coach/        the coaching engine: pure functions over the log, with tests in coach/test/;
@@ -129,9 +130,11 @@ js/
   engine/       plan.js, formulas.js, nutrition.js, warmup.js, splitparse.js,
                 volume.js, mealplan.js, plancheck.js, coachinfo.js, dayplan.js (the
                 plan on a date, the next day to train), share.js (what a friend sees);
-                body.js (energy, targets, the weight trend, body fat) and intake.js
-                (the food log's totals, averages and streaks) are handed what they
-                need and read no state, with tests in engine/test/
+                body.js (energy, targets, the weight trend, body fat), intake.js
+                (the food log's totals, averages and streaks) and lifts.js (loads,
+                volume, maxes, records, stalls, the next weight, the lighter week's
+                case) are handed what they need and read no state, with tests in
+                engine/test/
   i18n/         dict.js (the AR dictionary and t), exnames.js (Arabic exercise names)
   ui/           view.js, render.js, actions.js, sheets.js, facts.js (Progress's plain
                 answers, shared with the chat), coachwords.js (the coach's insights in
@@ -160,10 +163,10 @@ when one crosses a line it shouldn't (it runs in Node in under a second):
 - `app.js` answers no tap itself. Each tap is a branch in one of `js/ui/handlers/`,
   registered at boot by `app.js` in a fixed order; handler modules share code only
   through `common.js`, never by importing each other.
-- The pure engine modules (`body.js`, `intake.js`) never reach `state.js`, directly or
-  through anything they import. They are handed the profile, the weigh-ins, the food log
-  and today's date, and `formulas.js`, `stats.js` and `energy.js` keep their old names as
-  one-line wrappers that pass `S` in. `node tests/engine.mjs` runs their tests in Node,
+- The pure engine modules (`body.js`, `intake.js`, `lifts.js`) and `schema.js` never
+  reach `state.js`, directly or through anything they import. They are handed the
+  profile, the workouts, the weigh-ins, the food log and today's date, and `formulas.js`,
+  `stats.js` and `energy.js` keep their old names as one-line wrappers that pass `S` in. `node tests/engine.mjs` runs their tests in Node,
   along with the movement-pattern check over the whole exercise library.
 
 Four more rules hold this together. Each one is a bug that has already happened here:
@@ -284,6 +287,19 @@ not.
 
 **Settings, your plan, weigh-ins and the current workout** are one JSON blob in
 localStorage per profile, at `bunyan:db:<profile>`. It stays a few kilobytes.
+
+**What it holds is written down**, in `js/schema.js`: JSDoc types for the profile, the
+programs, a workout and its sets, the body log, a day's food, and the smaller sections.
+The same module fills in what an old blob or a hand-edited backup is missing
+(`normalize`), and carries old shapes forward one numbered version at a time
+(`migrateDB`): the blob records its version (`v`, now 3), each step runs once, in order,
+and a new shape is a new step at the end with its test, never an edit to an old one —
+blobs and backups in the old shapes are out there. Version 3 is the move from the v1
+list of splits and v2's "active copy" to programs you own; it keeps the day ids history
+is keyed on. A **restored backup is checked first** (`checkBackup`): a file that is not
+ours, or from a newer version of the app, is refused with the reason, and a damaged
+workout is left out and counted in the confirmation rather than refusing the lot. All of
+it is pure and runs in `node tests/engine.mjs`.
 
 **The two things that grow without limit are in IndexedDB**, in database `bunyan`:
 
