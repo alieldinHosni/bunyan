@@ -531,7 +531,7 @@ await test("the week starts on Saturday everywhere, and the setting moves it",as
   await tapTab(page,"train");await pause(page);
   eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");return sc.isoWeekday(document.querySelector('.twk-d').getAttribute('data-tweek'));}),6,"strip opens on Saturday");
   await tapTab(page,"profile");await pause(page);await page.tap('[data-sheet="set_app"]');await pause(page);
-  await page.tap('[data-wkstart]');await pause(page);
+  await page.tap('[data-wkstart="7"]');await pause(page);
   eq(await ev(page,"S.prefs.wkstart"),7,"then Sunday");
   eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");const u=await import("/js/util.js");return sc.isoWeekday(sc.weekStartOf(u.today()));}),7);
 });
@@ -757,7 +757,7 @@ await test("One place for each thing: the assessment in Coach AI only, how you f
   eq(await page.$$eval('#app [data-setup]',a=>a.length)>=1,true,"Coach AI has it");
   await tapTab(page,"profile");await pause(page);
   eq(await page.$$eval('#app [data-setup],#app [data-sheet="recovery"]',a=>a.length),0);
-  if(!(await page.$('.pring')))throw new Error("no ring");
+  if(!(await page.$('.pid .pmono')))throw new Error("no identity card");
 });
 /* ---- the name dialog, meals of your own, and a plan ------------------------------------- */
 await test("Name prompt: a rounded dialog with no Name label; a tap outside lowers the keyboard before it closes",async page=>{
@@ -1887,6 +1887,74 @@ await test("Schema: an old profile (v1 splits) opens as programs you own and is 
   eq(stored,3,"and saved that way");
 },{db:(()=>{const d=seed();delete d.v;delete d.programs;delete d.activeProgram;delete d.userSplits;
   d.splits=[{id:"ppl",name:"Push Pull Legs",days:[{id:"keep1",name:"Push",ex:[{id:"e1",name:"Pushups",sets:3,lo:8,hi:12}]}]}];d.currentSplit="ppl";return d;})()});
+/* ---- the Coach chat and Profile redesign (js/ui/views/chat.js, js/ui/settings.js) ---- */
+const sheet=async(page,name)=>{await page.evaluate(async n=>{(await import("/js/ui/actions.js")).openSheet(n);},name);await pause(page);};
+await test("Coach chat: the opening screen lists what can be asked by subject; a typed question is cleared once answered, and the answer names its subject",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  eq(await page.$$eval('.chat-grp',a=>a.length),3,"Training, Food, Progress");
+  eq(await page.$$eval('.chat-topic[data-chatq]',a=>a.length),12,"four questions each");
+  eq(await page.$eval('.chat-form',e=>getComputedStyle(e).position),"sticky","the box to type in stays in reach");
+  await page.fill('#chatq','how much protein do I need');await page.press('#chatq','Enter');await pause(page,400);
+  eq(await page.$eval('#chatq',e=>e.value),"","the box is empty once the question is answered");
+  eq(await page.evaluate(()=>[...document.querySelectorAll(".chat-a .chat-at")].pop().textContent),"Protein","the answer names its subject");
+  eq(await page.$$eval('.chat-grp',a=>a.length),0,"the opening list gives way to the conversation");
+  if(!(await page.$('.chat-next .chat-chips [data-chatq]')))throw new Error("nothing offered to ask next");
+});
+await test("Settings: every choice in sight, switches that say their state, a tap sets the value; no drop-down anywhere",async page=>{
+  await sheet(page,"set_training");
+  const sw=()=>page.$eval('[data-toggle="nowarm"]',e=>[e.getAttribute("role"),e.getAttribute("aria-checked")]);
+  eq(await sw(),["switch","false"],"warm-up is off in the seed, and says so");
+  await page.tap('[data-toggle="nowarm"]');await pause(page);
+  eq([await sw(),await ev(page,"S.prefs.nowarm")],[["switch","true"],false],"one tap on the row turns it on");
+  for(const [sel,expr,want] of [['[data-setprog="aggressive"]',"S.profile.prog","aggressive"],['[data-setrpe="every"]',"S.prefs.rpe","every"],
+    ['[data-setwarn="15"]',"S.prefs.warn",15],['[data-setdb="total"]',"S.prefs.dbLoad","total"]]){
+    await page.tap(sel);await pause(page,200);eq(await ev(page,expr),want,sel);}
+  eq(await page.$eval('[data-setprog="aggressive"]',e=>e.getAttribute("aria-pressed")),"true","the chosen one is marked");
+  await sheet(page,"set_app");
+  await page.tap('[data-setunit="lb"]');await pause(page,200);
+  await page.tap('[data-setcompact="1"]');await pause(page,200);
+  eq(await ev(page,"[S.prefs.unit,S.prefs.compact,document.body.classList.contains('compact')]"),["lb",true,true],"units and density");
+  await page.tap('[data-setlang="ar"]');await pause(page,300);
+  eq(await ev(page,"[S.prefs.lang,document.documentElement.dir]"),["ar","rtl"],"Arabic, right to left");
+  await page.tap('[data-setlang="en"]');await pause(page,300);
+  eq(await ev(page,"S.prefs.lang"),"en","and back");
+  for(const n of ["set_you","set_training","set_app","set_profiles","set_data","backup","share","about"]){
+    await sheet(page,n);eq(await page.$$eval('#sheet select',a=>a.length),0,"no drop-down in "+n);}
+});
+await test("You: sex, activity and goal wait for Save, with the numbers; closing without it changes nothing",async page=>{
+  await sheet(page,"set_you");
+  await page.tap('[data-ypick="p_sex|f"]');await pause(page,200);
+  await page.tap('[data-ypick="p_act|1.725"]');await pause(page,200);
+  await page.tap('[data-ypick="p_goal|lose"]');await pause(page,200);
+  eq(await ev(page,"[S.profile.sex,S.profile.activity,S.profile.goal]"),["m",1.4,"gain"],"nothing yet");
+  eq(await page.$eval('[data-ypick="p_act|1.725"]',e=>e.getAttribute("aria-checked")),"true","the pick is shown");
+  await page.fill('#p_age','41');
+  await page.tap('[data-saveyou]');await pause(page);
+  eq(await ev(page,"[S.profile.sex,S.profile.activity,S.profile.goal,S.profile.age]"),["f",1.725,"lose",41],"saved together");
+  await sheet(page,"set_you");await page.tap('[data-ypick="p_sex|m"]');await pause(page,200);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page);
+  eq(await ev(page,"S.profile.sex"),"f","closed without Save: unchanged");
+});
+await test("Backup: what it holds, counted; the raw text folded away until asked for",async page=>{
+  await sheet(page,"backup");
+  const n=await ev(page,"S.sessions.length");
+  eq(await page.$eval('.bk-holds b',e=>e.textContent),String(n),"workouts counted");
+  eq(await page.$eval('details.adv',e=>e.open),false,"folded");
+  eq(await page.$eval('#bk',e=>e.checkVisibility()),false,"no text on screen");
+  await page.tap('details.adv summary');await pause(page,200);
+  eq(await page.$eval('#bk',e=>e.checkVisibility()),true,"shown when asked for");
+  await sheet(page,"set_data");
+  eq(await page.$eval('[data-wipe]',e=>!e.closest('.sg-list').querySelector('[data-export]')),true,"Delete everything is apart from the safe rows");
+});
+await test("Profile: a summary page; every row opens its sheet; the backup row warns when there is none; About holds the small print",async page=>{
+  await tapTab(page,"profile");await pause(page);
+  eq(await page.$eval('.pid .pid-n',e=>e.textContent),await ev(page,"(Object.assign({},JSON.parse(localStorage.getItem('bunyan:profiles'))[0])).name"),"the name");
+  for(const s of ["set_you","set_training","set_app","set_profiles","set_data","about"])
+    if(!(await page.$('#app [data-sheet="'+s+'"]')))throw new Error("no way to "+s);
+  if(!(await page.$('#app [data-sheet="set_data"] .gtile.warn')))throw new Error("never backed up, and no warning");
+  await page.tap('#app [data-sheet="about"]');await pause(page);
+  if(!/Epley/.test(await page.$eval('#sheet',e=>e.innerText)))throw new Error("About lacks the formulas note");
+});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

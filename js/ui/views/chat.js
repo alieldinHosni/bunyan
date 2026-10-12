@@ -31,6 +31,7 @@ import {estMinutes, nextDayOf, planOn} from "../../engine/dayplan.js";
 import {avoids, standIn} from "../../engine/plan.js";
 import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
 import {words} from "../coachwords.js";
+import {glyph} from "../glyphs.js";
 
 var KEEP=30;
 /* The suggestions: what each asks, as the person would ask it. */
@@ -393,17 +394,38 @@ function ask(q,id){
   S.chat=(S.chat||[]).concat([msg]).slice(-KEEP);
   return msg;}
 
-/* ---- on screen ------------------------------------------------------------------ */
+/* ---- on screen ------------------------------------------------------------------
+   Not a chatbot's look: a question is a short line on the reading side, and an answer
+   is a card that names what it is about, with its lists as ruled rows, its notes set
+   apart, and its buttons last. Nothing is coloured by who said it; the accent is kept
+   for the one button an answer leads to. */
+/* What each answer is about, and its glyph (js/ui/glyphs.js). */
+var TOPIC={today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
+  track:["How you're doing","bars"],weight:["Weight trend","scale"],protein:["Protein","shaker"],calories:["Calories","flame"],
+  sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
+  goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],
+  help:["What I can answer","question"]};
+/* The opening screen: what can be asked, by what it is about. */
+var GROUPS=[["Training",["today","weights","missed","sore"]],["Food",["eat","protein","calories","water"]],
+  ["Progress",["track","weight","strong","balance"]]];
+
 function chips(ids,cls){
   return '<div class="chat-chips'+(cls?' '+cls:'')+'">'+ids.map(function(id){
     return '<button class="chat-chip" data-chatq="'+id+'">'+esc(t(ASK[id]))+'</button>';}).join("")+'</div>';}
+function topicRow(id){
+  var tp=TOPIC[id]||["","question"];
+  return '<button class="chat-topic" data-chatq="'+id+'"><span class="chat-gl">'+glyph(tp[1])+'</span>'
+   +'<span class="chat-topic-q">'+esc(t(ASK[id]))+'</span><span class="ico ico-chev" aria-hidden="true"></span></button>';}
 function bubble(m,live){
-  var h='<div class="chat-q"><p>'+esc(String(m.q||""))+'</p></div><div class="chat-a">';
+  var tp=TOPIC[m.id];
+  var h='<div class="chat-x'+(live?' live':'')+'"><div class="chat-q"><p>'+esc(String(m.q||""))+'</p></div><div class="chat-a">'
+   +'<div class="chat-ah"><span class="chat-gl">'+glyph(tp?tp[1]:"question")+'</span><span class="chat-ah-t">'
+   +'<span class="chat-ak">'+esc(t("Coach"))+'</span>'+(tp?'<span class="chat-at">'+esc(t(tp[0]))+'</span>':'')+'</span></div>';
   (Array.isArray(m.b)?m.b:[]).forEach(function(x){
     if(!x)return;
     if(x.p!=null)h+='<p>'+esc(String(x.p))+'</p>';
-    else if(Array.isArray(x.l))h+='<ul>'+x.l.map(function(i){return '<li>'+esc(String(i))+'</li>';}).join("")+'</ul>';
-    else if(x.n!=null)h+='<p class="chat-n">'+esc(String(x.n))+'</p>';});
+    else if(Array.isArray(x.l))h+='<ul class="chat-l">'+x.l.map(function(i){return '<li>'+esc(String(i))+'</li>';}).join("")+'</ul>';
+    else if(x.n!=null)h+='<p class="chat-n">'+glyph("info")+'<span>'+esc(String(x.n))+'</span></p>';});
   /* A kept conversation comes back from storage and from backups, so a button is only
      ever its label and data-* attributes the app itself acts on. */
   var acts=live&&Array.isArray(m.acts)?m.acts:[];
@@ -411,30 +433,40 @@ function bubble(m,live){
     var at=Object.keys(b.a||{}).filter(function(k){return /^data-[a-z]+$/.test(k);})
       .map(function(k){return ' '+k+'="'+esc(b.a[k])+'"';}).join("");
     return '<button class="btn '+(i?'g ':'')+'sm"'+at+'>'+esc(String(b.l||""))+'</button>';}).join("")+'</div>';
-  return h+'</div>';}
+  return h+'</div></div>';}
 
-/* The screen: the conversation, what to ask next, and a box to type in. */
+/* The screen: a header that says where the answers come from, then either what can be
+   asked or the conversation and what to ask next, and a box to type in that stays in
+   reach above the dock. */
 function vChat(){
   var log=(S.chat||[]).filter(function(m){return m&&typeof m==="object";}),last=log[log.length-1];
-  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Ask the coach"))+'</h1>'
-   +(log.length?'<button class="btn d sm chat-clear" data-chatclear="1">'+esc(t("Clear"))+'</button>':'')+'</div>'
-   +'<p class="dsub">'+esc(t("Answers come from your own log, plan and targets, worked out on this phone. Nothing you type leaves it."))+'</p>';
+  var h='<div class="chat-head">'+backArrow()
+   +'<div class="chat-head-t"><h1>'+esc(t("Ask the coach"))+'</h1>'
+   +'<p class="chat-priv">'+glyph("lock")+'<span>'+esc(t("From your log, worked out on this phone"))+'</span></p></div>'
+   +(log.length?'<button class="icobtn chat-clear" data-chatclear="1" aria-label="'+esc(t("Clear"))+'">'+glyph("trash")+'</button>':'')
+   +'</div>';
   h+='<div class="chat" role="log" aria-live="polite">';
-  if(!log.length)h+='<div class="chat-a chat-hi"><p>'+esc(t("Ask me about today's training, your food, or how things are going. Tap a question, or type your own, in English or Arabic."))+'</p></div>';
+  if(!log.length){
+    h+='<p class="chat-hi">'+esc(t("Ask me about today's training, your food, or how things are going. Tap a question, or type your own, in English or Arabic."))+'</p>'
+     +GROUPS.map(function(g){
+        return '<section class="chat-grp"><h2 class="chat-grp-h">'+esc(t(g[0]))+'</h2>'
+         +'<div class="chat-topics">'+g[1].map(topicRow).join("")+'</div></section>';}).join("")
+     +'<p class="chat-dis">'+esc(t("Answers come from your own log, plan and targets, worked out on this phone. Nothing you type leaves it."))+'</p>';}
   log.forEach(function(m,i){h+=bubble(m,i===log.length-1);});
   h+='</div>';
-  h+=chips(last?NEXT[last.id]||NEXT.unknown:["today","eat","track","weight","sore","missed"]);
+  if(last)h+='<div class="chat-next"><div class="chat-next-h">'+esc(t("Ask next"))+'</div>'+chips(NEXT[last.id]||NEXT.unknown)+'</div>';
   h+='<div class="chat-form"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'
    +esc(t("Ask a question"))+'" aria-label="'+esc(t("Ask a question"))+'">'
-   +'<button class="btn chat-send" data-chatsend="1">'+esc(t("Ask"))+'</button></div>';
+   +'<button class="chat-send" data-chatsend="1" aria-label="'+esc(t("Ask"))+'">'+glyph("send")+'</button></div>';
   return h;}
 
 /* Coach AI's way in: a few questions to tap, and the rest of the conversation. */
 function chatCard(){
   var log=S.chat||[];
-  return '<section class="chatcard"><div class="chatcard-h"><span class="shk">'+esc(t("Ask the coach"))+'</span>'
-   +'<p>'+esc(t("Questions answered from your own log, plan and targets."))+'</p></div>'
-   +chips(["today","eat","track"],"tight")
+  return '<section class="chatcard"><div class="chatcard-h"><span class="chat-gl">'+glyph("question")+'</span>'
+   +'<span><span class="chatcard-t">'+esc(t("Ask the coach"))+'</span>'
+   +'<span class="chatcard-s">'+esc(t("Questions answered from your own log, plan and targets."))+'</span></span></div>'
+   +'<div class="chat-topics tight">'+["today","eat","track"].map(topicRow).join("")+'</div>'
    +'<button class="btn g sm" data-chat="1">'+esc(t(log.length?"Continue the conversation":"Ask something else"))+'</button></section>';}
 
 export {ASK, ask, chatCard, NEXT, vChat};

@@ -8,23 +8,21 @@ import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay} from "./views/train.js";
 import {planOn} from "../engine/dayplan.js";
 import {ACT_GROUPS, actIcon, actInfo, actPace, actsIn, INTENSITY, intensityOf, isActivity} from "../data/activities.js";
-import {bwShare, incrementFor, backupAgeDays, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
+import {bwShare, incrementFor, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
-import {GOAL_ORDER, GOALS} from "../data/goals.js";
 import {groupLabel, groupRun, ivText, mmss, platePlan, rowsFor} from "./views/session.js";
-import {sessionById, ensureSessionIds, CUR, dayOf, dayRec, isOwner, PROFILES, S, split} from "../state.js";
+import {sessionById, ensureSessionIds, dayOf, dayRec, S, split} from "../state.js";
 import {blockNow} from "../engine/blocks.js";
-import {buildSnapshot, friends, snapStats} from "../engine/share.js";
+import {friends, snapStats} from "../engine/share.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
-import {CUES, mistakesFor, progressBar, seg, sparkline, stepper, V} from "./view.js";
-import {modeOf, themeOf, THEMES} from "./theme.js";
+import {CUES, mistakesFor, progressBar, sparkline, stepper, V} from "./view.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
-import {wdName, weekStart} from "../engine/schedule.js";
 import {tiexSheet} from "./views/timport.js";
 import {coolCard, warmOf} from "./views/warmup.js";
+import {settingsSheet} from "./settings.js";
 
 /* One figure in the exercise sheet: a label, the number (typeable), and − / + either
    side. The steps are the plan's own: a set, a rep, fifteen seconds of rest. */
@@ -39,7 +37,7 @@ function exStep(k,label,v,unit){
 var SHEET_KICK={editex:"Exercise",tiex:"Import",recovery:"Recovery",weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
   gear:"Training",likes:"Training",exercise:"Training",exhist:"History",share:"Sharing",coach:"Sharing",
   backup:"Your data",restore:"Your data",set_you:"Settings",set_training:"Settings",set_app:"Settings",
-  set_profiles:"Settings",set_data:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
+  set_profiles:"Settings",set_data:"Settings",about:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
 var CFICON={
   leave:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M9 16l-4-4 4-4M5 12h11"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
@@ -57,7 +55,10 @@ function vSheet(){
      went. Cancel and the main action sit side by side under the field.
      A name needs no "Name" label over it — the title says what is being named — and the
      word is what made iOS offer to fill the field from your contacts. */
-  if(V.sheet==="ask"){
+  /* Profile's settings sheets are written in settings.js. */
+  var sset=settingsSheet(V.sheet);
+  if(sset!==null)b=sset;
+  else if(V.sheet==="ask"){
     var o=V.sd||{};
     return '<div class="sheet dlg" data-close="1">'
      +'<div class="sheetbox dlgbox" data-stop="1" role="dialog" aria-modal="true" aria-labelledby="askt">'
@@ -663,15 +664,6 @@ function vSheet(){
           return x.w?(bwShare(nm3)?'+':'')+toDisp(x.w)+' \u00d7 '+x.r+(x.rpe?' <span class="tiny">@'+x.rpe+'</span>':''):x.r;
          }).join(' &nbsp; ')+'</div></div>';});
   }
-  else if(V.sheet==="share"){
-    b='<h2>'+t("Share your progress")+'</h2><p class="tiny" style="margin:2px 0 12px">'
-     +t("Copy all of this and send it. It contains your sessions, lifts and weight.")+' '
-     +t("It does not contain your meals or anything else.")+'</p>'
-     +'<textarea id="sn" style="width:100%;height:200px;background:var(--raised);color:var(--text);'
-     +'border:1px solid var(--border);border-radius:11px;padding:12px;font-size:12px">'
-     +esc(JSON.stringify(buildSnapshot()))+'</textarea>'
-     +'<button class="btn g" data-copysn="1">'+t("Select all")+'</button>';
-  }
   else if(V.sheet==="coach"){
     var F=friends(),names=Object.keys(F);
     b='<h2>'+t("Friends I follow")+'</h2><p class="tiny" style="margin:2px 0 14px">'
@@ -701,16 +693,6 @@ function vSheet(){
      +'padding:12px;font-size:12px"></textarea>'
      +'<button class="btn" data-addfriend="1">'+t("Add them")+'</button>';
   }
-  else if(V.sheet==="backup"){
-    b='<h2>'+t("Backup")+'</h2><p class="tiny" style="margin:2px 0 12px">'
-     +t("Save it as a file, or copy the text, and keep it somewhere safe. Restore brings everything back.")+'</p>'
-     +'<textarea id="bk" style="width:100%;height:220px;background:var(--raised);color:var(--text);'
-     +'border:1px solid var(--border);border-radius:11px;padding:12px;font-size:12px">'
-     +esc(JSON.stringify(S))+'</textarea>'
-     +'<button class="btn" data-bkfile="1">'+t("Save backup file")+'</button>'
-     +'<button class="btn g" data-copybk="1">'+t("Copy as text")+'</button>'
-     +'<p class="tiny" style="margin-top:10px">'+t("Photos are not included. They stay on this phone.")+'</p>';
-  }
   else if(V.sheet==="restore"){
     b='<h2>'+t("Restore")+'</h2><p class="tiny" style="margin:2px 0 12px">'+t("Paste a backup. This replaces everything currently in the app.")+'</p>'
      +'<label class="btn g" style="cursor:pointer">'+t("Choose backup file")
@@ -718,81 +700,6 @@ function vSheet(){
      +'<textarea id="rs" placeholder="'+esc(t("…or paste the backup text here"))+'" style="width:100%;height:160px;margin-top:10px;background:var(--raised);color:var(--text);'
      +'border:1px solid var(--border);border-radius:11px;padding:12px;font-size:16px"></textarea>'
      +'<button class="btn" data-dorestore="1">'+t("Restore")+'</button>';
-  }
-  /* ---- grouped settings. One sheet per section, opened from the Profile hub. ---- */
-  else if(V.sheet==="set_you"){
-    var yp=S.profile;
-    b='<h2>'+t("You")+'</h2><p class="tiny" style="margin:2px 0 14px">'
-     +t("These drive your calorie and macro estimates.")+'</p>'
-     +'<div class="grid2"><div><label class="tiny" for="p_age">'+t("Age")+'</label>'
-     +'<input id="p_age" type="number" value="'+yp.age+'"></div>'
-     +'<div><label class="tiny" for="p_height">'+t("Height (cm)")+'</label>'
-     +'<input id="p_height" type="number" value="'+yp.height+'"></div></div>'
-     +'<div class="grid2 mt"><div><label class="tiny" for="p_weight">'+t("Weight")+' ('+wUnit()+')</label>'
-     +'<input id="p_weight" type="number" step="0.1" value="'+toDisp(lastWeight()||yp.weight||86)+'"></div>'
-     +'<div><label class="tiny" for="p_sex">'+t("Sex")+'</label><select id="p_sex">'
-     +'<option value="m"'+(yp.sex==="m"?" selected":"")+'>'+t("Male")+'</option>'
-     +'<option value="f"'+(yp.sex==="f"?" selected":"")+'>'+t("Female")+'</option></select></div></div>'
-     +'<div class="mt"><label class="tiny" for="p_act">'+t("Activity")+'</label><select id="p_act">'
-     +[[1.2,t("Desk, no training")],[1.375,t("Light, 1-3 days")],[1.4,t("Desk plus 3 lifts")],
-       [1.55,t("Moderate, 4-5 days")],[1.725,t("Heavy, 6+ days")]].map(function(a){
-         return '<option value="'+a[0]+'"'+(+yp.activity===a[0]?" selected":"")+'>'+a[1]+'</option>';}).join("")
-     +'</select></div>'
-     +'<div class="mt"><label class="tiny" for="p_goal">'+t("Goal")+'</label><select id="p_goal">'
-     /* The one list of goals (js/data/goals.js), the same the assessment offers. */
-     +GOAL_ORDER.map(function(k){
-         return '<option value="'+k+'"'+(yp.goal===k?" selected":"")+'>'+esc(t(GOALS[k].label))+'</option>';}).join("")
-     +'</select></div>'
-     +'<p class="tiny mt">'+t("Your calorie and protein targets are worked out from these, in Coach → Nutrition → Targets.")+'</p>'
-     +'<button class="btn" data-saveyou="1">'+t("Save")+'</button>'
-     +'<button class="btn g" data-fsec="targets">'+t("See my targets")+'</button>';
-  }
-  else if(V.sheet==="set_training"){
-    var tp=S.prefs,tpr=S.profile;
-    b='<h2>'+t("Training")+'</h2><div class="list mt">'
-     +'<button class="item" data-progmode="1"><div><div>'+t("Progression")+'</div>'
-     +'<div class="tiny">'+t("How fast Bunyan adds weight")+'</div></div><span class="dim">'
-     +t(tpr.prog.charAt(0).toUpperCase()+tpr.prog.slice(1))+'</span></button>'
-     +'<button class="item" data-rpemode="1"><span>'+t("Ask for RPE")+'</span><span class="dim">'
-     +({every:t("Every set"),last:t("Last set only"),off:t("Never")})[tp.rpe]+'</span></button>'
-     /* Stored as "off" flags, so everyone who had the app before these existed
-        gets them on. */
-     +'<button class="item" data-toggle="nowarm"><div><div>'+t("Warm-up before a workout")+'</div>'
-     +'<div class="tiny">'+t("Drills for what the day trains, and ramp-up sets")+'</div></div>'
-     +'<span class="'+(!tp.nowarm?"pill ok":"dim")+'">'+(!tp.nowarm?t("On"):t("Off"))+'</span></button>'
-     +'<button class="item" data-toggle="nocool"><div><div>'+t("Cool-down after a workout")+'</div>'
-     +'<div class="tiny">'+t("Stretches for what you trained")+'</div></div>'
-     +'<span class="'+(!tp.nocool?"pill ok":"dim")+'">'+(!tp.nocool?t("On"):t("Off"))+'</span></button>'
-     +'<button class="item" data-toggle="noblocks"><div><div>'+t("Training blocks")+'</div>'
-     +'<div class="tiny">'+t("Effort builds for three weeks, then a lighter week")+'</div></div>'
-     +'<span class="'+(!tp.noblocks?"pill ok":"dim")+'">'+(!tp.noblocks?t("On"):t("Off"))+'</span></button>'
-     +'<button class="item" data-toggle="autorest"><span>'+t("Auto-start rest timer")+'</span>'
-     +'<span class="'+(tp.autorest?"pill ok":"dim")+'">'+(tp.autorest?t("On"):t("Off"))+'</span></button>'
-     +'<button class="item" data-warnmode="1"><span>'+t("Countdown warning")+'</span><span class="dim">'
-     +(tp.warn||10)+' '+t("sec")+'</span></button>'
-     +'<button class="item" data-toggle="sound"><span>'+t("Sounds")+'</span>'
-     +'<span class="'+(tp.sound?"pill ok":"dim")+'">'+(tp.sound?t("On"):t("Off"))+'</span></button>'
-     +'<button class="item" data-testsound="1"><div><div>'+t("Test sound")+'</div>'
-     +'<div class="tiny">'+t("Plays the 8-second rest alarm.")+'</div></div>'
-     +'<span class="pill a">'+t("Play")+'</span></button>'
-     /* Said plainly, once, where the sound settings are — so it is learned here rather
-        than in a gym when the timer runs out in silence. Stated as a limit of the
-        phone, not of the app, because that is what it is: iOS applies the hardware
-        switch to all web audio and suspends the page when it is not in front. */
-     +'<p class="tiny" style="margin:6px 2px 0;line-height:1.5;color:var(--faint)">'
-     +t("On iPhone the side switch silences this alarm, and it cannot play while the app is in the background or the phone is locked. The screen turns red when the rest is over, so you can see it with the sound off.")
-     +'</p>'
-     +'<button class="item" data-toggle="awake"><span>'+t("Keep screen awake")+'</span>'
-     +'<span class="'+(tp.awake?"pill ok":"dim")+'">'+(tp.awake?t("On"):t("Off"))+'</span></button>'
-     +'<button class="item" data-sheet="gear"><span>'+t("My equipment")+'</span><span class="dim">'
-     +(S.gear&&S.gear.length?S.gear.length+" "+t("selected"):t("Everything"))+'</span></button>'
-     +'<button class="item" data-sheet="likes"><span>'+t("Favourites")+'</span>'
-     +'<span class="dim">'+S.favs.length+" ★"+'</span></button>'
-     +'<button class="item" data-dbload="1"><div><div>'+t("Dumbbell weights")+'</div>'
-     +'<div class="tiny">'+t("How you enter them")+'</div></div><span class="dim">'
-     +t(tp.dbLoad==="total"?"Both together":"Per hand")+'</span></button>'
-     +'</div>'
-     +'<p class="tiny">'+t("Steps follow the equipment: 2.5 kg on a barbell (5 on the big leg lifts), 2 kg on dumbbells, never more than about a tenth of the load. Conservative halves them, aggressive doubles them. Any exercise can have its own step, set in its plan.")+'</p>';
   }
   /* One of your own foods, per serving: the name, what a serving is, and what is in
      it. Opened from My Foods, for a new food or one you made before. */
@@ -812,87 +719,6 @@ function vSheet(){
      +afTile("mf_f",t("Fat"),"g",mv.f,"0","decimal")+'</div>'
      +(mfx?'<p class="afnote">'+esc(t("Anything already logged keeps the numbers it was logged with."))+'</p>':'')
      +'<button class="btn afcta" data-savemyfoodx="'+esc(mfx?mfx.id:"new")+'">'+esc(t("Save"))+'</button>';
-  }
-  else if(V.sheet==="set_app"){
-    var ap=S.prefs,thCur=themeOf(),thMode=modeOf();
-    /* Appearance first. Each theme is drawn as itself: its preview carries data-palette and
-       data-theme, so index.html's theme blocks colour it whichever theme is on. Mode is
-       dark or light, for any theme. */
-    b='<h2>'+t("App")+'</h2>'
-     +'<div class="thlbl" id="thlbl">'+t("Theme")+'</div>'
-     +'<div class="thpicks" role="radiogroup" aria-labelledby="thlbl">'
-     +THEMES.map(function(th){
-        var on=th.id===thCur;
-        return '<button class="thpick'+(on?' on':'')+'" role="radio" aria-checked="'+on+'" data-settheme="'+th.id+'">'
-         +'<span class="thpv" data-palette="'+th.id+'" data-theme="'+thMode+'" aria-hidden="true">'
-         +'<span class="thpv-card"><span class="thpv-k"></span><b class="thpv-n">1,980</b>'
-         +'<span class="thpv-bar"><i></i></span></span>'
-         +'<span class="thpv-btn"></span>'
-         +'<span class="thpv-dock"><i class="on"></i><i></i><i></i></span></span>'
-         +'<span class="thpick-n">'+esc(t(th.name))+'</span>'
-         +'<span class="thpick-sw" aria-hidden="true">'+th.sw.map(function(c){return '<i style="background:'+c+'"></i>';}).join("")+'</span>'
-         +(on?'<span class="thpick-ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></span>':'')
-         +'</button>';}).join("")
-     +'</div>'
-     +'<div class="thlbl">'+t("Mode")+'</div>'
-     +seg({items:[["dark",t("Dark")],["light",t("Light")]],value:thMode,attr:"lookmode",cls:"thmode",label:t("Mode"),key:"lookmode"})
-     +'<div class="list mt">'
-     +'<button class="item" data-langmode="1"><span>'+t("Language")+'</span><span class="dim">'
-     +(ap.lang==="ar"?"العربية":"English")+'</span></button>'
-     +'<button class="item" data-wkstart="1"><div><div>'+t("Week starts on")+'</div>'
-     +'<div class="tiny">'+t("Where \"this week\" begins, on every screen.")+'</div></div>'
-     +'<span class="dim">'+esc(wdName(weekStart(),true))+'</span></button>'
-     +'<button class="item" data-unitmode="1"><div><div>'+t("Units")+'</div>'
-     +'<div class="tiny">'+t("Display only. Your history is never rewritten.")+'</div></div>'
-     +'<span class="dim">'+(ap.unit==="lb"?t("Pounds (lb)"):t("Kilograms (kg)"))+'</span></button>'
-     /* Only where the platform can actually vibrate. Safari has no vibration API. */
-     +(("vibrate" in navigator)
-       ?'<button class="item" data-toggle="haptic"><span>'+t("Haptic feedback")+'</span>'
-        +'<span class="'+(ap.haptic!==false?"pill ok":"dim")+'">'
-        +(ap.haptic!==false?t("On"):t("Off"))+'</span></button>'
-       :'')
-     +'<button class="item" data-toggle="anim"><span>'+t("Animations")+'</span>'
-     +'<span class="'+(ap.anim!==false?"pill ok":"dim")+'">'
-     +(ap.anim!==false?t("On"):t("Off"))+'</span></button>'
-     +'<button class="item" data-toggle="compact"><span>'+t("Interface density")+'</span>'
-     +'<span class="dim">'+(ap.compact?t("Compact"):t("Comfortable"))+'</span></button>'
-     +'<button class="item" data-toggle="splash"><span>'+t("Opening screen")+'</span>'
-     +'<span class="'+(ap.splash!==false?"pill ok":"dim")+'">'
-     +(ap.splash!==false?t("On"):t("Off"))+'</span></button>'
-     +'</div>';
-  }
-  else if(V.sheet==="set_profiles"){
-    b='<h2>'+t("Profiles on this phone")+'</h2>'
-     +'<p class="tiny" style="margin:2px 0 14px">'
-     +t("Anyone training on your phone gets their own profile. Nothing crosses over.")+'</p>'
-     +'<div class="list">';
-    PROFILES.forEach(function(pp){
-      b+='<button class="item" data-switch="'+pp.id+'"><div><div style="font-weight:600">'
-       +esc(pp.name)+(pp.owner?' <span class="pill a">'+t("admin")+'</span>':'')+'</div>'
-       +'<div class="tiny">'+(pp.id===CUR?t("in use now"):t("separate log, separate numbers"))
-       +'</div></div>'
-       +(pp.id===CUR?'<span class="pill a">'+t("current")+'</span>':'<span class="chev">›</span>')
-       +'</button>';});
-    b+='</div><div class="rowc">'
-     +'<button class="btn g sm" data-addprofile="1">'+t("Add a profile")+'</button>'
-     +'<button class="btn g sm" data-renameprofile="1">'+t("Rename this one")+'</button>'
-     +(PROFILES.length>1&&!isOwner()
-        ?'<button class="btn d sm" data-delprofile="1">'+t("Delete")+'</button>':'')
-     +'</div>';
-  }
-  else if(V.sheet==="set_data"){
-    var bAge=backupAgeDays();
-    b='<h2>'+t("Backup and reset")+'</h2><div class="list mt">'
-     +'<button class="item" data-export="1"><div><div>'+t("Export a backup")+'</div>'
-     +'<div class="tiny">'+(bAge===null?t("Never backed up")
-        :bAge===0?t("Backed up today"):t("Last backup")+' '+bAge+' '+t("days ago."))+'</div></div>'
-     +'<span class="chev">›</span></button>'
-     +'<button class="item" data-import="1"><span>'+t("Restore from a backup")+'</span>'
-     +'<span class="chev">›</span></button>'
-     +'<button class="item" data-wipe="1"><span style="color:var(--accent)">'
-     +t("Delete everything")+'</span><span class="chev">›</span></button>'
-     +'</div>'
-     +'<p class="tiny">'+t("Everything lives on this phone only. Nothing is uploaded anywhere. Export a backup every few weeks so a cleared browser cannot cost you your history.")+'</p>';
   }
   else if(V.sheet==="plates"){
     var pw=num(V.draft.w),pbar=V.bar==null?20:V.bar;

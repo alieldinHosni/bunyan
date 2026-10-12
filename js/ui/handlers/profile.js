@@ -51,14 +51,19 @@ function register(){
     adoptRestored(function(){render();toast(t("Restored."));});
   };
   /* The two settings sheets save independently now that they are separate screens. */
+  /* You: sex, activity and goal are picked on the sheet and kept with it (V.sd) until
+     Save, with the three numbers typed beside them. */
+  key("ypick",function(D){
+    var pk=String(D.ypick).split("|");if(pk.length!==2)return;
+    V.sd=V.sd||{};V.sd[pk[0]]=pk[1];render();return;});
   key("saveyou",function(){
-    var py=S.profile;
+    var py=S.profile,d=V.sd||{};
     py.age=num(val("p_age"),py.age);
     py.height=num(val("p_height"),py.height);
-    py.sex=val("p_sex")||py.sex;
+    py.sex=d.p_sex||py.sex;
     py.weight=toKg(num(val("p_weight"),toDisp(py.weight)));
-    py.activity=num(val("p_act"),py.activity);
-    py.goal=val("p_goal")||py.goal;
+    py.activity=num(d.p_act,py.activity);
+    py.goal=d.p_goal||py.goal;
     saveDB();render();toast(t("Saved."));return;});
   /* Test Sound plays the actual rest alarm, not a stand-in. A test that plays a
      different sound from the real one tests nothing the user cares about. */
@@ -67,8 +72,20 @@ function register(){
     alarmStart();
     setTimeout(function(){toast(t("If that was silent, the side switch on your phone is set to silent."));},500);
     return;});
-  /* Saturday, Sunday or Monday: the three a week is commonly started on. */
-  key("wkstart",function(){var wo=[6,7,1];S.prefs.wkstart=wo[(wo.indexOf(weekStart())+1)%wo.length];saveDB();render();return;});
+  /* Saturday, Sunday or Monday: the three a week is commonly started on. The App sheet
+     names the day; anything else steps to the next of the three. */
+  key("wkstart",function(D){var wo=[6,7,1],d=+D.wkstart;
+    S.prefs.wkstart=wo.indexOf(d)>=0?d:wo[(wo.indexOf(weekStart())+1)%wo.length];saveDB();render();return;});
+  /* The settings sheets' choices, each set to what was tapped rather than stepped on. */
+  key("setprog",function(D){if(/^(conservative|standard|aggressive)$/.test(D.setprog)){S.profile.prog=D.setprog;saveDB();render();}return;});
+  key("setrpe",function(D){if(/^(every|last|off)$/.test(D.setrpe)){S.prefs.rpe=D.setrpe;saveDB();render();}return;});
+  key("setwarn",function(D){var w=+D.setwarn;if([5,10,15].indexOf(w)>=0){S.prefs.warn=w;saveDB();render();}return;});
+  key("setdb",function(D){if(/^(hand|total)$/.test(D.setdb)){S.prefs.dbLoad=D.setdb;saveDB();render();}return;});
+  key("setunit",function(D){if(/^(kg|lb)$/.test(D.setunit)){S.prefs.unit=D.setunit;saveDB();render();}return;});
+  key("setcompact",function(D){S.prefs.compact=D.setcompact==="1";saveDB();render();return;});
+  key("setlang",function(D){if(!/^(en|ar)$/.test(D.setlang)||D.setlang===S.prefs.lang)return;
+    S.prefs.lang=D.setlang;saveDB();applyLang();render();
+    toast(S.prefs.lang==="ar"?"\u0627\u062a\u063a\u064a\u0631\u062a \u0644\u0644\u0639\u0631\u0628\u064a\u0629":"Switched to English");return;});
   key("toggle",function(D){S.prefs[D.toggle]=!S.prefs[D.toggle];
     if(D.toggle==="anim")document.body.classList.toggle("noanim",S.prefs.anim===false);
     if(D.toggle==="awake")keepAwake(S.prefs.awake&&!!S.active);
@@ -130,9 +147,15 @@ function register(){
                  function(){toast(t("Sharing is not available here."));});
     else toast(t("Sharing is not available here."));
     return;});
-  key("copysn",function(){var t2=document.getElementById("sn");t2.select();
-    try{document.execCommand("copy");toast(t("Copied. Send it on WhatsApp."));}
-    catch(e){toast(t("Select the text and copy it."));}return;});
+  /* The code is copied straight from the field, folded away or not. Where the
+     clipboard is refused, the field is opened and selected for a copy by hand. */
+  key("copysn",function(){var t2=document.getElementById("sn");if(!t2)return;
+    var byHand=function(){var dt=t2.closest("details");if(dt)dt.open=true;t2.select();
+      try{if(document.execCommand("copy")){toast(t("Copied. Send it on WhatsApp."));return;}}catch(e){}
+      toast(t("Select the text and copy it."));};
+    var wrote=null;try{wrote=navigator.clipboard&&navigator.clipboard.writeText(t2.value);}catch(e){}
+    if(wrote&&wrote.then)wrote.then(function(){toast(t("Copied. Send it on WhatsApp."));},byHand);else byHand();
+    return;});
   key("coach",function(){openSheet("coach");return;});
   key("addfriend",function(){
     try{var sn=JSON.parse(val("fp"));

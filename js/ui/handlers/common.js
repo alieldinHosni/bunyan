@@ -104,6 +104,9 @@ function readTraining(src){
 function chatSend(){
   var el=document.getElementById("chatq"),q=el?String(el.value||"").trim():"";
   if(!q){if(el)el.focus();return;}
+  /* Emptied before the render: the field is kept across renders, value and all, and a
+     question that stayed in the box after its answer read as not yet sent. */
+  el.value="";
   ask(q);saveDB();render();chatEnd();}
 function chatEnd(){
   requestAnimationFrame(function(){
