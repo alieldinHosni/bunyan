@@ -1592,7 +1592,8 @@ await test("Phase 4: one session and one weigh-in say \"not enough yet\" everywh
   if(!/A few more weigh-ins/.test(cards.Weight))throw new Error("weight: "+cards.Weight);
   await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page);
   await page.fill('#chatq','is my weight on track');await page.press('#chatq','Enter');await pause(page,300);
-  const a=await page.evaluate(()=>[...document.querySelectorAll(".chat-a")].pop().innerText);
+  /* The answer's own words, under the card's header that names its subject. */
+  const a=await page.evaluate(()=>[...[...document.querySelectorAll(".chat-a")].pop().children].filter(c=>!c.classList.contains("chat-ah")).map(c=>c.innerText).join("\n"));
   if(!/^1 weigh-in so far/.test(a)||!/four weigh-ins over two weeks/.test(a)||/a week\./.test(a))throw new Error("weight answer: "+a);
 },{db:Object.assign(seed(),{sessions:seed().sessions.slice(0,1)})});
 await test("Offline: with the network off, the installed app opens, every tab works, food search and the coach chat answer",async(page,env)=>{
@@ -1658,7 +1659,8 @@ await test("Dock: a page with little to scroll keeps its dock",async page=>{
 await test("Dock: slides off scrolling down and back scrolling up, at the scroll's pace",async page=>{await dockTest(page,true);},{prefs:{anim:true}});
 await test("Dock: with animations off it fades out and back instead",async page=>{await dockTest(page,false);});
 await test("Dock: the workout bar takes the dock's place while it is away, and still opens the workout",async page=>{
-  await startWorkout(page);await leaveWorkout(page);await tapTab(page,"profile");await pause(page);
+  /* A page long enough to scroll: the dock stays put on a short one. */
+  await startWorkout(page);await leaveWorkout(page);await tapTab(page,"coach");await pause(page);
   const pos=()=>page.evaluate(()=>Math.round(document.querySelector("#wbar .wbar").getBoundingClientRect().bottom));
   const p0=await pos();
   for(let i=0;i<12;i++){await page.evaluate(()=>window.scrollBy(0,15));await page.waitForTimeout(16);}
