@@ -80,6 +80,8 @@ function run(t){
   t.eq("photo" in normalize({profile:{photo:"javascript:alert(1)"}}).profile,false,"a picture that is not an image is dropped");
   t.eq("photo" in normalize({profile:{photo:"data:image/jpeg;base64,"+"A".repeat(300000)}}).profile,false,"one too big for the storage is dropped");
   t.eq("photo" in normalize({profile:{photo:42}}).profile,false,"a number is not a picture");
+  t.eq(normalize({prefs:{toured:{train:1,food:2}}}).prefs.toured,{train:1,food:2},"the guides seen are kept");
+  t.eq("toured" in normalize({prefs:{toured:"yes"}}).prefs,false,"anything else is dropped");
 
   /* ---- a backup: one of ours? ---- */
   t.eq(checkBackup(null).why,"notours","nothing");

@@ -4222,6 +4222,41 @@ body.kb .chat-form,body:has(nav.dhid) .chat-form{bottom:max(10px,env(safe-area-i
 @media (prefers-reduced-motion:reduce){.chat-typing,.chat-typing i,.chat-a.arrive,.chat-a.arrive>*,.chat-q.pop,.chat-orb::before,.chat-orb::after{animation:none!important}}
 body.noanim .chat-typing,body.noanim .chat-typing i,body.noanim .chat-a.arrive,body.noanim .chat-a.arrive>*,body.noanim .chat-q.pop,
 body.noanim .chat-orb::before,body.noanim .chat-orb::after{animation:none!important}
+/* The page guide (js/ui/tour.js): the page dimmed, the thing being explained lit
+   through a hole in the dim, and a glass card beside it with an arrow pointing at it.
+   The hole glides from one thing to the next; the card comes in from the side it is
+   pointing from. A tap anywhere is the next tip. */
+.tour{position:fixed;inset:0;z-index:90;touch-action:none;-webkit-tap-highlight-color:transparent;opacity:0;transition:opacity .24s var(--e-standard)}
+.tour.on{opacity:1}
+.tour-hole{position:fixed;border-radius:16px;box-shadow:0 0 0 200vmax rgba(0,0,0,.6),0 0 0 2px rgba(var(--accentHi-rgb),.85),0 0 26px 4px rgba(var(--accent-rgb),.45);
+  transition:left .42s cubic-bezier(.2,.8,.2,1),top .42s cubic-bezier(.2,.8,.2,1),width .42s cubic-bezier(.2,.8,.2,1),height .42s cubic-bezier(.2,.8,.2,1),border-radius .42s;pointer-events:none}
+.tour-hole::after{content:"";position:absolute;inset:-6px;border-radius:inherit;border:1.5px solid rgba(var(--accentHi-rgb),.6);animation:tourPing 1.8s ease-out infinite}
+@keyframes tourPing{from{transform:scale(.96);opacity:.9}to{transform:scale(1.08);opacity:0}}
+.tour-card{position:fixed;padding:16px 18px 14px;border-radius:20px;color:var(--text);
+  background:rgba(var(--bg-rgb),.66);border:1px solid var(--card-edge);
+  box-shadow:inset 0 1px 0 var(--hair-hi),0 22px 50px -18px rgba(0,0,0,.7);
+  -webkit-backdrop-filter:saturate(170%) blur(26px);backdrop-filter:saturate(170%) blur(26px);outline:none;opacity:0}
+.tour-card.in{animation:tourIn .36s cubic-bezier(.2,.8,.2,1) both}
+.tour-card.up.in{--from:10px}
+.tour-card.down.in{--from:-10px}
+@keyframes tourIn{from{opacity:0;transform:translateY(var(--from,8px)) scale(.97)}to{opacity:1;transform:none}}
+.tour-arrow{position:absolute;width:18px;height:18px;background:inherit;border:inherit;transform:rotate(45deg);
+  -webkit-backdrop-filter:inherit;backdrop-filter:inherit}
+.tour-card.up .tour-arrow{top:-10px;border-right:0;border-bottom:0;border-top-left-radius:4px}
+.tour-card.down .tour-arrow{bottom:-10px;border-left:0;border-top:0;border-bottom-right-radius:4px}
+.tour-card.none .tour-arrow{display:none}
+.tour-k{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accentHi)}
+[dir="rtl"] .tour-k{letter-spacing:0;font-size:12px}
+.tour-h{margin:6px 0 4px;font-family:var(--display);font-size:18px;line-height:1.25}
+.tour-p{margin:0;font-size:14.5px;line-height:1.5;color:var(--sub)}
+.tour-f{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.tour-tap{font-size:12px;color:var(--dim)}
+.tour-skip{flex:none;min-height:32px;padding:0 12px;border:0;border-radius:var(--rpill);background:rgba(var(--accent-rgb),.12);
+  color:var(--text);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+/* While a guide is open the dock stays in sight, so it can be pointed at. */
+body.touring nav.dhid .dock{transform:none;opacity:1}
+@media (prefers-reduced-motion:reduce){.tour-hole,.tour-hole::after,.tour-card.in{transition:none;animation:none!important;opacity:1}}
+body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{transition:none;animation:none!important;opacity:1}
 /* Coach AI's card: what it is, three questions, and the rest of the conversation. */
 .chatcard{margin:0 0 var(--s4);padding:16px;border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card)}
 .chatcard-h{display:flex;align-items:center;gap:12px;margin:0 0 14px}

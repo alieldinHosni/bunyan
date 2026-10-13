@@ -11,8 +11,10 @@ import {checkBackup} from "../../schema.js";
 import {toDisp, toKg, wUnit} from "../../units.js";
 import {fmtN, num, today} from "../../util.js";
 import {ACT, askConfirm, askText, openSheet, val} from "../actions.js";
+import {resetNav} from "../nav.js";
 import {render} from "../render.js";
 import {changeLook, themeOf} from "../theme.js";
+import {tourReset} from "../tour.js";
 import {alarmStart, keepAwake, toast, V} from "../view.js";
 import {has, key} from "./registry.js";
 
@@ -46,6 +48,8 @@ function downloadBackup(){
    the branches are tried in (see registry.js). */
 function register(){
   /* Back to the initial: the photo is let go. */
+  /* The page guides from the start: Training first, where the app opens. */
+  key("tourreset",function(){tourReset();resetNav();V.tab="train";V.train="days";render();window.scrollTo(0,0);return;});
   key("avinit",function(){if(!S.profile.photo)return;delete S.profile.photo;saveDB();render();toast(t("Your initial is back."));return;});
   ACT.restore=function(_,o){
     setS(normalize(JSON.parse(JSON.stringify(o))));

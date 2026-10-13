@@ -81,6 +81,8 @@ function vProfile(){
   h+=group(t("Your data"),
      prow('data-sheet="set_data"',"archive",t("Backup and reset"),bk.s,bk.k==="warn"?"warn":"")
     +prow('data-sheet="about"',"info",t("About and privacy"),t("Everything stays on this phone")));
+  h+=group(t("Help"),
+     prow('data-tourreset="1"',"question",t("Show the guide again"),t("The tips that point out what each button does")));
   return h;}
 
 export {vProfile};

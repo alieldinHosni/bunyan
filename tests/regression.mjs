@@ -43,6 +43,9 @@ async function open(o={}){
     localStorage.setItem("bunyan:current",'"me"');
     localStorage.setItem("bunyan:db:me",raw!=null?raw:JSON.stringify(db));localStorage.setItem("t:seeded","1");}},[db,o.raw==null?null:o.raw]);
   if(o.blockIDB)await ctx.addInitScript(()=>{try{Object.defineProperty(window,"indexedDB",{get(){return {open(){throw new Error("blocked");}};}});}catch(e){}});
+  /* The page guides (js/ui/tour.js) would cover what each test taps; the guide's own
+     test turns them back on. */
+  if(!o.tour)await ctx.addInitScript(()=>{try{localStorage.setItem("bunyan:notour","1");}catch(e){}});
   const page=await ctx.newPage();const errs=[];
   page.on("pageerror",e=>errs.push(e.message));
   await page.goto(URL_);await page.waitForTimeout(1000);
@@ -2111,6 +2114,37 @@ await test("Coach chat in motion: a sent question flies to its place, the coach 
   await page.fill('#chatq','how is my weight');await page.tap('.chat-send');await pause(page,250);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none"]),[false,true],"no motion, no wait");
 },{prefs:{anim:true}});
+await test("Guide: the first time Training opens, glass tips point at each thing in turn; a tap anywhere is the next; once seen it stays away; Profile brings it back",async page=>{
+  await pause(page,1400);
+  const card=()=>page.evaluate(()=>{const c=document.querySelector(".tour-card");if(!c)return null;
+    const h=document.querySelector(".tour-hole").getBoundingClientRect();
+    return {k:c.querySelector(".tour-k").textContent,h:c.querySelector(".tour-h").textContent,dir:c.classList.contains("up")?"up":c.classList.contains("down")?"down":"none",hole:[Math.round(h.width),Math.round(h.height)]};});
+  let c=await card();
+  if(!c)throw new Error("no guide on first opening");
+  eq([c.k,c.h],["Training · 1 of 8","What the coach noticed"],"the first tip");
+  const bell=await page.$eval('.hacts [data-csec="ai"]',e=>{const r=e.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];});
+  if(Math.abs(c.hole[0]-bell[0]-16)>2||Math.abs(c.hole[1]-bell[1]-16)>2)throw new Error("the light is not on the bell: "+JSON.stringify([c.hole,bell]));
+  eq(await ev(page,"V.tab"),"train","the page under it is untouched");
+  /* Anywhere: even over a button, a tap only moves the guide on. */
+  const seen=[c.h];
+  for(let i=0;i<7;i++){await page.mouse.click(30+i*40,300+i*30);await pause(page,500);c=await card();if(c)seen.push(c.h);}
+  eq(seen.length,8,"eight tips");
+  eq(seen[7],"Getting around","the last points at the dock");
+  eq(await ev(page,"[V.tab,V.sheet]"),["train",null],"no tap reached the page");
+  await page.mouse.click(200,200);await pause(page,600);
+  eq([await card(),await ev(page,"S.prefs.toured.train")],[null,1],"finished, and remembered");
+  await page.reload();await pause(page,2200);
+  eq(await card(),null,"not again");
+  /* Profile → Show the guide again: Training's guide, from the start. */
+  await page.evaluate(()=>localStorage.setItem("bunyan:notour","1"));
+  await tapTab(page,"profile");await pause(page,400);
+  await page.evaluate(()=>localStorage.removeItem("bunyan:notour"));
+  await page.$eval('[data-tourreset]',e=>e.click());await pause(page,1800);
+  c=await card();
+  eq([await ev(page,"V.tab"),c&&c.k],["train","Training · 1 of 8"],"back from the start");
+  await page.click('.tour-skip');await pause(page,500);
+  eq([await card(),await ev(page,"S.prefs.toured.train")],[null,1],"Skip ends it, seen");
+},{tour:true});
 await test("Steps: tap the number and type any count (456); Done saves it; the buttons still step by 500",async page=>{
   await tapTab(page,"train");await pause(page);await page.evaluate(()=>window.scrollTo(0,0));
   await page.$eval('.htile.steps',e=>e.click());await pause(page,400);

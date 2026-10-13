@@ -771,6 +771,13 @@ their brand colours exactly. In every theme:
   translucent and blurred, so the page they open over shows through, softened, under a
   lighter veil (after the owner's FitPulse reference). Where the browser cannot blur
   they stay solid.
+- **The guide** (`ui/tour.js`): the first time each page opens (Training, Food, Coach,
+  Progress, Profile, the coach chat, running mode), it is explained where it stands. The
+  page dims, one thing at a time is lit, and a glass card beside it, its arrow pointing at
+  it, says in a sentence or two what it is and what a tap does. A tap anywhere is the next
+  tip; Skip ends it. Each page's guide is shown once; Profile → Show the guide again
+  brings them back. A step a page does not have today is passed over, and a step added
+  later (a new feature) is shown on its own to someone who has seen the rest.
 - **The dock** is a dark pill of round buttons; the tab that is on opens into a pill in
   the action colour with its name beside the icon (Training is a dumbbell, Coach a
   whistle). Signal Green, in Blue, marks something new. Four tabs; Profile is not one of

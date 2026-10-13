@@ -150,6 +150,9 @@ function normalize(o){
   if(o.myPlan&&!Array.isArray(o.myPlan.days))o.myPlan=null;
   /* A profile picture is a small image kept as a data URL (js/ui/photos.js), or none.
      Anything else, or anything big enough to crowd the storage, is dropped. */
+  /* Which page guides have been seen (js/ui/tour.js): page → version. */
+  var tr=o.prefs.toured;
+  if(tr!=null&&(typeof tr!=="object"||Array.isArray(tr)))delete o.prefs.toured;
   var ph=o.profile.photo;
   if(ph!=null&&!(typeof ph==="string"&&/^data:image\/(jpeg|png|webp);base64,/.test(ph)&&ph.length<300000))delete o.profile.photo;
   /* Maintenance measured from the log and chosen as the base for the targets

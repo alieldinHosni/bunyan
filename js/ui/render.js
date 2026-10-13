@@ -13,6 +13,7 @@ import {vSheet} from "./sheets.js";
 import {S, saveDB, storeWarning} from "../state.js";
 import {vTrain} from "./views/train.js";
 import {ensureRunWatch, vRun} from "./run.js";
+import {tourCheck} from "./tour.js";
 import {syncRest} from "./views/session.js";
 import {PERSIST} from "../util.js";
 import {lockScroll, syncWorkoutState, V} from "./view.js";
@@ -134,6 +135,8 @@ function render(){
   /* The dock is built once and only its state changes after that — see dock.js. */
   syncDock(document.getElementById("nav"),V.tab,V.advice);
   ensureRunWatch();
+  /* The page's guide, the first time it opens (js/ui/tour.js). */
+  tourCheck();
   /* A workout under way, seen from another tab. */
   syncWbar();
   /* A new screen opens with the dock in view (see dock.js). */
