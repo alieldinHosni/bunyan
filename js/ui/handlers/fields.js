@@ -13,7 +13,7 @@ import {dayOf, editSplit, S, saveDB} from "../../state.js";
 import {toKg} from "../../units.js";
 import {fmtN, num} from "../../util.js";
 import {runAct, val} from "../actions.js";
-import {addPhoto} from "../photos.js";
+import {addPhoto, avatarFrom} from "../photos.js";
 import {render} from "../render.js";
 import {mealNow, toast, V} from "../view.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
@@ -157,6 +157,15 @@ function onChange(ev){
     pfr.onload=function(){V.pitext=String(pfr.result||"");
       loadFoods(function(){V.pparse=withNotes(parsePlan(V.pitext));render();});};
     pfr.readAsText(pfile);ev.target.value="";return;}
+  /* A profile picture from the camera or the gallery. */
+  if(ev.target.id==="av_file"){
+    var avf=ev.target.files&&ev.target.files[0];
+    ev.target.value="";
+    if(!avf)return;
+    avatarFrom(avf,function(url){
+      if(!url){toast(t("That photo could not be used. Try another."));return;}
+      S.profile.photo=url;saveDB();render();toast(t("Profile picture saved."));});
+    return;}
   if(ev.target.id==="pg_photo"){
     var file=ev.target.files&&ev.target.files[0];
     ev.target.value="";

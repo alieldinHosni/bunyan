@@ -60,4 +60,25 @@ function addPhoto(file,cb){
     putPhoto(CUR,{id:uid(),d:today(),t:Date.now(),w:out.w,h:out.h,b:out.b},cb);});}
 function removePhoto(id,cb){delPhoto(CUR,id,cb);}
 
-export {addPhoto, photoById, photoList, removePhoto};
+/* A profile picture: the middle square of a photo, 256 px a side, as a JPEG data URL
+   (about 15–30 KB). It is kept with the profile itself, so it goes into a backup and
+   needs no photo store. cb(dataUrl) or cb(null). */
+var AV=256;
+function avatarFrom(file,cb){
+  if(!file||!/^image\//.test(file.type||"image/"))return cb(null);
+  var url;
+  try{url=URL.createObjectURL(file);}catch(e){return cb(null);}
+  var img=new Image();
+  img.onload=function(){
+    var w=img.naturalWidth,h=img.naturalHeight,side=Math.min(w,h);
+    var c=document.createElement("canvas");c.width=AV;c.height=AV;
+    var out=null;
+    try{
+      c.getContext("2d").drawImage(img,(w-side)/2,(h-side)/2,side,side,0,0,AV,AV);
+      out=c.toDataURL("image/jpeg",0.84);}catch(e){out=null;}
+    URL.revokeObjectURL(url);
+    cb(out&&out.indexOf("data:image/jpeg")===0?out:null);};
+  img.onerror=function(){URL.revokeObjectURL(url);cb(null);};
+  img.src=url;}
+
+export {addPhoto, avatarFrom, photoById, photoList, removePhoto};

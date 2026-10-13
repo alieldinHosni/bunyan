@@ -45,6 +45,8 @@ function downloadBackup(){
 /* What this module answers. app.js calls register() once, at boot, in the order
    the branches are tried in (see registry.js). */
 function register(){
+  /* Back to the initial: the photo is let go. */
+  key("avinit",function(){if(!S.profile.photo)return;delete S.profile.photo;saveDB();render();toast(t("Your initial is back."));return;});
   ACT.restore=function(_,o){
     setS(normalize(JSON.parse(JSON.stringify(o))));
     migrate();saveDB();V.tab="train";V.train="days";

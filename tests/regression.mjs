@@ -2076,6 +2076,26 @@ await test("Training: the bell says what the coach noticed and opens it; the ini
   await page.tap('#app [data-back]');await pause(page,500);
   eq(await ev(page,"V.tab"),"train","back returns to Training");
 });
+await test("Profile picture: both choices in sight; a photo from the phone shows on Training and Profile, across a reload; the initial comes back",async page=>{
+  await tapTab(page,"profile");await pause(page,400);
+  await page.tap('.pid-av');await pause(page,500);
+  eq(await ev(page,"V.sheet"),"set_avatar","the picture opens its sheet");
+  eq(await page.$$eval('#sheet .avopt',a=>a.map(x=>[x.classList.contains("on"),!!x.querySelector('input[type=file][accept="image/*"]'),!!x.dataset.avinit])),
+    [[false,true,false],[true,false,true]],"upload a photo, and the initial (in use)");
+  await page.setInputFiles('#av_file',new URL("../icon-180.png",import.meta.url).pathname);
+  for(let i=0;i<20&&!(await ev(page,"!!S.profile.photo"));i++)await pause(page,150);
+  eq(await ev(page,"/^data:image\\/jpeg;base64,/.test(S.profile.photo)&&S.profile.photo.length<60000"),true,"kept small, as a JPEG");
+  eq(await page.$$eval('.pid .pmono img.avimg',a=>a.length),1,"Profile shows it");
+  await page.reload();await pause(page,1000);
+  await tapTab(page,"train");await pause(page);
+  eq(await page.$$eval('.hacts .havatar img.avimg',a=>a.length),1,"Training's top right shows it, after a reload");
+  await page.tap('.hacts .havatar');await pause(page,400);
+  await page.tap('.pid-av');await pause(page,500);
+  await page.tap('#sheet [data-avinit]');await pause(page,400);
+  eq(await ev(page,"'photo' in S.profile"),false,"let go");
+  await page.tap('#sheet [data-close]');await pause(page,400);
+  eq(await page.$eval('.pid .pmono',e=>[!!e.querySelector("img"),e.textContent.trim().length>0]),[false,true],"the initials are back");
+});
 await test("Steps: tap the number and type any count (456); Done saves it; the buttons still step by 500",async page=>{
   await tapTab(page,"train");await pause(page);await page.evaluate(()=>window.scrollTo(0,0));
   await page.$eval('.htile.steps',e=>e.click());await pause(page,400);

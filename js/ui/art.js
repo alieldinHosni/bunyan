@@ -194,9 +194,29 @@ var ART={
     ["M34 30H86V74C86 78 82 80 78 80H42C38 80 34 78 34 74Z","a"],["M32 18H88V30H32Z","a"],
     ["M34 44H86M34 66H86","b"],["M52 55C52 50 58 49 60 52C62 49 68 50 68 55C68 60 62 61 60 58C58 61 52 60 52 55Z","b"]],e:[]},
 };
+/* Profile: the orbit around the picture. An ellipse and two copies of it turned a third
+   of the way round, a ring inside, and embers on the paths; the embers travel and the
+   whole of it turns slowly (CSS), after it has drawn itself in. */
+ART.orbit={vb:"0 0 160 160",s:[
+  ["M8 80A72 56 0 1 0 152 80A72 56 0 1 0 8 80","a"],
+  ["M8 80A72 56 0 1 0 152 80A72 56 0 1 0 8 80","b",60],
+  ["M8 80A72 56 0 1 0 152 80A72 56 0 1 0 8 80","b",120],
+  ["M22 80A58 58 0 1 0 138 80A58 58 0 1 0 22 80","b"]],
+  e:[[152,80,2.2],[44,128,1.6],[96,25,1.3],[30,52,1.1]]};
+/* Profile, behind it all and still: contour lines, a map of ground climbed. */
+ART.topo={vb:"0 0 360 200",s:[
+  ["M252 44C274 43 290 57 288 74S266 103 245 101 214 87 216 69 230 45 252 44Z","a"],
+  ["M254 26C289 24 315 46 313 75S284 124 243 121 194 100 196 71 216 28 254 26Z","b"],
+  ["M256 8C305 4 341 38 339 78S299 147 241 143 172 112 175 71 204 12 256 8Z","b"],
+  ["M262 -12C327 -16 372 32 368 84S318 172 236 166 148 124 152 72 192 -6 262 -12Z","b"],
+  ["M78 150C94 142 114 148 116 162S100 186 82 184 60 168 64 158 72 153 78 150Z","a"],
+  ["M74 128C102 118 136 132 138 160S112 206 78 204 38 178 42 156 54 134 74 128Z","b"],
+  ["M-10 96C40 74 98 84 132 112S176 170 160 210","b"],
+  ["M-10 58C46 34 120 46 160 84S212 160 200 214","b"]],
+  e:[[252,72,1.6],[84,166,1.4]]};
 /* The point a stroke's rotation (its third field) turns about, per drawing; the
    origin where a drawing has none. */
-var CX={};
+var CX={orbit:[80,80]};
 
 function strokes(name){
   var a=ART[name],c=CX[name]||[0,0];

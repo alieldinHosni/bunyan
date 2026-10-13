@@ -142,8 +142,11 @@ above the dock.
   this week, weight, strength, food) are the coach chat's. Training volume over a short range is drawn as capsule
   bars, the newest in the action colour with its figure above it.
 - **Profile** (`views/profile.js`, `settings.js`), opened from Training's top right,
-  with a back arrow to it: who this is (the goal, the program,
-  workouts, streak, weight), then grouped rows that each say what is set: You, Training,
+  with a back arrow to it: who this is (the picture in a drawn orbit that turns slowly,
+  over still contour lines; the goal, the program, workouts, streak, weight). The
+  picture is a photo from the phone's camera or gallery, cropped square and kept with
+  the profile (about 20 KB), or the initial; tapping it offers both. Then glass rows
+  that each say what is set: You, Training,
   Nutrition, App; the profiles on the phone, sharing, friends; the backup (how old it
   is, and a warning when there is none) and About. Every setting is a switch, a
   segmented choice with every option in sight, or a ticked list; none is a drop-down,

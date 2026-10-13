@@ -10,6 +10,7 @@ import {toDisp, wUnit} from "../../units.js";
 import {dfmt, esc, fmtN, num, today} from "../../util.js";
 import {art} from "../art.js";
 import {glyph} from "../glyphs.js";
+import {avatar} from "../settings.js";
 import {V} from "../view.js";
 
 /* ---- pieces the frame is made of ------------------------------------------ */
@@ -77,7 +78,7 @@ function trainTop(){
    +'<div class="hacts">'
    +'<button class="hbtn'+(n?' flag':'')+'" data-csec="ai" aria-label="'+esc(bell)+'">'+glyph("bell")+'</button>'
    +'<button class="hbtn havatar" data-prof="1" aria-label="'+esc(t("Profile"))+'">'
-   +(name?'<span aria-hidden="true">'+esc(name.charAt(0).toUpperCase())+'</span>':glyph("person"))+'</button>'
+   +(S.profile.photo||name?avatar(name,"",true):glyph("person"))+'</button>'
    +'</div></div>'+reminder();}
 /* Weigh-in and steps, each one tap into its one-field sheet. */
 function bodyTiles(){

@@ -1765,7 +1765,20 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Target {n}. Tap the number to type it, or step by 500.": "الهدف {n}. دوس على الرقم واكتبه، أو غيّره 500 في المرة.",
 "Change the amount of": "غيّر كمية",
 "Change the amount": "غيّر الكمية",
-"{f}: now {a}.": "{f}: بقى {a}."
+"{f}: now {a}.": "{f}: بقى {a}.",
+"Profile picture": "صورة الحساب",
+"your photo. Change it": "صورتك. غيّرها",
+"your initial. Add a photo": "أول حرف من اسمك. ضيف صورة",
+"Your details": "بياناتك",
+"Shown at the top of Training and on Profile. It stays on this phone.": "بتظهر فوق في التمرين وفي حسابك، وبتفضل على الموبايل ده.",
+"Choose another photo": "اختار صورة تانية",
+"Upload a photo": "ارفع صورة",
+"From your camera or your gallery": "من الكاميرا أو من الصور",
+"Use my initial": "استخدم أول حرف من اسمي",
+"The first letter of your name": "أول حرف من اسمك",
+"That photo could not be used. Try another.": "مقدرناش نستخدم الصورة دي. جرّب واحدة تانية.",
+"Profile picture saved.": "صورة الحساب اتحفظت.",
+"Your initial is back.": "رجع أول حرف من اسمك."
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;

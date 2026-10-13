@@ -49,6 +49,8 @@
    @property {"conservative"|"standard"|"aggressive"} prog  how fast weight goes up
    @property {"new"|"some"|"experienced"|"advanced"} level  @property {number} days  a week
    @property {string[]=} limits  sore areas: knee, back, shoulder, wrist, ankle
+   @property {string=} photo  the profile picture, a JPEG data URL of about 256 px a
+     side, or missing for the initial
 
    @typedef {Object} Prefs  the Settings screens; the off flags (nowarm, nocool,
      noblocks) are false or missing for on, so a new setting needs no migration.
@@ -146,6 +148,10 @@ function normalize(o){
     if(!o[k]||typeof o[k]!=="object"||Array.isArray(o[k]))o[k]={};});
   Object.keys(d).forEach(function(k){if(k!=="v"&&!(k in o))o[k]=d[k];});
   if(o.myPlan&&!Array.isArray(o.myPlan.days))o.myPlan=null;
+  /* A profile picture is a small image kept as a data URL (js/ui/photos.js), or none.
+     Anything else, or anything big enough to crowd the storage, is dropped. */
+  var ph=o.profile.photo;
+  if(ph!=null&&!(typeof ph==="string"&&/^data:image\/(jpeg|png|webp);base64,/.test(ph)&&ph.length<300000))delete o.profile.photo;
   /* Maintenance measured from the log and chosen as the base for the targets
      (js/engine/energy.js): a plausible number of kcal, or nothing. */
   if(o.energy!=null&&!(o.energy&&typeof o.energy==="object"&&+o.energy.kcal>=1000&&+o.energy.kcal<=6000))delete o.energy;

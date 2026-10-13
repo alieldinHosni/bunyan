@@ -1500,7 +1500,29 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .hbtn.flag::after{content:"";position:absolute;top:9px;inset-inline-end:10px;width:9px;height:9px;border-radius:50%;
   background:var(--dock-flag);box-shadow:0 0 0 2px var(--bg)}
 .havatar{background:var(--accent);border-color:transparent;color:var(--onAccent);
-  font-family:var(--display);font-weight:800;font-size:17px}
+  font-family:var(--display);font-weight:800;font-size:17px;overflow:hidden}
+.havatar .avimg{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+/* The profile picture sheet: the picture large, then the two choices, both in sight. */
+.avprev{display:grid;place-items:center;margin:6px 0 18px}
+.avprev .xl{display:grid;place-items:center;width:112px;height:112px;border-radius:50%;object-fit:cover;
+  font-family:var(--display);font-weight:800;font-size:40px;color:var(--onAccent);
+  background:linear-gradient(150deg,rgba(var(--accent-rgb),.95),rgba(var(--accent-rgb),.62));
+  box-shadow:0 0 0 4px rgba(var(--bg-rgb),.8),0 0 0 5px var(--card-edge),0 14px 32px -10px rgba(var(--accent-rgb),.6)}
+.avopts{display:flex;flex-direction:column;gap:10px}
+.avopt{position:relative;display:flex;align-items:center;gap:14px;width:100%;min-height:68px;margin:0;padding:12px 14px;
+  border-radius:var(--r4);border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;text-align:start;cursor:pointer;
+  transition:border-color var(--m-micro) var(--e-standard),background var(--m-micro) var(--e-standard)}
+.avopt.on{border-color:rgba(var(--accentHi-rgb),.6);background:linear-gradient(180deg,rgba(var(--accent-rgb),.12),transparent),var(--surface)}
+:root:not(.tch) .avopt:active,.avopt.tapd{transform:scale(.98)}
+.avopt-i{display:grid;place-items:center;flex:none;width:44px;height:44px;border-radius:50%;color:var(--accentHi);
+  background:rgba(var(--accent-rgb),.14);box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),.3)}
+.avopt-i.ini{font-family:var(--display);font-weight:800;font-size:19px;color:var(--onAccent);background:var(--accent)}
+.avopt-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.avopt-t b{font-size:15px}
+.avopt-t small{font-size:12.5px;color:var(--dim)}
+.avopt-c{flex:none;color:var(--accentHi)}
+.avopt-c .gl{width:20px;height:20px;stroke-width:2.2}
+.avopt input[type=file]:focus-visible+.avopt-i{outline:2px solid var(--accentHi);outline-offset:2px}
 
 .hstack{display:flex;flex-direction:column;gap:16px}
 .hstack>.card{margin:0}
@@ -2584,6 +2606,17 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 [dir="rtl"] .sg-h{letter-spacing:0;font-size:12.5px}
 .sg-list{border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);overflow:hidden}
+/* On the page (not in a sheet) the rows are glass: the ground shows through, blurred,
+   under a lit top edge, and each icon sits in a glass disc of the accent. */
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  #app .sg-list,#app .pid{-webkit-backdrop-filter:saturate(150%) blur(18px);backdrop-filter:saturate(150%) blur(18px)}}
+#app .sg-list{box-shadow:inset 0 1px 0 var(--hair-hi),0 10px 30px -18px rgba(0,0,0,.45)}
+#app .sg-list .srow{border-bottom-color:var(--card-edge)}
+#app .srow .gtile{border-radius:50%;color:var(--accentHi);
+  background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,.16),transparent 55%),rgba(var(--accent-rgb),.14);
+  box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),.28),inset 0 1px 0 rgba(255,255,255,.18)}
+#app .srow-danger .gtile,#app .gtile.warn{color:var(--warning);background:rgba(var(--warning-rgb),.12);box-shadow:inset 0 0 0 1px rgba(var(--warning-rgb),.28)}
+#app button.srow:not(.srow-pick):active,#app button.srow.tapd{background:rgba(var(--accent-rgb),.08)}
 .sg-f{margin:8px 4px 0;font-size:12.5px;line-height:1.55;color:var(--dim)}
 .srow{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;margin:0;padding:10px 14px;border:0;
   border-bottom:1px solid var(--border);border-radius:0;background:none;color:var(--text);font:inherit;text-align:start;cursor:pointer;
@@ -2625,13 +2658,45 @@ button.srow:not(.srow-pick):active,button.srow.tapd{background:var(--surface)}
 .srow.on .pmono{box-shadow:inset 0 0 0 1.5px var(--accent-edge)}
 
 /* Who this is: a monogram, the name, the goal and the program, and three figures. */
-.pid{border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card);overflow:hidden}
-.pid-top{display:flex;align-items:center;gap:14px;width:100%;margin:0;padding:16px;border:0;background:none;color:var(--text);
-  font:inherit;text-align:start;cursor:pointer}
-.pid-top .ico-chev{flex:none;color:var(--dim)}
-.pid-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.pid-n{font-family:var(--display);font-weight:800;font-size:22px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pid{position:relative;isolation:isolate;border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card);overflow:hidden}
+/* Contour lines behind the whole card, still and faint: texture, never read. */
+.pid-bg{position:absolute;z-index:-1;top:-74px;right:-130px;width:540px;height:auto;opacity:.13;pointer-events:none;stroke-width:1.1}
+.pid-bg .a{opacity:.7}
+[dir="rtl"] .pid-bg{right:auto;left:-130px;transform:scaleX(-1)}
+.pid-hero{display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 16px 14px;text-align:center}
+/* The picture in its orbit. The orbit draws itself in, then turns slowly; its embers
+   travel round faster. Still when animations are off. */
+.pid-av{position:relative;display:grid;place-items:center;width:156px;height:156px;margin:0;padding:0;border:0;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(var(--glow-rgb),.20),transparent 72%);cursor:pointer;
+  transition:transform var(--m-press) var(--e-standard)}
+:root:not(.tch) .pid-av:active,.pid-av.tapd{transform:scale(.96)}
+.pid-av:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
+.pid-orbit{position:absolute;inset:0;width:100%;height:100%;stroke-width:1.2;animation:pidTurn 80s linear infinite}
+.pid-orbit .a{opacity:.85}
+.pid-orbit .e{transform-box:view-box;transform-origin:80px 80px}
+.pid-orbit.draw .e{animation:artEmber .9s var(--e-standard) .9s forwards,pidTurn 14s linear .9s infinite}
+@keyframes pidTurn{to{transform:rotate(360deg)}}
+.pmono.xl{width:84px;height:84px;border-radius:50%;font-size:30px;overflow:hidden;
+  background:linear-gradient(150deg,rgba(var(--accent-rgb),.95),rgba(var(--accent-rgb),.62));color:var(--onAccent);
+  box-shadow:0 0 0 3px rgba(var(--bg-rgb),.85),0 0 0 4px var(--card-edge),0 10px 28px -8px rgba(var(--accent-rgb),.6)}
+.pmono.xl .avimg{width:100%;height:100%;object-fit:cover;display:block}
+.pid-cam{position:absolute;bottom:30px;inset-inline-end:32px;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;
+  background:rgba(var(--bg-rgb),.72);color:var(--text);box-shadow:inset 0 0 0 1px var(--card-edge);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.pid-cam .gl{width:16px;height:16px}
+@media (prefers-reduced-motion:reduce){.pid-orbit,.pid-orbit .e{animation:none!important}.pid-orbit .e{opacity:.8}}
+body.noanim .pid-orbit,body.noanim .pid-orbit .e{animation:none!important}
+body.noanim .pid-orbit .e{opacity:.8}
+.pid-top{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;margin:0;padding:2px 8px;border:0;background:none;color:var(--text);
+  font:inherit;text-align:center;cursor:pointer}
+.pid-t{min-width:0;max-width:100%;display:flex;flex-direction:column;align-items:center;gap:3px}
+.pid-n{max-width:100%;font-family:var(--display);font-weight:800;font-size:24px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pid-s{font-size:13px;color:var(--dim);line-height:1.4}
+.pid-edit{display:inline-flex;align-items:center;gap:2px;margin-top:8px;padding:6px 8px 6px 14px;border-radius:var(--rpill);
+  font-size:12.5px;font-weight:700;color:var(--text);background:rgba(var(--accent-rgb),.10);box-shadow:inset 0 0 0 1px var(--card-edge)}
+[dir="rtl"] .pid-edit{padding:6px 14px 6px 8px}
+.pid-edit .ico-chev{width:16px;height:16px;color:var(--dim)}
+:root:not(.tch) .pid-top:active .pid-edit,.pid-top.tapd .pid-edit{background:rgba(var(--accent-rgb),.2)}
 .pid-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--border)}
 .pid-stats>div{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px}
 .pid-stats>div+div{border-inline-start:1px solid var(--border)}

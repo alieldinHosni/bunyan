@@ -36,7 +36,7 @@ function exStep(k,label,v,unit){
 /* ============================================================ sheets */
 var SHEET_KICK={editex:"Exercise",tiex:"Import",recovery:"Recovery",weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
   gear:"Training",likes:"Training",exercise:"Training",exhist:"History",share:"Sharing",coach:"Sharing",
-  backup:"Your data",restore:"Your data",set_you:"Settings",set_training:"Settings",set_app:"Settings",
+  backup:"Your data",restore:"Your data",set_you:"Settings",set_avatar:"Profile",set_training:"Settings",set_app:"Settings",
   set_profiles:"Settings",set_data:"Settings",about:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
 var CFICON={
   leave:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M9 16l-4-4 4-4M5 12h11"/>',
