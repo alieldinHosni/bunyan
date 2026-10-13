@@ -1957,6 +1957,72 @@ await test("Profile: a summary page; every row opens its sheet; the backup row w
   await page.tap('#app [data-sheet="about"]');await pause(page);
   if(!/Epley/.test(await page.$eval('#sheet',e=>e.innerText)))throw new Error("About lacks the formulas note");
 });
+/* ---- the chat answers in the language it is asked in, and knows more (js/ui/views/chat.js) ---- */
+/* A day with a plan: breakfast eaten, three meals still to go, all from the food list. */
+function planned(){
+  const db=seed(),pi=(n,fid,g,kcal,p,c,f)=>({n,fid,grams:g,label:g+" g",kcal,p,c,f});
+  db.mealSlots=[{id:"Breakfast",plan:[pi("Eggs","egg",100,143,12.6,0.7,9.5)]},
+    {id:"Lunch",plan:[pi("Chicken Breast, Grilled","chicken_breast_ck",150,248,46,0,5.4),pi("White Rice, Cooked","rice_ck",200,260,5.4,56,0.6)]},
+    {id:"Snack",plan:[pi("Greek Yogurt","greek_yog",170,100,17,6,0.7)]},
+    {id:"Dinner",plan:[pi("Lentils, Cooked","lentils",200,232,18,40,0.8)]}];
+  db.days[iso(0)]={meals:{Breakfast:{done:true,items:[pi("Eggs","egg",100,143,12.6,0.7,9.5)]}}};
+  return db;}
+const lastX=page=>page.evaluate(()=>{const x=[...document.querySelectorAll(".chat-x")].pop();
+  return {lang:x.getAttribute("lang"),dir:x.getAttribute("dir"),a:x.querySelector(".chat-a").innerText};});
+async function chatAsk(page,q){await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,400);return lastX(page);}
+await test("Coach chat: asked in Arabic in the English app, it answers in Arabic, and what it offers next is Arabic too; asked in English in the Arabic app, English",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  let r=await chatAsk(page,"بينش بريس كام؟");
+  eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang,r.dir],["weights","ar","rtl"],"a misspelt bench press in Arabic: the weights, in Arabic");
+  if(!/بنش بريس/.test(r.a)||/Squat|سكوات/.test(r.a))throw new Error("not the bench press alone: "+r.a);
+  const chips=await page.$$eval('.chat-next [data-chatq]',a=>a.map(b=>[b.dataset.chatl,/[؀-ۿ]/.test(b.textContent)]));
+  if(!chips.length||chips.some(c=>c[0]!=="ar"||!c[1]))throw new Error("the next questions are not Arabic: "+JSON.stringify(chips));
+  await page.tap('.chat-next [data-chatq]');await pause(page,400);
+  eq((await lastX(page)).lang,"ar","a tap on one keeps to Arabic");
+  r=await chatAsk(page,"3ayez akol eh delwa2ty");
+  eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang],["eat","ar"],"Arabic in Latin letters is Arabic");
+  r=await chatAsk(page,"what should I eat");
+  eq([r.lang,/[؀-ۿ]/.test(r.a)],["en",false],"and English again is English");
+  eq(await ev(page,"S.prefs.lang"),"en","the app's own language is untouched");
+});
+await test("Coach chat: in the Arabic app, an English question gets an English answer",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  const r=await chatAsk(page,"how much protein do I need");
+  eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang,r.dir],["protein","en","ltr"],"English");
+  if(/[؀-ۿ]/.test(r.a))throw new Error("Arabic in the answer: "+r.a);
+  eq(await ev(page,"[S.prefs.lang,document.documentElement.dir]"),["ar","rtl"],"the app stays Arabic");
+},{prefs:{lang:"ar"}});
+await test("Coach chat: the rest of today from the plan, swaps with the same macros that are never the same food, and what is in a food",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  let r=await chatAsk(page,"What should I eat for the rest of the day?");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"rest","the rest of the day");
+  for(const m of ["Lunch","Snack","Dinner"])if(r.a.indexOf(m)<0)throw new Error(m+" is missing: "+r.a);
+  if(/Breakfast/.test(r.a))throw new Error("breakfast is already eaten: "+r.a);
+  if(!/Lentils, Cooked/.test(r.a)||/Cooked, /.test(r.a))throw new Error("foods run together: "+r.a);
+  r=await chatAsk(page,"Is there other food options u can provide with same macros");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"swap","swaps");
+  const rows=r.a.split("\n").filter(x=>x.indexOf("→")>0);
+  if(rows.length<2)throw new Error("no swaps: "+r.a);
+  for(const x of rows){const [from,to]=x.split("→"),w=from.trim().split(/[ ,]/)[0].toLowerCase();
+    if(to.toLowerCase().indexOf(w)>=0)throw new Error("swapped for itself: "+x);
+    if(to.split("·").length<2)throw new Error("fewer than two choices: "+x);}
+  r=await chatAsk(page,"how much protein in eggs");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"foodinfo","what is in a food");
+  if(!/Eggs.*6\.3 g protein/.test(r.a)||!/Per 100 g/.test(r.a))throw new Error("egg facts: "+r.a);
+  r=await chatAsk(page,"كام بروتين في البيض");
+  eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang],["foodinfo","ar"],"the same, asked in Arabic");
+  if(!/بيض/.test(r.a)||!/6\.3 جم بروتين/.test(r.a))throw new Error("Arabic egg facts: "+r.a);
+},{db:planned()});
+await test("Coach chat: tomorrow's workout and how the last one went",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  let r=await chatAsk(page,"what do I train tomorrow");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"tomorrow","tomorrow");
+  if(!/Tomorrow/.test(r.a))throw new Error(r.a);
+  r=await chatAsk(page,"how did my last workout go");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"last","the last workout");
+  if(!/Bench Press: 60 kg × 8/.test(r.a)||!/[\d,]+ kg lifted in all/.test(r.a))throw new Error(r.a);
+  if(!(await page.$('.chat-acts [data-openday]')))throw new Error("no way to the session");
+});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

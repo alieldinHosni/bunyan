@@ -147,7 +147,10 @@ function register(){
   /* Ask the coach (js/ui/views/chat.js): open the conversation, ask a suggestion or what
      was typed, clear it with Undo. */
   key("chat",function(){pushNav();V.chat=true;render();chatEnd();return;});
-  key("chatq",function(D){if(!V.chat){pushNav();V.chat=true;}ask("",D.chatq);saveDB();render();chatEnd();return;});
+  /* The food database loads first (from the cache, offline): swaps and food facts
+     answer from it. */
+  key("chatq",function(D){if(!V.chat){pushNav();V.chat=true;}
+    loadFoods(function(){ask("",D.chatq,D.chatl);saveDB();render();chatEnd();});return;});
   key("chatsend",function(){chatSend();return;});
   key("chatclear",function(){var chB=S.chat||[];S.chat=[];saveDB();render();window.scrollTo(0,0);
     toast(t("Conversation cleared."),function(){S.chat=chB;saveDB();render();});return;});

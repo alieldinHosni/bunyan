@@ -96,7 +96,13 @@ chatbot. A question, tapped from the suggestions or typed in English or Arabic, 
 matched to one of a fixed set of things the coach can answer: today's workout, what to
 lift, what to eat now, how things are going, the weight trend, protein, where the
 calories come from, soreness or pain, a missed day or little time, the program's
-balance, strength, the goal, a new plan, water, steps. The answer is worked out on the
+balance, strength, the goal, a new plan, water, steps, tomorrow's workout, how the last
+one went, what is left to eat today, foods with the same macros as a planned one, and
+what is in a food. It answers in the language it is asked in, whatever the app is set
+to: Arabic (or Arabic typed in Latin letters, "3ayez akol eh") gets Arabic, English gets
+English, and the questions it offers next follow. Spelling is forgiven: one wrong letter
+in a longer word, a long vowel added or left out ("بينش" is بنش, "protien" is protein),
+and the common ways a lift or "calories" is written. The answer is worked out on the
 phone from the person's own log, plan and targets, with the same engines as the rest of
 the app, so it never says more than the app knows; a question outside that set is
 told so. Nothing is sent anywhere and no model writes the text. The newest answer
@@ -530,7 +536,8 @@ otherwise they would outlive the blob that was supposed to own them.
   - `intent.js`: what a question to the coach chat is asking, in English or Egyptian
     Arabic: phrases scored by the letters they match, so the more specific one wins
     ("how much weight" is the load, "my weight" the scale), and "unknown" rather than
-    a guess.
+    a guess. It also says which language the question is in, and the next-best
+    subject, for a question the first cannot answer.
 
   Coach AI shows them with the plan check's findings, one at a time: the most
   important, and "N more things the coach sees" behind a tap (the plan check, opened on
