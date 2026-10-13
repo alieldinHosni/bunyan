@@ -18,8 +18,9 @@ import {goBack, pushNav} from "../nav.js";
 import {render} from "../render.js";
 import {curDate, mealNow, play, toast, V} from "../view.js";
 import {pickAmount, servs} from "../views/addfood.js";
+import {ask} from "../views/chat.js";
 import {savedById} from "../views/food.js";
-import {pcAfter, slotsFrom, topOfResults, withNotes} from "./common.js";
+import {chatEnd, pcAfter, slotsFrom, topOfResults, withNotes} from "./common.js";
 import {has, key, on} from "./registry.js";
 
 /* Logs one food to the add-food sheet's meal and closes it. The single path for the
@@ -446,6 +447,19 @@ function register(){
   /* A frequent-food pill on the dashboard, or the + beside a result in the sheet.
      Both used to go to Snack whatever the meal — including from a sheet opened for
      Breakfast. logFood takes the sheet's meal, or the time of day's without one. */
+  /* A suggestion under the body diagram: that food, in that portion, into the meal for
+     the time of day. "Build today's meal" asks the coach what is left to eat today. */
+  key("fsug",function(D){
+    var fs=D.fsug.split("|");
+    loadFoods(function(){
+      var f=(FOODDB||[]).filter(function(x){return x.id===fs[0];})[0];
+      if(f)logFood(f,+fs[1],fs.slice(2).join("|"));});
+    return;});
+  key("fbuild",function(){
+    pushNav();V.tab="coach";V.csec="ai";V.chat=true;
+    loadFoods(function(){ask("",S.mealSlots&&S.mealSlots.some(function(x){return (x.plan||[]).length;})?"rest":"eat");
+      saveDB();render();chatEnd();});
+    return;});
   key("quickfood",function(D){
     var f10=(S.myFoods||[]).concat(FOODDB||[]).filter(function(x){return x.id===D.quickfood;})[0];
     if(!f10)return;

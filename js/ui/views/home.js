@@ -9,6 +9,8 @@ import {curProfile, dayRec, S} from "../../state.js";
 import {toDisp, wUnit} from "../../units.js";
 import {dfmt, esc, fmtN, num, today} from "../../util.js";
 import {art} from "../art.js";
+import {glyph} from "../glyphs.js";
+import {V} from "../view.js";
 
 /* ---- pieces the frame is made of ------------------------------------------ */
 
@@ -54,16 +56,22 @@ function tile(attr,cls,icon,label,value,sub,aria){
 var HI={
   steps:'<path d="M8 3c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM6 16h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM14 20h4"/>',
   weight:'<path d="M5 20h14l-2-12H7zM9 8a3 3 0 0 1 6 0M12 12v3"/>'};
-/* The greeting under a drawing for the time of day, then the one reminder. */
+/* The greeting under a drawing for the time of day, then the one reminder. At the top
+   right, two round glass buttons: the bell, which opens what the coach has noticed and
+   carries a dot while there is something, and the person, which opens Profile. */
 function trainTop(){
-  var name=ownName(),hr=new Date().getHours(),scene=hr<12?"sunrise":hr<17?"sun":"moon";
-  return '<div class="hgreet">'+art(scene,{cls:"hgreet-art"})+'<div>'
+  var name=ownName(),hr=new Date().getHours(),scene=hr<12?"sunrise":hr<17?"sun":"moon",n=V.advice||0;
+  var bell=t("What the coach noticed")+(n?", "+t(n===1?"1 thing to look at":"{n} things to look at").replace("{n}",n):"");
+  return '<div class="hgreet">'+art(scene,{cls:"hgreet-art"})+'<div class="hgreet-t">'
    +'<div class="hdate">'+esc(dfmt(new Date(),{weekday:"long",day:"numeric",month:"short"}))+'</div>'
    /* The name is its own run: a Latin name beside an Arabic greeting otherwise drags
       the comma to the wrong side ("Khalid ,صباح الخير"). Arabic takes its own comma. */
    +'<h1>'+esc(greeting())+(name?esc(S.prefs.lang==="ar"?"، ":", ")+'<bdi>'+esc(name)+'</bdi>':'')+'</h1></div>'
-   +(name?'<div class="havatar" aria-hidden="true">'+esc(name.charAt(0).toUpperCase())+'</div>':'')
-   +'</div>'+reminder();}
+   +'<div class="hacts">'
+   +'<button class="hbtn'+(n?' flag':'')+'" data-csec="ai" aria-label="'+esc(bell)+'">'+glyph("bell")+'</button>'
+   +'<button class="hbtn havatar" data-go="profile" aria-label="'+esc(t("Profile"))+'">'
+   +(name?'<span aria-hidden="true">'+esc(name.charAt(0).toUpperCase())+'</span>':glyph("person"))+'</button>'
+   +'</div></div>'+reminder();}
 /* Weigh-in and steps, each one tap into its one-field sheet. */
 function bodyTiles(){
   var g=S.goals,r=dayRec(today()),kg=lastWeight(),wc=weightChange();

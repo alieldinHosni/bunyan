@@ -107,6 +107,19 @@ function lineChart(pts,o){
    +'<span>'+esc(shortd(pts[last].d))+'</span></figcaption></figure>';
   return h;}
 function tooFew(text){return '<p class="pgnone">'+esc(text)+'</p>';}
+/* Bars as capsules, the way the reference draws a week: each value a rounded column on
+   a glass track, its date inside at the foot, and the newest filled in the accent with
+   its figure above it. For a short series only (up to 16), where each bar is wide
+   enough to carry its date; a longer one is a line. fmt turns a value into its label. */
+function capsChart(pts,o){
+  var mx=Math.max.apply(null,pts.map(function(p){return p.v;}))||1,last=pts.length-1;
+  return '<figure class="caps" role="img" aria-label="'+esc(o.aria||"")+'"><div class="caps-r" dir="ltr" aria-hidden="true">'
+   +pts.map(function(p,i){
+     var h=Math.max(16,Math.round(p.v/mx*100)),dd=String(+String(p.d).slice(8,10));
+     return '<div class="caps-c'+(i===last?' on':'')+'">'
+      +(i===last?'<span class="caps-v">'+esc(o.fmt(p.v))+'</span>':'')
+      +'<span class="caps-b" style="height:'+h+'%"><span class="caps-l">'+esc(dd)+'</span></span></div>';}).join("")
+   +'</div><figcaption class="pgaxis"><span>'+esc(shortd(pts[0].d))+'</span><span>'+esc(shortd(pts[last].d))+'</span></figcaption></figure>';}
 
 /* ---- the tab ------------------------------------------------------------------- */
 /* Nutrition trends and the weight trend against the goal moved to Food → Targets,
@@ -289,7 +302,8 @@ function vOverview(r){
   var vs=volumeSeries(r);
   h+='<div class="pgcard"><div class="pgcard-h"><h3>'+esc(t("Training volume"))+'</h3>'
    +'<span>'+esc(t(r<=31?"per training day":"per week"))+'</span></div>'
-   +(vs.length>=2?lineChart(vs,{grid:true,
+   +(vs.length>=2?(vs.length<=16?capsChart:lineChart)(vs,{grid:true,
+       fmt:function(v){return fmtN(Math.round(toDisp(v)))+" "+wUnit();},
        aria:t("Training volume")+", "+shortd(vs[0].d)+" – "+shortd(vs[vs.length-1].d)+": "
          +fmtN(toDisp(vs[0].v))+" → "+fmtN(toDisp(vs[vs.length-1].v))+" "+wUnit()})
      :tooFew(t("Train on two different days in this range and the trend draws here.")))

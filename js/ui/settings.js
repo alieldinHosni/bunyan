@@ -128,7 +128,7 @@ function appSheet(){
        +'<span class="thpv-card"><span class="thpv-k"></span><b class="thpv-n">1,980</b>'
        +'<span class="thpv-bar"><i></i></span></span>'
        +'<span class="thpv-btn"></span>'
-       +'<span class="thpv-dock"><i class="on"></i><i></i><i></i></span></span>'
+       +'<span class="thpv-dock"><i class="on"></i><i></i><i></i><i></i></span></span>'
        +'<span class="thpick-n">'+esc(t(th.name))+'</span>'
        +'<span class="thpick-sw" aria-hidden="true">'+th.sw.map(function(c){return '<i style="background:'+c+'"></i>';}).join("")+'</span>'
        +(on?'<span class="thpick-ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></span>':'')

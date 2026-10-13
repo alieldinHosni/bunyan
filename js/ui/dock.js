@@ -1,13 +1,13 @@
 /* Bunyan — dock
-   The bottom navigation: a floating dock with one sliding active indicator.
+   The bottom navigation: a floating pill of round buttons, the one that is on opened out
+   into a pill of its own with its name beside the icon.
 
    It is built once and then only updated. render() used to patch the whole bar on
-   every state change, which is harmless for plain buttons but wrong for a shared
-   indicator: the indicator has to be the same element from one tab to the next, or
-   its transform has nothing to transition from. So the markup is written the first
-   time and again only when the language changes the labels; every other render
-   touches three things — the active class, aria-current and the --i index the
-   indicator slides to.
+   every state change, which restarted every transition from nothing; the buttons have
+   to be the same elements from one tab to the next for the one being left to close as
+   the new one opens. So the markup is written the first time and again only when the
+   language changes the labels; every other render touches two things: the active
+   class and aria-current.
 
    Position is CSS alone (see "The dock" in index.html). Nothing here moves the fixed
    bar; the one thing that moves is the dock inside it, out of the way on scroll (see
@@ -15,24 +15,24 @@
 import {t} from "../i18n/dict.js";
 
 /* Icons on one grid (22), one stroke, one cut: square ends and mitred corners, the
-   structural style the brand is moving to. Home, activity and user are the Bunyan
-   Figma file's own vectors (they were icons/nav-*.svg); food is its pie chart with the
-   dock reference's leaf set into the open quarter; Progress is three rising bars, a
-   structure built course by course. Inline rather than masks, so the stroke itself
-   can take the accent and thicken when active. */
+   structural style of the brand. Training is a dumbbell, plates and bar, which says
+   lifting where the old heartbeat line said cardio; Coach is a whistle, the coach's
+   own tool, where a speech bubble said only "chat". Food is the pie chart with a leaf
+   set into the open quarter; Progress three rising bars; Profile a head and
+   shoulders. Inline rather than masks, so the stroke takes the colour of the circle
+   or the pill it sits in. */
 var ICON={
   home:'<path d="M13.75 19.25v-7.33a.92.92 0 0 0-.92-.92H9.17a.92.92 0 0 0-.92.92v7.33M2.75 9.17a1.83 1.83 0 0 1 .65-1.4l6.42-5.5a1.83 1.83 0 0 1 2.36 0l6.42 5.5a1.83 1.83 0 0 1 .65 1.4v8.25a1.83 1.83 0 0 1-1.83 1.83H4.58a1.83 1.83 0 0 1-1.83-1.83z"/>',
-  train:'<path d="M20.17 11h-2.28a1.83 1.83 0 0 0-1.77 1.34l-2.15 7.66a.23.23 0 0 1-.44 0L8.47 2a.23.23 0 0 0-.44 0L5.88 9.66A1.83 1.83 0 0 1 4.12 11H1.83"/>',
+  train:'<path d="M7.25 11h7.5M4.25 6h3v10h-3zM14.75 6h3v10h-3zM1.75 8.5h2.5v5h-2.5zM17.75 8.5h2.5v5h-2.5z"/>',
   food:'<path d="M11 2.4a8.6 8.6 0 1 0 8.6 8.6H11z"/><path d="M13.4 8.6c0-3.6 2.4-6 6.2-6 0 3.7-2.5 6-6.2 6z"/><path d="M13.4 8.6l3.2-3.2"/>',
   progress:'<path d="M3.5 19V13.5h4V19zM9 19V8.5h4V19zM14.5 19V3h4v16z"/>',
-  /* A speech bubble with a spark: the coach that plans for you. */
-  coach:'<path d="M4.58 2.75h12.84a1.83 1.83 0 0 1 1.83 1.83v9.17a1.83 1.83 0 0 1-1.83 1.83H9.17l-4.59 3.67v-3.67a1.83 1.83 0 0 1-1.83-1.83V4.58a1.83 1.83 0 0 1 1.83-1.83z"/><path d="M11 5.96l.92 2.37 2.37.92-2.37.92L11 12.54l-.92-2.37-2.37-.92 2.37-.92z"/>',
+  coach:'<path d="M8 7.5h12.5V12h-6.69A6 6 0 1 1 8 7.5z"/><path d="M9.75 13.5a1.75 1.75 0 1 1-3.5 0 1.75 1.75 0 0 1 3.5 0z"/>',
   profile:'<path d="M17.42 19.25v-1.83a3.67 3.67 0 0 0-3.67-3.67h-5.5a3.67 3.67 0 0 0-3.67 3.67v1.83M14.67 6.42a3.67 3.67 0 1 1-7.34 0 3.67 3.67 0 0 1 7.34 0z"/>'
 };
-/* id, what a screen reader announces, and the word under the icon. The names are
-   the sections', not the icons'; each label is the start of its accessible name, so
-   what is read aloud matches what is seen. Short enough for a fifth of the dock in
-   either language. */
+/* id, what a screen reader announces, and the word beside the icon when its tab is on.
+   The names are the sections', not the icons'; each label is the start of its
+   accessible name, so what is read aloud matches what is seen. Short enough for the
+   open pill on a small phone, in either language. */
 function items(){return [
   ["train",t("Training"),t("Train")],["food",t("Food"),t("Food")],["coach",t("Coach"),t("Coach")],
   ["progress",t("Progress"),t("Progress")],["profile",t("Profile"),t("Profile")]];}
@@ -43,7 +43,6 @@ function build(el){
   var list=items();
   el.setAttribute("aria-label",t("Main navigation"));
   el.innerHTML='<div class="dock">'
-   +'<span class="dock-ind" aria-hidden="true"></span>'
    +list.map(function(it){
      return '<button type="button" class="dock-b" data-tab="'+it[0]+'" aria-label="'+it[1]+'">'
       +'<svg viewBox="0 0 22 22" width="24" height="24" aria-hidden="true" focusable="false">'
@@ -172,10 +171,9 @@ function checkDock(screen){
 function syncDock(el,tab,advice){
   if(!el)return;
   if(built!==key(items())||!el.firstChild)build(el);
-  var idx=0,btns=el.querySelectorAll(".dock-b");
+  var btns=el.querySelectorAll(".dock-b");
   for(var i=0;i<btns.length;i++){
     var id=btns[i].getAttribute("data-tab"),on=id===tab;
-    if(on)idx=i;
     btns[i].classList.toggle("on",on);
     if(on)btns[i].setAttribute("aria-current","page");
     else btns[i].removeAttribute("aria-current");
@@ -185,8 +183,6 @@ function syncDock(el,tab,advice){
       var lbl=t("Coach")+(dot?", "+t(advice===1?"1 thing to look at":"{n} things to look at").replace("{n}",advice):"");
       if(btns[i].getAttribute("aria-label")!==lbl)btns[i].setAttribute("aria-label",lbl);}
   }
-  var dock=el.firstChild;
-  if(dock&&dock.style.getPropertyValue("--i")!==String(idx))dock.style.setProperty("--i",idx);
 }
 
 export {checkDock, initDockScroll, syncDock};

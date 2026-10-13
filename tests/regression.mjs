@@ -744,9 +744,9 @@ await test("Arabic: template program and day names are shown in Arabic, fraction
   if(r.frac.indexOf("3/4")<0)throw new Error("fraction lost its slash: "+r.frac);
   eq(r.own,"My Monday","a name the user typed passes through");
 },{prefs:{lang:"ar"}});
-await test("Light: the active dock icon reads on the dark dock",async page=>{
-  const c=await page.$eval('nav .dock-b.on',e=>getComputedStyle(e).color);
-  eq(c,"rgb(255, 92, 102)");
+await test("Light: the open tab reads on the dark dock: Glacier Blue on Machine Red",async page=>{
+  const c=await page.$eval('nav .dock-b.on',e=>[getComputedStyle(e).color,getComputedStyle(e).backgroundColor]);
+  eq(c,["rgb(219, 246, 255)","rgb(255, 46, 58)"]);
 },{db:Object.assign(seed(),{theme:"light"})});
 await test("One place for each thing: the assessment in Coach AI only, how you feel asked when a workout starts, nothing of it on Profile",async page=>{
   await tapTab(page,"train");await pause(page);
@@ -828,45 +828,52 @@ await test("Arabic plan: Arabic digits, the dual and spoons are read",async page
     return pp.parsePlan("الوجبة الأولى:\n٣ بيض\nبيضتين\nمعلقتين زبدة فول سوداني\nالعشا: ١٥٠ جم فراخ").map(m=>[m.named,m.n,m.items.map(i=>i.label)]);});
   eq(r,[[null,1,["3 × large egg","2 × large egg","2 tbsp"]],["Dinner",null,["150 g"]]]);
 });
-/* ---- themes: BUNYAN Red, BUNYAN Pink, Monochrome, each dark and light ------------------- */
+/* ---- themes: BUNYAN Red, BUNYAN Blue, Monochrome, each dark and light ------------------- */
 await test("Themes: the picker switches the whole app, and the choice outlives a reload",async page=>{
   await tapTab(page,"profile");await pause(page);
   await page.tap('[data-sheet="set_app"]');await pause(page,400);
-  eq(await page.$$eval('.thpick',a=>a.map(b=>b.getAttribute("data-settheme"))),["red","pink","mono"],"three themes");
+  eq(await page.$$eval('.thpick',a=>a.map(b=>b.getAttribute("data-settheme"))),["red","blue","mono"],"three themes");
   eq(await page.$eval('.thpick.on',e=>e.getAttribute("data-settheme")),"red","red by default");
-  await page.tap('[data-settheme="pink"]');await pause(page,500);
-  eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"pink","html is pink");
-  eq(await ev(page,"S.prefs.palette"),"pink","saved to the profile");
-  eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#FF7FEC","Electric Pink is the accent");
+  await page.tap('[data-settheme="blue"]');await pause(page,500);
+  eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"blue","html is blue");
+  eq(await ev(page,"S.prefs.palette"),"blue","saved to the profile");
+  eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#8AB0EC","Sky Blue is the accent");
   await page.tap('[data-lookmode="light"]');await pause(page,500);
-  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","pink|light"],"mode and the early copy");
+  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","blue|light"],"mode and the early copy");
   await page.reload();await page.waitForTimeout(60);
-  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-palette"),document.documentElement.getAttribute("data-theme")]),["pink","light"],"applied before the app runs");
+  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-palette"),document.documentElement.getAttribute("data-theme")]),["blue","light"],"applied before the app runs");
   await pause(page,1000);
   await tapTab(page,"profile");await pause(page);
-  if(!(await page.$eval('[data-sheet="set_app"]',e=>e.textContent)).includes("BUNYAN Pink"))throw new Error("the Profile row does not name the theme");
-  eq(await page.$eval('meta[name="theme-color"]',e=>e.content.toUpperCase()),"#FFF0FB","the status bar takes the theme's ground");
+  if(!(await page.$eval('[data-sheet="set_app"]',e=>e.textContent)).includes("BUNYAN Blue"))throw new Error("the Profile row does not name the theme");
+  eq(await page.$eval('meta[name="theme-color"]',e=>e.content.toUpperCase()),"#E9EEF6","the status bar takes the theme's ground");
 });
 await test("Themes: every theme and mode uses its reference colours exactly",async page=>{
   const r=await page.evaluate(()=>{
     const de=document.documentElement,out={};
-    for(const p of ["red","pink","mono"])for(const m of ["dark","light"]){
+    for(const p of ["red","blue","mono"])for(const m of ["dark","light"]){
       de.setAttribute("data-palette",p);de.setAttribute("data-theme",m);
       const cs=getComputedStyle(de);out[p+"-"+m]=["--accent","--bg","--onAccent","--raised"].map(k=>cs.getPropertyValue(k).trim().toUpperCase());}
     return out;});
   eq(r["red-dark"][0],"#FF2E3A","Machine Red");eq(r["red-dark"][2],"#DBF6FF","Glacier Blue on red");
   eq(r["red-light"].slice(0,2),["#FF2E3A","#DBF6FF"],"Glacier Blue ground");
-  eq([r["pink-dark"][0],r["pink-dark"][2],r["pink-dark"][3]],["#FF7FEC","#2E0F35","#2E0F35"],"Electric Pink on Dark Aubergine");
+  eq(r["blue-dark"].slice(0,3),["#8AB0EC","#070B1A","#070B1A"],"Sky Blue on Night Navy");
   eq(r["mono-dark"].slice(0,3),["#D7FFE0","#050505","#050505"],"Ghost Green on Zero Black");
   eq(r["mono-light"].slice(0,3),["#050505","#D7FFE0","#D7FFE0"],"Zero Black on Ghost Green");
 });
+await test("Themes: Pink became Blue; a profile that chose Pink opens in Blue, from the first paint",async page=>{
+  eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"blue","the app shows Blue");
+  eq(await ev(page,"S.prefs.palette"),"blue","the stored choice is Blue");
+  await page.evaluate(()=>localStorage.setItem("bunyan:look","pink|dark"));
+  await page.reload();await page.waitForTimeout(60);
+  eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"blue","the early copy too");
+},{prefs:{palette:"pink"}});
 await test("Themes: a delete asks in red whatever the theme",async page=>{
   await coach(page,"train","program");
   await page.$$eval('.drows [data-day]',a=>a[0].click());await pause(page,400);
   await page.$eval('[data-delday]',e=>e.click());await pause(page,500);
   const bg=await page.$eval('.cf.bad .cf-ok',e=>getComputedStyle(e).backgroundImage);
   if(!/229, 50, 62/.test(bg))throw new Error("delete is not red: "+bg);
-},{prefs:{palette:"pink"}});
+},{prefs:{palette:"blue"}});
 await test("Themes: the rest screen stays dark in light mode, with readable figures",async page=>{
   await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
   const r=await page.evaluate(()=>{const v=document.querySelector("#rest .rt-next-v");
@@ -1576,7 +1583,9 @@ await test("Phase 4: one card at a time until there is nothing to say, and then 
     eq(await page.$$eval('#app .pcf',a=>a.length),1,"one card at a time");
     await page.tap('#app .pcf [data-pckeep],#app .pcf [data-cokeep]');await pause(page,300);
     await page.evaluate(()=>{const x=document.querySelector('.toast');if(x)x.remove();});}
-  eq(await page.$$eval('#app .pcf,#app .as-note,#app .tsec-h',a=>a.length),0,"no cards, heading or footnote");
+  eq(await page.$$eval('#app .pcf,#app .as-note',a=>a.length),0,"no cards or footnote");
+  eq(await page.$$eval('#app .tsec-h',a=>a.map(h=>h.textContent)),["Your plan"],"no heading for the advice, only the plan's");
+  eq(await page.$eval('.cweek h2',e=>e.textContent),"On track","the coach says so at the top");
   eq(await page.$eval('#app .pcquiet',e=>e.textContent.trim()),"On track. Nothing to change.","one quiet line");
   eq(await page.$eval('nav [data-tab="coach"]',e=>e.classList.contains("advice")),false,"no dot");
   /* What was set aside can be brought back. */
@@ -1655,7 +1664,8 @@ await test("Dock: a page with little to scroll keeps its dock",async page=>{
   for(let i=0;i<12;i++){await page.evaluate(()=>window.scrollBy(0,15));await page.waitForTimeout(16);}
   await pause(page,650);
   eq(await page.evaluate(()=>document.getElementById("nav").classList.contains("dhid")),false);
-},{prefs:{anim:true}});
+/* No protein target, so Food has no body diagram and stays a short page. */
+},{prefs:{anim:true},db:Object.assign(seed(),{goals:{kcal:2500,p:0,c:300,f:70,water:3000,steps:9000}})});
 await test("Dock: slides off scrolling down and back scrolling up, at the scroll's pace",async page=>{await dockTest(page,true);},{prefs:{anim:true}});
 await test("Dock: with animations off it fades out and back instead",async page=>{await dockTest(page,false);});
 await test("Dock: the workout bar takes the dock's place while it is away, and still opens the workout",async page=>{
@@ -1675,7 +1685,20 @@ await test("Dock: every tab is labelled, in English and Arabic, and the label st
   eq(await lab(),[["Train",true],["Food",true],["Coach",true],["Progress",true],["Profile",true]],"English");
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});await pause(page);
   eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الكوتش","التقدم","حسابي"],"Arabic");
-  eq(await page.$$eval("nav .dock-l",a=>a.every(l=>l.scrollWidth<=l.clientWidth+1)),true,"no label is cut off");
+});
+await test("Dock: round tabs; the one that is on opens into a pill with its name, uncut in either language, even on a small phone",async page=>{
+  const st=()=>page.evaluate(()=>[...document.querySelectorAll("nav .dock-b")].map(b=>{const l=b.querySelector(".dock-l"),r=b.getBoundingClientRect();
+    return {tab:b.dataset.tab,on:b.classList.contains("on"),w:Math.round(r.width),h:Math.round(r.height),shown:getComputedStyle(l).opacity==="1",cut:l.scrollWidth>l.clientWidth+1};}));
+  for(const [lang,w] of [["en",390],["ar",390],["en",360],["ar",360]]){
+    await page.setViewportSize({width:w,height:780});
+    await page.evaluate(async l=>{(await import("/js/state.js")).S.prefs.lang=l;(await import("/js/ui/render.js")).render();},lang);await pause(page,200);
+    for(const tab of ["progress","train","profile"]){
+      await tapTab(page,tab);await pause(page,500);
+      const s=await st(),on=s.find(x=>x.on),off=s.filter(x=>!x.on);
+      eq(on.tab,tab,lang+" "+w+": the tapped tab is on");
+      if(!on.shown||on.cut)throw new Error(lang+" "+w+" "+tab+": its name is hidden or cut: "+JSON.stringify(on));
+      if(off.some(x=>x.shown||Math.abs(x.w-x.h)>2))throw new Error(lang+" "+w+": a tab that is off is not a plain circle: "+JSON.stringify(off));
+      if(on.w<off[0].w+30)throw new Error(lang+" "+w+": the open pill is no wider than a circle");}}
 });
 await test("Focus: the live workout has no dock; Save and exit brings it back with the session kept",async page=>{
   await startWorkout(page);
@@ -1956,6 +1979,209 @@ await test("Profile: a summary page; every row opens its sheet; the backup row w
   if(!(await page.$('#app [data-sheet="set_data"] .gtile.warn')))throw new Error("never backed up, and no warning");
   await page.tap('#app [data-sheet="about"]');await pause(page);
   if(!/Epley/.test(await page.$eval('#sheet',e=>e.innerText)))throw new Error("About lacks the formulas note");
+});
+/* ---- the chat answers in the language it is asked in, and knows more (js/ui/views/chat.js) ---- */
+/* A day with a plan: breakfast eaten, three meals still to go, all from the food list. */
+function planned(){
+  const db=seed(),pi=(n,fid,g,kcal,p,c,f)=>({n,fid,grams:g,label:g+" g",kcal,p,c,f});
+  db.mealSlots=[{id:"Breakfast",plan:[pi("Eggs","egg",100,143,12.6,0.7,9.5)]},
+    {id:"Lunch",plan:[pi("Chicken Breast, Grilled","chicken_breast_ck",150,248,46,0,5.4),pi("White Rice, Cooked","rice_ck",200,260,5.4,56,0.6)]},
+    {id:"Snack",plan:[pi("Greek Yogurt","greek_yog",170,100,17,6,0.7)]},
+    {id:"Dinner",plan:[pi("Lentils, Cooked","lentils",200,232,18,40,0.8)]}];
+  db.days[iso(0)]={meals:{Breakfast:{done:true,items:[pi("Eggs","egg",100,143,12.6,0.7,9.5)]}}};
+  return db;}
+const lastX=page=>page.evaluate(()=>{const x=[...document.querySelectorAll(".chat-x")].pop();
+  return {lang:x.getAttribute("lang"),dir:x.getAttribute("dir"),a:x.querySelector(".chat-a").innerText};});
+async function chatAsk(page,q){await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,400);return lastX(page);}
+await test("Coach chat: asked in Arabic in the English app, it answers in Arabic, and what it offers next is Arabic too; asked in English in the Arabic app, English",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  let r=await chatAsk(page,"بينش بريس كام؟");
+  eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang,r.dir],["weights","ar","rtl"],"a misspelt bench press in Arabic: the weights, in Arabic");
+  if(!/بنش بريس/.test(r.a)||/Squat|سكوات/.test(r.a))throw new Error("not the bench press alone: "+r.a);
+  const chips=await page.$$eval('.chat-next [data-chatq]',a=>a.map(b=>[b.dataset.chatl,/[؀-ۿ]/.test(b.textContent)]));
+  if(!chips.length||chips.some(c=>c[0]!=="ar"||!c[1]))throw new Error("the next questions are not Arabic: "+JSON.stringify(chips));
+  await page.tap('.chat-next [data-chatq]');await pause(page,400);
+  eq((await lastX(page)).lang,"ar","a tap on one keeps to Arabic");
+  r=await chatAsk(page,"3ayez akol eh delwa2ty");
+  eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang],["eat","ar"],"Arabic in Latin letters is Arabic");
+  r=await chatAsk(page,"what should I eat");
+  eq([r.lang,/[؀-ۿ]/.test(r.a)],["en",false],"and English again is English");
+  eq(await ev(page,"S.prefs.lang"),"en","the app's own language is untouched");
+});
+await test("Coach chat: in the Arabic app, an English question gets an English answer",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  const r=await chatAsk(page,"how much protein do I need");
+  eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang,r.dir],["protein","en","ltr"],"English");
+  if(/[؀-ۿ]/.test(r.a))throw new Error("Arabic in the answer: "+r.a);
+  eq(await ev(page,"[S.prefs.lang,document.documentElement.dir]"),["ar","rtl"],"the app stays Arabic");
+},{prefs:{lang:"ar"}});
+await test("Coach chat: the rest of today from the plan, swaps with the same macros that are never the same food, and what is in a food",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  let r=await chatAsk(page,"What should I eat for the rest of the day?");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"rest","the rest of the day");
+  for(const m of ["Lunch","Snack","Dinner"])if(r.a.indexOf(m)<0)throw new Error(m+" is missing: "+r.a);
+  if(/Breakfast/.test(r.a))throw new Error("breakfast is already eaten: "+r.a);
+  if(!/Lentils, Cooked/.test(r.a)||/Cooked, /.test(r.a))throw new Error("foods run together: "+r.a);
+  r=await chatAsk(page,"Is there other food options u can provide with same macros");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"swap","swaps");
+  const rows=r.a.split("\n").filter(x=>x.indexOf("→")>0);
+  if(rows.length<2)throw new Error("no swaps: "+r.a);
+  for(const x of rows){const [from,to]=x.split("→"),w=from.trim().split(/[ ,]/)[0].toLowerCase();
+    if(to.toLowerCase().indexOf(w)>=0)throw new Error("swapped for itself: "+x);
+    if(to.split("·").length<2)throw new Error("fewer than two choices: "+x);}
+  r=await chatAsk(page,"how much protein in eggs");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"foodinfo","what is in a food");
+  if(!/Eggs.*6\.3 g protein/.test(r.a)||!/Per 100 g/.test(r.a))throw new Error("egg facts: "+r.a);
+  r=await chatAsk(page,"كام بروتين في البيض");
+  eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang],["foodinfo","ar"],"the same, asked in Arabic");
+  if(!/بيض/.test(r.a)||!/6\.3 جم بروتين/.test(r.a))throw new Error("Arabic egg facts: "+r.a);
+},{db:planned()});
+await test("Coach chat: tomorrow's workout and how the last one went",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  let r=await chatAsk(page,"what do I train tomorrow");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"tomorrow","tomorrow");
+  if(!/Tomorrow/.test(r.a))throw new Error(r.a);
+  r=await chatAsk(page,"how did my last workout go");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"last","the last workout");
+  if(!/Bench Press: 60 kg × 8/.test(r.a)||!/[\d,]+ kg lifted in all/.test(r.a))throw new Error(r.a);
+  if(!(await page.$('.chat-acts [data-openday]')))throw new Error("no way to the session");
+});
+/* ---- the new look: the top of Training, capsule bars (views/home.js, views/progress.js) ---- */
+await test("Training: the bell says what the coach noticed and opens it; the initial opens Profile",async page=>{
+  await tapTab(page,"train");await pause(page);
+  const n=await ev(page,"V.advice");
+  const b=await page.$eval('.hacts [data-csec="ai"]',e=>[e.classList.contains("flag"),e.getAttribute("aria-label")]);
+  eq(b[0],n>0,"the dot is there exactly when there is something");
+  if(n>0&&b[1].indexOf(String(n))<0)throw new Error("the count is not in its name: "+b[1]);
+  await page.tap('.hacts [data-csec="ai"]');await pause(page,400);
+  eq(await ev(page,"[V.tab,V.csec]"),["coach","ai"],"the bell opens Coach AI");
+  await tapTab(page,"train");await pause(page);
+  await page.tap('.hacts [data-go="profile"]');await pause(page,400);
+  eq(await ev(page,"V.tab"),"profile","the initial opens Profile");
+});
+await test("Progress: training volume over a month is capsule bars, the newest in the accent with its figure",async page=>{
+  await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page,400);
+  const r=await page.evaluate(()=>{const c=document.querySelector(".caps");if(!c)return null;
+    const cs=[...c.querySelectorAll(".caps-c")];
+    return {n:cs.length,on:cs.map(x=>x.classList.contains("on")).lastIndexOf(true),v:(c.querySelector(".caps-c.on .caps-v")||{}).textContent,
+      label:c.getAttribute("aria-label"),round:getComputedStyle(c.querySelector(".caps-b")).borderTopLeftRadius};});
+  if(!r)throw new Error("no capsule bars");
+  eq(r.on,r.n-1,"the newest is the one marked");
+  if(!/^[\d,]+ kg$/.test(r.v||""))throw new Error("its figure: "+r.v);
+  if(!/^Training volume, /.test(r.label))throw new Error("no name for a screen reader: "+r.label);
+  if(parseFloat(r.round)<10)throw new Error("not rounded: "+r.round);
+});
+await test("Coach AI: this week's gauge agrees with Training's week; Ask me anything opens the chat ready to type; each plan tile opens its part",async page=>{
+  await tapTab(page,"train");await pause(page);
+  const wk=await page.$eval('.twk-h b',e=>e.textContent.match(/(\d+) \/ (\d+)/).slice(1).map(Number));
+  await coach(page,"ai");
+  const g=await page.evaluate(()=>({v:document.querySelector(".cweek-gv b").textContent,w:document.querySelector(".cweek-st b").textContent,
+    on:document.querySelectorAll(".cweek-svg line.on").length,dot:!!document.querySelector(".cweek-svg .dot")}));
+  eq(g.w,wk[0]+"/"+wk[1],"the same workouts as Training's week");
+  eq(g.v,wk[1]?Math.round(wk[0]/wk[1]*100)+"%":"—","the share");
+  if(wk[0]&&!g.on)throw new Error("no ticks filled");
+  await page.tap('.chatcard [data-chat="ask"]');await pause(page,400);
+  eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,!!document.querySelector(".chat-form")]),["chatq",true],"the box has the caret");
+  /* Its back arrow is in sight, at the top, and works with the keyboard up. */
+  const bb=await (await page.$('[data-back]')).boundingBox();
+  if(bb.y<0)throw new Error("the back arrow is off the top of the screen");
+  await page.touchscreen.tap(bb.x+bb.width/2,bb.y+bb.height/2);await pause(page,400);
+  eq(await ev(page,"[V.tab,!!V.chat]"),["coach",false],"back to Coach AI");
+  /* The dock ignores taps for a moment after the keyboard closes (body.kbleave). */
+  await pause(page,600);
+  for(const [sel,want] of [['.cplan-t[data-cfsub="targets"]',["coach","food"]],['.cplan-t[data-ctsub="program"]',["coach","train"]],['.cplan-t[data-cfsub="plan"]',["coach","food"]]]){
+    await coach(page,"ai");await page.$eval(sel,e=>e.scrollIntoView({block:"center"}));await pause(page,100);
+    await page.tap(sel);await pause(page,300);
+    eq(await ev(page,"[V.tab,V.csec]"),want,sel);}
+  await coach(page,"ai");
+  if(!(await page.$('.cplan-t[data-setup]')))throw new Error("no way to take the assessment again");
+});
+await test("Coach AI in Arabic: the gauge fills from the right, the plan's figures are Arabic",async page=>{
+  await coach(page,"ai");
+  const r=await page.evaluate(()=>({tf:getComputedStyle(document.querySelector(".cweek-svg")).transform,
+    tiles:[...document.querySelectorAll(".cplan-t")].map(x=>x.innerText).join(" ")}));
+  if(!/^matrix\(-1/.test(r.tf))throw new Error("not mirrored: "+r.tf);
+  if(/kcal|protein/i.test(r.tiles))throw new Error("English in the tiles: "+r.tiles);
+},{prefs:{lang:"ar"}});
+await test("Arabic type: titles in Alexandria and text in Readex Pro, bundled, and loaded for an Arabic screen",async page=>{
+  await page.evaluate(()=>document.fonts.ready);await pause(page,300);
+  const r=await page.evaluate(()=>[...document.fonts].filter(f=>f.status==="loaded").map(f=>f.family.replace(/"/g,"")+"|"+(f.unicodeRange.indexOf("U+600-6FF")>=0||f.unicodeRange.indexOf("U+0600-06FF")>=0?"ar":"latin")));
+  for(const f of ["Outfit|ar","Manrope|ar"])if(r.indexOf(f)<0)throw new Error(f+" not loaded: "+JSON.stringify(r));
+  eq(await page.evaluate(()=>getComputedStyle(document.body).fontFamily.split(",")[0].replace(/"/g,"").trim()),"Manrope","Arabic text starts from the bundled face");
+},{prefs:{lang:"ar"}});
+/* ---- Food: what the body needs (js/engine/needs.js, js/ui/bodyneeds.js) ---- */
+function lowProtein(){
+  const db=seed();db.goals={kcal:2500,p:150,c:300,f:70,water:3000,steps:9000};
+  const it=(n,k,p,c,f)=>({n,fid:"x"+n,grams:100,label:"1 serving",kcal:k,p,c,f});
+  db.days[iso(0)]={water:2800,meals:{Breakfast:{done:true,items:[it("Bread and jam",900,20,170,15)]},Lunch:{done:true,items:[it("Pasta",1000,30,140,40)]}}};
+  for(let i=1;i<=4;i++)db.days[iso(i)]={meals:{Lunch:{items:[it("Rice",2200,70,300,60)]}}};
+  return db;}
+await test("Food: in the evening with protein short, the body says so, lights protein, and offers three foods that log in one tap",async page=>{
+  await page.addInitScript(()=>{Date.prototype.getHours=function(){return 19;};});await page.reload();await pause(page,1200);
+  await tapTab(page,"food");await pause(page,400);
+  eq(await page.$eval('.fbody-h',e=>e.textContent),"Your body needs more protein.","the headline");
+  eq(await page.$$eval('.fbn',a=>a.map(x=>[x.querySelector('.fbn-k').textContent,x.classList.contains("on")])),
+    [["Protein",true],["Carbs",false],["Fat",false],["Water",false]],"four, protein lit");
+  eq(await page.$eval('.fbody-pill',e=>e.textContent),"+100 g to go","what is left, to the nearest 5 g");
+  eq(await page.$$eval('.fsug-t',a=>a.length),3,"three foods");
+  const before=await ev(page,"Object.values(S.days[Object.keys(S.days).sort().pop()].meals).reduce((n,m)=>n+(m.items||[]).length,0)");
+  const fid=await page.$eval('.fsug-t',e=>e.dataset.fsug.split("|")[0]);
+  await page.$eval('.fsug-t',e=>e.scrollIntoView({block:"center"}));await page.tap('.fsug-t');await pause(page,600);
+  const after=await ev(page,"Object.values(S.days[Object.keys(S.days).sort().pop()].meals).flatMap(m=>m.items||[])");
+  eq([after.length,after.some(x=>x.fid===fid&&x.p>10)],[before+1,true],"logged, with its protein");
+  if(!/Coach noticed/.test(await page.$eval('.fnoticed',e=>e.innerText)))throw new Error("no week card");
+  await page.$eval('[data-fbuild]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-fbuild]');await pause(page,600);
+  eq(await ev(page,"[V.tab,V.chat,S.chat[S.chat.length-1].id]"),["coach",true,"eat"],"Build today's meal asks the coach");
+},{db:lowProtein()});
+await test("Food: in the morning nothing is behind yet; with water short in the afternoon, a glass is offered instead of food",async page=>{
+  await page.addInitScript(()=>{Date.prototype.getHours=function(){return 9;};});await page.reload();await pause(page,1200);
+  await tapTab(page,"food");await pause(page,400);
+  eq([await page.$eval('.fbody-h',e=>e.textContent),await page.$$eval('.fbn.on,.fsug-t',a=>a.length)],["Your body is on course today.",0],"on course at 9:00");
+  await page.evaluate(async()=>{Date.prototype.getHours=function(){return 17;};const s=await import("/js/state.js");
+    const d=Object.keys(s.S.days).sort().pop();s.S.days[d].water=300;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$eval('.fbn.on .fbn-k',e=>e.textContent),"Water","water lit");
+  const w=await ev(page,"S.days[Object.keys(S.days).sort().pop()].water");
+  await page.$eval('.fbody-glass',e=>e.scrollIntoView({block:"center"}));await page.tap('.fbody-glass');await pause(page,300);
+  eq(await ev(page,"S.days[Object.keys(S.days).sort().pop()].water"),w+250,"a glass added");
+},{db:lowProtein()});
+/* ---- Running mode (js/ui/run.js, js/engine/run.js) ---- */
+await test("Running mode: the phone's positions become distance and a route; pause stops the clock; Finish saves a Running activity",async page=>{
+  const ctx=page.context();
+  await ctx.grantPermissions(["geolocation"]);await ctx.setGeolocation({latitude:30.0444,longitude:31.2357,accuracy:8});
+  await tapTab(page,"train");await pause(page);
+  await page.$eval('[data-run="start"]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-run="start"]');await pause(page,600);
+  eq(await page.evaluate(()=>[!!document.querySelector(".run"),document.body.classList.contains("focus")]),[true,true],"the run fills the screen, no dock");
+  for(let i=1;i<=6;i++){await ctx.setGeolocation({latitude:30.0444+i*0.00009,longitude:31.2357,accuracy:8});await pause(page,1500);}
+  const r=await ev(page,"[S.run.pts.length,Math.round(S.run.dist),S.run.gps]");
+  if(r[0]<5||r[1]<40||r[2]!=="on")throw new Error("not tracking: "+JSON.stringify(r));
+  if(!/^M[\d.]+ [\d.]+L/.test(await page.$eval('#runRoute',e=>e.getAttribute("d"))))throw new Error("no route drawn");
+  await page.tap('[data-run="pause"]');await pause(page,300);
+  const t1=await page.$eval('#runT',e=>e.textContent);await pause(page,1600);
+  eq(await page.$eval('#runT',e=>e.textContent),t1,"paused: the clock holds");
+  await page.tap('[data-run="resume"]');await pause(page,300);
+  await page.tap('[data-run="finish"]');await pause(page,800);
+  const s=await ev(page,"[!!S.run,!!S.active,S.sessions[0].entries[0].name,S.sessions[0].entries[0].sets[0].km>0.03,S.sessions[0].entries[0].sets[0].route.length>=5,S.sessions[0].entries[0].sets[0].kcal>0]");
+  eq(s,[false,false,"Running",true,true,true],"saved as a run with its distance, route and calories");
+});
+await test("Running mode: with location refused it is timed only, says so, and Finish opens the logger with the minutes in",async page=>{
+  await page.evaluate(()=>{Object.defineProperty(navigator,"geolocation",{configurable:true,value:{watchPosition:(ok,err)=>{setTimeout(()=>err({code:1}),50);return 1;},clearWatch:()=>{}}});});
+  await tapTab(page,"train");await pause(page);
+  await page.$eval('[data-run="start"]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-run="start"]');await pause(page,600);
+  eq(await page.$eval('#runGps',e=>[e.className,e.textContent]),["run-gps denied","Location is off"],"the chip says so");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.run.ms=125000;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  if(!/timed only/.test(await page.$eval('.run-note',e=>e.textContent)))throw new Error("no note");
+  await page.tap('[data-run="finish"]');await pause(page,600);
+  eq(await ev(page,"[!!S.run,!!S.active&&S.active.entries[0].name,V.draft.min>=2]"),[false,"Running",true],"the logger, with the time");
+});
+await test("Running mode: a run outlives closing the app, and the back gesture asks before ending it",async page=>{
+  await tapTab(page,"train");await pause(page);
+  await page.$eval('[data-run="start"]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-run="start"]');await pause(page,500);
+  await page.reload();await pause(page,1200);
+  eq(await page.evaluate(()=>!!document.querySelector(".run")),true,"still running after a reload");
+  await page.tap('[data-run="leave"]');await pause(page,400);
+  eq(await page.$eval('#sheet',e=>/End this run/.test(e.innerText)),true,"asks");
+  await page.tap('[data-confirmalt]');await pause(page,400);
+  eq(await ev(page,"[!!S.run,S.sessions.filter(s=>s.entries[0].name==='Running').length]"),[false,0],"discarded: nothing saved");
 });
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();

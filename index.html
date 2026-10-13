@@ -9,11 +9,13 @@
 <meta name="theme-color" content="#0A0B0E">
 <script>
 /* The theme before the first paint. render() sets it from the profile, but only after
-   the stylesheet has already painted the default once, so a Pink or Monochrome user saw
+   the stylesheet has already painted the default once, so a Blue or Monochrome user saw
    a flash of red on every launch. bunyan:look is the last theme and mode, kept small for
    exactly this read (js/ui/theme.js writes it). */
 try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.documentElement;
-  if(/^(red|pink|mono)$/.test(l[0]))d.setAttribute("data-palette",l[0]);
+  /* Pink was replaced by Blue: a phone that last showed Pink opens in Blue. */
+  if(l[0]==="pink")l[0]="blue";
+  if(/^(red|blue|mono)$/.test(l[0]))d.setAttribute("data-palette",l[0]);
   if(/^(dark|light)$/.test(l[1]))d.setAttribute("data-theme",l[1]);}catch(e){}
 </script>
 <title>Bunyan — Train · Fuel · Progress</title>
@@ -26,7 +28,14 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
    every frame in the Figma file uses. Both are SIL Open Font License (licences in
    fonts/), self-hosted rather than loaded from Google so the app still has its
    typography offline, which is the whole point of a PWA. Latin subset only: neither
-   face has Arabic glyphs, so RTL keeps its own system stack further down.
+   face has Arabic glyphs.
+
+   Arabic has its own pair, chosen to match: Alexandria (geometric and bold, as Outfit
+   is) for titles and figures, and Readex Pro (open and even, as Manrope is) for the
+   rest. Both OFL, both variable, Arabic subset only (31 KB and 23 KB). They are
+   declared under the Latin faces' own names with an Arabic unicode-range, so each
+   family is one font to the stylesheet: an Arabic letter in a title is drawn in
+   Alexandria, a Latin one in Outfit, and no rule has to know which language it holds.
 
    Manrope is a variable font, so one file carries every weight the design uses
    (400-700). Outfit is the variable file too, declared for 700-800: 700 for titles and
@@ -36,6 +45,12 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   font-weight:400 700;font-style:normal;font-display:swap}
 @font-face{font-family:"Outfit";src:url(fonts/outfit-latin.woff2) format("woff2");
   font-weight:700 800;font-style:normal;font-display:swap}
+@font-face{font-family:"Outfit";src:url(fonts/alexandria-arabic.woff2) format("woff2");
+  font-weight:700 800;font-style:normal;font-display:swap;
+  unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
+@font-face{font-family:"Manrope";src:url(fonts/readex-pro-arabic.woff2) format("woff2");
+  font-weight:400 700;font-style:normal;font-display:swap;
+  unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
 :root{
   /* Colours are not here: every colour token is set by the theme blocks that follow this
      one (---- themes), so a theme is one place to read and one place to change. */
@@ -83,10 +98,10 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* ---- themes ---------------------------------------------------------------------
-   Three BUNYAN themes — Red (the default), Pink and Monochrome — each in dark and light,
+   Three BUNYAN themes — Red (the default), Blue and Monochrome — each in dark and light,
    chosen in App settings (Theme, and Mode). A theme is a block of the same tokens below;
    nothing else in this stylesheet names a colour, so every surface, control, chart,
-   drawing and photo follows the one that is on. html carries data-palette (red, pink,
+   drawing and photo follows the one that is on. html carries data-palette (red, blue,
    mono) and data-theme (dark, light); any element can carry them too, which is how the
    theme picker draws each theme's preview inside whichever theme is on.
 
@@ -98,11 +113,13 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
    destructive and error · gold earned · scrim the overlay · glow-rgb coloured light ·
    img-tone how photos are recoloured · mac-p/c/f the macro series, validated as a set.
 
-   The six brand colours are used exactly as the reference swatches give them. */
+   The four brand colours of Red and Monochrome are used exactly as the reference
+   swatches give them. Blue is built from the night-blue reference the owner chose to
+   replace Pink with: its navy ground, its steel blue and its signal green. */
 :root{
   --machine-red:#FF2E3A; --glacier-blue:#DBF6FF;
-  --dark-aubergine:#2E0F35; --electric-pink:#FF7FEC;
   --zero-black:#050505; --ghost-green:#D7FFE0;
+  --night-navy:#070B1A; --steel-blue:#5C7FB5; --sky-blue:#8AB0EC; --signal-green:#82FC4F;
 }
 /* BUNYAN Red, dark — the signature, and the default. Machine Red is the one action
    colour: primary buttons, the active tab, progress, selection, never a whole surface.
@@ -117,7 +134,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accentSoft:rgba(255,46,58,.12); --secondary:var(--glacier-blue); --figure:var(--glacier-blue);
   --ok:#22A34B; --okSoft:#0E2415; --onOk:#0A0B0E; --gold:#C9A227; --warning:#E8A33A;
   --danger:var(--machine-red); --danger-fill:var(--machine-red); --danger-deep:#A80E19;
-  --navbg:#13151A; --navtext:#8A939B; --navon:#F1F5F8; --dock-on:var(--machine-red);
+ 
   --glow:rgba(255,46,58,.14); --glow-rgb:255,46,58; --mac-p:var(--machine-red); --mac-c:#22A6B3;
   --mac-f:#7F78F2; --glass:rgba(19,21,26,.78); --glass-solid:rgba(19,21,26,.96);
   --hair:rgba(255,255,255,.08); --hair-hi:rgba(255,255,255,.14); --seg-track:rgba(255,255,255,.04);
@@ -138,7 +155,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --onAccent:var(--glacier-blue); --accent-deep:#A80E19; --accentSoft:#FFE3E5; --secondary:#0A0B0E;
   --figure:#0A0B0E; --ok:#177530; --okSoft:#DDF2E5; --onOk:#FFFFFF; --gold:#7A6213;
   --warning:#8A5600; --danger:#C30F1C; --danger-fill:var(--machine-red); --danger-deep:#A80E19;
-  --navbg:#0A0B0E; --navtext:#8E99A1; --navon:#F1F5F8; --dock-on:#FF5C66; --glow:transparent;
+  --glow:transparent;
   --glow-rgb:255,46,58; --mac-p:#D41E2A; --mac-c:#009AA6; --mac-f:#6D5FE6;
   --glass:rgba(10,11,14,.86); --glass-solid:rgba(10,11,14,.97); --hair:rgba(10,40,60,.10);
   --hair-hi:rgba(255,255,255,.14); --seg-track:rgba(10,40,60,.06); --bar-track:rgba(10,40,60,.12);
@@ -149,51 +166,51 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --well:rgba(10,40,60,.07); --mark-tone:saturate(1); --bg-rgb:219,246,255; --accent-rgb:255,46,58;
   --accentHi-rgb:195,15,28; --danger-rgb:255,46,58; --warning-rgb:138,86,0; --gold-rgb:122,98,19;
 }
-/* BUNYAN Pink, dark — feminine, athletic, premium. Dark Aubergine is the card, on a deeper
-   aubergine-black ground; Electric Pink is the action and accent colour, with Dark
-   Aubergine labels on it (7.69:1). Blush is the highlight for figures. Shadows are
-   aubergine, not black. Destructive actions stay red: danger is a meaning, not a theme
-   colour. Photos and the mark turn from red to pink through --img-tone. */
-[data-palette="pink"],[data-palette="pink"] [data-theme="dark"]:not([data-palette]){
-  --bg:#1C0821; --raised:var(--dark-aubergine); --surface:#3B1843; --border:#4C2656; --text:#FFEBFB;
-  --sub:#EAC6E4; --dim:#BC92B8; --faint:#BC92B8; --accent:var(--electric-pink);
-  --accentHi:var(--electric-pink); --onAccent:var(--dark-aubergine); --accent-deep:#F05ADB;
-  --accentSoft:rgba(255,127,236,.13); --secondary:#FFD6F6; --figure:#FFD6F6; --ok:#28A85B;
-  --okSoft:#12301F; --onOk:var(--dark-aubergine); --gold:#F0C658; --warning:#FFB561;
-  --danger:#FF6B70; --danger-fill:#E5323E; --danger-deep:#B3131B; --navbg:var(--dark-aubergine);
-  --navtext:#BC92B8; --navon:#FFEBFB; --dock-on:var(--electric-pink); --glow:rgba(255,127,236,.15);
-  --glow-rgb:255,127,236; --mac-p:#E04FCB; --mac-c:#27A58C; --mac-f:#8C7BFF;
-  --glass:rgba(30,9,36,.80); --glass-solid:rgba(30,9,36,.96); --hair:rgba(255,235,251,.09);
-  --hair-hi:rgba(255,235,251,.16); --seg-track:rgba(255,235,251,.05);
-  --bar-track:rgba(255,235,251,.16); --accent-tint:rgba(255,127,236,.16);
-  --accent-edge:rgba(255,127,236,.34); --accent-glow:rgba(255,127,236,.24); --accent-dark:#5C1E66;
-  --scrim:rgba(14,3,18,.66); --img-tone:hue-rotate(-50deg) saturate(1.12) brightness(1.08);
-  --shadow-card:0 1px 0 rgba(255,235,251,.04) inset,0 10px 30px rgba(10,0,14,.38);
-  --well:rgba(14,3,18,.45); --mark-tone:hue-rotate(-50deg) saturate(1.12) brightness(1.08);
-  --bg-rgb:28,8,33; --accent-rgb:255,127,236; --accentHi-rgb:255,127,236; --danger-rgb:229,50,62;
+/* BUNYAN Blue, dark — night blue. Night Navy is the ground, cards are a deep blue
+   glass, Sky Blue (a lighter step of the reference's Steel Blue) is the action and
+   accent colour with navy labels on it (8.9:1), and Signal Green is the small live
+   mark: done, on, something new. Destructive actions stay red: danger is a meaning,
+   not a theme colour. Photos and the mark turn from red to blue through --img-tone. */
+[data-palette="blue"],[data-palette="blue"] [data-theme="dark"]:not([data-palette]){
+  --bg:var(--night-navy); --raised:#121A30; --surface:#1B2440; --border:#2A3452; --text:#EEF2F8;
+  --sub:#C3CBDA; --dim:#8D98B0; --faint:#8D98B0; --accent:var(--sky-blue);
+  --accentHi:var(--sky-blue); --onAccent:var(--night-navy); --accent-deep:var(--steel-blue);
+  --accentSoft:rgba(138,176,236,.13); --secondary:#D4D9E2; --figure:#E6ECF7; --ok:var(--signal-green);
+  --okSoft:#14301A; --onOk:var(--night-navy); --gold:#F0C658; --warning:#FFB561;
+  --danger:#FF6B70; --danger-fill:#E5323E; --danger-deep:#B3131B;
+  --glow:rgba(92,127,181,.28);
+  --glow-rgb:92,127,181; --mac-p:#5E8FE8; --mac-c:#21A68A; --mac-f:#D27C2C;
+  --glass:rgba(18,26,48,.78); --glass-solid:rgba(18,26,48,.96); --hair:rgba(212,217,226,.09);
+  --hair-hi:rgba(212,217,226,.16); --seg-track:rgba(212,217,226,.05);
+  --bar-track:rgba(212,217,226,.16); --accent-tint:rgba(138,176,236,.16);
+  --accent-edge:rgba(138,176,236,.34); --accent-glow:rgba(92,127,181,.30); --accent-dark:#1F3358;
+  --scrim:rgba(3,5,14,.66); --img-tone:hue-rotate(-150deg) saturate(.8) brightness(1.05);
+  --shadow-card:0 1px 0 rgba(212,217,226,.05) inset,0 10px 30px rgba(2,4,12,.45);
+  --well:rgba(3,5,14,.45); --mark-tone:hue-rotate(-150deg) saturate(.8) brightness(1.15);
+  --bg-rgb:7,11,26; --accent-rgb:138,176,236; --accentHi-rgb:138,176,236; --danger-rgb:229,50,62;
   --warning-rgb:255,181,97; --gold-rgb:240,198,88;
 }
-/* BUNYAN Pink, light — Dark Aubergine type on a blush page with white cards, Electric Pink
-   fills with aubergine labels. Pink text on blush would be 2:1, so accent text is a deep
-   magenta. The dock is aubergine glass. */
-[data-palette="pink"][data-theme="light"]{
-  --bg:#FFF0FB; --raised:#FFFFFF; --surface:#FBE1F5; --border:#EFC5E5; --text:var(--dark-aubergine);
-  --sub:#583A5F; --dim:#6C4C72; --faint:#6C4C72; --accent:var(--electric-pink); --accentHi:#A3148B;
-  --onAccent:var(--dark-aubergine); --accent-deep:#F05ADB; --accentSoft:#FFE0F9;
-  --secondary:var(--dark-aubergine); --figure:var(--dark-aubergine); --ok:#177530; --okSoft:#E2F3E8;
-  --onOk:#FFFFFF; --gold:#7A6213; --warning:#8A5300; --danger:#C41E2A; --danger-fill:#E5323E;
-  --danger-deep:#B3131B; --navbg:var(--dark-aubergine); --navtext:#CFA8CB; --navon:#FFEBFB;
-  --dock-on:var(--electric-pink); --glow:rgba(255,127,236,.20); --glow-rgb:255,127,236;
-  --mac-p:#B8309F; --mac-c:#14936B; --mac-f:#5B4FD6; --glass:rgba(46,15,53,.90);
-  --glass-solid:rgba(46,15,53,.97); --hair:rgba(46,15,53,.10); --hair-hi:rgba(255,255,255,.16);
-  --seg-track:rgba(46,15,53,.05); --bar-track:rgba(46,15,53,.12);
-  --accent-tint:rgba(255,127,236,.22); --accent-edge:rgba(211,57,188,.34);
-  --accent-glow:rgba(255,127,236,.30); --accent-dark:#6E2168; --scrim:rgba(46,15,53,.40);
-  --img-tone:hue-rotate(-50deg) saturate(1.12) brightness(1.08);
-  --shadow-card:0 1px 0 rgba(255,255,255,.7) inset,0 10px 30px rgba(46,15,53,.10);
-  --well:rgba(46,15,53,.06); --mark-tone:hue-rotate(-50deg) saturate(1.12) brightness(1.08);
-  --bg-rgb:255,240,251; --accent-rgb:255,127,236; --accentHi-rgb:163,20,139; --danger-rgb:229,50,62;
-  --warning-rgb:138,83,0; --gold-rgb:122,98,19;
+/* BUNYAN Blue, light — navy type on a pale blue-grey page with white cards; a deeper
+   step of Steel Blue is the fill, with white labels on it (5.5:1) and as accent text.
+   The dock is night-navy glass. */
+[data-palette="blue"][data-theme="light"]{
+  --bg:#E9EEF6; --raised:#FFFFFF; --surface:#DDE4EF; --border:#C3CDDD; --text:#0B1226;
+  --sub:#3A4560; --dim:#525E78; --faint:#525E78; --accent:#3D6AA8; --accentHi:#2F5A96;
+  --onAccent:#FFFFFF; --accent-deep:#2C5390; --accentSoft:#DCE7F8;
+  --secondary:#0B1226; --figure:#0B1226; --ok:#177530; --okSoft:#DDF2E5;
+  --onOk:#FFFFFF; --gold:#7A6213; --warning:#8A5600; --danger:#C41E2A; --danger-fill:#E5323E;
+  --danger-deep:#B3131B;
+  --glow:rgba(92,127,181,.22); --glow-rgb:92,127,181;
+  --mac-p:#2F5A96; --mac-c:#14936B; --mac-f:#B8641E; --glass:rgba(18,26,48,.88);
+  --glass-solid:rgba(18,26,48,.97); --hair:rgba(11,18,38,.10); --hair-hi:rgba(255,255,255,.16);
+  --seg-track:rgba(11,18,38,.05); --bar-track:rgba(11,18,38,.12);
+  --accent-tint:rgba(61,106,168,.14); --accent-edge:rgba(61,106,168,.32);
+  --accent-glow:rgba(61,106,168,.22); --accent-dark:#1F3358; --scrim:rgba(11,18,38,.42);
+  --img-tone:hue-rotate(-150deg) saturate(.8) brightness(1.05);
+  --shadow-card:0 1px 0 rgba(255,255,255,.7) inset,0 10px 30px rgba(11,18,38,.10);
+  --well:rgba(11,18,38,.06); --mark-tone:hue-rotate(-150deg) saturate(.85) brightness(.9);
+  --bg-rgb:233,238,246; --accent-rgb:61,106,168; --accentHi-rgb:47,90,150; --danger-rgb:229,50,62;
+  --warning-rgb:138,86,0; --gold-rgb:122,98,19;
 }
 /* Monochrome, dark — minimal, editorial. Zero Black ground, Ghost Green as the off-white:
    text, the primary fill (Zero Black labels on it, 18.7:1) and the active tab. A grey
@@ -207,8 +224,8 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accent-deep:var(--ghost-green); --accentSoft:rgba(215,255,224,.10); --secondary:#FFFFFF;
   --figure:#FFFFFF; --ok:#4C9E6B; --okSoft:#0F2116; --onOk:var(--zero-black);
   --gold:var(--ghost-green); --warning:#E3B04B; --danger:#FF5C61; --danger-fill:#E5323E;
-  --danger-deep:#B3131B; --navbg:#111211; --navtext:#86918A; --navon:var(--ghost-green);
-  --dock-on:var(--ghost-green); --glow:transparent; --glow-rgb:5,5,5; --mac-p:var(--ghost-green);
+  --danger-deep:#B3131B;
+  --glow:transparent; --glow-rgb:5,5,5; --mac-p:var(--ghost-green);
   --mac-c:#8FAA98; --mac-f:#58695D; --glass:rgba(17,18,17,.82); --glass-solid:rgba(17,18,17,.96);
   --hair:rgba(215,255,224,.09); --hair-hi:rgba(215,255,224,.15); --seg-track:rgba(215,255,224,.04);
   --bar-track:rgba(215,255,224,.14); --accent-tint:rgba(215,255,224,.12);
@@ -227,8 +244,8 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accent-deep:var(--zero-black); --accentSoft:#E3F5E7; --secondary:var(--zero-black);
   --figure:var(--zero-black); --ok:#177530; --okSoft:#DCF3E2; --onOk:#FFFFFF;
   --gold:var(--zero-black); --warning:#8A5600; --danger:#C41E2A; --danger-fill:#E5323E;
-  --danger-deep:#B3131B; --navbg:var(--zero-black); --navtext:#8E9A92; --navon:var(--ghost-green);
-  --dock-on:var(--ghost-green); --glow:transparent; --glow-rgb:215,255,224;
+  --danger-deep:#B3131B;
+  --glow:transparent; --glow-rgb:215,255,224;
   --mac-p:var(--zero-black); --mac-c:#34443A; --mac-f:#74917D; --glass:rgba(5,5,5,.90);
   --glass-solid:rgba(5,5,5,.97); --hair:rgba(5,5,5,.10); --hair-hi:rgba(255,255,255,.16);
   --seg-track:rgba(5,5,5,.05); --bar-track:rgba(5,5,5,.12); --accent-tint:rgba(5,5,5,.08);
@@ -237,6 +254,63 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --well:rgba(5,5,5,.06); --mark-tone:grayscale(1) brightness(.35); --bg-rgb:215,255,224;
   --accent-rgb:5,5,5; --accentHi-rgb:5,5,5; --danger-rgb:229,50,62; --warning-rgb:138,86,0;
   --gold-rgb:5,5,5;
+}
+/* ---- the dock, the ground and the cards, per theme ---------------------------------
+   The same six selectors as the theme blocks above, in the same order, so each mode
+   resolves exactly as they do.
+   - dock-*: the dock's pill (bar), a tab's circle (dot, its edge and its icon ink) and
+     the open pill of the tab that is on (pill, pill-ink); flag is the dot for news.
+   - ground: the page is not one flat colour but two or three of the theme's tones
+     blended (body::before), the way light falls across a surface.
+   - card, card-edge: the in-page cards are glass over that ground, so the blend shows
+     through them. Sheets, toasts and anything that floats over content stay solid. */
+:root,[data-palette="red"],[data-theme="dark"]:not([data-palette]){
+  --dock-bar:var(--glass); --dock-bar-solid:var(--glass-solid); --dock-dot:rgba(255,255,255,.06);
+  --dock-dot-solid:#1E2026; --dock-dot-edge:rgba(255,255,255,.07); --dock-dot-ink:#AEB6BD;
+  --dock-pill:var(--machine-red); --dock-pill-ink:var(--glacier-blue); --dock-flag:var(--machine-red);
+  --ground:radial-gradient(120% 60% at 50% -10%,rgba(255,46,58,.15) 0%,transparent 62%),
+    radial-gradient(95% 55% at 100% 105%,rgba(219,246,255,.06) 0%,transparent 60%);
+  --card:rgba(22,24,30,.80); --card-edge:var(--border);
+}
+[data-theme="light"],[data-palette="red"][data-theme="light"]{
+  --dock-dot:rgba(219,246,255,.10); --dock-dot-solid:#1D2226; --dock-dot-edge:rgba(219,246,255,.10);
+  --dock-dot-ink:#B9C7CE; --dock-pill:var(--machine-red); --dock-pill-ink:var(--glacier-blue); --dock-flag:#FF5C66;
+  --ground:radial-gradient(110% 55% at 50% -12%,#F6FDFF 0%,transparent 65%),
+    linear-gradient(180deg,transparent 35%,#C6E8F4 100%);
+  --card:rgba(245,252,255,.80); --card-edge:rgba(188,220,232,.9);
+}
+[data-palette="blue"],[data-palette="blue"] [data-theme="dark"]:not([data-palette]){
+  --dock-dot:rgba(212,217,226,.08); --dock-dot-solid:#1F2840; --dock-dot-edge:rgba(212,217,226,.10);
+  --dock-dot-ink:#B3BED2; --dock-pill:var(--sky-blue); --dock-pill-ink:var(--night-navy); --dock-flag:var(--signal-green);
+  --ground:radial-gradient(115% 55% at 85% -8%,rgba(92,127,181,.45) 0%,transparent 60%),
+    radial-gradient(95% 60% at 0% 105%,rgba(82,125,174,.24) 0%,transparent 62%),
+    linear-gradient(180deg,#0B1229 0%,var(--night-navy) 55%);
+  --card:rgba(37,48,80,.52); --card-edge:rgba(212,217,226,.13);
+}
+[data-palette="blue"][data-theme="light"]{
+  --dock-dot:rgba(212,217,226,.08); --dock-dot-solid:#1F2840; --dock-dot-edge:rgba(212,217,226,.10);
+  --dock-dot-ink:#B3BED2; --dock-pill:var(--sky-blue); --dock-pill-ink:var(--night-navy); --dock-flag:var(--signal-green);
+  --ground:radial-gradient(115% 55% at 85% -8%,rgba(138,176,236,.55) 0%,transparent 60%),
+    linear-gradient(180deg,#EEF2F8 0%,#D9E1EE 100%);
+  --card:rgba(255,255,255,.70); --card-edge:rgba(255,255,255,.85);
+}
+[data-palette="mono"],[data-palette="mono"] [data-theme="dark"]:not([data-palette]){
+  --dock-dot:rgba(215,255,224,.07); --dock-dot-solid:#1A1D1B; --dock-dot-edge:rgba(215,255,224,.09);
+  --dock-dot-ink:#A9BBAE; --dock-pill:var(--ghost-green); --dock-pill-ink:var(--zero-black); --dock-flag:var(--ghost-green);
+  --ground:radial-gradient(120% 60% at 15% -10%,rgba(215,255,224,.11) 0%,transparent 60%),
+    radial-gradient(100% 60% at 100% 105%,rgba(130,160,140,.11) 0%,transparent 62%),
+    linear-gradient(170deg,#0B100D 0%,var(--zero-black) 60%);
+  --card:rgba(215,255,224,.045); --card-edge:rgba(215,255,224,.10);
+}
+/* Monochrome, light is the reference's sage glass in Zero Black and Ghost Green: a
+   Ghost Green page that deepens to a grey green, frosted white cards, and the dock a
+   Zero Black pill whose open tab is Ghost Green. */
+[data-palette="mono"][data-theme="light"]{
+  --dock-dot:rgba(215,255,224,.14); --dock-dot-solid:#202722; --dock-dot-edge:rgba(215,255,224,.12);
+  --dock-dot-ink:#CFE9D5; --dock-pill:var(--ghost-green); --dock-pill-ink:var(--zero-black); --dock-flag:var(--ghost-green);
+  --ground:radial-gradient(110% 50% at 10% -5%,rgba(255,255,255,.75) 0%,transparent 60%),
+    linear-gradient(170deg,#E6FFEB 0%,var(--ghost-green) 35%,#B3D5BC 100%);
+  --card:rgba(255,255,255,.55); --card-edge:rgba(255,255,255,.80);
 }
 /* An element that carries its own theme or mode (the rest screen, the splash, a theme
    preview) restates its text colour: color is resolved once on body and then inherited
@@ -269,7 +343,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --color-set-target:var(--dim); --color-set-active:var(--accent); --color-set-done:var(--ok);
 }
 /* Photos and the mark are drawn in Bunyan red. A theme that is not red recolours them on
-   the way to the screen with --img-tone: Pink turns their red to its pink, Monochrome
+   the way to the screen with --img-tone: Blue turns their red to its blue, Monochrome
    takes the colour out, Red leaves them alone. :where() keeps this at no specificity, so
    a rule that gives one of them its own filter (a glow) still applies — and every such
    rule starts its filter with var(--img-tone) too. */
@@ -284,11 +358,23 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
    Safari's ~300ms tap delay. Pinch-to-zoom is untouched. user-scalable=no in the
    viewport meta does not work: iOS has ignored it since iOS 10. */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
-html,body{margin:0;background:var(--bg);color:var(--text);
-  background-image:radial-gradient(120% 60% at 50% -10%, var(--glow) 0%, transparent 62%);
-  background-attachment:fixed;
+html,body{margin:0;color:var(--text);
   font-family:"Manrope",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+/* The ground: the theme's flat colour on html (what shows past the ends of a bounce,
+   and what the status bar takes), and over it, fixed to the screen, the theme's blend
+   of tones. A fixed layer rather than background-attachment:fixed, which iOS ignores;
+   body stays clear so the layer shows between the cards. */
+html{background:var(--bg)}
+body{background:transparent}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--ground)}
+/* Glass: the cards in the page take the theme's card fill, a tint of the ground rather
+   than a slab over it, with a lighter edge. Only the fill colour changes: a card's own
+   glow or gradient stays on top of it. Sheets, toasts and bars that float over the page
+   keep their solid fills. */
+:is(.card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.pgstat,.pgmac,.sg-list,.pid,
+  .chat-a,.chatcard,.chat-topics,.coachplan,.coachhero,.psimple,.ready){background-color:var(--card);border-color:var(--card-edge)}
+:is(.sheetbox,#sheet,.sheet) :is(.card,.list,.sg-list,.drow){background-color:var(--raised);border-color:var(--border)}
 /* Reserve the dock's height plus breathing room, so the last card never sits under it.
    --navh already includes the safe area (through --dock-lift), so adding it again here
    would double-count. This is the only place the reserve is applied. */
@@ -462,42 +548,53 @@ body.kb nav{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(--
 body.focus{--navh:var(--dock-lift)}
 body.focus nav{opacity:0;visibility:hidden;pointer-events:none;
   transition:opacity var(--m-micro) var(--e-standard),visibility 0s var(--m-micro)}
-.dock{--i:0;position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
-  max-width:520px;height:var(--dock-h);margin:0 auto;padding:0 6px;
-  border-radius:var(--r5);background:var(--glass-solid);
+/* The dock (reference: a dark pill of round buttons, the one that is on opened into a
+   pill with its name). Each tab is a circle; the one that is on widens as its name
+   slides out beside the icon, and the one left closes, both on one curve, so a change
+   of tab reads as one movement. The circles keep their places: the space between them
+   gives and takes, and nothing jumps.
+
+   Colours are the theme's dock tokens: --dock-bar the pill, --dock-dot and
+   --dock-dot-ink a circle and its icon, --dock-pill and --dock-pill-ink the one that is
+   on. The bar is dark chrome in every theme and mode, so a circle always reads on it. */
+.dock{position:relative;display:flex;align-items:center;justify-content:space-between;gap:4px;
+  max-width:420px;height:var(--dock-h);margin:0 auto;padding:0 7px;
+  border-radius:var(--rpill);background:var(--dock-bar-solid);
   border:1px solid var(--dock-hair);border-top-color:var(--hair-hi);
-  box-shadow:var(--shadow-float);pointer-events:auto;isolation:isolate}
+  box-shadow:var(--shadow-float);pointer-events:auto;isolation:isolate;
+  --dot:clamp(40px, 12vw, 48px)}
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
-  .dock{background:var(--glass);-webkit-backdrop-filter:saturate(160%) blur(22px);backdrop-filter:saturate(160%) blur(22px)}}
-/* The dock keeps one order in both languages: Home at the left, Profile at the
+  .dock{background:var(--dock-bar);-webkit-backdrop-filter:saturate(160%) blur(22px);backdrop-filter:saturate(160%) blur(22px)}}
+/* The dock keeps one order in both languages: Training at the left, Profile at the
    right. It is a row of places, not a line of text, and a thumb that has learnt where
-   Train sits should find it there after switching to Arabic. direction:ltr fixes the
-   grid's column order and the indicator's slide together; the labels are icons, so
-   nothing inside needs to read right to left. */
+   Food sits should find it there after switching to Arabic. Inside the open pill the
+   name still reads in its own direction. */
 .dock{direction:ltr}
-/* One indicator, slid between the five cells by transform alone. Its cell is a fifth
-   of the dock's inner width, so --i × 100% is exactly one item per step. */
-.dock-ind{position:absolute;top:0;bottom:0;inset-inline-start:6px;width:calc((100% - 12px) / 5);
-  transform:translateX(calc(var(--i) * 100%));pointer-events:none;z-index:0;
-  transition:transform var(--m-screen) var(--e-ios)}
-.dock-ind::before{content:"";position:absolute;inset:0;margin:auto;width:min(66px,92%);height:52px;
-  border-radius:var(--rpill);background:var(--accent-tint);
-  box-shadow:inset 0 0 0 1px var(--accent-edge),0 0 22px var(--accent-glow)}
-.dock-b{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  min-width:var(--hit);min-height:var(--hit);height:100%;padding:0 2px;margin:0;border:0;background:none;
-  color:var(--navtext);cursor:pointer;
-  transition:color var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
-/* Square ends and mitred corners: the structural cut the icon set is moving to. */
+.dock-b{position:relative;flex:0 1 auto;display:flex;align-items:center;justify-content:center;
+  min-width:var(--dot);height:var(--dot);padding:0 calc((var(--dot) - 22px) / 2);margin:0;
+  border:1px solid var(--dock-dot-edge);border-radius:var(--rpill);background:var(--dock-dot);
+  color:var(--dock-dot-ink);cursor:pointer;overflow:hidden;
+  transition:background-color var(--m-screen) var(--e-ios),color var(--m-screen) var(--e-ios),
+    border-color var(--m-screen) var(--e-ios),padding var(--m-screen) var(--e-ios),transform var(--m-press) var(--e-standard)}
+/* Square ends and mitred corners: the structural cut of the icon set. */
 .dock-b svg{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;
-  stroke-width:1.8;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4;
-  transition:transform var(--m-comp) var(--e-ios),stroke-width var(--m-micro) var(--e-standard)}
-/* The word under each icon. One line, never wider than its fifth of the dock. */
-.dock-l{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  font-size:10.5px;line-height:1.2;font-weight:600;letter-spacing:.01em}
-[dir="rtl"] .dock-l{font-size:11px;letter-spacing:0}
-.dock-b.on{color:var(--dock-on)}
-.dock-b.on svg{transform:scale(1.04);stroke-width:2}
-.dock-b.on .dock-l{font-weight:700}
+  stroke-width:1.8;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4}
+/* The name: closed to nothing on a circle, slid open on the tab that is on. It is cut
+   with an ellipsis rather than pushing the dock wider, which only a very narrow phone
+   in a long language would ever see. */
+.dock-l{display:block;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  opacity:0;margin:0;direction:var(--dir,ltr);
+  font-size:12.5px;line-height:1.2;font-weight:700;letter-spacing:.01em;
+  transition:max-width var(--m-screen) var(--e-ios),opacity var(--m-fade) var(--e-standard),margin var(--m-screen) var(--e-ios)}
+[dir="rtl"] .dock-l{--dir:rtl;font-size:13px;letter-spacing:0}
+.dock-b.on{flex-shrink:1;min-width:0;padding:0 15px 0 12px;background:var(--dock-pill);color:var(--dock-pill-ink);border-color:transparent}
+.dock-b.on svg{stroke-width:2}
+.dock-b.on .dock-l{max-width:96px;opacity:1;margin-left:7px;transition-delay:0s,60ms,0s}
+/* In Arabic the open pill reads from the right: the icon first, at the right, then its
+   name. The buttons themselves keep their places (the dock is left to right). */
+[dir="rtl"] .dock-b{flex-direction:row-reverse}
+[dir="rtl"] .dock-b.on{padding:0 12px 0 15px}
+[dir="rtl"] .dock-b.on .dock-l{margin-left:0;margin-right:7px}
 :root:not(.tch) .dock-b:active,.dock-b.tapd{transform:scale(.94)}
 /* Out of the way while reading (js/ui/dock.js): scrolling down adds .dhid and the
    dock inside the fixed bar slides below the screen edge; scrolling up takes it off
@@ -555,7 +652,7 @@ body.kb #wbar{opacity:0;visibility:hidden;transition:opacity var(--m-micro) var(
 @keyframes wbPulse{0%,100%{opacity:1}50%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){.wbar,.wbar-dot{animation:none}}
 body.noanim .wbar,body.noanim .wbar-dot{animation:none}
-.dock-b:focus-visible{outline:2px solid rgba(255,255,255,.8);outline-offset:-6px;border-radius:var(--r4)}
+.dock-b:focus-visible{outline:2px solid rgba(255,255,255,.85);outline-offset:2px}
 /* ---- The segmented control (seg() in js/ui/view.js) ---------------------------
    The dock's language for any row of equal choices: a recessed track, one indicator
    sliding between equal cells by transform, a press that gives. Solid accent for a
@@ -641,21 +738,20 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
 :root:not(.tch) .thpick:active,.thpick.tapd{transform:scale(.97)}
 .thpick.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
 .thpv{position:relative;display:flex;flex-direction:column;gap:7px;width:100%;aspect-ratio:3/4;padding:9px 7px 30px;
-  border-radius:12px;overflow:hidden;background:var(--bg);color:var(--text);
-  background-image:radial-gradient(120% 60% at 50% -10%,var(--glow) 0%,transparent 62%);
+  border-radius:12px;overflow:hidden;background:var(--ground),var(--bg);color:var(--text);
   box-shadow:inset 0 0 0 1px var(--hair)}
-.thpv-card{display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:9px;background:var(--raised);
-  border:1px solid var(--border);box-shadow:var(--shadow-card)}
+.thpv-card{display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:9px;background:var(--card);
+  border:1px solid var(--card-edge);box-shadow:var(--shadow-card)}
 .thpv-k{width:46%;height:4px;border-radius:2px;background:var(--accentHi)}
 .thpv-n{font-family:var(--display);font-weight:800;font-size:15px;line-height:1;color:var(--figure);font-variant-numeric:tabular-nums}
 .thpv-bar{height:5px;border-radius:3px;background:var(--bar-track);overflow:hidden}
 .thpv-bar i{display:block;width:64%;height:100%;border-radius:3px;background:var(--accent)}
 .thpv-btn{height:16px;border-radius:999px;background:linear-gradient(180deg,var(--accent),var(--accent-deep));
   box-shadow:0 6px 14px -8px rgba(var(--glow-rgb),.9)}
-.thpv-dock{position:absolute;left:7px;right:7px;bottom:7px;height:16px;display:flex;align-items:center;justify-content:space-around;
-  border-radius:999px;background:var(--glass-solid);box-shadow:inset 0 0 0 1px var(--dock-hair)}
-.thpv-dock i{width:5px;height:5px;border-radius:50%;background:var(--navtext)}
-.thpv-dock i.on{width:12px;border-radius:3px;background:var(--dock-on)}
+.thpv-dock{position:absolute;left:7px;right:7px;bottom:7px;height:18px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 3px;border-radius:999px;background:var(--glass-solid);box-shadow:inset 0 0 0 1px var(--dock-hair)}
+.thpv-dock i{width:12px;height:12px;border-radius:50%;background:var(--dock-dot);box-shadow:inset 0 0 0 1px var(--dock-dot-edge)}
+.thpv-dock i.on{width:26px;border-radius:6px;background:var(--dock-pill);box-shadow:none}
 .thpick-n{font-size:12.5px;font-weight:700;line-height:1.2;text-align:center}
 .thpick-sw{display:flex;gap:4px}
 .thpick-sw i{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
@@ -750,12 +846,12 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
   letter-spacing:.06em;text-indent:.06em;
   margin-top:14px;opacity:0;text-shadow:0 1px 12px rgba(4,4,6,.9);
   animation:spTag .9s ease 1.9s forwards}
-/* The frame's "heritage touch": the name in Arabic, faint, at the foot. Neither design
-   face has Arabic glyphs, so this is the system Arabic face, as all Arabic in the app is.
+/* The frame's "heritage touch": the name in Arabic, faint, at the foot, in the
+   display face (Alexandria, for Arabic).
    The frame's "V 1.0.4" is placeholder text — the app has no version number to show. */
 #splash .sp-her{position:absolute;left:0;right:0;bottom:calc(32px + env(safe-area-inset-bottom));
   z-index:2;text-align:center;font-size:20px;color:#888580;opacity:0;
-  font-family:-apple-system,"SF Arabic","Geeza Pro","Segoe UI",Tahoma,sans-serif;
+  font-family:var(--display);font-weight:700;
   animation:spHer .9s ease 2.1s forwards}
 @keyframes spHer{to{opacity:.3}}
 @keyframes spArt{to{opacity:.92;transform:scale(1)}}
@@ -798,7 +894,7 @@ body.noanim #splash .sp-rule{transform:none;animation:none}
 body.noanim #splash .sp-tag{opacity:1;animation:none}
 body.noanim #splash .sp-her{opacity:.3;animation:none}
 body.noanim #splash .sp-embers{display:none}
-[dir="rtl"] body{font-family:-apple-system,"SF Arabic","Geeza Pro",BlinkMacSystemFont,
+[dir="rtl"] body{font-family:"Manrope","SF Arabic","Geeza Pro",-apple-system,BlinkMacSystemFont,
   "Segoe UI",Tahoma,sans-serif}
 [dir="rtl"] .chev{transform:scaleX(-1);display:inline-block}
 [dir="rtl"] th:first-child,[dir="rtl"] td:first-child{text-align:right}
@@ -1385,9 +1481,21 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 
 .hgreet{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
 .hdate{font-size:12px;font-weight:600;text-transform:uppercase;color:var(--dim);margin-bottom:4px}
-.havatar{flex:0 0 48px;width:48px;height:48px;border-radius:24px;background:var(--accentSoft);
-  border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;
-  font-family:var(--display);font-weight:700;font-size:16px;color:var(--text)}
+/* The bell and the person at the top right of Training: round glass buttons, as the
+   cards are glass. The bell's dot is the dock's flag colour, ringed in the page. */
+.hgreet-t{min-width:0}
+.hacts{flex:none;display:flex;align-items:center;gap:8px}
+.hbtn{position:relative;flex:none;display:grid;place-items:center;width:46px;height:46px;padding:0;margin:0;
+  border-radius:50%;border:1px solid var(--card-edge);background:var(--card);color:var(--text);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  transition:transform var(--m-press) var(--e-standard)}
+:root:not(.tch) .hbtn:active,.hbtn.tapd{transform:scale(.94)}
+.hbtn:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
+.hbtn .gl{width:21px;height:21px}
+.hbtn.flag::after{content:"";position:absolute;top:9px;inset-inline-end:10px;width:9px;height:9px;border-radius:50%;
+  background:var(--dock-flag);box-shadow:0 0 0 2px var(--bg)}
+.havatar{background:var(--accent);border-color:transparent;color:var(--onAccent);
+  font-family:var(--display);font-weight:800;font-size:17px}
 
 .hstack{display:flex;flex-direction:column;gap:16px}
 .hstack>.card{margin:0}
@@ -3544,6 +3652,149 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .libq input::-webkit-search-cancel-button,.libq input::-webkit-search-decoration{-webkit-appearance:none;display:none}
 .libq input:focus{border-color:var(--accentHi);box-shadow:0 0 0 3px rgba(var(--accentHi-rgb),.18);outline:none}
 .libq .ico-search{inset-inline-start:18px}
+/* ---- Food: what the body needs (js/ui/bodyneeds.js) --------------------------------
+   The reference's body diagram in the theme's pen: a headline, the figure with the four
+   nodes on an ellipse around it, the one furthest behind lit in the accent; then what
+   is left of it and three foods for it, drawn on plates. */
+.fbody{position:relative;margin:var(--s4) 0 0;padding:18px 16px 16px;border-radius:var(--r5);border:1px solid var(--card-edge);
+  background:radial-gradient(90% 60% at 50% 34%,rgba(var(--accent-rgb),.12),transparent 70%),var(--card);box-shadow:var(--shadow-card);overflow:hidden}
+.fbody-h{margin:6px 0 6px;font-family:var(--display);font-size:25px;line-height:1.15;max-width:16ch}
+.fbody-s{margin:0;font-size:14px;line-height:1.5;color:var(--sub);max-width:34ch}
+.fbody-d{position:relative;width:100%;max-width:340px;aspect-ratio:340/300;margin:14px auto 4px}
+.fbody-orbit{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.fbody-orbit ellipse{fill:none;stroke:var(--accentHi);stroke-width:1;opacity:.35;stroke-dasharray:2 5}
+.fbody-orbit ellipse.in{opacity:.16;stroke-dasharray:none}
+.fbody-orbit circle{fill:var(--accentHi);opacity:.7}
+.fbody-fig{position:absolute;left:50%;top:2%;height:96%;width:auto;transform:translateX(-50%);opacity:.9;
+  filter:drop-shadow(0 0 14px rgba(var(--accent-rgb),.25))}
+.fbn{position:absolute;display:flex;flex-direction:column;align-items:center;gap:3px;width:96px;margin-top:-28px;margin-inline-start:-48px;text-align:center}
+.fbn-c{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;border:1px solid var(--card-edge);
+  background:var(--raised);color:var(--text);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.fbn-c .gl{width:24px;height:24px}
+.fbn-k{margin-top:4px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sub)}
+[dir="rtl"] .fbn-k{letter-spacing:0;font-size:12px}
+.fbn b{font-family:var(--display);font-size:17px;font-weight:800;color:var(--figure);font-variant-numeric:tabular-nums}
+.fbn.full b{color:var(--ok)}
+.fbn.on .fbn-c{width:68px;height:68px;margin-top:-6px;background:var(--accent);color:var(--onAccent);border-color:transparent;
+  box-shadow:0 0 0 7px var(--accent-tint),0 0 34px var(--accent-glow)}
+.fbn.on .fbn-c .gl{width:28px;height:28px;stroke-width:2}
+.fbn.on .fbn-k,.fbn.on b{color:var(--accentHi)}
+.fbody-need{display:flex;flex-direction:column;gap:8px;margin:10px 0 0;padding:14px;border-radius:var(--r4);
+  border:1px solid var(--card-edge);background:var(--well)}
+.fbody-nk{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px}
+.fbody-nk b{font-family:var(--display);font-size:34px;font-weight:800;line-height:1;color:var(--accentHi);font-variant-numeric:tabular-nums}
+.fbody-nk b small{font-size:20px}
+.fbody-pill{padding:5px 11px;border-radius:var(--rpill);border:1px solid var(--accent-edge);font-size:12.5px;font-weight:700;color:var(--text)}
+.fbody-need p{margin:0;font-size:14px;line-height:1.5;color:var(--sub)}
+.fsug-h{margin:16px 0 10px}
+.fsug{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fsug-t{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;margin:0;padding:8px 8px 10px;
+  border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card);color:var(--text);font:inherit;text-align:start;
+  transition:transform var(--m-press) var(--e-standard)}
+:root:not(.tch) .fsug-t:active,.fsug-t.tapd{transform:scale(.96)}
+.fsug-art{display:grid;place-items:center;width:100%;aspect-ratio:4/3;margin-bottom:6px;border-radius:calc(var(--r4) - 4px);
+  background:radial-gradient(60% 60% at 50% 55%,rgba(var(--accent-rgb),.14),transparent 72%),var(--well)}
+.fsug-art .art{width:88%;height:auto}
+.fsug-n{max-width:100%;font-size:13.5px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+.fsug-v{font-size:12.5px;font-weight:700;color:var(--accentHi)}
+.fsug-s{font-size:11px;color:var(--dim)}
+.fbody-glass{margin:12px 0 0;gap:8px}
+.fbody-glass .gl{width:18px;height:18px}
+.fnoticed{display:flex;align-items:flex-start;gap:12px;margin:12px 0 0;padding:14px 16px;border-radius:var(--r4);
+  border:1px solid var(--card-edge);background:var(--card)}
+.fnoticed-i{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:50%;
+  border:1px solid var(--accent-edge);color:var(--accentHi)}
+.fnoticed-i .gl{width:22px;height:22px}
+.fnoticed b{display:block;font-size:15px}
+.fnoticed p{margin:3px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
+.btn.fbuild{margin:12px 0 0;gap:8px;border-color:var(--accent-edge);color:var(--accentHi)}
+.btn.fbuild .gl{width:18px;height:18px}
+[dir="rtl"] .btn.fbuild .gl{transform:scaleX(-1)}
+/* ---- Running mode (js/ui/run.js) ------------------------------------------------
+   The reference's running screen in the theme's dark: the route on a quiet grid, the
+   time large, the distance, and calories and pace either side of the round pause. The
+   screen fills the page edge to edge (it is a focus mode; the dock is away). */
+.run{position:relative;isolation:isolate;display:flex;flex-direction:column;min-height:100dvh;
+  margin:calc(-20px - env(safe-area-inset-top)) calc(-1 * var(--gutter)) 0;
+  padding:calc(14px + env(safe-area-inset-top)) var(--gutter) calc(24px + env(safe-area-inset-bottom));
+  background:var(--ground),var(--bg);color:var(--text)}
+.run-top{display:flex;align-items:center;gap:10px}
+.run-x{display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;border-radius:50%;
+  border:1px solid var(--card-edge);background:var(--card);color:var(--text)}
+.run-x svg,.run-play svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.run-h{flex:1;font-family:var(--display);font-size:22px;font-weight:800}
+.run-gps{flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--rpill);
+  border:1px solid var(--card-edge);background:var(--card);font-size:12px;font-weight:700;color:var(--sub)}
+.run-gps::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.run-gps.on::before{background:var(--ok);box-shadow:0 0 0 3px var(--okSoft)}
+.run-gps.weak::before,.run-gps.wait::before{background:var(--warning);animation:wbPulse 1.6s ease-in-out infinite}
+.run-gps.denied::before,.run-gps.off::before{background:var(--danger)}
+.run-map{position:relative;margin:14px calc(-1 * var(--gutter)) 0;height:min(46vh,340px);overflow:hidden;
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent);mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent)}
+.run-map svg{display:block;width:100%;height:100%}
+.run-map .g{stroke:var(--hair);stroke-width:1;fill:none}
+.run-map .s{stroke:var(--hair-hi);stroke-width:6;fill:none;stroke-linecap:round;opacity:.7}
+.run-map .rt{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.run-map .rt-glow{fill:none;stroke:var(--accent);stroke-width:12;stroke-linecap:round;stroke-linejoin:round;opacity:.22}
+.run-map .st{fill:var(--bg);stroke:var(--accent);stroke-width:3}
+.run-map .now{fill:var(--accent);stroke:var(--bg);stroke-width:2.5}
+.run-map .now-r{fill:rgba(var(--accent-rgb),.22);stroke:none;transform-box:fill-box;transform-origin:center;animation:runPulse 2s ease-out infinite}
+.run.paused .now-r{animation:none;opacity:0}
+@keyframes runPulse{from{transform:scale(.5);opacity:1}to{transform:scale(1.6);opacity:0}}
+body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
+@media (prefers-reduced-motion:reduce){.run-map .now-r,.run-gps::before{animation:none}}
+.run-big{display:flex;flex-direction:column;align-items:center;margin-top:-6px}
+.run-big b{font-family:var(--display);font-size:clamp(52px,17vw,72px);font-weight:800;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.run-big span{margin-top:6px;font-size:13px;color:var(--sub)}
+.run.paused .run-big b{color:var(--dim)}
+.run-mid{display:flex;flex-direction:column;align-items:center;margin-top:14px}
+.run-pin{display:grid;place-items:center;width:40px;height:40px;margin-bottom:6px;border-radius:50%;border:1px solid var(--card-edge);background:var(--card);color:var(--accentHi)}
+.run-pin .gl{width:19px;height:19px}
+.run-mid b{font-family:var(--display);font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.run-mid>span:last-child{font-size:12.5px;color:var(--sub)}
+.run-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-top:18px}
+.run-pill{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 12px 8px 8px;border-radius:var(--rpill);
+  border:1px solid var(--card-edge);background:var(--card)}
+.run-pi{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;background:var(--well);color:var(--accentHi)}
+.run-pi .gl{width:17px;height:17px}
+.run-pt{display:flex;flex-direction:column;min-width:0}
+.run-pt span{font-size:11px;color:var(--dim)}
+.run-pt b{font-family:var(--display);font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.run-play{display:grid;place-items:center;width:72px;height:72px;padding:0;border-radius:50%;border:0;
+  background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent);
+  box-shadow:0 0 0 7px var(--accent-tint),0 12px 30px -10px rgba(var(--accent-rgb),.9);transition:transform var(--m-press) var(--e-standard)}
+.run-play svg{width:28px;height:28px;stroke-width:2.6}
+.run-play svg path[d^="M7"]{fill:currentColor}
+:root:not(.tch) .run-play:active,.run-play.tapd{transform:scale(.94)}
+.btn.run-end{margin:20px 0 0}
+.run-note{margin:12px 4px 0;font-size:12.5px;line-height:1.5;color:var(--dim);text-align:center}
+/* Training's way in. */
+.ttile.trun .ttile-i .gl{width:22px;height:22px}
+/* Capsule bars (capsChart in views/progress.js): a row of rounded columns on glass
+   tracks, the newest in the accent with its figure in a pill above it. */
+.caps{margin:6px 0 0}
+.caps-r{display:flex;align-items:flex-end;gap:6px;height:168px;padding-top:30px}
+.caps-c{position:relative;flex:1 1 0;min-width:0;max-width:34px;height:100%;display:flex;align-items:flex-end;justify-content:center;
+  margin:0 auto;border-radius:var(--rpill);background:var(--seg-track);box-shadow:inset 0 0 0 1px var(--hair)}
+.caps-b{position:relative;display:flex;align-items:flex-end;justify-content:center;width:100%;min-height:26px;
+  border-radius:var(--rpill);background:var(--bar-track);box-shadow:inset 0 1px 0 var(--hair-hi)}
+.caps-l{padding-bottom:7px;font-size:10.5px;font-weight:700;line-height:1;color:var(--sub);font-variant-numeric:tabular-nums}
+.caps-c.on .caps-b{background:linear-gradient(180deg,var(--accent),var(--accent-deep));box-shadow:0 8px 18px -10px rgba(var(--accent-rgb),.9)}
+.caps-c.on .caps-l{color:var(--onAccent)}
+.caps-v{position:absolute;top:-28px;inset-inline-end:0;white-space:nowrap;padding:4px 9px;border-radius:var(--rpill);
+  background:var(--raised);border:1px solid var(--card-edge);font-size:11.5px;font-weight:700;color:var(--text);
+  font-variant-numeric:tabular-nums;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+/* Search, as the reference draws it: a glass pill with the magnifier in a round
+   button of its own at the start. The circle is the container's ::before, so the
+   magnifier (a mask icon, coloured by its own background) can sit on it. */
+.libq::before,.afq::before{content:"";position:absolute;inset-inline-start:6px;top:50%;width:40px;height:40px;margin-top:-20px;
+  z-index:1;border-radius:50%;background:var(--raised);box-shadow:0 1px 0 var(--hair-hi) inset,0 4px 12px rgba(0,0,0,.12);pointer-events:none}
+.libq input{background:var(--card);border-color:var(--card-edge);padding-inline-start:56px;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.afq{position:relative;background:var(--card);border-color:var(--card-edge);padding-inline-start:18px;
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.afq>.ico-search{position:relative;z-index:2;margin-inline-end:8px}
+.libq .ico-search{z-index:2}
 .libq-x{position:absolute;inset-inline-end:8px;top:50%;margin-top:-18px;width:36px;height:36px;border-radius:50%;
   border:none;background:var(--surface);color:var(--dim);font-size:13px}
 .libfilters{gap:8px;margin:0 -16px 6px;padding:2px 16px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -3656,8 +3907,9 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .htiles.two{margin:4px 0 14px}
 .btn.flogplan{margin:10px 0 0}
 /* Coach has something to say: a dot on its tab, its count in the accessible name. */
-.dock-b.advice::after{content:"";position:absolute;top:calc(50% - 21px);inset-inline-start:calc(50% + 6px);width:8px;height:8px;
-  border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--glass-solid);pointer-events:none}
+.dock-b.advice::after{content:"";position:absolute;top:7px;right:8px;width:8px;height:8px;
+  border-radius:50%;background:var(--dock-flag);box-shadow:0 0 0 2px var(--dock-dot-solid);pointer-events:none}
+.dock-b.on.advice::after{box-shadow:0 0 0 2px var(--dock-pill);background:var(--dock-pill-ink)}
 .csub{margin:-4px 0 16px}
 .coachhero{position:relative;isolation:isolate;overflow:hidden;margin:0 0 var(--s4);padding:18px 16px 16px;border-radius:var(--r5);
   border:1px solid var(--accent-edge);background:linear-gradient(160deg,var(--accent-tint),rgba(255,255,255,0) 60%),var(--raised);box-shadow:var(--shadow-card)}
@@ -3782,8 +4034,63 @@ body.kb .chat-form,body:has(nav.dhid) .chat-form{bottom:max(10px,env(safe-area-i
 .chatcard-h{display:flex;align-items:center;gap:12px;margin:0 0 14px}
 .chatcard-t{display:block;font-family:var(--display);font-weight:700;font-size:17px;line-height:1.2}
 .chatcard-s{display:block;margin-top:3px;font-size:13px;line-height:1.45;color:var(--sub)}
-.chatcard .chat-topics{margin:0 0 12px;background:var(--well)}
-.chatcard>.btn{margin:0}
+.chatcard>.btn{margin:12px 0 0}
+/* "Ask me anything": a glass pill that looks like the box it opens, its send button a
+   round accent button at the end, and the questions to tap under it in one row that
+   scrolls sideways. */
+.chat-ask{display:flex;align-items:center;gap:10px;width:100%;min-height:54px;margin:0;padding:6px 6px 6px 18px;
+  border-radius:var(--rpill);border:1px solid var(--card-edge);background:var(--well);color:var(--dim);
+  font:inherit;font-size:15px;text-align:start;cursor:text;transition:transform var(--m-press) var(--e-standard)}
+:root:not(.tch) .chat-ask:active,.chat-ask.tapd{transform:scale(.98)}
+.chat-ask-p{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-ask-go{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:50%;
+  background:var(--accent);color:var(--onAccent)}
+.chat-ask-go .gl{width:20px;height:20px;stroke-width:2.2}
+.chatcard .chat-chips.cc{flex-wrap:nowrap;overflow-x:auto;margin:12px -16px 0;padding:2px 16px 4px;scrollbar-width:none}
+.chatcard .chat-chips.cc::-webkit-scrollbar{display:none}
+.chatcard .chat-chips.cc .chat-chip{flex:none;white-space:nowrap}
+/* ---- Coach AI: this week (views/coach.js weekCard) ---------------------------------
+   The coach's mark and its word on things, a half-ring gauge of the week's workouts,
+   and three figures in rings. */
+.cweek{position:relative;margin:0 0 var(--s4);padding:18px 16px 16px;border-radius:var(--r5);border:1px solid var(--card-edge);
+  background:radial-gradient(110% 80% at 100% 0%,rgba(var(--accent-rgb),.16),transparent 62%),var(--card);box-shadow:var(--shadow-card)}
+.cweek-top{display:flex;align-items:center;gap:12px}
+.cweek-mark{display:grid;place-items:center;flex:none;width:48px;height:48px;border-radius:50%;
+  background:var(--accent);color:var(--onAccent);box-shadow:0 8px 20px -10px rgba(var(--accent-rgb),.9)}
+.cweek-mark .gl{width:26px;height:26px;stroke-width:2}
+.cweek-t{min-width:0}
+.cweek-t h2{margin:2px 0 2px;font-family:var(--display);font-size:22px;line-height:1.15}
+.cweek-t p{margin:0;font-size:13px;color:var(--sub)}
+.cweek-g{position:relative;max-width:300px;margin:14px auto 0}
+.cweek-svg{display:block;width:100%;height:auto;overflow:visible}
+[dir="rtl"] .cweek-svg{transform:scaleX(-1)}
+.cweek-svg line{stroke:var(--bar-track);stroke-width:3;stroke-linecap:round}
+.cweek-svg line.on{stroke:var(--accent)}
+.cweek-svg .dot{fill:var(--dock-flag);stroke:var(--raised);stroke-width:2}
+.cweek-gv{position:absolute;left:0;right:0;bottom:2px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.cweek-gv b{font-family:var(--display);font-size:34px;font-weight:800;line-height:1;color:var(--figure);font-variant-numeric:tabular-nums}
+.cweek-gv span{margin-top:4px;font-size:12.5px;color:var(--sub)}
+.cweek-s{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--hair)}
+.cweek-st{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;text-align:center}
+.cweek-sti{display:grid;place-items:center;width:40px;height:40px;margin-bottom:3px;border-radius:50%;
+  border:1px solid var(--card-edge);background:var(--well);color:var(--accentHi)}
+.cweek-sti .gl{width:19px;height:19px}
+.cweek-st b{font-family:var(--display);font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.cweek-st>span:last-child{font-size:11.5px;color:var(--dim);line-height:1.25}
+/* ---- Coach AI: the plan it built, as tiles ---------------------------------------- */
+.cplan{margin:var(--s4) 0 0}
+.cplan .tsec{margin-top:0}
+.cplan-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cplan-t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;min-height:128px;margin:0;padding:14px;
+  border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card);color:var(--text);font:inherit;text-align:start;
+  box-shadow:var(--shadow-card);transition:transform var(--m-press) var(--e-standard)}
+:root:not(.tch) .cplan-t:active,.cplan-t.tapd{transform:scale(.97)}
+.cplan-t .gtile{margin-bottom:8px;border-radius:50%}
+.cplan-k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .cplan-k{letter-spacing:0}
+.cplan-v{max-width:100%;font-family:var(--display);font-size:16px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
+.cplan-s{font-size:12.5px;color:var(--sub)}
+.cplan-gen{margin:12px 0 0}
 </style>
 </head>
 <body>

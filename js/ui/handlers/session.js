@@ -15,6 +15,7 @@ import {pushNav, resetNav} from "../nav.js";
 import {render} from "../render.js";
 import {endRest, keepAwake, toast, V} from "../view.js";
 import {warmShown} from "../views/warmup.js";
+import {discardRun, finishRun, pauseIt, resumeIt, startRun} from "../run.js";
 import {has, key, NEXT, on} from "./registry.js";
 
 /* ---- leaving an active workout ------------------------------------------- */
@@ -53,12 +54,20 @@ function backBlocked(){
   lockSaid=true;toast(t("Tap the close button to leave this workout."));
 }
 
+/* Running mode's way out, from its ✕ and from any back gesture while it is on screen:
+   save it, throw it away, or keep running. */
+function askEndRun(){
+  askConfirm({title:t("End this run?"),icon:"leave",
+    body:t("Save it to your training, or throw it away. Keep running and nothing changes."),
+    cta:t("Finish and save"),act:"runfinish",cancel:t("Keep running"),
+    alt:t("Discard run"),altact:"rundiscard"});}
 function navGuard(resume){
   /* Only when the workout is the thing you are actually looking at. vTrain() returns
      the logger for as long as a session is live, so "the Train tab" and "the workout"
      are the same screen and that is the whole condition. Without the tab test, every
      back gesture anywhere in the app — on Food, on Progress — would stop to ask about
      a workout the user is not currently in. */
+  if(S.run&&!S.active&&V.tab==="train"){askEndRun();return true;}
   if(!S.active||V.tab!=="train"||V.train==="hub")return false;
   leaveResume=resume||null;
   askConfirm({title:t("Leave workout?"),icon:"leave",
@@ -141,6 +150,17 @@ function register(){
   key("rpe",function(D){V.draft.rpe=+D.rpe;render();return;});
   key("actint",function(D){V.draft.rpe=+D.actint;render();return;});
   key("logact",function(){W.logBout();return;});
+  /* Running mode (js/ui/run.js). */
+  ACT.runfinish=function(){finishRun(render);};
+  ACT.rundiscard=function(){discardRun();render();toast(t("Run discarded."));};
+  key("run",function(D){
+    if(D.run==="start"){if(S.active){toast(t("Finish the workout first."));return;}
+      resetNav();V.tab="train";V.train="days";startRun();render();window.scrollTo(0,0);return;}
+    if(D.run==="pause"){pauseIt();render();return;}
+    if(D.run==="resume"){resumeIt();render();return;}
+    if(D.run==="finish"){finishRun(render);return;}
+    if(D.run==="leave"){askEndRun();return;}
+    return;});
   key("activ",function(){V.actIv=true;render();var ivf=document.getElementById("in_ivn");if(ivf)ivf.focus();return;});
   key("quickact",function(D){V.sheet=null;V.sd=null;startActivity(D.quickact);return;});
   key("actsheet",function(){openSheet("acts");return;});

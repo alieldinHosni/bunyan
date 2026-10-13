@@ -15,6 +15,7 @@ import {resetNav} from "../nav.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {ask} from "../views/chat.js";
+import {loadFoods} from "../../engine/nutrition.js";
 import {withIds} from "../views/timport.js";
 
 /* The exercise open in the edit sheet, and the one place its numbers are bounded:
@@ -107,7 +108,7 @@ function chatSend(){
   /* Emptied before the render: the field is kept across renders, value and all, and a
      question that stayed in the box after its answer read as not yet sent. */
   el.value="";
-  ask(q);saveDB();render();chatEnd();}
+  loadFoods(function(){ask(q);saveDB();render();chatEnd();});}
 function chatEnd(){
   requestAnimationFrame(function(){
     var qs=document.querySelectorAll(".chat-q"),q=qs[qs.length-1];

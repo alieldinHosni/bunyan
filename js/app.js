@@ -26,6 +26,7 @@ import {onChange, onInput, onKeydown} from "./ui/handlers/fields.js";
 import {render, syncKeyboard} from "./ui/render.js";
 import {setStorageErrorHandler} from "./util.js";
 import {syncWbar} from "./ui/wbar.js";
+import {paintRun} from "./ui/run.js";
 import {t} from "./i18n/dict.js";
 
 /* Read as the finger lands, not on the click: by then Chrome has already taken the
@@ -120,6 +121,7 @@ setInterval(function(){
        the eight-second alarm is only for a rest ending in front of you. */
     if(left<=0){setBeeped(true);if(Date.now()-V.restEnd<5000){alarmStart();tap("ok");}}}
   tickSession();
+  if(S.run)paintRun();
   if(syncWorkoutState())saveDB();},1000);
 document.addEventListener("visibilitychange",function(){
   if(document.visibilityState!=="visible")return;

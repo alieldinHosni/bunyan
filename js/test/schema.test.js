@@ -23,6 +23,12 @@ function run(t){
   t.eq(a.activeProgram,a.programs[0].id,"and is the active one");
   t.eq(["splits","currentSplit","myPlan","userSplits"].filter(function(k){return k in a;}),[],"the old keys are gone");
   t.eq(a.v,3,"and the blob says v3");
+
+  /* ---- every load: Pink, which Blue replaced, becomes Blue ---- */
+  var pk={v:3,prefs:{palette:"pink"},programs:[]};migrateDB(pk,env());
+  t.eq(pk.prefs.palette,"blue","a stored Pink is Blue");
+  var rd={v:3,prefs:{palette:"red"},programs:[]};migrateDB(rd,env());
+  t.eq(rd.prefs.palette,"red","and no other theme is touched");
   t.eq(a.programs[1].custom,undefined,"old flags dropped from programs");
 
   /* ---- v2: an active copy beside the splits saved from it ---- */

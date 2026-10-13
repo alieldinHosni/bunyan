@@ -78,25 +78,53 @@ server from the project folder.
 Five tabs. Two are for the day, one is for planning, one for looking back, one for you.
 
 - **Training** (`views/train.js`, with its top in `views/home.js`) opens the app: the
-  greeting, one reminder at most, the week, today's workout (start it, or change the
+  greeting with a bell (what the coach has noticed, with a dot while there is
+  something) and your initial (Profile) at the top right, one reminder at most, the week, today's workout (start it, or change the
   day to another of the plan), weigh-in and steps, and a run or a match to log. A
   workout left for later shows here as a Resume card.
+- **Running mode** (`ui/run.js`, the arithmetic in `engine/run.js`), from Training: a
+  run tracked live with the phone's own GPS, free and offline. The route is drawn as
+  it grows on a quiet grid (no map: tiles would need a service), the time large, the
+  distance, calories (about 1 kcal per kg per km) and pace, with pause and resume.
+  Fixes worse than 35 m, closer than 4 m to the last, or faster than 9 m/s are not
+  counted. The screen stays awake, because a phone stops giving a web app its position
+  in the background. Finishing saves a Running activity with its route; without
+  location it is timed only, and the logger opens with the minutes in for the
+  distance. A run in progress survives closing the app.
 - **Food** (`views/food.js`) is the day: what you have eaten against the targets, the
-  meals (a planned one is a tap from logging), water, and "Log today's plan".
+  meals (a planned one is a tap from logging), water, and "Log today's plan". Today
+  also reads the log as a body (`ui/bodyneeds.js`, numbers from `engine/needs.js`): a
+  headline ("Your body needs more protein."), a drawn figure with protein, carbs, fat
+  and water around it at their share of the day's targets, the one furthest behind for
+  the time of day lit (nothing is "behind" before mid-morning); what is left of it and
+  three everyday foods for it, each logged in one tap (a glass, for water); what the
+  coach noticed about protein over the last week; and "Build today's meal", which asks
+  the coach what is left to eat. The foods are line drawings, in the theme's pen.
 - **Coach** (`views/coach.js`) is where the planning lives, in three sections:
   - *Training*: the active program's days, other programs, templates, a coach's PDF
     brought in, the exercise library;
   - *Nutrition*: the meal plan, the daily targets, foods of your own, a plan brought in;
-  - *Coach AI*: the assessment, which builds the daily targets, the training and the
-    meal plan in one step, with one Undo, and puts them on Training and Food; then
-    *Ask the coach*; then what the plan check and the coach see (`views/pcheck.js`).
+  - *Coach AI*: before the assessment, only the way to start it (it builds the daily
+    targets, the training and the meal plan in one step, with one Undo, and puts them
+    on Training and Food). After it, the coach's own page: its word on things (on
+    track, or how many things it noticed) over a half-ring gauge of this week's
+    workouts and three figures (workouts, protein days, streak); *Coach noticed*, what
+    the plan check and the coach see, one card at a time (`views/pcheck.js`); *Ask me
+    anything*, a box that opens the chat ready to type, with questions to tap under it;
+    and the plan as four tiles (targets, training, meals, the assessment again).
 
 **Ask the coach** (`views/chat.js`, with `coach/intent.js`) is a guided chat, not a
 chatbot. A question, tapped from the suggestions or typed in English or Arabic, is
 matched to one of a fixed set of things the coach can answer: today's workout, what to
 lift, what to eat now, how things are going, the weight trend, protein, where the
 calories come from, soreness or pain, a missed day or little time, the program's
-balance, strength, the goal, a new plan, water, steps. The answer is worked out on the
+balance, strength, the goal, a new plan, water, steps, tomorrow's workout, how the last
+one went, what is left to eat today, foods with the same macros as a planned one, and
+what is in a food. It answers in the language it is asked in, whatever the app is set
+to: Arabic (or Arabic typed in Latin letters, "3ayez akol eh") gets Arabic, English gets
+English, and the questions it offers next follow. Spelling is forgiven: one wrong letter
+in a longer word, a long vowel added or left out ("بينش" is بنش, "protien" is protein),
+and the common ways a lift or "calories" is written. The answer is worked out on the
 phone from the person's own log, plan and targets, with the same engines as the rest of
 the app, so it never says more than the app knows; a question outside that set is
 told so. Nothing is sent anywhere and no model writes the text. The newest answer
@@ -107,7 +135,8 @@ subject, with its lists as ruled rows and its notes set apart; the box to type i
 above the dock.
 - **Progress** (`views/progress.js`) has two slides: *Simple*, five plain answers
   (training this week, weight, strength, food, records), and *Detailed*, the charts
-  and numbers a coach reads.
+  and numbers a coach reads. Training volume over a short range is drawn as capsule
+  bars, the newest in the action colour with its figure above it.
 - **Profile** (`views/profile.js`, `settings.js`): who this is (the goal, the program,
   workouts, streak, weight), then grouped rows that each say what is set: You, Training,
   Nutrition, App; the profiles on the phone, sharing, friends; the backup (how old it
@@ -530,7 +559,8 @@ otherwise they would outlive the blob that was supposed to own them.
   - `intent.js`: what a question to the coach chat is asking, in English or Egyptian
     Arabic: phrases scored by the letters they match, so the more specific one wins
     ("how much weight" is the load, "my weight" the scale), and "unknown" rather than
-    a guess.
+    a guess. It also says which language the question is in, and the next-best
+    subject, for a question the first cannot answer.
 
   Coach AI shows them with the plan check's findings, one at a time: the most
   important, and "N more things the coach sees" behind a tap (the plan check, opened on
@@ -701,17 +731,35 @@ stone-monolith splash. Neither is used anywhere. If you find a gold arch SVG or 
 The intro degrades gracefully — if `intro.jpg` is missing the composition still holds on
 the ember glow alone, so a missing file never shows a broken screen.
 
-### Palette
+### Themes
 
-The CSS custom properties at the top of `index.html` are the source of truth. In short:
+The theme blocks at the top of `index.html` are the source of truth; nothing else in
+the stylesheet names a colour. Three themes, each in dark and light, chosen in
+Profile → App:
 
-| Role | Colour | Use |
+| Theme | Built from | Action colour |
 | --- | --- | --- |
-| Ground | `#0A0A0C` | The base of the whole interface |
-| Surface / Raised | `#141418` / `#1C1C22` | Cards and controls |
-| Bone | `#F0EDE8` | Text. Warmer and easier on the eye than white |
-| Accent | `#C41E2A` → `#E02534` | The action colour, and the brand |
-| Green | `#2E7D32` | Completed states only — a logged set, a finished meal |
-| Brass | `#C9A227` | Personal records and earned progression only. Never decoration |
+| BUNYAN Red (default) | Machine Red `#FF2E3A`, Glacier Blue `#DBF6FF` | Machine Red, Glacier labels |
+| BUNYAN Blue | Night Navy `#070B1A`, Steel Blue `#5C7FB5`, Sky Blue `#8AB0EC`, Signal Green `#82FC4F` | Sky Blue with navy labels (dark), a deeper steel blue with white (light) |
+| Monochrome | Zero Black `#050505`, Ghost Green `#D7FFE0` | Ghost Green on black (dark), black on Ghost Green (light) |
 
-Brass is reserved. If everything is gold, nothing is.
+Blue replaced Pink; a profile that had chosen Pink opens in Blue. Red and Monochrome use
+their brand colours exactly. In every theme:
+
+- **The ground** is a blend of two or three of the theme's tones (`--ground`, a layer
+  fixed behind the page), not one flat colour.
+- **Cards are glass** (`--card`, `--card-edge`): a tint of the ground with a lighter edge,
+  so the blend shows through. Sheets, toasts and anything that floats stay solid.
+- **The dock** is a dark pill of round buttons; the tab that is on opens into a pill in
+  the action colour with its name beside the icon (Training is a dumbbell, Coach a
+  whistle). Signal Green, in Blue, marks something new.
+- Green means done, gold (brass) means earned, red means destructive, whatever the theme.
+  If everything is gold, nothing is.
+
+### Type
+
+Four faces, all SIL Open Font License, all bundled in `fonts/` and precached, so the
+app keeps its type offline: Outfit (titles and figures) and Manrope (everything else)
+for Latin, and their Arabic partners, Alexandria and Readex Pro. Each Arabic face is
+declared under its Latin partner's family name with an Arabic `unicode-range`, so a
+heading in either language is set in the right face without a rule per language.

@@ -1,5 +1,5 @@
 /* Bunyan — glyphs
-   The line icons the Coach chat and Profile use, drawn for them on the 24px grid the
+   The line icons the Coach chat, Profile and the top of Training use, drawn for them on the 24px grid the
    rest of the icon set uses: a 1.75 stroke in the current text colour, square caps and
    mitred joins, nothing filled. Inline SVG rather than the CSS-mask icons in
    index.html, because these sit inside tinted tiles and take their colour from them.
@@ -34,7 +34,14 @@ var P={
   check:"M5 12.5l4.5 4.5L19 7.5",
   lock:"M5 10.5h14V21H5zM8 10.5V7a4 4 0 0 1 8 0v3.5",
   restore:"M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5",
-  sound:"M4 9h4l5-4v14l-5-4H4zM16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"};
+  sound:"M4 9h4l5-4v14l-5-4H4zM16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11",
+  bell:"M6 16.5V10.5a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21.5h4",
+  molecule:"M12 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM6 15.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM18 15.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM10.8 8.2 7.2 15.6M13.2 8.2l3.6 7.4M8.5 18h7",
+  grain:"M12 21.5V7M12 7C10 6 9 4.2 9.3 2.5 11.3 3 12.2 4.8 12 7zm0 0c2-1 3-2.8 2.7-4.5C12.7 3 11.8 4.8 12 7zM12 12.5c-2.2-.6-3.6-2.4-3.6-4.6 2.3.3 3.7 2.2 3.6 4.6zm0 0c2.2-.6 3.6-2.4 3.6-4.6-2.3.3-3.7 2.2-3.6 4.6zM12 18c-2.2-.6-3.6-2.4-3.6-4.6 2.3.3 3.7 2.2 3.6 4.6zm0 0c2.2-.6 3.6-2.4 3.6-4.6-2.3.3-3.7 2.2-3.6 4.6z",
+  avocado:"M12 2.5C8.5 2.5 7.5 7 6.5 10 5 14.5 7 21 12 21s7-6.5 5.5-11c-1-3-2-7.5-5.5-7.5zM12 11.5a3.25 3.25 0 1 1 0 6.5 3.25 3.25 0 0 1 0-6.5z",
+  spark:"M11 4l1.8 5.2L18 11l-5.2 1.8L11 18l-1.8-5.2L4 11l5.2-1.8zM18.5 3v4M16.5 5h4",
+  arrow:"M4.5 12h14.5M13 6l6 6-6 6",
+  whistle:"M9 7h12.5v4.75h-6.9A6.25 6.25 0 1 1 9 7zM10.9 13.25a1.9 1.9 0 1 1-3.8 0 1.9 1.9 0 0 1 3.8 0z"};
 
 function glyph(name,cls){
   var d=P[name];if(!d)return "";

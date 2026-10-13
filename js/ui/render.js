@@ -12,6 +12,7 @@ import {vProgress} from "./views/progress.js";
 import {vSheet} from "./sheets.js";
 import {S, saveDB, storeWarning} from "../state.js";
 import {vTrain} from "./views/train.js";
+import {ensureRunWatch, vRun} from "./run.js";
 import {syncRest} from "./views/session.js";
 import {PERSIST} from "../util.js";
 import {lockScroll, syncWorkoutState, V} from "./view.js";
@@ -77,7 +78,7 @@ function render(){
   if(V.pcheck){V.pcheck=false;V.tab="coach";V.csec="ai";V.advall=true;}
   /* The chat is a Coach screen; leaving Coach leaves it (back restores it from the trail). */
   if(V.tab!=="coach")V.chat=false;
-  var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":V.train):V.tab==="coach"?(V.train!=="days"?V.train:V.pslot?"pslot":V.pimport?"pimport":V.smeal?"smeal":V.chat?"chat":"hub"):"");
+  var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":S.run?"run":V.train):V.tab==="coach"?(V.train!=="days"?V.train:V.pslot?"pslot":V.pimport?"pimport":V.smeal?"smeal":V.chat?"chat":"hub"):"");
   var moved=view!==lastView;lastView=view;
   /* Note what has focus and where the caret sits before the rebuild destroys it.
      Restoring the caret to the end of the value, which is what this used to do,
@@ -86,8 +87,13 @@ function render(){
   if(wasId&&was.setSelectionRange){
     try{selS=was.selectionStart;selE=was.selectionEnd;}catch(e){selS=null;}
   }
+  /* How many things Coach AI has to say, counted once: the dock's dot and the bell at
+     the top of Training both show it. */
+  V.advice=adviceCount();
   var h="";
   if(V.assess)h=vAssess();
+  /* A run in progress is the Training tab, as a workout is (js/ui/run.js). */
+  else if(V.tab==="train"&&S.run&&!S.active)h=vRun();
   else if(V.tab==="train")h=vTrain();
   else if(V.tab==="coach")h=vCoach();
   else if(V.tab==="progress")h=vProgress();
@@ -123,10 +129,11 @@ function render(){
   /* The live workout owns the screen, so the dock leaves while it is up. Its own ✕ is
      the way out: Save and exit lands on Train with the Resume card, where the dock is
      back. The page stops keeping room for the dock too (body.focus in index.html). */
-  var focus=!V.assess&&V.tab==="train"&&!!S.active&&V.train!=="hub";
+  var focus=!V.assess&&V.tab==="train"&&((!!S.active&&V.train!=="hub")||(!!S.run&&!S.active));
   document.body.classList.toggle("focus",focus);
   /* The dock is built once and only its state changes after that — see dock.js. */
-  syncDock(document.getElementById("nav"),V.tab,adviceCount());
+  syncDock(document.getElementById("nav"),V.tab,V.advice);
+  ensureRunWatch();
   /* A workout under way, seen from another tab. */
   syncWbar();
   /* A new screen opens with the dock in view (see dock.js). */

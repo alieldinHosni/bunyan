@@ -169,6 +169,13 @@ function normalize(o){
     else o.active.entries.forEach(function(e){
       if(!Array.isArray(e.sets))e.sets=[];
       if(!e.planned||typeof e.planned!=="object")e.planned={sets:3,lo:8,hi:12};});}
+  /* A run in progress (js/ui/run.js, js/engine/run.js): its clock and points, or
+     nothing. A run started on another phone's clock or half-written is dropped. */
+  if(o.run!=null){
+    var rn=o.run;
+    if(!rn||typeof rn!=="object"||!(+rn.started>0)||!Array.isArray(rn.pts)||!(+rn.dist>=0)||!(+rn.ms>=0))delete o.run;
+    else{rn.pts=rn.pts.filter(function(p){return Array.isArray(p)&&p.length===3&&isFinite(p[0])&&isFinite(p[1])&&isFinite(p[2]);});
+      if(rn.since!=null&&!(+rn.since>0))rn.since=null;}}
   o.sessions=o.sessions.filter(sessionOk);
   o.body=o.body.filter(function(b){return b&&typeof b.date==="string";});
   /* A weight step per exercise, in kg: only real positive numbers survive. */
@@ -226,8 +233,11 @@ var STEPS=[
 ];
 
 /* Every load, whatever the version: each program in shape, at least one program
-   (the full-body template, for a profile with none), and an active one that exists. */
+   (the full-body template, for a profile with none), an active one that exists, and a
+   theme that still exists. */
 function tidy(db,env){
+  /* Pink became Blue: the theme the owner replaced it with. */
+  if(db.prefs&&db.prefs.palette==="pink")db.prefs.palette="blue";
   if(!Array.isArray(db.programs))db.programs=[];
   db.programs.forEach(normProg);
   if(!db.programs.length){var fb=env.template("fb");if(fb){var c=copyProgram(fb,env);db.programs.push(c);}}

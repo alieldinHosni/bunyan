@@ -146,8 +146,17 @@ function register(){
   key("cofix",function(D){coachFix(D.cofix);return;});
   /* Ask the coach (js/ui/views/chat.js): open the conversation, ask a suggestion or what
      was typed, clear it with Undo. */
-  key("chat",function(){pushNav();V.chat=true;render();chatEnd();return;});
-  key("chatq",function(D){if(!V.chat){pushNav();V.chat=true;}ask("",D.chatq);saveDB();render();chatEnd();return;});
+  /* "Ask me anything" opens it ready to type: the field takes focus inside the tap, which
+     is what lets a phone raise its keyboard. */
+  key("chat",function(D){pushNav();V.chat=true;render();
+    /* From the top of the chat, where its back arrow is: Coach AI is usually scrolled to
+       the box by the time it is tapped. */
+    if(D.chat==="ask"){window.scrollTo(0,0);var q=document.getElementById("chatq");if(q){try{q.focus({preventScroll:true});}catch(e){q.focus();}}}
+    else chatEnd();return;});
+  /* The food database loads first (from the cache, offline): swaps and food facts
+     answer from it. */
+  key("chatq",function(D){if(!V.chat){pushNav();V.chat=true;}
+    loadFoods(function(){ask("",D.chatq,D.chatl);saveDB();render();chatEnd();});return;});
   key("chatsend",function(){chatSend();return;});
   key("chatclear",function(){var chB=S.chat||[];S.chat=[];saveDB();render();window.scrollTo(0,0);
     toast(t("Conversation cleared."),function(){S.chat=chB;saveDB();render();});return;});
