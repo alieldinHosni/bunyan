@@ -18,6 +18,7 @@ import {actInfo, intensityOf, isActivity} from "../../data/activities.js";
 import {head, reorderBtn, seg, V} from "../view.js";
 import {backArrow, backBar} from "../nav.js";
 import {art} from "../art.js";
+import {glyph} from "../glyphs.js";
 import {programCover} from "../cover.js";
 import {shown} from "../more.js";
 import {vTImport} from "./timport.js";
@@ -121,6 +122,11 @@ function vTrainHome(){
   if(!S.active)h+=blockCard();
   h+=deloadCard();
   h+=bodyTiles();
+  /* Running mode: a run tracked live with the phone's GPS (js/ui/run.js). */
+  h+='<button class="ttile wide trun" data-run="start"><span class="ttile-i" aria-hidden="true">'+glyph("route")+'</span>'
+   +'<span class="ttile-tx"><span class="ttile-n">'+t("Running mode")+'</span>'
+   +'<span class="ttile-s">'+t("Time, distance and pace from your phone's GPS")+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   h+='<button class="ttile wide tquick" data-actsheet="1">'+art("track",{cls:"btn-art"})+'<span class="ttile-i" aria-hidden="true">'+ACTIVITY+'</span>'
    +'<span class="ttile-tx"><span class="ttile-n">'+t("Log cardio or a sport")+'</span>'
    +'<span class="ttile-s">'+t("Running, football, padel, tennis, classes…")+'</span></span>'

@@ -169,6 +169,13 @@ function normalize(o){
     else o.active.entries.forEach(function(e){
       if(!Array.isArray(e.sets))e.sets=[];
       if(!e.planned||typeof e.planned!=="object")e.planned={sets:3,lo:8,hi:12};});}
+  /* A run in progress (js/ui/run.js, js/engine/run.js): its clock and points, or
+     nothing. A run started on another phone's clock or half-written is dropped. */
+  if(o.run!=null){
+    var rn=o.run;
+    if(!rn||typeof rn!=="object"||!(+rn.started>0)||!Array.isArray(rn.pts)||!(+rn.dist>=0)||!(+rn.ms>=0))delete o.run;
+    else{rn.pts=rn.pts.filter(function(p){return Array.isArray(p)&&p.length===3&&isFinite(p[0])&&isFinite(p[1])&&isFinite(p[2]);});
+      if(rn.since!=null&&!(+rn.since>0))rn.since=null;}}
   o.sessions=o.sessions.filter(sessionOk);
   o.body=o.body.filter(function(b){return b&&typeof b.date==="string";});
   /* A weight step per exercise, in kg: only real positive numbers survive. */

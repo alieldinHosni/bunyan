@@ -2143,6 +2143,45 @@ await test("Food: in the morning nothing is behind yet; with water short in the 
   await page.$eval('.fbody-glass',e=>e.scrollIntoView({block:"center"}));await page.tap('.fbody-glass');await pause(page,300);
   eq(await ev(page,"S.days[Object.keys(S.days).sort().pop()].water"),w+250,"a glass added");
 },{db:lowProtein()});
+/* ---- Running mode (js/ui/run.js, js/engine/run.js) ---- */
+await test("Running mode: the phone's positions become distance and a route; pause stops the clock; Finish saves a Running activity",async page=>{
+  const ctx=page.context();
+  await ctx.grantPermissions(["geolocation"]);await ctx.setGeolocation({latitude:30.0444,longitude:31.2357,accuracy:8});
+  await tapTab(page,"train");await pause(page);
+  await page.$eval('[data-run="start"]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-run="start"]');await pause(page,600);
+  eq(await page.evaluate(()=>[!!document.querySelector(".run"),document.body.classList.contains("focus")]),[true,true],"the run fills the screen, no dock");
+  for(let i=1;i<=6;i++){await ctx.setGeolocation({latitude:30.0444+i*0.00009,longitude:31.2357,accuracy:8});await pause(page,1500);}
+  const r=await ev(page,"[S.run.pts.length,Math.round(S.run.dist),S.run.gps]");
+  if(r[0]<5||r[1]<40||r[2]!=="on")throw new Error("not tracking: "+JSON.stringify(r));
+  if(!/^M[\d.]+ [\d.]+L/.test(await page.$eval('#runRoute',e=>e.getAttribute("d"))))throw new Error("no route drawn");
+  await page.tap('[data-run="pause"]');await pause(page,300);
+  const t1=await page.$eval('#runT',e=>e.textContent);await pause(page,1600);
+  eq(await page.$eval('#runT',e=>e.textContent),t1,"paused: the clock holds");
+  await page.tap('[data-run="resume"]');await pause(page,300);
+  await page.tap('[data-run="finish"]');await pause(page,800);
+  const s=await ev(page,"[!!S.run,!!S.active,S.sessions[0].entries[0].name,S.sessions[0].entries[0].sets[0].km>0.03,S.sessions[0].entries[0].sets[0].route.length>=5,S.sessions[0].entries[0].sets[0].kcal>0]");
+  eq(s,[false,false,"Running",true,true,true],"saved as a run with its distance, route and calories");
+});
+await test("Running mode: with location refused it is timed only, says so, and Finish opens the logger with the minutes in",async page=>{
+  await page.evaluate(()=>{Object.defineProperty(navigator,"geolocation",{configurable:true,value:{watchPosition:(ok,err)=>{setTimeout(()=>err({code:1}),50);return 1;},clearWatch:()=>{}}});});
+  await tapTab(page,"train");await pause(page);
+  await page.$eval('[data-run="start"]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-run="start"]');await pause(page,600);
+  eq(await page.$eval('#runGps',e=>[e.className,e.textContent]),["run-gps denied","Location is off"],"the chip says so");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.run.ms=125000;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  if(!/timed only/.test(await page.$eval('.run-note',e=>e.textContent)))throw new Error("no note");
+  await page.tap('[data-run="finish"]');await pause(page,600);
+  eq(await ev(page,"[!!S.run,!!S.active&&S.active.entries[0].name,V.draft.min>=2]"),[false,"Running",true],"the logger, with the time");
+});
+await test("Running mode: a run outlives closing the app, and the back gesture asks before ending it",async page=>{
+  await tapTab(page,"train");await pause(page);
+  await page.$eval('[data-run="start"]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-run="start"]');await pause(page,500);
+  await page.reload();await pause(page,1200);
+  eq(await page.evaluate(()=>!!document.querySelector(".run")),true,"still running after a reload");
+  await page.tap('[data-run="leave"]');await pause(page,400);
+  eq(await page.$eval('#sheet',e=>/End this run/.test(e.innerText)),true,"asks");
+  await page.tap('[data-confirmalt]');await pause(page,400);
+  eq(await ev(page,"[!!S.run,S.sessions.filter(s=>s.entries[0].name==='Running').length]"),[false,0],"discarded: nothing saved");
+});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

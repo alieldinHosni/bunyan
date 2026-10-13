@@ -3710,6 +3710,66 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .btn.fbuild{margin:12px 0 0;gap:8px;border-color:var(--accent-edge);color:var(--accentHi)}
 .btn.fbuild .gl{width:18px;height:18px}
 [dir="rtl"] .btn.fbuild .gl{transform:scaleX(-1)}
+/* ---- Running mode (js/ui/run.js) ------------------------------------------------
+   The reference's running screen in the theme's dark: the route on a quiet grid, the
+   time large, the distance, and calories and pace either side of the round pause. The
+   screen fills the page edge to edge (it is a focus mode; the dock is away). */
+.run{position:relative;isolation:isolate;display:flex;flex-direction:column;min-height:100dvh;
+  margin:calc(-20px - env(safe-area-inset-top)) calc(-1 * var(--gutter)) 0;
+  padding:calc(14px + env(safe-area-inset-top)) var(--gutter) calc(24px + env(safe-area-inset-bottom));
+  background:var(--ground),var(--bg);color:var(--text)}
+.run-top{display:flex;align-items:center;gap:10px}
+.run-x{display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;border-radius:50%;
+  border:1px solid var(--card-edge);background:var(--card);color:var(--text)}
+.run-x svg,.run-play svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.run-h{flex:1;font-family:var(--display);font-size:22px;font-weight:800}
+.run-gps{flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--rpill);
+  border:1px solid var(--card-edge);background:var(--card);font-size:12px;font-weight:700;color:var(--sub)}
+.run-gps::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.run-gps.on::before{background:var(--ok);box-shadow:0 0 0 3px var(--okSoft)}
+.run-gps.weak::before,.run-gps.wait::before{background:var(--warning);animation:wbPulse 1.6s ease-in-out infinite}
+.run-gps.denied::before,.run-gps.off::before{background:var(--danger)}
+.run-map{position:relative;margin:14px calc(-1 * var(--gutter)) 0;height:min(46vh,340px);overflow:hidden;
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent);mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent)}
+.run-map svg{display:block;width:100%;height:100%}
+.run-map .g{stroke:var(--hair);stroke-width:1;fill:none}
+.run-map .s{stroke:var(--hair-hi);stroke-width:6;fill:none;stroke-linecap:round;opacity:.7}
+.run-map .rt{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.run-map .rt-glow{fill:none;stroke:var(--accent);stroke-width:12;stroke-linecap:round;stroke-linejoin:round;opacity:.22}
+.run-map .st{fill:var(--bg);stroke:var(--accent);stroke-width:3}
+.run-map .now{fill:var(--accent);stroke:var(--bg);stroke-width:2.5}
+.run-map .now-r{fill:rgba(var(--accent-rgb),.22);stroke:none;transform-box:fill-box;transform-origin:center;animation:runPulse 2s ease-out infinite}
+.run.paused .now-r{animation:none;opacity:0}
+@keyframes runPulse{from{transform:scale(.5);opacity:1}to{transform:scale(1.6);opacity:0}}
+body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
+@media (prefers-reduced-motion:reduce){.run-map .now-r,.run-gps::before{animation:none}}
+.run-big{display:flex;flex-direction:column;align-items:center;margin-top:-6px}
+.run-big b{font-family:var(--display);font-size:clamp(52px,17vw,72px);font-weight:800;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.run-big span{margin-top:6px;font-size:13px;color:var(--sub)}
+.run.paused .run-big b{color:var(--dim)}
+.run-mid{display:flex;flex-direction:column;align-items:center;margin-top:14px}
+.run-pin{display:grid;place-items:center;width:40px;height:40px;margin-bottom:6px;border-radius:50%;border:1px solid var(--card-edge);background:var(--card);color:var(--accentHi)}
+.run-pin .gl{width:19px;height:19px}
+.run-mid b{font-family:var(--display);font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.run-mid>span:last-child{font-size:12.5px;color:var(--sub)}
+.run-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-top:18px}
+.run-pill{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 12px 8px 8px;border-radius:var(--rpill);
+  border:1px solid var(--card-edge);background:var(--card)}
+.run-pi{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;background:var(--well);color:var(--accentHi)}
+.run-pi .gl{width:17px;height:17px}
+.run-pt{display:flex;flex-direction:column;min-width:0}
+.run-pt span{font-size:11px;color:var(--dim)}
+.run-pt b{font-family:var(--display);font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.run-play{display:grid;place-items:center;width:72px;height:72px;padding:0;border-radius:50%;border:0;
+  background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent);
+  box-shadow:0 0 0 7px var(--accent-tint),0 12px 30px -10px rgba(var(--accent-rgb),.9);transition:transform var(--m-press) var(--e-standard)}
+.run-play svg{width:28px;height:28px;stroke-width:2.6}
+.run-play svg path[d^="M7"]{fill:currentColor}
+:root:not(.tch) .run-play:active,.run-play.tapd{transform:scale(.94)}
+.btn.run-end{margin:20px 0 0}
+.run-note{margin:12px 4px 0;font-size:12.5px;line-height:1.5;color:var(--dim);text-align:center}
+/* Training's way in. */
+.ttile.trun .ttile-i .gl{width:22px;height:22px}
 /* Capsule bars (capsChart in views/progress.js): a row of rounded columns on glass
    tracks, the newest in the accent with its figure in a pill above it. */
 .caps{margin:6px 0 0}
