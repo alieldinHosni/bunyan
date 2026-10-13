@@ -83,7 +83,14 @@ Five tabs. Two are for the day, one is for planning, one for looking back, one f
   day to another of the plan), weigh-in and steps, and a run or a match to log. A
   workout left for later shows here as a Resume card.
 - **Food** (`views/food.js`) is the day: what you have eaten against the targets, the
-  meals (a planned one is a tap from logging), water, and "Log today's plan".
+  meals (a planned one is a tap from logging), water, and "Log today's plan". Today
+  also reads the log as a body (`ui/bodyneeds.js`, numbers from `engine/needs.js`): a
+  headline ("Your body needs more protein."), a drawn figure with protein, carbs, fat
+  and water around it at their share of the day's targets, the one furthest behind for
+  the time of day lit (nothing is "behind" before mid-morning); what is left of it and
+  three everyday foods for it, each logged in one tap (a glass, for water); what the
+  coach noticed about protein over the last week; and "Build today's meal", which asks
+  the coach what is left to eat. The foods are line drawings, in the theme's pen.
 - **Coach** (`views/coach.js`) is where the planning lives, in three sections:
   - *Training*: the active program's days, other programs, templates, a coach's PDF
     brought in, the exercise library;

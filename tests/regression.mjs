@@ -2108,6 +2108,41 @@ await test("Arabic type: titles in Alexandria and text in Readex Pro, bundled, a
   for(const f of ["Outfit|ar","Manrope|ar"])if(r.indexOf(f)<0)throw new Error(f+" not loaded: "+JSON.stringify(r));
   eq(await page.evaluate(()=>getComputedStyle(document.body).fontFamily.split(",")[0].replace(/"/g,"").trim()),"Manrope","Arabic text starts from the bundled face");
 },{prefs:{lang:"ar"}});
+/* ---- Food: what the body needs (js/engine/needs.js, js/ui/bodyneeds.js) ---- */
+function lowProtein(){
+  const db=seed();db.goals={kcal:2500,p:150,c:300,f:70,water:3000,steps:9000};
+  const it=(n,k,p,c,f)=>({n,fid:"x"+n,grams:100,label:"1 serving",kcal:k,p,c,f});
+  db.days[iso(0)]={water:2800,meals:{Breakfast:{done:true,items:[it("Bread and jam",900,20,170,15)]},Lunch:{done:true,items:[it("Pasta",1000,30,140,40)]}}};
+  for(let i=1;i<=4;i++)db.days[iso(i)]={meals:{Lunch:{items:[it("Rice",2200,70,300,60)]}}};
+  return db;}
+await test("Food: in the evening with protein short, the body says so, lights protein, and offers three foods that log in one tap",async page=>{
+  await page.addInitScript(()=>{Date.prototype.getHours=function(){return 19;};});await page.reload();await pause(page,1200);
+  await tapTab(page,"food");await pause(page,400);
+  eq(await page.$eval('.fbody-h',e=>e.textContent),"Your body needs more protein.","the headline");
+  eq(await page.$$eval('.fbn',a=>a.map(x=>[x.querySelector('.fbn-k').textContent,x.classList.contains("on")])),
+    [["Protein",true],["Carbs",false],["Fat",false],["Water",false]],"four, protein lit");
+  eq(await page.$eval('.fbody-pill',e=>e.textContent),"+100 g to go","what is left, to the nearest 5 g");
+  eq(await page.$$eval('.fsug-t',a=>a.length),3,"three foods");
+  const before=await ev(page,"Object.values(S.days[Object.keys(S.days).sort().pop()].meals).reduce((n,m)=>n+(m.items||[]).length,0)");
+  const fid=await page.$eval('.fsug-t',e=>e.dataset.fsug.split("|")[0]);
+  await page.$eval('.fsug-t',e=>e.scrollIntoView({block:"center"}));await page.tap('.fsug-t');await pause(page,600);
+  const after=await ev(page,"Object.values(S.days[Object.keys(S.days).sort().pop()].meals).flatMap(m=>m.items||[])");
+  eq([after.length,after.some(x=>x.fid===fid&&x.p>10)],[before+1,true],"logged, with its protein");
+  if(!/Coach noticed/.test(await page.$eval('.fnoticed',e=>e.innerText)))throw new Error("no week card");
+  await page.$eval('[data-fbuild]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-fbuild]');await pause(page,600);
+  eq(await ev(page,"[V.tab,V.chat,S.chat[S.chat.length-1].id]"),["coach",true,"eat"],"Build today's meal asks the coach");
+},{db:lowProtein()});
+await test("Food: in the morning nothing is behind yet; with water short in the afternoon, a glass is offered instead of food",async page=>{
+  await page.addInitScript(()=>{Date.prototype.getHours=function(){return 9;};});await page.reload();await pause(page,1200);
+  await tapTab(page,"food");await pause(page,400);
+  eq([await page.$eval('.fbody-h',e=>e.textContent),await page.$$eval('.fbn.on,.fsug-t',a=>a.length)],["Your body is on course today.",0],"on course at 9:00");
+  await page.evaluate(async()=>{Date.prototype.getHours=function(){return 17;};const s=await import("/js/state.js");
+    const d=Object.keys(s.S.days).sort().pop();s.S.days[d].water=300;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$eval('.fbn.on .fbn-k',e=>e.textContent),"Water","water lit");
+  const w=await ev(page,"S.days[Object.keys(S.days).sort().pop()].water");
+  await page.$eval('.fbody-glass',e=>e.scrollIntoView({block:"center"}));await page.tap('.fbody-glass');await pause(page,300);
+  eq(await ev(page,"S.days[Object.keys(S.days).sort().pop()].water"),w+250,"a glass added");
+},{db:lowProtein()});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

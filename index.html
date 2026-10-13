@@ -3652,6 +3652,64 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .libq input::-webkit-search-cancel-button,.libq input::-webkit-search-decoration{-webkit-appearance:none;display:none}
 .libq input:focus{border-color:var(--accentHi);box-shadow:0 0 0 3px rgba(var(--accentHi-rgb),.18);outline:none}
 .libq .ico-search{inset-inline-start:18px}
+/* ---- Food: what the body needs (js/ui/bodyneeds.js) --------------------------------
+   The reference's body diagram in the theme's pen: a headline, the figure with the four
+   nodes on an ellipse around it, the one furthest behind lit in the accent; then what
+   is left of it and three foods for it, drawn on plates. */
+.fbody{position:relative;margin:var(--s4) 0 0;padding:18px 16px 16px;border-radius:var(--r5);border:1px solid var(--card-edge);
+  background:radial-gradient(90% 60% at 50% 34%,rgba(var(--accent-rgb),.12),transparent 70%),var(--card);box-shadow:var(--shadow-card);overflow:hidden}
+.fbody-h{margin:6px 0 6px;font-family:var(--display);font-size:25px;line-height:1.15;max-width:16ch}
+.fbody-s{margin:0;font-size:14px;line-height:1.5;color:var(--sub);max-width:34ch}
+.fbody-d{position:relative;width:100%;max-width:340px;aspect-ratio:340/300;margin:14px auto 4px}
+.fbody-orbit{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.fbody-orbit ellipse{fill:none;stroke:var(--accentHi);stroke-width:1;opacity:.35;stroke-dasharray:2 5}
+.fbody-orbit ellipse.in{opacity:.16;stroke-dasharray:none}
+.fbody-orbit circle{fill:var(--accentHi);opacity:.7}
+.fbody-fig{position:absolute;left:50%;top:2%;height:96%;width:auto;transform:translateX(-50%);opacity:.9;
+  filter:drop-shadow(0 0 14px rgba(var(--accent-rgb),.25))}
+.fbn{position:absolute;display:flex;flex-direction:column;align-items:center;gap:3px;width:96px;margin-top:-28px;margin-inline-start:-48px;text-align:center}
+.fbn-c{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;border:1px solid var(--card-edge);
+  background:var(--raised);color:var(--text);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.fbn-c .gl{width:24px;height:24px}
+.fbn-k{margin-top:4px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--sub)}
+[dir="rtl"] .fbn-k{letter-spacing:0;font-size:12px}
+.fbn b{font-family:var(--display);font-size:17px;font-weight:800;color:var(--figure);font-variant-numeric:tabular-nums}
+.fbn.full b{color:var(--ok)}
+.fbn.on .fbn-c{width:68px;height:68px;margin-top:-6px;background:var(--accent);color:var(--onAccent);border-color:transparent;
+  box-shadow:0 0 0 7px var(--accent-tint),0 0 34px var(--accent-glow)}
+.fbn.on .fbn-c .gl{width:28px;height:28px;stroke-width:2}
+.fbn.on .fbn-k,.fbn.on b{color:var(--accentHi)}
+.fbody-need{display:flex;flex-direction:column;gap:8px;margin:10px 0 0;padding:14px;border-radius:var(--r4);
+  border:1px solid var(--card-edge);background:var(--well)}
+.fbody-nk{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px}
+.fbody-nk b{font-family:var(--display);font-size:34px;font-weight:800;line-height:1;color:var(--accentHi);font-variant-numeric:tabular-nums}
+.fbody-nk b small{font-size:20px}
+.fbody-pill{padding:5px 11px;border-radius:var(--rpill);border:1px solid var(--accent-edge);font-size:12.5px;font-weight:700;color:var(--text)}
+.fbody-need p{margin:0;font-size:14px;line-height:1.5;color:var(--sub)}
+.fsug-h{margin:16px 0 10px}
+.fsug{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fsug-t{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;margin:0;padding:8px 8px 10px;
+  border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card);color:var(--text);font:inherit;text-align:start;
+  transition:transform var(--m-press) var(--e-standard)}
+:root:not(.tch) .fsug-t:active,.fsug-t.tapd{transform:scale(.96)}
+.fsug-art{display:grid;place-items:center;width:100%;aspect-ratio:4/3;margin-bottom:6px;border-radius:calc(var(--r4) - 4px);
+  background:radial-gradient(60% 60% at 50% 55%,rgba(var(--accent-rgb),.14),transparent 72%),var(--well)}
+.fsug-art .art{width:88%;height:auto}
+.fsug-n{max-width:100%;font-size:13.5px;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
+.fsug-v{font-size:12.5px;font-weight:700;color:var(--accentHi)}
+.fsug-s{font-size:11px;color:var(--dim)}
+.fbody-glass{margin:12px 0 0;gap:8px}
+.fbody-glass .gl{width:18px;height:18px}
+.fnoticed{display:flex;align-items:flex-start;gap:12px;margin:12px 0 0;padding:14px 16px;border-radius:var(--r4);
+  border:1px solid var(--card-edge);background:var(--card)}
+.fnoticed-i{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:50%;
+  border:1px solid var(--accent-edge);color:var(--accentHi)}
+.fnoticed-i .gl{width:22px;height:22px}
+.fnoticed b{display:block;font-size:15px}
+.fnoticed p{margin:3px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
+.btn.fbuild{margin:12px 0 0;gap:8px;border-color:var(--accent-edge);color:var(--accentHi)}
+.btn.fbuild .gl{width:18px;height:18px}
+[dir="rtl"] .btn.fbuild .gl{transform:scaleX(-1)}
 /* Capsule bars (capsChart in views/progress.js): a row of rounded columns on glass
    tracks, the newest in the accent with its figure in a pill above it. */
 .caps{margin:6px 0 0}

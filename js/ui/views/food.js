@@ -15,6 +15,7 @@ import {dayMeals, importName, mealName, mealSlots, mealStyle, nextMeal, planOf, 
 import {dateBar} from "../datebar.js";
 import {backArrow} from "../nav.js";
 import {art, waterArt} from "../art.js";
+import {bodyNeeds} from "../bodyneeds.js";
 import {fitCh, afTile} from "./addfood.js";
 import {trendCard, vNutrition} from "./progress.js";
 
@@ -131,6 +132,9 @@ function vFoodToday(dsel){
   h+='<button class="btn fadd" data-addfood="'+esc(next)+'">'
    +'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>'
    +esc(t("Add Food"))+' <span class="fadd-m">· '+esc(mealName(next))+'</span></button>';
+
+  /* ---- what the body needs, today only (js/ui/bodyneeds.js) */
+  if(dsel===today())h+=bodyNeeds(e,r.water||0);
 
   /* ---- water */
   var unit=glassUnit(g.water),ng=Math.max(1,Math.round(g.water/unit)),

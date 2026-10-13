@@ -114,7 +114,7 @@ for (const f of files){
    it in Node with plain data. Nothing these modules import, directly or through
    another module, may be state.js (units.js and the words read it too). The coach is
    held to the same, through its own rule above. */
-const PURE = ["js/engine/body.js", "js/engine/figures.js", "js/engine/intake.js", "js/engine/lifts.js", "js/schema.js"];
+const PURE = ["js/engine/body.js", "js/engine/figures.js", "js/engine/intake.js", "js/engine/lifts.js", "js/engine/needs.js", "js/schema.js"];
 for (const f of PURE){
   const seen = new Set(), todo = [f];
   while (todo.length){
