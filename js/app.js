@@ -84,6 +84,9 @@ document.addEventListener("click",function(ev){
    same test decides both directions, and render() re-checks it, so the flag cannot be
    left behind by a field that was destroyed rather than blurred. */
 document.addEventListener("focusin",syncKeyboard);
+/* A stepper's typed figure (steps, minutes) is selected on focus, so typing replaces it. */
+document.addEventListener("focusin",function(ev){var x=ev.target;
+  if(x&&x.classList&&x.classList.contains("stn")&&x.select)setTimeout(function(){try{x.select();}catch(e){}},0);});
 document.addEventListener("focusout",function(){setTimeout(syncKeyboard,60);});
 
 /* The clock and the rest ring are the only things that change every second, so they

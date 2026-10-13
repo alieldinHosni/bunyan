@@ -2,6 +2,7 @@
    Every bottom sheet, dispatched by vSheet(). */
 import {t, tm} from "../i18n/dict.js";
 import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
+import {hasPose, poseSvg} from "../data/poses.js";
 import {movementLabel} from "../data/movement.js";
 import {exName, planName} from "../i18n/exnames.js";
 import {dayMeals, mealName} from "../engine/meals.js";
@@ -17,7 +18,7 @@ import {blockNow} from "../engine/blocks.js";
 import {friends, snapStats} from "../engine/share.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
-import {CUES, mistakesFor, progressBar, sparkline, stepper, V} from "./view.js";
+import {CUES, mistakesFor, progressBar, sparkline, stepper, stepperInput, V} from "./view.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 import {tiexSheet} from "./views/timport.js";
@@ -36,12 +37,13 @@ function exStep(k,label,v,unit){
 /* ============================================================ sheets */
 var SHEET_KICK={editex:"Exercise",tiex:"Import",recovery:"Recovery",weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
   gear:"Training",likes:"Training",exercise:"Training",exhist:"History",share:"Sharing",coach:"Sharing",
-  backup:"Your data",restore:"Your data",set_you:"Settings",set_training:"Settings",set_app:"Settings",
+  backup:"Your data",restore:"Your data",set_you:"Settings",set_avatar:"Profile",set_training:"Settings",set_app:"Settings",
   set_profiles:"Settings",set_data:"Settings",about:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
 var CFICON={
   leave:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M9 16l-4-4 4-4M5 12h11"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
-  swap:'<path d="M4 8h13l-3-3M20 16H7l3 3"/>'
+  swap:'<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
+  route:'<path d="M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 17h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/>'
 };
 function vSheet(){
   if(!V.sheet)return "";
@@ -311,9 +313,10 @@ function vSheet(){
      +'<button class="btn" data-saveweight="1">Save for '+pretty(today())+'</button>';
   }
   else if(V.sheet==="steps"){
-    b='<h2>'+t("Steps today")+'</h2><p class="tiny" style="margin:2px 0 14px">Target '+S.goals.steps+'.</p>'
-     +stepper("st",V.draft.st||dayRec().steps||0,500,"steps")
-     +'<button class="btn" data-savesteps="1">Save</button>';
+    b='<h2>'+t("Steps today")+'</h2><p class="tiny" style="margin:2px 0 14px">'
+     +esc(t("Target {n}. Tap the number to type it, or step by 500.").replace("{n}",fmtN(S.goals.steps)))+'</p>'
+     +'<div class="stfield">'+stepperInput("st",V.draft.st!=null?V.draft.st:(dayRec().steps||0),500,t("steps"),true)+'</div>'
+     +'<button class="btn" data-savesteps="1">'+esc(t("Save"))+'</button>';
   }
   else if(V.sheet==="recovery"){
     var r=dayRec();
@@ -419,7 +422,10 @@ function vSheet(){
     ACT_GROUPS.forEach(function(g){
       b+='<div class="exd-h">'+t(g)+'</div><div class="actgrid">';
       actsIn(g).forEach(function(n){
-        b+='<button class="actbtn" data-quickact="'+esc(n)+'">'+actIcon(n,24)+'<span>'+esc(exName(n))+'</span></button>';});
+        /* Running outdoors can be tracked live (running mode): it says so. */
+        var live=n==="Running";
+        b+='<button class="actbtn'+(live?' live':'')+'" data-quickact="'+esc(n)+'">'+actIcon(n,24)+'<span>'+esc(live?t("Running, outdoor"):exName(n))+'</span>'
+         +(live?'<i class="actbtn-gps">'+esc(t("GPS"))+'</i>':'')+'</button>';});
       b+='</div>';});
   }
   else if(V.sheet==="swapday"){
@@ -507,6 +513,8 @@ function vSheet(){
       b+='<div class="exd-form2">'
        +'<figure><img src="'+exImg(nD,0)+'" alt="" decoding="async"><figcaption>'+t("Start")+'</figcaption></figure>'
        +'<figure><img src="'+exImg(nD,1)+'" alt="" decoding="async"><figcaption>'+t("End")+'</figcaption></figure></div>';
+    /* No photographs, but the drill is drawn (js/data/poses.js). */
+    else if(hasPose(nD))b+='<div class="exd-pose" role="img" aria-label="'+esc(exName(nD))+'">'+poseSvg(nD)+'</div>';
     b+='<div class="exd-facts">'
      +'<div><span>'+t("Primary")+'</span><b>'+tm(mD)+'</b></div>'
      +'<div><span>'+t("Secondary")+'</span><b>'+(secD.length?secD.map(function(s){return tm(s);}).join(" \u00b7 "):"—")+'</b></div>'

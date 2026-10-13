@@ -1,7 +1,8 @@
 /* Bunyan — extra exercises
    Common gym movements the photographed library (exercises.json, from the free
    exercise database) does not have. Same record shape, plus:
-     own  no photographs — thumb() and the form frames show the placeholder
+     own  not from the photographed library — thumb() and the form frames show the
+          placeholder, unless ph names the library's photographs of the same movement
      s    the steps, since instructions.json does not cover them
      ar   the Arabic name, used as-is instead of the word-by-word translation
    Merged into the library on load; anything the library already has wins. */
@@ -162,7 +163,14 @@ var X=[
   ["Bring one arm across the chest.", "Pull it closer at the elbow with the other hand.", "Hold, then switch sides."]]
 ];
 var EXTRA={};
+/* Drills the photographed library has under another name: the same movement, shot
+   there, so its photographs serve (ph, the library's folder). Only where the photo
+   shows this movement; a near one would teach the wrong thing. */
+var PH={"Glute Bridge Hold":"Butt_Lift_Bridge","Front-to-Back Leg Swings":"Front_Leg_Raises",
+  "Side-to-Side Leg Swings":"Side_Leg_Raises","Cross-Body Shoulder Stretch":"Shoulder_Stretch",
+  "Shoulder Pass-Through":"Chest_And_Front_Of_Shoulder_Stretch"};
 X.forEach(function(r){
-  EXTRA[r[0]]={i:"bn_"+r[0].toLowerCase().replace(/[^a-z0-9]+/g,"_"),m:r[1],e:r[2],d:r[3],p:r[4],c:r[5],x:r[6],ar:r[7],s:r[8],own:1};});
+  EXTRA[r[0]]={i:"bn_"+r[0].toLowerCase().replace(/[^a-z0-9]+/g,"_"),m:r[1],e:r[2],d:r[3],p:r[4],c:r[5],x:r[6],ar:r[7],s:r[8],own:1};
+  if(PH[r[0]])EXTRA[r[0]].ph=PH[r[0]];});
 
 export {EXTRA};

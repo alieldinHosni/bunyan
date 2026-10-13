@@ -11,32 +11,39 @@
    A drawing is a list of strokes — [d, kind] where kind "a" is the main line and "b"
    the faint one — and embers as [x, y, r]. */
 
+/* The three greeting scenes' ground: three ranges of hills, far to near, each deeper
+   in the accent's glass, with a line along the two far ridges. */
+var HILLS=[
+  ["M0 100C18 92 36 86 56 90S92 80 112 88S146 100 170 98S212 84 240 92V140H0Z","h1"],
+  ["M0 112C30 101 58 98 84 106S132 116 160 108S212 97 240 106V140H0Z","h2"],
+  ["M0 126C40 116 90 117 130 124S200 132 240 121V140H0Z","h3"],
+  ["M0 100C18 92 36 86 56 90S92 80 112 88S146 100 170 98S212 84 240 92","ridge"],
+  ["M0 112C30 101 58 98 84 106S132 116 160 108S212 97 240 106","ridge"]];
 var ART={
-  /* Home, morning: the sun clearing the horizon, the mane's strands running into it,
-     and its light on the water below. */
+  /* Home, morning: the sun clearing the hills, its glow behind them, three ranges
+     of hills in the accent's glass, nearer ones deeper, and two birds. */
   sunrise:{vb:"0 0 240 140",s:[
-    ["M10 104C70 97 170 97 230 104","a"],
-    ["M120 100A30 30 0 0 1 180 100","a"],
-    ["M131 100A19 19 0 0 1 169 100","b"],
-    ["M117 81L108 76M131 67L126 58M150 62V52M169 67L174 58M183 81L192 76","a"],
-    ["M8 30C48 22 74 60 112 94","b"],["M4 50C42 44 66 74 98 99","b"],["M22 14C66 6 92 50 124 88","b"],
-    ["M120 114H180M132 122H168M142 130H158","b"]],
-    e:[[204,58,1.8],[218,76,1.3],[92,34,1.5],[60,20,1.1]]},
-  /* Home, afternoon: the sun high, a ring of heat around it. */
+    ["M112 94A50 50 0 1 0 212 94A50 50 0 1 0 112 94","dsk"],
+    ["M136 98A26 26 0 0 1 188 98Z","a"],
+    ["M162 62V53M141 70L135 64M183 70L189 64M128 86L120 83M196 86L204 83","a"],
+    ["M66 50q4-4 8 0q4-4 8 0M90 38q3-3 6 0q3-3 6 0","b"]].concat(HILLS),
+    e:[[214,52,1.6],[226,70,1.2],[40,30,1.3],[20,52,1]]},
+  /* Home, afternoon: the sun high in its glow, its rays, a cloud, the hills. */
   sun:{vb:"0 0 240 140",s:[
-    ["M134 60A26 26 0 1 0 186 60A26 26 0 1 0 134 60","a"],
-    ["M124 60A36 36 0 1 0 196 60A36 36 0 1 0 124 60","b"],
-    ["M160 14V6M160 114V106M114 60H106M214 60H206M127 27L121 21M193 93L199 99M193 27L199 21M127 93L121 99","a"],
-    ["M6 118C58 96 98 128 150 112S214 96 236 106","b"],["M14 130C66 110 104 138 156 124S216 110 232 118","b"]],
-    e:[[70,40,1.6],[48,64,1.2],[226,30,1.3]]},
-  /* Home, evening: a crescent and the stars over the strands. */
+    ["M118 46A46 46 0 1 0 210 46A46 46 0 1 0 118 46","dsk"],
+    ["M146 46A18 18 0 1 0 182 46A18 18 0 1 0 146 46","a"],
+    ["M164 18V12M164 80V74M136 46H130M198 46H192M144 26L140 22M184 66L188 70M184 26L188 22M144 66L140 70","a"],
+    ["M44 64C44 56 54 52 60 57C63 49 76 48 80 57C88 56 92 64 86 69H48C44 69 42 66 44 64Z","a"],
+    ["M18 34q3-3 6 0q3-3 6 0","b"]].concat(HILLS),
+    e:[[216,96,1.2],[100,28,1.4],[226,24,1.1]]},
+  /* Home, evening: a crescent in its glow, stars, the hills gone dark. */
   moon:{vb:"0 0 240 140",s:[
-    ["M178 28A32 32 0 1 0 196 86A26 26 0 1 1 178 28","a"],
+    ["M134 54A44 44 0 1 0 222 54A44 44 0 1 0 134 54","dsk"],
+    ["M178 26A30 30 0 1 0 202 82A24 24 0 1 1 178 26Z","a"],
     ["M60 30L62 37L69 39L62 41L60 48L58 41L51 39L58 37Z","a"],
     ["M104 16L105 20L109 21L105 22L104 26L103 22L99 21L103 20Z","b"],
-    ["M28 66L29 70L33 71L29 72L28 76L27 72L23 71L27 70Z","b"],
-    ["M6 116C58 96 98 126 150 110S214 94 236 104","b"],["M16 128C68 110 106 136 158 122S218 108 232 116","b"]],
-    e:[[124,52,1.2],[86,74,1],[214,20,1.4]]},
+    ["M28 60L29 64L33 65L29 66L28 70L27 66L23 65L27 64Z","b"]].concat(HILLS),
+    e:[[124,48,1.2],[86,66,1],[216,18,1.4],[140,22,1],[40,14,1.1],[232,60,1]]},
   /* Food: a round baladi loaf and a palm frond. */
   loaf:{vb:"0 0 200 140",s:[
     ["M22 100C16 74 52 56 86 56C120 56 156 74 150 100C146 116 26 116 22 100Z","a"],
@@ -194,14 +201,40 @@ var ART={
     ["M34 30H86V74C86 78 82 80 78 80H42C38 80 34 78 34 74Z","a"],["M32 18H88V30H32Z","a"],
     ["M34 44H86M34 66H86","b"],["M52 55C52 50 58 49 60 52C62 49 68 50 68 55C68 60 62 61 60 58C58 61 52 60 52 55Z","b"]],e:[]},
 };
+/* Profile: the orbit around the picture. An ellipse and two copies of it turned a third
+   of the way round, a ring inside, and embers on the paths; the embers travel and the
+   whole of it turns slowly (CSS), after it has drawn itself in. */
+ART.orbit={vb:"0 0 160 160",nofill:1,s:[
+  ["M8 80A72 56 0 1 0 152 80A72 56 0 1 0 8 80","a"],
+  ["M8 80A72 56 0 1 0 152 80A72 56 0 1 0 8 80","b",60],
+  ["M8 80A72 56 0 1 0 152 80A72 56 0 1 0 8 80","b",120],
+  ["M22 80A58 58 0 1 0 138 80A58 58 0 1 0 22 80","b"]],
+  e:[[152,80,2.2],[44,128,1.6],[96,25,1.3],[30,52,1.1]]};
+/* Profile, behind it all and still: contour lines, a map of ground climbed. */
+ART.topo={vb:"0 0 360 200",nofill:1,s:[
+  ["M252 44C274 43 290 57 288 74S266 103 245 101 214 87 216 69 230 45 252 44Z","a"],
+  ["M254 26C289 24 315 46 313 75S284 124 243 121 194 100 196 71 216 28 254 26Z","b"],
+  ["M256 8C305 4 341 38 339 78S299 147 241 143 172 112 175 71 204 12 256 8Z","b"],
+  ["M262 -12C327 -16 372 32 368 84S318 172 236 166 148 124 152 72 192 -6 262 -12Z","b"],
+  ["M78 150C94 142 114 148 116 162S100 186 82 184 60 168 64 158 72 153 78 150Z","a"],
+  ["M74 128C102 118 136 132 138 160S112 206 78 204 38 178 42 156 54 134 74 128Z","b"],
+  ["M-10 96C40 74 98 84 132 112S176 170 160 210","b"],
+  ["M-10 58C46 34 120 46 160 84S212 160 200 214","b"]],
+  e:[[252,72,1.6],[84,166,1.4]]};
 /* The point a stroke's rotation (its third field) turns about, per drawing; the
    origin where a drawing has none. */
-var CX={};
+var CX={orbit:[80,80]};
 
+/* A main line that closes on itself (a bowl's rim, the sun, a star) is a shape, and
+   takes the glass fill (.c). */
+function closed(d){
+  if(/z\s*$/i.test(d))return true;
+  var n=d.match(/-?[\d.]+/g);if(!n||n.length<4)return false;
+  return Math.abs(+n[0]-+n[n.length-2])<0.6&&Math.abs(+n[1]-+n[n.length-1])<0.6&&/[AaCcQqSs]/.test(d);}
 function strokes(name){
-  var a=ART[name],c=CX[name]||[0,0];
+  var a=ART[name],c=CX[name]||[0,0],fill=!a.nofill;
   return a.s.map(function(s){
-    return '<path class="'+s[1]+'" d="'+s[0]+'" pathLength="1"'
+    return '<path class="'+s[1]+(fill&&s[1]==="a"&&closed(s[0])?' c':'')+'" d="'+s[0]+'" pathLength="1"'
       +(s[2]?' transform="rotate('+s[2]+' '+c[0]+' '+c[1]+')"':'')+'/>';}).join("")
    +a.e.map(function(e){return '<circle class="e" cx="'+e[0]+'" cy="'+e[1]+'" r="'+e[2]+'"/>';}).join("");}
 

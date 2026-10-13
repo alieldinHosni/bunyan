@@ -88,13 +88,9 @@ ACT.delsplit=function(_,id){
   S.programs=(S.programs||[]).filter(function(x){return x.id!==id;});
   if(V.train==="builder"&&V.previewId===id){resetNav();V.train="days";V.ctsub="programs";V.previewId=null;}
   saveDB();render();if(gone)toast(gone.name+" "+t("deleted."));};
-/* An amount changed on the diet import's review screen: the same sum as below, on the
-   draft, which is not saved until the plan is used. */
-ACT.pigrams=function(v,d){
-  var g=num(v,0);
-  if(g<=0){toast(t("Enter a number of grams."));return;}
-  var m=V.pparse&&V.pparse[d.m],it=m&&m.items[d.i];if(!it)return;
-  scaleItem(it,g);render();};
+/* An amount set in grams: recompute from the source food where we still have it,
+   scale what was stored where we do not. js/ui/handlers/food.js uses it for a food
+   it cannot open on the servings screen. */
 function scaleItem(it,g){
   var f=((S.myFoods||[]).concat(FOODDB||[])).filter(function(x){return x.id===it.fid;})[0];
   if(f){var n=nutritionFor(f,g);
@@ -103,15 +99,6 @@ function scaleItem(it,g){
     it.kcal=Math.round(it.kcal*k);it.p=r1(it.p*k);it.c=r1(it.c*k);
     it.f=r1(it.f*k);it.fib=r1((it.fib||0)*k);}
   it.grams=g;it.label=g+" g";}
-/* Editing a logged food item: recompute from the source food where we still have it,
-   scale what was stored where we do not. */
-ACT.editgrams=function(v,d){
-  var g=num(v,0);
-  if(g<=0){toast(t("Enter a number of grams."));return;}
-  var m=dayRec(d.date).meals[d.meal],it=m&&m.items[d.idx];
-  if(!it)return;
-  scaleItem(it,g);
-  saveDB();render();};
 ACT.customex=function(name,d){
   name=String(name).trim();
   if(LIB.some(function(l){return l[0].toLowerCase()===name.toLowerCase();})){
@@ -419,4 +406,4 @@ function addExercise(name){
     saveDB();closeSheet();toast(exName(name)+" "+t("added to")+" "+d.name+".");return;
   }
   saveDB();closeSheet();}
-export {startActivity, swapAlt, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};
+export {startActivity, swapAlt, scaleItem, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};

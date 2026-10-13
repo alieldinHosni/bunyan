@@ -34,7 +34,7 @@ import {seg, streak, V} from "../view.js";
 import {art} from "../art.js";
 import {backArrow} from "../nav.js";
 import {wdName, weekOrder, weekStart} from "../../engine/schedule.js";
-import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
+import {OPL_NAME, trendSays} from "../facts.js";
 import {photoList} from "../photos.js";
 import {render} from "../render.js";
 
@@ -184,15 +184,11 @@ function vProgress(){
       t("Finish one workout or log your weight, and volume, records, streaks and trends all start here."),
       '<button class="btn" data-go="train">'+t("Start a workout")+'</button>'
       +'<button class="btn g" data-sheet="weigh">'+t("Log weight")+'</button>');
-  /* Two slides: Simple, where you are in plain words, for anyone; Detailed, the
-     charts, records and per-muscle numbers a coach reads. */
-  var pv=V.pview==="detail"?"detail":"simple";
-  h+=seg({items:[["simple",t("Simple")],["detail",t("Detailed")]],value:pv,attr:"pview",
-    tabs:true,cls:"pgview",label:t("Progress"),key:"pgview"});
-  if(pv==="simple")return h+vSimple();
+  /* One page in three views: Overview, Strength, Body. (A Simple slide in plain words
+     used to come first; the coach's chat says those things now.) */
   var tab=V.ptab==="strength"||V.ptab==="body"?V.ptab:"overview";
   h+=seg({items:TABS.map(function(x){return [x[0],t(x[1])];}),value:tab,attr:"ptab",
-    soft:true,cls:"pgtabs2",label:t("Progress views"),key:"pgtabs"});
+    tabs:true,cls:"pgtabs2",label:t("Progress views"),key:"pgtabs"});
   var r=range();
   /* Overview opens with the day, as Food does: the date navigator and what that one
      day held. It scopes only that card. The range below drives everything else, and
@@ -208,17 +204,6 @@ function vProgress(){
   return h;}
 
 /* ---- Overview ------------------------------------------------------------------ */
-/* ---- the Simple slide ------------------------------------------------------------------
-   Five plain answers: am I training as planned, where is my weight going, am I getting
-   stronger, am I eating to plan, anything new. Each is a word or two, one sentence, and a
-   colour only where it says something: on track, needs a look. */
-function scard(k,state,head,line,cta){
-  return '<div class="psimple '+state+'"><div class="psimple-k">'+esc(k)+'</div>'
-   +'<div class="psimple-h">'+head+'</div><p>'+esc(line)+'</p>'+(cta||'')+'</div>';}
-function vSimple(){
-  return '<p class="dsub">'+esc(t("Where you are, in plain words. Detailed has the charts and the numbers behind them."))+'</p>'
-   +simpleFacts().map(function(f){return scard(f.k,f.state,f.head,f.line,f.cta);}).join("");}
-
 function stat(k,v,unit,sub){
   return '<div class="pgstat"><div class="pgstat-k">'+esc(k)+'</div>'
    +'<div class="pgstat-v">'+v+(unit?'<span>'+esc(unit)+'</span>':'')+'</div>'

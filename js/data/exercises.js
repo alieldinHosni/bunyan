@@ -1,6 +1,7 @@
 /* Bunyan — exercises
    The exercise library and its lookups, loaded from exercises.json. */
 import {esc} from "../util.js";
+import {hasPose, poseSvg} from "./poses.js";
 import {ACTS, actIcon, actMuscle, isActivity} from "./activities.js";
 import {EXTRA} from "./extra.js";
 import {movementOf} from "./movement.js";
@@ -199,8 +200,8 @@ function exSteps(n){
   return out.length?out:null;
 }
 function exImg(n,idx){
-  var m=exMedia(n); if(!m||m.own)return null;
-  return IMG_BASE+m.i+"/"+(idx||0)+".jpg";}
+  var m=exMedia(n); if(!m||(m.own&&!m.ph))return null;
+  return IMG_BASE+(m.own?m.ph:m.i)+"/"+(idx||0)+".jpg";}
 /* One shape for every empty state: an icon, what is missing, and the action that
    fixes it. cta is raw markup so callers can pass whatever button they need. */
 var EI={
@@ -256,6 +257,8 @@ function thumb(n,size){
   if(isActivity(n))return '<span class="thumb ph act" style="'+box+'">'
     +actIcon(n,Math.round(size*0.5))+'</span>';
   var u=exImg(n,0);
+  /* A drill with no photographs but a drawn figure (js/data/poses.js). */
+  if(!u&&hasPose(n))return '<div class="thumb ph posed" style="'+box+'">'+poseSvg(n)+'</div>';
   if(!u)return '<div class="thumb ph" style="'+box+'">'
     +dumbbellIcon(Math.round(size*0.5))+'</div>';
   var st=IMG[u],fall='<i class="thumbfall">'+dumbbellIcon(Math.round(size*0.5))+'</i>';

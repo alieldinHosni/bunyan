@@ -12,7 +12,7 @@ import {startScan} from "../../scan.js";
 import {dayRec, S, saveDB} from "../../state.js";
 import {toDisp, toKg} from "../../units.js";
 import {num, r1, today, uid} from "../../util.js";
-import {ACT, askConfirm, askText, closeSheet, openSheet, val} from "../actions.js";
+import {ACT, askConfirm, askText, closeSheet, openSheet, scaleItem, val} from "../actions.js";
 import {leave} from "../motion.js";
 import {goBack, pushNav} from "../nav.js";
 import {render} from "../render.js";
@@ -59,6 +59,48 @@ function addTo(meal,items,d){
     if(V.sd.todo!=null&&plan.todo){plan.todo.splice(+V.sd.todo,1);if(!plan.todo.length)delete plan.todo;V.sd.todo=null;}
     saveDB();return t("the plan for")+" "+mealName(plan.id);}
   addItems(meal,items,d||curDate());return mealName(meal);}
+/* ---- a food already in a list, its amount changed -----------------------------
+   A saved meal being built, a meal's plan, a logged meal, a plan under import review:
+   tapping a food in any of them opens it again on the servings screen, in the amount
+   it has, and Update puts the new amount in its place. No delete and add again.
+
+   Where it is: {k:"saved"|"plan"|"day"|"imp", id, i, d}. "day" carries the date it was
+   tapped on; "imp" is the review draft, which is saved only when the plan is used. */
+function itemAt(w){
+  if(!w)return null;
+  if(w.k==="saved"){var sm=savedById(w.id);return sm&&(sm.items||[])[w.i]||null;}
+  if(w.k==="plan"){var sl=ownSlot(w.id);return sl&&(sl.plan||[])[w.i]||null;}
+  if(w.k==="day"){var dm=dayRec(w.d).meals[w.id];return dm&&(dm.items||[])[w.i]||null;}
+  if(w.k==="imp"){var pm=V.pparse&&V.pparse[+w.id];return pm&&pm.items[w.i]||null;}
+  return null;}
+function whereOf(D){
+  var p=String(D||"").split("|"),k=p[0],i=+p[p.length-1],id=p.slice(1,-1).join("|");
+  return {k:k,id:k==="imp"?+id:id,i:i,d:curDate()};}
+/* The servings screen as it was when the food was added: a count of one of its
+   servings ("2 × slice"), an amount in a unit ("330 ml"), or else its grams. */
+function pickFor(food,it){
+  var lb=String(it.label||""),sv=servs(food),m=/^(\d+(?:\.\d+)?) × (.+)$/.exec(lb);
+  if(m){for(var si=0;si<sv.length;si++)if(sv[si][0]===m[2])return {food:food,si:si,n:+m[1],u:null,amt:null};}
+  var mu=/^(\d+(?:\.\d+)?) (.+)$/.exec(lb);
+  if(mu)for(var uk in UNIT_STEP)if(unitLabel(uk,+mu[1])===mu[2]&&(uk!=="g"||true))return {food:food,si:0,n:1,u:uk,amt:+mu[1]};
+  return {food:food,si:0,n:1,u:"g",amt:Math.round(it.grams||100)};}
+function editAmount(w){
+  var it=itemAt(w);if(!it)return;
+  loadFoods(function(){
+    var f=it.fid?(S.myFoods||[]).concat(FOODDB||[]).filter(function(x){return x.id===it.fid;})[0]:null;
+    /* Nothing to measure it through (a food typed in by hand, or one no longer in the
+       database): the amount in grams, scaled from what was stored. */
+    if(!f){
+      askText({title:it.n,label:t("Grams"),numeric:true,value:Math.round(it.grams||0)||"",
+        body:t("Everything recalculates from the amount."),cta:t("Save"),act:"editgramsw",data:w});
+      return;}
+    var pk=pickFor(f,it);pk.more=false;pk.from=null;pk.edit=w;
+    V.food={mode:"detail",tab:"search",sq:"",q:"",items:null,edit:-1,pick:pk};
+    openSheet("addfood",{meal:w.k==="day"?w.id:mealNow(),editing:1});});}
+function setAmount(it,food,g,label){
+  var n=nutritionFor(food,g);
+  it.grams=g;it.label=label;it.kcal=n.kcal;it.p=n.p;it.c=n.c;it.f=n.f;it.fib=n.fib;}
+
 /* ---- barcodes ----------------------------------------------------------- */
 /* Scanning and typing converge here, so both behave identically from this point on.
    Order matters: anything scanned before resolves with no network at all. */
@@ -114,6 +156,11 @@ function register(){
     if(name&&name!==mealName(id))x.name=name;
     saveDB();render();};
   ACT.barcode=function(v){ onBarcode(v); };
+  ACT.editgramsw=function(v,w){
+    var g=num(v,0);
+    if(g<=0){toast(t("Enter a number of grams."));return;}
+    var it=itemAt(w);if(!it)return;
+    scaleItem(it,g);if(w.k!=="imp")saveDB();render();};
   key("frange",function(D){V.frange=+D.frange;render();return;});
   key("clearfq",function(){if(V.food)V.food.sq="";render();topOfResults();var fq0=document.getElementById("fq");if(fq0)fq0.focus();return;});
   /* One meal of the day, on its own screen. */
@@ -161,6 +208,16 @@ function register(){
     }else pk.n=up?(pk.n<1?1:pk.n+1):(pk.n>1?pk.n-1:0.5);
     render();return;});
   has("fmore",function(){V.food.pick.more=!V.food.pick.more;render();return;});
+  key("editfood",function(D){editAmount(whereOf(D.editfood));return;});
+  has("fupdate",function(){
+    var pk=V.food&&V.food.pick,w=pk&&pk.edit;if(!w)return;
+    var am=pickAmount(pk);
+    if(!(am.g>0)){toast(t("Enter an amount first."));return;}
+    var it=itemAt(w);
+    if(it){setAmount(it,pk.food,am.g,am.label);if(w.k!=="imp")saveDB();}
+    closeSheet();render();play("set");
+    if(it)toast(t("{f}: now {a}.").replace("{f}",it.n).replace("{a}",am.label));
+    return;});
   has("faddpick",function(){
     var pk2=V.food.pick,am2=pickAmount(pk2);
     if(!(am2.g>0)){toast(t("Enter an amount first."));return;}
@@ -376,8 +433,7 @@ function register(){
     toast((gonePI.n||gonePI)+" "+t("removed."),function(){pmd[pk].splice(Math.min(pj,pmd[pk].length),0,gonePI);render();});return;});
   on(function(D){return D.pmrm!==undefined&&V.pparse;},function(D){var pmi=+D.pmrm,goneM=V.pparse.splice(pmi,1)[0];if(!goneM)return;render();
     toast(importName(goneM,pmi)+" "+t("removed."),function(){V.pparse.splice(Math.min(pmi,V.pparse.length),0,goneM);render();});return;});
-  key("pigram",function(D){var pg=D.pigram.split("|"),pmg=V.pparse&&V.pparse[+pg[0]],itg=pmg&&pmg.items[+pg[1]];if(!itg)return;
-    askText({title:itg.n,label:t("Grams"),numeric:true,value:itg.grams||"",cta:t("Save"),act:"pigrams",data:{m:+pg[0],i:+pg[1]}});return;});
+
   on(function(D){return D.pifind||D.piadd!==undefined;},function(D){
     var pfa=D.pifind?D.pifind.split("|"):[D.piadd],pmf=V.pparse&&V.pparse[+pfa[0]];if(!pmf)return;
     var rawF=D.pifind?pmf.todo[+pfa[1]]:"";if(D.pifind&&!rawF)return;
@@ -465,14 +521,7 @@ function register(){
     if(!f10)return;
     var gq=gramsFor(f10,1,null);
     logFood(f10,gq.g,gq.label);return;});
-  key("edititem",function(D){
-    var prE=D.edititem.split("|"),rE=dayRec(curDate()),mE=rE.meals[prE[0]];
-    if(!mE)return;
-    var itE=mE.items[+prE[1]];
-    if(!itE)return;
-    askText({title:itE.n,label:t("Grams"),numeric:true,value:Math.round(itE.grams||0),
-      body:t("Everything recalculates from the amount."),cta:t("Save"),act:"editgrams",
-      data:{meal:prE[0],idx:+prE[1],date:curDate()}});return;});
+
   key("dropfood",function(D){
     var prF=D.dropfood.split("|"),dF=curDate(),mF=dayRec(dF).meals[prF[0]];
     if(!mF)return;

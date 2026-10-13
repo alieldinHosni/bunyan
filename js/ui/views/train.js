@@ -25,6 +25,7 @@ import {vTImport} from "./timport.js";
 import {doseText, weeksText} from "../dose.js";
 import {estMinutes, planOn} from "../../engine/dayplan.js";
 import {paceOf, routePath} from "../../engine/run.js";
+import {mapGround, mapSeed} from "../runmap.js";
 import {bodyTiles, trainTop} from "./home.js";
 
 /* ============================================================ TRAIN */
@@ -155,7 +156,8 @@ function lastRunCard(){
   var pace=paceOf((+run.min||0)*60000,(+run.km||0)*1000);
   var when=date===now?t("Today"):pretty(date);
   return '<button class="trun-last" data-openday="'+esc(date)+'" aria-label="'+esc(t("Last run")+", "+run.km+" "+t("km")+(pace?", "+pace+" "+t("per km"):"")+", "+when)+'">'
-   +'<span class="trun-map" aria-hidden="true">'+(d?'<svg viewBox="0 0 120 80"><path d="'+d+'"/></svg>':glyph("route"))+'</span>'
+   +'<span class="trun-map" aria-hidden="true">'+(d?'<svg viewBox="0 0 120 80" preserveAspectRatio="xMidYMid slice">'
+     +mapGround(120,80,run.map||mapSeed(run),.55)+'<path class="rt-glow" d="'+d+'"/><path class="rt" d="'+d+'"/></svg>':glyph("route"))+'</span>'
    +'<span class="trun-t" aria-hidden="true"><span class="trun-k">'+esc(t("Last run"))+' · '+esc(when)+'</span>'
    +'<b><span class="num">'+(+run.km).toFixed(2)+'</span><small> '+esc(t("km"))+'</small></b>'
    +'<span class="trun-s">'+esc([pace?pace+" /"+t("km"):"",run.min?run.min+" "+t("min"):""].filter(Boolean).join(" · "))+'</span></span>'

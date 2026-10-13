@@ -12,6 +12,7 @@ import {dayOf, editSplit, S, saveDB} from "../../state.js";
 import {r1, uid} from "../../util.js";
 import {askConfirm, closeSheet, val} from "../actions.js";
 import {resetNav} from "../nav.js";
+import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {ask} from "../views/chat.js";
@@ -107,8 +108,9 @@ function chatSend(){
   if(!q){if(el)el.focus();return;}
   /* Emptied before the render: the field is kept across renders, value and all, and a
      question that stayed in the box after its answer read as not yet sent. */
+  var from=fromEl(el);
   el.value="";
-  loadFoods(function(){ask(q);saveDB();render();chatEnd();});}
+  loadFoods(function(){ask(q);saveDB();render();land(from);});}
 function chatEnd(){
   requestAnimationFrame(function(){
     var qs=document.querySelectorAll(".chat-q"),q=qs[qs.length-1];

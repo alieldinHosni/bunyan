@@ -14,6 +14,7 @@ import {restartAfter} from "../../engine/blocks.js";
 import {fmtN, num, today} from "../../util.js";
 import {closeSheet} from "../actions.js";
 import {pushNav, resetNav} from "../nav.js";
+import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {draftFrom, foodPrefs, GEARS, profileOf, STEPS, youOk} from "../views/assess.js";
@@ -155,8 +156,8 @@ function register(){
     else chatEnd();return;});
   /* The food database loads first (from the cache, offline): swaps and food facts
      answer from it. */
-  key("chatq",function(D){if(!V.chat){pushNav();V.chat=true;}
-    loadFoods(function(){ask("",D.chatq,D.chatl);saveDB();render();chatEnd();});return;});
+  key("chatq",function(D,el){var from=fromEl(el);if(!V.chat){pushNav();V.chat=true;}
+    loadFoods(function(){ask("",D.chatq,D.chatl);saveDB();render();land(from);});return;});
   key("chatsend",function(){chatSend();return;});
   key("chatclear",function(){var chB=S.chat||[];S.chat=[];saveDB();render();window.scrollTo(0,0);
     toast(t("Conversation cleared."),function(){S.chat=chB;saveDB();render();});return;});

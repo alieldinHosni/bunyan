@@ -1,10 +1,11 @@
-import {addFix, metres, newRun, paceOf, pauseRun, resumeRun, routePath, runKcal, runMs, thin} from "../run.js";
+import {addFix, kmMarks, metres, newRun, paceOf, pauseRun, resumeRun, routePath, routeXY, runKcal, runMs, thin} from "../run.js";
 
 /* A point d metres north of 30°N 31°E (Cairo), at time s seconds. One degree of
    latitude is 111.2 km. */
 function north(d,s,acc){return {lat:30+d/111195,lon:31,acc:acc==null?8:acc,t:s*1000};}
 
 function run(t){
+  marks(t);
   t.ok(Math.abs(metres([30,31],[30+1000/111195,31])-1000)<1,"a kilometre north is a kilometre");
   t.ok(Math.abs(metres([30,31],[30,31+1000/(111195*Math.cos(30*Math.PI/180))])-1000)<1,"and east, at 30°");
 
@@ -47,4 +48,12 @@ function run(t){
   var th=thin(Array.from({length:1000},function(_,i){return i;}),100);
   t.eq([th.length,th[0],th[99]],[100,0,999],"a long one: 100 points, first and last kept");
 }
+/* ---- kilometre marks ---- */
+function marks(t){
+  var pts=[];for(var i=0;i<=25;i++)pts.push([30+i*100/111195,31,i]);   /* 2.5 km due north, 100 m apart */
+  var m=kmMarks(pts,100,300,10),xy=routeXY(pts,100,300,10);
+  t.eq(m.map(function(x){return x.km;}),[1,2],"a mark at each whole kilometre, none at 2.5");
+  t.ok(Math.abs(m[0].y-(xy[10][1]))<0.2&&Math.abs(m[1].y-xy[20][1])<0.2,"at the point the kilometre falls on");
+  t.eq(kmMarks(pts.slice(0,5),100,300,10),[],"under a kilometre: none");
+  t.eq(routePath(pts.slice(0,2),100,300,10).indexOf("M"),0,"the path is still drawn from the points");}
 export {run};

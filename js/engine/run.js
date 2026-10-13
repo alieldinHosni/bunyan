@@ -58,16 +58,31 @@ function runKcal(m,ms,kg){
 
 /* The route as an SVG path in a w × h box with pad around it: flat projection (a run
    is far too small for the Earth's curve to show), north up, the same scale both ways
-   so a loop stays a loop. "" for fewer than two points. */
-function routePath(pts,w,h,pad){
-  if(!pts||pts.length<2)return "";
+   so a loop stays a loop. "" for fewer than two points. routeXY is the same as
+   points, [x, y]. */
+function routeXY(pts,w,h,pad){
+  if(!pts||pts.length<2)return [];
   var lat0=pts[0][0]*Math.PI/180,k=Math.cos(lat0);
   var xy=pts.map(function(p){return [p[1]*k,-p[0]];});
   var mnx=Infinity,mny=Infinity,mxx=-Infinity,mxy=-Infinity;
   xy.forEach(function(q){mnx=Math.min(mnx,q[0]);mxx=Math.max(mxx,q[0]);mny=Math.min(mny,q[1]);mxy=Math.max(mxy,q[1]);});
   var sw=Math.max(mxx-mnx,1e-9),sh=Math.max(mxy-mny,1e-9),sc=Math.min((w-2*pad)/sw,(h-2*pad)/sh);
   var ox=(w-sw*sc)/2,oy=(h-sh*sc)/2;
-  return xy.map(function(q,i){return (i?"L":"M")+(ox+(q[0]-mnx)*sc).toFixed(1)+" "+(oy+(q[1]-mny)*sc).toFixed(1);}).join("");}
+  return xy.map(function(q){return [+(ox+(q[0]-mnx)*sc).toFixed(1),+(oy+(q[1]-mny)*sc).toFixed(1)];});}
+function routePath(pts,w,h,pad){
+  return routeXY(pts,w,h,pad).map(function(q,i){return (i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1);}).join("");}
+/* Where each whole kilometre falls along the route, in the same box: [{km, x, y}],
+   placed between the two points it falls between. For the markers on the map. */
+function kmMarks(pts,w,h,pad){
+  var xy=routeXY(pts,w,h,pad),out=[],done=0,next=1000;
+  for(var i=1;i<xy.length;i++){
+    var d=metres(pts[i-1],pts[i]);
+    while(d>0&&done+d>=next){
+      var f=(next-done)/d;
+      out.push({km:next/1000,x:+(xy[i-1][0]+(xy[i][0]-xy[i-1][0])*f).toFixed(1),y:+(xy[i-1][1]+(xy[i][1]-xy[i-1][1])*f).toFixed(1)});
+      next+=1000;}
+    done+=d;}
+  return out;}
 
 /* At most n points, evenly picked and always with the last: what is kept with the
    saved run, so a long one does not bloat the history. */
@@ -77,4 +92,4 @@ function thin(pts,n){
   for(var i=0;i<n;i++)out.push(pts[Math.round(i*step)]);
   return out;}
 
-export {addFix, metres, newRun, paceOf, pauseRun, resumeRun, routePath, runKcal, runMs, thin};
+export {addFix, kmMarks, metres, newRun, paceOf, pauseRun, resumeRun, routePath, routeXY, runKcal, runMs, thin};

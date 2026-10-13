@@ -75,7 +75,8 @@ server from the project folder.
 
 ## How the app is laid out
 
-Five tabs. Two are for the day, one is for planning, one for looking back, one for you.
+Four tabs: two for the day, one for planning, one for looking back. Profile opens from
+your initial at the top right of Training.
 
 - **Training** (`views/train.js`, with its top in `views/home.js`) opens the app: the
   greeting with a bell (what the coach has noticed, with a dot while there is
@@ -84,16 +85,20 @@ Five tabs. Two are for the day, one is for planning, one for looking back, one f
   and steps (each icon in a round glass button at the tile's corner; steps ringed by
   their share of the goal, with "Goal met" when it is), and a run or a match to log. A
   workout left for later shows here as a Resume card.
-- **Running mode** (`ui/run.js`, the arithmetic in `engine/run.js`), from Training: a
-  run tracked live with the phone's own GPS, free and offline. The route is drawn as
-  it grows on a quiet grid (no map: tiles would need a service), the time large, the
-  distance, calories (about 1 kcal per kg per km) and pace, with pause and resume.
+- **Running mode** (`ui/run.js`, the arithmetic in `engine/run.js`), from Training or
+  from Log cardio (Running, outdoor offers it, or logging a run already done): a run
+  tracked live with the phone's own GPS, free and offline. The route is drawn as it
+  grows, glowing, with a mark at each kilometre, on a city drawn by `ui/runmap.js`
+  (blocks, avenues, a river, parks; seeded by the run, so it keeps its ground; not
+  the real streets, which would need a map service), the time large, the distance,
+  calories (about 1 kcal per kg per km) and pace, with pause and resume.
   Fixes worse than 35 m, closer than 4 m to the last, or faster than 9 m/s are not
   counted. The screen stays awake, because a phone stops giving a web app its position
   in the background. Finishing saves a Running activity with its route; without
   location it is timed only, and the logger opens with the minutes in for the
-  distance. A run in progress survives closing the app. The last run of the fortnight shows on Training
-  as a card, after the reference's: its route, the kilometres, pace and time.
+  distance. A run in progress survives closing the app. The last run of the fortnight
+  shows on Training as a card, after the reference's: its route on its ground, the
+  kilometres, pace and time.
 - **Food** (`views/food.js`) is the day: what you have eaten against the targets, the
   meals (a planned one is a tap from logging), water, and "Log today's plan". Today
   also reads the log as a body (`ui/bodyneeds.js`, numbers from `engine/needs.js`): a
@@ -135,13 +140,22 @@ carries its buttons (start the workout, log the plan, a 150 kcal step on the tar
 set the goal), each with Undo; the last 30 questions are kept. It opens on what can be
 asked, by subject (training, food, progress); each answer is a card that names its
 subject, with its lists as ruled rows and its notes set apart; the box to type in stays
-above the dock.
-- **Progress** (`views/progress.js`) has two slides: *Simple*, five plain answers
-  (training this week, weight, strength, food, records), and *Detailed*, the charts
-  and numbers a coach reads. Training volume over a short range is drawn as capsule
+above the dock. It is glass: a question a bubble of the accent's glass, an answer a glass
+card, the coach a lit orb on the opening screen. And it moves (`ui/chatmotion.js`): a
+sent question flies from the box (or the suggestion tapped) to its place, the coach types
+for a moment, three dots, and the answer comes in part after part. With Animations off
+or reduced motion, it is all there at once.
+- **Progress** (`views/progress.js`) is one page in three views, Overview, Strength
+  and Body: the charts and numbers a coach reads. The plain-words answers (training
+  this week, weight, strength, food) are the coach chat's. Training volume over a
+  short range is drawn as capsule
   bars, the newest in the action colour with its figure above it.
-- **Profile** (`views/profile.js`, `settings.js`): who this is (the goal, the program,
-  workouts, streak, weight), then grouped rows that each say what is set: You, Training,
+- **Profile** (`views/profile.js`, `settings.js`), opened from Training's top right,
+  with a back arrow to it: who this is (the picture in a drawn orbit that turns slowly,
+  over still contour lines; the goal, the program, workouts, streak, weight). The
+  picture is a photo from the phone's camera or gallery, cropped square and kept with
+  the profile (about 20 KB), or the initial; tapping it offers both. Then glass rows
+  that each say what is set: You, Training,
   Nutrition, App; the profiles on the phone, sharing, friends; the backup (how old it
   is, and a warning when there is none) and About. Every setting is a switch, a
   segmented choice with every option in sight, or a ticked list; none is a drop-down,
@@ -455,7 +469,12 @@ otherwise they would outlive the blob that was supposed to own them.
   muscle with at least a fifth of the top one's work is part of the day. Those muscles,
   in order, choose four or five moving drills (an opener first, quick hops last on a day
   that jumps or sprints), after a few minutes of easy cardio. A walk or yoga gets none,
-  and a plan that opens with its own mobility work keeps it.
+  and a plan that opens with its own mobility work keeps it. Every drill has a picture:
+  the library's photographs, or for the five the library shot under another name (leg
+  swings, the glute bridge hold, the cross-body stretch, the pass-through), those; the
+  rest are drawn as figures (`js/data/poses.js`): the body in the highlight, the far
+  limbs fainter, a dashed arrow for the movement, a wall or a door frame where it needs
+  one.
 - **Ramp-up sets** lead to the first heavy compound lift: the empty bar × 10 on a
   barbell, then 50% × 5 and 75% × 3 of the working weight (40%, 60% and 80% from 100 kg
   up), rounded to 2.5 kg. The working weight is the recommendation from last time, or
@@ -757,9 +776,23 @@ their brand colours exactly. In every theme:
   translucent and blurred, so the page they open over shows through, softened, under a
   lighter veil (after the owner's FitPulse reference). Where the browser cannot blur
   they stay solid.
+- **The drawings** (`ui/art.js`) share one paint (`#artdefs` in `index.html`): lines run
+  from the highlight down into the accent with a soft glow, a shape that closes on itself
+  takes a glass fill of the accent, embers glow, and the background lines are lighter
+  than the main ones. The greeting on Training is a scene for the time of day, the sun
+  clearing three ranges of hills in the morning, high with a cloud in the afternoon, a
+  crescent among stars in the evening, faded out toward the page.
+- **The guide** (`ui/tour.js`): the first time each page opens (Training, Food, Coach,
+  Progress, Profile, the coach chat, running mode), it is explained where it stands. The
+  page dims, one thing at a time is lit, and a glass card beside it, its arrow pointing at
+  it, says in a sentence or two what it is and what a tap does. A tap anywhere is the next
+  tip; Skip ends it. Each page's guide is shown once; Profile → Show the guide again
+  brings them back. A step a page does not have today is passed over, and a step added
+  later (a new feature) is shown on its own to someone who has seen the rest.
 - **The dock** is a dark pill of round buttons; the tab that is on opens into a pill in
   the action colour with its name beside the icon (Training is a dumbbell, Coach a
-  whistle). Signal Green, in Blue, marks something new.
+  whistle). Signal Green, in Blue, marks something new. Four tabs; Profile is not one of
+  them, and Training stays lit while it is open.
 - Green means done, gold (brass) means earned, red means destructive, whatever the theme.
   If everything is gold, nothing is.
 

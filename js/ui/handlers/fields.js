@@ -13,7 +13,7 @@ import {dayOf, editSplit, S, saveDB} from "../../state.js";
 import {toKg} from "../../units.js";
 import {fmtN, num} from "../../util.js";
 import {runAct, val} from "../actions.js";
-import {addPhoto} from "../photos.js";
+import {addPhoto, avatarFrom} from "../photos.js";
 import {render} from "../render.js";
 import {mealNow, toast, V} from "../view.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
@@ -74,8 +74,10 @@ function onInput(ev){
     var k=id.slice(3),v=parseFloat(ev.target.value);
     if((k==="w"||k==="r")&&V.draftSg){V.draftSg=false;
       [].forEach.call(document.querySelectorAll("#in_w,#in_r"),function(f){f.classList.remove("sg");});}
-    /* The field shows the user's unit; the draft is always kilograms. */
+    /* The field shows the user's unit; the draft is always kilograms. A cleared steps
+       field is nought, so Save never keeps a figure no longer on screen. */
     if(isFinite(v))V.draft[k]=(k==="w")?toKg(v):v;
+    else if(k==="st")V.draft.st=0;
     if(k==="min"){var ak=document.getElementById("actKcal"),ae2=S.active&&S.active.entries[V.logIdx];
       if(ak&&ae2)ak.textContent=fmtN(actKcal(ae2.name,num(V.draft.min),V.draft.rpe||6,lastWeight()))+" kcal";}
     return;}}
@@ -83,6 +85,8 @@ function onInput(ev){
    previously unreachable by keyboard entirely. */
 function onKeydown(ev){
   if(ev.key==="Escape"&&V.sheet){ev.preventDefault();requestCloseSheet();return;}
+  /* Done on the number pad saves the steps typed. */
+  if(ev.key==="Enter"&&ev.target.id==="in_st"){ev.preventDefault();var svb=document.querySelector("[data-savesteps]");if(svb)svb.click();return;}
   /* Arrow keys move along any tablist (the segmented controls), as they do natively. */
   /* The grip moves its row with the arrow keys too, so reordering never needs a drag. */
   var gp=(ev.key==="ArrowUp"||ev.key==="ArrowDown")&&ev.target.closest&&ev.target.closest("[data-grip]");
@@ -153,6 +157,15 @@ function onChange(ev){
     pfr.onload=function(){V.pitext=String(pfr.result||"");
       loadFoods(function(){V.pparse=withNotes(parsePlan(V.pitext));render();});};
     pfr.readAsText(pfile);ev.target.value="";return;}
+  /* A profile picture from the camera or the gallery. */
+  if(ev.target.id==="av_file"){
+    var avf=ev.target.files&&ev.target.files[0];
+    ev.target.value="";
+    if(!avf)return;
+    avatarFrom(avf,function(url){
+      if(!url){toast(t("That photo could not be used. Try another."));return;}
+      S.profile.photo=url;saveDB();render();toast(t("Profile picture saved."));});
+    return;}
   if(ev.target.id==="pg_photo"){
     var file=ev.target.files&&ev.target.files[0];
     ev.target.value="";

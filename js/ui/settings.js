@@ -152,6 +152,29 @@ function appSheet(){
      +pick(t("Interface density"),"",{items:[["0",t("Comfortable")],["1",t("Compact")]],value:ap.compact?"1":"0",attr:"setcompact",label:t("Interface density")}));}
 
 /* ---- Profiles on this phone -------------------------------------------------------- */
+/* The person as a picture: the photo they chose, else their initials (one letter
+   with one:true, as Training's top right has it). */
+function avatar(name,cls,one){
+  var ph=S.profile&&S.profile.photo,c=cls?' '+cls:'';
+  if(ph)return '<img class="avimg'+c+'" src="'+esc(ph)+'" alt="" decoding="async">';
+  var ini=one?(String(name||"").trim().charAt(0).toUpperCase()||"?"):initials(name);
+  return '<span class="avini'+c+'" aria-hidden="true">'+esc(ini)+'</span>';}
+function ownName(){var me=PROFILES.filter(function(p){return p.id===CUR;})[0];return (me&&me.name)||"";}
+/* The two ways to show who this is, both in sight: a photo from the phone, or the
+   initial. The one in use is marked; choosing the photo opens the camera or gallery. */
+function avatarSheet(){
+  var has=!!(S.profile&&S.profile.photo),nm=ownName(),tick='<span class="avopt-c" aria-hidden="true">'+glyph("check")+'</span>';
+  return '<h2>'+t("Profile picture")+'</h2><p class="tiny">'+t("Shown at the top of Training and on Profile. It stays on this phone.")+'</p>'
+   +'<div class="avprev">'+avatar(nm,"xl")+'</div>'
+   +'<div class="avopts" role="group" aria-label="'+esc(t("Profile picture"))+'">'
+   +'<label class="avopt'+(has?' on':'')+'"><input type="file" accept="image/*" id="av_file" class="pgfile" aria-label="'+esc(t(has?"Choose another photo":"Upload a photo"))+'">'
+   +'<span class="avopt-i">'+glyph("camera")+'</span>'
+   +'<span class="avopt-t"><b>'+t(has?"Choose another photo":"Upload a photo")+'</b><small>'+t("From your camera or your gallery")+'</small></span>'
+   +(has?tick:'')+'</label>'
+   +'<button class="avopt'+(has?'':' on')+'" data-avinit="1"'+(has?'':' aria-pressed="true"')+'>'
+   +'<span class="avopt-i ini">'+esc(String(nm).trim().charAt(0).toUpperCase()||"?")+'</span>'
+   +'<span class="avopt-t"><b>'+t("Use my initial")+'</b><small>'+t("The first letter of your name")+'</small></span>'
+   +(has?'':tick)+'</button></div>';}
 function initials(name){
   return String(name||"?").trim().split(/\s+/).map(function(w){return w.charAt(0);}).join("").slice(0,2).toUpperCase()||"?";}
 function profilesSheet(){
@@ -237,9 +260,9 @@ function aboutSheet(){
    +'<section class="sg"><h3 class="sg-h">'+t("How the numbers work")+'</h3><div class="sg-card"><span class="gtile">'+glyph("info")+'</span><p>'
    +t("Estimated 1RM uses the Epley formula and is only meaningful up to about 12 reps. Volume is the sum of weight × reps for every set, not an average.")+'</p></div></section>';}
 
-var SHEETS={set_you:youSheet,set_training:trainingSheet,set_app:appSheet,set_profiles:profilesSheet,
+var SHEETS={set_you:youSheet,set_avatar:avatarSheet,set_training:trainingSheet,set_app:appSheet,set_profiles:profilesSheet,
   set_data:dataSheet,backup:backupSheet,share:shareSheet,about:aboutSheet};
 /* The inside of a settings sheet, or null when the name is not one of these. */
 function settingsSheet(name){return SHEETS[name]?SHEETS[name]():null;}
 
-export {backupState, initials, settingsSheet};
+export {avatar, backupState, initials, settingsSheet};

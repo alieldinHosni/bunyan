@@ -303,10 +303,14 @@ function sparkline(vals,labels,color){
 function ex_isTimed(e){
   return e.kind==="timed"||!!e.timed||!!(e.planned&&e.planned.timed)
     ||/Hold|Plank|Wall Sit|Balance|Isometric|Stretch|Dead Hang|L-Sit|Carry|Farmer/i.test(e.name);}
-function stepperInput(id,val,step,unit){
+/* The same, with the figure a field: tap it and type any number (456 steps, not only
+   what the buttons step through). Focusing it selects it, so typing replaces it.
+   whole: true for a count, which brings up the plain number pad. */
+function stepperInput(id,val,step,unit,whole){
   return '<div class="steps"><button class="stp" data-stp="'+id+'" data-d="-'+step+'"'
    +' aria-label="'+t("Less")+' '+esc(unit)+'">&minus;</button>'
-   +'<div class="stv"><input class="stn" id="in_'+id+'" type="number" inputmode="decimal" '
+   +'<div class="stv"><input class="stn" id="in_'+id+'" type="number" inputmode="'+(whole?'numeric':'decimal')+'" enterkeyhint="done" '
+   +(whole?'step="1" min="0" ':'')
    +'value="'+val+'" aria-label="'+esc(unit)+'"><div class="stu">'+unit+'</div></div>'
    +'<button class="stp" data-stp="'+id+'" data-d="'+step+'"'
    +' aria-label="'+t("More")+' '+esc(unit)+'">+</button></div>';}

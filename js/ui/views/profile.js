@@ -1,5 +1,5 @@
 /* Bunyan — profile
-   Profile tab: who this is, then the settings, the people on this phone, and the data.
+   Profile, opened from the person at the top right of Training: who this is, then the settings, the people on this phone, and the data.
    Every row opens a sheet (js/ui/settings.js) and says what is set there now, so the
    page reads as a summary before anything is opened. */
 import {t} from "../../i18n/dict.js";
@@ -13,7 +13,9 @@ import {streak} from "../view.js";
 import {themeName, themeOf} from "../theme.js";
 import {planName} from "../../i18n/exnames.js";
 import {glyph} from "../glyphs.js";
-import {backupState, initials} from "../settings.js";
+import {avatar, backupState} from "../settings.js";
+import {art} from "../art.js";
+import {backArrow} from "../nav.js";
 
 /* One row: its glyph in a tile, its name, what is set there now, and a chevron. */
 function prow(attr,gl,name,sub,tone){
@@ -28,16 +30,21 @@ function vProfile(){
   var p=S.profile,g=S.goals,pf=curProfile(),pref=S.prefs;
   var name=pf.name||t("Me"),kg=lastWeight()||p.weight;
 
-  var h='<div class="thead"><h1>'+t("Profile")+'</h1></div>';
+  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Profile"))+'</h1></div>';
 
-  /* Who: a monogram, the name, the goal and the program it is followed with, and three
-     plain figures. Tapping it opens You, where the body and the goal are set. */
-  h+='<section class="pid">'
+  /* Who: the picture in its orbit (tap it for the photo or the initial), the name, the
+     goal and the program (tap for You, where the body and the goal are set), and three
+     plain figures, over contour lines drawn still behind it all. */
+  h+='<section class="pid">'+art("topo",{still:true,cls:"pid-bg"})
+   +'<div class="pid-hero">'
+   +'<button class="pid-av" data-sheet="set_avatar" aria-label="'+esc(t("Profile picture")+": "+t(S.profile.photo?"your photo. Change it":"your initial. Add a photo"))+'">'
+   +art("orbit",{cls:"pid-orbit"})
+   +'<span class="pmono xl">'+avatar(name)+'</span>'
+   +'<span class="pid-cam" aria-hidden="true">'+glyph("camera")+'</span></button>'
    +'<button class="pid-top" data-sheet="set_you">'
-   +'<span class="pmono lg" aria-hidden="true">'+esc(initials(name))+'</span>'
    +'<span class="pid-t"><span class="pid-n">'+esc(name)+'</span>'
    +'<span class="pid-s">'+esc([t(goalOf(p.goal).label),planName(split().name)].filter(Boolean).join(" · "))+'</span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
+   +'<span class="pid-edit">'+esc(t("Your details"))+'<span class="ico ico-chev" aria-hidden="true"></span></span></button></div>'
    +'<div class="pid-stats">'
    +'<div><b>'+fmtN(S.sessions.length)+'</b><span>'+t("Workouts")+'</span></div>'
    +'<div><b>'+streak()+'</b><span>'+t("Streak")+'</span></div>'
@@ -74,6 +81,8 @@ function vProfile(){
   h+=group(t("Your data"),
      prow('data-sheet="set_data"',"archive",t("Backup and reset"),bk.s,bk.k==="warn"?"warn":"")
     +prow('data-sheet="about"',"info",t("About and privacy"),t("Everything stays on this phone")));
+  h+=group(t("Help"),
+     prow('data-tourreset="1"',"question",t("Show the guide again"),t("The tips that point out what each button does")));
   return h;}
 
 export {vProfile};

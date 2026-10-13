@@ -271,6 +271,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --ground:radial-gradient(120% 60% at 50% -10%,rgba(255,46,58,.15) 0%,transparent 62%),
     radial-gradient(95% 55% at 100% 105%,rgba(219,246,255,.06) 0%,transparent 60%);
   --card:rgba(22,24,30,.80); --card-edge:var(--border);
+  --map-water:rgba(219,246,255,.10); --map-park:rgba(219,246,255,.05);
 }
 [data-theme="light"],[data-palette="red"][data-theme="light"]{
   --dock-dot:rgba(219,246,255,.10); --dock-dot-solid:#1D2226; --dock-dot-edge:rgba(219,246,255,.10);
@@ -278,6 +279,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --ground:radial-gradient(110% 55% at 50% -12%,#F6FDFF 0%,transparent 65%),
     linear-gradient(180deg,transparent 35%,#C6E8F4 100%);
   --card:rgba(245,252,255,.80); --card-edge:rgba(188,220,232,.9);
+  --map-water:rgba(120,190,215,.30); --map-park:rgba(120,190,215,.14);
 }
 [data-palette="blue"],[data-palette="blue"] [data-theme="dark"]:not([data-palette]){
   --dock-dot:rgba(212,217,226,.08); --dock-dot-solid:#1F2840; --dock-dot-edge:rgba(212,217,226,.10);
@@ -286,6 +288,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
     radial-gradient(95% 60% at 0% 105%,rgba(82,125,174,.24) 0%,transparent 62%),
     linear-gradient(180deg,#0B1229 0%,var(--night-navy) 55%);
   --card:rgba(37,48,80,.52); --card-edge:rgba(212,217,226,.13);
+  --map-water:rgba(138,176,236,.20); --map-park:rgba(130,252,79,.07);
 }
 [data-palette="blue"][data-theme="light"]{
   --dock-dot:rgba(212,217,226,.08); --dock-dot-solid:#1F2840; --dock-dot-edge:rgba(212,217,226,.10);
@@ -293,6 +296,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --ground:radial-gradient(115% 55% at 85% -8%,rgba(138,176,236,.55) 0%,transparent 60%),
     linear-gradient(180deg,#EEF2F8 0%,#D9E1EE 100%);
   --card:rgba(255,255,255,.70); --card-edge:rgba(255,255,255,.85);
+  --map-water:rgba(138,176,236,.40); --map-park:rgba(90,190,60,.16);
 }
 [data-palette="mono"],[data-palette="mono"] [data-theme="dark"]:not([data-palette]){
   --dock-dot:rgba(215,255,224,.07); --dock-dot-solid:#1A1D1B; --dock-dot-edge:rgba(215,255,224,.09);
@@ -301,6 +305,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
     radial-gradient(100% 60% at 100% 105%,rgba(130,160,140,.11) 0%,transparent 62%),
     linear-gradient(170deg,#0B100D 0%,var(--zero-black) 60%);
   --card:rgba(215,255,224,.045); --card-edge:rgba(215,255,224,.10);
+  --map-water:rgba(215,255,224,.10); --map-park:rgba(215,255,224,.06);
 }
 /* Monochrome, light is the reference's sage glass in Zero Black and Ghost Green: a
    Ghost Green page that deepens to a grey green, frosted white cards, and the dock a
@@ -311,6 +316,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --ground:radial-gradient(110% 50% at 10% -5%,rgba(255,255,255,.75) 0%,transparent 60%),
     linear-gradient(170deg,#E6FFEB 0%,var(--ghost-green) 35%,#B3D5BC 100%);
   --card:rgba(255,255,255,.55); --card-edge:rgba(255,255,255,.80);
+  --map-water:rgba(120,170,135,.30); --map-park:rgba(120,170,135,.16);
 }
 /* An element that carries its own theme or mode (the rest screen, the splash, a theme
    preview) restates its text colour: color is resolved once on body and then inherited
@@ -373,7 +379,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
    glow or gradient stays on top of it. Sheets, toasts and bars that float over the page
    keep their solid fills. */
 :is(.card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.pgstat,.pgmac,.sg-list,.pid,
-  .chat-a,.chatcard,.chat-topics,.coachplan,.coachhero,.psimple,.ready){background-color:var(--card);border-color:var(--card-edge)}
+  .chat-a,.chatcard,.chat-topics,.coachplan,.coachhero,.ready){background-color:var(--card);border-color:var(--card-edge)}
 :is(.sheetbox,#sheet,.sheet) :is(.card,.list,.sg-list,.drow){background-color:var(--raised);border-color:var(--border)}
 /* Reserve the dock's height plus breathing room, so the last card never sits under it.
    --navh already includes the safe area (through --dock-lift), so adding it again here
@@ -503,6 +509,11 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
   -moz-appearance:textfield}
 .stn::-webkit-outer-spin-button,.stn::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .stp{width:60px;height:60px}
+/* A figure you can type into reads as a field: a glass well, lit while it has focus. */
+.stfield .stv{background:var(--card);border:1px solid var(--card-edge);border-radius:18px;padding:8px 6px 6px;
+  transition:border-color .15s ease,box-shadow .15s ease}
+.stfield .stv:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accentSoft)}
+.stfield .stn:focus{outline:none}
 .plan{background:var(--accentSoft);border-radius:12px;padding:11px 13px;margin-bottom:12px}
 .thumb{border-radius:10px;object-fit:cover;background:#fff;flex-shrink:0}
 .thumb.ph{display:flex;align-items:center;justify-content:center;background:var(--raised);
@@ -1495,7 +1506,29 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .hbtn.flag::after{content:"";position:absolute;top:9px;inset-inline-end:10px;width:9px;height:9px;border-radius:50%;
   background:var(--dock-flag);box-shadow:0 0 0 2px var(--bg)}
 .havatar{background:var(--accent);border-color:transparent;color:var(--onAccent);
-  font-family:var(--display);font-weight:800;font-size:17px}
+  font-family:var(--display);font-weight:800;font-size:17px;overflow:hidden}
+.havatar .avimg{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+/* The profile picture sheet: the picture large, then the two choices, both in sight. */
+.avprev{display:grid;place-items:center;margin:6px 0 18px}
+.avprev .xl{display:grid;place-items:center;width:112px;height:112px;border-radius:50%;object-fit:cover;
+  font-family:var(--display);font-weight:800;font-size:40px;color:var(--onAccent);
+  background:linear-gradient(150deg,rgba(var(--accent-rgb),.95),rgba(var(--accent-rgb),.62));
+  box-shadow:0 0 0 4px rgba(var(--bg-rgb),.8),0 0 0 5px var(--card-edge),0 14px 32px -10px rgba(var(--accent-rgb),.6)}
+.avopts{display:flex;flex-direction:column;gap:10px}
+.avopt{position:relative;display:flex;align-items:center;gap:14px;width:100%;min-height:68px;margin:0;padding:12px 14px;
+  border-radius:var(--r4);border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;text-align:start;cursor:pointer;
+  transition:border-color var(--m-micro) var(--e-standard),background var(--m-micro) var(--e-standard)}
+.avopt.on{border-color:rgba(var(--accentHi-rgb),.6);background:linear-gradient(180deg,rgba(var(--accent-rgb),.12),transparent),var(--surface)}
+:root:not(.tch) .avopt:active,.avopt.tapd{transform:scale(.98)}
+.avopt-i{display:grid;place-items:center;flex:none;width:44px;height:44px;border-radius:50%;color:var(--accentHi);
+  background:rgba(var(--accent-rgb),.14);box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),.3)}
+.avopt-i.ini{font-family:var(--display);font-weight:800;font-size:19px;color:var(--onAccent);background:var(--accent)}
+.avopt-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.avopt-t b{font-size:15px}
+.avopt-t small{font-size:12.5px;color:var(--dim)}
+.avopt-c{flex:none;color:var(--accentHi)}
+.avopt-c .gl{width:20px;height:20px;stroke-width:2.2}
+.avopt input[type=file]:focus-visible+.avopt-i{outline:2px solid var(--accentHi);outline-offset:2px}
 
 .hstack{display:flex;flex-direction:column;gap:16px}
 .hstack>.card{margin:0}
@@ -1794,6 +1827,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .bkday.blank{border-style:dashed}
 .drow-s em{font-style:normal;color:var(--accentHi);font-weight:600}
 .dmain .ico-chev{flex:0 0 auto;margin-inline-end:6px;color:var(--dim)}
+.dedit .ico-edit{flex:0 0 auto;margin-inline-end:8px;opacity:.55}
 .bsp.on{border-color:rgba(var(--accentHi-rgb),.55);background:linear-gradient(180deg,rgba(var(--accent-rgb),.10),transparent),var(--raised)}
 .bpill{flex:0 0 auto;margin-inline-end:10px;padding:5px 12px;border-radius:var(--rpill);font-size:12px;font-weight:700;
   background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent)}
@@ -2578,6 +2612,17 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 [dir="rtl"] .sg-h{letter-spacing:0;font-size:12.5px}
 .sg-list{border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);overflow:hidden}
+/* On the page (not in a sheet) the rows are glass: the ground shows through, blurred,
+   under a lit top edge, and each icon sits in a glass disc of the accent. */
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  #app .sg-list,#app .pid{-webkit-backdrop-filter:saturate(150%) blur(18px);backdrop-filter:saturate(150%) blur(18px)}}
+#app .sg-list{box-shadow:inset 0 1px 0 var(--hair-hi),0 10px 30px -18px rgba(0,0,0,.45)}
+#app .sg-list .srow{border-bottom-color:var(--card-edge)}
+#app .srow .gtile{border-radius:50%;color:var(--accentHi);
+  background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,.16),transparent 55%),rgba(var(--accent-rgb),.14);
+  box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),.28),inset 0 1px 0 rgba(255,255,255,.18)}
+#app .srow-danger .gtile,#app .gtile.warn{color:var(--warning);background:rgba(var(--warning-rgb),.12);box-shadow:inset 0 0 0 1px rgba(var(--warning-rgb),.28)}
+#app button.srow:not(.srow-pick):active,#app button.srow.tapd{background:rgba(var(--accent-rgb),.08)}
 .sg-f{margin:8px 4px 0;font-size:12.5px;line-height:1.55;color:var(--dim)}
 .srow{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;margin:0;padding:10px 14px;border:0;
   border-bottom:1px solid var(--border);border-radius:0;background:none;color:var(--text);font:inherit;text-align:start;cursor:pointer;
@@ -2619,13 +2664,45 @@ button.srow:not(.srow-pick):active,button.srow.tapd{background:var(--surface)}
 .srow.on .pmono{box-shadow:inset 0 0 0 1.5px var(--accent-edge)}
 
 /* Who this is: a monogram, the name, the goal and the program, and three figures. */
-.pid{border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card);overflow:hidden}
-.pid-top{display:flex;align-items:center;gap:14px;width:100%;margin:0;padding:16px;border:0;background:none;color:var(--text);
-  font:inherit;text-align:start;cursor:pointer}
-.pid-top .ico-chev{flex:none;color:var(--dim)}
-.pid-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.pid-n{font-family:var(--display);font-weight:800;font-size:22px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pid{position:relative;isolation:isolate;border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card);overflow:hidden}
+/* Contour lines behind the whole card, still and faint: texture, never read. */
+.pid-bg{position:absolute;z-index:-1;top:-74px;right:-130px;width:540px;height:auto;opacity:.13;pointer-events:none;stroke-width:1.1}
+.pid-bg .a{opacity:.7}
+[dir="rtl"] .pid-bg{right:auto;left:-130px;transform:scaleX(-1)}
+.pid-hero{display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 16px 14px;text-align:center}
+/* The picture in its orbit. The orbit draws itself in, then turns slowly; its embers
+   travel round faster. Still when animations are off. */
+.pid-av{position:relative;display:grid;place-items:center;width:156px;height:156px;margin:0;padding:0;border:0;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(var(--glow-rgb),.20),transparent 72%);cursor:pointer;
+  transition:transform var(--m-press) var(--e-standard)}
+:root:not(.tch) .pid-av:active,.pid-av.tapd{transform:scale(.96)}
+.pid-av:focus-visible{outline:2px solid var(--accentHi);outline-offset:2px}
+.pid-orbit{position:absolute;inset:0;width:100%;height:100%;stroke-width:1.2;animation:pidTurn 80s linear infinite}
+.pid-orbit .a{opacity:.85}
+.pid-orbit .e{transform-box:view-box;transform-origin:80px 80px}
+.pid-orbit.draw .e{animation:artEmber .9s var(--e-standard) .9s forwards,pidTurn 14s linear .9s infinite}
+@keyframes pidTurn{to{transform:rotate(360deg)}}
+.pmono.xl{width:84px;height:84px;border-radius:50%;font-size:30px;overflow:hidden;
+  background:linear-gradient(150deg,rgba(var(--accent-rgb),.95),rgba(var(--accent-rgb),.62));color:var(--onAccent);
+  box-shadow:0 0 0 3px rgba(var(--bg-rgb),.85),0 0 0 4px var(--card-edge),0 10px 28px -8px rgba(var(--accent-rgb),.6)}
+.pmono.xl .avimg{width:100%;height:100%;object-fit:cover;display:block}
+.pid-cam{position:absolute;bottom:30px;inset-inline-end:32px;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;
+  background:rgba(var(--bg-rgb),.72);color:var(--text);box-shadow:inset 0 0 0 1px var(--card-edge);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.pid-cam .gl{width:16px;height:16px}
+@media (prefers-reduced-motion:reduce){.pid-orbit,.pid-orbit .e{animation:none!important}.pid-orbit .e{opacity:.8}}
+body.noanim .pid-orbit,body.noanim .pid-orbit .e{animation:none!important}
+body.noanim .pid-orbit .e{opacity:.8}
+.pid-top{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;margin:0;padding:2px 8px;border:0;background:none;color:var(--text);
+  font:inherit;text-align:center;cursor:pointer}
+.pid-t{min-width:0;max-width:100%;display:flex;flex-direction:column;align-items:center;gap:3px}
+.pid-n{max-width:100%;font-family:var(--display);font-weight:800;font-size:24px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pid-s{font-size:13px;color:var(--dim);line-height:1.4}
+.pid-edit{display:inline-flex;align-items:center;gap:2px;margin-top:8px;padding:6px 8px 6px 14px;border-radius:var(--rpill);
+  font-size:12.5px;font-weight:700;color:var(--text);background:rgba(var(--accent-rgb),.10);box-shadow:inset 0 0 0 1px var(--card-edge)}
+[dir="rtl"] .pid-edit{padding:6px 14px 6px 8px}
+.pid-edit .ico-chev{width:16px;height:16px;color:var(--dim)}
+:root:not(.tch) .pid-top:active .pid-edit,.pid-top.tapd .pid-edit{background:rgba(var(--accent-rgb),.2)}
 .pid-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--border)}
 .pid-stats>div{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px}
 .pid-stats>div+div{border-inline-start:1px solid var(--border)}
@@ -3542,8 +3619,17 @@ textarea.afnl.warn{border-color:var(--warning)}
 .art{display:block;overflow:visible;fill:none;stroke:var(--accentHi);stroke-width:1.7;
   stroke-linecap:round;stroke-linejoin:round;pointer-events:none;
   filter:drop-shadow(0 0 6px var(--accent-glow))}
-.art .b{opacity:.42}
+.art .a{stroke:url(#artStroke) var(--accentHi);stroke-width:2}
+.art .a.c{fill:url(#artFill) none}
+.art .b{opacity:.42;stroke-width:1.2}
 .art .e{fill:var(--accentHi);stroke:none;opacity:.8}
+/* Layers of a scene: hills filled with the accent's glass, a glowing disc. */
+.art .h1,.art .h2,.art .h3{stroke:none;fill:url(#artHill) none}
+.art .h1{opacity:.45}.art .h2{opacity:.7}.art .h3{opacity:1}
+.art .ridge{stroke:url(#artStroke) var(--accentHi);stroke-width:1.3;opacity:.8}
+.art .dsk{stroke:none;fill:url(#artGlow) none}
+.art.draw .a.c,.art.draw .h1,.art.draw .h2,.art.draw .h3,.art.draw .dsk{animation:artDraw 1.6s var(--e-decel) forwards,artFillIn 1.4s var(--e-standard) both}
+@keyframes artFillIn{from{fill-opacity:0}to{fill-opacity:1}}
 .art .lvl{stroke-width:2.6;opacity:1}
 .art.draw path{stroke-dasharray:1 1;stroke-dashoffset:1;animation:artDraw 1.6s var(--e-decel) forwards}
 .art.draw path.b{animation-delay:.18s}
@@ -3599,7 +3685,9 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .tgsug .pgnote{margin:0;color:var(--ok)}
 /* Home. The time of day's drawing rises behind the greeting's far side. */
 .hgreet{position:relative;isolation:isolate}
-.hgreet-art{position:absolute;z-index:-1;inset-inline-end:-10px;top:-18px;width:190px;height:auto;opacity:.7}
+.hgreet-art{position:absolute;z-index:-1;inset-inline-end:-10px;top:-18px;width:190px;height:auto;opacity:.7;
+  -webkit-mask-image:radial-gradient(130% 115% at 100% 0%,#000 42%,transparent 78%);mask-image:radial-gradient(130% 115% at 100% 0%,#000 42%,transparent 78%)}
+[dir="rtl"] .hgreet-art{-webkit-mask-image:radial-gradient(130% 115% at 0% 0%,#000 42%,transparent 78%);mask-image:radial-gradient(130% 115% at 0% 0%,#000 42%,transparent 78%)}
 .hnote.gold{border-color:var(--gold)}
 .hnote.gold h3{color:var(--gold)}
 .hstack>.thero2,.hstack>.twk{margin:0}
@@ -3760,10 +3848,27 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .run-map{position:relative;margin:14px calc(-1 * var(--gutter)) 0;height:min(46vh,340px);overflow:hidden;
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent);mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent)}
 .run-map svg{display:block;width:100%;height:100%}
-.run-map .g{stroke:var(--hair);stroke-width:1;fill:none}
-.run-map .s{stroke:var(--hair-hi);stroke-width:6;fill:none;stroke-linecap:round;opacity:.7}
-.run-map .rt{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
-.run-map .rt-glow{fill:none;stroke:var(--accent);stroke-width:12;stroke-linecap:round;stroke-linejoin:round;opacity:.22}
+/* The drawn city (js/ui/runmap.js): streets are the ground showing between blocks,
+   the blocks a shade lighter, buildings lighter again; water and parks are the
+   theme's own tints. The route is the only thing in the accent. */
+.rm-bg{fill:var(--bg)}
+.rm-blk rect{fill:rgba(255,255,255,.035)}
+.rm-bld rect{fill:rgba(255,255,255,.055)}
+.rm-park rect{fill:var(--map-park)}
+.rm-tree circle{fill:var(--map-park);opacity:.9}
+.rm-river{fill:none;stroke:var(--map-water);stroke-linecap:round}
+.rm-bank{fill:none;stroke:rgba(255,255,255,.04);stroke-linecap:round}
+.rm-ripple{fill:none;stroke:rgba(255,255,255,.08);stroke-width:1;stroke-dasharray:2 7}
+.rm-av path{fill:none;stroke:rgba(255,255,255,.07)}
+[data-theme="light"] .trun-map .rm-blk rect{fill:rgba(0,0,0,.045)}
+[data-theme="light"] .trun-map .rm-bld rect{fill:rgba(0,0,0,.06)}
+[data-theme="light"] .trun-map .rm-av path{stroke:rgba(255,255,255,.7)}
+[data-theme="light"] .trun-map .rm-bank{stroke:rgba(255,255,255,.5)}
+.run-map .rt{fill:none;stroke:var(--accent);stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round}
+.run-map .rt-glow{fill:none;stroke:var(--accent);stroke-width:16;stroke-linecap:round;stroke-linejoin:round;opacity:.2}
+.run-map .rt-hi{fill:none;stroke:rgba(255,255,255,.55);stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.run-map .km circle{fill:var(--bg);stroke:var(--accent);stroke-width:2}
+.run-map .km text{fill:var(--text);font:800 9px/1 var(--display);text-anchor:middle}
 .run-map .st{fill:var(--bg);stroke:var(--accent);stroke-width:3}
 .run-map .now{fill:var(--accent);stroke:var(--bg);stroke-width:2.5}
 .run-map .now-r{fill:rgba(var(--accent-rgb),.22);stroke:none;transform-box:fill-box;transform-origin:center;animation:runPulse 2s ease-out infinite}
@@ -3807,7 +3912,9 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .trun-map{display:grid;place-items:center;flex:none;width:96px;height:68px;border-radius:calc(var(--r4) - 4px);
   background:linear-gradient(var(--hair) 1px,transparent 1px) 0 0/16px 16px,linear-gradient(90deg,var(--hair) 1px,transparent 1px) 0 0/16px 16px,var(--well);color:var(--accentHi)}
 .trun-map svg{width:100%;height:100%}
-.trun-map path{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.trun-map{overflow:hidden}
+.trun-map .rt{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.trun-map .rt-glow{fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round;stroke-linejoin:round;opacity:.22}
 .trun-map .gl{width:26px;height:26px}
 .trun-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .trun-k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
@@ -3921,6 +4028,10 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 :root:not(.tch) .actbtn:active,.actbtn.tapd{transform:scale(.95)}
 .actbtn .acticon{color:var(--accentHi)}
 .actbtn span{line-height:1.2;overflow-wrap:anywhere}
+/* Running outdoors, which running mode tracks live: lit, with a GPS tag. */
+.actbtn.live{position:relative;border-color:rgba(var(--accentHi-rgb),.45);background:linear-gradient(180deg,rgba(var(--accent-rgb),.12),transparent),var(--raised)}
+.actbtn-gps{position:absolute;top:7px;inset-inline-end:7px;padding:2px 6px;border-radius:var(--rpill);font-style:normal;font-size:9.5px;font-weight:800;
+  letter-spacing:.06em;color:var(--onAccent);background:var(--accent)}
 .thumb.ph.act{display:grid;place-items:center;border-radius:12px;background:rgba(var(--accent-rgb),.12);color:var(--accentHi)}
 /* ---- Rest: hide to a bar (session.js) ------------------------------------------------ */
 .rt-hide{position:absolute;top:calc(14px + env(safe-area-inset-top));inset-inline-start:16px;z-index:2;display:flex;align-items:center;gap:6px;
@@ -3983,18 +4094,8 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 /* The assessment's meals: each with its foods under it. */
 .as-meals div{flex-wrap:wrap}
 .as-meals small{flex-basis:100%;margin-top:2px;font-size:12.5px;line-height:1.45;color:var(--sub)}
-/* Progress → Simple: one card per question, coloured only where the answer says something. */
-.pgview{margin:4px 0 14px}
-.pgtabs2{margin:0 0 6px}
-.psimple{margin:0 0 12px;padding:14px 14px 14px 16px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);
-  box-shadow:inset 3px 0 0 var(--dim)}
-[dir="rtl"] .psimple{box-shadow:inset -3px 0 0 var(--dim)}
-.psimple.ok{box-shadow:inset 3px 0 0 var(--ok)}
-.psimple.warn{box-shadow:inset 3px 0 0 var(--warning)}
-.psimple.bad{box-shadow:inset 3px 0 0 var(--accent)}
-[dir="rtl"] .psimple.ok{box-shadow:inset -3px 0 0 var(--ok)}
-[dir="rtl"] .psimple.warn{box-shadow:inset -3px 0 0 var(--warning)}
-[dir="rtl"] .psimple.bad{box-shadow:inset -3px 0 0 var(--accent)}
+/* Progress's three views. */
+.pgtabs2{margin:4px 0 10px}
 .psimple-k{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 .psimple-h{margin:4px 0 4px;font-family:var(--display);font-size:20px;line-height:1.25}
 .psimple-h b{font-variant-numeric:tabular-nums}
@@ -4078,6 +4179,112 @@ body.kb .chat-form,body:has(nav.dhid) .chat-form{bottom:max(10px,env(safe-area-i
   background:var(--accent);color:var(--onAccent);cursor:pointer}
 .chat-send .gl{width:20px;height:20px;stroke-width:2.1}
 :root:not(.tch) .chat-send:active,.chat-send.tapd{transform:scale(.94)}
+/* The chat as glass, in motion (js/ui/chatmotion.js). A question is a bubble of the
+   accent's glass on the reading side; an answer a glass card on the coach's side, its
+   tail toward it. Sent, a question flies from the box to its place; the coach types,
+   three dots; the answer comes in part after part. */
+.chat-q{background:linear-gradient(135deg,rgba(var(--accent-rgb),.32),rgba(var(--accent-rgb),.16));border-radius:20px;border-end-end-radius:6px;
+  box-shadow:inset 0 0 0 1px rgba(var(--accentHi-rgb),.36),inset 0 1px 0 rgba(255,255,255,.12),0 10px 24px -14px rgba(var(--accent-rgb),.6);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.chat-a{border-color:var(--card-edge);border-radius:22px;border-end-start-radius:6px;
+  box-shadow:inset 0 1px 0 var(--hair-hi),0 16px 36px -22px rgba(0,0,0,.55);
+  -webkit-backdrop-filter:saturate(150%) blur(20px);backdrop-filter:saturate(150%) blur(20px)}
+.chat-ah .chat-gl,.chat-topic .chat-gl,.chatcard-h .chat-gl{border-radius:50%;color:var(--accentHi);
+  background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,.16),transparent 55%),rgba(var(--accent-rgb),.16);
+  box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),.32)}
+.chat-topics{-webkit-backdrop-filter:saturate(150%) blur(18px);backdrop-filter:saturate(150%) blur(18px);box-shadow:inset 0 1px 0 var(--hair-hi)}
+.chat-topic{border-bottom-color:var(--card-edge)}
+.chat-chip{background:rgba(var(--bg-rgb),.38);border-color:var(--card-edge);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  transition:transform var(--m-press) var(--e-standard),border-color var(--m-micro) var(--e-standard)}
+:root:not(.tch) .chat-chip:active,.chat-chip.tapd{transform:scale(.96);border-color:rgba(var(--accentHi-rgb),.5)}
+.chat-form{box-shadow:inset 0 1px 0 var(--hair-hi),var(--shadow-float);border-color:var(--card-edge)}
+.chat-send{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),.78));box-shadow:0 8px 18px -8px rgba(var(--accent-rgb),.75);
+  transition:transform var(--m-press) var(--e-standard)}
+.chat-send .gl{transition:transform .2s var(--e-standard)}
+:root:not(.tch) .chat-send:active .gl,.chat-send.tapd .gl{transform:translate(3px,-3px)}
+[dir="rtl"] :root:not(.tch) .chat-send:active .gl,[dir="rtl"] .chat-send.tapd .gl{transform:translate(-3px,-3px)}
+/* The coach typing. */
+.chat-typing{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;padding:14px 16px;border-radius:20px;border-end-start-radius:6px;
+  background:var(--card);box-shadow:inset 0 0 0 1px var(--card-edge),inset 0 1px 0 var(--hair-hi);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);animation:chatIn .26s var(--e-decel) both}
+.chat-typing i{width:7px;height:7px;border-radius:50%;background:var(--accentHi);opacity:.5;animation:chatDot 1s ease-in-out infinite}
+.chat-typing i:nth-child(2){animation-delay:.15s}
+.chat-typing i:nth-child(3){animation-delay:.3s}
+@keyframes chatDot{0%,60%,100%{transform:none;opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+.chat-a.wait{display:none}
+.chat-a.arrive{animation:chatIn .42s var(--e-decel) both;transform-origin:0 100%}
+[dir="rtl"] .chat-a.arrive{transform-origin:100% 100%}
+.chat-a.arrive>*{animation:chatPart .46s var(--e-decel) both;animation-delay:calc(var(--i,0) * 80ms + 140ms)}
+@keyframes chatIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes chatPart{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.chat-q.pop{animation:chatIn .36s var(--e-decel) both;transform-origin:100% 100%}
+.chat-ghost{z-index:60;pointer-events:none;will-change:transform;align-self:auto}
+.chat-ghost p{margin:0}
+/* The opening screen: the coach as a lit orb, breathing. */
+.chat-orb{position:relative;display:grid;place-items:center;width:78px;height:78px;margin:14px auto 16px;border-radius:50%;color:var(--onAccent);
+  background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.38),transparent 46%),var(--accent);
+  box-shadow:0 14px 34px -12px rgba(var(--accent-rgb),.75),inset 0 -6px 14px rgba(0,0,0,.18)}
+.chat-orb::before,.chat-orb::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:1px solid rgba(var(--accentHi-rgb),.4);
+  animation:chatHalo 3.2s ease-out infinite}
+.chat-orb::after{animation-delay:1.6s}
+@keyframes chatHalo{from{transform:scale(.86);opacity:.9}to{transform:scale(1.4);opacity:0}}
+.chat-orb .gl{width:32px;height:32px;stroke-width:1.9}
+.chat-hi{text-align:center;max-width:32ch;margin-inline:auto}
+@media (prefers-reduced-motion:reduce){.chat-typing,.chat-typing i,.chat-a.arrive,.chat-a.arrive>*,.chat-q.pop,.chat-orb::before,.chat-orb::after{animation:none!important}}
+body.noanim .chat-typing,body.noanim .chat-typing i,body.noanim .chat-a.arrive,body.noanim .chat-a.arrive>*,body.noanim .chat-q.pop,
+body.noanim .chat-orb::before,body.noanim .chat-orb::after{animation:none!important}
+/* The page guide (js/ui/tour.js): the page dimmed, the thing being explained lit
+   through a hole in the dim, and a glass card beside it with an arrow pointing at it.
+   The hole glides from one thing to the next; the card comes in from the side it is
+   pointing from. A tap anywhere is the next tip. */
+.tour{position:fixed;inset:0;z-index:90;touch-action:none;-webkit-tap-highlight-color:transparent;opacity:0;transition:opacity .24s var(--e-standard)}
+.tour.on{opacity:1}
+.tour-hole{position:fixed;border-radius:16px;box-shadow:0 0 0 200vmax rgba(0,0,0,.6),0 0 0 2px rgba(var(--accentHi-rgb),.85),0 0 26px 4px rgba(var(--accent-rgb),.45);
+  transition:left .42s cubic-bezier(.2,.8,.2,1),top .42s cubic-bezier(.2,.8,.2,1),width .42s cubic-bezier(.2,.8,.2,1),height .42s cubic-bezier(.2,.8,.2,1),border-radius .42s;pointer-events:none}
+.tour-hole::after{content:"";position:absolute;inset:-6px;border-radius:inherit;border:1.5px solid rgba(var(--accentHi-rgb),.6);animation:tourPing 1.8s ease-out infinite}
+@keyframes tourPing{from{transform:scale(.96);opacity:.9}to{transform:scale(1.08);opacity:0}}
+.tour-card{position:fixed;padding:16px 18px 14px;border-radius:20px;color:var(--text);
+  background:rgba(var(--bg-rgb),.66);border:1px solid var(--card-edge);
+  box-shadow:inset 0 1px 0 var(--hair-hi),0 22px 50px -18px rgba(0,0,0,.7);
+  -webkit-backdrop-filter:saturate(170%) blur(26px);backdrop-filter:saturate(170%) blur(26px);outline:none;opacity:0}
+.tour-card.in{animation:tourIn .36s cubic-bezier(.2,.8,.2,1) both}
+.tour-card.up.in{--from:10px}
+.tour-card.down.in{--from:-10px}
+@keyframes tourIn{from{opacity:0;transform:translateY(var(--from,8px)) scale(.97)}to{opacity:1;transform:none}}
+.tour-arrow{position:absolute;width:18px;height:18px;background:inherit;border:inherit;transform:rotate(45deg);
+  -webkit-backdrop-filter:inherit;backdrop-filter:inherit}
+.tour-card.up .tour-arrow{top:-10px;border-right:0;border-bottom:0;border-top-left-radius:4px}
+.tour-card.down .tour-arrow{bottom:-10px;border-left:0;border-top:0;border-bottom-right-radius:4px}
+.tour-card.none .tour-arrow{display:none}
+.tour-k{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accentHi)}
+[dir="rtl"] .tour-k{letter-spacing:0;font-size:12px}
+.tour-h{margin:6px 0 4px;font-family:var(--display);font-size:18px;line-height:1.25}
+.tour-p{margin:0;font-size:14.5px;line-height:1.5;color:var(--sub)}
+.tour-f{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.tour-tap{font-size:12px;color:var(--dim)}
+.tour-skip{flex:none;min-height:32px;padding:0 12px;border:0;border-radius:var(--rpill);background:rgba(var(--accent-rgb),.12);
+  color:var(--text);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+/* While a guide is open the dock stays in sight, so it can be pointed at. */
+body.touring nav.dhid .dock{transform:none;opacity:1}
+@media (prefers-reduced-motion:reduce){.tour-hole,.tour-hole::after,.tour-card.in{transition:none;animation:none!important;opacity:1}}
+body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{transition:none;animation:none!important;opacity:1}
+/* A drill drawn as a figure (js/data/poses.js) where the library has no photograph:
+   the body in the highlight, the far arm and leg fainter, the movement a dashed arrow
+   in the text colour, props (a wall, a door frame) as quiet lines. */
+.pose{display:block;width:100%;height:auto;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.pose .fl{stroke:var(--hair-hi);stroke-width:1.5}
+.pose .prop{stroke:var(--sub);stroke-width:2.2;opacity:.55}
+.pose .tr{stroke:var(--accentHi);stroke-width:9}
+.pose .lb{stroke:var(--accentHi);stroke-width:6.2}
+.pose .lb.far{opacity:.42}
+.pose .ft{stroke-width:5}
+.pose .hd{fill:var(--accentHi);stroke:none}
+.pose .mv{stroke:var(--text);stroke-width:1.8;stroke-dasharray:3 3;opacity:.75}
+.pose .mvh{stroke:var(--text);stroke-width:1.8;opacity:.75}
+.thumb.ph.posed{background:radial-gradient(120% 120% at 30% 15%,rgba(var(--accent-rgb),.16),transparent 60%),var(--raised);padding:2px}
+.exd-pose{margin:4px 0 12px;padding:10px 14px;border-radius:var(--r4);border:1px solid var(--border);
+  background:radial-gradient(120% 90% at 30% 10%,rgba(var(--accent-rgb),.14),transparent 60%),var(--surface)}
+.exd-pose .pose{max-width:300px;margin:0 auto}
 /* Coach AI's card: what it is, three questions, and the rest of the conversation. */
 .chatcard{margin:0 0 var(--s4);padding:16px;border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card)}
 .chatcard-h{display:flex;align-items:center;gap:12px;margin:0 0 14px}
@@ -4143,6 +4350,21 @@ body.kb .chat-form,body:has(nav.dhid) .chat-form{bottom:max(10px,env(safe-area-i
 </style>
 </head>
 <body>
+<!-- The drawings' shared paint (js/ui/art.js): a stroke that runs from the highlight down
+     into the accent, a glass fill for closed shapes, a glow for embers and discs. Theme
+     colours through CSS variables, so every palette and mode paints its own. -->
+<svg id="artdefs" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
+  <defs>
+    <linearGradient id="artStroke" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="160">
+      <stop offset="0" style="stop-color:var(--accentHi)"/><stop offset=".55" style="stop-color:var(--accentHi)"/><stop offset="1" style="stop-color:var(--accent)"/></linearGradient>
+    <linearGradient id="artFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" style="stop-color:var(--accentHi);stop-opacity:.34"/><stop offset=".6" style="stop-color:var(--accent);stop-opacity:.12"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/></linearGradient>
+    <linearGradient id="artHill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" style="stop-color:var(--accentHi);stop-opacity:.42"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/></linearGradient>
+    <radialGradient id="artGlow">
+      <stop offset="0" style="stop-color:var(--accentHi);stop-opacity:.75"/><stop offset=".35" style="stop-color:var(--accentHi);stop-opacity:.28"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/></radialGradient>
+  </defs>
+</svg>
 <div id="splash" aria-hidden="true" data-theme="dark">
   <div class="sp-art"></div>
   <div class="sp-glow"></div>
