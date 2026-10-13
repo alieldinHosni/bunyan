@@ -137,9 +137,9 @@ set the goal), each with Undo; the last 30 questions are kept. It opens on what 
 asked, by subject (training, food, progress); each answer is a card that names its
 subject, with its lists as ruled rows and its notes set apart; the box to type in stays
 above the dock.
-- **Progress** (`views/progress.js`) has two slides: *Simple*, five plain answers
-  (training this week, weight, strength, food, records), and *Detailed*, the charts
-  and numbers a coach reads. Training volume over a short range is drawn as capsule
+- **Progress** (`views/progress.js`) is one page in three views, Overview, Strength
+  and Body: the charts and numbers a coach reads. The plain-words answers (training
+  this week, weight, strength, food) are the coach chat's. Training volume over a short range is drawn as capsule
   bars, the newest in the action colour with its figure above it.
 - **Profile** (`views/profile.js`, `settings.js`), opened from Training's top right,
   with a back arrow to it: who this is (the goal, the program,

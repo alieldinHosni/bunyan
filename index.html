@@ -373,7 +373,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
    glow or gradient stays on top of it. Sheets, toasts and bars that float over the page
    keep their solid fills. */
 :is(.card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.pgstat,.pgmac,.sg-list,.pid,
-  .chat-a,.chatcard,.chat-topics,.coachplan,.coachhero,.psimple,.ready){background-color:var(--card);border-color:var(--card-edge)}
+  .chat-a,.chatcard,.chat-topics,.coachplan,.coachhero,.ready){background-color:var(--card);border-color:var(--card-edge)}
 :is(.sheetbox,#sheet,.sheet) :is(.card,.list,.sg-list,.drow){background-color:var(--raised);border-color:var(--border)}
 /* Reserve the dock's height plus breathing room, so the last card never sits under it.
    --navh already includes the safe area (through --dock-lift), so adding it again here
@@ -3989,18 +3989,8 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 /* The assessment's meals: each with its foods under it. */
 .as-meals div{flex-wrap:wrap}
 .as-meals small{flex-basis:100%;margin-top:2px;font-size:12.5px;line-height:1.45;color:var(--sub)}
-/* Progress → Simple: one card per question, coloured only where the answer says something. */
-.pgview{margin:4px 0 14px}
-.pgtabs2{margin:0 0 6px}
-.psimple{margin:0 0 12px;padding:14px 14px 14px 16px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);
-  box-shadow:inset 3px 0 0 var(--dim)}
-[dir="rtl"] .psimple{box-shadow:inset -3px 0 0 var(--dim)}
-.psimple.ok{box-shadow:inset 3px 0 0 var(--ok)}
-.psimple.warn{box-shadow:inset 3px 0 0 var(--warning)}
-.psimple.bad{box-shadow:inset 3px 0 0 var(--accent)}
-[dir="rtl"] .psimple.ok{box-shadow:inset -3px 0 0 var(--ok)}
-[dir="rtl"] .psimple.warn{box-shadow:inset -3px 0 0 var(--warning)}
-[dir="rtl"] .psimple.bad{box-shadow:inset -3px 0 0 var(--accent)}
+/* Progress's three views. */
+.pgtabs2{margin:4px 0 10px}
 .psimple-k{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 .psimple-h{margin:4px 0 4px;font-family:var(--display);font-size:20px;line-height:1.25}
 .psimple-h b{font-variant-numeric:tabular-nums}

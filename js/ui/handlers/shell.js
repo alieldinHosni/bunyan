@@ -39,7 +39,7 @@ function register(){
     /* Tapping a tab while already at its top goes back to its first view. */
     if(tb==="train"&&top)V.tdate=null;
     if(tb==="food"&&top)V.fdate=null;
-    if(tb==="progress"&&top){V.ptab="overview";V.pview="simple";}
+    if(tb==="progress"&&top)V.ptab="overview";
     if(tb==="food"&&!same)V.fdate=null;
     render();if(!same)window.scrollTo(0,0);return;});
   /* Same reset as a tab tap: it is the same kind of move. Without V.train it landed

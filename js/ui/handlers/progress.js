@@ -44,7 +44,6 @@ function register(){
       render();toast(ok?t("Photo deleted."):t("That photo could not be deleted."));});};
   ACT.delsess=function(_,id){if(removeSession(id))toast(t("Workout deleted"));render();};
   /* Progress: the Simple slide or the Detailed one. */
-  key("pview",function(D){V.pview=D.pview==="detail"?"detail":"simple";render();window.scrollTo(0,0);return;});
   /* Progress → History, level two; its month steps back from this one. */
   key("phist",function(){pushNav();V.phist=true;V.hmonth=0;render();window.scrollTo(0,0);return;});
   key("hmonth",function(D){V.hmonth=Math.min(0,(+V.hmonth||0)+ +D.hmonth);render();return;});

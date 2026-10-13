@@ -602,7 +602,7 @@ await test("Targets: goals save in place, the suggestion applies, and Progress n
   eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const f=await import("/js/engine/formulas.js");
     return s.S.goals.kcal===Math.round(f.targetKcal()/10)*10&&s.S.goals.kcal!==2222;}),true,"suggested applied");
   if(!(await page.$('.pgadh'))&&!(await page.$('.empty')))throw new Error("no eating trends");
-  await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page);
+  await tapTab(page,"progress");await pause(page);
   eq(await page.$$eval('[data-ptab]',a=>a.map(b=>b.getAttribute("data-ptab")).filter((v,i,x)=>x.indexOf(v)===i).sort()),["body","overview","strength"]);
 });
 
@@ -632,7 +632,7 @@ await test("Leaving a workout for later lands on Training's Resume card, and Res
 await test("Progress: no date bar, History by month opens and Back returns",async page=>{
   await tapTab(page,"progress");await pause(page);
   if(await page.$('.dnav'))throw new Error("date bar still on Progress");
-  await page.tap('[data-pview="detail"]');await pause(page);
+  
   await page.tap('[data-phist]');await pause(page);
   /* The seed trains from two days ago back, so on the 1st and 2nd of a month every
      trained day is in the previous one: look in both months the test visits. */
@@ -644,12 +644,11 @@ await test("Progress: no date bar, History by month opens and Back returns",asyn
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.tab,!!V.phist]"),["progress",false]);
 });
-await test("Progress: Simple answers in plain words, and each goal's weight trend is judged by its own rate",async page=>{
+await test("Progress: one page in three views (Overview, Strength, Body), and each goal's weight trend is judged by its own rate",async page=>{
   await tapTab(page,"progress");await pause(page);
-  eq((await page.$$eval('.psimple .psimple-k',a=>a.map(x=>x.textContent))).slice(0,4),["Training","Weight","Strength","Food"],"plain answers, in order");
-  if(await page.$('.pgtabs2'))throw new Error("Detailed's views on Simple");
-  await page.tap('[data-pview="detail"]');await pause(page);
-  if(!(await page.$('.pgtabs2')))throw new Error("no views on Detailed");
+  eq(await page.$$eval('#app [data-pview],#app .psimple',a=>a.length),0,"no Simple slide, no switch to it");
+  eq(await page.$$eval('.pgtabs2 [data-ptab]',a=>a.map(x=>x.dataset.ptab)),["overview","strength","body"],"the three views");
+  eq(await page.$eval('.pgtabs2 [data-ptab].on,.pgtabs2 [aria-selected="true"]',e=>e.dataset.ptab),"overview","Overview first");
   /* Three weeks of weigh-ins at a set rate, under each goal. */
   const r=await page.evaluate(async()=>{
     const S=(await import("/js/state.js")).S,ST=await import("/js/engine/stats.js");
@@ -661,13 +660,13 @@ await test("Progress: Simple answers in plain words, and each goal's weight tren
     return out;});
   eq(r,{"recomp -0.3":["lose","ok"],"recomp 0":["lose","ok"],"lose -0.2":["lose","slow"],"gain 0.8":["gain","fast"],
     "strength 0.15":["gain","ok"],"maintain -0.3":["hold","down"]},"each goal by its own rate");
-  /* What Simple says: losing slowly while building muscle is on plan; gaining fast is not "more food". */
-  const say=async(g,rate)=>{await page.evaluate(async([g,rate])=>{
-    const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;
+  /* What the plain-words facts say (the coach's chat reads them): losing slowly while
+     building muscle is on plan; gaining fast is not "more food". */
+  const say=async(g,rate)=>page.evaluate(async([g,rate])=>{
+    const S=(await import("/js/state.js")).S,F=await import("/js/ui/facts.js");
     const iso=d=>{const x=new Date(Date.now()-d*864e5);return new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
     S.profile.goal=g;S.body=[];for(let d=21;d>=0;d-=3)S.body.push({date:iso(d),weight:Math.round((84-rate*d/7)*100)/100});
-    V.pview="simple";(await import("/js/ui/render.js")).render();},[g,rate]);await pause(page,300);
-    return page.$$eval('.psimple',a=>{const w=a.find(x=>x.querySelector('.psimple-k').textContent==="Weight");return [w.className.split(" ")[1],w.querySelector('p').textContent];});};
+    const w=F.simpleFacts().find(x=>x.k==="Weight");return [w.state,w.line];},[g,rate]);
   let w=await say("recomp",-0.3);
   eq([w[0],/On track for your goal/.test(w[1])],["ok",true],"a slow loss is on plan for losing fat and building muscle");
   w=await say("gain",0.8);
@@ -910,7 +909,7 @@ await test("Themes: the stylesheet names no colour outside the theme blocks",asy
   eq(bad,[],"coloured literals outside the themes");
 });
 await test("Back returns to where you were on the screen before; a tab tap always opens at the top",async page=>{
-  await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page);
+  await tapTab(page,"progress");await pause(page);
   const y0=await page.evaluate(()=>{document.querySelector("[data-phist]").scrollIntoView({block:"center"});return Math.round(scrollY);});
   if(y0<100)throw new Error("Progress → Detailed too short to test");
   await page.evaluate(()=>document.querySelector("[data-phist]").click());await pause(page,500);
@@ -1046,7 +1045,7 @@ async function dockTest(page,slide){
       taps:getComputedStyle(d).pointerEvents!=="none",y:Math.round(scrollY),dt:parseInt(n.style.getPropertyValue("--dt"))||0};});
   const scroll=async(dy,n)=>{for(let i=0;i<n;i++){await page.evaluate(d=>window.scrollBy(0,d),dy);await page.waitForTimeout(16);}};
   const settle=()=>pause(page,650);
-  await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page);
+  await tapTab(page,"progress");await pause(page);
   await scroll(10,3);await settle();
   eq((await st()).away,"0","a little scroll near the top leaves it");
   await scroll(15,10);await settle();
@@ -1610,8 +1609,7 @@ await test("Phase 4: one card at a time until there is nothing to say, and then 
 await test("Phase 4: one session and one weigh-in say \"not enough yet\" everywhere, never a trend",async page=>{
   await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));});
   eq(await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().length),0,"the coach says nothing");
-  await tapTab(page,"progress");await pause(page);
-  const cards=await page.$$eval('.psimple',a=>Object.fromEntries(a.map(x=>[x.querySelector('.psimple-k').textContent,x.innerText])));
+  const cards=await page.evaluate(async()=>Object.fromEntries((await import("/js/ui/facts.js")).simpleFacts().map(f=>[f.k,f.head+" "+f.line])));
   if(!/Not enough yet/.test(cards.Strength))throw new Error("strength: "+cards.Strength);
   if(!/A few more weigh-ins/.test(cards.Weight))throw new Error("weight: "+cards.Weight);
   await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page);
@@ -1636,7 +1634,7 @@ await test("Offline: with the network off, the installed app opens, every tab wo
 },{sw:true});
 /* ---- where the three judged lifts sit among raw competitors (coach phase 3) ------- */
 async function strengthTab(page){
-  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.pview="detail";V.ptab="strength";V.phalf="all";
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.ptab="strength";V.phalf="all";
     (await import("/js/ui/render.js")).render();});await pause(page,400);}
 await test("Among powerlifters: squat and bench placed against raw competitors of the same class, said as such; silent without data",async page=>{
   await strengthTab(page);
@@ -2092,7 +2090,7 @@ await test("Steps: tap the number and type any count (456); Done saves it; the b
   eq(await page.$eval('#in_st',e=>e.value),"956","+ still steps by 500");
 });
 await test("Progress: training volume over a month is capsule bars, the newest in the accent with its figure",async page=>{
-  await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page,400);
+  await tapTab(page,"progress");await pause(page);
   const r=await page.evaluate(()=>{const c=document.querySelector(".caps");if(!c)return null;
     const cs=[...c.querySelectorAll(".caps-c")];
     return {n:cs.length,on:cs.map(x=>x.classList.contains("on")).lastIndexOf(true),v:(c.querySelector(".caps-c.on .caps-v")||{}).textContent,
