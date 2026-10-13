@@ -560,6 +560,15 @@ await test("My Foods: build a meal from search, log it whole, and ✕ removes it
   await page.evaluate(()=>document.activeElement.blur());await pause(page,200);
   await page.tap('#sheet .afadd');await pause(page,500);
   eq(await ev(page,"[S.savedMeals.find(m=>m.id==='"+id+"').items.length,V.sheet,V.smeal]"),[1,null,id],"into the meal, back on its screen");
+  /* Changed my mind about the amount: tap the food, not ✕ and add again. */
+  const it0=await ev(page,"Object.assign({},S.savedMeals.find(m=>m.id==='"+id+"').items[0])");
+  await page.tap('[data-editfood="saved|'+id+'|0"]');await pause(page,600);
+  eq(await ev(page,"[V.sheet,!!V.food.pick.edit]"),["addfood",true],"the servings screen opens on it");
+  if(await page.$('#sheet [data-faddpick]'))throw new Error("it offers to add, not to update");
+  await page.tap('#sheet [data-fcount="1"]');await pause(page,250);
+  await page.tap('#sheet [data-fupdate]');await pause(page,500);
+  const it1=await ev(page,"S.savedMeals.find(m=>m.id==='"+id+"').items");
+  eq([it1.length,it1[0].n,it1[0].grams>it0.grams,it1[0].kcal>it0.kcal,await ev(page,"V.sheet")],[1,it0.n,true,true,null],"the same food, more of it, in its place");
   await page.tap('.dcta [data-addsaved]');await pause(page,400);
   eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");
     return Object.values(s.dayRec(u.today()).meals).reduce((n,m)=>n+m.items.length,0)>0;}),true,"logged whole");
@@ -947,8 +956,11 @@ await test("PDF plan: everything can be changed on the review before it is used"
   await page.evaluate(()=>document.querySelector('[data-pirm="1|0"]').click());await pause(page,200);
   eq(await ev(page,"V.pparse[1].items.map(i=>i.n).indexOf("+JSON.stringify(dropped)+")"),-1,"dropped");
   const k0=await ev(page,"V.pparse[0].items[0].kcal"),g0=await ev(page,"V.pparse[0].items[0].grams");
-  await page.evaluate(()=>document.querySelector('[data-pigram="0|0"]').click());await pause(page,300);
-  await page.fill("#askv",String(g0*2));await page.evaluate(()=>document.querySelector("[data-askok]").click());await pause(page,300);
+  /* Tapping the food opens it on the servings screen; set it in grams and update. */
+  await page.evaluate(()=>document.querySelector('[data-editfood="imp|0|0"]').click());await pause(page,500);
+  await page.selectOption("#afsrv","ug");await pause(page,300);
+  await page.fill("#afamt",String(g0*2));await pause(page,200);
+  await page.evaluate(()=>document.querySelector("[data-fupdate]").click());await pause(page,300);
   eq(await ev(page,"[V.pparse[0].items[0].grams,Math.abs(V.pparse[0].items[0].kcal-"+(k0*2)+")<=2]"),[g0*2,true],"the amount and its calories");
   await page.fill("#pt_kcal","2100");
   /* A food added to a meal of the draft, from the same search as logging. */

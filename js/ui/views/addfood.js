@@ -212,7 +212,10 @@ var UNAME={g:"grams (g)",kg:"kilograms (kg)",oz:"ounces (oz)",lb:"pounds (lb)",
 function vDetail(){
   var p=V.food.pick,f=p.food,sv=servs(f),s=sv[p.si]||sv[0],am=pickAmount(p),g=am.g,n=nutritionFor(f,g);
   var us=unitsFor(f);
-  var h=afHead(f.n,{back:'data-fback="1"',pre:t("Add to")});
+  /* Opened again from a list to change the amount: no way back to a search it did not
+     come from, and the button updates instead of adding. */
+  var ed=p.edit,h=ed?afHead(f.n,{sub:'<span class="afsub">'+esc(t("Change the amount"))+'</span>'})
+    :afHead(f.n,{back:'data-fback="1"',pre:t("Add to")});
   h+='<div class="afmono"><div class="afmono-k">'+esc(t("Total calories"))+'</div>'
    +'<div class="afmono-v">'+fmtN(n.kcal)+'</div><div class="afmono-u">kcal</div>'
    +'<div class="afmono-m">'
@@ -281,7 +284,8 @@ function vDetail(){
      +(f.src==="off"?'<div><span>'+esc(t("Source"))+'</span><b>Open Food Facts</b></div>'
       :f.src==="you"?'<div><span>'+esc(t("Source"))+'</span><b>'+esc(t("Your food"))+'</b></div>':'')
      +'</div>';}
-  h+='<button class="btn afcta" data-faddpick="1">'+esc(t("Add to"))+' '+esc(t(curMeal()))+'</button>';
+  h+=ed?'<button class="btn afcta" data-fupdate="1">'+esc(t("Update"))+'</button>'
+    :'<button class="btn afcta" data-faddpick="1">'+esc(t("Add to"))+' '+esc(t(curMeal()))+'</button>';
   return h;}
 
 /* ---- Quick Add (13:337, 13:403) --------------------------------------------- */

@@ -1762,7 +1762,10 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "{n} g": "{n} جم",
 "{n} kcal": "{n} سعر",
 "{n} g protein": "{n} جم بروتين",
-"Target {n}. Tap the number to type it, or step by 500.": "الهدف {n}. دوس على الرقم واكتبه، أو غيّره 500 في المرة."
+"Target {n}. Tap the number to type it, or step by 500.": "الهدف {n}. دوس على الرقم واكتبه، أو غيّره 500 في المرة.",
+"Change the amount of": "غيّر كمية",
+"Change the amount": "غيّر الكمية",
+"{f}: now {a}.": "{f}: بقى {a}."
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;

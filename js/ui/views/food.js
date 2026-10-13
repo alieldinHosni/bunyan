@@ -178,8 +178,8 @@ function vMeal(dsel,name){
     h+='<div class="empty"><p>'+esc(t("No items logged yet"))+'</p></div>';
   items.forEach(function(it,i){
     h+='<div class="fitemrow">'
-     +'<button class="fitemrow-b" data-edititem="'+name+'|'+i+'" aria-label="'
-     +esc(t("Edit")+" "+it.n)+'">'
+     +'<button class="fitemrow-b" data-editfood="'+esc("day|"+name+"|"+i)+'" aria-label="'
+     +esc(t("Change the amount of")+" "+it.n)+'">'
      +'<div style="flex:1;min-width:0"><div class="fitemrow-n">'+esc(it.n)
      +(it.label?' <span style="font-weight:400;color:var(--dim)">('+esc(it.label)+')</span>':'')
      +'</div>'
@@ -250,8 +250,17 @@ function vMyFoods(){
   h+='<button class="dadd" data-myfood="new"><span aria-hidden="true">+</span>'+t("Add your own food")+'</button>';
   return h;}
 
-/* One saved meal, built in place: the title renames it, ✕ takes an item out, the
-   dashed + adds from the same search as logging. Level two of the Food tab. */
+/* A food in a meal being built: tap it to change its amount (the servings screen
+   opens on what it is now), ✕ beside it to take it out. */
+function amountRow(where,it){
+  return '<button class="dmain dedit" data-editfood="'+esc(where)+'" aria-label="'+esc(t("Change the amount of")+" "+it.n)+'">'
+   +'<span class="dtext"><span class="drow-n">'+esc(it.n)+'</span>'
+   +'<span class="drow-s">'+(it.label?esc(it.label)+'<i class="ddot"></i>':'')+fmtN(it.kcal)+' kcal<i class="ddot"></i>'
+   +esc(t("P:"))+' '+r1(it.p)+'g</span></span>'
+   +'<span class="ico ico-edit" aria-hidden="true"></span></button>';}
+/* One saved meal, built in place: the title renames it, ✕ takes an item out, a tap
+   on an item changes its amount, the dashed + adds from the same search as logging.
+   Level two of the Food tab. */
 function savedById(id){return (S.savedMeals||[]).filter(function(m){return m.id===id;})[0]||null;}
 function vSavedMeal(id){
   var m=savedById(id);if(!m){V.smeal=null;return null;}
@@ -269,9 +278,7 @@ function vSavedMeal(id){
   items.forEach(function(it,i){
     h+='<div class="drow" data-k="si:'+i+':'+esc(it.n)+'">'
      +'<button class="drm" data-rmsmitem="'+m.id+'|'+i+'" aria-label="'+esc(t("Remove")+" "+it.n)+'"><i>'+XSVG+'</i></button>'
-     +'<div class="dmain"><span class="dtext"><span class="drow-n">'+esc(it.n)+'</span>'
-     +'<span class="drow-s">'+(it.label?esc(it.label)+'<i class="ddot"></i>':'')+fmtN(it.kcal)+' kcal<i class="ddot"></i>'
-     +esc(t("P:"))+' '+r1(it.p)+'g</span></span></div></div>';});
+     +amountRow("saved|"+m.id+"|"+i,it)+'</div>';});
   h+='</div>';
   if(!items.length)h+='<p class="dempty">'+esc(t("Add the foods that go in it. They are logged together, in these amounts."))+'</p>';
   h+='<button class="dadd" data-smadd="'+m.id+'"><span aria-hidden="true">+</span>'+t("Add food")+'</button>';
@@ -426,9 +433,7 @@ function vPlanSlot(id){
   pl.forEach(function(it,i){
     h+='<div class="drow" data-k="pi:'+i+':'+esc(it.n)+'">'
      +'<button class="drm" data-prmitem="'+esc(id)+'|'+i+'" aria-label="'+esc(t("Remove")+" "+it.n)+'"><i>'+XSVG+'</i></button>'
-     +'<div class="dmain"><span class="dtext"><span class="drow-n">'+esc(it.n)+'</span>'
-     +'<span class="drow-s">'+(it.label?esc(it.label)+'<i class="ddot"></i>':'')+fmtN(it.kcal)+' kcal<i class="ddot"></i>'
-     +esc(t("P:"))+' '+r1(it.p)+'g</span></span></div></div>';});
+     +amountRow("plan|"+id+"|"+i,it)+'</div>';});
   h+='</div>';
   if(!pl.length&&!todo.length)h+='<p class="dempty">'+esc(t("Add what this meal should be. Logging it is then one tap, from here or from the meal on Today."))+'</p>';
   if(todo.length){
@@ -497,7 +502,7 @@ function vImport(){
          +'<input id="pm_n_'+i+'" class="tiday" type="text" value="'+esc(importName(m,i))+'" aria-label="'+esc(t("Meal name"))+'" autocomplete="off" spellcheck="false">'
          +'<span class="picard-k">'+fmtN(mt.kcal)+' kcal</span>'
          +'<button class="ticard-x" data-pmrm="'+i+'" aria-label="'+esc(t("Remove")+" "+importName(m,i))+'">✕</button></div>'
-         +m.items.map(function(it,j){return '<div class="plist-r pied"><button class="pied-b" data-pigram="'+i+'|'+j+'"'+(it.grams?'':' disabled')+'>'
+         +m.items.map(function(it,j){return '<div class="plist-r pied"><button class="pied-b" data-editfood="imp|'+i+'|'+j+'"'+(it.grams?'':' disabled')+'>'
            +'<span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')
            +(it.note?'<small class="plist-note">'+esc(it.note)+'</small>':'')+'</span><b>'+fmtN(it.kcal)+'</b></button>'
            +'<button class="pied-x" data-pirm="'+i+'|'+j+'" aria-label="'+esc(t("Remove")+" "+it.n)+'">✕</button></div>';}).join("")
