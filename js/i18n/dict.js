@@ -1056,6 +1056,8 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "In English or Arabic, answered from your own log, plan and targets.": "بالعربي أو بالإنجليزي، والإجابة من سجلك وخطتك وأهدافك.",
 "Ask about training, food or progress": "اسأل عن التمرين أو الأكل أو التقدم",
 "Coach noticed": "الكوتش لاحظ",
+"of goal": "من الهدف",
+"Goal met": "وصلت للهدف",
 "Running mode": "وضع الجري",
 "Time, distance and pace from your phone's GPS": "الوقت والمسافة والسرعة من الـGPS بتاع موبايلك",
 "End or leave the run": "خلّص الجري أو اخرج",

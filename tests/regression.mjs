@@ -2183,6 +2183,29 @@ await test("Running mode: a run outlives closing the app, and the back gesture a
   await page.tap('[data-confirmalt]');await pause(page,400);
   eq(await ev(page,"[!!S.run,S.sessions.filter(s=>s.entries[0].name==='Running').length]"),[false,0],"discarded: nothing saved");
 });
+/* ---- glass pop-ups and the ringed tiles (index.html, js/ui/views/home.js) ---- */
+await test("Glass: a sheet, a dialog and a toast are frosted and see-through, and the veil over the page is lighter",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_app");});await pause(page,500);
+  const r=await page.evaluate(()=>{const b=getComputedStyle(document.querySelector("#sheet .sheetbox")),sh=getComputedStyle(document.querySelector("#sheet"));
+    const alpha=c=>{const m=c.match(/rgba?\(([^)]+)\)/);if(!m)return 1;const p=m[1].split(",");return p.length>3?+p[3]:1;};
+    return {blur:(b.backdropFilter||b.webkitBackdropFilter||""),bg:b.backgroundColor,bga:alpha(b.backgroundImage.match(/rgba\([^)]*\)\s*$/)?b.backgroundImage.match(/rgba\([^)]*\)\s*$/)[0]:b.backgroundColor),veil:alpha(sh.backgroundColor)};});
+  if(!/blur\(30px\)/.test(r.blur))throw new Error("the sheet is not frosted: "+r.blur);
+  if(!(r.bga<1&&r.bga>0.5))throw new Error("the sheet is not see-through: "+JSON.stringify(r));
+  if(!(r.veil<0.5))throw new Error("the veil is as heavy as before: "+r.veil);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();(await import("/js/ui/view.js")).toast("Saved.");});await pause(page,200);
+  if(!/blur/.test(await page.$eval('.toast',e=>getComputedStyle(e).backdropFilter||getComputedStyle(e).webkitBackdropFilter)))throw new Error("the toast is not glass");
+});
+await test("Training: steps sit in a ring that fills to the goal, and say so when it is met",async page=>{
+  await tapTab(page,"train");await pause(page);
+  const ring=()=>page.$eval('.htile.steps',e=>{const a=e.querySelector('.htile-ring .a');return {arc:a?a.getAttribute("stroke-dasharray"):null,met:!!e.querySelector('.htile-met'),label:e.getAttribute("aria-label")};});
+  let r=await ring();
+  eq([r.arc,r.met],["44 100",false],"4,000 of 9,000: 44%");
+  if(!/44% of goal/.test(r.label))throw new Error("the share is not in its name: "+r.label);
+  await page.evaluate(async()=>{const s=await import("/js/state.js");const d=Object.keys(s.S.days).sort().pop();s.S.days[d].steps=9500;(await import("/js/ui/render.js")).render();});await pause(page,200);
+  r=await ring();
+  eq([r.arc,r.met],["100 100",true],"over the goal: a full ring and Goal met");
+  eq(await page.$eval('.htile.weight .htile-ring',()=>true).catch(()=>false),false,"weight has no goal, so no ring");
+},{db:Object.assign(seed(),{days:{[iso(0)]:{steps:4000,meals:{}}}})});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);
