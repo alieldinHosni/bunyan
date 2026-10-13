@@ -4168,6 +4168,60 @@ body.kb .chat-form,body:has(nav.dhid) .chat-form{bottom:max(10px,env(safe-area-i
   background:var(--accent);color:var(--onAccent);cursor:pointer}
 .chat-send .gl{width:20px;height:20px;stroke-width:2.1}
 :root:not(.tch) .chat-send:active,.chat-send.tapd{transform:scale(.94)}
+/* The chat as glass, in motion (js/ui/chatmotion.js). A question is a bubble of the
+   accent's glass on the reading side; an answer a glass card on the coach's side, its
+   tail toward it. Sent, a question flies from the box to its place; the coach types,
+   three dots; the answer comes in part after part. */
+.chat-q{background:linear-gradient(135deg,rgba(var(--accent-rgb),.32),rgba(var(--accent-rgb),.16));border-radius:20px;border-end-end-radius:6px;
+  box-shadow:inset 0 0 0 1px rgba(var(--accentHi-rgb),.36),inset 0 1px 0 rgba(255,255,255,.12),0 10px 24px -14px rgba(var(--accent-rgb),.6);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.chat-a{border-color:var(--card-edge);border-radius:22px;border-end-start-radius:6px;
+  box-shadow:inset 0 1px 0 var(--hair-hi),0 16px 36px -22px rgba(0,0,0,.55);
+  -webkit-backdrop-filter:saturate(150%) blur(20px);backdrop-filter:saturate(150%) blur(20px)}
+.chat-ah .chat-gl,.chat-topic .chat-gl,.chatcard-h .chat-gl{border-radius:50%;color:var(--accentHi);
+  background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,.16),transparent 55%),rgba(var(--accent-rgb),.16);
+  box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),.32)}
+.chat-topics{-webkit-backdrop-filter:saturate(150%) blur(18px);backdrop-filter:saturate(150%) blur(18px);box-shadow:inset 0 1px 0 var(--hair-hi)}
+.chat-topic{border-bottom-color:var(--card-edge)}
+.chat-chip{background:rgba(var(--bg-rgb),.38);border-color:var(--card-edge);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  transition:transform var(--m-press) var(--e-standard),border-color var(--m-micro) var(--e-standard)}
+:root:not(.tch) .chat-chip:active,.chat-chip.tapd{transform:scale(.96);border-color:rgba(var(--accentHi-rgb),.5)}
+.chat-form{box-shadow:inset 0 1px 0 var(--hair-hi),var(--shadow-float);border-color:var(--card-edge)}
+.chat-send{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),.78));box-shadow:0 8px 18px -8px rgba(var(--accent-rgb),.75);
+  transition:transform var(--m-press) var(--e-standard)}
+.chat-send .gl{transition:transform .2s var(--e-standard)}
+:root:not(.tch) .chat-send:active .gl,.chat-send.tapd .gl{transform:translate(3px,-3px)}
+[dir="rtl"] :root:not(.tch) .chat-send:active .gl,[dir="rtl"] .chat-send.tapd .gl{transform:translate(-3px,-3px)}
+/* The coach typing. */
+.chat-typing{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;padding:14px 16px;border-radius:20px;border-end-start-radius:6px;
+  background:var(--card);box-shadow:inset 0 0 0 1px var(--card-edge),inset 0 1px 0 var(--hair-hi);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);animation:chatIn .26s var(--e-decel) both}
+.chat-typing i{width:7px;height:7px;border-radius:50%;background:var(--accentHi);opacity:.5;animation:chatDot 1s ease-in-out infinite}
+.chat-typing i:nth-child(2){animation-delay:.15s}
+.chat-typing i:nth-child(3){animation-delay:.3s}
+@keyframes chatDot{0%,60%,100%{transform:none;opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+.chat-a.wait{display:none}
+.chat-a.arrive{animation:chatIn .42s var(--e-decel) both;transform-origin:0 100%}
+[dir="rtl"] .chat-a.arrive{transform-origin:100% 100%}
+.chat-a.arrive>*{animation:chatPart .46s var(--e-decel) both;animation-delay:calc(var(--i,0) * 80ms + 140ms)}
+@keyframes chatIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes chatPart{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.chat-q.pop{animation:chatIn .36s var(--e-decel) both;transform-origin:100% 100%}
+.chat-ghost{z-index:60;pointer-events:none;will-change:transform;align-self:auto}
+.chat-ghost p{margin:0}
+/* The opening screen: the coach as a lit orb, breathing. */
+.chat-orb{position:relative;display:grid;place-items:center;width:78px;height:78px;margin:14px auto 16px;border-radius:50%;color:var(--onAccent);
+  background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.38),transparent 46%),var(--accent);
+  box-shadow:0 14px 34px -12px rgba(var(--accent-rgb),.75),inset 0 -6px 14px rgba(0,0,0,.18)}
+.chat-orb::before,.chat-orb::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:1px solid rgba(var(--accentHi-rgb),.4);
+  animation:chatHalo 3.2s ease-out infinite}
+.chat-orb::after{animation-delay:1.6s}
+@keyframes chatHalo{from{transform:scale(.86);opacity:.9}to{transform:scale(1.4);opacity:0}}
+.chat-orb .gl{width:32px;height:32px;stroke-width:1.9}
+.chat-hi{text-align:center;max-width:32ch;margin-inline:auto}
+@media (prefers-reduced-motion:reduce){.chat-typing,.chat-typing i,.chat-a.arrive,.chat-a.arrive>*,.chat-q.pop,.chat-orb::before,.chat-orb::after{animation:none!important}}
+body.noanim .chat-typing,body.noanim .chat-typing i,body.noanim .chat-a.arrive,body.noanim .chat-a.arrive>*,body.noanim .chat-q.pop,
+body.noanim .chat-orb::before,body.noanim .chat-orb::after{animation:none!important}
 /* Coach AI's card: what it is, three questions, and the rest of the conversation. */
 .chatcard{margin:0 0 var(--s4);padding:16px;border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card)}
 .chatcard-h{display:flex;align-items:center;gap:12px;margin:0 0 14px}

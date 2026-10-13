@@ -658,7 +658,8 @@ function vChat(){
    +'</div>';
   h+='<div class="chat" role="log" aria-live="polite">';
   if(!log.length){
-    h+='<p class="chat-hi">'+esc(t("Ask me about today's training, your food, or how things are going. Tap a question, or type your own, in English or Arabic."))+'</p>'
+    h+='<div class="chat-orb" aria-hidden="true">'+glyph("whistle")+'</div>'
+     +'<p class="chat-hi">'+esc(t("Ask me about today's training, your food, or how things are going. Tap a question, or type your own, in English or Arabic."))+'</p>'
      +GROUPS.map(function(g){
         return '<section class="chat-grp"><h2 class="chat-grp-h">'+esc(t(g[0]))+'</h2>'
          +'<div class="chat-topics">'+g[1].map(topicRow).join("")+'</div></section>';}).join("")

@@ -1,0 +1,67 @@
+/* Bunyan — the coach chat in motion
+   A question goes somewhere and an answer arrives. Sent from the box (or tapped as a
+   suggestion), the question leaves the place it was typed or tapped and flies to its
+   place in the conversation; then the coach is typing, three dots in a bubble; then the
+   answer comes in, its parts one after another.
+
+   The answer is already worked out and on the page when this starts (js/ui/views/
+   chat.js): this only stages how it is shown, so a redraw in the middle simply shows
+   it all, and with Animations off, or the system's reduced motion, nothing waits.
+
+   land(from, text) after the render. from is the rectangle the question left from. */
+import {isReduced} from "./motion.js";
+
+var TYPING_MS=720;
+var token=0;
+
+function off(){return isReduced()||document.body.classList.contains("noanim")||typeof Element.prototype.animate!=="function";}
+
+/* Where the question starts from: the box being typed in, or the suggestion tapped. */
+function fromEl(el){
+  if(!el||!el.getBoundingClientRect)return null;
+  var r=el.getBoundingClientRect();
+  return {left:r.left,top:r.top,width:r.width,height:r.height};}
+
+/* The conversation brought to the new question: its top a little under the header. */
+function bringUp(q){
+  if(q)window.scrollTo(0,Math.max(0,q.getBoundingClientRect().top+window.pageYOffset-72));}
+
+function land(from){
+  var my=++token;
+  requestAnimationFrame(function(){
+    var xs=document.querySelectorAll(".chat-x"),x=xs[xs.length-1];
+    var q=x&&x.querySelector(".chat-q"),a=x&&x.querySelector(".chat-a");
+    bringUp(q);
+    if(!q||!a||off())return;
+    /* The answer waits behind the dots. */
+    a.classList.add("wait");
+    var dots=document.createElement("div");
+    dots.className="chat-typing";dots.setAttribute("aria-hidden","true");
+    dots.innerHTML="<i></i><i></i><i></i>";
+    a.parentNode.insertBefore(dots,a);
+    /* The question flies from where it was typed or tapped. */
+    var to=q.getBoundingClientRect();
+    if(from&&to.width){
+      q.style.visibility="hidden";
+      var ghost=q.cloneNode(true);
+      ghost.classList.add("chat-ghost");
+      ghost.style.cssText="position:fixed;left:"+to.left+"px;top:"+to.top+"px;width:"+to.width+"px;margin:0;visibility:visible";
+      document.body.appendChild(ghost);
+      var dx=from.left+Math.min(from.width,to.width)/2-(to.left+to.width/2),dy=from.top+from.height/2-(to.top+to.height/2);
+      var fly=ghost.animate([
+        {transform:"translate("+dx+"px,"+dy+"px) scale(.86)",opacity:.35},
+        {transform:"translate("+(dx*.35)+"px,"+(dy*.35-10)+"px) scale(1.02)",opacity:1,offset:.6},
+        {transform:"none",opacity:1}],{duration:460,easing:"cubic-bezier(.2,.8,.2,1)"});
+      var done=function(){if(ghost.parentNode)ghost.parentNode.removeChild(ghost);q.style.visibility="";};
+      fly.onfinish=done;fly.oncancel=done;
+      setTimeout(done,900);}
+    else q.classList.add("pop");
+    setTimeout(function(){
+      if(my!==token&&dots.parentNode){dots.parentNode.removeChild(dots);a.classList.remove("wait");return;}
+      if(dots.parentNode)dots.parentNode.removeChild(dots);
+      /* Each part of the answer in turn: the header, the lines, the buttons. */
+      [].forEach.call(a.children,function(c,i){c.style.setProperty("--i",i);});
+      a.classList.remove("wait");a.classList.add("arrive");
+      setTimeout(function(){a.classList.remove("arrive");},1400);},TYPING_MS);});}
+
+export {fromEl, land};

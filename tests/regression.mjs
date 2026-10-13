@@ -2098,6 +2098,19 @@ await test("Profile picture: both choices in sight; a photo from the phone shows
   await page.tap('#sheet [data-close]');await pause(page,400);
   eq(await page.$eval('.pid .pmono',e=>[!!e.querySelector("img"),e.textContent.trim().length>0]),[false,true],"the initials are back");
 });
+await test("Coach chat in motion: a sent question flies to its place, the coach types, then the answer arrives; with Animations off, at once",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await page.fill('#chatq','how much protein do I need?');await page.tap('.chat-send');await pause(page,120);
+  eq(await page.evaluate(()=>[!!document.querySelector(".chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat .chat-q")].pop()).visibility]),[true,"hidden"],"in flight");
+  await pause(page,250);
+  eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display]),[true,"none"],"the coach typing, the answer waiting");
+  await pause(page,1400);
+  eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none",
+    /150 g a day/.test([...document.querySelectorAll(".chat-a")].pop().innerText)]),[false,true,true],"arrived");
+  await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.anim=false;document.body.classList.add("noanim");});
+  await page.fill('#chatq','how is my weight');await page.tap('.chat-send');await pause(page,250);
+  eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none"]),[false,true],"no motion, no wait");
+},{prefs:{anim:true}});
 await test("Steps: tap the number and type any count (456); Done saves it; the buttons still step by 500",async page=>{
   await tapTab(page,"train");await pause(page);await page.evaluate(()=>window.scrollTo(0,0));
   await page.$eval('.htile.steps',e=>e.click());await pause(page,400);

@@ -140,10 +140,15 @@ carries its buttons (start the workout, log the plan, a 150 kcal step on the tar
 set the goal), each with Undo; the last 30 questions are kept. It opens on what can be
 asked, by subject (training, food, progress); each answer is a card that names its
 subject, with its lists as ruled rows and its notes set apart; the box to type in stays
-above the dock.
+above the dock. It is glass: a question a bubble of the accent's glass, an answer a glass
+card, the coach a lit orb on the opening screen. And it moves (`ui/chatmotion.js`): a
+sent question flies from the box (or the suggestion tapped) to its place, the coach types
+for a moment, three dots, and the answer comes in part after part. With Animations off
+or reduced motion, it is all there at once.
 - **Progress** (`views/progress.js`) is one page in three views, Overview, Strength
   and Body: the charts and numbers a coach reads. The plain-words answers (training
-  this week, weight, strength, food) are the coach chat's. Training volume over a short range is drawn as capsule
+  this week, weight, strength, food) are the coach chat's. Training volume over a
+  short range is drawn as capsule
   bars, the newest in the action colour with its figure above it.
 - **Profile** (`views/profile.js`, `settings.js`), opened from Training's top right,
   with a back arrow to it: who this is (the picture in a drawn orbit that turns slowly,
