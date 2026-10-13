@@ -79,8 +79,10 @@ Five tabs. Two are for the day, one is for planning, one for looking back, one f
 
 - **Training** (`views/train.js`, with its top in `views/home.js`) opens the app: the
   greeting with a bell (what the coach has noticed, with a dot while there is
-  something) and your initial (Profile) at the top right, one reminder at most, the week, today's workout (start it, or change the
-  day to another of the plan), weigh-in and steps, and a run or a match to log. A
+  something) and your initial (Profile) at the top right, one reminder at most, the
+  week, today's workout (start it, or change the day to another of the plan), weigh-in
+  and steps (each icon in a round glass button at the tile's corner; steps ringed by
+  their share of the goal, with "Goal met" when it is), and a run or a match to log. A
   workout left for later shows here as a Resume card.
 - **Running mode** (`ui/run.js`, the arithmetic in `engine/run.js`), from Training: a
   run tracked live with the phone's own GPS, free and offline. The route is drawn as
@@ -90,7 +92,8 @@ Five tabs. Two are for the day, one is for planning, one for looking back, one f
   counted. The screen stays awake, because a phone stops giving a web app its position
   in the background. Finishing saves a Running activity with its route; without
   location it is timed only, and the logger opens with the minutes in for the
-  distance. A run in progress survives closing the app.
+  distance. A run in progress survives closing the app. The last run of the fortnight shows on Training
+  as a card, after the reference's: its route, the kilometres, pace and time.
 - **Food** (`views/food.js`) is the day: what you have eaten against the targets, the
   meals (a planned one is a tap from logging), water, and "Log today's plan". Today
   also reads the log as a body (`ui/bodyneeds.js`, numbers from `engine/needs.js`): a
@@ -749,7 +752,11 @@ their brand colours exactly. In every theme:
 - **The ground** is a blend of two or three of the theme's tones (`--ground`, a layer
   fixed behind the page), not one flat colour.
 - **Cards are glass** (`--card`, `--card-edge`): a tint of the ground with a lighter edge,
-  so the blend shows through. Sheets, toasts and anything that floats stay solid.
+  so the blend shows through.
+- **Pop-ups are frosted glass**: a sheet, a dialog and a toast are the ground made
+  translucent and blurred, so the page they open over shows through, softened, under a
+  lighter veil (after the owner's FitPulse reference). Where the browser cannot blur
+  they stay solid.
 - **The dock** is a dark pill of round buttons; the tab that is on opens into a pill in
   the action colour with its name beside the icon (Training is a dumbbell, Coach a
   whistle). Signal Green, in Blue, marks something new.

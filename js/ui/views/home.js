@@ -48,11 +48,18 @@ function reminder(){
     return '<button class="card tap hnote" data-sheet="weigh"><h3>'+t("Time to weigh in")+'</h3>'
      +'<p class="tiny" style="margin:6px 0 0">'+t(w?"A week since the last one. Mornings, before eating, compare best.":"One weigh-in starts your trend. Mornings, before eating, compare best.")+'</p></button>';
   return "";}
-function tile(attr,cls,icon,label,value,sub,aria){
-  return '<button class="htile '+cls+'" '+attr+' aria-label="'+esc(aria)+'">'
-   +'<span class="htile-i" aria-hidden="true"><svg viewBox="0 0 24 24">'+icon+'</svg></span>'
+/* A tile: its icon in a round glass button at the top corner, the label, the figure and a
+   line under it. ring (0..1) draws the share of a goal as an arc round the icon, the way
+   the reference's stat tiles do; null, for a figure with no goal, leaves the circle
+   plain. met adds a "Goal met" pill. */
+function tile(attr,cls,icon,label,value,sub,aria,ring,met){
+  var arc=ring==null?'':'<svg class="htile-ring" viewBox="0 0 48 48" aria-hidden="true"><circle class="t" cx="24" cy="24" r="21"/>'
+    +(ring>0?'<circle class="a" cx="24" cy="24" r="21" pathLength="100" stroke-dasharray="'+Math.round(Math.min(1,ring)*100)+' 100"/>':'')+'</svg>';
+  return '<button class="htile ringed '+cls+'" '+attr+' aria-label="'+esc(aria)+'">'
+   +'<span class="htile-i" aria-hidden="true">'+arc+'<svg viewBox="0 0 24 24">'+icon+'</svg></span>'
    +'<span class="htile-k">'+esc(label)+'</span><span class="htile-v">'+value+'</span>'
-   +'<span class="htile-s">'+sub+'</span></button>';}
+   +'<span class="htile-s">'+sub+'</span>'
+   +(met?'<span class="htile-met">'+esc(t("Goal met"))+'</span>':'')+'</button>';}
 var HI={
   steps:'<path d="M8 3c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM6 16h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM14 20h4"/>',
   weight:'<path d="M5 20h14l-2-12H7zM9 8a3 3 0 0 1 6 0M12 12v3"/>'};
@@ -81,7 +88,9 @@ function bodyTiles(){
       wc&&wc.d!=null?esc((wc.d>0?"+":wc.d<0?"−":"±")+toDisp(Math.abs(wc.d))+" · "+wc.days+" "+t("days")):esc(t(kg?"Tap to weigh in":"Log a weigh-in")),
       t("Weight")+" "+(kg?toDisp(kg)+" "+wUnit():t("Log a weigh-in")))
    +tile('data-sheet="steps"','steps',HI.steps,t("Steps"),
-      '<b>'+fmtN(r.steps||0)+'</b>',esc(t("Goal")+" "+fmtN(g.steps)),t("Steps")+" "+fmtN(r.steps||0))
+      '<b>'+fmtN(r.steps||0)+'</b>',esc(t("Goal")+" "+fmtN(g.steps)),
+      t("Steps")+" "+fmtN(r.steps||0)+(g.steps?", "+Math.min(100,Math.round((r.steps||0)/g.steps*100))+"% "+t("of goal"):""),
+      g.steps?(r.steps||0)/g.steps:null,g.steps>0&&(r.steps||0)>=g.steps)
    +'</div>';}
 
 export {bodyTiles, trainTop};

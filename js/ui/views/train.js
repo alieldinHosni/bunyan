@@ -24,6 +24,7 @@ import {shown} from "../more.js";
 import {vTImport} from "./timport.js";
 import {doseText, weeksText} from "../dose.js";
 import {estMinutes, planOn} from "../../engine/dayplan.js";
+import {paceOf, routePath} from "../../engine/run.js";
 import {bodyTiles, trainTop} from "./home.js";
 
 /* ============================================================ TRAIN */
@@ -122,6 +123,9 @@ function vTrainHome(){
   if(!S.active)h+=blockCard();
   h+=deloadCard();
   h+=bodyTiles();
+  /* The last run of the fortnight, as the reference's run card: its route, how far,
+     how fast. Opens that day. */
+  h+=lastRunCard();
   /* Running mode: a run tracked live with the phone's GPS (js/ui/run.js). */
   h+='<button class="ttile wide tquick trun" data-run="start"><span class="ttile-i" aria-hidden="true">'+glyph("route")+'</span>'
    +'<span class="ttile-tx"><span class="ttile-n">'+t("Running mode")+'</span>'
@@ -132,6 +136,30 @@ function vTrainHome(){
    +'<span class="ttile-s">'+t("Running, football, padel, tennis, classes…")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   return h;}
+
+/* The most recent Running entry of the last 14 days with a distance, as a card: the
+   route drawn from its saved points (none for a run logged by hand), the kilometres
+   large, the pace and the time, and an arrow to the day. "" when there is none. */
+function lastRunCard(){
+  var now=today(),cut=new Date(Date.now()-14*864e5).toISOString().slice(0,10),run=null,date=null;
+  (S.sessions||[]).some(function(ss){
+    if(!ss||!ss.date||ss.date<cut)return false;
+    (ss.entries||[]).some(function(e){
+      if(e.name!=="Running")return false;
+      var x=(e.sets||[]).filter(function(b){return +b.km>0;})[0];
+      if(x){run=x;date=ss.date;}
+      return !!x;});
+    return !!run;});
+  if(!run)return "";
+  var d=run.route&&run.route.length>1?routePath(run.route,120,80,10):"";
+  var pace=paceOf((+run.min||0)*60000,(+run.km||0)*1000);
+  var when=date===now?t("Today"):pretty(date);
+  return '<button class="trun-last" data-openday="'+esc(date)+'" aria-label="'+esc(t("Last run")+", "+run.km+" "+t("km")+(pace?", "+pace+" "+t("per km"):"")+", "+when)+'">'
+   +'<span class="trun-map" aria-hidden="true">'+(d?'<svg viewBox="0 0 120 80"><path d="'+d+'"/></svg>':glyph("route"))+'</span>'
+   +'<span class="trun-t" aria-hidden="true"><span class="trun-k">'+esc(t("Last run"))+' · '+esc(when)+'</span>'
+   +'<b><span class="num">'+(+run.km).toFixed(2)+'</span><small> '+esc(t("km"))+'</small></b>'
+   +'<span class="trun-s">'+esc([pace?pace+" /"+t("km"):"",run.min?run.min+" "+t("min"):""].filter(Boolean).join(" · "))+'</span></span>'
+   +'<span class="trun-go" aria-hidden="true">'+glyph("arrow")+'</span></button>';}
 
 /* The planning screens, for Coach: null when none is open. */
 function trainSub(){

@@ -3337,6 +3337,20 @@ textarea.afnl.warn{border-color:var(--warning)}
 .sheethead{border-bottom:none}
 .sheethead .x{width:34px;height:34px;flex-basis:34px;background:var(--raised)}
 .sheetbox{background:radial-gradient(120% 50% at 50% 0%,rgba(var(--glow-rgb),.10),transparent 60%),var(--bg)}
+/* Glass pop-ups (the owner's FitPulse reference: a frosted sheet with the picture behind
+   it). Where the browser can blur, a sheet, a dialog and a toast are the page's ground
+   made translucent and frosted, so what they open over shows through, softened; the
+   veil above a sheet is lighter for the same reason. Without blur they stay solid, as
+   above, since translucent without blur only muddies the text. */
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  .sheet{background:rgba(var(--bg-rgb),.38)}
+  .sheetbox{background:radial-gradient(120% 50% at 50% 0%,rgba(var(--glow-rgb),.12),transparent 60%),rgba(var(--bg-rgb),.74);
+    -webkit-backdrop-filter:saturate(160%) blur(30px);backdrop-filter:saturate(160%) blur(30px);
+    border-color:var(--card-edge);box-shadow:inset 0 1px 0 var(--hair-hi),0 -18px 48px -12px rgba(0,0,0,.35)}
+  .sheetbox.dlgbox{background:rgba(var(--bg-rgb),.80);-webkit-backdrop-filter:saturate(160%) blur(30px);backdrop-filter:saturate(160%) blur(30px);
+    box-shadow:0 24px 60px -12px rgba(0,0,0,.5),0 0 0 1px var(--card-edge),inset 0 1px 0 var(--hair-hi)}
+  .toast{background:rgba(var(--bg-rgb),.80);-webkit-backdrop-filter:saturate(160%) blur(24px);backdrop-filter:saturate(160%) blur(24px);border-color:var(--card-edge)}
+}
 
 /* ---- Rest over (session.js vRest, restDone): built for a glance mid-workout ------- */
 #rest .rt2{justify-content:space-between}
@@ -3598,6 +3612,20 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .htile-i{display:grid;place-items:center;width:32px;height:32px;margin-bottom:6px;border-radius:50%;
   background:var(--surface);box-shadow:inset 0 0 0 1px var(--border);color:var(--sub)}
 .htile-i svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* Training's two tiles: the icon sits in a round glass button at the top corner, as
+   the reference's stat tiles have it. With a goal (steps) a ring runs round it, the arc
+   its share of the goal in the accent, and at the goal a "Goal met" pill in ok. */
+.htile.ringed{position:relative}
+.htile.ringed .htile-i{position:absolute;top:12px;inset-inline-end:12px;width:46px;height:46px;margin:0;
+  background:var(--well);box-shadow:inset 0 0 0 1px var(--card-edge);color:var(--accentHi)}
+.htile.ringed .htile-i svg:not(.htile-ring){width:19px;height:19px}
+.htile-ring{position:absolute;inset:0;width:100%!important;height:100%!important;transform:rotate(-90deg);stroke-linecap:round}
+[dir="rtl"] .htile-ring{transform:rotate(-90deg) scaleY(-1)}
+.htile-ring circle{fill:none;stroke-width:4}
+.htile-ring .t{stroke:var(--bar-track)}
+.htile-ring .a{stroke:var(--accent)}
+.htile.ringed .htile-k{margin-top:10px}
+.htile-met{margin-top:6px;padding:3px 9px;border-radius:var(--rpill);background:var(--okSoft);color:var(--ok);font-size:11.5px;font-weight:700}
 .htile-k{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
 .htile-v{display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums}
 .htile-v b{font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:-.01em}
@@ -3770,6 +3798,27 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .run-note{margin:12px 4px 0;font-size:12.5px;line-height:1.5;color:var(--dim);text-align:center}
 /* Training's way in. */
 .ttile.trun .ttile-i .gl{width:22px;height:22px}
+/* The last run, as the reference's run card: the route on a well, the kilometres large,
+   pace and time, and a round arrow to the day. */
+.trun-last{display:flex;align-items:center;gap:14px;width:100%;margin:14px 0 0;padding:12px 12px 12px 12px;
+  border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card);color:var(--text);font:inherit;text-align:start;
+  box-shadow:var(--shadow-card);transition:transform var(--m-press) var(--e-standard)}
+:root:not(.tch) .trun-last:active,.trun-last.tapd{transform:scale(.98)}
+.trun-map{display:grid;place-items:center;flex:none;width:96px;height:68px;border-radius:calc(var(--r4) - 4px);
+  background:linear-gradient(var(--hair) 1px,transparent 1px) 0 0/16px 16px,linear-gradient(90deg,var(--hair) 1px,transparent 1px) 0 0/16px 16px,var(--well);color:var(--accentHi)}
+.trun-map svg{width:100%;height:100%}
+.trun-map path{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.trun-map .gl{width:26px;height:26px}
+.trun-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.trun-k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .trun-k{letter-spacing:0}
+.trun-t b{font-family:var(--display);font-size:28px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+.trun-t b small{font-size:14px;font-weight:700;color:var(--sub)}
+.trun-s{font-size:12.5px;color:var(--sub);font-variant-numeric:tabular-nums}
+.trun-go{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:50%;background:var(--raised);
+  box-shadow:inset 0 0 0 1px var(--card-edge);color:var(--text)}
+.trun-go .gl{width:18px;height:18px}
+[dir="rtl"] .trun-go .gl{transform:scaleX(-1)}
 /* Capsule bars (capsChart in views/progress.js): a row of rounded columns on glass
    tracks, the newest in the accent with its figure in a pill above it. */
 .caps{margin:6px 0 0}
