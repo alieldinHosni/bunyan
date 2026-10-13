@@ -3978,6 +3978,31 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .exd-form2 img{width:100%;height:100%;object-fit:cover;display:block}
 .exd-form2 figcaption{position:absolute;inset-inline-start:8px;bottom:8px;padding:4px 10px;border-radius:var(--rpill);
   background:rgba(8,8,10,.72);font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff}
+/* What it works: the body map beside the primary and secondary muscles in words. */
+.exd-musc{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:14px;align-items:center;
+  border:1px solid var(--border);border-radius:var(--r4);background:var(--raised);padding:12px 14px 12px 10px;margin-bottom:10px}
+.exd-musc-t{display:flex;flex-direction:column;gap:12px;min-width:0}
+.exd-musc-t>div{display:flex;flex-direction:column;gap:3px}
+.exd-musc-t span{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.exd-musc-t b{font-size:14.5px;font-weight:700;overflow-wrap:anywhere}
+.bmk{flex:none;width:9px;height:9px;border-radius:3px;background:var(--accent)}
+.bmk.s{background:rgba(var(--accent-rgb),.42)}
+/* The body map (js/data/bodymap.js): the body in the theme's quiet neutrals, the
+   muscles a shade lighter, lit ones in the accent. */
+.bmap{display:block;width:100%;height:auto}
+.bmap .b{fill:var(--hair)}
+.bmap .m{fill:var(--bar-track)}
+.bmap .p,.bmap .h4{fill:var(--accent)}
+.bmap .s{fill:rgba(var(--accent-rgb),.42)}
+.bmap .h1{fill:rgba(var(--accent-rgb),.2)}
+.bmap .h2{fill:rgba(var(--accent-rgb),.38)}
+.bmap .h3{fill:rgba(var(--accent-rgb),.62)}
+/* This week on the body, above the bars (Progress, Strength). */
+.pgbody{display:grid;justify-items:center;gap:8px;margin:2px 0 14px}
+.pgbody .bmap{max-width:240px}
+.pgbody-k{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+.pgbody-k i{width:96px;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--bar-track),rgba(var(--accent-rgb),.38),var(--accent))}
+[dir="rtl"] .pgbody-k i{transform:scaleX(-1)}
 .exd-facts{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);border-radius:var(--r4);background:var(--raised);overflow:hidden;margin-bottom:20px}
 .exd-facts>div{display:flex;flex-direction:column;gap:3px;padding:12px 14px;min-width:0}
 .exd-facts>div:nth-child(even){border-inline-start:1px solid var(--border)}

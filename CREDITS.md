@@ -39,7 +39,7 @@ adds one (see `COACHING-INTELLIGENCE.md`, Phase 0).
 | Progression as a named rule per exercise, not one rule for all | Liftosaur | AGPL-3 | Planned (see `EVALUATION.md`); will be written from the idea only. |
 | Volume read per muscle, week by week, against landmarks | MyFit (after Renaissance Periodization) | AGPL-3 | The coaching engine's weekly volume (`js/coach/volume.js`), written from the idea only. |
 | Per-week change rules, diet flags and per-item sources for foods | wger | AGPL-3 code, CC data | Planned; no wger code or data is used. |
-| Three-step builder: equipment, muscles, exercises; body-map muscle picker | workout-cool | MIT | Read for its flow; nothing used yet. |
+| Three-step builder: equipment, muscles, exercises; body-map muscle picker | workout-cool | MIT | Read for its flow; nothing used yet. The body map Bunyan draws is from react-native-body-highlighter (below). |
 
 ## Libraries
 
@@ -47,6 +47,7 @@ adds one (see `COACHING-INTELLIGENCE.md`, Phase 0).
 | --- | --- | --- |
 | [pdf.js](https://github.com/mozilla/pdf.js) (Mozilla) | Apache-2.0 — `js/vendor/pdfjs/LICENSE.txt` | Reading plan PDFs on the phone |
 | [ZXing for JS](https://github.com/zxing-js/library) 0.21.3 | Apache-2.0 — `js/vendor/zxing-LICENSE.txt` | Barcode scanning where the browser has no detector |
+| Body shapes from [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter) by ELABBASSI Hicham (`assets/bodyFront.ts`, `bodyBack.ts`) | MIT — the notice is in `js/data/bodymap.js` | The body map: what an exercise works, and this week's sets per muscle |
 
 ## Fonts
 

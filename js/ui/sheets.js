@@ -3,6 +3,7 @@
 import {t, tm} from "../i18n/dict.js";
 import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {hasPose, poseSvg} from "../data/poses.js";
+import {bodySvg, onMap} from "../data/bodymap.js";
 import {movementLabel} from "../data/movement.js";
 import {exName, planName} from "../i18n/exnames.js";
 import {dayMeals, mealName} from "../engine/meals.js";
@@ -515,9 +516,18 @@ function vSheet(){
        +'<figure><img src="'+exImg(nD,1)+'" alt="" decoding="async"><figcaption>'+t("End")+'</figcaption></figure></div>';
     /* No photographs, but the drill is drawn (js/data/poses.js). */
     else if(hasPose(nD))b+='<div class="exd-pose" role="img" aria-label="'+esc(exName(nD))+'">'+poseSvg(nD)+'</div>';
+    /* What it works, drawn: the primary muscle in the accent, the secondary ones
+       lighter, front and back, beside the same two facts in words. */
+    var secT=secD.length?secD.map(function(s){return tm(s);}).join(" \u00b7 "):"—";
+    var mapD=onMap(mD);
+    if(mapD){
+      var litD={};secD.forEach(function(s){litD[s]="s";});litD[mD]="p";
+      b+='<div class="exd-musc">'+bodySvg(litD,t("Primary")+": "+tm(mD)+". "+t("Secondary")+": "+secT+".")
+       +'<div class="exd-musc-t"><div><span><i class="bmk p" aria-hidden="true"></i>'+t("Primary")+'</span><b>'+tm(mD)+'</b></div>'
+       +'<div><span><i class="bmk s" aria-hidden="true"></i>'+t("Secondary")+'</span><b>'+secT+'</b></div></div></div>';}
     b+='<div class="exd-facts">'
-     +'<div><span>'+t("Primary")+'</span><b>'+tm(mD)+'</b></div>'
-     +'<div><span>'+t("Secondary")+'</span><b>'+(secD.length?secD.map(function(s){return tm(s);}).join(" \u00b7 "):"—")+'</b></div>'
+     +(mapD?'':'<div><span>'+t("Primary")+'</span><b>'+tm(mD)+'</b></div>'
+       +'<div><span>'+t("Secondary")+'</span><b>'+secT+'</b></div>')
      +'<div><span>'+t("Equipment")+'</span><b>'+t(lD?lD[2]:"Other")+'</b></div>'
      +'<div><span>'+t("Difficulty")+'</span><b>'+t(difficultyOf(nD))+'</b></div>'
      /* What it trains as a coach would say it: what a replacement keeps. */

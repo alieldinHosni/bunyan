@@ -32,6 +32,7 @@ import {fmtW, toDisp, wUnit} from "../../units.js";
 import {dfmt, esc, fmtN, num, pretty, r1, shortd, today} from "../../util.js";
 import {seg, streak, V} from "../view.js";
 import {art} from "../art.js";
+import {bodySvg} from "../../data/bodymap.js";
 import {backArrow} from "../nav.js";
 import {wdName, weekOrder, weekStart} from "../../engine/schedule.js";
 import {OPL_NAME, trendSays} from "../facts.js";
@@ -438,7 +439,14 @@ function vStrength(r){
   /* ---- this week, per muscle, against the plan's target */
   var wv=weeklyVolume();
   h+=lbl(t("This week"),'<span class="pgaside">'+esc(t("hard sets per muscle"))+' · '+esc(t("target"))+' '+wv.target+'</span>');
-  h+='<div class="pgcard pgshare">'+wv.rows.map(function(x){
+  /* The same week on the body: each muscle shaded by its sets against the target,
+     so a part left out (often the legs) is seen before it is read. The bars below
+     keep the exact numbers; the drawing adds nothing a screen reader needs. */
+  var wlit={};wv.rows.forEach(function(x){wlit[x.g]=Math.min(1,x.sets/wv.target);});
+  h+='<div class="pgcard pgshare">'
+   +'<div class="pgbody">'+bodySvg(wlit,"","wkmap")
+   +'<div class="pgbody-k" aria-hidden="true"><span>0</span><i></i><span>'+wv.target+' '+esc(t("sets"))+'</span></div></div>'
+   +wv.rows.map(function(x){
     var pct=Math.min(100,x.sets/wv.target*100),cls=x.sets>=wv.target?' ok':x.sets>=wv.target/2?'':' low';
     return '<div class="pgshare-r wv'+cls+'" aria-label="'+esc(t(x.g)+": "+x.sets+" "+t("of")+" "+wv.target+" "+t("sets"))+'">'
      +'<span>'+esc(t(x.g))+'</span>'
