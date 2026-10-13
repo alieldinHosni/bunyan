@@ -776,6 +776,12 @@ their brand colours exactly. In every theme:
   translucent and blurred, so the page they open over shows through, softened, under a
   lighter veil (after the owner's FitPulse reference). Where the browser cannot blur
   they stay solid.
+- **The drawings** (`ui/art.js`) share one paint (`#artdefs` in `index.html`): lines run
+  from the highlight down into the accent with a soft glow, a shape that closes on itself
+  takes a glass fill of the accent, embers glow, and the background lines are lighter
+  than the main ones. The greeting on Training is a scene for the time of day, the sun
+  clearing three ranges of hills in the morning, high with a cloud in the afternoon, a
+  crescent among stars in the evening, faded out toward the page.
 - **The guide** (`ui/tour.js`): the first time each page opens (Training, Food, Coach,
   Progress, Profile, the coach chat, running mode), it is explained where it stands. The
   page dims, one thing at a time is lit, and a glass card beside it, its arrow pointing at

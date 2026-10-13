@@ -1,0 +1,14 @@
+<!doctype html><html data-palette="blue" data-theme="dark"><head><meta charset="utf-8">
+<style id="s"></style></head><body style="margin:0">
+<div id="defs"></div>
+<div class="g" id="g" style="display:grid;grid-template-columns:repeat(4,190px);gap:10px;padding:10px"></div>
+<script type="module">
+const html=await (await fetch("/index.html")).text();
+document.getElementById("s").textContent=html.slice(html.indexOf("<style>")+7,html.indexOf("</style>"));
+const d0=html.indexOf('<svg id="artdefs"');document.getElementById("defs").innerHTML=html.slice(d0,html.indexOf("</svg>",d0)+6);
+const pal=new URLSearchParams(location.search);document.documentElement.dataset.palette=pal.get("p")||"blue";document.documentElement.dataset.theme=pal.get("m")||"dark";
+const {art}=await import("/js/ui/art.js");
+const src=await (await fetch("/js/ui/art.js")).text();
+const names=[...src.matchAll(/^  ([a-z]+):\{vb:/gm)].map(m=>m[1]).concat(["orbit","topo"]);
+document.getElementById("g").innerHTML=names.map(n=>'<div class="card" style="margin:0;padding:8px;color:var(--text);font:12px sans-serif">'+art(n,{still:true}).replace('class="art','style="width:100%;height:110px" class="art')+'<div>'+n+'</div></div>').join("");
+</script></body></html>
