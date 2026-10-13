@@ -2206,6 +2206,21 @@ await test("Training: steps sit in a ring that fills to the goal, and say so whe
   eq([r.arc,r.met],["100 100",true],"over the goal: a full ring and Goal met");
   eq(await page.$eval('.htile.weight .htile-ring',()=>true).catch(()=>false),false,"weight has no goal, so no ring");
 },{db:Object.assign(seed(),{days:{[iso(0)]:{steps:4000,meals:{}}}})});
+await test("Training: the last run of the fortnight is a card with its route, distance and pace, and opens its day",async page=>{
+  await tapTab(page,"train");await pause(page);
+  const r=await page.evaluate(()=>{const c=document.querySelector(".trun-last");if(!c)return null;
+    return {km:c.querySelector(".trun-t b").textContent,d:(c.querySelector(".trun-map path")||{getAttribute:()=>""}).getAttribute("d"),s:c.querySelector(".trun-s").textContent,date:c.dataset.openday};});
+  if(!r)throw new Error("no card");
+  eq([r.km,r.s,r.date],["4.86 km","5:33 /km · 27 min",iso(1)],"the run");
+  if(!/^M[\d.]+ [\d.]+(L[\d.]+ [\d.]+){5,}/.test(r.d))throw new Error("no route: "+r.d);
+  await page.$eval('.trun-last',e=>e.scrollIntoView({block:"center"}));await page.tap('.trun-last');await pause(page,400);
+  eq(await ev(page,"[V.sheet,V.sd&&V.sd.date]"),["dayview",iso(1)],"the day opens");
+},{db:(()=>{const db=seed(),route=[];for(let i=0;i<20;i++){const a=i/20*2*Math.PI;route.push([30+0.004*Math.sin(a),31+0.006*(1-Math.cos(a))]);}
+  db.sessions.unshift({id:"run1",date:iso(1),dayName:"Running",activeMs:1.6e6,entries:[{name:"Running",muscle:"Cardio",kind:"activity",sets:[{w:0,r:0,min:27,km:4.86,rpe:6,kcal:389,gps:1,route}]}]});return db;})()});
+await test("Training: no run in the last fortnight, no run card",async page=>{
+  await tapTab(page,"train");await pause(page);
+  eq(await page.$$eval('.trun-last',a=>a.length),0);
+});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

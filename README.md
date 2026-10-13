@@ -92,7 +92,8 @@ Five tabs. Two are for the day, one is for planning, one for looking back, one f
   counted. The screen stays awake, because a phone stops giving a web app its position
   in the background. Finishing saves a Running activity with its route; without
   location it is timed only, and the logger opens with the minutes in for the
-  distance. A run in progress survives closing the app.
+  distance. A run in progress survives closing the app. The last run of the fortnight shows on Training
+  as a card, after the reference's: its route, the kilometres, pace and time.
 - **Food** (`views/food.js`) is the day: what you have eaten against the targets, the
   meals (a planned one is a tap from logging), water, and "Log today's plan". Today
   also reads the log as a body (`ui/bodyneeds.js`, numbers from `engine/needs.js`): a

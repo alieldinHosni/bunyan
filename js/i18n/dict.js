@@ -1056,6 +1056,8 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "In English or Arabic, answered from your own log, plan and targets.": "بالعربي أو بالإنجليزي، والإجابة من سجلك وخطتك وأهدافك.",
 "Ask about training, food or progress": "اسأل عن التمرين أو الأكل أو التقدم",
 "Coach noticed": "الكوتش لاحظ",
+"per km": "لكل كم",
+"Last run": "آخر جري",
 "of goal": "من الهدف",
 "Goal met": "وصلت للهدف",
 "Running mode": "وضع الجري",

@@ -3798,6 +3798,27 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .run-note{margin:12px 4px 0;font-size:12.5px;line-height:1.5;color:var(--dim);text-align:center}
 /* Training's way in. */
 .ttile.trun .ttile-i .gl{width:22px;height:22px}
+/* The last run, as the reference's run card: the route on a well, the kilometres large,
+   pace and time, and a round arrow to the day. */
+.trun-last{display:flex;align-items:center;gap:14px;width:100%;margin:14px 0 0;padding:12px 12px 12px 12px;
+  border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card);color:var(--text);font:inherit;text-align:start;
+  box-shadow:var(--shadow-card);transition:transform var(--m-press) var(--e-standard)}
+:root:not(.tch) .trun-last:active,.trun-last.tapd{transform:scale(.98)}
+.trun-map{display:grid;place-items:center;flex:none;width:96px;height:68px;border-radius:calc(var(--r4) - 4px);
+  background:linear-gradient(var(--hair) 1px,transparent 1px) 0 0/16px 16px,linear-gradient(90deg,var(--hair) 1px,transparent 1px) 0 0/16px 16px,var(--well);color:var(--accentHi)}
+.trun-map svg{width:100%;height:100%}
+.trun-map path{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.trun-map .gl{width:26px;height:26px}
+.trun-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.trun-k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .trun-k{letter-spacing:0}
+.trun-t b{font-family:var(--display);font-size:28px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+.trun-t b small{font-size:14px;font-weight:700;color:var(--sub)}
+.trun-s{font-size:12.5px;color:var(--sub);font-variant-numeric:tabular-nums}
+.trun-go{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:50%;background:var(--raised);
+  box-shadow:inset 0 0 0 1px var(--card-edge);color:var(--text)}
+.trun-go .gl{width:18px;height:18px}
+[dir="rtl"] .trun-go .gl{transform:scaleX(-1)}
 /* Capsule bars (capsChart in views/progress.js): a row of rounded columns on glass
    tracks, the newest in the accent with its figure in a pill above it. */
 .caps{margin:6px 0 0}
