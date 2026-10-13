@@ -2102,6 +2102,12 @@ await test("Coach AI in Arabic: the gauge fills from the right, the plan's figur
   if(!/^matrix\(-1/.test(r.tf))throw new Error("not mirrored: "+r.tf);
   if(/kcal|protein/i.test(r.tiles))throw new Error("English in the tiles: "+r.tiles);
 },{prefs:{lang:"ar"}});
+await test("Arabic type: titles in Alexandria and text in Readex Pro, bundled, and loaded for an Arabic screen",async page=>{
+  await page.evaluate(()=>document.fonts.ready);await pause(page,300);
+  const r=await page.evaluate(()=>[...document.fonts].filter(f=>f.status==="loaded").map(f=>f.family.replace(/"/g,"")+"|"+(f.unicodeRange.indexOf("U+600-6FF")>=0||f.unicodeRange.indexOf("U+0600-06FF")>=0?"ar":"latin")));
+  for(const f of ["Outfit|ar","Manrope|ar"])if(r.indexOf(f)<0)throw new Error(f+" not loaded: "+JSON.stringify(r));
+  eq(await page.evaluate(()=>getComputedStyle(document.body).fontFamily.split(",")[0].replace(/"/g,"").trim()),"Manrope","Arabic text starts from the bundled face");
+},{prefs:{lang:"ar"}});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

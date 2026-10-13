@@ -5,7 +5,7 @@
    previous release's JS for one launch: markup the stylesheet no longer styles.
    Cache-first for images only.
    Bump CACHE whenever you change index.html. */
-const CACHE = "bunyan-v113";
+const CACHE = "bunyan-v114";
 /* instructions.json (595 KB) is deliberately absent: it is cached on first use by the
    catch-all handler below, so it no longer blocks first install. */
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
@@ -16,6 +16,7 @@ const FILES = ["./", "./index.html", "./manifest.webmanifest",
                   type. (The icons are drawn from the stylesheet itself now, so there
                   is nothing of theirs to fetch.) */
                "./fonts/manrope-latin.woff2", "./fonts/outfit-latin.woff2",
+               "./fonts/alexandria-arabic.woff2", "./fonts/readex-pro-arabic.woff2",
                "./img/split-ap.jpg", "./img/split-arnold.jpg", "./img/split-ppl.jpg",
                "./img/split-ul.jpg", "./img/split-fb.jpg", "./img/split-bw.jpg", "./img/rest-swirl.jpg",
                "./img/split-bro.jpg", "./img/split-sl5.jpg", "./img/split-db.jpg", "./img/split-glute.jpg",

@@ -28,7 +28,14 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
    every frame in the Figma file uses. Both are SIL Open Font License (licences in
    fonts/), self-hosted rather than loaded from Google so the app still has its
    typography offline, which is the whole point of a PWA. Latin subset only: neither
-   face has Arabic glyphs, so RTL keeps its own system stack further down.
+   face has Arabic glyphs.
+
+   Arabic has its own pair, chosen to match: Alexandria (geometric and bold, as Outfit
+   is) for titles and figures, and Readex Pro (open and even, as Manrope is) for the
+   rest. Both OFL, both variable, Arabic subset only (31 KB and 23 KB). They are
+   declared under the Latin faces' own names with an Arabic unicode-range, so each
+   family is one font to the stylesheet: an Arabic letter in a title is drawn in
+   Alexandria, a Latin one in Outfit, and no rule has to know which language it holds.
 
    Manrope is a variable font, so one file carries every weight the design uses
    (400-700). Outfit is the variable file too, declared for 700-800: 700 for titles and
@@ -38,6 +45,12 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   font-weight:400 700;font-style:normal;font-display:swap}
 @font-face{font-family:"Outfit";src:url(fonts/outfit-latin.woff2) format("woff2");
   font-weight:700 800;font-style:normal;font-display:swap}
+@font-face{font-family:"Outfit";src:url(fonts/alexandria-arabic.woff2) format("woff2");
+  font-weight:700 800;font-style:normal;font-display:swap;
+  unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
+@font-face{font-family:"Manrope";src:url(fonts/readex-pro-arabic.woff2) format("woff2");
+  font-weight:400 700;font-style:normal;font-display:swap;
+  unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
 :root{
   /* Colours are not here: every colour token is set by the theme blocks that follow this
      one (---- themes), so a theme is one place to read and one place to change. */
@@ -833,12 +846,12 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
   letter-spacing:.06em;text-indent:.06em;
   margin-top:14px;opacity:0;text-shadow:0 1px 12px rgba(4,4,6,.9);
   animation:spTag .9s ease 1.9s forwards}
-/* The frame's "heritage touch": the name in Arabic, faint, at the foot. Neither design
-   face has Arabic glyphs, so this is the system Arabic face, as all Arabic in the app is.
+/* The frame's "heritage touch": the name in Arabic, faint, at the foot, in the
+   display face (Alexandria, for Arabic).
    The frame's "V 1.0.4" is placeholder text — the app has no version number to show. */
 #splash .sp-her{position:absolute;left:0;right:0;bottom:calc(32px + env(safe-area-inset-bottom));
   z-index:2;text-align:center;font-size:20px;color:#888580;opacity:0;
-  font-family:-apple-system,"SF Arabic","Geeza Pro","Segoe UI",Tahoma,sans-serif;
+  font-family:var(--display);font-weight:700;
   animation:spHer .9s ease 2.1s forwards}
 @keyframes spHer{to{opacity:.3}}
 @keyframes spArt{to{opacity:.92;transform:scale(1)}}
@@ -881,7 +894,7 @@ body.noanim #splash .sp-rule{transform:none;animation:none}
 body.noanim #splash .sp-tag{opacity:1;animation:none}
 body.noanim #splash .sp-her{opacity:.3;animation:none}
 body.noanim #splash .sp-embers{display:none}
-[dir="rtl"] body{font-family:-apple-system,"SF Arabic","Geeza Pro",BlinkMacSystemFont,
+[dir="rtl"] body{font-family:"Manrope","SF Arabic","Geeza Pro",-apple-system,BlinkMacSystemFont,
   "Segoe UI",Tahoma,sans-serif}
 [dir="rtl"] .chev{transform:scaleX(-1);display:inline-block}
 [dir="rtl"] th:first-child,[dir="rtl"] td:first-child{text-align:right}

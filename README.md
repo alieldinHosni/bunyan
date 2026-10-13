@@ -739,3 +739,11 @@ their brand colours exactly. In every theme:
   whistle). Signal Green, in Blue, marks something new.
 - Green means done, gold (brass) means earned, red means destructive, whatever the theme.
   If everything is gold, nothing is.
+
+### Type
+
+Four faces, all SIL Open Font License, all bundled in `fonts/` and precached, so the
+app keeps its type offline: Outfit (titles and figures) and Manrope (everything else)
+for Latin, and their Arabic partners, Alexandria and Readex Pro. Each Arabic face is
+declared under its Latin partner's family name with an Arabic `unicode-range`, so a
+heading in either language is set in the right face without a rule per language.
