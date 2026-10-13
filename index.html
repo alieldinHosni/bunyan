@@ -503,6 +503,11 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
   -moz-appearance:textfield}
 .stn::-webkit-outer-spin-button,.stn::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .stp{width:60px;height:60px}
+/* A figure you can type into reads as a field: a glass well, lit while it has focus. */
+.stfield .stv{background:var(--card);border:1px solid var(--card-edge);border-radius:18px;padding:8px 6px 6px;
+  transition:border-color .15s ease,box-shadow .15s ease}
+.stfield .stv:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accentSoft)}
+.stfield .stn:focus{outline:none}
 .plan{background:var(--accentSoft);border-radius:12px;padding:11px 13px;margin-bottom:12px}
 .thumb{border-radius:10px;object-fit:cover;background:#fff;flex-shrink:0}
 .thumb.ph{display:flex;align-items:center;justify-content:center;background:var(--raised);

@@ -17,7 +17,7 @@ import {blockNow} from "../engine/blocks.js";
 import {friends, snapStats} from "../engine/share.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
-import {CUES, mistakesFor, progressBar, sparkline, stepper, V} from "./view.js";
+import {CUES, mistakesFor, progressBar, sparkline, stepper, stepperInput, V} from "./view.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 import {tiexSheet} from "./views/timport.js";
@@ -311,9 +311,10 @@ function vSheet(){
      +'<button class="btn" data-saveweight="1">Save for '+pretty(today())+'</button>';
   }
   else if(V.sheet==="steps"){
-    b='<h2>'+t("Steps today")+'</h2><p class="tiny" style="margin:2px 0 14px">Target '+S.goals.steps+'.</p>'
-     +stepper("st",V.draft.st||dayRec().steps||0,500,"steps")
-     +'<button class="btn" data-savesteps="1">Save</button>';
+    b='<h2>'+t("Steps today")+'</h2><p class="tiny" style="margin:2px 0 14px">'
+     +esc(t("Target {n}. Tap the number to type it, or step by 500.").replace("{n}",fmtN(S.goals.steps)))+'</p>'
+     +'<div class="stfield">'+stepperInput("st",V.draft.st!=null?V.draft.st:(dayRec().steps||0),500,t("steps"),true)+'</div>'
+     +'<button class="btn" data-savesteps="1">'+esc(t("Save"))+'</button>';
   }
   else if(V.sheet==="recovery"){
     var r=dayRec();

@@ -142,7 +142,7 @@ function register(){
   key("stp",function(D){
     var id=D.stp,d1=parseFloat(D.d);
     var cur=id==="bw"?(V.draft.bw!=null?V.draft.bw:toDisp(lastWeight()||86))
-           :id==="st"?(V.draft.st||dayRec().steps||0):V.draft[id];
+           :id==="st"?(V.draft.st!=null?V.draft.st:(dayRec().steps||0)):V.draft[id];
     var min=id==="w"?0:id==="rpe"?1:id==="st"?0:1;
     var max=id==="rpe"?10:1e6;
     V.draft[id]=Math.min(max,Math.max(min,r1(num(cur)+d1)));

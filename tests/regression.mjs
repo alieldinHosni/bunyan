@@ -2066,6 +2066,19 @@ await test("Training: the bell says what the coach noticed and opens it; the ini
   await page.tap('#app [data-back]');await pause(page,500);
   eq(await ev(page,"V.tab"),"train","back returns to Training");
 });
+await test("Steps: tap the number and type any count (456); Done saves it; the buttons still step by 500",async page=>{
+  await tapTab(page,"train");await pause(page);await page.evaluate(()=>window.scrollTo(0,0));
+  await page.$eval('.htile.steps',e=>e.click());await pause(page,400);
+  eq(await page.$eval('#in_st',e=>[e.type,e.inputMode]),["number","numeric"],"a number field with the plain pad");
+  await page.tap('#in_st');await pause(page,150);
+  await page.keyboard.type("456");await pause(page,100);
+  await page.keyboard.press("Enter");await pause(page,400);
+  eq(await page.evaluate(async()=>{const m=await import("/js/state.js"),V=(await import("/js/ui/view.js")).V,u=await import("/js/util.js");return [!!V.sheet,(m.S.days[u.today()]||{}).steps];}),[false,456],"saved as typed, the sheet closed");
+  await page.$eval('.htile.steps',e=>e.click());await pause(page,400);
+  eq(await page.$eval('#in_st',e=>e.value),"456","the field opens on today's count");
+  await page.tap('.stfield [data-d="500"]');await pause(page,200);
+  eq(await page.$eval('#in_st',e=>e.value),"956","+ still steps by 500");
+});
 await test("Progress: training volume over a month is capsule bars, the newest in the accent with its figure",async page=>{
   await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page,400);
   const r=await page.evaluate(()=>{const c=document.querySelector(".caps");if(!c)return null;

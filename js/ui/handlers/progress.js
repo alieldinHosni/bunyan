@@ -75,7 +75,8 @@ function register(){
     S.body.sort(function(a,b){return a.date<b.date?-1:1;});
     V.draft.bw=null;saveDB();closeSheet();toast(t("Weight saved."));return;});
   key("savesteps",function(){
-    dayRec().steps=V.draft.st||0;V.draft.st=null;saveDB();closeSheet();return;});
+    var sv=V.draft.st!=null?V.draft.st:(dayRec().steps||0);
+    dayRec().steps=Math.max(0,Math.round(num(sv)));V.draft.st=null;saveDB();closeSheet();return;});
   key("saverec",function(){
     var r3=dayRec();r3.sleep=num(val("r_sleep"));r3.sore=num(val("r_sore"));
     r3.energy=num(val("r_energy"));r3.ankle=num(val("r_ankle"));r3.notes=val("r_notes");

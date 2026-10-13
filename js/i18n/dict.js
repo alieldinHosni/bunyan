@@ -1761,7 +1761,8 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Food facts": "معلومات الأكل",
 "{n} g": "{n} جم",
 "{n} kcal": "{n} سعر",
-"{n} g protein": "{n} جم بروتين"
+"{n} g protein": "{n} جم بروتين",
+"Target {n}. Tap the number to type it, or step by 500.": "الهدف {n}. دوس على الرقم واكتبه، أو غيّره 500 في المرة."
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;
