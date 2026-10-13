@@ -744,9 +744,9 @@ await test("Arabic: template program and day names are shown in Arabic, fraction
   if(r.frac.indexOf("3/4")<0)throw new Error("fraction lost its slash: "+r.frac);
   eq(r.own,"My Monday","a name the user typed passes through");
 },{prefs:{lang:"ar"}});
-await test("Light: the active dock icon reads on the dark dock",async page=>{
-  const c=await page.$eval('nav .dock-b.on',e=>getComputedStyle(e).color);
-  eq(c,"rgb(255, 92, 102)");
+await test("Light: the open tab reads on the dark dock: Glacier Blue on Machine Red",async page=>{
+  const c=await page.$eval('nav .dock-b.on',e=>[getComputedStyle(e).color,getComputedStyle(e).backgroundColor]);
+  eq(c,["rgb(219, 246, 255)","rgb(255, 46, 58)"]);
 },{db:Object.assign(seed(),{theme:"light"})});
 await test("One place for each thing: the assessment in Coach AI only, how you feel asked when a workout starts, nothing of it on Profile",async page=>{
   await tapTab(page,"train");await pause(page);
@@ -828,45 +828,52 @@ await test("Arabic plan: Arabic digits, the dual and spoons are read",async page
     return pp.parsePlan("الوجبة الأولى:\n٣ بيض\nبيضتين\nمعلقتين زبدة فول سوداني\nالعشا: ١٥٠ جم فراخ").map(m=>[m.named,m.n,m.items.map(i=>i.label)]);});
   eq(r,[[null,1,["3 × large egg","2 × large egg","2 tbsp"]],["Dinner",null,["150 g"]]]);
 });
-/* ---- themes: BUNYAN Red, BUNYAN Pink, Monochrome, each dark and light ------------------- */
+/* ---- themes: BUNYAN Red, BUNYAN Blue, Monochrome, each dark and light ------------------- */
 await test("Themes: the picker switches the whole app, and the choice outlives a reload",async page=>{
   await tapTab(page,"profile");await pause(page);
   await page.tap('[data-sheet="set_app"]');await pause(page,400);
-  eq(await page.$$eval('.thpick',a=>a.map(b=>b.getAttribute("data-settheme"))),["red","pink","mono"],"three themes");
+  eq(await page.$$eval('.thpick',a=>a.map(b=>b.getAttribute("data-settheme"))),["red","blue","mono"],"three themes");
   eq(await page.$eval('.thpick.on',e=>e.getAttribute("data-settheme")),"red","red by default");
-  await page.tap('[data-settheme="pink"]');await pause(page,500);
-  eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"pink","html is pink");
-  eq(await ev(page,"S.prefs.palette"),"pink","saved to the profile");
-  eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#FF7FEC","Electric Pink is the accent");
+  await page.tap('[data-settheme="blue"]');await pause(page,500);
+  eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"blue","html is blue");
+  eq(await ev(page,"S.prefs.palette"),"blue","saved to the profile");
+  eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#8AB0EC","Sky Blue is the accent");
   await page.tap('[data-lookmode="light"]');await pause(page,500);
-  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","pink|light"],"mode and the early copy");
+  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","blue|light"],"mode and the early copy");
   await page.reload();await page.waitForTimeout(60);
-  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-palette"),document.documentElement.getAttribute("data-theme")]),["pink","light"],"applied before the app runs");
+  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-palette"),document.documentElement.getAttribute("data-theme")]),["blue","light"],"applied before the app runs");
   await pause(page,1000);
   await tapTab(page,"profile");await pause(page);
-  if(!(await page.$eval('[data-sheet="set_app"]',e=>e.textContent)).includes("BUNYAN Pink"))throw new Error("the Profile row does not name the theme");
-  eq(await page.$eval('meta[name="theme-color"]',e=>e.content.toUpperCase()),"#FFF0FB","the status bar takes the theme's ground");
+  if(!(await page.$eval('[data-sheet="set_app"]',e=>e.textContent)).includes("BUNYAN Blue"))throw new Error("the Profile row does not name the theme");
+  eq(await page.$eval('meta[name="theme-color"]',e=>e.content.toUpperCase()),"#E9EEF6","the status bar takes the theme's ground");
 });
 await test("Themes: every theme and mode uses its reference colours exactly",async page=>{
   const r=await page.evaluate(()=>{
     const de=document.documentElement,out={};
-    for(const p of ["red","pink","mono"])for(const m of ["dark","light"]){
+    for(const p of ["red","blue","mono"])for(const m of ["dark","light"]){
       de.setAttribute("data-palette",p);de.setAttribute("data-theme",m);
       const cs=getComputedStyle(de);out[p+"-"+m]=["--accent","--bg","--onAccent","--raised"].map(k=>cs.getPropertyValue(k).trim().toUpperCase());}
     return out;});
   eq(r["red-dark"][0],"#FF2E3A","Machine Red");eq(r["red-dark"][2],"#DBF6FF","Glacier Blue on red");
   eq(r["red-light"].slice(0,2),["#FF2E3A","#DBF6FF"],"Glacier Blue ground");
-  eq([r["pink-dark"][0],r["pink-dark"][2],r["pink-dark"][3]],["#FF7FEC","#2E0F35","#2E0F35"],"Electric Pink on Dark Aubergine");
+  eq(r["blue-dark"].slice(0,3),["#8AB0EC","#070B1A","#070B1A"],"Sky Blue on Night Navy");
   eq(r["mono-dark"].slice(0,3),["#D7FFE0","#050505","#050505"],"Ghost Green on Zero Black");
   eq(r["mono-light"].slice(0,3),["#050505","#D7FFE0","#D7FFE0"],"Zero Black on Ghost Green");
 });
+await test("Themes: Pink became Blue; a profile that chose Pink opens in Blue, from the first paint",async page=>{
+  eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"blue","the app shows Blue");
+  eq(await ev(page,"S.prefs.palette"),"blue","the stored choice is Blue");
+  await page.evaluate(()=>localStorage.setItem("bunyan:look","pink|dark"));
+  await page.reload();await page.waitForTimeout(60);
+  eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"blue","the early copy too");
+},{prefs:{palette:"pink"}});
 await test("Themes: a delete asks in red whatever the theme",async page=>{
   await coach(page,"train","program");
   await page.$$eval('.drows [data-day]',a=>a[0].click());await pause(page,400);
   await page.$eval('[data-delday]',e=>e.click());await pause(page,500);
   const bg=await page.$eval('.cf.bad .cf-ok',e=>getComputedStyle(e).backgroundImage);
   if(!/229, 50, 62/.test(bg))throw new Error("delete is not red: "+bg);
-},{prefs:{palette:"pink"}});
+},{prefs:{palette:"blue"}});
 await test("Themes: the rest screen stays dark in light mode, with readable figures",async page=>{
   await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
   const r=await page.evaluate(()=>{const v=document.querySelector("#rest .rt-next-v");
@@ -1576,7 +1583,9 @@ await test("Phase 4: one card at a time until there is nothing to say, and then 
     eq(await page.$$eval('#app .pcf',a=>a.length),1,"one card at a time");
     await page.tap('#app .pcf [data-pckeep],#app .pcf [data-cokeep]');await pause(page,300);
     await page.evaluate(()=>{const x=document.querySelector('.toast');if(x)x.remove();});}
-  eq(await page.$$eval('#app .pcf,#app .as-note,#app .tsec-h',a=>a.length),0,"no cards, heading or footnote");
+  eq(await page.$$eval('#app .pcf,#app .as-note',a=>a.length),0,"no cards or footnote");
+  eq(await page.$$eval('#app .tsec-h',a=>a.map(h=>h.textContent)),["Your plan"],"no heading for the advice, only the plan's");
+  eq(await page.$eval('.cweek h2',e=>e.textContent),"On track","the coach says so at the top");
   eq(await page.$eval('#app .pcquiet',e=>e.textContent.trim()),"On track. Nothing to change.","one quiet line");
   eq(await page.$eval('nav [data-tab="coach"]',e=>e.classList.contains("advice")),false,"no dot");
   /* What was set aside can be brought back. */
@@ -1675,7 +1684,20 @@ await test("Dock: every tab is labelled, in English and Arabic, and the label st
   eq(await lab(),[["Train",true],["Food",true],["Coach",true],["Progress",true],["Profile",true]],"English");
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});await pause(page);
   eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الكوتش","التقدم","حسابي"],"Arabic");
-  eq(await page.$$eval("nav .dock-l",a=>a.every(l=>l.scrollWidth<=l.clientWidth+1)),true,"no label is cut off");
+});
+await test("Dock: round tabs; the one that is on opens into a pill with its name, uncut in either language, even on a small phone",async page=>{
+  const st=()=>page.evaluate(()=>[...document.querySelectorAll("nav .dock-b")].map(b=>{const l=b.querySelector(".dock-l"),r=b.getBoundingClientRect();
+    return {tab:b.dataset.tab,on:b.classList.contains("on"),w:Math.round(r.width),h:Math.round(r.height),shown:getComputedStyle(l).opacity==="1",cut:l.scrollWidth>l.clientWidth+1};}));
+  for(const [lang,w] of [["en",390],["ar",390],["en",360],["ar",360]]){
+    await page.setViewportSize({width:w,height:780});
+    await page.evaluate(async l=>{(await import("/js/state.js")).S.prefs.lang=l;(await import("/js/ui/render.js")).render();},lang);await pause(page,200);
+    for(const tab of ["progress","train","profile"]){
+      await tapTab(page,tab);await pause(page,500);
+      const s=await st(),on=s.find(x=>x.on),off=s.filter(x=>!x.on);
+      eq(on.tab,tab,lang+" "+w+": the tapped tab is on");
+      if(!on.shown||on.cut)throw new Error(lang+" "+w+" "+tab+": its name is hidden or cut: "+JSON.stringify(on));
+      if(off.some(x=>x.shown||Math.abs(x.w-x.h)>2))throw new Error(lang+" "+w+": a tab that is off is not a plain circle: "+JSON.stringify(off));
+      if(on.w<off[0].w+30)throw new Error(lang+" "+w+": the open pill is no wider than a circle");}}
 });
 await test("Focus: the live workout has no dock; Save and exit brings it back with the session kept",async page=>{
   await startWorkout(page);
@@ -2023,6 +2045,63 @@ await test("Coach chat: tomorrow's workout and how the last one went",async page
   if(!/Bench Press: 60 kg × 8/.test(r.a)||!/[\d,]+ kg lifted in all/.test(r.a))throw new Error(r.a);
   if(!(await page.$('.chat-acts [data-openday]')))throw new Error("no way to the session");
 });
+/* ---- the new look: the top of Training, capsule bars (views/home.js, views/progress.js) ---- */
+await test("Training: the bell says what the coach noticed and opens it; the initial opens Profile",async page=>{
+  await tapTab(page,"train");await pause(page);
+  const n=await ev(page,"V.advice");
+  const b=await page.$eval('.hacts [data-csec="ai"]',e=>[e.classList.contains("flag"),e.getAttribute("aria-label")]);
+  eq(b[0],n>0,"the dot is there exactly when there is something");
+  if(n>0&&b[1].indexOf(String(n))<0)throw new Error("the count is not in its name: "+b[1]);
+  await page.tap('.hacts [data-csec="ai"]');await pause(page,400);
+  eq(await ev(page,"[V.tab,V.csec]"),["coach","ai"],"the bell opens Coach AI");
+  await tapTab(page,"train");await pause(page);
+  await page.tap('.hacts [data-go="profile"]');await pause(page,400);
+  eq(await ev(page,"V.tab"),"profile","the initial opens Profile");
+});
+await test("Progress: training volume over a month is capsule bars, the newest in the accent with its figure",async page=>{
+  await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page,400);
+  const r=await page.evaluate(()=>{const c=document.querySelector(".caps");if(!c)return null;
+    const cs=[...c.querySelectorAll(".caps-c")];
+    return {n:cs.length,on:cs.map(x=>x.classList.contains("on")).lastIndexOf(true),v:(c.querySelector(".caps-c.on .caps-v")||{}).textContent,
+      label:c.getAttribute("aria-label"),round:getComputedStyle(c.querySelector(".caps-b")).borderTopLeftRadius};});
+  if(!r)throw new Error("no capsule bars");
+  eq(r.on,r.n-1,"the newest is the one marked");
+  if(!/^[\d,]+ kg$/.test(r.v||""))throw new Error("its figure: "+r.v);
+  if(!/^Training volume, /.test(r.label))throw new Error("no name for a screen reader: "+r.label);
+  if(parseFloat(r.round)<10)throw new Error("not rounded: "+r.round);
+});
+await test("Coach AI: this week's gauge agrees with Training's week; Ask me anything opens the chat ready to type; each plan tile opens its part",async page=>{
+  await tapTab(page,"train");await pause(page);
+  const wk=await page.$eval('.twk-h b',e=>e.textContent.match(/(\d+) \/ (\d+)/).slice(1).map(Number));
+  await coach(page,"ai");
+  const g=await page.evaluate(()=>({v:document.querySelector(".cweek-gv b").textContent,w:document.querySelector(".cweek-st b").textContent,
+    on:document.querySelectorAll(".cweek-svg line.on").length,dot:!!document.querySelector(".cweek-svg .dot")}));
+  eq(g.w,wk[0]+"/"+wk[1],"the same workouts as Training's week");
+  eq(g.v,wk[1]?Math.round(wk[0]/wk[1]*100)+"%":"—","the share");
+  if(wk[0]&&!g.on)throw new Error("no ticks filled");
+  await page.tap('.chatcard [data-chat="ask"]');await pause(page,400);
+  eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,!!document.querySelector(".chat-form")]),["chatq",true],"the box has the caret");
+  /* Its back arrow is in sight, at the top, and works with the keyboard up. */
+  const bb=await (await page.$('[data-back]')).boundingBox();
+  if(bb.y<0)throw new Error("the back arrow is off the top of the screen");
+  await page.touchscreen.tap(bb.x+bb.width/2,bb.y+bb.height/2);await pause(page,400);
+  eq(await ev(page,"[V.tab,!!V.chat]"),["coach",false],"back to Coach AI");
+  /* The dock ignores taps for a moment after the keyboard closes (body.kbleave). */
+  await pause(page,600);
+  for(const [sel,want] of [['.cplan-t[data-cfsub="targets"]',["coach","food"]],['.cplan-t[data-ctsub="program"]',["coach","train"]],['.cplan-t[data-cfsub="plan"]',["coach","food"]]]){
+    await coach(page,"ai");await page.$eval(sel,e=>e.scrollIntoView({block:"center"}));await pause(page,100);
+    await page.tap(sel);await pause(page,300);
+    eq(await ev(page,"[V.tab,V.csec]"),want,sel);}
+  await coach(page,"ai");
+  if(!(await page.$('.cplan-t[data-setup]')))throw new Error("no way to take the assessment again");
+});
+await test("Coach AI in Arabic: the gauge fills from the right, the plan's figures are Arabic",async page=>{
+  await coach(page,"ai");
+  const r=await page.evaluate(()=>({tf:getComputedStyle(document.querySelector(".cweek-svg")).transform,
+    tiles:[...document.querySelectorAll(".cplan-t")].map(x=>x.innerText).join(" ")}));
+  if(!/^matrix\(-1/.test(r.tf))throw new Error("not mirrored: "+r.tf);
+  if(/kcal|protein/i.test(r.tiles))throw new Error("English in the tiles: "+r.tiles);
+},{prefs:{lang:"ar"}});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);

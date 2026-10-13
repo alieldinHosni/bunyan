@@ -674,13 +674,17 @@ function vChat(){
    +'<button class="chat-send" data-chatsend="1" aria-label="'+esc(t("Ask"))+'">'+glyph("send")+'</button></div>';
   return h;}
 
-/* Coach AI's way in: a few questions to tap, and the rest of the conversation. */
+/* Coach AI's way in, as a composer: a box that says "ask me anything" and opens the
+   chat with the keyboard up, and a row of questions to tap instead of typing. Once
+   there is a conversation, a way back to it. */
 function chatCard(){
   var log=S.chat||[];
-  return '<section class="chatcard"><div class="chatcard-h"><span class="chat-gl">'+glyph("question")+'</span>'
-   +'<span><span class="chatcard-t">'+esc(t("Ask the coach"))+'</span>'
-   +'<span class="chatcard-s">'+esc(t("Questions answered from your own log, plan and targets."))+'</span></span></div>'
-   +'<div class="chat-topics tight">'+["today","eat","track"].map(topicRow).join("")+'</div>'
-   +'<button class="btn g sm" data-chat="1">'+esc(t(log.length?"Continue the conversation":"Ask something else"))+'</button></section>';}
+  return '<section class="chatcard"><div class="chatcard-h"><span class="chat-gl">'+glyph("whistle")+'</span>'
+   +'<span><span class="chatcard-t">'+esc(t("Ask me anything"))+'</span>'
+   +'<span class="chatcard-s">'+esc(t("In English or Arabic, answered from your own log, plan and targets."))+'</span></span></div>'
+   +'<button class="chat-ask" data-chat="ask"><span class="chat-ask-p">'+esc(t("Ask about training, food or progress"))+'</span>'
+   +'<span class="chat-ask-go" aria-hidden="true">'+glyph("send")+'</span></button>'
+   +chips(["today","eat","rest","weights","track"],"cc")
+   +(log.length?'<button class="btn g sm" data-chat="1">'+esc(t("Continue the conversation"))+'</button>':'')+'</section>';}
 
 export {ASK, ask, chatCard, NEXT, vChat};

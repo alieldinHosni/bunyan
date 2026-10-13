@@ -86,6 +86,9 @@ function render(){
   if(wasId&&was.setSelectionRange){
     try{selS=was.selectionStart;selE=was.selectionEnd;}catch(e){selS=null;}
   }
+  /* How many things Coach AI has to say, counted once: the dock's dot and the bell at
+     the top of Training both show it. */
+  V.advice=adviceCount();
   var h="";
   if(V.assess)h=vAssess();
   else if(V.tab==="train")h=vTrain();
@@ -126,7 +129,7 @@ function render(){
   var focus=!V.assess&&V.tab==="train"&&!!S.active&&V.train!=="hub";
   document.body.classList.toggle("focus",focus);
   /* The dock is built once and only its state changes after that — see dock.js. */
-  syncDock(document.getElementById("nav"),V.tab,adviceCount());
+  syncDock(document.getElementById("nav"),V.tab,V.advice);
   /* A workout under way, seen from another tab. */
   syncWbar();
   /* A new screen opens with the dock in view (see dock.js). */

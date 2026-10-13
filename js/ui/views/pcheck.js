@@ -54,14 +54,16 @@ function adviceBody(){
   if(!all.length)return '<p class="pcquiet"><span class="ico ico-check" aria-hidden="true"></span>'
     +esc(t((S.sessions||[]).length<3?"Nothing to change. After a few weeks of sessions the coach reads your training too.":"On track. Nothing to change."))+'</p>'+again;
   var open=V.advall||all.length===1;
-  var h='<div class="tsec"><h2 class="tsec-h">'+t("What the coach sees")+'</h2>'
+  var h='<div class="tsec"><h2 class="tsec-h">'+t("Coach noticed")+'</h2>'
    +'<span class="libn">'+all.length+'</span></div>';
   h+=(open?all:all.slice(0,1)).map(function(x){return x.html();}).join("");
   if(all.length>1)h+=open
     ?'<button class="btn g sm pcmore" data-advall="0">'+esc(t("Show only the most important"))+'</button>'
     :'<button class="btn g pcmore" data-advall="1">'+esc(t(all.length===2?"1 more thing the coach sees":"{n} more things the coach sees").replace("{n}",all.length-1))+'</button>';
   if(kept)h+='<p class="dsub">'+esc(t("You chose to keep some as they are. They come back here if the numbers behind them change."))+'</p>'+again;
-  h+='<p class="as-note">'+esc(t("Ranges and targets here are starting points from the research, not rules. How you feel, recover and progress over a few weeks says more."))+'</p>';
   return h;}
+/* The small print under the whole of Coach AI. */
+function adviceNote(){
+  return '<p class="as-note">'+esc(t("Ranges and targets here are starting points from the research, not rules. How you feel, recover and progress over a few weeks says more."))+'</p>';}
 
-export {adviceBody, adviceCount, coachAct};
+export {adviceBody, adviceCount, adviceNote, coachAct};

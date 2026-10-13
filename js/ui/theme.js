@@ -2,7 +2,7 @@
    The three BUNYAN themes and the one place that puts the chosen one on screen.
 
    Every colour lives in index.html's theme blocks; this module only names the themes
-   and applies the choice. A theme (data-palette: red, pink, mono) and a mode
+   and applies the choice. A theme (data-palette: red, blue, mono) and a mode
    (data-theme: dark, light) go on html, and every token block keys off the pair. Both
    are the profile's own, so each person on the phone keeps theirs. */
 import {S} from "../state.js";
@@ -11,18 +11,21 @@ import {isReduced} from "./motion.js";
 /* sw: the two reference colours each theme is built from, exactly as given. */
 var THEMES=[
   {id:"red",name:"BUNYAN Red",sw:["#FF2E3A","#DBF6FF"]},
-  {id:"pink",name:"BUNYAN Pink",sw:["#2E0F35","#FF7FEC"]},
+  {id:"blue",name:"BUNYAN Blue",sw:["#070B1A","#8AB0EC","#82FC4F"]},
   {id:"mono",name:"Monochrome",sw:["#050505","#D7FFE0"]}];
 
+/* Pink was replaced by Blue at the owner's request; a profile that chose Pink is
+   shown Blue (schema's tidy() also rewrites the stored choice on the next load). */
 function themeOf(){
   var p=S.prefs&&S.prefs.palette;
+  if(p==="pink")p="blue";
   return THEMES.some(function(x){return x.id===p;})?p:"red";}
 function modeOf(){return S.theme==="light"?"light":"dark";}
 function themeName(id){return (THEMES.filter(function(x){return x.id===id;})[0]||THEMES[0]).name;}
 
 /* Called by every render. Cheap when nothing changed. The pair is also kept under its
    own small key, which index.html reads before the first paint of the next launch: the
-   profile's full record is far too big to parse that early, and without it a Pink or
+   profile's full record is far too big to parse that early, and without it a Blue or
    Monochrome user saw the default red for a moment on every start. The status bar
    (theme-color) takes the theme's ground. */
 var last="";

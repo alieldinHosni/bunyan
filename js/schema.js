@@ -226,8 +226,11 @@ var STEPS=[
 ];
 
 /* Every load, whatever the version: each program in shape, at least one program
-   (the full-body template, for a profile with none), and an active one that exists. */
+   (the full-body template, for a profile with none), an active one that exists, and a
+   theme that still exists. */
 function tidy(db,env){
+  /* Pink became Blue: the theme the owner replaced it with. */
+  if(db.prefs&&db.prefs.palette==="pink")db.prefs.palette="blue";
   if(!Array.isArray(db.programs))db.programs=[];
   db.programs.forEach(normProg);
   if(!db.programs.length){var fb=env.template("fb");if(fb){var c=copyProgram(fb,env);db.programs.push(c);}}

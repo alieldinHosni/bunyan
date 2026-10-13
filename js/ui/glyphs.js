@@ -1,5 +1,5 @@
 /* Bunyan — glyphs
-   The line icons the Coach chat and Profile use, drawn for them on the 24px grid the
+   The line icons the Coach chat, Profile and the top of Training use, drawn for them on the 24px grid the
    rest of the icon set uses: a 1.75 stroke in the current text colour, square caps and
    mitred joins, nothing filled. Inline SVG rather than the CSS-mask icons in
    index.html, because these sit inside tinted tiles and take their colour from them.
@@ -34,7 +34,9 @@ var P={
   check:"M5 12.5l4.5 4.5L19 7.5",
   lock:"M5 10.5h14V21H5zM8 10.5V7a4 4 0 0 1 8 0v3.5",
   restore:"M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5",
-  sound:"M4 9h4l5-4v14l-5-4H4zM16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"};
+  sound:"M4 9h4l5-4v14l-5-4H4zM16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11",
+  bell:"M6 16.5V10.5a6 6 0 0 1 12 0v6l1.5 2h-15zM10 21.5h4",
+  whistle:"M9 7h12.5v4.75h-6.9A6.25 6.25 0 1 1 9 7zM10.9 13.25a1.9 1.9 0 1 1-3.8 0 1.9 1.9 0 0 1 3.8 0z"};
 
 function glyph(name,cls){
   var d=P[name];if(!d)return "";
