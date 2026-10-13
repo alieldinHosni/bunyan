@@ -469,7 +469,12 @@ otherwise they would outlive the blob that was supposed to own them.
   muscle with at least a fifth of the top one's work is part of the day. Those muscles,
   in order, choose four or five moving drills (an opener first, quick hops last on a day
   that jumps or sprints), after a few minutes of easy cardio. A walk or yoga gets none,
-  and a plan that opens with its own mobility work keeps it.
+  and a plan that opens with its own mobility work keeps it. Every drill has a picture:
+  the library's photographs, or for the five the library shot under another name (leg
+  swings, the glute bridge hold, the cross-body stretch, the pass-through), those; the
+  rest are drawn as figures (`js/data/poses.js`): the body in the highlight, the far
+  limbs fainter, a dashed arrow for the movement, a wall or a door frame where it needs
+  one.
 - **Ramp-up sets** lead to the first heavy compound lift: the empty bar × 10 on a
   barbell, then 50% × 5 and 75% × 3 of the working weight (40%, 60% and 80% from 100 kg
   up), rounded to 2.5 kg. The working weight is the recommendation from last time, or

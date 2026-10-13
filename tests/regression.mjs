@@ -2145,6 +2145,15 @@ await test("Guide: the first time Training opens, glass tips point at each thing
   await page.click('.tour-skip');await pause(page,500);
   eq([await card(),await ev(page,"S.prefs.toured.train")],[null,1],"Skip ends it, seen");
 },{tour:true});
+await test("Warm-up pictures: drills the library shot under another name use its photos; the rest are drawn as figures, in the list and on their sheet",async page=>{
+  const r=await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    return {bridge:X.exImg("Glute Bridge Hold",1),swing:X.exImg("Side-to-Side Leg Swings",0),cobra:X.exImg("Cobra Stretch",0),
+      thumb:X.thumb("Cobra Stretch",40).indexOf('class="pose')>=0,none:X.thumb("Pec Deck Fly",40).indexOf('class="pose')>=0};});
+  if(!/Butt_Lift_Bridge\/1\.jpg$/.test(r.bridge)||!/Side_Leg_Raises\/0\.jpg$/.test(r.swing))throw new Error("photos: "+JSON.stringify(r));
+  eq([r.cobra,r.thumb,r.none],[null,true,false],"Cobra is drawn; a machine exercise is not");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Pigeon Stretch"});});await pause(page,600);
+  eq(await page.$$eval('#sheet .exd-pose svg.pose path.lb',a=>a.length>=4),true,"its sheet shows the figure");
+});
 await test("Steps: tap the number and type any count (456); Done saves it; the buttons still step by 500",async page=>{
   await tapTab(page,"train");await pause(page);await page.evaluate(()=>window.scrollTo(0,0));
   await page.$eval('.htile.steps',e=>e.click());await pause(page,400);

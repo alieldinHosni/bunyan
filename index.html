@@ -4257,6 +4257,23 @@ body.noanim .chat-orb::before,body.noanim .chat-orb::after{animation:none!import
 body.touring nav.dhid .dock{transform:none;opacity:1}
 @media (prefers-reduced-motion:reduce){.tour-hole,.tour-hole::after,.tour-card.in{transition:none;animation:none!important;opacity:1}}
 body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{transition:none;animation:none!important;opacity:1}
+/* A drill drawn as a figure (js/data/poses.js) where the library has no photograph:
+   the body in the highlight, the far arm and leg fainter, the movement a dashed arrow
+   in the text colour, props (a wall, a door frame) as quiet lines. */
+.pose{display:block;width:100%;height:auto;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.pose .fl{stroke:var(--hair-hi);stroke-width:1.5}
+.pose .prop{stroke:var(--sub);stroke-width:2.2;opacity:.55}
+.pose .tr{stroke:var(--accentHi);stroke-width:9}
+.pose .lb{stroke:var(--accentHi);stroke-width:6.2}
+.pose .lb.far{opacity:.42}
+.pose .ft{stroke-width:5}
+.pose .hd{fill:var(--accentHi);stroke:none}
+.pose .mv{stroke:var(--text);stroke-width:1.8;stroke-dasharray:3 3;opacity:.75}
+.pose .mvh{stroke:var(--text);stroke-width:1.8;opacity:.75}
+.thumb.ph.posed{background:radial-gradient(120% 120% at 30% 15%,rgba(var(--accent-rgb),.16),transparent 60%),var(--raised);padding:2px}
+.exd-pose{margin:4px 0 12px;padding:10px 14px;border-radius:var(--r4);border:1px solid var(--border);
+  background:radial-gradient(120% 90% at 30% 10%,rgba(var(--accent-rgb),.14),transparent 60%),var(--surface)}
+.exd-pose .pose{max-width:300px;margin:0 auto}
 /* Coach AI's card: what it is, three questions, and the rest of the conversation. */
 .chatcard{margin:0 0 var(--s4);padding:16px;border-radius:var(--r5);border:1px solid var(--border);background:var(--raised);box-shadow:var(--shadow-card)}
 .chatcard-h{display:flex;align-items:center;gap:12px;margin:0 0 14px}

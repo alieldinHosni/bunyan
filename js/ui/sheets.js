@@ -2,6 +2,7 @@
    Every bottom sheet, dispatched by vSheet(). */
 import {t, tm} from "../i18n/dict.js";
 import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
+import {hasPose, poseSvg} from "../data/poses.js";
 import {movementLabel} from "../data/movement.js";
 import {exName, planName} from "../i18n/exnames.js";
 import {dayMeals, mealName} from "../engine/meals.js";
@@ -512,6 +513,8 @@ function vSheet(){
       b+='<div class="exd-form2">'
        +'<figure><img src="'+exImg(nD,0)+'" alt="" decoding="async"><figcaption>'+t("Start")+'</figcaption></figure>'
        +'<figure><img src="'+exImg(nD,1)+'" alt="" decoding="async"><figcaption>'+t("End")+'</figcaption></figure></div>';
+    /* No photographs, but the drill is drawn (js/data/poses.js). */
+    else if(hasPose(nD))b+='<div class="exd-pose" role="img" aria-label="'+esc(exName(nD))+'">'+poseSvg(nD)+'</div>';
     b+='<div class="exd-facts">'
      +'<div><span>'+t("Primary")+'</span><b>'+tm(mD)+'</b></div>'
      +'<div><span>'+t("Secondary")+'</span><b>'+(secD.length?secD.map(function(s){return tm(s);}).join(" \u00b7 "):"—")+'</b></div>'
