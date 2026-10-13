@@ -1664,7 +1664,8 @@ await test("Dock: a page with little to scroll keeps its dock",async page=>{
   for(let i=0;i<12;i++){await page.evaluate(()=>window.scrollBy(0,15));await page.waitForTimeout(16);}
   await pause(page,650);
   eq(await page.evaluate(()=>document.getElementById("nav").classList.contains("dhid")),false);
-},{prefs:{anim:true}});
+/* No protein target, so Food has no body diagram and stays a short page. */
+},{prefs:{anim:true},db:Object.assign(seed(),{goals:{kcal:2500,p:0,c:300,f:70,water:3000,steps:9000}})});
 await test("Dock: slides off scrolling down and back scrolling up, at the scroll's pace",async page=>{await dockTest(page,true);},{prefs:{anim:true}});
 await test("Dock: with animations off it fades out and back instead",async page=>{await dockTest(page,false);});
 await test("Dock: the workout bar takes the dock's place while it is away, and still opens the workout",async page=>{

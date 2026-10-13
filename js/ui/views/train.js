@@ -123,7 +123,7 @@ function vTrainHome(){
   h+=deloadCard();
   h+=bodyTiles();
   /* Running mode: a run tracked live with the phone's GPS (js/ui/run.js). */
-  h+='<button class="ttile wide trun" data-run="start"><span class="ttile-i" aria-hidden="true">'+glyph("route")+'</span>'
+  h+='<button class="ttile wide tquick trun" data-run="start"><span class="ttile-i" aria-hidden="true">'+glyph("route")+'</span>'
    +'<span class="ttile-tx"><span class="ttile-n">'+t("Running mode")+'</span>'
    +'<span class="ttile-s">'+t("Time, distance and pace from your phone's GPS")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
