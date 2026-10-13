@@ -30,8 +30,8 @@ in Arabic, nothing changes the plan without a tap.
 - What a profile stores is written down in `js/schema.js` (JSDoc types), with its
   defaults, the shape check every load runs, versioned migrations (the blob records
   `v`; each step runs once, in order) and the check a restored backup must pass (A4).
-- The guard is the regression suite (145 browser tests), the coach tests (147), the
-  engine, data and schema tests (`tests/engine.mjs`, 214), the architecture test and
+- The guard is the regression suite (157 browser tests), the coach tests (147), the
+  engine, data and schema tests (`tests/engine.mjs`, 265), the architecture test and
   random-tap stress runs in both languages.
 
 ## Where the coaching stands
