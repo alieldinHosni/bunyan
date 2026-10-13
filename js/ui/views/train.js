@@ -157,7 +157,7 @@ function lastRunCard(){
   return '<button class="trun-last" data-openday="'+esc(date)+'" aria-label="'+esc(t("Last run")+", "+run.km+" "+t("km")+(pace?", "+pace+" "+t("per km"):"")+", "+when)+'">'
    +'<span class="trun-map" aria-hidden="true">'+(d?'<svg viewBox="0 0 120 80"><path d="'+d+'"/></svg>':glyph("route"))+'</span>'
    +'<span class="trun-t" aria-hidden="true"><span class="trun-k">'+esc(t("Last run"))+' · '+esc(when)+'</span>'
-   +'<b class="num" dir="ltr">'+(+run.km).toFixed(2)+'<small> '+esc(t("km"))+'</small></b>'
+   +'<b><span class="num">'+(+run.km).toFixed(2)+'</span><small> '+esc(t("km"))+'</small></b>'
    +'<span class="trun-s">'+esc([pace?pace+" /"+t("km"):"",run.min?run.min+" "+t("min"):""].filter(Boolean).join(" · "))+'</span></span>'
    +'<span class="trun-go" aria-hidden="true">'+glyph("arrow")+'</span></button>';}
 
