@@ -1103,7 +1103,7 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
 .setrow.hd{background:none;border:none;padding:0 9px 6px;margin-bottom:2px}
 .setrow.hd span{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
   color:var(--faint);text-align:center}
-.setrow.hd span:nth-child(2),.setrow.hd span:nth-child(3){text-align:left}
+.setrow.hd span:nth-child(2){text-align:start}
 .setrow.on{border-color:var(--accent);background:var(--accentSoft)}
 .setrow.pend{opacity:.55}
 .setrow.warm{opacity:.7}
@@ -1116,8 +1116,11 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
   font-variant-numeric:tabular-nums}
 .setrow.on .setnum{color:var(--accentHi)}
 .setrow.did .setnum{color:var(--text)}
-.setprev{font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Last time, under the boxes it is the reference for: its own line, as wide as they are. */
+.setprev{grid-column:3/-2;grid-row:2;margin-top:-1px;font-size:12px;line-height:1.2;color:var(--dim);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:start}
+.setprev span{color:var(--faint);font-weight:600}
+.setprev b{font-weight:700;font-variant-numeric:tabular-nums}
 .cell{background:var(--raised);border:1px solid var(--border);border-radius:9px;height:42px;
   text-align:center;font-size:16px;font-weight:700;color:var(--text);width:100%;padding:0;
   font-variant-numeric:tabular-nums;-moz-appearance:textfield}
@@ -4047,13 +4050,16 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .pgshare-r.wv.low .bar i{opacity:.55}
 .pgnote{margin:10px 0 0;font-size:12.5px;color:var(--dim);line-height:1.45}
 /* ---- readiness, session effort, pain (session.js, sheets.js) ------------------------- */
-.ready{margin:14px 0 0;padding:14px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+.ready{margin:12px 0 0;padding:10px 12px 12px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+.ready .ready-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.ready .ready-c button{min-height:36px}
 .ready-h,.wc2-effort-h{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
 .ready-c{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .ready-c button{min-height:44px;padding:0 2px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
   color:var(--sub);font-size:12.5px;font-weight:700}
 .ready-c button.on{background:rgba(var(--accent-rgb),.16);border-color:rgba(var(--accentHi-rgb),.7);color:var(--text)}
-.ready-skip{display:block;margin:10px auto 0;border:none;background:none;color:var(--dim);font-size:13px;font-weight:600;min-height:32px}
+.ready-skip{flex:none;margin-block:-6px;margin-inline:0 -6px;padding:0 8px;border:none;background:none;color:var(--dim);font-size:13px;font-weight:600;
+  letter-spacing:0;text-transform:none;min-height:32px}
 .readynote,.painnote{margin:14px 0 0;padding:12px 14px;border-radius:var(--r4);font-size:13.5px;line-height:1.45}
 .readynote{background:var(--raised);border:1px solid var(--border);color:var(--sub)}
 .readynote .readyless{display:flex;margin:10px 0 0}
