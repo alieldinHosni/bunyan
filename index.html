@@ -1828,7 +1828,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   font-family:var(--display);font-weight:800;font-size:15px}
 .bkday.blank .bnum{background:var(--surface);border-color:var(--border);color:var(--dim)}
 .bkday.blank{border-style:dashed}
-.drow-s em{font-style:normal;color:var(--accentHi);font-weight:600}
+.drow-s em{font-style:normal;color:var(--faint);font-weight:500}
 .dmain .ico-chev{flex:0 0 auto;margin-inline-end:6px;color:var(--dim)}
 .dedit .ico-edit{flex:0 0 auto;margin-inline-end:8px;opacity:.55}
 .bsp.on{border-color:rgba(var(--accentHi-rgb),.55);background:linear-gradient(180deg,rgba(var(--accent-rgb),.10),transparent),var(--raised)}
@@ -2352,8 +2352,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .fitemrow-k{font-weight:700;font-size:15px;flex-shrink:0;font-variant-numeric:tabular-nums}
 /* The frame shows this revealed by a swipe. It is a permanent button instead: the app
    has no list-swipe anywhere else, and a delete that has to be discovered by dragging
-   is a delete some users never find. */
-.fitemrow-x{flex:0 0 52px;background:rgba(var(--danger-rgb),.12);border:none;color:var(--danger);
+   is a delete some users never find. Quiet until pressed: a column of red blocks made
+   a meal read as a list of warnings. */
+.fitemrow-x{flex:0 0 48px;background:none;border:none;border-inline-start:1px solid var(--hair);color:var(--faint);
   display:flex;align-items:center;justify-content:center}
 :root:not(.tch) .fitemrow-x:active,.fitemrow-x.tapd{background:var(--danger);color:#fff}
 .fitemrow-x .ico-trash{width:20px;height:20px;flex-basis:20px}
