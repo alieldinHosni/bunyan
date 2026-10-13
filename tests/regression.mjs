@@ -599,7 +599,7 @@ await test("Training: opens the app, one reminder at most, today's card, weigh-i
   eq(await ev(page,"V.tab"),"train","the app opens on Training");
   eq(await page.$$eval('.hnote',a=>a.length)<=1,true,"one reminder");
   if(!(await page.$('#app .thero2 [data-startday]')))throw new Error("no today card");
-  eq(await page.$$eval('#app .htile',a=>a.map(e=>e.classList[1])),["weight","steps"],"weigh-in and steps");
+  eq(await page.$$eval('#app .htile',a=>a.map(e=>["weight","steps"].filter(c=>e.classList.contains(c))[0])),["weight","steps"],"weigh-in and steps");
   eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");return sc.isoWeekday(document.querySelector('.twk-d').getAttribute('data-tweek'));}),6,"Saturday first");
   await tapTab(page,"food");await pause(page);
   const w0=await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;});
