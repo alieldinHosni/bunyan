@@ -271,6 +271,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --ground:radial-gradient(120% 60% at 50% -10%,rgba(255,46,58,.15) 0%,transparent 62%),
     radial-gradient(95% 55% at 100% 105%,rgba(219,246,255,.06) 0%,transparent 60%);
   --card:rgba(22,24,30,.80); --card-edge:var(--border);
+  --map-water:rgba(219,246,255,.10); --map-park:rgba(219,246,255,.05);
 }
 [data-theme="light"],[data-palette="red"][data-theme="light"]{
   --dock-dot:rgba(219,246,255,.10); --dock-dot-solid:#1D2226; --dock-dot-edge:rgba(219,246,255,.10);
@@ -278,6 +279,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --ground:radial-gradient(110% 55% at 50% -12%,#F6FDFF 0%,transparent 65%),
     linear-gradient(180deg,transparent 35%,#C6E8F4 100%);
   --card:rgba(245,252,255,.80); --card-edge:rgba(188,220,232,.9);
+  --map-water:rgba(120,190,215,.30); --map-park:rgba(120,190,215,.14);
 }
 [data-palette="blue"],[data-palette="blue"] [data-theme="dark"]:not([data-palette]){
   --dock-dot:rgba(212,217,226,.08); --dock-dot-solid:#1F2840; --dock-dot-edge:rgba(212,217,226,.10);
@@ -286,6 +288,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
     radial-gradient(95% 60% at 0% 105%,rgba(82,125,174,.24) 0%,transparent 62%),
     linear-gradient(180deg,#0B1229 0%,var(--night-navy) 55%);
   --card:rgba(37,48,80,.52); --card-edge:rgba(212,217,226,.13);
+  --map-water:rgba(138,176,236,.20); --map-park:rgba(130,252,79,.07);
 }
 [data-palette="blue"][data-theme="light"]{
   --dock-dot:rgba(212,217,226,.08); --dock-dot-solid:#1F2840; --dock-dot-edge:rgba(212,217,226,.10);
@@ -293,6 +296,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --ground:radial-gradient(115% 55% at 85% -8%,rgba(138,176,236,.55) 0%,transparent 60%),
     linear-gradient(180deg,#EEF2F8 0%,#D9E1EE 100%);
   --card:rgba(255,255,255,.70); --card-edge:rgba(255,255,255,.85);
+  --map-water:rgba(138,176,236,.40); --map-park:rgba(90,190,60,.16);
 }
 [data-palette="mono"],[data-palette="mono"] [data-theme="dark"]:not([data-palette]){
   --dock-dot:rgba(215,255,224,.07); --dock-dot-solid:#1A1D1B; --dock-dot-edge:rgba(215,255,224,.09);
@@ -301,6 +305,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
     radial-gradient(100% 60% at 100% 105%,rgba(130,160,140,.11) 0%,transparent 62%),
     linear-gradient(170deg,#0B100D 0%,var(--zero-black) 60%);
   --card:rgba(215,255,224,.045); --card-edge:rgba(215,255,224,.10);
+  --map-water:rgba(215,255,224,.10); --map-park:rgba(215,255,224,.06);
 }
 /* Monochrome, light is the reference's sage glass in Zero Black and Ghost Green: a
    Ghost Green page that deepens to a grey green, frosted white cards, and the dock a
@@ -311,6 +316,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --ground:radial-gradient(110% 50% at 10% -5%,rgba(255,255,255,.75) 0%,transparent 60%),
     linear-gradient(170deg,#E6FFEB 0%,var(--ghost-green) 35%,#B3D5BC 100%);
   --card:rgba(255,255,255,.55); --card-edge:rgba(255,255,255,.80);
+  --map-water:rgba(120,170,135,.30); --map-park:rgba(120,170,135,.16);
 }
 /* An element that carries its own theme or mode (the rest screen, the splash, a theme
    preview) restates its text colour: color is resolved once on body and then inherited
@@ -3831,10 +3837,27 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .run-map{position:relative;margin:14px calc(-1 * var(--gutter)) 0;height:min(46vh,340px);overflow:hidden;
   -webkit-mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent);mask-image:linear-gradient(180deg,transparent,#000 12%,#000 82%,transparent)}
 .run-map svg{display:block;width:100%;height:100%}
-.run-map .g{stroke:var(--hair);stroke-width:1;fill:none}
-.run-map .s{stroke:var(--hair-hi);stroke-width:6;fill:none;stroke-linecap:round;opacity:.7}
-.run-map .rt{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
-.run-map .rt-glow{fill:none;stroke:var(--accent);stroke-width:12;stroke-linecap:round;stroke-linejoin:round;opacity:.22}
+/* The drawn city (js/ui/runmap.js): streets are the ground showing between blocks,
+   the blocks a shade lighter, buildings lighter again; water and parks are the
+   theme's own tints. The route is the only thing in the accent. */
+.rm-bg{fill:var(--bg)}
+.rm-blk rect{fill:rgba(255,255,255,.035)}
+.rm-bld rect{fill:rgba(255,255,255,.055)}
+.rm-park rect{fill:var(--map-park)}
+.rm-tree circle{fill:var(--map-park);opacity:.9}
+.rm-river{fill:none;stroke:var(--map-water);stroke-linecap:round}
+.rm-bank{fill:none;stroke:rgba(255,255,255,.04);stroke-linecap:round}
+.rm-ripple{fill:none;stroke:rgba(255,255,255,.08);stroke-width:1;stroke-dasharray:2 7}
+.rm-av path{fill:none;stroke:rgba(255,255,255,.07)}
+[data-theme="light"] .trun-map .rm-blk rect{fill:rgba(0,0,0,.045)}
+[data-theme="light"] .trun-map .rm-bld rect{fill:rgba(0,0,0,.06)}
+[data-theme="light"] .trun-map .rm-av path{stroke:rgba(255,255,255,.7)}
+[data-theme="light"] .trun-map .rm-bank{stroke:rgba(255,255,255,.5)}
+.run-map .rt{fill:none;stroke:var(--accent);stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round}
+.run-map .rt-glow{fill:none;stroke:var(--accent);stroke-width:16;stroke-linecap:round;stroke-linejoin:round;opacity:.2}
+.run-map .rt-hi{fill:none;stroke:rgba(255,255,255,.55);stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.run-map .km circle{fill:var(--bg);stroke:var(--accent);stroke-width:2}
+.run-map .km text{fill:var(--text);font:800 9px/1 var(--display);text-anchor:middle}
 .run-map .st{fill:var(--bg);stroke:var(--accent);stroke-width:3}
 .run-map .now{fill:var(--accent);stroke:var(--bg);stroke-width:2.5}
 .run-map .now-r{fill:rgba(var(--accent-rgb),.22);stroke:none;transform-box:fill-box;transform-origin:center;animation:runPulse 2s ease-out infinite}
@@ -3878,7 +3901,9 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .trun-map{display:grid;place-items:center;flex:none;width:96px;height:68px;border-radius:calc(var(--r4) - 4px);
   background:linear-gradient(var(--hair) 1px,transparent 1px) 0 0/16px 16px,linear-gradient(90deg,var(--hair) 1px,transparent 1px) 0 0/16px 16px,var(--well);color:var(--accentHi)}
 .trun-map svg{width:100%;height:100%}
-.trun-map path{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.trun-map{overflow:hidden}
+.trun-map .rt{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.trun-map .rt-glow{fill:none;stroke:var(--accent);stroke-width:8;stroke-linecap:round;stroke-linejoin:round;opacity:.22}
 .trun-map .gl{width:26px;height:26px}
 .trun-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .trun-k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
@@ -3992,6 +4017,10 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 :root:not(.tch) .actbtn:active,.actbtn.tapd{transform:scale(.95)}
 .actbtn .acticon{color:var(--accentHi)}
 .actbtn span{line-height:1.2;overflow-wrap:anywhere}
+/* Running outdoors, which running mode tracks live: lit, with a GPS tag. */
+.actbtn.live{position:relative;border-color:rgba(var(--accentHi-rgb),.45);background:linear-gradient(180deg,rgba(var(--accent-rgb),.12),transparent),var(--raised)}
+.actbtn-gps{position:absolute;top:7px;inset-inline-end:7px;padding:2px 6px;border-radius:var(--rpill);font-style:normal;font-size:9.5px;font-weight:800;
+  letter-spacing:.06em;color:var(--onAccent);background:var(--accent)}
 .thumb.ph.act{display:grid;place-items:center;border-radius:12px;background:rgba(var(--accent-rgb),.12);color:var(--accentHi)}
 /* ---- Rest: hide to a bar (session.js) ------------------------------------------------ */
 .rt-hide{position:absolute;top:calc(14px + env(safe-area-inset-top));inset-inline-start:16px;z-index:2;display:flex;align-items:center;gap:6px;

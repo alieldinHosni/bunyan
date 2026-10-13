@@ -85,16 +85,20 @@ your initial at the top right of Training.
   and steps (each icon in a round glass button at the tile's corner; steps ringed by
   their share of the goal, with "Goal met" when it is), and a run or a match to log. A
   workout left for later shows here as a Resume card.
-- **Running mode** (`ui/run.js`, the arithmetic in `engine/run.js`), from Training: a
-  run tracked live with the phone's own GPS, free and offline. The route is drawn as
-  it grows on a quiet grid (no map: tiles would need a service), the time large, the
-  distance, calories (about 1 kcal per kg per km) and pace, with pause and resume.
+- **Running mode** (`ui/run.js`, the arithmetic in `engine/run.js`), from Training or
+  from Log cardio (Running, outdoor offers it, or logging a run already done): a run
+  tracked live with the phone's own GPS, free and offline. The route is drawn as it
+  grows, glowing, with a mark at each kilometre, on a city drawn by `ui/runmap.js`
+  (blocks, avenues, a river, parks; seeded by the run, so it keeps its ground; not
+  the real streets, which would need a map service), the time large, the distance,
+  calories (about 1 kcal per kg per km) and pace, with pause and resume.
   Fixes worse than 35 m, closer than 4 m to the last, or faster than 9 m/s are not
   counted. The screen stays awake, because a phone stops giving a web app its position
   in the background. Finishing saves a Running activity with its route; without
   location it is timed only, and the logger opens with the minutes in for the
-  distance. A run in progress survives closing the app. The last run of the fortnight shows on Training
-  as a card, after the reference's: its route, the kilometres, pace and time.
+  distance. A run in progress survives closing the app. The last run of the fortnight
+  shows on Training as a card, after the reference's: its route on its ground, the
+  kilometres, pace and time.
 - **Food** (`views/food.js`) is the day: what you have eaten against the targets, the
   meals (a planned one is a tap from logging), water, and "Log today's plan". Today
   also reads the log as a body (`ui/bodyneeds.js`, numbers from `engine/needs.js`): a

@@ -235,6 +235,7 @@ await test("readiness, pain flag and session effort are kept with the workout",a
 await test("an activity logs pace inputs and heart rate",async page=>{
   await tapTab(page,"train");await pause(page);
   await page.tap('[data-actsheet]');await pause(page);await page.tap('#sheet [data-quickact="Running"]');await pause(page,500);
+  await page.tap('#sheet [data-confirmalt]');await pause(page,500);
   await page.fill('#in_min','30');await page.fill('#in_km','6');await page.fill('#in_hr','150');
   await page.evaluate(()=>document.activeElement.blur());
   await page.$eval('[data-logact]',e=>e.scrollIntoView({block:"center"}));
@@ -374,6 +375,7 @@ await test("a suggested set is marked, and logged untouched it says so",async pa
 await test("intervals are kept on a cardio bout",async page=>{
   await tapTab(page,"train");await pause(page);
   await page.tap('[data-actsheet]');await pause(page);await page.tap('#sheet [data-quickact="Running"]');await pause(page,500);
+  await page.tap('#sheet [data-confirmalt]');await pause(page,500);
   await page.$eval('[data-activ]',e=>e.click());await pause(page);
   await page.fill('#in_ivn','8');await page.fill('#in_ivon','30');await page.fill('#in_ivoff','90');
   await page.evaluate(()=>document.activeElement.blur());
@@ -2213,6 +2215,21 @@ await test("Running mode: the phone's positions become distance and a route; pau
   const s=await ev(page,"[!!S.run,!!S.active,S.sessions[0].entries[0].name,S.sessions[0].entries[0].sets[0].km>0.03,S.sessions[0].entries[0].sets[0].route.length>=5,S.sessions[0].entries[0].sets[0].kcal>0]");
   eq(s,[false,false,"Running",true,true,true],"saved as a run with its distance, route and calories");
 });
+await test("Running mode from Log cardio: Running, outdoor offers it; it opens on a drawn city, and the saved run keeps that ground",async page=>{
+  const ctx=page.context();
+  await ctx.grantPermissions(["geolocation"]);await ctx.setGeolocation({latitude:30.0444,longitude:31.2357,accuracy:8});
+  await tapTab(page,"train");await pause(page);
+  await page.tap('[data-actsheet]');await pause(page);
+  eq(await page.$eval('#sheet .actbtn.live',e=>[e.dataset.quickact,!!e.querySelector(".actbtn-gps")]),["Running",true],"marked as tracked live");
+  await page.tap('#sheet [data-quickact="Running"]');await pause(page,500);
+  eq(await page.$$eval('#sheet [data-confirmok],#sheet [data-confirmalt]',a=>a.map(b=>b.textContent)),["Start running mode","Log a run I've done"],"both ways");
+  await page.tap('#sheet [data-confirmok]');await pause(page,700);
+  eq(await page.evaluate(()=>[!!document.querySelector(".run"),document.querySelectorAll(".run-map .rm-blk rect").length>20,!!document.querySelector(".run-map .rm-river")]),[true,true,true],"running, on a city");
+  for(let i=1;i<=5;i++){await ctx.setGeolocation({latitude:30.0444+i*0.00009,longitude:31.2357,accuracy:8});await pause(page,1500);}
+  const seed=await ev(page,"Math.floor(S.run.started/1000)");
+  await page.tap('[data-run="finish"]');await pause(page,900);
+  eq(await ev(page,"[S.sessions[0].entries[0].name,S.sessions[0].entries[0].sets[0].map]"),["Running",seed],"saved with its ground");
+});
 await test("Running mode: with location refused it is timed only, says so, and Finish opens the logger with the minutes in",async page=>{
   await page.evaluate(()=>{Object.defineProperty(navigator,"geolocation",{configurable:true,value:{watchPosition:(ok,err)=>{setTimeout(()=>err({code:1}),50);return 1;},clearWatch:()=>{}}});});
   await tapTab(page,"train");await pause(page);
@@ -2259,7 +2276,7 @@ await test("Training: steps sit in a ring that fills to the goal, and say so whe
 await test("Training: the last run of the fortnight is a card with its route, distance and pace, and opens its day",async page=>{
   await tapTab(page,"train");await pause(page);
   const r=await page.evaluate(()=>{const c=document.querySelector(".trun-last");if(!c)return null;
-    return {km:c.querySelector(".trun-t b").textContent,d:(c.querySelector(".trun-map path")||{getAttribute:()=>""}).getAttribute("d"),s:c.querySelector(".trun-s").textContent,date:c.dataset.openday};});
+    return {km:c.querySelector(".trun-t b").textContent,d:(c.querySelector(".trun-map path.rt")||{getAttribute:()=>""}).getAttribute("d"),s:c.querySelector(".trun-s").textContent,date:c.dataset.openday};});
   if(!r)throw new Error("no card");
   eq([r.km,r.s,r.date],["4.86 km","5:33 /km · 27 min",iso(1)],"the run");
   if(!/^M[\d.]+ [\d.]+(L[\d.]+ [\d.]+){5,}/.test(r.d))throw new Error("no route: "+r.d);

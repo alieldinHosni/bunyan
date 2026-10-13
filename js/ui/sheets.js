@@ -41,7 +41,8 @@ var SHEET_KICK={editex:"Exercise",tiex:"Import",recovery:"Recovery",weigh:"Body"
 var CFICON={
   leave:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M9 16l-4-4 4-4M5 12h11"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
-  swap:'<path d="M4 8h13l-3-3M20 16H7l3 3"/>'
+  swap:'<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
+  route:'<path d="M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 17h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/>'
 };
 function vSheet(){
   if(!V.sheet)return "";
@@ -420,7 +421,10 @@ function vSheet(){
     ACT_GROUPS.forEach(function(g){
       b+='<div class="exd-h">'+t(g)+'</div><div class="actgrid">';
       actsIn(g).forEach(function(n){
-        b+='<button class="actbtn" data-quickact="'+esc(n)+'">'+actIcon(n,24)+'<span>'+esc(exName(n))+'</span></button>';});
+        /* Running outdoors can be tracked live (running mode): it says so. */
+        var live=n==="Running";
+        b+='<button class="actbtn'+(live?' live':'')+'" data-quickact="'+esc(n)+'">'+actIcon(n,24)+'<span>'+esc(live?t("Running, outdoor"):exName(n))+'</span>'
+         +(live?'<i class="actbtn-gps">'+esc(t("GPS"))+'</i>':'')+'</button>';});
       b+='</div>';});
   }
   else if(V.sheet==="swapday"){

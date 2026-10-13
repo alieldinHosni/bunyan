@@ -162,7 +162,17 @@ function register(){
     if(D.run==="leave"){askEndRun();return;}
     return;});
   key("activ",function(){V.actIv=true;render();var ivf=document.getElementById("in_ivn");if(ivf)ivf.focus();return;});
-  key("quickact",function(D){V.sheet=null;V.sd=null;startActivity(D.quickact);return;});
+  /* Running from Log cardio: tracked live in running mode, or logged after the fact.
+     During a workout it is logged into it, as any activity is. */
+  ACT.runlive=function(){if(S.active||S.run)return;resetNav();V.tab="train";V.train="days";startRun();render();window.scrollTo(0,0);};
+  ACT.runlog=function(){startActivity("Running");};
+  key("quickact",function(D){
+    if(D.quickact==="Running"&&!S.active&&!S.run){
+      askConfirm({title:t("Running, outdoor"),icon:"route",
+        body:t("Track it live with your phone's GPS: the route on a map, the distance, your pace and the time. Or log a run you have already done."),
+        cta:t("Start running mode"),act:"runlive",alt:t("Log a run I've done"),altact:"runlog"});
+      return;}
+    V.sheet=null;V.sd=null;startActivity(D.quickact);return;});
   key("actsheet",function(){openSheet("acts");return;});
   key("logset",function(){W.logSet();return;});
   has("delset",function(D){W.removeRow(+D.delset);return;});

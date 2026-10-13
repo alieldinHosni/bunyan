@@ -1778,7 +1778,12 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "The first letter of your name": "أول حرف من اسمك",
 "That photo could not be used. Try another.": "مقدرناش نستخدم الصورة دي. جرّب واحدة تانية.",
 "Profile picture saved.": "صورة الحساب اتحفظت.",
-"Your initial is back.": "رجع أول حرف من اسمك."
+"Your initial is back.": "رجع أول حرف من اسمك.",
+"Running, outdoor": "جري في الشارع",
+"GPS": "GPS",
+"Track it live with your phone's GPS: the route on a map, the distance, your pace and the time. Or log a run you have already done.": "تابعه لايف بالـGPS بتاع موبايلك: الطريق على الخريطة، والمسافة، وسرعتك، والوقت. أو سجّل جري عملته قبل كده.",
+"Start running mode": "ابدأ وضع الجري",
+"Log a run I've done": "سجّل جري عملته"
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;
