@@ -3619,15 +3619,15 @@ textarea.afnl.warn{border-color:var(--warning)}
 .art{display:block;overflow:visible;fill:none;stroke:var(--accentHi);stroke-width:1.7;
   stroke-linecap:round;stroke-linejoin:round;pointer-events:none;
   filter:drop-shadow(0 0 6px var(--accent-glow))}
-.art .a{stroke:url(#artStroke);stroke-width:2}
-.art .a.c{fill:url(#artFill)}
+.art .a{stroke:url(#artStroke) var(--accentHi);stroke-width:2}
+.art .a.c{fill:url(#artFill) none}
 .art .b{opacity:.42;stroke-width:1.2}
 .art .e{fill:var(--accentHi);stroke:none;opacity:.8}
 /* Layers of a scene: hills filled with the accent's glass, a glowing disc. */
-.art .h1,.art .h2,.art .h3{stroke:none;fill:url(#artHill)}
+.art .h1,.art .h2,.art .h3{stroke:none;fill:url(#artHill) none}
 .art .h1{opacity:.45}.art .h2{opacity:.7}.art .h3{opacity:1}
-.art .ridge{stroke:url(#artStroke);stroke-width:1.3;opacity:.8}
-.art .dsk{stroke:none;fill:url(#artGlow)}
+.art .ridge{stroke:url(#artStroke) var(--accentHi);stroke-width:1.3;opacity:.8}
+.art .dsk{stroke:none;fill:url(#artGlow) none}
 .art.draw .a.c,.art.draw .h1,.art.draw .h2,.art.draw .h3,.art.draw .dsk{animation:artDraw 1.6s var(--e-decel) forwards,artFillIn 1.4s var(--e-standard) both}
 @keyframes artFillIn{from{fill-opacity:0}to{fill-opacity:1}}
 .art .lvl{stroke-width:2.6;opacity:1}
