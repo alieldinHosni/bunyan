@@ -306,6 +306,9 @@ function ex_isTimed(e){
 /* The same, with the figure a field: tap it and type any number (456 steps, not only
    what the buttons step through). Focusing it selects it, so typing replaces it.
    whole: true for a count, which brings up the plain number pad. */
+/* The period a change is measured over, said the same way on every screen: the
+   amount, then "in 9 days". */
+function inDays(n){return n==null?"":n===1?t("in 1 day"):t("in {n} days").replace("{n}",n);}
 function stepperInput(id,val,step,unit,whole){
   return '<div class="steps"><button class="stp" data-stp="'+id+'" data-d="-'+step+'"'
    +' aria-label="'+t("Less")+' '+esc(unit)+'">&minus;</button>'
@@ -443,4 +446,4 @@ function curDate(){return V.fdate||today();}
 /* The meal a quick add goes into: the next one not yet logged on that date. */
 function mealNow(d){return nextMeal(d||curDate());}
 
-export {curDate, mealNow, GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};
+export {curDate, inDays, mealNow, GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};

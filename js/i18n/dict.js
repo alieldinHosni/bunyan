@@ -971,7 +971,7 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "at least": "على الأقل",
 "in a row": "ورا بعض",
 "per session": "للجلسة",
-"since": "من",
+"since": "من", "in {n} days": "في {n} يوم", "in 1 day": "في يوم",
 "today not counted": "النهاردة مش محسوب",
 "total sets": "مجموعة إجمالي",
 "vs last week": "عن الأسبوع اللي فات",

@@ -30,7 +30,7 @@ import {standingNow} from "../../engine/coachinfo.js";
 import {ensureSessionIds, S} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
 import {dfmt, esc, fmtN, num, pretty, r1, shortd, today} from "../../util.js";
-import {seg, streak, V} from "../view.js";
+import {inDays, seg, streak, V} from "../view.js";
 import {art} from "../art.js";
 import {bodySvg} from "../../data/bodymap.js";
 import {backArrow} from "../nav.js";
@@ -243,12 +243,12 @@ function vOverview(r){
   var gw={lose:-1,gain:1}[rateOf(goal)[0]]||0;
   var wi=weighIns(r),wc=weightChange(),bfv=bodyFat(),bfs=bodyFatSeries(r),si=strengthIndex(r),cm=consistencyMonth();
   var wFirst=wi.length?wi[0].weight:null,wLast=wc?wc.cur.weight:null;
-  var wd=wi.length>=2?toDisp(wLast)-toDisp(wFirst):null;
+  var wd=wi.length>=2?toDisp(wLast)-toDisp(wFirst):null,wdn=wi.length>=2?inDays(daysBetween(wi[0].date,wi[wi.length-1].date)):"";
   var bfd=bfs.length>=2?bfs[bfs.length-1].v-bfs[0].v:null;
   h+=lbl(t("Key metrics"),'<button class="pglink" data-ptab="body">'+esc(t("See details"))+'</button>');
   h+='<div class="pgkm">'
    +kcard("weight",t("Weight"),wLast?String(toDisp(wLast)):"—",wLast?wUnit():"",
-      wd!=null?delta(wd,true,gw," "+wUnit()):esc(t(wLast?"One weigh-in in range":"Not logged yet")),
+      wd!=null?delta(wd,true,gw," "+wUnit(),wdn):esc(t(wLast?"One weigh-in in range":"Not logged yet")),
       spark(wi.map(function(b){return b.weight;}),gw!==0&&wd!=null&&(wd<0)===(gw<0)),"body",
       t("Weight")+" "+(wLast?toDisp(wLast)+" "+wUnit():t("Not logged yet")))
    +kcard("bf",t("Body fat"),bfv.bf!=null?String(bfv.bf):"—",bfv.bf!=null?"%":"",
@@ -282,7 +282,7 @@ function vOverview(r){
     var wp=wi.map(function(b){return {d:b.date,v:toDisp(b.weight)};});
     h+=lbl(t("Recent progress"),'<button class="pglink" data-ptab="body">'+esc(t("View all"))+'</button>');
     h+='<div class="pgcard"><div class="pgcard-h"><h3 class="pgcard-i">'+kicon("weight")+esc(t("Weight"))+'</h3>'
-     +'<span class="pgcard-r"><b>'+toDisp(wLast)+' '+esc(wUnit())+'</b>'+(wd!=null?delta(wd,true,gw," "+wUnit()):'')+'</span></div>'
+     +'<span class="pgcard-r"><b>'+toDisp(wLast)+' '+esc(wUnit())+'</b>'+(wd!=null?delta(wd,true,gw," "+wUnit(),wdn):'')+'</span></div>'
      +lineChart(wp,{fill:true,dots:true,aria:t("Body weight")+", "+wp[0].v+" → "+wp[wp.length-1].v+" "+wUnit()})+'</div>';}
 
   var vs=volumeSeries(r);
@@ -375,7 +375,8 @@ function vStrength(r){
     .sort(function(a,b){return (b.w-a.w)||(b.sets-a.sets);}).slice(0,8);
   if(recs.length){
     h+=lbl(t("Personal records"));
-    h+='<div class="pgprs" role="list">'+recs.map(function(L){
+    /* More than two do not fit: the row fades at its end, so it reads as one to scroll. */
+    h+='<div class="pgprs'+(recs.length>2?' more':'')+'" role="list">'+recs.map(function(L){
       return '<button class="pgpr'+(L.name===V.chartEx?' on':'')+'" role="listitem" data-chartex="'+esc(L.name)+'"'
        +' aria-label="'+esc(exName(L.name)+": "+(L.w?fmtW(L.w)+" × "+L.reps:L.reps+" "+t("reps"))+", "+dateStr(L.date))+'">'
        +kicon("strength")+'<span class="pgpr-n">'+esc(exName(L.name))+'</span>'
@@ -506,7 +507,7 @@ function vBody(r){
   if(!wc)h+='<div class="pgstat-k">'+esc(t("Body weight"))+'</div>'+art("body",{cls:"pgbody-art"})
     +tooFew(t("Weigh in and the trend starts here. Mornings, before eating, are the most comparable."));
   else{
-    var since=wc.ref?(wc.days>=7&&wc.days<14?t("vs last week"):t("since")+" "+dateStr(wc.ref.date)):"";
+    var since=wc.ref?inDays(wc.days):"";
     h+='<div class="pgwhead"><div><div class="pgstat-k">'+esc(t("Body weight"))+'</div>'
      +'<div class="pgbig w">'+toDisp(wc.cur.weight)+'<span>'+esc(wUnit())+'</span></div></div>'
      +(wc.ref?'<div class="pgwd">'+delta(toDisp(wc.cur.weight)-toDisp(wc.ref.weight),true,gw," "+wUnit(),since)+'</div>':'')
