@@ -1,5 +1,5 @@
 /* Bunyan — profile
-   Profile tab: who this is, then the settings, the people on this phone, and the data.
+   Profile, opened from the person at the top right of Training: who this is, then the settings, the people on this phone, and the data.
    Every row opens a sheet (js/ui/settings.js) and says what is set there now, so the
    page reads as a summary before anything is opened. */
 import {t} from "../../i18n/dict.js";
@@ -14,6 +14,7 @@ import {themeName, themeOf} from "../theme.js";
 import {planName} from "../../i18n/exnames.js";
 import {glyph} from "../glyphs.js";
 import {backupState, initials} from "../settings.js";
+import {backArrow} from "../nav.js";
 
 /* One row: its glyph in a tile, its name, what is set there now, and a chevron. */
 function prow(attr,gl,name,sub,tone){
@@ -28,7 +29,7 @@ function vProfile(){
   var p=S.profile,g=S.goals,pf=curProfile(),pref=S.prefs;
   var name=pf.name||t("Me"),kg=lastWeight()||p.weight;
 
-  var h='<div class="thead"><h1>'+t("Profile")+'</h1></div>';
+  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Profile"))+'</h1></div>';
 
   /* Who: a monogram, the name, the goal and the program it is followed with, and three
      plain figures. Tapping it opens You, where the body and the goal are set. */

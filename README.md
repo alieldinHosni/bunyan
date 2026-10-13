@@ -75,7 +75,8 @@ server from the project folder.
 
 ## How the app is laid out
 
-Five tabs. Two are for the day, one is for planning, one for looking back, one for you.
+Four tabs: two for the day, one for planning, one for looking back. Profile opens from
+your initial at the top right of Training.
 
 - **Training** (`views/train.js`, with its top in `views/home.js`) opens the app: the
   greeting with a bell (what the coach has noticed, with a dot while there is
@@ -140,7 +141,8 @@ above the dock.
   (training this week, weight, strength, food, records), and *Detailed*, the charts
   and numbers a coach reads. Training volume over a short range is drawn as capsule
   bars, the newest in the action colour with its figure above it.
-- **Profile** (`views/profile.js`, `settings.js`): who this is (the goal, the program,
+- **Profile** (`views/profile.js`, `settings.js`), opened from Training's top right,
+  with a back arrow to it: who this is (the goal, the program,
   workouts, streak, weight), then grouped rows that each say what is set: You, Training,
   Nutrition, App; the profiles on the phone, sharing, friends; the backup (how old it
   is, and a warning when there is none) and About. Every setting is a switch, a
@@ -759,7 +761,8 @@ their brand colours exactly. In every theme:
   they stay solid.
 - **The dock** is a dark pill of round buttons; the tab that is on opens into a pill in
   the action colour with its name beside the icon (Training is a dumbbell, Coach a
-  whistle). Signal Green, in Blue, marks something new.
+  whistle). Signal Green, in Blue, marks something new. Four tabs; Profile is not one of
+  them, and Training stays lit while it is open.
 - Green means done, gold (brass) means earned, red means destructive, whatever the theme.
   If everything is gold, nothing is.
 

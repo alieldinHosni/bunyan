@@ -6,7 +6,7 @@ import {t} from "../../i18n/dict.js";
 import {today} from "../../util.js";
 import {ACT, closeSheet, openSheet, runAct, val} from "../actions.js";
 import {shiftDay} from "../datebar.js";
-import {goBack, resetNav} from "../nav.js";
+import {goBack, pushNav, resetNav} from "../nav.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {requestCloseSheet, toCoach} from "./common.js";
@@ -47,6 +47,9 @@ function register(){
      behind it — a day view whose back arrow now correctly hides, and nothing to
      return to but the tab bar. */
   key("go",function(D){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.phist=false;V.assess=false;V.pcheck=false;render();return;});
+  /* Profile is a step into Training, not a place of its own: it opens from the person
+     at the top right, and back returns there. */
+  key("prof",function(){if(V.tab==="profile")return;pushNav();V.tab="profile";V.train="days";render();window.scrollTo(0,0);return;});
   /* Food's old sections: today is the Food page; the plan, targets and foods of your
      own are planned in Coach → Nutrition. */
   key("fsec",function(D){if(D.fsec==="today"){if(V.sheet)closeSheet();resetNav();V.tab="food";V.fdate=null;V.train="days";

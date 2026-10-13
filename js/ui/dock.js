@@ -18,16 +18,15 @@ import {t} from "../i18n/dict.js";
    structural style of the brand. Training is a dumbbell, plates and bar, which says
    lifting where the old heartbeat line said cardio; Coach is a whistle, the coach's
    own tool, where a speech bubble said only "chat". Food is the pie chart with a leaf
-   set into the open quarter; Progress three rising bars; Profile a head and
-   shoulders. Inline rather than masks, so the stroke takes the colour of the circle
+   set into the open quarter; Progress three rising bars. Profile is not here: it
+   opens from the person at the top right of Training. Inline rather than masks, so the stroke takes the colour of the circle
    or the pill it sits in. */
 var ICON={
   home:'<path d="M13.75 19.25v-7.33a.92.92 0 0 0-.92-.92H9.17a.92.92 0 0 0-.92.92v7.33M2.75 9.17a1.83 1.83 0 0 1 .65-1.4l6.42-5.5a1.83 1.83 0 0 1 2.36 0l6.42 5.5a1.83 1.83 0 0 1 .65 1.4v8.25a1.83 1.83 0 0 1-1.83 1.83H4.58a1.83 1.83 0 0 1-1.83-1.83z"/>',
   train:'<path d="M7.25 11h7.5M4.25 6h3v10h-3zM14.75 6h3v10h-3zM1.75 8.5h2.5v5h-2.5zM17.75 8.5h2.5v5h-2.5z"/>',
   food:'<path d="M11 2.4a8.6 8.6 0 1 0 8.6 8.6H11z"/><path d="M13.4 8.6c0-3.6 2.4-6 6.2-6 0 3.7-2.5 6-6.2 6z"/><path d="M13.4 8.6l3.2-3.2"/>',
   progress:'<path d="M3.5 19V13.5h4V19zM9 19V8.5h4V19zM14.5 19V3h4v16z"/>',
-  coach:'<path d="M8 7.5h12.5V12h-6.69A6 6 0 1 1 8 7.5z"/><path d="M9.75 13.5a1.75 1.75 0 1 1-3.5 0 1.75 1.75 0 0 1 3.5 0z"/>',
-  profile:'<path d="M17.42 19.25v-1.83a3.67 3.67 0 0 0-3.67-3.67h-5.5a3.67 3.67 0 0 0-3.67 3.67v1.83M14.67 6.42a3.67 3.67 0 1 1-7.34 0 3.67 3.67 0 0 1 7.34 0z"/>'
+  coach:'<path d="M8 7.5h12.5V12h-6.69A6 6 0 1 1 8 7.5z"/><path d="M9.75 13.5a1.75 1.75 0 1 1-3.5 0 1.75 1.75 0 0 1 3.5 0z"/>'
 };
 /* id, what a screen reader announces, and the word beside the icon when its tab is on.
    The names are the sections', not the icons'; each label is the start of its
@@ -35,7 +34,7 @@ var ICON={
    open pill on a small phone, in either language. */
 function items(){return [
   ["train",t("Training"),t("Train")],["food",t("Food"),t("Food")],["coach",t("Coach"),t("Coach")],
-  ["progress",t("Progress"),t("Progress")],["profile",t("Profile"),t("Profile")]];}
+  ["progress",t("Progress"),t("Progress")]];}
 
 var built=null;   /* the label set the markup was written with */
 
@@ -170,6 +169,8 @@ function checkDock(screen){
    something; the number is in its accessible name. */
 function syncDock(el,tab,advice){
   if(!el)return;
+  /* Profile opens from Training's header, so Training stays lit under it. */
+  if(tab==="profile")tab="train";
   if(built!==key(items())||!el.firstChild)build(el);
   var btns=el.querySelectorAll(".dock-b");
   for(var i=0;i<btns.length;i++){

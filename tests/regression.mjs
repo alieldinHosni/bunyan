@@ -54,6 +54,9 @@ const pause=(page,ms=300)=>page.waitForTimeout(ms);
    fixed bar that can scroll the page — which, since the dock moves out of the way of
    scrolling, takes the target away mid-tap. A finger scrolls nothing. */
 async function tapTab(page,tab){
+  /* Profile is not on the dock: it opens from the person at the top right of Training. */
+  if(tab==="profile"){await tapTab(page,"train");await page.waitForTimeout(150);await page.evaluate(()=>window.scrollTo(0,0));
+    await page.tap('.hacts .havatar');await page.waitForTimeout(60);return;}
   const b=await (await page.$('nav [data-tab="'+tab+'"]')).boundingBox();
   if(!b||b.y>=page.viewportSize().height)throw new Error("the dock is out of view");
   await page.touchscreen.tap(b.x+b.width/2,b.y+b.height/2);await page.waitForTimeout(60);}
@@ -1682,9 +1685,9 @@ await test("Dock: the workout bar takes the dock's place while it is away, and s
 /* ---- the good parts of an outside proposal, built in ---------------------------------- */
 await test("Dock: every tab is labelled, in English and Arabic, and the label starts its accessible name",async page=>{
   const lab=()=>page.$$eval("nav .dock-b",a=>a.map(b=>[b.querySelector(".dock-l").textContent,b.getAttribute("aria-label").indexOf(b.querySelector(".dock-l").textContent)===0]));
-  eq(await lab(),[["Train",true],["Food",true],["Coach",true],["Progress",true],["Profile",true]],"English");
+  eq(await lab(),[["Train",true],["Food",true],["Coach",true],["Progress",true]],"English");
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});await pause(page);
-  eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الكوتش","التقدم","حسابي"],"Arabic");
+  eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الكوتش","التقدم"],"Arabic");
 });
 await test("Dock: round tabs; the one that is on opens into a pill with its name, uncut in either language, even on a small phone",async page=>{
   const st=()=>page.evaluate(()=>[...document.querySelectorAll("nav .dock-b")].map(b=>{const l=b.querySelector(".dock-l"),r=b.getBoundingClientRect();
@@ -1692,7 +1695,7 @@ await test("Dock: round tabs; the one that is on opens into a pill with its name
   for(const [lang,w] of [["en",390],["ar",390],["en",360],["ar",360]]){
     await page.setViewportSize({width:w,height:780});
     await page.evaluate(async l=>{(await import("/js/state.js")).S.prefs.lang=l;(await import("/js/ui/render.js")).render();},lang);await pause(page,200);
-    for(const tab of ["progress","train","profile"]){
+    for(const tab of ["progress","train","coach"]){
       await tapTab(page,tab);await pause(page,500);
       const s=await st(),on=s.find(x=>x.on),off=s.filter(x=>!x.on);
       eq(on.tab,tab,lang+" "+w+": the tapped tab is on");
@@ -2056,8 +2059,12 @@ await test("Training: the bell says what the coach noticed and opens it; the ini
   await page.tap('.hacts [data-csec="ai"]');await pause(page,400);
   eq(await ev(page,"[V.tab,V.csec]"),["coach","ai"],"the bell opens Coach AI");
   await tapTab(page,"train");await pause(page);
-  await page.tap('.hacts [data-go="profile"]');await pause(page,400);
+  await page.tap('.hacts .havatar');await pause(page,400);
   eq(await ev(page,"V.tab"),"profile","the initial opens Profile");
+  eq(await page.$$eval("nav .dock-b",a=>a.map(b=>b.dataset.tab)),["train","food","coach","progress"],"Profile is not on the dock");
+  eq(await page.$eval("nav .dock-b.on",e=>e.dataset.tab),"train","Training stays lit under Profile");
+  await page.tap('#app [data-back]');await pause(page,500);
+  eq(await ev(page,"V.tab"),"train","back returns to Training");
 });
 await test("Progress: training volume over a month is capsule bars, the newest in the accent with its figure",async page=>{
   await tapTab(page,"progress");await pause(page);await page.tap('[data-pview="detail"]');await pause(page,400);
