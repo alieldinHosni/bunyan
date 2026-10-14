@@ -9,6 +9,7 @@ import {actIcon, actInfo, actKcal, actPace, INTENSITY, intensityOf, isActivity} 
 import {S} from "../../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num} from "../../util.js";
+import {markArt} from "../art.js";
 import {ex_isTimed, stepperInput, V} from "../view.js";
 import {doseText} from "../dose.js";
 import {vWarm, warmShown} from "./warmup.js";
@@ -217,7 +218,7 @@ function vLogger(){
   var med=exMedia(e.name),img0=exImg(e.name,0),img1=exImg(e.name,1);
   /* The exercise as one card over the Bunyan horse, as the other tabs set their
      heroes: what it is, how it looks, what it asks for. */
-  h+='<section class="exhero"><img class="exhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">'
+  h+='<section class="exhero">'+markArt("exhero-art")
    +'<div class="exhero-k">'+t("Exercise")+' '+(V.logIdx+1)+' '+t("of")+' '+a.entries.length+'</div>';
   h+='<div class="exhead">'
    +'<h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
@@ -424,7 +425,7 @@ var TICK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L1
 function ivText(iv){return iv&&iv.n?iv.n+' \u00d7 '+iv.on+'s'+(iv.off?' / '+iv.off+'s':''):"";}
 function actBody(a,e,rows,active){
   var info=actInfo(e.name),kg=lastWeight()||0,last=V.logIdx>=a.entries.length-1;
-  var h='<section class="exhero acthero"><img class="exhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">'
+  var h='<section class="exhero acthero">'+markArt("exhero-art")
    +'<div class="exhero-k">'+t("Exercise")+' '+(V.logIdx+1)+' '+t("of")+' '+a.entries.length+'</div>'
    +'<div class="exhead acthead"><span class="actbadge">'+actIcon(e.name,28)+'</span>'
    +'<h1 class="ex-name">'+esc(exName(e.name))+'</h1></div>'

@@ -764,7 +764,7 @@ await test("Arabic: template program and day names are shown in Arabic, fraction
 await test("Light: the open tab reads on the dark dock: Glacier Blue on Machine Red",async page=>{
   const c=await page.$eval('nav .dock-b.on',e=>[getComputedStyle(e).color,getComputedStyle(e).backgroundColor]);
   eq(c,["rgb(219, 246, 255)","rgb(255, 46, 58)"]);
-},{db:Object.assign(seed(),{theme:"light"})});
+},{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"red"}});
 await test("One place for each thing: the assessment in Coach AI only, how you feel asked when a workout starts, nothing of it on Profile",async page=>{
   await tapTab(page,"train");await pause(page);
   eq(await page.$$eval('#app .rchk,#app [data-rchk]',a=>a.length),0,"no recovery check-in on Training");
@@ -845,24 +845,27 @@ await test("Arabic plan: Arabic digits, the dual and spoons are read",async page
     return pp.parsePlan("الوجبة الأولى:\n٣ بيض\nبيضتين\nمعلقتين زبدة فول سوداني\nالعشا: ١٥٠ جم فراخ").map(m=>[m.named,m.n,m.items.map(i=>i.label)]);});
   eq(r,[[null,1,["3 × large egg","2 × large egg","2 tbsp"]],["Dinner",null,["150 g"]]]);
 });
-/* ---- themes: BUNYAN Red, BUNYAN Blue, Monochrome, each dark and light ------------------- */
+/* ---- themes: BUNYAN Blue (the default), BUNYAN Red, Sage, each dark and light ------------- */
 await test("Themes: the picker switches the whole app, and the choice outlives a reload",async page=>{
   await tapTab(page,"profile");await pause(page);
   await page.tap('[data-sheet="set_app"]');await pause(page,400);
-  eq(await page.$$eval('.thpick',a=>a.map(b=>b.getAttribute("data-settheme"))),["red","blue","mono"],"three themes");
-  eq(await page.$eval('.thpick.on',e=>e.getAttribute("data-settheme")),"red","red by default");
-  await page.tap('[data-settheme="blue"]');await pause(page,500);
-  eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"blue","html is blue");
-  eq(await ev(page,"S.prefs.palette"),"blue","saved to the profile");
-  eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#8AB0EC","Sky Blue is the accent");
+  eq(await page.$$eval('.thpick',a=>a.map(b=>b.getAttribute("data-settheme"))),["blue","red","mono"],"three themes, Blue first");
+  eq(await page.$eval('.thpick.on',e=>e.getAttribute("data-settheme")),"blue","blue by default");
+  eq(await page.$$eval('link[rel="icon"],link[rel="apple-touch-icon"]',a=>a.map(l=>l.getAttribute("href"))),["icon-180.png","icon-180.png"],"Blue's icon");
+  await page.tap('[data-settheme="red"]');await pause(page,500);
+  eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"red","html is red");
+  eq(await ev(page,"S.prefs.palette"),"red","saved to the profile");
+  eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#FF2E3A","Machine Red is the accent");
+  eq(await page.$$eval('link[rel="icon"],link[rel="apple-touch-icon"]',a=>a.map(l=>l.getAttribute("href"))),["icon-red-180.png","icon-red-180.png"],"the icon takes the theme");
   await page.tap('[data-lookmode="light"]');await pause(page,500);
-  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","blue|light"],"mode and the early copy");
+  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","red|light"],"mode and the early copy");
   await page.reload();await page.waitForTimeout(60);
-  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-palette"),document.documentElement.getAttribute("data-theme")]),["blue","light"],"applied before the app runs");
+  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-palette"),document.documentElement.getAttribute("data-theme"),
+    document.querySelector('link[rel="apple-touch-icon"]').getAttribute("href")]),["red","light","icon-red-180.png"],"applied before the app runs, the icon too");
   await pause(page,1000);
   await tapTab(page,"profile");await pause(page);
-  if(!(await page.$eval('[data-sheet="set_app"]',e=>e.textContent)).includes("BUNYAN Blue"))throw new Error("the Profile row does not name the theme");
-  eq(await page.$eval('meta[name="theme-color"]',e=>e.content.toUpperCase()),"#E9EEF6","the status bar takes the theme's ground");
+  if(!(await page.$eval('[data-sheet="set_app"]',e=>e.textContent)).includes("BUNYAN Red"))throw new Error("the Profile row does not name the theme");
+  eq(await page.$eval('meta[name="theme-color"]',e=>e.content.toUpperCase()),"#DBF6FF","the status bar takes the theme's ground");
 });
 await test("Themes: every theme and mode uses its reference colours exactly",async page=>{
   const r=await page.evaluate(()=>{
@@ -874,8 +877,8 @@ await test("Themes: every theme and mode uses its reference colours exactly",asy
   eq(r["red-dark"][0],"#FF2E3A","Machine Red");eq(r["red-dark"][2],"#DBF6FF","Glacier Blue on red");
   eq(r["red-light"].slice(0,2),["#FF2E3A","#DBF6FF"],"Glacier Blue ground");
   eq(r["blue-dark"].slice(0,3),["#8AB0EC","#070B1A","#070B1A"],"Sky Blue on Night Navy");
-  eq(r["mono-dark"].slice(0,3),["#D7FFE0","#050505","#050505"],"Ghost Green on Zero Black");
-  eq(r["mono-light"].slice(0,3),["#050505","#D7FFE0","#D7FFE0"],"Zero Black on Ghost Green");
+  eq(r["mono-dark"].slice(0,3),["#DCE7E4","#0D1A1B","#142E33"],"Sage: sage-white on the deep sage ground");
+  eq(r["mono-light"].slice(0,3),["#142E33","#D2DBDA","#F2F6F5"],"Sage: the reference's deep slate on sage");
 });
 await test("Themes: Pink became Blue; a profile that chose Pink opens in Blue, from the first paint",async page=>{
   eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"blue","the app shows Blue");
@@ -895,7 +898,52 @@ await test("Themes: the rest screen stays dark in light mode, with readable figu
   await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
   const r=await page.evaluate(()=>{const v=document.querySelector("#rest .rt-next-v");
     return v?getComputedStyle(v).color:null;});
-  eq(r,"rgb(215, 255, 224)","Ghost Green on the dark rest screen");
+  eq(r,"rgb(234, 241, 239)","Sage's light type on the dark rest screen");
+},{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
+await test("Themes: each page draws its own picture on the ground, under the glass",async page=>{
+  const shot=()=>page.evaluate(()=>{const g=document.getElementById("bgart"),svg=g&&g.querySelector("svg");
+    const cs=g&&getComputedStyle(g);
+    return [svg?[...svg.classList].find(c=>c.indexOf("bgart-")===0):null,cs&&cs.position,cs&&cs.zIndex,
+      !!svg&&svg.querySelectorAll("path").length>8];});
+  eq(await shot(),["bgart-train","fixed","-1",true],"Train's, fixed behind the page");
+  for(const tab of ["food","coach","progress","profile"]){
+    await tapTab(page,tab);await pause(page);
+    eq((await shot())[0],"bgart-"+tab,tab+" draws its own");}
+  /* The cards frost what is behind them, the drawing included. */
+  const bf=await page.$eval("#app .card,#app .sg-list",e=>getComputedStyle(e).backdropFilter||getComputedStyle(e).webkitBackdropFilter);
+  if(!/blur/.test(bf||""))throw new Error("the cards are not glass: "+bf);
+  /* Its colours are the theme's, so a change of theme repaints it without rebuilding it. */
+  await page.evaluate(()=>{window.__bg=document.querySelector("#bgart svg");});
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="red";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.evaluate(()=>[getComputedStyle(document.getElementById("bgart")).getPropertyValue("--bga").trim().toUpperCase(),
+    document.querySelector("#bgart svg")===window.__bg]),["#FF2E3A",true],"the same drawing, repainted in red");
+});
+await test("Themes: the mark is the theme's own colour, and so is the icon",async page=>{
+  const look=()=>page.evaluate(()=>{const m=document.querySelector(".libhero .mk");
+    return [m?getComputedStyle(m).backgroundImage:"",document.querySelector('link[rel="apple-touch-icon"]').getAttribute("href")];});
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.train="library";(await import("/js/ui/render.js")).render();});
+  await pause(page,300);
+  eq(await page.$$eval(".libhero .mk",a=>a.length),1,"the library's mark");
+  let r=await look();
+  if(!/138, 176, 236/.test(r[0]))throw new Error("the mark is not Sky Blue: "+r[0]);
+  eq(r[1],"icon-180.png","Blue's icon");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="mono";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  r=await look();
+  if(!/220, 231, 228/.test(r[0]))throw new Error("the mark is not Sage's: "+r[0]);
+  eq(r[1],"icon-mono-180.png","Sage's icon");
+  /* The icons are real files, the size the phone asks for. */
+  for(const f of ["icon-180.png","icon-red-180.png","icon-mono-180.png"]){
+    const png=fs.readFileSync(new URL("../"+f,import.meta.url));
+    eq([png.readUInt32BE(16),png.readUInt32BE(20)],[180,180],f);}
+});
+await test("Themes: Sage light, as the reference: white type on the ground, deep slate on the glass",async page=>{
+  await tapTab(page,"progress");await pause(page);
+  const c=await page.evaluate(()=>{const col=s=>{const e=document.querySelector(s);return e?getComputedStyle(e).color:null;};
+    return [col(".thead h1"),col(".pglbl h2"),col(".pgcard,.pgstat,.card")];});
+  eq(c.slice(0,2),["rgb(255, 255, 255)","rgb(255, 255, 255)"],"the title and the section heading");
+  eq(c[2],"rgb(19, 38, 39)","a card's type");
+  /* The dock is the reference's: a slate bar, white buttons, the open tab a white pill. */
+  eq(await page.$eval(".dock-b.on",e=>getComputedStyle(e).backgroundColor),"rgb(255, 255, 255)","the open tab");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
 await test("Themes: the stylesheet names no colour outside the theme blocks",async page=>{
   const bad=await page.evaluate(async()=>{
@@ -1752,7 +1800,7 @@ await test("Covers: a program of your own gets a cover drawn from its week",asyn
   eq(r[r.length-1],[1,1,1],"one day of two exercises (a top course and one below), one rest day");
   const c=await page.$eval(".drow-cov .pc-t",e=>getComputedStyle(e).fill);
   eq(c,"rgb(255, 46, 58)","its top course is Machine Red");
-});
+},{prefs:{palette:"red"}});
 /* ---- training blocks (js/coach/block.js, js/engine/blocks.js) ---- */
 const blockAt=(page,start)=>page.evaluate(async st=>{const s=await import("/js/state.js");s.S.block={start:st};s.saveDB();
   (await import("/js/ui/render.js")).render();},start);
@@ -2451,7 +2499,7 @@ await test("Live figure: the Seated Chest Press moves in 3D in the exercise shee
   /* Closed, it lets go of the graphics card. */
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,500);
   eq((await mq(page)).length,0,"nothing left running");
-});
+},{prefs:{palette:"red"}});
 await test("Live figure: a second exercise is the same figure on other equipment — the Seated Machine Row",async page=>{
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Seated Machine Row"});});await pause(page,600);
   const s=await waitLive(page);
@@ -2463,8 +2511,8 @@ await test("Live figure: a second exercise is the same figure on other equipment
   eq(await page.evaluate(async()=>{const R=await import("/js/data/mannequin/rig.js"),E=await import("/js/data/exercises.js"),M=await import("/js/data/mannequin/motion.js"),C=await import("/js/data/mannequin/records.js");
     const rec=C.recordFor("Seated Machine Row"),hl=R.highlight(E.muscleOf("Seated Machine Row"),E.secondaryOf("Seated Machine Row"),rec.refine);
     return [...new Set(M.sceneAt(rec,.5,hl).prims.filter(q=>q.hl>0).map(q=>q.tag))].sort();}),["biceps","lats","reardelt","traps"]);
-});
-await test("Live figure: it takes the theme — light mode lights the stage, Monochrome takes the colour out",async page=>{
+},{prefs:{palette:"red"}});
+await test("Live figure: it takes the theme — light mode lights the stage, Sage and Blue have no red",async page=>{
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Machine Chest Press"});});await pause(page,600);
   await waitLive(page);
   const dark=await probe(page);
@@ -2476,11 +2524,11 @@ await test("Live figure: it takes the theme — light mode lights the stage, Mon
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.theme="dark";S.prefs.palette="mono";(await import("/js/ui/render.js")).render();});await pause(page,400);
   eq((await mq(page))[0].look,"mono|dark");
   const mono=await probe(page);
-  eq(mono.red,0,"no red in Monochrome");
+  eq(mono.red,0,"no red in Sage");
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="blue";(await import("/js/ui/render.js")).render();});await pause(page,400);
   const blue=await probe(page);
   eq(blue.red,0,"Blue lights the muscles in its own colour");
-});
+},{prefs:{palette:"red"}});
 await test("Live figure: in the workout it moves without turning (a sideways swipe there changes exercise)",async page=>{
   await startWorkout(page);
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.active.entries[V.logIdx].name="Machine Chest Press";(await import("/js/ui/render.js")).render();});await pause(page,600);

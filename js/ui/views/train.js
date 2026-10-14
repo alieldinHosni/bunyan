@@ -17,7 +17,7 @@ import {tokenMatch} from "../../engine/text.js";
 import {actInfo, intensityOf, isActivity} from "../../data/activities.js";
 import {head, reorderBtn, seg, V} from "../view.js";
 import {backArrow, backBar} from "../nav.js";
-import {art} from "../art.js";
+import {art, markArt} from "../art.js";
 import {glyph} from "../glyphs.js";
 import {programCover} from "../cover.js";
 import {shown} from "../more.js";
@@ -417,7 +417,7 @@ function vLibrary(){
         && (!V.exd||l[4]===V.exd)
         && (!q||tokenMatch(q,exHay(l)));});
   var h=backBar();
-  h+='<div class="libhero"><img class="libhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">'
+  h+='<div class="libhero">'+markArt("libhero-art")
    +'<div class="libhead"><div><span class="shk">'+t("Training")+'</span><h1>'+t("Exercise Library")+'</h1>'
    +'<p class="sub">'+fmtN(LIB.length)+' '+t("exercises")+'</p></div>'
    +'<button class="icobtn" data-train="favs" aria-label="'+t("Favourites")
@@ -462,7 +462,7 @@ function vLibrary(){
 /* ---- programs: the ready-made splits (fixed) and yours (editable) -------------
    Ready-made splits cannot be changed or deleted, only previewed and adopted. Yours
    open in the builder, and each has an ✕ that deletes it after one question. */
-var HERO_ART='<img class="libhero-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">';
+var HERO_ART=markArt("libhero-art");
 var PLUS='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 var SPARK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>';
 /* ---- the split builder ------------------------------------------------------------

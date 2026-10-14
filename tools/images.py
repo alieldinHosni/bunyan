@@ -26,6 +26,14 @@ kind has the same size, crop and compression, and adding more is a re-run.
       Writes js/data/figures.js, the list of which exercises have figures and how many
       frames each. Needs numpy as well.
 
+  python3 tools/images.py icons
+      The app's icons, one per theme, from the mark (mark.png): the mark in the
+      theme's colours on the theme's ground, as the app draws them. icon-180.png (the
+      Home Screen icon and the tab's, full-bleed: the phone rounds it), icon-512.png
+      (rounded) and icon-maskable-512.png (full-bleed, the mark inside the safe circle)
+      in Blue, the default theme, which the manifest names; icon-red-180.png and
+      icon-mono-180.png for the other two, which js/ui/theme.js swaps in.
+
 Needs Pillow with WebP (python3 -c "from PIL import features; print(features.check('webp'))").
 Existing outputs are kept unless --force; the run says what it made and what it skipped.
 """
@@ -305,8 +313,76 @@ def thumb_of(im, fig, s=156):
     return im.crop(tuple(round(v) for v in box)).resize((s, s), Image.LANCZOS)
 
 
+# ---- the icons: the mark in each theme's colours, on its ground ----
+
+# ground top, ground bottom, the glow behind the mark, and the mark's light, middle and
+# deep (top to bottom), from the theme blocks in index.html
+ICONS = {
+    "blue": dict(top=(13, 22, 50), bottom=(7, 11, 26), glow=(92, 127, 181),
+                 mark=((222, 233, 252), (138, 176, 236), (92, 127, 181))),
+    "red": dict(top=(34, 11, 18), bottom=(13, 7, 9), glow=(255, 46, 58),
+                mark=((255, 132, 138), (255, 46, 58), (168, 14, 25))),
+    # Sage: the reference's ground, deep teal on the left into the lighter slate, and
+    # the mark in its white
+    "mono": dict(top=(66, 88, 89), bottom=(124, 143, 144), glow=(30, 56, 58), left=(36, 62, 63),
+                 mark=((250, 252, 251), (226, 235, 232), (190, 207, 203))),
+}
+
+
+def icon(theme, size, fill=0.654, rounded=False):
+    """One icon: the theme's ground, a glow, and the mark filled top to bottom with the
+    theme's colours, keeping the drawing's own engraving (its darker strokes)."""
+    import numpy as np
+    from PIL import ImageFilter
+    t, S = ICONS[theme], 1024
+    y, x = np.mgrid[0:S, 0:S].astype(np.float32) / S
+    top, bot = (np.array(c, np.float32) for c in (t["top"], t["bottom"]))
+    rgb = top + (bot - top) * y[..., None]
+    if "left" in t:
+        d = np.exp(-(((x - 0.0) / 0.62) ** 2 + ((y - 0.32) / 0.5) ** 2) * 1.6)[..., None]
+        rgb += (np.array(t["left"], np.float32) - rgb) * d * 0.85
+    g = np.exp(-(((x - 0.72) / 0.55) ** 2 + ((y - 0.18) / 0.5) ** 2) * 1.4)[..., None]
+    rgb += (np.array(t["glow"], np.float32) - rgb) * g * 0.42
+    im = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+    m = Image.open(os.path.join(ROOT, "mark.png")).convert("RGBA")
+    m = m.crop(m.getchannel("A").getbbox())
+    k = fill * S / m.height
+    m = m.resize((round(m.width * k), round(m.height * k)), Image.LANCZOS)
+    ox, oy = (S - m.width) // 2, (S - m.height) // 2
+    a = np.asarray(m.getchannel("A"), np.float32) / 255
+    shade = np.clip(np.asarray(m.getchannel("R"), np.float32) / 208, 0.72, 1.08)[..., None]
+    v = np.linspace(0, 1, m.height, dtype=np.float32)[:, None, None]
+    lo, mid, hi = (np.array(c, np.float32) for c in t["mark"])
+    col = np.where(v < 0.5, lo + (mid - lo) * (v / 0.5), mid + (hi - mid) * ((v - 0.5) / 0.5))
+    col = np.broadcast_to(col, (m.height, m.width, 3)) * shade
+    mk = Image.fromarray(np.dstack([np.clip(col, 0, 255), a * 255]).astype(np.uint8), "RGBA")
+    glow = Image.new("RGBA", (S, S), t["glow"] + (0,))
+    ga = Image.new("L", (S, S), 0)
+    ga.paste(m.getchannel("A").point(lambda q: q * 0.55), (ox, oy))
+    glow.putalpha(ga.filter(ImageFilter.GaussianBlur(S * 0.03)))
+    im = Image.alpha_composite(im, glow)
+    im.alpha_composite(mk, (ox, oy))
+    if rounded:
+        r = Image.new("L", (S, S), 0)
+        ImageDraw.Draw(r).rounded_rectangle((0, 0, S - 1, S - 1), radius=round(S * 0.2237), fill=255)
+        im.putalpha(r)
+    else:
+        im = im.convert("RGB")
+    return im.resize((size, size), Image.LANCZOS)
+
+
+def icons(args):
+    out = [("icon-180.png", "blue", 180, {}), ("icon-512.png", "blue", 512, {"rounded": True}),
+           ("icon-maskable-512.png", "blue", 512, {"fill": 0.5}),
+           ("icon-red-180.png", "red", 180, {}), ("icon-mono-180.png", "mono", 180, {})]
+    for name, theme, size, kw in out:
+        path = os.path.join(ROOT, name)
+        icon(theme, size, **kw).save(path, "PNG", optimize=True)
+        print(f"{name}: {os.path.getsize(path) // 1024} KB")
+
+
 if __name__ == "__main__":
     a = sys.argv[1:]
-    if not a or a[0] not in ("exercises", "photos", "figures"):
+    if not a or a[0] not in ("exercises", "photos", "figures", "icons"):
         sys.exit(__doc__)
-    {"exercises": exercises, "photos": photos, "figures": figures}[a[0]](a)
+    {"exercises": exercises, "photos": photos, "figures": figures, "icons": icons}[a[0]](a)

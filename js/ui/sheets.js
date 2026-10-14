@@ -26,6 +26,7 @@ import {tiexSheet} from "./views/timport.js";
 import {coolCard, warmOf} from "./views/warmup.js";
 import {settingsSheet} from "./settings.js";
 import {fig3dHtml, hasMannequin} from "./mannequin.js";
+import {markArt} from "./art.js";
 
 /* One figure in the exercise sheet: a label, the number (typeable), and − / + either
    side. The steps are the plan's own: a set, a rep, fifteen seconds of rest. */
@@ -595,7 +596,7 @@ function vSheet(){
        Progress. */
     var wsecs=w.secs||w.mins*60;
     b='<div class="wc2">'
-     +'<img class="wc2-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">'
+     +markArt("wc2-art")
      +'<div class="wc2-medal" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M8.5 13.9 7 22l5-3 5 3-1.5-8.1"/></svg></div>'
      +'<h1 class="wc2-h">'+t("Workout complete")+'</h1>'
      +'<p class="wc2-sub">'+esc(planName(w.dayName))+' · '+pretty(w.date)+'</p>'

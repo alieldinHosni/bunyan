@@ -6,22 +6,25 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bunyan">
-<meta name="theme-color" content="#0A0B0E">
-<script>
-/* The theme before the first paint. render() sets it from the profile, but only after
-   the stylesheet has already painted the default once, so a Blue or Monochrome user saw
-   a flash of red on every launch. bunyan:look is the last theme and mode, kept small for
-   exactly this read (js/ui/theme.js writes it). */
-try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.documentElement;
-  /* Pink was replaced by Blue: a phone that last showed Pink opens in Blue. */
-  if(l[0]==="pink")l[0]="blue";
-  if(/^(red|blue|mono)$/.test(l[0]))d.setAttribute("data-palette",l[0]);
-  if(/^(dark|light)$/.test(l[1]))d.setAttribute("data-theme",l[1]);}catch(e){}
-</script>
+<meta name="theme-color" content="#070B1A">
 <title>Bunyan — Train · Fuel · Progress</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-180.png">
+<script>
+/* The theme before the first paint. render() sets it from the profile, but only after
+   the stylesheet has already painted the default (Blue) once, so a Red or Sage
+   user saw a flash of blue on every launch. bunyan:look is the last theme and mode, kept small for
+   exactly this read (js/ui/theme.js writes it). The icon goes with it: the tab's and the
+   one a phone puts on its Home Screen are the theme's own (icon-180.png is Blue's). */
+try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.documentElement;
+  /* Pink was replaced by Blue: a phone that last showed Pink opens in Blue. */
+  if(l[0]==="pink")l[0]="blue";
+  if(/^(red|blue|mono)$/.test(l[0])){d.setAttribute("data-palette",l[0]);
+    if(l[0]!=="blue")[].forEach.call(document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"]'),
+      function(k){k.setAttribute("href","icon-"+l[0]+"-180.png");});}
+  if(/^(dark|light)$/.test(l[1]))d.setAttribute("data-theme",l[1]);}catch(e){}
+</script>
 <style>
 /* ---- type: the two faces the Bunyan design is set in ---------------------------
    Outfit for titles and display numbers, Manrope for everything else — the pairing
@@ -98,7 +101,8 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* ---- themes ---------------------------------------------------------------------
-   Three BUNYAN themes — Red (the default), Blue and Monochrome — each in dark and light,
+   Three BUNYAN themes — Blue (the default), Red and Sage (stored as "mono", once
+   Monochrome) — each in dark and light,
    chosen in App settings (Theme, and Mode). A theme is a block of the same tokens below;
    nothing else in this stylesheet names a colour, so every surface, control, chart,
    drawing and photo follows the one that is on. html carries data-palette (red, blue,
@@ -113,65 +117,22 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
    destructive and error · gold earned · scrim the overlay · glow-rgb coloured light ·
    img-tone how photos are recoloured · mac-p/c/f the macro series, validated as a set.
 
-   The four brand colours of Red and Monochrome are used exactly as the reference
-   swatches give them. Blue is built from the night-blue reference the owner chose to
-   replace Pink with: its navy ground, its steel blue and its signal green. */
+   Red uses the brand's Machine Red and Glacier Blue exactly as the reference swatches
+   give them. Blue is built from the night-blue reference the owner chose to replace
+   Pink with: its navy ground, its steel blue and its signal green. Sage is the owner's
+   sage glass reference. All three are glass on a blended ground (the cards, the dock
+   and the controls frost what lies behind them), saturated in their own colours. */
 :root{
   --machine-red:#FF2E3A; --glacier-blue:#DBF6FF;
   --zero-black:#050505; --ghost-green:#D7FFE0;
   --night-navy:#070B1A; --steel-blue:#5C7FB5; --sky-blue:#8AB0EC; --signal-green:#82FC4F;
 }
-/* BUNYAN Red, dark — the signature, and the default. Machine Red is the one action
-   colour: primary buttons, the active tab, progress, selection, never a whole surface.
-   Structure is cool near-black; Glacier Blue is the controlled highlight — the label on
-   red, and the big figures. Red is also the accent text on dark, where it measures
-   4.96:1 on a card. The primary fill runs from Machine Red to accent-deep, so its Glacier
-   label holds 4.64:1 where it sits. */
-:root,[data-palette="red"],[data-theme="dark"]:not([data-palette]){
-  --bg:#0A0B0E; --raised:#13151A; --surface:#1B1E25; --border:#262A33; --text:#F1F5F8;
-  --sub:#C4CCD2; --dim:#8A939B; --faint:#8A939B; --accent:var(--machine-red);
-  --accentHi:var(--machine-red); --onAccent:var(--glacier-blue); --accent-deep:#A80E19;
-  --accentSoft:rgba(255,46,58,.12); --secondary:var(--glacier-blue); --figure:var(--glacier-blue);
-  --ok:#22A34B; --okSoft:#0E2415; --onOk:#0A0B0E; --gold:#C9A227; --warning:#E8A33A;
-  --danger:var(--machine-red); --danger-fill:var(--machine-red); --danger-deep:#A80E19;
- 
-  --glow:rgba(255,46,58,.14); --glow-rgb:255,46,58; --mac-p:var(--machine-red); --mac-c:#22A6B3;
-  --mac-f:#7F78F2; --glass:rgba(19,21,26,.78); --glass-solid:rgba(19,21,26,.96);
-  --hair:rgba(255,255,255,.08); --hair-hi:rgba(255,255,255,.14); --seg-track:rgba(255,255,255,.04);
-  --bar-track:rgba(255,255,255,.14); --accent-tint:rgba(255,46,58,.16);
-  --accent-edge:rgba(255,46,58,.32); --accent-glow:rgba(255,46,58,.22); --accent-dark:#4A0910;
-  --scrim:rgba(4,5,8,.62); --img-tone:saturate(1);
-  --shadow-card:0 1px 0 rgba(255,255,255,.03) inset,0 10px 30px rgba(0,0,0,.28);
-  --well:rgba(8,8,10,.45); --mark-tone:saturate(1); --bg-rgb:10,11,14; --accent-rgb:255,46,58;
-  --accentHi-rgb:255,46,58; --danger-rgb:255,46,58; --warning-rgb:232,163,58; --gold-rgb:201,162,39;
-}
-/* BUNYAN Red, light — the Glacier Blue swatch: Glacier Blue is the page, cards are a
-   whiter glacier, Machine Red stays the fill. Red text on glacier would be 3.27:1, so
-   accent text (accentHi) and danger use a deeper red; icons and fills keep Machine Red.
-   The dock stays dark glass, as chrome. */
-[data-theme="light"],[data-palette="red"][data-theme="light"]{
-  --bg:var(--glacier-blue); --raised:#F5FCFF; --surface:#E4F5FC; --border:#BCDCE8; --text:#0A0B0E;
-  --sub:#334750; --dim:#465B65; --faint:#465B65; --accent:var(--machine-red); --accentHi:#C30F1C;
-  --onAccent:var(--glacier-blue); --accent-deep:#A80E19; --accentSoft:#FFE3E5; --secondary:#0A0B0E;
-  --figure:#0A0B0E; --ok:#177530; --okSoft:#DDF2E5; --onOk:#FFFFFF; --gold:#7A6213;
-  --warning:#8A5600; --danger:#C30F1C; --danger-fill:var(--machine-red); --danger-deep:#A80E19;
-  --glow:transparent;
-  --glow-rgb:255,46,58; --mac-p:#D41E2A; --mac-c:#009AA6; --mac-f:#6D5FE6;
-  --glass:rgba(10,11,14,.86); --glass-solid:rgba(10,11,14,.97); --hair:rgba(10,40,60,.10);
-  --hair-hi:rgba(255,255,255,.14); --seg-track:rgba(10,40,60,.06); --bar-track:rgba(10,40,60,.12);
-  --accent-tint:rgba(255,46,58,.14); --accent-edge:rgba(255,46,58,.32);
-  --accent-glow:rgba(255,46,58,.20); --accent-dark:#5A0B12; --scrim:rgba(6,22,32,.42);
-  --img-tone:saturate(1);
-  --shadow-card:0 1px 0 rgba(255,255,255,.6) inset,0 10px 30px rgba(10,40,60,.10);
-  --well:rgba(10,40,60,.07); --mark-tone:saturate(1); --bg-rgb:219,246,255; --accent-rgb:255,46,58;
-  --accentHi-rgb:195,15,28; --danger-rgb:255,46,58; --warning-rgb:138,86,0; --gold-rgb:122,98,19;
-}
 /* BUNYAN Blue, dark — night blue. Night Navy is the ground, cards are a deep blue
    glass, Sky Blue (a lighter step of the reference's Steel Blue) is the action and
    accent colour with navy labels on it (8.9:1), and Signal Green is the small live
    mark: done, on, something new. Destructive actions stay red: danger is a meaning,
-   not a theme colour. Photos and the mark turn from red to blue through --img-tone. */
-[data-palette="blue"],[data-palette="blue"] [data-theme="dark"]:not([data-palette]){
+   not a theme colour. Photos turn from red to blue through --img-tone. */
+:root,[data-palette="blue"],[data-theme="dark"]:not([data-palette]),[data-palette="blue"] [data-theme="dark"]:not([data-palette]){
   --bg:var(--night-navy); --raised:#121A30; --surface:#1B2440; --border:#2A3452; --text:#EEF2F8;
   --sub:#C3CBDA; --dim:#8D98B0; --faint:#8D98B0; --accent:var(--sky-blue);
   --accentHi:var(--sky-blue); --onAccent:var(--night-navy); --accent-deep:var(--steel-blue);
@@ -186,14 +147,15 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accent-edge:rgba(138,176,236,.34); --accent-glow:rgba(92,127,181,.30); --accent-dark:#1F3358;
   --scrim:rgba(3,5,14,.66); --img-tone:hue-rotate(-150deg) saturate(.8) brightness(1.05);
   --shadow-card:0 1px 0 rgba(212,217,226,.05) inset,0 10px 30px rgba(2,4,12,.45);
-  --well:rgba(3,5,14,.45); --mark-tone:hue-rotate(-150deg) saturate(.8) brightness(1.15);
+  --well:rgba(3,5,14,.45);
   --bg-rgb:7,11,26; --accent-rgb:138,176,236; --accentHi-rgb:138,176,236; --danger-rgb:229,50,62;
   --warning-rgb:255,181,97; --gold-rgb:240,198,88;
+  --glass-hi:rgba(212,217,226,.16); --glass-btn:rgba(37,48,80,.42); --glass-btn-edge:rgba(212,217,226,.16);
 }
 /* BUNYAN Blue, light — navy type on a pale blue-grey page with white cards; a deeper
    step of Steel Blue is the fill, with white labels on it (5.5:1) and as accent text.
    The dock is night-navy glass. */
-[data-palette="blue"][data-theme="light"]{
+[data-theme="light"],[data-palette="blue"][data-theme="light"],[data-palette="blue"] [data-theme="light"]:not([data-palette]){
   --bg:#E9EEF6; --raised:#FFFFFF; --surface:#DDE4EF; --border:#C3CDDD; --text:#0B1226;
   --sub:#3A4560; --dim:#525E78; --faint:#525E78; --accent:#3D6AA8; --accentHi:#2F5A96;
   --onAccent:#FFFFFF; --accent-deep:#2C5390; --accentSoft:#DCE7F8;
@@ -208,115 +170,177 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accent-glow:rgba(61,106,168,.22); --accent-dark:#1F3358; --scrim:rgba(11,18,38,.42);
   --img-tone:hue-rotate(-150deg) saturate(.8) brightness(1.05);
   --shadow-card:0 1px 0 rgba(255,255,255,.7) inset,0 10px 30px rgba(11,18,38,.10);
-  --well:rgba(11,18,38,.06); --mark-tone:hue-rotate(-150deg) saturate(.85) brightness(.9);
+  --well:rgba(11,18,38,.06);
   --bg-rgb:233,238,246; --accent-rgb:61,106,168; --accentHi-rgb:47,90,150; --danger-rgb:229,50,62;
   --warning-rgb:138,86,0; --gold-rgb:122,98,19;
+  --glass-hi:rgba(255,255,255,.85); --glass-btn:rgba(255,255,255,.56); --glass-btn-edge:rgba(255,255,255,.88);
 }
-/* Monochrome, dark — minimal, editorial. Zero Black ground, Ghost Green as the off-white:
-   text, the primary fill (Zero Black labels on it, 18.7:1) and the active tab. A grey
-   hierarchy does the rest. No coloured glow, no card shadow, flat buttons: depth comes
-   from hairlines. Colour only where it means something: done (a muted green), warning,
-   danger. Photos and the mark are shown in greyscale. */
+/* BUNYAN Red, dark — the signature, as glass. Machine Red is the one action colour:
+   primary buttons, the active tab, progress, selection, never a whole surface. The ground
+   is a deep wine black lit red from above and wine from below; cards are wine glass;
+   Glacier Blue is the controlled highlight — the label on red, and the big figures. */
+[data-palette="red"],[data-palette="red"] [data-theme="dark"]:not([data-palette]){
+  --bg:#0D0709; --raised:#1A0E12; --surface:#25131A; --border:#3A2029; --text:#F8EFF1;
+  --sub:#DCC7CB; --dim:#A99096; --faint:#A99096; --accent:var(--machine-red);
+  --accentHi:var(--machine-red); --onAccent:var(--glacier-blue); --accent-deep:#A80E19;
+  --accentSoft:rgba(255,46,58,.13); --secondary:var(--glacier-blue); --figure:var(--glacier-blue);
+  --ok:#22A34B; --okSoft:#0E2415; --onOk:#0D0709; --gold:#D9B13A; --warning:#E8A33A;
+  --danger:var(--machine-red); --danger-fill:var(--machine-red); --danger-deep:#A80E19;
+  --glow:rgba(255,46,58,.22); --glow-rgb:255,46,58; --mac-p:var(--machine-red); --mac-c:#22A6B3;
+  --mac-f:#7F78F2; --glass:rgba(30,12,17,.74); --glass-solid:rgba(30,12,17,.96);
+  --hair:rgba(255,226,230,.08); --hair-hi:rgba(255,226,230,.15); --seg-track:rgba(255,226,230,.05);
+  --bar-track:rgba(255,226,230,.15); --accent-tint:rgba(255,46,58,.17);
+  --accent-edge:rgba(255,46,58,.34); --accent-glow:rgba(255,46,58,.28); --accent-dark:#4A0910;
+  --scrim:rgba(8,3,5,.64); --img-tone:saturate(1);
+  --shadow-card:0 1px 0 rgba(255,226,230,.05) inset,0 10px 30px rgba(10,2,4,.45);
+  --well:rgba(10,3,5,.45); --bg-rgb:13,7,9; --accent-rgb:255,46,58;
+  --accentHi-rgb:255,46,58; --danger-rgb:255,46,58; --warning-rgb:232,163,58; --gold-rgb:217,177,58;
+  --glass-hi:rgba(255,226,230,.16); --glass-btn:rgba(64,20,30,.42); --glass-btn-edge:rgba(255,214,220,.16);
+}
+/* BUNYAN Red, light — the Glacier Blue swatch: Glacier Blue is the page, cards are a
+   whiter glacier, Machine Red stays the fill. Red text on glacier would be 3.27:1, so
+   accent text (accentHi) and danger use a deeper red; icons and fills keep Machine Red.
+   The dock stays dark glass, as chrome. */
+[data-palette="red"][data-theme="light"],[data-palette="red"] [data-theme="light"]:not([data-palette]){
+  --bg:var(--glacier-blue); --raised:#F5FCFF; --surface:#E4F5FC; --border:#BCDCE8; --text:#0A0B0E;
+  --sub:#334750; --dim:#465B65; --faint:#465B65; --accent:var(--machine-red); --accentHi:#C30F1C;
+  --onAccent:var(--glacier-blue); --accent-deep:#A80E19; --accentSoft:#FFE3E5; --secondary:#0A0B0E;
+  --figure:#0A0B0E; --ok:#177530; --okSoft:#DDF2E5; --onOk:#FFFFFF; --gold:#7A6213;
+  --warning:#8A5600; --danger:#C30F1C; --danger-fill:var(--machine-red); --danger-deep:#A80E19;
+  --glow:transparent;
+  --glow-rgb:255,46,58; --mac-p:#D41E2A; --mac-c:#009AA6; --mac-f:#6D5FE6;
+  --glass:rgba(10,11,14,.86); --glass-solid:rgba(10,11,14,.97); --hair:rgba(10,40,60,.10);
+  --hair-hi:rgba(255,255,255,.14); --seg-track:rgba(10,40,60,.06); --bar-track:rgba(10,40,60,.12);
+  --accent-tint:rgba(255,46,58,.14); --accent-edge:rgba(255,46,58,.32);
+  --accent-glow:rgba(255,46,58,.20); --accent-dark:#5A0B12; --scrim:rgba(6,22,32,.42);
+  --img-tone:saturate(1);
+  --shadow-card:0 1px 0 rgba(255,255,255,.6) inset,0 10px 30px rgba(10,40,60,.10);
+  --well:rgba(10,40,60,.07); --bg-rgb:219,246,255; --accent-rgb:255,46,58;
+  --accentHi-rgb:195,15,28; --danger-rgb:255,46,58; --warning-rgb:138,86,0; --gold-rgb:122,98,19;
+  --glass-hi:rgba(255,255,255,.85); --glass-btn:rgba(255,255,255,.56); --glass-btn-edge:rgba(255,255,255,.88);
+}
+/* Sage, dark — the owner's sage reference, at night: a deep sage-teal ground lit by a
+   paler sage from above, sage glass cards, a sage-white for the action and the active
+   tab with deep slate labels on it. Colour only where it means something: done, a
+   caution, danger. Photos are shown in the sage's teal. (Its id stays "mono".) */
 [data-palette="mono"],[data-palette="mono"] [data-theme="dark"]:not([data-palette]){
-  --bg:var(--zero-black); --raised:#111211; --surface:#1A1B1A; --border:#272927;
-  --text:var(--ghost-green); --sub:#BCCDC0; --dim:#86918A; --faint:#86918A;
-  --accent:var(--ghost-green); --accentHi:var(--ghost-green); --onAccent:var(--zero-black);
-  --accent-deep:var(--ghost-green); --accentSoft:rgba(215,255,224,.10); --secondary:#FFFFFF;
-  --figure:#FFFFFF; --ok:#4C9E6B; --okSoft:#0F2116; --onOk:var(--zero-black);
-  --gold:var(--ghost-green); --warning:#E3B04B; --danger:#FF5C61; --danger-fill:#E5323E;
+  --bg:#0D1A1B; --raised:#152527; --surface:#1D2F31; --border:#2A3F41;
+  --text:#EAF1EF; --sub:#BFD0CD; --dim:#8FA5A2; --faint:#8FA5A2;
+  --accent:#DCE7E4; --accentHi:#DCE7E4; --onAccent:#142E33;
+  --accent-deep:#B3C8C3; --accentSoft:rgba(220,231,228,.10); --secondary:#FFFFFF;
+  --figure:#FFFFFF; --ok:#5DBB8A; --okSoft:#10261B; --onOk:#0D1A1B;
+  --gold:#E3C26B; --warning:#E3B04B; --danger:#FF5C61; --danger-fill:#E5323E;
   --danger-deep:#B3131B;
-  --glow:transparent; --glow-rgb:5,5,5; --mac-p:var(--ghost-green);
-  --mac-c:#8FAA98; --mac-f:#58695D; --glass:rgba(17,18,17,.82); --glass-solid:rgba(17,18,17,.96);
-  --hair:rgba(215,255,224,.09); --hair-hi:rgba(215,255,224,.15); --seg-track:rgba(215,255,224,.04);
-  --bar-track:rgba(215,255,224,.14); --accent-tint:rgba(215,255,224,.12);
-  --accent-edge:rgba(215,255,224,.30); --accent-glow:rgba(215,255,224,.10); --accent-dark:#1E2A22;
-  --scrim:rgba(0,0,0,.72); --img-tone:grayscale(1) contrast(1.08); --fig-tone:grayscale(1) contrast(1.05); --shadow-card:0 0 #0000;
-  --well:rgba(0,0,0,.5); --mark-tone:grayscale(1) brightness(2.6); --bg-rgb:5,5,5;
-  --accent-rgb:215,255,224; --accentHi-rgb:215,255,224; --danger-rgb:229,50,62;
-  --warning-rgb:227,176,75; --gold-rgb:215,255,224;
+  --glow:rgba(120,155,150,.22); --glow-rgb:120,155,150; --mac-p:#DCE7E4;
+  --mac-c:#5FAFA5; --mac-f:#D6A35A; --glass:rgba(16,30,32,.74); --glass-solid:rgba(16,30,32,.96);
+  --hair:rgba(220,235,232,.09); --hair-hi:rgba(220,235,232,.16); --seg-track:rgba(220,235,232,.05);
+  --bar-track:rgba(220,235,232,.14); --accent-tint:rgba(220,231,228,.12);
+  --accent-edge:rgba(220,231,228,.30); --accent-glow:rgba(120,155,150,.26); --accent-dark:#1E3436;
+  --scrim:rgba(4,10,11,.66); --img-tone:grayscale(1) sepia(.3) hue-rotate(128deg) saturate(.75) contrast(1.06); --fig-tone:grayscale(1) contrast(1.05);
+  --shadow-card:0 1px 0 rgba(220,235,232,.05) inset,0 10px 30px rgba(2,8,9,.45);
+  --well:rgba(2,8,9,.45); --bg-rgb:13,26,27;
+  --accent-rgb:220,231,228; --accentHi-rgb:220,231,228; --danger-rgb:229,50,62;
+  --warning-rgb:227,176,75; --gold-rgb:227,194,107;
+  --glass-hi:rgba(220,235,232,.16); --glass-btn:rgba(160,190,186,.10); --glass-btn-edge:rgba(220,235,232,.16);
 }
-/* Monochrome, light — the Ghost Green swatch: Ghost Green page, white cards, Zero Black
-   type and Zero Black fills with Ghost Green labels. The dock is black glass. */
-[data-palette="mono"][data-theme="light"]{
-  --bg:var(--ghost-green); --raised:#FFFFFF; --surface:#EAFFEF; --border:#B5DCBE;
-  --text:var(--zero-black); --sub:#2B352E; --dim:#46524A; --faint:#46524A;
-  --accent:var(--zero-black); --accentHi:var(--zero-black); --onAccent:var(--ghost-green);
-  --accent-deep:var(--zero-black); --accentSoft:#E3F5E7; --secondary:var(--zero-black);
-  --figure:var(--zero-black); --ok:#177530; --okSoft:#DCF3E2; --onOk:#FFFFFF;
-  --gold:var(--zero-black); --warning:#8A5600; --danger:#C41E2A; --danger-fill:#E5323E;
+/* Sage, light — the owner's reference exactly: a sage ground blended from deep teal
+   (#324C4D) through grey sage to a pale grey (#E0E4E5), frosted light glass cards with
+   deep slate type, deep slate-teal (#142E33, the reference's bars and switch) for the
+   action with white labels, and the dock a slate pill of white buttons. Type straight
+   on the ground is white, as in the reference (see the sage ground's type below). */
+[data-palette="mono"][data-theme="light"],[data-palette="mono"] [data-theme="light"]:not([data-palette]){
+  --bg:#D2DBDA; --raised:#E6ECEB; --surface:#D3DCDB; --border:#AEBDBC;
+  --text:#132627; --sub:#2C4041; --dim:#435857; --faint:#435857;
+  --accent:#142E33; --accentHi:#142E33; --onAccent:#F2F6F5;
+  --accent-deep:#0A1F23; --accentSoft:rgba(20,46,51,.10); --secondary:#142E33;
+  --figure:#142E33; --ok:#1D7448; --okSoft:#D7ECDF; --onOk:#FFFFFF;
+  --gold:#7A6213; --warning:#8A5600; --danger:#B8222D; --danger-fill:#E5323E;
   --danger-deep:#B3131B;
-  --glow:transparent; --glow-rgb:215,255,224;
-  --mac-p:var(--zero-black); --mac-c:#34443A; --mac-f:#74917D; --glass:rgba(5,5,5,.90);
-  --glass-solid:rgba(5,5,5,.97); --hair:rgba(5,5,5,.10); --hair-hi:rgba(255,255,255,.16);
-  --seg-track:rgba(5,5,5,.05); --bar-track:rgba(5,5,5,.12); --accent-tint:rgba(5,5,5,.08);
-  --accent-edge:rgba(5,5,5,.30); --accent-glow:rgba(5,5,5,.10); --accent-dark:#3E4A42;
-  --scrim:rgba(5,5,5,.45); --img-tone:grayscale(1) contrast(1.05); --fig-tone:grayscale(1) contrast(1.05); --shadow-card:0 0 #0000;
-  --well:rgba(5,5,5,.06); --mark-tone:grayscale(1) brightness(.35); --bg-rgb:215,255,224;
-  --accent-rgb:5,5,5; --accentHi-rgb:5,5,5; --danger-rgb:229,50,62; --warning-rgb:138,86,0;
-  --gold-rgb:5,5,5;
+  --glow:transparent; --glow-rgb:20,46,51;
+  --mac-p:#142E33; --mac-c:#3F8E86; --mac-f:#B8732A; --glass:rgba(20,40,43,.84);
+  --glass-solid:rgba(20,40,43,.97); --hair:rgba(19,38,39,.12); --hair-hi:rgba(255,255,255,.50);
+  --seg-track:rgba(19,38,39,.06); --bar-track:rgba(19,38,39,.14); --accent-tint:rgba(20,46,51,.10);
+  --accent-edge:rgba(20,46,51,.30); --accent-glow:rgba(20,46,51,.18); --accent-dark:#0A1F23;
+  --scrim:rgba(14,28,30,.40); --img-tone:grayscale(1) sepia(.3) hue-rotate(128deg) saturate(.75) contrast(1.04); --fig-tone:grayscale(1) contrast(1.05);
+  --shadow-card:0 1px 0 rgba(255,255,255,.5) inset,0 12px 30px rgba(14,30,31,.16);
+  --well:rgba(19,38,39,.06); --bg-rgb:210,219,218;
+  --accent-rgb:20,46,51; --accentHi-rgb:20,46,51; --danger-rgb:229,50,62; --warning-rgb:138,86,0;
+  --gold-rgb:122,98,19;
+  --glass-hi:rgba(255,255,255,.62); --glass-btn:rgba(236,242,241,.58); --glass-btn-edge:rgba(255,255,255,.72);
 }
 /* ---- the dock, the ground and the cards, per theme ---------------------------------
    The same six selectors as the theme blocks above, in the same order, so each mode
    resolves exactly as they do.
-   - dock-*: the dock's pill (bar), a tab's circle (dot, its edge and its icon ink) and
-     the open pill of the tab that is on (pill, pill-ink); flag is the dot for news.
+   - dock-*: the dock's pill (bar, a glass in every theme), a tab's circle (dot, its
+     edge and its icon ink) and the open pill of the tab that is on (pill, pill-ink);
+     flag is the dot for news.
    - ground: the page is not one flat colour but two or three of the theme's tones
-     blended (body::before), the way light falls across a surface.
-   - card, card-edge: the in-page cards are glass over that ground, so the blend shows
-     through them. Sheets, toasts and anything that floats over content stay solid. */
-:root,[data-palette="red"],[data-theme="dark"]:not([data-palette]){
-  --dock-bar:var(--glass); --dock-bar-solid:var(--glass-solid); --dock-dot:rgba(255,255,255,.06);
-  --dock-dot-solid:#1E2026; --dock-dot-edge:rgba(255,255,255,.07); --dock-dot-ink:#AEB6BD;
-  --dock-pill:var(--machine-red); --dock-pill-ink:var(--glacier-blue); --dock-flag:var(--machine-red);
-  --ground:radial-gradient(120% 60% at 50% -10%,rgba(255,46,58,.15) 0%,transparent 62%),
-    radial-gradient(95% 55% at 100% 105%,rgba(219,246,255,.06) 0%,transparent 60%);
-  --card:rgba(22,24,30,.80); --card-edge:var(--border);
-  --map-water:rgba(219,246,255,.10); --map-park:rgba(219,246,255,.05);
-}
-[data-theme="light"],[data-palette="red"][data-theme="light"]{
-  --dock-dot:rgba(219,246,255,.10); --dock-dot-solid:#1D2226; --dock-dot-edge:rgba(219,246,255,.10);
-  --dock-dot-ink:#B9C7CE; --dock-pill:var(--machine-red); --dock-pill-ink:var(--glacier-blue); --dock-flag:#FF5C66;
-  --ground:radial-gradient(110% 55% at 50% -12%,#F6FDFF 0%,transparent 65%),
-    linear-gradient(180deg,transparent 35%,#C6E8F4 100%);
-  --card:rgba(245,252,255,.80); --card-edge:rgba(188,220,232,.9);
-  --map-water:rgba(120,190,215,.30); --map-park:rgba(120,190,215,.14);
-}
-[data-palette="blue"],[data-palette="blue"] [data-theme="dark"]:not([data-palette]){
+     blended (body::before), the way light falls across a surface; the background
+     drawings (#bgart) lie on it.
+   - card, card-edge: the in-page cards are frosted glass over that ground, so the blend
+     and the drawings show through them, softened. */
+:root,[data-palette="blue"],[data-theme="dark"]:not([data-palette]),[data-palette="blue"] [data-theme="dark"]:not([data-palette]){
+  --dock-bar:var(--glass); --dock-bar-solid:var(--glass-solid); --dock-hair:rgba(212,217,226,.14);
   --dock-dot:rgba(212,217,226,.08); --dock-dot-solid:#1F2840; --dock-dot-edge:rgba(212,217,226,.10);
   --dock-dot-ink:#B3BED2; --dock-pill:var(--sky-blue); --dock-pill-ink:var(--night-navy); --dock-flag:var(--signal-green);
   --ground:radial-gradient(115% 55% at 85% -8%,rgba(92,127,181,.45) 0%,transparent 60%),
     radial-gradient(95% 60% at 0% 105%,rgba(82,125,174,.24) 0%,transparent 62%),
     linear-gradient(180deg,#0B1229 0%,var(--night-navy) 55%);
-  --card:rgba(37,48,80,.52); --card-edge:rgba(212,217,226,.13);
+  --card:rgba(37,48,80,.48); --card-edge:rgba(212,217,226,.14);
   --map-water:rgba(138,176,236,.20); --map-park:rgba(130,252,79,.07);
 }
-[data-palette="blue"][data-theme="light"]{
+[data-theme="light"],[data-palette="blue"][data-theme="light"],[data-palette="blue"] [data-theme="light"]:not([data-palette]){
+  --dock-bar:rgba(18,26,48,.80); --dock-hair:rgba(212,217,226,.16);
   --dock-dot:rgba(212,217,226,.08); --dock-dot-solid:#1F2840; --dock-dot-edge:rgba(212,217,226,.10);
   --dock-dot-ink:#B3BED2; --dock-pill:var(--sky-blue); --dock-pill-ink:var(--night-navy); --dock-flag:var(--signal-green);
   --ground:radial-gradient(115% 55% at 85% -8%,rgba(138,176,236,.55) 0%,transparent 60%),
+    radial-gradient(90% 55% at 0% 100%,rgba(92,127,181,.22) 0%,transparent 62%),
     linear-gradient(180deg,#EEF2F8 0%,#D9E1EE 100%);
-  --card:rgba(255,255,255,.70); --card-edge:rgba(255,255,255,.85);
+  --card:rgba(255,255,255,.62); --card-edge:rgba(255,255,255,.88);
   --map-water:rgba(138,176,236,.40); --map-park:rgba(90,190,60,.16);
 }
-[data-palette="mono"],[data-palette="mono"] [data-theme="dark"]:not([data-palette]){
-  --dock-dot:rgba(215,255,224,.07); --dock-dot-solid:#1A1D1B; --dock-dot-edge:rgba(215,255,224,.09);
-  --dock-dot-ink:#A9BBAE; --dock-pill:var(--ghost-green); --dock-pill-ink:var(--zero-black); --dock-flag:var(--ghost-green);
-  --ground:radial-gradient(120% 60% at 15% -10%,rgba(215,255,224,.11) 0%,transparent 60%),
-    radial-gradient(100% 60% at 100% 105%,rgba(130,160,140,.11) 0%,transparent 62%),
-    linear-gradient(170deg,#0B100D 0%,var(--zero-black) 60%);
-  --card:rgba(215,255,224,.045); --card-edge:rgba(215,255,224,.10);
-  --map-water:rgba(215,255,224,.10); --map-park:rgba(215,255,224,.06);
+[data-palette="red"],[data-palette="red"] [data-theme="dark"]:not([data-palette]){
+  --dock-bar:var(--glass); --dock-bar-solid:var(--glass-solid); --dock-hair:rgba(255,226,230,.14);
+  --dock-dot:rgba(255,226,230,.07); --dock-dot-solid:#2A141A; --dock-dot-edge:rgba(255,226,230,.10);
+  --dock-dot-ink:#D9BEC3; --dock-pill:var(--machine-red); --dock-pill-ink:var(--glacier-blue); --dock-flag:var(--machine-red);
+  --ground:radial-gradient(115% 55% at 85% -8%,rgba(255,46,58,.34) 0%,transparent 60%),
+    radial-gradient(95% 60% at 0% 105%,rgba(150,22,48,.34) 0%,transparent 62%),
+    radial-gradient(70% 40% at 0% 38%,rgba(219,246,255,.05) 0%,transparent 70%),
+    linear-gradient(180deg,#1E0A10 0%,#0D0709 55%);
+  --card:rgba(66,20,31,.46); --card-edge:rgba(255,214,220,.14);
+  --map-water:rgba(219,246,255,.10); --map-park:rgba(219,246,255,.05);
 }
-/* Monochrome, light is the reference's sage glass in Zero Black and Ghost Green: a
-   Ghost Green page that deepens to a grey green, frosted white cards, and the dock a
-   Zero Black pill whose open tab is Ghost Green. */
-[data-palette="mono"][data-theme="light"]{
-  --dock-dot:rgba(215,255,224,.14); --dock-dot-solid:#202722; --dock-dot-edge:rgba(215,255,224,.12);
-  --dock-dot-ink:#CFE9D5; --dock-pill:var(--ghost-green); --dock-pill-ink:var(--zero-black); --dock-flag:var(--ghost-green);
-  --ground:radial-gradient(110% 50% at 10% -5%,rgba(255,255,255,.75) 0%,transparent 60%),
-    linear-gradient(170deg,#E6FFEB 0%,var(--ghost-green) 35%,#B3D5BC 100%);
-  --card:rgba(255,255,255,.55); --card-edge:rgba(255,255,255,.80);
-  --map-water:rgba(120,170,135,.30); --map-park:rgba(120,170,135,.16);
+[data-palette="red"][data-theme="light"],[data-palette="red"] [data-theme="light"]:not([data-palette]){
+  --dock-bar:rgba(30,12,17,.80); --dock-hair:rgba(255,226,230,.16);
+  --dock-dot:rgba(219,246,255,.10); --dock-dot-solid:#2A141A; --dock-dot-edge:rgba(219,246,255,.12);
+  --dock-dot-ink:#E3CBD0; --dock-pill:var(--machine-red); --dock-pill-ink:var(--glacier-blue); --dock-flag:#FF5C66;
+  --ground:radial-gradient(115% 55% at 85% -8%,rgba(255,46,58,.30) 0%,transparent 60%),
+    radial-gradient(95% 60% at 0% 105%,rgba(110,190,220,.55) 0%,transparent 62%),
+    linear-gradient(180deg,#EEFAFF 0%,#CDE9F4 100%);
+  --card:rgba(255,255,255,.58); --card-edge:rgba(255,255,255,.88);
+  --map-water:rgba(120,190,215,.30); --map-park:rgba(120,190,215,.14);
+}
+[data-palette="mono"],[data-palette="mono"] [data-theme="dark"]:not([data-palette]){
+  --dock-bar:var(--glass); --dock-bar-solid:var(--glass-solid); --dock-hair:rgba(220,235,232,.14);
+  --dock-dot:rgba(220,235,232,.08); --dock-dot-solid:#1D2F31; --dock-dot-edge:rgba(220,235,232,.12);
+  --dock-dot-ink:#B9CAC7; --dock-pill:#E6EEEC; --dock-pill-ink:#142E33; --dock-flag:#9BE3B9;
+  --ground:radial-gradient(115% 55% at 85% -8%,rgba(122,152,150,.42) 0%,transparent 60%),
+    radial-gradient(95% 60% at 0% 105%,rgba(58,96,95,.38) 0%,transparent 62%),
+    linear-gradient(180deg,#152729 0%,#0D1A1B 55%);
+  --card:rgba(160,190,186,.09); --card-edge:rgba(220,235,232,.14);
+  --map-water:rgba(220,235,232,.10); --map-park:rgba(220,235,232,.06);
+}
+[data-palette="mono"][data-theme="light"],[data-palette="mono"] [data-theme="light"]:not([data-palette]){
+  --dock-bar:rgba(20,40,43,.82); --dock-hair:rgba(255,255,255,.18);
+  --dock-dot:rgba(244,248,247,.94); --dock-dot-solid:#F2F6F5; --dock-dot-edge:rgba(255,255,255,.70);
+  --dock-dot-ink:#142E33; --dock-pill:#FFFFFF; --dock-pill-ink:#142E33; --dock-flag:#2E8B5E;
+  --ground:radial-gradient(85% 42% at 0% 24%,rgba(44,72,73,.96) 0%,rgba(44,72,73,.6) 38%,transparent 74%),
+    radial-gradient(75% 38% at 0% 70%,rgba(50,78,79,.82) 0%,transparent 72%),
+    radial-gradient(80% 36% at 100% 2%,rgba(190,201,202,.78) 0%,transparent 64%),
+    radial-gradient(120% 34% at 60% 108%,rgba(224,228,229,.95) 0%,transparent 62%),
+    linear-gradient(165deg,#53696A 0%,#62797A 46%,#7C8F90 100%);
+  --card:rgba(224,231,230,.56); --card-edge:rgba(255,255,255,.62);
+  --map-water:rgba(120,160,160,.30); --map-park:rgba(120,160,160,.16);
 }
 /* ---- the live figure's stage, per theme (js/ui/mannequin.js) -------------------------
    The 3D figure is drawn by the graphics card, so its colours are read from these
@@ -331,42 +355,60 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
      the viewer
    - shade: how dark the shadow on the floor is
    - arrow, arrow-glow: the way the movement goes */
-:root,[data-palette="red"],[data-theme="dark"]:not([data-palette]){
-  --mq-top:#09111E; --mq-mid:#0F1B2E; --mq-edge:#050A13; --mq-pool:#2068C4; --mq-pool-k:1;
-  --mq-skin:#656A73; --mq-metal:#373E49; --mq-pad:#343942; --mq-steel:#949CAC; --mq-mark:#C2474C;
-  --mq-rim:#B1D6FF; --mq-bounce:#6198E4; --mq-deep:#E44C3B; --mq-hot:#FFAC7B; --mq-shade:1;
-  --mq-arrow:#84BAFF; --mq-arrow-glow:#468CFF;
-}
-[data-theme="light"],[data-palette="red"][data-theme="light"]{
-  --mq-top:#F4FAFD; --mq-mid:#FFFFFF; --mq-edge:#C9DCE6; --mq-pool:#A6875B; --mq-pool-k:-.3;
-  --mq-skin:#949DA9; --mq-metal:#4E5866; --mq-pad:#3B434F; --mq-steel:#C9D0DA; --mq-mark:#D9303B;
-  --mq-rim:#E9F0F7; --mq-bounce:#9DB7D8; --mq-deep:#E0202E; --mq-hot:#FF6A4D; --mq-shade:.9;
-  --mq-arrow:#1F6FE0; --mq-arrow-glow:#7FB0F5;
-}
-[data-palette="blue"],[data-palette="blue"] [data-theme="dark"]:not([data-palette]){
+:root,[data-palette="blue"],[data-theme="dark"]:not([data-palette]),[data-palette="blue"] [data-theme="dark"]:not([data-palette]){
   --mq-top:#0A1226; --mq-mid:#121D38; --mq-edge:#04070F; --mq-pool:#2B5FB5; --mq-pool-k:1;
   --mq-skin:#656A73; --mq-metal:#353D4D; --mq-pad:#313848; --mq-steel:#949CAC; --mq-mark:#8AB0EC;
   --mq-rim:#B1D6FF; --mq-bounce:#5E8FE8; --mq-deep:#2F6BFF; --mq-hot:#A8CCFF; --mq-shade:1;
   --mq-arrow:#82FC4F; --mq-arrow-glow:#3FA52A;
 }
-[data-palette="blue"][data-theme="light"]{
+[data-theme="light"],[data-palette="blue"][data-theme="light"],[data-palette="blue"] [data-theme="light"]:not([data-palette]){
   --mq-top:#F3F6FB; --mq-mid:#FFFFFF; --mq-edge:#CDD7E6; --mq-pool:#A68B5B; --mq-pool-k:-.3;
   --mq-skin:#949DA9; --mq-metal:#4B5568; --mq-pad:#3A4254; --mq-steel:#C9D0DA; --mq-mark:#3D6AA8;
   --mq-rim:#E9F0F7; --mq-bounce:#9DB7D8; --mq-deep:#1F4FA8; --mq-hot:#3D7CF0; --mq-shade:.9;
   --mq-arrow:#177530; --mq-arrow-glow:#7CC79A;
 }
+[data-palette="red"],[data-palette="red"] [data-theme="dark"]:not([data-palette]){
+  --mq-top:#09111E; --mq-mid:#0F1B2E; --mq-edge:#050A13; --mq-pool:#2068C4; --mq-pool-k:1;
+  --mq-skin:#656A73; --mq-metal:#373E49; --mq-pad:#343942; --mq-steel:#949CAC; --mq-mark:#C2474C;
+  --mq-rim:#B1D6FF; --mq-bounce:#6198E4; --mq-deep:#E44C3B; --mq-hot:#FFAC7B; --mq-shade:1;
+  --mq-arrow:#84BAFF; --mq-arrow-glow:#468CFF;
+}
+[data-palette="red"][data-theme="light"],[data-palette="red"] [data-theme="light"]:not([data-palette]){
+  --mq-top:#F4FAFD; --mq-mid:#FFFFFF; --mq-edge:#C9DCE6; --mq-pool:#A6875B; --mq-pool-k:-.3;
+  --mq-skin:#949DA9; --mq-metal:#4E5866; --mq-pad:#3B434F; --mq-steel:#C9D0DA; --mq-mark:#D9303B;
+  --mq-rim:#E9F0F7; --mq-bounce:#9DB7D8; --mq-deep:#E0202E; --mq-hot:#FF6A4D; --mq-shade:.9;
+  --mq-arrow:#1F6FE0; --mq-arrow-glow:#7FB0F5;
+}
 [data-palette="mono"],[data-palette="mono"] [data-theme="dark"]:not([data-palette]){
-  --mq-top:#0D0F0E; --mq-mid:#171A18; --mq-edge:#050505; --mq-pool:#3A463E; --mq-pool-k:.9;
-  --mq-skin:#525653; --mq-metal:#3A3C3B; --mq-pad:#333534; --mq-steel:#A3A8A5; --mq-mark:#D7FFE0;
-  --mq-rim:#E2EEE5; --mq-bounce:#8E9A92; --mq-deep:#A9B8AE; --mq-hot:#F4FFF6; --mq-shade:1;
-  --mq-arrow:#D7FFE0; --mq-arrow-glow:#6F8A77;
+  --mq-top:#0E1B1D; --mq-mid:#18292B; --mq-edge:#071012; --mq-pool:#3E6B67; --mq-pool-k:.9;
+  --mq-skin:#5B6765; --mq-metal:#34403F; --mq-pad:#2E3939; --mq-steel:#A3B3B1; --mq-mark:#DCE7E4;
+  --mq-rim:#DDEBE8; --mq-bounce:#7FA39F; --mq-deep:#3F8E86; --mq-hot:#A9E2D8; --mq-shade:1;
+  --mq-arrow:#DCE7E4; --mq-arrow-glow:#5FAFA5;
 }
-[data-palette="mono"][data-theme="light"]{
-  --mq-top:#F4FFF6; --mq-mid:#FFFFFF; --mq-edge:#C3D9C8; --mq-pool:#8F9C93; --mq-pool-k:-.3;
-  --mq-skin:#A2A8A4; --mq-metal:#4A4E4B; --mq-pad:#3A3D3B; --mq-steel:#CDD2CF; --mq-mark:#050505;
-  --mq-rim:#EEF5F0; --mq-bounce:#B9C6BD; --mq-deep:#050505; --mq-hot:#3E4A42; --mq-shade:.9;
-  --mq-arrow:#050505; --mq-arrow-glow:#8FA596;
+[data-palette="mono"][data-theme="light"],[data-palette="mono"] [data-theme="light"]:not([data-palette]){
+  --mq-top:#E8EEED; --mq-mid:#F6F9F8; --mq-edge:#B7C6C4; --mq-pool:#6F8784; --mq-pool-k:-.3;
+  --mq-skin:#9AA6A4; --mq-metal:#46514F; --mq-pad:#364140; --mq-steel:#CBD5D3; --mq-mark:#142E33;
+  --mq-rim:#EEF4F3; --mq-bounce:#AFC0BD; --mq-deep:#17524B; --mq-hot:#2F8C80; --mq-shade:.9;
+  --mq-arrow:#142E33; --mq-arrow-glow:#6F9C96;
 }
+/* Sage, light: type straight on the ground is white, as in the reference (the page's
+   title and greeting, the section headings and their links, a note under a list), and
+   everything on glass keeps the theme's deep slate type. Done with the type tokens, so
+   every rule that reads them follows. Only what is known to sit on the ground turns
+   white, and never inside glass: anything missed stays slate, which still reads on the
+   sage, where white on the frosted glass would not. */
+[data-palette="mono"][data-theme="light"] #app :is(.hgreet-t,.thead h1,.thead-s,.tsec-h,.tlink,.tsec>.libn,.pglbl h2,
+  .pglbl .pglink,.pgaside,.pgnone,.pgnote,.dhead-t,.dsub,.sg-h,.as-note,.chat-head-t,.chat-hi,.chat-grp-h,.chat-dis,.empty):not(:is(
+  .card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.pgstat,.pgmac,.sg-list,.pid,.chat-a,
+  .chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.dnav,.glass) *){
+  --text:#FFFFFF; --sub:#F0F5F4; --dim:#E2EBE9; --faint:#E2EBE9; --accentHi:#FFFFFF;
+  text-shadow:0 1px 2px rgba(20,46,51,.28)}
+/* the ones that take their parent's colour rather than a token of their own */
+[data-palette="mono"][data-theme="light"] #app :is(.hgreet-t,.thead h1,.tsec-h,.pglbl h2,.dhead-t,.sg-h,.chat-head-t,.empty):not(:is(
+  .card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.pgstat,.pgmac,.sg-list,.pid,.chat-a,
+  .chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.dnav,.glass) *){color:var(--text)}
+/* and the ground's drawing is drawn in the same white, like the reference's headings */
+[data-palette="mono"][data-theme="light"] #bgart{--bga:#F3F7F6; --bgb:#D6E1DF}
 /* An element that carries its own theme or mode (the rest screen, the splash, a theme
    preview) restates its text colour: color is resolved once on body and then inherited
    as a finished colour, so without this the rest screen's figures stayed light-mode
@@ -397,17 +439,21 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --color-data-protein:var(--mac-p); --color-data-carbs:var(--mac-c); --color-data-fat:var(--mac-f);
   --color-set-target:var(--dim); --color-set-active:var(--accent); --color-set-done:var(--ok);
 }
-/* Photos and the mark are drawn in Bunyan red. A theme that is not red recolours them on
-   the way to the screen with --img-tone: Blue turns their red to its blue, Monochrome
-   takes the colour out, Red leaves them alone. :where() keeps this at no specificity, so
-   a rule that gives one of them its own filter (a glow) still applies — and every such
-   rule starts its filter with var(--img-tone) too. */
+/* Photos are drawn in Bunyan red. A theme that is not red recolours them on the way to
+   the screen with --img-tone: Blue turns their red to its blue, Sage to its teal, Red
+   leaves them alone. :where() keeps this at no specificity, so a rule that gives
+   one of them its own filter (a glow) still applies — and every such rule starts its
+   filter with var(--img-tone) too. */
 :where(img[src$="intro.jpg"],img[src$="rest-swirl.jpg"],.tcover img,#splash .sp-art){filter:var(--img-tone)}
-/* The mark is a flat red shape, so it can be recoloured outright: in Monochrome it is the
-   off-white (or near-black in light) rather than the mid grey a plain greyscale gives. */
-:where(img[src$="mark.png"]){filter:var(--mark-tone)}
+/* The mark (js/ui/art.js markArt, and the splash's): mark.png is only its shape, a mask,
+   filled with the theme's own colours from its highlight down into its deep accent, so
+   it is exactly the theme's in every theme and mode, not a tint of the red. A glow or a
+   fade goes on the span around it: on the shape itself the mask would cut it off. */
+.mk{display:block;width:100%;aspect-ratio:1;
+  background:linear-gradient(172deg,var(--accentHi) 8%,var(--accent) 52%,var(--accent-deep));
+  -webkit-mask:url(mark.png) center/contain no-repeat;mask:url(mark.png) center/contain no-repeat}
 /* The big figures — a day's calories, a tile's number, a record — take the theme's
-   highlight: Glacier Blue in Red, blush in Pink, white in Monochrome; plain text in light. */
+   highlight: Glacier Blue in Red, white in Blue and Sage; plain text in light. */
 .fring2-n,.htile-v b,.pgkm-v,.tghero-n b,.mealbanner-v,.wc2-stats b,.pgstat-v{color:var(--figure)}
 /* Kills double-tap-to-zoom, which has no place in an installed app, and with it
    Safari's ~300ms tap delay. Pinch-to-zoom is untouched. user-scalable=no in the
@@ -423,6 +469,24 @@ html,body{margin:0;color:var(--text);
 html{background:var(--bg)}
 body{background:transparent}
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--ground)}
+/* In Arabic the page runs from the right, so the ground turns round with it: the title
+   keeps the deep side of the blend behind it (Sage light's white type needs it). */
+[dir="rtl"] body::before{transform:scaleX(-1)}
+/* On the ground, a drawing for the page (js/ui/bgart.js), under everything else, so the
+   frosted cards show it softened. It keeps to the app's column on a wide screen, takes no
+   glow filter (a filter the size of the screen costs every frame of a scroll), and turns
+   round in Arabic so it sits at the same end as the page's own drawings. Its two colours
+   are the theme's highlight and accent unless the theme says otherwise (Sage light). */
+#bgart{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;
+  --bga:var(--accentHi);--bgb:var(--accent)}
+#bgart .art{position:absolute;top:0;left:50%;width:min(100%,560px);height:100%;transform:translateX(-50%);
+  filter:none;stroke:var(--bga);opacity:.55}
+#bgart .art .a,#bgart .art .ridge{stroke:url(#bgaStroke) var(--bga)}
+#bgart .art .a.c{fill:url(#bgaFill) none}
+#bgart .art :is(.h1,.h2,.h3){fill:url(#bgaHill) none}
+#bgart .art .dsk{fill:url(#bgaGlow) none}
+#bgart .art .e{fill:var(--bga)}
+[dir="rtl"] #bgart .art{transform:translateX(-50%) scaleX(-1)}
 /* Glass: the cards in the page take the theme's card fill, a tint of the ground rather
    than a slab over it, with a lighter edge. Only the fill colour changes: a card's own
    glow or gradient stays on top of it. Sheets, toasts and bars that float over the page
@@ -886,7 +950,7 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
 /* No shaped scrim behind the lockup on purpose: any radial dark enough to help is also
    dark enough to read as an oval painted over the artwork. Legibility comes from the
    frame veil, the text shadows below, and the mark's own glow. */
-#splash .sp-mark{display:block;margin:0 auto;width:112px;height:112px;object-fit:contain;
+#splash .sp-mark{display:block;margin:0 auto;width:112px;height:112px;
   opacity:0;transform:translateY(14px) scale(.82);
   animation:spMark 1.2s cubic-bezier(.2,.72,.24,1) .62s forwards,
             spMarkGlow 3.4s ease-in-out 1.6s infinite alternate}
@@ -923,8 +987,8 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
                      to{transform:translate(-50%,-50%) scale(1.09)}}
 @keyframes spMark{0%{opacity:0;transform:translateY(14px) scale(.82)}
   55%{opacity:1}100%{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes spMarkGlow{from{filter:var(--mark-tone) drop-shadow(0 4px 18px rgba(var(--glow-rgb),.28))}
-                      to{filter:var(--mark-tone) drop-shadow(0 4px 34px rgba(var(--glow-rgb),.60))}}
+@keyframes spMarkGlow{from{filter:drop-shadow(0 4px 18px rgba(var(--glow-rgb),.28))}
+                      to{filter:drop-shadow(0 4px 34px rgba(var(--glow-rgb),.60))}}
 @keyframes spName{from{opacity:0;letter-spacing:.42em;text-indent:.42em;filter:blur(3px)}
                   to{opacity:1;letter-spacing:.04em;text-indent:.04em;filter:blur(0)}}
 @keyframes spRule{to{transform:scaleX(1)}}
@@ -941,7 +1005,7 @@ body.nosplash #splash{display:none}
   #splash .sp-art{opacity:.92;transform:none;animation:none}
   #splash .sp-glow{opacity:1;animation:none}
   #splash .sp-mark{opacity:1;transform:none;animation:none;
-    filter:var(--mark-tone) drop-shadow(0 4px 24px rgba(var(--glow-rgb),.42))}
+    filter:drop-shadow(0 4px 24px rgba(var(--glow-rgb),.42))}
   #splash .sp-name{opacity:1;animation:none}
   #splash .sp-rule{transform:none;animation:none}
   #splash .sp-tag{opacity:1;animation:none}
@@ -951,7 +1015,7 @@ body.noanim #splash{animation:spOut .45s ease 1.6s forwards}
 body.noanim #splash .sp-art{opacity:.92;transform:none;animation:none}
 body.noanim #splash .sp-glow{opacity:1;animation:none}
 body.noanim #splash .sp-mark{opacity:1;transform:none;animation:none;
-  filter:var(--mark-tone) drop-shadow(0 4px 24px rgba(var(--glow-rgb),.42))}
+  filter:drop-shadow(0 4px 24px rgba(var(--glow-rgb),.42))}
 body.noanim #splash .sp-name{opacity:1;animation:none}
 body.noanim #splash .sp-rule{transform:none;animation:none}
 body.noanim #splash .sp-tag{opacity:1;animation:none}
@@ -1231,7 +1295,7 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
   background:radial-gradient(60% 120% at 88% 40%,rgba(var(--glow-rgb),.28),transparent 70%)}
 .dnav-art{position:absolute;z-index:-1;inset-inline-end:-26px;top:50%;width:136px;height:auto;
   transform:translateY(-50%);opacity:.26;pointer-events:none;
-  filter:var(--mark-tone) drop-shadow(0 0 18px rgba(var(--glow-rgb),.55)) saturate(1.1);
+  filter:drop-shadow(0 0 18px rgba(var(--glow-rgb),.55));
   -webkit-mask:linear-gradient(90deg,transparent,#000 45%);mask:linear-gradient(90deg,transparent,#000 45%)}
 [dir="rtl"] .dnav-art{transform:translateY(-50%) scaleX(-1);
   -webkit-mask:linear-gradient(270deg,transparent,#000 45%);mask:linear-gradient(270deg,transparent,#000 45%)}
@@ -2126,8 +2190,8 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tgl i{position:absolute;top:3px;inset-inline-start:3px;width:22px;height:22px;border-radius:11px;background:#fff;
   transition:transform var(--m-micro) var(--e-standard)}
 .tgl.on{background:var(--accent)}
-/* The knob on the accent takes the ink made for it: white on Ghost Green barely
-   showed in Monochrome. */
+/* The knob on the accent takes the ink made for it: white on a pale accent (Sage's
+   sage-white in dark) barely shows. */
 .tgl.on i{background:var(--onAccent)}
 .tgl.on i{transform:translateX(20px)}
 [dir="rtl"] .tgl.on i{transform:translateX(-20px)}
@@ -3378,7 +3442,7 @@ textarea.afnl.warn{border-color:var(--warning)}
   background:radial-gradient(90% 70% at 100% 0%,rgba(var(--glow-rgb),.20),transparent 60%),
     linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 40%),var(--raised)}
 .exhero-art{position:absolute;z-index:-1;top:-24px;inset-inline-end:-40px;width:190px;height:auto;opacity:.16;pointer-events:none;
-  filter:var(--mark-tone) drop-shadow(0 0 20px rgba(var(--glow-rgb),.5));-webkit-mask:linear-gradient(200deg,#000 20%,transparent 75%);mask:linear-gradient(200deg,#000 20%,transparent 75%)}
+  filter:drop-shadow(0 0 20px rgba(var(--glow-rgb),.5));-webkit-mask:linear-gradient(200deg,#000 20%,transparent 75%);mask:linear-gradient(200deg,#000 20%,transparent 75%)}
 [dir="rtl"] .exhero-art{transform:scaleX(-1)}
 .exhero-k{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--accentHi);margin-bottom:6px}
 .exhero .exhead{margin:0 0 14px}
@@ -3409,6 +3473,11 @@ textarea.afnl.warn{border-color:var(--warning)}
   box-shadow:0 10px 26px -14px var(--accent-glow)}
 .setcard .setrow.pend{opacity:.5}
 .setcard .cell{border-radius:12px;background:rgba(0,0,0,.35);border-color:var(--hair-hi)}
+/* In light mode a dark well reads as a grey box on the light glass: the cells are the
+   light glass of every other field there. Focus still shows, in the accent. */
+[data-theme="light"] .setcard .cell{background:var(--glass-btn);border-color:var(--glass-btn-edge);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.06)}
+.setcard .cell:focus{border-color:var(--accent)}
 .setcard .logbtn.go{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border:0}
 .setcard .addrow{margin-top:4px;display:flex;justify-content:center}
 .addset2{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border-radius:var(--rpill);border:1px dashed var(--hair-hi);
@@ -4381,7 +4450,7 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 /* The instructional figures' still frames (js/data/figures.js) are drawn on their own
    navy stage, so they fill their frames. In light mode they turn over to a light stage
    (inverted, then the hue put back: the red stays red, the blue blue), as the light
-   figure of the design; in Monochrome they lose their colour like every picture. They
+   figure of the design; in Sage they lose their colour. They
    do not take the palette's tint, which would turn their navy to olive. */
 .thumbwrap.fig,img.thumb.fig{background:var(--raised)}
 .formvis.fig img,.exd-form2.fig img{object-fit:cover}
@@ -4482,6 +4551,42 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 .cplan-v{max-width:100%;font-family:var(--display);font-size:16px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
 .cplan-s{font-size:12.5px;color:var(--sub)}
 .cplan-gen{margin:12px 0 0}
+
+/* ---- Glass, everywhere -----------------------------------------------------------
+   The owner's references: frosted glass over a blended, drawn ground. Cards, buttons,
+   chips, fields, the segmented control, the round header buttons and the dock are
+   glass: a translucent fill of the theme's tone, the ground and its drawings (#bgart)
+   blurred behind it, a light rim, and a highlight along the top edge. The primary
+   action is the accent as coloured glass, lit from above. A glass surface inside
+   another only tints (a second blur would cost the phone and show nothing new). Where
+   the browser cannot blur, every one keeps the solid fill given above. */
+:root{--glass-blur:20px;--glass-sat:150%}
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  /* Each at the weight of its own base rule (:where adds none), so a state that has its
+     own look (a chosen day, an open card, a selected pill) still wins over the glass. */
+  :where(#app) :is(.card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.pgstat,.pgmac,.sg-list,.pid,
+    .chat-a,.chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero){
+    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+    backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+    box-shadow:inset 0 1px 0 var(--glass-hi),var(--shadow-card)}
+  .btn.g,.pill:where(:not(.a):not(.ok):not(.gold):not(.sup)),.seg,.hbtn:where(:not(.havatar)),.iconbtn,
+  :where(#app) :is(input,select,textarea):where(:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file])){
+    background-color:var(--glass-btn);border-color:var(--glass-btn-edge);
+    -webkit-backdrop-filter:blur(14px) saturate(var(--glass-sat));backdrop-filter:blur(14px) saturate(var(--glass-sat));
+    box-shadow:inset 0 1px 0 var(--glass-hi)}
+  .seg{background-image:none}
+  #app :is(.card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.pgstat,.pgmac,.sg-list,.pid,
+    .chat-a,.chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero)
+    :is(.card,.list,.drow,.ttile,.htile,.pill,.seg,.btn.g,.hbtn,.iconbtn,input,select,textarea){
+    -webkit-backdrop-filter:none;backdrop-filter:none}
+  .dock{box-shadow:inset 0 1px 0 var(--glass-hi),var(--shadow-float)}
+}
+/* The primary action, lit from above. At a plain .btn's weight (:where adds none), so a
+   button that is given its own fill (a delete's red, a sheet's own) keeps it. */
+.btn:where(:not(.g):not(.o):not(.ok):not(.danger):not(.d)),.pill.a,.seg-ind,.btn.fadd,.btn.ss-next{
+  background-image:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0) 56%),linear-gradient(180deg,var(--accent),var(--accent-deep))}
+.btn:where(:not(.g):not(.o):not(.ok):not(.danger):not(.d)){
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.36),inset 0 0 0 1px rgba(255,255,255,.10),0 12px 28px -14px rgba(var(--accent-rgb),.8)}
 </style>
 </head>
 <body>
@@ -4513,13 +4618,14 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
     <i class="sp-em" style="left:89%;--dx:-7px;animation-duration:8.2s;animation-delay:2.1s"></i>
   </div>
   <div class="sp-mid">
-    <img class="sp-mark" src="mark.png" alt="">
+    <span class="sp-mark"><i class="mk"></i></span>
     <div class="sp-name">BUNYAN</div>
     <div class="sp-rule"><i></i><b></b><i></i></div>
     <div class="sp-tag">Built Through Discipline</div>
   </div>
   <div class="sp-her" lang="ar" dir="rtl">بُنيان</div>
 </div>
+<div id="bgart" aria-hidden="true"></div>
 <div id="app"></div>
 <nav id="nav"></nav>
 <div id="wbar"></div>
