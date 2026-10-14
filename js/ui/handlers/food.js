@@ -17,7 +17,7 @@ import {leave} from "../motion.js";
 import {goBack, pushNav} from "../nav.js";
 import {render} from "../render.js";
 import {curDate, mealNow, play, toast, V} from "../view.js";
-import {pickAmount, servs} from "../views/addfood.js";
+import {fitCh, pickAmount, servs} from "../views/addfood.js";
 import {ask} from "../views/chat.js";
 import {savedById} from "../views/food.js";
 import {chatEnd, pcAfter, slotsFrom, topOfResults, withNotes} from "./common.js";
@@ -205,6 +205,10 @@ function register(){
     if(pk.u){
       var stp=UNIT_STEP[pk.u];
       pk.amt=Math.max(stp,roundUnit(pk.u,(up?Math.floor:Math.ceil)(pk.amt/stp+(up?1e-9:-1e-9))*stp+(up?stp:-stp)));
+      /* The redraw leaves a focused field alone, and a tap on + or − does not take the
+         focus on a phone: after typing, the box kept the typed figure. Set it here. */
+      var fa=document.getElementById("afamt");
+      if(fa){fa.value=String(pk.amt);fa.style.width=fitCh(pk.amt,"0")+"ch";}
     }else pk.n=up?(pk.n<1?1:pk.n+1):(pk.n>1?pk.n-1:0.5);
     render();return;});
   has("fmore",function(){V.food.pick.more=!V.food.pick.more;render();return;});

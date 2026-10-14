@@ -36,7 +36,8 @@ function seed(){
 const browser=await chromium.launch(process.env.CHROMIUM?{executablePath:process.env.CHROMIUM}:{});
 let fails=0,passes=0;
 async function open(o={}){
-  const ctx=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,serviceWorkers:o.sw?"allow":"block"});
+  const ctx=await browser.newContext(Object.assign({viewport:{width:390,height:844},hasTouch:true,isMobile:true,serviceWorkers:o.sw?"allow":"block"},
+    o.ua?{userAgent:o.ua}:{}));
   const db=o.db||seed();if(o.prefs)Object.assign(db.prefs,o.prefs);
   await ctx.addInitScript(([db,raw])=>{if(!localStorage.getItem("t:seeded")){
     localStorage.setItem("bunyan:profiles",JSON.stringify([{id:"me",name:"Me",owner:true}]));
@@ -1026,6 +1027,67 @@ await test("PDF plan: everything can be changed on the review before it is used"
   await page.tap("[data-puse]");await pause(page,500);
   eq(await ev(page,"S.goals.kcal"),2100,"the changed target");
   eq(await page.evaluate(async()=>{const M=await import("/js/engine/meals.js");return M.mealName(M.mealSlots()[0].id);}),"Breakfast bowl","the renamed meal");
+});
+await test("Food: an amount in tablespoons shows its figure, and + and − change it, typed or not",async page=>{
+  await tapTab(page,"food");await pause(page);
+  await page.tap('.btn.fadd');await pause(page,800);
+  await page.fill('#fq','white rice');await pause(page,900);
+  await page.evaluate(()=>document.activeElement.blur());await pause(page,200);
+  await page.evaluate(()=>document.querySelector('#sheet [data-fpick]').click());await pause(page,500);
+  await page.selectOption("#afsrv","utbsp");await pause(page,400);
+  /* The figure fits its box: no padding eats it, nothing is cut off. */
+  const box=()=>page.$eval("#afamt",e=>{const s=getComputedStyle(e);
+    return {v:e.value,pad:s.paddingLeft,fits:e.clientWidth>0&&e.scrollWidth<=e.clientWidth+1,w:e.clientWidth};});
+  const b0=await box();
+  if(!(+b0.v>0))throw new Error("no amount: "+JSON.stringify(b0));
+  eq([b0.pad,b0.fits],["0px",true],"the figure shows ("+JSON.stringify(b0)+")");
+  await page.tap('#sheet [data-fcount="1"]');await pause(page,300);
+  const b1=await box();
+  eq([+b1.v,b1.fits],[Math.floor(+b0.v)+1,true],"+ adds a tablespoon, and shows it");
+  /* Typed, then stepped with the keyboard still up: the box follows the step. */
+  await page.fill("#afamt","5");await pause(page,300);
+  await page.evaluate(()=>document.querySelector('#sheet [data-fcount="1"]').click());await pause(page,300);
+  eq(await page.evaluate(()=>[document.activeElement.id,document.getElementById("afamt").value]),["afamt","6"],"the typed box takes the step");
+  await page.evaluate(()=>document.querySelector('#sheet [data-fcount="-1"]').click());await pause(page,300);
+  eq((await box()).v,"5","and − takes it back");
+});
+/* iPhone Safari scrolls the page to bring a tapped field above the keyboard; a sheet
+   pinned to what is visible then moved against it, and jumped up and down with every
+   field (js/ui/keyboard.js). Chromium has no such keyboard, so the visible part is made
+   short the way the keyboard makes it, and the tap is an iPhone's. */
+const IPHONE="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+/* A tap as an iPhone delivers it, on el at (x, y), or a scroll when moved: whether the
+   page was told not to handle it itself. */
+const touch=(page,sel,dy=0)=>page.evaluate(([sel,dy])=>{const el=document.querySelector(sel),b=el.getBoundingClientRect(),x=b.x+8,y=b.y+b.height/2;
+  const mk=(t,yy)=>new TouchEvent(t,{bubbles:true,cancelable:true,
+    touches:t==="touchend"?[]:[new Touch({identifier:1,target:el,clientX:x,clientY:yy})],
+    changedTouches:[new Touch({identifier:1,target:el,clientX:x,clientY:yy})]});
+  el.dispatchEvent(mk("touchstart",y));if(dy)el.dispatchEvent(mk("touchmove",y+dy));
+  const end=mk("touchend",y+dy);el.dispatchEvent(end);return end.defaultPrevented;},[sel,dy]);
+await test("Keyboard (iPhone): a field in a sheet takes a tap without the page scrolling, and the sheet brings it into view",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("manual",{name:"",meal:"Breakfast"});});await pause(page,600);
+  const y0=await page.evaluate(()=>scrollY);
+  /* The keyboard is up: what is visible ends 420 px down. */
+  await page.evaluate(()=>document.documentElement.style.setProperty("--vvh","420px"));await pause(page,200);
+  await page.evaluate(()=>{document.querySelector("#sheet .sheetbox").scrollTop=0;});
+  /* The tap is the app's to answer: Safari is not left to scroll the page for it. */
+  eq(await touch(page,'label[for="mf_f"] .aftile-k'),true,"the tap is taken");
+  await pause(page,900);
+  eq(await page.evaluate(()=>{const f=document.getElementById("mf_f"),b=f.getBoundingClientRect();
+    return [document.activeElement&&document.activeElement.id,f.style.transform,Math.round(b.top)>=0&&Math.round(b.bottom)<=420,scrollY];}),
+    ["mf_f","",true,y0],"Fat has the focus, back in place, in sight above the keys, the page where it was");
+  /* The next field by the keyboard's arrow: brought into view by the sheet. */
+  await page.evaluate(()=>{document.querySelector("#sheet .sheetbox").scrollTop=0;});
+  await page.evaluate(async()=>{const K=await import("/js/ui/keyboard.js");const f=document.getElementById("mf_f");K.reveal(f);});
+  eq(await page.evaluate(()=>{const b=document.getElementById("mf_f").getBoundingClientRect();return Math.round(b.top)>=0&&Math.round(b.bottom)<=420;}),true,"revealed in the sheet");
+  /* A finger that scrolls the sheet does not open the keyboard on the field it lifts over. */
+  await page.evaluate(()=>document.activeElement.blur());await pause(page,200);
+  eq(await touch(page,"#mf_n",-60),false,"a scroll is the browser's");
+  eq(await page.evaluate(()=>document.activeElement&&document.activeElement.id||""),"","no focus from a scroll");
+},{ua:IPHONE});
+await test("Keyboard: other phones keep the browser's own handling of a tapped field",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("manual",{name:"",meal:"Breakfast"});});await pause(page,600);
+  eq(await touch(page,'label[for="mf_f"] .aftile-k'),false,"left to the browser");
 });
 await test("Supplement doses: mg, mcg and IU are read as doses",async page=>{
   const r=await page.evaluate(async()=>{
