@@ -4,8 +4,8 @@
    into its accent, a fainter second line, closed shapes filled with the accent's glass,
    a few embers. They are made of the brand's own subjects and each page's own:
 
-     train     the climb: ranges of hills going back and a path winding up them to a
-               mark on the far ridge (the greeting above draws the sun or the moon)
+     train     the owner's horseman at dusk over the river (js/ui/scene.js), a full
+               scene rather than a line drawing
      food      the harvest: wheat rising from the ground, an olive branch reaching in
      coach     the guide: a compass whose needle is the mark's sword, under a
                constellation
@@ -17,6 +17,8 @@
    the frosted cards show them softened. Their colours are CSS variables (--bga, --bgb,
    set on #bgart from the theme), so a change of theme or mode repaints them for free.
    Built once per page from a few generators, then kept; nothing here runs per frame. */
+import {scene} from "./scene.js";
+
 var W=390,H=844;
 /* a small fixed random, so the same page always draws the same */
 function rnd(seed){var x=seed;return function(){x=(x*1103515245+12345)%2147483648;return x/2147483648;};}
@@ -34,12 +36,6 @@ function smoothPath(pts,close){
     if(!close){p0=pts[Math.max(i-1,0)];p3=pts[Math.min(i+2,n-1)];}
     d+="C"+f(p1[0]+(p2[0]-p0[0])/6)+" "+f(p1[1]+(p2[1]-p0[1])/6)+" "+f(p2[0]-(p3[0]-p1[0])/6)+" "+f(p2[1]-(p3[1]-p1[1])/6)+" "+f(p2[0])+" "+f(p2[1]);}
   return d+(close?"Z":"");}
-/* A ridge across the page at height y, rising and falling by amp. */
-function ridge(y,amp,seed,steps){
-  var r=rnd(seed),pts=[];steps=steps||7;
-  for(var i=0;i<=steps;i++)pts.push([-20+i*(W+40)/steps,y-amp*(.35+.65*r())]);
-  return pts;}
-function hill(pts){return smoothPath(pts)+"V"+(H+10)+"H-20Z";}
 /* An organic ring around (cx, cy): a circle that wanders by wob. */
 function ring(cx,cy,rx,ry,wob,seed,n){
   var r=rnd(seed),pts=[];n=n||10;
@@ -76,26 +72,6 @@ function olive(x,y,len,ang,bend,seed){
       out+=path("a c","M"+f(ox-5)+" "+f(oy)+"A5 6 0 1 0 "+f(ox+5)+" "+f(oy)+"A5 6 0 1 0 "+f(ox-5)+" "+f(oy));}}
   return out;}
 var BUILD={
-  train:function(){
-    /* (The sun or the moon is the greeting's own drawing, at the top; this is the land
-       under it.) */
-    var out="";
-    /* a glow low on the left, where the path starts */
-    out+=path("dsk",circle(40,700,150));
-    /* the ranges, far to near, each deeper glass */
-    var r1=ridge(520,96,7,6),r2=ridge(600,74,19,7),r3=ridge(690,60,31,8);
-    out+=path("h1",hill(r1))+path("ridge",smoothPath(r1));
-    out+=path("h2",hill(r2))+path("ridge",smoothPath(r2));
-    out+=path("h3",hill(r3));
-    /* the way up: a path winding from the foot of the page to the far ridge */
-    out+=path("a","M120 860C150 800 96 772 132 730S226 700 204 652S262 600 250 556");
-    out+=path("b","M136 862C168 806 114 776 150 736S242 704 222 656S276 606 262 560");
-    /* the summit's mark, where the path ends */
-    out+=path("a c","M252 520V490L272 497L252 504");
-    /* birds over the far range, and the light's embers */
-    out+=path("b","M60 330q6-6 12 0q6-6 12 0M100 300q5-5 10 0q5-5 10 0M318 370q4-4 8 0q4-4 8 0");
-    [[60,150,1.4],[150,110,1.1],[214,190,1.2],[30,420,1],[372,300,1.3],[340,460,1.1],[300,250,1]].forEach(function(e){out+=ember(e[0],e[1],e[2]);});
-    return out;},
   food:function(){
     var out="";
     out+=path("dsk",circle(70,760,130));
@@ -164,6 +140,11 @@ var DEFS='<defs>'
 var CACHE={},shown="";
 /* The drawing for a page, as markup. */
 function bgArt(key){
+  /* Training's ground is the owner's horseman at dusk (js/ui/scene.js), a full scene
+     rather than a line drawing, kept to the foot of the screen where it stands. */
+  if(key==="train"){
+    if(!CACHE.train)CACHE.train='<svg class="art scene bgart-train" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">'+scene()+'</svg>';
+    return CACHE.train;}
   if(!BUILD[key])return "";
   if(!CACHE[key])CACHE[key]='<svg class="art bgart-'+key+'" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">'+DEFS+BUILD[key]()+'</svg>';
   return CACHE[key];}

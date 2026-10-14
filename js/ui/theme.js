@@ -29,17 +29,20 @@ function themeName(id){return (THEMES.filter(function(x){return x.id===id;})[0]|
 /* The theme's icon (tools/images.py icons): the mark in the theme's colours on its
    ground. Blue's is icon-180.png, the one the manifest and the page start with. */
 function iconOf(pal){return pal==="blue"?"icon-180.png":"icon-"+pal+"-180.png";}
+/* Which theme's icon the app wears: the theme's own, unless one was chosen in
+   Profile → App → App icon ("auto", or no choice, follows the theme). */
+function iconPal(){var c=S.prefs&&S.prefs.icon;return /^(red|blue|mono)$/.test(c)?c:themeOf();}
 
 /* Called by every render. Cheap when nothing changed. The pair is also kept under its
    own small key, which index.html reads before the first paint of the next launch: the
    profile's full record is far too big to parse that early, and without it a Red or
    Sage user saw the default blue for a moment on every start. The status bar
    (theme-color) takes the theme's ground, and the tab's icon and the Home Screen's the
-   theme's own. A phone keeps the icon it was given when the app was added to its Home
+   theme's own, or the one chosen in Settings (the third part of the key). A phone keeps the icon it was given when the app was added to its Home
    Screen; this one is what it is given the next time. */
 var last="";
 function applyLook(){
-  var de=document.documentElement,pal=themeOf(),mode=modeOf(),look=pal+"|"+mode;
+  var de=document.documentElement,pal=themeOf(),mode=modeOf(),icon=iconPal(),look=pal+"|"+mode+"|"+icon;
   if(de.getAttribute("data-palette")!==pal)de.setAttribute("data-palette",pal);
   if(de.getAttribute("data-theme")!==mode)de.setAttribute("data-theme",mode);
   if(look===last)return;
@@ -49,7 +52,7 @@ function applyLook(){
   if(meta){
     var bg=getComputedStyle(de).getPropertyValue("--bg").trim();
     if(bg)meta.setAttribute("content",bg);}
-  var ic=iconOf(pal),links=document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"]');
+  var ic=iconOf(icon),links=document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"]');
   for(var i=0;i<links.length;i++)if(links[i].getAttribute("href")!==ic)links[i].setAttribute("href",ic);}
 
 /* A change of theme or mode cross-fades the whole screen where the browser can (the View
@@ -60,4 +63,4 @@ function changeLook(fn){
     try{document.startViewTransition(fn);return;}catch(e){}}
   fn();}
 
-export {applyLook, changeLook, iconOf, modeOf, themeName, themeOf, THEMES};
+export {applyLook, changeLook, iconOf, iconPal, modeOf, themeName, themeOf, THEMES};

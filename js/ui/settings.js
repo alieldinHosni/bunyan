@@ -23,7 +23,7 @@ import {CUR, PROFILES, S} from "../state.js";
 import {fmtW, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, shortd} from "../util.js";
 import {seg, V} from "./view.js";
-import {modeOf, themeOf, THEMES} from "./theme.js";
+import {iconOf, modeOf, themeOf, THEMES} from "./theme.js";
 import {glyph} from "./glyphs.js";
 import {afTile} from "./views/addfood.js";
 
@@ -133,9 +133,27 @@ function appSheet(){
        +'<span class="thpick-sw" aria-hidden="true">'+th.sw.map(function(c){return '<i style="background:'+c+'"></i>';}).join("")+'</span>'
        +(on?'<span class="thpick-ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg></span>':'')
        +'</button>';}).join("")+'</div>';
+  /* The app's icon: the theme's own, which changes with it, or one of the three kept
+     whatever the theme. Each is shown as the icon itself. */
+  var icCur=/^(red|blue|mono)$/.test(ap.icon)?ap.icon:"auto";
+  var icons='<div class="icpicks" role="radiogroup" aria-label="'+esc(t("App icon"))+'">'
+   +[["auto",t("Theme")]].concat(THEMES.map(function(th){return [th.id,t(th.id==="mono"?"Sage":th.id==="red"?"Red":"Blue")];}))
+     .map(function(o){
+      var on=o[0]===icCur;
+      return '<button class="icpick'+(on?' on':'')+'" role="radio" aria-checked="'+on+'" data-seticon="'+o[0]+'">'
+       +'<span class="icpick-i'+(o[0]==="auto"?' auto':'')+'" aria-hidden="true"><img src="'+iconOf(o[0]==="auto"?thCur:o[0])+'" alt="" width="52" height="52" decoding="async">'
+       +(o[0]==="auto"?'<i style="background:conic-gradient(#8AB0EC 0 33.3%,#FF2E3A 0 66.6%,#9AABA9 0)"></i>':'')+'</span>'
+       +'<span class="icpick-n">'+esc(o[1])+'</span></button>';}).join("")+'</div>';
   return '<h2>'+t("App")+'</h2>'
    +'<section class="sg"><h3 class="sg-h">'+t("Theme")+'</h3>'+picks
    +seg({items:[["dark",t("Dark")],["light",t("Light")]],value:thMode,attr:"lookmode",cls:"thmode",label:t("Mode"),key:"lookmode",soft:true})
+   +'</section>'
+   +'<section class="sg"><h3 class="sg-h">'+t("App icon")+'</h3>'+icons
+   +'<p class="sg-f">'+esc(icCur==="auto"?t("The icon changes with the theme."):t("The icon stays this colour whatever the theme."))+' '
+   /* Said plainly, because it is the phone's rule and not something the app can change:
+      a Home Screen app keeps the icon it was added with. Adding it again may start it
+      empty, so the backup goes first. */
+   +esc(t("On iPhone, the Home Screen keeps the icon BUNYAN had when it was added. To change it there, make a backup first (Profile → Backup and reset), add BUNYAN to the Home Screen again from Safari (Share → Add to Home Screen), and restore the backup in it if it opens empty."))+'</p>'
    +'</section>'
    +group(t("Language and units"),
       pick(t("Language"),"",{items:[["en","English"],["ar","العربية"]],value:ap.lang==="ar"?"ar":"en",attr:"setlang",label:t("Language")})

@@ -859,7 +859,7 @@ await test("Themes: the picker switches the whole app, and the choice outlives a
   eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#FF2E3A","Machine Red is the accent");
   eq(await page.$$eval('link[rel="icon"],link[rel="apple-touch-icon"]',a=>a.map(l=>l.getAttribute("href"))),["icon-red-180.png","icon-red-180.png"],"the icon takes the theme");
   await page.tap('[data-lookmode="light"]');await pause(page,500);
-  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","red|light"],"mode and the early copy");
+  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","red|light|red"],"mode and the early copy");
   await page.reload();await page.waitForTimeout(60);
   eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-palette"),document.documentElement.getAttribute("data-theme"),
     document.querySelector('link[rel="apple-touch-icon"]').getAttribute("href")]),["red","light","icon-red-180.png"],"applied before the app runs, the icon too");
@@ -867,6 +867,30 @@ await test("Themes: the picker switches the whole app, and the choice outlives a
   await tapTab(page,"profile");await pause(page);
   if(!(await page.$eval('[data-sheet="set_app"]',e=>e.textContent)).includes("BUNYAN Red"))throw new Error("the Profile row does not name the theme");
   eq(await page.$eval('meta[name="theme-color"]',e=>e.content.toUpperCase()),"#DBF6FF","the status bar takes the theme's ground");
+});
+/* The icon follows the theme unless one is chosen; a chosen one stays through a change
+   of theme and a reload (it is applied before the app runs, with the theme). */
+await test("Themes: the app icon follows the theme, or stays the colour chosen in Settings",async page=>{
+  const icons=()=>page.$$eval('link[rel="icon"],link[rel="apple-touch-icon"]',a=>a.map(l=>l.getAttribute("href")));
+  await tapTab(page,"profile");await pause(page);
+  await page.tap('[data-sheet="set_app"]');await pause(page,400);
+  eq(await page.$$eval('.icpick',a=>a.map(b=>b.getAttribute("data-seticon"))),["auto","blue","red","mono"],"the theme's, then the three");
+  eq(await page.$eval('.icpick.on',e=>e.getAttribute("data-seticon")),"auto","follows the theme by default");
+  eq(await page.$$eval('.icpick img',a=>a.map(i=>i.getAttribute("src"))),["icon-180.png","icon-180.png","icon-red-180.png","icon-mono-180.png"]);
+  if(!await page.$$eval('.icpick img',a=>a.every(i=>i.complete&&i.naturalWidth===180)))throw new Error("an icon did not load");
+  await page.tap('[data-seticon="mono"]');await pause(page,400);
+  eq([await ev(page,"S.prefs.icon"),await icons()],["mono",["icon-mono-180.png","icon-mono-180.png"]],"Sage's icon in the Blue theme");
+  await page.tap('[data-settheme="red"]');await pause(page,500);
+  eq(await icons(),["icon-mono-180.png","icon-mono-180.png"],"kept when the theme changes");
+  eq(await page.evaluate(()=>localStorage.getItem("bunyan:look")),"red|dark|mono");
+  await page.reload();await page.waitForTimeout(60);
+  eq(await icons(),["icon-mono-180.png","icon-mono-180.png"],"before the app runs, after a reload");
+  await pause(page,1000);
+  await tapTab(page,"profile");await pause(page);
+  await page.tap('[data-sheet="set_app"]');await pause(page,400);
+  await page.tap('[data-seticon="auto"]');await pause(page,400);
+  eq([await ev(page,"S.prefs.icon"),await icons()],["auto",["icon-red-180.png","icon-red-180.png"]],"back to the theme's");
+  if(!/Home Screen/.test(await page.$eval('.icpicks+.sg-f',e=>e.textContent)))throw new Error("the Home Screen note is missing");
 });
 await test("Themes: every theme and mode uses its reference colours exactly",async page=>{
   const r=await page.evaluate(()=>{
@@ -918,6 +942,25 @@ await test("Themes: each page draws its own picture on the ground, under the gla
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="red";(await import("/js/ui/render.js")).render();});await pause(page,300);
   eq(await page.evaluate(()=>[getComputedStyle(document.getElementById("bgart")).getPropertyValue("--bga").trim().toUpperCase(),
     document.querySelector("#bgart svg")===window.__bg]),["#FF2E3A",true],"the same drawing, repainted in red");
+});
+/* Training's ground is the owner's horseman at dusk, drawn (js/ui/scene.js): the rider
+   on the rock, the obelisk, palms, the city and the river, in the theme's own colours. */
+await test("Themes: Training's ground is the horseman at dusk, in the theme's colours, softened in light mode",async page=>{
+  const look=()=>page.evaluate(()=>{const s=document.querySelector("#bgart svg.scene");if(!s)return null;
+    const ink=s.querySelector(".sc-ink"),near=s.querySelector(".sc-ink .sc-near"),win=s.querySelector(".sc-win");
+    return {rider:s.querySelectorAll(".sc-near").length>=3,palms:s.querySelectorAll(".sc-frond").length>=8,windows:s.querySelectorAll(".sc-win").length>10,
+      ink:getComputedStyle(near).fill,light:getComputedStyle(win).fill,soft:getComputedStyle(ink).opacity,
+      bottom:s.getAttribute("preserveAspectRatio")};});
+  const d=await look();
+  if(!d)throw new Error("no scene on Training");
+  eq([d.rider,d.palms,d.windows,d.bottom],[true,true,true,"xMidYMax slice"],"the whole scene, standing at the foot of the screen");
+  eq(d.soft,"1","full strength in the dark");
+  /* Blue dark: the night navy ink, the theme's highlight for the light */
+  eq(d.ink,await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--bg").trim()).then(v=>{const h=v.replace("#","");return "rgb("+[0,2,4].map(i=>parseInt(h.substr(i,2),16)).join(", ")+")";}),"the ground's own ink");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.theme="light";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq((await look()).soft,"0.42","light mode softens the ink as one");
+  await tapTab(page,"food");await pause(page);
+  eq(await page.evaluate(()=>!!document.querySelector("#bgart svg.scene")),false,"the other pages keep their drawings");
 });
 await test("Themes: the mark is the theme's own colour, and so is the icon",async page=>{
   const look=()=>page.evaluate(()=>{const m=document.querySelector(".libhero .mk");
@@ -2567,6 +2610,22 @@ await test("Surfaces: the page is glass, glass inside glass only tints, and a sh
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Pullups"});});await pause(page,400);
   eq(await page.evaluate(()=>{const e=document.activeElement;return [e.classList.contains("sheetbox"),getComputedStyle(e).outlineStyle];}),[true,"none"]);
 });
+/* A partly transparent element cuts the glass inside it off from the ground: a page that
+   faded in showed its cards and buttons thin and clear until the fade ended, then they
+   frosted, a flash on every tab change. The page rises instead, and a sheet's veil fades
+   by its colour. Sampled every frame while they come in. */
+await test("Surfaces: changing page or opening a sheet never fades what holds the glass, so it does not flash",async page=>{
+  const watch=sel=>page.evaluate(sel=>new Promise(res=>{const seen=[],t0=performance.now();
+    (function f(){const e=document.querySelector(sel);if(e)seen.push(+getComputedStyle(e).opacity);
+      if(performance.now()-t0<450)requestAnimationFrame(f);else res(seen);})();}),sel);
+  await tapTab(page,"train");await pause(page,400);
+  const w=watch("#app");await tapTab(page,"food");const seen=await w;
+  if(!await page.evaluate(()=>document.getElementById("app").classList.contains("pagein")))throw new Error("the page did not animate in");
+  eq(seen.filter(o=>o<1),[],"#app faded");
+  const s=watch("#sheet .sheet");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Barbell Squat"});});
+  eq((await s).filter(o=>o<1),[],"the sheet faded");
+},{prefs:{anim:true}});
 /* The live 3D figure (js/ui/mannequin.js): drawn by this browser's WebGL2 (software
    here). The suite runs with animations off, so each figure draws once and holds still
    until asked, which also keeps these tests quick. */

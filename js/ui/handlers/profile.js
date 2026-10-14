@@ -111,6 +111,10 @@ function register(){
   /* Settings → Theme and Mode. The whole screen cross-fades into the new look. */
   key("settheme",function(D){if(D.settheme===themeOf())return;
     changeLook(function(){S.prefs.palette=D.settheme;saveDB();render();});return;});
+  /* Settings → App icon: the theme's own ("auto") or one kept whatever the theme. */
+  key("seticon",function(D){var v=/^(red|blue|mono)$/.test(D.seticon)?D.seticon:"auto";
+    if(v===(S.prefs.icon||"auto"))return;
+    S.prefs.icon=v;saveDB();render();return;});
   key("lookmode",function(D){if(D.lookmode===S.theme)return;
     changeLook(function(){S.theme=D.lookmode;saveDB();render();});return;});
   key("progmode",function(){
