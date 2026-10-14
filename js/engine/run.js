@@ -1,19 +1,22 @@
-/* Bunyan — a run, measured
-   The arithmetic of running mode (js/ui/run.js): the clock, the distance the phone's
-   positions add up to, the pace, the calories, and the route as a drawing. Pure: a run
-   is a plain object passed in and handed back, so js/engine/test/run.test.js runs it
-   in Node with made-up positions.
+/* Bunyan — a run, a walk, a ride or a hike, measured
+   The arithmetic of live tracking (js/ui/run.js): the clock, the distance the phone's
+   positions add up to, the pace or the speed, the calories, and the route as a drawing.
+   Pure: a session is a plain object passed in and handed back, so
+   js/engine/test/run.test.js runs it in Node with made-up positions.
 
-   A run: {started, ms, since, pts:[[lat, lon, t]], dist}
-     ms     running time banked before the current stretch (pauses are not counted)
+   A session: {started, act, ms, since, pts:[[lat, lon, t]], dist}
+     act    the activity (Running, Walking, Cycling, Hiking, Trail Running/Walking);
+            one saved before there was a choice is a run
+     ms     moving time banked before the current stretch (pauses are not counted)
      since  when the current stretch began, or null while paused
      pts    the positions kept, oldest first; dist the metres between them
 
    A phone's position wanders even standing still, and now and then leaps. So a fix is
    kept only when it is accurate to 35 m or better, when it is at least 4 m from the
    last one kept (closer is the same spot, and adding it would count the wander as
-   running), and when getting there would not have needed more than 9 m/s (32 km/h,
-   faster than any runner), which is a leap, not a stride. */
+   moving), and when getting there would not have needed more than the activity's top
+   speed (js/data/activities.js: 9 m/s for a run, 20 for a ride), which is a leap, not
+   a stride. */
 
 var R=6371008.8;   /* the Earth's mean radius, m */
 
@@ -23,23 +26,24 @@ function metres(a,b){
   var h=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a[0]*toR)*Math.cos(b[0]*toR)*Math.sin(dLon/2)*Math.sin(dLon/2);
   return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));}
 
-function newRun(now){return {started:now,ms:0,since:now,pts:[],dist:0};}
+function newRun(now,act){return {started:now,act:act||"Running",ms:0,since:now,pts:[],dist:0};}
 /* Running time so far, in ms. */
 function runMs(run,now){return run.ms+(run.since!=null?Math.max(0,now-run.since):0);}
 function pauseRun(run,now){if(run.since!=null){run.ms=runMs(run,now);run.since=null;}return run;}
 function resumeRun(run,now){if(run.since==null)run.since=now;return run;}
 
-/* A position from the phone: {lat, lon, acc (m), t (ms)}. Returns what happened, for
-   the screen: "kept", "same" (too close to count), "rough" (not accurate enough),
-   "leap" (impossibly fast), "paused" (not counted while paused). */
-function addFix(run,f){
+/* A position from the phone: {lat, lon, acc (m), t (ms)}, and the activity's top
+   speed in m/s (a run's 9 when not given). Returns what happened, for the screen:
+   "kept", "same" (too close to count), "rough" (not accurate enough), "leap"
+   (impossibly fast), "paused" (not counted while paused). */
+function addFix(run,f,top){
   if(run.since==null)return "paused";
   if(!(f.acc<=35))return "rough";
   var p=[+f.lat.toFixed(6),+f.lon.toFixed(6),f.t],last=run.pts[run.pts.length-1];
   if(!last){run.pts.push(p);return "kept";}
   var d=metres(last,p),dt=(p[2]-last[2])/1000;
   if(d<4)return "same";
-  if(dt>0&&d/dt>9)return "leap";
+  if(dt>0&&d/dt>(top>0?top:9))return "leap";
   run.pts.push(p);run.dist+=d;return "kept";}
 
 /* Minutes per kilometre as "m:ss", or "" with too little distance to say (under 50 m). */
@@ -47,6 +51,10 @@ function paceOf(ms,m){
   if(!(m>=50&&ms>0))return "";
   var s=Math.round(ms/1000/(m/1000));
   return Math.floor(s/60)+":"+String(s%60).padStart(2,"0");}
+/* Kilometres an hour to one decimal, as a ride is read, or "" under 50 m. */
+function speedOf(ms,m){
+  if(!(m>=50&&ms>0))return "";
+  return (Math.round(m/ms*3600*10)/10).toFixed(1);}
 
 /* Energy: about 1 kcal per kilogram per kilometre run, whatever the pace, the long-
    standing rule of thumb the running research supports; with no distance (no GPS),
@@ -55,6 +63,22 @@ function runKcal(m,ms,kg){
   kg=kg>0?kg:70;
   if(m>=200)return Math.round(kg*m/1000);
   return Math.round(9.8*kg*ms/3600000);}
+/* The other activities, by MET × kg × hours. Walking and cycling cost more the faster
+   they go, so their MET is read off the speed measured (the Compendium of Physical
+   Activities, 2011: [km/h below which, MET]); with no distance, a moderate effort.
+   A hike is 6 whatever its pace (the climb, not the speed, is what it costs), and a
+   trail session is a run at a runner's speed (8 km/h and up) and a hike below it. */
+var WALK=[[3.2,2.0],[4.0,2.8],[4.8,3.0],[5.6,3.5],[6.4,4.3],[7.2,5.0],[Infinity,7.0]];
+var RIDE=[[16,4.0],[19.3,6.8],[22.5,8.0],[25.7,10.0],[32,12.0],[Infinity,15.8]];
+function metAt(tbl,kmh){for(var i=0;i<tbl.length;i++)if(kmh<tbl[i][0])return tbl[i][1];return tbl[tbl.length-1][1];}
+function outdoorKcal(act,m,ms,kg){
+  kg=kg>0?kg:70;
+  var h=ms/3600000,kmh=ms>0&&m>=200?m/ms*3600:0;
+  if(!act||act==="Running")return runKcal(m,ms,kg);
+  if(act==="Trail Running/Walking")return kmh>=8?runKcal(m,ms,kg):Math.round(6*kg*h);
+  if(act==="Walking")return Math.round((kmh?metAt(WALK,kmh):3.5)*kg*h);
+  if(act==="Cycling")return Math.round((kmh?metAt(RIDE,kmh):7.5)*kg*h);
+  return Math.round(6*kg*h);}
 
 /* The route as an SVG path in a w × h box with pad around it: flat projection (a run
    is far too small for the Earth's curve to show), north up, the same scale both ways
@@ -92,4 +116,4 @@ function thin(pts,n){
   for(var i=0;i<n;i++)out.push(pts[Math.round(i*step)]);
   return out;}
 
-export {addFix, kmMarks, metres, newRun, paceOf, pauseRun, resumeRun, routePath, routeXY, runKcal, runMs, thin};
+export {addFix, kmMarks, metres, newRun, outdoorKcal, paceOf, pauseRun, resumeRun, routePath, routeXY, runKcal, runMs, speedOf, thin};

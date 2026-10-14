@@ -1,6 +1,7 @@
 /* Bunyan — exnames
    Compositional Arabic exercise names, plus applyLang(). */
-import {actInfo} from "../data/activities.js";
+import {actInfo, outdoorOf} from "../data/activities.js";
+import {t} from "./dict.js";
 import {S} from "../state.js";
 import {EXDB, exShort} from "../data/exercises.js";
 import {setLang} from "../util.js";
@@ -247,4 +248,11 @@ function applyLang(){
 }
 
 
-export {applyLang, exName, planName};
+/* An outdoor activity as its button in Log cardio and its question name it ("Running,
+   outdoor", where an indoor one sits beside it in the list), or as the live screen's
+   title (title true: "Trail run" for the library's long name); its own name otherwise. */
+function outdoorName(n,title){
+  var o=outdoorOf(n),k=o&&(title?o.title:o.pick);
+  return k&&k!==n?t(k):exName(n);}
+
+export {applyLang, exName, outdoorName, planName};

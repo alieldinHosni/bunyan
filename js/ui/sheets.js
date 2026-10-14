@@ -5,11 +5,11 @@ import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exFigs, exImg, exMedia, 
 import {hasPose, poseSvg} from "../data/poses.js";
 import {bodySvg, onMap} from "../data/bodymap.js";
 import {movementLabel} from "../data/movement.js";
-import {exName, planName} from "../i18n/exnames.js";
+import {exName, outdoorName, planName} from "../i18n/exnames.js";
 import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay} from "./views/train.js";
 import {planOn} from "../engine/dayplan.js";
-import {ACT_GROUPS, actIcon, actInfo, actPace, actsIn, INTENSITY, intensityOf, isActivity} from "../data/activities.js";
+import {ACT_GROUPS, actIcon, actInfo, actRate, actsIn, INTENSITY, intensityOf, isActivity, outdoorOf} from "../data/activities.js";
 import {bwShare, incrementFor, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
@@ -425,10 +425,11 @@ function vSheet(){
     ACT_GROUPS.forEach(function(g){
       b+='<div class="exd-h">'+t(g)+'</div><div class="actgrid">';
       actsIn(g).forEach(function(n){
-        /* Running outdoors can be tracked live (running mode): it says so. */
-        var live=n==="Running";
-        b+='<button class="actbtn'+(live?' live':'')+'" data-quickact="'+esc(n)+'">'+actIcon(n,24)+'<span>'+esc(live?t("Running, outdoor"):exName(n))+'</span>'
-         +(live?'<i class="actbtn-gps">'+esc(t("GPS"))+'</i>':'')+'</button>';});
+        /* What is done outdoors (a run, a walk, a ride, a hike) can be tracked live: it
+           says so, by name where an indoor one is beside it (Running, outdoor). */
+        var o=outdoorOf(n);
+        b+='<button class="actbtn'+(o?' live':'')+'" data-quickact="'+esc(n)+'">'+actIcon(n,24)+'<span>'+esc(o?outdoorName(n):exName(n))+'</span>'
+         +(o?'<i class="actbtn-gps">'+esc(t("GPS"))+'</i>':'')+'</button>';});
       b+='</div>';});
   }
   else if(V.sheet==="swapday"){
@@ -678,7 +679,7 @@ function vSheet(){
         b+='<div class="card"><div class="row"><span class="tiny">'+pretty(r.d)+'</span></div>'
          +'<div class="num mt" style="font-size:15px">'+r.s.map(function(x){
             return num(x.min)+' '+t("min")+(num(x.km)?' · '+x.km+' km':'')
-             +(actPace(num(x.min),num(x.km))?' · '+actPace(num(x.min),num(x.km)):'')
+             +(actRate(nm3,num(x.min),num(x.km))?' · '+actRate(nm3,num(x.min),num(x.km)):'')
              +' · '+t(intensityOf(x.rpe||6)[1])+(x.iv?' · '+ivText(x.iv):'')+(num(x.hr)?' · '+num(x.hr)+' bpm':'')
              +(x.kcal?' · '+fmtN(x.kcal)+' kcal':'');}).join('<br>')+'</div></div>';
         return;}

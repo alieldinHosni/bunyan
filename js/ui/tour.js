@@ -24,8 +24,7 @@ var GUIDES={
     {sel:".twk",h:"Your week",p:"Every day of this week. A tick is a workout done. Tap a day to see what it holds."},
     {sel:".thero2",h:"Today's workout",p:"Start it here. Change swaps today for another day of your plan."},
     {sel:".htiles",h:"Weigh-in and steps",p:"Tap either one to log it, and type the number. The ring fills toward your daily steps goal."},
-    {sel:".ttile.trun",h:"Running mode",p:"A run tracked live with your phone's GPS: the route on a map, the distance, pace and time."},
-    {sel:"[data-actsheet]",h:"Cardio and sports",p:"Log a run, a match or a class by time and effort instead of sets."},
+    {sel:"[data-actsheet]",h:"Cardio and sports",p:"Log a match or a class by time and effort. Pick a run, a walk, a ride or a hike to track it live with your phone's GPS."},
     {sel:"nav .dock",fixed:true,h:"Getting around",p:"Training, Food, Coach and Progress. The tab you are on opens to show its name."}]},
   food:{name:"Food",steps:[
     {sel:".dnav",h:"The day",p:"Swipe or tap the arrows to see another day. Food always opens on today."},
@@ -52,10 +51,10 @@ var GUIDES={
   chat:{name:"Ask the coach",steps:[
     {sel:".chat-topics",h:"Tap a question",p:"Pick one, and the coach answers from your own log, plan and targets."},
     {sel:".chat-form",fixed:true,h:"Or type your own",p:"In English or Arabic. Nothing you type leaves your phone."}]},
-  run:{name:"Running mode",steps:[
+  run:{name:"Live tracking",steps:[
     {sel:".run-gps",h:"GPS",p:"Whether your phone has your position. Green means the route and distance are being tracked."},
     {sel:".run-play",h:"Pause and carry on",p:"Pause stops the clock and the distance; tap again to carry on."},
-    {sel:".run-end",h:"Finish and save",p:"Saves the run to your training, with its route, distance, pace and calories."}]}};
+    {sel:".run-end",h:"Finish and save",p:"Saves it to your training, with its route, distance and calories."}]}};
 
 /* Which guide fits the screen now, or null. */
 function pageKey(){

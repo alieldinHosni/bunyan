@@ -5,7 +5,7 @@ import {isolateNums} from "../../i18n/bidi.js";
 import {difficultyOf, exFigs, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {bodyAt, bwShare, loadText, dbTotal, inDeload, lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
-import {actIcon, actInfo, actKcal, actPace, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
+import {actIcon, actInfo, actKcal, actRate, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
 import {S} from "../../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num} from "../../util.js";
@@ -465,7 +465,7 @@ function actBody(a,e,rows,active){
     e.sets.forEach(function(st,i){
       h+='<div class="act-row'+(V.fresh===i?' fresh':'')+'" data-k="act:'+i+'"><span class="act-ok" aria-hidden="true">'+TICK+'</span>'
        +'<span class="act-t"><b>'+num(st.min)+' '+t("min")+(num(st.km)?' · '+st.km+' km':'')
-         +(actPace(num(st.min),num(st.km))?' · '+actPace(num(st.min),num(st.km)):'')+'</b>'
+         +(actRate(e.name,num(st.min),num(st.km))?' · '+actRate(e.name,num(st.min),num(st.km)):'')+'</b>'
        +'<span>'+t(intensityOf(st.rpe||6)[1])+(st.iv?' · '+ivText(st.iv):'')+(num(st.hr)?' · '+num(st.hr)+' bpm':'')+(st.kcal?' · '+fmtN(st.kcal)+' kcal':'')+'</span></span>'
        +'<button class="delset" data-delset="'+i+'" aria-label="'+t("Delete")+' '+(i+1)+'">✕</button></div>';});
     h+='</div>';

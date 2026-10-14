@@ -16,6 +16,8 @@ import {render} from "../render.js";
 import {endRest, keepAwake, toast, V} from "../view.js";
 import {warmShown} from "../views/warmup.js";
 import {discardRun, finishRun, pauseIt, resumeIt, startRun} from "../run.js";
+import {outdoorOf} from "../../data/activities.js";
+import {outdoorName} from "../../i18n/exnames.js";
 import {has, key, NEXT, on} from "./registry.js";
 
 /* ---- leaving an active workout ------------------------------------------- */
@@ -54,13 +56,13 @@ function backBlocked(){
   lockSaid=true;toast(t("Tap the close button to leave this workout."));
 }
 
-/* Running mode's way out, from its ✕ and from any back gesture while it is on screen:
-   save it, throw it away, or keep running. */
+/* Live tracking's way out (a run, a walk, a ride, a hike), from its ✕ and from any back
+   gesture while it is on screen: save it, throw it away, or carry on. */
 function askEndRun(){
-  askConfirm({title:t("End this run?"),icon:"leave",
-    body:t("Save it to your training, or throw it away. Keep running and nothing changes."),
-    cta:t("Finish and save"),act:"runfinish",cancel:t("Keep running"),
-    alt:t("Discard run"),altact:"rundiscard"});}
+  askConfirm({title:t("End it here?"),icon:"leave",
+    body:t("Save it to your training, or throw it away. Carry on and nothing changes."),
+    cta:t("Finish and save"),act:"runfinish",cancel:t("Carry on"),
+    alt:t("Discard it"),altact:"rundiscard"});}
 function navGuard(resume){
   /* Only when the workout is the thing you are actually looking at. vTrain() returns
      the logger for as long as a session is live, so "the Train tab" and "the workout"
@@ -150,27 +152,29 @@ function register(){
   key("rpe",function(D){V.draft.rpe=+D.rpe;render();return;});
   key("actint",function(D){V.draft.rpe=+D.actint;render();return;});
   key("logact",function(){W.logBout();return;});
-  /* Running mode (js/ui/run.js). */
+  /* Live tracking (js/ui/run.js). */
   ACT.runfinish=function(){finishRun(render);};
-  ACT.rundiscard=function(){discardRun();render();toast(t("Run discarded."));};
+  ACT.rundiscard=function(){discardRun();render();toast(t("Discarded."));};
   key("run",function(D){
-    if(D.run==="start"){if(S.active){toast(t("Finish the workout first."));return;}
-      resetNav();V.tab="train";V.train="days";startRun();render();window.scrollTo(0,0);return;}
     if(D.run==="pause"){pauseIt();render();return;}
     if(D.run==="resume"){resumeIt();render();return;}
     if(D.run==="finish"){finishRun(render);return;}
     if(D.run==="leave"){askEndRun();return;}
     return;});
   key("activ",function(){V.actIv=true;render();var ivf=document.getElementById("in_ivn");if(ivf)ivf.focus();return;});
-  /* Running from Log cardio: tracked live in running mode, or logged after the fact.
-     During a workout it is logged into it, as any activity is. */
-  ACT.runlive=function(){if(S.active||S.run)return;resetNav();V.tab="train";V.train="days";startRun();render();window.scrollTo(0,0);};
-  ACT.runlog=function(){startActivity("Running");};
+  /* An outdoor activity from Log cardio (a run, a walk, a ride, a hike: js/data/
+     activities.js OUTDOOR): tracked live, or logged after the fact. This is the only
+     way into live tracking. During a workout it is logged into it, as any activity is. */
+  ACT.runlive=function(){if(S.active||S.run)return;resetNav();V.tab="train";V.train="days";startRun(V.runAct);render();window.scrollTo(0,0);};
+  ACT.runlog=function(){startActivity(V.runAct||"Running");};
   key("quickact",function(D){
-    if(D.quickact==="Running"&&!S.active&&!S.run){
-      askConfirm({title:t("Running, outdoor"),icon:"route",
-        body:t("Track it live with your phone's GPS: the route on a map, the distance, your pace and the time. Or log a run you have already done."),
-        cta:t("Start running mode"),act:"runlive",alt:t("Log a run I've done"),altact:"runlog"});
+    var o=outdoorOf(D.quickact);
+    if(o&&!S.active&&!S.run){
+      V.runAct=D.quickact;
+      askConfirm({title:outdoorName(D.quickact),icon:"route",
+        body:t(o.read==="speed"?"Track it live with your phone's GPS: the route on a map, the distance, your speed and the time. Or log one you have already done."
+          :"Track it live with your phone's GPS: the route on a map, the distance, your pace and the time. Or log one you have already done."),
+        cta:t("Track it live"),act:"runlive",alt:t("Log one I've done"),altact:"runlog"});
       return;}
     V.sheet=null;V.sd=null;startActivity(D.quickact);return;});
   key("actsheet",function(){openSheet("acts");return;});
