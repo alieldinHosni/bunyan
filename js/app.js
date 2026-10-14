@@ -19,6 +19,7 @@ import {initNav} from "./ui/nav.js";
 import {initPress} from "./ui/press.js";
 import {initReorder} from "./ui/reorder.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
+import {initKeyboard} from "./ui/keyboard.js";
 import {loadExDB, reconcileExercises, useUserData} from "./data/exercises.js";
 import {mmss, paintOver, paintRest, sessionClock} from "./ui/views/session.js";
 import {moveRow, requestCloseSheet} from "./ui/handlers/common.js";
@@ -172,6 +173,8 @@ setStorageErrorHandler(toast);
 initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,
          locked:sessionLocked,onBlocked:backBlocked});
 initSheetDrag(requestCloseSheet);
+/* A field in a sheet takes the keyboard without the page jumping under it (iPhone). */
+initKeyboard();
 syncViewport();
 if(window.visualViewport){
   window.visualViewport.addEventListener("resize",syncViewport);

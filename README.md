@@ -177,6 +177,8 @@ js/
   scan.js       camera barcode scanning, and the overlay it owns
   ui/nav.js     the back stack: arrow, edge swipe and OS gesture share one path
   ui/sheetdrag.js  drag a sheet header down to dismiss
+  ui/keyboard.js   on an iPhone, a field tapped in a sheet takes the keyboard without
+                   Safari scrolling the page under the sheet; the sheet scrolls it into view
   state.js      S, profiles, persistence; what S holds, its defaults and its versioned
                 migrations are in schema.js (pure, tests in js/test/)
   data/         exercises.js, splits.js, goals.js, movement.js (each exercise's movement

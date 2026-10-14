@@ -2992,6 +2992,16 @@ details.adv>.btn{margin:0 14px 14px;width:calc(100% - 28px)}
 .afstep-p{background:var(--accentSoft);color:var(--accentHi)}
 .afstep button:disabled{opacity:.4}
 .afstep b{font-family:var(--display);font-weight:800;font-size:24px;font-variant-numeric:tabular-nums}
+/* An amount in a measure (tbsp, ml, cups): the figure, sized to itself so its unit
+   stays beside it, in the stepper's own type. Without this the field kept the general
+   input's padding and its width in ch was all padding: the number did not show. */
+.afamt{flex:1;min-width:0;display:flex;align-items:baseline;justify-content:center;gap:6px}
+.afamt input{flex:0 1 auto;min-width:1ch;max-width:100%;background:none;border:none;border-radius:0;padding:0;
+  color:var(--text);font-family:var(--display);font-weight:800;font-size:24px;text-align:center;
+  font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.afamt input:focus{border:none}
+.afamt input::-webkit-inner-spin-button,.afamt input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.afamt i{font-style:normal;font-weight:700;font-size:14px;color:var(--dim);flex-shrink:0}
 
 .afmore{display:flex;align-items:center;gap:10px;width:100%;margin-top:16px;text-align:start;
   background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:0 16px;min-height:52px;
