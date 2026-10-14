@@ -25,6 +25,7 @@ import {applyLook} from "./theme.js";
 import {bindExSwipe} from "./exswipe.js";
 import {bindMore} from "./more.js";
 import {syncMannequins} from "./mannequin.js";
+import {syncBgArt} from "./bgart.js";
 
 /* ============================================================ render */
 /* Motion is applied after the DOM has settled, and only to what changed.
@@ -135,6 +136,8 @@ function render(){
   document.body.classList.toggle("focus",focus);
   /* The dock is built once and only its state changes after that — see dock.js. */
   syncDock(document.getElementById("nav"),V.tab,V.advice);
+  /* The page's drawing on the ground (js/ui/bgart.js); the assessment is Coach's. */
+  syncBgArt(V.assess?"coach":V.tab);
   ensureRunWatch();
   /* The page's guide, the first time it opens (js/ui/tour.js). */
   tourCheck();

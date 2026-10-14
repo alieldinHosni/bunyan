@@ -264,4 +264,10 @@ function gaugeArt(frac,o){
     +'<path class="a" d="M86 88Q100 82 114 88M100 86V97" pathLength="1"/>'
     +'<path class="a" d="M95 104A5 5 0 1 0 105 104A5 5 0 1 0 95 104" pathLength="1"/></g>'}));}
 
-export {art, gaugeArt, waterArt};
+/* The mark (mark.png), filled with the theme's own colours rather than tinted: the PNG
+   is only its shape (a CSS mask, .mk in index.html), so it is exactly the accent of the
+   theme and mode it is drawn in. cls places it; the span is what a glow or a fade is
+   put on, since a mask would cut those off the shape itself. */
+function markArt(cls){return '<span class="'+cls+'" aria-hidden="true"><i class="mk"></i></span>';}
+
+export {art, gaugeArt, markArt, waterArt};

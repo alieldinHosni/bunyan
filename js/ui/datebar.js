@@ -17,6 +17,7 @@ import {S} from "../state.js";
 import {dfmt, esc, today} from "../util.js";
 import {weekOrder, weekStart} from "../engine/schedule.js";
 import {V} from "./view.js";
+import {markArt} from "./art.js";
 
 /* Local midnight, shifted, then read back as a local date rather than a UTC one.
    `new Date(iso+"T00:00:00")` is local, but toISOString() converts to UTC, so east of
@@ -120,7 +121,7 @@ function dateBar(o){
   var full=dfmt(d,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   return '<div class="dnav-wrap" data-k="dnav-wrap">'
    +'<div class="dnav'+(isToday?' now':'')+(o.art?' art':'')+'" data-swipe="day">'
-   +(o.art?'<img class="dnav-art" src="mark.png" alt="" aria-hidden="true" width="440" height="440" decoding="async">':'')
+   +(o.art?markArt("dnav-art"):'')
    +'<button class="dnav-arrow" data-dday="-1" aria-label="'+t("Previous day")+'">'+CHEV_L+'</button>'
    +'<button class="dnav-mid" data-dopen="1" aria-expanded="'+(o.open?"true":"false")+'"'
    +' aria-label="'+esc(t("Choose a day")+", "+full)+'">'

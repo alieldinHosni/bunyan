@@ -146,9 +146,9 @@ configuration:
 
 | | Dark | Light |
 | --- | --- | --- |
-| **Red** (default) | the reference's Dark: navy stage, blue rim and floor light, red-orange muscles, light-blue arrow | the reference's Light: a pale stage, a lighter figure, red muscles, a blue arrow |
-| **Blue** | navy stage, muscles in the theme's blue, Signal Green arrow | pale blue stage, deep blue muscles, green arrow |
-| **Monochrome** | near-black stage, muscles in Ghost Green white | Ghost Green stage, muscles in near-black |
+| **Red** | the reference's Dark: navy stage, blue rim and floor light, red-orange muscles, light-blue arrow | the reference's Light: a pale stage, a lighter figure, red muscles, a blue arrow |
+| **Blue** (default) | navy stage, muscles in the theme's blue, Signal Green arrow | pale blue stage, deep blue muscles, green arrow |
+| **Sage** (once Monochrome) | deep teal stage, muscles in sage teal, a sage-white arrow | pale sage stage, deep teal muscles, a slate arrow |
 
 **Purple** is in the reference but is not a BUNYAN theme, so it is not wired to
 anything. Adding a whole app palette is a product decision beyond this pilot. If one is
@@ -208,7 +208,7 @@ The browser tests check the figure in the actual app:
 
 - in the exercise sheet it draws, lights its muscles (compared with the same figure unlit), survives a repaint, turns under a drag, plays and pauses, and lets go when closed;
 - the row works too;
-- light mode lightens the stage, and Monochrome and Blue have no red;
+- light mode lightens the stage, and Sage and Blue have no red (these run in Red, where the lit muscles are the red the test looks for);
 - in the workout it draws and keeps running through repaints;
 - without WebGL2 the stills show;
 - the stills and thumbnails ship.

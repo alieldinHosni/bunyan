@@ -13,7 +13,7 @@ phone's browser and never leaves the device.
    never goes near it.
 3. On the repo page choose **Add file → Upload files**, drag in the app files, and
    commit. They are `index.html`, `sw.js`, `manifest.webmanifest`, `exercises.json`,
-   `instructions.json`, `foods.json`, `icon-180.png`, `icon-512.png`, `mark.png`,
+   `instructions.json`, `foods.json`, every `icon-*.png`, `mark.png`,
    `intro.jpg`, **and the whole `js/` folder with its sub-folders intact** — the app is
    ES modules and each one is fetched by its path, so a flattened `js/` will not run.
    That includes `js/vendor/`, which holds the barcode decoder used by iPhones.
@@ -766,8 +766,12 @@ stone-monolith splash. Neither is used anywhere. If you find a gold arch SVG or 
 
 | File | What it is |
 | --- | --- |
-| `mark.png` | The horse and sword, red on transparent. In-app header and the intro |
-| `icon-180.png`, `icon-512.png` | The same mark on `#0D0D0D`, for the home screen |
+| `mark.png` | The horse and sword on transparent. Only its shape is used: in the app it is a mask filled with the theme's own colours (`.mk`, `markArt()` in `ui/art.js`) |
+| `icon-180.png`, `icon-512.png`, `icon-maskable-512.png` | The mark in Blue's colours on Blue's ground, for the Home Screen, the tab and the manifest (the maskable one keeps the mark inside Android's safe circle) |
+| `icon-red-180.png`, `icon-mono-180.png` | The same in Red and in Sage. The tab's icon and the Home Screen's follow the theme (`applyLook()` in `ui/theme.js`, and the head of `index.html` before the first paint). A phone keeps the icon it was given when the app was added to its Home Screen: remove it and add it again to take a new theme's |
+
+The icons are made by `python3 tools/images.py icons` from `mark.png` and the theme
+colours, so a change of colour is a re-run, not a drawing.
 | `intro.jpg` | The intro artwork: a rider with a raised sword on a rearing horse, both in near-silhouette, an ember glow behind them |
 
 The intro degrades gracefully — if `intro.jpg` is missing the composition still holds on
@@ -781,15 +785,30 @@ Profile → App:
 
 | Theme | Built from | Action colour |
 | --- | --- | --- |
-| BUNYAN Red (default) | Machine Red `#FF2E3A`, Glacier Blue `#DBF6FF` | Machine Red, Glacier labels |
-| BUNYAN Blue | Night Navy `#070B1A`, Steel Blue `#5C7FB5`, Sky Blue `#8AB0EC`, Signal Green `#82FC4F` | Sky Blue with navy labels (dark), a deeper steel blue with white (light) |
-| Monochrome | Zero Black `#050505`, Ghost Green `#D7FFE0` | Ghost Green on black (dark), black on Ghost Green (light) |
+| BUNYAN Blue (default) | Night Navy `#070B1A`, Steel Blue `#5C7FB5`, Sky Blue `#8AB0EC`, Signal Green `#82FC4F` | Sky Blue with navy labels (dark), a deeper steel blue with white (light) |
+| BUNYAN Red | Machine Red `#FF2E3A`, Glacier Blue `#DBF6FF`, on a wine-black ground (dark) | Machine Red, Glacier labels |
+| Sage (stored as `mono`, once Monochrome) | The owner's sage glass reference: deep teal `#142E33`, sage `#53696A`–`#7C8F90`, pale grey `#E0E4E5` | Sage-white with slate labels (dark); deep slate with white labels, white type on the ground and slate type on the glass (light) |
 
-Blue replaced Pink; a profile that had chosen Pink opens in Blue. Red and Monochrome use
-their brand colours exactly. In every theme:
+Blue replaced Pink; a profile that had chosen Pink opens in Blue. A profile that never
+chose opens in Blue; one that chose Red or Monochrome keeps it (Monochrome is now Sage).
+Red uses its brand colours exactly. In every theme:
 
 - **The ground** is a blend of two or three of the theme's tones (`--ground`, a layer
   fixed behind the page), not one flat colour.
+- **On the ground, a drawing for each page** (`ui/bgart.js`, `#bgart`): Training the
+  ranges of hills and a path up them, Food wheat and an olive branch, Coach a compass
+  whose needle is the sword under its stars, Progress contour lines round a summit and
+  the line that climbs to it, Profile the mane's long strokes. Still, in the theme's two
+  colours (`--bga`, `--bgb`; Sage light draws in white), kept to the app's column, turned
+  round in Arabic. The ground's blend turns round in Arabic too, so a title keeps the
+  deep side behind it.
+- **Glass, everywhere** (the end of the stylesheet): cards, the secondary buttons, the
+  chips, the fields, the segmented control, the round header buttons and the dock are
+  frosted glass, a translucent fill of the theme's tone over the blurred ground and its
+  drawing, a light rim and a highlight along the top edge. The primary action is the
+  accent as coloured glass lit from above. Glass inside glass only tints. Each rule is
+  at the weight of the control's own base rule, so a state with its own look (a chosen
+  day, a delete's red) still wins. Without blur support everything keeps its solid fill.
 - **Cards are glass** (`--card`, `--card-edge`): a tint of the ground with a lighter edge,
   so the blend shows through.
 - **Pop-ups are frosted glass**: a sheet, a dialog and a toast are the ground made
@@ -799,7 +818,8 @@ their brand colours exactly. In every theme:
 - **The drawings** (`ui/art.js`) share one paint (`#artdefs` in `index.html`): lines run
   from the highlight down into the accent with a soft glow, a shape that closes on itself
   takes a glass fill of the accent, embers glow, and the background lines are lighter
-  than the main ones. The greeting on Training is a scene for the time of day, the sun
+  than the main ones. The mark is the theme's colour exactly (a mask filled from the
+  highlight into the deep accent), not a tint. The greeting on Training is a scene for the time of day, the sun
   clearing three ranges of hills in the morning, high with a cloud in the afternoon, a
   crescent among stars in the evening, faded out toward the page.
 - **The guide** (`ui/tour.js`): the first time each page opens (Training, Food, Coach,
@@ -809,9 +829,10 @@ their brand colours exactly. In every theme:
   tip; Skip ends it. Each page's guide is shown once; Profile → Show the guide again
   brings them back. A step a page does not have today is passed over, and a step added
   later (a new feature) is shown on its own to someone who has seen the rest.
-- **The dock** is a dark pill of round buttons; the tab that is on opens into a pill in
+- **The dock** is a glass pill of round buttons; the tab that is on opens into a pill in
   the action colour with its name beside the icon (Training is a dumbbell, Coach a
-  whistle). Signal Green, in Blue, marks something new. Four tabs; Profile is not one of
+  whistle). In Sage light it is the reference's slate bar of white buttons with a white
+  pill. Signal Green, in Blue, marks something new. Four tabs; Profile is not one of
   them, and Training stays lit while it is open.
 - Green means done, gold (brass) means earned, red means destructive, whatever the theme.
   If everything is gold, nothing is.

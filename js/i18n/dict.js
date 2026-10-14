@@ -1141,7 +1141,7 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "handful": "حفنة",
 "half": "نص",
 "2 tbsp": "2 معلقة كبيرة",
-"Monochrome": "أبيض وأسود",
+"Sage": "ميرمية",
 "Remove this exercise": "شيل التمرين ده",
 "Skip this exercise": "تخطّى التمرين ده",
 "Replace {ex}?": "تغيّر {ex}؟",
