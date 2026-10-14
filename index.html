@@ -14,15 +14,18 @@
 <script>
 /* The theme before the first paint. render() sets it from the profile, but only after
    the stylesheet has already painted the default (Blue) once, so a Red or Sage
-   user saw a flash of blue on every launch. bunyan:look is the last theme and mode, kept small for
-   exactly this read (js/ui/theme.js writes it). The icon goes with it: the tab's and the
-   one a phone puts on its Home Screen are the theme's own (icon-180.png is Blue's). */
+   user saw a flash of blue on every launch. bunyan:look is the last theme, mode and icon
+   ("red|dark|red"), kept small for exactly this read (js/ui/theme.js writes it). The tab's
+   icon and the one a phone puts on its Home Screen are the theme's own, or the one chosen
+   in Settings (icon-180.png is Blue's). */
 try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.documentElement;
   /* Pink was replaced by Blue: a phone that last showed Pink opens in Blue. */
   if(l[0]==="pink")l[0]="blue";
-  if(/^(red|blue|mono)$/.test(l[0])){d.setAttribute("data-palette",l[0]);
-    if(l[0]!=="blue")[].forEach.call(document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"]'),
-      function(k){k.setAttribute("href","icon-"+l[0]+"-180.png");});}
+  if(/^(red|blue|mono)$/.test(l[0]))d.setAttribute("data-palette",l[0]);
+  /* The icon chosen in Settings, else the theme's. */
+  var ic=/^(red|blue|mono)$/.test(l[2])?l[2]:l[0];
+  if(/^(red|mono)$/.test(ic))[].forEach.call(document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"]'),
+    function(k){k.setAttribute("href","icon-"+ic+"-180.png");});
   if(/^(dark|light)$/.test(l[1]))d.setAttribute("data-theme",l[1]);}catch(e){}
 </script>
 <style>
@@ -487,6 +490,43 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 #bgart .art .dsk{fill:url(#bgaGlow) none}
 #bgart .art .e{fill:var(--bga)}
 [dir="rtl"] #bgart .art{transform:translateX(-50%) scaleX(-1)}
+/* Training's horseman at dusk (js/ui/scene.js). One ink, the ground's darkest tone, at a
+   strength that falls with distance; the light (--sc-light) is the drawing colour: the
+   glow over the horizon, the rims facing it, the windows and their reflection. Light
+   mode draws in the theme's deep colour with the whole ink softened at once, under a
+   pale light, a misty morning. */
+#bgart{--sc-ink:var(--bg);--sc-light:var(--bga)}
+[data-theme="light"] #bgart{--sc-ink:var(--accent-deep);--sc-light:var(--bg)}
+[data-palette="mono"][data-theme="light"] #bgart{--sc-light:var(--bga)}
+[data-theme="light"] #bgart .scene .sc-ink{opacity:.42}
+#bgart .art.scene{opacity:1;stroke:none}
+#bgart .scene .sc-s0{stop-color:var(--sc-light);stop-opacity:0}
+#bgart .scene .sc-s1{stop-color:var(--sc-light);stop-opacity:.18}
+#bgart .scene .sc-s2{stop-color:var(--sc-light);stop-opacity:.42}
+#bgart .scene .sc-sky{fill:url(#scSky)}
+#bgart .scene .sc-g0{stop-color:var(--sc-light);stop-opacity:.72}
+#bgart .scene .sc-g1{stop-color:var(--bgb);stop-opacity:.26}
+#bgart .scene .sc-g2{stop-color:var(--bgb);stop-opacity:0}
+#bgart .scene .sc-sun{fill:url(#scSun)}
+#bgart .scene .sc-c0{stop-color:var(--sc-light);stop-opacity:.26}
+#bgart .scene .sc-c1{stop-color:var(--sc-light);stop-opacity:0}
+#bgart .scene .sc-cloud{fill:url(#scCloud)}
+#bgart .scene .sc-w0{stop-color:var(--sc-light);stop-opacity:.14}
+#bgart .scene .sc-w1{stop-color:var(--sc-light);stop-opacity:.02}
+#bgart .scene .sc-water{fill:url(#scWater)}
+#bgart .scene .sc-refl{fill:none;stroke:var(--sc-light);stroke-width:1;stroke-opacity:.35}
+#bgart .scene .sc-win{fill:var(--sc-light);fill-opacity:.8}
+#bgart .scene .sc-far{fill:var(--sc-ink);fill-opacity:.36}
+#bgart .scene .sc-far2{fill:var(--sc-ink);fill-opacity:.5}
+#bgart .scene .sc-city{fill:var(--sc-ink);fill-opacity:.74}
+#bgart .scene .sc-bank{fill:var(--sc-ink);fill-opacity:.84}
+#bgart .scene .sc-palm{fill:var(--sc-ink);fill-opacity:.92;stroke:var(--sc-ink);stroke-opacity:.92}
+#bgart .scene .sc-palm2{fill:var(--sc-ink);fill-opacity:.7;stroke:var(--sc-ink);stroke-opacity:.7}
+#bgart .scene .sc-frond{fill:none;stroke-linecap:round}
+#bgart .scene .sc-near{fill:var(--sc-ink)}
+#bgart .scene .sc-rim{fill:none;stroke:var(--sc-light);stroke-width:1.2;stroke-opacity:.5}
+#bgart .scene .sc-rim2{fill:none;stroke:var(--sc-light);stroke-width:.8;stroke-opacity:.12}
+#bgart .scene .sc-rimfill{fill:var(--sc-light);fill-opacity:.42}
 /* Glass: the cards in the page take the theme's card fill, a tint of the ground rather
    than a slab over it, with a lighter edge. Only the fill colour changes: a card's own
    glow or gradient stays on top of it. Sheets, toasts and bars that float over the page
@@ -802,12 +842,20 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
 @media (max-width:360px){.seg-b{font-size:12px}}
 /* Gated to real navigation. Left ungated it replayed on every state change, which
    during a workout meant the screen flew in again after every logged set. */
-#app.pagein{animation:pageIn var(--m-screen) var(--e-standard)}
-@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* A rise, not a fade. While an element is partly transparent, the glass inside it can
+   only frost what is inside that element too, not the ground behind the page, so a
+   fading page showed every card and button thin and clear, and they set back to frosted
+   glass the moment the fade ended: a flash on every tab change. Moving the page does
+   not cut the glass off from the ground. */
+#app.pagein{animation:pageIn var(--m-screen) var(--e-decel)}
+@keyframes pageIn{from{transform:translateY(10px)}to{transform:none}}
 /* Gated: entry animations run when a surface appears, never on a re-render. */
 .sheet.entering .sheetbox{animation:sheetIn var(--m-sheet) var(--e-decel)}
 @keyframes sheetIn{from{transform:translateY(14%)}to{transform:none}}
-.sheet.entering{animation:fadeIn var(--m-fade) var(--e-standard)}
+/* The veil fades by its colour, not its opacity, for the same reason as the page: the
+   frosted sheet inside it would see only the veil until the fade ended. */
+.sheet.entering{animation:veilIn var(--m-fade) var(--e-standard)}
+@keyframes veilIn{from{background-color:transparent}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){
   #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh{animation:none}}
@@ -887,6 +935,18 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
 .thpick-ok svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .seg.thmode{margin:0}
 .thpicks+.seg.thmode{margin-top:12px}
+/* App icon: the icons themselves, the chosen one ringed. "Theme" shows the current
+   theme's icon with a small badge of the three, as it changes with them. */
+.icpicks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.icpick{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;margin:0;padding:12px 4px 10px;
+  border:1px solid var(--border);border-radius:var(--r4);background:var(--raised);color:var(--text);font:inherit;cursor:pointer;
+  transition:border-color var(--m-micro) var(--e-standard),box-shadow var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
+:root:not(.tch) .icpick:active,.icpick.tapd{transform:scale(.97)}
+.icpick.on{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+.icpick-i{position:relative;display:block;width:52px;height:52px}
+.icpick-i img{display:block;width:52px;height:52px;border-radius:12px;box-shadow:0 6px 16px -8px rgba(0,0,0,.6),0 0 0 1px var(--card-edge)}
+.icpick-i i{position:absolute;inset-inline-end:-5px;bottom:-5px;width:18px;height:18px;border-radius:50%;box-shadow:0 0 0 2px var(--raised)}
+.icpick-n{font-size:12.5px;font-weight:700;line-height:1.2;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 /* The theme change itself: one cross-fade of the whole screen (js/ui/theme.js), quick
    enough to read as a response, not a performance. */
 ::view-transition-old(root),::view-transition-new(root){animation-duration:280ms;animation-timing-function:var(--e-standard)}

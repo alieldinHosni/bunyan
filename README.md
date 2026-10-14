@@ -783,7 +783,7 @@ stone-monolith splash. Neither is used anywhere. If you find a gold arch SVG or 
 | --- | --- |
 | `mark.png` | The horse and sword on transparent. Only its shape is used: in the app it is a mask filled with the theme's own colours (`.mk`, `markArt()` in `ui/art.js`) |
 | `icon-180.png`, `icon-512.png`, `icon-maskable-512.png` | The mark in Blue's colours on Blue's ground, for the Home Screen, the tab and the manifest (the maskable one keeps the mark inside Android's safe circle) |
-| `icon-red-180.png`, `icon-mono-180.png` | The same in Red and in Sage. The tab's icon and the Home Screen's follow the theme (`applyLook()` in `ui/theme.js`, and the head of `index.html` before the first paint). A phone keeps the icon it was given when the app was added to its Home Screen: remove it and add it again to take a new theme's |
+| `icon-red-180.png`, `icon-mono-180.png` | The same in Red and in Sage. The tab's icon and the Home Screen's follow the theme (`applyLook()` in `ui/theme.js`, and the head of `index.html` before the first paint). Profile → App → **App icon** keeps one of the three whatever the theme instead. A phone keeps the icon it was given when the app was added to its Home Screen: make a backup, add it again, and restore the backup if it opens empty |
 
 The icons are made by `python3 tools/images.py icons` from `mark.png` and the theme
 colours, so a change of colour is a re-run, not a drawing.
@@ -811,7 +811,10 @@ Red uses its brand colours exactly. In every theme:
 - **The ground** is a blend of two or three of the theme's tones (`--ground`, a layer
   fixed behind the page), not one flat colour.
 - **On the ground, a drawing for each page** (`ui/bgart.js`, `#bgart`): Training the
-  ranges of hills and a path up them, Food wheat and an olive branch, Coach a compass
+  owner's horseman at dusk (`ui/scene.js`: the rider on a rock beside an obelisk, palms,
+  a river and a city under the last of the light, drawn from the owner's picture so it
+  is sharp on any screen and takes each theme's colours, a misty morning in light mode,
+  standing at the foot of the screen above the dock), Food wheat and an olive branch, Coach a compass
   whose needle is the sword under its stars, Progress contour lines round a summit and
   the line that climbs to it, Profile the mane's long strokes. Still, in the theme's two
   colours (`--bga`, `--bgb`; Sage light draws in white), kept to the app's column, turned
