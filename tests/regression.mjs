@@ -43,6 +43,7 @@ async function open(o={}){
     localStorage.setItem("bunyan:current",'"me"');
     localStorage.setItem("bunyan:db:me",raw!=null?raw:JSON.stringify(db));localStorage.setItem("t:seeded","1");}},[db,o.raw==null?null:o.raw]);
   if(o.blockIDB)await ctx.addInitScript(()=>{try{Object.defineProperty(window,"indexedDB",{get(){return {open(){throw new Error("blocked");}};}});}catch(e){}});
+  if(o.init)await ctx.addInitScript(o.init);
   /* The page guides (js/ui/tour.js) would cover what each test taps; the guide's own
      test turns them back on. */
   if(!o.tour)await ctx.addInitScript(()=>{try{localStorage.setItem("bunyan:notour","1");}catch(e){}});
@@ -2410,6 +2411,105 @@ await test("Surfaces: glass only where it floats; a sheet focused from code draw
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Barbell Squat"});});await pause(page,400);
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Pullups"});});await pause(page,400);
   eq(await page.evaluate(()=>{const e=document.activeElement;return [e.classList.contains("sheetbox"),getComputedStyle(e).outlineStyle];}),[true,"none"]);
+});
+/* The live 3D figure (js/ui/mannequin.js): drawn by this browser's WebGL2 (software
+   here). The suite runs with animations off, so each figure draws once and holds still
+   until asked, which also keeps these tests quick. */
+const mq=page=>page.evaluate(async()=>(await import("/js/ui/mannequin.js")).mannequins().map(m=>m.state()));
+const probe=page=>page.evaluate(async()=>(await import("/js/ui/mannequin.js")).mannequins()[0].probe());
+async function waitLive(page){
+  for(let i=0;i<40;i++){const s=await mq(page);if(s.length&&s[0].frames>0)return s;await pause(page,250);}
+  throw new Error("the figure never drew: "+JSON.stringify(await mq(page)));}
+await test("Live figure: the Seated Chest Press moves in 3D in the exercise sheet, its muscles lit, and survives a repaint",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Machine Chest Press"});});await pause(page,600);
+  const s=await waitLive(page);
+  eq([s.length,s[0].live,s[0].err],[1,true,""],"one live figure");
+  eq(await page.$eval("#sheet .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-mq-turn"),getComputedStyle(e.querySelector(".fig3d-still")).display]),
+    [true,true,"none"],"live, turnable, the stills put away");
+  eq(await page.$$eval("#sheet .fig3d-still img",a=>a.map(i=>i.getAttribute("src"))),
+    ["img/fig/bn_machine_chest_press-0.webp","img/fig/bn_machine_chest_press-1.webp"],"the stills it falls back to");
+  const pr=await probe(page);
+  if(!(pr.lit>.002))throw new Error("no rim light on the figure: "+JSON.stringify(pr));
+  /* The red is the muscles' (the machine's red line is there either way). */
+  const off=await page.evaluate(async()=>{const m=(await import("/js/ui/mannequin.js")).mannequins()[0];m.setHL({});const r=m.probe();return r;});
+  if(!(pr.red>off.red+.001))throw new Error("no lit muscle on the figure: "+JSON.stringify([pr.red,off.red]));
+  /* A repaint keeps the same figure, at the same size: the patcher leaves the canvas be. */
+  const w0=await page.$eval("#sheet .fig3d canvas",c=>[c.width,c.height]);
+  await page.evaluate(async()=>{window.__fig=document.querySelector("#sheet .fig3d")._mq;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$eval("#sheet .fig3d canvas",c=>[c.width,c.height]),w0,"the canvas keeps its size");
+  eq(await page.evaluate(()=>document.querySelector("#sheet .fig3d")._mq===window.__fig),true,"and its figure");
+  /* Drag turns it; a tap plays it (it holds still with animations off). */
+  const box=await page.$eval("#sheet .fig3d canvas",c=>{const r=c.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2];});
+  await page.mouse.move(box[0],box[1]);await page.mouse.down();await page.mouse.move(box[0]-60,box[1],{steps:4});await page.mouse.up();
+  const turned=(await mq(page))[0];
+  if(Math.abs(turned.yaw-55)<10)throw new Error("a drag did not turn it: "+turned.yaw);
+  eq(turned.playing,false,"a drag is not a tap");
+  await page.tap("#sheet .fig3d-play");await pause(page,200);
+  eq([(await mq(page))[0].playing,await page.$eval("#sheet .fig3d",e=>e.hasAttribute("data-paused"))],[true,false],"the button plays it");
+  await page.tap("#sheet .fig3d-play");await pause(page,200);
+  eq((await mq(page))[0].playing,false,"and pauses it");
+  /* Closed, it lets go of the graphics card. */
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,500);
+  eq((await mq(page)).length,0,"nothing left running");
+});
+await test("Live figure: a second exercise is the same figure on other equipment — the Seated Machine Row",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Seated Machine Row"});});await pause(page,600);
+  const s=await waitLive(page);
+  eq([s[0].live,s[0].yaw],[true,60],"live, from its own view");
+  const pr=await probe(page);
+  const off=await page.evaluate(async()=>{const m=(await import("/js/ui/mannequin.js")).mannequins()[0];m.setHL({});return m.probe();});
+  if(!(pr.red>off.red+.001))throw new Error("no lit muscle: "+JSON.stringify([pr.red,off.red]));
+  /* What it lights is the library's: the back in full, the biceps at half. */
+  eq(await page.evaluate(async()=>{const R=await import("/js/data/mannequin/rig.js"),E=await import("/js/data/exercises.js"),M=await import("/js/data/mannequin/motion.js"),C=await import("/js/data/mannequin/records.js");
+    const rec=C.recordFor("Seated Machine Row"),hl=R.highlight(E.muscleOf("Seated Machine Row"),E.secondaryOf("Seated Machine Row"),rec.refine);
+    return [...new Set(M.sceneAt(rec,.5,hl).prims.filter(q=>q.hl>0).map(q=>q.tag))].sort();}),["biceps","lats","reardelt","traps"]);
+});
+await test("Live figure: it takes the theme — light mode lights the stage, Monochrome takes the colour out",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Machine Chest Press"});});await pause(page,600);
+  await waitLive(page);
+  const dark=await probe(page);
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.theme="light";(await import("/js/ui/render.js")).render();});await pause(page,400);
+  eq((await mq(page))[0].look,"red|light","it saw the change");
+  const light=await probe(page);
+  if(!(light.mean[0]>dark.mean[0]+80))throw new Error("the stage did not lighten: "+JSON.stringify([dark.mean,light.mean]));
+  if(!(light.red>.001))throw new Error("light mode lost the red: "+JSON.stringify(light));
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.theme="dark";S.prefs.palette="mono";(await import("/js/ui/render.js")).render();});await pause(page,400);
+  eq((await mq(page))[0].look,"mono|dark");
+  const mono=await probe(page);
+  eq(mono.red,0,"no red in Monochrome");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="blue";(await import("/js/ui/render.js")).render();});await pause(page,400);
+  const blue=await probe(page);
+  eq(blue.red,0,"Blue lights the muscles in its own colour");
+});
+await test("Live figure: in the workout it moves without turning (a sideways swipe there changes exercise)",async page=>{
+  await startWorkout(page);
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.active.entries[V.logIdx].name="Machine Chest Press";(await import("/js/ui/render.js")).render();});await pause(page,600);
+  await waitLive(page);
+  eq(await page.$eval(".exhero .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-mq-turn"),e.getAttribute("data-mq")]),[true,false,"Machine Chest Press"]);
+  /* Logging a set repaints the screen; the figure carries on. */
+  await page.evaluate(()=>{window.__fig=document.querySelector(".exhero .fig3d")._mq;});
+  await page.evaluate(async()=>{(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.evaluate(()=>document.querySelector(".exhero .fig3d")._mq===window.__fig),true,"the same figure after a repaint");
+  /* The next exercise has photographs, and the figure lets go. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.active.entries[V.logIdx].name="Pullups";(await import("/js/ui/render.js")).render();});await pause(page,400);
+  eq([(await mq(page)).length,await page.$$eval(".exhero .formvis img",a=>a.length)],[0,2]);
+});
+await test("Live figure: a phone without WebGL2 keeps the start and end stills",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Machine Chest Press"});});await pause(page,800);
+  eq((await mq(page)).length,0,"nothing started");
+  const st=await page.$eval("#sheet .fig3d",e=>{const s=e.querySelector(".fig3d-still");
+    return [e.hasAttribute("data-live"),getComputedStyle(e.querySelector("canvas")).display,getComputedStyle(s).display,[...s.querySelectorAll("img")].map(i=>i.naturalWidth)];});
+  eq(st,[false,"none","grid",[720,720]]);
+},{init:()=>{try{delete window.WebGL2RenderingContext;}catch(e){}}});
+await test("Live figure: the two pilot exercises have their stills and list thumbnails, and nothing else is drawn yet",async page=>{
+  eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];
+    for(const id in F){const u=["img/ex/"+id+".webp"];for(let i=0;i<F[id];i++)u.push("img/fig/"+id+"-"+i+".webp");
+      for(const x of u){const r=await fetch(x);if(!r.ok)out.push(x);}}return [F,out];}),
+    [{"bn_machine_chest_press":2,"bn_seated_machine_row":2},[]]);
+  const bg=await page.evaluate(async()=>{const E=await import("/js/data/exercises.js"),d=document.createElement("div");d.innerHTML=E.thumb("Machine Chest Press",52);document.body.appendChild(d);
+    const i=d.querySelector("img");const r=[i.getAttribute("src"),i.classList.contains("fig"),getComputedStyle(i).backgroundColor];d.remove();return r;});
+  eq(bg.slice(0,2),["img/ex/bn_machine_chest_press.webp",true]);
+  if(bg[2]==="rgb(255, 255, 255)")throw new Error("a figure thumbnail on white");
 });
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();

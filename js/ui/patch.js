@@ -29,9 +29,13 @@ function sameNode(a,b){
   return keyOf(a)===keyOf(b);
 }
 /* Markers written at run time rather than by a view. Stripping them would restart the
-   entry animation they exist to run once, which is the whole bug this file removes. */
-function runtimeAttr(name){
-  return name==="data-anim"||name==="data-count"||name==="style";
+   entry animation they exist to run once, which is the whole bug this file removes.
+   A canvas's size is the same kind of thing: its drawing code sets it, and taking it
+   away clears the picture and shrinks it to the default (data-live and data-paused
+   are the live figure's, js/ui/mannequin.js). */
+function runtimeAttr(el,name){
+  return name==="data-anim"||name==="data-count"||name==="style"||name==="data-live"||name==="data-paused"
+    ||(el.nodeName==="CANVAS"&&(name==="width"||name==="height"));
 }
 function patchAttrs(o,n){
   var i,a;
@@ -43,7 +47,7 @@ function patchAttrs(o,n){
   }
   for(i=o.attributes.length-1;i>=0;i--){
     a=o.attributes[i];
-    if(!n.hasAttribute(a.name)&&!runtimeAttr(a.name))o.removeAttribute(a.name);
+    if(!n.hasAttribute(a.name)&&!runtimeAttr(o,a.name))o.removeAttribute(a.name);
   }
 }
 /* A form field's live value is a property, not the attribute, so patching markup

@@ -2,7 +2,7 @@
    The live session surface and rest screen. Execution, not editing. */
 import {t, tm} from "../../i18n/dict.js";
 import {isolateNums} from "../../i18n/bidi.js";
-import {difficultyOf, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
+import {difficultyOf, exFigs, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {bodyAt, bwShare, loadText, dbTotal, inDeload, lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
 import {actIcon, actInfo, actKcal, actPace, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
@@ -12,6 +12,7 @@ import {esc, fmtN, num} from "../../util.js";
 import {ex_isTimed, stepperInput, V} from "../view.js";
 import {doseText} from "../dose.js";
 import {vWarm, warmShown} from "./warmup.js";
+import {fig3dHtml, hasMannequin} from "../mannequin.js";
 
 /* ============================================================ SESSION
    Execution surface, not an editor. vDay() prescribes the work; this screen only
@@ -222,8 +223,14 @@ function vLogger(){
    +'<h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
    +'<button class="infobtn" data-exdetail="'+esc(e.name)+'" aria-label="'+t("How to do it")+'">i</button>'
    +'</div>';
-  if(img0&&img1)
-    h+='<div class="formvis">'
+  /* The exercise moving, live, where it has a 3D record (js/ui/mannequin.js; it does
+     not turn here, where a sideways swipe moves between exercises); otherwise the
+     photographs, or the drawn figure (js/data/figures.js): a start and an end. */
+  var nfig=exFigs(e.name);
+  if(hasMannequin(e.name))
+    h+=fig3dHtml(e.name,{label:exName(e.name),stills:[img0,img1]});
+  else if(img0&&img1)
+    h+='<div class="formvis'+(nfig?' fig':'')+'">'
      +'<figure><img src="'+img0+'" alt="" loading="lazy" decoding="async">'
      +'<figcaption>'+t("Start")+'</figcaption></figure>'
      +'<figure><img src="'+img1+'" alt="" loading="lazy" decoding="async">'

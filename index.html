@@ -230,7 +230,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --hair:rgba(215,255,224,.09); --hair-hi:rgba(215,255,224,.15); --seg-track:rgba(215,255,224,.04);
   --bar-track:rgba(215,255,224,.14); --accent-tint:rgba(215,255,224,.12);
   --accent-edge:rgba(215,255,224,.30); --accent-glow:rgba(215,255,224,.10); --accent-dark:#1E2A22;
-  --scrim:rgba(0,0,0,.72); --img-tone:grayscale(1) contrast(1.08); --shadow-card:0 0 #0000;
+  --scrim:rgba(0,0,0,.72); --img-tone:grayscale(1) contrast(1.08); --fig-tone:grayscale(1) contrast(1.05); --shadow-card:0 0 #0000;
   --well:rgba(0,0,0,.5); --mark-tone:grayscale(1) brightness(2.6); --bg-rgb:5,5,5;
   --accent-rgb:215,255,224; --accentHi-rgb:215,255,224; --danger-rgb:229,50,62;
   --warning-rgb:227,176,75; --gold-rgb:215,255,224;
@@ -250,7 +250,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --glass-solid:rgba(5,5,5,.97); --hair:rgba(5,5,5,.10); --hair-hi:rgba(255,255,255,.16);
   --seg-track:rgba(5,5,5,.05); --bar-track:rgba(5,5,5,.12); --accent-tint:rgba(5,5,5,.08);
   --accent-edge:rgba(5,5,5,.30); --accent-glow:rgba(5,5,5,.10); --accent-dark:#3E4A42;
-  --scrim:rgba(5,5,5,.45); --img-tone:grayscale(1) contrast(1.05); --shadow-card:0 0 #0000;
+  --scrim:rgba(5,5,5,.45); --img-tone:grayscale(1) contrast(1.05); --fig-tone:grayscale(1) contrast(1.05); --shadow-card:0 0 #0000;
   --well:rgba(5,5,5,.06); --mark-tone:grayscale(1) brightness(.35); --bg-rgb:215,255,224;
   --accent-rgb:5,5,5; --accentHi-rgb:5,5,5; --danger-rgb:229,50,62; --warning-rgb:138,86,0;
   --gold-rgb:5,5,5;
@@ -317,6 +317,55 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
     linear-gradient(170deg,#E6FFEB 0%,var(--ghost-green) 35%,#B3D5BC 100%);
   --card:rgba(255,255,255,.55); --card-edge:rgba(255,255,255,.80);
   --map-water:rgba(120,170,135,.30); --map-park:rgba(120,170,135,.16);
+}
+/* ---- the live figure's stage, per theme (js/ui/mannequin.js) -------------------------
+   The 3D figure is drawn by the graphics card, so its colours are read from these
+   tokens rather than painted by CSS; the same six selectors as above, in the same order.
+   - top, mid, edge: the stage, top to bottom, and lighter behind the figure (mid)
+   - pool, pool-k: the light on the floor under the figure, added (k > 0) or taken away
+     (k < 0, on a light stage, where a pool of light would vanish)
+   - skin, metal, pad, steel, mark: the figure, the machine's frame, its pads, its bright
+     steel, and the line on its weight stack
+   - rim, bounce: the edge light from behind and the light from the floor
+   - deep, hot: the muscles an exercise works, where they turn away and where they face
+     the viewer
+   - shade: how dark the shadow on the floor is
+   - arrow, arrow-glow: the way the movement goes */
+:root,[data-palette="red"],[data-theme="dark"]:not([data-palette]){
+  --mq-top:#09111E; --mq-mid:#0F1B2E; --mq-edge:#050A13; --mq-pool:#2068C4; --mq-pool-k:1;
+  --mq-skin:#656A73; --mq-metal:#373E49; --mq-pad:#343942; --mq-steel:#949CAC; --mq-mark:#C2474C;
+  --mq-rim:#B1D6FF; --mq-bounce:#6198E4; --mq-deep:#E44C3B; --mq-hot:#FFAC7B; --mq-shade:1;
+  --mq-arrow:#84BAFF; --mq-arrow-glow:#468CFF;
+}
+[data-theme="light"],[data-palette="red"][data-theme="light"]{
+  --mq-top:#F4FAFD; --mq-mid:#FFFFFF; --mq-edge:#C9DCE6; --mq-pool:#A6875B; --mq-pool-k:-.3;
+  --mq-skin:#949DA9; --mq-metal:#4E5866; --mq-pad:#3B434F; --mq-steel:#C9D0DA; --mq-mark:#D9303B;
+  --mq-rim:#E9F0F7; --mq-bounce:#9DB7D8; --mq-deep:#E0202E; --mq-hot:#FF6A4D; --mq-shade:.9;
+  --mq-arrow:#1F6FE0; --mq-arrow-glow:#7FB0F5;
+}
+[data-palette="blue"],[data-palette="blue"] [data-theme="dark"]:not([data-palette]){
+  --mq-top:#0A1226; --mq-mid:#121D38; --mq-edge:#04070F; --mq-pool:#2B5FB5; --mq-pool-k:1;
+  --mq-skin:#656A73; --mq-metal:#353D4D; --mq-pad:#313848; --mq-steel:#949CAC; --mq-mark:#8AB0EC;
+  --mq-rim:#B1D6FF; --mq-bounce:#5E8FE8; --mq-deep:#2F6BFF; --mq-hot:#A8CCFF; --mq-shade:1;
+  --mq-arrow:#82FC4F; --mq-arrow-glow:#3FA52A;
+}
+[data-palette="blue"][data-theme="light"]{
+  --mq-top:#F3F6FB; --mq-mid:#FFFFFF; --mq-edge:#CDD7E6; --mq-pool:#A68B5B; --mq-pool-k:-.3;
+  --mq-skin:#949DA9; --mq-metal:#4B5568; --mq-pad:#3A4254; --mq-steel:#C9D0DA; --mq-mark:#3D6AA8;
+  --mq-rim:#E9F0F7; --mq-bounce:#9DB7D8; --mq-deep:#1F4FA8; --mq-hot:#3D7CF0; --mq-shade:.9;
+  --mq-arrow:#177530; --mq-arrow-glow:#7CC79A;
+}
+[data-palette="mono"],[data-palette="mono"] [data-theme="dark"]:not([data-palette]){
+  --mq-top:#0D0F0E; --mq-mid:#171A18; --mq-edge:#050505; --mq-pool:#3A463E; --mq-pool-k:.9;
+  --mq-skin:#525653; --mq-metal:#3A3C3B; --mq-pad:#333534; --mq-steel:#A3A8A5; --mq-mark:#D7FFE0;
+  --mq-rim:#E2EEE5; --mq-bounce:#8E9A92; --mq-deep:#A9B8AE; --mq-hot:#F4FFF6; --mq-shade:1;
+  --mq-arrow:#D7FFE0; --mq-arrow-glow:#6F8A77;
+}
+[data-palette="mono"][data-theme="light"]{
+  --mq-top:#F4FFF6; --mq-mid:#FFFFFF; --mq-edge:#C3D9C8; --mq-pool:#8F9C93; --mq-pool-k:-.3;
+  --mq-skin:#A2A8A4; --mq-metal:#4A4E4B; --mq-pad:#3A3D3B; --mq-steel:#CDD2CF; --mq-mark:#050505;
+  --mq-rim:#EEF5F0; --mq-bounce:#B9C6BD; --mq-deep:#050505; --mq-hot:#3E4A42; --mq-shade:.9;
+  --mq-arrow:#050505; --mq-arrow-glow:#8FA596;
 }
 /* An element that carries its own theme or mode (the rest screen, the splash, a theme
    preview) restates its text colour: color is resolved once on body and then inherited
@@ -4329,6 +4378,44 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 .pose .hd{fill:var(--accentHi);stroke:none}
 .pose .mv{stroke:var(--text);stroke-width:1.8;stroke-dasharray:3 3;opacity:.75}
 .pose .mvh{stroke:var(--text);stroke-width:1.8;opacity:.75}
+/* The instructional figures' still frames (js/data/figures.js) are drawn on their own
+   navy stage, so they fill their frames. In light mode they turn over to a light stage
+   (inverted, then the hue put back: the red stays red, the blue blue), as the light
+   figure of the design; in Monochrome they lose their colour like every picture. They
+   do not take the palette's tint, which would turn their navy to olive. */
+.thumbwrap.fig,img.thumb.fig{background:var(--raised)}
+.formvis.fig img,.exd-form2.fig img{object-fit:cover}
+:where(img.thumb.fig,.formvis.fig img,.exd-form2.fig img,.fig3d img){filter:var(--fig-tone,contrast(1))}
+[data-theme="light"] :where(img.thumb.fig,.formvis.fig img,.exd-form2.fig img,.fig3d img){filter:invert(1) hue-rotate(180deg) var(--fig-tone,contrast(1))}
+/* The live figure (js/ui/mannequin.js): one stage, the exercise moving on it. Until the
+   graphics card has drawn it (and where it never can) the two stills show instead,
+   side by side; the canvas takes over when it is live. A drag turns it in the exercise
+   sheet (data-mq-turn), so the canvas lets vertical scrolls through and keeps
+   sideways drags for itself. */
+.fig3d{position:relative;aspect-ratio:4/3;margin:0 0 12px;border-radius:var(--r4);overflow:hidden;
+  border:1px solid var(--border);background:var(--mq-edge)}
+.fig3d canvas{display:block;width:100%;height:100%}
+.fig3d[data-mq-turn] canvas{touch-action:pan-y;cursor:grab}
+.fig3d:not([data-live]) canvas,.fig3d:not([data-live]) .fig3d-play,.fig3d[data-live] .fig3d-still{display:none}
+.fig3d:not([data-live]){aspect-ratio:8/3}
+.fig3d-still{display:grid;grid-template-columns:1fr 1fr;gap:2px;height:100%}
+.fig3d-still figure{position:relative;margin:0;min-width:0}
+.fig3d-still img{width:100%;height:100%;object-fit:cover;display:block}
+.fig3d-still figcaption{position:absolute;inset-inline-start:8px;bottom:8px;padding:4px 10px;border-radius:var(--rpill);
+  background:rgba(8,8,10,.72);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff}
+.fig3d-play{position:absolute;inset-inline-end:8px;bottom:8px;width:34px;height:34px;display:grid;place-items:center;
+  border:0;border-radius:var(--rpill);background:rgba(0,0,0,.5);color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.fig3d-play svg{width:14px;height:14px;fill:currentColor}
+.fig3d-play .i-play,.fig3d[data-paused] .fig3d-play .i-pause{display:none}
+.fig3d[data-paused] .fig3d-play .i-play{display:block}
+.fig3d-tag{position:absolute;inset-inline-start:8px;bottom:8px;padding:4px 10px;border-radius:var(--rpill);pointer-events:none;
+  background:rgba(0,0,0,.5);color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.fig3d:not([data-live]) .fig3d-tag{display:none}
+.fig3d-tag{animation:fig3dTagOut .5s 4s both}
+@keyframes fig3dTagOut{to{opacity:0;visibility:hidden}}
+.exhero .fig3d{aspect-ratio:16/10;margin:0 0 14px;border-radius:var(--r3);border-color:var(--hair)}
+.exhero .fig3d:not([data-live]){aspect-ratio:8/3}
 .thumb.ph.posed{background:radial-gradient(120% 120% at 30% 15%,rgba(var(--accent-rgb),.16),transparent 60%),var(--raised);padding:2px}
 .exd-pose{margin:4px 0 12px;padding:10px 14px;border-radius:var(--r4);border:1px solid var(--border);
   background:radial-gradient(120% 90% at 30% 10%,rgba(var(--accent-rgb),.14),transparent 60%),var(--surface)}

@@ -1,7 +1,7 @@
 /* Bunyan — sheets
    Every bottom sheet, dispatched by vSheet(). */
 import {t, tm} from "../i18n/dict.js";
-import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
+import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exFigs, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {hasPose, poseSvg} from "../data/poses.js";
 import {bodySvg, onMap} from "../data/bodymap.js";
 import {movementLabel} from "../data/movement.js";
@@ -25,6 +25,7 @@ import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 import {tiexSheet} from "./views/timport.js";
 import {coolCard, warmOf} from "./views/warmup.js";
 import {settingsSheet} from "./settings.js";
+import {fig3dHtml, hasMannequin} from "./mannequin.js";
 
 /* One figure in the exercise sheet: a label, the number (typeable), and − / + either
    side. The steps are the plan's own: a set, a rep, fifteen seconds of rest. */
@@ -509,9 +510,15 @@ function vSheet(){
     b+='<p class="tiny">'+subD+'</p>';
     /* The two positions first — what the movement looks like is what someone opening
        this between sets wants — then the four facts as one even grid. */
-    var med=exMedia(nD);
-    if(med&&exImg(nD,0))
-      b+='<div class="exd-form2">'
+    var med=exMedia(nD),figD=exFigs(nD);
+    /* An exercise with a 3D record moves, live, and turns under a finger
+       (js/ui/mannequin.js); its start and end stills show until it is drawn, and
+       wherever it cannot be. The rest show their photographs, or the drawn figure
+       (js/data/figures.js) where there are none. */
+    if(hasMannequin(nD))
+      b+=fig3dHtml(nD,{turn:true,label:exName(nD),stills:[exImg(nD,0),exImg(nD,1)]});
+    else if(med&&exImg(nD,0))
+      b+='<div class="exd-form2'+(figD?' fig':'')+'">'
        +'<figure><img src="'+exImg(nD,0)+'" alt="" decoding="async"><figcaption>'+t("Start")+'</figcaption></figure>'
        +'<figure><img src="'+exImg(nD,1)+'" alt="" decoding="async"><figcaption>'+t("End")+'</figcaption></figure></div>';
     /* No photographs, but the drill is drawn (js/data/poses.js). */

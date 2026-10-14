@@ -290,6 +290,7 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Amount": "الكمية",
 "Start": "البداية",
 "End": "النهاية",
+"Drag to turn": "اسحب عشان تلفّه",
 "Saved": "اتحفظ",
 "Servings": "الحصص",
 "Session": "الجلسة",

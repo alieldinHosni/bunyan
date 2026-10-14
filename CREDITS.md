@@ -14,6 +14,12 @@ adds one (see `COACHING-INTELLIGENCE.md`, Phase 0).
 | **Powerlifting results**: raw squat, bench press and deadlift percentiles by sex and IPF weight class | [OpenPowerlifting](https://www.openpowerlifting.org) meet results ([opl-data](https://gitlab.com/openpowerlifting/opl-data), `meet-data/`) | Public domain (the project's `LICENSE-DATA`). Their code is AGPL-3; none of it is used | `js/coach/powerlifting.js`, built by `tools/opl-percentiles.py` from the published CSV files: the "Among powerlifters" card in Progress. This page uses data from the OpenPowerlifting project, https://www.openpowerlifting.org. You may download a copy of the data at https://gitlab.com/openpowerlifting/opl-data. |
 | **Barcode lookups**, when online | Open Food Facts | ODbL (database), content per product | Optional, only when the user scans a barcode not already saved; results are remembered on the phone. |
 
+## Made for Bunyan
+
+| What | Made with | Used for |
+| --- | --- | --- |
+| **The 3D figure**: one sculpted, faceless figure, a kit of gym-machine parts, and the records of two exercises (Machine Chest Press, Seated Machine Row) | Bunyan's own model (`js/data/mannequin/`): no third-party models, textures, motion data or libraries | Drawn live in the app by `js/ui/mannequin.js` (WebGL2); the same model, rendered offline (`tools/figures/`, `tools/images.py`), makes their still pictures in `img/fig/` and list thumbnails in `img/ex/`. See `docs/MANNEQUIN3D.md`. |
+
 ## Formulas and published methods
 
 | What | Source | Used for |
