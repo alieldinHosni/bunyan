@@ -2450,10 +2450,14 @@ await test("A weight change says its period the same way on Training, Overview a
   const bd=await page.$eval(".pgwd .pgd",e=>e.textContent);
   if(!/kg in \d+ days$/.test(bd))throw new Error("Body: "+bd);
 },{db:Object.assign(seed(),{body:[{date:iso(30),weight:85},{date:iso(9),weight:84.6},{date:iso(0),weight:84.8}]})});
-await test("Surfaces: glass only where it floats; a sheet focused from code draws no ring",async page=>{
+await test("Surfaces: the page is glass, glass inside glass only tints, and a sheet focused from code draws no ring",async page=>{
   await tapTab(page,"profile");await pause(page,300);
-  const b=await page.$eval("#app .sg-list",e=>getComputedStyle(e).backdropFilter||getComputedStyle(e).webkitBackdropFilter||"none");
-  eq(b,"none","settings rows are not blurred");
+  const b=await page.$eval("#app .sg-list",e=>{const s=getComputedStyle(e);return s.backdropFilter||s.webkitBackdropFilter||"none";});
+  if(!/blur/.test(b))throw new Error("the settings rows are not glass: "+b);
+  /* A second blur inside a frosted card would cost the phone and show nothing new. */
+  const inner=await page.$$eval("#app :is(.card,.sg-list,.pid,.list) :is(.card,.list,.drow,.pill,.btn.g,.hbtn,.iconbtn,input,select,textarea)",
+    a=>a.map(e=>{const s=getComputedStyle(e);return s.backdropFilter||s.webkitBackdropFilter||"none";}).filter(v=>v!=="none"));
+  eq(inner,[],"nothing inside the glass blurs again");
   const d=await page.evaluate(()=>{const x=document.querySelector("nav .dock");const s=getComputedStyle(x);return s.backdropFilter||s.webkitBackdropFilter;});
   if(!/blur/.test(d))throw new Error("the dock lost its glass");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Barbell Squat"});});await pause(page,400);
