@@ -2344,6 +2344,73 @@ await test("Training: no run in the last fortnight, no run card",async page=>{
   await tapTab(page,"train");await pause(page);
   eq(await page.$$eval('.trun-last',a=>a.length),0);
 });
+/* ---- Phase 1 of the visual audit ---- */
+await test("Logger: last time reads in full under each set, in English and Arabic; How do you feel today? is one line",async page=>{
+  await startWorkout(page);
+  const r=await page.evaluate(()=>{const rd=document.querySelector(".ready");const p=[...document.querySelectorAll(".setprev")];
+    return {hd:[...document.querySelectorAll(".setrow.hd span")].map(e=>e.textContent),txt:p.map(e=>e.textContent),
+      clipped:p.some(e=>e.scrollWidth>e.clientWidth+1),readyH:rd?Math.round(rd.getBoundingClientRect().height):0,
+      skipInHead:!!document.querySelector(".ready .ready-h .ready-skip")};});
+  if(r.hd.indexOf("Last")>=0)throw new Error("Last is still a column");
+  eq(r.txt[0],"Last time 60 kg × 8","the first set's last time, whole");
+  eq([r.clipped,r.skipInHead],[false,true],"nothing clipped; Skip beside the question");
+  if(r.readyH>110)throw new Error("readiness takes "+r.readyH+"px");
+},{prefs:{autorest:false}});
+await test("Logger in Arabic: last time keeps its figures in order",async page=>{
+  await startWorkout(page);
+  eq(await page.$eval(".setprev",e=>e.textContent),"آخر مرة 60 كجم × 8");
+},{prefs:{autorest:false,lang:"ar"}});
+await test("Calm red: an empty plan slot is faint text; a meal's delete is a quiet icon until pressed",async page=>{
+  await coach(page,"food","plan");
+  const c=await page.evaluate(()=>{const em=document.querySelector(".drow-s em"),s=getComputedStyle(em);
+    const f=getComputedStyle(document.querySelector(".drow-s")).color;return [s.color,f];});
+  if(/255, 46, 58/.test(c[0]))throw new Error("still red: "+c[0]);
+  await tapTab(page,"food");await page.tap('[data-meal="Lunch"]');await pause(page,400);
+  eq(await page.$eval(".fitemrow-x",e=>getComputedStyle(e).backgroundColor),"rgba(0, 0, 0, 0)","no red block");
+},{db:Object.assign(seed(),{days:{[iso(0)]:{meals:{Lunch:{done:true,items:[{n:"Eggs",fid:"egg",grams:100,label:"100 g",kcal:143,p:12.6,c:.7,f:9.5}]}}}}})});
+await test("Muscle map: an exercise shows what it works, front and back; Strength shades this week's sets on the body",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Barbell Squat"});});await pause(page,500);
+  const m=await page.evaluate(()=>{const s=document.querySelector("#sheet .exd-musc .bmap");return s?{p:s.querySelectorAll(".m.p").length,s:s.querySelectorAll(".m.s").length,
+    label:s.getAttribute("aria-label"),text:document.querySelector(".exd-musc-t").innerText}:null;});
+  if(!m)throw new Error("no body map on the exercise");
+  /* One shape per muscle and side: squat lights the quads in front; glutes, hamstrings and calves (front and back) lighter. */
+  if(m.p<1||m.s<4)throw new Error("lit: "+JSON.stringify(m));
+  if(!/Primary: Quads/.test(m.label)||!/Quads/.test(m.text))throw new Error("label: "+m.label);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  await tapTab(page,"progress");await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.ptab="strength";(await import("/js/ui/render.js")).render();});await pause(page,400);
+  const w=await page.evaluate(()=>{const s=document.querySelector(".pgbody .bmap");return s?[...s.querySelectorAll(".m.h1,.m.h2,.m.h3,.m.h4")].length:-1;});
+  if(w<1)throw new Error("the week is not on the body");
+});
+await test("Cardio & Sports: every activity has its own icon, and Cycling is offered once",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("acts");});await pause(page,500);
+  const r=await page.evaluate(()=>{const t=[...document.querySelectorAll("#sheet .actbtn")];const by={};
+    t.forEach(b=>{const k=b.querySelector("svg").innerHTML;(by[k]=by[k]||[]).push(b.dataset.quickact);});
+    return {n:t.length,names:t.map(b=>b.dataset.quickact),shared:Object.values(by).filter(v=>v.length>1)};});
+  if(r.names.indexOf("Bicycling")>=0)throw new Error("Bicycling beside Cycling");
+  /* The three treadmills share the treadmill; a spinning class and the stationary bike share the bike. */
+  eq(r.shared.map(v=>v.sort().join(",")).sort(),["Bicycling, Stationary,Spinning Class","Jogging, Treadmill,Running, Treadmill,Walking, Treadmill"],"only the same machine shares an icon");
+});
+await test("A weight change says its period the same way on Training, Overview and Body",async page=>{
+  await tapTab(page,"train");await pause(page);
+  const tr=await page.$eval('[data-sheet="weigh"]',e=>e.innerText);
+  if(!/kg in \d+ days/.test(tr))throw new Error("Training: "+tr);
+  await tapTab(page,"progress");await pause(page,300);
+  const ov=await page.$eval(".pgkm .pgd",e=>e.textContent);
+  if(!/kg in \d+ days$/.test(ov))throw new Error("Overview: "+ov);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.ptab="body";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  const bd=await page.$eval(".pgwd .pgd",e=>e.textContent);
+  if(!/kg in \d+ days$/.test(bd))throw new Error("Body: "+bd);
+},{db:Object.assign(seed(),{body:[{date:iso(30),weight:85},{date:iso(9),weight:84.6},{date:iso(0),weight:84.8}]})});
+await test("Surfaces: glass only where it floats; a sheet focused from code draws no ring",async page=>{
+  await tapTab(page,"profile");await pause(page,300);
+  const b=await page.$eval("#app .sg-list",e=>getComputedStyle(e).backdropFilter||getComputedStyle(e).webkitBackdropFilter||"none");
+  eq(b,"none","settings rows are not blurred");
+  const d=await page.evaluate(()=>{const x=document.querySelector("nav .dock");const s=getComputedStyle(x);return s.backdropFilter||s.webkitBackdropFilter;});
+  if(!/blur/.test(d))throw new Error("the dock lost its glass");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Barbell Squat"});});await pause(page,400);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Pullups"});});await pause(page,400);
+  eq(await page.evaluate(()=>{const e=document.activeElement;return [e.classList.contains("sheetbox"),getComputedStyle(e).outlineStyle];}),[true,"none"]);
+});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails);
