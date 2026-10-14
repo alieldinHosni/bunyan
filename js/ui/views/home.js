@@ -11,7 +11,7 @@ import {dfmt, esc, fmtN, num, today} from "../../util.js";
 import {art} from "../art.js";
 import {glyph} from "../glyphs.js";
 import {avatar} from "../settings.js";
-import {V} from "../view.js";
+import {inDays, V} from "../view.js";
 
 /* ---- pieces the frame is made of ------------------------------------------ */
 
@@ -86,7 +86,7 @@ function bodyTiles(){
   return '<div class="htiles two">'
    +tile('data-sheet="weigh"','weight',HI.weight,t("Weight"),
       kg?'<b>'+toDisp(kg)+'</b><small>'+esc(wUnit())+'</small>':'<b>—</b>',
-      wc&&wc.d!=null?esc((wc.d>0?"+":wc.d<0?"−":"±")+toDisp(Math.abs(wc.d))+" · "+wc.days+" "+t("days")):esc(t(kg?"Tap to weigh in":"Log a weigh-in")),
+      wc&&wc.d!=null?esc((wc.d>0?"+":wc.d<0?"−":"±")+toDisp(Math.abs(wc.d))+" "+wUnit()+" "+inDays(wc.days)):esc(t(kg?"Tap to weigh in":"Log a weigh-in")),
       t("Weight")+" "+(kg?toDisp(kg)+" "+wUnit():t("Log a weigh-in")))
    +tile('data-sheet="steps"','steps',HI.steps,t("Steps"),
       '<b>'+fmtN(r.steps||0)+'</b>',esc(t("Goal")+" "+fmtN(g.steps)),

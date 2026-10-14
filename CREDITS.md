@@ -8,11 +8,17 @@ adds one (see `COACHING-INTELLIGENCE.md`, Phase 0).
 
 | What | Source | Licence | Used for |
 | --- | --- | --- | --- |
-| **Exercise library** — 876 exercises with muscles, equipment, level and steps, and two photographs each for all but the three newest (Kettlebell Halo, Halo with Overhead Extension, Overhead Triceps Extension), which upstream has not photographed yet | [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by yuhonas | Unlicense (public domain) | `exercises.json`, `instructions.json`; photos loaded from the repository through jsDelivr. Bunyan adds Arabic names and its own extra exercises (`js/data/extra.js`); five of its warm-up drills show the library's photographs of the same movement, and the rest of its drills are drawn as figures by Bunyan (`js/data/poses.js`). |
+| **Exercise library** — 876 exercises with muscles, equipment, level and steps, and two photographs each for all but the three newest (Kettlebell Halo, Halo with Overhead Extension, Overhead Triceps Extension), which upstream has not photographed yet | [free-exercise-db](https://github.com/yuhonas/free-exercise-db) by yuhonas | Unlicense (public domain) | `exercises.json`, `instructions.json`; the full photos are loaded from the repository through jsDelivr, and each exercise's first photo is also kept with the app as a small list thumbnail (`img/ex/`, made by `tools/images.py`). The repository is released under the Unlicense; it does not say where its photographs were first taken, which is worth settling before building more on them. Bunyan adds Arabic names and its own extra exercises (`js/data/extra.js`); five of its warm-up drills show the library's photographs of the same movement, and the rest of its drills are drawn as figures by Bunyan (`js/data/poses.js`). |
 | **MET values** for cardio, sports and classes | Compendium of Physical Activities (Herrmann, Willis, Ainsworth et al., 2024 adult edition) | Free to use with citation | `js/data/activities.js`: calories burned by activities. |
 | **Food composition** — 568 foods per 100 g | Widely published composition figures, compiled for Bunyan and checked against Atwater energy (see README, "The food database") | Bunyan's own compilation | `foods.json`. Not a copy of any one database. USDA FoodData Central (CC0) is the intended reference for checking it. |
 | **Powerlifting results**: raw squat, bench press and deadlift percentiles by sex and IPF weight class | [OpenPowerlifting](https://www.openpowerlifting.org) meet results ([opl-data](https://gitlab.com/openpowerlifting/opl-data), `meet-data/`) | Public domain (the project's `LICENSE-DATA`). Their code is AGPL-3; none of it is used | `js/coach/powerlifting.js`, built by `tools/opl-percentiles.py` from the published CSV files: the "Among powerlifters" card in Progress. This page uses data from the OpenPowerlifting project, https://www.openpowerlifting.org. You may download a copy of the data at https://gitlab.com/openpowerlifting/opl-data. |
 | **Barcode lookups**, when online | Open Food Facts | ODbL (database), content per product | Optional, only when the user scans a barcode not already saved; results are remembered on the phone. |
+
+## Made for Bunyan
+
+| What | Made with | Used for |
+| --- | --- | --- |
+| **The 3D figure**: one sculpted, faceless figure, a kit of gym-machine parts, and the records of two exercises (Machine Chest Press, Seated Machine Row) | Bunyan's own model (`js/data/mannequin/`): no third-party models, textures, motion data or libraries | Drawn live in the app by `js/ui/mannequin.js` (WebGL2); the same model, rendered offline (`tools/figures/`, `tools/images.py`), makes their still pictures in `img/fig/` and list thumbnails in `img/ex/`. See `docs/MANNEQUIN3D.md`. |
 
 ## Formulas and published methods
 
@@ -39,7 +45,7 @@ adds one (see `COACHING-INTELLIGENCE.md`, Phase 0).
 | Progression as a named rule per exercise, not one rule for all | Liftosaur | AGPL-3 | Planned (see `EVALUATION.md`); will be written from the idea only. |
 | Volume read per muscle, week by week, against landmarks | MyFit (after Renaissance Periodization) | AGPL-3 | The coaching engine's weekly volume (`js/coach/volume.js`), written from the idea only. |
 | Per-week change rules, diet flags and per-item sources for foods | wger | AGPL-3 code, CC data | Planned; no wger code or data is used. |
-| Three-step builder: equipment, muscles, exercises; body-map muscle picker | workout-cool | MIT | Read for its flow; nothing used yet. |
+| Three-step builder: equipment, muscles, exercises; body-map muscle picker | workout-cool | MIT | Read for its flow; nothing used yet. The body map Bunyan draws is from react-native-body-highlighter (below). |
 
 ## Libraries
 
@@ -47,6 +53,8 @@ adds one (see `COACHING-INTELLIGENCE.md`, Phase 0).
 | --- | --- | --- |
 | [pdf.js](https://github.com/mozilla/pdf.js) (Mozilla) | Apache-2.0 — `js/vendor/pdfjs/LICENSE.txt` | Reading plan PDFs on the phone |
 | [ZXing for JS](https://github.com/zxing-js/library) 0.21.3 | Apache-2.0 — `js/vendor/zxing-LICENSE.txt` | Barcode scanning where the browser has no detector |
+| [Tabler Icons](https://github.com/tabler/tabler-icons) by Paweł Kuna (31 outline icons for activities, 42 for foods) | MIT — the notice is in `js/data/acticons.js` and `js/data/foodicons.js` | An icon for each cardio activity and sport (the ten Tabler lacks, the cardio machines, boxing, hockey, badminton, padel and squash, were drawn for Bunyan in the same style), and a picture for every food until it has a photograph |
+| Body shapes from [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter) by ELABBASSI Hicham (`assets/bodyFront.ts`, `bodyBack.ts`) | MIT — the notice is in `js/data/bodymap.js` | The body map: what an exercise works, and this week's sets per muscle |
 
 ## Fonts
 

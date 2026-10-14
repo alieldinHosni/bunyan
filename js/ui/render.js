@@ -24,6 +24,7 @@ import {applyMotion, countTo, once} from "./motion.js";
 import {applyLook} from "./theme.js";
 import {bindExSwipe} from "./exswipe.js";
 import {bindMore} from "./more.js";
+import {syncMannequins} from "./mannequin.js";
 
 /* ============================================================ render */
 /* Motion is applied after the DOM has settled, and only to what changed.
@@ -192,6 +193,9 @@ function render(){
   syncKeyboard();
   paintMotion(appEl,view);
   paintMotion(sheetEl,"sheet:"+(V.sheet||""));
+  /* The live 3D figures: new ones start, kept ones carry on, gone ones let go of the
+     graphics card (js/ui/mannequin.js). */
+  syncMannequins();
 
   /* No search field is focused for you. Opening the picker with the keyboard already
      up hid half the list behind it before anything was typed; browsing by muscle

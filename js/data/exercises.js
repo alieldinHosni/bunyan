@@ -2,6 +2,7 @@
    The exercise library and its lookups, loaded from exercises.json. */
 import {esc} from "../util.js";
 import {hasPose, poseSvg} from "./poses.js";
+import {FIGS} from "./figures.js";
 import {ACTS, actIcon, actMuscle, isActivity} from "./activities.js";
 import {EXTRA} from "./extra.js";
 import {movementOf} from "./movement.js";
@@ -199,9 +200,25 @@ function exSteps(n){
   }
   return out.length?out:null;
 }
+/* An exercise the library has no photographs of, drawn instead as the instructional
+   figure (js/data/figures.js): how many frames it has, 2 (a start and an end) or 1 (a
+   hold); 0 when it is photographed or not drawn. */
+function exFigs(n){
+  var m=exMedia(n); return (m&&m.own&&!m.ph&&m.i&&FIGS[m.i])||0;}
 function exImg(n,idx){
-  var m=exMedia(n); if(!m||(m.own&&!m.ph))return null;
+  var m=exMedia(n); if(!m)return null;
+  var f=exFigs(n); if(f)return "img/fig/"+m.i+"-"+Math.min(idx||0,f-1)+".webp";
+  if(m.own&&!m.ph)return null;
   return IMG_BASE+(m.own?m.ph:m.i)+"/"+(idx||0)+".jpg";}
+/* The list thumbnail: the same first photograph, made small and kept with the app
+   (img/ex/, by tools/images.py), so a list of forty rows no longer downloads forty
+   full-size photos from the CDN, and works offline once seen. The detail screens
+   still show the full photographs (exImg). */
+function exThumb(n){
+  var m=exMedia(n); if(!m)return null;
+  if(exFigs(n))return "img/ex/"+m.i+".webp";
+  if(m.own&&!m.ph)return null;
+  return "img/ex/"+(m.own?m.ph:m.i)+".webp";}
 /* One shape for every empty state: an icon, what is missing, and the action that
    fixes it. cta is raw markup so callers can pass whatever button they need. */
 var EI={
@@ -223,9 +240,10 @@ function dumbbellIcon(px){
   return '<svg viewBox="0 0 24 24" width="'+px+'" height="'+px+'" aria-hidden="true">'
     +'<path d="M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12" stroke="currentColor" fill="none" '
     +'stroke-width="1.8" stroke-linecap="round"/></svg>';}
-/* Photos come off a CDN, so the first view of any exercise is a network round trip.
-   Hold the space with a shimmer instead of letting the layout jump, and fall back to
-   the dumbbell glyph when the image never arrives.
+/* A thumbnail is a file of the app's own (exThumb), fetched the first time it is
+   seen and cached after, so a first view can still be a network round trip. Hold the
+   space with a shimmer instead of letting the layout jump, and fall back to the
+   dumbbell glyph when the image never arrives.
 
    What each photo did is remembered (IMG), and the markup says so: a photo that has
    loaded is written without the shimmer, one that failed is written as the glyph with
@@ -256,15 +274,17 @@ function thumb(n,size){
   /* An activity reads better as its own glyph than as a treadmill photograph. */
   if(isActivity(n))return '<span class="thumb ph act" style="'+box+'">'
     +actIcon(n,Math.round(size*0.5))+'</span>';
-  var u=exImg(n,0);
+  var u=exThumb(n);
   /* A drill with no photographs but a drawn figure (js/data/poses.js). */
   if(!u&&hasPose(n))return '<div class="thumb ph posed" style="'+box+'">'+poseSvg(n)+'</div>';
   if(!u)return '<div class="thumb ph" style="'+box+'">'
     +dumbbellIcon(Math.round(size*0.5))+'</div>';
   var st=IMG[u],fall='<i class="thumbfall">'+dumbbellIcon(Math.round(size*0.5))+'</i>';
+  /* A figure has no ground of its own: it sits on the surface, not on white. */
+  var fig=exFigs(n)?' fig':'';
   if(st==="x")return '<span class="thumbwrap failed" style="'+box+'">'+fall+'</span>';
-  return '<span class="thumbwrap'+(st==="ok"?'':' skel')+'" style="'+box+'">'+fall
-    +'<img class="thumb" loading="lazy" src="'+u+'" alt="" style="'+box+'"></span>';}
+  return '<span class="thumbwrap'+fig+(st==="ok"?'':' skel')+'" style="'+box+'">'+fall
+    +'<img class="thumb'+fig+'" loading="lazy" src="'+u+'" alt="" style="'+box+'"></span>';}
 function libFind(n){var v=EXDB&&EXDB[n];return v?[n,v.m,v.e,v.c]:null;}
 function hasGear(n){
   var gear=user().gear;
@@ -313,7 +333,7 @@ function movementOfEx(n){
   return MOVE[n];}
 
 
-export {useUserData, alsoKnown, isUnilateral, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
+export {exFigs, exThumb, useUserData, alsoKnown, isUnilateral, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
 
 /* Plate maths only means something on a loaded bar. On a machine, a cable or your
    own bodyweight the button was there on every exercise and useful on a handful.

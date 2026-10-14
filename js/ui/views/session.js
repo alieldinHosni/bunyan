@@ -2,7 +2,7 @@
    The live session surface and rest screen. Execution, not editing. */
 import {t, tm} from "../../i18n/dict.js";
 import {isolateNums} from "../../i18n/bidi.js";
-import {difficultyOf, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
+import {difficultyOf, exFigs, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {bodyAt, bwShare, loadText, dbTotal, inDeload, lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
 import {actIcon, actInfo, actKcal, actPace, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
@@ -12,6 +12,7 @@ import {esc, fmtN, num} from "../../util.js";
 import {ex_isTimed, stepperInput, V} from "../view.js";
 import {doseText} from "../dose.js";
 import {vWarm, warmShown} from "./warmup.js";
+import {fig3dHtml, hasMannequin} from "../mannequin.js";
 
 /* ============================================================ SESSION
    Execution surface, not an editor. vDay() prescribes the work; this screen only
@@ -191,9 +192,11 @@ function vLogger(){
   /* How the lifter feels today, asked once before the first set. It changes nothing
      on its own; a low answer only says, plainly, that doing less still counts. */
   if(doneAll===0&&a.ready==null){
-    h+='<section class="ready"><div class="ready-h">'+t("How do you feel today?")+'</div><div class="ready-c">'
+    /* One line and one row of chips, so the exercise is in view under it. */
+    h+='<section class="ready"><div class="ready-h"><span>'+t("How do you feel today?")+'</span>'
+     +'<button class="ready-skip" data-ready="0">'+t("Skip")+'</button></div><div class="ready-c">'
      +READY.map(function(x){return '<button data-ready="'+x[0]+'">'+t(x[1])+'</button>';}).join("")
-     +'</div><button class="ready-skip" data-ready="0">'+t("Skip")+'</button></section>';
+     +'</div></section>';
   }else if(a.ready&&a.ready<=2&&doneAll===0){
     /* Today's suggestions are already lighter (see recommend()); fewer sets is offered. */
     h+='<div class="readynote">'+t("A low day. Today's suggestions are lighter; drop a set if you need to, or stop early. It still counts.")
@@ -220,8 +223,14 @@ function vLogger(){
    +'<h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
    +'<button class="infobtn" data-exdetail="'+esc(e.name)+'" aria-label="'+t("How to do it")+'">i</button>'
    +'</div>';
-  if(img0&&img1)
-    h+='<div class="formvis">'
+  /* The exercise moving, live, where it has a 3D record (js/ui/mannequin.js; it does
+     not turn here, where a sideways swipe moves between exercises); otherwise the
+     photographs, or the drawn figure (js/data/figures.js): a start and an end. */
+  var nfig=exFigs(e.name);
+  if(hasMannequin(e.name))
+    h+=fig3dHtml(e.name,{label:exName(e.name),stills:[img0,img1]});
+  else if(img0&&img1)
+    h+='<div class="formvis'+(nfig?' fig':'')+'">'
      +'<figure><img src="'+img0+'" alt="" loading="lazy" decoding="async">'
      +'<figcaption>'+t("Start")+'</figcaption></figure>'
      +'<figure><img src="'+img1+'" alt="" loading="lazy" decoding="async">'
@@ -278,14 +287,16 @@ function vLogger(){
 
   /* --- the set grid: prescription, previous performance and entry in one row --- */
   /* Delete leads the row, log ends it. Grid columns follow the writing direction, so
-     in Arabic the pair swaps sides without a second rule. */
-  var cols=timed?(rpeCol?"24px 24px 1fr 78px 44px 38px":"24px 24px 1fr 90px 38px")
-                :(rpeCol?"24px 24px 1fr 56px 50px 42px 38px":"24px 24px 1fr 66px 58px 38px");
+     in Arabic the pair swaps sides without a second rule. Last time is not a column:
+     squeezed between the set and the weight it had 26px for "100 kg × 8" and read
+     "10…". It is a line of its own under the boxes it is the reference for. */
+  var cols=timed?(rpeCol?"24px 24px 1fr 44px 38px":"24px 24px 1fr 38px")
+                :(rpeCol?"24px 24px 1fr 1fr 44px 38px":"24px 24px 1fr 1fr 38px");
   /* On a bodyweight lift the box is what is added to you, so the column says so: +KG,
      and 0 is you alone. The body's own share is counted in volume and records. */
   var bwl=bwShare(e.name)>0,wHead=(bwl?"+":"")+wUnit().toUpperCase();
-  var hd=timed?["",t("Set"),t("Last"),t("Secs")]
-              :["",t("Set"),t("Last"),wHead,loaded?t("Secs"):t("Reps")];
+  var hd=timed?["",t("Set"),t("Secs")]
+              :["",t("Set"),wHead,loaded?t("Secs"):t("Reps")];
   if(rpeCol)hd.push("RPE");
   hd.push("");
   var doneHere=e.sets.length;
@@ -297,9 +308,10 @@ function vLogger(){
   for(var i=0;i<rows;i++){
     var done=i<e.sets.length,st=done?e.sets[i]:null,isAct=(i===active);
     var cls2="setrow "+(done?"did":isAct?"on":"pend");
-    var pv="—";
-    if(p&&p.sets[i])pv=timed?(p.sets[i].r+"s")
-      :((p.sets[i].w?(bwl?"+":"")+toDisp(p.sets[i].w)+wUnit()+" × ":"")+p.sets[i].r);
+    var pv="",ps=p&&p.sets[i];
+    if(ps)pv=timed?ps.r+" "+t("s")
+      :ps.w?(bwl?"+":"")+toDisp(ps.w)+" "+wUnit()+" × "+ps.r
+      :bwl?t("BW")+" × "+ps.r:ps.r+" "+t("reps");
     /* The set number doubles as the warm-up toggle: tap it and the row stops counting
        toward volume, records and progression. No extra column for it. */
     var warm=done&&st.wu;
@@ -308,8 +320,7 @@ function vLogger(){
      +'<button class="delset" data-delset="'+i+'" aria-label="'+t("Delete set")+' '+(i+1)+'">✕</button>'
      +(done?'<button class="setnum wtog" data-warm="'+i+'" aria-label="'+t("Mark as warm-up")
         +' '+(i+1)+'" aria-pressed="'+(warm?"true":"false")+'">'+(warm?"W":(i+1))+'</button>'
-       :'<div class="setnum">'+(i+1)+'</div>')
-     +'<div class="setprev">'+pv+'</div>';
+       :'<div class="setnum">'+(i+1)+'</div>');
 
     if(!timed){
       if(done)h+='<input class="cell" type="number" inputmode="decimal" step="0.5" '
@@ -341,6 +352,7 @@ function vLogger(){
     else if(isAct)h+='<button class="logbtn go" data-logset="1" aria-label="'
       +t("Complete set")+' '+(i+1)+'">✓</button>';
     else h+='<button class="logbtn off" disabled aria-hidden="true">✓</button>';
+    if(pv)h+='<div class="setprev"><span>'+t("Last time")+'</span> <b>'+esc(String(pv))+'</b></div>';
     h+='</div>';
   }
   h+='</div>';

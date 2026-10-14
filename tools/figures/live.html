@@ -1,0 +1,69 @@
+<!doctype html>
+<!-- Bunyan — the live figure, on its own
+     Every exercise that has a record (js/data/mannequin/records.js), in each of BUNYAN's
+     themes, drawn live by the app's own renderer (js/ui/mannequin.js) with the app's own
+     stylesheet, so what shows here is what the app shows. Not part of the app: it is
+     never cached or linked. Serve the repository's folder and open it:
+       python3 -m http.server 8765   →   http://localhost:8765/tools/figures/live.html
+     ?ex=Machine%20Chest%20Press   one exercise      ?themes=red-dark,mono-light   some themes
+     Drag a figure to turn it; tap it to pause; the slider holds every figure at one
+     moment of the repetition. -->
+<html lang="en" data-palette="red" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<base href="../../">
+<title>Live figure preview</title>
+<style id="appcss"></style>
+<style>
+  html,body{background:#111214;color:#e8eaee;margin:0;padding:0;min-height:0;overflow:auto}
+  body::before,body::after{display:none}
+  .pv{padding:16px;max-width:1400px;margin:0 auto;font:14px/1.4 system-ui,sans-serif}
+  .pv h1{font-size:18px;margin:0 0 4px} .pv p{margin:0 0 12px;color:#a9afb8}
+  .pv-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  .pv-bar label{display:flex;gap:8px;align-items:center}
+  .pv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .pv-cell{padding:10px;border-radius:14px;background:var(--bg);color:var(--text)}
+  .pv-cell h2{font-size:12px;margin:0 0 8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  .pv-cell .pv-st{font-size:11px;color:var(--dim);margin:6px 0 0;min-height:1.4em}
+</style>
+</head>
+<body>
+<div class="pv">
+  <h1>The live figure</h1>
+  <p>Each exercise with a record, in each theme, drawn by the app's renderer. Drag to turn, tap to pause.</p>
+  <div class="pv-bar">
+    <label><input type="checkbox" id="hold"> Hold at</label>
+    <input type="range" id="u" min="0" max="1" step=".01" value="1">
+    <span id="uv">1.00</span>
+  </div>
+  <div class="pv-grid" id="grid"></div>
+</div>
+<script type="module">
+  const root=document.baseURI;
+  const html=await (await fetch(new URL("index.html",root))).text();
+  document.getElementById("appcss").textContent=html.slice(html.indexOf("<style>")+7,html.indexOf("</style>"));
+  /* the app's words read the profile's language: an empty profile, in English */
+  (await import(new URL("js/state.js",root))).setS({prefs:{}});
+  const {loadExDB,exImg}=await import(new URL("js/data/exercises.js",root));
+  await new Promise(r=>loadExDB(r));
+  const {RECORDS}=await import(new URL("js/data/mannequin/records.js",root));
+  const M=await import(new URL("js/ui/mannequin.js",root));
+  const qs=new URLSearchParams(location.search);
+  const names=qs.get("ex")?qs.get("ex").split(","):Object.keys(RECORDS);
+  const themes=(qs.get("themes")||"red-dark,red-light,blue-dark,blue-light,mono-dark,mono-light").split(",");
+  const grid=document.getElementById("grid");
+  grid.innerHTML=names.map(n=>themes.map(th=>{const [p,m]=th.split("-");
+    return '<div class="pv-cell" data-palette="'+p+'" data-theme="'+m+'"><h2>'+n+' · '+p+' '+m+'</h2>'
+      +M.fig3dHtml(n,{turn:true,stills:[exImg(n,0),exImg(n,1)]})+'<div class="pv-st"></div></div>';}).join("")).join("");
+  M.syncMannequins();
+  const hold=document.getElementById("hold"),u=document.getElementById("u"),uv=document.getElementById("uv");
+  function apply(){uv.textContent=(+u.value).toFixed(2);if(hold.checked)M.mannequins().forEach(m=>m.setU(+u.value));}
+  hold.onchange=()=>{if(hold.checked)apply();else M.mannequins().forEach(m=>{m.toggle();});};
+  u.oninput=apply;
+  setInterval(()=>{document.querySelectorAll(".pv-cell").forEach((c,i)=>{const m=c.querySelector(".fig3d")._mq;
+    if(m){const s=m.state();c.querySelector(".pv-st").textContent=s.live?(s.w+"×"+s.h+" · scene at "+Math.round(s.q*100)+"% · "+s.frames+" frames"):"stills: "+s.err;}});},500);
+  window.__mq=M;window.__ready=true;
+</script>
+</body>
+</html>

@@ -1,11 +1,15 @@
 /* Bunyan — activities
    Cardio, sports and classes: things logged as time and effort, not sets and reps.
-   Pure data with no imports, so the library, the logger and the formulas can all
-   read it without a cycle.
+   Pure data, importing only its icons (js/data/acticons.js), so the library, the
+   logger and the formulas can all read it without a cycle.
 
    Each entry: name, group, MET (the Compendium of Physical Activities' figure for a
-   moderate effort), whether distance means anything for it, an icon, its Arabic
-   name. Calories are MET × body weight × hours, scaled by how hard it was. */
+   moderate effort), whether distance means anything for it, its kind (what the
+   warm-up reads to know what it asks of the body), its Arabic name. The icon is
+   its own (ICON below). Calories are MET × body weight × hours, scaled by how hard
+   it was. */
+import {ACT_ICONS} from "./acticons.js";
+
 var ACTS=[
   /* Cardio the library has no photographed entry for. Treadmill running, the bikes,
      the rower, the stair machines and rope jumping already exist there and are
@@ -50,6 +54,20 @@ var LIB_ACTS={
   "Running, Treadmill":[9.8,1,"جري على المشاية"],"Skating":[7,0,"تزحلق"],"Stairmaster":[9,0,"جهاز السلالم"],
   "Step Mill":[9,0,"ستيب ميل"],"Trail Running/Walking":[6,1,"جري أو مشي في الطبيعة"],"Walking, Treadmill":[3.5,1,"مشي على المشاية"]
 };
+/* Each activity's own icon, so the grid is found by shape (js/data/acticons.js). */
+var ICON={Running:"run",Walking:"walk",Swimming:"swimming",Hiking:"trekking",Cycling:"bike",HIIT:"flame",
+  "Spinning Class":"stationary-bike",CrossFit:"barbell",Yoga:"yoga",Pilates:"stretching-2",Dance:"music",
+  Stretching:"stretching",Football:"ball-football",Basketball:"ball-basketball",Tennis:"ball-tennis",Padel:"padel",
+  Squash:"squash",Badminton:"shuttlecock","Table Tennis":"ping-pong",Volleyball:"ball-volleyball",Handball:"play-handball",
+  Rugby:"ball-american-football",Hockey:"hockey",Cricket:"cricket",Baseball:"ball-baseball",Golf:"golf",Boxing:"boxing",
+  "Martial Arts":"karate",Climbing:"mountain",Skiing:"ski-jumping",
+  "Air Bike":"air-bike",Bicycling:"bike","Bicycling, Stationary":"stationary-bike","Elliptical Trainer":"elliptical",
+  "Jogging, Treadmill":"treadmill","Recumbent Bike":"recumbent-bike","Rope Jumping":"jump-rope","Rowing, Stationary":"rowing",
+  "Running, Treadmill":"treadmill",Skating:"ice-skating",Stairmaster:"stairs-up","Step Mill":"stairs",
+  "Trail Running/Walking":"run-sprint","Walking, Treadmill":"treadmill"};
+/* Offered once: the library's "Bicycling" is the same thing as Cycling, so the grid
+   shows Cycling only. Rides logged under either name still read as cardio. */
+var HIDDEN={"Bicycling":1};
 var BY={};
 ACTS.forEach(function(a){BY[a[0]]={n:a[0],grp:a[1],met:a[2],dist:!!a[3],ico:a[4],ar:a[5]};});
 Object.keys(LIB_ACTS).forEach(function(n){
@@ -62,7 +80,7 @@ function actMuscle(n){var a=BY[n];return a?(a.grp==="Sports"?"Sports":"Cardio"):
 var ACT_GROUPS=["Cardio","Sports","Classes"];
 function actsIn(grp){
   var out=ACTS.filter(function(a){return a[1]===grp;}).map(function(a){return a[0];});
-  if(grp==="Cardio")out=out.concat(Object.keys(LIB_ACTS));
+  if(grp==="Cardio")out=out.concat(Object.keys(LIB_ACTS).filter(function(n){return !HIDDEN[n];}));
   return out;}
 
 /* How hard it was, as the four choices the logger offers, stored as an RPE so the
@@ -82,20 +100,9 @@ function actKcal(n,mins,rpe,kg){
   var a=BY[n];if(!a||!mins)return 0;
   return Math.round(a.met*(kg||70)*(mins/60)*intensityOf(rpe||6)[2]);}
 
-var ICO={
-  run:'<path d="M13.5 5.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM9 20l2.5-5 2.5 2v4M7 12l2-4 4 1 2 3 3 1M11.5 15l-1-4"/>',
-  walk:'<path d="M12.5 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM10 21l1.5-6 2.5 2.5V21M9 12.5l1.5-5 3 1 1.5 3M11.5 15l-1-4.5"/>',
-  swim:'<path d="M2 17c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5M2 21c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5M16 8.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM6 14l4-5 4 2.5"/>',
-  hike:'<path d="M3 20l6-10 4 6 3-4 5 8zM9 10l2-3"/>',
-  bike:'<circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-7h5l3 7M10 9l3 7M14 5h2"/>',
-  pulse:'<path d="M3 12h4l2-6 4 12 2-6h6"/>',
-  flex:'<path d="M12 5.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM5 10c3 1 5 1 7 1s4 0 7-1M12 11v4l-4 6M12 15l4 6"/>',
-  ball:'<circle cx="12" cy="12" r="9"/><path d="M12 7l4 3-1.5 4.5h-5L8 10zM12 3v4M16 10l4.5-1.5M14.5 14.5l2.5 4M9.5 14.5l-2.5 4M8 10L3.5 8.5"/>',
-  racket:'<ellipse cx="14" cy="9" rx="6" ry="6.5" transform="rotate(35 14 9)"/><path d="M9.5 13.5L3 20M11 8l6 2M12 5l4 7"/>',
-  fight:'<path d="M7 11V7a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v6a5 5 0 0 1-5 5h-1a4 4 0 0 1-4-4zM7 11h6M10 18v3h5v-3"/>'
-};
+
 function actIcon(n,size){
-  var a=BY[n],k=a?a.ico:"pulse";
-  return '<svg viewBox="0 0 24 24" width="'+(size||22)+'" height="'+(size||22)+'" aria-hidden="true" class="acticon">'+ICO[k]+'</svg>';}
+  var k=ACT_ICONS[ICON[n]]?ICON[n]:"heartbeat";
+  return '<svg viewBox="0 0 24 24" width="'+(size||22)+'" height="'+(size||22)+'" aria-hidden="true" class="acticon">'+ACT_ICONS[k]+'</svg>';}
 
 export {actPace, ACT_GROUPS, ACTS, actIcon, actInfo, actKcal, actMuscle, actsIn, INTENSITY, intensityOf, isActivity};

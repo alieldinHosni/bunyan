@@ -17,7 +17,7 @@ for(const n of Object.keys(EXTRA))if(!lib[n])lib[n]=EXTRA[n];
 globalThis.fetch=async()=>({json:async()=>JSON.parse(fs.readFileSync(new URL("../exercises.json",import.meta.url),"utf8"))});
 await new Promise(r=>loadExDB(r));
 
-const files=["engine/test/body","engine/test/intake","engine/test/lifts","engine/test/figures","engine/test/needs","engine/test/run","data/test/movement","test/schema"];
+const files=["engine/test/body","engine/test/intake","engine/test/lifts","engine/test/figures","engine/test/needs","engine/test/run","data/test/movement","data/test/bodymap","data/test/mannequin","test/schema"];
 let pass=0,fail=0;
 for(const f of files){
   const n=f.split("/").pop();
