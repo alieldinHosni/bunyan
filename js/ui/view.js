@@ -30,6 +30,9 @@ var V={tab:"train",fdate:null,food:null,range:30,exd:null,showAll:false,restPaus
        /* Which meal the Food tab has opened, or null for the day's dashboard. It is
           part of the nav route, so back returns to the dashboard, not to the tab. */
        meal:null,
+       /* The outdoor activity picked in Log cardio, while its "track it live or log
+          one" question is open (js/ui/handlers/session.js). */
+       runAct:null,
        bar:20};
 
 var AC=null,beeped=true,lastTick=99,wakeLock=null;

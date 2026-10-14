@@ -14,7 +14,7 @@ import {blockNow, offPlanLight, shiftNow} from "../../engine/blocks.js";
 import {isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder} from "../../engine/schedule.js";
 import {esc, fmtN, pretty, shortd, today} from "../../util.js";
 import {tokenMatch} from "../../engine/text.js";
-import {actInfo, intensityOf, isActivity} from "../../data/activities.js";
+import {actIcon, actInfo, intensityOf, isActivity, outdoorOf} from "../../data/activities.js";
 import {head, reorderBtn, seg, V} from "../view.js";
 import {backArrow, backBar} from "../nav.js";
 import {art, markArt} from "../art.js";
@@ -24,8 +24,8 @@ import {shown} from "../more.js";
 import {vTImport} from "./timport.js";
 import {doseText, weeksText} from "../dose.js";
 import {estMinutes, planOn} from "../../engine/dayplan.js";
-import {paceOf, routePath} from "../../engine/run.js";
-import {mapGround, mapSeed} from "../runmap.js";
+import {paceOf, routePath, speedOf} from "../../engine/run.js";
+import {groundFor, mapSeed} from "../runmap.js";
 import {bodyTiles, trainTop} from "./home.js";
 
 /* ============================================================ TRAIN */
@@ -124,43 +124,45 @@ function vTrainHome(){
   if(!S.active)h+=blockCard();
   h+=deloadCard();
   h+=bodyTiles();
-  /* The last run of the fortnight, as the reference's run card: its route, how far,
-     how fast. Opens that day. */
+  /* The last outdoor session of the fortnight (a run, a walk, a ride, a hike), as the
+     reference's run card: its route, how far, how fast. Opens that day. */
   h+=lastRunCard();
-  /* Running mode: a run tracked live with the phone's GPS (js/ui/run.js). */
-  h+='<button class="ttile wide tquick trun" data-run="start"><span class="ttile-i" aria-hidden="true">'+glyph("route")+'</span>'
-   +'<span class="ttile-tx"><span class="ttile-n">'+t("Running mode")+'</span>'
-   +'<span class="ttile-s">'+t("Time, distance and pace from your phone's GPS")+'</span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  /* Cardio and sports. Picking an outdoor one there (a run, a walk, a ride, a hike) is
+     the way into tracking it live with the phone's GPS (js/ui/run.js): there is no
+     separate button for it here. */
   h+='<button class="ttile wide tquick" data-actsheet="1">'+art("track",{cls:"btn-art"})+'<span class="ttile-i" aria-hidden="true">'+ACTIVITY+'</span>'
    +'<span class="ttile-tx"><span class="ttile-n">'+t("Log cardio or a sport")+'</span>'
-   +'<span class="ttile-s">'+t("Running, football, padel, tennis, classes…")+'</span></span>'
+   +'<span class="ttile-s">'+t("Track a run, a walk or a ride live, or log football, padel, classes…")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   return h;}
 
-/* The most recent Running entry of the last 14 days with a distance, as a card: the
-   route drawn from its saved points (none for a run logged by hand), the kilometres
-   large, the pace and the time, and an arrow to the day. "" when there is none. */
+/* The most recent outdoor session of the last 14 days with a distance (Running,
+   Walking, Cycling, Hiking, a trail run), as a card: the route drawn from its saved
+   points on that activity's ground (none for one logged by hand), the kilometres large,
+   the pace (a ride: the speed) and the time, and an arrow to the day. "" when there is
+   none. */
 function lastRunCard(){
-  var now=today(),cut=new Date(Date.now()-14*864e5).toISOString().slice(0,10),run=null,date=null;
+  var now=today(),cut=new Date(Date.now()-14*864e5).toISOString().slice(0,10),run=null,date=null,act="";
   (S.sessions||[]).some(function(ss){
     if(!ss||!ss.date||ss.date<cut)return false;
     (ss.entries||[]).some(function(e){
-      if(e.name!=="Running")return false;
+      if(!outdoorOf(e.name))return false;
       var x=(e.sets||[]).filter(function(b){return +b.km>0;})[0];
-      if(x){run=x;date=ss.date;}
+      if(x){run=x;date=ss.date;act=e.name;}
       return !!x;});
     return !!run;});
   if(!run)return "";
-  var d=run.route&&run.route.length>1?routePath(run.route,120,80,10):"";
-  var pace=paceOf((+run.min||0)*60000,(+run.km||0)*1000);
+  var o=outdoorOf(act),d=run.route&&run.route.length>1?routePath(run.route,120,80,10):"";
+  var ms=(+run.min||0)*60000,m=(+run.km||0)*1000,spd=o.read==="speed";
+  var rate=spd?speedOf(ms,m):paceOf(ms,m),unit=spd?" "+t("km/h"):" /"+t("km");
   var when=date===now?t("Today"):pretty(date);
-  return '<button class="trun-last" data-openday="'+esc(date)+'" aria-label="'+esc(t("Last run")+", "+run.km+" "+t("km")+(pace?", "+pace+" "+t("per km"):"")+", "+when)+'">'
+  return '<button class="trun-last" data-openday="'+esc(date)+'" data-act="'+esc(act)+'" aria-label="'+esc(t(o.last)+", "+run.km+" "+t("km")
+     +(rate?", "+rate+(spd?" "+t("km/h"):" "+t("per km")):"")+", "+when)+'">'
    +'<span class="trun-map" aria-hidden="true">'+(d?'<svg viewBox="0 0 120 80" preserveAspectRatio="xMidYMid slice">'
-     +mapGround(120,80,run.map||mapSeed(run),.55)+'<path class="rt-glow" d="'+d+'"/><path class="rt" d="'+d+'"/></svg>':glyph("route"))+'</span>'
-   +'<span class="trun-t" aria-hidden="true"><span class="trun-k">'+esc(t("Last run"))+' · '+esc(when)+'</span>'
+     +groundFor(o.ground,120,80,run.map||mapSeed(run),.55)+'<path class="rt-glow" d="'+d+'"/><path class="rt" d="'+d+'"/></svg>':actIcon(act,26))+'</span>'
+   +'<span class="trun-t" aria-hidden="true"><span class="trun-k">'+esc(t(o.last))+' · '+esc(when)+'</span>'
    +'<b><span class="num">'+(+run.km).toFixed(2)+'</span><small> '+esc(t("km"))+'</small></b>'
-   +'<span class="trun-s">'+esc([pace?pace+" /"+t("km"):"",run.min?run.min+" "+t("min"):""].filter(Boolean).join(" · "))+'</span></span>'
+   +'<span class="trun-s">'+esc([rate?rate+unit:"",run.min?run.min+" "+t("min"):""].filter(Boolean).join(" · "))+'</span></span>'
    +'<span class="trun-go" aria-hidden="true">'+glyph("arrow")+'</span></button>';}
 
 /* The planning screens, for Coach: null when none is open. */

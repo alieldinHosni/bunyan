@@ -1,4 +1,4 @@
-import {addFix, kmMarks, metres, newRun, paceOf, pauseRun, resumeRun, routePath, routeXY, runKcal, runMs, thin} from "../run.js";
+import {addFix, kmMarks, metres, newRun, outdoorKcal, paceOf, pauseRun, resumeRun, routePath, routeXY, runKcal, runMs, speedOf, thin} from "../run.js";
 
 /* A point d metres north of 30°N 31°E (Cairo), at time s seconds. One degree of
    latitude is 111.2 km. */
@@ -34,6 +34,24 @@ function run(t){
   t.eq(runKcal(5000,1800000,80),400,"5 km at 80 kg: about 400 kcal");
   t.eq(runKcal(0,1800000,80),392,"no distance: by the time, MET 9.8");
   t.eq(runKcal(5000,1800000,0),350,"no weight: 70 kg");
+
+  /* ---- a walk, a ride, a hike: each its own ---- */
+  t.eq([newRun(0).act,newRun(0,"Cycling").act],["Running","Cycling"],"a session knows what it is; a run when not told");
+  var ride=newRun(0,"Cycling");addFix(ride,north(0,0));
+  t.eq(addFix(ride,north(150,10),20),"kept","a ride at 15 m/s (54 km/h downhill) is kept with a ride's top speed");
+  var jog=newRun(0);addFix(jog,north(0,0));
+  t.eq(addFix(jog,north(150,10)),"leap","the same jump on a run is a leap");
+  t.eq(speedOf(1800000,12000),"24.0","12 km in 30 min: 24.0 km/h");
+  t.eq(speedOf(30000,40),"","under 50 m: too little to say");
+  t.eq(outdoorKcal("Running",5000,1800000,80),runKcal(5000,1800000,80),"a run counts as before");
+  t.eq(outdoorKcal("Cycling",12000,1800000,80),400,"a ride at 24 km/h, 30 min, 80 kg: MET 10, 400 kcal");
+  t.eq(outdoorKcal("Cycling",5000,1800000,80),160,"at 10 km/h: MET 4, 160 kcal");
+  t.eq(outdoorKcal("Cycling",0,1800000,80),300,"no distance: a moderate ride, MET 7.5");
+  t.eq(outdoorKcal("Walking",2500,1800000,80),140,"a walk at 5 km/h: MET 3.5, 140 kcal");
+  t.eq(outdoorKcal("Walking",3500,1800000,80),200,"at 7 km/h: MET 5, 200 kcal");
+  t.eq(outdoorKcal("Hiking",3000,3600000,80),480,"an hour's hike: MET 6, 480 kcal");
+  t.eq(outdoorKcal("Trail Running/Walking",5000,1800000,80),400,"a trail session at 10 km/h is a run");
+  t.eq(outdoorKcal("Trail Running/Walking",2500,1800000,80),240,"and at 5 km/h a hike");
 
   /* ---- the route ---- */
   t.eq(routePath([[30,31,0]],100,100,10),"","one point: nothing to draw");

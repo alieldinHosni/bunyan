@@ -2232,15 +2232,15 @@ await test("Guide: the first time Training opens, glass tips point at each thing
     return {k:c.querySelector(".tour-k").textContent,h:c.querySelector(".tour-h").textContent,dir:c.classList.contains("up")?"up":c.classList.contains("down")?"down":"none",hole:[Math.round(h.width),Math.round(h.height)]};});
   let c=await card();
   if(!c)throw new Error("no guide on first opening");
-  eq([c.k,c.h],["Training · 1 of 8","What the coach noticed"],"the first tip");
+  eq([c.k,c.h],["Training · 1 of 7","What the coach noticed"],"the first tip");
   const bell=await page.$eval('.hacts [data-csec="ai"]',e=>{const r=e.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];});
   if(Math.abs(c.hole[0]-bell[0]-16)>2||Math.abs(c.hole[1]-bell[1]-16)>2)throw new Error("the light is not on the bell: "+JSON.stringify([c.hole,bell]));
   eq(await ev(page,"V.tab"),"train","the page under it is untouched");
   /* Anywhere: even over a button, a tap only moves the guide on. */
   const seen=[c.h];
-  for(let i=0;i<7;i++){await page.mouse.click(30+i*40,300+i*30);await pause(page,500);c=await card();if(c)seen.push(c.h);}
-  eq(seen.length,8,"eight tips");
-  eq(seen[7],"Getting around","the last points at the dock");
+  for(let i=0;i<6;i++){await page.mouse.click(30+i*40,300+i*30);await pause(page,500);c=await card();if(c)seen.push(c.h);}
+  eq(seen.length,7,"seven tips (live tracking is reached through Cardio and sports)");
+  eq(seen[6],"Getting around","the last points at the dock");
   eq(await ev(page,"[V.tab,V.sheet]"),["train",null],"no tap reached the page");
   await page.mouse.click(200,200);await pause(page,600);
   eq([await card(),await ev(page,"S.prefs.toured.train")],[null,1],"finished, and remembered");
@@ -2252,7 +2252,7 @@ await test("Guide: the first time Training opens, glass tips point at each thing
   await page.evaluate(()=>localStorage.removeItem("bunyan:notour"));
   await page.$eval('[data-tourreset]',e=>e.click());await pause(page,1800);
   c=await card();
-  eq([await ev(page,"V.tab"),c&&c.k],["train","Training · 1 of 8"],"back from the start");
+  eq([await ev(page,"V.tab"),c&&c.k],["train","Training · 1 of 7"],"back from the start");
   await page.click('.tour-skip');await pause(page,500);
   eq([await card(),await ev(page,"S.prefs.toured.train")],[null,1],"Skip ends it, seen");
 },{tour:true});
@@ -2363,59 +2363,100 @@ await test("Food: in the morning nothing is behind yet; with water short in the 
   await page.$eval('.fbody-glass',e=>e.scrollIntoView({block:"center"}));await page.tap('.fbody-glass');await pause(page,300);
   eq(await ev(page,"S.days[Object.keys(S.days).sort().pop()].water"),w+250,"a glass added");
 },{db:lowProtein()});
-/* ---- Running mode (js/ui/run.js, js/engine/run.js) ---- */
-await test("Running mode: the phone's positions become distance and a route; pause stops the clock; Finish saves a Running activity",async page=>{
+/* ---- Live tracking: a run, a walk, a ride, a hike (js/ui/run.js, js/engine/run.js) ----
+   The only way in is Log cardio: pick an outdoor activity, then "Track it live". */
+async function liveStart(page,act){
+  await tapTab(page,"train");await pause(page);
+  await page.tap('[data-actsheet]');await pause(page);
+  await page.tap('#sheet [data-quickact="'+act+'"]');await pause(page,500);
+  await page.tap('#sheet [data-confirmok]');await pause(page,700);}
+await test("Live tracking: no Running mode button on Training; Log cardio is the way in, for every outdoor activity",async page=>{
+  await tapTab(page,"train");await pause(page);
+  eq(await page.$$eval('#app [data-run]',a=>a.length),0,"no tile on Training");
+  await page.tap('[data-actsheet]');await pause(page);
+  eq(await page.$$eval('#sheet .actbtn.live',a=>a.map(e=>[e.dataset.quickact,e.querySelector("span").textContent,!!e.querySelector(".actbtn-gps")])),
+    [["Running","Running, outdoor",true],["Walking","Walking, outdoor",true],["Hiking","Hiking",true],["Cycling","Cycling, outdoor",true],
+     ["Trail Running/Walking","Trail Running/Walking",true]],"each outdoor one is marked as tracked live");
+  eq(await page.$$eval('#sheet .actbtn:not(.live)',a=>a.some(e=>["Swimming","Running, Treadmill","Bicycling, Stationary","Football"].includes(e.dataset.quickact))),true,"indoor and sports are logged as before");
+  await page.tap('#sheet [data-quickact="Cycling"]');await pause(page,500);
+  eq(await page.$$eval('#sheet [data-confirmok],#sheet [data-confirmalt]',a=>a.map(b=>b.textContent)),["Track it live","Log one I've done"],"both ways");
+  if(!/your speed/.test(await page.$eval('#sheet',e=>e.textContent)))throw new Error("a ride is read as speed");
+  /* Logged after the fact: the logger, for a ride. */
+  await page.tap('#sheet [data-confirmalt]');await pause(page,600);
+  eq(await ev(page,"[!!S.run,!!S.active&&S.active.entries[0].name]"),[false,"Cycling"],"the logger, for the ride");
+});
+await test("Live tracking: a run's positions become distance and a route; pause stops the clock; Finish saves a Running activity",async page=>{
   const ctx=page.context();
   await ctx.grantPermissions(["geolocation"]);await ctx.setGeolocation({latitude:30.0444,longitude:31.2357,accuracy:8});
-  await tapTab(page,"train");await pause(page);
-  await page.$eval('[data-run="start"]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-run="start"]');await pause(page,600);
-  eq(await page.evaluate(()=>[!!document.querySelector(".run"),document.body.classList.contains("focus")]),[true,true],"the run fills the screen, no dock");
+  await liveStart(page,"Running");
+  eq(await page.evaluate(()=>[!!document.querySelector(".run"),document.body.classList.contains("focus"),document.querySelector(".run-h").textContent]),[true,true,"Running"],"the run fills the screen, no dock");
+  eq(await page.evaluate(()=>[document.querySelectorAll(".run-map .rm-blk rect").length>20,!!document.querySelector(".run-map .rm-river")]),[true,true],"on a city");
   for(let i=1;i<=6;i++){await ctx.setGeolocation({latitude:30.0444+i*0.00009,longitude:31.2357,accuracy:8});await pause(page,1500);}
-  const r=await ev(page,"[S.run.pts.length,Math.round(S.run.dist),S.run.gps]");
-  if(r[0]<5||r[1]<40||r[2]!=="on")throw new Error("not tracking: "+JSON.stringify(r));
+  const r=await ev(page,"[S.run.pts.length,Math.round(S.run.dist),S.run.gps,S.run.act]");
+  if(r[0]<5||r[1]<40||r[2]!=="on"||r[3]!=="Running")throw new Error("not tracking: "+JSON.stringify(r));
   if(!/^M[\d.]+ [\d.]+L/.test(await page.$eval('#runRoute',e=>e.getAttribute("d"))))throw new Error("no route drawn");
+  if(!/^\d+:\d\d$/.test(await page.$eval('#runP',e=>e.textContent)))throw new Error("no pace");
   await page.tap('[data-run="pause"]');await pause(page,300);
   const t1=await page.$eval('#runT',e=>e.textContent);await pause(page,1600);
   eq(await page.$eval('#runT',e=>e.textContent),t1,"paused: the clock holds");
   await page.tap('[data-run="resume"]');await pause(page,300);
+  const seed=await ev(page,"Math.floor(S.run.started/1000)");
   await page.tap('[data-run="finish"]');await pause(page,800);
-  const s=await ev(page,"[!!S.run,!!S.active,S.sessions[0].entries[0].name,S.sessions[0].entries[0].sets[0].km>0.03,S.sessions[0].entries[0].sets[0].route.length>=5,S.sessions[0].entries[0].sets[0].kcal>0]");
-  eq(s,[false,false,"Running",true,true,true],"saved as a run with its distance, route and calories");
+  const s=await ev(page,"[!!S.run,!!S.active,S.sessions[0].entries[0].name,S.sessions[0].entries[0].sets[0].km>0.03,S.sessions[0].entries[0].sets[0].route.length>=5,S.sessions[0].entries[0].sets[0].kcal>0,S.sessions[0].entries[0].sets[0].map]");
+  eq(s,[false,false,"Running",true,true,true,seed],"saved as a run with its distance, route, calories and ground");
 });
-await test("Running mode from Log cardio: Running, outdoor offers it; it opens on a drawn city, and the saved run keeps that ground",async page=>{
+await test("Live tracking: a ride is its own: Cycling, speed in km/h, a countryside under the route, saved as a ride with a ride's calories",async page=>{
   const ctx=page.context();
   await ctx.grantPermissions(["geolocation"]);await ctx.setGeolocation({latitude:30.0444,longitude:31.2357,accuracy:8});
-  await tapTab(page,"train");await pause(page);
-  await page.tap('[data-actsheet]');await pause(page);
-  eq(await page.$eval('#sheet .actbtn.live',e=>[e.dataset.quickact,!!e.querySelector(".actbtn-gps")]),["Running",true],"marked as tracked live");
-  await page.tap('#sheet [data-quickact="Running"]');await pause(page,500);
-  eq(await page.$$eval('#sheet [data-confirmok],#sheet [data-confirmalt]',a=>a.map(b=>b.textContent)),["Start running mode","Log a run I've done"],"both ways");
-  await page.tap('#sheet [data-confirmok]');await pause(page,700);
-  eq(await page.evaluate(()=>[!!document.querySelector(".run"),document.querySelectorAll(".run-map .rm-blk rect").length>20,!!document.querySelector(".run-map .rm-river")]),[true,true,true],"running, on a city");
-  for(let i=1;i<=5;i++){await ctx.setGeolocation({latitude:30.0444+i*0.00009,longitude:31.2357,accuracy:8});await pause(page,1500);}
-  const seed=await ev(page,"Math.floor(S.run.started/1000)");
+  await liveStart(page,"Cycling");
+  eq(await page.evaluate(()=>[document.querySelector(".run").dataset.act,document.querySelector(".run-h").textContent,
+    [...document.querySelectorAll(".run-pt>span")].map(e=>e.textContent)]),["Cycling","Cycling",["Kcal","Speed km/h"]],"a ride, read as speed");
+  eq(await page.evaluate(()=>[document.querySelectorAll(".run-map .rm-field rect").length>10,document.querySelectorAll(".run-map .rm-road path").length,
+    document.querySelectorAll(".run-map .rm-blk rect").length]),[true,3,0],"fields and roads, not a city");
+  /* 22 m a fix every 1.5 s is about 15 m/s (53 km/h): a run would call each a leap,
+     a ride keeps them. */
+  for(let i=1;i<=6;i++){await ctx.setGeolocation({latitude:30.0444+i*0.0002,longitude:31.2357,accuracy:8});await pause(page,1500);}
+  const r=await ev(page,"[S.run.pts.length,Math.round(S.run.dist)]");
+  if(r[0]<5||r[1]<80)throw new Error("a ride's speed was taken for a leap: "+JSON.stringify(r));
+  if(!/^\d+\.\d$/.test(await page.$eval('#runP',e=>e.textContent)))throw new Error("no speed: "+await page.$eval('#runP',e=>e.textContent));
   await page.tap('[data-run="finish"]');await pause(page,900);
-  eq(await ev(page,"[S.sessions[0].entries[0].name,S.sessions[0].entries[0].sets[0].map]"),["Running",seed],"saved with its ground");
+  const e=await ev(page,"[S.sessions[0].entries[0].name,S.sessions[0].entries[0].sets[0].km>0.07,S.sessions[0].entries[0].sets[0].kcal>0]");
+  eq(e,["Cycling",true,true],"saved as a ride");
+  /* Training's card: the last ride, its speed, on its countryside. */
+  await page.tap('.wc2 [data-wcdone],#sheet .btn').catch(()=>{});await pause(page,500);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  await tapTab(page,"train");await pause(page,500);
+  eq(await page.$eval('.trun-last',e=>[e.dataset.act,/Last ride/.test(e.querySelector(".trun-k").textContent),/km\/h/.test(e.querySelector(".trun-s").textContent),
+    !!e.querySelector(".rm-field")]),["Cycling",true,true,true],"the last ride, with its speed, on fields");
 });
-await test("Running mode: with location refused it is timed only, says so, and Finish opens the logger with the minutes in",async page=>{
+await test("Live tracking: a walk is drawn on a park and a hike on hills",async page=>{
+  await liveStart(page,"Walking");
+  eq(await page.evaluate(()=>[document.querySelector(".run-h").textContent,!!document.querySelector(".run-map .rm-pond path"),
+    document.querySelectorAll(".run-map .rm-path path").length>2]),["Walking",true,true],"a walk: a park, its pond and paths");
+  await page.tap('[data-run="leave"]');await pause(page,400);
+  await page.tap('#sheet [data-confirmalt]');await pause(page,400);
+  eq(await ev(page,"!!S.run"),false,"discarded");
+  await liveStart(page,"Hiking");
+  eq(await page.evaluate(()=>[document.querySelector(".run-h").textContent,document.querySelectorAll(".run-map .rm-contour path").length>20,
+    !!document.querySelector(".run-map .rm-peak path"),document.querySelector("#runP").previousElementSibling.textContent]),["Hiking",true,true,"Pace /km"],"a hike: contours and peaks, read as pace");
+});
+await test("Live tracking: with location refused it is timed only, says so, and Finish opens the logger with the minutes in",async page=>{
   await page.evaluate(()=>{Object.defineProperty(navigator,"geolocation",{configurable:true,value:{watchPosition:(ok,err)=>{setTimeout(()=>err({code:1}),50);return 1;},clearWatch:()=>{}}});});
-  await tapTab(page,"train");await pause(page);
-  await page.$eval('[data-run="start"]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-run="start"]');await pause(page,600);
+  await liveStart(page,"Walking");
   eq(await page.$eval('#runGps',e=>[e.className,e.textContent]),["run-gps denied","Location is off"],"the chip says so");
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.run.ms=125000;(await import("/js/ui/render.js")).render();});await pause(page,300);
   if(!/timed only/.test(await page.$eval('.run-note',e=>e.textContent)))throw new Error("no note");
   await page.tap('[data-run="finish"]');await pause(page,600);
-  eq(await ev(page,"[!!S.run,!!S.active&&S.active.entries[0].name,V.draft.min>=2]"),[false,"Running",true],"the logger, with the time");
+  eq(await ev(page,"[!!S.run,!!S.active&&S.active.entries[0].name,V.draft.min>=2]"),[false,"Walking",true],"the logger, for the walk, with the time");
 });
-await test("Running mode: a run outlives closing the app, and the back gesture asks before ending it",async page=>{
-  await tapTab(page,"train");await pause(page);
-  await page.$eval('[data-run="start"]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-run="start"]');await pause(page,500);
+await test("Live tracking: a session outlives closing the app, and the back gesture asks before ending it",async page=>{
+  await liveStart(page,"Cycling");
   await page.reload();await pause(page,1200);
-  eq(await page.evaluate(()=>!!document.querySelector(".run")),true,"still running after a reload");
+  eq(await page.evaluate(()=>[!!document.querySelector(".run"),document.querySelector(".run-h").textContent]),[true,"Cycling"],"still riding after a reload");
   await page.tap('[data-run="leave"]');await pause(page,400);
-  eq(await page.$eval('#sheet',e=>/End this run/.test(e.innerText)),true,"asks");
+  eq(await page.$eval('#sheet',e=>/End it here/.test(e.innerText)),true,"asks");
   await page.tap('[data-confirmalt]');await pause(page,400);
-  eq(await ev(page,"[!!S.run,S.sessions.filter(s=>s.entries[0].name==='Running').length]"),[false,0],"discarded: nothing saved");
+  eq(await ev(page,"[!!S.run,S.sessions.filter(s=>s.entries[0].name==='Cycling').length]"),[false,0],"discarded: nothing saved");
 });
 /* ---- glass pop-ups and the ringed tiles (index.html, js/ui/views/home.js) ---- */
 await test("Glass: a sheet, a dialog and a toast are frosted and see-through, and the veil over the page is lighter",async page=>{

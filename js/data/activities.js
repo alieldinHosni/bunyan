@@ -73,6 +73,20 @@ ACTS.forEach(function(a){BY[a[0]]={n:a[0],grp:a[1],met:a[2],dist:!!a[3],ico:a[4]
 Object.keys(LIB_ACTS).forEach(function(n){
   BY[n]={n:n,grp:"Cardio",met:LIB_ACTS[n][0],dist:!!LIB_ACTS[n][1],ico:"pulse",ar:LIB_ACTS[n][2],lib:true};});
 
+/* Done outside, and tracked live with the phone's GPS when picked from Log cardio
+   (js/ui/run.js). For each: how it is read (pace in min/km, or speed in km/h for a
+   ride), the fastest it goes (two fixes further apart than that in the time between
+   them are a GPS leap, not movement; m/s), the ground drawn under the route
+   (js/ui/runmap.js), what the screen and the picker call it, and the word for one,
+   for "Last run" and the like. */
+var OUTDOOR={
+  "Running":{read:"pace",top:9,ground:"city",title:"Running",pick:"Running, outdoor",last:"Last run"},
+  "Walking":{read:"pace",top:4,ground:"park",title:"Walking",pick:"Walking, outdoor",last:"Last walk"},
+  "Cycling":{read:"speed",top:20,ground:"country",title:"Cycling",pick:"Cycling, outdoor",last:"Last ride"},
+  "Hiking":{read:"pace",top:4,ground:"trail",title:"Hiking",pick:"Hiking",last:"Last hike"},
+  "Trail Running/Walking":{read:"pace",top:8,ground:"trail",title:"Trail run",pick:"Trail Running/Walking",last:"Last trail run"}};
+function outdoorOf(n){return Object.prototype.hasOwnProperty.call(OUTDOOR,n)?OUTDOOR[n]:null;}
+
 function actInfo(n){return BY[n]||null;}
 function isActivity(n){return !!BY[n];}
 /* The library's muscle filter: sports under Sports, everything else under Cardio. */
@@ -96,6 +110,12 @@ function actPace(min,km){
   if(!(min>0&&km>0))return "";
   var s=Math.round(min*60/km);
   return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")+" /km";}
+/* A ride is read as speed, everything else as pace: "24.3 km/h" or "5:30 /km". */
+function rides(n){var o=outdoorOf(n);return o?o.read==="speed":/cycl|bicycl/i.test(n||"");}
+function actRate(n,min,km){
+  if(!rides(n))return actPace(min,km);
+  if(!(min>0&&km>0))return "";
+  return (Math.round(km/(min/60)*10)/10).toFixed(1)+" km/h";}
 function actKcal(n,mins,rpe,kg){
   var a=BY[n];if(!a||!mins)return 0;
   return Math.round(a.met*(kg||70)*(mins/60)*intensityOf(rpe||6)[2]);}
@@ -105,4 +125,4 @@ function actIcon(n,size){
   var k=ACT_ICONS[ICON[n]]?ICON[n]:"heartbeat";
   return '<svg viewBox="0 0 24 24" width="'+(size||22)+'" height="'+(size||22)+'" aria-hidden="true" class="acticon">'+ACT_ICONS[k]+'</svg>';}
 
-export {actPace, ACT_GROUPS, ACTS, actIcon, actInfo, actKcal, actMuscle, actsIn, INTENSITY, intensityOf, isActivity};
+export {actPace, actRate, ACT_GROUPS, ACTS, actIcon, actInfo, actKcal, actMuscle, actsIn, INTENSITY, intensityOf, isActivity, OUTDOOR, outdoorOf};

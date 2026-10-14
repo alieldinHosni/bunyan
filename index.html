@@ -4010,6 +4010,29 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .rm-bank{fill:none;stroke:rgba(255,255,255,.04);stroke-linecap:round}
 .rm-ripple{fill:none;stroke:rgba(255,255,255,.08);stroke-width:1;stroke-dasharray:2 7}
 .rm-av path{fill:none;stroke:rgba(255,255,255,.07)}
+/* The other grounds (js/ui/runmap.js): a park for a walk, the countryside for a ride,
+   hills for a hike. The same few tones of the theme as the city. */
+.rm-park path{fill:var(--map-park)}
+.rm-pond path{fill:var(--map-water)}
+.rm-path path{fill:none;stroke:rgba(255,255,255,.08);stroke-linecap:round;stroke-linejoin:round}
+.rm-field .f0{fill:rgba(255,255,255,.03)}
+.rm-field .f1{fill:rgba(255,255,255,.06)}
+.rm-field .f2{fill:var(--map-park)}
+.rm-hedge path{fill:none;stroke:var(--map-park);opacity:.9}
+.rm-road path{fill:none;stroke:rgba(255,255,255,.075);stroke-linecap:round}
+.rm-roadc path{fill:none;stroke:rgba(255,255,255,.15);stroke-width:1;stroke-dasharray:6 7}
+.rm-contour path{fill:none;stroke:rgba(255,255,255,.07);stroke-width:1}
+.rm-contour.ix path{stroke:rgba(255,255,255,.13);stroke-width:1.5}
+.rm-stream path{fill:none;stroke:var(--map-water);stroke-linecap:round;stroke-linejoin:round}
+.rm-peak path{fill:rgba(255,255,255,.24)}
+[data-theme="light"] .trun-map .rm-field .f0{fill:rgba(0,0,0,.025)}
+[data-theme="light"] .trun-map .rm-field .f1{fill:rgba(0,0,0,.045)}
+[data-theme="light"] .trun-map .rm-field .f2{fill:var(--map-park)}
+[data-theme="light"] .trun-map .rm-path path,[data-theme="light"] .trun-map .rm-road path{stroke:rgba(255,255,255,.75)}
+[data-theme="light"] .trun-map .rm-roadc path{stroke:rgba(0,0,0,.14)}
+[data-theme="light"] .trun-map .rm-contour path{stroke:rgba(0,0,0,.09)}
+[data-theme="light"] .trun-map .rm-contour.ix path{stroke:rgba(0,0,0,.16)}
+[data-theme="light"] .trun-map .rm-peak path{fill:rgba(0,0,0,.25)}
 [data-theme="light"] .trun-map .rm-blk rect{fill:rgba(0,0,0,.045)}
 [data-theme="light"] .trun-map .rm-bld rect{fill:rgba(0,0,0,.06)}
 [data-theme="light"] .trun-map .rm-av path{stroke:rgba(255,255,255,.7)}

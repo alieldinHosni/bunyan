@@ -85,20 +85,33 @@ your initial at the top right of Training.
   and steps (each icon in a round glass button at the tile's corner; steps ringed by
   their share of the goal, with "Goal met" when it is), and a run or a match to log. A
   workout left for later shows here as a Resume card.
-- **Running mode** (`ui/run.js`, the arithmetic in `engine/run.js`), from Training or
-  from Log cardio (Running, outdoor offers it, or logging a run already done): a run
-  tracked live with the phone's own GPS, free and offline. The route is drawn as it
-  grows, glowing, with a mark at each kilometre, on a city drawn by `ui/runmap.js`
-  (blocks, avenues, a river, parks; seeded by the run, so it keeps its ground; not
-  the real streets, which would need a map service), the time large, the distance,
-  calories (about 1 kcal per kg per km) and pace, with pause and resume.
-  Fixes worse than 35 m, closer than 4 m to the last, or faster than 9 m/s are not
-  counted. The screen stays awake, because a phone stops giving a web app its position
-  in the background. Finishing saves a Running activity with its route; without
-  location it is timed only, and the logger opens with the minutes in for the
-  distance. A run in progress survives closing the app. The last run of the fortnight
-  shows on Training as a card, after the reference's: its route on its ground, the
-  kilometres, pace and time.
+- **Live tracking** (`ui/run.js`, the arithmetic in `engine/run.js`): a run, a walk, a
+  ride, a hike or a trail run tracked live with the phone's own GPS, free and offline.
+  The only way in is Log cardio: an outdoor activity (`OUTDOOR` in `data/activities.js`)
+  carries a GPS mark there, and picking it asks whether to track it live or log one
+  already done. Training has no separate button for it. Each is its own:
+  - its name and icon on the screen;
+  - pace (min/km) for a run, a walk or a hike, and speed (km/h) for a ride;
+  - its calories: about 1 kcal per kg per km for a run; walking and cycling by the MET
+    for the speed measured (Compendium 2011); a hike at MET 6;
+  - the top speed past which a jump in the GPS is a leap and not movement: 9 m/s for a
+    run, 4 for a walk or a hike, 20 for a ride;
+  - the ground drawn under the route by `ui/runmap.js`: a city for a run (blocks,
+    avenues, a river, parks), a park for a walk (lawns, ponds, winding paths, trees),
+    the countryside for a ride (a patchwork of fields with hedgerows, long roads, a
+    river, a village), and hills for a hike or a trail run (contour lines round their
+    peaks, streams, woods). It is seeded by the session, so it keeps its ground. It is
+    not the real streets, which would need a map service.
+
+  The route grows on screen, glowing, with a mark at each kilometre. The time is large,
+  under it the distance, then calories and pace or speed, with pause and resume. Fixes
+  worse than 35 m, or closer than 4 m to the last, are not counted. The screen stays
+  awake, because a phone stops giving a web app its position in the background.
+  Finishing saves that activity with its route. Without location it is timed only, and
+  the logger opens with the minutes in, for the distance. A session in progress
+  survives closing the app. The last outdoor session of the fortnight shows on Training
+  as a card, after the reference's: its route on its ground, the kilometres, pace or
+  speed, and time.
 - **Food** (`views/food.js`) is the day: what you have eaten against the targets, the
   meals (a planned one is a tap from logging), water, and "Log today's plan". Today
   also reads the log as a body (`ui/bodyneeds.js`, numbers from `engine/needs.js`): a
@@ -825,7 +838,7 @@ Red uses its brand colours exactly. In every theme:
   clearing three ranges of hills in the morning, high with a cloud in the afternoon, a
   crescent among stars in the evening, faded out toward the page.
 - **The guide** (`ui/tour.js`): the first time each page opens (Training, Food, Coach,
-  Progress, Profile, the coach chat, running mode), it is explained where it stands. The
+  Progress, Profile, the coach chat, live tracking), it is explained where it stands. The
   page dims, one thing at a time is lit, and a glass card beside it, its arrow pointing at
   it, says in a sentence or two what it is and what a tap does. A tap anywhere is the next
   tip; Skip ends it. Each page's guide is shown once; Profile → Show the guide again
