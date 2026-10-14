@@ -2824,8 +2824,17 @@ details.adv>.btn{margin:0 14px 14px;width:calc(100% - 28px)}
 .afresults{display:flex;flex-direction:column;gap:10px}
 .afres{display:flex;align-items:center;gap:6px;background:var(--surface);border-radius:12px;
   padding-inline-end:10px}
-.afres-b{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;background:none;border:none;
-  text-align:start;color:var(--text);padding:14px 16px;min-height:60px}
+.afres-b{flex:1;min-width:0;display:flex;align-items:center;gap:12px;background:none;border:none;
+  text-align:start;color:var(--text);padding:10px 14px;min-height:60px}
+.afres-t{display:flex;flex-direction:column;gap:4px;min-width:0}
+/* A food's picture (js/data/foodicons.js): its photograph when it has one, else an icon
+   for what it is, on a quiet tile. Identity, not action, so it is not in the accent. */
+.fpic{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;overflow:hidden;
+  background:var(--raised);box-shadow:inset 0 0 0 1px var(--hair);color:var(--sub)}
+.fpic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.fpic.ph img{width:100%;height:100%;object-fit:cover}
+.fpic.lg{width:64px;height:64px;border-radius:18px;margin:0 auto 12px}
+.fpic.lg svg{width:34px;height:34px}
 .afres-n{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .afres-n span{font-weight:400;color:var(--dim)}
 .afres-m{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap;

@@ -7,7 +7,8 @@ import {t} from "../../i18n/dict.js";
 import {eatenToday, lastWeight, macroKcal, macroTargets, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
 import {checkPlans} from "../../engine/plancheck.js";
-import {sumNutrition} from "../../engine/nutrition.js";
+import {FOODDB, sumNutrition} from "../../engine/nutrition.js";
+import {foodPic} from "../../data/foodicons.js";
 import {dayRec, S} from "../../state.js";
 import {dfmt, esc, fmtN, r1, today} from "../../util.js";
 import {curDate, GRIPSVG, mealNow, progressBar, reorderBtn, seg, V} from "../view.js";
@@ -158,6 +159,12 @@ function vFoodToday(dsel){
   return h;}
 
 /* ---- one meal (node 13:118). Reached from a logged row above; back returns here. */
+/* What a logged item was, for its picture: the food it came from when there is one,
+   else just its name (a quick add, or a food since deleted). */
+function foodOfItem(it){
+  var p=(S.myFoods||[]).concat(FOODDB||[]);
+  for(var i=0;it.fid&&i<p.length;i++)if(p[i].id===it.fid)return p[i];
+  return {n:it.n};}
 function vMeal(dsel,name){
   var r=dayRec(dsel),m=r.meals[name]||{items:[]},items=m.items||[],tot=sumNutrition(items);
   var when=dsel===today()?t("Logged today")
@@ -179,7 +186,7 @@ function vMeal(dsel,name){
   items.forEach(function(it,i){
     h+='<div class="fitemrow">'
      +'<button class="fitemrow-b" data-editfood="'+esc("day|"+name+"|"+i)+'" aria-label="'
-     +esc(t("Change the amount of")+" "+it.n)+'">'
+     +esc(t("Change the amount of")+" "+it.n)+'">'+foodPic(foodOfItem(it))
      +'<div style="flex:1;min-width:0"><div class="fitemrow-n">'+esc(it.n)
      +(it.label?' <span style="font-weight:400;color:var(--dim)">('+esc(it.label)+')</span>':'')
      +'</div>'

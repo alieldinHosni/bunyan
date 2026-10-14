@@ -9,6 +9,7 @@
    One sheet, three modes (V.food.mode): "search", "detail" and "quick". */
 import {t} from "../../i18n/dict.js";
 import {empty} from "../../data/exercises.js";
+import {foodPic} from "../../data/foodicons.js";
 import {frequentFoods} from "../../engine/formulas.js";
 import {density, FOODDB, isMeasure, nutritionFor, searchFoods, sumNutrition, unitGrams, unitKey,
         unitLabel, UNIT_STEP, unitsFor} from "../../engine/nutrition.js";
@@ -83,9 +84,9 @@ function errCard(title,body,retry){
 function card(f,pick,add){
   var s=servs(f)[0],n=nutritionFor(f,s[1]);
   return '<div class="afres">'
-   +'<button class="afres-b" '+pick+'>'
-   +'<span class="afres-n">'+esc(f.n)+' <span>('+esc(s[0])+')</span></span>'
-   +'<span class="afres-m">'+macroLine(n)+'</span></button>'
+   +'<button class="afres-b" '+pick+'>'+foodPic(f)
+   +'<span class="afres-t"><span class="afres-n">'+esc(f.n)+' <span>('+esc(s[0])+')</span></span>'
+   +'<span class="afres-m">'+macroLine(n)+'</span></span></button>'
    +(add?'<button class="afadd" '+add+' aria-label="'+esc(t("Add")+" "+f.n)+'">'
      +'<span class="ico ico-plus" aria-hidden="true"></span></button>':'')
    +'</div>';}
@@ -216,7 +217,7 @@ function vDetail(){
      come from, and the button updates instead of adding. */
   var ed=p.edit,h=ed?afHead(f.n,{sub:'<span class="afsub">'+esc(t("Change the amount"))+'</span>'})
     :afHead(f.n,{back:'data-fback="1"',pre:t("Add to")});
-  h+='<div class="afmono"><div class="afmono-k">'+esc(t("Total calories"))+'</div>'
+  h+='<div class="afmono">'+foodPic(f,"lg")+'<div class="afmono-k">'+esc(t("Total calories"))+'</div>'
    +'<div class="afmono-v">'+fmtN(n.kcal)+'</div><div class="afmono-u">kcal</div>'
    +'<div class="afmono-m">'
    +'<div><b>'+r1(n.p)+'g</b><span>'+esc(t("PRO"))+'</span></div>'

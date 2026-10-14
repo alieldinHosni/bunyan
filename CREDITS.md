@@ -47,7 +47,7 @@ adds one (see `COACHING-INTELLIGENCE.md`, Phase 0).
 | --- | --- | --- |
 | [pdf.js](https://github.com/mozilla/pdf.js) (Mozilla) | Apache-2.0 — `js/vendor/pdfjs/LICENSE.txt` | Reading plan PDFs on the phone |
 | [ZXing for JS](https://github.com/zxing-js/library) 0.21.3 | Apache-2.0 — `js/vendor/zxing-LICENSE.txt` | Barcode scanning where the browser has no detector |
-| [Tabler Icons](https://github.com/tabler/tabler-icons) by Paweł Kuna (31 outline icons) | MIT — the notice is in `js/data/acticons.js` | An icon for each cardio activity and sport; the ten Tabler lacks (the cardio machines, boxing, hockey, badminton, padel, squash) were drawn for Bunyan in the same style |
+| [Tabler Icons](https://github.com/tabler/tabler-icons) by Paweł Kuna (31 outline icons for activities, 42 for foods) | MIT — the notice is in `js/data/acticons.js` and `js/data/foodicons.js` | An icon for each cardio activity and sport (the ten Tabler lacks, the cardio machines, boxing, hockey, badminton, padel and squash, were drawn for Bunyan in the same style), and a picture for every food until it has a photograph |
 | Body shapes from [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter) by ELABBASSI Hicham (`assets/bodyFront.ts`, `bodyBack.ts`) | MIT — the notice is in `js/data/bodymap.js` | The body map: what an exercise works, and this week's sets per muscle |
 
 ## Fonts
