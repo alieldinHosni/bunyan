@@ -123,6 +123,23 @@ var PROPS={
       out.push.apply(out,PROPS.beam([x-.38,.022,z],[x+.38,.022,z],.08,.044));});
     out.push.apply(out,PROPS.beam([x,h+.12,-w-.09],[x,h+.12,w+.09],.065,.065));
     return out;},
+  /* A Smith machine: the bar rides two steel rails, so it can only go straight up and
+     down. c is the bar's centre: the rails stand at its x, z = +-w (inside the plates),
+     each in front of an iron post, and the carriages that hold the bar sit on the rails
+     at its height. A beam over the top, a rail on the floor each side. */
+  smith:function(c,o){
+    o=o||{};var x=c[0],w=o.w||.56,h=o.h||2.2,bx=x-.1,out=[];
+    [-1,1].forEach(function(s){
+      var z=s*w;
+      out.push(capsule([x,.08,z],[x,h-.06,z],.016,4,0));
+      out.push.apply(out,PROPS.beam([bx,0,z],[bx,h+.07,z],.07,.07));
+      [.08,h-.06].forEach(function(y){out.push.apply(out,PROPS.beam([x+.02,y,z],[bx,y,z],.035,.035));});
+      out.push.apply(out,PROPS.beam([x-.62,.022,z],[x+.5,.022,z],.08,.044));});
+    out.push.apply(out,PROPS.beam([bx,h+.035,-w-.035],[bx,h+.035,w+.035],.07,.07));
+    /* the frame is scenery: the camera frames the figure and the bar, not its height */
+    out.forEach(function(q){q.bg=1;});
+    [-1,1].forEach(function(s){out.push(box([x,c[1],s*w],X,Y,Z,[.032,.07,.03],.008,2,0));});
+    return out;},
   /* parallettes: two low bars at z = +-w, centred at x */
   parallettes:function(x,w){
     var out=[];

@@ -98,14 +98,15 @@ function bodySpheres(J){
       [add(J.an[s],mul(J.fd[s].dir,.16)),.05]);});
   return out;}
 /* Everything the camera has to keep in view over the whole movement: the body at five
-   moments and the equipment (its solids, a little inside their bounds), with the middle
+   moments and the equipment (its solids, a little inside their bounds; not scenery, a
+   frame marked bg), with the middle
    and size of it all, and where the feet stand (the floor's pool of light). */
 function framePoints(rec){
   var list=[],feet=[];
   [0,.25,.5,.75,1].forEach(function(u){
     var sc=sceneAt(rec,u);
     bodySpheres(sc.J).forEach(function(b){list.push([b[0][0],b[0][1],b[0][2],b[1]]);});
-    sc.solids.forEach(function(q){list.push([q.c[0],q.c[1],q.c[2],q.r*.7]);});
+    sc.solids.forEach(function(q){if(!q.bg)list.push([q.c[0],q.c[1],q.c[2],q.r*.7]);});
     feet.push(sc.J.an.l,sc.J.an.r,sc.J.P);});
   var lo=[1e9,1e9,1e9],hi=[-1e9,-1e9,-1e9];
   list.forEach(function(q){for(var k=0;k<3;k++){lo[k]=Math.min(lo[k],q[k]-q[3]);hi[k]=Math.max(hi[k],q[k]+q[3]);}});

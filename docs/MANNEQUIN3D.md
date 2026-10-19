@@ -208,6 +208,9 @@ light.
 - It stops when off screen (IntersectionObserver) or when the app is in the
   background. It holds still under reduced motion (the app's Animations setting or the
   system's) until play is pressed. A closed sheet releases the graphics context.
+- A new figure starts a frame after its page has painted. Making the graphics context
+  and its shaders holds the page for a moment, and a change of page (the dock leaving
+  as a workout starts) should not wait on it; the stills show until it is live.
 - No WebGL2, a driver that will not build the shaders, the body not loaded, or a lost
   context: the element keeps showing the two stills it was written with, so nothing is
   ever blank.
@@ -228,19 +231,21 @@ biomechanics, and gives it parameters for what varies:
 
 | Family | Parameters | Examples |
 | --- | --- | --- |
-| `curl` | barbell, EZ bar, dumbbells or cable; palms up, in, down, or turning up; standing, seated, incline, preacher; one arm | Barbell Curl, Hammer Curls, Preacher Curl, Incline Dumbbell Curl |
+| `curl` | barbell, EZ bar, dumbbells or cable (a bar, a rope, or one handle); palms up, in, down, or turning up; standing, seated, incline, preacher; one arm | Barbell Curl, Hammer Curls, Preacher Curl, Cable Hammer Curls - Rope Attachment |
 | `press` | barbell, dumbbells, kettlebells; standing or seated; Arnold's turn; one arm | Standing Military Press, Arnold Dumbbell Press |
-| `raise` | to the side, the front, or the rear (bent over or face down on an incline bench) | Side Lateral Raise, Reverse Flyes |
-| `shrug`, `uprightRow` | barbell or dumbbells | Barbell Shrug, Upright Barbell Row |
+| `raise` | to the side, the front, or the rear (bent over or face down on an incline bench); one arm on a low cable, the other hand on the hip | Side Lateral Raise, Reverse Flyes, Front Cable Raise |
+| `shrug`, `uprightRow` | barbell, dumbbells or a cable bar | Barbell Shrug, Upright Barbell Row, Cable Shrugs |
 | `squat` | bar on the back, front rack, crossed arms, overhead, goblet (dumbbell or kettlebell), dumbbells, hands behind the head; stance | Barbell Squat, Goblet Squat, Overhead Squat |
 | `hinge` | deadlift, Romanian, stiff-legged, sumo, good morning | Barbell Deadlift, Romanian Deadlift |
 | `row` | barbell, dumbbells, kettlebell; grip; one arm with a knee and hand on a bench | Bent Over Barbell Row, One-Arm Dumbbell Row |
-| `benchPress`, `fly` | barbell or dumbbells; flat, incline, decline or the floor; grip width | Barbell Bench Press, Dumbbell Flyes |
-| `triceps` | overhead, lying (skull crusher), kickback, cable pushdown; bar, rope, dumbbells | EZ-Bar Skullcrusher, Triceps Pushdown |
+| `benchPress`, `fly` | barbell or dumbbells (flyes: or two low cables); flat, incline, decline or the floor; grip width | Barbell Bench Press, Dumbbell Flyes, Flat Bench Cable Flyes |
+| `triceps` | overhead, lying (skull crusher), kickback, cable pushdown; bar, rope, dumbbells; palms up on the pushdown; a rope overhead from a low pulley, or leaning forward from a high one; lying with a cable bar | EZ-Bar Skullcrusher, Triceps Pushdown, Cable Rope Overhead Triceps Extension |
 | `pushup`, `pullup`, `dip`, `crunch`, `plank`, `lunge`, `calfRaise`, `bridge` | hands on a box or a bar, feet raised; grip; lean; split, forward or reverse, rear foot on a bench; bench or floor | Pushups, Chin-Up, Sit-Up, Barbell Hip Thrust |
 | `pulldown`, `cableRow`, `crossover` | wide, close, underhand or V-handle grip; behind the neck; one arm | Wide-Grip Lat Pulldown, Seated Cable Rows, Cable Crossover |
 | `legMachine`, `legPress`, `pecDeck` | leg extension, lying or seated leg curl; stance; the pec deck forward or reversed | Leg Extensions, Lying Leg Curls, Leg Press, Butterfly |
 | `stepUp`, `sideBend`, `benchDip`, `invertedRow`, `legRaise`, `hyper`, `kbSwing` | dumbbells or a bar; feet raised; on the floor, a bench or hanging, knees bent; one arm | Dumbbell Step Ups, Bench Dips, Hanging Leg Raise, Hyperextensions |
+| `facePull`, `straightArm`, `cableCrunch`, `pullThrough` | a rope to the face, elbows high; straight arms swept down from a high pulley, a bar or a rope; kneeling, curled down under a high pulley; hinged facing away from a low pulley, the rope between the legs | Face Pull, Straight-Arm Pulldown, Cable Crunch, Pull Through |
+| **On a Smith machine** (`smith` on `squat`, `benchPress`, `press`, `uprightRow`, `row`, `hinge`, `calfRaise`, `shrug`) | the bar runs on two rails, so its path is a straight line up and down: the family keeps the bar on one line and arranges the body round it (the feet ahead of the bar and the trunk more upright in a squat, the hips back in a stiff-legged deadlift, the bar straight up from the chest on a bench) | Smith Machine Squat, Smith Machine Bench Press, Smith Machine Bent Over Row |
 
 A family places the body with the same pose language as the hand-written records, and
 then puts the hands on what they hold: `grasp` sets each hand round its handle (the
@@ -253,7 +258,7 @@ from the body.
 **Which exercise is which family is written by hand** in `TABLE`, by the library's
 exact name: nothing is guessed from a name. An exercise is added only after its row on
 a review sheet agrees with the library's photographs: the same setup (standing, seated,
-on a bench, face down), the same implement, the same start and end. 162 of the
+on a bench, face down), the same implement, the same start and end. 193 of the
 library's exercises are in it so far. The first pass over 62 found real differences,
 all fixed before any shipped: Reverse Flyes is
 done face down on an incline bench, the library's Split Squat with Dumbbells has the
@@ -263,12 +268,16 @@ knee and hand on a bench. Later passes did the same:
 
 - the incline push-ups are done with the hands on a bar, so they got a variant;
 - the one-arm exercises got the free arm the photographs show (hanging with its dumbbell, empty, or on the hip);
-- the pulldown and reverse-fly machines got their weight stacks in front, as in the photographs.
+- the pulldown and reverse-fly machines got their weight stacks in front, as in the photographs;
+- on a Smith machine, a side view put the near plates over the body, so those look from the front between the rails, and the frame (2.2 m of rails and posts) is scenery the camera does not fit, or the figure would be small inside it;
+- a cable column in front of a curl, an upright row or a shrug stood between the camera and the arms, so those look from the side, as the photographs do.
 
 Exercises whose photographs show a setup no family draws yet were left out rather than
 drawn wrongly: a kettlebell press seated on the floor with the legs apart, a one-arm
 kettlebell row in a split stance, a one-arm press braced on a bench, a lat pulldown with
-two separate handles, and a one-arm low cable crossover.
+two separate handles, and a one-arm low cable crossover. The cable preacher curl is
+drawn correctly but its column stands where the camera would see the pad from, so the
+pad does not read; it keeps its photographs.
 
 **What lights up** stays the library's. Where the library lists no secondary muscles,
 the app fills them in from the movement's pattern; raises and shrugs are filed as

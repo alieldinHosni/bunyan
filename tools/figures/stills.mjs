@@ -32,7 +32,9 @@ for(const n of names){
     grid.style.display="block";
     grid.innerHTML='<div class="pv-cell" data-palette="blue" data-theme="dark" style="width:1080px;padding:0;border-radius:0">'+M.fig3dHtml(n,{})+'</div>';
     M.syncMannequins();
-    const m=M.mannequins().find(x=>x.name===n);
+    /* a new figure starts once the page has painted */
+    let m;for(let i=0;i<100&&!(m=M.mannequins().find(x=>x.name===n));i++)await new Promise(r=>setTimeout(r,30));
+    if(!m)return {err:"not started"};
     for(let i=0;i<200&&!m.state().live;i++)await new Promise(r=>setTimeout(r,50));
     const cv=m.el.querySelector("canvas"),out={};
     for(const u of [0,1]){m.setU(u);out[u]=cv.toDataURL("image/png");}

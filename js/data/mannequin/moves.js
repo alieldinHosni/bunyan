@@ -107,6 +107,15 @@ function dbIn(J,s,o){return ["dumbbell",J.grip[s],norm(cross(J.pn[s],J.hd[s])),o
 function dbsIn(J,o){return [dbIn(J,"l",o),dbIn(J,"r",o)];}
 /* a kettlebell by its handle, the bell hanging from the hand */
 function kbIn(J,s,down){return ["kettlebell",J.grip[s],down||[0,-1,0]];}
+/* A rope attachment: a strand from each hand to the knot, and the cable from the
+   knot to its pulley (a column standing at b, the pulley ph high). */
+function ropeIn(J,knot,b,ph){
+  return [["cable",b,ph,knot,{handle:false}],["tube",J.grip.l,knot,.012,3],["tube",J.grip.r,knot,.012,3]];}
+/* a cable to one handle (a D handle) in hand s */
+function handleIn(J,s,b,ph){
+  return [["cable",b,ph,J.grip[s],{handle:false}],["grip",J.grip[s],norm(cross(J.pn[s],J.hd[s])),.06]];}
+/* a Smith machine's frame round the bar, its rails at x (the bar's line) */
+function smithIn(J,x){var c=lerp(J.grip.l,J.grip.r,.5);return ["smith",[x,c[1],0]];}
 var BENCH=["bench",[-.25,0,0],{len:1.15}];
 /* where a back pad's surface meets the seat, under the hips, from the pelvis */
 function padFoot(J){return sub(J.P,mul(J.pf.f,.13));}
@@ -173,7 +182,8 @@ function curl(o){
     var up=rz(sag(t),90);
     var pn=grip==="sup"?up:grip==="pro"?mul(up,-1):grip==="ham"?[0,0,-sg(s)]:norm(lerp([0,0,-sg(s)],up,Math.min(1,u*1.6)));
     armTo(p,J,s,ua,fa,pn);}
-  var rec={keys:[b0,b0],tempo:[1.1,.3,1.7,.5],cam:{yaw:at==="incline"?70:at==="preacher"?40:32,pitch:8},arrow:{track:"wr.l"},
+  /* a cable column stands in front: look from the side, past it */
+  var rec={keys:[b0,b0],tempo:[1.1,.3,1.7,.5],cam:{yaw:imp==="cable"?95:at==="incline"?70:at==="preacher"?40:32,pitch:8},arrow:{track:"wr.l"},
     drive:function(p,u){
       var J=base(p);
       p.grip="grip";
@@ -185,8 +195,10 @@ function curl(o){
       var e=[];
       if(imp==="bb"||imp==="ez")e.push(barIn(J,{plate:.12,len:imp==="ez"?.62:.75,sleeve:imp==="ez"?.26:.22,ez:imp==="ez"}));
       else if(imp==="db")e=e.concat(o.single?[dbIn(J,o.one)]:dbsIn(J));
-      else if(imp==="cable"){var mid=lerp(J.grip.l,J.grip.r,.5);
-        e.push(["cable",[.75,0,0],.12,mid,{handle:false}],["grip",mid,norm(sub(J.grip.l,J.grip.r)),.24]);}
+      else if(imp==="cable"){var mid=lerp(J.grip.l,J.grip.r,.5),cb=[.75,0,0];
+        if(o.rope)e=e.concat(ropeIn(J,add(mid,[.05,-.07,0]),cb,.12));
+        else if(o.single)e=e.concat(handleIn(J,o.one,cb,.12));
+        else e.push(["cable",cb,.12,mid,{handle:false}],["grip",mid,norm(sub(J.grip.l,J.grip.r)),.24]);}
       if(at==="sit")e.push(BENCH);
       if(at==="incline")e.push(["adjBench",padFoot(J),55]);
       if(at==="preacher")e.push(["preacher",lerp(J.sh.l,J.sh.r,.5),sag(45),o.stand?null:[J.P[0]-.02,J.P[1]-.13,0]]);
@@ -207,7 +219,7 @@ function press(o){
     drive:function(p,u){
       var J=base(p),sh=lerp(J.sh.l,J.sh.r,.5),y=sh[1],x=sh[0];
       if(imp==="bb"){
-        var w=o.w||.27,c=o.behind?lerp([x-.13,y+.07,0],[x-.03,y+.56,0],u):polyAt([[x+.12,y+.03,0],[x+.17,y+.22,0],[x+.04,y+.56,0]],u);
+        var w=o.w||.27,c=o.behind?lerp([x-.13,y+.07,0],[x-.03,y+.56,0],u):o.smith?[x+.1,y+.03+.5*u,0]:polyAt([[x+.12,y+.03,0],[x+.17,y+.22,0],[x+.04,y+.56,0]],u);
         onBar(p,c,o.behind?.36:w,[1,.2,0],[0,1,0],o.behind?8:18);
         p.elbows=o.behind?S(.1,-1,1):S(.8,-1,.25);}
       else{
@@ -231,8 +243,10 @@ function press(o){
       else if(imp==="db"){e=e.concat(dbsIn(J));if(o.free==="hang")e[e.length-(o.one==="l"?1:2)]=["dumbbell",J.grip[o.one==="l"?"r":"l"],[1,0,0]];}
       else e.push(kbIn(J,"l",norm(sub(J.el.l,J.wr.l))),kbIn(J,"r",norm(sub(J.el.r,J.wr.r))));
       if(at==="sit")e.push(["adjBench",padFoot(J),84]);
+      if(o.smith)e.push(smithIn(J,lerp(J.sh.l,J.sh.r,.5)[0]+.1));
       return e;}};
   if(o.one)rec.arrow={track:"wr."+o.one};
+  if(o.smith)rec.cam={yaw:32,pitch:6};
   return rec;}
 
 /* ---- raises: a nearly straight arm swung up from the side or the front ----
@@ -251,9 +265,11 @@ function raise(o){
       var J=base(p);
       LR.forEach(function(s){
         /* a plate held in both hands starts in front of the thighs, not in them */
-        var t=(o.one&&o.one!==s)?0:u,a=num(dir==="side"?10:imp==="plate"||imp==="bb"?20:6,top,t)*R,d,pn;
+        /* a low cable from the other side starts the hand across, in front of the body */
+        var a0=dir==="side"?(imp==="cable"?-14:10):imp==="plate"||imp==="bb"?20:6;
+        var t=(o.one&&o.one!==s)?0:u,a=num(a0,top,t)*R,d,pn;
         if(dir==="front"){d=[Math.sin(a),-Math.cos(a),sg(s)*.12];pn=[-Math.cos(a),-Math.sin(a),0];}
-        else if(dir==="side"){d=[.12,-Math.cos(a),sg(s)*Math.sin(a)];pn=[0,-Math.sin(a),-sg(s)*Math.cos(a)];}
+        else if(dir==="side"){d=[.12+(a<.3?(.3-a)*.6:0),-Math.cos(a),sg(s)*Math.sin(a)];pn=[0,-Math.sin(a),-sg(s)*Math.cos(a)];}
         else{/* bent over: out to the sides from the trunk's front, in the trunk's frame */
           var f=J.pf.f,l=mul(J.pf.l,sg(s)),dn=mul(J.pf.f,1);
           d=norm(add(mul(dn,Math.cos(a)),mul(l,Math.sin(a))));pn=norm(sub(mul(l,-Math.cos(a)),mul(f,Math.sin(a))));
@@ -264,8 +280,10 @@ function raise(o){
         armTo(p,J,s,d,bend,pn);
         p.elbows[s]=dir==="front"?side([0,-.2,1],s):dir==="side"?[-.4,.3,0]:mul(J.pf.u,1);});
       p.grip="grip";
-      if(o.single)freeArm(p,J,o.one==="l"?"r":"l","hang");},
+      if(o.single)freeArm(p,J,o.one==="l"?"r":"l",o.free||"hang");},
     equip:function(J){
+      if(imp==="cable"){var cs=o.one;
+        return handleIn(J,cs,dir==="front"?[-.62,0,0]:[0,0,-sg(cs)*.78],.1);}
       var e=imp==="plate"?[["disc",lerp(J.grip.l,J.grip.r,.5),[1,0,0],.17,.03,2]]:imp==="bb"?[barIn(J,{plate:.12,len:.75,sleeve:.22})]:o.single?[dbIn(J,o.one)]:dbsIn(J);
       if(prone)e.push(["adjBench",add(J.P,mul(J.pf.f,.14)),35,{prone:true,len:.6}]);
       if(o.at==="sit")e.push(BENCH);
@@ -279,7 +297,7 @@ function shrug(o){
   o=o||{};
   var imp=o.imp||"bb";
   var k0=stand({shrug:0}),k1=stand({shrug:32});
-  return {keys:[k0,k1],tempo:[.8,.6,1.2,.5],cam:{yaw:150,pitch:8},arrow:{track:"sh.l"},refine:{Back:"Traps"},
+  return {keys:[k0,k1],tempo:[.8,.6,1.2,.5],cam:{yaw:imp==="cable"?75:150,pitch:8},arrow:{track:"sh.l"},refine:{Back:"Traps"},
     drive:function(p){
       var J=base(p),h={};
       LR.forEach(function(s){
@@ -287,13 +305,15 @@ function shrug(o){
         var z=imp==="db"?sg(s)*.25:sg(s)*.26,y=J.sh[s][1]-Math.sqrt(Math.max(REACH*REACH-(x-J.sh[s][0])*(x-J.sh[s][0])-(z-J.sh[s][2])*(z-J.sh[s][2]),.01));
         h[s]={g:[x,y,z],axis:imp==="db"?[1,0,0]:[0,0,1],pn:imp==="db"?[0,0,-sg(s)]:o.behind?[1,0,0]:[-1,0,0],hd:[0,-1,0]};});
       grasp(p,h);p.grip="grip";},
-    equip:function(J){return imp==="db"?dbsIn(J):[barIn(J)];}};}
+    equip:function(J){
+      if(imp==="cable"){var m=lerp(J.grip.l,J.grip.r,.5);return [["cable",[.7,0,0],.1,m,{handle:false}],["grip",m,[0,0,1],.3]];}
+      return imp==="db"?dbsIn(J):o.smith?[barIn(J),smithIn(J,o.behind?-.13:.13)]:[barIn(J)];}};}
 
 /* ---- upright rows: a narrow bar drawn up the body, the elbows leading high ---- */
 function uprightRow(o){
   o=o||{};
   var imp=o.imp||"bb",b0=stand();
-  return {keys:[b0,b0],tempo:[1.0,.3,1.5,.5],cam:{yaw:45,pitch:6},arrow:{track:"wr.l"},refine:{Back:"Traps"},
+  return {keys:[b0,b0],tempo:[1.0,.3,1.5,.5],cam:{yaw:imp==="cable"?75:45,pitch:6},arrow:{track:"wr.l"},refine:{Back:"Traps"},
     drive:function(p,u){
       var J=base(p),sh=lerp(J.sh.l,J.sh.r,.5);
       var c=lerp([.15,sh[1]-.56,0],[.15,sh[1]-.06,0],u);
@@ -303,7 +323,7 @@ function uprightRow(o){
     equip:function(J){
       if(imp==="db")return [["dumbbell",J.grip.l,[0,0,1]],["dumbbell",J.grip.r,[0,0,1]]];
       if(imp==="cable"){var mid=lerp(J.grip.l,J.grip.r,.5);return [["cable",[.7,0,0],.12,mid,{handle:false}],["grip",mid,[0,0,1],.18]];}
-      return [barIn(J,{plate:.16})];}};}
+      return o.smith?[barIn(J),smithIn(J,.15)]:[barIn(J,{plate:.16})];}};}
 
 /* ---- squats ----
    load "back" | "front" | "goblet" | "db" (at the sides) | "none" (arms forward) |
@@ -313,8 +333,13 @@ function squat(o){
   var load=o.load||"back",w=o.w||.19,toe=o.toe||22;
   var lean=load==="front"||load==="cross"||load==="goblet"||load==="kb"||load==="overhead"?24:load==="none"||load==="prisoner"?28:38;
   var deep=o.depth==="full";
-  var top=Object.assign(stand({pelvis:[0,1.04,0],pitch:load==="back"?6:2}),stance(w,toe));
-  var bot=Object.assign(stand({pelvis:[deep?-.15:-.2,deep?.5:.6,0],pitch:lean+(deep?4:0),head:-lean*.5}),stance(w,toe));
+  /* on a Smith machine the feet stand a little in front of the bar's line and the
+     trunk stays more upright, the hips sinking under the bar */
+  var sm=o.smith,fx=sm?.12:0,sx=0;
+  if(sm)lean*=.6;
+  var top=Object.assign(stand({pelvis:[0,sm?1.03:1.04,0],pitch:load==="back"?(sm?2:6):2}),stance(w,toe,fx));
+  var bot=Object.assign(stand({pelvis:[deep?-.15:-.2,deep?.5:.6,0],pitch:lean+(deep?4:0),head:-lean*.5}),stance(w,toe,fx));
+  if(sm){sx=onChest(base(top),.41,-.1)[0];bot.pelvis=[bot.pelvis[0]+sx-onChest(base(bot),.41,-.1)[0],bot.pelvis[1],0];}
   var rec={keys:[bot,top],tempo:[1.2,.3,1.7,.5],cam:{yaw:(load==="back"||load==="db"||load==="none")&&w<.26?62:38,pitch:8},arrow:{track:"P"},refine:{Glutes:"Glutes"},
     drive:function(p){
       var J=base(p),h={};
@@ -341,7 +366,10 @@ function squat(o){
       else if(load==="kb")e.push(["kettlebell",add(lerp(J.grip.l,J.grip.r,.5),[0,.01,0]),[0,-1,0]]);
       else if(load==="db")e=e.concat(dbsIn(J));
       if(o.box)e.push(["block",[-.42,.21,0],[.2,.21,.22]]);
+      if(sm)e.push(smithIn(J,sx));
       return e;}};
+  /* in a Smith machine, from the front, between the rails */
+  if(sm)rec.cam={yaw:30,pitch:8};
   return rec;}
 
 /* ---- hinges: deadlifts, Romanian deadlifts, good mornings ----
@@ -356,15 +384,24 @@ function hinge(o){
   var bot=Object.assign(stand(lo),st),top=Object.assign(stand({pitch:-2}),st);
   if(kind==="deadlift"||sumo){bot.knees=sumo?S(.6,0,1):S(1,0,.4);}
   if(kind==="stiff"){bot.knees=S(1,0,.1);}
-  return {keys:[bot,top],tempo:[1.2,.4,1.8,.6],cam:{yaw:sumo?38:gm?84:72,pitch:6},arrow:{track:gm?"sh.l":"wr.l"},
+  var sm=o.smith,sx=0;
+  if(sm){
+    bot.pitch=Math.min(bot.pitch,64);
+    sx=hangBar(base(top),.25,true)[0];
+    var shb=lerp(base(bot).sh.l,base(bot).sh.r,.5);
+    bot.pelvis=[bot.pelvis[0]+sx+.03-shb[0],bot.pelvis[1],0];}
+  /* a Smith machine's plates would hide the body from the side */
+  return {keys:[bot,top],tempo:[1.2,.4,1.8,.6],cam:{yaw:sumo||sm?38:gm?84:72,pitch:sm?10:6},arrow:{track:gm?"sh.l":"wr.l"},
     refine:{Back:"Lower back"},
     drive:function(p){
       var J=base(p);
       if(gm){var B=onChest(J,.41,-.1);onBar(p,B,.42,[1,.3,0],[0,1,0],10);p.elbows=S(-.4,-1,.6);p.grip="grip";return;}
       if(imp==="db"){var h={};LR.forEach(function(s){var g=hangBar(J,.2);h[s]={g:[g[0],g[1],sg(s)*.2],axis:[0,0,1],pn:[-1,0,0],hd:[0,-1,0]};});grasp(p,h);}
-      else{var w=sumo?.17:.25,c=hangBar(J,w,!sumo);if(kind==="deadlift"||sumo)c[1]=Math.max(c[1],.225);onBar(p,c,w,[-1,0,0],[0,-1,0],0);}
+      else{var w=sumo?.17:.25,c=hangBar(J,w,!sumo);if(kind==="deadlift"||sumo)c[1]=Math.max(c[1],.225);
+        if(sm){var sh=lerp(J.sh.l,J.sh.r,.5),dx=sx-sh[0];c=[sx,sh[1]-Math.sqrt(Math.max(REACH*REACH*.97-dx*dx-.0025,.01)),0];}
+        onBar(p,c,w,[-1,0,0],[0,-1,0],0);}
       p.elbows=S(-1,0,.2);p.grip="grip";},
-    equip:function(J){return imp==="db"?dbsIn(J):[barIn(J)];}};}
+    equip:function(J){return imp==="db"?dbsIn(J):sm?[barIn(J),smithIn(J,sx)]:[barIn(J)];}};}
 
 /* ---- bent-over rows: the trunk leaning forward, the weight pulled to the body ----
    imp "bb" | "db" | "kb"; grip "pro" | "sup" | "ham"; one: one arm, the other hand
@@ -373,8 +410,10 @@ function row(o){
   o=o||{};
   var imp=o.imp||"bb",grip=o.grip||(imp==="bb"?"pro":"ham");
   var one=o.one;
-  var b0=one?kneelOnBench():stand({pelvis:[-.17,.92,0],pitch:62,head:-28,knees:S(1,0,.18)});
-  var rec={keys:[b0,b0],tempo:[1.0,.4,1.5,.5],cam:{yaw:one?110:120,pitch:14},arrow:{track:"wr."+(one||"l")},refine:{Back:"Lats"},
+  var b0=one?kneelOnBench():stand({pelvis:[-.17,.92,0],pitch:o.smith?50:62,head:-28,knees:S(1,0,.18)});
+  /* on a Smith machine the bar's line is where it meets the body at the top */
+  var sx=o.smith?onTrunk(base(b0),.2,.17)[0]:0;
+  var rec={keys:[b0,b0],tempo:[1.0,.4,1.5,.5],cam:{yaw:o.smith?38:one?110:120,pitch:14},arrow:{track:"wr."+(one||"l")},refine:{Back:"Lats"},
     drive:function(p,u){
       var J=base(p),h={};
       LR.forEach(function(s){
@@ -382,6 +421,10 @@ function row(o){
         var down=add(J.sh[s],[.02,-REACH*.97,0]);
         var w=imp==="bb"?.26:.21,top=onTrunk(J,.18,.17,sg(s)*w);
         down[2]=sg(s)*(imp==="bb"?.26:.22);
+        if(o.smith){
+          var dx=sx-J.sh[s][0],dz=sg(s)*.26-J.sh[s][2];
+          down=[sx,J.sh[s][1]-Math.sqrt(Math.max(REACH*REACH*.94-dx*dx-dz*dz,.01)),sg(s)*.26];
+          var du=(sx-J.P[0]-J.pf.f[0]*.17)/(J.pf.u[0]||1e-6);top=onTrunk(J,du,.17,sg(s)*.26);top=[sx,top[1],sg(s)*.26];}
         var g=lerp(down,top,u);
         var pn=grip==="pro"?[-1,0,0]:grip==="sup"?[1,0,0]:[0,0,-sg(s)];
         h[s]={g:g,axis:grip==="ham"?[1,0,0]:[0,0,1],pn:pn,hd:[0,-1,0]};});
@@ -394,6 +437,7 @@ function row(o){
       if(imp==="bb")e.push(barIn(J));
       else if(one)e.push(imp==="kb"?kbIn(J,one):dbIn(J,one));
       else e=e.concat(imp==="kb"?[kbIn(J,"l"),kbIn(J,"r")]:dbsIn(J));
+      if(o.smith)e.push(smithIn(J,sx));
       if(one)e.push(["bench",[-.25,0,-sg(one)*.16],{len:1.15}]);
       return e;}};
   if(one)rec.refine={Back:"Lats"};
@@ -414,6 +458,7 @@ function benchPress(o){
       var low=onChest(J,ang>0?.33:.29,.16),high=add(sh,add(mul(up,.53),mul(J.cf.u,-.03)));
       if(imp==="bb"){
         var c=lerp(low,high,u);c[2]=0;
+        if(o.smith){var dx=low[0]-sh[0];c=[low[0],num(low[1],sh[1]+Math.sqrt(Math.max(.53*.53-dx*dx,.01)),u),0];}
         var tf=mul(J.cf.u,-1);  /* toward the feet */
         onBar(p,c,w,norm(add(tf,[0,.5,0])),norm(add(up,mul(J.cf.u,.15))),20);
         p.elbows=S(0,-.7,1);p.elbows.l=add(p.elbows.l,mul(tf,.4));p.elbows.r=add(p.elbows.r,mul(tf,.4));}
@@ -429,8 +474,10 @@ function benchPress(o){
     equip:function(J){
       var e=[];
       if(imp==="bb")e.push(barIn(J));else e=e.concat(dbsIn(J));
+      if(o.smith)e.push(smithIn(J,onChest(J,ang>0?.33:.29,.16)[0]));
       if(!o.floor)e.push(benchFor(J,ang));
       return e;}};
+  if(o.smith)rec.cam={yaw:26,pitch:18};
   return rec;}
 
 /* ---- flyes: lying, the arms opening wide in an arc and closing over the chest ----
@@ -452,7 +499,11 @@ function fly(o){
         p.elbows[s]=add(mul(tf,.5),[0,-1,0]);});
       p.grip="grip";},
     equip:function(J){
-      var e=dbsIn(J);
+      var e=[];
+      if(imp==="cable")LR.forEach(function(s){var sx=J.sh[s][0],z=sg(s)*1.1,pz=z-sg(s)*.16;
+        e=e.concat([["tower",[sx,0,z],[0,0,-sg(s)],{h:2.25,w:.3,d:.22}],["disc",[sx,.22,pz],[1,0,0],.05,.025,4],
+          ["tube",[sx,.22,pz],J.grip[s],.005,4],["grip",J.grip[s],norm(cross(J.pn[s],J.hd[s])),.06]]);});
+      else e=dbsIn(J);
       e.push(benchFor(J,ang));
       return e;}};}
 
@@ -464,16 +515,19 @@ function triceps(o){
   o=o||{};
   var kind=o.kind||"overhead",imp=o.imp||"db";
   var b0=kind==="lying"?lie():kind==="kickback"?(o.one?kneelOnBench():stand({pelvis:[-.16,.93,0],pitch:68,head:-30,knees:S(1,0,.15)})):
-    kind==="pushdown"?stand({pitch:8}):o.at==="sit"?sit({pelvis:[-.02,.57,0],pitch:-6}):stand();
+    kind==="pushdown"?stand({pitch:8}):o.at==="sit"?sit({pelvis:[-.02,.57,0],pitch:-6}):
+    o.lean?stand({pitch:o.lean,head:-8,feet:{l:[.24,ANKLE,.13],r:[-.24,ANKLE,-.13]},knees:S(1,0,.1)}):stand();
+  var lean=o.lean||0;
   return {keys:[b0,b0],tempo:[1.0,.3,1.5,.5],cam:{yaw:kind==="lying"?62:kind==="kickback"?100:kind==="pushdown"?82:40,pitch:kind==="lying"?18:8},arrow:{track:"wr."+(o.one||"l")},
     drive:function(p,u){
       var J=base(p),both=imp==="db1"||imp==="ez"||imp==="bb"||imp==="rope"||imp==="bar";
       LR.forEach(function(s){
         var t=(o.one&&o.one!==s)?0:u,ua,fa,pn,w;
         if(kind==="overhead"){
-          ua=norm([.12,1,sg(s)*(both?-.05:.04)]);
-          fa=norm(add(rz([0,1,0],num(140,6,t)),[0,0,sg(s)*(both?-.18:0)]));
-          pn=imp==="db"?[0,0,-sg(s)]:rz([0,1,0],num(140,6,t)+90);}
+          /* leaning forward, the whole arm turns with the trunk */
+          ua=norm(rz([.12,1,sg(s)*(both?-.05:.04)],-lean));
+          fa=norm(add(rz([0,1,0],num(140,6,t)-lean),[0,0,sg(s)*(both?-.18:0)]));
+          pn=imp==="db"||imp==="rope"?[0,0,-sg(s)]:rz([0,1,0],num(140,6,t)+90-lean);}
         else if(kind==="lying"){
           ua=norm(add([0,1,0],mul(J.cf.u,.22)));
           var a=num(118,0,t);fa=norm(add(mul([0,1,0],Math.cos(a*R)),mul(J.cf.u,Math.sin(a*R))));
@@ -486,7 +540,7 @@ function triceps(o){
         else{
           ua=norm([.1,-1,sg(s)*.02]);
           var q=num(80,4,t)*R;fa=norm([Math.sin(q),-Math.cos(q),imp==="rope"?sg(s)*num(.05,.25,t):-sg(s)*.04]);
-          pn=imp==="rope"?[0,0,-sg(s)]:rz(fa,-90);}
+          pn=imp==="rope"?[0,0,-sg(s)]:rz(fa,o.grip==="sup"?90:-90);}
         if(kind==="kickback"&&o.one&&o.one!==s)return;
         if(kind==="overhead"&&o.one&&o.one!==s){freeArm(p,J,s,"hip");return;}
         armTo(p,J,s,ua,fa,pn);
@@ -499,6 +553,11 @@ function triceps(o){
       if(imp==="db"){if(o.one)e.push(dbIn(J,o.one));else e=e.concat(dbsIn(J));}
       else if(imp==="db1"){var m=lerp(J.grip.l,J.grip.r,.5);e.push(["dumbbell",add(m,mul(J.hd.l,-.02)),J.hd.l]);}
       else if(imp==="bb"||imp==="ez")e.push(barIn(J,{plate:.16,len:imp==="ez"?.62:1.05,ez:imp==="ez"}));
+      if(kind==="overhead"&&imp==="rope"){var kn=lerp(J.grip.l,J.grip.r,.5);
+        kn=add(kn,mul(norm(sub(kn,lerp(J.el.l,J.el.r,.5))),.06));
+        e=e.concat(ropeIn(J,kn,lean?[-.8,0,0]:[-.62,0,0],lean?1.95:.12));}
+      if(kind==="lying"&&imp==="bar"){var lm=lerp(J.grip.l,J.grip.r,.5);
+        e.push(["cable",[-1.2,0,0],.14,lm,{handle:false}],["grip",lm,norm(sub(J.grip.l,J.grip.r)),.15]);}
       if(kind==="pushdown"){var mid=lerp(J.grip.l,J.grip.r,.5);
         e.push(["cable",[.62,0,0],2.05,mid,{handle:false}]);
         if(imp==="rope")e.push(["tube",J.grip.l,mid,.012,3],["tube",J.grip.r,mid,.012,3]);
@@ -622,13 +681,14 @@ function calfRaise(o){
   var imp=o.imp||"none";
   var lo=stand({pelvis:[0,1.04,0]}),hi=stand({pelvis:[-.02,1.115,0],feet:S(-.02,.152,.13),toes:S(0,0,0)});
   hi.toes={l:-34,r:-34};
-  return {keys:[lo,hi],tempo:[.8,.6,1.2,.4],cam:{yaw:80,pitch:4},arrow:{track:"an.l"},
+  var sx=o.smith?onChest(base(lo),.41,-.1)[0]:0;
+  return {keys:[lo,hi],tempo:[.8,.6,1.2,.4],cam:{yaw:o.smith?50:80,pitch:4},arrow:{track:"an.l"},
     drive:function(p){
       var J=base(p),h={};
       if(imp==="db"){LR.forEach(function(s){h[s]={g:add(J.sh[s],[0,-REACH*.98,sg(s)*.04]),axis:[1,0,0],pn:[0,0,-sg(s)],hd:[0,-1,0]};});grasp(p,h);p.grip="grip";}
       else if(imp==="bb"){onBar(p,onChest(J,.41,-.1),.42,[1,.3,0],[0,1,0],10);p.elbows=S(-.4,-1,.6);p.grip="grip";}
       else{LR.forEach(function(s){h[s]={g:onTrunk(J,.1,.02,sg(s)*.22),axis:[1,0,0],pn:[0,0,-sg(s)],hd:[0,-1,0]};});grasp(p,h);p.grip="open";}},
-    equip:function(J){return imp==="db"?dbsIn(J):imp==="bb"?[barIn(J)]:[];}};}
+    equip:function(J){return imp==="db"?dbsIn(J):imp==="bb"?(o.smith?[barIn(J),smithIn(J,sx)]:[barIn(J)]):[];}};}
 
 /* ---- glute bridges and hip thrusts: the hips driven up, the shoulders still ----
    at "floor" (shoulders on the floor) | "bench" (shoulders on a bench); imp "none" | "bb" */
@@ -927,6 +987,77 @@ function kbSwing(o){
       var g=o.one?J.grip[o.one]:lerp(J.grip.l,J.grip.r,.5),dn=norm(sub(lerp(J.grip.l,J.grip.r,.5),lerp(J.sh.l,J.sh.r,.5)));
       return [["kettlebell",g,dn]];}};}
 
+/* ---- face pulls: a rope from a pulley at face height drawn back to the face, the
+   elbows high and wide, the hands finishing beside the ears ---- */
+function facePull(o){
+  var b0=stand({pitch:-4,head:2,feet:{l:[.12,ANKLE,.15],r:[-.14,ANKLE,-.15]},knees:S(1,0,.08)});
+  return {keys:[b0,b0],tempo:[1.0,.4,1.4,.5],cam:{yaw:62,pitch:8},arrow:{track:"wr.l"},refine:{Shoulders:"Rear delts",Back:"Traps"},
+    drive:function(p,u){
+      var J=base(p),h={};
+      LR.forEach(function(s){
+        var sh=J.sh[s],g=lerp([sh[0]+REACH*.95,sh[1]+.06,sg(s)*.07],[sh[0]+.08,sh[1]+.2,sg(s)*.24],u);
+        /* palms in with the arms long; facing forward by the ears */
+        h[s]={g:g,axis:norm(lerp([0,1,0],[.4,0,-sg(s)],u)),pn:norm(lerp([0,0,-sg(s)],[.6,0,-sg(s)*.8],u)),hd:norm(lerp([1,0,0],[0,1,0],u))};});
+      grasp(p,h);
+      p.elbows=S(-.3,.7*u,1);p.grip="grip";},
+    equip:function(J){
+      var m=lerp(J.grip.l,J.grip.r,.5);
+      return ropeIn(J,[Math.max(m[0],J.grip.l[0])+.12,m[1],0],[1.15,0,0],1.6);}};}
+
+/* ---- straight-arm pulldowns: facing a high pulley, the arms kept long and swept down
+   from in front of the face to the thighs ---- grip "pro" (a bar) | "rope" */
+function straightArm(o){
+  o=o||{};
+  var rope=o.grip==="rope";
+  var b0=stand({pelvis:[rope?-.08:-.03,1.0,0],pitch:rope?28:14,head:-6,knees:S(1,0,.12),feet:S(0,ANKLE,.15)});
+  return {keys:[b0,b0],tempo:[1.0,.4,1.5,.5],cam:{yaw:72,pitch:8},arrow:{track:"wr.l"},refine:{Back:"Lats"},
+    drive:function(p,u){
+      var J=base(p),h={};
+      LR.forEach(function(s){
+        /* the arm's angle from straight down toward the front */
+        var a=num(rope?118:100,rope?8:14,u)*R,d=[Math.sin(a),-Math.cos(a),0];
+        var dz=sg(s)*(rope?.06:.24)-J.sh[s][2],L=Math.sqrt(Math.max(REACH*REACH*.95-dz*dz,.01));
+        var g=add(J.sh[s],[d[0]*L,d[1]*L,dz]);
+        h[s]=rope?{g:g,axis:[Math.cos(a),Math.sin(a),0],pn:[0,0,-sg(s)],hd:d}:{g:g,axis:[0,0,1],pn:[-Math.cos(a),-Math.sin(a),0],hd:d};});
+      grasp(p,h);p.elbows=S(-1,0,.4);p.grip="grip";},
+    equip:function(J){
+      var m=lerp(J.grip.l,J.grip.r,.5);
+      if(rope)return ropeIn(J,add(m,[.1,.06,0]),[1.05,0,0],2.05);
+      return [["cable",[1.05,0,0],2.05,m,{handle:false}],["grip",m,[0,0,1],.3]];}};}
+
+/* ---- cable crunches: kneeling under a high pulley, a rope held by the head, the
+   trunk curled down toward the knees while the hips stay up ---- */
+function cableCrunch(o){
+  var legs={feet:S(-.46,.07,.13),footDir:S(-1,-.3,.05),sole:S(0,1,0),knees:S(1,-.5,.1)};
+  var lo=Object.assign({pelvis:[-.02,.6,0],pitch:38,bend:8,head:-12},legs),hi=Object.assign({pelvis:[-.1,.54,0],pitch:66,bend:46,head:6},legs);
+  return {keys:[lo,hi],tempo:[1.0,.5,1.4,.4],cam:{yaw:72,pitch:10},arrow:{track:"sh.l"},refine:{Core:"Abs"},
+    drive:function(p){
+      var J=base(p),h={};
+      LR.forEach(function(s){h[s]={g:add(J.head,add(mul(J.hu,-.1),add(mul(J.hf,.02),mul(J.cf.l,sg(s)*.09)))),axis:J.hu,pn:mul(J.cf.l,-sg(s)),hd:J.hu};});
+      grasp(p,h);p.elbows=S(1,-.3,.4);p.grip="grip";},
+    equip:function(J){
+      var m=lerp(J.grip.l,J.grip.r,.5);
+      return [["mat",[-.2,0,0],{len:.55,w:.38}]].concat(ropeIn(J,add(m,add(mul(J.hu,.12),mul(J.hf,.06))),[.85,0,0],2.05));}};}
+
+/* ---- pull-throughs: facing away from a low pulley, the rope between the legs, the
+   hips hinged back and driven through to standing ---- */
+function pullThrough(o){
+  var st=stance(.25,22);
+  var bot=Object.assign(stand({pelvis:[-.24,.86,0],pitch:66,head:-28}),st),top=Object.assign(stand({pitch:-2}),st);
+  bot.knees=S(1,0,.35);
+  return {keys:[bot,top],tempo:[1.1,.4,1.6,.5],cam:{yaw:70,pitch:8},arrow:{track:"P"},refine:{Glutes:"Glutes"},
+    drive:function(p,u){
+      var J=base(p),h={},kx=(J.kn.l[0]+J.kn.r[0])/2;
+      LR.forEach(function(s){
+        /* between the knees at the bottom, in front of the hips at the top */
+        var x=num(kx-.06,J.P[0]+.16,u),dx=x-J.sh[s][0],dz=sg(s)*.05-J.sh[s][2];
+        var g=[x,J.sh[s][1]-Math.sqrt(Math.max(REACH*REACH*.96-dx*dx-dz*dz,.01)),sg(s)*.05];
+        h[s]={g:g,axis:[1,0,0],pn:[0,0,-sg(s)],hd:[0,-1,0]};});
+      grasp(p,h);p.elbows=S(-1,0,.3);p.grip="grip";},
+    equip:function(J){
+      var m=lerp(J.grip.l,J.grip.r,.5);
+      return ropeIn(J,add(m,[-.1,-.05,0]),[-1.05,0,0],.12);}};}
+
 /* ================= the library: which exercise is which family =================
    By the library's exact name (exercises.json). An exercise is added here only after
    its family has been looked at beside its photographs (tools/figures/review.mjs). */
@@ -1094,7 +1225,40 @@ var TABLE={
   "Flat Bench Lying Leg Raise":[legRaise,{at:"bench"}],
   "Hanging Leg Raise":[legRaise,{at:"hang",knees:true}],
   "Hyperextensions (Back Extensions)":[hyper,{}],
-  "One-Arm Kettlebell Swings":[kbSwing,{one:"l"}]
+  "One-Arm Kettlebell Swings":[kbSwing,{one:"l"}],
+  /* ---- on a Smith machine: the same movements, the bar on rails ---- */
+  "Smith Machine Squat":[squat,{load:"back",smith:true}],
+  "Smith Machine Bench Press":[benchPress,{imp:"bb",smith:true}],
+  "Smith Machine Incline Bench Press":[benchPress,{imp:"bb",angle:35,smith:true}],
+  "Smith Machine Decline Press":[benchPress,{imp:"bb",angle:-20,smith:true}],
+  "Decline Smith Press":[benchPress,{imp:"bb",angle:-20,smith:true}],
+  "Smith Machine Close-Grip Bench Press":[benchPress,{imp:"bb",w:.2,smith:true}],
+  "Smith Machine Overhead Shoulder Press":[press,{imp:"bb",at:"sit",smith:true}],
+  "Smith Machine Upright Row":[uprightRow,{imp:"bb",smith:true}],
+  "Smith Machine Bent Over Row":[row,{imp:"bb",smith:true}],
+  "Smith Machine Stiff-Legged Deadlift":[hinge,{kind:"stiff",smith:true}],
+  "Smith Machine Calf Raise":[calfRaise,{imp:"bb",smith:true}],
+  "Smith Machine Behind the Back Shrug":[shrug,{imp:"bb",behind:true,smith:true}],
+  /* ---- on cables ---- */
+  "Standing Biceps Cable Curl":[curl,{imp:"cable"}],
+  "Cable Hammer Curls - Rope Attachment":[curl,{imp:"cable",grip:"ham",rope:true,w:.07}],
+  "Reverse Cable Curl":[curl,{imp:"cable",grip:"pro"}],
+  "Standing One-Arm Cable Curl":[curl,{imp:"cable",one:"l",single:true}],
+  "Reverse Grip Triceps Pushdown":[triceps,{kind:"pushdown",imp:"bar",grip:"sup"}],
+  "Cable Rope Overhead Triceps Extension":[triceps,{kind:"overhead",imp:"rope"}],
+  "Triceps Overhead Extension with Rope":[triceps,{kind:"overhead",imp:"rope",lean:40}],
+  "Cable Lying Triceps Extension":[triceps,{kind:"lying",imp:"bar"}],
+  "Front Cable Raise":[raise,{dir:"front",imp:"cable",one:"l",single:true,free:"hip"}],
+  "Standing Low-Pulley Deltoid Raise":[raise,{dir:"side",imp:"cable",one:"l",single:true,free:"hip"}],
+  "Upright Cable Row":[uprightRow,{imp:"cable"}],
+  "Cable Shrugs":[shrug,{imp:"cable"}],
+  "Face Pull":[facePull,{}],
+  "Straight-Arm Pulldown":[straightArm,{}],
+  "Rope Straight-Arm Pulldown":[straightArm,{grip:"rope"}],
+  "Cable Crunch":[cableCrunch,{}],
+  "Pull Through":[pullThrough,{}],
+  "Flat Bench Cable Flyes":[fly,{imp:"cable"}],
+  "Incline Cable Flye":[fly,{imp:"cable",angle:35}]
 };
 
 /* The record for a library exercise, built once. */
@@ -1117,6 +1281,7 @@ var FAMILIES={curl:curl,press:press,raise:raise,shrug:shrug,uprightRow:uprightRo
   benchPress:benchPress,fly:fly,triceps:triceps,pushup:pushup,pullup:pullup,dip:dip,crunch:crunch,plank:plank,lunge:lunge,
   calfRaise:calfRaise,bridge:bridge,pulldown:pulldown,cableRow:cableRow,crossover:crossover,legMachine:legMachine,
   legPress:legPress,pecDeck:pecDeck,stepUp:stepUp,sideBend:sideBend,benchDip:benchDip,invertedRow:invertedRow,
-  legRaise:legRaise,hyper:hyper,kbSwing:kbSwing};
+  legRaise:legRaise,hyper:hyper,kbSwing:kbSwing,facePull:facePull,straightArm:straightArm,cableCrunch:cableCrunch,
+  pullThrough:pullThrough};
 
 export {TABLE, FAMILIES, moveFor, grasp, onBar, armTo, stand, sit, lie, floorLie, stance, S};
