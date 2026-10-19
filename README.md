@@ -499,13 +499,14 @@ otherwise they would outlive the blob that was supposed to own them.
   rest are drawn as figures (`js/data/poses.js`): the body in the highlight, the far
   limbs fainter, a dashed arrow for the movement, a wall or a door frame where it needs
   one.
-- **The 3D figure (195 exercises so far, growing).** The Machine Chest Press, the Seated
-  Machine Row and 193 of the library's exercises (curls, presses, raises, squats,
+- **The 3D figure (211 exercises so far, growing).** The Machine Chest Press, the Seated
+  Machine Row and 209 of the library's exercises (curls, presses, raises, squats,
   deadlifts, rows, bench presses, flyes, triceps work, push-ups, pull-ups, dips, crunches,
   lunges, calf raises, hip thrusts, lat pulldowns, cable rows and crossovers, leg
   extensions, curls and presses, the pec deck, step-ups, leg raises, back extensions,
   swings, the Smith machine's squats, presses, rows and deadlifts, face pulls,
-  straight-arm pulldowns, cable crunches and pull-throughs) are shown as a 3D figure doing the exercise, live, on the exercise sheet
+  straight-arm pulldowns, cable crunches, pull-throughs, cable presses, wood chops and
+  lifts) are shown as a 3D figure doing the exercise, live, on the exercise sheet
   (a drag turns it) and on the workout screen: a real human body (MakeHuman's CC0
   mesh, on its skeleton, in shorts and trainers, with hands that close round the
   handles) on a gym machine, the muscles the library says the exercise works glowing
