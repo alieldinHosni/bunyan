@@ -3,3 +3,6 @@
 # percentile tables in tools/, never committed. See COACHING-INTELLIGENCE phase 3.
 tools/opl-source/
 *.opl.csv
+
+# Python byte-code from running the tools
+__pycache__/

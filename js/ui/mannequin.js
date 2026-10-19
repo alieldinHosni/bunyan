@@ -1,238 +1,82 @@
 /* Bunyan — the mannequin, live
-   The 3D figure doing an exercise, drawn on the graphics card (WebGL2) and moving: the
-   same model the still pictures are made from (js/data/mannequin/), so what animates
-   here is exactly what the stills show. No library, no build step, nothing fetched:
-   the figure is a field of rounded solids (geom.js), and one fragment shader marches a
-   ray from every pixel into it, so the muscles swell out of the body the way they do
-   in the stills instead of being separate pieces stuck on.
+   The 3D figure doing an exercise, drawn on the graphics card (WebGL2) and moving: a
+   real human body (MakeHuman's CC0 mesh, js/data/mannequin/body.js and img/fig/body.bin)
+   on its skeleton, posed every frame by the pose controller (motion.js, skin.js), with
+   its equipment as meshes (mesh.js). Triangles, not ray marching: drawn at the screen's
+   own resolution, smoothed (multisampled), so its edges are as sharp as the text around
+   it. No library, no build step.
 
-   A frame: the pose controller (motion.js) puts the body where it is at that moment of
-   the repetition, the solids are packed into a small float texture (pack.js) and
-   uploaded, the scene is drawn into a texture, its bright parts are blurred twice for
-   the glow, and the result is put on the canvas with the motion arrow drawn over it.
-   About 120 solids; each ray only tests the few clusters of them it passes near.
+   A frame: the pose at this moment of the repetition gives every bone's matrix, which
+   go up as a small float texture; a shadow map is drawn from the key light; then the
+   stage, the floor with the figure's shadow and its pool of light, the equipment, the
+   body (its skin moved by its bones in the vertex shader), and the motion arrow over it.
 
-   What lights up is the library's own: the exercise's main muscle in full and the
-   others at half (exercises.json m and x), through the record's refinements. The
-   colours are the theme's: every colour here is a --mq-* token in index.html's theme
-   blocks, read from the element, so a change of theme or mode repaints the figure.
+   The light is a studio's, fixed to the camera so the figure is lit from any side: a
+   soft key from the front and above, a fill, the theme's edge light from behind, and
+   the stage's sky and floor colours round it. What lights up is the library's own: the
+   exercise's main muscle in full and the others at half (exercises.json m and x), each
+   muscle a region of the skin with soft edges, glowing with the effort. Every colour is
+   a --mq-* token in index.html's theme blocks, read from the element, so a change of
+   theme or mode repaints it.
 
-   Where it cannot run (no WebGL2, a shader the driver will not build, a lost context)
-   the element keeps showing the still pictures it was written with, which are the same
-   figure at the start and end of the movement. It stops when it is off screen or the
-   app is in the background, holds still for reduced motion until asked to play, and
-   lowers its own resolution on a slow phone.
+   The camera: a drag turns the figure round (all the way round), up and down within
+   limits, with the weight of a real object: it follows the finger closely, carries on a
+   little when let go, and settles. Two fingers (or a wheel) bring it nearer or further;
+   a double tap eases back to the exercise's own view. The framing is worked out for
+   every angle, so the whole movement stays in the picture and nothing jumps as it turns.
+
+   Where it cannot run (no WebGL2, a driver that will not build it, the body not loaded,
+   a lost context) the element keeps showing its still pictures. It stops when it is off
+   screen or the app is in the background, holds still for reduced motion until asked
+   to play, and lowers its resolution only if a phone cannot keep up.
 
    Markup (a view writes it; this module finds it after every render):
      <div class="fig3d" data-mq="Machine Chest Press" [data-mq-turn]> canvas, the stills,
      a play/pause button </div>
    data-mq-turn lets a drag turn the figure (the exercise sheet); the workout screen
    leaves it off, because a sideways swipe there moves between exercises. */
-import {phaseAt, sceneAt, framing, arrowShape} from "../data/mannequin/motion.js";
+import {phaseAt, sceneAt, framePoints, fitCamera, arrowShape} from "../data/mannequin/motion.js";
 import {highlight} from "../data/mannequin/rig.js";
 import {recordFor} from "../data/mannequin/records.js";
-import {pack, MAXC, ROW} from "../data/mannequin/pack.js";
-import {camera, project, V} from "../data/mannequin/geom.js";
+import {BODY} from "../data/mannequin/body.js";
+import {NB} from "../data/mannequin/skin.js";
+import {place, build} from "../data/mannequin/mesh.js";
+import {V} from "../data/mannequin/geom.js";
 import {muscleOf, secondaryOf} from "../data/exercises.js";
 import {isReduced} from "./motion.js";
 import {t} from "../i18n/dict.js";
 import {esc} from "../util.js";
 
-/* ---- shaders ---- */
-var VS="#version 300 es\n"
- +"const vec2 P[3]=vec2[3](vec2(-1.,-1.),vec2(3.,-1.),vec2(-1.,3.));\n"
- +"out vec2 vUv;\n"
- +"void main(){vec2 p=P[gl_VertexID];vUv=p*.5+.5;gl_Position=vec4(p,0.,1.);}\n";
-
-/* The scene: the stage, the figure and its equipment, lit as the stills are (see
-   tools/figures/render.mjs, which this follows step for step). The same source, built
-   with FLOOR, is the floor pass: how dark the floor is under each pixel (the figure's
-   shadow and the darkening where it stands), worked out at a quarter of the size,
-   because it is soft anyway and it is a fifth of the work. */
-function sceneFS(floor){return "#version 300 es\n"
- +(floor?"#define FLOOR\n":"")
- +"precision highp float;precision highp int;precision highp sampler2D;\n"
- +"uniform sampler2D uP,uFl;\n"
- +"uniform vec4 uCB["+MAXC+"];uniform ivec4 uCI["+MAXC+"];uniform int uNC;\n"
- +"uniform ivec4 uHL[16];uniform int uNHL;\n"
- +"uniform vec3 uEye,uFwd,uRgt,uUp;uniform vec2 uTan,uRes;\n"
- +"uniform vec3 uLK,uLF,uLRL,uLRR;\n"
- +"uniform vec4 uFoot;uniform vec2 uFig;\n"
- +"uniform vec3 uTop,uMid,uEdge,uPool;\n"
- +"uniform vec3 uAlb[10];uniform vec2 uSpc[10];\n"
- +"uniform vec3 uKeyC,uFillC,uSkyC,uBncC,uRimC,uSpcC,uMarkE,uDeep,uHot;\n"
- +"uniform float uAct,uShade,uQ;\n"
- +"out vec4 oC;\n"
- /* the exact distance to solid i (pack.js gives the layout) */
- +"float sdPrim(int i,vec3 p){\n"
- +" vec4 h=texelFetch(uP,ivec2(1,i),0);int k=int(h.x+.5)&7;\n"
- +" vec4 a=texelFetch(uP,ivec2(2,i),0);\n"
- +" if(k==0)return length(p-a.xyz)-a.w;\n"
- +" vec4 b=texelFetch(uP,ivec2(3,i),0);\n"
- +" if(k==1){vec3 ba=b.xyz-a.xyz,pa=p-a.xyz;float s=clamp(dot(pa,ba)/max(dot(ba,ba),1e-9),0.,1.);return length(pa-ba*s)-mix(a.w,b.w,s);}\n"
- +" if(k==4){vec3 ba=b.xyz-a.xyz;float hh=max(length(ba),1e-6);vec3 ax=ba/hh,pa=p-a.xyz;float s=dot(pa,ax);float r=length(pa-ax*s);\n"
- +"  vec2 d=vec2(r-a.w+b.w,abs(s-hh*.5)-hh*.5+b.w);return min(max(d.x,d.y),0.)+length(max(d,0.))-b.w;}\n"
- +" vec4 c=texelFetch(uP,ivec2(4,i),0),d=texelFetch(uP,ivec2(5,i),0);\n"
- +" vec3 q=p-a.xyz,ez=cross(b.xyz,c.xyz),l=vec3(dot(q,b.xyz),dot(q,c.xyz),dot(q,ez));\n"
- +" if(k==2){vec3 x=l/d.xyz;float k0=length(x),k1=length(x/d.xyz);return k1>1e-7?k0*(k0-1.)/k1:-min(d.x,min(d.y,d.z));}\n"
- +" vec3 e=abs(l)-d.xyz;return length(max(e,0.))+min(max(e.x,max(e.y,e.z)),0.)-a.w;}\n"
- /* the scene's distance and material at p, from the clusters in the mask (two words:
-    clusters 0-31 and 32-63), as geom.js makeSdf. A solid's bound radius is negative
-    when it is a groove, so a solid far away costs one texture read. */
- +"bool on(uvec2 mk,int ci){return ci<32?(mk.x&(1u<<uint(ci)))!=0u:(mk.y&(1u<<uint(ci-32)))!=0u;}\n"
- +"vec2 map(vec3 p,float cut,uvec2 mk){\n"
- +" float d=1e9,m=0.;\n"
- +" for(int ci=0;ci<"+MAXC+";ci++){\n"
- +"  if(ci>=uNC)break;\n"
- +"  if(!on(mk,ci))continue;\n"
- +"  ivec4 I=uCI[ci];vec4 C=uCB[ci];float lc=length(p-C.xyz)-C.w;\n"
- +"  if(I.z==0){\n"
- +"   if(lc>cut){if(lc<d){d=lc;m=1.;}continue;}\n"
- +"   for(int j=I.x;j<I.x+I.y;j++){\n"
- +"    vec4 t0=texelFetch(uP,ivec2(0,j),0);bool gr=t0.w<0.;\n"
- +"    float lb=length(p-t0.xyz)-abs(t0.w);\n"
- +"    if(lb>cut){if(!gr&&lb<d){d=lb;m=1.;}continue;}\n"
- +"    float e=sdPrim(j,p),k=texelFetch(uP,ivec2(1,j),0).z;\n"
- +"    if(gr){float h=clamp(.5-.5*(d+e)/k,0.,1.);d=d+(-e-d)*h+k*h*(1.-h);continue;}\n"
- /* the first solid is taken as it is: blending it into 1e9 loses it in a 32-bit float */
- +"    if(d>=1e8){d=e;m=1.;continue;}\n"
- +"    if(e>d+k)continue;\n"
- +"    float h=clamp(.5+.5*(d-e)/k,0.,1.);if(h>.5)m=1.;d=d+(e-d)*h-k*h*(1.-h);}\n"
- +"  }else if(I.z==1){\n"
- +"   if(lc>=d)continue;\n"
- +"   if(lc>cut){d=lc;m=float(I.w);continue;}\n"
- +"   float gd=1e9,gm=0.;\n"
- +"   for(int j=I.x;j<I.x+I.y;j++){\n"
- +"    vec4 t1=texelFetch(uP,ivec2(1,j),0);float e=sdPrim(j,p);\n"
- +"    if(gd>=1e8){gd=e;gm=t1.y;continue;}\n"
- +"    if(e>gd+t1.z)continue;\n"
- +"    float h=clamp(.5+.5*(gd-e)/t1.z,0.,1.);if(h>.5)gm=t1.y;gd=gd+(e-gd)*h-t1.z*h*(1.-h);}\n"
- +"   if(gd<d){d=gd;m=gm;}\n"
- +"  }else{\n"
- +"   if(lc>=d)continue;\n"
- +"   for(int j=I.x;j<I.x+I.y;j++){\n"
- +"    vec4 t0=texelFetch(uP,ivec2(0,j),0);float lb=length(p-t0.xyz)-abs(t0.w);\n"
- +"    if(lb>=d)continue;\n"
- +"    float e=lb>cut?lb:sdPrim(j,p);\n"
- +"    if(e<d){d=e;m=texelFetch(uP,ivec2(1,j),0).y;}}}}\n"
- +" return vec2(d,m);}\n"
- +"const uvec2 ALL=uvec2(0xffffffffu);\n"
- /* which clusters a ray passes near, and where along it the first and last are */
- +"uvec2 rayMask(vec3 ro,vec3 rd,float pad,out float t0,out float t1){\n"
- +" uvec2 mk=uvec2(0u);t0=1e9;t1=-1.;\n"
- +" for(int ci=0;ci<"+MAXC+";ci++){\n"
- +"  if(ci>=uNC)break;\n"
- +"  vec4 C=uCB[ci];vec3 oc=ro-C.xyz;float r=C.w+pad,b=dot(oc,rd),c=dot(oc,oc)-r*r,h=b*b-c;\n"
- +"  if(h<0.)continue;h=sqrt(h);\n"
- +"  if(-b+h<0.)continue;\n"
- +"  if(ci<32)mk.x|=1u<<uint(ci);else mk.y|=1u<<uint(ci-32);\n"
- +"  t0=min(t0,max(-b-h,0.));t1=max(t1,-b+h);}\n"
- +" return mk;}\n"
- +"float shadow(vec3 p,vec3 l,float cut,int n){\n"
- +" float t0,t1;uvec2 mk=rayMask(p,l,.12,t0,t1);if(mk==uvec2(0u))return 1.;\n"
- +" float res=1.,s=max(.02,t0),e=min(t1,4.);\n"
- +" for(int i=0;i<40;i++){if(i>=n||s>e)break;float h=map(p+l*s,cut,mk).x;if(h<.0008)return 0.;res=min(res,9.*h/s);s+=clamp(h,.01,.25);}\n"
- +" return clamp(res,0.,1.);}\n"
- +"vec3 ray(vec2 s){return normalize(uFwd+uRgt*((2.*s.x-1.)*uTan.x)+uUp*((2.*s.y-1.)*uTan.y));}\n"
- +"#ifdef FLOOR\n"
- +"float floorAO(vec3 p){float o=0.,s=1.;\n"
- +" for(int i=1;i<=5;i++){float h=.04*float(i);o+=(h-map(vec3(p.x,h,p.z),.2,ALL).x)*s;s*=.55;}\n"
- +" return clamp(1.-1.6*o,0.,1.);}\n"
- +"void main(){\n"
- +" vec2 s=gl_FragCoord.xy/uRes;vec3 ro=uEye,rd=ray(s);float dark=0.;\n"
- +" if(rd.y<0.){vec3 fp=ro+rd*(-ro.y/rd.y);\n"
- +"  float s1=shadow(fp,uLK,.35,40);\n"
- +"  float o=map(vec3(fp.x,.1,fp.z),.35,ALL).x<.35?floorAO(fp):1.;\n"
- +"  dark=clamp((1.-s1)*.5+(1.-o)*.6,0.,.8);}\n"
- +" oC=vec4(dark,0.,0.,1.);}\n"
- +"#else\n"
- +"vec3 nrm(vec3 p,uvec2 mk){const vec2 e=vec2(.001,-.001);\n"
- +" return normalize(e.xyy*map(p+e.xyy,.06,mk).x+e.yyx*map(p+e.yyx,.06,mk).x+e.yxy*map(p+e.yxy,.06,mk).x+e.xxx*map(p+e.xxx,.06,mk).x);}\n"
- +"float ao(vec3 p,vec3 n){float o=0.,s=1.;\n"
- +" for(int i=1;i<=5;i++){float h=.02*float(i);o+=(h-map(p+n*h,.1,ALL).x)*s;s*=.62;}\n"
- +" return clamp(1.-3.*o,0.,1.);}\n"
- /* the worked muscles near p (geom.js glowAt) */
- +"float glowAt(vec3 p){float w=0.;\n"
- +" for(int i=0;i<64;i++){if(i>=uNHL)break;int j=uHL[i>>2][i&3];\n"
- +"  vec4 t0=texelFetch(uP,ivec2(0,j),0);if(length(p-t0.xyz)-abs(t0.w)>.04)continue;\n"
- +"  float e=sdPrim(j,p);if(e<.04)w=max(w,texelFetch(uP,ivec2(1,j),0).w*(1.-smoothstep(.004,.03,e)));}\n"
- +" return w;}\n"
- /* the stage: the theme's ground, lighter behind the figure, a pool of light on the
-    floor under it, darker toward the edges (tools/images.py ground) */
- +"vec3 stage(vec2 s,vec3 ro,vec3 rd){\n"
- +" float ys=1.-s.y;vec3 c=mix(uTop,uEdge,ys);\n"
- +" vec2 dd=vec2((s.x-uFig.x)/.42,(ys-uFig.y)/.58);c=mix(c,uMid,exp(-dot(dd,dd)*1.3));\n"
- +" if(rd.y<0.){vec3 fp=ro+rd*(-ro.y/rd.y);vec2 q=(fp.xz-uFoot.xy)/uFoot.zw;float r=dot(q,q);\n"
- +"  c+=(exp(-r*1.6)*.55+exp(-r*.35)*.12)*uPool;}\n"
- +" vec2 v=vec2((s.x-.5)/.75,(s.y-.5)/.8);c*=clamp(1.12-dot(v,v)*.5,.45,1.);\n"
- +" return c;}\n"
- +"void main(){\n"
- +" vec2 s=gl_FragCoord.xy/uRes;vec3 ro=uEye,rd=ray(s);\n"
- +" float t0,t1;uvec2 mk=rayMask(ro,rd,.06,t0,t1);\n"
- +" bool hit=false;float t=t0,mat=0.;\n"
- +" if(mk!=uvec2(0u)){for(int i=0;i<160;i++){if(t>t1)break;vec2 h=map(ro+rd*t,.06,mk);if(h.x<.0005*t){hit=true;mat=h.y;break;}t+=h.x;}}\n"
- +" if(!hit){\n"
- +"  vec3 c=stage(s,ro,rd);\n"
- +"  if(rd.y<0.)c*=1.-texture(uFl,s).r*uShade;\n"
- +"  oC=vec4(c,0.);return;}\n"
- +" vec3 p=ro+rd*t,n=nrm(p,mk),v=-rd;int mi=clamp(int(mat+.5),0,9);\n"
- +" vec3 alb=uAlb[mi];vec2 sg=uSpc[mi];\n"
- +" float a=ao(p,n),s1=uQ>.5?shadow(p+n*.003,uLK,.2,30):1.;\n"
- +" float ndv=max(dot(n,v),0.),dk=max(dot(n,uLK),0.)*s1,df=max(dot(n,uLF),0.);\n"
- +" float sky=(.5+.5*n.y)*a,bn=max(-n.y,0.)*(.3+.7*a);\n"
- +" float sp=pow(max(dot(n,normalize(uLK+v)),0.),sg.y)*sg.x*s1;\n"
- +" float F=(1.-ndv)*(1.-ndv);\n"
- +" float rim=F*(max(dot(n,uLRL),0.)+max(dot(n,uLRR),0.))*(.45+.55*a),top=max(n.y,0.)*a;\n"
- +" float rs=mi==1?1.:(mi==8||mi==9)?.6:.38;\n"
- +" vec3 col=alb*(.95*dk*uKeyC+.35*top*uKeyC+.2*df*uFillC+.22*sky*uSkyC+.55*bn*uBncC)+sp*uSpcC+(rim*uRimC*1.55+F*.05*uRimC)*rs;\n"
- +" if(mi==7)col+=uMarkE*(.4+.6*a);\n"
- +" if(mi==1&&uNHL>0){float w=glowAt(p);\n"
- +"  if(w>0.){float g=pow(ndv,3.);w*=(1.-.55*F)*(.45+.55*uAct);\n"
- +"   vec3 em=mix(uDeep,uHot,g)*(.45+.55*dk+.2*top+.1*sky)+sp*uSpcC*.7+rim*uRimC*.6;\n"
- +"   col=mix(col,em,min(w*1.05,1.));}}\n"
- +" oC=vec4(pow(clamp(col,0.,1.),vec3(1./2.2)),1.);}\n"
- +"#endif\n";}
-
-/* The glow: what is bright on the figure, a quarter size (tools/images.py bloom). */
-var FS_HOT="#version 300 es\n"
- +"precision highp float;uniform sampler2D uT;uniform vec2 uPx;in vec2 vUv;out vec4 oC;\n"
- +"vec4 f(vec2 o){vec4 s=texture(uT,vUv+o*uPx);return vec4(max(s.rgb-.42,0.)*s.a*1.6,1.);}\n"
- +"void main(){oC=(f(vec2(-1.,-1.))+f(vec2(1.,-1.))+f(vec2(-1.,1.))+f(vec2(1.,1.)))*.25;}\n";
-/* A smaller copy, for the wider glow. */
-var FS_DOWN="#version 300 es\n"
- +"precision highp float;uniform sampler2D uT;uniform vec2 uPx;in vec2 vUv;out vec4 oC;\n"
- +"void main(){oC=(texture(uT,vUv+vec2(-.5,-.5)*uPx)+texture(uT,vUv+vec2(.5,-.5)*uPx)+texture(uT,vUv+vec2(-.5,.5)*uPx)+texture(uT,vUv+vec2(.5,.5)*uPx))*.25;}\n";
-/* A Gaussian blur along uDir. */
-var FS_BLUR="#version 300 es\n"
- +"precision highp float;uniform sampler2D uT;uniform vec2 uDir;uniform float uSig;in vec2 vUv;out vec4 oC;\n"
- +"void main(){vec4 c=vec4(0.);float ws=0.;\n"
- +" for(int i=-6;i<=6;i++){float w=exp(-float(i*i)/(2.*uSig*uSig));c+=texture(uT,vUv+uDir*float(i))*w;ws+=w;}\n"
- +" oC=c/ws;}\n";
-/* The picture: the scene, its glow laid over it, and the arrow. */
-var FS_OUT="#version 300 es\n"
- +"precision highp float;uniform sampler2D uS,uG1,uG2;\n"
- +"uniform vec2 uA[24];uniform int uNA;uniform vec2 uH[3];uniform vec3 uArC,uArG;uniform float uArK,uSc;\n"
- +"in vec2 vUv;out vec4 oC;\n"
- +"float seg(vec2 p,vec2 a,vec2 b){vec2 pa=p-a,ba=b-a;float h=clamp(dot(pa,ba)/max(dot(ba,ba),1e-6),0.,1.);return length(pa-ba*h);}\n"
- +"float tri(vec2 p,vec2 a,vec2 b,vec2 c){\n"
- +" float d=min(seg(p,a,b),min(seg(p,b,c),seg(p,c,a)));\n"
- +" float s1=(b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x),s2=(c.x-b.x)*(p.y-b.y)-(c.y-b.y)*(p.x-b.x),s3=(a.x-c.x)*(p.y-c.y)-(a.y-c.y)*(p.x-c.x);\n"
- +" bool inside=(s1>=0.&&s2>=0.&&s3>=0.)||(s1<=0.&&s2<=0.&&s3<=0.);return inside?-d:d;}\n"
- +"void main(){\n"
- +" vec3 c=texture(uS,vUv).rgb;\n"
- +" vec3 g=texture(uG1,vUv).rgb*.55+texture(uG2,vUv).rgb*.45;\n"
- +" c=1.-(1.-c)*(1.-clamp(g,0.,1.));\n"
- +" if(uNA>1){vec2 p=gl_FragCoord.xy;float d=1e9;\n"
- +"  for(int i=0;i<23;i++){if(i>=uNA-1)break;d=min(d,seg(p,uA[i],uA[i+1]));}\n"
- +"  d=min(d-1.6*uSc,tri(p,uH[0],uH[1],uH[2]));\n"
- +"  float glow=exp(-pow(max(d+1.6*uSc,0.)/(4.6*uSc),2.))*.62*uArK,core=clamp(.5-d,0.,1.)*uArK;\n"
- +"  c=mix(c,uArG,glow);c=mix(c,uArC,core);}\n"
- +" c+=(fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453)-.5)/255.;\n"
- +" oC=vec4(c,1.);}\n";
+/* ---- the body's mesh, loaded once for every figure ---- */
+var BODYP=null;
+function loadBody(){
+  if(BODYP)return BODYP;
+  BODYP=fetch("img/fig/body.bin").then(function(r){if(!r.ok)throw new Error("body "+r.status);return r.arrayBuffer();})
+    .then(decode).catch(function(e){BODYP=null;throw e;});
+  return BODYP;}
+function decode(buf){
+  var L=BODY.layout,n=BODY.vertices,nt=BODY.triangles,lo=BODY.min,hi=BODY.max;
+  var q=new Uint16Array(buf,L.pos.offset,n*3),pos=new Float32Array(n*3);
+  for(var i=0;i<n*3;i++){var k=i%3;pos[i]=lo[k]+q[i]/65535*(hi[k]-lo[k]);}
+  var idx=new Uint16Array(buf,L.idx.offset,nt*3);
+  /* smooth normals from the rest shape; the bones turn them with the skin */
+  var nrm=new Float32Array(n*3);
+  for(var t3=0;t3<nt*3;t3+=3){
+    var a=idx[t3]*3,b=idx[t3+1]*3,c=idx[t3+2]*3;
+    var ux=pos[b]-pos[a],uy=pos[b+1]-pos[a+1],uz=pos[b+2]-pos[a+2],vx=pos[c]-pos[a],vy=pos[c+1]-pos[a+1],vz=pos[c+2]-pos[a+2];
+    var fx=uy*vz-uz*vy,fy=uz*vx-ux*vz,fz=ux*vy-uy*vx;
+    nrm[a]+=fx;nrm[a+1]+=fy;nrm[a+2]+=fz;nrm[b]+=fx;nrm[b+1]+=fy;nrm[b+2]+=fz;nrm[c]+=fx;nrm[c+1]+=fy;nrm[c+2]+=fz;}
+  for(i=0;i<n;i++){var l=Math.hypot(nrm[i*3],nrm[i*3+1],nrm[i*3+2])||1;nrm[i*3]/=l;nrm[i*3+1]/=l;nrm[i*3+2]/=l;}
+  var misc=new Uint8Array(buf,L.misc.offset,n*4);
+  return {n:n,nt:nt,pos:pos,nrm:nrm,idx:idx,bone:new Uint8Array(buf,L.bone.offset,n*4),bw:new Uint8Array(buf,L.bw.offset,n*4),
+    mus:new Uint8Array(buf,L.mus.offset,n*4),misc:misc};}
+/* For the preview page: colour each muscle region on its own (setDebug({muscles:1})). */
+var DEBUG={};
+function setDebug(o){DEBUG=o||{};}
+/* a muscle's tag (rig.js MUSCLE_TAGS) as its number in the mesh */
+var MUSID={};BODY.muscles.forEach(function(m,i){MUSID[m]=i+1;});
 
 /* ---- the theme ---- */
-/* Every colour comes from the element's --mq-* tokens (index.html). A token is read as
-   a CSS colour by a 2D canvas, so any colour syntax works. */
 var probeCtx=null;
 function cssRgb(s,fallback){
   s=(s||"").trim();if(!s)return fallback;
@@ -245,28 +89,114 @@ function cssRgb(s,fallback){
   }catch(e){}
   return fallback;}
 function lin(c){return c.map(function(x){return Math.pow(x,2.2);});}
-function scale(c,k){return [c[0]*k[0],c[1]*k[1],c[2]*k[2]];}
+function scale(c,k){return [c[0]*k,c[1]*k,c[2]*k];}
 function mixc(a,b,w){return [a[0]+(b[0]-a[0])*w,a[1]+(b[1]-a[1])*w,a[2]+(b[2]-a[2])*w];}
-/* What the shader needs from the theme. */
+/* What the figure needs from the theme: the stage (top, middle, edge, the pool of light
+   on the floor), the materials, the lights, the muscles' colours, the arrow. */
 function readTheme(el){
   var cs=getComputedStyle(el),g=function(n){return cs.getPropertyValue(n);};
   function col(n,d){return cssRgb(g(n),d);}
   function num(n,d){var v=parseFloat(g(n));return isFinite(v)?v:d;}
   var skin=lin(col("--mq-skin",[.4,.42,.45])),metal=lin(col("--mq-metal",[.22,.24,.29]));
   var pad=lin(col("--mq-pad",[.2,.22,.26])),steel=lin(col("--mq-steel",[.58,.61,.67]));
-  var rim=lin(col("--mq-rim",[.7,.84,1])),key=[1,.98,.95];
-  var alb=[skin,skin,metal,pad,steel,scale(metal,[2,2,2]),scale(pad,[.9,.9,.9]),lin(col("--mq-mark",[.76,.28,.3])),
-    scale(skin,[1.2,1.2,1.16]),scale(skin,[2.3,2.2,2.1])];
-  return {
+  var rim=lin(col("--mq-rim",[.7,.84,1])),key=[1,.97,.93],light=num("--mq-shade",1)<.95;
+  return {light:light,
     top:col("--mq-top",[.035,.067,.118]),mid:col("--mq-mid",[.059,.106,.18]),edge:col("--mq-edge",[.02,.04,.075]),
-    pool:col("--mq-pool",[.125,.408,.769]).map(function(x){return x*num("--mq-pool-k",1);}),
-    alb:alb,spc:[[.42,38],[.42,38],[.38,50],[.2,16],[.85,80],[.08,10],[.1,12],[.4,40],[.3,28],[.2,18]],
-    key:key,fill:scale(mixc(key,rim,.6),[.7,.7,.7]),sky:scale(mixc(key,rim,.7),[.62,.62,.62]),
-    bounce:lin(col("--mq-bounce",[.38,.6,.89])),rim:rim,spec:mixc(key,rim,.3),
-    markE:scale(lin(col("--mq-mark",[.76,.28,.3])),[.4,.06,.06]),
+    pool:col("--mq-pool",[.125,.408,.769]),poolK:num("--mq-pool-k",1),
+    skin:scale(skin,1.12),shorts:scale(pad,.55),shoes:scale(metal,.7),soles:scale(steel,.75),eyes:scale(skin,.85),
+    /* materials by number (kit.js): 2 iron, 3 pads and grips, 4 steel, 5 wall, 6 mat,
+       7 the machine's line; [albedo, specular strength, shininess, glow] */
+    mats:{1:[skin,.3,22,0],2:[metal,.35,40,0],3:[scale(pad,.9),.12,10,0],4:[steel,.9,90,0],5:[scale(metal,1.15),.06,8,0],
+      6:[scale(pad,.8),.04,6,0],7:[lin(col("--mq-mark",[.76,.28,.3])),.4,30,.35],8:[scale(metal,.8),.3,30,0],9:[scale(steel,.9),.2,20,0]},
+    key:key,fill:scale(mixc(key,rim,.55),.62),sky:scale(mixc(key,rim,.65),light?.75:.5),
+    bounce:scale(lin(col("--mq-bounce",[.38,.6,.89])),light?.55:.42),rim:rim,spec:mixc(key,rim,.25),
     deep:lin(col("--mq-deep",[.89,.3,.23])),hot:lin(col("--mq-hot",[1,.67,.48])),
-    shade:num("--mq-shade",1),
     arrow:col("--mq-arrow",[.52,.73,1]),arrowGlow:col("--mq-arrow-glow",[.27,.55,1])};}
+
+/* ---- shaders ---- */
+var HEAD="#version 300 es\nprecision highp float;precision highp int;precision highp sampler2D;precision highp sampler2DShadow;\n";
+/* The body's skin moved by its bones. Each vertex is in up to two muscles, with how
+   much (body.js mus); how much it glows is worked out here and that is what is blended
+   across a triangle. (Blending the muscles' numbers instead would pass through other
+   muscles' numbers between two regions and light thin lines that belong to neither.) */
+var VS_BODY=
+  "layout(location=0) in vec3 aP;layout(location=1) in vec3 aN;layout(location=2) in uvec4 aB;layout(location=3) in vec4 aW;\n"
+ +"layout(location=4) in vec4 aM;layout(location=5) in vec4 aX;\n"
+ +"uniform sampler2D uBones;uniform mat4 uVP;uniform float uHL[21];\n"
+ +"out vec3 vP;out vec3 vN;out vec2 vM;out vec4 vX;flat out int vI;\n"
+ +"float lit(float m,float w){int i=int(m+.5);return i>0&&i<21?uHL[i]*smoothstep(.12,.6,w/255.):0.;}\n"
+ +"mat4 bm(uint i){int y=int(i);return mat4(texelFetch(uBones,ivec2(0,y),0),texelFetch(uBones,ivec2(1,y),0),texelFetch(uBones,ivec2(2,y),0),texelFetch(uBones,ivec2(3,y),0));}\n"
+ +"void main(){mat4 S=bm(aB.x)*aW.x+bm(aB.y)*aW.y+bm(aB.z)*aW.z+bm(aB.w)*aW.w;vec4 w=S*vec4(aP,1.);\n"
+ +"int id=int(aM.x+.5);vM=vec2(min(lit(aM.x,aM.y)+lit(aM.z,aM.w),1.),id==31?1.:0.);vI=id;\n"
+ +"vP=w.xyz;vN=mat3(S)*aN;vX=aX;gl_Position=uVP*w;}";
+var VS_EQ=
+  "layout(location=0) in vec3 aP;layout(location=1) in vec3 aN;uniform mat4 uVP;uniform mat4 uModel;out vec3 vP;out vec3 vN;\n"
+ +"void main(){vec4 w=uModel*vec4(aP,1.);vP=w.xyz;vN=mat3(uModel)*aN;gl_Position=uVP*w;}";
+/* The lighting, shared by the body and the equipment. */
+var LIGHT=
+  "uniform vec3 uEye,uLK,uLF,uLR,uKeyC,uFillC,uSkyC,uBncC,uRimC,uSpcC;uniform sampler2DShadow uSh;uniform mat4 uLVP;uniform float uShOn;\n"
+ +"float shadowAt(vec3 p,vec3 n){if(uShOn<.5)return 1.;vec4 q=uLVP*vec4(p+n*.008,1.);vec3 s=q.xyz/q.w*.5+.5;\n"
+ +" if(s.x<0.||s.x>1.||s.y<0.||s.y>1.||s.z>1.)return 1.;vec2 px=1./vec2(textureSize(uSh,0));float k=0.;\n"
+ +" for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)k+=texture(uSh,vec3(s.xy+vec2(float(x),float(y))*px*1.4,s.z-.0012));return k/9.;}\n"
+ +"vec3 shade(vec3 P,vec3 N,vec3 alb,float si,float sp,float wrap,float ao){vec3 V=normalize(uEye-P);\n"
+ +" float sh=shadowAt(P,N);float nl=dot(N,uLK);float d=max((nl+wrap)/(1.+wrap),0.);\n"
+ +" vec3 H=normalize(uLK+V);float s=pow(max(dot(N,H),0.),sp)*si*smoothstep(-.1,.2,nl)*(sp+8.)/32.;\n"
+ +" float df=max((dot(N,uLF)+.35)/1.35,0.);vec3 amb=mix(uBncC,uSkyC,N.y*.5+.5);\n"
+ +" float fr=pow(1.-max(dot(N,V),0.),3.);float rim=fr*smoothstep(-.3,.5,dot(N,uLR));\n"
+ +" return alb*(uKeyC*d*mix(.35,1.,sh)+uFillC*df*.42+amb*ao)+uSpcC*s*sh+uRimC*rim*.6*ao;}\n"
+ +"vec3 tone(vec3 c){c*=1.05;c=c/(1.+c*.18);return pow(clamp(c,0.,1.),vec3(1./2.2));}\n";
+/* The body: skin, and the outfit drawn on it from how far inside the shorts, the
+   trainers and their soles each point is (body.js), as lines sharp at any size; the
+   muscles the exercise works glowing through the skin (and a little through the
+   shorts). */
+var FS_BODY=
+  "in vec3 vP;in vec3 vN;in vec2 vM;in vec4 vX;flat in int vI;out vec4 o;\n"
+ +"uniform vec3 uSkin,uShorts,uShoes,uSoles,uEyes,uDeep,uHot;uniform float uAct,uDbg;\n"+LIGHT
+ +"float inside(float b){float d=(b-128.)/2000.;return clamp(d/max(fwidth(d),1e-5)+.5,0.,1.);}\n"
+ +"void main(){vec3 N=normalize(vN);float cav=vX.w/255.;\n"
+ +" float sh=inside(vX.x),so=inside(vX.y),sl=inside(vX.z)*so;\n"
+ +" vec3 alb=mix(mix(mix(uSkin,uShorts,sh),uShoes,so),uSoles,sl);alb=mix(alb,uEyes,step(.5,vM.y));\n"
+ +" float si=mix(mix(.3,.05,sh),mix(.42,.15,sl),so),sp=mix(mix(20.,8.,sh),44.,so),wrap=mix(mix(.45,.2,sh),.2,so);\n"
+ +" float hem=1.-smoothstep(.0008,.0035,abs((vX.x-128.)/2000.));alb*=1.-.35*hem*step(.5,sh+hem);\n"
+ +" float ao=1.-.55*smoothstep(.53,.8,cav);\n"
+ +" float h=vM.x*(1.-.35*sh)*(1.-so);\n"
+ +" alb=mix(alb,uDeep,h*.85);\n"
+ +" vec3 c=shade(vP,N,alb,si,sp,wrap,ao);\n"
+ +" vec3 V=normalize(uEye-vP);float edge=pow(1.-max(dot(N,V),0.),1.5);\n"
+ +" c+=uHot*h*(.12+.3*uAct)*(.6+.8*edge);\n"
+ +" if(uDbg>.5){vec3 k=fract(vec3(float(vI))*vec3(.618,.381,.789)+.1);c=(vI>0&&vI<21)?k:vec3(.08)+.04*dot(N,vec3(.3,.8,.5));}\n"
+ +" o=vec4(uDbg>.5?c:tone(c),1.);}";
+var FS_EQ=
+  "in vec3 vP;in vec3 vN;out vec4 o;uniform vec3 uAlb;uniform vec3 uSpc;\n"+LIGHT
+ +"void main(){vec3 N=normalize(vN);\n"
+ +" vec3 c=shade(vP,N,uAlb,uSpc.x,uSpc.y,.15,1.)+uAlb*uSpc.z;o=vec4(tone(c),1.);}";
+/* The stage behind: the theme's top colour above, its middle at the horizon, a soft
+   light behind the figure. */
+var VS_FULL="out vec2 vU;void main(){vec2 p=vec2(gl_VertexID==1?3.:-1.,gl_VertexID==2?3.:-1.);vU=p*.5+.5;gl_Position=vec4(p,.9999,1.);}";
+var FS_BG=
+  "in vec2 vU;out vec4 o;uniform vec3 uTop,uMid,uEdge;uniform vec2 uFig;uniform float uAsp;\n"
+ +"void main(){vec3 c=mix(uMid,uTop,smoothstep(.25,1.,vU.y));vec2 d=(vU-uFig)*vec2(uAsp,1.);\n"
+ +" c=mix(c,mix(uMid,vec3(1.),.06),.55*(1.-smoothstep(0.,.75,length(d))));\n"
+ +" c=mix(c,uEdge,.45*smoothstep(.55,1.15,length((vU-.5)*vec2(uAsp,1.))));o=vec4(c,1.);}";
+/* The floor: a disc of the stage's middle colour, the theme's pool of light under the
+   figure, the figure's shadow, fading into the stage at its rim. */
+var VS_FLOOR="layout(location=0) in vec2 aP;uniform mat4 uVP;uniform vec2 uC;uniform float uR;out vec3 vP;\n"
+ +"void main(){vec3 p=vec3(uC.x+aP.x*uR,0.,uC.y+aP.y*uR);vP=p;gl_Position=uVP*vec4(p,1.);}";
+var FS_FLOOR=
+  "in vec3 vP;out vec4 o;uniform vec3 uMid,uEdge,uPool;uniform float uPoolK;uniform vec2 uC;uniform float uR;\n"
+ +"uniform sampler2DShadow uSh;uniform mat4 uLVP;uniform float uShOn;uniform vec4 uFoot;\n"
+ +"float sh(vec3 p){if(uShOn<.5)return 1.;vec4 q=uLVP*vec4(p,1.);vec3 s=q.xyz/q.w*.5+.5;if(s.x<0.||s.x>1.||s.y<0.||s.y>1.)return 1.;\n"
+ +" vec2 px=1./vec2(textureSize(uSh,0));float k=0.;for(int x=-2;x<=2;x++)for(int y=-2;y<=2;y++)k+=texture(uSh,vec3(s.xy+vec2(float(x),float(y))*px*1.8,s.z-.002));return k/25.;}\n"
+ +"void main(){float r=length(vP.xz-uC)/uR;vec2 f=(vP.xz-uFoot.xy)/uFoot.zw;float pool=1.-smoothstep(0.,1.,length(f));\n"
+ +" vec3 c=mix(mix(uMid,uEdge,.35),uEdge,smoothstep(.2,1.,r));c+=uPool*uPoolK*.35*pool*pool;\n"
+ +" float s=sh(vP);c*=mix(.5,1.,s);\n"
+ +" float ao=1.-.35*(1.-smoothstep(0.,.8,length(f)))*(1.-s*.5);c*=ao;\n"
+ +" o=vec4(c,1.-smoothstep(.62,1.,r));}";
+var FS_DEPTH="out vec4 o;void main(){o=vec4(1.);}";
+/* The arrow, on the picture: pixels in, its colour by alpha. */
+var VS_ARROW="layout(location=0) in vec2 aP;layout(location=1) in float aA;uniform vec2 uRes;out float vA;\n"
+ +"void main(){vA=aA;gl_Position=vec4(aP/uRes*2.-1.,0.,1.);}";
+var FS_ARROW="in float vA;out vec4 o;uniform vec3 uC;uniform float uK;void main(){float a=vA*uK;o=vec4(uC*a,a);}";
 
 /* ---- GL ---- */
 var GL2=null;
@@ -275,186 +205,243 @@ function supported(){
   try{var c=document.createElement("canvas");GL2=!!(window.WebGL2RenderingContext&&c.getContext("webgl2"));}catch(e){GL2=false;}
   return GL2;}
 function shader(gl,type,src){
-  var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);
+  var s=gl.createShader(type);gl.shaderSource(s,HEAD+src);gl.compileShader(s);
   if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)&&!gl.isContextLost())throw new Error(gl.getShaderInfoLog(s)||"shader");
   return s;}
-function program(gl,fs){
+function program(gl,vs,fs){
   var p=gl.createProgram();
-  gl.attachShader(p,shader(gl,gl.VERTEX_SHADER,VS));gl.attachShader(p,shader(gl,gl.FRAGMENT_SHADER,fs));
+  gl.attachShader(p,shader(gl,gl.VERTEX_SHADER,vs));gl.attachShader(p,shader(gl,gl.FRAGMENT_SHADER,fs));
   gl.linkProgram(p);
   if(!gl.getProgramParameter(p,gl.LINK_STATUS)&&!gl.isContextLost())throw new Error(gl.getProgramInfoLog(p)||"link");
   var u={},n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);
   for(var i=0;i<n;i++){var a=gl.getActiveUniform(p,i),nm=a.name.replace(/\[0\]$/,"");u[nm]=gl.getUniformLocation(p,a.name);}
   return {p:p,u:u};}
-function target(gl,w,h){
-  var tx=gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D,tx);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-  var fb=gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tx,0);
-  return {fb:fb,tx:tx,w:w,h:h};}
-function drop(gl,tg){if(tg){gl.deleteFramebuffer(tg.fb);gl.deleteTexture(tg.tx);}}
 
-/* The camera's lights, as the stills set them: a key from the front and above, a
-   fill, two blue edge lights from behind, the sky. */
+/* ---- 4×4 matrices, column major ---- */
+function mul4(a,b){var o=new Float32Array(16);
+  for(var c=0;c<4;c++)for(var r=0;r<4;r++)o[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];return o;}
+function lookAt(eye,f,r,u){
+  return new Float32Array([r[0],u[0],-f[0],0,r[1],u[1],-f[1],0,r[2],u[2],-f[2],0,
+    -V.dot(r,eye),-V.dot(u,eye),V.dot(f,eye),1]);}
+function persp(ty,asp,n,fr){var f=1/ty,nf=1/(n-fr);
+  return new Float32Array([f/asp,0,0,0,0,f,0,0,0,0,(fr+n)*nf,-1,0,0,2*fr*n*nf,0]);}
+function ortho(r,n,fr){return new Float32Array([1/r,0,0,0,0,1/r,0,0,0,0,-2/(fr-n),0,0,0,-(fr+n)/(fr-n),1]);}
+
+/* The camera's lights: the key from the front, left and above, a fill from the right,
+   the edge light from behind. */
 function lights(cam){
   function L(a,b,c){return V.norm(V.add(V.add(V.mul(cam.f,a),V.mul(cam.r,b)),V.mul(cam.u,c)));}
-  return {key:L(-.55,-.45,.75),fill:L(-.7,.6,.1),rimL:L(.9,-.8,.4),rimR:L(.9,.8,.4)};}
+  return {key:L(-.5,-.42,.76),fill:L(-.62,.7,.18),rim:L(.85,.25,.45)};}
 
 /* ---- one live figure ---- */
 var LIVE=[];
 function Mannequin(el){
   var name=el.getAttribute("data-mq"),rec=recordFor(name);
   var canvas=el.querySelector("canvas"),btn=el.querySelector(".fig3d-play");
-  var gl=null,P={},tex=null,texRows=0,T={},vao=null;
-  var hl=highlight(muscleOf(name),secondaryOf(name),rec&&rec.refine);
-  var theme=null,look="",cam=null,camKey="",yaw0=(rec&&rec.cam&&rec.cam.yaw!=null)?rec.cam.yaw:60,yaw=yaw0;
-  var pitch0=(rec&&rec.cam&&rec.cam.pitch!=null)?rec.cam.pitch:8,pitch=pitch0,fits={};
-  var playing=!isReduced(),visible=true,raf=0,clock=0,last=0,ema=16,slow=0,fast=0,frames=0;
-  var q=1,qMax=1,W=0,H=0,dead=false,err="",paths={},stillU=1,io=null,ro=null;
+  var gl=null,P={},body=null,boneTex=null,shadow=null,shapes={},vaoBody=null,vaoFloor=null,vaoArrow=null,bufArrow=null;
+  var hl=highlight(muscleOf(name),secondaryOf(name),rec&&rec.refine),hlv=new Float32Array(21);
+  var theme=null,look="",pts=null;
+  /* the view: where it is, where it is going, and how fast it is turning */
+  var view0={yaw:(rec&&rec.cam&&rec.cam.yaw!=null)?rec.cam.yaw:60,pitch:(rec&&rec.cam&&rec.cam.pitch!=null)?rec.cam.pitch:8,zoom:1};
+  var view={yaw:view0.yaw,pitch:view0.pitch,zoom:1},goal={yaw:view0.yaw,pitch:view0.pitch,zoom:1},spin=0,held=false;
+  var playing=!isReduced(),visible=true,raf=0,clock=0,last=0,ema=16,slow=0,frames=0;
+  var dpr=Math.min(window.devicePixelRatio||1,3),W=0,H=0,dead=false,err="",stillU=1,io=null,ro=null,cam=null;
   function nothing(){}
-  /* what syncMannequins and the tests call; a figure that never started answers them too */
   var self={el:el,name:name,sync:nothing,wake:nothing,toggle:nothing,setU:nothing,setHL:nothing,
     probe:function(){return null;},
     dispose:function(){dead=true;},
-    state:function(){return {live:!!gl&&!dead,playing:playing,frames:frames,q:q,err:err,w:W,h:H,yaw:yaw,look:look};}};
+    state:function(){return {live:!!gl&&!dead&&!!body,playing:playing,frames:frames,q:dpr,err:err,w:W,h:H,yaw:view.yaw,look:look};}};
   function fail(e){
     err=String(e&&e.message||e);dead=true;el.removeAttribute("data-live");stop();
     try{var lc=gl&&gl.getExtension("WEBGL_lose_context");if(lc)lc.loseContext();}catch(x){}
     gl=null;}
   if(!rec||!canvas){err="no record";dead=true;return self;}
   try{
-    gl=canvas.getContext("webgl2",{antialias:false,alpha:false,depth:false,stencil:false,premultipliedAlpha:false,powerPreference:"default"});
+    gl=canvas.getContext("webgl2",{antialias:true,alpha:false,depth:true,stencil:false,premultipliedAlpha:true,powerPreference:"default"});
     if(!gl)throw new Error("no WebGL2");
-    P.scene=program(gl,sceneFS(false));P.floor=program(gl,sceneFS(true));P.hot=program(gl,FS_HOT);P.down=program(gl,FS_DOWN);
-    P.blur=program(gl,FS_BLUR);P.out=program(gl,FS_OUT);
-    vao=gl.createVertexArray();gl.bindVertexArray(vao);
-    tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);
+    P.body=program(gl,VS_BODY,FS_BODY);P.eq=program(gl,VS_EQ,FS_EQ);P.bg=program(gl,VS_FULL,FS_BG);
+    P.floor=program(gl,VS_FLOOR,FS_FLOOR);P.sBody=program(gl,VS_BODY,FS_DEPTH);P.sEq=program(gl,VS_EQ,FS_DEPTH);
+    P.arrow=program(gl,VS_ARROW,FS_ARROW);
+    /* the bones' matrices: four texels a bone */
+    boneTex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,boneTex);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,4,NB,0,gl.RGBA,gl.FLOAT,null);
+    /* the shadow map, from the key light */
+    var st=gl.createTexture(),SZ=1024;gl.bindTexture(gl.TEXTURE_2D,st);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.DEPTH_COMPONENT24,SZ,SZ,0,gl.DEPTH_COMPONENT,gl.UNSIGNED_INT,null);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_MODE,gl.COMPARE_REF_TO_TEXTURE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_FUNC,gl.LEQUAL);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    var sf=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,sf);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,st,0);
+    shadow={tx:st,fb:sf,size:SZ,ok:gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE};
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+    /* the floor: a disc */
+    var ring=[0,0],N=64;for(var i=0;i<=N;i++){var a=i/N*Math.PI*2;ring.push(Math.cos(a),Math.sin(a));}
+    vaoFloor=gl.createVertexArray();gl.bindVertexArray(vaoFloor);
+    var fb=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,fb);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(ring),gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+    vaoArrow=gl.createVertexArray();gl.bindVertexArray(vaoArrow);
+    bufArrow=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,bufArrow);
+    gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,12,0);
+    gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,1,gl.FLOAT,false,12,8);
+    gl.bindVertexArray(null);
   }catch(e){fail(e);return self;}
   canvas.addEventListener("webglcontextlost",function(ev){ev.preventDefault();fail("context lost");});
-  el.setAttribute("data-live","1");
 
-  /* ---- size and camera ---- */
-  /* the canvas's laid-out size (not its box on screen, which a sheet sliding in scales) */
+  /* the body's buffers, once it has loaded */
+  function upload(B){
+    vaoBody=gl.createVertexArray();gl.bindVertexArray(vaoBody);
+    function attr(loc,data,size,type,norm,integer){
+      var b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(loc);
+      if(integer)gl.vertexAttribIPointer(loc,size,type,0,0);else gl.vertexAttribPointer(loc,size,type,norm,0,0);}
+    attr(0,B.pos,3,gl.FLOAT,false);attr(1,B.nrm,3,gl.FLOAT,false);
+    attr(2,B.bone,4,gl.UNSIGNED_BYTE,false,true);attr(3,B.bw,4,gl.UNSIGNED_BYTE,true);
+    attr(4,B.mus,4,gl.UNSIGNED_BYTE,false);attr(5,B.misc,4,gl.UNSIGNED_BYTE,false);
+    var ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,B.idx,gl.STATIC_DRAW);
+    gl.bindVertexArray(null);
+    body=B;}
+  /* an equipment shape's buffers, made the first time it is drawn */
+  function shapeOf(key){
+    if(shapes[key])return shapes[key];
+    var m=build(key);if(!m)return null;
+    var vao=gl.createVertexArray();gl.bindVertexArray(vao);
+    [m.p,m.n].forEach(function(d,loc){var b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,d,gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);});
+    var ib=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,m.i,gl.STATIC_DRAW);
+    gl.bindVertexArray(null);
+    shapes[key]={vao:vao,n:m.i.length};return shapes[key];}
+
+  /* ---- size ---- */
   function resize(){
     if(dead)return false;
-    var dpr=Math.min(window.devicePixelRatio||1,2);
     var w=Math.max(2,Math.round(canvas.clientWidth*dpr)),h=Math.max(2,Math.round(canvas.clientHeight*dpr));
-    if(w===W&&h===H&&T.s)return false;
-    W=w;H=h;canvas.width=W;canvas.height=H;
-    /* the scene is marched at no more than about 200 000 pixels, and less on a slow phone */
-    qMax=Math.min(1,Math.sqrt(200000/(W*H)));if(q>qMax||!T.s)q=qMax;
-    build();fits={};camKey="";paths={};return true;}
-  function build(){
-    ["s","fl","g1","g1b","g2","g2b"].forEach(function(k){drop(gl,T[k]);});
-    var sw=Math.max(2,Math.round(W*q)),sh=Math.max(2,Math.round(H*q));
-    T.s=target(gl,sw,sh);T.fl=target(gl,Math.max(2,Math.round(sw/4)),Math.max(2,Math.round(sh/4)));
-    var w1=Math.max(2,Math.round(W/4)),h1=Math.max(2,Math.round(H/4)),w2=Math.max(2,Math.round(W/8)),h2=Math.max(2,Math.round(H/8));
-    T.g1=target(gl,w1,h1);T.g1b=target(gl,w1,h1);T.g2=target(gl,w2,h2);T.g2b=target(gl,w2,h2);}
-  /* one framing per few degrees of turn, so the whole movement stays in the picture */
-  function fitAt(y){
-    var k=Math.round(y/5)*5+"|"+Math.round(pitch/5)*5;
-    if(!fits[k])fits[k]=framing(rec,W/H,Math.round(y/5)*5,Math.round(pitch/5)*5,{margin:.98});
-    return fits[k];}
+    if(w===W&&h===H)return false;
+    W=w;H=h;canvas.width=W;canvas.height=H;return true;}
+
+  /* ---- the camera ---- */
   function camNow(){
-    var key=yaw.toFixed(1)+"|"+pitch.toFixed(1)+"|"+W+"x"+H;
-    if(key===camKey)return cam;
-    var f=fitAt(yaw);
-    cam=camera(f.target,f.dist,yaw,pitch,f.fov,W/H);camKey=key;return cam;}
-  /* the arrow, placed again whenever the camera moves */
-  function arrow(){
-    if(paths.key===camKey)return paths.v;
-    paths={key:camKey,v:arrowShape(rec,camNow(),W,H)};
-    return paths.v;}
+    if(!pts)pts=framePoints(rec);
+    cam=fitCamera(rec,pts,W/H,view.yaw,view.pitch,view.zoom);
+    return cam;}
+  /* the view eases toward where the finger put it; let go, it carries on and settles */
+  function settle(dt){
+    var k=1-Math.exp(-dt/(held?.045:.11));
+    if(!held&&Math.abs(spin)>.5){goal.yaw+=spin*dt;spin*=Math.exp(-dt/.32);}else if(!held)spin=0;
+    var moved=Math.abs(goal.yaw-view.yaw)+Math.abs(goal.pitch-view.pitch)+Math.abs(goal.zoom-view.zoom)*40;
+    view.yaw+=(goal.yaw-view.yaw)*k;view.pitch+=(goal.pitch-view.pitch)*k;view.zoom+=(goal.zoom-view.zoom)*k;
+    return moved>.02||Math.abs(spin)>.5;}
 
   /* ---- a frame ---- */
   function draw(s){
-    if(dead)return;
+    if(dead||!body)return;
     try{
-      if(!T.s)resize();
+      resize();
       if(!theme)retheme();
-      var ph=playing?phaseAt(rec,s):{u:stillU,act:1};
-      var sc=sceneAt(rec,ph.u,hl),pk=pack(sc.prims),c=camNow(),Ls=lights(c),th=theme;
-      /* the solids */
-      gl.bindTexture(gl.TEXTURE_2D,tex);
-      if(pk.n!==texRows){gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA32F,ROW,pk.n,0,gl.RGBA,gl.FLOAT,pk.tex);texRows=pk.n;}
-      else gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,ROW,pk.n,gl.RGBA,gl.FLOAT,pk.tex);
-      var cb=new Float32Array(MAXC*4),ci=new Int32Array(MAXC*4),hv=new Int32Array(64),lo=[1e9,1e9],hi=[-1e9,-1e9];
-      pk.clusters.forEach(function(C,i){cb.set([C.c[0],C.c[1],C.c[2],C.r],i*4);ci.set([C.start,C.count,C.type,C.m],i*4);});
-      pk.hl.slice(0,64).forEach(function(j,i){hv[i]=j;});
-      sc.prims.forEach(function(q3){lo[0]=Math.min(lo[0],q3.c[0]-q3.r*.5);hi[0]=Math.max(hi[0],q3.c[0]+q3.r*.5);
-        lo[1]=Math.min(lo[1],q3.c[2]-q3.r*.5);hi[1]=Math.max(hi[1],q3.c[2]+q3.r*.5);});
-      /* where the figure sits on the screen, for the light behind it */
-      var mid=project(c,c.target),fig=[(mid[0]+1)/2,1-(mid[1]+1)/2];
-      /* ---- the floor's shadow, a quarter size, then the scene ---- */
-      [[P.floor,T.fl],[P.scene,T.s]].forEach(function(st){
-        var u=st[0].u,tg=st[1];
-        gl.bindFramebuffer(gl.FRAMEBUFFER,tg.fb);gl.viewport(0,0,tg.w,tg.h);gl.useProgram(st[0].p);
-        bindTex(0,tex,u.uP);
-        if(u.uFl)bindTex(1,T.fl.tx,u.uFl);
-        gl.uniform4fv(u.uCB,cb);gl.uniform4iv(u.uCI,ci);gl.uniform1i(u.uNC,pk.clusters.length);
-        if(u.uHL){gl.uniform4iv(u.uHL,hv);gl.uniform1i(u.uNHL,Math.min(pk.hl.length,64));}
-        gl.uniform3fv(u.uEye,c.p);gl.uniform3fv(u.uFwd,c.f);gl.uniform3fv(u.uRgt,c.r);gl.uniform3fv(u.uUp,c.u);
-        gl.uniform2f(u.uTan,c.tx,c.ty);gl.uniform2f(u.uRes,tg.w,tg.h);gl.uniform3fv(u.uLK,Ls.key);
-        if(u.uLF){
-          gl.uniform3fv(u.uLF,Ls.fill);gl.uniform3fv(u.uLRL,Ls.rimL);gl.uniform3fv(u.uLRR,Ls.rimR);
-          gl.uniform4f(u.uFoot,(lo[0]+hi[0])/2,(lo[1]+hi[1])/2,Math.max((hi[0]-lo[0])*.62,.5),Math.max((hi[1]-lo[1])*.62,.45));
-          gl.uniform2f(u.uFig,fig[0],fig[1]);
-          gl.uniform3fv(u.uTop,th.top);gl.uniform3fv(u.uMid,th.mid);gl.uniform3fv(u.uEdge,th.edge);gl.uniform3fv(u.uPool,th.pool);
-          gl.uniform3fv(u.uAlb,[].concat.apply([],th.alb));gl.uniform2fv(u.uSpc,[].concat.apply([],th.spc));
-          gl.uniform3fv(u.uKeyC,th.key);gl.uniform3fv(u.uFillC,th.fill);gl.uniform3fv(u.uSkyC,th.sky);
-          gl.uniform3fv(u.uBncC,th.bounce);gl.uniform3fv(u.uRimC,th.rim);gl.uniform3fv(u.uSpcC,th.spec);
-          gl.uniform3fv(u.uMarkE,th.markE);gl.uniform3fv(u.uDeep,th.deep);gl.uniform3fv(u.uHot,th.hot);
-          gl.uniform1f(u.uAct,ph.act);gl.uniform1f(u.uShade,th.shade);gl.uniform1f(u.uQ,q>.45?1:0);}
-        gl.drawArrays(gl.TRIANGLES,0,3);});
-      /* ---- the glow ---- */
-      pass(P.hot,T.g1,T.s,{uPx:[1/T.s.w,1/T.s.h]});
-      blur(T.g1,T.g1b,W/4*6/720);
-      pass(P.down,T.g2,T.g1,{uPx:[1/T.g1.w,1/T.g1.h]});
-      blur(T.g2,T.g2b,W/8*18/720);
+      var ph=playing?phaseAt(rec,s):{u:stillU,act:1},sc=sceneAt(rec,ph.u),c=camNow(),Ls=lights(c),th=theme;
+      gl.bindTexture(gl.TEXTURE_2D,boneTex);
+      gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,4,NB,gl.RGBA,gl.FLOAT,sc.M);
+      var near=Math.max(.05,c.dist-4),far=c.dist+6;
+      var VP=mul4(persp(c.ty,W/H,near,far),lookAt(c.p,c.f,c.r,c.u));
+      /* the light's view: an orthographic box round everything, looking along the key */
+      var ctr=pts.center,rad=pts.radius*1.15,lp=V.add(ctr,V.mul(Ls.key,rad*3));
+      var lf=V.mul(Ls.key,-1),lr=V.norm(V.cross(lf,Math.abs(lf[1])>.95?[1,0,0]:[0,1,0])),lu=V.cross(lr,lf);
+      var LVP=mul4(ortho(rad,rad*.5,rad*5.5),lookAt(lp,lf,lr,lu));
+      var parts=sc.solids.map(place).filter(Boolean);
+      /* ---- the shadow map ---- */
+      var shOn=shadow.ok?1:0;
+      if(shOn){
+        gl.bindFramebuffer(gl.FRAMEBUFFER,shadow.fb);gl.viewport(0,0,shadow.size,shadow.size);
+        gl.enable(gl.DEPTH_TEST);gl.depthMask(true);gl.clear(gl.DEPTH_BUFFER_BIT);gl.disable(gl.BLEND);
+        gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1.5,3);
+        gl.useProgram(P.sBody.p);bindBones(P.sBody.u);gl.uniformMatrix4fv(P.sBody.u.uVP,false,LVP);
+        gl.bindVertexArray(vaoBody);gl.drawElements(gl.TRIANGLES,body.nt*3,gl.UNSIGNED_SHORT,0);
+        gl.useProgram(P.sEq.p);gl.uniformMatrix4fv(P.sEq.u.uVP,false,LVP);
+        parts.forEach(function(pt){var sh=shapeOf(pt.key);if(!sh)return;
+          gl.uniformMatrix4fv(P.sEq.u.uModel,false,pt.mat);gl.bindVertexArray(sh.vao);gl.drawElements(gl.TRIANGLES,sh.n,gl.UNSIGNED_SHORT,0);});
+        gl.disable(gl.POLYGON_OFFSET_FILL);}
       /* ---- the picture ---- */
-      var O=P.out,ou=O.u,ar=arrow(),A=new Float32Array(48),Hd=new Float32Array(6),na=0;
-      if(ar){ar.body.slice(0,24).forEach(function(p,i){A[i*2]=p[0];A[i*2+1]=p[1];});na=Math.min(ar.body.length,24);
-        ar.head.forEach(function(p,i){Hd[i*2]=p[0];Hd[i*2+1]=p[1];});}
-      gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,W,H);gl.useProgram(O.p);
-      bindTex(0,T.s.tx,ou.uS);bindTex(1,T.g1.tx,ou.uG1);bindTex(2,T.g2.tx,ou.uG2);
-      gl.uniform2fv(ou.uA,A);gl.uniform1i(ou.uNA,na);gl.uniform2fv(ou.uH,Hd);
-      gl.uniform3fv(ou.uArC,th.arrow);gl.uniform3fv(ou.uArG,th.arrowGlow);
-      gl.uniform1f(ou.uArK,ph.u===stillU&&!playing?1:(ph.act>.95?1:.72));gl.uniform1f(ou.uSc,W/720);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,W,H);
+      gl.clearColor(th.edge[0],th.edge[1],th.edge[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+      /* the stage */
+      var mid=project3(VP,ctr);
+      gl.disable(gl.DEPTH_TEST);gl.useProgram(P.bg.p);gl.bindVertexArray(null);
+      gl.uniform3fv(P.bg.u.uTop,th.top);gl.uniform3fv(P.bg.u.uMid,th.mid);gl.uniform3fv(P.bg.u.uEdge,th.edge);
+      gl.uniform2f(P.bg.u.uFig,mid[0]*.5+.5,mid[1]*.5+.5);gl.uniform1f(P.bg.u.uAsp,W/H);
       gl.drawArrays(gl.TRIANGLES,0,3);
+      /* the floor */
+      gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+      var fu=P.floor.u,foot=pts.foot;gl.useProgram(P.floor.p);
+      gl.uniformMatrix4fv(fu.uVP,false,VP);gl.uniform2f(fu.uC,ctr[0],ctr[2]);gl.uniform1f(fu.uR,Math.max(2.2,rad*2.2));
+      gl.uniform3fv(fu.uMid,th.mid);gl.uniform3fv(fu.uEdge,th.edge);gl.uniform3fv(fu.uPool,th.pool);gl.uniform1f(fu.uPoolK,th.poolK);
+      gl.uniform4f(fu.uFoot,foot[0],foot[1],foot[2],foot[3]);
+      shadowUniforms(fu,LVP,shOn);
+      gl.bindVertexArray(vaoFloor);gl.drawArrays(gl.TRIANGLE_FAN,0,66);
+      gl.disable(gl.BLEND);
+      /* the equipment, then the body */
+      gl.enable(gl.DEPTH_TEST);gl.depthMask(true);
+      var eu=P.eq.u;gl.useProgram(P.eq.p);gl.uniformMatrix4fv(eu.uVP,false,VP);lightUniforms(eu,c,Ls,th);shadowUniforms(eu,LVP,shOn);
+      parts.forEach(function(pt){var sh=shapeOf(pt.key);if(!sh)return;
+        var mt=th.mats[pt.m]||th.mats[2];
+        gl.uniformMatrix4fv(eu.uModel,false,pt.mat);gl.uniform3fv(eu.uAlb,mt[0]);gl.uniform3f(eu.uSpc,mt[1],mt[2],mt[3]);
+        gl.bindVertexArray(sh.vao);gl.drawElements(gl.TRIANGLES,sh.n,gl.UNSIGNED_SHORT,0);});
+      var bu=P.body.u;gl.useProgram(P.body.p);bindBones(bu);gl.uniformMatrix4fv(bu.uVP,false,VP);
+      lightUniforms(bu,c,Ls,th);shadowUniforms(bu,LVP,shOn);
+      gl.uniform1fv(bu.uHL,hlv);gl.uniform1f(bu.uAct,ph.act);
+      gl.uniform3fv(bu.uSkin,th.skin);gl.uniform3fv(bu.uShorts,th.shorts);gl.uniform3fv(bu.uShoes,th.shoes);gl.uniform3fv(bu.uSoles,th.soles);gl.uniform3fv(bu.uEyes,th.eyes);
+      gl.uniform1f(bu.uDbg,DEBUG.muscles?1:0);
+      gl.uniform3fv(bu.uDeep,th.deep);gl.uniform3fv(bu.uHot,th.hot);
+      gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);
+      gl.bindVertexArray(vaoBody);gl.drawElements(gl.TRIANGLES,body.nt*3,gl.UNSIGNED_SHORT,0);
+      gl.disable(gl.CULL_FACE);
+      /* the arrow */
+      drawArrow(c,ph);
+      gl.bindVertexArray(null);
+      if(!el.hasAttribute("data-live"))el.setAttribute("data-live","1");
       frames++;
     }catch(e){fail(e);}}
-  function bindTex(unit,tx,loc){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,tx);gl.uniform1i(loc,unit);}
-  function pass(pr,dst,src,un){
-    gl.bindFramebuffer(gl.FRAMEBUFFER,dst.fb);gl.viewport(0,0,dst.w,dst.h);gl.useProgram(pr.p);
-    bindTex(0,src.tx,pr.u.uT);
-    for(var k in un)if(pr.u[k])gl.uniform2fv(pr.u[k],un[k]);
-    gl.drawArrays(gl.TRIANGLES,0,3);}
-  function blur(a,b,sig){
-    var B=P.blur;sig=Math.max(sig,.6);
-    [[a,b,[1/a.w,0]],[b,a,[0,1/a.h]]].forEach(function(st){
-      gl.bindFramebuffer(gl.FRAMEBUFFER,st[1].fb);gl.viewport(0,0,st[1].w,st[1].h);gl.useProgram(B.p);
-      bindTex(0,st[0].tx,B.u.uT);gl.uniform2fv(B.u.uDir,st[2]);gl.uniform1f(B.u.uSig,sig);
-      gl.drawArrays(gl.TRIANGLES,0,3);});}
+  function project3(M,p){var x=M[0]*p[0]+M[4]*p[1]+M[8]*p[2]+M[12],y=M[1]*p[0]+M[5]*p[1]+M[9]*p[2]+M[13],w=M[3]*p[0]+M[7]*p[1]+M[11]*p[2]+M[15];
+    return [x/w,y/w];}
+  function bindBones(u){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,boneTex);gl.uniform1i(u.uBones,0);}
+  function shadowUniforms(u,LVP,on){
+    gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,shadow.tx);gl.uniform1i(u.uSh,1);
+    gl.uniformMatrix4fv(u.uLVP,false,LVP);gl.uniform1f(u.uShOn,on);}
+  function lightUniforms(u,c,Ls,th){
+    gl.uniform3fv(u.uEye,c.p);gl.uniform3fv(u.uLK,Ls.key);gl.uniform3fv(u.uLF,Ls.fill);gl.uniform3fv(u.uLR,Ls.rim);
+    gl.uniform3fv(u.uKeyC,th.key);gl.uniform3fv(u.uFillC,th.fill);gl.uniform3fv(u.uSkyC,th.sky);gl.uniform3fv(u.uBncC,th.bounce);
+    gl.uniform3fv(u.uRimC,th.rim);gl.uniform3fv(u.uSpcC,th.spec);}
+  /* the arrow: a soft glow under a solid line, and its head */
+  var arrowKey="",arrowVerts=null;
+  function drawArrow(c,ph){
+    var key=[c.yaw.toFixed(1),c.pitch.toFixed(1),c.dist.toFixed(3),W,H].join("|");
+    if(key!==arrowKey){arrowKey=key;arrowVerts=arrowMesh(arrowShape(rec,c,W,H),W/720);}
+    if(!arrowVerts||!arrowVerts.n)return;
+    gl.disable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+    gl.useProgram(P.arrow.p);gl.bindVertexArray(vaoArrow);gl.bindBuffer(gl.ARRAY_BUFFER,bufArrow);
+    gl.bufferData(gl.ARRAY_BUFFER,arrowVerts.d,gl.DYNAMIC_DRAW);gl.uniform2f(P.arrow.u.uRes,W,H);
+    var k=ph.u===stillU&&!playing?1:(ph.act>.95?1:.72);
+    gl.uniform3fv(P.arrow.u.uC,theme.arrowGlow);gl.uniform1f(P.arrow.u.uK,.5*k);gl.drawArrays(gl.TRIANGLES,0,arrowVerts.glow);
+    gl.uniform3fv(P.arrow.u.uC,theme.arrow);gl.uniform1f(P.arrow.u.uK,k);gl.drawArrays(gl.TRIANGLES,arrowVerts.glow,arrowVerts.n-arrowVerts.glow);
+    gl.disable(gl.BLEND);}
 
   /* ---- time ---- */
   function tick(now){
     raf=0;if(dead)return;
-    if(last){var dt=now-last;clock+=Math.min(dt,100);ema=ema*.9+dt*.1;adapt();}
-    last=now;draw(clock/1000);
-    if(playing&&visible&&!document.hidden)raf=requestAnimationFrame(tick);
+    var dt=last?Math.min(now-last,100):16;
+    if(last){if(playing)clock+=dt;ema=ema*.92+dt*.08;adapt();}
+    last=now;
+    var turning=settle(dt/1000);
+    draw(clock/1000);
+    if((playing||turning||held)&&visible&&!document.hidden)raf=requestAnimationFrame(tick);
     else last=0;}
-  /* a phone that cannot keep up gets fewer pixels, then a still figure */
+  /* a phone that cannot keep up gets fewer pixels (never fewer than one a point), then
+     a still figure */
   function adapt(){
-    if(ema>30){slow++;fast=0;}else if(ema<18){fast++;slow=0;}else{slow=0;fast=0;}
-    if(slow>20){slow=0;
-      if(q>.32){q=Math.max(.3,q*.8);build();}
-      else if(ema>55){playing=false;syncBtn();}}
-    if(fast>90&&q<qMax){fast=0;q=Math.min(qMax,q*1.12);build();}}
-  function start(){if(!raf&&!dead&&playing&&visible&&!document.hidden){last=0;raf=requestAnimationFrame(tick);}}
+    if(ema>30)slow++;else slow=Math.max(0,slow-1);
+    if(slow>40){slow=0;
+      if(dpr>1.01){dpr=Math.max(1,dpr-.5);resize();}
+      else if(ema>55&&playing){playing=false;syncBtn();}}}
+  function start(){if(!raf&&!dead&&visible&&!document.hidden){last=0;raf=requestAnimationFrame(tick);}}
   function stop(){if(raf){cancelAnimationFrame(raf);raf=0;}last=0;}
   function once(){if(!dead&&!raf)requestAnimationFrame(function(){if(!raf)draw(clock/1000);});}
   function syncBtn(){
@@ -464,59 +451,75 @@ function Mannequin(el){
     el.toggleAttribute("data-paused",!playing);}
   function toggle(){
     playing=!playing;
-    /* paused, it holds where it was; started again, it carries on from there */
     if(!playing){var ph=phaseAt(rec,clock/1000);stillU=ph.u;}
     syncBtn();if(playing)start();else{stop();once();}}
   self.toggle=toggle;
 
   /* ---- the theme ---- */
-  function retheme(){
-    var de=document.documentElement;
-    look=(el.closest("[data-palette]")||de).getAttribute("data-palette")+"|"+(el.closest("[data-theme]")||de).getAttribute("data-theme");
-    theme=readTheme(el);}
+  function lookOf(){var de=document.documentElement;
+    return (el.closest("[data-palette]")||de).getAttribute("data-palette")+"|"+(el.closest("[data-theme]")||de).getAttribute("data-theme");}
+  function retheme(){look=lookOf();theme=readTheme(el);}
+  function setHL(h){hl=h||{};hlv=new Float32Array(21);for(var k in hl)if(MUSID[k])hlv[MUSID[k]]=hl[k];}
+  setHL(hl);
   self.sync=function(){
     if(dead)return;
-    /* what the patcher put back from the markup, set to how the figure really is */
-    el.setAttribute("data-live","1");syncBtn();
-    var de=document.documentElement;
-    var lk=(el.closest("[data-palette]")||de).getAttribute("data-palette")+"|"+(el.closest("[data-theme]")||de).getAttribute("data-theme");
-    if(lk!==look){retheme();once();}
+    if(body)el.setAttribute("data-live","1");
+    syncBtn();
+    if(lookOf()!==look){retheme();once();}
     if(resize())once();};
 
-  /* ---- turning it with a finger (the exercise sheet only) ---- */
+  /* ---- turning it ---- */
   if(el.hasAttribute("data-mq-turn")){
-    var drag=null;
+    var ptrs={},drag=null,pinch=null,lastTap=0;
     canvas.addEventListener("pointerdown",function(ev){
-      drag={x:ev.clientX,y:ev.clientY,yaw:yaw,pitch:pitch,moved:false,id:ev.pointerId};});
+      ptrs[ev.pointerId]={x:ev.clientX,y:ev.clientY};
+      var ids=Object.keys(ptrs);
+      if(ids.length===2){var a=ptrs[ids[0]],b=ptrs[ids[1]];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),zoom:goal.zoom};drag=null;return;}
+      drag={x:ev.clientX,y:ev.clientY,yaw:goal.yaw,pitch:goal.pitch,moved:false,id:ev.pointerId,hist:[[ev.clientX,performance.now()]]};
+      spin=0;});
     canvas.addEventListener("pointermove",function(ev){
+      if(ptrs[ev.pointerId])ptrs[ev.pointerId]={x:ev.clientX,y:ev.clientY};
+      if(pinch){var ids=Object.keys(ptrs);if(ids.length<2)return;var a=ptrs[ids[0]],b=ptrs[ids[1]];
+        goal.zoom=Math.max(.7,Math.min(1.6,pinch.zoom*pinch.d/Math.max(Math.hypot(a.x-b.x,a.y-b.y),1)));held=true;start();return;}
       if(!drag||ev.pointerId!==drag.id)return;
       var dx=ev.clientX-drag.x,dy=ev.clientY-drag.y;
-      if(!drag.moved&&Math.abs(dx)<6)return;
-      if(!drag.moved){drag.moved=true;try{canvas.setPointerCapture(ev.pointerId);}catch(e){}}
-      yaw=Math.max(yaw0-85,Math.min(yaw0+85,drag.yaw-dx*.45));
-      pitch=Math.max(-2,Math.min(30,drag.pitch+dy*.12));
-      if(!playing)once();});
+      if(!drag.moved&&Math.hypot(dx,dy)<6)return;
+      if(!drag.moved){drag.moved=true;held=true;try{canvas.setPointerCapture(ev.pointerId);}catch(e){}}
+      goal.yaw=drag.yaw-dx*.5;
+      goal.pitch=Math.max(-6,Math.min(48,drag.pitch+dy*.25));
+      drag.hist.push([ev.clientX,performance.now()]);if(drag.hist.length>6)drag.hist.shift();
+      start();});
     function up(ev){
+      delete ptrs[ev.pointerId];
+      if(pinch){if(Object.keys(ptrs).length<2){pinch=null;held=false;}return;}
       if(!drag||ev.pointerId!==drag.id)return;
-      var tap=!drag.moved;drag=null;
-      if(tap)toggle();}
-    canvas.addEventListener("pointerup",up);canvas.addEventListener("pointercancel",function(){drag=null;});
-    canvas.addEventListener("dblclick",function(){yaw=yaw0;pitch=pitch0;once();});}
+      var d=drag;drag=null;held=false;
+      if(!d.moved){
+        var now=performance.now();
+        if(now-lastTap<320){lastTap=0;goal.yaw=view0.yaw+Math.round((view.yaw-view0.yaw)/360)*360;goal.pitch=view0.pitch;goal.zoom=1;spin=0;start();return;}
+        lastTap=now;
+        setTimeout(function(){if(lastTap===now)toggle();},330);return;}
+      /* let go while turning: it carries on, slowing */
+      var h=d.hist,a0=h[0],a1=h[h.length-1],dtm=(a1[1]-a0[1])/1000;
+      spin=dtm>0&&performance.now()-a1[1]<80?Math.max(-720,Math.min(720,-(a1[0]-a0[0])*.5/dtm)):0;
+      start();}
+    canvas.addEventListener("pointerup",up);canvas.addEventListener("pointercancel",up);
+    canvas.addEventListener("wheel",function(ev){ev.preventDefault();goal.zoom=Math.max(.7,Math.min(1.6,goal.zoom*Math.exp(ev.deltaY*.0015)));start();},{passive:false});}
   if(btn)btn.addEventListener("click",function(ev){ev.stopPropagation();toggle();});
 
   /* ---- on screen or not, and its size ---- */
   if(window.IntersectionObserver){
-    io=new IntersectionObserver(function(es){visible=es[es.length-1].isIntersecting;if(visible)start();else stop();});
+    io=new IntersectionObserver(function(es){visible=es[es.length-1].isIntersecting;if(visible){if(playing)start();else once();}else stop();});
     io.observe(el);}
   if(window.ResizeObserver){ro=new ResizeObserver(function(){if(resize())once();});ro.observe(canvas);}
-  self.wake=function(){if(document.hidden)stop();else start();};
+  self.wake=function(){if(document.hidden)stop();else if(playing)start();};
   self.dispose=function(){
     stop();dead=true;if(io)io.disconnect();if(ro)ro.disconnect();
     try{var lc=gl&&gl.getExtension("WEBGL_lose_context");if(lc)lc.loseContext();}catch(e){}
     gl=null;};
   /* for the tests: draw now and say what came out */
   self.probe=function(){
-    if(dead||!gl)return null;
+    if(dead||!gl||!body)return null;
     draw(clock/1000);
     var px=new Uint8Array(W*H*4);gl.readPixels(0,0,W,H,gl.RGBA,gl.UNSIGNED_BYTE,px);
     var n=W*H,sum=[0,0,0],red=0,lit=0;
@@ -524,11 +527,40 @@ function Mannequin(el){
       if(r>120&&r>g*1.5&&r>b*1.5)red++;if(r+g+b>360)lit++;}
     return {w:W,h:H,mean:sum.map(function(x){return Math.round(x/n);}),red:red/n,lit:lit/n,corner:[px[0],px[1],px[2]]};};
   self.setU=function(u){playing=false;stillU=u;stop();syncBtn();draw(0);};
-  /* which muscles are lit, by tag (rig.js); for the preview page and the tests */
-  self.setHL=function(h){hl=h||{};if(!playing)draw(clock/1000);};
+  self.setHL=function(h){setHL(h);if(!playing)draw(clock/1000);};
+  /* turn it from code (the preview page and the tests): degrees, eased like a finger */
+  self.turn=function(dy,dp){goal.yaw+=dy||0;goal.pitch=Math.max(-6,Math.min(48,goal.pitch+(dp||0)));start();};
+  self.view=function(){return {yaw:view.yaw,pitch:view.pitch,zoom:view.zoom,cam:cam};};
+  /* put the view somewhere at once (the preview page, the offline stills) */
+  self.setView=function(v){
+    ["yaw","pitch","zoom"].forEach(function(k){if(v&&v[k]!=null)view[k]=goal[k]=v[k];});spin=0;
+    if(!raf)draw(clock/1000);};
   syncBtn();resize();retheme();
-  if(playing)start();else draw(0);
+  loadBody().then(function(B){if(dead)return;try{upload(B);}catch(e){fail(e);return;}
+    if(playing)start();else draw(0);}).catch(function(e){err=String(e&&e.message||e);});
   return self;}
+
+/* The arrow's triangles, from its path on the picture: a wide soft glow and a narrow
+   line over it, each a strip with round-ish joins, and the head. [x, y, alpha] each. */
+function arrowMesh(ar,S){
+  if(!ar)return null;
+  var d=[];
+  function strip(pts,w,soft){
+    for(var i=0;i<pts.length-1;i++){
+      var a=pts[i],b=pts[i+1],tx=b[0]-a[0],ty=b[1]-a[1],l=Math.hypot(tx,ty)||1,nx=-ty/l*w,ny=tx/l*w;
+      if(soft){
+        /* the glow: bright on its line, nothing at its edges */
+        d.push(a[0],a[1],1,a[0]+nx,a[1]+ny,0,b[0],b[1],1, b[0],b[1],1,a[0]+nx,a[1]+ny,0,b[0]+nx,b[1]+ny,0);
+        d.push(a[0],a[1],1,b[0],b[1],1,a[0]-nx,a[1]-ny,0, b[0],b[1],1,b[0]-nx,b[1]-ny,0,a[0]-nx,a[1]-ny,0);}
+      else d.push(a[0]+nx,a[1]+ny,1,a[0]-nx,a[1]-ny,1,b[0]+nx,b[1]+ny,1, b[0]+nx,b[1]+ny,1,a[0]-nx,a[1]-ny,1,b[0]-nx,b[1]-ny,1);}}
+  function tri(h,g){
+    var c=[(h[0][0]+h[1][0]+h[2][0])/3,(h[0][1]+h[1][1]+h[2][1])/3];
+    var p=h.map(function(q){return [c[0]+(q[0]-c[0])*g,c[1]+(q[1]-c[1])*g];});
+    d.push(p[0][0],p[0][1],1,p[1][0],p[1][1],1,p[2][0],p[2][1],1);}
+  strip(ar.body,9*S,true);tri(ar.head,1.6);
+  var glow=d.length/3;
+  strip(ar.body,2.1*S,false);tri(ar.head,1);
+  return {d:new Float32Array(d),n:d.length/3,glow:glow};}
 
 /* Called after every render: starts the figures that have appeared, keeps the ones that
    stay (the patcher keeps their elements), and lets go of the ones that left. */
@@ -564,4 +596,4 @@ function fig3dHtml(name,o){
     +(o.turn?'<span class="fig3d-tag" aria-hidden="true">'+t("Drag to turn")+'</span>':'')
     +'<button class="fig3d-play" type="button" aria-label="'+t("Pause")+'">'+ICONS+'</button></div>';}
 
-export {syncMannequins, hasMannequin, mannequins, supported, readTheme, fig3dHtml};
+export {syncMannequins, hasMannequin, mannequins, supported, readTheme, fig3dHtml, loadBody, setDebug};

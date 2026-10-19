@@ -7,8 +7,8 @@
    Only the pilot's two exercises ship (js/data/figures.js), and they are posed from
    their 3D records; the rest are drafts, kept for when each gets its record and its
    pictures are approved (docs/MANNEQUIN3D.md). Render one by name, not the whole set. */
-import {V} from "./render.mjs";
-import {joints} from "./body.mjs";
+import {V} from "../../js/data/mannequin/geom.js";
+import {joints} from "../../js/data/mannequin/rig.js";
 import {RECORDS} from "../../js/data/mannequin/records.js";
 import {poseAt} from "../../js/data/mannequin/motion.js";
 const {add,sub,mul,norm,lerp}=V;

@@ -9,14 +9,18 @@
      phaseAt(rec, seconds)   where in the repetition: {u, phase, act}. u runs 0 (start)
                              to 1 (end); act is how hard the muscles work (for the glow)
      poseAt(rec, u)          the pose at u
-     sceneAt(rec, u, hl)     the solids to draw: {prims, J, pose}
-     framing(rec, ...)       one camera that keeps the whole movement in the picture
+     sceneAt(rec, u)         what to draw: {pose, J, M, solids}: the joints, every
+                             bone's matrix (skin.js) and the equipment's solids
+     framePoints(rec)        what the camera must keep in view, over the movement
+     fitCamera(rec, pts, ...) the camera at a yaw and pitch that keeps it all in the
+                             picture
      motionPath(rec, n)      the world path the arrow follows, start to end
      arrowShape(rec, cam..)  the arrow on the picture, set beside the body
 
    Pure: the same calls give the same figure, in the app and in the offline tool. */
 import {V, camera, project} from "./geom.js";
-import {joints, figure} from "./rig.js";
+import {joints} from "./rig.js";
+import {solve} from "./skin.js";
 import {props} from "./kit.js";
 
 var add=V.add,sub=V.sub,mul=V.mul,dot=V.dot,cross=V.cross,len=V.len,norm=V.norm,lerp=V.lerp;
@@ -76,35 +80,63 @@ function poseAt(rec,u){
   var keys=rec.keys,p=keys.length<2?mix(keys[0],null,0):lerpPose(keys[0],keys[1],u);
   if(rec.drive)rec.drive(p,u,rec);
   return p;}
-/* What to draw at u: the figure, its lit muscles, and the equipment placed from where
-   the body is (a handle in the hand, a pad behind the back). */
-function sceneAt(rec,u,hl){
-  var pose=poseAt(rec,u),f=figure(pose,hl),list=rec.equip?rec.equip(joints(pose),u,rec):[];
-  return {prims:f.prims.concat(props(list)),J:f.J,pose:pose};}
+/* What to draw at u: the body (its joints J and its bones' matrices M) and the
+   equipment placed from where the body is (a handle in the hand, a pad behind the
+   back), as solids (kit.js). */
+function sceneAt(rec,u){
+  var pose=poseAt(rec,u),r=solve(pose),list=rec.equip?rec.equip(r.J,u,rec):[];
+  return {pose:pose,J:r.J,M:r.M,solids:props(list)};}
 
 /* ---- the picture ---- */
-/* One camera for the whole movement: aimed at the middle of everything drawn at the
-   start, the middle and the end, as close as keeps all of it inside the picture with a
-   margin. yaw and pitch default to the record's own view. */
-function framing(rec,aspect,yaw,pitch,o){
-  o=o||{};var c=rec.cam||{},prims=[];
-  [0,.5,1].forEach(function(u){prims=prims.concat(sceneAt(rec,u,{}).prims);});
-  yaw=yaw!=null?yaw:c.yaw!=null?c.yaw:60;
-  pitch=pitch!=null?pitch:c.pitch!=null?c.pitch:8;
-  var fov=c.fov||28,margin=o.margin||c.margin||.84,lo=[1e9,1e9,1e9],hi=[-1e9,-1e9,-1e9],i,k;
-  for(i=0;i<prims.length;i++)for(k=0;k<3;k++){
-    lo[k]=Math.min(lo[k],prims[i].c[k]-prims[i].r*.7);hi[k]=Math.max(hi[k],prims[i].c[k]+prims[i].r*.7);}
+/* The body as spheres round its joints, for the camera and the arrow: what has to stay
+   in the picture and what an arrow must not cover. */
+function bodySpheres(J){
+  var out=[[J.head,.13],[J.neck,.09],[J.P,.16],[V.lerp(J.neck,J.P,.45),.17]];
+  ["l","r"].forEach(function(s){
+    out.push([J.sh[s],.09],[J.el[s],.06],[J.wr[s],.05],[J.grip[s],.055],[V.lerp(J.sh[s],J.el[s],.5),.07],[V.lerp(J.el[s],J.wr[s],.5),.055],
+      [J.hip[s],.1],[V.lerp(J.hip[s],J.kn[s],.5),.09],[J.kn[s],.07],[V.lerp(J.kn[s],J.an[s],.5),.065],[J.an[s],.06],
+      [add(J.an[s],mul(J.fd[s].dir,.16)),.05]);});
+  return out;}
+/* Everything the camera has to keep in view over the whole movement: the body at five
+   moments and the equipment (its solids, a little inside their bounds), with the middle
+   and size of it all, and where the feet stand (the floor's pool of light). */
+function framePoints(rec){
+  var list=[],feet=[];
+  [0,.25,.5,.75,1].forEach(function(u){
+    var sc=sceneAt(rec,u);
+    bodySpheres(sc.J).forEach(function(b){list.push([b[0][0],b[0][1],b[0][2],b[1]]);});
+    sc.solids.forEach(function(q){list.push([q.c[0],q.c[1],q.c[2],q.r*.7]);});
+    feet.push(sc.J.an.l,sc.J.an.r,sc.J.P);});
+  var lo=[1e9,1e9,1e9],hi=[-1e9,-1e9,-1e9];
+  list.forEach(function(q){for(var k=0;k<3;k++){lo[k]=Math.min(lo[k],q[k]-q[3]);hi[k]=Math.max(hi[k],q[k]+q[3]);}});
   lo[1]=Math.min(lo[1],0);
-  var target=mul(add(lo,hi),.5);
+  var center=mul(add(lo,hi),.5),radius=len(sub(hi,lo))/2;
+  var fl=[1e9,1e9],fh=[-1e9,-1e9];
+  feet.forEach(function(q){fl[0]=Math.min(fl[0],q[0]);fh[0]=Math.max(fh[0],q[0]);fl[1]=Math.min(fl[1],q[2]);fh[1]=Math.max(fh[1],q[2]);});
+  return {list:list,lo:lo,hi:hi,center:center,radius:radius,
+    foot:[(fl[0]+fh[0])/2,(fl[1]+fh[1])/2,Math.max((fh[0]-fl[0])*.75,.55),Math.max((fh[1]-fl[1])*.75,.5)]};}
+/* The camera at yaw and pitch (degrees; yaw 0 looks at the figure's front, 90 at its
+   left) that keeps everything in pts inside the picture with a margin: aimed at the
+   middle of it all, as close as it can be. The aim does not move with the turn and the
+   distance changes smoothly with it, so turning never jumps. zoom brings it nearer (<1)
+   or further (>1). */
+function fitCamera(rec,pts,aspect,yaw,pitch,zoom){
+  var c=rec.cam||{},fov=c.fov||28,margin=c.margin||.86,target=pts.center;
   if(c.target)target=add(target,c.target);
-  var a=.5,b=40;
-  for(var it=0;it<40;it++){
+  var a=.5,b=40,L=pts.list;
+  for(var it=0;it<28;it++){
     var d=(a+b)/2,cam=camera(target,d,yaw,pitch,fov,aspect),m=0;
-    for(i=0;i<prims.length;i++){
-      var pr=project(cam,prims[i].c),rx=prims[i].r*.7/pr[2]/cam.tx,ry=prims[i].r*.7/pr[2]/cam.ty;
+    for(var i=0;i<L.length;i++){
+      var q=L[i],pr=project(cam,q);
+      if(pr[2]<=.05){m=9;break;}
+      var rx=q[3]/pr[2]/cam.tx,ry=q[3]/pr[2]/cam.ty;
       m=Math.max(m,Math.abs(pr[0])+rx,Math.abs(pr[1])+ry);}
     if(m>margin)a=d;else b=d;}
-  return camera(target,b*(c.zoom||1),yaw,pitch,fov,aspect);}
+  return camera(target,b*(c.zoom||1)*(zoom||1),yaw,pitch,fov,aspect);}
+/* The old single framing, for the offline tools: the record's own view. */
+function framing(rec,aspect,yaw,pitch,o){
+  var c=rec.cam||{};
+  return fitCamera(rec,framePoints(rec),aspect,yaw!=null?yaw:c.yaw!=null?c.yaw:60,pitch!=null?pitch:c.pitch!=null?c.pitch:8,1);}
 
 /* The way the exercise moves, for its arrow: n+1 points from start to end along the
    path of what the record tracks (by default whichever of the hands, feet, knees or
@@ -153,18 +185,17 @@ function arrowShape(rec,cam,w,h,hl){
   var span=b-a,min=46*S,c0=[0,0];
   q.forEach(function(p){c0[0]+=p[0]/q.length;c0[1]+=p[1]/q.length;});
   if(span<min)q=q.map(function(p){return [c0[0]+(p[0]-c0[0])*min/span,c0[1]+(p[1]-c0[1])*min/span];});
-  /* the figure, as circles, at both ends of the movement */
+  /* the figure, as circles, at both ends of the movement, with a little room round them */
   var disc=[];
-  [0,1].forEach(function(u){sceneAt(rec,u,hl||{}).prims.forEach(function(p){
-    if(p.g!==1)return;
-    var pr=project(cam,p.c);
-    disc.push([(pr[0]+1)/2*w,(pr[1]+1)/2*h,p.r*.85/pr[2]/cam.tx*w/2]);});});
+  [0,1].forEach(function(u){bodySpheres(joints(poseAt(rec,u))).forEach(function(b){
+    var pr=project(cam,b[0]);
+    disc.push([(pr[0]+1)/2*w,(pr[1]+1)/2*h,b[1]*1.1/pr[2]/cam.tx*w/2]);});});
   var fc=[0,0];disc.forEach(function(d){fc[0]+=d[0]/disc.length;fc[1]+=d[1]/disc.length;});
   function cover(r){
     var n=0;
     r.forEach(function(p){
       if(p[0]<14*S||p[0]>w-14*S||p[1]<14*S||p[1]>h-14*S){n+=3;return;}
-      for(var k=0;k<disc.length;k++){var d=disc[k];if((p[0]-d[0])*(p[0]-d[0])+(p[1]-d[1])*(p[1]-d[1])<d[2]*d[2]){n++;return;}}});
+      for(var k=0;k<disc.length;k++){var d=disc[k],rr=d[2]+8*S;if((p[0]-d[0])*(p[0]-d[0])+(p[1]-d[1])*(p[1]-d[1])<rr*rr){n++;return;}}});
     return n;}
   /* the places it might go */
   var nrm=q.map(function(p,k){
@@ -191,4 +222,4 @@ function arrowShape(rec,cam,w,h,hl){
   return {body:r.slice(0,-1).concat([[e[0]-tx*9*S,e[1]-ty*9*S]]),
     head:[[e[0]+tx*3*S,e[1]+ty*3*S],[e[0]-tx*11*S+nx*7*S,e[1]-ty*11*S+ny*7*S],[e[0]-tx*11*S-nx*7*S,e[1]-ty*11*S-ny*7*S]]};}
 
-export {TEMPO, ease, cycleOf, phaseAt, mix, lerpPose, arc, poseAt, sceneAt, framing, motionPath, arrowShape};
+export {TEMPO, ease, cycleOf, phaseAt, mix, lerpPose, arc, poseAt, sceneAt, bodySpheres, framePoints, fitCamera, framing, motionPath, arrowShape};

@@ -2669,14 +2669,14 @@ await test("Live figure: the Seated Chest Press moves in 3D in the exercise shee
 await test("Live figure: a second exercise is the same figure on other equipment — the Seated Machine Row",async page=>{
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Seated Machine Row"});});await pause(page,600);
   const s=await waitLive(page);
-  eq([s[0].live,s[0].yaw],[true,60],"live, from its own view");
+  eq([s[0].live,s[0].yaw],[true,145],"live, from its own view: behind, where the back works");
   const pr=await probe(page);
   const off=await page.evaluate(async()=>{const m=(await import("/js/ui/mannequin.js")).mannequins()[0];m.setHL({});return m.probe();});
   if(!(pr.red>off.red+.001))throw new Error("no lit muscle: "+JSON.stringify([pr.red,off.red]));
   /* What it lights is the library's: the back in full, the biceps at half. */
   eq(await page.evaluate(async()=>{const R=await import("/js/data/mannequin/rig.js"),E=await import("/js/data/exercises.js"),M=await import("/js/data/mannequin/motion.js"),C=await import("/js/data/mannequin/records.js");
     const rec=C.recordFor("Seated Machine Row"),hl=R.highlight(E.muscleOf("Seated Machine Row"),E.secondaryOf("Seated Machine Row"),rec.refine);
-    return [...new Set(M.sceneAt(rec,.5,hl).prims.filter(q=>q.hl>0).map(q=>q.tag))].sort();}),["biceps","lats","reardelt","traps"]);
+    return Object.keys(hl).filter(k=>hl[k]>0).sort();}),["biceps","lats","reardelt","traps"]);
 },{prefs:{palette:"red"}});
 await test("Live figure: it takes the theme — light mode lights the stage, Sage and Blue have no red",async page=>{
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Machine Chest Press"});});await pause(page,600);
