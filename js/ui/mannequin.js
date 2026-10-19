@@ -563,7 +563,18 @@ function arrowMesh(ar,S){
   return {d:new Float32Array(d),n:d.length/3,glow:glow};}
 
 /* Called after every render: starts the figures that have appeared, keeps the ones that
-   stay (the patcher keeps their elements), and lets go of the ones that left. */
+   stay (the patcher keeps their elements), and lets go of the ones that left. A new
+   figure starts once the new page has painted: making its context and shaders holds
+   the page for a moment, and the change of page (the dock leaving for a workout, the
+   glass settling) should not wait on it. */
+var QUEUE=[],queued=false;
+function startQueued(){
+  queued=false;
+  var q=QUEUE;QUEUE=[];
+  q.forEach(function(el){
+    el._mqq=false;
+    if(!el.isConnected||el._mq)return;
+    el._mq=Mannequin(el);LIVE.push(el._mq);});}
 function syncMannequins(){
   for(var i=LIVE.length-1;i>=0;i--)
     if(!LIVE[i].el.isConnected){LIVE[i].dispose();LIVE[i].el._mq=null;LIVE.splice(i,1);}
@@ -571,8 +582,11 @@ function syncMannequins(){
   for(var j=0;j<els.length;j++){
     var el=els[j];
     if(el._mq){el._mq.sync&&el._mq.sync();continue;}
-    if(!supported())continue;
-    el._mq=Mannequin(el);LIVE.push(el._mq);}}
+    if(el._mqq||!supported())continue;
+    el._mqq=true;QUEUE.push(el);}
+  if(QUEUE.length&&!queued){
+    queued=true;
+    requestAnimationFrame(function(){setTimeout(startQueued,0);});}}
 document.addEventListener("visibilitychange",function(){LIVE.forEach(function(m){m.wake&&m.wake();});});
 
 /* Whether an exercise is drawn live: it has a record (the phone may still fall back to
