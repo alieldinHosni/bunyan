@@ -6,6 +6,7 @@ import {BODY} from "../mannequin/body.js";
 import {solve, NB, IX, BONES, P0, ARM} from "../mannequin/skin.js";
 import {place, build} from "../mannequin/mesh.js";
 import {project} from "../mannequin/geom.js";
+import {TABLE, moveFor} from "../mannequin/moves.js";
 
 const PRESS="Machine Chest Press",ROWX="Seated Machine Row";
 const deg=(a,b,c)=>{const u=V.norm(V.sub(a,b)),w=V.norm(V.sub(c,b));return Math.acos(Math.max(-1,Math.min(1,V.dot(u,w))))*180/Math.PI;};
@@ -128,5 +129,31 @@ function run(t,lib){
     const mv=[(b[0]-a[0])*360,(b[1]-a[1])*270],ad=[ar.head[0][0]-ar.body[0][0],ar.head[0][1]-ar.body[0][1]];
     t.ok(mv[0]*ad[0]+mv[1]*ad[1]>0,n+": and points the way the hands move");}
   t.ok(P0[1]>1&&P0[1]<1.1&&IX["foot.L"]>=0,"the pelvis point and the bones are where the poses expect them");
+
+  /* ---- the library's movements (moves.js): every exercise in the table ---- */
+  const names=Object.keys(TABLE);
+  t.eq(names.filter(n=>!lib[n]),[],"every exercise the families draw is in the library, by its exact name ("+names.length+")");
+  t.ok(names.every(n=>recordFor(n)===moveFor(n)&&recordFor(n)),"and recordFor finds each one's record");
+  const unreached=[],sunk=[],broken=[],still=[];
+  for(const n of names){
+    const rec=moveFor(n);
+    let moved=0,prev=null;
+    for(const u of [0,.25,.5,.75,1]){
+      const p=poseAt(rec,u),sc=sceneAt(rec,u),J=sc.J;
+      if(![...sc.M].every(Number.isFinite)||!sc.solids.every(q=>JSON.stringify(q).indexOf("null")<0)){broken.push(n+"@"+u);continue;}
+      /* the hands get to what they hold */
+      for(const s of ["l","r"])if(p.hands&&p.hands[s]&&V.len(V.sub(J.wr[s],p.hands[s]))>.012){unreached.push(n+" "+s+"@"+u);break;}
+      /* nothing goes through the floor */
+      if(["l","r"].some(s=>J.an[s][1]<.06)||J.P[1]<.05)sunk.push(n+"@"+u);
+      if(prev)moved+=V.len(V.sub(J.wr.l,prev.wr.l))+V.len(V.sub(J.P,prev.P))+V.len(V.sub(J.sh.l,prev.sh.l))+V.len(V.sub(J.an.l,prev.an.l));
+      prev=J;}
+    if(rec.keys.length>1&&moved<.05)still.push(n);}
+  t.eq(broken,[],"every one solves to a body and its equipment at every moment");
+  t.eq(unreached,[],"in every one the hands reach what they hold, all the way through");
+  t.eq(sunk,[],"and nothing goes through the floor");
+  t.eq(still,[],"and each one moves");
+  const unframed=names.filter(n=>{const rec=moveFor(n),pts=framePoints(rec),cam=fitCamera(rec,pts,4/3,rec.cam.yaw,rec.cam.pitch,1);
+    return !Number.isFinite(cam.dist)||pts.list.some(q=>{const pr=project(cam,q);return Math.abs(pr[0])>1||Math.abs(pr[1])>1;});});
+  t.eq(unframed,[],"and each one is all in the picture from its own view");
 }
 export {run};

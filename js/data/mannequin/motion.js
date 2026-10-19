@@ -144,13 +144,16 @@ function framing(rec,aspect,yaw,pitch,o){
    alike. */
 var TRACK={"wr.l":function(J){return J.wr.l;},"wr.r":function(J){return J.wr.r;},
   "an.l":function(J){return J.an.l;},"an.r":function(J){return J.an.r;},
-  "kn.l":function(J){return J.kn.l;},"kn.r":function(J){return J.kn.r;},P:function(J){return J.P;}};
+  "kn.l":function(J){return J.kn.l;},"kn.r":function(J){return J.kn.r;},P:function(J){return J.P;},
+  "sh.l":function(J){return J.sh.l;},"sh.r":function(J){return J.sh.r;},"el.l":function(J){return J.el.l;},
+  "el.r":function(J){return J.el.r;},head:function(J){return J.head;}};
 function motionPath(rec,n,side){
   if(!rec.keys||rec.keys.length<2)return [];
   n=n||16;
   var Js=[],i,k;
   for(i=0;i<=n;i++)Js.push(joints(poseAt(rec,i/n)));
   var key=rec.arrow&&rec.arrow.track;
+  if(!TRACK[key])key=null;
   if(!key){
     var best=null,bl=0;
     for(k in TRACK){var s=0;for(i=1;i<=n;i++)s+=len(sub(TRACK[k](Js[i]),TRACK[k](Js[i-1])));if(s>bl){bl=s;best=k;}}
@@ -173,7 +176,10 @@ function arrowShape(rec,cam,w,h,hl){
   var near=cam.p[2]>=0?"l":"r",world=motionPath(rec,16,near);
   if(world.length<2)return null;
   var S=w/720,px=function(q){var pr=project(cam,q);return [(pr[0]+1)/2*w,(pr[1]+1)/2*h];};
-  var P=world.map(px),seg=[0],L=0,i,j;
+  var P=world.map(px),seg=[0],L=0,i,j,k;
+  /* smoothed, so a path that wavers on the picture draws as one clean curve */
+  for(k=0;k<3;k++)P=P.map(function(p,n){if(!n||n===P.length-1)return p;
+    return [(P[n-1][0]+2*p[0]+P[n+1][0])/4,(P[n-1][1]+2*p[1]+P[n+1][1])/4];});
   for(i=1;i<P.length;i++){L+=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]);seg.push(L);}
   if(L<18*S)return null;
   /* the middle of the path, evenly spaced */
@@ -195,7 +201,7 @@ function arrowShape(rec,cam,w,h,hl){
     var n=0;
     r.forEach(function(p){
       if(p[0]<14*S||p[0]>w-14*S||p[1]<14*S||p[1]>h-14*S){n+=3;return;}
-      for(var k=0;k<disc.length;k++){var d=disc[k],rr=d[2]+8*S;if((p[0]-d[0])*(p[0]-d[0])+(p[1]-d[1])*(p[1]-d[1])<rr*rr){n++;return;}}});
+      for(var k=0;k<disc.length;k++){var d=disc[k],rr=d[2]+4*S;if((p[0]-d[0])*(p[0]-d[0])+(p[1]-d[1])*(p[1]-d[1])<rr*rr){n++;return;}}});
     return n;}
   /* the places it might go */
   var nrm=q.map(function(p,k){
@@ -208,13 +214,18 @@ function arrowShape(rec,cam,w,h,hl){
   if(cl/Math.max(span,1)>.85){
     var u=[ch[0]/cl,ch[1]/cl],ahead=(P[P.length-1][0]-q[0][0])*u[0]+(P[P.length-1][1]-q[0][1])*u[1]+16*S,
       behind=(q[q.length-1][0]-P[0][0])*u[0]+(q[q.length-1][1]-P[0][1])*u[1]+16*S;
-    cands.push([q.map(function(p){return [p[0]+u[0]*ahead,p[1]+u[1]*ahead];}),1]);
-    cands.push([q.map(function(p){return [p[0]-u[0]*behind,p[1]-u[1]*behind];}),1.4]);}
+    cands.push([q.map(function(p){return [p[0]+u[0]*ahead,p[1]+u[1]*ahead];}),18]);
+    cands.push([q.map(function(p){return [p[0]-u[0]*behind,p[1]-u[1]*behind];}),22]);}
+  /* an offset copy on the inside of a tight curve folds up on itself: not an arrow */
+  function lenOf(r){var l=0;for(var n=1;n<r.length;n++)l+=Math.hypot(r[n][0]-r[n-1][0],r[n][1]-r[n-1][1]);return l;}
+  var ql=lenOf(q);
+  cands=cands.filter(function(cd){return lenOf(cd[0])>=ql*.7;});
   var best=null;
   cands.forEach(function(cd){
     var r=cd[0],m=[0,0];r.forEach(function(p){m[0]+=p[0]/r.length;m[1]+=p[1]/r.length;});
     var away=-Math.sign((m[0]-fc[0])*(m[0]-c0[0])+(m[1]-fc[1])*(m[1]-c0[1]));
-    var score=cover(r)*10+cd[1]+away*.5;
+    /* covering a little of the figure is better than an arrow off on its own */
+    var score=cover(r)*1.5+cd[1]+away*.5;
     if(!best||score<best[0])best=[score,r];});
   var r=best[1],e=r[r.length-1],pv=r[r.length-3],tx=e[0]-pv[0],ty=e[1]-pv[1],k=Math.hypot(tx,ty)||1;
   tx/=k;ty/=k;

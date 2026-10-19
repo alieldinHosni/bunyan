@@ -10,6 +10,8 @@
      yaw, pitch, roll, twist     degrees. pitch leans the trunk forward (90 = face down,
                                  -90 = on the back); roll leans it to its left; twist
                                  turns the chest on the hips
+     bend, lean                  degrees the spine curls forward (a crunch; negative
+                                 arches it back), and bends to its left
      axes:{u,f}                  the trunk by its up and forward axes instead (lying on
                                  a side, a side plank)
      head, look                  degrees the head nods forward from the trunk's line,
@@ -43,7 +45,7 @@ function joints(p){return solve(p).J;}
 /* The app's muscle names (exercises.json m and x, and the names Progress and the coach
    use), as the muscles of the figure. */
 var MUSCLE_TAGS={Chest:["chest"],"Upper chest":["chest"],Shoulders:["frontdelt","sidedelt","reardelt"],
-  "Front delts":["frontdelt"],"Rear delts":["reardelt"],Back:["lats","traps","reardelt"],"Upper back":["traps","reardelt"],
+  "Front delts":["frontdelt"],"Side delts":["sidedelt"],"Rear delts":["reardelt"],Back:["lats","traps","reardelt"],"Upper back":["traps","reardelt"],
   Lats:["lats"],"Lower back":["lowerback"],Traps:["traps"],Biceps:["biceps"],Triceps:["triceps"],Forearms:["forearms"],
   Quads:["rf","quads"],Hamstrings:["hams"],Glutes:["glutes","gmed"],"Hams & glutes":["hams","glutes"],Legs:["rf","quads","hams","glutes"],
   Calves:["calves"],Core:["abs","obliques"],Abs:["abs"],Obliques:["obliques"],Adductors:["adductors"],Abductors:["gmed"],

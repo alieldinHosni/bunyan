@@ -28,6 +28,7 @@
 import {V} from "./geom.js";
 import {joints, DIM} from "./rig.js";
 import {arc} from "./motion.js";
+import {moveFor} from "./moves.js";
 
 var add=V.add,sub=V.sub,mul=V.mul;
 
@@ -114,7 +115,8 @@ var RECORDS={
     cam:{yaw:145,pitch:10},
     arrow:{track:"wr.l"}}
 };
-/* The record for an exercise, by its name in the library; null when it has none yet. */
-function recordFor(name){return (name&&Object.prototype.hasOwnProperty.call(RECORDS,name))?RECORDS[name]:null;}
+/* The record for an exercise, by its name in the library: one written here, or one
+   built from its movement's family (moves.js); null when it has none yet. */
+function recordFor(name){return (name&&Object.prototype.hasOwnProperty.call(RECORDS,name))?RECORDS[name]:moveFor(name);}
 
 export {RECORDS, recordFor, seated, along, grip, wristFor, levers};

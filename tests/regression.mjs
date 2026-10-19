@@ -2704,10 +2704,26 @@ await test("Live figure: in the workout it moves without turning (a sideways swi
   await page.evaluate(()=>{window.__fig=document.querySelector(".exhero .fig3d")._mq;});
   await page.evaluate(async()=>{(await import("/js/ui/render.js")).render();});await pause(page,300);
   eq(await page.evaluate(()=>document.querySelector(".exhero .fig3d")._mq===window.__fig),true,"the same figure after a repaint");
-  /* The next exercise has photographs, and the figure lets go. */
-  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.active.entries[V.logIdx].name="Pullups";(await import("/js/ui/render.js")).render();});await pause(page,400);
+  /* The next exercise has only photographs, and the figure lets go. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.active.entries[V.logIdx].name="Atlas Stones";(await import("/js/ui/render.js")).render();});await pause(page,400);
   eq([(await mq(page)).length,await page.$$eval(".exhero .formvis img",a=>a.length)],[0,2]);
 });
+await test("Live figure: the library's exercises are drawn by their movement's family — a Barbell Curl in the sheet",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Barbell Curl"});});await pause(page,600);
+  const s=await waitLive(page);
+  eq([s.length,s[0].live,s[0].err],[1,true,""],"one live figure");
+  eq(await page.$eval("#sheet .fig3d",e=>[e.getAttribute("data-mq"),e.hasAttribute("data-mq-turn")]),["Barbell Curl",true]);
+  /* its stills, where it cannot draw, are the library's own photographs */
+  eq(await page.$$eval("#sheet .fig3d-still img",a=>a.map(i=>/Barbell_Curl\/[01]\.jpg$/.test(i.getAttribute("src")))),[true,true]);
+  const pr=await probe(page);
+  const off=await page.evaluate(async()=>{const m=(await import("/js/ui/mannequin.js")).mannequins()[0];m.setHL({});return m.probe();});
+  if(!(pr.red>off.red+.001))throw new Error("no lit muscle: "+JSON.stringify([pr.red,off.red]));
+  eq(await page.evaluate(async()=>{const R=await import("/js/data/mannequin/rig.js"),E=await import("/js/data/exercises.js"),C=await import("/js/data/mannequin/records.js");
+    const n="Barbell Curl",hl=R.highlight(E.muscleOf(n),E.secondaryOf(n),C.recordFor(n).refine);return Object.keys(hl).sort();}),["biceps","forearms"],"the library's muscles");
+  /* an exercise the families do not draw yet keeps its photographs */
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Atlas Stones"});});await pause(page,500);
+  eq([(await mq(page)).length,await page.$$eval("#sheet .exd-form2 img",a=>a.length)],[0,2]);
+},{prefs:{palette:"red"}});
 await test("Live figure: a phone without WebGL2 keeps the start and end stills",async page=>{
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Machine Chest Press"});});await pause(page,800);
   eq((await mq(page)).length,0,"nothing started");
@@ -2715,7 +2731,7 @@ await test("Live figure: a phone without WebGL2 keeps the start and end stills",
     return [e.hasAttribute("data-live"),getComputedStyle(e.querySelector("canvas")).display,getComputedStyle(s).display,[...s.querySelectorAll("img")].map(i=>i.naturalWidth)];});
   eq(st,[false,"none","grid",[720,720]]);
 },{init:()=>{try{delete window.WebGL2RenderingContext;}catch(e){}}});
-await test("Live figure: the two pilot exercises have their stills and list thumbnails, and nothing else is drawn yet",async page=>{
+await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails (the library's fall back to their photographs)",async page=>{
   eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];
     for(const id in F){const u=["img/ex/"+id+".webp"];for(let i=0;i<F[id];i++)u.push("img/fig/"+id+"-"+i+".webp");
       for(const x of u){const r=await fetch(x);if(!r.ok)out.push(x);}}return [F,out];}),

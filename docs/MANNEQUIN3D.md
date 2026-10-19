@@ -3,9 +3,13 @@
 A real-time 3D figure that does the exercise: a real human body on gym equipment, the
 muscles the exercise works glowing in the theme's colour, an arrow the way the movement
 goes, on a lit stage. It runs in the app, offline, with no library and no build step.
-Two exercises have it so far: **Machine Chest Press** (the reference's Seated Chest
-Press) and **Seated Machine Row**, the second built from the first one's parts to show
-that the body, the equipment and the motion are reusable.
+
+It started with two exercises written by hand (**Machine Chest Press** and **Seated
+Machine Row**). The rest of the library is being drawn by **movement families**: a
+curl, a press, a squat or a row written once, with parameters for the implement, the
+grip and the position (see "The library's movements" below). An exercise gets its
+figure only once its family has been checked beside the library's own photographs of
+it; until then it keeps its photographs.
 
 Where it appears: the exercise sheet (it plays, and a drag turns it) and the workout
 screen (it plays and does not turn, because a sideways swipe there changes exercise).
@@ -66,12 +70,14 @@ time ──► motion.js phaseAt() ─ where in the repetition (eased lift, hold
 | `js/data/mannequin/kit.js` | **The equipment**: free weights, benches, and a machine kit (beam, pad, seat, weight-stack tower, pivot hub, lever arm, grip) |
 | `js/data/mannequin/mesh.js` | The kit's solids (sphere, ellipsoid, round cone, round cylinder, rounded box) as triangle meshes, each built once and kept |
 | `js/data/mannequin/motion.js` | **The pose controller**: tempo and easing, pose interpolation, rigid arcs for levers, the scene at a moment, the camera's fit at any angle, the motion path and the arrow |
-| `js/data/mannequin/records.js` | **The exercise records**: the two exercises |
+| `js/data/mannequin/records.js` | **The exercise records**: the two written by hand, and `recordFor(name)`, which falls back to the families |
+| `js/data/mannequin/moves.js` | **The library's movements**: the families, and the table of which library exercise is which family |
 | `js/data/mannequin/geom.js` | Vectors, the camera and its projection |
 | `js/ui/mannequin.js` | The renderer, the camera's handling, the markup, mounting and teardown |
 | `tools/body/bake.py` | Makes `body.bin` and `body.js` from MakeHuman's files (below) |
 | `tools/figures/stills.mjs` | Draws each record's start and end with the live renderer, for the stills and thumbnails |
 | `tools/figures/live.html` | Every record in every theme, live, for checking by eye |
+| `tools/figures/review.mjs`, `review.py` | Each named exercise's start and end beside the library's two photographs of it, on sheets to look through |
 
 All of `js/data/mannequin/` is pure (no DOM, no state), so it is tested in Node.
 
@@ -214,6 +220,77 @@ phones. A triangle renderer of 28,000 triangles is light work for any phone GPU 
 last several years, but that is an expectation, not a test; the first real-device
 check should be a mid-range Android phone with the preview page below.
 
+## The library's movements
+
+Most of the library is a few movements with different equipment, grips and positions,
+so `js/data/mannequin/moves.js` writes each movement once, as a **family**, with its
+biomechanics, and gives it parameters for what varies:
+
+| Family | Parameters | Examples |
+| --- | --- | --- |
+| `curl` | barbell, EZ bar, dumbbells or cable; palms up, in, down, or turning up; standing, seated, incline, preacher; one arm | Barbell Curl, Hammer Curls, Preacher Curl, Incline Dumbbell Curl |
+| `press` | barbell, dumbbells, kettlebells; standing or seated; Arnold's turn; one arm | Standing Military Press, Arnold Dumbbell Press |
+| `raise` | to the side, the front, or the rear (bent over or face down on an incline bench) | Side Lateral Raise, Reverse Flyes |
+| `shrug`, `uprightRow` | barbell or dumbbells | Barbell Shrug, Upright Barbell Row |
+| `squat` | bar on the back, front rack, crossed arms, overhead, goblet (dumbbell or kettlebell), dumbbells, hands behind the head; stance | Barbell Squat, Goblet Squat, Overhead Squat |
+| `hinge` | deadlift, Romanian, stiff-legged, sumo, good morning | Barbell Deadlift, Romanian Deadlift |
+| `row` | barbell, dumbbells, kettlebell; grip; one arm with a knee and hand on a bench | Bent Over Barbell Row, One-Arm Dumbbell Row |
+| `benchPress`, `fly` | barbell or dumbbells; flat, incline, decline or the floor; grip width | Barbell Bench Press, Dumbbell Flyes |
+| `triceps` | overhead, lying (skull crusher), kickback, cable pushdown; bar, rope, dumbbells | EZ-Bar Skullcrusher, Triceps Pushdown |
+| `pushup`, `pullup`, `dip`, `crunch`, `plank`, `lunge`, `calfRaise`, `bridge` | hands on a box or a bar, feet raised; grip; lean; split, forward or reverse, rear foot on a bench; bench or floor | Pushups, Chin-Up, Sit-Up, Barbell Hip Thrust |
+| `pulldown`, `cableRow`, `crossover` | wide, close, underhand or V-handle grip; behind the neck; one arm | Wide-Grip Lat Pulldown, Seated Cable Rows, Cable Crossover |
+| `legMachine`, `legPress`, `pecDeck` | leg extension, lying or seated leg curl; stance; the pec deck forward or reversed | Leg Extensions, Lying Leg Curls, Leg Press, Butterfly |
+| `stepUp`, `sideBend`, `benchDip`, `invertedRow`, `legRaise`, `hyper`, `kbSwing` | dumbbells or a bar; feet raised; on the floor, a bench or hanging, knees bent; one arm | Dumbbell Step Ups, Bench Dips, Hanging Leg Raise, Hyperextensions |
+
+A family places the body with the same pose language as the hand-written records, and
+then puts the hands on what they hold: `grasp` sets each hand round its handle (the
+handle in the middle of the palm, the fingers along the forearm, the palm the right way
+round), so a bar is always in both palms and a dumbbell in its hand, whatever the arms
+do. Free weights hang where straight arms put them and clear the legs; a bar on the
+back rides on the trapezius; the benches (flat, incline, decline, preacher) are placed
+from the body.
+
+**Which exercise is which family is written by hand** in `TABLE`, by the library's
+exact name: nothing is guessed from a name. An exercise is added only after its row on
+a review sheet agrees with the library's photographs: the same setup (standing, seated,
+on a bench, face down), the same implement, the same start and end. 162 of the
+library's exercises are in it so far. The first pass over 62 found real differences,
+all fixed before any shipped: Reverse Flyes is
+done face down on an incline bench, the library's Split Squat with Dumbbells has the
+rear foot on a bench, its Front Barbell Squat crosses the arms, its Goblet Squat holds a
+kettlebell, its Bodyweight Squat has the hands behind the head, and the kickback has a
+knee and hand on a bench. Later passes did the same:
+
+- the incline push-ups are done with the hands on a bar, so they got a variant;
+- the one-arm exercises got the free arm the photographs show (hanging with its dumbbell, empty, or on the hip);
+- the pulldown and reverse-fly machines got their weight stacks in front, as in the photographs.
+
+Exercises whose photographs show a setup no family draws yet were left out rather than
+drawn wrongly: a kettlebell press seated on the floor with the legs apart, a one-arm
+kettlebell row in a split stance, a one-arm press braced on a bench, a lat pulldown with
+two separate handles, and a one-arm low cable crossover.
+
+**What lights up** stays the library's. Where the library lists no secondary muscles,
+the app fills them in from the movement's pattern; raises and shrugs are filed as
+pushes and pulls, so they used to borrow a press's (triceps and chest) or a row's
+(biceps). They now get their own: the traps for a raise, the forearms for a shrug,
+on the figure and on the exercise sheet's muscle map alike.
+
+To add exercises: put them in `TABLE` with their family and parameters, then
+
+```sh
+node tools/figures/review.mjs OUT "Name one" "Name two"    # their start and end, drawn
+python3 tools/figures/review.py OUT                         # beside the library's photographs
+```
+
+and look at every row. The unit tests then hold every exercise in the table to:
+
+- its name being in the library;
+- solving at every moment, with the hands reaching what they hold all the way through;
+- nothing going through the floor;
+- moving;
+- being in the picture from its own view.
+
 ## Setup and testing
 
 Nothing to install for the app. No dependencies were added.
@@ -290,9 +367,9 @@ movement, and a look from every side before it is shown.
 
 ## What it does not do yet
 
-- **Two exercises only.** The other exercises keep their current pictures until each
-  has a record that has been checked; a figure doing the wrong movement is worse than
-  a photograph.
+- **Not the whole library yet.** The families cover the exercises in `TABLE`; the
+  rest keep their photographs until each has been checked. A figure doing the wrong
+  movement is worse than a photograph.
 - **No face detail, no cloth movement, no muscles that change shape** as they work:
   the glow shows what works, the body's shape stays the same.
 - **The machines are generic selectorized designs**, not a particular brand. The

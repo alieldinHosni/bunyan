@@ -335,17 +335,29 @@ for n in skin_ix:
         t, ang, _ = around(p, el[s], wr[s], FWD)
         cand["forearms"] = spindle(t, -0.05, 0.8)
     elif arm_up + shoulder > 0.45 and ax > x_sh * 0.8:
-        # the upper arm, its front the side the elbow bends toward
-        fa = wr[s] - el[s]
-        t, ang, rr = around(p, sh[s], el[s], fa)
-        out_ = ang * sg  # positive toward the outside of the arm
-        cap = float(smooth01(0.45, 0.25, t))
+        # the upper arm: where a point sits round it, by the world's directions (the
+        # rest pose's forearm runs too nearly in line with it to say where its front
+        # is): the front (forward), the outside (away from the body and up, where the
+        # side of the deltoid faces) and the back
+        a0, a1 = sh[s], el[s]
+        u = (a1 - a0) / np.linalg.norm(a1 - a0)
+        t = float(np.dot(p - a0, u) / np.linalg.norm(a1 - a0))
+        r = p - a0 - u * np.dot(p - a0, u)
+        r = r / (np.linalg.norm(r) + 1e-9)
+        def ref(v):
+            v = np.asarray(v, dtype=float)
+            v = v - u * np.dot(v, u)
+            return v / (np.linalg.norm(v) + 1e-9)
+        def deg(v):
+            return float(np.degrees(np.arccos(np.clip(np.dot(r, ref(v)), -1, 1))))
+        front, outside, back = deg(FWD), deg([sg * 0.6, 1.0, 0.0]), deg(-FWD)
+        cap = float(smooth01(0.52, 0.3, t))
         if cap > 0:
-            cand["frontdelt"] = cap * band(ang, -35 * sg, 50)
-            cand["sidedelt"] = cap * band(ang, 75 * sg, 45)
-            cand["reardelt"] = cap * band(ang, 160 * sg, 50)
-        cand["biceps"] = spindle(t, 0.28, 0.98) * band(ang, -10 * sg, 52)
-        cand["triceps"] = spindle(t, 0.2, 1.02) * band(ang, 175, 62)
+            cand["frontdelt"] = cap * float(smooth01(62, 38, front))
+            cand["sidedelt"] = cap * float(smooth01(66, 40, outside))
+            cand["reardelt"] = cap * float(smooth01(62, 38, back))
+        cand["biceps"] = spindle(t, 0.28, 0.98) * float(smooth01(66, 44, front))
+        cand["triceps"] = spindle(t, 0.2, 1.02) * float(smooth01(80, 56, back))
     elif leg_lo > 0.5:
         t, ang, _ = around(p, kn[s], an[s], FWD)
         cand["calves"] = spindle(t, -0.02, 0.72) * band(ang, 180, 80)

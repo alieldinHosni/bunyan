@@ -5,7 +5,7 @@
    previous release's JS for one launch: markup the stylesheet no longer styles.
    Cache-first for images only.
    Bump CACHE whenever you change index.html. */
-const CACHE = "bunyan-v128";
+const CACHE = "bunyan-v129";
 /* instructions.json (595 KB) is deliberately absent: it is cached on first use by the
    catch-all handler below, so it no longer blocks first install. */
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
@@ -34,7 +34,7 @@ const FILES = ["./", "./index.html", "./manifest.webmanifest",
                   poses, the equipment and the renderer, so it moves offline too. */
                "./js/data/mannequin/geom.js", "./js/data/mannequin/rig.js", "./js/data/mannequin/kit.js",
                "./js/data/mannequin/motion.js", "./js/data/mannequin/records.js", "./js/data/mannequin/skin.js",
-               "./js/data/mannequin/body.js", "./js/data/mannequin/mesh.js", "./img/fig/body.bin",
+               "./js/data/mannequin/body.js", "./js/data/mannequin/mesh.js", "./js/data/mannequin/moves.js", "./img/fig/body.bin",
                "./js/ui/mannequin.js",
                /* Reading a plan from a PDF works offline: the reader and Mozilla's pdf.js
                   (about 1.8 MB) are precached with everything else. */

@@ -499,8 +499,12 @@ otherwise they would outlive the blob that was supposed to own them.
   rest are drawn as figures (`js/data/poses.js`): the body in the highlight, the far
   limbs fainter, a dashed arrow for the movement, a wall or a door frame where it needs
   one.
-- **The 3D figure (a pilot: two exercises).** The Machine Chest Press and the Seated
-  Machine Row are shown as a 3D figure doing the exercise, live, on the exercise sheet
+- **The 3D figure (164 exercises so far, growing).** The Machine Chest Press, the Seated
+  Machine Row and 162 of the library's exercises (curls, presses, raises, squats,
+  deadlifts, rows, bench presses, flyes, triceps work, push-ups, pull-ups, dips, crunches,
+  lunges, calf raises, hip thrusts, lat pulldowns, cable rows and crossovers, leg
+  extensions, curls and presses, the pec deck, step-ups, leg raises, back extensions,
+  swings) are shown as a 3D figure doing the exercise, live, on the exercise sheet
   (a drag turns it) and on the workout screen: a real human body (MakeHuman's CC0
   mesh, on its skeleton, in shorts and trainers, with hands that close round the
   handles) on a gym machine, the muscles the library says the exercise works glowing
@@ -508,7 +512,11 @@ otherwise they would outlive the blob that was supposed to own them.
   serves every exercise: a record (`js/data/mannequin/records.js`) gives the start and
   end poses, the machine (built from a kit of parts, its lever arms turning on their
   pivots so the hands follow them), the tempo and the camera; the muscles come from the
-  library. It is drawn as triangles on the graphics card by `js/ui/mannequin.js` (WebGL2,
+  library. The library's exercises are built by movement families
+  (`js/data/mannequin/moves.js`: a curl, a squat or a press written once, with the
+  implement, grip and position as parameters), and an exercise is added only after its
+  family has been checked beside the library's own photographs of it; the rest keep
+  their photographs. It is drawn as triangles on the graphics card by `js/ui/mannequin.js` (WebGL2,
   no library) at the screen's own resolution, smoothed, with a soft shadow. A drag turns
   it all the way round and up and down, with weight (it carries on a little and
   settles), two fingers or a wheel bring it nearer, a double tap eases back to its own

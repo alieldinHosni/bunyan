@@ -105,20 +105,25 @@ function frameMat(fr){return [fr.f[0],fr.f[1],fr.f[2],fr.u[0],fr.u[1],fr.u[2],fr
 function rotAxis(v,axis,ang){
   var c=Math.cos(ang),s=Math.sin(ang),k=norm(axis);
   return add(add(mul(v,c),mul(cross(k,v),s)),mul(k,dot(k,v)*(1-c)));}
-function frame(yaw,pitch,roll,twist){
+function frame(yaw,pitch,roll,twist,bend,lean){
   var f=[1,0,0],u=[0,1,0],l=[0,0,1],a;
   a=(roll||0)*R;f=rotAxis(f,[1,0,0],a);u=rotAxis(u,[1,0,0],a);l=rotAxis(l,[1,0,0],a);
   a=-(pitch||0)*R;f=rotAxis(f,[0,0,1],a);u=rotAxis(u,[0,0,1],a);l=rotAxis(l,[0,0,1],a);
   a=-(yaw||0)*R;f=rotAxis(f,[0,1,0],a);u=rotAxis(u,[0,1,0],a);l=rotAxis(l,[0,1,0],a);
-  var base={f:f,u:u,l:l};
-  if(!twist)return {pel:base,chest:base};
-  var tw=twist*R;
-  return {pel:base,chest:{f:rotAxis(f,u,tw),u:u,l:rotAxis(l,u,tw)}};}
-function axesFrame(a,twist){
-  var u=norm(a.u),f=norm(sub(a.f,mul(u,dot(a.f,u)))),l=cross(f,u),base={f:f,u:u,l:l};
-  if(!twist)return {pel:base,chest:base};
-  var tw=twist*R;
-  return {pel:base,chest:{f:rotAxis(f,u,tw),u:u,l:rotAxis(l,u,tw)}};}
+  return chestOf({f:f,u:u,l:l},twist,bend,lean);}
+function axesFrame(a,twist,bend,lean){
+  var u=norm(a.u),f=norm(sub(a.f,mul(u,dot(a.f,u)))),l=cross(f,u);
+  return chestOf({f:f,u:u,l:l},twist,bend,lean);}
+/* The chest's frame from the pelvis's: curled forward by bend degrees (a crunch;
+   negative arches back), bent to its left by lean, then turned to its left by twist.
+   The spine shares it out between its bones. */
+function chestOf(base,twist,bend,lean){
+  if(!twist&&!bend&&!lean)return {pel:base,chest:base};
+  var f=base.f,u=base.u,l=base.l,a;
+  if(bend){a=-bend*R;f=rotAxis(f,base.l,a);u=rotAxis(u,base.l,a);}
+  if(lean){a=lean*R;u=rotAxis(u,base.f,a);l=rotAxis(l,base.f,a);}
+  if(twist){a=twist*R;f=rotAxis(f,u,a);l=rotAxis(l,u,a);}
+  return {pel:base,chest:{f:f,u:u,l:l}};}
 
 /* Two bones, lengths a and b, from root toward target, the middle joint out toward
    pole (a direction). Out of reach: the full stretch toward it; too close: as folded
@@ -157,7 +162,7 @@ function curlOf(g){
 
 function solve(p,out){
   out=out||new Float32Array(NB*16);
-  var fr=p.axes?axesFrame(p.axes,p.twist):frame(p.yaw,p.pitch,p.roll,p.twist),pf=fr.pel,cf=fr.chest;
+  var fr=p.axes?axesFrame(p.axes,p.twist,p.bend,p.lean):frame(p.yaw,p.pitch,p.roll,p.twist,p.bend,p.lean),pf=fr.pel,cf=fr.chest;
   var Pp=p.pelvis||P0,Rp=frameMat(pf),Rc=frameMat(cf);
   /* the pelvis: root and both hip bones, rigid */
   ["root","pelvis.L","pelvis.R"].forEach(function(n){put(out,IX[n],Rp,P0,Pp);});

@@ -124,6 +124,12 @@ function secondaryOf(n){
   var v=EXDB&&EXDB[n];
   if(v&&v.x&&v.x.length)return v.x;
   var m=muscleOf(n),p=patternOf(n);
+  /* A raise is filed as a push, but it is not a press: the arm swings up on its own,
+     with the traps, not the triceps and chest. */
+  var mv=movementOf(n,m);
+  if(m==="Shoulders"&&mv==="raise")p="Isolation";
+  /* a shrug only lifts the shoulders: the grip holds, nothing else pulls */
+  if(mv==="shrug")return ["Forearms"];
   var byM=SECONDARY[m];
   if(byM&&byM[p])return byM[p];
   if(byM){var k=Object.keys(byM)[0];return byM[k]||[];}
