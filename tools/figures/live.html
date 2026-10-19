@@ -50,7 +50,7 @@
   const {RECORDS}=await import(new URL("js/data/mannequin/records.js",root));
   const M=await import(new URL("js/ui/mannequin.js",root));
   const qs=new URLSearchParams(location.search);
-  const names=qs.get("ex")?qs.get("ex").split(","):Object.keys(RECORDS);
+  const names=qs.get("ex")==="-"?[]:qs.get("ex")?qs.get("ex").split(","):Object.keys(RECORDS);
   const themes=(qs.get("themes")||"red-dark,red-light,blue-dark,blue-light,mono-dark,mono-light").split(",");
   const grid=document.getElementById("grid");
   grid.innerHTML=names.map(n=>themes.map(th=>{const [p,m]=th.split("-");
@@ -62,7 +62,7 @@
   hold.onchange=()=>{if(hold.checked)apply();else M.mannequins().forEach(m=>{m.toggle();});};
   u.oninput=apply;
   setInterval(()=>{document.querySelectorAll(".pv-cell").forEach((c,i)=>{const m=c.querySelector(".fig3d")._mq;
-    if(m){const s=m.state();c.querySelector(".pv-st").textContent=s.live?(s.w+"×"+s.h+" · scene at "+Math.round(s.q*100)+"% · "+s.frames+" frames"):"stills: "+s.err;}});},500);
+    const st=c.querySelector(".pv-st");if(m&&st){const s=m.state();st.textContent=s.live?(s.w+"×"+s.h+" · scene at "+Math.round(s.q*100)+"% · "+s.frames+" frames"):"stills: "+s.err;}});},500);
   window.__mq=M;window.__ready=true;
 </script>
 </body>

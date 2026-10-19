@@ -13,13 +13,23 @@ var add=V.add,sub=V.sub,mul=V.mul,dot=V.dot,cross=V.cross,len=V.len,norm=V.norm,
 var R=Math.PI/180,X=[1,0,0],Y=[0,1,0],Z=[0,0,1];
 
 var PROPS={
-  /* a barbell centred at c, along z */
+  /* a barbell centred at c, along o.axis (z by default): o.len its half length, o.sleeve
+     how much of each end carries plates, o.plate their radius; o.ez an EZ bar, its
+     middle bent twice each side where the hands go */
   barbell:function(c,o){
-    o=o||{};var out=[capsule(add(c,[0,0,-1.05]),add(c,[0,0,1.05]),.014,4,0)],pr=o.plate||.225;
+    o=o||{};var ax=norm(o.axis||Z),L=o.len||1.05,sl=o.sleeve||(o.ez?.26:.44),pr=o.plate||.225,in_=L-sl,out=[];
+    function at(t){return add(c,mul(ax,t));}
+    if(o.ez){
+      var up=norm(sub(Y,mul(ax,dot(Y,ax))));if(len(sub(Y,mul(ax,dot(Y,ax))))<.1)up=X;
+      var k=[[0,0],[.05,0],[.1,.028],[.15,0],[.2,.028],[.25,0]];
+      [-1,1].forEach(function(s){
+        for(var i=1;i<k.length;i++)out.push(capsule(add(at(s*k[i-1][0]),mul(up,k[i-1][1])),add(at(s*k[i][0]),mul(up,k[i][1])),.014,4,0));
+        out.push(capsule(at(s*.25),at(s*L),.014,4,0));});}
+    else out.push(capsule(at(-L),at(L),.014,4,0));
     [-1,1].forEach(function(s){
-      out.push(cyl(add(c,[0,0,s*.64]),add(c,[0,0,s*.70]),pr,.008,2,0));
-      out.push(cyl(add(c,[0,0,s*.70]),add(c,[0,0,s*.75]),pr*.82,.008,2,0));
-      out.push(cyl(add(c,[0,0,s*.61]),add(c,[0,0,s*.635]),.03,.004,4,0));});
+      out.push(cyl(at(s*(in_+.03)),at(s*(in_+.09)),pr,.008,2,0));
+      out.push(cyl(at(s*(in_+.09)),at(s*(in_+.14)),pr*.82,.008,2,0));
+      out.push(cyl(at(s*in_),at(s*(in_+.025)),.03,.004,4,0));});
     return out;},
   /* a dumbbell centred at c, along dir */
   dumbbell:function(c,dir,o){
@@ -46,6 +56,50 @@ var PROPS={
       out.push.apply(out,PROPS.beam([x,h-.115,c[2]],[x,.04,c[2]],.06,.06));
       out.push.apply(out,PROPS.beam([x,.022,c[2]-.21],[x,.022,c[2]+.21],.065,.044));});
     return out;},
+  /* An adjustable bench set to incline: its back pad's surface rising from c (where it
+     meets the seat, under the hips) at ang degrees toward -x; the seat in front, a
+     post and a floor rail under them. */
+  adjBench:function(c,ang,o){
+    o=o||{};var sx=o.prone?-1:1,a=ang*R,d=[-sx*Math.cos(a),Math.sin(a),0],n=[sx*Math.sin(a),Math.cos(a),0],L=o.len||.84,out=[];
+    /* prone: lain on face down, the pad rising toward +x and the seat behind */
+    if(o.prone)n=[-Math.sin(a),Math.cos(a),0],d=[Math.cos(a),Math.sin(a),0];
+    var seatX=c[0]+(o.prone?-.19:.19);
+    out.push(box(sub(add(c,mul(d,L/2)),mul(n,.036)),d,n,Z,[L/2,.036,.14],.03,3,0));
+    out.push(box([seatX,c[1]-.066,c[2]],X,Y,Z,[.2,.036,.15],.03,3,0));
+    var foot=c[0]+d[0]*L*.55;
+    out.push.apply(out,PROPS.beam([seatX,c[1]-.12,c[2]],[seatX,.04,c[2]],.07,.07));
+    out.push.apply(out,PROPS.beam(sub(add(c,mul(d,L*.5)),mul(n,.09)),[foot,.04,c[2]],.06,.06));
+    var x0=Math.min(foot,seatX)-.12,x1=Math.max(foot,seatX)+.12;
+    out.push.apply(out,PROPS.beam([x0,.022,c[2]],[x1,.022,c[2]],.09,.044));
+    [x0+.05,x1-.05].forEach(function(x){out.push.apply(out,PROPS.beam([x,.022,c[2]-.2],[x,.022,c[2]+.2],.065,.044));});
+    return out;},
+  /* A decline bench: its pad's surface running down from c (under the hips) at ang
+     degrees toward -x, a short pad rising to the knees, and a roller the ankles hook
+     under. */
+  declineBench:function(c,ang,o){
+    o=o||{};var a=ang*R,d=[-Math.cos(a),-Math.sin(a),0],n=[-Math.sin(a),Math.cos(a),0],L=.9,out=[];
+    out.push(box(sub(add(c,mul(d,L/2-.12)),mul(n,.036)),d,n,Z,[L/2,.036,.14],.03,3,0));
+    var k=[c[0]+.34,c[1]+.08,c[2]];
+    out.push(box(sub(lerp(c,k,.5),[0,.04,0]),norm(sub(k,c)),norm(cross(Z,norm(sub(k,c)))),Z,[len(sub(k,c))/2,.03,.13],.025,3,0));
+    [-1,1].forEach(function(s){out.push(cyl([k[0]+.2,k[1]-.12,c[2]+s*.02],[k[0]+.2,k[1]-.12,c[2]+s*.16],.045,.02,3,0));});
+    out.push.apply(out,PROPS.beam([k[0]+.2,k[1]-.12,c[2]],[k[0]+.08,.04,c[2]],.06,.06));
+    var hd=add(c,mul(d,L*.75));
+    out.push.apply(out,PROPS.beam([hd[0],hd[1]-.1,c[2]],[hd[0],.04,c[2]],.06,.06));
+    out.push.apply(out,PROPS.beam([hd[0]-.05,.022,c[2]],[k[0]+.15,.022,c[2]],.09,.044));
+    return out;},
+  /* A preacher bench: the arm pad sloping down and forward under the upper arms (sh the
+     shoulders' middle, ua the way the upper arms run), a seat, a post. */
+  preacher:function(sh,ua,seat){
+    var a=norm(ua),n=norm([-a[1],a[0],0]);if(n[1]<0)n=mul(n,-1);
+    var c=sub(add(sh,mul(a,.2)),mul(n,.082)),out=[];
+    out.push(box(c,a,n,Z,[.15,.035,.2],.03,3,0));
+    var foot=[c[0]+.02,.04,c[2]];
+    out.push.apply(out,PROPS.beam(sub(c,mul(n,.06)),foot,.07,.07));
+    out.push.apply(out,PROPS.beam([(seat?seat[0]:c[0])-.1,.022,c[2]],[c[0]+.35,.022,c[2]],.09,.044));
+    /* a standing preacher bench has no seat */
+    if(seat){out.push.apply(out,PROPS.soft([seat[0],seat[1]-.04,seat[2]],X,Y,[.18,.04,.18]));
+      out.push.apply(out,PROPS.beam([seat[0],seat[1]-.08,seat[2]],[seat[0],.04,seat[2]],.07,.07));}
+    return out;},
   /* an inclined back pad from its foot fp, rising at ang degrees toward -x, length L */
   pad:function(fp,ang,L,o){
     o=o||{};var a=ang*R,dir=[-Math.cos(a),Math.sin(a),0],c=add(fp,mul(dir,L/2)),ey=norm(cross(Z,dir));
@@ -68,6 +122,23 @@ var PROPS={
       out.push.apply(out,PROPS.beam([x,0,z],[x,h+.09,z],.075,.075));
       out.push.apply(out,PROPS.beam([x-.38,.022,z],[x+.38,.022,z],.08,.044));});
     out.push.apply(out,PROPS.beam([x,h+.12,-w-.09],[x,h+.12,w+.09],.065,.065));
+    return out;},
+  /* A Smith machine: the bar rides two steel rails, so it can only go straight up and
+     down. c is the bar's centre: the rails stand at its x, z = +-w (inside the plates),
+     each in front of an iron post, and the carriages that hold the bar sit on the rails
+     at its height. A beam over the top, a rail on the floor each side. */
+  smith:function(c,o){
+    o=o||{};var x=c[0],w=o.w||.56,h=o.h||2.2,bx=x-.1,out=[];
+    [-1,1].forEach(function(s){
+      var z=s*w;
+      out.push(capsule([x,.08,z],[x,h-.06,z],.016,4,0));
+      out.push.apply(out,PROPS.beam([bx,0,z],[bx,h+.07,z],.07,.07));
+      [.08,h-.06].forEach(function(y){out.push.apply(out,PROPS.beam([x+.02,y,z],[bx,y,z],.035,.035));});
+      out.push.apply(out,PROPS.beam([x-.62,.022,z],[x+.5,.022,z],.08,.044));});
+    out.push.apply(out,PROPS.beam([bx,h+.035,-w-.035],[bx,h+.035,w+.035],.07,.07));
+    /* the frame is scenery: the camera frames the figure and the bar, not its height */
+    out.forEach(function(q){q.bg=1;});
+    [-1,1].forEach(function(s){out.push(box([x,c[1],s*w],X,Y,Z,[.032,.07,.03],.008,2,0));});
     return out;},
   /* parallettes: two low bars at z = +-w, centred at x */
   parallettes:function(x,w){

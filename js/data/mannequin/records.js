@@ -26,8 +26,9 @@
    Press) and Seated Machine Row. Both are seated on the same machine seat and driven
    by the same lever arm, which is the point: the second is the first's parts again. */
 import {V} from "./geom.js";
-import {joints} from "./rig.js";
+import {joints, DIM} from "./rig.js";
 import {arc} from "./motion.js";
+import {moveFor} from "./moves.js";
 
 var add=V.add,sub=V.sub,mul=V.mul;
 
@@ -35,12 +36,13 @@ var add=V.add,sub=V.sub,mul=V.mul;
 function S(x,y,z){return {l:[x,y,z],r:[x,y,-z]};}
 /* Seated on a machine seat whose top is at 0.48: pelvis on it, feet flat on the floor,
    knees a little apart. */
-function seated(o){return Object.assign({pelvis:[-.12,.585,0],feet:S(.34,.075,.17),knees:S(1,.4,.15)},o||{});}
+function seated(o){return Object.assign({pelvis:[-.12,.61,0],feet:S(.36,.08,.17),knees:S(1,.4,.15),grip:"grip"},o||{});}
 /* a point on the trunk: du along its up, df forward, dl to its left */
 function along(J,du,df,dl){return add(add(add(J.P,mul(J.pf.u,du)),mul(J.pf.f,df||0)),mul(J.pf.l,dl||0));}
-/* The grip in each hand: a little past the wrist, along the hand. */
-var GRIP=.03;
-function grip(J,s){return add(J.wr[s],mul(J.hd[s],GRIP));}
+/* The grip in each hand: in the palm, the fingers round it (skin.js). */
+function grip(J,s){return J.grip[s];}
+/* The wrist that puts the palm on a handle at g. */
+function wristFor(J,s,g){return sub(sub(g,mul(J.hd[s],DIM.palm)),mul(J.pn[s],.022));}
 /* Levers whose grips run start to end on a rigid arc: one per side, each turning on a
    pivot above the middle of its path (reach metres up), so the hands follow the
    machine. The grips' start and end come from the keys' hands and hand directions. */
@@ -54,11 +56,11 @@ function onLevers(reach){
   return function(p,u,rec){
     var lv=levers(rec,reach),J=joints(p);
     p.hands={};
-    ["l","r"].forEach(function(s){p.hands[s]=sub(lv[s].at(u),mul(J.hd[s],GRIP));});};}
+    ["l","r"].forEach(function(s){p.hands[s]=wristFor(J,s,lv[s].at(u));});};}
 /* The machine seat on its post and rail, and a back pad along the trunk. */
 function seat(){return [["seat",[-.13,.48,0],[1,0,0],{back:.5,front:.36}]];}
-function backPad(J){return [["soft",along(J,.33,-.17),J.pf.u,J.pf.f,[.36,.048,.17]],
-  ["beam",along(J,.1,-.24),[-.13,.44,0],.065,.065]];}
+function backPad(J){return [["soft",along(J,.33,-.13),J.pf.u,J.pf.f,[.36,.048,.17]],
+  ["beam",along(J,.1,-.2),[-.13,.44,0],.065,.065]];}
 /* The lever arms and what carries them: the grips (vertical, a neutral grip) at the
    ends of rigid arms hanging from a shaft overhead, its hubs at the pivots, the shaft
    held by a boom from the weight-stack tower at towerX (the tower faces the seat). */
@@ -84,8 +86,8 @@ var RECORDS={
   "Machine Chest Press":{
     id:"bn_machine_chest_press",
     keys:[
-      seated({hands:S(.11,.98,.32),handDir:S(1,0,-.15),elbows:S(-.8,-.35,.9)}),
-      seated({hands:S(.445,1.01,.19),handDir:S(1,0,0),elbows:S(-.2,-1,.6)})],
+      seated({hands:S(.2,.98,.32),handDir:S(1,0,-.15),elbows:S(-.8,-.35,.9)}),
+      seated({hands:S(.455,1.01,.19),handDir:S(1,0,0),elbows:S(-.2,-1,.6)})],
     drive:onLevers(.78),
     equip:function(J,u,rec){
       return seat().concat(backPad(J),[["tower",[TW,0,0],[1,0,0]]],leverRig(J,u,rec,.78,TW+.1));},
@@ -99,8 +101,8 @@ var RECORDS={
   "Seated Machine Row":{
     id:"bn_seated_machine_row",
     keys:[
-      seated({hands:S(.44,1.02,.2),handDir:S(1,0,0),elbows:S(-.2,-1,.3)}),
-      seated({hands:S(.03,.93,.23),handDir:S(1,0,0),elbows:S(-1,-.4,.1)})],
+      seated({hands:S(.47,1.02,.2),handDir:S(1,0,0),elbows:S(-.2,-1,.3)}),
+      seated({hands:S(.08,.86,.21),handDir:S(1,0,0),elbows:S(-1,-.4,.1)})],
     drive:onLevers(.78),
     equip:function(J,u,rec){
       var tx=.86;
@@ -109,10 +111,12 @@ var RECORDS={
         ["beam",[.13,1.0,0],[tx-.13,1.0,0],.065,.065],["beam",[-.13,.022,0],[tx,.022,0],.09,.044]],
         leverRig(J,u,rec,.78,tx-.1));},
     tempo:[1.0,.4,1.6,.5],
-    cam:{yaw:60,pitch:8},
+    /* from behind and to the side: the back is what works */
+    cam:{yaw:145,pitch:10},
     arrow:{track:"wr.l"}}
 };
-/* The record for an exercise, by its name in the library; null when it has none yet. */
-function recordFor(name){return (name&&Object.prototype.hasOwnProperty.call(RECORDS,name))?RECORDS[name]:null;}
+/* The record for an exercise, by its name in the library: one written here, or one
+   built from its movement's family (moves.js); null when it has none yet. */
+function recordFor(name){return (name&&Object.prototype.hasOwnProperty.call(RECORDS,name))?RECORDS[name]:moveFor(name);}
 
-export {RECORDS, recordFor, seated, along, grip, levers};
+export {RECORDS, recordFor, seated, along, grip, wristFor, levers};

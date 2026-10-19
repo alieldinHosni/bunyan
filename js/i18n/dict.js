@@ -1843,7 +1843,13 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Show the guide again": "اعرض الدليل تاني",
 "The tips that point out what each button does": "النصايح اللي بتشاور على كل زرار وبتقول بيعمل إيه",
 "Your picture": "صورتك",
-"{i} of {n}": "{i} من {n}"
+"{i} of {n}": "{i} من {n}",
+"App icon": "أيقونة التطبيق",
+"Red": "أحمر",
+"Blue": "أزرق",
+"The icon changes with the theme.": "الأيقونة بتتغير مع المظهر.",
+"The icon stays this colour whatever the theme.": "الأيقونة بتفضل باللون ده مهما كان المظهر.",
+"On iPhone, the Home Screen keeps the icon BUNYAN had when it was added. To change it there, make a backup first (Profile → Backup and reset), add BUNYAN to the Home Screen again from Safari (Share → Add to Home Screen), and restore the backup in it if it opens empty.": "على الآيفون، الشاشة الرئيسية بتحتفظ بالأيقونة اللي كانت لبنيان وقت ما اتضاف. عشان تغيرها هناك، اعمل نسخة احتياطية الأول (حسابي ← النسخ الاحتياطي وإعادة الضبط)، وضيف بنيان للشاشة الرئيسية تاني من سفاري (مشاركة ← إضافة إلى الشاشة الرئيسية)، واسترجع النسخة فيه لو فتح فاضي."
 };
 function t(k){
   if(!S.prefs||S.prefs.lang!=="ar")return k;
