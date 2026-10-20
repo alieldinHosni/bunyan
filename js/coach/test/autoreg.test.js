@@ -6,6 +6,10 @@ function log(sessions){
   return sessions.map(function(sets,i){return mk(addDays(TODAY,-7*(sessions.length-1-i)),[["Squat",sets]]);});}
 
 function run(t){
+  /* Cardio has no sets: no advice, no crash. */
+  var cardio=progressionAdvice([mk(TODAY,[["Running",[]]])],"Running",RANGE,INFO);
+  t.eq(cardio.kind,"insufficient","cardio with no sets: insufficient");
+  t.clean(cardio,"cardio with no sets: no NaN or undefined");
   var none=progressionAdvice([],"Squat",RANGE,INFO);
   t.eq(none.kind,"insufficient","empty log: insufficient");
   t.clean(none,"empty log: no NaN or undefined");
