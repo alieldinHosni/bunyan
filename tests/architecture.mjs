@@ -11,6 +11,7 @@
      app     js/app.js           boot and wiring: nothing imports it, and it answers no tap itself
              (taps are answered in js/ui/handlers/, one module per domain)
      vendor  js/vendor/          third-party code as shipped (pdf.js), for the engine only
+     knowledge js/knowledge/     leaf data from the textbooks: imports nothing (the spec's rule); i18n reads its cue words
 
    A view may use another view only to show it (Coach shows the planning screens,
    Training shows the logger): the list below. Logic two views need lives in the
@@ -44,13 +45,15 @@ function layer(f){
   if (f.startsWith("js/ui/views/")) return "view";
   if (f.startsWith("js/ui/")) return "ui";
   if (f.startsWith("js/vendor/")) return "vendor";
+  if (f.startsWith("js/knowledge/")) return "knowledge";
   return "other";}
 
 /* Who may import whom. A layer not listed for an importer is a violation. */
 const MAY = {
   coach:  ["coach"],
+  knowledge: [],
   data:   ["data", "core:util"],
-  i18n:   ["i18n", "data", "core"],
+  i18n:   ["i18n", "data", "core", "knowledge"],
   core:   ["core", "data", "i18n"],
   engine: ["engine", "coach", "data", "i18n", "core", "vendor"],
   ui:     ["ui", "view", "engine", "coach", "data", "i18n", "core"],
