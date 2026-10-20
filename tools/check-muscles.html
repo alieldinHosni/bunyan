@@ -1,0 +1,44 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bunyan — muscle vocabulary check</title>
+<!-- Run with tools/serve.ps1, open http://localhost:8777/tools/check-muscles.html.
+     Checks the one-vocabulary rule: every muscle named in imbalances.js is in
+     anatomy.js MUSCLE_MAP, every tag there is a real exercises.json tag, and every
+     tag anywhere in anatomy.js is real. Never shipped; never run by the app. -->
+<pre id="out">running…</pre>
+<script type="module">
+const out = document.getElementById("out");
+const a = await import("../js/knowledge/anatomy.js?v=" + Date.now());
+const im = await import("../js/knowledge/imbalances.js?v=" + Date.now());
+const co = await import("../js/knowledge/corrective.js?v=" + Date.now());
+const cr = await import("../js/knowledge/core.js?v=" + Date.now());
+const lib = await fetch("../exercises.json").then(r => r.json());
+const libTags = [...new Set(Object.values(lib).map(e => e.m))].sort();
+const map = new Map(a.MUSCLE_MAP.map(m => [m.muscle, m.tag]));
+const problems = [];
+if (JSON.stringify([...a.meta.libraryTags].sort()) !== JSON.stringify(libTags))
+  problems.push("meta.libraryTags differs from exercises.json: " + libTags.join(","));
+const dup = a.MUSCLE_MAP.map(m => m.muscle).filter((x, i, arr) => arr.indexOf(x) !== i);
+if (dup.length) problems.push("duplicate muscles in MUSCLE_MAP: " + dup.join(", "));
+for (const m of a.MUSCLE_MAP) if (m.tag !== null && !libTags.includes(m.tag)) problems.push("MUSCLE_MAP tag not in library: " + m.muscle + " → " + m.tag);
+const tags = []; JSON.stringify(a, (k, v) => { if (k === "tag") tags.push(v); return v; });
+for (const t of tags) if (t !== null && !libTags.includes(t)) problems.push("anatomy.js tag not in library: " + t);
+for (const ex of a.MOTOR_BEHAVIOUR.synergies.exercises) for (const side of ["agonists", "synergists", "stabilisers"])
+  for (const m of ex[side] || []) if (!map.has(m)) problems.push("synergies " + ex.exercise + "." + side + ": '" + m + "' not in MUSCLE_MAP");
+for (const f of im.MOVEMENT_FAULTS || []) for (const side of ["overactive", "underactive"])
+  for (const m of f[side] || []) if (!map.has(m)) problems.push("fault " + f.id + "." + side + ": '" + m + "' not in MUSCLE_MAP");
+for (const c of im.CAUSES || []) for (const e of c.effects) for (const side of ["overactive", "tight"])
+  for (const m of e[side] || []) if (!map.has(m)) problems.push("causes " + c.id + "." + side + ": '" + m + "' not in MUSCLE_MAP");
+for (const i of im.INJURY_EFFECTS || []) for (const m of i.reduces || []) if (!map.has(m) && !/stabilisers$/.test(m))
+  problems.push("injury " + i.injury + ": '" + m + "' not in MUSCLE_MAP");
+for (const p of im.PATTERNS) for (const side of ["overactive", "underactive"])
+  for (const m of p[side] || []) if (!map.has(m)) problems.push("imbalances " + p.id + "." + side + ": '" + m + "' not in MUSCLE_MAP");
+for (const t of co.TECHNIQUES) for (const s of t.stretches || []) for (const m of s.target || []) if (!map.has(m)) problems.push("corrective " + s.id + ": '" + m + "' not in MUSCLE_MAP");
+const B = cr.BASICS, R = cr.RATIONALE; for (const m of [...B.local.muscles, ...B.global.muscles].map(x => x.muscle).concat(B.global.alsoNamed, R.posture.anteriorTilt.overactive, R.posture.anteriorTilt.underactive, R.posture.posteriorTilt.overactive, R.posture.posteriorTilt.underactive, R.rehabilitation.underactiveInChronicLbp)) if (!map.has(m)) problems.push("core: '" + m + "' not in MUSCLE_MAP");
+const D = co.DYSFUNCTION; for (const e of D.alteredReciprocalInhibition.examples) for (const m of [...e.overactive, ...e.inhibits]) if (!map.has(m)) problems.push("corrective ARI: '" + m + "'");
+for (const m of Object.values(D.synergisticDominance.example).slice(0, 3)) if (!map.has(m)) problems.push("corrective SD: '" + m + "'");
+out.textContent = (problems.length ? "PROBLEMS\n" + problems.join("\n") : "OK") +
+  "\n\nmuscles mapped: " + a.MUSCLE_MAP.length + " (" + a.MUSCLE_MAP.filter(m => m.tag === null).length + " untagged)" +
+  "\npatterns: " + im.PATTERNS.length + "\nlibrary tags: " + libTags.join(", ");
+window.__result = problems;
+</script>

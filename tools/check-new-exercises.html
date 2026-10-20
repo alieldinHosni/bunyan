@@ -1,0 +1,54 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bunyan — new-exercise proposal check</title>
+<!-- Run with tools/serve.ps1, open http://localhost:8777/tools/check-new-exercises.html.
+     Checks tools/new-exercises.proposal.json: full library schema on every entry, tags
+     from the library's 13 groups, ids and names that do not collide with exercises.json,
+     `nearest` pointing at a real library entry, cues ≤2 × ≤10 words in English and
+     Arabic (Arabic script, no Latin), and lists every entry that has no image yet.
+     Renders the Arabic names and cues RTL to read. Never shipped; never run by the app. -->
+<style>body{font:14px system-ui;margin:16px}.rtl{direction:rtl;text-align:right;font:16px/1.7 "Segoe UI",Tahoma,sans-serif;border:1px solid #ccc;padding:12px;max-width:560px}.rtl b{display:block;margin-top:10px}</style>
+<pre id="out">running…</pre>
+<div id="rtl" class="rtl" dir="rtl" lang="ar"></div>
+<script type="module">
+const out = document.getElementById("out");
+const P = await fetch("new-exercises.proposal.json?v=" + Date.now()).then(r => r.json());
+const lib = await fetch("../exercises.json").then(r => r.json());
+const tags = new Set(Object.values(lib).map(e => e.m));
+const ids = new Set(Object.values(lib).map(e => e.i)), names = new Set(Object.keys(lib).map(n => n.toLowerCase()));
+const EQ = new Set(Object.values(lib).map(e => e.e)), DF = new Set(Object.values(lib).map(e => e.d)), PT = new Set(Object.values(lib).map(e => e.p));
+const words = s => s.trim().split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
+const problems = [], seen = new Set(), noImage = [];
+for (const x of P.exercises) {
+  const k = x.i || x.name;
+  for (const f of ["name","i","nameAr","m","x","e","d","p","c","category","src","mechanics","cues","cuesAr"]) if (x[f] === undefined) problems.push(k + ": missing " + f);
+  if (seen.has(x.i)) problems.push(k + ": duplicate id in proposal"); seen.add(x.i);
+  if (ids.has(x.i)) problems.push(k + ": id already in exercises.json");
+  if (names.has((x.name || "").toLowerCase())) problems.push(k + ": name already in exercises.json");
+  if (!tags.has(x.m)) problems.push(k + ": primary tag not a library group — " + x.m);
+  for (const s of x.x || []) if (!tags.has(s)) problems.push(k + ": secondary tag not a library group — " + s);
+  if (!EQ.has(x.e)) problems.push(k + ": equipment not in library vocabulary — " + x.e);
+  if (!DF.has(x.d)) problems.push(k + ": difficulty not in library vocabulary — " + x.d);
+  if (!PT.has(x.p)) problems.push(k + ": pattern not in library vocabulary — " + x.p);
+  if (x.nearest && !names.has(x.nearest.replace(/ \(library\).*$/, "").toLowerCase())) problems.push(k + ": nearest not found — " + x.nearest);
+  if (!x.cues?.length || x.cues.length > 2) problems.push(k + ": " + (x.cues?.length || 0) + " cues");
+  if ((x.cuesAr || []).length !== (x.cues || []).length) problems.push(k + ": Arabic cue count differs");
+  for (const q of x.cues || []) if (words(q) > 10) problems.push(k + ": " + words(q) + " words — " + q);
+  for (const q of [x.nameAr, ...(x.cuesAr || [])]) {
+    if (!/[؀-ۿ]/.test(q || "")) problems.push(k + ": no Arabic script — " + q);
+    if (/[A-Za-z]/.test(q || "")) problems.push(k + ": Latin inside Arabic — " + q);
+  }
+  for (const q of x.cuesAr || []) if (words(q) > 10) problems.push(k + ": Arabic " + words(q) + " words — " + q);
+  if (!x.image) noImage.push(x.name);
+}
+const box = document.getElementById("rtl");
+for (const x of P.exercises) { const b = document.createElement("b"); b.textContent = x.nameAr; box.append(b); for (const q of x.cuesAr) { const d = document.createElement("div"); d.textContent = "• " + q; box.append(d); } }
+const byCat = {}; for (const x of P.exercises) byCat[x.category] = (byCat[x.category] || 0) + 1;
+out.textContent = (problems.length ? "PROBLEMS\n" + problems.join("\n") : "OK") +
+  "\n\nproposed: " + P.exercises.length + "  by category: " + JSON.stringify(byCat) +
+  "\nwith a near library entry (owner decides): " + P.exercises.filter(x => x.nearest).length +
+  "\ntags from the book: " + P.exercises.filter(x => x.tagFromBook).length +
+  "\nNO IMAGE YET: " + noImage.length + " of " + P.exercises.length + "\n  " + noImage.join("\n  ") +
+  "\nRTL render: " + getComputedStyle(box).direction;
+window.__result = problems;
+</script>
