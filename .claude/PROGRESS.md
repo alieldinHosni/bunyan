@@ -1677,6 +1677,7 @@ Owns `js/knowledge/`, `docs/`, `tools/`, plus two files by explicit exception:
   Nothing else in `js/i18n/`, `js/ui/` or the tests was changed. If you edit `dict.js`, keep the merge line after the `AR` literal.
 
 
+- 20 Oct — **Salvaged fixes:** the two 13 Oct UI fixes that never reached GitHub (`patch.js` keyed lists, `photos.js` URL cache) are rebased onto main @ 38126ac as diffs in `.claude/salvaged-fixes.md`, for the session working on main. Not applied here. This folder's other app code is stale and discarded.
 ---
 
 <!-- Merged 20 Oct from GitHub main (38126ac): the coaching-intelligence session's progress file, kept whole and unedited below. Headings demoted one level. -->
