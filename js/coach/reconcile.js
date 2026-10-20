@@ -32,18 +32,27 @@
    one with another session loading the same muscle the day before or after (at least
    one rest day between sessions for the same muscles: js/knowledge/acute-variables.js
    VARIABLES.frequency, source 20.3), and never past the muscle's weekly maximum
-   recoverable volume (js/coach/landmarks.js, the only MRV in the app; a muscle with no
-   MRV there cannot be checked, so it is not moved). Missing those, the whole session is
-   let go: catching up past what can be recovered from is the opposite of what a
-   missed session calls for. `why` names each muscle that did not fit:
-     no_mrv       no recoverable maximum to check against
-     mrv          the week would pass it
-     no_session   no remaining session trains the muscle
-     rest_days    the sessions that do sit next to another one for the same muscle
-     per_session  more sets missed than sessions to take one each
+   recoverable volume (js/coach/landmarks.js — practitioner heuristics, not measured
+   constants; see BASIS there). Catching up past what can be recovered from is the
+   opposite of what a missed session calls for.
+
+   What fits is moved and the rest is let go, and both numbers are said: "1 of 6 sets
+   moved to Saturday, the other 5 are gone" — a partial move is not a fix, and the
+   result must not read as one. Per muscle:
+     {muscle, missed, moved, gone, ceiling, why}
+     ceiling  "mrv", or "none" where landmarks.js has no MRV for the muscle (Forearms,
+              Adductors, Neck): then the one-set-per-session limit governs alone, and
+              the result says there is no recovery-ceiling data for it
+     why      what stopped the rest ("" when everything moved):
+       mrv          the week would pass the muscle's MRV
+       no_session   no remaining session trains the muscle
+       rest_days    the sessions that do sit next to another one for the same muscle
+       per_session  more sets missed than sessions to take one each
+   kind: "adjust" (all moved), "partial" (some), "week_fine" (none: the week is still
+   fine, this one's gone).
 
    Both return a defined result for any input — never NaN, never undefined. */
-import {LANDMARKS} from "./landmarks.js";
+import {BASIS, LANDMARKS} from "./landmarks.js";
 import {dayNo, num} from "./util.js";
 
 var DAY_SHIFT=0.15, STEP=10;
@@ -101,34 +110,30 @@ function loads(s,m){return num(s&&s.sets&&s.sets[m])>=1;}
 
 function reconcileTraining(input){
   input=input||{};
-  var out={kind:"none",add:[],gone:{},why:{}};
+  var out={kind:"none",add:[],muscles:[],missed:0,moved:0,gone:0,basis:BASIS};
   var missed=input.missed,from=String(input.from||"");
   if(!missed||!ISO.test(String(missed.date||""))||!ISO.test(from))return out;
   var sessions=(Array.isArray(input.sessions)?input.sessions:[]).filter(function(s){
     return s&&ISO.test(String(s.date||""))&&s.sets&&typeof s.sets==="object";}).slice().sort(byDay);
   var need={};
   Object.keys(missed.sets||{}).forEach(function(m){var n=Math.floor(num(missed.sets[m]));if(n>0)need[m]=n;});
-  var muscles=Object.keys(need).sort();
-  if(!muscles.length){out.kind="nothing_missed";return out;}
+  var names=Object.keys(need).sort();
+  if(!names.length){out.kind="nothing_missed";return out;}
   var start=dayNo(from),add=[];
-  muscles.forEach(function(m){
-    var L=LANDMARKS[m];
-    if(!L){out.why[m]="no_mrv";return;}
+  names.forEach(function(m){
+    var L=LANDMARKS[m],n=need[m];
     var week=sessions.reduce(function(a,s){return a+num(s.sets[m]);},0);
-    var room=Math.floor(L.mrv-week);
-    if(room<need[m]){out.why[m]="mrv";return;}
-    var fit=sessions.filter(function(s){
-      if(dayNo(s.date)<start||!loads(s,m))return false;
+    var room=L?Math.max(0,Math.floor(L.mrv-week)):n;
+    var later=sessions.filter(function(s){return dayNo(s.date)>=start&&loads(s,m);});
+    var fit=later.filter(function(s){
       return !sessions.some(function(o){return o!==s&&loads(o,m)&&Math.abs(dayNo(o.date)-dayNo(s.date))<=1;});});
-    if(fit.length<need[m]){
-      var later=sessions.some(function(s){return dayNo(s.date)>=start&&loads(s,m);});
-      out.why[m]=!later?"no_session":!fit.length?"rest_days":"per_session";return;}
-    fit.slice(0,need[m]).forEach(function(s){add.push({date:s.date,muscle:m,sets:1});});});
-  if(Object.keys(out.why).length){
-    out.kind="week_fine";
-    muscles.forEach(function(m){out.gone[m]=need[m];});
-    return out;}
-  out.kind="adjust";
+    var moved=Math.min(n,room,fit.length),why="";
+    if(moved<n)why=L&&room<=fit.length?"mrv":!later.length?"no_session":!fit.length?"rest_days":"per_session";
+    fit.slice(0,moved).forEach(function(s){add.push({date:s.date,muscle:m,sets:1});});
+    out.muscles.push({muscle:m,missed:n,moved:moved,gone:n-moved,ceiling:L?"mrv":"none",why:why});
+    out.missed+=n;out.moved+=moved;});
+  out.gone=out.missed-out.moved;
+  out.kind=!out.moved?"week_fine":out.gone?"partial":"adjust";
   out.add=add.sort(function(a,b){return byDay(a,b)||(a.muscle<b.muscle?-1:1);});
   return out;}
 

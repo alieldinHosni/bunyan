@@ -1,5 +1,5 @@
 import {reconcileNutrition, reconcileTraining} from "../reconcile.js";
-import {LANDMARKS} from "../landmarks.js";
+import {BASIS, LANDMARKS} from "../landmarks.js";
 
 /* The week of Monday 19 October 2026. */
 var WEEK=["2026-10-19","2026-10-20","2026-10-21","2026-10-22","2026-10-23","2026-10-24","2026-10-25"];
@@ -68,6 +68,8 @@ function nutrition(t){
 /* Training: sets per muscle, the app's way. */
 function S(date,sets){return {date:date,sets:sets};}
 
+function M(r,m){return r.muscles.filter(function(x){return x.muscle===m;})[0]||{};}
+
 function training(t){
   var none=reconcileTraining();
   t.eq(none.kind,"none","no input: none");
@@ -78,34 +80,39 @@ function training(t){
   /* A small miss fits: one set per muscle per session, into sessions that train it. */
   var week=[S(WEEK[0],{Chest:6}),S(WEEK[3],{Chest:5,Biceps:2}),S(WEEK[5],{Chest:5,Biceps:2})];
   var small=reconcileTraining({missed:S(WEEK[1],{Chest:2,Biceps:1}),sessions:week,from:WEEK[2]});
-  t.eq(small.kind,"adjust","two chest sets and a biceps set: they fit");
+  t.eq([small.kind,small.missed,small.moved,small.gone],["adjust",3,3,0],"two chest sets and a biceps set: all three fit");
   t.eq(small.add,[{date:WEEK[3],muscle:"Biceps",sets:1},{date:WEEK[3],muscle:"Chest",sets:1},{date:WEEK[5],muscle:"Chest",sets:1}],
     "one extra set per muscle per session, spread over the sessions that train it");
   t.ok(16+2<=LANDMARKS.Chest.mrv,"and the week stays under the chest MRV");
+  t.eq(small.basis,BASIS,"the landmarks travel with their label: heuristics, not measurements");
   t.clean(small,"adjust: no NaN or undefined");
 
-  /* A missed leg day usually cannot be absorbed: let it go. */
+  /* A missed leg day: what fits moves, the rest is gone, and both numbers are said. */
   var legs=reconcileTraining({missed:S(WEEK[1],{Quads:6,Hamstrings:4}),
     sessions:[S(WEEK[0],{Chest:6}),S(WEEK[3],{Back:6}),S(WEEK[5],{Quads:6,Hamstrings:4})],from:WEEK[2]});
-  t.eq([legs.kind,legs.add,legs.gone,legs.why.Quads],["week_fine",[],{Hamstrings:4,Quads:6},"per_session"],
-    "six quad sets and one leg session left: the week is still fine, this one's gone");
-  t.clean(legs,"week fine: no NaN or undefined");
+  t.eq([legs.kind,legs.missed,legs.moved,legs.gone],["partial",10,2,8],"ten leg sets missed, one leg session left: 2 moved, 8 gone");
+  t.eq(M(legs,"Quads"),{muscle:"Quads",missed:6,moved:1,gone:5,ceiling:"mrv",why:"per_session"},"1 of 6 quad sets moved to Saturday, the other 5 are gone");
+  t.eq(legs.add,[{date:WEEK[5],muscle:"Hamstrings",sets:1},{date:WEEK[5],muscle:"Quads",sets:1}],"each moved set says where it went");
+  t.clean(legs,"partial: no NaN or undefined");
 
   /* The MRV is a hard ceiling. */
   var high=reconcileTraining({missed:S(WEEK[1],{Chest:2}),sessions:[S(WEEK[0],{Chest:11}),S(WEEK[3],{Chest:5}),S(WEEK[5],{Chest:5})],from:WEEK[2]});
-  t.eq([high.kind,high.why.Chest],["week_fine","mrv"],"21 chest sets with an MRV of 22: two more do not go in");
+  t.eq([high.kind,M(high,"Chest").moved,M(high,"Chest").why],["partial",1,"mrv"],"21 chest sets with an MRV of 22: one goes in, not two");
+  var full=reconcileTraining({missed:S(WEEK[1],{Chest:2}),sessions:[S(WEEK[0],{Chest:12}),S(WEEK[3],{Chest:5}),S(WEEK[5],{Chest:5})],from:WEEK[2]});
+  t.eq([full.kind,full.moved,M(full,"Chest").why],["week_fine",0,"mrv"],"already at the MRV: nothing goes in, the week is still fine");
 
   /* At least one rest day between sessions for the same muscle. */
   var close=reconcileTraining({missed:S(WEEK[1],{Chest:1}),sessions:[S(WEEK[3],{Chest:5}),S(WEEK[4],{Chest:5})],from:WEEK[2]});
-  t.eq([close.kind,close.why.Chest],["week_fine","rest_days"],"Thursday and Friday both train chest: neither takes another set");
+  t.eq([close.kind,M(close,"Chest").why],["week_fine","rest_days"],"Thursday and Friday both train chest: neither takes another set");
 
   /* Saturday missed: nothing left to take it. */
   var sat=reconcileTraining({missed:S(WEEK[5],{Back:5}),sessions:[S(WEEK[1],{Back:5})],from:WEEK[6]});
-  t.eq([sat.kind,sat.why.Back],["week_fine","no_session"],"a session missed on Saturday: the week is still fine");
+  t.eq([sat.kind,sat.gone,M(sat,"Back").why],["week_fine",5,"no_session"],"a session missed on Saturday: the week is still fine, this one's gone");
 
-  /* A muscle with no MRV cannot be checked, so it is not moved. */
-  var fore=reconcileTraining({missed:S(WEEK[1],{Forearms:1}),sessions:[S(WEEK[3],{Forearms:2})],from:WEEK[2]});
-  t.eq([fore.kind,fore.why.Forearms],["week_fine","no_mrv"],"no MRV for forearms: not moved");}
+  /* No MRV in the landmarks: the one-set limit governs alone, and the result says so. */
+  var fore=reconcileTraining({missed:S(WEEK[1],{Forearms:3}),sessions:[S(WEEK[3],{Forearms:2}),S(WEEK[5],{Forearms:2})],from:WEEK[2]});
+  t.eq([fore.kind,M(fore,"Forearms").moved,M(fore,"Forearms").ceiling,M(fore,"Forearms").why],["partial",2,"none","per_session"],
+    "forearms, no MRV: one set per session still moves, marked as having no recovery ceiling");}
 
 function run(t){nutrition(t);training(t);}
 

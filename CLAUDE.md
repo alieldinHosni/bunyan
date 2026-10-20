@@ -35,7 +35,17 @@ for which directories this session may edit.
 - Verify in RTL, not just LTR.
 - Numbers go in `.num` / `.metric` / `.stat` so bidi does not mangle them.
 
-## Formulas — do not change these
+## Formulas
+
+The textbook's method is the default for prescription and programming. A formula may be
+changed when the book's version is demonstrably better, but never on preference. When one
+changes, recompute all derived history so a single method applies throughout, and record
+the change in PROGRESS.md. Current choices, with reasons:
+
+- Estimated 1RM: Epley, capped at 12 reps. Kept over the book's formula, which covers only
+  2-10 reps and carries no reps-in-reserve term.
+- Volume, Mifflin-St Jeor, 4/4/9, MET: unchanged. 4/4/9 and MET already match the book;
+  the book offers no better method for the others.
 
 - Volume = `Σ(weight × reps)` per set. **Not** `weight × reps × sets`.
 - Estimated 1RM = Epley, `weight × (1 + reps / 30)`, **capped at 12 reps**. Do not widen

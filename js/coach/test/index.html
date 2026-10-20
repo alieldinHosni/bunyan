@@ -37,7 +37,8 @@ import * as energy from "./energy.test.js";
 import * as block from "./block.test.js";
 import * as context from "./context.test.js";
 import * as reconcile from "./reconcile.test.js";
-var files={volume:volume,fatigue:fatigue,strength:strength,autoreg:autoreg,weakpoints:weakpoints,insights:insights,percentile:percentile,intent:intent,energy:energy,block:block,context:context,reconcile:reconcile};
+import * as targets from "./targets.test.js";
+var files={volume:volume,fatigue:fatigue,strength:strength,autoreg:autoreg,weakpoints:weakpoints,insights:insights,percentile:percentile,intent:intent,energy:energy,block:block,context:context,reconcile:reconcile,targets:targets};
 var all=[];
 Object.keys(files).forEach(function(k){
   var t=makeT(k);

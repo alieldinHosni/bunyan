@@ -9,9 +9,9 @@ belongs to the knowledge session).
 History is never left mixed: when a formula changes, the whole log is recomputed under
 the new one, and `PROGRESS.md` records which formula changed and when.
 
-**Nothing in this file has been changed yet.** Every row below is either locked by
-`CLAUDE.md` ("Formulas — do not change these") or lives in a folder another session
-owns. See "What blocks a change" at the end.
+**Decided 20 Oct:** row 1 stays Epley (owner). `CLAUDE.md` now carries the owner's
+formula policy and the current choices. Rows 2–4 and 7 are logged in `PROGRESS.md` for
+the app session with the book's values; the book is the default.
 
 ## History and recomputation
 
@@ -30,9 +30,9 @@ Three stored values do not recompute by themselves:
 
 ## The disagreements
 
-| # | What | Textbook (`js/knowledge/`) | App | Lives in | Locked by `CLAUDE.md` |
+| # | What | Textbook (`js/knowledge/`) | App | Lives in | Named in `CLAUDE.md` |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Estimated 1RM | `1RM = load ÷ (1 − 0.025 × reps)`, for 2–10 reps (`acute-variables.js` `ONE_RM`, handout) | Epley, `load × (1 + reps/30)`, with reps plus reps in reserve capped at 12 (`js/coach/util.js` `e1rm`; the engine calls it) | `js/coach/` | **Yes**: "Epley … capped at 12 reps" |
+| 1 | Estimated 1RM | `1RM = load ÷ (1 − 0.025 × reps)`, for 2–10 reps (`acute-variables.js` `ONE_RM`, handout) | Epley, `load × (1 + reps/30)`, with reps plus reps in reserve capped at 12 (`js/coach/util.js` `e1rm`; the engine calls it) | `js/coach/` | **Kept, 20 Oct** (owner): narrower coverage and less information are not an improvement |
 | 2 | Fat-loss deficit | a moderate 500 kcal/day (`nutrition-principles.js` `GOAL_STRATEGIES.fatLoss`, 9.8) | 20% of maintenance, capped at 750 kcal (`js/data/goals.js` `lose`) | `js/data/` | No |
 | 3 | Muscle-gain surplus | 350–500 kcal/day; may be unnecessary if protein is high (`GOAL_STRATEGIES.muscleGain`, 9.8) | 10% of maintenance, capped at 300 kcal (`goals.js` `gain`) | `js/data/` | No |
 | 4 | Protein while losing | 2.4 g/kg in a deficit lessens lean-mass loss; 1.6–2.2 for athletes cutting (9.8) | 2.0 g/kg (`goals.js` `lose`), lean-adjusted above BMI 30 (`js/engine/body.js` `proteinFor`) | `js/data/` | No |
@@ -47,7 +47,7 @@ Three stored values do not recompute by themselves:
 | 13 | Lowest calorie target | nothing stated | when losing, max(0.95 × BMR, 1,200 women or 1,500 men) (`body.js` `targetKcalOf`) | `js/engine/` | No. **Owner's 2.7A floor is BMR itself**, so the engine can set a day the coach may not move down |
 | 14 | Calories from macros | 4 / 4 / 9 | 4 / 4 / 9 | — | **Agrees** |
 | 15 | MET calories | `MET × 3.5 × kg / 200` per minute | the same | — | **Agrees** |
-| 16 | Volume landmarks (MEV, MAV, MRV) | none: the book counts sets per exercise per session, not per muscle per week | Renaissance Periodization ranges, rounded (`js/coach/landmarks.js`) | `js/coach/` | No. Nothing in the book to compare; RP stays the only source |
+| 16 | Volume landmarks (MEV, MAV, MRV) | none: the book counts sets per exercise per session, not per muscle per week | Renaissance Periodization ranges, rounded (`js/coach/landmarks.js`) | `js/coach/` | No. Nothing in the book to compare; RP stays the only source. No MRV for Forearms, Adductors or Neck: a knowledge-base shortfall |
 | 17 | Strength-ratio norms | none | none since 20 Oct: the unsourced ranges were removed; weak points report "no reference data" | `js/coach/` | No |
 
 ## Is the book's method better? Row by row
@@ -56,8 +56,9 @@ Three stored values do not recompute by themselves:
   that Epley reads up to about 2% higher. The book's formula only covers 2–10 reps, so
   adopting it would drop sets of 11–12 (narrowing the range, never widening it). It has
   no reps-in-reserve term; the app adds reps left in reserve before estimating, and that
-  would need to be kept or dropped deliberately. **Your decision**, and it needs
-  `CLAUDE.md` changed first (below).
+  would need to be kept or dropped deliberately. **Decided 20 Oct: Epley stays.** The
+  difference sits inside day-to-day noise, and the book's version covers less and knows
+  less.
 - **2, 3, deficit and surplus.** A fixed number of calories against a share of
   maintenance. The share scales with body size, which the book itself says matters
   ("individual needs vary tremendously"). Adopting the book means fixed numbers: −500
@@ -74,12 +75,8 @@ Three stored values do not recompute by themselves:
 
 ## What blocks a change
 
-- **`CLAUDE.md`** says "Formulas — do not change these" for Epley, Mifflin-St Jeor,
-  calories from macros, MET calories and volume. The owner's 20 Oct rule makes the book
-  the default, but `CLAUDE.md` is loaded into every session, so a formula changed while
-  it still says otherwise will look like a violation to every session that follows.
-  **`CLAUDE.md` needs updating by the owner first**, for row 1 at least.
 - **Folder ownership.** Rows 2–8 and 13 live in `js/data/`, `js/engine/` and
-  `js/schema.js`, which belong to the app session. The coaching engine session cannot
-  make those changes; each is logged in `.claude/PROGRESS.md` as a request.
-- **The coaching brief for this session** also says to keep Epley capped at 12 reps.
+  `js/schema.js`, which belong to the app session. Each is logged in
+  `.claude/PROGRESS.md` as a request, with the book's value.
+- `CLAUDE.md` was updated on 20 Oct to the owner's policy: the book is the default when
+  it is demonstrably better, and a change recomputes all derived history.

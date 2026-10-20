@@ -28,6 +28,9 @@ var LANDMARKS={
   Core:      {mev:0, mav:[16,20],mrv:25}
 };
 
+/* Carried with every result built on these numbers, so nothing shows them as facts. */
+var BASIS="practitioner heuristics (Renaissance Periodization), not measured constants";
+
 var RANGE={new:[8,12],some:[10,16],experienced:[12,20],advanced:[14,22]};
 
-export {LANDMARKS, RANGE};
+export {BASIS, LANDMARKS, RANGE};

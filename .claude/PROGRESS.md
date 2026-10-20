@@ -1749,3 +1749,31 @@ The owner asked for two more surfaces, and both follow the same rules:
 4. `js/engine/body.js` `bmrOf` — the hardcoded 86 kg fallback (above). The 2.7A BMR floor must not rest on it.
 5. **`CLAUDE.md`** (owner) — "Formulas — do not change these" conflicts with the 20 Oct rule that the book is the default. Update it before any formula row in docs/FORMULA-RECONCILIATION.md is changed, or every later session will read the change as a violation.
 6. Knowledge session — `nutrition-principles.js` `GOAL_STRATEGIES`: the `bunyan` notes are stale. "lose" is now 20% of maintenance capped at 750, not TDEE − 500; "gain" is 10% capped at 300, not +250 (`js/data/goals.js`).
+
+### ⚠ PRIORITY — two bugs for the app session (owner, 20 Oct)
+
+**P1. `js/engine/body.js` `bmrOf` defaults to 86 kg when no weight exists** (`num(p.weight,86)`). That is the owner's own body weight hardcoded as a fallback: every other profile with no weight silently gets the owner's BMR, and every target derived from it (maintenance, calories, macros) is wrong. It also breaks `CLAUDE.md` ("body weight comes from the profile, never hardcoded"). **Fix:** with no weigh-in and no profile weight, return a "no weight set" result and prompt for a weight, never a default. (The coach's wrapper `js/coach/targets.js` already refuses to call it without a real weight.)
+
+**P2. Two calorie floors.** `targetKcalOf` lets a weight-loss target fall to 0.95 × BMR, which sits **below** the BMR floor the owner set for weekly reconciliation (2.7A). Two floors is the inconsistency being removed. **Fix:** raise the engine's floor to BMR itself, so there is one floor in the app. Nothing automated may take a user below BMR.
+
+### Book values to adopt — for the app session (owner, 20 Oct: the book is the default)
+
+Details and sources in `docs/FORMULA-RECONCILIATION.md`. Each is in `js/data/goals.js` or `js/engine/`, outside the coach's folder. Logged history is not affected (targets and plans are worked out when read); rebuild the stored `goals` when each ships.
+- **Fat-loss deficit:** book a moderate **500 kcal/day** (`nutrition-principles.js` `GOAL_STRATEGIES.fatLoss.moderateDeficit`, 9.8). App: 20% of maintenance, capped at 750 (`goals.js` `lose`).
+- **Muscle-gain surplus:** book **350–500 kcal/day**, noting a surplus may be unnecessary with high protein (`GOAL_STRATEGIES.muscleGain.surplus`, 9.8). App: 10%, capped at 300 (`goals.js` `gain`).
+- **Protein in a deficit:** book **2.4 g/kg** lessens fat-free-mass loss (`GOAL_STRATEGIES.muscleGain.protein.higher`, `fatLoss.protein.findings`, 9.8). App: 2.0 g/kg for "lose".
+- **Rep, set and rest ranges:** book Table 20-3 (`acute-variables.js` `BY_ADAPTATION`, 20.3). **Maximal strength 1–5 reps × 4–6 sets at 85–100% 1RM, rest 3–5 min; hypertrophy 6–12 × 3–6 at 75–85%, rest 0–180 s; stabilisation/endurance 12–20 × 1–3 at 50–70%, rest 30–60 s; power 1–10 × 3–6, rest 3–5 min.** App: `goals.js` `TRAIN` (strength main lifts 3–5 reps, rest × 1.3; endurance 10–15, rest × 0.6) and `plan.js` `LEVELS`. Open question 21.
+- **Sessions a week by training status:** book beginner 2–3, intermediate 3 (total body) or 4 (split), advanced 4–6 (`VARIABLES.frequency.byStatus`, 20.3). No app counterpart.
+
+### For the Knowledge session
+
+- `nutrition-principles.js` `GOAL_STRATEGIES`: two `bunyan` notes describe the app's old targets. `fatLoss.moderateDeficit.bunyan` says "matches Bunyan's 'lose' target (TDEE − 500)"; it is 20% of maintenance capped at 750. `muscleGain.surplus.bunyan` says "TDEE + 250"; it is 10% capped at 300 (`js/data/goals.js`). Please correct them.
+- **Knowledge-base shortfall:** no MRV (or MEV/MAV) for Forearms, Adductors or Neck. The coach's only landmarks are `js/coach/landmarks.js` (RP), which has none for them, so missed sets for those muscles move under the one-set-per-session limit alone, and the result says there is no recovery-ceiling data.
+
+### Coaching engine session — 20 Oct, round 3
+
+- **`tests/architecture.mjs`** (owner-approved one-off exception): the coach layer may now import `js/engine/body.js` (`"engine:body"`), pure and with no cycle. Request 2 above: done.
+- **`CLAUDE.md`** (owner instruction): "Formulas — do not change these" replaced with the owner's formula policy and the current choices. Request 5 above: done. **Formula changed: none.** Estimated 1RM stays Epley, capped at 12 (owner decision).
+- **`js/coach/targets.js`**: the thin wrapper. `dayTargetsFor` and `reconcileWeekFor` take BMR and targets from `body.js`; no weight → `no_weight`, never a default; past days use the weigh-ins up to that day.
+- **Training reconciliation moves what fits:** `kind` adjust / partial / week_fine, with missed, moved and gone per muscle ("1 of 6 moved to Saturday, the other 5 are gone"). A muscle with no MRV moves under the one-set limit alone and is marked `ceiling:"none"`. Results carry `landmarks.js` `BASIS` ("practitioner heuristics … not measured constants").
+- Tests: 235 pass in `js/coach/test/index.html` (checked headless) and in Node; `node tests/coach.mjs` still runs only the original ten files (request 1 open). Architecture and engine tests pass.
