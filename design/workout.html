@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en" data-palette="blue" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bunyan Workout Screen</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Layout concept: one phone frame per state, LTR above RTL; each frame is the real
+   390 x 844 screen with the fold drawn where an iPhone 13 Pro's glass ends.
+   Every colour below is a main token (tokens.css). No new colours. */
+:root{
+  --ph-w:390px; --ph-h:844px; --status:47px;
+  --f-num:"Outfit",-apple-system,system-ui,sans-serif;
+  --f-ui:"Manrope",-apple-system,system-ui,sans-serif;
+  color-scheme:dark;
+}
+[data-theme="light"]{color-scheme:light}
+/* ---- PROPOSED, approved 20 Oct (token-requests.md §4) --------------------------------
+   Labels never sit on Machine Red. Aliases of existing tokens only, no new colours:
+   in Red the fill under a label is accent-deep, and in Red dark it takes a 1.5px Machine
+   Red edge so the button still stands off the wine-black page. Blue and Sage keep their
+   accent, which already carries its label with room (8.87:1 and more in the darks). */
+:root,[data-palette]{--color-action-fill:var(--accent);--color-action-edge:transparent;--dock-pill-fill:var(--dock-pill)}
+[data-palette="red"]{--color-action-fill:var(--accent-deep);--color-action-edge:var(--accent);--dock-pill-fill:var(--accent-deep)}
+[data-palette="red"][data-theme="light"]{--color-action-edge:transparent}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 64px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--accentHi);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+
+/* ---- the page around the frames ---------------------------------------------- */
+.pg-head{max-width:1240px;margin:0 auto 20px;display:flex;flex-wrap:wrap;gap:12px 32px;align-items:end;justify-content:space-between}
+.pg-head h1{font-family:var(--f-num);font-size:28px;font-weight:700;margin:0;letter-spacing:-.01em}
+.pg-head p{margin:4px 0 0;color:var(--sub);max-width:62ch}
+.pick{display:flex;flex-wrap:wrap;gap:16px}
+.seg{display:inline-flex;gap:4px;padding:4px;border-radius:var(--rpill);background:var(--seg-track);border:1px solid var(--hair)}
+.seg button{border:0;background:transparent;min-height:36px;padding:0 14px;border-radius:var(--rpill);color:var(--sub);font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--color-action-fill);color:var(--onAccent)}
+.row-k{max-width:1240px;margin:28px auto 10px;color:var(--dim);font-weight:700;font-size:13px}
+.rail{max-width:1240px;margin:0 auto;overflow-x:auto;padding-bottom:12px}
+.rail-in{display:flex;gap:28px;width:max-content}
+.cell{display:grid;gap:10px;align-content:start;width:calc(var(--ph-w) * var(--z,.86))}
+.cell h2{margin:0;font-family:var(--f-num);font-size:17px;font-weight:700}
+.cell h2 span{color:var(--dim);font-family:var(--f-ui);font-size:13px;font-weight:600;margin-inline-start:6px}
+.cell a{color:var(--accentHi);font-size:13px;font-weight:600}
+.zoom{zoom:var(--z,.86)}
+
+/* ---- one phone ---------------------------------------------------------------- */
+.ph{width:var(--ph-w);min-height:var(--ph-h);position:relative;isolation:isolate;overflow:hidden;
+  border-radius:44px;border:1px solid var(--hair-hi);background:var(--bg);color:var(--text);font-family:var(--f-ui)}
+.ph[lang="ar"]{font-size:16px;line-height:1.6}
+.fold{position:absolute;top:var(--ph-h);inset-inline:0;border-top:2px dashed var(--accent-edge);z-index:5;pointer-events:none}
+.fold span{position:absolute;inset-inline-end:14px;top:4px;font-size:11px;color:var(--dim);background:var(--bg);padding:0 6px;border-radius:6px}
+
+/* chrome: the only glass on this screen, one blurred layer, 103px tall. Same treatment as
+   main's session header (.sess .ss-top), so the type on it is the page's own type. */
+.wh{position:sticky;top:0;z-index:4;padding:var(--status) 12px 0;background:rgba(var(--bg-rgb),.72);
+  -webkit-backdrop-filter:saturate(150%) blur(18px);backdrop-filter:saturate(150%) blur(18px);border-bottom:1px solid var(--hair)}
+.wh-row{display:grid;grid-template-columns:44px 1fr auto 44px;gap:8px;align-items:center;height:52px}
+.ib{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--glass-btn-edge);
+  background:var(--glass-btn);color:var(--text);padding:0}
+.ib svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.wh-t{background:none;border:0;padding:0;text-align:start;min-width:0;min-height:44px;display:grid;align-content:center}
+.wh-day{font-size:13px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wh-pos{font-size:15px;font-weight:700;display:flex;gap:4px;align-items:center}
+.wh-pos svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4}
+.wh-clock{font-size:15px;font-weight:700;color:var(--sub)}
+.wh-bar{height:3px;background:var(--bar-track);margin:0 -12px}
+.wh-bar i{display:block;height:100%;background:var(--accent)}
+
+/* content: flat, opaque surfaces only */
+.wb{padding:14px 20px 28px;display:grid;gap:14px}
+.wb>*{min-width:0}
+.ex{display:grid;grid-template-columns:1fr 44px 44px;gap:6px;align-items:center}
+.ex h3{margin:0;font-family:var(--f-num);font-size:21px;font-weight:700;line-height:1.2;min-width:0}
+.ex p{grid-column:1/-1;margin:-4px 0 0;color:var(--sub);font-size:15px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.adds{display:flex;gap:6px}
+.chip.wu{border-color:var(--gold);color:var(--text)}
+.chip{min-height:44px;padding:0 14px;border-radius:var(--rpill);border:1.5px dashed var(--border);background:transparent;color:var(--text);font-weight:700;font-size:14px}
+.ib.flat{background:var(--surface);border-color:var(--border)}
+
+.sc{background:var(--raised);border:1px solid var(--border);border-radius:var(--r5);padding:18px 16px 14px;display:grid;gap:14px}
+.sc-g{display:grid;grid-template-columns:1.25fr 1fr;gap:12px}
+.val{display:grid;gap:8px;justify-items:stretch;text-align:center}
+.val-k{font-size:13px;font-weight:700;color:var(--dim)}
+.val-n{font-family:var(--f-num);font-weight:700;font-size:76px;line-height:.95;letter-spacing:-.02em;border:0;background:none;padding:2px 0 6px;
+  border-bottom:2px solid var(--hair-hi);border-radius:0;color:var(--text)}
+.val-n.sg{color:var(--text)}
+.stp{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stp button{min-height:56px;border-radius:var(--r4);border:1px solid var(--border);background:var(--surface);
+  font-family:var(--f-num);font-size:19px;font-weight:700;color:var(--text)}
+.sc-h{border-top:1px solid var(--hair);padding-top:12px;color:var(--sub);font-size:15px;display:flex;flex-wrap:wrap;gap:4px 10px}
+.sc-h b{color:var(--text);font-weight:700}
+.sc.small .val-n{font-size:56px}
+.sc.small .stp button{min-height:52px}
+
+/* the one primary action: the Nike-style check. Its fill is the action fill (never
+   Machine Red under a label); the 20px label is kept by choice, not for contrast. */
+.log{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:76px;width:100%;
+  border:0;border-radius:var(--rpill);padding-block:8px;padding-inline:28px 8px;
+  background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);color:var(--onAccent);
+  font-family:var(--f-num);font-size:20px;font-weight:700;text-align:start}
+.log-c{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;border:3px solid var(--onAccent);flex:none}
+.log-c svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.log.ok{background:var(--ok);color:var(--onOk)}
+.log.ok .log-c{background:var(--onOk);color:var(--ok);border-color:var(--onOk)}
+.done-row{display:flex;align-items:center;gap:12px;min-height:76px;border-radius:var(--rpill);padding-inline:8px 10px;background:var(--ok);color:var(--onOk)}
+.done-row .log-c{background:var(--onOk);color:var(--ok);border-color:var(--onOk)}
+.done-row b{flex:1;font-family:var(--f-num);font-size:20px}
+.undo{min-height:48px;padding:0 18px;border-radius:var(--rpill);border:2px solid var(--onOk);background:transparent;color:var(--onOk);font-weight:700;font-size:16px}
+
+/* the rest, in place: no full-screen cover, the log control stays under the thumb */
+.rb{background:var(--raised);border:1px solid var(--border);border-radius:var(--r5);padding:14px 16px 16px;display:grid;gap:10px}
+.rb-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rb-k{font-size:13px;font-weight:700;color:var(--dim)}
+.rb-t{font-family:var(--f-num);font-size:68px;font-weight:700;line-height:.95;letter-spacing:-.02em}
+.rb-ctl{display:flex;gap:8px}
+.rb-ctl button{width:48px;height:48px;border-radius:50%;border:1px solid var(--border);background:var(--surface);font-weight:700;font-size:14px;color:var(--text);padding:0}
+.rb-ctl svg{width:20px;height:20px;fill:currentColor}
+.rb-bar{height:6px;border-radius:3px;background:var(--bar-track);overflow:hidden}
+.rb-bar i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.rb.over{background:var(--color-action-fill);border-color:var(--color-action-edge);color:var(--onAccent)}
+.rb.over .rb-k,.rb.over .rb-sub{color:var(--onAccent)}
+.rb-sub{font-family:var(--f-num);font-size:20px;font-weight:700}
+
+/* sets so far: delete leads the row (settled), the tick ends it */
+.sl{display:grid;gap:6px}
+.sr{display:grid;grid-template-columns:44px 30px 1fr 44px;align-items:center;gap:4px;min-height:52px;border-radius:var(--r4);
+  padding-inline:2px 4px;border:1px solid var(--hair);color:var(--sub)}
+.sr.did{background:var(--surface);border-color:var(--border);color:var(--text)}
+.sr.on{border-color:var(--accent-edge);background:var(--accent-tint);color:var(--text)}
+.sr .x{width:44px;height:44px;border:0;background:none;border-radius:50%;color:var(--dim);font-size:16px;padding:0}
+.sr .n{font-family:var(--f-num);font-weight:700;text-align:center}
+.sr .v{font-weight:600}
+.sr.wu{border-style:dashed;border-color:var(--gold);background:transparent}
+.sr.wu.on{background:var(--accent-tint)}
+.wub{width:28px;height:28px;margin:auto;border-radius:50%;border:1.5px solid var(--gold);color:var(--text);display:grid;place-items:center;font-size:13px;font-weight:700}
+.wut{font-size:13px;font-weight:700;color:var(--sub);margin-inline-start:6px}
+.sc-wu{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--gold)}
+.sc-wu p{margin:0;flex:1;min-width:0}
+.sc-wu p span{color:var(--sub);font-weight:600}
+.sr .now{font-size:14px;font-weight:700;color:var(--text)}
+.tick{width:36px;height:36px;margin:4px;border-radius:50%;border:0;display:grid;place-items:center;padding:0;background:var(--ok);color:var(--onOk)}
+.tick svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.tick.off{background:transparent;border:1px solid var(--hair-hi);color:var(--dim)}
+.sr.ask{grid-template-columns:1fr auto auto;padding-inline:14px 6px;gap:6px;border-color:var(--danger);background:var(--surface);color:var(--text)}
+.sr.ask button{min-height:44px;padding:0 16px;border-radius:var(--rpill);font-weight:700;font-size:15px}
+.sr.ask .del{border:1px solid var(--danger);background:transparent;color:var(--danger)}
+.sr.ask .keep{border:1px solid var(--border);background:var(--raised);color:var(--text)}
+.addset{min-height:52px;border-radius:var(--r4);border:1.5px dashed var(--border);background:transparent;color:var(--sub);font-weight:700}
+
+.feel{display:grid;gap:8px}
+.feel-h{display:flex;justify-content:space-between;align-items:center;color:var(--sub);font-size:14px;font-weight:600}
+.feel-h button{border:0;background:none;color:var(--accentHi);font-weight:700;min-height:44px;padding:0 4px}
+.feel-c{display:flex;gap:6px;overflow:hidden}
+.feel-c button{flex:1;min-height:44px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);font-size:14px;font-weight:600;padding:0 6px;white-space:nowrap}
+
+.nx{display:grid;grid-template-columns:1fr 24px;align-items:center;gap:8px;min-height:64px;padding:8px 16px;border-radius:var(--r4);
+  border:1px solid var(--border);background:var(--raised);text-align:start}
+.nx small{display:block;font-size:13px;color:var(--dim);font-weight:700}
+.nx b{font-family:var(--f-num);font-size:17px;font-weight:700}
+.nx svg{width:20px;height:20px;fill:none;stroke:var(--dim);stroke-width:2.4}
+[dir="rtl"] .flip{transform:scaleX(-1)}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tools button{min-height:52px;border-radius:var(--r4);border:1px solid var(--border);background:var(--surface);font-weight:700;display:flex;gap:8px;align-items:center;justify-content:center}
+.tools svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.quiet{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px}
+.quiet button{border:0;background:none;min-height:44px;padding:0 4px;color:var(--dim);font-size:14px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+
+/* session complete */
+.fin{padding:28px 20px;display:grid;gap:18px;justify-items:center;text-align:center}
+.fin-c{width:96px;height:96px;border-radius:50%;background:var(--ok);color:var(--onOk);display:grid;place-items:center}
+.fin-c svg{width:48px;height:48px;fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.fin h3{margin:0;font-family:var(--f-num);font-size:30px;font-weight:700}
+.fin p{margin:-12px 0 0;color:var(--sub)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+.stat{background:var(--raised);border:1px solid var(--border);border-radius:var(--r4);padding:14px 6px;display:grid;gap:2px}
+.stat b{font-family:var(--f-num);font-size:30px;font-weight:700;line-height:1.1}
+.stat small{font-size:13px;color:var(--dim);font-weight:700}
+.rec{width:100%;background:var(--raised);border:1.5px solid var(--gold);border-radius:var(--r4);padding:14px 16px;text-align:start;display:grid;gap:2px}
+.rec b{color:var(--gold);font-size:15px}
+.rec span{font-size:16px;font-weight:600}
+.fin .log{justify-content:center;padding-inline:24px}
+
+/* the single-frame view, for checking on a phone at arm's length */
+body.one .pg,body.one .row-k{display:none}
+body.one{padding:0}
+body.one #one{display:block}
+#one{display:none}
+#one .back{display:block;margin:16px auto 24px;
+  min-height:44px;padding:0 16px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--raised);color:var(--text);font-weight:700}
+#one .ph{border-radius:0;border:0;margin:0 auto}
+.notes{max-width:1240px;margin:36px auto 0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr))}
+.note{background:var(--raised);border:1px solid var(--border);border-radius:var(--r3);padding:16px 18px}
+.note h3{margin:0 0 8px;font-family:var(--f-num);font-size:17px}
+.note table{border-collapse:collapse;width:100%;font-size:14px}
+.note td,.note th{padding:6px 4px;border-bottom:1px solid var(--hair);text-align:start;vertical-align:top}
+.note th{color:var(--dim);font-size:13px}
+.note ul{margin:0;padding-inline-start:18px;color:var(--sub)}
+.note li{margin:4px 0}
+.up{color:var(--warning);font-weight:700}.dn{color:var(--ok);font-weight:700}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="pg pg-head">
+  <div>
+    <h1>Workout screen</h1>
+    <p>Five states (plus a warm-up set and the end of a rest), English above Arabic. The dashed line is the bottom of an iPhone 13 Pro screen. Open any frame on its own to check it on a phone at arm's length.</p>
+  </div>
+  <div class="pick">
+    <div class="seg" role="group" aria-label="Theme" id="pal">
+      <button data-v="blue" aria-pressed="true">Blue</button><button data-v="red" aria-pressed="false">Red</button><button data-v="mono" aria-pressed="false">Sage</button>
+    </div>
+    <div class="seg" role="group" aria-label="Mode" id="mode">
+      <button data-v="dark" aria-pressed="true">Dark</button><button data-v="light" aria-pressed="false">Light</button>
+    </div>
+  </div>
+</header>
+<div class="row-k">English</div>
+<div class="pg rail"><div class="rail-in" id="ltr"></div></div>
+<div class="row-k">Arabic</div>
+<div class="pg rail"><div class="rail-in" id="rtl"></div></div>
+
+<section class="pg notes">
+  <div class="note">
+    <h3>Taps, before and after</h3>
+    <table>
+      <thead><tr><th>Action</th><th>Now</th><th>Designed</th></tr></thead>
+      <tbody>
+        <tr><td>Log a set</td><td>1, then 2 after every rest</td><td class="dn">1, always, during the rest too</td></tr>
+        <tr><td>Change a weight (60 → 62.5)</td><td>7 by keyboard</td><td class="dn">1 (+2.5). Tap the number to type a big jump.</td></tr>
+        <tr><td>Add a set</td><td>1 + scroll</td><td class="dn">1, beside the set count at the top (+ Set or + Warm-up)</td></tr>
+        <tr><td>Delete a set</td><td>2 (✕, confirm sheet)</td><td>2 (✕, confirm in the row, no sheet)</td></tr>
+        <tr><td>Swap an exercise</td><td>2 + scroll</td><td class="dn">2 (⇄ beside the name, pick)</td></tr>
+        <tr><td>See the next exercise</td><td>2</td><td class="dn">0, it is on screen</td></tr>
+        <tr><td>Finish the session</td><td>1–2 at the end, 3 mid-way</td><td>1–2 at the end, 3 mid-way</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">
+    <h3>What moved, and where</h3>
+    <ul>
+      <li>The 3D figure is off this screen. It stays behind ⓘ (How to do it), where the exercise sheet already shows it.</li>
+      <li>Tags (muscle, equipment, difficulty) go behind ⓘ. The dose stays as one line under the name.</li>
+      <li>"Last time" is said once, in the card, for the set you are on.</li>
+      <li>The personal-record card moves to Workout complete, where records are news.</li>
+      <li>Remove and Something hurts? are quiet links under the tools, not tiles beside them.</li>
+      <li>A warm-up is chosen when it is added (+ Warm-up), not toggled afterwards. Its row is dashed in gold with a W, and the card says it is not counted.</li>
+      <li>The rest no longer covers the screen. It sits above the next set, and the check logs from it.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h3>The one row confirm</h3>
+    <p style="margin:0 0 10px;color:var(--sub)">Delete stays on the left of a row and still asks. The question opens in the row itself instead of a sheet.</p>
+    <div class="sl" id="askdemo"></div>
+  </div>
+</section>
+
+<div id="one"><div id="oneframe"></div><button class="back" id="oneback">All frames</button></div>
+
+<script>
+/* Strings. Arabic is the app's own (js/i18n/dict.js) except the four marked NEW. */
+var T={
+ en:{day:"Full Body A",exOf:"Exercise {i} of {n}",setOf:"Set {i} of {n}",dose:"{r} reps",kg:"kg",reps:"reps",
+  last:"Last time",rec:"Recommended",cue:"Hold the weight, chase a rep",logset:"Log set {i}",logged:"Set {i} logged",undo:"Undo",
+  rest:"Rest",restDone:"Rest complete",over:"over your rest",next:"Next",feel:"How do you feel today?",skip:"Skip",
+  feels:["Drained","Low","OK","Good","Great"],addset:"Set",addwu:"Warm-up",wu:"Warm-up",logwu:"Log warm-up",wuNote:"Not counted in volume or records",skipEx:"Skip",addEx:"Add",remove:"Remove this exercise",hurts:"Something hurts?",
+  now:"now",info:"How to do it",swap:"Replace this exercise",close:"Close workout",more:"More",
+  done:"Workout complete",dur:"Duration",sets:"Sets",vol:"Volume",pr:"New personal record",finish:"Done",
+  delAsk:"Delete set {i}?",del:"Delete",keep:"Cancel",
+  ex:["Barbell Bench Press","Wide-Grip Lat Pulldown","Leg Press","Machine Shoulder Press","Standing Biceps Cable Curl","Plank"]},
+ ar:{day:"جسم كامل أ",exOf:"تمرين {i} من {n}",setOf:"مجموعة {i} من {n}",dose:"{r} عدة",kg:"كجم",reps:"عدة",
+  last:"آخر مرة",rec:"المرشّح",cue:"ثبّت الوزن وزوّد عدة",logset:"سجّل المجموعة {i}",logged:"المجموعة {i} اتسجلت",undo:"تراجع",
+  rest:"راحة",restDone:"الراحة خلصت",over:"زيادة عن وقت الراحة",next:"التالي",feel:"حاسس بإيه النهارده؟",skip:"تخطّي",
+  feels:["مستنزف","مش في الفورمة","تمام","كويس","ممتاز"],addset:"مجموعة",addwu:"إحماء",wu:"الإحماء",logwu:"سجّل الإحماء",wuNote:"مش محسوب في الحجم ولا الأرقام القياسية",skipEx:"تخطّي",addEx:"ضيف",remove:"شيل التمرين ده",hurts:"في حاجة بتوجعك؟",
+  now:"دلوقتي",info:"طريقة الأداء",swap:"غيّر التمرين ده",close:"اقفل التمرين",more:"أكتر",
+  done:"التمرين خلص",dur:"المدة",sets:"المجموعات",vol:"الحجم",pr:"رقم قياسي جديد",finish:"تمام",
+  delAsk:"تمسح المجموعة {i}؟",del:"مسح",keep:"إلغاء",
+  ex:["بنش بريس بالبار","سحب أمامي قبضة واسعة","ليج بريس","بريس كتف بالجهاز","بايسبس كيرل واقف بالكابل","بلانك"]}
+};
+/* NEW strings needing an Arabic entry in dict.js: "Log set {i}", "Set {i} logged",
+   "Hold the weight, chase a rep", "Delete set {i}?". Listed in docs/design/workout-spec.md. */
+function f(s,o){return s.replace(/\{(\w)\}/g,function(_,k){return '<span class="num">'+o[k]+'</span>';});}
+function n(x){return '<span class="num">'+x+'</span>';}
+var I={
+ x:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+ more:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="3.4"/></svg>',
+ down:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>',
+ info:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v6M12 7h.01"/><circle cx="12" cy="12" r="9"/></svg>',
+ swap:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>',
+ check:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+ chev:'<svg class="flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>',
+ skip:'<svg class="flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l10 7-10 7zM19 5v14"/></svg>',
+ plus:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+ pause:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>'
+};
+/* One exercise, three sets of 6–10, barbell bench: the step is incrementOf()'s 2.5 kg. */
+var STATES=[
+ {id:"idle",name:"Idle",note:"opens here, nothing logged",clock:"0:01",pct:0,cur:1,w:"60",r:"8",rows:[["on"],["pend","60","8"],["pend","60","8"]],idle:true},
+ {id:"warm",name:"Active set",note:"a warm-up, added with + Warm-up",clock:"0:40",pct:0,cur:1,w:"40",r:"8",wu:true,rows:[["wuon"],["pend","60","8"],["pend","60","8"],["pend","60","8"]]},
+ {id:"active",name:"Active set",note:"set 2; a warm-up logged before set 1",clock:"4:12",pct:6,cur:2,w:"62.5",r:"8",rows:[["wu","40","8"],["did","60","8"],["on"],["pend","62.5","8"]]},
+ {id:"logged",name:"Set completed",note:"the moment after the check",clock:"5:03",pct:11,cur:3,w:"62.5",r:"8",rows:[["did","60","8"],["did","62.5","8"],["on"]],logged:2,rest:{t:"2:00",p:100}},
+ {id:"rest",name:"Rest",note:"counting down, log from here",clock:"5:39",pct:11,cur:3,w:"62.5",r:"8",rows:[["did","60","8"],["did","62.5","8"],["on"]],rest:{t:"1:24",p:70}},
+ {id:"over",name:"Rest",note:"time is up: the band is the alert",clock:"7:08",pct:11,cur:3,w:"62.5",r:"8",rows:[["did","60","8"],["did","62.5","8"],["on"]],rest:{over:"+0:05"}},
+ {id:"complete",name:"Session complete",note:"records live here now",complete:true}
+];
+function head(s,L){
+  return '<header class="wh"><div class="wh-row">'
+   +'<button class="ib" aria-label="'+L.close+'">'+I.x+'</button>'
+   +'<button class="wh-t"><span class="wh-day">'+L.day+'</span><span class="wh-pos">'+f(L.exOf,{i:1,n:6})+I.down+'</span></button>'
+   +'<span class="wh-clock num">'+s.clock+'</span>'
+   +'<button class="ib" aria-label="'+L.more+'">'+I.more+'</button></div>'
+   +'<div class="wh-bar"><i style="width:'+s.pct+'%"></i></div></header>';
+}
+function rows(s,L){
+  var h='<div class="sl">';
+  var k=0;
+  s.rows.forEach(function(r){
+    if(r[0]!=="wu"&&r[0]!=="wuon")k++;
+    if(r[0]==="on"){h+='<div class="sr on"><span></span><span class="n num">'+k+'</span><span class="now">'+L.now+'</span><span></span></div>';return;}
+    var v=n(r[1])+' '+L.kg+' × '+n(r[2]);
+    if(r[0]==="wu"){h+='<div class="sr wu"><button class="x" aria-label="Delete warm-up">✕</button><span class="n wub">W</span><span class="v">'+v+' <span class="wut">'+L.wu+'</span></span><button class="tick" aria-label="Undo warm-up">'+I.check+'</button></div>';return;}
+    if(r[0]==="wuon"){h+='<div class="sr on wu"><span></span><span class="n wub">W</span><span class="now">'+L.now+' · '+L.wu+'</span><span></span></div>';return;}
+    h+='<div class="sr '+r[0]+'"><button class="x" aria-label="Delete set '+k+'">✕</button><span class="n num">'+k+'</span><span class="v">'+v+'</span>'
+     +(r[0]==="did"?'<button class="tick" aria-label="Undo set '+k+'">'+I.check+'</button>':'<span class="tick off" aria-hidden="true">'+I.check+'</span>')+'</div>';
+  });
+  return h+'</div>';
+}
+function card(s,L){
+  var small=!!s.rest&&!s.logged;
+  var hint=s.wu?'':s.idle?'<span>'+L.rec+' <b>'+n(s.w)+' '+L.kg+' × '+n("6–10")+'</b></span><span>'+L.cue+'</span>'
+                 :'<span>'+L.last+' <b>'+n("60")+' '+L.kg+' × '+n("8")+'</b></span>';
+  return '<section class="sc'+(small||s.logged?' small':'')+'">'+(s.wu?'<div class="sc-wu"><span class="wub">W</span><p>'+L.wu+' <span>· '+L.wuNote+'</span></p></div>':'')+'<div class="sc-g">'
+   +'<div class="val"><span class="val-k">'+L.kg+'</span><button class="val-n num">'+s.w+'</button>'
+   +'<div class="stp"><button class="num" aria-label="2.5 '+L.kg+' less">−2.5</button><button class="num" aria-label="2.5 '+L.kg+' more">+2.5</button></div></div>'
+   +'<div class="val"><span class="val-k">'+L.reps+'</span><button class="val-n num">'+s.r+'</button>'
+   +'<div class="stp"><button class="num" aria-label="1 less">−1</button><button class="num" aria-label="1 more">+1</button></div></div>'
+   +'</div>'+(hint?'<div class="sc-h">'+hint+'</div>':'')+'</section>';
+}
+function restBand(s,L){
+  var r=s.rest;
+  if(r.over)return '<section class="rb over" role="alert"><div class="rb-t" style="font-size:40px;line-height:1.1">'+L.restDone+'</div>'
+     +'<div class="rb-sub"><span class="num">'+r.over+'</span> '+L.over+'</div></section>';
+  return '<section class="rb"><div class="rb-top"><div><div class="rb-k">'+L.rest+'</div><div class="rb-t num">'+r.t+'</div></div>'
+   +'<div class="rb-ctl"><button class="num">−30</button><button aria-label="Pause">'+I.pause+'</button><button class="num">+30</button></div></div>'
+   +'<div class="rb-bar"><i style="width:'+r.p+'%"></i></div></section>';
+}
+function logCtl(s,L){
+  if(s.logged)return '<div class="done-row" role="status"><span class="log-c">'+I.check+'</span><b>'+f(L.logged,{i:s.logged})+'</b><button class="undo">'+L.undo+'</button></div>';
+  return '<button class="log"><span>'+(s.wu?L.logwu:f(L.logset,{i:s.cur}))+'</span><span class="log-c">'+I.check+'</span></button>';
+}
+function frame(s,lang){
+  var L=T[lang],dir=lang==="ar"?"rtl":"ltr",h='<div class="ph" dir="'+dir+'" lang="'+lang+'">';
+  if(s.complete){
+    h+='<div class="fin" style="padding-top:calc(var(--status) + 40px)"><div class="fin-c">'+I.check+'</div><h3>'+L.done+'</h3><p>'+L.day+'</p>'
+     +'<div class="stats"><div class="stat"><b class="num">48:12</b><small>'+L.dur+'</small></div><div class="stat"><b class="num">18</b><small>'+L.sets+'</small></div>'
+     +'<div class="stat"><b class="num">6,240</b><small>'+L.vol+' · '+L.kg+'</small></div></div>'
+     +'<div class="rec"><b>'+L.pr+'</b><span>'+L.ex[0]+' · '+n("62.5")+' '+L.kg+' × '+n("8")+'</span></div>'
+     +'<button class="log">'+L.finish+'</button></div>';
+    return h+'<div class="fold"><span>844</span></div></div>';
+  }
+  h+=head(s,L)+'<div class="wb">';
+  h+='<div class="ex"><h3>'+L.ex[0]+'</h3><button class="ib flat" aria-label="'+L.info+'">'+I.info+'</button><button class="ib flat" aria-label="'+L.swap+'">'+I.swap+'</button>'
+   +'<p><span>'+(s.wu?L.wu:f(L.setOf,{i:s.cur,n:3})+' · '+f(L.dose,{r:"6–10"}))+'</span><span class="adds"><button class="chip wu">+ '+L.addwu+'</button><button class="chip">+ '+L.addset+'</button></span></p></div>';
+  if(s.rest)h+=restBand(s,L);
+  h+=card(s,L)+logCtl(s,L);
+  if(s.idle)h+='<div class="feel"><div class="feel-h"><span>'+L.feel+'</span><button>'+L.skip+'</button></div><div class="feel-c">'
+     +L.feels.map(function(x){return '<button>'+x+'</button>';}).join("")+'</div></div>';
+  h+='<button class="nx"><span><small>'+L.next+'</small><b>'+L.ex[1]+'</b></span>'+I.chev+'</button>';
+  h+=rows(s,L);
+  h+='<div class="tools"><button>'+I.skip+L.skipEx+'</button><button>'+I.plus+L.addEx+'</button></div>'
+   +'<div class="quiet"><button>'+L.remove+'</button><button>'+L.hurts+'</button></div>';
+  return h+'</div><div class="fold"><span>844</span></div></div>';
+}
+function build(){
+  ["en","ar"].forEach(function(lang){
+    var host=document.getElementById(lang==="en"?"ltr":"rtl"),h="";
+    STATES.forEach(function(s){
+      var id=s.id+"-"+(lang==="en"?"ltr":"rtl");
+      h+='<div class="cell"><h2>'+s.name+'<span>'+s.note+'</span></h2><a href="#'+id+'">Open on its own</a><div class="zoom">'+frame(s,lang)+'</div></div>';
+    });
+    host.innerHTML=h;
+  });
+  var L=T.en;
+  document.getElementById("askdemo").innerHTML='<div class="sr ask"><span>'+f(L.delAsk,{i:1})+' '+n("60")+' '+L.kg+' × '+n("8")+'</span>'
+    +'<button class="del">'+L.del+'</button><button class="keep">'+L.keep+'</button></div>';
+}
+function single(){
+  var m=/^#(\w+)-(ltr|rtl)$/.exec(location.hash),one=document.getElementById("oneframe");
+  if(!m){document.body.classList.remove("one");one.innerHTML="";return;}
+  var s=STATES.filter(function(x){return x.id===m[1];})[0];if(!s)return;
+  one.innerHTML=frame(s,m[2]==="rtl"?"ar":"en");
+  one.style.zoom=Math.min(1,window.innerWidth/390);
+  document.body.classList.add("one");window.scrollTo(0,0);
+}
+function seg(id,attr){
+  var g=document.getElementById(id);
+  g.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+    g.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});
+    document.documentElement.setAttribute(attr,b.getAttribute("data-v"));});
+}
+seg("pal","data-palette");seg("mode","data-theme");
+/* The viewer may set the mode on <html> itself; show the switches as they are. */
+["pal","mode"].forEach(function(id){var at=id==="pal"?"data-palette":"data-theme",v=document.documentElement.getAttribute(at)||(id==="pal"?"blue":"dark");
+  document.getElementById(id).querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x.getAttribute("data-v")===v?"true":"false");});});
+document.getElementById("oneback").addEventListener("click",function(){history.replaceState(null,"",location.pathname);single();});
+window.addEventListener("hashchange",single);
+build();single();
+</script>
+</body>
+</html>
