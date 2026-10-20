@@ -1777,3 +1777,9 @@ Details and sources in `docs/FORMULA-RECONCILIATION.md`. Each is in `js/data/goa
 - **`js/coach/targets.js`**: the thin wrapper. `dayTargetsFor` and `reconcileWeekFor` take BMR and targets from `body.js`; no weight → `no_weight`, never a default; past days use the weigh-ins up to that day.
 - **Training reconciliation moves what fits:** `kind` adjust / partial / week_fine, with missed, moved and gone per muscle ("1 of 6 moved to Saturday, the other 5 are gone"). A muscle with no MRV moves under the one-set limit alone and is marked `ceiling:"none"`. Results carry `landmarks.js` `BASIS` ("practitioner heuristics … not measured constants").
 - Tests: 235 pass in `js/coach/test/index.html` (checked headless) and in Node; `node tests/coach.mjs` still runs only the original ten files (request 1 open). Architecture and engine tests pass.
+
+### Design import — 20 Oct
+
+- Design session's files committed from its two published prototypes (workout screen, Ask panel): `design/workout.html`, `design/chat.html`, `design/tokens.css`, and `docs/design/` workout-spec, chat-spec, token-requests, workout-diagnosis, palette-comparison, coachchat-current, arabic-names-audit. Copied byte for byte; the copies shared by both pages were identical.
+- **Not recovered:** the captures in `docs/design/current/` (PNGs the diagnosis and CoachChat notes cite) and the Design session's own PROGRESS entries (the main → design system colour re-sync task, the proposed Arabic rope-pushdown name). Neither page published them; they exist only on that session's local branch.
+- No change to `js/`, `css/` or `index.html`.
