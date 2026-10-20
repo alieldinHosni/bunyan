@@ -1,0 +1,55 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bunyan — cue check</title>
+<!-- Run with tools/serve.ps1, open http://localhost:8777/tools/check-cues.html.
+     Checks cues.js against its own limits: every key is a real exercises.json id, at
+     most two cues each, at most ten words per cue — in English and in Arabic. Every cue
+     must have an Arabic entry in AR (the shape js/i18n/dict.js uses), written in Arabic
+     script with no leftover Latin words, and no AR entry may be orphaned. The Arabic is
+     then rendered in an RTL block (dir="rtl", lang="ar") using the same lookup t() does,
+     so it can be read the way the app will show it. Never shipped; never run by the app. -->
+<style>
+  body{font:14px system-ui;margin:16px}
+  .rtl{direction:rtl;text-align:right;font:16px/1.7 "Segoe UI",Tahoma,sans-serif;border:1px solid #ccc;padding:12px;max-width:520px}
+  .rtl h3{margin:12px 0 2px;font-size:13px;color:#555;direction:ltr;text-align:right}
+  .rtl li{margin:2px 0}
+</style>
+<pre id="out">running…</pre>
+<div id="rtl" class="rtl" dir="rtl" lang="ar"></div>
+<script type="module">
+const out = document.getElementById("out");
+const c = await import("../js/knowledge/cues.js?v=" + Date.now());
+const lib = await fetch("../exercises.json").then(r => r.json());
+const ids = new Set(Object.values(lib).map(e => e.i));
+const { cuesMax, wordsMax } = c.meta.limits;
+const AR = c.AR || {};
+const t = k => AR[k] || k;               // the same lookup js/i18n/dict.js t() does in Arabic mode
+const words = s => s.trim().split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
+const problems = [], used = new Set();
+for (const [id, v] of Object.entries(c.CUES)) {
+  if (!ids.has(id)) problems.push("not an exercise id: " + id);
+  if (!v.cues.length || v.cues.length > cuesMax) problems.push(id + ": " + v.cues.length + " cues");
+  for (const q of v.cues) {
+    if (words(q) > wordsMax) problems.push(id + ": " + words(q) + " words — " + q);
+    used.add(q);
+    const a = AR[q];
+    if (!a) { problems.push(id + ": no Arabic for — " + q); continue; }
+    if (!/[؀-ۿ]/.test(a)) problems.push(id + ": Arabic entry has no Arabic script — " + a);
+    if (/[A-Za-z]/.test(a)) problems.push(id + ": Latin letters inside the Arabic — " + a);
+    if (words(a) > wordsMax) problems.push(id + ": Arabic " + words(a) + " words — " + a);
+  }
+}
+for (const k of Object.keys(AR)) if (!used.has(k)) problems.push("orphan Arabic entry: " + k);
+const box = document.getElementById("rtl");
+for (const [id, v] of Object.entries(c.CUES)) {
+  const h = document.createElement("h3"); h.textContent = id;
+  const ul = document.createElement("ul");
+  for (const q of v.cues) { const li = document.createElement("li"); li.textContent = t(q); ul.append(li); }
+  box.append(h, ul);
+}
+const dirOk = getComputedStyle(box).direction === "rtl";
+if (!dirOk) problems.push("RTL container did not compute direction: rtl");
+out.textContent = (problems.length ? "PROBLEMS\n" + problems.join("\n") : "OK") +
+  "\n\nexercises cued: " + Object.keys(c.CUES).length + "\ncues: " + used.size + "\nArabic entries: " + Object.keys(AR).length + "\nRTL render: " + (dirOk ? "rtl" : "NOT rtl");
+window.__result = problems;
+</script>

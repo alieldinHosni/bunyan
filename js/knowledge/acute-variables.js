@@ -1,0 +1,278 @@
+/* Bunyan — knowledge: acute variables
+   Resistance-training prescription: the adaptation principles behind it (GAS, SAID,
+   specificity), the five adaptations, and the acute variables — reps, sets, intensity,
+   tempo, rest, volume, frequency, duration, selection, order — by adaptation and by
+   training status. Per-phase values (the goal × phase × training-age lookup the spec
+   asks for) are completed from chapter 21; the app's own template numbers are compared
+   in INGESTION-LOG, not changed. Leaf data. */
+
+var meta={
+  covers:"Resistance-training principles and acute-variable prescription",
+  derivedFrom:"certification curriculum",
+  sections:["20.1","20.2","20.3","20.4","20.5","20.6","20.7","20.8","20.9","20.10","20.13","H.1RM"],
+  status:"complete for chapters 20–21: adaptation (BY_ADAPTATION), phase (phases.js PHASE_VARIABLES) and training status (VARIABLES.frequency.byStatus)",
+  lookup:{goal:"BY_ADAPTATION by adaptation id", phase:"phases.js PHASE_VARIABLES by phase number", trainingAge:"VARIABLES.frequency.byStatus; phase entry rules in phases.js (phase 4 experienced only)",
+    agentReading:"goal × phase × training age = pick the phase for the goal and training age (phases.js GOAL_PLANS / PROGRESSION), then read that phase's resistance block; BY_ADAPTATION gives the same numbers by adaptation"},
+  appNote:"js/engine/plan.js LEVELS/GOALS carry their own rep, set and rest numbers — compared in INGESTION-LOG open question 21; templates should later derive from this file (spec §2.2)",
+  confidence:"high unless an entry says otherwise"
+};
+
+var PRINCIPLES={
+  benefits:{src:"20.1", list:["cardiovascular efficiency","endocrine and cholesterol adaptations","hypertrophy","bone density","metabolism","less body fat",
+    "neuromuscular control","connective-tissue strength","muscular endurance","strength","power"]},
+  gas:{src:"20.1", name:"general adaptation syndrome", origin:"proposed in 1936",
+    stress:"in training, the load lifted — eustress, a good stress the body adapts to when met repeatedly",
+    stages:[
+      {order:1, id:"alarm", reaction:["fatigue","joint stiffness","DOMS"], timing:{onsetH:{min:6, max:48}, domsH:{min:24, max:48}},
+        stimulates:["oxygen and blood supply","neural recruitment","bone formation","joint load tolerance","connective-tissue strength"],
+        notes:["soreness correlates poorly with how much muscle damage occurred","all contraction types damage muscle, especially in the untrained",
+          "while sore, repeating or advancing the exercise is limited"],
+        rule:"introduce resistance exercise gradually and systematically to minimise DOMS"},
+      {order:2, id:"resistance_development", reaction:["more efficient fibre recruitment","better oxygen and blood distribution"],
+        rule:"apply progressive overload; load is only one way to raise intensity",
+        plateau:"performance rises until a new plateau, held if training is held"},
+      {order:3, id:"exhaustion", cause:"prolonged or intolerable stress (distress)",
+        consequences:["stress fractures","muscle strains and ligament sprains","joint pain","emotional fatigue"], note:"they can accumulate"}],
+    periodization:{is:"planned, organised manipulation of training variables in progressive cycles", why:"stress, then enough repair, to avoid exhaustion",
+      cycleLength:"varies widely with ability, goals and schedule"},
+    overtraining:{syndrome:"chronic fatigue, declining performance, burnout — from abrupt, prolonged or high-volume/intensity training without enough recovery",
+      overreaching:"a temporary performance drop from fatigue; unnoticed, it can lead to overtraining syndrome",
+      difference:"how long performance takes to restore, not the type or duration of the training stress"}},
+  said:{src:"20.1", name:"principle of specificity (specific adaptation to imposed demands)",
+    examples:{heavy:"heavy lifting → maximal strength", light:"light, many reps → muscular endurance"},
+    types:["energy system (anaerobic, aerobic)","mode","muscle groups and movement patterns","posture"],
+    rule:"keep training as specific as possible — muscles, energy systems, patterns, velocity, muscle actions",
+    exception:"if the specific pattern raises injury risk or feeds a dysfunction, stay as specific as is safe — e.g. teach eccentric control and landing before explosive work",
+    mechanical:{is:"the weight and movements imposed", examples:["leg endurance → light loads, high reps","chest maximal strength → heavy loads"]},
+    neuromuscular:{is:"contraction speed and exercise selection",
+      examples:{stability:"controlled, unstable, slower", strength:"stable, heavier — prime movers", power:"light, high-velocity"}},
+    metabolic:{is:"the energy demand", examples:{endurance:"long bouts, minimal rest — aerobic", strengthPower:"longer rest to replenish ATP — anaerobic"}},
+    fibres:{typeI:"slow-twitch — long contractions for stabilisation, endurance, posture", typeII:"fast-twitch — larger, quick to peak tension, fatigue faster; force and power"}}
+};
+
+/* The five adaptations, in the order they build on each other. */
+var ADAPTATIONS=[
+  {id:"stabilization", src:"20.2", is:"optimal dynamic joint support for correct posture in every movement — the right muscles, force, plane and timing",
+    needs:"high muscular endurance",
+    method:"controlled unstable exercise — standing, single-leg or a balance modality, the core and joint stabilisers support the body instead of a bench or machine",
+    limit:"only as much instability as can be safely controlled with ideal posture",
+    notFor:"hypertrophy or maximal strength — heavier loads need stable conditions for safety",
+    evidence:["controlled instability improves stability and balance; without it stability may even worsen","poor stabilisation lowers force production"]},
+  {id:"muscular_endurance", src:"20.2", is:"producing and holding force for long periods",
+    role:"the foundation of core and joint stabilisation on which the rest is built", fibres:"type I",
+    method:["high repetitions (more time under tension)","short rest between sets"],
+    evidence:["after an initial effect, multiple periodised sets may beat single sets","strength training alone raises endurance somewhat; specific training most"]},
+  {id:"hypertrophy", src:"20.2", is:"enlargement of fibres — more cross-sectional area from more myofibril proteins",
+    timeline:{visibleWeeks:{min:4, max:8}, for:"untrained people", note:"the process starts early whatever the intensity"},
+    method:"varied rep ranges with progressive overload and multiple sets — in younger and older adults of both sexes",
+    example:{weeks:24, daysPerWeek:3, sets:3, reps:{min:8, max:12}, result:"improved hypertrophy and body composition"}},
+  {id:"strength", src:"20.2", is:"the neuromuscular system producing internal tension to overcome an external force",
+    neural:"early gains come from recruiting more motor units; after a recruitment plateau, further gains come from hypertrophy",
+    firstWeeks:{weeks:12, note:"most strength gains happen in the first 12 weeks"},
+    later:"intermediate and advanced lifters need more volume and intensity in a periodised plan",
+    basis:"built on stabilisation; strength work suits type II fibres (fast, high tension, fatigable)",
+    planes:"traditional programmes over-favour single-plane maximal strength; train all actions, planes and tempos progressively"},
+  {id:"power", src:"20.2", is:"the greatest force in the shortest time",
+    formulas:["force × velocity","work ÷ time — measured in watts"],
+    raiseBy:["more force (load)","more velocity"],
+    neural:["more motor units","better synchronisation","faster activation"],
+    method:"move both heavy and light loads as fast as safely possible — superset them",
+    builds:"on stabilisation and strength"}
+];
+
+/* The variables. */
+var VARIABLES={src:"20.3",
+  list:["repetitions","sets","intensity","tempo","rest interval","volume","frequency","duration","exercise selection","exercise order"],
+  questions:["which exercises suit the person","which are contraindicated","what intensity","how many exercises","how many sets and reps","how many days a week"],
+  reps:{inverseTo:"load", categories:[{id:"low", min:1, max:5},{id:"moderate", min:6, max:12},{id:"high", min:12, note:"12+"}],
+    overlapNote:"the source's moderate and high bands share 12"},
+  sets:{rule:"fewer sets with higher reps at lower intensity; more sets with lower reps at higher intensity", setBy:["reps","intensity","fitness"]},
+  intensity:{is:"load, usually as % of 1RM", importance:"often argued to be the most important variable for muscle growth",
+    setBy:["physical capability","fitness","nutritional status","goals"]},
+  tempo:{notation:"four numbers in seconds: eccentric / isometric / concentric / isometric — the same order whatever the exercise starts with",
+    examples:[{exercise:"push-up", tempo:"4-2-1-1", reads:["lower 4 s","hold 2 s just above the floor","push up 1 s","pause 1 s at the top"]},
+      {exercise:"barbell curl", tempo:"3-0-1-2", reads:["curl up 1 s","hold 2 s at the top","lower 3 s","no pause at the bottom"]}],
+    use:{slow:["hypertrophy","stabilisation and endurance"], fast:["strength","power"]}},
+  restRule:"the energy system used depends on quantity, intensity and fitness; if intensity cannot be held, reduce the load to keep the rep range",
+  volume:{formula:"reps × sets × load", evidence:"higher-volume multiple-set protocols beat single sets for hypertrophy and strength",
+    inverseTo:"intensity", raise:"strategically with intensity to avoid plateaus — by exercises, reps or sets"},
+  frequency:{rule:"at least 1 day of rest between sessions that stress the same muscles",
+    factors:["exercise type","muscles involved","training status","programme intensity and volume","lifestyle"],
+    byStatus:[{status:"beginner", sessionsPerWeek:{min:2, max:3}},
+      {status:"intermediate", sessionsPerWeek:{totalBody:3, split:4}},
+      {status:"advanced", sessionsPerWeek:{min:4, max:6}, note:"may train more than once a day"}]},
+  duration:{typicalMin:{min:30, max:90}, inverseTo:"intensity", factors:["health","training level","goals","volume","training type"]},
+  selection:{factors:["specificity","equipment","training history","dedication","time"],
+    first:"establish correct technique — demonstrate, explain, allow time; modify or teach the pattern",
+    multiVsSingle:{multi:"more effort and stabilisation", single:"focus on one muscle — target underdeveloped muscles, improve symmetry"}},
+  order:{rules:[{order:1, rule:"priority first — exercises for the person's main goal, less specific ones later (fatigue)"},
+      {order:2, rule:"multi-joint (compound) before single-joint (assistance) — more force across the session; compound work suffers after isolation"}],
+    why:"compound lifts under low fatigue with best technique"}
+};
+
+/* The 1RM conversion handout, reduced to its rule. The chart itself (loads 5–1,000 lb,
+   2–10 reps) is not reproduced; every one of its 160 rows fits this formula. */
+var ONE_RM={src:"H.1RM",
+  formula:"1RM = load ÷ (1 − 0.025 × reps)", pctOf1RM:"100 − 2.5 × reps", repsRange:{min:2, max:10},
+  examples:[{reps:10, pct:75, multiplier:1.333},{reps:5, pct:87.5, multiplier:1.143},{reps:2, pct:95, multiplier:1.053}],
+  use:"the bench and squat strength tests (assessments.js) read 1RM from this chart after 3-rep sets",
+  vsBunyan:{bunyan:"Epley, 1RM = load × (1 + reps ÷ 30), capped at 12 reps (CLAUDE.md)", sameAt:10,
+    belowTen:"Epley estimates higher — e.g. at 5 reps by about 2% (1.167 vs 1.143)", note:"open question 22; no formula change"},
+  check:"fitted to all 160 rows; the mean multipliers agree with the formula to 3 decimal places"
+};
+
+/* Table 20-3 plus the rest guidance, by adaptation. Not absolutes — programme, goals
+   and fitness decide. */
+var BY_ADAPTATION=[
+  {adaptation:"stabilization_endurance", src:"20.3", reps:{min:12, max:20, note:"or higher"}, sets:{min:1, max:3}, intensityPct1RM:{min:50, max:70},
+    restS:{min:30, max:60}, tempo:"slow"},
+  {adaptation:"hypertrophy", src:"20.3", reps:{min:6, max:12, note:"or higher"}, sets:{min:3, max:6}, intensityPct1RM:{min:75, max:85},
+    restS:{min:0, max:180}, tempo:"slower", note:"many schemes work, depending on total volume and fitness"},
+  {adaptation:"maximal_strength", src:"20.3", reps:{min:1, max:5}, sets:{min:4, max:6}, intensityPct1RM:{min:85, max:100},
+    restS:{min:180, max:300}, note:"3–5 min seems more effective and safer for multi-joint lifts"},
+  {adaptation:"power", src:"20.3", reps:{min:1, max:10}, sets:{min:3, max:6},
+    intensity:{medicineBallPctBodyweight:10, weightsPct1RM:{min:30, max:45}},
+    restS:{min:180, max:300}, note:"ATP replenishment takes about 4 min", tempo:"as fast as safely possible"}
+];
+
+/* Training systems (Table 20-5 and the text). */
+var SYSTEMS=[
+  {id:"warm_up_set", src:"20.4", is:"1–2 low-intensity sets before the work sets — psychological and physical preparation",
+    reps:{min:10, max:15}, rule:"no undue fatigue"},
+  {id:"single_set", src:"20.4", is:"one set per exercise", sessionsPerWeek:2, for:"especially beginners — lets connective tissue and nerves adapt first",
+    note:"often wrongly seen as too little stimulus"},
+  {id:"multiple_set", src:"20.4", is:"several sets per exercise", for:"novice and advanced; superior for advanced clients", caution:"more volume must be dosed to avoid overtraining"},
+  {id:"pyramid", src:"20.4", is:"raise or lower the load each set",
+    lightToHeavy:{startReps:{min:10, max:12}, endReps:{min:1, max:2}, sets:{min:4, max:6}, variants:"2–4 sets or 12–20 reps also work"},
+    heavyToLight:"warm up, start heavy for 1–2 reps, then lighter with more reps over 4–6 sets"},
+  {id:"superset", src:"20.4", is:"two exercises in quick succession",
+    variants:[{id:"same_muscle", example:"bench press then push-ups", effect:"endurance and hypertrophy — high volume", more:"three = triset; more = giant set; more exercises, more fatigue"},
+      {id:"opposing_muscles", example:"chest and back; quadriceps and hamstrings", effect:"heavy load on each — one recovers while the other works"}],
+    reps:{min:8, max:12, note:"any number can be used"}, restS:0, benefits:["endurance","hypertrophy","power — depending on exercises"]},
+  {id:"complex", src:"20.4", is:"a heavy compound lift then a biomechanically similar explosive one (e.g. squat then squat jump)",
+    mechanism:"post-activation potentiation — nervous-system excitation from the heavy lift raises force in the explosive one",
+    sets:{min:3, max:5, note:"or more — volume dependent"}, recoveryH:72, sessionsPerWeek:{min:2, max:4, note:"depending on the split"},
+    agentReading:"72 h recovery and 2–4 sessions a week only fit together if the sessions load different areas",
+    confidence:"medium on frequency — the two figures sit uneasily together"},
+  {id:"drop_set", src:"20.4", is:"to failure, strip a little load, continue", dropPct:{min:5, max:20}, repsPerDrop:{min:2, max:4}, drops:{min:2, max:3},
+    tripleDrop:"failure plus three successive drops without rest", for:"experienced lifters — advanced"},
+  {id:"giant_set", src:"20.4", is:"three or more exercises in succession, one muscle group", reps:{min:8, max:12},
+    restBetweenExercisesS:{min:5, max:15}, restBetweenGiantSetsMin:{min:2, max:5},
+    example:["flat dumbbell press × 10","incline dumbbell press × 10","decline bench press × 10","dumbbell fly × 10"],
+    evidence:"improved 1RM, peak power, shuttle-run performance and lean mass",
+    tableConflict:"Table 20-5 says four or more exercises; the text says three or more", confidence:"medium"},
+  {id:"rest_pause", src:"20.4", is:"moderate to heavy loads with short rests inside the set",
+    steps:[{order:1, step:"do the planned reps"},{order:2, step:"rack the weight, a few deep breaths, then reps to failure"},{order:3, step:"repeat step 2 as many times as possible"}],
+    goals:{maxStrength:"heavier load, slightly longer pauses", enduranceOrBodyComposition:"moderate load, shorter pauses"},
+    effect:"more time under tension and metabolic stress, especially in recreationally trained people"},
+  {id:"circuit", src:"20.4", is:"exercises one after another with minimal rest", sets:{min:1, max:3}, reps:{min:8, max:20},
+    for:["limited time","body-composition change"]},
+  {id:"peripheral_heart_action", src:"20.4", is:"a circuit alternating upper- and lower-body exercises", reps:{min:8, max:20},
+    why:"spreads blood flow between upper and lower body — may improve circulation", for:["integrated programmes","body composition","health"],
+    example:["dumbbell chest press","dumbbell squat","seated machine row","dumbbell Romanian deadlift","standing dumbbell shoulder press"]},
+  {id:"split_routine", src:"20.4", is:"different body parts on different days", for:["bodybuilders","mass and strength athletes"],
+    why:"more work per body part in the time — more hypertrophy", caution:"training a part more than once a week — watch volume, intensity and recovery",
+    examples:[
+      {days:2, plan:[{day:"Mon", parts:["upper body"]},{day:"Thu", parts:["lower body"]}]},
+      {days:3, plan:[{day:"Mon", parts:["chest","shoulders","triceps"]},{day:"Wed", parts:["legs"]},{day:"Fri", parts:["back","biceps"]}]},
+      {days:4, plan:[{day:"Mon", parts:["chest","triceps"]},{day:"Tue", parts:["back","biceps"]},{day:"Thu", parts:["legs"]},{day:"Fri", parts:["shoulders"]}]},
+      {days:5, plan:[{day:"Mon", parts:["chest"]},{day:"Tue", parts:["legs"]},{day:"Wed", parts:["back"]},{day:"Thu", parts:["shoulders"]},{day:"Fri", parts:["arms"]}]},
+      {days:6, plan:[{day:"Mon + Fri", parts:["chest","shoulders","triceps"]},{day:"Tue + Sat", parts:["legs"]},{day:"Wed + Sun", parts:["back","biceps"]}]}],
+    tableNote:"Table 20-7 was column-mixed in plain text; recovered from a layout extraction"},
+  {id:"vertical_loading", src:"20.4", is:"one set of each exercise down the template, then repeat — total body, chest, back, shoulders, biceps, triceps, legs",
+    benefit:"each part recovers (about 7–10 min between its sets if each exercise takes ~1 min) while the person keeps moving",
+    circuit:"minimise rest to run it as a circuit"},
+  {id:"horizontal_loading", src:"20.4", is:"all sets of one exercise or body part before the next", common:"the usual gym method",
+    for:["hypertrophy","maximal strength","power"], drawback:"rest can exceed working time",
+    metabolic:{restS:{min:30, max:90}, effect:"faster metabolic and hypertrophy adaptations"}}
+];
+
+var SAFETY={src:"20.5",
+  goal:"do no harm — manage risk to keep injury low while maximising results",
+  scope:["interview for health history, lifestyle, willingness and ability","instruct, demonstrate, evaluate, educate","consult, screen and evaluate before programming","respond to emergencies"],
+  equipment:["group by category (free weights, machines, plyometrics, warm-up)","return equipment — clutter is a tripping hazard","never use damaged equipment (frayed cables, missing or loose parts) — repair or replace","clean and upgrade regularly"],
+  spotting:{needed:"compound lifts — barbell back squat, bench press, dumbbell shoulder press — especially heavy", evidence:"proper spotting reduces injuries",
+    checklist:["agree the rep count before the set","stand stable, wide stance","give enough help through the sticking point",
+      "dumbbells: spot at the wrists, not the elbows — better support, elbows cannot collapse in",
+      "barbell squat: stand behind, upper arms under the lifter's armpits",
+      "use a second spotter when the load is more than one can manage — one at each end of the bar",
+      "never spot machines or cables with hands under the weight stack"]},
+  monitoring:{intensity:["heart rate","RPE 1–10 (assessments.js rpe)"], technique:"correct and cue; quality before quantity or load",
+    checkpoints:"the five kinetic chain checkpoints (core.js CHECKPOINTS) — feet shoulder width and straight unless the exercise needs otherwise; shoulders neutral unless the exercise needs protraction or elevation"},
+  breathing:{rule:"breathe out on the concentric phase (preferably through the mouth), in on the eccentric",
+    why:"breathing habits shape muscle use and posture",
+    valsalva:{is:"exhaling against a closed glottis — more intra-abdominal pressure and spinal stability, less disc compression",
+      bracing:["transversus abdominis","rectus abdominis","external obliques","internal obliques","diaphragm"],
+      use:"maximal or near-maximal lifts in healthy people seeking maximal strength",
+      risks:["light-headedness and dizziness","impeded venous return","raised heart rate and blood pressure"],
+      avoid:["hypertension","heart disease"],
+      most:"unnecessary for most clients, who seek weight loss and health"}}
+};
+
+var GUIDELINES={src:"20.6",
+  benefits:["joint stability","endurance","strength","power","coordination","lean mass","less body fat","athletic performance","health markers"],
+  vary:{progress:["easy → hard","simple → complex","static → dynamic","slow → fast","stabilisation → strength → power"],
+    volume:{sets:["low","moderate","high"], reps:["low","moderate","high"]},
+    range:["full","partial","end range","mixed"], planes:["sagittal","frontal","transverse","multiplanar"],
+    speed:["slow","medium","fast","explosive"], resistance:["bodyweight","light","medium","heavy"]},
+  first:{patterns:["squat","push","pull","vertical press","hip hinge"], skills:"use of machines, free weights and other equipment", why:"lower injury risk, especially for new or deconditioned people"},
+  sequence:[
+    {order:1, id:"stabilization_focused", adaptations:["stability","muscular endurance"],
+      why:["core and joint stability","prepares tendons and ligaments","type I fibres for posture and spinal stability under later heavy loads"],
+      prescription:{tempo:"slow", reps:{min:12, max:20}, sets:{min:1, max:3}},
+      progress:["bilateral → alternating → unilateral (e.g. standing cable row: two-arm → alternating → one-arm)","smaller base of support (the same row on one leg)",
+        "unusual loading and equipment for the upper limbs — e.g. a kettlebell held bottom-up; an oscillating-load bar"],
+      tailor:{athlete:"single-leg lifts, unusual loading", olderAdult:"perhaps seated elastic-band work as the most unstable position safely managed; progress with practice"}},
+    {order:2, id:"strength_focused", adaptations:["strength","hypertrophy"], when:"after movement competency, stability and endurance",
+      load:"heavier", for:"anyone wanting more muscle size, strength and bone density", examples:["squat","Romanian deadlift","bench press"]},
+    {order:3, id:"power_focused", adaptations:["power"], is:"rate of force production at realistic speeds",
+      note:"uncommon in gyms but has a real place", examples:["medicine ball throws","explosive plyometrics"]}],
+  sequenceRule:"the order is critically important"
+};
+
+/* Key points from the exercise lessons (20.7–20.10, 20.13). Lessons 20.11–20.12 are
+   missing from the PDF (gap 1) — nothing here for the arm exercises. */
+var EXERCISES=[
+  {id:"ball_squat_curl_press", src:"20.7", group:"total body", point:"use the ball as a guide, as if sitting into a chair — do not lean back on it"},
+  {id:"mp_step_up_balance_curl_press", src:"20.7", group:"total body", point:"no low-back arch when pressing overhead — it may mean overactive latissimus dorsi and underactive abdominals"},
+  {id:"single_leg_squat_curl_press", src:"20.7", group:"total body", point:"only as deep as can be controlled with ideal posture"},
+  {id:"single_leg_squat_row", src:"20.7", group:"total body", targets:["gluteus maximus","posterior deltoid","rhomboids"]},
+  {id:"mp_lunge_two_arm_press", src:"20.7", group:"total body", point:"in every squat or lunge: foot straight, knee over the second and third toes"},
+  {id:"squat_curl_press", src:"20.7", group:"total body", point:"pick a load the curl and press can handle — the upper body tires first"},
+  {id:"deadlift_shrug_calf_raise", src:"20.7", group:"total body", note:"can be loaded heavily; complements Olympic lifting"},
+  {id:"push_up", src:"20.8", group:"chest", fault:{sign:"low back sags as the hips drop", meaning:"underactive abdominals", action:"regress the exercise"}},
+  {id:"push_up_ball", src:"20.8", group:"chest", regression:"floor push-up"},
+  {id:"standing_cable_chest_press", src:"20.8", group:"chest", fault:{sign:"shoulder shrug", meaning:"overactive upper trapezius", action:"more stretching"}},
+  {id:"dumbbell_chest_press", src:"20.8", group:"chest", point:"elbow depth is set by control and tissue extensibility — only as low as is controlled without compensating"},
+  {id:"barbell_bench_press", src:"20.8", group:"chest", point:"feet on the floor (plates under them if short); buttocks, shoulders and head on the bench"},
+  {id:"medicine_ball_chest_pass", src:"20.8", group:"chest", alternative:"tubing or cable, light enough to move fast without compensation"},
+  {id:"ball_cobra", src:"20.9", group:"back", point:"arms externally rotated, thumbs up"},
+  {id:"ball_dumbbell_row", src:"20.9", group:"back", alternative:"prone can be uncomfortable — for overweight clients use a machine or a standing hip-hinge row"},
+  {id:"standing_cable_row", src:"20.9", group:"back", point:"start every row by retracting and depressing the shoulder blades; no shrugging"},
+  {id:"seated_cable_row", src:"20.9", group:"back", point:"torso still — rocking adds momentum, cuts effect and stresses the low back"},
+  {id:"lat_pulldown", src:"20.9", group:"back", safety:"never behind the neck (stresses the shoulders and neck); the bar passes in front of the face to about shoulder height"},
+  {id:"medicine_ball_pullover_throw", src:"20.9", group:"back", prerequisite:"good latissimus dorsi extensibility"},
+  {id:"soccer_throw", src:"20.9", group:"back", load:"ball no more than 10% of bodyweight; throw as hard as possible"},
+  {id:"tubing_external_rotation", src:"20.10", group:"shoulders", targets:["infraspinatus","teres minor"]},
+  {id:"tubing_internal_rotation", src:"20.10", group:"shoulders", targets:["subscapularis"]},
+  {id:"single_leg_scaption", src:"20.10", group:"shoulders", point:"arms at 45° in the scapular plane — less supraspinatus impingement risk", regression:"two-leg stance"},
+  {id:"ball_combo_1", src:"20.10", group:"shoulders", parts:["Y (scaption)","T (abduction)","A (cobra)"]},
+  {id:"ball_combo_2", src:"20.10", group:"shoulders", parts:["dumbbell row","external rotation","prone shoulder press"]},
+  {id:"standing_dumbbell_shoulder_press", src:"20.10", group:"shoulders", safety:"core active in every overhead press — protects the low back"},
+  {id:"lateral_raise", src:"20.10", group:"shoulders", targets:["deltoids"], note:"the middle deltoid — one of three heads (anterior, middle, posterior)"},
+  {id:"seated_dumbbell_shoulder_press", src:"20.10", group:"shoulders", safety:"neck neutral, head drawn back — a forward head overloads the neck"},
+  {id:"ball_squat", src:"20.13", group:"legs", use:"teaches the squat; progress to squats without the ball"},
+  {id:"single_leg_squat", src:"20.13", group:"legs", note:"advanced stabilisation exercise — only as low as safely controlled"},
+  {id:"single_leg_rdl", src:"20.13", group:"legs", targets:["hamstring complex","gluteus maximus","erector spinae"]},
+  {id:"calf_raise", src:"20.13", group:"legs", targets:["gastrocnemius","soleus"]},
+  {id:"mp_step_up", src:"20.13", group:"legs", use:"regress the lunge to a step-up until flexibility and stability allow it"},
+  {id:"mp_lunge", src:"20.13", group:"legs", variants:["front","lateral","turning","reverse"]},
+  {id:"dumbbell_squat", src:"20.13", group:"legs", point:"feet shoulder width, toes straight, knees over the second and third toes — no valgus, spares the knee ligaments"},
+  {id:"leg_press", src:"20.13", group:"legs", point:"feet shoulder width, toes straight, knees over the second and third toes — less stress on knees, hips, low back"},
+  {id:"barbell_squat", src:"20.13", group:"legs", depth:"only as far as can be controlled without compensating; more range as flexibility and stability grow"},
+  {id:"deadlift", src:"20.13", group:"legs", point:"all five checkpoints, especially a neutral — not rounded — spine"},
+  {id:"squat_jump", src:"20.13", group:"legs", safety:"knees caving on landing is dangerous; feet straight, knees over the second and third toes"},
+  {id:"tuck_jump", src:"20.13", group:"legs", point:"land just behind the ball of the foot — not on the ball or the heel"}
+];
+
+export {meta, PRINCIPLES, ADAPTATIONS, VARIABLES, BY_ADAPTATION, SYSTEMS, SAFETY, GUIDELINES, EXERCISES, ONE_RM};

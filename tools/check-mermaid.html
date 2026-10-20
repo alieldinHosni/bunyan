@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Bunyan — diagram check</title>
+<!-- Run with tools/serve.ps1, open http://localhost:8777/tools/check-mermaid.html.
+     Parses and renders every ```mermaid block in docs/erd.md, uml.md and flows.md so a
+     syntax error shows up here, not on GitHub. Loads the mermaid library from a CDN —
+     a dev tool only; never shipped, never run by the app (which stays offline). -->
+<style>body{font:14px system-ui;margin:16px} svg{max-width:100%} .err{color:#b00} h2{margin-top:32px}</style>
+<pre id="out">running…</pre>
+<div id="views"></div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
+mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
+const out = document.getElementById("out"), views = document.getElementById("views");
+const results = [];
+for (const doc of ["erd", "uml", "flows"]) {
+  const md = await fetch(`../docs/${doc}.md?v=${Date.now()}`).then(r => r.text());
+  const blocks = [...md.matchAll(/```mermaid\n([\s\S]*?)```/g)].map(m => m[1]);
+  for (const [i, src] of blocks.entries()) {
+    const id = `${doc}${i}`;
+    try {
+      await mermaid.parse(src);
+      const { svg } = await mermaid.render(id, src);
+      const h = document.createElement("h2"); h.textContent = `${doc}.md block ${i + 1}`;
+      const d = document.createElement("div"); d.innerHTML = svg;
+      views.append(h, d); results.push(`OK   ${doc}.md #${i + 1}`);
+    } catch (e) { results.push(`FAIL ${doc}.md #${i + 1}: ${String(e.message || e).split("\n")[0]}`); }
+  }
+}
+out.textContent = results.join("\n");
+window.__result = results;
+</script>

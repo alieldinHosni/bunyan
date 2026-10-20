@@ -1,0 +1,1300 @@
+{
+    "meta":  {
+                 "generated":  "2026-10-20",
+                 "by":  "tools/name-reconciliation.ps1",
+                 "librarySource":  "exercises.json (repo root)",
+                 "status":  "PROPOSAL — nothing applied",
+                 "library":  876,
+                 "rows":  56,
+                 "exact":  20,
+                 "needReview":  36,
+                 "muscleFlags":  1,
+                 "variantNames":  29,
+                 "rule":  "anything below exact needs owner review; renames are a separate reviewed commit; never bundled"
+             },
+    "rows":  [
+                 {
+                     "id":  "Calves-SMR",
+                     "current":  "Calves-SMR",
+                     "proposed":  "Self-myofascial rolling: calves",
+                     "confidence":  "exact",
+                     "reason":  "14.4 region \u0027calves\u0027",
+                     "library":  {
+                                     "primary":  "Calves",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Calves"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Peroneals-SMR",
+                     "current":  "Peroneals-SMR",
+                     "proposed":  "Self-myofascial rolling: peroneals",
+                     "confidence":  "exact",
+                     "reason":  "14.4 region \u0027peroneals\u0027",
+                     "library":  {
+                                     "primary":  "Calves",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Calves"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Hamstring-SMR",
+                     "current":  "Hamstring-SMR",
+                     "proposed":  "Self-myofascial rolling: hamstrings",
+                     "confidence":  "exact",
+                     "reason":  "14.4 region \u0027hamstrings\u0027",
+                     "library":  {
+                                     "primary":  "Hamstrings",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Hamstrings"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Quadriceps-SMR",
+                     "current":  "Quadriceps-SMR",
+                     "proposed":  "Self-myofascial rolling: quadriceps",
+                     "confidence":  "exact",
+                     "reason":  "14.4 region \u0027quadriceps\u0027",
+                     "library":  {
+                                     "primary":  "Quads",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Quads"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Iliotibial_Tract-SMR",
+                     "current":  "Iliotibial Tract-SMR",
+                     "proposed":  "Self-myofascial rolling: lateral thigh",
+                     "confidence":  "likely",
+                     "reason":  "14.4 \u0027lateral thigh\u0027; the library names the IT tract; TFL maps to Glutes (medium)",
+                     "library":  {
+                                     "primary":  "Glutes",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Glutes"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Piriformis-SMR",
+                     "current":  "Piriformis-SMR",
+                     "proposed":  "Self-myofascial rolling: piriformis",
+                     "confidence":  "exact",
+                     "reason":  "14.4 region \u0027piriformis\u0027",
+                     "library":  {
+                                     "primary":  "Glutes",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Glutes"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Latissimus_Dorsi-SMR",
+                     "current":  "Latissimus Dorsi-SMR",
+                     "proposed":  "Self-myofascial rolling: latissimus dorsi",
+                     "confidence":  "exact",
+                     "reason":  "14.4 region \u0027latissimus dorsi\u0027",
+                     "library":  {
+                                     "primary":  "Back",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Back"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Standing_Gastrocnemius_Calf_Stretch",
+                     "current":  "Standing Gastrocnemius Calf Stretch",
+                     "proposed":  "Static gastrocnemius stretch",
+                     "confidence":  "likely",
+                     "reason":  "14.5 lunge-stance calf stretch, rear knee straight",
+                     "library":  {
+                                     "primary":  "Calves",
+                                     "secondary":  [
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Calves"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Standing_Soleus_And_Achilles_Stretch",
+                     "current":  "Standing Soleus And Achilles Stretch",
+                     "proposed":  "Static soleus stretch",
+                     "confidence":  "likely",
+                     "reason":  "14.5 as gastrocnemius with the back knee bent",
+                     "library":  {
+                                     "primary":  "Calves",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Calves"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "90_90_Hamstring",
+                     "current":  "90/90 Hamstring",
+                     "proposed":  "Static 90/90 hamstring stretch",
+                     "confidence":  "exact",
+                     "reason":  "14.5 same name and position",
+                     "library":  {
+                                     "primary":  "Hamstrings",
+                                     "secondary":  [
+                                                       "Calves"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Hamstrings"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Kneeling_Hip_Flexor",
+                     "current":  "Kneeling Hip Flexor",
+                     "proposed":  "Static kneeling hip flexor stretch",
+                     "confidence":  "likely",
+                     "reason":  "14.5; hip flexors map to Quads per library convention",
+                     "library":  {
+                                     "primary":  "Quads",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Quads"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Side_Neck_Stretch",
+                     "current":  "Side Neck Stretch",
+                     "proposed":  "Static upper trapezius / scalene stretch",
+                     "confidence":  "uncertain",
+                     "reason":  "14.5 lateral neck flexion; the library name is generic",
+                     "library":  {
+                                     "primary":  "Neck",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Neck"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Arm_Circles",
+                     "current":  "Arm Circles",
+                     "proposed":  "Arm circles",
+                     "confidence":  "exact",
+                     "reason":  "14.7 dynamic drill",
+                     "library":  {
+                                     "primary":  "Shoulders",
+                                     "secondary":  [
+                                                       "Back"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Shoulders"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Rope_Jumping",
+                     "current":  "Rope Jumping",
+                     "proposed":  "Jump rope",
+                     "confidence":  "likely",
+                     "reason":  "14.7 warm-up drill; no muscle group given",
+                     "library":  {
+                                     "primary":  "Quads",
+                                     "secondary":  [
+                                                       "Calves",
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+
+                                    ],
+                     "muscleCheck":  "not checkable",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Plank",
+                     "current":  "Plank",
+                     "proposed":  "Plank",
+                     "confidence":  "exact",
+                     "reason":  "16.4",
+                     "library":  {
+                                     "primary":  "Core",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Side_Bridge",
+                     "current":  "Side Bridge",
+                     "proposed":  "Side plank",
+                     "confidence":  "likely",
+                     "reason":  "16.4; \u0027side bridge\u0027 is a synonym",
+                     "library":  {
+                                     "primary":  "Core",
+                                     "secondary":  [
+                                                       "Shoulders"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Dead_Bug",
+                     "current":  "Dead Bug",
+                     "proposed":  "Dead bug",
+                     "confidence":  "exact",
+                     "reason":  "16.4",
+                     "library":  {
+                                     "primary":  "Core",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Pallof_Press",
+                     "current":  "Pallof Press",
+                     "proposed":  "Pallof press",
+                     "confidence":  "exact",
+                     "reason":  "16.4 anti-rotation",
+                     "library":  {
+                                     "primary":  "Core",
+                                     "secondary":  [
+                                                       "Chest",
+                                                       "Shoulders",
+                                                       "Triceps"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Farmers_Walk",
+                     "current":  "Farmer\u0027s Walk",
+                     "proposed":  "Farmer\u0027s carry",
+                     "confidence":  "likely",
+                     "reason":  "16.4 lists it as a level-1 core exercise (brace, stay upright)",
+                     "library":  {
+                                     "primary":  "Forearms",
+                                     "secondary":  [
+                                                       "Core",
+                                                       "Glutes",
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Crunches",
+                     "current":  "Crunches",
+                     "proposed":  "Floor crunch",
+                     "confidence":  "likely",
+                     "reason":  "16.4 shoulder blades only — not a sit-up",
+                     "library":  {
+                                     "primary":  "Core",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Hyperextensions_Back_Extensions",
+                     "current":  "Hyperextensions (Back Extensions)",
+                     "proposed":  "Back extension",
+                     "confidence":  "likely",
+                     "reason":  "16.4 level-2 core; lumbar extensors map to Back",
+                     "library":  {
+                                     "primary":  "Back",
+                                     "secondary":  [
+                                                       "Glutes",
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Back",
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Reverse_Crunch",
+                     "current":  "Reverse Crunch",
+                     "proposed":  "Reverse crunch",
+                     "confidence":  "exact",
+                     "reason":  "16.4",
+                     "library":  {
+                                     "primary":  "Core",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Standing_Cable_Lift",
+                     "current":  "Standing Cable Lift",
+                     "proposed":  "Cable lift",
+                     "confidence":  "likely",
+                     "reason":  "16.4",
+                     "library":  {
+                                     "primary":  "Core",
+                                     "secondary":  [
+                                                       "Shoulders"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Standing_Cable_Wood_Chop",
+                     "current":  "Standing Cable Wood Chop",
+                     "proposed":  "Cable chop",
+                     "confidence":  "likely",
+                     "reason":  "16.4 \u0027the reverse of the lift\u0027",
+                     "library":  {
+                                     "primary":  "Core",
+                                     "secondary":  [
+                                                       "Shoulders"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Butt_Lift_Bridge",
+                     "current":  "Butt Lift (Bridge)",
+                     "proposed":  "Floor bridge",
+                     "confidence":  "uncertain",
+                     "reason":  "16.4 floor bridge; library name differs",
+                     "library":  {
+                                     "primary":  "Glutes",
+                                     "secondary":  [
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Glutes",
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Physioball_Hip_Bridge",
+                     "current":  "Physioball Hip Bridge",
+                     "proposed":  "Ball bridge",
+                     "confidence":  "uncertain",
+                     "reason":  "16.4 bridge with head and shoulders on the ball — check the library picture",
+                     "library":  {
+                                     "primary":  "Glutes",
+                                     "secondary":  [
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Glutes",
+                                        "Core"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Kettlebell_One-Legged_Deadlift",
+                     "current":  "Kettlebell One-Legged Deadlift",
+                     "proposed":  "Single-leg Romanian deadlift",
+                     "confidence":  "uncertain",
+                     "reason":  "17.4/20.13; the library entry is kettlebell-specific",
+                     "library":  {
+                                     "primary":  "Hamstrings",
+                                     "secondary":  [
+                                                       "Glutes",
+                                                       "Back"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Hamstrings",
+                                        "Glutes",
+                                        "Back"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Step-up_with_Knee_Raise",
+                     "current":  "Step-up with Knee Raise",
+                     "proposed":  "Multiplanar step-up to balance",
+                     "confidence":  "uncertain",
+                     "reason":  "17.4; the book version holds single-leg balance at the top",
+                     "library":  {
+                                     "primary":  "Glutes",
+                                     "secondary":  [
+                                                       "Hamstrings",
+                                                       "Quads"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Glutes",
+                                        "Quads"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Freehand_Jump_Squat",
+                     "current":  "Freehand Jump Squat",
+                     "proposed":  "Squat jump",
+                     "confidence":  "likely",
+                     "reason":  "18.3",
+                     "library":  {
+                                     "primary":  "Quads",
+                                     "secondary":  [
+                                                       "Calves",
+                                                       "Glutes",
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Quads",
+                                        "Glutes"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Split_Jump",
+                     "current":  "Split Jump",
+                     "proposed":  "Lunge jump",
+                     "confidence":  "uncertain",
+                     "reason":  "18.3; \u0027split jump\u0027 is a common synonym",
+                     "library":  {
+                                     "primary":  "Quads",
+                                     "secondary":  [
+                                                       "Calves",
+                                                       "Glutes",
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Quads",
+                                        "Glutes"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Knee_Tuck_Jump",
+                     "current":  "Knee Tuck Jump",
+                     "proposed":  "Tuck jump",
+                     "confidence":  "likely",
+                     "reason":  "18.3; the book gives no muscle group",
+                     "library":  {
+                                     "primary":  "Hamstrings",
+                                     "secondary":  [
+                                                       "Glutes",
+                                                       "Adductors",
+                                                       "Calves"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+
+                                    ],
+                     "muscleCheck":  "not checkable",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Double_Leg_Butt_Kick",
+                     "current":  "Double Leg Butt Kick",
+                     "proposed":  "Butt kick",
+                     "confidence":  "likely",
+                     "reason":  "18.3 two-foot jump bringing heels to glutes",
+                     "library":  {
+                                     "primary":  "Quads",
+                                     "secondary":  [
+                                                       "Glutes",
+                                                       "Adductors",
+                                                       "Calves"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+
+                                    ],
+                     "muscleCheck":  "not checkable",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Front_Box_Jump",
+                     "current":  "Front Box Jump",
+                     "proposed":  "Box jump-up",
+                     "confidence":  "likely",
+                     "reason":  "18.3",
+                     "library":  {
+                                     "primary":  "Hamstrings",
+                                     "secondary":  [
+                                                       "Glutes",
+                                                       "Adductors",
+                                                       "Calves"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+
+                                    ],
+                     "muscleCheck":  "not checkable",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Box_Jump_Multiple_Response",
+                     "current":  "Box Jump (Multiple Response)",
+                     "proposed":  "Repeat box jumps",
+                     "confidence":  "likely",
+                     "reason":  "18.3",
+                     "library":  {
+                                     "primary":  "Hamstrings",
+                                     "secondary":  [
+                                                       "Glutes",
+                                                       "Adductors",
+                                                       "Calves"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+
+                                    ],
+                     "muscleCheck":  "not checkable",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Linear_Depth_Jump",
+                     "current":  "Linear Depth Jump",
+                     "proposed":  "Depth jump",
+                     "confidence":  "likely",
+                     "reason":  "18.3",
+                     "library":  {
+                                     "primary":  "Quads",
+                                     "secondary":  [
+                                                       "Calves",
+                                                       "Glutes",
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+
+                                    ],
+                     "muscleCheck":  "not checkable",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Plyo_Push-up",
+                     "current":  "Plyo Push-up",
+                     "proposed":  "Plyometric push-up",
+                     "confidence":  "exact",
+                     "reason":  "18.3",
+                     "library":  {
+                                     "primary":  "Chest",
+                                     "secondary":  [
+                                                       "Shoulders",
+                                                       "Triceps"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Chest"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Lateral_Bound",
+                     "current":  "Lateral Bound",
+                     "proposed":  "Ice skaters (skater jumps)",
+                     "confidence":  "uncertain",
+                     "reason":  "18.3 side-to-side hops; the library name is generic",
+                     "library":  {
+                                     "primary":  "Adductors",
+                                     "secondary":  [
+                                                       "Glutes",
+                                                       "Calves",
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Adductors",
+                                        "Glutes"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Pushups",
+                     "current":  "Pushups",
+                     "proposed":  "Push-up",
+                     "confidence":  "exact",
+                     "reason":  "20.8",
+                     "library":  {
+                                     "primary":  "Chest",
+                                     "secondary":  [
+                                                       "Shoulders",
+                                                       "Triceps"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Chest"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Standing_Cable_Chest_Press",
+                     "current":  "Standing Cable Chest Press",
+                     "proposed":  "Standing cable chest press",
+                     "confidence":  "exact",
+                     "reason":  "20.8",
+                     "library":  {
+                                     "primary":  "Chest",
+                                     "secondary":  [
+                                                       "Shoulders",
+                                                       "Triceps"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Chest"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Dumbbell_Bench_Press",
+                     "current":  "Dumbbell Bench Press",
+                     "proposed":  "Flat dumbbell chest press",
+                     "confidence":  "likely",
+                     "reason":  "20.8",
+                     "library":  {
+                                     "primary":  "Chest",
+                                     "secondary":  [
+                                                       "Shoulders",
+                                                       "Triceps"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Chest"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Barbell_Bench_Press_-_Medium_Grip",
+                     "current":  "Barbell Bench Press - Medium Grip",
+                     "proposed":  "Barbell bench press",
+                     "confidence":  "likely",
+                     "reason":  "20.8; also breaks the naming rule (grip is a variant)",
+                     "library":  {
+                                     "primary":  "Chest",
+                                     "secondary":  [
+                                                       "Shoulders",
+                                                       "Triceps"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Chest"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true,
+                     "variantRule":  "name carries a variant after \u0027 - \u0027 — move it to a variant field"
+                 },
+                 {
+                     "id":  "Seated_Cable_Rows",
+                     "current":  "Seated Cable Rows",
+                     "proposed":  "Seated cable row",
+                     "confidence":  "exact",
+                     "reason":  "20.9",
+                     "library":  {
+                                     "primary":  "Back",
+                                     "secondary":  [
+                                                       "Biceps",
+                                                       "Shoulders"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Back"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Wide-Grip_Lat_Pulldown",
+                     "current":  "Wide-Grip Lat Pulldown",
+                     "proposed":  "Seated lat pulldown",
+                     "confidence":  "likely",
+                     "reason":  "20.9; the book does not specify grip — in front of the face",
+                     "library":  {
+                                     "primary":  "Back",
+                                     "secondary":  [
+                                                       "Biceps",
+                                                       "Shoulders"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Back"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "External_Rotation_with_Band",
+                     "current":  "External Rotation with Band",
+                     "proposed":  "Tubing external rotation",
+                     "confidence":  "likely",
+                     "reason":  "20.10 infraspinatus and teres minor (rotator cuff → Shoulders)",
+                     "library":  {
+                                     "primary":  "Shoulders",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Shoulders"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Internal_Rotation_with_Band",
+                     "current":  "Internal Rotation with Band",
+                     "proposed":  "Tubing internal rotation",
+                     "confidence":  "likely",
+                     "reason":  "20.10 subscapularis",
+                     "library":  {
+                                     "primary":  "Shoulders",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Shoulders"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Dumbbell_Scaption",
+                     "current":  "Dumbbell Scaption",
+                     "proposed":  "Single-leg dumbbell scaption",
+                     "confidence":  "likely",
+                     "reason":  "20.10; the book version is single-leg (regress to two legs)",
+                     "library":  {
+                                     "primary":  "Shoulders",
+                                     "secondary":  [
+                                                       "Back"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Shoulders"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Standing_Dumbbell_Press",
+                     "current":  "Standing Dumbbell Press",
+                     "proposed":  "Standing dumbbell shoulder press",
+                     "confidence":  "likely",
+                     "reason":  "20.10",
+                     "library":  {
+                                     "primary":  "Shoulders",
+                                     "secondary":  [
+                                                       "Triceps"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Shoulders"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Seated_Dumbbell_Press",
+                     "current":  "Seated Dumbbell Press",
+                     "proposed":  "Seated dumbbell shoulder press",
+                     "confidence":  "likely",
+                     "reason":  "20.10",
+                     "library":  {
+                                     "primary":  "Shoulders",
+                                     "secondary":  [
+                                                       "Triceps"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Shoulders"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Side_Lateral_Raise",
+                     "current":  "Side Lateral Raise",
+                     "proposed":  "Standing dumbbell lateral raise",
+                     "confidence":  "likely",
+                     "reason":  "20.10 middle deltoid",
+                     "library":  {
+                                     "primary":  "Shoulders",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Shoulders"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Dumbbell_Squat",
+                     "current":  "Dumbbell Squat",
+                     "proposed":  "Dumbbell squat",
+                     "confidence":  "exact",
+                     "reason":  "20.13",
+                     "library":  {
+                                     "primary":  "Quads",
+                                     "secondary":  [
+                                                       "Calves",
+                                                       "Glutes",
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Quads"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Leg_Press",
+                     "current":  "Leg Press",
+                     "proposed":  "Leg press",
+                     "confidence":  "exact",
+                     "reason":  "20.13",
+                     "library":  {
+                                     "primary":  "Quads",
+                                     "secondary":  [
+                                                       "Calves",
+                                                       "Glutes",
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Quads"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Barbell_Squat",
+                     "current":  "Barbell Squat",
+                     "proposed":  "Barbell squat",
+                     "confidence":  "exact",
+                     "reason":  "20.13",
+                     "library":  {
+                                     "primary":  "Quads",
+                                     "secondary":  [
+                                                       "Calves",
+                                                       "Glutes",
+                                                       "Hamstrings"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Quads"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Barbell_Deadlift",
+                     "current":  "Barbell Deadlift",
+                     "proposed":  "Deadlift",
+                     "confidence":  "likely",
+                     "reason":  "20.13 (book groups it with legs; hinge muscles)",
+                     "library":  {
+                                     "primary":  "Back",
+                                     "secondary":  [
+                                                       "Calves",
+                                                       "Forearms",
+                                                       "Glutes"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Hamstrings",
+                                        "Glutes",
+                                        "Back"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Standing_Calf_Raises",
+                     "current":  "Standing Calf Raises",
+                     "proposed":  "Calf raise",
+                     "confidence":  "likely",
+                     "reason":  "20.13",
+                     "library":  {
+                                     "primary":  "Calves",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Calves"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  true
+                 },
+                 {
+                     "id":  "Romanian_Deadlift",
+                     "current":  "Romanian Deadlift",
+                     "proposed":  "Romanian deadlift",
+                     "confidence":  "exact",
+                     "reason":  "21.3 hinge pattern",
+                     "library":  {
+                                     "primary":  "Hamstrings",
+                                     "secondary":  [
+                                                       "Calves",
+                                                       "Glutes",
+                                                       "Back"
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Hamstrings",
+                                        "Glutes",
+                                        "Back"
+                                    ],
+                     "muscleCheck":  "pass",
+                     "review":  false
+                 },
+                 {
+                     "id":  "Cable_Hip_Adduction",
+                     "current":  "Cable Hip Adduction",
+                     "proposed":  "Hip adduction (cable)",
+                     "confidence":  "likely",
+                     "reason":  "7.5 adductors; the library tags it Quads — see validation",
+                     "library":  {
+                                     "primary":  "Quads",
+                                     "secondary":  [
+
+                                                   ]
+                                 },
+                     "bookGroups":  [
+                                        "Adductors"
+                                    ],
+                     "muscleCheck":  "FLAG",
+                     "review":  true
+                 }
+             ],
+    "validation":  [
+                       {
+                           "id":  "Cable_Hip_Adduction",
+                           "problem":  "book group(s) Adductors not in library tags Quads"
+                       }
+                   ],
+    "namingRule":  [
+                       {
+                           "id":  "Back_Flyes_-_With_Bands",
+                           "current":  "Back Flyes - With Bands",
+                           "base":  "Back Flyes",
+                           "variant":  "With Bands"
+                       },
+                       {
+                           "id":  "Barbell_Ab_Rollout_-_On_Knees",
+                           "current":  "Barbell Ab Rollout - On Knees",
+                           "base":  "Barbell Ab Rollout",
+                           "variant":  "On Knees"
+                       },
+                       {
+                           "id":  "Barbell_Bench_Press_-_Medium_Grip",
+                           "current":  "Barbell Bench Press - Medium Grip",
+                           "base":  "Barbell Bench Press",
+                           "variant":  "Medium Grip"
+                       },
+                       {
+                           "id":  "Barbell_Incline_Bench_Press_-_Medium_Grip",
+                           "current":  "Barbell Incline Bench Press - Medium Grip",
+                           "base":  "Barbell Incline Bench Press",
+                           "variant":  "Medium Grip"
+                       },
+                       {
+                           "id":  "Bench_Press_-_Powerlifting",
+                           "current":  "Bench Press - Powerlifting",
+                           "base":  "Bench Press",
+                           "variant":  "Powerlifting"
+                       },
+                       {
+                           "id":  "Bench_Press_-_With_Bands",
+                           "current":  "Bench Press - With Bands",
+                           "base":  "Bench Press",
+                           "variant":  "With Bands"
+                       },
+                       {
+                           "id":  "Cable_Hammer_Curls_-_Rope_Attachment",
+                           "current":  "Cable Hammer Curls - Rope Attachment",
+                           "base":  "Cable Hammer Curls",
+                           "variant":  "Rope Attachment"
+                       },
+                       {
+                           "id":  "Calf_Raises_-_With_Bands",
+                           "current":  "Calf Raises - With Bands",
+                           "base":  "Calf Raises",
+                           "variant":  "With Bands"
+                       },
+                       {
+                           "id":  "Cross_Over_-_With_Bands",
+                           "current":  "Cross Over - With Bands",
+                           "base":  "Cross Over",
+                           "variant":  "With Bands"
+                       },
+                       {
+                           "id":  "Crunch_-_Hands_Overhead",
+                           "current":  "Crunch - Hands Overhead",
+                           "base":  "Crunch",
+                           "variant":  "Hands Overhead"
+                       },
+                       {
+                           "id":  "Crunch_-_Legs_On_Exercise_Ball",
+                           "current":  "Crunch - Legs On Exercise Ball",
+                           "base":  "Crunch",
+                           "variant":  "Legs On Exercise Ball"
+                       },
+                       {
+                           "id":  "Dips_-_Chest_Version",
+                           "current":  "Dips - Chest Version",
+                           "base":  "Dips",
+                           "variant":  "Chest Version"
+                       },
+                       {
+                           "id":  "Dips_-_Triceps_Version",
+                           "current":  "Dips - Triceps Version",
+                           "base":  "Dips",
+                           "variant":  "Triceps Version"
+                       },
+                       {
+                           "id":  "Hang_Clean_-_Below_the_Knees",
+                           "current":  "Hang Clean - Below the Knees",
+                           "base":  "Hang Clean",
+                           "variant":  "Below the Knees"
+                       },
+                       {
+                           "id":  "Hang_Snatch_-_Below_Knees",
+                           "current":  "Hang Snatch - Below Knees",
+                           "base":  "Hang Snatch",
+                           "variant":  "Below Knees"
+                       },
+                       {
+                           "id":  "Incline_Dumbbell_Flyes_-_With_A_Twist",
+                           "current":  "Incline Dumbbell Flyes - With A Twist",
+                           "base":  "Incline Dumbbell Flyes",
+                           "variant":  "With A Twist"
+                       },
+                       {
+                           "id":  "Isometric_Neck_Exercise_-_Front_And_Back",
+                           "current":  "Isometric Neck Exercise - Front And Back",
+                           "base":  "Isometric Neck Exercise",
+                           "variant":  "Front And Back"
+                       },
+                       {
+                           "id":  "Isometric_Neck_Exercise_-_Sides",
+                           "current":  "Isometric Neck Exercise - Sides",
+                           "base":  "Isometric Neck Exercise",
+                           "variant":  "Sides"
+                       },
+                       {
+                           "id":  "Lateral_Raise_-_With_Bands",
+                           "current":  "Lateral Raise - With Bands",
+                           "base":  "Lateral Raise",
+                           "variant":  "With Bands"
+                       },
+                       {
+                           "id":  "Oblique_Crunches_-_On_The_Floor",
+                           "current":  "Oblique Crunches - On The Floor",
+                           "base":  "Oblique Crunches",
+                           "variant":  "On The Floor"
+                       },
+                       {
+                           "id":  "Push-Ups_-_Close_Triceps_Position",
+                           "current":  "Push-Ups - Close Triceps Position",
+                           "base":  "Push-Ups",
+                           "variant":  "Close Triceps Position"
+                       },
+                       {
+                           "id":  "Push_Press_-_Behind_the_Neck",
+                           "current":  "Push Press - Behind the Neck",
+                           "base":  "Push Press",
+                           "variant":  "Behind the Neck"
+                       },
+                       {
+                           "id":  "Shoulder_Press_-_With_Bands",
+                           "current":  "Shoulder Press - With Bands",
+                           "base":  "Shoulder Press",
+                           "variant":  "With Bands"
+                       },
+                       {
+                           "id":  "Sled_Drag_-_Harness",
+                           "current":  "Sled Drag - Harness",
+                           "base":  "Sled Drag",
+                           "variant":  "Harness"
+                       },
+                       {
+                           "id":  "Squats_-_With_Bands",
+                           "current":  "Squats - With Bands",
+                           "base":  "Squats",
+                           "variant":  "With Bands"
+                       },
+                       {
+                           "id":  "Triceps_Pushdown_-_Rope_Attachment",
+                           "current":  "Triceps Pushdown - Rope Attachment",
+                           "base":  "Triceps Pushdown",
+                           "variant":  "Rope Attachment"
+                       },
+                       {
+                           "id":  "Triceps_Pushdown_-_V-Bar_Attachment",
+                           "current":  "Triceps Pushdown - V-Bar Attachment",
+                           "base":  "Triceps Pushdown",
+                           "variant":  "V-Bar Attachment"
+                       },
+                       {
+                           "id":  "Upright_Row_-_With_Bands",
+                           "current":  "Upright Row - With Bands",
+                           "base":  "Upright Row",
+                           "variant":  "With Bands"
+                       },
+                       {
+                           "id":  "Weighted_Sit-Ups_-_With_Bands",
+                           "current":  "Weighted Sit-Ups - With Bands",
+                           "base":  "Weighted Sit-Ups",
+                           "variant":  "With Bands"
+                       }
+                   ],
+    "cautions":  [
+                     {
+                         "id":  "Standing_Toe_Touches",
+                         "source":  "14.7",
+                         "note":  "the straight-leg toe touch is a controversial stretch (disc stress; avoid with herniated discs or sciatic-type pain)",
+                         "found":  true
+                     },
+                     {
+                         "id":  "Wide-Grip_Pulldown_Behind_The_Neck",
+                         "source":  "20.9",
+                         "note":  "behind-the-neck pulldowns are not advised (shoulder and neck stress)",
+                         "found":  true
+                     },
+                     {
+                         "id":  "Lower_Back-SMR",
+                         "source":  "14.4",
+                         "note":  "the source says avoid rolling over the lumbar spine",
+                         "found":  true
+                     },
+                     {
+                         "id":  "Neck-SMR",
+                         "source":  "14.4",
+                         "note":  "the source says avoid rolling over the cervical spine",
+                         "found":  true
+                     },
+                     {
+                         "id":  "Hammer_Curls",
+                         "source":  "7.3",
+                         "note":  "hammer grip emphasises the brachioradialis — consider Forearms as a secondary",
+                         "found":  true
+                     },
+                     {
+                         "id":  "Hyperextensions_Back_Extensions",
+                         "source":  "7.4",
+                         "note":  "pattern is \u0027Elbow extension\u0027; a back extension is hip and spine extension",
+                         "found":  true
+                     }
+                 ]
+}

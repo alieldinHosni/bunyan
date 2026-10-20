@@ -6,3 +6,6 @@ tools/opl-source/
 
 # Python byte-code from running the tools
 __pycache__/
+
+# Copyrighted reference textbooks. Never commit or publish these.
+source/
