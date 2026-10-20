@@ -1810,5 +1810,5 @@ Recomposition and Get stronger keep a capped share of maintenance (the book give
 - Knowledge session: `docs/FORMULA-RECONCILIATION.md` rows 2–4, 7 and 13 are now adopted (above). `nutrition-principles.js` `GOAL_STRATEGIES`: "lose" is now TDEE − 500 (the old note is right again); "gain" is TDEE + 350, not + 250.
 - Request 1 (`tests/coach.mjs` names) is still open: `context`, `reconcile` and `targets` pass when run directly (79 tests, run against these changes).
 
-Tests: engine 388 (new: `js/engine/test/retarget.test.js`, body tests for no weight and the floor), coach 156, architecture (153 modules, `retarget.js` pure and precached), browser suite — see the commit. CACHE bunyan-v135.
+Tests: engine 388 (new: `js/engine/test/retarget.test.js`, body tests for no weight and the floor), coach 156, architecture (153 modules, `retarget.js` pure and precached), browser suite 198/198 (six new: no weight on Targets and the weigh-in, the You sheet, the chat, the floor at BMR, the rebuild with Undo, kept targets). CACHE bunyan-v135.
 
