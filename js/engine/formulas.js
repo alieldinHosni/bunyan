@@ -11,8 +11,8 @@ import {blockNow, plannedLight} from "./blocks.js";
 import {avgRPE, bestE1RMIn, bodyAtIn, bwShare, consistencyIn, daysSinceIn, deloadDueIn, deloadSets, e1RM, incrementOf,
         loadIn, plateauIn, prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, recordsOfEntry, repsAtIn,
         sessionVolumeIn, snapDown, volumeIn, weeklySetsIn} from "./lifts.js";
-import {avg7Of, bmrOf, lastWeightOf, macroTargetsOf, proteinFor, sessionKcalOf, targetKcalOf, tdeeFormulaOf,
-        tdeeOf} from "./body.js";
+import {avg7Of, bmrOf, kcalFloorOf, lastWeightOf, macroTargetsOf, missingOf, proteinFor, sessionKcalOf, targetKcalOf,
+        tdeeFormulaOf, tdeeOf} from "./body.js";
 
 /* ============================================================ formulas */
 /* The lifts' maths lives in lifts.js, which is handed the log it works from (the
@@ -28,6 +28,11 @@ function macroKcal(p,c,f){return Math.round(num(p)*4+num(c)*4+num(f)*9);}
 /* The body's maths lives in body.js, which is handed what it needs; these pass in
    this profile's state, so the screens and the coach keep calling them as before. */
 function bmr(){return bmrOf(S.profile,S.body);}
+/* What the energy maths still needs ("no_profile", "no_weight" or ""), and the lowest
+   target anything automated may set (BMR). Without a weight these are what the screens
+   go by: there is no default weight to fall back on. */
+function energyMissing(){return missingOf(S.profile,S.body);}
+function kcalFloor(){return kcalFloorOf(S.profile,S.body);}
 function tdeeFormula(){return tdeeFormulaOf(S.profile,S.body);}
 /* Maintenance in use: what the log measured, once the person chose to build their
    targets on it (S.energy, set from js/engine/energy.js); otherwise the formula. */
@@ -119,4 +124,4 @@ function addItems(meal,items,d){
 
 
 
-export {bmr, bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, tdeeFormula, volume, weeklySets, macroTargets};
+export {bmr, energyMissing, kcalFloor, bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, tdeeFormula, volume, weeklySets, macroTargets};

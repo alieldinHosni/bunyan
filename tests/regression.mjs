@@ -1476,12 +1476,70 @@ await test("Goals: one list drives the targets — deficit, surplus and protein 
     const out={};
     for(const g of ["lose","recomp","gain","strength","endurance","mobility","maintain"]){
       S.profile.goal=g;const m=F.macroTargets(),td=F.tdee();
-      out[g]=[Math.round((m.kcal-td)/td*100),Math.round(m.p/84*10)/10,Math.abs(m.p*4+m.c*4+m.f*9-m.kcal)<=30];}
+      out[g]=[m.kcal-td,Math.round((m.kcal-td)/td*100),Math.round(m.p/84*10)/10,Math.abs(m.p*4+m.c*4+m.f*9-m.kcal)<=30];}
     return out;});
-  eq(r.lose[0],-20,"lose");eq(r.recomp[0]<0&&r.recomp[0]>-15,true,"recomp");eq(r.gain[0]>0&&r.gain[0]<=11,true,"gain");eq(r.maintain[0],0,"maintain");
-  eq([r.lose[1],r.recomp[1],r.gain[1],r.endurance[1]],[2,2.2,1.8,1.6],"protein g/kg");
-  eq(Object.values(r).every(x=>x[2]),true,"macros add up to the energy");
+  /* The textbook's fixed 500 under and 350 over (to the nearest 10 kcal); recomposition,
+     which it does not cover, a share of maintenance. */
+  eq(Math.abs(r.lose[0]+500)<=10,true,"lose: 500 under");eq(Math.abs(r.gain[0]-350)<=10,true,"gain: 350 over");
+  eq(r.recomp[1]<0&&r.recomp[1]>-15,true,"recomp");eq(r.maintain[1],0,"maintain");
+  eq([r.lose[2],r.recomp[2],r.gain[2],r.endurance[2]],[2.4,2.2,1.8,1.6],"protein g/kg");
+  eq(Object.values(r).every(x=>x[3]),true,"macros add up to the energy");
 },{db:Object.assign(seed(),{body:[]})});
+/* ---- no weight is never a default weight (owner, 20 Oct: the 86 kg fallback) ---------- */
+function noWeight(){const d=seed();d.profile.weight=null;d.body=[];return d;}
+await test("No weight: nothing is worked out, Targets asks for one, and the weigh-in saves only what is typed",async page=>{
+  eq(await page.evaluate(async()=>{const F=await import("/js/engine/formulas.js");return [F.bmr(),F.tdee(),F.targetKcal(),F.macroTargets(),F.energyMissing()];}),
+    [null,null,null,null,"no_weight"],"no BMR, maintenance, target or macros, and it says why");
+  await coach(page,"food","targets");
+  if(await page.$('[data-usesug]'))throw new Error("a suggestion offered with no weight");
+  await page.tap('.tgneed [data-sheet="weigh"]');await pause(page);
+  eq(await page.$eval('#in_bw',e=>e.value),"","the weigh-in starts empty, not at someone else's weight");
+  await page.tap('[data-stp="bw"][data-d="0.1"]');await pause(page,200);
+  eq(await ev(page,"V.draft.bw==null"),true,"+ has nothing to step from");
+  await page.tap('[data-saveweight]');await pause(page);
+  eq(await ev(page,"[S.body.length,V.sheet]"),[0,"weigh"],"nothing typed: nothing saved, the sheet stays");
+  await page.fill('#in_bw','72');await page.tap('[data-saveweight]');await pause(page);
+  eq(await ev(page,"S.body.map(b=>b.weight)"),[72],"what was typed is saved");
+  if(!(await page.$('[data-usesug]'))&&!(await page.$('.tgsug')))throw new Error("no suggestion once there is a weight");
+},{db:noWeight()});
+await test("No weight: the You sheet shows none and saves none",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_you");});await pause(page);
+  eq(await page.$eval('#p_weight',e=>e.value),"","the weight field is empty");
+  await page.fill('#p_age','40');await page.tap('[data-saveyou]');await pause(page);
+  eq(await ev(page,"[S.profile.age,S.profile.weight>0]"),[40,false],"age saved, no weight invented");
+},{db:noWeight()});
+await test("No weight: the coach chat asks for one instead of working out calories",async page=>{
+  const r=await page.evaluate(async()=>{const C=await import("/js/ui/views/chat.js");const S=(await import("/js/state.js")).S;
+    const out={};for(const id of ["calories","protein","goal"]){C.ask("",id);out[id]=JSON.stringify(S.chat[S.chat.length-1]);}return out;});
+  for(const id of ["calories","protein"]){
+    if(!/your weight/i.test(r[id]))throw new Error(id+": no ask for the weight: "+r[id].slice(0,300));
+    if(!/"data-sheet":"weigh"/.test(r[id]))throw new Error(id+": no way to log it");}
+  for(const id in r)if(/NaN|null|undefined/.test(r[id]))throw new Error(id+": a figure without a weight: "+r[id].slice(0,300));
+},{db:noWeight()});
+await test("One floor: the coach's step down stops at BMR",async page=>{
+  const bmr=await page.evaluate(async()=>(await import("/js/engine/formulas.js")).bmr());
+  eq(bmr,1820,"84 kg, 180 cm, 30, man");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.goals.kcal=1870;
+    document.body.insertAdjacentHTML("beforeend",'<button id="tkstep" data-chatkcal="-150" style="position:fixed;top:0;left:0;z-index:99999">x</button>');});
+  await page.tap('#tkstep');await pause(page);
+  eq(await ev(page,"S.goals.kcal"),1820,"1,870 − 150 would be 1,720: held at BMR");
+});
+/* Version 1's targets for this profile at 84 kg, losing fat: a fifth under, 2.0 g/kg. */
+function v1Lose(){const d=seed();d.profile.goal="lose";d.goals={kcal:2040,p:168,c:200,f:63,water:3000,steps:9000};return d;}
+await test("Formula change: targets the old formula made are rebuilt once on the textbook's values, with Undo",async page=>{
+  await pause(page,900);
+  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.goals.f,S.goals.c,S.formulaV]"),[2050,202,64,167,2],"500 under, 2.4 g/kg");
+  if(!(await page.$('.toast-undo')))throw new Error("the change was not said");
+  await page.tap('.toast-undo');await pause(page);
+  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.formulaV]"),[2040,168,2],"Undo puts the old ones back, and it does not run again");
+  await page.reload();await pause(page,2400);
+  eq(await ev(page,"[S.goals.kcal,S.goals.p]"),[2040,168],"after a reload: still the person's choice");
+},{db:v1Lose()});
+await test("Formula change: targets the person set are kept",async page=>{
+  await pause(page,900);
+  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.formulaV]"),[2500,150,2],"kept, and marked done");
+  if(await page.$('.toast-undo'))throw new Error("a change was announced that did not happen");
+});
 await test("Workout generator: kit and sore spots swapped, volume in range, effort set, goal extras, time kept",async page=>{
   const r=await page.evaluate(async()=>{
     const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));

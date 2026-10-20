@@ -34,6 +34,9 @@
    @property {Deload}   deload         the lighter week, started or put off
    @property {Block=}   block          where the current training block began (js/engine/blocks.js)
    @property {Energy=}  energy         maintenance measured from the log, once chosen
+   @property {number=}  formulaV       the formula version the stored targets are on
+                                       (js/engine/retarget.js); missing means 1. Not in
+                                       DEF, or normalize would mark old blobs as current
    @property {Slot[]=}  mealSlots      the day's meals, when not the usual four
    @property {Object[]=} chat          the coach chat's kept conversation
    @property {number}   lastBackup     ms since 1970, 0 for never
@@ -158,6 +161,9 @@ function normalize(o){
   /* Maintenance measured from the log and chosen as the base for the targets
      (js/engine/energy.js): a plausible number of kcal, or nothing. */
   if(o.energy!=null&&!(o.energy&&typeof o.energy==="object"&&+o.energy.kcal>=1000&&+o.energy.kcal<=6000))delete o.energy;
+  /* The formula version the targets were built on (js/engine/retarget.js): a whole
+     number, or nothing, which reads as version 1. */
+  if(o.formulaV!=null&&!(typeof o.formulaV==="number"&&o.formulaV>=1&&o.formulaV%1===0))delete o.formulaV;
   /* The coach chat's kept conversation (js/ui/views/chat.js): a list, or nothing. */
   if(o.chat!=null&&!Array.isArray(o.chat))delete o.chat;
   /* Where the training block began (js/engine/blocks.js): a date, or nothing. */

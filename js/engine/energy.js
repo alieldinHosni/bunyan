@@ -35,6 +35,7 @@ function learnedDiffers(){
   var L=learnedNow();
   if(L.kind!=="ok"||L.share<0.5)return null;
   var use=maintenanceInUse();
+  if(!(use.kcal>0))return null;
   if(Math.abs(L.kcal-use.kcal)<Math.max(150,use.kcal*0.06))return null;
   return {learned:L,use:use};}
 
