@@ -7,6 +7,10 @@ function weekly(points){
   return points.map(function(p,i){return mk(addDays(TODAY,-7*(points.length-1-i)),[["Squat",[[p[0],p[1]]]]]);});}
 
 function run(t){
+  /* Cardio has no sets: no estimate, no crash. */
+  var run1=e1rmTrend([mk(TODAY,[["Running",[]]]),mk(addDays(TODAY,-7),[["Running",[[0,0]]]])],"Running",INFO,{today:TODAY});
+  t.eq(run1.direction,"insufficient","cardio with no sets: insufficient");
+  t.clean(run1,"cardio with no sets: no NaN or undefined");
   var empty=e1rmTrend([],"Squat",INFO,{today:TODAY});
   t.eq(empty.direction,"insufficient","empty log: insufficient");
   t.clean(empty,"empty log: no NaN or undefined");

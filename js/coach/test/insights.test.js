@@ -4,6 +4,9 @@ import {addDays, INFO, mk} from "./assert.js";
 var TODAY="2026-10-07";
 
 function run(t){
+  /* A log of cardio only, no sets anywhere: nothing to say, no crash. */
+  var cardio=[0,3,7,10,14,17].map(function(d){return mk(addDays(TODAY,-d),[["Running",[]]]);});
+  t.eq(insights(cardio,INFO,{today:TODAY}),[],"cardio only: nothing to say");
   t.eq(insights([],INFO,{today:TODAY}),[],"empty log: nothing to say");
   t.eq(insights([mk(TODAY,[["Bench",[[80,8,9]]]])],INFO,{today:TODAY}),[],"one session: nothing to say");
 

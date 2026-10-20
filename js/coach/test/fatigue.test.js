@@ -4,6 +4,10 @@ import {addDays, INFO, mk} from "./assert.js";
 var TODAY="2026-10-07";
 
 function run(t){
+  /* Cardio has no sets: nothing to match, no crash. */
+  var cardio=[0,7,14].map(function(d){return mk(addDays(TODAY,-d),[["Running",[]]]);});
+  t.eq(fatigued(cardio,INFO,{today:TODAY}),[],"cardio with no sets: nothing fatigued");
+  t.clean(fatigueTrend(cardio,"Running",INFO,{today:TODAY}),"cardio with no sets: no NaN or undefined");
   var empty=fatigueTrend([],"Bench",INFO,{today:TODAY});
   t.eq(empty.status,"insufficient","empty log: insufficient");
   t.clean(empty,"empty log: no NaN or undefined");

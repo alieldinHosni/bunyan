@@ -2,7 +2,8 @@
    Reads every module's imports and fails when one crosses a line it shouldn't. Each rule
    is a bug that already happened here, or a door it would open:
 
-     coach   js/coach/           pure coaching: imports only itself; no DOM, storage or network
+     coach   js/coach/           pure coaching: imports only itself and the pure body maths
+                                 (js/engine/body.js); no DOM, storage or network
      core    util, db, photostore, scan, state, units, schema (what S holds: pure, imports nothing)
      data    js/data/            the libraries: imports only data and util
      i18n    js/i18n/            words: data, state and util at most
@@ -50,7 +51,7 @@ function layer(f){
 
 /* Who may import whom. A layer not listed for an importer is a violation. */
 const MAY = {
-  coach:  ["coach"],
+  coach:  ["coach", "engine:body"],
   knowledge: [],
   data:   ["data", "core:util"],
   i18n:   ["i18n", "data", "core", "knowledge"],
