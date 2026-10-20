@@ -119,10 +119,10 @@ works and was built to the honesty rules.
 
 ## 7. Captures, and what they showed
 
-`docs/design/current/`: `chat-card.png` (the composer on Coach AI), `chat-empty.png`,
-`chat-answer.png` ("how much should I lift on bench"), `chat-long-answer.png` ("why are my
-calories set like this"), `chat-command.png`. Headless Chromium at 390 × 844, the
-regression suite's seed profile, Blue dark, English.
+Captures not retained. Five were taken (the composer on Coach AI; the empty state; the
+answer to "how much should I lift on bench"; the answer to "why are my calories set like
+this"; a command) in headless Chromium at 390 × 844, with the regression suite's seed
+profile, Blue dark, English. They were not kept in the repo; what they showed is below.
 
 - **A command is answered as something else, wrongly.** "add tricep extention machine to
   push day" came back as **Food facts: White Rice, Cooked, 205 kcal per cup**. No intent

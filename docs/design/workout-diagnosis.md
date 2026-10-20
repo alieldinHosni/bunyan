@@ -6,9 +6,9 @@ regression suite's seed profile: Blue dark, English, kg, RPE on the last set, au
 Source: `vLogger()` and `vRest()` in `js/ui/views/session.js`, handlers in
 `js/ui/handlers/session.js`, actions in `js/ui/workout.js`.
 
-Captures in `current/`: `workout-first-set.png` (the screen as it opens),
-`workout-mid-exercise-full.png` (the whole page after set 1, with the rest hidden),
-`rest.png`, `rest-complete.png`.
+Captures not retained. Four were taken (the screen as it opens; the whole page after
+set 1, with the rest hidden; the rest; rest complete) but were not kept in the repo. The
+findings below are written out in full and do not depend on them.
 
 No design yet. This is for approval before any redesign.
 
@@ -30,7 +30,7 @@ pieces of text.**
 | Tools | 1,107 | 64 | Replace · Remove · Skip · Add |
 | Pain | 1,179 | 48 | "Something hurts?" |
 
-**Before the first set** (`workout-first-set.png`) three more blocks sit above the table:
+**Before the first set** (the screen as it opens) three more blocks sit above the table:
 "How do you feel today?" (5 chips + Skip), a three-line recommendation banner, and day
 notes or a pain note when they apply. The active row starts below the bottom of the
 screen; only the top of its ✓ shows.
