@@ -1729,3 +1729,12 @@ The owner asked for two more surfaces, and both follow the same rules:
 - A real export with several weeks of data: checked against the owner's own coach program and log, which stay on the build machine and are not committed. The insights were ones a coach would say; the stale-card bugs found this way are fixed.
 - A one-session log says "not enough yet" everywhere and invents no trend. *Test: "Phase 4: one session and one weigh-in…"*
 - Fully offline: the installed app opens with the network off, every tab works, food search works and the coach chat answers. *Test: "Offline: with the network off…"* Every module the app loads is in the service worker's precache.
+
+## Coaching engine session (js/coach/, branch claude/happy-davinci-vydujg)
+
+- 20 Oct — **SESSION-RULES.md created** (owner-approved one-off exception to folder ownership): the ownership table from SESSION-PLAN.md, copied, nothing more. Note: the table has no row for a coaching session; js/coach/ ownership is per the owner's instruction to this session.
+- 20 Oct — **Audit before code.** Phase 2 (2.1–2.6) already exists in js/coach/ and passes `node tests/coach.mjs` (147). Owner: extend, do not rebuild; js/engine/ return shapes unchanged.
+  - js/knowledge/ has **no strength-ratio norms** (searched every file; assessments.js bench/squat strength tests carry no norms). weakpoints.js's RATIOS are unsourced → to return "no reference data" (owner decision).
+  - js/knowledge/ has **no MEV/MAV/MRV**. BY_ADAPTATION is sets per exercise per session, a different measure, not a second landmark source.
+  - **Open, for the app/engine session:** `js/engine/body.js` `bmrOf` falls back to a hardcoded 86 kg when the profile has no weight and there are no weigh-ins (`num(p.weight,86)`). CLAUDE.md: body weight comes from the profile, never hardcoded. Not changed here.
+  - **Open, layer rule:** `tests/architecture.mjs` allows js/coach/ to import only js/coach/; js/engine/ imports js/coach/ (lifts.js uses coach/util.js `e1rm`, the one Epley implementation). Awaiting owner decision on how 2.7A gets BMR/targets.
