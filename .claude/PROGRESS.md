@@ -1783,3 +1783,9 @@ Details and sources in `docs/FORMULA-RECONCILIATION.md`. Each is in `js/data/goa
 - Design session's files committed from its two published prototypes (workout screen, Ask panel): `design/workout.html`, `design/chat.html`, `design/tokens.css`, and `docs/design/` workout-spec, chat-spec, token-requests, workout-diagnosis, palette-comparison, coachchat-current, arabic-names-audit. Copied byte for byte; the copies shared by both pages were identical.
 - **Not recovered:** the captures in `docs/design/current/` (PNGs the diagnosis and CoachChat notes cite) and the Design session's own PROGRESS entries (the main → design system colour re-sync task, the proposed Arabic rope-pushdown name). Neither page published them; they exist only on that session's local branch.
 - No change to `js/`, `css/` or `index.html`.
+
+## Workout implementation (6b) — branch session/workout-impl
+
+Owner's brief, 20 Oct: build docs/design/workout-spec.md into the app, workout screen only (not the Ask panel). Note: SESSION-RULES.md has no 6b row; this session edits `js/ui/` (Stabilise's) and `index.html` per the owner's instruction for this task.
+
+- 21 Oct — **Tokens** (token-requests.md §2–§4, approved 20 Oct): `--onDanger` (#FFFFFF, all six themes); `--color-action-fill` / `--color-action-edge` (Red: accent-deep, with a 1.5px Machine Red edge in Red dark; Blue and Sage: accent); `--color-danger-action-fill` (danger-deep). Applied to the primary `.btn`, the confirm sheet's primary, the destructive confirm (now danger-deep + onDanger, no `#fff`), and the Red dock pill (accent-deep). Other accent-gradient fills with labels elsewhere in the app (`.btn.fadd`, `.thero2 .btn`, `.pill.a`, `.tnext`, day chips…) are **not** changed: outside the workout screen. Listed for a follow-up.

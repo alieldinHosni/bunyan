@@ -141,7 +141,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accentHi:var(--sky-blue); --onAccent:var(--night-navy); --accent-deep:var(--steel-blue);
   --accentSoft:rgba(138,176,236,.13); --secondary:#D4D9E2; --figure:#E6ECF7; --ok:var(--signal-green);
   --okSoft:#14301A; --onOk:var(--night-navy); --gold:#F0C658; --warning:#FFB561;
-  --danger:#FF6B70; --danger-fill:#E5323E; --danger-deep:#B3131B;
+  --danger:#FF6B70; --danger-fill:#E5323E; --danger-deep:#B3131B; --onDanger:#FFFFFF;
   --glow:rgba(92,127,181,.28);
   --glow-rgb:92,127,181; --mac-p:#5E8FE8; --mac-c:#21A68A; --mac-f:#D27C2C;
   --glass:rgba(18,26,48,.78); --glass-solid:rgba(18,26,48,.96); --hair:rgba(212,217,226,.09);
@@ -164,7 +164,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --onAccent:#FFFFFF; --accent-deep:#2C5390; --accentSoft:#DCE7F8;
   --secondary:#0B1226; --figure:#0B1226; --ok:#177530; --okSoft:#DDF2E5;
   --onOk:#FFFFFF; --gold:#7A6213; --warning:#8A5600; --danger:#C41E2A; --danger-fill:#E5323E;
-  --danger-deep:#B3131B;
+  --danger-deep:#B3131B; --onDanger:#FFFFFF;
   --glow:rgba(92,127,181,.22); --glow-rgb:92,127,181;
   --mac-p:#2F5A96; --mac-c:#14936B; --mac-f:#B8641E; --glass:rgba(18,26,48,.88);
   --glass-solid:rgba(18,26,48,.97); --hair:rgba(11,18,38,.10); --hair-hi:rgba(255,255,255,.16);
@@ -188,7 +188,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accentHi:var(--machine-red); --onAccent:var(--glacier-blue); --accent-deep:#A80E19;
   --accentSoft:rgba(255,46,58,.13); --secondary:var(--glacier-blue); --figure:var(--glacier-blue);
   --ok:#22A34B; --okSoft:#0E2415; --onOk:#0D0709; --gold:#D9B13A; --warning:#E8A33A;
-  --danger:var(--machine-red); --danger-fill:var(--machine-red); --danger-deep:#A80E19;
+  --danger:var(--machine-red); --danger-fill:var(--machine-red); --danger-deep:#A80E19; --onDanger:#FFFFFF;
   --glow:rgba(255,46,58,.22); --glow-rgb:255,46,58; --mac-p:var(--machine-red); --mac-c:#22A6B3;
   --mac-f:#7F78F2; --glass:rgba(30,12,17,.74); --glass-solid:rgba(30,12,17,.96);
   --hair:rgba(255,226,230,.08); --hair-hi:rgba(255,226,230,.15); --seg-track:rgba(255,226,230,.05);
@@ -209,7 +209,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --sub:#334750; --dim:#465B65; --faint:#465B65; --accent:var(--machine-red); --accentHi:#C30F1C;
   --onAccent:var(--glacier-blue); --accent-deep:#A80E19; --accentSoft:#FFE3E5; --secondary:#0A0B0E;
   --figure:#0A0B0E; --ok:#177530; --okSoft:#DDF2E5; --onOk:#FFFFFF; --gold:#7A6213;
-  --warning:#8A5600; --danger:#C30F1C; --danger-fill:var(--machine-red); --danger-deep:#A80E19;
+  --warning:#8A5600; --danger:#C30F1C; --danger-fill:var(--machine-red); --danger-deep:#A80E19; --onDanger:#FFFFFF;
   --glow:transparent;
   --glow-rgb:255,46,58; --mac-p:#D41E2A; --mac-c:#009AA6; --mac-f:#6D5FE6;
   --glass:rgba(10,11,14,.86); --glass-solid:rgba(10,11,14,.97); --hair:rgba(10,40,60,.10);
@@ -233,7 +233,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accent-deep:#B3C8C3; --accentSoft:rgba(220,231,228,.10); --secondary:#FFFFFF;
   --figure:#FFFFFF; --ok:#5DBB8A; --okSoft:#10261B; --onOk:#0D1A1B;
   --gold:#E3C26B; --warning:#E3B04B; --danger:#FF5C61; --danger-fill:#E5323E;
-  --danger-deep:#B3131B;
+  --danger-deep:#B3131B; --onDanger:#FFFFFF;
   --glow:rgba(120,155,150,.22); --glow-rgb:120,155,150; --mac-p:#DCE7E4;
   --mac-c:#5FAFA5; --mac-f:#D6A35A; --glass:rgba(16,30,32,.74); --glass-solid:rgba(16,30,32,.96);
   --hair:rgba(220,235,232,.09); --hair-hi:rgba(220,235,232,.16); --seg-track:rgba(220,235,232,.05);
@@ -258,7 +258,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accent-deep:#0A1F23; --accentSoft:rgba(20,46,51,.10); --secondary:#142E33;
   --figure:#142E33; --ok:#1D7448; --okSoft:#D7ECDF; --onOk:#FFFFFF;
   --gold:#7A6213; --warning:#8A5600; --danger:#B8222D; --danger-fill:#E5323E;
-  --danger-deep:#B3131B;
+  --danger-deep:#B3131B; --onDanger:#FFFFFF;
   --glow:transparent; --glow-rgb:20,46,51;
   --mac-p:#142E33; --mac-c:#3F8E86; --mac-f:#B8732A; --glass:rgba(20,40,43,.84);
   --glass-solid:rgba(20,40,43,.97); --hair:rgba(19,38,39,.12); --hair-hi:rgba(255,255,255,.50);
@@ -305,7 +305,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
 [data-palette="red"],[data-palette="red"] [data-theme="dark"]:not([data-palette]){
   --dock-bar:var(--glass); --dock-bar-solid:var(--glass-solid); --dock-hair:rgba(255,226,230,.14);
   --dock-dot:rgba(255,226,230,.07); --dock-dot-solid:#2A141A; --dock-dot-edge:rgba(255,226,230,.10);
-  --dock-dot-ink:#D9BEC3; --dock-pill:var(--machine-red); --dock-pill-ink:var(--glacier-blue); --dock-flag:var(--machine-red);
+  --dock-dot-ink:#D9BEC3; --dock-pill:var(--accent-deep); --dock-pill-ink:var(--glacier-blue); --dock-flag:var(--machine-red);
   --ground:radial-gradient(115% 55% at 85% -8%,rgba(255,46,58,.34) 0%,transparent 60%),
     radial-gradient(95% 60% at 0% 105%,rgba(150,22,48,.34) 0%,transparent 62%),
     radial-gradient(70% 40% at 0% 38%,rgba(219,246,255,.05) 0%,transparent 70%),
@@ -316,7 +316,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
 [data-palette="red"][data-theme="light"],[data-palette="red"] [data-theme="light"]:not([data-palette]){
   --dock-bar:rgba(30,12,17,.80); --dock-hair:rgba(255,226,230,.16);
   --dock-dot:rgba(219,246,255,.10); --dock-dot-solid:#2A141A; --dock-dot-edge:rgba(219,246,255,.12);
-  --dock-dot-ink:#E3CBD0; --dock-pill:var(--machine-red); --dock-pill-ink:var(--glacier-blue); --dock-flag:#FF5C66;
+  --dock-dot-ink:#E3CBD0; --dock-pill:var(--accent-deep); --dock-pill-ink:var(--glacier-blue); --dock-flag:#FF5C66;
   --ground:radial-gradient(115% 55% at 85% -8%,rgba(255,46,58,.30) 0%,transparent 60%),
     radial-gradient(95% 60% at 0% 105%,rgba(110,190,220,.55) 0%,transparent 62%),
     linear-gradient(180deg,#EEFAFF 0%,#CDE9F4 100%);
@@ -345,6 +345,18 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --card:rgba(224,231,230,.56); --card-edge:rgba(255,255,255,.62);
   --map-water:rgba(120,160,160,.30); --map-park:rgba(120,160,160,.16);
 }
+/* ---- labels never sit on Machine Red (docs/design/token-requests.md §4, owner 20 Oct) --
+   Aliases of existing tokens, no new colours. The fill under a label is accent-deep in
+   Red (Glacier Blue on it is 6.80:1) and keeps a 1.5px Machine Red edge in Red dark, where
+   the deep fill alone is 2.61:1 against the page. Blue and Sage keep accent, which already
+   carries its label with room. Machine Red stays for fills with no text: bars, rings,
+   active marks. A destructive label sits on danger-deep in every theme, in onDanger. */
+:root,[data-palette],[data-theme]{--color-action-fill:var(--accent);--color-action-edge:transparent;
+  --color-danger-action-fill:var(--danger-deep)}
+[data-palette="red"],[data-palette="red"] [data-theme="dark"]:not([data-palette]){
+  --color-action-fill:var(--accent-deep);--color-action-edge:var(--accent)}
+[data-palette="red"][data-theme="light"],[data-palette="red"] [data-theme="light"]:not([data-palette]){
+  --color-action-fill:var(--accent-deep);--color-action-edge:transparent}
 /* ---- the live figure's stage, per theme (js/ui/mannequin.js) -------------------------
    The 3D figure is drawn by the graphics card, so its colours are read from these
    tokens rather than painted by CSS; the same six selectors as above, in the same order.
@@ -618,7 +630,7 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
    16px icon 8px before the label. min-height rather than height so a translated label
    that wraps grows the button instead of spilling out of it. */
 .btn{width:100%;padding:0 18px;border-radius:var(--rpill);border:none;
-  background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent);
+  background:linear-gradient(180deg,var(--color-action-fill),var(--accent-deep));color:var(--onAccent);
   font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:0;
   text-transform:none;margin-top:var(--s2);
   display:flex;align-items:center;justify-content:center;gap:8px;
@@ -627,6 +639,9 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
    rather than overridden per variant, because zeroing it on .btn.sm would outrank
    .iconbtn's own 44px minimum on specificity and shrink the date-bar arrows. */
 .btn:not(.sm):not(.d){min-height:52px}
+/* The Machine Red edge that keeps the deep fill off the page in Red dark (§4). Only on the
+   accent-filled primary; the tonal and outlined variants have edges of their own. */
+.btn:not(.g):not(.o):not(.ok):not(.danger):not(.d){box-shadow:inset 0 0 0 1.5px var(--color-action-edge)}
 :root:not(.tch) .btn:active,.btn.tapd{transform:scale(.975);filter:brightness(1.12)}
 .btn.g{background:var(--raised);border:1px solid var(--border);color:var(--text)}
 .btn.o{background:transparent;border:1px solid var(--ok);color:var(--ok)}
@@ -3605,12 +3620,12 @@ textarea.afnl.warn{border-color:var(--warning)}
 .cf-b{color:var(--dim);font-size:15px;line-height:1.45;margin:8px auto 22px;max-width:30ch}
 .cf-acts{display:flex;flex-direction:column;gap:10px}
 .cf-acts .btn{margin:0;border-radius:var(--rpill);text-transform:none;letter-spacing:0;font-size:16px;min-height:54px}
-.cf-acts .cf-ok{background:linear-gradient(180deg,var(--accent),var(--accent-deep));
-  box-shadow:0 10px 26px -12px rgba(var(--glow-rgb),.7),inset 0 1px 0 rgba(255,255,255,.18)}
+.cf-acts .cf-ok{background:linear-gradient(180deg,var(--color-action-fill),var(--accent-deep));
+  box-shadow:inset 0 0 0 1.5px var(--color-action-edge),0 10px 26px -12px rgba(var(--glow-rgb),.7),inset 0 1px 0 rgba(255,255,255,.18)}
 .cf-acts .cf-no{background:var(--raised);border:1px solid var(--border)}
 /* A confirm that deletes (its icon is the bin) asks in the danger colour, which stays
    red in every theme; any other confirm's action is the theme's own primary. */
-.cf.bad .cf-acts .cf-ok{background:linear-gradient(180deg,var(--danger-fill),var(--danger-deep));color:#fff;
+.cf.bad .cf-acts .cf-ok{background:var(--color-danger-action-fill);color:var(--onDanger);
   box-shadow:0 10px 26px -12px rgba(var(--danger-rgb),.6),inset 0 1px 0 rgba(255,255,255,.18)}
 .cf-alt{background:none;border:none;color:var(--accentHi);font-family:inherit;font-weight:600;font-size:15px;
   padding:12px 0 2px;min-height:44px;cursor:pointer}
