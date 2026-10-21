@@ -143,7 +143,11 @@ function register(){
   has("jumpl",function(D){closeSheet();W.jumpTo(+D.jumpl);return;});
   key("stp",function(D){
     var id=D.stp,d1=parseFloat(D.d);
-    var cur=id==="bw"?(V.draft.bw!=null?V.draft.bw:toDisp(lastWeight()||86))
+    /* With no weight known the weigh-in is typed (js/ui/sheets.js): +/- has nothing to
+       step from until it is, rather than starting from someone else's weight. */
+    var bw0=lastWeight()||num(S.profile.weight);
+    if(id==="bw"&&V.draft.bw==null&&!bw0){var bwf=document.getElementById("in_bw");if(bwf)bwf.focus();return;}
+    var cur=id==="bw"?(V.draft.bw!=null?V.draft.bw:toDisp(bw0))
            :id==="st"?(V.draft.st!=null?V.draft.st:(dayRec().steps||0)):V.draft[id];
     var min=id==="w"?0:id==="rpe"?1:id==="st"?0:1;
     var max=id==="rpe"?10:1e6;

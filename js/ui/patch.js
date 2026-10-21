@@ -75,14 +75,27 @@ function patchNode(o,n){
   patchChildren(o,n);
   patchField(o,n);
 }
+/* Whether a keyed element is still to come among `from` and its later siblings. */
+function keyAhead(from,key){
+  for(var x=from;x;x=x.nextSibling)if(x.nodeType===1&&keyOf(x)===key)return true;
+  return false;
+}
+/* Position decides, except where keys say an element was added or removed. Without
+   that, one new item at the front of a keyed list — a progress photo, newest first —
+   misaligned every item after it, and each was replaced: every thumbnail destroyed and
+   repainted for the one that was added. Now the new one is inserted and the rest are
+   matched where they are. Moves are not tracked; a moved item is still replaced. */
 function patchChildren(oldP,newP){
   var o=oldP.firstChild,n=newP.firstChild;
   while(n){
     var nextN=n.nextSibling;
     if(!o){ oldP.appendChild(n); n=nextN; continue; }
+    if(sameNode(o,n)){ patchNode(o,n); o=o.nextSibling; n=nextN; continue; }
+    var kn=n.nodeType===1?keyOf(n):null, ko=o.nodeType===1?keyOf(o):null;
+    if(kn&&!keyAhead(o,kn)){ oldP.insertBefore(n,o); n=nextN; continue; }
+    if(ko&&!keyAhead(n,ko)){ var drop=o; o=o.nextSibling; oldP.removeChild(drop); continue; }
     var nextO=o.nextSibling;
-    if(sameNode(o,n))patchNode(o,n);
-    else oldP.replaceChild(n,o);
+    oldP.replaceChild(n,o);
     o=nextO; n=nextN;
   }
   while(o){ var gone=o; o=o.nextSibling; oldP.removeChild(gone); }

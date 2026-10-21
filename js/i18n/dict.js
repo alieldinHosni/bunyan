@@ -1850,7 +1850,20 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Blue": "أزرق",
 "The icon changes with the theme.": "الأيقونة بتتغير مع المظهر.",
 "The icon stays this colour whatever the theme.": "الأيقونة بتفضل باللون ده مهما كان المظهر.",
-"On iPhone, the Home Screen keeps the icon BUNYAN had when it was added. To change it there, make a backup first (Profile → Backup and reset), add BUNYAN to the Home Screen again from Safari (Share → Add to Home Screen), and restore the backup in it if it opens empty.": "على الآيفون، الشاشة الرئيسية بتحتفظ بالأيقونة اللي كانت لبنيان وقت ما اتضاف. عشان تغيرها هناك، اعمل نسخة احتياطية الأول (حسابي ← النسخ الاحتياطي وإعادة الضبط)، وضيف بنيان للشاشة الرئيسية تاني من سفاري (مشاركة ← إضافة إلى الشاشة الرئيسية)، واسترجع النسخة فيه لو فتح فاضي."
+"On iPhone, the Home Screen keeps the icon BUNYAN had when it was added. To change it there, make a backup first (Profile → Backup and reset), add BUNYAN to the Home Screen again from Safari (Share → Add to Home Screen), and restore the backup in it if it opens empty.": "على الآيفون، الشاشة الرئيسية بتحتفظ بالأيقونة اللي كانت لبنيان وقت ما اتضاف. عشان تغيرها هناك، اعمل نسخة احتياطية الأول (حسابي ← النسخ الاحتياطي وإعادة الضبط)، وضيف بنيان للشاشة الرئيسية تاني من سفاري (مشاركة ← إضافة إلى الشاشة الرئيسية)، واسترجع النسخة فيه لو فتح فاضي.",
+"Log your weight, and Bunyan works out your maintenance and a target for your goal. Nothing is worked out without it.": "سجّل وزنك، وبنيان يحسبلك سعرات الثبات وهدف يناسب هدفك. من غير الوزن مفيش حاجة بتتحسب.",
+"Your target is {p} g a day. Log your weight and I can say what that is per kg of body weight, and what your goal calls for.": "هدفك {p} جم في اليوم. سجّل وزنك وأقولك ده كام جم لكل كيلو من وزنك، وهدفك محتاج قد إيه.",
+"Your target is {p} g a day: {k} g per kg of body weight. The research supports 1.6 to 2.2 g per kg for people who train, and 2.4 in a calorie deficit to keep muscle.": "هدفك {p} جم في اليوم: {k} جم لكل كيلو من وزنك. الأبحاث بتدعم من 1.6 لـ2.2 جم لكل كيلو للي بيتمرنوا، و2.4 وانت في عجز سعرات عشان تحافظ على العضل.",
+"I need your weight to work out your calories, and I won't guess it. Log it and ask me again.": "محتاج وزنك عشان أحسب سعراتك، ومش هخمّنه. سجّله واسألني تاني.",
+"{g} takes {d} kcal a day below that: {k} kcal.": "{g} بينزل {d} سعر في اليوم تحت كده: {k} سعر.",
+"{g} adds {d} kcal a day to that: {k} kcal.": "{g} بيزوّد {d} سعر في اليوم على كده: {k} سعر.",
+"That is as low as Bunyan sets a target: your resting energy of {b} kcal, and never under 1,200 kcal for women or 1,500 for men.": "ده أقل هدف بنيان بيحطه: سعرات جسمك وهو مرتاح، {b} سعر، ومش أقل من 1,200 سعر للستات أو 1,500 للرجالة أبدًا.",
+"Switching to {g} changes your targets too, and they need your weight, which I won't guess. Your training stays as it is.": "لو غيّرته لـ{g} أهدافك هتتغير كمان، ودي محتاجة وزنك، ومش هخمّنه. تمرينك هيفضل زي ما هو.",
+"Goal updated. Log your weight and its targets are worked out.": "الهدف اتحدث. سجّل وزنك وأهدافه تتحسب.",
+"After the bathroom, before eating. Judge the seven-day average, not the daily number.": "بعد الحمّام وقبل الأكل. احكم بمتوسط السبع أيام، مش برقم يوم واحد.",
+"Type your weight first.": "اكتب وزنك الأول.",
+"That does not look like a body weight. Check it and save again.": "ده مش شكل وزن جسم. راجعه واحفظ تاني.",
+"Your targets now follow the textbook: 500 kcal under maintenance to lose fat, 350 over to build muscle, 2.4 g of protein per kg while losing.": "أهدافك دلوقتي ماشية على الكتاب: 500 سعر تحت سعرات الثبات لخسارة الدهون، و350 فوقها لبناء العضل، و2.4 جم بروتين لكل كيلو وانت بتخس."
 };
 /* Coaching cues (js/knowledge/cues.js AR) join the dictionary; the app's own strings win on a clash. */
 for(var ck in CUE_AR)if(!(ck in AR))AR[ck]=CUE_AR[ck];

@@ -307,13 +307,17 @@ function vSheet(){
      +'<button class="ddel exrm" data-delex="'+e.id+'">'+t("Remove from this day")+'</button>';
   }
   else if(V.sheet==="weigh"){
-    var lw=lastWeight()||86;
+    /* The stepper starts from the last weight known. With none, an empty field to type
+       it into: a stepper has to start somewhere, and any number put there would be a
+       guess that one tap on Save would keep as a weigh-in. */
+    var lw=lastWeight()||num(S.profile.weight),bst=inLb()?0.2:0.1;
     b='<h2>'+t("Morning weight")+'</h2><p class="tiny" style="margin:2px 0 14px">'
-     +'After the bathroom, before eating. Judge the seven-day average, not the daily number.</p>'
+     +esc(t("After the bathroom, before eating. Judge the seven-day average, not the daily number."))+'</p>'
      /* V.draft.bw is held in the user's display unit while this sheet is open and
         converted back to kilograms on save. */
-     +stepper("bw",V.draft.bw!=null?V.draft.bw:toDisp(lw),inLb()?0.2:0.1,wUnit())
-     +'<button class="btn" data-saveweight="1">Save for '+pretty(today())+'</button>';
+     +(lw?stepper("bw",V.draft.bw!=null?V.draft.bw:toDisp(lw),bst,wUnit())
+        :'<div class="stfield">'+stepperInput("bw",V.draft.bw!=null?V.draft.bw:"",bst,wUnit())+'</div>')
+     +'<button class="btn" data-saveweight="1">'+esc(t("Save for today"))+'</button>';
   }
   else if(V.sheet==="steps"){
     b='<h2>'+t("Steps today")+'</h2><p class="tiny" style="margin:2px 0 14px">'

@@ -1750,13 +1750,13 @@ The owner asked for two more surfaces, and both follow the same rules:
 5. **`CLAUDE.md`** (owner) — "Formulas — do not change these" conflicts with the 20 Oct rule that the book is the default. Update it before any formula row in docs/FORMULA-RECONCILIATION.md is changed, or every later session will read the change as a violation.
 6. Knowledge session — `nutrition-principles.js` `GOAL_STRATEGIES`: the `bunyan` notes are stale. "lose" is now 20% of maintenance capped at 750, not TDEE − 500; "gain" is 10% capped at 300, not +250 (`js/data/goals.js`).
 
-### ⚠ PRIORITY — two bugs for the app session (owner, 20 Oct)
+### ⚠ PRIORITY — two bugs for the app session (owner, 20 Oct) — both DONE 20 Oct, see "App session — 20 Oct" below
 
 **P1. `js/engine/body.js` `bmrOf` defaults to 86 kg when no weight exists** (`num(p.weight,86)`). That is the owner's own body weight hardcoded as a fallback: every other profile with no weight silently gets the owner's BMR, and every target derived from it (maintenance, calories, macros) is wrong. It also breaks `CLAUDE.md` ("body weight comes from the profile, never hardcoded"). **Fix:** with no weigh-in and no profile weight, return a "no weight set" result and prompt for a weight, never a default. (The coach's wrapper `js/coach/targets.js` already refuses to call it without a real weight.)
 
 **P2. Two calorie floors.** `targetKcalOf` lets a weight-loss target fall to 0.95 × BMR, which sits **below** the BMR floor the owner set for weekly reconciliation (2.7A). Two floors is the inconsistency being removed. **Fix:** raise the engine's floor to BMR itself, so there is one floor in the app. Nothing automated may take a user below BMR.
 
-### Book values to adopt — for the app session (owner, 20 Oct: the book is the default)
+### Book values to adopt — for the app session (owner, 20 Oct: the book is the default) — adopted 20 Oct except sets, rest and sessions a week; see "App session — 20 Oct" below
 
 Details and sources in `docs/FORMULA-RECONCILIATION.md`. Each is in `js/data/goals.js` or `js/engine/`, outside the coach's folder. Logged history is not affected (targets and plans are worked out when read); rebuild the stored `goals` when each ships.
 - **Fat-loss deficit:** book a moderate **500 kcal/day** (`nutrition-principles.js` `GOAL_STRATEGIES.fatLoss.moderateDeficit`, 9.8). App: 20% of maintenance, capped at 750 (`goals.js` `lose`).
@@ -1777,6 +1777,40 @@ Details and sources in `docs/FORMULA-RECONCILIATION.md`. Each is in `js/data/goa
 - **`js/coach/targets.js`**: the thin wrapper. `dayTargetsFor` and `reconcileWeekFor` take BMR and targets from `body.js`; no weight → `no_weight`, never a default; past days use the weigh-ins up to that day.
 - **Training reconciliation moves what fits:** `kind` adjust / partial / week_fine, with missed, moved and gone per muscle ("1 of 6 moved to Saturday, the other 5 are gone"). A muscle with no MRV moves under the one-set limit alone and is marked `ceiling:"none"`. Results carry `landmarks.js` `BASIS` ("practitioner heuristics … not measured constants").
 - Tests: 235 pass in `js/coach/test/index.html` (checked headless) and in Node; `node tests/coach.mjs` still runs only the original ten files (request 1 open). Architecture and engine tests pass.
+
+### App session — 20 Oct
+
+**Salvaged render fixes** (8cb0436): `.claude/salvaged-fixes.md` applied exactly. The base blobs matched (patch.js 7bee43a, photos.js f405001). `js/ui/patch.js` inserts or drops a keyed element where the list gained or lost one (`keyAhead`) instead of replacing every row after it; `js/ui/photos.js` keeps each photo's address by id and revokes only the ones removed. CACHE bunyan-v134. Full browser suite 192/192 before the rebase onto f3154d4.
+
+**P1 done: no weight is never a default weight.** `bmrOf` returned the owner's 86 kg for any profile without one. Now:
+- `js/engine/body.js`: `weightOf` (weigh-in, else profile, else 0) and `missingOf` ("no_profile" without age or height, "no_weight" without a weight, the coach's words). `bmrOf`, `tdeeFormulaOf`, `targetKcalOf`, `kcalFloorOf` and `macroTargetsOf` return **null** when something is missing; `maintenanceInUseOf` returns `{kcal:null, source:"none"}`. A learned maintenance with no weight still gives no target, since the floor needs BMR.
+- The same 86 was in four more places, two of which **wrote it**: the weigh-in sheet's stepper started at 86 and Save kept it as a weigh-in (`sheets.js`, `handlers/progress.js`); the You sheet prefilled Weight with 86 and Save stored it as the profile weight (`settings.js`); the stepper's +/- stepped from 86 (`handlers/session.js`). Now the weigh-in is an empty field to type into when no weight is known, Save with nothing typed saves nothing (and checks 30–300 kg), and the You sheet's Weight is empty until entered.
+- Every caller handles null and asks for what is missing: Targets ("Log your weight…" with Log weight, or the You sheet when age/height are missing too), the chat's calories, protein and goal answers, the plan-check fixes and the chat's goal/kcal buttons (open the weigh-in), Use these targets, the assessment preview, `learnedDiffers`. Strings through `t()` with Arabic; checked in RTL.
+- Also fixed in the weigh-in sheet: its instruction line and Save label were raw English, not through `t()`.
+
+**P2 done: one floor, BMR.** `kcalFloorOf` = BMR, never under 1,200 kcal (women) / 1,500 (men); the old 0.95 × BMR while losing is gone. It applies to every goal's target and to the chat's "eat N kcal less" step (which only had 1,200/1,500). Nothing automated now sets a target under BMR. The 1,200/1,500 minimum stays as an absolute minimum and only binds when BMR is below it (a small, older woman); the coach's reconciliation (`js/coach/reconcile.js`) holds days at BMR alone, so for such a person a reconciled day could sit between BMR and 1,200. Owner to decide whether the minimum stays.
+
+**Formula changed: the textbook's values (owner, 20 Oct; docs/FORMULA-RECONCILIATION.md rows 2, 3, 4, 7, 13).** Formula version 2, from 20 Oct 2026:
+| What | Was (version 1) | Now (version 2) |
+| --- | --- | --- |
+| Fat-loss deficit | 20% of maintenance, at most 750 | **500 kcal/day**, fixed (`goals.js` `lose.fixed`) |
+| Muscle-gain surplus | 10% of maintenance, at most 300 | **350 kcal/day**, fixed — the low end of the book's 350–500, since most of a larger surplus is stored as fat (`gain.fixed`) |
+| Protein, fat loss | 2.0 g/kg | **2.4 g/kg** (`lose.protein`) |
+| Lowest target | max(0.95 × BMR while losing, 1,200/1,500) | max(BMR, 1,200/1,500), every goal |
+| Strength main lift reps | 3–5 | **1–5** (`TRAIN.str.main`) |
+| Endurance reps | main 10–15, accessories 12–15 | **12–20** both (`TRAIN.end`) |
+Recomposition and Get stronger keep a capped share of maintenance (the book gives no figure for them). `kcal` stays on lose and gain as the direction the plan check reads. Not changed, not asked: sets and rest by adaptation (strength main lifts get 3–4 sets and 150–240 s rest against the book's 4–6 sets and 180–300 s; endurance main lifts 60–120 s against 30–60 s), sessions a week, power's 1–10. Recomposition's protein stays 2.2 although it runs a deficit (the book's 2.4 is "in a deficit"): owner to decide.
+
+**History under one method.** Logged entries store only what was entered, so estimated maxes, volume, BMR, maintenance and every suggested target recompute by themselves. The stored targets (`goals`) do not: `js/engine/retarget.js` rebuilds them once per profile (`formulaV` 1 → 2, at start-up, profile switch and restore) **where they are exactly what version 1 produced** (energy in tens, fat the goal's share, carbs the rest, protein version 1's g/kg of a weight the profile has had) and version 2 gives this person different numbers. Targets typed on the Targets screen, read from a PDF or moved by a coach step are the person's and are kept; the Targets screen offers the new suggestion beside them. Rebuilt targets say so in a toast with Undo. Without a weight they are left as they are. Generated programs keep the rep ranges they were made with (they are the person's, possibly edited); a plan generated from now uses the new ranges. `formulaV` is deliberately not in `DEF`, or `normalize` would mark old blobs current.
+
+**Found, not fixed — owner to decide:** a new profile's `goals` default (`js/schema.js` `DEF`) is 1,950 kcal, 175 g protein, 170 g carbs, 62 g fat. Those look calculated and are shown as targets before anything is entered — the same kind of value as the 86 kg. Making them empty needs every screen that reads `S.goals` to handle no target; not done in this unit.
+
+**For other sessions:**
+- Coaching session: `js/coach/targets.js`'s header says `bmrOf()` falls back to a fixed weight; it no longer does (null, and `missingOf` gives the same "no_profile"/"no_weight"). If the reconciliation should use the app's one floor including the 1,200/1,500 minimum, take `kcalFloorOf` instead of `bmrOf` for `bmr`.
+- Knowledge session: `docs/FORMULA-RECONCILIATION.md` rows 2–4, 7 and 13 are now adopted (above). `nutrition-principles.js` `GOAL_STRATEGIES`: "lose" is now TDEE − 500 (the old note is right again); "gain" is TDEE + 350, not + 250.
+- Request 1 (`tests/coach.mjs` names) is still open: `context`, `reconcile` and `targets` pass when run directly (79 tests, run against these changes).
+
+Tests: engine 388 (new: `js/engine/test/retarget.test.js`, body tests for no weight and the floor), coach 156, architecture (153 modules, `retarget.js` pure and precached), browser suite 198/198 (six new: no weight on Targets and the weigh-in, the You sheet, the chat, the floor at BMR, the rebuild with Undo, kept targets). CACHE bunyan-v135.
 
 ### Design import — 20 Oct
 

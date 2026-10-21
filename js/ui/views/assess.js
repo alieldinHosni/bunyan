@@ -68,6 +68,8 @@ function preview(a){
     var cands=[];try{cands=splitCandidates(num(a.days),a.level,a.goal,S.gear);}catch(e){}
     var plan=generatePlan(a.split||(cands[0]&&cands[0].id));
     var tg=macroTargets(),meals=null;
+    /* The assessment asks for a weight before this step (youOk); without one there are no targets. */
+    if(!tg)return out;
     /* The meals need the food database, which loads on the way to this screen. */
     if(FOODDB)try{meals=buildMealPlan(tg,foodPrefs(a));}catch(e){meals=null;}
     out={tg:tg,td:tdee(),plan:plan,cands:cands,vol:volumeCheck(plan,a.level),meals:meals};

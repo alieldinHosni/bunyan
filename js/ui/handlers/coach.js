@@ -3,7 +3,7 @@
    plan built from the targets. */
 import {coachNow} from "../../engine/coachinfo.js";
 import {addDaysISO} from "../../engine/dayplan.js";
-import {lastWeight, macroTargets} from "../../engine/formulas.js";
+import {kcalFloor, lastWeight, macroTargets} from "../../engine/formulas.js";
 import {buildMealPlan} from "../../engine/mealplan.js";
 import {FOODDB, loadFoods} from "../../engine/nutrition.js";
 import {buildPlan, rebalance} from "../../engine/plan.js";
@@ -12,7 +12,7 @@ import {t} from "../../i18n/dict.js";
 import {S, saveDB, split} from "../../state.js";
 import {restartAfter} from "../../engine/blocks.js";
 import {fmtN, num, today} from "../../util.js";
-import {closeSheet} from "../actions.js";
+import {closeSheet, openSheet} from "../actions.js";
 import {pushNav, resetNav} from "../nav.js";
 import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
@@ -34,8 +34,9 @@ function useAssessment(){
   S.gear=GEARS[A.gear]?GEARS[A.gear].slice():null;
   var bt=S.body.filter(function(b){return b.date===today();})[0];
   if(bt)bt.weight=S.profile.weight;else S.body.push({date:today(),weight:S.profile.weight});
+  /* The assessment asks for a weight (youOk), so there are targets; if not, none are set. */
   var m=macroTargets();
-  ["kcal","p","c","f","water","steps"].forEach(function(k){if(m[k])S.goals[k]=m[k];});
+  if(m)["kcal","p","c","f","water","steps"].forEach(function(k){if(m[k])S.goals[k]=m[k];});
   buildPlan(A.split||undefined);
   /* The meals the result showed, worked out again from the targets just set. */
   if(FOODDB){var mp=buildMealPlan(S.goals,foodPrefs(A));if(mp&&mp.length)S.mealSlots=slotsFrom(mp);}
@@ -57,6 +58,8 @@ function pcFix(id){
     days:prog?JSON.parse(JSON.stringify(prog.days)):null,dis:JSON.parse(JSON.stringify(S.pcDismiss||{})),
     energy:S.energy?JSON.parse(JSON.stringify(S.energy)):null};
   var g=S.goals,w=lastWeight()||num(S.profile.weight),msg="";
+  /* These fixes are built on the targets, which need a weight: ask for it, never assume one. */
+  if(/^(targets|protein|carbs|learned|phasegoal)$/.test(act)&&!macroTargets()){openSheet("weigh");return;}
   if(act==="targets"){var m=macroTargets();g.kcal=m.kcal;g.p=m.p;g.c=m.c;g.f=m.f;msg=t("Targets updated.");}
   /* Protein or carbs up, the other two moved so the calories stay where they are. */
   else if(act==="protein"){g.p=macroTargets().p;g.c=Math.max(50,Math.round((g.kcal-g.p*4-g.f*9)/4));
@@ -163,15 +166,18 @@ function register(){
     toast(t("Conversation cleared."),function(){S.chat=chB;saveDB();render();});return;});
   /* What an answer offers to change: a small step on the calorie target, carbs moving
      with it so protein and fat stay where they are; or the goal, with its targets. */
-  key("chatkcal",function(D){var gB=JSON.parse(JSON.stringify(S.goals)),gK=S.goals,dK=+D.chatkcal||0,flK=S.profile.sex==="f"?1200:1500;
-    gK.kcal=Math.max(flK,Math.round((num(gK.kcal)+dK)/10)*10);gK.c=Math.max(50,Math.round((gK.kcal-num(gK.p)*4-num(gK.f)*9)/4));
+  /* Never under the app's one floor (BMR): a step down stops there. Without a weight
+     there is no floor to check against, so a step down waits for one. */
+  key("chatkcal",function(D){var gB=JSON.parse(JSON.stringify(S.goals)),gK=S.goals,dK=+D.chatkcal||0,flK=kcalFloor();
+    if(dK<0&&flK==null){openSheet("weigh");return;}
+    gK.kcal=Math.max(flK==null?0:Math.ceil(flK/10)*10,Math.round((num(gK.kcal)+dK)/10)*10);gK.c=Math.max(50,Math.round((gK.kcal-num(gK.p)*4-num(gK.f)*9)/4));
     saveDB();render();
     toast(t(dK<0?"Target lowered to {k} kcal; carbs moved with it.":"Target raised to {k} kcal; carbs moved with it.").replace("{k}",fmtN(gK.kcal)),
       function(){S.goals=gB;saveDB();render();});return;});
   key("chatgoal",function(D){var cgB={goals:JSON.parse(JSON.stringify(S.goals)),goal:S.profile.goal};
-    S.profile.goal=D.chatgoal;var cgM=macroTargets();S.goals.kcal=cgM.kcal;S.goals.p=cgM.p;S.goals.c=cgM.c;S.goals.f=cgM.f;
+    S.profile.goal=D.chatgoal;var cgM=macroTargets();if(cgM){S.goals.kcal=cgM.kcal;S.goals.p=cgM.p;S.goals.c=cgM.c;S.goals.f=cgM.f;}
     saveDB();render();
-    toast(t("Goal and targets updated."),function(){S.goals=cgB.goals;S.profile.goal=cgB.goal;saveDB();render();});return;});
+    toast(t(cgM?"Goal and targets updated.":"Goal updated. Log your weight and its targets are worked out."),function(){S.goals=cgB.goals;S.profile.goal=cgB.goal;saveDB();render();});return;});
   key("cokeep",function(D){var ck=D.cokeep,cb=JSON.parse(JSON.stringify(S.coachDismiss||{}));coachSetAside(ck,14);saveDB();render();
     toast(t("Set aside for two weeks."),function(){S.coachDismiss=cb;saveDB();render();});return;});
   /* A meal plan from the targets, from Food's plan section, and another version of it. */
