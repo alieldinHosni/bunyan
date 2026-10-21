@@ -1812,3 +1812,8 @@ Recomposition and Get stronger keep a capped share of maintenance (the book give
 
 Tests: engine 388 (new: `js/engine/test/retarget.test.js`, body tests for no weight and the floor), coach 156, architecture (153 modules, `retarget.js` pure and precached), browser suite 198/198 (six new: no weight on Targets and the weigh-in, the You sheet, the chat, the floor at BMR, the rebuild with Undo, kept targets). CACHE bunyan-v135.
 
+### Design import — 20 Oct
+
+- Design session's files committed from its two published prototypes (workout screen, Ask panel): `design/workout.html`, `design/chat.html`, `design/tokens.css`, and `docs/design/` workout-spec, chat-spec, token-requests, workout-diagnosis, palette-comparison, coachchat-current, arabic-names-audit. Copied byte for byte; the copies shared by both pages were identical.
+- **Not recovered:** the captures in `docs/design/current/` (PNGs the diagnosis and CoachChat notes cite) and the Design session's own PROGRESS entries (the main → design system colour re-sync task, the proposed Arabic rope-pushdown name). Neither page published them; they exist only on that session's local branch.
+- No change to `js/`, `css/` or `index.html`.

@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en" data-palette="blue" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bunyan Ask Panel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Layout concept: the Ask panel floats over whatever tab is open, above the dock, so an
+   action can be seen landing on the screen behind it. One frame per state, English
+   above Arabic, each the real 390 x 844 screen. Every colour is a main token. */
+:root{
+  --ph-w:390px; --ph-h:844px; --status:47px; --home:34px;
+  --f-num:"Outfit",-apple-system,system-ui,sans-serif;
+  --f-ui:"Manrope",-apple-system,system-ui,sans-serif;
+  color-scheme:dark;
+}
+[data-theme="light"]{color-scheme:light}
+/* ---- PROPOSED, approved 20 Oct (token-requests.md §4) --------------------------------
+   Labels never sit on Machine Red. Aliases of existing tokens only, no new colours:
+   in Red the fill under a label is accent-deep, and in Red dark it takes a 1.5px Machine
+   Red edge so the button still stands off the wine-black page. Blue and Sage keep their
+   accent, which already carries its label with room (8.87:1 and more in the darks). */
+:root,[data-palette]{--color-action-fill:var(--accent);--color-action-edge:transparent;--dock-pill-fill:var(--dock-pill)}
+[data-palette="red"]{--color-action-fill:var(--accent-deep);--color-action-edge:var(--accent);--dock-pill-fill:var(--accent-deep)}
+[data-palette="red"][data-theme="light"]{--color-action-edge:transparent}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--f-ui);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 64px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--accentHi);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+
+/* ---- the page around the frames (same as workout.html) ---------------------------- */
+.pg-head{max-width:1240px;margin:0 auto 20px;display:flex;flex-wrap:wrap;gap:12px 32px;align-items:end;justify-content:space-between}
+.pg-head h1{font-family:var(--f-num);font-size:28px;font-weight:700;margin:0;letter-spacing:-.01em}
+.pg-head p{margin:4px 0 0;color:var(--sub);max-width:62ch}
+.pick{display:flex;flex-wrap:wrap;gap:16px}
+.seg{display:inline-flex;gap:4px;padding:4px;border-radius:var(--rpill);background:var(--seg-track);border:1px solid var(--hair)}
+.seg button{border:0;background:transparent;min-height:36px;padding:0 14px;border-radius:var(--rpill);color:var(--sub);font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--color-action-fill);color:var(--onAccent)}
+.row-k{max-width:1240px;margin:28px auto 10px;color:var(--dim);font-weight:700;font-size:13px}
+.rail{max-width:1240px;margin:0 auto;overflow-x:auto;padding-bottom:12px}
+.rail-in{display:flex;gap:28px;width:max-content}
+.cell{display:grid;gap:10px;align-content:start;width:calc(var(--ph-w) * var(--z,.86))}
+.cell h2{margin:0;font-family:var(--f-num);font-size:17px;font-weight:700}
+.cell h2 span{color:var(--dim);font-family:var(--f-ui);font-size:13px;font-weight:600;margin-inline-start:6px}
+.cell a{color:var(--accentHi);font-size:13px;font-weight:600}
+.zoom{zoom:var(--z,.86)}
+.notes{max-width:1240px;margin:36px auto 0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr))}
+.note{background:var(--raised);border:1px solid var(--border);border-radius:var(--r3);padding:16px 18px}
+.note h3{margin:0 0 8px;font-family:var(--f-num);font-size:17px}
+.note ul{margin:0;padding-inline-start:18px;color:var(--sub)}
+.note li{margin:4px 0}
+
+/* ---- one phone ------------------------------------------------------------------ */
+.ph{width:var(--ph-w);height:var(--ph-h);position:relative;isolation:isolate;overflow:hidden;
+  border-radius:44px;border:1px solid var(--hair-hi);background:var(--bg);color:var(--text);font-family:var(--f-ui)}
+.ph[lang="ar"]{font-size:16px;line-height:1.6}
+
+/* the tab behind: Training, the Push A day, drawn plainly (it is not what is designed here) */
+.bgtab{position:absolute;inset:0;padding:calc(var(--status) + 8px) 20px 0;display:grid;gap:10px;align-content:start}
+.bg-h{display:flex;align-items:center;gap:10px;min-height:44px}
+.bg-h b{font-family:var(--f-num);font-size:26px}
+.bg-h span{color:var(--sub);font-size:14px}
+.bg-l{display:grid;gap:6px}
+.bg-r{display:grid;grid-template-columns:1fr auto;align-items:center;min-height:52px;padding:0 16px;border-radius:var(--r4);
+  background:var(--raised);border:1px solid var(--border);gap:8px}
+.bg-r b{font-weight:700;font-size:15px}
+.bg-r span{color:var(--sub);font-size:14px}
+.bg-r.new{border:2px solid var(--accent);background:var(--raised)}
+.bg-r.new i{font-style:normal;font-size:12px;font-weight:700;color:var(--text);background:var(--accent-tint);border:1px solid var(--accent-edge);border-radius:var(--rpill);padding:2px 8px;margin-inline-start:8px}
+
+/* outside the panel: a light veil, so what happens behind stays visible. A tap on it
+   closes the panel and does nothing else. */
+.veil{position:absolute;inset:0;background:rgba(var(--bg-rgb),.42);z-index:2}
+
+/* the dock, real icons, plus Ask; it never mirrors (main's rule) */
+.dockw{position:absolute;left:16px;right:16px;bottom:var(--home);z-index:4}
+.dock{display:flex;align-items:center;justify-content:space-between;gap:4px;height:64px;padding:0 7px;direction:ltr;
+  border-radius:var(--rpill);background:var(--dock-bar);-webkit-backdrop-filter:saturate(160%) blur(22px);backdrop-filter:saturate(160%) blur(22px);
+  border:1px solid var(--dock-hair);border-top-color:var(--hair-hi);box-shadow:var(--shadow-float)}
+.db{display:flex;align-items:center;justify-content:center;min-width:48px;height:48px;padding:0 13px;border-radius:var(--rpill);
+  border:1px solid var(--dock-dot-edge);background:var(--dock-dot);color:var(--dock-dot-ink)}
+.db svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:square;stroke-linejoin:miter}
+.db.on{background:var(--dock-pill-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);color:var(--dock-pill-ink);border-color:transparent;padding:0 15px 0 12px}
+.db.on span{margin-left:7px;font-size:12.5px;font-weight:700}
+[dir="rtl"] .db.on{flex-direction:row-reverse;padding:0 12px 0 15px}
+[dir="rtl"] .db.on span{margin-left:0;margin-right:7px;font-size:13px}
+.db.ask.open{border:2px solid var(--dock-pill);color:var(--dock-pill)}
+
+/* the panel: opaque, floating, above the dock; no grabber, no drag */
+.pnl{position:absolute;left:10px;right:10px;bottom:calc(var(--home) + 64px + 10px);max-height:calc(var(--ph-h) - 250px - var(--home) - 74px);z-index:3;display:flex;flex-direction:column;
+  background:var(--raised);border:1px solid var(--border);border-radius:var(--r5);box-shadow:var(--shadow-float);overflow:hidden}
+.pnl-h{display:grid;grid-template-columns:1fr 44px 44px;gap:4px;align-items:center;padding:6px 8px 6px 18px;border-bottom:1px solid var(--hair)}
+[dir="rtl"] .pnl-h{padding:6px 18px 6px 8px}
+.pnl-h b{font-family:var(--f-num);font-size:18px;display:block;line-height:1.2}
+.pnl-h small{display:block;font-size:13px;color:var(--dim)}
+.ib{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:0}
+.ib svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+/* newest at the bottom, but the top can always be scrolled to: the inner column pushes
+   down with margin-top:auto instead of end-alignment, which would cut off the top */
+.pnl-b{flex:0 1 auto;min-height:0;overflow:auto;padding:10px 16px 12px;display:flex;flex-direction:column}
+.pnl-in{margin-top:auto;display:grid;gap:10px}
+/* the field is in the flow, under the conversation, so it can never lie over it */
+.pnl-f{display:flex;gap:8px;align-items:center;padding:10px 12px 12px;border-top:1px solid var(--hair);background:var(--raised)}
+.pnl-f span{flex:1;min-height:48px;display:flex;align-items:center;padding:0 18px;border-radius:var(--rpill);background:var(--surface);
+  border:1px solid var(--border);color:var(--dim);font-size:16px}
+.send{width:48px;height:48px;border-radius:50%;border:0;background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);color:var(--onAccent);display:grid;place-items:center;flex:none;padding:0}
+.send svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+[dir="rtl"] .send svg{transform:scaleX(-1)}
+
+/* what was asked: a plain line on the reading-end side; no bubble, no tail */
+.q{justify-self:end;max-width:85%;padding:6px 14px;border-radius:var(--r3);background:var(--surface);color:var(--sub);font-size:15px}
+/* the answer: flat, the lead large enough to read at arm's length */
+.a{display:grid;gap:8px}
+.a-k{font-size:13px;font-weight:700;color:var(--dim)}
+.a-l{font-size:18px;line-height:1.4;font-weight:600;color:var(--text);margin:0}
+.a-l b{font-weight:800}
+.more{justify-self:start;min-height:44px;border:0;background:none;padding:0;color:var(--accentHi);font-weight:700;font-size:15px;display:flex;gap:6px;align-items:center}
+.more svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+/* the action's own button, on the action fill (never Machine Red under a label) */
+.go{min-height:52px;padding:0 24px;border:0;border-radius:var(--rpill);background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);color:var(--onAccent);
+  font-family:var(--f-num);font-size:20px;font-weight:700}
+.sec{min-height:52px;padding:0 20px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;font-size:16px}
+.chg{display:grid;gap:2px;padding:12px 14px;border-radius:var(--r3);background:var(--surface);border:1px solid var(--border)}
+.chg b{font-weight:700}
+.chg span{color:var(--sub);font-size:14px}
+/* choices: full-width rows, 52px, one tap each */
+.opts{display:grid;gap:6px}
+.opt{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;min-height:52px;padding:6px 16px;border-radius:var(--r4);
+  border:1px solid var(--border);background:var(--surface);text-align:start}
+.opt b{font-weight:700;display:block}
+.opt span{font-size:13px;color:var(--sub)}
+.opt svg{width:18px;height:18px;fill:none;stroke:var(--dim);stroke-width:2.4}
+[dir="rtl"] .opt svg{transform:scaleX(-1)}
+.opt.none{background:transparent;border-style:dashed}
+.opt.none b{color:var(--sub)}
+/* done, and its undo; and undone */
+.done{display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;padding:10px 10px 10px 12px;border-radius:var(--r3);background:var(--okSoft);border:1px solid var(--ok)}
+[dir="rtl"] .done{padding:10px 12px 10px 10px}
+.done i{width:36px;height:36px;border-radius:50%;background:var(--ok);color:var(--onOk);display:grid;place-items:center}
+.done i svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.done p{margin:0;font-weight:700;color:var(--text)}
+.undo{min-height:44px;padding:0 16px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--raised);color:var(--text);font-weight:700}
+.undone{display:grid;grid-template-columns:36px 1fr;gap:10px;align-items:center;padding:10px 12px;border-radius:var(--r3);border:1px dashed var(--border)}
+.undone i{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);display:grid;place-items:center;color:var(--sub)}
+.undone i svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+[dir="rtl"] .undone i svg{transform:scaleX(-1)}
+.undone p{margin:0;color:var(--sub);font-weight:600}
+/* the empty state: one line, then things to say, as rows */
+.hint{margin:0;color:var(--sub);font-size:15px}
+.sug{display:grid;gap:6px}
+.sug button{min-height:48px;padding:0 16px;border-radius:var(--r4);border:1px solid var(--border);background:var(--surface);text-align:start;font-weight:600;font-size:15px}
+.sug-k{font-size:13px;font-weight:700;color:var(--dim);margin-top:2px}
+
+/* single-frame view */
+body.one .pg,body.one .row-k{display:none}
+body.one{padding:0}
+body.one #one{display:block}
+#one{display:none}
+#one .ph{border-radius:0;border:0;margin:0 auto}
+#one .back{display:block;margin:16px auto 24px;min-height:44px;padding:0 16px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--raised);color:var(--text);font-weight:700}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="pg pg-head">
+  <div>
+    <h1>Ask panel</h1>
+    <p>CoachChat, extended. It opens from the dock over the tab you are on, so a change can be seen landing behind it. Six states, English above Arabic.</p>
+  </div>
+  <div class="pick">
+    <div class="seg" role="group" aria-label="Theme" id="pal">
+      <button data-v="blue" aria-pressed="true">Blue</button><button data-v="red" aria-pressed="false">Red</button><button data-v="mono" aria-pressed="false">Sage</button>
+    </div>
+    <div class="seg" role="group" aria-label="Mode" id="mode">
+      <button data-v="dark" aria-pressed="true">Dark</button><button data-v="light" aria-pressed="false">Light</button>
+    </div>
+  </div>
+</header>
+<div class="row-k">English</div>
+<div class="pg rail"><div class="rail-in" id="ltr"></div></div>
+<div class="row-k">Arabic</div>
+<div class="pg rail"><div class="rail-in" id="rtl"></div></div>
+
+<section class="pg notes">
+  <div class="note">
+    <h3>How it behaves</h3>
+    <ul>
+      <li>Opens from Ask, the fifth place on the dock, on every tab. The dock stays visible and usable.</li>
+      <li>Closes with ✕ or a tap outside. The outside tap only closes. No grabber, no drag.</li>
+      <li>⤢ opens the whole history full screen, by a tap. It never grows by a drag.</li>
+      <li>The panel is as tall as what it holds, up to the top quarter of the screen, so a short answer leaves more of the tab in view.</li>
+      <li>The field is part of the panel, under the conversation, so it cannot cover an answer. With the keyboard up, the panel sits on the keyboard and the dock hides, as today.</li>
+      <li>An applied change scrolls the screen behind so the changed row is in view above the panel, outlined until the panel closes.</li>
+      <li>During a workout, Ask is in the ⋯ menu, never near the log control.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h3>What changed from CoachChat</h3>
+    <ul>
+      <li>Answers lead with one or two sentences at 18px; today's detail is behind More.</li>
+      <li>Four new shapes, all inside the conversation: confirm, done with Undo, a question back, close matches.</li>
+      <li>Gone: the typing dots, the pulsing orb, the "Coach" label on every answer, the bubble tail.</li>
+      <li>No text over the background drawing: the panel is opaque, as the workout screen is.</li>
+      <li>A name that does not match is never answered with the nearest food. It gets close matches.</li>
+    </ul>
+  </div>
+</section>
+
+<div id="one"><div id="oneframe"></div><button class="back" id="oneback">All frames</button></div>
+
+<script>
+var T={
+ en:{ask:"Ask",sub:"From your log, worked out on this phone",field:"Ask, or say what to change",close:"Close",expand:"Show the whole conversation",
+  day:"Push A",dayMeta:"5 exercises · about 55 min",train:"Train",
+  bg:[["Barbell Bench Press","3 × 6–10"],["Incline Dumbbell Press","3 × 8–12"],["Dumbbell Shoulder Press","3 × 8–12"],["Machine Triceps Extension","3 × 10–12"],["Cable Fly","3 × 12–15"]],
+  added:"Added",
+  hint:"Ask about your training, food or progress, or say what to change.",
+  sugK1:"Ask",sugK2:"Change",
+  sug1:["What do I train today?","What's left to eat today?"],
+  sug2:["Add an exercise to a day","Swap an exercise for today"],
+  q1:"how much should I lift on bench",k1:"What to lift",
+  l1:"Bench press today: <b>62.5 kg × 6–10</b>. You reached the top of the range on every set last time, so it goes up by the smallest step.",
+  more:"More",
+  q2:"add triceps pushdown to push day",k2:"Change your program",
+  l2:"Add Triceps Pushdown to Push A?",chgA:"Triceps Pushdown",chgB:"3 × 10–12 · last in the day",go:"Add it",notnow:"Not now",
+  q3:"swap my squat for leg press today",k3:"Swap for today",
+  l3:"Squats are in two workouts this week. Which one?",o3:[["Legs A","Today"],["Legs B","Thursday"],["Both",""]],
+  q4:"add rope tricep thing to push day",k4:"Which exercise?",
+  l4:"No exercise called “rope tricep thing”. Closest:",
+  o4:["Triceps Pushdown - Rope Attachment","Cable Rope Overhead Triceps Extension","Triceps Pushdown"],none:"None of these",
+  done:"Added Triceps Pushdown to Push A.",undo:"Undo",
+  undone:"Undone. Push A is as it was."},
+ ar:{ask:"اسأل",sub:"من سجلك، وبيتحسب على موبايلك",field:"اسأل، أو قول عايز تغيّر إيه",close:"إغلاق",expand:"اعرض المحادثة كلها",
+  day:"دفع أ",dayMeta:"5 تمارين · حوالي 55 دقيقة",train:"التمرين",
+  bg:[["بنش بريس بالبار","3 × 6–10"],["بريس مائل بالدمبل","3 × 8–12"],["بريس كتف بالدمبل","3 × 8–12"],["ترايسبس إكستينشن بالجهاز","3 × 10–12"],["فلاي بالكابل","3 × 12–15"]],
+  added:"اتضاف",
+  hint:"اسأل عن تمرينك أو أكلك أو تقدمك، أو قول عايز تغيّر إيه.",
+  sugK1:"اسأل",sugK2:"غيّر",
+  sug1:["أتمرن إيه النهاردة؟","فاضلي آكل إيه النهاردة؟"],
+  sug2:["ضيف تمرين ليوم","بدّل تمرين النهاردة"],
+  q1:"أشيل كام في البنش",k1:"تشيل كام",
+  l1:"بنش بريس النهاردة: <b><span class=\"num\">62.5</span> كجم × <span class=\"num\">6–10</span></b>. وصلت لآخر الرينج في كل مجموعة المرة اللي فاتت، فالوزن يزيد أصغر خطوة.",
+  more:"أكتر",
+  q2:"ضيف ترايسبس بوش داون ليوم الدفع",k2:"تغيير في برنامجك",
+  l2:"أضيف ترايسبس بوش داون لـ دفع أ؟",chgA:"ترايسبس بوش داون",chgB:"<span class=\"num\">3 × 10–12</span> · آخر تمرين في اليوم",go:"ضيفه",notnow:"مش دلوقتي",
+  q3:"بدّل السكوات بليج بريس النهاردة",k3:"تبديل للنهاردة",
+  l3:"السكوات موجود في تمرينين الأسبوع ده. أنهي واحد؟",o3:[["رجلين أ","النهاردة"],["رجلين ب","الخميس"],["الاتنين",""]],
+  q4:"ضيف ترايسبس بالحبل ليوم الدفع",k4:"أنهي تمرين؟",
+  l4:"مفيش تمرين اسمه «ترايسبس بالحبل». الأقرب:",
+  o4:["ترايسبس بوش داون بالحبل","حبل ترايسبس إكستينشن علوي بالكابل","ترايسبس بوش داون"],none:"ولا واحد من دول",
+  done:"ترايسبس بوش داون اتضاف لـ دفع أ.",undo:"تراجع",
+  undone:"اتلغى. دفع أ رجع زي ما كان."}
+};
+/* NEW strings, listed in docs/design/chat-spec.md with their Arabic. */
+var I={
+ x:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+ exp:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>',
+ send:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg>',
+ down:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>',
+ chev:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>',
+ check:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+ undo:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>',
+ /* the dock's own icons (js/ui/dock.js), and Ask in the same cut: square ends, mitred */
+ train:'<path d="M7.25 11h7.5M4.25 6h3v10h-3zM14.75 6h3v10h-3zM1.75 8.5h2.5v5h-2.5zM17.75 8.5h2.5v5h-2.5z"/>',
+ food:'<path d="M11 2.4a8.6 8.6 0 1 0 8.6 8.6H11z"/><path d="M13.4 8.6c0-3.6 2.4-6 6.2-6 0 3.7-2.5 6-6.2 6z"/><path d="M13.4 8.6l3.2-3.2"/>',
+ coach:'<path d="M8 7.5h12.5V12h-6.69A6 6 0 1 1 8 7.5z"/><path d="M9.75 13.5a1.75 1.75 0 1 1-3.5 0 1.75 1.75 0 0 1 3.5 0z"/>',
+ progress:'<path d="M3.5 19V13.5h4V19zM9 19V8.5h4V19zM14.5 19V3h4v16z"/>',
+ askI:'<path d="M2.75 3.75h16.5v11H9.5l-4.25 3.5v-3.5h-2.5z"/><path d="M9 7.6a2 2 0 1 1 2.75 1.85c-.5.2-.75.6-.75 1.1v.45M11 12.6v.1"/>'
+};
+function svg(p){return '<svg viewBox="0 0 22 22" aria-hidden="true">'+p+'</svg>';}
+function n(x){return '<span class="num">'+x+'</span>';}
+var STATES=[
+ {id:"empty",name:"Empty",note:"what you can say"},
+ {id:"answer",name:"Answer",note:"two sentences, detail behind More"},
+ {id:"confirm",name:"Action confirmation",note:"nothing changes until Add it"},
+ {id:"applied",name:"Applied",note:"lands behind the panel, Undo stays"},
+ {id:"clarify",name:"Clarifying question",note:"asks only for the missing piece"},
+ {id:"matches",name:"Close matches",note:"never answered with the nearest food"},
+ {id:"undone",name:"After undo",note:"back as it was"}
+];
+function bg(s,L){
+  var rows=L.bg.slice(),newRow=s.id==="applied";
+  var h='<div class="bgtab" aria-hidden="true"><div class="bg-h"><b>'+L.day+'</b><span>'+L.dayMeta.replace(/(\d+)/g,'<span class="num">$1</span>')+'</span></div><div class="bg-l">';
+  /* applied: scrolled so the new row sits in the strip above the panel */
+  if(newRow)rows=rows.slice(2).concat([[L.chgA,"3 × 10–12"]]);
+  rows.forEach(function(r,i){var isNew=newRow&&i===rows.length-1;
+    h+='<div class="bg-r'+(isNew?' new':'')+'"><b>'+r[0]+(isNew?'<i>'+L.added+'</i>':'')+'</b><span class="num">'+r[1]+'</span></div>';});
+  return h+'</div></div>';
+}
+function dock(L){
+  return '<div class="dockw"><nav class="dock">'
+   +'<span class="db on">'+svg(I.train)+'<span>'+L.train+'</span></span>'
+   +'<span class="db">'+svg(I.food)+'</span><span class="db">'+svg(I.coach)+'</span><span class="db">'+svg(I.progress)+'</span>'
+   +'<span class="db ask open" aria-label="'+L.ask+'">'+svg(I.askI)+'</span></nav></div>';
+}
+function body(s,L){
+  var h='';
+  if(s.id==="empty"){
+    h+='<p class="hint">'+L.hint+'</p><div class="sug"><div class="sug-k">'+L.sugK1+'</div>'+L.sug1.map(function(x){return '<button>'+x+'</button>';}).join("")
+     +'<div class="sug-k">'+L.sugK2+'</div>'+L.sug2.map(function(x){return '<button>'+x+'</button>';}).join("")+'</div>';
+    return h;}
+  if(s.id==="answer")return '<div class="q" dir="auto">'+L.q1+'</div><div class="a"><div class="a-k">'+L.k1+'</div><p class="a-l">'+L.l1+'</p>'
+     +'<button class="more">'+L.more+I.down+'</button></div>';
+  if(s.id==="confirm")return '<div class="q" dir="auto">'+L.q2+'</div><div class="a"><div class="a-k">'+L.k2+'</div><p class="a-l">'+L.l2+'</p>'
+     +'<div class="chg"><b>'+L.chgA+'</b><span>'+(L.chgB.indexOf("num")>0?L.chgB:L.chgB.replace("3 × 10–12",n("3 × 10–12")))+'</span></div>'
+     +'<div class="acts"><button class="go">'+L.go+'</button><button class="sec">'+L.notnow+'</button></div></div>';
+  if(s.id==="applied")return '<div class="q" dir="auto">'+L.q2+'</div><div class="done" role="status"><i>'+I.check+'</i><p>'+L.done+'</p><button class="undo">'+L.undo+'</button></div>';
+  if(s.id==="undone")return '<div class="q" dir="auto">'+L.q2+'</div><div class="undone" role="status"><i>'+I.undo+'</i><p>'+L.undone+'</p></div>';
+  if(s.id==="clarify")return '<div class="q" dir="auto">'+L.q3+'</div><div class="a"><div class="a-k">'+L.k3+'</div><p class="a-l">'+L.l3+'</p><div class="opts">'
+     +L.o3.map(function(o){return '<button class="opt"><span><b>'+o[0]+'</b>'+(o[1]?'<span>'+o[1]+'</span>':'')+'</span>'+I.chev+'</button>';}).join("")+'</div></div>';
+  if(s.id==="matches")return '<div class="q" dir="auto">'+L.q4+'</div><div class="a"><p class="a-l">'+L.l4+'</p><div class="opts">'
+     +L.o4.map(function(o){return '<button class="opt"><b>'+o+'</b>'+I.chev+'</button>';}).join("")
+     +'<button class="opt none"><b>'+L.none+'</b></button></div></div>';
+}
+function frame(s,lang){
+  var L=T[lang],dir=lang==="ar"?"rtl":"ltr";
+  return '<div class="ph" dir="'+dir+'" lang="'+lang+'">'+bg(s,L)+'<div class="veil"></div>'
+   +'<section class="pnl" role="dialog" aria-label="'+L.ask+'"><div class="pnl-h"><div><b>'+L.ask+'</b><small>'+L.sub+'</small></div>'
+   +'<button class="ib" aria-label="'+L.expand+'">'+I.exp+'</button><button class="ib" aria-label="'+L.close+'">'+I.x+'</button></div>'
+   +'<div class="pnl-b" role="log"><div class="pnl-in">'+body(s,L)+'</div></div>'
+   +'<div class="pnl-f"><span>'+L.field+'</span><button class="send" aria-label="'+L.ask+'">'+I.send+'</button></div></section>'
+   +dock(L)+'</div>';
+}
+function build(){
+  ["en","ar"].forEach(function(lang){
+    var host=document.getElementById(lang==="en"?"ltr":"rtl"),h="";
+    STATES.forEach(function(s){var id=s.id+"-"+(lang==="en"?"ltr":"rtl");
+      h+='<div class="cell"><h2>'+s.name+'<span>'+s.note+'</span></h2><a href="#'+id+'">Open on its own</a><div class="zoom">'+frame(s,lang)+'</div></div>';});
+    host.innerHTML=h;});
+  settle(document);
+}
+function settle(root){root.querySelectorAll(".pnl-b").forEach(function(b){if(!b.querySelector(".hint"))b.scrollTop=b.scrollHeight;});}
+function single(){
+  var m=/^#(\w+)-(ltr|rtl)$/.exec(location.hash),one=document.getElementById("oneframe");
+  if(!m){document.body.classList.remove("one");one.innerHTML="";return;}
+  var s=STATES.filter(function(x){return x.id===m[1];})[0];if(!s)return;
+  one.innerHTML=frame(s,m[2]==="rtl"?"ar":"en");settle(one);one.style.zoom=Math.min(1,window.innerWidth/390);
+  document.body.classList.add("one");window.scrollTo(0,0);
+}
+function seg(id,attr){var g=document.getElementById(id);
+  g.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;
+    g.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});
+    document.documentElement.setAttribute(attr,b.getAttribute("data-v"));});}
+seg("pal","data-palette");seg("mode","data-theme");
+["pal","mode"].forEach(function(id){var at=id==="pal"?"data-palette":"data-theme",v=document.documentElement.getAttribute(at)||(id==="pal"?"blue":"dark");
+  document.getElementById(id).querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x.getAttribute("data-v")===v?"true":"false");});});
+document.getElementById("oneback").addEventListener("click",function(){history.replaceState(null,"",location.pathname);single();});
+window.addEventListener("hashchange",single);
+build();single();
+</script>
+</body>
+</html>
