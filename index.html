@@ -639,9 +639,6 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
    rather than overridden per variant, because zeroing it on .btn.sm would outrank
    .iconbtn's own 44px minimum on specificity and shrink the date-bar arrows. */
 .btn:not(.sm):not(.d){min-height:52px}
-/* The Machine Red edge that keeps the deep fill off the page in Red dark (§4). Only on the
-   accent-filled primary; the tonal and outlined variants have edges of their own. */
-.btn:not(.g):not(.o):not(.ok):not(.danger):not(.d){box-shadow:inset 0 0 0 1.5px var(--color-action-edge)}
 :root:not(.tch) .btn:active,.btn.tapd{transform:scale(.975);filter:brightness(1.12)}
 .btn.g{background:var(--raised);border:1px solid var(--border);color:var(--text)}
 .btn.o{background:transparent;border:1px solid var(--ok);color:var(--ok)}
@@ -873,9 +870,9 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
 @keyframes veilIn{from{background-color:transparent}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){
-  #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh{animation:none}}
+  #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh,.sr.fresh .tick{animation:none}}
 body.noanim #app,body.noanim .sheetbox,body.noanim .sheet,
-body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
+body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .sr.fresh .tick{animation:none}
 /* cursor:pointer is not decoration here. iOS Safari only delivers click events from
    a plain div when it looks interactive, which is why tapping the dimmed area above
    a sheet did nothing on a phone while working on a desktop. */
@@ -1665,6 +1662,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 :root.reduced .bar[data-anim] i,
 :root.reduced path.line[data-anim],
 :root.reduced .logbtn.done.fresh,
+:root.reduced .sr.fresh .tick,
 :root.reduced .err{animation:none}
 :root.reduced .skel{animation:none}
 :root.reduced .ss-clock i{animation:none}
@@ -3570,6 +3568,172 @@ textarea.afnl.warn{border-color:var(--warning)}
 .addset2 span{font-size:18px;color:var(--accentHi)}
 :root:not(.tch) .addset2:active,.addset2.tapd{transform:scale(.96)}
 .btn.ss-next{border-radius:var(--r4);background:linear-gradient(180deg,var(--accent),var(--accent-deep));box-shadow:0 14px 30px -14px var(--accent-glow);margin-top:var(--s4)}
+/* ---- The workout screen (docs/design/workout-spec.md, owner's rulings of 20 Oct) -------
+   Flat: content never sits on the ground or on glass. The header is the one blurred
+   layer; the rest band, the set card and every text surface are opaque. The current
+   set's numbers are the largest thing on the screen, and the check stays under the
+   thumb during a rest. Labels sit on --color-action-fill, never on Machine Red. */
+body.wkflat::before,body.wkflat #bgart{display:none}
+body.wkflat #app{--gutter:20px}
+/* The app's glass (see "Glass, everywhere") stops at the workout's header: fields, the
+   feel chips and the secondary buttons here are flat. */
+.sess .wb :is(input,select,textarea,.ready,.btn.g,.card){-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
+.sess .wb :is(input,select,textarea){background-color:var(--surface);border-color:var(--border)}
+.sess .flip{display:inline-block}
+[dir="rtl"] .sess .flip{transform:scaleX(-1)}
+.sess svg{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* WorkoutHeader: close, day and position (opens today's list), clock, more, a 3px bar. */
+.sess .ss-top{margin-bottom:var(--s3);padding-bottom:0;border-bottom:1px solid var(--hair)}
+.sess .ss-row{display:grid;grid-template-columns:var(--hit) minmax(0,1fr) auto var(--hit);gap:var(--s2);align-items:center;min-height:52px}
+.sess .ss-back,.sess .ss-more{width:var(--hit);height:var(--hit);margin:0;border-radius:50%;border:1px solid var(--glass-btn-edge);
+  background:var(--glass-btn);color:var(--text);font-size:17px}
+.sess .ss-title{min-height:var(--hit);justify-content:center;padding:0}
+.sess .ss-name{font-size:13px;font-weight:600;color:var(--sub)}
+.sess .ss-meta{display:flex;align-items:center;gap:var(--s1);margin:0;font-size:15px;font-weight:700;color:var(--text)}
+.sess .ss-caret{width:16px;height:16px;stroke-width:2.4}
+.sess .ss-clock{margin:0;padding:0 var(--s1);border:0;border-radius:0;background:none;box-shadow:none;align-items:flex-end}
+.sess .ss-clock .num{color:var(--sub);font-size:15px}
+.sess .ss-bar{height:3px;margin:var(--s2) calc(-1 * var(--gutter)) 0;border-radius:0;background:var(--bar-track)}
+.sess .ss-bar i{height:3px;border-radius:0;background:var(--accent)}
+
+.sess .wb{display:grid;gap:var(--s3)}
+.sess .wb>*{min-width:0;margin-block:0}
+
+/* ExerciseLine: the name (smaller than the numbers), how to do it, swap; the set line
+   and the two adds. */
+.wexl{display:grid;grid-template-columns:minmax(0,1fr) var(--hit) var(--hit);gap:var(--s1) var(--s2);align-items:center}
+.wexl .ex-name{font-family:var(--display);font-size:21px;font-weight:700;letter-spacing:0;line-height:1.2;margin:0;min-width:0}
+.sess .ib{width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border-radius:50%;
+  border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.sess .ib svg{width:20px;height:20px}
+.wexl-s{grid-column:1/-1;margin:0;display:flex;align-items:center;justify-content:space-between;gap:var(--s2);flex-wrap:wrap;
+  color:var(--sub);font-size:15px}
+.wexl-s .ex-light{color:var(--text);font-weight:700}
+.wexl .adds{display:flex;gap:6px}
+.wexl .chip{white-space:nowrap;min-height:var(--hit);padding:0 var(--s3);border-radius:var(--rpill);border:1.5px dashed var(--border);
+  background:transparent;color:var(--text);font-weight:700;font-size:14px}
+.wexl .chip.wkwu{border-color:var(--gold)}
+
+/* RestBand: in place of the old full-screen rest. Time up, it fills with the action
+   fill and is the alert. */
+.rb{display:grid;gap:10px;padding:var(--s3) var(--s4) var(--s4);border-radius:var(--r5);border:1px solid var(--border);background:var(--raised)}
+.rb-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
+.rb-k{font-size:13px;font-weight:700;color:var(--dim)}
+.rb-t{font-family:var(--display);font-size:68px;font-weight:700;line-height:.95;letter-spacing:-.02em;color:var(--text)}
+.rb-ctl{display:flex;gap:var(--s2)}
+.rb-ctl button{width:48px;height:48px;display:grid;place-items:center;padding:0;border-radius:50%;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-weight:700;font-size:14px}
+.rb-ctl svg{width:20px;height:20px;fill:currentColor;stroke:none}
+.rb .i-play,.rb.paused .i-pause{display:none}
+.rb.paused .i-play{display:block}
+.rb-bar{height:6px;border-radius:3px;background:var(--bar-track);overflow:hidden}
+.rb-bar i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+.rb.over{background:var(--color-action-fill);border-color:var(--color-action-edge);color:var(--onAccent);border-width:1.5px}
+.rb-done{font-family:var(--display);font-size:40px;font-weight:700;line-height:1.1}
+.rb-sub{font-family:var(--display);font-size:20px;font-weight:700}
+
+/* SetCard: flat raised, no glass. 76px numbers, 56px steppers; 56px numbers while a rest
+   counts, because then the time is the number that matters. */
+.wsc{display:grid;gap:var(--s3);padding:18px var(--s4) var(--s3);border-radius:var(--r5);border:1px solid var(--border);background:var(--raised)}
+.sc-g{display:grid;grid-template-columns:1.25fr 1fr;gap:var(--s3)}
+.sc-g.one{grid-template-columns:1fr}
+.wsc .val{display:grid;gap:var(--s2);text-align:center;min-width:0}
+.wsc .val-k{font-size:13px;font-weight:700;color:var(--dim)}
+.sess .wsc .val-n{width:100%;min-width:0;height:auto;margin:0;padding:2px 0 6px;border:0;border-bottom:2px solid var(--hair-hi);border-radius:0;
+  background:none;box-shadow:none;color:var(--text);text-align:center;font-family:var(--display);font-weight:700;font-size:76px;line-height:.95;
+  letter-spacing:-.02em;-moz-appearance:textfield;appearance:textfield}
+.sess .wsc .val-n::-webkit-inner-spin-button,.wsc .val-n::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.sess .wsc .val-n:focus{outline:none;border-bottom-color:var(--accent)}
+/* A pre-filled value is a suggestion until it is touched. The number stays in text:
+   it is the thing being read at arm's length. */
+.sess .wsc .val-n.sg{color:var(--text)}
+.wsc .wstp{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+.wsc .wstp button{min-height:56px;padding:0;border-radius:var(--r4);border:1px solid var(--border);background:var(--surface);
+  color:var(--text);font-family:var(--display);font-size:19px;font-weight:700}
+.sess .wsc.small .val-n{font-size:56px}
+.wsc.small .wstp button{min-height:52px}
+.sc-h{display:flex;flex-wrap:wrap;gap:var(--s1) 10px;padding-top:var(--s3);border-top:1px solid var(--hair);color:var(--sub);font-size:15px}
+.sc-h b{color:var(--text);font-weight:700}
+.sc-h>span{flex:1 1 100%}
+.sc-h .sc-cue{font-style:italic}
+.sc-rpe{display:grid;gap:var(--s2);text-align:center}
+.sc-rpe-c{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.sc-rpe-c button{min-height:var(--hit);border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
+  color:var(--text);font-weight:700;font-size:15px}
+.sc-rpe-c button.on{background:var(--accent-tint);border-color:var(--accent);color:var(--text)}
+.sc-wu{display:flex;align-items:center;gap:var(--s2);font-size:14px;font-weight:700;color:var(--text)}
+.sc-wu p{margin:0;flex:1;min-width:0}
+.sc-wu p span{color:var(--sub);font-weight:600}
+.sess .wub{width:28px;height:28px;margin:auto;border-radius:50%;border:1.5px solid var(--gold);color:var(--text);
+  display:grid;place-items:center;font-size:13px;font-weight:700}
+.sc-wu .wub{margin:0;flex:none}
+
+/* LogControl: the Nike-style check, full width, on the action fill. */
+.sess .log{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);width:100%;min-height:76px;margin:0;
+  padding-block:var(--s2);padding-inline:28px var(--s2);border:0;border-radius:var(--rpill);
+  background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);color:var(--onAccent);
+  font-family:var(--display);font-size:20px;font-weight:700;text-align:start}
+:root:not(.tch) .sess button.log:active,.sess button.log.tapd{transform:scale(.985)}
+.log-c{width:60px;height:60px;flex:none;display:grid;place-items:center;border-radius:50%;border:3px solid currentColor}
+.log-c svg{width:28px;height:28px;stroke-width:3.2}
+.sess .log.ok{background:var(--ok);box-shadow:none;color:var(--onOk);padding-inline:var(--s2) 10px;justify-content:flex-start}
+.sess .log.ok .log-c{background:var(--onOk);color:var(--ok);border-color:var(--onOk)}
+.sess .log.ok b{flex:1;min-width:0;font-size:20px}
+.sess .undo{min-height:48px;padding:0 18px;border-radius:var(--rpill);border:2px solid var(--onOk);background:transparent;
+  color:var(--onOk);font-weight:700;font-size:16px}
+
+/* "How do you feel today?", under the check before the first set. */
+.sess .ready{margin:0;padding:0;border:0;background:none}
+.sess .ready-h{margin-bottom:var(--s2);font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--sub)}
+.sess .ready-skip{color:var(--accentHi);font-weight:700;min-height:var(--hit)}
+.sess .readynote,.sess .painnote{margin:0}
+.sess .exalt{margin:0;justify-self:start}
+
+/* NextExercise: the next one by name, one tap. */
+.nx{display:grid;grid-template-columns:minmax(0,1fr) 24px;align-items:center;gap:var(--s2);min-height:64px;padding:var(--s2) var(--s4);
+  border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);color:var(--text);text-align:start}
+.nx small{display:block;font-size:13px;font-weight:700;color:var(--dim)}
+.nx b{display:block;font-family:var(--display);font-size:17px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx svg{width:20px;height:20px;color:var(--dim);stroke-width:2.4}
+
+/* SetHistory: delete leads (settled), the tick ends the row and takes the set back. */
+.wsl{display:grid;gap:6px}
+.wsr{display:grid;grid-template-columns:var(--hit) 30px minmax(0,1fr) var(--hit);align-items:center;gap:var(--s1);min-height:52px;
+  padding-inline:2px var(--s1);border-radius:var(--r4);border:1px solid var(--hair);color:var(--sub)}
+.wsr.did{background:var(--surface);border-color:var(--border);color:var(--text)}
+.wsr.on{background:var(--accent-tint);border-color:var(--accent-edge);color:var(--text)}
+.wsr .x{width:var(--hit);height:var(--hit);padding:0;border:0;border-radius:50%;background:none;color:var(--dim);font-size:16px}
+.wsr .n{font-family:var(--display);font-weight:700;text-align:center}
+.wsr .v{font-weight:600;min-width:0}
+.wsr .now{font-size:14px;font-weight:700;color:var(--text)}
+.wsr.wkwu{border-style:dashed;border-color:var(--gold);background:transparent}
+.wsr.wkwu.did{background:var(--surface)}
+.wsr.wkwu.on{background:var(--accent-tint)}
+.wsr .wut{margin-inline-start:6px;font-size:13px;font-weight:700;color:var(--sub)}
+.wsr .wtick{width:36px;height:36px;margin:var(--s1);padding:0;display:grid;place-items:center;border:0;border-radius:50%;
+  background:var(--ok);color:var(--onOk);position:relative}
+/* 36px drawn, a 44px target. */
+.wsr button.wtick::after{content:"";position:absolute;inset:-4px}
+.wsr .wtick svg{width:18px;height:18px;stroke-width:3}
+.wsr .wtick.off{background:transparent;border:1px solid var(--hair-hi);color:var(--dim)}
+.wsr.fresh .wtick{animation:setpop var(--m-pop) var(--e-spring)}
+.wsr.ask{grid-template-columns:minmax(0,1fr) auto auto;gap:6px;padding-inline:14px 6px;border-color:var(--danger);
+  background:var(--surface);color:var(--text)}
+.wsr.ask button{min-height:var(--hit);padding:0 var(--s4);border-radius:var(--rpill);font-weight:700;font-size:15px}
+.wsr.ask .del{border:1px solid var(--danger);background:transparent;color:var(--danger)}
+.wsr.ask .keep{border:1px solid var(--border);background:var(--raised);color:var(--text)}
+.sess .bwnote{margin:0}
+
+/* Tools: Skip and Add as tiles; Remove and Something hurts? as quiet links under them. */
+.sess .tools{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+.sess .tools button{min-height:52px;display:flex;align-items:center;justify-content:center;gap:var(--s2);border-radius:var(--r4);
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700}
+.sess .tools svg{width:18px;height:18px}
+.sess .quiet{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--s1);margin-bottom:var(--s5)}
+.sess .quiet button{min-height:var(--hit);padding:0 var(--s1);border:0;background:none;color:var(--dim);font-size:14px;font-weight:600;
+  text-decoration:underline;text-underline-offset:3px}
+.sess .quiet button.on{color:var(--warning)}
 .ss-acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;margin:var(--s4) 0 8px}
 .ss-act{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 12px;border-radius:var(--r4);
   border:1px solid var(--border);background:var(--raised);color:var(--text);font-weight:600;font-size:14px}
@@ -3684,6 +3848,27 @@ textarea.afnl.warn{border-color:var(--warning)}
 .rt-skip,.rt-main{text-transform:none;letter-spacing:0}
 
 /* ---- Workout complete (sheets.js "done") ------------------------------------------ */
+/* Workout complete (workout-spec.md): the ok check, the figures on raised, the record
+   card in gold, Done in the log control's style, then the questions under it. */
+.wfin{display:grid;gap:var(--s4);justify-items:center;text-align:center;padding-top:var(--s4)}
+.wfin-c{width:96px;height:96px;display:grid;place-items:center;border-radius:50%;background:var(--ok);color:var(--onOk)}
+.wfin-c svg{width:48px;height:48px;fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.wfin-h{margin:0;font-family:var(--display);font-size:30px;font-weight:700}
+.wfin-sub{margin:calc(-1 * var(--s3)) 0 0;color:var(--sub)}
+.wfin-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2);width:100%}
+.wfin-stats .stat{display:grid;gap:2px;padding:14px 6px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+.wfin-stats b{font-family:var(--display);font-size:30px;font-weight:700;line-height:1.1;white-space:nowrap;color:var(--text)}
+.wfin-stats b small{font-size:15px;color:var(--dim)}
+.wfin-stats>.stat>small{font-size:13px;font-weight:700;color:var(--dim)}
+.wfin-rec{width:100%;display:grid;gap:2px;padding:14px var(--s4);border-radius:var(--r4);border:1.5px solid var(--gold);
+  background:var(--raised);text-align:start}
+.wfin-rec b{color:var(--gold);font-size:15px}
+.wfin-rec span{font-size:16px;font-weight:600;color:var(--text)}
+.wfin-up{margin:0;color:var(--sub);font-weight:600}
+.wfin-done{width:100%;min-height:76px;display:flex;align-items:center;justify-content:center;padding:0 var(--s5);
+  border:0;border-radius:var(--rpill);background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);
+  color:var(--onAccent);font-family:var(--display);font-size:20px;font-weight:700}
+.wfin .wc2-effort{width:100%;margin-top:0}
 .wc2{position:relative;text-align:center;padding:8px 4px 0;isolation:isolate}
 .wc2-art{position:absolute;z-index:-1;top:-40px;left:50%;width:300px;height:auto;transform:translateX(-50%);opacity:.10;pointer-events:none}
 .wc2-medal{display:grid;place-items:center;width:84px;height:84px;margin:6px auto 16px;border-radius:50%;
@@ -4691,10 +4876,14 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 }
 /* The primary action, lit from above. At a plain .btn's weight (:where adds none), so a
    button that is given its own fill (a delete's red, a sheet's own) keeps it. */
-.btn:where(:not(.g):not(.o):not(.ok):not(.danger):not(.d)),.pill.a,.seg-ind,.btn.fadd,.btn.ss-next{
+.pill.a,.seg-ind,.btn.fadd,.btn.ss-next{
   background-image:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0) 56%),linear-gradient(180deg,var(--accent),var(--accent-deep))}
 .btn:where(:not(.g):not(.o):not(.ok):not(.danger):not(.d)){
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.36),inset 0 0 0 1px rgba(255,255,255,.10),0 12px 28px -14px rgba(var(--accent-rgb),.8)}
+  background-image:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0) 56%),linear-gradient(180deg,var(--color-action-fill),var(--accent-deep));
+  box-shadow:inset 0 0 0 1.5px var(--color-action-edge),inset 0 1px 0 rgba(255,255,255,.36),inset 0 0 0 1px rgba(255,255,255,.10),0 12px 28px -14px rgba(var(--accent-rgb),.8)}
+/* In Red the label sits on flat accent-deep (token-requests.md §4): the light from above
+   would lift the top of the fill back towards Machine Red, under the label. */
+[data-palette="red"] .btn:where(:not(.g):not(.o):not(.ok):not(.danger):not(.d)){background-image:none}
 </style>
 </head>
 <body>

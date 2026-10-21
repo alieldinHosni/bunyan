@@ -134,6 +134,8 @@ function render(){
      back. The page stops keeping room for the dock too (body.focus in index.html). */
   var focus=!V.assess&&V.tab==="train"&&((!!S.active&&V.train!=="hub")||(!!S.run&&!S.active));
   document.body.classList.toggle("focus",focus);
+  /* The workout itself is flat: no ground, no drawing behind it (workout-spec.md). */
+  document.body.classList.toggle("wkflat",focus&&!!S.active);
   /* The dock is built once and only its state changes after that — see dock.js. */
   syncDock(document.getElementById("nav"),V.tab,V.advice);
   /* The page's drawing on the ground (js/ui/bgart.js); the assessment is Coach's. */

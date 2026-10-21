@@ -85,9 +85,10 @@ document.addEventListener("click",function(ev){
    same test decides both directions, and render() re-checks it, so the flag cannot be
    left behind by a field that was destroyed rather than blurred. */
 document.addEventListener("focusin",syncKeyboard);
-/* A stepper's typed figure (steps, minutes) is selected on focus, so typing replaces it. */
+/* A stepper's typed figure (steps, minutes) and the set card's two numbers are selected on
+   focus, so typing replaces them. */
 document.addEventListener("focusin",function(ev){var x=ev.target;
-  if(x&&x.classList&&x.classList.contains("stn")&&x.select)setTimeout(function(){try{x.select();}catch(e){}},0);});
+  if(x&&x.classList&&(x.classList.contains("stn")||x.classList.contains("val-n"))&&x.select)setTimeout(function(){try{x.select();}catch(e){}},0);});
 document.addEventListener("focusout",function(){setTimeout(syncKeyboard,60);});
 
 /* The clock and the rest ring are the only things that change every second, so they
@@ -110,7 +111,7 @@ function tickSession(){
      rest surface does not disappear at zero any more — it turns into the alert, and
      stays until the user acknowledges it. Sound cannot be relied on (silent switch,
      backgrounded tab), so the screen has to carry it. */
-  if(left<=0){V.restOver=V.restEnd;V.restEnd=0;V.restPaused=false;V.restDone=true;V.restMin=false;
+  if(left<=0){V.restOver=V.restEnd;V.restEnd=0;V.restPaused=false;V.restDone=true;
     if(!V.sheet)render();else syncWbar();return;}
   paintRest();
 }
@@ -165,7 +166,7 @@ useUserData(function(){return S;});
    profile being left (state.js calls this rather than reaching into the view). */
 onProfileSwitch(function(){
   V.tab="train";V.train="days";V.logIdx=0;
-  V.restEnd=0;V.restPaused=false;V.restDone=false;
+  V.restEnd=0;V.restPaused=false;V.restDone=false;V.justLogged=null;V.askDel=null;
   restoreWorkoutState();});
 initState();
 setStorageErrorHandler(toast);
