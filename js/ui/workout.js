@@ -14,15 +14,16 @@ import {muscleOf, MUSCLES} from "../data/exercises.js";
 import {lastWeight, prFor, recordOf, recordText} from "../engine/formulas.js";
 import {exName} from "../i18n/exnames.js";
 import {S, saveDB} from "../state.js";
-import {fmtW, toKg} from "../units.js";
+import {fmtW, toDisp, toKg} from "../units.js";
 import {num, r1} from "../util.js";
 import {ACT, askConfirm, closeSheet, finishSession, openSheet, syncDraft, val} from "./actions.js";
 import {render} from "./render.js";
 import {resetNav} from "./nav.js";
-import {groupNext, groupRun, noteSet, paintRest, rowsFor} from "./views/session.js";
-import {alarmStop, endRest, ex_isTimed, play, setBeeped, setLastTick, startRest, syncWorkoutState, tap, toast, V} from "./view.js";
+import {groupNext, groupRun, LOGGED_MS, noteSet, paintRest, rowsFor, weightStep} from "./views/session.js";
+import {endRest, ex_isTimed, play, setBeeped, startRest, syncWorkoutState, tap, toast, V} from "./view.js";
 
 function current(){return (S.active&&S.active.entries[V.logIdx])||null;}
+var loggedTimer=0;
 
 /* The muscle filter a replacement should open on. muscleOf() can answer "Other",
    which is a real classification but not one the filter row offers — selecting it
@@ -136,18 +137,28 @@ function logSet(){
   if(lp)V.draft.rpe=lp.value===""?null:Math.min(10,Math.max(1,Math.round(num(lp.value,8)*2)/2));
   var bad=setProblem(V.draft.w,V.draft.r,ex_isTimed(e3));
   if(bad){toast(bad);return;}
-  var ns={w:V.draft.w,r:V.draft.r};if(V.draft.rpe)ns.rpe=V.draft.rpe;
+  /* A warm-up is chosen when it is added (+ Warm-up), so the set knows its kind as it
+     is logged: wu, and out of volume, records and progression as before. */
+  var wu=num(e3.wuq)>0;
+  var ns={w:V.draft.w,r:V.draft.r};if(V.draft.rpe&&!wu)ns.rpe=V.draft.rpe;
   if(V.draftSg)ns.sg=1;
+  if(wu){ns.wu=true;e3.wuq=num(e3.wuq)-1;}
   var rec3=recordOf(e3.name,ns,e3.sets);
   e3.sets.push(ns);
   /* A slipped digit (80 → 800) would become a record and drive every suggestion
      after it. Far above the lifter's best, say so — the set is logged, and the tick
      undoes it. */
   var bestW=prFor(e3.name).w;
-  if(bestW>=20&&ns.w>bestW*1.3)setTimeout(function(){
+  if(!wu&&bestW>=20&&ns.w>bestW*1.3)setTimeout(function(){
     toast(t("That is well above your best of")+" "+fmtW(bestW)+". "+t("Check the weight. Tap the tick to undo."));},50);
   else if(rec3)setTimeout(function(){toast("🏆 "+recordText(rec3));},50);
-  V.loggedAt=Date.now();
+  V.loggedAt=Date.now();V.askDel=null;
+  /* For a moment the check says the set is logged and offers Undo, then reads the next
+     set (workout-spec.md, LogControl). */
+  var nWork=e3.sets.filter(function(x){return !x.wu;}).length;
+  V.justLogged={idx:V.logIdx,i:e3.sets.length-1,n:nWork,wu:wu,at:V.loggedAt};
+  clearTimeout(loggedTimer);
+  loggedTimer=setTimeout(function(){if(V.justLogged&&Date.now()-V.justLogged.at>=LOGGED_MS){V.justLogged=null;if(S.active)render();}},LOGGED_MS+30);
   /* Closes the active period and starts a new one; the clock resumes by itself. */
   noteSet(S.active);
   V.fresh=e3.sets.length-1;
@@ -189,15 +200,19 @@ function logBout(){
    logged set asks, and says what it is about to throw away. */
 function removeRow(i){
   var eD=current();if(!eD)return;
-  if(i<eD.sets.length){
-    var sD=eD.sets[i];
-    askConfirm({title:t("Delete set")+" "+(i+1)+"?",icon:"trash",
-      body:(num(sD.w)?fmtW(sD.w)+" × "+num(sD.r):num(sD.r)+" "+t("reps"))
-           +" "+t("will be removed."),
-      cta:t("Delete"),act:"delset",data:i,hard:true});
-    return;}
+  /* A logged set asks inside its own row: still two taps, one sheet fewer. */
+  if(i<eD.sets.length){V.askDel={x:V.logIdx,i:i};render();return;}
+  /* A pending row: a queued warm-up leaves the queue, a working set the plan. */
+  if(i-eD.sets.length<num(eD.wuq))eD.wuq=num(eD.wuq)-1;
   eD.extra=(eD.extra||0)-1;
   saveDB();syncDraft();render();}
+function cancelDelete(){V.askDel=null;render();}
+/* The row's Delete. A warm-up was a row of its own (+ Warm-up), so its row goes with it. */
+function deleteSet(i){
+  var e=current(),ask=V.askDel;V.askDel=null;
+  if(!e||!ask||ask.x!==V.logIdx||ask.i!==i||!e.sets[i]){render();return;}
+  if(e.sets[i].wu&&num(e.extra)>0)e.extra=num(e.extra)-1;
+  ACT.delset(null,i);}
 /* Tapping the green tick undoes that set. Reversible, so no confirm. */
 function unlogSet(i){
   /* The log button turns into this one under the finger, so the second tap of a
@@ -206,18 +221,49 @@ function unlogSet(i){
   var e4=current();if(!e4)return;
   var gone=e4.sets.splice(i,1)[0];
   if(!gone)return;
-  V.fresh=-1;saveDB();syncDraft();render();
+  /* A warm-up taken back is the warm-up still to do, not a working set. */
+  if(gone.wu)e4.wuq=num(e4.wuq)+1;
+  V.fresh=-1;V.justLogged=null;V.askDel=null;saveDB();syncDraft();render();
   toast(t("Set removed."),function(){
     if(!S.active||S.active.entries.indexOf(e4)<0)return;
+    if(gone.wu)e4.wuq=Math.max(0,num(e4.wuq)-1);
     e4.sets.splice(Math.min(i,e4.sets.length),0,gone);saveDB();syncDraft();render();});}
+/* Undo on the "Set 2 logged" control: the set comes back off, with the numbers it was
+   logged with, and the rest it started ends. Not within a moment of logging, or the
+   second tap of a double tap would land here. */
+function undoLogged(){
+  var j=V.justLogged,e=current();
+  if(!j||!e||j.idx!==V.logIdx)return;
+  if(V.loggedAt&&Date.now()-V.loggedAt<800)return;
+  var gone=e.sets[j.i];if(!gone||j.i!==e.sets.length-1)return;
+  e.sets.pop();if(gone.wu)e.wuq=num(e.wuq)+1;
+  V.justLogged=null;V.fresh=-1;endRest();
+  syncDraft();V.draft.w=num(gone.w);V.draft.r=num(gone.r);V.draft.rpe=gone.rpe||null;V.draftSg=!!gone.sg;
+  saveDB();render();}
 function addRow(){
   var e5=current();if(!e5)return;
   e5.extra=(e5.extra||0)+1;V.fresh=-1;saveDB();render();}
-function toggleWarm(i){
-  var ew=current(),sw=ew&&ew.sets[i];
-  if(!sw)return;
-  sw.wu=!sw.wu;V.fresh=-1;saveDB();syncDraft();render();
-  toast(sw.wu?t("Marked as a warm-up."):t("Counting as a working set."));}
+/* + Warm-up: a warm-up row before the next working set, and the set being done. Its
+   numbers start from the last warm-up on this exercise, or else the next working set,
+   to step down from; no warm-up weight is recommended, since there is no rule for one. */
+function addWarmup(){
+  var e=current();if(!e)return;
+  e.extra=num(e.extra)+1;e.wuq=num(e.wuq)+1;V.fresh=-1;V.askDel=null;
+  saveDB();syncDraft();render();}
+/* The steppers: weight by the exercise's own step at this load, reps by 1, seconds by
+   5. What is typed in the box but not yet blurred is read first. */
+function stepDraft(k,dir){
+  var e=current();if(!e||(k!=="w"&&k!=="r"))return;
+  var f=document.getElementById("in_"+k);
+  if(f&&f.value!=="")V.draft[k]=k==="w"?toKg(f.value):num(f.value);
+  if(k==="w"){
+    var st=Math.round(toDisp(weightStep(e.name,V.draft.w))*100)/100;
+    var d=Math.max(0,Math.min(toDisp(1000),Math.round((toDisp(V.draft.w)+dir*st)*100)/100));
+    V.draft.w=toKg(d);}
+  else{
+    var timed=ex_isTimed(e),by=timed?5:1;
+    V.draft.r=Math.max(1,Math.min(timed?3600:100,Math.round(num(V.draft.r))+dir*by));}
+  V.draftSg=false;render();}
 /* Editing a set that is already logged, in place. Previously the only way to fix
    a typo was to delete the set and re-enter it. */
 function editLoggedSet(i,k,raw){
@@ -247,14 +293,6 @@ function restControl(cmd){
   if(cmd==="resume"){V.restPaused=false;V.restEnd=Date.now()+V.restLeft*1000;
     setBeeped(false);paintRest();persistRest();return;}
   if(cmd==="skip"){endRest();render();return;}
-  if(cmd==="hide"){V.restMin=true;render();return;}
-  if(cmd==="show"){V.restMin=false;render();return;}
-  /* From the rest-over screen: start another countdown of that length. */
-  if(cmd==="ext30"||cmd==="ext60"){
-    var ext=cmd==="ext30"?30:60;
-    alarmStop();V.restDone=false;V.restPaused=false;
-    V.restTotal=ext;V.restEnd=Date.now()+ext*1000;setBeeped(false);setLastTick(99);
-    render();return;}
   var by=+cmd;if(!isFinite(by))return;
   if(V.restPaused){V.restLeft=Math.max(0,V.restLeft+by);
     V.restTotal=Math.max(15,V.restTotal+by);
@@ -291,5 +329,5 @@ function askDiscard(){
     body:t("Every set you logged in this workout is thrown away. This cannot be undone."),
     cta:t("Discard it"),act:"discard",hard:true});}
 
-export {addRow, askDiscard, confirmFinish, removeExercise, editLoggedSet, flagPain, jumpTo, logBout, logSet, nextExercise,
-        lighterDay, persistRest, pickMuscle, removeRow, restControl, resume, setProblem, setReady, toggleWarm, unlogSet};
+export {addRow, addWarmup, askDiscard, cancelDelete, confirmFinish, deleteSet, removeExercise, editLoggedSet, flagPain, jumpTo, logBout, logSet, nextExercise,
+        lighterDay, persistRest, pickMuscle, removeRow, restControl, resume, setProblem, setReady, stepDraft, undoLogged, unlogSet};

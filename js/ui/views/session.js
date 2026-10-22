@@ -1,19 +1,16 @@
 /* Bunyan — session
    The live session surface and rest screen. Execution, not editing. */
-import {t, tm} from "../../i18n/dict.js";
-import {isolateNums} from "../../i18n/bidi.js";
-import {difficultyOf, exFigs, exImg, exMedia, isUnilateral, muscleOfEntry} from "../../data/exercises.js";
+import {t} from "../../i18n/dict.js";
+import {exMedia, isUnilateral} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
-import {bodyAt, bwShare, loadText, dbTotal, inDeload, lastWeight, prevPerf, prFor, progressionHint, recommend} from "../../engine/formulas.js";
-import {actIcon, actInfo, actKcal, actRate, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
+import {bodyAt, bwShare, dbTotal, incrementFor, inDeload, lastWeight, prevPerf, recommend} from "../../engine/formulas.js";
+import {incrementOf} from "../../engine/lifts.js";
+import {actInfo, actKcal, actRate, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
 import {S} from "../../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num} from "../../util.js";
-import {markArt} from "../art.js";
 import {ex_isTimed, stepperInput, V} from "../view.js";
-import {doseText} from "../dose.js";
 import {vWarm, warmShown} from "./warmup.js";
-import {fig3dHtml, hasMannequin} from "../mannequin.js";
 
 /* ============================================================ SESSION
    Execution surface, not an editor. vDay() prescribes the work; this screen only
@@ -110,23 +107,200 @@ function noteSet(a){
   a.lastSet=now;
 }
 
-/* The prescription of a live entry, as the plan wrote it — and, inside a training
-   block, how many sets the answers after earlier workouts moved it by. */
-function plannedDose(e){
-  var p=e.planned||{},d=p.plan!=null?num(p.sets)-num(p.plan):0;
-  return doseText({sets:p.sets,lo:p.lo,hi:p.hi,amrap:p.amrap,side:p.side,rir:p.rir,timed:ex_isTimed(e)&&!LOADED.test(e.name)})
-    +(d?" · "+t(d>0?"{n} more than the plan":"{n} fewer than the plan").replace("{n}",Math.abs(d)):"");}
+/* The weight step of an exercise at a load: the progression engine's own
+   (lifts.js incrementOf, through formulas.js for the lifter's own step, the unit and
+   how dumbbells are logged), so the steppers and the suggestions cannot disagree.
+   Bodyweight lifts have no equipment step; their added load steps as other kit does. */
+function weightStep(name,w){
+  return incrementFor(name,w)||incrementOf("",w,{lb:inLb()});}
+
+/* ---- the rows of an exercise, in order --------------------------------------
+   Logged sets first, then what is still to do: the warm-ups queued with + Warm-up
+   (e.wuq), then the working sets. A warm-up has no number; working sets are counted
+   1, 2, 3 on their own. */
+function rowPlan(e){
+  var rows=rowsFor(e),out=[],k=0,q=Math.max(0,num(e.wuq)),i;
+  for(i=0;i<rows;i++){
+    var done=i<e.sets.length,wu=done?!!e.sets[i].wu:(i-e.sets.length)<q;
+    if(!wu)k++;
+    out.push({i:i,done:done,wu:wu,n:wu?0:k,set:done?e.sets[i]:null});}
+  return out;}
+/* The working sets of an exercise, planned and done. */
+function workCount(plan){return plan.filter(function(r){return !r.wu;}).length;}
+/* "6–10 reps", "40–60 s", "max": the reps half of the dose, for the set line. */
+function repsText(e,timed){
+  var p=e.planned||{};
+  if(p.amrap)return t("max");
+  if(!p.lo&&!p.hi)return "";
+  var r=p.lo+(p.hi&&p.hi!==p.lo?"–"+p.hi:"");
+  return r+" "+(timed?t("s"):t("reps"))+(p.side?" "+t("/ side"):"")
+    +(p.rir!=null&&!timed?" · "+t("{n} in reserve").replace("{n}",p.rir):"");}
+/* A set as the rows and the reference line say it: "60 kg × 8", "+10 kg × 6", "BW × 12",
+   "45 s". */
+function setText(name,x,timed){
+  if(timed)return '<span class="num">'+num(x.r)+'</span> '+t("s");
+  var bwl=bwShare(name)>0;
+  if(num(x.w))return '<span class="num">'+(bwl?"+":"")+toDisp(x.w)+'</span> '+wUnit()+' × <span class="num">'+num(x.r)+'</span>';
+  return (bwl?t("BW")+' × ':'')+'<span class="num">'+num(x.r)+'</span>'+(bwl?'':' '+t("reps"));}
+function fill(s,n){return s.replace("{n}",'<span class="num">'+n+'</span>');}
+
+var IC={
+  info:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11v6M12 7h.01"/><circle cx="12" cy="12" r="9"/></svg>',
+  swap:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>',
+  check:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  chev:'<svg class="flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>',
+  skip:'<svg class="flip" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l10 7-10 7zM19 5v14"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  down:'<svg class="ss-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>',
+  pause:'<svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+  play:'<svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>'
+};
+/* How long the "Set 2 logged" state holds the log control before it reads "Log set 3". */
+var LOGGED_MS=2000;
+function justLogged(){
+  var j=V.justLogged;
+  return j&&j.idx===V.logIdx&&Date.now()-j.at<LOGGED_MS?j:null;}
+
+/* ---- the rest, in place --------------------------------------------------------
+   A band above the next set, not a screen over it: the set's numbers and the check stay
+   under the thumb, and the check logs from here. Time up, the band is the alert. */
+function restOn(){return !!S.active&&(V.restEnd>Date.now()||V.restPaused||V.restDone);}
+function restLeft(){return V.restPaused?V.restLeft:Math.max(0,Math.ceil((V.restEnd-Date.now())/1000));}
+function restPct(){var total=Math.max(1,V.restTotal||1);return Math.max(0,Math.min(100,restLeft()/total*100));}
+function vRestBand(){
+  if(V.restDone)
+    return '<section class="rb over" data-k="rest" role="alert"><div class="rb-done">'+t("Rest complete")+'</div>'
+     +(V.restOver?'<div class="rb-sub"><span class="num" id="restOver">'+overText()+'</span> '+t("over your rest")+'</div>':'')
+     +'</section>';
+  var paused=V.restPaused;
+  return '<section class="rb'+(paused?' paused':'')+'" data-k="rest" id="restBand" aria-label="'+t("Rest")+'"><div class="rb-top"><div>'
+   +'<div class="rb-k">'+t("Rest")+'</div><div class="rb-t num" id="restDig">'+mmss(restLeft())+'</div></div>'
+   +'<div class="rb-ctl">'
+   +'<button class="num" data-rest="-30" aria-label="'+t("30 seconds less")+'">−30</button>'
+   +'<button id="restMain" data-rest="'+(paused?"resume":"pause")+'" aria-label="'+t(paused?"Resume":"Pause")+'">'+IC.pause+IC.play+'</button>'
+   +'<button class="num" data-rest="30" aria-label="'+t("30 seconds more")+'">+30</button></div></div>'
+   +'<div class="rb-bar" aria-hidden="true"><i id="restBar" style="width:'+restPct()+'%"></i></div></section>';}
+
+/* ---- the set being done -----------------------------------------------------------
+   Its two numbers are the largest thing on the screen; the steppers move them by the
+   progression engine's own step, so the buttons and the suggestions cannot disagree.
+   Tapping a number types into it, for a big jump. */
+function vSetCard(e,row,rows,o){
+  var timed=o.timed,loaded=o.loaded,bwl=bwShare(e.name)>0,small=o.small,p=o.p;
+  var h='<section class="wsc'+(small?' small':'')+(row.wu?' wkwu':'')+'" data-k="sc">';
+  if(row.wu)h+='<div class="sc-wu"><span class="wub" aria-hidden="true">W</span><p>'+t("Warm-up")
+    +' <span>· '+t("Not counted in volume or records")+'</span></p></div>';
+  /* What the weight box holds: added load on a bodyweight lift, and how a dumbbell's
+     weight reads (per hand unless the lifter chose totals). */
+  var med=exMedia(e.name);
+  var wKey=(bwl?"+":"")+wUnit()
+    +(med&&med.e==="Dumbbell"?' · '+t(dbTotal()&&!isUnilateral(e.name)?"both together":"per hand"):'');
+  var wStepD=stepOf(e),rLbl=timed||loaded?t("Secs"):t("reps"),rStep=timed||loaded?5:1;
+  h+='<div class="sc-g'+(timed?' one':'')+'">';
+  if(!timed)
+    h+='<div class="val"><label class="val-k" for="in_w">'+wKey+'</label>'
+     +'<input class="val-n num'+(V.draftSg?' sg':'')+'" id="in_w" type="number" inputmode="decimal" step="any" min="0" enterkeyhint="done" '
+     +'value="'+toDisp(V.draft.w)+'" aria-label="'+(bwl?t("Added weight"):t("Weight"))+', '+wUnit()+(V.draftSg?', '+t("suggested"):'')+'">'
+     +'<div class="wstp">'
+     +'<button class="num" data-sstep="w" data-d="-1" aria-label="'+t("Less")+' '+wUnit()+'">−'+wStepD+'</button>'
+     +'<button class="num" data-sstep="w" data-d="1" aria-label="'+t("More")+' '+wUnit()+'">+'+wStepD+'</button></div></div>';
+  h+='<div class="val"><label class="val-k" for="in_r">'+rLbl+'</label>'
+   +'<input class="val-n num'+(V.draftSg?' sg':'')+'" id="in_r" type="number" inputmode="numeric" step="1" min="0" enterkeyhint="done" '
+   +'value="'+num(V.draft.r)+'" aria-label="'+rLbl+(V.draftSg?', '+t("suggested"):'')+'">'
+   +'<div class="wstp">'
+   +'<button class="num" data-sstep="r" data-d="-1" aria-label="'+t("Less")+' '+rLbl+'">−'+rStep+'</button>'
+   +'<button class="num" data-sstep="r" data-d="1" aria-label="'+t("More")+' '+rLbl+'">+'+rStep+'</button></div></div>';
+  h+='</div>';
+  /* How hard it was, when it is asked for: the last set by default. */
+  if(!row.wu&&o.rpe)
+    h+='<div class="sc-rpe" role="group" aria-label="RPE"><span class="val-k">RPE</span><div class="sc-rpe-c">'
+     +[6,7,8,9,10].map(function(x){var on=num(V.draft.rpe)===x;
+        return '<button class="num'+(on?' on':'')+'" data-rpe="'+x+'" aria-pressed="'+on+'">'+x+'</button>';}).join("")
+     +'</div></div>';
+  /* One reference line, for this set only. Before the first working set it is the
+     recommendation and its reason; after it, what this set was last time. */
+  var hint="";
+  if(!row.wu){
+    var started=e.sets.some(function(x){return !x.wu;}),ps=p&&p.sets[row.n-1];
+    var rec=started?null:recommend(e),range=(e.planned.lo||"")+(e.planned.hi&&e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"");
+    if(!started&&!p&&!timed)
+      hint='<span>'+(num(e.planned.w0)
+        ?esc(t("First time on this one. Your plan starts it at"))+' <b>'+fmtW(e.planned.w0)+'</b>.'
+        :esc(t(S.profile&&S.profile.level==="new"
+          ?"First time on this one. Pick a weight you could lift three or four more times than the reps asked, and learn the movement before adding load."
+          :"First time on this one. Use the first set to find a working weight, then settle in.")))+'</span>';
+    else if(rec&&rec.amrap)
+      hint='<span>'+(rec.w?t("Recommended")+' <b>'+fmtW(rec.w)+'</b> · ':'')
+       +esc(t("As many clean reps as you can. Beat last time."))+(rec.last?' ('+esc(rec.last)+')':'')+'</span>';
+    else if(rec&&(rec.w||rec.bw))
+      hint='<span>'+t("Recommended")+' <b>'+(rec.bw?t("BW"):fmtW(rec.w))+' × <span class="num">'+range+'</span></b></span>'
+       +(rec.note?'<span>'+esc(t(rec.note))+'</span>':'');
+    else if(ps)hint='<span>'+t("Last time")+' <b>'+setText(e.name,ps,timed)+'</b></span>';
+    /* The coach's cue for it, from an imported plan or a note of your own. */
+    if(e.planned.note&&!started)hint+='<span class="sc-cue">'+esc(e.planned.note)+'</span>';
+  }
+  if(hint)h+='<div class="sc-h">'+hint+'</div>';
+  return h+'</section>';}
+/* The weight step the buttons show, in the unit on screen. */
+function stepOf(e){
+  var s=weightStep(e.name,V.draft.w);
+  return r2(toDisp(s));}
+function r2(x){return Math.round(x*100)/100;}
+
+/* ---- the one primary action -------------------------------------------------------
+   The check. It logs from the rest too; for a moment after, it says the set is logged
+   and offers Undo, then reads the next set. */
+function vLogControl(e,row){
+  var j=justLogged();
+  if(j)return '<div class="log ok" data-k="log" role="status"><span class="log-c" aria-hidden="true">'+IC.check+'</span>'
+    +'<b>'+(j.wu?t("Warm-up logged"):fill(t("Set {n} logged"),j.n))+'</b>'
+    +'<button class="undo" data-undolog="1">'+t("Undo")+'</button></div>';
+  if(!row){
+    var last=V.logIdx>=S.active.entries.length-1;
+    return '<button class="log" data-k="log" data-nextex="1"><span>'+t(last?"Finish workout":"Next exercise")+'</span>'
+     +'<span class="log-c" aria-hidden="true">'+IC.chev+'</span></button>';}
+  return '<button class="log" data-k="log" data-logset="1" aria-label="'+(row.wu?t("Log warm-up"):t("Complete set")+' '+row.n)+'">'
+   +'<span>'+(row.wu?t("Log warm-up"):fill(t("Log set {n}"),row.n))+'</span>'
+   +'<span class="log-c" aria-hidden="true">'+IC.check+'</span></button>';}
+
+/* ---- sets so far ----------------------------------------------------------------
+   Delete leads the row (settled), the tick ends it and takes the set back. Delete asks
+   inside the row itself, not in a sheet. */
+function vHistory(e,plan,cur,timed){
+  var h='<div class="wsl" data-k="sl">';
+  plan.forEach(function(r){
+    var lbl=r.wu?t("Warm-up"):t("Set")+' '+r.n;
+    if(r.done&&V.askDel&&V.askDel.x===V.logIdx&&V.askDel.i===r.i){
+      h+='<div class="wsr ask" data-k="set:'+r.i+'"><span>'+(r.wu?t("Delete warm-up?"):fill(t("Delete set {n}?"),r.n))+' '+setText(e.name,r.set,timed)+'</span>'
+       +'<button class="del" data-delok="'+r.i+'">'+t("Delete")+'</button>'
+       +'<button class="keep" data-delno="1">'+t("Cancel")+'</button></div>';
+      return;}
+    var cls="wsr"+(r.done?" did":r.i===cur?" on":" pend")+(r.wu?" wkwu":"")+(r.done&&V.fresh===r.i?" fresh":"");
+    h+='<div class="'+cls+'" data-k="set:'+r.i+'">'
+     /* The row being done has nothing to delete yet. */
+     +(r.i===cur?'<span></span>':'<button class="x" data-delset="'+r.i+'" aria-label="'+t("Delete")+' '+esc(lbl)+'">✕</button>')
+     +(r.wu?'<span class="n wub" aria-hidden="true">W</span>':'<span class="n num">'+r.n+'</span>');
+    if(r.i===cur)h+='<span class="now">'+t("now")+(r.wu?' · '+t("Warm-up"):'')+'</span><span></span>';
+    else{
+      /* A row still to do shows the numbers it is planned at. */
+      var v=setText(e.name,r.done?r.set:V.draft,timed);
+      h+='<span class="v">'+v+(r.wu?' <span class="wut">'+t("Warm-up")+'</span>':'')+'</span>';
+      h+=r.done?'<button class="wtick" data-unlog="'+r.i+'" aria-label="'+t("Undo set")+' '+esc(lbl)+'">'+IC.check+'</button>'
+        :'<span class="wtick off" aria-hidden="true">'+IC.check+'</span>';}
+    h+='</div>';});
+  return h+'</div>';}
+
 function vLogger(){
   var a=S.active;
   if(V.logIdx>=a.entries.length)V.logIdx=a.entries.length-1;
   if(V.logIdx<0)V.logIdx=0;
   var e=a.entries[V.logIdx];
   if(!e){V.logIdx=0;e=a.entries[0];}
-  /* A carry is timed but loaded: it keeps the weight column and counts seconds. */
+  /* A carry is timed but loaded: it keeps the weight and counts seconds. */
   var loaded=ex_isTimed(e)&&LOADED.test(e.name);
-  var timed=ex_isTimed(e)&&!loaded,rows=rowsFor(e),rpeCol=S.prefs.rpe!=="off";
+  var timed=ex_isTimed(e)&&!loaded,rows=rowsFor(e);
   var active=e.sets.length<rows?e.sets.length:-1;
-  var p=prevPerf(e.name),pr=prFor(e.name);
+  var p=prevPerf(e.name);
   var run=groupRun(a.entries,V.logIdx);
 
   var planTotal=0,doneAll=0;
@@ -134,66 +308,65 @@ function vLogger(){
   var pct=planTotal?Math.min(100,Math.round(doneAll/planTotal*100)):0;
   var clock=sessionClock(a);
 
-  /* --- sticky header: identity, elapsed, overall progress --- */
-  var h='<div class="sess"><div class="sess-glow" aria-hidden="true"></div><div class="ss-top"><div class="ss-row">'
+  /* --- the header: the only glass on this screen. The bar says how much is done, so
+     the count of sets logged and the hidden-rest bar are gone. --- */
+  var h='<div class="sess"><div class="ss-top"><div class="ss-row">'
    /* A close, not a back: the edge-swipe is held off while a session is live, so this
-      is the way out and it should say so. Same data-back handler, so the leave
-      confirmation and everything behind it are untouched. */
+      is the way out and it should say so. */
    +'<button class="ss-back" data-back="1" aria-label="'+t("Close workout")+'">✕</button>'
    /* The title opens today's exercises as a list: the overview, and a way to go
       straight to any of them. */
    +'<button class="ss-title" data-exlist="1" aria-haspopup="dialog" aria-label="'+t("Today's exercises")+'">'
    +'<span class="ss-name">'+esc(planName(a.dayName))+'</span>'
-   +'<span class="ss-meta"><span class="mseg">'+t("Exercise")
-   +' <span class="num">'+(V.logIdx+1)+'</span> '+t("of")
-   +' <span class="num">'+a.entries.length+'</span>'
-   +'<svg class="ss-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></span><span class="sep">\u00b7</span>'
-   +'<span class="mseg"><span class="num">'+doneAll+'</span> '
-   +t(doneAll===1?"set logged":"sets logged")+'</span></span></button>'
+   +'<span class="ss-meta">'+t("Exercise")+' <span class="num">'+(V.logIdx+1)+'</span> '+t("of")
+   +' <span class="num">'+a.entries.length+'</span>'+IC.down+'</span></button>'
    /* A stopped clock with nothing to explain it reads as a bug, so the paused state
       says so rather than just freezing. */
-   +'<div class="ss-clock"><span class="ico ico-clock" aria-hidden="true"></span>'
-   +'<span class="num" id="sessClock">'+mmss(clock.ms/1000)+'</span>'
-   +'<span class="ss-paused" id="sessPaused"'+(clock.paused?'':' hidden')+'>'
-   +t("Paused")+'</span></div>'
+   +'<div class="ss-clock"><span class="num" id="sessClock">'+mmss(clock.ms/1000)+'</span>'
+   +'<span class="ss-paused" id="sessPaused"'+(clock.paused?'':' hidden')+'>'+t("Paused")+'</span></div>'
    +'<button class="ss-more" data-sessmore="1" aria-label="'+t("More")+'">⋯</button>'
-   +'</div><div class="ss-bar"><i style="width:'+pct+'%"></i></div>'
-   /* The hidden rest, still counting. Tap to bring the full screen back. */
-   +(V.restMin&&(V.restEnd>Date.now()||V.restPaused)
-     ?'<button class="restbar" data-rest="show"><span>'+t(V.restPaused?"Rest paused":"Resting")+'</span>'
-      +'<b id="restBarDig">'+mmss(V.restPaused?V.restLeft:Math.max(0,Math.ceil((V.restEnd-Date.now())/1000)))+'</b>'
-      +'<i>'+t("Show")+'</i></button>':'')
-   +'</div>';
+   +'</div><div class="ss-bar"><i style="width:'+pct+'%"></i></div></div>';
 
-  /* The warm-up comes first, in place of the first exercise, until it is done or
-     skipped (js/ui/views/warmup.js). */
+  /* The warm-up routine comes first, in place of the first exercise, until it is done
+     or skipped (js/ui/views/warmup.js). */
   if(warmShown(a))return h+vWarm(a)+'</div>';
 
-  /* --- one segment per exercise; members of a superset are tied together. The
-     arrows either side step through them; so does a swipe on the exercise below. --- */
-  var NAVP='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6"/></svg>',
-      NAVN='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6l6 6-6 6"/></svg>';
-  h+='<div class="ss-nav"><button class="ss-navb" data-exnav="-1" aria-label="'+t("Previous exercise")+'"'
-   +(V.logIdx>0?'':' disabled')+'>'+NAVP+'</button><div class="ss-seg">';
-  a.entries.forEach(function(x,i){
-    var cls=i===V.logIdx?"on":(x.sets.length>=rowsFor(x)?"did":"");
-    var srun=groupRun(a.entries,i);
-    if(srun.length>1)cls+=" gp"+(i===srun[0]?" gp1":"")+(i===srun[srun.length-1]?" gpN":"");
-    h+='<button class="'+cls+'" data-jump="'+i+'" aria-label="'+esc(exName(x.name))+'"><span></span></button>';});
-  h+='</div><button class="ss-navb" data-exnav="1" aria-label="'+t("Next exercise")+'"'
-   +(V.logIdx<a.entries.length-1?'':' disabled')+'>'+NAVN+'</button></div>';
   /* Everything about this exercise, as one pane the swipe moves (js/ui/exswipe.js). */
-  h+='<div class="ex-pane" data-exswipe="1">';
+  h+='<div class="ex-pane wb" data-exswipe="1">';
+  var act=isActivity(e.name);
+  var plan=act?null:rowPlan(e),row=!act&&active>=0?plan[active]:null;
+  var workN=plan?workCount(plan):0;
 
-  /* --- what am I doing: canvas screen 3 (Figma node 2:1008) ---
-     Title with an info control, the two form frames, the tag row, then the
-     recommendation. The frame's START/END panels are placeholder rectangles standing in
-     for artwork; the library ships a real photograph of each position, so those are used
-     instead — closer to the design's intent than copying its stand-in would be. */
-  /* How the lifter feels today, asked once before the first set. It changes nothing
-     on its own; a low answer only says, plainly, that doing less still counts. */
+  /* --- what this is: the name, how to do it, swap it; the set line and the two adds. --- */
+  var line;
+  if(act)line=esc(t(actInfo(e.name).grp));
+  else if(row&&row.wu)line=t("Warm-up");
+  else line=t("Set")+' <span class="num">'+Math.min(workN,row?row.n:workN)+'</span> '+t("of")+' <span class="num">'+workN+'</span>'
+    +(repsText(e,timed)?' · '+esc(repsText(e,timed)):'');
+  if(!act&&isUnilateral(e.name)&&!e.planned.side)line+=' · '+t("Each side");
+  /* Inside a training block: how many sets the answers after earlier workouts moved it by. */
+  var pd=!act&&e.planned&&e.planned.plan!=null?num(e.planned.sets)-num(e.planned.plan):0;
+  if(pd)line+=' · '+t(pd>0?"{n} more than the plan":"{n} fewer than the plan").replace("{n}",Math.abs(pd));
+  if(run.length>1)line+=' · '+t("Superset")+' '+groupLabel(a.entries,V.logIdx);
+  if(inDeload())line+=' · <span class="ex-light">'+t("Lighter week")+'</span>';
+  h+='<div class="wexl"><h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
+   +(act?'<span></span>':'<button class="ib" data-exdetail="'+esc(e.name)+'" aria-label="'+t("How to do it")+'">'+IC.info+'</button>')
+   +'<button class="ib" data-swap="1" aria-label="'+t("Replace this exercise")+'">'+IC.swap+'</button>'
+   +'<p class="wexl-s"><span>'+line+'</span>'
+   +(act?'':'<span class="adds"><button class="chip wkwu" data-addwu="1">'+t("+ Warm-up")+'</button>'
+     +'<button class="chip" data-addrow="1">'+t("+ Set")+'</button></span>')+'</p></div>';
+
+  if(act){h+=actBody(a,e,rows,active);}
+  else{
+    if(restOn())h+=vRestBand();
+    if(row)h+=vSetCard(e,row,rows,{timed:timed,loaded:loaded,p:p,small:restOn(),
+      rpe:S.prefs.rpe!=="off"&&rpeWanted(row.n-1,workN)});
+    h+=vLogControl(e,row);
+  }
+
+  /* --- before the first set only, under the check so it no longer pushes the numbers
+     down: how you feel, the day's notes, a pain flag, the plan's other choice. --- */
   if(doneAll===0&&a.ready==null){
-    /* One line and one row of chips, so the exercise is in view under it. */
     h+='<section class="ready"><div class="ready-h"><span>'+t("How do you feel today?")+'</span>'
      +'<button class="ready-skip" data-ready="0">'+t("Skip")+'</button></div><div class="ready-c">'
      +READY.map(function(x){return '<button data-ready="'+x[0]+'">'+t(x[1])+'</button>';}).join("")
@@ -203,8 +376,6 @@ function vLogger(){
     h+='<div class="readynote">'+t("A low day. Today's suggestions are lighter; drop a set if you need to, or stop early. It still counts.")
      +(a.lighter?'':'<button class="btn g sm readyless" data-readyless="1">'+t("One set fewer on each exercise")+'</button>')+'</div>';
   }
-  /* The day's notes from the plan, before anything is logged: how long it should
-     take, what to cut if time runs short. Folded, so they cost a line. */
   if(doneAll===0&&a.dayNotes&&a.dayNotes.length)
     h+='<details class="daynotes"><summary>'+t("Notes for today")+'</summary>'
      +a.dayNotes.map(function(l){return '<p>'+esc(l)+'</p>';}).join("")+'</details>';
@@ -213,209 +384,39 @@ function vLogger(){
   if(!e.sets.length&&painRecent(e.name))
     h+='<div class="painnote">'+t("You flagged pain on this exercise recently. Consider a substitute, and if it keeps coming back, get it looked at.")
      +' <button class="linkbtn" data-swap="1">'+t("Replace it")+'</button></div>';
-  if(isActivity(e.name))h+=actBody(a,e,rows,active);
-  else{
-  var med=exMedia(e.name),img0=exImg(e.name,0),img1=exImg(e.name,1);
-  /* The exercise as one card over the Bunyan horse, as the other tabs set their
-     heroes: what it is, how it looks, what it asks for. */
-  h+='<section class="exhero">'+markArt("exhero-art")
-   +'<div class="exhero-k">'+t("Exercise")+' '+(V.logIdx+1)+' '+t("of")+' '+a.entries.length+'</div>';
-  h+='<div class="exhead">'
-   +'<h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
-   +'<button class="infobtn" data-exdetail="'+esc(e.name)+'" aria-label="'+t("How to do it")+'">i</button>'
-   +'</div>';
-  /* The exercise moving, live, where it has a 3D record (js/ui/mannequin.js; it does
-     not turn here, where a sideways swipe moves between exercises); otherwise the
-     photographs, or the drawn figure (js/data/figures.js): a start and an end. */
-  var nfig=exFigs(e.name);
-  if(hasMannequin(e.name))
-    h+=fig3dHtml(e.name,{label:exName(e.name),stills:[img0,img1]});
-  else if(img0&&img1)
-    h+='<div class="formvis'+(nfig?' fig':'')+'">'
-     +'<figure><img src="'+img0+'" alt="" loading="lazy" decoding="async">'
-     +'<figcaption>'+t("Start")+'</figcaption></figure>'
-     +'<figure><img src="'+img1+'" alt="" loading="lazy" decoding="async">'
-     +'<figcaption>'+t("End")+'</figcaption></figure></div>';
-  h+='<div class="ex-tags">'
-   +(run.length>1?'<span class="pill sup">'+t("Superset")+' '+groupLabel(a.entries,V.logIdx)
-       +' · '+t("round")+' '+Math.min(rows,e.sets.length+1)+'/'+rows+'</span>':'')
-   +(inDeload()?'<span class="pill gold">'+t("Lighter week")+'</span>':'')
-   +'<span class="etag">'+esc(tm(muscleOfEntry(e)))+'</span>'
-   /* How to read the numbers: a dumbbell's weight is per hand unless the lifter chose
-      totals, and a one-sided exercise's reps are for one side. */
-   +(med&&med.e?'<span class="etag">'+esc(t(med.e))
-     +(med.e==="Dumbbell"?' · '+esc(t(dbTotal()&&!isUnilateral(e.name)?"both together":"per hand")):'')+'</span>':'')
-   +(isUnilateral(e.name)&&!e.planned.side?'<span class="etag">'+t("Each side")+'</span>':'')
-   +'<span class="etag">'+esc(plannedDose(e))+'</span>'
-   +(difficultyOf(e.name)?'<span class="etag hot">'+esc(t(difficultyOf(e.name)))+'</span>':'')
-   +(pr.w?'<span class="pill gold">'+esc(t("PR"))+' '+esc(loadText(e.name,pr.w))+'</span>':'')
-   +'</div>'
-   /* The coach's cue for it, from an imported plan or a note of your own. */
-   +(e.planned.note?'<p class="ex-cue">'+esc(e.planned.note)+'</p>':'')
-   /* The plan's other choice for this slot ("Pull-Ups or Seated Row"), one tap away
-      until a set is logged. */
-   +(e.alt&&!e.sets.length?'<button class="linkbtn exalt" data-swapalt="1">'+esc(t(e.altWhy==="gear"?"Don't have the kit?":"Or"))+' '+esc(exName(e.alt))+'</button>':'')
-   +'</section>';
+  /* The plan's other choice for this slot ("Pull-Ups or Seated Row"), one tap away
+     until a set is logged. */
+  if(e.alt&&!e.sets.length)
+    h+='<button class="linkbtn exalt" data-swapalt="1">'+esc(t(e.altWhy==="gear"?"Don't have the kit?":"Or"))+' '+esc(exName(e.alt))+'</button>';
 
-  /* The frame's recommendation banner, above the table where it puts it. The figure is
-     the recommender's own, and it only appears before the first set of the exercise —
-     once you are working, the rows carry the numbers. */
-  var recTop=e.sets.length?null:recommend(e);
-  /* Nothing logged on this exercise before, so nothing to recommend from: say how to
-     find the first weight instead. A beginner gets the fuller version. */
-  if(!e.sets.length&&!p&&!timed)
-    h+='<div class="recbar first"><span class="ico ico-bulb" aria-hidden="true"></span><span>'
-     +(num(e.planned.w0)
-        /* The plan said where to start. */
-        ?esc(t("First time on this one. Your plan starts it at"))+' <b>'+fmtW(e.planned.w0)+'</b>.'
-        :esc(t(S.profile&&S.profile.level==="new"
-          ?"First time on this one. Pick a weight you could lift three or four more times than the reps asked, and learn the movement before adding load."
-          :"First time on this one. Use the first set to find a working weight, then settle in.")))+'</span></div>';
-  if(recTop&&recTop.amrap)
-    h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span><span>'
-     +(recTop.w?t("Recommended")+': <b>'+fmtW(recTop.w)+'</b> · ':'')
-     +esc(t("As many clean reps as you can. Beat last time."))+(recTop.last?' ('+esc(recTop.last)+')':'')+'</span></div>';
-  else if(recTop&&recTop.bw)
-    h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span>'
-     +'<span>'+t("Recommended")+': <b>'+t("BW")+'</b> × '+e.planned.lo
-     +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+' '+t("reps")
-     +(recTop.note?' · '+esc(t(recTop.note)):'')+'</span></div>';
-  else if(recTop&&recTop.w)
-    h+='<div class="recbar"><span class="ico ico-bulb" aria-hidden="true"></span>'
-     +'<span>'+t("Recommended")+': <b>'+fmtW(recTop.w)+'</b> × '+e.planned.lo
-     +(e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"")+' '+t("reps")
-     +(recTop.note?' · '+esc(t(recTop.note)):'')+'</span></div>';
+  /* --- what is next: the next exercise by name, one tap to go there. Inside a superset
+     it is the next one in the round. --- */
+  var nxI=run.length>1?groupNext(a.entries,V.logIdx):null;
+  if(nxI===null||nxI===V.logIdx)nxI=V.logIdx<a.entries.length-1?V.logIdx+1:null;
+  if(nxI!==null){
+    var nxE=a.entries[nxI],nxG=groupLabel(a.entries,nxI);
+    h+='<button class="nx" data-jump="'+nxI+'"><span><small>'+t("Next")+'</small><b>'+(nxG?esc(nxG)+' · ':'')+esc(exName(nxE.name))+'</b></span>'+IC.chev+'</button>';}
 
-  /* --- the set grid: prescription, previous performance and entry in one row --- */
-  /* Delete leads the row, log ends it. Grid columns follow the writing direction, so
-     in Arabic the pair swaps sides without a second rule. Last time is not a column:
-     squeezed between the set and the weight it had 26px for "100 kg × 8" and read
-     "10…". It is a line of its own under the boxes it is the reference for. */
-  var cols=timed?(rpeCol?"24px 24px 1fr 44px 38px":"24px 24px 1fr 38px")
-                :(rpeCol?"24px 24px 1fr 1fr 44px 38px":"24px 24px 1fr 1fr 38px");
-  /* On a bodyweight lift the box is what is added to you, so the column says so: +KG,
-     and 0 is you alone. The body's own share is counted in volume and records. */
-  var bwl=bwShare(e.name)>0,wHead=(bwl?"+":"")+wUnit().toUpperCase();
-  var hd=timed?["",t("Set"),t("Secs")]
-              :["",t("Set"),wHead,loaded?t("Secs"):t("Reps")];
-  if(rpeCol)hd.push("RPE");
-  hd.push("");
-  var doneHere=e.sets.length;
-  h+='<section class="setcard"><div class="setcard-h"><h2>'+t("Sets")+'</h2>'
-   +'<span class="setcard-c"><bdi class="num"><b>'+Math.min(doneHere,rows)+'</b> / '+rows+'</bdi> '+t("done")+'</span></div>';
-  h+='<div class="setgrid"><div class="setrow hd" style="grid-template-columns:'+cols+'">'
-   +hd.map(function(x){return '<span>'+x+'</span>';}).join("")+'</div>';
-
-  for(var i=0;i<rows;i++){
-    var done=i<e.sets.length,st=done?e.sets[i]:null,isAct=(i===active);
-    var cls2="setrow "+(done?"did":isAct?"on":"pend");
-    var pv="",ps=p&&p.sets[i];
-    if(ps)pv=timed?ps.r+" "+t("s")
-      :ps.w?(bwl?"+":"")+toDisp(ps.w)+" "+wUnit()+" × "+ps.r
-      :bwl?t("BW")+" × "+ps.r:ps.r+" "+t("reps");
-    /* The set number doubles as the warm-up toggle: tap it and the row stops counting
-       toward volume, records and progression. No extra column for it. */
-    var warm=done&&st.wu;
-    if(warm)cls2+=" warm";
-    h+='<div class="'+cls2+'" data-k="set:'+i+'" style="grid-template-columns:'+cols+'">'
-     +'<button class="delset" data-delset="'+i+'" aria-label="'+t("Delete set")+' '+(i+1)+'">✕</button>'
-     +(done?'<button class="setnum wtog" data-warm="'+i+'" aria-label="'+t("Mark as warm-up")
-        +' '+(i+1)+'" aria-pressed="'+(warm?"true":"false")+'">'+(warm?"W":(i+1))+'</button>'
-       :'<div class="setnum">'+(i+1)+'</div>');
-
-    if(!timed){
-      if(done)h+='<input class="cell" type="number" inputmode="decimal" step="0.5" '
-        +'value="'+toDisp(st.w)+'" data-setidx="'+i+'" data-k="w" '
-        +'aria-label="'+(bwl?'Added weight in ':'Weight in ')+wUnit()+', set '+(i+1)+'">';
-      else if(isAct)h+='<input class="cell'+(V.draftSg?' sg':'')+'" type="number" inputmode="decimal" step="0.5" '
-        +'id="in_w" value="'+toDisp(V.draft.w)+'" aria-label="'+(bwl?'Added weight in ':'Weight in ')+wUnit()+(V.draftSg?', '+t("suggested"):'')+'">';
-      else h+='<div class="cellmute">'+(num(V.draft.w)?toDisp(V.draft.w):"—")+'</div>';
-    }
-    if(done)h+='<input class="cell" type="number" inputmode="numeric" '
-      +'value="'+num(st.r)+'" data-setidx="'+i+'" data-k="r" aria-label="Reps, set '+(i+1)+'">';
-    else if(isAct)h+='<input class="cell'+(V.draftSg?' sg':'')+'" type="number" inputmode="numeric" '
-      +'id="in_r" value="'+num(V.draft.r)+'" aria-label="Reps'+(V.draftSg?', '+t("suggested"):'')+'">';
-    else h+='<div class="cellmute">'+(num(V.draft.r)||"—")+'</div>';
-
-    if(rpeCol){
-      if(!rpeWanted(i,rows))h+='<div class="cellmute">—</div>';
-      else if(done)h+='<input class="cell rp" type="number" inputmode="numeric" min="1" max="10" '
-        +'value="'+(st.rpe||"")+'" data-setidx="'+i+'" data-k="rpe" aria-label="RPE, set '+(i+1)+'">';
-      else if(isAct)h+='<input class="cell rp" type="number" inputmode="numeric" min="1" max="10" '
-        +'id="in_rpe" value="'+(V.draft.rpe||"")+'" placeholder="–" aria-label="RPE">';
-      else h+='<div class="cellmute">–</div>';
-    }
-
-    /* One control logs a set, and its colour is the state: red until it is done,
-       green after, with a short pop on the change. */
-    if(done)h+='<button class="logbtn done'+(V.fresh===i?" fresh":"")+'" data-unlog="'+i+'" '
-      +'aria-label="'+t("Undo set")+' '+(i+1)+'">✓</button>';
-    else if(isAct)h+='<button class="logbtn go" data-logset="1" aria-label="'
-      +t("Complete set")+' '+(i+1)+'">✓</button>';
-    else h+='<button class="logbtn off" disabled aria-hidden="true">✓</button>';
-    if(pv)h+='<div class="setprev"><span>'+t("Last time")+'</span> <b>'+esc(String(pv))+'</b></div>';
-    h+='</div>';
-  }
-  h+='</div>';
-  /* Adds a set beyond the prescription, and sits under whatever the last row is. */
-  h+='<div class="addrow"><button class="addset2" data-addrow="1">'
-   +'<span aria-hidden="true">+</span>'+t("Add a set")+'</button></div>';
-  /* Said once, under the table, so +KG is never a guess. */
-  if(bwl&&!timed){
-    var bwNow=bodyAt(null);
-    h+='<p class="bwnote">'+(bwNow
-      ?t("+KG is weight added to you, like a belt or vest; leave it at 0 for bodyweight. Your {w} is counted in volume and records.").replace("{w}",fmtW(bwNow))
-      :t("+KG is weight added to you, like a belt or vest; leave it at 0 for bodyweight. Log your weight and it is counted in volume and records."))+'</p>';}
-  h+='</section>';
-
-  /* The recommendation now sits above the table, in the frame's banner. */
-  var hint=progressionHint(e);
-  if(hint)h+='<div class="card mt" style="border-color:var(--gold);margin-bottom:0">'
-    +'<h3 style="color:var(--gold);font-size:14px">'+t("Progression earned")+'</h3>'
-    +'<p class="tiny" style="margin:5px 0 0">'+t("Top of the range on every set. Try")+' '
-    +fmtW(hint.next)+' '+t("next session")+'.</p></div>';
-  if(pr.w&&e.sets.some(function(x){return num(x.w)>=pr.w&&num(x.w)>0;}))
-    h+='<div class="card mt" style="border-color:var(--gold);margin-bottom:0">'
-     +'<h3 style="color:var(--gold);font-size:14px">'+t("New personal record")+'</h3></div>';
-
-  /* The row's own check logs the set now, so the button that duplicated it is gone.
-     What remains is the one thing the row cannot say: where you go when the
-     exercise is finished. */
-  if(active<0){
-    h+='<button class="btn ss-next" data-nextex="1">'
-     +(V.logIdx>=a.entries.length-1?t("Finish workout"):t("Next exercise"))+'</button>';
-  }else if(run.length>1){
-    /* Inside a superset the next set is on a different exercise, which the row
-       cannot show on its own. */
-    var nxtG=groupNext(a.entries,V.logIdx);
-    if(nxtG!==null&&run.indexOf(nxtG)>run.indexOf(V.logIdx))
-      h+='<p class="tiny" style="margin:10px 2px 0;text-align:center">'
-       +t("Next")+': '+esc(groupLabel(a.entries,nxtG))+' · '
-       +esc(exName(a.entries[nxtG].name))+'</p>';
+  if(!act){
+    h+=vHistory(e,plan,active,timed);
+    /* Said once, under the sets, so +KG is never a guess. */
+    if(bwShare(e.name)>0&&!timed){
+      var bwNow=bodyAt(null);
+      h+='<p class="bwnote">'+(bwNow
+        ?t("+KG is weight added to you, like a belt or vest; leave it at 0 for bodyweight. Your {w} is counted in volume and records.").replace("{w}",fmtW(bwNow))
+        :t("+KG is weight added to you, like a belt or vest; leave it at 0 for bodyweight. Log your weight and it is counted in volume and records."))+'</p>';}
   }
 
-  }
-  /* Canvas screen 4 keeps exactly two secondary actions under the table. The other
-     five — how to, plates, note, finish, discard — are behind the header's overflow,
-     which is also what Round 4 item 1 asks for: one primary action, everything
-     infrequent collapsed. Nothing was removed, only moved. */
-  /* What can happen to today's workout, one tap each: this exercise swapped, dropped
-     or skipped, or another one added. Today only — the program keeps its plan. Remove
-     needs another exercise to leave behind; Skip, one to move on to. */
-  function tool(attr,path,label,aria){
-    return '<button class="ss-tool" '+attr+' aria-label="'+aria+'"><svg viewBox="0 0 24 24" aria-hidden="true">'+path+'</svg>'
-     +'<span>'+label+'</span></button>';}
-  h+='<div class="ss-tools">'
-   +tool('data-swap="1"','<path d="M4 8h13l-3-3M20 16H7l3 3"/>',t("Replace"),t("Replace this exercise"))
-   +(a.entries.length>1?tool('data-rmlive="1"','<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',t("Remove"),t("Remove this exercise")):'')
-   +(V.logIdx<a.entries.length-1?tool('data-nextex="1"','<path d="M5 5l10 7-10 7zM19 5v14"/>',t("Skip"),t("Skip this exercise")):'')
-   +tool('data-addlive="1"','<path d="M12 5v14M5 12h14"/>',t("Add"),t("Add an exercise"))
-   +'</div>'
-   +'<div class="ss-acts"><button class="ss-act'+(e.pain?' on':'')+'" data-hurt="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg>'+t(e.pain?"Pain noted":"Something hurts?")+'</button>'
-   +'</div></div></div>';
-
-  /* The rest screen is no longer part of this string; syncRest() owns it. */
-  return h;}
+  /* --- what can happen to today's workout. Skip and Add are tiles; Remove and
+     Something hurts? are quiet links under them, lower in the hierarchy. Today only:
+     the program keeps its plan. --- */
+  h+='<div class="tools">'
+   +(V.logIdx<a.entries.length-1?'<button data-nextex="1" aria-label="'+t("Skip this exercise")+'">'+IC.skip+'<span>'+t("Skip")+'</span></button>':'')
+   +'<button data-addlive="1" aria-label="'+t("Add an exercise")+'">'+IC.plus+'<span>'+t("Add")+'</span></button></div>'
+   +'<div class="quiet">'
+   +(a.entries.length>1?'<button data-rmlive="1">'+t("Remove this exercise")+'</button>':'<span></span>')
+   +'<button class="'+(e.pain?'on':'')+'" data-hurt="1">'+t(e.pain?"Pain noted":"Something hurts?")+'</button></div>';
+  return h+'</div></div>';}
 
 /* ---- cardio, sports, classes ----------------------------------------------------
    Logged as what they are: how long, how far where that means anything, how hard.
@@ -425,13 +426,7 @@ var TICK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L1
 function ivText(iv){return iv&&iv.n?iv.n+' \u00d7 '+iv.on+'s'+(iv.off?' / '+iv.off+'s':''):"";}
 function actBody(a,e,rows,active){
   var info=actInfo(e.name),kg=lastWeight()||0,last=V.logIdx>=a.entries.length-1;
-  var h='<section class="exhero acthero">'+markArt("exhero-art")
-   +'<div class="exhero-k">'+t("Exercise")+' '+(V.logIdx+1)+' '+t("of")+' '+a.entries.length+'</div>'
-   +'<div class="exhead acthead"><span class="actbadge">'+actIcon(e.name,28)+'</span>'
-   +'<h1 class="ex-name">'+esc(exName(e.name))+'</h1></div>'
-   +'<div class="ex-tags"><span class="etag">'+esc(t(info.grp))+'</span>'
-   +(info.dist?'<span class="etag">'+t("Time and distance")+'</span>':'<span class="etag">'+t("Time and effort")+'</span>')
-   +'</div></section>';
+  var h='<div class="act-tags"><span class="etag">'+(info.dist?t("Time and distance"):t("Time and effort"))+'</span></div>';
   h+='<section class="setcard actcard">';
   if(active>=0){
     var mins=num(V.draft.min)||30,rpe=V.draft.rpe||6,cur=intensityOf(rpe)[0];
@@ -490,173 +485,36 @@ function platePlan(totalKg,barKg){
     if(n>0){out.push({w:s,n:n});left=Math.round((left-n*s)*1000)/1000;}});
   return {perSide:perSide,plates:out,left:Math.round(left*100)/100,bar:bar};}
 
-/* Rest is a mode, not a card. Nothing else on screen competes with it. */
-function vRest(a,e,rows,timed){
-  var paused=V.restPaused;
-  var left=paused?V.restLeft:Math.max(0,Math.ceil((V.restEnd-Date.now())/1000));
-  var total=Math.max(1,V.restTotal||1);
-  var C=REST_C,off=C*(1-Math.max(0,Math.min(1,left/total)));
-  var lastSet=e.sets[e.sets.length-1];
-  /* The frame's "Set 2: 30kg × 10 @ RPE 7". "of 4" is kept because the banner above
-     now carries the confirmation, which is what that clause used to be doing here. */
-  var didTxt=lastSet
-    ?(t("Set")+' '+e.sets.length+' '+t("of")+' '+rows+': '
-      +(timed?lastSet.r+'s':(lastSet.w?(bwShare(e.name)?'+':'')+toDisp(lastSet.w)+wUnit()+' × '+lastSet.r
-                                     :lastSet.r+' '+t("reps")))
-      +(S.prefs.rpe!=="off"&&lastSet.rpe?' @ '+t("RPE")+' '+lastSet.rpe:''))
-    :esc(exName(e.name));
-  var nx,nr="";
-  /* After a superset round the next thing is a different exercise, so say which. */
-  var restRun=groupRun(a.entries,V.logIdx);
-  if(restRun.length>1&&e.sets.length<rows){
-    nx=groupLabel(a.entries,V.logIdx)+' · '+e.name;
-    nr=t("Set")+' '+(e.sets.length+1)+' '+t("of")+' '+rows;
-  }else if(e.sets.length<rows){
-    nx=t("Set")+' '+(e.sets.length+1)+': '
-      +(timed?num(V.draft.r)+'s'
-        :(num(V.draft.w)?fmtW(V.draft.w)+' × '+num(V.draft.r)+' '+t("reps")
-                        :num(V.draft.r)+' '+t("reps")));
-    if(S.prefs.rpe!=="off")nr=t("Target RPE")+' 8';
-  }else{
-    var nxe=a.entries[V.logIdx+1];
-    nx=nxe?esc(exName(nxe.name)):t("Finish workout");
-    nr=nxe?esc(plannedDose(nxe))+(nxe.planned.amrap||ex_isTimed(nxe)?'':' '+t("reps")):"";
-  }
-  /* What the set just logged was, for the line under REST PERIOD: "Set 2 of 4
-     complete · 85 kg × 8". */
-  var doneTxt=lastSet?(t("Set")+' '+e.sets.length+' '+t("of")+' '+rows+' '+t("complete")
-      +(timed?' · '+lastSet.r+'s':lastSet.w?' · '+(bwShare(e.name)?'+':'')+toDisp(lastSet.w)+' '+wUnit()+' × '+lastSet.r
-                                          :' · '+lastSet.r+' '+t("reps"))):esc(exName(e.name));
-  var art='<div class="rt-art" aria-hidden="true"><img src="img/rest-swirl.jpg" alt="" decoding="async"></div>';
-  var upnext='<div class="rt-next"><div class="rt-next-k">'+t("Up next")+'</div>'
-     +'<div class="rt-next-v">'+nx+'</div>'+(nr?'<div class="rt-next-r">'+nr+'</div>':'')+'</div>';
-
-  /* Time's up. Its own screen rather than a label on the countdown, because sound is
-     not guaranteed to arrive — the silent switch kills it and a backgrounded tab
-     suspends it — so the screen has to be the alert. And it asks what is next rather
-     than offering one button: the next set, a little more rest, the next exercise, or,
-     after the last set of the day, the finish. */
-  if(V.restDone){
-    var more=e.sets.length<rows, last=V.logIdx>=a.entries.length-1;
-    var primary=more
-      ?'<button class="rt-go" data-rest="skip">'+ARROW+'<span>'+t("Start next set")+'</span></button>'
-      :last?'<button class="rt-go" data-finish="1">'+FLAG+'<span>'+t("Finish workout")+'</span></button>'
-      :'<button class="rt-go" data-nextex="1">'+ARROW+'<span>'+t("Next exercise")+'</span></button>';
-    /* Built for a glance between sets: one line of context, one large answer, then
-       the alternatives as big, equal buttons — no descriptions to read. */
-    var nextLine=more?t("Up next")+' · '+nx
-      :last?t("That was the last set."):t("Up next")+' · '+nx;
-    return '<div class="restwrap rt rt-done rt2" role="alertdialog" aria-labelledby="rtDoneH">'+art
-     +'<div class="rt2-top"><div class="rt-sub">'+doneTxt+'</div>'
-     +'<div class="rt-check" aria-hidden="true"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="rt-check-t"/>'
-     +'<circle cx="60" cy="60" r="52" class="rt-check-r"/><path d="M40 61l13 13 27-29" class="rt-check-m"/></svg></div>'
-     +'<h2 class="rt-h" id="rtDoneH" aria-live="assertive">'+t(more?"Rest complete":last?"Last set done":"Exercise complete")+'</h2>'
-     /* How long ago it ran out, counting up: someone back from a locked phone sees how
-        long they actually rested. Quiet, so the next action stays the loudest thing. */
-     +(V.restOver?'<p class="rt-over"><span class="rt-over-t num" id="restOver" dir="ltr">'+overText()+'</span>'
-       +'<span class="rt-over-k">'+t("over your rest")+'</span></p>':'')
-     +'<p class="rt2-next">'+nextLine+'</p></div>'
-     +'<div class="rt2-acts">'+primary
-     +'<div class="rt2-k">'+t("Add rest")+'</div>'
-     +'<div class="rt2-pair"><button class="rt2-b" dir="ltr" data-rest="ext30">+30s</button>'
-     +'<button class="rt2-b" dir="ltr" data-rest="ext60">+60s</button></div>'
-     +(more&&!last?'<button class="rt2-b wide" data-nextex="1">'+SKIP+'<span>'+t("Skip to next exercise")+'</span></button>':'')
-     +(!last||more?'<button class="rt2-end" data-finish="1">'+FLAG+'<span>'+t("End workout")+'</span></button>':'')
-     +'</div></div>';
-  }
-  return '<div class="restwrap rt" role="dialog" aria-label="'+t("Rest")+'">'+art
-   +'<button class="rt-hide" data-rest="hide"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>'+t("Hide")+'</button>'
-   +'<div class="rt-k">'+t("Rest period")+'</div><div class="rt-sub">'+doneTxt+'</div>'
-   +'<div class="rt-ring"><svg viewBox="0 0 180 180" aria-hidden="true">'
-   +'<circle cx="90" cy="90" r="79" class="rt-ring-t"/>'
-   +'<circle id="restRing" cx="90" cy="90" r="79" class="rt-ring-v" stroke-dasharray="'+C+'" stroke-dashoffset="'+off+'"/>'
-   +'</svg><div class="rt-ct"><div class="rt-dig" id="restDig" aria-live="polite">'+mmss(left)+'</div>'
-   +'<div class="rt-tot" id="restTot">'+t("of")+' '+mmss(total)+'</div></div></div>'
-   +'<div class="rt-ctl">'
-   +'<button class="rt-rnd" dir="ltr" data-rest="-30" aria-label="'+t("30 seconds less")+'">−30s</button>'
-   +'<button class="rt-main" id="restMain" data-rest="'+(paused?"resume":"pause")+'" aria-label="'+(paused?t("Resume"):t("Pause"))+'">'
-   +'<i class="ico ico-'+(paused?"play":"pause")+'" id="restMainIco"></i><span id="restMainTxt">'+(paused?t("Resume"):t("Pause"))+'</span></button>'
-   +'<button class="rt-rnd" dir="ltr" data-rest="30" aria-label="'+t("30 seconds more")+'">+30s</button></div>'
-   +upnext
-   +'<button class="rt-skip" data-rest="skip">'+t("Skip rest")+'</button></div>';}
-
-var ARROW='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>';
-var FLAG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>';
-var SKIP='<svg viewBox="0 0 24 24"><path d="M5 5l10 7-10 7zM19 5v14"/></svg>';
-
-/* ---- keeping the rest screen still -------------------------------------------
-   The rest screen lives in its own container outside #app, for the same reason the
-   barcode scanner does: render() replaces innerHTML wholesale, and rebuilding this
-   one restarts the ring's transition from zero, which is the stutter that made
-   every −30s tap flash. Only four things ever change while resting, so only those
-   four are touched. */
-/* 2π × 79 — the frame's 170px ring inside its 180px box, stroke 12. */
-var REST_C=496.37;
+/* ---- the rest band, kept still ---------------------------------------------------
+   A tick changes the digits, the bar and the pause control, and nothing else, so only
+   those are touched; the band itself is part of the workout and is patched with it. */
 function paintRest(){
   var paused=V.restPaused;
-  var left=paused?V.restLeft:Math.max(0,Math.ceil((V.restEnd-Date.now())/1000));
-  var total=Math.max(1,V.restTotal||1);
   var d=document.getElementById("restDig");
-  if(d)d.textContent=mmss(left);
-  var tot=document.getElementById("restTot");
-  if(tot)tot.textContent=t("of")+" "+mmss(total);
-  var bar=document.getElementById("restBarDig");
-  if(bar)bar.textContent=mmss(left);
-  var ring=document.getElementById("restRing");
-  if(ring)ring.setAttribute("stroke-dashoffset",
-    String(REST_C*(1-Math.max(0,Math.min(1,left/total)))));
+  if(d){var s=mmss(restLeft());if(d.textContent!==s)d.textContent=s;}
+  var bar=document.getElementById("restBar");
+  if(bar)bar.style.width=restPct()+"%";
+  var band=document.getElementById("restBand");
+  if(band)band.classList.toggle("paused",!!paused);
   var main=document.getElementById("restMain");
   if(main){
-    /* The control is an icon now, so the label moves to aria-label and the glyph is
-       swapped by class. Writing textContent here would delete the icon. */
     main.setAttribute("aria-label",paused?t("Resume"):t("Pause"));
-    main.setAttribute("data-rest",paused?"resume":"pause");
-    var mi=document.getElementById("restMainIco");
-    if(mi)mi.className="ico ico-"+(paused?"play":"pause");
-    var mt=document.getElementById("restMainTxt");
-    if(mt)mt.textContent=paused?t("Resume"):t("Pause");
-  }
+    main.setAttribute("data-rest",paused?"resume":"pause");}
 }
 /* Time since the rest ran out, as "+m:ss". Empty when it is not known. */
 function overText(){
   if(!V.restOver)return "";
   return "+"+mmss(Math.max(0,Math.floor((Date.now()-V.restOver)/1000)));}
-/* The count-up on the finished screen, repainted each second by tickSession. */
+/* The count-up on the time-up band, repainted each second by tickSession. */
 function paintOver(){
   var el=document.getElementById("restOver");
   if(!el)return;
   var s=overText();
   if(el.textContent!==s)el.textContent=s;}
-/* Rebuilds only when the screen is genuinely a different one — a new exercise, a
-   new set, or a language change. A tick or a ±30s tap keeps the same DOM. */
+/* The rest used to own a full-screen container outside #app. It is a band on the
+   workout now (workout-spec.md, RestBand), so the container stays empty. */
 function syncRest(){
   var host=document.getElementById("rest");
-  if(!host)return;
-  var a=S.active;
-  /* Three states now, not two. restDone keeps the surface up after the clock reaches
-     zero so the alert has somewhere to live — the sound may never arrive. */
-  var on=!!a&&(V.restEnd>Date.now()||V.restPaused||V.restDone);
-  /* Hidden: the countdown carries on in a bar on the workout screen, so the set just
-     logged can be corrected or the next exercise read. It comes back full screen the
-     moment the rest is over. */
-  if(on&&V.restMin&&!V.restDone)on=false;
-  /* On another tab the rest is the workout bar above the dock, counting down there;
-     the full screen is the Train tab's. Tapping the bar brings it back. */
-  if(on&&V.tab!=="train")on=false;
-  if(!on){
-    if(host.firstChild)host.textContent="";
-    host.removeAttribute("data-k");
-    return;
-  }
-  var e=a.entries[V.logIdx];
-  if(!e){host.textContent="";host.removeAttribute("data-k");return;}
-  /* The done state is a different screen, so it belongs in the key — otherwise the
-     countdown's DOM is kept and only the digits get repainted. */
-  var key=V.logIdx+"|"+e.sets.length+"|"+(V.restDone?"done":"run")+"|"+(S.prefs&&S.prefs.lang||"en");
-  if(host.getAttribute("data-k")===key){paintRest();return;}
-  host.setAttribute("data-k",key);
-  var rh=vRest(a,e,rowsFor(e),ex_isTimed(e)&&!LOADED.test(e.name));
-  host.innerHTML=S.prefs&&S.prefs.lang==="ar"?isolateNums(rh):rh;
-}
+  if(host&&host.firstChild)host.textContent="";}
 
-export {ivText, groupLabel, groupNext, groupRun, IDLE_PAUSE, mmss, noteSet, overText, paintOver, paintRest, platePlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger};
+export {ivText, groupLabel, groupNext, groupRun, IDLE_PAUSE, LOGGED_MS, mmss, noteSet, overText, paintOver, paintRest, platePlan, rowPlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger, weightStep};

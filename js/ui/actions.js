@@ -5,7 +5,7 @@ import {exIdOf, kindOf, LIB, muscleOf, muscleOfEntry, pickable} from "../data/ex
 import {standIn} from "../engine/plan.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
-import {deloadSets, inDeload, recordsIn, avgRPE, prevPerf, recommend, sessionVolume} from "../engine/formulas.js";
+import {deloadSets, inDeload, recordsIn, avgRPE, prevPerf, progressionHint, recommend, sessionVolume} from "../engine/formulas.js";
 import {blockDay, blockNow, ensureBlock} from "../engine/blocks.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {coolFor} from "./views/warmup.js";
@@ -117,7 +117,7 @@ ACT.delset=function(_,i){
   var e=S.active&&S.active.entries[V.logIdx];if(!e)return;
   /* Play the row out before the state change removes it. Splicing first would leave
      nothing on screen to animate, and the list would appear to jump. */
-  leave(document.querySelector('#app .setrow[data-k="set:'+i+'"]'),function(){
+  leave(document.querySelector('#app .wsr[data-k="set:'+i+'"]'),function(){
     e.sets.splice(i,1);V.fresh=-1;saveDB();syncDraft();render();});};
 ACT.discard=function(){
   S.active=null;endRest();V.fresh=-1;
@@ -218,6 +218,14 @@ function startActivity(name){
 /* What the next set reads before the user touches anything. Once a set is logged in
    this session the next one inherits it, so straight sets cost one tap. The
    recommendation engine drives only the opening set. */
+/* The last warm-up logged on an exercise: this workout's, else the latest session's. */
+function lastWarmup(e){
+  var i,w=e.sets.filter(function(x){return x.wu;});
+  if(w.length)return w[w.length-1];
+  for(i=0;i<S.sessions.length;i++){
+    var pe=S.sessions[i].entries.filter(function(x){return x.name===e.name&&(x.sets||[]).some(function(y){return y.wu;});})[0];
+    if(pe){w=pe.sets.filter(function(y){return y.wu;});return w[w.length-1];}}
+  return null;}
 function syncDraft(){
   if(!S.active)return;
   var e=S.active.entries[V.logIdx];if(!e)return;
@@ -233,6 +241,13 @@ function syncDraft(){
   /* Whatever goes in the fields here is a suggestion, and is shown as one until the
      lifter touches it; a set logged untouched is marked as such. */
   V.draftSg=true;
+  /* A warm-up being done (queued with + Warm-up) starts from the last warm-up on this
+     exercise, today or before; with none, from the working set below, to step down
+     from. A working set never starts from a warm-up's numbers. */
+  if(num(e.wuq)>0){var lw=lastWarmup(e);
+    if(lw){V.draft.w=num(lw.w);V.draft.r=num(lw.r);V.draft.rpe=null;return;}}
+  last=null;
+  for(var li=e.sets.length-1;li>=0;li--)if(!e.sets[li].wu){last=e.sets[li];break;}
   if(last){V.draft.w=num(last.w);V.draft.r=num(last.r);V.draft.rpe=null;return;}
   var p=prevPerf(e.name);
   var src=p?p.sets[0]:null;
@@ -260,6 +275,10 @@ function finishSession(){
      exercise. Measured against history, which this session has not joined yet. */
   var prs=[];
   a.entries.forEach(function(e){var rec=recordsIn(e);if(rec)prs.push(rec);});
+  /* Top of the range on every set: the next session's step, said on the complete
+     screen, where it is news (it used to be a card mid-workout). */
+  var prog=[];
+  a.entries.forEach(function(e){if(isActivity(e.name))return;var ph=progressionHint(e);if(ph)prog.push({n:e.name,next:ph.next});});
 
   var prev=null;
   for(var i=0;i<S.sessions.length;i++)
@@ -286,7 +305,7 @@ function finishSession(){
     sets:allSets.length,
     /* Lifting was done, so "how was the amount" means something. */
     lift:a.entries.some(function(e){return !isActivity(e.name)&&(e.sets||[]).some(function(x){return !x.wu;});}),
-    exs:a.entries.filter(function(e){return e.sets.length;}).length,rpe:avgRPE(allSets),prs:prs,
+    exs:a.entries.filter(function(e){return e.sets.length;}).length,rpe:avgRPE(allSets),prs:prs,prog:prog,
     notes:a.notes||"",
     /* What the complete screen needs to state an achievement rather than a number:
        the plan it is being measured against, and the session it is being compared to. */
@@ -299,7 +318,7 @@ function finishSession(){
   /* The plan's words for the day and each exercise were for doing it, not for the
      record: history keeps what describes the sets, not the cues. */
   delete a.dayNotes;delete a.warm;delete a.wuDone;
-  a.entries.forEach(function(e){delete e.alt;delete e.altWhy;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
+  a.entries.forEach(function(e){delete e.alt;delete e.altWhy;delete e.wuq;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
   recordSession(a);S.active=null;endRest();keepAwake(false);stopHold();V.cdDone={};
   saveDB();V.tab="train";V.train="days";
   play(prs.length?"pr":"complete");tap("ok");
