@@ -1866,6 +1866,12 @@ Owner's brief, 26 Oct: Part 1 layout fixes, Part 2 the agent (actions), Part 3 k
   - `tests/coach.mjs` now also runs the `context` and `reconcile` tests (PROGRESS request 1 from 20 Oct): 228 pass.
 - 26 Oct — **Fix from the owner's screenshot** ("Can u add push ups to my current week?" with a Push day answered "No exercise called “ups current week”"). Three causes in `js/ui/agent.js`: (1) a day's name was taken as the day wherever its word appeared, so "push" in "push ups" became the Push day — now a day name counts only where it is said as one (after to/from/in/on/for or the Arabic for them, or before day/workout), and only that occurrence is taken out; (2) "current week" and the like were not set aside as filler; (3) a name split or run together ("push ups", "pushups", "push-ups") now matches the library entry directly. Regression test added. CACHE `bunyan-v139`.
 
+## Workout: a one-time swipe hint — branch session/swipe-hint
+
+Owner, 26 Oct: like the first-run guide, an arrow at the right edge of the screen and an animation showing to swipe left for the next exercise. CACHE `bunyan-v142`.
+
+- `js/ui/tour.js` (`swipeHint`): the first time a workout of more than one exercise reaches its first exercise, the screen dims, a tab with an arrow sits at the edge the next exercise comes from (right in English; left in Arabic, where swiping right is next, as `exswipe.js` already does), and a finger slides across from it, looping, over one line: "Swipe left for the next exercise", with "And right to go back. The list at the top reaches any of them." A tap anywhere, Escape, or moving to another exercise puts it away for good (`S.prefs.toured.swipe`, per profile; Profile → Show the guide again brings it back with the other guides). With Animations off or reduced motion, the finger and arrow stand still.
+- Regression test added (English and Arabic edges, tap, moving on).
 ## Chat: scroll in compact, follow-ups in context, a day of history — branch session/chat-context
 
 Owner, 26 Oct (with screenshots): compact can't scroll through messages; the coach doesn't remember the context within the session ("Is it pull ups?" after a close-matches answer got "I won't guess"); erase chat history after 24 h but keep the context. CACHE `bunyan-v141`.

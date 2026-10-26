@@ -79,9 +79,50 @@ function splashing(){return !!document.getElementById("splash")&&!document.body.
 
 var T=null,timer=null;
 
+/* ---- the workout's swipe hint ------------------------------------------------------
+   The first time a workout of more than one exercise reaches its first exercise: the
+   screen dims, an arrow points at the screen's edge, and a finger slides from that edge
+   across, looping, with one line: swipe left for the next exercise (right in Arabic,
+   where the next one comes from the left). A tap anywhere, or the first swipe, puts it
+   away for good (S.prefs.toured.swipe, per profile; Show the guide again brings it back
+   with the others). With reduced motion the finger stays still, the arrow says it. */
+var SH=null;
+function swipeDue(){
+  var a=S.active;
+  return !!a&&V.tab==="train"&&V.train!=="hub"&&!V.sheet&&!V.coach&&!off()&&!seen("swipe")
+    &&a.entries&&a.entries.length>1&&!!document.querySelector("#app [data-exswipe]");}
+function swipeHint(){
+  if(SH||T||!swipeDue())return;
+  var ar=document.documentElement.getAttribute("dir")==="rtl",idx=V.logIdx;
+  var el=document.createElement("div");
+  el.className="swhint"+(ar?" rtl":"");el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");
+  el.setAttribute("aria-label",t("Swipe for the next exercise"));
+  el.innerHTML='<div class="swhint-edge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></div>'
+   +'<div class="swhint-track" aria-hidden="true"><span class="swhint-dot"></span></div>'
+   +'<div class="swhint-card"><h2>'+esc(t(ar?"Swipe right for the next exercise":"Swipe left for the next exercise"))+'</h2>'
+   +'<p>'+esc(t(ar?"And left to go back. The list at the top reaches any of them.":"And right to go back. The list at the top reaches any of them."))+'</p>'
+   +'<span class="tour-tap">'+esc(t("Tap anywhere to continue"))+'</span></div>';
+  document.body.appendChild(el);
+  SH={el:el,idx:idx};
+  el.addEventListener("click",function(ev){ev.stopPropagation();ev.preventDefault();swipeDone();},false);
+  ["wheel","touchmove"].forEach(function(n){el.addEventListener(n,function(ev){ev.preventDefault();},{passive:false});});
+  document.addEventListener("keydown",swipeKey,true);
+  requestAnimationFrame(function(){el.classList.add("on");});}
+function swipeKey(ev){if(SH&&(ev.key==="Escape"||ev.key==="Enter"||ev.key===" ")){ev.preventDefault();ev.stopPropagation();swipeDone();}}
+function swipeDone(){
+  if(!SH)return;
+  var el=SH.el;SH=null;
+  document.removeEventListener("keydown",swipeKey,true);
+  el.classList.remove("on");
+  setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},260);
+  S.prefs.toured=Object.assign({},S.prefs.toured||{});S.prefs.toured.swipe=1;saveDB();}
+
 /* After every render: if this page has a guide not yet seen, it starts once the
    screen has settled. */
 function tourCheck(){
+  /* The workout moved on (a swipe, the list) or ended: the hint has done its job. */
+  if(SH&&(!S.active||V.logIdx!==SH.idx||V.sheet))swipeDone();
+  if(!SH&&swipeDue())setTimeout(swipeHint,700);
   if(T)return;
   clearTimeout(timer);
   timer=setTimeout(function(){
