@@ -321,8 +321,9 @@ function trainAround(a,ar){
   l(a,hit.map(function(e){var s=standIn(e.name,S.gear,[ar[0]],taken);if(s)taken[s]=1;
     return exName(e.name)+" \u2192 "+(s?exName(s):t("leave it out for now"));}));
   n(a,t("In the workout, Something hurts? then Replace this exercise shows these first."));}
+var PAIN=/(pain|hurt|injur|sharp|swollen|الم|وجع|يوجع|بيوجع|بتوجع|واجع|مصاب|اصابه)/;
 function aSore(a,q){
-  var fq=fold(q),pain=/(pain|hurt|injur|sharp|swollen|الم|وجع|يوجع|بيوجع|بتوجع|واجع|مصاب|اصابه)/.test(fq),ar=areaOf(fq);
+  var fq=fold(q),pain=PAIN.test(fq),ar=areaOf(fq);
   /* Pain is logged, and assessed by a professional: never advice from here
      (js/knowledge/scope.js). */
   if(pain)return aScope(a,q);
@@ -988,8 +989,9 @@ function knowFor(text,iid,it,prev){
   var fq=fold(text),short=fq.split(" ").length<=8;
   if(prev&&prev.id==="know"&&prev.kq&&DEEPER.test(fq)&&short){var kd=lookup(prev.kq);if(kd)return {k:kd,kq:prev.kq,deeper:true};}
   var asked=ASKQ.test(fq)||/[?؟]/.test(text);
-  /* What lives in the app has its own answer (aElse: Profile > You, no data). */
-  if(ELSEWHERE.some(function(x){return x[1].test(fq);}))return null;
+  /* What lives in the app has its own answer (aElse: Profile > You, no data), and pain
+     is referred, never looked up (aSore → aScope). */
+  if(ELSEWHERE.some(function(x){return x[1].test(fq);})||PAIN.test(fq))return null;
   var loose=iid==="unknown"||(SOFT.test(iid)&&it.score<=7&&asked)||(DEFINE.test(fq)&&it.score<15&&(SOFT.test(iid)||iid==="eat"));
   if(!loose)return null;
   var k=lookup(text);
