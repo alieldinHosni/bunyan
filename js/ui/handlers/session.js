@@ -43,7 +43,7 @@ var leaveResume=null;
    so anything with a side effect here would fire on every repaint. */
 function sessionLocked(){
   /* The workout itself, not its Resume card on the Training page ("hub"). */
-  return !!(S.active&&V.tab==="train"&&V.train!=="hub"&&!V.sheet);
+  return !!(S.active&&V.tab==="train"&&V.train!=="hub"&&!V.sheet&&!V.coach);
 }
 /* A gesture answered by nothing at all reads as a frozen app, so it says what to do
    instead — once per workout, not per swipe, which would be its own annoyance. Only

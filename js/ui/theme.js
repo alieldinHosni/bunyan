@@ -12,7 +12,7 @@ import {isReduced} from "./motion.js";
 /* sw: the reference colours each theme is built from. Blue is the default. */
 var THEMES=[
   {id:"blue",name:"BUNYAN Blue",sw:["#070B1A","#8AB0EC","#82FC4F"]},
-  {id:"red",name:"BUNYAN Red",sw:["#FF2E3A","#DBF6FF"]},
+  {id:"red",name:"BUNYAN Red",sw:["#03060F","#E7172E","#466299"]},
   /* Once Monochrome (its id stays "mono", so a stored choice still finds it); now the
      owner's reference: sage glass on a deep teal and slate ground. */
   {id:"mono",name:"Sage",sw:["#142E33","#9AABA9","#E9EFEE"]}];

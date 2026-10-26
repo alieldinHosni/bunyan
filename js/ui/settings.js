@@ -142,7 +142,7 @@ function appSheet(){
       var on=o[0]===icCur;
       return '<button class="icpick'+(on?' on':'')+'" role="radio" aria-checked="'+on+'" data-seticon="'+o[0]+'">'
        +'<span class="icpick-i'+(o[0]==="auto"?' auto':'')+'" aria-hidden="true"><img src="'+iconOf(o[0]==="auto"?thCur:o[0])+'" alt="" width="52" height="52" decoding="async">'
-       +(o[0]==="auto"?'<i style="background:conic-gradient(#8AB0EC 0 33.3%,#FF2E3A 0 66.6%,#9AABA9 0)"></i>':'')+'</span>'
+       +(o[0]==="auto"?'<i style="background:conic-gradient(#8AB0EC 0 33.3%,#E7172E 0 66.6%,#9AABA9 0)"></i>':'')+'</span>'
        +'<span class="icpick-n">'+esc(o[1])+'</span></button>';}).join("")+'</div>';
   return '<h2>'+t("App")+'</h2>'
    +'<section class="sg"><h3 class="sg-h">'+t("Theme")+'</h3>'+picks

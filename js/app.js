@@ -16,6 +16,7 @@ import {draftFrom} from "./ui/views/assess.js";
 import {initDockScroll} from "./ui/dock.js";
 import {initExSwipe} from "./ui/exswipe.js";
 import {initNav} from "./ui/nav.js";
+import {closeCoach} from "./ui/coachfab.js";
 import {initPress} from "./ui/press.js";
 import {initReorder} from "./ui/reorder.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
@@ -171,7 +172,7 @@ onProfileSwitch(function(){
 initState();
 setStorageErrorHandler(toast);
 /* One back path for the arrow, the edge swipe and the OS gesture. */
-initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,
+initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,closeCoach:function(){closeCoach(render);},
          locked:sessionLocked,onBlocked:backBlocked});
 initSheetDrag(requestCloseSheet);
 /* A field in a sheet takes the keyboard without the page jumping under it (iPhone). */

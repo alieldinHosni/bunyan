@@ -114,7 +114,7 @@ function fallback(){
    H.locked must be pure — this runs on every render. Telling the user why the
    gesture did nothing is H.onBlocked's job, and that only runs on a real attempt. */
 function canBack(){
-  if(V.sheet)return true;                    /* back closes the sheet */
+  if(V.sheet||V.coach)return true;           /* back closes the sheet, or the Coach panel */
   if(H.locked&&H.locked())return false;      /* a live workout: the ✕ is the way out */
   return STACK.length>0;
 }
@@ -146,6 +146,7 @@ function doBack(){
   /* A sheet is the top-most thing on screen, so it is what back closes first. It
      costs no history entry, so nothing is popped here. */
   if(V.sheet){ if(H.closeSheet)H.closeSheet(); return; }
+  if(V.coach){ if(H.closeCoach)H.closeCoach(); return; }
   if(DEPTH>0){ history.back(); return; }   /* popstate finishes the job, guard included */
   if(H.guard&&H.guard(fallback))return;
   fallback();
@@ -164,9 +165,9 @@ window.addEventListener("popstate",function(ev){
      or an unwind landing late. Nothing to do. */
   if(d>=DEPTH)return;
   var byControl=viaControl; viaControl=false;
-  if(V.sheet){
-    /* The gesture was spent closing a sheet, so give the entry back. */
-    if(H.closeSheet)H.closeSheet();
+  if(V.sheet||V.coach){
+    /* The gesture was spent closing a sheet (or the Coach panel), so give the entry back. */
+    if(V.sheet){if(H.closeSheet)H.closeSheet();}else if(H.closeCoach)H.closeCoach();
     repush();
     return;
   }
