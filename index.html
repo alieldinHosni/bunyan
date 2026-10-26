@@ -354,6 +354,36 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --color-danger-action-fill:var(--danger-deep)}
 /* Since 26 Oct Red's accent is Signal Red (#E7172E), which carries a white label at 4.6:1,
    so Red's action fill is its accent like the other themes. */
+/* ---- the workout's surfaces (owner's mockup, 26 Oct; values sampled from it) ----------
+   Deep navy cards with a luminous blue rim, brighter along the top, and a soft glow; blue-
+   tinted secondary type; the check as a light gradient with a glow under it. Exact in Blue
+   dark; Red dark keeps the same navy with Signal Red for the action (red on navy); Sage and
+   the light modes keep their own card glass. */
+:root,[data-palette],[data-theme]{
+  --wk-page:var(--bg); --wk-card:var(--card); --wk-rim:var(--card-edge); --wk-rim-hi:var(--glass-hi); --wk-glow:transparent;
+  --wk-well:var(--surface); --wk-well-rim:var(--border); --wk-chip:var(--surface); --wk-chip-rim:var(--border);
+  --wk-act-top:var(--color-action-fill); --wk-act-bot:var(--color-action-fill); --wk-act-glow:transparent;
+  --wk-tick:var(--ok); --wk-onTick:var(--onOk); --wk-now:var(--accent-tint); --wk-sub:var(--sub); --wk-dim:var(--dim);
+  --wk-hair:var(--hair); --wk-head:rgba(var(--bg-rgb),.72)}
+[data-palette="blue"],[data-theme="dark"]:not([data-palette]),[data-palette="blue"] [data-theme="dark"]:not([data-palette]),:root:not([data-palette]):not([data-theme="light"]){
+  --wk-page:#030B19; --wk-card:#0E1A2E; --wk-rim:#2A446E; --wk-rim-hi:#405881; --wk-glow:rgba(64,110,190,.30);
+  --wk-well:#13223A; --wk-well-rim:#2C4874; --wk-chip:#061226; --wk-chip-rim:#5F7BA6;
+  --wk-act-top:#A8D3FD; --wk-act-bot:#92C5FD; --wk-act-glow:rgba(146,197,253,.40);
+  --wk-tick:#4C85CB; --wk-onTick:#FFFFFF; --wk-now:#13243F; --wk-sub:#B4CAEB; --wk-dim:#9EB5D2;
+  --wk-hair:#1C2C46; --wk-head:rgba(6,16,32,.82)}
+[data-palette="red"],[data-palette="red"] [data-theme="dark"]:not([data-palette]){
+  --wk-page:var(--red-navy); --wk-card:#0A1426; --wk-rim:#22385C; --wk-rim-hi:#34507A; --wk-glow:rgba(60,100,170,.24);
+  --wk-well:#0E1B30; --wk-well-rim:#24406A; --wk-chip:#061020; --wk-chip-rim:#4A6490;
+  --wk-act-top:var(--signal-red); --wk-act-bot:#C8102A; --wk-act-glow:rgba(231,23,46,.42);
+  --wk-tick:var(--signal-red); --wk-onTick:#FFFFFF; --wk-now:#12203A; --wk-sub:#A9B7CE; --wk-dim:#94A5C5;
+  --wk-hair:#18263E; --wk-head:rgba(4,9,20,.82)}
+[data-theme="light"],[data-palette="blue"][data-theme="light"],[data-palette="blue"] [data-theme="light"]:not([data-palette]),
+[data-palette="red"][data-theme="light"],[data-palette="red"] [data-theme="light"]:not([data-palette]){
+  --wk-page:var(--bg); --wk-card:var(--card); --wk-rim:var(--card-edge); --wk-rim-hi:var(--glass-hi); --wk-glow:transparent;
+  --wk-well:var(--surface); --wk-well-rim:var(--border); --wk-chip:var(--surface); --wk-chip-rim:var(--border);
+  --wk-act-top:var(--color-action-fill); --wk-act-bot:var(--color-action-fill); --wk-act-glow:transparent;
+  --wk-tick:var(--ok); --wk-onTick:var(--onOk); --wk-now:var(--accent-tint); --wk-sub:var(--sub); --wk-dim:var(--dim);
+  --wk-hair:var(--hair); --wk-head:rgba(var(--bg-rgb),.72)}
 /* ---- the live figure's stage, per theme (js/ui/mannequin.js) -------------------------
    The 3D figure is drawn by the graphics card, so its colours are read from these
    tokens rather than painted by CSS; the same six selectors as above, in the same order.
@@ -3770,6 +3800,27 @@ body.wkflat #app{--gutter:20px}
 .sess .quiet button{min-height:var(--hit);padding:0 var(--s1);border:0;background:none;color:var(--dim);font-size:14px;font-weight:600;
   text-decoration:underline;text-underline-offset:3px}
 .sess .quiet button.on{color:var(--warning)}
+/* ---- the workout in the mockup's colours (the --wk-* tokens above) ---------------------- */
+body.wkflat{background:var(--wk-page);min-height:100vh}
+.sess{--sub:var(--wk-sub);--dim:var(--wk-dim);--hair:var(--wk-hair)}
+.sess .ss-top{background:var(--wk-head);border-bottom-color:var(--wk-rim)}
+.sess .ss-back,.sess .ss-more,.sess .ib{background:var(--wk-well);border:1px solid var(--wk-well-rim);color:var(--text)}
+.sess .wglass{background:var(--wk-card);border:1px solid var(--wk-rim);border-top-color:var(--wk-rim-hi);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 14px 34px -20px var(--wk-glow),0 0 0 1px rgba(0,0,0,.12)}
+.sess .wsc .wstp button,.sess .rb-ctl button,.sess .tools button,.sess .ready-c button,.sess .sc-rpe-c button{
+  background:var(--wk-well);border-color:var(--wk-well-rim)}
+.sess .wexl .chip.wkwu{background:var(--wk-chip);border-color:var(--wk-chip-rim)}
+.sess .wexl .chip{border-color:var(--wk-well-rim)}
+.sess button.log{background:linear-gradient(180deg,var(--wk-act-top),var(--wk-act-bot));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 0 0 1.5px var(--color-action-edge),0 14px 30px -12px var(--wk-act-glow)}
+.sess .wsr.on{background:var(--wk-now)}
+.sess .wtick{background:var(--wk-tick);color:var(--wk-onTick)}
+.sess .wtick.cur{background:transparent;border-color:var(--wk-tick)}
+.sess .wtick.off{background:transparent;border:1.5px solid var(--wk-well-rim)}
+/* The figures stay white, as in the mockup: the "Suggested" tag above says what they are. */
+.sess .wsc .val-n.sg{color:var(--text)}
+.sess .rb-bar i,.sess .ss-bar i{background:var(--wk-act-bot)}
+
 .ss-acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;margin:var(--s4) 0 8px}
 .ss-act{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 12px;border-radius:var(--r4);
   border:1px solid var(--border);background:var(--raised);color:var(--text);font-weight:600;font-size:14px}
