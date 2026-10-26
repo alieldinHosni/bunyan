@@ -1931,3 +1931,13 @@ Owner, 26 Oct (screenshots): right after retaking the assessment (Endurance and 
   - Back and Use this plan side by side.
 - **Food photos:** the meal cards use glyphs. There are no food photographs in the app, and none are invented (CLAUDE.md, Honesty): waiting on the owner for photos.
 - **Noticed, not changed:** in the bodyweight endurance plan, "Bent Press → Butt-Ups" (a kettlebell press swapped for a core move) is the stand-in logic's choice; worth a look in the movement table.
+
+## Every place on its own picture — branch session/page-photos
+
+Owner, 26 Oct: a sheet of eight photographs, one per place (home, training, start workout, warm-up, food, coach, progress, profile): "crop and use this instead, every picture has its location". CACHE `bunyan-v146`.
+
+- Cut into `img/page-{home,training,workout,warmup,food,coach,progress,profile}.jpg`, leaving out each tile's caption, the menu over the profile tile and the made-up stats panel over the progress tile (CLAUDE.md, Honesty: no invented figures on screen).
+- `js/ui/bgart.js` is now the pictures only; the line drawings and the per-theme rider (`img/ground-*`) are gone. `render.js groundOf()` picks the place: Training's first page is home, a day before Start workout is workout, planning (builder, library, Coach → Training) is training, Coach → Nutrition is food, Coach AI, the chat and the assessment are coach.
+- The workout keeps its flat ground (workout-spec.md), so the warm-up's picture is in the warm-up card's header (`.wu-art`).
+- Each picture has a veil of the ground's own tone, darkest at the top, so titles read on a bright sky; Coach's is quieter because the tablet in it carries words of its own. Not mirrored in Arabic. Faint in light mode. The photographs are the same in every theme.
+- The ground test is rewritten for the eight places.

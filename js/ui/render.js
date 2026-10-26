@@ -66,6 +66,14 @@ function paintMotion(root,viewKey){
 }
 
 var lastView="",lastSheet=null;
+/* Which picture a place stands on: Training's first page is home; a day about to be
+   started is the workout's; planning a program is training's; Coach's sections are
+   their own; the assessment is Coach's. */
+function groundOf(){
+  if(V.assess)return "coach";
+  if(V.tab==="train")return V.train==="day"||V.train==="preview"?"workout":V.train==="days"?"home":"training";
+  if(V.tab==="coach")return V.csec==="train"?"training":V.csec==="food"?"food":"coach";
+  return V.tab;}
 function render(){
   if(syncWorkoutState())saveDB();
   applyLook();
@@ -142,8 +150,8 @@ function render(){
   document.body.classList.toggle("wkflat",focus&&!!S.active);
   /* The dock is built once and only its state changes after that — see dock.js. */
   syncDock(document.getElementById("nav"),V.tab,V.advice);
-  /* The page's drawing on the ground (js/ui/bgart.js); the assessment is Coach's. */
-  syncBgArt(V.assess?"coach":V.tab);
+  /* The place's picture on the ground (js/ui/bgart.js); the assessment is Coach's. */
+  syncBgArt(groundOf());
   ensureRunWatch();
   /* The page's guide, the first time it opens (js/ui/tour.js). */
   tourCheck();
