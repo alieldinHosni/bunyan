@@ -25,7 +25,7 @@ import {glyph} from "../glyphs.js";
 import {builderBody, exercisesPage, programsPage, trainSub, weekOffer} from "./train.js";
 import {foodSub, vMyFoods, vPlan, vTargets} from "./food.js";
 import {adviceBody, adviceNote} from "./pcheck.js";
-import {chatCard, vChat} from "./chat.js";
+import {vChat} from "./chat.js";
 
 var CSECS=[["train","Training"],["food","Nutrition"],["ai","Coach AI"]];
 var TSUBS=[["program","My program"],["programs","Programs"],["exercises","Exercises"]];
@@ -73,7 +73,7 @@ function vCoachAI(){
     return h;}
   h+=weekCard();
   h+=adviceBody();
-  h+=chatCard();
+  /* The conversation is reached from the floating Coach button only (js/ui/coachfab.js). */
   h+=planTiles();
   /* The small print belongs to the advice: a week with nothing to say has none. */
   if(V.advice)h+=adviceNote();

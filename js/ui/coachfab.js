@@ -45,8 +45,9 @@ function fabHtml(){
 /* ---- the panel ------------------------------------------------------------------------ */
 function panelHtml(){
   var full=V.coach==="full",log=(S.chat||[]).filter(function(m){return m&&typeof m==="object";});
-  /* Compact keeps the newest exchange in view; full height holds the whole conversation. */
-  var shown=full?log:log.slice(-1);
+  /* Every exchange is in the panel, so a new one is one more row and nothing before it is
+     rebuilt (js/ui/patch.js keys them): compact shows only the newest (.prev hidden),
+     full height the whole conversation. */
   /* The veil is a button so a tap on it reaches the tap handler; it closes the panel and
      does nothing else. Not in the tab order: the panel's own ✕ is the control. */
   var h='<button class="cp-veil" type="button" tabindex="-1" data-coachclose="1" aria-hidden="true"></button>'
@@ -61,8 +62,10 @@ function panelHtml(){
    +'<div class="cp-b" id="cpB" role="log" aria-live="polite">';
   if(!log.length)h+='<p class="cp-hi">'+esc(t("Ask about training, food or progress"))+'</p>';
   else{
-    if(!full&&log.length>1)h+='<button class="cp-more" data-coachsize="full">'+esc(t("Show the whole conversation"))+'</button>';
-    shown.forEach(function(m,i){h+=bubble(m,i===shown.length-1);});}
+    /* Always in its place, hidden when there is nothing above, so the rows after it
+       keep theirs and the patch leaves them alone. */
+    h+='<button class="cp-more" data-coachsize="full"'+(!full&&log.length>1?'':' hidden')+'>'+esc(t("Show the whole conversation"))+'</button>';
+    log.forEach(function(m,i){h+=bubble(m,i===log.length-1,i<log.length-1);});}
   /* What to ask: for where it was opened, then, after an answer, what follows from it,
      in the conversation's language. */
   var last=log[log.length-1];
@@ -75,7 +78,7 @@ function panelHtml(){
   return h;}
 
 /* ---- keeping the containers in step ---------------------------------------------------- */
-var lastMode=null,lastFab=null,openKey="";
+var lastMode=null,lastFab=null,openKey="",held=false;
 function routeKey(){return [V.tab,V.train,V.dayId,V.previewId,V.meal,V.smeal,V.pslot,V.pimport,V.phist,V.csec,V.ctsub,V.cfsub].join("|");}
 function syncCoach(){
   var fab=document.getElementById("cfab"),pan=document.getElementById("cpanel");
@@ -86,7 +89,7 @@ function syncCoach(){
   document.body.classList.toggle("cfab-on",show);
   /* An answer's button that goes somewhere (another screen, a sheet, the assessment)
      is the person leaving the conversation: the panel steps aside for it. */
-  if(V.coach&&lastMode&&(V.sheet||V.assess||routeKey()!==openKey))V.coach=null;
+  if(V.coach&&lastMode&&!held&&(V.sheet||V.assess||routeKey()!==openKey))V.coach=null;
   var mode=V.coach||null;
   if(!mode){if(pan.firstChild&&!pan.classList.contains("closing"))pan.textContent="";lastMode=null;pan.hidden=true;return;}
   pan.hidden=false;
@@ -101,9 +104,22 @@ function syncCoach(){
     var box=pan.querySelector(".cp");
     if(box)try{box.focus({preventScroll:true});}catch(e){}
     toEnd();}}
-/* The conversation's end in view, inside the panel's own scroll. */
+/* The newest exchange in view, from its top: the question and the start of the answer,
+   never the end of a long answer with its first lines scrolled away. */
 function toEnd(){
-  requestAnimationFrame(function(){var b=document.getElementById("cpB");if(b)b.scrollTop=b.scrollHeight;});}
+  requestAnimationFrame(function(){
+    var b=document.getElementById("cpB");if(!b)return;
+    var xs=b.querySelectorAll(".chat-x"),x=xs[xs.length-1];
+    /* Compact holds the newest exchange alone: from the top, Show the whole
+       conversation included. */
+    if(!x||!b.closest(".cp.full")){b.scrollTop=0;return;}
+    b.scrollTop=Math.max(0,b.scrollTop+x.getBoundingClientRect().top-b.getBoundingClientRect().top-12);});}
+/* A change the coach makes on the person's behalf runs the screen's own code, which
+   may move the screen behind (a food logged opens Food): the panel stays over it, and
+   what is behind it now is where closing it returns to. */
+function holdCoach(fn){
+  held=true;
+  try{return fn();}finally{held=false;openKey=routeKey();}}
 /* Closing plays the panel back into the launcher, then lets go; focus returns to it. */
 function closeCoach(render){
   var pan=document.getElementById("cpanel");
@@ -114,4 +130,4 @@ function closeCoach(render){
   setTimeout(function(){pan.classList.remove("closing");pan.textContent="";render();focusFab();},200);}
 function focusFab(){var b=document.querySelector("#cfab .cfab");if(b)try{b.focus({preventScroll:true});}catch(e){}}
 
-export {closeCoach, fabShown, syncCoach, toEnd};
+export {closeCoach, fabShown, holdCoach, syncCoach, toEnd};

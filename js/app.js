@@ -177,10 +177,25 @@ initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,closeCoach:fu
 initSheetDrag(requestCloseSheet);
 /* A field in a sheet takes the keyboard without the page jumping under it (iPhone). */
 initKeyboard();
-syncViewport();
+/* What the keyboard and the browser chrome leave visible (--vvh, --vvt), measured again
+   whenever it can have changed. A cold launch from the Home Screen is the case that bit:
+   iOS reports a short viewport for the first frames, and a value read once at boot kept the
+   sheets, the Coach panel and the dock's band laid out against it until the next launch.
+   So it is measured again after the first frames and after the page settles, on resize,
+   rotation, a return from the background and a restore from the back-forward cache. */
+function settleViewport(){
+  syncViewport();
+  requestAnimationFrame(function(){requestAnimationFrame(syncViewport);});
+  setTimeout(syncViewport,250);setTimeout(syncViewport,1000);}
+settleViewport();
 if(window.visualViewport){
   window.visualViewport.addEventListener("resize",syncViewport);
   window.visualViewport.addEventListener("scroll",syncViewport);}
+window.addEventListener("resize",syncViewport);
+window.addEventListener("orientationchange",settleViewport);
+window.addEventListener("pageshow",settleViewport);
+window.addEventListener("load",settleViewport);
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")settleViewport();});
 initReorder(moveRow,function(){tap("light");});
 initDockScroll();
 initPress();

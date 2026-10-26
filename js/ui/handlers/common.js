@@ -168,4 +168,8 @@ function requestCloseSheet(){
   closeSheet();
 }
 
-export {MF, builderId, chatEnd, chatSend, editedEx, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};
+/* Functions a handler module lends the coach's actions (js/ui/handlers/actions.js),
+   set when it registers: the actions run what the screens run without the handler
+   modules importing each other. */
+var LENT={};
+export {LENT, MF, builderId, chatEnd, chatSend, editedEx, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};

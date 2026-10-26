@@ -20,7 +20,7 @@ import {curDate, mealNow, play, toast, V} from "../view.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
 import {ask} from "../views/chat.js";
 import {savedById} from "../views/food.js";
-import {chatEnd, pcAfter, slotsFrom, topOfResults, withNotes} from "./common.js";
+import {chatEnd, LENT, pcAfter, slotsFrom, topOfResults, withNotes} from "./common.js";
 import {has, key, on} from "./registry.js";
 
 /* Logs one food to the add-food sheet's meal and closes it. The single path for the
@@ -144,6 +144,7 @@ function openBarcodePrompt(){
 /* What this module answers. app.js calls register() once, at boot, in the order
    the branches are tried in (see registry.js). */
 function register(){
+  LENT.logFood=logFood;
   /* Deleting a progress photo. Asked first: the photo is on this phone only, so there
      is nothing to undo from. */
   /* A meal of the day, added or renamed from Food → Plan. A blank name numbers it by its
