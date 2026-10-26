@@ -233,6 +233,8 @@ function vSheet(){
     b='<h2>'+t("Session")+'</h2>'
      +'<p class="sub" style="margin:2px 0 16px">'+esc(exName(smE.name))+'</p>'
      +'<div class="list">'
+     /* The coach, from the workout: over the set, never near the log control. */
+     +'<button class="item" data-coachopen="1"><span>'+t("Ask Coach")+'</span><span class="chev">›</span></button>'
      +'<button class="item" data-exdetail="'+esc(smE.name)+'"><span>'+t("How to do it")+'</span>'
      +'<span class="chev">›</span></button>'
      +(loadable(smE.name)?'<button class="item" data-plates="1"><span>'+t("Plates")+'</span>'

@@ -666,14 +666,17 @@ function vChat(){
      +'<p class="chat-dis">'+esc(t("Answers come from your own log, plan and targets, worked out on this phone. Nothing you type leaves it."))+'</p>';}
   log.forEach(function(m,i){h+=bubble(m,i===log.length-1);});
   h+='</div>';
-  /* What to ask next, in the conversation's language. */
-  if(last){var LL=last.lang==="ar"||last.lang==="en"?last.lang:uiLang(),own=LL!==uiLang()?LL:"";
-    h+=withLang(LL,function(){return '<div class="chat-next" lang="'+LL+'" dir="'+(LL==="ar"?"rtl":"ltr")+'"><div class="chat-next-h">'+esc(t("Ask next"))+'</div>'
-      +chips(NEXT[last.id]||NEXT.unknown,"",own)+'</div>';});}
+  if(last)h+=askNext(last);
   h+='<div class="chat-form"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'
    +esc(t("Ask a question"))+'" aria-label="'+esc(t("Ask a question"))+'">'
    +'<button class="chat-send" data-chatsend="1" aria-label="'+esc(t("Ask"))+'">'+glyph("send")+'</button></div>';
   return h;}
+
+/* What to ask next, in the conversation's language (the floating Coach shows it too). */
+function askNext(last){
+  var LL=last.lang==="ar"||last.lang==="en"?last.lang:uiLang(),own=LL!==uiLang()?LL:"";
+  return withLang(LL,function(){return '<div class="chat-next" lang="'+LL+'" dir="'+(LL==="ar"?"rtl":"ltr")+'"><div class="chat-next-h">'+esc(t("Ask next"))+'</div>'
+    +chips(NEXT[last.id]||NEXT.unknown,"",own)+'</div>';});}
 
 /* Coach AI's way in, as a composer: a box that says "ask me anything" and opens the
    chat with the keyboard up, and a row of questions to tap instead of typing. Once
@@ -688,4 +691,4 @@ function chatCard(){
    +chips(["today","eat","rest","weights","track"],"cc")
    +(log.length?'<button class="btn g sm" data-chat="1">'+esc(t("Continue the conversation"))+'</button>':'')+'</section>';}
 
-export {ASK, ask, chatCard, NEXT, vChat};
+export {ASK, ask, askNext, bubble, chatCard, NEXT, vChat};

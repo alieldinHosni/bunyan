@@ -126,7 +126,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
    sage glass reference. All three are glass on a blended ground (the cards, the dock
    and the controls frost what lies behind them), saturated in their own colours. */
 :root{
-  --machine-red:#FF2E3A; --glacier-blue:#DBF6FF;
+  --machine-red:#FF2E3A; --glacier-blue:#DBF6FF; --signal-red:#E7172E; --red-navy:#03060F;
   --zero-black:#050505; --ghost-green:#D7FFE0;
   --night-navy:#070B1A; --steel-blue:#5C7FB5; --sky-blue:#8AB0EC; --signal-green:#82FC4F;
 }
@@ -178,27 +178,27 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --warning-rgb:138,86,0; --gold-rgb:122,98,19;
   --glass-hi:rgba(255,255,255,.85); --glass-btn:rgba(255,255,255,.56); --glass-btn-edge:rgba(255,255,255,.88);
 }
-/* BUNYAN Red, dark — the signature, as glass. Machine Red is the one action colour:
-   primary buttons, the active tab, progress, selection, never a whole surface. The ground
-   is a deep wine black lit red from above and wine from below; cards are wine glass;
-   Glacier Blue is the controlled highlight — the label on red, and the big figures. */
+/* BUNYAN Red, dark — red on night navy (owner's reference, 26 Oct). The ground is near-black
+   navy lit red from above; cards are navy glass; Signal Red (#E7172E) is the one action
+   colour, and white labels sit on it at 4.6:1, so a label may sit on the red itself.
+   Glacier Blue stays the cool highlight for the big figures. */
 [data-palette="red"],[data-palette="red"] [data-theme="dark"]:not([data-palette]){
-  --bg:#0D0709; --raised:#1A0E12; --surface:#25131A; --border:#3A2029; --text:#F8EFF1;
-  --sub:#DCC7CB; --dim:#A99096; --faint:#A99096; --accent:var(--machine-red);
-  --accentHi:var(--machine-red); --onAccent:var(--glacier-blue); --accent-deep:#A80E19;
-  --accentSoft:rgba(255,46,58,.13); --secondary:var(--glacier-blue); --figure:var(--glacier-blue);
-  --ok:#22A34B; --okSoft:#0E2415; --onOk:#0D0709; --gold:#D9B13A; --warning:#E8A33A;
-  --danger:var(--machine-red); --danger-fill:var(--machine-red); --danger-deep:#A80E19; --onDanger:#FFFFFF;
-  --glow:rgba(255,46,58,.22); --glow-rgb:255,46,58; --mac-p:var(--machine-red); --mac-c:#22A6B3;
-  --mac-f:#7F78F2; --glass:rgba(30,12,17,.74); --glass-solid:rgba(30,12,17,.96);
-  --hair:rgba(255,226,230,.08); --hair-hi:rgba(255,226,230,.15); --seg-track:rgba(255,226,230,.05);
-  --bar-track:rgba(255,226,230,.15); --accent-tint:rgba(255,46,58,.17);
-  --accent-edge:rgba(255,46,58,.34); --accent-glow:rgba(255,46,58,.28); --accent-dark:#4A0910;
-  --scrim:rgba(8,3,5,.64); --img-tone:saturate(1);
-  --shadow-card:0 1px 0 rgba(255,226,230,.05) inset,0 10px 30px rgba(10,2,4,.45);
-  --well:rgba(10,3,5,.45); --bg-rgb:13,7,9; --accent-rgb:255,46,58;
-  --accentHi-rgb:255,46,58; --danger-rgb:255,46,58; --warning-rgb:232,163,58; --gold-rgb:217,177,58;
-  --glass-hi:rgba(255,226,230,.16); --glass-btn:rgba(64,20,30,.42); --glass-btn-edge:rgba(255,214,220,.16);
+  --bg:var(--red-navy); --raised:#081224; --surface:#0E1B30; --border:#1C2A44; --text:#F2F5FA;
+  --sub:#A9B7CE; --dim:#8496B3; --faint:#8496B3; --accent:var(--signal-red);
+  --accentHi:#FF5A6A; --onAccent:#FFFFFF; --accent-deep:#B30F24;
+  --accentSoft:rgba(231,23,46,.14); --secondary:var(--glacier-blue); --figure:var(--glacier-blue);
+  --ok:#22A34B; --okSoft:#0E2415; --onOk:var(--red-navy); --gold:#D9B13A; --warning:#E8A33A;
+  --danger:#FF4D5E; --danger-fill:var(--signal-red); --danger-deep:#A80E19; --onDanger:#FFFFFF;
+  --glow:rgba(231,23,46,.22); --glow-rgb:231,23,46; --mac-p:var(--signal-red); --mac-c:#22A6B3;
+  --mac-f:#7F78F2; --glass:rgba(8,14,30,.74); --glass-solid:rgba(8,14,30,.96);
+  --hair:rgba(180,200,235,.08); --hair-hi:rgba(180,200,235,.15); --seg-track:rgba(180,200,235,.05);
+  --bar-track:rgba(180,200,235,.15); --accent-tint:rgba(231,23,46,.16);
+  --accent-edge:rgba(231,23,46,.40); --accent-glow:rgba(231,23,46,.30); --accent-dark:#4A0910;
+  --scrim:rgba(1,4,12,.66); --img-tone:saturate(1);
+  --shadow-card:0 1px 0 rgba(180,200,235,.05) inset,0 10px 30px rgba(0,3,10,.5);
+  --well:rgba(0,3,10,.45); --bg-rgb:3,6,15; --accent-rgb:231,23,46;
+  --accentHi-rgb:255,90,106; --danger-rgb:231,23,46; --warning-rgb:232,163,58; --gold-rgb:217,177,58;
+  --glass-hi:rgba(180,200,235,.14); --glass-btn:rgba(20,32,58,.46); --glass-btn-edge:rgba(180,200,235,.16);
 }
 /* BUNYAN Red, light — the Glacier Blue swatch: Glacier Blue is the page, cards are a
    whiter glacier, Machine Red stays the fill. Red text on glacier would be 3.27:1, so
@@ -206,20 +206,20 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
    The dock stays dark glass, as chrome. */
 [data-palette="red"][data-theme="light"],[data-palette="red"] [data-theme="light"]:not([data-palette]){
   --bg:var(--glacier-blue); --raised:#F5FCFF; --surface:#E4F5FC; --border:#BCDCE8; --text:#0A0B0E;
-  --sub:#334750; --dim:#465B65; --faint:#465B65; --accent:var(--machine-red); --accentHi:#C30F1C;
-  --onAccent:var(--glacier-blue); --accent-deep:#A80E19; --accentSoft:#FFE3E5; --secondary:#0A0B0E;
+  --sub:#334750; --dim:#465B65; --faint:#465B65; --accent:var(--signal-red); --accentHi:#C30F1C;
+  --onAccent:#FFFFFF; --accent-deep:#A80E19; --accentSoft:#FFE3E5; --secondary:#0A0B0E;
   --figure:#0A0B0E; --ok:#177530; --okSoft:#DDF2E5; --onOk:#FFFFFF; --gold:#7A6213;
-  --warning:#8A5600; --danger:#C30F1C; --danger-fill:var(--machine-red); --danger-deep:#A80E19; --onDanger:#FFFFFF;
+  --warning:#8A5600; --danger:#C30F1C; --danger-fill:var(--signal-red); --danger-deep:#A80E19; --onDanger:#FFFFFF;
   --glow:transparent;
-  --glow-rgb:255,46,58; --mac-p:#D41E2A; --mac-c:#009AA6; --mac-f:#6D5FE6;
+  --glow-rgb:231,23,46; --mac-p:#D41E2A; --mac-c:#009AA6; --mac-f:#6D5FE6;
   --glass:rgba(10,11,14,.86); --glass-solid:rgba(10,11,14,.97); --hair:rgba(10,40,60,.10);
   --hair-hi:rgba(255,255,255,.14); --seg-track:rgba(10,40,60,.06); --bar-track:rgba(10,40,60,.12);
-  --accent-tint:rgba(255,46,58,.14); --accent-edge:rgba(255,46,58,.32);
-  --accent-glow:rgba(255,46,58,.20); --accent-dark:#5A0B12; --scrim:rgba(6,22,32,.42);
+  --accent-tint:rgba(231,23,46,.12); --accent-edge:rgba(231,23,46,.32);
+  --accent-glow:rgba(231,23,46,.20); --accent-dark:#5A0B12; --scrim:rgba(6,22,32,.42);
   --img-tone:saturate(1);
   --shadow-card:0 1px 0 rgba(255,255,255,.6) inset,0 10px 30px rgba(10,40,60,.10);
-  --well:rgba(10,40,60,.07); --bg-rgb:219,246,255; --accent-rgb:255,46,58;
-  --accentHi-rgb:195,15,28; --danger-rgb:255,46,58; --warning-rgb:138,86,0; --gold-rgb:122,98,19;
+  --well:rgba(10,40,60,.07); --bg-rgb:219,246,255; --accent-rgb:231,23,46;
+  --accentHi-rgb:195,15,28; --danger-rgb:231,23,46; --warning-rgb:138,86,0; --gold-rgb:122,98,19;
   --glass-hi:rgba(255,255,255,.85); --glass-btn:rgba(255,255,255,.56); --glass-btn-edge:rgba(255,255,255,.88);
 }
 /* Sage, dark — the owner's sage reference, at night: a deep sage-teal ground lit by a
@@ -303,21 +303,20 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --map-water:rgba(138,176,236,.40); --map-park:rgba(90,190,60,.16);
 }
 [data-palette="red"],[data-palette="red"] [data-theme="dark"]:not([data-palette]){
-  --dock-bar:var(--glass); --dock-bar-solid:var(--glass-solid); --dock-hair:rgba(255,226,230,.14);
-  --dock-dot:rgba(255,226,230,.07); --dock-dot-solid:#2A141A; --dock-dot-edge:rgba(255,226,230,.10);
-  --dock-dot-ink:#D9BEC3; --dock-pill:var(--accent-deep); --dock-pill-ink:var(--glacier-blue); --dock-flag:var(--machine-red);
-  --ground:radial-gradient(115% 55% at 85% -8%,rgba(255,46,58,.34) 0%,transparent 60%),
-    radial-gradient(95% 60% at 0% 105%,rgba(150,22,48,.34) 0%,transparent 62%),
-    radial-gradient(70% 40% at 0% 38%,rgba(219,246,255,.05) 0%,transparent 70%),
-    linear-gradient(180deg,#1E0A10 0%,#0D0709 55%);
-  --card:rgba(66,20,31,.46); --card-edge:rgba(255,214,220,.14);
+  --dock-bar:var(--glass); --dock-bar-solid:var(--glass-solid); --dock-hair:rgba(180,200,235,.14);
+  --dock-dot:rgba(180,200,235,.07); --dock-dot-solid:#0E1B30; --dock-dot-edge:rgba(180,200,235,.10);
+  --dock-dot-ink:#A9B7CE; --dock-pill:var(--signal-red); --dock-pill-ink:#FFFFFF; --dock-flag:var(--signal-red);
+  --ground:radial-gradient(115% 55% at 85% -8%,rgba(231,23,46,.30) 0%,transparent 60%),
+    radial-gradient(95% 60% at 0% 105%,rgba(40,70,140,.22) 0%,transparent 62%),
+    linear-gradient(180deg,#070C1C 0%,var(--red-navy) 55%);
+  --card:rgba(12,26,52,.62); --card-edge:rgba(150,175,220,.12);
   --map-water:rgba(219,246,255,.10); --map-park:rgba(219,246,255,.05);
 }
 [data-palette="red"][data-theme="light"],[data-palette="red"] [data-theme="light"]:not([data-palette]){
   --dock-bar:rgba(30,12,17,.80); --dock-hair:rgba(255,226,230,.16);
   --dock-dot:rgba(219,246,255,.10); --dock-dot-solid:#2A141A; --dock-dot-edge:rgba(219,246,255,.12);
-  --dock-dot-ink:#E3CBD0; --dock-pill:var(--accent-deep); --dock-pill-ink:var(--glacier-blue); --dock-flag:#FF5C66;
-  --ground:radial-gradient(115% 55% at 85% -8%,rgba(255,46,58,.30) 0%,transparent 60%),
+  --dock-dot-ink:#E3CBD0; --dock-pill:var(--signal-red); --dock-pill-ink:#FFFFFF; --dock-flag:#FF5C66;
+  --ground:radial-gradient(115% 55% at 85% -8%,rgba(231,23,46,.26) 0%,transparent 60%),
     radial-gradient(95% 60% at 0% 105%,rgba(110,190,220,.55) 0%,transparent 62%),
     linear-gradient(180deg,#EEFAFF 0%,#CDE9F4 100%);
   --card:rgba(255,255,255,.58); --card-edge:rgba(255,255,255,.88);
@@ -353,10 +352,38 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
    active marks. A destructive label sits on danger-deep in every theme, in onDanger. */
 :root,[data-palette],[data-theme]{--color-action-fill:var(--accent);--color-action-edge:transparent;
   --color-danger-action-fill:var(--danger-deep)}
+/* Since 26 Oct Red's accent is Signal Red (#E7172E), which carries a white label at 4.6:1,
+   so Red's action fill is its accent like the other themes. */
+/* ---- the workout's surfaces (owner's mockup, 26 Oct; values sampled from it) ----------
+   Deep navy cards with a luminous blue rim, brighter along the top, and a soft glow; blue-
+   tinted secondary type; the check as a light gradient with a glow under it. Exact in Blue
+   dark; Red dark keeps the same navy with Signal Red for the action (red on navy); Sage and
+   the light modes keep their own card glass. */
+:root,[data-palette],[data-theme]{
+  --wk-page:var(--bg); --wk-card:var(--card); --wk-rim:var(--card-edge); --wk-rim-hi:var(--glass-hi); --wk-glow:transparent;
+  --wk-well:var(--surface); --wk-well-rim:var(--border); --wk-chip:var(--surface); --wk-chip-rim:var(--border);
+  --wk-act-top:var(--color-action-fill); --wk-act-bot:var(--color-action-fill); --wk-act-glow:transparent;
+  --wk-tick:var(--ok); --wk-onTick:var(--onOk); --wk-now:var(--accent-tint); --wk-sub:var(--sub); --wk-dim:var(--dim);
+  --wk-hair:var(--hair); --wk-head:rgba(var(--bg-rgb),.72)}
+[data-palette="blue"],[data-theme="dark"]:not([data-palette]),[data-palette="blue"] [data-theme="dark"]:not([data-palette]),:root:not([data-palette]):not([data-theme="light"]){
+  --wk-page:#030B19; --wk-card:#0E1A2E; --wk-rim:#2A446E; --wk-rim-hi:#405881; --wk-glow:rgba(64,110,190,.30);
+  --wk-well:#13223A; --wk-well-rim:#2C4874; --wk-chip:#061226; --wk-chip-rim:#5F7BA6;
+  --wk-act-top:#A8D3FD; --wk-act-bot:#92C5FD; --wk-act-glow:rgba(146,197,253,.40);
+  --wk-tick:#4C85CB; --wk-onTick:#FFFFFF; --wk-now:#13243F; --wk-sub:#B4CAEB; --wk-dim:#9EB5D2;
+  --wk-hair:#1C2C46; --wk-head:rgba(6,16,32,.82)}
 [data-palette="red"],[data-palette="red"] [data-theme="dark"]:not([data-palette]){
-  --color-action-fill:var(--accent-deep);--color-action-edge:var(--accent)}
+  --wk-page:var(--red-navy); --wk-card:#0A1426; --wk-rim:#22385C; --wk-rim-hi:#34507A; --wk-glow:rgba(60,100,170,.24);
+  --wk-well:#0E1B30; --wk-well-rim:#24406A; --wk-chip:#061020; --wk-chip-rim:#4A6490;
+  --wk-act-top:var(--signal-red); --wk-act-bot:#C8102A; --wk-act-glow:rgba(231,23,46,.42);
+  --wk-tick:var(--signal-red); --wk-onTick:#FFFFFF; --wk-now:#12203A; --wk-sub:#A9B7CE; --wk-dim:#94A5C5;
+  --wk-hair:#18263E; --wk-head:rgba(4,9,20,.82)}
+[data-theme="light"],[data-palette="blue"][data-theme="light"],[data-palette="blue"] [data-theme="light"]:not([data-palette]),
 [data-palette="red"][data-theme="light"],[data-palette="red"] [data-theme="light"]:not([data-palette]){
-  --color-action-fill:var(--accent-deep);--color-action-edge:transparent}
+  --wk-page:var(--bg); --wk-card:var(--card); --wk-rim:var(--card-edge); --wk-rim-hi:var(--glass-hi); --wk-glow:transparent;
+  --wk-well:var(--surface); --wk-well-rim:var(--border); --wk-chip:var(--surface); --wk-chip-rim:var(--border);
+  --wk-act-top:var(--color-action-fill); --wk-act-bot:var(--color-action-fill); --wk-act-glow:transparent;
+  --wk-tick:var(--ok); --wk-onTick:var(--onOk); --wk-now:var(--accent-tint); --wk-sub:var(--sub); --wk-dim:var(--dim);
+  --wk-hair:var(--hair); --wk-head:rgba(var(--bg-rgb),.72)}
 /* ---- the live figure's stage, per theme (js/ui/mannequin.js) -------------------------
    The 3D figure is drawn by the graphics card, so its colours are read from these
    tokens rather than painted by CSS; the same six selectors as above, in the same order.
@@ -3773,6 +3800,27 @@ body.wkflat #app{--gutter:20px}
 .sess .quiet button{min-height:var(--hit);padding:0 var(--s1);border:0;background:none;color:var(--dim);font-size:14px;font-weight:600;
   text-decoration:underline;text-underline-offset:3px}
 .sess .quiet button.on{color:var(--warning)}
+/* ---- the workout in the mockup's colours (the --wk-* tokens above) ---------------------- */
+body.wkflat{background:var(--wk-page);min-height:100vh}
+.sess{--sub:var(--wk-sub);--dim:var(--wk-dim);--hair:var(--wk-hair)}
+.sess .ss-top{background:var(--wk-head);border-bottom-color:var(--wk-rim)}
+.sess .ss-back,.sess .ss-more,.sess .ib{background:var(--wk-well);border:1px solid var(--wk-well-rim);color:var(--text)}
+.sess .wglass{background:var(--wk-card);border:1px solid var(--wk-rim);border-top-color:var(--wk-rim-hi);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 14px 34px -20px var(--wk-glow),0 0 0 1px rgba(0,0,0,.12)}
+.sess .wsc .wstp button,.sess .rb-ctl button,.sess .tools button,.sess .ready-c button,.sess .sc-rpe-c button{
+  background:var(--wk-well);border-color:var(--wk-well-rim)}
+.sess .wexl .chip.wkwu{background:var(--wk-chip);border-color:var(--wk-chip-rim)}
+.sess .wexl .chip{border-color:var(--wk-well-rim)}
+.sess button.log{background:linear-gradient(180deg,var(--wk-act-top),var(--wk-act-bot));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 0 0 1.5px var(--color-action-edge),0 14px 30px -12px var(--wk-act-glow)}
+.sess .wsr.on{background:var(--wk-now)}
+.sess .wtick{background:var(--wk-tick);color:var(--wk-onTick)}
+.sess .wtick.cur{background:transparent;border-color:var(--wk-tick)}
+.sess .wtick.off{background:transparent;border:1.5px solid var(--wk-well-rim)}
+/* The figures stay white, as in the mockup: the "Suggested" tag above says what they are. */
+.sess .wsc .val-n.sg{color:var(--text)}
+.sess .rb-bar i,.sess .ss-bar i{background:var(--wk-act-bot)}
+
 .ss-acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;margin:var(--s4) 0 8px}
 .ss-act{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 12px;border-radius:var(--r4);
   border:1px solid var(--border);background:var(--raised);color:var(--text);font-weight:600;font-size:14px}
@@ -4884,6 +4932,86 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 .cplan-s{font-size:12.5px;color:var(--sub)}
 .cplan-gen{margin:12px 0 0}
 
+/* ---- The floating Coach (js/ui/coachfab.js) ----------------------------------------------
+   A round launcher above the dock at the bottom right, and the panel it opens into: the
+   theme's own ground made translucent and blurred, so it is light glass in light modes and
+   dark glass in dark ones, with the type of that theme on it. Where the browser cannot blur
+   it is the raised surface, solid. The dock never mirrors, so neither does the launcher. */
+#cfab{position:fixed;z-index:52;right:max(16px,calc(env(safe-area-inset-right) + 12px));
+  bottom:calc(var(--navh) + 14px);pointer-events:none}
+.cfab{pointer-events:auto;width:56px;height:56px;display:grid;place-items:center;padding:0;border-radius:50%;
+  border:1.5px solid var(--accent);color:var(--accentHi);background:rgba(var(--bg-rgb),.78);
+  box-shadow:0 10px 26px -10px rgba(var(--accent-rgb),.55),var(--shadow-float);
+  -webkit-backdrop-filter:blur(16px) saturate(140%);backdrop-filter:blur(16px) saturate(140%);
+  animation:cfabIn var(--m-comp) var(--e-decel);
+  transition:transform var(--m-press) var(--e-standard),background-color var(--m-micro) var(--e-standard)}
+.cfab .gl{width:26px;height:26px;stroke-width:2}
+:root:not(.tch) .cfab:active,.cfab.tapd{transform:scale(.93);background:var(--accent-tint)}
+.cfab:focus-visible{outline:3px solid var(--accentHi);outline-offset:3px}
+@keyframes cfabIn{from{opacity:0;transform:scale(.6)}}
+/* The last of a page scrolls clear of the launcher. */
+body.cfab-on #app{padding-bottom:72px}
+/* Out of the way while reading, with the dock (js/ui/dock.js adds .dhid). */
+#cfab .cfab{transition:transform var(--dt,var(--m-comp)) var(--e-ios),background-color var(--m-micro) var(--e-standard)}
+#cfab.dhid .cfab{transform:translate3d(0,calc(var(--navh) + 96px),0)}
+#cfab.dfade .cfab{transition:opacity var(--dt,var(--m-micro)) var(--e-standard)}
+#cfab.dfade.dhid .cfab{transform:none;opacity:0;pointer-events:none}
+
+#cpanel{position:fixed;left:0;right:0;top:var(--vvt,0px);height:var(--vvh,100%);z-index:95;display:flex;flex-direction:column;
+  justify-content:flex-end;align-items:flex-end;padding:0 12px calc(var(--navh) + 10px)}
+#cpanel[hidden]{display:none}
+/* On the keyboard while typing, and for a moment after it goes (body.kbleave): a tap on
+   send or an answer's button blurs the field first, and moving the panel then would put
+   something else under the finger. */
+body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
+.cp-veil{position:absolute;inset:0;width:100%;padding:0;border:0;border-radius:0;background:rgba(var(--bg-rgb),.42);cursor:default}
+.cp{position:relative;width:100%;max-width:420px;display:flex;flex-direction:column;min-height:0;
+  max-height:min(70vh,calc(var(--vvh,100dvh) - var(--navh) - 72px));
+  border-radius:var(--r5);border:1px solid var(--card-edge);color:var(--text);
+  background:var(--raised);box-shadow:inset 0 1px 0 var(--glass-hi),var(--shadow-float);outline:none;
+  transform-origin:calc(100% - 28px) calc(100% + 42px)}
+@supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
+  .cp{background:rgba(var(--bg-rgb),.86);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%)}}
+.cp.full{position:fixed;left:8px;right:8px;width:auto;max-width:none;max-height:none;
+  top:calc(var(--vvt,0px) + max(8px,env(safe-area-inset-top)));
+  height:calc(var(--vvh,100dvh) - max(8px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))}
+#cpanel.opening .cp{animation:cpIn 260ms var(--e-ios)}
+#cpanel.opening .cp-veil{animation:fadeIn 200ms var(--e-standard)}
+#cpanel.resized .cp{animation:wkIn var(--m-comp) var(--e-decel)}
+#cpanel.closing .cp{animation:cpOut 200ms var(--e-accel) forwards}
+#cpanel.closing .cp-veil{animation:fadeIn 200ms var(--e-standard) reverse forwards}
+@keyframes cpIn{from{opacity:0;transform:scale(.12);border-radius:50%}}
+@keyframes cpOut{to{opacity:0;transform:scale(.12)}}
+.cp-h{display:flex;align-items:center;gap:var(--s2);padding:10px 8px 8px var(--s4);border-bottom:1px solid var(--hair)}
+.cp-mark{width:36px;height:36px;flex:none;display:grid;place-items:center;border-radius:50%;
+  background:var(--accent-tint);color:var(--accentHi)}
+.cp-mark .gl{width:20px;height:20px;stroke-width:2}
+.cp-ht{flex:1;min-width:0}
+.cp-ht h2{margin:0;font-family:var(--display);font-size:17px;font-weight:700;line-height:1.2}
+.cp-ht p{margin:1px 0 0;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-ib{width:var(--hit);height:var(--hit);flex:none;display:grid;place-items:center;padding:0;border:0;border-radius:50%;
+  background:none;color:var(--sub)}
+.cp-ib .gl{width:20px;height:20px}
+:root:not(.tch) .cp-ib:active,.cp-ib.tapd{background:var(--surface)}
+.cp-b{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--s3) var(--s4);display:flex;flex-direction:column;gap:var(--s3)}
+.cp-hi{margin:0;font-size:15px;color:var(--sub)}
+.cp-more{align-self:center;min-height:var(--hit);padding:0 var(--s3);border:0;background:none;color:var(--accentHi);font-weight:700;font-size:13.5px}
+.cp .chat-a{background:var(--surface);box-shadow:none}
+.cp .chat-next{margin:0}
+.cp .chat-chip{min-height:40px}
+.cp-sug{display:flex;flex-wrap:wrap;gap:6px}
+.cp-chip{min-height:40px;padding:0 var(--s3);border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
+  color:var(--text);font-weight:600;font-size:13.5px;text-align:start;position:relative}
+.cp-chip::after{content:"";position:absolute;inset:-2px 0}
+.cp-f{display:flex;gap:var(--s2);padding:var(--s2) var(--s3) var(--s3);border-top:1px solid var(--hair)}
+.cp-f input{flex:1;min-width:0;min-height:44px;margin:0;padding:0 var(--s4);border-radius:var(--rpill);
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:16px}
+.cp .cp-f input{-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;background-color:var(--surface)}
+.cp-send{width:44px;height:44px;flex:none;display:grid;place-items:center;padding:0;border:0;border-radius:50%;
+  background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);color:var(--onAccent)}
+.cp-send .gl{width:20px;height:20px}
+@media (prefers-reduced-motion:reduce){.cfab,#cpanel .cp,#cpanel .cp-veil{animation:none!important}}
+body.noanim .cfab,body.noanim #cpanel .cp,body.noanim #cpanel .cp-veil,:root.reduced .cfab,:root.reduced #cpanel .cp,:root.reduced #cpanel .cp-veil{animation:none!important}
 /* ---- Glass, everywhere -----------------------------------------------------------
    The owner's references: frosted glass over a blended, drawn ground. Cards, buttons,
    chips, fields, the segmented control, the round header buttons and the dock are
@@ -4965,6 +5093,8 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 <div id="app"></div>
 <nav id="nav"></nav>
 <div id="wbar"></div>
+<div id="cfab"></div>
+<div id="cpanel" hidden></div>
 <div id="sheet"></div>
 <div id="rest" data-theme="dark"></div>
 <script type="module" src="./js/app.js"></script>

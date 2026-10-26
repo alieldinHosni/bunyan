@@ -20,7 +20,8 @@ import {toast, V} from "../view.js";
 import {draftFrom, foodPrefs, GEARS, profileOf, STEPS, youOk} from "../views/assess.js";
 import {ask} from "../views/chat.js";
 import {coachAct} from "../views/pcheck.js";
-import {chatEnd, chatSend, slotsFrom, toCoach} from "./common.js";
+import {chatSend, slotsFrom, toCoach} from "./common.js";
+import {closeCoach, toEnd} from "../coachfab.js";
 import {key, on} from "./registry.js";
 
 /* The assessment's answers become the profile, the daily targets and the training
@@ -149,17 +150,20 @@ function register(){
      was typed, clear it with Undo. */
   /* "Ask me anything" opens it ready to type: the field takes focus inside the tap, which
      is what lets a phone raise its keyboard. */
-  key("chat",function(D){pushNav();V.chat=true;render();
-    /* From the top of the chat, where its back arrow is: Coach AI is usually scrolled to
-       the box by the time it is tapped. */
-    if(D.chat==="ask"){window.scrollTo(0,0);var q=document.getElementById("chatq");if(q){try{q.focus({preventScroll:true});}catch(e){q.focus();}}}
-    else chatEnd();return;});
+  /* The conversation is the floating Coach's panel (js/ui/coachfab.js), over the screen
+     it was opened from: no route changes, so closing it is back where you were. */
+  key("chat",function(D){V.coach=D.chat==="ask"?"compact":"full";render();
+    if(D.chat==="ask"){var q=document.getElementById("chatq");if(q){try{q.focus({preventScroll:true});}catch(e){q.focus();}}}
+    return;});
+  key("coachopen",function(){if(V.sheet)closeSheet();V.coach="compact";render();return;});
+  key("coachclose",function(){closeCoach(render);return;});
+  key("coachsize",function(D){V.coach=D.coachsize==="full"?"full":"compact";render();return;});
   /* The food database loads first (from the cache, offline): swaps and food facts
      answer from it. */
-  key("chatq",function(D,el){var from=fromEl(el);if(!V.chat){pushNav();V.chat=true;}
-    loadFoods(function(){ask("",D.chatq,D.chatl);saveDB();render();land(from);});return;});
+  key("chatq",function(D,el){var from=fromEl(el);if(!V.coach)V.coach="compact";
+    loadFoods(function(){ask("",D.chatq,D.chatl);saveDB();render();land(from);toEnd();});return;});
   key("chatsend",function(){chatSend();return;});
-  key("chatclear",function(){var chB=S.chat||[];S.chat=[];saveDB();render();window.scrollTo(0,0);
+  key("chatclear",function(){var chB=S.chat||[];S.chat=[];saveDB();render();
     toast(t("Conversation cleared."),function(){S.chat=chB;saveDB();render();});return;});
   /* What an answer offers to change: a small step on the calorie target, carbs moving
      with it so protein and fat stay where they are; or the goal, with its targets. */

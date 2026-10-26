@@ -14,6 +14,7 @@ import {toKg} from "../../units.js";
 import {fmtN, num} from "../../util.js";
 import {runAct, val} from "../actions.js";
 import {addPhoto, avatarFrom} from "../photos.js";
+import {closeCoach} from "../coachfab.js";
 import {render} from "../render.js";
 import {mealNow, toast, V} from "../view.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
@@ -90,6 +91,7 @@ function onInput(ev){
    previously unreachable by keyboard entirely. */
 function onKeydown(ev){
   if(ev.key==="Escape"&&V.sheet){ev.preventDefault();requestCloseSheet();return;}
+  if(ev.key==="Escape"&&V.coach){ev.preventDefault();closeCoach(render);return;}
   /* Done on the number pad saves the steps typed. */
   if(ev.key==="Enter"&&ev.target.id==="in_st"){ev.preventDefault();var svb=document.querySelector("[data-savesteps]");if(svb)svb.click();return;}
   /* Arrow keys move along any tablist (the segmented controls), as they do natively. */

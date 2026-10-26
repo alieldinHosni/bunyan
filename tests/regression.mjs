@@ -687,7 +687,8 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   await coach(page,"ai");
   if(!(await page.$('.chatcard')))throw new Error("no Ask the coach card in Coach AI");
   await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
-  eq(await ev(page,"[V.tab,V.chat,S.chat.length,S.chat[0].id]"),["coach",true,1,"today"],"a suggestion opens the chat and is answered");
+  /* The conversation is the floating Coach's panel now, over Coach AI. */
+  eq(await ev(page,"[V.tab,V.coach,S.chat.length,S.chat[0].id]"),["coach","compact",1,"today"],"a suggestion opens the Coach panel and is answered");
   if(!(await page.$('.chat-a .chat-acts [data-startday]')))throw new Error("today's answer offers no Start workout");
   const ask=async q=>{await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,300);
     return page.evaluate(()=>{const a=[...document.querySelectorAll(".chat-a")].pop();return a?a.innerText:"";});};
@@ -700,7 +701,7 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   eq(await page.$$eval('.chat-acts',x=>x.length),1,"only the newest answer carries buttons");
   a=await ask("asdf qwer");
   eq(await ev(page,"S.chat[S.chat.length-1].id"),"unknown","nonsense is said to be outside what it knows");
-  if(!/can't answer/.test(a)||!(await page.$('.chat-chips [data-chatq]')))throw new Error("unknown has no way on: "+a);
+  if(!/can't answer/.test(a)||!(await page.$('#cpanel .chat-chips [data-chatq]')))throw new Error("unknown has no way on: "+a);
   /* The weight stalled while losing fat, and the log matches the target: a step on the target, with Undo. */
   a=await ask("why is my weight stuck");
   if(!/Eat 150 kcal less a day/.test(a))throw new Error("no step offered: "+a);
@@ -714,14 +715,15 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   eq(await ev(page,"S.profile.goal"),"gain","goal set");
   await page.tap('.toast-undo');await pause(page);
   eq(await ev(page,"[S.profile.goal,S.goals.kcal]"),["lose",2500],"Undo puts goal and targets back");
-  /* Kept, cleared with Undo, and Back returns to Coach AI. */
+  /* Kept, cleared with Undo (from the panel at full height), and closing returns to Coach AI. */
   const n=await ev(page,"S.chat.length");
+  await page.tap('.cp [data-coachsize="full"]');await pause(page);
   await page.tap('[data-chatclear]');await pause(page);
   eq(await ev(page,"(S.chat||[]).length"),0,"cleared");
   await page.tap('.toast-undo');await pause(page);
   eq(await ev(page,"S.chat.length"),n,"Undo brings it back");
-  await page.tap('[data-back]');await pause(page,500);
-  eq(await ev(page,"[V.tab,!!V.chat,V.csec]"),["coach",false,"ai"],"Back to Coach AI");
+  await page.tap('.cp [data-coachclose]');await pause(page,500);
+  eq(await ev(page,"[V.tab,!!V.coach,V.csec]"),["coach",false,"ai"],"closed, back on Coach AI");
   if(!/Continue the conversation/.test(await page.$eval('.chatcard',e=>e.innerText)))throw new Error("the card does not offer to continue");
   eq(out,[],"no network requests");
 },{db:Object.assign(seed(),{
@@ -764,9 +766,10 @@ await test("Arabic: template program and day names are shown in Arabic, fraction
   eq(r.own,"My Monday","a name the user typed passes through");
 },{prefs:{lang:"ar"}});
 /* On accent-deep since token-requests.md §3 (owner, 20 Oct): Glacier Blue on Machine Red was 3.27:1. */
-await test("Light: the open tab reads on the dark dock: Glacier Blue on Red's accent-deep",async page=>{
+/* Red is red on navy since 26 Oct: white on Signal Red (#E7172E), 4.6:1. */
+await test("Light: the open tab reads on the dark dock: white on Signal Red",async page=>{
   const c=await page.$eval('nav .dock-b.on',e=>[getComputedStyle(e).color,getComputedStyle(e).backgroundColor]);
-  eq(c,["rgb(219, 246, 255)","rgb(168, 14, 25)"]);
+  eq(c,["rgb(255, 255, 255)","rgb(231, 23, 46)"]);
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"red"}});
 await test("One place for each thing: the assessment in Coach AI only, how you feel asked when a workout starts, nothing of it on Profile",async page=>{
   await tapTab(page,"train");await pause(page);
@@ -858,7 +861,7 @@ await test("Themes: the picker switches the whole app, and the choice outlives a
   await page.tap('[data-settheme="red"]');await pause(page,500);
   eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"red","html is red");
   eq(await ev(page,"S.prefs.palette"),"red","saved to the profile");
-  eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#FF2E3A","Machine Red is the accent");
+  eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#E7172E","Signal Red is the accent (red on navy since 26 Oct)");
   eq(await page.$$eval('link[rel="icon"],link[rel="apple-touch-icon"]',a=>a.map(l=>l.getAttribute("href"))),["icon-red-180.png","icon-red-180.png"],"the icon takes the theme");
   await page.tap('[data-lookmode="light"]');await pause(page,500);
   eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","red|light|red"],"mode and the early copy");
@@ -901,8 +904,9 @@ await test("Themes: every theme and mode uses its reference colours exactly",asy
       de.setAttribute("data-palette",p);de.setAttribute("data-theme",m);
       const cs=getComputedStyle(de);out[p+"-"+m]=["--accent","--bg","--onAccent","--raised"].map(k=>cs.getPropertyValue(k).trim().toUpperCase());}
     return out;});
-  eq(r["red-dark"][0],"#FF2E3A","Machine Red");eq(r["red-dark"][2],"#DBF6FF","Glacier Blue on red");
-  eq(r["red-light"].slice(0,2),["#FF2E3A","#DBF6FF"],"Glacier Blue ground");
+  /* Red is red on night navy since 26 Oct (the owner's reference): Signal Red, white labels. */
+  eq(r["red-dark"],["#E7172E","#03060F","#FFFFFF","#081224"],"Signal Red on night navy, white on red");
+  eq(r["red-light"].slice(0,3),["#E7172E","#DBF6FF","#FFFFFF"],"Glacier Blue ground, Signal Red");
   eq(r["blue-dark"].slice(0,3),["#8AB0EC","#070B1A","#070B1A"],"Sky Blue on Night Navy");
   eq(r["mono-dark"].slice(0,3),["#DCE7E4","#0D1A1B","#142E33"],"Sage: sage-white on the deep sage ground");
   eq(r["mono-light"].slice(0,3),["#142E33","#D2DBDA","#F2F6F5"],"Sage: the reference's deep slate on sage");
@@ -946,7 +950,7 @@ await test("Themes: each page draws its own picture on the ground, under the gla
   await page.evaluate(()=>{window.__bg=document.querySelector("#bgart svg");});
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="red";(await import("/js/ui/render.js")).render();});await pause(page,300);
   eq(await page.evaluate(()=>[getComputedStyle(document.getElementById("bgart")).getPropertyValue("--bga").trim().toUpperCase(),
-    document.querySelector("#bgart svg")===window.__bg]),["#FF2E3A",true],"the same drawing, repainted in red");
+    document.querySelector("#bgart svg")===window.__bg]),["#FF5A6A",true],"the same drawing, repainted in red");
 });
 /* Training's ground is the owner's horseman at dusk, drawn (js/ui/scene.js): the rider
    on the rock, the obelisk, palms, the city and the river, in the theme's own colours. */
@@ -1860,9 +1864,10 @@ await test("Dock: the workout bar takes the dock's place while it is away, and s
 /* ---- the good parts of an outside proposal, built in ---------------------------------- */
 await test("Dock: every tab is labelled, in English and Arabic, and the label starts its accessible name",async page=>{
   const lab=()=>page.$$eval("nav .dock-b",a=>a.map(b=>[b.querySelector(".dock-l").textContent,b.getAttribute("aria-label").indexOf(b.querySelector(".dock-l").textContent)===0]));
-  eq(await lab(),[["Train",true],["Food",true],["Coach",true],["Progress",true]],"English");
+  /* The planning tab is "Plan"; the coach itself floats (js/ui/coachfab.js). */
+  eq(await lab(),[["Train",true],["Food",true],["Plan",true],["Progress",true]],"English");
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});await pause(page);
-  eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الكوتش","التقدم"],"Arabic");
+  eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الخطة","التقدم"],"Arabic");
 });
 await test("Dock: round tabs; the one that is on opens into a pill with its name, uncut in either language, even on a small phone",async page=>{
   const st=()=>page.evaluate(()=>[...document.querySelectorAll("nav .dock-b")].map(b=>{const l=b.querySelector(".dock-l"),r=b.getBoundingClientRect();
@@ -1911,7 +1916,7 @@ await test("Covers: a program of your own gets a cover drawn from its week",asyn
   const r=await page.$$eval(".drow-cov svg",a=>a.map(s=>[s.querySelectorAll(".pc-t").length,s.querySelectorAll(".pc-b").length,s.querySelectorAll(".pc-r").length]));
   eq(r[r.length-1],[1,1,1],"one day of two exercises (a top course and one below), one rest day");
   const c=await page.$eval(".drow-cov .pc-t",e=>getComputedStyle(e).fill);
-  eq(c,"rgb(255, 46, 58)","its top course is Machine Red");
+  eq(c,"rgb(231, 23, 46)","its top course is Signal Red");
 },{prefs:{palette:"red"}});
 /* ---- training blocks (js/coach/block.js, js/engine/blocks.js) ---- */
 const blockAt=(page,start)=>page.evaluate(async st=>{const s=await import("/js/state.js");s.S.block={start:st};s.saveDB();
@@ -2093,16 +2098,23 @@ await test("Schema: an old profile (v1 splits) opens as programs you own and is 
   d.splits=[{id:"ppl",name:"Push Pull Legs",days:[{id:"keep1",name:"Push",ex:[{id:"e1",name:"Pushups",sets:3,lo:8,hi:12}]}]}];d.currentSplit="ppl";return d;})()});
 /* ---- the Coach chat and Profile redesign (js/ui/views/chat.js, js/ui/settings.js) ---- */
 const sheet=async(page,name)=>{await page.evaluate(async n=>{(await import("/js/ui/actions.js")).openSheet(n);},name);await pause(page);};
-await test("Coach chat: the opening screen lists what can be asked by subject; a typed question is cleared once answered, and the answer names its subject",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
-  eq(await page.$$eval('.chat-grp',a=>a.length),3,"Training, Food, Progress");
-  eq(await page.$$eval('.chat-topic[data-chatq]',a=>a.length),12,"four questions each");
-  eq(await page.$eval('.chat-form',e=>getComputedStyle(e).position),"sticky","the box to type in stays in reach");
+/* The floating Coach opens on a short line and three questions for where it was opened
+   (the tall list of twelve is gone); the field sits under the conversation. */
+await test("Coach chat: the panel opens on three questions for where it was opened; a typed question is cleared once answered, and the answer names its subject",async page=>{
+  await coach(page,"ai");await page.tap('.chatcard [data-chat="ask"]');await pause(page,400);
+  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["balance","track","plan"],"Coach's own questions");
+  const f=await page.evaluate(()=>{const b=document.getElementById("cpB").getBoundingClientRect(),f=document.querySelector(".cp-f").getBoundingClientRect();return f.top>=b.bottom-1;});
+  eq(f,true,"the field is under the conversation, never over it");
   await page.fill('#chatq','how much protein do I need');await page.press('#chatq','Enter');await pause(page,400);
   eq(await page.$eval('#chatq',e=>e.value),"","the box is empty once the question is answered");
   eq(await page.evaluate(()=>[...document.querySelectorAll(".chat-a .chat-at")].pop().textContent),"Protein","the answer names its subject");
-  eq(await page.$$eval('.chat-grp',a=>a.length),0,"the opening list gives way to the conversation");
-  if(!(await page.$('.chat-next .chat-chips [data-chatq]')))throw new Error("nothing offered to ask next");
+  eq(await page.$$eval('#cpanel .cp-sug',a=>a.length),0,"the opening questions give way to the conversation");
+  if(!(await page.$('#cpanel .chat-next .chat-chips [data-chatq]')))throw new Error("nothing offered to ask next");
+  /* Opened from Food, it offers food questions. */
+  await page.tap('.cp [data-coachclose]');await pause(page,400);
+  await page.evaluate(async()=>{(await import("/js/state.js")).S.chat=[];});
+  await pause(page,600);await tapTab(page,"food");await pause(page,300);await page.tap('#cfab .cfab');await pause(page,400);
+  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["rest","eat","protein"],"Food's questions");
 });
 await test("Settings: every choice in sight, switches that say their state, a tap sets the value; no drop-down anywhere",async page=>{
   await sheet(page,"set_training");
@@ -2264,15 +2276,15 @@ await test("Profile picture: both choices in sight; a photo from the phone shows
 });
 await test("Coach chat in motion: a sent question flies to its place, the coach types, then the answer arrives; with Animations off, at once",async page=>{
   await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
-  await page.fill('#chatq','how much protein do I need?');await page.tap('.chat-send');await pause(page,120);
-  eq(await page.evaluate(()=>[!!document.querySelector(".chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat .chat-q")].pop()).visibility]),[true,"hidden"],"in flight");
+  await page.fill('#chatq','how much protein do I need?');await page.tap('.cp-send');await pause(page,120);
+  eq(await page.evaluate(()=>[!!document.querySelector(".chat-ghost"),getComputedStyle([...document.querySelectorAll(".cp-b .chat-q")].pop()).visibility]),[true,"hidden"],"in flight");
   await pause(page,250);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display]),[true,"none"],"the coach typing, the answer waiting");
   await pause(page,1400);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none",
     /150 g a day/.test([...document.querySelectorAll(".chat-a")].pop().innerText)]),[false,true,true],"arrived");
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.anim=false;document.body.classList.add("noanim");});
-  await page.fill('#chatq','how is my weight');await page.tap('.chat-send');await pause(page,250);
+  await page.fill('#chatq','how is my weight');await page.tap('.cp-send');await pause(page,250);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none"]),[false,true],"no motion, no wait");
 },{prefs:{anim:true}});
 await test("Guide: the first time Training opens, glass tips point at each thing in turn; a tap anywhere is the next; once seen it stays away; Profile brings it back",async page=>{
@@ -2350,12 +2362,12 @@ await test("Coach AI: this week's gauge agrees with Training's week; Ask me anyt
   eq(g.v,wk[1]?Math.round(wk[0]/wk[1]*100)+"%":"—","the share");
   if(wk[0]&&!g.on)throw new Error("no ticks filled");
   await page.tap('.chatcard [data-chat="ask"]');await pause(page,400);
-  eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,!!document.querySelector(".chat-form")]),["chatq",true],"the box has the caret");
-  /* Its back arrow is in sight, at the top, and works with the keyboard up. */
-  const bb=await (await page.$('[data-back]')).boundingBox();
-  if(bb.y<0)throw new Error("the back arrow is off the top of the screen");
-  await page.touchscreen.tap(bb.x+bb.width/2,bb.y+bb.height/2);await pause(page,400);
-  eq(await ev(page,"[V.tab,!!V.chat]"),["coach",false],"back to Coach AI");
+  eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,!!document.querySelector("#cpanel .cp-f")]),["chatq",true],"the box has the caret");
+  /* Its close is in sight and works with the keyboard up. */
+  const bb=await (await page.$('.cp [data-coachclose]')).boundingBox();
+  if(bb.y<0)throw new Error("the close is off the top of the screen");
+  await page.touchscreen.tap(bb.x+bb.width/2,bb.y+bb.height/2);await pause(page,500);
+  eq(await ev(page,"[V.tab,!!V.coach]"),["coach",false],"back to Coach AI");
   /* The dock ignores taps for a moment after the keyboard closes (body.kbleave). */
   await pause(page,600);
   for(const [sel,want] of [['.cplan-t[data-cfsub="targets"]',["coach","food"]],['.cplan-t[data-ctsub="program"]',["coach","train"]],['.cplan-t[data-cfsub="plan"]',["coach","food"]]]){
@@ -2400,7 +2412,7 @@ await test("Food: in the evening with protein short, the body says so, lights pr
   eq([after.length,after.some(x=>x.fid===fid&&x.p>10)],[before+1,true],"logged, with its protein");
   if(!/Coach noticed/.test(await page.$eval('.fnoticed',e=>e.innerText)))throw new Error("no week card");
   await page.$eval('[data-fbuild]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-fbuild]');await pause(page,600);
-  eq(await ev(page,"[V.tab,V.chat,S.chat[S.chat.length-1].id]"),["coach",true,"eat"],"Build today's meal asks the coach");
+  eq(await ev(page,"[V.tab,V.coach,S.chat[S.chat.length-1].id]"),["coach","compact","eat"],"Build today's meal asks the coach, in the Coach panel");
 },{db:lowProtein()});
 await test("Food: in the morning nothing is behind yet; with water short in the afternoon, a glass is offered instead of food",async page=>{
   await page.addInitScript(()=>{Date.prototype.getHours=function(){return 9;};});await page.reload();await pause(page,1200);
@@ -2603,6 +2615,26 @@ await test("Workout screen: a logged set's numbers can be corrected in place; a 
   await page.evaluate(()=>document.activeElement.blur());await pause(page,300);
   eq(await ev(page,"S.active.entries[0].sets[0].r"),7,"corrected in place");
 },{prefs:{autorest:false}});
+/* ---- The floating Coach (js/ui/coachfab.js) ---- */
+await test("Floating Coach: on the tab roots, never over a workout, a sheet or the keyboard; opening it from a workout keeps every value; Escape closes it",async page=>{
+  const fab=()=>page.$$eval('#cfab .cfab',a=>a.length);
+  for(const tab of ["train","food","progress","coach"]){await tapTab(page,tab);await pause(page,300);eq(await fab(),1,"on "+tab);}
+  /* Clear of the dock: its bottom edge sits above the dock's top. */
+  const r=await page.evaluate(()=>{const f=document.querySelector("#cfab .cfab").getBoundingClientRect(),d=document.querySelector("nav .dock").getBoundingClientRect();return [f.bottom<=d.top,f.right<=innerWidth];});
+  eq(r,[true,true],"above the dock, on screen");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("backup");});await pause(page,300);
+  eq(await fab(),0,"not over a sheet");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  await startWorkout(page);
+  eq(await fab(),0,"not over the workout");
+  await page.fill('#in_r','11');await page.tap('[data-sstep="w"][data-d="1"]');await pause(page,200);
+  const before=await ev(page,"[V.logIdx,V.draft.w,S.active.entries[0].sets.length]");
+  await page.tap('[data-sessmore]');await pause(page,300);await page.tap('#sheet [data-coachopen]');await pause(page,500);
+  eq(await ev(page,"[V.coach,V.sheet]"),["compact",null],"the Coach from the ⋯ menu");
+  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["weights","sore","missed"],"the workout's own questions");
+  await page.keyboard.press("Escape");await pause(page,500);
+  eq(await ev(page,"[V.coach,V.logIdx,V.draft.w,S.active.entries[0].sets.length,document.getElementById('in_r').value]"),[null,...before,"11"],"closed, the workout as it was");
+});
 /* ---- Phase 1 of the visual audit ---- */
 /* The set card says last time once, for the set being done (workout-spec.md); before the
    first set it is the recommendation instead. */

@@ -26,14 +26,16 @@ var ICON={
   train:'<path d="M7.25 11h7.5M4.25 6h3v10h-3zM14.75 6h3v10h-3zM1.75 8.5h2.5v5h-2.5zM17.75 8.5h2.5v5h-2.5z"/>',
   food:'<path d="M11 2.4a8.6 8.6 0 1 0 8.6 8.6H11z"/><path d="M13.4 8.6c0-3.6 2.4-6 6.2-6 0 3.7-2.5 6-6.2 6z"/><path d="M13.4 8.6l3.2-3.2"/>',
   progress:'<path d="M3.5 19V13.5h4V19zM9 19V8.5h4V19zM14.5 19V3h4v16z"/>',
-  coach:'<path d="M8 7.5h12.5V12h-6.69A6 6 0 1 1 8 7.5z"/><path d="M9.75 13.5a1.75 1.75 0 1 1-3.5 0 1.75 1.75 0 0 1 3.5 0z"/>'
+  /* The planning tab (programs, the library, meals, targets): a clipboard. The coach
+     itself is the floating button now (js/ui/coachfab.js). */
+  coach:'<path d="M7.25 2.75h7.5v3h-7.5zM7.25 4.25H4.25v15h13.5v-15h-3M7.75 10.5h6.5M7.75 14.5h4"/>'
 };
 /* id, what a screen reader announces, and the word beside the icon when its tab is on.
    The names are the sections', not the icons'; each label is the start of its
    accessible name, so what is read aloud matches what is seen. Short enough for the
    open pill on a small phone, in either language. */
 function items(){return [
-  ["train",t("Training"),t("Train")],["food",t("Food"),t("Food")],["coach",t("Coach"),t("Coach")],
+  ["train",t("Training"),t("Train")],["food",t("Food"),t("Food")],["coach",t("Plan"),t("Plan")],
   ["progress",t("Progress"),t("Progress")]];}
 
 var built=null;   /* the label set the markup was written with */
@@ -110,7 +112,8 @@ function setAway(on,ms){
   if(away===on)return;
   away=on;
   var fade=reducedMotion();
-  [navEl,wbEl].forEach(function(el){
+  /* The floating Coach (js/ui/coachfab.js) steps aside with the dock. */
+  [navEl,wbEl,document.getElementById("cfab")].forEach(function(el){
     if(!el)return;
     /* Duration first, in the same style change as the class: a transition takes the
        timing of the style it is going to. */
@@ -165,7 +168,7 @@ function checkDock(screen){
   if(moved||tooShort())showDock();}
 
 /* The whole of what changes when the tab does. */
-/* advice: how many things Coach AI has to say. A dot on Coach says there is
+/* advice: how many things Coach AI has to say. A dot on Plan says there is
    something; the number is in its accessible name. */
 function syncDock(el,tab,advice){
   if(!el)return;
@@ -181,7 +184,7 @@ function syncDock(el,tab,advice){
     if(id==="coach"){
       var dot=!!advice;
       if(btns[i].classList.contains("advice")!==dot)btns[i].classList.toggle("advice",dot);
-      var lbl=t("Coach")+(dot?", "+t(advice===1?"1 thing to look at":"{n} things to look at").replace("{n}",advice):"");
+      var lbl=t("Plan")+(dot?", "+t(advice===1?"1 thing to look at":"{n} things to look at").replace("{n}",advice):"");
       if(btns[i].getAttribute("aria-label")!==lbl)btns[i].setAttribute("aria-label",lbl);}
   }
 }

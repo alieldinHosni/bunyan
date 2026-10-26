@@ -39,7 +39,7 @@ function vCoach(){
   /* The conversation, under anything an answer opened over it. */
   if(V.chat)return vChat();
   var sec=csec(),n=V.advice||0,h='';
-  h+='<div class="thead"><div><h1>'+t("Coach")+'</h1>'
+  h+='<div class="thead"><div><h1>'+t("Plan")+'</h1>'
    +'<p class="thead-s">'+t("Plan it here. Do it in Training and Food.")+'</p></div></div>';
   h+=seg({items:CSECS.map(function(x){return [x[0],t(x[1])+(x[0]==="ai"&&n?" ·"+n:"")];}),value:sec,attr:"csec",tabs:true,
     cls:"tsecs csecs",label:t("Coach"),key:"csecs"});
