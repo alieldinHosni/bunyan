@@ -284,7 +284,7 @@ function planWeigh(text,p,it){
   if(!kg)return say(t("What did you weigh? Say it with the number, like “I weigh 82.5 kg”."),[{l:t("Log weight"),a:{"data-sheet":"weigh"}}]);
   /* A bare number in a pounds app is pounds. */
   if(it&&!it.unit&&S.prefs.unit==="lb")kg=Math.round(kg/2.2046*10)/10;
-  if(kg<25||kg>350)return say(fill(t("{w} doesn't look like a body weight. Say it again with kg or lb."),{w:fmtW(kg)}));
+  if(kg<30||kg>300)return say(fill(t("{w} doesn't look like a body weight. Say it again with kg or lb."),{w:fmtW(kg)}));
   var last=(S.body||[]).filter(function(b){return b.date!==today();}).slice(-1)[0];
   return confirm("progress.weighIn",{kg:kg},{
     lead:fill(t("Save {w} as today's weight?"),{w:fmtW(kg)}),item:fmtW(kg),

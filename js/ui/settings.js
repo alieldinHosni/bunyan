@@ -21,7 +21,7 @@ import {wdName, weekStart} from "../engine/schedule.js";
 import {buildSnapshot, snapStats} from "../engine/share.js";
 import {CUR, PROFILES, S} from "../state.js";
 import {fmtW, toDisp, wUnit} from "../units.js";
-import {esc, fmtN, shortd} from "../util.js";
+import {esc, fmtN, num, shortd} from "../util.js";
 import {seg, V} from "./view.js";
 import {iconOf, modeOf, themeOf, THEMES} from "./theme.js";
 import {glyph} from "./glyphs.js";
@@ -68,7 +68,8 @@ function youSheet(){
    +'<div class="aftiles ng3 yt">'
    +afTile("p_age",t("Age"),t("yrs"),yp.age,"30","numeric")
    +afTile("p_height",t("Height"),t("cm"),yp.height,"175","numeric")
-   +afTile("p_weight",t("Weight"),wUnit(),toDisp(lastWeight()||yp.weight||86),"80","decimal")
+   /* Empty until entered: a figure here would be saved as this person's weight. */
+   +afTile("p_weight",t("Weight"),wUnit(),(lastWeight()||num(yp.weight))?toDisp(lastWeight()||yp.weight):"","80","decimal")
    +'</div>'
    +'<section class="sg"><h3 class="sg-h">'+t("Sex")+'</h3>'
    +seg({items:[["p_sex|m",t("Male")],["p_sex|f",t("Female")]],value:"p_sex|"+sex,attr:"ypick",key:"ysex",label:t("Sex"),soft:true})

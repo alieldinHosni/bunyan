@@ -6,6 +6,7 @@ import {isActivity} from "../../data/activities.js";
 import {loadExDB} from "../../data/exercises.js";
 import {importName, ownSlots} from "../../engine/meals.js";
 import {checkPlans} from "../../engine/plancheck.js";
+import {retarget} from "../../engine/retarget.js";
 import {readSplit} from "../../engine/splitparse.js";
 import {t} from "../../i18n/dict.js";
 import {dayOf, editSplit, S, saveDB} from "../../state.js";
@@ -168,8 +169,22 @@ function requestCloseSheet(){
   closeSheet();
 }
 
+/* Targets the old formula made, rebuilt on the current one (js/engine/retarget.js), once
+   per profile: at start-up, on a profile switch and after a restore. Said once, with
+   Undo, since the day's numbers move. Undo puts the old ones back on the profile they
+   came from, and only there. */
+function retargetNow(){
+  var r=retarget(S);
+  if(!r)return;
+  saveDB();
+  if(!r.changed)return;
+  var s0=S,before=r.before;
+  setTimeout(function(){
+    if(S!==s0)return;
+    toast(t("Your targets now follow the textbook: 500 kcal under maintenance to lose fat, 350 over to build muscle, 2.4 g of protein per kg while losing."),
+      function(){if(S!==s0)return;Object.assign(S.goals,before);saveDB();render();});},1200);}
 /* Functions a handler module lends the coach's actions (js/ui/handlers/actions.js),
    set when it registers: the actions run what the screens run without the handler
    modules importing each other. */
 var LENT={};
-export {LENT, MF, builderId, chatEnd, chatSend, editedEx, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};
+export {LENT, MF, builderId, retargetNow, chatEnd, chatSend, editedEx, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};

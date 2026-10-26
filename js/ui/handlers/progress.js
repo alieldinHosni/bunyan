@@ -67,8 +67,12 @@ function register(){
       body:t("It is removed from this phone. This cannot be undone."),
       cta:t("Delete photo"),act:"delphoto",data:D.delphoto});return;});
   key("saveweight",function(){
-    /* Back to kilograms before it touches storage. */
-    var w2=V.draft.bw!=null?toKg(V.draft.bw):(lastWeight()||86);
+    /* Back to kilograms before it touches storage. What is saved is what is on screen:
+       the stepper's figure, or the one typed. Nothing typed is nothing saved, never a
+       stand-in weight. */
+    var w2=V.draft.bw!=null?toKg(V.draft.bw):(lastWeight()||num(S.profile.weight));
+    if(!(w2>0)){toast(t("Type your weight first."));var bwf=document.getElementById("in_bw");if(bwf)bwf.focus();return;}
+    if(w2<30||w2>300){toast(t("That does not look like a body weight. Check it and save again."));return;}
     var ex0=S.body.filter(function(b){return b.date===today();})[0];
     if(ex0)ex0.weight=w2;else S.body.push({date:today(),weight:w2});
     S.body.sort(function(a,b){return a.date<b.date?-1:1;});

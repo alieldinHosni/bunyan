@@ -4,7 +4,7 @@
    saved and the foods you made, kept and edited here) and Targets (what the day is
    measured against, with the evidence for whether it is working beside it). */
 import {t} from "../../i18n/dict.js";
-import {eatenToday, lastWeight, macroKcal, macroTargets, tdee, tdeeFormula} from "../../engine/formulas.js";
+import {eatenToday, energyMissing, macroKcal, macroTargets, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {FOODDB, sumNutrition} from "../../engine/nutrition.js";
@@ -310,10 +310,10 @@ function macroPct(p,c,f){
     .sort(function(a,c2){return c2[0]-a[0];}).slice(0,rest)
     .forEach(function(x){pc[x[1]]++;});
   return pc;}
+/* null without an age, a height or a weight: nothing is worked out from a guess. */
 function suggested(){
-  var p=S.profile||{};
-  if(!p.age||!p.height||!(lastWeight()||p.weight))return null;
   var m=macroTargets();
+  if(!m)return null;
   return {tdee:tdee(),kcal:m.kcal,p:m.p,f:m.f,c:m.c};}
 /* Where the maintenance figure comes from, and what the log measures. */
 function maintSource(){
@@ -356,8 +356,12 @@ function vTargets(){
   /* From the profile: maintenance and a target sized to the goal. */
   var sg=suggested();
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Suggested for you")+'</h2></div>';
-  if(!sg)h+='<div class="pgcard"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Add your age, height and weight, and Bunyan works out a target for your goal."))+'</p>'
-    +'<button class="btn g" data-sheet="set_you">'+esc(t("Add your details"))+'</button></div>';
+  /* Only the weight missing: the weigh-in sheet. Anything more: the You sheet asks for all three. */
+  if(!sg)h+=energyMissing()==="no_weight"
+    ?'<div class="pgcard tgneed"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Log your weight, and Bunyan works out your maintenance and a target for your goal. Nothing is worked out without it."))+'</p>'
+      +'<button class="btn g" data-sheet="weigh">'+esc(t("Log weight"))+'</button></div>'
+    :'<div class="pgcard tgneed"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Add your age, height and weight, and Bunyan works out a target for your goal."))+'</p>'
+      +'<button class="btn g" data-sheet="set_you">'+esc(t("Add your details"))+'</button></div>';
   else{
     var same=sg.kcal===g.kcal&&sg.p===g.p&&sg.c===g.c&&sg.f===g.f;
     h+='<div class="pgcard tgsug"><div class="tgsug-r"><div><div class="pgstat-k">'+esc(t("Maintenance"))+'</div><b>'+fmtN(sg.tdee)+'</b><small>kcal</small></div>'

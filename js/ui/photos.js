@@ -9,7 +9,10 @@ import {today, uid} from "../util.js";
 /* The list is read once per profile and per write, and its URLs are revoked when it
    is replaced, so paging through Progress does not leak a blob URL per render.
    list: null while loading, false where this browser cannot store photos. */
-var C={key:null,list:null,loading:null,urls:[]};
+/* byId keeps each photo's URL across reloads. A reload after adding one used to mint
+   fresh URLs for every photo, which changed every <img src> and repainted the grid —
+   the whole-surface rebuild Round 2 Phase 1 exists to prevent, by another route. */
+var C={key:null,pid:null,list:null,loading:null,byId:{}};
 
 function photoList(onLoad){
   var key=CUR+"#"+photoGen();
@@ -19,16 +22,20 @@ function photoList(onLoad){
     loadPhotos(CUR,function(rows){
       if(C.loading!==key)return;
       C.loading=null;
-      C.urls.forEach(function(u){try{URL.revokeObjectURL(u);}catch(e){}});
-      C.urls=[];
-      C.key=key;
+      var keep=C.pid===CUR?C.byId:{},next={};
+      if(C.pid!==CUR)for(var id0 in C.byId)try{URL.revokeObjectURL(C.byId[id0]);}catch(e){}
       C.list=rows===null?false:rows.map(function(r){
-        var u="";
-        try{u=URL.createObjectURL(r.b);C.urls.push(u);}catch(e){}
+        var u=keep[r.id]||"";
+        if(!u)try{u=URL.createObjectURL(r.b);}catch(e){}
+        if(u)next[r.id]=u;
         return {id:r.id,d:r.d,t:r.t,w:r.w,h:r.h,url:u};}).filter(function(p){return p.url;});
+      for(var id1 in keep)if(!next[id1])try{URL.revokeObjectURL(keep[id1]);}catch(e){}
+      C.byId=next;C.pid=CUR;C.key=key;
       onLoad&&onLoad();});
   }
-  return null;}
+  /* While a reload runs, the list already on screen stays on screen. Only a profile
+     seen for the first time shows the loading placeholder. */
+  return C.pid===CUR?C.list:null;}
 function photoById(id){
   return (C.list||[]).filter(function(p){return p.id===id;})[0]||null;}
 

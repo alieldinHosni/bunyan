@@ -16,6 +16,7 @@ import {render} from "../render.js";
 import {changeLook, themeOf} from "../theme.js";
 import {tourReset} from "../tour.js";
 import {alarmStart, keepAwake, toast, V} from "../view.js";
+import {retargetNow} from "./common.js";
 import {has, key} from "./registry.js";
 
 /* The text of a backup, read and checked (js/schema.js checkBackup): {o, check}, or
@@ -54,6 +55,7 @@ function register(){
   ACT.restore=function(_,o){
     setS(normalize(JSON.parse(JSON.stringify(o))));
     migrate();saveDB();V.tab="train";V.train="days";
+    retargetNow();
     adoptRestored(function(){render();toast(t("Restored."));});
   };
   /* The two settings sheets save independently now that they are separate screens. */

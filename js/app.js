@@ -23,7 +23,7 @@ import {initSheetDrag} from "./ui/sheetdrag.js";
 import {initKeyboard} from "./ui/keyboard.js";
 import {loadExDB, reconcileExercises, useUserData} from "./data/exercises.js";
 import {mmss, paintOver, paintRest, sessionClock} from "./ui/views/session.js";
-import {moveRow, requestCloseSheet} from "./ui/handlers/common.js";
+import {moveRow, requestCloseSheet, retargetNow} from "./ui/handlers/common.js";
 import {onChange, onInput, onKeydown} from "./ui/handlers/fields.js";
 import {render, syncKeyboard} from "./ui/render.js";
 import {setStorageErrorHandler} from "./util.js";
@@ -168,8 +168,11 @@ useUserData(function(){return S;});
 onProfileSwitch(function(){
   V.tab="train";V.train="days";V.logIdx=0;
   V.restEnd=0;V.restPaused=false;V.restDone=false;V.justLogged=null;V.askDel=null;
-  restoreWorkoutState();});
+  restoreWorkoutState();
+  retargetNow();});
 initState();
+/* Targets the old formula made are rebuilt on the current one, once per profile. */
+retargetNow();
 setStorageErrorHandler(toast);
 /* One back path for the arrow, the edge swipe and the OS gesture. */
 initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,closeCoach:function(){closeCoach(render);},

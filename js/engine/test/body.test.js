@@ -1,5 +1,5 @@
-import {avg7Of, bmrOf, bodyFatOf, lastWeightOf, macroTargetsOf, maintenanceInUseOf, measurementsOf, proteinFor,
-        sessionKcalOf, targetKcalOf, tdeeFormulaOf, tdeeOf, weightChangeOf, weightTrendOf} from "../body.js";
+import {avg7Of, bmrOf, bodyFatOf, kcalFloorOf, lastWeightOf, macroTargetsOf, maintenanceInUseOf, measurementsOf, missingOf,
+        proteinFor, sessionKcalOf, targetKcalOf, tdeeFormulaOf, tdeeOf, weightChangeOf, weightOf, weightTrendOf} from "../body.js";
 
 var MAN={age:30,height:180,weight:80,sex:"m",activity:1.4,goal:"lose"};
 var WOMAN={age:25,height:165,weight:60,sex:"f",activity:1.55,goal:"gain"};
@@ -14,7 +14,20 @@ function run(t){
   t.eq(bmrOf(MAN,[]),1780,"resting energy, Mifflin–St Jeor: man, 80 kg, 180 cm, 30 → 1,780");
   t.eq(bmrOf(WOMAN,[]),1345,"woman, 60 kg, 165 cm, 25 → 1,345");
   t.eq(bmrOf(MAN,[{date:day(0),weight:90}]),1880,"the latest weigh-in wins over the profile's weight");
-  t.eq(bmrOf({},[]),865,"nothing entered: 86 kg and zeros, still a number");
+  /* No weight is never a default weight: nothing is worked out, and the screens ask. */
+  var NOW={age:30,height:180,sex:"m",activity:1.4,goal:"lose"};
+  t.eq([bmrOf({},[]),bmrOf(NOW,[]),bmrOf(Object.assign({},NOW,{weight:null}),[{date:day(0),waist:90}])],[null,null,null],
+    "no weight anywhere (none in the profile, no weigh-in, a tape-only entry): no BMR, not a default");
+  t.eq([missingOf(NOW,[]),missingOf({weight:80},[]),missingOf(MAN,[]),missingOf(NOW,[{date:day(0),weight:80}])],
+    ["no_weight","no_profile","","",],"what is missing, in the coach's words");
+  t.eq(bmrOf({weight:80,sex:"m"},[]),null,"a weight but no age or height: no BMR either");
+  t.eq([weightOf(NOW,[]),weightOf(MAN,[]),weightOf(MAN,[{date:day(0),weight:90}])],[0,80,90],"the weight used: a weigh-in, the profile's, or 0");
+  t.eq([tdeeFormulaOf(NOW,[]),tdeeOf(NOW,[],null),targetKcalOf(NOW,[],null),kcalFloorOf(NOW,[])],[null,null,null,null],
+    "no weight: no maintenance, no target, no floor");
+  t.eq(maintenanceInUseOf(NOW,[],null),{kcal:null,source:"none"},"maintenance in use says there is none");
+  t.eq(targetKcalOf(NOW,[],{kcal:2600}),null,"a measured maintenance but no weight: still no target, since the floor needs BMR");
+  t.eq([macroTargetsOf(NOW,[],null),macroTargetsOf({},[],null),macroTargetsOf({goal:"lose"},[],null)],[null,null,null],
+    "no weight, or nothing at all: no targets");
   t.eq(tdeeFormulaOf(MAN,[]),2492,"maintenance by formula: 1,780 × 1.4");
   t.eq(tdeeFormulaOf(WOMAN,[]),2085,"1,345 × 1.55, rounded");
   t.eq(tdeeOf(MAN,[],{kcal:2650.4}),2650,"a measured maintenance, once chosen, is the one in use");
@@ -23,32 +36,36 @@ function run(t){
   t.eq(maintenanceInUseOf(MAN,[],null),{kcal:2492,source:"formula"},"… or the formula");
 
   /* ---- the calorie target ---- */
-  t.eq(targetKcalOf(MAN,[],null),1994,"losing fat: a fifth under maintenance (2,492 − 498)");
-  t.eq(targetKcalOf(MAN,[],{kcal:4000}),3250,"the deficit is capped at 750 kcal");
+  t.eq(targetKcalOf(MAN,[],null),1992,"losing fat: the textbook's 500 under maintenance (2,492 − 500)");
+  t.eq(targetKcalOf(MAN,[],{kcal:4000}),3500,"the same 500 whatever the maintenance");
   t.eq(targetKcalOf({age:60,height:150,weight:45,sex:"f",activity:1.2,goal:"lose"},[],null),1200,
-    "never under 1,200 kcal for a woman");
-  t.eq(targetKcalOf({age:30,height:180,weight:80,sex:"m",activity:1.2,goal:"lose"},[],{kcal:1600}),1691,
-    "never under about the resting burn while losing (1,780 × 0.95)");
-  t.eq(targetKcalOf(WOMAN,[],null),2294,"building muscle: a tenth over (2,085 + 209)");
+    "never under 1,200 kcal for a woman whose BMR is lower (927)");
+  t.eq(targetKcalOf({age:30,height:180,weight:80,sex:"m",activity:1.2,goal:"lose"},[],{kcal:1600}),1780,
+    "never under resting energy: 1,600 − 500 would be 1,100, the floor is BMR, 1,780");
+  t.eq([kcalFloorOf(MAN,[]),kcalFloorOf({age:60,height:150,weight:45,sex:"f"},[])],[1780,1200],
+    "the one floor: BMR, or 1,200 / 1,500 where BMR is under that");
+  [["recomp",null],["strength",null],["maintain",null],["lose",{kcal:1700}],["gain",{kcal:1300}]].forEach(function(c){
+    var pr=Object.assign({},MAN,{goal:c[0]});
+    t.ok(targetKcalOf(pr,[],c[1])>=bmrOf(pr,[]),c[0]+": the target is never under BMR");});
+  t.eq(targetKcalOf(WOMAN,[],null),2435,"building muscle: the textbook's 350 over (2,085 + 350)");
+  t.eq(targetKcalOf(Object.assign({},MAN,{goal:"recomp"}),[],null),2243,"recomposition, which the book does not cover: a tenth under (2,492 − 249)");
   t.eq(targetKcalOf({age:30,height:180,weight:80,sex:"m",activity:1.4},[],null),2492,"no goal set: maintenance");
 
   /* ---- protein ---- */
-  t.eq(proteinFor(MAN,80),160,"2.0 g/kg while losing fat");
+  t.eq(proteinFor(MAN,80),192,"2.4 g/kg while losing fat (the textbook's figure in a deficit)");
   t.eq(proteinFor({goal:"gain"},80),144,"1.8 g/kg building muscle");
   t.eq(proteinFor({goal:"recomp",height:180},80),176,"2.2 g/kg for recomposition");
-  t.eq(proteinFor({goal:"lose",height:170},120),156,"above a BMI of 30, from the weight at a BMI of 27");
+  t.eq(proteinFor({goal:"lose",height:170},120),187,"above a BMI of 30, from the weight at a BMI of 27");
   t.eq(proteinFor({goal:"lose"},0),0,"no weight: nothing, not NaN");
 
   /* ---- the day's targets ---- */
-  t.eq(macroTargetsOf(MAN,[],null),{kcal:1990,p:160,f:62,c:198,water:2750,steps:10000},
-    "losing fat at 80 kg: 1,990 kcal, 160 g protein, 28% fat, carbs the rest, 2.75 L, 10,000 steps");
+  t.eq(macroTargetsOf(MAN,[],null),{kcal:1990,p:192,f:62,c:166,water:2750,steps:10000},
+    "losing fat at 80 kg: 1,990 kcal, 192 g protein, 28% fat, carbs the rest, 2.75 L, 10,000 steps");
   var mw=macroTargetsOf(WOMAN,[{date:day(0),weight:64}],null);
   t.eq([mw.p,mw.water,mw.steps],[115,2250,undefined],"from the latest weigh-in; no step target for building muscle");
-  var none=macroTargetsOf({goal:"lose"},[],null);
-  t.ok(!("water" in none),"no weight anywhere: no water target");
-  t.clean(none,"no weight anywhere: no NaN or undefined");
-  t.ok(none.c>=50,"carbs never under 50 g");
-  t.clean(macroTargetsOf({},[],null),"an empty profile: no NaN or undefined");
+  var lean=macroTargetsOf({age:30,height:180,weight:60,sex:"m",activity:1.2,goal:"lose"},[],null);
+  t.clean(lean,"a light body losing fat: no NaN or undefined");
+  t.ok(lean.c>=50,"carbs never under 50 g");
 
   /* ---- a session's burn ---- */
   t.eq(sessionKcalOf(80,45),315,"5 METs × 3.5 × 80 kg / 200 × 45 min = 315");

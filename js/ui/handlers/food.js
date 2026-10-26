@@ -503,6 +503,7 @@ function register(){
     saveDB();closeSheet();render();toast(nmX+" "+t("saved."));return;});
   key("usesug",function(){
     var mS=macroTargets();
+    if(!mS){openSheet("weigh");return;}
     S.goals.kcal=mS.kcal;S.goals.p=mS.p;S.goals.f=mS.f;S.goals.c=mS.c;
     saveDB();render();toast(t("Targets updated."));return;});
   /* A frequent-food pill on the dashboard, or the + beside a result in the sheet.
@@ -547,6 +548,7 @@ function register(){
     if(p3.weight&&!S.body.some(function(b3){return b3.date===today();}))
       S.body.push({date:today(),weight:p3.weight});
     var m3=macroTargets();
+    if(!m3){saveDB();render();toast(t("Enter your height, weight and age first."));return;}
     S.goals.kcal=m3.kcal;S.goals.p=m3.p;S.goals.f=m3.f;S.goals.c=m3.c;
     saveDB();render();toast(t("Targets updated."));return;});
   key("savegoals",function(){

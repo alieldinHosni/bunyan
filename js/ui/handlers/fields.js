@@ -84,6 +84,7 @@ function onInput(ev){
        field is nought, so Save never keeps a figure no longer on screen. */
     if(isFinite(v))V.draft[k]=(k==="w")?toKg(v):v;
     else if(k==="st")V.draft.st=0;
+    else if(k==="bw")V.draft.bw=null;
     if(k==="min"){var ak=document.getElementById("actKcal"),ae2=S.active&&S.active.entries[V.logIdx];
       if(ak&&ae2)ak.textContent=fmtN(actKcal(ae2.name,num(V.draft.min),V.draft.rpe||6,lastWeight()))+" kcal";}
     return;}}
@@ -94,6 +95,8 @@ function onKeydown(ev){
   if(ev.key==="Escape"&&V.coach){ev.preventDefault();closeCoach(render);return;}
   /* Done on the number pad saves the steps typed. */
   if(ev.key==="Enter"&&ev.target.id==="in_st"){ev.preventDefault();var svb=document.querySelector("[data-savesteps]");if(svb)svb.click();return;}
+  /* And a first weight typed into the weigh-in. */
+  if(ev.key==="Enter"&&ev.target.id==="in_bw"){ev.preventDefault();var swb=document.querySelector("[data-saveweight]");if(swb)swb.click();return;}
   /* Arrow keys move along any tablist (the segmented controls), as they do natively. */
   /* The grip moves its row with the arrow keys too, so reordering never needs a drag. */
   var gp=(ev.key==="ArrowUp"||ev.key==="ArrowDown")&&ev.target.closest&&ev.target.closest("[data-grip]");

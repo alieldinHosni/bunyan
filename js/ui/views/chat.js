@@ -31,7 +31,7 @@ import {namesExercise, namesFood, plan as planAction, proceed} from "../agent.js
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
-import {bmr, bwShare, deloadDue, e1RM, eatenToday, inDeload, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
+import {bmr, bwShare, deloadDue, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {mealName, mealSlots} from "../../engine/meals.js";
 import {FOODDB, fuzzyFoods, isDrink, nutritionFor, searchFoods, sumNutrition} from "../../engine/nutrition.js";
 import {nutrition, topLifts, weeklyCardio, weighIns, weightChange, weightTrend} from "../../engine/stats.js";
@@ -252,13 +252,16 @@ function aWeight(a){
 
 function aProtein(a){
   var g=S.goals||{},w=lastWeight()||num(S.profile.weight),G=goalOf(S.profile.goal),mt=macroTargets();
-  var per=w?r1(num(g.p)/w):0,e=eatenToday(today());
+  var e=eatenToday(today());
+  /* Per kg needs a weight; without one, the target is all there is to say. */
+  if(!w){p(a,fill(t("Your target is {p} g a day. Log your weight and I can say what that is per kg of body weight, and what your goal calls for."),{p:g.p}));
+    return act(a,t("Log weight"),{"data-sheet":"weigh"});}
   var kp=KB.protein();
-  p(a,fill(t("Your target is {p} g a day: {k} g per kg of body weight."),{p:g.p,k:per})
+  p(a,fill(t("Your target is {p} g a day: {k} g per kg of body weight."),{p:g.p,k:r1(num(g.p)/w)})
     +(kp?" "+fill(t("For people who train to build and keep muscle, the range is {lo} to {hi} g per kg."),{lo:kp.min,hi:kp.max}):""));
   if(kp)src(a,kp.src);
   p(a,fill(t("For {g} the app sets {x} g per kg."),{g:t(G.label),x:G.protein})
-    +(Math.abs(num(g.p)-mt.p)>mt.p*0.1?" "+fill(t("Your target was changed from the suggested {s} g."),{s:mt.p}):""));
+    +(mt&&Math.abs(num(g.p)-mt.p)>mt.p*0.1?" "+fill(t("Your target was changed from the suggested {s} g."),{s:mt.p}):""));
   var nm=Math.max(3,mealSlots().length);
   p(a,fill(t("Spread over {n} meals, that's about {q} g each: a palm or two of chicken, fish, meat, eggs, Greek yogurt or beans."),{n:nm,q:Math.round(num(g.p)/nm)}));
   var nu=nutrition(7),hit=nu.days.filter(function(x){return num(x.p)>=num(g.p)*0.9;}).length;
@@ -266,17 +269,25 @@ function aProtein(a){
   return act(a,t("Targets"),{"data-csec":"food","data-cfsub":"targets"});}
 
 function aCalories(a){
-  var pr=S.profile,G=goalOf(pr.goal),g=S.goals||{},b=bmr(),td=tdee(),tk=Math.round(targetKcal()/10)*10;
-  if(!num(pr.age)||!num(pr.height)){p(a,t("I need your age and height to work out your calories. The assessment asks for both."));
+  var pr=S.profile,G=goalOf(pr.goal),g=S.goals||{},why=energyMissing();
+  if(why==="no_profile"){p(a,t("I need your age and height to work out your calories. The assessment asks for both."));
     return act(a,t("Start the assessment"),{"data-setup":"1"});}
+  /* No weight is not guessed: every figure below rests on it. */
+  if(why==="no_weight"){p(a,t("I need your weight to work out your calories, and I won't guess it. Log it and ask me again."));
+    return act(a,t("Log weight"),{"data-sheet":"weigh"});}
+  var b=bmr(),td=tdee(),tk=Math.round(targetKcal()/10)*10;
   p(a,fill(t("At rest your body uses about {b} kcal a day, from your age, height, weight and sex (the Mifflin–St Jeor formula)."),{b:fmtN(b)}));
   var use=maintenanceInUse();
   if(use.source==="learned")p(a,fill(t("By formula, maintaining your weight would take about {f} kcal. Your targets are built on what your own log measured instead: {t} kcal."),{f:fmtN(tdeeFormula()),t:fmtN(td)}));
   else p(a,fill(t("With your activity, maintaining your weight takes about {t} kcal."),{t:fmtN(td)}));
   var pct=Math.round(Math.abs(G.kcal)*100);
-  p(a,G.kcal?fill(t(G.kcal<0?"{g} takes {p}% below that, capped at {c} kcal: {k} kcal.":"{g} adds {p}% to that, capped at {c} kcal: {k} kcal."),
+  p(a,G.fixed!=null?fill(t(G.fixed<0?"{g} takes {d} kcal a day below that: {k} kcal.":"{g} adds {d} kcal a day to that: {k} kcal."),
+      {g:t(G.label),d:fmtN(Math.abs(G.fixed)),k:fmtN(tk)})
+    :G.kcal?fill(t(G.kcal<0?"{g} takes {p}% below that, capped at {c} kcal: {k} kcal.":"{g} adds {p}% to that, capped at {c} kcal: {k} kcal."),
       {g:t(G.label),p:pct,c:G.cap||"—",k:fmtN(tk)})
     :fill(t("{g} eats at maintenance: {k} kcal."),{g:t(G.label),k:fmtN(tk)}));
+  /* The floor held it up: say so, rather than let the sum look wrong. */
+  if(targetKcal()<=kcalFloor())n(a,fill(t("That is as low as Bunyan sets a target: your resting energy of {b} kcal, and never under 1,200 kcal for women or 1,500 for men."),{b:fmtN(b)}));
   p(a,fill(t("Then protein {p} g, fat {f} g, and carbs take the rest: {c} g."),{p:g.p,f:g.f,c:g.c}));
   if(Math.abs(num(g.kcal)-tk)>=50)n(a,fill(t("Your target now is {k} kcal, set by hand or by a plan you used. Targets in Coach can put it back."),{k:fmtN(g.kcal)}));
   /* What the log measures: the honest check on any formula. */
@@ -381,8 +392,9 @@ function aGoal(a,q){
   p(a,fill(t("Your goal is {g}: {d}"),{g:t(G.label),d:t(G.desc)}));
   var want=GOALWORD.filter(function(x){return x[1].test(fq);})[0];
   if(want&&want[0]!==pr.goal){var W=goalOf(want[0]),m=macroTargetsFor(want[0]);
-    p(a,fill(t("Switching to {g} would set your day to about {k} kcal and {p} g of protein. Your training stays as it is; the plan check tells you if it no longer suits."),
-      {g:t(W.label),k:fmtN(m.kcal),p:m.p}));
+    p(a,m?fill(t("Switching to {g} would set your day to about {k} kcal and {p} g of protein. Your training stays as it is; the plan check tells you if it no longer suits."),
+      {g:t(W.label),k:fmtN(m.kcal),p:m.p})
+      :fill(t("Switching to {g} changes your targets too, and they need your weight, which I won't guess. Your training stays as it is."),{g:t(W.label)}));
     act(a,fill(t("Set my goal to {g}"),{g:t(W.label).toLowerCase()}),{"data-chatgoal":want[0]});}
   else if(want)p(a,t("That's already your goal."));
   p(a,t("To change the whole plan with it, retake the assessment: it rebuilds your targets, training and meals together, and nothing changes until you use it."));
