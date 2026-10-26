@@ -67,13 +67,16 @@ function daysIn(text){
     var pl=planOn(sp,today());
     if(pl.day&&!pl.rest)hit.push(pl.day);
     left=left.replace(/ (today|tonight|النهارده|انهارده|اليوم)(?= )/g," ");}
+  /* The whole name ("Push A"), or every word of it that names something ("push") —
+     only where it is said as a day: after to, from, in, on or for (or the Arabic for
+     them), or before day or workout. "add push ups" names Push-Ups, not the Push day.
+     A whole name said wins over the words it shares with other days ("Full Body A" is
+     not also Full Body B and C). */
   sp.days.forEach(function(d){
     if(hit.indexOf(d)>=0)return;
     var full=spell(fold(d.name));
-    /* The whole name ("Push A"), or every word of it that names something ("push") —
-       only where it is said as a day: after to, from, in, on or for (or the Arabic for
-       them), or before day or workout. "add push ups" names Push-Ups, not the Push day. */
-    if(asDay(fq,full)){hit.push(d);left=dropDay(left,full);return;}
+    if(asDay(fq,full)){hit.push(d);left=dropDay(left,full);}});
+  if(!hit.length)sp.days.forEach(function(d){
     dayWords(d).some(function(ws){
       if(!ws.length||!asDay(fq,ws.join(" ")))return false;
       hit.push(d);left=dropDay(left,ws.join(" "));return true;});});
@@ -326,6 +329,40 @@ function proceed(ag,v){
   if(ag.act==="food.log")return planLog("",p);
   return null;}
 
+
+/* ---- a follow-up to the last question --------------------------------------------------
+   A typed answer to a pick ("Is it pull ups?", "the second one", "Push") is that pick
+   answered, the same as tapping the row. Only what the pick asked for is looked for;
+   nothing is invented, and near misses are offered again rather than chosen. */
+var ORD=[/^(1|first|the first|1st|الاول|اول|اولي|الاولي)$/,/^(2|second|the second|2nd|التاني|تاني|التانيه|تانيه)$/,
+  /^(3|third|the third|3rd|التالت|تالت|التالته)$/,/^(4|fourth|the fourth|4th|الرابع|رابع)$/];
+var ASKY=/(^| )(is|it|its|that|this|one|mean|meant|maybe|about|how|what|which|hmm|ok|oh|يعني|قصدي|هو|هي|ده|دي|اللي|طيب)(?= |$)/g;
+function answerPick(ag,text){
+  if(!ag||ag.s!=="pick")return null;
+  var q=rest(String(text||"")).replace(ASKY," ").replace(/\s+/g," ").trim(),opts=ag.opts||[];
+  if(!q)return null;
+  var pick=function(v){return proceed(ag,v);};
+  for(var i=0;i<ORD.length;i++)if(ORD[i].test(q)&&opts[i])return pick(opts[i].v);
+  var fq=fold(q),hit=opts.filter(function(o){return fold(o.l)===fq||fold(String(o.v))===fq;})[0];
+  if(hit)return pick(hit.v);
+  if(ag.what==="exercise"){
+    var pool=ag.act==="exercise.remove"||(ag.act==="exercise.swap"&&ag.slot==="from")
+      ?inProgram().map(function(x){return x.e.name;}).filter(function(n,j,a){return a.indexOf(n)===j;}):libPool();
+    var r=findExercise(q,pool);
+    if(r.kind==="one")return pick(r.name);
+    if(r.kind==="some")return Object.assign({},ag,{lead:t("Which exercise?"),opts:exOpts(r.names),none:false});
+    return null;}
+  if(ag.what==="day"){
+    var ds=split().days.filter(function(d){return d.ex.length&&opts.some(function(o){return o.v===d.id;});});
+    var d=ds.filter(function(x){return dayWords(x).some(function(ws){return ws.length&&ws.every(function(w){return (" "+fq+" ").indexOf(" "+w+" ")>=0;});});});
+    return d.length===1?pick(d[0].id):null;}
+  if(ag.what==="food"&&FOODDB){
+    var h=searchFoods(q,1)[0];return h&&h.score>=72?pick(h.f.id):null;}
+  if(ag.what==="scope"){
+    if(/(today|النهارده|انهارده)/.test(fq))return pick("today");
+    if(/(program|plan|برنامج|البرنامج)/.test(fq))return pick("program");}
+  return null;}
+
 /* Whether a request names an exercise (the library's or the program's), so "swap" and
    "add" go to training rather than food; and whether it names a food or a meal. */
 /* Word by word: "rice" is not in "triceps", though the picker's search finds it there. */
@@ -335,7 +372,7 @@ function namesExercise(text){
   var r=findExercise(q,libPool()),qt=norm(q).split(" ").filter(Boolean);
   if(r.kind!=="one"&&r.kind!=="some")return false;
   return (r.name?[r.name]:r.names).some(function(n){
-    var w=" "+norm(hay(n))+" ";return qt.every(function(x){return w.indexOf(" "+x)>=0;});});}
+    var w=" "+norm(hay(n))+" ";return qt.every(function(x){return w.indexOf(" "+x)>=0||(x.length>4&&w.indexOf(" "+x.replace(/s$/,""))>=0);});});}
 function namesFood(text){
   var fq=" "+fold(text)+" ";
   if(mealIn(fq))return true;
@@ -343,4 +380,4 @@ function namesFood(text){
   return [rest(swapParts(fq).from),rest(fq)].some(function(q){
     var c=parseFoodInput(q)[0];return !!c&&searchFoods(c.query,1).some(function(h){return h.score>=72;});});}
 
-export {foodById, namesExercise, namesFood, plan, proceed};
+export {answerPick, foodById, namesExercise, namesFood, plan, proceed};
