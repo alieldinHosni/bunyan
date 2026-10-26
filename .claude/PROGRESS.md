@@ -1866,6 +1866,13 @@ Owner's brief, 26 Oct: Part 1 layout fixes, Part 2 the agent (actions), Part 3 k
   - `tests/coach.mjs` now also runs the `context` and `reconcile` tests (PROGRESS request 1 from 20 Oct): 228 pass.
 - 26 Oct — **Fix from the owner's screenshot** ("Can u add push ups to my current week?" with a Push day answered "No exercise called “ups current week”"). Three causes in `js/ui/agent.js`: (1) a day's name was taken as the day wherever its word appeared, so "push" in "push ups" became the Push day — now a day name counts only where it is said as one (after to/from/in/on/for or the Arabic for them, or before day/workout), and only that occurrence is taken out; (2) "current week" and the like were not set aside as filler; (3) a name split or run together ("push ups", "pushups", "push-ups") now matches the library entry directly. Regression test added. CACHE `bunyan-v139`.
 
+## Chat: scroll in compact, follow-ups in context, a day of history — branch session/chat-context
+
+Owner, 26 Oct (with screenshots): compact can't scroll through messages; the coach doesn't remember the context within the session ("Is it pull ups?" after a close-matches answer got "I won't guess"); erase chat history after 24 h but keep the context. CACHE `bunyan-v141`.
+
+- **Compact scrolls.** Every exchange is in the panel at both sizes and scrolls; compact opens on the newest. "Show the whole conversation" is gone (the ⤢ button remains for full height).
+- **Follow-ups.** Within 30 minutes of the last exchange: a typed answer to a pick is that pick ("Is it pull ups?", "the first one", a day's name, "for today"); "yes"/"no" to a waiting change is Add it / Not now (the same tap); "yes" to a choice asks it again; "and squats" / "and a banana" repeats the last request with the new thing. Only what the pick asked for is looked for, never invented (`answerPick` in `js/ui/agent.js`). "yes"/"no" are never read as food names.
+- **24-hour history.** Messages older than a day are dropped when a question is asked and when the panel opens. What the person asked the coach to keep (`S.context`, js/coach/context.js) is separate and untouched; it is per profile, saved with the profile and included in backups.
 ## Workout: the next exercise in view, and no photo flash in the exercise sheet — branch session/workout-next
 
 Owner, 26 Oct: "when I start a workout, I don't see the small reminder of the next exercise; this page should be as simple as possible" and "when I click the i, the 3D video flashes and shows the old start and end photos". CACHE `bunyan-v140`.

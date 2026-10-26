@@ -738,7 +738,7 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
     items:[{n:"Day's food",fid:"x",grams:100,label:"1 serving",kcal:2480,p:150,c:300,f:70}]}}}]))})});
 await test("Coach chat: a saved conversation that is not the app's own renders as text only",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;
-    S.chat=[null,7,{q:"<img src=x onerror=alert(1)>",id:"today",b:[{p:"<b>hi</b>"},{l:["<i>x</i>",3]},null],
+    S.chat=[null,7,{q:"<img src=x onerror=alert(1)>",id:"today",at:Date.now(),b:[{p:"<b>hi</b>"},{l:["<i>x</i>",3]},null],
       acts:[{l:"Go",a:{"onclick":"alert(1)","data-tab":"food","data-x\" onmouseover=\"alert(1)":"1"}}]}];});
   await openChat(page);
   const r=await page.evaluate(()=>({img:!!document.querySelector(".chat img"),b:!!document.querySelector(".chat-a b"),
@@ -2379,7 +2379,6 @@ await test("Coach agent: an unknown exercise gets real close matches, then a day
   eq([after.length,/^Added .+ to Full Body B\.$/.test(r.done.replace(/Undo$/,"")),await ev(page,"V.coach")],[before.length+1,true,"compact"],"applied, said, the panel still open");
   /* Asked something else, the Undo stays on the applied row. */
   await agSay(page,"how much protein do I need");
-  await page.tap('#cpanel .cp-more');await pause(page,400);
   if(!(await page.$('#cpanel [data-agundo]')))throw new Error("the Undo went away");
   await page.tap('#cpanel [data-agundo]');await pause(page,400);
   eq(await dayEx(page,2),before,"Undo puts the day back");
@@ -2396,6 +2395,35 @@ await test("Coach agent: a day's name is a day only where it is said as one — 
   eq(r.lead,"Add Pushups to Push?","run together, and with day");
   r=await agSay(page,"remove leg press from push");
   eq(r.lead,"Take Leg Press out of Push?","from the day");
+});
+await test("Coach follow-ups: a typed answer to a choice, yes or no to a change, and \"and squats\" carry on the same request; compact scrolls through every message; a day-old conversation is gone, kept facts are not",async page=>{
+  await openChat(page);
+  let r=await agSay(page,"add tricep extention machine to push day");
+  if(!/Closest:$/.test(r.lead))throw new Error(r.lead);
+  r=await agSay(page,"Is it pull ups?");
+  eq(r.lead,"Add Pullups to which day?","the answer to the pick, in words");
+  r=await agSay(page,"yes");
+  eq(r.lead,"Which one? Tap it, or say its name.","yes to a choice asks it again");
+  r=await agSay(page,"the first one");
+  eq(/^Add Pullups to Full Body A\?$/.test(r.lead),true,"an ordinal picks");
+  const before=await dayEx(page,0);
+  await page.fill('#chatq','yes');await page.press('#chatq','Enter');await pause(page,500);
+  eq((await dayEx(page,0)).length,before.length+1,"yes is Add it");
+  r=await agSay(page,"and squats");
+  eq(r.lead,"Add Barbell Squat to which day?","and … is the same request again");
+  r=await agSay(page,"Full Body B");
+  await page.fill('#chatq','no');await page.press('#chatq','Enter');await pause(page,400);
+  eq(await page.evaluate(()=>!![...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector(".chat-n")),true,"no is Not now");
+  /* Compact: every exchange is there, and the panel scrolls through them. */
+  const sc=await page.evaluate(()=>{const b=document.getElementById("cpB"),xs=[...b.querySelectorAll(".chat-x")];
+    return {n:xs.length,hidden:xs.filter(x=>!x.getClientRects().length).length,scrolls:b.scrollHeight>b.clientHeight};});
+  eq([sc.n>=6,sc.hidden,sc.scrolls,await ev(page,"V.coach")],[true,0,true,"compact"],"compact scrolls through the whole conversation");
+  /* A day later the conversation is gone; what they asked it to keep is not. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.context={v:1,next:2,items:[{id:"c1",kind:"schedule",text:"I work nights",at:"2026-10-01",by:"user"}]};
+    S.chat.forEach(m=>{m.at-=25*36e5;});});
+  await page.tap('.cp [data-coachclose]');await pause(page,500);
+  await page.tap('#cfab .cfab');await pause(page,500);
+  eq(await ev(page,"[S.chat.length,S.context.items.length]"),[0,1],"day-old messages pruned, facts kept");
 });
 await test("Coach agent: sending appends one row and leaves the earlier ones as they were; the panel is not rebuilt",async page=>{
   await openChat(page);
