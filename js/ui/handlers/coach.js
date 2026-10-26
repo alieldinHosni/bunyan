@@ -18,10 +18,11 @@ import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {draftFrom, foodPrefs, GEARS, profileOf, STEPS, youOk} from "../views/assess.js";
-import {ask} from "../views/chat.js";
+import {ask, findMsg, follow} from "../views/chat.js";
 import {coachAct} from "../views/pcheck.js";
 import {chatSend, slotsFrom, toCoach} from "./common.js";
-import {closeCoach, toEnd} from "../coachfab.js";
+import {closeCoach, holdCoach, toEnd} from "../coachfab.js";
+import {perform, undo} from "./actions.js";
 import {key, on} from "./registry.js";
 
 /* The assessment's answers become the profile, the daily targets and the training
@@ -163,6 +164,21 @@ function register(){
   key("chatq",function(D,el){var from=fromEl(el);if(!V.coach)V.coach="compact";
     loadFoods(function(){ask("",D.chatq,D.chatl);saveDB();render();land(from);toEnd();});return;});
   key("chatsend",function(){chatSend();return;});
+  /* A request in the chat (js/ui/agent.js): Add it runs the action the way its screen
+     does (js/ui/handlers/actions.js) and the row turns to done, with Undo for the
+     session; Not now leaves everything as it is. Only that row changes. */
+  key("agok",function(D){var m=findMsg(D.agok);if(!m||!m.ag||m.ag.s!=="confirm")return;
+    loadFoods(function(){
+      var ok=holdCoach(function(){return perform(m.ag.act,m.ag.p,m.at);});
+      m.ag.s=ok?"applied":"failed";saveDB();render();});return;});
+  key("agno",function(D){var m=findMsg(D.agno);if(!m||!m.ag||m.ag.s!=="confirm")return;
+    m.ag.s="declined";saveDB();render();return;});
+  key("agundo",function(D){var m=findMsg(D.agundo);if(!m||!m.ag||m.ag.s!=="applied")return;
+    if(holdCoach(function(){return undo(m.at);})){m.ag.s="undone";saveDB();render();}return;});
+  /* A choice on a pick, or None of these: one more exchange, as if typed. */
+  key("agpick",function(D,el){var pr=String(D.agpick).split("|"),from=fromEl(el);
+    loadFoods(function(){if(follow(pr[0],+pr[1])){saveDB();render();land(from);toEnd();}});return;});
+  key("agnone",function(D,el){var from=fromEl(el);if(follow(D.agnone,null)){saveDB();render();land(from);toEnd();}return;});
   key("chatclear",function(){var chB=S.chat||[];S.chat=[];saveDB();render();
     toast(t("Conversation cleared."),function(){S.chat=chB;saveDB();render();});return;});
   /* What an answer offers to change: a small step on the calorie target, carbs moving

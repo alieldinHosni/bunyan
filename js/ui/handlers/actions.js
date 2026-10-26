@@ -1,0 +1,97 @@
+/* Bunyan — what the coach can do, by name
+   The chat's action half (docs/design/chat-spec.md, .claude/SESSION-AGENT.md §1). Each
+   action is a name, what it does, what it takes, and whether it waits for a tap; and it
+   runs by doing what the app's own button does: the same tap through the same branch
+   (dispatchTap), or the same function the button calls. Nothing here changes the
+   program or the log any other way, so the registry holds nothing the screens cannot
+   already do, and when a screen's behaviour changes the coach's changes with it.
+
+   confirm:true is anything that changes the program or the log: the chat shows what
+   will happen and waits for a tap (an inline confirmation in the panel, never a sheet).
+
+   Undo is one step, for the session: the newest applied action can be taken back, with
+   no history behind it (SESSION-AGENT.md §4). Before an action runs, the part of the
+   state it touches is copied (snap); Undo puts that copy back. A reload ends the session,
+   and the Undo with it. */
+import {FOODDB} from "../../engine/nutrition.js";
+import {dayOf, S, saveDB} from "../../state.js";
+import {toDisp} from "../../units.js";
+import {today} from "../../util.js";
+import {render} from "../render.js";
+import {V} from "../view.js";
+import {LENT} from "./common.js";
+import {dispatchTap} from "./registry.js";
+
+/* A tap on a button carrying these data-* keys, as if the person had made it. */
+function tap(D){
+  var b=typeof document!=="undefined"?document.createElement("button"):null;
+  return dispatchTap(D,b,{target:b},{typingAsk:false});}
+function copy(x){return x==null?x:JSON.parse(JSON.stringify(x));}
+
+/* What each kind of action touches, copied before it runs and put back by Undo. */
+var SNAP={
+  program:function(){var p=copy(S.programs);return function(){S.programs=p;};},
+  live:function(){var a=copy(S.active),i=V.logIdx;return function(){S.active=a;V.logIdx=i;if(a)a.idx=i;};},
+  day:function(){var d=today(),r=copy(S.days[d]);return function(){if(r)S.days[d]=r;else delete S.days[d];};},
+  body:function(){var b=copy(S.body);return function(){S.body=b;};},
+  goals:function(){var g=copy(S.goals),k=S.profile.goal;return function(){S.goals=g;S.profile.goal=k;};}};
+
+var ACTIONS={
+  "exercise.add":{desc:"Add a library exercise to a day of the program",params:{name:"exercise, from the library",day:"day id, from the program"},
+    confirm:true,snap:"program",
+    /* The picker's tap, with the day it was opened for. */
+    run:function(p){if(!dayOf(p.day))return false;V.dayId=p.day;V.sd={};tap({pickex:p.name});return true;}},
+  "exercise.remove":{desc:"Take an exercise out of a day of the program",params:{id:"the exercise's id in that day",day:"day id"},
+    confirm:true,snap:"program",
+    /* The ✕ on the day builder's row. */
+    run:function(p){if(!dayOf(p.day))return false;V.dayId=p.day;tap({rmex:p.id});return true;}},
+  "exercise.swap":{desc:"Replace an exercise in a day of the program with a library exercise, keeping its sets, reps and rest",
+    params:{id:"the exercise's id in that day",day:"day id",name:"the replacement, from the library"},confirm:true,snap:"program",
+    /* Replace this exercise, then the picked one: the picker opened with replace. */
+    run:function(p){if(!dayOf(p.day))return false;V.dayId=p.day;V.sd={replace:p.id};tap({pickex:p.name});return true;}},
+  "exercise.swapToday":{desc:"Swap an exercise in the workout in progress, for today only",params:{i:"its place in the workout",name:"the replacement"},
+    confirm:true,snap:"live",
+    run:function(p){if(!S.active||!S.active.entries[p.i]||S.active.entries[p.i].sets.length)return false;
+      V.logIdx=p.i;S.active.idx=p.i;V.sd={swaplive:true};tap({pickex:p.name});return true;}},
+  "set.log":{desc:"Log a set of the exercise on screen in the workout in progress",params:{w:"weight, kg",r:"reps"},
+    confirm:true,snap:"live",
+    /* The logger's fields, filled, and its Log set. */
+    run:function(p){var w=document.getElementById("in_w"),r=document.getElementById("in_r");
+      if(!S.active||!w||!r)return false;w.value=String(toDisp(p.w));r.value=String(p.r);tap({logset:"1"});return true;}},
+  "food.log":{desc:"Log a food from the database to today's meal",params:{fid:"food id, from the database or My Foods",g:"grams",label:"portion as shown",meal:"meal id, or none for the time of day's"},
+    confirm:true,snap:"day",
+    /* The add-food sheet's servings screen: opened for the meal, then the food. */
+    run:function(p){var f=(S.myFoods||[]).concat(FOODDB||[]).filter(function(x){return x.id===p.fid;})[0];if(!f)return false;
+      if(p.meal){V.sheet="addfood";V.sd={meal:p.meal};}
+      if(!LENT.logFood)return false;LENT.logFood(f,p.g,p.label);return true;}},
+  "progress.weighIn":{desc:"Save today's weigh-in",params:{kg:"body weight, kg"},confirm:true,snap:"body",
+    /* The weigh-in sheet's Save, with the weight in the field. */
+    run:function(p){V.draft.bw=toDisp(p.kg);tap({saveweight:"1"});return true;}},
+  "plan.calories":{desc:"Move the calorie target, carbs moving with it",params:{kcal:"change, kcal a day"},confirm:true,snap:"goals",
+    run:function(p){tap({chatkcal:String(p.kcal)});return true;}},
+  "plan.goal":{desc:"Change the goal, with its targets",params:{goal:"goal id"},confirm:true,snap:"goals",
+    run:function(p){tap({chatgoal:p.goal});return true;}},
+  /* Opens the assessment; nothing changes until it is used, so no confirmation. */
+  "profile.reassess":{desc:"Open the assessment",params:{},confirm:false,run:function(){tap({setup:"1"});return true;}},
+  "profile.open":{desc:"Open Profile",params:{},confirm:false,run:function(){tap({prof:"1"});return true;}},
+  "profile.you":{desc:"Open Profile > You: age, height, weight, sex, activity and goal",params:{},confirm:false,run:function(){tap({sheet:"set_you"});return true;}},
+  /* Cardio is logged as a bout in the workout, or started from Training: the coach opens
+     the list of activities rather than logging time it was not given. */
+  "cardio.open":{desc:"Open the list of activities to log or start one",params:{},confirm:false,run:function(){tap({actsheet:"1"});return true;}}};
+
+/* The newest applied action's way back, for this session only. */
+var LAST=null;
+function perform(id,p,tag){
+  var A=ACTIONS[id];if(!A)return false;
+  var back=A.snap?SNAP[A.snap]():null;
+  var ok=false;V.quietToast=!!A.confirm;
+  try{ok=A.run(p||{});}catch(e){ok=false;}finally{V.quietToast=false;}
+  if(!ok){if(back)back();return false;}
+  if(back)LAST={tag:tag,back:back};
+  return true;}
+function canUndo(tag){return !!LAST&&LAST.tag===tag;}
+function undo(tag){
+  if(!canUndo(tag))return false;
+  LAST.back();LAST=null;saveDB();render();return true;}
+
+export {ACTIONS, canUndo, perform, undo};

@@ -70,6 +70,11 @@ async function coach(page,sec,sub){
   await tapTab(page,"coach");await page.waitForTimeout(200);
   if(sec){await page.tap('[data-csec="'+sec+'"]');await page.waitForTimeout(200);}
   if(sub){await page.tap('[data-'+(sec==="train"?"ctsub":"cfsub")+'="'+sub+'"]');await page.waitForTimeout(250);}}
+/* The conversation opens from the floating Coach only. With q, that question is asked. */
+async function openChat(page,q){
+  await coach(page);await page.tap('#cfab .cfab');await page.waitForTimeout(400);
+  if(q){await page.evaluate(async q=>{const c=await import("/js/ui/views/chat.js");document.getElementById("chatq").value=(await import("/js/i18n/dict.js")).t(c.ASK[q]);},q);
+    await page.press('#chatq','Enter');await page.waitForTimeout(400);}}
 async function startWorkout(page){await tapTab(page,"train");await pause(page);await page.tap('[data-startday]');await pause(page,400);}
 /* The live workout has no dock: its ✕ and Save and exit are the way to the other tabs,
    and the session carries on (Resume card on Train, the workout bar elsewhere). */
@@ -685,13 +690,14 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   /* Nothing goes over the network: every answer is worked out here. */
   const out=[];page.on("request",r=>{if(!r.url().startsWith("http://localhost"))out.push(r.url());});
   await coach(page,"ai");
-  if(!(await page.$('.chatcard')))throw new Error("no Ask the coach card in Coach AI");
-  await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
+  if(await page.$('.chatcard'))throw new Error("the Ask card is still on Plan");
+  await page.tap('#cfab .cfab');await pause(page,400);
+  await page.fill('#chatq',"What do I train today?");await page.press('#chatq','Enter');await pause(page,400);
   /* The conversation is the floating Coach's panel now, over Coach AI. */
   eq(await ev(page,"[V.tab,V.coach,S.chat.length,S.chat[0].id]"),["coach","compact",1,"today"],"a suggestion opens the Coach panel and is answered");
   if(!(await page.$('.chat-a .chat-acts [data-startday]')))throw new Error("today's answer offers no Start workout");
   const ask=async q=>{await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,300);
-    return page.evaluate(()=>{const a=[...document.querySelectorAll(".chat-a")].pop();return a?a.innerText:"";});};
+    return page.evaluate(()=>{const a=(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop());return a?a.innerText:"";});};
   let a=await ask("how much protein do I need?");
   eq(await ev(page,"S.chat[S.chat.length-1].id"),"protein","typed: protein");
   if(!/150 g a day/.test(a))throw new Error("protein answer not from the targets: "+a);
@@ -701,7 +707,7 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   eq(await page.$$eval('.chat-acts',x=>x.length),1,"only the newest answer carries buttons");
   a=await ask("asdf qwer");
   eq(await ev(page,"S.chat[S.chat.length-1].id"),"unknown","nonsense is said to be outside what it knows");
-  if(!/can't answer/.test(a)||!(await page.$('#cpanel .chat-chips [data-chatq]')))throw new Error("unknown has no way on: "+a);
+  if(!/won't guess/.test(a)||!(await page.$('#cpanel .chat-chips [data-chatq]')))throw new Error("unknown has no way on: "+a);
   /* The weight stalled while losing fat, and the log matches the target: a step on the target, with Undo. */
   a=await ask("why is my weight stuck");
   if(!/Eat 150 kcal less a day/.test(a))throw new Error("no step offered: "+a);
@@ -724,7 +730,6 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   eq(await ev(page,"S.chat.length"),n,"Undo brings it back");
   await page.tap('.cp [data-coachclose]');await pause(page,500);
   eq(await ev(page,"[V.tab,!!V.coach,V.csec]"),["coach",false,"ai"],"closed, back on Coach AI");
-  if(!/Continue the conversation/.test(await page.$eval('.chatcard',e=>e.innerText)))throw new Error("the card does not offer to continue");
   eq(out,[],"no network requests");
 },{db:Object.assign(seed(),{
   profile:{age:30,height:180,weight:84,sex:"m",activity:1.4,goal:"lose",prog:"standard",level:"some",days:3},
@@ -735,7 +740,7 @@ await test("Coach chat: a saved conversation that is not the app's own renders a
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;
     S.chat=[null,7,{q:"<img src=x onerror=alert(1)>",id:"today",b:[{p:"<b>hi</b>"},{l:["<i>x</i>",3]},null],
       acts:[{l:"Go",a:{"onclick":"alert(1)","data-tab":"food","data-x\" onmouseover=\"alert(1)":"1"}}]}];});
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await openChat(page);
   const r=await page.evaluate(()=>({img:!!document.querySelector(".chat img"),b:!!document.querySelector(".chat-a b"),
     btn:[...document.querySelectorAll(".chat-acts button")].map(b=>b.getAttributeNames().sort().join(","))}));
   eq(r,{img:false,b:false,btn:["class,data-tab"]},"markup stays text; a button keeps only data-* the app knows");
@@ -1699,9 +1704,9 @@ await test("Maintenance learned: four weeks at 2,000 kcal and a steady weight me
   await page.tap('.toast-undo').catch(()=>{});await pause(page,300);
   eq(await ev(page,"[!!S.energy,S.goals.kcal]"),[false,2500],"Undo: the formula and the old target back");
   /* The chat, asked about calories, says what the log measures and offers the same fix. */
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page);
+  await openChat(page);
   await page.fill('#chatq','why are my calories like this');await page.press('#chatq','Enter');await pause(page,300);
-  const a=await page.evaluate(()=>[...document.querySelectorAll(".chat-a")].pop().innerText);
+  const a=await page.evaluate(()=>(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop()).innerText);
   if(!/Your own log says your body uses about 2,0[0-3]0 kcal a day/.test(a)||!(await page.$('.chat-acts [data-pcfix="maint-learned"]')))
     throw new Error("chat: "+a);
 },{db:Object.assign(seed(),{
@@ -1781,10 +1786,10 @@ await test("Phase 4: one session and one weigh-in say \"not enough yet\" everywh
   const cards=await page.evaluate(async()=>Object.fromEntries((await import("/js/ui/facts.js")).simpleFacts().map(f=>[f.k,f.head+" "+f.line])));
   if(!/Not enough yet/.test(cards.Strength))throw new Error("strength: "+cards.Strength);
   if(!/A few more weigh-ins/.test(cards.Weight))throw new Error("weight: "+cards.Weight);
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page);
+  await openChat(page);
   await page.fill('#chatq','is my weight on track');await page.press('#chatq','Enter');await pause(page,300);
   /* The answer's own words, under the card's header that names its subject. */
-  const a=await page.evaluate(()=>[...[...document.querySelectorAll(".chat-a")].pop().children].filter(c=>!c.classList.contains("chat-ah")).map(c=>c.innerText).join("\n"));
+  const a=await page.evaluate(()=>[...(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop()).children].filter(c=>!c.classList.contains("chat-ah")).map(c=>c.innerText).join("\n"));
   if(!/^1 weigh-in so far/.test(a)||!/four weigh-ins over two weeks/.test(a)||/a week\./.test(a))throw new Error("weight answer: "+a);
 },{db:Object.assign(seed(),{sessions:seed().sessions.slice(0,1)})});
 await test("Offline: with the network off, the installed app opens, every tab works, food search and the coach chat answer",async(page,env)=>{
@@ -1796,8 +1801,8 @@ await test("Offline: with the network off, the installed app opens, every tab wo
   await page.reload();await pause(page,1500);
   for(const tab of ["train","food","coach","progress","profile"]){await tapTab(page,tab);await pause(page,300);
     if(!(await page.$eval('#app',e=>e.children.length)))throw new Error(tab+" is empty offline");}
-  await coach(page,"ai");await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
-  if(!/Today is|rest day|Done for today/.test(await page.evaluate(()=>[...document.querySelectorAll(".chat-a")].pop().innerText)))throw new Error("the chat did not answer offline");
+  await openChat(page,"today");
+  if(!/Today is|rest day|Done for today/.test(await page.evaluate(()=>(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop()).innerText)))throw new Error("the chat did not answer offline");
   eq(await page.evaluate(async()=>{const n=await import("/js/engine/nutrition.js");await new Promise(f=>n.loadFoods(f));return n.searchFoods("chicken").length>0;}),true,"food search works offline");
   await env.ctx.setOffline(false);
 },{sw:true});
@@ -2064,9 +2069,9 @@ await test("Movement: the plan builder's stand-ins keep the movement",async page
   if(knee&&/Jump|Hop|Bound/i.test(knee))throw new Error("a sore knee was given another jump: "+knee);
 });
 await test("Movement: the chat's pain answer names swaps for the sore area",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
+  await openChat(page,"today");
   await page.fill('#chatq',"my knee hurts");await page.press('#chatq','Enter');await pause(page,400);
-  const a=await page.evaluate(()=>{const x=[...document.querySelectorAll(".chat-a")].pop();return x?x.innerText:"";});
+  const a=await page.evaluate(()=>{const x=(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop());return x?x.innerText:"";});
   if(!/load the knee|loads the knee/.test(a))throw new Error("no area answer: "+a);
   await page.fill('#chatq',"ركبتي بتوجعني");await page.press('#chatq','Enter');await pause(page,400);
   eq(await ev(page,"S.chat[S.chat.length-1].id"),"sore","Arabic: the sore answer");
@@ -2101,7 +2106,7 @@ const sheet=async(page,name)=>{await page.evaluate(async n=>{(await import("/js/
 /* The floating Coach opens on a short line and three questions for where it was opened
    (the tall list of twelve is gone); the field sits under the conversation. */
 await test("Coach chat: the panel opens on three questions for where it was opened; a typed question is cleared once answered, and the answer names its subject",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat="ask"]');await pause(page,400);
+  await openChat(page);
   eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["balance","track","plan"],"Coach's own questions");
   const f=await page.evaluate(()=>{const b=document.getElementById("cpB").getBoundingClientRect(),f=document.querySelector(".cp-f").getBoundingClientRect();return f.top>=b.bottom-1;});
   eq(f,true,"the field is under the conversation, never over it");
@@ -2182,10 +2187,10 @@ function planned(){
   db.days[iso(0)]={meals:{Breakfast:{done:true,items:[pi("Eggs","egg",100,143,12.6,0.7,9.5)]}}};
   return db;}
 const lastX=page=>page.evaluate(()=>{const x=[...document.querySelectorAll(".chat-x")].pop();
-  return {lang:x.getAttribute("lang"),dir:x.getAttribute("dir"),a:x.querySelector(".chat-a").innerText};});
+  return {lang:x.getAttribute("lang"),dir:x.getAttribute("dir"),a:(x.querySelectorAll(".chat-more").forEach(d=>d.open=true),x.querySelector(".chat-a").innerText)};});
 async function chatAsk(page,q){await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,400);return lastX(page);}
 await test("Coach chat: asked in Arabic in the English app, it answers in Arabic, and what it offers next is Arabic too; asked in English in the Arabic app, English",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await openChat(page);
   let r=await chatAsk(page,"بينش بريس كام؟");
   eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang,r.dir],["weights","ar","rtl"],"a misspelt bench press in Arabic: the weights, in Arabic");
   if(!/بنش بريس/.test(r.a)||/Squat|سكوات/.test(r.a))throw new Error("not the bench press alone: "+r.a);
@@ -2200,14 +2205,14 @@ await test("Coach chat: asked in Arabic in the English app, it answers in Arabic
   eq(await ev(page,"S.prefs.lang"),"en","the app's own language is untouched");
 });
 await test("Coach chat: in the Arabic app, an English question gets an English answer",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await openChat(page);
   const r=await chatAsk(page,"how much protein do I need");
   eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang,r.dir],["protein","en","ltr"],"English");
   if(/[؀-ۿ]/.test(r.a))throw new Error("Arabic in the answer: "+r.a);
   eq(await ev(page,"[S.prefs.lang,document.documentElement.dir]"),["ar","rtl"],"the app stays Arabic");
 },{prefs:{lang:"ar"}});
 await test("Coach chat: the rest of today from the plan, swaps with the same macros that are never the same food, and what is in a food",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await openChat(page);
   let r=await chatAsk(page,"What should I eat for the rest of the day?");
   eq(await ev(page,"S.chat[S.chat.length-1].id"),"rest","the rest of the day");
   for(const m of ["Lunch","Snack","Dinner"])if(r.a.indexOf(m)<0)throw new Error(m+" is missing: "+r.a);
@@ -2228,7 +2233,7 @@ await test("Coach chat: the rest of today from the plan, swaps with the same mac
   if(!/بيض/.test(r.a)||!/6\.3 جم بروتين/.test(r.a))throw new Error("Arabic egg facts: "+r.a);
 },{db:planned()});
 await test("Coach chat: tomorrow's workout and how the last one went",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await openChat(page);
   let r=await chatAsk(page,"what do I train tomorrow");
   eq(await ev(page,"S.chat[S.chat.length-1].id"),"tomorrow","tomorrow");
   if(!/Tomorrow/.test(r.a))throw new Error(r.a);
@@ -2274,15 +2279,163 @@ await test("Profile picture: both choices in sight; a photo from the phone shows
   await page.tap('#sheet [data-close]');await pause(page,400);
   eq(await page.$eval('.pid .pmono',e=>[!!e.querySelector("img"),e.textContent.trim().length>0]),[false,true],"the initials are back");
 });
+/* ---- the coach's action half (js/ui/agent.js, js/ui/handlers/actions.js) ---- */
+async function agSay(page,q){await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,450);
+  return page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();
+    return {lead:(x.querySelector(".chat-lead")||{}).textContent||"",opts:[...x.querySelectorAll(".ag-opt .ag-ol")].map(e=>e.textContent),
+      ok:!!x.querySelector("[data-agok]"),done:(x.querySelector(".ag-done")||{}).textContent||"",undone:(x.querySelector(".ag-undone")||{}).textContent||"",
+      lang:x.getAttribute("lang"),dir:x.getAttribute("dir")};});}
+const agLast=page=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();
+  return {lead:(x.querySelector(".chat-lead")||{}).textContent||"",opts:[...x.querySelectorAll(".ag-opt .ag-ol")].map(e=>e.textContent),
+    ok:!!x.querySelector("[data-agok]"),done:(x.querySelector(".ag-done")||{}).textContent||"",undone:(x.querySelector(".ag-undone")||{}).textContent||""};});
+const dayEx=(page,i)=>ev(page,`(async()=>{const s=(await import("/js/state.js")).split();return s.days[${i}].ex.map(e=>e.name);})()`);
+await test("Coach agent: an unknown exercise gets real close matches, then a day, then a confirmation; nothing changes before the tap; Undo stays and puts it back",async page=>{
+  await openChat(page);
+  const before=await dayEx(page,2);
+  let r=await agSay(page,"add tricep extention machine to push day");
+  if(!/^No exercise called “tricep extention machine”\. Closest:/.test(r.lead))throw new Error("lead: "+r.lead);
+  /* Every choice is a library entry; None of these is last. */
+  const lib=await page.evaluate(async names=>{const L=(await import("/js/data/exercises.js")).LIB;return names.slice(0,-1).every(n=>L.some(l=>l[0]===n));},r.opts);
+  eq([lib,r.opts[r.opts.length-1],r.opts.length>=4],[true,"None of these",true],"real entries, and None of these");
+  if(!r.opts.some(o=>/Triceps/.test(o)))throw new Error("no triceps exercise offered: "+r.opts);
+  await page.tap('#cpanel .ag-opt');await pause(page,450);
+  r=await agLast(page);
+  if(!/to which day\?$/.test(r.lead)||r.opts.some(o=>/^Rest$/.test(o)))throw new Error("day pick: "+JSON.stringify(r));
+  await page.tap('#cpanel .ag-opt:nth-child(2)');await pause(page,450);
+  r=await agLast(page);
+  eq([/^Add .+ to Full Body B\?$/.test(r.lead),r.ok],[true,true],"a confirmation, with the action's own verb");
+  eq(await page.$eval('#cpanel [data-agok]',b=>b.textContent),"Add it","Add it, never Confirm");
+  eq(await dayEx(page,2),before,"nothing changed before the tap");
+  /* The panel is inline: no sheet, no dialog over it. */
+  eq(await ev(page,"[V.sheet,V.coach]"),[null,"compact"],"inline, not modal");
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  r=await agLast(page);
+  const after=await dayEx(page,2);
+  eq([after.length,/^Added .+ to Full Body B\.$/.test(r.done.replace(/Undo$/,"")),await ev(page,"V.coach")],[before.length+1,true,"compact"],"applied, said, the panel still open");
+  /* Asked something else, the Undo stays on the applied row. */
+  await agSay(page,"how much protein do I need");
+  await page.tap('#cpanel .cp-more');await pause(page,400);
+  if(!(await page.$('#cpanel [data-agundo]')))throw new Error("the Undo went away");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await dayEx(page,2),before,"Undo puts the day back");
+  if(!(await page.$('#cpanel .ag-undone')))throw new Error("no undone row");
+});
+await test("Coach agent: sending appends one row and leaves the earlier ones as they were; the panel is not rebuilt",async page=>{
+  await openChat(page);
+  await agSay(page,"how much protein do I need");
+  await page.evaluate(()=>{document.querySelector("#cpanel .chat-x").__mark=1;document.getElementById("cpB").__mark=1;});
+  await agSay(page,"remove plank");
+  eq(await page.evaluate(()=>[document.querySelector("#cpanel .chat-x").__mark,document.getElementById("cpB").__mark,document.querySelectorAll("#cpanel .chat-x").length]),[1,1,2],"same nodes, one more row");
+  await page.tap('#cpanel [data-agno]');await pause(page,300);
+  eq(await page.evaluate(()=>document.querySelector("#cpanel .chat-x").__mark),1,"Not now changes only its own row");
+  eq(await dayEx(page,0).then(x=>x.includes("Plank")),true,"Not now leaves the program alone");
+});
+await test("Coach agent: remove and swap from the program; swap stays a food swap for foods; a food is logged to the meal said; a weigh-in is saved; each with Undo",async page=>{
+  await openChat(page);
+  let r=await agSay(page,"swap hack squat for leg press");
+  eq(/^Swap Hack Squat for Leg Press in Full Body C\?$/.test(r.lead),true,"swap: the day it is in");
+  await page.tap('#cpanel [data-agok]');await pause(page,450);
+  eq((await dayEx(page,4))[0],"Leg Press","swapped in place");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq((await dayEx(page,4))[0],"Hack Squat","and back");
+  r=await agSay(page,"swap rice for potatoes");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"swap","rice is a food: the food swap, not an exercise");
+  r=await agSay(page,"log 200g chicken breast for lunch");
+  eq([/^Log Chicken Breast, Cooked, 200 g, to Lunch\?$/.test(r.lead),r.ok],[true,true],"the food, the amount and the meal said");
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq(await ev(page,"(()=>{const d=Object.values(S.days)[0];return [Object.keys(d.meals),d.meals.Lunch.items[0].grams,!!V.coach];})()"),[["Lunch"],200,true],"logged, panel open");
+  r=await agSay(page,"log chiken brest");
+  if(!/^No food called “chiken brest”\. Closest:/.test(r.lead)||!r.opts.some(o=>/Chicken Breast/.test(o)))throw new Error("food close matches: "+JSON.stringify(r));
+  r=await agSay(page,"I weigh 82.5 kg");
+  eq(/^Save 82\.5 kg as today's weight\?$/.test(r.lead),true,"a weigh-in, said");
+  await page.tap('#cpanel [data-agok]');await pause(page,400);
+  eq(await ev(page,"S.body[S.body.length-1].weight"),82.5,"saved");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await ev(page,"S.body.length"),1,"Undo");
+  r=await agSay(page,"is my weight on track");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"weight","a question about weight is still a question");
+});
+await test("Coach agent in Arabic: requests in Egyptian Arabic, answered in Arabic, right to left",async page=>{
+  await openChat(page);
+  let r=await agSay(page,"شيل السكوات");
+  eq([/^أشيل هاك سكوات من /.test(r.lead),r.lang,r.dir,r.ok],[true,"ar","rtl",true],"remove, in Arabic");
+  r=await agSay(page,"بدل الهاك سكوات بالليج بريس");
+  eq(/^أبدّل هاك سكوات بـ ليج بريس في /.test(r.lead),true,"swap, in Arabic");
+  r=await agSay(page,"وزني النهارده ٨٢");
+  eq(/^أحفظ 82 كجم وزن النهاردة؟$/.test(r.lead.replace(/[⁦-⁩]/g,"")),true,"a weigh-in in Arabic digits: "+r.lead);
+  await page.tap('#cpanel [data-agok]');await pause(page,400);
+  const d=await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector(".ag-done").textContent);
+  if(!/اتحفظ/.test(d)||!/تراجع/.test(d))throw new Error("applied in Arabic: "+d);
+  /* Numbers in the lead are one run each. */
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x.live .chat-lead .num")].length>0),true,"figures in .num");
+},{prefs:{lang:"ar"}});
+await test("Coach knowledge: training questions answer from the knowledge files with the person's own program, cite the entry, and lead with two sentences at most",async page=>{
+  await openChat(page);
+  const lead=()=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();
+    x.querySelectorAll(".chat-more").forEach(d=>d.open=true);
+    return {lead:x.querySelector(".chat-lead").textContent,src:(x.querySelector(".chat-src")||{}).textContent||""};});
+  const words=s=>s.trim().split(/\s+/).length,sents=s=>s.split(/[.!?؟](?:\s|$)/).filter(x=>x.trim()).length;
+  for(const [q,re,src] of [["how many reps for hypertrophy",/6–12 reps a set\. Your program has most lifts at/,/Training variables 20\.3/],
+    ["how long should I rest between sets",/up to 3 min between sets\. Your program rests/,/Training variables 20\.3/],
+    ["how many sets a week for chest",/Your program gives chest \d+ sets a week\. The app's range for growth is roughly 12–20/,/Training variables/],
+    ["how many days a week should I train",/sessions a week.*Your program has 3 training days/,/Training variables 20\.3/],
+    ["how much protein do I need",/150 g a day.*1\.4 to 2 g per kg/,/Nutrition principles 9\.2/]]){
+    await agSay(page,q);const r=await lead();
+    if(!re.test(r.lead))throw new Error(q+": "+r.lead);
+    if(!src.test(r.src))throw new Error(q+": no source: "+r.src);
+    if(sents(r.lead)>2||words(r.lead)>45)throw new Error(q+": the lead runs "+words(r.lead)+" words");}
+  /* Every answer's lead, whatever it is, two sentences at most. */
+  for(const q of ["What do I train today?","what should I eat now","is my program balanced","how am i doing","my knee hurts"]){
+    await agSay(page,q);const r=await lead();
+    if(sents(r.lead)>2)throw new Error(q+": "+r.lead);}
+});
+await test("Coach scope: no diagnosis, no medical or supplement advice, however it is put; outside what it knows it says what it understood and where to go",async page=>{
+  await openChat(page);
+  const lead=()=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();return [x.querySelector(".chat-lead").textContent,[...x.querySelectorAll(".chat-acts button")].map(b=>b.textContent)];});
+  for(const [q,re] of [["is my knee torn",/needs a physio or a doctor, not me/],["do I have tendonitis in my elbow",/needs a physio or a doctor, not me/],
+    ["what's wrong with my shoulder",/needs a physio or a doctor, not me/],["should I take ibuprofen before training",/doctor or a pharmacist, not me/],
+    ["should I take creatine",/doctor or a registered dietitian, not me/],["I think I have an eating disorder",/a doctor or a psychologist, not me/],
+    ["ركبتي مقطوعة؟",/أخصائي علاج طبيعي أو دكتور، مش أنا/]]){
+    await agSay(page,q);
+    eq(await ev(page,"S.chat[S.chat.length-1].id"),"scope",q+": the hard limit");
+    const [l]=await lead();if(!re.test(l))throw new Error(q+": "+l);
+    if(/tendinitis|tendonitis|strain|sprain|tear/i.test(l))throw new Error(q+": names a condition: "+l);}
+  await agSay(page,"change my height");
+  let [l,b]=await lead();
+  eq([/Profile > You/.test(l),b],[true,["Open it"]],"height: where it is, and a way there");
+  await agSay(page,"what's my resting heart rate");
+  [l,b]=await lead();
+  eq([/not something I have data on/.test(l),b.length],[true,1],"no data: says so, and offers what it has");
+  await agSay(page,"what's the weather in Cairo");
+  [l]=await lead();
+  if(/understand/i.test(l)||!/won't guess/.test(l))throw new Error("unknown: "+l);
+});
+await test("Coach actions: every action in the registry runs through a branch the screens already answer",async page=>{
+  const r=await page.evaluate(async()=>{
+    const A=(await import("/js/ui/handlers/actions.js")).ACTIONS,src=await (await fetch("/js/ui/handlers/actions.js")).text();
+    const keys=[...src.matchAll(/tap\(\{([a-z]+):/g)].map(m=>m[1]);
+    const handlers=await Promise.all(["shell","train","session","food","coach","progress","profile"].map(n=>fetch("/js/ui/handlers/"+n+".js").then(x=>x.text())));
+    const all=handlers.join("\n");
+    return {n:Object.keys(A).length,missing:[...new Set(keys)].filter(k=>!new RegExp('(key|has)\\("'+k+'"').test(all)),
+      described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
+      domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
+  eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");
+  eq(r.domains,["cardio","exercise","food","plan","profile","progress","set"],"grouped by domain");
+  /* set.log, in a live workout: the logger's own Log set. */
+  await startWorkout(page);
+  const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");
+  await page.evaluate(async()=>{(await import("/js/ui/handlers/actions.js")).perform("set.log",{w:62.5,r:8},1);});await pause(page,400);
+  eq(await ev(page,"[S.active.entries[V.logIdx].sets.length,S.active.entries[V.logIdx].sets.slice(-1)[0].w]"),[n0+1,62.5],"logged by the logger");
+});
 await test("Coach chat in motion: a sent question flies to its place, the coach types, then the answer arrives; with Animations off, at once",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await openChat(page);
   await page.fill('#chatq','how much protein do I need?');await page.tap('.cp-send');await pause(page,120);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-ghost"),getComputedStyle([...document.querySelectorAll(".cp-b .chat-q")].pop()).visibility]),[true,"hidden"],"in flight");
   await pause(page,250);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display]),[true,"none"],"the coach typing, the answer waiting");
   await pause(page,1400);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none",
-    /150 g a day/.test([...document.querySelectorAll(".chat-a")].pop().innerText)]),[false,true,true],"arrived");
+    /150 g a day/.test((document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop()).innerText)]),[false,true,true],"arrived");
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.anim=false;document.body.classList.add("noanim");});
   await page.fill('#chatq','how is my weight');await page.tap('.cp-send');await pause(page,250);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none"]),[false,true],"no motion, no wait");
@@ -2361,7 +2514,7 @@ await test("Coach AI: this week's gauge agrees with Training's week; Ask me anyt
   eq(g.w,wk[0]+"/"+wk[1],"the same workouts as Training's week");
   eq(g.v,wk[1]?Math.round(wk[0]/wk[1]*100)+"%":"—","the share");
   if(wk[0]&&!g.on)throw new Error("no ticks filled");
-  await page.tap('.chatcard [data-chat="ask"]');await pause(page,400);
+  await page.tap('#cfab .cfab');await pause(page,400);await page.focus('#chatq');
   eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,!!document.querySelector("#cpanel .cp-f")]),["chatq",true],"the box has the caret");
   /* Its close is in sight and works with the keyboard up. */
   const bb=await (await page.$('.cp [data-coachclose]')).boundingBox();
@@ -2619,9 +2772,12 @@ await test("Workout screen: a logged set's numbers can be corrected in place; a 
 await test("Floating Coach: on the tab roots, never over a workout, a sheet or the keyboard; opening it from a workout keeps every value; Escape closes it",async page=>{
   const fab=()=>page.$$eval('#cfab .cfab',a=>a.length);
   for(const tab of ["train","food","progress","coach"]){await tapTab(page,tab);await pause(page,300);eq(await fab(),1,"on "+tab);}
-  /* Clear of the dock: its bottom edge sits above the dock's top. */
-  const r=await page.evaluate(()=>{const f=document.querySelector("#cfab .cfab").getBoundingClientRect(),d=document.querySelector("nav .dock").getBoundingClientRect();return [f.bottom<=d.top,f.right<=innerWidth];});
-  eq(r,[true,true],"above the dock, on screen");
+  /* Docked beside the dock, in its band: it covers no content and nothing of the dock. */
+  for(const w of [390,360,320]){await page.setViewportSize({width:w,height:780});await pause(page,250);
+    const r=await page.evaluate(()=>{const f=document.querySelector("#cfab .cfab").getBoundingClientRect(),d=document.querySelector("nav .dock").getBoundingClientRect();
+      return [Math.abs(f.bottom-d.bottom)<2,f.left>=d.right-1,f.right<=innerWidth];});
+    eq(r,[true,true,true],w+": beside the dock, on screen");}
+  await page.setViewportSize({width:390,height:844});await pause(page,200);
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("backup");});await pause(page,300);
   eq(await fab(),0,"not over a sheet");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
@@ -2634,6 +2790,25 @@ await test("Floating Coach: on the tab roots, never over a workout, a sheet or t
   eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["weights","sore","missed"],"the workout's own questions");
   await page.keyboard.press("Escape");await pause(page,500);
   eq(await ev(page,"[V.coach,V.logIdx,V.draft.w,S.active.entries[0].sets.length,document.getElementById('in_r').value]"),[null,...before,"11"],"closed, the workout as it was");
+});
+await test("Layout: scrolled to the end, every screen's content ends above the dock, and the Coach launcher covers no card on any of them",async page=>{
+  for(const w of [390,320])for(const lang of ["en","ar"]){
+    await page.setViewportSize({width:w,height:740});
+    await page.evaluate(async l=>{(await import("/js/state.js")).S.prefs.lang=l;(await import("/js/ui/render.js")).render();},lang);await pause(page,200);
+    for(const tab of ["train","food","progress","coach"]){
+      await page.evaluate(()=>window.scrollTo(0,0));await pause(page,250);await tapTab(page,tab);await pause(page,400);
+      for(const y of [0,1e6]){
+        await page.evaluate(y=>window.scrollTo(0,y),y);await pause(page,450);
+        const r=await page.evaluate(()=>{const d=document.querySelector("nav .dock").getBoundingClientRect(),f=document.querySelector("#cfab .cfab");
+          const fr=f&&f.getBoundingClientRect(),hit=[],cards=[...document.querySelectorAll("#app .card, #app button, #app .num")].filter(e=>e.getClientRects().length);
+          const over=(a,b)=>a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1;
+          for(const c of cards){const cr=c.getBoundingClientRect();if(fr&&over(cr,fr))hit.push((c.className||c.tagName)+"");}
+          const vis=getComputedStyle(document.getElementById("nav")).visibility==="visible"&&d.top<innerHeight;
+          const last=Math.max(...[...document.querySelectorAll("#app > *")].map(e=>e.getBoundingClientRect().bottom));
+          if(fr&&fr.top<d.top-1)hit.push("(above the dock band)");
+          return {hit,end:vis?last<=d.top+1:true,dead:document.documentElement.scrollHeight-(scrollY+innerHeight)};});
+        if(y?r.hit.length:r.hit.some(h=>h[0]==="("))throw new Error(w+" "+lang+" "+tab+" @"+y+": the launcher covers "+r.hit.join(", "));
+        if(y&&!r.end)throw new Error(w+" "+lang+" "+tab+": the content ends under the dock");}}}
 });
 /* ---- Phase 1 of the visual audit ---- */
 /* The set card says last time once, for the set being done (workout-spec.md); before the

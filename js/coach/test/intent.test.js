@@ -19,7 +19,15 @@ var EN=[
   ["What do I train tomorrow?","tomorrow"],["how did my last workout go","last"],["is today a rest day","today"],
   ["What should I eat for the rest of the day?","rest"],["Is there other food options u can provide with same macros","swap"],
   ["I want to replace dinner","swap"],["what can I eat instead of rice","swap"],["how much protein in eggs","foodinfo"],
-  ["calories in koshari","foodinfo"],["nutrition facts of oats","foodinfo"]];
+  ["calories in koshari","foodinfo"],["nutrition facts of oats","foodinfo"],
+  /* Requests: the matcher says what kind; js/ui/agent.js finds what they name. */
+  ["add leg press to legs day","exadd"],["remove leg press from my program","exremove"],["swap squat for leg press","exswap"],
+  ["log 200g chicken breast for lunch","foodlog"],["I ate two eggs","foodlog"],["I weighed 82 this morning","weighlog"],["redo my assessment","reassess"],
+  /* How training works, answered from the knowledge files. */
+  ["how many reps for hypertrophy","kreps"],["how many sets should I do per exercise","ksets"],["how long should I rest between sets","krest"],
+  ["how many days a week should I train","kfreq"],["how many sets a week for chest","kvolume"],["what tempo should I lift at","ktempo"],
+  ["how many warm up sets","kwarm"],["how long should a workout be","kdur"],["how is my 1rm calculated","k1rm"],
+  ["what's today","today"]];
 var AR=[
   ["اتمرن ايه النهارده؟","today"],["تمرين النهارده ايه","today"],["اشيل كام في البنش؟","weights"],["ازود الوزن امتى","weights"],
   ["اكل ايه دلوقتي","eat"],["فاضل كام سعرات","eat"],["انا جعان","eat"],["انا ماشي صح؟","track"],["عامل ايه الاسبوع ده","track"],
@@ -30,7 +38,9 @@ var AR=[
   ["اشرب مايه قد ايه","water"],["الخطوات","steps"],["ساعدني","help"],["السلام عليكم","hello"],["شكرا","thanks"],
   ["بينش بريس كام؟","weights"],["ديدليفت كام","weights"],["اتمرن ايه بكره","tomorrow"],["اخر تمرين كان ازاي","last"],
   ["اكل ايه باقي اليوم","rest"],["عايز حاجة تانية بنفس الماكروز","swap"],["بديل للرز","swap"],["كام بروتين في البيض","foodinfo"],
-  ["كم بروتين في البيض","foodinfo"],["ماذا آكل الآن","eat"],["akol eh delwa2ty","eat"]];
+  ["كم بروتين في البيض","foodinfo"],["ماذا آكل الآن","eat"],["akol eh delwa2ty","eat"],
+  ["ضيف ليج بريس ليوم الرجل","exadd"],["شيل السكوات","exremove"],["بدل السكوات بالليج بريس","exswap"],["اكلت فراخ","foodlog"],
+  ["وزني النهارده ٨٢","weighlog"],["اعيد التقييم","reassess"],["الراحه بين المجموعات قد ايه","krest"],["عدد التكرارات للعضل","kreps"]];
 
 function run(t){
   function miss(list){return list.filter(function(x){return intentOf(x[0]).id!==x[1];})
@@ -60,6 +70,10 @@ function run(t){
   t.eq(intentOf("how much protein in a day do I need").ranked.slice(0,2),["foodinfo","protein"],"ranked: the best and the next");
   /* Nothing to answer: unknown, never a guess. */
   t.eq([intentOf("").id,intentOf("asdf qwer").id,intentOf("   ").id],["unknown","unknown","unknown"],"nonsense and empty are unknown");
+  /* Numbers a request names: a body weight (pounds converted), a portion in grams. */
+  t.eq([intentOf("I weigh 82.5 kg").kg,intentOf("I weigh 180 lb").kg,intentOf("وزني ٨٢٫٥").kg,intentOf("log 150 g rice").grams],[82.5,81.6,82.5,150],"weights and grams read from the request");
+  /* "swap" alone is still a food swap; an exercise swap needs the two named. */
+  t.eq([intentOf("other foods with the same macros").id,intentOf("swap my lunch").id],["swap","swap"],"food swaps stay food swaps");
   t.clean(intentOf("what should I train today"),"no NaN or undefined");}
 
 export {run};

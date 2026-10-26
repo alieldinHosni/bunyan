@@ -12,7 +12,8 @@
      app     js/app.js           boot and wiring: nothing imports it, and it answers no tap itself
              (taps are answered in js/ui/handlers/, one module per domain)
      vendor  js/vendor/          third-party code as shipped (pdf.js), for the engine only
-     knowledge js/knowledge/     leaf data from the textbooks: imports nothing (the spec's rule); i18n reads its cue words
+     knowledge js/knowledge/     leaf data from the textbooks: imports nothing (the spec's rule); i18n reads its cue
+                                 words, and the engine reads it for the coach's technical answers (js/engine/kb.js)
 
    A view may use another view only to show it (Coach shows the planning screens,
    Training shows the logger): the list below. Logic two views need lives in the
@@ -56,7 +57,7 @@ const MAY = {
   data:   ["data", "core:util"],
   i18n:   ["i18n", "data", "core", "knowledge"],
   core:   ["core", "data", "i18n"],
-  engine: ["engine", "coach", "data", "i18n", "core", "vendor"],
+  engine: ["engine", "coach", "data", "i18n", "core", "vendor", "knowledge"],
   ui:     ["ui", "view", "engine", "coach", "data", "i18n", "core"],
   view:   ["ui", "view", "engine", "coach", "data", "i18n", "core"],
   app:    ["ui", "view", "engine", "coach", "data", "i18n", "core"]};
@@ -103,14 +104,15 @@ for (const f of files){
 
 /* app.js is boot and wiring. Taps are answered in js/ui/handlers/, one module per
    domain, registered by app.js at boot; those modules do not import each other (only
-   the registry and the helpers they share), so the order their branches are tried in
+   the registry, the helpers they share, and the coach's named actions, which register
+   no branch of their own), so the order their branches are tried in
    is written in one place, app.js. */
 {
   const app = fs.readFileSync(path.join(ROOT, "js/app.js"), "utf8");
   if (/\bif\s*\(\s*D\.[A-Za-z]/.test(app)) bad.push("js/app.js answers a tap itself: tap branches belong in js/ui/handlers/");
   for (const f of files.filter(f => f.startsWith("js/ui/handlers/")))
     for (const to of graph[f])
-      if (to.startsWith("js/ui/handlers/") && !/\/(registry|common)\.js$/.test(to))
+      if (to.startsWith("js/ui/handlers/") && !/\/(registry|common|actions)\.js$/.test(to))
         bad.push(`${f} imports ${to}: handler modules share code through common.js only`);
 }
 
