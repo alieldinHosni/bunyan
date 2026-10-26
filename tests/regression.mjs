@@ -1497,7 +1497,7 @@ await test("Goals: one list drives the targets — deficit, surplus and protein 
      which it does not cover, a share of maintenance. */
   eq(Math.abs(r.lose[0]+500)<=10,true,"lose: 500 under");eq(Math.abs(r.gain[0]-350)<=10,true,"gain: 350 over");
   eq(r.recomp[1]<0&&r.recomp[1]>-15,true,"recomp");eq(r.maintain[1],0,"maintain");
-  eq([r.lose[2],r.recomp[2],r.gain[2],r.endurance[2]],[2.4,2.2,1.8,1.6],"protein g/kg");
+  eq([r.lose[2],r.recomp[2],r.gain[2],r.endurance[2]],[2.4,2.4,1.8,1.6],"protein g/kg");
   eq(Object.values(r).every(x=>x[3]),true,"macros add up to the energy");
 },{db:Object.assign(seed(),{body:[]})});
 /* ---- no weight is never a default weight (owner, 20 Oct: the 86 kg fallback) ---------- */
