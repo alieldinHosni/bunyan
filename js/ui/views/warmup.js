@@ -75,6 +75,9 @@ function vWarm(a){
   var keys=[pk].concat(w.own?[]:w.drills.map(function(d){return d.name;}));
   var nDone=keys.filter(function(k){return done[k];}).length;
   var h='<section class="wu wu2">'
+   /* The warm-up's picture: the runner on the steps, behind the header (the workout's
+      ground is flat, so it lives in the card). */
+   +'<div class="wu-art" aria-hidden="true"></div>'
    +'<div class="wu-head"><span class="shk">'+t("Before you start")+' · '+t("About {n} min").replace("{n}",w.min)+'</span>'
    +'<h1>'+t("Warm-up")+'</h1>'
    +(w.focus.length?'<p class="sub">'+esc(t("for {m}").replace("{m}",muscles(w.focus)))+'</p>':'')

@@ -5,13 +5,13 @@
    previous release's JS for one launch: markup the stylesheet no longer styles.
    Cache-first for images only.
    Bump CACHE whenever you change index.html. */
-const CACHE = "bunyan-v145";
+const CACHE = "bunyan-v146";
 /* instructions.json (595 KB) is deliberately absent: it is cached on first use by the
    catch-all handler below, so it no longer blocks first install. */
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
                "./exercises.json", "./foods.json",
                "./icon-180.png", "./icon-512.png", "./icon-maskable-512.png", "./icon-red-180.png", "./icon-mono-180.png",
-               "./mark.png", "./intro.jpg", "./img/ground-red.jpg", "./img/ground-blue.jpg", "./img/ground-sage.jpg",
+               "./mark.png", "./intro.jpg", "./img/page-home.jpg", "./img/page-training.jpg", "./img/page-workout.jpg", "./img/page-warmup.jpg", "./img/page-food.jpg", "./img/page-coach.jpg", "./img/page-progress.jpg", "./img/page-profile.jpg",
                /* The design's typefaces. Precached because the app draws its whole
                   identity from them — offline without the fonts falls back to system
                   type. (The icons are drawn from the stylesheet itself now, so there

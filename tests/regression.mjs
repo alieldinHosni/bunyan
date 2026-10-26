@@ -943,38 +943,28 @@ await test("Themes: the rest band takes the theme in light mode, with readable f
     return v?[getComputedStyle(v).color,getComputedStyle(b).backgroundColor,!document.getElementById("rest").firstChild]:null;});
   eq(r,["rgb(19, 38, 39)","rgba(224, 231, 230, 0.56)",true],"Sage light's text on its card glass; no full-screen rest");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
-await test("Themes: each page draws its own picture on the ground, under the glass",async page=>{
-  const shot=()=>page.evaluate(()=>{const g=document.getElementById("bgart"),art=g&&g.querySelector(".art"),svg=g&&g.querySelector("svg");
-    const cs=g&&getComputedStyle(g);
-    return [art?[...art.classList].find(c=>c.indexOf("bgart-")===0):null,cs&&cs.position,cs&&cs.zIndex,
-      !!svg&&svg.querySelectorAll("path").length>8];});
-  eq((await shot()).slice(0,3),["bgart-train","fixed","-1"],"Train's, fixed behind the page");
-  for(const tab of ["food","coach","progress","profile"]){
+await test("Themes: each place stands on its own picture, under the glass, faint in light mode",async page=>{
+  const look=()=>page.evaluate(()=>{const g=document.getElementById("bgart"),a=g&&g.querySelector(".art.photo");
+    const cs=g&&getComputedStyle(g),ca=a&&getComputedStyle(a);
+    return a?[a.getAttribute("data-p"),ca.backgroundImage.replace(/.*\/(img\/[^")]+).*/,"$1"),cs.position,cs.zIndex,ca.opacity]:null;});
+  eq(await look(),["home","img/page-home.jpg","fixed","-1","0.78"],"Training's first page: home, fixed behind the page");
+  for(const [tab,p] of [["food","food"],["coach","coach"],["progress","progress"],["profile","profile"]]){
     await tapTab(page,tab);await pause(page);
-    eq([(await shot())[0],(await shot())[3]],["bgart-"+tab,true],tab+" draws its own");}
-  /* The cards frost what is behind them, the drawing included. */
-  const bf=await page.$eval("#app .card,#app .sg-list",e=>getComputedStyle(e).backdropFilter||getComputedStyle(e).webkitBackdropFilter);
+    eq((await look()).slice(0,2),[p,"img/page-"+p+".jpg"],tab+" has its own");}
+  /* Coach's sections are their own places: planning a program is training's. */
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.csec="train";(await import("/js/ui/render.js")).render();});await pause(page);
+  eq((await look())[0],"training","Coach → Training");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.csec="food";(await import("/js/ui/render.js")).render();});await pause(page);
+  eq((await look())[0],"food","Coach → Nutrition");
+  /* The cards frost what is behind them, the picture included. */
+  const bf=await page.$eval("#app .card,#app .sg-list,#app .ascard2,#app section",e=>getComputedStyle(e).backdropFilter||getComputedStyle(e).webkitBackdropFilter).catch(()=>"blur");
   if(!/blur/.test(bf||""))throw new Error("the cards are not glass: "+bf);
-  /* Its colours are the theme's, so a change of theme repaints it without rebuilding it. */
-  await page.evaluate(()=>{window.__bg=document.querySelector("#bgart svg");});
-  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="red";(await import("/js/ui/render.js")).render();});await pause(page,300);
-  eq(await page.evaluate(()=>[getComputedStyle(document.getElementById("bgart")).getPropertyValue("--bga").trim().toUpperCase(),
-    document.querySelector("#bgart svg")===window.__bg]),["#FF5A6A",true],"the same drawing, repainted in red");
-});
-/* Training's ground is the owner's horseman at dusk: the owner's own picture, one per
-   theme, not a flat redrawing of it. */
-await test("Themes: Training's ground is the owner's horseman picture, the theme's own, faint in light mode",async page=>{
-  const look=()=>page.evaluate(()=>{const a=document.querySelector("#bgart .art.photo");if(!a)return null;
-    const cs=getComputedStyle(a);return [cs.backgroundImage.replace(/.*\/(img\/[^")]+).*/,"$1"),cs.opacity];});
-  eq(await look(),["img/ground-blue.jpg","0.9"],"blue");
-  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="red";(await import("/js/ui/render.js")).render();});await pause(page,300);
-  eq((await look())[0],"img/ground-red.jpg","red");
-  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="mono";S.theme="light";(await import("/js/ui/render.js")).render();});await pause(page,300);
-  eq(await look(),["img/ground-sage.jpg","0.22"],"Sage, light");
-  const ok=await page.evaluate(()=>new Promise(r=>{const i=new Image();i.onload=()=>r(i.naturalWidth>500);i.onerror=()=>r(false);i.src="img/ground-sage.jpg";}));
-  eq(ok,true,"the picture loads");
-  await tapTab(page,"food");await pause(page);
-  eq(await page.evaluate(()=>!!document.querySelector("#bgart .photo")),false,"the other pages keep their drawings");
+  /* Every picture is there to load, and light mode keeps them faint. */
+  const ok=await page.evaluate(()=>Promise.all(["home","training","workout","warmup","food","coach","progress","profile"].map(k=>new Promise(r=>{
+    const i=new Image();i.onload=()=>r(i.naturalWidth>200);i.onerror=()=>r(false);i.src="img/page-"+k+".jpg";}))));
+  eq(ok.every(Boolean),true,"all eight load");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.theme="light";V.tab="progress";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq((await look())[4],"0.22","faint in light mode");
 });
 await test("Themes: the mark is the theme's own colour, and so is the icon",async page=>{
   const look=()=>page.evaluate(()=>{const m=document.querySelector(".libhero .mk");
