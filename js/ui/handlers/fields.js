@@ -73,7 +73,12 @@ function onInput(ev){
   if(id.indexOf("in_")===0){
     var k=id.slice(3),v=parseFloat(ev.target.value);
     if((k==="w"||k==="r")&&V.draftSg){V.draftSg=false;
-      [].forEach.call(document.querySelectorAll("#in_w,#in_r"),function(f){f.classList.remove("sg");});}
+      [].forEach.call(document.querySelectorAll("#in_w,#in_r"),function(f){f.classList.remove("sg");});
+      /* Touched, the numbers are the lifter's own, not the app's suggestion. */
+      var sgt=document.getElementById("sgTag");if(sgt)sgt.hidden=true;}
+    /* The set card's boxes are as wide as their figure, with the unit beside it. */
+    if(ev.target.classList.contains("val-n")){ev.target.style.width=(Math.max(1,ev.target.value.length)+0.4)+"ch";
+      ev.target.classList.toggle("long",ev.target.value.length>3);}
     /* The field shows the user's unit; the draft is always kilograms. A cleared steps
        field is nought, so Save never keeps a figure no longer on screen. */
     if(isFinite(v))V.draft[k]=(k==="w")?toKg(v):v;

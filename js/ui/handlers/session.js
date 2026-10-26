@@ -149,7 +149,14 @@ function register(){
     var max=id==="rpe"?10:1e6;
     V.draft[id]=Math.min(max,Math.max(min,r1(num(cur)+d1)));
     render();return;});
-  key("rpe",function(D){V.draft.rpe=+D.rpe;render();return;});
+  /* The set card's RPE chips: tapping the chosen one again takes it back, since how a
+     set felt is the lifter's to say or leave out. */
+  key("rpe",function(D){V.draft.rpe=V.draft.rpe===+D.rpe?null:+D.rpe;render();return;});
+  key("sstep",function(D){W.stepDraft(D.sstep,+D.d<0?-1:1);return;});
+  key("addwu",function(){W.addWarmup();return;});
+  key("undolog",function(){W.undoLogged();return;});
+  has("delok",function(D){W.deleteSet(+D.delok);return;});
+  key("delno",function(){W.cancelDelete();return;});
   key("actint",function(D){V.draft.rpe=+D.actint;render();return;});
   key("logact",function(){W.logBout();return;});
   /* Live tracking (js/ui/run.js). */
@@ -197,7 +204,6 @@ function register(){
   /* The plan's other choice for this exercise, before anything is logged on it. */
   on(function(D){return D.swapalt&&S.active;},function(){var ea=S.active.entries[V.logIdx];if(!ea||!ea.alt||ea.sets.length)return;
     swapAlt(ea.alt,V.logIdx,ea.name);return;});
-  on(function(D){return D.warm!==undefined&&S.active;},function(D){W.toggleWarm(+D.warm);return;});
   key("plates",function(){openSheet("plates");return;});
   has("bar",function(D){V.bar=+D.bar;render();return;});
   key("note",function(){openSheet("note");return;});

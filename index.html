@@ -141,7 +141,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accentHi:var(--sky-blue); --onAccent:var(--night-navy); --accent-deep:var(--steel-blue);
   --accentSoft:rgba(138,176,236,.13); --secondary:#D4D9E2; --figure:#E6ECF7; --ok:var(--signal-green);
   --okSoft:#14301A; --onOk:var(--night-navy); --gold:#F0C658; --warning:#FFB561;
-  --danger:#FF6B70; --danger-fill:#E5323E; --danger-deep:#B3131B;
+  --danger:#FF6B70; --danger-fill:#E5323E; --danger-deep:#B3131B; --onDanger:#FFFFFF;
   --glow:rgba(92,127,181,.28);
   --glow-rgb:92,127,181; --mac-p:#5E8FE8; --mac-c:#21A68A; --mac-f:#D27C2C;
   --glass:rgba(18,26,48,.78); --glass-solid:rgba(18,26,48,.96); --hair:rgba(212,217,226,.09);
@@ -164,7 +164,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --onAccent:#FFFFFF; --accent-deep:#2C5390; --accentSoft:#DCE7F8;
   --secondary:#0B1226; --figure:#0B1226; --ok:#177530; --okSoft:#DDF2E5;
   --onOk:#FFFFFF; --gold:#7A6213; --warning:#8A5600; --danger:#C41E2A; --danger-fill:#E5323E;
-  --danger-deep:#B3131B;
+  --danger-deep:#B3131B; --onDanger:#FFFFFF;
   --glow:rgba(92,127,181,.22); --glow-rgb:92,127,181;
   --mac-p:#2F5A96; --mac-c:#14936B; --mac-f:#B8641E; --glass:rgba(18,26,48,.88);
   --glass-solid:rgba(18,26,48,.97); --hair:rgba(11,18,38,.10); --hair-hi:rgba(255,255,255,.16);
@@ -188,7 +188,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accentHi:var(--machine-red); --onAccent:var(--glacier-blue); --accent-deep:#A80E19;
   --accentSoft:rgba(255,46,58,.13); --secondary:var(--glacier-blue); --figure:var(--glacier-blue);
   --ok:#22A34B; --okSoft:#0E2415; --onOk:#0D0709; --gold:#D9B13A; --warning:#E8A33A;
-  --danger:var(--machine-red); --danger-fill:var(--machine-red); --danger-deep:#A80E19;
+  --danger:var(--machine-red); --danger-fill:var(--machine-red); --danger-deep:#A80E19; --onDanger:#FFFFFF;
   --glow:rgba(255,46,58,.22); --glow-rgb:255,46,58; --mac-p:var(--machine-red); --mac-c:#22A6B3;
   --mac-f:#7F78F2; --glass:rgba(30,12,17,.74); --glass-solid:rgba(30,12,17,.96);
   --hair:rgba(255,226,230,.08); --hair-hi:rgba(255,226,230,.15); --seg-track:rgba(255,226,230,.05);
@@ -209,7 +209,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --sub:#334750; --dim:#465B65; --faint:#465B65; --accent:var(--machine-red); --accentHi:#C30F1C;
   --onAccent:var(--glacier-blue); --accent-deep:#A80E19; --accentSoft:#FFE3E5; --secondary:#0A0B0E;
   --figure:#0A0B0E; --ok:#177530; --okSoft:#DDF2E5; --onOk:#FFFFFF; --gold:#7A6213;
-  --warning:#8A5600; --danger:#C30F1C; --danger-fill:var(--machine-red); --danger-deep:#A80E19;
+  --warning:#8A5600; --danger:#C30F1C; --danger-fill:var(--machine-red); --danger-deep:#A80E19; --onDanger:#FFFFFF;
   --glow:transparent;
   --glow-rgb:255,46,58; --mac-p:#D41E2A; --mac-c:#009AA6; --mac-f:#6D5FE6;
   --glass:rgba(10,11,14,.86); --glass-solid:rgba(10,11,14,.97); --hair:rgba(10,40,60,.10);
@@ -233,7 +233,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accent-deep:#B3C8C3; --accentSoft:rgba(220,231,228,.10); --secondary:#FFFFFF;
   --figure:#FFFFFF; --ok:#5DBB8A; --okSoft:#10261B; --onOk:#0D1A1B;
   --gold:#E3C26B; --warning:#E3B04B; --danger:#FF5C61; --danger-fill:#E5323E;
-  --danger-deep:#B3131B;
+  --danger-deep:#B3131B; --onDanger:#FFFFFF;
   --glow:rgba(120,155,150,.22); --glow-rgb:120,155,150; --mac-p:#DCE7E4;
   --mac-c:#5FAFA5; --mac-f:#D6A35A; --glass:rgba(16,30,32,.74); --glass-solid:rgba(16,30,32,.96);
   --hair:rgba(220,235,232,.09); --hair-hi:rgba(220,235,232,.16); --seg-track:rgba(220,235,232,.05);
@@ -258,7 +258,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --accent-deep:#0A1F23; --accentSoft:rgba(20,46,51,.10); --secondary:#142E33;
   --figure:#142E33; --ok:#1D7448; --okSoft:#D7ECDF; --onOk:#FFFFFF;
   --gold:#7A6213; --warning:#8A5600; --danger:#B8222D; --danger-fill:#E5323E;
-  --danger-deep:#B3131B;
+  --danger-deep:#B3131B; --onDanger:#FFFFFF;
   --glow:transparent; --glow-rgb:20,46,51;
   --mac-p:#142E33; --mac-c:#3F8E86; --mac-f:#B8732A; --glass:rgba(20,40,43,.84);
   --glass-solid:rgba(20,40,43,.97); --hair:rgba(19,38,39,.12); --hair-hi:rgba(255,255,255,.50);
@@ -305,7 +305,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
 [data-palette="red"],[data-palette="red"] [data-theme="dark"]:not([data-palette]){
   --dock-bar:var(--glass); --dock-bar-solid:var(--glass-solid); --dock-hair:rgba(255,226,230,.14);
   --dock-dot:rgba(255,226,230,.07); --dock-dot-solid:#2A141A; --dock-dot-edge:rgba(255,226,230,.10);
-  --dock-dot-ink:#D9BEC3; --dock-pill:var(--machine-red); --dock-pill-ink:var(--glacier-blue); --dock-flag:var(--machine-red);
+  --dock-dot-ink:#D9BEC3; --dock-pill:var(--accent-deep); --dock-pill-ink:var(--glacier-blue); --dock-flag:var(--machine-red);
   --ground:radial-gradient(115% 55% at 85% -8%,rgba(255,46,58,.34) 0%,transparent 60%),
     radial-gradient(95% 60% at 0% 105%,rgba(150,22,48,.34) 0%,transparent 62%),
     radial-gradient(70% 40% at 0% 38%,rgba(219,246,255,.05) 0%,transparent 70%),
@@ -316,7 +316,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
 [data-palette="red"][data-theme="light"],[data-palette="red"] [data-theme="light"]:not([data-palette]){
   --dock-bar:rgba(30,12,17,.80); --dock-hair:rgba(255,226,230,.16);
   --dock-dot:rgba(219,246,255,.10); --dock-dot-solid:#2A141A; --dock-dot-edge:rgba(219,246,255,.12);
-  --dock-dot-ink:#E3CBD0; --dock-pill:var(--machine-red); --dock-pill-ink:var(--glacier-blue); --dock-flag:#FF5C66;
+  --dock-dot-ink:#E3CBD0; --dock-pill:var(--accent-deep); --dock-pill-ink:var(--glacier-blue); --dock-flag:#FF5C66;
   --ground:radial-gradient(115% 55% at 85% -8%,rgba(255,46,58,.30) 0%,transparent 60%),
     radial-gradient(95% 60% at 0% 105%,rgba(110,190,220,.55) 0%,transparent 62%),
     linear-gradient(180deg,#EEFAFF 0%,#CDE9F4 100%);
@@ -345,6 +345,18 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --card:rgba(224,231,230,.56); --card-edge:rgba(255,255,255,.62);
   --map-water:rgba(120,160,160,.30); --map-park:rgba(120,160,160,.16);
 }
+/* ---- labels never sit on Machine Red (docs/design/token-requests.md §4, owner 20 Oct) --
+   Aliases of existing tokens, no new colours. The fill under a label is accent-deep in
+   Red (Glacier Blue on it is 6.80:1) and keeps a 1.5px Machine Red edge in Red dark, where
+   the deep fill alone is 2.61:1 against the page. Blue and Sage keep accent, which already
+   carries its label with room. Machine Red stays for fills with no text: bars, rings,
+   active marks. A destructive label sits on danger-deep in every theme, in onDanger. */
+:root,[data-palette],[data-theme]{--color-action-fill:var(--accent);--color-action-edge:transparent;
+  --color-danger-action-fill:var(--danger-deep)}
+[data-palette="red"],[data-palette="red"] [data-theme="dark"]:not([data-palette]){
+  --color-action-fill:var(--accent-deep);--color-action-edge:var(--accent)}
+[data-palette="red"][data-theme="light"],[data-palette="red"] [data-theme="light"]:not([data-palette]){
+  --color-action-fill:var(--accent-deep);--color-action-edge:transparent}
 /* ---- the live figure's stage, per theme (js/ui/mannequin.js) -------------------------
    The 3D figure is drawn by the graphics card, so its colours are read from these
    tokens rather than painted by CSS; the same six selectors as above, in the same order.
@@ -618,7 +630,7 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
    16px icon 8px before the label. min-height rather than height so a translated label
    that wraps grows the button instead of spilling out of it. */
 .btn{width:100%;padding:0 18px;border-radius:var(--rpill);border:none;
-  background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent);
+  background:linear-gradient(180deg,var(--color-action-fill),var(--accent-deep));color:var(--onAccent);
   font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:0;
   text-transform:none;margin-top:var(--s2);
   display:flex;align-items:center;justify-content:center;gap:8px;
@@ -858,9 +870,9 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
 @keyframes veilIn{from{background-color:transparent}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){
-  #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh{animation:none}}
+  #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh,.wsr.fresh .wtick,.sess .log.ok,.rb{animation:none}}
 body.noanim #app,body.noanim .sheetbox,body.noanim .sheet,
-body.noanim .restwrap,body.noanim .logbtn.done.fresh{animation:none}
+body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wtick,body.noanim .sess .log.ok,body.noanim .rb{animation:none}
 /* cursor:pointer is not decoration here. iOS Safari only delivers click events from
    a plain div when it looks interactive, which is why tapping the dimmed area above
    a sheet did nothing on a phone while working on a desktop. */
@@ -1650,6 +1662,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 :root.reduced .bar[data-anim] i,
 :root.reduced path.line[data-anim],
 :root.reduced .logbtn.done.fresh,
+:root.reduced .wsr.fresh .wtick,
+:root.reduced .sess .log.ok,
+:root.reduced .rb,
 :root.reduced .err{animation:none}
 :root.reduced .skel{animation:none}
 :root.reduced .ss-clock i{animation:none}
@@ -3555,6 +3570,209 @@ textarea.afnl.warn{border-color:var(--warning)}
 .addset2 span{font-size:18px;color:var(--accentHi)}
 :root:not(.tch) .addset2:active,.addset2.tapd{transform:scale(.96)}
 .btn.ss-next{border-radius:var(--r4);background:linear-gradient(180deg,var(--accent),var(--accent-deep));box-shadow:0 14px 30px -14px var(--accent-glow);margin-top:var(--s4)}
+/* ---- The workout screen (docs/design/workout-spec.md, revised by the owner 21 Oct) ----
+   Calm and fast to read mid-set: the exercise, the set's numbers, the check, then
+   everything else. The page is the theme's flat ground (no drawing behind numbers); the
+   set card, the rest, the next exercise and the sets are the theme's translucent card
+   glass with its rim, which needs no blur over a flat ground, so the header is the one
+   blurred layer. Labels sit on --color-action-fill, never on Machine Red. */
+body.wkflat::before,body.wkflat #bgart{display:none}
+body.wkflat #app{--gutter:20px}
+[dir="rtl"] .sess .flip{transform:scaleX(-1)}
+.sess .gl{stroke-width:2}
+/* The app's glass (see "Glass, everywhere") stops at the workout's header: fields and
+   buttons in the content are flat. */
+.sess .wb :is(input,select,textarea,.ready,.btn.g,.card){-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
+.sess .wb :is(input,select,textarea){background-color:var(--surface);border-color:var(--border)}
+.sess .wglass{background:var(--card);border:1px solid var(--card-edge);box-shadow:inset 0 1px 0 var(--glass-hi)}
+
+/* WorkoutHeader: close, day and position (opens today's list), clock, more, a 3px bar. */
+.sess .ss-top{margin-bottom:var(--s3);padding-bottom:0;border-bottom:1px solid var(--hair)}
+.sess .ss-row{display:grid;grid-template-columns:var(--hit) minmax(0,1fr) auto var(--hit);gap:var(--s3);align-items:center;min-height:52px}
+.sess .ss-back,.sess .ss-more{width:var(--hit);height:var(--hit);margin:0;padding:0;display:grid;place-items:center;border-radius:50%;
+  border:1px solid var(--glass-btn-edge);background:var(--glass-btn);color:var(--text)}
+.sess .ss-title{min-height:var(--hit);justify-content:center;padding:0}
+.sess .ss-name{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sub)}
+[dir="rtl"] .sess .ss-name{letter-spacing:0;font-size:13px}
+.sess .ss-meta{display:flex;align-items:center;gap:var(--s1);margin:0;font-size:16px;font-weight:700;color:var(--text)}
+.sess .ss-caret{width:16px;height:16px}
+.sess .ss-clock{margin:0;padding:0 var(--s1);border:0;border-radius:0;background:none;box-shadow:none;align-items:flex-end}
+.sess .ss-clock .num{color:var(--sub);font-size:16px}
+.sess .ss-bar{height:3px;margin:var(--s2) calc(-1 * var(--gutter)) 0;border-radius:0;background:var(--bar-track)}
+.sess .ss-bar i{height:3px;border-radius:0;background:var(--accent)}
+
+.sess .wb{display:grid;gap:var(--s3)}
+.sess .wb>*{min-width:0;margin-block:0}
+
+/* ExerciseLine: the exercise is the heading; the prescription under it; how to do it
+   and swap beside it; the two adds as one row of quiet chips. */
+.wexl{display:grid;grid-template-columns:minmax(0,1fr) var(--hit) var(--hit);gap:var(--s1) var(--s2);align-items:center}
+.wexl .ex-name{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.15;margin:0;min-width:0}
+.sess .ib{width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border-radius:50%;
+  border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.wexl-s{grid-column:1/-1;margin:0;color:var(--sub);font-size:15px}
+.wexl-s .ex-light{color:var(--text);font-weight:700}
+.wexl .adds{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s1)}
+.wexl .chip{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;min-height:var(--hit);padding:0 var(--s4);border-radius:var(--rpill);
+  border:1px dashed var(--border);background:transparent;color:var(--text);font-weight:600;font-size:14px}
+.wexl .chip .gl{width:18px;height:18px}
+.wexl .chip.wkwu{border:1px solid var(--border);background:var(--surface)}
+.wexl .chip.wkwu .gl{color:var(--gold)}
+
+/* RestBand: compact, above the set. Time up, it fills with the action fill and is the
+   alert. */
+.rb{display:grid;gap:10px;padding:var(--s3) var(--s4);border-radius:var(--r4)}
+.rb-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
+.rb-l{display:flex;align-items:baseline;gap:var(--s3)}
+.rb-k{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .rb-k{letter-spacing:0;font-size:13px}
+.rb-t{font-family:var(--display);font-size:44px;font-weight:700;line-height:1;letter-spacing:-.01em;color:var(--text)}
+.rb-ctl{display:flex;gap:var(--s2)}
+.rb-ctl button{width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border-radius:50%;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-weight:700;font-size:14px}
+.rb-ctl .gl{width:18px;height:18px}
+.rb-ctl :is(.i-pause,.i-play){fill:currentColor;stroke:none}
+.rb .i-play,.rb.paused .i-pause{display:none}
+.rb.paused .i-play{display:block}
+.rb-bar{height:4px;border-radius:2px;background:var(--bar-track);overflow:hidden}
+.rb-bar i{display:block;height:100%;border-radius:2px;background:var(--accent);transition:width 1s linear}
+.rb.over{background:var(--color-action-fill);border:1.5px solid var(--color-action-edge);color:var(--onAccent);gap:2px}
+.rb-done{font-family:var(--display);font-size:26px;font-weight:700;line-height:1.15}
+.rb-sub{font-family:var(--display);font-size:16px;font-weight:700}
+
+/* SetCard: the one thing to read at arm's length. */
+.wsc{display:grid;gap:var(--s3);padding:var(--s4);border-radius:var(--r5)}
+.sc-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);min-height:24px}
+.sg-tag{margin-inline-start:auto;padding:2px 10px;border-radius:var(--rpill);border:1px solid var(--border);
+  color:var(--sub);font-size:12px;font-weight:700}
+.sg-tag[hidden]{display:none}
+.sc-g{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4)}
+.sc-g.one{grid-template-columns:1fr}
+.sc-g:not(.one) .val+.val{border-inline-start:1px solid var(--hair);padding-inline-start:var(--s4)}
+.wsc .val{display:grid;gap:var(--s2);justify-items:center;text-align:center;min-width:0}
+.wsc .val-k{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .wsc .val-k{letter-spacing:0;font-size:13px}
+.val-nw{display:flex;align-items:baseline;justify-content:center;gap:6px;max-width:100%;min-width:0}
+.sess .wsc .val-n{min-width:1.4ch;max-width:100%;height:auto;margin:0;padding:0;border:0;border-bottom:2px solid transparent;border-radius:0;
+  background:none;box-shadow:none;color:var(--text);text-align:center;font-family:var(--display);font-weight:700;font-size:64px;
+  line-height:1.05;letter-spacing:-.02em;-moz-appearance:textfield;appearance:textfield}
+.sess .wsc .val-n::-webkit-inner-spin-button,.sess .wsc .val-n::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.sess .wsc .val-n:focus{outline:none;border-bottom-color:var(--accent)}
+/* A suggestion reads one step quieter than numbers the lifter set (and says so in the
+   tag above), so it is never taken for something done. */
+.sess .wsc .val-n.sg{color:var(--sub)}
+.val-u{font-size:18px;font-weight:600;color:var(--sub)}
+.wsc .wstp{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);width:100%}
+.wsc .wstp button{min-height:52px;display:flex;align-items:center;justify-content:center;gap:2px;padding:0;border-radius:var(--r4);
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--display);font-size:17px;font-weight:700}
+.wsc .wstp .gl{width:18px;height:18px;stroke-width:2.4}
+:root:not(.tch) .wsc .wstp button:active,.wsc .wstp button.tapd{background:var(--accent-tint);border-color:var(--accent-edge)}
+.sess .wsc.small .val-n{font-size:min(48px,45cqi)}
+/* The figure fits its half of the card at any width: 62.5 and 102.5 step down, and on
+   the narrowest phones the unit moves up into the label. */
+.wsc .val{container-type:inline-size}
+.sess .wsc .val-n{font-size:min(64px,45cqi)}
+.sess .wsc .val-n.long{font-size:min(50px,30cqi)}
+.sess .wsc.small .val-n.long{font-size:min(40px,30cqi)}
+.val-ku{display:none}
+@container (max-width:130px){.wsc .val-u{display:none}.wsc .val-ku{display:inline}}
+.wsc.small .wstp button{min-height:48px}
+.sc-h{display:grid;gap:2px;padding-top:var(--s3);border-top:1px solid var(--hair);color:var(--sub);font-size:14px;line-height:1.4}
+.sc-h b{color:var(--text);font-weight:700}
+.sc-h .sc-cue{font-style:italic}
+.sc-rpe{display:grid;gap:var(--s2);text-align:center}
+.sc-rpe-c{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.sc-rpe-c button{min-height:var(--hit);border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
+  color:var(--text);font-weight:700;font-size:15px}
+.sc-rpe-c button.on{background:var(--accent-tint);border-color:var(--accent);color:var(--text)}
+.sc-wu{display:flex;align-items:center;gap:var(--s2);font-size:14px;font-weight:700;color:var(--text);min-width:0}
+.sc-wu p{margin:0;min-width:0}
+.sc-wu p span{color:var(--sub);font-weight:600}
+.sess .wub{width:24px;height:24px;flex:none;border-radius:50%;border:1.5px solid var(--gold);color:var(--text);
+  display:inline-grid;place-items:center;font-size:12px;font-weight:700}
+
+/* LogControl: the one primary action. A label and the check, on the action fill. */
+.sess .log{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);width:100%;min-height:64px;margin:0;
+  padding-block:10px;padding-inline:var(--s5) 10px;border:0;border-radius:var(--rpill);
+  background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);color:var(--onAccent);
+  font-family:var(--display);font-size:19px;font-weight:700;text-align:start;
+  transition:transform var(--m-press) var(--e-standard),filter var(--m-press) var(--e-standard)}
+:root:not(.tch) .sess button.log:active,.sess button.log.tapd{transform:scale(.98);filter:brightness(1.08)}
+.log-c{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;border:2px solid currentColor}
+.log-c .gl{width:22px;height:22px;stroke-width:2.6}
+.sess .log.ok{background:var(--ok);box-shadow:none;color:var(--onOk);padding-inline:10px;justify-content:flex-start;
+  animation:wkIn var(--m-comp) var(--e-decel)}
+.sess .log.ok .log-c{background:var(--onOk);color:var(--ok);border-color:var(--onOk)}
+.sess .log.ok b{flex:1;min-width:0;font-size:19px}
+.sess .undo{min-height:var(--hit);padding:0 18px;border-radius:var(--rpill);border:2px solid var(--onOk);background:transparent;
+  color:var(--onOk);font-weight:700;font-size:15px}
+@keyframes wkIn{from{opacity:0;transform:translateY(4px)}}
+.rb{animation:wkIn var(--m-comp) var(--e-decel)}
+
+/* "How do you feel today?" (readiness for the day, before the first set), compact. */
+.sess .ready{margin:0;padding:0;border:0;background:none}
+.sess .ready-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:14px;font-weight:600;
+  letter-spacing:0;text-transform:none;color:var(--sub)}
+.sess .ready-skip{color:var(--accentHi);font-weight:700;min-height:var(--hit)}
+.sess .ready-c{gap:6px}
+.sess .ready-c button{min-height:var(--hit);font-size:13.5px}
+.sess .readynote,.sess .painnote{margin:0}
+.sess .exalt{margin:0;justify-self:start}
+
+/* NextExercise: secondary, one row. */
+.nx{display:grid;grid-template-columns:auto minmax(0,1fr) 20px;align-items:center;gap:var(--s3);min-height:56px;padding:var(--s2) var(--s3);
+  border-radius:var(--r4);color:var(--text);text-align:start}
+.nx .thumbwrap,.nx .thumb{border-radius:10px}
+.nx small{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-inline-end:6px}
+[dir="rtl"] .nx small{letter-spacing:0;font-size:13px}
+.nx b{font-family:var(--display);font-size:16px;font-weight:700}
+.nx>span:not(.thumbwrap){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx .gl{width:20px;height:20px;color:var(--dim)}
+
+/* SetHistory: one list, hairlines between rows. Delete leads (settled); the state ends the
+   row: a filled tick (done; tap to take it back), the accent ring (now), an empty ring. */
+.wsl{display:grid;border-radius:var(--r4);overflow:hidden}
+.wsr{display:grid;grid-template-columns:var(--hit) minmax(0,1fr) var(--hit);align-items:center;gap:var(--s1);min-height:52px;
+  padding-inline:2px var(--s1);color:var(--sub)}
+.wsr+.wsr{border-top:1px solid var(--hair)}
+.wsr.did{color:var(--text)}
+.wsr.on{background:var(--accent-tint);color:var(--text)}
+.wsr .x{width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:none;color:var(--dim)}
+.wsr .x .gl{width:16px;height:16px}
+.wsr-t{display:flex;align-items:baseline;gap:10px;min-width:0;flex-wrap:wrap}
+.wsr-n{display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--text)}
+.wsr.pend .wsr-n{color:var(--sub);font-weight:600}
+.wsr-v{font-weight:600}
+.wsr.on .wsr-v{font-weight:700;color:var(--text)}
+.wsr.wkwu .wub{width:20px;height:20px;font-size:11px}
+.sess .wsr .wcell{min-width:1.4ch;max-width:6ch;height:auto;padding:0 0 1px;margin:0;border:0;border-bottom:1px dashed var(--border);border-radius:0;
+  background:none;color:var(--text);font:inherit;font-weight:700;text-align:center;-moz-appearance:textfield;appearance:textfield}
+.sess .wsr .wcell::-webkit-inner-spin-button,.sess .wsr .wcell::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.sess .wsr .wcell:focus{outline:none;border-bottom:1px solid var(--accent)}
+.wtick{width:28px;height:28px;margin:auto;padding:0;display:grid;place-items:center;border-radius:50%;position:relative;
+  border:0;background:var(--ok);color:var(--onOk)}
+/* 28px drawn, a 44px target. */
+.wsr button.wtick::after{content:"";position:absolute;inset:-8px}
+.wtick .gl{width:16px;height:16px;stroke-width:2.6}
+.wtick.cur{background:transparent;border:2px solid var(--accent)}
+.wtick.off{background:transparent;border:1.5px solid var(--hair-hi)}
+.wsr.fresh .wtick{animation:setpop var(--m-pop) var(--e-spring)}
+.wsr.ask{grid-template-columns:minmax(0,1fr) auto auto;gap:6px;padding-inline:var(--s4) 6px;background:var(--surface);color:var(--text);
+  box-shadow:inset 0 0 0 1px var(--danger)}
+.wsr.ask button{min-height:var(--hit);padding:0 var(--s4);border-radius:var(--rpill);font-weight:700;font-size:15px}
+.wsr.ask .del{border:1px solid var(--danger);background:transparent;color:var(--danger)}
+.wsr.ask .keep{border:1px solid var(--border);background:var(--raised);color:var(--text)}
+.sess .bwnote{margin:0}
+
+/* Tools: Skip and Add exercise as tiles; Remove and Something hurts? as quiet links. */
+.sess .tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:var(--s2)}
+.sess .tools button{min-height:48px;display:flex;align-items:center;justify-content:center;gap:var(--s2);border-radius:var(--r4);
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;font-size:14.5px}
+.sess .tools .gl{width:18px;height:18px}
+.sess .quiet{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--s1) var(--s5);margin-bottom:var(--s5)}
+.sess .quiet button{min-height:var(--hit);padding:0 var(--s1);border:0;background:none;color:var(--dim);font-size:14px;font-weight:600;
+  text-decoration:underline;text-underline-offset:3px}
+.sess .quiet button.on{color:var(--warning)}
 .ss-acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;margin:var(--s4) 0 8px}
 .ss-act{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 12px;border-radius:var(--r4);
   border:1px solid var(--border);background:var(--raised);color:var(--text);font-weight:600;font-size:14px}
@@ -3605,12 +3823,12 @@ textarea.afnl.warn{border-color:var(--warning)}
 .cf-b{color:var(--dim);font-size:15px;line-height:1.45;margin:8px auto 22px;max-width:30ch}
 .cf-acts{display:flex;flex-direction:column;gap:10px}
 .cf-acts .btn{margin:0;border-radius:var(--rpill);text-transform:none;letter-spacing:0;font-size:16px;min-height:54px}
-.cf-acts .cf-ok{background:linear-gradient(180deg,var(--accent),var(--accent-deep));
-  box-shadow:0 10px 26px -12px rgba(var(--glow-rgb),.7),inset 0 1px 0 rgba(255,255,255,.18)}
+.cf-acts .cf-ok{background:linear-gradient(180deg,var(--color-action-fill),var(--accent-deep));
+  box-shadow:inset 0 0 0 1.5px var(--color-action-edge),0 10px 26px -12px rgba(var(--glow-rgb),.7),inset 0 1px 0 rgba(255,255,255,.18)}
 .cf-acts .cf-no{background:var(--raised);border:1px solid var(--border)}
 /* A confirm that deletes (its icon is the bin) asks in the danger colour, which stays
    red in every theme; any other confirm's action is the theme's own primary. */
-.cf.bad .cf-acts .cf-ok{background:linear-gradient(180deg,var(--danger-fill),var(--danger-deep));color:#fff;
+.cf.bad .cf-acts .cf-ok{background:var(--color-danger-action-fill);color:var(--onDanger);
   box-shadow:0 10px 26px -12px rgba(var(--danger-rgb),.6),inset 0 1px 0 rgba(255,255,255,.18)}
 .cf-alt{background:none;border:none;color:var(--accentHi);font-family:inherit;font-weight:600;font-size:15px;
   padding:12px 0 2px;min-height:44px;cursor:pointer}
@@ -3669,6 +3887,27 @@ textarea.afnl.warn{border-color:var(--warning)}
 .rt-skip,.rt-main{text-transform:none;letter-spacing:0}
 
 /* ---- Workout complete (sheets.js "done") ------------------------------------------ */
+/* Workout complete (workout-spec.md): the ok check, the figures on raised, the record
+   card in gold, Done in the log control's style, then the questions under it. */
+.wfin{display:grid;gap:var(--s4);justify-items:center;text-align:center;padding-top:var(--s4)}
+.wfin-c{width:96px;height:96px;display:grid;place-items:center;border-radius:50%;background:var(--ok);color:var(--onOk)}
+.wfin-c svg{width:48px;height:48px;fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.wfin-h{margin:0;font-family:var(--display);font-size:30px;font-weight:700}
+.wfin-sub{margin:calc(-1 * var(--s3)) 0 0;color:var(--sub)}
+.wfin-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2);width:100%}
+.wfin-stats .stat{display:grid;gap:2px;padding:14px 6px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+.wfin-stats b{font-family:var(--display);font-size:30px;font-weight:700;line-height:1.1;white-space:nowrap;color:var(--text)}
+.wfin-stats b small{font-size:15px;color:var(--dim)}
+.wfin-stats>.stat>small{font-size:13px;font-weight:700;color:var(--dim)}
+.wfin-rec{width:100%;display:grid;gap:2px;padding:14px var(--s4);border-radius:var(--r4);border:1.5px solid var(--gold);
+  background:var(--raised);text-align:start}
+.wfin-rec b{color:var(--gold);font-size:15px}
+.wfin-rec span{font-size:16px;font-weight:600;color:var(--text)}
+.wfin-up{margin:0;color:var(--sub);font-weight:600}
+.wfin-done{width:100%;min-height:76px;display:flex;align-items:center;justify-content:center;padding:0 var(--s5);
+  border:0;border-radius:var(--rpill);background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);
+  color:var(--onAccent);font-family:var(--display);font-size:20px;font-weight:700}
+.wfin .wc2-effort{width:100%;margin-top:0}
 .wc2{position:relative;text-align:center;padding:8px 4px 0;isolation:isolate}
 .wc2-art{position:absolute;z-index:-1;top:-40px;left:50%;width:300px;height:auto;transform:translateX(-50%);opacity:.10;pointer-events:none}
 .wc2-medal{display:grid;place-items:center;width:84px;height:84px;margin:6px auto 16px;border-radius:50%;
@@ -4676,10 +4915,14 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 }
 /* The primary action, lit from above. At a plain .btn's weight (:where adds none), so a
    button that is given its own fill (a delete's red, a sheet's own) keeps it. */
-.btn:where(:not(.g):not(.o):not(.ok):not(.danger):not(.d)),.pill.a,.seg-ind,.btn.fadd,.btn.ss-next{
+.pill.a,.seg-ind,.btn.fadd,.btn.ss-next{
   background-image:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0) 56%),linear-gradient(180deg,var(--accent),var(--accent-deep))}
 .btn:where(:not(.g):not(.o):not(.ok):not(.danger):not(.d)){
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.36),inset 0 0 0 1px rgba(255,255,255,.10),0 12px 28px -14px rgba(var(--accent-rgb),.8)}
+  background-image:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,0) 56%),linear-gradient(180deg,var(--color-action-fill),var(--accent-deep));
+  box-shadow:inset 0 0 0 1.5px var(--color-action-edge),inset 0 1px 0 rgba(255,255,255,.36),inset 0 0 0 1px rgba(255,255,255,.10),0 12px 28px -14px rgba(var(--accent-rgb),.8)}
+/* In Red the label sits on flat accent-deep (token-requests.md §4): the light from above
+   would lift the top of the fill back towards Machine Red, under the label. */
+[data-palette="red"] .btn:where(:not(.g):not(.o):not(.ok):not(.danger):not(.d)){background-image:none;background-color:var(--color-action-fill)}
 </style>
 </head>
 <body>

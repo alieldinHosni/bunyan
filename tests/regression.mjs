@@ -355,7 +355,7 @@ await test("a lighter week cuts planned sets and suggested load, and ends",async
   const cut=await ev(page,"S.active.entries.map(e=>e.planned.sets)");
   const plan=await ev(page,"(function(){var sp=S.programs.find(p=>p.id===S.activeProgram);var d=sp.days.find(x=>x.id===S.active.dayId);return d.ex.map(e=>e.sets)})()");
   if(!cut.every((n,i)=>n<plan[i]||n===1))throw new Error("sets not cut: "+cut+" vs "+plan);
-  if(!/Lighter week/.test(await page.textContent(".ex-tags")))throw new Error("no lighter-week tag");
+  if(!/Lighter week/.test(await page.textContent(".wexl-s")))throw new Error("no lighter-week mark on the set line");
 });
 await test("weight steps: own step wins; dumbbell totals double the step",async page=>{
   const r=await F(page,`(function(){var a=F.incrementFor("Dumbbell Bench Press",30);S.prefs.dbLoad="total";var b=F.incrementFor("Dumbbell Bench Press",60);
@@ -520,8 +520,8 @@ await test("workout bar: the clock on other tabs, rest counts down there, rest o
   eq(await ev(page,"document.body.classList.contains('wb')"),true);
   await page.tap('#wbar .wbar');await pause(page,500);
   eq(await ev(page,"[V.tab,!document.getElementById('wbar').firstChild]"),["train",true],"tap returns");
+  /* The rest is a band on the workout now (workout-spec.md), so there is nothing to hide. */
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
-  await page.tap('[data-rest="hide"]');await pause(page);
   await leaveWorkout(page);
   await tapTab(page,"food");await pause(page,1200);
   eq(await page.$eval('#rest',e=>!e.firstChild),true,"no full-screen rest on Food");
@@ -530,7 +530,8 @@ await test("workout bar: the clock on other tabs, rest counts down there, rest o
   eq(await page.$eval('#wbar .wbar',e=>e.classList.contains("done")),true,"rest over");
   if(!/^\+\d+:\d\d$/.test(await page.$eval('#wbarT',e=>e.textContent)))throw new Error("the bar does not count up past the rest");
   await page.tap('#wbar .wbar');await pause(page,500);
-  eq(await ev(page,"[V.tab,V.restDone,!!document.getElementById('rest').firstChild]"),["train",true,true],"rest-over screen on return");
+  /* The time-up state is the band on the workout now, not a screen of its own. */
+  eq(await ev(page,"[V.tab,V.restDone,!!document.querySelector('#app .rb.over[role=alert]'),!document.getElementById('rest').firstChild]"),["train",true,true,true],"rest-over band on return");
 },{prefs:{autorest:true}});
 
 /* ---- the week, and Food in three sections -------------------------------------------- */
@@ -762,9 +763,10 @@ await test("Arabic: template program and day names are shown in Arabic, fraction
   if(r.frac.indexOf("3/4")<0)throw new Error("fraction lost its slash: "+r.frac);
   eq(r.own,"My Monday","a name the user typed passes through");
 },{prefs:{lang:"ar"}});
-await test("Light: the open tab reads on the dark dock: Glacier Blue on Machine Red",async page=>{
+/* On accent-deep since token-requests.md §3 (owner, 20 Oct): Glacier Blue on Machine Red was 3.27:1. */
+await test("Light: the open tab reads on the dark dock: Glacier Blue on Red's accent-deep",async page=>{
   const c=await page.$eval('nav .dock-b.on',e=>[getComputedStyle(e).color,getComputedStyle(e).backgroundColor]);
-  eq(c,["rgb(219, 246, 255)","rgb(255, 46, 58)"]);
+  eq(c,["rgb(219, 246, 255)","rgb(168, 14, 25)"]);
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"red"}});
 await test("One place for each thing: the assessment in Coach AI only, how you feel asked when a workout starts, nothing of it on Profile",async page=>{
   await tapTab(page,"train");await pause(page);
@@ -916,14 +918,17 @@ await test("Themes: a delete asks in red whatever the theme",async page=>{
   await coach(page,"train","program");
   await page.$$eval('.drows [data-day]',a=>a[0].click());await pause(page,400);
   await page.$eval('[data-delday]',e=>e.click());await pause(page,500);
-  const bg=await page.$eval('.cf.bad .cf-ok',e=>getComputedStyle(e).backgroundImage);
-  if(!/229, 50, 62/.test(bg))throw new Error("delete is not red: "+bg);
+  /* On danger-deep, with onDanger: the label never sits on danger-fill (token-requests.md §4). */
+  const bg=await page.$eval('.cf.bad .cf-ok',e=>[getComputedStyle(e).backgroundColor,getComputedStyle(e).color]);
+  eq(bg,["rgb(179, 19, 27)","rgb(255, 255, 255)"],"delete is danger-deep, white label");
 },{prefs:{palette:"blue"}});
-await test("Themes: the rest screen stays dark in light mode, with readable figures",async page=>{
+/* The rest is a band on the workout (workout-spec.md, RestBand): the theme's own raised
+   surface and text, in light mode as in dark. */
+await test("Themes: the rest band takes the theme in light mode, with readable figures",async page=>{
   await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
-  const r=await page.evaluate(()=>{const v=document.querySelector("#rest .rt-next-v");
-    return v?getComputedStyle(v).color:null;});
-  eq(r,"rgb(234, 241, 239)","Sage's light type on the dark rest screen");
+  const r=await page.evaluate(()=>{const v=document.getElementById("restDig"),b=v&&v.closest(".rb");
+    return v?[getComputedStyle(v).color,getComputedStyle(b).backgroundColor,!document.getElementById("rest").firstChild]:null;});
+  eq(r,["rgb(19, 38, 39)","rgba(224, 231, 230, 0.56)",true],"Sage light's text on its card glass; no full-screen rest");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
 await test("Themes: each page draws its own picture on the ground, under the glass",async page=>{
   const shot=()=>page.evaluate(()=>{const g=document.getElementById("bgart"),svg=g&&g.querySelector("svg");
@@ -1153,7 +1158,7 @@ await test("Bodyweight lifts: the box is added weight, and body weight counts in
   await pause(page,400);
   const last=await ev(page,"S.active.entries.length-1");
   await page.tap('[data-exlist]');await pause(page,400);await page.tap('#sheet [data-jumpl="'+last+'"]');await pause(page,400);
-  eq(await page.$eval(".setrow.hd",e=>e.innerText.indexOf("+KG")>-1),true,"the column says +KG");
+  eq(await page.$eval('label[for="in_w"]',e=>e.firstChild.textContent),"Added weight","the weight box says it is added weight");
   if(!(await page.$(".bwnote")))throw new Error("no note on what +KG means");
   await page.fill('#in_w','0');await page.fill('#in_r','9');await page.tap('[data-logset]');await pause(page,900);
   eq(await ev(page,"S.active.entries[S.active.entries.length-1].sets[0].w"),0,"logged as body weight alone");
@@ -1185,17 +1190,18 @@ await test("Exercises: a sideways swipe moves between them; a nudge or a vertica
   await drag(80,520,320,525);eq(await idx(),0,"swipe right: previous");
   await drag(80,520,320,525);eq(await idx(),0,"the first exercise resists");
   await drag(10,520,300,525);eq(await idx(),0,"not from the screen edge");
-  await page.tap('[data-exnav="1"]');await pause(page,400);eq(await idx(),1,"next arrow");
-  await page.tap('[data-exnav="-1"]');await pause(page,400);eq(await idx(),0,"previous arrow");
-  eq(await page.$eval('[data-exnav="-1"]',e=>e.disabled),true,"no previous at the first");
+  /* The arrows and segments are gone (workout-spec.md): the next exercise is named on the
+     screen and one tap away; the list from the title reaches any of them. */
+  eq(await page.$eval('.nx b',e=>e.textContent),await ev(page,"(async()=>(await import('/js/i18n/exnames.js')).exName(S.active.entries[1].name))()"),"the next one is named");
+  await page.tap('.nx');await pause(page,400);eq(await idx(),1,"next exercise");
+  await page.tap('[data-exlist]');await pause(page,400);await page.tap('#sheet [data-jumpl="0"]');await pause(page,400);eq(await idx(),0,"back by the list");
   await page.tap('[data-exlist]');await pause(page,400);
   eq(await page.$$eval("#sheet .exl-row",a=>a.length),await ev(page,"S.active.entries.length"),"the list has every exercise");
   await page.tap('#sheet [data-jumpl="2"]');await pause(page,400);eq([await idx(),await ev(page,"!!V.sheet")],[2,false],"list jump");
-  await page.tap('[data-jump="1"]');await pause(page,400);eq(await idx(),1,"segment");
+  await page.tap('.nx');await pause(page,400);eq(await idx(),3,"next from there");
   /* Looking ahead does not end a rest. */
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
-  await page.evaluate(async()=>{(await import("/js/ui/workout.js")).restControl("hide");});await pause(page,300);
-  await page.tap('[data-exnav="1"]');await pause(page,400);
+  await page.tap('.nx');await pause(page,400);
   eq(await ev(page,"V.restEnd>Date.now()"),true,"the rest keeps running");
 },{prefs:{autorest:true,anim:true}});
 async function dockTest(page,slide){
@@ -1389,7 +1395,7 @@ await test("Training import: a coach's PDF becomes a draft — days, week, cues,
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).ACT.discard();});await pause(page,200);
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,p=S.programs.filter(x=>x.id===S.activeProgram)[0];(await import("/js/ui/actions.js")).startDay(p.days[0].id);});await pause(page,400);
   eq(await ev(page,"[V.draft.w,S.active.entries[0].planned.note]"),[50,"Two warm-up sets first"],"start weight and cue");
-  eq(await page.$eval(".ex-cue",e=>e.textContent),"Two warm-up sets first");
+  eq(await page.$eval(".sc-cue",e=>e.textContent),"Two warm-up sets first");
   await page.evaluate(async()=>{(await import("/js/ui/workout.js")).jumpTo(3);});await pause(page,300);
   await page.evaluate(()=>document.querySelector("[data-swapalt]").click());await pause(page,300);
   eq(await ev(page,"[S.active.entries[3].name,S.active.entries[3].alt,S.active.entries[3].planned.amrap]"),["Standing Biceps Cable Curl","Chin-Up",true],"swapped for the other choice");
@@ -1414,7 +1420,7 @@ await test("Warm-up engine: drills follow what the day trains, ramp sets lead to
 });
 await test("Warm-up: shown before the first exercise; ticks and a hold timer; Start goes to the work; ⋯ brings it back",async page=>{
   await startWorkout(page);
-  if(!(await page.$('.wu'))||(await page.$('.setcard')))throw new Error("the warm-up is not the first screen");
+  if(!(await page.$('.wu'))||(await page.$('.wsc')))throw new Error("the warm-up is not the first screen");
   eq(await page.$$eval('.wu-rs',a=>a[0].textContent),"20 kg × 10","ramp starts with the bar");
   await page.tap('.wu [data-wutick]:not([data-wutick="wp"])');await pause(page);
   eq(await page.$eval('.wu [data-wutick]:not([data-wutick="wp"])',b=>b.getAttribute("aria-pressed")),"true","ticked");
@@ -1425,11 +1431,11 @@ await test("Warm-up: shown before the first exercise; ticks and a hold timer; St
   await pause(page,1200);
   eq(await ev(page,"[S.active.wuDone.wp,document.querySelector('.wu-pulse').classList.contains('did')]"),[1,true],"ticked when it ends");
   await page.tap('[data-wugo]');await pause(page);
-  eq(await ev(page,"[S.active.warm,!!document.querySelector('.setcard'),!!document.querySelector('.wu')]"),[1,true,false],"started");
+  eq(await ev(page,"[S.active.warm,!!document.querySelector('.wsc'),!!document.querySelector('.wu')]"),[1,true,false],"started");
   await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-wuopen]');await pause(page);
   if(!(await page.$('.wu')))throw new Error("the menu did not bring the warm-up back");
   await page.tap('[data-wuskip]');await pause(page);
-  eq(await ev(page,"[S.active.warm,!!document.querySelector('.setcard')]"),[0,true],"back to the work");
+  eq(await ev(page,"[S.active.warm,!!document.querySelector('.wsc')]"),[0,true],"back to the work");
 },{prefs:{nowarm:false}});
 await test("Cool-down: stretches for what was trained on Workout complete, timed, with the how-to one tap away; both switch off",async page=>{
   await startWorkout(page);
@@ -1447,7 +1453,7 @@ await test("Cool-down: stretches for what was trained on Workout complete, timed
   eq(await ev(page,"V.sheet"),"exdetail");
   await page.tap('[data-exback]');await pause(page,400);
   eq(await ev(page,"[V.sheet,!!document.querySelector('.cd .wu-row.did')]"),["done",true],"back to the summary, tick kept");
-  await page.tap('#sheet .cf-ok');await pause(page);
+  await page.tap('#sheet .wfin-done');await pause(page);
   /* Both are on by default and switched off in Training settings. */
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page);
   await page.tap('[data-toggle="nowarm"]');await pause(page);await page.tap('[data-toggle="nocool"]');await pause(page);
@@ -1894,8 +1900,9 @@ await test("Rest: once it runs out it counts up how long ago, and that survives 
   if(!/^\+1:3\d$/.test(await over()))throw new Error("expected about +1:35, got "+await over());
   await page.reload();await pause(page,1500);
   if(!/^\+1:3\d$/.test(await over()))throw new Error("after a reload: "+await over());
-  await page.tap('[data-rest="skip"]');await pause(page);
-  eq(await ev(page,"[V.restDone,V.restOver]"),[false,0],"the next set clears it");
+  /* The check logs from the time-up band: no tap to dismiss it first. */
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page);
+  eq(await ev(page,"[V.restDone,V.restOver,S.active.entries[0].sets.length]"),[false,0,1],"the next set clears it");
 },{prefs:{autorest:true}});
 await test("Covers: a program of your own gets a cover drawn from its week",async page=>{
   await page.evaluate(async()=>{const st=await import("/js/state.js");
@@ -2539,21 +2546,84 @@ await test("Training: no run in the last fortnight, no run card",async page=>{
   await tapTab(page,"train");await pause(page);
   eq(await page.$$eval('.trun-last',a=>a.length),0);
 });
-/* ---- Phase 1 of the visual audit ---- */
-await test("Logger: last time reads in full under each set, in English and Arabic; How do you feel today? is one line",async page=>{
+/* ---- The workout screen (docs/design/workout-spec.md) ---- */
+await test("Workout screen: steppers move by the engine's own step; the check logs from the rest and says so, with Undo",async page=>{
   await startWorkout(page);
-  const r=await page.evaluate(()=>{const rd=document.querySelector(".ready");const p=[...document.querySelectorAll(".setprev")];
-    return {hd:[...document.querySelectorAll(".setrow.hd span")].map(e=>e.textContent),txt:p.map(e=>e.textContent),
-      clipped:p.some(e=>e.scrollWidth>e.clientWidth+1),readyH:rd?Math.round(rd.getBoundingClientRect().height):0,
+  const w0=await ev(page,"V.draft.w"),step=await F(page,`F.incrementFor(S.active.entries[0].name,${w0})`);
+  await page.tap('[data-sstep="w"][data-d="1"]');await pause(page,200);
+  eq(await ev(page,"V.draft.w"),Math.round((w0+step)*100)/100,"one tap, one step");
+  eq(await page.$eval('[data-sstep="w"][data-d="1"]',e=>[e.textContent,e.getAttribute("aria-label")]),[String(step),"More "+step+" kg"],"the button says the step");
+  await page.tap('[data-sstep="r"][data-d="-1"]');await pause(page,200);
+  const r=await ev(page,"V.draft.r");
+  await page.tap('[data-logset]');await pause(page,300);
+  eq(await ev(page,"[S.active.entries[0].sets.length,S.active.entries[0].sets[0].r,V.restEnd>Date.now()]"),[1,r,true],"logged, resting");
+  eq(await page.$eval('#app .log.ok b',e=>e.textContent),"Set 1 logged");
+  if(!(await page.$('#app .rb #restDig')))throw new Error("no rest band");
+  /* Undo takes it back and ends the rest it started. */
+  await pause(page,700);await page.tap('[data-undolog]');await pause(page,300);
+  eq(await ev(page,"[S.active.entries[0].sets.length,V.restEnd>Date.now()]"),[0,false],"undone");
+  /* The check logs during a rest, in one tap, and the log control reads the next set after a moment. */
+  await page.tap('[data-logset]');await pause(page,900);
+  await page.tap('[data-logset]');await pause(page,2300);
+  eq(await ev(page,"S.active.entries[0].sets.length"),2,"logged from the rest");
+  eq(await page.$eval('#app [data-logset]',e=>e.textContent),"Log set 3");
+},{prefs:{autorest:true}});
+await test("Workout screen: + Warm-up adds a warm-up set, out of volume and numbering; delete asks in the row",async page=>{
+  await startWorkout(page);
+  const w=await ev(page,"V.draft.w");
+  await page.tap('[data-addwu]');await pause(page,300);
+  eq(await page.$eval('#app [data-logset]',e=>e.textContent),"Log warm-up");
+  if(!(await page.$('#app .wsc.wkwu .sc-wu')))throw new Error("the card does not say warm-up");
+  eq(await ev(page,"V.draft.w"),w,"starts from the working weight (no warm-up recommended)");
+  await page.tap('[data-sstep="w"][data-d="-1"]');await page.tap('[data-sstep="w"][data-d="-1"]');await pause(page,200);
+  await page.tap('[data-logset]');await pause(page,300);
+  eq(await page.$eval("#app .log.ok b",x=>x.textContent),"Warm-up logged","the logged state names it");
+  await pause(page,2100);
+  const e=await ev(page,"S.active.entries[0]");
+  eq([e.sets.length,e.sets[0].wu,e.wuq],[1,true,0],"logged as a warm-up");
+  eq(await page.$eval('#app [data-logset]',x=>x.textContent),"Log set 1","working sets keep their own numbers");
+  eq(await ev(page,"V.draft.w"),w,"the working set does not start from the warm-up");
+  eq(await F(page,"F.sessionVolume(S.active)"),0,"a warm-up is not volume");
+  /* Delete asks inside the row; Cancel keeps it, Delete removes it and its row. */
+  const rows=await page.$$eval('#app .wsr',a=>a.length);
+  await page.tap('#app .wsr.wkwu [data-delset="0"]');await pause(page,300);
+  if(!(await page.$('#app .wsr.ask [data-delok="0"]')))throw new Error("no confirm in the row");
+  eq(await ev(page,"V.sheet"),null,"no sheet");
+  await page.tap('[data-delno]');await pause(page,200);eq(await ev(page,"S.active.entries[0].sets.length"),1,"cancel keeps it");
+  await page.tap('#app .wsr.wkwu [data-delset="0"]');await pause(page,300);await page.tap('[data-delok="0"]');await pause(page,700);
+  eq([await ev(page,"S.active.entries[0].sets.length"),await page.$$eval('#app .wsr',a=>a.length)],[0,rows-1],"deleted, with its row");
+},{prefs:{autorest:false}});
+await test("Workout screen: a logged set's numbers can be corrected in place; a suggestion is marked until it is touched",async page=>{
+  await startWorkout(page);
+  if(!(await page.$('#sgTag:not([hidden])')))throw new Error("the suggestion is not marked");
+  await page.fill('#in_r','9');
+  eq(await page.$eval('#sgTag',e=>e.hidden),true,"typed: no longer a suggestion");
+  await page.tap('[data-logset]');await pause(page,900);
+  await page.fill('#app .wsr.did [data-setidx="0"][data-k="r"]','7');
+  await page.evaluate(()=>document.activeElement.blur());await pause(page,300);
+  eq(await ev(page,"S.active.entries[0].sets[0].r"),7,"corrected in place");
+},{prefs:{autorest:false}});
+/* ---- Phase 1 of the visual audit ---- */
+/* The set card says last time once, for the set being done (workout-spec.md); before the
+   first set it is the recommendation instead. */
+await test("Logger: last time reads in full for the set being done, in English and Arabic; How do you feel today? is one line",async page=>{
+  await startWorkout(page);
+  const r0=await page.evaluate(()=>{const rd=document.querySelector(".ready");
+    return {rec:document.querySelector(".wsc .sc-h").textContent,readyH:rd?Math.round(rd.getBoundingClientRect().height):0,
       skipInHead:!!document.querySelector(".ready .ready-h .ready-skip")};});
-  if(r.hd.indexOf("Last")>=0)throw new Error("Last is still a column");
-  eq(r.txt[0],"Last time 60 kg × 8","the first set's last time, whole");
+  if(!/^Recommended /.test(r0.rec))throw new Error("before the first set: "+r0.rec);
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  const r=await page.evaluate(()=>{const p=[...document.querySelectorAll(".wsc .sc-h span")];
+    return {txt:p.map(e=>e.textContent),clipped:p.some(e=>e.scrollWidth>e.clientWidth+1)};});
+  r.readyH=r0.readyH;r.skipInHead=r0.skipInHead;
+  eq(r.txt[0],"Last time 60 kg × 8","the second set's last time, whole");
   eq([r.clipped,r.skipInHead],[false,true],"nothing clipped; Skip beside the question");
   if(r.readyH>110)throw new Error("readiness takes "+r.readyH+"px");
 },{prefs:{autorest:false}});
 await test("Logger in Arabic: last time keeps its figures in order",async page=>{
   await startWorkout(page);
-  eq(await page.$eval(".setprev",e=>e.textContent),"آخر مرة 60 كجم × 8");
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  eq(await page.$eval(".wsc .sc-h span",e=>e.textContent),"آخر مرة 60 كجم × 8");
 },{prefs:{autorest:false,lang:"ar"}});
 await test("Calm red: an empty plan slot is faint text; a meal's delete is a quiet icon until pressed",async page=>{
   await coach(page,"food","plan");
@@ -2695,18 +2765,15 @@ await test("Live figure: it takes the theme — light mode lights the stage, Sag
   const blue=await probe(page);
   eq(blue.red,0,"Blue lights the muscles in its own colour");
 },{prefs:{palette:"red"}});
-await test("Live figure: in the workout it moves without turning (a sideways swipe there changes exercise)",async page=>{
+/* The figure is off the workout screen (workout-spec.md): it lives behind ⓘ, in the
+   exercise sheet, where it turns under a finger. */
+await test("Live figure: the workout shows none; ⓘ opens the exercise sheet, where it moves and turns",async page=>{
   await startWorkout(page);
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.active.entries[V.logIdx].name="Machine Chest Press";(await import("/js/ui/render.js")).render();});await pause(page,600);
+  eq(await page.$$eval("#app .fig3d,#app .formvis",a=>a.length),0,"no figure or photos on the workout");
+  await page.tap('.wexl [data-exdetail]');await pause(page,600);
   await waitLive(page);
-  eq(await page.$eval(".exhero .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-mq-turn"),e.getAttribute("data-mq")]),[true,false,"Machine Chest Press"]);
-  /* Logging a set repaints the screen; the figure carries on. */
-  await page.evaluate(()=>{window.__fig=document.querySelector(".exhero .fig3d")._mq;});
-  await page.evaluate(async()=>{(await import("/js/ui/render.js")).render();});await pause(page,300);
-  eq(await page.evaluate(()=>document.querySelector(".exhero .fig3d")._mq===window.__fig),true,"the same figure after a repaint");
-  /* The next exercise has only photographs, and the figure lets go. */
-  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.active.entries[V.logIdx].name="Atlas Stones";(await import("/js/ui/render.js")).render();});await pause(page,400);
-  eq([(await mq(page)).length,await page.$$eval(".exhero .formvis img",a=>a.length)],[0,2]);
+  eq(await page.$eval("#sheet .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-mq-turn"),e.getAttribute("data-mq")]),[true,true,"Machine Chest Press"]);
 });
 await test("Live figure: the library's exercises are drawn by their movement's family — a Barbell Curl in the sheet",async page=>{
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Barbell Curl"});});await pause(page,600);
