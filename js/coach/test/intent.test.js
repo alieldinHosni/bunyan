@@ -1,4 +1,4 @@
-import {IDS, intentOf} from "../intent.js";
+import {factOf, IDS, intentOf, situationOf} from "../intent.js";
 
 /* Questions people type, and what each is asking. English and Egyptian Arabic, typed
    the way phones type them: no capitals, no hamza, ة as ه, Arabic or Western digits. */
@@ -27,7 +27,7 @@ var EN=[
   ["how many reps for hypertrophy","kreps"],["how many sets should I do per exercise","ksets"],["how long should I rest between sets","krest"],
   ["how many days a week should I train","kfreq"],["how many sets a week for chest","kvolume"],["what tempo should I lift at","ktempo"],
   ["how many warm up sets","kwarm"],["how long should a workout be","kdur"],["how is my 1rm calculated","k1rm"],
-  ["what's today","today"]];
+  ["what's today","today"],["What have I told you?","facts"]];
 var AR=[
   ["اتمرن ايه النهارده؟","today"],["تمرين النهارده ايه","today"],["اشيل كام في البنش؟","weights"],["ازود الوزن امتى","weights"],
   ["اكل ايه دلوقتي","eat"],["فاضل كام سعرات","eat"],["انا جعان","eat"],["انا ماشي صح؟","track"],["عامل ايه الاسبوع ده","track"],
@@ -74,6 +74,14 @@ function run(t){
   t.eq([intentOf("I weigh 82.5 kg").kg,intentOf("I weigh 180 lb").kg,intentOf("وزني ٨٢٫٥").kg,intentOf("log 150 g rice").grams],[82.5,81.6,82.5,150],"weights and grams read from the request");
   /* "swap" alone is still a food swap; an exercise swap needs the two named. */
   t.eq([intentOf("other foods with the same macros").id,intentOf("swap my lunch").id],["swap","swap"],"food swaps stay food swaps");
+  /* A report, not a question: what went off, from its own words. */
+  t.eq(["I had a bad day, didn't commit to the diet","I missed yesterday's workout","I'm so tired today","my knee hurts","bad day",
+    "يوم وحش ومالتزمتش بالدايت","مروحتش الجيم النهارده","منمتش كويس","ركبتي بتوجعني"].map(function(q){var s=situationOf(q);return s&&s.kind;}),
+    ["food","train","tired","pain","day","food","train","tired","pain"],"situations by their signals");
+  t.eq([situationOf("what should I eat after a bad day?"),situationOf("how much protein do I need"),situationOf("I only have 30 minutes")],[null,null,null],"questions and plain statements are not reports");
+  /* A fact about their life, said by them; a report is not one. */
+  t.eq(["I work 13-hour days","I can't do squats","I don't eat pork","بشتغل ١٣ ساعة في اليوم","I missed yesterday's workout","I'm tired","what do I train today"].map(factOf),
+    [true,true,true,true,false,false,false],"facts said, and only those");
   t.clean(intentOf("what should I train today"),"no NaN or undefined");}
 
 export {run};

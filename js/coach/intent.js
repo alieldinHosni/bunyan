@@ -155,6 +155,10 @@ var INTENTS=[
   ["k1rm",[
     "1rm|one rep max|max calculate|formula|estimate","estimated max|1rm","how is max|1rm calculated",
     "اقصي وزن مره|لعده","الماكس"]],
+  /* What the person has told the coach to keep (js/coach/context.js). */
+  ["facts",[
+    "what have i told you","what did i tell you","what do you know about me","what you know about me","my facts|notes","what you remember|kept",
+    "قلتلك ايه","انا قلتلك ايه","تعرف ايه عني","فاكر ايه عني"]],
   ["thanks",[
     "thanks|thank|thx|cheers","great|perfect|awesome|nice","ok$|okay$|cool",
     "شكرا|متشكر|متشكره|ميرسي","تمام|حلو|جميل|ماشي"]]];
@@ -248,9 +252,43 @@ function intentOf(q){
     kg:lb?Math.round(+lb[1]/2.2046*10)/10:kg?+kg[1]:0,unit:lb?"lb":kg&&kg[2]?"kg":"",grams:gr?+gr[1]:0,
     ranked:scores.filter(function(x){return x.score>=3;}).map(function(x){return x.id;})};}
 
+
+/* ---- a situation, not a question ----------------------------------------------------
+   "I had a bad day, didn't stick to the diet" is a report, not an instruction. Its
+   signals (missed, didn't, skipped, bad day, tired, stressed, sore, and the Egyptian
+   Arabic for them) say something went off; its other words say what: food, training,
+   sleep and energy, or pain. Pure: {kind:"food"|"train"|"tired"|"pain"|"day"} or null.
+   "day" is a bad day with nothing saying what went off. A question is not a report. */
+var SIGNAL=/(^| )(missed|miss|didnt|did not|skipped|skip|bad day|rough day|awful day|terrible day|tired|exhausted|stressed|sore|blew|cheated|overate|ate too much|binged|binge|fell off|slipped|couldnt sleep|slept badly|no sleep|hurts|hurt|pain|aching|injured|فوت|فوتت|فاتني|مروحتش|ماروحتش|معملتش|ماعملتش|ملتزمتش|مالتزمتش|ماالتزمتش|يوم وحش|يوم زفت|يوم صعب|تعبان|تعبانه|مرهق|مرهقه|مضغوط|مضغوطه|متوتر|متوتره|واجعني|بيوجعني|بتوجعني|وجع|الم|اكلت كتير|كسرت الدايت|بوظت|منمتش|نمت وحش)( |$)/;
+var WHAT=[["pain",/(^| )(hurts|hurt|pain|aching|injured|injury|واجعني|بيوجعني|بتوجعني|وجع|الم|مصاب)( |$)/],
+  ["food",/(^| )(diet|ate|eat|eating|food|calories|meal|meals|binge|binged|overate|cheated|junk|دايت|الدايت|اكل|الاكل|اكلت|سعرات|وجبه|الوجبات|رجيم)( |$)/],
+  ["train",/(^| )(workout|training|train|gym|session|lift|lifting|leg day|تمرين|التمرين|الجيم|جيم|اتمرن|مروحتش|ماروحتش)( |$)/],
+  ["tired",/(^| )(tired|exhausted|sleep|slept|stressed|energy|sore|تعبان|تعبانه|مرهق|مرهقه|نوم|منمتش|نمت|مضغوط|مضغوطه|متوتر|متوتره|طاقه)( |$)/]];
+var ASKING=/[?؟]|^(what|how|why|should|can|could|is|are|do|does|when|which|ايه|ازاي|ليه|هل|امتي|اعمل ايه)( |$)/;
+/* Arabic writes "and", "with" and "the" onto the word: each word is also tried bare. */
+function bareAr(text){return text+" "+text.split(" ").map(function(w){
+  return w.replace(/^(و|ف)(?=[\u0600-\u06FF]{3})/,"").replace(/^(بال|وال|لل|ال|ب)(?=[\u0600-\u06FF]{3})/,"");}).join(" ");}
+function situationOf(q){
+  var raw=String(q||""),text=bareAr(spell(fold(raw)));
+  if(!text||ASKING.test(raw.trim().toLowerCase())||ASKING.test(text))return null;
+  if(!SIGNAL.test(text))return null;
+  for(var i=0;i<WHAT.length;i++)if(WHAT[i][1].test(text))return {kind:WHAT[i][0]};
+  return {kind:"day"};}
+
+/* ---- a fact about the person's life, said by them ---------------------------------
+   "I work 13-hour days", "I can't do squats", "I don't eat pork": a statement worth
+   keeping (js/coach/context.js), if the person agrees and says what kind it is. Only
+   ever the words as said; nothing about the person is guessed here. Pure: true/false. */
+var FACT=/^(i|im|i am|i ve|ive|my)( .*)?( )(work|works|working|shift|shifts|job|nights|commute|kids|travel|cant|cannot|dont eat|do not eat|avoid|allergic|vegetarian|vegan|hate|prefer|gym closes|gym opens|no gym|train at home|only train)( |$)/;
+var FACT_AR=/(بشتغل|شغلي|شيفت|مبقدرش|مقدرش|مش بقدر|مش باكل|مبكلش|مباكلش|عندي حساسيه|حساسيه من|نباتي|نباتيه|بفضل|مش بحب|مبحبش|بكره|الجيم بيقفل|بتمرن في البيت)/;
+function factOf(q){
+  var raw=String(q||""),text=fold(raw);
+  if(!text||ASKING.test(raw.trim().toLowerCase())||ASKING.test(text))return false;
+  return FACT.test(text+" ")||FACT_AR.test(text);}
+
 var IDS=INTENTS.map(function(x){return x[0];});
 /* The intents that change something, and the ones answered from the knowledge files. */
 var ACTION_IDS=["exadd","exremove","exswap","foodlog","weighlog","reassess"];
 var KNOW_IDS=["kreps","ksets","krest","kfreq","kvolume","ktempo","kwarm","kdur","k1rm"];
 
-export {ACTION_IDS, fold, IDS, intentOf, KNOW_IDS, skel, spell};
+export {ACTION_IDS, factOf, fold, IDS, intentOf, KNOW_IDS, situationOf, skel, spell};

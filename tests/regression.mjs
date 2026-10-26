@@ -2068,13 +2068,20 @@ await test("Movement: the plan builder's stand-ins keep the movement",async page
   const knee=await page.evaluate(async()=>{const pl=await import("/js/engine/plan.js");return pl.standIn("Freehand Jump Squat",[],["knee"]);});
   if(knee&&/Jump|Hop|Bound/i.test(knee))throw new Error("a sore knee was given another jump: "+knee);
 });
-await test("Movement: the chat's pain answer names swaps for the sore area",async page=>{
+/* Pain is logged, never advised on (js/knowledge/scope.js); asked what it is, the
+   answer is who to see, and what in the next workout loads the area — the plan's
+   data, not a treatment. */
+await test("Movement: pain said is offered the recovery log and no advice; asked about, it is referred, with what loads the area",async page=>{
   await openChat(page,"today");
   await page.fill('#chatq',"my knee hurts");await page.press('#chatq','Enter');await pause(page,400);
-  const a=await page.evaluate(()=>{const x=(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop());return x?x.innerText:"";});
-  if(!/load the knee|loads the knee/.test(a))throw new Error("no area answer: "+a);
+  let a=await page.evaluate(()=>{const x=(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop());return x?x.innerText:"";});
+  if(!/recovery log/.test(a)||/stop|rest it|ice|stretch|should/i.test(a.replace(/recovery log\?/,"")))throw new Error("pain said: "+a);
+  eq(await page.$$eval('#cpanel .chat-x.live .chat-acts button',b=>b.map(x=>x.dataset.sheet)),["recovery"],"the recovery log, nothing else");
+  await page.fill('#chatq',"why does my knee hurt?");await page.press('#chatq','Enter');await pause(page,400);
+  a=await page.evaluate(()=>{const x=(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop());return x?x.innerText:"";});
+  if(!/physio or a doctor, not me/.test(a)||!/load the knee|loads the knee/.test(a))throw new Error("pain asked: "+a);
   await page.fill('#chatq',"ركبتي بتوجعني");await page.press('#chatq','Enter');await pause(page,400);
-  eq(await ev(page,"S.chat[S.chat.length-1].id"),"sore","Arabic: the sore answer");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"situation","Arabic: the same");
 });
 /* ---- state with a schema (js/schema.js) ---- */
 await test("Schema: a backup from a newer version of the app is refused, and says why",async page=>{
@@ -2426,6 +2433,76 @@ await test("Coach actions: every action in the registry runs through a branch th
   const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");
   await page.evaluate(async()=>{(await import("/js/ui/handlers/actions.js")).perform("set.log",{w:62.5,r:8},1);});await pause(page,400);
   eq(await ev(page,"[S.active.entries[V.logIdx].sets.length,S.active.entries[V.logIdx].sets.slice(-1)[0].w]"),[n0+1,62.5],"logged by the logger");
+});
+await test("Coach, a rough day: a report gets one question back; food goes to the week's reconciliation, never a stricter tomorrow; a week that cannot absorb it is still fine",async page=>{
+  await openChat(page);
+  const last=()=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();x.querySelectorAll(".chat-more").forEach(d=>d.open=true);
+    return {lead:x.querySelector(".chat-lead").textContent,text:x.innerText,acts:[...x.querySelectorAll(".chat-acts button")].map(b=>b.textContent)};});
+  await agSay(page,"I had a bad day, didn't commit to the diet, I need to amend it for today");
+  let r=await last();
+  eq([r.lead,r.acts],["Sounds like today got away from you. Want me to work out what's left in the week, or just log it and move on?",["Work out the week","Just log it"]],"one question, two ways on");
+  /* A day over target by 1,100 kcal: spread over the days left, inside the limits. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,U=await import("/js/util.js");
+    S.days[U.today()]={water:0,steps:0,meals:{Lunch:{items:[{n:"x",kcal:3600,p:150,c:400,f:150}]}}};});
+  await page.tap('#cpanel .chat-acts button');await pause(page,500);
+  r=await last();
+  if(!/kcal a day less, protein unchanged/.test(r.lead))throw new Error("week: "+r.lead);
+  if(/tomorrow|make up|burn|fast|skip/i.test(r.lead))throw new Error("a stricter tomorrow: "+r.lead);
+  const days=[...r.text.matchAll(/: ([\d,]+) kcal/g)].map(m=>+m[1].replace(",",""));
+  if(!days.length||days.some(k=>k<2500*0.85-10))throw new Error("a day moved more than 15%: "+days);
+  eq(await ev(page,"S.goals.kcal"),2500,"the app's targets are not changed");
+  /* Far over: the week is still fine, said plainly. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,U=await import("/js/util.js");S.days[U.today()].meals.Lunch.items[0].kcal=9000;});
+  await page.tap('#cpanel [data-chatq="weekfood"]').catch(async()=>{await agSay(page,"I blew my diet today");await page.tap('#cpanel .chat-acts button');});
+  await pause(page,500);
+  if((await last()).lead.indexOf("Sounds like")===0){await page.tap('#cpanel .chat-acts button');await pause(page,500);}
+  r=await last();
+  if(!/^The week is still fine\./.test(r.lead)||/challenge|try|harder/i.test(r.lead))throw new Error("week fine: "+r.lead);
+  /* Missed training, a low day, a vague bad day: one question each. */
+  for(const [q,re] of [["I missed today's workout",/^Missed one, then\./],["I'm exhausted today",/^A low day, then\./],["bad day",/What went off\?$/],["مروحتش الجيم النهارده",/^فاتك تمرين يعني\./]]){
+    await agSay(page,q);r=await last();
+    if(!re.test(r.lead))throw new Error(q+": "+r.lead);
+    eq(await ev(page,"S.chat[S.chat.length-1].id"),"situation",q);}
+  /* A question is answered, not asked back. */
+  await agSay(page,"what should I eat now?");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"eat","a question stays a question");
+});
+await test("Coach, missed training on fixed weekdays: the missed sets moved where recovery allows, both numbers said; a rotation loses nothing",async page=>{
+  await openChat(page);
+  await agSay(page,"I missed today's workout");
+  await page.tap('#cpanel [data-chatq="weektrain"]');await pause(page,500);
+  let lead=await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector(".chat-lead").textContent);
+  if(!/^Nothing is lost\. Your program is a rotation/.test(lead))throw new Error("rotation: "+lead);
+  await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split(),sch=await import("/js/engine/schedule.js"),U=await import("/js/util.js");
+    const wd=sch.isoWeekday(U.today());sp.schedule="week";sp.days[0].wd=[wd];sp.days[2].wd=[(wd+1)%7+1];sp.days[4].wd=[(wd+3)%7+1];});
+  await agSay(page,"I missed today's workout");
+  await page.tap('#cpanel [data-chatq="weektrain"]');await pause(page,500);
+  lead=await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector(".chat-lead").textContent);
+  if(!/(\d+ of Full Body A's \d+ sets fit into the rest of the week; the other \d+ are gone\.|^All \d+ of Full Body A's sets fit|^The week is still fine\.)/.test(lead))throw new Error("week: "+lead);
+});
+await test("Coach context: a fact is kept only when the person says so, in their words, under the kind they pick; it is listed, deletable, and said back where it bears",async page=>{
+  await openChat(page);
+  await agSay(page,"I can't do bench press");
+  eq(await ev(page,"(S.context&&S.context.items||[]).length"),0,"nothing kept before they say so");
+  await page.tap('#cpanel .chat-acts button:nth-child(3)');await pause(page,300);
+  eq(await ev(page,"S.context.items.map(x=>[x.kind,x.text,x.by])"),[["constraint","I can't do bench press","user"]],"their words, their kind");
+  await agSay(page,"I don't eat pork");
+  await page.tap('#cpanel [data-ctxno]');await pause(page,300);
+  eq(await ev(page,"S.context.items.length"),1,"Don't keep it keeps nothing");
+  /* A report is never stored as a fact about them. */
+  await agSay(page,"I'm so tired, no motivation today");
+  eq(await ev(page,"S.context.items.length"),1,"nothing inferred");
+  await agSay(page,"What do I train today?");
+  const a=await page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();x.querySelectorAll(".chat-more").forEach(d=>d.open=true);return x.innerText;});
+  if(!/You said “I can't do bench press”, and Barbell Bench Press is in it\./.test(a))throw new Error("not said back: "+a);
+  await agSay(page,"What have I told you?");
+  eq(await page.$$eval('#cpanel .chat-x.live [data-ctxdel]',b=>b.map(x=>x.textContent)),["Delete “I can't do bench press”"],"listed with a delete");
+  await page.tap('#cpanel [data-ctxdel]');await pause(page,300);
+  eq(await ev(page,"S.context.items.length"),0,"deleted for good");
+  /* And from Profile. */
+  await page.tap('.cp [data-coachclose]');await pause(page,500);
+  await tapTab(page,"profile");await pause(page,400);
+  if(!(await page.$('[data-chatq="facts"]')))throw new Error("no way to it from Profile");
 });
 await test("Coach chat in motion: a sent question flies to its place, the coach types, then the answer arrives; with Animations off, at once",async page=>{
   await openChat(page);

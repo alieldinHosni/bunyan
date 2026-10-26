@@ -23,8 +23,12 @@ import {coachAct} from "../views/pcheck.js";
 import {chatSend, slotsFrom, toCoach} from "./common.js";
 import {closeCoach, holdCoach, toEnd} from "../coachfab.js";
 import {perform, undo} from "./actions.js";
+import {addFact, removeFact} from "../../coach/context.js";
 import {key, on} from "./registry.js";
 
+/* The kept message a button in the conversation belongs to: the newest one (only the
+   newest carries buttons). */
+function lastAsked(){var c=S.chat||[];return c[c.length-1]||null;}
 /* The assessment's answers become the profile, the daily targets and the training
    plan, all at once and all with one Undo. */
 function useAssessment(){
@@ -178,6 +182,17 @@ function register(){
   /* A choice on a pick, or None of these: one more exchange, as if typed. */
   key("agpick",function(D,el){var pr=String(D.agpick).split("|"),from=fromEl(el);
     loadFoods(function(){if(follow(pr[0],+pr[1])){saveDB();render();land(from);toEnd();}});return;});
+  /* What the person said, kept in their words under the kind they picked
+     (js/coach/context.js), or not kept; and deleted when they ask. */
+  key("ctxadd",function(D,el){var m=lastAsked(el);if(!m)return;
+    var r=addFact(S.context,{kind:D.ctxadd,text:m.q,by:"user"},{today:today()});
+    if(r.ok)S.context=r.store;
+    m.acts=[];m.b=[{p:r.ok||r.why==="duplicate"?t("Kept, in your words. Ask “What have I told you?” to see or delete it."):t("That couldn't be kept.")}];
+    saveDB();render();return;});
+  key("ctxno",function(D,el){var m=lastAsked(el);if(!m)return;m.acts=[];m.b=[{p:t("Not kept.")}];saveDB();render();return;});
+  key("ctxdel",function(D){var r=removeFact(S.context,D.ctxdel);S.context=r.store;
+    (S.chat||[]).forEach(function(m){if(m&&Array.isArray(m.acts))m.acts=m.acts.filter(function(b){return !(b.a&&b.a["data-ctxdel"]===D.ctxdel);});});
+    saveDB();render();toast(t("Deleted."));return;});
   key("agnone",function(D,el){var from=fromEl(el);if(follow(D.agnone,null)){saveDB();render();land(from);toEnd();}return;});
   key("chatclear",function(){var chB=S.chat||[];S.chat=[];saveDB();render();
     toast(t("Conversation cleared."),function(){S.chat=chB;saveDB();render();});return;});
