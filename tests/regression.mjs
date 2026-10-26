@@ -944,14 +944,14 @@ await test("Themes: the rest band takes the theme in light mode, with readable f
   eq(r,["rgb(19, 38, 39)","rgba(224, 231, 230, 0.56)",true],"Sage light's text on its card glass; no full-screen rest");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
 await test("Themes: each page draws its own picture on the ground, under the glass",async page=>{
-  const shot=()=>page.evaluate(()=>{const g=document.getElementById("bgart"),svg=g&&g.querySelector("svg");
+  const shot=()=>page.evaluate(()=>{const g=document.getElementById("bgart"),art=g&&g.querySelector(".art"),svg=g&&g.querySelector("svg");
     const cs=g&&getComputedStyle(g);
-    return [svg?[...svg.classList].find(c=>c.indexOf("bgart-")===0):null,cs&&cs.position,cs&&cs.zIndex,
+    return [art?[...art.classList].find(c=>c.indexOf("bgart-")===0):null,cs&&cs.position,cs&&cs.zIndex,
       !!svg&&svg.querySelectorAll("path").length>8];});
-  eq(await shot(),["bgart-train","fixed","-1",true],"Train's, fixed behind the page");
+  eq((await shot()).slice(0,3),["bgart-train","fixed","-1"],"Train's, fixed behind the page");
   for(const tab of ["food","coach","progress","profile"]){
     await tapTab(page,tab);await pause(page);
-    eq((await shot())[0],"bgart-"+tab,tab+" draws its own");}
+    eq([(await shot())[0],(await shot())[3]],["bgart-"+tab,true],tab+" draws its own");}
   /* The cards frost what is behind them, the drawing included. */
   const bf=await page.$eval("#app .card,#app .sg-list",e=>getComputedStyle(e).backdropFilter||getComputedStyle(e).webkitBackdropFilter);
   if(!/blur/.test(bf||""))throw new Error("the cards are not glass: "+bf);
@@ -961,24 +961,20 @@ await test("Themes: each page draws its own picture on the ground, under the gla
   eq(await page.evaluate(()=>[getComputedStyle(document.getElementById("bgart")).getPropertyValue("--bga").trim().toUpperCase(),
     document.querySelector("#bgart svg")===window.__bg]),["#FF5A6A",true],"the same drawing, repainted in red");
 });
-/* Training's ground is the owner's horseman at dusk, drawn (js/ui/scene.js): the rider
-   on the rock, the obelisk, palms, the city and the river, in the theme's own colours. */
-await test("Themes: Training's ground is the horseman at dusk, in the theme's colours, softened in light mode",async page=>{
-  const look=()=>page.evaluate(()=>{const s=document.querySelector("#bgart svg.scene");if(!s)return null;
-    const ink=s.querySelector(".sc-ink"),near=s.querySelector(".sc-ink .sc-near"),win=s.querySelector(".sc-win");
-    return {rider:s.querySelectorAll(".sc-near").length>=3,palms:s.querySelectorAll(".sc-frond").length>=8,windows:s.querySelectorAll(".sc-win").length>10,
-      ink:getComputedStyle(near).fill,light:getComputedStyle(win).fill,soft:getComputedStyle(ink).opacity,
-      bottom:s.getAttribute("preserveAspectRatio")};});
-  const d=await look();
-  if(!d)throw new Error("no scene on Training");
-  eq([d.rider,d.palms,d.windows,d.bottom],[true,true,true,"xMidYMax slice"],"the whole scene, standing at the foot of the screen");
-  eq(d.soft,"1","full strength in the dark");
-  /* Blue dark: the night navy ink, the theme's highlight for the light */
-  eq(d.ink,await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--bg").trim()).then(v=>{const h=v.replace("#","");return "rgb("+[0,2,4].map(i=>parseInt(h.substr(i,2),16)).join(", ")+")";}),"the ground's own ink");
-  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.theme="light";(await import("/js/ui/render.js")).render();});await pause(page,300);
-  eq((await look()).soft,"0.42","light mode softens the ink as one");
+/* Training's ground is the owner's horseman at dusk: the owner's own picture, one per
+   theme, not a flat redrawing of it. */
+await test("Themes: Training's ground is the owner's horseman picture, the theme's own, faint in light mode",async page=>{
+  const look=()=>page.evaluate(()=>{const a=document.querySelector("#bgart .art.photo");if(!a)return null;
+    const cs=getComputedStyle(a);return [cs.backgroundImage.replace(/.*\/(img\/[^")]+).*/,"$1"),cs.opacity];});
+  eq(await look(),["img/ground-blue.jpg","0.9"],"blue");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="red";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq((await look())[0],"img/ground-red.jpg","red");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="mono";S.theme="light";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await look(),["img/ground-sage.jpg","0.22"],"Sage, light");
+  const ok=await page.evaluate(()=>new Promise(r=>{const i=new Image();i.onload=()=>r(i.naturalWidth>500);i.onerror=()=>r(false);i.src="img/ground-sage.jpg";}));
+  eq(ok,true,"the picture loads");
   await tapTab(page,"food");await pause(page);
-  eq(await page.evaluate(()=>!!document.querySelector("#bgart svg.scene")),false,"the other pages keep their drawings");
+  eq(await page.evaluate(()=>!!document.querySelector("#bgart .photo")),false,"the other pages keep their drawings");
 });
 await test("Themes: the mark is the theme's own colour, and so is the icon",async page=>{
   const look=()=>page.evaluate(()=>{const m=document.querySelector(".libhero .mk");
@@ -1501,7 +1497,7 @@ await test("Goals: one list drives the targets — deficit, surplus and protein 
      which it does not cover, a share of maintenance. */
   eq(Math.abs(r.lose[0]+500)<=10,true,"lose: 500 under");eq(Math.abs(r.gain[0]-350)<=10,true,"gain: 350 over");
   eq(r.recomp[1]<0&&r.recomp[1]>-15,true,"recomp");eq(r.maintain[1],0,"maintain");
-  eq([r.lose[2],r.recomp[2],r.gain[2],r.endurance[2]],[2.4,2.2,1.8,1.6],"protein g/kg");
+  eq([r.lose[2],r.recomp[2],r.gain[2],r.endurance[2]],[2.4,2.4,1.8,1.6],"protein g/kg");
   eq(Object.values(r).every(x=>x[3]),true,"macros add up to the energy");
 },{db:Object.assign(seed(),{body:[]})});
 /* ---- no weight is never a default weight (owner, 20 Oct: the 86 kg fallback) ---------- */
@@ -1547,16 +1543,16 @@ await test("One floor: the coach's step down stops at BMR",async page=>{
 function v1Lose(){const d=seed();d.profile.goal="lose";d.goals={kcal:2040,p:168,c:200,f:63,water:3000,steps:9000};return d;}
 await test("Formula change: targets the old formula made are rebuilt once on the textbook's values, with Undo",async page=>{
   await pause(page,900);
-  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.goals.f,S.goals.c,S.formulaV]"),[2050,202,64,167,2],"500 under, 2.4 g/kg");
+  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.goals.f,S.goals.c,S.formulaV]"),[2050,202,64,167,3],"500 under, 2.4 g/kg");
   if(!(await page.$('.toast-undo')))throw new Error("the change was not said");
   await page.tap('.toast-undo');await pause(page);
-  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.formulaV]"),[2040,168,2],"Undo puts the old ones back, and it does not run again");
+  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.formulaV]"),[2040,168,3],"Undo puts the old ones back, and it does not run again");
   await page.reload();await pause(page,2400);
   eq(await ev(page,"[S.goals.kcal,S.goals.p]"),[2040,168],"after a reload: still the person's choice");
 },{db:v1Lose()});
 await test("Formula change: targets the person set are kept",async page=>{
   await pause(page,900);
-  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.formulaV]"),[2500,150,2],"kept, and marked done");
+  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.formulaV]"),[2500,150,3],"kept, and marked done");
   if(await page.$('.toast-undo'))throw new Error("a change was announced that did not happen");
 });
 await test("Workout generator: kit and sore spots swapped, volume in range, effort set, goal extras, time kept",async page=>{
@@ -1580,6 +1576,24 @@ await test("Workout generator: kit and sore spots swapped, volume in range, effo
       mob.days.filter(d=>d.ex.length).every(d=>d.ex.some(e=>/Stretch|Rotation/.test(e.name))),
       lose45.days.every(d=>P.dayMinutes(d)<=45-8+5)];});
   eq(r,[false,true,true,true,true,true,true,true]);
+});
+await test("Harmony: a plan the assessment just built is not flagged by the plan check, and its sets and rest follow the textbook's table for the goal",async page=>{
+  const r=await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const S=(await import("/js/state.js")).S,P=await import("/js/engine/plan.js"),C=await import("/js/engine/plancheck.js");
+    /* The lifts the generator prescribes (it gives them an effort); core, calves, timed
+       holds and the goal's extras keep their own prescription. */
+    const lifts=pl=>pl.days.flatMap(d=>d.ex).filter(e=>e.rir!=null&&e.sets&&!e.timed);
+    const out={};
+    for(const [goal,gear,lv,days,mins] of [["endurance",["Bodyweight"],"advanced",3,45],["gain",null,"some",4,60],["lose",["Bodyweight"],"new",3,30],["strength",null,"experienced",3,60]]){
+      Object.assign(S.profile,{age:30,height:180,weight:84,sex:"m",level:lv,days:days,mins:mins,limits:[],sleep:0,goal:goal});S.gear=gear;
+      P.buildPlan();
+      out[goal]={found:C.checkPlans().filter(f=>/^vol-low$|^surplus-low$/.test(f.id)).map(f=>f.id),l:lifts((S.programs||[]).slice(-1)[0]||{days:[]})};}
+    const E=out.endurance.l,St=out.strength.l;
+    return [out.endurance.found,out.gain.found,out.lose.found,
+      E.length>0&&E.every(e=>e.sets>=1&&e.sets<=3&&e.rest>=30&&e.rest<=60),
+      St.filter(e=>e.rest>=180).length>0,out.gain.l.every(e=>e.rest<=180)];});
+  eq(r,[[],[],[],true,true,true]);
 });
 await test("Meal plan: a day built from the targets, within 5%, servings as labels, diet and leave-outs respected",async page=>{
   const r=await page.evaluate(async()=>{

@@ -15,7 +15,7 @@
    differences, and the app says so where it shows them. */
 import {isActivity} from "../data/activities.js";
 import {muscleOf, secondaryOf} from "../data/exercises.js";
-import {RANGE} from "../coach/landmarks.js";
+import {ceilingFor, RANGE, rangeFor} from "../coach/landmarks.js";
 
 /* The ranges themselves live with the landmarks, in js/coach/landmarks.js. */
 /* The muscles a program is judged on. Forearms, neck and calves are trained by
@@ -42,11 +42,14 @@ function weeklySets(prog){
   Object.keys(out).forEach(function(m){out[m]=Math.round(out[m]*2)/2;});
   return out;}
 
-/* Each judged muscle against the range: low, ok or high. */
-function volumeCheck(prog,level){
-  var r=RANGE[level]||RANGE.some,w=weeklySets(prog);
+/* Each judged muscle against the range for the goal's training style (train, from
+   js/data/goals.js): low, ok or high. A goal with no weekly floor is never "low";
+   lo and hi are then null, and only well past the ceiling is "high". */
+function volumeCheck(prog,level,train){
+  var r=rangeFor(level,train||"hyp"),top=ceilingFor(level),w=weeklySets(prog);
   return JUDGED.map(function(m){
     var s=w[m]||0;
-    return {m:m,sets:s,lo:r[0],hi:r[1],status:s<r[0]*0.7?"low":s>r[1]*1.3?"high":"ok"};});}
+    return {m:m,sets:s,lo:r?r[0]:null,hi:r?r[1]:null,
+      status:r&&s<r[0]*0.7?"low":s>top*1.3?"high":"ok"};});}
 
-export {JUDGED, perWeek, RANGE, volumeCheck, weeklySets};
+export {JUDGED, perWeek, RANGE, rangeFor, volumeCheck, weeklySets};

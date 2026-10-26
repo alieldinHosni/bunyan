@@ -1909,3 +1909,25 @@ Owner, 26 Oct (three screenshots): the coach loses the thread ("How many hours s
 - **Doing things** (`js/coach/commands.js` → `agent.js planCommand` → new registry actions in `handlers/actions.js`, each the app's own tap): open any place (Food, Training, Progress, Coach, Profile, meal plan, targets, program, programs, history, weigh-in, steps, sleep, activities, assessment, settings, your details, backup, new meal plan); add water ("two glasses", "500 ml", "شربت كوبايتين مية"); log steps; units, language, light/dark, colour theme (at once, with Undo); start today's workout, next exercise, finish (the app's own confirmation), skip or extend rest; log a set ("80 kg for 8"); raise/lower calories; change goal. Anything that writes the log or the plan waits for a tap, as before. Questions are never commands ("how much water should I drink" is answered).
 - **Arabic:** every new string has an entry. The knowledge files are English data, so their lines stay English inside an Arabic answer (as food names do). Translating the knowledge base is the remaining gap.
 - Regression tests added (knowledge answers and follow-ups, Arabic, commands with Undo, Arabic water); the knowledge-citation test now checks the source is kept and not shown.
+
+## Plan harmony, the textbook's sets and rest, the owner's ground picture, the result page — branch session/plan-harmony (stacked on session/local-brain)
+
+Owner, 26 Oct (screenshots): right after retaking the assessment (Endurance and fitness, bodyweight, 3 days, 45 min) Coach AI said "Some muscles get little training — Balance the volume" about the plan the app had just built; is the assessment following the knowledge base; Training's background is a flat redrawing of the owner's 3D picture; and a drawing of how the result page should look. CACHE `bunyan-v145`.
+
+- **Why the app argued with itself.** The plan check judged every goal against the muscle-growth weekly range (RP landmarks, `RANGE` by level), but the builder only fits what the session length allows, and for a non-muscle goal that range was never the target. Now:
+  - `js/coach/landmarks.js` `rangeFor(level, train)`: the weekly floor applies to the "hyp" goals only (lose, recomp, gain); strength, power, endurance, mobility and general fitness have none (the textbook prescribes them per exercise), only the ceiling (`ceilingFor`).
+  - `volume.js volumeCheck(prog, level, train)`, the builder's `balance` and the plan check all read it, so the three can't disagree.
+  - The plan check offers "Balance the volume" only when it would move something (`canBalance` dry-runs `rebalance` on a copy): a full schedule isn't a finding.
+  - `coachinfo.js`: "Less training than your program has" counts a muscle as planned only where the program gives it at least its mev, so it can't blame skipped sets for what the program never had.
+  - Regression test "Harmony" reproduces the owner's case (fails on the old plan check, passes now) plus three other profiles.
+- **The textbook's sets and rest (owner: the plan follows the knowledge base; this was the open item from 20 Oct).** `plan.js shapePlan`: every prescribed lift's sets go into the adaptation's range (endurance 1–3, hypertrophy 3–6, strength 4–6, power 3–6; `BY_ADAPTATION`), the main lift's rest into its range (endurance 30–60 s, hypertrophy up to 180 s, strength and power 180–300 s), other lifts no longer than the range. Mobility and general fitness have no row and keep the level's. Time trimming still comes after.
+- **Recomposition protein 2.2 → 2.4 g/kg** (it runs a deficit; the book's 2.4 is for a deficit). Formula version 3: `retarget.js` rebuilds version 2 recomposition targets once, if they are exactly what version 2 made (same rule as before: typed targets are kept). Endurance 1.6 and strength 1.8 stay; both are inside the book's 1.4–2.0 for people who train.
+- **Training's ground is the owner's picture**, one per theme (`img/ground-red.jpg`, `-blue`, `-sage` = the green one for Sage), cut from the owner's upload. It sits at the top and fades out, and is faint in light mode. `js/ui/scene.js` (the flat redrawing) is removed. Other pages keep their drawings.
+- **The result page as drawn:**
+  - Daily targets as five tiles with icons.
+  - Training: the split's name, its reason (now in Arabic too; `whyThisSplit` goes through `t()`), the alternatives, and each day as a row with its first exercise's picture that opens to the whole day with doses.
+  - Weekly training load: a bar per muscle in its own ink. Out of the ceiling; the range band only for muscle goals.
+  - Meal plan as cards (Arabic food names where the database has them).
+  - Back and Use this plan side by side.
+- **Food photos:** the meal cards use glyphs. There are no food photographs in the app, and none are invented (CLAUDE.md, Honesty): waiting on the owner for photos.
+- **Noticed, not changed:** in the bodyweight endurance plan, "Bent Press → Butt-Ups" (a kettlebell press swapped for a core move) is the stand-in logic's choice; worth a look in the movement table.

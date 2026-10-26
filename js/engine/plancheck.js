@@ -21,7 +21,7 @@ import {lastWeight, macroTargets, tdee} from "./formulas.js";
 import {learnedDiffers} from "./energy.js";
 import {fmtW} from "../units.js";
 import {perWeek, RANGE, volumeCheck} from "./volume.js";
-import {LEVELS} from "./plan.js";
+import {LEVELS, rebalance} from "./plan.js";
 import {S, split} from "../state.js";
 import {fmtN, num} from "../util.js";
 import {t, tm} from "../i18n/dict.js";
@@ -54,6 +54,12 @@ function programFacts(prog){
       if(num(e.rest))rests.push(num(e.rest));});});
   return {mains:mains,sport:Math.round(sport),lifts:lifts,mob:mob,
     rest:rests.length?rests.reduce(function(a,b){return a+b;},0)/rests.length:0};}
+
+/* Whether Balance the volume would change anything, tried on a copy. */
+function canBalance(prog,p){
+  var c=JSON.parse(JSON.stringify(prog)),r={sets:0,added:0};
+  try{r=rebalance(c,p,S.gear);}catch(e){return true;}
+  return r.sets>0||r.added>0;}
 
 function checkPlans(){
   var out=[],p=S.profile||{},G=goalOf(p.goal),w=lastWeight()||num(p.weight);
@@ -109,8 +115,12 @@ function checkPlans(){
   /* ---- the training against the goal and the level ---- */
   var prog=split(),f=prog&&prog.days&&prog.days.length?programFacts(prog):null;
   if(f&&f.lifts){
-    var level=LEVELS[p.level]?p.level:"some",vc=volumeCheck(prog,level),r=RANGE[level];
+    var level=LEVELS[p.level]?p.level:"some",vc=volumeCheck(prog,level,G.train),r=RANGE[level];
     var low=vc.filter(function(v){return v.status==="low";}).map(function(v){return v.m;});
+    /* What the plan builder already did all it could for is not a finding: if
+       Balance the volume would move nothing (the sessions are full), offering it is a
+       button that does nothing, and the app arguing with its own plan. */
+    if(low.length&&!canBalance(prog,p))low=[];
     var high=vc.filter(function(v){return v.status==="high";}).map(function(v){return v.m;});
     if(low.length)
       out.push({id:"vol-low",area:"train",sev:G.train==="hyp"?2:1,title:t("Some muscles get little training"),

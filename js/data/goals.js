@@ -21,7 +21,8 @@
    Where the textbook gives a figure, it is the one used (docs/FORMULA-RECONCILIATION.md):
    500 kcal under maintenance for fat loss, 350 over for muscle (the low end of its
    350–500, since most of a larger surplus is stored as fat), 2.4 g/kg protein in a
-   deficit, and its rep ranges for strength and endurance. Where it gives none
+   deficit (fat loss, and recomposition, which runs one: 26 Oct), and its rep ranges
+   for strength and endurance. Where it gives none
    (recomposition, getting stronger), a share of maintenance, capped. They are starting
    points the plan check and the weekly review adjust from, and every one of them can
    be overridden. */
@@ -31,7 +32,7 @@ var GOALS={
              kcal:-0.20,fixed:-500,protein:2.4,fat:0.28,train:"hyp",steps:10000,
              split:{fb:5,ul:4,ap:3,ppl:1,bro:-4,arnold:-4,bw:3}},
   recomp:   {label:"Lose fat, build muscle",   desc:"Leaner and more muscular at once: slower, but both.",
-             kcal:-0.10,cap:400,protein:2.2,fat:0.28,train:"hyp",steps:9000,
+             kcal:-0.10,cap:400,protein:2.4,fat:0.28,train:"hyp",steps:9000,
              split:{fb:3,ul:4,ap:4,ppl:2,bro:-2,arnold:-2,bw:1}},
   gain:     {label:"Build muscle",             desc:"Add size, with as little fat as possible.",
              kcal:0.10,fixed:350,protein:1.8,fat:0.28,train:"hyp",

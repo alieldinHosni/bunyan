@@ -1,4 +1,4 @@
-import {FORMULA_V, fromV1, retarget, v1TargetsOf} from "../retarget.js";
+import {FORMULA_V, fromV1, retarget, v1TargetsOf, v2TargetsOf} from "../retarget.js";
 
 var MAN={age:30,height:180,weight:80,sex:"m",activity:1.4,goal:"lose"};
 var WOMAN={age:25,height:165,weight:60,sex:"f",activity:1.55,goal:"gain"};
@@ -43,7 +43,12 @@ function run(t){
   var m=Object.assign({},MAN,{goal:"maintain"}),mt=v1TargetsOf(m,[],null),f=blob(m,mt);
   r=retarget(f);
   t.eq([r.changed,f.goals.kcal],[false,mt.kcal],"a goal whose numbers did not change: left as it is");
-  t.eq(retarget(blob(MAN,{kcal:1990,p:160,f:62,c:198},[],{formulaV:2})),null,"a profile already on version 2: nothing due");
+  t.eq(retarget(blob(MAN,{kcal:1990,p:160,f:62,c:198},[],{formulaV:3})),null,"a profile already on version 3: nothing due");
+  /* Version 2 to 3: only recomposition's protein moved. */
+  var rc=Object.assign({},MAN,{goal:"recomp"}),r2=v2TargetsOf(rc,[],null),b2=blob(rc,r2,[],{formulaV:2}),rr=retarget(b2);
+  t.eq([rr.changed,b2.goals.p,b2.formulaV],[true,192,FORMULA_V],"recomposition's 2.2 g/kg targets are rebuilt at 2.4");
+  var lz=retarget(blob(MAN,{kcal:1990,p:160,f:62,c:198},[],{formulaV:2}));
+  t.eq(lz&&lz.changed,false,"a version 2 profile on another goal keeps its targets");
   t.eq(retarget(null),null,"nothing: nothing");
   t.clean(a,"no NaN or undefined");
 }

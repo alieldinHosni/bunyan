@@ -14,15 +14,19 @@
         losing, never under 1,200 / 1,500 kcal.
      2  20 Oct 2026, the textbook's values (docs/FORMULA-RECONCILIATION.md rows 2–4, 13):
         500 under, 350 over, 2.4 g/kg losing fat; the floor BMR for every goal, never
-        under 1,200 / 1,500 kcal. */
+        under 1,200 / 1,500 kcal.
+     3  26 Oct 2026: recomposition runs a deficit, so it takes the textbook's 2.4 g/kg
+        for a deficit too (was 2.2); every other number as in version 2. */
 import {bmrOf, macroTargetsOf, tdeeOf} from "./body.js";
 import {goalOf} from "../data/goals.js";
 import {num} from "../util.js";
 
-var FORMULA_V=2;
-/* What version 1 had that goals.js no longer does: the caps on the shares, and the
-   protein for fat loss. Every other goal's numbers are the same in both. */
-var V1={lose:{cap:750,protein:2.0},gain:{cap:300}};
+var FORMULA_V=3;
+/* What each old version had that goals.js no longer does: version 1 the caps on the
+   shares and the protein for fat loss and recomposition, version 2 recomposition's
+   protein. Every other goal's numbers are the same throughout. */
+var V1={lose:{cap:750,protein:2.0},gain:{cap:300},recomp:{protein:2.2}};
+var V2={recomp:{protein:2.2}};
 
 /* The day's targets as version 1 worked them out, at the data given. null without BMR. */
 function v1TargetsOf(profile,body,energy){
@@ -46,8 +50,8 @@ function leanKg(p,body){
 /* Whether stored targets have the shape version 1 gave them: energy in tens, fat the
    goal's share of it, carbs what is left, and protein the goal's version 1 g/kg of a
    weight this profile has had. Typed, imported and hand-moved targets do not. */
-function fromV1(goals,profile,body){
-  var g=goals||{},p=profile||{},G=goalOf(p.goal),o=V1[p.goal]||{};
+function fromV1(goals,profile,body,old){
+  var g=goals||{},p=profile||{},G=goalOf(p.goal),o=(old||V1)[p.goal]||{};
   var kc=num(g.kcal),pr=num(g.p),f=num(g.f),c=num(g.c);
   if(!(kc>0)||kc%10)return false;
   if(f!==Math.round(kc*(G.fat||0.28)/9))return false;
@@ -64,15 +68,23 @@ function fromV1(goals,profile,body){
    way, so this runs once per profile. Rebuilt only where the targets came from the old
    formula and the new one gives this person different numbers; without a weight there
    is nothing to rebuild them on, and they are left as they are. */
+/* Version 2's targets: today's formula with version 2's protein; energy and fat are
+   the same, carbs take what the protein leaves. */
+function v2TargetsOf(profile,body,energy){
+  var now=macroTargetsOf(profile,body,energy),o=V2[(profile||{}).goal];
+  if(!now||!o)return now;
+  var pr=Math.round(leanKg(profile||{},body)*o.protein);
+  return {kcal:now.kcal,p:pr,f:now.f,c:Math.max(50,Math.round((now.kcal-pr*4-now.f*9)/4))};}
 function retarget(db){
   if(!db||num(db.formulaV)>=FORMULA_V)return null;
   var out={changed:false,before:JSON.parse(JSON.stringify(db.goals||{}))};
+  var v=num(db.formulaV)||1;
   db.formulaV=FORMULA_V;
-  if(!db.goals||!fromV1(db.goals,db.profile,db.body))return out;
-  var now=macroTargetsOf(db.profile,db.body,db.energy),was=v1TargetsOf(db.profile,db.body,db.energy);
+  if(!db.goals||!fromV1(db.goals,db.profile,db.body,v>=2?V2:V1))return out;
+  var now=macroTargetsOf(db.profile,db.body,db.energy),was=v>=2?v2TargetsOf(db.profile,db.body,db.energy):v1TargetsOf(db.profile,db.body,db.energy);
   if(!now||!was)return out;
   if(["kcal","p","c","f"].every(function(k){return now[k]===was[k];}))return out;
   ["kcal","p","c","f"].forEach(function(k){if(db.goals[k]!==now[k]){db.goals[k]=now[k];out.changed=true;}});
   return out;}
 
-export {FORMULA_V, fromV1, retarget, v1TargetsOf};
+export {FORMULA_V, fromV1, retarget, v1TargetsOf, v2TargetsOf};

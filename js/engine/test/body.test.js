@@ -54,7 +54,7 @@ function run(t){
   /* ---- protein ---- */
   t.eq(proteinFor(MAN,80),192,"2.4 g/kg while losing fat (the textbook's figure in a deficit)");
   t.eq(proteinFor({goal:"gain"},80),144,"1.8 g/kg building muscle");
-  t.eq(proteinFor({goal:"recomp",height:180},80),176,"2.2 g/kg for recomposition");
+  t.eq(proteinFor({goal:"recomp",height:180},80),192,"2.4 g/kg for recomposition, a deficit");
   t.eq(proteinFor({goal:"lose",height:170},120),187,"above a BMI of 30, from the weight at a BMI of 27");
   t.eq(proteinFor({goal:"lose"},0),0,"no weight: nothing, not NaN");
 
