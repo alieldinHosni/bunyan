@@ -928,7 +928,7 @@ await test("Themes: the rest band takes the theme in light mode, with readable f
   await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
   const r=await page.evaluate(()=>{const v=document.getElementById("restDig"),b=v&&v.closest(".rb");
     return v?[getComputedStyle(v).color,getComputedStyle(b).backgroundColor,!document.getElementById("rest").firstChild]:null;});
-  eq(r,["rgb(19, 38, 39)","rgb(230, 236, 235)",true],"Sage light's text on its raised surface; no full-screen rest");
+  eq(r,["rgb(19, 38, 39)","rgba(224, 231, 230, 0.56)",true],"Sage light's text on its card glass; no full-screen rest");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
 await test("Themes: each page draws its own picture on the ground, under the glass",async page=>{
   const shot=()=>page.evaluate(()=>{const g=document.getElementById("bgart"),svg=g&&g.querySelector("svg");
@@ -1158,7 +1158,7 @@ await test("Bodyweight lifts: the box is added weight, and body weight counts in
   await pause(page,400);
   const last=await ev(page,"S.active.entries.length-1");
   await page.tap('[data-exlist]');await pause(page,400);await page.tap('#sheet [data-jumpl="'+last+'"]');await pause(page,400);
-  eq(await page.$eval('label[for="in_w"]',e=>e.textContent.indexOf("+kg")>-1),true,"the weight box says +kg");
+  eq(await page.$eval('label[for="in_w"]',e=>e.firstChild.textContent),"Added weight","the weight box says it is added weight");
   if(!(await page.$(".bwnote")))throw new Error("no note on what +KG means");
   await page.fill('#in_w','0');await page.fill('#in_r','9');await page.tap('[data-logset]');await pause(page,900);
   eq(await ev(page,"S.active.entries[S.active.entries.length-1].sets[0].w"),0,"logged as body weight alone");
@@ -2552,7 +2552,7 @@ await test("Workout screen: steppers move by the engine's own step; the check lo
   const w0=await ev(page,"V.draft.w"),step=await F(page,`F.incrementFor(S.active.entries[0].name,${w0})`);
   await page.tap('[data-sstep="w"][data-d="1"]');await pause(page,200);
   eq(await ev(page,"V.draft.w"),Math.round((w0+step)*100)/100,"one tap, one step");
-  eq(await page.$eval('[data-sstep="w"][data-d="1"]',e=>e.textContent),"+"+step,"the button says the step");
+  eq(await page.$eval('[data-sstep="w"][data-d="1"]',e=>[e.textContent,e.getAttribute("aria-label")]),[String(step),"More "+step+" kg"],"the button says the step");
   await page.tap('[data-sstep="r"][data-d="-1"]');await pause(page,200);
   const r=await ev(page,"V.draft.r");
   await page.tap('[data-logset]');await pause(page,300);
@@ -2592,6 +2592,16 @@ await test("Workout screen: + Warm-up adds a warm-up set, out of volume and numb
   await page.tap('[data-delno]');await pause(page,200);eq(await ev(page,"S.active.entries[0].sets.length"),1,"cancel keeps it");
   await page.tap('#app .wsr.wkwu [data-delset="0"]');await pause(page,300);await page.tap('[data-delok="0"]');await pause(page,700);
   eq([await ev(page,"S.active.entries[0].sets.length"),await page.$$eval('#app .wsr',a=>a.length)],[0,rows-1],"deleted, with its row");
+},{prefs:{autorest:false}});
+await test("Workout screen: a logged set's numbers can be corrected in place; a suggestion is marked until it is touched",async page=>{
+  await startWorkout(page);
+  if(!(await page.$('#sgTag:not([hidden])')))throw new Error("the suggestion is not marked");
+  await page.fill('#in_r','9');
+  eq(await page.$eval('#sgTag',e=>e.hidden),true,"typed: no longer a suggestion");
+  await page.tap('[data-logset]');await pause(page,900);
+  await page.fill('#app .wsr.did [data-setidx="0"][data-k="r"]','7');
+  await page.evaluate(()=>document.activeElement.blur());await pause(page,300);
+  eq(await ev(page,"S.active.entries[0].sets[0].r"),7,"corrected in place");
 },{prefs:{autorest:false}});
 /* ---- Phase 1 of the visual audit ---- */
 /* The set card says last time once, for the set being done (workout-spec.md); before the

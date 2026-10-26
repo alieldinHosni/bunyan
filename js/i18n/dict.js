@@ -1854,7 +1854,7 @@ var AR={"What I would give you": "اللي هرشحهولك", "Recommended": "ا
 "Log set {n}": "سجّل المجموعة {n}", "Set {n} logged": "المجموعة {n} اتسجلت",
 "Hold the weight, chase a rep": "ثبّت الوزن وزوّد عدة", "Delete set {n}?": "تمسح المجموعة {n}؟",
 "Log warm-up": "سجّل الإحماء", "Not counted in volume or records": "مش محسوب في الحجم ولا الأرقام القياسية",
-"+ Warm-up": "+ إحماء", "+ Set": "+ مجموعة", "Warm-up logged": "الإحماء اتسجل", "Delete warm-up?": "تمسح الإحماء؟", "Added weight": "الوزن المضاف",
+"+ Warm-up": "+ إحماء", "+ Set": "+ مجموعة", "Warm-up logged": "الإحماء اتسجل", "Add warm-up": "ضيف إحماء", "Skip exercise": "تخطّى التمرين", "Suggested": "مقترح", "How hard was that set?": "المجموعة كانت صعبة قد إيه؟", "Delete warm-up?": "تمسح الإحماء؟", "Added weight": "الوزن المضاف",
 "On iPhone, the Home Screen keeps the icon BUNYAN had when it was added. To change it there, make a backup first (Profile → Backup and reset), add BUNYAN to the Home Screen again from Safari (Share → Add to Home Screen), and restore the backup in it if it opens empty.": "على الآيفون، الشاشة الرئيسية بتحتفظ بالأيقونة اللي كانت لبنيان وقت ما اتضاف. عشان تغيرها هناك، اعمل نسخة احتياطية الأول (حسابي ← النسخ الاحتياطي وإعادة الضبط)، وضيف بنيان للشاشة الرئيسية تاني من سفاري (مشاركة ← إضافة إلى الشاشة الرئيسية)، واسترجع النسخة فيه لو فتح فاضي."
 };
 /* Coaching cues (js/knowledge/cues.js AR) join the dictionary; the app's own strings win on a clash. */

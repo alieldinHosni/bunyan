@@ -870,9 +870,9 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
 @keyframes veilIn{from{background-color:transparent}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){
-  #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh,.sr.fresh .tick{animation:none}}
+  #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh,.wsr.fresh .wtick,.sess .log.ok,.rb{animation:none}}
 body.noanim #app,body.noanim .sheetbox,body.noanim .sheet,
-body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .sr.fresh .tick{animation:none}
+body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wtick,body.noanim .sess .log.ok,body.noanim .rb{animation:none}
 /* cursor:pointer is not decoration here. iOS Safari only delivers click events from
    a plain div when it looks interactive, which is why tapping the dimmed area above
    a sheet did nothing on a phone while working on a desktop. */
@@ -1662,7 +1662,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 :root.reduced .bar[data-anim] i,
 :root.reduced path.line[data-anim],
 :root.reduced .logbtn.done.fresh,
-:root.reduced .sr.fresh .tick,
+:root.reduced .wsr.fresh .wtick,
+:root.reduced .sess .log.ok,
+:root.reduced .rb,
 :root.reduced .err{animation:none}
 :root.reduced .skel{animation:none}
 :root.reduced .ss-clock i{animation:none}
@@ -3568,169 +3570,206 @@ textarea.afnl.warn{border-color:var(--warning)}
 .addset2 span{font-size:18px;color:var(--accentHi)}
 :root:not(.tch) .addset2:active,.addset2.tapd{transform:scale(.96)}
 .btn.ss-next{border-radius:var(--r4);background:linear-gradient(180deg,var(--accent),var(--accent-deep));box-shadow:0 14px 30px -14px var(--accent-glow);margin-top:var(--s4)}
-/* ---- The workout screen (docs/design/workout-spec.md, owner's rulings of 20 Oct) -------
-   Flat: content never sits on the ground or on glass. The header is the one blurred
-   layer; the rest band, the set card and every text surface are opaque. The current
-   set's numbers are the largest thing on the screen, and the check stays under the
-   thumb during a rest. Labels sit on --color-action-fill, never on Machine Red. */
+/* ---- The workout screen (docs/design/workout-spec.md, revised by the owner 21 Oct) ----
+   Calm and fast to read mid-set: the exercise, the set's numbers, the check, then
+   everything else. The page is the theme's flat ground (no drawing behind numbers); the
+   set card, the rest, the next exercise and the sets are the theme's translucent card
+   glass with its rim, which needs no blur over a flat ground, so the header is the one
+   blurred layer. Labels sit on --color-action-fill, never on Machine Red. */
 body.wkflat::before,body.wkflat #bgart{display:none}
 body.wkflat #app{--gutter:20px}
-/* The app's glass (see "Glass, everywhere") stops at the workout's header: fields, the
-   feel chips and the secondary buttons here are flat. */
+[dir="rtl"] .sess .flip{transform:scaleX(-1)}
+.sess .gl{stroke-width:2}
+/* The app's glass (see "Glass, everywhere") stops at the workout's header: fields and
+   buttons in the content are flat. */
 .sess .wb :is(input,select,textarea,.ready,.btn.g,.card){-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
 .sess .wb :is(input,select,textarea){background-color:var(--surface);border-color:var(--border)}
-.sess .flip{display:inline-block}
-[dir="rtl"] .sess .flip{transform:scaleX(-1)}
-.sess svg{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.sess .wglass{background:var(--card);border:1px solid var(--card-edge);box-shadow:inset 0 1px 0 var(--glass-hi)}
 
 /* WorkoutHeader: close, day and position (opens today's list), clock, more, a 3px bar. */
 .sess .ss-top{margin-bottom:var(--s3);padding-bottom:0;border-bottom:1px solid var(--hair)}
-.sess .ss-row{display:grid;grid-template-columns:var(--hit) minmax(0,1fr) auto var(--hit);gap:var(--s2);align-items:center;min-height:52px}
-.sess .ss-back,.sess .ss-more{width:var(--hit);height:var(--hit);margin:0;border-radius:50%;border:1px solid var(--glass-btn-edge);
-  background:var(--glass-btn);color:var(--text);font-size:17px}
+.sess .ss-row{display:grid;grid-template-columns:var(--hit) minmax(0,1fr) auto var(--hit);gap:var(--s3);align-items:center;min-height:52px}
+.sess .ss-back,.sess .ss-more{width:var(--hit);height:var(--hit);margin:0;padding:0;display:grid;place-items:center;border-radius:50%;
+  border:1px solid var(--glass-btn-edge);background:var(--glass-btn);color:var(--text)}
 .sess .ss-title{min-height:var(--hit);justify-content:center;padding:0}
-.sess .ss-name{font-size:13px;font-weight:600;color:var(--sub)}
-.sess .ss-meta{display:flex;align-items:center;gap:var(--s1);margin:0;font-size:15px;font-weight:700;color:var(--text)}
-.sess .ss-caret{width:16px;height:16px;stroke-width:2.4}
+.sess .ss-name{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sub)}
+[dir="rtl"] .sess .ss-name{letter-spacing:0;font-size:13px}
+.sess .ss-meta{display:flex;align-items:center;gap:var(--s1);margin:0;font-size:16px;font-weight:700;color:var(--text)}
+.sess .ss-caret{width:16px;height:16px}
 .sess .ss-clock{margin:0;padding:0 var(--s1);border:0;border-radius:0;background:none;box-shadow:none;align-items:flex-end}
-.sess .ss-clock .num{color:var(--sub);font-size:15px}
+.sess .ss-clock .num{color:var(--sub);font-size:16px}
 .sess .ss-bar{height:3px;margin:var(--s2) calc(-1 * var(--gutter)) 0;border-radius:0;background:var(--bar-track)}
 .sess .ss-bar i{height:3px;border-radius:0;background:var(--accent)}
 
 .sess .wb{display:grid;gap:var(--s3)}
 .sess .wb>*{min-width:0;margin-block:0}
 
-/* ExerciseLine: the name (smaller than the numbers), how to do it, swap; the set line
-   and the two adds. */
+/* ExerciseLine: the exercise is the heading; the prescription under it; how to do it
+   and swap beside it; the two adds as one row of quiet chips. */
 .wexl{display:grid;grid-template-columns:minmax(0,1fr) var(--hit) var(--hit);gap:var(--s1) var(--s2);align-items:center}
-.wexl .ex-name{font-family:var(--display);font-size:21px;font-weight:700;letter-spacing:0;line-height:1.2;margin:0;min-width:0}
+.wexl .ex-name{font-family:var(--display);font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.15;margin:0;min-width:0}
 .sess .ib{width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border-radius:50%;
   border:1px solid var(--border);background:var(--surface);color:var(--text)}
-.sess .ib svg{width:20px;height:20px}
-.wexl-s{grid-column:1/-1;margin:0;display:flex;align-items:center;justify-content:space-between;gap:var(--s2);flex-wrap:wrap;
-  color:var(--sub);font-size:15px}
+.wexl-s{grid-column:1/-1;margin:0;color:var(--sub);font-size:15px}
 .wexl-s .ex-light{color:var(--text);font-weight:700}
-.wexl .adds{display:flex;gap:6px}
-.wexl .chip{white-space:nowrap;min-height:var(--hit);padding:0 var(--s3);border-radius:var(--rpill);border:1.5px dashed var(--border);
-  background:transparent;color:var(--text);font-weight:700;font-size:14px}
-.wexl .chip.wkwu{border-color:var(--gold)}
+.wexl .adds{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s1)}
+.wexl .chip{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;min-height:var(--hit);padding:0 var(--s4);border-radius:var(--rpill);
+  border:1px dashed var(--border);background:transparent;color:var(--text);font-weight:600;font-size:14px}
+.wexl .chip .gl{width:18px;height:18px}
+.wexl .chip.wkwu{border:1px solid var(--border);background:var(--surface)}
+.wexl .chip.wkwu .gl{color:var(--gold)}
 
-/* RestBand: in place of the old full-screen rest. Time up, it fills with the action
-   fill and is the alert. */
-.rb{display:grid;gap:10px;padding:var(--s3) var(--s4) var(--s4);border-radius:var(--r5);border:1px solid var(--border);background:var(--raised)}
+/* RestBand: compact, above the set. Time up, it fills with the action fill and is the
+   alert. */
+.rb{display:grid;gap:10px;padding:var(--s3) var(--s4);border-radius:var(--r4)}
 .rb-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
-.rb-k{font-size:13px;font-weight:700;color:var(--dim)}
-.rb-t{font-family:var(--display);font-size:68px;font-weight:700;line-height:.95;letter-spacing:-.02em;color:var(--text)}
+.rb-l{display:flex;align-items:baseline;gap:var(--s3)}
+.rb-k{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .rb-k{letter-spacing:0;font-size:13px}
+.rb-t{font-family:var(--display);font-size:44px;font-weight:700;line-height:1;letter-spacing:-.01em;color:var(--text)}
 .rb-ctl{display:flex;gap:var(--s2)}
-.rb-ctl button{width:48px;height:48px;display:grid;place-items:center;padding:0;border-radius:50%;border:1px solid var(--border);
+.rb-ctl button{width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border-radius:50%;border:1px solid var(--border);
   background:var(--surface);color:var(--text);font-weight:700;font-size:14px}
-.rb-ctl svg{width:20px;height:20px;fill:currentColor;stroke:none}
+.rb-ctl .gl{width:18px;height:18px}
+.rb-ctl :is(.i-pause,.i-play){fill:currentColor;stroke:none}
 .rb .i-play,.rb.paused .i-pause{display:none}
 .rb.paused .i-play{display:block}
-.rb-bar{height:6px;border-radius:3px;background:var(--bar-track);overflow:hidden}
-.rb-bar i{display:block;height:100%;border-radius:3px;background:var(--accent)}
-.rb.over{background:var(--color-action-fill);border-color:var(--color-action-edge);color:var(--onAccent);border-width:1.5px}
-.rb-done{font-family:var(--display);font-size:40px;font-weight:700;line-height:1.1}
-.rb-sub{font-family:var(--display);font-size:20px;font-weight:700}
+.rb-bar{height:4px;border-radius:2px;background:var(--bar-track);overflow:hidden}
+.rb-bar i{display:block;height:100%;border-radius:2px;background:var(--accent);transition:width 1s linear}
+.rb.over{background:var(--color-action-fill);border:1.5px solid var(--color-action-edge);color:var(--onAccent);gap:2px}
+.rb-done{font-family:var(--display);font-size:26px;font-weight:700;line-height:1.15}
+.rb-sub{font-family:var(--display);font-size:16px;font-weight:700}
 
-/* SetCard: flat raised, no glass. 76px numbers, 56px steppers; 56px numbers while a rest
-   counts, because then the time is the number that matters. */
-.wsc{display:grid;gap:var(--s3);padding:18px var(--s4) var(--s3);border-radius:var(--r5);border:1px solid var(--border);background:var(--raised)}
-.sc-g{display:grid;grid-template-columns:1.25fr 1fr;gap:var(--s3)}
+/* SetCard: the one thing to read at arm's length. */
+.wsc{display:grid;gap:var(--s3);padding:var(--s4);border-radius:var(--r5)}
+.sc-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);min-height:24px}
+.sg-tag{margin-inline-start:auto;padding:2px 10px;border-radius:var(--rpill);border:1px solid var(--border);
+  color:var(--sub);font-size:12px;font-weight:700}
+.sg-tag[hidden]{display:none}
+.sc-g{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4)}
 .sc-g.one{grid-template-columns:1fr}
-.wsc .val{display:grid;gap:var(--s2);text-align:center;min-width:0}
-.wsc .val-k{font-size:13px;font-weight:700;color:var(--dim)}
-.sess .wsc .val-n{width:100%;min-width:0;height:auto;margin:0;padding:2px 0 6px;border:0;border-bottom:2px solid var(--hair-hi);border-radius:0;
-  background:none;box-shadow:none;color:var(--text);text-align:center;font-family:var(--display);font-weight:700;font-size:76px;line-height:.95;
-  letter-spacing:-.02em;-moz-appearance:textfield;appearance:textfield}
-.sess .wsc .val-n::-webkit-inner-spin-button,.wsc .val-n::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.sc-g:not(.one) .val+.val{border-inline-start:1px solid var(--hair);padding-inline-start:var(--s4)}
+.wsc .val{display:grid;gap:var(--s2);justify-items:center;text-align:center;min-width:0}
+.wsc .val-k{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .wsc .val-k{letter-spacing:0;font-size:13px}
+.val-nw{display:flex;align-items:baseline;justify-content:center;gap:6px;max-width:100%;min-width:0}
+.sess .wsc .val-n{min-width:1.4ch;max-width:100%;height:auto;margin:0;padding:0;border:0;border-bottom:2px solid transparent;border-radius:0;
+  background:none;box-shadow:none;color:var(--text);text-align:center;font-family:var(--display);font-weight:700;font-size:64px;
+  line-height:1.05;letter-spacing:-.02em;-moz-appearance:textfield;appearance:textfield}
+.sess .wsc .val-n::-webkit-inner-spin-button,.sess .wsc .val-n::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .sess .wsc .val-n:focus{outline:none;border-bottom-color:var(--accent)}
-/* A pre-filled value is a suggestion until it is touched. The number stays in text:
-   it is the thing being read at arm's length. */
-.sess .wsc .val-n.sg{color:var(--text)}
-.wsc .wstp{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
-.wsc .wstp button{min-height:56px;padding:0;border-radius:var(--r4);border:1px solid var(--border);background:var(--surface);
-  color:var(--text);font-family:var(--display);font-size:19px;font-weight:700}
-.sess .wsc.small .val-n{font-size:56px}
-.wsc.small .wstp button{min-height:52px}
-.sc-h{display:flex;flex-wrap:wrap;gap:var(--s1) 10px;padding-top:var(--s3);border-top:1px solid var(--hair);color:var(--sub);font-size:15px}
+/* A suggestion reads one step quieter than numbers the lifter set (and says so in the
+   tag above), so it is never taken for something done. */
+.sess .wsc .val-n.sg{color:var(--sub)}
+.val-u{font-size:18px;font-weight:600;color:var(--sub)}
+.wsc .wstp{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);width:100%}
+.wsc .wstp button{min-height:52px;display:flex;align-items:center;justify-content:center;gap:2px;padding:0;border-radius:var(--r4);
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--display);font-size:17px;font-weight:700}
+.wsc .wstp .gl{width:18px;height:18px;stroke-width:2.4}
+:root:not(.tch) .wsc .wstp button:active,.wsc .wstp button.tapd{background:var(--accent-tint);border-color:var(--accent-edge)}
+.sess .wsc.small .val-n{font-size:min(48px,45cqi)}
+/* The figure fits its half of the card at any width: 62.5 and 102.5 step down, and on
+   the narrowest phones the unit moves up into the label. */
+.wsc .val{container-type:inline-size}
+.sess .wsc .val-n{font-size:min(64px,45cqi)}
+.sess .wsc .val-n.long{font-size:min(50px,30cqi)}
+.sess .wsc.small .val-n.long{font-size:min(40px,30cqi)}
+.val-ku{display:none}
+@container (max-width:130px){.wsc .val-u{display:none}.wsc .val-ku{display:inline}}
+.wsc.small .wstp button{min-height:48px}
+.sc-h{display:grid;gap:2px;padding-top:var(--s3);border-top:1px solid var(--hair);color:var(--sub);font-size:14px;line-height:1.4}
 .sc-h b{color:var(--text);font-weight:700}
-.sc-h>span{flex:1 1 100%}
 .sc-h .sc-cue{font-style:italic}
 .sc-rpe{display:grid;gap:var(--s2);text-align:center}
 .sc-rpe-c{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .sc-rpe-c button{min-height:var(--hit);border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
   color:var(--text);font-weight:700;font-size:15px}
 .sc-rpe-c button.on{background:var(--accent-tint);border-color:var(--accent);color:var(--text)}
-.sc-wu{display:flex;align-items:center;gap:var(--s2);font-size:14px;font-weight:700;color:var(--text)}
-.sc-wu p{margin:0;flex:1;min-width:0}
+.sc-wu{display:flex;align-items:center;gap:var(--s2);font-size:14px;font-weight:700;color:var(--text);min-width:0}
+.sc-wu p{margin:0;min-width:0}
 .sc-wu p span{color:var(--sub);font-weight:600}
-.sess .wub{width:28px;height:28px;margin:auto;border-radius:50%;border:1.5px solid var(--gold);color:var(--text);
-  display:grid;place-items:center;font-size:13px;font-weight:700}
-.sc-wu .wub{margin:0;flex:none}
+.sess .wub{width:24px;height:24px;flex:none;border-radius:50%;border:1.5px solid var(--gold);color:var(--text);
+  display:inline-grid;place-items:center;font-size:12px;font-weight:700}
 
-/* LogControl: the Nike-style check, full width, on the action fill. */
-.sess .log{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);width:100%;min-height:76px;margin:0;
-  padding-block:var(--s2);padding-inline:28px var(--s2);border:0;border-radius:var(--rpill);
+/* LogControl: the one primary action. A label and the check, on the action fill. */
+.sess .log{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);width:100%;min-height:64px;margin:0;
+  padding-block:10px;padding-inline:var(--s5) 10px;border:0;border-radius:var(--rpill);
   background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);color:var(--onAccent);
-  font-family:var(--display);font-size:20px;font-weight:700;text-align:start}
-:root:not(.tch) .sess button.log:active,.sess button.log.tapd{transform:scale(.985)}
-.log-c{width:60px;height:60px;flex:none;display:grid;place-items:center;border-radius:50%;border:3px solid currentColor}
-.log-c svg{width:28px;height:28px;stroke-width:3.2}
-.sess .log.ok{background:var(--ok);box-shadow:none;color:var(--onOk);padding-inline:var(--s2) 10px;justify-content:flex-start}
+  font-family:var(--display);font-size:19px;font-weight:700;text-align:start;
+  transition:transform var(--m-press) var(--e-standard),filter var(--m-press) var(--e-standard)}
+:root:not(.tch) .sess button.log:active,.sess button.log.tapd{transform:scale(.98);filter:brightness(1.08)}
+.log-c{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;border:2px solid currentColor}
+.log-c .gl{width:22px;height:22px;stroke-width:2.6}
+.sess .log.ok{background:var(--ok);box-shadow:none;color:var(--onOk);padding-inline:10px;justify-content:flex-start;
+  animation:wkIn var(--m-comp) var(--e-decel)}
 .sess .log.ok .log-c{background:var(--onOk);color:var(--ok);border-color:var(--onOk)}
-.sess .log.ok b{flex:1;min-width:0;font-size:20px}
-.sess .undo{min-height:48px;padding:0 18px;border-radius:var(--rpill);border:2px solid var(--onOk);background:transparent;
-  color:var(--onOk);font-weight:700;font-size:16px}
+.sess .log.ok b{flex:1;min-width:0;font-size:19px}
+.sess .undo{min-height:var(--hit);padding:0 18px;border-radius:var(--rpill);border:2px solid var(--onOk);background:transparent;
+  color:var(--onOk);font-weight:700;font-size:15px}
+@keyframes wkIn{from{opacity:0;transform:translateY(4px)}}
+.rb{animation:wkIn var(--m-comp) var(--e-decel)}
 
-/* "How do you feel today?", under the check before the first set. */
+/* "How do you feel today?" (readiness for the day, before the first set), compact. */
 .sess .ready{margin:0;padding:0;border:0;background:none}
-.sess .ready-h{margin-bottom:var(--s2);font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--sub)}
+.sess .ready-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:14px;font-weight:600;
+  letter-spacing:0;text-transform:none;color:var(--sub)}
 .sess .ready-skip{color:var(--accentHi);font-weight:700;min-height:var(--hit)}
+.sess .ready-c{gap:6px}
+.sess .ready-c button{min-height:var(--hit);font-size:13.5px}
 .sess .readynote,.sess .painnote{margin:0}
 .sess .exalt{margin:0;justify-self:start}
 
-/* NextExercise: the next one by name, one tap. */
-.nx{display:grid;grid-template-columns:minmax(0,1fr) 24px;align-items:center;gap:var(--s2);min-height:64px;padding:var(--s2) var(--s4);
-  border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);color:var(--text);text-align:start}
-.nx small{display:block;font-size:13px;font-weight:700;color:var(--dim)}
-.nx b{display:block;font-family:var(--display);font-size:17px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nx svg{width:20px;height:20px;color:var(--dim);stroke-width:2.4}
+/* NextExercise: secondary, one row. */
+.nx{display:grid;grid-template-columns:auto minmax(0,1fr) 20px;align-items:center;gap:var(--s3);min-height:56px;padding:var(--s2) var(--s3);
+  border-radius:var(--r4);color:var(--text);text-align:start}
+.nx .thumbwrap,.nx .thumb{border-radius:10px}
+.nx small{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-inline-end:6px}
+[dir="rtl"] .nx small{letter-spacing:0;font-size:13px}
+.nx b{font-family:var(--display);font-size:16px;font-weight:700}
+.nx>span:not(.thumbwrap){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx .gl{width:20px;height:20px;color:var(--dim)}
 
-/* SetHistory: delete leads (settled), the tick ends the row and takes the set back. */
-.wsl{display:grid;gap:6px}
-.wsr{display:grid;grid-template-columns:var(--hit) 30px minmax(0,1fr) var(--hit);align-items:center;gap:var(--s1);min-height:52px;
-  padding-inline:2px var(--s1);border-radius:var(--r4);border:1px solid var(--hair);color:var(--sub)}
-.wsr.did{background:var(--surface);border-color:var(--border);color:var(--text)}
-.wsr.on{background:var(--accent-tint);border-color:var(--accent-edge);color:var(--text)}
-.wsr .x{width:var(--hit);height:var(--hit);padding:0;border:0;border-radius:50%;background:none;color:var(--dim);font-size:16px}
-.wsr .n{font-family:var(--display);font-weight:700;text-align:center}
-.wsr .v{font-weight:600;min-width:0}
-.wsr .now{font-size:14px;font-weight:700;color:var(--text)}
-.wsr.wkwu{border-style:dashed;border-color:var(--gold);background:transparent}
-.wsr.wkwu.did{background:var(--surface)}
-.wsr.wkwu.on{background:var(--accent-tint)}
-.wsr .wut{margin-inline-start:6px;font-size:13px;font-weight:700;color:var(--sub)}
-.wsr .wtick{width:36px;height:36px;margin:var(--s1);padding:0;display:grid;place-items:center;border:0;border-radius:50%;
-  background:var(--ok);color:var(--onOk);position:relative}
-/* 36px drawn, a 44px target. */
-.wsr button.wtick::after{content:"";position:absolute;inset:-4px}
-.wsr .wtick svg{width:18px;height:18px;stroke-width:3}
-.wsr .wtick.off{background:transparent;border:1px solid var(--hair-hi);color:var(--dim)}
+/* SetHistory: one list, hairlines between rows. Delete leads (settled); the state ends the
+   row: a filled tick (done; tap to take it back), the accent ring (now), an empty ring. */
+.wsl{display:grid;border-radius:var(--r4);overflow:hidden}
+.wsr{display:grid;grid-template-columns:var(--hit) minmax(0,1fr) var(--hit);align-items:center;gap:var(--s1);min-height:52px;
+  padding-inline:2px var(--s1);color:var(--sub)}
+.wsr+.wsr{border-top:1px solid var(--hair)}
+.wsr.did{color:var(--text)}
+.wsr.on{background:var(--accent-tint);color:var(--text)}
+.wsr .x{width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:none;color:var(--dim)}
+.wsr .x .gl{width:16px;height:16px}
+.wsr-t{display:flex;align-items:baseline;gap:10px;min-width:0;flex-wrap:wrap}
+.wsr-n{display:inline-flex;align-items:center;gap:6px;font-weight:700;color:var(--text)}
+.wsr.pend .wsr-n{color:var(--sub);font-weight:600}
+.wsr-v{font-weight:600}
+.wsr.on .wsr-v{font-weight:700;color:var(--text)}
+.wsr.wkwu .wub{width:20px;height:20px;font-size:11px}
+.sess .wsr .wcell{min-width:1.4ch;max-width:6ch;height:auto;padding:0 0 1px;margin:0;border:0;border-bottom:1px dashed var(--border);border-radius:0;
+  background:none;color:var(--text);font:inherit;font-weight:700;text-align:center;-moz-appearance:textfield;appearance:textfield}
+.sess .wsr .wcell::-webkit-inner-spin-button,.sess .wsr .wcell::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.sess .wsr .wcell:focus{outline:none;border-bottom:1px solid var(--accent)}
+.wtick{width:28px;height:28px;margin:auto;padding:0;display:grid;place-items:center;border-radius:50%;position:relative;
+  border:0;background:var(--ok);color:var(--onOk)}
+/* 28px drawn, a 44px target. */
+.wsr button.wtick::after{content:"";position:absolute;inset:-8px}
+.wtick .gl{width:16px;height:16px;stroke-width:2.6}
+.wtick.cur{background:transparent;border:2px solid var(--accent)}
+.wtick.off{background:transparent;border:1.5px solid var(--hair-hi)}
 .wsr.fresh .wtick{animation:setpop var(--m-pop) var(--e-spring)}
-.wsr.ask{grid-template-columns:minmax(0,1fr) auto auto;gap:6px;padding-inline:14px 6px;border-color:var(--danger);
-  background:var(--surface);color:var(--text)}
+.wsr.ask{grid-template-columns:minmax(0,1fr) auto auto;gap:6px;padding-inline:var(--s4) 6px;background:var(--surface);color:var(--text);
+  box-shadow:inset 0 0 0 1px var(--danger)}
 .wsr.ask button{min-height:var(--hit);padding:0 var(--s4);border-radius:var(--rpill);font-weight:700;font-size:15px}
 .wsr.ask .del{border:1px solid var(--danger);background:transparent;color:var(--danger)}
 .wsr.ask .keep{border:1px solid var(--border);background:var(--raised);color:var(--text)}
 .sess .bwnote{margin:0}
 
-/* Tools: Skip and Add as tiles; Remove and Something hurts? as quiet links under them. */
-.sess .tools{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
-.sess .tools button{min-height:52px;display:flex;align-items:center;justify-content:center;gap:var(--s2);border-radius:var(--r4);
-  border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700}
-.sess .tools svg{width:18px;height:18px}
-.sess .quiet{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--s1);margin-bottom:var(--s5)}
+/* Tools: Skip and Add exercise as tiles; Remove and Something hurts? as quiet links. */
+.sess .tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:var(--s2)}
+.sess .tools button{min-height:48px;display:flex;align-items:center;justify-content:center;gap:var(--s2);border-radius:var(--r4);
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;font-size:14.5px}
+.sess .tools .gl{width:18px;height:18px}
+.sess .quiet{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--s1) var(--s5);margin-bottom:var(--s5)}
 .sess .quiet button{min-height:var(--hit);padding:0 var(--s1);border:0;background:none;color:var(--dim);font-size:14px;font-weight:600;
   text-decoration:underline;text-underline-offset:3px}
 .sess .quiet button.on{color:var(--warning)}
