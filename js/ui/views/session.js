@@ -128,6 +128,15 @@ function rowPlan(e){
   return out;}
 /* The working sets of an exercise, planned and done. */
 function workCount(plan){return plan.filter(function(r){return !r.wu;}).length;}
+/* What is next, one quiet line under the name, always in view: the next exercise, one
+   tap to go there. Inside a superset it is the next one in the round. */
+function nextLine(a,run){
+  var nxI=run&&run.length>1?groupNext(a.entries,V.logIdx):null;
+  if(nxI===null||nxI===V.logIdx)nxI=V.logIdx<a.entries.length-1?V.logIdx+1:null;
+  if(nxI===null)return "";
+  var nxE=a.entries[nxI],nxG=groupLabel(a.entries,nxI);
+  return '<button class="wexl-nx" data-jump="'+nxI+'"><span class="wexl-nk">'+t("Next")+'</span>'
+    +'<b>'+(nxG?esc(nxG)+' · ':'')+esc(exName(nxE.name))+'</b>'+IC.chev+'</button>';}
 /* "6–10 reps", "40–60 s", "max": the reps half of the dose, for the set line. */
 function repsText(e,timed){
   var p=e.planned||{};
@@ -367,6 +376,7 @@ function vLogger(){
    +'<button class="ib" data-swap="1" aria-label="'+t("Replace this exercise")+'">'+IC.swap+'</button>'
    +'<p class="wexl-s"><span>'+line+'</span>'
    +'</p>'
+   +nextLine(a,run)
    +(act?'':'<div class="adds"><button class="chip wkwu" data-addwu="1">'+IC.flame+'<span>'+t("Add warm-up")+'</span></button>'
      +'<button class="chip" data-addrow="1">'+IC.plus+'<span>'+t("Add a set")+'</span></button></div>')+'</div>';
 
@@ -402,14 +412,6 @@ function vLogger(){
      until a set is logged. */
   if(e.alt&&!e.sets.length)
     h+='<button class="linkbtn exalt" data-swapalt="1">'+esc(t(e.altWhy==="gear"?"Don't have the kit?":"Or"))+' '+esc(exName(e.alt))+'</button>';
-
-  /* --- what is next: the next exercise by name, one tap to go there. Inside a superset
-     it is the next one in the round. --- */
-  var nxI=run.length>1?groupNext(a.entries,V.logIdx):null;
-  if(nxI===null||nxI===V.logIdx)nxI=V.logIdx<a.entries.length-1?V.logIdx+1:null;
-  if(nxI!==null){
-    var nxE=a.entries[nxI],nxG=groupLabel(a.entries,nxI);
-    h+='<button class="nx wglass" data-jump="'+nxI+'">'+thumb(nxE.name,40)+'<span><small>'+t("Next")+'</small><b>'+(nxG?esc(nxG)+' · ':'')+esc(exName(nxE.name))+'</b></span>'+IC.chev+'</button>';}
 
   if(!act){
     h+=vHistory(e,plan,active,timed);
