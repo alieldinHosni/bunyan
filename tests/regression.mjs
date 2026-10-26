@@ -1201,16 +1201,16 @@ await test("Exercises: a sideways swipe moves between them; a nudge or a vertica
   await drag(10,520,300,525);eq(await idx(),0,"not from the screen edge");
   /* The arrows and segments are gone (workout-spec.md): the next exercise is named on the
      screen and one tap away; the list from the title reaches any of them. */
-  eq(await page.$eval('.nx b',e=>e.textContent),await ev(page,"(async()=>(await import('/js/i18n/exnames.js')).exName(S.active.entries[1].name))()"),"the next one is named");
-  await page.tap('.nx');await pause(page,400);eq(await idx(),1,"next exercise");
+  eq(await page.$eval('.wexl-nx b',e=>e.textContent),await ev(page,"(async()=>(await import('/js/i18n/exnames.js')).exName(S.active.entries[1].name))()"),"the next one is named");
+  await page.tap('.wexl-nx');await pause(page,400);eq(await idx(),1,"next exercise");
   await page.tap('[data-exlist]');await pause(page,400);await page.tap('#sheet [data-jumpl="0"]');await pause(page,400);eq(await idx(),0,"back by the list");
   await page.tap('[data-exlist]');await pause(page,400);
   eq(await page.$$eval("#sheet .exl-row",a=>a.length),await ev(page,"S.active.entries.length"),"the list has every exercise");
   await page.tap('#sheet [data-jumpl="2"]');await pause(page,400);eq([await idx(),await ev(page,"!!V.sheet")],[2,false],"list jump");
-  await page.tap('.nx');await pause(page,400);eq(await idx(),3,"next from there");
+  await page.tap('.wexl-nx');await pause(page,400);eq(await idx(),3,"next from there");
   /* Looking ahead does not end a rest. */
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
-  await page.tap('.nx');await pause(page,400);
+  await page.tap('.wexl-nx');await pause(page,400);
   eq(await ev(page,"V.restEnd>Date.now()"),true,"the rest keeps running");
 },{prefs:{autorest:true,anim:true}});
 async function dockTest(page,slide){
@@ -2984,6 +2984,21 @@ await test("Layout: scrolled to the end, every screen's content ends above the d
           return {hit,end:vis?last<=d.top+1:true,dead:document.documentElement.scrollHeight-(scrollY+innerHeight)};});
         if(y?r.hit.length:r.hit.some(h=>h[0]==="("))throw new Error(w+" "+lang+" "+tab+" @"+y+": the launcher covers "+r.hit.join(", "));
         if(y&&!r.end)throw new Error(w+" "+lang+" "+tab+": the content ends under the dock");}}}
+});
+await test("Workout: the next exercise is named under the current one, in view on a small phone, and on the warm-up card; the exercise sheet never shows the old photos while its 3D figure loads",async page=>{
+  await page.setViewportSize({width:375,height:667});
+  await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.nowarm=false;});
+  await startWorkout(page);
+  const then=await page.$eval('.wu-then b',e=>e.textContent).catch(()=>"");
+  eq(then,await ev(page,"(async()=>(await import('/js/i18n/exnames.js')).exName(S.active.entries[0].name))()"),"the warm-up names what follows it");
+  await page.tap('[data-wuskip]');await pause(page,400);
+  const r=await page.evaluate(()=>{const n=document.querySelector(".wexl-nx");if(!n)return null;const b=n.getBoundingClientRect();return [b.bottom<=innerHeight,!!document.querySelector("#app .nx")];});
+  eq(r,[true,false],"Next is under the name, in view; the old card is gone");
+  /* The figure's stage holds its size and shows no photos until it is drawn. */
+  await page.tap('[data-exdetail]');await pause(page,30);
+  const f=await page.evaluate(()=>{const f=document.querySelector("#sheet .fig3d");if(!f)return "none";
+    return [f.hasAttribute("data-still")||f.hasAttribute("data-live")?"ok":getComputedStyle(f.querySelector(".fig3d-still")).visibility];});
+  if(f!=="none"&&f[0]!=="ok"&&f[0]!=="hidden")throw new Error("photos shown while loading: "+f);
 });
 /* ---- Phase 1 of the visual audit ---- */
 /* The set card says last time once, for the set being done (workout-spec.md); before the
