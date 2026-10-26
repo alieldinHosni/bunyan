@@ -63,6 +63,9 @@ function vProfile(){
      prow('data-sheet="set_you"',"person",t("You"),you.length?you.join(" · "):t("Add your age, height and weight"))
     +prow('data-sheet="set_training"',"dumbbell",t("Training"),
        t(p.prog.charAt(0).toUpperCase()+p.prog.slice(1))+" · "+t("RPE")+" "+rpeLabel.toLowerCase())
+    /* What the person told the coach, kept in their words: listed and deletable from
+       the conversation (js/coach/context.js). */
+    +prow('data-chatq="facts"',"person",t("What you've told the coach"),t("Kept as you said it, and deletable"))
     +prow('data-fsec="targets"',"bowl",t("Nutrition"),fmtN(g.kcal)+" kcal · "+g.p+"g "+t("Protein").toLowerCase())
     +prow('data-sheet="set_app"',"sliders",t("App"),
        [t(themeName(themeOf()))+" · "+(S.theme==="light"?t("Light"):t("Dark")),

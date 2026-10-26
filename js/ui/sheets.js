@@ -26,7 +26,6 @@ import {tiexSheet} from "./views/timport.js";
 import {coolCard, warmOf} from "./views/warmup.js";
 import {settingsSheet} from "./settings.js";
 import {fig3dHtml, hasMannequin} from "./mannequin.js";
-import {markArt} from "./art.js";
 
 /* One figure in the exercise sheet: a label, the number (typeable), and − / + either
    side. The steps are the plan's own: a set, a rep, fifteen seconds of rest. */
@@ -234,6 +233,8 @@ function vSheet(){
     b='<h2>'+t("Session")+'</h2>'
      +'<p class="sub" style="margin:2px 0 16px">'+esc(exName(smE.name))+'</p>'
      +'<div class="list">'
+     /* The coach, from the workout: over the set, never near the log control. */
+     +'<button class="item" data-coachopen="1"><span>'+t("Ask Coach")+'</span><span class="chev">›</span></button>'
      +'<button class="item" data-exdetail="'+esc(smE.name)+'"><span>'+t("How to do it")+'</span>'
      +'<span class="chev">›</span></button>'
      +(loadable(smE.name)?'<button class="item" data-plates="1"><span>'+t("Plates")+'</span>'
@@ -600,32 +601,38 @@ function vSheet(){
        a record if there was one — and what to do next. Everything else lives in
        Progress. */
     var wsecs=w.secs||w.mins*60;
-    b='<div class="wc2">'
-     +markArt("wc2-art")
-     +'<div class="wc2-medal" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M8.5 13.9 7 22l5-3 5 3-1.5-8.1"/></svg></div>'
-     +'<h1 class="wc2-h">'+t("Workout complete")+'</h1>'
-     +'<p class="wc2-sub">'+esc(planName(w.dayName))+' · '+pretty(w.date)+'</p>'
-     +'<div class="wc2-stats">'
-     +'<div><b>'+(wsecs>=3600?Math.floor(wsecs/3600)+'<small>h</small> '+Math.round(wsecs%3600/60)+'<small>m</small>':mmss(wsecs))+'</b><span>'+t("Time")+'</span></div>'
+    /* Workout complete (workout-spec.md): the check, three figures, and the records,
+       which are news here rather than mid-set; Done, then the questions under it. */
+    b='<div class="wfin">'
+     +'<div class="wfin-c" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>'
+     +'<h1 class="wfin-h">'+t("Workout complete")+'</h1>'
+     +'<p class="wfin-sub">'+esc(planName(w.dayName))+' · '+pretty(w.date)+'</p>'
+     +'<div class="wfin-stats">'
+     +'<div class="stat"><b class="num">'+(wsecs>=3600?Math.floor(wsecs/3600)+'<small>h</small> '+Math.round(wsecs%3600/60)+'<small>m</small>':mmss(wsecs))+'</b><small>'+t("Duration")+'</small></div>'
      /* A lifting day shows its tonnage; a run or a match shows what it burned. */
      +(w.vol||!w.actKcal
-       ?'<div><b><span data-count-to="'+Math.round(toDisp(w.vol))+'">'+fmtN(toDisp(w.vol))+'</span><small>'+wUnit()+'</small></b><span>'+t("Volume")+'</span></div>'
-       :'<div><b><span data-count-to="'+w.actKcal+'">'+fmtN(w.actKcal)+'</span><small>kcal</small></b><span>'+t("Burned")+'</span></div>')
+       ?'<div class="stat"><b class="num"><span data-count-to="'+Math.round(toDisp(w.vol))+'">'+fmtN(toDisp(w.vol))+'</span></b><small>'+t("Volume")+' · '+wUnit()+'</small></div>'
+       :'<div class="stat"><b class="num"><span data-count-to="'+w.actKcal+'">'+fmtN(w.actKcal)+'</span></b><small>'+t("Burned")+' · kcal</small></div>')
      +(w.actKm&&!w.vol
-       ?'<div><b>'+w.actKm+'<small>km</small></b><span>'+t("Distance")+'</span></div>'
-       :'<div><b><span data-count-to="'+w.sets+'">'+w.sets+'</span></b><span>'+t("Sets")+'</span></div>')
+       ?'<div class="stat"><b class="num">'+w.actKm+'</b><small>'+t("Distance")+' · km</small></div>'
+       :'<div class="stat"><b class="num"><span data-count-to="'+w.sets+'">'+w.sets+'</span></b><small>'+t("Sets")+'</small></div>')
      +'</div>';
-    /* One highlight line at most: a record beats a volume gain. */
+    /* The best record first: weight, then estimated max, then reps. */
     var RK={w:3,e:2,r:1};
     var prs=w.prs.slice().sort(function(x,y){return (RK[y.k||"w"]-RK[x.k||"w"])||(y.w-x.w);});
     if(prs.length){
       var p0=prs[0],k0=p0.k||"w";
-      b+='<div class="wc2-hl"><span aria-hidden="true">🏆</span><span>'
-       +(prs.length>1?prs.length+' '+t("new records")+' · ':t(k0==="e"?"New best estimated max":k0==="r"?"Rep record":"New record")+' · ')
-       +esc(exName(p0.n))+' '+(k0==="e"?fmtW(p0.e):k0==="r"?p0.r+' × '+fmtW(p0.w):fmtW(p0.w)+' × '+p0.r)+'</span></div>';}
+      b+='<div class="wfin-rec"><b>'+(prs.length>1?'<span class="num">'+prs.length+'</span> '+t("new records")
+          :t(k0==="e"?"New best estimated max":k0==="r"?"Rep record":"New personal record"))+'</b>'
+       +'<span>'+esc(exName(p0.n))+' · '+(k0==="e"?fmtW(p0.e):k0==="r"?p0.r+' × '+fmtW(p0.w):fmtW(p0.w)+' × '+p0.r)+'</span></div>';}
     else if(w.prevVol&&w.delta>0)
-      b+='<div class="wc2-hl"><span aria-hidden="true">↑</span><span>'+t("Volume up")+' '
-       +Math.round(w.delta/w.prevVol*100)+'% '+t("on last session")+'</span></div>';
+      b+='<p class="wfin-up"><span aria-hidden="true">↑</span> '+t("Volume up")+' '
+       +Math.round(w.delta/w.prevVol*100)+'% '+t("on last session")+'</p>';
+    /* Top of the range on every set: next session's step. */
+    (w.prog||[]).forEach(function(g){
+      b+='<div class="wfin-rec"><b>'+t("Progression earned")+'</b><span>'+esc(exName(g.n))+' · '
+       +t("Top of the range on every set. Try")+' '+fmtW(g.next)+' '+t("next session")+'.</span></div>';});
+    b+='<button class="wfin-done" data-close="1">'+t("Done")+'</button>';
     /* One tap for how hard the whole session was. It is the one number that tracks
        training load across lifting, cardio and sport alike. */
     var sr=(sessionById(w.id)||{}).srpe||0;
@@ -645,7 +652,6 @@ function vSheet(){
     /* Stretches for what was trained, with a timer each. */
     b+=coolCard(w.cool);
     b+='</div><div class="cf-acts wc2-acts">'
-     +'<button class="btn cf-ok" data-close="1">'+t("Done")+'</button>'
      +'<div class="wc2-row">'
      +(w.id?'<button class="btn g cf-no" data-sessedit="'+esc(w.id)+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>'+t("Edit")+'</button>':'')
      +'<button class="btn g cf-no" data-sharews="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>'+t("Share")+'</button>'

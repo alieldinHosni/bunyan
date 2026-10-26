@@ -42,11 +42,11 @@ var AC=null,beeped=true,lastTick=99,wakeLock=null;
    that must be silenced would have meant getting all ten right and keeping them right.
    The alarm outliving the screen that raised it is the specific failure this prevents. */
 function endRest(){
-  V.restEnd=0;V.restPaused=false;V.restDone=false;V.restMin=false;V.restOver=0;
+  V.restEnd=0;V.restPaused=false;V.restDone=false;V.restOver=0;
   alarmStop();
 }
 function startRest(e){
-  V.restDone=false;V.restMin=false;V.restOver=0;alarmStop();   /* a new rest replaces the last one's alert */
+  V.restDone=false;V.restOver=0;alarmStop();   /* a new rest replaces the last one's alert */
   audioOn();
   if(!S.prefs.autorest){V.restEnd=0;return;}
   V.restTotal=e.rest||75;
@@ -144,6 +144,9 @@ function syncViewport(){
 /* undo: a function for the toast's button, which says Undo unless label says
    otherwise ("Show me" for a plan check). */
 function toast(msg,undo,label){
+  /* A change the coach made says itself in the panel, with its own Undo
+     (js/ui/handlers/actions.js): no second word of it over the field. */
+  if(V.quietToast)return;
   var old=document.querySelector(".toast");if(old)old.remove();
   var d=document.createElement("div");d.className="toast";d.setAttribute("role","status");
   var s=document.createElement("span");s.textContent=msg;d.appendChild(s);
@@ -429,6 +432,10 @@ function lockScroll(on){
     b.style.left="";b.style.right="";b.style.width="";
     d.style.height="";
     window.scrollTo(0,_lockY);
+    /* Unpinning restores the page's own height and scroll, and the visible viewport is
+       measured again: a sheet that closed with the keyboard up, or after the toolbar
+       moved, otherwise left --vvh at its old value and the next sheet sized from it. */
+    syncViewport();
   }
 }
 

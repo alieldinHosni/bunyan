@@ -25,7 +25,7 @@ import {glyph} from "../glyphs.js";
 import {builderBody, exercisesPage, programsPage, trainSub, weekOffer} from "./train.js";
 import {foodSub, vMyFoods, vPlan, vTargets} from "./food.js";
 import {adviceBody, adviceNote} from "./pcheck.js";
-import {chatCard, vChat} from "./chat.js";
+import {vChat} from "./chat.js";
 
 var CSECS=[["train","Training"],["food","Nutrition"],["ai","Coach AI"]];
 var TSUBS=[["program","My program"],["programs","Programs"],["exercises","Exercises"]];
@@ -39,7 +39,7 @@ function vCoach(){
   /* The conversation, under anything an answer opened over it. */
   if(V.chat)return vChat();
   var sec=csec(),n=V.advice||0,h='';
-  h+='<div class="thead"><div><h1>'+t("Coach")+'</h1>'
+  h+='<div class="thead"><div><h1>'+t("Plan")+'</h1>'
    +'<p class="thead-s">'+t("Plan it here. Do it in Training and Food.")+'</p></div></div>';
   h+=seg({items:CSECS.map(function(x){return [x[0],t(x[1])+(x[0]==="ai"&&n?" ·"+n:"")];}),value:sec,attr:"csec",tabs:true,
     cls:"tsecs csecs",label:t("Coach"),key:"csecs"});
@@ -73,7 +73,7 @@ function vCoachAI(){
     return h;}
   h+=weekCard();
   h+=adviceBody();
-  h+=chatCard();
+  /* The conversation is reached from the floating Coach button only (js/ui/coachfab.js). */
   h+=planTiles();
   /* The small print belongs to the advice: a week with nothing to say has none. */
   if(V.advice)h+=adviceNote();

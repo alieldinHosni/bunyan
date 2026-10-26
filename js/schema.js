@@ -39,6 +39,7 @@
                                        DEF, or normalize would mark old blobs as current
    @property {Slot[]=}  mealSlots      the day's meals, when not the usual four
    @property {Object[]=} chat          the coach chat's kept conversation
+   @property {Object=}  context        facts the person told the coach, in their words (js/coach/context.js)
    @property {number}   lastBackup     ms since 1970, 0 for never
    @property {number}   backupSnooze   ms; no reminder before then
    @property {boolean}  onboarded

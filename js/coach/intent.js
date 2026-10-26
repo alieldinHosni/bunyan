@@ -23,7 +23,7 @@
 var INTENTS=[
   ["today",[
     "today workout|session|train|training|plan|program|gym","what train|training|workout|lift|do$","whats on","next workout|session",
-    "start workout|training","which day","تمرين|تمريني|اتمرن|هتمرن نهارده|النهارده|انهارده|اليوم","اتمرن|هتمرن|العب ايه|اي",
+    "start workout|training","which day","whats|what today","تمرين|تمريني|اتمرن|هتمرن نهارده|النهارده|انهارده|اليوم","اتمرن|هتمرن|العب ايه|اي",
     "التمرين الجاي|اللي جاي","ابدا تمرين|التمرين","rest day|days","day off","today rest|off","راحه|اجازه النهارده|اليوم",
     "ماذا|ايش|شو اتمرن|العب","atmaren|atmarren|etmaren|tamreen|tamrin"]],
   ["tomorrow",[
@@ -101,6 +101,64 @@ var INTENTS=[
   ["hello",[
     "hi$|hello|hey|salam|yo$","good morning|evening","morning",
     "اهلا|ازيك|ازيكم|السلام|سلام|هاي","صباح|مساء"]],
+  /* ---- things to change (js/ui/agent.js resolves what they name; nothing here
+     knows the library, the split or the foods). An exercise swap is its own intent:
+     "swap" above is a food swap, and which one a question is decides on what it names
+     — an exercise in the library or a food in the database — never on the verb. */
+  ["exadd",[
+    "add exercise|exercises|movement|move|lift","add to day|workout|session|program|routine|push|pull|legs|upper|lower|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday",
+    "put in|into my|day|workout|program","include in","add$",
+    "ضيف|اضيف|زود|ضيفلي تمرين","حط|حطلي في|ل اليوم|التمرين|البرنامج","ضيف|اضيف|حط"]],
+  ["exremove",[
+    "remove|delete|drop exercise|from|it","take out|off exercise|from","get rid of","no more","remove$|delete$",
+    "شيل|امسح|احذف|الغي تمرين|من","شيل|امسح|احذف"]],
+  ["exswap",[
+    "swap|replace|switch|change|substitute exercise|movement|lift","swap|replace|switch|substitute for|with",
+    "instead of exercise|movement","بدل|غير|استبدل تمرين|التمرين",
+    "بدل|غير|استبدل سكوات|بنش|ديدلفت|بريس|كيرل|ليج|سحب|تجديف|عقله"]],
+  ["foodlog",[
+    "log|add|record food|meal|breakfast|lunch|dinner|snack","i ate|had|eaten","just ate|had","log$","ate$|eaten$",
+    "سجل|سجلي|ضيف اكل|وجبه|فطار|غدا|عشا","اكلت|كلت|اتغديت|اتعشيت|فطرت","سجل|سجلي"]],
+  ["weighlog",[
+    "log|record|save|update weight|weighed|weigh","i weigh|weighed","weight today|this morning",
+    "سجل|سجلي|حدث وزني|الوزن","وزني النهارده|انهارده|دلوقتي|بقي|الصبح","وزنت"]],
+  ["reassess",[
+    "reassess$|reassessment","redo|retake|repeat|restart my assessment|evaluation","assess me again","start over",
+    "اعيد التقييم","اعمل التقييم تاني|من الاول","تقييم جديد"]],
+  /* ---- how training works: answered from js/knowledge/ (js/engine/kb.js) with the
+     person's own program and log beside it. */
+  ["kreps",[
+    "how many reps should|for|to","rep range","reps for muscle|size|hypertrophy|strength|growth|endurance","best reps",
+    "كام عده|تكرار المفروض|للعضل|للتضخيم|للقوه","عدد العدات|التكرارات"]],
+  ["ksets",[
+    "how many sets should|per|for|each","sets per exercise","sets for muscle|size|hypertrophy|strength",
+    "كام مجموعه|سيت المفروض|للعضل|لكل","عدد المجموعات|السيتات"]],
+  ["krest",[
+    "how long rest|wait between","rest between sets","rest time","how much rest","rest period|periods|interval",
+    "ارتاح|راحه قد|كام ايه بين","الراحه بين","وقت الراحه"]],
+  ["kfreq",[
+    "how many days|times week|train","how often train|should|lift|workout","times a week","days per|a week train|lift|gym",
+    "كام يوم|مره في الاسبوع","اتمرن كام"]],
+  ["kvolume",[
+    "how many sets week|weekly","sets a|per week","weekly sets|volume","enough sets for","enough volume","too many sets",
+    "chest|back|shoulders|quads|hamstrings|glutes|biceps|triceps|calves|legs|arms volume|sets",
+    "مجموعات|سيتات في الاسبوع","كفايه صدر|ضهر|كتف|رجل|باي|تراي"]],
+  ["ktempo",[
+    "tempo","tempo lift|should|for|reps|rep","how fast lift|rep|reps|lower","lifting speed","slow reps|negatives",
+    "سرعه العده|التكرار","بالراحه ولا بسرعه"]],
+  ["kwarm",[
+    "warm up|warmup sets|set|how many","warmup|warm-up","before lifting|working sets",
+    "تسخين|احماء"]],
+  ["kdur",[
+    "how long workout|session|train|training|should","workout length|duration","session length|duration","how long gym",
+    "مده التمرين","التمرين ياخد قد|كام"]],
+  ["k1rm",[
+    "1rm|one rep max|max calculate|formula|estimate","estimated max|1rm","how is max|1rm calculated",
+    "اقصي وزن مره|لعده","الماكس"]],
+  /* What the person has told the coach to keep (js/coach/context.js). */
+  ["facts",[
+    "what have i told you","what did i tell you","what do you know about me","what you know about me","my facts|notes","what you remember|kept",
+    "قلتلك ايه","انا قلتلك ايه","تعرف ايه عني","فاكر ايه عني"]],
   ["thanks",[
     "thanks|thank|thx|cheers","great|perfect|awesome|nice","ok$|okay$|cool",
     "شكرا|متشكر|متشكره|ميرسي","تمام|حلو|جميل|ماشي"]]];
@@ -169,7 +227,9 @@ function phraseScore(text,phrase){
     score+=hit.replace(/\$$/,"").length+(how===2?1:0);}
   return score;}
 
-/* The intent of a question: {id, score, lang, mins, ranked}. id is "unknown" when
+/* The intent of a question: {id, score, lang, mins, kg, unit, grams, ranked}. kg is a
+   body weight the question names (in kilograms, converted from pounds when it says
+   lb), unit the unit it said ("" for a bare number), grams a portion it names. id is "unknown" when
    nothing in it is something the coach can answer; ranked lists every intent it
    touched, best first, for an answer that wants the runner-up. mins is a number of minutes the question names
    ("I only have 30 minutes"), for the questions about time. */
@@ -184,9 +244,51 @@ function intentOf(q){
   scores.sort(function(a,b){return b.score-a.score;});
   var best=scores[0]||{id:"unknown",score:0};
   var m=text.replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);}).match(/(\d{1,3}) ?(min|mins|minute|minutes|m\b|دقيقه|دقايق|دقيقة)/);
+  /* From the question as typed: folding takes the decimal point away. */
+  var ar=String(q).toLowerCase().replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);}).replace(/(\d)[٫,](\d)/g,"$1.$2").replace(/[^\w\s.\u0600-\u06FF]/g," ");
+  var kg=ar.match(/(\d{2,3}(?:\.\d)?) ?(kg|kgs|kilo|kilos|كيلو|ك)?(?= |$)/),lb=ar.match(/(\d{2,3}(?:\.\d)?) ?(lb|lbs|pound|pounds|رطل)(?= |$)/);
+  var gr=ar.match(/(\d{1,4}) ?(g|gm|gr|gram|grams|جرام|جم)(?= |$)/);
   return {id:best.score>=3?best.id:"unknown",score:best.score,lang:lang,mins:m?+m[1]:0,
+    kg:lb?Math.round(+lb[1]/2.2046*10)/10:kg?+kg[1]:0,unit:lb?"lb":kg&&kg[2]?"kg":"",grams:gr?+gr[1]:0,
     ranked:scores.filter(function(x){return x.score>=3;}).map(function(x){return x.id;})};}
 
-var IDS=INTENTS.map(function(x){return x[0];});
 
-export {fold, IDS, intentOf, skel, spell};
+/* ---- a situation, not a question ----------------------------------------------------
+   "I had a bad day, didn't stick to the diet" is a report, not an instruction. Its
+   signals (missed, didn't, skipped, bad day, tired, stressed, sore, and the Egyptian
+   Arabic for them) say something went off; its other words say what: food, training,
+   sleep and energy, or pain. Pure: {kind:"food"|"train"|"tired"|"pain"|"day"} or null.
+   "day" is a bad day with nothing saying what went off. A question is not a report. */
+var SIGNAL=/(^| )(missed|miss|didnt|did not|skipped|skip|bad day|rough day|awful day|terrible day|tired|exhausted|stressed|sore|blew|cheated|overate|ate too much|binged|binge|fell off|slipped|couldnt sleep|slept badly|no sleep|hurts|hurt|pain|aching|injured|فوت|فوتت|فاتني|مروحتش|ماروحتش|معملتش|ماعملتش|ملتزمتش|مالتزمتش|ماالتزمتش|يوم وحش|يوم زفت|يوم صعب|تعبان|تعبانه|مرهق|مرهقه|مضغوط|مضغوطه|متوتر|متوتره|واجعني|بيوجعني|بتوجعني|وجع|الم|اكلت كتير|كسرت الدايت|بوظت|منمتش|نمت وحش)( |$)/;
+var WHAT=[["pain",/(^| )(hurts|hurt|pain|aching|injured|injury|واجعني|بيوجعني|بتوجعني|وجع|الم|مصاب)( |$)/],
+  ["food",/(^| )(diet|ate|eat|eating|food|calories|meal|meals|binge|binged|overate|cheated|junk|دايت|الدايت|اكل|الاكل|اكلت|سعرات|وجبه|الوجبات|رجيم)( |$)/],
+  ["train",/(^| )(workout|training|train|gym|session|lift|lifting|leg day|تمرين|التمرين|الجيم|جيم|اتمرن|مروحتش|ماروحتش)( |$)/],
+  ["tired",/(^| )(tired|exhausted|sleep|slept|stressed|energy|sore|تعبان|تعبانه|مرهق|مرهقه|نوم|منمتش|نمت|مضغوط|مضغوطه|متوتر|متوتره|طاقه)( |$)/]];
+var ASKING=/[?؟]|^(what|how|why|should|can|could|is|are|do|does|when|which|ايه|ازاي|ليه|هل|امتي|اعمل ايه)( |$)/;
+/* Arabic writes "and", "with" and "the" onto the word: each word is also tried bare. */
+function bareAr(text){return text+" "+text.split(" ").map(function(w){
+  return w.replace(/^(و|ف)(?=[\u0600-\u06FF]{3})/,"").replace(/^(بال|وال|لل|ال|ب)(?=[\u0600-\u06FF]{3})/,"");}).join(" ");}
+function situationOf(q){
+  var raw=String(q||""),text=bareAr(spell(fold(raw)));
+  if(!text||ASKING.test(raw.trim().toLowerCase())||ASKING.test(text))return null;
+  if(!SIGNAL.test(text))return null;
+  for(var i=0;i<WHAT.length;i++)if(WHAT[i][1].test(text))return {kind:WHAT[i][0]};
+  return {kind:"day"};}
+
+/* ---- a fact about the person's life, said by them ---------------------------------
+   "I work 13-hour days", "I can't do squats", "I don't eat pork": a statement worth
+   keeping (js/coach/context.js), if the person agrees and says what kind it is. Only
+   ever the words as said; nothing about the person is guessed here. Pure: true/false. */
+var FACT=/^(i|im|i am|i ve|ive|my)( .*)?( )(work|works|working|shift|shifts|job|nights|commute|kids|travel|cant|cannot|dont eat|do not eat|avoid|allergic|vegetarian|vegan|hate|prefer|gym closes|gym opens|no gym|train at home|only train)( |$)/;
+var FACT_AR=/(بشتغل|شغلي|شيفت|مبقدرش|مقدرش|مش بقدر|مش باكل|مبكلش|مباكلش|عندي حساسيه|حساسيه من|نباتي|نباتيه|بفضل|مش بحب|مبحبش|بكره|الجيم بيقفل|بتمرن في البيت)/;
+function factOf(q){
+  var raw=String(q||""),text=fold(raw);
+  if(!text||ASKING.test(raw.trim().toLowerCase())||ASKING.test(text))return false;
+  return FACT.test(text+" ")||FACT_AR.test(text);}
+
+var IDS=INTENTS.map(function(x){return x[0];});
+/* The intents that change something, and the ones answered from the knowledge files. */
+var ACTION_IDS=["exadd","exremove","exswap","foodlog","weighlog","reassess"];
+var KNOW_IDS=["kreps","ksets","krest","kfreq","kvolume","ktempo","kwarm","kdur","k1rm"];
+
+export {ACTION_IDS, factOf, fold, IDS, intentOf, KNOW_IDS, situationOf, skel, spell};

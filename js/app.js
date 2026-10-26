@@ -16,6 +16,7 @@ import {draftFrom} from "./ui/views/assess.js";
 import {initDockScroll} from "./ui/dock.js";
 import {initExSwipe} from "./ui/exswipe.js";
 import {initNav} from "./ui/nav.js";
+import {closeCoach} from "./ui/coachfab.js";
 import {initPress} from "./ui/press.js";
 import {initReorder} from "./ui/reorder.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
@@ -85,9 +86,10 @@ document.addEventListener("click",function(ev){
    same test decides both directions, and render() re-checks it, so the flag cannot be
    left behind by a field that was destroyed rather than blurred. */
 document.addEventListener("focusin",syncKeyboard);
-/* A stepper's typed figure (steps, minutes) is selected on focus, so typing replaces it. */
+/* A stepper's typed figure (steps, minutes) and the set card's two numbers are selected on
+   focus, so typing replaces them. */
 document.addEventListener("focusin",function(ev){var x=ev.target;
-  if(x&&x.classList&&x.classList.contains("stn")&&x.select)setTimeout(function(){try{x.select();}catch(e){}},0);});
+  if(x&&x.classList&&(x.classList.contains("stn")||x.classList.contains("val-n"))&&x.select)setTimeout(function(){try{x.select();}catch(e){}},0);});
 document.addEventListener("focusout",function(){setTimeout(syncKeyboard,60);});
 
 /* The clock and the rest ring are the only things that change every second, so they
@@ -110,7 +112,7 @@ function tickSession(){
      rest surface does not disappear at zero any more — it turns into the alert, and
      stays until the user acknowledges it. Sound cannot be relied on (silent switch,
      backgrounded tab), so the screen has to carry it. */
-  if(left<=0){V.restOver=V.restEnd;V.restEnd=0;V.restPaused=false;V.restDone=true;V.restMin=false;
+  if(left<=0){V.restOver=V.restEnd;V.restEnd=0;V.restPaused=false;V.restDone=true;
     if(!V.sheet)render();else syncWbar();return;}
   paintRest();
 }
@@ -165,7 +167,7 @@ useUserData(function(){return S;});
    profile being left (state.js calls this rather than reaching into the view). */
 onProfileSwitch(function(){
   V.tab="train";V.train="days";V.logIdx=0;
-  V.restEnd=0;V.restPaused=false;V.restDone=false;
+  V.restEnd=0;V.restPaused=false;V.restDone=false;V.justLogged=null;V.askDel=null;
   restoreWorkoutState();
   retargetNow();});
 initState();
@@ -173,15 +175,30 @@ initState();
 retargetNow();
 setStorageErrorHandler(toast);
 /* One back path for the arrow, the edge swipe and the OS gesture. */
-initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,
+initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,closeCoach:function(){closeCoach(render);},
          locked:sessionLocked,onBlocked:backBlocked});
 initSheetDrag(requestCloseSheet);
 /* A field in a sheet takes the keyboard without the page jumping under it (iPhone). */
 initKeyboard();
-syncViewport();
+/* What the keyboard and the browser chrome leave visible (--vvh, --vvt), measured again
+   whenever it can have changed. A cold launch from the Home Screen is the case that bit:
+   iOS reports a short viewport for the first frames, and a value read once at boot kept the
+   sheets, the Coach panel and the dock's band laid out against it until the next launch.
+   So it is measured again after the first frames and after the page settles, on resize,
+   rotation, a return from the background and a restore from the back-forward cache. */
+function settleViewport(){
+  syncViewport();
+  requestAnimationFrame(function(){requestAnimationFrame(syncViewport);});
+  setTimeout(syncViewport,250);setTimeout(syncViewport,1000);}
+settleViewport();
 if(window.visualViewport){
   window.visualViewport.addEventListener("resize",syncViewport);
   window.visualViewport.addEventListener("scroll",syncViewport);}
+window.addEventListener("resize",syncViewport);
+window.addEventListener("orientationchange",settleViewport);
+window.addEventListener("pageshow",settleViewport);
+window.addEventListener("load",settleViewport);
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")settleViewport();});
 initReorder(moveRow,function(){tap("light");});
 initDockScroll();
 initPress();

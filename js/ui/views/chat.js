@@ -13,11 +13,21 @@
    An answer is in the language the question was asked in, whatever the app is set to:
    Arabic letters (or Egyptian Arabic typed in Latin letters) get Arabic, English gets
    English. A tapped suggestion follows the conversation. */
-import {t} from "../../i18n/dict.js";
+import {t, tm} from "../../i18n/dict.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {goalOf} from "../../data/goals.js";
 import {isActivity} from "../../data/activities.js";
-import {fold, intentOf, skel, spell} from "../../coach/intent.js";
+import {ACTION_IDS, factOf, fold, intentOf, KNOW_IDS, situationOf, skel, spell} from "../../coach/intent.js";
+import {KINDS, listFacts} from "../../coach/context.js";
+import {reconcileNutrition, reconcileTraining} from "../../coach/reconcile.js";
+import {pinnedOn, weekDates} from "../../engine/schedule.js";
+import {muscleOf, secondaryOf} from "../../data/exercises.js";
+import {LANDMARKS} from "../../coach/landmarks.js";
+import * as KB from "../../engine/kb.js";
+import {weeklySets} from "../../engine/volume.js";
+import {weeklyVolume} from "../../engine/stats.js";
+import {canUndo} from "../handlers/actions.js";
+import {namesExercise, namesFood, plan as planAction, proceed} from "../agent.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
@@ -46,7 +56,9 @@ var ASK={
   balance:"Is my program balanced?",strong:"How strong am I?",goal:"Should I change my goal?",
   plan:"Build me a new plan",water:"How much water should I drink?",steps:"How are my steps and cardio?",
   help:"What can you answer?",tomorrow:"What do I train tomorrow?",last:"How did my last workout go?",
-  rest:"What's left to eat today?",swap:"Other foods with the same macros"};
+  rest:"What's left to eat today?",swap:"Other foods with the same macros",
+  weekfood:"Work out what's left in the week",logfood:"Just log it and move on",weektrain:"Work out the rest of the week",
+  letgo:"Just move on",lowday:"Adjust today for a low day",facts:"What have I told you?"};
 /* What to offer next, after each kind of answer. */
 var NEXT={
   today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
@@ -56,7 +68,14 @@ var NEXT={
   plan:["today","eat","goal"],water:["eat","steps","track"],steps:["weight","water","track"],
   help:["today","eat","track"],hello:["today","eat","track"],thanks:["today","eat","track"],unknown:["today","eat","track"],
   tomorrow:["today","weights","last"],last:["strong","weights","tomorrow"],rest:["swap","protein","eat"],
-  swap:["rest","protein","eat"],foodinfo:["swap","rest","protein"]};
+  swap:["rest","protein","eat"],foodinfo:["swap","rest","protein"],
+  exadd:["today","balance","tomorrow"],exremove:["today","balance","tomorrow"],exswap:["today","balance","weights"],
+  foodlog:["rest","protein","eat"],weighlog:["weight","calories","track"],reassess:["plan","goal","today"],
+  kreps:["weights","balance","today"],ksets:["balance","weights","today"],krest:["weights","today","missed"],kfreq:["balance","plan","today"],
+  kvolume:["balance","strong","plan"],ktempo:["weights","today","strong"],kwarm:["today","weights","sore"],kdur:["missed","today","balance"],
+  k1rm:["strong","weights","track"],scope:["today","track","help"],situation:["today","rest","track"],
+  weekfood:["rest","protein","track"],logfood:["rest","eat","track"],weektrain:["today","tomorrow","balance"],letgo:["today","tomorrow","track"],
+  lowday:["today","sore","missed"],remember:["facts","today","eat"],facts:["today","eat","track"]};
 
 function fill(s,o){Object.keys(o).forEach(function(k){s=s.split("{"+k+"}").join(o[k]);});return s;}
 function list(a){return a.join(S.prefs.lang==="ar"?"، ":", ");}
@@ -64,10 +83,13 @@ function list(a){return a.join(S.prefs.lang==="ar"?"، ":", ");}
    comma between them would run two foods into one. */
 function foods(a){return a.join(" + ");}
 /* An answer: paragraphs (p), a list (l), a small note (n), and its buttons. */
-function A(){return {b:[],acts:[]};}
+function A(){return {b:[],acts:[],src:[]};}
 function p(a,s){a.b.push({p:s});return a;}
 function l(a,items){if(items.length)a.b.push({l:items});return a;}
 function n(a,s){a.b.push({n:s});return a;}
+/* Where a technical answer comes from: the knowledge entry, by file and section. */
+var SRCNAME={"acute-variables":"Training variables","nutrition-principles":"Nutrition principles","scope":"Scope of practice"};
+function src(a,ref){if(!ref)return a;var f=ref.split(" ")[0];a.src=(a.src||[]).concat([t(SRCNAME[f]||f)+" "+ref.slice(f.length+1)]);return a;}
 function act(a,label,attrs){a.acts.push({l:label,a:attrs});return a;}
 function noTags(s){return String(s||"").replace(/<[^>]+>/g,"");}
 /* Run fn as if the app were in language l: t(), exercise and plan names and dates all
@@ -114,6 +136,8 @@ function aToday(a,q){
     if(bl&&ex.length)n(a,fill(t("Block {b} · Week {w} of {n}"),{b:bl.block,w:bl.week,n:bl.of})+". "
       +t(bl.rir===1?"Stop each set with 1 rep in reserve.":"Stop each set with {n} reps in reserve.").replace("{n}",bl.rir));
     if(ex.length)n(a,t("Each exercise shows a suggested weight when you get to it, from what you lifted last time."));}
+  clashes(d.ex).forEach(function(c){p(a,fill(t("You said “{s}”, and {ex} is in it."),{s:c.said,ex:exName(c.name)}));});
+  told(a,["schedule","obstacle"]);
   act(a,t("Start workout"),{"data-startday":d.id});
   return act(a,t("Change the day"),{"data-tab":"train"});}
 
@@ -232,7 +256,10 @@ function aProtein(a){
   /* Per kg needs a weight; without one, the target is all there is to say. */
   if(!w){p(a,fill(t("Your target is {p} g a day. Log your weight and I can say what that is per kg of body weight, and what your goal calls for."),{p:g.p}));
     return act(a,t("Log weight"),{"data-sheet":"weigh"});}
-  p(a,fill(t("Your target is {p} g a day: {k} g per kg of body weight. The research supports 1.6 to 2.2 g per kg for people who train, and 2.4 in a calorie deficit to keep muscle."),{p:g.p,k:r1(num(g.p)/w)}));
+  var kp=KB.protein();
+  p(a,fill(t("Your target is {p} g a day: {k} g per kg of body weight."),{p:g.p,k:r1(num(g.p)/w)})
+    +(kp?" "+fill(t("For people who train to build and keep muscle, the range is {lo} to {hi} g per kg."),{lo:kp.min,hi:kp.max}):""));
+  if(kp)src(a,kp.src);
   p(a,fill(t("For {g} the app sets {x} g per kg."),{g:t(G.label),x:G.protein})
     +(mt&&Math.abs(num(g.p)-mt.p)>mt.p*0.1?" "+fill(t("Your target was changed from the suggested {s} g."),{s:mt.p}):""));
   var nm=Math.max(3,mealSlots().length);
@@ -293,13 +320,9 @@ function trainAround(a,ar){
   n(a,t("In the workout, Something hurts? then Replace this exercise shows these first."));}
 function aSore(a,q){
   var fq=fold(q),pain=/(pain|hurt|injur|sharp|swollen|الم|وجع|يوجع|بيوجع|بتوجع|واجع|مصاب|اصابه)/.test(fq),ar=areaOf(fq);
-  if(pain){
-    p(a,t("Pain that is sharp, or that changes how you move, is a reason to stop the exercise that causes it. Train around it with exercises that don't hurt."));
-    if(ar)trainAround(a,ar);
-    p(a,t("If it lasts more than a few days, swells, or wakes you at night, see a doctor or a physiotherapist. I can't tell what it is."));
-    n(a,t("Tell the assessment about it under sore spots, and the plan it builds avoids loading it."));
-    act(a,t("Swap exercises in my program"),{"data-csec":"train","data-ctsub":"program"});
-    return act(a,t("Retake the assessment"),{"data-setup":"1"});}
+  /* Pain is logged, and assessed by a professional: never advice from here
+     (js/knowledge/scope.js). */
+  if(pain)return aScope(a,q);
   p(a,t("Soreness a day or two after training is normal. It doesn't mean the workout was good or bad, and the warm-up usually eases it."));
   var fat=coachNow().filter(function(c){return /^(fatigue|falling|stall)$/.test(c.kind);})[0];
   if(inDeload())p(a,fill(t("You're in a lighter week until {d}. Keep the sets easy and sleep well."),{d:S.deload.until}));
@@ -408,8 +431,7 @@ function aHello(a){
   return p(a,(nm&&nm!=="Me"?fill(t("Hi {n}."),{n:nm}):t("Hi."))+" "+t("Ask me about today's training, your food, or how things are going."));}
 function aThanks(a){return p(a,t("Any time."));}
 function aUnknown(a){
-  p(a,t("I can't answer that one. I'm a guided coach: I answer from your log, plan and targets, not from the internet."));
-  return p(a,t("Try one of these, or ask in your own words:"));}
+  return p(a,t("That isn't something I can answer from your log or the coaching notes I work from, so I won't guess.")+" "+t("I can answer these, or you can say it another way:"));}
 
 /* ---- tomorrow, the last workout -------------------------------------------------- */
 function aTomorrow(a){
@@ -526,20 +548,23 @@ function swapLine(it,f,kcal){
 /* The food a question names, once its question words are taken out. */
 var QWORDS=/\b(how|much|many|what|whats|is|are|there|the|a|an|in|of|for|to|on|does|do|contain|contains|has|have|with|same|macros|macro|calories|calorie|kcal|protein|carbs|carb|fat|fats|fiber|fibre|sugar|grams|gram|g|nutrition|facts|info|value|values|instead|swap|replace|alternative|alternatives|other|food|foods|options|can|i|eat|my|me|you|u|give|provide|please|per|serving)\b/g;
 var QWORDS_AR=/(^| )(كام|كم|بروتين|سعر|سعره|سعرات|كارب|دهون|جرام|في|فيه|فيها|القيمه|الغذائيه|بديل|بدايل|بدائل|بدل|حاجه|تانيه|تاني|غير|نفس|الماكروز|الماكرو|عايز|عاوز|ايه|اي|انا|ممكن|اكل|للـ)(?= |$)/g;
-function namedFood(q){
-  var rest=spell(fold(q)).replace(QWORDS," ").replace(QWORDS_AR," ").replace(/(^| )ل(?=ل)/g," ").replace(/\s+/g," ").trim();
+function foodWords(q){return spell(fold(q)).replace(QWORDS," ").replace(QWORDS_AR," ").replace(/(^| )ل(?=ل)/g," ").replace(/\s+/g," ").trim();}
+function namedFood(q,strict){
+  var rest=foodWords(q);
   if(rest.length<2)return null;
   var bare=rest.replace(/(^| )(ال|لل|بال|وال)(?=..)/g,"$1").trim();
   var hits=searchFoods(rest,6).concat(searchFoods(bare,6)).sort(function(x,y){return y.score-x.score;});
   /* As people eat it: "chicken" is chicken cooked, not the raw entry, when both match
      about as well. */
   var hit=hits.filter(function(x){return hits[0]&&x.score>=hits[0].score-12&&!INGREDIENT.test(x.f.n);})[0]||hits[0];
-  if(hit&&hit.score>=60)return hit.f;
+  if(hit&&hit.score>=(strict?72:60))return hit.f;
+  if(strict)return null;
   var fz=fuzzyFoods(rest,1)[0];
   return fz&&fz.dist<=2?fz.f:null;}
 
 function aSwap(a,q){
-  var nf=namedFood(q);
+  /* Named by its name, not a near miss: "dinner" is the meal, not ginger. */
+  var nf=namedFood(q,true);
   /* A food named: what stands in for it, a usual portion's worth. */
   if(nf){
     var meal=planMeal(""),inPlan=meal&&meal.plan.filter(function(it){var f=foodOf(it);return f&&f.id===nf.id;})[0];
@@ -572,7 +597,12 @@ function aSwap(a,q){
   return act(a,t("Open Food"),{"data-tab":"food"});}
 
 function aFoodInfo(a,q,it){
-  var f=namedFood(q);
+  var f=namedFood(q,true);
+  /* Misspelt: the closest foods the database has, to pick from; never one chosen
+     quietly for the person. */
+  var fw=foodWords(q),near=!f&&fw.length>=3?fuzzyFoods(fw,4).filter(function(x){return x.dist<=2;}):[];
+  if(near.length){a.ag={s:"pick",what:"food",lead:fill(t("No food called “{q}”. Closest:"),{q:fw}),act:"food.info",slot:"fid",none:true,
+      opts:near.map(function(x){return {v:x.f.id,l:foodName(x.f),sub:""};})};return a;}
   /* "How much protein in a day do I need" names no food: answer what it asks. */
   if(!f){var nx=(it&&it.ranked||[]).filter(function(x){return x!=="foodinfo";})[0];
     if(nx&&ANSWER[nx])return ANSWER[nx](a,q,it);
@@ -587,11 +617,296 @@ function aFoodInfo(a,q,it){
   if(pl>5&&ns.p>=3)p(a,fill(t("One portion covers about {n}% of the protein you have left today."),{n:Math.min(100,Math.round(ns.p/pl*100))}));
   return act(a,t("Open Food"),{"data-tab":"food"});}
 
+/* ---- how training works: the knowledge files, beside the person's own program -------
+   Every one of these reads its numbers from js/knowledge/ (js/engine/kb.js) and says
+   which entry they came from; the other half of the answer is the person's own program
+   or log. What the knowledge files do not cover is not answered here. */
+function goalWord(ad){return t(ad==="maximal_strength"?"getting stronger":"building muscle");}
+/* The program's lifts: not activities. */
+function lifts(){var out=[];split().days.forEach(function(d){d.ex.forEach(function(e){if(!isActivity(e.name))out.push(e);});});return out;}
+/* The most common value of f across the program's lifts. */
+function mode(xs,f){var c={},best=null,bn=0;xs.forEach(function(x){var k=f(x);if(k==null)return;c[k]=(c[k]||0)+1;if(c[k]>bn){bn=c[k];best=k;}});return best;}
+function range(r){return r.min===r.max?String(r.min):r.min+"–"+r.max;}
+function secs(s){return s>=60&&s%60===0?fill(t("{n} min"),{n:s/60}):s>=60?fill(t("{n} min"),{n:r1(s/60)}):fill(t("{n} s"),{n:s});}
+function versus(v,r){return v<r.min?t("below it"):v>r.max?t("above it"):t("inside it");}
+function aKReps(a){
+  var k=KB.prescription(S.profile.goal),L=lifts();
+  p(a,fill(t("For {g}, the range is {r} reps a set."),{g:goalWord(k.adaptation),r:range(k.reps)})
+    +(L.length?" "+fill(t("Your program has most lifts at {r}, {v}."),{r:mode(L,function(e){return e.timed?null:(e.lo===e.hi?e.lo:e.lo+"–"+e.hi);})||"—",
+      v:versus(num(mode(L,function(e){return e.timed?null:e.hi;})),k.reps)}):""));
+  if(k.reps.note)n(a,t("Higher reps also work when the sets are hard."));
+  return src(a,k.src);}
+function aKSets(a){
+  var k=KB.prescription(S.profile.goal),L=lifts(),avg=L.length?r1(L.reduce(function(x,e){return x+num(e.sets);},0)/L.length):0;
+  p(a,fill(t("For {g}, the range is {r} sets an exercise."),{g:goalWord(k.adaptation),r:range(k.sets)})
+    +(L.length?" "+fill(t("Your program averages {n}, {v}."),{n:avg,v:versus(avg,k.sets)}):""));
+  return src(a,k.src);}
+function aKRest(a){
+  var k=KB.prescription(S.profile.goal),L=lifts(),r=mode(L,function(e){return num(e.rest)||null;});
+  var span=k.rest.min?secs(k.rest.min)+"–"+secs(k.rest.max):fill(t("up to {n}"),{n:secs(k.rest.max)});
+  p(a,fill(t("For {g}, rest {r} between sets."),{g:goalWord(k.adaptation),r:span})
+    +(r?" "+fill(t("Your program rests {n} on most lifts, {v}."),{n:secs(r),v:versus(r,k.rest)}):""));
+  if(k.adaptation==="maximal_strength")n(a,t("Three to five minutes suits the big multi-joint lifts best."));
+  return src(a,k.src);}
+function aKFreq(a){
+  var f=KB.frequency(S.profile.level),sp=split(),days=sp.days.filter(function(d){return d.ex.length;}).length;
+  p(a,(f.per.min!=null?fill(t("At your level, {per} sessions a week."),{per:range(f.per)})
+    :fill(t("At your level, {a} sessions a week full-body, or {b} on a split."),{a:f.per.totalBody,b:f.per.split}))+(days?" "+fill(t(days===1?"Your program has 1 training day.":"Your program has {n} training days."),{n:days}):""));
+  n(a,t("Leave at least a day between sessions that work the same muscles."));
+  return src(a,f.src);}
+var MUSCLEWORD=[["Chest",/chest|pec|صدر/],["Back",/\bback\b|lats?\b|ضهر|ظهر/],["Shoulders",/shoulder|delt|كتف|اكتاف/],["Quads",/quad|thigh|legs?\b|رجل|فخذ|فخاد/],
+  ["Hamstrings",/hamstring|خلفيه/],["Glutes",/glute|مؤخره/],["Biceps",/bicep|باي/],["Triceps",/tricep|تراي/],["Calves",/calf|calves|سمانه/]];
+function aKVolume(a,q){
+  var fq=fold(q),m=MUSCLEWORD.filter(function(x){return x[1].test(fq);})[0],ws=weeklySets(split()),wl=weeklyVolume(),vk=KB.volume();
+  var pick=m?m[0]:null;
+  if(!pick){var lo=null;Object.keys(LANDMARKS).forEach(function(k){if(k==="Core"||k==="Calves")return;var v=num(ws[k]),r=LANDMARKS[k].mav;
+      var gap=v<r[0]?r[0]-v:0;if(gap&&(!lo||gap>lo.gap))lo={k:k,gap:gap};});pick=lo?lo.k:"Chest";}
+  var L=LANDMARKS[pick],plan0=Math.round(num(ws[pick])),done=(wl.rows.filter(function(r){return r.g===pick;})[0]||{}).sets;
+  var r={min:L.mav[0],max:L.mav[1]};
+  p(a,fill(t("Your program gives {m} {n} sets a week. The app's range for growth is roughly {r}, so {v}."),
+    {m:tm(pick).toLowerCase(),n:plan0,r:range(r),v:plan0<r.min?t("there's room for more"):plan0>r.max?t("that's above it"):t("that's inside it")}));
+  if(done!=null)n(a,fill(t("Logged so far this week: {n}."),{n:Math.round(done)}));
+  p(a,t("Several sets an exercise build more muscle and strength than one."));
+  n(a,t("The weekly range is the app's own, from practitioner guidelines (Renaissance Periodization), not from the coaching notes. People differ widely."));
+  return src(a,vk.src);}
+function aKTempo(a){var k=KB.tempo();
+  p(a,t("Slower reps suit building muscle and endurance; faster ones suit strength and power."));
+  p(a,t("A tempo is four numbers in seconds: lowering, pause, lifting, pause."));
+  return src(a,k.src);}
+function aKWarm(a){var w=KB.warmup();
+  p(a,fill(t("Before the work sets, 1–2 light sets of {r} reps, without tiring yourself."),{r:range(w.reps)}));
+  n(a,t("The workout screen adds warm-up sets with + Warm-up."));
+  return src(a,w.src);}
+function aKDur(a){
+  var d=KB.duration(),sp=split(),pl=planOn(sp,today()),day=pl.day&&!pl.rest?pl.day:nextDayOf(sp);
+  p(a,fill(t("A session usually runs {lo}–{hi} min; the harder it is, the shorter."),{lo:d.min,hi:d.max})
+    +(day?" "+fill(t("{d} takes about {m} min."),{d:planName(day.name),m:estMinutes(day)}):""));
+  return src(a,d.src);}
+function aK1RM(a){
+  var o=KB.oneRM(),top=topLifts().filter(function(L){return !isActivity(L.name)&&L.w&&bwShare(L.name)<=0;})[0];
+  p(a,fill(t("The app estimates a one-rep max from your best set with the Epley formula, up to 12 reps. The coaching notes' chart covers {r} reps."),{r:range(o.repsRange)}));
+  if(top){var e=e1RM(top.w,top.reps,top.rpe);if(e&&top.reps>1)p(a,fill(t("{ex}: {w} × {r}, so about {e} for one."),{ex:exName(top.name),w:fmtW(top.w),r:top.reps,e:fmtW(e)}));}
+  n(a,t("An estimate: the more reps in the set, the less exact."));
+  return src(a,o.src);}
+
+/* ---- the hard limits (js/knowledge/scope.js) ---------------------------------------
+   Checked before anything else, however the question is put: no diagnosis, no injury
+   assessment, no medical advice, no supplement or therapeutic-diet advice, no mental
+   health care. The answer says who to see instead and what the app can show. */
+var SCOPE=[
+  ["mental","no_mental_health_care",/(depress|anxiety|anxious|panic attack|eating disorder|bulimi|anorexi|binge|purg|self harm|suicid|اكتئاب|مكتئب|قلق|اضطراب|نوبه هلع)/],
+  ["medical","no_treatment",/(medicine|medication|painkiller|pain killer|ibuprofen|paracetamol|panadol|aspirin|pills?\b|antibiotic|steroid|injection|insulin|blood pressure|cholesterol|diabet|pregnan|heart condition|asthma|دوا|دواء|ادويه|مسكن|برشام|حبوب|حقنه|انسولين|سكر|ضغط|كوليسترول|حامل|حمل)/],
+  ["diagnosis","no_diagnosis",/(diagnos|whats wrong with|what is wrong with|do i have|is it (torn|broken|fractured|sprained|a tear|serious)|tendon|tendinitis|tendonitis|hernia|arthritis|sciatica|\btorn\b|tear in|fractur|sprain|dislocat|meniscus|ligament|rotator cuff|slipped disc|herniat|تشخيص|عندي ايه|مقطوع|قطع في|كسر|التواء|ملخ|خشونه|انزلاق|غضروف|رباط|اربطه|وتر)/],
+  ["supplement","no_nutrition_or_supplement_advice",/(supplement|creatine|pre.?workout|fat burner|vitamin|mineral pill|مكمل|مكملات|كرياتين|فيتامين|حارق)/]];
+function scopeOf(q){var fq=fold(q);for(var i=0;i<SCOPE.length;i++)if(SCOPE[i][2].test(fq))return SCOPE[i];return null;}
+function aScope(a,q){
+  var sc=scopeOf(q)||SCOPE[2],ar=areaOf(fold(q)),rule=KB.scopeRule(sc[1]);
+  if(sc[0]==="mental"){
+    p(a,t("That needs a professional, a doctor or a psychologist, not me. Please talk to one; it is worth it."));
+    return src(a,rule&&rule.src);}
+  if(sc[0]==="medical"){
+    p(a,t("That needs a doctor or a pharmacist, not me: I don't give medical advice."));
+    p(a,t("I can show you what your training and food have looked like, to take with you."));
+    act(a,t("Open Progress"),{"data-tab":"progress"});
+    return src(a,rule&&rule.src);}
+  if(sc[0]==="supplement"){
+    p(a,t("Supplement advice needs a doctor or a registered dietitian, not me. I can show you your protein for the week against your target."));
+    act(a,t("My protein this week"),{"data-chatq":"protein","data-chatl":uiLang()});
+    return src(a,rule&&rule.src);}
+  p(a,ar?fill(t("That needs a physio or a doctor, not me: I can't assess an injury. I can show you what in your next workout loads the {area}."),{area:t(ar[1])})
+    :t("That needs a physio or a doctor, not me: I can't assess pain or an injury."));
+  if(ar)trainAround(a,ar);
+  act(a,t("Log it"),{"data-sheet":"recovery"});
+  return src(a,rule&&rule.src);}
+
+/* ---- outside what the coach knows: what was understood, and where to go ------------- */
+var ELSEWHERE=[
+  ["you",/(height|how tall|tall am|my age|how old|birthday|birth date|my sex|gender|my name|طولي|الطول|طول|سني|عمري|السن|اسمي)/],
+  ["nodata",/(heart rate|resting hr|\bhrv\b|vo2|sleep score|body fat scan|blood|bpm|نبض|ضربات القلب)/]];
+function aElse(a,q){
+  var fq=fold(q),hit=ELSEWHERE.filter(function(x){return x[1].test(fq);})[0];
+  if(hit&&hit[0]==="you"){
+    p(a,t("That's in Profile > You, with your age, height and weight. Want me to open it?"));
+    return act(a,t("Open it"),{"data-sheet":"set_you"});}
+  if(hit&&hit[0]==="nodata"){
+    p(a,t("That's not something I have data on. I can show you how your training and weight are going."));
+    return act(a,t("How am I doing?"),{"data-chatq":"track","data-chatl":uiLang()});}
+  return aUnknown(a);}
+
+/* ---- a report, not a question: one question back, never a guess --------------------
+   "I had a bad day, didn't stick to the diet" (js/coach/intent.js situationOf). The
+   answer acknowledges it in one clause and asks one thing: work the week out, or log
+   it and move on. Food goes to the week's reconciliation (js/coach/reconcile.js),
+   training to moving the missed sets, a low day to adjusting today's effort, and pain
+   to the recovery log only: no advice. Never a stricter tomorrow. */
+function aSituation(a,q,it,sit){
+  var L={"data-chatl":uiLang()};
+  var go=function(label,id){return act(a,label,Object.assign({"data-chatq":id},L));};
+  if(sit.kind==="pain"){
+    p(a,t("Noted. Want me to put it in today's recovery log?"));
+    return act(a,t("Log it"),{"data-sheet":"recovery"});}
+  if(sit.kind==="food"){
+    p(a,t("Sounds like today got away from you. Want me to work out what's left in the week, or just log it and move on?"));
+    go(t("Work out the week"),"weekfood");return go(t("Just log it"),"logfood");}
+  if(sit.kind==="train"){
+    p(a,t("Missed one, then. Want me to work out the rest of the week, or just move on?"));
+    go(t("Work out the week"),"weektrain");return go(t("Just move on"),"letgo");}
+  if(sit.kind==="tired"){
+    p(a,t("A low day, then. Want me to adjust today's workout, or just note it?"));
+    go(t("Adjust today"),"lowday");return act(a,t("Just note it"),{"data-sheet":"recovery"});}
+  p(a,t("Sounds like today got away from you. What went off?"));
+  go(t("Food"),"weekfood");go(t("Training"),"weektrain");return go(t("Sleep or energy"),"lowday");}
+
+/* The week's food, reconciled: what is left of the week's budget over the days left,
+   inside the limits reconcile.js keeps (15% a day at most, never under BMR). The
+   targets in the app stay as they are; this is the week's arithmetic. */
+function kcalOn(d){var r=S.days[d];if(!r||!r.meals)return 0;var all=[];
+  Object.keys(r.meals).forEach(function(k){(r.meals[k].items||[]).forEach(function(i){all.push(i);});});
+  return all.length?sumNutrition(all).kcal:0;}
+function aWeekFood(a){
+  var g=S.goals||{},b=bmr(),now=today(),week=weekDates(now),from=addDaysISO(now,1);
+  if(!(num(g.kcal)>0)||!(b>0)){p(a,t("I need your targets and your age, height, weight and sex for that. The assessment asks for them."));
+    return act(a,t("Start the assessment"),{"data-setup":"1"});}
+  if(!kcalOn(now)){p(a,t("Log what you ate today first; I can't work the week out from a day that isn't logged."));
+    return act(a,t("Open Food"),{"data-tab":"food"});}
+  var T={kcal:num(g.kcal),p:num(g.p),c:num(g.c),f:num(g.f)};
+  var r=reconcileNutrition({bmr:b,from:from,days:week.map(function(d){var k=d<from?kcalOn(d):0;return {date:d,target:T,eaten:k?{kcal:k}:null};})});
+  var open=r.days||[];
+  if(r.kind==="on_track"){p(a,t("The week is on track: nothing to change."));return a;}
+  if(r.kind==="week_fine"){
+    p(a,r.why==="no_days_left"?t("The week is still fine. A new one starts tomorrow; eat your normal targets.")
+      :t("The week is still fine. The gap is more than the days left can take, so let it go and eat your normal targets."));
+    if(r.unlogged.length)n(a,fill(t(r.unlogged.length===1?"1 day this week isn't logged, so it isn't counted.":"{n} days this week aren't logged, so they aren't counted."),{n:r.unlogged.length}));
+    return a;}
+  var each=Math.round(Math.abs(r.gap)/Math.max(1,open.length)/10)*10;
+  p(a,fill(t(r.gap<0?"Spread over the {n} days left, that's about {k} kcal a day less, protein unchanged.":"Spread over the {n} days left, that's about {k} kcal a day more, protein unchanged."),{n:open.length,k:fmtN(each)}));
+  l(a,open.map(function(d){return pretty(d.date)+": "+fill(t("{n} kcal"),{n:fmtN(d.kcal)});}));
+  n(a,t("No day moves more than 15%, and none goes under your resting energy. Your targets in the app stay as they are."));
+  if(r.unlogged.length)n(a,fill(t(r.unlogged.length===1?"1 day this week isn't logged, so it isn't counted.":"{n} days this week aren't logged, so they aren't counted."),{n:r.unlogged.length}));
+  return a;}
+function aLogFood(a){
+  p(a,t("Fine. Log what you ate when you can; it's the week that counts, not the day."));
+  return act(a,t("Open Food"),{"data-tab":"food"});}
+
+/* The week's training, reconciled: the missed session's sets moved into the sessions
+   left that train the same muscles, where recovery allows (reconcile.js); what does
+   not fit is let go, and both numbers are said. A rotation loses nothing. */
+function setsOf(list,work){
+  var out={};
+  (list||[]).forEach(function(e){
+    if(!e||isActivity(e.name))return;
+    var n=work?(e.sets||[]).filter(function(x){return !x.wu;}).length:num(e.sets);if(!n)return;
+    var m=muscleOf(e.name);out[m]=(out[m]||0)+n;
+    (secondaryOf(e.name)||[]).forEach(function(s){out[s]=(out[s]||0)+n/2;});});
+  return out;}
+function aWeekTrain(a){
+  var sp=split(),now=today();
+  if(sp.schedule!=="week"){
+    var nx=nextDayOf(sp);
+    p(a,(nx?fill(t("Nothing is lost. Your program is a rotation, so the next workout is simply the one you missed: {d}."),{d:planName(nx.name)})
+      :t("Nothing is lost. Your program is a rotation, so the next workout is simply the one you missed."))+" "+t("Don't try to fit two into one day."));
+    return a;}
+  var week=weekDates(now),done=function(d){return S.sessions.some(function(s){return s.date===d;});};
+  /* The session missed: today's, if it is not done, or the last one before it. */
+  var mdate=null;week.slice().reverse().forEach(function(d){if(!mdate&&d<=now&&pinnedOn(sp,d)&&!done(d))mdate=d;});
+  if(!mdate){p(a,t("I can't find a missed session this week: every planned one so far is logged."));return a;}
+  var md=pinnedOn(sp,mdate),from=addDaysISO(now,1);
+  var others=week.filter(function(d){return d!==mdate;}).map(function(d){
+    if(d<from){var ss=S.sessions.filter(function(s){return s.date===d;});
+      var e=[];ss.forEach(function(s){e=e.concat(s.entries||[]);});return e.length?{date:d,sets:setsOf(e,true)}:null;}
+    var pd=pinnedOn(sp,d);return pd?{date:d,sets:setsOf(pd.ex,false)}:null;}).filter(Boolean);
+  var r=reconcileTraining({missed:{date:mdate,sets:setsOf(md.ex,false)},sessions:others,from:from});
+  if(r.kind==="week_fine"||r.kind==="none"||r.kind==="nothing_missed"){
+    p(a,fill(t("The week is still fine. {d}'s sets don't fit into the rest of it without crowding recovery, so that one's gone; train the rest as planned."),{d:planName(md.name)}));
+    return a;}
+  var wd=function(d){return pretty(d).split(",")[0];};
+  p(a,fill(t(r.kind==="adjust"?"All {n} of {d}'s sets fit into the rest of the week.":"{m} of {d}'s {n} sets fit into the rest of the week; the other {g} are gone."),
+    {n:Math.round(r.missed),m:r.moved,g:r.gone,d:planName(md.name)}));
+  var byDay={},order=[];r.add.forEach(function(x){if(!byDay[x.date]){byDay[x.date]=[];order.push(x.date);}byDay[x.date].push(tm(x.muscle).toLowerCase());});
+  l(a,order.map(function(d){return wd(d)+": "+fill(t("+1 set each: {m}"),{m:list(byDay[d])});}));
+  n(a,t("Add them as extra sets on those days. Nothing is moved where it would come too close to another session for the same muscles."));
+  return a;}
+function aLetGo(a){
+  var nx=nextDayOf(split());
+  p(a,nx?fill(t("Fine. Next up is {d}; train it as planned."),{d:planName(nx.name)}):t("Fine. Train the next one as planned."));
+  return a;}
+/* A low day: today's effort adjusted, from the log's own fatigue reading where it has
+   one. The program is not changed. */
+function aLowDay(a){
+  p(a,t("On a low day: do the workout with one set fewer on each exercise, or keep the sets and stop two or three reps short of failure. Sleep is the biggest lever: seven to nine hours."));
+  var fat=coachNow().filter(function(c){return /^(fatigue|falling|stall)$/.test(c.kind);})[0];
+  if(fat){var w=words(fat);p(a,t("Your log also shows it:")+" "+w[0]+". "+w[1]);act(a,w[2],{"data-cofix":fat.id});}
+  else if(deloadDue())n(a,t("It has been a long run of hard weeks. A lighter week now would let your body catch up."));
+  return act(a,t("Log sleep and energy"),{"data-sheet":"recovery"});}
+
+/* ---- what the person has told the coach (js/coach/context.js) -----------------------
+   Kept only when they say so, in their own words, under the kind they pick; listed and
+   deletable whenever they ask. Nothing about them is inferred. */
+var CTXKIND={schedule:"Work or schedule",obstacle:"Something in the way",constraint:"Something I can't do",preference:"A preference"};
+function aRemember(a,q){
+  p(a,t("Want me to keep that, in your words, so later answers can work around it? Pick what it is."));
+  KINDS.forEach(function(k){act(a,t(CTXKIND[k]),{"data-ctxadd":k});});
+  return act(a,t("Don't keep it"),{"data-ctxno":"1"});}
+function aFacts(a){
+  var f=listFacts(S.context);
+  if(!f.length){p(a,t("You haven't told me anything to keep yet. Say something like “I work 13-hour days”, and I'll ask before keeping it."));return a;}
+  p(a,fill(t(f.length===1?"You've told me 1 thing. It's kept as you said it; delete it any time.":"You've told me {n} things. Each is kept as you said it; delete any of them."),{n:f.length}));
+  f.forEach(function(x){act(a,fill(t("Delete “{t}”"),{t:x.text}),{"data-ctxdel":x.id});});
+  return a;}
+/* What they told the coach that bears on this answer, said back in their words. */
+/* Food answers say back only what is about food, by its own words. */
+var FOODSAID=/(eat|food|diet|meal|allerg|vegan|vegetarian|pork|dairy|lactose|gluten|halal|fast|اكل|باكل|بكل|دايت|حساسيه|نباتي|لبن|صيام|صايم)/;
+function told(a,kinds,food){
+  var f=listFacts(S.context).filter(function(x){return kinds.indexOf(x.kind)>=0&&(!food||FOODSAID.test(fold(x.text)));});
+  if(f.length)n(a,t("You told me:")+" "+f.map(function(x){return "“"+x.text+"”";}).join(" · "));
+  return a;}
+/* An exercise in this list that something they said they can't do names. */
+function clashes(exs){
+  var out=[];
+  listFacts(S.context,"constraint").concat(listFacts(S.context,"preference")).forEach(function(x){
+    var one=function(w){return w.length>4?w.replace(/([^s])s$/,"$1"):w;};
+    var fw=" "+spell(fold(x.text)).split(" ").map(one).join(" ")+" ";
+    exs.forEach(function(e){
+      var hit=[e.name,exName(e.name)].some(function(nm){return fold(nm).split(" ").some(function(w){
+        w=one(w);return w.length>=4&&!GENERIC.test(w)&&fw.indexOf(" "+w+" ")>=0;});});
+      if(hit&&!out.some(function(o){return o.name===e.name;}))out.push({name:e.name,said:x.text});});});
+  return out;}
+
+/* ---- requests: what js/ui/agent.js made of them ------------------------------------ */
+function aReassess(a){
+  p(a,t("The assessment rebuilds your targets, training and meals from your answers. Nothing changes until you use what it builds."));
+  return act(a,t("Retake the assessment"),{"data-setup":"1"});}
+
+/* An answer, with what the person told the coach that bears on it said back. */
+function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
 var ANSWER={today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
-  help:aHelp,hello:aHello,thanks:aThanks,unknown:aUnknown,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo};
+  help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
+  kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
+  scope:aScope,reassess:aReassess,situation:function(a,q,it){return aSituation(a,q,it,it.sit||{kind:"day"});},weekfood:aWeekFood,logfood:aLogFood,weektrain:aWeekTrain,letgo:aLetGo,lowday:aLowDay,
+  remember:aRemember,facts:aFacts};
+["missed","kfreq","kdur","weektrain"].forEach(function(k){ANSWER[k]=withTold(ANSWER[k],["schedule","obstacle"]);});
+["eat","rest","weekfood","swap"].forEach(function(k){ANSWER[k]=withTold(ANSWER[k],["preference","constraint","obstacle"],true);});
 
-/* Ask: q is what the person typed, or a suggestion's id. Kept with its answer. */
+/* Which way a message goes when the words could go two ways: a request that names a
+   food is about food, one that names an exercise is about training; a weight with a
+   number in it, said rather than asked, is a weigh-in. */
+/* A message that starts with the verb is that request, whatever else it names
+   ("add squats" is an add, not a question about squats). */
+var VERB=[["exadd",/^(please |pls |can you |could you |i want to |i wanna |)(add|put|include)( |$)|^(ممكن |عايز |عاوز |)(ضيف|اضيف|ضيفلي|حط|حطلي)( |$)/],
+  ["exremove",/^(please |pls |can you |could you |i want to |i wanna |)(remove|delete|drop|take out)( |$)|^(ممكن |عايز |عاوز |)(شيل|امسح|احذف)( |$)/],
+  ["exswap",/^(please |pls |can you |could you |i want to |i wanna |)(swap|replace|switch|substitute)( |$)|^(ممكن |عايز |عاوز |)(بدل|استبدل)( |$)/],
+  ["foodlog",/^(please |pls |can you |)(log|i ate|ate|just ate)( |$)|^(سجل|سجلي|اكلت|كلت)( |$)/]];
+function route(iid,text,it){
+  var fq0=fold(text);
+  for(var vi=0;vi<VERB.length;vi++)if(VERB[vi][1].test(fq0)&&!(VERB[vi][0]==="foodlog"&&/^log /.test(fq0)&&/weight|وزن/.test(fq0))){iid=VERB[vi][0];break;}
+  var asked=/\?|؟|on track|stuck|should|why|how|ماشي|ليه|ازاي/.test(fold(text)+(/[?؟]/.test(text)?" ?":""));
+  if((iid==="weight"||iid==="weighlog")&&it.kg&&!asked)return "weighlog";
+  if(iid==="weighlog"&&!it.kg)return (it.ranked||[]).filter(function(x){return x!=="weighlog";})[0]||"weight";
+  if(iid==="exswap"&&!namesExercise(text)&&namesFood(text))return "swap";
+  if(iid==="swap"&&/ instead of | in place of /.test(" "+fq0+" ")&&namesExercise(text)&&!namesFood(text))return "exswap";
+  if(iid==="exadd"&&!namesExercise(text)&&namesFood(text))return "foodlog";
+  return iid;}
 /* Ask: q is what the person typed, or a suggestion's id (with the conversation's
    language, lang). Kept with its answer and the language it was answered in. */
 function ask(q,id,lang){
@@ -599,19 +914,49 @@ function ask(q,id,lang){
   var L=id?(lang==="ar"||lang==="en"?lang:uiLang()):it.lang==="ar"?"ar":"en";
   var msg=withLang(L,function(){
     var text=id?t(ASK[id]||""):String(q).trim().slice(0,300),iid=it.id;
-    /* Not phrased as anything known, but it names an exercise in the plan, or a food:
-       that is what it is about. */
-    if(!id&&iid==="unknown"){
-      if(namedExercises(text).length)iid="weights";
-      else if(FOODDB&&namedFood(text))iid="foodinfo";}
+    if(!id){
+      /* The hard limits first, whatever else the question seems to be. */
+      var sit=null;
+      if(scopeOf(text))iid="scope";
+      /* A report rather than a question or a request: one question back. */
+      else if(!VERB.some(function(v){return v[0]!=="foodlog"&&v[1].test(fold(text));})&&(sit=situationOf(text))){iid="situation";it.sit=sit;}
+      else if(factOf(text))iid="remember";
+      else iid=route(iid,text,it);
+      /* Not phrased as anything known, but it names an exercise in the plan, or a
+         food by its name: that is what it is about. A near miss is not a match. */
+      if(iid==="unknown"){
+        if(namedExercises(text).length)iid="weights";
+        else if(FOODDB&&namedFood(text,true))iid="foodinfo";}}
+    if(ACTION_IDS.indexOf(iid)>=0&&iid!=="reassess"&&S.onboarded){
+      var ag=null;try{ag=planAction(iid,text,it);}catch(e){ag=null;}
+      if(ag)return {q:text,id:iid,at:Date.now(),b:[],acts:ag.acts||[],ag:ag,lang:L};
+      iid="unknown";}
     var a=A(),fn=ANSWER[iid]||aUnknown;
-    if(!S.onboarded&&/^(today|tomorrow|weights|eat|rest|swap|weight|protein|calories|missed|balance|goal)$/.test(iid)){
+    if(!S.onboarded&&/^(today|tomorrow|weights|eat|rest|swap|weight|protein|calories|missed|balance|goal|exadd|exremove|exswap|foodlog|weighlog|kreps|ksets|krest|kfreq|kvolume|kdur)$/.test(iid)){
       p(a,t("First, the assessment: a few questions, and the coach builds your targets, training and meals. Then I can answer from your own plan."));
       act(a,t("Start the assessment"),{"data-setup":"1"});}
     else{try{fn(a,text,it);}catch(e){a=aUnknown(A());}}
-    return {q:text,id:iid,at:Date.now(),b:a.b,acts:a.acts,lang:L};});
+    return {q:text,id:iid,at:Date.now(),b:a.b,acts:a.acts,src:a.src&&a.src.length?a.src:undefined,ag:a.ag,lang:L};});
   S.chat=(S.chat||[]).concat([msg]).slice(-KEEP);
   return msg;}
+/* A choice tapped on a pick: said as the person's own line, then the request goes on
+   with it filled in. None of these: where the thing can be found instead. */
+function follow(at,i){
+  var m=(S.chat||[]).filter(function(x){return x&&x.at===+at;})[0];if(!m||!m.ag)return null;
+  var L=m.lang==="ar"||m.lang==="en"?m.lang:uiLang(),ag=m.ag;
+  if(i==null)return withLang(L,function(){
+    var none={q:t("None of these"),id:m.id,at:Date.now(),b:[],acts:[],lang:L,ag:ag.what==="food"
+      ?{s:"say",lead:t("Then it isn't in the food list. Food can add it as one of your own foods."),acts:[{l:t("Open Food"),a:{"data-tab":"food"}}]}
+      :{s:"say",lead:t("Then it isn't in the library. The picker on any day lists every exercise, and can add one of your own."),acts:[{l:t("Open Training"),a:{"data-tab":"train"}}]}};
+    S.chat=(S.chat||[]).concat([none]).slice(-KEEP);return none;});
+  var o=(ag.opts||[])[+i];if(!o)return null;
+  if(ag.act==="food.info")return ask(o.l,null,L);
+  return withLang(L,function(){
+    var nx=null;try{nx=proceed(ag,o.v);}catch(e){nx=null;}
+    if(!nx)nx={s:"say",lead:t("That didn't go through. Nothing was changed."),acts:[]};
+    var msg={q:o.l,id:m.id,at:Date.now(),b:[],acts:nx.acts||[],ag:nx,lang:L};
+    S.chat=(S.chat||[]).concat([msg]).slice(-KEEP);return msg;});}
+function findMsg(at){return (S.chat||[]).filter(function(x){return x&&x.at===+at;})[0]||null;}
 
 /* ---- on screen ------------------------------------------------------------------
    Not a chatbot's look: a question is a short line on the reading side, and an answer
@@ -624,7 +969,14 @@ var TOPIC={today:["Today's workout","dumbbell"],weights:["What to lift","dumbbel
   sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
   goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],
   help:["What I can answer","question"],tomorrow:["Tomorrow's workout","dumbbell"],last:["Last workout","bars"],
-  rest:["The rest of today","bowl"],swap:["Food swaps","balance"],foodinfo:["Food facts","info"]};
+  rest:["The rest of today","bowl"],swap:["Food swaps","balance"],foodinfo:["Food facts","info"],
+  exadd:["Change your program","clipboard"],exremove:["Change your program","clipboard"],exswap:["Change your program","swap"],
+  foodlog:["Log food","bowl"],weighlog:["Weigh-in","scale"],reassess:["A new plan","clipboard"],
+  kreps:["Reps","dumbbell"],ksets:["Sets","dumbbell"],krest:["Rest between sets","clock"],kfreq:["How often to train","clock"],
+  kvolume:["Weekly volume","balance"],ktempo:["Tempo","clock"],kwarm:["Warming up","flame"],kdur:["Session length","clock"],
+  k1rm:["One-rep max","medal"],scope:["Outside what I do","info"],situation:["A rough day","moon"],
+  weekfood:["The week's food","bowl"],logfood:["The week's food","bowl"],weektrain:["The week's training","dumbbell"],letgo:["The week's training","dumbbell"],
+  lowday:["A low day","moon"],remember:["What you told me","person"],facts:["What you told me","person"]};
 /* The opening screen: what can be asked, by what it is about. */
 var GROUPS=[["Training",["today","tomorrow","weights","sore"]],["Food",["eat","rest","swap","protein"]],
   ["Progress",["track","last","weight","strong"]]];
@@ -636,26 +988,69 @@ function topicRow(id){
   var tp=TOPIC[id]||["","question"];
   return '<button class="chat-topic" data-chatq="'+id+'"><span class="chat-gl">'+glyph(tp[1])+'</span>'
    +'<span class="chat-topic-q">'+esc(t(ASK[id]))+'</span><span class="ico ico-chev" aria-hidden="true"></span></button>';}
-function bubble(m,live){
+function bubble(m,live,prev){
   var L=m.lang==="ar"||m.lang==="en"?m.lang:uiLang();
-  return withLang(L,function(){return bubbleIn(m,live,L);});}
-function bubbleIn(m,live,L){
-  var tp=TOPIC[m.id];
-  var h='<div class="chat-x'+(live?' live':'')+'" lang="'+L+'" dir="'+(L==="ar"?"rtl":"ltr")+'"><div class="chat-q"><p dir="auto">'+esc(String(m.q||""))+'</p></div><div class="chat-a">'
-   +'<div class="chat-ah"><span class="chat-gl">'+glyph(tp?tp[1]:"question")+'</span><span class="chat-ah-t">'
-   +'<span class="chat-ak">'+esc(t("Coach"))+'</span>'+(tp?'<span class="chat-at">'+esc(t(tp[0]))+'</span>':'')+'</span></div>';
-  (Array.isArray(m.b)?m.b:[]).forEach(function(x){
+  return withLang(L,function(){return bubbleIn(m,live,L,prev);});}
+/* An answer reads as one or two sentences; the rest is behind More. */
+function sentences(s){
+  var out=[],re=/[.!?؟]\s+/g,mm,from=0;
+  while((mm=re.exec(s))){out.push(s.slice(from,mm.index+1));from=re.lastIndex;}
+  out.push(s.slice(from));
+  return out.filter(function(x){return x.trim();});}
+/* The lead's figures stand out, each in .num so bidi keeps it one run. */
+function figures(s){
+  return String(s).split(/(\d[\d,.:×–]*\d|\d)/).map(function(x,i){return i%2?'<span class="num">'+esc(x)+'</span>':esc(x);}).join("");}
+function blocks(list){
+  var h="";
+  list.forEach(function(x){
     if(!x)return;
     if(x.p!=null)h+='<p>'+esc(String(x.p))+'</p>';
     else if(Array.isArray(x.l))h+='<ul class="chat-l">'+x.l.map(function(i){return '<li>'+esc(String(i))+'</li>';}).join("")+'</ul>';
     else if(x.n!=null)h+='<p class="chat-n">'+glyph("info")+'<span>'+esc(String(x.n))+'</span></p>';});
-  /* A kept conversation comes back from storage and from backups, so a button is only
-     ever its label and data-* attributes the app itself acts on. */
-  var acts=live&&Array.isArray(m.acts)?m.acts:[];
-  if(acts.length)h+='<div class="chat-acts">'+acts.map(function(b,i){
+  return h;}
+/* A kept conversation comes back from storage and from backups, so a button is only
+   ever its label and data-* attributes the app itself acts on. */
+function buttons(acts){
+  return acts.length?'<div class="chat-acts">'+acts.map(function(b,i){
     var at=Object.keys(b.a||{}).filter(function(k){return /^data-[a-z]+$/.test(k);})
       .map(function(k){return ' '+k+'="'+esc(b.a[k])+'"';}).join("");
-    return '<button class="btn '+(i?'g ':'')+'sm"'+at+'>'+esc(String(b.l||""))+'</button>';}).join("")+'</div>';
+    return '<button class="btn '+(i?'g ':'')+'sm"'+at+'>'+esc(String(b.l||""))+'</button>';}).join("")+'</div>':"";}
+/* A request: what will change and the tap that does it; done, with Undo; undone; or the
+   one piece still missing, its real choices as rows. Every value here was worked out
+   when the request was made and kept with it, so it shows as it was said. */
+var AGSTATE={confirm:1,applied:1,undone:1,declined:1,failed:1,pick:1,say:1};
+function agHtml(m,live){
+  var g=m.ag,at=esc(String(m.at)),h='<p class="chat-lead">'+figures(String(g.lead||""))+'</p>';
+  if(g.s==="confirm"||g.s==="applied"||g.s==="undone"||g.s==="declined"||g.s==="failed"){
+    if(g.item)h+='<div class="ag-item"><b>'+esc(String(g.item))+'</b>'+(g.detail?'<span>'+figures(String(g.detail))+'</span>':'')+'</div>';}
+  if(g.s==="confirm"&&live)h+='<div class="ag-acts"><button class="btn ag-ok" data-agok="'+at+'">'+esc(String(g.cta||t("Do it")))+'</button>'
+    +'<button class="btn g ag-no" data-agno="'+at+'">'+esc(t("Not now"))+'</button></div>';
+  else if(g.s==="applied")h+='<div class="ag-done" role="status"><span class="ag-ck">'+glyph("check")+'</span><span class="ag-t">'+esc(String(g.done||""))+'</span>'
+    +(canUndo(m.at)?'<button class="ag-undo" data-agundo="'+at+'">'+esc(t("Undo"))+'</button>':'')+'</div>';
+  else if(g.s==="undone")h+='<div class="ag-undone" role="status">'+glyph("restore")+'<span>'+esc(String(g.undone||""))+'</span></div>';
+  else if(g.s==="declined")h+='<p class="chat-n">'+glyph("info")+'<span>'+esc(t("Kept as it is."))+'</span></p>';
+  else if(g.s==="failed")h+='<p class="chat-n">'+glyph("info")+'<span>'+esc(t("That didn't go through. Nothing was changed."))+'</span></p>';
+  else if(g.s==="pick"&&live)h+='<div class="ag-opts">'+(g.opts||[]).map(function(o,i){
+      return '<button class="ag-opt" data-agpick="'+at+'|'+i+'"><span class="ag-ol">'+esc(String(o.l||""))+'</span>'+(o.sub?'<span class="ag-os">'+esc(String(o.sub))+'</span>':'')+'</button>';}).join("")
+    +(g.none?'<button class="ag-opt none" data-agnone="'+at+'"><span class="ag-ol">'+esc(t("None of these"))+'</span></button>':'')+'</div>';
+  if(g.s==="say"&&live)h+=buttons(Array.isArray(g.acts)?g.acts:[]);
+  return h;}
+function bubbleIn(m,live,L,prev){
+  var tp=TOPIC[m.id];
+  var h='<div class="chat-x'+(live?' live':'')+(prev?' prev':'')+'" data-k="x'+esc(String(m.at||""))+'" lang="'+L+'" dir="'+(L==="ar"?"rtl":"ltr")+'"><div class="chat-q"><p dir="auto">'+esc(String(m.q||""))+'</p></div><div class="chat-a">'
+   +'<div class="chat-ah"><span class="chat-gl">'+glyph(tp?tp[1]:"question")+'</span><span class="chat-ah-t">'
+   +'<span class="chat-ak">'+esc(t("Coach"))+'</span>'+(tp?'<span class="chat-at">'+esc(t(tp[0]))+'</span>':'')+'</span></div>';
+  if(m.ag&&typeof m.ag==="object"&&AGSTATE[m.ag.s])return h+agHtml(m,live)+'</div></div>';
+  var b=(Array.isArray(m.b)?m.b:[]).filter(Boolean),lead="",more=b;
+  if(b[0]&&b[0].p!=null){
+    var ss=sentences(String(b[0].p));lead=ss.slice(0,2).join(" ");
+    more=(ss.length>2?[{p:ss.slice(2).join(" ")}]:[]).concat(b.slice(1));}
+  if(lead)h+='<p class="chat-lead">'+figures(lead)+'</p>';
+  var srcs=Array.isArray(m.src)?m.src:[];
+  if(!lead)h+=blocks(more);
+  else if(more.length||srcs.length)h+='<details class="chat-more"><summary>'+esc(t("More"))+'</summary>'+blocks(more)
+    +(srcs.length?'<p class="chat-src">'+esc(t("From the coaching notes:"))+' '+srcs.map(function(x){return esc(String(x));}).join(" · ")+'</p>':'')+'</details>';
+  h+=buttons(live&&Array.isArray(m.acts)?m.acts:[]);
   return h+'</div></div>';}
 
 /* The screen: a header that says where the answers come from, then either what can be
@@ -678,26 +1073,16 @@ function vChat(){
      +'<p class="chat-dis">'+esc(t("Answers come from your own log, plan and targets, worked out on this phone. Nothing you type leaves it."))+'</p>';}
   log.forEach(function(m,i){h+=bubble(m,i===log.length-1);});
   h+='</div>';
-  /* What to ask next, in the conversation's language. */
-  if(last){var LL=last.lang==="ar"||last.lang==="en"?last.lang:uiLang(),own=LL!==uiLang()?LL:"";
-    h+=withLang(LL,function(){return '<div class="chat-next" lang="'+LL+'" dir="'+(LL==="ar"?"rtl":"ltr")+'"><div class="chat-next-h">'+esc(t("Ask next"))+'</div>'
-      +chips(NEXT[last.id]||NEXT.unknown,"",own)+'</div>';});}
+  if(last)h+=askNext(last);
   h+='<div class="chat-form"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'
    +esc(t("Ask a question"))+'" aria-label="'+esc(t("Ask a question"))+'">'
    +'<button class="chat-send" data-chatsend="1" aria-label="'+esc(t("Ask"))+'">'+glyph("send")+'</button></div>';
   return h;}
 
-/* Coach AI's way in, as a composer: a box that says "ask me anything" and opens the
-   chat with the keyboard up, and a row of questions to tap instead of typing. Once
-   there is a conversation, a way back to it. */
-function chatCard(){
-  var log=S.chat||[];
-  return '<section class="chatcard"><div class="chatcard-h"><span class="chat-gl">'+glyph("whistle")+'</span>'
-   +'<span><span class="chatcard-t">'+esc(t("Ask me anything"))+'</span>'
-   +'<span class="chatcard-s">'+esc(t("In English or Arabic, answered from your own log, plan and targets."))+'</span></span></div>'
-   +'<button class="chat-ask" data-chat="ask"><span class="chat-ask-p">'+esc(t("Ask about training, food or progress"))+'</span>'
-   +'<span class="chat-ask-go" aria-hidden="true">'+glyph("send")+'</span></button>'
-   +chips(["today","eat","rest","weights","track"],"cc")
-   +(log.length?'<button class="btn g sm" data-chat="1">'+esc(t("Continue the conversation"))+'</button>':'')+'</section>';}
+/* What to ask next, in the conversation's language (the floating Coach shows it too). */
+function askNext(last){
+  var LL=last.lang==="ar"||last.lang==="en"?last.lang:uiLang(),own=LL!==uiLang()?LL:"";
+  return withLang(LL,function(){return '<div class="chat-next" lang="'+LL+'" dir="'+(LL==="ar"?"rtl":"ltr")+'"><div class="chat-next-h">'+esc(t("Ask next"))+'</div>'
+    +chips(NEXT[last.id]||NEXT.unknown,"",own)+'</div>';});}
 
-export {ASK, ask, chatCard, NEXT, vChat};
+export {ASK, ask, askNext, bubble, findMsg, follow, NEXT, vChat};

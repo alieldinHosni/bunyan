@@ -26,6 +26,7 @@ import {bindExSwipe} from "./exswipe.js";
 import {bindMore} from "./more.js";
 import {syncMannequins} from "./mannequin.js";
 import {syncBgArt} from "./bgart.js";
+import {syncCoach} from "./coachfab.js";
 
 /* ============================================================ render */
 /* Motion is applied after the DOM has settled, and only to what changed.
@@ -81,6 +82,9 @@ function render(){
   if(V.pcheck){V.pcheck=false;V.tab="coach";V.csec="ai";V.advall=true;}
   /* The chat is a Coach screen; leaving Coach leaves it (back restores it from the trail). */
   if(V.tab!=="coach")V.chat=false;
+  /* The conversation is the floating Coach's now (js/ui/coachfab.js): a route that
+     still asks for the old chat screen (an answer asked from Food) opens the panel. */
+  if(V.chat){V.chat=false;V.coach=V.coach||"compact";}
   var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":S.run?"run":V.train):V.tab==="coach"?(V.train!=="days"?V.train:V.pslot?"pslot":V.pimport?"pimport":V.smeal?"smeal":V.chat?"chat":"hub"):"");
   var moved=view!==lastView;lastView=view;
   /* Note what has focus and where the caret sits before the rebuild destroys it.
@@ -134,6 +138,8 @@ function render(){
      back. The page stops keeping room for the dock too (body.focus in index.html). */
   var focus=!V.assess&&V.tab==="train"&&((!!S.active&&V.train!=="hub")||(!!S.run&&!S.active));
   document.body.classList.toggle("focus",focus);
+  /* The workout itself is flat: no ground, no drawing behind it (workout-spec.md). */
+  document.body.classList.toggle("wkflat",focus&&!!S.active);
   /* The dock is built once and only its state changes after that — see dock.js. */
   syncDock(document.getElementById("nav"),V.tab,V.advice);
   /* The page's drawing on the ground (js/ui/bgart.js); the assessment is Coach's. */
@@ -163,12 +169,14 @@ function render(){
   syncRest();
   /* A sheet is modal, so hide the screen behind it from assistive tech and move
      focus into it the moment it opens. Sheets used to be invisible to both. */
-  appEl.setAttribute("aria-hidden",V.sheet?"true":"false");
+  /* The floating Coach: the launcher where it may sit, the panel when it is open. */
+  syncCoach();
+  appEl.setAttribute("aria-hidden",V.sheet||V.coach?"true":"false");
   document.getElementById("nav").setAttribute("aria-hidden",V.sheet||focus?"true":"false");
   document.getElementById("wbar").setAttribute("aria-hidden",V.sheet?"true":"false");
   /* And stop it moving, for the same reason it is hidden from assistive tech: while
      a sheet is up, the screen behind is not something the user is operating. */
-  lockScroll(V.sheet);
+  lockScroll(V.sheet||V.coach);
   var opened=V.sheet&&V.sheet!==lastSheet;
   lastSheet=V.sheet;
   /* Only a rebuild can lose focus. On the patch path the field the user is typing in

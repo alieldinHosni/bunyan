@@ -18,6 +18,7 @@ import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {ask} from "../views/chat.js";
 import {loadFoods} from "../../engine/nutrition.js";
+import {toEnd} from "../coachfab.js";
 import {withIds} from "../views/timport.js";
 
 /* The exercise open in the edit sheet, and the one place its numbers are bounded:
@@ -111,7 +112,7 @@ function chatSend(){
      question that stayed in the box after its answer read as not yet sent. */
   var from=fromEl(el);
   el.value="";
-  loadFoods(function(){ask(q);saveDB();render();land(from);});}
+  loadFoods(function(){ask(q);saveDB();render();land(from);toEnd();});}
 function chatEnd(){
   requestAnimationFrame(function(){
     var qs=document.querySelectorAll(".chat-q"),q=qs[qs.length-1];
@@ -182,5 +183,8 @@ function retargetNow(){
     if(S!==s0)return;
     toast(t("Your targets now follow the textbook: 500 kcal under maintenance to lose fat, 350 over to build muscle, 2.4 g of protein per kg while losing."),
       function(){if(S!==s0)return;Object.assign(S.goals,before);saveDB();render();});},1200);}
-
-export {MF, builderId, retargetNow, chatEnd, chatSend, editedEx, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};
+/* Functions a handler module lends the coach's actions (js/ui/handlers/actions.js),
+   set when it registers: the actions run what the screens run without the handler
+   modules importing each other. */
+var LENT={};
+export {LENT, MF, builderId, retargetNow, chatEnd, chatSend, editedEx, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};

@@ -70,6 +70,11 @@ async function coach(page,sec,sub){
   await tapTab(page,"coach");await page.waitForTimeout(200);
   if(sec){await page.tap('[data-csec="'+sec+'"]');await page.waitForTimeout(200);}
   if(sub){await page.tap('[data-'+(sec==="train"?"ctsub":"cfsub")+'="'+sub+'"]');await page.waitForTimeout(250);}}
+/* The conversation opens from the floating Coach only. With q, that question is asked. */
+async function openChat(page,q){
+  await coach(page);await page.tap('#cfab .cfab');await page.waitForTimeout(400);
+  if(q){await page.evaluate(async q=>{const c=await import("/js/ui/views/chat.js");document.getElementById("chatq").value=(await import("/js/i18n/dict.js")).t(c.ASK[q]);},q);
+    await page.press('#chatq','Enter');await page.waitForTimeout(400);}}
 async function startWorkout(page){await tapTab(page,"train");await pause(page);await page.tap('[data-startday]');await pause(page,400);}
 /* The live workout has no dock: its ✕ and Save and exit are the way to the other tabs,
    and the session carries on (Resume card on Train, the workout bar elsewhere). */
@@ -355,7 +360,7 @@ await test("a lighter week cuts planned sets and suggested load, and ends",async
   const cut=await ev(page,"S.active.entries.map(e=>e.planned.sets)");
   const plan=await ev(page,"(function(){var sp=S.programs.find(p=>p.id===S.activeProgram);var d=sp.days.find(x=>x.id===S.active.dayId);return d.ex.map(e=>e.sets)})()");
   if(!cut.every((n,i)=>n<plan[i]||n===1))throw new Error("sets not cut: "+cut+" vs "+plan);
-  if(!/Lighter week/.test(await page.textContent(".ex-tags")))throw new Error("no lighter-week tag");
+  if(!/Lighter week/.test(await page.textContent(".wexl-s")))throw new Error("no lighter-week mark on the set line");
 });
 await test("weight steps: own step wins; dumbbell totals double the step",async page=>{
   const r=await F(page,`(function(){var a=F.incrementFor("Dumbbell Bench Press",30);S.prefs.dbLoad="total";var b=F.incrementFor("Dumbbell Bench Press",60);
@@ -520,8 +525,8 @@ await test("workout bar: the clock on other tabs, rest counts down there, rest o
   eq(await ev(page,"document.body.classList.contains('wb')"),true);
   await page.tap('#wbar .wbar');await pause(page,500);
   eq(await ev(page,"[V.tab,!document.getElementById('wbar').firstChild]"),["train",true],"tap returns");
+  /* The rest is a band on the workout now (workout-spec.md), so there is nothing to hide. */
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
-  await page.tap('[data-rest="hide"]');await pause(page);
   await leaveWorkout(page);
   await tapTab(page,"food");await pause(page,1200);
   eq(await page.$eval('#rest',e=>!e.firstChild),true,"no full-screen rest on Food");
@@ -530,7 +535,8 @@ await test("workout bar: the clock on other tabs, rest counts down there, rest o
   eq(await page.$eval('#wbar .wbar',e=>e.classList.contains("done")),true,"rest over");
   if(!/^\+\d+:\d\d$/.test(await page.$eval('#wbarT',e=>e.textContent)))throw new Error("the bar does not count up past the rest");
   await page.tap('#wbar .wbar');await pause(page,500);
-  eq(await ev(page,"[V.tab,V.restDone,!!document.getElementById('rest').firstChild]"),["train",true,true],"rest-over screen on return");
+  /* The time-up state is the band on the workout now, not a screen of its own. */
+  eq(await ev(page,"[V.tab,V.restDone,!!document.querySelector('#app .rb.over[role=alert]'),!document.getElementById('rest').firstChild]"),["train",true,true,true],"rest-over band on return");
 },{prefs:{autorest:true}});
 
 /* ---- the week, and Food in three sections -------------------------------------------- */
@@ -684,12 +690,14 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   /* Nothing goes over the network: every answer is worked out here. */
   const out=[];page.on("request",r=>{if(!r.url().startsWith("http://localhost"))out.push(r.url());});
   await coach(page,"ai");
-  if(!(await page.$('.chatcard')))throw new Error("no Ask the coach card in Coach AI");
-  await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
-  eq(await ev(page,"[V.tab,V.chat,S.chat.length,S.chat[0].id]"),["coach",true,1,"today"],"a suggestion opens the chat and is answered");
+  if(await page.$('.chatcard'))throw new Error("the Ask card is still on Plan");
+  await page.tap('#cfab .cfab');await pause(page,400);
+  await page.fill('#chatq',"What do I train today?");await page.press('#chatq','Enter');await pause(page,400);
+  /* The conversation is the floating Coach's panel now, over Coach AI. */
+  eq(await ev(page,"[V.tab,V.coach,S.chat.length,S.chat[0].id]"),["coach","compact",1,"today"],"a suggestion opens the Coach panel and is answered");
   if(!(await page.$('.chat-a .chat-acts [data-startday]')))throw new Error("today's answer offers no Start workout");
   const ask=async q=>{await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,300);
-    return page.evaluate(()=>{const a=[...document.querySelectorAll(".chat-a")].pop();return a?a.innerText:"";});};
+    return page.evaluate(()=>{const a=(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop());return a?a.innerText:"";});};
   let a=await ask("how much protein do I need?");
   eq(await ev(page,"S.chat[S.chat.length-1].id"),"protein","typed: protein");
   if(!/150 g a day/.test(a))throw new Error("protein answer not from the targets: "+a);
@@ -699,7 +707,7 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   eq(await page.$$eval('.chat-acts',x=>x.length),1,"only the newest answer carries buttons");
   a=await ask("asdf qwer");
   eq(await ev(page,"S.chat[S.chat.length-1].id"),"unknown","nonsense is said to be outside what it knows");
-  if(!/can't answer/.test(a)||!(await page.$('.chat-chips [data-chatq]')))throw new Error("unknown has no way on: "+a);
+  if(!/won't guess/.test(a)||!(await page.$('#cpanel .chat-chips [data-chatq]')))throw new Error("unknown has no way on: "+a);
   /* The weight stalled while losing fat, and the log matches the target: a step on the target, with Undo. */
   a=await ask("why is my weight stuck");
   if(!/Eat 150 kcal less a day/.test(a))throw new Error("no step offered: "+a);
@@ -713,15 +721,15 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   eq(await ev(page,"S.profile.goal"),"gain","goal set");
   await page.tap('.toast-undo');await pause(page);
   eq(await ev(page,"[S.profile.goal,S.goals.kcal]"),["lose",2500],"Undo puts goal and targets back");
-  /* Kept, cleared with Undo, and Back returns to Coach AI. */
+  /* Kept, cleared with Undo (from the panel at full height), and closing returns to Coach AI. */
   const n=await ev(page,"S.chat.length");
+  await page.tap('.cp [data-coachsize="full"]');await pause(page);
   await page.tap('[data-chatclear]');await pause(page);
   eq(await ev(page,"(S.chat||[]).length"),0,"cleared");
   await page.tap('.toast-undo');await pause(page);
   eq(await ev(page,"S.chat.length"),n,"Undo brings it back");
-  await page.tap('[data-back]');await pause(page,500);
-  eq(await ev(page,"[V.tab,!!V.chat,V.csec]"),["coach",false,"ai"],"Back to Coach AI");
-  if(!/Continue the conversation/.test(await page.$eval('.chatcard',e=>e.innerText)))throw new Error("the card does not offer to continue");
+  await page.tap('.cp [data-coachclose]');await pause(page,500);
+  eq(await ev(page,"[V.tab,!!V.coach,V.csec]"),["coach",false,"ai"],"closed, back on Coach AI");
   eq(out,[],"no network requests");
 },{db:Object.assign(seed(),{
   profile:{age:30,height:180,weight:84,sex:"m",activity:1.4,goal:"lose",prog:"standard",level:"some",days:3},
@@ -732,7 +740,7 @@ await test("Coach chat: a saved conversation that is not the app's own renders a
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;
     S.chat=[null,7,{q:"<img src=x onerror=alert(1)>",id:"today",b:[{p:"<b>hi</b>"},{l:["<i>x</i>",3]},null],
       acts:[{l:"Go",a:{"onclick":"alert(1)","data-tab":"food","data-x\" onmouseover=\"alert(1)":"1"}}]}];});
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await openChat(page);
   const r=await page.evaluate(()=>({img:!!document.querySelector(".chat img"),b:!!document.querySelector(".chat-a b"),
     btn:[...document.querySelectorAll(".chat-acts button")].map(b=>b.getAttributeNames().sort().join(","))}));
   eq(r,{img:false,b:false,btn:["class,data-tab"]},"markup stays text; a button keeps only data-* the app knows");
@@ -762,9 +770,11 @@ await test("Arabic: template program and day names are shown in Arabic, fraction
   if(r.frac.indexOf("3/4")<0)throw new Error("fraction lost its slash: "+r.frac);
   eq(r.own,"My Monday","a name the user typed passes through");
 },{prefs:{lang:"ar"}});
-await test("Light: the open tab reads on the dark dock: Glacier Blue on Machine Red",async page=>{
+/* On accent-deep since token-requests.md §3 (owner, 20 Oct): Glacier Blue on Machine Red was 3.27:1. */
+/* Red is red on navy since 26 Oct: white on Signal Red (#E7172E), 4.6:1. */
+await test("Light: the open tab reads on the dark dock: white on Signal Red",async page=>{
   const c=await page.$eval('nav .dock-b.on',e=>[getComputedStyle(e).color,getComputedStyle(e).backgroundColor]);
-  eq(c,["rgb(219, 246, 255)","rgb(255, 46, 58)"]);
+  eq(c,["rgb(255, 255, 255)","rgb(231, 23, 46)"]);
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"red"}});
 await test("One place for each thing: the assessment in Coach AI only, how you feel asked when a workout starts, nothing of it on Profile",async page=>{
   await tapTab(page,"train");await pause(page);
@@ -856,7 +866,7 @@ await test("Themes: the picker switches the whole app, and the choice outlives a
   await page.tap('[data-settheme="red"]');await pause(page,500);
   eq(await page.evaluate(()=>document.documentElement.getAttribute("data-palette")),"red","html is red");
   eq(await ev(page,"S.prefs.palette"),"red","saved to the profile");
-  eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#FF2E3A","Machine Red is the accent");
+  eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#E7172E","Signal Red is the accent (red on navy since 26 Oct)");
   eq(await page.$$eval('link[rel="icon"],link[rel="apple-touch-icon"]',a=>a.map(l=>l.getAttribute("href"))),["icon-red-180.png","icon-red-180.png"],"the icon takes the theme");
   await page.tap('[data-lookmode="light"]');await pause(page,500);
   eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","red|light|red"],"mode and the early copy");
@@ -899,8 +909,9 @@ await test("Themes: every theme and mode uses its reference colours exactly",asy
       de.setAttribute("data-palette",p);de.setAttribute("data-theme",m);
       const cs=getComputedStyle(de);out[p+"-"+m]=["--accent","--bg","--onAccent","--raised"].map(k=>cs.getPropertyValue(k).trim().toUpperCase());}
     return out;});
-  eq(r["red-dark"][0],"#FF2E3A","Machine Red");eq(r["red-dark"][2],"#DBF6FF","Glacier Blue on red");
-  eq(r["red-light"].slice(0,2),["#FF2E3A","#DBF6FF"],"Glacier Blue ground");
+  /* Red is red on night navy since 26 Oct (the owner's reference): Signal Red, white labels. */
+  eq(r["red-dark"],["#E7172E","#03060F","#FFFFFF","#081224"],"Signal Red on night navy, white on red");
+  eq(r["red-light"].slice(0,3),["#E7172E","#DBF6FF","#FFFFFF"],"Glacier Blue ground, Signal Red");
   eq(r["blue-dark"].slice(0,3),["#8AB0EC","#070B1A","#070B1A"],"Sky Blue on Night Navy");
   eq(r["mono-dark"].slice(0,3),["#DCE7E4","#0D1A1B","#142E33"],"Sage: sage-white on the deep sage ground");
   eq(r["mono-light"].slice(0,3),["#142E33","#D2DBDA","#F2F6F5"],"Sage: the reference's deep slate on sage");
@@ -916,14 +927,17 @@ await test("Themes: a delete asks in red whatever the theme",async page=>{
   await coach(page,"train","program");
   await page.$$eval('.drows [data-day]',a=>a[0].click());await pause(page,400);
   await page.$eval('[data-delday]',e=>e.click());await pause(page,500);
-  const bg=await page.$eval('.cf.bad .cf-ok',e=>getComputedStyle(e).backgroundImage);
-  if(!/229, 50, 62/.test(bg))throw new Error("delete is not red: "+bg);
+  /* On danger-deep, with onDanger: the label never sits on danger-fill (token-requests.md §4). */
+  const bg=await page.$eval('.cf.bad .cf-ok',e=>[getComputedStyle(e).backgroundColor,getComputedStyle(e).color]);
+  eq(bg,["rgb(179, 19, 27)","rgb(255, 255, 255)"],"delete is danger-deep, white label");
 },{prefs:{palette:"blue"}});
-await test("Themes: the rest screen stays dark in light mode, with readable figures",async page=>{
+/* The rest is a band on the workout (workout-spec.md, RestBand): the theme's own raised
+   surface and text, in light mode as in dark. */
+await test("Themes: the rest band takes the theme in light mode, with readable figures",async page=>{
   await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
-  const r=await page.evaluate(()=>{const v=document.querySelector("#rest .rt-next-v");
-    return v?getComputedStyle(v).color:null;});
-  eq(r,"rgb(234, 241, 239)","Sage's light type on the dark rest screen");
+  const r=await page.evaluate(()=>{const v=document.getElementById("restDig"),b=v&&v.closest(".rb");
+    return v?[getComputedStyle(v).color,getComputedStyle(b).backgroundColor,!document.getElementById("rest").firstChild]:null;});
+  eq(r,["rgb(19, 38, 39)","rgba(224, 231, 230, 0.56)",true],"Sage light's text on its card glass; no full-screen rest");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
 await test("Themes: each page draws its own picture on the ground, under the glass",async page=>{
   const shot=()=>page.evaluate(()=>{const g=document.getElementById("bgart"),svg=g&&g.querySelector("svg");
@@ -941,7 +955,7 @@ await test("Themes: each page draws its own picture on the ground, under the gla
   await page.evaluate(()=>{window.__bg=document.querySelector("#bgart svg");});
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.palette="red";(await import("/js/ui/render.js")).render();});await pause(page,300);
   eq(await page.evaluate(()=>[getComputedStyle(document.getElementById("bgart")).getPropertyValue("--bga").trim().toUpperCase(),
-    document.querySelector("#bgart svg")===window.__bg]),["#FF2E3A",true],"the same drawing, repainted in red");
+    document.querySelector("#bgart svg")===window.__bg]),["#FF5A6A",true],"the same drawing, repainted in red");
 });
 /* Training's ground is the owner's horseman at dusk, drawn (js/ui/scene.js): the rider
    on the rock, the obelisk, palms, the city and the river, in the theme's own colours. */
@@ -1153,7 +1167,7 @@ await test("Bodyweight lifts: the box is added weight, and body weight counts in
   await pause(page,400);
   const last=await ev(page,"S.active.entries.length-1");
   await page.tap('[data-exlist]');await pause(page,400);await page.tap('#sheet [data-jumpl="'+last+'"]');await pause(page,400);
-  eq(await page.$eval(".setrow.hd",e=>e.innerText.indexOf("+KG")>-1),true,"the column says +KG");
+  eq(await page.$eval('label[for="in_w"]',e=>e.firstChild.textContent),"Added weight","the weight box says it is added weight");
   if(!(await page.$(".bwnote")))throw new Error("no note on what +KG means");
   await page.fill('#in_w','0');await page.fill('#in_r','9');await page.tap('[data-logset]');await pause(page,900);
   eq(await ev(page,"S.active.entries[S.active.entries.length-1].sets[0].w"),0,"logged as body weight alone");
@@ -1185,17 +1199,18 @@ await test("Exercises: a sideways swipe moves between them; a nudge or a vertica
   await drag(80,520,320,525);eq(await idx(),0,"swipe right: previous");
   await drag(80,520,320,525);eq(await idx(),0,"the first exercise resists");
   await drag(10,520,300,525);eq(await idx(),0,"not from the screen edge");
-  await page.tap('[data-exnav="1"]');await pause(page,400);eq(await idx(),1,"next arrow");
-  await page.tap('[data-exnav="-1"]');await pause(page,400);eq(await idx(),0,"previous arrow");
-  eq(await page.$eval('[data-exnav="-1"]',e=>e.disabled),true,"no previous at the first");
+  /* The arrows and segments are gone (workout-spec.md): the next exercise is named on the
+     screen and one tap away; the list from the title reaches any of them. */
+  eq(await page.$eval('.nx b',e=>e.textContent),await ev(page,"(async()=>(await import('/js/i18n/exnames.js')).exName(S.active.entries[1].name))()"),"the next one is named");
+  await page.tap('.nx');await pause(page,400);eq(await idx(),1,"next exercise");
+  await page.tap('[data-exlist]');await pause(page,400);await page.tap('#sheet [data-jumpl="0"]');await pause(page,400);eq(await idx(),0,"back by the list");
   await page.tap('[data-exlist]');await pause(page,400);
   eq(await page.$$eval("#sheet .exl-row",a=>a.length),await ev(page,"S.active.entries.length"),"the list has every exercise");
   await page.tap('#sheet [data-jumpl="2"]');await pause(page,400);eq([await idx(),await ev(page,"!!V.sheet")],[2,false],"list jump");
-  await page.tap('[data-jump="1"]');await pause(page,400);eq(await idx(),1,"segment");
+  await page.tap('.nx');await pause(page,400);eq(await idx(),3,"next from there");
   /* Looking ahead does not end a rest. */
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
-  await page.evaluate(async()=>{(await import("/js/ui/workout.js")).restControl("hide");});await pause(page,300);
-  await page.tap('[data-exnav="1"]');await pause(page,400);
+  await page.tap('.nx');await pause(page,400);
   eq(await ev(page,"V.restEnd>Date.now()"),true,"the rest keeps running");
 },{prefs:{autorest:true,anim:true}});
 async function dockTest(page,slide){
@@ -1389,7 +1404,7 @@ await test("Training import: a coach's PDF becomes a draft — days, week, cues,
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).ACT.discard();});await pause(page,200);
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,p=S.programs.filter(x=>x.id===S.activeProgram)[0];(await import("/js/ui/actions.js")).startDay(p.days[0].id);});await pause(page,400);
   eq(await ev(page,"[V.draft.w,S.active.entries[0].planned.note]"),[50,"Two warm-up sets first"],"start weight and cue");
-  eq(await page.$eval(".ex-cue",e=>e.textContent),"Two warm-up sets first");
+  eq(await page.$eval(".sc-cue",e=>e.textContent),"Two warm-up sets first");
   await page.evaluate(async()=>{(await import("/js/ui/workout.js")).jumpTo(3);});await pause(page,300);
   await page.evaluate(()=>document.querySelector("[data-swapalt]").click());await pause(page,300);
   eq(await ev(page,"[S.active.entries[3].name,S.active.entries[3].alt,S.active.entries[3].planned.amrap]"),["Standing Biceps Cable Curl","Chin-Up",true],"swapped for the other choice");
@@ -1414,7 +1429,7 @@ await test("Warm-up engine: drills follow what the day trains, ramp sets lead to
 });
 await test("Warm-up: shown before the first exercise; ticks and a hold timer; Start goes to the work; ⋯ brings it back",async page=>{
   await startWorkout(page);
-  if(!(await page.$('.wu'))||(await page.$('.setcard')))throw new Error("the warm-up is not the first screen");
+  if(!(await page.$('.wu'))||(await page.$('.wsc')))throw new Error("the warm-up is not the first screen");
   eq(await page.$$eval('.wu-rs',a=>a[0].textContent),"20 kg × 10","ramp starts with the bar");
   await page.tap('.wu [data-wutick]:not([data-wutick="wp"])');await pause(page);
   eq(await page.$eval('.wu [data-wutick]:not([data-wutick="wp"])',b=>b.getAttribute("aria-pressed")),"true","ticked");
@@ -1425,11 +1440,11 @@ await test("Warm-up: shown before the first exercise; ticks and a hold timer; St
   await pause(page,1200);
   eq(await ev(page,"[S.active.wuDone.wp,document.querySelector('.wu-pulse').classList.contains('did')]"),[1,true],"ticked when it ends");
   await page.tap('[data-wugo]');await pause(page);
-  eq(await ev(page,"[S.active.warm,!!document.querySelector('.setcard'),!!document.querySelector('.wu')]"),[1,true,false],"started");
+  eq(await ev(page,"[S.active.warm,!!document.querySelector('.wsc'),!!document.querySelector('.wu')]"),[1,true,false],"started");
   await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-wuopen]');await pause(page);
   if(!(await page.$('.wu')))throw new Error("the menu did not bring the warm-up back");
   await page.tap('[data-wuskip]');await pause(page);
-  eq(await ev(page,"[S.active.warm,!!document.querySelector('.setcard')]"),[0,true],"back to the work");
+  eq(await ev(page,"[S.active.warm,!!document.querySelector('.wsc')]"),[0,true],"back to the work");
 },{prefs:{nowarm:false}});
 await test("Cool-down: stretches for what was trained on Workout complete, timed, with the how-to one tap away; both switch off",async page=>{
   await startWorkout(page);
@@ -1447,7 +1462,7 @@ await test("Cool-down: stretches for what was trained on Workout complete, timed
   eq(await ev(page,"V.sheet"),"exdetail");
   await page.tap('[data-exback]');await pause(page,400);
   eq(await ev(page,"[V.sheet,!!document.querySelector('.cd .wu-row.did')]"),["done",true],"back to the summary, tick kept");
-  await page.tap('#sheet .cf-ok');await pause(page);
+  await page.tap('#sheet .wfin-done');await pause(page);
   /* Both are on by default and switched off in Training settings. */
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page);
   await page.tap('[data-toggle="nowarm"]');await pause(page);await page.tap('[data-toggle="nocool"]');await pause(page);
@@ -1747,9 +1762,9 @@ await test("Maintenance learned: four weeks at 2,000 kcal and a steady weight me
   await page.tap('.toast-undo').catch(()=>{});await pause(page,300);
   eq(await ev(page,"[!!S.energy,S.goals.kcal]"),[false,2500],"Undo: the formula and the old target back");
   /* The chat, asked about calories, says what the log measures and offers the same fix. */
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page);
+  await openChat(page);
   await page.fill('#chatq','why are my calories like this');await page.press('#chatq','Enter');await pause(page,300);
-  const a=await page.evaluate(()=>[...document.querySelectorAll(".chat-a")].pop().innerText);
+  const a=await page.evaluate(()=>(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop()).innerText);
   if(!/Your own log says your body uses about 2,0[0-3]0 kcal a day/.test(a)||!(await page.$('.chat-acts [data-pcfix="maint-learned"]')))
     throw new Error("chat: "+a);
 },{db:Object.assign(seed(),{
@@ -1829,10 +1844,10 @@ await test("Phase 4: one session and one weigh-in say \"not enough yet\" everywh
   const cards=await page.evaluate(async()=>Object.fromEntries((await import("/js/ui/facts.js")).simpleFacts().map(f=>[f.k,f.head+" "+f.line])));
   if(!/Not enough yet/.test(cards.Strength))throw new Error("strength: "+cards.Strength);
   if(!/A few more weigh-ins/.test(cards.Weight))throw new Error("weight: "+cards.Weight);
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page);
+  await openChat(page);
   await page.fill('#chatq','is my weight on track');await page.press('#chatq','Enter');await pause(page,300);
   /* The answer's own words, under the card's header that names its subject. */
-  const a=await page.evaluate(()=>[...[...document.querySelectorAll(".chat-a")].pop().children].filter(c=>!c.classList.contains("chat-ah")).map(c=>c.innerText).join("\n"));
+  const a=await page.evaluate(()=>[...(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop()).children].filter(c=>!c.classList.contains("chat-ah")).map(c=>c.innerText).join("\n"));
   if(!/^1 weigh-in so far/.test(a)||!/four weigh-ins over two weeks/.test(a)||/a week\./.test(a))throw new Error("weight answer: "+a);
 },{db:Object.assign(seed(),{sessions:seed().sessions.slice(0,1)})});
 await test("Offline: with the network off, the installed app opens, every tab works, food search and the coach chat answer",async(page,env)=>{
@@ -1844,8 +1859,8 @@ await test("Offline: with the network off, the installed app opens, every tab wo
   await page.reload();await pause(page,1500);
   for(const tab of ["train","food","coach","progress","profile"]){await tapTab(page,tab);await pause(page,300);
     if(!(await page.$eval('#app',e=>e.children.length)))throw new Error(tab+" is empty offline");}
-  await coach(page,"ai");await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
-  if(!/Today is|rest day|Done for today/.test(await page.evaluate(()=>[...document.querySelectorAll(".chat-a")].pop().innerText)))throw new Error("the chat did not answer offline");
+  await openChat(page,"today");
+  if(!/Today is|rest day|Done for today/.test(await page.evaluate(()=>(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop()).innerText)))throw new Error("the chat did not answer offline");
   eq(await page.evaluate(async()=>{const n=await import("/js/engine/nutrition.js");await new Promise(f=>n.loadFoods(f));return n.searchFoods("chicken").length>0;}),true,"food search works offline");
   await env.ctx.setOffline(false);
 },{sw:true});
@@ -1912,9 +1927,10 @@ await test("Dock: the workout bar takes the dock's place while it is away, and s
 /* ---- the good parts of an outside proposal, built in ---------------------------------- */
 await test("Dock: every tab is labelled, in English and Arabic, and the label starts its accessible name",async page=>{
   const lab=()=>page.$$eval("nav .dock-b",a=>a.map(b=>[b.querySelector(".dock-l").textContent,b.getAttribute("aria-label").indexOf(b.querySelector(".dock-l").textContent)===0]));
-  eq(await lab(),[["Train",true],["Food",true],["Coach",true],["Progress",true]],"English");
+  /* The planning tab is "Plan"; the coach itself floats (js/ui/coachfab.js). */
+  eq(await lab(),[["Train",true],["Food",true],["Plan",true],["Progress",true]],"English");
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});await pause(page);
-  eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الكوتش","التقدم"],"Arabic");
+  eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الخطة","التقدم"],"Arabic");
 });
 await test("Dock: round tabs; the one that is on opens into a pill with its name, uncut in either language, even on a small phone",async page=>{
   const st=()=>page.evaluate(()=>[...document.querySelectorAll("nav .dock-b")].map(b=>{const l=b.querySelector(".dock-l"),r=b.getBoundingClientRect();
@@ -1952,8 +1968,9 @@ await test("Rest: once it runs out it counts up how long ago, and that survives 
   if(!/^\+1:3\d$/.test(await over()))throw new Error("expected about +1:35, got "+await over());
   await page.reload();await pause(page,1500);
   if(!/^\+1:3\d$/.test(await over()))throw new Error("after a reload: "+await over());
-  await page.tap('[data-rest="skip"]');await pause(page);
-  eq(await ev(page,"[V.restDone,V.restOver]"),[false,0],"the next set clears it");
+  /* The check logs from the time-up band: no tap to dismiss it first. */
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page);
+  eq(await ev(page,"[V.restDone,V.restOver,S.active.entries[0].sets.length]"),[false,0,1],"the next set clears it");
 },{prefs:{autorest:true}});
 await test("Covers: a program of your own gets a cover drawn from its week",async page=>{
   await page.evaluate(async()=>{const st=await import("/js/state.js");
@@ -1962,7 +1979,7 @@ await test("Covers: a program of your own gets a cover drawn from its week",asyn
   const r=await page.$$eval(".drow-cov svg",a=>a.map(s=>[s.querySelectorAll(".pc-t").length,s.querySelectorAll(".pc-b").length,s.querySelectorAll(".pc-r").length]));
   eq(r[r.length-1],[1,1,1],"one day of two exercises (a top course and one below), one rest day");
   const c=await page.$eval(".drow-cov .pc-t",e=>getComputedStyle(e).fill);
-  eq(c,"rgb(255, 46, 58)","its top course is Machine Red");
+  eq(c,"rgb(231, 23, 46)","its top course is Signal Red");
 },{prefs:{palette:"red"}});
 /* ---- training blocks (js/coach/block.js, js/engine/blocks.js) ---- */
 const blockAt=(page,start)=>page.evaluate(async st=>{const s=await import("/js/state.js");s.S.block={start:st};s.saveDB();
@@ -2109,13 +2126,20 @@ await test("Movement: the plan builder's stand-ins keep the movement",async page
   const knee=await page.evaluate(async()=>{const pl=await import("/js/engine/plan.js");return pl.standIn("Freehand Jump Squat",[],["knee"]);});
   if(knee&&/Jump|Hop|Bound/i.test(knee))throw new Error("a sore knee was given another jump: "+knee);
 });
-await test("Movement: the chat's pain answer names swaps for the sore area",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chatq="today"]');await pause(page,400);
+/* Pain is logged, never advised on (js/knowledge/scope.js); asked what it is, the
+   answer is who to see, and what in the next workout loads the area — the plan's
+   data, not a treatment. */
+await test("Movement: pain said is offered the recovery log and no advice; asked about, it is referred, with what loads the area",async page=>{
+  await openChat(page,"today");
   await page.fill('#chatq',"my knee hurts");await page.press('#chatq','Enter');await pause(page,400);
-  const a=await page.evaluate(()=>{const x=[...document.querySelectorAll(".chat-a")].pop();return x?x.innerText:"";});
-  if(!/load the knee|loads the knee/.test(a))throw new Error("no area answer: "+a);
+  let a=await page.evaluate(()=>{const x=(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop());return x?x.innerText:"";});
+  if(!/recovery log/.test(a)||/stop|rest it|ice|stretch|should/i.test(a.replace(/recovery log\?/,"")))throw new Error("pain said: "+a);
+  eq(await page.$$eval('#cpanel .chat-x.live .chat-acts button',b=>b.map(x=>x.dataset.sheet)),["recovery"],"the recovery log, nothing else");
+  await page.fill('#chatq',"why does my knee hurt?");await page.press('#chatq','Enter');await pause(page,400);
+  a=await page.evaluate(()=>{const x=(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop());return x?x.innerText:"";});
+  if(!/physio or a doctor, not me/.test(a)||!/load the knee|loads the knee/.test(a))throw new Error("pain asked: "+a);
   await page.fill('#chatq',"ركبتي بتوجعني");await page.press('#chatq','Enter');await pause(page,400);
-  eq(await ev(page,"S.chat[S.chat.length-1].id"),"sore","Arabic: the sore answer");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"situation","Arabic: the same");
 });
 /* ---- state with a schema (js/schema.js) ---- */
 await test("Schema: a backup from a newer version of the app is refused, and says why",async page=>{
@@ -2144,16 +2168,23 @@ await test("Schema: an old profile (v1 splits) opens as programs you own and is 
   d.splits=[{id:"ppl",name:"Push Pull Legs",days:[{id:"keep1",name:"Push",ex:[{id:"e1",name:"Pushups",sets:3,lo:8,hi:12}]}]}];d.currentSplit="ppl";return d;})()});
 /* ---- the Coach chat and Profile redesign (js/ui/views/chat.js, js/ui/settings.js) ---- */
 const sheet=async(page,name)=>{await page.evaluate(async n=>{(await import("/js/ui/actions.js")).openSheet(n);},name);await pause(page);};
-await test("Coach chat: the opening screen lists what can be asked by subject; a typed question is cleared once answered, and the answer names its subject",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
-  eq(await page.$$eval('.chat-grp',a=>a.length),3,"Training, Food, Progress");
-  eq(await page.$$eval('.chat-topic[data-chatq]',a=>a.length),12,"four questions each");
-  eq(await page.$eval('.chat-form',e=>getComputedStyle(e).position),"sticky","the box to type in stays in reach");
+/* The floating Coach opens on a short line and three questions for where it was opened
+   (the tall list of twelve is gone); the field sits under the conversation. */
+await test("Coach chat: the panel opens on three questions for where it was opened; a typed question is cleared once answered, and the answer names its subject",async page=>{
+  await openChat(page);
+  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["balance","track","plan"],"Coach's own questions");
+  const f=await page.evaluate(()=>{const b=document.getElementById("cpB").getBoundingClientRect(),f=document.querySelector(".cp-f").getBoundingClientRect();return f.top>=b.bottom-1;});
+  eq(f,true,"the field is under the conversation, never over it");
   await page.fill('#chatq','how much protein do I need');await page.press('#chatq','Enter');await pause(page,400);
   eq(await page.$eval('#chatq',e=>e.value),"","the box is empty once the question is answered");
   eq(await page.evaluate(()=>[...document.querySelectorAll(".chat-a .chat-at")].pop().textContent),"Protein","the answer names its subject");
-  eq(await page.$$eval('.chat-grp',a=>a.length),0,"the opening list gives way to the conversation");
-  if(!(await page.$('.chat-next .chat-chips [data-chatq]')))throw new Error("nothing offered to ask next");
+  eq(await page.$$eval('#cpanel .cp-sug',a=>a.length),0,"the opening questions give way to the conversation");
+  if(!(await page.$('#cpanel .chat-next .chat-chips [data-chatq]')))throw new Error("nothing offered to ask next");
+  /* Opened from Food, it offers food questions. */
+  await page.tap('.cp [data-coachclose]');await pause(page,400);
+  await page.evaluate(async()=>{(await import("/js/state.js")).S.chat=[];});
+  await pause(page,600);await tapTab(page,"food");await pause(page,300);await page.tap('#cfab .cfab');await pause(page,400);
+  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["rest","eat","protein"],"Food's questions");
 });
 await test("Settings: every choice in sight, switches that say their state, a tap sets the value; no drop-down anywhere",async page=>{
   await sheet(page,"set_training");
@@ -2221,10 +2252,10 @@ function planned(){
   db.days[iso(0)]={meals:{Breakfast:{done:true,items:[pi("Eggs","egg",100,143,12.6,0.7,9.5)]}}};
   return db;}
 const lastX=page=>page.evaluate(()=>{const x=[...document.querySelectorAll(".chat-x")].pop();
-  return {lang:x.getAttribute("lang"),dir:x.getAttribute("dir"),a:x.querySelector(".chat-a").innerText};});
+  return {lang:x.getAttribute("lang"),dir:x.getAttribute("dir"),a:(x.querySelectorAll(".chat-more").forEach(d=>d.open=true),x.querySelector(".chat-a").innerText)};});
 async function chatAsk(page,q){await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,400);return lastX(page);}
 await test("Coach chat: asked in Arabic in the English app, it answers in Arabic, and what it offers next is Arabic too; asked in English in the Arabic app, English",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await openChat(page);
   let r=await chatAsk(page,"بينش بريس كام؟");
   eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang,r.dir],["weights","ar","rtl"],"a misspelt bench press in Arabic: the weights, in Arabic");
   if(!/بنش بريس/.test(r.a)||/Squat|سكوات/.test(r.a))throw new Error("not the bench press alone: "+r.a);
@@ -2239,14 +2270,14 @@ await test("Coach chat: asked in Arabic in the English app, it answers in Arabic
   eq(await ev(page,"S.prefs.lang"),"en","the app's own language is untouched");
 });
 await test("Coach chat: in the Arabic app, an English question gets an English answer",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await openChat(page);
   const r=await chatAsk(page,"how much protein do I need");
   eq([await ev(page,"S.chat[S.chat.length-1].id"),r.lang,r.dir],["protein","en","ltr"],"English");
   if(/[؀-ۿ]/.test(r.a))throw new Error("Arabic in the answer: "+r.a);
   eq(await ev(page,"[S.prefs.lang,document.documentElement.dir]"),["ar","rtl"],"the app stays Arabic");
 },{prefs:{lang:"ar"}});
 await test("Coach chat: the rest of today from the plan, swaps with the same macros that are never the same food, and what is in a food",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await openChat(page);
   let r=await chatAsk(page,"What should I eat for the rest of the day?");
   eq(await ev(page,"S.chat[S.chat.length-1].id"),"rest","the rest of the day");
   for(const m of ["Lunch","Snack","Dinner"])if(r.a.indexOf(m)<0)throw new Error(m+" is missing: "+r.a);
@@ -2267,7 +2298,7 @@ await test("Coach chat: the rest of today from the plan, swaps with the same mac
   if(!/بيض/.test(r.a)||!/6\.3 جم بروتين/.test(r.a))throw new Error("Arabic egg facts: "+r.a);
 },{db:planned()});
 await test("Coach chat: tomorrow's workout and how the last one went",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
+  await openChat(page);
   let r=await chatAsk(page,"what do I train tomorrow");
   eq(await ev(page,"S.chat[S.chat.length-1].id"),"tomorrow","tomorrow");
   if(!/Tomorrow/.test(r.a))throw new Error(r.a);
@@ -2313,17 +2344,235 @@ await test("Profile picture: both choices in sight; a photo from the phone shows
   await page.tap('#sheet [data-close]');await pause(page,400);
   eq(await page.$eval('.pid .pmono',e=>[!!e.querySelector("img"),e.textContent.trim().length>0]),[false,true],"the initials are back");
 });
+/* ---- the coach's action half (js/ui/agent.js, js/ui/handlers/actions.js) ---- */
+async function agSay(page,q){await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,450);
+  return page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();
+    return {lead:(x.querySelector(".chat-lead")||{}).textContent||"",opts:[...x.querySelectorAll(".ag-opt .ag-ol")].map(e=>e.textContent),
+      ok:!!x.querySelector("[data-agok]"),done:(x.querySelector(".ag-done")||{}).textContent||"",undone:(x.querySelector(".ag-undone")||{}).textContent||"",
+      lang:x.getAttribute("lang"),dir:x.getAttribute("dir")};});}
+const agLast=page=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();
+  return {lead:(x.querySelector(".chat-lead")||{}).textContent||"",opts:[...x.querySelectorAll(".ag-opt .ag-ol")].map(e=>e.textContent),
+    ok:!!x.querySelector("[data-agok]"),done:(x.querySelector(".ag-done")||{}).textContent||"",undone:(x.querySelector(".ag-undone")||{}).textContent||""};});
+const dayEx=(page,i)=>ev(page,`(async()=>{const s=(await import("/js/state.js")).split();return s.days[${i}].ex.map(e=>e.name);})()`);
+await test("Coach agent: an unknown exercise gets real close matches, then a day, then a confirmation; nothing changes before the tap; Undo stays and puts it back",async page=>{
+  await openChat(page);
+  const before=await dayEx(page,2);
+  let r=await agSay(page,"add tricep extention machine to push day");
+  if(!/^No exercise called “tricep extention machine”\. Closest:/.test(r.lead))throw new Error("lead: "+r.lead);
+  /* Every choice is a library entry; None of these is last. */
+  const lib=await page.evaluate(async names=>{const L=(await import("/js/data/exercises.js")).LIB;return names.slice(0,-1).every(n=>L.some(l=>l[0]===n));},r.opts);
+  eq([lib,r.opts[r.opts.length-1],r.opts.length>=4],[true,"None of these",true],"real entries, and None of these");
+  if(!r.opts.some(o=>/Triceps/.test(o)))throw new Error("no triceps exercise offered: "+r.opts);
+  await page.tap('#cpanel .ag-opt');await pause(page,450);
+  r=await agLast(page);
+  if(!/to which day\?$/.test(r.lead)||r.opts.some(o=>/^Rest$/.test(o)))throw new Error("day pick: "+JSON.stringify(r));
+  await page.tap('#cpanel .ag-opt:nth-child(2)');await pause(page,450);
+  r=await agLast(page);
+  eq([/^Add .+ to Full Body B\?$/.test(r.lead),r.ok],[true,true],"a confirmation, with the action's own verb");
+  eq(await page.$eval('#cpanel [data-agok]',b=>b.textContent),"Add it","Add it, never Confirm");
+  eq(await dayEx(page,2),before,"nothing changed before the tap");
+  /* The panel is inline: no sheet, no dialog over it. */
+  eq(await ev(page,"[V.sheet,V.coach]"),[null,"compact"],"inline, not modal");
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  r=await agLast(page);
+  const after=await dayEx(page,2);
+  eq([after.length,/^Added .+ to Full Body B\.$/.test(r.done.replace(/Undo$/,"")),await ev(page,"V.coach")],[before.length+1,true,"compact"],"applied, said, the panel still open");
+  /* Asked something else, the Undo stays on the applied row. */
+  await agSay(page,"how much protein do I need");
+  await page.tap('#cpanel .cp-more');await pause(page,400);
+  if(!(await page.$('#cpanel [data-agundo]')))throw new Error("the Undo went away");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await dayEx(page,2),before,"Undo puts the day back");
+  if(!(await page.$('#cpanel .ag-undone')))throw new Error("no undone row");
+});
+await test("Coach agent: sending appends one row and leaves the earlier ones as they were; the panel is not rebuilt",async page=>{
+  await openChat(page);
+  await agSay(page,"how much protein do I need");
+  await page.evaluate(()=>{document.querySelector("#cpanel .chat-x").__mark=1;document.getElementById("cpB").__mark=1;});
+  await agSay(page,"remove plank");
+  eq(await page.evaluate(()=>[document.querySelector("#cpanel .chat-x").__mark,document.getElementById("cpB").__mark,document.querySelectorAll("#cpanel .chat-x").length]),[1,1,2],"same nodes, one more row");
+  await page.tap('#cpanel [data-agno]');await pause(page,300);
+  eq(await page.evaluate(()=>document.querySelector("#cpanel .chat-x").__mark),1,"Not now changes only its own row");
+  eq(await dayEx(page,0).then(x=>x.includes("Plank")),true,"Not now leaves the program alone");
+});
+await test("Coach agent: remove and swap from the program; swap stays a food swap for foods; a food is logged to the meal said; a weigh-in is saved; each with Undo",async page=>{
+  await openChat(page);
+  let r=await agSay(page,"swap hack squat for leg press");
+  eq(/^Swap Hack Squat for Leg Press in Full Body C\?$/.test(r.lead),true,"swap: the day it is in");
+  await page.tap('#cpanel [data-agok]');await pause(page,450);
+  eq((await dayEx(page,4))[0],"Leg Press","swapped in place");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq((await dayEx(page,4))[0],"Hack Squat","and back");
+  r=await agSay(page,"swap rice for potatoes");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"swap","rice is a food: the food swap, not an exercise");
+  r=await agSay(page,"log 200g chicken breast for lunch");
+  eq([/^Log Chicken Breast, Cooked, 200 g, to Lunch\?$/.test(r.lead),r.ok],[true,true],"the food, the amount and the meal said");
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq(await ev(page,"(()=>{const d=Object.values(S.days)[0];return [Object.keys(d.meals),d.meals.Lunch.items[0].grams,!!V.coach];})()"),[["Lunch"],200,true],"logged, panel open");
+  r=await agSay(page,"log chiken brest");
+  if(!/^No food called “chiken brest”\. Closest:/.test(r.lead)||!r.opts.some(o=>/Chicken Breast/.test(o)))throw new Error("food close matches: "+JSON.stringify(r));
+  r=await agSay(page,"I weigh 82.5 kg");
+  eq(/^Save 82\.5 kg as today's weight\?$/.test(r.lead),true,"a weigh-in, said");
+  await page.tap('#cpanel [data-agok]');await pause(page,400);
+  eq(await ev(page,"S.body[S.body.length-1].weight"),82.5,"saved");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await ev(page,"S.body.length"),1,"Undo");
+  r=await agSay(page,"is my weight on track");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"weight","a question about weight is still a question");
+});
+await test("Coach agent in Arabic: requests in Egyptian Arabic, answered in Arabic, right to left",async page=>{
+  await openChat(page);
+  let r=await agSay(page,"شيل السكوات");
+  eq([/^أشيل هاك سكوات من /.test(r.lead),r.lang,r.dir,r.ok],[true,"ar","rtl",true],"remove, in Arabic");
+  r=await agSay(page,"بدل الهاك سكوات بالليج بريس");
+  eq(/^أبدّل هاك سكوات بـ ليج بريس في /.test(r.lead),true,"swap, in Arabic");
+  r=await agSay(page,"وزني النهارده ٨٢");
+  eq(/^أحفظ 82 كجم وزن النهاردة؟$/.test(r.lead.replace(/[⁦-⁩]/g,"")),true,"a weigh-in in Arabic digits: "+r.lead);
+  await page.tap('#cpanel [data-agok]');await pause(page,400);
+  const d=await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector(".ag-done").textContent);
+  if(!/اتحفظ/.test(d)||!/تراجع/.test(d))throw new Error("applied in Arabic: "+d);
+  /* Numbers in the lead are one run each. */
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x.live .chat-lead .num")].length>0),true,"figures in .num");
+},{prefs:{lang:"ar"}});
+await test("Coach knowledge: training questions answer from the knowledge files with the person's own program, cite the entry, and lead with two sentences at most",async page=>{
+  await openChat(page);
+  const lead=()=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();
+    x.querySelectorAll(".chat-more").forEach(d=>d.open=true);
+    return {lead:x.querySelector(".chat-lead").textContent,src:(x.querySelector(".chat-src")||{}).textContent||""};});
+  const words=s=>s.trim().split(/\s+/).length,sents=s=>s.split(/[.!?؟](?:\s|$)/).filter(x=>x.trim()).length;
+  for(const [q,re,src] of [["how many reps for hypertrophy",/6–12 reps a set\. Your program has most lifts at/,/Training variables 20\.3/],
+    ["how long should I rest between sets",/up to 3 min between sets\. Your program rests/,/Training variables 20\.3/],
+    ["how many sets a week for chest",/Your program gives chest \d+ sets a week\. The app's range for growth is roughly 12–20/,/Training variables/],
+    ["how many days a week should I train",/sessions a week.*Your program has 3 training days/,/Training variables 20\.3/],
+    ["how much protein do I need",/150 g a day.*1\.4 to 2 g per kg/,/Nutrition principles 9\.2/]]){
+    await agSay(page,q);const r=await lead();
+    if(!re.test(r.lead))throw new Error(q+": "+r.lead);
+    if(!src.test(r.src))throw new Error(q+": no source: "+r.src);
+    if(sents(r.lead)>2||words(r.lead)>45)throw new Error(q+": the lead runs "+words(r.lead)+" words");}
+  /* Every answer's lead, whatever it is, two sentences at most. */
+  for(const q of ["What do I train today?","what should I eat now","is my program balanced","how am i doing","my knee hurts"]){
+    await agSay(page,q);const r=await lead();
+    if(sents(r.lead)>2)throw new Error(q+": "+r.lead);}
+});
+await test("Coach scope: no diagnosis, no medical or supplement advice, however it is put; outside what it knows it says what it understood and where to go",async page=>{
+  await openChat(page);
+  const lead=()=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();return [x.querySelector(".chat-lead").textContent,[...x.querySelectorAll(".chat-acts button")].map(b=>b.textContent)];});
+  for(const [q,re] of [["is my knee torn",/needs a physio or a doctor, not me/],["do I have tendonitis in my elbow",/needs a physio or a doctor, not me/],
+    ["what's wrong with my shoulder",/needs a physio or a doctor, not me/],["should I take ibuprofen before training",/doctor or a pharmacist, not me/],
+    ["should I take creatine",/doctor or a registered dietitian, not me/],["I think I have an eating disorder",/a doctor or a psychologist, not me/],
+    ["ركبتي مقطوعة؟",/أخصائي علاج طبيعي أو دكتور، مش أنا/]]){
+    await agSay(page,q);
+    eq(await ev(page,"S.chat[S.chat.length-1].id"),"scope",q+": the hard limit");
+    const [l]=await lead();if(!re.test(l))throw new Error(q+": "+l);
+    if(/tendinitis|tendonitis|strain|sprain|tear/i.test(l))throw new Error(q+": names a condition: "+l);}
+  await agSay(page,"change my height");
+  let [l,b]=await lead();
+  eq([/Profile > You/.test(l),b],[true,["Open it"]],"height: where it is, and a way there");
+  await agSay(page,"what's my resting heart rate");
+  [l,b]=await lead();
+  eq([/not something I have data on/.test(l),b.length],[true,1],"no data: says so, and offers what it has");
+  await agSay(page,"what's the weather in Cairo");
+  [l]=await lead();
+  if(/understand/i.test(l)||!/won't guess/.test(l))throw new Error("unknown: "+l);
+});
+await test("Coach actions: every action in the registry runs through a branch the screens already answer",async page=>{
+  const r=await page.evaluate(async()=>{
+    const A=(await import("/js/ui/handlers/actions.js")).ACTIONS,src=await (await fetch("/js/ui/handlers/actions.js")).text();
+    const keys=[...src.matchAll(/tap\(\{([a-z]+):/g)].map(m=>m[1]);
+    const handlers=await Promise.all(["shell","train","session","food","coach","progress","profile"].map(n=>fetch("/js/ui/handlers/"+n+".js").then(x=>x.text())));
+    const all=handlers.join("\n");
+    return {n:Object.keys(A).length,missing:[...new Set(keys)].filter(k=>!new RegExp('(key|has)\\("'+k+'"').test(all)),
+      described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
+      domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
+  eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");
+  eq(r.domains,["cardio","exercise","food","plan","profile","progress","set"],"grouped by domain");
+  /* set.log, in a live workout: the logger's own Log set. */
+  await startWorkout(page);
+  const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");
+  await page.evaluate(async()=>{(await import("/js/ui/handlers/actions.js")).perform("set.log",{w:62.5,r:8},1);});await pause(page,400);
+  eq(await ev(page,"[S.active.entries[V.logIdx].sets.length,S.active.entries[V.logIdx].sets.slice(-1)[0].w]"),[n0+1,62.5],"logged by the logger");
+});
+await test("Coach, a rough day: a report gets one question back; food goes to the week's reconciliation, never a stricter tomorrow; a week that cannot absorb it is still fine",async page=>{
+  await openChat(page);
+  const last=()=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();x.querySelectorAll(".chat-more").forEach(d=>d.open=true);
+    return {lead:x.querySelector(".chat-lead").textContent,text:x.innerText,acts:[...x.querySelectorAll(".chat-acts button")].map(b=>b.textContent)};});
+  await agSay(page,"I had a bad day, didn't commit to the diet, I need to amend it for today");
+  let r=await last();
+  eq([r.lead,r.acts],["Sounds like today got away from you. Want me to work out what's left in the week, or just log it and move on?",["Work out the week","Just log it"]],"one question, two ways on");
+  /* A day over target by 1,100 kcal: spread over the days left, inside the limits. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,U=await import("/js/util.js");
+    S.days[U.today()]={water:0,steps:0,meals:{Lunch:{items:[{n:"x",kcal:3600,p:150,c:400,f:150}]}}};});
+  await page.tap('#cpanel .chat-acts button');await pause(page,500);
+  r=await last();
+  if(!/kcal a day less, protein unchanged/.test(r.lead))throw new Error("week: "+r.lead);
+  if(/tomorrow|make up|burn|fast|skip/i.test(r.lead))throw new Error("a stricter tomorrow: "+r.lead);
+  const days=[...r.text.matchAll(/: ([\d,]+) kcal/g)].map(m=>+m[1].replace(",",""));
+  if(!days.length||days.some(k=>k<2500*0.85-10))throw new Error("a day moved more than 15%: "+days);
+  eq(await ev(page,"S.goals.kcal"),2500,"the app's targets are not changed");
+  /* Far over: the week is still fine, said plainly. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,U=await import("/js/util.js");S.days[U.today()].meals.Lunch.items[0].kcal=9000;});
+  await page.tap('#cpanel [data-chatq="weekfood"]').catch(async()=>{await agSay(page,"I blew my diet today");await page.tap('#cpanel .chat-acts button');});
+  await pause(page,500);
+  if((await last()).lead.indexOf("Sounds like")===0){await page.tap('#cpanel .chat-acts button');await pause(page,500);}
+  r=await last();
+  if(!/^The week is still fine\./.test(r.lead)||/challenge|try|harder/i.test(r.lead))throw new Error("week fine: "+r.lead);
+  /* Missed training, a low day, a vague bad day: one question each. */
+  for(const [q,re] of [["I missed today's workout",/^Missed one, then\./],["I'm exhausted today",/^A low day, then\./],["bad day",/What went off\?$/],["مروحتش الجيم النهارده",/^فاتك تمرين يعني\./]]){
+    await agSay(page,q);r=await last();
+    if(!re.test(r.lead))throw new Error(q+": "+r.lead);
+    eq(await ev(page,"S.chat[S.chat.length-1].id"),"situation",q);}
+  /* A question is answered, not asked back. */
+  await agSay(page,"what should I eat now?");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"eat","a question stays a question");
+});
+await test("Coach, missed training on fixed weekdays: the missed sets moved where recovery allows, both numbers said; a rotation loses nothing",async page=>{
+  await openChat(page);
+  await agSay(page,"I missed today's workout");
+  await page.tap('#cpanel [data-chatq="weektrain"]');await pause(page,500);
+  let lead=await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector(".chat-lead").textContent);
+  if(!/^Nothing is lost\. Your program is a rotation/.test(lead))throw new Error("rotation: "+lead);
+  await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split(),sch=await import("/js/engine/schedule.js"),U=await import("/js/util.js");
+    const wd=sch.isoWeekday(U.today());sp.schedule="week";sp.days[0].wd=[wd];sp.days[2].wd=[(wd+1)%7+1];sp.days[4].wd=[(wd+3)%7+1];});
+  await agSay(page,"I missed today's workout");
+  await page.tap('#cpanel [data-chatq="weektrain"]');await pause(page,500);
+  lead=await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector(".chat-lead").textContent);
+  if(!/(\d+ of Full Body A's \d+ sets fit into the rest of the week; the other \d+ are gone\.|^All \d+ of Full Body A's sets fit|^The week is still fine\.)/.test(lead))throw new Error("week: "+lead);
+});
+await test("Coach context: a fact is kept only when the person says so, in their words, under the kind they pick; it is listed, deletable, and said back where it bears",async page=>{
+  await openChat(page);
+  await agSay(page,"I can't do bench press");
+  eq(await ev(page,"(S.context&&S.context.items||[]).length"),0,"nothing kept before they say so");
+  await page.tap('#cpanel .chat-acts button:nth-child(3)');await pause(page,300);
+  eq(await ev(page,"S.context.items.map(x=>[x.kind,x.text,x.by])"),[["constraint","I can't do bench press","user"]],"their words, their kind");
+  await agSay(page,"I don't eat pork");
+  await page.tap('#cpanel [data-ctxno]');await pause(page,300);
+  eq(await ev(page,"S.context.items.length"),1,"Don't keep it keeps nothing");
+  /* A report is never stored as a fact about them. */
+  await agSay(page,"I'm so tired, no motivation today");
+  eq(await ev(page,"S.context.items.length"),1,"nothing inferred");
+  await agSay(page,"What do I train today?");
+  const a=await page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();x.querySelectorAll(".chat-more").forEach(d=>d.open=true);return x.innerText;});
+  if(!/You said “I can't do bench press”, and Barbell Bench Press is in it\./.test(a))throw new Error("not said back: "+a);
+  await agSay(page,"What have I told you?");
+  eq(await page.$$eval('#cpanel .chat-x.live [data-ctxdel]',b=>b.map(x=>x.textContent)),["Delete “I can't do bench press”"],"listed with a delete");
+  await page.tap('#cpanel [data-ctxdel]');await pause(page,300);
+  eq(await ev(page,"S.context.items.length"),0,"deleted for good");
+  /* And from Profile. */
+  await page.tap('.cp [data-coachclose]');await pause(page,500);
+  await tapTab(page,"profile");await pause(page,400);
+  if(!(await page.$('[data-chatq="facts"]')))throw new Error("no way to it from Profile");
+});
 await test("Coach chat in motion: a sent question flies to its place, the coach types, then the answer arrives; with Animations off, at once",async page=>{
-  await coach(page,"ai");await page.tap('.chatcard [data-chat]');await pause(page,400);
-  await page.fill('#chatq','how much protein do I need?');await page.tap('.chat-send');await pause(page,120);
-  eq(await page.evaluate(()=>[!!document.querySelector(".chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat .chat-q")].pop()).visibility]),[true,"hidden"],"in flight");
+  await openChat(page);
+  await page.fill('#chatq','how much protein do I need?');await page.tap('.cp-send');await pause(page,120);
+  eq(await page.evaluate(()=>[!!document.querySelector(".chat-ghost"),getComputedStyle([...document.querySelectorAll(".cp-b .chat-q")].pop()).visibility]),[true,"hidden"],"in flight");
   await pause(page,250);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display]),[true,"none"],"the coach typing, the answer waiting");
   await pause(page,1400);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none",
-    /150 g a day/.test([...document.querySelectorAll(".chat-a")].pop().innerText)]),[false,true,true],"arrived");
+    /150 g a day/.test((document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop()).innerText)]),[false,true,true],"arrived");
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.anim=false;document.body.classList.add("noanim");});
-  await page.fill('#chatq','how is my weight');await page.tap('.chat-send');await pause(page,250);
+  await page.fill('#chatq','how is my weight');await page.tap('.cp-send');await pause(page,250);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none"]),[false,true],"no motion, no wait");
 },{prefs:{anim:true}});
 await test("Guide: the first time Training opens, glass tips point at each thing in turn; a tap anywhere is the next; once seen it stays away; Profile brings it back",async page=>{
@@ -2400,13 +2649,13 @@ await test("Coach AI: this week's gauge agrees with Training's week; Ask me anyt
   eq(g.w,wk[0]+"/"+wk[1],"the same workouts as Training's week");
   eq(g.v,wk[1]?Math.round(wk[0]/wk[1]*100)+"%":"—","the share");
   if(wk[0]&&!g.on)throw new Error("no ticks filled");
-  await page.tap('.chatcard [data-chat="ask"]');await pause(page,400);
-  eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,!!document.querySelector(".chat-form")]),["chatq",true],"the box has the caret");
-  /* Its back arrow is in sight, at the top, and works with the keyboard up. */
-  const bb=await (await page.$('[data-back]')).boundingBox();
-  if(bb.y<0)throw new Error("the back arrow is off the top of the screen");
-  await page.touchscreen.tap(bb.x+bb.width/2,bb.y+bb.height/2);await pause(page,400);
-  eq(await ev(page,"[V.tab,!!V.chat]"),["coach",false],"back to Coach AI");
+  await page.tap('#cfab .cfab');await pause(page,400);await page.focus('#chatq');
+  eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,!!document.querySelector("#cpanel .cp-f")]),["chatq",true],"the box has the caret");
+  /* Its close is in sight and works with the keyboard up. */
+  const bb=await (await page.$('.cp [data-coachclose]')).boundingBox();
+  if(bb.y<0)throw new Error("the close is off the top of the screen");
+  await page.touchscreen.tap(bb.x+bb.width/2,bb.y+bb.height/2);await pause(page,500);
+  eq(await ev(page,"[V.tab,!!V.coach]"),["coach",false],"back to Coach AI");
   /* The dock ignores taps for a moment after the keyboard closes (body.kbleave). */
   await pause(page,600);
   for(const [sel,want] of [['.cplan-t[data-cfsub="targets"]',["coach","food"]],['.cplan-t[data-ctsub="program"]',["coach","train"]],['.cplan-t[data-cfsub="plan"]',["coach","food"]]]){
@@ -2451,7 +2700,7 @@ await test("Food: in the evening with protein short, the body says so, lights pr
   eq([after.length,after.some(x=>x.fid===fid&&x.p>10)],[before+1,true],"logged, with its protein");
   if(!/Coach noticed/.test(await page.$eval('.fnoticed',e=>e.innerText)))throw new Error("no week card");
   await page.$eval('[data-fbuild]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-fbuild]');await pause(page,600);
-  eq(await ev(page,"[V.tab,V.chat,S.chat[S.chat.length-1].id]"),["coach",true,"eat"],"Build today's meal asks the coach");
+  eq(await ev(page,"[V.tab,V.coach,S.chat[S.chat.length-1].id]"),["coach","compact","eat"],"Build today's meal asks the coach, in the Coach panel");
 },{db:lowProtein()});
 await test("Food: in the morning nothing is behind yet; with water short in the afternoon, a glass is offered instead of food",async page=>{
   await page.addInitScript(()=>{Date.prototype.getHours=function(){return 9;};});await page.reload();await pause(page,1200);
@@ -2597,21 +2846,126 @@ await test("Training: no run in the last fortnight, no run card",async page=>{
   await tapTab(page,"train");await pause(page);
   eq(await page.$$eval('.trun-last',a=>a.length),0);
 });
-/* ---- Phase 1 of the visual audit ---- */
-await test("Logger: last time reads in full under each set, in English and Arabic; How do you feel today? is one line",async page=>{
+/* ---- The workout screen (docs/design/workout-spec.md) ---- */
+await test("Workout screen: steppers move by the engine's own step; the check logs from the rest and says so, with Undo",async page=>{
   await startWorkout(page);
-  const r=await page.evaluate(()=>{const rd=document.querySelector(".ready");const p=[...document.querySelectorAll(".setprev")];
-    return {hd:[...document.querySelectorAll(".setrow.hd span")].map(e=>e.textContent),txt:p.map(e=>e.textContent),
-      clipped:p.some(e=>e.scrollWidth>e.clientWidth+1),readyH:rd?Math.round(rd.getBoundingClientRect().height):0,
+  const w0=await ev(page,"V.draft.w"),step=await F(page,`F.incrementFor(S.active.entries[0].name,${w0})`);
+  await page.tap('[data-sstep="w"][data-d="1"]');await pause(page,200);
+  eq(await ev(page,"V.draft.w"),Math.round((w0+step)*100)/100,"one tap, one step");
+  eq(await page.$eval('[data-sstep="w"][data-d="1"]',e=>[e.textContent,e.getAttribute("aria-label")]),[String(step),"More "+step+" kg"],"the button says the step");
+  await page.tap('[data-sstep="r"][data-d="-1"]');await pause(page,200);
+  const r=await ev(page,"V.draft.r");
+  await page.tap('[data-logset]');await pause(page,300);
+  eq(await ev(page,"[S.active.entries[0].sets.length,S.active.entries[0].sets[0].r,V.restEnd>Date.now()]"),[1,r,true],"logged, resting");
+  eq(await page.$eval('#app .log.ok b',e=>e.textContent),"Set 1 logged");
+  if(!(await page.$('#app .rb #restDig')))throw new Error("no rest band");
+  /* Undo takes it back and ends the rest it started. */
+  await pause(page,700);await page.tap('[data-undolog]');await pause(page,300);
+  eq(await ev(page,"[S.active.entries[0].sets.length,V.restEnd>Date.now()]"),[0,false],"undone");
+  /* The check logs during a rest, in one tap, and the log control reads the next set after a moment. */
+  await page.tap('[data-logset]');await pause(page,900);
+  await page.tap('[data-logset]');await pause(page,2300);
+  eq(await ev(page,"S.active.entries[0].sets.length"),2,"logged from the rest");
+  eq(await page.$eval('#app [data-logset]',e=>e.textContent),"Log set 3");
+},{prefs:{autorest:true}});
+await test("Workout screen: + Warm-up adds a warm-up set, out of volume and numbering; delete asks in the row",async page=>{
+  await startWorkout(page);
+  const w=await ev(page,"V.draft.w");
+  await page.tap('[data-addwu]');await pause(page,300);
+  eq(await page.$eval('#app [data-logset]',e=>e.textContent),"Log warm-up");
+  if(!(await page.$('#app .wsc.wkwu .sc-wu')))throw new Error("the card does not say warm-up");
+  eq(await ev(page,"V.draft.w"),w,"starts from the working weight (no warm-up recommended)");
+  await page.tap('[data-sstep="w"][data-d="-1"]');await page.tap('[data-sstep="w"][data-d="-1"]');await pause(page,200);
+  await page.tap('[data-logset]');await pause(page,300);
+  eq(await page.$eval("#app .log.ok b",x=>x.textContent),"Warm-up logged","the logged state names it");
+  await pause(page,2100);
+  const e=await ev(page,"S.active.entries[0]");
+  eq([e.sets.length,e.sets[0].wu,e.wuq],[1,true,0],"logged as a warm-up");
+  eq(await page.$eval('#app [data-logset]',x=>x.textContent),"Log set 1","working sets keep their own numbers");
+  eq(await ev(page,"V.draft.w"),w,"the working set does not start from the warm-up");
+  eq(await F(page,"F.sessionVolume(S.active)"),0,"a warm-up is not volume");
+  /* Delete asks inside the row; Cancel keeps it, Delete removes it and its row. */
+  const rows=await page.$$eval('#app .wsr',a=>a.length);
+  await page.tap('#app .wsr.wkwu [data-delset="0"]');await pause(page,300);
+  if(!(await page.$('#app .wsr.ask [data-delok="0"]')))throw new Error("no confirm in the row");
+  eq(await ev(page,"V.sheet"),null,"no sheet");
+  await page.tap('[data-delno]');await pause(page,200);eq(await ev(page,"S.active.entries[0].sets.length"),1,"cancel keeps it");
+  await page.tap('#app .wsr.wkwu [data-delset="0"]');await pause(page,300);await page.tap('[data-delok="0"]');await pause(page,700);
+  eq([await ev(page,"S.active.entries[0].sets.length"),await page.$$eval('#app .wsr',a=>a.length)],[0,rows-1],"deleted, with its row");
+},{prefs:{autorest:false}});
+await test("Workout screen: a logged set's numbers can be corrected in place; a suggestion is marked until it is touched",async page=>{
+  await startWorkout(page);
+  if(!(await page.$('#sgTag:not([hidden])')))throw new Error("the suggestion is not marked");
+  await page.fill('#in_r','9');
+  eq(await page.$eval('#sgTag',e=>e.hidden),true,"typed: no longer a suggestion");
+  await page.tap('[data-logset]');await pause(page,900);
+  await page.fill('#app .wsr.did [data-setidx="0"][data-k="r"]','7');
+  await page.evaluate(()=>document.activeElement.blur());await pause(page,300);
+  eq(await ev(page,"S.active.entries[0].sets[0].r"),7,"corrected in place");
+},{prefs:{autorest:false}});
+/* ---- The floating Coach (js/ui/coachfab.js) ---- */
+await test("Floating Coach: on the tab roots, never over a workout, a sheet or the keyboard; opening it from a workout keeps every value; Escape closes it",async page=>{
+  const fab=()=>page.$$eval('#cfab .cfab',a=>a.length);
+  for(const tab of ["train","food","progress","coach"]){await tapTab(page,tab);await pause(page,300);eq(await fab(),1,"on "+tab);}
+  /* Docked beside the dock, in its band: it covers no content and nothing of the dock. */
+  for(const w of [390,360,320]){await page.setViewportSize({width:w,height:780});await pause(page,250);
+    const r=await page.evaluate(()=>{const f=document.querySelector("#cfab .cfab").getBoundingClientRect(),d=document.querySelector("nav .dock").getBoundingClientRect();
+      return [Math.abs(f.bottom-d.bottom)<2,f.left>=d.right-1,f.right<=innerWidth];});
+    eq(r,[true,true,true],w+": beside the dock, on screen");}
+  await page.setViewportSize({width:390,height:844});await pause(page,200);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("backup");});await pause(page,300);
+  eq(await fab(),0,"not over a sheet");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  await startWorkout(page);
+  eq(await fab(),0,"not over the workout");
+  await page.fill('#in_r','11');await page.tap('[data-sstep="w"][data-d="1"]');await pause(page,200);
+  const before=await ev(page,"[V.logIdx,V.draft.w,S.active.entries[0].sets.length]");
+  await page.tap('[data-sessmore]');await pause(page,300);await page.tap('#sheet [data-coachopen]');await pause(page,500);
+  eq(await ev(page,"[V.coach,V.sheet]"),["compact",null],"the Coach from the ⋯ menu");
+  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["weights","sore","missed"],"the workout's own questions");
+  await page.keyboard.press("Escape");await pause(page,500);
+  eq(await ev(page,"[V.coach,V.logIdx,V.draft.w,S.active.entries[0].sets.length,document.getElementById('in_r').value]"),[null,...before,"11"],"closed, the workout as it was");
+});
+await test("Layout: scrolled to the end, every screen's content ends above the dock, and the Coach launcher covers no card on any of them",async page=>{
+  for(const w of [390,320])for(const lang of ["en","ar"]){
+    await page.setViewportSize({width:w,height:740});
+    await page.evaluate(async l=>{(await import("/js/state.js")).S.prefs.lang=l;(await import("/js/ui/render.js")).render();},lang);await pause(page,200);
+    for(const tab of ["train","food","progress","coach"]){
+      await page.evaluate(()=>window.scrollTo(0,0));await pause(page,250);await tapTab(page,tab);await pause(page,400);
+      for(const y of [0,1e6]){
+        await page.evaluate(y=>window.scrollTo(0,y),y);await pause(page,450);
+        const r=await page.evaluate(()=>{const d=document.querySelector("nav .dock").getBoundingClientRect(),f=document.querySelector("#cfab .cfab");
+          const fr=f&&f.getBoundingClientRect(),hit=[],cards=[...document.querySelectorAll("#app .card, #app button, #app .num")].filter(e=>e.getClientRects().length);
+          const over=(a,b)=>a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1;
+          for(const c of cards){const cr=c.getBoundingClientRect();if(fr&&over(cr,fr))hit.push((c.className||c.tagName)+"");}
+          const vis=getComputedStyle(document.getElementById("nav")).visibility==="visible"&&d.top<innerHeight;
+          const last=Math.max(...[...document.querySelectorAll("#app > *")].map(e=>e.getBoundingClientRect().bottom));
+          if(fr&&fr.top<d.top-1)hit.push("(above the dock band)");
+          return {hit,end:vis?last<=d.top+1:true,dead:document.documentElement.scrollHeight-(scrollY+innerHeight)};});
+        if(y?r.hit.length:r.hit.some(h=>h[0]==="("))throw new Error(w+" "+lang+" "+tab+" @"+y+": the launcher covers "+r.hit.join(", "));
+        if(y&&!r.end)throw new Error(w+" "+lang+" "+tab+": the content ends under the dock");}}}
+});
+/* ---- Phase 1 of the visual audit ---- */
+/* The set card says last time once, for the set being done (workout-spec.md); before the
+   first set it is the recommendation instead. */
+await test("Logger: last time reads in full for the set being done, in English and Arabic; How do you feel today? is one line",async page=>{
+  await startWorkout(page);
+  const r0=await page.evaluate(()=>{const rd=document.querySelector(".ready");
+    return {rec:document.querySelector(".wsc .sc-h").textContent,readyH:rd?Math.round(rd.getBoundingClientRect().height):0,
       skipInHead:!!document.querySelector(".ready .ready-h .ready-skip")};});
-  if(r.hd.indexOf("Last")>=0)throw new Error("Last is still a column");
-  eq(r.txt[0],"Last time 60 kg × 8","the first set's last time, whole");
+  if(!/^Recommended /.test(r0.rec))throw new Error("before the first set: "+r0.rec);
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  const r=await page.evaluate(()=>{const p=[...document.querySelectorAll(".wsc .sc-h span")];
+    return {txt:p.map(e=>e.textContent),clipped:p.some(e=>e.scrollWidth>e.clientWidth+1)};});
+  r.readyH=r0.readyH;r.skipInHead=r0.skipInHead;
+  eq(r.txt[0],"Last time 60 kg × 8","the second set's last time, whole");
   eq([r.clipped,r.skipInHead],[false,true],"nothing clipped; Skip beside the question");
   if(r.readyH>110)throw new Error("readiness takes "+r.readyH+"px");
 },{prefs:{autorest:false}});
 await test("Logger in Arabic: last time keeps its figures in order",async page=>{
   await startWorkout(page);
-  eq(await page.$eval(".setprev",e=>e.textContent),"آخر مرة 60 كجم × 8");
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  eq(await page.$eval(".wsc .sc-h span",e=>e.textContent),"آخر مرة 60 كجم × 8");
 },{prefs:{autorest:false,lang:"ar"}});
 await test("Calm red: an empty plan slot is faint text; a meal's delete is a quiet icon until pressed",async page=>{
   await coach(page,"food","plan");
@@ -2753,18 +3107,15 @@ await test("Live figure: it takes the theme — light mode lights the stage, Sag
   const blue=await probe(page);
   eq(blue.red,0,"Blue lights the muscles in its own colour");
 },{prefs:{palette:"red"}});
-await test("Live figure: in the workout it moves without turning (a sideways swipe there changes exercise)",async page=>{
+/* The figure is off the workout screen (workout-spec.md): it lives behind ⓘ, in the
+   exercise sheet, where it turns under a finger. */
+await test("Live figure: the workout shows none; ⓘ opens the exercise sheet, where it moves and turns",async page=>{
   await startWorkout(page);
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.active.entries[V.logIdx].name="Machine Chest Press";(await import("/js/ui/render.js")).render();});await pause(page,600);
+  eq(await page.$$eval("#app .fig3d,#app .formvis",a=>a.length),0,"no figure or photos on the workout");
+  await page.tap('.wexl [data-exdetail]');await pause(page,600);
   await waitLive(page);
-  eq(await page.$eval(".exhero .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-mq-turn"),e.getAttribute("data-mq")]),[true,false,"Machine Chest Press"]);
-  /* Logging a set repaints the screen; the figure carries on. */
-  await page.evaluate(()=>{window.__fig=document.querySelector(".exhero .fig3d")._mq;});
-  await page.evaluate(async()=>{(await import("/js/ui/render.js")).render();});await pause(page,300);
-  eq(await page.evaluate(()=>document.querySelector(".exhero .fig3d")._mq===window.__fig),true,"the same figure after a repaint");
-  /* The next exercise has only photographs, and the figure lets go. */
-  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.active.entries[V.logIdx].name="Atlas Stones";(await import("/js/ui/render.js")).render();});await pause(page,400);
-  eq([(await mq(page)).length,await page.$$eval(".exhero .formvis img",a=>a.length)],[0,2]);
+  eq(await page.$eval("#sheet .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-mq-turn"),e.getAttribute("data-mq")]),[true,true,"Machine Chest Press"]);
 });
 await test("Live figure: the library's exercises are drawn by their movement's family — a Barbell Curl in the sheet",async page=>{
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Barbell Curl"});});await pause(page,600);
