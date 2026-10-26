@@ -72,7 +72,9 @@ function vWarm(a){
    +'<div class="wu-head"><span class="shk">'+t("Before you start")+'</span>'
    +'<h1>'+t("Warm-up")+'</h1>'
    +'<p class="sub">'+t("About {n} min").replace("{n}",w.min)
-   +(w.focus.length?' · '+esc(t("for {m}").replace("{m}",muscles(w.focus))):'')+'</p></div>';
+   +(w.focus.length?' · '+esc(t("for {m}").replace("{m}",muscles(w.focus))):'')+'</p>'
+   /* What comes after it, so the workout is in view from the first screen. */
+   +(a.entries[0]?'<p class="wu-then"><span>'+t("Then")+'</span> <b>'+esc(exName(a.entries[0].name))+'</b></p>':'')+'</div>';
   var step=0;
   /* 1. Pulse: timed as a whole, so it can run while you get on the bike. */
   var pk="wp";

@@ -3747,6 +3747,17 @@ body.wkflat #app{--gutter:20px}
 .sess .exalt{margin:0;justify-self:start}
 
 /* NextExercise: secondary, one row. */
+/* Next, under the exercise's name: one quiet line, always in view. */
+.wexl-nx{grid-column:1/-1;display:flex;align-items:center;gap:var(--s2);max-width:100%;min-height:var(--hit);margin:calc(var(--s1) * -1) 0 0;padding:0;
+  border:0;background:none;color:var(--sub);font:inherit;font-size:14px;text-align:start;cursor:pointer}
+.wexl-nk{flex:none;font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .wexl-nk{letter-spacing:0;font-size:12.5px}
+.wexl-nx b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;color:var(--text)}
+.wexl-nx .gl,.wexl-nx svg{flex:none;width:16px;height:16px;color:var(--dim)}
+.wu-then{margin:var(--s2) 0 0;font-size:14px;color:var(--sub)}
+.wu-then span{font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .wu-then span{letter-spacing:0;font-size:12.5px}
+.wu-then b{color:var(--text)}
 .nx{display:grid;grid-template-columns:auto minmax(0,1fr) 20px;align-items:center;gap:var(--s3);min-height:56px;padding:var(--s2) var(--s3);
   border-radius:var(--r4);color:var(--text);text-align:start}
 .nx .thumbwrap,.nx .thumb{border-radius:10px}
@@ -4878,7 +4889,10 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 .fig3d canvas{display:block;width:100%;height:100%}
 .fig3d[data-mq-turn] canvas{touch-action:pan-y;cursor:grab}
 .fig3d:not([data-live]) canvas,.fig3d:not([data-live]) .fig3d-play,.fig3d[data-live] .fig3d-still{display:none}
-.fig3d:not([data-live]){aspect-ratio:8/3}
+/* While the figure loads: the empty stage at its own size. The photos are the
+   fallback only (data-still: no graphics, an error, or not drawn in time). */
+.fig3d:not([data-live]):not([data-still]) .fig3d-still{visibility:hidden}
+.fig3d[data-still]:not([data-live]){aspect-ratio:8/3}
 .fig3d-still{display:grid;grid-template-columns:1fr 1fr;gap:2px;height:100%}
 .fig3d-still figure{position:relative;margin:0;min-width:0}
 .fig3d-still img{width:100%;height:100%;object-fit:cover;display:block}
@@ -4896,7 +4910,7 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 .fig3d-tag{animation:fig3dTagOut .5s 4s both}
 @keyframes fig3dTagOut{to{opacity:0;visibility:hidden}}
 .exhero .fig3d{aspect-ratio:16/10;margin:0 0 14px;border-radius:var(--r3);border-color:var(--hair)}
-.exhero .fig3d:not([data-live]){aspect-ratio:8/3}
+.exhero .fig3d[data-still]:not([data-live]){aspect-ratio:8/3}
 .thumb.ph.posed{background:radial-gradient(120% 120% at 30% 15%,rgba(var(--accent-rgb),.16),transparent 60%),var(--raised);padding:2px}
 .exd-pose{margin:4px 0 12px;padding:10px 14px;border-radius:var(--r4);border:1px solid var(--border);
   background:radial-gradient(120% 90% at 30% 10%,rgba(var(--accent-rgb),.14),transparent 60%),var(--surface)}
@@ -5037,9 +5051,6 @@ body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
 .cp-chip{min-height:40px;padding:0 var(--s3);border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
   color:var(--text);font-weight:600;font-size:13.5px;text-align:start;position:relative}
 .cp-chip::after{content:"";position:absolute;inset:-2px 0}
-/* Compact holds only the newest exchange; the rest are in the panel, hidden, so a new
-   exchange is one more row (js/ui/coachfab.js). */
-.cp:not(.full) .chat-x.prev{display:none}
 /* An answer reads as its lead, one or two sentences, with the rest behind More. */
 .chat-a .chat-lead{margin:0 0 var(--s2);font-size:17px;font-weight:600;line-height:1.45;color:var(--text)}
 .chat-lead .num{font-weight:800}

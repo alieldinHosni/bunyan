@@ -27,7 +27,7 @@ import * as KB from "../../engine/kb.js";
 import {weeklySets} from "../../engine/volume.js";
 import {weeklyVolume} from "../../engine/stats.js";
 import {canUndo} from "../handlers/actions.js";
-import {namesExercise, namesFood, plan as planAction, proceed} from "../agent.js";
+import {answerPick, namesExercise, namesFood, plan as planAction, proceed} from "../agent.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
@@ -551,7 +551,7 @@ var QWORDS_AR=/(^| )(كام|كم|بروتين|سعر|سعره|سعرات|كار�
 function foodWords(q){return spell(fold(q)).replace(QWORDS," ").replace(QWORDS_AR," ").replace(/(^| )ل(?=ل)/g," ").replace(/\s+/g," ").trim();}
 function namedFood(q,strict){
   var rest=foodWords(q);
-  if(rest.length<2)return null;
+  if(rest.length<(strict?3:2))return null;
   var bare=rest.replace(/(^| )(ال|لل|بال|وال)(?=..)/g,"$1").trim();
   var hits=searchFoods(rest,6).concat(searchFoods(bare,6)).sort(function(x,y){return y.score-x.score;});
   /* As people eat it: "chicken" is chicken cooked, not the raw entry, when both match
@@ -909,8 +909,33 @@ function route(iid,text,it){
   return iid;}
 /* Ask: q is what the person typed, or a suggestion's id (with the conversation's
    language, lang). Kept with its answer and the language it was answered in. */
+/* The conversation is kept for a day; what the person told the coach to remember is
+   kept apart (S.context, js/coach/context.js) and is not touched by this. */
+var DAY=864e5;
+function pruneChat(){
+  var c=S.chat||[],now=Date.now(),kept=c.filter(function(m){return m&&typeof m==="object"&&num(m.at)>now-DAY;});
+  if(kept.length!==c.length){S.chat=kept;return true;}
+  return false;}
+/* The exchange a new message may follow on from: the newest one, if it is recent. */
+var FOLLOW=30*60000;
+function lastExchange(){var c=S.chat||[],m=c[c.length-1];return m&&num(m.at)>Date.now()-FOLLOW?m:null;}
+var YES=/^(yes|yeah|yep|yup|sure|ok|okay|do it|go ahead|please do|add it|log it|save it|swap it|remove it|ايوه|اه|ايوا|تمام|ماشي|اوك|نعم|ضيفه|سجله|احفظه|بدله|شيله)( |$)/;
+var NO=/^(no|nope|not now|dont|don t|cancel|لا|لأ|مش دلوقتي|بلاش|خلاص)( |$)/;
+var MORE=/^(and|also|plus|what about|how about|و|كمان|وكمان)( |$)/;
 function ask(q,id,lang){
+  pruneChat();
+  /* A short answer to the last question: yes or no to a change waiting for a tap is that
+     tap (the caller runs it; nothing is added to the conversation). */
+  var prev=id?null:lastExchange(),fq0=id?"":fold(q);
+  if(prev&&prev.ag&&prev.ag.s==="confirm"&&(YES.test(fq0)||NO.test(fq0)))
+    return {tap:YES.test(fq0)?{agok:String(prev.at)}:{agno:String(prev.at)}};
   var it=id?{id:id,ranked:[]}:intentOf(q);
+  /* "yes" to a choice: the choice is still to make, so it is asked again. */
+  if(prev&&prev.ag&&prev.ag.s==="pick"&&(YES.test(fq0)||NO.test(fq0))){
+    var Lp=prev.lang==="ar"||prev.lang==="en"?prev.lang:uiLang();
+    var again=withLang(Lp,function(){return {q:String(q).trim().slice(0,300),id:prev.id,at:Date.now(),b:[],acts:[],lang:Lp,
+      ag:NO.test(fq0)?{s:"say",lead:t("Kept as it is."),acts:[]}:Object.assign({},prev.ag,{lead:t("Which one? Tap it, or say its name.")})};});
+    S.chat=(S.chat||[]).concat([again]).slice(-KEEP);return again;}
   var L=id?(lang==="ar"||lang==="en"?lang:uiLang()):it.lang==="ar"?"ar":"en";
   var msg=withLang(L,function(){
     var text=id?t(ASK[id]||""):String(q).trim().slice(0,300),iid=it.id;
@@ -926,7 +951,15 @@ function ask(q,id,lang){
          food by its name: that is what it is about. A near miss is not a match. */
       if(iid==="unknown"){
         if(namedExercises(text).length)iid="weights";
-        else if(FOODDB&&namedFood(text,true))iid="foodinfo";}}
+        else if(FOODDB&&!YES.test(fold(text))&&!NO.test(fold(text))&&namedFood(text,true))iid="foodinfo";}}
+    /* A follow-up: the answer to the last pick ("Is it pull ups?", "the second one"),
+       or the same request again for something else ("and squats"). */
+    if(!id&&prev&&iid!=="scope"&&iid!=="situation"&&iid!=="remember"){
+      if(prev.ag&&prev.ag.s==="pick"&&(iid==="unknown"||iid===prev.id||MORE.test(fold(text)))){
+        var nx=null;try{nx=answerPick(prev.ag,text);}catch(e){nx=null;}
+        if(nx)return {q:text,id:prev.id,at:Date.now(),b:[],acts:nx.acts||[],ag:nx,lang:L};}
+      if(/^(exadd|exremove|exswap|foodlog)$/.test(prev.id)&&(iid==="unknown"||MORE.test(fold(text)))
+        &&(prev.id==="foodlog"?namesFood(text):namesExercise(text.replace(MORE,""))))iid=prev.id;}
     if(ACTION_IDS.indexOf(iid)>=0&&iid!=="reassess"&&S.onboarded){
       var ag=null;try{ag=planAction(iid,text,it);}catch(e){ag=null;}
       if(ag)return {q:text,id:iid,at:Date.now(),b:[],acts:ag.acts||[],ag:ag,lang:L};
@@ -1085,4 +1118,4 @@ function askNext(last){
   return withLang(LL,function(){return '<div class="chat-next" lang="'+LL+'" dir="'+(LL==="ar"?"rtl":"ltr")+'"><div class="chat-next-h">'+esc(t("Ask next"))+'</div>'
     +chips(NEXT[last.id]||NEXT.unknown,"",own)+'</div>';});}
 
-export {ASK, ask, askNext, bubble, findMsg, follow, NEXT, vChat};
+export {ASK, ask, askNext, bubble, findMsg, follow, NEXT, pruneChat, vChat};

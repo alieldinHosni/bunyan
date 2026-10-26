@@ -14,12 +14,12 @@
    V.coach: null (closed), "compact" or "full". */
 import {t} from "../i18n/dict.js";
 import {isolateNums} from "../i18n/bidi.js";
-import {S} from "../state.js";
+import {S, saveDB} from "../state.js";
 import {esc} from "../util.js";
 import {V} from "./view.js";
 import {glyph} from "./glyphs.js";
 import {patch, replace} from "./patch.js";
-import {ASK, askNext, bubble} from "./views/chat.js";
+import {ASK, askNext, bubble, pruneChat} from "./views/chat.js";
 
 /* What to offer first, by where it was opened. Only questions the coach answers. */
 var SUGGEST={train:["today","weights","tomorrow"],workout:["weights","sore","missed"],food:["rest","eat","protein"],
@@ -45,9 +45,9 @@ function fabHtml(){
 /* ---- the panel ------------------------------------------------------------------------ */
 function panelHtml(){
   var full=V.coach==="full",log=(S.chat||[]).filter(function(m){return m&&typeof m==="object";});
-  /* Every exchange is in the panel, so a new one is one more row and nothing before it is
-     rebuilt (js/ui/patch.js keys them): compact shows only the newest (.prev hidden),
-     full height the whole conversation. */
+  /* Every exchange is in the panel and scrolls, compact or full height: a new one is one
+     more row and nothing before it is rebuilt (js/ui/patch.js keys them). Compact opens
+     on the newest; full height is the same conversation, taller. */
   /* The veil is a button so a tap on it reaches the tap handler; it closes the panel and
      does nothing else. Not in the tab order: the panel's own ✕ is the control. */
   var h='<button class="cp-veil" type="button" tabindex="-1" data-coachclose="1" aria-hidden="true"></button>'
@@ -62,9 +62,6 @@ function panelHtml(){
    +'<div class="cp-b" id="cpB" role="log" aria-live="polite">';
   if(!log.length)h+='<p class="cp-hi">'+esc(t("Ask about training, food or progress"))+'</p>';
   else{
-    /* Always in its place, hidden when there is nothing above, so the rows after it
-       keep theirs and the patch leaves them alone. */
-    h+='<button class="cp-more" data-coachsize="full"'+(!full&&log.length>1?'':' hidden')+'>'+esc(t("Show the whole conversation"))+'</button>';
     log.forEach(function(m,i){h+=bubble(m,i===log.length-1,i<log.length-1);});}
   /* What to ask: for where it was opened, then, after an answer, what follows from it,
      in the conversation's language. */
@@ -95,7 +92,9 @@ function syncCoach(){
   pan.hidden=false;
   var html=panelHtml();if(rtl)html=isolateNums(html);
   var opening=lastMode===null,resized=lastMode&&lastMode!==mode;
-  if(opening)openKey=routeKey();
+  /* A day-old conversation is gone when the panel opens (what the person asked the coach
+     to remember is kept apart, in S.context). */
+  if(opening){openKey=routeKey();if(pruneChat()){saveDB();html=panelHtml();if(rtl)html=isolateNums(html);}}
   if(opening||resized)replace(pan,html);else patch(pan,html);
   pan.classList.toggle("opening",opening);
   pan.classList.toggle("resized",!!resized);
@@ -110,9 +109,7 @@ function toEnd(){
   requestAnimationFrame(function(){
     var b=document.getElementById("cpB");if(!b)return;
     var xs=b.querySelectorAll(".chat-x"),x=xs[xs.length-1];
-    /* Compact holds the newest exchange alone: from the top, Show the whole
-       conversation included. */
-    if(!x||!b.closest(".cp.full")){b.scrollTop=0;return;}
+    if(!x){b.scrollTop=0;return;}
     b.scrollTop=Math.max(0,b.scrollTop+x.getBoundingClientRect().top-b.getBoundingClientRect().top-12);});}
 /* A change the coach makes on the person's behalf runs the screen's own code, which
    may move the screen behind (a food logged opens Food): the panel stays over it, and

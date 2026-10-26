@@ -1872,3 +1872,17 @@ Owner, 26 Oct: like the first-run guide, an arrow at the right edge of the scree
 
 - `js/ui/tour.js` (`swipeHint`): the first time a workout of more than one exercise reaches its first exercise, the screen dims, a tab with an arrow sits at the edge the next exercise comes from (right in English; left in Arabic, where swiping right is next, as `exswipe.js` already does), and a finger slides across from it, looping, over one line: "Swipe left for the next exercise", with "And right to go back. The list at the top reaches any of them." A tap anywhere, Escape, or moving to another exercise puts it away for good (`S.prefs.toured.swipe`, per profile; Profile → Show the guide again brings it back with the other guides). With Animations off or reduced motion, the finger and arrow stand still.
 - Regression test added (English and Arabic edges, tap, moving on).
+## Chat: scroll in compact, follow-ups in context, a day of history — branch session/chat-context
+
+Owner, 26 Oct (with screenshots): compact can't scroll through messages; the coach doesn't remember the context within the session ("Is it pull ups?" after a close-matches answer got "I won't guess"); erase chat history after 24 h but keep the context. CACHE `bunyan-v141`.
+
+- **Compact scrolls.** Every exchange is in the panel at both sizes and scrolls; compact opens on the newest. "Show the whole conversation" is gone (the ⤢ button remains for full height).
+- **Follow-ups.** Within 30 minutes of the last exchange: a typed answer to a pick is that pick ("Is it pull ups?", "the first one", a day's name, "for today"); "yes"/"no" to a waiting change is Add it / Not now (the same tap); "yes" to a choice asks it again; "and squats" / "and a banana" repeats the last request with the new thing. Only what the pick asked for is looked for, never invented (`answerPick` in `js/ui/agent.js`). "yes"/"no" are never read as food names.
+- **24-hour history.** Messages older than a day are dropped when a question is asked and when the panel opens. What the person asked the coach to keep (`S.context`, js/coach/context.js) is separate and untouched; it is per profile, saved with the profile and included in backups.
+## Workout: the next exercise in view, and no photo flash in the exercise sheet — branch session/workout-next
+
+Owner, 26 Oct: "when I start a workout, I don't see the small reminder of the next exercise; this page should be as simple as possible" and "when I click the i, the 3D video flashes and shows the old start and end photos". CACHE `bunyan-v140`.
+
+- **Next, in view.** The Next card sat under the log button, the feel chips and the recommendation, below the fold on a 375 × 667 phone (or with Display Zoom). It is now one quiet line under the exercise's name ("NEXT Wide-Grip Lat Pulldown ›", one tap goes there; inside a superset, the next in the round), and the card lower down is removed. The warm-up card says what follows it ("THEN Barbell Bench Press").
+- **No flash in the exercise sheet.** The 3D figure's start and end photos were its first frame: the sheet showed them at 8:3, then the figure replaced them at 4:3. The photos are now only the fallback (`data-still`: no WebGL2, an error, no record, or not drawn within 4 s); until the figure is drawn the stage is empty at its final size. `patch.js` keeps `data-still` as a runtime attribute, like `data-live`.
+- Regression test added; the navigation test now taps the new line.

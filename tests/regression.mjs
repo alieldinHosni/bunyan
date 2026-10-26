@@ -738,7 +738,7 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
     items:[{n:"Day's food",fid:"x",grams:100,label:"1 serving",kcal:2480,p:150,c:300,f:70}]}}}]))})});
 await test("Coach chat: a saved conversation that is not the app's own renders as text only",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;
-    S.chat=[null,7,{q:"<img src=x onerror=alert(1)>",id:"today",b:[{p:"<b>hi</b>"},{l:["<i>x</i>",3]},null],
+    S.chat=[null,7,{q:"<img src=x onerror=alert(1)>",id:"today",at:Date.now(),b:[{p:"<b>hi</b>"},{l:["<i>x</i>",3]},null],
       acts:[{l:"Go",a:{"onclick":"alert(1)","data-tab":"food","data-x\" onmouseover=\"alert(1)":"1"}}]}];});
   await openChat(page);
   const r=await page.evaluate(()=>({img:!!document.querySelector(".chat img"),b:!!document.querySelector(".chat-a b"),
@@ -1201,16 +1201,16 @@ await test("Exercises: a sideways swipe moves between them; a nudge or a vertica
   await drag(10,520,300,525);eq(await idx(),0,"not from the screen edge");
   /* The arrows and segments are gone (workout-spec.md): the next exercise is named on the
      screen and one tap away; the list from the title reaches any of them. */
-  eq(await page.$eval('.nx b',e=>e.textContent),await ev(page,"(async()=>(await import('/js/i18n/exnames.js')).exName(S.active.entries[1].name))()"),"the next one is named");
-  await page.tap('.nx');await pause(page,400);eq(await idx(),1,"next exercise");
+  eq(await page.$eval('.wexl-nx b',e=>e.textContent),await ev(page,"(async()=>(await import('/js/i18n/exnames.js')).exName(S.active.entries[1].name))()"),"the next one is named");
+  await page.tap('.wexl-nx');await pause(page,400);eq(await idx(),1,"next exercise");
   await page.tap('[data-exlist]');await pause(page,400);await page.tap('#sheet [data-jumpl="0"]');await pause(page,400);eq(await idx(),0,"back by the list");
   await page.tap('[data-exlist]');await pause(page,400);
   eq(await page.$$eval("#sheet .exl-row",a=>a.length),await ev(page,"S.active.entries.length"),"the list has every exercise");
   await page.tap('#sheet [data-jumpl="2"]');await pause(page,400);eq([await idx(),await ev(page,"!!V.sheet")],[2,false],"list jump");
-  await page.tap('.nx');await pause(page,400);eq(await idx(),3,"next from there");
+  await page.tap('.wexl-nx');await pause(page,400);eq(await idx(),3,"next from there");
   /* Looking ahead does not end a rest. */
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
-  await page.tap('.nx');await pause(page,400);
+  await page.tap('.wexl-nx');await pause(page,400);
   eq(await ev(page,"V.restEnd>Date.now()"),true,"the rest keeps running");
 },{prefs:{autorest:true,anim:true}});
 async function dockTest(page,slide){
@@ -2379,7 +2379,6 @@ await test("Coach agent: an unknown exercise gets real close matches, then a day
   eq([after.length,/^Added .+ to Full Body B\.$/.test(r.done.replace(/Undo$/,"")),await ev(page,"V.coach")],[before.length+1,true,"compact"],"applied, said, the panel still open");
   /* Asked something else, the Undo stays on the applied row. */
   await agSay(page,"how much protein do I need");
-  await page.tap('#cpanel .cp-more');await pause(page,400);
   if(!(await page.$('#cpanel [data-agundo]')))throw new Error("the Undo went away");
   await page.tap('#cpanel [data-agundo]');await pause(page,400);
   eq(await dayEx(page,2),before,"Undo puts the day back");
@@ -2396,6 +2395,35 @@ await test("Coach agent: a day's name is a day only where it is said as one — 
   eq(r.lead,"Add Pushups to Push?","run together, and with day");
   r=await agSay(page,"remove leg press from push");
   eq(r.lead,"Take Leg Press out of Push?","from the day");
+});
+await test("Coach follow-ups: a typed answer to a choice, yes or no to a change, and \"and squats\" carry on the same request; compact scrolls through every message; a day-old conversation is gone, kept facts are not",async page=>{
+  await openChat(page);
+  let r=await agSay(page,"add tricep extention machine to push day");
+  if(!/Closest:$/.test(r.lead))throw new Error(r.lead);
+  r=await agSay(page,"Is it pull ups?");
+  eq(r.lead,"Add Pullups to which day?","the answer to the pick, in words");
+  r=await agSay(page,"yes");
+  eq(r.lead,"Which one? Tap it, or say its name.","yes to a choice asks it again");
+  r=await agSay(page,"the first one");
+  eq(/^Add Pullups to Full Body A\?$/.test(r.lead),true,"an ordinal picks");
+  const before=await dayEx(page,0);
+  await page.fill('#chatq','yes');await page.press('#chatq','Enter');await pause(page,500);
+  eq((await dayEx(page,0)).length,before.length+1,"yes is Add it");
+  r=await agSay(page,"and squats");
+  eq(r.lead,"Add Barbell Squat to which day?","and … is the same request again");
+  r=await agSay(page,"Full Body B");
+  await page.fill('#chatq','no');await page.press('#chatq','Enter');await pause(page,400);
+  eq(await page.evaluate(()=>!![...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector(".chat-n")),true,"no is Not now");
+  /* Compact: every exchange is there, and the panel scrolls through them. */
+  const sc=await page.evaluate(()=>{const b=document.getElementById("cpB"),xs=[...b.querySelectorAll(".chat-x")];
+    return {n:xs.length,hidden:xs.filter(x=>!x.getClientRects().length).length,scrolls:b.scrollHeight>b.clientHeight};});
+  eq([sc.n>=6,sc.hidden,sc.scrolls,await ev(page,"V.coach")],[true,0,true,"compact"],"compact scrolls through the whole conversation");
+  /* A day later the conversation is gone; what they asked it to keep is not. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.context={v:1,next:2,items:[{id:"c1",kind:"schedule",text:"I work nights",at:"2026-10-01",by:"user"}]};
+    S.chat.forEach(m=>{m.at-=25*36e5;});});
+  await page.tap('.cp [data-coachclose]');await pause(page,500);
+  await page.tap('#cfab .cfab');await pause(page,500);
+  eq(await ev(page,"[S.chat.length,S.context.items.length]"),[0,1],"day-old messages pruned, facts kept");
 });
 await test("Coach agent: sending appends one row and leaves the earlier ones as they were; the panel is not rebuilt",async page=>{
   await openChat(page);
@@ -2972,6 +3000,21 @@ await test("Workout: the first time, a hint shows to swipe for the next exercise
   await page.evaluate(async()=>{(await import("/js/ui/workout.js")).jumpTo(1);});await pause(page,500);
   eq(await ev(page,"[!!document.querySelector('.swhint'),S.prefs.toured.swipe]"),[false,1],"moving on puts it away");
 },{tour:true,prefs:{toured:{train:9,food:9,coach:9,progress:9,profile:9}}});
+await test("Workout: the next exercise is named under the current one, in view on a small phone, and on the warm-up card; the exercise sheet never shows the old photos while its 3D figure loads",async page=>{
+  await page.setViewportSize({width:375,height:667});
+  await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.nowarm=false;});
+  await startWorkout(page);
+  const then=await page.$eval('.wu-then b',e=>e.textContent).catch(()=>"");
+  eq(then,await ev(page,"(async()=>(await import('/js/i18n/exnames.js')).exName(S.active.entries[0].name))()"),"the warm-up names what follows it");
+  await page.tap('[data-wuskip]');await pause(page,400);
+  const r=await page.evaluate(()=>{const n=document.querySelector(".wexl-nx");if(!n)return null;const b=n.getBoundingClientRect();return [b.bottom<=innerHeight,!!document.querySelector("#app .nx")];});
+  eq(r,[true,false],"Next is under the name, in view; the old card is gone");
+  /* The figure's stage holds its size and shows no photos until it is drawn. */
+  await page.tap('[data-exdetail]');await pause(page,30);
+  const f=await page.evaluate(()=>{const f=document.querySelector("#sheet .fig3d");if(!f)return "none";
+    return [f.hasAttribute("data-still")||f.hasAttribute("data-live")?"ok":getComputedStyle(f.querySelector(".fig3d-still")).visibility];});
+  if(f!=="none"&&f[0]!=="ok"&&f[0]!=="hidden")throw new Error("photos shown while loading: "+f);
+});
 /* ---- Phase 1 of the visual audit ---- */
 /* The set card says last time once, for the set being done (workout-spec.md); before the
    first set it is the recommendation instead. */

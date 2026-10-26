@@ -20,6 +20,7 @@ import {ask} from "../views/chat.js";
 import {loadFoods} from "../../engine/nutrition.js";
 import {toEnd} from "../coachfab.js";
 import {withIds} from "../views/timport.js";
+import {dispatchTap} from "./registry.js";
 
 /* The exercise open in the edit sheet, and the one place its numbers are bounded:
    at least one set and one rep, the range never inverted, rest in whole seconds. */
@@ -112,7 +113,11 @@ function chatSend(){
      question that stayed in the box after its answer read as not yet sent. */
   var from=fromEl(el);
   el.value="";
-  loadFoods(function(){ask(q);saveDB();render();land(from);toEnd();});}
+  loadFoods(function(){
+    var m=ask(q);
+    /* "yes" or "no" to a change waiting for a tap: that tap. */
+    if(m&&m.tap){dispatchTap(m.tap,document.createElement("button"),{},{typingAsk:false});return;}
+    saveDB();render();land(from);toEnd();});}
 function chatEnd(){
   requestAnimationFrame(function(){
     var qs=document.querySelectorAll(".chat-q"),q=qs[qs.length-1];

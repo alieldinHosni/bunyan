@@ -252,10 +252,15 @@ function Mannequin(el){
     dispose:function(){dead=true;},
     state:function(){return {live:!!gl&&!dead&&!!body,playing:playing,frames:frames,q:dpr,err:err,w:W,h:H,yaw:view.yaw,look:look};}};
   function fail(e){
-    err=String(e&&e.message||e);dead=true;el.removeAttribute("data-live");stop();
+    err=String(e&&e.message||e);dead=true;el.removeAttribute("data-live");el.setAttribute("data-still","1");stop();
     try{var lc=gl&&gl.getExtension("WEBGL_lose_context");if(lc)lc.loseContext();}catch(x){}
     gl=null;}
-  if(!rec||!canvas){err="no record";dead=true;return self;}
+  if(!rec||!canvas){err="no record";dead=true;el.setAttribute("data-still","1");return self;}
+  /* The start and end photos are the fallback, not a first frame: they show only if the
+     figure cannot be drawn, or is not drawn within a few seconds (no graphics, or the
+     body model not in the cache). Until then the stage is empty, at the figure's size,
+     so nothing flashes and nothing jumps when it arrives. */
+  setTimeout(function(){if(el.isConnected&&!el.hasAttribute("data-live"))el.setAttribute("data-still","1");},4000);
   try{
     gl=canvas.getContext("webgl2",{antialias:true,alpha:false,depth:true,stencil:false,premultipliedAlpha:true,powerPreference:"default"});
     if(!gl)throw new Error("no WebGL2");
@@ -582,7 +587,8 @@ function syncMannequins(){
   for(var j=0;j<els.length;j++){
     var el=els[j];
     if(el._mq){el._mq.sync&&el._mq.sync();continue;}
-    if(el._mqq||!supported())continue;
+    if(!supported()){el.setAttribute("data-still","1");continue;}
+    if(el._mqq)continue;
     el._mqq=true;QUEUE.push(el);}
   if(QUEUE.length&&!queued){
     queued=true;

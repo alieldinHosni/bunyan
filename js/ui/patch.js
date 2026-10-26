@@ -34,7 +34,7 @@ function sameNode(a,b){
    away clears the picture and shrinks it to the default (data-live and data-paused
    are the live figure's, js/ui/mannequin.js). */
 function runtimeAttr(el,name){
-  return name==="data-anim"||name==="data-count"||name==="style"||name==="data-live"||name==="data-paused"
+  return name==="data-anim"||name==="data-count"||name==="style"||name==="data-live"||name==="data-paused"||name==="data-still"
     ||(el.nodeName==="CANVAS"&&(name==="width"||name==="height"));
 }
 function patchAttrs(o,n){
