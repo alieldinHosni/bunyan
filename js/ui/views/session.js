@@ -172,9 +172,12 @@ function restLeft(){return V.restPaused?V.restLeft:Math.max(0,Math.ceil((V.restE
 function restPct(){var total=Math.max(1,V.restTotal||1);return Math.max(0,Math.min(100,restLeft()/total*100));}
 function vRestBand(){
   if(V.restDone)
-    return '<section class="rb over" data-k="rest" role="alert"><div class="rb-done">'+t("Rest complete")+'</div>'
+    return '<section class="rb over" data-k="rest" role="alert"><div class="rb-l"><div class="rb-done">'+t("Rest complete")+'</div>'
      +(V.restOver?'<div class="rb-sub"><span class="num" id="restOver">'+overText()+'</span> '+t("over your rest")+'</div>':'')
-     +'</section>';
+     +'</div><div class="rb-ctl">'
+     /* More rest, or put it away: the choice is the lifter's, not the timer's. */
+     +'<button class="num rb-more" data-rest="extend" dir="ltr" aria-label="'+t("30 seconds more rest")+'">+30</button>'
+     +'<button class="rb-close" data-rest="skip" aria-label="'+t("Close")+'">'+IC.close+'</button></div></section>';
   var paused=V.restPaused;
   return '<section class="rb wglass'+(paused?' paused':'')+'" data-k="rest" id="restBand" aria-label="'+t("Rest")+'"><div class="rb-top">'
    +'<div class="rb-l"><div class="rb-k">'+t("Rest")+'</div><div class="rb-t num" id="restDig">'+mmss(restLeft())+'</div></div>'
@@ -310,7 +313,8 @@ function vHistory(e,plan,cur,timed){
      +(r.done?'<button class="wtick" data-unlog="'+r.i+'" aria-label="'+t("Undo set")+' '+esc(lbl)+'">'+IC.check+'</button>'
        :'<span class="wtick '+(now?'cur':'off')+'" aria-hidden="true"></span>')
      +'</div>';});
-  return h+'</div>';}
+  /* One more set, under the sets it adds to. */
+  return h+'<button class="wsl-add" data-k="addrow" data-addrow="1">'+IC.plus+'<span>'+t("Add a set")+'</span></button></div>';}
 
 function vLogger(){
   var a=S.active;
@@ -377,8 +381,7 @@ function vLogger(){
    +'<p class="wexl-s"><span>'+line+'</span>'
    +'</p>'
    +nextLine(a,run)
-   +(act?'':'<div class="adds"><button class="chip wkwu" data-addwu="1">'+IC.flame+'<span>'+t("Add warm-up")+'</span></button>'
-     +'<button class="chip" data-addrow="1">'+IC.plus+'<span>'+t("Add a set")+'</span></button></div>')+'</div>';
+   +'</div>';
 
   if(act){h+=actBody(a,e,rows,active);}
   else{

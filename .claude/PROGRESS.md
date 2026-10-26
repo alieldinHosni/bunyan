@@ -1886,3 +1886,14 @@ Owner, 26 Oct: "when I start a workout, I don't see the small reminder of the ne
 - **Next, in view.** The Next card sat under the log button, the feel chips and the recommendation, below the fold on a 375 × 667 phone (or with Display Zoom). It is now one quiet line under the exercise's name ("NEXT Wide-Grip Lat Pulldown ›", one tap goes there; inside a superset, the next in the round), and the card lower down is removed. The warm-up card says what follows it ("THEN Barbell Bench Press").
 - **No flash in the exercise sheet.** The 3D figure's start and end photos were its first frame: the sheet showed them at 8:3, then the figure replaced them at 4:3. The photos are now only the fallback (`data-still`: no WebGL2, an error, no record, or not drawn within 4 s); until the figure is drawn the stage is empty at its final size. `patch.js` keeps `data-still` as a runtime attribute, like `data-live`.
 - Regression test added; the navigation test now taps the new line.
+
+## Workout polish — branch session/workout-polish
+
+Owner, 26 Oct (screenshot of a Pushups set): remove Add warm-up; Add a set under the sets, not above; when the rest finishes, close it or extend it; the warm-up screen reads like a PDF and its icons flash at the start; fix the tab-history test that fails on main. CACHE `bunyan-v143`.
+
+- **The failing test** ("Back returns… a tab opens at its top", red on main for weeks) was the test, not the app: it scrolled down, which puts the dock away (`nav.dhid`, faded out), then tapped where the hidden dock was. `tapTab()` now scrolls up a little first when the dock is away, as a thumb would. The same helper fixes the intermittent "tab taps do not grow the browser history".
+- **Add warm-up** is gone from the exercise screen (the warm-up set logic stays, for sets already logged). **Add a set** is the last row of the sets list.
+- **Rest complete** now carries **+30** (a fresh 30-second rest from now) and **✕** (puts it away), on one line with the text.
+- **Warm-up screen**: a short header (before you start · about N min, the muscles, "0 of 6 done" with a bar), one card per step, no photos or drawings in the rows (they loaded at different moments and flickered; the name still opens how to do it), the ramp-up's explanation behind "Why", and Start the workout / Skip pinned at the bottom with what comes after it.
+- Regression tests added for each.
+- **Noticed, not changed:** the owner's screenshot shows Pushups with an *added* weight of 86 kg suggested ("Recommended 86 kg × 8–20 · Same weight, aim for more reps"). That reads as 86 kg logged as added load on a bodyweight lift earlier (e.g. body weight typed into the +KG box, or a session from before the 86 kg default was removed). Needs the owner's data to confirm; not touched.
