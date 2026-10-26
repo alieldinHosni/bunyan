@@ -2385,6 +2385,18 @@ await test("Coach agent: an unknown exercise gets real close matches, then a day
   eq(await dayEx(page,2),before,"Undo puts the day back");
   if(!(await page.$('#cpanel .ag-undone')))throw new Error("no undone row");
 });
+await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
+  await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
+  await openChat(page);
+  let r=await agSay(page,"Can u add push ups to my current week?");
+  eq([r.lead,r.opts],["Add Pushups to which day?",["Push","Pull","Legs"]],"the exercise, then the day");
+  r=await agSay(page,"add push ups to push");
+  eq(r.lead,"Add Pushups to Push?","both, from one sentence");
+  r=await agSay(page,"add pushups to push day");
+  eq(r.lead,"Add Pushups to Push?","run together, and with day");
+  r=await agSay(page,"remove leg press from push");
+  eq(r.lead,"Take Leg Press out of Push?","from the day");
+});
 await test("Coach agent: sending appends one row and leaves the earlier ones as they were; the panel is not rebuilt",async page=>{
   await openChat(page);
   await agSay(page,"how much protein do I need");

@@ -38,7 +38,7 @@ function fill(s,o){Object.keys(o).forEach(function(k){s=s.split("{"+k+"}").join(
 /* ---- the words around the names --------------------------------------------------- */
 /* What a request says besides what it names: the verbs, the little words, and the
    words for a workout or a program. Taken out before the rest is looked up. */
-var FILLER=/(^| )(please|pls|can|could|would|you|u|i|id|want|wanna|like|to|the|a|an|my|me|some|in|into|on|onto|from|of|for|with|at|this|that|it|day|days|workout|workouts|session|program|programme|routine|plan|exercise|exercises|movement|lift|add|put|include|remove|delete|drop|take|out|off|get|rid|no|more|swap|replace|switch|change|substitute|instead|log|record|ate|eaten|had|have|just|ive|i've|and|then|also|ممكن|عايز|عاوز|عايزه|لو|سمحت|ضيف|اضيف|ضيفلي|زود|حط|حطلي|شيل|امسح|احذف|الغي|بدل|غير|استبدل|سجل|سجلي|اكلت|كلت|تمرين|التمرين|يوم|اليوم|برنامج|البرنامج|في|من|على|علي|ل|لـ|مكان)(?= |$)/g;
+var FILLER=/(^| )(please|pls|can|could|would|you|u|i|id|want|wanna|like|to|the|a|an|my|me|some|in|into|on|onto|from|of|for|with|at|this|that|it|day|days|workout|workouts|session|program|programme|routine|plan|exercise|exercises|movement|lift|add|put|include|remove|delete|drop|take|out|off|get|rid|no|more|swap|replace|switch|change|substitute|instead|log|record|ate|eaten|had|have|just|ive|i've|and|then|also|current|week|weeks|weekly|this|next|routine|schedule|الاسبوع|اسبوع|ده|الحالي|ممكن|عايز|عاوز|عايزه|لو|سمحت|ضيف|اضيف|ضيفلي|زود|حط|حطلي|شيل|امسح|احذف|الغي|بدل|غير|استبدل|سجل|سجلي|اكلت|كلت|تمرين|التمرين|يوم|اليوم|برنامج|البرنامج|في|من|على|علي|ل|لـ|مكان)(?= |$)/g;
 function rest(text){
   var s=" "+spell(fold(text))+" ",prev;
   do{prev=s;s=s.replace(FILLER," ");}while(s!==prev);
@@ -50,6 +50,17 @@ var DAYWORD=/^(day|a|b|c|d|\d+|يوم)$/;
 function dayWords(d){return [d.name,planName(d.name)].map(function(n){return spell(fold(n)).split(" ").filter(function(w){return w&&!DAYWORD.test(w);});});}
 /* The days the text names, and the text without them. "today" is the day on today's
    plan, when there is one. */
+var BEFOREDAY="(to|from|in|into|on|for|of|ل|لـ|من|في|يوم|ليوم)",AFTERDAY="(day|days|workout|session|يوم)";
+function dayRes(name){
+  var n=name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  return [new RegExp(" "+BEFOREDAY+" (my |the |ال)?"+n+" "),new RegExp(" (ال)?"+n+" "+AFTERDAY+" "),new RegExp(" (ل|لل|بال)"+n+" ")];}
+function asDay(fq,name){return !!name&&dayRes(name).some(function(re){return re.test(fq);});}
+/* Takes out the day as it was said, and only there: the same word elsewhere ("push"
+   in "push ups") stays. */
+function dropDay(left,name){
+  var res=dayRes(name);
+  for(var i=0;i<res.length;i++)if(res[i].test(left))return left.replace(res[i]," ");
+  return left;}
 function daysIn(text){
   var sp=split(),fq=" "+spell(fold(text))+" ",hit=[],left=fq;
   if(/ (today|tonight|النهارده|انهارده|اليوم) /.test(fq)){
@@ -58,12 +69,14 @@ function daysIn(text){
     left=left.replace(/ (today|tonight|النهارده|انهارده|اليوم)(?= )/g," ");}
   sp.days.forEach(function(d){
     if(hit.indexOf(d)>=0)return;
-    var full=" "+spell(fold(d.name))+" ";
-    /* The whole name ("Push A"), or every word of it that names something ("push"). */
-    if(fq.indexOf(full)>=0){hit.push(d);left=left.split(full).join(" ");return;}
+    var full=spell(fold(d.name));
+    /* The whole name ("Push A"), or every word of it that names something ("push") —
+       only where it is said as a day: after to, from, in, on or for (or the Arabic for
+       them), or before day or workout. "add push ups" names Push-Ups, not the Push day. */
+    if(asDay(fq,full)){hit.push(d);left=dropDay(left,full);return;}
     dayWords(d).some(function(ws){
-      if(!ws.length||!ws.every(function(w){return fq.indexOf(" "+w+" ")>=0||fq.indexOf(" ال"+w+" ")>=0;}))return false;
-      hit.push(d);ws.forEach(function(w){left=left.replace(new RegExp(" (ال)?"+w+"(?= )","g")," ");});return true;});});
+      if(!ws.length||!asDay(fq,ws.join(" ")))return false;
+      hit.push(d);left=dropDay(left,ws.join(" "));return true;});});
   /* "push day" when the program has no such day: said back, never matched to another. */
   var miss="";
   if(!hit.length){var mm=/ (?!(?:a|the|my|this|that|rest|leg|arm|one|every|each|a)\b)([^ ]+) day /.exec(left)||/ ل?ل?يوم (?!ال?راحه)([^ ]+) /.exec(left);
@@ -95,6 +108,11 @@ function findExercise(q,pool){
   var inPool=function(n){return pool.indexOf(n)>=0;};
   var m=matchExercise(q);
   if(m.conf==="exact"&&inPool(m.name))return {kind:"one",name:m.name};
+  /* The name run together or split ("push ups", "pushups", "push-ups"), singular or
+     plural: the same exercise. */
+  var sq=function(x){return norm(x).replace(/[\s-]+/g,"").replace(/s$/,"");},qs=sq(q);
+  var same=qs.length>=4?pool.filter(function(n){return sq(n)===qs||sq(exName(n))===qs;}):[];
+  if(same.length===1)return {kind:"one",name:same[0]};
   /* Among equal matches, the ones already in the program come first. */
   var mine={};inProgram().forEach(function(x){mine[x.e.name]=1;});
   var hits=pool.filter(function(n){return tokenMatch(q,hay(n));})
