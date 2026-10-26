@@ -117,6 +117,9 @@ function chatSend(){
     var m=ask(q);
     /* "yes" or "no" to a change waiting for a tap: that tap. */
     if(m&&m.tap){dispatchTap(m.tap,document.createElement("button"),{},{typingAsk:false});return;}
+    /* Something to do at once: it runs, and its row says it was done. */
+    if(m&&m.ag&&m.ag.run&&m.ag.s==="confirm"){saveDB();render();land(from);toEnd();
+      dispatchTap({agrun:String(m.at)},document.createElement("button"),{},{typingAsk:false});return;}
     saveDB();render();land(from);toEnd();});}
 function chatEnd(){
   requestAnimationFrame(function(){

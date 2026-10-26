@@ -2358,6 +2358,69 @@ const agLast=page=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cp
   return {lead:(x.querySelector(".chat-lead")||{}).textContent||"",opts:[...x.querySelectorAll(".ag-opt .ag-ol")].map(e=>e.textContent),
     ok:!!x.querySelector("[data-agok]"),done:(x.querySelector(".ag-done")||{}).textContent||"",undone:(x.querySelector(".ag-undone")||{}).textContent||""};});
 const dayEx=(page,i)=>ev(page,`(async()=>{const s=(await import("/js/state.js")).split();return s.days[${i}].ex.map(e=>e.name);})()`);
+await test("Coach brain: questions no fixed answer is for are answered from the whole knowledge base, with the person's own numbers; follow-ups are read with the question before them; no source is ever shown",async page=>{
+  await openChat(page);
+  const last=()=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();
+    x.querySelectorAll(".chat-more").forEach(d=>d.open=true);
+    return {lead:(x.querySelector(".chat-lead")||{}).textContent||"",all:x.querySelector(".chat-a").textContent,topic:(x.querySelector(".chat-at")||{}).textContent||""};});
+  await agSay(page,"How many hours I should sleep?");let r=await last();
+  if(!/7.9 hours|hours: 7.9/.test(r.lead))throw new Error("sleep: "+r.lead);
+  eq(r.topic,"Good to know","not soreness");
+  await agSay(page,"Yeah but how many hours?");r=await last();
+  if(!/7.9/.test(r.lead))throw new Error("the follow-up lost the question: "+r.lead);
+  await agSay(page,"why?");r=await last();
+  if(/won't guess/.test(r.all))throw new Error("why: "+r.all);
+  await agSay(page,"what is a superset");r=await last();
+  if(!/two exercises/i.test(r.lead))throw new Error("superset: "+r.lead);
+  await agSay(page,"how much fiber should I eat");r=await last();
+  if(!/\d/.test(r.all)||!/fibre|g per day/i.test(r.all))throw new Error("fibre: "+r.all);
+  await agSay(page,"what is the capital of france");r=await last();
+  if(!/won't guess/.test(r.lead))throw new Error("an invented answer: "+r.lead);
+  /* Water answers with the person's own target and today. */
+  await agSay(page,"how much water should I drink");r=await last();
+  if(!/ml/.test(r.all))throw new Error("water: "+r.all);
+  eq(await page.evaluate(()=>document.querySelectorAll("#cpanel .chat-src").length+[...document.querySelectorAll("#cpanel .chat-a")].filter(a=>/coaching notes|\.js\b/i.test(a.textContent)).length),0,"no source shown");
+});
+await test("Coach brain in Arabic: a knowledge question gets an Arabic answer around the figures",async page=>{
+  await openChat(page);
+  const r=await agSay(page,"نوم كام ساعة؟");
+  if(!/7.9/.test(r.lead))throw new Error("sleep in Arabic: "+r.lead);
+  eq([r.lang,r.dir],["ar","rtl"],"Arabic answer");
+},{prefs:{lang:"ar"}});
+await test("Coach does what the app does: opens places, adds water and steps, changes settings with Undo, moves calories, all through the app's own buttons",async page=>{
+  await openChat(page);
+  const d=()=>ev(page,"S.days[(new Date(Date.now()-new Date().getTimezoneOffset()*6e4)).toISOString().slice(0,10)]||{}");
+  const w0=(await d()).water||0;
+  let r=await agSay(page,"add 2 glasses of water");
+  if(!/500 ml/.test(r.lead)||!r.ok)throw new Error("water: "+JSON.stringify(r));
+  eq((await d()).water||0,w0,"nothing before the tap");
+  await page.tap('#cpanel [data-agok]');await pause(page,400);
+  eq((await d()).water||0,w0+500,"water added");
+  r=await agLast(page);if(!/Added 500 ml/.test(r.done))throw new Error("done: "+r.done);
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq((await d()).water||0,w0,"undone");
+  r=await agSay(page,"log 8000 steps");await page.tap('#cpanel [data-agok]');await pause(page,400);
+  eq((await d()).steps,8000,"steps saved");  r=await agSay(page,"switch to pounds");
+  eq(await ev(page,"S.prefs.unit"),"lb","pounds at once");
+  if(!/lb/.test(r.done))throw new Error("units: "+r.done);
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await ev(page,"S.prefs.unit"),"kg","units undone");
+  const k0=await ev(page,"S.goals.kcal");
+  r=await agSay(page,"raise my calories by 200");await page.tap('#cpanel [data-agok]');await pause(page,400);
+  eq(await ev(page,"S.goals.kcal"),Math.round((k0+200)/10)*10,"calories raised");
+  /* Going somewhere lets the panel go with the move. */
+  await page.fill('#chatq',"open my meal plan");await page.press('#chatq','Enter');await pause(page,700);
+  eq([await ev(page,"V.tab"),await ev(page,"V.cfsub")],["coach","plan"],"meal plan opened");
+  await openChat(page);
+  r=await agSay(page,"how much water should I drink");
+  if(r.ok)throw new Error("a question is not a command");
+});
+await test("Coach does what the app does, in Arabic: water said in Egyptian Arabic is asked in Arabic",async page=>{
+  await openChat(page);
+  const r=await agSay(page,"شربت كوبايتين مية");
+  if(!/500/.test(r.lead)||!/مل/.test(r.lead)||!r.ok)throw new Error("water in Arabic: "+r.lead);
+  eq(r.dir,"rtl","RTL");
+},{prefs:{lang:"ar"}});
 await test("Coach agent: an unknown exercise gets real close matches, then a day, then a confirmation; nothing changes before the tap; Undo stays and puts it back",async page=>{
   await openChat(page);
   const before=await dayEx(page,2);
@@ -2478,11 +2541,11 @@ await test("Coach agent in Arabic: requests in Egyptian Arabic, answered in Arab
   /* Numbers in the lead are one run each. */
   eq(await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x.live .chat-lead .num")].length>0),true,"figures in .num");
 },{prefs:{lang:"ar"}});
-await test("Coach knowledge: training questions answer from the knowledge files with the person's own program, cite the entry, and lead with two sentences at most",async page=>{
+await test("Coach knowledge: training questions answer from the knowledge files with the person's own program, keep the entry, and lead with two sentences at most",async page=>{
   await openChat(page);
   const lead=()=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();
     x.querySelectorAll(".chat-more").forEach(d=>d.open=true);
-    return {lead:x.querySelector(".chat-lead").textContent,src:(x.querySelector(".chat-src")||{}).textContent||""};});
+    return {lead:x.querySelector(".chat-lead").textContent,src:x.querySelector(".chat-a").getAttribute("data-src")||"",shown:!!x.querySelector(".chat-src")};});
   const words=s=>s.trim().split(/\s+/).length,sents=s=>s.split(/[.!?؟](?:\s|$)/).filter(x=>x.trim()).length;
   for(const [q,re,src] of [["how many reps for hypertrophy",/6–12 reps a set\. Your program has most lifts at/,/Training variables 20\.3/],
     ["how long should I rest between sets",/up to 3 min between sets\. Your program rests/,/Training variables 20\.3/],
@@ -2492,6 +2555,7 @@ await test("Coach knowledge: training questions answer from the knowledge files 
     await agSay(page,q);const r=await lead();
     if(!re.test(r.lead))throw new Error(q+": "+r.lead);
     if(!src.test(r.src))throw new Error(q+": no source: "+r.src);
+    if(r.shown)throw new Error(q+": the source is shown");
     if(sents(r.lead)>2||words(r.lead)>45)throw new Error(q+": the lead runs "+words(r.lead)+" words");}
   /* Every answer's lead, whatever it is, two sentences at most. */
   for(const q of ["What do I train today?","what should I eat now","is my program balanced","how am i doing","my knee hurts"]){
@@ -2521,15 +2585,18 @@ await test("Coach scope: no diagnosis, no medical or supplement advice, however 
 });
 await test("Coach actions: every action in the registry runs through a branch the screens already answer",async page=>{
   const r=await page.evaluate(async()=>{
-    const A=(await import("/js/ui/handlers/actions.js")).ACTIONS,src=await (await fetch("/js/ui/handlers/actions.js")).text();
-    const keys=[...src.matchAll(/tap\(\{([a-z]+):/g)].map(m=>m[1]);
+    const M=await import("/js/ui/handlers/actions.js"),A=M.ACTIONS,src=await (await fetch("/js/ui/handlers/actions.js")).text();
+    /* The taps written out, and the places "open …" goes (the Coach sections go through
+       shell.js's one csec/ctsub/cfsub branch). */
+    const keys=[...src.matchAll(/tap\(\{([a-z]+):/g)].map(m=>m[1])
+      .concat(Object.values(M.PLACE).flat().map(D=>Object.keys(D)[0]).filter(k=>k!=="csec"));
     const handlers=await Promise.all(["shell","train","session","food","coach","progress","profile"].map(n=>fetch("/js/ui/handlers/"+n+".js").then(x=>x.text())));
     const all=handlers.join("\n");
     return {n:Object.keys(A).length,missing:[...new Set(keys)].filter(k=>!new RegExp('(key|has)\\("'+k+'"').test(all)),
       described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
       domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
   eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");
-  eq(r.domains,["cardio","exercise","food","plan","profile","progress","set"],"grouped by domain");
+  eq(r.domains,["app","cardio","exercise","food","plan","profile","progress","rest","set","steps","water","workout"],"grouped by domain");
   /* set.log, in a live workout: the logger's own Log set. */
   await startWorkout(page);
   const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");
