@@ -4810,6 +4810,38 @@ body.noanim .chat-orb::before,body.noanim .chat-orb::after{animation:none!import
 .tour-tap{font-size:12px;color:var(--dim)}
 .tour-skip{flex:none;min-height:32px;padding:0 12px;border:0;border-radius:var(--rpill);background:rgba(var(--accent-rgb),.12);
   color:var(--text);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
+/* The workout's swipe hint (js/ui/tour.js): the screen dimmed, an arrow at the edge the
+   next exercise comes from, a finger sliding across from it, one line under it. */
+.swhint{position:fixed;inset:0;z-index:90;touch-action:none;-webkit-tap-highlight-color:transparent;
+  background:rgba(0,0,0,.62);opacity:0;transition:opacity .24s var(--e-standard)}
+.swhint.on{opacity:1}
+.swhint-edge{position:absolute;top:50%;right:0;width:56px;height:120px;margin-top:-60px;display:grid;place-items:center;
+  border-radius:var(--r4) 0 0 var(--r4);background:rgba(var(--accent-rgb),.22);border:1px solid rgba(var(--accentHi-rgb),.6);border-right:0;
+  color:var(--accentHi);animation:swEdge 1.6s ease-in-out infinite}
+.swhint-edge svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.swhint.rtl .swhint-edge{right:auto;left:0;border-radius:0 var(--r4) var(--r4) 0;border-right:1px solid rgba(var(--accentHi-rgb),.6);border-left:0}
+.swhint.rtl .swhint-edge svg{transform:scaleX(-1)}
+@keyframes swEdge{0%,100%{transform:translateX(0)}50%{transform:translateX(-6px)}}
+.swhint.rtl .swhint-edge{animation-name:swEdgeR}
+@keyframes swEdgeR{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+.swhint-track{position:absolute;top:50%;left:var(--s5);right:var(--s5);height:0}
+.swhint-dot{position:absolute;top:-22px;right:0;width:44px;height:44px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,rgba(255,255,255,.95),rgba(255,255,255,.55) 60%,rgba(255,255,255,.15));
+  box-shadow:0 0 0 6px rgba(255,255,255,.12),0 10px 24px rgba(0,0,0,.4);animation:swDot 1.9s cubic-bezier(.4,0,.2,1) infinite}
+.swhint-dot::after{content:"";position:absolute;top:50%;left:100%;width:90px;height:6px;margin-top:-3px;border-radius:var(--rpill);
+  background:linear-gradient(90deg,rgba(255,255,255,.4),transparent)}
+@keyframes swDot{0%{right:0;opacity:0}12%{opacity:1}70%{right:calc(100% - 44px);opacity:1}100%{right:calc(100% - 44px);opacity:0}}
+.swhint.rtl .swhint-dot{right:auto;left:0;animation-name:swDotR}
+.swhint.rtl .swhint-dot::after{left:auto;right:100%;background:linear-gradient(270deg,rgba(255,255,255,.4),transparent)}
+@keyframes swDotR{0%{left:0;opacity:0}12%{opacity:1}70%{left:calc(100% - 44px);opacity:1}100%{left:calc(100% - 44px);opacity:0}}
+.swhint-card{position:absolute;left:var(--s4);right:var(--s4);top:calc(50% + 84px);padding:var(--s4) var(--s4) var(--s3);border-radius:20px;
+  background:rgba(var(--bg-rgb),.72);border:1px solid var(--card-edge);color:var(--text);
+  -webkit-backdrop-filter:saturate(170%) blur(26px);backdrop-filter:saturate(170%) blur(26px)}
+.swhint-card h2{margin:0 0 var(--s1);font-family:var(--display);font-size:19px;line-height:1.25}
+.swhint-card p{margin:0 0 var(--s2);font-size:14.5px;line-height:1.5;color:var(--sub)}
+@media (prefers-reduced-motion:reduce){.swhint-edge,.swhint-dot{animation:none}.swhint-dot{opacity:1}}
+:root.reduced .swhint-edge,:root.reduced .swhint-dot,body.noanim .swhint-edge,body.noanim .swhint-dot{animation:none}
+:root.reduced .swhint-dot,body.noanim .swhint-dot{opacity:1}
 /* While a guide is open the dock stays in sight, so it can be pointed at. */
 body.touring nav.dhid .dock{transform:none;opacity:1}
 @media (prefers-reduced-motion:reduce){.tour-hole,.tour-hole::after,.tour-card.in{transition:none;animation:none!important;opacity:1}}

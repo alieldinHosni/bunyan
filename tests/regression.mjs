@@ -2957,6 +2957,21 @@ await test("Layout: scrolled to the end, every screen's content ends above the d
         if(y?r.hit.length:r.hit.some(h=>h[0]==="("))throw new Error(w+" "+lang+" "+tab+" @"+y+": the launcher covers "+r.hit.join(", "));
         if(y&&!r.end)throw new Error(w+" "+lang+" "+tab+": the content ends under the dock");}}}
 });
+await test("Workout: the first time, a hint shows to swipe for the next exercise (from the right in English, the left in Arabic); a tap or a swipe puts it away for good",async page=>{
+  await startWorkout(page);await pause(page,1200);
+  const h=await page.evaluate(()=>{const e=document.querySelector(".swhint .swhint-edge");if(!e)return null;const r=e.getBoundingClientRect();
+    return {right:Math.round(innerWidth-r.right),text:document.querySelector(".swhint h2").textContent};});
+  eq(h,{right:0,text:"Swipe left for the next exercise"},"at the right edge, saying which way");
+  await page.tap('.swhint');await pause(page,400);
+  eq(await ev(page,"[!!document.querySelector('.swhint'),S.prefs.toured.swipe]"),[false,1],"a tap puts it away and it is remembered");
+  /* A swipe (here, moving to the next exercise) puts it away too. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;delete S.prefs.toured.swipe;S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});
+  await pause(page,1200);
+  const a=await page.evaluate(()=>{const e=document.querySelector(".swhint .swhint-edge");return e?Math.round(e.getBoundingClientRect().left):null;});
+  eq(a,0,"Arabic: at the left edge");
+  await page.evaluate(async()=>{(await import("/js/ui/workout.js")).jumpTo(1);});await pause(page,500);
+  eq(await ev(page,"[!!document.querySelector('.swhint'),S.prefs.toured.swipe]"),[false,1],"moving on puts it away");
+},{tour:true,prefs:{toured:{train:9,food:9,coach:9,progress:9,profile:9}}});
 /* ---- Phase 1 of the visual audit ---- */
 /* The set card says last time once, for the set being done (workout-spec.md); before the
    first set it is the recommendation instead. */
