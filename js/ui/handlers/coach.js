@@ -178,6 +178,15 @@ function register(){
     loadFoods(function(){
       var ok=holdCoach(function(){return perform(m.ag.act,m.ag.p,m.at);});
       m.ag.s=ok?"applied":"failed";saveDB();render();});return;});
+  /* Something the person told the coach to do that runs at once (js/ui/agent.js
+     planCommand): going somewhere and the workout's buttons let the panel go with the
+     move; a setting keeps it open, with Undo. */
+  key("agrun",function(D){var m=findMsg(D.agrun);if(!m||!m.ag||m.ag.s!=="confirm"||!m.ag.run)return;
+    var go=/^(app\.go|workout\.|rest\.)/.test(m.ag.act),ok;
+    m.ag.s="applied";saveDB();
+    ok=go?perform(m.ag.act,m.ag.p,m.at):holdCoach(function(){return perform(m.ag.act,m.ag.p,m.at);});
+    if(!ok)m.ag.s="failed";
+    saveDB();render();if(!go)toEnd();return;});
   key("agno",function(D){var m=findMsg(D.agno);if(!m||!m.ag||m.ag.s!=="confirm")return;
     m.ag.s="declined";saveDB();render();return;});
   key("agundo",function(D){var m=findMsg(D.agundo);if(!m||!m.ag||m.ag.s!=="applied")return;

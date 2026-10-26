@@ -28,7 +28,7 @@ import {exName, planName} from "../i18n/exnames.js";
 import {lastWeight} from "../engine/formulas.js";
 import {S, split} from "../state.js";
 import {fmtW} from "../units.js";
-import {fmtN, pretty, today} from "../util.js";
+import {fmtN, num, pretty, today} from "../util.js";
 import {doseText} from "./dose.js";
 import {mealNow} from "./view.js";
 import {exHay} from "./views/train.js";
@@ -320,6 +320,72 @@ function plan(id,text,it){
   if(id==="foodlog")return planLog(text,null,it);
   if(id==="weighlog")return planWeigh(text,null,it);
   return null;}
+/* ---- doing things in the app ------------------------------------------------------
+   A command (js/coach/commands.js) as what the chat shows. Going somewhere, a setting,
+   and the workout's own buttons run at once (run:true): the chat says what was done,
+   and a setting can be undone. Anything that writes to the log waits for a tap. */
+var PLACENAME={food:"Food",train:"Training",progress:"Progress",coach:"Coach",profile:"Profile",mealplan:"your meal plan",
+  targets:"your targets",program:"your program",programs:"the programs",history:"your workout history",weigh:"the weigh-in",
+  steps:"steps",recovery:"sleep and recovery",activities:"the activities",assessment:"the assessment",settings:"settings",
+  you:"your details",backup:"backup",newmeals:"a new meal plan"};
+function now(act,p,lead,done,o){return Object.assign({s:"confirm",act:act,p:p,lead:"",done:done,run:true},o||{});}
+var GOALNAME={lose:"Lose fat",recomp:"Lose fat and build muscle",gain:"Build muscle",strength:"Get stronger",athletic:"Athletic performance",endurance:"Endurance",mobility:"Mobility"};
+function planCommand(c){
+  if(!c)return null;
+  if(c.cmd==="go"){
+    if(!c.to)return say(t("Where to? I can open Food, Training, Progress, your program, meal plan, targets, history, settings, or the weigh-in, steps and sleep logs."));
+    var nm=t(PLACENAME[c.to]||c.to);
+    return now("app.go",{to:c.to},fill(t("Opening {p}."),{p:nm}),fill(t("Opened {p}."),{p:nm}));}
+  if(c.cmd==="water.add"){
+    if(!c.ml)return say(t("How much? Say it like “add 500 ml of water” or “two glasses”."),[{l:t("Open Food"),a:{"data-tab":"food"}}]);
+    var r=S.days[today()]||{},w=(r.water||0)+c.ml;
+    return confirm("water.add",{ml:c.ml},{lead:fill(t("Add {n} ml of water to today?"),{n:fmtN(c.ml)}),item:fmtN(c.ml)+" "+t("ml"),
+      detail:fill(t("Today goes to {d} of {g} ml."),{d:fmtN(w),g:fmtN((S.goals||{}).water||0)}),cta:t("Add it"),
+      done:fill(t("Added {n} ml. Today: {d} ml."),{n:fmtN(c.ml),d:fmtN(w)}),undone:t("Undone. Today's water is as it was.")});}
+  if(c.cmd==="steps.log"){
+    if(!c.n)return say(t("How many steps? Say it with the number, like “log 8000 steps”."),[{l:t("Log steps"),a:{"data-sheet":"steps"}}]);
+    var cur=(S.days[today()]||{}).steps||0,n=c.add?cur+c.n:c.n;
+    return confirm("steps.log",{n:n},{lead:fill(t("Save {n} steps for today?"),{n:fmtN(n)}),item:fmtN(n),
+      detail:cur?fill(t("Logged so far today: {n}."),{n:fmtN(cur)}):"",cta:t("Save it"),
+      done:fill(t("Saved {n} steps for today."),{n:fmtN(n)}),undone:t("Undone. Today's steps are as they were.")});}
+  if(c.cmd==="app.unit"){if(S.prefs.unit===c.unit)return say(fill(t("Weights are already in {u}."),{u:c.unit==="lb"?"lb":"kg"}));
+    return now("app.unit",{unit:c.unit},"",fill(t("Weights now show in {u}."),{u:c.unit==="lb"?"lb":"kg"}),{undone:t("Undone. Units are as they were.")});}
+  if(c.cmd==="app.lang"){if(S.prefs.lang===c.lang)return say(t(c.lang==="ar"?"The app is already in Arabic.":"The app is already in English."));
+    return now("app.lang",{lang:c.lang},"",t(c.lang==="ar"?"The app is now in Arabic.":"The app is now in English."),{undone:t("Undone. The language is as it was.")});}
+  if(c.cmd==="app.look"){if(S.theme===c.look)return say(t(c.look==="dark"?"Dark mode is already on.":"Light mode is already on."));
+    return now("app.look",{look:c.look},"",t(c.look==="dark"?"Dark mode is on.":"Light mode is on."),{undone:t("Undone. The look is as it was.")});}
+  if(c.cmd==="app.palette")
+    return now("app.palette",{palette:c.palette},"",fill(t("The theme is now {p}."),{p:t(c.palette==="red"?"Red":c.palette==="mono"?"Mono":"Blue")}),{undone:t("Undone. The look is as it was.")});
+  if(c.cmd==="workout.start"){
+    if(S.active)return say(fill(t("You have a workout in progress: {d}. Pick it up where you left off."),{d:planName(S.active.dayName||"")}),[{l:t("Resume workout"),a:{"data-tab":"train"}}]);
+    var pl=planOn(split(),today()),d=pl&&pl.day&&!pl.rest&&pl.kind!=="done"?pl.day:null;
+    if(!d)return say(pl&&pl.rest?t("Today is a rest day. Pick a day to train anyway on Training."):t("There's no workout planned for today."),[{l:t("Open Training"),a:{"data-tab":"train"}}]);
+    return now("workout.start",{day:d.id},fill(t("Starting {d}."),{d:planName(d.name)}),fill(t("Started {d}."),{d:planName(d.name)}));}
+  if(/^(workout|rest)\./.test(c.cmd)&&!S.active)return say(t("There's no workout in progress. Say “start my workout” to begin today's."));
+  if(c.cmd==="workout.next")return now("workout.next",{},"",t("On to the next exercise."));
+  if(c.cmd==="workout.finish")return now("workout.finish",{},"",t("Finishing: confirm on the workout screen."));
+  if(c.cmd==="rest.skip")return now("rest.skip",{},"",t("Rest ended."));
+  if(c.cmd==="rest.extend")return now("rest.extend",{},"",t("Thirty more seconds of rest."));
+  if(c.cmd==="set.log"){
+    if(!S.active)return say(t("There's no workout in progress. Say “start my workout” to begin today's."));
+    var e=S.active.entries&&S.active.entries[S.active.idx||0],kg=c.unit==="lb"||(!c.unit&&S.prefs.unit==="lb")?Math.round(c.w/2.2046*10)/10:c.w;
+    if(!e||!c.r)return say(t("Say it like “80 kg for 8”."));
+    var nm2=exName(e.name);
+    return confirm("set.log",{w:kg,r:c.r},{lead:fill(t("Log {w} × {r} on {ex}?"),{w:fmtW(kg),r:c.r,ex:nm2}),item:fmtW(kg)+" × "+c.r,detail:nm2,
+      cta:t("Log it"),done:fill(t("Logged {w} × {r} on {ex}."),{w:fmtW(kg),r:c.r,ex:nm2}),undone:t("Undone. The set is taken back.")});}
+  if(c.cmd==="plan.calories"){
+    if(!c.kcal)return say(t("By how much? Say it like “raise my calories by 200”."),[{l:t("Targets"),a:{"data-csec":"food","data-cfsub":"targets"}}]);
+    var k0=num((S.goals||{}).kcal);
+    return confirm("plan.calories",{kcal:c.kcal},{lead:fill(t(c.kcal>0?"Raise your calorie target by {n} kcal?":"Lower your calorie target by {n} kcal?"),{n:fmtN(Math.abs(c.kcal))}),
+      item:fmtN(k0)+" → "+fmtN(k0+c.kcal)+" "+t("kcal"),detail:t("Carbs move with it; protein and fat stay."),cta:t("Change it"),
+      done:t("Target changed; carbs moved with it."),undone:t("Undone. Your targets are as they were.")});}
+  if(c.cmd==="plan.goal"){
+    if(!c.goal)return say(t("To which goal? Lose fat, build muscle, get stronger, endurance, athletic performance or mobility."));
+    if(S.profile.goal===c.goal)return say(fill(t("Your goal is already {g}."),{g:t(GOALNAME[c.goal])}));
+    return confirm("plan.goal",{goal:c.goal},{lead:fill(t("Change your goal to {g}?"),{g:t(GOALNAME[c.goal])}),item:t(GOALNAME[c.goal]),
+      detail:t("Your calorie and macro targets are worked out again for it."),cta:t("Change it"),
+      done:fill(t("Goal changed to {g}, with its targets."),{g:t(GOALNAME[c.goal])}),undone:t("Undone. Your goal and targets are as they were.")});}
+  return null;}
 /* A choice made from a pick: the same request, with that piece filled in. */
 function proceed(ag,v){
   var p=Object.assign({},ag.p);p[ag.slot]=v;
@@ -380,4 +446,4 @@ function namesFood(text){
   return [rest(swapParts(fq).from),rest(fq)].some(function(q){
     var c=parseFoodInput(q)[0];return !!c&&searchFoods(c.query,1).some(function(h){return h.score>=72;});});}
 
-export {answerPick, foodById, namesExercise, namesFood, plan, proceed};
+export {answerPick, foodById, namesExercise, namesFood, plan, planCommand, proceed};

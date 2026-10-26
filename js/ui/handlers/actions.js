@@ -34,7 +34,18 @@ var SNAP={
   live:function(){var a=copy(S.active),i=V.logIdx;return function(){S.active=a;V.logIdx=i;if(a)a.idx=i;};},
   day:function(){var d=today(),r=copy(S.days[d]);return function(){if(r)S.days[d]=r;else delete S.days[d];};},
   body:function(){var b=copy(S.body);return function(){S.body=b;};},
-  goals:function(){var g=copy(S.goals),k=S.profile.goal;return function(){S.goals=g;S.profile.goal=k;};}};
+  goals:function(){var g=copy(S.goals),k=S.profile.goal;return function(){S.goals=g;S.profile.goal=k;};},
+  /* Settings put back the way the screen's own buttons left them. */
+  prefs:function(){var pr=copy(S.prefs),th=S.theme;return function(){
+    if(pr.lang!==S.prefs.lang)tap({setlang:pr.lang});
+    if(th!==S.theme)tap({lookmode:th});
+    S.prefs=pr;};}};
+/* Where "open …" goes: the tap the screen itself makes to get there. */
+var PLACE={food:[{tab:"food"}],train:[{tab:"train"}],progress:[{tab:"progress"}],coach:[{tab:"coach"}],profile:[{prof:"1"}],
+  mealplan:[{csec:"food",cfsub:"plan"}],targets:[{csec:"food",cfsub:"targets"}],program:[{csec:"train",ctsub:"program"}],
+  programs:[{csec:"train",ctsub:"programs"}],history:[{tab:"progress"},{phist:"1"}],weigh:[{sheet:"weigh"}],steps:[{sheet:"steps"}],
+  recovery:[{sheet:"recovery"}],activities:[{actsheet:"1"}],assessment:[{setup:"1"}],settings:[{sheet:"set_app"}],
+  you:[{sheet:"set_you"}],backup:[{"export":"1"}],newmeals:[{pgen:"1"}]};
 
 var ACTIONS={
   "exercise.add":{desc:"Add a library exercise to a day of the program",params:{name:"exercise, from the library",day:"day id, from the program"},
@@ -77,7 +88,30 @@ var ACTIONS={
   "profile.you":{desc:"Open Profile > You: age, height, weight, sex, activity and goal",params:{},confirm:false,run:function(){tap({sheet:"set_you"});return true;}},
   /* Cardio is logged as a bout in the workout, or started from Training: the coach opens
      the list of activities rather than logging time it was not given. */
-  "cardio.open":{desc:"Open the list of activities to log or start one",params:{},confirm:false,run:function(){tap({actsheet:"1"});return true;}}};
+  "cardio.open":{desc:"Open the list of activities to log or start one",params:{},confirm:false,run:function(){tap({actsheet:"1"});return true;}},
+  "app.go":{desc:"Open a place in the app",params:{to:"one of "+Object.keys(PLACE).join(", ")},confirm:false,
+    run:function(p){var g=PLACE[p.to];if(!g)return false;g.forEach(function(D){tap(D);});return true;}},
+  "water.add":{desc:"Add water to today",params:{ml:"millilitres"},confirm:true,snap:"day",
+    /* Food's glass button, with the amount. */
+    run:function(p){if(!(p.ml>0))return false;tap({water:String(Math.round(p.ml)),wdate:today()});return true;}},
+  "steps.log":{desc:"Save today's steps",params:{n:"steps for the day"},confirm:true,snap:"day",
+    /* The steps sheet's Save, with the number in the field. */
+    run:function(p){if(!(p.n>=0))return false;V.draft.st=p.n;tap({savesteps:"1"});return true;}},
+  "app.unit":{desc:"Show weights in kg or lb",params:{unit:"kg or lb"},confirm:false,snap:"prefs",
+    run:function(p){if(!/^(kg|lb)$/.test(p.unit))return false;tap({setunit:p.unit});return true;}},
+  "app.lang":{desc:"Set the app's language",params:{lang:"en or ar"},confirm:false,snap:"prefs",
+    run:function(p){if(!/^(en|ar)$/.test(p.lang))return false;tap({setlang:p.lang});return true;}},
+  "app.look":{desc:"Light or dark mode",params:{look:"light or dark"},confirm:false,snap:"prefs",
+    run:function(p){if(!/^(light|dark)$/.test(p.look))return false;tap({lookmode:p.look});return true;}},
+  "app.palette":{desc:"The app's colour theme",params:{palette:"red, blue or mono"},confirm:false,snap:"prefs",
+    run:function(p){if(!/^(red|blue|mono)$/.test(p.palette))return false;tap({settheme:p.palette});return true;}},
+  "workout.start":{desc:"Start a day of the program",params:{day:"day id"},confirm:false,
+    run:function(p){if(S.active||!dayOf(p.day))return false;tap({startday:p.day});return true;}},
+  /* The workout's own buttons: next, finish (its own confirmation), and the rest timer's. */
+  "workout.next":{desc:"Go to the next exercise in the workout",params:{},confirm:false,run:function(){if(!S.active)return false;tap({nextex:"1"});return true;}},
+  "workout.finish":{desc:"Finish the workout: the app asks to confirm",params:{},confirm:false,run:function(){if(!S.active)return false;tap({finish:"1"});return true;}},
+  "rest.skip":{desc:"End the rest timer",params:{},confirm:false,run:function(){if(!S.active||!(V.restEnd||V.restPaused||V.restDone))return false;tap({rest:"skip"});return true;}},
+  "rest.extend":{desc:"Thirty more seconds of rest",params:{},confirm:false,run:function(){if(!S.active)return false;tap({rest:V.restEnd&&!V.restDone?"30":"extend"});return true;}}};
 
 /* The newest applied action's way back, for this session only. */
 var LAST=null;
@@ -94,4 +128,4 @@ function undo(tag){
   if(!canUndo(tag))return false;
   LAST.back();LAST=null;saveDB();render();return true;}
 
-export {ACTIONS, canUndo, perform, undo};
+export {ACTIONS, canUndo, perform, PLACE, undo};

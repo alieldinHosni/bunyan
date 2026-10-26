@@ -24,10 +24,12 @@ import {pinnedOn, weekDates} from "../../engine/schedule.js";
 import {muscleOf, secondaryOf} from "../../data/exercises.js";
 import {LANDMARKS} from "../../coach/landmarks.js";
 import * as KB from "../../engine/kb.js";
+import {lookup, ownTerms} from "../../engine/kbsearch.js";
 import {weeklySets} from "../../engine/volume.js";
 import {weeklyVolume} from "../../engine/stats.js";
 import {canUndo} from "../handlers/actions.js";
-import {answerPick, namesExercise, namesFood, plan as planAction, proceed} from "../agent.js";
+import {answerPick, namesExercise, namesFood, plan as planAction, planCommand, proceed} from "../agent.js";
+import {commandOf} from "../../coach/commands.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
@@ -75,7 +77,8 @@ var NEXT={
   kvolume:["balance","strong","plan"],ktempo:["weights","today","strong"],kwarm:["today","weights","sore"],kdur:["missed","today","balance"],
   k1rm:["strong","weights","track"],scope:["today","track","help"],situation:["today","rest","track"],
   weekfood:["rest","protein","track"],logfood:["rest","eat","track"],weektrain:["today","tomorrow","balance"],letgo:["today","tomorrow","track"],
-  lowday:["today","sore","missed"],remember:["facts","today","eat"],facts:["today","eat","track"]};
+  lowday:["today","sore","missed"],remember:["facts","today","eat"],facts:["today","eat","track"],
+  know:["today","eat","track"],app:["today","eat","track"]};
 
 function fill(s,o){Object.keys(o).forEach(function(k){s=s.split("{"+k+"}").join(o[k]);});return s;}
 function list(a){return a.join(S.prefs.lang==="ar"?"، ":", ");}
@@ -425,13 +428,17 @@ function aSteps(a){
 function aHelp(a){
   p(a,t("I answer from your own log, plan and targets, worked out on this phone. Nothing you type leaves it."));
   p(a,t("Ask about today's workout, what to lift, what to eat, your weight, protein and calories, soreness, missing a day or having little time, your program's balance, your strength, your goal, or a new plan."));
+  p(a,t("Ask anything about training, food, sleep, cardio, mobility or habits, too."));
+  l(a,[t("Tell me to do things: “open my meal plan”, “add a glass of water”, “log 8000 steps”, “start my workout”, “skip rest”, “80 kg for 8”."),
+    t("Change things: “raise my calories by 200”, “change my goal to build muscle”, “switch to pounds”, “dark mode”, “switch to Arabic”."),
+    t("And your program and food: “add squats to leg day”, “swap bench press for push-ups”, “I ate 200 g of chicken”, “I weigh 82 kg”.")]);
   return a;}
 function aHello(a){
   var nm=(S.profile.name||"").trim();
   return p(a,(nm&&nm!=="Me"?fill(t("Hi {n}."),{n:nm}):t("Hi."))+" "+t("Ask me about today's training, your food, or how things are going."));}
 function aThanks(a){return p(a,t("Any time."));}
 function aUnknown(a){
-  return p(a,t("That isn't something I can answer from your log or the coaching notes I work from, so I won't guess.")+" "+t("I can answer these, or you can say it another way:"));}
+  return p(a,t("That isn't something I can answer from your log or what I know, so I won't guess.")+" "+t("I can answer these, or you can say it another way:"));}
 
 /* ---- tomorrow, the last workout -------------------------------------------------- */
 function aTomorrow(a){
@@ -667,7 +674,7 @@ function aKVolume(a,q){
     {m:tm(pick).toLowerCase(),n:plan0,r:range(r),v:plan0<r.min?t("there's room for more"):plan0>r.max?t("that's above it"):t("that's inside it")}));
   if(done!=null)n(a,fill(t("Logged so far this week: {n}."),{n:Math.round(done)}));
   p(a,t("Several sets an exercise build more muscle and strength than one."));
-  n(a,t("The weekly range is the app's own, from practitioner guidelines (Renaissance Periodization), not from the coaching notes. People differ widely."));
+  n(a,t("The weekly range is the app's own, from practitioner guidelines (Renaissance Periodization). People differ widely."));
   return src(a,vk.src);}
 function aKTempo(a){var k=KB.tempo();
   p(a,t("Slower reps suit building muscle and endurance; faster ones suit strength and power."));
@@ -684,7 +691,7 @@ function aKDur(a){
   return src(a,d.src);}
 function aK1RM(a){
   var o=KB.oneRM(),top=topLifts().filter(function(L){return !isActivity(L.name)&&L.w&&bwShare(L.name)<=0;})[0];
-  p(a,fill(t("The app estimates a one-rep max from your best set with the Epley formula, up to 12 reps. The coaching notes' chart covers {r} reps."),{r:range(o.repsRange)}));
+  p(a,fill(t("The app estimates a one-rep max from your best set with the Epley formula, up to 12 reps. The standard chart covers {r} reps."),{r:range(o.repsRange)}));
   if(top){var e=e1RM(top.w,top.reps,top.rpe);if(e&&top.reps>1)p(a,fill(t("{ex}: {w} × {r}, so about {e} for one."),{ex:exName(top.name),w:fmtW(top.w),r:top.reps,e:fmtW(e)}));}
   n(a,t("An estimate: the more reps in the set, the less exact."));
   return src(a,o.src);}
@@ -732,6 +739,52 @@ function aElse(a,q){
     p(a,t("That's not something I have data on. I can show you how your training and weight are going."));
     return act(a,t("How am I doing?"),{"data-chatq":"track","data-chatl":uiLang()});}
   return aUnknown(a);}
+
+/* ---- anything else the knowledge files answer -------------------------------------
+   A question none of the answers above is for, looked up across the whole knowledge
+   base (js/engine/kbsearch.js): what it says, lead first, then what of the person's own
+   log and targets bears on it, and where in the app to act on it. The knowledge files
+   are English data, so their lines stay English in an Arabic answer, as food names do.
+   A search that finds nothing good is not an answer: aElse says so. */
+function sexLine(s){var x=S.profile.sex;
+  return x==="f"?!/^(Men|Male)\b/.test(s):x==="m"?!/^(Women|Female)\b/.test(s):true;}
+function lastNights(){
+  var out=[];for(var i=0;i<7;i++){var r=S.days[addDaysISO(today(),-i)];if(r&&num(r.sleep)>0)out.push(num(r.sleep));}
+  return out;}
+/* The person's side: by what the passage is about. */
+function mine(a,k){
+  var tt=k.doc.file+" "+k.doc.top+" "+k.doc.title,g=S.goals||{},r=S.days[today()]||{};
+  if(/sleep/i.test(tt)){
+    var ns=lastNights();
+    if(ns.length)p(a,fill(t("You logged {h} hours a night on average over your last {n} nights."),{h:r1(ns.reduce(function(x,y){return x+y;},0)/ns.length),n:ns.length}));
+    else if(num(S.profile.sleep))p(a,fill(t("In the assessment you said you sleep about {h} hours."),{h:r1(num(S.profile.sleep))}));
+    return act(a,t("Log sleep and energy"),{"data-sheet":"recovery"});}
+  if(/hydration|fluid|water/i.test(tt)){
+    if(g.water)p(a,fill(t("Your target is {g} ml a day. Today so far: {d} ml."),{g:fmtN(g.water),d:fmtN(r.water||0)}));
+    return act(a,t("Add a glass"),{"data-water":"250","data-wdate":today()});}
+  if(/protein/i.test(tt)&&g.p){p(a,fill(t("Your target is {p} g a day."),{p:g.p}));return act(a,t("Targets"),{"data-csec":"food","data-cfsub":"targets"});}
+  if(/carbohydrate|lipid|fat|energy|calori|weight management|macronutrient/i.test(tt)&&g.kcal){
+    p(a,fill(t("Your targets: {k} kcal, {p} g protein, {c} g carbs, {f} g fat a day."),{k:fmtN(g.kcal),p:g.p||0,c:g.c||0,f:g.f||0}));
+    return act(a,t("Targets"),{"data-csec":"food","data-cfsub":"targets"});}
+  if(k.area==="cardio"){var c=weeklyCardio();
+    p(a,fill(t("Cardio this week: {m} of the {t} minutes of moderate activity health guidelines suggest."),{m:c.min,t:c.target}));
+    return act(a,t("Log or start an activity"),{"data-actsheet":"1"});}
+  if(k.area==="train"&&S.onboarded){var sp=split(),dd=sp&&sp.days?sp.days.filter(function(d){return d.ex.length;}).length:0;
+    if(dd)p(a,fill(t("Your program has {n} training days a week."),{n:dd}));
+    return act(a,t("Open my program"),{"data-csec":"train","data-ctsub":"program"});}
+  if(k.area==="mobility")return act(a,t("Open Training"),{"data-tab":"train"});
+  return a;}
+function aKnow(a,q,it){
+  var k=it&&it.know||lookup(q);
+  if(!k)return aElse(a,q);
+  var lines=k.lines.filter(sexLine),also=k.also.filter(sexLine);
+  if(it&&it.deeper){lines=lines.slice(1);if(!lines.length&&!also.length)lines=k.lines.slice(0,1);}
+  var lead=k.needsFigure&&k.figure&&sexLine(k.figure)?k.figure:lines[0]||k.lines[0];
+  /* Asked for a figure the knowledge does not hold: said so, then what it does hold. */
+  if(k.needsFigure&&!k.figure)p(a,t("There's no single number for that. What holds:")+" "+lead+".");
+  else p(a,/[.!?]$/.test(lead)?lead:lead+".");
+  l(a,lines.filter(function(x){return x!==lead;}).concat(also.filter(function(x){return x!==lead&&lines.indexOf(x)<0;})).slice(0,5));
+  return mine(a,k);}
 
 /* ---- a report, not a question: one question back, never a guess --------------------
    "I had a bad day, didn't stick to the diet" (js/coach/intent.js situationOf). The
@@ -881,7 +934,7 @@ function aReassess(a){
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
 var ANSWER={today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
-  help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
+  help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
   scope:aScope,reassess:aReassess,situation:function(a,q,it){return aSituation(a,q,it,it.sit||{kind:"day"});},weekfood:aWeekFood,logfood:aLogFood,weektrain:aWeekTrain,letgo:aLetGo,lowday:aLowDay,
   remember:aRemember,facts:aFacts};
@@ -922,6 +975,30 @@ function lastExchange(){var c=S.chat||[],m=c[c.length-1];return m&&num(m.at)>Dat
 var YES=/^(yes|yeah|yep|yup|sure|ok|okay|do it|go ahead|please do|add it|log it|save it|swap it|remove it|ايوه|اه|ايوا|تمام|ماشي|اوك|نعم|ضيفه|سجله|احفظه|بدله|شيله)( |$)/;
 var NO=/^(no|nope|not now|dont|don t|cancel|لا|لأ|مش دلوقتي|بلاش|خلاص)( |$)/;
 var MORE=/^(and|also|plus|what about|how about|و|كمان|وكمان)( |$)/;
+/* When the knowledge base answers instead: a question no answer here is for; one the
+   matched answer is only loosely about (one word of it, as "sleep" is to soreness);
+   or one that asks what something is or why. */
+var SOFT=/^(sore|steps|help|track|hello|thanks|missed|goal|strong|balance|today|tomorrow|plan|lowday)$/;
+var DEFINE=/^(what is|what are|whats|what s|define|explain|tell me about|why (is|are|do|does|should|would|must)|is it (good|bad|ok|okay|better|safe|true)|benefits? of|difference between|يعني ايه|ايه هو|ايه هي|ايه فايده|فايده|ليه)( |$)|\b(before|after) (a |my |the |)(workout|training|session|gym|lifting|run)\b|\b(how (many|much|long|often))\b/;
+var ASKQ=/[?؟]|^(how|what|why|when|which|should|is|are|do|does|can|كام|ايه|ازاي|ليه|امتي|هل)( |$)|(^| )(كام|قد ايه|ازاي)( |$)/;
+/* A short follow-up to the last answer: "why?", "more", "but how many hours?". */
+var ONTO=/^(yeah|yes|ok|okay|but|and|so|hmm|well|what about|how about|then|طب|طيب|بس|و|يعني|ماشي|اه)( |$)/;
+var DEEPER=/^(why|how come|more|tell me more|explain|details|go on|really|ليه|ازاي|اكتر|وضح|كمل)( |$)/;
+function knowFor(text,iid,it,prev){
+  var fq=fold(text),short=fq.split(" ").length<=8;
+  if(prev&&prev.id==="know"&&prev.kq&&DEEPER.test(fq)&&short){var kd=lookup(prev.kq);if(kd)return {k:kd,kq:prev.kq,deeper:true};}
+  var asked=ASKQ.test(fq)||/[?؟]/.test(text);
+  /* What lives in the app has its own answer (aElse: Profile > You, no data). */
+  if(ELSEWHERE.some(function(x){return x[1].test(fq);}))return null;
+  var loose=iid==="unknown"||(SOFT.test(iid)&&it.score<=7&&asked)||(DEFINE.test(fq)&&it.score<15&&(SOFT.test(iid)||iid==="eat"));
+  if(!loose)return null;
+  var k=lookup(text);
+  if(k&&(iid==="unknown"||k.titled))return {k:k,kq:text};
+  /* Not enough on its own: read with the question before it. */
+  var base=prev&&(prev.kq||prev.q);
+  /* "ok" alone says nothing new: only a follow-up with a word of its own is read on. */
+  if(iid==="unknown"&&base&&ownTerms(text).length&&(ONTO.test(fq)||fq.split(" ").length<=4)){var kc=lookup(base+" "+text);if(kc)return {k:kc,kq:base+" "+text};}
+  return null;}
 function ask(q,id,lang){
   pruneChat();
   /* A short answer to the last question: yes or no to a change waiting for a tap is that
@@ -941,8 +1018,12 @@ function ask(q,id,lang){
     var text=id?t(ASK[id]||""):String(q).trim().slice(0,300),iid=it.id;
     if(!id){
       /* The hard limits first, whatever else the question seems to be. */
-      var sit=null;
+      var sit=null,cm=null;
       if(scopeOf(text))iid="scope";
+      /* Something to do in the app: it is done, or asked for, the way its button does. */
+      else if(S.onboarded&&(cm=commandOf(text))){
+        var cg=null;try{cg=planCommand(cm);}catch(e){cg=null;}
+        if(cg)return {q:text,id:"app",at:Date.now(),b:[],acts:cg.acts||[],ag:cg,lang:L};}
       /* A report rather than a question or a request: one question back. */
       else if(!VERB.some(function(v){return v[0]!=="foodlog"&&v[1].test(fold(text));})&&(sit=situationOf(text))){iid="situation";it.sit=sit;}
       else if(factOf(text))iid="remember";
@@ -960,6 +1041,9 @@ function ask(q,id,lang){
         if(nx)return {q:text,id:prev.id,at:Date.now(),b:[],acts:nx.acts||[],ag:nx,lang:L};}
       if(/^(exadd|exremove|exswap|foodlog)$/.test(prev.id)&&(iid==="unknown"||MORE.test(fold(text)))
         &&(prev.id==="foodlog"?namesFood(text):namesExercise(text.replace(MORE,""))))iid=prev.id;}
+    if(!id&&iid!=="scope"&&iid!=="situation"&&iid!=="remember"){
+      var kn=null;try{kn=knowFor(text,iid,it,prev);}catch(e){kn=null;}
+      if(kn){iid="know";it.know=kn.k;it.kq=kn.kq;it.deeper=!!kn.deeper;}}
     if(ACTION_IDS.indexOf(iid)>=0&&iid!=="reassess"&&S.onboarded){
       var ag=null;try{ag=planAction(iid,text,it);}catch(e){ag=null;}
       if(ag)return {q:text,id:iid,at:Date.now(),b:[],acts:ag.acts||[],ag:ag,lang:L};
@@ -969,7 +1053,7 @@ function ask(q,id,lang){
       p(a,t("First, the assessment: a few questions, and the coach builds your targets, training and meals. Then I can answer from your own plan."));
       act(a,t("Start the assessment"),{"data-setup":"1"});}
     else{try{fn(a,text,it);}catch(e){a=aUnknown(A());}}
-    return {q:text,id:iid,at:Date.now(),b:a.b,acts:a.acts,src:a.src&&a.src.length?a.src:undefined,ag:a.ag,lang:L};});
+    return {q:text,id:iid,at:Date.now(),b:a.b,acts:a.acts,src:a.src&&a.src.length?a.src:undefined,ag:a.ag,lang:L,kq:iid==="know"?it.kq:undefined};});
   S.chat=(S.chat||[]).concat([msg]).slice(-KEEP);
   return msg;}
 /* A choice tapped on a pick: said as the person's own line, then the request goes on
@@ -1009,7 +1093,8 @@ var TOPIC={today:["Today's workout","dumbbell"],weights:["What to lift","dumbbel
   kvolume:["Weekly volume","balance"],ktempo:["Tempo","clock"],kwarm:["Warming up","flame"],kdur:["Session length","clock"],
   k1rm:["One-rep max","medal"],scope:["Outside what I do","info"],situation:["A rough day","moon"],
   weekfood:["The week's food","bowl"],logfood:["The week's food","bowl"],weektrain:["The week's training","dumbbell"],letgo:["The week's training","dumbbell"],
-  lowday:["A low day","moon"],remember:["What you told me","person"],facts:["What you told me","person"]};
+  lowday:["A low day","moon"],remember:["What you told me","person"],facts:["What you told me","person"],
+  know:["Good to know","spark"],app:["In the app","check"]};
 /* The opening screen: what can be asked, by what it is about. */
 var GROUPS=[["Training",["today","tomorrow","weights","sore"]],["Food",["eat","rest","swap","protein"]],
   ["Progress",["track","last","weight","strong"]]];
@@ -1053,7 +1138,7 @@ function buttons(acts){
    when the request was made and kept with it, so it shows as it was said. */
 var AGSTATE={confirm:1,applied:1,undone:1,declined:1,failed:1,pick:1,say:1};
 function agHtml(m,live){
-  var g=m.ag,at=esc(String(m.at)),h='<p class="chat-lead">'+figures(String(g.lead||""))+'</p>';
+  var g=m.ag,at=esc(String(m.at)),h=g.lead?'<p class="chat-lead">'+figures(String(g.lead))+'</p>':'';
   if(g.s==="confirm"||g.s==="applied"||g.s==="undone"||g.s==="declined"||g.s==="failed"){
     if(g.item)h+='<div class="ag-item"><b>'+esc(String(g.item))+'</b>'+(g.detail?'<span>'+figures(String(g.detail))+'</span>':'')+'</div>';}
   if(g.s==="confirm"&&live)h+='<div class="ag-acts"><button class="btn ag-ok" data-agok="'+at+'">'+esc(String(g.cta||t("Do it")))+'</button>'
@@ -1074,15 +1159,16 @@ function bubbleIn(m,live,L,prev){
    +'<div class="chat-ah"><span class="chat-gl">'+glyph(tp?tp[1]:"question")+'</span><span class="chat-ah-t">'
    +'<span class="chat-ak">'+esc(t("Coach"))+'</span>'+(tp?'<span class="chat-at">'+esc(t(tp[0]))+'</span>':'')+'</span></div>';
   if(m.ag&&typeof m.ag==="object"&&AGSTATE[m.ag.s])return h+agHtml(m,live)+'</div></div>';
+  /* Where an answer stands is kept with it, not shown: the coach speaks as a coach. */
+  var srcs=Array.isArray(m.src)?m.src:[];
+  if(srcs.length)h=h.replace('<div class="chat-a">','<div class="chat-a" data-src="'+esc(srcs.join(" · "))+'">');
   var b=(Array.isArray(m.b)?m.b:[]).filter(Boolean),lead="",more=b;
   if(b[0]&&b[0].p!=null){
     var ss=sentences(String(b[0].p));lead=ss.slice(0,2).join(" ");
     more=(ss.length>2?[{p:ss.slice(2).join(" ")}]:[]).concat(b.slice(1));}
   if(lead)h+='<p class="chat-lead">'+figures(lead)+'</p>';
-  var srcs=Array.isArray(m.src)?m.src:[];
   if(!lead)h+=blocks(more);
-  else if(more.length||srcs.length)h+='<details class="chat-more"><summary>'+esc(t("More"))+'</summary>'+blocks(more)
-    +(srcs.length?'<p class="chat-src">'+esc(t("From the coaching notes:"))+' '+srcs.map(function(x){return esc(String(x));}).join(" · ")+'</p>':'')+'</details>';
+  else if(more.length)h+='<details class="chat-more"><summary>'+esc(t("More"))+'</summary>'+blocks(more)+'</details>';
   h+=buttons(live&&Array.isArray(m.acts)?m.acts:[]);
   return h+'</div></div>';}
 
