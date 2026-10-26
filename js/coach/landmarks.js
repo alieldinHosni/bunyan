@@ -33,4 +33,14 @@ var BASIS="practitioner heuristics (Renaissance Periodization), not measured con
 
 var RANGE={new:[8,12],some:[10,16],experienced:[12,20],advanced:[14,22]};
 
-export {BASIS, LANDMARKS, RANGE};
+/* The range is about growing muscle (and keeping it while losing fat): it is what the
+   plan is built to and checked against only for a goal trained that way (the "hyp"
+   style in js/data/goals.js TRAIN). Strength, power, endurance, mobility and general
+   fitness are prescribed per exercise by the textbook's adaptation table instead
+   (sets, reps and rest; js/knowledge/acute-variables.js BY_ADAPTATION), and hold no
+   weekly target per muscle; for them only the top of the range is kept, as a ceiling
+   on what most people recover from. null: no floor. */
+function rangeFor(level,train){return train==="hyp"?RANGE[level]||RANGE.some:null;}
+function ceilingFor(level){return (RANGE[level]||RANGE.some)[1];}
+
+export {BASIS, ceilingFor, LANDMARKS, RANGE, rangeFor};

@@ -4,8 +4,8 @@
    into its accent, a fainter second line, closed shapes filled with the accent's glass,
    a few embers. They are made of the brand's own subjects and each page's own:
 
-     train     the owner's horseman at dusk over the river (js/ui/scene.js), a full
-               scene rather than a line drawing
+     train     the owner's horseman at dusk over the river: the owner's own picture,
+               one per theme (img/ground-red, -blue, -sage), not a drawing
      food      the harvest: wheat rising from the ground, an olive branch reaching in
      coach     the guide: a compass whose needle is the mark's sword, under a
                constellation
@@ -17,7 +17,6 @@
    the frosted cards show them softened. Their colours are CSS variables (--bga, --bgb,
    set on #bgart from the theme), so a change of theme or mode repaints them for free.
    Built once per page from a few generators, then kept; nothing here runs per frame. */
-import {scene} from "./scene.js";
 
 var W=390,H=844;
 /* a small fixed random, so the same page always draws the same */
@@ -140,11 +139,10 @@ var DEFS='<defs>'
 var CACHE={},shown="";
 /* The drawing for a page, as markup. */
 function bgArt(key){
-  /* Training's ground is the owner's horseman at dusk (js/ui/scene.js), a full scene
-     rather than a line drawing, kept to the foot of the screen where it stands. */
-  if(key==="train"){
-    if(!CACHE.train)CACHE.train='<svg class="art scene bgart-train" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">'+scene()+'</svg>';
-    return CACHE.train;}
+  /* Training's ground is the owner's horseman at dusk: the picture itself, rendered in
+     depth, not redrawn flat. Which one is the theme's (index.html, #bgart .photo), so a
+     change of theme swaps it without a rebuild. */
+  if(key==="train")return '<div class="art photo bgart-train" aria-hidden="true"></div>';
   if(!BUILD[key])return "";
   if(!CACHE[key])CACHE[key]='<svg class="art bgart-'+key+'" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">'+DEFS+BUILD[key]()+'</svg>';
   return CACHE[key];}

@@ -23,6 +23,10 @@ import {esc, fmtN, num, today} from "../../util.js";
 import {V} from "../view.js";
 import {backArrow} from "../nav.js";
 import {importName} from "../../engine/meals.js";
+import {ceilingFor} from "../../coach/landmarks.js";
+import {exThumb} from "../../data/exercises.js";
+import {doseText} from "../dose.js";
+import {glyph} from "../glyphs.js";
 
 /* Equipment as a choice of three, and what each means in the equipment list. */
 var GEARS={gym:null,home:["Dumbbell","Band","Kettlebell"],bw:["Bodyweight"]};
@@ -72,7 +76,7 @@ function preview(a){
     if(!tg)return out;
     /* The meals need the food database, which loads on the way to this screen. */
     if(FOODDB)try{meals=buildMealPlan(tg,foodPrefs(a));}catch(e){meals=null;}
-    out={tg:tg,td:tdee(),plan:plan,cands:cands,vol:volumeCheck(plan,a.level),meals:meals};
+    out={tg:tg,td:tdee(),plan:plan,cands:cands,vol:volumeCheck(plan,a.level,goalOf(a.goal).train),meals:meals};
   }finally{S.profile=keep.profile;S.gear=keep.gear;S.body=keep.body;}
   CACHE={k:key,v:out};
   return out;}
@@ -159,6 +163,20 @@ function kcalWhy(a,r){
     .replace("{d}",fmtN(Math.abs(Math.round(d/10)*10))).replace("{p}",pace)
     +(G.kcal<0?" "+t("Eat at least this; much less and you lose muscle with the fat."):"");}
 
+/* The result, as the owner drew it (26 Oct): the goal, then three cards — the day's
+   targets as tiles, the training as its days (each with its first exercise's picture,
+   opening to the whole day) and its weekly load per muscle, and the meals as cards —
+   and Back and Use this plan side by side. */
+var MUSCLE_INK={Chest:"--accent",Back:"--mac-p",Shoulders:"--gold",Quads:"--accentHi",Hamstrings:"--ok",Glutes:"--mac-f",Biceps:"--mac-c",Triceps:"--warning"};
+var MEAL_GLYPH=[[/breakfast|فطار|فطور/i,"grain"],[/lunch|غدا/i,"bowl"],[/dinner|عشا/i,"flame"],[/snack|سناك/i,"avocado"]];
+function mealGlyph(name){for(var i=0;i<MEAL_GLYPH.length;i++)if(MEAL_GLYPH[i][0].test(name))return MEAL_GLYPH[i][1];return "bowl";}
+/* A food by its Arabic name where the database has one, as the Food page shows it. */
+function foodLabel(x){
+  if(S.prefs.lang!=="ar"||!FOODDB)return x.n;
+  var f=FOODDB.filter(function(y){return y.id===x.fid;})[0],a=f&&(f.a||[]).filter(function(z){return /[\u0600-\u06FF]/.test(z);})[0];
+  return a||x.n;}
+function tile(ico,v,label){return '<div class="as-tile">'+glyph(ico)+'<b class="num">'+v+'</b><span>'+esc(label)+'</span></div>';}
+function cardHead(ico,label){return '<div class="as-ch">'+glyph(ico)+'<span>'+esc(label)+'</span></div>';}
 function result(a){
   var r=preview(a);
   if(!r)return '<p class="as-sub">'+t("Something went wrong working this out. Go back a step and try again.")+'</p>';
@@ -167,56 +185,65 @@ function result(a){
    +'<p class="as-sub">'+esc(t(LEVELS[a.level].label)+" · "+a.days+" "+t("days a week")+" · "+a.mins+" "+t("min"))+'</p></div>';
   if(a.done)h+='<div class="as-done" role="status">'+t("Your plan is in: today's training is on the Training page and today's meals on the Food page. Change anything in Coach.")+'</div>';
   /* Daily targets. */
-  h+='<section class="ascard2"><h3>'+t("Daily targets")+'</h3>'
-   +'<div class="as-kcal"><b>'+fmtN(tg.kcal)+'</b><span>kcal</span></div>'
+  h+='<section class="ascard2">'+cardHead("target",t("Daily targets"))
+   +'<div class="as-kcal"><b class="num">'+fmtN(tg.kcal)+'</b><span>'+t("kcal")+'</span></div>'
    +'<p class="as-why">'+esc(kcalWhy(a,r))+'</p>'
-   +'<div class="as-macros">'
-   +'<div><b>'+tg.p+' g</b><span>'+t("Protein")+'</span></div>'
-   +'<div><b>'+tg.c+' g</b><span>'+t("Carbs")+'</span></div>'
-   +'<div><b>'+tg.f+' g</b><span>'+t("Fat")+'</span></div>'
-   +(tg.water?'<div><b>'+(tg.water/1000).toFixed(2).replace(/0$/,"")+' L</b><span>'+t("Water")+'</span></div>':'')
-   +(tg.steps?'<div><b>'+fmtN(tg.steps)+'</b><span>'+t("Steps")+'</span></div>':'')+'</div>'
-   +'<p class="as-why">'+esc(t("Protein at {g} g per kg keeps and builds muscle; fat at about a quarter of your energy; carbs fuel the training.").replace("{g}",G.protein))+'</p></section>';
+   +'<div class="as-tiles">'+tile("shaker",tg.p+" g",t("Protein"))+tile("grain",tg.c+" g",t("Carbs"))+tile("avocado",tg.f+" g",t("Fat"))
+   +(tg.water?tile("drop",(tg.water/1000).toFixed(1)+" L",t("Water")):'')
+   +(tg.steps?tile("route",fmtN(tg.steps),t("Steps")):'')+'</div>'
+   +'<p class="as-note">'+esc(t("Protein at {g} g per kg keeps and builds muscle; fat at about a quarter of your energy; carbs fuel the training.").replace("{g}",G.protein))+'</p></section>';
   /* Training. */
   var c0=r.cands.filter(function(c){return c.id===(a.split||(r.cands[0]&&r.cands[0].id));})[0];
-  h+='<section class="ascard2"><h3>'+t("Training")+'</h3>'
-   +'<div class="as-split"><b>'+esc(planName(plan.name))+'</b>'+(c0?'<span>'+esc(c0.why)+'</span>':'')+'</div>';
+  h+='<section class="ascard2">'+cardHead("dumbbell",t("Training"))
+   +'<h2 class="as-split">'+esc(planName(plan.name))+'</h2>'+(c0?'<p class="as-why">'+esc(c0.why)+'</p>':'');
   if(r.cands.length>1)h+='<div class="aschips as-alt">'+r.cands.map(function(c){
       var on=c.id===(a.split||r.cands[0].id);
       return '<button class="aschip'+(on?' on':'')+'" data-assplit="'+esc(c.id)+'" aria-pressed="'+on+'">'+esc(planName(c.name))+'</button>';}).join("")+'</div>';
   h+='<div class="as-days">'+plan.days.filter(function(d){return d.ex.length;}).map(function(d){
-      return '<div><b>'+esc(planName(d.name))+'</b><span>'+d.ex.length+' '+t("exercises")+' · ~'+Math.round(dayMinutes(d)/5)*5+' '+t("min")+'</span></div>';}).join("")+'</div>';
-  h+='<p class="as-why">'+esc(t("Effort: stop each set with {a} reps left in reserve on the main lift and {b} on the rest. That is close enough to failure to grow, far enough to recover.").replace("{a}",T.rir[0]).replace("{b}",T.rir[1]))+'</p>';
-  if(T.add)h+='<p class="as-why">'+esc(t(T.add==="plyo"?"Jumps open each session, while you are fresh.":T.add==="cond"?"Each session ends with twelve minutes of intervals.":"Each session ends with mobility work for what it trained."))+'</p>';
-  /* Weekly sets per muscle, against the range for the level. */
-  var mx=Math.max.apply(null,r.vol.map(function(v){return Math.max(v.sets,v.hi);}).concat([1]));
-  h+='<div class="as-l">'+t("Hard sets a week, by muscle")+'</div><div class="as-vol">'
+      var names=d.ex.slice(0,3).map(function(e){return exName(e.name);}).join(", ");
+      return '<details class="as-day"><summary><img class="as-th" src="'+esc(exThumb(d.ex[0].name))+'" alt="" loading="lazy" decoding="async">'
+       +'<span class="as-dt"><b>'+esc(planName(d.name))+'</b><small>'+esc(names)+'</small></span>'
+       +'<span class="as-dm"><span class="num">'+d.ex.length+'</span> '+esc(t("exercises"))+'<br>~<span class="num">'+Math.round(dayMinutes(d)/5)*5+'</span> '+esc(t("min"))+'</span>'
+       +glyph("chev","as-chev")+'</summary>'
+       +'<ul class="as-dex">'+d.ex.map(function(e){return '<li><span>'+esc(exName(e.name))+'</span><span class="num">'+esc(doseText(e))+'</span></li>';}).join("")+'</ul></details>';}).join("")+'</div>';
+  h+='<p class="as-note">'+esc(t("Effort: stop each set with {a} reps left in reserve on the main lift and {b} on the rest. That is close enough to failure to grow, far enough to recover.").replace("{a}",T.rir[0]).replace("{b}",T.rir[1]))
+   +(T.add?" "+esc(t(T.add==="plyo"?"Jumps open each session, while you are fresh.":T.add==="cond"?"Each session ends with twelve minutes of intervals.":"Each session ends with mobility work for what it trained.")):"")+'</p>';
+  /* Weekly sets per muscle: against the range where the goal is muscle, against the
+     ceiling of what most people recover from otherwise. */
+  var top=ceilingFor(a.level),ranged=r.vol[0]&&r.vol[0].lo!=null;
+  h+='<div class="as-ch as-ch2">'+glyph("bars")+'<span>'+esc(t("Weekly training load"))+'</span></div><div class="as-vol">'
    +r.vol.map(function(v){
-      return '<div class="as-vr '+v.status+'"><span>'+esc(tm(v.m))+'</span>'
-       +'<i><em style="inset-inline-start:'+(v.lo/mx*100)+'%;width:'+((v.hi-v.lo)/mx*100)+'%"></em><b style="width:'+(Math.min(v.sets,mx)/mx*100)+'%"></b></i>'
-       +'<span class="num">'+v.sets+'</span></div>';}).join("")+'</div>'
-   +'<p class="as-note">'+esc(t("The shaded band is a typical range for your experience: {lo}–{hi} sets. It is a starting point, not a rule; how you recover decides.").replace("{lo}",r.vol[0].lo).replace("{hi}",r.vol[0].hi))+'</p>';
+      return '<div class="as-vr '+v.status+'" style="--ink:var('+(MUSCLE_INK[v.m]||"--accent")+')"><span>'+esc(tm(v.m))+'</span>'
+       +'<i>'+(ranged?'<em style="inset-inline-start:'+(v.lo/top*100)+'%;width:'+(Math.min(v.hi,top)-v.lo)/top*100+'%"></em>':'')
+       +'<b style="width:'+(Math.min(v.sets,top)/top*100)+'%"></b></i>'
+       +'<span class="num">'+v.sets+' / '+top+'</span></div>';}).join("")+'</div>'
+   +'<p class="as-note">'+esc(ranged
+      ?t("Hard sets a week. The shaded band is a typical range for your experience: {lo}–{hi} sets. It is a starting point, not a rule; how you recover decides.").replace("{lo}",r.vol[0].lo).replace("{hi}",r.vol[0].hi)
+      :t("Hard sets a week, out of {n}, about the most people recover from. Your goal isn't muscle size, so there is no weekly target per muscle: each exercise's sets and rest follow your goal.").replace("{n}",top))+'</p>';
   var sw=plan.meta&&plan.meta.swaps||[];
   if(sw.length)h+='<div class="as-l">'+t("Swapped for your equipment and sore spots")+'</div><ul class="as-swaps">'
     +sw.map(function(x){return '<li>'+esc(exName(x[0]))+' → <b>'+esc(exName(x[1]))+'</b></li>';}).join("")+'</ul>';
   h+='</section>';
   /* Meals: the day's targets as food, in the meals and style asked for. */
-  h+='<section class="ascard2"><h3>'+t("Meals")+'</h3>';
+  h+='<section class="ascard2">'+cardHead("bowl",t("Meal plan"));
   if(!r.meals)h+='<p class="as-why">'+esc(t("Putting your meals together…"))+'</p>';
   else{
     var all=[];r.meals.forEach(function(m){all=all.concat(m.items);});
     var mt=sumNutrition(all);
-    h+='<div class="as-days as-meals">'+r.meals.map(function(m,i){
-        var tot=sumNutrition(m.items);
-        return '<div><b>'+esc(importName(m,i))+'</b><span>'+fmtN(tot.kcal)+' kcal · '+t("P:")+' '+tot.p+'g</span>'
-         +'<small>'+esc(m.items.map(function(x){return x.n;}).join(", "))+'</small></div>';}).join("")+'</div>'
-     +'<p class="as-why">'+esc(t("The day comes to {k} kcal and {p} g of protein. Every food and amount can be changed in Coach → Nutrition.").replace("{k}",fmtN(mt.kcal)).replace("{p}",mt.p))+'</p>';}
+    h+='<div class="as-meals">'+r.meals.map(function(m,i){
+        var tot=sumNutrition(m.items),nm=importName(m,i);
+        return '<div class="as-meal"><details><summary><span class="as-mi">'+glyph(mealGlyph(nm))+'</span>'
+         +'<span class="as-mt"><b>'+esc(nm)+'</b><small>'+esc(m.items.slice(0,3).map(foodLabel).join(S.prefs.lang==="ar"?"، ":", "))+'</small>'
+         +'<small><span class="num">'+fmtN(tot.kcal)+'</span> '+t("kcal")+' · <span class="num">'+tot.p+'</span> g '+esc(t("protein"))+'</small></span>'+glyph("chev","as-chev")+'</summary>'
+         +'<ul class="as-dex">'+m.items.map(function(x){return '<li><span>'+esc(foodLabel(x))+'</span><span class="num">'+esc(x.label||"")+'</span></li>';}).join("")+'</ul></details></div>';}).join("")+'</div>'
+     +'<p class="as-note">'+esc(t("The day comes to {k} kcal and {p} g of protein. Every food and amount can be changed in Coach → Nutrition.").replace("{k}",fmtN(mt.kcal)).replace("{p}",mt.p))+'</p>';}
   h+='</section>';
-  h+='<p class="as-note">'+t("Bunyan is a training log, not medical advice. If you have an injury or a health condition, check with a professional first, and stop any exercise that causes sharp pain.")+'</p>';
-  if(!a.done)h+='<div class="dcta"><button class="btn dbegin" data-asuse="1">'+t("Use this plan")+'</button>'
-    +'<p class="bnote">'+t("Sets your daily targets, makes this your training and fills your meals. Your history stays as it is.")+'</p></div>';
-  else h+='<div class="dcta"><button class="btn dbegin" data-astrain="1">'+t("Today's training")+'</button>'
-    +'<button class="btn g" data-asfood="1">'+t("Today's food")+'</button></div>';
+  h+='<p class="as-note as-disc">'+glyph("info")+'<span>'+t("Bunyan is a training log, not medical advice. If you have an injury or a health condition, check with a professional first, and stop any exercise that causes sharp pain.")+'</span></p>';
+  if(!a.done)h+='<div class="as-cta"><button class="btn g" data-asback="1">'+glyph("arrow","as-back")+t("Back")+'</button>'
+    +'<button class="btn dbegin" data-asuse="1">'+glyph("check")+t("Use this plan")+'</button></div>'
+    +'<p class="bnote">'+t("Sets your daily targets, makes this your training and fills your meals. Your history stays as it is.")+'</p>';
+  else h+='<div class="as-cta"><button class="btn g" data-asfood="1">'+t("Today's food")+'</button>'
+    +'<button class="btn dbegin" data-astrain="1">'+t("Today's training")+'</button></div>';
   return h;}
 
 function vAssess(){
@@ -231,7 +258,6 @@ function vAssess(){
     h+='<div class="as-nav">'
      +(a.step>0?'<button class="btn g" data-asback="1">'+t("Back")+'</button>':'')
      +'<button class="btn" data-asnext="1">'+t(s==="intro"?"Start":s==="sleep"?"See my plan":"Next")+'</button></div>';}
-  else if(!a.done)h+='<div class="as-nav"><button class="btn g" data-asback="1">'+t("Back")+'</button></div>';
   return h;}
 
 export {activityOf, draftFrom, foodPrefs, GEARS, preview, profileOf, STEPS, vAssess, youOk};

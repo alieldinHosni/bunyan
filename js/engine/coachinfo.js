@@ -13,7 +13,9 @@ import {isActivity} from "../data/activities.js";
 import {EXDB, isCompound, muscleOf, secondaryOf} from "../data/exercises.js";
 import {lastWeight, loadOf} from "./formulas.js";
 import {S, split} from "../state.js";
-import {today} from "../util.js";
+import {num, today} from "../util.js";
+import {LANDMARKS} from "../coach/landmarks.js";
+import {weeklySets} from "./volume.js";
 
 var INFO={muscle:muscleOf,secondary:secondaryOf,activity:isActivity,load:loadOf};
 /* A cheap fingerprint of the log, so an edited workout (a set, a weight, a date) is
@@ -49,7 +51,11 @@ function programFacts(){
       planned[muscleOf(e.name)]=1;
       if(first&&isCompound(e.name)){if(mains.indexOf(e.name)<0)mains.push(e.name);first=false;}
       if(e.lo&&e.hi&&!ranges[e.name])ranges[e.name]={lo:e.lo,hi:e.hi};});});
-  return {mains:mains,ranges:ranges,planned:Object.keys(planned),id:prog&&prog.id};}
+  /* "Less training than your program has" is only true where the program has enough:
+     a muscle counts as planned when its weekly sets reach where growth starts (mev). */
+  var ws=prog?weeklySets(prog):{};
+  return {mains:mains,ranges:ranges,id:prog&&prog.id,
+    planned:Object.keys(planned).filter(function(m){var L=LANDMARKS[m];return !L||num(ws[m])>=L.mev;})};}
 
 function coachNow(){
   var ss=S.sessions||[],pf=programFacts();

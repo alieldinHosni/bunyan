@@ -5,8 +5,10 @@ import {isActivity} from "../data/activities.js";
 import {PRESETS} from "../data/splits.js";
 import {addProgram, makeProgram, S, saveDB} from "../state.js";
 import {num, uid} from "../util.js";
+import {t} from "../i18n/dict.js";
 import {goalOf, GOALS, trainOf} from "../data/goals.js";
-import {JUDGED, RANGE, weeklySets} from "./volume.js";
+import {JUDGED, RANGE, rangeFor, weeklySets} from "./volume.js";
+import {BY_ADAPTATION} from "../knowledge/acute-variables.js";
 
 /* ============================================================ plan engine */
 /* sets and rest are [compound, isolation]. Compounds always get more of both. */
@@ -116,15 +118,16 @@ function whyThisSplit(days,level,goal,id){
     bw:"Nothing but the floor, so it fits whatever you have to hand."
   };
   var goalNote=goal==="lose"
-      ?" Frequency and compound work hold onto muscle while you are eating less."
-    :goal==="recomp"?" Every muscle trained often, so the muscle you build outpaces the fat you lose."
-    :goal==="gain"?" Volume per muscle is what drives size."
-    :goal==="strength"?" The big lifts come round often enough to practise them."
-    :goal==="athletic"?" Jumps first while you are fresh, then the strength that powers them."
-    :goal==="endurance"?" Whole-body sessions with short rests, and conditioning to finish."
-    :goal==="mobility"?" Whole-body strength through full ranges, with mobility work every session."
+      ?"Frequency and compound work hold onto muscle while you are eating less."
+    :goal==="recomp"?"Every muscle trained often, so the muscle you build outpaces the fat you lose."
+    :goal==="gain"?"Volume per muscle is what drives size."
+    :goal==="strength"?"The big lifts come round often enough to practise them."
+    :goal==="athletic"?"Jumps first while you are fresh, then the strength that powers them."
+    :goal==="endurance"?"Whole-body sessions with short rests, and conditioning to finish."
+    :goal==="mobility"?"Whole-body strength through full ranges, with mobility work every session."
     :"";
-  return (byId[id]||"")+" "+d+" days a week."+goalNote;
+  /* Shown as it is, so it is said in the app's language. */
+  return [byId[id]?t(byId[id]):"",t("{d} days a week.").replace("{d}",d),goalNote?t(goalNote):""].filter(Boolean).join(" ");
 }
 var TIMED=/Hold|Plank|Wall Sit|Balance|Isometric|Stretch|Dead Hang|L-Sit|Carry|Farmer|Bridge/i;
 var JUMPY=/\b(jumps?|hops?|bounds?|plyo|climbers?)\b/i;
@@ -237,7 +240,16 @@ function dayMinutes(d){
    3. the goal's additions go on: jumps first, conditioning or mobility last;
    4. the day is trimmed to the time there is, accessories first, main lifts never.
    Timed holds, core, calves, mobility and cardio keep the preset's own prescription. */
+/* The textbook's sets and rest for the goal's adaptation (Table 20-3,
+   js/knowledge/acute-variables.js BY_ADAPTATION; owner, 26 Oct: the plan follows the
+   knowledge base). Mobility and general fitness have no row of their own and keep the
+   level's sets and rest. */
+var ADAPT={hyp:"hypertrophy",str:"maximal_strength",pow:"power",end:"stabilization_endurance"};
+function adaptOf(goal){var id=ADAPT[goalOf(goal).train];
+  return id?BY_ADAPTATION.filter(function(r){return r.adaptation===id;})[0]||null:null;}
+function within(v,r){return r?Math.max(num(r.min),Math.min(num(r.max)||v,v)):v;}
 function shapePlan(plan,p,gear){
+  var AD=adaptOf(p.goal);
   var L=LEVELS[p.level]||LEVELS.some,T=trainOf(p.goal),limits=p.limits||[];
   var budget=Math.max(25,(num(p.mins)||60)-8);   /* the warm-up takes about eight */
   var tired=num(p.sleep)>0&&num(p.sleep)<6;
@@ -270,7 +282,12 @@ function shapePlan(plan,p,gear){
       /* Your own body weight is not a load you can set, so its reps stay open. */
       if(!bw){e.lo=r[0]+(main?nb:0);e.hi=r[1]+(main?nb:0);}
       e.rir=main?T.rir[0]:T.rir[1];
-      e.rest=round30((main?L.rest[0]:comp?Math.max(90,L.rest[0]-30):L.rest[1])*T.rest);});
+      e.rest=round30((main?L.rest[0]:comp?Math.max(90,L.rest[0]-30):L.rest[1])*T.rest);
+      /* Into the book's range for the adaptation: sets for every lift; rest in full for
+         the main lift, and no longer than the range for the rest. */
+      if(AD){e.sets=within(e.sets,AD.sets);
+        e.rest=main?within(e.rest,AD.restS):Math.min(e.rest,num(AD.restS&&AD.restS.max)||e.rest);
+        if(AD.restS&&e.rest<num(AD.restS.min)&&ADAPT[goalOf(p.goal).train]==="stabilization_endurance")e.rest=num(AD.restS.min);}});
     var extra=T.add==="plyo"?plyoFor(d,limits):T.add==="cond"?condFor(gear):T.add==="mob"?mobFor(d):[];
     keep=keep.concat(extra);
     d.ex=T.add==="plyo"?extra.concat(d.ex):d.ex.concat(extra);
@@ -310,7 +327,9 @@ var ACC={
 };
 function lifts(e){return !isActivity(e.name)&&!TIMED.test(e.name)&&!e.timed;}
 function balance(plan,p,gear,budget,T){
-  var r=RANGE[p.level]||RANGE.some,limits=p.limits||[];
+  /* Only a goal trained for muscle has a floor to build up to (js/coach/landmarks.js
+     rangeFor); every goal is kept under the ceiling. */
+  var r=rangeFor(p.level,goalOf(p.goal).train)||[0,(RANGE[p.level]||RANGE.some)[1]],limits=p.limits||[];
   for(var it=0;it<30;it++){
     var w=weeklySets(plan),changed=false;
     for(var q=0;q<JUDGED.length&&!changed;q++){

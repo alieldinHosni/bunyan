@@ -529,43 +529,15 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 #bgart .art .dsk{fill:url(#bgaGlow) none}
 #bgart .art .e{fill:var(--bga)}
 [dir="rtl"] #bgart .art{transform:translateX(-50%) scaleX(-1)}
-/* Training's horseman at dusk (js/ui/scene.js). One ink, the ground's darkest tone, at a
-   strength that falls with distance; the light (--sc-light) is the drawing colour: the
-   glow over the horizon, the rims facing it, the windows and their reflection. Light
-   mode draws in the theme's deep colour with the whole ink softened at once, under a
-   pale light, a misty morning. */
-#bgart{--sc-ink:var(--bg);--sc-light:var(--bga)}
-[data-theme="light"] #bgart{--sc-ink:var(--accent-deep);--sc-light:var(--bg)}
-[data-palette="mono"][data-theme="light"] #bgart{--sc-light:var(--bga)}
-[data-theme="light"] #bgart .scene .sc-ink{opacity:.42}
-#bgart .art.scene{opacity:1;stroke:none}
-#bgart .scene .sc-s0{stop-color:var(--sc-light);stop-opacity:0}
-#bgart .scene .sc-s1{stop-color:var(--sc-light);stop-opacity:.18}
-#bgart .scene .sc-s2{stop-color:var(--sc-light);stop-opacity:.42}
-#bgart .scene .sc-sky{fill:url(#scSky)}
-#bgart .scene .sc-g0{stop-color:var(--sc-light);stop-opacity:.72}
-#bgart .scene .sc-g1{stop-color:var(--bgb);stop-opacity:.26}
-#bgart .scene .sc-g2{stop-color:var(--bgb);stop-opacity:0}
-#bgart .scene .sc-sun{fill:url(#scSun)}
-#bgart .scene .sc-c0{stop-color:var(--sc-light);stop-opacity:.26}
-#bgart .scene .sc-c1{stop-color:var(--sc-light);stop-opacity:0}
-#bgart .scene .sc-cloud{fill:url(#scCloud)}
-#bgart .scene .sc-w0{stop-color:var(--sc-light);stop-opacity:.14}
-#bgart .scene .sc-w1{stop-color:var(--sc-light);stop-opacity:.02}
-#bgart .scene .sc-water{fill:url(#scWater)}
-#bgart .scene .sc-refl{fill:none;stroke:var(--sc-light);stroke-width:1;stroke-opacity:.35}
-#bgart .scene .sc-win{fill:var(--sc-light);fill-opacity:.8}
-#bgart .scene .sc-far{fill:var(--sc-ink);fill-opacity:.36}
-#bgart .scene .sc-far2{fill:var(--sc-ink);fill-opacity:.5}
-#bgart .scene .sc-city{fill:var(--sc-ink);fill-opacity:.74}
-#bgart .scene .sc-bank{fill:var(--sc-ink);fill-opacity:.84}
-#bgart .scene .sc-palm{fill:var(--sc-ink);fill-opacity:.92;stroke:var(--sc-ink);stroke-opacity:.92}
-#bgart .scene .sc-palm2{fill:var(--sc-ink);fill-opacity:.7;stroke:var(--sc-ink);stroke-opacity:.7}
-#bgart .scene .sc-frond{fill:none;stroke-linecap:round}
-#bgart .scene .sc-near{fill:var(--sc-ink)}
-#bgart .scene .sc-rim{fill:none;stroke:var(--sc-light);stroke-width:1.2;stroke-opacity:.5}
-#bgart .scene .sc-rim2{fill:none;stroke:var(--sc-light);stroke-width:.8;stroke-opacity:.12}
-#bgart .scene .sc-rimfill{fill:var(--sc-light);fill-opacity:.42}
+/* Training's ground: the owner's horseman at dusk, the picture itself, one per theme
+   (red, blue, and the green one for Sage). It stands at the top of the page and fades
+   into the ground; in light mode it is a faint memory of itself. */
+#bgart .art.photo{height:min(68vh,600px);opacity:.9;stroke:none;
+  background:url("img/ground-blue.jpg") 30% 0/cover no-repeat;
+  -webkit-mask-image:linear-gradient(to bottom,var(--bg) 40%,transparent);mask-image:linear-gradient(to bottom,var(--bg) 40%,transparent)}
+[data-palette="red"] #bgart .art.photo{background-image:url("img/ground-red.jpg")}
+[data-palette="mono"] #bgart .art.photo{background-image:url("img/ground-sage.jpg")}
+[data-theme="light"] #bgart .art.photo{opacity:.22}
 /* Glass: the cards in the page take the theme's card fill, a tint of the ground rather
    than a slab over it, with a lighter edge. Only the fill colour changes: a card's own
    glow or gradient stays on top of it. Sheets, toasts and bars that float over the page
@@ -2425,29 +2397,71 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .ascard2{margin:0 0 var(--s4);padding:14px 14px 12px;border-radius:var(--r5);border:1px solid var(--border);box-shadow:var(--shadow-card);
   background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 40%),var(--raised)}
 .ascard2 h3{margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+/* The result (js/ui/views/assess.js result): each card opens on a small glyph and a
+   label in the accent, then the figures; tiles for the targets, rows for the days and
+   the meals that open in place, a bar per muscle in its own ink. */
+.as-ch{display:flex;align-items:center;gap:var(--s2);margin:0 0 var(--s2);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.as-ch .gl{width:18px;height:18px;color:var(--accentHi)}
+.as-ch2{margin-top:var(--s4)}
 .as-kcal{display:flex;align-items:baseline;gap:6px}
-.as-kcal b{font-family:var(--display);font-size:38px;line-height:1;font-variant-numeric:tabular-nums}
-.as-kcal span{color:var(--sub);font-weight:600}
+.as-kcal b{font-family:var(--display);font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.as-kcal span{color:var(--sub);font-weight:600;font-size:18px}
 .as-why{margin:8px 0 0;font-size:13px;line-height:1.5;color:var(--sub)}
-.as-macros{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin-top:12px}
-.as-macros div{padding:9px 10px;border-radius:var(--r3);background:var(--surface);border:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
-.as-macros b{font-size:16px;font-variant-numeric:tabular-nums}
-.as-macros span{font-size:11.5px;color:var(--dim)}
-.as-split{display:flex;flex-direction:column;gap:4px}
-.as-split b{font-size:18px}
-.as-split span{font-size:13px;line-height:1.45;color:var(--sub)}
-.as-alt{margin-top:10px}
-.as-alt .aschip{min-height:36px;font-size:13px;padding:0 12px}
-.as-days{display:flex;flex-direction:column;margin-top:12px;border-top:1px solid var(--hair)}
-.as-days div{display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--hair);font-size:14px}
-.as-days span{color:var(--dim);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
-.as-vol{display:flex;flex-direction:column;gap:7px}
-.as-vr{display:grid;grid-template-columns:84px 1fr 34px;align-items:center;gap:10px;font-size:13px}
-.as-vr i{position:relative;height:8px;border-radius:4px;background:var(--bar-track);overflow:hidden}
+.as-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s2);margin-top:var(--s3)}
+.as-tile{display:flex;flex-direction:column;align-items:center;gap:2px;padding:var(--s3) 4px;border-radius:var(--r3);
+  background:var(--surface);border:1px solid var(--border);text-align:center;min-width:0}
+.as-tile .gl{width:22px;height:22px;color:var(--accentHi);margin-bottom:4px}
+.as-tile b{font-size:15px;font-weight:700;white-space:nowrap}
+.as-tile span{font-size:11px;color:var(--dim)}
+.as-split{font-family:var(--display);font-size:22px;line-height:1.15;margin:2px 0 0}
+.as-alt{margin-top:var(--s3)}
+.as-alt .aschip{min-height:36px;font-size:13px;padding:0 var(--s3)}
+.as-days{display:flex;flex-direction:column;margin-top:var(--s3);border-radius:var(--r3);border:1px solid var(--border);background:var(--surface);overflow:hidden}
+.as-day+.as-day{border-top:1px solid var(--hair)}
+.as-day summary,.as-meal summary{display:flex;align-items:center;gap:var(--s3);padding:var(--s2) var(--s3);list-style:none;cursor:pointer}
+.as-day summary::-webkit-details-marker,.as-meal summary::-webkit-details-marker{display:none}
+.as-th{flex:none;width:52px;height:52px;border-radius:var(--r2);object-fit:cover;background:var(--well);filter:var(--img-tone)}
+.as-dt,.as-mt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.as-dt b,.as-mt b{font-size:15px}
+.as-dt small,.as-mt small{font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.as-dm{flex:none;font-size:12px;line-height:1.5;color:var(--sub);text-align:end}
+.as-chev{flex:none;width:16px;height:16px;color:var(--dim);transition:transform var(--m-press) var(--e-standard)}
+[dir="rtl"] .as-chev{transform:scaleX(-1)}
+details[open]>summary .as-chev{transform:rotate(90deg)}
+.as-dex{margin:0;padding:0 var(--s3) var(--s2);list-style:none}
+.as-dex li{display:flex;justify-content:space-between;gap:var(--s3);padding:6px 0;border-top:1px solid var(--hair);font-size:13px}
+.as-dex .num{color:var(--sub);white-space:nowrap}
+.as-vol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2) var(--s4)}
+.as-vr{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n v" "b b";align-items:center;gap:4px var(--s2);font-size:12.5px}
+.as-vr>span:first-child{grid-area:n;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.as-vr>i{grid-area:b}
+.as-vr>.num{grid-area:v}
+.as-vr i{position:relative;height:6px;border-radius:3px;background:var(--bar-track);overflow:hidden}
 .as-vr em{position:absolute;top:0;bottom:0;background:rgba(var(--accent-rgb),.18)}
-.as-vr i b{position:absolute;inset-inline-start:0;top:2px;bottom:2px;border-radius:2px;background:var(--ok)}
-.as-vr.low i b,.as-vr.high i b{background:var(--warning)}
-.as-vr .num{text-align:end;font-variant-numeric:tabular-nums;color:var(--sub)}
+.as-vr i b{position:absolute;inset-inline-start:0;top:0;bottom:0;border-radius:3px;background:var(--ink,var(--accent))}
+.as-vr .num{text-align:end;font-variant-numeric:tabular-nums;color:var(--sub);font-size:11.5px}
+.as-vr.low .num,.as-vr.high .num{color:var(--warning)}
+.as-meals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2);margin-top:var(--s2)}
+.as-meal{border-radius:var(--r3);border:1px solid var(--border);background:var(--surface);min-width:0}
+.as-meal summary{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;padding:var(--s3);gap:4px var(--s2)}
+.as-meal .as-mt{display:contents}
+.as-meal .as-mt small{grid-column:1/-1}
+.as-meal .as-mi{width:32px;height:32px;border-radius:16px}
+.as-meal .as-mi .gl{width:18px;height:18px}
+.as-meal summary .as-chev{display:none}
+.as-meal:has(details[open]){grid-column:1/-1}
+.as-mi{flex:none;width:40px;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;background:var(--accent-tint);color:var(--accentHi)}
+.as-mi .gl{width:22px;height:22px}
+.as-mt small{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.as-mt small:last-child{display:block;white-space:nowrap;color:var(--sub);margin-top:2px}
+.as-disc{display:flex;gap:var(--s2);align-items:flex-start}
+.as-disc .gl{flex:none;width:16px;height:16px;margin-top:2px}
+.as-cta{display:flex;gap:var(--s3);margin-top:var(--s4)}
+.as-cta .btn{flex:1;width:auto;min-width:0;margin:0;display:inline-flex;align-items:center;justify-content:center;gap:var(--s2)}
+.as-cta .btn.g{flex:0 0 38%}
+.as-cta .gl{width:18px;height:18px}
+.as-back{transform:scaleX(-1)}
+[dir="rtl"] .as-back{transform:none}
 .as-swaps{margin:0;padding-inline-start:18px;font-size:13px;line-height:1.6;color:var(--sub)}
 .as-swaps b{color:var(--text);font-weight:600}
 .pgen-acts{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 6px}
