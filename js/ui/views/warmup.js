@@ -7,7 +7,6 @@
    js/engine/warmup.js; this file only draws it. */
 import {t, tm} from "../../i18n/dict.js";
 import {exName} from "../../i18n/exnames.js";
-import {thumb} from "../../data/exercises.js";
 import {recommend} from "../../engine/formulas.js";
 import {cooldownFor, warmupFor} from "../../engine/warmup.js";
 import {S} from "../../state.js";
@@ -51,7 +50,9 @@ function row(key,name,dose,secs,side,done,tickAttr){
   return '<div class="wu-row'+(done?' did':'')+'" data-k="'+key+'">'
    +'<button class="wu-tick" '+tickAttr+'="'+esc(name)+'" aria-pressed="'+(done?"true":"false")+'" aria-label="'
    +esc(t("Done")+": "+exName(name))+'">'+TICK+'</button>'
-   +'<button class="wu-ex" data-exdetail="'+esc(name)+'">'+thumb(name,40)
+   /* No photo: a list of photos and drawings that load at different moments flickers,
+      and reads like a printout. The name opens how to do it. */
+   +'<button class="wu-ex" data-exdetail="'+esc(name)+'">'
    +'<span class="wu-t"><span class="wu-n">'+esc(exName(name))+'</span><span class="wu-d">'+esc(dose)+'</span></span></button>'
    +(secs?'<button class="wu-hold'+(hs?' run':'')+'" data-hold="'+key+'" data-secs="'+secs+'" data-side="'+(side?1:0)
      +'" data-holdn="'+esc(name)+'" data-holdt="'+key+'"'+(hs?' style="--p:'+hs.p.toFixed(3)+'"':'')
@@ -64,51 +65,58 @@ var PULSE={
   home:"March or jog on the spot, then a few jumping jacks. Breathing harder, still able to talk.",
   run:"Walk briskly, then jog easily. Breathing harder, still able to talk."};
 
+/* The warm-up: a short header with how far along it is, then one card per step (the
+   pulse, the moves, the ramp-up sets), and Start pinned at the bottom with what comes
+   after it. The why is behind a fold, not a paragraph in the way. */
 function vWarm(a){
   var w=warmOf(a);
   if(!w)return "";
-  var done=a.wuDone||{};
-  var h='<section class="wu">'
-   +'<div class="wu-head"><span class="shk">'+t("Before you start")+'</span>'
+  var done=a.wuDone||{},pk="wp";
+  var keys=[pk].concat(w.own?[]:w.drills.map(function(d){return d.name;}));
+  var nDone=keys.filter(function(k){return done[k];}).length;
+  var h='<section class="wu wu2">'
+   +'<div class="wu-head"><span class="shk">'+t("Before you start")+' · '+t("About {n} min").replace("{n}",w.min)+'</span>'
    +'<h1>'+t("Warm-up")+'</h1>'
-   +'<p class="sub">'+t("About {n} min").replace("{n}",w.min)
-   +(w.focus.length?' · '+esc(t("for {m}").replace("{m}",muscles(w.focus))):'')+'</p>'
-   /* What comes after it, so the workout is in view from the first screen. */
-   +(a.entries[0]?'<p class="wu-then"><span>'+t("Then")+'</span> <b>'+esc(exName(a.entries[0].name))+'</b></p>':'')+'</div>';
+   +(w.focus.length?'<p class="sub">'+esc(t("for {m}").replace("{m}",muscles(w.focus)))+'</p>':'')
+   +'<div class="wu-prog" data-k="wuprog"><span class="num">'+esc(t("{d} of {n} done").replace("{d}",nDone).replace("{n}",keys.length))+'</span>'
+   +'<i aria-hidden="true"><b style="width:'+Math.round(nDone/keys.length*100)+'%"></b></i></div></div>';
   var step=0;
   /* 1. Pulse: timed as a whole, so it can run while you get on the bike. */
-  var pk="wp";
-  h+='<div class="wu-step"><div class="wu-sh"><b>'+(++step)+'</b><span>'+t("Raise your pulse")+'</span></div>'
+  var phs=holdState(pk);
+  h+='<div class="wu-step wu-card"><div class="wu-sh"><b>'+(++step)+'</b><span>'+t("Raise your pulse")+'</span></div>'
    +'<div class="wu-row wu-pulse'+(done[pk]?' did':'')+'" data-k="wp">'
    +'<button class="wu-tick" data-wutick="'+pk+'" aria-pressed="'+(done[pk]?"true":"false")+'" aria-label="'+esc(t("Done")+": "+t("Raise your pulse"))+'">'+TICK+'</button>'
-   +'<p class="wu-txt">'+esc(t(PULSE[w.pulse.how]))+'</p>';
-  var phs=holdState(pk);
-  h+='<button class="wu-hold'+(phs?' run':'')+'" data-hold="'+pk+'" data-secs="'+w.pulse.min*60+'" data-side="0" data-holdn="'+pk+'" data-holdt="'+pk+'"'
+   +'<p class="wu-txt">'+esc(t(PULSE[w.pulse.how]))+'</p>'
+   +'<button class="wu-hold'+(phs?' run':'')+'" data-hold="'+pk+'" data-secs="'+w.pulse.min*60+'" data-side="0" data-holdn="'+pk+'" data-holdt="'+pk+'"'
    +(phs?' style="--p:'+phs.p.toFixed(3)+'"':'')+' aria-label="'+esc(t(phs?"Stop the timer":"Start the timer"))+'">'
    +PLAY+'<span class="hold-l">'+esc(holdLabel(pk,w.pulse.min*60))+'</span></button></div></div>';
   /* 2. The drills for what the day trains, or a word that the plan has its own. */
   if(w.own)
-    h+='<div class="wu-step"><div class="wu-sh"><b>'+(++step)+'</b><span>'+t("Move what you'll train")+'</span></div>'
+    h+='<div class="wu-step wu-card"><div class="wu-sh"><b>'+(++step)+'</b><span>'+t("Move what you'll train")+'</span></div>'
      +'<p class="wu-note">'+t("Your plan opens with its own mobility work. Do that next, as the session lists it.")+'</p></div>';
   else if(w.drills.length){
-    h+='<div class="wu-step"><div class="wu-sh"><b>'+(++step)+'</b><span>'+t("Move what you'll train")+'</span></div>';
+    h+='<div class="wu-step wu-card"><div class="wu-sh"><b>'+(++step)+'</b><span>'+t("Move what you'll train")+'</span></div>';
     w.drills.forEach(function(d,i){
       h+=row("wd"+i,d.name,doseOf(d),d.sec,d.side,done[d.name],"data-wutick");});
     h+='</div>';}
   /* 3. Ramp-up sets on the first heavy lift. */
   if(w.ramp){
-    h+='<div class="wu-step"><div class="wu-sh"><b>'+(++step)+'</b><span>'
+    h+='<div class="wu-step wu-card"><div class="wu-sh"><b>'+(++step)+'</b><span>'
      +esc(t("Ramp up to {ex}").replace("{ex}",exName(w.ramp.name)))+'</span></div>';
     if(w.ramp.sets.length)
       h+='<div class="wu-ramp">'+w.ramp.sets.map(function(s){
           return '<span class="wu-rs"><b>'+esc(fmtW(s.w))+'</b> × '+s.r+'</span>';}).join("")
        +'<span class="wu-rs work">'+esc(t("then"))+' <b>'+esc(fmtW(w.ramp.work))+'</b></span></div>';
     else h+='<p class="wu-note">'+t("Build up over two or three lighter sets to your first working weight.")+'</p>';
-    h+='<p class="wu-note">'+t("Lighter sets, short rests, nothing near failure. They get you ready; they are not logged.")
-     +(w.moreLifts?' '+t("Each big lift after it: one lighter set of five first."):'')+'</p></div>';}
-  h+='<p class="wu-why">'+t("Moving drills now, held stretches at the end: a long hold just before lifting can take a little off your strength for a while.")+'</p>'
-   +'<button class="btn wu-go" data-wugo="1">'+t("Start the workout")+'</button>'
-   +'<button class="btn g wu-skip" data-wuskip="1">'+t("Skip the warm-up")+'</button>'
+    h+='<details class="wu-why"><summary>'+t("Why")+'</summary>'
+     +'<p>'+t("Lighter sets, short rests, nothing near failure. They get you ready; they are not logged.")
+     +(w.moreLifts?' '+t("Each big lift after it: one lighter set of five first."):'')+'</p>'
+     +'<p>'+t("Moving drills now, held stretches at the end: a long hold just before lifting can take a little off your strength for a while.")+'</p></details></div>';}
+  /* Start stays in reach at the bottom, with what follows it. */
+  h+='<div class="wu-foot">'
+   +(a.entries[0]?'<p class="wu-then"><span>'+t("Then")+'</span> <b>'+esc(exName(a.entries[0].name))+'</b></p>':'')
+   +'<div class="wu-acts"><button class="btn wu-go" data-wugo="1">'+t("Start the workout")+'</button>'
+   +'<button class="btn g wu-skip" data-wuskip="1">'+t("Skip")+'</button></div></div>'
    +'</section>';
   return h;}
 

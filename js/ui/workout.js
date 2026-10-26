@@ -293,6 +293,8 @@ function restControl(cmd){
   if(cmd==="resume"){V.restPaused=false;V.restEnd=Date.now()+V.restLeft*1000;
     setBeeped(false);paintRest();persistRest();return;}
   if(cmd==="skip"){endRest();render();return;}
+  /* Over: thirty seconds more, a fresh short rest from now. */
+  if(cmd==="extend"){endRest();V.restTotal=30;V.restEnd=Date.now()+30000;setBeeped(false);persistRest();render();return;}
   var by=+cmd;if(!isFinite(by))return;
   if(V.restPaused){V.restLeft=Math.max(0,V.restLeft+by);
     V.restTotal=Math.max(15,V.restTotal+by);

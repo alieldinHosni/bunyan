@@ -2499,6 +2499,35 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .wu-rs.work{background:var(--accent-tint);border-color:var(--accent-edge)}
 .wu-note{margin:6px 2px 0;font-size:12.5px;line-height:1.45;color:var(--dim)}
 .wu-why{margin:16px 2px 14px;padding-top:12px;border-top:1px solid var(--border);font-size:12.5px;line-height:1.5;color:var(--dim)}
+/* The warm-up as cards (js/ui/views/warmup.js vWarm): a header with its progress, one
+   card per step, Start pinned at the bottom. */
+.wu.wu2{overflow:visible;padding:0;margin:var(--s1) 0 0;border:0;background:none;box-shadow:none}
+.wu.wu2::before,.wu.wu2::after{display:none}
+.wu2 .wu-head{padding:var(--s1) var(--s1) var(--s3)}
+.wu2 .wu-head .shk{color:var(--dim)}
+.wu-prog{display:flex;align-items:center;gap:var(--s3);margin-top:var(--s3);font-size:13px;font-weight:700;color:var(--sub)}
+.wu-prog i{flex:1;height:6px;border-radius:var(--rpill);background:var(--bar-track);overflow:hidden}
+.wu-prog b{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width var(--m-data) var(--e-standard)}
+.wu2 .wu-card{margin:0 0 var(--s3);padding:var(--s3) var(--s3) var(--s2);border:1px solid var(--card-edge);border-radius:var(--r4);
+  background:var(--card);box-shadow:inset 0 1px 0 var(--hair-hi)}
+.wu2 .wu-card .wu-sh{margin:0 0 var(--s2)}
+.wu2 .wu-row{padding:var(--s2) 0;min-height:52px}
+.wu2 .wu-n{font-size:15.5px}
+.wu2 .wu-d{font-size:13px}
+.wu2 .wu-ramp{margin:0 0 var(--s2)}
+.wu2 details.wu-why{margin:var(--s1) 0 0;padding:0;border:0}
+.wu2 .wu-why summary{display:inline-flex;align-items:center;min-height:var(--hit);list-style:none;color:var(--accentHi);font-weight:700;font-size:14px;cursor:pointer}
+.wu2 .wu-why summary::-webkit-details-marker{display:none}
+.wu2 .wu-why p{margin:0 0 var(--s2);font-size:13.5px;line-height:1.5;color:var(--sub)}
+.wu-foot{position:sticky;bottom:0;z-index:5;margin:var(--s2) calc(var(--s4) * -1) 0;padding:var(--s3) var(--s4) max(var(--s3),env(safe-area-inset-bottom));
+  background:var(--wk-page,var(--bg))}
+.wu-foot::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:var(--s5);pointer-events:none;
+  background:linear-gradient(to bottom,transparent,var(--wk-page,var(--bg)))}
+.wu-foot .wu-then{margin:0 0 var(--s2)}
+.wu-acts{display:flex;gap:var(--s2)}
+.wu-acts .wu-go{flex:1;margin:0}
+.wu-acts .wu-skip{flex:none;width:auto;margin:0;padding:0 var(--s4)}
+
 .wu-skip{margin-top:8px}
 .cd{margin-top:14px;padding:12px 12px 6px;border-radius:var(--r3);background:var(--surface);border:1px solid var(--border);text-align:start}
 .cd-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;letter-spacing:.14em;
@@ -3663,7 +3692,17 @@ body.wkflat #app{--gutter:20px}
 .rb.paused .i-play{display:block}
 .rb-bar{height:4px;border-radius:2px;background:var(--bar-track);overflow:hidden}
 .rb-bar i{display:block;height:100%;border-radius:2px;background:var(--accent);transition:width 1s linear}
-.rb.over{background:var(--color-action-fill);border:1.5px solid var(--color-action-edge);color:var(--onAccent);gap:2px}
+.rb.over{background:var(--color-action-fill);border:1.5px solid var(--color-action-edge);color:var(--onAccent);
+  display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:var(--s3)}
+.rb.over .rb-l{min-width:0;display:block}
+.rb.over .rb-ctl{display:flex;gap:var(--s2);flex:none}
+.rb.over .rb-ctl button{min-width:var(--hit);height:var(--hit);padding:0 var(--s3);border-radius:var(--rpill);border:1.5px solid currentColor;
+  background:transparent;color:inherit;font-weight:800;font-size:15px;display:grid;place-items:center}
+.rb.over .rb-close svg,.rb.over .rb-close .gl{width:18px;height:18px}
+/* Add a set, under the sets. */
+.wsl-add{display:flex;align-items:center;justify-content:center;gap:var(--s2);width:100%;min-height:var(--hit);margin:0;padding:var(--s2) var(--s3);
+  border:0;border-top:1px dashed var(--border);background:none;color:var(--sub);font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.wsl-add svg,.wsl-add .gl{width:18px;height:18px}
 .rb-done{font-family:var(--display);font-size:26px;font-weight:700;line-height:1.15}
 .rb-sub{font-family:var(--display);font-size:16px;font-weight:700}
 

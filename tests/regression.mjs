@@ -62,6 +62,10 @@ async function tapTab(page,tab){
   /* Profile is not on the dock: it opens from the person at the top right of Training. */
   if(tab==="profile"){await tapTab(page,"train");await page.waitForTimeout(150);await page.evaluate(()=>window.scrollTo(0,0));
     await page.tap('.hacts .havatar');await page.waitForTimeout(60);return;}
+  /* Scrolling down puts the dock away (nav.dhid): as a thumb would, scroll up a little
+     to bring it back before tapping it. */
+  if(await page.evaluate(()=>document.getElementById("nav").classList.contains("dhid"))){
+    await page.evaluate(()=>window.scrollBy(0,-40));await page.waitForTimeout(450);}
   const b=await (await page.$('nav [data-tab="'+tab+'"]')).boundingBox();
   if(!b||b.y>=page.viewportSize().height)throw new Error("the dock is out of view");
   await page.touchscreen.tap(b.x+b.width/2,b.y+b.height/2);await page.waitForTimeout(60);}
@@ -2908,10 +2912,11 @@ await test("Workout screen: steppers move by the engine's own step; the check lo
   eq(await ev(page,"S.active.entries[0].sets.length"),2,"logged from the rest");
   eq(await page.$eval('#app [data-logset]',e=>e.textContent),"Log set 3");
 },{prefs:{autorest:true}});
-await test("Workout screen: + Warm-up adds a warm-up set, out of volume and numbering; delete asks in the row",async page=>{
+await test("Workout screen: a warm-up set (no button for it any more; the logic stays for the sets already logged) is out of volume and numbering; delete asks in the row",async page=>{
   await startWorkout(page);
   const w=await ev(page,"V.draft.w");
-  await page.tap('[data-addwu]');await pause(page,300);
+  if(await page.$('#app [data-addwu]'))throw new Error("the Add warm-up button is still there");
+  await page.evaluate(async()=>{(await import("/js/ui/workout.js")).addWarmup();});await pause(page,300);
   eq(await page.$eval('#app [data-logset]',e=>e.textContent),"Log warm-up");
   if(!(await page.$('#app .wsc.wkwu .sc-wu')))throw new Error("the card does not say warm-up");
   eq(await ev(page,"V.draft.w"),w,"starts from the working weight (no warm-up recommended)");
@@ -3014,6 +3019,31 @@ await test("Workout: the next exercise is named under the current one, in view o
   const f=await page.evaluate(()=>{const f=document.querySelector("#sheet .fig3d");if(!f)return "none";
     return [f.hasAttribute("data-still")||f.hasAttribute("data-live")?"ok":getComputedStyle(f.querySelector(".fig3d-still")).visibility];});
   if(f!=="none"&&f[0]!=="ok"&&f[0]!=="hidden")throw new Error("photos shown while loading: "+f);
+});
+await test("Workout: no Add warm-up; Add a set sits under the sets; when the rest is over it can be extended by 30 s or closed",async page=>{
+  await startWorkout(page);
+  eq(await page.evaluate(()=>[!!document.querySelector("#app [data-addwu]"),!!document.querySelector("#app .wsl [data-addrow]")]),[false,true],"no warm-up chip; Add a set inside the sets list");
+  const n0=await ev(page,"S.active.entries[0].planned.sets");
+  await page.tap('#app .wsl [data-addrow]');await pause(page,300);
+  eq(await page.$$eval('#app .wsl .wsr',a=>a.length),n0+1,"a set added");
+  await page.fill('#in_w','40');await page.tap('[data-logset]');await pause(page,2500);
+  await page.evaluate(async()=>{(await import("/js/ui/view.js")).V.restEnd=Date.now()+200;});await pause(page,2200);
+  if(!(await page.$('#app .rb.over')))throw new Error("rest not over");
+  await page.tap('.rb.over [data-rest="extend"]');await pause(page,300);
+  eq(await ev(page,"[!!document.querySelector('.rb.over'),Math.round((V.restEnd-Date.now())/1000)]"),[false,30],"30 s more");
+  await page.evaluate(async()=>{(await import("/js/ui/view.js")).V.restEnd=Date.now()+200;});await pause(page,2200);
+  await page.tap('.rb.over [data-rest="skip"]');await pause(page,300);
+  eq(await page.evaluate(()=>!!document.querySelector("#app .rb")),false,"closed");
+},{prefs:{autorest:true}});
+await test("Warm-up: cards with a progress line, no photos that load in at different times, Start pinned at the bottom",async page=>{
+  await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.nowarm=false;});
+  await startWorkout(page);
+  const r=await page.evaluate(()=>{const f=document.querySelector(".wu-foot").getBoundingClientRect();
+    return {cards:document.querySelectorAll(".wu2 .wu-card").length,imgs:document.querySelectorAll(".wu img,.wu .thumb,.wu .thumbwrap").length,
+      prog:document.querySelector(".wu-prog span").textContent,foot:Math.round(f.bottom)<=innerHeight&&f.top<innerHeight};});
+  if(r.cards<2||r.imgs!==0||!/^0 of \d+ done$/.test(r.prog)||!r.foot)throw new Error(JSON.stringify(r));
+  await page.tap('.wu-pulse [data-wutick]');await pause(page,300);
+  if(!/^1 of \d+ done$/.test(await page.$eval(".wu-prog span",e=>e.textContent)))throw new Error("progress not counted");
 });
 /* ---- Phase 1 of the visual audit ---- */
 /* The set card says last time once, for the set being done (workout-spec.md); before the
