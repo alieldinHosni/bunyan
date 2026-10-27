@@ -5229,6 +5229,9 @@ body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
 .ag-undone{display:flex;align-items:center;gap:var(--s2);padding:var(--s3);border-radius:var(--r2);border:1px dashed var(--border);color:var(--sub);font-size:14px}
 .ag-undone .gl{width:18px;height:18px;flex:none}
 .ag-opts{display:flex;flex-direction:column;gap:var(--s2)}
+/* Short single-word choices (the muscles for an exercise of their own): two to a row. */
+.ag-opts.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.ag-opts.two .ag-opt{min-height:var(--hit)}
 .ag-opt{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:calc(var(--s1) / 2);min-height:52px;padding:var(--s2) var(--s4);
   border-radius:var(--r2);border:1px solid var(--border);background:var(--raised);color:var(--text);text-align:start;cursor:pointer}
 .ag-opt.none{border-style:dashed;background:none;color:var(--sub)}

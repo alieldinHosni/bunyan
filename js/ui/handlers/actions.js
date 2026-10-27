@@ -18,7 +18,8 @@ import {itemOf} from "../../engine/mealplan.js";
 import {ownSlot} from "../../engine/meals.js";
 import {dayOf, S, saveDB} from "../../state.js";
 import {toDisp} from "../../units.js";
-import {today} from "../../util.js";
+import {today, uid} from "../../util.js";
+import {LIB, MUSCLES} from "../../data/exercises.js";
 import {render} from "../render.js";
 import {V} from "../view.js";
 import {LENT} from "./common.js";
@@ -34,6 +35,9 @@ function copy(x){return x==null?x:JSON.parse(JSON.stringify(x));}
 /* What each kind of action touches, copied before it runs and put back by Undo. */
 var SNAP={
   program:function(){var p=copy(S.programs);return function(){S.programs=p;};},
+  /* The program and the person's own exercises: an exercise made for them leaves the
+     library again (it was the last one in). */
+  exlib:function(){var p=copy(S.programs),mx=copy(S.myEx||[]),n=LIB.length;return function(){S.programs=p;S.myEx=mx;LIB.length=n;};},
   live:function(){var a=copy(S.active),i=V.logIdx;return function(){S.active=a;V.logIdx=i;if(a)a.idx=i;};},
   day:function(){var d=today(),r=copy(S.days[d]);return function(){if(r)S.days[d]=r;else delete S.days[d];};},
   body:function(){var b=copy(S.body);return function(){S.body=b;};},
@@ -56,6 +60,16 @@ var ACTIONS={
     confirm:true,snap:"program",
     /* The picker's tap, with the day it was opened for. */
     run:function(p){if(!dayOf(p.day))return false;V.dayId=p.day;V.sd={};tap({pickex:p.name});return true;}},
+  "exercise.create":{desc:"Make an exercise of the person's own (a name and the muscle it works, no picture) and add it to a day of the program",
+    params:{name:"its name, as the person said it",m:"the muscle it works, one of the library's",day:"day id, from the program"},
+    confirm:true,snap:"exlib",
+    /* What the picker's "add your own" does, then the picker's tap with the day. */
+    run:function(p){
+      var name=String(p.name||"").trim();
+      if(!dayOf(p.day)||!name||MUSCLES.indexOf(p.m)<0)return false;
+      if(!LIB.some(function(l){return l[0].toLowerCase()===name.toLowerCase();})){
+        LIB.push([name,p.m,"Other",0]);(S.myEx=S.myEx||[]).push({id:"u_"+uid(),n:name,m:p.m});}
+      V.dayId=p.day;V.sd={};tap({pickex:name});return true;}},
   "exercise.remove":{desc:"Take an exercise out of a day of the program",params:{id:"the exercise's id in that day",day:"day id"},
     confirm:true,snap:"program",
     /* The ✕ on the day builder's row. */
