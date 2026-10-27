@@ -2881,6 +2881,12 @@ await test("Steps: tap the number and type any count (456); Done saves it; the b
   await page.tap('.stfield [data-d="500"]');await pause(page,200);
   eq(await page.$eval('#in_st',e=>e.value),"956","+ still steps by 500");
 });
+await test("Plan: “New meal plan from my targets” stands clear of the tiles above it",async page=>{
+  await tapTab(page,"coach");await pause(page);
+  const gap=await page.evaluate(()=>{const b=document.querySelector(".cplan-gen"),g=document.querySelector(".cplan-g");
+    return b&&g?b.getBoundingClientRect().top-g.getBoundingClientRect().bottom:null;});
+  if(gap==null||gap<10)throw new Error("the button touches the tiles: gap "+gap);
+});
 await test("Progress: the controls carry icons, the halves are a figure with their own names, and Plan is a brain",async page=>{
   await tapTab(page,"progress");await pause(page);
   eq(await page.$$eval('.pgtabs2 .seg-b',a=>a.map(b=>!!b.querySelector("svg.seg-i")&&b.querySelector(".seg-l").textContent)),["Overview","Strength","Body"],"an icon over each view's name");

@@ -2036,3 +2036,18 @@ Owner, 27 Oct (a mock of Progress's controls). CACHE `bunyan-v153`.
 - Dock: Plan's clipboard is now a brain (dock.js `ICON.coach`).
 - Test: icons on each control, the halves' figure and names, the control kept in place on a tap,
   the brain.
+
+## Every page photo whole; the meal plan button's room — branch session/photos-meal-btn
+
+Owner, 27 Oct (a full Progress photo, a second sheet of five, a Plan screenshot). CACHE `bunyan-v154`.
+- `page-progress.jpg` is the owner's full photograph (the banner by the bay, 941×1672);
+  `page-warmup.jpg`, `page-food.jpg` and `page-profile.jpg` are cut from the new sheet. Each had a
+  printed caption ("PROGRESS", "WARM UP", "FOOD / NUTRITION", "PROFILE / SETTINGS"); painted out
+  (OpenCV inpaint over a mask of the caption's pixels, in tools only, not shipped). Workout and
+  coach keep the full photographs from earlier today; the sheet's versions of them are smaller.
+- Every photograph now fills the screen's height (the 64 vh frame is gone) and fades only toward
+  the dock. Framing so nothing is lost: Progress aligned to its left edge (the banner), Food to its
+  foot (the bowl; it is narrower than a phone, so only sky goes) and fading later; the warm-up
+  card's picture at 60 % (the banner and steps).
+- **"New meal plan from my targets" touched the tiles**: `.cplan-gen`'s 12 px margin lost to
+  `.btn.sm{margin:0}`; now `.btn.cplan-gen{margin:var(--s3) 0 0}`. Test: the gap is at least 10 px.

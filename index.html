@@ -534,11 +534,12 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 #bgart .art .dsk{fill:url(#bgaGlow) none}
 #bgart .art .e{fill:var(--bga)}
 [dir="rtl"] #bgart .art{transform:translateX(-50%) scaleX(-1)}
-/* Each place's picture (js/ui/bgart.js): the owner's photographs, standing at the top
-   of the page and fading into the ground; in light mode a faint memory of themselves.
+/* Each place's picture (js/ui/bgart.js): the owner's photographs, made to a phone's
+   shape, filling the screen's height so each is seen whole and fading only toward the
+   dock; in light mode a faint memory of themselves.
    They are the same in every theme: they are photographs, not drawings in its paint. */
-#bgart .art.photo{height:min(64vh,560px);opacity:.78;stroke:none;background:center 0/cover no-repeat;
-  -webkit-mask-image:linear-gradient(to bottom,var(--bg) 35%,transparent);mask-image:linear-gradient(to bottom,var(--bg) 35%,transparent)}
+#bgart .art.photo{height:100%;opacity:.78;stroke:none;background:center 0/cover no-repeat;
+  -webkit-mask-image:linear-gradient(to bottom,var(--bg) 50%,transparent 94%);mask-image:linear-gradient(to bottom,var(--bg) 50%,transparent 94%)}
 #bgart .photo[data-p="home"]{background-image:url("img/page-home.jpg")}
 #bgart .photo[data-p="training"]{background-image:url("img/page-training.jpg")}
 #bgart .photo[data-p="workout"]{background-image:url("img/page-workout.jpg")}
@@ -547,10 +548,6 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 #bgart .photo[data-p="coach"]{background-image:url("img/page-coach.jpg")}
 #bgart .photo[data-p="progress"]{background-image:url("img/page-progress.jpg")}
 #bgart .photo[data-p="profile"]{background-image:url("img/page-profile.jpg")}
-/* The owner's full photographs (27 Oct), made to a phone's shape, fill the screen's
-   height so each is seen whole, and fade only toward the dock. */
-#bgart .art.photo:is([data-p="home"],[data-p="training"],[data-p="workout"],[data-p="coach"]){height:100%;
-  -webkit-mask-image:linear-gradient(to bottom,var(--bg) 50%,transparent 94%);mask-image:linear-gradient(to bottom,var(--bg) 50%,transparent 94%)}
 /* A veil of the ground's own tone over each, deepest at the top, so the page's title
    and line under it read on a bright sky. */
 #bgart .art.photo::after{content:"";position:absolute;inset:0;
@@ -558,6 +555,12 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 /* The coach's tablet carries words of its own; under the cards they would read as the
    app's, so it is quieter. */
 #bgart .photo[data-p="coach"]{opacity:.5}
+/* Framing, so nothing in a picture is lost: Progress's banner stands at its left edge;
+   Food's photograph is narrower than a phone, so it is aligned to its foot, where the
+   bowl is (only sky goes), and fades later. */
+#bgart .photo[data-p="progress"]{background-position:0 0}
+#bgart .photo[data-p="food"]{background-position:center 100%;
+  -webkit-mask-image:linear-gradient(to bottom,var(--bg) 62%,transparent);mask-image:linear-gradient(to bottom,var(--bg) 62%,transparent)}
 [data-theme="light"] #bgart .art.photo{opacity:.22}
 /* The pictures are not mirrored in Arabic: they are places, not drawings. */
 [dir="rtl"] #bgart .art.photo{transform:translateX(-50%)}
@@ -2510,7 +2513,7 @@ details[open]>summary .as-chev{transform:rotate(90deg)}
 /* The iPhone's haptic switch (js/ui/view.js iosTick): in the page so it can tick, never seen or reached. */
 .hapt{position:fixed;left:0;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;clip-path:inset(50%)}
 .wu-art{position:absolute;z-index:-1;inset:calc(var(--s3) * -1) calc(var(--gutter,var(--s4)) * -1) auto;height:260px;opacity:.55;
-  background:linear-gradient(to bottom,rgba(var(--bg-rgb),.55),rgba(var(--bg-rgb),.2)),url("img/page-warmup.jpg") center 30%/cover no-repeat;
+  background:linear-gradient(to bottom,rgba(var(--bg-rgb),.55),rgba(var(--bg-rgb),.2)),url("img/page-warmup.jpg") center 60%/cover no-repeat;
   /* Soft on every side: the picture melts into the page instead of ending in a box. */
   -webkit-mask-image:radial-gradient(ellipse 75% 85% at 50% 25%,var(--bg) 30%,transparent 100%);
   mask-image:radial-gradient(ellipse 75% 85% at 50% 25%,var(--bg) 30%,transparent 100%)}
@@ -5090,7 +5093,7 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 [dir="rtl"] .cplan-k{letter-spacing:0}
 .cplan-v{max-width:100%;font-family:var(--display);font-size:16px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
 .cplan-s{font-size:12.5px;color:var(--sub)}
-.cplan-gen{margin:12px 0 0}
+.btn.cplan-gen{margin:var(--s3) 0 0}
 
 /* ---- The floating Coach (js/ui/coachfab.js) ----------------------------------------------
    A round launcher above the dock at the bottom right, and the panel it opens into: the
