@@ -76,6 +76,7 @@ function vProfile(){
      prow('data-sheet="set_profiles"',"people",t("Profiles on this phone"),
        PROFILES.length+" "+(PROFILES.length===1?t("profile"):t("profiles")))
     +prow('data-share="1"',"share",t("Share my progress"),t("Makes a code you can send on WhatsApp"))
+    +prow('data-sheet="recvplan"',"clipboard",t("Add a shared plan"),t("A program or meal plan another Bunyan user sent you"))
     +(isOwner()?prow('data-coach="1"',"eye",t("Friends I follow"),
        Object.keys(friends()).length+" "+t("shared with you")):""));
 
