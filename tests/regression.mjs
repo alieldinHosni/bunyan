@@ -445,16 +445,21 @@ await test("templates: Use it now makes an active copy; Just add it keeps the cu
   await page.tap('[data-adopt]');await pause(page);await page.tap('[data-confirmok]');await pause(page,400);
   eq(await ev(page,"S.programs.find(p=>p.id===S.activeProgram).from"),"ul","active copy of the template");
 });
-await test("builder: switching to weekdays pins the days, and weekday chips move a pin",async page=>{
+await test("builder: switching to weekdays pins the days, and a weekday chip adds a pin, shared with a day that has it (two sessions that day)",async page=>{
   await page.evaluate(async()=>{const {V}=await import("/js/ui/view.js");const {render}=await import("/js/ui/render.js");const s=await import("/js/state.js");
     V.tab="coach";V.train="builder";V.previewId=s.S.activeProgram;render();});await pause(page);
   await page.tap('[data-sched="week"]');await pause(page);
   const pinned=await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days.filter(d=>d.ex.length).every(d=>d.wd.length===1)");
   eq(pinned,true,"each training day pinned");
-  const first=await page.$eval('.bkday .bwd button:not(.on)',b=>b.getAttribute("data-wd"));
-  await page.tap('[data-wd="'+first+'"]');await pause(page);
+  const first=await page.$eval('.bkday .bwd button.taken',b=>b.getAttribute("data-wd"));
   const [id,n]=first.split("|");
-  eq(await ev(page,"(function(){var p=S.programs.find(p=>p.id===S.activeProgram);return p.days.filter(d=>d.wd.indexOf("+n+")>=0).map(d=>d.id)})()"),[id],"weekday belongs to one day");
+  const owners=await ev(page,"(function(){var p=S.programs.find(p=>p.id===S.activeProgram);return p.days.filter(d=>d.wd.indexOf("+n+")>=0).map(d=>d.id)})()");
+  await page.tap('[data-wd="'+first+'"]');await pause(page);
+  const now=await ev(page,"(function(){var p=S.programs.find(p=>p.id===S.activeProgram);return p.days.filter(d=>d.wd.indexOf("+n+")>=0).map(d=>d.id)})()");
+  eq([now.includes(id),owners.every(o=>now.includes(o)),now.length],[true,true,owners.length+1],"the day it was on keeps it; this day has it too");
+  if(!(await page.$('.bwd button.on.two')))throw new Error("a shared weekday is not marked");
+  await page.tap('[data-wd="'+first+'"]');await pause(page);
+  eq(await ev(page,"(function(){var p=S.programs.find(p=>p.id===S.activeProgram);return p.days.filter(d=>d.wd.indexOf("+n+")>=0).map(d=>d.id)})()"),owners,"tapped again: taken off this day only");
 });
 await test("a rotation program is offered weekdays once, where the program is planned",async page=>{
   await coach(page,"train","program");
@@ -2989,6 +2994,50 @@ await test("Coach, when unsure and when wrong: other readings offered under a ne
   eq(vis,["add it to pull too"],"search shows what matches, questions and answers, in place");
   await page.fill('#chhq','zzzz');await pause(page,200);
   eq(await page.$eval('#chhNone',e=>e.hidden),false,"and says when nothing does");
+});
+await test("Workout fixes: the chat finishes the exercise on screen; RPE is asked after a set, about it; the set being done can be deleted, then Next exercise; today's exercises reorder by grip",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.rpe="every";});
+  await startWorkout(page);
+  if(await page.$('.wsc [data-rpe]'))throw new Error("RPE asked before the set is done");
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  eq(await page.$eval('.rpeask .val-k',e=>e.textContent),"How hard was set 1? · RPE","asked about the set just done");
+  await page.tap('.rpeask [data-rpeset$=":8"]');await pause(page,300);
+  eq([await ev(page,"S.active.entries[0].sets[0].rpe"),!!(await page.$('.rpeask'))],[8,false],"written to that set; the question goes");
+  const rows=await page.$$eval('.wsl .wsr',a=>a.length);
+  await page.tap('.wsr.on [data-delset]');await pause(page,500);
+  eq(await page.$$eval('.wsl .wsr',a=>a.length),rows-1,"the set being done is deleted, the next takes its place");
+  while(await page.$('.wsr.on [data-delset]')){await page.tap('.wsr.on [data-delset]');await pause(page,500);}
+  eq(await page.$eval('.sess .log',e=>e.textContent.trim()),"Next exercise","none left: Next exercise");
+  /* Reorder: the third moves up one, the one on screen stays on screen. */
+  const names=await ev(page,"S.active.entries.map(e=>e.name)");
+  await page.tap('[data-exlist]');await pause(page);
+  await page.focus('[data-grip="le2"]');await page.keyboard.press("ArrowUp");await pause(page,300);
+  eq(await ev(page,"S.active.entries.map(e=>e.name)"),[names[0],names[2],names[1]].concat(names.slice(3)),"moved up one");
+  eq(await ev(page,"S.active.entries[V.logIdx].name"),names[0],"the exercise on screen is still the one on screen");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page);
+  /* The chat: done with this exercise. */
+  await page.tap('.ss-coach');await pause(page,500);
+  await page.fill('#chatq',"I need to complete the current exercise");await page.press('#chatq','Enter');await pause(page,900);
+  /* Done at once, and the panel steps aside so the next exercise is in view. */
+  const x=await ev(page,"S.chat[S.chat.length-1].ag.done");
+  if(!/Done with .+: 1 set logged\. On to the next\./.test(x))throw new Error("chat: "+x);
+  eq(await ev(page,"V.logIdx"),1,"on to the next exercise");
+},{prefs:{autorest:false}});
+await test("Two sessions in a day: by weekday, the second pinned day is today's once the first is done; on the go, Start another session starts any day",async page=>{
+  const ids=await page.evaluate(async()=>{const st=await import("/js/state.js"),S=st.S,sp=st.split();const wd=((new Date().getDay()+6)%7)+1;
+    sp.schedule="week";const tr=sp.days.filter(d=>d.ex.length);tr.forEach(d=>d.wd=[]);tr[0].wd=[wd];tr[1].wd=[wd];
+    S.sessions.unshift({id:"am",date:new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10),dayId:tr[0].id,dayName:tr[0].name,entries:[{name:tr[0].ex[0].name,muscle:"Chest",sets:[{w:60,r:8}]}]});
+    st.saveDB();return [tr[0].id,tr[1].id];});
+  await tapTab(page,"train");await pause(page,500);
+  eq(await page.$eval('.thero2 .klabel',e=>e.textContent),"Session 2 today","the second session is today's now");
+  eq(await page.$eval('.thero2 [data-startday]',e=>e.dataset.startday),ids[1],"and it is the other day pinned today");
+  /* On the go: the second done too, then any day. */
+  await page.evaluate(async(ids)=>{const st=await import("/js/state.js"),S=st.S;S.sessions.unshift(Object.assign({},S.sessions[0],{id:"pm",dayId:ids[1]}));st.saveDB();},ids);
+  await tapTab(page,"progress");await tapTab(page,"train");await pause(page,500);
+  await page.tap('.thero2 [data-another]');await pause(page,400);
+  eq(await page.$$eval('#sheet [data-startday].did',a=>a.length),2,"today's done sessions ticked");
+  await page.tap('#sheet [data-startday]:not(.did)');await pause(page,600);
+  eq(await ev(page,"[!!S.active,V.sheet]"),[true,null],"started, the sheet gone");
 });
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});

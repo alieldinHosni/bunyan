@@ -19,7 +19,7 @@ import {blockNow} from "../engine/blocks.js";
 import {friends, snapStats} from "../engine/share.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
-import {CUES, mistakesFor, progressBar, sparkline, stepper, stepperInput, V} from "./view.js";
+import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, stepper, stepperInput, V} from "./view.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 import {tiexSheet} from "./views/timport.js";
@@ -213,6 +213,17 @@ function vSheet(){
      row competing with the set you are trying to log. Nothing was dropped. */
   /* Today's exercises at a glance, from the session title: where each one stands, and
      a tap to go to it. The order is the workout's; supersets keep their letters. */
+  /* Another session today (owner, 27 Oct): any training day of the program, the ones
+     done today ticked, or a run, a class, a sport. */
+  else if(V.sheet==="another"){
+    var asp=split(),doneT={};(S.sessions||[]).forEach(function(s){if(s.date===today()&&s.dayId)doneT[s.dayId]=1;});
+    b='<h2>'+t("Start another session")+'</h2><p class="sub" style="margin:2px 0 14px">'+esc(t("Pick what to train now. Today's first session stays as it is."))+'</p><div class="exl">';
+    (asp?asp.days:[]).filter(function(d){return d.ex.length;}).forEach(function(d){
+      b+='<button class="exl-row'+(doneT[d.id]?' did':'')+'" data-startday="'+esc(d.id)+'">'
+       +'<span class="exl-n" aria-hidden="true">'+(doneT[d.id]?'<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>':'+')+'</span>'
+       +'<span class="exl-t"><b>'+esc(planName(d.name))+'</b><small><bdi class="num">'+d.ex.length+'</bdi> '+t("exercises")+(doneT[d.id]?' · '+t("done today"):'')+'</small></span></button>';});
+    b+='</div><button class="btn g" data-actsheet="1">'+t("A run, a class or a sport")+'</button>';
+  }
   else if(V.sheet==="exlist"){
     var la=S.active;
     if(!la)return "";
@@ -221,12 +232,15 @@ function vSheet(){
     la.entries.forEach(function(x,i){
       var rws=rowsFor(x),dn=Math.min(x.sets.length,rws),cur=i===V.logIdx,fin=x.sets.length>=rws;
       var gl=groupLabel(la.entries,i);
-      b+='<button class="exl-row'+(cur?' on':'')+(fin?' did':'')+'" data-jumpl="'+i+'"'+(cur?' aria-current="step"':'')+'>'
+      /* Each row moves by its grip (owner, 27 Oct): today's order, not the program's. */
+      b+='<div class="exl-r" data-rowid="le'+i+'"><button class="exl-row'+(cur?' on':'')+(fin?' did':'')+'" data-jumpl="'+i+'"'+(cur?' aria-current="step"':'')+'>'
        +'<span class="exl-n" aria-hidden="true">'+(fin?'<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>':(gl||(i+1)))+'</span>'
        +'<span class="exl-t"><b>'+esc(exName(x.name))+'</b><small>'+esc(tm(muscleOfEntry(x)))
        +' \u00b7 <bdi class="num">'+dn+'/'+rws+'</bdi> '+t(isActivity(x.name)?"bouts":"sets")+'</small></span>'
        +(cur?'<span class="exl-cur">'+t("Current")+'</span>':'')
-       +'</button>';});
+       +'</button>'
+       +(la.entries.length>1?'<button class="exl-grip" data-grip="le'+i+'" aria-label="'+esc(t("Move")+" "+exName(x.name))+'">'+GRIPSVG+'</button>':'')
+       +'</div>';});
     b+='</div><button class="btn g" data-addlive="1">'+t("Add an exercise")+'</button>';
   }
   else if(V.sheet==="sessmore"){

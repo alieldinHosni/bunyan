@@ -2323,3 +2323,26 @@ CACHE `bunyan-v169` (session/workout-flow is v168; whichever merges second keeps
 - **Chat history search**: a field above the days; typing hides what doesn't match (question or
   answer), each row in place, and says when nothing does (fields.js `chhq`).
 - Tests: coach 229 (corpus included); regression "Coach, when unsure and when wrong…".
+
+## Workout fixes from the gym, and two sessions in a day — branch session/workout-more
+
+CACHE `bunyan-v174`. Owner, 27 Oct, from screenshots taken mid-workout:
+- **"I need to complete the current exercise"** was answered with a knowledge card about energy.
+  commands.js: complete / finish / end / done with / skip / move on from (this / the current)
+  exercise, "this exercise is done", "خلصت التمرين ده" → workout.next {done:1}; agent.js says
+  "Done with {ex}: n sets logged. On to the next." (the last exercise → finish, confirmed on screen;
+  no workout → said so). chat.js `DOWORK`: anything that does something to a set / exercise /
+  workout is never looked up in the knowledge files.
+- **RPE** was asked in the set card before the set ("How hard was that set?"), so a tap after
+  finishing went to the next set. Now `vRpeAsk` asks "How hard was set n?" once that set is logged
+  (every set or the last, per Settings), a tap writes it to that set (`rpeset`) and the card leaves.
+- **The set being done can be deleted** (✕ on every row): it leaves today's plan and the next row is
+  current; with none left the log control is Next exercise / Finish workout.
+- **Today's exercises reorder** from the title's list: a grip per row (reorder.js, keyboard too);
+  common.js `moveRow` for `le<i>` ids keeps the exercise on screen on screen; supersets tidied.
+- **Two sessions in a day**: by weekday, a weekday chip held by another day is now shared, not
+  moved (marked, and a note under the days); schedule.js `pinnedAllOn`; dayplan.js: today, with a
+  session done and another pinned day left, that day is today's ("Session 2 today"). On the go: a
+  done day's card offers "Start another session" — a sheet with every training day (today's done
+  ones ticked) and "A run, a class or a sport".
+- Tests: "Workout fixes: …", "Two sessions in a day: …"; the builder weekday test now expects sharing.

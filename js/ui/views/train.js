@@ -61,7 +61,10 @@ function dayHero(sp,p,iso){
     var sv=p.session;
     label=iso===today()?t("Done today"):t("Completed");
     meta=(sv.mins?sv.mins+' '+t("min")+' · ':'')+sv.entries.filter(function(e){return (e.sets||[]).length;}).length+' '+t("exercises");
-    cta='<button class="btn g" data-openday="'+iso+'">'+t("View session")+'</button>';
+    cta='<button class="btn g" data-openday="'+iso+'">'+t("View session")+'</button>'
+    /* Another session the same day, on the go (owner, 27 Oct): any day of the program,
+       or a run, a class, a sport. */
+     +(iso===today()?'<button class="btn" data-another="1"><span aria-hidden="true">+</span> '+t("Start another session")+'</button>':'');
   }else if(p.kind==="past"||p.kind==="none"){
     label=p.kind==="past"?t("No session"):t("Nothing planned");
     meta=p.kind==="past"?t("Nothing was logged on this day."):t("Your program has no training days yet. Plan them in Coach.");
@@ -73,7 +76,7 @@ function dayHero(sp,p,iso){
     if(p.kind==="today"&&p.next)
       cta='<button class="btn g" data-startday="'+p.next.id+'">'+t("Train anyway")+' · '+esc(p.next.name)+'</button>';
   }else{
-    label=p.kind==="today"?t("Current workout"):t("Planned");
+    label=p.kind==="today"?(p.again?t("Session {n} today").replace("{n}",p.again):t("Current workout")):t("Planned");
     meta=p.day.ex.length+' '+t("exercises")+' · ~'+estMinutes(p.day)+' '+t("min");
     cta=p.kind==="today"
       ?'<button class="btn" data-startday="'+p.day.id+'"><span class="ico ico-play" aria-hidden="true"></span>'+t("Start workout")+'</button>'
@@ -517,15 +520,18 @@ function builderBody(sp,id,inline){
         :'<em>'+t("Tap to add exercises")+'</em>')+'</span></span>'
      +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
      +(roD?'<button class="dgrip" data-grip="'+d.id+'" aria-label="'+esc(t("Move")+" "+planName(d.name))+'">'+GRIPSVG+'</button>':'')
-     /* By weekday, each day carries the week: tap a weekday to pin it here. One taken
-        by another day is dimmed, and tapping it moves it to this one. */
+     /* By weekday, each day carries the week: tap a weekday to pin it here. One another
+        day has too is marked: that weekday holds both, as two sessions. */
      +(week?'<div class="bwd" role="group" aria-label="'+esc(t("Weekdays for")+" "+planName(d.name))+'">'
        +weekOrder().map(function(n){
-         var mine=(d.wd||[]).indexOf(n)>=0,other=!mine&&sp.days.some(function(o){return o!==d&&(o.wd||[]).indexOf(n)>=0;});
-         return '<button class="'+(mine?'on':other?'taken':'')+'" data-wd="'+d.id+'|'+n+'" aria-pressed="'+mine+'">'+esc(wdName(n))+'</button>';}).join("")
+         var mine=(d.wd||[]).indexOf(n)>=0,also=sp.days.some(function(o){return o!==d&&(o.wd||[]).indexOf(n)>=0;}),other=!mine&&also;
+         return '<button class="'+(mine?'on':other?'taken':'')+(mine&&also?' two':'')+'" data-wd="'+d.id+'|'+n+'" aria-pressed="'+mine+'">'+esc(wdName(n))+'</button>';}).join("")
        +'</div>':'')
      +'</div>';});
-  h+='</div><button class="dadd" data-bday="1"><span aria-hidden="true">+</span>'+t("Add day")+'</button>';
+  h+='</div>';
+  if(week&&sp.days.some(function(d){return (d.wd||[]).some(function(n){return sp.days.some(function(o){return o!==d&&(o.wd||[]).indexOf(n)>=0;});});}))
+    h+='<p class="bnote">'+t("A weekday on two days is two sessions that day, the upper one first.")+'</p>';
+  h+='<button class="dadd" data-bday="1"><span aria-hidden="true">+</span>'+t("Add day")+'</button>';
   /* What an imported program came with: its phase and length, and the coach's notes —
      the rules, the reasons, the warnings — kept with it rather than thrown away. */
   if(sp.meta&&(sp.meta.phase||sp.meta.weeks))

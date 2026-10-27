@@ -135,9 +135,10 @@ function register(){
   /* A weekday is one day's at a time: pinning it here takes it from any other day. */
   key("wd",function(D){var pw=D.wd.split("|"),ws=editSplit(builderId()),wday=ws&&ws.days.filter(function(d){return d.id===pw[0];})[0];
     if(!wday)return;var wn=+pw[1];
+    /* A weekday another day has is shared, not taken from it (owner, 27 Oct): two days on
+       one weekday are two sessions that day, in the program's order. */
     if((wday.wd||[]).indexOf(wn)>=0)wday.wd=wday.wd.filter(function(x){return x!==wn;});
-    else{ws.days.forEach(function(d){d.wd=(d.wd||[]).filter(function(x){return x!==wn;});});
-      wday.wd=(wday.wd||[]).concat(wn).sort();}
+    else wday.wd=(wday.wd||[]).concat(wn).sort();
     saveDB();render();return;});
   key("wdoffer",function(D){var wo=split();S.wdOffered=true;
     if(D.wdoffer==="yes"){wo.schedule="week";toWeekdays(wo);

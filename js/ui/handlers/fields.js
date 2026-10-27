@@ -115,7 +115,7 @@ function onKeydown(ev){
   var gp=(ev.key==="ArrowUp"||ev.key==="ArrowDown")&&ev.target.closest&&ev.target.closest("[data-grip]");
   if(gp){
     ev.preventDefault();
-    var gid=gp.getAttribute("data-grip"),gl=V.tab==="coach"&&V.reorder==="ms"?mealSlots()
+    var gid=gp.getAttribute("data-grip"),gl=V.sheet==="exlist"&&S.active?S.active.entries.map(function(x,i){return {id:"le"+i};}):V.tab==="coach"&&V.reorder==="ms"?mealSlots()
       :builderId()?(editSplit(builderId())||{days:[]}).days:((dayOf(V.dayId)||{ex:[]}).ex);
     var gi=gl.findIndex(function(x){return x.id===gid;});
     if(gi<0)return;

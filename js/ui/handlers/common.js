@@ -63,6 +63,13 @@ function builderId(){
 /* Drag and the arrow keys both land here: a day in the split builder, or an
    exercise in a day. */
 function moveRow(id,to){
+  /* Today's workout, from its list (exlist sheet): the exercise on screen stays on screen. */
+  if(V.sheet==="exlist"&&S.active&&/^le\d+$/.test(id)){
+    var en=S.active.entries,li=+id.slice(2),cur=en[V.logIdx];
+    to=Math.max(0,Math.min(en.length-1,to));
+    if(!en[li]||to===li)return;
+    en.splice(to,0,en.splice(li,1)[0]);tidyGroups(en);
+    V.logIdx=Math.max(0,en.indexOf(cur));S.active.idx=V.logIdx;saveDB();render();return;}
   if(V.tab==="coach"&&V.reorder==="ms"){
     var sl=ownSlots(),k0=sl.findIndex(function(x){return x.id===id;});
     to=Math.max(0,Math.min(sl.length-1,to));

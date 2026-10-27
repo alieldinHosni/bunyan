@@ -114,6 +114,9 @@ function commandOf(text,unit){
   if(/(^| )(skip|end|stop|cancel) (the |my |)rest( |$)|(^| )(اقفل|الغي|كفايه|خلص|سكيب) (ال|)راحه/.test(q))return {cmd:"rest.skip"};
   if(/(^| )(extend|more|longer|add 30( s| sec| seconds|)( to)?) (the |my |)rest( |$)|(^| )30 (s|sec|seconds) more( |$)|(^| )(زود|طول) (ال|)راحه/.test(q))return {cmd:"rest.extend"};
   if(/(^| )(next exercise|next one|go to next|move on to the next|التمرين اللي بعده|التمرين الجاي|اللي بعده)( |$)/.test(q)&&!asks)return {cmd:"workout.next"};
+  /* Done with the exercise on screen (owner, 27 Oct: "I need to complete the current
+     exercise" was read as a question about energy): on to the next, or the finish. */
+  if(/(^| )(complete|finish|end|stop|wrap up|done with|im done with|i m done with|i am done with|close|skip|move on from) (the |this |my |)(current |)(exercise|movement|lift|one)( |$)|(^| )(this|the current) (exercise|one) (is |)(done|finished|complete)( |$)|(^| )(خلصت|انهي|اقفل|عدي|سيب|خلص) (ال|)(تمرين|حركه) (ده|دي|الحالي)( |$)/.test(q)&&!asks)return {cmd:"workout.next",done:1};
   if(/(^| )(finish|end|complete|wrap up|done with) (my |the |this |)(workout|session|training)( |$)|(^| )(خلصت|انهي|اقفل) (ال|)(تمرين|سيشن)( |$)/.test(q)&&!asks)return {cmd:"workout.finish"};
   if(/^(start|begin|let s start|lets start|go|start today s|ابدا|ابدأ|يلا|يلا نبدا) ?(my |the |today s |todays |)(workout|training|session|تمرين|التمرين)( |$)/.test(fq)&&!asks)return {cmd:"workout.start"};
   /* "bodyweight x 12": a set with no load. */
