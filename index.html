@@ -874,6 +874,13 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
 .seg.soft .seg-ind{background:var(--accent-tint);box-shadow:inset 0 0 0 1px var(--accent-edge)}
 .seg.soft .seg-b.on{color:var(--accentHi)}
 @media (max-width:360px){.seg-b{font-size:12px}}
+/* With icons (seg o.items[3]; Progress, owner's mock 27 Oct): the icon over its word,
+   a taller cell for the two. .pghalf sets them side by side. */
+.seg.ic .seg-b{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--s1);
+  min-height:60px;padding:var(--s2) 4px}
+.seg-i{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.seg-l{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.seg-dim{opacity:.35}
 /* Gated to real navigation. Left ungated it replayed on every state change, which
    during a workout meant the screen flew in again after every logged set. */
 /* A rise, not a fade. While an element is partly transparent, the glass inside it can
@@ -3506,6 +3513,13 @@ textarea.afnl.warn{border-color:var(--warning)}
 .pgbanner .ico-chev{color:var(--text)}
 /* Strength: the filter, record cards, exercise rows, the insight. */
 .pghalf{margin-top:12px}
+.pghalf.ic .seg-b{flex-direction:row;gap:var(--s2);min-height:48px}
+.pgrange.ic .seg-b{min-height:54px}
+.pgrange .seg-i{width:18px;height:18px}
+.pghalf .seg-i{width:24px;height:24px}
+/* The page's mark beside its name, in the accent (owner's mock). */
+.thead-ic{display:flex;align-items:center;gap:var(--s3)}
+.thead-ic svg{flex:none;width:1em;height:1em;fill:var(--accent);stroke:none}
 .pgprs{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 2px 6px;margin:0 -2px;
   scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .pgprs::-webkit-scrollbar{display:none}

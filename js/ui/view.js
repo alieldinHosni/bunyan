@@ -354,7 +354,8 @@ function stepper(id,val,step,unit){
    the choice moves rather than blinking from one place to another, and the row never
    changes size.
 
-   o.items   [[value, label, accessible name?], …]
+   o.items   [[value, label, accessible name?, icon?], …] (an icon is inner SVG markup on
+             the 24 grid, the caller's constant; with one, every cell has the icon's room)
    o.value   the selected value
    o.attr    the data attribute each button carries (the click handler's key)
    o.label   the group's accessible name
@@ -362,9 +363,9 @@ function stepper(id,val,step,unit){
    o.soft    a secondary control: tinted indicator rather than the solid accent
    o.key     a stable data-k, so the patcher keeps the element and the slide can run */
 function seg(o){
-  var items=o.items||[],idx=0;
+  var items=o.items||[],idx=0,ic=items.some(function(it){return it[3];});
   items.forEach(function(it,i){if(String(it[0])===String(o.value))idx=i;});
-  return '<div class="seg'+(o.soft?' soft':'')+(o.cls?' '+o.cls:'')+'" data-k="'+esc(o.key||o.attr)+'"'
+  return '<div class="seg'+(o.soft?' soft':'')+(ic?' ic':'')+(o.cls?' '+o.cls:'')+'" data-k="'+esc(o.key||o.attr)+'"'
    +' role="'+(o.tabs?'tablist':'group')+'" aria-label="'+esc(o.label||"")+'"'
    +' style="--n:'+items.length+';--i:'+idx+'">'
    +'<span class="seg-ind" aria-hidden="true"></span>'
@@ -372,7 +373,10 @@ function seg(o){
      var on=i===idx;
      return '<button type="button" class="seg-b'+(on?' on':'')+'" data-'+o.attr+'="'+esc(it[0])+'"'
       +(o.tabs?' role="tab" aria-selected="'+on+'" tabindex="'+(on?0:-1)+'"':' aria-pressed="'+on+'"')
-      +(it[2]?' aria-label="'+esc(it[2])+'"':'')+'>'+esc(it[1])+'</button>';}).join("")
+      +(it[2]?' aria-label="'+esc(it[2])+'"':'')+'>'
+      /* it[3], an icon's inner markup on the 24 grid: the module's own constant, never text. */
+      +(ic?'<svg class="seg-i" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(it[3]||'')+'</svg><span class="seg-l">'+esc(it[1])+'</span>':esc(it[1]))
+      +'</button>';}).join("")
    +'</div>';}
 
 function progressBar(cur,goal,color){
