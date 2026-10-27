@@ -13,11 +13,14 @@ import {streak} from "../view.js";
 import {themeName, themeOf} from "../theme.js";
 import {planName} from "../../i18n/exnames.js";
 import {glyph} from "../glyphs.js";
+import {state as smartState} from "../smartcoach.js";
 import {avatar, backupState} from "../settings.js";
 import {art} from "../art.js";
 import {backArrow} from "../nav.js";
 
 /* One row: its glyph in a tile, its name, what is set there now, and a chevron. */
+function smartLabel(){var st=smartState().st,on=S.prefs.smart&&S.prefs.smart.on;
+  return st==="ready"?"On, on this phone":st==="loading"||st==="checking"?"Loading…":on?"On":"Off: understands any question, on this phone";}
 function prow(attr,gl,name,sub,tone){
   return '<button class="srow" '+attr+'><span class="gtile'+(tone?' '+tone:'')+'">'+glyph(gl)+'</span>'
    +'<span class="srow-t"><span class="srow-n">'+esc(name)+'</span>'
@@ -68,6 +71,8 @@ function vProfile(){
        told you?"), where it can be deleted. */
     +prow('data-sheet="set_chat"',"clock",t("Chat history"),t("The last 30 days, to read"))
     +prow('data-fsec="targets"',"bowl",t("Nutrition"),fmtN(g.kcal)+" kcal · "+g.p+"g "+t("Protein").toLowerCase())
+    /* The on-device model (js/ui/smartcoach.js): off until asked for. */
+    +prow('data-sheet="set_smart"',"spark",t("Smart coach"),t(smartLabel()))
     +prow('data-sheet="set_app"',"sliders",t("App"),
        [t(themeName(themeOf()))+" · "+(S.theme==="light"?t("Light"):t("Dark")),
         pref.lang==="ar"?"العربية":"English",wUnit()].join(" · ")));

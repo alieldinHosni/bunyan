@@ -12,7 +12,8 @@ import {t} from "../../i18n/dict.js";
 import {S, saveDB, split} from "../../state.js";
 import {restartAfter} from "../../engine/blocks.js";
 import {fmtN, num, today} from "../../util.js";
-import {closeSheet, openSheet} from "../actions.js";
+import {ACT, askConfirm, closeSheet, openSheet} from "../actions.js";
+import {isReady, run as runSmart, start as smartStart, state as smartState, stop as smartStop} from "../smartcoach.js";
 import {pushNav, resetNav} from "../nav.js";
 import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
@@ -136,6 +137,7 @@ function mealPrefs(){
 
 /* What this module answers. app.js calls register() once, at boot, in the order
    the branches are tried in (see registry.js). */
+ACT.smartoff=function(){smartStop().then(function(){toast(t("Smart coach off. The download is removed."));});};
 function register(){
   /* The assessment, from Explore, Home or Profile: a fresh draft from what is saved. */
   key("setup",function(){if(V.sheet)closeSheet();pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);return;});
@@ -190,6 +192,16 @@ function register(){
     m.miss=1;saveDB();
     var p=document.createElement("p");p.className="chat-missd";p.textContent=t("Kept, thanks. Try saying it another way, or tap a question below.");
     if(el&&el.parentNode)el.parentNode.replaceChild(p,el);return;});
+  /* The smart coach (js/ui/smartcoach.js): a question the rules missed, tried again by
+     the model; the setting's buttons. */
+  key("smarttry",function(D){var m0=findMsg(D.smarttry);if(!m0||!isReady())return;
+    var m={q:m0.qq||m0.q,id:"smart",at:Date.now(),b:[{p:""}],acts:[],lang:m0.lang,pending:true};
+    S.chat=(S.chat||[]).concat([m]);saveDB();render();toEnd();
+    runSmart(m,saveDB,function(){render();toEnd();});return;});
+  key("smarton",function(){smartStart(smartState().size);return;});
+  key("smartsize",function(D){if(/^(small|better)$/.test(D.smartsize)){smartState().size=D.smartsize;render();}return;});
+  key("smartoff",function(){askConfirm({title:t("Turn off the smart coach?"),icon:"trash",
+    body:t("The model is removed from this phone. The coach answers as before; turn it on again any time."),cta:t("Turn off and remove"),act:"smartoff",danger:true});return;});
   key("misscopy",function(){
     var tx=(S.missed||[]).map(function(x){return x.q+"  →  "+x.id;}).join("\n");
     var ok=function(){toast(t("Copied."));};
