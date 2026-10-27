@@ -3744,8 +3744,11 @@ body.wkflat #app{--gutter:20px}
   display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:var(--s3)}
 .rb.over .rb-l{min-width:0;display:block}
 .rb.over .rb-ctl{display:flex;gap:var(--s2);flex:none}
-.rb.over .rb-ctl button{min-width:var(--hit);height:var(--hit);padding:0 var(--s3);border-radius:var(--rpill);border:1.5px solid currentColor;
-  background:transparent;color:inherit;font-weight:800;font-size:15px;display:grid;place-items:center}
+/* Two equal circles, +30 and ✕, each centred on what it says: the base rule fixes a
+   control's width, and "+30" ran past a circle that narrow, sitting off to one side. */
+.rb.over .rb-ctl button{width:calc(var(--hit) + var(--s2));height:calc(var(--hit) + var(--s2));padding:0;border-radius:50%;
+  border:1.5px solid currentColor;background:transparent;color:inherit;font-weight:800;font-size:14px;letter-spacing:-.01em;
+  display:grid;place-items:center;text-align:center;line-height:1}
 .rb.over .rb-close svg,.rb.over .rb-close .gl{width:18px;height:18px}
 /* Add a set, under the sets. */
 .wsl-add{display:flex;align-items:center;justify-content:center;gap:var(--s2);width:100%;min-height:var(--hit);margin:0;padding:var(--s2) var(--s3);
@@ -4422,7 +4425,7 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .fnoticed-i .gl{width:22px;height:22px}
 .fnoticed b{display:block;font-size:15px}
 .fnoticed p{margin:3px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
-.btn.fbuild{margin:12px 0 0;gap:8px;border-color:var(--accent-edge);color:var(--accentHi)}
+.btn.fbuild{margin:var(--s3) 0 var(--s4);gap:8px;border-color:var(--accent-edge);color:var(--accentHi)}
 .btn.fbuild .gl{width:18px;height:18px}
 [dir="rtl"] .btn.fbuild .gl{transform:scaleX(-1)}
 /* ---- Running mode (js/ui/run.js) ------------------------------------------------

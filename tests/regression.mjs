@@ -1622,7 +1622,7 @@ function oldBwLog(){const d=seed();const day=new Date(Date.now()-5*864e5).toISOS
 await test("Old logs: body-weight sets logged at the body weight are read as body weight, once, said with Undo; a real added weight stays",async page=>{
   await pause(page,3400);
   const sets=()=>ev(page,"S.sessions.find(s=>s.id==='oldpu').entries[0].sets.map(x=>x.w)");
-  eq([await sets(),await ev(page,"S.logFixV")],[[0,0,20],1],"84 and 84.5 to 0, the vest kept");
+  eq([await sets(),await ev(page,"S.logFixV")],[[0,0,20],2],"84 and 84.5 to 0, the vest kept");
   if(!/read as body weight/.test(await page.textContent(".toast").catch(()=>"")))throw new Error("the change was not said: "+await page.textContent(".toast").catch(()=>"none"));
   await page.tap('.toast-undo');await pause(page);
   eq(await sets(),[84,84.5,20],"Undo puts them back");
@@ -1630,6 +1630,11 @@ await test("Old logs: body-weight sets logged at the body weight are read as bod
   await page.reload();await pause(page,3400);
   eq(await sets(),[84,84.5,20],"and it does not run again");
 },{db:oldBwLog()});
+await test("Old logs: a workout open at the update has its body-weight sets read as body weight too",async page=>{
+  await pause(page,3400);
+  eq(await ev(page,"S.active.entries[0].sets.map(x=>x.w)"),[0],"the open workout's push-up set");
+},{db:(()=>{const d=oldBwLog();const today=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+  d.active={date:today,dayName:"Push",start:Date.now()-6e5,idx:0,entries:[{name:"Pushups",muscle:"Chest",planned:{sets:3,lo:8,hi:20},sets:[{w:84,r:20}]}]};return d;})()});
 await test("Old logs: the correction is kept across a reload, and not said again",async page=>{
   await pause(page,3400);
   const sets=()=>ev(page,"S.sessions.find(s=>s.id==='oldpu').entries[0].sets.map(x=>x.w)");
