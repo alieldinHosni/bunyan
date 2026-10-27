@@ -35,7 +35,7 @@ function paint(){
     var lab=els[i].querySelector(".hold-l");
     if(lab)lab.textContent=holdLabel(H.key,0);
     els[i].style.setProperty("--p",s.p.toFixed(3));
-    els[i].classList.add("run");}
+    els[i].classList.add("timing");}
   if(s.left<=0){var done=H.done;stopHold();play("set");tap("ok");if(done)done();}}
 
 function startHold(key,secs,side,done){
@@ -49,7 +49,7 @@ function stopHold(){
   if(!H)return;
   clearInterval(H.timer);
   var els=document.querySelectorAll('[data-holdt="'+H.key+'"]');
-  for(var i=0;i<els.length;i++){els[i].classList.remove("run");els[i].style.removeProperty("--p");}
+  for(var i=0;i<els.length;i++){els[i].classList.remove("timing");els[i].style.removeProperty("--p");}
   H=null;}
 
 function holding(key){return !!(H&&(key==null||H.key===key));}

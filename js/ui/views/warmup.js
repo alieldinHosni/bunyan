@@ -54,7 +54,7 @@ function row(key,name,dose,secs,side,done,tickAttr){
       and reads like a printout. The name opens how to do it. */
    +'<button class="wu-ex" data-exdetail="'+esc(name)+'">'
    +'<span class="wu-t"><span class="wu-n">'+esc(exName(name))+'</span><span class="wu-d">'+esc(dose)+'</span></span></button>'
-   +(secs?'<button class="wu-hold'+(hs?' run':'')+'" data-hold="'+key+'" data-secs="'+secs+'" data-side="'+(side?1:0)
+   +(secs?'<button class="wu-hold'+(hs?' timing':'')+'" data-hold="'+key+'" data-secs="'+secs+'" data-side="'+(side?1:0)
      +'" data-holdn="'+esc(name)+'" data-holdt="'+key+'"'+(hs?' style="--p:'+hs.p.toFixed(3)+'"':'')
      +' aria-label="'+esc(t(hs?"Stop the timer":"Start the timer")+": "+exName(name))+'">'
      +PLAY+'<span class="hold-l">'+esc(holdLabel(key,secs))+'</span></button>':'')
@@ -90,7 +90,7 @@ function vWarm(a){
    +'<div class="wu-row wu-pulse'+(done[pk]?' did':'')+'" data-k="wp">'
    +'<button class="wu-tick" data-wutick="'+pk+'" aria-pressed="'+(done[pk]?"true":"false")+'" aria-label="'+esc(t("Done")+": "+t("Raise your pulse"))+'">'+TICK+'</button>'
    +'<p class="wu-txt">'+esc(t(PULSE[w.pulse.how]))+'</p>'
-   +'<button class="wu-hold'+(phs?' run':'')+'" data-hold="'+pk+'" data-secs="'+w.pulse.min*60+'" data-side="0" data-holdn="'+pk+'" data-holdt="'+pk+'"'
+   +'<button class="wu-hold'+(phs?' timing':'')+'" data-hold="'+pk+'" data-secs="'+w.pulse.min*60+'" data-side="0" data-holdn="'+pk+'" data-holdt="'+pk+'"'
    +(phs?' style="--p:'+phs.p.toFixed(3)+'"':'')+' aria-label="'+esc(t(phs?"Stop the timer":"Start the timer"))+'">'
    +PLAY+'<span class="hold-l">'+esc(holdLabel(pk,w.pulse.min*60))+'</span></button></div></div>';
   /* 2. The drills for what the day trains, or a word that the plan has its own. */

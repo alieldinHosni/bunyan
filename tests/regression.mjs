@@ -1430,7 +1430,7 @@ await test("Warm-up: shown before the first exercise; ticks and a hold timer; St
   /* The pulse raiser's timer, shortened so the test does not wait four minutes. */
   await page.$eval('[data-hold="wp"]',b=>b.setAttribute("data-secs","1"));
   await page.tap('[data-hold="wp"]');await pause(page,300);
-  eq(await page.$eval('[data-hold="wp"]',b=>b.classList.contains("run")),true,"counting");
+  eq(await page.$eval('[data-hold="wp"]',b=>b.classList.contains("timing")),true,"counting");
   await pause(page,1200);
   eq(await ev(page,"[S.active.wuDone.wp,document.querySelector('.wu-pulse').classList.contains('did')]"),[1,true],"ticked when it ends");
   await page.tap('[data-wugo]');await pause(page);
@@ -1645,6 +1645,14 @@ await test("Old logs: the correction is kept across a reload, and not said again
   eq(await sets(),[0,0,20],"still corrected after a reload");
   eq(await page.evaluate(()=>/read as body weight/.test((document.querySelector(".toast")||{}).textContent||"")),false,"said once");
 },{db:oldBwLog()});
+await test("Warm-up: a running timer stays the small pill it was, counting down in place",async page=>{
+  await startWorkout(page);
+  const box=()=>page.$eval('.wu-pulse .wu-hold',e=>{const r=e.getBoundingClientRect();return {w:Math.round(r.width),h:Math.round(r.height),dir:getComputedStyle(e).flexDirection,cls:e.className};});
+  const before=await box();
+  await page.tap('.wu-pulse .wu-hold');await pause(page,1300);
+  const after=await box();
+  eq([after.h,after.dir,/timing/.test(after.cls),after.w<=before.w+40],[before.h,"row",true,true],"same height, a row, not a page-tall column");
+},{prefs:{nowarm:false}});
 await test("Warm-up: Start stays on the bottom edge all the way down",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.nowarm=false;});
   await startWorkout(page);
