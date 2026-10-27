@@ -1987,4 +1987,5 @@ Owner, 27 Oct: the chat screen shifts badly when the keyboard opens; tab changes
   - A health-tick note on vigorous topics, and a sore-spot note on movement topics.
   - What the person told the coach that bears on it.
 - Tests: the suggestions (kit, sore spot, goal dose, the day asked) and the goal's dose for an added exercise.
+- **The workout stands on the training picture** (owner, 27 Oct, two screenshots: the two backgrounds should be the same; the workout's looked zoomed in): `groundOf` gives a live workout `training`, the picture of Plan → Training, framed the same.
 - **Owner, 27 Oct (screenshot): asking to rebuild for no equipment jumped straight to the result page with no message or motion: it looked like a glitch.** Now the coach says what it will do ("Yes. I can rebuild your program for no equipment…, nothing changes until you tap Use this plan") with **Show me** / Not now. On the tap, and for any "open …" command, the answer is marked done and shown for a beat, then the panel closes back into its button, and only then does the page move, with its rise (`coach.js goAfter`).
