@@ -10,7 +10,7 @@ import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay} from "./views/train.js";
 import {planOn} from "../engine/dayplan.js";
 import {ACT_GROUPS, actIcon, actInfo, actRate, actsIn, INTENSITY, intensityOf, isActivity, outdoorOf} from "../data/activities.js";
-import {bwShare, incrementFor, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
+import {barKg, bwShare, incrementFor, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {groupLabel, groupRun, ivText, mmss, platePlan, rowsFor} from "./views/session.js";
@@ -94,6 +94,8 @@ function vSheet(){
      +(c.body?'<p class="cf-b">'+esc(c.body)+'</p>':'')
      +'<div class="cf-acts">'
      +'<button class="btn cf-ok" data-confirmok="1">'+esc(c.cta||t("Delete"))+'</button>'
+     /* mid: a second real choice beside the primary, as plain as Cancel. */
+     +(c.mid?'<button class="btn g cf-mid" data-confirmmid="1">'+esc(c.mid)+'</button>':'')
      +'<button class="btn g cf-no" '+(c.back?'data-restore="1"':'data-close="1"')+'>'+esc(c.cancel||t("Cancel"))+'</button>'
      /* altbad: the second choice is the one that deletes, so it reads in danger red. */
      +(c.alt?'<button class="cf-alt'+(c.altbad?' bad':'')+'" data-confirmalt="1">'+esc(c.alt)+'</button>':'')
@@ -230,23 +232,22 @@ function vSheet(){
   else if(V.sheet==="sessmore"){
     var sm=S.active,smE=sm&&sm.entries[V.logIdx];
     if(!smE)return "";
+    /* Only what is nowhere else on the screen (owner, 27 Oct): the coach has its
+       button in the header, how to do it is ⓘ, the plates are under the weight, and
+       finishing or throwing the workout away is the close button's question. */
     b='<h2>'+t("Session")+'</h2>'
      +'<p class="sub" style="margin:2px 0 16px">'+esc(exName(smE.name))+'</p>'
      +'<div class="list">'
-     /* The coach, from the workout: over the set, never near the log control. */
-     +'<button class="item" data-coachopen="1"><span>'+t("Ask Coach")+'</span><span class="chev">›</span></button>'
-     +'<button class="item" data-exdetail="'+esc(smE.name)+'"><span>'+t("How to do it")+'</span>'
-     +'<span class="chev">›</span></button>'
-     +(loadable(smE.name)?'<button class="item" data-plates="1"><span>'+t("Plates")+'</span>'
-       +'<span class="chev">›</span></button>':'')
      +'<button class="item" data-note="1"><span>'+t("Session note")+'</span>'
      +(sm.notes?'<span class="pill a">'+t("Saved")+'</span>':'<span class="chev">›</span>')+'</button>'
      /* The warm-up again, whenever it is wanted: after skipping it, or before a
         second heavy lift. */
-     +(warmOf(sm)?'<button class="item" data-wuopen="1"><span>'+t("Warm-up")+'</span><span class="chev">›</span></button>':'')
-     +'</div>'
-     +'<button class="btn" data-finish="1">'+t("Finish workout")+'</button>'
-     +'<button class="btn danger" data-discard="1">'+t("Discard workout")+'</button>';
+     +(warmOf(sm)?'<button class="item" data-wuopen="1"><span>'+t("Warm-up again")+'</span><span class="chev">›</span></button>':'')
+     /* Today only, for this exercise: the program keeps its plan. */
+     +'<button class="item'+(smE.pain?' on':'')+'" data-hurt="1"><span>'+t(smE.pain?"Pain noted":"Something hurts?")+'</span>'
+     +(smE.pain?'<span class="pill a">'+t("Noted")+'</span>':'<span class="chev">›</span>')+'</button>'
+     +(sm.entries.length>1?'<button class="item d" data-rmlive="1"><span>'+t("Remove this exercise")+'</span><span class="chev">›</span></button>':'')
+     +'</div>';
   }
   else if(V.sheet==="tiex"){b=tiexSheet();}
   else if(V.sheet==="editex"){
@@ -763,7 +764,7 @@ function vSheet(){
      +'<button class="btn afcta" data-savemyfoodx="'+esc(mfx?mfx.id:"new")+'">'+esc(t("Save"))+'</button>';
   }
   else if(V.sheet==="plates"){
-    var pw=num(V.draft.w),pbar=V.bar==null?20:V.bar;
+    var pw=num(V.draft.w),pbar=barKg();
     var plan=platePlan(pw,pbar);
     b='<h2>'+t("Plates")+'</h2>'
      +'<p class="tiny" style="margin:2px 0 14px">'+t("Per side, heaviest first.")+'</p>'

@@ -1,11 +1,11 @@
 /* Bunyan — actions
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
-import {exIdOf, kindOf, LIB, muscleOf, muscleOfEntry, pickable} from "../data/exercises.js";
+import {exIdOf, isBarbell, kindOf, LIB, muscleOf, muscleOfEntry, pickable} from "../data/exercises.js";
 import {doseFor, standIn, usable} from "../engine/plan.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
-import {deloadSets, inDeload, recordsIn, avgRPE, prevPerf, progressionHint, recommend, sessionVolume} from "../engine/formulas.js";
+import {barKg, deloadSets, inDeload, recordsIn, avgRPE, prevPerf, progressionHint, recommend, sessionVolume} from "../engine/formulas.js";
 import {blockDay, blockNow, ensureBlock} from "../engine/blocks.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {coolFor} from "./views/warmup.js";
@@ -251,6 +251,8 @@ function syncDraft(){
   /* A warm-up being done (queued with + Warm-up) starts from the last warm-up on this
      exercise, today or before; with none, from the working set below, to step down
      from. A working set never starts from a warm-up's numbers. */
+  if(num(e.wuq)>0&&e.wuRamp){var rk=e.sets.filter(function(x){return x.wu;}).length,rs=e.wuRamp[rk];
+    if(rs){V.draft.w=num(rs.w);V.draft.r=num(rs.r);V.draft.rpe=null;return;}}
   if(num(e.wuq)>0){var lw=lastWarmup(e);
     if(lw){V.draft.w=num(lw.w);V.draft.r=num(lw.r);V.draft.rpe=null;return;}}
   last=null;
@@ -263,6 +265,8 @@ function syncDraft(){
   V.draft.w=rec&&rec.w?rec.w:(src?num(src.w):num(e.planned&&e.planned.w0));
   V.draft.r=src?num(src.r):e.planned.hi||8;
   V.draft.rpe=null;
+  /* A barbell is never lighter than its bar (owner, 27 Oct): a first time starts there. */
+  if(isBarbell(e.name)&&num(V.draft.w)<barKg())V.draft.w=barKg();
   if(!p)V.draftSg=false;}
 
 function finishSession(){
@@ -325,7 +329,7 @@ function finishSession(){
   /* The plan's words for the day and each exercise were for doing it, not for the
      record: history keeps what describes the sets, not the cues. */
   delete a.dayNotes;delete a.warm;delete a.wuDone;
-  a.entries.forEach(function(e){delete e.alt;delete e.altWhy;delete e.wuq;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
+  a.entries.forEach(function(e){delete e.alt;delete e.altWhy;delete e.wuq;delete e.wuRamp;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
   recordSession(a);S.active=null;endRest();keepAwake(false);stopHold();V.cdDone={};
   saveDB();V.tab="train";V.train="days";
   play(prs.length?"pr":"complete");tap("ok");

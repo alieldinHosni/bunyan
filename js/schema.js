@@ -157,6 +157,7 @@ function normalize(o){
   /* A profile picture is a small image kept as a data URL (js/ui/photos.js), or none.
      Anything else, or anything big enough to crowd the storage, is dropped. */
   /* Which page guides have been seen (js/ui/tour.js): page → version. */
+  if(o.prefs.bar!=null&&!(isFinite(+o.prefs.bar)&&+o.prefs.bar>=0&&+o.prefs.bar<=40))delete o.prefs.bar;
   var tr=o.prefs.toured;
   if(tr!=null&&(typeof tr!=="object"||Array.isArray(tr)))delete o.prefs.toured;
   var ph=o.profile.photo;

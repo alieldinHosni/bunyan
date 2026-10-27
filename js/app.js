@@ -214,7 +214,13 @@ initExSwipe({
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from
    holding the whole app behind the intro; in practice it resolves well inside it. */
 /* The history is in: old body-weight sets are read as body weight, once (js/engine/logfix.js). */
-loadStored(function(){ applyExReconcile(); fixLogsNow(); render(); });
+var bootDraft="";
+/* A workout open across a reload: its first numbers were filled in before the history
+   and the library were in, so with no suggestion to go on (0 on a barbell, say). Untouched,
+   they are filled in again now that last time is known. */
+loadStored(function(){ applyExReconcile(); fixLogsNow();
+  if(S.active)loadExDB(function(){if(S.active&&bootDraft&&JSON.stringify(V.draft)===bootDraft){bootDraft="";syncDraft();render();}});
+  render(); });
 /* The intro belongs to a cold start, not to every document load. A reload for any
    reason — a service worker taking over, a crash recovery, the OS reclaiming the
    tab — used to replay it, which reads as the app restarting. */
@@ -244,7 +250,7 @@ window.addEventListener("storage",function(ev){
 /* Reopened mid-workout (a reload, or iOS having reclaimed the tab): straight back to
    the exercise and the rest that were on screen, not to Home. */
 V.csec=(S.prefs&&S.prefs.csec)||"ai";
-if(S.active){restoreWorkoutState();syncDraft();V.tab="train";V.train="days";}
+if(S.active){restoreWorkoutState();syncDraft();bootDraft=JSON.stringify(V.draft);V.tab="train";V.train="days";}
 if(!S.onboarded){V.tab="coach";V.csec="ai";V.assess=true;V.asd=draftFrom();}
 render();
 

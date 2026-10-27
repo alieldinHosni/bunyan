@@ -7,7 +7,7 @@
    js/engine/warmup.js; this file only draws it. */
 import {t, tm} from "../../i18n/dict.js";
 import {exName} from "../../i18n/exnames.js";
-import {recommend} from "../../engine/formulas.js";
+import {barKg, recommend} from "../../engine/formulas.js";
 import {cooldownFor, warmupFor} from "../../engine/warmup.js";
 import {S} from "../../state.js";
 import {fmtW} from "../../units.js";
@@ -17,6 +17,7 @@ import {holdLabel, holdState} from "../hold.js";
 
 var TICK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 var PLAY='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z"/></svg>';
+var INFO='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg>';
 
 /* The weight the first set of an exercise will be done at: the recommendation
    from last time, or the plan's starting weight. 0 when neither is known. */
@@ -25,7 +26,7 @@ function workKg(e){
   return (r&&num(r.w))||num(e.planned&&e.planned.w0)||0;}
 
 function warmOf(a){
-  return warmupFor(a.entries,{work:workKg,gear:S.gear||null,bar:V.bar==null?20:V.bar});}
+  return warmupFor(a.entries,{work:workKg,gear:S.gear||null,bar:barKg()});}
 
 /* The warm-up shows before the first set of a session, unless it is switched off;
    from the ⋯ menu it shows whenever asked for. */
@@ -43,8 +44,9 @@ function doseOf(d){
   if(d.sec)return d.sec+" "+t("s")+(d.side?" "+t("/ side"):"");
   return d.n+" "+(d.side?t("/ side"):t("reps"));}
 
-/* A drill or a stretch: tick, the exercise (tap for how), and a hold timer when it
-   is held rather than repeated. */
+/* A drill or a stretch: tick, the exercise, ⓘ for how, and a hold timer when it is
+   held rather than repeated. The name ticks it as the circle does (owner, 27 Oct): the
+   whole row is the target, not a small circle to hunt for. */
 function row(key,name,dose,secs,side,done,tickAttr){
   var hs=secs?holdState(key):null;
   return '<div class="wu-row'+(done?' did':'')+'" data-k="'+key+'">'
@@ -52,8 +54,9 @@ function row(key,name,dose,secs,side,done,tickAttr){
    +esc(t("Done")+": "+exName(name))+'">'+TICK+'</button>'
    /* No photo: a list of photos and drawings that load at different moments flickers,
       and reads like a printout. The name opens how to do it. */
-   +'<button class="wu-ex" data-exdetail="'+esc(name)+'">'
+   +'<button class="wu-ex" '+tickAttr+'="'+esc(name)+'" aria-hidden="true" tabindex="-1">'
    +'<span class="wu-t"><span class="wu-n">'+esc(exName(name))+'</span><span class="wu-d">'+esc(dose)+'</span></span></button>'
+   +'<button class="wu-info" data-exdetail="'+esc(name)+'" aria-label="'+esc(t("How to do it")+": "+exName(name))+'">'+INFO+'</button>'
    +(secs?'<button class="wu-hold'+(hs?' timing':'')+'" data-hold="'+key+'" data-secs="'+secs+'" data-side="'+(side?1:0)
      +'" data-holdn="'+esc(name)+'" data-holdt="'+key+'"'+(hs?' style="--p:'+hs.p.toFixed(3)+'"':'')
      +' aria-label="'+esc(t(hs?"Stop the timer":"Start the timer")+": "+exName(name))+'">'
@@ -89,7 +92,7 @@ function vWarm(a){
   h+='<div class="wu-step wu-card"><div class="wu-sh"><b>'+(++step)+'</b><span>'+t("Raise your pulse")+'</span></div>'
    +'<div class="wu-row wu-pulse'+(done[pk]?' did':'')+'" data-k="wp">'
    +'<button class="wu-tick" data-wutick="'+pk+'" aria-pressed="'+(done[pk]?"true":"false")+'" aria-label="'+esc(t("Done")+": "+t("Raise your pulse"))+'">'+TICK+'</button>'
-   +'<p class="wu-txt">'+esc(t(PULSE[w.pulse.how]))+'</p>'
+   +'<button class="wu-ex wu-txt" data-wutick="'+pk+'" aria-hidden="true" tabindex="-1">'+esc(t(PULSE[w.pulse.how]))+'</button>'
    +'<button class="wu-hold'+(phs?' timing':'')+'" data-hold="'+pk+'" data-secs="'+w.pulse.min*60+'" data-side="0" data-holdn="'+pk+'" data-holdt="'+pk+'"'
    +(phs?' style="--p:'+phs.p.toFixed(3)+'"':'')+' aria-label="'+esc(t(phs?"Stop the timer":"Start the timer"))+'">'
    +PLAY+'<span class="hold-l">'+esc(holdLabel(pk,w.pulse.min*60))+'</span></button></div></div>';
@@ -109,17 +112,25 @@ function vWarm(a){
     if(w.ramp.sets.length)
       h+='<div class="wu-ramp">'+w.ramp.sets.map(function(s){
           return '<span class="wu-rs"><b>'+esc(fmtW(s.w))+'</b> × '+s.r+'</span>';}).join("")
-       +'<span class="wu-rs work">'+esc(t("then"))+' <b>'+esc(fmtW(w.ramp.work))+'</b></span></div>';
+       +'<span class="wu-rs work">'+esc(t("then"))+' <b>'+esc(fmtW(w.ramp.work))+'</b></span></div>'
+       /* Logged where they are done (owner, 27 Oct): Start puts them on the lift as
+          warm-up rows (W), their weights filled in. */
+       +'<p class="wu-note">'+esc(t("Start the workout and they're on {ex} as warm-up sets (W), filled in.").replace("{ex}",exName(w.ramp.name)))+'</p>';
     else h+='<p class="wu-note">'+t("Build up over two or three lighter sets to your first working weight.")+'</p>';
     h+='<details class="wu-why"><summary>'+t("Why")+'</summary>'
-     +'<p>'+t("Lighter sets, short rests, nothing near failure. They get you ready; they are not logged.")
+     +'<p>'+t("Lighter sets, short rests, nothing near failure. They get you ready, and count for nothing in volume or records.")
      +(w.moreLifts?' '+t("Each big lift after it: one lighter set of five first."):'')+'</p>'
      +'<p>'+t("Moving drills now, held stretches at the end: a long hold just before lifting can take a little off your strength for a while.")+'</p></details></div>';}
   /* Start stays in reach at the bottom, with what follows it. */
+  /* The pulse's timer stays in sight at the bottom while it runs, the list free to
+     scroll (owner, 27 Oct). The same timer as the row's: hold.js paints both. */
   h+='<div class="wu-foot">'
+   +'<button class="wu-hold wu-hold-mini'+(phs?' timing':'')+'" data-hold="'+pk+'" data-secs="'+w.pulse.min*60+'" data-side="0" data-holdn="'+pk+'" data-holdt="'+pk+'"'
+   +(phs?' style="--p:'+phs.p.toFixed(3)+'"':'')+' aria-label="'+esc(t("Stop the timer"))+'">'
+   +'<span class="wu-hm-k">'+esc(t("Raise your pulse"))+'</span><span class="hold-l num">'+esc(holdLabel(pk,w.pulse.min*60))+'</span></button>'
    +(a.entries[0]?'<p class="wu-then"><span>'+t("Then")+'</span> <b>'+esc(exName(a.entries[0].name))+'</b></p>':'')
    +'<div class="wu-acts"><button class="btn wu-go" data-wugo="1">'+t("Start the workout")+'</button>'
-   +'<button class="btn g wu-skip" data-wuskip="1">'+t("Skip")+'</button></div></div>'
+   +'<button class="btn g wu-skip" data-wuskip="1">'+t("Skip warm-up")+'</button></div></div>'
    +'</section>';
   return h;}
 

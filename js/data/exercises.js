@@ -312,6 +312,8 @@ var UNI_RE=/\b(single|one)[- ]?(arm|leg|hand|legged|armed)\b|\balternat|\bunilat
 function isUnilateral(n){return !isActivity(n)&&UNI_RE.test(String(n||""));}
 /* Two dumbbells at once: a dumbbell exercise that is not one side at a time. Logged
    per hand, its weight is one of the two it moves. */
+/* A barbell exercise: its weight is the total, the bar in it (the plates sheet's bar). */
+function isBarbell(n){var v=EXDB&&EXDB[n];return !!(v&&v.e==="Barbell");}
 function pairOfDumbbells(n){var v=EXDB&&EXDB[n];return !!(v&&v.e==="Dumbbell")&&!isUnilateral(n);}
 function kindOf(n){return isActivity(n)?"activity":TIMED_RE.test(n||"")?"timed":"strength";}
 function muscleOf(n){var a=actMuscle(n);if(a)return a;var v=EXDB&&EXDB[n];return v?v.m:"Other";}
@@ -342,7 +344,7 @@ function movementOfEx(n){
   return MOVE[n];}
 
 
-export {exFigs, exThumb, useUserData, alsoKnown, isUnilateral, pairOfDumbbells, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
+export {exFigs, exThumb, useUserData, alsoKnown, isBarbell, isUnilateral, pairOfDumbbells, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
 
 /* Plate maths only means something on a loaded bar. On a machine, a cable or your
    own bodyweight the button was there on every exercise and useful on a handful.
