@@ -2918,6 +2918,27 @@ await test("Dumbbells per hand or together: switching converts the history, volu
   if(!/with bar/.test(lbl))throw new Error("barbell weight label: "+lbl);
   await leaveWorkout(page);
 });
+await test("Coach, when unsure and when wrong: other readings offered under a near tie; Not what I asked keeps the question to send on; \"add it to Pull too\" means the last exercise; the history searches",async page=>{
+  await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
+  await openChat(page);
+  await agSay(page,"Which day is next?");await pause(page,300);
+  eq(await page.$$eval('#cpanel .chat-x.live .chat-alt [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["tomorrow"],"a near tie: the other reading, one tap");
+  eq(await page.$$eval('#cpanel .chat-next [data-chatq="tomorrow"]',a=>a.length),0,"and not again under Ask next");
+  await page.tap('#cpanel .chat-x.live .chat-miss');await pause(page,300);
+  eq(await ev(page,"[S.missed.length,S.missed[0].q,!!document.querySelector('#cpanel .chat-missd')]"),[1,"Which day is next?",true],"kept, and said so in place");
+  let r=await agSay(page,"add pushups to push");
+  eq(r.lead,"Add Pushups to Push?","the request");
+  r=await agSay(page,"add it to pull too");
+  eq(r.lead,"Add Pushups to Pull?","\"it\" is the exercise just named");
+  await page.tap('.cp [data-coachclose]');await pause(page,400);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_chat");});await pause(page,500);
+  eq(await page.$eval('#sheet .chh-miss .num',e=>e.textContent),"1","the kept questions, counted, in Chat history");
+  await page.fill('#chhq','pushups to pull');await pause(page,200);
+  const vis=await page.$$eval('#sheet .chh-day .chat-x',a=>a.filter(x=>!x.hidden).map(x=>x.querySelector(".chat-q").textContent));
+  eq(vis,["add it to pull too"],"search shows what matches, questions and answers, in place");
+  await page.fill('#chhq','zzzz');await pause(page,200);
+  eq(await page.$eval('#chhNone',e=>e.hidden),false,"and says when nothing does");
+});
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
   await openChat(page);

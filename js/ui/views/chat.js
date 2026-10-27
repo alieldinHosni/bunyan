@@ -57,7 +57,7 @@ var KEEP=500;
 /* The suggestions: what each asks, as the person would ask it. */
 var ASK={
   today:"What do I train today?",weights:"How much should I lift?",eat:"What should I eat now?",
-  plateau:"Why isn't my lift going up?",week:"How was my week?",busy:"This machine is taken",track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
+  plateau:"Why isn't my lift going up?",loadlog:"How are weights logged?",week:"How was my week?",busy:"This machine is taken",track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
   calories:"Why are my calories set like this?",sore:"I'm sore or tired",missed:"I'm short on time today",
   balance:"Is my program balanced?",strong:"How strong am I?",goal:"Should I change my goal?",
   plan:"Build me a new plan",water:"How much water should I drink?",steps:"How are my steps and cardio?",
@@ -1209,9 +1209,26 @@ function knowFor(text,iid,it,prev){
 var CORR=/^(no+|nope|not that|wrong|sorry|oops)?[ ,.!]*(i meant|i mean|meant|make it|change it to|actually|لا|لأ|قصدي|اقصد)( |$)/;
 var SAME=/^(do |)(the same|same|that|it)( again| too|)( for| on| to| in| with)( .+)$|^(and|also|plus|و|وكمان) (.+?)( too| as well| كمان|)$/;
 var PREP={exadd:"to",exremove:"from",exswap:"in"};
+/* "it", "that one", "ده": the exercise the last exchange was about (owner, 27 Oct),
+   said in its place, in a request that names none of its own: "add it to Friday too",
+   "swap it", "شيل ده". ("How do I do it" in a workout is the exercise on screen, commands.js.) */
+var PRON=/(^| )(it|that|this|that one|this one|ده|دي|هو|هي)(?= |$)/;
+var PRONVERB=/^(please |pls |can you |could you |)(add|put|include|remove|delete|drop|take out|swap|replace|switch|substitute|ضيف|حط|شيل|امسح|بدل|استبدل)( |$)/;
+function lastExercise(prev){
+  var p=prev&&prev.ag&&prev.ag.p,n=p&&(p.name||p.from);
+  if(n&&typeof n==="string")return n;
+  var ne=prev?namedExercises(prev.qq||prev.q||""):[];
+  return ne.length?ne[0].name:"";}
+function withReferent(q,prev){
+  var fq=fold(q);
+  if(!PRONVERB.test(fq)||!PRON.test(" "+fq.replace(PRONVERB,"")+" ")||namedExercises(q).length)return null;
+  var nm=lastExercise(prev);if(!nm)return null;
+  var head=fq.match(PRONVERB)[0],rest=" "+fq.slice(head.length)+" ";
+  return (head+rest.replace(PRON,"$1"+nm.toLowerCase())).replace(/\s+/g," ").trim().replace(/ (too|as well|also|كمان)$/,"");}
 function rewrite(q){
   var prev=lastExchange();if(!prev||!prev.q)return null;
   var fq=fold(q),m,target,corr=false;
+  var rf=withReferent(q,prev);if(rf)return rf;
   if((m=fq.match(CORR))){target=fq.slice(m[0].length).trim();corr=true;}
   else if((m=fq.match(SAME)))target=(m[5]||m[7]||"").replace(/^(for|on|to|in|with) /,"").trim();
   target=target.replace(/^(on|for|to|the|in|it|يوم|ل|لـ) /,"").replace(/ (day|يوم)$/,"").trim();
@@ -1315,7 +1332,11 @@ function askOne(q,id,lang){
       p(a,t("First, the assessment: a few questions, and the coach builds your targets, training and meals. Then I can answer from your own plan."));
       act(a,t("Start the assessment"),{"data-setup":"1"});}
     else{try{fn(a,text,it);}catch(e){a=aUnknown(A());}}
-    return {q:text,id:iid,at:Date.now(),b:a.b,acts:a.acts,src:a.src&&a.src.length?a.src:undefined,ag:a.ag,lang:L,kq:iid==="know"?it.kq:undefined};});
+    /* A shaky reading (intent.js unsure): the answer, and under it the other things the
+       words could have meant, one tap each (owner, 27 Oct). */
+    var alt=!id&&it.unsure&&iid===it.id?(it.ranked||[]).filter(function(x){return x!==iid&&ACTION_IDS.indexOf(x)<0&&ASK[x];}).slice(0,2):[];
+    return {q:text,id:iid,at:Date.now(),b:a.b,acts:a.acts,src:a.src&&a.src.length?a.src:undefined,ag:a.ag,lang:L,kq:iid==="know"?it.kq:undefined,
+      alt:alt.length?alt:undefined};});
   S.chat=(S.chat||[]).concat([msg]).slice(-KEEP);
   return msg;}
 /* A choice tapped on a pick: said as the person's own line, then the request goes on
@@ -1425,7 +1446,7 @@ function bubbleIn(m,live,L,prev,ro){
   var h='<div class="chat-x'+(live?' live':'')+(prev?' prev':'')+(ro?' ro':'')+'" data-k="'+(ro?'h':'x')+esc(String(m.at||""))+'" lang="'+L+'" dir="'+(L==="ar"?"rtl":"ltr")+'"><div class="chat-q"><p dir="auto">'+esc(String(m.q||""))+'</p></div><div class="chat-a">'
    +'<div class="chat-ah"><span class="chat-gl">'+glyph(tp?tp[1]:"question")+'</span><span class="chat-ah-t">'
    +'<span class="chat-ak">'+esc(t("Coach"))+'</span>'+(tp?'<span class="chat-at">'+esc(t(tp[0]))+'</span>':'')+'</span></div>';
-  if(m.ag&&typeof m.ag==="object"&&AGSTATE[m.ag.s])return h+agHtml(m,live,ro)+'</div></div>';
+  if(m.ag&&typeof m.ag==="object"&&AGSTATE[m.ag.s])return h+agHtml(m,live,ro)+missHtml(m,live,ro)+'</div></div>';
   /* Where an answer stands is kept with it, not shown: the coach speaks as a coach. */
   var srcs=Array.isArray(m.src)?m.src:[];
   if(srcs.length)h=h.replace('<div class="chat-a">','<div class="chat-a" data-src="'+esc(srcs.join(" · "))+'">');
@@ -1437,7 +1458,17 @@ function bubbleIn(m,live,L,prev,ro){
   if(!lead)h+=blocks(more);
   else if(more.length)h+='<details class="chat-more"><summary>'+esc(t("More"))+'</summary>'+blocks(more)+'</details>';
   h+=buttons(live&&Array.isArray(m.acts)?m.acts:[]);
-  return h+'</div></div>';}
+  if(live&&!ro&&Array.isArray(m.alt)&&m.alt.length)
+    h+='<div class="chat-alt"><span>'+esc(t("Or did you mean"))+'</span>'
+     +m.alt.filter(function(x){return ASK[x];}).map(function(x){return '<button class="chat-altb" data-chatq="'+esc(x)+'">'+esc(t(ASK[x]))+'</button>';}).join("")+'</div>';
+  return h+missHtml(m,live,ro)+'</div></div>';}
+/* Not what I asked (owner, 27 Oct): on the newest answer to something typed, a quiet
+   link that keeps the question on this phone (S.missed) for the owner to send on, so a
+   misreading becomes a fix and a test. Said once it is kept. */
+function missHtml(m,live,ro){
+  if(!live||ro||!m||!m.q||m.id==="app"&&!m.ag)return "";
+  if(m.miss)return '<p class="chat-missd" data-k="miss'+esc(String(m.at))+'">'+esc(t("Kept, thanks. Try saying it another way, or tap a question below."))+'</p>';
+  return '<button class="chat-miss" data-chatmiss="'+esc(String(m.at))+'" data-k="miss'+esc(String(m.at))+'">'+esc(t("Not what I asked"))+'</button>';}
 
 /* The screen: a header that says where the answers come from, then either what can be
    asked or the conversation and what to ask next, and a box to type in that stays in
@@ -1473,7 +1504,8 @@ function askNext(last,n){
   var LL=last.lang==="ar"||last.lang==="en"?last.lang:uiLang(),own=LL!==uiLang()?LL:"",slim=n>1;
   return withLang(LL,function(){return '<div class="chat-next'+(slim?' slim':'')+'" lang="'+LL+'" dir="'+(LL==="ar"?"rtl":"ltr")+'"'
     +(slim?' role="group" aria-label="'+esc(t("Ask next"))+'">':'><div class="chat-next-h">'+esc(t("Ask next"))+'</div>')
-    +chips(NEXT[last.id]||NEXT.unknown,"",own)+'</div>';});}
+    /* What the answer already offers under "Or did you mean" is not offered twice. */
+    +chips((NEXT[last.id]||NEXT.unknown).filter(function(x){return !(Array.isArray(last.alt)&&last.alt.indexOf(x)>=0);}),"",own)+'</div>';});}
 
 /* ---- the chat history (Profile → Chat history) ----------------------------------
    Thirty days of the conversation, by day, newest day first, to read: nothing in it
@@ -1485,7 +1517,16 @@ function histSheet(){
     if(!days[k]){days[k]=[];order.push(k);}days[k].push(m);});
   var h='<h2>'+esc(t("Chat history"))+'</h2><p class="tiny">'
    +esc(t("Your conversations with the coach from the last 30 days, to read. Older days are removed; the chat itself shows the last 24 hours."))+'</p>';
+  /* The questions marked Not what I asked, to send on: copied as plain lines. */
+  var ms0=Array.isArray(S.missed)?S.missed:[];
+  if(ms0.length)h+='<section class="chh-miss"><h3 class="sg-h">'+esc(t("Questions the coach got wrong"))+' <span class="num">'+ms0.length+'</span></h3>'
+    +'<p class="tiny">'+esc(t("Copy them and send them on, so the coach learns to read them."))+'</p>'
+    +'<div class="sacts"><button class="btn g sm" data-misscopy="1">'+esc(t("Copy the list"))+'</button>'
+    +'<button class="btn g sm" data-missclear="1">'+esc(t("Clear"))+'</button></div></section>';
   if(!log.length)return h+'<p class="chh-empty">'+esc(t("Nothing here yet."))+'</p>';
+  /* Search: typing hides what doesn't match, each row in place (handlers/fields.js). */
+  h+='<input id="chhq" class="chh-q" type="search" enterkeyhint="search" autocomplete="off" placeholder="'+esc(t("Search the history"))+'" aria-label="'+esc(t("Search the history"))+'">'
+   +'<p class="chh-none tiny" id="chhNone" hidden>'+esc(t("Nothing matches."))+'</p>';
   order.reverse().forEach(function(k){var ms=days[k];
     h+='<section class="chh-day"><h3 class="sg-h">'+esc(dayWord(num(ms[0].at)))+'</h3>'
      +ms.map(function(m){return bubble(m,false,false,true);}).join("")+'</section>';});

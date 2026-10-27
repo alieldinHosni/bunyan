@@ -12,6 +12,7 @@ import {t} from "../../i18n/dict.js";
 import {dayOf, editSplit, S, saveDB} from "../../state.js";
 import {toKg} from "../../units.js";
 import {fmtN, num} from "../../util.js";
+import {fold} from "../../coach/intent.js";
 import {runAct, val} from "../actions.js";
 import {addPhoto, avatarFrom} from "../photos.js";
 import {closeCoach} from "../coachfab.js";
@@ -70,6 +71,15 @@ function onInput(ev){
     V.food.sq=ev.target.value;V.food.tab="search";
     clearTimeout(exqTimer);
     exqTimer=setTimeout(function(){exqTimer=null;render();topOfResults();},140);
+    return;}
+  /* Chat history search: each exchange shown or hidden in place, a day with none left
+     hidden with it. */
+  if(id==="chhq"){
+    var hq=fold(ev.target.value).trim(),any=false;
+    [].forEach.call(document.querySelectorAll("#sheet .chh-day"),function(sec){var seen=false;
+      [].forEach.call(sec.querySelectorAll(".chat-x"),function(x){var hit=!hq||fold(x.textContent).indexOf(hq)>=0;x.hidden=!hit;if(hit)seen=true;});
+      sec.hidden=!seen;if(seen)any=true;});
+    var nn=document.getElementById("chhNone");if(nn)nn.hidden=any;
     return;}
   if(id.indexOf("in_")===0){
     var k=id.slice(3),v=parseFloat(ev.target.value);

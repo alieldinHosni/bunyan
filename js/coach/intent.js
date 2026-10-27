@@ -30,7 +30,7 @@ var INTENTS=[
     "tomorrow|tmrw|tomorow","train|training|workout|session|gym|lift|plan tomorrow|tmrw|tomorow","next day",
     "بكره|بكرا","اتمرن|تمرين|هتمرن|العب ايه|اي بكره|بكرا"]],
   ["last",[
-    "last workout|session|training|gym|time","previous workout|session","how did i do","my last workout|session",
+    "last workout|session|training|gym|time","previous workout|session","how did i do","my last workout|session","how yesterday workout|session|training|gym",
     "اخر تمرين|جلسه|مره","التمرين اللي فات","عملت ايه اخر|المره"]],
   ["weights",[
     "how much weight|lift|squat|bench|deadlift|press|row|curl","what weight|load","how heavy","weight should","increase|add|raise weight|load",
@@ -39,14 +39,14 @@ var INTENTS=[
     "بنش|سكوات|ديدلفت|بريس|كيرل|عقله|سحب|تجديف|ليج كام|كم|قد|وزن","كم كيلو|وزن"]],
   ["eat",[
     "what eat","eat today|now|next","left today","calories|kcal|protein left|remaining","remaining","food today","how much eat|food",
-    "hungry","next meal","meal now","have i eaten",
+    "hungry","starving|starved|famished","next meal","meal now","have i eaten",
     "اكل ايه|اي","اكل النهارده|دلوقتي","ماذا|ايش|شو اكل","اكل الان|الحين","akol|akl|aakol|kol eh|e$|eih|eah","فاضل|باقي كام|ايه|سعرات|بروتين","اكل كام|قد","جعان|جعانه","الوجبه الجايه","وجبه دلوقتي"]],
   ["rest",[
-    "rest of day|today","eat|food|meals rest of day|today","remaining meals","rest of my day",
+    "rest of day|today","eat|food|meals rest of day|today","remaining meals","rest of my day","left eat today|tonight","have left today|tonight",
     "باقي|بقيه اليوم|النهارده","اكل ايه باقي|بقيه اليوم|النهارده"]],
   ["swap",[
     "other food|foods|options|meal|meals|choices","alternative|alternatives|substitute|substitutes|swap|swaps|replacement",
-    "instead of","same macros|calories|kcal|protein","something else eat|instead","replace|swap|change food|meal|it|breakfast|lunch|dinner|snack",
+    "instead of","what|which can|could replace|substitute","same macros|calories|kcal|protein","something else eat|instead","replace|swap|change food|meal|it|breakfast|lunch|dinner|snack",
     "بديل|بدايل|بدائل|بدل","حاجه|اكل|اكله تانيه|تاني|غير","نفس الماكروز|الماكرو|السعرات|الكالوريز|البروتين","اغير الاكل|الوجبه|الاكله"]],
   ["foodinfo",[
     "how much protein|calories|kcal|carbs|fat|fiber|sugar in$","how many calories|kcal|grams in$","protein|calories|kcal|carbs|fat|macros in$",
@@ -55,7 +55,8 @@ var INTENTS=[
   /* A lift that has stopped moving (chat.js aPlateau). */
   ["plateau",[
     "why not going up","why isnt going up","not going up","bench|squat|deadlift|press|lift|lifts|row|curl|pullups|chinups stuck","stuck on|at","plateau","plateaued","stalled","not getting stronger","stopped going up|improving|progressing",
-    "not progressing","cant increase|add weight","ليه مش بيزيد","مش بيزيد","واقف عند","ثابت مش بيزيد","مش بقوي"]],
+    "not progressing","cant increase|add weight","bench|squat|deadlift|press|lift|row|curl stalled|stalling|plateaued",
+    "bench|squat|deadlift|press|lift|row|curl isnt|not going|moving|increasing","ليه مش بيزيد","مش بيزيد","واقف عند","ثابت مش بيزيد","مش بقوي"]],
   /* The weekly check-in: the week, from the log (chat.js aWeek). */
   ["week",[
     "how was my week","how was week","how did week go","week review|recap|summary|check|checkin","weekly review|recap|summary|check|checkin|report",
@@ -85,11 +86,11 @@ var INTENTS=[
     "فوت|فاتني|فوتت","مروحتش|ماروحتش","معنديش|مفيش وقت","مش فاضي","وقت قليل|مش كتير","مستعجل|مستعجله","تمرين قصير|سريع","دقيقه|دقايق"]],
   ["balance",[
     "balanced|balance","enough sets|volume","volume","muscle groups","too much|many sets","overtraining|overtrained","weak point|points|spot",
-    "lagging","neglect|neglecting",
+    "lagging","neglect|neglecting","program|split|routine good|ok|okay|right|decent","missing muscles|muscle|anything",
     "متوازن|توازن","مجموعات كفايه","حجم التمرين|الفوليوم","عضله متاخره|ضعيفه","مهمل|مهمله"]],
   ["strong",[
     "how strong","strong am i","my max|maxes","1rm","one rep max","record|records|pr$|prs$","strength","compare|compared","percentile",
-    "squat|bench|deadlift",
+    "squat|bench|deadlift","best lifts|lift|numbers",
     "قوتي|قوي|قويه","اقصي وزن|اقصي","رقم قياسي|ارقامي|الارقام","اقارن|مقارنه"]],
   ["goal",[
     "change goal|goals","my goal","goal","bulk|bulking","cut$|cutting","lose fat","build muscle","recomp","get stronger",
@@ -116,10 +117,10 @@ var INTENTS=[
      — an exercise in the library or a food in the database — never on the verb. */
   ["exadd",[
     "add exercise|exercises|movement|move|lift","add to day|workout|session|program|routine|push|pull|legs|upper|lower|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday",
-    "put in|into my|day|workout|program","include in","add$",
+    "put in|into my|day|workout|program","put on day|workout|session|program|routine","include in","add$",
     "ضيف|اضيف|زود|ضيفلي تمرين","حط|حطلي في|ل اليوم|التمرين|البرنامج","ضيف|اضيف|حط"]],
   ["exremove",[
-    "remove|delete|drop exercise|from|it","take out|off exercise|from","get rid of","no more","remove$|delete$",
+    "remove|delete|drop exercise|from|it","take out|off exercise|from","take out of","get rid of","no more","remove$|delete$",
     "شيل|امسح|احذف|الغي تمرين|من","شيل|امسح|احذف"]],
   ["exswap",[
     "swap|replace|switch|change|substitute exercise|movement|lift","swap|replace|switch|substitute for|with",
@@ -156,7 +157,7 @@ var INTENTS=[
     "tempo","tempo lift|should|for|reps|rep","how fast lift|rep|reps|lower","lifting speed","slow reps|negatives",
     "سرعه العده|التكرار","بالراحه ولا بسرعه"]],
   ["kwarm",[
-    "warm up|warmup sets|set|how many","warmup|warm-up","before lifting|working sets",
+    "warm up|warmup sets|set|how many","warmup|warm-up","before lifting|working sets","how do|should i warm|warmup",
     "تسخين|احماء"]],
   ["kdur",[
     "how long workout|session|train|training|should","workout length|duration","session length|duration","how long gym",
@@ -170,7 +171,7 @@ var INTENTS=[
     "volume include|including|includes|count|counts|counted|calculate|calculated|calculation|work|works|worked|figured",
     "how is|do you volume calculated|counted|worked|figure|calculate",
     "log|enter|record|type|put weight|weights per|total|both|together|hand",
-    "dumbbell|dumbbells per|each|both hand|hands","dumbbell|dumbbells weight|weights total|together",
+    "dumbbell|dumbbells per|each|both hand|hands","dumbbell|dumbbells weight|weights total|together","log|enter|count both|one dumbbell|dumbbells",
     "وزن البار|الباربل","البار محسوب|بيتحسب|داخل|معاه|مع","الفوليوم|الحجم|الفوليوم بيتحسب|محسوب|ازاي",
     "لكل|كل ايد|ايده","الدمبل|الدامبل|دمبل|دامبل لكل|كل|الاتنين|مع|واحد|واحده","اسجل|بسجل الوزن|وزن لكل|كل|الاتنين|مع|الاجمالي"]],
   ["k1rm",[
@@ -259,9 +260,9 @@ function intentOf(q){
   var text=spell(fold(q)),lang=ARABIC.test(q)||FRANCO.test(text)?"ar":"en",scores=[];
   if(!text)return {id:"unknown",score:0,lang:lang,mins:0,ranked:[]};
   INTENTS.forEach(function(it){
-    var s=0;
-    it[1].forEach(function(p){var x=phraseScore(text,p);if(x>s)s=x;});
-    if(s>0)scores.push({id:it[0],score:s});});
+    var s=0,parts=0;
+    it[1].forEach(function(p){var x=phraseScore(text,p);if(x>s){s=x;parts=p.split(" ").length;}});
+    if(s>0)scores.push({id:it[0],score:s,parts:parts});});
   /* Highest first; on a tie the intent listed first, as before (a stable sort). */
   scores.sort(function(a,b){return b.score-a.score;});
   var best=scores[0]||{id:"unknown",score:0};
@@ -272,7 +273,13 @@ function intentOf(q){
   var gr=ar.match(/(\d{1,4}) ?(g|gm|gr|gram|grams|جرام|جم)(?= |$)/);
   return {id:best.score>=3?best.id:"unknown",score:best.score,lang:lang,mins:m?+m[1]:0,
     kg:lb?Math.round(+lb[1]/2.2046*10)/10:kg?+kg[1]:0,unit:lb?"lb":kg&&kg[2]?"kg":"",grams:gr?+gr[1]:0,
-    ranked:scores.filter(function(x){return x.score>=3;}).map(function(x){return x.id;})};}
+    ranked:scores.filter(function(x){return x.score>=3;}).map(function(x){return x.id;}),
+    /* The runner-up's score, for telling a clear reading from a near tie. */
+    second:scores[1]&&scores[1].score>=3?scores[1].score:0,
+    /* Shaky: a near tie with the runner-up, or one keyword carrying a long message.
+       The answer still comes; the chat offers the other readings under it. */
+    unsure:best.score>=3&&((scores[1]&&scores[1].score>=3&&best.score-scores[1].score<=1)
+      ||(best.parts===1&&best.score<=8&&text.split(" ").length>=6))};}
 
 
 /* ---- a situation, not a question ----------------------------------------------------

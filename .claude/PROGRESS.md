@@ -2265,3 +2265,28 @@ called “<the whole sentence>”".
 - Tests: intent cases (the owner's three sentences, Arabic, guards), engine (volume both hands,
   conversion both ways), regression "Coach understanding: …how weights are logged…" and
   "Dumbbells per hand or together…".
+
+## Coach: unsure, Not what I asked, "it", a phrasing corpus, history search — branch session/coach-unsure
+
+CACHE `bunyan-v169` (session/workout-flow is v168; whichever merges second keeps the higher).
+- **A shaky reading offers the others** (intent.js `unsure`, `second`, each score's `parts`): a near
+  tie with the runner-up (≤1 apart), or one keyword carrying six words or more. The answer still
+  comes; under it "Or did you mean" with up to two other readings that have a question to ask
+  (`m.alt`, chat.js). Ask next leaves those out, so nothing shows twice. Measured on the intent
+  tests: 3 of 137 flagged, each a real near tie. Coverage (matched letters ÷ letters) was tried and
+  dropped: real questions sit as low as misread ones.
+- **Not what I asked** (newest answer, typed questions): keeps {q, id, at, lang} in `S.missed`
+  (per profile, 200 at most, validated in schema.js) and says so in place. Chat history shows
+  "Questions the coach got wrong" with Copy the list (plain lines "question → read as") and Clear
+  (with Undo). The owner sends the list on; each line becomes a corpus entry and a fix.
+- **"it", "that", "ده"** in a change request naming no exercise (add/put/remove/swap…) is the
+  exercise the last exchange was about (`withReferent` in `rewrite`): its agent params' name, else
+  the one its words named. "add it to Pull too" → "add pushups to pull". Trailing too/also dropped.
+- **Corpus** (js/coach/test/corpus.test.js, in tests/coach.mjs and the browser runner): 127
+  phrasings across every answer, EN / Egyptian Arabic / Franco. 14 were misread at first; phrases
+  added for each (starving; left to eat today; is my program good; missing muscles; best lifts;
+  how did yesterday's workout go; what can replace X; put X on Y day; take X out of; how do I warm
+  up; log both dumbbells; a lift stalled / isn't going up).
+- **Chat history search**: a field above the days; typing hides what doesn't match (question or
+  answer), each row in place, and says when nothing does (fields.js `chhq`).
+- Tests: coach 229 (corpus included); regression "Coach, when unsure and when wrong…".
