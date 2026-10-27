@@ -1,9 +1,9 @@
 /* Bunyan — session
    The live session surface and rest screen. Execution, not editing. */
 import {t} from "../../i18n/dict.js";
-import {exMedia, isUnilateral, thumb} from "../../data/exercises.js";
+import {exMedia, isBarbell, isUnilateral, thumb} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
-import {bodyAt, bwShare, dbTotal, incrementFor, inDeload, lastWeight, prevPerf, recommend} from "../../engine/formulas.js";
+import {barKg, bodyAt, bwShare, dbTotal, incrementFor, inDeload, lastWeight, prevPerf, recommend} from "../../engine/formulas.js";
 import {incrementOf} from "../../engine/lifts.js";
 import {actInfo, actKcal, actRate, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
 import {S} from "../../state.js";
@@ -112,8 +112,10 @@ function noteSet(a){
    (lifts.js incrementOf, through formulas.js for the lifter's own step, the unit and
    how dumbbells are logged), so the steppers and the suggestions cannot disagree.
    Bodyweight lifts have no equipment step; their added load steps as other kit does. */
+/* A barbell moves by the smallest pair of plates, one a side: 2.5 kg, or 5 lb. */
 function weightStep(name,w){
-  return incrementFor(name,w)||incrementOf("",w,{lb:inLb()});}
+  var s=incrementFor(name,w)||incrementOf("",w,{lb:inLb()});
+  return isBarbell(name)?Math.max(s,inLb()?5/2.2046:2.5):s;}
 
 /* ---- the rows of an exercise, in order --------------------------------------
    Logged sets first, then what is still to do: the warm-ups queued with + Warm-up
@@ -228,6 +230,10 @@ function vSetCard(e,row,rows,o){
    +'<button data-sstep="r" data-d="-1" aria-label="'+t("Less")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.minus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>'
    +'<button data-sstep="r" data-d="1" aria-label="'+t("More")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.plus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button></div></div>';
   h+='</div>';
+  /* The plates, without opening anything (owner, 27 Oct): a barbell's total read as the
+     bar and what goes on each side. A tap opens the plates sheet to change the bar. */
+  if(!timed&&!row.wu&&isBarbell(e.name)&&barKg()>0){var pl=plateLine(V.draft.w);
+    h+='<button class="sc-pl" id="scPl" data-plates="1" aria-label="'+esc(t("Plates"))+'"'+(pl?'':' hidden')+'>'+pl+'</button>';}
   /* How hard it was, when it is asked for: the last set by default. */
   if(!row.wu&&o.rpe)
     h+='<div class="sc-rpe" role="group" aria-label="'+t("How hard was that set?")+' (RPE)"><span class="val-k">'+t("How hard was that set?")+' · RPE</span><div class="sc-rpe-c">'
@@ -258,6 +264,15 @@ function vSetCard(e,row,rows,o){
   }
   if(hint)h+='<div class="sc-h">'+hint+'</div>';
   return h+'</section>';}
+/* The plates line's words for a total, kg: "" when there is nothing to load. The
+   field's typing updates it in place (handlers/fields.js), the rest of the card as it is. */
+function plateLine(w){
+  if(!(num(w)>0)||!(barKg()>0))return "";
+  var pp=platePlan(w,barKg());
+  if(pp.under)return esc(t("Lighter than the bar"));
+  if(!pp.plates.length)return esc(t("Just the bar"));
+  return esc(t("Bar"))+' + '+pp.plates.map(function(x){return '<span class="num">'+(x.n>1?x.n+'×':'')+x.w+'</span>';}).join(' + ')
+    +' '+esc(t("a side"))+(pp.left>0?' <span class="sc-pl-x">· '+esc(t("not exact"))+'</span>':'');}
 /* The weight step the buttons show, in the unit on screen. */
 function stepOf(e){
   var s=weightStep(e.name,V.draft.w);
@@ -437,10 +452,7 @@ function vLogger(){
      the program keeps its plan. --- */
   h+='<div class="tools">'
    +(V.logIdx<a.entries.length-1?'<button data-nextex="1">'+IC.skip+'<span>'+t("Skip exercise")+'</span></button>':'')
-   +'<button data-addlive="1">'+IC.plus+'<span>'+t("Add exercise")+'</span></button></div>'
-   +'<div class="quiet">'
-   +(a.entries.length>1?'<button data-rmlive="1">'+t("Remove exercise")+'</button>':'')
-   +'<button class="'+(e.pain?'on':'')+'" data-hurt="1">'+t(e.pain?"Pain noted":"Something hurts?")+'</button></div>';
+   +'<button data-addlive="1">'+IC.plus+'<span>'+t("Add exercise")+'</span></button></div>';
   return h+'</div></div>';}
 
 /* ---- cardio, sports, classes ----------------------------------------------------
@@ -542,4 +554,4 @@ function syncRest(){
   var host=document.getElementById("rest");
   if(host&&host.firstChild)host.textContent="";}
 
-export {ivText, groupLabel, groupNext, groupRun, IDLE_PAUSE, LOGGED_MS, mmss, noteSet, overText, paintOver, paintRest, platePlan, rowPlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger, weightStep};
+export {ivText, groupLabel, groupNext, groupRun, IDLE_PAUSE, LOGGED_MS, mmss, noteSet, overText, paintOver, paintRest, plateLine, platePlan, rowPlan, rowsFor, sessionClock, sessionWall, syncRest, vLogger, weightStep};

@@ -70,6 +70,9 @@ function plateauOf(name){return plateauIn(LOG(),name);}
 /* How dumbbell loads are entered: per hand (the default, and what the numbers on the
    dumbbells say) or as the pair's total. */
 function dbTotal(){return !!(S.prefs&&S.prefs.dbLoad==="total");}
+/* The bar the person loads, kg: chosen on the plates sheet and kept with the profile
+   (S.prefs.bar); 20 kg until then. 0 means no bar (a fixed or Smith bar counted apart). */
+function barKg(){var b=S.prefs&&S.prefs.bar;return b!=null&&isFinite(+b)&&+b>=0&&+b<=40?+b:20;}
 /* ---- a lighter week ----------------------------------------------------------
    Suggested, never imposed (lifts.js deloadDueIn has the case). While it runs the
    plan's sets drop by about 40% and suggested loads by about 10%. A lighter week runs
@@ -124,4 +127,4 @@ function addItems(meal,items,d){
 
 
 
-export {bmr, energyMissing, kcalFloor, bodyAt, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, tdeeFormula, volume, weeklySets, macroTargets};
+export {bmr, energyMissing, kcalFloor, bodyAt, barKg, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, tdeeFormula, volume, weeklySets, macroTargets};

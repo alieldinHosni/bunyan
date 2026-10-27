@@ -2265,3 +2265,33 @@ called “<the whole sentence>”".
 - Tests: intent cases (the owner's three sentences, Arabic, guards), engine (volume both hands,
   conversion both ways), regression "Coach understanding: …how weights are logged…" and
   "Dumbbells per hand or together…".
+
+## The workout, simpler: no duplicates, barbell sense, thumb reach, a quicker warm-up — branch session/workout-flow
+
+CACHE `bunyan-v168`. Owner, 27 Oct: "no duplicates" — ⋯ repeated the close button, the coach
+button and ⓘ.
+- **⋯ holds only what is nowhere else** (sheets.js `sessmore`): Session note, Warm-up again,
+  Something hurts? (moved from under the workout), Remove this exercise (moved; red). Gone: Ask
+  Coach (header button), How to do it (ⓘ), Plates (the plates line), Finish and Discard (the close
+  button). Under the workout only Skip exercise and Add exercise stay.
+- **Close button asks three ways**: Save and exit (primary, as before), Finish workout (new `mid`
+  choice on the confirm sheet: `mid`/`midact`, handler `confirmmid`; `ACT.leavefinish` →
+  `confirmFinish`, its own question about sets left), Keep training; Discard in red (`altbad`).
+- **Barbell**: a first time starts at the bar (actions.js `syncDraft`, `isBarbell`, `barKg`); the
+  steppers move by one pair of the smallest plates, 2.5 kg / 5 lb (session.js `weightStep`) and
+  stop at the bar going down (workout.js `stepDraft`); a 0 kg barbell set is refused with the
+  bar's weight said. The bar chosen on the plates sheet is now kept per profile (`S.prefs.bar`,
+  validated 0–40 in schema.js; was `V.bar`, lost on reload) and used by warm-up, coach, sheet.
+- **Plates line** under a barbell's weight ("Bar + 20 a side", "Just the bar", "· not exact"),
+  a tap to the plates sheet; typing updates that line alone (fields.js → `plateLine`).
+- **Logged** says itself quietly: an ok hairline, not a solid green bar. **Log set** is
+  `position:sticky` at the bottom, in reach when scrolled to the sets.
+- **Warm-up**: the drill's name ticks it (ⓘ beside it for how); ticking scrolls the next one still
+  to do into view. The pulse timer has a copy in the bottom bar that shows only while it runs and
+  its row is out of view (hold.js `paint` toggles `.away`). "Skip warm-up". Start puts the ramp-up
+  sets on their lift as warm-up rows (W), each prefilled (workout.js `queueRamp`, `e.wuRamp`,
+  dropped at finish).
+- Already there, so not built: swipe between exercises (exswipe.js), typing the weight (it is an
+  input), the finish summary.
+- Tests: updated for the moved controls (`finishEarly` helper); new "Warm-up, quicker…" and
+  "The workout, simpler…".

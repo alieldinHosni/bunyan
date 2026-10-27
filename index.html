@@ -1007,6 +1007,8 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
   padding:var(--s4);transition:background var(--m-micro) var(--e-standard);
   border-top:1px solid var(--border);width:100%;background:none;
   color:var(--text);text-align:left;border-left:none;border-right:none;border-bottom:none}
+/* A row that takes something away reads in danger red (the workout's ⋯: Remove). */
+.item.d>span:first-child{color:var(--danger)}
 .item:first-child{border-top:none}
 :root:not(.tch) .item:active,.item.tapd{background:var(--surface)}
 .chev{color:var(--faint);font-size:19px;flex-shrink:0}
@@ -2544,6 +2546,14 @@ details[open]>summary .as-chev{transform:rotate(90deg)}
 .wu-row.did .wu-n{color:var(--sub)}
 :root:not(.tch) .wu-ex:active .wu-n,.wu-ex.tapd .wu-n{color:var(--accentHi)}
 .wu-txt{flex:1;margin:0;font-size:13.5px;line-height:1.45;color:var(--sub)}
+button.wu-txt{padding:0;border:0;background:transparent;text-align:start;font-family:inherit}
+/* How to do a drill: a small ⓘ at the row's end, so the name itself can tick it. */
+.wu-info{flex:none;width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border:0;background:transparent;color:var(--dim)}
+.wu-info svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+/* The pulse timer's copy at the bottom: there only while it runs. */
+.wu-foot .wu-hold-mini{display:none;width:100%;height:var(--hit);margin:0 0 var(--s2);justify-content:space-between;padding:0 var(--s4)}
+.wu-foot .wu-hold-mini.timing.away{display:flex}
+.wu-hm-k{font-weight:600}
 /* The hold timer fills from the start edge as it counts. */
 .wu-hold{--p:0;flex:none;position:relative;overflow:hidden;isolation:isolate;min-width:76px;height:34px;padding:0 10px;
   border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);color:var(--text);
@@ -3847,6 +3857,10 @@ body.wkflat #app{--gutter:20px}
 .sess .wub{width:24px;height:24px;flex:none;border-radius:50%;border:1.5px solid var(--gold);color:var(--text);
   display:inline-grid;place-items:center;font-size:12px;font-weight:700}
 
+/* The plates line under a barbell's weight: quiet, one line, a tap to the plates sheet. */
+.sess .sc-pl{display:block;width:100%;margin-top:var(--s2);padding:var(--s2) 0 0;border:0;border-top:1px solid var(--hair);background:none;
+  color:var(--sub);font-size:14px;font-weight:600;text-align:center}
+.sess .sc-pl-x{color:var(--dim)}
 /* LogControl: the one primary action. A label and the check, on the action fill. */
 .sess .log{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);width:100%;min-height:64px;margin:0;
   padding-block:10px;padding-inline:var(--s5) 10px;border:0;border-radius:var(--rpill);
@@ -3856,12 +3870,18 @@ body.wkflat #app{--gutter:20px}
 :root:not(.tch) .sess button.log:active,.sess button.log.tapd{transform:scale(.98);filter:brightness(1.08)}
 .log-c{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;border:2px solid currentColor}
 .log-c .gl{width:22px;height:22px;stroke-width:2.6}
-.sess .log.ok{background:var(--ok);box-shadow:none;color:var(--onOk);padding-inline:10px;justify-content:flex-start;
+/* Logged: said quietly, in the button's place, for a moment (owner, 27 Oct: the solid
+   green bar shouted over the rest). A hairline of the ok colour, the check filled. */
+.sess .log.ok{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ok);color:var(--text);padding-inline:10px;justify-content:flex-start;
   animation:wkIn var(--m-comp) var(--e-decel)}
-.sess .log.ok .log-c{background:var(--onOk);color:var(--ok);border-color:var(--onOk)}
-.sess .log.ok b{flex:1;min-width:0;font-size:19px}
-.sess .undo{min-height:var(--hit);padding:0 18px;border-radius:var(--rpill);border:2px solid var(--onOk);background:transparent;
-  color:var(--onOk);font-weight:700;font-size:15px}
+.sess .log.ok .log-c{background:var(--ok);color:var(--onOk);border-color:var(--ok);width:36px;height:36px}
+.sess .log.ok b{flex:1;min-width:0;font-size:17px;font-weight:600}
+.sess .undo{min-height:var(--hit);padding:0 18px;border-radius:var(--rpill);border:1.5px solid var(--hair);background:transparent;
+  color:var(--text);font-weight:700;font-size:15px}
+/* The log control stays in reach of the thumb (owner, 27 Oct): scrolled down to the
+   sets, it waits at the bottom of the screen rather than up out of sight. */
+.sess .log{position:sticky;bottom:calc(var(--s3) + env(safe-area-inset-bottom));z-index:2}
+.sess .log.ok{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 @keyframes wkIn{from{opacity:0;transform:translateY(4px)}}
 .rb{animation:wkIn var(--m-comp) var(--e-decel)}
 

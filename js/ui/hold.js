@@ -31,7 +31,13 @@ function paint(){
   var s=holdState(H.key);
   if(s.second&&!H.switched){H.switched=true;play("tick");tap();}
   var els=document.querySelectorAll('[data-holdt="'+H.key+'"]');
+  /* A copy of the timer kept in sight (the warm-up's pulse, at the bottom) shows only
+     while its own row is scrolled out of view: never the same timer twice on screen. */
+  var row=document.querySelector(".wu-pulse"),r=row&&row.getBoundingClientRect(),
+      hd=document.querySelector(".ss-top"),hb=hd?hd.getBoundingClientRect().bottom:0,
+      away=!!r&&(r.bottom<hb||r.top>innerHeight*0.75);
   for(var i=0;i<els.length;i++){
+    if(els[i].classList.contains("wu-hold-mini"))els[i].classList.toggle("away",away);
     var lab=els[i].querySelector(".hold-l");
     if(lab)lab.textContent=holdLabel(H.key,0);
     els[i].style.setProperty("--p",s.p.toFixed(3));

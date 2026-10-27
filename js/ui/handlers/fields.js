@@ -12,6 +12,7 @@ import {t} from "../../i18n/dict.js";
 import {dayOf, editSplit, S, saveDB} from "../../state.js";
 import {toKg} from "../../units.js";
 import {fmtN, num} from "../../util.js";
+import {plateLine} from "../views/session.js";
 import {runAct, val} from "../actions.js";
 import {addPhoto, avatarFrom} from "../photos.js";
 import {closeCoach} from "../coachfab.js";
@@ -83,6 +84,8 @@ function onInput(ev){
     /* The field shows the user's unit; the draft is always kilograms. A cleared steps
        field is nought, so Save never keeps a figure no longer on screen. */
     if(isFinite(v))V.draft[k]=(k==="w")?toKg(v):v;
+    /* A barbell's plates follow the figure as it is typed, that line alone. */
+    if(k==="w"){var pe=document.getElementById("scPl");if(pe){var ph=plateLine(isFinite(v)?V.draft.w:0);pe.innerHTML=ph;pe.hidden=!ph;}}
     else if(k==="st")V.draft.st=0;
     else if(k==="bw")V.draft.bw=null;
     if(k==="min"){var ak=document.getElementById("actKcal"),ae2=S.active&&S.active.entries[V.logIdx];
