@@ -11,6 +11,7 @@ import * as W from "./ui/workout.js";
 import {initState, loadStored, onProfileSwitch, refreshFromStorage, S, saveDB, saveSession, startupNote, storageKey} from "./state.js";
 import {alarmStart, beeped, keepAwake, lastTick, play, restoreWorkoutState, setBeeped, setLastTick, syncViewport, syncWorkoutState, tap, toast, V} from "./ui/view.js";
 import {closeSheet, syncDraft} from "./ui/actions.js";
+import {boot as smartBoot, onChange as smartChanged} from "./ui/smartcoach.js";
 import {dispatchTap} from "./ui/handlers/registry.js";
 import {draftFrom} from "./ui/views/assess.js";
 import {initDockScroll} from "./ui/dock.js";
@@ -218,7 +219,10 @@ var bootDraft="";
 /* A workout open across a reload: its first numbers were filled in before the history
    and the library were in, so with no suggestion to go on (0 on a barbell, say). Untouched,
    they are filled in again now that last time is known. */
-loadStored(function(){ applyExReconcile(); fixLogsNow();
+/* The smart coach: loaded in the background when it was switched on, and its setting
+   repainted as the download moves. */
+smartChanged(function(){if(V.sheet==="set_smart"||V.tab==="profile")render();});
+loadStored(function(){ smartBoot(); applyExReconcile(); fixLogsNow();
   if(S.active)loadExDB(function(){if(S.active&&bootDraft&&JSON.stringify(V.draft)===bootDraft){bootDraft="";syncDraft();render();}});
   render(); });
 /* The intro belongs to a cold start, not to every document load. A reload for any

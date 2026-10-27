@@ -20,6 +20,7 @@ import {toast, V} from "../view.js";
 import {ask} from "../views/chat.js";
 import {loadFoods} from "../../engine/nutrition.js";
 import {toEnd} from "../coachfab.js";
+import {run as runSmart} from "../smartcoach.js";
 import {withIds} from "../views/timport.js";
 import {dispatchTap} from "./registry.js";
 
@@ -125,7 +126,9 @@ function sendText(q,from,shown){
     /* Something to do at once: it runs, and its row says it was done. */
     if(m&&m.ag&&m.ag.run&&m.ag.s==="confirm"){saveDB();render();land(from);toEnd();
       dispatchTap({agrun:String(m.at)},document.createElement("button"),{},{typingAsk:false});return;}
-    saveDB();render();land(from);toEnd();});}
+    saveDB();render();land(from);toEnd();
+    /* No rule for it: the smart coach writes the answer into its row. */
+    if(m&&m.pending)runSmart(m,saveDB,function(){render();toEnd();});});}
 function chatEnd(){
   requestAnimationFrame(function(){
     var qs=document.querySelectorAll(".chat-q"),q=qs[qs.length-1];

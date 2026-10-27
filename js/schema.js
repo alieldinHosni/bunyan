@@ -159,6 +159,8 @@ function normalize(o){
      Anything else, or anything big enough to crowd the storage, is dropped. */
   /* Which page guides have been seen (js/ui/tour.js): page → version. */
   if(o.prefs.bar!=null&&!(isFinite(+o.prefs.bar)&&+o.prefs.bar>=0&&+o.prefs.bar<=40))delete o.prefs.bar;
+  /* The smart coach: {on, size}, or nothing. */
+  if(o.prefs.smart!=null&&!(o.prefs.smart&&typeof o.prefs.smart==="object"&&typeof o.prefs.smart.on==="boolean"&&/^(small|better)$/.test(o.prefs.smart.size)))delete o.prefs.smart;
   var tr=o.prefs.toured;
   if(tr!=null&&(typeof tr!=="object"||Array.isArray(tr)))delete o.prefs.toured;
   var ph=o.profile.photo;

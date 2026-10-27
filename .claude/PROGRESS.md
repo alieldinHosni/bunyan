@@ -2323,3 +2323,36 @@ CACHE `bunyan-v169` (session/workout-flow is v168; whichever merges second keeps
 - **Chat history search**: a field above the days; typing hides what doesn't match (question or
   answer), each row in place, and says when nothing does (fields.js `chhq`).
 - Tests: coach 229 (corpus included); regression "Coach, when unsure and when wrong…".
+
+## The smart coach: an optional language model on the phone — branch session/smart-coach
+
+CACHE `bunyan-v175`. Owner, 27 Oct: "yes go for it" (an on-device model, opt-in), using the linked
+repos' ideas.
+- **Library**: WebLLM 0.2.86 (Apache-2.0, from the npm registry: js/vendor/web-llm.js unchanged +
+  LICENSE) in a worker (js/vendor/web-llm-worker.js). Vendor is outside the import graph: loaded only
+  when switched on (js/engine/llm.js dynamic import), never precached. sw.js: the library is cached
+  first in "bunyan-llm", kept across releases; activate now deletes only old "bunyan-vN" caches, so
+  WebLLM's own model caches (hundreds of MB the person chose to download) survive app updates.
+- **Models** (llm.js MODELS): Qwen2.5 Instruct 4-bit, small 0.5B (~0.3 GB) / better 1.5B (~0.9 GB),
+  f16 where the GPU has shader-f16, else f32; context 2048. `support()` checks WebGPU and an adapter.
+  `remove()` deletes every file of both sizes. A test seam (`globalThis.__bunyanFakeLLM`) stands in
+  for the model in tests/regression.mjs: a test browser has no GPU.
+- **Grounding** (js/engine/smart.js, from agent-zero / ollama-agent: a local model told only what it
+  may use): the person's snapshot (js/ui/smartcoach.js `snapshot`: goal, targets, today's plan, the
+  workout under way, weight and its 7-day average, body fat / lean mass, last three sessions' top sets,
+  what they told the coach), the BM25 passages the question reaches (kbsearch), the last two
+  exchanges, and the rules: only these figures, never invent a number (CLAUDE.md honesty), no
+  diagnosis / injury treatment / doses, Egyptian Arabic or English as asked, ≤4 sentences.
+- **Acting**: never directly. "DO: <request>" on its last line becomes a button that sends that
+  request through the app's own parser (data-chatsay), which shows it and asks; a request the parser
+  does not know is dropped.
+- **When it answers**: only what the rules could not — `unknown`, or a question met only loosely by a
+  textbook passage (chat.js: such a `know` goes to it when it is ready, with the same passages). Every
+  request, log, command, textbook answer and hard limit stays with the rules. Not what I asked →
+  "Let the smart coach try". Its answers say they were written by the model and can be wrong.
+- **Setting**: Profile → Smart coach (settings.js `set_smart`): what it costs (download, iOS 26 /
+  WebGPU, battery), Small / Better, Download and turn on (progress), Turn off and remove (confirm).
+  `S.prefs.smart {on,size}` schema-validated; boot loads it quietly from what is downloaded.
+- Not tested with a real model here (no GPU in this environment): the plumbing, grounding, fallback
+  and button path are tested with the stand-in. First real run is on the owner's iPhone.
+- Tests: engine smart (prompt, Arabic, passages, DO line, thinking stripped); regression "Smart coach: …".

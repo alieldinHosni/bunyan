@@ -27,6 +27,7 @@ import {iconOf, modeOf, themeOf, THEMES} from "./theme.js";
 import {glyph} from "./glyphs.js";
 import {afTile} from "./views/addfood.js";
 import {histSheet} from "./views/chat.js";
+import {sheet as smartSheet, state as smartState} from "./smartcoach.js";
 
 /* ---- the grammar ------------------------------------------------------------------ */
 function group(title,rows,foot){
@@ -284,7 +285,7 @@ function aboutSheet(){
    +t("Estimated 1RM uses the Epley formula and is only meaningful up to about 12 reps. Volume is the sum of weight × reps for every set, not an average.")+'</p></div></section>';}
 
 var SHEETS={set_you:youSheet,set_avatar:avatarSheet,set_training:trainingSheet,set_app:appSheet,set_profiles:profilesSheet,
-  set_data:dataSheet,backup:backupSheet,share:shareSheet,about:aboutSheet,set_chat:histSheet};
+  set_data:dataSheet,backup:backupSheet,share:shareSheet,about:aboutSheet,set_chat:histSheet,set_smart:smartSheet};
 /* The inside of a settings sheet, or null when the name is not one of these. */
 function settingsSheet(name){return SHEETS[name]?SHEETS[name]():null;}
 
