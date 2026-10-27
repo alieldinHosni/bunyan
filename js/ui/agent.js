@@ -15,7 +15,7 @@
    program has, a food is one the database (or My Foods) has; when none is close, the
    answer says so and points to where it can be found. The change itself is run by
    js/ui/handlers/actions.js, the same way the screens' own buttons run it. */
-import {isActivity} from "../data/activities.js";
+import {actKcal, actRate, isActivity} from "../data/activities.js";
 import {difficultyOf, exSteps, EXDB, isCompound as isCompoundName, isFav, LIB, movementOfEx, muscleOf as muscleOfName, MUSCLES, patternOf, pickable} from "../data/exercises.js";
 import {planOn} from "../engine/dayplan.js";
 import {avoids, doseFor, usable} from "../engine/plan.js";
@@ -453,6 +453,49 @@ function planDeload(c){
       :"Your sets have been close to failure for two weeks running."):t("Nothing in your log calls for one yet; it's yours to take."),
     cta:t("Start it"),done:fill(t("Lighter week on, until {d}."),{d:pretty(addDays(today(),6))}),undone:t("Undone. Your weeks are as they were.")});}
 
+/* ---- logged in a sentence: cardio, a lift done without the app, sleep and soreness ---- */
+function ago(iso){var n=today();return iso===n?t("today"):iso===addDays(n,-1)?t("yesterday"):pretty(iso);}
+/* "Ran 5 km in 28 min": a finished bout, as the workout screen saves one. Calories
+   only where the activity has a measured MET and the person's weight is known, and
+   said as an estimate; they never touch the food target. */
+function planAct(c){
+  if(!c.min)return say(fill(t("How long did it take? Say it like “ran {k} km in 28 minutes”."),{k:c.km||5}));
+  var date=c.when==="yesterday"?addDays(today(),-1):today(),kg=lastWeight()||num(S.profile.weight);
+  var kcal=kg?actKcal(c.act,c.min,6,kg):0,nm=exName(c.act),pace=c.km?actRate(c.act,c.min,c.km):"";
+  var parts=[fill(t("{n} min"),{n:c.min})];if(c.km)parts.push(c.km+" "+t("km"));if(pace)parts.push(pace);
+  if(kcal)parts.push(fill(t("about {k} kcal (an estimate)"),{k:fmtN(kcal)}));
+  return confirm("act.log",{act:c.act,min:c.min,km:c.km||0,date:date,kcal:kcal},{
+    lead:fill(t("Log {a}, {d}?"),{a:nm,d:ago(date)}),item:nm,detail:parts.join(" · ")+". "+t("Cardio doesn't change your food target."),
+    cta:t("Log it"),done:fill(t("Logged {a}."),{a:nm}),undone:t("Undone. Nothing was logged.")});}
+/* "Yesterday I did bench 3x8 at 80": into the history on that date. */
+var PASTW=/(^| )(\d+(\.\d+)?|x|×|by|sets?|reps?|of|at|with|kg|kgs|lb|lbs|yesterday|today|did|done|trained|hit|i|on|last|امبارح|امس|عملت|لعبت|اتمرنت|كيلو|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun|الاتنين|التلات|الاربع|الخميس|الجمعه|السبت|الحد|الاحد)(?= |$)/g;
+function pastIso(w){var n=today();if(w==="yesterday")return addDays(n,-1);if(w==="today")return n;
+  for(var i=0;i<7;i++){var d=addDays(n,-i);if(isoWeekday(d)===+w)return d;}return "";}
+function planPast(c,p){
+  p=p||{};
+  if(!p.name){
+    var q=rest(c.text||"").replace(/[٠-٩]/g," ").replace(PASTW," ").replace(/\s+/g," ").trim();
+    var r=findExercise(q,libPool().filter(function(n){return !isActivity(n);}));
+    if(r.kind==="empty"||r.kind==="none")return say(t("Which exercise? Say it like “yesterday I did Bench Press 3x8 at 80 kg”."));
+    var pp={date:pastIso(c.when),sets:c.sets,reps:c.reps,w:c.unit==="lb"||(!c.unit&&S.prefs.unit==="lb")?Math.round(c.w/2.2046*100)/100:c.w};
+    if(r.kind!=="one")return pick("exercise",t("Which exercise?"),exOpts(r.names),"past.log",pp,"name");
+    p=Object.assign(pp,{name:r.name});}
+  if(!p.date)return say(t("Which day? Say it like “yesterday” or “on Monday”."));
+  var line=p.sets+" × "+p.reps+(p.w?" · "+fmtW(p.w):"");
+  return confirm("past.log",{name:p.name,date:p.date,sets:p.sets,reps:p.reps,w:p.w},{
+    lead:fill(t("Add {ex}, {s}, to {d}?"),{ex:exName(p.name),s:line,d:ago(p.date)}),item:exName(p.name),
+    detail:t("It goes into your history for that day; records and progress count it."),cta:t("Add it"),
+    done:fill(t("Added {ex} to {d}."),{ex:exName(p.name),d:ago(p.date)}),undone:t("Undone. Your history is as it was.")});}
+/* "Slept 5 hours", "legs are very sore": the recovery log's two numbers, and what they
+   mean for today. */
+function planRecovery(c){
+  var bits=[];if(c.sleep)bits.push(fill(t("{h} h of sleep"),{h:c.sleep}));if(c.sore)bits.push(fill(t("soreness {n}/10"),{n:c.sore}));
+  var tip=c.sore>=7?t("Very sore: train it lighter today, or take the rest day (say “skip today”)."):
+    c.sleep&&c.sleep<6?t("A short night: keep today's effort moderate and stop a rep or two earlier. The plan itself stays."):
+    t("Noted. Today's plan stays as it is.");
+  return confirm("recovery.log",{sleep:c.sleep||0,sore:c.sore||0},{lead:fill(t("Log {x} for today?"),{x:bits.join(t(" and "))}),
+    item:bits.join(" · "),detail:tip,cta:t("Log it"),done:t("Logged.")+" "+tip,undone:t("Undone. Today's log is as it was.")});}
+
 /* ---- in the gym: how the last set felt, the form, the plates ----------------------- */
 /* "Too easy" / "too heavy": the next set's numbers moved a step, the way the logger's
    own suggestion moves them (incrementFor). Only the next set changes; nothing logged
@@ -551,6 +594,9 @@ function planCommand(c){
   if(!c)return null;
   if(c.cmd==="ex.busy")return planBusy();
   if(c.cmd==="set.feel")return planFeel(c.dir);
+  if(c.cmd==="act.log")return planAct(c);
+  if(c.cmd==="past.log")return planPast(c);
+  if(c.cmd==="recovery.log")return planRecovery(c);
   if(c.cmd==="ex.how")return planHow();
   if(c.cmd==="plates")return planPlates(c);
   if(c.cmd==="ex.dose")return planDose(c);
@@ -636,6 +682,7 @@ function proceed(ag,v){
   var p=Object.assign({},ag.p);p[ag.slot]=v;
   if(ag.act==="exercise.add")return addNext(p,null);
   if(ag.act==="exercise.create")return createNext(p);
+  if(ag.act==="past.log")return planPast({},p);
   /* The machine was taken: the swap for today, said before it is made. */
   if(ag.act==="exercise.swapToday")return confirm("exercise.swapToday",{i:p.i,name:p.name},{
     lead:fill(t("Swap {old} for {new} for today?"),{old:exName(p.from),new:exName(p.name)}),
@@ -699,4 +746,4 @@ function namesFood(text){
   return [rest(swapParts(fq).from),rest(fq)].some(function(q){
     var c=parseFoodInput(q)[0];return !!c&&searchFoods(c.query,1).some(function(h){return h.score>=72;});});}
 
-export {answerPick, createAsk, foodById, namesExercise, namesFood, plan, planCommand, proceed, suggestExercises, swapPick};
+export {answerPick, createAsk, daysIn, foodById, namesExercise, namesFood, plan, planCommand, proceed, suggestExercises, swapPick};

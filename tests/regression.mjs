@@ -2779,6 +2779,60 @@ await test("Coach panel in the hand: the header dragged down shrinks then closes
   await page.fill('#chatq','how is my weight');await page.press('#chatq','Enter');await pause(page,700);
   eq(await page.$eval('.chat-typing',e=>[e.getAttribute("role"),e.textContent]).catch(()=>null),["status","Coach is typing"],"the typing, said");
 },{prefs:{anim:true}});
+await test("Coach logging in a sentence: cardio with its time and distance, a lift done without the app, sleep and soreness; each with Undo",async page=>{
+  await openChat(page);
+  const n0=await ev(page,"S.sessions.length");
+  let r=await agSay(page,"ran 5 km in 28 min");
+  eq([r.lead,r.ok],["Log Running, today?",true],"cardio, said first");
+  const det=await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x")].pop().innerText);
+  if(!/28 min · 5 km · 5:36 \/km · about \d+ kcal \(an estimate\)/.test(det))throw new Error("detail: "+det);
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq(await ev(page,"[S.sessions.length,S.sessions[0].entries[0].name,S.sessions[0].entries[0].sets[0].min,S.sessions[0].entries[0].sets[0].km]"),[n0+1,"Running",28,5],"a bout in the history");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await ev(page,"S.sessions.length"),n0,"Undo takes it out");
+  r=await agSay(page,"yesterday I did barbell squat 3x8 at 100");
+  eq([/^Add .+, 3 × 8 · 100 kg, to yesterday\?$/.test(r.lead),r.ok],[true,true],"a past lift: "+r.lead);
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  const y=await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,U=await import("/js/util.js"),SC=await import("/js/engine/schedule.js");
+    const d=SC.addDays(U.today(),-1),s=S.sessions.find(x=>x.date===d&&x.dayName==="Logged in chat");return s?s.entries.map(e=>[e.sets.length,e.sets[0].w,e.sets[0].r]):null;});
+  eq(y,[[3,100,8]],"on yesterday, three sets");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await ev(page,"S.sessions.length"),n0,"Undo takes it out");
+  r=await agSay(page,"slept 5 hours");
+  eq([r.lead,r.ok],["Log 5 h of sleep for today?",true],"sleep");
+  await page.tap('#cpanel [data-agok]');await pause(page,400);
+  eq(await ev(page,"(S.days[(new Date(Date.now()-new Date().getTimezoneOffset()*6e4)).toISOString().slice(0,10)]||{}).sleep"),5,"saved for today");
+  r=await agSay(page,"my legs are very sore");
+  if(!/^Log soreness 8\/10 for today\?$/.test(r.lead))throw new Error("sore: "+r.lead);
+});
+await test("Coach understanding: a correction and \"same for\" redo the last request with the day changed; two requests at once are two, both live; \"undo that\" offers the last change back",async page=>{
+  await openChat(page);
+  const pd=await planDates(page),tr=pd.filter(x=>x.train&&x.d!==pd[0].d);
+  if(tr.length<2)throw new Error("two training days needed: "+JSON.stringify(pd));
+  let r=await agSay(page,"skip "+WD[tr[0].wd-1]);
+  eq(await ev(page,"S.chat[S.chat.length-1].ag.p.date"),tr[0].d,"the first day");
+  r=await agSay(page,"no, I meant "+WD[tr[1].wd-1]);
+  eq([await ev(page,"S.chat[S.chat.length-1].ag.p.date"),r.ok],[tr[1].d,true],"the correction: the same request, the other day");
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  r=await agSay(page,"same for "+WD[tr[0].wd-1]);
+  eq([await ev(page,"S.chat[S.chat.length-1].ag.p.date"),r.ok],[tr[0].d,true],"same for: the request again, for that day");
+  /* Two at once. */
+  const ex0=await ev(page,`(async()=>(await import("/js/state.js")).split().days[0].ex[0].name)()`);
+  await page.fill('#chatq',"add pushups to full body b and remove "+ex0+" from full body a");await page.press('#chatq','Enter');await pause(page,500);
+  eq(await page.$$eval('#cpanel [data-agok]',a=>a.length),2,"two requests, two live confirmations");
+  /* Undo that. */
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  r=await agSay(page,"undo that");
+  eq([/^Undo “/.test(r.lead),await page.evaluate(()=>!![...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector("[data-agundo]"))],[true,true],"the last change, offered back");
+});
+await test("Coach gym slang: \"2 plates x 5\" is 100 kg for 5, and \"bodyweight x 12\" a set with no load",async page=>{
+  await startWorkout(page);
+  await page.tap('.ss-coach');await pause(page,500);
+  let r=await agSay(page,"2 plates x 5");
+  if(!/^Log 100 kg × 5 on /.test(r.lead))throw new Error("plates: "+r.lead);
+  r=await agSay(page,"bodyweight x 12");
+  if(!/^Log 0 kg × 12 on |^Log .* × 12 on /.test(r.lead))throw new Error("bw: "+r.lead);
+});
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
   await openChat(page);
@@ -2926,7 +2980,7 @@ await test("Coach actions: every action in the registry runs through a branch th
       described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
       domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
   eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");
-  eq(r.domains,["app","cardio","deload","exercise","food","meal","plan","profile","progress","rest","sched","set","steps","water","workout"],"grouped by domain");
+  eq(r.domains,["act","app","cardio","deload","exercise","food","meal","past","plan","profile","progress","recovery","rest","sched","set","steps","water","workout"],"grouped by domain");
   /* set.log, in a live workout: the logger's own Log set. */
   await startWorkout(page);
   const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");

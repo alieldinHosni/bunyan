@@ -69,8 +69,35 @@ function doseOf(fq){
   if(!d.rest&&/(longer|more|increase|زود|اطول|اكتر)( the| my|)? ?(rest|rests|(ال)?راحه)|(rest|rests|(ال)?راحه) (longer|more|اطول|اكتر)/.test(n))d.restBy=30;
   return Object.keys(d).length?d:null;}
 
-function commandOf(text){
-  var raw=String(text||"").trim(),fq=spell(fold(raw)),q=" "+fq+" ";
+/* Gym talk for a load: "2 plates" is the bar and two plates a side (20 kg each, or 45 lb
+   in a pounds app); said before anything reads the numbers. */
+function slang(s,unit){
+  return s.replace(/(\d) ?plates?( a side| per side| each side| on each side| aside|)/g,function(m,n){
+    return unit==="lb"?(45+90*(+n))+" lb":(20+40*(+n))+" kg";});}
+/* Activities said in a sentence, by the words people use for them, and how long and far. */
+var ACTW=[["Running",/(^| )(ran|run|running|jog|jogged|jogging|جريت|جري|بجري)( |$)/],["Walking",/(^| )(walked|walk|walking|مشيت|مشي|اتمشيت)( |$)/],
+  ["Cycling",/(^| )(cycled|cycling|bike|biked|biking|rode|bicycle|عجله|دراجه|سيكلنج)( |$)/],["Swimming",/(^| )(swam|swim|swimming|عومت|سباحه|عوم)( |$)/],
+  ["Hiking",/(^| )(hike|hiked|hiking|هايكنج)( |$)/],["Football",/(^| )(football|soccer|كوره|فوتبول)( |$)/],["Basketball",/(^| )(basketball|باسكت)( |$)/],
+  ["Tennis",/(^| )(tennis|تنس)( |$)/],["Padel",/(^| )(padel|paddle|بادل)( |$)/],["Squash",/(^| )(squash|اسكواش)( |$)/],["Badminton",/(^| )(badminton|ريشه)( |$)/],
+  ["Volleyball",/(^| )(volleyball|فولي)( |$)/],["Handball",/(^| )(handball|هاندبول)( |$)/],["Boxing",/(^| )(boxing|boxed|بوكس|ملاكمه)( |$)/],
+  ["Martial Arts",/(^| )(karate|judo|bjj|jiu jitsu|kickboxing|muay thai|mma|كاراتيه|جودو|كيك بوكس)( |$)/],["Yoga",/(^| )(yoga|يوجا)( |$)/],
+  ["Pilates",/(^| )(pilates|بيلاتس)( |$)/],["Dance",/(^| )(danced|dance|dancing|رقص|رقصت)( |$)/],["HIIT",/(^| )(hiit)( |$)/],
+  ["Spinning Class",/(^| )(spin class|spinning)( |$)/],["CrossFit",/(^| )(crossfit|كروس فيت)( |$)/],["Climbing",/(^| )(climbed|climbing|bouldering|تسلق)( |$)/],
+  ["Table Tennis",/(^| )(ping pong|table tennis|بينج بونج)( |$)/],["Golf",/(^| )(golf|جولف)( |$)/],["Stretching",/(^| )(stretched|stretching|اطالات|استطاله)( |$)/]];
+function minutesIn(s){
+  var m;
+  if(/(ساعه ونص|hour and a half|an hour and half|1\.5 hours?)/.test(s))return 90;
+  if(/(نص ساعه|half an hour|half hour)/.test(s))return 30;
+  if(/(ساعتين|two hours|2 hours)/.test(s))return 120;
+  if((m=s.match(/(\d+(?:\.\d+)?) ?(hours|hour|hrs|hr|h|ساعات|ساعه)( |$)/)))return Math.round(+m[1]*60);
+  if(/(^| )(an hour|one hour|a hour|ساعه)( |$)/.test(s))return 60;
+  if((m=s.match(/(\d+) ?(minutes|minute|mins|min|m|دقيقه|دقايق|د)( |$)/)))return +m[1];
+  return 0;}
+function kmIn(s){var m=s.match(/(\d+(?:\.\d+)?) ?(km|k|kms|kilometers|kilometres|كيلو|كم)( |$)/);if(m)return +m[1];
+  m=s.match(/(\d+(?:\.\d+)?) ?(miles|mile|mi)( |$)/);return m?Math.round(+m[1]*1.609*10)/10:0;}
+
+function commandOf(text,unit){
+  var raw=slang(String(text||"").trim(),unit),fq=spell(fold(raw)),q=" "+fq+" ";
   if(!fq)return null;
   var asks=QUESTION.test(fq)||/[?؟]\s*$/.test(raw);
 
@@ -89,10 +116,42 @@ function commandOf(text){
   if(/(^| )(next exercise|next one|go to next|move on to the next|التمرين اللي بعده|التمرين الجاي|اللي بعده)( |$)/.test(q)&&!asks)return {cmd:"workout.next"};
   if(/(^| )(finish|end|complete|wrap up|done with) (my |the |this |)(workout|session|training)( |$)|(^| )(خلصت|انهي|اقفل) (ال|)(تمرين|سيشن)( |$)/.test(q)&&!asks)return {cmd:"workout.finish"};
   if(/^(start|begin|let s start|lets start|go|start today s|ابدا|ابدأ|يلا|يلا نبدا) ?(my |the |today s |todays |)(workout|training|session|تمرين|التمرين)( |$)/.test(fq)&&!asks)return {cmd:"workout.start"};
+  /* "bodyweight x 12": a set with no load. */
+  var bw=fq.replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);}).match(/^(log |did |)(bw|bodyweight|body weight|وزن الجسم) ?(x|×|for|by|في) ?(\d{1,3}) ?(reps|rep|عده|عدات|)$/);
+  if(bw&&!asks)return {cmd:"set.log",w:0,unit:"",r:+bw[4]};
   /* "log 80 kg for 8", "80 x 8", "سجل ٨٠ في ٨" */
   var st=fq.replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);})
     .match(/^(log |log a set |log set |did |سجل |)(\d+(?:[.,]\d+)?) ?(kg|kgs|lb|lbs|كيلو|)? ?(x|×|for|by|في|ب) ?(\d{1,2}) ?(reps|rep|عده|عدات|)$/);
   if(st&&!asks)return {cmd:"set.log",w:+st[2].replace(",","."),unit:/lb/.test(st[3])?"lb":st[3]?"kg":"",r:+st[5]};
+
+  /* ---- taking the last change back ---- */
+  if(/^(undo|undo that|undo it|undo the last|swap it back|put it back|change it back|switch it back|revert|revert it|revert that|take it back|take that back|رجعه|رجعها|رجع زي ما كان|الغي اللي فات|الغي اخر حاجه|تراجع)( please| pls|)$/.test(fq))return {cmd:"undo.last"};
+
+  /* ---- sleep and soreness, for today ---- */
+  if(!asks){var sm=raw.toLowerCase().replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);}).replace(/ة/g,"ه").match(/(slept|sleep|got|نمت|نوم)[^0-9]{0,12}(\d+(?:[.,]\d)?) ?(hours|hour|hrs|hr|h|ساعات|ساعه)/);
+    var slept=sm?+sm[2].replace(",","."):/(نمت ساعتين)/.test(fq)?2:0;
+    var sore=0,sn=fq.match(/(sore|soreness|ممسوك|متكسر|وجع عضلات)[^0-9]{0,10}(\d{1,2})( ?\/ ?10| out of 10|)/);
+    if(sn)sore=Math.min(10,+sn[2]);
+    else if(/(very|really|super|so|extremely|اوي|جدا|قوي)[^ ]* ?(sore)|(sore|ممسوك|متكسر)( اوي| جدا| قوي)|(killing me|can t move|cant move|wrecked)/.test(fq))sore=8;
+    else if(/(a bit|a little|slightly|kinda|شويه) (sore|ممسوك)|(sore|ممسوك) (a bit|a little|شويه)/.test(fq))sore=3;
+    else if(/(^| )(i m|im|i am|my|legs|arms|back|chest|shoulders|feeling|feel|جسمي|رجلي)( [a-z]+)? (are |is |)(sore|ممسوك|ممسوكه|متكسر)( |$)/.test(q))sore=5;
+    if((slept>0&&slept<=16)||sore)return {cmd:"recovery.log",sleep:slept>0&&slept<=16?slept:0,sore:sore};}
+
+  /* ---- cardio or a sport, said in a sentence ---- */
+  if(!asks){var an="";for(var ai=0;ai<ACTW.length;ai++)if(ACTW[ai][1].test(q)){an=ACTW[ai][0];break;}
+    var ar=raw.toLowerCase().replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);}).replace(/(\d),(\d)/g,"$1.$2").replace(/ة/g,"ه").replace(/[أإآ]/g,"ا");
+    var amin=minutesIn(ar),akm=kmIn(ar);
+    if(an&&(amin||akm)&&!/(how|should|can i|كام|ازاي)/.test(fq))
+      return {cmd:"act.log",act:an,min:amin,km:akm,when:/(yesterday|امبارح|امس)/.test(fq)?"yesterday":"today"};}
+
+  /* ---- a workout done without the app: "yesterday I did bench 3x8 at 80" ---- */
+  if(!asks&&/(^| )(did|done|trained|hit|عملت|لعبت|اتمرنت)( |$)/.test(q)){
+    var pr=raw.toLowerCase().replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);}).replace(/(\d),(\d)/g,"$1.$2"),pm;
+    var pwn=whenIn(fq),pwhen=/(yesterday|امبارح|امس)/.test(fq)?"yesterday":pwn.length?pwn[0]:"";
+    if(pwhen&&(pm=pr.match(/(\d{1,2}) ?(x|×|sets? of|by) ?(\d{1,3})/))){
+      var wm=pr.match(/(?:^| )(at|@|with|ب|بـ|على) ?(\d{1,3}(?:\.\d+)?) ?(kg|kgs|lb|lbs|كيلو|)/)||pr.match(/(\d{1,3}(?:\.\d+)?) ?(kg|kgs|lb|lbs|كيلو)( |$)/);
+      var pw=wm?+(wm[2]&&/\d/.test(wm[2])?wm[2]:wm[1]):0,pu=wm?(wm[3]||wm[2]||""):"";
+      return {cmd:"past.log",when:pwhen,sets:+pm[1],reps:+pm[3],w:pw,unit:/lb/.test(pu)?"lb":/kg|كيلو/.test(pu)?"kg":"",text:raw};}}
 
   /* ---- in the gym: how the last set felt, the form, the plates ---- */
   if(/^(that|it|this|the set|that set|last set)?( one)?( was| felt| is|)( way| really| a bit| a little| too| so|)* ?(too )?(easy|light|easy peasy)( |$)|^(too easy|easy|light)( |$)|(سهل|خفيف|سهله|خفيفه)( اوي| قوي| جدا|)$/.test(fq))return {cmd:"set.feel",dir:1};
@@ -171,4 +230,4 @@ function commandOf(text){
     return {cmd:"go",to:""};}
   return null;}
 
-export {commandOf, whenIn};
+export {commandOf, slang, whenIn};

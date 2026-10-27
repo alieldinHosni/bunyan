@@ -16,10 +16,13 @@
 import {FOODDB} from "../../engine/nutrition.js";
 import {itemOf} from "../../engine/mealplan.js";
 import {ownSlot} from "../../engine/meals.js";
-import {dayOf, S, saveDB} from "../../state.js";
+import {dayOf, dayRec, recordSession, removeSession, S, saveDB, saveSession} from "../../state.js";
 import {toDisp} from "../../units.js";
 import {today, uid} from "../../util.js";
-import {LIB, MUSCLES} from "../../data/exercises.js";
+import {exIdOf, LIB, muscleOf, MUSCLES} from "../../data/exercises.js";
+import {actMuscle, isActivity} from "../../data/activities.js";
+import {t} from "../../i18n/dict.js";
+import {exName} from "../../i18n/exnames.js";
 import {render} from "../render.js";
 import {V} from "../view.js";
 import {LENT, setExField} from "./common.js";
@@ -44,6 +47,11 @@ var SNAP={
   goals:function(){var g=copy(S.goals),k=S.profile.goal;return function(){S.goals=g;S.profile.goal=k;};},
   meals:function(){var m=copy(S.mealSlots);return function(){S.mealSlots=m;};},
   /* The week's dates moved by hand (S.daySwap), and the lighter week with its block. */
+  /* Workouts added to the history: Undo takes out any it didn't have. */
+  sessions:function(){var ids={};(S.sessions||[]).forEach(function(s){ids[s.id]=(s.entries||[]).length;});
+    return function(){(S.sessions||[]).slice().forEach(function(s){
+      if(!(s.id in ids))removeSession(s.id);
+      else if((s.entries||[]).length>ids[s.id]){s.entries=s.entries.slice(0,ids[s.id]);saveSession(s);}});};},
   /* The next set's numbers in the logger. */
   draft:function(){var d=copy(V.draft);return function(){V.draft=d;};},
   sched:function(){var w=copy(S.daySwap||{});return function(){S.daySwap=w;};},
@@ -112,6 +120,29 @@ var ACTIONS={
     run:function(p){if(!S.active)return false;V.draft=V.draft||{};V.draft.w=+p.w||0;V.draft.r=+p.r||0;
       var w=document.getElementById("in_w"),r=document.getElementById("in_r");
       if(w)w.value=String(toDisp(V.draft.w));if(r)r.value=String(V.draft.r);render();return true;}},
+  "act.log":{desc:"Log a bout of cardio or sport done today or yesterday: minutes, and distance where given",
+    params:{act:"an activity of the list",min:"minutes",km:"km or 0",date:"YYYY-MM-DD",kcal:"its estimate, or 0"},confirm:true,snap:"sessions",
+    /* A finished session of one bout, as the workout screen records one. */
+    run:function(p){if(!isActivity(p.act)||!(p.min>0)||!p.date||p.date>today())return false;
+      var at=Date.parse(p.date+"T12:00:00");
+      var s={id:"s"+Date.now().toString(36),date:p.date,started:at,lastSet:at+p.min*60000,activeMs:p.min*60000,dayId:null,dayName:exName(p.act),
+        entries:[{name:p.act,exId:exIdOf(p.act),kind:"activity",muscle:actMuscle(p.act)||"Cardio",planned:{sets:1,lo:0,hi:0},rest:0,grp:null,
+          sets:[{w:0,r:0,min:p.min,km:p.km||0,rpe:6,kcal:p.kcal||0}]}]};
+      recordSession(s);S.sessions.sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});saveDB();render();return true;}},
+  "past.log":{desc:"Add a lift done without the app to the history: sets of reps at a weight, on a past date",
+    params:{name:"exercise, from the library",date:"YYYY-MM-DD, today or before",sets:"how many",reps:"each",w:"kg, 0 for none"},confirm:true,snap:"sessions",
+    run:function(p){if(!LIB.some(function(l){return l[0]===p.name;})||!p.date||p.date>today()||!(p.sets>0&&p.reps>0))return false;
+      var label=t("Logged in chat"),s=(S.sessions||[]).filter(function(x){return x.date===p.date&&x.dayName===label&&!x.dayId;})[0],fresh=!s;
+      var sets=[];for(var i=0;i<Math.min(20,p.sets);i++)sets.push({w:+p.w||0,r:+p.reps});
+      var ent={name:p.name,exId:exIdOf(p.name),muscle:muscleOf(p.name),planned:{sets:sets.length,lo:p.reps,hi:p.reps},rest:0,grp:null,sets:sets};
+      if(fresh){var at=Date.parse(p.date+"T12:00:00");
+        s={id:"s"+Date.now().toString(36),date:p.date,started:at,lastSet:at,activeMs:sets.length*120000,dayId:null,dayName:label,entries:[ent]};
+        recordSession(s);S.sessions.sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:0;});}
+      else{s.entries.push(ent);saveSession(s);}
+      saveDB();render();return true;}},
+  "recovery.log":{desc:"Save last night's sleep (hours) and today's soreness (0–10)",params:{sleep:"hours or 0",sore:"0–10 or 0"},confirm:true,snap:"day",
+    /* The recovery log's own two fields. */
+    run:function(p){var r=dayRec(today());if(p.sleep>0)r.sleep=Math.min(16,+p.sleep);if(p.sore>0)r.sore=Math.min(10,Math.round(+p.sore));saveDB();render();return true;}},
   "set.log":{desc:"Log a set of the exercise on screen in the workout in progress",params:{w:"weight, kg",r:"reps"},
     confirm:true,snap:"live",
     /* The logger's fields, filled, and its Log set. */
