@@ -2127,3 +2127,30 @@ add it to a day?" It couldn't (exercise.add takes library names only). CACHE `bu
   `KEEP_MS` (30 days) and `KEEP=500` messages, the cap a month's history needs.
 - Test: made from a name the library lacks, muscle asked, confirmed, in library and day, Undo
   restores both.
+
+## Coach skills: dose, schedule, lighter week, weekly check-in, a machine taken — branch session/coach-skills
+
+Owner, 27 Oct: build the four starred ideas, and "if I'm in the gym and the machine is occupied,
+ask for an alternative". CACHE `bunyan-v161`. All through commands.js (pure parsing) → agent.js
+(what the chat shows) → actions.js (what runs, with Undo).
+- **Sets, reps, rest** (`ex.dose` → `exercise.dose`): "make bench 4 sets of 6", "squats 5x5",
+  "rest 2 min on squats", "shorter rests on Legs" (a whole day, 30 s, never under 30), Arabic too.
+  Changed wherever the exercise is in the program unless a day is said, through `setExField`
+  (the steppers' own limits). Out-of-range values are refused, not clamped silently.
+- **Skip / move** (`sched.skip`, `sched.move`; snap `sched`): today, tomorrow or a weekday (EN/AR,
+  `whenIn`). Skip makes the date a rest day (`S.daySwap[date]="rest"`, read by `planOn`); move puts
+  the workout on the new date and what was there back on the old one (or a rest day). The day's
+  "Change workout" sheet gained the same "Rest day" row, so a tap can do what the coach does.
+- **Lighter week** (`deload.start` / `deload.end`; snap `deload`): the Training card's own button.
+  "should I deload?" stays a question. Answers that say one is due now carry "Start a lighter week".
+- **Weekly check-in** (intent `week`, `aWeek`): last week in the first two days of a new week, else
+  this week so far: workouts vs plan, working sets and volume vs the week before, protein days of the
+  logged ones, average weight vs the week before, lifts past their best e1RM; each only with data;
+  then one thing to change. Offered first in the panel's suggestions in a new week until read
+  (`S.ckSeen`, validated in schema.js). "How was my week?" moved here from `track`.
+- **A machine taken** (`ex.busy`): "the machine is taken", "someone's on the bench", "الجهاز مشغول",
+  or the workout's first suggestion (Ask Coach in the workout's ⋯ menu). Up to four alternatives
+  for the same muscle: same movement first, other equipment, the person's kit, nothing near a sore
+  spot, nothing already in today's workout; then `exercise.swapToday`. Not once sets are logged.
+- Tests: one per skill (each with Undo), the registry's domains, the workout's suggestions, intent
+  cases.

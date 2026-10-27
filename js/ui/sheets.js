@@ -451,6 +451,11 @@ function vSheet(){
        +'<span><span class="trow-n">'+esc(planName(d.name))+'</span>'
        +'<span class="trow-s">'+(d.ex.length?d.ex.length+' '+t("exercises"):t("rest day"))+'</span></span>'
        +(on?'<span class="tnext">'+t("Selected")+'</span>':'')+'</button>';});
+    /* The day taken off (the coach's "skip today" is this row). Only where the program has
+       no rest day of its own to pick. */
+    if(!spx.days.some(function(d){return !d.ex.length;})){var off=(S.daySwap||{})[sd2]==="rest";
+      b+='<button class="trow'+(off?' on':'')+'" data-swapto="rest" aria-pressed="'+off+'"><span><span class="trow-n">'+t("Rest day")+'</span>'
+       +'<span class="trow-s">'+t("Take this day off")+'</span></span>'+(off?'<span class="tnext">'+t("Selected")+'</span>':'')+'</button>';}
     b+='</div>';
     if((S.daySwap||{})[sd2])b+='<button class="btn g" data-swapto="">'+t("Back to the plan")+'</button>';
   }

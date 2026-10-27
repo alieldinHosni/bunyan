@@ -22,7 +22,7 @@ import {today, uid} from "../../util.js";
 import {LIB, MUSCLES} from "../../data/exercises.js";
 import {render} from "../render.js";
 import {V} from "../view.js";
-import {LENT} from "./common.js";
+import {LENT, setExField} from "./common.js";
 import {dispatchTap} from "./registry.js";
 import {STEPS} from "../views/assess.js";
 
@@ -43,6 +43,10 @@ var SNAP={
   body:function(){var b=copy(S.body);return function(){S.body=b;};},
   goals:function(){var g=copy(S.goals),k=S.profile.goal;return function(){S.goals=g;S.profile.goal=k;};},
   meals:function(){var m=copy(S.mealSlots);return function(){S.mealSlots=m;};},
+  /* The week's dates moved by hand (S.daySwap), and the lighter week with its block. */
+  sched:function(){var w=copy(S.daySwap||{});return function(){S.daySwap=w;};},
+  deload:function(){var d=copy(S.deload),b=copy(S.block);return function(){
+    if(d)S.deload=d;else delete S.deload;if(b)S.block=b;else delete S.block;};},
   /* Settings put back the way the screen's own buttons left them. */
   prefs:function(){var pr=copy(S.prefs),th=S.theme;return function(){
     if(pr.lang!==S.prefs.lang)tap({setlang:pr.lang});
@@ -70,6 +74,24 @@ var ACTIONS={
       if(!LIB.some(function(l){return l[0].toLowerCase()===name.toLowerCase();})){
         LIB.push([name,p.m,"Other",0]);(S.myEx=S.myEx||[]).push({id:"u_"+uid(),n:name,m:p.m});}
       V.dayId=p.day;V.sd={};tap({pickex:name});return true;}},
+  "exercise.dose":{desc:"Change an exercise's sets, reps or rest in the program (or the rests of a whole day)",
+    params:{ch:"[{day, id, sets?, lo?, hi?, rest?}], each an exercise in a day"},confirm:true,snap:"program",
+    /* What the exercise sheet's steppers write, field by field. */
+    run:function(p){var ok=false;
+      (p.ch||[]).forEach(function(c){var d=dayOf(c.day),e=d&&d.ex.filter(function(x){return x.id===c.id;})[0];if(!e)return;
+        ["sets","lo","hi","rest"].forEach(function(k){if(c[k]!=null)setExField(e,k,c[k]);});ok=true;});
+      if(ok){saveDB();render();}return ok;}},
+  "sched.skip":{desc:"Make a day's workout a rest day; the plan carries on",params:{date:"YYYY-MM-DD, today or later"},confirm:true,snap:"sched",
+    /* The day's own "Change workout" sheet, with a rest day chosen. */
+    run:function(p){if(!p.date||p.date<today())return false;(S.daySwap=S.daySwap||{})[p.date]="rest";saveDB();render();return true;}},
+  "sched.move":{desc:"Move a workout from one date to another; what was on that date goes the other way",
+    params:{from:"date",to:"date",day:"the day id moving",back:"the day id going back, or rest"},confirm:true,snap:"sched",
+    run:function(p){if(!p.from||!p.to||p.from<today()||p.to<today()||!dayOf(p.day))return false;
+      var w=S.daySwap=S.daySwap||{};w[p.to]=p.day;w[p.from]=p.back||"rest";saveDB();render();return true;}},
+  "deload.start":{desc:"Start a lighter week: fewer sets and about 10% lighter suggestions for seven days",params:{},confirm:true,snap:"deload",
+    /* The Training card's "Start a lighter week". */
+    run:function(){tap({deload:"start"});return true;}},
+  "deload.end":{desc:"End the lighter week early",params:{},confirm:true,snap:"deload",run:function(){tap({deload:"end"});return true;}},
   "exercise.remove":{desc:"Take an exercise out of a day of the program",params:{id:"the exercise's id in that day",day:"day id"},
     confirm:true,snap:"program",
     /* The ✕ on the day builder's row. */

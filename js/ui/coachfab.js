@@ -15,15 +15,20 @@
 import {t} from "../i18n/dict.js";
 import {isolateNums} from "../i18n/bidi.js";
 import {S, saveDB} from "../state.js";
-import {esc} from "../util.js";
+import {esc, today} from "../util.js";
+import {addDays, weekStartOf} from "../engine/schedule.js";
 import {V} from "./view.js";
 import {glyph} from "./glyphs.js";
 import {patch, replace} from "./patch.js";
 import {ASK, askNext, bubble, chatShown, histLink, pruneChat} from "./views/chat.js";
 
 /* What to offer first, by where it was opened. Only questions the coach answers. */
-var SUGGEST={train:["today","weights","tomorrow"],workout:["weights","sore","missed"],food:["rest","eat","protein"],
+var SUGGEST={train:["today","weights","tomorrow"],workout:["busy","weights","sore"],food:["rest","eat","protein"],
   progress:["track","strong","weight"],coach:["balance","track","plan"]};
+/* In the first two days of a new week, last week's check-in comes first until read. */
+function suggestFor(w){
+  var n=today(),ws=weekStartOf(n),fresh=n<=addDays(ws,1)&&S.ckSeen!==ws&&(S.sessions||[]).length;
+  return fresh?["week"].concat(SUGGEST[w].filter(function(x){return x!=="week";}).slice(0,2)):SUGGEST[w];}
 function where(){return S.active&&V.tab==="train"&&V.train!=="hub"?"workout":(SUGGEST[V.tab]?V.tab:"train");}
 
 /* ---- where the launcher may sit ------------------------------------------------------ */
@@ -67,7 +72,7 @@ function panelHtml(){
      in the conversation's language. */
   var last=log[log.length-1];
   if(last)h+=askNext(last,log.length);
-  else h+='<div class="cp-sug">'+SUGGEST[where()].map(function(id){
+  else h+='<div class="cp-sug">'+suggestFor(where()).map(function(id){
     return '<button class="cp-chip" data-chatq="'+id+'">'+esc(t(ASK[id]))+'</button>';}).join("")+'</div>';
   h+='</div><div class="cp-f"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'
    +esc(t("Ask a question"))+'" aria-label="'+esc(t("Ask a question"))+'">'
