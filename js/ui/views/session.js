@@ -234,12 +234,8 @@ function vSetCard(e,row,rows,o){
      bar and what goes on each side. A tap opens the plates sheet to change the bar. */
   if(!timed&&!row.wu&&isBarbell(e.name)&&barKg()>0){var pl=plateLine(V.draft.w);
     h+='<button class="sc-pl" id="scPl" data-plates="1" aria-label="'+esc(t("Plates"))+'"'+(pl?'':' hidden')+'>'+pl+'</button>';}
-  /* How hard it was, when it is asked for: the last set by default. */
-  if(!row.wu&&o.rpe)
-    h+='<div class="sc-rpe" role="group" aria-label="'+t("How hard was that set?")+' (RPE)"><span class="val-k">'+t("How hard was that set?")+' · RPE</span><div class="sc-rpe-c">'
-     +[6,7,8,9,10].map(function(x){var on=num(V.draft.rpe)===x;
-        return '<button class="num'+(on?' on':'')+'" data-rpe="'+x+'" aria-pressed="'+on+'">'+x+'</button>';}).join("")
-     +'</div></div>';
+  /* How hard a set was is asked once it is done, about that set (vRpeAsk), not here
+     before it (owner, 27 Oct: asked ahead, the answer went to the wrong set). */
   /* One reference line, for this set only. Before the first working set it is the
      recommendation and its reason; after it, what this set was last time. */
   var hint="";
@@ -279,6 +275,18 @@ function stepOf(e){
   return r2(toDisp(s));}
 function r2(x){return Math.round(x*100)/100;}
 
+/* How hard the set just logged was: asked about that set, by its number, once it is
+   done, when the setting asks for it (every set, or the last); a tap writes it to the
+   set and the question goes. Not asked again once answered or once another set is in. */
+function vRpeAsk(e,workN){
+  if(S.prefs.rpe==="off")return "";
+  var i=e.sets.length-1,x=e.sets[i];if(!x||x.wu||x.rpe)return "";
+  var k=e.sets.filter(function(s){return !s.wu;}).length;
+  if(!rpeWanted(k-1,workN))return "";
+  return '<section class="sc-rpe rpeask wglass" data-k="rpeask" role="group" aria-label="'+esc(t("How hard was set {n}?").replace("{n}",k))+' (RPE)">'
+   +'<span class="val-k">'+esc(t("How hard was set {n}?").replace("{n}",k))+' · RPE</span><div class="sc-rpe-c">'
+   +[6,7,8,9,10].map(function(v){return '<button class="num" data-rpeset="'+i+':'+v+'">'+v+'</button>';}).join("")
+   +'</div></section>';}
 /* ---- the one primary action -------------------------------------------------------
    The check. It logs from the rest too; for a moment after, it says the set is logged
    and offers Undo, then reads the next set. */
@@ -320,8 +328,9 @@ function vHistory(e,plan,cur,timed){
     var now=r.i===cur;
     var cls="wsr"+(r.done?" did":now?" on":" pend")+(r.wu?" wkwu":"")+(r.done&&V.fresh===r.i?" fresh":"");
     h+='<div class="'+cls+'" role="listitem" data-k="set:'+r.i+'">'
-     /* Delete leads the row (settled). The row being done has nothing to delete yet. */
-     +(now?'<span></span>':'<button class="x" data-delset="'+r.i+'" aria-label="'+t("Delete")+' '+esc(lbl)+'">'+IC.close+'</button>')
+     /* Delete leads every row, the one being done too (owner, 27 Oct): it leaves the
+        plan for today and the next one, or Next exercise, takes its place. */
+     +'<button class="x" data-delset="'+r.i+'" aria-label="'+t("Delete")+' '+esc(lbl)+'">'+IC.close+'</button>'
      +'<span class="wsr-t"><span class="wsr-n">'+(r.wu?'<span class="wub" aria-hidden="true">W</span>'+t("Warm-up"):t("Set")+' <span class="num">'+r.n+'</span>')+'</span>'
      +'<span class="wsr-v">'+(now?t("now"):r.done?doneVals(e,r,timed,lbl)
        /* A row still to do shows what it is planned at, quieter than what was done. */
@@ -407,8 +416,8 @@ function vLogger(){
   if(act){h+=actBody(a,e,rows,active);}
   else{
     if(restOn())h+=vRestBand();
-    if(row)h+=vSetCard(e,row,rows,{timed:timed,loaded:loaded,p:p,small:restOn(),
-      rpe:S.prefs.rpe!=="off"&&rpeWanted(row.n-1,workN)});
+    h+=vRpeAsk(e,workN);
+    if(row)h+=vSetCard(e,row,rows,{timed:timed,loaded:loaded,p:p,small:restOn()});
     h+=vLogControl(e,row);
   }
 

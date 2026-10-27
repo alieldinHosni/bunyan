@@ -37,9 +37,12 @@ function spreadWd(n){var s=weekStart();
   return (SPREAD[Math.max(1,Math.min(7,n))]||[]).map(function(o){return (s-1+o)%7+1;});}
 
 /* The training day pinned to this date's weekday, or null for a rest day. */
-function pinnedOn(sp,iso){
+function pinnedOn(sp,iso){return pinnedAllOn(sp,iso)[0]||null;}
+/* Every day pinned to a date's weekday, in the program's order: two days on one weekday
+   are two sessions that day, morning and evening (owner, 27 Oct). */
+function pinnedAllOn(sp,iso){
   var wd=isoWeekday(iso);
-  return sp.days.filter(function(d){return d.ex.length&&(d.wd||[]).indexOf(wd)>=0;})[0]||null;}
+  return sp.days.filter(function(d){return d.ex.length&&(d.wd||[]).indexOf(wd)>=0;});}
 /* The next pinned training day from this date on (this date included). */
 function nextPinned(sp,iso){
   for(var k=0;k<7;k++){var d=pinnedOn(sp,addDays(iso,k));if(d)return {day:d,iso:addDays(iso,k)};}
@@ -67,4 +70,4 @@ function suggestWd(sp){
   train.forEach(function(d){if(!out[d.id]){var w=free.shift();if(w){out[d.id]=[w];taken[w]=1;}}});
   return out;}
 
-export {addDays, isoWeekday, nextPinned, pinnedOn, spreadWd, suggestWd, wdName, weekDates, weekOrder, weekStart, weekStartOf};
+export {addDays, isoWeekday, nextPinned, pinnedOn, spreadWd, suggestWd, wdName, weekDates, weekOrder, weekStart, weekStartOf, pinnedAllOn};

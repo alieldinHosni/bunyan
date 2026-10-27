@@ -119,7 +119,7 @@ function register(){
     sw9.srpe=+D.srpe;saveSession(sw9);render();return;});
   key("hurt",function(){openSheet("hurt");return;});
   key("hurtdo",function(D){W.flagPain(D.hurtdo);return;});
-  key("startday",function(D){pushNav();startDay(D.startday);return;});
+  key("startday",function(D){if(V.sheet==="another"){V.sheet=null;V.sd=null;}pushNav();startDay(D.startday);return;});
   has("continue",function(){W.resume();return;});
   /* Moving between exercises: the segments, the arrows either side of them, and the
      list from the title all slide the new one in from the side it lies on. */
@@ -165,6 +165,10 @@ function register(){
   /* The set card's RPE chips: tapping the chosen one again takes it back, since how a
      set felt is the lifter's to say or leave out. */
   key("rpe",function(D){V.draft.rpe=V.draft.rpe===+D.rpe?null:+D.rpe;render();return;});
+  /* How hard a logged set was, written to that set; the question leaves in place. */
+  key("rpeset",function(D,el){var pr=String(D.rpeset).split(":"),e=S.active&&S.active.entries[V.logIdx],x=e&&e.sets[+pr[0]];
+    if(!x)return;x.rpe=+pr[1];S.active.lastSet=S.active.lastSet||Date.now();saveDB();
+    var box=el&&el.closest&&el.closest(".rpeask");if(box)box.remove();return;});
   key("sstep",function(D){W.stepDraft(D.sstep,+D.d<0?-1:1);return;});
   key("addwu",function(){W.addWarmup();return;});
   key("undolog",function(){W.undoLogged();return;});
@@ -198,6 +202,7 @@ function register(){
       return;}
     V.sheet=null;V.sd=null;startActivity(D.quickact);return;});
   key("actsheet",function(){openSheet("acts");return;});
+  key("another",function(){if(S.active)return;openSheet("another");return;});
   key("logset",function(){W.logSet();return;});
   has("delset",function(D){W.removeRow(+D.delset);return;});
   has("unlog",function(D){W.unlogSet(+D.unlog);return;});

@@ -686,7 +686,13 @@ function planCommand(c){
     if(!d)return say(pl&&pl.rest?t("Today is a rest day. Pick a day to train anyway on Training."):t("There's no workout planned for today."),[{l:t("Open Training"),a:{"data-tab":"train"}}]);
     return now("workout.start",{day:d.id},fill(t("Starting {d}."),{d:planName(d.name)}),fill(t("Started {d}."),{d:planName(d.name)}));}
   if(/^(workout|rest)\./.test(c.cmd)&&!S.active)return say(t("There's no workout in progress. Say “start my workout” to begin today's."));
-  if(c.cmd==="workout.next")return now("workout.next",{},"",t("On to the next exercise."));
+  if(c.cmd==="workout.next"){
+    if(!S.active)return say(t("There's no workout under way. Start one, then I can move it along."));
+    var cur=S.active.entries[S.active.idx||0],done=cur?cur.sets.filter(function(x){return !x.wu;}).length:0;
+    var last=(S.active.idx||0)>=S.active.entries.length-1;
+    if(last)return now("workout.finish",{},"",t("That was the last exercise: finishing the workout, confirm on the screen."));
+    return now("workout.next",{},"",c.done&&cur?fill(t(done===1?"Done with {ex}: 1 set logged. On to the next.":"Done with {ex}: {n} sets logged. On to the next."),{ex:exName(cur.name),n:done})
+      :t("On to the next exercise."));}
   if(c.cmd==="workout.finish")return now("workout.finish",{},"",t("Finishing: confirm on the workout screen."));
   if(c.cmd==="rest.skip")return now("rest.skip",{},"",t("Rest ended."));
   if(c.cmd==="rest.extend")return now("rest.extend",{},"",t("Thirty more seconds of rest."));

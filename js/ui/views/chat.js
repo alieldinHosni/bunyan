@@ -1218,6 +1218,7 @@ var ASKQ=/[?؟]|^(how|what|why|when|which|should|is|are|do|does|can|كام|اي�
 var EXQ=/\b(exercises?|moves?|movements?|lifts?)\b.*\b(for|to (build|grow|train|work|target|hit))\b|\b(best|good|what|which|suggest|recommend)\b.*\b(exercises?|moves?|lifts?)\b|\b(train|work|hit|grow|build)\b.*\b(chest|back|shoulders?|quads?|legs?|hamstrings?|glutes?|biceps?|triceps?|calves)\b.*\?|تمارين|تمرين ل/;
 var ONTO=/^(yeah|yes|ok|okay|but|and|so|hmm|well|what about|how about|then|طب|طيب|بس|و|يعني|ماشي|اه)( |$)/;
 var DEEPER=/^(why|how come|more|tell me more|explain|details|go on|really|ليه|ازاي|اكتر|وضح|كمل)( |$)/;
+var DOWORK=/ (complete|finish|end|stop|skip|delete|remove|add|log|undo|redo|repeat|move|swap|done with) (the |this |my |a |one |current |last |next )*(set|sets|exercise|exercises|workout|session|rep|reps) /;
 function knowFor(text,iid,it,prev){
   var fq=fold(text),short=fq.split(" ").length<=8;
   if(prev&&prev.id==="know"&&prev.kq&&DEEPER.test(fq)&&short){var kd=lookup(prev.kq);if(kd)return {k:kd,kq:prev.kq,deeper:true};}
@@ -1225,6 +1226,9 @@ function knowFor(text,iid,it,prev){
   /* What lives in the app has its own answer (aElse: Profile > You, no data), and pain
      is referred, never looked up (aSore → aScope). */
   if(ELSEWHERE.some(function(x){return x[1].test(fq);})||PAIN.test(fq))return null;
+  /* Something to do to the workout ("complete the current exercise", "delete this set")
+     is never read as a question for the knowledge files. */
+  if(DOWORK.test(" "+fq+" "))return null;
   var loose=iid==="unknown"||(SOFT.test(iid)&&it.score<=7&&asked)||(DEFINE.test(fq)&&it.score<15&&(SOFT.test(iid)||iid==="eat"));
   if(!loose)return null;
   var k=lookup(text);
