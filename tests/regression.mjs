@@ -2990,6 +2990,29 @@ await test("Coach, when unsure and when wrong: other readings offered under a ne
   await page.fill('#chhq','zzzz');await pause(page,200);
   eq(await page.$eval('#chhNone',e=>e.hidden),false,"and says when nothing does");
 });
+await test("InBody: the photo shown to copy from, the copied text read into fields to check, saved as the day's body entry; Progress and the coach read it",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("inbody");});await pause(page);
+  await page.setInputFiles('#ib_img',{name:"inbody.png",mimeType:"image/png",buffer:Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=","base64")});
+  await pause(page,500);
+  if(!(await page.$('#sheet .ib-img')))throw new Error("the photo is not shown to read from");
+  await page.fill('#ib_text',"Total Body Water 49.8 L\nWeight 84.2 kg (61.5~83.1)\nSkeletal Muscle Mass 38.1 kg\nBody Fat Mass 16.3 kg\nPBF (Percent Body Fat) 19.4 %\nVisceral Fat Level 7\nBasal Metabolic Rate 1820 kcal\nInBody Score 78");
+  await page.tap('[data-ibread]');await pause(page,400);
+  eq(await page.evaluate(()=>["weight","pbf","smm","fatkg","vfl","ibmr","tbw","score"].map(k=>document.getElementById("ib_"+k).value)),
+    ["84.2","19.4","38.1","16.3","7","1820","49.8","78"],"every figure in its field, to check");
+  if(!(await page.$('#sheet .ib-img')))throw new Error("the photo went away on reading");
+  await page.fill('#ib_pbf','19.6');
+  await page.tap('[data-ibsave]');await pause(page,400);
+  const e=await ev(page,"S.body.filter(b=>b.src==='inbody').map(b=>[b.weight,b.bf,b.smm,b.fatkg,b.vfl,b.ibmr,b.tbw,b.ibscore])");
+  eq(e,[[84.2,19.6,38.1,16.3,7,1820,49.8,78]],"saved as checked, the edited figure kept");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.ptab="body";(await import("/js/ui/render.js")).render();});await pause(page,500);
+  const pg=await page.evaluate(()=>document.body.innerText);
+  if(!/From your InBody test/.test(pg)||!/Skeletal muscle mass/.test(pg))throw new Error("Progress doesn't show it");
+  await openChat(page);
+  await agSay(page,"what does my inbody say");await pause(page,300);
+  const x=await page.evaluate(()=>{const e=[...document.querySelectorAll("#cpanel .chat-x")].pop();e.querySelectorAll(".chat-more").forEach(d=>d.open=true);return [(e.querySelector(".chat-at")||{}).textContent,e.innerText.replace(/[\u2066-\u2069]/g,"")];});
+  eq(x[0],"Your InBody","the coach reads it");
+  if(!/body fat 19\.6%/.test(x[1])||!/within the range the textbook gives for most men \(10–20%\)/.test(x[1])||!/Mifflin-St Jeor/.test(x[1]))throw new Error("answer: "+x[1]);
+});
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
   await openChat(page);
