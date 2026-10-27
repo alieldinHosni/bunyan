@@ -2020,3 +2020,19 @@ small cuts from the sheet. CACHE `bunyan-v152`.
   sheet cuts: the sheet the owner sent with them carries captions and, on Progress, a stats
   card drawn into the picture, and its tiles are no wider than the current cuts.
 - Test: the full photograph fills the height.
+
+## Progress controls from the owner's mock; Plan's icon a brain — branch session/progress-controls
+
+Owner, 27 Oct (a mock of Progress's controls). CACHE `bunyan-v153`.
+- `seg()` (view.js) takes an optional icon per item (`items[i][3]`, inner SVG on the 24 grid, a
+  module constant). With one, the control gets `.ic`: icon over word, a taller cell.
+- Progress: Overview / Strength / Body carry a chart, the dumbbell and a person; each span a
+  calendar; the page's name has the bars mark in the accent. The range and the halves are now
+  filled like the views (the mock), no longer the tinted secondary style.
+- All / Upper / Lower: the owner asked for body icons instead of arrows. They are one figure,
+  the half not chosen drawn faint, icon beside the word. Their accessible names are "Whole
+  body", "Upper body", "Lower body" (Arabic added). Kept as three: it is one tap to narrow the
+  records and the lift list, and All is the default, so nobody has to use it.
+- Dock: Plan's clipboard is now a brain (dock.js `ICON.coach`).
+- Test: icons on each control, the halves' figure and names, the control kept in place on a tap,
+  the brain.

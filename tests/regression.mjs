@@ -2881,6 +2881,19 @@ await test("Steps: tap the number and type any count (456); Done saves it; the b
   await page.tap('.stfield [data-d="500"]');await pause(page,200);
   eq(await page.$eval('#in_st',e=>e.value),"956","+ still steps by 500");
 });
+await test("Progress: the controls carry icons, the halves are a figure with their own names, and Plan is a brain",async page=>{
+  await tapTab(page,"progress");await pause(page);
+  eq(await page.$$eval('.pgtabs2 .seg-b',a=>a.map(b=>!!b.querySelector("svg.seg-i")&&b.querySelector(".seg-l").textContent)),["Overview","Strength","Body"],"an icon over each view's name");
+  eq(await page.$$eval('.pgrange .seg-b svg.seg-i',a=>a.length),5,"a calendar over each span");
+  eq(await page.$eval('.thead-ic svg',e=>getComputedStyle(e).fill!=="none"),true,"the page's mark beside its name");
+  await page.tap('[data-ptab="strength"]');await pause(page);
+  eq(await page.$$eval('.pghalf .seg-b',a=>a.map(b=>[b.getAttribute("aria-label"),b.querySelectorAll(".seg-dim").length])),
+    [["Whole body",0],["Upper body",1],["Lower body",1]],"one figure, the other half faint");
+  const keep=await page.$('.pghalf');await page.tap('[data-phalf="lower"]');await pause(page);
+  eq(await page.$eval('[data-phalf="lower"]',e=>e.getAttribute("aria-pressed")),"true","Lower chosen");
+  eq(await keep.evaluate(e=>e.isConnected),true,"the control is kept, not rebuilt");
+  eq(await page.$eval('.dock-b[data-tab="coach"] svg path',e=>e.getAttribute("d").startsWith("M11 4.6")),true,"Plan's icon is the brain");
+});
 await test("Progress: training volume over a month is capsule bars, the newest in the accent with its figure",async page=>{
   await tapTab(page,"progress");await pause(page);
   const r=await page.evaluate(()=>{const c=document.querySelector(".caps");if(!c)return null;
