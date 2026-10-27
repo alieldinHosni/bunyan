@@ -28,8 +28,8 @@ import {lookup, ownTerms} from "../../engine/kbsearch.js";
 import {weeklySets} from "../../engine/volume.js";
 import {weeklyVolume} from "../../engine/stats.js";
 import {canUndo} from "../handlers/actions.js";
-import {answerPick, createAsk, namesExercise, namesFood, plan as planAction, planCommand, proceed, suggestExercises, swapPick} from "../agent.js";
-import {commandOf} from "../../coach/commands.js";
+import {answerPick, createAsk, daysIn, namesExercise, namesFood, plan as planAction, planCommand, proceed, suggestExercises, swapPick} from "../agent.js";
+import {commandOf, whenIn} from "../../coach/commands.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
@@ -1128,7 +1128,58 @@ function knowFor(text,iid,it,prev){
   /* "ok" alone says nothing new: only a follow-up with a word of its own is read on. */
   if(iid==="unknown"&&base&&ownTerms(text).length&&(ONTO.test(fq)||fq.split(" ").length<=4)){var kc=lookup(base+" "+text);if(kc)return {k:kc,kq:base+" "+text};}
   return null;}
+/* ---- what follows from the last request ----------------------------------------------
+   "No, I meant Friday", "same for Thursday", "and Pull too": the last request said again
+   with the day (or the exercise) changed, and run as if typed so (rewrite). Two requests
+   in one message ("add squats to Monday and remove leg press") are two messages, each
+   with its own buttons (pair). "Undo that": the newest change that can still be undone. */
+var CORR=/^(no+|nope|not that|wrong|sorry|oops)?[ ,.!]*(i meant|i mean|meant|make it|change it to|actually|لا|لأ|قصدي|اقصد)( |$)/;
+var SAME=/^(do |)(the same|same|that|it)( again| too|)( for| on| to| in| with)( .+)$|^(and|also|plus|و|وكمان) (.+?)( too| as well| كمان|)$/;
+var PREP={exadd:"to",exremove:"from",exswap:"in"};
+function rewrite(q){
+  var prev=lastExchange();if(!prev||!prev.q)return null;
+  var fq=fold(q),m,target,corr=false;
+  if((m=fq.match(CORR))){target=fq.slice(m[0].length).trim();corr=true;}
+  else if((m=fq.match(SAME)))target=(m[5]||m[7]||"").replace(/^(for|on|to|in|with) /,"").trim();
+  target=target.replace(/^(on|for|to|the|in|it|يوم|ل|لـ) /,"").replace(/ (day|يوم)$/,"").trim();
+  /* Only a day or a name: anything longer, or a request of its own, is read as itself. */
+  if(!target||target.split(" ").length>4||commandOf(target,S.prefs.unit))return null;
+  /* The request as it was run: a correction's own words are not the request. */
+  var pq=spell(fold(prev.qq||prev.q)),w=whenIn(target);
+  if(w.length){
+    var tk=pq.split(" "),at=-1;tk.forEach(function(x,i){if(whenIn(x).length)at=i;});
+    var tw=target.split(" ").filter(function(x){return whenIn(x).length;}).pop();
+    if(at>=0){tk[at]=tw;return tk.join(" ");}
+    return pq+" "+tw;}
+  var dd=daysIn(target);
+  if(dd.days.length===1&&PREP[prev.id]){var pd=daysIn(prev.qq||prev.q);return pd.left+" "+PREP[prev.id]+" "+dd.days[0].name;}
+  /* A correction naming something else: the same request with that instead. */
+  if(corr&&(prev.id==="exadd"||prev.id==="exremove")){var pd2=daysIn(prev.qq||prev.q);
+    return (prev.id==="exadd"?"add ":"remove ")+target+(pd2.days.length===1?" "+PREP[prev.id]+" "+pd2.days[0].name:"");}
+  return null;}
+/* Two requests at once, each something to do (a command, or a change to the program
+   or the log, as its verb says). */
+var JOIN=/ (and then|then|and also|and|ثم|وبعدين|و بعدين|وكمان) /;
+function splitTwo(q){
+  var s=String(q).trim(),m=s.match(JOIN);if(!m)return null;
+  var a=s.slice(0,m.index).trim(),b=s.slice(m.index+m[0].length).trim();
+  var doing=function(x){var f=fold(x);return !!commandOf(x,S.prefs.unit)||VERB.some(function(v){return v[1].test(f);});};
+  return a&&b&&doing(a)&&doing(b)?[a,b]:null;}
+function undoLast(){
+  var c=chatShown();for(var i=c.length-1;i>=0;i--){var m=c[i];
+    if(m&&m.ag&&m.ag.s==="applied"&&canUndo(m.at))
+      return {s:"say",lead:fill(t("Undo “{d}”?"),{d:String(m.ag.done||"")}),acts:[{l:t("Undo it"),a:{"data-agundo":String(m.at)}}]};}
+  return {s:"say",lead:t("There's nothing recent to undo."),acts:[]};}
 function ask(q,id,lang){
+  if(!id&&S.onboarded){
+    var rw=null;try{rw=rewrite(q);}catch(e){rw=null;}
+    if(rw){var mr=askOne(rw,null,lang);if(mr&&!mr.tap){mr.qq=rw;mr.q=String(q).trim().slice(0,300);}return mr;}
+    var two=null;try{two=splitTwo(q);}catch(e){two=null;}
+    if(two){var m1=askOne(two[0],null,lang);if(!m1||m1.tap)return m1;
+      var m2=askOne(two[1],null,lang);if(!m2||m2.tap)return m1;
+      if(m2.at<=m1.at)m2.at=m1.at+1;m1.pair=1;m2.pair=1;return m2;}}
+  return askOne(q,id,lang);}
+function askOne(q,id,lang){
   pruneChat();
   /* A short answer to the last question: yes or no to a change waiting for a tap is that
      tap (the caller runs it; nothing is added to the conversation). */
@@ -1153,8 +1204,8 @@ function ask(q,id,lang){
       var sit=null,cm=null;
       if(scopeOf(text))iid="scope";
       /* Something to do in the app: it is done, or asked for, the way its button does. */
-      else if(S.onboarded&&(cm=commandOf(text))){
-        var cg=null;try{cg=planCommand(cm);}catch(e){cg=null;}
+      else if(S.onboarded&&(cm=commandOf(text,S.prefs.unit))){
+        var cg=null;try{cg=cm.cmd==="undo.last"?undoLast():planCommand(cm);}catch(e){cg=null;}
         if(cg)return {q:text,id:"app",at:Date.now(),b:[],acts:cg.acts||[],ag:cg,lang:L};}
       /* A report rather than a question or a request: one question back. */
       else if(!VERB.some(function(v){return v[0]!=="foodlog"&&v[1].test(fold(text));})&&(sit=situationOf(text))){iid="situation";it.sit=sit;}
@@ -1333,7 +1384,7 @@ function vChat(){
         return '<section class="chat-grp"><h2 class="chat-grp-h">'+esc(t(g[0]))+'</h2>'
          +'<div class="chat-topics">'+g[1].map(topicRow).join("")+'</div></section>';}).join("")
      +'<p class="chat-dis">'+esc(t("Answers come from your own log, plan and targets, worked out on this phone. Nothing you type leaves it."))+'</p>';}
-  log.forEach(function(m,i){h+=bubble(m,i===log.length-1);});
+  log.forEach(function(m,i){h+=bubble(m,liveAt(log,i));});
   h+='</div>';
   if(last)h+=askNext(last,log.length);
   h+='<div class="chat-form"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'
@@ -1373,4 +1424,8 @@ function dayWord(at){
   if(same(d,y))return t("Yesterday");
   return shortd(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"));}
 
-export {ASK, ask, askNext, bubble, chatShown, findMsg, follow, histLink, histSheet, NEXT, pruneChat, vChat};
+/* Whether a message's buttons are live: the newest one, or both of a pair still waiting. */
+function liveAt(log,i){var m=log[i],n=log.length-1;
+  return i===n||(i===n-1&&m&&m.pair&&log[n].pair&&m.ag&&(m.ag.s==="confirm"||m.ag.s==="pick"));}
+
+export {ASK, ask, askNext, bubble, liveAt, chatShown, findMsg, follow, histLink, histSheet, NEXT, pruneChat, vChat};

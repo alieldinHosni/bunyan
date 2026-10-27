@@ -2186,3 +2186,29 @@ sure haptics work on the iPhone. CACHE `bunyan-v164`.
   "Coach is typing". Yes/Not now chips were not added: every confirmation already has its two
   buttons.
 - Tests: haptic recipe, gym commands, header button, drag, long press, More, typing status.
+
+## Coach batch 2: understanding and logging — branch session/coach-batch2 (on batch 1)
+
+CACHE `bunyan-v165`.
+- **Corrections and "same for"** (chat.js `rewrite`): "no, I meant Friday", "same for Thursday",
+  "and Pull too": the last request (as it was run, `m.qq`) said again with the day, program day or
+  exercise changed. Only when what follows is a day or a short name, never a request of its own.
+- **Two requests in one** (`splitTwo`): split on "and", "then", "ثم", "وبعدين" when both halves
+  are things to do; two messages (`pair`), both confirmations live (`liveAt`).
+- **"Undo that" / "swap it back"** (`undo.last`): offers the newest change that can still be
+  undone, as a button (the change's own Undo).
+- **Gym slang** (commands.js `slang`): "2 plates" = bar + two plates a side (20 kg / 45 lb by the
+  app's unit); "bodyweight x 12" = a set with no load. Franco detection no longer reads 3x8, 5k,
+  30min, 20kg as Arabic letters (intent.js FRANCO).
+- **Cardio in a sentence** (`act.log`): "ran 5 km in 28 min", "45 min football", "لعبت كورة ساعة";
+  25 activities by the words people use; minutes, hours, km, miles; today or yesterday. Saved as a
+  finished one-bout session; kcal only from the activity's MET and a known weight, said as an
+  estimate, never added to the food target.
+- **A lift done without the app** (`past.log`): "yesterday I did bench 3x8 at 80", "on Monday I did
+  squats 5x5 100kg": into the history on that date (a "Logged in chat" session, appended to if one
+  exists), counting toward records and progress.
+- **Sleep and soreness** (`recovery.log`): "slept 5 hours", "legs are very sore", "soreness 7/10";
+  the recovery log's fields for today, with what it means for today's training.
+- Undo for history changes (snap `sessions`): new sessions removed, appended entries trimmed.
+- Tests: logging (each with Undo), corrections / same-for / two requests / undo that, slang;
+  registry domains.

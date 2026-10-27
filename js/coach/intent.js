@@ -171,7 +171,8 @@ var INTENTS=[
 var ARABIC=/[؀-ۿ]/;
 /* Egyptian Arabic typed in Latin letters, with digits for the letters Latin lacks
    ("3ayez akol eh delwa2ty"): answered in Arabic, as the person writing it reads. */
-var FRANCO=/[a-z][2357][a-z]|(^| )[2357][a-z]|(^| )(3ayez|3ayza|3awez|delwa2ty|dlw2ty|enaharda|elnaharda|nharda|bokra|ezay|izay|leh|eh|keda|kam|akol|atmaren|wazny|ana)($| )/;
+/* A digit for an Arabic letter ("3ayez", "7aga"); not a gym figure: 3x8, 5k, 30min, 20kg. */
+var FRANCO=/[a-z][2357][a-z]|(^| )[2357](?!x\d|k\b|km\b|kg\b|kgs\b|lb|min|mins\b|m\b|h\b|hr|s\b|sec|g\b|th\b|rd\b|nd\b|st\b)[a-z]|(^| )(3ayez|3ayza|3awez|delwa2ty|dlw2ty|enaharda|elnaharda|nharda|bokra|ezay|izay|leh|eh|keda|kam|akol|atmaren|wazny|ana)($| )/;
 
 /* Folded the way the food and exercise search fold: case, the Arabic letter variants
    people type for each other, marks and tatweel, and punctuation. */

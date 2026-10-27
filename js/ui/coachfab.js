@@ -20,7 +20,7 @@ import {addDays, weekStartOf} from "../engine/schedule.js";
 import {V} from "./view.js";
 import {glyph} from "./glyphs.js";
 import {patch, replace} from "./patch.js";
-import {ASK, askNext, bubble, chatShown, histLink, pruneChat} from "./views/chat.js";
+import {ASK, askNext, bubble, chatShown, histLink, liveAt, pruneChat} from "./views/chat.js";
 
 /* What to offer first, by where it was opened. Only questions the coach answers. */
 var SUGGEST={train:["today","weights","tomorrow"],workout:["busy","weights","sore"],food:["rest","eat","protein"],
@@ -67,7 +67,7 @@ function panelHtml(){
    +'<div class="cp-b" id="cpB" role="log" aria-live="polite">'+histLink();
   if(!log.length)h+='<p class="cp-hi">'+esc(t("Ask about training, food or progress"))+'</p>';
   else{
-    log.forEach(function(m,i){h+=bubble(m,i===log.length-1,i<log.length-1);});}
+    log.forEach(function(m,i){h+=bubble(m,liveAt(log,i),i<log.length-1);});}
   /* What to ask: for where it was opened, then, after an answer, what follows from it,
      in the conversation's language. */
   var last=log[log.length-1];
