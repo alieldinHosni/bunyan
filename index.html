@@ -4848,6 +4848,16 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .chat-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .chat-acts .btn{flex:1 1 auto;width:auto;margin:0}
 .chat-next{margin:22px 0 0}
+/* The way to the chat history, at the top of the conversation when it holds more than
+   the chat shows: a quiet line, not a card. */
+.chat-histl{display:flex;align-items:center;justify-content:center;gap:var(--s2);margin:0 auto var(--s3);min-height:var(--hit);
+  padding:0 var(--s3);border:0;background:none;color:var(--dim);font-size:13px;font-weight:600}
+.chat-histl .gl{width:16px;height:16px}
+:root:not(.tch) .chat-histl:hover,.chat-histl:focus-visible{color:var(--accentHi)}
+/* The history (Profile → Chat history): the conversation by day, to read. */
+.chh-day{margin-top:var(--s4)}
+.chh-day .chat-x{margin-top:var(--s3)}
+.chh-empty{color:var(--dim);margin:var(--s4) 0}
 .chat-next-h{margin:0 0 8px;padding-inline-start:4px}
 /* After the first answer: one slim row, sideways, its end fading so it reads as one to
    scroll. */

@@ -40,7 +40,7 @@ import {FOODDB, fuzzyFoods, isDrink, nutritionFor, searchFoods, sumNutrition} fr
 import {nutrition, topLifts, weeklyCardio, weighIns, weightChange, weightTrend} from "../../engine/stats.js";
 import {S, split} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
-import {esc, fmtN, num, pretty, r1, setLang, today} from "../../util.js";
+import {esc, fmtN, num, pretty, r1, setLang, shortd, today} from "../../util.js";
 import {backArrow} from "../nav.js";
 import {doseText} from "../dose.js";
 import {blockDay, blockNow} from "../../engine/blocks.js";
@@ -1024,13 +1024,26 @@ function route(iid,text,it){
 /* The conversation is kept for a day; what the person told the coach to remember is
    kept apart (S.context, js/coach/context.js) and is not touched by this. */
 var DAY=864e5;
+/* How long things are kept (owner, 27 Oct): the conversation shows the last day; the
+   chat history (Profile → Chat history, histSheet) keeps thirty, read only, and what is
+   older is gone. Clearing the conversation (S.chatFrom) only hides it from the chat. */
+var KEEP=30*DAY;
 function pruneChat(){
-  var c=S.chat||[],now=Date.now(),kept=c.filter(function(m){return m&&typeof m==="object"&&num(m.at)>now-DAY;});
+  var c=S.chat||[],now=Date.now(),kept=c.filter(function(m){return m&&typeof m==="object"&&num(m.at)>now-KEEP;});
   if(kept.length!==c.length){S.chat=kept;return true;}
   return false;}
+/* The conversation as the chat shows it: today's day of it, since it was last cleared. */
+function chatShown(){
+  var from=Math.max(Date.now()-DAY,num(S.chatFrom));
+  return (S.chat||[]).filter(function(m){return m&&typeof m==="object"&&num(m.at)>from;});}
+/* Whether the history holds more than the chat shows: then the chat offers it. */
+function hasOlder(){return (S.chat||[]).length>chatShown().length;}
+/* The way from the chat to its history, at the top of the conversation. */
+function histLink(){
+  return hasOlder()?'<button class="chat-histl" data-chathist="1">'+glyph("clock")+'<span>'+esc(t("Review chat history"))+'</span></button>':'';}
 /* The exchange a new message may follow on from: the newest one, if it is recent. */
 var FOLLOW=30*60000;
-function lastExchange(){var c=S.chat||[],m=c[c.length-1];return m&&num(m.at)>Date.now()-FOLLOW?m:null;}
+function lastExchange(){var c=chatShown(),m=c[c.length-1];return m&&num(m.at)>Date.now()-FOLLOW?m:null;}
 var YES=/^(yes|yeah|yep|yup|sure|ok|okay|do it|go ahead|please do|add it|log it|save it|swap it|remove it|ايوه|اه|ايوا|تمام|ماشي|اوك|نعم|ضيفه|سجله|احفظه|بدله|شيله)( |$)/;
 var NO=/^(no|nope|not now|dont|don t|cancel|لا|لأ|مش دلوقتي|بلاش|خلاص)( |$)/;
 var MORE=/^(and|also|plus|what about|how about|و|كمان|وكمان)( |$)/;
@@ -1173,9 +1186,10 @@ function topicRow(id){
   var tp=TOPIC[id]||["","question"];
   return '<button class="chat-topic" data-chatq="'+id+'"><span class="chat-gl">'+glyph(tp[1])+'</span>'
    +'<span class="chat-topic-q">'+esc(t(ASK[id]))+'</span><span class="ico ico-chev" aria-hidden="true"></span></button>';}
-function bubble(m,live,prev){
+/* ro: in the history, to read: no button in it does anything, so none is drawn. */
+function bubble(m,live,prev,ro){
   var L=m.lang==="ar"||m.lang==="en"?m.lang:uiLang();
-  return withLang(L,function(){return bubbleIn(m,live,L,prev);});}
+  return withLang(L,function(){return bubbleIn(m,ro?false:live,L,prev,ro);});}
 /* An answer reads as one or two sentences; the rest is behind More. */
 function sentences(s){
   var out=[],re=/[.!?؟]\s+/g,mm,from=0;
@@ -1204,14 +1218,14 @@ function buttons(acts){
    one piece still missing, its real choices as rows. Every value here was worked out
    when the request was made and kept with it, so it shows as it was said. */
 var AGSTATE={confirm:1,applied:1,undone:1,declined:1,failed:1,pick:1,say:1};
-function agHtml(m,live){
+function agHtml(m,live,ro){
   var g=m.ag,at=esc(String(m.at)),h=g.lead?'<p class="chat-lead">'+figures(String(g.lead))+'</p>':'';
   if(g.s==="confirm"||g.s==="applied"||g.s==="undone"||g.s==="declined"||g.s==="failed"){
     if(g.item)h+='<div class="ag-item"><b>'+esc(String(g.item))+'</b>'+(g.detail?'<span>'+figures(String(g.detail))+'</span>':'')+'</div>';}
   if(g.s==="confirm"&&live)h+='<div class="ag-acts"><button class="btn ag-ok" data-agok="'+at+'">'+esc(String(g.cta||t("Do it")))+'</button>'
     +'<button class="btn g ag-no" data-agno="'+at+'">'+esc(t("Not now"))+'</button></div>';
   else if(g.s==="applied")h+='<div class="ag-done" role="status"><span class="ag-ck">'+glyph("check")+'</span><span class="ag-t">'+esc(String(g.done||""))+'</span>'
-    +(canUndo(m.at)?'<button class="ag-undo" data-agundo="'+at+'">'+esc(t("Undo"))+'</button>':'')+'</div>';
+    +(!ro&&canUndo(m.at)?'<button class="ag-undo" data-agundo="'+at+'">'+esc(t("Undo"))+'</button>':'')+'</div>';
   else if(g.s==="undone")h+='<div class="ag-undone" role="status">'+glyph("restore")+'<span>'+esc(String(g.undone||""))+'</span></div>';
   else if(g.s==="declined")h+='<p class="chat-n">'+glyph("info")+'<span>'+esc(t("Kept as it is."))+'</span></p>';
   else if(g.s==="failed")h+='<p class="chat-n">'+glyph("info")+'<span>'+esc(t("That didn't go through. Nothing was changed."))+'</span></p>';
@@ -1220,12 +1234,12 @@ function agHtml(m,live){
     +(g.none?'<button class="ag-opt none" data-agnone="'+at+'"><span class="ag-ol">'+esc(t("None of these"))+'</span></button>':'')+'</div>';
   if(g.s==="say"&&live)h+=buttons(Array.isArray(g.acts)?g.acts:[]);
   return h;}
-function bubbleIn(m,live,L,prev){
+function bubbleIn(m,live,L,prev,ro){
   var tp=TOPIC[m.id];
-  var h='<div class="chat-x'+(live?' live':'')+(prev?' prev':'')+'" data-k="x'+esc(String(m.at||""))+'" lang="'+L+'" dir="'+(L==="ar"?"rtl":"ltr")+'"><div class="chat-q"><p dir="auto">'+esc(String(m.q||""))+'</p></div><div class="chat-a">'
+  var h='<div class="chat-x'+(live?' live':'')+(prev?' prev':'')+(ro?' ro':'')+'" data-k="'+(ro?'h':'x')+esc(String(m.at||""))+'" lang="'+L+'" dir="'+(L==="ar"?"rtl":"ltr")+'"><div class="chat-q"><p dir="auto">'+esc(String(m.q||""))+'</p></div><div class="chat-a">'
    +'<div class="chat-ah"><span class="chat-gl">'+glyph(tp?tp[1]:"question")+'</span><span class="chat-ah-t">'
    +'<span class="chat-ak">'+esc(t("Coach"))+'</span>'+(tp?'<span class="chat-at">'+esc(t(tp[0]))+'</span>':'')+'</span></div>';
-  if(m.ag&&typeof m.ag==="object"&&AGSTATE[m.ag.s])return h+agHtml(m,live)+'</div></div>';
+  if(m.ag&&typeof m.ag==="object"&&AGSTATE[m.ag.s])return h+agHtml(m,live,ro)+'</div></div>';
   /* Where an answer stands is kept with it, not shown: the coach speaks as a coach. */
   var srcs=Array.isArray(m.src)?m.src:[];
   if(srcs.length)h=h.replace('<div class="chat-a">','<div class="chat-a" data-src="'+esc(srcs.join(" · "))+'">');
@@ -1243,13 +1257,13 @@ function bubbleIn(m,live,L,prev){
    asked or the conversation and what to ask next, and a box to type in that stays in
    reach above the dock. */
 function vChat(){
-  var log=(S.chat||[]).filter(function(m){return m&&typeof m==="object";}),last=log[log.length-1];
+  var log=chatShown(),last=log[log.length-1];
   var h='<div class="chat-head">'+backArrow()
    +'<div class="chat-head-t"><h1>'+esc(t("Ask the coach"))+'</h1>'
    +'<p class="chat-priv">'+glyph("lock")+'<span>'+esc(t("From your log, worked out on this phone"))+'</span></p></div>'
    +(log.length?'<button class="icobtn chat-clear" data-chatclear="1" aria-label="'+esc(t("Clear"))+'">'+glyph("trash")+'</button>':'')
    +'</div>';
-  h+='<div class="chat" role="log" aria-live="polite">';
+  h+='<div class="chat" role="log" aria-live="polite">'+histLink();
   if(!log.length){
     h+='<div class="chat-orb" aria-hidden="true">'+glyph("whistle")+'</div>'
      +'<p class="chat-hi">'+esc(t("Ask me about today's training, your food, or how things are going. Tap a question, or type your own, in English or Arabic."))+'</p>'
@@ -1275,4 +1289,26 @@ function askNext(last,n){
     +(slim?' role="group" aria-label="'+esc(t("Ask next"))+'">':'><div class="chat-next-h">'+esc(t("Ask next"))+'</div>')
     +chips(NEXT[last.id]||NEXT.unknown,"",own)+'</div>';});}
 
-export {ASK, ask, askNext, bubble, findMsg, follow, NEXT, pruneChat, vChat};
+/* ---- the chat history (Profile → Chat history) ----------------------------------
+   Thirty days of the conversation, by day, newest day first, to read: nothing in it
+   can be sent or tapped into doing something. One button deletes it all, with Undo. */
+function histSheet(){
+  pruneChat();
+  var log=(S.chat||[]).filter(function(m){return m&&typeof m==="object"&&num(m.at)>0;}),days={},order=[];
+  log.forEach(function(m){var d=new Date(num(m.at)),k=d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
+    if(!days[k]){days[k]=[];order.push(k);}days[k].push(m);});
+  var h='<h2>'+esc(t("Chat history"))+'</h2><p class="tiny">'
+   +esc(t("Your conversations with the coach from the last 30 days, to read. Older days are removed; the chat itself shows the last 24 hours."))+'</p>';
+  if(!log.length)return h+'<p class="chh-empty">'+esc(t("Nothing here yet."))+'</p>';
+  order.reverse().forEach(function(k){var ms=days[k];
+    h+='<section class="chh-day"><h3 class="sg-h">'+esc(dayWord(num(ms[0].at)))+'</h3>'
+     +ms.map(function(m){return bubble(m,false,false,true);}).join("")+'</section>';});
+  return h+'<div class="sacts"><button class="btn d" data-chathistdel="1">'+esc(t("Delete chat history"))+'</button></div>';}
+/* Today, Yesterday, or the date. */
+function dayWord(at){
+  var d=new Date(at),n=new Date(),y=new Date(n.getTime()-DAY),same=function(a,b){return a.toDateString()===b.toDateString();};
+  if(same(d,n))return t("Today");
+  if(same(d,y))return t("Yesterday");
+  return shortd(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"));}
+
+export {ASK, ask, askNext, bubble, chatShown, findMsg, follow, histLink, histSheet, NEXT, pruneChat, vChat};

@@ -2073,3 +2073,24 @@ Owner, 27 Oct (two screenshots). CACHE `bunyan-v155`.
   dock icons are square (a brain has no corners). First drawn from above; the owner asked for
   the side (CACHE `bunyan-v157`): the cerebrum's dome with its main fissure and folds, the
   cerebellum under the back, the stem; drawn on the 24 grid, scaled to the dock's 22.
+
+## Chat history — branch session/chat-history
+
+Owner, 27 Oct (two screenshots): Profile's "What you've told the coach" sent "What have I told
+you?" into the chat. CACHE `bunyan-v158`.
+- **Profile → Chat history** (`data-sheet="set_chat"`, `histSheet` in chat.js, registered in
+  settings.js): thirty days of the conversation by day, newest day first, read only (bubbles drawn
+  with `ro`: no buttons, no Undo, no field to type in), and one "Delete chat history" with Undo.
+- **Kept 30 days, shown 24 hours**: `pruneChat` now drops only what is older than 30 days;
+  `chatShown()` is what the chat and the floating Coach show (the last day, since it was last
+  cleared). Follow-ups read on only from what is shown.
+- **Clear** in the chat now sets `S.chatFrom` (validated in schema.js): the conversation leaves the
+  chat but stays in the history. The history's own button deletes it.
+- **"Review chat history"** at the top of the conversation whenever the history holds more than
+  the chat shows: the panel closes (its own close, 260 ms), Profile comes in, and 420 ms later the
+  history rises over it.
+- What the person asked the coach to keep is still asked in the chat ("What have I told you?"),
+  where each item can be deleted.
+- Tests: the day / thirty days split, the way from the chat and from Profile, nothing tappable or
+  sendable in the history, delete with Undo; clear hides, not deletes; day-old messages leave the
+  chat for the history.

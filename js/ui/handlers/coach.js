@@ -27,7 +27,7 @@ import {addFact, removeFact} from "../../coach/context.js";
 import {key, on} from "./registry.js";
 
 /* The answer marked done and shown for a beat, the panel closed, then the move. */
-var BEAT=420,CLOSE=290;
+var BEAT=420,CLOSE=290,HIST_IN=420;
 function goAfter(m){
   m.ag.s="applied";saveDB();render();toEnd();
   setTimeout(function(){
@@ -219,8 +219,18 @@ function register(){
     (S.chat||[]).forEach(function(m){if(m&&Array.isArray(m.acts))m.acts=m.acts.filter(function(b){return !(b.a&&b.a["data-ctxdel"]===D.ctxdel);});});
     saveDB();render();toast(t("Deleted."));return;});
   key("agnone",function(D,el){var from=fromEl(el);if(follow(D.agnone,null)){saveDB();render();land(from);toEnd();}return;});
-  key("chatclear",function(){var chB=S.chat||[];S.chat=[];saveDB();render();
-    toast(t("Conversation cleared."),function(){S.chat=chB;saveDB();render();});return;});
+  /* Clearing the conversation hides it from the chat; the history keeps it (its own
+     button deletes that). */
+  key("chatclear",function(){var fB=S.chatFrom;S.chatFrom=Date.now();saveDB();render();
+    toast(t("Conversation cleared."),function(){S.chatFrom=fB;saveDB();render();});return;});
+  /* From the chat to its history: the panel closes, Profile comes in, then the history
+     rises over it, each move given its own time (owner, 27 Oct: not fast). */
+  key("chathist",function(){
+    var go=function(){pushNav();V.tab="profile";V.train="days";render();window.scrollTo(0,0);
+      setTimeout(function(){openSheet("set_chat");},HIST_IN);};
+    if(V.coach){closeCoach(render);setTimeout(go,CLOSE);}else go();return;});
+  key("chathistdel",function(){var cB=S.chat||[],fB=S.chatFrom;S.chat=[];S.chatFrom=0;saveDB();render();
+    toast(t("Chat history deleted."),function(){S.chat=cB;S.chatFrom=fB;saveDB();render();});return;});
   /* What an answer offers to change: a small step on the calorie target, carbs moving
      with it so protein and fat stay where they are; or the goal, with its targets. */
   /* Never under the app's one floor (BMR): a step down stops there. Without a weight

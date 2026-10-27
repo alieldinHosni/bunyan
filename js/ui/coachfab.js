@@ -19,7 +19,7 @@ import {esc} from "../util.js";
 import {V} from "./view.js";
 import {glyph} from "./glyphs.js";
 import {patch, replace} from "./patch.js";
-import {ASK, askNext, bubble, pruneChat} from "./views/chat.js";
+import {ASK, askNext, bubble, chatShown, histLink, pruneChat} from "./views/chat.js";
 
 /* What to offer first, by where it was opened. Only questions the coach answers. */
 var SUGGEST={train:["today","weights","tomorrow"],workout:["weights","sore","missed"],food:["rest","eat","protein"],
@@ -44,7 +44,7 @@ function fabHtml(){
 
 /* ---- the panel ------------------------------------------------------------------------ */
 function panelHtml(){
-  var full=V.coach==="full",log=(S.chat||[]).filter(function(m){return m&&typeof m==="object";});
+  var full=V.coach==="full",log=chatShown();
   /* Every exchange is in the panel and scrolls, compact or full height: a new one is one
      more row and nothing before it is rebuilt (js/ui/patch.js keys them). Compact opens
      on the newest; full height is the same conversation, taller. */
@@ -59,7 +59,7 @@ function panelHtml(){
    +(full?'<svg class="gl" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 4.5v5h-5M14.5 19.5v-5h5"/></svg>'
          :'<svg class="gl" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4.5h5.5V10M10 19.5H4.5V14"/></svg>')+'</button>'
    +'<button class="cp-ib" data-coachclose="1" aria-label="'+esc(t("Close"))+'">'+glyph("close")+'</button></header>'
-   +'<div class="cp-b" id="cpB" role="log" aria-live="polite">';
+   +'<div class="cp-b" id="cpB" role="log" aria-live="polite">'+histLink();
   if(!log.length)h+='<p class="cp-hi">'+esc(t("Ask about training, food or progress"))+'</p>';
   else{
     log.forEach(function(m,i){h+=bubble(m,i===log.length-1,i<log.length-1);});}

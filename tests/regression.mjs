@@ -729,9 +729,9 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   const n=await ev(page,"S.chat.length");
   await page.tap('.cp [data-coachsize="full"]');await pause(page);
   await page.tap('[data-chatclear]');await pause(page);
-  eq(await ev(page,"(S.chat||[]).length"),0,"cleared");
+  eq([await page.$$eval('#cpanel .chat-x',a=>a.length),await ev(page,"S.chat.length")],[0,n],"cleared from the chat, kept in the history");
   await page.tap('.toast-undo');await pause(page);
-  eq(await ev(page,"S.chat.length"),n,"Undo brings it back");
+  eq(await page.$$eval('#cpanel .chat-x',a=>a.length)>0,true,"Undo brings it back");
   await page.tap('.cp [data-coachclose]');await pause(page,500);
   eq(await ev(page,"[V.tab,!!V.coach,V.csec]"),["coach",false,"ai"],"closed, back on Coach AI");
   eq(out,[],"no network requests");
@@ -2636,12 +2636,14 @@ await test("Coach follow-ups: a typed answer to a choice, yes or no to a change,
   const sc=await page.evaluate(()=>{const b=document.getElementById("cpB"),xs=[...b.querySelectorAll(".chat-x")];
     return {n:xs.length,hidden:xs.filter(x=>!x.getClientRects().length).length,scrolls:b.scrollHeight>b.clientHeight};});
   eq([sc.n>=6,sc.hidden,sc.scrolls,await ev(page,"V.coach")],[true,0,true,"compact"],"compact scrolls through the whole conversation");
-  /* A day later the conversation is gone; what they asked it to keep is not. */
+  /* A day later the conversation is gone from the chat (kept in its history, with a way
+     to it); what they asked it to keep is not touched. */
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.context={v:1,next:2,items:[{id:"c1",kind:"schedule",text:"I work nights",at:"2026-10-01",by:"user"}]};
     S.chat.forEach(m=>{m.at-=25*36e5;});});
   await page.tap('.cp [data-coachclose]');await pause(page,500);
   await page.tap('#cfab .cfab');await pause(page,500);
-  eq(await ev(page,"[S.chat.length,S.context.items.length]"),[0,1],"day-old messages pruned, facts kept");
+  eq([await page.$$eval('#cpanel .chat-x',a=>a.length),await ev(page,"S.chat.length>=6"),!!(await page.$('#cpanel [data-chathist]')),await ev(page,"S.context.items.length")],
+    [0,true,true,1],"day-old messages leave the chat for its history, facts kept");
 });
 await test("Coach agent: sending appends one row and leaves the earlier ones as they were; the panel is not rebuilt",async page=>{
   await openChat(page);
@@ -2822,7 +2824,36 @@ await test("Coach context: a fact is kept only when the person says so, in their
   /* And from Profile. */
   await page.tap('.cp [data-coachclose]');await pause(page,500);
   await tapTab(page,"profile");await pause(page,400);
-  if(!(await page.$('[data-chatq="facts"]')))throw new Error("no way to it from Profile");
+  /* Profile's row is the chat history, which asks the coach nothing (owner, 27 Oct). */
+  eq(await page.$$eval('[data-chatq="facts"]',a=>a.length),0,"Profile no longer sends a question");
+});
+await test("Chat history: the chat shows a day, the history thirty read-only days, reached from Profile and from the chat; cleared is hidden, not lost",async page=>{
+  /* Three exchanges: today, three days ago, forty days ago. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,now=Date.now(),D=864e5;
+    const m=(at,q,p)=>({at,q,id:"protein",lang:"en",b:[{p}],acts:[{l:"Open Food",a:{"data-tab":"food"}}]});
+    S.chat=[m(now-40*D,"forty days ago","Old."),m(now-3*D,"three days ago","Earlier."),m(now-60000,"just now","Now.")];
+    (await import("/js/ui/render.js")).render();});
+  await openChat(page);
+  eq(await page.$$eval('#cpanel .chat-q',a=>a.map(x=>x.textContent)),["just now"],"the chat: the last day only");
+  if(!(await page.$('#cpanel [data-chathist]')))throw new Error("no way to the history from the chat");
+  await page.tap('#cpanel [data-chathist]');await pause(page,1400);
+  eq(await ev(page,"[V.tab,V.sheet,!!V.coach]"),["profile","set_chat",false],"the panel closed, Profile, then the history");
+  const h=await page.evaluate(()=>{const s=document.querySelector(".sheet,#sheet");return {
+    q:[...s.querySelectorAll(".chat-q")].map(x=>x.textContent),days:s.querySelectorAll(".chh-day").length,
+    acts:s.querySelectorAll(".chat-x button:not(summary), .chat-x [data-tab], .chat-x [data-chatq]").length,
+    input:s.querySelectorAll("input,textarea,[data-chatsend]").length};});
+  eq(h,{q:["just now","three days ago"],days:2,acts:0,input:0},"30 days, newest day first, nothing to tap or send");
+  eq(await ev(page,"S.chat.length"),2,"forty days ago is gone");
+  /* Profile's row opens the same. */
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,600);
+  const row=await page.$('[data-sheet="set_chat"]');
+  eq(await row.evaluate(e=>e.textContent.indexOf("Chat history")>=0),true,"the row is named Chat history");
+  /* Deleting it is one button, with Undo. */
+  await row.tap();await pause(page,700);
+  await page.tap('[data-chathistdel]');await pause(page,300);
+  eq(await ev(page,"S.chat.length"),0,"deleted");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"S.chat.length"),2,"Undo brings it back");
 });
 await test("Coach chat in motion: a sent question flies to its place, the coach types, then the answer arrives; with Animations off, at once",async page=>{
   await openChat(page);
