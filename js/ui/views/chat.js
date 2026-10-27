@@ -28,7 +28,7 @@ import {lookup, ownTerms} from "../../engine/kbsearch.js";
 import {weeklySets} from "../../engine/volume.js";
 import {weeklyVolume} from "../../engine/stats.js";
 import {canUndo} from "../handlers/actions.js";
-import {answerPick, namesExercise, namesFood, plan as planAction, planCommand, proceed, suggestExercises, swapPick} from "../agent.js";
+import {answerPick, createAsk, namesExercise, namesFood, plan as planAction, planCommand, proceed, suggestExercises, swapPick} from "../agent.js";
 import {commandOf} from "../../coach/commands.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
@@ -51,7 +51,9 @@ import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
 import {words} from "../coachwords.js";
 import {glyph} from "../glyphs.js";
 
-var KEEP=30;
+/* The most messages kept, newest last: thirty days of the history (KEEP_MS), bounded so
+   a chatty month cannot grow the saved data without end. */
+var KEEP=500;
 /* The suggestions: what each asks, as the person would ask it. */
 var ASK={
   today:"What do I train today?",weights:"How much should I lift?",eat:"What should I eat now?",
@@ -1005,7 +1007,8 @@ var ANSWER={today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,p
    number in it, said rather than asked, is a weigh-in. */
 /* A message that starts with the verb is that request, whatever else it names
    ("add squats" is an add, not a question about squats). */
-var VERB=[["exadd",/^(please |pls |can you |could you |i want to |i wanna |)(add|put|include)( |$)|^(ممكن |عايز |عاوز |)(ضيف|اضيف|ضيفلي|حط|حطلي)( |$)/],
+var VERB=[["exadd",/^(please |pls |can you |could you |i want to |i wanna |)(create|make)( me| a| an| my| new| custom| own)* (exercise|move|movement|lift)( |$)|^(اعمل|اعملي|ضيف|ضيفلي) (تمرين|حركه) (جديد|جديده)( |$)/],
+  ["exadd",/^(please |pls |can you |could you |i want to |i wanna |)(add|put|include)( |$)|^(ممكن |عايز |عاوز |)(ضيف|اضيف|ضيفلي|حط|حطلي)( |$)/],
   ["exremove",/^(please |pls |can you |could you |i want to |i wanna |)(remove|delete|drop|take out)( |$)|^(ممكن |عايز |عاوز |)(شيل|امسح|احذف)( |$)/],
   ["exswap",/^(please |pls |can you |could you |i want to |i wanna |)(swap|replace|switch|substitute)( |$)|^(ممكن |عايز |عاوز |)(بدل|استبدل)( |$)/],
   ["foodlog",/^(please |pls |can you |)(log|i ate|ate|just ate)( |$)|^(سجل|سجلي|اكلت|كلت)( |$)/]];
@@ -1027,9 +1030,9 @@ var DAY=864e5;
 /* How long things are kept (owner, 27 Oct): the conversation shows the last day; the
    chat history (Profile → Chat history, histSheet) keeps thirty, read only, and what is
    older is gone. Clearing the conversation (S.chatFrom) only hides it from the chat. */
-var KEEP=30*DAY;
+var KEEP_MS=30*DAY;
 function pruneChat(){
-  var c=S.chat||[],now=Date.now(),kept=c.filter(function(m){return m&&typeof m==="object"&&num(m.at)>now-KEEP;});
+  var c=S.chat||[],now=Date.now(),kept=c.filter(function(m){return m&&typeof m==="object"&&num(m.at)>now-KEEP_MS;});
   if(kept.length!==c.length){S.chat=kept;return true;}
   return false;}
 /* The conversation as the chat shows it: today's day of it, since it was last cleared. */
@@ -1142,6 +1145,10 @@ function follow(at,i){
   var m=(S.chat||[]).filter(function(x){return x&&x.at===+at;})[0];if(!m||!m.ag)return null;
   var L=m.lang==="ar"||m.lang==="en"?m.lang:uiLang(),ag=m.ag;
   if(i==null)return withLang(L,function(){
+    /* Under the closest exercises to add: then it is one of their own, made here. */
+    if(ag.act==="exercise.add"&&ag.p&&ag.p.q){
+      var own={q:t("None of these"),id:m.id,at:Date.now(),b:[],acts:[],lang:L,ag:createAsk(ag.p.q,{day:ag.p.day||""})};
+      S.chat=(S.chat||[]).concat([own]).slice(-KEEP);return own;}
     var none={q:t("None of these"),id:m.id,at:Date.now(),b:[],acts:[],lang:L,ag:ag.what==="food"
       ?{s:"say",lead:t("Then it isn't in the food list. Food can add it as one of your own foods."),acts:[{l:t("Open Food"),a:{"data-tab":"food"}}]}
       :{s:"say",lead:t("Then it isn't in the library. The picker on any day lists every exercise, and can add one of your own."),acts:[{l:t("Open Training"),a:{"data-tab":"train"}}]}};
@@ -1229,7 +1236,7 @@ function agHtml(m,live,ro){
   else if(g.s==="undone")h+='<div class="ag-undone" role="status">'+glyph("restore")+'<span>'+esc(String(g.undone||""))+'</span></div>';
   else if(g.s==="declined")h+='<p class="chat-n">'+glyph("info")+'<span>'+esc(t("Kept as it is."))+'</span></p>';
   else if(g.s==="failed")h+='<p class="chat-n">'+glyph("info")+'<span>'+esc(t("That didn't go through. Nothing was changed."))+'</span></p>';
-  else if(g.s==="pick"&&live)h+='<div class="ag-opts">'+(g.opts||[]).map(function(o,i){
+  else if(g.s==="pick"&&live)h+='<div class="ag-opts'+(g.what==="muscle"?' two':'')+'">'+(g.opts||[]).map(function(o,i){
       return '<button class="ag-opt" data-agpick="'+at+'|'+i+'"><span class="ag-ol">'+esc(String(o.l||""))+'</span>'+(o.sub?'<span class="ag-os">'+esc(String(o.sub))+'</span>':'')+'</button>';}).join("")
     +(g.none?'<button class="ag-opt none" data-agnone="'+at+'"><span class="ag-ol">'+esc(t("None of these"))+'</span></button>':'')+'</div>';
   if(g.s==="say"&&live)h+=buttons(Array.isArray(g.acts)?g.acts:[]);

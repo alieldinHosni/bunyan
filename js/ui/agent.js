@@ -16,7 +16,7 @@
    answer says so and points to where it can be found. The change itself is run by
    js/ui/handlers/actions.js, the same way the screens' own buttons run it. */
 import {isActivity} from "../data/activities.js";
-import {difficultyOf, EXDB, isCompound as isCompoundName, LIB, muscleOf as muscleOfName, patternOf, pickable} from "../data/exercises.js";
+import {difficultyOf, EXDB, isCompound as isCompoundName, LIB, muscleOf as muscleOfName, MUSCLES, patternOf, pickable} from "../data/exercises.js";
 import {planOn} from "../engine/dayplan.js";
 import {avoids, doseFor, usable} from "../engine/plan.js";
 import {goalOf} from "../data/goals.js";
@@ -149,18 +149,22 @@ function pick(what,lead,opts,act,p,slot,none){return {s:"pick",what:what,lead:le
 function confirm(act,p,o){return Object.assign({s:"confirm",act:act,p:p},o);}
 function say(lead,acts){return {s:"say",lead:lead,acts:acts||[]};}
 function closeOf(q,names,act,p,slot){
+  /* For an add, the words asked for go with the pick: "None of these" makes them an
+     exercise of the person's own (createAsk). */
+  if(act==="exercise.add")p=Object.assign({q:q},p);
   return pick("exercise",fill(t("No exercise called “{q}”. Closest:"),{q:q}),exOpts(names),act,p,slot,true);}
 
 /* ---- each request ---------------------------------------------------------------------- */
 /* Add: an exercise from the library, to a day of the program. */
+/* "a new exercise called …", "my own move …": the words around a name that are not it. */
+var NEWEX=/^((create|make|add|put|please|can you|could you) )*((a|an|my|me) )*((new|custom|own) )*((exercise|move|movement|lift) )?((called|named|that s called) )?|^((اعمل|اعملي|ضيف|ضيفلي) )?((تمرين|حركه) )?((جديد|جديده) )?((اسمه|اسمها) )?/;
 function planAdd(text,p){
   p=p||{};
-  var dd=daysIn(text),q=rest(dd.left);
+  var dd=daysIn(text),q=rest(dd.left).replace(NEWEX,"").trim();
   if(!p.name){
     var r=findExercise(q,libPool());
     if(r.kind==="empty")return say(t("Which exercise? Say its name, like “add Leg Press to Legs”."));
-    if(r.kind==="none")return say(fill(t("No exercise called “{q}” in the library."),{q:q})+" "+t("The picker on any day lists all of them."),
-      [{l:t("Open Training"),a:{"data-tab":"train"}}]);
+    if(r.kind==="none")return createAsk(q,{day:p.day||(dd.days.length===1?dd.days[0].id:"")});
     if(r.kind==="close")return closeOf(q,r.names,"exercise.add",{day:p.day||(dd.days.length===1?dd.days[0].id:"")},"name");
     if(r.kind==="some")return pick("exercise",t("Which exercise?"),exOpts(r.names),"exercise.add",{day:p.day||(dd.days.length===1?dd.days[0].id:"")},"name");
     p.name=r.name;}
@@ -182,6 +186,37 @@ function addNext(p,days,miss){
     item:exName(p.name),detail:fill(t("{d} · last in the day"),{d:act?fill(t("{n} min"),{n:30}):doseLine(doseFor(p.name))}),
     cta:t("Add it"),done:fill(t("Added {ex} to {day}."),{ex:exName(p.name),day:planName(d.name)}),
     undone:fill(t("Undone. {day} is as it was."),{day:planName(d.name)})});}
+
+/* ---- an exercise of the person's own ---------------------------------------------------
+   Asked for by a name the library doesn't have ("add Turkish get-ups to Monday", or
+   "None of these" under the closest): made the way the picker makes one (a name and
+   the muscle it works, no picture or guide), saved to the library and added to a day,
+   with Undo. The muscle is asked, never guessed: it decides the volume counts. */
+var OWN_MUSCLES=MUSCLES.filter(function(m){return m!=="Cardio"&&m!=="Sports";});
+function ownName(q){
+  var s=String(q||"").replace(/[^\w\u0600-\u06FF' -]/g," ").replace(/\s+/g," ").trim().slice(0,48);
+  return s.replace(/(^|[ -])([a-z])/g,function(m,a,b){return a+b.toUpperCase();});}
+function createAsk(q,p){
+  var name=ownName(q);
+  if(name.replace(/[^A-Za-z\u0600-\u06FF]/g,"").length<3)return say(t("Which exercise? Say its name, like “add Leg Press to Legs”."));
+  return pick("muscle",fill(t("“{n}” isn't in the library. I can add it as an exercise of your own. Which muscle does it work most?"),{n:name}),
+    OWN_MUSCLES.map(function(m){return {v:m,l:t(m)};}),"exercise.create",Object.assign({},p,{name:name}),"m",false);}
+function createNext(p){
+  var sp=split();
+  if(!p.m)return createAsk(p.name,p);
+  if(LIB.some(function(l){return l[0].toLowerCase()===String(p.name).toLowerCase();}))return addNext({name:p.name,day:p.day},null);
+  if(!p.day){
+    var ds=sp.days.filter(function(d){return d.ex.length;});
+    if(ds.length===1)p.day=ds[0].id;
+    else if(!ds.length)return say(t("Your program has no days yet."),[{l:t("Plan my training"),a:{"data-csec":"train","data-ctsub":"program"}}]);
+    else return pick("day",fill(t("Add {ex} to which day?"),{ex:p.name}),ds.map(dayOpt),"exercise.create",{name:p.name,m:p.m},"day");}
+  var d=sp.days.filter(function(x){return x.id===p.day;})[0];
+  if(!d)return say(t("That day isn't in your program any more."));
+  return confirm("exercise.create",{name:p.name,m:p.m,day:d.id},{
+    lead:fill(t("Add {ex}, your own exercise for {m}, to {day}?"),{ex:p.name,m:t(p.m).toLowerCase(),day:planName(d.name)}),
+    item:p.name,detail:fill(t("{d} · last in the day"),{d:doseLine(doseFor(p.name))})+" · "+t("no picture or guide"),
+    cta:t("Add it"),done:fill(t("Added {ex} to {day}. It's in your library too."),{ex:p.name,day:planName(d.name)}),
+    undone:fill(t("Undone. {day} is as it was, and {ex} is out of your library."),{day:planName(d.name),ex:p.name})});}
 
 /* Sets × reps, and the rest, as a line. */
 function doseLine(z){return z.sets+" × "+(z.lo===z.hi?z.lo:z.lo+"–"+z.hi)+" · "+fill(t("{s} s rest"),{s:z.rest});}
@@ -453,6 +488,7 @@ function swapNext(p){
 function proceed(ag,v){
   var p=Object.assign({},ag.p);p[ag.slot]=v;
   if(ag.act==="exercise.add")return addNext(p,null);
+  if(ag.act==="exercise.create")return createNext(p);
   if(ag.act==="exercise.remove")return planRemove("",p);
   if(ag.act==="exercise.swap")return planSwap("",p);
   if(ag.act==="food.log")return planLog("",p);
@@ -510,4 +546,4 @@ function namesFood(text){
   return [rest(swapParts(fq).from),rest(fq)].some(function(q){
     var c=parseFoodInput(q)[0];return !!c&&searchFoods(c.query,1).some(function(h){return h.score>=72;});});}
 
-export {answerPick, foodById, namesExercise, namesFood, plan, planCommand, proceed, suggestExercises, swapPick};
+export {answerPick, createAsk, foodById, namesExercise, namesFood, plan, planCommand, proceed, suggestExercises, swapPick};

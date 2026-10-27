@@ -2108,3 +2108,22 @@ you?" into the chat. CACHE `bunyan-v158`.
   - Tests: opens on the newest exchange; mid-resize the box is not transformed and its contents
     are fully opaque, and settles back to the CSS; the dots wait for the question and are still
     there a beat later.
+
+## The coach makes an exercise of the person's own — branch session/coach-new-exercise
+
+Owner, 27 Oct: "if I need to do an exercise that isn't in my library, can the chat create it and
+add it to a day?" It couldn't (exercise.add takes library names only). CACHE `bunyan-v160`.
+- `exercise.create` (actions.js): a name and the muscle it works, saved to `S.myEx` and the library
+  exactly as the picker's "add your own" does (no picture, no guide), then added to the day through
+  the picker's own tap. Undo (`snap:"exlib"`) puts back the program, `S.myEx` and the library.
+- agent.js: "add X to Monday" with no match → `createAsk`: the muscle is asked (the library's,
+  less Cardio and Sports; two to a row), never guessed, since it decides volume; then the day if
+  not said; then a confirmation with the day's dose ("no picture or guide"). Under the closest
+  names, "None of these" goes on to make it. A name that turns out to exist is simply added.
+- "create / make a (new) exercise called …" and "اعمل تمرين جديد …" are an add (chat.js VERB);
+  the words around the name are dropped (`NEWEX`).
+- **Fixed in passing**: last round's 30-day constant was declared as `KEEP` in chat.js, which
+  already had `KEEP=30` (the most messages kept), so the cap silently became 30 days in ms. Now
+  `KEEP_MS` (30 days) and `KEEP=500` messages, the cap a month's history needs.
+- Test: made from a name the library lacks, muscle asked, confirmed, in library and day, Undo
+  restores both.

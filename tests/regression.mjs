@@ -2602,6 +2602,28 @@ await test("Coach agent: an unknown exercise gets real close matches, then a day
   eq(await dayEx(page,2),before,"Undo puts the day back");
   if(!(await page.$('#cpanel .ag-undone')))throw new Error("no undone row");
 });
+await test("Coach agent: an exercise the library doesn't have becomes one of the person's own — the muscle asked, a day, a confirmation, then library and day, with Undo",async page=>{
+  await openChat(page);
+  const before=await dayEx(page,2),libN=await page.evaluate(async()=>(await import("/js/data/exercises.js")).LIB.length);
+  let r=await agSay(page,"create a new exercise called wobble board balance for full body b");
+  /* Close names first, if there are any: None of these goes on to make it. */
+  if(/Closest:$/.test(r.lead)){await page.tap('#cpanel [data-agnone]');await pause(page,450);r=await agLast(page);}
+  eq(/^“Wobble Board Balance” isn't in the library\. .*Which muscle does it work most\?$/.test(r.lead),true,"the muscle is asked, not guessed: "+r.lead);
+  eq(r.opts.indexOf("Core")>=0&&r.opts.indexOf("Cardio")<0,true,"the library's muscles");
+  await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelectorAll(".ag-opt").forEach(b=>{if(b.textContent==="Core")b.click();}));await pause(page,450);
+  r=await agLast(page);
+  eq([r.lead,r.ok],["Add Wobble Board Balance, your own exercise for core, to Full Body B?",true],"the day was said; a confirmation");
+  eq([await dayEx(page,2),await ev(page,"(S.myEx||[]).length")],[before,0],"nothing changed before the tap");
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  const made=await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,L=(await import("/js/data/exercises.js")).LIB;
+    return [(S.myEx||[]).map(m=>[m.n,m.m]),L.some(l=>l[0]==="Wobble Board Balance"&&l[1]==="Core")];});
+  eq(made,[[["Wobble Board Balance","Core"]],true],"in the library, as theirs");
+  const after=await dayEx(page,2);
+  eq([after.length,after[after.length-1]],[before.length+1,"Wobble Board Balance"],"and last in Full Body B");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq([await dayEx(page,2),await ev(page,"(S.myEx||[]).length"),await page.evaluate(async()=>(await import("/js/data/exercises.js")).LIB.length)],[before,0,libN],"Undo: the day and the library as they were");
+  /* Asked again by the same name once it exists, it is simply added. */
+});
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
   await openChat(page);
