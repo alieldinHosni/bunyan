@@ -37,6 +37,7 @@
    @property {number=}  formulaV       the formula version the stored targets are on
                                        (js/engine/retarget.js); missing means 1. Not in
                                        DEF, or normalize would mark old blobs as current
+   @property {number=}  logFixV        the one-time log corrections done (js/engine/logfix.js)
    @property {Slot[]=}  mealSlots      the day's meals, when not the usual four
    @property {Object[]=} chat          the coach chat's kept conversation
    @property {Object=}  context        facts the person told the coach, in their words (js/coach/context.js)
@@ -165,6 +166,8 @@ function normalize(o){
   /* The formula version the targets were built on (js/engine/retarget.js): a whole
      number, or nothing, which reads as version 1. */
   if(o.formulaV!=null&&!(typeof o.formulaV==="number"&&o.formulaV>=1&&o.formulaV%1===0))delete o.formulaV;
+  /* Which one-time log corrections have run (js/engine/logfix.js): a whole number, or nothing. */
+  if(o.logFixV!=null&&!(typeof o.logFixV==="number"&&o.logFixV>=1&&o.logFixV%1===0))delete o.logFixV;
   /* The coach chat's kept conversation (js/ui/views/chat.js): a list, or nothing. */
   if(o.chat!=null&&!Array.isArray(o.chat))delete o.chat;
   /* Where the training block began (js/engine/blocks.js): a date, or nothing. */

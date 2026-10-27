@@ -1616,6 +1616,28 @@ await test("Body weight in the weight field is body weight: push-ups logged at 8
     return [rec&&rec.w,!!(rec&&rec.bw),wu.ramp&&wu.ramp.name];});
   eq(r,[0,true,"Barbell Bench Press - Medium Grip"]);
 });
+/* An old log: push-ups at the lifter's body weight (84 kg), and one set with a real vest. */
+function oldBwLog(){const d=seed();const day=new Date(Date.now()-5*864e5).toISOString().slice(0,10);
+  d.sessions.push({id:"oldpu",date:day,dayName:"Push",entries:[{name:"Pushups",muscle:"Chest",sets:[{w:84,r:20},{w:84.5,r:18},{w:20,r:10}]}]});return d;}
+await test("Old logs: body-weight sets logged at the body weight are read as body weight, once, said with Undo; a real added weight stays",async page=>{
+  await pause(page,3400);
+  const sets=()=>ev(page,"S.sessions.find(s=>s.id==='oldpu').entries[0].sets.map(x=>x.w)");
+  eq([await sets(),await ev(page,"S.logFixV")],[[0,0,20],1],"84 and 84.5 to 0, the vest kept");
+  if(!/read as body weight/.test(await page.textContent(".toast").catch(()=>"")))throw new Error("the change was not said: "+await page.textContent(".toast").catch(()=>"none"));
+  await page.tap('.toast-undo');await pause(page);
+  eq(await sets(),[84,84.5,20],"Undo puts them back");
+  await pause(page,1200);   /* the save is written a moment later */
+  await page.reload();await pause(page,3400);
+  eq(await sets(),[84,84.5,20],"and it does not run again");
+},{db:oldBwLog()});
+await test("Old logs: the correction is kept across a reload, and not said again",async page=>{
+  await pause(page,3400);
+  const sets=()=>ev(page,"S.sessions.find(s=>s.id==='oldpu').entries[0].sets.map(x=>x.w)");
+  eq(await sets(),[0,0,20],"corrected");
+  await pause(page,1200);await page.reload();await pause(page,3400);
+  eq(await sets(),[0,0,20],"still corrected after a reload");
+  eq(await page.evaluate(()=>/read as body weight/.test((document.querySelector(".toast")||{}).textContent||"")),false,"said once");
+},{db:oldBwLog()});
 await test("Warm-up: Start stays on the bottom edge all the way down",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.nowarm=false;});
   await startWorkout(page);

@@ -7,9 +7,10 @@ import {loadExDB} from "../../data/exercises.js";
 import {importName, ownSlots} from "../../engine/meals.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {retarget} from "../../engine/retarget.js";
+import {fixBodyweightLogs} from "../../engine/logfix.js";
 import {readSplit} from "../../engine/splitparse.js";
 import {t} from "../../i18n/dict.js";
-import {dayOf, editSplit, S, saveDB} from "../../state.js";
+import {CUR, dayOf, editSplit, S, saveDB, saveSession} from "../../state.js";
 import {r1, uid} from "../../util.js";
 import {askConfirm, closeSheet, val} from "../actions.js";
 import {resetNav} from "../nav.js";
@@ -191,8 +192,23 @@ function retargetNow(){
     if(S!==s0)return;
     toast(t("Your targets now follow the textbook: 500 kcal under maintenance to lose fat, 350 over to build muscle, 2.4 g of protein per kg while losing."),
       function(){if(S!==s0)return;Object.assign(S.goals,before);saveDB();render();});},1200);}
+/* Body-weight sets logged with the body weight as the weight (js/engine/logfix.js),
+   read back as body weight, once per profile, when the history and the exercise
+   library are both in (app.js calls it once the history has loaded; a profile switch
+   and a restore after theirs). Each changed session is saved where history is kept.
+   Said, with Undo, when anything changed. */
+function fixLogsNow(){
+  loadExDB(function(){
+    var f=fixBodyweightLogs(S);if(!f)return;
+    f.sessions.forEach(function(s){saveSession(s);});
+    saveDB();if(!f.changed)return;
+    render();
+    var prof=CUR;
+    setTimeout(function(){if(CUR!==prof)return;
+      toast(t(f.changed===1?"1 body-weight set logged with your body weight as the weight now reads as body weight.":"{n} body-weight sets logged with your body weight as the weight now read as body weight.").replace("{n}",f.changed),
+        function(){if(CUR!==prof)return;f.undo(S).forEach(function(s){saveSession(s);});saveDB();render();});},2600);});}
 /* Functions a handler module lends the coach's actions (js/ui/handlers/actions.js),
    set when it registers: the actions run what the screens run without the handler
    modules importing each other. */
 var LENT={};
-export {LENT, MF, builderId, retargetNow, chatEnd, chatSend, editedEx, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};
+export {LENT, MF, builderId, fixLogsNow, retargetNow, chatEnd, chatSend, editedEx, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};
