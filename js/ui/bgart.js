@@ -1,14 +1,14 @@
 /* Bunyan — the ground's pictures
    Behind the glass, a picture for each place in the app: the owner's own photographs
-   (img/page-*.jpg), one per place, fading into the ground. Home, training, workout and
-   coach are the owner's full photographs (27 Oct), made to a phone's shape and filling
-   the screen's height; the others are cut from the owner's sheet (26 Oct) and stand at
-   the top of the page:
+   (img/page-*.jpg), one per place, each filling the screen's height and fading into
+   the ground toward the dock. Home, training, workout, coach and progress are the
+   owner's full photographs (27 Oct); warm-up, food and profile are cut from the owner's
+   second sheet (27 Oct), its printed captions painted out:
 
      home       the mark carved in stone over the water (Training, the first page)
      training   the rack under the pergola (planning: the program, the library)
      workout    the bottle and towel on the step (a day, before Start workout)
-     warmup     the runner on the steps (the warm-up's own header, js/ui/views/warmup.js)
+     warmup     the banner by the steps (the warm-up's own header, js/ui/views/warmup.js)
      food       the bowl on the terrace (Food, and Coach's Nutrition)
      coach      the coach on the tablet (Coach AI, the chat, the assessment)
      progress   looking out over the bay (Progress)
