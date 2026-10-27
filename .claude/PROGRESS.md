@@ -2154,3 +2154,11 @@ ask for an alternative". CACHE `bunyan-v161`. All through commands.js (pure pars
   spot, nothing already in today's workout; then `exercise.swapToday`. Not once sets are logged.
 - Tests: one per skill (each with Undo), the registry's domains, the workout's suggestions, intent
   cases.
+
+## Warm-up timer turned into a page-tall column — branch session/warmup-timer
+
+Owner, 27 Oct (two screenshots): tapping the 4:00 "Raise your pulse" timer made it a tall vertical
+bar. Cause: the running timer took the class `run`, and the GPS run screen's page-wide `.run`
+(index.html, flex column, `min-height:100dvh`) applied to it. The timer's state class is now
+`timing` (warmup.js, hold.js, index.html). CACHE `bunyan-v162`.
+Test: the running timer keeps its height and stays a row.
