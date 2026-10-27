@@ -205,8 +205,14 @@ function recommendIn(log,e,ctx){
   var p=prevPerfIn(log,e.name);
   if(!p||!p.sets.length)return null;
   var top=0,topR=0,rpes=[];
+  /* A body-weight exercise logged with the lifter's own body weight in the weight
+     field (an old logger filled it in) is body weight alone, not that much added: it
+     suggested 86 kg on push-ups. Within a kilo and a half of the body weight given. */
+  var bwEx=!e.planned.timed&&(bwShare(e.name)>0||!!(EXDB&&EXDB[e.name]&&EXDB[e.name].e==="Bodyweight"));
+  var bodyKg=num(ctx.bodyKg);
+  function wOf(x){var w=num(x.w);return bwEx&&bodyKg&&Math.abs(w-bodyKg)<=1.5?0:w;}
   p.sets.forEach(function(x){
-    if(num(x.w)>top){top=num(x.w);topR=num(x.r);}
+    if(wOf(x)>top){top=wOf(x);topR=num(x.r);}
     else if(!top&&num(x.r)>topR)topR=num(x.r);   /* body weight alone: the best reps */
     if(x.rpe)rpes.push(x.rpe);});
   var avg=rpes.length?rpes.reduce(function(a,b){return a+b;},0)/rpes.length:0;

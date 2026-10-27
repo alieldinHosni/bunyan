@@ -310,6 +310,20 @@ function shapePlan(plan,p,gear){
   KEEP=[];MAINS=[];SKILLED=true;SUBS={};
   return swaps;}
 
+/* What one more exercise gets, for this person: the same rules as the builder's
+   accessories (sets from experience, reps, effort and rest from the goal, then into
+   the textbook's range for the goal's adaptation). Used when an exercise is added by
+   hand or by the coach, and for the coach's suggestions, so all three agree with the
+   plan. {sets, lo, hi, rest, rir} */
+function doseFor(name,p){
+  p=p||S.profile||{};
+  var L=LEVELS[p.level]||LEVELS.some,T=trainOf(p.goal),AD=adaptOf(p.goal),comp=isCompound(name);
+  var e={sets:Math.max(2,(comp?L.sets[0]:L.sets[1])+T.sets),lo:T.acc[0],hi:T.acc[1],rir:T.rir[1],
+    rest:round30((comp?Math.max(90,L.rest[0]-30):L.rest[1])*T.rest)};
+  if(AD){e.sets=within(e.sets,AD.sets);e.rest=Math.min(e.rest,num(AD.restS&&AD.restS.max)||e.rest);
+    if(ADAPT[goalOf(p.goal).train]==="stabilization_endurance")e.rest=Math.max(e.rest,num(AD.restS.min));}
+  return e;}
+
 /* ---- volume per muscle -------------------------------------------------------------
    After shaping, each muscle's weekly sets are brought into the range for the
    lifter's experience (js/engine/volume.js). Short: a set is added to that
@@ -411,4 +425,4 @@ function buildPlan(id){
 }
 
 
-export {AVOID, avoids, buildPlan, dayMinutes, generatePlan, GOALS, LEVELS, rebalance, shapePlan, splitCandidates, SPLIT_LEVEL, standIn};
+export {adaptOf, AVOID, avoids, buildPlan, dayMinutes, doseFor, generatePlan, GOALS, LEVELS, rebalance, shapePlan, splitCandidates, SPLIT_LEVEL, standIn, usable};

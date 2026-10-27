@@ -72,9 +72,10 @@ var lastView="",lastSheet=null;
    their own; the assessment is Coach's. */
 function groundOf(){
   if(V.assess)return "coach";
-  /* The workout stands on Training's own picture (owner, 27 Oct); the warm-up carries
+  /* The workout stands on the same picture as planning your training, framed the same
+     way (owner, 27 Oct); the warm-up carries
      its own in its card, so the ground stays clear while it is up. */
-  if(V.tab==="train"&&S.active&&V.train!=="hub")return warmShown(S.active)?"":"home";
+  if(V.tab==="train"&&S.active&&V.train!=="hub")return warmShown(S.active)?"":"training";
   if(V.tab==="train")return V.train==="day"||V.train==="preview"?"workout":V.train==="days"?"home":"training";
   if(V.tab==="coach")return V.csec==="train"?"training":V.csec==="food"?"food":"coach";
   return V.tab;}

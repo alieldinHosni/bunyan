@@ -16,7 +16,7 @@ import {render} from "../render.js";
 import {changeLook, themeOf} from "../theme.js";
 import {tourReset} from "../tour.js";
 import {alarmStart, keepAwake, toast, V} from "../view.js";
-import {retargetNow} from "./common.js";
+import {fixLogsNow, retargetNow} from "./common.js";
 import {has, key} from "./registry.js";
 
 /* The text of a backup, read and checked (js/schema.js checkBackup): {o, check}, or
@@ -56,7 +56,7 @@ function register(){
     setS(normalize(JSON.parse(JSON.stringify(o))));
     migrate();saveDB();V.tab="train";V.train="days";
     retargetNow();
-    adoptRestored(function(){render();toast(t("Restored."));});
+    adoptRestored(function(){fixLogsNow();render();toast(t("Restored."));});
   };
   /* The two settings sheets save independently now that they are separate screens. */
   /* You: sex, activity and goal are picked on the sheet and kept with it (V.sd) until
@@ -122,7 +122,7 @@ function register(){
   key("progmode",function(){
     var order=["conservative","standard","aggressive"];
     S.profile.prog=order[(order.indexOf(S.profile.prog)+1)%3];saveDB();render();return;});
-  key("switch",function(D){if(D.switch!==CUR){switchProfile(D.switch,render);render();}return;});
+  key("switch",function(D){if(D.switch!==CUR){switchProfile(D.switch,function(){fixLogsNow();render();});render();}return;});
   key("addprofile",function(){
     askText({title:t("Add a profile"),
       body:t("A separate log, weight and plan. Nothing crosses over."),

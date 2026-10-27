@@ -26,6 +26,14 @@ import {perform, undo} from "./actions.js";
 import {addFact, removeFact} from "../../coach/context.js";
 import {key, on} from "./registry.js";
 
+/* The answer marked done and shown for a beat, the panel closed, then the move. */
+var BEAT=380,CLOSE=230;
+function goAfter(m){
+  m.ag.s="applied";saveDB();render();toEnd();
+  setTimeout(function(){
+    if(V.coach)closeCoach(render);
+    setTimeout(function(){
+      if(!perform(m.ag.act,m.ag.p,m.at)){m.ag.s="failed";saveDB();render();}},V.coach===null?CLOSE:0);},BEAT);}
 /* The kept message a button in the conversation belongs to: the newest one (only the
    newest carries buttons). */
 function lastAsked(){var c=S.chat||[];return c[c.length-1]||null;}
@@ -175,18 +183,23 @@ function register(){
      does (js/ui/handlers/actions.js) and the row turns to done, with Undo for the
      session; Not now leaves everything as it is. Only that row changes. */
   key("agok",function(D){var m=findMsg(D.agok);if(!m||!m.ag||m.ag.s!=="confirm")return;
+    /* A confirmed move to another screen (the plan rebuilt for other kit): the same
+       sequence as one that runs at once. */
+    if(/^(app\.go|plan\.gear)$/.test(m.ag.act)){goAfter(m);return;}
     loadFoods(function(){
       var ok=holdCoach(function(){return perform(m.ag.act,m.ag.p,m.at);});
       m.ag.s=ok?"applied":"failed";saveDB();render();});return;});
   /* Something the person told the coach to do that runs at once (js/ui/agent.js
-     planCommand): going somewhere and the workout's buttons let the panel go with the
-     move; a setting keeps it open, with Undo. */
+     planCommand). A setting keeps the panel open, with Undo. Going somewhere (and the
+     workout's buttons) is said first: the answer shows for a beat, the panel closes
+     back into its button, and only then does the page move, with its own rise, so the
+     change never looks like a jump. */
   key("agrun",function(D){var m=findMsg(D.agrun);if(!m||!m.ag||m.ag.s!=="confirm"||!m.ag.run)return;
-    var go=/^(app\.go|workout\.|rest\.|plan\.gear)/.test(m.ag.act),ok;
+    var go=/^(app\.go|workout\.|rest\.|plan\.gear)/.test(m.ag.act);
+    if(go){goAfter(m);return;}
     m.ag.s="applied";saveDB();
-    ok=go?perform(m.ag.act,m.ag.p,m.at):holdCoach(function(){return perform(m.ag.act,m.ag.p,m.at);});
-    if(!ok)m.ag.s="failed";
-    saveDB();render();if(!go)toEnd();return;});
+    if(!holdCoach(function(){return perform(m.ag.act,m.ag.p,m.at);}))m.ag.s="failed";
+    saveDB();render();toEnd();return;});
   key("agno",function(D){var m=findMsg(D.agno);if(!m||!m.ag||m.ag.s!=="confirm")return;
     m.ag.s="declined";saveDB();render();return;});
   key("agundo",function(D){var m=findMsg(D.agundo);if(!m||!m.ag||m.ag.s!=="applied")return;

@@ -93,7 +93,7 @@ function recordText(rec){
   if(rec.k==="r")return t("Rep record")+": "+rec.r+" \u00d7 "+loadText(rec.n,rec.w);
   return t("New record")+": "+loadText(rec.n,rec.w)+" \u00d7 "+rec.r;}
 function recommend(e){
-  return recommendIn(LOG(),e,{increment:function(n,top){return incrementFor(n,top);},deload:inDeload(),
+  return recommendIn(LOG(),e,{increment:function(n,top){return incrementFor(n,top);},deload:inDeload(),bodyKg:lastWeight()||num(S.profile.weight),
     ready:S.active&&num(S.active.ready)});}
 function progressionHint(e){return progressionHintOf(e,function(n,w){return incrementFor(n,w);});}
 function weeklySets(){return weeklySetsIn(LOG(),Date.now());}

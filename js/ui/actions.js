@@ -2,7 +2,7 @@
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
 import {exIdOf, kindOf, LIB, muscleOf, muscleOfEntry, pickable} from "../data/exercises.js";
-import {standIn} from "../engine/plan.js";
+import {doseFor, standIn} from "../engine/plan.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
 import {deloadSets, inDeload, recordsIn, avgRPE, prevPerf, progressionHint, recommend, sessionVolume} from "../engine/formulas.js";
@@ -382,7 +382,9 @@ function addExercise(name){
     closeSheet();
     toast(t("{ex} added to {day}.").replace("{ex}",exName(name)).replace("{day}",td.name));
     return;}
-  var e=ex(name,3,8,12);
+  /* The goal's own prescription, as the plan builder gives it (js/engine/plan.js doseFor). */
+  var dz=doseFor(name),e=ex(name,dz.sets,dz.lo,dz.hi);
+  e.rest=dz.rest;e.rir=dz.rir;
   e.exId=exIdOf(name);
   /* A match or a run is planned as time and effort, not sets and reps. */
   if(isActivity(name)){e.sets=1;e.lo=0;e.hi=0;e.rest=0;

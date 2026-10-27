@@ -99,6 +99,9 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
      and accept one unstyled frame. Do not let them drift again. */
   --m-press:100ms; --m-micro:150ms; --m-pop:200ms; --m-comp:250ms;
   --m-sheet:300ms; --m-screen:300ms; --m-data:400ms; --m-reveal:500ms; --m-fade:200ms;
+  /* A change of tab and the coach panel: a touch slower than a screen, with a little
+     spring at the end so they land rather than stop. --m-kb follows the iPhone keyboard. */
+  --m-tab:420ms; --m-panel:380ms; --m-kb:320ms;
   --e-standard:cubic-bezier(0.2, 0, 0, 1); --e-decel:cubic-bezier(0.05, 0.7, 0.1, 1);
   --e-accel:cubic-bezier(0.3, 0, 0.8, 0.15); --e-spring:cubic-bezier(.2,.9,.3,1.06);
   --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
@@ -763,8 +766,8 @@ body.focus nav{opacity:0;visibility:hidden;pointer-events:none;
   min-width:var(--dot);height:var(--dot);padding:0 calc((var(--dot) - 22px) / 2);margin:0;
   border:1px solid var(--dock-dot-edge);border-radius:var(--rpill);background:var(--dock-dot);
   color:var(--dock-dot-ink);cursor:pointer;overflow:hidden;
-  transition:background-color var(--m-screen) var(--e-ios),color var(--m-screen) var(--e-ios),
-    border-color var(--m-screen) var(--e-ios),padding var(--m-screen) var(--e-ios),transform var(--m-press) var(--e-standard)}
+  transition:background-color var(--m-tab) var(--e-ios),color var(--m-tab) var(--e-ios),
+    border-color var(--m-tab) var(--e-ios),padding var(--m-tab) var(--e-spring),transform var(--m-press) var(--e-standard)}
 /* Square ends and mitred corners: the structural cut of the icon set. */
 .dock-b svg{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;
   stroke-width:1.8;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4}
@@ -774,7 +777,7 @@ body.focus nav{opacity:0;visibility:hidden;pointer-events:none;
 .dock-l{display:block;min-width:0;max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   opacity:0;margin:0;direction:var(--dir,ltr);
   font-size:12.5px;line-height:1.2;font-weight:700;letter-spacing:.01em;
-  transition:max-width var(--m-screen) var(--e-ios),opacity var(--m-fade) var(--e-standard),margin var(--m-screen) var(--e-ios)}
+  transition:max-width var(--m-tab) var(--e-spring),opacity var(--m-comp) var(--e-standard),margin var(--m-tab) var(--e-spring)}
 [dir="rtl"] .dock-l{--dir:rtl;font-size:13px;letter-spacing:0}
 .dock-b.on{flex-shrink:1;min-width:0;padding:0 15px 0 12px;background:var(--dock-pill);color:var(--dock-pill-ink);border-color:transparent}
 .dock-b.on svg{stroke-width:2}
@@ -872,8 +875,8 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
    fading page showed every card and button thin and clear, and they set back to frosted
    glass the moment the fade ended: a flash on every tab change. Moving the page does
    not cut the glass off from the ground. */
-#app.pagein{animation:pageIn var(--m-screen) var(--e-decel)}
-@keyframes pageIn{from{transform:translateY(10px)}to{transform:none}}
+#app.pagein{animation:pageIn var(--m-tab) var(--e-spring)}
+@keyframes pageIn{from{transform:translateY(16px)}to{transform:none}}
 /* Gated: entry animations run when a surface appears, never on a re-render. */
 .sheet.entering .sheetbox{animation:sheetIn var(--m-sheet) var(--e-decel)}
 @keyframes sheetIn{from{transform:translateY(14%)}to{transform:none}}
@@ -2560,6 +2563,10 @@ details[open]>summary .as-chev{transform:rotate(90deg)}
 .wu2 .wu-why p{margin:0 0 var(--s2);font-size:13.5px;line-height:1.5;color:var(--sub)}
 .wu-foot{position:sticky;bottom:0;z-index:5;margin:var(--s2) calc(var(--gutter,var(--s4)) * -1) 0;padding:var(--s3) var(--gutter,var(--s4)) max(var(--s3),env(safe-area-inset-bottom));
   background:var(--wk-page,var(--bg))}
+/* Pinned to the bottom edge all the way down: the body keeps room under the page for
+   the dock, which the workout has put away, and at the end of the scroll the footer
+   stopped there, a strip above the edge. With the footer up, no such room. */
+body.focus:has(.wu-foot){padding-bottom:0}
 .wu-foot::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:var(--s6);pointer-events:none;
   background:linear-gradient(to bottom,transparent,var(--wk-page,var(--bg)))}
 .wu-foot .wu-then{margin:0 0 var(--s2)}
@@ -5090,7 +5097,10 @@ body.cfab-on nav .dock{margin-right:calc(var(--dock-h) + var(--s2));gap:calc(var
 #cfab.dfade.dhid .cfab{transform:none;opacity:0;pointer-events:none}
 
 #cpanel{position:fixed;left:0;right:0;top:var(--vvt,0px);height:var(--vvh,100dvh);z-index:95;display:flex;flex-direction:column;
-  justify-content:flex-end;align-items:flex-end;padding:0 12px calc(var(--navh) + 10px)}
+  justify-content:flex-end;align-items:flex-end;padding:0 12px calc(var(--navh) + 10px);
+  /* It follows the keyboard: the visible part shrinks when the keyboard rises and the
+     panel glides with it, at the keyboard's own pace, instead of jumping. */
+  transition:top var(--m-kb) var(--e-ios),height var(--m-kb) var(--e-ios),padding-bottom var(--m-kb) var(--e-ios)}
 #cpanel[hidden]{display:none}
 /* On the keyboard while typing, and for a moment after it goes (body.kbleave): a tap on
    send or an answer's button blurs the field first, and moving the panel then would put
@@ -5105,10 +5115,11 @@ body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
   .cp{background:rgba(var(--bg-rgb),.86);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%)}}
 .cp.full{position:fixed;left:8px;right:8px;width:auto;max-width:none;max-height:none;
+  transition:top var(--m-kb) var(--e-ios),height var(--m-kb) var(--e-ios);
   top:calc(var(--vvt,0px) + max(8px,env(safe-area-inset-top)));
   height:calc(var(--vvh,100dvh) - max(8px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))}
-#cpanel.opening .cp{animation:cpIn 260ms var(--e-ios)}
-#cpanel.opening .cp-veil{animation:fadeIn 200ms var(--e-standard)}
+#cpanel.opening .cp{animation:cpIn var(--m-panel) var(--e-spring)}
+#cpanel.opening .cp-veil{animation:fadeIn var(--m-comp) var(--e-standard)}
 #cpanel.resized .cp{animation:wkIn var(--m-comp) var(--e-decel)}
 #cpanel.closing .cp{animation:cpOut 200ms var(--e-accel) forwards}
 #cpanel.closing .cp-veil{animation:fadeIn 200ms var(--e-standard) reverse forwards}

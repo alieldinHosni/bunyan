@@ -183,7 +183,8 @@ function warmupFor(entries,ctx){
   var ramp=null,more=0;
   for(var k=0;k<entries.length;k++){
     var e=entries[k],n=e.name;
-    if(isActivity(n)||!isCompound(n)||(e.planned&&e.planned.timed))continue;
+    /* Body weight is not ramped: there is no lighter bar to work up from. */
+    if(isActivity(n)||!isCompound(n)||(e.planned&&e.planned.timed)||(EXDB&&EXDB[n]&&EXDB[n].e==="Bodyweight"))continue;
     if(!ramp){
       var kg=ctx.work?+ctx.work(e)||0:0,bb=loadable(n);
       if(!kg&&!bb&&!(EXDB&&EXDB[n]&&/Dumbbell|Machine|Cable|Kettlebell/.test(EXDB[n].e)))continue;

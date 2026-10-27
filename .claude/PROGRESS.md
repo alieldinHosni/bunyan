@@ -1961,3 +1961,35 @@ Owner, 27 Oct (screenshot: "Can I restructure my workout plan to be home based w
 - **Haptics on iPhone**: Safari has no vibration API; since iOS 18 a hidden `<input type="checkbox" switch>` ticks the Taptic Engine when its label is clicked inside a tap. `view.js iosTick` does that on every button tap (where Android vibrates). Its clicks stop at the label. The Haptic feedback setting now shows on iPhone too. Not verifiable in the headless browser: check on the phone.
 - Tests: the assessment walk-through takes the new step; new tests for the health step and the textbook notes, the kit request, and the haptic switch; the registry test accepts `on()` branches (`D.as`).
 - **The workout stands on Training's picture** (owner, 27 Oct: "the same training page background on the page after the warm-up"). `render.js groundOf`: a live workout shows `home`; while the warm-up is up the ground stays clear (its card has its own). The workout page's colour moved from `body` to the root (`:root:has(body.wkflat)`), because a body background covers the ground layer.
+
+## Motion, the keyboard under the chat, and answers tailored to the person — branch session/motion-tailor
+
+Owner, 27 Oct: the chat screen shifts badly when the keyboard opens; tab changes and opening the chat should be a little slower and more dynamic; suggestions (exercises, volume, progress) must come from the knowledge base and be tailored to what the assessment and the chat know. CACHE `bunyan-v148`.
+
+- **Keyboard:** the chat's question box is now held like a sheet's field (`keyboard.js inSheet` covers `#cpanel .cp`), so Safari no longer scrolls the page under the panel. The panel follows the keyboard with a transition on its top, height and padding (`--m-kb` 320 ms, `--e-ios`) instead of snapping. Not verifiable headless: check on the phone.
+- **Motion tokens:** `--m-tab` 420 ms and `--m-panel` 380 ms, with `--e-spring` (a slight settle).
+  - The page change (`#app.pagein`) rises 16 px over `--m-tab`.
+  - The dock pill and its label slide on it too.
+  - The coach panel opens over `--m-panel`.
+  - A theme test waits for the dock's change to finish before reading its colour.
+- **One prescription everywhere:** `plan.js doseFor(name, profile)` gives an added exercise the same sets, reps, rest and effort as the builder's accessories: the goal's training style and level, then into the textbook's range for the goal's adaptation. Used by:
+  - the picker (`actions.js addExercise`, was a fixed 3 × 8–12)
+  - the coach's "add …" confirmation (was a fixed "3 × 8–12")
+  - the new suggestions
+- **"What exercises for legs?"** (`agent.js suggestExercises`, also "best exercise for …", "تمارين صدر"): exercises are drawn from the library, then:
+  - Filtered: the person's kit (`usable`), nothing on the avoid list for a sore spot they named (`avoids`), no advanced or skill moves for someone new, no jumps for someone new or with a health tick (unless the goal is power), no strongman implements. Stretches, holds and cardio drills only for mobility or endurance.
+  - Ranked: compounds first, loaded moves first for size and strength when there is a load, beginner-rated moves first for someone new.
+  - At most two of each movement; each shows the goal's dose and whether it's already in the program.
+  - A tap adds it to a day, asking which.
+- **The volume answer is goal-aware:** a goal that isn't muscle size gets "no weekly target per muscle; {a}–{b} sets an exercise" instead of the RP range.
+- **Knowledge answers are tailored** (`chat.js tailor`):
+  - The goal's sets, reps and rest when the passage is about how to train.
+  - A health-tick note on vigorous topics, and a sore-spot note on movement topics.
+  - What the person told the coach that bears on it.
+- Tests: the suggestions (kit, sore spot, goal dose, the day asked) and the goal's dose for an added exercise.
+- **The workout stands on the training picture** (owner, 27 Oct, two screenshots: the two backgrounds should be the same; the workout's looked zoomed in): `groundOf` gives a live workout `training`, the picture of Plan → Training, framed the same.
+- **Owner, 27 Oct (screenshot): asking to rebuild for no equipment jumped straight to the result page with no message or motion: it looked like a glitch.** Now the coach says what it will do ("Yes. I can rebuild your program for no equipment…, nothing changes until you tap Use this plan") with **Show me** / Not now. On the tap, and for any "open …" command, the answer is marked done and shown for a beat, then the panel closes back into its button, and only then does the page move, with its rise (`coach.js goAfter`).
+- **Warm-up footer pinned** (owner, 27 Oct: scrolling the warm-up, Start and Skip moved up). The body keeps room under the page for the dock, which the workout puts away; at the end of the scroll the sticky footer stopped above that room. `body.focus:has(.wu-foot){padding-bottom:0}`. Test: the footer's bottom is the screen's at the top, the middle and the end.
+- **The 86 kg on push-ups, fixed.** Push-up sets logged with the lifter's body weight in the weight field (an old logger filled it in) made every suggestion "+86 kg", and the warm-up ramped up to it (42.5, 65, then 86 kg). `lifts.js recommendIn` now treats a weight within 1.5 kg of the body weight, on a body-weight exercise, as body weight alone (`ctx.bodyKg` from `formulas.recommend`). `warmup.js` no longer ramps a body-weight exercise. The logged sets themselves are left as they are (the person's history).
+- **The old 86 kg sets corrected in the log** (owner: "correct the logged data … then merge"). `js/engine/logfix.js` (new): once per profile (`logFixV` 1, validated in schema.js), each body-weight exercise's set logged within 1.5 kg of that day's body weight (`bodyAtIn`) gets 0 added weight. A real added weight (a vest, a belt) is far from it and stays. It runs once the history is in memory (it is kept in IndexedDB: at boot after `loadStored`, after a profile switch and after a restore), saves each changed session where history lives, and says how many sets changed, with Undo. Derived numbers follow by themselves: such a set's load is now body weight × the exercise's share, the same as every set logged since the box said "added".
+  Tests: corrected once with Undo, a 20 kg vest set kept, Undo kept across a reload, the correction kept across a reload and said once.

@@ -28,7 +28,7 @@ import {lookup, ownTerms} from "../../engine/kbsearch.js";
 import {weeklySets} from "../../engine/volume.js";
 import {weeklyVolume} from "../../engine/stats.js";
 import {canUndo} from "../handlers/actions.js";
-import {answerPick, namesExercise, namesFood, plan as planAction, planCommand, proceed} from "../agent.js";
+import {answerPick, namesExercise, namesFood, plan as planAction, planCommand, proceed, suggestExercises} from "../agent.js";
 import {commandOf} from "../../coach/commands.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
@@ -44,7 +44,8 @@ import {backArrow} from "../nav.js";
 import {doseText} from "../dose.js";
 import {blockDay, blockNow} from "../../engine/blocks.js";
 import {addDaysISO, estMinutes, nextDayOf, planOn} from "../../engine/dayplan.js";
-import {avoids, standIn} from "../../engine/plan.js";
+import {adaptOf, avoids, standIn} from "../../engine/plan.js";
+import {rangeFor} from "../../coach/landmarks.js";
 import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
 import {words} from "../coachwords.js";
 import {glyph} from "../glyphs.js";
@@ -78,7 +79,7 @@ var NEXT={
   k1rm:["strong","weights","track"],scope:["today","track","help"],situation:["today","rest","track"],
   weekfood:["rest","protein","track"],logfood:["rest","eat","track"],weektrain:["today","tomorrow","balance"],letgo:["today","tomorrow","track"],
   lowday:["today","sore","missed"],remember:["facts","today","eat"],facts:["today","eat","track"],
-  know:["today","eat","track"],app:["today","eat","track"]};
+  know:["today","eat","track"],app:["today","eat","track"],exsuggest:["today","balance","weights"]};
 
 function fill(s,o){Object.keys(o).forEach(function(k){s=s.split("{"+k+"}").join(o[k]);});return s;}
 function list(a){return a.join(S.prefs.lang==="ar"?"، ":", ");}
@@ -670,6 +671,15 @@ function aKVolume(a,q){
   if(!pick){var lo=null;Object.keys(LANDMARKS).forEach(function(k){if(k==="Core"||k==="Calves")return;var v=num(ws[k]),r=LANDMARKS[k].mav;
       var gap=v<r[0]?r[0]-v:0;if(gap&&(!lo||gap>lo.gap))lo={k:k,gap:gap};});pick=lo?lo.k:"Chest";}
   var L=LANDMARKS[pick],plan0=Math.round(num(ws[pick])),done=(wl.rows.filter(function(r){return r.g===pick;})[0]||{}).sets;
+  /* A goal that isn't about muscle size has no weekly floor (js/coach/landmarks.js
+     rangeFor): its sets are set per exercise, by the textbook's table for the goal. */
+  var G0=goalOf(S.profile.goal),AD0=adaptOf(S.profile.goal);
+  if(!rangeFor(S.profile.level,G0.train)){
+    p(a,fill(t("Your program gives {m} {n} sets a week. Your goal is {g}, not muscle size, so there's no weekly target per muscle: each exercise's sets and rest follow your goal."),
+      {m:tm(pick).toLowerCase(),n:plan0,g:t(G0.label).toLowerCase()})
+      +(AD0?" "+fill(t("That's {a}–{b} sets an exercise."),{a:AD0.sets.min,b:AD0.sets.max}):""));
+    if(done!=null)n(a,fill(t("Logged so far this week: {n}."),{n:Math.round(done)}));
+    return src(a,vk.src);}
   var r={min:L.mav[0],max:L.mav[1]};
   p(a,fill(t("Your program gives {m} {n} sets a week. The app's range for growth is roughly {r}, so {v}."),
     {m:tm(pick).toLowerCase(),n:plan0,r:range(r),v:plan0<r.min?t("there's room for more"):plan0>r.max?t("that's above it"):t("that's inside it")}));
@@ -785,7 +795,23 @@ function aKnow(a,q,it){
   if(k.needsFigure&&!k.figure)p(a,t("There's no single number for that. What holds:")+" "+lead+".");
   else p(a,/[.!?]$/.test(lead)?lead:lead+".");
   l(a,lines.filter(function(x){return x!==lead;}).concat(also.filter(function(x){return x!==lead&&lines.indexOf(x)<0;})).slice(0,5));
+  tailor(a,k);
   return mine(a,k);}
+/* The answer for this person: their goal's prescription when the passage is about how
+   to train, a word when what they told the assessment changes it, and what they told
+   the coach that bears on it. */
+var VIGOROUS=/hiit|interval|plyometric|sprint|vigorous|maximal|power/i;
+function tailor(a,k){
+  var pr=S.profile||{},tt=k.doc.file+" "+k.doc.title,AD=adaptOf(pr.goal),G=goalOf(pr.goal);
+  if(S.onboarded&&AD&&/acute-variables|phases/.test(k.doc.file)&&/rep|set|rest|volume|intensity|tempo|adaptation|frequency|system/i.test(tt))
+    p(a,fill(t("For your goal, {g}: {s} sets of {r} reps an exercise, {rest} rest."),
+      {g:t(G.label).toLowerCase(),s:AD.sets.min+"–"+AD.sets.max,r:AD.reps.min+"–"+AD.reps.max,
+       rest:AD.restS.min?fill(t("{a}–{b} s"),{a:AD.restS.min,b:AD.restS.max}):fill(t("up to {b} s"),{b:AD.restS.max})}));
+  if((pr.health||[]).length&&VIGOROUS.test(tt+" "+k.lines.join(" ")))
+    n(a,t("You ticked a health question in the assessment: keep to moderate effort until a doctor or a qualified exercise professional has cleared you."));
+  if((pr.limits||[]).length&&/stretch|mobility|flexib|posture|movement|squat|lunge|press/i.test(tt))
+    n(a,t("Mind what you said hurts: stop anything that brings it on."));
+  told(a,/food|nutrition|hydration|protein|carbohydrate|lipid/i.test(tt)?["preference","constraint","obstacle"]:["schedule","obstacle","constraint"],/nutrition/.test(k.doc.file));}
 
 /* ---- a report, not a question: one question back, never a guess --------------------
    "I had a bad day, didn't stick to the diet" (js/coach/intent.js situationOf). The
@@ -983,6 +1009,7 @@ var SOFT=/^(sore|steps|help|track|hello|thanks|missed|goal|strong|balance|today|
 var DEFINE=/^(what is|what are|whats|what s|define|explain|tell me about|why (is|are|do|does|should|would|must)|is it (good|bad|ok|okay|better|safe|true)|benefits? of|difference between|يعني ايه|ايه هو|ايه هي|ايه فايده|فايده|ليه)( |$)|\b(before|after) (a |my |the |)(workout|training|session|gym|lifting|run)\b|\b(how (many|much|long|often))\b/;
 var ASKQ=/[?؟]|^(how|what|why|when|which|should|is|are|do|does|can|كام|ايه|ازاي|ليه|امتي|هل)( |$)|(^| )(كام|قد ايه|ازاي)( |$)/;
 /* A short follow-up to the last answer: "why?", "more", "but how many hours?". */
+var EXQ=/\b(exercises?|moves?|movements?|lifts?)\b.*\b(for|to (build|grow|train|work|target|hit))\b|\b(best|good|what|which|suggest|recommend)\b.*\b(exercises?|moves?|lifts?)\b|\b(train|work|hit|grow|build)\b.*\b(chest|back|shoulders?|quads?|legs?|hamstrings?|glutes?|biceps?|triceps?|calves)\b.*\?|تمارين|تمرين ل/;
 var ONTO=/^(yeah|yes|ok|okay|but|and|so|hmm|well|what about|how about|then|طب|طيب|بس|و|يعني|ماشي|اه)( |$)/;
 var DEEPER=/^(why|how come|more|tell me more|explain|details|go on|really|ليه|ازاي|اكتر|وضح|كمل)( |$)/;
 function knowFor(text,iid,it,prev){
@@ -1043,6 +1070,12 @@ function ask(q,id,lang){
         if(nx)return {q:text,id:prev.id,at:Date.now(),b:[],acts:nx.acts||[],ag:nx,lang:L};}
       if(/^(exadd|exremove|exswap|foodlog)$/.test(prev.id)&&(iid==="unknown"||MORE.test(fold(text)))
         &&(prev.id==="foodlog"?namesFood(text):namesExercise(text.replace(MORE,""))))iid=prev.id;}
+    /* "What exercises for chest?", "best exercise for glutes at home", "تمارين صدر": the
+       library, chosen for this person (js/ui/agent.js suggestExercises). */
+    if(!id&&S.onboarded&&iid!=="scope"&&iid!=="situation"&&!/^(exadd|exremove|exswap)$/.test(iid)&&EXQ.test(fold(text))){
+      var mw=MUSCLEWORD.filter(function(x){return x[1].test(fold(text));})[0];
+      if(mw){var sg=null;try{sg=suggestExercises(mw[0]);}catch(e){sg=null;}
+        if(sg)return {q:text,id:"exsuggest",at:Date.now(),b:[],acts:sg.acts||[],ag:sg,lang:L};}}
     if(!id&&iid!=="scope"&&iid!=="situation"&&iid!=="remember"){
       var kn=null;try{kn=knowFor(text,iid,it,prev);}catch(e){kn=null;}
       if(kn){iid="know";it.know=kn.k;it.kq=kn.kq;it.deeper=!!kn.deeper;}}
@@ -1096,7 +1129,7 @@ var TOPIC={today:["Today's workout","dumbbell"],weights:["What to lift","dumbbel
   k1rm:["One-rep max","medal"],scope:["Outside what I do","info"],situation:["A rough day","moon"],
   weekfood:["The week's food","bowl"],logfood:["The week's food","bowl"],weektrain:["The week's training","dumbbell"],letgo:["The week's training","dumbbell"],
   lowday:["A low day","moon"],remember:["What you told me","person"],facts:["What you told me","person"],
-  know:["Good to know","spark"],app:["In the app","check"]};
+  know:["Good to know","spark"],app:["In the app","check"],exsuggest:["Exercises for you","dumbbell"]};
 /* The opening screen: what can be asked, by what it is about. */
 var GROUPS=[["Training",["today","tomorrow","weights","sore"]],["Food",["eat","rest","swap","protein"]],
   ["Progress",["track","last","weight","strong"]]];

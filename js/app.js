@@ -23,7 +23,7 @@ import {initSheetDrag} from "./ui/sheetdrag.js";
 import {initKeyboard} from "./ui/keyboard.js";
 import {loadExDB, reconcileExercises, useUserData} from "./data/exercises.js";
 import {mmss, paintOver, paintRest, sessionClock} from "./ui/views/session.js";
-import {moveRow, requestCloseSheet, retargetNow} from "./ui/handlers/common.js";
+import {fixLogsNow, moveRow, requestCloseSheet, retargetNow} from "./ui/handlers/common.js";
 import {onChange, onInput, onKeydown} from "./ui/handlers/fields.js";
 import {render, syncKeyboard} from "./ui/render.js";
 import {setStorageErrorHandler} from "./util.js";
@@ -209,7 +209,8 @@ initExSwipe({
 /* History comes from IndexedDB, so it arrives a tick later than everything else.
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from
    holding the whole app behind the intro; in practice it resolves well inside it. */
-loadStored(function(){ applyExReconcile(); render(); });
+/* The history is in: old body-weight sets are read as body weight, once (js/engine/logfix.js). */
+loadStored(function(){ applyExReconcile(); fixLogsNow(); render(); });
 /* The intro belongs to a cold start, not to every document load. A reload for any
    reason — a service worker taking over, a crash recovery, the OS reclaiming the
    tab — used to replay it, which reads as the app restarting. */

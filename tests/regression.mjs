@@ -990,7 +990,9 @@ await test("Themes: Sage light, as the reference: white type on the ground, deep
     return [col(".thead h1"),col(".pglbl h2"),col(".pgcard,.pgstat,.card")];});
   eq(c.slice(0,2),["rgb(255, 255, 255)","rgb(255, 255, 255)"],"the title and the section heading");
   eq(c[2],"rgb(19, 38, 39)","a card's type");
-  /* The dock is the reference's: a slate bar, white buttons, the open tab a white pill. */
+  /* The dock is the reference's: a slate bar, white buttons, the open tab a white pill
+     (once its change of tab, --m-tab, has played). */
+  await pause(page,500);
   eq(await page.$eval(".dock-b.on",e=>getComputedStyle(e).backgroundColor),"rgb(255, 255, 255)","the open tab");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
 await test("Themes: the stylesheet names no colour outside the theme blocks",async page=>{
@@ -1602,6 +1604,46 @@ await test("Assessment health questions: a ticked one keeps the plan to low and 
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");V.asd.step=A.STEPS.indexOf("health");(await import("/js/ui/render.js")).render();});await pause(page);
   await page.tap('[data-asm="health|chest"]');await pause(page);
   if(!/low and moderate effort/.test(await page.textContent(".as")))throw new Error("no word on a ticked health question");
+});
+await test("Body weight in the weight field is body weight: push-ups logged at 84 kg (the lifter's weight) suggest no added load, and get no ramp-up sets",async page=>{
+  const r=await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const st=await import("/js/state.js"),F=await import("/js/engine/formulas.js"),W=await import("/js/engine/warmup.js");
+    const d=new Date(Date.now()-2*864e5).toISOString().slice(0,10);
+    st.S.sessions.push({id:"pu",date:d,dayName:"Push",entries:[{name:"Pushups",muscle:"Chest",sets:[{w:84,r:20},{w:84,r:18}]}]});
+    const rec=F.recommend({name:"Pushups",planned:{sets:3,lo:8,hi:20}});
+    const wu=W.warmupFor([{name:"Pushups",planned:{sets:3,lo:8,hi:20},sets:[]},{name:"Barbell Bench Press - Medium Grip",planned:{sets:3,lo:6,hi:10},sets:[]}],{work:()=>60,gear:null,bar:20});
+    return [rec&&rec.w,!!(rec&&rec.bw),wu.ramp&&wu.ramp.name];});
+  eq(r,[0,true,"Barbell Bench Press - Medium Grip"]);
+});
+/* An old log: push-ups at the lifter's body weight (84 kg), and one set with a real vest. */
+function oldBwLog(){const d=seed();const day=new Date(Date.now()-5*864e5).toISOString().slice(0,10);
+  d.sessions.push({id:"oldpu",date:day,dayName:"Push",entries:[{name:"Pushups",muscle:"Chest",sets:[{w:84,r:20},{w:84.5,r:18},{w:20,r:10}]}]});return d;}
+await test("Old logs: body-weight sets logged at the body weight are read as body weight, once, said with Undo; a real added weight stays",async page=>{
+  await pause(page,3400);
+  const sets=()=>ev(page,"S.sessions.find(s=>s.id==='oldpu').entries[0].sets.map(x=>x.w)");
+  eq([await sets(),await ev(page,"S.logFixV")],[[0,0,20],1],"84 and 84.5 to 0, the vest kept");
+  if(!/read as body weight/.test(await page.textContent(".toast").catch(()=>"")))throw new Error("the change was not said: "+await page.textContent(".toast").catch(()=>"none"));
+  await page.tap('.toast-undo');await pause(page);
+  eq(await sets(),[84,84.5,20],"Undo puts them back");
+  await pause(page,1200);   /* the save is written a moment later */
+  await page.reload();await pause(page,3400);
+  eq(await sets(),[84,84.5,20],"and it does not run again");
+},{db:oldBwLog()});
+await test("Old logs: the correction is kept across a reload, and not said again",async page=>{
+  await pause(page,3400);
+  const sets=()=>ev(page,"S.sessions.find(s=>s.id==='oldpu').entries[0].sets.map(x=>x.w)");
+  eq(await sets(),[0,0,20],"corrected");
+  await pause(page,1200);await page.reload();await pause(page,3400);
+  eq(await sets(),[0,0,20],"still corrected after a reload");
+  eq(await page.evaluate(()=>/read as body weight/.test((document.querySelector(".toast")||{}).textContent||"")),false,"said once");
+},{db:oldBwLog()});
+await test("Warm-up: Start stays on the bottom edge all the way down",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.nowarm=false;});
+  await startWorkout(page);
+  const at=async y=>{await page.evaluate(y=>window.scrollTo(0,y),y);await pause(page,200);
+    return page.evaluate(()=>Math.round(document.querySelector(".wu-foot").getBoundingClientRect().bottom)-innerHeight);};
+  eq([await at(0),await at(300),await at(99999)],[0,0,0],"the footer's bottom is the screen's");
 });
 await test("Meal plan: a day built from the targets, within 5%, servings as labels, diet and leave-outs respected",async page=>{
   const r=await page.evaluate(async()=>{
@@ -2434,7 +2476,7 @@ await test("Coach does what the app does: opens places, adds water and steps, ch
   r=await agSay(page,"raise my calories by 200");await page.tap('#cpanel [data-agok]');await pause(page,400);
   eq(await ev(page,"S.goals.kcal"),Math.round((k0+200)/10)*10,"calories raised");
   /* Going somewhere lets the panel go with the move. */
-  await page.fill('#chatq',"open my meal plan");await page.press('#chatq','Enter');await pause(page,700);
+  await page.fill('#chatq',"open my meal plan");await page.press('#chatq','Enter');await pause(page,1300);
   eq([await ev(page,"V.tab"),await ev(page,"V.cfsub")],["coach","plan"],"meal plan opened");
   await openChat(page);
   r=await agSay(page,"how much water should I drink");
@@ -2443,7 +2485,12 @@ await test("Coach does what the app does: opens places, adds water and steps, ch
 await test("Coach: asked to make the program home based with no equipment, it opens the plan rebuilt for bodyweight to review, changing nothing yet",async page=>{
   await openChat(page);
   const before=await ev(page,"JSON.stringify(S.programs)");
-  await page.fill('#chatq',"Can I restructure my workout plan to be home based with no equipment?");await page.press('#chatq','Enter');await pause(page,800);
+  await page.fill('#chatq',"Can I restructure my workout plan to be home based with no equipment?");await page.press('#chatq','Enter');await pause(page,600);
+  /* Said first, with a button: nothing moves until it is tapped. */
+  const r0=await agLast(page);
+  if(!/rebuild your program for no equipment/.test(r0.lead)||!r0.ok)throw new Error("not said first: "+r0.lead);
+  eq(await ev(page,"!!V.assess"),false,"still in the chat");
+  await page.tap('#cpanel [data-agok]');await pause(page,1000);
   eq([await ev(page,"V.assess"),await ev(page,"V.asd&&V.asd.gear"),await ev(page,"V.asd&&V.asd.step")===await page.evaluate(async()=>(await import("/js/ui/views/assess.js")).STEPS.indexOf("result"))],[true,"bw",true],"the result, for bodyweight");
   eq(await ev(page,"JSON.stringify(S.programs)")===before,true,"nothing changed before Use this plan");
 });
@@ -2456,6 +2503,26 @@ await test("Haptics: on an iPhone a tap ticks the hidden switch, and no tap bran
   eq(r,[true,0,"boolean"]);
 },{init:()=>{Object.defineProperty(navigator,"userAgent",{get:()=>"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"});
   try{Object.defineProperty(Navigator.prototype,"vibrate",{value:undefined,configurable:true});delete Navigator.prototype.vibrate;}catch(e){}}});
+await test("Coach tailors: exercises for a muscle fit the kit, the sore spots and the goal, each with the goal's dose; an exercise added by hand takes the goal's dose too",async page=>{
+  await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const S=(await import("/js/state.js")).S;Object.assign(S.profile,{goal:"endurance",level:"some",limits:["shoulder"],health:[]});S.gear=["Bodyweight"];});
+  await openChat(page);
+  const r=await agSay(page,"what exercises for chest?");
+  if(!/For chest, for endurance and fitness/.test(r.lead))throw new Error("lead: "+r.lead);
+  const subs=await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x.live .ag-os")].map(e=>e.textContent));
+  if(!subs.length||!subs.every(x=>/^[1-3] × 12–20/.test(x)))throw new Error("doses: "+subs.join(" | "));
+  const ok=await page.evaluate(async()=>{const X=await import("/js/data/exercises.js"),P=await import("/js/engine/plan.js");
+    const names=[...document.querySelectorAll("#cpanel .chat-x.live .ag-ol")].map(e=>e.textContent);
+    return names.length>0&&names.every(n=>{const k=Object.keys(X.EXDB).find(x=>x===n)||n;return P.usable(k,["Bodyweight"])&&!P.avoids(k,["shoulder"]);});});
+  eq(ok,true,"bodyweight only, nothing that loads the shoulder");
+  /* A tap asks for the day, as "add … to …" does. */
+  await page.tap('#cpanel .chat-x.live .ag-opt');await pause(page,400);
+  if(!/to which day/.test((await agLast(page)).lead))throw new Error("no day asked");
+  /* The picker's exercise takes the goal's dose. */
+  const d=await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,P=await import("/js/engine/plan.js");S.profile.goal="strength";S.profile.level="experienced";
+    return P.doseFor("Dumbbell Bench Press");});
+  eq([d.sets>=4&&d.sets<=6,d.lo,d.hi],[true,6,10],"strength: 4–6 sets of 6–10");
+},{prefs:{lang:"en"}});
 await test("Coach does what the app does, in Arabic: water said in Egyptian Arabic is asked in Arabic",async page=>{
   await openChat(page);
   const r=await agSay(page,"شربت كوبايتين مية");
