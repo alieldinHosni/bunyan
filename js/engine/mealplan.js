@@ -181,4 +181,4 @@ function buildMealPlan(targets,pref){
   out.forEach(function(m){m.items=m.solved.filter(function(x){return x.g>0;}).map(itemOf);delete m.solved;});
   return out;}
 
-export {allowed, buildMealPlan};
+export {allowed, buildMealPlan, itemOf};

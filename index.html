@@ -97,11 +97,13 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
      motion.js was introduced, while this comment claimed they matched. If you change a
      duration or a curve, change it in motion.js and mirror it here, or delete this block
      and accept one unstyled frame. Do not let them drift again. */
-  --m-press:100ms; --m-micro:150ms; --m-pop:200ms; --m-comp:250ms;
-  --m-sheet:300ms; --m-screen:300ms; --m-data:400ms; --m-reveal:500ms; --m-fade:200ms;
+  /* Unhurried, so one move flows into the next (owner, 27 Oct: slower, more blended);
+     a press stays quick, since it answers a finger. */
+  --m-press:110ms; --m-micro:190ms; --m-pop:260ms; --m-comp:320ms;
+  --m-sheet:380ms; --m-screen:380ms; --m-data:480ms; --m-reveal:600ms; --m-fade:260ms;
   /* A change of tab and the coach panel: a touch slower than a screen, with a little
      spring at the end so they land rather than stop. --m-kb follows the iPhone keyboard. */
-  --m-tab:420ms; --m-panel:380ms; --m-kb:320ms;
+  --m-tab:460ms; --m-panel:420ms; --m-kb:340ms;
   --e-standard:cubic-bezier(0.2, 0, 0, 1); --e-decel:cubic-bezier(0.05, 0.7, 0.1, 1);
   --e-accel:cubic-bezier(0.3, 0, 0.8, 0.15); --e-spring:cubic-bezier(.2,.9,.3,1.06);
   --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
@@ -5123,9 +5125,10 @@ body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
   height:calc(var(--vvh,100dvh) - max(8px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))}
 #cpanel.opening .cp{animation:cpIn var(--m-panel) var(--e-spring)}
 #cpanel.opening .cp-veil{animation:fadeIn var(--m-comp) var(--e-standard)}
-#cpanel.resized .cp{animation:wkIn var(--m-comp) var(--e-decel)}
-#cpanel.closing .cp{animation:cpOut 200ms var(--e-accel) forwards}
-#cpanel.closing .cp-veil{animation:fadeIn 200ms var(--e-standard) reverse forwards}
+/* Resized (js/ui/coachfab.js flip): the box itself glides; its contents return once it has. */
+.cp.flipping>*{animation:fadeIn var(--m-comp) var(--e-standard) 120ms both}
+#cpanel.closing .cp{animation:cpOut 260ms var(--e-accel) forwards}
+#cpanel.closing .cp-veil{animation:fadeIn 260ms var(--e-standard) reverse forwards}
 @keyframes cpIn{from{opacity:0;transform:scale(.12);border-radius:50%}}
 @keyframes cpOut{to{opacity:0;transform:scale(.12)}}
 .cp-h{display:flex;align-items:center;gap:var(--s2);padding:10px 8px 8px var(--s4);border-bottom:1px solid var(--hair)}

@@ -2528,6 +2528,33 @@ await test("Coach tailors: exercises for a muscle fit the kit, the sore spots an
     return P.doseFor("Dumbbell Bench Press");});
   eq([d.sets>=4&&d.sets<=6,d.lo,d.hi],[true,6,10],"strength: 4–6 sets of 6–10");
 },{prefs:{lang:"en"}});
+await test("Coach swaps one planned food, spelt as typed: three like-for-like choices, a tap and a yes put it in the plan, with Undo",async page=>{
+  await page.evaluate(async()=>{const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods(r));
+    const M=await import("/js/engine/mealplan.js"),S=(await import("/js/state.js")).S;
+    const by=w=>N.FOODDB.find(f=>f.n===w);
+    S.mealSlots=[{id:"Breakfast"},{id:"Lunch",plan:[M.itemOf({f:by("Tilapia, Grilled"),g:120}),M.itemOf({f:by("Egyptian Rice, Cooked"),g:350})]},{id:"Snack"},{id:"Dinner"}];});
+  await openChat(page);
+  const r=await agSay(page,"Replace the talibia grill in my lunch, with something similar.");
+  if(!/Instead of Tilapia, Grilled 120 g in Lunch/.test(r.lead))throw new Error("lead: "+r.lead);
+  eq(r.opts.length,3,"three choices");
+  const first=r.opts[0];
+  await page.tap('#cpanel .chat-x.live .ag-opt');await pause(page,400);
+  let c=await agLast(page);
+  if(!/^Swap Tilapia, Grilled for /.test(c.lead)||!c.ok)throw new Error("confirm: "+c.lead);
+  eq(await ev(page,"S.mealSlots[1].plan[0].n"),"Tilapia, Grilled","nothing before yes");
+  await page.tap('#cpanel [data-agok]');await pause(page,400);
+  const now=await ev(page,"S.mealSlots[1].plan[0].n");
+  if(now==="Tilapia, Grilled"||!first.startsWith(now))throw new Error("swapped to "+now+" / "+first);
+  eq(await ev(page,"S.mealSlots[1].plan[1].n"),"Egyptian Rice, Cooked","the rest of lunch as it was");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await ev(page,"S.mealSlots[1].plan[0].n"),"Tilapia, Grilled","undone");
+});
+await test("Coach: leaving through an answer's button brings the coach's button straight back to the dock",async page=>{
+  await openChat(page);
+  await page.fill('#chatq',"what should I eat now");await page.press('#chatq','Enter');await pause(page,600);
+  await page.tap('#cpanel .chat-x.live .chat-acts [data-tab="food"]');await pause(page,700);
+  eq([await ev(page,"V.tab"),await page.evaluate(()=>!!document.querySelector("#cfab .cfab"))],["food",true],"on Food, with the button");
+});
 await test("Coach does what the app does, in Arabic: water said in Egyptian Arabic is asked in Arabic",async page=>{
   await openChat(page);
   const r=await agSay(page,"شربت كوبايتين مية");
@@ -2709,7 +2736,7 @@ await test("Coach actions: every action in the registry runs through a branch th
       described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
       domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
   eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");
-  eq(r.domains,["app","cardio","exercise","food","plan","profile","progress","rest","set","steps","water","workout"],"grouped by domain");
+  eq(r.domains,["app","cardio","exercise","food","meal","plan","profile","progress","rest","set","steps","water","workout"],"grouped by domain");
   /* set.log, in a live workout: the logger's own Log set. */
   await startWorkout(page);
   const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");
