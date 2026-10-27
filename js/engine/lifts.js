@@ -16,7 +16,7 @@
    The exercise library (js/data/exercises.js) is read for what an exercise is —
    its equipment, whether it is bodyweight or one-sided — not for anything the person
    logged. */
-import {EXDB, isUnilateral, muscleOfEntry} from "../data/exercises.js";
+import {EXDB, isUnilateral, muscleOfEntry, pairOfDumbbells} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {num, r1} from "../util.js";
 import {progressionAdvice} from "../coach/autoreg.js";
@@ -59,8 +59,10 @@ function loadIn(log,name,w,date){
   if(!bw||add>=bw*0.8)return add;
   return r1(bw*k+add);}
 /* A warm-up counts for nothing: not volume, not average RPE, not a record, and not
-   the progression check. It is there so the row exists, not so it scores. */
-function setVolIn(log,x,name,date){return x.wu?0:loadIn(log,name,x.w,date)*num(x.r);}
+   the progression check. It is there so the row exists, not so it scores.
+   Volume is the weight moved: two dumbbells logged per hand (log.dbHand) moved twice
+   the figure in the box (owner, 27 Oct). Records and estimated maxes stay as logged. */
+function setVolIn(log,x,name,date){return x.wu?0:loadIn(log,name,x.w,date)*num(x.r)*(log.dbHand&&pairOfDumbbells(name)?2:1);}
 function volumeIn(log,sets,name,date){var tot=0;for(var i=0;i<sets.length;i++)tot+=setVolIn(log,sets[i],name,date);return tot;}
 function sessionVolumeIn(log,s){var tot=0;s.entries.forEach(function(e){tot+=volumeIn(log,e.sets||[],e.name,s.date);});return tot;}
 function avgRPE(sets){var n=0,tot=0;sets.forEach(function(x){if(x.wu||!x.rpe)return;tot+=x.rpe;n++;});return n?r1(tot/n):0;}

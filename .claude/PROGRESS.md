@@ -2235,3 +2235,33 @@ CACHE `bunyan-v166`.
 - `data-chatsay` (handlers/coach.js, common.js `sendText`): an answer's button that sends a request,
   shown in the conversation as the button's words.
 - Tests: sore spot (asked and from the pain answer, Undo), travel mode end to end, plateau.
+
+## How weights are logged: the coach understands, dumbbells count as moved — branch session/coach-load-logging
+
+CACHE `bunyan-v167`. From the owner's screenshots: "the barbell weight per hand?" got the body-weight
+trend; two longer questions with "include" in them started an add-exercise and offered "No exercise
+called “<the whole sentence>”".
+- **A question is not a command** (chat.js `askedOnly`, in `route`): exadd/exremove/exswap only when
+  the verb leads ("add …", "can you put …") or the message isn't asked. Asking words first (does, is,
+  when, how, هل, ازاي…) or a question mark after anything but can/could/please/ممكن… go to the next
+  intent the words touch instead. "how do I add X to Y" stays a request (`HOWDO`).
+- **A sentence is not looked up as a name** (agent.js `closeOf`): six words or more matching no
+  exercise say so, with Open Training, instead of four unrelated "closest" names.
+- **New intent `loadlog` → `aLoadLog`** ("How weights are logged"): barbell = total, bar included;
+  dumbbells per hand or both together (the person's setting, said); one side at a time = one side;
+  machines = the stack; body-weight lifts = added only. What volume counts. Dumbbell setting button.
+  Weight-with-a-load-word ("barbell weight per hand") is this, not body weight. Arabic phrases too.
+- **Barbell weight box** reads "Weight · with bar" (session.js wKey), as dumbbells read "per hand".
+- **Formula change — volume** (owner, 27 Oct): still Σ(weight × reps), but the weight is what was
+  moved: a two-dumbbell exercise logged per hand counts both dumbbells (×2; lifts.js `setVolIn`,
+  `log.dbHand` from formulas.js/stats.js `LOG()`; exercises.js `pairOfDumbbells`). One-side
+  exercises, barbells, everything else unchanged. Volume is never stored, so every past session
+  is recomputed by the same rule. Records and estimated maxes stay per the box, as logged.
+- **Switching per hand ↔ both together converts the history** (logfix.js `convertDbLoads`, common.js
+  `setDbLoad`, used by Settings and the old `dbload` key): every two-dumbbell set ×2 or ÷2, the
+  workout under way, and own steps (`S.incr`) — so one method holds throughout. Toast with Undo.
+- Stale test fixed: "Movement: pain said…" expected only the recovery-log button; batch 3 added the
+  swap offer to the pain answer on purpose. It now expects both.
+- Tests: intent cases (the owner's three sentences, Arabic, guards), engine (volume both hands,
+  conversion both ways), regression "Coach understanding: …how weights are logged…" and
+  "Dumbbells per hand or together…".

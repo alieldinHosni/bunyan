@@ -2220,7 +2220,8 @@ await test("Movement: pain said is offered the recovery log and no advice; asked
   await page.fill('#chatq',"my knee hurts");await page.press('#chatq','Enter');await pause(page,400);
   let a=await page.evaluate(()=>{const x=(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop());return x?x.innerText:"";});
   if(!/recovery log/.test(a)||/stop|rest it|ice|stretch|should/i.test(a.replace(/recovery log\?/,"")))throw new Error("pain said: "+a);
-  eq(await page.$$eval('#cpanel .chat-x.live .chat-acts button',b=>b.map(x=>x.dataset.sheet)),["recovery"],"the recovery log, nothing else");
+  eq(await page.$$eval('#cpanel .chat-x.live .chat-acts button',b=>b.map(x=>x.dataset.sheet||(x.dataset.chatsay!=null?"swap":""))),["recovery","swap"],
+    "the recovery log, and the offer to swap out what loads it (batch 3), nothing else");
   await page.fill('#chatq',"why does my knee hurt?");await page.press('#chatq','Enter');await pause(page,400);
   a=await page.evaluate(()=>{const x=(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop());return x?x.innerText:"";});
   if(!/physio or a doctor, not me/.test(a)||!/load the knee|loads the knee/.test(a))throw new Error("pain asked: "+a);
@@ -2874,6 +2875,48 @@ await test("Coach advice: a stuck lift is read from six weeks of the log, with t
   await agSay(page,"why isn't my bench going up?");
   const x=await page.evaluate(()=>{const e=[...document.querySelectorAll("#cpanel .chat-x")].pop();e.querySelectorAll(".chat-more").forEach(d=>d.open=true);return e.innerText;});
   if(!/Bench Press.*the last six weeks: \d+ sessions, estimated max/.test(x)||!/The one change: /.test(x))throw new Error("plateau: "+x);
+});
+await test("Coach understanding: a question about how weights are logged is answered, never taken as a change — the owner's three sentences, word for word, and in Arabic",async page=>{
+  await openChat(page);
+  let r=await agSay(page,"add barbell incline bench press");
+  if(!/to which day\?$/.test(r.lead))throw new Error("no pick to interrupt: "+r.lead);
+  const before=await ev(page,`(async()=>JSON.stringify((await import("/js/state.js")).split().days.map(d=>d.ex.map(e=>e.name))))()`);
+  const card=()=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();x.querySelectorAll(".chat-more").forEach(d=>d.open=true);
+    return {topic:(x.querySelector(".chat-at")||{}).textContent||"",text:x.innerText,closest:/Closest|No exercise called/.test(x.innerText)};});
+  for(const q of ["The barbell weight per hand?","The barbell weight per hand, total, and is it including the barbell weight?",
+    "When u calculate the volume, does that include the bar weight? And when I log weight is it per hand for the bar or total?"]){
+    await agSay(page,q);const c=await card();
+    eq([c.topic,c.closest],["How weights are logged",false],q);
+    if(!/Barbell: the total on the bar, the bar included/.test(c.text)||!/Dumbbells are logged per hand, the weight of one/.test(c.text)||!/a pair counts twice/.test(c.text))throw new Error("answer: "+c.text);}
+  eq(await ev(page,`(async()=>JSON.stringify((await import("/js/state.js")).split().days.map(d=>d.ex.map(e=>e.name))))()`),before,"the program is untouched");
+  await agSay(page,"does volume include the bar?");eq((await card()).topic,"How weights are logged","a short one");
+  await agSay(page,"الدمبل بسجله لكل ايد ولا الاتنين مع بعض؟");
+  const ar=await card();eq([ar.topic,/لكل إيد، وزن واحد/.test(ar.text)],["إزاي الأوزان بتتسجل",true],"in Arabic, answered in Arabic");
+  r=await agSay(page,"how do I add face pulls to push day");
+  if(/How weights/.test((await card()).topic))throw new Error("a how-do-I request went to the weights answer");
+  r=await agSay(page,"can you put curls in");
+  if(!/(which day\?|Closest:|\?)$/.test(r.lead))throw new Error("a request phrased with can you is still a request: "+r.lead);
+});
+await test("Dumbbells per hand or together: switching converts the history, volume counts both dumbbells either way, and the barbell box says the bar is in it",async page=>{
+  const vol=()=>ev(page,`(async()=>{const F=await import("/js/engine/formulas.js"),S=(await import("/js/state.js")).S;return Math.round(F.sessionVolume(S.sessions[0]));})()`);
+  await page.evaluate(async()=>{const st=await import("/js/state.js");
+    st.S.sessions.unshift({id:"dbv",date:new Date().toISOString().slice(0,10),dayName:"Push",entries:[{name:"Dumbbell Bench Press",muscle:"Chest",sets:[{w:20,r:10}]},
+      {name:"One-Arm Dumbbell Row",muscle:"Back",sets:[{w:30,r:10}]},{name:"Barbell Squat",muscle:"Quads",sets:[{w:100,r:5}]}]});st.saveDB();});
+  eq(await vol(),400+300+500,"per hand: a pair counts twice, one arm once, the barbell as logged");
+  await sheet(page,"set_training");
+  await page.tap('[data-setdb="total"]');await pause(page,300);
+  eq(await ev(page,"[S.prefs.dbLoad,S.sessions[0].entries.map(e=>e.sets[0].w)]"),["total",[40,30,100]],"both together: the pair's sets doubled, the rest as they were");
+  eq(await vol(),1200,"the same volume either way");
+  await page.tap('[data-setdb="hand"]');await pause(page,300);
+  eq(await ev(page,"S.sessions[0].entries.map(e=>e.sets[0].w)"),[20,30,100],"and back");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.sessions.shift();st.saveDB();});
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});
+  await pause(page,300);
+  await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split(),X=await import("/js/data/exercises.js");sp.days.forEach(d=>{if(d.ex[0]){d.ex[0].name="Barbell Squat";d.ex[0].exId=X.exIdOf("Barbell Squat");}});});
+  await startWorkout(page);
+  const lbl=await page.$eval('label[for="in_w"]',e=>e.textContent);
+  if(!/with bar/.test(lbl))throw new Error("barbell weight label: "+lbl);
+  await leaveWorkout(page);
 });
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});

@@ -18,7 +18,7 @@ import {avg7Of, bmrOf, kcalFloorOf, lastWeightOf, macroTargetsOf, missingOf, pro
 /* The lifts' maths lives in lifts.js, which is handed the log it works from (the
    workouts, the weigh-ins, the profile's weight); these pass in this profile's state,
    so the screens and the coach keep calling them as before. */
-function LOG(){return {sessions:S.sessions,body:S.body,weight:S.profile&&S.profile.weight};}
+function LOG(){return {sessions:S.sessions,body:S.body,weight:S.profile&&S.profile.weight,dbHand:!(S.prefs&&S.prefs.dbLoad==="total")};}
 function bodyAt(date){return bodyAtIn(LOG(),date);}
 function loadOf(name,w,date){return loadIn(LOG(),name,w,date);}
 function volume(sets,name,date){return volumeIn(LOG(),sets,name,date);}

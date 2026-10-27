@@ -1,6 +1,7 @@
 import {bestE1RMIn, bodyAtIn, bwShare, consistencyIn, daysSinceIn, deloadDueIn, e1RM, incrementOf, loadIn, plateauIn,
         prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, repsAtIn, sessionVolumeIn, snapDown, volumeIn,
         weeklySetsIn} from "../lifts.js";
+import {convertDbLoads} from "../logfix.js";
 
 /* The runner loads the exercise library first: equipment and bodyweight come from it. */
 var NOW="2026-10-07",NOWMS=new Date(NOW+"T12:00:00").getTime();
@@ -22,6 +23,16 @@ function run(t){
   t.eq(loadIn({body:[],weight:null},PU,0,NOW),0,"no body weight anywhere: only what was added");
   t.eq(volumeIn(body,[set(100,5),set(60,10,0,true)],SQ,NOW),500,"volume: load × reps, warm-ups count nothing");
   t.eq(sessionVolumeIn(body,sess(1,[[SQ,[set(100,5)]],[BP,[set(60,10)]]])),1100,"a session's volume, every exercise");
+  var DB="Dumbbell Bench Press",ROW="One-Arm Dumbbell Row",hand=Object.assign({},body,{dbHand:true});
+  t.eq([volumeIn(hand,[set(20,10)],DB,NOW),volumeIn(body,[set(40,10)],DB,NOW),volumeIn(hand,[set(30,10)],ROW,NOW),volumeIn(hand,[set(100,5)],SQ,NOW)],[400,400,300,500],
+    "volume is the weight moved: two dumbbells logged per hand count twice, as a total once; one arm at a time, and a barbell, as logged");
+  var cdb={prefs:{},incr:{"Dumbbell Bench Press":2,"Barbell Squat":5},sessions:[sess(3,[[DB,[set(20,10),set(10,12,0,true)]],[ROW,[set(30,10)]],[SQ,[set(100,5)]]])],
+    active:{entries:[{name:DB,sets:[set(22.5,8)]}]}};
+  var cv=convertDbLoads(cdb,"total"),ce=cdb.sessions[0].entries;
+  t.eq([cv.changed,cv.sessions.length,ce[0].sets[0].w,ce[0].sets[1].w,ce[1].sets[0].w,ce[2].sets[0].w,cdb.active.entries[0].sets[0].w,cdb.incr["Dumbbell Bench Press"],cdb.incr["Barbell Squat"],cdb.prefs.dbLoad],
+    [3,1,40,20,30,100,45,4,5,"total"],"per hand to both together: two-dumbbell sets, the workout under way and own steps doubled; one arm and the barbell untouched");
+  t.eq([convertDbLoads(cdb,"total").changed,convertDbLoads(cdb,"hand").changed,ce[0].sets[0].w,cdb.active.entries[0].sets[0].w,cdb.prefs.dbLoad],[0,3,20,22.5,"hand"],
+    "switching to the setting it already has changes nothing; and back again halves them");
   t.eq([e1RM(100,5,8),e1RM(100,1),e1RM(100,5)],[123.3,100,116.7],"estimated max: Epley, counting reps in reserve; a single is a max already");
   t.eq(bestE1RMIn(body,[set(100,5,8),set(110,1),set(150,3,0,true)],SQ,NOW),123.3,"the best estimated max of the sets, warm-ups left out");
 

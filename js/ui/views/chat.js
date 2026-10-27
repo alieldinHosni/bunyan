@@ -33,7 +33,7 @@ import {commandOf, whenIn} from "../../coach/commands.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
-import {bestE1RM, bmr, bwShare, deloadDue, plateauOf, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
+import {bestE1RM, bmr, bwShare, dbTotal, deloadDue, plateauOf, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {mealName, mealSlots} from "../../engine/meals.js";
 import {editDist} from "../../engine/text.js";
 import {FOODDB, fuzzyFoods, isDrink, nutritionFor, searchFoods, sumNutrition} from "../../engine/nutrition.js";
@@ -67,7 +67,7 @@ var ASK={
   letgo:"Just move on",lowday:"Adjust today for a low day",facts:"What have I told you?"};
 /* What to offer next, after each kind of answer. */
 var NEXT={
-  plateau:["strong","weights","sore"],week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
+  plateau:["strong","weights","sore"],loadlog:["weights","strong","today"],week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
   track:["weight","strong","balance"],weight:["calories","eat","goal"],protein:["eat","calories","track"],
   calories:["protein","weight","goal"],sore:["today","missed","balance"],missed:["today","weights","track"],
   balance:["today","strong","plan"],strong:["weights","track","balance"],goal:["calories","plan","weight"],
@@ -278,6 +278,21 @@ function aWeek(a){
    six weeks of the log: how often, how its estimated max moved, how hard the sets were,
    its muscle's weekly sets against the growth range (for a size goal), sleep, and a
    deficit. Each reason only where the log has the data; then the one change to make. */
+/* How the weight box is read (owner, 27 Oct): what the number means for each kind of
+   lift, and what volume counts, from the same rules the logger and the maths use
+   (session.js wKey, lifts.js loadIn and setVolIn), with the person's dumbbell setting. */
+function aLoadLog(a){
+  var tot=dbTotal();
+  p(a,t(tot?"A barbell is logged as the total, bar included. Dumbbells are logged as both together: that's your setting."
+    :"A barbell is logged as the total, bar included. Dumbbells are logged per hand, the weight of one: that's your setting."));
+  l(a,[t("Barbell: the total on the bar, the bar included. The plates sheet works out each side from it."),
+    t("One arm or one leg at a time: one side. The reps of one side, and with dumbbells the one in your hand."),
+    t("Machines and cables: the number on the stack."),
+    t("Body-weight exercises: only what you add, like a belt or a vest. Your body weight is counted for you.")]);
+  p(a,t(tot?"Volume is weight × reps for every set, added up, warm-ups left out. It counts the bar, and both dumbbells as you log them."
+    :"Volume is weight × reps for every set, added up, warm-ups left out. It counts the bar, and both dumbbells: logged per hand, a pair counts twice."));
+  n(a,t("You can switch dumbbells between per hand and both together in Settings → Training. What you've already logged is converted to match."));
+  return act(a,t("Dumbbell setting"),{"data-sheet":"set_training"});}
 function aPlateau(a,q){
   var named=namedExercises(q),name=named.length?named[0].name:null,lifts=[];
   split().days.forEach(function(d){d.ex.forEach(function(e){if(!isActivity(e.name)&&lifts.indexOf(e.name)<0)lifts.push(e.name);});});
@@ -1093,7 +1108,7 @@ function aReassess(a){
 
 /* An answer, with what the person told the coach that bears on it said back. */
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
-var ANSWER={plateau:aPlateau,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
+var ANSWER={plateau:aPlateau,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
   help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
@@ -1112,9 +1127,19 @@ var VERB=[["exadd",/^(please |pls |can you |could you |i want to |i wanna |)(cre
   ["exremove",/^(please |pls |can you |could you |i want to |i wanna |)(remove|delete|drop|take out)( |$)|^(ممكن |عايز |عاوز |)(شيل|امسح|احذف)( |$)/],
   ["exswap",/^(please |pls |can you |could you |i want to |i wanna |)(swap|replace|switch|substitute)( |$)|^(ممكن |عايز |عاوز |)(بدل|استبدل)( |$)/],
   ["foodlog",/^(please |pls |can you |)(log|i ate|ate|just ate)( |$)|^(سجل|سجلي|اكلت|كلت)( |$)/]];
+/* A question is not an instruction (owner, 27 Oct): "does volume include the bar?"
+   asks about the bar; it does not add one. Asking words first, or a question mark
+   after anything but "can I", "could you", "please"…, keep a change to the program
+   from starting; the next thing the words could be is answered instead. */
+var QSTART=/^(does|do|did|is|are|was|were|when|what|whats|why|how|where|which|who|whose|will|hal|هل|امتي|امتى|ازاي|ليه|ايه|فين|انهي|اني)( |$)/;
+var ASKOK=/^(can|could|would|will you|may|should|shall|please|pls|i|id|im|lets|let|ممكن|عايز|عاوز|عايزه|لو سمحت)( |$)/;
+var HOWDO=/^(how (do|can|would|should) i (add|put|include|remove|delete|drop|swap|replace|switch)|(is it possible to|هل ممكن|هو ممكن) )( |$)?/;
+function askedOnly(text){var fq=fold(text);if(HOWDO.test(fq))return false;return QSTART.test(fq)||(/[?؟]/.test(text)&&!ASKOK.test(fq));}
 function route(iid,text,it){
-  var fq0=fold(text);
-  for(var vi=0;vi<VERB.length;vi++)if(VERB[vi][1].test(fq0)&&!(VERB[vi][0]==="foodlog"&&/^log /.test(fq0)&&/weight|وزن/.test(fq0))){iid=VERB[vi][0];break;}
+  var fq0=fold(text),verb=false;
+  for(var vi=0;vi<VERB.length;vi++)if(VERB[vi][1].test(fq0)&&!(VERB[vi][0]==="foodlog"&&/^log /.test(fq0)&&/weight|وزن/.test(fq0))){iid=VERB[vi][0];verb=true;break;}
+  if(!verb&&/^(exadd|exremove|exswap)$/.test(iid)&&askedOnly(text))
+    iid=(it.ranked||[]).filter(function(x){return ACTION_IDS.indexOf(x)<0;})[0]||"unknown";
   var asked=/\?|؟|on track|stuck|should|why|how|ماشي|ليه|ازاي/.test(fold(text)+(/[?؟]/.test(text)?" ?":""));
   if((iid==="weight"||iid==="weighlog")&&it.kg&&!asked)return "weighlog";
   if(iid==="weighlog"&&!it.kg)return (it.ranked||[]).filter(function(x){return x!=="weighlog";})[0]||"weight";
@@ -1322,7 +1347,7 @@ function findMsg(at){return (S.chat||[]).filter(function(x){return x&&x.at===+at
    apart, and its buttons last. Nothing is coloured by who said it; the accent is kept
    for the one button an answer leads to. */
 /* What each answer is about, and its glyph (js/ui/glyphs.js). */
-var TOPIC={plateau:["A stuck lift","medal"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
+var TOPIC={plateau:["A stuck lift","medal"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
   track:["How you're doing","bars"],weight:["Weight trend","scale"],protein:["Protein","shaker"],calories:["Calories","flame"],
   sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
   goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],

@@ -310,6 +310,9 @@ var TIMED_RE=/Hold|Plank|Wall Sit|Balance|Isometric|Stretch|Dead Hang|L-Sit|Carr
    in that hand. Read from the name, which is where the library says it. */
 var UNI_RE=/\b(single|one)[- ]?(arm|leg|hand|legged|armed)\b|\balternat|\bunilateral|split squat|bulgarian|lunge|step[- ]?up|pistol|kickback|concentration curl|side plank|suitcase/i;
 function isUnilateral(n){return !isActivity(n)&&UNI_RE.test(String(n||""));}
+/* Two dumbbells at once: a dumbbell exercise that is not one side at a time. Logged
+   per hand, its weight is one of the two it moves. */
+function pairOfDumbbells(n){var v=EXDB&&EXDB[n];return !!(v&&v.e==="Dumbbell")&&!isUnilateral(n);}
 function kindOf(n){return isActivity(n)?"activity":TIMED_RE.test(n||"")?"timed":"strength";}
 function muscleOf(n){var a=actMuscle(n);if(a)return a;var v=EXDB&&EXDB[n];return v?v.m:"Other";}
 /* The muscle of a planned or logged exercise, resolved from the library first.
@@ -339,7 +342,7 @@ function movementOfEx(n){
   return MOVE[n];}
 
 
-export {exFigs, exThumb, useUserData, alsoKnown, isUnilateral, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
+export {exFigs, exThumb, useUserData, alsoKnown, isUnilateral, pairOfDumbbells, exIdOf, nameOfExId, reconcileExercises, kindOf, exAlias, exShort, exVariant, loadable, difficultyOf, empty, EQUIP, EXDB, exImg, exMedia, exSteps, isCompound, isFav, LIB, libFind, loadExDB, loadInstructions, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb};
 
 /* Plate maths only means something on a loaded bar. On a machine, a cable or your
    own bodyweight the button was there on every exercise and useful on a handful.
