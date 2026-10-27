@@ -2066,3 +2066,9 @@ Owner, 27 Oct (two screenshots). CACHE `bunyan-v155`.
   spans instead of cutting a word. The calendar icons are gone (they doubled the row's height).
 - Tests: the list then the slim row; the controls under a fifth of the screen, spans and halves
   on one row.
+- **Icons redrawn** (owner: the halves looked like a child's drawing, the brain like a tomato).
+  CACHE `bunyan-v156`. The halves are now one athlete's figure drawn solid (broad shoulders,
+  arms apart, a V to the waist, a waistline between the halves), the half not chosen at 30 %.
+  The dock's brain is drawn for Bunyan (no icon set's path): two halves seen from above with
+  the lobes' folds and the fissure, slightly taller than wide, round-capped where the other
+  dock icons are square (a brain has no corners).

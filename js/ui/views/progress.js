@@ -127,17 +127,19 @@ function capsChart(pts,o){
    beside the targets they judge. */
 var TABS=[["overview","Overview"],["strength","Strength"],["body","Body"]];
 /* The controls' icons (owner's mock, 27 Oct), on the 24 grid in the metric badges'
-   stroke: a chart for Overview, the dumbbell for Strength, a person for Body. The halves are one figure, the half that is not chosen drawn faint, so
-   All, Upper and Lower read as the body they filter by rather than as arrows. */
-var FIG_UP='<circle cx="12" cy="4.5" r="2"/><path d="M8.5 8.5h7v5.5h-7zM8.5 8.5 6 14M15.5 8.5 18 14"/>',
-  FIG_LO='<path d="M10 14v7.5M14 14v7.5"/>';
+   stroke: a chart for Overview, the dumbbell for Strength, a person for Body. The halves
+   are one athlete's figure, drawn solid (owner, 27 Oct: the line figure looked
+   childish): broad shoulders tapering to the waist, the half not chosen faint, so All,
+   Upper and Lower read as the body they filter by. */
+var FIG_UP='<circle cx="12" cy="2.9" r="2"/><path d="M8.1 5.8C9.3 5.4 10.6 5.3 12 5.3C13.4 5.3 14.7 5.4 15.9 5.8C17 6.1 17.7 6.9 17.9 8L18.9 12.8C19 13.4 18.6 13.9 18 13.9C17.5 13.9 17.2 13.6 17.1 13.2L16 9.2L14.6 13.3C14.5 13.6 14.4 13.8 14.2 13.9H9.8C9.6 13.8 9.5 13.6 9.4 13.3L8 9.2L6.9 13.2C6.8 13.6 6.5 13.9 6 13.9C5.4 13.9 5 13.4 5.1 12.8L6.1 8C6.3 6.9 7 6.1 8.1 5.8Z"/>',
+  FIG_LO='<path d="M9.7 14.4H14.3L14.8 16.2L14.2 22.4C14.1 23 13.7 23.4 13.1 23.4C12.6 23.4 12.3 23 12.3 22.5L12.1 17.4H11.9L11.7 22.5C11.7 23 11.4 23.4 10.9 23.4C10.3 23.4 9.9 23 9.8 22.4L9.2 16.2Z"/>';
 var SEGI={
   overview:'<rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="M7 15l3.5-3.5 2.5 2.5 4-4"/>',
   strength:'<path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
   body:'<circle cx="12" cy="4.5" r="2"/><path d="M9 21.5v-8H7.5V10A2.5 2.5 0 0 1 10 7.5h4a2.5 2.5 0 0 1 2.5 2.5v3.5H15v8M12 14v7.5"/>',
-  all:FIG_UP+FIG_LO,
-  upper:FIG_UP+'<g class="seg-dim">'+FIG_LO+'</g>',
-  lower:'<g class="seg-dim">'+FIG_UP+'</g>'+FIG_LO};
+  all:'<g class="fig">'+FIG_UP+FIG_LO+'</g>',
+  upper:'<g class="fig">'+FIG_UP+'<g class="seg-dim">'+FIG_LO+'</g></g>',
+  lower:'<g class="fig"><g class="seg-dim">'+FIG_UP+'</g>'+FIG_LO+'</g>'};
 function anything(){
   if(S.sessions.length||weighIns().length||measurements().length)return true;
   for(var d in S.days)if(S.days[d]&&S.days[d].meals)

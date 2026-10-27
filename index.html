@@ -780,6 +780,7 @@ body.focus nav{opacity:0;visibility:hidden;pointer-events:none;
 /* Square ends and mitred corners: the structural cut of the icon set. */
 .dock-b svg{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;
   stroke-width:1.8;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4}
+.dock-b[data-tab="coach"] svg{stroke-linecap:round;stroke-linejoin:round}
 /* The name: closed to nothing on a circle, slid open on the tab that is on. It is cut
    with an ellipsis rather than pushing the dock wider, which only a very narrow phone
    in a long language would ever see. */
@@ -883,7 +884,9 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
   min-height:60px;padding:var(--s2) 4px}
 .seg-i{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .seg-l{max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.seg-dim{opacity:.35}
+.seg-dim{opacity:.3}
+/* The body's figure is drawn solid, not in line (js/ui/views/progress.js SEGI). */
+.seg-i .fig{fill:currentColor;stroke:none}
 /* Gated to real navigation. Left ungated it replayed on every state change, which
    during a workout meant the screen flew in again after every logged set. */
 /* A rise, not a fade. While an element is partly transparent, the glass inside it can
