@@ -2407,6 +2407,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .as-nav{display:flex;gap:10px;margin-top:22px}
 .as-nav .btn{flex:1;width:auto;min-width:0;margin:0}
 .as-nav .btn.g{flex:0 0 auto;min-width:96px}
+.as-warn{display:flex;gap:var(--s2);align-items:flex-start;margin:6px 0 12px;padding:12px 14px;border-radius:var(--r3);
+  background:rgba(var(--warning-rgb),.12);border:1px solid rgba(var(--warning-rgb),.5);font-size:14px;line-height:1.45}
+.as-warn .gl{flex:none;width:18px;height:18px;color:var(--warning);margin-top:2px}
 .as-done{margin:6px 0 12px;padding:12px 14px;border-radius:var(--r3);background:var(--okSoft);border:1px solid var(--ok);font-size:14px;line-height:1.45}
 .ascard2{margin:0 0 var(--s4);padding:14px 14px 12px;border-radius:var(--r5);border:1px solid var(--border);box-shadow:var(--shadow-card);
   background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0) 40%),var(--raised)}
@@ -2488,9 +2491,13 @@ details[open]>summary .as-chev{transform:rotate(90deg)}
   background:radial-gradient(90% 60% at 100% 0%,rgba(var(--glow-rgb),.16),transparent 60%),
     linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 40%),var(--raised)}
 .wu-head{padding:0 2px 6px}
-.wu-art{position:absolute;z-index:-1;inset:0 0 auto 0;height:220px;opacity:.55;
+/* The iPhone's haptic switch (js/ui/view.js iosTick): in the page so it can tick, never seen or reached. */
+.hapt{position:fixed;left:0;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;clip-path:inset(50%)}
+.wu-art{position:absolute;z-index:-1;inset:calc(var(--s3) * -1) calc(var(--gutter,var(--s4)) * -1) auto;height:260px;opacity:.55;
   background:linear-gradient(to bottom,rgba(var(--bg-rgb),.55),rgba(var(--bg-rgb),.2)),url("img/page-warmup.jpg") center 30%/cover no-repeat;
-  -webkit-mask-image:linear-gradient(to bottom,var(--bg) 20%,transparent);mask-image:linear-gradient(to bottom,var(--bg) 20%,transparent)}
+  /* Soft on every side: the picture melts into the page instead of ending in a box. */
+  -webkit-mask-image:radial-gradient(ellipse 75% 85% at 50% 25%,var(--bg) 30%,transparent 100%);
+  mask-image:radial-gradient(ellipse 75% 85% at 50% 25%,var(--bg) 30%,transparent 100%)}
 [data-theme="light"] .wu-art{opacity:.2}
 .wu-head h1{font-family:var(--display);font-size:clamp(22px,6.6vw,27px);line-height:1.12;margin:2px 0 4px}
 .wu-head .sub{margin:0;font-size:13.5px;color:var(--sub)}
@@ -2551,9 +2558,9 @@ details[open]>summary .as-chev{transform:rotate(90deg)}
 .wu2 .wu-why summary{display:inline-flex;align-items:center;min-height:var(--hit);list-style:none;color:var(--accentHi);font-weight:700;font-size:14px;cursor:pointer}
 .wu2 .wu-why summary::-webkit-details-marker{display:none}
 .wu2 .wu-why p{margin:0 0 var(--s2);font-size:13.5px;line-height:1.5;color:var(--sub)}
-.wu-foot{position:sticky;bottom:0;z-index:5;margin:var(--s2) calc(var(--s4) * -1) 0;padding:var(--s3) var(--s4) max(var(--s3),env(safe-area-inset-bottom));
+.wu-foot{position:sticky;bottom:0;z-index:5;margin:var(--s2) calc(var(--gutter,var(--s4)) * -1) 0;padding:var(--s3) var(--gutter,var(--s4)) max(var(--s3),env(safe-area-inset-bottom));
   background:var(--wk-page,var(--bg))}
-.wu-foot::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:var(--s5);pointer-events:none;
+.wu-foot::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:var(--s6);pointer-events:none;
   background:linear-gradient(to bottom,transparent,var(--wk-page,var(--bg)))}
 .wu-foot .wu-then{margin:0 0 var(--s2)}
 .wu-acts{display:flex;gap:var(--s2)}
@@ -3664,7 +3671,9 @@ textarea.afnl.warn{border-color:var(--warning)}
    set card, the rest, the next exercise and the sets are the theme's translucent card
    glass with its rim, which needs no blur over a flat ground, so the header is the one
    blurred layer. Labels sit on --color-action-fill, never on Machine Red. */
-body.wkflat::before,body.wkflat #bgart{display:none}
+/* The workout keeps a flat page, with Training's picture on the ground behind it
+   (js/ui/render.js groundOf; owner, 27 Oct). */
+body.wkflat::before{display:none}
 body.wkflat #app{--gutter:20px}
 [dir="rtl"] .sess .flip{transform:scaleX(-1)}
 .sess .gl{stroke-width:2}
@@ -3883,9 +3892,13 @@ body.wkflat #app{--gutter:20px}
   text-decoration:underline;text-underline-offset:3px}
 .sess .quiet button.on{color:var(--warning)}
 /* ---- the workout in the mockup's colours (the --wk-* tokens above) ---------------------- */
-body.wkflat{background:var(--wk-page)}
+/* On the root, not the body: a body background would cover the ground's picture. */
+:root:has(body.wkflat){background:var(--wk-page)}
 .sess{--sub:var(--wk-sub);--dim:var(--wk-dim);--hair:var(--wk-hair)}
-.sess .ss-top{background:var(--wk-head);border-bottom-color:var(--wk-rim)}
+.sess .ss-top{background:var(--wk-head);border-bottom-color:transparent}
+/* The header fades into the page below it, rather than ending on a ruled edge. */
+.sess .ss-top::after{content:"";position:absolute;left:0;right:0;top:100%;height:var(--s4);pointer-events:none;
+  background:linear-gradient(to bottom,var(--wk-head),transparent)}
 .sess .ss-back,.sess .ss-more,.sess .ib{background:var(--wk-well);border:1px solid var(--wk-well-rim);color:var(--text)}
 .sess .wglass{background:var(--wk-card);border:1px solid var(--wk-rim);border-top-color:var(--wk-rim-hi);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 14px 34px -20px var(--wk-glow),0 0 0 1px rgba(0,0,0,.12)}

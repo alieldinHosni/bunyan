@@ -1941,3 +1941,23 @@ Owner, 26 Oct: a sheet of eight photographs, one per place (home, training, star
 - The workout keeps its flat ground (workout-spec.md), so the warm-up's picture is in the warm-up card's header (`.wu-art`).
 - Each picture has a veil of the ground's own tone, darkest at the top, so titles read on a bright sky; Coach's is quieter because the tablet in it carries words of its own. Not mirrored in Arabic. Faint in light mode. The photographs are the same in every theme.
 - The ground test is rewritten for the eight places.
+
+## Coach without "AI", the health questions, the kit rebuild, haptics on iPhone — branch session/coach-sync
+
+Owner, 27 Oct (screenshot: "Can I restructure my workout plan to be home based with no equipment?" answered with the protein RDA). CACHE `bunyan-v147`.
+
+- **"Coach", not "Coach AI"**: the section tab, its kicker, the chat's "things worth a look" line and the guide (English and Arabic).
+- **The wrong answer.** The question shared only synonyms with a protein passage whose key was "take home". Two fixes:
+  - It is a request: `commands.js` reads "make / restructure / switch my plan … no equipment / at home / gym" (also as a question, in English or Egyptian Arabic) as `plan.gear`. The registry's `plan.gear` opens the assessment as it stands, taps its equipment answer to the new kit, and shows the result to review; nothing changes until Use this plan.
+  - The knowledge search now needs two of the person's own words (not synonyms), or one in the passage's name, and structural words in a key ("take home", "notes", "rules") no longer count as a name.
+- **The assessment follows the knowledge base:**
+  - A **health step** (the PAR-Q+ topics as `assessments.js SCREENING.parq.logic` paraphrases them; the instrument itself isn't reproduced). The book's rule: screen every new exerciser. Any one ticked means the plan drops jumps and intervals (low to moderate effort), and the result says to check with a doctor or a qualified exercise professional first. Over 45, the vigorous-intensity note.
+  - **Your week** shows the textbook's sessions a week for the level (`kb.frequency`).
+  - **Sleep** shows 7–9 hours (`kb.sleep`, new).
+- **Warm-up**:
+  - The picture is a soft vignette instead of a box.
+  - The workout header fades into the page instead of a ruled edge.
+  - The Start footer spans the screen at the workout's gutter, with a taller fade.
+- **Haptics on iPhone**: Safari has no vibration API; since iOS 18 a hidden `<input type="checkbox" switch>` ticks the Taptic Engine when its label is clicked inside a tap. `view.js iosTick` does that on every button tap (where Android vibrates). Its clicks stop at the label. The Haptic feedback setting now shows on iPhone too. Not verifiable in the headless browser: check on the phone.
+- Tests: the assessment walk-through takes the new step; new tests for the health step and the textbook notes, the kit request, and the haptic switch; the registry test accepts `on()` branches (`D.as`).
+- **The workout stands on Training's picture** (owner, 27 Oct: "the same training page background on the page after the warm-up"). `render.js groundOf`: a live workout shows `home`; while the warm-up is up the ground stays clear (its card has its own). The workout page's colour moved from `body` to the root (`:root:has(body.wkflat)`), because a body background covers the ground layer.

@@ -1585,6 +1585,24 @@ await test("Harmony: a plan the assessment just built is not flagged by the plan
       St.filter(e=>e.rest>=180).length>0,out.gain.l.every(e=>e.rest<=180)];});
   eq(r,[[],[],[],true,true,true]);
 });
+await test("Assessment health questions: a ticked one keeps the plan to low and moderate effort and says to check first; the week and sleep steps show the textbook's figures",async page=>{
+  const r=await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const S=(await import("/js/state.js")).S,P=await import("/js/engine/plan.js");
+    Object.assign(S.profile,{age:30,height:180,weight:84,sex:"m",level:"some",days:3,mins:60,limits:[],sleep:0,goal:"endurance",health:[]});S.gear=null;
+    const free=P.generatePlan();S.profile.health=["heart"];const held=P.generatePlan();S.profile.health=[];
+    const last=pl=>pl.days.filter(d=>d.ex.length).map(d=>d.ex[d.ex.length-1].name);
+    return [last(free).every(n=>n==="Rowing, Stationary"),last(held).some(n=>n==="Rowing, Stationary")];});
+  eq(r,[true,false],"intervals only without a health flag");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");
+    V.asd=A.draftFrom();V.asd.level="new";V.asd.step=A.STEPS.indexOf("week");V.assess=true;(await import("/js/ui/render.js")).render();});await pause(page);
+  if(!/2–3 sessions a week/.test(await page.textContent(".as")))throw new Error("no sessions-a-week guidance");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");V.asd.step=A.STEPS.indexOf("sleep");(await import("/js/ui/render.js")).render();});await pause(page);
+  if(!/7 to 9 hours a night/.test(await page.textContent(".as")))throw new Error("no sleep guidance");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");V.asd.step=A.STEPS.indexOf("health");(await import("/js/ui/render.js")).render();});await pause(page);
+  await page.tap('[data-asm="health|chest"]');await pause(page);
+  if(!/low and moderate effort/.test(await page.textContent(".as")))throw new Error("no word on a ticked health question");
+});
 await test("Meal plan: a day built from the targets, within 5%, servings as labels, diet and leave-outs respected",async page=>{
   const r=await page.evaluate(async()=>{
     const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods?N.loadFoods(r):r());
@@ -1614,6 +1632,9 @@ await test("Assessment: first run opens it; answers become targets and training 
   await page.tap('[data-as="goal|recomp"]');await pause(page,150);
   for(let i=0;i<5;i++){await page.tap('[data-asnext]');await pause(page,150);}
   await page.tap('[data-asm="limits|back"]');await pause(page,150);
+  await page.tap('[data-asnext]');await pause(page,150);
+  /* The health questions (the PAR-Q+ topics): none ticked. */
+  eq(await page.$$eval('[data-asm^="health|"]',a=>a.length),7,"seven health topics");
   await page.tap('[data-asnext]');await pause(page,150);
   await page.tap('[data-asm="avoid|nuts"]');await pause(page,150);
   await page.tap('[data-asnext]');await pause(page,150);await page.tap('[data-asnext]');await pause(page,800);
@@ -2419,6 +2440,22 @@ await test("Coach does what the app does: opens places, adds water and steps, ch
   r=await agSay(page,"how much water should I drink");
   if(r.ok)throw new Error("a question is not a command");
 });
+await test("Coach: asked to make the program home based with no equipment, it opens the plan rebuilt for bodyweight to review, changing nothing yet",async page=>{
+  await openChat(page);
+  const before=await ev(page,"JSON.stringify(S.programs)");
+  await page.fill('#chatq',"Can I restructure my workout plan to be home based with no equipment?");await page.press('#chatq','Enter');await pause(page,800);
+  eq([await ev(page,"V.assess"),await ev(page,"V.asd&&V.asd.gear"),await ev(page,"V.asd&&V.asd.step")===await page.evaluate(async()=>(await import("/js/ui/views/assess.js")).STEPS.indexOf("result"))],[true,"bw",true],"the result, for bodyweight");
+  eq(await ev(page,"JSON.stringify(S.programs)")===before,true,"nothing changed before Use this plan");
+});
+await test("Haptics: on an iPhone a tap ticks the hidden switch, and no tap branch sees it",async page=>{
+  const r=await page.evaluate(async()=>{
+    const V=await import("/js/ui/view.js"),S=(await import("/js/state.js")).S;S.prefs.haptic=true;
+    let seen=0;document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(".hapt"))seen++;});
+    V.tap("light");const sw=document.querySelector(".hapt input[switch]");
+    return [!!document.querySelector(".hapt"),seen,typeof V.canBuzz()];});
+  eq(r,[true,0,"boolean"]);
+},{init:()=>{Object.defineProperty(navigator,"userAgent",{get:()=>"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"});
+  try{Object.defineProperty(Navigator.prototype,"vibrate",{value:undefined,configurable:true});delete Navigator.prototype.vibrate;}catch(e){}}});
 await test("Coach does what the app does, in Arabic: water said in Egyptian Arabic is asked in Arabic",async page=>{
   await openChat(page);
   const r=await agSay(page,"شربت كوبايتين مية");
@@ -2596,7 +2633,7 @@ await test("Coach actions: every action in the registry runs through a branch th
       .concat(Object.values(M.PLACE).flat().map(D=>Object.keys(D)[0]).filter(k=>k!=="csec"));
     const handlers=await Promise.all(["shell","train","session","food","coach","progress","profile"].map(n=>fetch("/js/ui/handlers/"+n+".js").then(x=>x.text())));
     const all=handlers.join("\n");
-    return {n:Object.keys(A).length,missing:[...new Set(keys)].filter(k=>!new RegExp('(key|has)\\("'+k+'"').test(all)),
+    return {n:Object.keys(A).length,missing:[...new Set(keys)].filter(k=>!new RegExp('(key|has)\\("'+k+'"|D\\.'+k+'!==undefined').test(all)),
       described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
       domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
   eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");

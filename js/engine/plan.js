@@ -288,7 +288,10 @@ function shapePlan(plan,p,gear){
       if(AD){e.sets=within(e.sets,AD.sets);
         e.rest=main?within(e.rest,AD.restS):Math.min(e.rest,num(AD.restS&&AD.restS.max)||e.rest);
         if(AD.restS&&e.rest<num(AD.restS.min)&&ADAPT[goalOf(p.goal).train]==="stabilization_endurance")e.rest=num(AD.restS.min);}});
-    var extra=T.add==="plyo"?plyoFor(d,limits):T.add==="cond"?condFor(gear):T.add==="mob"?mobFor(d):[];
+    /* A health question ticked in the assessment (the PAR-Q+ topics): low and moderate
+       effort only until a professional clears it, so no jumps and no intervals. */
+    var screened=(p.health||[]).length>0;
+    var extra=T.add==="plyo"&&!screened?plyoFor(d,limits):T.add==="cond"&&!screened?condFor(gear):T.add==="mob"?mobFor(d):[];
     keep=keep.concat(extra);
     d.ex=T.add==="plyo"?extra.concat(d.ex):d.ex.concat(extra);
     KEEP=KEEP.concat(keep);});

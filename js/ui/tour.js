@@ -34,7 +34,7 @@ var GUIDES={
     {sel:".fbody",h:"What your body needs",p:"What is behind for the time of day, and everyday foods that bring it. One tap logs one."},
     {sel:".fwater",h:"Water",p:"Tap the glasses to set how much you have drunk today."}]},
   coach:{name:"Coach",steps:[
-    {sel:".csecs",h:"Three parts",p:"Training is your program, Nutrition your meal plan and targets, Coach AI what the coach sees and the chat."},
+    {sel:".csecs",h:"Three parts",p:"Training is your program, Nutrition your meal plan and targets, Coach what the coach sees and the chat."},
     {sel:".cweek",h:"Your week, judged",p:"The coach's word on this week, with workouts done, protein days and your streak."},
     {sel:".pcf",h:"Coach noticed",p:"One thing at a time from your log. Act on it with its button, or set it aside."},
     {sel:".chatcard",h:"Ask me anything",p:"Ask about training, food or progress, in English or Arabic. Answers come from your own log."},

@@ -182,7 +182,7 @@ function register(){
      planCommand): going somewhere and the workout's buttons let the panel go with the
      move; a setting keeps it open, with Undo. */
   key("agrun",function(D){var m=findMsg(D.agrun);if(!m||!m.ag||m.ag.s!=="confirm"||!m.ag.run)return;
-    var go=/^(app\.go|workout\.|rest\.)/.test(m.ag.act),ok;
+    var go=/^(app\.go|workout\.|rest\.|plan\.gear)/.test(m.ag.act),ok;
     m.ag.s="applied";saveDB();
     ok=go?perform(m.ag.act,m.ag.p,m.at):holdCoach(function(){return perform(m.ag.act,m.ag.p,m.at);});
     if(!ok)m.ag.s="failed";

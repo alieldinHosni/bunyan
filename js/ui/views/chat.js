@@ -214,7 +214,7 @@ function aTrack(a){
   p(a,t("Where you are, in plain words:"));
   l(a,f.map(function(x){return x.k+": "+noTags(x.head)+". "+x.line;}));
   var c=checkPlans().length+coachNow().length;
-  if(c)n(a,fill(t(c===1?"There is 1 thing in Coach AI worth a look.":"There are {n} things in Coach AI worth a look."),{n:c}));
+  if(c)n(a,fill(t(c===1?"There is 1 thing in Coach worth a look.":"There are {n} things in Coach worth a look."),{n:c}));
   return act(a,t("Open Progress"),{"data-tab":"progress"});}
 
 function aWeight(a){

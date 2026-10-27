@@ -11,7 +11,7 @@
    building muscle (and losing fat while keeping it) reads hypertrophy, getting stronger
    reads maximal strength. */
 import {BY_ADAPTATION, ONE_RM, SYSTEMS, VARIABLES} from "../knowledge/acute-variables.js";
-import {PROTEIN} from "../knowledge/nutrition-principles.js";
+import {PROTEIN, WEIGHT_MANAGEMENT} from "../knowledge/nutrition-principles.js";
 import {RULES} from "../knowledge/scope.js";
 
 function adaptationFor(goal){return goal==="strength"?"maximal_strength":"hypertrophy";}
@@ -40,7 +40,10 @@ function oneRM(){return {repsRange:ONE_RM.repsRange,src:cite("acute-variables",O
 function protein(){
   var row=(PROTEIN.dailyTargets||[]).filter(function(x){return /build and maintain muscle/.test(x.who||"");})[0];
   return row&&row.gPerKg?{min:row.gPerKg.min,max:row.gPerKg.max,src:cite("nutrition-principles",PROTEIN.src)}:null;}
+/* Hours of sleep a night for adults. */
+function sleep(){var g=WEIGHT_MANAGEMENT.sleep&&WEIGHT_MANAGEMENT.sleep.target;
+  return g?{min:g.minHours,max:g.maxHours,src:cite("nutrition-principles",WEIGHT_MANAGEMENT.src||"")}:null;}
 /* A hard limit from scope.js, by id: it overrides every other answer. */
 function scopeRule(id){var r=RULES.filter(function(x){return x.id===id;})[0];return r?{id:r.id,src:cite("scope",r.src)}:null;}
 
-export {adaptationFor, duration, frequency, oneRM, prescription, protein, scopeRule, tempo, volume, warmup};
+export {adaptationFor, duration, frequency, oneRM, prescription, protein, scopeRule, sleep, tempo, volume, warmup};

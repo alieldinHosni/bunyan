@@ -52,8 +52,25 @@ function startRest(e){
   V.restTotal=e.rest||75;
   V.restEnd=Date.now()+V.restTotal*1000;
   beeped=false;lastTick=99;}
+/* Safari has no vibration API. Since iOS 18 a switch (<input type="checkbox" switch>)
+   ticks the Taptic Engine when it is toggled, and a tap on its label toggles it, so a
+   hidden one gives the iPhone the same light tick. It must be inside the tap's own
+   handler, which is where tap() is called. Its clicks stop at the label, so no branch
+   or outside-tap rule ever sees them. */
+var IOS=typeof navigator!=="undefined"&&(/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1));
+var hapEl=null;
+function iosTick(){
+  if(!hapEl){
+    var l=document.createElement("label"),i=document.createElement("input");
+    l.className="hapt";l.setAttribute("aria-hidden","true");
+    i.type="checkbox";i.setAttribute("switch","");i.tabIndex=-1;
+    l.appendChild(i);
+    ["click","change","input"].forEach(function(ev){l.addEventListener(ev,function(e){e.stopPropagation();});});
+    document.body.appendChild(l);hapEl=l;}
+  hapEl.click();}
+function canBuzz(){return typeof navigator!=="undefined"&&("vibrate" in navigator||IOS);}
 function buzz(ms){
-  try{if(navigator.vibrate)navigator.vibrate(ms||10);}catch(e){}}
+  try{if(navigator.vibrate)navigator.vibrate(ms||10);else if(IOS)iosTick();}catch(e){}}
 function tap(kind){
   if(S.prefs.haptic!==false)buzz(kind==="heavy"?18:kind==="ok"?[12,40,12]:9);
 }
@@ -456,4 +473,4 @@ function curDate(){return V.fdate||today();}
 /* The meal a quick add goes into: the next one not yet logged on that date. */
 function mealNow(d){return nextMeal(d||curDate());}
 
-export {curDate, inDays, mealNow, GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};
+export {canBuzz, curDate, inDays, mealNow, GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};

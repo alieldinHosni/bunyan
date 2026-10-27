@@ -27,7 +27,7 @@ import {foodSub, vMyFoods, vPlan, vTargets} from "./food.js";
 import {adviceBody, adviceNote} from "./pcheck.js";
 import {vChat} from "./chat.js";
 
-var CSECS=[["train","Training"],["food","Nutrition"],["ai","Coach AI"]];
+var CSECS=[["train","Training"],["food","Nutrition"],["ai","Coach"]];
 var TSUBS=[["program","My program"],["programs","Programs"],["exercises","Exercises"]];
 var FSUBS=[["plan","Meal plan"],["targets","Targets"],["foods","My foods"]];
 function pick(v,list,dflt){return list.some(function(x){return x[0]===v;})?v:dflt;}
@@ -66,7 +66,7 @@ function vCoachAI(){
   var h='';
   if(!S.onboarded){
     h+='<div class="coachhero">'+art("wall",{cls:"coachhero-art"})
-     +'<span class="shk">'+t("Coach AI")+'</span>'
+     +'<span class="shk">'+t("Coach")+'</span>'
      +'<h2>'+t("Your plan, built for you")+'</h2>'
      +'<p>'+esc(t("Answer a short assessment: your goal, body, week, equipment, sore spots and how you eat. The coach builds your training and your meals, and puts them on the Training and Food pages. Nothing changes until you say so."))+'</p>'
      +'<button class="btn" data-setup="1">'+t("Start the assessment")+'</button></div>';

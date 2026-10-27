@@ -22,7 +22,7 @@ import {buildSnapshot, snapStats} from "../engine/share.js";
 import {CUR, PROFILES, S} from "../state.js";
 import {fmtW, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, shortd} from "../util.js";
-import {seg, V} from "./view.js";
+import {canBuzz, seg, V} from "./view.js";
 import {iconOf, modeOf, themeOf, THEMES} from "./theme.js";
 import {glyph} from "./glyphs.js";
 import {afTile} from "./views/addfood.js";
@@ -164,8 +164,9 @@ function appSheet(){
      +pick(t("Week starts on"),t("Where \"this week\" begins, on every screen."),{items:[6,7,1].map(function(d){return [d,wdName(d,true)];}),
         value:weekStart(),attr:"wkstart",label:t("Week starts on")}))
    +group(t("Interface"),
-      /* Only where the platform can actually vibrate. Safari has no vibration API. */
-      (("vibrate" in navigator)?sw('data-toggle="haptic"',t("Haptic feedback"),"",ap.haptic!==false):"")
+      /* Only where the phone can give it: a vibration, or the iPhone's switch tick
+         (js/ui/view.js buzz). */
+      (canBuzz()?sw('data-toggle="haptic"',t("Haptic feedback"),"",ap.haptic!==false):"")
      +sw('data-toggle="anim"',t("Animations"),"",ap.anim!==false)
      +sw('data-toggle="splash"',t("Opening screen"),"",ap.splash!==false)
      +pick(t("Interface density"),"",{items:[["0",t("Comfortable")],["1",t("Compact")]],value:ap.compact?"1":"0",attr:"setcompact",label:t("Interface density")}));}
