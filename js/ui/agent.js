@@ -18,7 +18,7 @@
 import {actKcal, actRate, isActivity} from "../data/activities.js";
 import {difficultyOf, exSteps, EXDB, isCompound as isCompoundName, isFav, LIB, movementOfEx, muscleOf as muscleOfName, MUSCLES, patternOf, pickable} from "../data/exercises.js";
 import {planOn} from "../engine/dayplan.js";
-import {avoids, doseFor, usable} from "../engine/plan.js";
+import {avoids, doseFor, standIn, usable} from "../engine/plan.js";
 import {goalOf} from "../data/goals.js";
 import {FOODDB, fuzzyFoods, gramsFor, nutritionFor, parseFoodInput, searchFoods} from "../engine/nutrition.js";
 import {mealName} from "../engine/meals.js";
@@ -496,6 +496,47 @@ function planRecovery(c){
   return confirm("recovery.log",{sleep:c.sleep||0,sore:c.sore||0},{lead:fill(t("Log {x} for today?"),{x:bits.join(t(" and "))}),
     item:bits.join(" · "),detail:tip,cta:t("Log it"),done:t("Logged.")+" "+tip,undone:t("Undone. Today's log is as it was.")});}
 
+/* ---- a sore spot, across the program ----------------------------------------------------
+   Every exercise in the program that loads it (the plan's own avoid lists) for its closest
+   stand-in that doesn't (standIn); one with none is left in and said so. The area joins
+   the profile's limits, so new plans and suggestions keep away from it too. Not advice
+   about the pain itself: that is a professional's (js/knowledge/scope.js). */
+var AREANAME={knee:"knees",back:"lower back",shoulder:"shoulders",wrist:"wrists",ankle:"ankles"};
+function planLimit(c){
+  var lim=((S.profile||{}).limits||[]).slice();if(lim.indexOf(c.area)<0)lim.push(c.area);
+  var sw=[],kept=[],taken={};
+  split().days.forEach(function(d){d.ex.forEach(function(e){taken[e.name]=1;});});
+  split().days.forEach(function(d){d.ex.forEach(function(e){
+    if(isActivity(e.name)||!avoids(e.name,[c.area]))return;
+    var to=standIn(e.name,S.gear,lim,taken);
+    if(to){taken[to]=1;sw.push({day:d.id,id:e.id,from:e.name,to:to});}else kept.push(e.name);});});
+  var area=t(AREANAME[c.area]);
+  if(!sw.length&&!kept.length)return say(fill(t("Nothing in your program loads your {a} much. I'll keep new suggestions away from it too."),{a:area}));
+  if(!sw.length)return say(fill(t("What loads your {a} has no close stand-in with your kit: {list}. Go lighter on it, or ask me to remove it."),{a:area,list:kept.map(exName).join(", ")}));
+  return confirm("plan.avoid",{area:c.area,sw:sw},{lead:fill(t(sw.length===1?"Swap the exercise that loads your {a}?":"Swap the {n} exercises that load your {a}?"),{n:sw.length,a:area}),
+    item:sw.slice(0,4).map(function(x){return exName(x.from)+" → "+exName(x.to);}).join(" · ")+(sw.length>4?" …":""),
+    detail:(kept.length?fill(t("No close stand-in for {list}: it stays."),{list:kept.map(exName).join(", ")})+" ":"")
+      +t("Sets, reps and rest stay. If the pain is sharp, swollen or lasting, have it seen by a professional."),
+    cta:t("Swap them"),done:fill(t("Swapped. New plans keep away from your {a} too."),{a:area}),undone:t("Undone. Your program is as it was.")});}
+
+/* ---- travel mode: other kit for a few days ------------------------------------------------
+   Until the date, each workout swaps what needs kit you don't have with you for its closest
+   stand-in that you do (actions.js startDay); the program itself stays as it is. */
+var KITNAME={Dumbbell:"dumbbells",Band:"bands",Kettlebell:"kettlebells",Machine:"machines",Cable:"cables"};
+function planTravel(c){
+  if(c.cmd==="travel.end"){
+    if(!S.travel||!S.travel.until||S.travel.until<today())return say(t("Travel mode isn't on."));
+    return confirm("travel.end",{},{lead:t("End travel mode now?"),item:t("Travel mode"),detail:t("Your workouts go back to your own kit."),
+      cta:t("End it"),done:t("Travel mode is off. Welcome back."),undone:t("Undone. Travel mode is back on.")});}
+  var n=today(),until=c.until?whenIso(c.until):c.days>0?addDays(n,c.days-1):c.days<0?(function(){for(var i=0;i<7;i++){var d=addDays(n,i);if(isoWeekday(d)===7)return d;}return addDays(n,6);})():addDays(n,6);
+  var kit=c.gear.filter(function(g){return g!=="Bodyweight";}).map(function(g){return t(KITNAME[g]||g);});
+  var kitTxt=kit.length?kit.join(t(" and ")):t("your bodyweight");
+  var change=0;split().days.forEach(function(d){d.ex.forEach(function(e){if(!isActivity(e.name)&&!usable(e.name,c.gear))change++;});});
+  return confirm("travel.set",{gear:c.gear,until:until},{lead:fill(t("Train with {k} until {d}?"),{k:kitTxt,d:pretty(until)}),
+    item:t("Travel mode"),detail:(change?fill(t(change===1?"1 exercise in your program needs other kit: each workout swaps it for the closest one with what you have.":"{n} exercises in your program need other kit: each workout swaps them for the closest ones with what you have."),{n:change}):t("Everything in your program works with that."))
+      +" "+t("Your program itself stays as it is."),
+    cta:t("Start travel mode"),done:fill(t("Travel mode on, until {d}."),{d:pretty(until)}),undone:t("Undone. Your kit is as it was.")});}
+
 /* ---- in the gym: how the last set felt, the form, the plates ----------------------- */
 /* "Too easy" / "too heavy": the next set's numbers moved a step, the way the logger's
    own suggestion moves them (incrementFor). Only the next set changes; nothing logged
@@ -595,6 +636,8 @@ function planCommand(c){
   if(c.cmd==="ex.busy")return planBusy();
   if(c.cmd==="set.feel")return planFeel(c.dir);
   if(c.cmd==="act.log")return planAct(c);
+  if(c.cmd==="limit.add")return planLimit(c);
+  if(c.cmd==="travel.set"||c.cmd==="travel.end")return planTravel(c);
   if(c.cmd==="past.log")return planPast(c);
   if(c.cmd==="recovery.log")return planRecovery(c);
   if(c.cmd==="ex.how")return planHow();

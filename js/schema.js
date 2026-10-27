@@ -175,6 +175,8 @@ function normalize(o){
   if(o.ckSeen!=null&&!/^\d{4}-\d\d-\d\d$/.test(String(o.ckSeen)))delete o.ckSeen;
   /* When the conversation was last cleared (ms): the chat shows only what came after. */
   if(o.chatFrom!=null&&!(typeof o.chatFrom==="number"&&isFinite(o.chatFrom)&&o.chatFrom>=0))delete o.chatFrom;
+  /* Travel mode: the kit at hand, until a date (js/ui/actions.js startDay). */
+  if(o.travel!=null&&!(o.travel&&Array.isArray(o.travel.gear)&&/^\d{4}-\d\d-\d\d$/.test(String(o.travel.until))))delete o.travel;
   /* Where the training block began (js/engine/blocks.js): a date, or nothing. */
   if(o.block!=null&&!(o.block&&typeof o.block.start==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(o.block.start)))delete o.block;
   /* The day's meals (js/engine/meals.js): a list of {id, name?, plan?, todo?}, or

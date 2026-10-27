@@ -2833,6 +2833,48 @@ await test("Coach gym slang: \"2 plates x 5\" is 100 kg for 5, and \"bodyweight 
   r=await agSay(page,"bodyweight x 12");
   if(!/^Log 0 kg × 12 on |^Log .* × 12 on /.test(r.lead))throw new Error("bw: "+r.lead);
 });
+await test("Coach advice: a sore spot swapped out across the program (asked, or from the pain answer), with Undo",async page=>{
+  const name=await page.evaluate(async()=>{const X=await import("/js/data/exercises.js"),sp=(await import("/js/state.js")).split();
+    const n=X.LIB.map(l=>l[0]).find(n=>/Upright Row/.test(n)&&X.pickable(n));sp.days[0].ex[0].name=n;sp.days[0].ex[0].exId=X.exIdOf(n);return n;});
+  await openChat(page);
+  await page.fill('#chatq',"my shoulder hurts");await page.press('#chatq','Enter');await pause(page,500);
+  if(!(await page.$('#cpanel [data-chatsay]')))throw new Error("no way from the pain answer to the swap");
+  await page.tap('#cpanel [data-chatsay]');await pause(page,500);
+  let r=await agLast(page);
+  eq([/^Swap the (exercise|\d+ exercises) that loads? your shoulders\?$/.test(r.lead),r.ok],[true,true],"said first: "+r.lead);
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  const after=await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split(),S=(await import("/js/state.js")).S;return [sp.days[0].ex[0].name,S.profile.limits];});
+  eq([after[0]!==name,!/Upright Row/.test(after[0]),after[1].includes("shoulder")],[true,true,true],"swapped, and the profile keeps away from it");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await ev(page,`(async()=>(await import("/js/state.js")).split().days[0].ex[0].name)()`),name,"Undo: the program as it was");
+});
+await test("Coach advice: travel mode swaps what needs other kit in each workout until its date, says so on Training, and ends when back",async page=>{
+  await openChat(page);
+  let r=await agSay(page,"I'm travelling for a week, bodyweight only");
+  eq([/^Train with your bodyweight until /.test(r.lead),r.ok],[true,true],"said first: "+r.lead);
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq(await ev(page,"S.travel.gear"),["Bodyweight"],"on");
+  await page.tap('.cp [data-coachclose]');await pause(page,500);
+  await tapTab(page,"train");await pause(page);
+  if(!(await page.$('[data-travel="end"]')))throw new Error("Training doesn't say travel mode is on");
+  await page.tap('[data-startday]');await pause(page,500);
+  const ok=await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,X=await import("/js/data/exercises.js"),A=await import("/js/data/activities.js");
+    return S.active.entries.every(e=>A.isActivity(e.name)||!X.EXDB[e.name]||!X.EXDB[e.name].e||X.EXDB[e.name].e==="Bodyweight"||e.altWhy!=="travel")
+      &&S.active.entries.some(e=>e.altWhy==="travel");});
+  eq(ok,true,"the workout uses the kit at hand, each swap with the original a tap away");
+  await leaveWorkout(page);
+  await openChat(page);
+  r=await agSay(page,"I'm back home");
+  eq([r.lead,r.ok],["End travel mode now?",true],"back");
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq(await ev(page,"S.travel===undefined"),true,"off");
+});
+await test("Coach advice: a stuck lift is read from six weeks of the log, with the reasons that apply and one change",async page=>{
+  await openChat(page);
+  await agSay(page,"why isn't my bench going up?");
+  const x=await page.evaluate(()=>{const e=[...document.querySelectorAll("#cpanel .chat-x")].pop();e.querySelectorAll(".chat-more").forEach(d=>d.open=true);return e.innerText;});
+  if(!/Bench Press.*the last six weeks: \d+ sessions, estimated max/.test(x)||!/The one change: /.test(x))throw new Error("plateau: "+x);
+});
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
   await openChat(page);
@@ -2980,7 +3022,7 @@ await test("Coach actions: every action in the registry runs through a branch th
       described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
       domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
   eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");
-  eq(r.domains,["act","app","cardio","deload","exercise","food","meal","past","plan","profile","progress","recovery","rest","sched","set","steps","water","workout"],"grouped by domain");
+  eq(r.domains,["act","app","cardio","deload","exercise","food","meal","past","plan","profile","progress","recovery","rest","sched","set","steps","travel","water","workout"],"grouped by domain");
   /* set.log, in a live workout: the logger's own Log set. */
   await startWorkout(page);
   const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");

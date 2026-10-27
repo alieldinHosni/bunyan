@@ -122,7 +122,7 @@ function vTrainHome(){
   if(S.active)h+=resumeHero();
   else{h+=weekStrip(sp,sel);h+=dayHero(sp,planOn(sp,sel),sel);}
   if(!S.active)h+=blockCard();
-  h+=deloadCard();
+  h+=deloadCard()+travelCard();
   h+=bodyTiles();
   /* The last outdoor session of the fortnight (a run, a walk, a ride, a hike), as the
      reference's run card: its route, how far, how fast. Opens that day. */
@@ -257,6 +257,11 @@ function programsList(){
 
 /* A suggestion with its reason and two answers, or — during the week — a quiet line
    saying it is on and until when, with a way out. Never shown mid-workout. */
+/* Travel mode on: a quiet line saying so, until when, and a way out (the coach turns it on). */
+function travelCard(){
+  var tv=S.travel;if(!tv||!tv.until||today()>tv.until)return "";
+  return '<div class="dlcard on"><span class="dlcard-t"><b>'+t("Travel mode")+'</b><span>'+t("Until")+' '+shortd(tv.until)
+   +' · '+t("exercises swapped for your kit at hand")+'</span></span><button class="dlcard-x" data-travel="end">'+t("End it")+'</button></div>';}
 function deloadCard(){
   /* The planned lighter week of a training block is shown by its own card. */
   if(inDeload()&&!offPlanLight())return "";

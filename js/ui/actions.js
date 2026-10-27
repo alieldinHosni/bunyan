@@ -2,7 +2,7 @@
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
 import {exIdOf, kindOf, LIB, muscleOf, muscleOfEntry, pickable} from "../data/exercises.js";
-import {doseFor, standIn} from "../engine/plan.js";
+import {doseFor, standIn, usable} from "../engine/plan.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
 import {deloadSets, inDeload, recordsIn, avgRPE, prevPerf, progressionHint, recommend, sessionVolume} from "../engine/formulas.js";
@@ -167,6 +167,8 @@ function programWeek(sp){
 /* An exercise kept for some weeks of a program — balance work in weeks 1–4, hops from
    week 9 — joins a workout only in those weeks. */
 function inWeek(e,wk){return !(e.wk&&wk&&(wk<e.wk[0]||wk>e.wk[1]));}
+/* The kit at hand while travel mode is on (S.travel, until its date), else null. */
+function travelGear(){var tv=S.travel;return tv&&tv.until&&today()<=tv.until&&Array.isArray(tv.gear)?tv.gear:null;}
 function startDay(dayId){
   var d=dayOf(dayId);if(!d||!d.ex.length)return;
   var sp=ownerOf(d.id)||split(),wk=programWeek(sp);
@@ -198,8 +200,13 @@ function startDay(dayId){
       if(e.plan!=null)pl.plan=e.plan;
       /* Kit you do not have: the same movement on what you do, offered beside it
          (the plan's own other choice wins where it gave one). */
-      var alt=e.alt||null,altWhy=null;
-      if(!alt&&!isActivity(e.name)&&!pickable(e.name)){alt=standIn(e.name,S.gear,(S.profile||{}).limits)||null;if(alt)altWhy="gear";}
+      var alt=e.alt||null,altWhy=null,nm=e.name;
+      /* Travel mode: what needs kit left at home is swapped for the closest stand-in with
+         the kit at hand, for this workout; the original stays a tap away (alt). */
+      var tg=travelGear();
+      if(tg&&!isActivity(e.name)&&!usable(e.name,tg)){var ts=standIn(e.name,tg,(S.profile||{}).limits);if(ts){alt=e.name;altWhy="travel";nm=ts;}}
+      else if(!alt&&!isActivity(e.name)&&!pickable(e.name)){alt=standIn(e.name,S.gear,(S.profile||{}).limits)||null;if(alt)altWhy="gear";}
+      if(nm!==e.name)return {name:nm,exId:exIdOf(nm),kind:kindOf(nm),muscle:muscleOf(nm),planned:pl,rest:e.rest,grp:e.grp||null,alt:alt,altWhy:altWhy,sets:[]};
       return {name:e.name,exId:e.exId||exIdOf(e.name),kind:e.timed&&!isActivity(e.name)?"timed":kindOf(e.name),muscle:muscleOfEntry(e),planned:pl,
               rest:e.rest,grp:e.grp||null,alt:alt,altWhy:altWhy||undefined,sets:[]};})};
   V.logIdx=0;V.tab="train";V.train="days";endRest();stopHold();V.fresh=-1;

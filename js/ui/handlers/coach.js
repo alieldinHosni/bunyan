@@ -20,7 +20,7 @@ import {toast, V} from "../view.js";
 import {draftFrom, foodPrefs, GEARS, profileOf, STEPS, youOk} from "../views/assess.js";
 import {ask, findMsg, follow} from "../views/chat.js";
 import {coachAct} from "../views/pcheck.js";
-import {chatSend, slotsFrom, toCoach} from "./common.js";
+import {chatSend, sendText, slotsFrom, toCoach} from "./common.js";
 import {closeCoach, holdCoach, toEnd} from "../coachfab.js";
 import {perform, undo} from "./actions.js";
 import {addFact, removeFact} from "../../coach/context.js";
@@ -177,6 +177,7 @@ function register(){
     return;});
   key("coachopen",function(){if(V.sheet)closeSheet();V.coach="compact";render();return;});
   key("coachclose",function(){closeCoach(render);return;});
+  key("chatsay",function(D,el){if(!V.coach)V.coach="compact";sendText(D.chatsay,fromEl(el),el&&el.textContent||"");return;});
   /* A long press on an exchange (js/ui/chatgest.js): copy it, or delete it with Undo. */
   key("msgcopy",function(D){var tx=msgText(D.msgcopy);closeMenu();
     var ok=function(){toast(t("Copied."));};
