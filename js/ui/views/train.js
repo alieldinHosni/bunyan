@@ -536,6 +536,8 @@ function builderBody(sp,id,inline){
      +sp.notes.map(function(n){return (n.h?'<h3>'+esc(n.h)+'</h3>':'')+(n.t||[]).map(function(l){return '<p>'+esc(l)+'</p>';}).join("");}).join("")
      +'</details>';
   h+='<div class="dcta">'
+   /* To another Bunyan user, as it is (owner, 27 Oct): js/engine/planshare.js. */
+   +(sp.days.some(function(d){return d.ex.length;})?'<button class="ddel dset" data-shareplan="p:'+esc(id)+'">'+t("Share this program")+'</button>':'')
    +(active?(inline?'<button class="btn g dbegin" data-ctsub="programs">'+t("Switch program")+'</button>'
              +'<button class="ddel dset" data-sheet="set_training">'+t("Workout settings")+'</button>'
              :'<p class="bactive">✓ '+t("This is your training")+'</p>')

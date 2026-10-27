@@ -10,7 +10,8 @@ import {register as profileTaps} from "./ui/handlers/profile.js";
 import * as W from "./ui/workout.js";
 import {initState, loadStored, onProfileSwitch, refreshFromStorage, S, saveDB, saveSession, startupNote, storageKey} from "./state.js";
 import {alarmStart, beeped, keepAwake, lastTick, play, restoreWorkoutState, setBeeped, setLastTick, syncViewport, syncWorkoutState, tap, toast, V} from "./ui/view.js";
-import {closeSheet, syncDraft} from "./ui/actions.js";
+import {closeSheet, openSheet, syncDraft} from "./ui/actions.js";
+import {decodePlan} from "./engine/planshare.js";
 import {dispatchTap} from "./ui/handlers/registry.js";
 import {draftFrom} from "./ui/views/assess.js";
 import {initDockScroll} from "./ui/dock.js";
@@ -219,6 +220,11 @@ var bootDraft="";
    and the library were in, so with no suggestion to go on (0 on a barbell, say). Untouched,
    they are filled in again now that last time is known. */
 loadStored(function(){ applyExReconcile(); fixLogsNow();
+  /* Opened from a shared plan's link (#plan=…): what it holds, ready to add, and the
+     link taken out of the address so a reload does not ask again. */
+  var ph=/[#&]plan=([^&]+)/.exec(location.hash||"");
+  if(ph&&S.onboarded){try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}
+    loadExDB(function(){decodePlan(decodeURIComponent(ph[1])).then(function(g){openSheet("recvplan",g?{got:g,done:{}}:{text:ph[1],err:1});});});}
   if(S.active)loadExDB(function(){if(S.active&&bootDraft&&JSON.stringify(V.draft)===bootDraft){bootDraft="";syncDraft();render();}});
   render(); });
 /* The intro belongs to a cold start, not to every document load. A reload for any

@@ -3008,6 +3008,48 @@ await test("Own exercises the library has after all become the library's: pictur
   db.activeProgram="arn";
   db.sessions.unshift({id:"own1",date:new Date().toISOString().slice(0,10),dayName:"Arms",entries:[{name:"Reverse wrist curl",muscle:"Other",sets:[{w:20,r:12}]}]});
   return db;})()});
+await test("A plan to another Bunyan user: the program and the meal plan arrive on the other phone exactly as sent; the link opens it too",async page=>{
+  /* Phone A: a program with an own exercise and a superset, and a meal plan. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),S=st.S,sp=st.split();
+    S.myEx=(S.myEx||[]).concat([{id:"u_x",n:"Arnold special",m:"Chest"}]);
+    sp.name="Arnold 2";sp.days[0].ex[0].note="pause at the bottom";sp.days[0].ex[0].grp="a";sp.days[0].ex[1].grp="a";
+    sp.days[0].ex.push({id:"own1",name:"Arnold special",sets:4,lo:10,hi:15,rest:60});
+    S.mealSlots=[{id:"Breakfast",plan:[{fid:"x1",n:"Oats",label:"80 g",grams:80,kcal:300,p:10,c:54,f:6,fib:8,src:"plan"}]},{id:"Lunch",plan:[{n:"Chicken Breast",label:"200 g",grams:200,kcal:330,p:62,c:0,f:7,src:"plan"}]}];
+    st.saveDB();});
+  const shape=p=>p.days.map(d=>[d.name,d.wd,d.ex.map(e=>[e.name,e.sets,e.lo,e.hi,e.rest||null,e.note||null,!!e.grp])]);
+  const sent=await page.evaluate(async()=>{const st=await import("/js/state.js");return JSON.parse(JSON.stringify(st.split()));});
+  await coach(page,"train","program");
+  await page.tap('[data-shareplan^="p:"]');await pause(page,600);
+  eq(await ev(page,"V.sheet"),"sendplan","the share sheet, code ready");
+  const msg=await page.$eval('#planc',e=>e.value);
+  if(!/^.+shared a Bunyan plan with you: Arnold 2\.\n.+\n\nhttp.+#plan=BNY[01]\./.test(msg))throw new Error("message: "+msg);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page);
+  await coach(page,"food","plan");
+  await page.tap('[data-shareplan="meals"]');await pause(page,600);
+  const msg2=await page.$eval('#planc',e=>e.value);
+  /* Phone B: another person's app. */
+  const B=await open({});
+  try{
+    const b=B.page;
+    await b.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("recvplan");});await pause(b);
+    await b.fill('#rplan','garbage');await b.tap('[data-rplanread]');await pause(b,400);
+    if(!(await b.$('#sheet .bad')))throw new Error("a non-plan is not refused");
+    await b.fill('#rplan',msg);await b.tap('[data-rplanread]');await pause(b,500);
+    if(!(await b.$('[data-rplanadd="use"]')))throw new Error("no preview");
+    await b.tap('[data-rplanadd="use"]');await pause(b,500);
+    const got=await b.evaluate(async()=>{const st=await import("/js/state.js");return JSON.parse(JSON.stringify(st.split()));});
+    eq([got.name,got.schedule,shape(got)],[sent.name,sent.schedule,shape(sent)],"the program, day by day, exercise by exercise, as sent");
+    eq(await ev(b,"S.myEx.some(m=>m.n==='Arnold special'&&m.m==='Chest')"),true,"the sender's own exercise came with it");
+    await b.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("recvplan");});await pause(b);
+    await b.fill('#rplan',msg2);await b.tap('[data-rplanread]');await pause(b,500);
+    await b.tap('[data-rplanmeals]');await pause(b,500);
+    eq(await ev(b,"S.mealSlots.map(s=>[s.id,s.plan.map(i=>[i.n,i.grams,i.kcal,i.p])])"),[["Breakfast",[["Oats",80,300,10]]],["Lunch",[["Chicken Breast",200,330,62]]]],"the meal plan, food by food");
+    /* The link alone, opened in a browser. */
+    const link=msg.slice(msg.indexOf("http"));
+    await b.goto("about:blank");await b.goto(link.replace(/^https?:\/\/[^/]+\/[^#]*/,URL_));await pause(b,1800);
+    eq(await ev(b,"[V.sheet,!!(V.sd&&V.sd.got&&V.sd.got.program),location.hash]"),["recvplan",true,""],"the link opens the plan, and leaves the address");
+  }finally{await B.ctx.close();}
+});
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
   await openChat(page);

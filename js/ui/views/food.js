@@ -420,6 +420,8 @@ function vPlan(){
      +(ro?'<button class="dgrip" data-grip="'+esc(x.id)+'" aria-label="'+esc(t("Move")+" "+mealName(x.id))+'">'+GRIPSVG+'</button>':'')
      +'</div>';});
   h+='</div><button class="dadd" data-paddslot="1"><span aria-hidden="true">+</span>'+t("Add a meal")+'</button>';
+  /* To another Bunyan user, as it is (owner, 27 Oct): js/engine/planshare.js. */
+  if(all.length)h+='<button class="ddel dset plshare" data-shareplan="meals">'+t("Share my meal plan")+'</button>';
   h+='<button class="bnew" data-pimport="1">'+art("loaf",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
    +'<span class="bnew-t"><b>'+t("Import a plan")+'</b><span>'+t("Paste it or open a file, and it is sorted into meals")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';

@@ -4,12 +4,14 @@
 import {BACKUP_SNOOZE} from "../../engine/formulas.js";
 import {weekStart} from "../../engine/schedule.js";
 import {friends, saveFriends} from "../../engine/share.js";
+import {decodePlan, encodePlan, packPlan} from "../../engine/planshare.js";
+import {EXDB, exIdOf, LIB} from "../../data/exercises.js";
 import {t} from "../../i18n/dict.js";
-import {applyLang} from "../../i18n/exnames.js";
-import {adoptRestored, CUR, curProfile, isOwner, migrate, normalize, S, saveDB, setS, switchProfile} from "../../state.js";
+import {applyLang, planName} from "../../i18n/exnames.js";
+import {addProgram, adoptRestored, CUR, curProfile, isOwner, makeProgram, migrate, normalize, programById, S, saveDB, setS, switchProfile} from "../../state.js";
 import {checkBackup} from "../../schema.js";
 import {toDisp, toKg, wUnit} from "../../units.js";
-import {fmtN, num, today} from "../../util.js";
+import {fmtN, num, today, uid} from "../../util.js";
 import {ACT, askConfirm, askText, openSheet, val} from "../actions.js";
 import {resetNav} from "../nav.js";
 import {render} from "../render.js";
@@ -47,6 +49,20 @@ function downloadBackup(){
 
 /* What this module answers. app.js calls register() once, at boot, in the order
    the branches are tried in (see registry.js). */
+/* The message read for a plan: what it holds, or why not, in the same sheet. */
+function readPlan(text){
+  decodePlan(text).then(function(g){
+    if(!g){openSheet("recvplan",{text:text,err:1});return;}
+    openSheet("recvplan",{got:g,done:{}});});}
+/* To the clipboard; where it is refused, the field holding it is opened and selected. */
+function copyText(tx,fieldId){
+  var ok=function(){toast(t("Copied. Paste it in a message."));};
+  var byHand=function(){var f=document.getElementById(fieldId);if(!f){toast(t("Sharing is not available here."));return;}
+    var dt=f.closest("details");if(dt)dt.open=true;f.select();
+    try{if(document.execCommand("copy")){ok();return;}}catch(e){}
+    toast(t("Select the text and copy it."));};
+  var wrote=null;try{wrote=navigator.clipboard&&navigator.clipboard.writeText(tx);}catch(e){}
+  if(wrote&&wrote.then)wrote.then(ok,byHand);else byHand();}
 function register(){
   /* Back to the initial: the photo is let go. */
   /* The page guides from the start: Training first, where the app opens. */
@@ -167,6 +183,48 @@ function register(){
       toast(t("Select the text and copy it."));};
     var wrote=null;try{wrote=navigator.clipboard&&navigator.clipboard.writeText(t2.value);}catch(e){}
     if(wrote&&wrote.then)wrote.then(function(){toast(t("Copied. Send it on WhatsApp."));},byHand);else byHand();
+    return;});
+  /* ---- a plan to another Bunyan user (js/engine/planshare.js) ---- */
+  /* What goes: a program (p:<id>) or the meal plan. The code is made first, then the
+     sheet opens with it, so Share… is its own tap, as the OS share sheet asks. */
+  key("shareplan",function(D){
+    var w=String(D.shareplan),pk;
+    if(w.indexOf("p:")===0){var sp=programById(w.slice(2));if(!sp)return;pk=packPlan({program:sp,own:S.myEx||[],from:curProfile().name});}
+    else pk=packPlan({slots:S.mealSlots||[],from:curProfile().name});
+    encodePlan(pk).then(function(code){
+      var what=pk.program?planName(pk.program.name):t("a meal plan");
+      var link=location.origin+location.pathname+"#plan="+code;
+      var text=t("{name} shared a Bunyan plan with you: {what}.").replace("{name}",pk.from||t("Someone")).replace("{what}",what)+"\n"
+        +t("In Bunyan: Profile, then Add a shared plan, and paste this whole message.")+"\n\n"+link;
+      openSheet("sendplan",{code:code,plan:pk,text:text});});
+    return;});
+  key("sendplan",function(){var d=V.sd;if(!d||!d.text)return;
+    if(navigator.share){navigator.share({title:"Bunyan",text:d.text}).catch(function(){});return;}
+    copyText(d.text,"planc");return;});
+  key("copyplan",function(){var d=V.sd;if(d&&d.text)copyText(d.text,"planc");return;});
+  key("rplanpaste",function(){var f=document.getElementById("rplan");
+    try{navigator.clipboard.readText().then(function(x){if(f){f.value=x;}readPlan(x);},function(){toast(t("Paste it into the box, then Read it."));});}
+    catch(e){toast(t("Paste it into the box, then Read it."));}
+    return;});
+  key("rplanread",function(){readPlan(val("rplan"));return;});
+  key("rplanadd",function(D){var d=V.sd,g=d&&d.got;if(!g||!g.program||(d.done&&d.done.program))return;
+    var use=D.rplanadd==="use",before={progs:(S.programs||[]).slice(),act:S.activeProgram,myEx:(S.myEx||[]).slice(),lib:LIB.length};
+    /* The sender's own exercises the program uses join this library as own ones. */
+    (g.ex||[]).forEach(function(m){if(EXDB&&EXDB[m.n])return;
+      if(!LIB.some(function(l){return l[0].toLowerCase()===m.n.toLowerCase();})){LIB.push([m.n,m.m,"Other",0]);(S.myEx=S.myEx||[]).push({id:"u_"+uid(),n:m.n,m:m.m});}});
+    var src=JSON.parse(JSON.stringify(g.program));src.id="shared";src.from=null;
+    src.days.forEach(function(d2){d2.id="x";d2.ex.forEach(function(e){e.id="x";});});
+    var p=makeProgram(src);p.days.forEach(function(d2){d2.ex.forEach(function(e){var id=exIdOf(e.name);if(id)e.exId=id;});});
+    addProgram(p,use);
+    d.done=Object.assign({},d.done,{program:1});saveDB();render();
+    toast(t(use?"{name} is your training now.":"{name} is in your programs.").replace("{name}",planName(p.name)),function(){
+      S.programs=before.progs;S.activeProgram=before.act;S.myEx=before.myEx;LIB.length=before.lib;saveDB();render();});
+    return;});
+  key("rplanmeals",function(){var d=V.sd,g=d&&d.got;if(!g||!g.meals||(d.done&&d.done.meals))return;
+    var before=S.mealSlots?JSON.parse(JSON.stringify(S.mealSlots)):null;
+    S.mealSlots=g.meals.map(function(m){var s={id:m.id,plan:JSON.parse(JSON.stringify(m.plan))};if(m.name)s.name=m.name;return s;});
+    d.done=Object.assign({},d.done,{meals:1});saveDB();render();
+    toast(t("Your meal plan is this one now."),function(){if(before)S.mealSlots=before;else delete S.mealSlots;saveDB();render();});
     return;});
   key("coach",function(){openSheet("coach");return;});
   key("addfriend",function(){

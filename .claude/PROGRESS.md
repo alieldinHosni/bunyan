@@ -2341,3 +2341,26 @@ fly", "Barbell wrist curl", "Reverse wrist curl", "Seated triceps extension" sho
   dropped from myEx and LIB. Said once with the names and Undo; Undo puts all back and adds the names to
   `S.keepOwn` (schema-validated) so they are not adopted again.
 - Test: "Own exercises the library has after all…".
+## A plan to another Bunyan user — branch session/plan-share
+
+CACHE `bunyan-v171` (session/exercise-match is v170). Owner, 27 Oct: a workout or nutrition plan,
+made, imported or built with the coach, shared to another Bunyan user and arriving the same.
+- **No server** (the app has none; server/ belongs to the Backend session): the plan travels as a
+  code in an ordinary message. js/engine/planshare.js: `packPlan` (program without ids or history,
+  the sender's own exercises it uses, meals with each food's own nutrition; never log, weight,
+  targets or profile), `encodePlan` (JSON → deflate-raw via CompressionStream where there is one
+  → base64url, "BNY1." / plain "BNY0."), `decodePlan` (finds the code inside a whole pasted message),
+  `cleanPlan` (every field checked and clamped: it comes from outside), `planSummary`.
+  Precached. A 6-day, 48-exercise program is a ~330-character code.
+- **Send**: "Share this program" under any program with exercises (train.js builder), "Share my meal
+  plan" under a meal plan with food (food.js vPlan). The code is made, then the sheet (settings.js
+  `sendplan`) offers Share… (the OS sheet, its own tap as iOS needs) and Copy the message. The message
+  says how to add it and ends in a link `…#plan=<code>`.
+- **Receive**: Profile → People → "Add a shared plan" (`recvplan`): paste (or the Paste button,
+  clipboard), Read it, then what it holds and, per part, "Add it and train with it" / "Add it to my
+  programs" (fresh ids, exIds, own exercises joined) and "Use this meal plan" (replaces the meals;
+  targets untouched), each with Undo. Opening the link (a browser, or Android's installed app)
+  shows the same sheet and clears the address (app.js). On iPhone a link opens Safari, whose storage
+  is not the Home Screen app's — hence paste first.
+- Tests: engine planshare (pack, accept, refuse, clamp); regression "A plan to another Bunyan user…"
+  (two phones: program and meal plan compared field by field; link).

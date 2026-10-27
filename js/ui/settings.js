@@ -14,11 +14,12 @@
    Nothing here is a native drop-down, and no raw backup text is on screen unless
    asked for. */
 import {t} from "../i18n/dict.js";
-import {exName} from "../i18n/exnames.js";
+import {exName, planName} from "../i18n/exnames.js";
 import {GOAL_ORDER, GOALS} from "../data/goals.js";
 import {backupAgeDays, lastWeight} from "../engine/formulas.js";
 import {wdName, weekStart} from "../engine/schedule.js";
 import {buildSnapshot, snapStats} from "../engine/share.js";
+import {planSummary} from "../engine/planshare.js";
 import {CUR, PROFILES, S} from "../state.js";
 import {fmtW, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, shortd} from "../util.js";
@@ -275,6 +276,46 @@ function shareSheet(){
    +'<details class="adv"><summary>'+t("Show the code")+'</summary>'
    +'<textarea id="sn" class="adv-t" readonly>'+esc(JSON.stringify(sn))+'</textarea></details>';}
 
+/* ---- a plan, to another Bunyan user (js/engine/planshare.js) ----------------------------
+   Sending: what goes, and the message to send it in (V.sd: {code, plan, text}). The
+   share sheet is opened from this sheet's button, inside the tap the OS asks for. */
+function planLines(sm){
+  var l=[];
+  if(sm.program)l.push('<div><span>'+esc(planName(sm.program))+'</span><b>'+esc(t(sm.days===1?"1 training day":"{n} training days").replace("{n}",sm.days))
+    +' · '+esc(t("{n} exercises").replace("{n}",sm.ex))+'</b></div>');
+  if(sm.meals)l.push('<div><span>'+esc(t("Meal plan"))+'</span><b>'+esc(t(sm.meals===1?"1 meal":"{n} meals").replace("{n}",sm.meals))
+    +' · <bdi class="num">'+fmtN(Math.round(sm.kcal))+'</bdi> kcal</b></div>');
+  return '<div class="shc-l">'+l.join("")+'</div>';}
+function sendPlanSheet(){
+  var d=V.sd||{};if(!d.code)return '<h2>'+t("Share")+'</h2>';
+  return '<h2>'+esc(t(d.plan.program?"Share this program":"Share my meal plan"))+'</h2>'
+   +'<p class="tiny">'+esc(t("Anyone with Bunyan can add it as you have it: they open Profile, then Add a shared plan, and paste your message. Your history, weight and targets stay with you."))+'</p>'
+   +'<div class="bk-card shc">'+planLines(planSummary(d.plan))+'</div>'
+   +'<button class="btn" data-sendplan="1">'+esc(t("Share…"))+'</button>'
+   +'<button class="btn g" data-copyplan="1">'+esc(t("Copy the message"))+'</button>'
+   +'<details class="adv"><summary>'+esc(t("Show the message"))+'</summary>'
+   +'<textarea id="planc" class="adv-t" readonly>'+esc(d.text)+'</textarea></details>';}
+/* Receiving: paste, read, then what it holds, each part added on its own tap
+   (V.sd: {text?, got?, err?, done:{program, meals}}). */
+function recvPlanSheet(){
+  var d=V.sd||{},g=d.got;
+  var h='<h2>'+esc(t("Add a shared plan"))+'</h2>';
+  if(!g)return h+'<p class="tiny">'+esc(t("Paste the message another Bunyan user sent you. Their program or meal plan is added exactly as they have it."))+'</p>'
+    +'<textarea id="rplan" class="adv-t rplan" rows="4" placeholder="'+esc(t("Paste the message here"))+'">'+esc(d.text||"")+'</textarea>'
+    +(d.err?'<p class="tiny bad" role="alert">'+esc(t("That isn't a Bunyan plan, or it was cut short. Ask for the whole message again."))+'</p>':'')
+    +'<div class="sacts"><button class="btn g" data-rplanpaste="1">'+esc(t("Paste"))+'</button>'
+    +'<button class="btn" data-rplanread="1">'+esc(t("Read it"))+'</button></div>';
+  var sm=planSummary(g),done=d.done||{};
+  h+='<p class="tiny">'+esc(g.from?t("From {name}.").replace("{name}",g.from):t("A shared plan."))+'</p>'
+   +'<div class="bk-card shc">'+planLines(sm)+'</div>';
+  if(g.program)h+=done.program?'<p class="rp-done">✓ '+esc(t("Added to your programs."))+'</p>'
+    :'<button class="btn" data-rplanadd="use">'+esc(t("Add it and train with it"))+'</button>'
+     +'<button class="btn g" data-rplanadd="keep">'+esc(t("Add it to my programs"))+'</button>';
+  if(g.meals)h+=done.meals?'<p class="rp-done">✓ '+esc(t("Your meal plan is this one now."))+'</p>'
+    :'<p class="tiny">'+esc(t("The portions are as they planned them. Your daily targets stay as they are."))+'</p>'
+     +'<button class="btn'+(g.program?' g':'')+'" data-rplanmeals="1">'+esc(t("Use this meal plan"))+'</button>';
+  return h;}
+
 /* ---- About -------------------------------------------------------------------------- */
 function aboutSheet(){
   return '<h2>'+t("About and privacy")+'</h2>'
@@ -284,7 +325,7 @@ function aboutSheet(){
    +t("Estimated 1RM uses the Epley formula and is only meaningful up to about 12 reps. Volume is the sum of weight × reps for every set, not an average.")+'</p></div></section>';}
 
 var SHEETS={set_you:youSheet,set_avatar:avatarSheet,set_training:trainingSheet,set_app:appSheet,set_profiles:profilesSheet,
-  set_data:dataSheet,backup:backupSheet,share:shareSheet,about:aboutSheet,set_chat:histSheet};
+  set_data:dataSheet,backup:backupSheet,share:shareSheet,about:aboutSheet,set_chat:histSheet,sendplan:sendPlanSheet,recvplan:recvPlanSheet};
 /* The inside of a settings sheet, or null when the name is not one of these. */
 function settingsSheet(name){return SHEETS[name]?SHEETS[name]():null;}
 
