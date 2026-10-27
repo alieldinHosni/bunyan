@@ -2563,6 +2563,10 @@ details[open]>summary .as-chev{transform:rotate(90deg)}
 .wu2 .wu-why p{margin:0 0 var(--s2);font-size:13.5px;line-height:1.5;color:var(--sub)}
 .wu-foot{position:sticky;bottom:0;z-index:5;margin:var(--s2) calc(var(--gutter,var(--s4)) * -1) 0;padding:var(--s3) var(--gutter,var(--s4)) max(var(--s3),env(safe-area-inset-bottom));
   background:var(--wk-page,var(--bg))}
+/* Pinned to the bottom edge all the way down: the body keeps room under the page for
+   the dock, which the workout has put away, and at the end of the scroll the footer
+   stopped there, a strip above the edge. With the footer up, no such room. */
+body.focus:has(.wu-foot){padding-bottom:0}
 .wu-foot::before{content:"";position:absolute;left:0;right:0;bottom:100%;height:var(--s6);pointer-events:none;
   background:linear-gradient(to bottom,transparent,var(--wk-page,var(--bg)))}
 .wu-foot .wu-then{margin:0 0 var(--s2)}

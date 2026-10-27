@@ -1605,6 +1605,24 @@ await test("Assessment health questions: a ticked one keeps the plan to low and 
   await page.tap('[data-asm="health|chest"]');await pause(page);
   if(!/low and moderate effort/.test(await page.textContent(".as")))throw new Error("no word on a ticked health question");
 });
+await test("Body weight in the weight field is body weight: push-ups logged at 84 kg (the lifter's weight) suggest no added load, and get no ramp-up sets",async page=>{
+  const r=await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const st=await import("/js/state.js"),F=await import("/js/engine/formulas.js"),W=await import("/js/engine/warmup.js");
+    const d=new Date(Date.now()-2*864e5).toISOString().slice(0,10);
+    st.S.sessions.push({id:"pu",date:d,dayName:"Push",entries:[{name:"Pushups",muscle:"Chest",sets:[{w:84,r:20},{w:84,r:18}]}]});
+    const rec=F.recommend({name:"Pushups",planned:{sets:3,lo:8,hi:20}});
+    const wu=W.warmupFor([{name:"Pushups",planned:{sets:3,lo:8,hi:20},sets:[]},{name:"Barbell Bench Press - Medium Grip",planned:{sets:3,lo:6,hi:10},sets:[]}],{work:()=>60,gear:null,bar:20});
+    return [rec&&rec.w,!!(rec&&rec.bw),wu.ramp&&wu.ramp.name];});
+  eq(r,[0,true,"Barbell Bench Press - Medium Grip"]);
+});
+await test("Warm-up: Start stays on the bottom edge all the way down",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.nowarm=false;});
+  await startWorkout(page);
+  const at=async y=>{await page.evaluate(y=>window.scrollTo(0,y),y);await pause(page,200);
+    return page.evaluate(()=>Math.round(document.querySelector(".wu-foot").getBoundingClientRect().bottom)-innerHeight);};
+  eq([await at(0),await at(300),await at(99999)],[0,0,0],"the footer's bottom is the screen's");
+});
 await test("Meal plan: a day built from the targets, within 5%, servings as labels, diet and leave-outs respected",async page=>{
   const r=await page.evaluate(async()=>{
     const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods?N.loadFoods(r):r());
