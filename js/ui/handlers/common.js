@@ -6,14 +6,17 @@ import {isActivity} from "../../data/activities.js";
 import {loadExDB} from "../../data/exercises.js";
 import {importName, ownSlots} from "../../engine/meals.js";
 import {checkPlans} from "../../engine/plancheck.js";
+import {readInBody} from "../../engine/inbody.js";
+import {readPhoto} from "../../engine/ocr.js";
 import {retarget} from "../../engine/retarget.js";
 import {adoptLibrary, convertDbLoads, fixBodyweightLogs} from "../../engine/logfix.js";
 import {readSplit} from "../../engine/splitparse.js";
 import {t} from "../../i18n/dict.js";
 import {exName} from "../../i18n/exnames.js";
 import {CUR, dayOf, editSplit, S, saveDB, saveSession} from "../../state.js";
-import {r1, uid} from "../../util.js";
-import {askConfirm, closeSheet, val} from "../actions.js";
+import {toKg} from "../../units.js";
+import {num, r1, uid} from "../../util.js";
+import {askConfirm, closeSheet, openSheet, val} from "../actions.js";
 import {resetNav} from "../nav.js";
 import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
@@ -248,4 +251,28 @@ function setDbLoad(to,quiet){
    set when it registers: the actions run what the screens run without the handler
    modules importing each other. */
 var LENT={};
-export {builderId, chatEnd, chatSend, editedEx, fixLogsNow, LENT, setDbLoad, MF, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, retargetNow, sendText, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};
+/* The text copied off the sheet, read: what was found fills the fields, the rest stay
+   as typed, and the sheet says how many it found. */
+function ibRead(text){
+  var got=readInBody(text),n=Object.keys(got).length;
+  if(!n){toast(t("No InBody figures found in that text. Copy the numbers with their labels."));return;}
+  var cur=Object.assign({},(V.sd&&V.sd.ib)||{});
+  ["date","weight","pbf","smm","fatkg","vfl","ibmr","tbw","score"].forEach(function(k){var f=document.getElementById("ib_"+k);if(f&&f.value!=="")cur[k]=k==="date"?f.value:(k==="weight"||k==="smm"||k==="fatkg"?toKg(num(f.value)):num(f.value));});
+  openSheet("inbody",{img:V.sd&&V.sd.img,ib:Object.assign(cur,got)});
+  toast(t(n===1?"Read 1 figure. Check it against your sheet.":"Read {n} figures. Check them against your sheet.").replace("{n}",n));}
+/* The sheet's photo, read on the phone (js/engine/ocr.js): its text goes where a pasted
+   copy would and is read the same way. Only the status line changes while it reads; a
+   newer photo, or the sheet closed, drops an older reading. */
+var OCR=0;
+function ibStatus(txt,pct){var el=document.getElementById("ibOcr");if(!el)return;
+  el.hidden=!txt;el.querySelector(".ib-stl").textContent=txt||"";el.querySelector(".ib-stn").textContent=pct!=null?pct+"%":"";}
+function ibPhoto(file){
+  var my=++OCR,img=V.sd&&V.sd.img;
+  ibStatus(t("Reading the photo…"),0);
+  readPhoto(file,function(p){if(my===OCR)ibStatus(t("Reading the photo…"),Math.round(p*100));}).then(function(txt){
+    if(my!==OCR||V.sheet!=="inbody"||(V.sd&&V.sd.img)!==img)return;
+    var f=document.getElementById("ib_text");if(f)f.value=txt;
+    if(Object.keys(readInBody(txt)).length){ibRead(txt);return;}
+    ibStatus(t("No InBody figures found on the photo. Copy its text and paste it below."));
+  },function(){if(my===OCR&&V.sheet==="inbody")ibStatus(t("The photo couldn't be read on this phone. Copy its text and paste it below."));});}
+export {builderId, chatEnd, chatSend, editedEx, fixLogsNow, ibPhoto, ibRead, LENT, setDbLoad, MF, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, retargetNow, sendText, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};

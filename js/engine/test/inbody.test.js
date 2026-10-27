@@ -8,6 +8,8 @@ function run(t){
   t.eq(readInBody("Weight\nSkeletal Muscle Mass\nBody Fat Mass\n84.2\n38.1\n16.3"),{weight:84.2,smm:38.1,fatkg:16.3},"copied as a table: labels, then figures, paired in order");
   t.eq(readInBody("Weight\nSkeletal Muscle Mass\nBody Fat Mass\n84.2\n38.1"),{},"a table with a figure missing is not guessed at");
   t.eq(readInBody("الوزن ٨٤٫٢ كجم\nنسبة الدهون ١٩٫٤ ٪\nكتلة العضلات الهيكلية ٣٨٫١"),{pbf:19.4,smm:38.1,weight:84.2},"an Arabic sheet, Arabic digits");
+  t.eq(readInBody("InBody\n51.4~42.0 49.8 ‏إجمالي مياه الجسم‎\n20.2~10.1 16.3 ‏كتلة الدهون‎\n83.1-5 84.2 ‏الوزن‎\n‎37.2-4 38.1 ‏كتلة العضلات الهيكلية‎\n20.0~10.0 19.4 ‏نسبة الدهون‎\n7 ‏مستوى الدهون الحشوية‎"),
+    {pbf:19.4,smm:38.1,fatkg:16.3,vfl:7,tbw:49.8,weight:84.2},"an Arabic sheet read off its photo: range, figure, label on each line, the figure nearest the label");
   t.eq(readInBody("Weight 185.6 lb\nSkeletal Muscle Mass 84.0 lb\nPBF 19.4 %"),{pbf:19.4,smm:38.1,weight:84.2},"pounds converted");
   t.eq(readInBody("Weight 8420 kg\nPBF 194 %"),{},"figures no test can read are left out");
   t.eq(readInBody("hello"),{},"nothing in it: nothing");

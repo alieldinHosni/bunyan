@@ -20,7 +20,7 @@ import {closeCoach} from "../coachfab.js";
 import {render} from "../render.js";
 import {mealNow, toast, V} from "../view.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
-import {builderId, chatSend, editedEx, moveRow, readTraining, requestCloseSheet, setExField, topOfResults, withNotes} from "./common.js";
+import {builderId, chatSend, ibPhoto, editedEx, moveRow, readTraining, requestCloseSheet, setExField, topOfResults, withNotes} from "./common.js";
 
 /* A weekday holds one thing: a day of the program, an activity, or rest. */
 function assignWd(n,val){
@@ -138,11 +138,11 @@ function onKeydown(ev){
     runAct(ao.act,av2);}}
 function onChange(ev){
   if(ev.target.id==="chartsel"){V.chartEx=ev.target.value;render();return;}
-  /* The InBody sheet's photo, shown in the sheet to read and copy from; kept in memory
+  /* The InBody sheet's photo, shown in the sheet and read on the phone; kept in memory
      only, never stored. */
   if(ev.target.id==="ib_img"){var ibf=ev.target.files&&ev.target.files[0];if(!ibf)return;
     if(V.sd&&V.sd.img)try{URL.revokeObjectURL(V.sd.img);}catch(e){}
-    openSheet("inbody",{img:URL.createObjectURL(ibf),ib:(V.sd&&V.sd.ib)||{}});return;}
+    openSheet("inbody",{img:URL.createObjectURL(ibf),ib:(V.sd&&V.sd.ib)||{}});ibPhoto(ibf);return;}
   var ek=/^e_(sets|rest|lo|hi|min|km)$/.exec(ev.target.id||"");
   if(ek){var ee=editedEx();if(ee){setExField(ee,ek[1],ev.target.value);saveDB();render();}return;}
   /* A progress photo, picked from the camera or the library. Shrunk and stored on

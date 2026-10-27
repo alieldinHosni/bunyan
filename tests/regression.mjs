@@ -3078,6 +3078,37 @@ await test("InBody: the photo shown to copy from, the copied text read into fiel
   eq(x[0],"Your InBody","the coach reads it");
   if(!/body fat 19\.6%/.test(x[1])||!/within the range the textbook gives for most men \(10–20%\)/.test(x[1])||!/Mifflin-St Jeor/.test(x[1]))throw new Error("answer: "+x[1]);
 });
+await test("InBody from its photo: read on the phone, nothing fetched from outside, every figure in its field to check; saved, the coach says what it means for the plans",async page=>{
+  const outside=[];
+  await page.route("**/*",r=>{const u=new URL(r.request().url());if(!/^(localhost|127\.0\.0\.1)$/.test(u.hostname)){outside.push(u.href);return r.abort();}return r.continue();});
+  try{
+    /* A sheet as printed: labels, readings, the ranges beside them. */
+    const png=await page.evaluate(()=>{const c=document.createElement("canvas");c.width=1240;c.height=900;const g=c.getContext("2d");
+      g.fillStyle="#fff";g.fillRect(0,0,c.width,c.height);g.fillStyle="#111";g.font="bold 40px Arial";g.fillText("InBody",60,80);g.font="24px Arial";
+      [["Total Body Water (L)","49.8","42.0~51.4"],["Body Fat Mass (kg)","20.6","10.1~20.2"],["Weight (kg)","84.2","61.5~83.1"],["Skeletal Muscle Mass (kg)","38.1","30.4~37.2"],
+       ["Percent Body Fat (%)","24.5","10.0~20.0"],["Visceral Fat Level","7",""],["Basal Metabolic Rate (kcal)","1820",""],["InBody Score","78/100",""]]
+        .forEach((r,i)=>{const y=180+i*60;g.fillText(r[0],60,y);g.fillText(r[1],620,y);g.fillText(r[2],820,y);});
+      return c.toDataURL("image/png").split(",")[1];});
+    await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("inbody");});await pause(page);
+    await page.setInputFiles('#ib_img',{name:"inbody.png",mimeType:"image/png",buffer:Buffer.from(png,"base64")});
+    await pause(page,300);
+    eq(await page.$eval('#ibOcr',e=>!e.hidden&&/Reading the photo/.test(e.textContent)),true,"it says it is reading");
+    await page.waitForFunction(()=>{const f=document.getElementById("ib_weight");return f&&f.value!=="";},null,{timeout:60000});
+    eq(await page.evaluate(()=>["weight","pbf","smm","fatkg","vfl","ibmr","tbw","score"].map(k=>document.getElementById("ib_"+k).value)),
+      ["84.2","24.5","38.1","20.6","7","1820","49.8","78"],"every figure off the photo, in its field to check");
+    if(!(await page.$('#sheet .ib-img')))throw new Error("the photo went away on reading");
+    eq(outside,[],"nothing fetched from outside the app");
+    await page.tap('[data-ibsave]');await pause(page,800);
+    eq(await ev(page,"S.body.filter(b=>b.src==='inbody').map(b=>[b.weight,b.bf])"),[[84.2,24.5]],"saved");
+    const x=await page.evaluate(()=>{const e=[...document.querySelectorAll("#cpanel .chat-x")].pop();if(!e)return null;
+      e.querySelectorAll(".chat-more").forEach(d=>d.open=true);
+      return [(e.querySelector(".chat-at")||{}).textContent,e.innerText.replace(/[⁦-⁩]/g,""),!!e.querySelector('[data-chatq="goal"]')];});
+    if(!x)throw new Error("the coach did not open on saving");
+    eq(x[0],"Your InBody","the coach reads it at once");
+    if(!/above the range the textbook gives for most men/.test(x[1]))throw new Error("answer: "+x[1]);
+    eq(x[2],true,"with the goal to change, which rebuilds both plans");
+  }finally{await page.unroute("**/*");}
+});
 await test("Coach memory: a fact that contradicts or updates one kept is asked about, not kept beside it",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.context={v:1,next:2,items:[{id:"c1",kind:"schedule",text:"I work 13-hour days",at:"2026-10-01",by:"user"}]};});
   await openChat(page);
