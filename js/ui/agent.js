@@ -16,8 +16,10 @@
    answer says so and points to where it can be found. The change itself is run by
    js/ui/handlers/actions.js, the same way the screens' own buttons run it. */
 import {isActivity} from "../data/activities.js";
-import {LIB, pickable} from "../data/exercises.js";
+import {difficultyOf, EXDB, isCompound as isCompoundName, LIB, muscleOf as muscleOfName, patternOf, pickable} from "../data/exercises.js";
 import {planOn} from "../engine/dayplan.js";
+import {avoids, doseFor, usable} from "../engine/plan.js";
+import {goalOf} from "../data/goals.js";
 import {FOODDB, fuzzyFoods, gramsFor, nutritionFor, parseFoodInput, searchFoods} from "../engine/nutrition.js";
 import {mealName} from "../engine/meals.js";
 import {matchExercise} from "../engine/splitparse.js";
@@ -177,9 +179,50 @@ function addNext(p,days,miss){
   var act=isActivity(p.name);
   return confirm("exercise.add",{name:p.name,day:d.id},{
     lead:fill(t("Add {ex} to {day}?"),{ex:exName(p.name),day:planName(d.name)}),
-    item:exName(p.name),detail:fill(t("{d} · last in the day"),{d:act?fill(t("{n} min"),{n:30}):"3 × 8–12"}),
+    item:exName(p.name),detail:fill(t("{d} · last in the day"),{d:act?fill(t("{n} min"),{n:30}):doseLine(doseFor(p.name))}),
     cta:t("Add it"),done:fill(t("Added {ex} to {day}."),{ex:exName(p.name),day:planName(d.name)}),
     undone:fill(t("Undone. {day} is as it was."),{day:planName(d.name)})});}
+
+/* Sets × reps, and the rest, as a line. */
+function doseLine(z){return z.sets+" × "+(z.lo===z.hi?z.lo:z.lo+"–"+z.hi)+" · "+fill(t("{s} s rest"),{s:z.rest});}
+/* Exercises for a muscle, chosen for this person: from the library, what their kit
+   allows (usable), nothing that loads a sore spot they named (avoids), no skill moves
+   for someone new, the big compound lifts first and what is already in the program
+   marked; each with the goal's own prescription (doseFor). A pick: tapping one adds it
+   to a day, asking which, the same as "add … to …". */
+var SKILL=/Nordic|Pistol|Muscle[- ]Up|Handstand|One[- ]Arm Push|Planche|Dragon|Human Flag|Front Lever|Back Lever/i;
+function suggestExercises(muscle){
+  var p=S.profile||{},limits=p.limits||[],gear=S.gear,mine={};
+  split().days.forEach(function(d){d.ex.forEach(function(e){mine[e.name]=1;});});
+  var pool=LIB.filter(function(l){var n=l[0];
+    return pickable(n)&&!isActivity(n)&&muscleOfName(n)===muscle&&usable(n,gear)&&!avoids(n,limits)&&!(p.level==="new"&&(SKILL.test(n)||/Advanced|Expert/.test(difficultyOf(n)||"")));})
+    .map(function(l){return l[0];});
+  if(!pool.length)return say(fill(t("Nothing in the library trains {m} with your equipment and around what you've said hurts."),{m:t(muscle).toLowerCase()}),
+    [{l:t("Open Training"),a:{"data-tab":"train"}}]);
+  /* For size and strength a move that takes a load comes before the same move with
+     none, when there is something to load it with. */
+  var loadGoal=/^(hyp|str|pow)$/.test(goalOf(p.goal).train)&&gear&&gear.some(function(g){return g!=="Bodyweight";});
+  function score(n){var e=(EXDB&&EXDB[n]||{}).e||"";
+    return (isCompoundName(n)?4:0)+(loadGoal&&e&&e!=="Bodyweight"?2:0)+(mine[n]?1:0)
+      +(p.level==="new"&&difficultyOf(n)==="Beginner"?3:0);}
+  pool.sort(function(a,b){return score(b)-score(a);});
+  /* Stretches, holds and cardio drills are not what "exercises for legs" means, unless
+     the goal is mobility or endurance. A spread, not five versions of one move: at most
+     two of each movement, by the move its name says. */
+  var tr=goalOf(p.goal).train,side=tr==="mob"?/Conditioning|Isometric/:tr==="end"?/Mobility|Isometric/:/Mobility|Conditioning|Isometric/;
+  var noJumps=(p.level==="new"&&tr!=="pow")||(p.health||[]).length>0;
+  var main=pool.filter(function(n){return !side.test(patternOf(n)||"")&&!(noJumps&&/jump|bound|hop|plyo|burpee|skater/i.test(n))
+    &&!(tr!=="pow"&&/atlas|drag|yoke|log lift|tire|sled|keg|farmer/i.test(n));});
+  if(main.length)pool=main;
+  var MOVE=/squat|lunge|step|deadlift|thrust|bridge|press|push|fly|row|pull|chin|curl|raise|extension|kickback|dip|crunch|plank/i;
+  var seen={},top=[];
+  pool.forEach(function(n){var m=n.match(MOVE),k=m?m[0].toLowerCase():n;if(top.length<5&&(seen[k]||0)<2){seen[k]=(seen[k]||0)+1;top.push(n);}});
+  var G=goalOf(p.goal);
+  var lead=fill(t("For {m}, for {g}, with what you train with:"),{m:t(muscle).toLowerCase(),g:t(G.label).toLowerCase()})
+    +((p.health||[]).length?" "+t("Keep the effort moderate until a professional has cleared you."):"")
+    +(limits.length?" "+t("Moves the app keeps away from what you said hurts are left out; stop anything that brings it on."):"")+" "+t("Tap one to add it to a day.");
+  return pick("exercise",lead,top.map(function(n){var o=exOpt(n,doseLine(doseFor(n))+(mine[n]?" · "+t("in your program"):""));return o;}),
+    "exercise.add",{},"name",false);}
 
 /* Remove: an exercise that is in the program, from the day it is in. */
 function planRemove(text,p){
@@ -449,4 +492,4 @@ function namesFood(text){
   return [rest(swapParts(fq).from),rest(fq)].some(function(q){
     var c=parseFoodInput(q)[0];return !!c&&searchFoods(c.query,1).some(function(h){return h.score>=72;});});}
 
-export {answerPick, foodById, namesExercise, namesFood, plan, planCommand, proceed};
+export {answerPick, foodById, namesExercise, namesFood, plan, planCommand, proceed, suggestExercises};

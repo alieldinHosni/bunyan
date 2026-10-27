@@ -1961,3 +1961,29 @@ Owner, 27 Oct (screenshot: "Can I restructure my workout plan to be home based w
 - **Haptics on iPhone**: Safari has no vibration API; since iOS 18 a hidden `<input type="checkbox" switch>` ticks the Taptic Engine when its label is clicked inside a tap. `view.js iosTick` does that on every button tap (where Android vibrates). Its clicks stop at the label. The Haptic feedback setting now shows on iPhone too. Not verifiable in the headless browser: check on the phone.
 - Tests: the assessment walk-through takes the new step; new tests for the health step and the textbook notes, the kit request, and the haptic switch; the registry test accepts `on()` branches (`D.as`).
 - **The workout stands on Training's picture** (owner, 27 Oct: "the same training page background on the page after the warm-up"). `render.js groundOf`: a live workout shows `home`; while the warm-up is up the ground stays clear (its card has its own). The workout page's colour moved from `body` to the root (`:root:has(body.wkflat)`), because a body background covers the ground layer.
+
+## Motion, the keyboard under the chat, and answers tailored to the person — branch session/motion-tailor
+
+Owner, 27 Oct: the chat screen shifts badly when the keyboard opens; tab changes and opening the chat should be a little slower and more dynamic; suggestions (exercises, volume, progress) must come from the knowledge base and be tailored to what the assessment and the chat know. CACHE `bunyan-v148`.
+
+- **Keyboard:** the chat's question box is now held like a sheet's field (`keyboard.js inSheet` covers `#cpanel .cp`), so Safari no longer scrolls the page under the panel. The panel follows the keyboard with a transition on its top, height and padding (`--m-kb` 320 ms, `--e-ios`) instead of snapping. Not verifiable headless: check on the phone.
+- **Motion tokens:** `--m-tab` 420 ms and `--m-panel` 380 ms, with `--e-spring` (a slight settle).
+  - The page change (`#app.pagein`) rises 16 px over `--m-tab`.
+  - The dock pill and its label slide on it too.
+  - The coach panel opens over `--m-panel`.
+  - A theme test waits for the dock's change to finish before reading its colour.
+- **One prescription everywhere:** `plan.js doseFor(name, profile)` gives an added exercise the same sets, reps, rest and effort as the builder's accessories: the goal's training style and level, then into the textbook's range for the goal's adaptation. Used by:
+  - the picker (`actions.js addExercise`, was a fixed 3 × 8–12)
+  - the coach's "add …" confirmation (was a fixed "3 × 8–12")
+  - the new suggestions
+- **"What exercises for legs?"** (`agent.js suggestExercises`, also "best exercise for …", "تمارين صدر"): exercises are drawn from the library, then:
+  - Filtered: the person's kit (`usable`), nothing on the avoid list for a sore spot they named (`avoids`), no advanced or skill moves for someone new, no jumps for someone new or with a health tick (unless the goal is power), no strongman implements. Stretches, holds and cardio drills only for mobility or endurance.
+  - Ranked: compounds first, loaded moves first for size and strength when there is a load, beginner-rated moves first for someone new.
+  - At most two of each movement; each shows the goal's dose and whether it's already in the program.
+  - A tap adds it to a day, asking which.
+- **The volume answer is goal-aware:** a goal that isn't muscle size gets "no weekly target per muscle; {a}–{b} sets an exercise" instead of the RP range.
+- **Knowledge answers are tailored** (`chat.js tailor`):
+  - The goal's sets, reps and rest when the passage is about how to train.
+  - A health-tick note on vigorous topics, and a sore-spot note on movement topics.
+  - What the person told the coach that bears on it.
+- Tests: the suggestions (kit, sore spot, goal dose, the day asked) and the goal's dose for an added exercise.

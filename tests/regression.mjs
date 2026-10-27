@@ -990,7 +990,9 @@ await test("Themes: Sage light, as the reference: white type on the ground, deep
     return [col(".thead h1"),col(".pglbl h2"),col(".pgcard,.pgstat,.card")];});
   eq(c.slice(0,2),["rgb(255, 255, 255)","rgb(255, 255, 255)"],"the title and the section heading");
   eq(c[2],"rgb(19, 38, 39)","a card's type");
-  /* The dock is the reference's: a slate bar, white buttons, the open tab a white pill. */
+  /* The dock is the reference's: a slate bar, white buttons, the open tab a white pill
+     (once its change of tab, --m-tab, has played). */
+  await pause(page,500);
   eq(await page.$eval(".dock-b.on",e=>getComputedStyle(e).backgroundColor),"rgb(255, 255, 255)","the open tab");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
 await test("Themes: the stylesheet names no colour outside the theme blocks",async page=>{
@@ -2456,6 +2458,26 @@ await test("Haptics: on an iPhone a tap ticks the hidden switch, and no tap bran
   eq(r,[true,0,"boolean"]);
 },{init:()=>{Object.defineProperty(navigator,"userAgent",{get:()=>"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"});
   try{Object.defineProperty(Navigator.prototype,"vibrate",{value:undefined,configurable:true});delete Navigator.prototype.vibrate;}catch(e){}}});
+await test("Coach tailors: exercises for a muscle fit the kit, the sore spots and the goal, each with the goal's dose; an exercise added by hand takes the goal's dose too",async page=>{
+  await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const S=(await import("/js/state.js")).S;Object.assign(S.profile,{goal:"endurance",level:"some",limits:["shoulder"],health:[]});S.gear=["Bodyweight"];});
+  await openChat(page);
+  const r=await agSay(page,"what exercises for chest?");
+  if(!/For chest, for endurance and fitness/.test(r.lead))throw new Error("lead: "+r.lead);
+  const subs=await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x.live .ag-os")].map(e=>e.textContent));
+  if(!subs.length||!subs.every(x=>/^[1-3] × 12–20/.test(x)))throw new Error("doses: "+subs.join(" | "));
+  const ok=await page.evaluate(async()=>{const X=await import("/js/data/exercises.js"),P=await import("/js/engine/plan.js");
+    const names=[...document.querySelectorAll("#cpanel .chat-x.live .ag-ol")].map(e=>e.textContent);
+    return names.length>0&&names.every(n=>{const k=Object.keys(X.EXDB).find(x=>x===n)||n;return P.usable(k,["Bodyweight"])&&!P.avoids(k,["shoulder"]);});});
+  eq(ok,true,"bodyweight only, nothing that loads the shoulder");
+  /* A tap asks for the day, as "add … to …" does. */
+  await page.tap('#cpanel .chat-x.live .ag-opt');await pause(page,400);
+  if(!/to which day/.test((await agLast(page)).lead))throw new Error("no day asked");
+  /* The picker's exercise takes the goal's dose. */
+  const d=await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,P=await import("/js/engine/plan.js");S.profile.goal="strength";S.profile.level="experienced";
+    return P.doseFor("Dumbbell Bench Press");});
+  eq([d.sets>=4&&d.sets<=6,d.lo,d.hi],[true,6,10],"strength: 4–6 sets of 6–10");
+},{prefs:{lang:"en"}});
 await test("Coach does what the app does, in Arabic: water said in Egyptian Arabic is asked in Arabic",async page=>{
   await openChat(page);
   const r=await agSay(page,"شربت كوبايتين مية");

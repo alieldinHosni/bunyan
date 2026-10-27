@@ -20,7 +20,9 @@ function opensKeyboard(el){
   if(el.matches("textarea,[contenteditable=true]"))return true;
   return el.matches("input")&&!el.matches("[type=checkbox],[type=radio],[type=range],[type=file],[type=button],"
     +"[type=submit],[type=reset],[type=color],[type=date],[type=time],[type=datetime-local],[type=month],[type=week],[type=hidden]");}
-function inSheet(el){return !!(el&&el.closest&&el.closest("#sheet .sheetbox"));}
+/* A sheet, or the coach's panel: both are pinned to what the keyboard leaves, so both
+   jumped when Safari scrolled the page under them to show the field. */
+function inSheet(el){return !!(el&&el.closest&&el.closest("#sheet .sheetbox,#cpanel .cp"));}
 
 /* The nearest box that scrolls, short of the page. */
 function scrollBox(el){
