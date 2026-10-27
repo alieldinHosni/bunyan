@@ -2436,7 +2436,7 @@ await test("Coach does what the app does: opens places, adds water and steps, ch
   r=await agSay(page,"raise my calories by 200");await page.tap('#cpanel [data-agok]');await pause(page,400);
   eq(await ev(page,"S.goals.kcal"),Math.round((k0+200)/10)*10,"calories raised");
   /* Going somewhere lets the panel go with the move. */
-  await page.fill('#chatq',"open my meal plan");await page.press('#chatq','Enter');await pause(page,700);
+  await page.fill('#chatq',"open my meal plan");await page.press('#chatq','Enter');await pause(page,1300);
   eq([await ev(page,"V.tab"),await ev(page,"V.cfsub")],["coach","plan"],"meal plan opened");
   await openChat(page);
   r=await agSay(page,"how much water should I drink");
@@ -2445,7 +2445,12 @@ await test("Coach does what the app does: opens places, adds water and steps, ch
 await test("Coach: asked to make the program home based with no equipment, it opens the plan rebuilt for bodyweight to review, changing nothing yet",async page=>{
   await openChat(page);
   const before=await ev(page,"JSON.stringify(S.programs)");
-  await page.fill('#chatq',"Can I restructure my workout plan to be home based with no equipment?");await page.press('#chatq','Enter');await pause(page,800);
+  await page.fill('#chatq',"Can I restructure my workout plan to be home based with no equipment?");await page.press('#chatq','Enter');await pause(page,600);
+  /* Said first, with a button: nothing moves until it is tapped. */
+  const r0=await agLast(page);
+  if(!/rebuild your program for no equipment/.test(r0.lead)||!r0.ok)throw new Error("not said first: "+r0.lead);
+  eq(await ev(page,"!!V.assess"),false,"still in the chat");
+  await page.tap('#cpanel [data-agok]');await pause(page,1000);
   eq([await ev(page,"V.assess"),await ev(page,"V.asd&&V.asd.gear"),await ev(page,"V.asd&&V.asd.step")===await page.evaluate(async()=>(await import("/js/ui/views/assess.js")).STEPS.indexOf("result"))],[true,"bw",true],"the result, for bodyweight");
   eq(await ev(page,"JSON.stringify(S.programs)")===before,true,"nothing changed before Use this plan");
 });
