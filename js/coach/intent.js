@@ -161,6 +161,18 @@ var INTENTS=[
   ["kdur",[
     "how long workout|session|train|training|should","workout length|duration","session length|duration","how long gym",
     "مده التمرين","التمرين ياخد قد|كام"]],
+  /* How the weight box is read: a barbell's total, a dumbbell per hand or both, and what
+     volume counts. Above the body-weight and change-the-program intents on purpose:
+     "is the barbell weight per hand", "does volume include the bar". */
+  ["loadlog",[
+    "weight|weights|load per|each|one hand|hands","per hand$","per hand|side or|vs total","total or|vs per hand|each",
+    "bar|barbell weight","weight of|with bar|barbell","include|including|included|includes|count|counts|counted|counting bar$|barbell",
+    "volume include|including|includes|count|counts|counted|calculate|calculated|calculation|work|works|worked|figured",
+    "how is|do you volume calculated|counted|worked|figure|calculate",
+    "log|enter|record|type|put weight|weights per|total|both|together|hand",
+    "dumbbell|dumbbells per|each|both hand|hands","dumbbell|dumbbells weight|weights total|together",
+    "وزن البار|الباربل","البار محسوب|بيتحسب|داخل|معاه|مع","الفوليوم|الحجم|الفوليوم بيتحسب|محسوب|ازاي",
+    "لكل|كل ايد|ايده","الدمبل|الدامبل|دمبل|دامبل لكل|كل|الاتنين|مع|واحد|واحده","اسجل|بسجل الوزن|وزن لكل|كل|الاتنين|مع|الاجمالي"]],
   ["k1rm",[
     "1rm|one rep max|max calculate|formula|estimate","estimated max|1rm","how is max|1rm calculated",
     "اقصي وزن مره|لعده","الماكس"]],

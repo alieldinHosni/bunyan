@@ -16,7 +16,7 @@ import {weekStartOf} from "./schedule.js";
 
 /* What the figures are handed: the workouts, the weigh-ins and the profile's weight
    (body weight counts in a pull-up's load), as lifts.js takes them. */
-function LOG(){return {sessions:S.sessions,body:S.body,weight:S.profile&&S.profile.weight};}
+function LOG(){return {sessions:S.sessions,body:S.body,weight:S.profile&&S.profile.weight,dbHand:!(S.prefs&&S.prefs.dbLoad==="total")};}
 
 /* Progress re-renders on every tap — a range, a tab, a chart — and each figure below
    is a sweep over the whole history. They are kept until the data changes: a save

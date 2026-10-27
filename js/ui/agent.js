@@ -151,6 +151,9 @@ function pick(what,lead,opts,act,p,slot,none){return {s:"pick",what:what,lead:le
 function confirm(act,p,o){return Object.assign({s:"confirm",act:act,p:p},o);}
 function say(lead,acts){return {s:"say",lead:lead,acts:acts||[]};}
 function closeOf(q,names,act,p,slot){
+  /* A sentence, not a name (owner, 27 Oct): six words or more that match no exercise
+     are not looked up as one; the closest names to a sentence are noise. */
+  if(q.split(" ").length>=6)return say(t("I couldn't tell which exercise you mean. Say just its name, or pick it in Training."),[{l:t("Open Training"),a:{"data-tab":"train"}}]);
   /* For an add, the words asked for go with the pick: "None of these" makes them an
      exercise of the person's own (createAsk). */
   if(act==="exercise.add")p=Object.assign({q:q},p);

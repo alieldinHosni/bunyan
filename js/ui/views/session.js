@@ -203,11 +203,13 @@ function vSetCard(e,row,rows,o){
     +' <span>· '+t("Not counted in volume or records")+'</span></p></div>':'';
   if(V.draftSg)top+='<span class="sg-tag" id="sgTag">'+t("Suggested")+'</span>';
   if(top)h+='<div class="sc-top">'+top+'</div>';
-  /* What the weight box holds: added load on a bodyweight lift, and how a dumbbell's
-     weight reads (per hand unless the lifter chose totals). */
+  /* What the weight box holds: added load on a bodyweight lift, how a dumbbell's
+     weight reads (per hand unless the lifter chose totals), and a barbell's total with
+     the bar in it, what the plates sheet works from. */
   var med=exMedia(e.name);
   var wKey=t(bwl?"Added weight":"Weight")
-    +(med&&med.e==="Dumbbell"?' · '+t(dbTotal()&&!isUnilateral(e.name)?"both together":"per hand"):'');
+    +(med&&med.e==="Dumbbell"?' · '+t(dbTotal()&&!isUnilateral(e.name)?"both together":"per hand"):'')
+    +(med&&med.e==="Barbell"?' · '+t("with bar"):'');
   var wStepD=stepOf(e),rLbl=timed||loaded?t("Duration"):t("Reps"),rStep=timed||loaded?5:1,rUnit=timed||loaded?t("s"):"";
   h+='<div class="sc-g'+(timed?' one':'')+'">';
   if(!timed)

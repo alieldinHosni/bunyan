@@ -16,7 +16,7 @@ import {render} from "../render.js";
 import {changeLook, themeOf} from "../theme.js";
 import {tourReset} from "../tour.js";
 import {alarmStart, keepAwake, toast, V} from "../view.js";
-import {fixLogsNow, retargetNow} from "./common.js";
+import {fixLogsNow, retargetNow, setDbLoad} from "./common.js";
 import {has, key} from "./registry.js";
 
 /* The text of a backup, read and checked (js/schema.js checkBackup): {o, check}, or
@@ -88,7 +88,7 @@ function register(){
   key("setprog",function(D){if(/^(conservative|standard|aggressive)$/.test(D.setprog)){S.profile.prog=D.setprog;saveDB();render();}return;});
   key("setrpe",function(D){if(/^(every|last|off)$/.test(D.setrpe)){S.prefs.rpe=D.setrpe;saveDB();render();}return;});
   key("setwarn",function(D){var w=+D.setwarn;if([5,10,15].indexOf(w)>=0){S.prefs.warn=w;saveDB();render();}return;});
-  key("setdb",function(D){if(/^(hand|total)$/.test(D.setdb)){S.prefs.dbLoad=D.setdb;saveDB();render();}return;});
+  key("setdb",function(D){if(/^(hand|total)$/.test(D.setdb))setDbLoad(D.setdb);return;});
   key("setunit",function(D){if(/^(kg|lb)$/.test(D.setunit)){S.prefs.unit=D.setunit;saveDB();render();}return;});
   key("setcompact",function(D){S.prefs.compact=D.setcompact==="1";saveDB();render();return;});
   key("setlang",function(D){if(!/^(en|ar)$/.test(D.setlang)||D.setlang===S.prefs.lang)return;

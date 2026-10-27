@@ -20,7 +20,7 @@ import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {groupRun} from "../views/session.js";
 import {newNames, programFromDraft} from "../views/timport.js";
-import {builderId, editedEx, pcAfter, readTraining, requestCloseSheet, setExField, tidyGroups, toCoach, topOfResults} from "./common.js";
+import {builderId, editedEx, pcAfter, readTraining, requestCloseSheet, setDbLoad, setExField, tidyGroups, toCoach, topOfResults} from "./common.js";
 import {has, key, NEXT, on} from "./registry.js";
 
 /* Moving a program to weekdays: the empty "Rest" days that spaced out a rotation
@@ -226,7 +226,7 @@ function register(){
     at=Math.max(0,Math.min(steps.length-1,at+(+D.exincr)));
     if(steps[at])S.incr[ec.name]=Math.round(steps[at]*1000)/1000;else delete S.incr[ec.name];
     saveDB();render();return;});
-  key("dbload",function(){S.prefs.dbLoad=S.prefs.dbLoad==="total"?"hand":"total";saveDB();render();return;});
+  key("dbload",function(){setDbLoad(S.prefs.dbLoad==="total"?"hand":"total");return;});
   key("saveex",function(){
     var e2=editedEx();
     if(e2)["sets","rest","lo","hi","min","km"].forEach(function(k){

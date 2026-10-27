@@ -7,7 +7,7 @@ import {loadExDB} from "../../data/exercises.js";
 import {importName, ownSlots} from "../../engine/meals.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {retarget} from "../../engine/retarget.js";
-import {fixBodyweightLogs} from "../../engine/logfix.js";
+import {convertDbLoads, fixBodyweightLogs} from "../../engine/logfix.js";
 import {readSplit} from "../../engine/splitparse.js";
 import {t} from "../../i18n/dict.js";
 import {CUR, dayOf, editSplit, S, saveDB, saveSession} from "../../state.js";
@@ -211,8 +211,18 @@ function fixLogsNow(){
     setTimeout(function(){if(CUR!==prof)return;
       toast(t(f.changed===1?"1 body-weight set logged with your body weight as the weight now reads as body weight.":"{n} body-weight sets logged with your body weight as the weight now read as body weight.").replace("{n}",f.changed),
         function(){if(CUR!==prof)return;f.undo(S).forEach(function(s){saveSession(s);});saveDB();render();});},2600);});}
+/* How dumbbells are entered, per hand or both together, with the logged history
+   converted to match (js/engine/logfix.js convertDbLoads). Said, with Undo, when any
+   set changed. */
+function setDbLoad(to,quiet){
+  var from=S.prefs.dbLoad==="total"?"total":"hand";if(to===from)return;
+  var c=convertDbLoads(S,to);
+  c.sessions.forEach(function(s){saveSession(s);});
+  saveDB();render();
+  if(c.changed&&!quiet)toast(t(to==="total"?"{n} dumbbell sets now read as both dumbbells together.":"{n} dumbbell sets now read as one dumbbell.").replace("{n}",c.changed),
+    function(){setDbLoad(from,true);});}
 /* Functions a handler module lends the coach's actions (js/ui/handlers/actions.js),
    set when it registers: the actions run what the screens run without the handler
    modules importing each other. */
 var LENT={};
-export {builderId, chatEnd, chatSend, editedEx, fixLogsNow, LENT, MF, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, retargetNow, sendText, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};
+export {builderId, chatEnd, chatSend, editedEx, fixLogsNow, LENT, setDbLoad, MF, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, retargetNow, sendText, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};

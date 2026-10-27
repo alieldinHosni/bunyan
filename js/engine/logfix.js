@@ -13,7 +13,7 @@
    {changed, sessions, undo}: the number of sets changed, the sessions to save, and a
    way to put them back (returning the sessions to save again). The
    version is set either way (db.logFixV), so this runs once. */
-import {EXDB} from "../data/exercises.js";
+import {EXDB, pairOfDumbbells} from "../data/exercises.js";
 import {bodyAtIn} from "./lifts.js";
 import {num} from "../util.js";
 
@@ -46,4 +46,25 @@ function fixBodyweightLogs(db){
       if(x&&!num(x.w)){x.w=p[4];if(p[0]!=="@active"&&back.indexOf(s)<0)back.push(s);}});
     return back;}};}
 
-export {fixBodyweightLogs, LOGFIX_V};
+/* Dumbbell loads, from per hand to both together or back (owner, 27 Oct). The setting
+   says what the box holds, so the history is brought along with it: every set of a
+   two-dumbbell exercise, the workout under way, and a step of the person's own for
+   one, doubled or halved, so one method holds throughout and volume, records and
+   suggestions do not jump. One arm at a time is one dumbbell either way, untouched.
+   convertDbLoads(db, to) → {changed, sessions}: the sets changed, the sessions to save. */
+function convertDbLoads(db,to){
+  var from=db&&db.prefs&&db.prefs.dbLoad==="total"?"total":"hand",out={changed:0,sessions:[]};
+  if(!db||!/^(hand|total)$/.test(to)||to===from)return out;
+  var k=to==="total"?2:0.5;
+  function conv(s,save){var hit=false;
+    (s&&s.entries||[]).forEach(function(e){
+      if(!e||!pairOfDumbbells(e.name))return;
+      (e.sets||[]).forEach(function(x){if(x&&num(x.w)>0){x.w=Math.round(num(x.w)*k*100)/100;out.changed++;hit=true;}});});
+    if(hit&&save)out.sessions.push(s);}
+  (db.sessions||[]).forEach(function(s){conv(s,true);});
+  conv(db.active,false);
+  if(db.incr)Object.keys(db.incr).forEach(function(n){if(pairOfDumbbells(n)&&num(db.incr[n])>0)db.incr[n]=Math.round(num(db.incr[n])*k*100)/100;});
+  db.prefs.dbLoad=to;
+  return out;}
+
+export {convertDbLoads, fixBodyweightLogs, LOGFIX_V};
