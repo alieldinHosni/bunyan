@@ -3178,8 +3178,8 @@ await test("Chat history: the chat shows a day, the history thirty read-only day
   const h=await page.evaluate(()=>{const s=document.querySelector(".sheet,#sheet");return {
     q:[...s.querySelectorAll(".chat-q")].map(x=>x.textContent),days:s.querySelectorAll(".chh-day").length,
     acts:s.querySelectorAll(".chat-x button:not(summary), .chat-x [data-tab], .chat-x [data-chatq]").length,
-    input:s.querySelectorAll("input,textarea,[data-chatsend]").length};});
-  eq(h,{q:["just now","three days ago"],days:2,acts:0,input:0},"30 days, newest day first, nothing to tap or send");
+    input:s.querySelectorAll("input:not(#chhq),textarea,[data-chatsend]").length,search:!!s.querySelector("#chhq")};});
+  eq(h,{q:["just now","three days ago"],days:2,acts:0,input:0,search:true},"30 days, newest day first, nothing to tap or send; only a search");
   eq(await ev(page,"S.chat.length"),2,"forty days ago is gone");
   /* Profile's row opens the same. */
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,600);
