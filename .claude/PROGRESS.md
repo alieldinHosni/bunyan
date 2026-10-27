@@ -2364,3 +2364,24 @@ made, imported or built with the coach, shared to another Bunyan user and arrivi
   is not the Home Screen app's — hence paste first.
 - Tests: engine planshare (pack, accept, refuse, clamp); regression "A plan to another Bunyan user…"
   (two phones: program and meal plan compared field by field; link).
+## InBody results for the coach — branch session/inbody
+
+CACHE `bunyan-v172` (#75 v170, #76 v171). Owner, 27 Oct: upload an InBody to the coach so plans use it.
+- **No text recognition in the app** (it would need a model this offline app does not carry, or an
+  API). Instead: the sheet shows the chosen photo (memory only, never stored), and on iPhone its text
+  is copied with Live Text and pasted. js/engine/inbody.js `readInBody` finds each figure by its label
+  (EN and Arabic, Arabic digits, lb converted): on the label's own line first, else a labels-column /
+  figures-column copy paired in order only when the counts match. Out-of-range figures are left out;
+  fat mass that disagrees with weight × % is dropped. Every figure is shown to be checked.
+- **Saved** (Progress → Body → Body composition → "Add an InBody result", or the coach's button) as the
+  test date's body entry: `weight`, `bf` (where the app already reads them: targets, lean mass,
+  charts), plus `smm, fatkg, vfl, ibmr, tbw, ibscore`, `src:"inbody"`; with Undo.
+- **Progress** says "From your InBody test" and shows skeletal muscle, visceral fat level, score.
+- **Coach** (intent `inbody`, `aInBody`): the latest test; body fat against the textbook's ranges
+  (assessments.js body_fat_ranges, 11.4: men 10–20 %, women 20–30 %, varies with age; `fatBand`);
+  fat and muscle change since the test before; a goal that disagrees (above the range but not losing,
+  or in range but losing) is said with Change my goal; the device's BMR is shown and not used —
+  targets keep Mifflin-St Jeor for everyone (CLAUDE.md formulas); the textbook's hydration caveat.
+  Figures in the coach's lines are wrapped in bidi isolates so a sign stays with its number in Arabic.
+- Tests: engine inbody (labels, table copy, missing figure, Arabic, lb, out of range, bands);
+  corpus phrasings; regression "InBody: …" (photo, read, check, edit, save, Progress, coach).

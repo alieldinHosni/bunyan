@@ -14,7 +14,7 @@ import {toKg} from "../../units.js";
 import {fmtN, num} from "../../util.js";
 import {fold} from "../../coach/intent.js";
 import {plateLine} from "../views/session.js";
-import {runAct, val} from "../actions.js";
+import {openSheet, runAct, val} from "../actions.js";
 import {addPhoto, avatarFrom} from "../photos.js";
 import {closeCoach} from "../coachfab.js";
 import {render} from "../render.js";
@@ -138,6 +138,11 @@ function onKeydown(ev){
     runAct(ao.act,av2);}}
 function onChange(ev){
   if(ev.target.id==="chartsel"){V.chartEx=ev.target.value;render();return;}
+  /* The InBody sheet's photo, shown in the sheet to read and copy from; kept in memory
+     only, never stored. */
+  if(ev.target.id==="ib_img"){var ibf=ev.target.files&&ev.target.files[0];if(!ibf)return;
+    if(V.sd&&V.sd.img)try{URL.revokeObjectURL(V.sd.img);}catch(e){}
+    openSheet("inbody",{img:URL.createObjectURL(ibf),ib:(V.sd&&V.sd.ib)||{}});return;}
   var ek=/^e_(sets|rest|lo|hi|min|km)$/.exec(ev.target.id||"");
   if(ek){var ee=editedEx();if(ee){setExField(ee,ek[1],ev.target.value);saveDB();render();}return;}
   /* A progress photo, picked from the camera or the library. Shrunk and stored on

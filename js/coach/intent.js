@@ -66,6 +66,10 @@ var INTENTS=[
     "on track","how am i doing","how doing","my progress","progress","results","improving","getting better","summary","overview",
     "this week",
     "ماشي صح","عامل|ماشي ايه|اي","تقدمي|التقدم","اتحسنت|بتحسن","نتايج|نتائج|النتيجه","ملخص","الاسبوع ده|الاسبوع"]],
+  /* An InBody (bioimpedance) result: read by chat.js aInBody from the body entries. */
+  ["inbody",[
+    "inbody|in-body","in body scan|test|result|sheet","body composition scan|test|result","my scan|scan result","skeletal muscle mass|smm","visceral fat",
+    "انبودي|انبودى","ان بودي","تحليل|تكوين الجسم","كتله العضلات","الدهون الحشويه"]],
   ["weight",[
     "my weight","scale","weight stuck|same|plateau|stall|not","not losing|dropping","not gaining","weigh|weighed|weigh-in","body weight","plateau","stalled",
     "lost|gained how much","losing weight","gaining weight",

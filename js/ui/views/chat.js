@@ -41,6 +41,7 @@ import {nutrition, topLifts, weeklyCardio, weighIns, weightChange, weightTrend} 
 import {S, split} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num, pretty, r1, setLang, shortd, today} from "../../util.js";
+import {FAT_RANGE, fatBand} from "../../engine/inbody.js";
 import {backArrow} from "../nav.js";
 import {doseText} from "../dose.js";
 import {blockDay, blockNow} from "../../engine/blocks.js";
@@ -57,7 +58,7 @@ var KEEP=500;
 /* The suggestions: what each asks, as the person would ask it. */
 var ASK={
   today:"What do I train today?",weights:"How much should I lift?",eat:"What should I eat now?",
-  plateau:"Why isn't my lift going up?",loadlog:"How are weights logged?",week:"How was my week?",busy:"This machine is taken",track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
+  plateau:"Why isn't my lift going up?",inbody:"What does my InBody say?",loadlog:"How are weights logged?",week:"How was my week?",busy:"This machine is taken",track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
   calories:"Why are my calories set like this?",sore:"I'm sore or tired",missed:"I'm short on time today",
   balance:"Is my program balanced?",strong:"How strong am I?",goal:"Should I change my goal?",
   plan:"Build me a new plan",water:"How much water should I drink?",steps:"How are my steps and cardio?",
@@ -67,7 +68,7 @@ var ASK={
   letgo:"Just move on",lowday:"Adjust today for a low day",facts:"What have I told you?"};
 /* What to offer next, after each kind of answer. */
 var NEXT={
-  plateau:["strong","weights","sore"],loadlog:["weights","strong","today"],week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
+  plateau:["strong","weights","sore"],inbody:["weight","calories","goal"],loadlog:["weights","strong","today"],week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
   track:["weight","strong","balance"],weight:["calories","eat","goal"],protein:["eat","calories","track"],
   calories:["protein","weight","goal"],sore:["today","missed","balance"],missed:["today","weights","track"],
   balance:["today","strong","plan"],strong:["weights","track","balance"],goal:["calories","plan","weight"],
@@ -293,6 +294,38 @@ function aLoadLog(a){
     :"Volume is weight × reps for every set, added up, warm-ups left out. It counts the bar, and both dumbbells: logged per hand, a pair counts twice."));
   n(a,t("You can switch dumbbells between per hand and both together in Settings → Training. What you've already logged is converted to match."));
   return act(a,t("Dumbbell setting"),{"data-sheet":"set_training"});}
+/* An InBody result, read (owner, 27 Oct; js/engine/inbody.js): the latest test, against
+   the textbook's body-fat ranges (11.4, varying with age), what changed since the test
+   before, and what that says about the goal. The device's BMR is shown, never used: the
+   targets keep one method for everyone. */
+function aInBody(a){
+  var tests=(S.body||[]).filter(function(b){return b.src==="inbody"&&(b.bf||b.smm||b.weight);});
+  if(!tests.length){
+    p(a,t("Add your InBody sheet and I'll read it with the rest of your log: body fat, muscle, and how they change from one test to the next."));
+    return act(a,t("Add an InBody result"),{"data-sheet":"inbody"});}
+  var c=tests[tests.length-1],pv=tests.length>1?tests[tests.length-2]:null,sex=(S.profile||{}).sex,goal=(S.profile||{}).goal;
+  /* Figures kept whole in a right-to-left line: a sign stays before its number. */
+  var iso=function(x){return "\u2066"+x+"\u2069";};
+  var bits=[];
+  if(c.bf)bits.push(fill(t("body fat {n}%"),{n:iso(c.bf)}));
+  if(c.smm)bits.push(fill(t("skeletal muscle {w}"),{w:iso(fmtW(c.smm))}));
+  if(c.weight)bits.push(fill(t("weight {w}"),{w:iso(fmtW(c.weight))}));
+  p(a,fill(t("Your InBody from {d}: {list}."),{d:shortd(c.date),list:list(bits)}));
+  var band=fatBand(c.bf,sex),R=FAT_RANGE[sex];
+  if(band)p(a,fill(t(band==="over"?"That's above the range the textbook gives for most {who} ({lo}–{hi}%). It varies with age."
+    :band==="under"?"That's under the range the textbook gives for most {who} ({lo}–{hi}%).":"That's within the range the textbook gives for most {who} ({lo}–{hi}%)."),
+    {who:t(sex==="f"?"women":"men"),lo:iso(R[0]),hi:iso(R[1])}));
+  if(pv){var fk=function(e){return e.fatkg!=null?e.fatkg:(e.bf&&e.weight?e.weight*e.bf/100:null);},ch=[];
+    var f0=fk(pv),f1=fk(c);if(f0!=null&&f1!=null)ch.push(fill(t("fat {d}"),{d:iso((f1-f0>=0?"+":"−")+fmtW(Math.abs(Math.round((f1-f0)*10)/10)))}));
+    if(pv.smm&&c.smm)ch.push(fill(t("skeletal muscle {d}"),{d:iso((c.smm-pv.smm>=0?"+":"−")+fmtW(Math.abs(Math.round((c.smm-pv.smm)*10)/10)))}));
+    if(ch.length)p(a,fill(t("Since your test on {d}: {list}."),{d:shortd(pv.date),list:list(ch)}));}
+  if(band==="over"&&goal!=="lose"){p(a,t("With body fat above that range, losing fat first is the direction the textbook points to. Change the goal and both plans are rebuilt."));
+    act(a,t("Change my goal"),{"data-chatq":"goal"});}
+  else if(band&&band!=="over"&&goal==="lose"){p(a,t("You're within that range already. Building muscle may suit you better than losing more."));
+    act(a,t("Change my goal"),{"data-chatq":"goal"});}
+  if(c.ibmr){var mine=bmr();n(a,fill(t(mine?"Its BMR, {i} kcal, is the device's own estimate. Your targets use Mifflin-St Jeor ({m} kcal), the same method for everyone.":"Its BMR, {i} kcal, is the device's own estimate. Your targets use Mifflin-St Jeor, the same method for everyone."),{i:fmtN(c.ibmr),m:fmtN(Math.round(mine||0))}));}
+  n(a,t("Bioimpedance reads body water: compare tests taken at the same time of day, before eating or training."));
+  return act(a,t("Add an InBody result"),{"data-sheet":"inbody"});}
 function aPlateau(a,q){
   var named=namedExercises(q),name=named.length?named[0].name:null,lifts=[];
   split().days.forEach(function(d){d.ex.forEach(function(e){if(!isActivity(e.name)&&lifts.indexOf(e.name)<0)lifts.push(e.name);});});
@@ -1108,7 +1141,7 @@ function aReassess(a){
 
 /* An answer, with what the person told the coach that bears on it said back. */
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
-var ANSWER={plateau:aPlateau,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
+var ANSWER={plateau:aPlateau,inbody:aInBody,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
   help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
@@ -1368,7 +1401,7 @@ function findMsg(at){return (S.chat||[]).filter(function(x){return x&&x.at===+at
    apart, and its buttons last. Nothing is coloured by who said it; the accent is kept
    for the one button an answer leads to. */
 /* What each answer is about, and its glyph (js/ui/glyphs.js). */
-var TOPIC={plateau:["A stuck lift","medal"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
+var TOPIC={plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
   track:["How you're doing","bars"],weight:["Weight trend","scale"],protein:["Protein","shaker"],calories:["Calories","flame"],
   sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
   goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],

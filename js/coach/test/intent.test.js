@@ -6,7 +6,7 @@ var EN=[
   ["What should I train today?","today"],["what's my workout today","today"],["Which day is next?","today"],
   ["How much weight should I lift on bench?","weights"],["how heavy should I squat","weights"],["when do I add weight","weights"],
   ["What should I eat now?","eat"],["how many calories left today","eat"],["I'm hungry","eat"],
-  ["Am I on track?","track"],["How was my week?","week"],["why is my bench stuck?","plateau"],["The barbell weight per hand?","loadlog"],["The barbell weight per hand, total, and is it including the barbell weight?","loadlog"],
+  ["Am I on track?","track"],["How was my week?","week"],["why is my bench stuck?","plateau"],["what does my InBody say?","inbody"],["The barbell weight per hand?","loadlog"],["The barbell weight per hand, total, and is it including the barbell weight?","loadlog"],
   ["When u calculate the volume, does that include the bar weight? And when I log weight is it per hand for the bar or total?","loadlog"],["is the bar counted in my volume","loadlog"],
   ["وزن البار محسوب في الفوليوم؟","loadlog"],["الدمبل بسجله لكل ايد ولا الاتنين مع بعض؟","loadlog"],["what dumbbell weight should I use","weights"],["include curls in push day","exadd"],["my squat has plateaued","plateau"],["weekly check-in","week"],["Am I improving?","track"],["how am I doing","track"],
   ["Why is my weight stuck?","weight"],["I'm not losing weight","weight"],["the scale hasn't moved","weight"],
