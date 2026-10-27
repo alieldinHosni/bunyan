@@ -2990,6 +2990,24 @@ await test("Coach, when unsure and when wrong: other readings offered under a ne
   await page.fill('#chhq','zzzz');await pause(page,200);
   eq(await page.$eval('#chhNone',e=>e.hidden),false,"and says when nothing does");
 });
+await test("Own exercises the library has after all become the library's: picture, muscle, history kept, with Undo; a program imported now matches them",async page=>{
+  await pause(page,3800);
+  const st=await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,X=await import("/js/data/exercises.js");
+    const d=S.programs[0].days[0];return [d.ex.slice(0,5).map(e=>e.name),S.myEx.map(m=>m.n),S.sessions[0].entries.map(e=>e.name),X.LIB.some(l=>l[0]==="Reverse wrist curl")];});
+  eq(st[0],["Reverse Barbell Curl","Reverse Flyes","Palms-Up Barbell Wrist Curl Over A Bench","Palms-Down Wrist Curl Over A Bench","Seated Triceps Press"],"the program uses the library's");
+  eq([st[1],st[2][0],st[3]],[["Arnold special"],"Palms-Down Wrist Curl Over A Bench",false],"own list keeps only what the library lacks; history renamed");
+  if(!(await page.$('.toast-undo')))throw new Error("not said with Undo");
+  await page.tap('.toast-undo');await pause(page,500);
+  eq(await ev(page,"[S.programs[0].days[0].ex[3].name,S.myEx.length,S.keepOwn.length]"),["Reverse wrist curl",6,5],"Undo: as they were, and kept as own");
+  await page.reload();await pause(page,3800);
+  eq(await ev(page,"S.programs[0].days[0].ex[3].name"),"Reverse wrist curl","not adopted again after Undo");
+},{init:()=>{},db:(()=>{const db=seed();
+  const own=["Overhand grip barbell curl","Single arm rear delt fly","Barbell wrist curl","Reverse wrist curl","Seated triceps extension","Arnold special"];
+  db.myEx=own.map((n,i)=>({id:"u_"+i,n,m:"Other"}));
+  db.programs=[{id:"arn",name:"Arnold 2",schedule:"cycle",days:[{id:"d1",name:"Arms",wd:[],ex:own.map((n,i)=>({id:"e"+i,name:n,sets:3,lo:8,hi:12,rest:75}))}]}];
+  db.activeProgram="arn";
+  db.sessions.unshift({id:"own1",date:new Date().toISOString().slice(0,10),dayName:"Arms",entries:[{name:"Reverse wrist curl",muscle:"Other",sets:[{w:20,r:12}]}]});
+  return db;})()});
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
   await openChat(page);

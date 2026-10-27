@@ -101,6 +101,22 @@ var KNOWN={
   "cable curl":"Standing Biceps Cable Curl","bicep curl":"Dumbbell Bicep Curl","biceps curl":"Dumbbell Bicep Curl",
   "dumbbell curl":"Dumbbell Bicep Curl","hammer curl":"Hammer Curls","preacher curl":"Preacher Curl",
   "ez bar curl":"EZ-Bar Curl","barbell curl":"Barbell Curl",
+  /* The grip turned over (owner, 27 Oct: these came in as exercises of their own). */
+  "reverse curl":"Reverse Barbell Curl","reverse barbell curl":"Reverse Barbell Curl","reverse grip curl":"Reverse Barbell Curl",
+  "reverse grip barbell curl":"Reverse Barbell Curl","overhand curl":"Reverse Barbell Curl","overhand grip curl":"Reverse Barbell Curl",
+  "overhand barbell curl":"Reverse Barbell Curl","overhand grip barbell curl":"Reverse Barbell Curl","pronated curl":"Reverse Barbell Curl",
+  "pronated barbell curl":"Reverse Barbell Curl","pronated grip barbell curl":"Reverse Barbell Curl",
+  "reverse dumbbell curl":"Standing Dumbbell Reverse Curl","reverse cable curl":"Reverse Cable Curl",
+  "wrist curl":"Palms-Up Barbell Wrist Curl Over A Bench","barbell wrist curl":"Palms-Up Barbell Wrist Curl Over A Bench",
+  "palms up wrist curl":"Palms-Up Barbell Wrist Curl Over A Bench","seated wrist curl":"Seated Palm-Up Barbell Wrist Curl",
+  "seated barbell wrist curl":"Seated Palm-Up Barbell Wrist Curl","dumbbell wrist curl":"Palms-Up Dumbbell Wrist Curl Over A Bench",
+  "reverse wrist curl":"Palms-Down Wrist Curl Over A Bench","reverse barbell wrist curl":"Palms-Down Wrist Curl Over A Bench",
+  "palms down wrist curl":"Palms-Down Wrist Curl Over A Bench","overhand wrist curl":"Palms-Down Wrist Curl Over A Bench",
+  "reverse dumbbell wrist curl":"Palms-Down Dumbbell Wrist Curl Over A Bench","cable wrist curl":"Cable Wrist Curl",
+  "seated triceps extension":"Seated Triceps Press","seated tricep extension":"Seated Triceps Press",
+  "seated overhead triceps extension":"Seated Triceps Press","seated overhead tricep extension":"Seated Triceps Press",
+  "seated dumbbell triceps extension":"Seated Triceps Press","seated dumbbell tricep extension":"Seated Triceps Press",
+  "single arm rear delt fly":"Reverse Flyes","one arm rear delt fly":"Reverse Flyes","rear delt raise":"Reverse Flyes",
   "romanian deadlift":"Romanian Deadlift","rdl":"Romanian Deadlift","deadlift":"Barbell Deadlift",
   "squat":"Barbell Squat","back squat":"Barbell Squat","barbell squat":"Barbell Squat","front squat":"Front Barbell Squat",
   "hack squat":"Hack Squat","leg press":"Leg Press","leg extension":"Leg Extensions",
@@ -160,14 +176,17 @@ function knownIn(k){
 /* The best library name for what a coach wrote, and how sure that is: "exact" for a
    known name or the library's own, "close" for a strong word match, "" when nothing
    is close enough to offer. */
-function matchExercise(raw){
+/* o.lib: the shipped library only, never an exercise of the person's own (whose own
+   name would otherwise match itself). */
+function matchExercise(raw,o){
   var s=String(raw||"").replace(/\(.*?\)/g," ").replace(/\s[—–-]\s.*$/,"");
   if(EXDB&&EXDB[raw])return {name:raw,conf:"exact"};
   libKeys();
+  var lib=!!(o&&o.lib),ok=function(n){return !lib||!!(EXDB&&EXDB[n]);};
   var kFull=key(s),k=key(s.replace(NOISE," ")),k2=key(s.replace(/,.*$/,"").replace(NOISE," "));
   /* The library's own name, however it was capitalised or punctuated. */
-  if(BYKEY[kFull])return {name:BYKEY[kFull],conf:"exact"};
-  if(BYKEY[k])return {name:BYKEY[k],conf:"exact"};
+  if(BYKEY[kFull]&&ok(BYKEY[kFull]))return {name:BYKEY[kFull],conf:"exact"};
+  if(BYKEY[k]&&ok(BYKEY[k]))return {name:BYKEY[k],conf:"exact"};
   /* A name coaches use for it. "T-Bar Row, chest supported" is a T-bar row first and
      a variant second, so the words before the comma are tried as well. */
   var hit=knownIn(kFull)||knownIn(k)||knownIn(k2);
@@ -175,6 +194,7 @@ function matchExercise(raw){
   var qt=k.split(" ").filter(Boolean);if(!qt.length)return {name:"",conf:""};
   var best=null,bs=0;
   libKeys().forEach(function(c){
+    if(!ok(c.n))return;
     var hitN=0;qt.forEach(function(q){if(c.k.indexOf(q)>=0)hitN++;});
     if(!hitN)return;
     /* Every word the coach wrote should be there; extra words in the library name
