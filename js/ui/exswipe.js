@@ -17,6 +17,7 @@
    Direction follows the content: dragging it left brings in what is to the right —
    the next exercise in English, the previous one in Arabic. */
 import {isReduced} from "./motion.js";
+import {tap} from "./view.js";
 
 var H=null,st=null,lockUntil=0,swallowUntil=0;
 var EDGE=20,SLOP=10,RATIO=1.3;
@@ -72,6 +73,8 @@ function onEnd(){
   var far=Math.abs(s.dx)>s.w*0.3,flick=Math.abs(v)>0.45&&Math.abs(s.dx)>40&&(v<0)===(s.dx<0);
   if(!H.can(step)||!(far||flick)){springBack(s.p);return;}
   lockUntil=Date.now()+380;
+  /* The touch's own end: the one moment an iPhone allows the tick. */
+  tap();
   /* Dragged left, the old exercise leaves to the left and the new one comes in from
      the right; dragged right, the other way round. */
   var from=s.dx<0?1:-1;

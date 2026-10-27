@@ -25,6 +25,10 @@ import {closeCoach, holdCoach, toEnd} from "../coachfab.js";
 import {perform, undo} from "./actions.js";
 import {addFact, removeFact} from "../../coach/context.js";
 import {key, on} from "./registry.js";
+import {closeMenu, msgText} from "../chatgest.js";
+/* Where the clipboard API is missing or refused: a hidden field, selected and copied. */
+function copyOld(tx){try{var f=document.createElement("textarea");f.value=tx;f.setAttribute("readonly","");f.style.position="fixed";f.style.opacity="0";
+  document.body.appendChild(f);f.select();document.execCommand("copy");f.remove();}catch(e){}}
 
 /* The answer marked done and shown for a beat, the panel closed, then the move. */
 var BEAT=420,CLOSE=290,HIST_IN=420;
@@ -173,6 +177,14 @@ function register(){
     return;});
   key("coachopen",function(){if(V.sheet)closeSheet();V.coach="compact";render();return;});
   key("coachclose",function(){closeCoach(render);return;});
+  /* A long press on an exchange (js/ui/chatgest.js): copy it, or delete it with Undo. */
+  key("msgcopy",function(D){var tx=msgText(D.msgcopy);closeMenu();
+    var ok=function(){toast(t("Copied."));};
+    try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(tx).then(ok,function(){copyOld(tx);ok();});return;}}catch(e){}
+    copyOld(tx);ok();return;});
+  key("msgdel",function(D){closeMenu();var before=S.chat||[],at=+D.msgdel;
+    S.chat=before.filter(function(m){return !(m&&m.at===at);});saveDB();render();
+    toast(t("Deleted."),function(){S.chat=before;saveDB();render();});return;});
   key("coachsize",function(D){V.coach=D.coachsize==="full"?"full":"compact";render();return;});
   /* The food database loads first (from the cache, offline): swaps and food facts
      answer from it. */

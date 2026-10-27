@@ -94,6 +94,14 @@ function commandOf(text){
     .match(/^(log |log a set |log set |did |سجل |)(\d+(?:[.,]\d+)?) ?(kg|kgs|lb|lbs|كيلو|)? ?(x|×|for|by|في|ب) ?(\d{1,2}) ?(reps|rep|عده|عدات|)$/);
   if(st&&!asks)return {cmd:"set.log",w:+st[2].replace(",","."),unit:/lb/.test(st[3])?"lb":st[3]?"kg":"",r:+st[5]};
 
+  /* ---- in the gym: how the last set felt, the form, the plates ---- */
+  if(/^(that|it|this|the set|that set|last set)?( one)?( was| felt| is|)( way| really| a bit| a little| too| so|)* ?(too )?(easy|light|easy peasy)( |$)|^(too easy|easy|light)( |$)|(سهل|خفيف|سهله|خفيفه)( اوي| قوي| جدا|)$/.test(fq))return {cmd:"set.feel",dir:1};
+  if(/^(that|it|this|the set|that set|last set)?( one)?( was| felt| is|)( way| really| a bit| a little| too| so|)* ?(too )?(heavy|hard|tough|brutal)( |$)|^(too heavy|too hard|heavy|i failed|failed|couldn t finish|could not finish|cant finish|i struggled)( |$)|(تقيل|صعب|تقيله|صعبه)( اوي| قوي| جدا|)$|^(مقدرتش|معرفتش) (اكمل|اخلص)/.test(fq))return {cmd:"set.feel",dir:-1};
+  if(/^(how (do|should|can) i (do|perform|make) (this|it|that)( one| exercise|)|how to do (this|it|that)( one| exercise|)|show me how( to do (this|it))?|form( check| cues| tips|)|technique|cues)( |$)|^(ازاي|ازي) (اعمل|اعمله|اعملها|العب|العبه) ?(ده|دي|التمرين ده|)$|^(طريقه|شرح) (الاداء|التمرين ده|اللعب)/.test(fq))return {cmd:"ex.how"};
+  /* From the words as typed: folding takes the decimal point away (87.5 is not 875). */
+  var pl=raw.toLowerCase().replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);}).match(/(plates?|طارات|طاره)( do i need| for| to make| to load| on the bar for| ل| علشان| عشان|)? ?(\d{2,3}(?:[.,]\d+)?) ?(kg|kgs|lb|lbs|كيلو|)|(how (do i|to) load|load) (\d{2,3}(?:[.,]\d+)?) ?(kg|kgs|lb|lbs|)/);
+  if(pl){var pw=+(pl[3]||pl[7]).replace(",","."),pu=pl[4]||pl[8]||"";return {cmd:"plates",w:pw,unit:/lb/.test(pu)?"lb":pu?"kg":""};}
+
   /* ---- in the gym: the machine is taken ---- */
   if(/(machine|bench|rack|cable|cables|station|equipment|smith|it|that|this one)( is| s|s)? (taken|occupied|busy|in use|being used|full)( |$)|(someone|somebody|some one|a guy|people)( is| s)? (on|using|at) (it|the|that)|(cant|can t|cannot|can not) (get|use) (on |)(the|a|that) (machine|bench|rack|cable|station)|(الجهاز|المكنه|البنش|الكابل|الرف)( ده| دي|)( مشغول| مشغوله| عليه حد)|(حد|واحد|ناس) (على|علي|عليه|بيستخدم|شغال على) (الجهاز|المكنه|البنش|الكابل)|^(مشغول|مشغوله)( |$)/.test(fq))
     return {cmd:"ex.busy"};

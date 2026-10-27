@@ -167,7 +167,9 @@ function appSheet(){
    +group(t("Interface"),
       /* Only where the phone can give it: a vibration, or the iPhone's switch tick
          (js/ui/view.js buzz). */
-      (canBuzz()?sw('data-toggle="haptic"',t("Haptic feedback"),"",ap.haptic!==false):"")
+      (canBuzz()?sw('data-toggle="haptic"',t("Haptic feedback"),"",ap.haptic!==false)
+        /* To feel it now: the press itself ticks (app.js), and what is needed if it doesn't. */
+        +'<button class="srow" data-hapttest="1">'+words(t("Test haptics"),t("Tap to feel a tick. On iPhone it needs iOS 18 or later and System Haptics on in Settings → Sounds & Haptics."))+'</button>':"")
      +sw('data-toggle="anim"',t("Animations"),"",ap.anim!==false)
      +sw('data-toggle="splash"',t("Opening screen"),"",ap.splash!==false)
      +pick(t("Interface density"),"",{items:[["0",t("Comfortable")],["1",t("Compact")]],value:ap.compact?"1":"0",attr:"setcompact",label:t("Interface density")}));}

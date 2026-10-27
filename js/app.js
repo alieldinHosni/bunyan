@@ -20,6 +20,7 @@ import {closeCoach} from "./ui/coachfab.js";
 import {initPress} from "./ui/press.js";
 import {initReorder} from "./ui/reorder.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
+import {initChatGest} from "./ui/chatgest.js";
 import {initKeyboard} from "./ui/keyboard.js";
 import {loadExDB, reconcileExercises, useUserData} from "./data/exercises.js";
 import {mmss, paintOver, paintRest, sessionClock} from "./ui/views/session.js";
@@ -72,7 +73,7 @@ document.addEventListener("touchend",function(ev){
   var step=dx<0?1:-1;
   if(document.documentElement.getAttribute("dir")==="rtl")step=-step;
   var btn=sw.el.querySelector('[data-dday="'+step+'"]');
-  if(btn&&!btn.disabled){swipedAt=Date.now();btn.click();}
+  if(btn&&!btn.disabled){swipedAt=Date.now();btn.click();tap();}
 },{passive:true});
 /* A handled swipe must not also count as a tap on whatever the finger ended over —
    the date itself would open the month. Only the click that immediately follows. */
@@ -178,6 +179,9 @@ setStorageErrorHandler(toast);
 initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,closeCoach:function(){closeCoach(render);},
          locked:sessionLocked,onBlocked:backBlocked});
 initSheetDrag(requestCloseSheet);
+/* The coach's header dragged down: the whole conversation gets smaller, the compact panel
+   closes; with the tick, since the finger has just let go (a moment iOS allows it). */
+initChatGest(function(){tap();if(V.coach==="full"){V.coach="compact";render();}else closeCoach(render);});
 /* A field in a sheet takes the keyboard without the page jumping under it (iPhone). */
 initKeyboard();
 /* What the keyboard and the browser chrome leave visible (--vvh, --vvt), measured again

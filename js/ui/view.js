@@ -58,16 +58,19 @@ function startRest(e){
    handler, which is where tap() is called. Its clicks stop at the label, so no branch
    or outside-tap rule ever sees them. */
 var IOS=typeof navigator!=="undefined"&&(/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1));
-var hapEl=null;
+/* A fresh switch each time, clicked and taken away at once: the recipe known to tick on
+   iPhones (owner, 27 Oct: haptics not felt). One switch kept in the page and toggled
+   back and forth did not tick reliably. Out of sight in <head>, so no layout, focus or
+   screen reader ever meets it, and its click stops at the label. */
 function iosTick(){
-  if(!hapEl){
-    var l=document.createElement("label"),i=document.createElement("input");
-    l.className="hapt";l.setAttribute("aria-hidden","true");
-    i.type="checkbox";i.setAttribute("switch","");i.tabIndex=-1;
-    l.appendChild(i);
-    ["click","change","input"].forEach(function(ev){l.addEventListener(ev,function(e){e.stopPropagation();});});
-    document.body.appendChild(l);hapEl=l;}
-  hapEl.click();}
+  var l=document.createElement("label"),i=document.createElement("input");
+  l.className="hapt";l.setAttribute("aria-hidden","true");l.style.display="none";
+  i.type="checkbox";i.setAttribute("switch","");i.tabIndex=-1;
+  l.appendChild(i);
+  ["click","change","input"].forEach(function(ev){l.addEventListener(ev,function(e){e.stopPropagation();});});
+  (document.head||document.body).appendChild(l);
+  l.click();
+  l.remove();}
 function canBuzz(){return typeof navigator!=="undefined"&&("vibrate" in navigator||IOS);}
 function buzz(ms){
   try{if(navigator.vibrate)navigator.vibrate(ms||10);else if(IOS)iosTick();}catch(e){}}

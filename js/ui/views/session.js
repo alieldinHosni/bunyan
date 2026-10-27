@@ -344,12 +344,16 @@ function vLogger(){
       straight to any of them. */
    +'<button class="ss-title" data-exlist="1" aria-haspopup="dialog" aria-label="'+t("Today's exercises")+'">'
    +'<span class="ss-name">'+esc(planName(a.dayName))+'</span>'
-   +'<span class="ss-meta">'+t("Exercise")+' <span class="num">'+(V.logIdx+1)+'</span> '+t("of")
+   +'<span class="ss-meta"><span class="ss-mw">'+t("Exercise")+' </span><span class="num">'+(V.logIdx+1)+'</span> '+t("of")
    +' <span class="num">'+a.entries.length+'</span>'+IC.down+'</span></button>'
    /* A stopped clock with nothing to explain it reads as a bug, so the paused state
       says so rather than just freezing. */
    +'<div class="ss-clock"><span class="num" id="sessClock">'+mmss(clock.ms/1000)+'</span>'
    +'<span class="ss-paused" id="sessPaused"'+(clock.paused?'':' hidden')+'>'+t("Paused")+'</span></div>'
+   /* The coach, one tap away mid-workout (owner, 27 Oct): a machine taken, a set that
+      felt off, how to do this one. The floating button stays off the workout. */
+   +'<button class="ss-coach" data-coachopen="1" aria-label="'+t("Ask Coach")+'">'
+   +'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5.5h16v10.5H11l-4.5 3.5V16H4z"/><path d="M8.5 10.75h7"/></svg></button>'
    +'<button class="ss-more" data-sessmore="1" aria-label="'+t("More")+'">'+IC.more+'</button>'
    +'</div><div class="ss-bar"><i style="width:'+pct+'%"></i></div></div>';
 
