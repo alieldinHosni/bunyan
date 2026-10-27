@@ -13,7 +13,8 @@
    {changed, sessions, undo}: the number of sets changed, the sessions to save, and a
    way to put them back (returning the sessions to save again). The
    version is set either way (db.logFixV), so this runs once. */
-import {EXDB, pairOfDumbbells} from "../data/exercises.js";
+import {EXDB, exIdOf, LIB, muscleOf, pairOfDumbbells} from "../data/exercises.js";
+import {matchExercise} from "./splitparse.js";
 import {bodyAtIn} from "./lifts.js";
 import {num} from "../util.js";
 
@@ -67,4 +68,47 @@ function convertDbLoads(db,to){
   db.prefs.dbLoad=to;
   return out;}
 
-export {convertDbLoads, fixBodyweightLogs, LOGFIX_V};
+/* Exercises of the person's own that the library has after all (owner, 27 Oct:
+   "Overhand grip barbell curl", "Reverse wrist curl" came in from a program as their
+   own, muscle Other, no picture). Each whose name the library now knows for certain —
+   its own name or a name coaches use (splitparse.js KNOWN), never a near miss — becomes
+   the library's exercise everywhere: every program, the workout under way, every
+   session, favourites, skips, own steps. Names put back with Undo (db.keepOwn) stay
+   the person's own. Pure on the blob; LIB loses the own entries it adopted.
+   adoptLibrary(db) → {names:[[own, library]], sessions, undo}. */
+function adoptLibrary(db){
+  var out={names:[],sessions:[],undo:null};
+  if(!db||!EXDB||!Array.isArray(db.myEx)||!db.myEx.length)return out;
+  var keep={};(db.keepOwn||[]).forEach(function(n){keep[String(n).toLowerCase()]=1;});
+  var map={};
+  db.myEx.forEach(function(m){
+    if(!m||!m.n||EXDB[m.n]||keep[m.n.toLowerCase()])return;
+    var r=matchExercise(m.n,{lib:true});
+    if(r&&r.conf==="exact"&&r.name&&EXDB[r.name])map[m.n]=r.name;});
+  var names=Object.keys(map);if(!names.length)return out;
+  var before={myEx:db.myEx.slice(),favs:(db.favs||[]).slice(),skip:(db.skip||[]).slice(),incr:Object.assign({},db.incr||{}),was:[]};
+  function fix(e,where){if(e&&map[e.name]){before.was.push([where,e,e.name,e.exId,e.muscle]);
+    e.name=map[e.name];e.exId=exIdOf(e.name);if(e.muscle!=null)e.muscle=muscleOf(e.name);return true;}return false;}
+  (db.programs||[]).concat(db.userSplits||[],db.myPlan?[db.myPlan]:[]).forEach(function(sp){
+    (sp&&sp.days||[]).forEach(function(d){(d.ex||[]).forEach(function(e){fix(e,"plan");});});});
+  if(db.active)(db.active.entries||[]).forEach(function(e){fix(e,"active");});
+  (db.sessions||[]).forEach(function(s){var hit=false;(s.entries||[]).forEach(function(e){if(fix(e,s))hit=true;});if(hit)out.sessions.push(s);});
+  var ren=function(n){return map[n]||n;};
+  if(Array.isArray(db.favs))db.favs=db.favs.map(ren).filter(function(n,i,a){return a.indexOf(n)===i;});
+  if(Array.isArray(db.skip))db.skip=db.skip.map(ren).filter(function(n,i,a){return a.indexOf(n)===i;});
+  if(db.incr)names.forEach(function(n){if(db.incr[n]!=null){if(db.incr[map[n]]==null)db.incr[map[n]]=db.incr[n];delete db.incr[n];}});
+  db.myEx=db.myEx.filter(function(m){return !map[m.n];});
+  for(var i=LIB.length-1;i>=0;i--)if(map[LIB[i][0]]&&!EXDB[LIB[i][0]])LIB.splice(i,1);
+  out.names=names.map(function(n){return [n,map[n]];});
+  /* Undo: every entry back to the name it had, the own exercises back, and their names
+     kept as the person's own from now on. Returns the sessions to save again. */
+  out.undo=function(d){d=d||db;var back=[];
+    before.was.forEach(function(w){var e=w[1];e.name=w[2];if(w[3]!=null)e.exId=w[3];else delete e.exId;if(w[4]!=null)e.muscle=w[4];
+      if(w[0]!=="plan"&&w[0]!=="active"&&back.indexOf(w[0])<0)back.push(w[0]);});
+    d.myEx=before.myEx;d.favs=before.favs;d.skip=before.skip;d.incr=before.incr;
+    d.keepOwn=(d.keepOwn||[]).concat(names);
+    before.myEx.forEach(function(m){if(map[m.n])LIB.push([m.n,m.m||"Other","Other",0]);});
+    return back;};
+  return out;}
+
+export {adoptLibrary, convertDbLoads, fixBodyweightLogs, LOGFIX_V};

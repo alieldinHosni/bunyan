@@ -2323,3 +2323,21 @@ CACHE `bunyan-v169` (session/workout-flow is v168; whichever merges second keeps
 - **Chat history search**: a field above the days; typing hides what doesn't match (question or
   answer), each row in place, and says when nothing does (fields.js `chhq`).
 - Tests: coach 229 (corpus included); regression "Coach, when unsure and when wrong…".
+
+## Own exercises the library has after all — branch session/exercise-match
+
+CACHE `bunyan-v170`. Owner, 27 Oct (screenshots): "Overhand grip barbell curl", "Single arm rear delt
+fly", "Barbell wrist curl", "Reverse wrist curl", "Seated triceps extension" showed as the person's own
+(muscle Other, no picture): a program import had no name for them, so useDraft made them own.
+- **splitparse.js KNOWN**: reverse / overhand / pronated (grip) curls → Reverse Barbell Curl (and the
+  dumbbell and cable ones); wrist curls palms up / down, barbell, dumbbell, seated; seated (overhead /
+  dumbbell) triceps extension → Seated Triceps Press; single / one arm rear delt fly, rear delt raise →
+  Reverse Flyes. "Overhand grip barbell curl" had matched plain Barbell Curl "exact"; now right.
+- **matchExercise(raw, {lib:true})**: the shipped library only. LIBKEYS includes own exercises, so an
+  own name matched itself.
+- **adoptLibrary** (logfix.js), run with fixLogsNow on every load (common.js `adoptLibNow`): each own
+  exercise whose name the library knows for certain (exact, never "close") becomes the library's in
+  every program, the open workout, every session (name, exId, muscle), favourites, skips and own steps;
+  dropped from myEx and LIB. Said once with the names and Undo; Undo puts all back and adds the names to
+  `S.keepOwn` (schema-validated) so they are not adopted again.
+- Test: "Own exercises the library has after all…".

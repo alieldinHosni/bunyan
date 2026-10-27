@@ -7,9 +7,10 @@ import {loadExDB} from "../../data/exercises.js";
 import {importName, ownSlots} from "../../engine/meals.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {retarget} from "../../engine/retarget.js";
-import {convertDbLoads, fixBodyweightLogs} from "../../engine/logfix.js";
+import {adoptLibrary, convertDbLoads, fixBodyweightLogs} from "../../engine/logfix.js";
 import {readSplit} from "../../engine/splitparse.js";
 import {t} from "../../i18n/dict.js";
+import {exName} from "../../i18n/exnames.js";
 import {CUR, dayOf, editSplit, S, saveDB, saveSession} from "../../state.js";
 import {r1, uid} from "../../util.js";
 import {askConfirm, closeSheet, val} from "../actions.js";
@@ -203,6 +204,7 @@ function retargetNow(){
    Said, with Undo, when anything changed. */
 function fixLogsNow(){
   loadExDB(function(){
+    adoptLibNow();
     var f=fixBodyweightLogs(S);if(!f)return;
     f.sessions.forEach(function(s){saveSession(s);});
     saveDB();if(!f.changed)return;
@@ -211,6 +213,17 @@ function fixLogsNow(){
     setTimeout(function(){if(CUR!==prof)return;
       toast(t(f.changed===1?"1 body-weight set logged with your body weight as the weight now reads as body weight.":"{n} body-weight sets logged with your body weight as the weight now read as body weight.").replace("{n}",f.changed),
         function(){if(CUR!==prof)return;f.undo(S).forEach(function(s){saveSession(s);});saveDB();render();});},2600);});}
+/* Own exercises the library has after all become the library's (js/engine/logfix.js
+   adoptLibrary), said once with their names and Undo. Runs with fixLogsNow, so on every
+   load: a name the library learns later is adopted then. */
+function adoptLibNow(){
+  var a=adoptLibrary(S);if(!a.names.length)return;
+  a.sessions.forEach(function(s){saveSession(s);});saveDB();render();
+  var prof=CUR,list=a.names.map(function(p){return exName(p[1]);}).join(", ");
+  setTimeout(function(){if(CUR!==prof)return;
+    toast(t(a.names.length===1?"1 exercise of your own is the library's now, with its picture and how-to: {list}.":"{n} exercises of your own are the library's now, with their pictures and how-to: {list}.")
+      .replace("{n}",a.names.length).replace("{list}",list),
+      function(){if(CUR!==prof)return;a.undo(S).forEach(function(s){saveSession(s);});saveDB();render();});},3200);}
 /* How dumbbells are entered, per hand or both together, with the logged history
    converted to match (js/engine/logfix.js convertDbLoads). Said, with Undo, when any
    set changed. */
