@@ -551,7 +551,7 @@ function vBody(r){
      +'<b>'+r1(m.v).toFixed(1)+' '+esc(t("cm"))+'</b>'
      +'<span class="pgm-d">'+(m.delta?delta(m.delta,true,m.good," "+t("cm")):'')+'</span></div>';});
 
-  var bf=bodyFat();
+  var bf=bodyFat(),ibE=bf.src==="entered"?(S.body||[]).filter(function(b){return b.date===bf.date&&b.src==="inbody";})[0]:null;
   h+=lbl(t("Body composition"));
   h+='<div class="pgcard">';
   if(bf.bf==null){
@@ -567,9 +567,13 @@ function vBody(r){
      +(bf.lean!=null?'<div class="pgcomp-e"><div class="pgstat-k">'+esc(t("Lean mass"))+'</div>'
        +'<div class="pgcomp-v">'+toDisp(bf.lean)+'<span>'+esc(wUnit())+'</span></div></div>':'')+'</div>'
      +(lean!=null?'<div class="pgtrack" role="img" aria-label="'+esc(t("Lean mass")+" "+r1(lean)+"%")+'"><i style="width:'+lean+'%"></i></div>':'')
-     +'<p class="pgnote">'+esc(bf.src==="entered"?t("The figure you entered")+", "+dateStr(bf.date)+"."
-       :t("Estimated from your waist, neck and height (US Navy method), usually within 3–4 points of a lab measurement."))+'</p>';}
-  h+='</div>';
+     +'<p class="pgnote">'+esc(ibE?t("From your InBody test")+", "+dateStr(bf.date)+"."
+       :bf.src==="entered"?t("The figure you entered")+", "+dateStr(bf.date)+"."
+       :t("Estimated from your waist, neck and height (US Navy method), usually within 3–4 points of a lab measurement."))+'</p>';
+    /* The InBody's own figures, beside the body fat they came with. */
+    if(ibE)h+=[["smm","Skeletal muscle mass",1],["vfl","Visceral fat level"],["ibscore","InBody score"]].filter(function(f){return ibE[f[0]]!=null;})
+      .map(function(f){return '<div class="pgm"><span>'+esc(t(f[1]))+'</span><b class="num">'+(f[2]?toDisp(ibE[f[0]])+' '+esc(wUnit()):ibE[f[0]])+'</b><span></span></div>';}).join("");}
+  h+='<button class="btn g" data-sheet="inbody">'+esc(t("Add an InBody result"))+'</button></div>';
 
   h+=lbl(t("Progress photos"));
   var ph=photoList(function(){if(V.tab==="progress"&&V.ptab==="body")render();});

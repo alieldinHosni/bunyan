@@ -16,6 +16,8 @@ var CORPUS=[
   ["is the bar included in the weight","loadlog"],["do i count the bar","loadlog"],["dumbbell weight per hand or both","loadlog"],
   ["do i log both dumbbells","loadlog"],["how is volume calculated","loadlog"],["does volume count the bar","loadlog"],
   ["بسجل وزن الدمبل لكل ايد","loadlog"],["البار محسوب في الوزن","loadlog"],
+  /* an InBody result */
+  ["what does my inbody say","inbody"],["i did an inbody test","inbody"],["my body composition result","inbody"],["انبودي بتاعي بيقول ايه","inbody"],["عملت تحليل الجسم","inbody"],
   /* a stuck lift */
   ["why is my squat stuck","plateau"],["my bench isn't going up","plateau"],["my deadlift stalled","plateau"],["i've plateaued on overhead press","plateau"],
   /* the week */

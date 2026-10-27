@@ -321,6 +321,26 @@ function vSheet(){
         :'<div class="stfield">'+stepperInput("bw",V.draft.bw!=null?V.draft.bw:"",bst,wUnit())+'</div>')
      +'<button class="btn" data-saveweight="1">'+esc(t("Save for today"))+'</button>';
   }
+  /* An InBody result (owner, 27 Oct; js/engine/inbody.js): the sheet's photo to read
+     from, the text copied off it pasted and read, every figure shown to be checked, then
+     saved as the day's body entry. V.sd.ib holds what was read; V.sd.img the photo. */
+  else if(V.sheet==="inbody"){
+    var ib=(V.sd&&V.sd.ib)||{},IBF=[["weight","Weight",wUnit()],["pbf","Body fat","%"],["smm","Skeletal muscle mass",wUnit()],
+      ["fatkg","Body fat mass",wUnit()],["vfl","Visceral fat level",""],["ibmr","BMR (the device's)","kcal"],["tbw","Total body water","L"],["score","InBody score",""]];
+    var kgF={weight:1,smm:1,fatkg:1};
+    b='<h2>'+t("InBody result")+'</h2><p class="tiny" style="margin:2px 0 12px">'
+     +esc(t("Choose the photo of your sheet. On iPhone, press and hold on its numbers, tap Select All, then Copy, and paste below. Check every figure before saving."))+'</p>'
+     +'<label class="btn g ib-pick">'+esc(t(V.sd&&V.sd.img?"Choose another photo":"Choose the photo"))+'<input id="ib_img" type="file" accept="image/*" hidden></label>'
+     +(V.sd&&V.sd.img?'<img class="ib-img" src="'+esc(V.sd.img)+'" alt="'+esc(t("Your InBody sheet"))+'">':'')
+     +'<textarea id="ib_text" class="adv-t ib-text" rows="3" placeholder="'+esc(t("Paste the copied text here"))+'"></textarea>'
+     +'<div class="sacts"><button class="btn g" data-ibpaste="1">'+esc(t("Paste"))+'</button><button class="btn g" data-ibread="1">'+esc(t("Read the numbers"))+'</button></div>'
+     +'<div class="grid2 ib-f"><div><label class="tiny" for="ib_date">'+esc(t("Date of the test"))+'</label><input id="ib_date" type="date" max="'+today()+'" value="'+esc(ib.date||today())+'"></div>'
+     +IBF.map(function(f){var v=ib[f[0]];if(v!=null&&kgF[f[0]])v=toDisp(v);
+        return '<div><label class="tiny" for="ib_'+f[0]+'">'+esc(t(f[1]))+(f[2]?' · '+esc(f[2]):'')+'</label>'
+         +'<input id="ib_'+f[0]+'" class="num" type="number" inputmode="decimal" step="any" value="'+(v!=null?v:"")+'"></div>';}).join("")+'</div>'
+     +'<p class="tiny">'+esc(t("Bioimpedance reads body water, so drinking, sweating or a full bladder moves it. Test at the same time of day each time, before eating or training."))+'</p>'
+     +'<button class="btn" data-ibsave="1">'+esc(t("Save the result"))+'</button>';
+  }
   else if(V.sheet==="steps"){
     b='<h2>'+t("Steps today")+'</h2><p class="tiny" style="margin:2px 0 14px">'
      +esc(t("Target {n}. Tap the number to type it, or step by 500.").replace("{n}",fmtN(S.goals.steps)))+'</p>'
