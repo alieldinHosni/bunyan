@@ -2859,14 +2859,31 @@ await test("Coach chat in motion: a sent question flies to its place, the coach 
   await openChat(page);
   await page.fill('#chatq','how much protein do I need?');await page.tap('.cp-send');await pause(page,120);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-ghost"),getComputedStyle([...document.querySelectorAll(".cp-b .chat-q")].pop()).visibility]),[true,"hidden"],"in flight");
-  await pause(page,250);
+  eq(await page.evaluate(()=>!!document.querySelector(".chat-typing")),false,"no dots until the question has landed");
+  await pause(page,450);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display]),[true,"none"],"the coach typing, the answer waiting");
-  await pause(page,1400);
+  await pause(page,600);
+  eq(await page.evaluate(()=>!!document.querySelector(".chat-typing")),true,"still typing: a beat a person can see");
+  await pause(page,1800);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none",
     /150 g a day/.test((document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop()).innerText)]),[false,true,true],"arrived");
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.anim=false;document.body.classList.add("noanim");});
   await page.fill('#chatq','how is my weight');await page.tap('.cp-send');await pause(page,250);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none"]),[false,true],"no motion, no wait");
+},{prefs:{anim:true}});
+await test("Coach panel: it opens on the newest message; smaller and bigger glide with the conversation in view, never fading out",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,now=Date.now();
+    S.chat=Array.from({length:8},(_,i)=>({at:now-(8-i)*60000,q:"question "+i,id:"protein",lang:"en",b:[{p:"An answer long enough to take some room in the panel, line after line, number "+i+"."}]}));});
+  await openChat(page);await pause(page,500);
+  const at=await page.evaluate(()=>{const b=document.getElementById("cpB"),x=[...b.querySelectorAll(".chat-x")].pop();
+    const r=x.getBoundingClientRect(),br=b.getBoundingClientRect();return [b.scrollTop>0,r.top>=br.top-1&&r.top<br.bottom-40];});
+  eq(at,[true,true],"opens on the newest exchange, not scrolled up");
+  await page.tap('.cp [data-coachsize="full"]');await pause(page,150);
+  const mid=await page.evaluate(()=>{const c=document.querySelector(".cp"),cs=getComputedStyle(c),kids=[...c.children].map(k=>+getComputedStyle(k).opacity);
+    return [cs.transform==="none",Math.min(...kids)];});
+  eq(mid,[true,1],"mid-way: the box moves, not a scaled picture of it, and what is inside stays visible");
+  await pause(page,700);
+  eq(await page.evaluate(()=>{const c=document.querySelector(".cp");return [c.style.height,c.style.position,c.classList.contains("full")];}),["","",true],"settled: the box is the CSS's again");
 },{prefs:{anim:true}});
 await test("Guide: the first time Training opens, glass tips point at each thing in turn; a tap anywhere is the next; once seen it stays away; Profile brings it back",async page=>{
   await pause(page,1400);

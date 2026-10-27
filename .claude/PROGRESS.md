@@ -2094,3 +2094,17 @@ you?" into the chat. CACHE `bunyan-v158`.
 - Tests: the day / thirty days split, the way from the chat and from Profile, nothing tappable or
   sendable in the history, delete with Undo; clear hides, not deletes; day-old messages leave the
   chat for the history.
+- **The panel's motion** (owner, 27 Oct). CACHE `bunyan-v159`.
+  - **Opened scrolled up**: `toEnd` measured the newest exchange with getBoundingClientRect while
+    the panel was scaling in from the launcher (scale .12), so it scrolled a fraction of the way.
+    It now measures by layout (`offIn`, offsetTop up to `#cpB`, which is `position:relative`).
+  - **Smaller / bigger flashed dark**: the old FLIP scaled a picture of the box and faded its
+    contents out and back. Now the box's own left/top/width/height glide from the old rectangle
+    to the new (`--m-panel`, `--e-ios`), the conversation in view and reflowing all the way;
+    inline styles cleared when it settles. `.cp.flipping` is gone.
+  - **Too quick to read as a conversation**: the question flies for 600 ms; the dots come once it
+    has landed (420 ms) and stay 1–2 s by the answer's length; the answer arrives over 560 ms, its
+    parts 120 ms apart; the panel glides to keep each new thing in view (`follow`).
+  - Tests: opens on the newest exchange; mid-resize the box is not transformed and its contents
+    are fully opaque, and settles back to the CSS; the dots wait for the question and are still
+    there a beat later.

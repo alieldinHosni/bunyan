@@ -4908,18 +4908,18 @@ body.kb .chat-form,body:has(nav.dhid) .chat-form{bottom:max(10px,env(safe-area-i
 /* The coach typing. */
 .chat-typing{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;padding:14px 16px;border-radius:20px;border-end-start-radius:6px;
   background:var(--card);box-shadow:inset 0 0 0 1px var(--card-edge),inset 0 1px 0 var(--hair-hi);
-  animation:chatIn .26s var(--e-decel) both}
+  animation:chatIn .36s var(--e-decel) both}
 .chat-typing i{width:7px;height:7px;border-radius:50%;background:var(--accentHi);opacity:.5;animation:chatDot 1s ease-in-out infinite}
 .chat-typing i:nth-child(2){animation-delay:.15s}
 .chat-typing i:nth-child(3){animation-delay:.3s}
 @keyframes chatDot{0%,60%,100%{transform:none;opacity:.4}30%{transform:translateY(-4px);opacity:1}}
 .chat-a.wait{display:none}
-.chat-a.arrive{animation:chatIn .42s var(--e-decel) both;transform-origin:0 100%}
+.chat-a.arrive{animation:chatIn .56s var(--e-decel) both;transform-origin:0 100%}
 [dir="rtl"] .chat-a.arrive{transform-origin:100% 100%}
-.chat-a.arrive>*{animation:chatPart .46s var(--e-decel) both;animation-delay:calc(var(--i,0) * 80ms + 140ms)}
+.chat-a.arrive>*{animation:chatPart .56s var(--e-decel) both;animation-delay:calc(var(--i,0) * 120ms + 180ms)}
 @keyframes chatIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes chatPart{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.chat-q.pop{animation:chatIn .36s var(--e-decel) both;transform-origin:100% 100%}
+.chat-q.pop{animation:chatIn .48s var(--e-decel) both;transform-origin:100% 100%}
 .chat-ghost{z-index:60;pointer-events:none;will-change:transform;align-self:auto}
 .chat-ghost p{margin:0}
 /* The opening screen: the coach as a lit orb, breathing. */
@@ -5175,7 +5175,6 @@ body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
 #cpanel.opening .cp{animation:cpIn var(--m-panel) var(--e-spring)}
 #cpanel.opening .cp-veil{animation:fadeIn var(--m-comp) var(--e-standard)}
 /* Resized (js/ui/coachfab.js flip): the box itself glides; its contents return once it has. */
-.cp.flipping>*{animation:fadeIn var(--m-comp) var(--e-standard) 120ms both}
 #cpanel.closing .cp{animation:cpOut 260ms var(--e-accel) forwards}
 #cpanel.closing .cp-veil{animation:fadeIn 260ms var(--e-standard) reverse forwards}
 @keyframes cpIn{from{opacity:0;transform:scale(.12);border-radius:50%}}
@@ -5191,7 +5190,7 @@ body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
   background:none;color:var(--sub)}
 .cp-ib .gl{width:20px;height:20px}
 :root:not(.tch) .cp-ib:active,.cp-ib.tapd{background:var(--surface)}
-.cp-b{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--s3) var(--s4);display:flex;flex-direction:column;gap:var(--s3)}
+.cp-b{position:relative;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:var(--s3) var(--s4);display:flex;flex-direction:column;gap:var(--s3)}
 .cp-hi{margin:0;font-size:15px;color:var(--sub)}
 .cp-more{align-self:center;min-height:var(--hit);padding:0 var(--s3);border:0;background:none;color:var(--accentHi);font-weight:700;font-size:13.5px}
 .cp .chat-a{background:var(--surface);box-shadow:none}

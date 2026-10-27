@@ -110,18 +110,27 @@ function syncCoach(){
     var box=pan.querySelector(".cp");
     if(box)try{box.focus({preventScroll:true});}catch(e){}
     toEnd();}}
+/* The box itself moves: its edges glide from the old rectangle to the new one, and the
+   conversation inside stays in view the whole way, reflowing as it goes (owner, 27 Oct:
+   the old way scaled a picture of the box and faded what was in it out and back, which
+   flashed dark). */
+var MORPH=["position","left","top","width","height","max-width","max-height","margin","transition"];
 function flip(box,r0){
-  if(!box||document.body.classList.contains("noanim"))return;
+  if(!box||document.body.classList.contains("noanim")||document.documentElement.classList.contains("reduced"))return;
   var r1=box.getBoundingClientRect();if(!r1.width||!r1.height)return;
-  var sx=r0.width/r1.width,sy=r0.height/r1.height,dx=r0.left-r1.left,dy=r0.top-r1.top;
-  box.style.transformOrigin="0 0";box.style.transition="none";
-  box.style.transform="translate("+dx+"px,"+dy+"px) scale("+sx+","+sy+")";
-  box.getBoundingClientRect();
-  box.style.transition="transform var(--m-panel) var(--e-ios),border-radius var(--m-panel) var(--e-ios)";
-  box.style.transform="";
-  /* What is inside fades back in as the box settles, so it is never seen stretched. */
-  box.classList.add("flipping");
-  setTimeout(function(){box.style.transition="";box.style.transformOrigin="";box.classList.remove("flipping");},520);}
+  var set=function(r){box.style.left=r.left+"px";box.style.top=r.top+"px";box.style.width=r.width+"px";box.style.height=r.height+"px";};
+  box.style.transition="none";box.style.position="fixed";box.style.margin="0";box.style.maxWidth="none";box.style.maxHeight="none";
+  set(r0);box.getBoundingClientRect();
+  box.style.transition="left var(--m-panel) var(--e-ios),top var(--m-panel) var(--e-ios),width var(--m-panel) var(--e-ios),height var(--m-panel) var(--e-ios)";
+  set(r1);
+  var t=setTimeout(done,560);
+  function done(){clearTimeout(t);box.removeEventListener("transitionend",end);MORPH.forEach(function(k){box.style.removeProperty(k);});}
+  function end(e){if(e.target===box&&e.propertyName==="height")done();}
+  box.addEventListener("transitionend",end);}
+/* Where an exchange sits in the conversation, by layout, not by what is on screen: the
+   panel scales in from the launcher as it opens, and a measure taken then is a fraction
+   of the real one (owner, 27 Oct: it opened scrolled up, not on the newest message). */
+function offIn(el,b){var y=0;while(el&&el!==b){y+=el.offsetTop;el=el.offsetParent;}return y;}
 /* The newest exchange in view, from its top: the question and the start of the answer,
    never the end of a long answer with its first lines scrolled away. */
 function toEnd(){
@@ -129,7 +138,7 @@ function toEnd(){
     var b=document.getElementById("cpB");if(!b)return;
     var xs=b.querySelectorAll(".chat-x"),x=xs[xs.length-1];
     if(!x){b.scrollTop=0;return;}
-    b.scrollTop=Math.max(0,b.scrollTop+x.getBoundingClientRect().top-b.getBoundingClientRect().top-12);});}
+    b.scrollTop=Math.max(0,offIn(x,b)-12);});}
 /* A change the coach makes on the person's behalf runs the screen's own code, which
    may move the screen behind (a food logged opens Food): the panel stays over it, and
    what is behind it now is where closing it returns to. */
