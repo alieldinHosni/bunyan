@@ -2051,3 +2051,18 @@ Owner, 27 Oct (a full Progress photo, a second sheet of five, a Plan screenshot)
   card's picture at 60 % (the banner and steps).
 - **"New meal plan from my targets" touched the tiles**: `.cplan-gen`'s 12 px margin lost to
   `.btn.sm{margin:0}`; now `.btn.cplan-gen{margin:var(--s3) 0 0}`. Test: the gap is at least 10 px.
+
+## Ask next slim after the first answer; Progress controls in two low rows — branch session/compact-controls
+
+Owner, 27 Oct (two screenshots). CACHE `bunyan-v155`.
+- **Ask next took the conversation's room**: after the first answer it is still the list under
+  its heading (a way in); from the second answer on it is one slim row that scrolls sideways,
+  its end fading, named "Ask next" for a screen reader (`askNext(last,n)`, both the chat page
+  and the floating Coach).
+- **Progress's three tall rows** (about 30 % of the screen): now the views with their icons
+  beside the words (44 px), and one row under them with the spans (words only) and, on Strength,
+  the halves as the figure alone (`seg` options `row` and `bare`; each half keeps its full
+  accessible name). On a phone too narrow for both (under 390 px) the halves wrap under the
+  spans instead of cutting a word. The calendar icons are gone (they doubled the row's height).
+- Tests: the list then the slim row; the controls under a fifth of the screen, spans and halves
+  on one row.

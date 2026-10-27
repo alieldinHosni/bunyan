@@ -2332,6 +2332,15 @@ function planned(){
 const lastX=page=>page.evaluate(()=>{const x=[...document.querySelectorAll(".chat-x")].pop();
   return {lang:x.getAttribute("lang"),dir:x.getAttribute("dir"),a:(x.querySelectorAll(".chat-more").forEach(d=>d.open=true),x.querySelector(".chat-a").innerText)};});
 async function chatAsk(page,q){await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,400);return lastX(page);}
+await test("Coach chat: what to ask next is a list after the first answer, then one slim row that keeps the conversation's room",async page=>{
+  await openChat(page);
+  await chatAsk(page,"how much protein do I need");
+  eq(await page.$$eval('#cpanel .chat-next',a=>a.map(d=>[d.classList.contains("slim"),!!d.querySelector(".chat-next-h")])),[[false,true]],"first: the list under its heading");
+  await chatAsk(page,"what should I eat now");
+  const r=await page.evaluate(()=>{const d=document.querySelector("#cpanel .chat-next"),c=d.querySelector(".chat-chips"),b=[...c.children];
+    return [d.classList.contains("slim"),!!d.querySelector(".chat-next-h"),d.getAttribute("aria-label"),new Set(b.map(x=>Math.round(x.getBoundingClientRect().top))).size,b.length>0];});
+  eq(r,[true,false,"Ask next",1,true],"then: one row, named for a screen reader");
+});
 await test("Coach chat: asked in Arabic in the English app, it answers in Arabic, and what it offers next is Arabic too; asked in English in the Arabic app, English",async page=>{
   await openChat(page);
   let r=await chatAsk(page,"بينش بريس كام؟");
@@ -2889,12 +2898,16 @@ await test("Plan: “New meal plan from my targets” stands clear of the tiles 
 });
 await test("Progress: the controls carry icons, the halves are a figure with their own names, and Plan is a brain",async page=>{
   await tapTab(page,"progress");await pause(page);
-  eq(await page.$$eval('.pgtabs2 .seg-b',a=>a.map(b=>!!b.querySelector("svg.seg-i")&&b.querySelector(".seg-l").textContent)),["Overview","Strength","Body"],"an icon over each view's name");
-  eq(await page.$$eval('.pgrange .seg-b svg.seg-i',a=>a.length),5,"a calendar over each span");
+  eq(await page.$$eval('.pgtabs2 .seg-b',a=>a.map(b=>!!b.querySelector("svg.seg-i")&&b.querySelector(".seg-l").textContent)),["Overview","Strength","Body"],"an icon beside each view's name");
   eq(await page.$eval('.thead-ic svg',e=>getComputedStyle(e).fill!=="none"),true,"the page's mark beside its name");
   await page.tap('[data-ptab="strength"]');await pause(page);
   eq(await page.$$eval('.pghalf .seg-b',a=>a.map(b=>[b.getAttribute("aria-label"),b.querySelectorAll(".seg-dim").length])),
     [["Whole body",0],["Upper body",1],["Lower body",1]],"one figure, the other half faint");
+  /* Low (owner, 27 Oct): the views and one row of spans and halves, under a fifth of the screen. */
+  const low=await page.evaluate(()=>{const a=document.querySelector(".pgtabs2").getBoundingClientRect(),f=document.querySelector(".pgfilt").getBoundingClientRect(),
+    r=document.querySelector(".pgrange").getBoundingClientRect(),h=document.querySelector(".pghalf").getBoundingClientRect();
+    return [f.bottom-a.top<innerHeight/5,r.top===h.top,document.querySelectorAll(".pghalf .seg-l").length];});
+  eq(low,[true,true,0],"two low rows; the halves are the figure alone");
   const keep=await page.$('.pghalf');await page.tap('[data-phalf="lower"]');await pause(page);
   eq(await page.$eval('[data-phalf="lower"]',e=>e.getAttribute("aria-pressed")),"true","Lower chosen");
   eq(await keep.evaluate(e=>e.isConnected),true,"the control is kept, not rebuilt");
