@@ -15,6 +15,7 @@ import {vTrain} from "./views/train.js";
 import {ensureRunWatch, vRun} from "./run.js";
 import {tourCheck} from "./tour.js";
 import {syncRest} from "./views/session.js";
+import {warmShown} from "./views/warmup.js";
 import {PERSIST} from "../util.js";
 import {lockScroll, syncWorkoutState, V} from "./view.js";
 import {patch, replace} from "./patch.js";
@@ -71,6 +72,9 @@ var lastView="",lastSheet=null;
    their own; the assessment is Coach's. */
 function groundOf(){
   if(V.assess)return "coach";
+  /* The workout stands on Training's own picture (owner, 27 Oct); the warm-up carries
+     its own in its card, so the ground stays clear while it is up. */
+  if(V.tab==="train"&&S.active&&V.train!=="hub")return warmShown(S.active)?"":"home";
   if(V.tab==="train")return V.train==="day"||V.train==="preview"?"workout":V.train==="days"?"home":"training";
   if(V.tab==="coach")return V.csec==="train"?"training":V.csec==="food"?"food":"coach";
   return V.tab;}

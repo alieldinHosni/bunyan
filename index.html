@@ -3671,7 +3671,9 @@ textarea.afnl.warn{border-color:var(--warning)}
    set card, the rest, the next exercise and the sets are the theme's translucent card
    glass with its rim, which needs no blur over a flat ground, so the header is the one
    blurred layer. Labels sit on --color-action-fill, never on Machine Red. */
-body.wkflat::before,body.wkflat #bgart{display:none}
+/* The workout keeps a flat page, with Training's picture on the ground behind it
+   (js/ui/render.js groundOf; owner, 27 Oct). */
+body.wkflat::before{display:none}
 body.wkflat #app{--gutter:20px}
 [dir="rtl"] .sess .flip{transform:scaleX(-1)}
 .sess .gl{stroke-width:2}
@@ -3890,7 +3892,8 @@ body.wkflat #app{--gutter:20px}
   text-decoration:underline;text-underline-offset:3px}
 .sess .quiet button.on{color:var(--warning)}
 /* ---- the workout in the mockup's colours (the --wk-* tokens above) ---------------------- */
-body.wkflat{background:var(--wk-page)}
+/* On the root, not the body: a body background would cover the ground's picture. */
+:root:has(body.wkflat){background:var(--wk-page)}
 .sess{--sub:var(--wk-sub);--dim:var(--wk-dim);--hair:var(--wk-hair)}
 .sess .ss-top{background:var(--wk-head);border-bottom-color:transparent}
 /* The header fades into the page below it, rather than ending on a ruled edge. */
