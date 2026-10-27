@@ -2069,6 +2069,7 @@ Owner, 27 Oct (two screenshots). CACHE `bunyan-v155`.
 - **Icons redrawn** (owner: the halves looked like a child's drawing, the brain like a tomato).
   CACHE `bunyan-v156`. The halves are now one athlete's figure drawn solid (broad shoulders,
   arms apart, a V to the waist, a waistline between the halves), the half not chosen at 30 %.
-  The dock's brain is drawn for Bunyan (no icon set's path): two halves seen from above with
-  the lobes' folds and the fissure, slightly taller than wide, round-capped where the other
-  dock icons are square (a brain has no corners).
+  The dock's brain is drawn for Bunyan (no icon set's path), round-capped where the other
+  dock icons are square (a brain has no corners). First drawn from above; the owner asked for
+  the side (CACHE `bunyan-v157`): the cerebrum's dome with its main fissure and folds, the
+  cerebellum under the back, the stem; drawn on the 24 grid, scaled to the dock's 22.

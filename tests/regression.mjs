@@ -2911,7 +2911,7 @@ await test("Progress: the controls carry icons, the halves are a figure with the
   const keep=await page.$('.pghalf');await page.tap('[data-phalf="lower"]');await pause(page);
   eq(await page.$eval('[data-phalf="lower"]',e=>e.getAttribute("aria-pressed")),"true","Lower chosen");
   eq(await keep.evaluate(e=>e.isConnected),true,"the control is kept, not rebuilt");
-  eq(await page.$eval('.dock-b[data-tab="coach"] svg path',e=>e.getAttribute("d").startsWith("M11 4.22")),true,"Plan's icon is the brain");
+  eq(await page.$eval('.dock-b[data-tab="coach"] svg path',e=>e.getAttribute("d").startsWith("M6.2 15.2")),true,"Plan's icon is the brain");
 });
 await test("Progress: training volume over a month is capsule bars, the newest in the accent with its figure",async page=>{
   await tapTab(page,"progress");await pause(page);

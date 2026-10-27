@@ -26,12 +26,13 @@ var ICON={
   train:'<path d="M7.25 11h7.5M4.25 6h3v10h-3zM14.75 6h3v10h-3zM1.75 8.5h2.5v5h-2.5zM17.75 8.5h2.5v5h-2.5z"/>',
   food:'<path d="M11 2.4a8.6 8.6 0 1 0 8.6 8.6H11z"/><path d="M13.4 8.6c0-3.6 2.4-6 6.2-6 0 3.7-2.5 6-6.2 6z"/><path d="M13.4 8.6l3.2-3.2"/>',
   progress:'<path d="M3.5 19V13.5h4V19zM9 19V8.5h4V19zM14.5 19V3h4v16z"/>',
-  /* The planning tab (programs, the library, meals, targets): a brain seen from above,
-     its two halves, the folds where the lobes meet and the long fissure between them
-     (owner, 27 Oct; drawn for Bunyan). Rounded, where the others are cut square: a
-     brain has no corners (index.html, the dock). The coach itself is the floating
-     button now (js/ui/coachfab.js). */
-  coach:'<path d="M11 4.22C10.49 3.02 9.23 2.48 8.13 2.93C7.12 3.3 6.53 4.22 6.53 5.23C5.1 5.41 4.08 6.78 4.25 8.34C3.33 9.08 2.99 10.54 3.49 11.73C3.16 13.11 3.75 14.58 4.93 15.22C5.1 16.77 6.45 17.97 7.96 17.78C8.98 18.61 10.33 18.43 11 17.42"/><path d="M11 4.22C11.51 3.02 12.77 2.48 13.87 2.93C14.88 3.3 15.47 4.22 15.47 5.23C16.9 5.41 17.92 6.78 17.75 8.34C18.67 9.08 19.01 10.54 18.51 11.73C18.84 13.11 18.25 14.58 17.07 15.22C16.9 16.77 15.55 17.97 14.04 17.78C13.02 18.61 11.67 18.43 11 17.42"/><path d="M6.53 5.23C6.95 6.05 7.71 6.42 8.47 6.42"/><path d="M4.25 8.34C4.93 8.8 5.69 8.89 6.36 8.62"/><path d="M11 9.72C9.99 9.81 8.98 10.54 8.72 11.64"/><path d="M4.93 15.22C5.69 15.22 6.45 14.76 6.87 14.03"/><path d="M15.47 5.23C15.05 6.05 14.29 6.42 13.53 6.42"/><path d="M17.75 8.34C17.07 8.8 16.31 8.89 15.64 8.62"/><path d="M11 9.72C12.01 9.81 13.02 10.54 13.28 11.64"/><path d="M17.07 15.22C16.31 15.22 15.55 14.76 15.13 14.03"/><path d="M11 4.22 V17.42"/>'
+  /* The planning tab (programs, the library, meals, targets): a brain seen from the
+     side (owner, 27 Oct; drawn for Bunyan): the cerebrum's dome with its main fissure and
+     folds, the cerebellum tucked under the back, the stem. Drawn on the 24 grid and
+     scaled to the dock's 22, round-capped where the others are cut square (a brain has
+     no corners; index.html, the dock). The coach itself is the floating button now
+     (js/ui/coachfab.js). */
+  coach:'<g transform="scale(.9167)"><path d="M6.2 15.2C4 14.4 2.8 12.2 3.2 9.8C3.6 6.6 6.4 4.1 10 3.6C13.8 3.1 17.6 4.4 19.6 7.2C21.2 9.4 21.2 12.4 19.8 14.2"/><path d="M6.2 15.2C8 15.9 10.6 16 12.6 15.4C13.6 15.1 14.4 15 15.2 15.1"/><path d="M15.2 15.1C15.2 17.3 16.9 18.9 18.8 18.5C20.5 18.1 21.2 16.2 20.2 14.6C19.6 13.8 18.6 13.6 17.6 13.9"/><path d="M13.1 15.6C13.4 17.4 13.8 19 14.4 20.6"/><path d="M6.4 12.6C8.6 11.4 11.4 11.2 13.8 12.4"/><path d="M12.6 3.5C11.8 5.2 13 6.6 12 8.6"/><path d="M6.2 6.6C7.6 7 8.2 8.2 7.6 9.6"/><path d="M16.4 5.2C15.8 6.6 16.8 7.8 18.4 8"/><path d="M15.2 10.2C16.6 10 17.8 10.8 18.4 12"/></g>'
 };
 /* id, what a screen reader announces, and the word beside the icon when its tab is on.
    The names are the sections', not the icons'; each label is the start of its
