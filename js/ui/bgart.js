@@ -1,7 +1,9 @@
 /* Bunyan — the ground's pictures
    Behind the glass, a picture for each place in the app: the owner's own photographs
-   (img/page-*.jpg, cut from the owner's sheet of them, 26 Oct), one per place, each
-   standing at the top of the page and fading into the ground:
+   (img/page-*.jpg), one per place, fading into the ground. Home, training, workout and
+   coach are the owner's full photographs (27 Oct), made to a phone's shape and filling
+   the screen's height; the others are cut from the owner's sheet (26 Oct) and stand at
+   the top of the page:
 
      home       the mark carved in stone over the water (Training, the first page)
      training   the rack under the pergola (planning: the program, the library)

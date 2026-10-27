@@ -547,6 +547,10 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 #bgart .photo[data-p="coach"]{background-image:url("img/page-coach.jpg")}
 #bgart .photo[data-p="progress"]{background-image:url("img/page-progress.jpg")}
 #bgart .photo[data-p="profile"]{background-image:url("img/page-profile.jpg")}
+/* The owner's full photographs (27 Oct), made to a phone's shape, fill the screen's
+   height so each is seen whole, and fade only toward the dock. */
+#bgart .art.photo:is([data-p="home"],[data-p="training"],[data-p="workout"],[data-p="coach"]){height:100%;
+  -webkit-mask-image:linear-gradient(to bottom,var(--bg) 50%,transparent 94%);mask-image:linear-gradient(to bottom,var(--bg) 50%,transparent 94%)}
 /* A veil of the ground's own tone over each, deepest at the top, so the page's title
    and line under it read on a bright sky. */
 #bgart .art.photo::after{content:"";position:absolute;inset:0;
