@@ -52,9 +52,14 @@ var INTENTS=[
     "how much protein|calories|kcal|carbs|fat|fiber|sugar in$","how many calories|kcal|grams in$","protein|calories|kcal|carbs|fat|macros in$",
     "macros of|for","nutrition of|facts|info|value",
     "كام|كم بروتين|سعر|سعره|سعرات|كارب|دهون|جرام في","فيه|فيها|في كام|كم بروتين|سعر|سعره|سعرات|كارب|دهون","القيمه الغذائيه"]],
+  /* The weekly check-in: the week, from the log (chat.js aWeek). */
+  ["week",[
+    "how was my week","how was week","how did week go","week review|recap|summary|check|checkin","weekly review|recap|summary|check|checkin|report",
+    "check in","checkin","last week","my week",
+    "الاسبوع كان|عدي|فات","ملخص الاسبوع","الاسبوع اللي فات","اسبوعي كان|عامل","مراجعه الاسبوع"]],
   ["track",[
     "on track","how am i doing","how doing","my progress","progress","results","improving","getting better","summary","overview",
-    "how was my week","this week","review",
+    "this week",
     "ماشي صح","عامل|ماشي ايه|اي","تقدمي|التقدم","اتحسنت|بتحسن","نتايج|نتائج|النتيجه","ملخص","الاسبوع ده|الاسبوع"]],
   ["weight",[
     "my weight","scale","weight stuck|same|plateau|stall|not","not losing|dropping","not gaining","weigh|weighed|weigh-in","body weight","plateau","stalled",

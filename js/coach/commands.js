@@ -44,6 +44,31 @@ var OPEN=/^(please |pls |can you |could you |)(open|go to|goto|show me|show|take
 
 var QUESTION=/^(should|how|why|what|when|which|is|are|do|does|can i|could i|هل|ليه|ازاي|امتي|اعمل ايه|كام)( |$)|[?؟]$/;
 
+/* When, said as a day: today, tomorrow or a weekday (1 Monday … 7 Sunday), in the order
+   said. The caller turns them into dates. */
+var WHEN=[["today",/^(today|tonight|النهارده|انهارده|اليوم)$/],["tomorrow",/^(tomorrow|tmrw|بكره|بكرا|غدا)$/],
+  [1,/^(monday|mon|الاتنين|الاثنين|اتنين)$/],[2,/^(tuesday|tue|tues|التلات|الثلاثاء|الثلاثا|التلاتاء)$/],[3,/^(wednesday|wed|الاربع|الاربعاء|الاربعا)$/],
+  [4,/^(thursday|thu|thurs|الخميس)$/],[5,/^(friday|fri|الجمعه)$/],[6,/^(saturday|sat|السبت)$/],[7,/^(sunday|sun|الحد|الاحد)$/]];
+function whenIn(fq){
+  var out=[];fq.split(" ").forEach(function(w){w=w.replace(/(s|'s)$/,"").replace(/^لل/,"ال").replace(/^(ل|ب)(?=ال)/,"");
+    for(var i=0;i<WHEN.length;i++)if(WHEN[i][1].test(w)||WHEN[i][1].test(w+"s")){out.push(WHEN[i][0]);break;}});
+  return out;}
+/* A change to how much an exercise asks: sets, reps, rest, or rests shorter or longer.
+   The exercise and the day are the agent's to find, from the words. */
+function doseOf(fq){
+  var d={},m;
+  var n=fq.replace(/[٠-٩]/g,function(c){return "٠١٢٣٤٥٦٧٨٩".indexOf(c);});
+  if((m=n.match(/(\d{1,2}) ?(x|×|by|sets? of|مجموعات من|مجموعه من) ?(\d{1,2})(?: ?(?:-|to|–|ل) ?(\d{1,2}))?/))){d.sets=+m[1];d.lo=+m[3];d.hi=+(m[4]||m[3]);}
+  else{
+    if((m=n.match(/(\d{1,2}) ?(sets|set|مجموعات|مجموعه|سيتات|سيت)( |$)/)))d.sets=+m[1];
+    if((m=n.match(/(\d{1,2})(?: ?(?:-|to|–) ?(\d{1,2}))? ?(reps|rep|عدات|عده)( |$)/))){d.lo=+m[1];d.hi=+(m[2]||m[1]);}}
+  if((m=n.match(/(rest|راحه)( of| for| to| ل| ب|)? ?(\d{1,3}(?:[.,]\d)?) ?(s|sec|secs|seconds|ثانيه|ثواني|min|mins|minute|minutes|دقيقه|دقايق|دقيقتين)( |$)/))||
+     (m=n.match(/()()(\d{1,3}(?:[.,]\d)?) ?(s|sec|secs|seconds|ثانيه|ثواني|min|mins|minute|minutes|دقيقه|دقايق) (rest|of rest|راحه)( |$)/))){
+    var v=+m[3].replace(",",".");d.rest=Math.round(/^(min|mins|minute|minutes|دقيقه|دقايق)$/.test(m[4])?v*60:v);}
+  if(!d.rest&&/(shorter|less|cut|reduce|قلل|اقل|اقصر)( the| my|)? ?(rest|rests|(ال)?راحه)|(rest|rests|(ال)?راحه) (shorter|less|اقل|اقصر)/.test(n))d.restBy=-30;
+  if(!d.rest&&/(longer|more|increase|زود|اطول|اكتر)( the| my|)? ?(rest|rests|(ال)?راحه)|(rest|rests|(ال)?راحه) (longer|more|اطول|اكتر)/.test(n))d.restBy=30;
+  return Object.keys(d).length?d:null;}
+
 function commandOf(text){
   var raw=String(text||"").trim(),fq=spell(fold(raw)),q=" "+fq+" ";
   if(!fq)return null;
@@ -68,6 +93,31 @@ function commandOf(text){
   var st=fq.replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);})
     .match(/^(log |log a set |log set |did |سجل |)(\d+(?:[.,]\d+)?) ?(kg|kgs|lb|lbs|كيلو|)? ?(x|×|for|by|في|ب) ?(\d{1,2}) ?(reps|rep|عده|عدات|)$/);
   if(st&&!asks)return {cmd:"set.log",w:+st[2].replace(",","."),unit:/lb/.test(st[3])?"lb":st[3]?"kg":"",r:+st[5]};
+
+  /* ---- in the gym: the machine is taken ---- */
+  if(/(machine|bench|rack|cable|cables|station|equipment|smith|it|that|this one)( is| s|s)? (taken|occupied|busy|in use|being used|full)( |$)|(someone|somebody|some one|a guy|people)( is| s)? (on|using|at) (it|the|that)|(cant|can t|cannot|can not) (get|use) (on |)(the|a|that) (machine|bench|rack|cable|station)|(الجهاز|المكنه|البنش|الكابل|الرف)( ده| دي|)( مشغول| مشغوله| عليه حد)|(حد|واحد|ناس) (على|علي|عليه|بيستخدم|شغال على) (الجهاز|المكنه|البنش|الكابل)|^(مشغول|مشغوله)( |$)/.test(fq))
+    return {cmd:"ex.busy"};
+
+  /* ---- the lighter week ---- */
+  var light=/(lighter week|light week|easy week|easier week|deload|اسبوع خفيف|اسبوع اخف|ديلود)/.test(fq);
+  if(light&&/(end|stop|finish|cancel|over|انهي|وقف|الغي|خلص)/.test(fq)&&!asks)return {cmd:"deload.end"};
+  if(light&&!asks&&(/^(start|take|do|begin|give me|i want|i need|i ll take|ill take|let s do|lets do|let s take|lets take|yes|ok|okay|go|please|time for|ابدا|ابدأ|عايز|عاوز|محتاج|اعمل|اعملي|يلا|خلينا|ايوه|تمام)( |$)/.test(fq)||/^(a |)(deload|lighter week|light week)( week| now| please|)$/.test(fq)))
+    return {cmd:"deload.start"};
+
+  /* ---- the week's schedule: skip a day, move a workout ---- */
+  var wn=whenIn(fq);
+  if(!asks&&/(^| )(move|reschedule|push|shift|postpone|swap|انقل|اجل|ودي|حرك|غير)( |$)/.test(q)&&/(workout|session|training|تمرين|التمرين|سيشن)/.test(fq)&&wn.length
+     &&/( to | until |لـ| ل| ليوم | الى | يوم )/.test(" "+fq+" "))
+    return {cmd:"sched.move",from:wn.length>1?wn[0]:"",to:wn[wn.length-1]};
+  if(!asks&&(/^(skip|cancel|miss|drop)( today s| todays| today| tomorrow s| tomorrows| tomorrow| my| the| this|)* ?(workout|session|training|it)?( today| tomorrow|)( |$)/.test(fq)
+     ||/(take|taking) (today|tomorrow|the day) off|(rest|day off) (today|tomorrow)|(skip|cancel) (today|tomorrow)|(im|i m|i am) (sick|ill|unwell|not feeling well).*(skip|rest|off|cant train|can t train)/.test(fq)
+     ||/(مش هتمرن|مش هقدر اتمرن|هريح|الغي تمرين|الغي التمرين|اجازه من التمرين|تعبان.*(مش هتمرن|هريح))/.test(fq)))
+    return {cmd:"sched.skip",on:wn[0]||"today"};
+
+  /* ---- how much an exercise asks ---- */
+  if(!asks&&(/^(make|change|set|update|put|switch|do|i want|let s do|lets do|use|rest|خلي|غير|اعمل|عايز|حط|راحه)( |$)/.test(fq)
+     ||/(shorter|longer|less|more) (rest|rests)|(rest|rests) (shorter|longer)|(قلل|زود) (ال)?راحه/.test(fq))){
+    var dz=doseOf(fq);if(dz)return Object.assign({cmd:"ex.dose",text:raw},dz);}
 
   /* ---- water and steps ---- */
   var water=/(^| )(water|مايه|ميه|مياه|مية)( |$)/.test(q),glass=/(glass|glasses|cup|cups|كوبايه|كوبايتين|كوبايات|كباية)/.test(fq);
@@ -113,4 +163,4 @@ function commandOf(text){
     return {cmd:"go",to:""};}
   return null;}
 
-export {commandOf};
+export {commandOf, whenIn};

@@ -2624,6 +2624,89 @@ await test("Coach agent: an exercise the library doesn't have becomes one of the
   eq([await dayEx(page,2),await ev(page,"(S.myEx||[]).length"),await page.evaluate(async()=>(await import("/js/data/exercises.js")).LIB.length)],[before,0,libN],"Undo: the day and the library as they were");
   /* Asked again by the same name once it exists, it is simply added. */
 });
+const WD=["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+/* The next dates (from today) the plan has a workout on, and ones it rests. */
+const planDates=page=>page.evaluate(async()=>{const sp=(await import("/js/state.js")).split(),D=await import("/js/engine/dayplan.js"),SC=await import("/js/engine/schedule.js"),U=await import("/js/util.js");
+  const out=[];for(let i=0;i<7;i++){const d=SC.addDays(U.today(),i),p=D.planOn(sp,d);out.push({d,wd:SC.isoWeekday(d),train:!!(p.day&&!p.rest&&p.kind!=="done"),id:p.day&&p.day.id,rest:!!p.rest});}return out;});
+const planOnD=(page,d)=>page.evaluate(async d=>{const sp=(await import("/js/state.js")).split(),p=(await import("/js/engine/dayplan.js")).planOn(sp,d);return {id:p.day&&p.day.id||null,rest:!!p.rest};},d);
+await test("Coach skills: sets, reps and rest changed by saying so, for an exercise or a whole day's rests, with Undo",async page=>{
+  await openChat(page);
+  const name=await ev(page,`(async()=>{return (await import("/js/state.js")).split().days[0].ex[0].name;})()`);
+  const dose=()=>ev(page,`(async()=>{const sp=(await import("/js/state.js")).split();return sp.days.flatMap(d=>d.ex.filter(e=>e.name===${JSON.stringify(name)}).map(e=>[e.sets,e.lo,e.hi,e.rest]));})()`);
+  const before=await dose();
+  let r=await agSay(page,"make "+name+" 4 sets of 6");
+  eq([/^Change .+ to 4 × 6/.test(r.lead),r.ok],[true,true],"the change, said first: "+r.lead);
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq((await dose()).every(x=>x[0]===4&&x[1]===6&&x[2]===6),true,"4 × 6 wherever it is in the program");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await dose(),before,"Undo puts it back");
+  r=await agSay(page,"rest 2 min on "+name);
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq((await dose()).every(x=>x[3]===120),true,"rest in minutes");
+  const rests=()=>ev(page,`(async()=>(await import("/js/state.js")).split().days[0].ex.map(e=>e.rest))()`);
+  const r0=await rests();
+  r=await agSay(page,"shorter rests on full body a");
+  eq(/^Shorter rests on Full Body A/.test(r.lead),true,"a whole day's rests: "+r.lead);
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq(await rests(),r0.map(x=>Math.max(30,x-30)),"30 s less on each, never under 30");
+});
+await test("Coach skills: a day skipped and a workout moved by saying so, the week as it was with Undo",async page=>{
+  await openChat(page);
+  const pd=await planDates(page),tr=pd.filter(x=>x.train);
+  if(tr.length<1)throw new Error("no training day in the next week: "+JSON.stringify(pd));
+  const a=tr[0],say=a.d===pd[0].d?"today":WD[a.wd-1];
+  let r=await agSay(page,"skip "+say);
+  eq([/^Skip .+\? It becomes a rest day/.test(r.lead),r.ok],[true,true],"skip: said first: "+r.lead);
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq((await planOnD(page,a.d)).rest,true,"that date is a rest day");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await planOnD(page,a.d),{id:a.id,rest:false},"Undo: the workout is back");
+  /* Move it to a later date in the week. */
+  const b=pd.filter(x=>x.d>a.d)[1]||pd.filter(x=>x.d>a.d)[0];
+  const bBefore=await planOnD(page,b.d);
+  r=await agSay(page,"move "+(say==="today"?"today's":WD[a.wd-1]+"'s")+" workout to "+WD[b.wd-1]);
+  eq([/^Move .+ from .+ to .+\?$/.test(r.lead),r.ok],[true,true],"move: said first: "+r.lead);
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq((await planOnD(page,b.d)).id,a.id,"the workout is on the new day");
+  eq(await planOnD(page,a.d),bBefore.id&&!bBefore.rest?{id:bBefore.id,rest:false}:{id:null,rest:true},"what was there went the other way");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq((await planOnD(page,b.d)),bBefore,"Undo: the week as it was");
+});
+await test("Coach skills: the lighter week started from the chat, with Undo; and when one is due, the answer offers it",async page=>{
+  await openChat(page);
+  let r=await agSay(page,"start a lighter week");
+  eq([/^Start a lighter week\?/.test(r.lead),r.ok],[true,true],"said first: "+r.lead);
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq(await ev(page,"!!(S.deload&&S.deload.until)"),true,"on");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await ev(page,"!!(S.deload&&S.deload.until)"),false,"Undo: off again");
+  r=await agSay(page,"should I deload?");
+  eq(r.ok,false,"a question is not a request");
+});
+await test("Coach skills: a machine taken mid-workout gets alternatives for the same muscles, swapped in for today only",async page=>{
+  await startWorkout(page);
+  /* From the workout's own menu: Ask Coach, where the first suggestion is this. */
+  await page.tap('[data-sessmore]');await pause(page,400);await page.tap('[data-coachopen]');await pause(page,500);
+  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a[0]&&a[0].dataset.chatq),"busy","the first suggestion in a workout");
+  const prog=await dayEx(page,0),cur=await ev(page,"S.active.entries[S.active.idx||0].name");
+  await page.tap('#cpanel [data-chatq="busy"]');await pause(page,450);
+  let r=await agLast(page);
+  if(!/taken\? These work the same muscles/.test(r.lead)||!r.opts.length)throw new Error("alternatives: "+JSON.stringify(r));
+  const mus=await page.evaluate(async([c,o])=>{const X=await import("/js/data/exercises.js");return o.every(n=>X.LIB.some(l=>X.muscleOf(l[0])===X.muscleOf(c)&&l[0]!==c));},[cur,r.opts]);
+  eq(mus,true,"the same muscle");
+  await page.tap('#cpanel .ag-opt');await pause(page,450);
+  r=await agLast(page);
+  eq([/^Swap .+ for .+ for today\?$/.test(r.lead),r.ok],[true,true],"for today, said first");
+  await page.tap('#cpanel [data-agok]');await pause(page,600);
+  eq([await ev(page,"S.active.entries[S.active.idx||0].name")!==cur,await dayEx(page,0)],[true,prog],"swapped in the workout; the program as it was");
+});
+await test("Coach skills: the weekly check-in reads the week from the log, ends on one thing to change, and is offered first in a new week",async page=>{
+  await openChat(page);
+  await agSay(page,"how was my week");
+  const x=await page.evaluate(()=>{const e=[...document.querySelectorAll("#cpanel .chat-x")].pop();e.querySelectorAll(".chat-more").forEach(d=>d.open=true);return e.innerText;});
+  if(!/(Last week|This week so far), from your log:/.test(x)||!/Workouts: \d+/.test(x))throw new Error("check-in: "+x);
+  eq(await ev(page,"typeof S.ckSeen"),"string","read: not offered again this week");
+});
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
   await openChat(page);
@@ -2771,7 +2854,7 @@ await test("Coach actions: every action in the registry runs through a branch th
       described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
       domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
   eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");
-  eq(r.domains,["app","cardio","exercise","food","meal","plan","profile","progress","rest","set","steps","water","workout"],"grouped by domain");
+  eq(r.domains,["app","cardio","deload","exercise","food","meal","plan","profile","progress","rest","sched","set","steps","water","workout"],"grouped by domain");
   /* set.log, in a live workout: the logger's own Log set. */
   await startWorkout(page);
   const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");
@@ -3278,7 +3361,7 @@ await test("Floating Coach: on the tab roots, never over a workout, a sheet or t
   const before=await ev(page,"[V.logIdx,V.draft.w,S.active.entries[0].sets.length]");
   await page.tap('[data-sessmore]');await pause(page,300);await page.tap('#sheet [data-coachopen]');await pause(page,500);
   eq(await ev(page,"[V.coach,V.sheet]"),["compact",null],"the Coach from the ⋯ menu");
-  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["weights","sore","missed"],"the workout's own questions");
+  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["busy","weights","sore"],"the workout's own questions: a machine taken first");
   await page.keyboard.press("Escape");await pause(page,500);
   eq(await ev(page,"[V.coach,V.logIdx,V.draft.w,S.active.entries[0].sets.length,document.getElementById('in_r').value]"),[null,...before,"11"],"closed, the workout as it was");
 });

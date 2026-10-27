@@ -16,7 +16,7 @@
    answer says so and points to where it can be found. The change itself is run by
    js/ui/handlers/actions.js, the same way the screens' own buttons run it. */
 import {isActivity} from "../data/activities.js";
-import {difficultyOf, EXDB, isCompound as isCompoundName, LIB, muscleOf as muscleOfName, MUSCLES, patternOf, pickable} from "../data/exercises.js";
+import {difficultyOf, EXDB, isCompound as isCompoundName, isFav, LIB, movementOfEx, muscleOf as muscleOfName, MUSCLES, patternOf, pickable} from "../data/exercises.js";
 import {planOn} from "../engine/dayplan.js";
 import {avoids, doseFor, usable} from "../engine/plan.js";
 import {goalOf} from "../data/goals.js";
@@ -27,7 +27,8 @@ import {editDist, fuzzTol, fuzzyRank, matchScore, norm, tokenMatch} from "../eng
 import {fold, spell} from "../coach/intent.js";
 import {t} from "../i18n/dict.js";
 import {exName, planName} from "../i18n/exnames.js";
-import {lastWeight} from "../engine/formulas.js";
+import {deloadDue, inDeload, lastWeight} from "../engine/formulas.js";
+import {addDays, isoWeekday} from "../engine/schedule.js";
 import {S, split} from "../state.js";
 import {fmtW} from "../units.js";
 import {fmtN, num, pretty, today} from "../util.js";
@@ -407,9 +408,115 @@ var PLACENAME={food:"Food",train:"Training",progress:"Progress",coach:"Coach",pr
   steps:"steps",recovery:"sleep and recovery",activities:"the activities",assessment:"the assessment",settings:"settings",
   you:"your details",backup:"backup",newmeals:"a new meal plan"};
 function now(act,p,lead,done,o){return Object.assign({s:"confirm",act:act,p:p,lead:"",done:done,run:true},o||{});}
+/* ---- the week's schedule ------------------------------------------------------------
+   A said day as a date: today, tomorrow, or the next such weekday (today included). */
+function whenIso(w){
+  var n=today();if(!w||w==="today")return n;if(w==="tomorrow")return addDays(n,1);
+  for(var i=0;i<7;i++){var d=addDays(n,i);if(isoWeekday(d)===+w)return d;}return "";}
+function dayWord(iso){var n=today();return iso===n?t("today"):iso===addDays(n,1)?t("tomorrow"):pretty(iso);}
+/* Skip: the day's workout off, the day a rest day; the plan carries on. */
+function planSkip(c){
+  var iso=whenIso(c.on),pl=planOn(split(),iso);
+  if(pl.kind==="done")return say(fill(t("You've already trained {d}."),{d:dayWord(iso)}));
+  if(!pl.day||pl.rest)return say(fill(t("{D} is already a rest day."),{D:cap(dayWord(iso))}));
+  return confirm("sched.skip",{date:iso},{lead:fill(t("Skip {w} {d}? It becomes a rest day, and the plan carries on from what you train."),{w:planName(pl.day.name),d:dayWord(iso)}),
+    item:planName(pl.day.name),detail:pretty(iso),cta:t("Skip it"),done:fill(t("{D} is a rest day now."),{D:cap(dayWord(iso))}),
+    undone:t("Undone. Your week is as it was.")});}
+/* Move: the workout on one day to another; what was there goes back the other way (a
+   rest day if nothing was). */
+function planMove(c){
+  var from=whenIso(c.from||"today"),to=whenIso(c.to),sp=split();
+  if(!to)return say(t("To which day? Say it like “move today's workout to Friday”."));
+  if(from===to)return say(t("That's the same day."));
+  var a=planOn(sp,from),b=planOn(sp,to);
+  if(a.kind==="done")return say(fill(t("You've already trained {d}."),{d:dayWord(from)}));
+  if(!a.day||a.rest)return say(fill(t("There's no workout {d} to move."),{d:dayWord(from)}));
+  if(b.kind==="done")return say(fill(t("You've already trained {d}."),{d:dayWord(to)}));
+  var back=b.day&&!b.rest?b.day:null;
+  return confirm("sched.move",{from:from,to:to,day:a.day.id,back:back?back.id:"rest"},{
+    lead:fill(t("Move {w} from {a} to {b}?"),{w:planName(a.day.name),a:dayWord(from),b:dayWord(to)}),item:planName(a.day.name),
+    detail:back?fill(t("{w} moves to {a} in its place."),{w:planName(back.name),a:dayWord(from)}):fill(t("{A} becomes a rest day."),{A:cap(dayWord(from))}),
+    cta:t("Move it"),done:fill(t("{w} is on {b} now."),{w:planName(a.day.name),b:dayWord(to)}),undone:t("Undone. Your week is as it was.")});}
+function cap(s){s=String(s||"");return s.charAt(0).toUpperCase()+s.slice(1);}
+
+/* ---- the lighter week: the card's own button, said in the chat ---------------------- */
+function planDeload(c){
+  if(c.cmd==="deload.end"){
+    if(!inDeload())return say(t("There's no lighter week on."));
+    return confirm("deload.end",{},{lead:t("End the lighter week now?"),item:t("Lighter week"),detail:t("Your next workouts go back to the full plan."),
+      cta:t("End it"),done:t("The lighter week is over."),undone:t("Undone. The lighter week is back on.")});}
+  if(inDeload())return say(fill(t("Your lighter week is already on, until {d}."),{d:pretty(S.deload.until)}));
+  var due=deloadDue();
+  return confirm("deload.start",{},{lead:t("Start a lighter week? For the next seven days, fewer sets and about 10% lighter suggestions."),
+    item:t("Lighter week"),detail:due?t(due.why==="plateau"?"Several of your lifts have stalled for three sessions in a row."
+      :"Your sets have been close to failure for two weeks running."):t("Nothing in your log calls for one yet; it's yours to take."),
+    cta:t("Start it"),done:fill(t("Lighter week on, until {d}."),{d:pretty(addDays(today(),6))}),undone:t("Undone. Your weeks are as they were.")});}
+
+/* ---- the machine is taken: the same muscles, another way, for today -------------------
+   The picker's own like-for-like ranking (same muscle, same movement), with other
+   equipment first, what the person has and nothing near a sore spot; never one already
+   in today's workout. */
+function planBusy(){
+  var a=S.active;
+  if(!a)return say(t("That's for a workout in progress. Start it and tell me when a machine is taken."));
+  var i=a.idx||0,e=a.entries[i];
+  if(!e||isActivity(e.name))return say(t("Nothing to swap on this one."));
+  if(e.sets.length)return say(fill(t("You've logged sets on {ex}, so it stays. Tell me when you're on the next one."),{ex:exName(e.name)}));
+  var p=S.profile||{},mus=muscleOfName(e.name),mv=movementOfEx(e.name),te=(EXDB&&EXDB[e.name]||{}).e,inToday={};
+  a.entries.forEach(function(x){inToday[x.name]=1;});
+  var alts=LIB.filter(function(l){var n=l[0];return l[1]===mus&&!inToday[n]&&pickable(n)&&!isActivity(n)&&usable(n,S.gear)&&!avoids(n,p.limits||[]);})
+    .map(function(l){var s=(movementOfEx(l[0])===mv?3:0)+(l[2]!==te?2:0)+(isCompoundName(l[0])===isCompoundName(e.name)?1:0)+(isFav(l[0])?1:0);return {n:l[0],s:s,eq:l[2]};})
+    .sort(function(x,y){return y.s-x.s||x.n.length-y.n.length;}).slice(0,4);
+  if(!alts.length)return say(fill(t("Nothing else in the library trains {m} with what you have. Wait it out, or skip {ex} today."),{m:t(mus).toLowerCase(),ex:exName(e.name)}));
+  return pick("exercise",fill(t("{ex} taken? These work the same muscles another way. Tap one to swap it in for today:"),{ex:exName(e.name)}),
+    alts.map(function(x){return exOpt(x.n,t(x.eq||""));}),"exercise.swapToday",{i:i,from:e.name},"name",false);}
+
+/* ---- sets, reps and rest ---------------------------------------------------------------
+   "make bench 4 sets of 6", "rest 2 min on squats", "shorter rests on Legs": the
+   exercise (or a whole day, for rests) from the words, changed wherever it is in the
+   program unless a day is said, the way the exercise sheet's steppers change it. */
+var DOSEW=/(^| )(\d+|x|×|by|sets?|reps?|rests?|seconds?|secs?|s|mins?|minutes?|shorter|longer|less|more|cut|reduce|increase|make|set|update|use|do|lets|let|s|mine|each|all|every|time|times|مجموعات|مجموعه|سيت|سيتات|عدات|عده|راحه|الراحه|ثانيه|ثواني|دقيقه|دقايق|قلل|اقل|اقصر|اطول|اكتر|خلي|اعمل)(?= |$)/g;
+function planDose(c){
+  var dd=daysIn(c.text||""),q=rest(dd.left).replace(/[٠-٩]/g,"").replace(DOSEW," ").replace(/\s+/g," ").trim(),all=inProgram();
+  var scope=dd.days.length?all.filter(function(x){return dd.days.indexOf(x.day)>=0;}):all;
+  var bad=(c.sets&&(c.sets<1||c.sets>10))||(c.lo&&(c.lo<1||c.lo>50||c.hi>50))||(c.rest&&(c.rest<15||c.rest>600));
+  if(bad)return say(t("That's outside what a plan uses: 1 to 10 sets, 1 to 50 reps, and 15 seconds to 10 minutes of rest."));
+  var targets;
+  if(!q){
+    if(c.restBy&&dd.days.length===1)targets=scope.filter(function(x){return !isActivity(x.e.name);});
+    else return say(t("Which exercise? Say it like “make Bench Press 4 sets of 6” or “rest 2 minutes on Squats”."));}
+  else{
+    var names=[];scope.forEach(function(x){if(names.indexOf(x.e.name)<0)names.push(x.e.name);});
+    var r=findExercise(q,names);
+    if(r.kind==="some")return say(fill(t("Which one? {list}. Say it with the name."),{list:r.names.map(exName).join(", ")}));
+    if(r.kind!=="one")return say(fill(t("No exercise called “{q}” in your program."),{q:q}),[{l:t("Open Training"),a:{"data-tab":"train"}}]);
+    targets=scope.filter(function(x){return x.e.name===r.name;});}
+  if(!targets.length)return say(t("Nothing there to change."));
+  var ch=targets.map(function(x){var e=x.e,o={day:x.day.id,id:e.id};
+    if(c.sets&&!isActivity(e.name))o.sets=c.sets;
+    if(c.lo&&!isActivity(e.name)){o.lo=c.lo;o.hi=c.hi||c.lo;}
+    if(c.rest)o.rest=c.rest;
+    if(c.restBy)o.rest=Math.max(30,Math.min(600,num(e.rest,90)+c.restBy));
+    return o;});
+  var e0=targets[0].e,after=Object.assign({},e0,ch[0]);
+  var dayList=targets.map(function(x){return planName(x.day.name);}).filter(function(n,i,a){return a.indexOf(n)===i;});
+  var restTxt=function(s){return s>=60&&s%60===0?fill(t("{n} min rest"),{n:s/60}):fill(t("{s} s rest"),{s:s});};
+  var whole=!q;
+  var lead=whole?fill(t(c.restBy<0?"Shorter rests on {day}: 30 seconds less on each exercise?":"Longer rests on {day}: 30 seconds more on each exercise?"),{day:dayList[0]})
+    :fill(t("Change {ex} to {d}?"),{ex:exName(e0.name),d:(c.sets||c.lo?doseText(after):"")+(c.sets||c.lo?(ch[0].rest?" · ":""):"")+(ch[0].rest?restTxt(ch[0].rest):"")});
+  var detail=whole?targets.map(function(x,i){return exName(x.e.name)+" "+restTxt(ch[i].rest);}).slice(0,4).join(" · ")+(targets.length>4?" …":"")
+    :fill(t("Now: {d}"),{d:doseText(e0)+" · "+restTxt(num(e0.rest,90))})+(dayList.length>1?" · "+fill(t("in {days}"),{days:dayList.join(", ")}):"");
+  return confirm("exercise.dose",{ch:ch},{lead:lead,item:whole?dayList[0]:exName(e0.name),detail:detail,cta:t("Change it"),
+    done:whole?fill(t("Rests changed on {day}."),{day:dayList[0]}):fill(t("{ex} changed."),{ex:exName(e0.name)}),undone:t("Undone. Your program is as it was.")});}
+
 var GOALNAME={lose:"Lose fat",recomp:"Lose fat and build muscle",gain:"Build muscle",strength:"Get stronger",athletic:"Athletic performance",endurance:"Endurance",mobility:"Mobility"};
 function planCommand(c){
   if(!c)return null;
+  if(c.cmd==="ex.busy")return planBusy();
+  if(c.cmd==="ex.dose")return planDose(c);
+  if(c.cmd==="deload.start"||c.cmd==="deload.end")return planDeload(c);
+  if(c.cmd==="sched.skip")return planSkip(c);
+  if(c.cmd==="sched.move")return planMove(c);
   if(c.cmd==="go"){
     if(!c.to)return say(t("Where to? I can open Food, Training, Progress, your program, meal plan, targets, history, settings, or the weigh-in, steps and sleep logs."));
     var nm=t(PLACENAME[c.to]||c.to);
@@ -489,6 +596,12 @@ function proceed(ag,v){
   var p=Object.assign({},ag.p);p[ag.slot]=v;
   if(ag.act==="exercise.add")return addNext(p,null);
   if(ag.act==="exercise.create")return createNext(p);
+  /* The machine was taken: the swap for today, said before it is made. */
+  if(ag.act==="exercise.swapToday")return confirm("exercise.swapToday",{i:p.i,name:p.name},{
+    lead:fill(t("Swap {old} for {new} for today?"),{old:exName(p.from),new:exName(p.name)}),
+    item:exName(p.name),detail:t("Your program stays as it is."),cta:t("Swap it"),
+    done:fill(t("Swapped {old} for {new} for today."),{old:exName(p.from),new:exName(p.name)}),
+    undone:t("Undone. Today's workout is as it was.")});
   if(ag.act==="exercise.remove")return planRemove("",p);
   if(ag.act==="exercise.swap")return planSwap("",p);
   if(ag.act==="food.log")return planLog("",p);

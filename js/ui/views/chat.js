@@ -20,7 +20,7 @@ import {isActivity} from "../../data/activities.js";
 import {ACTION_IDS, factOf, fold, intentOf, KNOW_IDS, situationOf, skel, spell} from "../../coach/intent.js";
 import {KINDS, listFacts} from "../../coach/context.js";
 import {reconcileNutrition, reconcileTraining} from "../../coach/reconcile.js";
-import {pinnedOn, weekDates} from "../../engine/schedule.js";
+import {addDays as addDaysW, pinnedOn, weekDates, weekStartOf} from "../../engine/schedule.js";
 import {muscleOf, secondaryOf} from "../../data/exercises.js";
 import {LANDMARKS} from "../../coach/landmarks.js";
 import * as KB from "../../engine/kb.js";
@@ -33,7 +33,7 @@ import {commandOf} from "../../coach/commands.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
-import {bmr, bwShare, deloadDue, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
+import {bestE1RM, bmr, bwShare, deloadDue, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {mealName, mealSlots} from "../../engine/meals.js";
 import {editDist} from "../../engine/text.js";
 import {FOODDB, fuzzyFoods, isDrink, nutritionFor, searchFoods, sumNutrition} from "../../engine/nutrition.js";
@@ -57,7 +57,7 @@ var KEEP=500;
 /* The suggestions: what each asks, as the person would ask it. */
 var ASK={
   today:"What do I train today?",weights:"How much should I lift?",eat:"What should I eat now?",
-  track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
+  week:"How was my week?",busy:"This machine is taken",track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
   calories:"Why are my calories set like this?",sore:"I'm sore or tired",missed:"I'm short on time today",
   balance:"Is my program balanced?",strong:"How strong am I?",goal:"Should I change my goal?",
   plan:"Build me a new plan",water:"How much water should I drink?",steps:"How are my steps and cardio?",
@@ -67,7 +67,7 @@ var ASK={
   letgo:"Just move on",lowday:"Adjust today for a low day",facts:"What have I told you?"};
 /* What to offer next, after each kind of answer. */
 var NEXT={
-  today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
+  week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
   track:["weight","strong","balance"],weight:["calories","eat","goal"],protein:["eat","calories","track"],
   calories:["protein","weight","goal"],sore:["today","missed","balance"],missed:["today","weights","track"],
   balance:["today","strong","plan"],strong:["weights","track","balance"],goal:["calories","plan","weight"],
@@ -221,6 +221,58 @@ function aTrack(a){
   if(c)n(a,fill(t(c===1?"There is 1 thing in Coach worth a look.":"There are {n} things in Coach worth a look."),{n:c}));
   return act(a,t("Open Progress"),{"data-tab":"progress"});}
 
+/* ---- the weekly check-in ------------------------------------------------------------
+   A week from the person's own log: the last one, in the first two days of a new week,
+   otherwise this one so far. Workouts against the plan, sets and volume against the
+   week before, protein days, the weight's average against the week before, lifts that
+   beat their best; each line only where the log has the data. Then one thing to change. */
+function weekSpan(){
+  var n=today(),ws=weekStartOf(n),last=addDaysW(n,-1)<=ws&&n<=addDaysW(ws,1);
+  var from=last?addDaysW(ws,-7):ws,to=last?addDaysW(ws,-1):n;
+  return {from:from,to:to,last:last,prevFrom:addDaysW(from,-7),prevTo:addDaysW(from,-1)};}
+function inSpan(d,a,b){return d>=a&&d<=b;}
+function aWeek(a){
+  var w=weekSpan(),ss=S.sessions||[],G=S.goals||{};
+  var wk=ss.filter(function(s){return inSpan(s.date,w.from,w.to);}),pv=ss.filter(function(s){return inSpan(s.date,w.prevFrom,w.prevTo);});
+  var sets=function(list){var c=0;list.forEach(function(s){(s.entries||[]).forEach(function(e){(e.sets||[]).forEach(function(x){if(!x.wu)c++;});});});return c;};
+  var vol=function(list){return list.reduce(function(t0,s){return t0+sessionVolume(s);},0);};
+  var plan=num(S.profile.days)||split().days.filter(function(d){return d.ex.length;}).length;
+  p(a,t(w.last?"Last week, from your log:":"This week so far, from your log:"));
+  var L=[];
+  L.push(fill(t(plan?"Workouts: {n} of {p} planned":"Workouts: {n}"),{n:wk.length,p:plan}));
+  if(wk.length){var s1=sets(wk),s0=sets(pv),v1=vol(wk),v0=vol(pv);
+    L.push(fill(t("Working sets: {n}"),{n:s1})+(pv.length?" ("+fill(t("{n} the week before"),{n:s0})+")":""));
+    if(v1)L.push(fill(t("Volume: {v}"),{v:fmtW(v1)})+(v0?" ("+(v1>=v0?"+":"−")+Math.round(Math.abs(v1-v0)/v0*100)+"%)":""));}
+  /* Protein: the days food was logged, and how many of them reached the target. */
+  var logged=0,hit=0;
+  for(var d=w.from;d<=w.to;d=addDaysW(d,1)){var r=S.days&&S.days[d];if(!r||!r.meals)continue;
+    var it=[];Object.keys(r.meals).forEach(function(k){(r.meals[k].items||[]).forEach(function(i){it.push(i);});});
+    if(!it.length)continue;logged++;if(G.p&&sumNutrition(it).p>=G.p*0.9)hit++;}
+  if(logged&&G.p)L.push(fill(t("Protein: on target {h} of the {n} days you logged food"),{h:hit,n:logged}));
+  /* Weight: the week's average against the week before's, both from weigh-ins. */
+  var avg=function(x,y){var b=(S.body||[]).filter(function(e){return e&&e.weight&&inSpan(e.date,x,y);});
+    return b.length?b.reduce(function(t0,e){return t0+num(e.weight);},0)/b.length:0;};
+  var aw=avg(w.from,w.to),ap=avg(w.prevFrom,w.prevTo);
+  if(aw&&ap)L.push(fill(t("Weight: {w} average, {d} on the week before"),{w:fmtW(aw),d:(aw-ap>=0?"+":"−")+fmtW(Math.abs(aw-ap))}));
+  /* Lifts that beat their best estimated max from before the week. */
+  var beat=[];
+  wk.forEach(function(s){(s.entries||[]).forEach(function(e){
+    var now1=bestE1RM(e.sets||[],e.name,s.date);if(!now1)return;
+    var before=0;ss.forEach(function(o){if(o.date>=w.from)return;(o.entries||[]).forEach(function(x){if(x.name===e.name){var b=bestE1RM(x.sets||[],x.name,o.date);if(b>before)before=b;}});});
+    if(before&&now1>before&&beat.indexOf(e.name)<0)beat.push(e.name);});});
+  if(beat.length)L.push(fill(t("New bests: {list}"),{list:beat.slice(0,3).map(exName).join(", ")}));
+  l(a,L);
+  /* One thing to change, the first that applies. */
+  var tip;
+  if(w.last&&plan&&wk.length<plan)tip=fill(t("This week, get all {p} workouts in: the plan only works if it's trained."),{p:plan});
+  if(!tip&&logged<4)tip=t("Log your food on more days. With four or more a week I can tell whether your targets fit.");
+  if(!tip&&G.p&&hit<logged*0.7)tip=fill(t("Protein is the gap: {g} g a day. Put some in every meal rather than catching up at night."),{g:fmtN(G.p)});
+  if(!tip&&!beat.length&&wk.length)tip=t("Push a little where last week's sets felt easy: one more rep, or the next weight up.");
+  if(!tip)tip=t("Keep it as it is: it's working.");
+  p(a,tip);
+  S.ckSeen=weekStartOf(today());
+  return act(a,t("Open Progress"),{"data-tab":"progress"});}
+
 function aWeight(a){
   var list0=weighIns(),tr=weightTrend(),wc=weightChange(),g=S.profile.goal,G=goalOf(g);
   if(!list0.length){
@@ -337,7 +389,7 @@ function aSore(a,q){
   else if(fat){var w=words(fat);
     p(a,t("Your log also shows it:")+" "+w[0]+". "+w[1]);
     act(a,w[2],{"data-cofix":fat.id});}
-  else if(deloadDue())p(a,t("It has been a long run of hard weeks. A lighter week now would let your body catch up."));
+  else if(deloadDue()){p(a,t("It has been a long run of hard weeks. A lighter week now would let your body catch up."));act(a,t("Start a lighter week"),{"data-deload":"start"});}
   p(a,t("On a low day: do the workout with one set fewer on each exercise, or keep the sets and stop two or three reps short of failure. Sleep is the biggest lever: seven to nine hours."));
   return a;}
 
@@ -950,7 +1002,7 @@ function aLowDay(a){
   p(a,t("On a low day: do the workout with one set fewer on each exercise, or keep the sets and stop two or three reps short of failure. Sleep is the biggest lever: seven to nine hours."));
   var fat=coachNow().filter(function(c){return /^(fatigue|falling|stall)$/.test(c.kind);})[0];
   if(fat){var w=words(fat);p(a,t("Your log also shows it:")+" "+w[0]+". "+w[1]);act(a,w[2],{"data-cofix":fat.id});}
-  else if(deloadDue())n(a,t("It has been a long run of hard weeks. A lighter week now would let your body catch up."));
+  else if(deloadDue()){n(a,t("It has been a long run of hard weeks. A lighter week now would let your body catch up."));act(a,t("Start a lighter week"),{"data-deload":"start"});}
   return act(a,t("Log sleep and energy"),{"data-sheet":"recovery"});}
 
 /* ---- what the person has told the coach (js/coach/context.js) -----------------------
@@ -993,7 +1045,7 @@ function aReassess(a){
 
 /* An answer, with what the person told the coach that bears on it said back. */
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
-var ANSWER={today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
+var ANSWER={week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
   help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
@@ -1093,6 +1145,9 @@ function ask(q,id,lang){
   var L=id?(lang==="ar"||lang==="en"?lang:uiLang()):it.lang==="ar"?"ar":"en";
   var msg=withLang(L,function(){
     var text=id?t(ASK[id]||""):String(q).trim().slice(0,300),iid=it.id;
+    /* The workout's own suggestion: a machine taken is a request, not a question. */
+    if(id==="busy"){var cb=null;try{cb=planCommand({cmd:"ex.busy"});}catch(e){cb=null;}
+      if(cb)return {q:text,id:"app",at:Date.now(),b:[],acts:cb.acts||[],ag:cb,lang:L};}
     if(!id){
       /* The hard limits first, whatever else the question seems to be. */
       var sit=null,cm=null;
@@ -1168,7 +1223,7 @@ function findMsg(at){return (S.chat||[]).filter(function(x){return x&&x.at===+at
    apart, and its buttons last. Nothing is coloured by who said it; the accent is kept
    for the one button an answer leads to. */
 /* What each answer is about, and its glyph (js/ui/glyphs.js). */
-var TOPIC={today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
+var TOPIC={week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
   track:["How you're doing","bars"],weight:["Weight trend","scale"],protein:["Protein","shaker"],calories:["Calories","flame"],
   sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
   goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],

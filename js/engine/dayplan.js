@@ -58,6 +58,8 @@ function planOn(sp,iso){
      the rotation for that date only; the rotation carries on from whatever is
      actually trained. */
   var sw=S.daySwap&&S.daySwap[iso];
+  /* A day taken off by hand (the coach's "skip today"): a rest day for that date. */
+  if(sw==="rest")return {kind:iso===now?"today":"plan",day:null,name:t("Rest day"),rest:true,swapped:true};
   if(sw){var od=sp.days.filter(function(d){return d.id===sw;})[0];
     if(od)return {kind:iso===now?"today":"plan",day:od,name:od.name,rest:!od.ex.length,swapped:true};}
   /* By weekday: whatever is pinned to that weekday, and a rest day otherwise. */
