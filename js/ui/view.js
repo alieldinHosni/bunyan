@@ -361,11 +361,13 @@ function stepper(id,val,step,unit){
    o.label   the group's accessible name
    o.tabs    true for a tablist (it switches what is shown below), else a button group
    o.soft    a secondary control: tinted indicator rather than the solid accent
-   o.key     a stable data-k, so the patcher keeps the element and the slide can run */
+   o.key     a stable data-k, so the patcher keeps the element and the slide can run
+   o.row     icons beside their words rather than over them (a low control)
+   o.bare    icons alone, the word only in each cell's accessible name (items[i][2]) */
 function seg(o){
   var items=o.items||[],idx=0,ic=items.some(function(it){return it[3];});
   items.forEach(function(it,i){if(String(it[0])===String(o.value))idx=i;});
-  return '<div class="seg'+(o.soft?' soft':'')+(ic?' ic':'')+(o.cls?' '+o.cls:'')+'" data-k="'+esc(o.key||o.attr)+'"'
+  return '<div class="seg'+(o.soft?' soft':'')+(ic?' ic':'')+(o.row?' row':'')+(o.bare?' bare':'')+(o.cls?' '+o.cls:'')+'" data-k="'+esc(o.key||o.attr)+'"'
    +' role="'+(o.tabs?'tablist':'group')+'" aria-label="'+esc(o.label||"")+'"'
    +' style="--n:'+items.length+';--i:'+idx+'">'
    +'<span class="seg-ind" aria-hidden="true"></span>'
@@ -375,7 +377,7 @@ function seg(o){
       +(o.tabs?' role="tab" aria-selected="'+on+'" tabindex="'+(on?0:-1)+'"':' aria-pressed="'+on+'"')
       +(it[2]?' aria-label="'+esc(it[2])+'"':'')+'>'
       /* it[3], an icon's inner markup on the 24 grid: the module's own constant, never text. */
-      +(ic?'<svg class="seg-i" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(it[3]||'')+'</svg><span class="seg-l">'+esc(it[1])+'</span>':esc(it[1]))
+      +(ic?'<svg class="seg-i" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(it[3]||'')+'</svg>'+(o.bare?'':'<span class="seg-l">'+esc(it[1])+'</span>'):esc(it[1]))
       +'</button>';}).join("")
    +'</div>';}
 

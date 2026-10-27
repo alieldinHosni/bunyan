@@ -780,6 +780,7 @@ body.focus nav{opacity:0;visibility:hidden;pointer-events:none;
 /* Square ends and mitred corners: the structural cut of the icon set. */
 .dock-b svg{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;
   stroke-width:1.8;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:4}
+.dock-b[data-tab="coach"] svg{stroke-linecap:round;stroke-linejoin:round;stroke-width:1.96}
 /* The name: closed to nothing on a circle, slid open on the tab that is on. It is cut
    with an ellipsis rather than pushing the dock wider, which only a very narrow phone
    in a long language would ever see. */
@@ -883,7 +884,9 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
   min-height:60px;padding:var(--s2) 4px}
 .seg-i{flex:none;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .seg-l{max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.seg-dim{opacity:.35}
+.seg-dim{opacity:.3}
+/* The body's figure is drawn solid, not in line (js/ui/views/progress.js SEGI). */
+.seg-i .fig{fill:currentColor;stroke:none}
 /* Gated to real navigation. Left ungated it replayed on every state change, which
    during a workout meant the screen flew in again after every logged set. */
 /* A rise, not a fade. While an element is partly transparent, the glass inside it can
@@ -3516,10 +3519,17 @@ textarea.afnl.warn{border-color:var(--warning)}
 .pgbanner .ico-chev{color:var(--text)}
 /* Strength: the filter, record cards, exercise rows, the insight. */
 .pghalf{margin-top:12px}
-.pghalf.ic .seg-b{flex-direction:row;gap:var(--s2);min-height:48px}
-.pgrange.ic .seg-b{min-height:54px}
-.pgrange .seg-i{width:18px;height:18px}
-.pghalf .seg-i{width:24px;height:24px}
+.seg.ic.row .seg-b{flex-direction:row;gap:var(--s2);min-height:44px;padding:0 4px}
+.seg.ic.row .seg-i{width:19px;height:19px}
+.seg.ic.bare .seg-b{min-height:40px;padding:0}
+/* The spans and, on Strength, the halves share one row (vProgress). */
+/* On a phone too narrow for both, the halves wrap under the spans rather than cut them. */
+.pgfilt{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:10px}
+.pgfilt>.pgrange{flex:1 1 226px;min-width:0;margin-top:0}
+.pgfilt>.pghalf{flex:1 0 100px;max-width:120px;margin-top:0}
+.pgfilt>.pgrange .seg-b{padding:0 1px;font-size:12.5px;text-overflow:clip}
+.pgfilt+.pgcard,.pgfilt+.empty{margin-top:var(--s4)}
+.pghalf .seg-i{width:22px;height:22px}
 /* The page's mark beside its name, in the accent (owner's mock). */
 .thead-ic{display:flex;align-items:center;gap:var(--s3)}
 .thead-ic svg{flex:none;width:1em;height:1em;fill:var(--accent);stroke:none}
@@ -4839,6 +4849,14 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .chat-acts .btn{flex:1 1 auto;width:auto;margin:0}
 .chat-next{margin:22px 0 0}
 .chat-next-h{margin:0 0 8px;padding-inline-start:4px}
+/* After the first answer: one slim row, sideways, its end fading so it reads as one to
+   scroll. */
+.chat-next.slim{margin-top:var(--s3)}
+.chat-next.slim .chat-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;
+  -webkit-mask-image:linear-gradient(to var(--fade-end,right),var(--bg) 85%,transparent);mask-image:linear-gradient(to var(--fade-end,right),var(--bg) 85%,transparent)}
+[dir="rtl"] .chat-next.slim .chat-chips{--fade-end:left}
+.chat-next.slim .chat-chips::-webkit-scrollbar{display:none}
+.chat-next.slim .chat-chip{flex:none;white-space:nowrap}
 .chat-chips{display:flex;flex-wrap:wrap;gap:8px}
 .chat-chip{min-height:40px;padding:8px 14px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--raised);
   color:var(--text);font:inherit;font-size:14px;font-weight:600;line-height:1.3;text-align:start;cursor:pointer}

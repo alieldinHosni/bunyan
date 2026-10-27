@@ -66,7 +66,7 @@ function panelHtml(){
   /* What to ask: for where it was opened, then, after an answer, what follows from it,
      in the conversation's language. */
   var last=log[log.length-1];
-  if(last)h+=askNext(last);
+  if(last)h+=askNext(last,log.length);
   else h+='<div class="cp-sug">'+SUGGEST[where()].map(function(id){
     return '<button class="cp-chip" data-chatq="'+id+'">'+esc(t(ASK[id]))+'</button>';}).join("")+'</div>';
   h+='</div><div class="cp-f"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'

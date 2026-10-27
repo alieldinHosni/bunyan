@@ -26,10 +26,13 @@ var ICON={
   train:'<path d="M7.25 11h7.5M4.25 6h3v10h-3zM14.75 6h3v10h-3zM1.75 8.5h2.5v5h-2.5zM17.75 8.5h2.5v5h-2.5z"/>',
   food:'<path d="M11 2.4a8.6 8.6 0 1 0 8.6 8.6H11z"/><path d="M13.4 8.6c0-3.6 2.4-6 6.2-6 0 3.7-2.5 6-6.2 6z"/><path d="M13.4 8.6l3.2-3.2"/>',
   progress:'<path d="M3.5 19V13.5h4V19zM9 19V8.5h4V19zM14.5 19V3h4v16z"/>',
-  /* The planning tab (programs, the library, meals, targets): a brain (owner, 27 Oct),
-     two halves and their folds. The coach itself is the floating button now
+  /* The planning tab (programs, the library, meals, targets): a brain seen from the
+     side (owner, 27 Oct; drawn for Bunyan): the cerebrum's dome with its main fissure and
+     folds, the cerebellum tucked under the back, the stem. Drawn on the 24 grid and
+     scaled to the dock's 22, round-capped where the others are cut square (a brain has
+     no corners; index.html, the dock). The coach itself is the floating button now
      (js/ui/coachfab.js). */
-  coach:'<path d="M11 4.6C10.4 3 8 2.4 6.7 3.9 5 3.8 3.7 5.4 4.1 7 2.6 7.8 2.4 10.2 3.7 11.3 2.8 12.9 3.6 15.1 5.4 15.4 5.6 17.6 8 18.9 9.8 17.8 10.4 19 11 19.25 11 19.25M11 4.6C11.6 3 14 2.4 15.3 3.9 17 3.8 18.3 5.4 17.9 7 19.4 7.8 19.6 10.2 18.3 11.3 19.2 12.9 18.4 15.1 16.6 15.4 16.4 17.6 14 18.9 12.2 17.8 11.6 19 11 19.25 11 19.25M11 4.6v14.65M6.5 7.5c1.5 0 2.5 1 2.5 2.5M15.5 7.5c-1.5 0-2.5 1-2.5 2.5M6.75 12.5H9M15.25 12.5H13"/>'
+  coach:'<g transform="scale(.9167)"><path d="M6.2 15.2C4 14.4 2.8 12.2 3.2 9.8C3.6 6.6 6.4 4.1 10 3.6C13.8 3.1 17.6 4.4 19.6 7.2C21.2 9.4 21.2 12.4 19.8 14.2"/><path d="M6.2 15.2C8 15.9 10.6 16 12.6 15.4C13.6 15.1 14.4 15 15.2 15.1"/><path d="M15.2 15.1C15.2 17.3 16.9 18.9 18.8 18.5C20.5 18.1 21.2 16.2 20.2 14.6C19.6 13.8 18.6 13.6 17.6 13.9"/><path d="M13.1 15.6C13.4 17.4 13.8 19 14.4 20.6"/><path d="M6.4 12.6C8.6 11.4 11.4 11.2 13.8 12.4"/><path d="M12.6 3.5C11.8 5.2 13 6.6 12 8.6"/><path d="M6.2 6.6C7.6 7 8.2 8.2 7.6 9.6"/><path d="M16.4 5.2C15.8 6.6 16.8 7.8 18.4 8"/><path d="M15.2 10.2C16.6 10 17.8 10.8 18.4 12"/></g>'
 };
 /* id, what a screen reader announces, and the word beside the icon when its tab is on.
    The names are the sections', not the icons'; each label is the start of its

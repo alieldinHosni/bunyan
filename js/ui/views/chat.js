@@ -1259,16 +1259,20 @@ function vChat(){
      +'<p class="chat-dis">'+esc(t("Answers come from your own log, plan and targets, worked out on this phone. Nothing you type leaves it."))+'</p>';}
   log.forEach(function(m,i){h+=bubble(m,i===log.length-1);});
   h+='</div>';
-  if(last)h+=askNext(last);
+  if(last)h+=askNext(last,log.length);
   h+='<div class="chat-form"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'
    +esc(t("Ask a question"))+'" aria-label="'+esc(t("Ask a question"))+'">'
    +'<button class="chat-send" data-chatsend="1" aria-label="'+esc(t("Ask"))+'">'+glyph("send")+'</button></div>';
   return h;}
 
-/* What to ask next, in the conversation's language (the floating Coach shows it too). */
-function askNext(last){
-  var LL=last.lang==="ar"||last.lang==="en"?last.lang:uiLang(),own=LL!==uiLang()?LL:"";
-  return withLang(LL,function(){return '<div class="chat-next" lang="'+LL+'" dir="'+(LL==="ar"?"rtl":"ltr")+'"><div class="chat-next-h">'+esc(t("Ask next"))+'</div>'
+/* What to ask next, in the conversation's language (the floating Coach shows it too).
+   After the first answer it is a list under its heading, a way in; after that (n, the
+   answers so far, above 1) one slim row that scrolls sideways, so it never takes the
+   conversation's room (owner, 27 Oct). */
+function askNext(last,n){
+  var LL=last.lang==="ar"||last.lang==="en"?last.lang:uiLang(),own=LL!==uiLang()?LL:"",slim=n>1;
+  return withLang(LL,function(){return '<div class="chat-next'+(slim?' slim':'')+'" lang="'+LL+'" dir="'+(LL==="ar"?"rtl":"ltr")+'"'
+    +(slim?' role="group" aria-label="'+esc(t("Ask next"))+'">':'><div class="chat-next-h">'+esc(t("Ask next"))+'</div>')
     +chips(NEXT[last.id]||NEXT.unknown,"",own)+'</div>';});}
 
 export {ASK, ask, askNext, bubble, findMsg, follow, NEXT, pruneChat, vChat};
