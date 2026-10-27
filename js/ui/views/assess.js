@@ -24,6 +24,7 @@ import {V} from "../view.js";
 import {backArrow} from "../nav.js";
 import {importName} from "../../engine/meals.js";
 import {ceilingFor} from "../../coach/landmarks.js";
+import * as KB from "../../engine/kb.js";
 import {exThumb} from "../../data/exercises.js";
 import {doseText} from "../dose.js";
 import {glyph} from "../glyphs.js";
@@ -41,20 +42,27 @@ var JOB={desk:1.2,some:1.3,feet:1.4,physical:1.5};
 function activityOf(a){return Math.min(1.9,Math.round((JOB[a.job]||1.3)*1000+num(a.days)*50)/1000);}
 var LIMITS=[["knee","Knees"],["back","Lower back"],["shoulder","Shoulders"],["wrist","Wrists"],["ankle","Ankles"]];
 var AVOIDS=[["dairy","Dairy"],["eggs","Eggs"],["fish","Fish and seafood"],["nuts","Nuts"],["gluten","Gluten"]];
-var STEPS=["intro","you","goal","level","week","gear","life","limits","food","sleep","result"];
+/* The health questions before a new programme: the PAR-Q+ topics as the knowledge base
+   paraphrases them (js/knowledge/assessments.js SCREENING.parq.logic; the instrument
+   itself is not reproduced). The book's rule: screen every new exerciser first. */
+var HEALTH=[["heart","A heart condition or high blood pressure, as a doctor told you"],["chest","Chest pain at rest, in daily life or when active"],
+  ["dizzy","Dizziness that cost you your balance, or fainting, in the last 12 months"],["chronic","Another long-term condition a doctor diagnosed"],
+  ["meds","Medication prescribed for a long-term condition"],["joint","A bone, joint or muscle problem in the last year that activity could worsen"],
+  ["supervised","A doctor said to exercise only under medical supervision"]];
+var STEPS=["intro","you","goal","level","week","gear","life","limits","health","food","sleep","result"];
 
 function draftFrom(){
   var p=S.profile||{},pr=S.prefs||{};
   return {step:0,sex:p.sex||"m",age:num(p.age)||"",height:num(p.height)||"",
     weight:lastWeight()||num(p.weight)||"",goal:GOALS[p.goal]?p.goal:"lose",level:LEVELS[p.level]?p.level:"some",
-    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),
+    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),
     meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",
     sleep:num(p.sleep)||7.5,split:null,done:false};}
 
 /* The profile the draft describes. */
 function profileOf(a){
   return {sex:a.sex,age:num(a.age),height:num(a.height),weight:num(a.weight),goal:a.goal,level:a.level,
-    days:num(a.days),mins:num(a.mins),job:a.job,activity:activityOf(a),limits:a.limits.slice(),sleep:num(a.sleep)};}
+    days:num(a.days),mins:num(a.mins),job:a.job,activity:activityOf(a),limits:a.limits.slice(),health:(a.health||[]).slice(),sleep:num(a.sleep)};}
 function foodPrefs(a,variant){
   return {meals:num(a.meals)||4,diet:a.diet,avoid:a.avoid.slice(),powder:!!a.powder,style:a.style,variant:variant||0};}
 
@@ -81,6 +89,7 @@ function preview(a){
   CACHE={k:key,v:out};
   return out;}
 
+function fill(x,o){Object.keys(o).forEach(function(k){x=x.split("{"+k+"}").join(o[k]);});return x;}
 /* ---- pieces ------------------------------------------------------------------------- */
 function chip(field,val,label,on,multi){
   return '<button class="aschip'+(on?' on':'')+'" data-'+(multi?'asm':'as')+'="'+field+'|'+esc(String(val))+'" aria-pressed="'+(on?"true":"false")+'">'+esc(label)+'</button>';}
@@ -123,6 +132,10 @@ function body(a){
   else if(s==="week"){
     h+=q(t("Your week"),t("What you can keep up on a normal week, not your best one."));
     h+=lbl(t("Days a week you can train"))+chips("days",[[2,"2"],[3,"3"],[4,"4"],[5,"5"],[6,"6"]],a.days);
+    /* The textbook's sessions a week for this much experience (acute-variables). */
+    var fr=KB.frequency(a.level),pw=fr&&fr.per;
+    var lo=pw?(pw.min!=null?pw.min:Math.min(pw.totalBody||3,pw.split||4)):0,hi=pw?(pw.max!=null?pw.max:Math.max(pw.totalBody||3,pw.split||4)):0;
+    if(lo)h+='<p class="as-note">'+fill(t("For your experience, {lo}–{hi} sessions a week is the usual range."),{lo:lo,hi:hi})+'</p>';
     h+=lbl(t("Time for each session, warm-up included"))+chips("mins",[[30,"30 "+t("min")],[45,"45 "+t("min")],[60,"60 "+t("min")],[75,"75 "+t("min")],[90,"90 "+t("min")]],a.mins);}
   else if(s==="gear"){
     h+=q(t("Where do you train?"),t("Exercises you cannot do are swapped for ones that work the same muscles."));
@@ -139,6 +152,13 @@ function body(a){
     h+=q(t("Anything to work around?"),t("A sore spot steers the plan away from what loads it. This is not a diagnosis: pain that lasts or is sharp deserves a physio."));
     h+=mchips("limits",LIMITS,a.limits);
     h+='<p class="as-note">'+t(a.limits.length?"Leave these on only while they are a problem.":"Nothing selected: nothing is worked around.")+'</p>';}
+  else if(s==="health"){
+    h+=q(t("Your health"),t("The standard questions before starting a new programme. Tick any that apply to you."));
+    h+=mchips("health",HEALTH,a.health||[]);
+    h+='<p class="as-note">'+t((a.health||[]).length
+      ?"Then check with your doctor or a qualified exercise professional before hard training. Until then your plan keeps to low and moderate effort: no jumps and no intervals."
+      :"None ticked: you're clear to start. Build up gradually.")+'</p>';
+    if(num(a.age)>45)h+='<p class="as-note">'+t("Over 45 and not used to hard efforts? Check with a qualified exercise professional before training at a vigorous intensity.")+'</p>';}
   else if(s==="food"){
     h+=q(t("How you eat"),t("For the meal plan. It uses foods from the app's database, Egyptian home food first."));
     h+=lbl(t("Meals a day"))+chips("meals",[[3,"3"],[4,"4"],[5,"5"],[6,"6"]],a.meals);
@@ -148,7 +168,9 @@ function body(a){
     h+=lbl(t("Food style"))+chips("style",[["egy",t("Egyptian home food")],["mixed",t("A mix")],["intl",t("International")]],a.style);}
   else if(s==="sleep"){
     h+=q(t("How do you sleep?"),t("Most nights. Short sleep slows recovery, so the plan asks a little less of you."));
-    h+=chips("sleep",[[5,t("Under 6 hours")],[6.5,t("6 to 7 hours")],[8,t("7 to 9 hours")],[9.5,t("More than 9")]],a.sleep);}
+    h+=chips("sleep",[[5,t("Under 6 hours")],[6.5,t("6 to 7 hours")],[8,t("7 to 9 hours")],[9.5,t("More than 9")]],a.sleep);
+    var sl=KB.sleep();
+    if(sl)h+='<p class="as-note">'+fill(t("Adults do best on {lo} to {hi} hours a night."),{lo:sl.min,hi:sl.max})+'</p>';}
   else if(s==="result")h+=result(a);
   return h;}
 
@@ -183,6 +205,7 @@ function result(a){
   var G=goalOf(a.goal),T=trainOf(a.goal),tg=r.tg,plan=r.plan,h='';
   h+='<div class="as-hero"><span class="shk">'+t("Your plan")+'</span><h1>'+esc(t(G.label))+'</h1>'
    +'<p class="as-sub">'+esc(t(LEVELS[a.level].label)+" · "+a.days+" "+t("days a week")+" · "+a.mins+" "+t("min"))+'</p></div>';
+  if((a.health||[]).length)h+='<div class="as-warn" role="note">'+glyph("info")+'<span>'+t("You ticked a health question: check with your doctor or a qualified exercise professional before hard training. This plan keeps to low and moderate effort.")+'</span></div>';
   if(a.done)h+='<div class="as-done" role="status">'+t("Your plan is in: today's training is on the Training page and today's meals on the Food page. Change anything in Coach.")+'</div>';
   /* Daily targets. */
   h+='<section class="ascard2">'+cardHead("target",t("Daily targets"))
@@ -207,7 +230,7 @@ function result(a){
        +glyph("chev","as-chev")+'</summary>'
        +'<ul class="as-dex">'+d.ex.map(function(e){return '<li><span>'+esc(exName(e.name))+'</span><span class="num">'+esc(doseText(e))+'</span></li>';}).join("")+'</ul></details>';}).join("")+'</div>';
   h+='<p class="as-note">'+esc(t("Effort: stop each set with {a} reps left in reserve on the main lift and {b} on the rest. That is close enough to failure to grow, far enough to recover.").replace("{a}",T.rir[0]).replace("{b}",T.rir[1]))
-   +(T.add?" "+esc(t(T.add==="plyo"?"Jumps open each session, while you are fresh.":T.add==="cond"?"Each session ends with twelve minutes of intervals.":"Each session ends with mobility work for what it trained.")):"")+'</p>';
+   +(T.add&&(T.add==="mob"||!(a.health||[]).length)?" "+esc(t(T.add==="plyo"?"Jumps open each session, while you are fresh.":T.add==="cond"?"Each session ends with twelve minutes of intervals.":"Each session ends with mobility work for what it trained.")):"")+'</p>';
   /* Weekly sets per muscle: against the range where the goal is muscle, against the
      ceiling of what most people recover from otherwise. */
   var top=ceilingFor(a.level),ranged=r.vol[0]&&r.vol[0].lo!=null;

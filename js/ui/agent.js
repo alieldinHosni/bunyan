@@ -336,6 +336,9 @@ function planCommand(c){
     if(!c.to)return say(t("Where to? I can open Food, Training, Progress, your program, meal plan, targets, history, settings, or the weigh-in, steps and sleep logs."));
     var nm=t(PLACENAME[c.to]||c.to);
     return now("app.go",{to:c.to},fill(t("Opening {p}."),{p:nm}),fill(t("Opened {p}."),{p:nm}));}
+  if(c.cmd==="plan.gear"){
+    var KIT={bw:"no equipment",home:"home equipment",gym:"a full gym"};
+    return now("plan.gear",{gear:c.gear},"",fill(t("Here is your program rebuilt for {k}: the same goal, days and session length. Review it, then tap Use this plan."),{k:t(KIT[c.gear])}));}
   if(c.cmd==="water.add"){
     if(!c.ml)return say(t("How much? Say it like “add 500 ml of water” or “two glasses”."),[{l:t("Open Food"),a:{"data-tab":"food"}}]);
     var r=S.days[today()]||{},w=(r.water||0)+c.ml;

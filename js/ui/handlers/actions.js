@@ -21,6 +21,7 @@ import {render} from "../render.js";
 import {V} from "../view.js";
 import {LENT} from "./common.js";
 import {dispatchTap} from "./registry.js";
+import {STEPS} from "../views/assess.js";
 
 /* A tap on a button carrying these data-* keys, as if the person had made it. */
 function tap(D){
@@ -89,6 +90,11 @@ var ACTIONS={
   /* Cardio is logged as a bout in the workout, or started from Training: the coach opens
      the list of activities rather than logging time it was not given. */
   "cardio.open":{desc:"Open the list of activities to log or start one",params:{},confirm:false,run:function(){tap({actsheet:"1"});return true;}},
+  /* A program for other kit: the assessment opened as it stands, its equipment answer
+     tapped to the new kit, at its result. Nothing changes until Use this plan. */
+  "plan.gear":{desc:"Show the plan rebuilt for other equipment, to review and use",params:{gear:"gym, home or bw"},confirm:false,
+    run:function(p){if(!/^(gym|home|bw)$/.test(p.gear))return false;tap({setup:"1"});if(!V.asd)return false;
+      tap({as:"gear|"+p.gear});V.asd.step=STEPS.indexOf("result");render();return true;}},
   "app.go":{desc:"Open a place in the app",params:{to:"one of "+Object.keys(PLACE).join(", ")},confirm:false,
     run:function(p){var g=PLACE[p.to];if(!g)return false;g.forEach(function(D){tap(D);});return true;}},
   "water.add":{desc:"Add water to today",params:{ml:"millilitres"},confirm:true,snap:"day",

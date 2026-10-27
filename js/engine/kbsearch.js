@@ -169,6 +169,9 @@ function pairs(facts){
         if(k&&k[1]===head&&(k[2]||k[3]||"").trim()===what){used[j]=1;out.push(head+what+": "+m[4]+"–"+k[4]);return;}}}
     out.push(f);});
   return out;}
+/* Words that name a file's structure, not its subject ("take home", "notes"): they do
+   not make a passage about what a question says. */
+var TITLEFILL=/^(take|home|note|notes|rule|rules|summary|key|point|points|general|overview|basic|basics|evidence|finding|findings|other|misc|\d+)$/;
 var INDEX=null;
 function build(){
   if(INDEX)return INDEX;
@@ -189,7 +192,7 @@ function build(){
         words(title+" "+title).concat(words(facts.join(" "))).forEach(function(w){tokens.push(stem(w));});
         facts=pairs(facts);
         var seen={};facts=facts.filter(function(f){var k=f.toLowerCase();if(seen[k])return false;seen[k]=1;return true;});
-        docs.push({file:F[0],area:F[2],top:p[0],key:p[1],title:title,titleW:words(title).map(stem),facts:facts,tokens:tokens,len:tokens.length});});});});
+        docs.push({file:F[0],area:F[2],top:p[0],key:p[1],title:title,titleW:words(title).map(stem).filter(function(w){return !TITLEFILL.test(w);}),facts:facts,tokens:tokens,len:tokens.length});});});});
   var df={},avg=0;
   docs.forEach(function(d){avg+=d.len;var seen={};d.tokens.forEach(function(w){if(!seen[w]){seen[w]=1;df[w]=(df[w]||0)+1;}});
     d.tf={};d.tokens.forEach(function(w){d.tf[w]=(d.tf[w]||0)+1;});});
@@ -262,7 +265,10 @@ function lookup(q,prevQ){
   var r=search(q,3),top=r[0];
   if(!top)return null;
   var own=ownTerms(q),titled=own.some(function(w){return top.doc.titleW.indexOf(w)>=0;});
-  if(top.score<9||(top.hits<2&&!titled))return null;
+  /* The person's own words, not only what the synonyms add: "restructure my workout
+     plan to be home based" shares only synonyms with a protein passage. */
+  var ownHits=own.filter(function(w){return top.doc.tf[w];}).length;
+  if(top.score<9||(ownHits<2&&!titled))return null;
   var lines=bestFacts(top.doc,q,4),more=[];
   /* A second passage on the same thing, from another file, adds what the first lacks. */
   r.slice(1).forEach(function(x){if(x.doc.file!==top.doc.file&&x.score>top.score*0.7&&more.length<2)

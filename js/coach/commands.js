@@ -49,6 +49,15 @@ function commandOf(text){
   if(!fq)return null;
   var asks=QUESTION.test(fq)||/[?؟]\s*$/.test(raw);
 
+  /* ---- the program for other kit: asked as a question too ("can I make my plan
+     home based with no equipment?") ---- */
+  var kit=/(no equipment|without equipment|zero equipment|bodyweight|body weight|no gym|nothing at home|من غير ادوات|بدون ادوات|من غير اجهزه|وزن الجسم|من غير جيم)/.test(fq)?"bw"
+    :/(dumbbells?|bands?|kettlebells?|at home|home based|from home|in the house|في البيت|من البيت|دمبل)/.test(fq)?"home"
+    :/(full gym|the gym|a gym|machines|في الجيم|الجيم)/.test(fq)?"gym":"";
+  if(kit&&/(plan|program|programme|workouts?|routine|training|split|exercises|برنامج|البرنامج|التمرين|تمارين|خطه)/.test(fq)
+    &&/(restructure|change|switch|make|convert|rebuild|adapt|turn|move|redo|modify|adjust|update|build|redesign|can i|could i|i want|i need|wanna|حول|غير|اعمل|عدل|ممكن|عايز|عاوز)/.test(fq))
+    return {cmd:"plan.gear",gear:kit};
+
   /* ---- the workout in progress ---- */
   if(/(^| )(skip|end|stop|cancel) (the |my |)rest( |$)|(^| )(اقفل|الغي|كفايه|خلص|سكيب) (ال|)راحه/.test(q))return {cmd:"rest.skip"};
   if(/(^| )(extend|more|longer|add 30( s| sec| seconds|)( to)?) (the |my |)rest( |$)|(^| )30 (s|sec|seconds) more( |$)|(^| )(زود|طول) (ال|)راحه/.test(q))return {cmd:"rest.extend"};
