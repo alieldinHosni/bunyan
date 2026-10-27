@@ -948,6 +948,8 @@ await test("Themes: each place stands on its own picture, under the glass, faint
     const cs=g&&getComputedStyle(g),ca=a&&getComputedStyle(a);
     return a?[a.getAttribute("data-p"),ca.backgroundImage.replace(/.*\/(img\/[^")]+).*/,"$1"),cs.position,cs.zIndex,ca.opacity]:null;});
   eq(await look(),["home","img/page-home.jpg","fixed","-1","0.78"],"Training's first page: home, fixed behind the page");
+  /* The owner's full photographs fill the screen's height, so each is seen whole. */
+  eq(await page.evaluate(()=>Math.abs(document.querySelector("#bgart .art.photo").getBoundingClientRect().height-innerHeight)<2),true,"the full photograph fills the height");
   for(const [tab,p] of [["food","food"],["coach","coach"],["progress","progress"],["profile","profile"]]){
     await tapTab(page,tab);await pause(page);
     eq((await look()).slice(0,2),[p,"img/page-"+p+".jpg"],tab+" has its own");}

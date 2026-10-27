@@ -2006,3 +2006,17 @@ Owner, 27 Oct (two screenshots). CACHE `bunyan-v150`.
   - **Slower motion, app-wide** (tokens): micro 190, pop 260, comp 320, sheet and screen 380, data 480, reveal 600, fade 260 ms; tab 460, panel 420, keyboard 340; the panel's close 260 ms, and the coach's "say it, close, then move" beat 420 + 290 ms. A press stays quick (110).
   - **Swaps, one item, done in the chat**: "replace the talibia grill in my lunch" finds the planned item with a typo allowed (`planItemNamed`, a word within two letters), offers three like-for-like foods with their kcal and macros, and a tap then "Swap it" replaces it in the plan (`meal.swap`, Undo). Like for like: a food from another aisle counts against it (rice → breads and taro, not cornflakes), and "Cornflakes" / "Corn Flakes" are one food. "Other foods for lunch" no longer reads "lunch" as luncheon meat; the whole-meal answer says how to swap one.
   - **Doing it here**: the water answer's button adds a glass instead of opening Food.
+
+## The owner's full photographs — branch session/full-photos
+
+Owner, 27 Oct: the background photos re-uploaded at a phone's shape (941×1672), to replace the
+small cuts from the sheet. CACHE `bunyan-v152`.
+- `img/page-home.jpg` (the mark over the water), `page-training.jpg` (the rack under the pergola),
+  `page-workout.jpg` (bottle and towel) and `page-coach.jpg` (the tablet) are now the full
+  photographs, JPEG q80. The coach's is cut above its printed caption ("COACH / AI ASSISTANT"),
+  which would read as the app's own words.
+- These four fill the screen's height (`#bgart .art.photo:is(...)`, fade from 50 % to 94 %) so
+  each is seen whole instead of its top 64 vh. Warm-up, Food, Progress and Profile keep their
+  sheet cuts: the sheet the owner sent with them carries captions and, on Progress, a stats
+  card drawn into the picture, and its tiles are no wider than the current cuts.
+- Test: the full photograph fills the height.
