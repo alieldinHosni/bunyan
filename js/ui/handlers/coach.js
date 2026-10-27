@@ -240,8 +240,21 @@ function register(){
   key("ctxadd",function(D,el){var m=lastAsked(el);if(!m)return;
     var r=addFact(S.context,{kind:D.ctxadd,text:m.q,by:"user"},{today:today()});
     if(r.ok)S.context=r.store;
+    /* It says the opposite of something kept: which stands is the person's to say. */
+    if(r.why==="contradicts"){
+      m.b=[{p:t("Earlier you told me “{was}”. Which stands now?").replace("{was}",r.was)}];
+      m.acts=[{l:t("This one, instead"),a:{"data-ctxrep":r.id+"|"+D.ctxadd}},{l:t("Both stand"),a:{"data-ctxboth":D.ctxadd}}];
+      saveDB();render();return;}
     m.acts=[];m.b=[{p:r.ok||r.why==="duplicate"?t("Kept, in your words. Ask “What have I told you?” to see or delete it."):t("That couldn't be kept.")}];
     saveDB();render();return;});
+  key("ctxrep",function(D,el){var m=lastAsked(el);if(!m)return;var pr=String(D.ctxrep).split("|");
+    var r=addFact(S.context,{kind:pr[1],text:m.q,by:"user"},{today:today(),replace:pr[0]});
+    if(r.ok)S.context=r.store;
+    m.acts=[];m.b=[{p:r.ok?t("Updated: the old one is gone, this one is kept."):t("That couldn't be kept.")}];saveDB();render();return;});
+  key("ctxboth",function(D,el){var m=lastAsked(el);if(!m)return;
+    var r=addFact(S.context,{kind:D.ctxboth,text:m.q,by:"user"},{today:today(),both:true});
+    if(r.ok)S.context=r.store;
+    m.acts=[];m.b=[{p:r.ok||r.why==="duplicate"?t("Kept, in your words. Ask “What have I told you?” to see or delete it."):t("That couldn't be kept.")}];saveDB();render();return;});
   key("ctxno",function(D,el){var m=lastAsked(el);if(!m)return;m.acts=[];m.b=[{p:t("Not kept.")}];saveDB();render();return;});
   key("ctxdel",function(D){var r=removeFact(S.context,D.ctxdel);S.context=r.store;
     (S.chat||[]).forEach(function(m){if(m&&Array.isArray(m.acts))m.acts=m.acts.filter(function(b){return !(b.a&&b.a["data-ctxdel"]===D.ctxdel);});});
