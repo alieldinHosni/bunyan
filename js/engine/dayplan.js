@@ -6,7 +6,7 @@ import {t} from "../i18n/dict.js";
 import {isActivity, actInfo} from "../data/activities.js";
 import {S} from "../state.js";
 import {today} from "../util.js";
-import {nextPinned, pinnedOn} from "./schedule.js";
+import {nextPinned, pinnedAllOn, pinnedOn} from "./schedule.js";
 
 /* ---- where the rotation stands ------------------------------------------------
    The latest planned session sets it; a run or a match logged on its own (no day id)
@@ -50,6 +50,12 @@ function planOn(sp,iso){
   var logged=S.sessions.filter(function(x){return x.date===iso&&x.dayId;});
   /* Today, a run on its own does not stand in for the day's workout. */
   if(!logged.length&&iso<now)logged=S.sessions.filter(function(x){return x.date===iso;});
+  /* Today, with a session done and another day pinned to today still to do: that one
+     is today's workout now (two sessions in a day, by weekday). */
+  if(logged.length&&iso===now&&sp.schedule==="week"){
+    var doneIds={};logged.forEach(function(x){doneIds[x.dayId]=1;});
+    var left=pinnedAllOn(sp,iso).filter(function(d){return !doneIds[d.id];});
+    if(left.length)return {kind:"today",day:left[0],name:left[0].name,rest:false,again:logged.length+1,session:logged[0]};}
   if(logged.length){
     var ld=sp.days.filter(function(d){return d.id===logged[0].dayId;})[0]||null;
     return {kind:"done",session:logged[0],day:ld,name:logged[0].dayName};}
