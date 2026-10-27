@@ -49,6 +49,8 @@ function register(){
   key("go",function(D){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.phist=false;V.assess=false;V.pcheck=false;render();return;});
   /* Profile is a step into Training, not a place of its own: it opens from the person
      at the top right, and back returns there. */
+  /* Settings → Test haptics: the press has already ticked (app.js); nothing else to do. */
+  key("hapttest",function(){return;});
   key("prof",function(){if(V.tab==="profile")return;pushNav();V.tab="profile";V.train="days";render();window.scrollTo(0,0);return;});
   /* Food's old sections: today is the Food page; the plan, targets and foods of your
      own are planned in Coach → Nutrition. */

@@ -10,6 +10,7 @@
 
    land(from, text) after the render. from is the rectangle the question left from. */
 import {isReduced} from "./motion.js";
+import {t} from "../i18n/dict.js";
 
 /* The pace of a conversation (owner, 27 Oct: it was too quick to read as one): the
    question flies to its place; once it lands the coach starts typing, for longer the
@@ -50,8 +51,9 @@ function land(from){
     /* The answer waits; the dots come once the question has landed. */
     a.classList.add("wait");
     var dots=document.createElement("div");
-    dots.className="chat-typing";dots.setAttribute("aria-hidden","true");
-    dots.innerHTML="<i></i><i></i><i></i>";
+    /* Said to a screen reader as well as shown: the coach is typing. */
+    dots.className="chat-typing";dots.setAttribute("role","status");
+    dots.innerHTML='<i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><span class="vh">'+t("Coach is typing")+'</span>';
     var typing=typingFor(a);
     /* The question flies from where it was typed or tapped. */
     var to=q.getBoundingClientRect();

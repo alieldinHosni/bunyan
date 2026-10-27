@@ -2162,3 +2162,27 @@ bar. Cause: the running timer took the class `run`, and the GPS run screen's pag
 (index.html, flex column, `min-height:100dvh`) applied to it. The timer's state class is now
 `timing` (warmup.js, hold.js, index.html). CACHE `bunyan-v162`.
 Test: the running timer keeps its height and stays a row.
+
+## Coach batch 1: haptics on iPhone, the panel in the hand, the coach in the gym — branch session/coach-batch1
+
+Owner, 27 Oct: build the suggested ideas (all but the ones needing an online service) and make
+sure haptics work on the iPhone. CACHE `bunyan-v164`.
+- **Haptics on iPhone**: every button press already ticked (app.js), but through one hidden switch
+  kept in the page and toggled back and forth. Now the recipe known to tick on iOS 18+: a fresh
+  `<input type=checkbox switch>` in a hidden label in <head>, clicked and removed, per tick
+  (view.js `iosTick`). Swipes now tick too (exercise swipe, date swipe), at the touch's end, the
+  one moment iOS allows it; timers cannot (iOS blocks haptics outside a touch). Settings → App has
+  "Test haptics", with what an iPhone needs (iOS 18+, System Haptics on).
+- **The workout's coach button** (`.ss-coach`, `data-coachopen`) in the top bar, one tap; on phones
+  under 360 px the bar reads "1 of 6" without "Exercise".
+- **Gym commands**: "too easy" / "too heavy" / "I failed" → the next set a step up or about 10% down
+  (`incrementFor`; reps for unloaded), confirmed, `set.next` fills the logger, Undo (snap `draft`).
+  "How do I do this?" → the steps of the exercise on screen and its guide. "Plates for 87.5" → per
+  side on the plates sheet's bar, with what standard plates can't make.
+- **The panel in the hand** (js/ui/chatgest.js, precached): the header dragged down shrinks the
+  whole conversation to compact, then closes it (ticks on release); "More" grows open and shut
+  (WAAPI height); a long press on an exchange opens Copy / Delete by the finger (Delete has Undo;
+  Copy uses the clipboard, a hidden field where refused); the typing dots are a status saying
+  "Coach is typing". Yes/Not now chips were not added: every confirmation already has its two
+  buttons.
+- Tests: haptic recipe, gym commands, header button, drag, long press, More, typing status.

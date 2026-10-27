@@ -44,6 +44,8 @@ var SNAP={
   goals:function(){var g=copy(S.goals),k=S.profile.goal;return function(){S.goals=g;S.profile.goal=k;};},
   meals:function(){var m=copy(S.mealSlots);return function(){S.mealSlots=m;};},
   /* The week's dates moved by hand (S.daySwap), and the lighter week with its block. */
+  /* The next set's numbers in the logger. */
+  draft:function(){var d=copy(V.draft);return function(){V.draft=d;};},
   sched:function(){var w=copy(S.daySwap||{});return function(){S.daySwap=w;};},
   deload:function(){var d=copy(S.deload),b=copy(S.block);return function(){
     if(d)S.deload=d;else delete S.deload;if(b)S.block=b;else delete S.block;};},
@@ -104,6 +106,12 @@ var ACTIONS={
     confirm:true,snap:"live",
     run:function(p){if(!S.active||!S.active.entries[p.i]||S.active.entries[p.i].sets.length)return false;
       V.logIdx=p.i;S.active.idx=p.i;V.sd={swaplive:true};tap({pickex:p.name});return true;}},
+  "set.next":{desc:"Put the next set's weight and reps in the logger (how the last one felt)",params:{w:"weight, kg",r:"reps"},
+    confirm:true,snap:"draft",
+    /* The logger's two fields, as the person would type them. */
+    run:function(p){if(!S.active)return false;V.draft=V.draft||{};V.draft.w=+p.w||0;V.draft.r=+p.r||0;
+      var w=document.getElementById("in_w"),r=document.getElementById("in_r");
+      if(w)w.value=String(toDisp(V.draft.w));if(r)r.value=String(V.draft.r);render();return true;}},
   "set.log":{desc:"Log a set of the exercise on screen in the workout in progress",params:{w:"weight, kg",r:"reps"},
     confirm:true,snap:"live",
     /* The logger's fields, filled, and its Log set. */

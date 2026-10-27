@@ -2522,9 +2522,13 @@ await test("Haptics: on an iPhone a tap ticks the hidden switch, and no tap bran
   const r=await page.evaluate(async()=>{
     const V=await import("/js/ui/view.js"),S=(await import("/js/state.js")).S;S.prefs.haptic=true;
     let seen=0;document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(".hapt"))seen++;});
-    V.tap("light");const sw=document.querySelector(".hapt input[switch]");
-    return [!!document.querySelector(".hapt"),seen,typeof V.canBuzz()];});
-  eq(r,[true,0,"boolean"]);
+    /* A fresh switch for each tick, clicked and gone: watch it come and go. */
+    let made=0,toggled=0;const mo=new MutationObserver(m=>m.forEach(x=>x.addedNodes.forEach(n=>{if(n.classList&&n.classList.contains("hapt")){made++;n.querySelector("input").addEventListener("change",()=>toggled++);}})));
+    mo.observe(document.head,{childList:true});
+    const clicked=[];const orig=HTMLLabelElement.prototype.click;HTMLLabelElement.prototype.click=function(){if(this.classList.contains("hapt"))clicked.push(!!this.querySelector("input[switch]")&&this.isConnected);return orig.call(this);};
+    V.tap("light");V.tap("ok");await new Promise(r=>setTimeout(r,30));mo.disconnect();HTMLLabelElement.prototype.click=orig;
+    return [made,clicked,document.querySelectorAll(".hapt").length,seen,typeof V.canBuzz()];});
+  eq(r,[2,[true,true],0,0,"boolean"],"a switch per tick, clicked while in the page, then removed; no tap branch sees it");
 },{init:()=>{Object.defineProperty(navigator,"userAgent",{get:()=>"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"});
   try{Object.defineProperty(Navigator.prototype,"vibrate",{value:undefined,configurable:true});delete Navigator.prototype.vibrate;}catch(e){}}});
 await test("Coach tailors: exercises for a muscle fit the kit, the sore spots and the goal, each with the goal's dose; an exercise added by hand takes the goal's dose too",async page=>{
@@ -2694,7 +2698,7 @@ await test("Coach skills: the lighter week started from the chat, with Undo; and
 await test("Coach skills: a machine taken mid-workout gets alternatives for the same muscles, swapped in for today only",async page=>{
   await startWorkout(page);
   /* From the workout's own menu: Ask Coach, where the first suggestion is this. */
-  await page.tap('[data-sessmore]');await pause(page,400);await page.tap('[data-coachopen]');await pause(page,500);
+  await page.tap('[data-sessmore]');await pause(page,400);await page.tap('#sheet [data-coachopen]');await pause(page,500);
   eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a[0]&&a[0].dataset.chatq),"busy","the first suggestion in a workout");
   const prog=await dayEx(page,0),cur=await ev(page,"S.active.entries[S.active.idx||0].name");
   await page.tap('#cpanel [data-chatq="busy"]');await pause(page,450);
@@ -2715,6 +2719,66 @@ await test("Coach skills: the weekly check-in reads the week from the log, ends 
   if(!/(Last week|This week so far), from your log:/.test(x)||!/Workouts: \d+/.test(x))throw new Error("check-in: "+x);
   eq(await ev(page,"typeof S.ckSeen"),"string","read: not offered again this week");
 });
+await test("Coach in the gym: one tap to the coach from the workout; a set too easy or too heavy moves the next; the form; the plates",async page=>{
+  await startWorkout(page);
+  await page.tap('.ss-coach');await pause(page,500);
+  eq(await ev(page,"V.coach"),"compact","the workout's own coach button");
+  let r=await agSay(page,"plates for 102.5");
+  if(!/^For 102\.5 kg on a 20 kg bar: .+ kg on each side\./.test(r.lead))throw new Error("plates: "+r.lead);
+  r=await agSay(page,"how do I do this?");
+  const cur=await ev(page,"S.active.entries[S.active.idx||0].name");
+  eq(await page.evaluate(()=>!![...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector("[data-exdetail]")),true,"the guide, a tap away: "+r.lead);
+  r=await agSay(page,"too easy");
+  eq(/^Log a set of /.test(r.lead),true,"nothing to judge before a set");
+  /* A set logged at a known weight, then judged. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;const e=S.active.entries[S.active.idx||0];e.sets.push({w:60,r:8});});
+  r=await agSay(page,"that was too easy");
+  eq([/^Then go up a step\. Next set: /.test(r.lead),r.ok],[true,true],"up a step: "+r.lead);
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  const up=await ev(page,"V.draft.w");
+  if(!(up>60))throw new Error("not heavier: "+up);
+  r=await agSay(page,"too heavy");
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  if(!(await ev(page,"V.draft.w")<60))throw new Error("not lighter");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await ev(page,"V.draft.w"),up,"Undo: the next set as it was");
+});
+await test("Coach panel in the hand: the header dragged down shrinks then closes it; a long press copies or deletes; More grows open; the typing is said",async page=>{
+  await openChat(page);
+  await agSay(page,"how much protein do I need");
+  /* A long press on the exchange. */
+  const touch=(type,x,y,sel)=>page.evaluate(([type,x,y,sel])=>{const el=document.querySelector(sel)||document.elementFromPoint(x,y);
+    const tc=new Touch({identifier:1,target:el,clientX:x,clientY:y});
+    el.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,touches:type==="touchend"?[]:[tc],changedTouches:[tc]}));},[type,x,y,sel]);
+  await pause(page,2600);
+  const box=await page.evaluate(()=>{const e=[...document.querySelectorAll('#cpanel .chat-x .chat-a')].pop(),r=e.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+20};});
+  await touch("touchstart",box.x,box.y,null);await pause(page,650);
+  eq(await page.$$eval('#msgmenu button',a=>a.map(b=>b.textContent)),["Copy","Delete"],"Copy and Delete, by the finger");
+  await touch("touchend",box.x,box.y,null);
+  const n=await ev(page,"S.chat.length");
+  await page.click('#msgmenu [data-msgdel]');await pause(page,400);
+  eq([await ev(page,"S.chat.length"),await page.$$eval('#msgmenu',a=>a.length)],[n-1,0],"deleted, the menu gone");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"S.chat.length"),n,"Undo brings it back");
+  /* More grows open, then closed. */
+  if(await page.$('#cpanel .chat-more>summary')){
+    await page.click('#cpanel .chat-more>summary');await pause(page,80);
+    const mid=await page.$eval('#cpanel .chat-more',d=>[d.open,!!d.getAnimations().length]);
+    await pause(page,450);
+    eq([mid,await page.$eval('#cpanel .chat-more',d=>d.open)],[[true,true],true],"opens by growing");}
+  /* The header, dragged: the whole conversation → compact → closed. */
+  await page.tap('.cp [data-coachsize="full"]');await pause(page,600);
+  const drag=async()=>{const h=await page.$eval('#cpanel .cp-h',e=>{const r=e.getBoundingClientRect();return {x:r.left+r.width/2-60,y:r.top+r.height/2};});
+    await touch("touchstart",h.x,h.y,'#cpanel .cp-h p');for(let i=1;i<=6;i++){await touch("touchmove",h.x,h.y+i*30,'#cpanel .cp-h p');}
+    await touch("touchend",h.x,h.y+180,'#cpanel .cp-h p');await pause(page,700);};
+  await drag();eq(await ev(page,"V.coach"),"compact","dragged down: smaller");
+  await drag();eq(await ev(page,"V.coach"),null,"dragged again: closed");
+  /* The typing dots say so to a screen reader. */
+  await openChat(page);
+  await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.anim=true;document.body.classList.remove("noanim");});
+  await page.fill('#chatq','how is my weight');await page.press('#chatq','Enter');await pause(page,700);
+  eq(await page.$eval('.chat-typing',e=>[e.getAttribute("role"),e.textContent]).catch(()=>null),["status","Coach is typing"],"the typing, said");
+},{prefs:{anim:true}});
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
   await openChat(page);

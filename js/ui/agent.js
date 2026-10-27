@@ -16,7 +16,7 @@
    answer says so and points to where it can be found. The change itself is run by
    js/ui/handlers/actions.js, the same way the screens' own buttons run it. */
 import {isActivity} from "../data/activities.js";
-import {difficultyOf, EXDB, isCompound as isCompoundName, isFav, LIB, movementOfEx, muscleOf as muscleOfName, MUSCLES, patternOf, pickable} from "../data/exercises.js";
+import {difficultyOf, exSteps, EXDB, isCompound as isCompoundName, isFav, LIB, movementOfEx, muscleOf as muscleOfName, MUSCLES, patternOf, pickable} from "../data/exercises.js";
 import {planOn} from "../engine/dayplan.js";
 import {avoids, doseFor, usable} from "../engine/plan.js";
 import {goalOf} from "../data/goals.js";
@@ -27,14 +27,15 @@ import {editDist, fuzzTol, fuzzyRank, matchScore, norm, tokenMatch} from "../eng
 import {fold, spell} from "../coach/intent.js";
 import {t} from "../i18n/dict.js";
 import {exName, planName} from "../i18n/exnames.js";
-import {deloadDue, inDeload, lastWeight} from "../engine/formulas.js";
+import {deloadDue, incrementFor, inDeload, lastWeight} from "../engine/formulas.js";
 import {addDays, isoWeekday} from "../engine/schedule.js";
 import {S, split} from "../state.js";
-import {fmtW} from "../units.js";
+import {fmtW, toDisp, wUnit} from "../units.js";
 import {fmtN, num, pretty, today} from "../util.js";
 import {doseText} from "./dose.js";
-import {mealNow} from "./view.js";
+import {mealNow, V} from "./view.js";
 import {exHay} from "./views/train.js";
+import {platePlan} from "./views/session.js";
 
 function fill(s,o){Object.keys(o).forEach(function(k){s=s.split("{"+k+"}").join(o[k]);});return s;}
 
@@ -452,6 +453,42 @@ function planDeload(c){
       :"Your sets have been close to failure for two weeks running."):t("Nothing in your log calls for one yet; it's yours to take."),
     cta:t("Start it"),done:fill(t("Lighter week on, until {d}."),{d:pretty(addDays(today(),6))}),undone:t("Undone. Your weeks are as they were.")});}
 
+/* ---- in the gym: how the last set felt, the form, the plates ----------------------- */
+/* "Too easy" / "too heavy": the next set's numbers moved a step, the way the logger's
+   own suggestion moves them (incrementFor). Only the next set changes; nothing logged
+   is touched. Without a load, reps move instead. */
+function planFeel(dir){
+  var a=S.active;
+  if(!a)return say(t("Tell me during a workout, after a set, and I'll move the next one."));
+  var e=a.entries[a.idx||0],ls=e&&e.sets[e.sets.length-1];
+  if(!e||isActivity(e.name))return say(t("Nothing to move on this one."));
+  if(!ls)return say(fill(t("Log a set of {ex} first, then tell me how it felt."),{ex:exName(e.name)}));
+  var w=num(ls.w),r=num(ls.r),inc=incrementFor(e.name,w),nw=w,nr=r;
+  if(w>0&&inc>0){
+    if(dir>0)nw=w+inc;
+    else{var cut=Math.max(inc,w*0.1);nw=Math.max(0,Math.round((w-cut)/inc)*inc);}}
+  else nr=Math.max(1,r+(dir>0?2:-2));
+  nw=Math.round(nw*100)/100;
+  var line=(nw?fmtW(nw)+" × ":"")+nr+(nw?"":" "+t("reps"));
+  return confirm("set.next",{w:nw,r:nr},{lead:fill(t(dir>0?"Then go up a step. Next set: {s}?":"Then ease off. Next set: {s}?"),{s:line}),
+    item:line,detail:fill(t("{ex}, last set {w} × {r}. Only the next set changes."),{ex:exName(e.name),w:w?fmtW(w):"",r:r}).replace(" ×  "," × ").replace(",  ×",","),
+    cta:t("Use it"),done:fill(t("Next set: {s}."),{s:line}),undone:t("Undone. The next set is as it was.")});}
+/* "How do I do this?": the steps for the exercise on screen, and its full guide. */
+function planHow(){
+  var a=S.active,e=a&&a.entries[a.idx||0];
+  if(!e)return say(t("During a workout I'll show the exercise on screen. Or ask how to do one by name."),[{l:t("Open Training"),a:{"data-tab":"train"}}]);
+  var st=exSteps(e.name)||[];
+  var lead=st.length?st.slice(0,4).map(function(s,i){return (i+1)+". "+s;}).join(" "):fill(t("The guide for {ex} has the steps and the common mistakes."),{ex:exName(e.name)});
+  return say(fill(t("{ex}:"),{ex:exName(e.name)})+" "+lead,[{l:t("How to do it"),a:{"data-exdetail":e.name}}]);}
+/* "Plates for 87.5": per side, heaviest first, on the bar the plates sheet uses. */
+function planPlates(c){
+  var kg=c.unit==="lb"||(!c.unit&&S.prefs.unit==="lb")?c.w/2.2046:c.w,bar=V.bar==null?20:num(V.bar);
+  var pp=platePlan(kg,bar),u=wUnit();
+  if(pp.under)return say(fill(t("{w} is less than the bar, {b}."),{w:fmtW(kg),b:fmtW(bar)}));
+  var list=pp.plates.map(function(x){return (x.n>1?x.n+" × ":"")+x.w;}).join(" + ");
+  return say(fill(t("For {w} on a {b} bar: {list} {u} on each side."),{w:fmtW(kg),b:fmtW(bar),list:list||"0",u:u})
+    +(pp.left>0?" "+fill(t("{l} {u} a side can't be made with standard plates."),{l:pp.left,u:u}):""));}
+
 /* ---- the machine is taken: the same muscles, another way, for today -------------------
    The picker's own like-for-like ranking (same muscle, same movement), with other
    equipment first, what the person has and nothing near a sore spot; never one already
@@ -513,6 +550,9 @@ var GOALNAME={lose:"Lose fat",recomp:"Lose fat and build muscle",gain:"Build mus
 function planCommand(c){
   if(!c)return null;
   if(c.cmd==="ex.busy")return planBusy();
+  if(c.cmd==="set.feel")return planFeel(c.dir);
+  if(c.cmd==="ex.how")return planHow();
+  if(c.cmd==="plates")return planPlates(c);
   if(c.cmd==="ex.dose")return planDose(c);
   if(c.cmd==="deload.start"||c.cmd==="deload.end")return planDeload(c);
   if(c.cmd==="sched.skip")return planSkip(c);

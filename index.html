@@ -1263,7 +1263,9 @@ body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
   stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .ss-name{font-size:15px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis}
-.ss-meta{font-size:11.5px;color:var(--dim);margin-top:1px}
+.ss-meta{font-size:11.5px;color:var(--dim);margin-top:1px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* A small phone keeps the count and the caret; the word goes (the coach's button took its room). */
+@media (max-width:359px){.ss-mw{display:none}}
 /* A bare dot between two digits reads as one number at phone size. */
 .ss-meta .sep{display:inline-block;margin:0 7px;opacity:.55}
 .ss-clock{flex-shrink:0;display:flex;align-items:center;gap:6px;
@@ -3653,6 +3655,10 @@ textarea.afnl.warn{border-color:var(--warning)}
   background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;padding:0}
 .sess .ss-back{color:var(--accentHi);font-size:18px}
 .sess .ss-more{color:var(--text);font-size:18px;letter-spacing:.05em}
+.ss-coach{flex:none;width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:var(--rpill);
+  border:1px solid var(--accent-edge);background:var(--accent-tint);color:var(--accentHi)}
+.ss-coach svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+:root:not(.tch) .ss-coach:active,.ss-coach.tapd{transform:scale(.94)}
 .sess .ss-clock{border-radius:var(--r4);border:1px solid var(--accent-edge);background:var(--accent-tint);
   box-shadow:0 8px 22px -10px var(--accent-glow)}
 .sess .ss-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden}
@@ -3725,7 +3731,7 @@ body.wkflat #app{--gutter:20px}
 
 /* WorkoutHeader: close, day and position (opens today's list), clock, more, a 3px bar. */
 .sess .ss-top{margin-bottom:var(--s3);padding-bottom:0;border-bottom:1px solid var(--hair)}
-.sess .ss-row{display:grid;grid-template-columns:var(--hit) minmax(0,1fr) auto var(--hit);gap:var(--s3);align-items:center;min-height:52px}
+.sess .ss-row{display:grid;grid-template-columns:var(--hit) minmax(0,1fr) auto var(--hit) var(--hit);gap:var(--s2);align-items:center;min-height:52px}
 .sess .ss-back,.sess .ss-more{width:var(--hit);height:var(--hit);margin:0;padding:0;display:grid;place-items:center;border-radius:50%;
   border:1px solid var(--glass-btn-edge);background:var(--glass-btn);color:var(--text)}
 .sess .ss-title{min-height:var(--hit);justify-content:center;padding:0}
@@ -4848,6 +4854,19 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .chat-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .chat-acts .btn{flex:1 1 auto;width:auto;margin:0}
 .chat-next{margin:22px 0 0}
+/* Read by a screen reader, never seen. */
+.vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+/* A long press on an exchange (js/ui/chatgest.js): the bubble answers, and a small menu
+   comes up by the finger. The phone's own callout would cover it. */
+#cpanel .chat-x,.chat .chat-x{-webkit-touch-callout:none}
+.chat-x.held{transform:scale(.985);transition:transform var(--m-micro) var(--e-standard)}
+.msgmenu{position:fixed;z-index:130;display:flex;gap:var(--s1);padding:var(--s1);border-radius:var(--rpill);
+  background:var(--raised);border:1px solid var(--card-edge);box-shadow:var(--shadow-float);animation:fadeIn var(--m-pop) var(--e-standard)}
+.msgmenu button{min-height:var(--hit);padding:0 var(--s4);border:0;border-radius:var(--rpill);background:none;color:var(--text);font-weight:700;font-size:14px}
+.msgmenu button.d{color:var(--danger)}
+.msgmenu button:focus-visible{outline:2px solid var(--accentHi);outline-offset:-2px}
+/* The coach's header is a grip: dragged down, the panel gets smaller or closes. */
+#cpanel .cp-h{touch-action:none}
 /* The way to the chat history, at the top of the conversation when it holds more than
    the chat shows: a quiet line, not a card. */
 .chat-histl{display:flex;align-items:center;justify-content:center;gap:var(--s2);margin:0 auto var(--s3);min-height:var(--hit);
