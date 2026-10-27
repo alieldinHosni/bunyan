@@ -2323,3 +2323,27 @@ CACHE `bunyan-v169` (session/workout-flow is v168; whichever merges second keeps
 - **Chat history search**: a field above the days; typing hides what doesn't match (question or
   answer), each row in place, and says when nothing does (fields.js `chhq`).
 - Tests: coach 229 (corpus included); regression "Coach, when unsure and when wrong…".
+
+## Agent intelligence from the four linked repos — branch session/agent-memory
+
+CACHE `bunyan-v173`. Owner, 27 Oct, linked samiralibabic/open-ended-agent, thefilesareinthecomputer/
+agent-zero, yepmdg/ollama-agent, openinterpreter/openinterpreter, "use whatever can be implemented".
+Read (cloned read-only outside the repo): all four drive a language model on a computer — Ollama /
+llama.cpp / an OpenAI-compatible endpoint (open-ended-agent: Bun loop with memory files; agent-zero:
+LangGraph + Ollama + ChromaDB, Python; ollama-agent: Python ReAct loop + ChromaDB; Open Interpreter:
+a terminal coding agent, a Codex fork in Rust). None runs in an iPhone browser, and a phone app served
+over https cannot reach an Ollama on the home network (mixed content). So the model parts cannot come
+in; their patterns can, where Bunyan's coach did not have them yet:
+- Already here: BM25 knowledge retrieval over js/knowledge (engine/kbsearch.js — agent-zero's KB
+  retrieval), a tool registry with descriptions (handlers/actions.js — ollama-agent tools.yaml),
+  multi-part requests (chat.js splitTwo — ollama-agent router's "multipart"), facts memory.
+- **Built: memory that does not keep contradictions** (agent-zero memory_manager DEDUP/CONTRADICT):
+  coach/context.js `relation(a,b)` → "same" (≥85 % of content words shared, same polarity: kept once)
+  or "opposite" (≥60 % shared and one negated — "I eat pork"/"I don't eat pork", "بحب"/"مبحبش" —
+  or the same statement with its figure changed, "13-hour"/"12-hour"). `addFact` returns
+  why:"contradicts" (id, was) for an opposite of any kind; opts.replace / opts.both settle it. The
+  chat asks "Earlier you told me “…”. Which stands now?" — This one, instead / Both stand.
+- Not built, the owner's decision: a language model on the phone (WebGPU, WebLLM-style, 0.5–1.5 GB
+  download, recent iPhones only, slow and battery-heavy) — that is what would make the coach answer
+  anything; everything here stays rule-based without it.
+- Tests: coach context (relations, contradiction, replace, both); regression "Coach memory: …".

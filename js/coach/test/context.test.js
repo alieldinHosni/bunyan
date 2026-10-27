@@ -1,4 +1,4 @@
-import {addFact, emptyContext, KINDS, listFacts, readContext, removeFact} from "../context.js";
+import {addFact, emptyContext, KINDS, listFacts, readContext, relation, removeFact} from "../context.js";
 
 var TODAY="2026-10-20";
 
@@ -43,6 +43,20 @@ function run(t){
   addFact(b.store,{kind:"obstacle",text:"Night shifts",by:"user"});removeFact(b.store,"c2");
   t.eq(JSON.stringify(b.store),before,"the store handed in is left alone");
   var shown=listFacts(b.store);shown[0].text="edited";
-  t.eq(listFacts(b.store)[0].text,"Works 13-hour days","editing what was listed does not change the store");}
+  t.eq(listFacts(b.store)[0].text,"Works 13-hour days","editing what was listed does not change the store");
+  /* Near the same, or the opposite (agent-zero's memory: a near duplicate is not kept
+     twice; a contradiction is not kept beside what it contradicts). */
+  t.eq([relation("I eat pork","I don't eat pork"),relation("I can do squats","I can't do squats"),relation("بحب الجري","مبحبش الجري"),
+    relation("I work 13-hour days","I work 12-hour days"),relation("I don't eat pork","I do not eat pork"),relation("I hate running","I love cycling")],
+    ["opposite","opposite","opposite","opposite","same",""],"opposites by a negation or a changed figure; the same in other words; unrelated is neither");
+  var pk=addFact(null,{kind:"preference",text:"I eat pork",by:"user"},{today:TODAY});
+  t.eq(addFact(pk.store,{kind:"preference",text:"I do eat pork",by:"user"},{today:TODAY}).why,"duplicate","near the same: kept once");
+  var cx=addFact(pk.store,{kind:"constraint",text:"I don't eat pork",by:"user"},{today:TODAY});
+  t.eq([cx.ok,cx.why,cx.id,cx.was,listFacts(cx.store).length],[false,"contradicts","c1","I eat pork",1],"the opposite of a kept entry, of any kind: asked, nothing changed");
+  var rp=addFact(pk.store,{kind:"constraint",text:"I don't eat pork",by:"user"},{today:TODAY,replace:"c1"});
+  t.eq(listFacts(rp.store).map(function(x){return x.text;}),["I don't eat pork"],"replace: the old one out, the new one in");
+  var bo=addFact(pk.store,{kind:"constraint",text:"I don't eat pork",by:"user"},{today:TODAY,both:true});
+  t.eq(listFacts(bo.store).length,2,"keep both, when the person says both stand");
+}
 
 export {run};

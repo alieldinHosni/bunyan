@@ -2990,6 +2990,17 @@ await test("Coach, when unsure and when wrong: other readings offered under a ne
   await page.fill('#chhq','zzzz');await pause(page,200);
   eq(await page.$eval('#chhNone',e=>e.hidden),false,"and says when nothing does");
 });
+await test("Coach memory: a fact that contradicts or updates one kept is asked about, not kept beside it",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.context={v:1,next:2,items:[{id:"c1",kind:"schedule",text:"I work 13-hour days",at:"2026-10-01",by:"user"}]};});
+  await openChat(page);
+  await agSay(page,"I work 12-hour days now");await pause(page,300);
+  await page.tap('#cpanel .chat-x.live [data-ctxadd="schedule"]');await pause(page,400);
+  const x=await page.evaluate(()=>{const e=[...document.querySelectorAll("#cpanel .chat-x")].pop();return [e.innerText,[...e.querySelectorAll("button")].map(b=>Object.keys(b.dataset)[0])];});
+  if(!/Earlier you told me “I work 13-hour days”\. Which stands now\?/.test(x[0]))throw new Error("not asked: "+x[0]);
+  eq(await ev(page,"S.context.items.map(i=>i.text)"),["I work 13-hour days"],"nothing changed before the answer");
+  await page.tap('#cpanel .chat-x.live [data-ctxrep]');await pause(page,400);
+  eq(await ev(page,"S.context.items.map(i=>i.text)"),["I work 12-hour days now"],"replaced: one statement, the newer");
+});
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
   await openChat(page);

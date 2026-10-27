@@ -41,15 +41,47 @@ function readContext(raw){
      not_user   it did not come from the person — an inference is never kept
      kind       not one of KINDS
      empty      nothing was said
-     duplicate  the same kind and words are already kept (id names that entry) */
+     duplicate  the same kind and words, or near enough, are already kept (id names it)
+     contradicts  it is the opposite of a kept entry of any kind (id, was: that entry);
+                opts.replace=id takes that one out for this, opts.both keeps the two */
+/* Near the same, or the opposite (owner, 27 Oct, from agent-zero's memory: a near
+   duplicate refreshes, a contradiction replaces). Without a model "the same" is the
+   words: two statements sharing most of their content words say the same thing, and
+   if one is negated and the other is not ("I eat pork" / "I don't eat pork", "بحب
+   الجري" / "مبحبش الجري") they say opposite things. → "same", "opposite" or "". */
+var NEG=/(^| )(not|no|never|without|dont|cant|cannot|wont|doesnt|isnt|arent|مش|لا|ما|مافيش|مفيش)(?= |$)|(^| )م[\u0600-\u06FF]{2,}ش(?= |$)/;
+var STOP={i:1,im:1,a:1,an:1,the:1,my:1,me:1,to:1,at:1,in:1,on:1,of:1,and:1,or:1,do:1,does:1,am:1,is:1,are:1,be:1,it:1,for:1,with:1,
+  انا:1,في:1,على:1,من:1,و:1,ال:1,اني:1};
+function unNeg(t){return String(t||"").toLowerCase().replace(/\bcan'?t\b/g,"can not").replace(/\bwon'?t\b/g,"will not").replace(/n't\b/g," not");}
+function words(t){
+  return unNeg(t).replace(/[^\w\s\u0600-\u06FF]/g," ").split(/\s+/).filter(Boolean)
+    .map(function(w){var m=/^م([\u0600-\u06FF]{2,})ش$/.exec(w);return m?m[1]:w;})
+    .filter(function(w){return !STOP[w]&&!/^(not|no|never|without|dont|cant|cannot|wont|doesnt|isnt|arent|مش|لا|ما|مافيش|مفيش)$/.test(w);})
+    .map(function(w){return w.replace(/(ing|es|s)$/,"");});}
+function relation(a,b){
+  var A=words(a),B=words(b);if(!A.length||!B.length)return "";
+  var inB=A.filter(function(w){return B.indexOf(w)>=0;}).length,share=inB/Math.max(A.length,B.length);
+  var na=NEG.test(" "+unNeg(a)+" "),nb=NEG.test(" "+unNeg(b)+" ");
+  if(share>=0.6&&na!==nb)return "opposite";
+  /* The same statement with its figure changed ("13-hour days" → "12-hour days"): the
+     newer one is an update of the older, which the person confirms. */
+  var da=(String(a).match(/\d+/g)||[]).join(","),db=(String(b).match(/\d+/g)||[]).join(",");
+  if(share>=0.6&&na===nb&&da!==db&&da&&db)return "opposite";
+  if(share>=0.85&&na===nb)return "same";
+  return "";}
 function addFact(store,fact,opts){
   var s=readContext(store);opts=opts||{};
   if(!fact||fact.by!=="user")return {ok:false,store:s,why:"not_user"};
   if(KINDS.indexOf(fact.kind)<0)return {ok:false,store:s,why:"kind"};
   var text=typeof fact.text==="string"?fact.text.trim():"";
   if(!text)return {ok:false,store:s,why:"empty"};
-  var same=s.items.filter(function(x){return x.kind===fact.kind&&x.text===text;})[0];
+  var same=s.items.filter(function(x){return x.kind===fact.kind&&(x.text===text||relation(x.text,text)==="same");})[0];
   if(same)return {ok:false,store:s,why:"duplicate",id:same.id};
+  /* The opposite of something kept, of any kind: the person says which stands
+     (opts.replace: the id to take out; opts.both: keep the two). */
+  if(!opts.both){var opp=s.items.filter(function(x){return relation(x.text,text)==="opposite";})[0];
+    if(opp&&opts.replace!==opp.id)return {ok:false,store:s,why:"contradicts",id:opp.id,was:opp.text};
+    if(opp)s={v:1,next:s.next,items:s.items.filter(function(x){return x.id!==opp.id;})};}
   var id="c"+s.next;
   var item={id:id,kind:fact.kind,text:text,at:typeof opts.today==="string"?opts.today:"",by:"user"};
   return {ok:true,store:{v:1,next:s.next+1,items:s.items.concat([item])},id:id};}
@@ -66,4 +98,4 @@ function listFacts(store,kind){
   return readContext(store).items.filter(function(x){return !kind||x.kind===kind;})
     .map(function(x){return {id:x.id,kind:x.kind,text:x.text,at:x.at,by:x.by};});}
 
-export {addFact, emptyContext, KINDS, listFacts, readContext, removeFact};
+export {addFact, emptyContext, KINDS, listFacts, readContext, relation, removeFact};
