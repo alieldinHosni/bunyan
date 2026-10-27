@@ -114,8 +114,12 @@ function chatSend(){
      question that stayed in the box after its answer read as not yet sent. */
   var from=fromEl(el);
   el.value="";
+  sendText(q,from,"");}
+/* A request sent as if typed: from the box, or from an answer's button that asks for
+   something (data-chatsay), shown as that button's words. */
+function sendText(q,from,shown){
   loadFoods(function(){
-    var m=ask(q);
+    var m=ask(q);if(m&&!m.tap&&shown)m.q=shown;
     /* "yes" or "no" to a change waiting for a tap: that tap. */
     if(m&&m.tap){dispatchTap(m.tap,document.createElement("button"),{},{typingAsk:false});return;}
     /* Something to do at once: it runs, and its row says it was done. */
@@ -211,4 +215,4 @@ function fixLogsNow(){
    set when it registers: the actions run what the screens run without the handler
    modules importing each other. */
 var LENT={};
-export {LENT, MF, builderId, fixLogsNow, retargetNow, chatEnd, chatSend, editedEx, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};
+export {builderId, chatEnd, chatSend, editedEx, fixLogsNow, LENT, MF, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, retargetNow, sendText, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};

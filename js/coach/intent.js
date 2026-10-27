@@ -52,6 +52,10 @@ var INTENTS=[
     "how much protein|calories|kcal|carbs|fat|fiber|sugar in$","how many calories|kcal|grams in$","protein|calories|kcal|carbs|fat|macros in$",
     "macros of|for","nutrition of|facts|info|value",
     "كام|كم بروتين|سعر|سعره|سعرات|كارب|دهون|جرام في","فيه|فيها|في كام|كم بروتين|سعر|سعره|سعرات|كارب|دهون","القيمه الغذائيه"]],
+  /* A lift that has stopped moving (chat.js aPlateau). */
+  ["plateau",[
+    "why not going up","why isnt going up","not going up","bench|squat|deadlift|press|lift|lifts|row|curl|pullups|chinups stuck","stuck on|at","plateau","plateaued","stalled","not getting stronger","stopped going up|improving|progressing",
+    "not progressing","cant increase|add weight","ليه مش بيزيد","مش بيزيد","واقف عند","ثابت مش بيزيد","مش بقوي"]],
   /* The weekly check-in: the week, from the log (chat.js aWeek). */
   ["week",[
     "how was my week","how was week","how did week go","week review|recap|summary|check|checkin","weekly review|recap|summary|check|checkin|report",

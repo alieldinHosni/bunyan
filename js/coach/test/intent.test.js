@@ -6,7 +6,7 @@ var EN=[
   ["What should I train today?","today"],["what's my workout today","today"],["Which day is next?","today"],
   ["How much weight should I lift on bench?","weights"],["how heavy should I squat","weights"],["when do I add weight","weights"],
   ["What should I eat now?","eat"],["how many calories left today","eat"],["I'm hungry","eat"],
-  ["Am I on track?","track"],["How was my week?","week"],["weekly check-in","week"],["Am I improving?","track"],["how am I doing","track"],
+  ["Am I on track?","track"],["How was my week?","week"],["why is my bench stuck?","plateau"],["my squat has plateaued","plateau"],["weekly check-in","week"],["Am I improving?","track"],["how am I doing","track"],
   ["Why is my weight stuck?","weight"],["I'm not losing weight","weight"],["the scale hasn't moved","weight"],
   ["How much protein do I need?","protein"],["Why are my calories 2400?","calories"],["explain my macros","calories"],
   ["I'm sore and tired","sore"],["my knee hurts","sore"],["I slept badly","sore"],["I feel fatigued","sore"],

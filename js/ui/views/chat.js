@@ -33,7 +33,7 @@ import {commandOf, whenIn} from "../../coach/commands.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
-import {bestE1RM, bmr, bwShare, deloadDue, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
+import {bestE1RM, bmr, bwShare, deloadDue, plateauOf, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {mealName, mealSlots} from "../../engine/meals.js";
 import {editDist} from "../../engine/text.js";
 import {FOODDB, fuzzyFoods, isDrink, nutritionFor, searchFoods, sumNutrition} from "../../engine/nutrition.js";
@@ -57,7 +57,7 @@ var KEEP=500;
 /* The suggestions: what each asks, as the person would ask it. */
 var ASK={
   today:"What do I train today?",weights:"How much should I lift?",eat:"What should I eat now?",
-  week:"How was my week?",busy:"This machine is taken",track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
+  plateau:"Why isn't my lift going up?",week:"How was my week?",busy:"This machine is taken",track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
   calories:"Why are my calories set like this?",sore:"I'm sore or tired",missed:"I'm short on time today",
   balance:"Is my program balanced?",strong:"How strong am I?",goal:"Should I change my goal?",
   plan:"Build me a new plan",water:"How much water should I drink?",steps:"How are my steps and cardio?",
@@ -67,7 +67,7 @@ var ASK={
   letgo:"Just move on",lowday:"Adjust today for a low day",facts:"What have I told you?"};
 /* What to offer next, after each kind of answer. */
 var NEXT={
-  week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
+  plateau:["strong","weights","sore"],week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
   track:["weight","strong","balance"],weight:["calories","eat","goal"],protein:["eat","calories","track"],
   calories:["protein","weight","goal"],sore:["today","missed","balance"],missed:["today","weights","track"],
   balance:["today","strong","plan"],strong:["weights","track","balance"],goal:["calories","plan","weight"],
@@ -272,6 +272,48 @@ function aWeek(a){
   p(a,tip);
   S.ckSeen=weekStartOf(today());
   return act(a,t("Open Progress"),{"data-tab":"progress"});}
+
+/* ---- why a lift is stuck ---------------------------------------------------------------
+   The lift named (else one the log says has stalled, else the first big lift), read from
+   six weeks of the log: how often, how its estimated max moved, how hard the sets were,
+   its muscle's weekly sets against the growth range (for a size goal), sleep, and a
+   deficit. Each reason only where the log has the data; then the one change to make. */
+function aPlateau(a,q){
+  var named=namedExercises(q),name=named.length?named[0].name:null,lifts=[];
+  split().days.forEach(function(d){d.ex.forEach(function(e){if(!isActivity(e.name)&&lifts.indexOf(e.name)<0)lifts.push(e.name);});});
+  if(!name)name=lifts.filter(function(n){return plateauOf(n);})[0]||lifts[0];
+  if(!name){p(a,t("Your program has no lifts yet, so there's nothing to read."));return act(a,t("Plan my training"),{"data-csec":"train","data-ctsub":"program"});}
+  var nm=exName(name),since=addDaysW(today(),-42),ss=(S.sessions||[]).filter(function(s){return s.date>=since&&(s.entries||[]).some(function(e){return e.name===name;});})
+    .sort(function(x,y){return x.date<y.date?-1:x.date>y.date?1:0;});
+  if(ss.length<3){p(a,fill(t("Only {n} sessions of {ex} in the last six weeks: too few to call it stuck. Train it twice a week for three weeks, then ask me again."),{n:ss.length,ex:nm}));return a;}
+  var best=function(s){var e=s.entries.filter(function(x){return x.name===name;})[0];return e?bestE1RM(e.sets||[],name,s.date):0;};
+  var b0=best(ss[0]),b1=Math.max(best(ss[ss.length-1]),best(ss[ss.length-2]));
+  if(b0&&b1)p(a,fill(t("{ex}, the last six weeks: {n} sessions, estimated max {a} → {b}."),{ex:nm,n:ss.length,a:fmtW(b0),b:fmtW(b1)}));
+  var why=[],fix="";
+  var perWk=ss.length/6;
+  if(perWk<1.5){why.push(t("You train it about once a week. Twice is the most reliable way to keep a lift moving."));fix=fix||"freq";}
+  var rp=[];ss.forEach(function(s){s.entries.forEach(function(e){if(e.name===name)(e.sets||[]).forEach(function(x){if(!x.wu&&x.rpe)rp.push(+x.rpe);});});});
+  if(rp.length>=6){var ar=Math.round(rp.reduce(function(x,y){return x+y;},0)/rp.length*10)/10;
+    if(ar>=9.3){why.push(fill(t("Your sets average RPE {r}: close to failure every time, more than recovery keeps up with."),{r:ar}));fix=fix||"deload";}
+    else if(ar<=7){why.push(fill(t("Your sets average RPE {r}: there's room left in them."),{r:ar}));fix=fix||"push";}}
+  var mus=muscleOf(name),ws=weeklySets(split()),Lm=LANDMARKS[mus];
+  if(rangeFor(S.profile.level,goalOf(S.profile.goal).train)&&Lm&&num(ws[mus])<Lm.mav[0]){
+    why.push(fill(t("Your program gives {m} {n} sets a week, under the range for growth ({lo}–{hi})."),{m:tm(mus).toLowerCase(),n:Math.round(num(ws[mus])),lo:Lm.mav[0],hi:Lm.mav[1]}));fix=fix||"volume";}
+  var sl=[];for(var i=0;i<14;i++){var r=S.days&&S.days[addDaysW(today(),-i)];if(r&&num(r.sleep)>0)sl.push(num(r.sleep));}
+  if(sl.length>=4){var as=Math.round(sl.reduce(function(x,y){return x+y;},0)/sl.length*10)/10;
+    if(as<7){why.push(fill(t("You've logged {h} hours of sleep a night on average: under seven slows strength."),{h:as}));fix=fix||"sleep";}}
+  if(S.profile.goal==="lose")why.push(t("You're eating below maintenance to lose fat: strength usually holds rather than climbs, and that's fine."));
+  if(!why.length){why.push(t("Nothing in your log stands out: how often, how hard and how much all look right."));fix="reps";}
+  l(a,why);
+  var FIX={freq:fill(t("The one change: put {ex} on a second day of the week."),{ex:nm}),
+    deload:t("The one change: a lighter week, then build back up."),
+    push:t("The one change: add weight when you reach the top of the rep range, even if it feels early."),
+    volume:fill(t("The one change: one more set of {ex} each time."),{ex:nm}),
+    sleep:t("The one change: seven to nine hours of sleep. Nothing in the gym makes up for it."),
+    reps:fill(t("The one change: four weeks of {ex} in a lower range (4–6 reps) with more weight, then back."),{ex:nm})};
+  p(a,FIX[fix]||FIX.reps);
+  if(fix==="deload"&&!inDeload())act(a,t("Start a lighter week"),{"data-deload":"start"});
+  return a;}
 
 function aWeight(a){
   var list0=weighIns(),tr=weightTrend(),wc=weightChange(),g=S.profile.goal,G=goalOf(g);
@@ -819,7 +861,9 @@ function aScope(a,q){
     return src(a,rule&&rule.src);}
   p(a,ar?fill(t("That needs a physio or a doctor, not me: I can't assess an injury. I can show you what in your next workout loads the {area}."),{area:t(ar[1])})
     :t("That needs a physio or a doctor, not me: I can't assess pain or an injury."));
-  if(ar)trainAround(a,ar);
+  if(ar){trainAround(a,ar);
+    /* The same across the whole program, as a request (agent.js planLimit), on a tap. */
+    act(a,fill(t("Swap what loads my {area} across my program"),{area:t(ar[1])}),{"data-chatsay":"swap exercises that load my "+ar[0]});}
   act(a,t("Log it"),{"data-sheet":"recovery"});
   return src(a,rule&&rule.src);}
 
@@ -910,7 +954,11 @@ function aSituation(a,q,it,sit){
   var go=function(label,id){return act(a,label,Object.assign({"data-chatq":id},L));};
   if(sit.kind==="pain"){
     p(a,t("Noted. Want me to put it in today's recovery log?"));
-    return act(a,t("Log it"),{"data-sheet":"recovery"});}
+    act(a,t("Log it"),{"data-sheet":"recovery"});
+    /* An area named: the same offer as the pain answer's, to keep the program off it. */
+    var ar=areaOf(fold(q));
+    if(ar)act(a,fill(t("Swap what loads my {area} across my program"),{area:t(ar[1])}),{"data-chatsay":"swap exercises that load my "+ar[0]});
+    return a;}
   if(sit.kind==="food"){
     p(a,t("Sounds like today got away from you. Want me to work out what's left in the week, or just log it and move on?"));
     go(t("Work out the week"),"weekfood");return go(t("Just log it"),"logfood");}
@@ -1045,7 +1093,7 @@ function aReassess(a){
 
 /* An answer, with what the person told the coach that bears on it said back. */
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
-var ANSWER={week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
+var ANSWER={plateau:aPlateau,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
   help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
@@ -1274,7 +1322,7 @@ function findMsg(at){return (S.chat||[]).filter(function(x){return x&&x.at===+at
    apart, and its buttons last. Nothing is coloured by who said it; the accent is kept
    for the one button an answer leads to. */
 /* What each answer is about, and its glyph (js/ui/glyphs.js). */
-var TOPIC={week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
+var TOPIC={plateau:["A stuck lift","medal"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
   track:["How you're doing","bars"],weight:["Weight trend","scale"],protein:["Protein","shaker"],calories:["Calories","flame"],
   sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
   goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],

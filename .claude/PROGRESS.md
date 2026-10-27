@@ -2212,3 +2212,26 @@ CACHE `bunyan-v165`.
 - Undo for history changes (snap `sessions`): new sessions removed, appended entries trimmed.
 - Tests: logging (each with Undo), corrections / same-for / two requests / undo that, slang;
   registry domains.
+
+## Coach batch 3: advice — branch session/coach-batch3 (on batch 2)
+
+CACHE `bunyan-v166`.
+- **A stuck lift** (intent `plateau`, `aPlateau`): "why isn't my bench going up?", "my squat has
+  plateaued". The lift named (else one `plateauOf` flags, else the first). From six weeks of the
+  log: sessions, the estimated max's change, average RPE of working sets, its muscle's weekly sets
+  against the growth range (size goals only), logged sleep, a fat-loss goal. Each reason only with
+  data, then one change (a second day, a lighter week with its button, add weight, one more set,
+  sleep, or four weeks in a lower rep range). Fewer than three sessions: too few to say.
+- **A sore spot across the program** (`limit.add` → `plan.avoid`; snap `avoid`): "swap exercises that
+  load my shoulder", or one tap from the pain answers (both the knowledge one and the report one,
+  `data-chatsay`). Each program exercise the plan's AVOID list matches goes to its closest stand-in
+  (`standIn`, the area added to limits); any without one stays, said so. The area joins
+  `profile.limits`, so new plans keep away from it. Never advice about the pain itself.
+- **Travel mode** (`travel.set` / `travel.end`; snap `travel`; `S.travel` validated in schema.js):
+  "travelling for a week, bodyweight only", "hotel gym with dumbbells only until Sunday",
+  "مسافر اسبوع ومعايا دمبل بس". Until the date, each workout swaps what needs kit left at home for its
+  stand-in with the kit at hand (actions.js `startDay`, the original a tap away as `alt`); the
+  program itself is untouched. Training shows a quiet line with End it; "I'm back" ends it.
+- `data-chatsay` (handlers/coach.js, common.js `sendText`): an answer's button that sends a request,
+  shown in the conversation as the button's words.
+- Tests: sore spot (asked and from the pain answer, Undo), travel mode end to end, plateau.

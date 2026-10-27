@@ -75,6 +75,7 @@ function register(){
   /* A lighter week: started, put off for a week, or ended early. With training blocks
      running, the next block starts after it: the day after an unplanned one ends, or
      today when either kind is ended early. */
+  key("travel",function(D){if(D.travel==="end"){delete S.travel;saveDB();render();toast(t("Travel mode is off. Welcome back."));}return;});
   key("deload",function(D){
     var dl=S.deload=S.deload||{};
     if(D.deload==="start"){dl.until=addDaysISO(today(),6);dl.last=today();delete dl.snooze;

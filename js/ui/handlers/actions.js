@@ -52,6 +52,9 @@ var SNAP={
     return function(){(S.sessions||[]).slice().forEach(function(s){
       if(!(s.id in ids))removeSession(s.id);
       else if((s.entries||[]).length>ids[s.id]){s.entries=s.entries.slice(0,ids[s.id]);saveSession(s);}});};},
+  /* A sore spot: the program and the profile's limits together. */
+  avoid:function(){var p=copy(S.programs),l=copy((S.profile||{}).limits||[]);return function(){S.programs=p;S.profile.limits=l;};},
+  travel:function(){var tr=copy(S.travel);return function(){if(tr)S.travel=tr;else delete S.travel;};},
   /* The next set's numbers in the logger. */
   draft:function(){var d=copy(V.draft);return function(){V.draft=d;};},
   sched:function(){var w=copy(S.daySwap||{});return function(){S.daySwap=w;};},
@@ -143,6 +146,17 @@ var ACTIONS={
   "recovery.log":{desc:"Save last night's sleep (hours) and today's soreness (0–10)",params:{sleep:"hours or 0",sore:"0–10 or 0"},confirm:true,snap:"day",
     /* The recovery log's own two fields. */
     run:function(p){var r=dayRec(today());if(p.sleep>0)r.sleep=Math.min(16,+p.sleep);if(p.sore>0)r.sore=Math.min(10,Math.round(+p.sore));saveDB();render();return true;}},
+  "plan.avoid":{desc:"Keep away from a sore area: swap the program's exercises that load it for stand-ins, and add it to the profile's limits",
+    params:{area:"knee, back, shoulder, wrist or ankle",sw:"[{day, id, from, to}]"},confirm:true,snap:"avoid",
+    run:function(p){if(!/^(knee|back|shoulder|wrist|ankle)$/.test(p.area))return false;
+      var lim=S.profile.limits=(S.profile.limits||[]);if(lim.indexOf(p.area)<0)lim.push(p.area);
+      (p.sw||[]).forEach(function(x){var d=dayOf(x.day),e=d&&d.ex.filter(function(y){return y.id===x.id&&y.name===x.from;})[0];
+        if(e&&LIB.some(function(l){return l[0]===x.to;})){e.name=x.to;e.exId=exIdOf(x.to);delete e.alt;}});
+      saveDB();render();return true;}},
+  "travel.set":{desc:"Travel mode: until a date, each workout swaps what needs other kit for the closest stand-in with this kit",
+    params:{gear:"the kit at hand, e.g. [Bodyweight, Dumbbell]",until:"YYYY-MM-DD"},confirm:true,snap:"travel",
+    run:function(p){if(!Array.isArray(p.gear)||!p.until||p.until<today())return false;S.travel={gear:p.gear.slice(),until:p.until};saveDB();render();return true;}},
+  "travel.end":{desc:"End travel mode",params:{},confirm:true,snap:"travel",run:function(){tap({travel:"end"});return true;}},
   "set.log":{desc:"Log a set of the exercise on screen in the workout in progress",params:{w:"weight, kg",r:"reps"},
     confirm:true,snap:"live",
     /* The logger's fields, filled, and its Log set. */

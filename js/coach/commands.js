@@ -124,6 +124,29 @@ function commandOf(text,unit){
     .match(/^(log |log a set |log set |did |سجل |)(\d+(?:[.,]\d+)?) ?(kg|kgs|lb|lbs|كيلو|)? ?(x|×|for|by|في|ب) ?(\d{1,2}) ?(reps|rep|عده|عدات|)$/);
   if(st&&!asks)return {cmd:"set.log",w:+st[2].replace(",","."),unit:/lb/.test(st[3])?"lb":st[3]?"kg":"",r:+st[5]};
 
+  /* ---- a sore spot, across the whole program ---- */
+  var AREA=[["knee",/(knee|knees|ركبه|ركبتي|ركب)/],["back",/(lower back|back|ضهري|ظهري|الضهر|الظهر)/],["shoulder",/(shoulder|shoulders|كتف|كتفي|الكتف)/],
+    ["wrist",/(wrist|wrists|رسغ|رسغي|معصم)/],["ankle",/(ankle|ankles|كاحل|كاحلي)/]];
+  if(/(avoid|swap out|swap|change|replace|protect|work around|spare|keep away from|go easy on|easy on|take out|remove|شيل|بدل|غير|ابعد عن|تجنب|ريح)/.test(fq)
+     &&/(exercise|exercises|program|plan|workout|workouts|lifts|moves|تمارين|التمارين|البرنامج|برنامجي)/.test(fq)){
+    for(var ri=0;ri<AREA.length;ri++)if(AREA[ri][1].test(fq))return {cmd:"limit.add",area:AREA[ri][0]};}
+
+  /* ---- away from the usual kit: travel mode ---- */
+  if(!asks&&/(i m back|im back|i am back|back home|back from (my )?(trip|travel)|end travel|stop travel|travel (mode )?(is )?over|done travel|رجعت|خلصت السفر|رجعت من السفر)/.test(fq))return {cmd:"travel.end"};
+  if(!asks&&(/(travel|travelling|traveling|trip|hotel|away|vacation|holiday|مسافر|سفر|فندق|اجازه)/.test(fq)||/(only|just) (have |got |)(dumbbells?|bands?|kettlebells?|my bodyweight|bodyweight)/.test(fq))
+     &&/(dumbbell|band|kettlebell|bodyweight|body weight|no equipment|nothing|hotel gym|hotel room|دمبل|دامبل|استك|كيتل|من غير ادوات|من غير اجهزه|بوزن الجسم|جيم الفندق)/.test(fq)){
+    var gear=["Bodyweight"];
+    /* "Hotel gym": dumbbells and the usual machines, unless it is "… only". */
+    if(/(hotel gym|جيم الفندق)/.test(fq)&&!/(only|just|بس)/.test(fq))gear=gear.concat(["Dumbbell","Machine","Cable"]);
+    if(/(dumbbell|دمبل|دامبل)/.test(fq)&&gear.indexOf("Dumbbell")<0)gear.push("Dumbbell");
+    if(/(band|استك)/.test(fq))gear.push("Band");
+    if(/(kettlebell|كيتل)/.test(fq))gear.push("Kettlebell");
+    var days=0,dm=fq.match(/(\d{1,2}) ?(days|day|ايام|يوم)/);if(dm)days=+dm[1];
+    else if(/(a week|one week|7 days|اسبوع)/.test(fq))days=7;else if(/(two weeks|2 weeks|اسبوعين)/.test(fq))days=14;
+    else if(/(weekend|الويك اند|الويكند)/.test(fq))days=-1;
+    var tw=whenIn(fq).filter(function(x){return x!=="today";});
+    return {cmd:"travel.set",gear:gear,days:days,until:tw.length?tw[tw.length-1]:""};}
+
   /* ---- taking the last change back ---- */
   if(/^(undo|undo that|undo it|undo the last|swap it back|put it back|change it back|switch it back|revert|revert it|revert that|take it back|take that back|رجعه|رجعها|رجع زي ما كان|الغي اللي فات|الغي اخر حاجه|تراجع)( please| pls|)$/.test(fq))return {cmd:"undo.last"};
 
