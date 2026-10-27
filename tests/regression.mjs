@@ -3133,6 +3133,37 @@ await test("Two sessions in a day: by weekday, the second pinned day is today's 
   await page.tap('#sheet [data-startday]:not(.did)');await pause(page,600);
   eq(await ev(page,"[!!S.active,V.sheet]"),[true,null],"started, the sheet gone");
 });
+/* The smart coach's model, stood in for: a test browser has no GPU. It answers with what
+   it was told, so the test can read the grounding, and records every request. */
+const fakeLLM=()=>{window.__llmCalls=[];window.__bunyanFakeLLM={installed:false,unload(){},
+  chat:{completions:{create:async(req)=>{window.__llmCalls.push(req);const q=req.messages[req.messages.length-1].content;
+    const words=/song/.test(q)?["Something ","upbeat ","helps.\nDO: ","next exercise"]:["I don't have that."];
+    return {[Symbol.asyncIterator](){let i=0;return {next:async()=>i<words.length?{done:false,value:{choices:[{delta:{content:words[i++]}}]}}:{done:true}};}};}}}};};
+await test("Smart coach: off until asked for; turned on, it answers what the rules can't, grounded on the log, in the asker's language, a suggested change as a button; turned off, the download goes",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_smart");});await pause(page,300);
+  if(!(await page.$('[data-smarton]')))throw new Error("no way to turn it on");
+  eq(await ev(page,"!!(S.prefs.smart&&S.prefs.smart.on)"),false,"off by default");
+  await page.tap('[data-smartsize="better"]');await pause(page,200);
+  await page.tap('[data-smarton]');await pause(page,600);
+  eq(await ev(page,"[S.prefs.smart,!!document.querySelector('#sheet .smc-st.ok')]"),[{on:true,size:"better"},true],"on, the size chosen, said ready");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page);
+  await openChat(page);
+  /* What the rules know is still theirs. */
+  await agSay(page,"How much protein do I need?");await pause(page,400);
+  eq(await ev(page,"window.__llmCalls.length"),0,"a question the rules answer never reaches the model");
+  await page.fill('#chatq',"what's a good song for leg day");await page.press('#chatq','Enter');await pause(page,1200);
+  const x=await page.evaluate(()=>{const e=[...document.querySelectorAll("#cpanel .chat-x")].pop();e.querySelectorAll(".chat-more").forEach(d=>d.open=true);
+    return [(e.querySelector(".chat-at")||{}).textContent,e.innerText,[...e.querySelectorAll("[data-chatsay]")].map(b=>b.dataset.chatsay)];});
+  eq([x[0],/Something upbeat helps\./.test(x[1]),/Written by the model on this phone/.test(x[1]),x[2]],["Smart coach",true,true,["next exercise"]],"its answer, said to be the model's, its suggestion a button");
+  const sys=await ev(page,"window.__llmCalls[0].messages[0].content");
+  if(!/Daily targets: \d+ kcal/.test(sys)||!/Never invent a number/.test(sys)||!/plain English/.test(sys))throw new Error("grounding: "+sys.slice(0,400));
+  await page.fill("#chatq","ايه رأيك في الموسيقى وانا بتمرن");await page.press('#chatq','Enter');await pause(page,1200);
+  if(!/Egyptian Arabic/.test(await ev(page,"window.__llmCalls[window.__llmCalls.length-1].messages[0].content")))throw new Error("an Arabic question not answered in Arabic");
+  await page.tap('.cp [data-coachclose]');await pause(page,400);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_smart");});await pause(page,300);
+  await page.tap('[data-smartoff]');await pause(page,300);await page.tap('#sheet [data-confirmok]');await pause(page,500);
+  eq(await ev(page,"[S.prefs.smart.on,window.__bunyanFakeLLM.installed]"),[false,false],"off, the download removed");
+},{init:fakeLLM});
 await test("Coach agent: a day's name is a day only where it is said as one — \"add push ups to my current week\" with a Push day is Push-Ups, not the Push day",async page=>{
   await page.evaluate(async()=>{const sp=(await import("/js/state.js")).split();sp.days[0].name="Push";sp.days[2].name="Pull";sp.days[4].name="Legs";});
   await openChat(page);

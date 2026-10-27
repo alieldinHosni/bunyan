@@ -42,6 +42,7 @@ import {S, split} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num, pretty, r1, setLang, shortd, today} from "../../util.js";
 import {FAT_RANGE, fatBand} from "../../engine/inbody.js";
+import {isReady} from "../smartcoach.js";
 import {backArrow} from "../nav.js";
 import {doseText} from "../dose.js";
 import {blockDay, blockNow} from "../../engine/blocks.js";
@@ -83,7 +84,7 @@ var NEXT={
   k1rm:["strong","weights","track"],scope:["today","track","help"],situation:["today","rest","track"],
   weekfood:["rest","protein","track"],logfood:["rest","eat","track"],weektrain:["today","tomorrow","balance"],letgo:["today","tomorrow","track"],
   lowday:["today","sore","missed"],remember:["facts","today","eat"],facts:["today","eat","track"],
-  know:["today","eat","track"],app:["today","eat","track"],exsuggest:["today","balance","weights"]};
+  know:["today","eat","track"],smart:["today","eat","track"],app:["today","eat","track"],exsuggest:["today","balance","weights"]};
 
 function fill(s,o){Object.keys(o).forEach(function(k){s=s.split("{"+k+"}").join(o[k]);});return s;}
 function list(a){return a.join(S.prefs.lang==="ar"?"، ":", ");}
@@ -1359,11 +1360,17 @@ function askOne(q,id,lang){
         if(sg)return {q:text,id:"exsuggest",at:Date.now(),b:[],acts:sg.acts||[],ag:sg,lang:L};}}
     if(!id&&iid!=="scope"&&iid!=="situation"&&iid!=="remember"){
       var kn=null;try{kn=knowFor(text,iid,it,prev);}catch(e){kn=null;}
+      /* A question no rule knew, met only by a textbook passage: with the smart coach on,
+         it answers instead, from the same passages (js/engine/smart.js). */
+      if(kn&&iid==="unknown"&&!id&&S.onboarded&&isReady())kn=null;
       if(kn){iid="know";it.know=kn.k;it.kq=kn.kq;it.deeper=!!kn.deeper;}}
     if(ACTION_IDS.indexOf(iid)>=0&&iid!=="reassess"&&S.onboarded){
       var ag=null;try{ag=planAction(iid,text,it);}catch(e){ag=null;}
       if(ag)return {q:text,id:iid,at:Date.now(),b:[],acts:ag.acts||[],ag:ag,lang:L};
       iid="unknown";}
+    /* Nothing the rules know: the smart coach, when it is on and loaded, writes the
+       answer (js/ui/smartcoach.js run), into this row as it comes. */
+    if(iid==="unknown"&&!id&&S.onboarded&&isReady())return {q:text,id:"smart",at:Date.now(),b:[{p:""}],acts:[],lang:L,pending:true};
     var a=A(),fn=ANSWER[iid]||aUnknown;
     if(!S.onboarded&&/^(today|tomorrow|weights|eat|rest|swap|weight|protein|calories|missed|balance|goal|exadd|exremove|exswap|foodlog|weighlog|kreps|ksets|krest|kfreq|kvolume|kdur)$/.test(iid)){
       p(a,t("First, the assessment: a few questions, and the coach builds your targets, training and meals. Then I can answer from your own plan."));
@@ -1418,7 +1425,7 @@ var TOPIC={plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],loadl
   k1rm:["One-rep max","medal"],scope:["Outside what I do","info"],situation:["A rough day","moon"],
   weekfood:["The week's food","bowl"],logfood:["The week's food","bowl"],weektrain:["The week's training","dumbbell"],letgo:["The week's training","dumbbell"],
   lowday:["A low day","moon"],remember:["What you told me","person"],facts:["What you told me","person"],
-  know:["Good to know","spark"],app:["In the app","check"],exsuggest:["Exercises for you","dumbbell"]};
+  know:["Good to know","spark"],smart:["Smart coach","spark"],app:["In the app","check"],exsuggest:["Exercises for you","dumbbell"]};
 /* The opening screen: what can be asked, by what it is about. */
 var GROUPS=[["Training",["today","tomorrow","weights","sore"]],["Food",["eat","rest","swap","protein"]],
   ["Progress",["track","last","weight","strong"]]];
@@ -1491,7 +1498,8 @@ function bubbleIn(m,live,L,prev,ro){
   if(b[0]&&b[0].p!=null){
     var ss=sentences(String(b[0].p));lead=ss.slice(0,2).join(" ");
     more=(ss.length>2?[{p:ss.slice(2).join(" ")}]:[]).concat(b.slice(1));}
-  if(lead)h+='<p class="chat-lead">'+figures(lead)+'</p>';
+  if(m.pending)h+='<p class="chat-lead smart-wait" aria-live="polite">'+esc(t("Thinking…"))+'</p>';
+  else if(lead)h+='<p class="chat-lead">'+figures(lead)+'</p>';
   if(!lead)h+=blocks(more);
   else if(more.length)h+='<details class="chat-more"><summary>'+esc(t("More"))+'</summary>'+blocks(more)+'</details>';
   h+=buttons(live&&Array.isArray(m.acts)?m.acts:[]);
@@ -1504,7 +1512,8 @@ function bubbleIn(m,live,L,prev,ro){
    misreading becomes a fix and a test. Said once it is kept. */
 function missHtml(m,live,ro){
   if(!live||ro||!m||!m.q||m.id==="app"&&!m.ag)return "";
-  if(m.miss)return '<p class="chat-missd" data-k="miss'+esc(String(m.at))+'">'+esc(t("Kept, thanks. Try saying it another way, or tap a question below."))+'</p>';
+  if(m.miss)return '<p class="chat-missd" data-k="miss'+esc(String(m.at))+'">'+esc(t("Kept, thanks. Try saying it another way, or tap a question below."))+'</p>'
+    +(m.id!=="smart"&&isReady()?'<button class="chat-altb" data-smarttry="'+esc(String(m.at))+'">'+esc(t("Let the smart coach try"))+'</button>':'');
   return '<button class="chat-miss" data-chatmiss="'+esc(String(m.at))+'" data-k="miss'+esc(String(m.at))+'">'+esc(t("Not what I asked"))+'</button>';}
 
 /* The screen: a header that says where the answers come from, then either what can be

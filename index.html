@@ -4910,6 +4910,22 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 #cpanel .cp-h{touch-action:none}
 /* The way to the chat history, at the top of the conversation when it holds more than
    the chat shows: a quiet line, not a card. */
+/* The smart coach: its setting (size choice, download bar, status) and an answer still
+   being written. */
+.smc{margin:var(--s3) 0}
+.smc-pick{display:grid;gap:var(--s2);margin:var(--s3) 0}
+.smc-pick button{display:grid;gap:2px;text-align:start;padding:var(--s3);border-radius:var(--r3);border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.smc-pick button.on{border-color:var(--accent);background:var(--accent-tint)}
+.smc-pick b{font-size:16px}
+.smc-pick span{font-size:13px;color:var(--sub)}
+.smc-bar{height:8px;border-radius:var(--rpill);background:var(--surface);overflow:hidden;margin:var(--s4) 0 var(--s2)}
+.smc-bar i{display:block;height:100%;background:var(--accent);transition:width var(--m-comp) var(--e-standard)}
+.smc-st{margin:var(--s3) 0;font-size:14px;color:var(--sub)}
+.smc-st.ok{color:var(--ok);font-weight:700}
+.smc-st.bad{color:var(--danger)}
+.smart-wait{color:var(--sub);animation:smartPulse 1.2s ease-in-out infinite}
+@keyframes smartPulse{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.smart-wait{animation:none}}
 /* Under a shaky reading: the other things it could have meant, as small chips. */
 .chat-alt{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--hair)}
 .chat-alt>span{width:100%;font-size:13px;color:var(--sub)}
