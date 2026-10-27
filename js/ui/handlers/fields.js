@@ -84,10 +84,10 @@ function onInput(ev){
     /* The field shows the user's unit; the draft is always kilograms. A cleared steps
        field is nought, so Save never keeps a figure no longer on screen. */
     if(isFinite(v))V.draft[k]=(k==="w")?toKg(v):v;
-    /* A barbell's plates follow the figure as it is typed, that line alone. */
-    if(k==="w"){var pe=document.getElementById("scPl");if(pe){var ph=plateLine(isFinite(v)?V.draft.w:0);pe.innerHTML=ph;pe.hidden=!ph;}}
     else if(k==="st")V.draft.st=0;
     else if(k==="bw")V.draft.bw=null;
+    /* A barbell's plates follow the figure as it is typed, that line alone. */
+    if(k==="w"){var pe=document.getElementById("scPl");if(pe){var ph=plateLine(isFinite(v)?V.draft.w:0);pe.innerHTML=ph;pe.hidden=!ph;}}
     if(k==="min"){var ak=document.getElementById("actKcal"),ae2=S.active&&S.active.entries[V.logIdx];
       if(ak&&ae2)ak.textContent=fmtN(actKcal(ae2.name,num(V.draft.min),V.draft.rpe||6,lastWeight()))+" kcal";}
     return;}}

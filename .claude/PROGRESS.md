@@ -2295,3 +2295,7 @@ button and ⓘ.
   input), the finish summary.
 - Tests: updated for the moved controls (`finishEarly` helper); new "Warm-up, quicker…" and
   "The workout, simpler…".
+- Full-suite fixes: the plates line's update had been put inside fields.js's if/else chain, so a
+  typed body weight was cleared at once (weigh-in saved nothing); moved after it. A workout open
+  across a reload filled its numbers before the history and library had loaded (0 on a barbell,
+  no suggestion); an untouched draft is now filled again once they are in (app.js `bootDraft`).
