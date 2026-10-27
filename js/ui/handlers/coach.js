@@ -183,6 +183,21 @@ function register(){
     var ok=function(){toast(t("Copied."));};
     try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(tx).then(ok,function(){copyOld(tx);ok();});return;}}catch(e){}
     copyOld(tx);ok();return;});
+  /* Not what I asked: the question kept for the owner to send on (S.missed, newest last,
+     200 at most); the link becomes its thanks, that element alone. */
+  key("chatmiss",function(D,el){var m=findMsg(D.chatmiss);if(!m||m.miss)return;
+    S.missed=(Array.isArray(S.missed)?S.missed:[]).concat([{q:String(m.q||"").slice(0,300),id:String(m.id||""),at:Date.now(),lang:m.lang==="ar"?"ar":"en"}]).slice(-200);
+    m.miss=1;saveDB();
+    var p=document.createElement("p");p.className="chat-missd";p.textContent=t("Kept, thanks. Try saying it another way, or tap a question below.");
+    if(el&&el.parentNode)el.parentNode.replaceChild(p,el);return;});
+  key("misscopy",function(){
+    var tx=(S.missed||[]).map(function(x){return x.q+"  →  "+x.id;}).join("\n");
+    var ok=function(){toast(t("Copied."));};
+    try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(tx).then(ok,function(){copyOld(tx);ok();});return;}}catch(e){}
+    copyOld(tx);ok();return;});
+  key("missclear",function(D,el){var before=S.missed||[];S.missed=[];saveDB();
+    var sec=el&&el.closest&&el.closest(".chh-miss");if(sec)sec.remove();
+    toast(t("Cleared."),function(){S.missed=before;saveDB();render();});return;});
   key("msgdel",function(D){closeMenu();var before=S.chat||[],at=+D.msgdel;
     S.chat=before.filter(function(m){return !(m&&m.at===at);});saveDB();render();
     toast(t("Deleted."),function(){S.chat=before;saveDB();render();});return;});

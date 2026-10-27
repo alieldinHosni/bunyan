@@ -41,6 +41,7 @@
    @property {Slot[]=}  mealSlots      the day's meals, when not the usual four
    @property {Object[]=} chat          the coach chat's kept conversation (30 days)
    @property {number=} chatFrom        when the chat was last cleared (ms); the history keeps it
+   @property {Object[]=} missed        questions marked Not what I asked: {q, id, at, lang}
    @property {Object=}  context        facts the person told the coach, in their words (js/coach/context.js)
    @property {number}   lastBackup     ms since 1970, 0 for never
    @property {number}   backupSnooze   ms; no reminder before then
@@ -176,6 +177,8 @@ function normalize(o){
   if(o.ckSeen!=null&&!/^\d{4}-\d\d-\d\d$/.test(String(o.ckSeen)))delete o.ckSeen;
   /* When the conversation was last cleared (ms): the chat shows only what came after. */
   if(o.chatFrom!=null&&!(typeof o.chatFrom==="number"&&isFinite(o.chatFrom)&&o.chatFrom>=0))delete o.chatFrom;
+  /* The questions marked Not what I asked: {q, id, at, lang}, 200 at most. */
+  if(o.missed!=null)o.missed=Array.isArray(o.missed)?o.missed.filter(function(x){return x&&typeof x==="object"&&typeof x.q==="string";}).slice(-200):[];
   /* Travel mode: the kit at hand, until a date (js/ui/actions.js startDay). */
   if(o.travel!=null&&!(o.travel&&Array.isArray(o.travel.gear)&&/^\d{4}-\d\d-\d\d$/.test(String(o.travel.until))))delete o.travel;
   /* Where the training block began (js/engine/blocks.js): a date, or nothing. */

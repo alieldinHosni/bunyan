@@ -4889,6 +4889,17 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 #cpanel .cp-h{touch-action:none}
 /* The way to the chat history, at the top of the conversation when it holds more than
    the chat shows: a quiet line, not a card. */
+/* Under a shaky reading: the other things it could have meant, as small chips. */
+.chat-alt{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--hair)}
+.chat-alt>span{width:100%;font-size:13px;color:var(--sub)}
+.chat-altb{min-height:var(--hit);padding:0 var(--s3);border-radius:var(--rpill);border:1px solid var(--border);background:transparent;color:var(--text);font-size:14px;font-weight:600}
+/* Not what I asked: a quiet link at the answer's foot; its thanks in the same place. */
+.chat-miss{display:block;margin:var(--s2) 0 0;margin-inline-start:auto;min-height:var(--hit);padding:0 var(--s1);border:0;background:none;color:var(--dim);font-size:13px;text-decoration:underline;text-underline-offset:3px}
+.chat-missd{margin:var(--s2) 0 0;font-size:13px;color:var(--sub)}
+/* Chat history: search, and the questions kept as misread. */
+.chh-q{width:100%;min-height:var(--hit);margin:var(--s3) 0 var(--s2);padding:0 var(--s3);border-radius:var(--r3);border:1px solid var(--border);background:var(--raised);color:var(--text);font:inherit}
+.chh-miss{margin:var(--s3) 0;padding:var(--s3);border:1px solid var(--border);border-radius:var(--r4)}
+.chh-miss .sacts{display:flex;gap:var(--s2);margin-top:var(--s2)}
 .chat-histl{display:flex;align-items:center;justify-content:center;gap:var(--s2);margin:0 auto var(--s3);min-height:var(--hit);
   padding:0 var(--s3);border:0;background:none;color:var(--dim);font-size:13px;font-weight:600}
 .chat-histl .gl{width:16px;height:16px}
