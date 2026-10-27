@@ -3,10 +3,9 @@
    bioimpedance as a self-administered body-composition test (js/knowledge/assessments.js,
    11.4), its readings moved by anything that changes body water.
 
-   There is no text recognition in the app: reading a photo needs a model this offline
-   app does not carry. On iPhone the photo's own text can be copied (Live Text: press on
-   the numbers, Select All, Copy) and pasted here; readInBody finds the figures in that
-   text by their labels, English or Arabic, whatever order the copy put them in. Every
+   The photo is read on the phone (js/engine/ocr.js); its text can also be copied off it
+   (Live Text on iPhone) and pasted. readInBody finds the figures in either by their
+   labels, English or Arabic, whatever order the text put them in. Every
    figure is shown to be checked before anything is saved, and a figure outside what a
    person can measure is left out rather than guessed.
 
@@ -26,7 +25,7 @@ var FIELDS=[
 
 function readInBody(text){
   var s=String(text||"").toLowerCase().replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);})
-    .replace(/(\d)[٫,](\d)/g,"$1.$2").replace(/\r/g,"").replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي");
+    .replace(/(\d)[٫,](\d)/g,"$1.$2").replace(/[\r‎‏؜⁦-⁩]/g,"").replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي");
   var lb=/\blbs?\b/.test(s)&&!/\bkg\b/.test(s),out={},taken=[],labels=[];
   var conv=function(k,v){return (k==="weight"||k==="smm"||k==="fatkg")&&lb?Math.round(v/2.2046*10)/10:v;};
   var fits=function(f,v){return v>=f[2]&&v<=f[3];};
@@ -38,9 +37,21 @@ function readInBody(text){
       if(out[f[0]]!=null)continue;
       /* A label's figure is the first number after it on its own line; ranges printed
          beside it ("42.0~51.4") come after the reading on InBody sheets. */
-      var line=s.slice(at).split("\n")[0].slice(0,40),n=line.match(/-?\d+(?:\.\d+)?/);
-      if(!n)continue;
-      var pos=at+n.index;if(taken.indexOf(pos)>=0)continue;
+      var line=s.slice(at).split("\n")[0].slice(0,40),n=line.match(/-?\d+(?:\.\d+)?/),pos;
+      if(n)pos=at+n.index;
+      else{
+        /* A right-to-left sheet read off its photo comes out as "range, figure, label"
+           on a line: the figure is the number nearest the label that is not part of a
+           range ("42.0~51.4", "83.1-5"). */
+        var ls=s.lastIndexOf("\n",m.index-1)+1,before=s.slice(ls,m.index),nm,last=null;
+        var nre=/\d+(?:\.\d+)?/g;
+        while((nm=nre.exec(before))){
+          var pc=before.charAt(nm.index-1),nc=before.charAt(nm.index+nm[0].length);
+          if(/[~\-–]/.test(pc)||/[~\-–]/.test(nc))continue;
+          last=nm;}
+        if(!last)continue;
+        n=last;pos=ls+last.index;}
+      if(taken.indexOf(pos)>=0)continue;
       var v=conv(f[0],+n[0]);
       if(!fits(f,v))continue;
       out[f[0]]=Math.round(v*10)/10;taken.push(pos);}});

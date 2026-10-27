@@ -2462,3 +2462,30 @@ repos' ideas.
 - Not tested with a real model here (no GPU in this environment): the plumbing, grounding, fallback
   and button path are tested with the stand-in. First real run is on the owner's iPhone.
 - Tests: engine smart (prompt, Arabic, passages, DO line, thinking stripped); regression "Smart coach: …".
+
+## InBody read from its photo; saved, the coach says what it means — branch session/inbody-ocr
+
+CACHE `bunyan-v176`. Owner, 27 Oct: "start" on what was missing: the photo read by the app, not
+copied off by hand, and the InBody result put to the plans.
+- **Reader**: Tesseract in WebAssembly (js/vendor/ocr/: tesseract.js 7.0.0 + core 7.0.0, Apache-2.0;
+  English and Arabic tessdata_best integer data, Apache-2.0; README.txt lists them). js/engine/ocr.js
+  `readPhoto(file, onProgress)`: the photo shrunk to 2000 px, English + Arabic, LSTM only, worker
+  terminated after each read. SIMD core where WebAssembly SIMD validates (~3.9 MB), the plain one
+  otherwise; ~4.6 MB of language data. Fetched only on the first read; sw.js keeps js/vendor/ocr/ cache
+  first in "bunyan-ocr", across releases (activate deletes only old "bunyan-vN"). Checked offline:
+  read once online, reload offline, same photo reads.
+- **Sheet**: choosing the photo reads it (common.js `ibPhoto`); only the status line `#ibOcr` changes
+  while it reads (CLAUDE.md rendering rule); its text goes into the paste box and through `ibRead`, so
+  every figure is shown to be checked. A newer photo or a closed sheet drops an older reading. Paste
+  stays for a figure it misses. `ibRead` moved to common.js (handlers share through common only).
+- **readInBody**: a right-to-left sheet read off a photo comes out "range, figure, label": the figure is
+  the number nearest before the label that is not part of a range. Bidi marks stripped.
+- **Saved → the coach**: saving opens the coach on "What does my InBody mean for my plans?": aInBody's
+  reading, the textbook's range (11.4), and Change my goal when it points the other way (both plans are
+  rebuilt on a goal change).
+- **Not changed, on purpose**: maintenance stays Mifflin-St Jeor × activity. The knowledge base (8.4)
+  names Katch-McArdle (lean-mass based) but says every equation underestimates and more so for muscular
+  people, and offers no better one (FORMULA-RECONCILIATION row 10). Protein stays g per kg of body
+  weight, as the book gives it. InBody's weight is the day's weigh-in, so targets already follow it.
+- Tests: engine inbody (right-to-left photo text); regression "InBody from its photo: …" (a drawn sheet
+  read in the browser, outside requests blocked and none made, figures in fields, save opens the coach).

@@ -6,7 +6,6 @@ import {lastWeight} from "../../engine/formulas.js";
 import {t} from "../../i18n/dict.js";
 import {dayRec, ensureSessionIds, removeSession, S, saveDB, saveSession, sessionById} from "../../state.js";
 import {toKg} from "../../units.js";
-import {readInBody} from "../../engine/inbody.js";
 import {num, r1, today} from "../../util.js";
 import {ACT, askConfirm, closeSheet, openSheet, val} from "../actions.js";
 import {pushNav} from "../nav.js";
@@ -14,6 +13,7 @@ import {removePhoto} from "../photos.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {has, key} from "./registry.js";
+import {ibRead, sendText} from "./common.js";
 
 /* The edit sheet's inputs into its working copy, before anything re-renders it. */
 function readSE(){
@@ -39,15 +39,6 @@ function askDelSession(id){
 
 /* What this module answers. app.js calls register() once, at boot, in the order
    the branches are tried in (see registry.js). */
-/* The text copied off the sheet, read: what was found fills the fields, the rest stay
-   as typed, and the sheet says how many it found. */
-function ibRead(text){
-  var got=readInBody(text),n=Object.keys(got).length;
-  if(!n){toast(t("No InBody figures found in that text. Copy the numbers with their labels."));return;}
-  var cur=Object.assign({},(V.sd&&V.sd.ib)||{});
-  ["date","weight","pbf","smm","fatkg","vfl","ibmr","tbw","score"].forEach(function(k){var f=document.getElementById("ib_"+k);if(f&&f.value!=="")cur[k]=k==="date"?f.value:(k==="weight"||k==="smm"||k==="fatkg"?toKg(num(f.value)):num(f.value));});
-  openSheet("inbody",{img:V.sd&&V.sd.img,ib:Object.assign(cur,got)});
-  toast(t(n===1?"Read 1 figure. Check it against your sheet.":"Read {n} figures. Check them against your sheet.").replace("{n}",n));}
 function register(){
   ACT.delphoto=function(_,id){
     removePhoto(id,function(ok){
@@ -132,6 +123,10 @@ function register(){
     saveDB();closeSheet();render();
     toast(t("InBody result saved. The coach reads it from now on."),function(){
       var i=S.body.indexOf(e);if(i<0)return;if(before)S.body[i]=before;else S.body.splice(i,1);saveDB();render();});
+    /* What it means for the plans, at once: the coach's reading of it, with the goal the
+       textbook's range points to and a button to change it (chat.js aInBody). */
+    if(!V.coach)V.coach="compact";
+    sendText("what does my inbody say",null,t("What does my InBody mean for my plans?"));
     return;});
   key("sessedit",function(D){
     ensureSessionIds();
