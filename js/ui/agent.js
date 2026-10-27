@@ -27,7 +27,7 @@ import {editDist, fuzzTol, fuzzyRank, matchScore, norm, tokenMatch} from "../eng
 import {fold, spell} from "../coach/intent.js";
 import {t} from "../i18n/dict.js";
 import {exName, planName} from "../i18n/exnames.js";
-import {deloadDue, incrementFor, inDeload, lastWeight} from "../engine/formulas.js";
+import {barKg, deloadDue, incrementFor, inDeload, lastWeight} from "../engine/formulas.js";
 import {addDays, isoWeekday} from "../engine/schedule.js";
 import {S, split} from "../state.js";
 import {fmtW, toDisp, wUnit} from "../units.js";
@@ -569,7 +569,7 @@ function planHow(){
   return say(fill(t("{ex}:"),{ex:exName(e.name)})+" "+lead,[{l:t("How to do it"),a:{"data-exdetail":e.name}}]);}
 /* "Plates for 87.5": per side, heaviest first, on the bar the plates sheet uses. */
 function planPlates(c){
-  var kg=c.unit==="lb"||(!c.unit&&S.prefs.unit==="lb")?c.w/2.2046:c.w,bar=V.bar==null?20:num(V.bar);
+  var kg=c.unit==="lb"||(!c.unit&&S.prefs.unit==="lb")?c.w/2.2046:c.w,bar=barKg();
   var pp=platePlan(kg,bar),u=wUnit();
   if(pp.under)return say(fill(t("{w} is less than the bar, {b}."),{w:fmtW(kg),b:fmtW(bar)}));
   var list=pp.plates.map(function(x){return (x.n>1?x.n+" × ":"")+x.w;}).join(" + ");

@@ -10,8 +10,8 @@
    repaints; none of them reads the event that caused it. */
 import {t} from "../i18n/dict.js";
 import {actKcal} from "../data/activities.js";
-import {muscleOf, MUSCLES} from "../data/exercises.js";
-import {lastWeight, prFor, recordOf, recordText} from "../engine/formulas.js";
+import {isBarbell, muscleOf, MUSCLES} from "../data/exercises.js";
+import {barKg, lastWeight, prFor, recordOf, recordText} from "../engine/formulas.js";
 import {exName} from "../i18n/exnames.js";
 import {S, saveDB} from "../state.js";
 import {fmtW, toDisp, toKg} from "../units.js";
@@ -20,6 +20,7 @@ import {ACT, askConfirm, closeSheet, finishSession, openSheet, syncDraft, val} f
 import {render} from "./render.js";
 import {resetNav} from "./nav.js";
 import {groupNext, groupRun, LOGGED_MS, noteSet, paintRest, rowsFor, weightStep} from "./views/session.js";
+import {warmOf} from "./views/warmup.js";
 import {endRest, ex_isTimed, play, setBeeped, startRest, syncWorkoutState, tap, toast, V} from "./view.js";
 
 function current(){return (S.active&&S.active.entries[V.logIdx])||null;}
@@ -136,6 +137,9 @@ function logSet(){
   if(lr)V.draft.r=lr.value===""?0:num(lr.value);
   if(lp)V.draft.rpe=lp.value===""?null:Math.min(10,Math.max(1,Math.round(num(lp.value,8)*2)/2));
   var bad=setProblem(V.draft.w,V.draft.r,ex_isTimed(e3));
+  /* A barbell set at 0 is a slip, not a set (owner, 27 Oct): the bar alone weighs. */
+  if(!bad&&isBarbell(e3.name)&&barKg()>0&&!(V.draft.w>0))
+    bad=t("A barbell can't be 0: the bar alone is {b}. Enter the total, bar included.").replace("{b}",fmtW(barKg()));
   if(bad){toast(bad);return;}
   /* A warm-up is chosen when it is added (+ Warm-up), so the set knows its kind as it
      is logged: wu, and out of volume, records and progression as before. */
@@ -250,6 +254,17 @@ function addWarmup(){
   var e=current();if(!e)return;
   e.extra=num(e.extra)+1;e.wuq=num(e.wuq)+1;V.fresh=-1;V.askDel=null;
   saveDB();syncDraft();render();}
+/* The warm-up's ramp-up sets, put on the lift they lead to as warm-up rows (W) when
+   the workout starts (owner, 27 Oct): done where they are logged, each filled in with
+   its weight and reps (actions.js syncDraft reads e.wuRamp). Once per exercise, and
+   not after a set of it is logged. */
+function queueRamp(){
+  var a=S.active,w=a&&warmOf(a);if(!w||!w.ramp||!w.ramp.sets.length)return;
+  var e=a.entries.filter(function(x){return x.name===w.ramp.name;})[0];
+  if(!e||e.wuRamp||e.sets.length)return;
+  var n=w.ramp.sets.length;
+  e.wuRamp=w.ramp.sets.map(function(s){return {w:num(s.w),r:num(s.r)};});
+  e.extra=num(e.extra)+n;e.wuq=num(e.wuq)+n;}
 /* The steppers: weight by the exercise's own step at this load, reps by 1, seconds by
    5. What is typed in the box but not yet blurred is read first. */
 function stepDraft(k,dir){
@@ -258,7 +273,9 @@ function stepDraft(k,dir){
   if(f&&f.value!=="")V.draft[k]=k==="w"?toKg(f.value):num(f.value);
   if(k==="w"){
     var st=Math.round(toDisp(weightStep(e.name,V.draft.w))*100)/100;
-    var d=Math.max(0,Math.min(toDisp(1000),Math.round((toDisp(V.draft.w)+dir*st)*100)/100));
+    /* Stepping down stops at the bar: a barbell is never lighter than it. */
+    var floor=isBarbell(e.name)&&toDisp(V.draft.w)>=toDisp(barKg())?toDisp(barKg()):0;
+    var d=Math.max(floor,Math.min(toDisp(1000),Math.round((toDisp(V.draft.w)+dir*st)*100)/100));
     V.draft.w=toKg(d);}
   else{
     var timed=ex_isTimed(e),by=timed?5:1;
@@ -331,5 +348,5 @@ function askDiscard(){
     body:t("Every set you logged in this workout is thrown away. This cannot be undone."),
     cta:t("Discard it"),act:"discard",hard:true});}
 
-export {addRow, addWarmup, askDiscard, cancelDelete, confirmFinish, deleteSet, removeExercise, editLoggedSet, flagPain, jumpTo, logBout, logSet, nextExercise,
+export {addRow, addWarmup, queueRamp, askDiscard, cancelDelete, confirmFinish, deleteSet, removeExercise, editLoggedSet, flagPain, jumpTo, logBout, logSet, nextExercise,
         lighterDay, persistRest, pickMuscle, removeRow, restControl, resume, setProblem, setReady, stepDraft, undoLogged, unlogSet};

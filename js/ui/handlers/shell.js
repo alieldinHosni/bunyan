@@ -31,6 +31,7 @@ function register(){
     runAct(ao.act,av);return;});
   has("confirmok",function(){runAct((V.sd||{}).act,true);return;});
   has("confirmalt",function(){runAct((V.sd||{}).altact,true);return;});
+  has("confirmmid",function(){runAct((V.sd||{}).midact,true);return;});
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
   /* A tab tap is a fresh start: the top of the page, and Food on today — a past
      date left selected from earlier was where a meal logged later could land. */

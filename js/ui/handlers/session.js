@@ -8,7 +8,7 @@ import {t} from "../../i18n/dict.js";
 import {dayRec, S, saveDB, saveSession, sessionById} from "../../state.js";
 import {toDisp} from "../../units.js";
 import {num, r1} from "../../util.js";
-import {ACT, askConfirm, closeSheet, openSheet, startActivity, startDay, swapAlt, val} from "../actions.js";
+import {ACT, askConfirm, closeSheet, openSheet, startActivity, startDay, swapAlt, syncDraft, val} from "../actions.js";
 import {enter as enterEx, fromOf} from "../exswipe.js";
 import {holding, startHold, stopHold} from "../hold.js";
 import {pushNav, resetNav} from "../nav.js";
@@ -74,8 +74,8 @@ function navGuard(resume){
   leaveResume=resume||null;
   askConfirm({title:t("Leave workout?"),icon:"leave",
     body:t("Your sets are saved. Pick up where you left off any time."),
-    cta:t("Save and exit"),act:"leavekeep",cancel:t("Keep training"),
-    alt:t("Discard workout"),altact:"leavediscard"});
+    cta:t("Save and exit"),act:"leavekeep",mid:t("Finish workout"),midact:"leavefinish",cancel:t("Keep training"),
+    alt:t("Discard workout"),altact:"leavediscard",altbad:true});
   return true;
 }
 /* Cancel needs no handler: closing the sheet without choosing leaves the session and
@@ -96,6 +96,9 @@ function leaveTo(tab){
    the branches are tried in (see registry.js). */
 function register(){
   ACT.leavekeep=function(){leaveTo("train");};
+  /* Finishing early is the close button's choice too (owner, 27 Oct): its own question
+     follows when sets are left (workout.js confirmFinish). */
+  ACT.leavefinish=function(){leaveResume=null;setTimeout(function(){W.confirmFinish();},0);};
   /* Discarding ends the workout, so there is nothing to resume and no reason to leave
      Train: you stay on the Train hub, ready to pick another day. */
   ACT.leavediscard=function(){
@@ -122,10 +125,16 @@ function register(){
      list from the title all slide the new one in from the side it lies on. */
   /* The warm-up: done, skipped, brought back from the ⋯ menu; its ticks and timers,
      and the cool-down's on the complete sheet. */
-  on(function(D){return D.wugo||D.wuskip;},function(D){if(S.active){S.active.warm=D.wugo?1:0;stopHold();saveDB();window.scrollTo(0,0);render();}return;});
+  on(function(D){return D.wugo||D.wuskip;},function(D){if(S.active){S.active.warm=D.wugo?1:0;stopHold();
+    if(D.wugo){W.queueRamp();syncDraft();}saveDB();window.scrollTo(0,0);render();}return;});
   key("wuopen",function(){if(S.active){S.active.warm="open";closeSheet();window.scrollTo(0,0);}return;});
   has("wutick",function(D){var wa=S.active;if(wa){wa.wuDone=wa.wuDone||{};
-    if(wa.wuDone[D.wutick])delete wa.wuDone[D.wutick];else wa.wuDone[D.wutick]=1;saveDB();render();}return;});
+    var on=!wa.wuDone[D.wutick];
+    if(on)wa.wuDone[D.wutick]=1;else delete wa.wuDone[D.wutick];saveDB();render();
+    /* Ticked: the next one still to do comes into view, so the list walks itself. */
+    if(on){var nx=document.querySelector(".wu2 .wu-row:not(.did)");
+      if(nx&&nx.scrollIntoView)try{nx.scrollIntoView({block:"center",behavior:"smooth"});}catch(e){}}}
+    return;});
   has("cdtick",function(D){V.cdDone=V.cdDone||{};
     if(V.cdDone[D.cdtick])delete V.cdDone[D.cdtick];else V.cdDone[D.cdtick]=1;render();return;});
   key("hold",function(D){var hk=D.hold,hn=D.holdn;
@@ -199,7 +208,8 @@ function register(){
     V.exm=W.pickMuscle(eS&&eS.name);V.exe="All";V.exq="";
     openSheet("exercise",{swaplive:true,like:eS?eS.name:null});return;});
   key("nextex",function(){W.nextExercise();return;});
-  key("rmlive",function(){W.removeExercise();return;});
+  /* From ⋯: the menu goes first, so Undo or the question is what is left on screen. */
+  key("rmlive",function(){if(V.sheet==="sessmore")closeSheet();W.removeExercise();return;});
   /* Added to this workout only: the picker starts from the whole library. */
   key("addlive",function(){V.exm="All";V.exe="All";V.exq="";openSheet("exercise",{addlive:true});return;});
   has("sessmore",function(){openSheet("sessmore");return;});
@@ -209,7 +219,7 @@ function register(){
   on(function(D){return D.swapalt&&S.active;},function(){var ea=S.active.entries[V.logIdx];if(!ea||!ea.alt||ea.sets.length)return;
     swapAlt(ea.alt,V.logIdx,ea.name);return;});
   key("plates",function(){openSheet("plates");return;});
-  has("bar",function(D){V.bar=+D.bar;render();return;});
+  has("bar",function(D){S.prefs.bar=+D.bar;saveDB();render();return;});
   key("note",function(){openSheet("note");return;});
   key("savenote",function(){
     if(S.active){S.active.notes=val("snote");saveDB();}
