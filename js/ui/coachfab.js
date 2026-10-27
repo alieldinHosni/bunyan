@@ -81,12 +81,14 @@ function syncCoach(){
   var fab=document.getElementById("cfab"),pan=document.getElementById("cpanel");
   if(!fab||!pan)return;
   var rtl=S.prefs&&S.prefs.lang==="ar";
+  /* An answer's button that goes somewhere (another screen, a sheet, the assessment)
+     is the person leaving the conversation: the panel steps aside for it. Decided
+     first, so the launcher comes back in the same render: decided after, the dock was
+     left without it until something else redrew the screen. */
+  if(V.coach&&lastMode&&!held&&(V.sheet||V.assess||routeKey()!==openKey))V.coach=null;
   var show=fabShown();
   if(show!==lastFab){fab.innerHTML=show?fabHtml():"";lastFab=show;}
   document.body.classList.toggle("cfab-on",show);
-  /* An answer's button that goes somewhere (another screen, a sheet, the assessment)
-     is the person leaving the conversation: the panel steps aside for it. */
-  if(V.coach&&lastMode&&!held&&(V.sheet||V.assess||routeKey()!==openKey))V.coach=null;
   var mode=V.coach||null;
   if(!mode){if(pan.firstChild&&!pan.classList.contains("closing"))pan.textContent="";lastMode=null;pan.hidden=true;return;}
   pan.hidden=false;
@@ -95,14 +97,31 @@ function syncCoach(){
   /* A day-old conversation is gone when the panel opens (what the person asked the coach
      to remember is kept apart, in S.context). */
   if(opening){openKey=routeKey();if(pruneChat()){saveDB();html=panelHtml();if(rtl)html=isolateNums(html);}}
+  /* Smaller or bigger: the panel grows or shrinks from where it was to where it is
+     going (measured before and after, then played back), rather than jumping and
+     fading in. With the keyboard up or not, it is the same two boxes. */
+  var was=resized&&pan.querySelector(".cp"),r0=was?was.getBoundingClientRect():null;
   if(opening||resized)replace(pan,html);else patch(pan,html);
   pan.classList.toggle("opening",opening);
-  pan.classList.toggle("resized",!!resized);
+  if(r0)flip(pan.querySelector(".cp"),r0);
+  pan.classList.remove("resized");
   lastMode=mode;
   if(opening||resized){
     var box=pan.querySelector(".cp");
     if(box)try{box.focus({preventScroll:true});}catch(e){}
     toEnd();}}
+function flip(box,r0){
+  if(!box||document.body.classList.contains("noanim"))return;
+  var r1=box.getBoundingClientRect();if(!r1.width||!r1.height)return;
+  var sx=r0.width/r1.width,sy=r0.height/r1.height,dx=r0.left-r1.left,dy=r0.top-r1.top;
+  box.style.transformOrigin="0 0";box.style.transition="none";
+  box.style.transform="translate("+dx+"px,"+dy+"px) scale("+sx+","+sy+")";
+  box.getBoundingClientRect();
+  box.style.transition="transform var(--m-panel) var(--e-ios),border-radius var(--m-panel) var(--e-ios)";
+  box.style.transform="";
+  /* What is inside fades back in as the box settles, so it is never seen stretched. */
+  box.classList.add("flipping");
+  setTimeout(function(){box.style.transition="";box.style.transformOrigin="";box.classList.remove("flipping");},520);}
 /* The newest exchange in view, from its top: the question and the start of the answer,
    never the end of a long answer with its first lines scrolled away. */
 function toEnd(){
@@ -124,7 +143,7 @@ function closeCoach(render){
   var reduced=document.documentElement.classList.contains("reduced")||document.body.classList.contains("noanim");
   if(!pan||!pan.firstChild||reduced){render();focusFab();return;}
   pan.classList.add("closing");
-  setTimeout(function(){pan.classList.remove("closing");pan.textContent="";render();focusFab();},200);}
+  setTimeout(function(){pan.classList.remove("closing");pan.textContent="";render();focusFab();},260);}
 function focusFab(){var b=document.querySelector("#cfab .cfab");if(b)try{b.focus({preventScroll:true});}catch(e){}}
 
 export {closeCoach, fabShown, holdCoach, syncCoach, toEnd};

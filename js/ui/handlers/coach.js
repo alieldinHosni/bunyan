@@ -27,7 +27,7 @@ import {addFact, removeFact} from "../../coach/context.js";
 import {key, on} from "./registry.js";
 
 /* The answer marked done and shown for a beat, the panel closed, then the move. */
-var BEAT=380,CLOSE=230;
+var BEAT=420,CLOSE=290;
 function goAfter(m){
   m.ag.s="applied";saveDB();render();toEnd();
   setTimeout(function(){

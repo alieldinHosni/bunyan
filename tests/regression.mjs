@@ -1622,7 +1622,7 @@ function oldBwLog(){const d=seed();const day=new Date(Date.now()-5*864e5).toISOS
 await test("Old logs: body-weight sets logged at the body weight are read as body weight, once, said with Undo; a real added weight stays",async page=>{
   await pause(page,3400);
   const sets=()=>ev(page,"S.sessions.find(s=>s.id==='oldpu').entries[0].sets.map(x=>x.w)");
-  eq([await sets(),await ev(page,"S.logFixV")],[[0,0,20],1],"84 and 84.5 to 0, the vest kept");
+  eq([await sets(),await ev(page,"S.logFixV")],[[0,0,20],2],"84 and 84.5 to 0, the vest kept");
   if(!/read as body weight/.test(await page.textContent(".toast").catch(()=>"")))throw new Error("the change was not said: "+await page.textContent(".toast").catch(()=>"none"));
   await page.tap('.toast-undo');await pause(page);
   eq(await sets(),[84,84.5,20],"Undo puts them back");
@@ -1630,6 +1630,11 @@ await test("Old logs: body-weight sets logged at the body weight are read as bod
   await page.reload();await pause(page,3400);
   eq(await sets(),[84,84.5,20],"and it does not run again");
 },{db:oldBwLog()});
+await test("Old logs: a workout open at the update has its body-weight sets read as body weight too",async page=>{
+  await pause(page,3400);
+  eq(await ev(page,"S.active.entries[0].sets.map(x=>x.w)"),[0],"the open workout's push-up set");
+},{db:(()=>{const d=oldBwLog();const today=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+  d.active={date:today,dayName:"Push",start:Date.now()-6e5,idx:0,entries:[{name:"Pushups",muscle:"Chest",planned:{sets:3,lo:8,hi:20},sets:[{w:84,r:20}]}]};return d;})()});
 await test("Old logs: the correction is kept across a reload, and not said again",async page=>{
   await pause(page,3400);
   const sets=()=>ev(page,"S.sessions.find(s=>s.id==='oldpu').entries[0].sets.map(x=>x.w)");
@@ -2523,6 +2528,33 @@ await test("Coach tailors: exercises for a muscle fit the kit, the sore spots an
     return P.doseFor("Dumbbell Bench Press");});
   eq([d.sets>=4&&d.sets<=6,d.lo,d.hi],[true,6,10],"strength: 4–6 sets of 6–10");
 },{prefs:{lang:"en"}});
+await test("Coach swaps one planned food, spelt as typed: three like-for-like choices, a tap and a yes put it in the plan, with Undo",async page=>{
+  await page.evaluate(async()=>{const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods(r));
+    const M=await import("/js/engine/mealplan.js"),S=(await import("/js/state.js")).S;
+    const by=w=>N.FOODDB.find(f=>f.n===w);
+    S.mealSlots=[{id:"Breakfast"},{id:"Lunch",plan:[M.itemOf({f:by("Tilapia, Grilled"),g:120}),M.itemOf({f:by("Egyptian Rice, Cooked"),g:350})]},{id:"Snack"},{id:"Dinner"}];});
+  await openChat(page);
+  const r=await agSay(page,"Replace the talibia grill in my lunch, with something similar.");
+  if(!/Instead of Tilapia, Grilled 120 g in Lunch/.test(r.lead))throw new Error("lead: "+r.lead);
+  eq(r.opts.length,3,"three choices");
+  const first=r.opts[0];
+  await page.tap('#cpanel .chat-x.live .ag-opt');await pause(page,400);
+  let c=await agLast(page);
+  if(!/^Swap Tilapia, Grilled for /.test(c.lead)||!c.ok)throw new Error("confirm: "+c.lead);
+  eq(await ev(page,"S.mealSlots[1].plan[0].n"),"Tilapia, Grilled","nothing before yes");
+  await page.tap('#cpanel [data-agok]');await pause(page,400);
+  const now=await ev(page,"S.mealSlots[1].plan[0].n");
+  if(now==="Tilapia, Grilled"||!first.startsWith(now))throw new Error("swapped to "+now+" / "+first);
+  eq(await ev(page,"S.mealSlots[1].plan[1].n"),"Egyptian Rice, Cooked","the rest of lunch as it was");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await ev(page,"S.mealSlots[1].plan[0].n"),"Tilapia, Grilled","undone");
+});
+await test("Coach: leaving through an answer's button brings the coach's button straight back to the dock",async page=>{
+  await openChat(page);
+  await page.fill('#chatq',"what should I eat now");await page.press('#chatq','Enter');await pause(page,600);
+  await page.tap('#cpanel .chat-x.live .chat-acts [data-tab="food"]');await pause(page,700);
+  eq([await ev(page,"V.tab"),await page.evaluate(()=>!!document.querySelector("#cfab .cfab"))],["food",true],"on Food, with the button");
+});
 await test("Coach does what the app does, in Arabic: water said in Egyptian Arabic is asked in Arabic",async page=>{
   await openChat(page);
   const r=await agSay(page,"شربت كوبايتين مية");
@@ -2704,7 +2736,7 @@ await test("Coach actions: every action in the registry runs through a branch th
       described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
       domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
   eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");
-  eq(r.domains,["app","cardio","exercise","food","plan","profile","progress","rest","set","steps","water","workout"],"grouped by domain");
+  eq(r.domains,["app","cardio","exercise","food","meal","plan","profile","progress","rest","set","steps","water","workout"],"grouped by domain");
   /* set.log, in a live workout: the logger's own Log set. */
   await startWorkout(page);
   const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");

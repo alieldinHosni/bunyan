@@ -436,6 +436,19 @@ function planCommand(c){
       detail:t("Your calorie and macro targets are worked out again for it."),cta:t("Change it"),
       done:fill(t("Goal changed to {g}, with its targets."),{g:t(GOALNAME[c.goal])}),undone:t("Undone. Your goal and targets are as they were.")});}
   return null;}
+/* A planned meal's item swapped for one of the foods offered (js/ui/views/chat.js
+   aSwap): a pick, then a confirmation, then the plan changes, with Undo. */
+function swapPick(meal,idx,it,name,opts){
+  return pick("food",fill(t("Instead of {f} in {m}, the same calories with protein, carbs and fat close to it. Tap one to put it in your plan:"),
+    {f:name+(it.grams?" "+Math.round(it.grams)+" g":""),m:mealName(meal)}),opts,"meal.swap",{meal:meal,idx:idx,from:it.fid||"",name:name},"pick",false);}
+function swapNext(p){
+  var pr=String(p.pick||"").split("|"),f=foodById(pr[0]),g=+pr[1];
+  if(!f||!g)return say(t("That food isn't in the database any more."));
+  var lbl=foodShown(f)+" "+g+" g";
+  return confirm("meal.swap",{meal:p.meal,idx:p.idx,from:p.from,fid:f.id,g:g},{
+    lead:fill(t("Swap {a} for {b} in {m}?"),{a:p.name,b:lbl,m:mealName(p.meal)}),item:lbl,
+    detail:t("Only the plan changes; anything you've logged stays as it is."),cta:t("Swap it"),
+    done:fill(t("{b} is in {m} now."),{b:lbl,m:mealName(p.meal)}),undone:fill(t("Undone. {m} is as it was."),{m:mealName(p.meal)})});}
 /* A choice made from a pick: the same request, with that piece filled in. */
 function proceed(ag,v){
   var p=Object.assign({},ag.p);p[ag.slot]=v;
@@ -443,6 +456,7 @@ function proceed(ag,v){
   if(ag.act==="exercise.remove")return planRemove("",p);
   if(ag.act==="exercise.swap")return planSwap("",p);
   if(ag.act==="food.log")return planLog("",p);
+  if(ag.act==="meal.swap")return swapNext(p);
   return null;}
 
 
@@ -496,4 +510,4 @@ function namesFood(text){
   return [rest(swapParts(fq).from),rest(fq)].some(function(q){
     var c=parseFoodInput(q)[0];return !!c&&searchFoods(c.query,1).some(function(h){return h.score>=72;});});}
 
-export {answerPick, foodById, namesExercise, namesFood, plan, planCommand, proceed, suggestExercises};
+export {answerPick, foodById, namesExercise, namesFood, plan, planCommand, proceed, suggestExercises, swapPick};

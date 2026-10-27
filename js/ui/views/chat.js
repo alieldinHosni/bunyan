@@ -28,13 +28,14 @@ import {lookup, ownTerms} from "../../engine/kbsearch.js";
 import {weeklySets} from "../../engine/volume.js";
 import {weeklyVolume} from "../../engine/stats.js";
 import {canUndo} from "../handlers/actions.js";
-import {answerPick, namesExercise, namesFood, plan as planAction, planCommand, proceed, suggestExercises} from "../agent.js";
+import {answerPick, namesExercise, namesFood, plan as planAction, planCommand, proceed, suggestExercises, swapPick} from "../agent.js";
 import {commandOf} from "../../coach/commands.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
 import {bmr, bwShare, deloadDue, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {mealName, mealSlots} from "../../engine/meals.js";
+import {editDist} from "../../engine/text.js";
 import {FOODDB, fuzzyFoods, isDrink, nutritionFor, searchFoods, sumNutrition} from "../../engine/nutrition.js";
 import {nutrition, topLifts, weeklyCardio, weighIns, weightChange, weightTrend} from "../../engine/stats.js";
 import {S, split} from "../../state.js";
@@ -418,7 +419,8 @@ function aWater(a){
   var g=S.goals||{},r=S.days[today()]||{},w=lastWeight()||num(S.profile.weight);
   p(a,fill(t("Your target is {g} ml a day, about 35 ml per kg of body weight. Today so far: {d} ml."),{g:fmtN(g.water||0),d:fmtN(r.water||0)}));
   p(a,t("Drink more on training days and in the heat. Pale yellow is the sign you're drinking enough."));
-  return act(a,t("Open Food"),{"data-tab":"food"});}
+  /* Done here, not by going to Food: the glass the Food page adds. */
+  return act(a,t("Add a glass"),{"data-water":"250","data-wdate":today()});}
 
 function aSteps(a){
   var g=S.goals||{},r=S.days[today()]||{},c=weeklyCardio();
@@ -539,6 +541,9 @@ function swapsFor(f,kcal){
   var ranked=pool.map(function(x){
     var g=Math.round(kcal/num(x.kcal)*(x.per||100)/5)*5,nn=nutritionFor(x,g);
     var d=(Math.abs(nn.p-tgt.p)*4+Math.abs(nn.c-tgt.c)*4+Math.abs(nn.f-tgt.f)*9)/Math.max(kcal,1);
+    /* Like for like first: a food from the same aisle (rice for rice, not cornflakes;
+       a vegetable for a salad, not pasta) beats a closer macro match from another. */
+    if(f.cat&&x.cat!==f.cat)d+=0.18;
     return {f:x,g:g,n:nn,d:d};})
     .filter(function(x){return x.g>=20&&x.g<=600&&x.d<=0.45;})
     .sort(function(x,y){return x.d-y.d;});
@@ -546,6 +551,8 @@ function swapsFor(f,kcal){
   var out=[],used=[];
   for(var i=0;i<ranked.length&&out.length<3;i++){
     var kw=keyWords(ranked[i].f.n);if(!kw.length)kw=[fold(ranked[i].f.n)];
+    /* "Cornflakes" and "Corn Flakes" are one food: the name without its spaces counts too. */
+    kw=kw.concat([fold(ranked[i].f.n).replace(/[^a-z]/g,"")]);
     if(kw.some(function(w){return used.indexOf(w)>=0;}))continue;
     used=used.concat(kw);out.push(ranked[i]);}
   return out;}
@@ -571,9 +578,34 @@ function namedFood(q,strict){
   var fz=fuzzyFoods(rest,1)[0];
   return fz&&fz.dist<=2?fz.f:null;}
 
+/* One item of a planned meal the question names, spelt as people type it ("the talibia
+   grill in my lunch"): the meal it says, or every planned meal, item by item, a word
+   of the item's name within a letter or two of a word of the question. */
+function planItemNamed(q){
+  var fq=fold(q),qw=foodWords(q).split(" ").filter(function(w){return w.length>=4;});
+  if(!qw.length)return null;
+  var slots=mealSlots().filter(function(x){return (x.plan||[]).length;}),named=null;
+  for(var i=0;i<MEALWORD.length;i++)if(MEALWORD[i][1].test(fq)){named=MEALWORD[i][0];break;}
+  if(named)slots=slots.filter(function(x){return x.id===named;}).concat(slots.filter(function(x){return x.id!==named;}));
+  var best=null;
+  slots.forEach(function(m){(m.plan||[]).forEach(function(it,i){
+    var nw=fold(itemName(it)+" "+(it.n||"")).replace(/[^a-z\u0600-\u06ff ]/g," ").split(" ").filter(function(w){return w.length>=4;});
+    var hits=qw.filter(function(w){return nw.some(function(x){return x===w||(w.length>=5&&editDist(w,x)<=2)||x.indexOf(w)===0||w.indexOf(x)===0;});}).length;
+    if(hits&&(!best||hits>best.hits||(hits===best.hits&&m.id===named&&best.m.id!==named)))best={m:m,i:i,it:it,hits:hits};});});
+  return best;}
 function aSwap(a,q){
-  /* Named by its name, not a near miss: "dinner" is the meal, not ginger. */
-  var nf=namedFood(q,true);
+  /* One item of a planned meal: three foods that fit its place, each a tap away from
+     going into the plan instead (js/ui/agent.js swapPick, with a confirmation). */
+  var pi=null;try{pi=planItemNamed(q);}catch(e){pi=null;}
+  if(pi){var pf=foodOf(pi.it),sw=pf?swapsFor(pf,num(pi.it.kcal)):[];
+    if(sw.length){a.ag=swapPick(pi.m.id,pi.i,pi.it,itemName(pi.it),sw.map(function(x){
+      return {v:x.f.id+"|"+x.g,l:foodName(x.f)+" "+fill(t("{n} g"),{n:x.g}),
+        sub:fill(t("{k} kcal · {p} g protein · {c} g carbs · {f} g fat"),{k:fmtN(x.n.kcal),p:Math.round(x.n.p),c:Math.round(x.n.c),f:Math.round(x.n.f)})};}));
+      return a;}}
+  /* Named by its name, not a near miss: "dinner" is the meal, not ginger, and "lunch"
+     is the meal, not luncheon meat (the meal's words are taken out first). */
+  var qf=fold(q);MEALWORD.forEach(function(m){qf=qf.replace(new RegExp(m[1].source,"g")," ");});
+  var nf=namedFood(qf,true);
   /* A food named: what stands in for it, a usual portion's worth. */
   if(nf){
     var meal=planMeal(""),inPlan=meal&&meal.plan.filter(function(it){var f=foodOf(it);return f&&f.id===nf.id;})[0];
@@ -602,7 +634,7 @@ function aSwap(a,q){
     return act(a,t("Open Food"),{"data-tab":"food"});}
   p(a,fill(t("Swaps for {m}: each is the same calories, with protein, carbs and fat close to what it replaces."),{m:mealName(m.id)}));
   l(a,lines);
-  n(a,t("Swap one item or all of them; the meal still adds up to about the same."));
+  n(a,t("Swap one item or all of them; the meal still adds up to about the same.")+" "+t("Say which, like “swap the rice in my lunch”, and I'll put it in your plan."));
   return act(a,t("Open Food"),{"data-tab":"food"});}
 
 function aFoodInfo(a,q,it){

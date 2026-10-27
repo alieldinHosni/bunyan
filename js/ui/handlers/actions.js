@@ -14,6 +14,8 @@
    state it touches is copied (snap); Undo puts that copy back. A reload ends the session,
    and the Undo with it. */
 import {FOODDB} from "../../engine/nutrition.js";
+import {itemOf} from "../../engine/mealplan.js";
+import {ownSlot} from "../../engine/meals.js";
 import {dayOf, S, saveDB} from "../../state.js";
 import {toDisp} from "../../units.js";
 import {today} from "../../util.js";
@@ -36,6 +38,7 @@ var SNAP={
   day:function(){var d=today(),r=copy(S.days[d]);return function(){if(r)S.days[d]=r;else delete S.days[d];};},
   body:function(){var b=copy(S.body);return function(){S.body=b;};},
   goals:function(){var g=copy(S.goals),k=S.profile.goal;return function(){S.goals=g;S.profile.goal=k;};},
+  meals:function(){var m=copy(S.mealSlots);return function(){S.mealSlots=m;};},
   /* Settings put back the way the screen's own buttons left them. */
   prefs:function(){var pr=copy(S.prefs),th=S.theme;return function(){
     if(pr.lang!==S.prefs.lang)tap({setlang:pr.lang});
@@ -95,6 +98,15 @@ var ACTIONS={
   "plan.gear":{desc:"Show the plan rebuilt for other equipment, to review and use",params:{gear:"gym, home or bw"},confirm:false,
     run:function(p){if(!/^(gym|home|bw)$/.test(p.gear))return false;tap({setup:"1"});if(!V.asd)return false;
       tap({as:"gear|"+p.gear});V.asd.step=STEPS.indexOf("result");render();return true;}},
+  /* The plan's item replaced in place, as the plan screen's remove-and-add would leave
+     it, the new food at the amount offered; only while the item is still the one
+     the swap was offered for. */
+  "meal.swap":{desc:"Swap one food in a meal of the plan for another",params:{meal:"meal id",idx:"its place in the meal",from:"the food it was",fid:"the new food",g:"grams"},
+    confirm:true,snap:"meals",
+    run:function(p){var sl=ownSlot(p.meal),it=sl&&(sl.plan||[])[p.idx];
+      var f=(S.myFoods||[]).concat(FOODDB||[]).filter(function(x){return x.id===p.fid;})[0];
+      if(!it||!f||(p.from&&it.fid&&it.fid!==p.from))return false;
+      sl.plan[p.idx]=itemOf({f:f,g:p.g});saveDB();render();return true;}},
   "app.go":{desc:"Open a place in the app",params:{to:"one of "+Object.keys(PLACE).join(", ")},confirm:false,
     run:function(p){var g=PLACE[p.to];if(!g)return false;g.forEach(function(D){tap(D);});return true;}},
   "water.add":{desc:"Add water to today",params:{ml:"millilitres"},confirm:true,snap:"day",
