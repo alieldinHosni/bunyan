@@ -39,7 +39,8 @@
                                        DEF, or normalize would mark old blobs as current
    @property {number=}  logFixV        the one-time log corrections done (js/engine/logfix.js)
    @property {Slot[]=}  mealSlots      the day's meals, when not the usual four
-   @property {Object[]=} chat          the coach chat's kept conversation
+   @property {Object[]=} chat          the coach chat's kept conversation (30 days)
+   @property {number=} chatFrom        when the chat was last cleared (ms); the history keeps it
    @property {Object=}  context        facts the person told the coach, in their words (js/coach/context.js)
    @property {number}   lastBackup     ms since 1970, 0 for never
    @property {number}   backupSnooze   ms; no reminder before then
@@ -170,6 +171,8 @@ function normalize(o){
   if(o.logFixV!=null&&!(typeof o.logFixV==="number"&&o.logFixV>=1&&o.logFixV%1===0))delete o.logFixV;
   /* The coach chat's kept conversation (js/ui/views/chat.js): a list, or nothing. */
   if(o.chat!=null&&!Array.isArray(o.chat))delete o.chat;
+  /* When the conversation was last cleared (ms): the chat shows only what came after. */
+  if(o.chatFrom!=null&&!(typeof o.chatFrom==="number"&&isFinite(o.chatFrom)&&o.chatFrom>=0))delete o.chatFrom;
   /* Where the training block began (js/engine/blocks.js): a date, or nothing. */
   if(o.block!=null&&!(o.block&&typeof o.block.start==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(o.block.start)))delete o.block;
   /* The day's meals (js/engine/meals.js): a list of {id, name?, plan?, todo?}, or

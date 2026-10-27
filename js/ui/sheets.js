@@ -40,7 +40,7 @@ function exStep(k,label,v,unit){
 var SHEET_KICK={editex:"Exercise",tiex:"Import",recovery:"Recovery",weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
   gear:"Training",likes:"Training",exercise:"Training",exhist:"History",share:"Sharing",coach:"Sharing",
   backup:"Your data",restore:"Your data",set_you:"Settings",set_avatar:"Profile",set_training:"Settings",set_app:"Settings",
-  set_profiles:"Settings",set_data:"Settings",about:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
+  set_profiles:"Settings",set_data:"Settings",set_chat:"Settings",about:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
 var CFICON={
   leave:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M9 16l-4-4 4-4M5 12h11"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',

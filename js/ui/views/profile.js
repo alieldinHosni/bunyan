@@ -63,9 +63,10 @@ function vProfile(){
      prow('data-sheet="set_you"',"person",t("You"),you.length?you.join(" · "):t("Add your age, height and weight"))
     +prow('data-sheet="set_training"',"dumbbell",t("Training"),
        t(p.prog.charAt(0).toUpperCase()+p.prog.slice(1))+" · "+t("RPE")+" "+rpeLabel.toLowerCase())
-    /* What the person told the coach, kept in their words: listed and deletable from
-       the conversation (js/coach/context.js). */
-    +prow('data-chatq="facts"',"person",t("What you've told the coach"),t("Kept as you said it, and deletable"))
+    /* The conversation with the coach, 30 days of it, to read (js/ui/views/chat.js
+       histSheet). What the person told it to keep is asked in the chat ("What have I
+       told you?"), where it can be deleted. */
+    +prow('data-sheet="set_chat"',"clock",t("Chat history"),t("The last 30 days, to read"))
     +prow('data-fsec="targets"',"bowl",t("Nutrition"),fmtN(g.kcal)+" kcal · "+g.p+"g "+t("Protein").toLowerCase())
     +prow('data-sheet="set_app"',"sliders",t("App"),
        [t(themeName(themeOf()))+" · "+(S.theme==="light"?t("Light"):t("Dark")),

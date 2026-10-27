@@ -2073,3 +2073,38 @@ Owner, 27 Oct (two screenshots). CACHE `bunyan-v155`.
   dock icons are square (a brain has no corners). First drawn from above; the owner asked for
   the side (CACHE `bunyan-v157`): the cerebrum's dome with its main fissure and folds, the
   cerebellum under the back, the stem; drawn on the 24 grid, scaled to the dock's 22.
+
+## Chat history — branch session/chat-history
+
+Owner, 27 Oct (two screenshots): Profile's "What you've told the coach" sent "What have I told
+you?" into the chat. CACHE `bunyan-v158`.
+- **Profile → Chat history** (`data-sheet="set_chat"`, `histSheet` in chat.js, registered in
+  settings.js): thirty days of the conversation by day, newest day first, read only (bubbles drawn
+  with `ro`: no buttons, no Undo, no field to type in), and one "Delete chat history" with Undo.
+- **Kept 30 days, shown 24 hours**: `pruneChat` now drops only what is older than 30 days;
+  `chatShown()` is what the chat and the floating Coach show (the last day, since it was last
+  cleared). Follow-ups read on only from what is shown.
+- **Clear** in the chat now sets `S.chatFrom` (validated in schema.js): the conversation leaves the
+  chat but stays in the history. The history's own button deletes it.
+- **"Review chat history"** at the top of the conversation whenever the history holds more than
+  the chat shows: the panel closes (its own close, 260 ms), Profile comes in, and 420 ms later the
+  history rises over it.
+- What the person asked the coach to keep is still asked in the chat ("What have I told you?"),
+  where each item can be deleted.
+- Tests: the day / thirty days split, the way from the chat and from Profile, nothing tappable or
+  sendable in the history, delete with Undo; clear hides, not deletes; day-old messages leave the
+  chat for the history.
+- **The panel's motion** (owner, 27 Oct). CACHE `bunyan-v159`.
+  - **Opened scrolled up**: `toEnd` measured the newest exchange with getBoundingClientRect while
+    the panel was scaling in from the launcher (scale .12), so it scrolled a fraction of the way.
+    It now measures by layout (`offIn`, offsetTop up to `#cpB`, which is `position:relative`).
+  - **Smaller / bigger flashed dark**: the old FLIP scaled a picture of the box and faded its
+    contents out and back. Now the box's own left/top/width/height glide from the old rectangle
+    to the new (`--m-panel`, `--e-ios`), the conversation in view and reflowing all the way;
+    inline styles cleared when it settles. `.cp.flipping` is gone.
+  - **Too quick to read as a conversation**: the question flies for 600 ms; the dots come once it
+    has landed (420 ms) and stay 1–2 s by the answer's length; the answer arrives over 560 ms, its
+    parts 120 ms apart; the panel glides to keep each new thing in view (`follow`).
+  - Tests: opens on the newest exchange; mid-resize the box is not transformed and its contents
+    are fully opaque, and settles back to the CSS; the dots wait for the question and are still
+    there a beat later.
