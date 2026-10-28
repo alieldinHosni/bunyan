@@ -2634,3 +2634,32 @@ check training days from past weeks".
   vanished. It is now always in the page, folded (`.dbfold`, inert) and unfolding with `--m-cal` /
   `--e-cal` as Training's does; the bar's ⌄ turns at the same pace. Its look (.dbcal) is unchanged.
   Test: regression "Food's calendar unfolds slowly …".
+
+## The run page: a phone sitting still runs nowhere; controls fixed; pace now and splits — branch session/run
+
+CACHE `bunyan-v183`. Owner, 28 Oct (screenshots of a live run): "the buttons should be fixed to the
+bottom of the screen not moving … The line drawn should represent a running path, but in fact it drew
+this while I was sitting on the chair and shook my phone … think as a runner".
+- **Why the line appeared**: every fix the phone reported within 30 m of accuracy was kept once it lay
+  more than a few metres from the last, so a still phone's wandering GPS (5–20 m of noise) added up
+  to a path and distance. js/engine/run.js addFix is now one pipeline, tuned by simulation (`RUNTUNE`):
+  fixes worse than 25 m dropped (20 m to start the line); a leap no runner makes dropped; a light
+  Kalman smoothing whose trust in each fix follows the phone's own speed reading; **stillness** — the
+  phone's speed under 0.4 m/s with the move inside twice its accuracy, or 15 s in which the net
+  movement stayed inside max(10 m, 1.5 × accuracy) — adds no point and no distance; a point is kept only
+  past max(10 m, 2 × accuracy, capped 25 m). Simulated: a still phone with 15 m of noise over 10 min
+  ≤ 27 m (was hundreds); runs within 1.3 %, track loops 1.5 %, walks 4 %.
+- Points carry moving time ([lat, lon, t, ms]) so **splits** (`splitsOf`) and **pace now** (`paceNow` /
+  `speedNow`, over the last ~200 m or 60 s of points ending at the newest one) leave pauses out.
+  js/schema.js accepts 3- and 4-element points (it was dropping the new ones).
+- **Page (js/ui/run.js vRun)**: moving time big; distance its own card; pace now, average and
+  "≈kcal, an estimate" beneath; a status pill (Finding GPS…, Not moving…, Paused); splits by km with
+  the change from the one before; a tap and a "Kilometre n · m:ss" note at each km. The controls are
+  fixed to the bottom over a fade: Pause alone while running (no finishing by accident); paused shows
+  Resume and "Finish and save". GPS reads on / fair / weak.
+- Not done, by what a web app can do: tracking with the screen off (the phone stops sharing position
+  with a page in the background; the note says so), and auto-pause (the "Not moving…" status shows
+  instead, the time keeps counting). Needs checking on a real phone outdoors.
+- Tests: engine run.test.js (noise tables, still phone, km runs, rough / leap / paused, splits, pace now);
+  regression "Live tracking: a phone sitting still, its GPS wandering, is not a run …" (105 m on the old
+  code, nothing now), and the run / ride / hike tests for the new layout and fixed controls.

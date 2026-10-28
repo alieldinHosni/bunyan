@@ -208,8 +208,16 @@ function normalize(o){
   if(o.run!=null){
     var rn=o.run;
     if(!rn||typeof rn!=="object"||!(+rn.started>0)||!Array.isArray(rn.pts)||!(+rn.dist>=0)||!(+rn.ms>=0))delete o.run;
-    else{rn.pts=rn.pts.filter(function(p){return Array.isArray(p)&&p.length===3&&isFinite(p[0])&&isFinite(p[1])&&isFinite(p[2]);});
-      if(rn.since!=null&&!(+rn.since>0))rn.since=null;}}
+    /* A point is [lat, lon, t], and since 28 Oct [lat, lon, t, moving ms] (the splits and
+       the pace now read the fourth): both kept. */
+    else{rn.pts=rn.pts.filter(function(p){return Array.isArray(p)&&(p.length===3||(p.length===4&&isFinite(p[3])))&&isFinite(p[0])&&isFinite(p[1])&&isFinite(p[2]);});
+      if(rn.since!=null&&!(+rn.since>0))rn.since=null;
+      /* The filter's own state (js/engine/run.js): a smoothed position, the last stretch,
+         when it last moved, the kilometres said. Half-written, it starts afresh. */
+      if(rn.kf!=null&&!(rn.kf&&isFinite(rn.kf.lat)&&isFinite(rn.kf.lon)&&rn.kf.v>=0&&isFinite(rn.kf.t)))delete rn.kf;
+      if(rn.rec!=null&&!Array.isArray(rn.rec))delete rn.rec;
+      if(rn.moved!=null&&!isFinite(rn.moved))delete rn.moved;
+      if(rn.kmSaid!=null&&!(rn.kmSaid>=0))delete rn.kmSaid;}}
   o.sessions=o.sessions.filter(sessionOk);
   o.body=o.body.filter(function(b){return b&&typeof b.date==="string";});
   /* A weight step per exercise, in kg: only real positive numbers survive. */
