@@ -2595,3 +2595,17 @@ save a weigh-in.
   first tap after a search.
 - Tests: regression "Search sheets: typing, then the first tap …" (fails on the old CSS, passes now);
   "Weigh-in: with a weight on record …".
+
+## Done on the keyboard: the chat glides down once, no bounce — branch session/kb-close
+
+CACHE `bunyan-v181`. Owner, 28 Oct (screenshot, compact chat, the keyboard's ✓): the panel bounced up
+and down, then settled.
+- **Cause**: going down, the prediction set the whole screen at once, but iOS's readings on the way
+  (sizes in between, and the page's offset held up until the very end) were still taken, each pulling
+  the panel back up mid-glide. Now, while the keyboard is going down, nothing it reports is taken; the
+  reading after it has gone settles it (view.js syncViewport).
+- **And**: the panel's room above the dock came back 60ms after the screen did (when the keyboard flag
+  dropped), two moves started apart. Now in the same instant (`body.kbdown`, set by kbPredict).
+- Slower: `--m-kb` 380 → 440ms.
+- Test: regression "Chat, iPhone keyboard closed with Done: …" (an iPhone browser with iOS's viewport
+  readings played in; the panel sampled every frame: one way, no turn). Fails on the old code.
