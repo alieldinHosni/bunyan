@@ -193,9 +193,13 @@ function bindPanel(grow){
   pan.addEventListener("focusin",function(e){
     if(!grow||!e.target||e.target.id!=="chatq"||V.coach!=="compact"||!touchPhone())return;
     clearTimeout(growT);
+    var sent0=chatShown().length;
     growT=setTimeout(function(){
       var q=document.getElementById("chatq");
       if(V.coach!=="compact"||!q||document.activeElement!==q)return;
+      /* Sent already, before the keyboard was even up: the answer is the thing to see,
+         and the panel stays as it is under it. */
+      if(chatShown().length!==sent0)return;
       /* Already sent: the message is flying into the conversation, or the answer is on
          its way. The panel does not move under it. */
       if(document.querySelector("#cpanel .chat-ghost,#cpanel .chat-typing,.chat-ghost"))return;

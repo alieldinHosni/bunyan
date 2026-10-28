@@ -740,8 +740,7 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   eq(await ev(page,"[S.profile.goal,S.goals.kcal]"),["lose",2500],"Undo puts goal and targets back");
   /* Kept, cleared with Undo (from the panel at full height), and closing returns to Coach AI. */
   const n=await ev(page,"S.chat.length");
-  /* Typing in the small panel grew it to the whole conversation (coachfab.js bindPanel). */
-  eq(await ev(page,"V.coach"),"full","typed in, it is at full height");
+  await page.tap('.cp [data-coachsize="full"]');await pause(page);
   await page.tap('[data-chatclear]');await pause(page);
   eq([await page.$$eval('#cpanel .chat-x',a=>a.length),await ev(page,"S.chat.length")],[0,n],"cleared from the chat, kept in the history");
   await page.tap('.toast-undo');await pause(page);
