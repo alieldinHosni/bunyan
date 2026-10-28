@@ -519,11 +519,12 @@ await test("Back goes up one level: a day to My program, a template to Programs"
 });
 await test("week strip: a tapped day shows its plan, today returns to now",async page=>{
   await tapTab(page,"train");await pause(page);
-  eq(await page.$$eval('.twk-d',a=>a.length),7);
-  const other=await page.$eval('.twk-d:not(.today)',b=>b.getAttribute("data-tweek"));
-  await page.tap('.twk-d[data-tweek="'+other+'"]');await pause(page);
-  eq(await ev(page,"[V.tdate,document.querySelector('.twk-d.sel').getAttribute('data-tweek')]"),[other,other]);
-  await page.tap('.twk-d.today');await pause(page);
+  /* The week's row (the month folded under it is the calendar's, not tapped here). */
+  eq(await page.$$eval('.twk-r .twk-d',a=>a.length),7);
+  const other=await page.$eval('.twk-r .twk-d:not(.today)',b=>b.getAttribute("data-tweek"));
+  await page.tap('.twk-r .twk-d[data-tweek="'+other+'"]');await pause(page);
+  eq(await ev(page,"[V.tdate,document.querySelector('.twk-r .twk-d.sel').getAttribute('data-tweek')]"),[other,other]);
+  await page.tap('.twk-r .twk-d.today');await pause(page);
   eq(await ev(page,"V.tdate"),null);
 });
 await test("My program edits the active program in place",async page=>{
@@ -3209,6 +3210,40 @@ await test("Chat, iPhone keyboard closed with Done: the panel glides once to its
     Object.defineProperty(fake,"offsetTop",{get(){return fake._t;}});
     Object.defineProperty(fake,"width",{get(){return innerWidth;}});
     Object.defineProperty(window,"visualViewport",{get(){return fake;},configurable:true});}});
+await test("Training calendar: the ⌄ or a held press opens the week into the month and back; months either side; a past day shows below; Today comes back",async page=>{
+  await tapTab(page,"train");await pause(page,300);
+  eq(await page.$$eval('.twk.cal .twk-today',a=>a.length),0,"on today, no Today button");
+  await page.tap('[data-calopen]');await pause(page,800);
+  eq(await page.evaluate(()=>[document.querySelector(".twk.cal").classList.contains("open"),document.querySelector("[data-calopen]").getAttribute("aria-expanded"),document.querySelector(".twk-fold").hasAttribute("inert")]),[true,"true",true],"open: the month, the week folded away");
+  const mh=await page.$eval('.twk-mo',e=>e.getBoundingClientRect().height);if(mh<200)throw new Error("the month did not unfold: "+mh);
+  const m0=await page.$eval('.twk-mt b',e=>e.textContent);
+  await page.tap('[data-calm="-1"]');await pause(page,300);
+  if(await page.$eval('.twk-mt b',e=>e.textContent)===m0)throw new Error("the month did not change");
+  eq(await page.$$eval('.twk.cal .twk-today',a=>a.length),1,"another month: Today offered");
+  /* A past training day (the seed's sessions are every third day) shows in the card below. */
+  const past=await page.evaluate(()=>{const b=[...document.querySelectorAll(".twk-grid .twk-d.done:not(.out)")].pop();return b&&b.getAttribute("data-tweek");});
+  if(!past)throw new Error("no training day ticked in the month before");
+  await page.tap('.twk-grid [data-tweek="'+past+'"]');await pause(page,400);
+  eq(await ev(page,"V.tdate"),past,"the day picked is the one shown below");
+  if(!(await page.$('.thero2 [data-openday="'+past+'"]')))throw new Error("its session is not offered below");
+  await page.tap('[data-caltoday]');await pause(page,400);
+  eq(await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,U=await import("/js/util.js");return [V.tdate,document.querySelector(".twk-mt b").textContent,!!document.querySelector(".twk-today"),!!document.querySelector('.twk-grid .twk-d.today.sel[data-tweek="'+U.today()+'"]')];}),
+    [null,m0,false,true],"Today: today picked, its month shown, the button gone");
+  /* Held: folds back; the day under the finger is not picked by it. */
+  const d=await page.$('.twk-grid .twk-d:not(.today):not(.out)');const box=await d.boundingBox();
+  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX:x,clientY:y,pointerType:"touch",isPrimary:true}));},[box.x+box.width/2,box.y+box.height/2]);
+  await pause(page,650);
+  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,clientX:x,clientY:y,pointerType:"touch"}));el.click();},[box.x+box.width/2,box.y+box.height/2]);
+  await pause(page,800);
+  eq(await page.evaluate(async()=>[document.querySelector(".twk.cal").classList.contains("open"),(await import("/js/ui/view.js")).V.tdate]),[false,null],"held: back to the week, and no day picked by the hold");
+  /* And held on the week opens it. */
+  const w=await (await page.$('.twk-r .twk-d')).boundingBox();
+  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX:x,clientY:y,pointerType:"touch",isPrimary:true}));},[w.x+w.width/2,w.y+w.height/2]);
+  await pause(page,650);
+  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,clientX:x,clientY:y,pointerType:"touch"}));},[w.x+w.width/2,w.y+w.height/2]);
+  await pause(page,800);
+  eq(await page.$eval('.twk.cal',e=>e.classList.contains("open")),true,"held on the week: the month");
+},{prefs:{anim:true}});
 await test("Workout motion, with motion on: the RPE card holds the chosen number, then plays out while the cards below rise; Next exercise arrives, it does not pop in",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.rpe="every";});
   await startWorkout(page);

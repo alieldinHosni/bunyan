@@ -2609,3 +2609,23 @@ and down, then settled.
 - Slower: `--m-kb` 380 → 440ms.
 - Test: regression "Chat, iPhone keyboard closed with Done: …" (an iPhone browser with iOS's viewport
   readings played in; the panel sampled every frame: one way, no turn). Fails on the old code.
+
+## The training calendar: Today, and the week held open into the month — branch session/calendar
+
+CACHE `bunyan-v182`. Owner, 28 Oct (screenshot of Training's week): "a small return to today button,
+plus it needs to expand with slow animation when I tap on it and hold to see the whole calendar and
+check training days from past weeks".
+- **views/train.js weekStrip** (Training's own; Home's "openday" strip is unchanged): the week and,
+  folded under it, the month (`monthGrid`: the person's first weekday, the months either side quieter,
+  training days ticked, planned ones dotted, the month's session count, ‹ › for any month). Both are
+  always in the page, one folded to nothing (`.twk-fold` / `.twk-mo`, grid rows 1fr↔0fr with opacity,
+  `--m-cal` 620ms, `--e-cal` an even ease in and out: the app's usual curves cover most of the way in
+  the first third and read as quick). The folded one is inert.
+- **Opening**: held (js/ui/calhold.js: 480ms without moving more than 10px; the tap it ends with is
+  swallowed so no day is picked; the phone's own long-press menu is kept off) or the ⌄ in the header,
+  which stays for anyone who does not hold and for a screen reader (aria-expanded). Held on the month,
+  it folds back. A day in the month shows in the card below, as a day of the week does (V.tdate).
+- **Today**: a pill in the header whenever another day or another month is showing; one tap back to
+  today and its month (handlers/train.js caltoday). V.calOpen, V.calM.
+- Tests: regression "Training calendar: …" (⌄, months, a past training day shown below, Today, held
+  both ways, the hold's tap swallowed); "week strip: …" now counts the week's row.

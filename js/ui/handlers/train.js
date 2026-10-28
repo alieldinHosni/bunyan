@@ -70,8 +70,15 @@ function useDraft(){
 
 /* What this module answers. app.js calls register() once, at boot, in the order
    the branches are tried in (see registry.js). */
+function toggleCal(){V.calOpen=!V.calOpen;V.calM=V.calOpen?(V.tdate||today()).slice(0,7):null;render();}
 function register(){
   key("tweek",function(D){V.tdate=D.tweek===today()?null:D.tweek;render();return;});
+  /* The training calendar (views/train.js weekStrip): the week opens into the month and
+     folds back; a month either side; Today brings the day and the month back. */
+  key("calopen",function(){toggleCal();return;});
+  key("calm",function(D){var m=V.calM||(V.tdate||today()).slice(0,7),d=new Date(m+"-01T00:00:00");
+    d.setMonth(d.getMonth()+(+D.calm<0?-1:1));V.calM=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");render();return;});
+  key("caltoday",function(){V.tdate=null;V.calM=null;render();return;});
   /* A lighter week: started, put off for a week, or ended early. With training blocks
      running, the next block starts after it: the day after an unplanned one ends, or
      today when either kind is ended early. */
@@ -299,4 +306,4 @@ function register(){
     groupRun(du.ex,ui).forEach(function(k){du.ex[k].grp=null;});
     saveDB();render();toast(t("Superset broken."));return;});}
 
-export {register};
+export {register, toggleCal};
