@@ -3120,6 +3120,33 @@ await test("Coach memory: a fact that contradicts or updates one kept is asked a
   await page.tap('#cpanel .chat-x.live [data-ctxrep]');await pause(page,400);
   eq(await ev(page,"S.context.items.map(i=>i.text)"),["I work 12-hour days now"],"replaced: one statement, the newer");
 });
+await test("Workout motion, with motion on: the RPE card holds the chosen number, then plays out while the cards below rise; Next exercise arrives, it does not pop in",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.rpe="every";});
+  await startWorkout(page);
+  const sets=await ev(page,"S.active.entries[0].planned.sets||3");
+  for(let k=0;k<sets;k++){await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+    if(k<sets-1){const r=await page.$('.rpeask [data-rpeset$=":7"]');if(r){await r.tap();await pause(page,1000);}}}
+  eq(!!(await page.$('.rpeask')),true,"asked after the last set");
+  const before=await page.$eval('[data-nextex]',e=>e.getBoundingClientRect().top);
+  await page.tap('.rpeask [data-rpeset$=":8"]');await pause(page,80);
+  eq(await page.$eval('.rpeask [data-rpeset$=":8"]',e=>e.classList.contains("on")),true,"the chosen number is held");
+  await page.waitForSelector('.rpeask.rowout.slow',{timeout:1500});
+  const mid=await page.$eval('.rpeask',e=>getComputedStyle(e).animationDuration);
+  eq(mid,"0.4s","it plays out over the unhurried flow, not cut");
+  await pause(page,900);
+  eq(!!(await page.$('.rpeask')),false,"then it is gone");
+  const after=await page.$eval('[data-nextex]',e=>e.getBoundingClientRect().top);
+  if(!(after<before))throw new Error("Next exercise did not rise into its place: "+before+" → "+after);
+  eq(await page.$eval('[data-nextex]',e=>[e.getAttribute("data-k"),e.hasAttribute("data-anim"),getComputedStyle(e).animationName]),["lognext",true,"cardIn"],"Next exercise arrives as a card of its own");
+  /* The rest, put away: it plays out where it was; nothing is left behind. */
+  if(!(await page.$('.sess [data-k="rest"]')))throw new Error("no rest to put away");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.restEnd=Date.now()+300;});
+  await page.waitForSelector('.sess [data-k="rest"] [data-rest="skip"]',{timeout:5000});
+  await page.tap('.sess [data-k="rest"] [data-rest="skip"]');await pause(page,60);
+  eq(await page.evaluate(()=>{const g=document.querySelector('.sess .rb.ghost');return g?[g.classList.contains("rowout"),g.inert,!!g.querySelector("[id]")]:null;}),[true,true,false],"the rest card plays out, inert, its ids gone");
+  await pause(page,900);
+  eq(await page.evaluate(()=>document.querySelectorAll('.sess .rb').length),0,"then it is gone, and no rest is left");
+},{prefs:{anim:true}});
 await test("Workout fixes: the chat finishes the exercise on screen; RPE is asked after a set, about it; the set being done can be deleted, then Next exercise; today's exercises reorder by grip",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.rpe="every";});
   await startWorkout(page);

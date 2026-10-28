@@ -85,10 +85,13 @@ function keyAhead(from,key){
    misaligned every item after it, and each was replaced: every thumbnail destroyed and
    repainted for the one that was added. Now the new one is inserted and the rest are
    matched where they are. Moves are not tracked; a moved item is still replaced. */
+function isGhost(el){ return el.nodeType===1&&el.classList.contains("ghost"); }
 function patchChildren(oldP,newP){
   var o=oldP.firstChild,n=newP.firstChild;
   while(n){
     var nextN=n.nextSibling;
+    /* A card playing out (render.js playOut) is not part of the state: stepped over. */
+    if(o&&isGhost(o)){ o=o.nextSibling; continue; }
     if(!o){ oldP.appendChild(n); n=nextN; continue; }
     if(sameNode(o,n)){ patchNode(o,n); o=o.nextSibling; n=nextN; continue; }
     var kn=n.nodeType===1?keyOf(n):null, ko=o.nodeType===1?keyOf(o):null;
@@ -98,7 +101,7 @@ function patchChildren(oldP,newP){
     oldP.replaceChild(n,o);
     o=nextO; n=nextN;
   }
-  while(o){ var gone=o; o=o.nextSibling; oldP.removeChild(gone); }
+  while(o){ var gone=o; o=o.nextSibling; if(!isGhost(gone))oldP.removeChild(gone); }
 }
 
 /* Bring `root` to match `html`, touching only what differs. */

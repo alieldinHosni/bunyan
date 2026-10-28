@@ -905,9 +905,9 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
 @keyframes veilIn{from{background-color:transparent}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){
-  #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh,.wsr.fresh .wtick,.sess .log.ok,.rb{animation:none}}
+  #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh,.wsr.fresh .wtick,.sess .log.ok,.rb,.sess [data-k][data-anim]{animation:none}}
 body.noanim #app,body.noanim .sheetbox,body.noanim .sheet,
-body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wtick,body.noanim .sess .log.ok,body.noanim .rb{animation:none}
+body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wtick,body.noanim .sess .log.ok,body.noanim .rb,body.noanim .sess [data-k][data-anim]{animation:none}
 /* cursor:pointer is not decoration here. iOS Safari only delivers click events from
    a plain div when it looks interactive, which is why tapping the dimmed area above
    a sheet did nothing on a phone while working on a desktop. */
@@ -1649,6 +1649,13 @@ body.noanim .skel{animation:none}
   100%{opacity:0;transform:translateY(-4px);height:0;
        margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;border-top-width:0;border-bottom-width:0}}
 .rowout{animation:rowOut var(--m-comp) var(--e-standard) forwards;pointer-events:none;overflow:hidden}
+/* A card leaving a screen in use (the RPE question, answered): the slower flow, so the
+   eye sees it go and the cards below rise into its place (owner, 28 Oct). */
+.rowout.slow{animation-duration:var(--m-flow)}
+/* The workout's cards arriving (render.js marks .sess [data-k]): the rest, the RPE
+   question, Next exercise, a new set row. Up a little and in, unhurried, settling. */
+@keyframes cardIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+.sess [data-k][data-anim]:not(input):not(.rowout){animation:cardIn var(--m-flow) var(--e-decel) both}
 
 /* The rest screen is a distinct mode, so it gets a real entrance. */
 @keyframes restIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:none}}
@@ -1704,6 +1711,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 :root.reduced .wsr.fresh .wtick,
 :root.reduced .sess .log.ok,
 :root.reduced .rb,
+:root.reduced .sess [data-k][data-anim],
 :root.reduced .err{animation:none}
 :root.reduced .skel{animation:none}
 :root.reduced .ss-clock i{animation:none}
@@ -3863,7 +3871,9 @@ body.wkflat #app{--gutter:20px}
 .sc-h .sc-cue{font-style:italic}
 .sc-rpe{display:grid;gap:var(--s2);text-align:center}
 /* Asked after a set, about it: a small card of its own above the next set. */
-.sess .rpeask{padding:var(--s3);border-radius:var(--r4);animation:wkIn var(--m-comp) var(--e-decel)}
+/* Its entrance is the workout cards' own (cardIn, .sess [data-k]); an animation here
+   would also outrank its exit (.rowout). */
+.sess .rpeask{padding:var(--s3);border-radius:var(--r4)}
 .sc-rpe-c{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .sc-rpe-c button{min-height:var(--hit);border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
   color:var(--text);font-weight:700;font-size:15px}

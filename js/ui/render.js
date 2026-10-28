@@ -21,7 +21,7 @@ import {lockScroll, syncWorkoutState, V} from "./view.js";
 import {patch, replace} from "./patch.js";
 import {checkDock, syncDock} from "./dock.js";
 import {syncWbar} from "./wbar.js";
-import {applyMotion, countTo, once} from "./motion.js";
+import {applyMotion, countTo, leave, once} from "./motion.js";
 import {applyLook} from "./theme.js";
 import {bindExSwipe} from "./exswipe.js";
 import {bindMore} from "./more.js";
@@ -45,7 +45,9 @@ function paintMotion(root,viewKey){
      [data-anim], which the patcher is told to preserve. An earlier version added a
      class instead and the patcher stripped it every render, because `class` appears
      in the markup and `data-anim` does not. Marking is also cheaper. */
-  els=root.querySelectorAll(".empty,.setrow[data-k],.list .item[data-k],.bar");
+  /* The workout's cards too (.sess): each one that appears — the rest, the RPE
+     question, Next exercise — arrives rather than popping in (owner, 28 Oct). */
+  els=root.querySelectorAll(".empty,.setrow[data-k],.list .item[data-k],.bar,.sess [data-k]:not(input)");
   for(i=0;i<els.length;i++)once(els[i],viewKey,function(){});
 
   /* The one that needs more than a marker: a draw-on needs the path's own length,
@@ -65,6 +67,26 @@ function paintMotion(root,viewKey){
   els=root.querySelectorAll("[data-count-to]");
   for(i=0;i<els.length;i++)countTo(els[i],els[i].getAttribute("data-count-to"));
 }
+
+/* A workout card that the new state no longer has (the rest, once it is over or put
+   away) plays out where it was rather than vanishing (owner, 28 Oct). The patcher
+   removes it; it is put back, detached from the state, and collapses away while the
+   cards below rise. Only these, which stand alone: the log button changes into the
+   next one and needs no ghost of the last. */
+var OUTK=["rest"];
+function leavingCards(root){
+  var out=[];
+  OUTK.forEach(function(k){var el=root.querySelector('.sess [data-k="'+k+'"]');
+    if(el&&!el.classList.contains("rowout"))out.push({k:k,el:el,par:el.parentNode,next:el.nextElementSibling});});
+  return out;}
+function playOut(list){
+  list.forEach(function(g){
+    if(g.el.isConnected||!g.par.isConnected)return;
+    if(document.querySelector('.sess [data-k="'+g.k+'"]'))return;
+    /* A ghost: no longer anything to tap, and out of the patcher's way (no key). */
+    g.el.removeAttribute("data-k");g.el.removeAttribute("id");g.el.querySelectorAll("[id]").forEach(function(x){x.removeAttribute("id");});g.el.classList.add("ghost");g.el.setAttribute("aria-hidden","true");g.el.inert=true;
+    g.par.insertBefore(g.el,g.next&&g.next.parentNode===g.par?g.next:null);
+    leave(g.el,function(){if(g.el.parentNode)g.el.parentNode.removeChild(g.el);},true);});}
 
 var lastView="",lastSheet=null;
 /* Which picture a place stands on: Training's first page is home; a day about to be
@@ -141,7 +163,9 @@ function render(){
      same-tab render happened to clear the class. Removing it and forcing a reflow
      before re-adding is the standard way to replay a CSS animation. */
   appEl.classList.remove("pagein");
+  var going=moved?[]:leavingCards(appEl);
   if(moved)replace(appEl,h); else patch(appEl,h);
+  playOut(going);
   if(moved){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
   bindExSwipe();
   bindMore(render);
