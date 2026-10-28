@@ -19,7 +19,7 @@ import {blockNow} from "../engine/blocks.js";
 import {friends, snapStats} from "../engine/share.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
-import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, stepper, stepperInput, V} from "./view.js";
+import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, stepperInput, V} from "./view.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 import {tiexSheet} from "./views/timport.js";
@@ -333,8 +333,9 @@ function vSheet(){
      +esc(t("After the bathroom, before eating. Judge the seven-day average, not the daily number."))+'</p>'
      /* V.draft.bw is held in the user's display unit while this sheet is open and
         converted back to kilograms on save. */
-     +(lw?stepper("bw",V.draft.bw!=null?V.draft.bw:toDisp(lw),bst,wUnit())
-        :'<div class="stfield">'+stepperInput("bw",V.draft.bw!=null?V.draft.bw:"",bst,wUnit())+'</div>')
+     /* Typed or stepped (the audit, 28 Oct: only − and + in tenths, so 84 to 79.6 was
+        44 taps). From the last weight known, or empty to type into. */
+     +'<div class="stfield">'+stepperInput("bw",V.draft.bw!=null?V.draft.bw:(lw?toDisp(lw):""),bst,wUnit())+'</div>'
      +'<button class="btn" data-saveweight="1">'+esc(t("Save for today"))+'</button>';
   }
   /* An InBody result (owner, 27 Oct; js/engine/inbody.js): the sheet's photo, read on

@@ -1201,8 +1201,12 @@ body.noanim #splash .sp-embers{display:none}
 .srch-foot .btn{margin:0}
 .srch-n{font-size:12.5px;color:var(--dim);margin:4px 0 10px}
 /* While typing, the keyboard owns half the screen, so the title and the counts step
-   aside and the results keep the room. */
-body.kb .srch .srch-hide,body.kb .srch .srch-title{display:none}
+   aside and the results keep the room. They stay aside for a moment after it goes
+   (body.kbleave): a tap on a result is what takes the keyboard away, and the title coming
+   back then pushed the list down under the finger, so the first tap on a food's or an
+   exercise's + did nothing (the audit, 28 Oct). */
+body.kb .srch .srch-hide,body.kb .srch .srch-title,
+body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 .pkrow .pkadd{flex:0 0 36px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
   background:rgba(var(--accent-rgb),.14);border:1px solid rgba(var(--accentHi-rgb),.45);color:var(--accentHi);
   font-size:20px;font-weight:600;line-height:1;transition:transform var(--m-press) var(--e-standard)}
@@ -4982,7 +4986,9 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
   margin:20px 0 10px;padding:5px;padding-inline-start:18px;border-radius:var(--rpill);border:1px solid var(--hair-hi);
   background:rgba(var(--bg-rgb),.84);box-shadow:var(--shadow-float);-webkit-backdrop-filter:blur(20px) saturate(1.5);backdrop-filter:blur(20px) saturate(1.5);
   transition:bottom var(--m-screen) var(--e-ios),border-color var(--m-micro) var(--e-standard)}
-body.kb .chat-form,body:has(nav.dhid) .chat-form{bottom:max(10px,env(safe-area-inset-bottom))}
+/* And for a moment after the keyboard goes (kbleave): the tap on send is what takes it
+   away, and the box moving up then put the button out from under the finger. */
+body.kb .chat-form,body.kbleave .chat-form,body:has(nav.dhid) .chat-form{bottom:max(10px,env(safe-area-inset-bottom))}
 .chat-form:focus-within{border-color:var(--accent-edge)}
 .chat-form input{flex:1;min-width:0;min-height:44px;margin:0;padding:0;border:0;border-radius:0;background:none;font-size:16px}
 .chat-form input:focus{border:0}

@@ -364,14 +364,6 @@ function stepperInput(id,val,step,unit,whole){
    +'value="'+val+'" aria-label="'+esc(unit)+'"><div class="stu">'+unit+'</div></div>'
    +'<button class="stp" data-stp="'+id+'" data-d="'+step+'"'
    +' aria-label="'+t("More")+' '+esc(unit)+'">+</button></div>';}
-function stepper(id,val,step,unit){
-  return '<div class="steps"><button class="stp" data-stp="'+id+'" data-d="-'+step+'"'
-   +' aria-label="'+t("Less")+' '+esc(unit)+'">&minus;</button>'
-   +'<div class="stv"><div class="stn" aria-live="polite">'+val+'</div>'
-   +'<div class="stu">'+unit+'</div></div>'
-   +'<button class="stp" data-stp="'+id+'" data-d="'+step+'"'
-   +' aria-label="'+t("More")+' '+esc(unit)+'">+</button></div>';}
-
 /* The segmented control: the dock's sliding indicator, for any row of equal choices
    that picks one view of the same thing — Progress's sections and ranges, the
    add-food tabs, a filter. One element slides between the cells by transform, so
@@ -503,4 +495,4 @@ function curDate(){return V.fdate||today();}
 /* The meal a quick add goes into: the next one not yet logged on that date. */
 function mealNow(d){return nextMeal(d||curDate());}
 
-export {canBuzz, curDate, inDays, kbPredict, mealNow, GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};
+export {canBuzz, curDate, inDays, kbPredict, mealNow, GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepperInput, streak, tap, toast, V};

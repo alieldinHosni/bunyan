@@ -2334,6 +2334,19 @@ await test("Coach chat: the panel opens on three questions for where it was open
   await page.tap('#cfab .cfab');await pause(page,400);
   eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["rest","eat","protein"],"Food's questions");
 });
+await test("Search sheets: typing, then the first tap on a result's + adds it (the title coming back used to push the list down under the finger)",async page=>{
+  await tapTab(page,"food");await pause(page,300);
+  await page.tap('#app .btn:has-text("Add Food")');await pause(page,500);
+  await page.tap('#fq');await page.fill('#fq','egg');await pause(page,600);
+  await page.tap('#sheet [data-quickfood="egg"]');await pause(page,500);
+  eq(await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,U=await import("/js/util.js");const r=S.days[U.today()];return r&&r.meals&&Object.values(r.meals).some(m=>(m.items||[]).some(i=>i.fid==="egg"));}),true,"the egg is logged on the first tap");
+});
+await test("Weigh-in: with a weight on record, the figure starts from it and can be typed, not only stepped in tenths",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("weigh");});await pause(page,300);
+  eq(await page.$eval('#in_bw',e=>e.value),"84","from the last weight");
+  await page.fill('#in_bw','79.6');await page.tap('[data-saveweight]');await pause(page,300);
+  eq(await ev(page,"S.body[S.body.length-1].weight"),79.6,"typed, saved");
+});
 await test("Audit: the equipment and favourites sheets in Arabic; the water glasses wide enough to tap; the assessment says which figure is out of range",async page=>{
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});await pause(page,300);
   for(const sh of ["gear","likes"]){
