@@ -53,6 +53,9 @@ function planNote(p){
   if(p.kind==="none")return t("Nothing planned");
   if(p.rest)return t("Rest day");
   return planName(p.name)||"";}
+/* Another session today, for this day only (owner, 28 Oct: "from the training home
+   page, as a one-time added session"): offered on today's card whatever today holds. */
+function ANOTHER(){return '<button class="thero2-add" data-another="1"><span aria-hidden="true">+</span> '+t("Add another session today")+'</button>';}
 /* The selected day's card. What it offers depends on when the day is: today can be
    started, a future day previewed, a finished one opened. */
 function dayHero(sp,p,iso){
@@ -75,11 +78,12 @@ function dayHero(sp,p,iso){
     /* A rest day is advice, not a lock: someone who feels good can train anyway. */
     if(p.kind==="today"&&p.next)
       cta='<button class="btn g" data-startday="'+p.next.id+'">'+t("Train anyway")+' · '+esc(p.next.name)+'</button>';
+    if(p.kind==="today")cta+=ANOTHER();
   }else{
     label=p.kind==="today"?(p.again?t("Session {n} today").replace("{n}",p.again):t("Current workout")):t("Planned");
     meta=p.day.ex.length+' '+t("exercises")+' · ~'+estMinutes(p.day)+' '+t("min");
     cta=p.kind==="today"
-      ?'<button class="btn" data-startday="'+p.day.id+'"><span class="ico ico-play" aria-hidden="true"></span>'+t("Start workout")+'</button>'
+      ?'<button class="btn" data-startday="'+p.day.id+'"><span class="ico ico-play" aria-hidden="true"></span>'+t("Start workout")+'</button>'+ANOTHER()
       :'<button class="btn g" data-day="'+p.day.id+'">'+t("Preview the day")+'</button>';
   }
   var name=p.kind==="past"?t("Rest or unlogged"):p.kind==="none"?esc(planName(sp.name)):(p.rest?t("Rest day"):planName(p.name));
@@ -529,8 +533,12 @@ function builderBody(sp,id,inline){
        +'</div>':'')
      +'</div>';});
   h+='</div>';
-  if(week&&sp.days.some(function(d){return (d.wd||[]).some(function(n){return sp.days.some(function(o){return o!==d&&(o.wd||[]).indexOf(n)>=0;});});}))
-    h+='<p class="bnote">'+t("A weekday on two days is two sessions that day, the upper one first.")+'</p>';
+  /* Two sessions on one weekday, every week (owner, 28 Oct: "from the coach training hub
+     as a permanent session in that day"): said where the weekdays are picked, and in
+     rotation, how to get there. */
+  var twoOn=week&&sp.days.some(function(d){return (d.wd||[]).some(function(n){return sp.days.some(function(o){return o!==d&&(o.wd||[]).indexOf(n)>=0;});});});
+  if(week)h+='<p class="bnote">'+(twoOn?t("A weekday on two days is two sessions that day, the upper one first."):t("Two sessions on one day every week: tap a weekday another day already has. Both are trained that day, the upper one first."))+'</p>';
+  else if(sp.days.length>1)h+='<p class="bnote">'+t("Two sessions on the same day every week? Set the schedule By weekday, then give two days the same weekday.")+'</p>';
   h+='<button class="dadd" data-bday="1"><span aria-hidden="true">+</span>'+t("Add day")+'</button>';
   /* What an imported program came with: its phase and length, and the coach's notes —
      the rules, the reasons, the warnings — kept with it rather than thrown away. */

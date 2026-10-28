@@ -9,7 +9,7 @@ import {register as progressTaps} from "./ui/handlers/progress.js";
 import {register as profileTaps} from "./ui/handlers/profile.js";
 import * as W from "./ui/workout.js";
 import {initState, loadStored, onProfileSwitch, refreshFromStorage, S, saveDB, saveSession, startupNote, storageKey} from "./state.js";
-import {alarmStart, beeped, keepAwake, lastTick, play, restoreWorkoutState, setBeeped, setLastTick, syncViewport, syncWorkoutState, tap, toast, V} from "./ui/view.js";
+import {alarmStart, beeped, keepAwake, kbPredict, lastTick, play, restoreWorkoutState, setBeeped, setLastTick, syncViewport, syncWorkoutState, tap, toast, V} from "./ui/view.js";
 import {closeSheet, openSheet, syncDraft} from "./ui/actions.js";
 import {decodePlan} from "./engine/planshare.js";
 import {boot as smartBoot, onChange as smartChanged} from "./ui/smartcoach.js";
@@ -18,7 +18,7 @@ import {draftFrom} from "./ui/views/assess.js";
 import {initDockScroll} from "./ui/dock.js";
 import {initExSwipe} from "./ui/exswipe.js";
 import {initNav} from "./ui/nav.js";
-import {closeCoach} from "./ui/coachfab.js";
+import {bindPanel, closeCoach} from "./ui/coachfab.js";
 import {initPress} from "./ui/press.js";
 import {initReorder} from "./ui/reorder.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
@@ -185,7 +185,8 @@ initSheetDrag(requestCloseSheet);
    closes; with the tick, since the finger has just let go (a moment iOS allows it). */
 initChatGest(function(){tap();if(V.coach==="full"){V.coach="compact";render();}else closeCoach(render);});
 /* A field in a sheet takes the keyboard without the page jumping under it (iPhone). */
-initKeyboard();
+initKeyboard(kbPredict);
+bindPanel();
 /* What the keyboard and the browser chrome leave visible (--vvh, --vvt), measured again
    whenever it can have changed. A cold launch from the Home Screen is the case that bit:
    iOS reports a short viewport for the first frames, and a value read once at boot kept the

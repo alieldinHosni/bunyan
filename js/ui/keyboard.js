@@ -88,8 +88,24 @@ function onFocusIn(ev){
   if(!opensKeyboard(el)||!inSheet(el)||lifted===el)return;
   lift(el);afterKeyboard(el);}
 
-function initKeyboard(){
+/* The keyboard about to rise or fall (view.js kbPredict): a field taking the focus with
+   none focused before, or the last one letting it go with none taking it. */
+var kbUp=false,kbT=0;
+function onFocusInAny(ev){
+  if(!opensKeyboard(ev.target)){return;}
+  clearTimeout(kbT);
+  if(!kbUp){kbUp=true;predict(true);}}
+function onFocusOutAny(ev){
+  if(!opensKeyboard(ev.target))return;
+  clearTimeout(kbT);
+  /* Focus moving to the next field keeps the keyboard up: only a blur with nothing after. */
+  kbT=setTimeout(function(){if(!opensKeyboard(document.activeElement)&&kbUp){kbUp=false;predict(false);}},0);}
+var predict=function(){};
+function initKeyboard(onPredict){
+  if(onPredict)predict=onPredict;
   if(!IOS)return;
+  document.addEventListener("focusin",onFocusInAny);
+  document.addEventListener("focusout",onFocusOutAny);
   document.addEventListener("touchstart",onTouchStart,{passive:true});
   document.addEventListener("touchend",onTouchEnd,{passive:false});
   document.addEventListener("focusin",onFocusIn);}

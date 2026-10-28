@@ -2,6 +2,7 @@
    A workout under way: starting and resuming, the warm-up and cool-down, how you feel,
    moving between exercises, logging sets and activities, rest, swapping and adding,
    pain, plates, notes, finishing and leaving. */
+import {leave, ms} from "../motion.js";
 import * as W from "../workout.js";
 import {lastWeight} from "../../engine/formulas.js";
 import {t} from "../../i18n/dict.js";
@@ -166,9 +167,15 @@ function register(){
      set felt is the lifter's to say or leave out. */
   key("rpe",function(D){V.draft.rpe=V.draft.rpe===+D.rpe?null:+D.rpe;render();return;});
   /* How hard a logged set was, written to that set; the question leaves in place. */
-  key("rpeset",function(D,el){var pr=String(D.rpeset).split(":"),e=S.active&&S.active.entries[V.logIdx],x=e&&e.sets[+pr[0]];
-    if(!x)return;x.rpe=+pr[1];S.active.lastSet=S.active.lastSet||Date.now();saveDB();
-    var box=el&&el.closest&&el.closest(".rpeask");if(box)box.remove();return;});
+  key("rpeset",function(D){var pr=String(D.rpeset).split(":"),e=S.active&&S.active.entries[V.logIdx],x=e&&e.sets[+pr[0]];
+    if(!x||V.rpeOut)return;x.rpe=+pr[1];S.active.lastSet=S.active.lastSet||Date.now();saveDB();
+    /* The chosen number held a moment, then the card plays out and what is below rises
+       into its place (js/ui/motion.js leave); views/session.js vRpeAsk draws it till then. */
+    var out=V.rpeOut={x:V.logIdx,i:+pr[0],v:+pr[1],go:false};render();
+    setTimeout(function(){if(V.rpeOut!==out)return;out.go=true;
+      var box=document.querySelector(".rpeask");
+      leave(box,function(){if(V.rpeOut===out)V.rpeOut=null;render();},true);},ms("comp"));
+    return;});
   key("sstep",function(D){W.stepDraft(D.sstep,+D.d<0?-1:1);return;});
   key("addwu",function(){W.addWarmup();return;});
   key("undolog",function(){W.undoLogged();return;});

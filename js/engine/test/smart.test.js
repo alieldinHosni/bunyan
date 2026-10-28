@@ -10,6 +10,9 @@ function run(t){
     [true,true,true,true,true,true],"grounded on the person's own figures, told never to invent one");
   t.eq(/Egyptian Arabic/.test(buildMessages("اريح قد ايه",{},"ar",[])[0].content),true,"an Arabic question is answered in Egyptian Arabic");
   t.eq(/Textbook notes:\n\[1\]/.test(buildMessages("how many hours of sleep do I need",{},"en",[])[0].content),true,"the textbook passages the question reaches, numbered");
+  var hw=buildMessages("how do I add a second session",{program:"PPL, by weekday: Push (Mon) 6 exercises"},"en",[])[0].content;
+  t.eq([/How the app works:\n- Training tab/.test(hw),/Add another session today/.test(hw),/- Program: PPL, by weekday/.test(hw),/No filler/.test(hw)],[true,true,true,true],
+    "how the app works and the person's program are in front of it, and it is told to answer for them, not in general");
   t.eq(readReply("Sure.\nDO: add face pulls to Pull day"),{text:"Sure.",act:"add face pulls to Pull day"},"a request to act, read off its last line");
   t.eq(readReply("<think>let me see</think>Rest 2–3 minutes."),{text:"Rest 2–3 minutes.",act:""},"a model's thinking is not shown");
   t.eq(readReply("<think>unfinished"),{text:"",act:""},"thinking cut off: nothing to show");}

@@ -29,6 +29,9 @@ var DUR={
   sheet: 300,    /* baseweb timing300  — sheet rise and backdrop */
   screen:300,    /* baseweb timing300  — tab and page changes */
   data:  400,    /* baseweb timing400  — rings, counters, bars */
+  flow:  400,    /* baseweb timing400  — a card arriving on, or leaving, a screen in use:
+                    the workout's rest, RPE and Next exercise, the chat's panel and rows.
+                    Owner, 28 Oct: at 250 the RPE card "disappears", the eye cannot follow. */
   reveal:500     /* baseweb timing500  — chart draw-on, once per view */
 };
 var EASE={
@@ -112,12 +115,12 @@ function countTo(el,to,opts){
 /* Play an element out, then do the thing that removes it.
 
    Anything leaving has to outlive the state change that removed it, or there is
-   nothing left to animate. Two call sites use this — deleting a set and dropping a
-   food item — which is what earns it a function rather than four inline lines.
+   nothing left to animate. Deleting a set, dropping a food item, and a workout card that
+   has done its job (the RPE question once answered, slow: the card is larger than a row).
 
    Under reduced motion, and if the element has gone, it calls straight through: the
    removal must happen whether or not the animation can. */
-function leave(el,done){
+function leave(el,done,slow){
   if(!el||_reduced||!el.parentNode){ done(); return; }
   /* Freeze the measured height so the exit can collapse it and the rows below slide up
      instead of snapping. An auto height cannot be animated at all, and the usual
@@ -126,6 +129,7 @@ function leave(el,done){
      on an element that is about to be destroyed. */
   el.style.height=el.getBoundingClientRect().height+"px";
   el.classList.add("rowout");
+  if(slow)el.classList.add("slow");
   var fired=false;
   var go=function(){ if(fired)return; fired=true;
     el.removeEventListener("animationend",go);
@@ -137,7 +141,7 @@ function leave(el,done){
   el.addEventListener("animationend",go);
   /* animationend does not arrive if the element is hidden or the animation is
      cancelled, and a row that never disappears is worse than one that vanishes. */
-  setTimeout(go,DUR.comp+60);
+  setTimeout(go,(slow?DUR.flow:DUR.comp)+60);
 }
 
 /* Runs an entry animation exactly once per element, keyed by a name. The patcher keeps

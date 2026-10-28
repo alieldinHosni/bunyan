@@ -217,7 +217,9 @@ function vSheet(){
      done today ticked, or a run, a class, a sport. */
   else if(V.sheet==="another"){
     var asp=split(),doneT={};(S.sessions||[]).forEach(function(s){if(s.date===today()&&s.dayId)doneT[s.dayId]=1;});
-    b='<h2>'+t("Start another session")+'</h2><p class="sub" style="margin:2px 0 14px">'+esc(t("Pick what to train now. Today's first session stays as it is."))+'</p><div class="exl">';
+    var anyT=Object.keys(doneT).length||(S.sessions||[]).some(function(s){return s.date===today();});
+    b='<h2>'+t(anyT?"Start another session":"Add another session today")+'</h2><p class="sub" style="margin:2px 0 14px">'
+     +esc(t(anyT?"Pick what to train now. Today's first session stays as it is.":"For today only: pick what to train now. Today's planned session stays on today too. For every week, give a day a second session in your program."))+'</p><div class="exl">';
     (asp?asp.days:[]).filter(function(d){return d.ex.length;}).forEach(function(d){
       b+='<button class="exl-row'+(doneT[d.id]?' did':'')+'" data-startday="'+esc(d.id)+'">'
        +'<span class="exl-n" aria-hidden="true">'+(doneT[d.id]?'<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>':'+')+'</span>'

@@ -2326,7 +2326,9 @@ await test("Coach chat: the panel opens on three questions for where it was open
   /* Opened from Food, it offers food questions. */
   await page.tap('.cp [data-coachclose]');await pause(page,400);
   await page.evaluate(async()=>{(await import("/js/state.js")).S.chat=[];});
-  await pause(page,600);await tapTab(page,"food");await pause(page,300);await page.tap('#cfab .cfab');await pause(page,400);
+  await pause(page,600);
+  await tapTab(page,"food");await pause(page,300);
+  await page.tap('#cfab .cfab');await pause(page,400);
   eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["rest","eat","protein"],"Food's questions");
 });
 await test("Settings: every choice in sight, switches that say their state, a tap sets the value; no drop-down anywhere",async page=>{
@@ -3120,6 +3122,55 @@ await test("Coach memory: a fact that contradicts or updates one kept is asked a
   await page.tap('#cpanel .chat-x.live [data-ctxrep]');await pause(page,400);
   eq(await ev(page,"S.context.items.map(i=>i.text)"),["I work 12-hour days now"],"replaced: one statement, the newer");
 });
+await test("Chat motion: typing, bigger or smaller keeps the field, its text and the keyboard; a tap on send keeps them; the panel and its box ease with the keyboard",async page=>{
+  await openChat(page);
+  await page.tap('#chatq');await page.fill('#chatq','how much protein');
+  await page.evaluate(()=>{const q=document.getElementById("chatq");q.setSelectionRange(4,8);});
+  await page.tap('[data-coachsize="full"]');await pause(page,700);
+  eq(await page.evaluate(()=>{const q=document.activeElement;return [!!document.querySelector(".cp.full"),q&&q.id,q&&q.value,q&&q.selectionStart,q&&q.selectionEnd];}),
+    [true,"chatq","how much protein",4,8],"made bigger while typing: the same text, the caret where it was, still focused");
+  await page.tap('[data-coachsize="compact"]');await pause(page,700);
+  eq(await page.evaluate(()=>[!document.querySelector(".cp.full"),document.activeElement&&document.activeElement.id]),[true,"chatq"],"and smaller again, still typing");
+  const f0=await page.$eval('#chatq',e=>{const r=e.getBoundingClientRect();return r.top+r.height/2;});
+  await page.tap('.cp-send');await pause(page,40);
+  const g=await page.evaluate(()=>{const g=document.querySelector(".chat-ghost");if(!g)return null;const r=g.getBoundingClientRect();
+    return {z:+getComputedStyle(g).zIndex,pz:+getComputedStyle(document.getElementById("cpanel")).zIndex,mid:r.top+r.height/2,text:g.textContent.trim()};});
+  if(!g)throw new Error("no message flying from the box");
+  eq([g.z>g.pz,/how much protein/i.test(g.text)],[true,true],"the sent words fly over the panel, not behind it");
+  if(Math.abs(g.mid-f0)>60)throw new Error("it does not leave from the box: "+g.mid+" vs "+f0);
+  await pause(page,900);
+  eq(await page.evaluate(()=>[!!document.querySelector(".chat-ghost"),getComputedStyle([...document.querySelectorAll("#cpB .chat-q")].pop()).visibility]),[false,"visible"],"and lands: its place in the conversation shows it");
+  eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,document.getElementById("chatq").value]),["chatq",""],"sent: the field keeps the focus (the keyboard stays), emptied");
+  const tr=await page.evaluate(()=>[getComputedStyle(document.getElementById("cpanel")).transitionProperty,getComputedStyle(document.querySelector("#cpanel .cp")).transitionProperty]);
+  if(!/top/.test(tr[0])||!/height/.test(tr[0])||!/max-height/.test(tr[1]))throw new Error("transitions: "+tr);
+},{prefs:{anim:true}});
+await test("Workout motion, with motion on: the RPE card holds the chosen number, then plays out while the cards below rise; Next exercise arrives, it does not pop in",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.rpe="every";});
+  await startWorkout(page);
+  const sets=await ev(page,"S.active.entries[0].planned.sets||3");
+  for(let k=0;k<sets;k++){await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+    if(k<sets-1){const r=await page.$('.rpeask [data-rpeset$=":7"]');if(r){await r.tap();await pause(page,1000);}}}
+  eq(!!(await page.$('.rpeask')),true,"asked after the last set");
+  const before=await page.$eval('[data-nextex]',e=>e.getBoundingClientRect().top);
+  await page.tap('.rpeask [data-rpeset$=":8"]');await pause(page,80);
+  eq(await page.$eval('.rpeask [data-rpeset$=":8"]',e=>e.classList.contains("on")),true,"the chosen number is held");
+  await page.waitForSelector('.rpeask.rowout.slow',{timeout:1500});
+  const mid=await page.$eval('.rpeask',e=>getComputedStyle(e).animationDuration);
+  eq(mid,"0.4s","it plays out over the unhurried flow, not cut");
+  await pause(page,900);
+  eq(!!(await page.$('.rpeask')),false,"then it is gone");
+  const after=await page.$eval('[data-nextex]',e=>e.getBoundingClientRect().top);
+  if(!(after<before))throw new Error("Next exercise did not rise into its place: "+before+" → "+after);
+  eq(await page.$eval('[data-nextex]',e=>[e.getAttribute("data-k"),e.hasAttribute("data-anim"),getComputedStyle(e).animationName]),["lognext",true,"cardIn"],"Next exercise arrives as a card of its own");
+  /* The rest, put away: it plays out where it was; nothing is left behind. */
+  if(!(await page.$('.sess [data-k="rest"]')))throw new Error("no rest to put away");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.restEnd=Date.now()+300;});
+  await page.waitForSelector('.sess [data-k="rest"] [data-rest="skip"]',{timeout:5000});
+  await page.tap('.sess [data-k="rest"] [data-rest="skip"]');await pause(page,60);
+  eq(await page.evaluate(()=>{const g=document.querySelector('.sess .rb.ghost');return g?[g.classList.contains("rowout"),g.inert,!!g.querySelector("[id]")]:null;}),[true,true,false],"the rest card plays out, inert, its ids gone");
+  await pause(page,900);
+  eq(await page.evaluate(()=>document.querySelectorAll('.sess .rb').length),0,"then it is gone, and no rest is left");
+},{prefs:{anim:true}});
 await test("Workout fixes: the chat finishes the exercise on screen; RPE is asked after a set, about it; the set being done can be deleted, then Next exercise; today's exercises reorder by grip",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.rpe="every";});
   await startWorkout(page);
@@ -3356,15 +3407,20 @@ await test("Coach, a rough day: a report gets one question back; food goes to th
   await agSay(page,"I had a bad day, didn't commit to the diet, I need to amend it for today");
   let r=await last();
   eq([r.lead,r.acts],["Sounds like today got away from you. Want me to work out what's left in the week, or just log it and move on?",["Work out the week","Just log it"]],"one question, two ways on");
-  /* A day over target by 1,100 kcal: spread over the days left, inside the limits. */
-  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,U=await import("/js/util.js");
-    S.days[U.today()]={water:0,steps:0,meals:{Lunch:{items:[{n:"x",kcal:3600,p:150,c:400,f:150}]}}};});
+  /* A day over target, by what the days left can take (300 kcal each, inside the 15% a
+     day limit): spread over them. Sized to the day the test runs: on a Wednesday of a
+     Saturday week only two days are left, and a fixed 1,100 kcal was "still fine". */
+  const left=await page.evaluate(async()=>{const U=await import("/js/util.js"),W=await import("/js/engine/schedule.js");const n=U.today();return W.weekDates(n).filter(d=>d>n).length;});
+  await page.evaluate(async over=>{const S=(await import("/js/state.js")).S,U=await import("/js/util.js");
+    S.days[U.today()]={water:0,steps:0,meals:{Lunch:{items:[{n:"x",kcal:2500+over,p:150,c:400,f:150}]}}};},Math.min(1100,Math.max(1,left)*300));
   await page.tap('#cpanel .chat-acts button');await pause(page,500);
   r=await last();
+  if(!left){if(!/A new one starts tomorrow/.test(r.lead))throw new Error("week's last day: "+r.lead);}
+  else{
   if(!/kcal a day less, protein unchanged/.test(r.lead))throw new Error("week: "+r.lead);
   if(/tomorrow|make up|burn|fast|skip/i.test(r.lead))throw new Error("a stricter tomorrow: "+r.lead);
   const days=[...r.text.matchAll(/: ([\d,]+) kcal/g)].map(m=>+m[1].replace(",",""));
-  if(!days.length||days.some(k=>k<2500*0.85-10))throw new Error("a day moved more than 15%: "+days);
+  if(!days.length||days.some(k=>k<2500*0.85-10))throw new Error("a day moved more than 15%: "+days);}
   eq(await ev(page,"S.goals.kcal"),2500,"the app's targets are not changed");
   /* Far over: the week is still fine, said plainly. */
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,U=await import("/js/util.js");S.days[U.today()].meals.Lunch.items[0].kcal=9000;});

@@ -59,7 +59,7 @@ var KEEP=500;
 /* The suggestions: what each asks, as the person would ask it. */
 var ASK={
   today:"What do I train today?",weights:"How much should I lift?",eat:"What should I eat now?",
-  plateau:"Why isn't my lift going up?",inbody:"What does my InBody say?",loadlog:"How are weights logged?",week:"How was my week?",busy:"This machine is taken",track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
+  plateau:"Why isn't my lift going up?",inbody:"What does my InBody say?",twice:"Can I train twice in a day?",loadlog:"How are weights logged?",week:"How was my week?",busy:"This machine is taken",track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
   calories:"Why are my calories set like this?",sore:"I'm sore or tired",missed:"I'm short on time today",
   balance:"Is my program balanced?",strong:"How strong am I?",goal:"Should I change my goal?",
   plan:"Build me a new plan",water:"How much water should I drink?",steps:"How are my steps and cardio?",
@@ -69,7 +69,7 @@ var ASK={
   letgo:"Just move on",lowday:"Adjust today for a low day",facts:"What have I told you?"};
 /* What to offer next, after each kind of answer. */
 var NEXT={
-  plateau:["strong","weights","sore"],inbody:["weight","calories","goal"],loadlog:["weights","strong","today"],week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
+  plateau:["strong","weights","sore"],inbody:["weight","calories","goal"],twice:["today","sore","missed"],loadlog:["weights","strong","today"],week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
   track:["weight","strong","balance"],weight:["calories","eat","goal"],protein:["eat","calories","track"],
   calories:["protein","weight","goal"],sore:["today","missed","balance"],missed:["today","weights","track"],
   balance:["today","strong","plan"],strong:["weights","track","balance"],goal:["calories","plan","weight"],
@@ -327,6 +327,14 @@ function aInBody(a){
   if(c.ibmr){var mine=bmr();n(a,fill(t(mine?"Its BMR, {i} kcal, is the device's own estimate. Your targets use Mifflin-St Jeor ({m} kcal), the same method for everyone.":"Its BMR, {i} kcal, is the device's own estimate. Your targets use Mifflin-St Jeor, the same method for everyone."),{i:fmtN(c.ibmr),m:fmtN(Math.round(mine||0))}));}
   n(a,t("Bioimpedance reads body water: compare tests taken at the same time of day, before eating or training."));
   return act(a,t("Add an InBody result"),{"data-sheet":"inbody"});}
+/* Two sessions in one day (owner, 28 Oct): the two ways the app has, each a tap away. */
+function aTwice(a){
+  p(a,t("Yes, two ways."));
+  p(a,t("Today only: on Training, tap Add another session today and pick what to train. Today's planned session stays on today too."));
+  p(a,t("Every week: in your program, set the schedule By weekday and give two days the same weekday. Both are trained that day, the upper one first."));
+  if(!S.active)act(a,t("Add another session today"),{"data-another":"1"});
+  var sp=split();if(sp)act(a,t("Set it in my program"),{"data-editsplit":sp.id});
+  return a;}
 function aPlateau(a,q){
   var named=namedExercises(q),name=named.length?named[0].name:null,lifts=[];
   split().days.forEach(function(d){d.ex.forEach(function(e){if(!isActivity(e.name)&&lifts.indexOf(e.name)<0)lifts.push(e.name);});});
@@ -1142,7 +1150,7 @@ function aReassess(a){
 
 /* An answer, with what the person told the coach that bears on it said back. */
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
-var ANSWER={plateau:aPlateau,inbody:aInBody,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
+var ANSWER={plateau:aPlateau,inbody:aInBody,twice:aTwice,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
   help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
@@ -1360,9 +1368,11 @@ function askOne(q,id,lang){
         if(sg)return {q:text,id:"exsuggest",at:Date.now(),b:[],acts:sg.acts||[],ag:sg,lang:L};}}
     if(!id&&iid!=="scope"&&iid!=="situation"&&iid!=="remember"){
       var kn=null;try{kn=knowFor(text,iid,it,prev);}catch(e){kn=null;}
-      /* A question no rule knew, met only by a textbook passage: with the smart coach on,
-         it answers instead, from the same passages (js/engine/smart.js). */
-      if(kn&&iid==="unknown"&&!id&&S.onboarded&&isReady())kn=null;
+      /* A question met only loosely, by a textbook passage (no rule knew it, or the rule
+         it touched is not what it asks): with the smart coach on, it answers instead, from
+         the same passages and the person's own figures (js/engine/smart.js). Owner, 28 Oct:
+         "How to create two sessions then?" got a passage about session 1 of a phase. */
+      if(kn&&!kn.deeper&&!id&&S.onboarded&&isReady()){kn=null;iid="unknown";}
       if(kn){iid="know";it.know=kn.k;it.kq=kn.kq;it.deeper=!!kn.deeper;}}
     if(ACTION_IDS.indexOf(iid)>=0&&iid!=="reassess"&&S.onboarded){
       var ag=null;try{ag=planAction(iid,text,it);}catch(e){ag=null;}
@@ -1412,7 +1422,7 @@ function findMsg(at){return (S.chat||[]).filter(function(x){return x&&x.at===+at
    apart, and its buttons last. Nothing is coloured by who said it; the accent is kept
    for the one button an answer leads to. */
 /* What each answer is about, and its glyph (js/ui/glyphs.js). */
-var TOPIC={plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
+var TOPIC={plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],twice:["Two sessions in a day","dumbbell"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
   track:["How you're doing","bars"],weight:["Weight trend","scale"],protein:["Protein","shaker"],calories:["Calories","flame"],
   sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
   goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],

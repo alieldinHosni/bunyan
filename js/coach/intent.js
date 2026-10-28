@@ -66,6 +66,12 @@ var INTENTS=[
     "on track","how am i doing","how doing","my progress","progress","results","improving","getting better","summary","overview",
     "this week",
     "ماشي صح","عامل|ماشي ايه|اي","تقدمي|التقدم","اتحسنت|بتحسن","نتايج|نتائج|النتيجه","ملخص","الاسبوع ده|الاسبوع"]],
+  /* Two sessions in one day (owner, 28 Oct): how, for today or every week (chat.js aTwice). */
+  ["twice",[
+    "two|2 sessions|workouts|trainings a|per|in day","two|2 sessions|workouts|trainings in one|single|same day","twice a|per day","train|workout twice",
+    "double session|sessions|day","second session|workout today|day","another session|workout today","add|create|make another|second session|workout",
+    "add|create|make two sessions|workouts",
+    "مرتين في اليوم","مرتين اليوم","تمرينتين|تمرينين في اليوم","سيشنين|حصتين","تمرين تاني النهارده","سيشن تاني|تانيه"]],
   /* An InBody (bioimpedance) result: read by chat.js aInBody from the body entries. */
   ["inbody",[
     "inbody|in-body","in body scan|test|result|sheet","body composition scan|test|result","my scan|scan result","skeletal muscle mass|smm","visceral fat",

@@ -62,6 +62,9 @@ function snapshot(){
   var p=S.profile||{},g=S.goals||{},out={name:(curProfile()||{}).name||""};
   out.goal=t(goalOf(p.goal).label);
   if(g.kcal)out.targets=g.kcal+" kcal, "+(g.p||0)+" g protein, "+(g.c||0)+" g carbs, "+(g.f||0)+" g fat a day";
+  try{var sp0=split(),WD=["","Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+    if(sp0)out.program=planName(sp0.name||"")+", "+(sp0.schedule==="week"?"by weekday":"in rotation")+": "+sp0.days.map(function(d){
+      return planName(d.name)+(sp0.schedule==="week"&&(d.wd||[]).length?" ("+d.wd.map(function(n){return WD[n];}).join(", ")+")":"")+" "+d.ex.length+" exercises";}).join("; ");}catch(e){}
   try{var sp=split(),pl=sp&&planOn(sp,today());
     if(pl)out.today=pl.kind==="done"?"trained today ("+planName(pl.name||"")+")":pl.rest?"rest day":pl.day?planName(pl.day.name)+": "+pl.day.ex.map(function(e){return exName(e.name)+" "+e.sets+"×"+e.lo+"-"+e.hi;}).join(", "):"";}catch(e){}
   if(S.active){var a=S.active,e=a.entries[V.logIdx||0];

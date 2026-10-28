@@ -103,7 +103,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --m-sheet:380ms; --m-screen:380ms; --m-data:480ms; --m-reveal:600ms; --m-fade:260ms;
   /* A change of tab and the coach panel: a touch slower than a screen, with a little
      spring at the end so they land rather than stop. --m-kb follows the iPhone keyboard. */
-  --m-tab:460ms; --m-panel:420ms; --m-kb:340ms;
+  --m-tab:460ms; --m-panel:420ms; --m-kb:380ms; --m-close:340ms;
   --e-standard:cubic-bezier(0.2, 0, 0, 1); --e-decel:cubic-bezier(0.05, 0.7, 0.1, 1);
   --e-accel:cubic-bezier(0.3, 0, 0.8, 0.15); --e-spring:cubic-bezier(.2,.9,.3,1.06);
   --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
@@ -905,9 +905,9 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
 @keyframes veilIn{from{background-color:transparent}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){
-  #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh,.wsr.fresh .wtick,.sess .log.ok,.rb{animation:none}}
+  #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh,.wsr.fresh .wtick,.sess .log.ok,.rb,.sess [data-k][data-anim]{animation:none}}
 body.noanim #app,body.noanim .sheetbox,body.noanim .sheet,
-body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wtick,body.noanim .sess .log.ok,body.noanim .rb{animation:none}
+body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wtick,body.noanim .sess .log.ok,body.noanim .rb,body.noanim .sess [data-k][data-anim]{animation:none}
 /* cursor:pointer is not decoration here. iOS Safari only delivers click events from
    a plain div when it looks interactive, which is why tapping the dimmed area above
    a sheet did nothing on a phone while working on a desktop. */
@@ -1649,6 +1649,13 @@ body.noanim .skel{animation:none}
   100%{opacity:0;transform:translateY(-4px);height:0;
        margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;border-top-width:0;border-bottom-width:0}}
 .rowout{animation:rowOut var(--m-comp) var(--e-standard) forwards;pointer-events:none;overflow:hidden}
+/* A card leaving a screen in use (the RPE question, answered): the slower flow, so the
+   eye sees it go and the cards below rise into its place (owner, 28 Oct). */
+.rowout.slow{animation-duration:var(--m-flow)}
+/* The workout's cards arriving (render.js marks .sess [data-k]): the rest, the RPE
+   question, Next exercise, a new set row. Up a little and in, unhurried, settling. */
+@keyframes cardIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+.sess [data-k][data-anim]:not(input):not(.rowout){animation:cardIn var(--m-flow) var(--e-decel) both}
 
 /* The rest screen is a distinct mode, so it gets a real entrance. */
 @keyframes restIn{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:none}}
@@ -1704,6 +1711,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 :root.reduced .wsr.fresh .wtick,
 :root.reduced .sess .log.ok,
 :root.reduced .rb,
+:root.reduced .sess [data-k][data-anim],
 :root.reduced .err{animation:none}
 :root.reduced .skel{animation:none}
 :root.reduced .ss-clock i{animation:none}
@@ -2110,7 +2118,8 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .bwd button{min-height:34px;padding:0;border-radius:10px;border:1px solid var(--border);background:var(--surface);
   color:var(--sub);font-size:11.5px;font-weight:700}
 .bwd button.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:transparent;color:var(--onAccent)}
-.bwd button.taken{opacity:.35}
+/* A weekday another day has: still open to this one too, as a second session that day. */
+.bwd button.taken{border-style:dashed;color:var(--dim)}
 /* A weekday this day shares with another: two sessions that day. */
 .bwd button.on.two{box-shadow:inset 0 0 0 2px var(--gold)}
 .wkoffer-l{margin:-4px 0 12px;font-weight:600;color:var(--text);font-size:14px;line-height:1.6}
@@ -3862,7 +3871,9 @@ body.wkflat #app{--gutter:20px}
 .sc-h .sc-cue{font-style:italic}
 .sc-rpe{display:grid;gap:var(--s2);text-align:center}
 /* Asked after a set, about it: a small card of its own above the next set. */
-.sess .rpeask{padding:var(--s3);border-radius:var(--r4);animation:wkIn var(--m-comp) var(--e-decel)}
+/* Its entrance is the workout cards' own (cardIn, .sess [data-k]); an animation here
+   would also outrank its exit (.rowout). */
+.sess .rpeask{padding:var(--s3);border-radius:var(--r4)}
 .sc-rpe-c{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .sc-rpe-c button{min-height:var(--hit);border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
   color:var(--text);font-weight:700;font-size:15px}
@@ -4289,6 +4300,12 @@ body.wkflat #app{--gutter:20px}
 :root:not(.tch) .thero2-swap:active,.thero2-swap.tapd{transform:scale(.95)}
 .thero2-swap svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .thero2:has(.thero2-swap) .thero2-t{padding-inline-end:86px}
+/* Another session today (train.js ANOTHER): a quiet second action under the card's own. */
+.thero2-add{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;margin-top:var(--s2);
+  border-radius:var(--rpill);border:1px dashed var(--hair-hi);background:transparent;color:var(--sub);font-size:14px;font-weight:700;
+  transition:transform var(--m-press) var(--e-standard),color var(--m-press) var(--e-standard)}
+.thero2-add span{font-size:18px;line-height:1;color:var(--accentHi)}
+:root:not(.tch) .thero2-add:active,.thero2-add.tapd{transform:scale(.97)}
 .trow.on{background:rgba(var(--accent-rgb),.08)}
 .trow.on .trow-n{color:var(--accentHi)}
 /* ---- Exercise library (train.js vLibrary) and exercise sheet ------------------------ */
@@ -5008,7 +5025,10 @@ body.kb .chat-form,body:has(nav.dhid) .chat-form{bottom:max(10px,env(safe-area-i
 @keyframes chatIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes chatPart{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .chat-q.pop{animation:chatIn .48s var(--e-decel) both;transform-origin:100% 100%}
-.chat-ghost{z-index:60;pointer-events:none;will-change:transform;align-self:auto}
+/* Over the coach's panel (#cpanel, 95), under the sheets (100): at 60 the flying question
+   went behind the panel, and in the floating coach it was never seen. */
+.chat-ghost{z-index:97;pointer-events:none;will-change:transform;align-self:auto;transform-origin:0 50%}
+[dir="rtl"] .chat-ghost{transform-origin:100% 50%}
 .chat-ghost p{margin:0}
 /* The opening screen: the coach as a lit orb, breathing. */
 .chat-orb{position:relative;display:grid;place-items:center;width:78px;height:78px;margin:14px auto 16px;border-radius:50%;color:var(--onAccent);
@@ -5244,27 +5264,36 @@ body.cfab-on nav .dock{margin-right:calc(var(--dock-h) + var(--s2));gap:calc(var
      panel glides with it, at the keyboard's own pace, instead of jumping. */
   transition:top var(--m-kb) var(--e-ios),height var(--m-kb) var(--e-ios),padding-bottom var(--m-kb) var(--e-ios)}
 #cpanel[hidden]{display:none}
-/* On the keyboard while typing, and for a moment after it goes (body.kbleave): a tap on
-   send or an answer's button blurs the field first, and moving the panel then would put
-   something else under the finger. */
-body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
+/* On the keyboard while typing. A tap on the panel's buttons keeps the field focused
+   (coachfab.js bindPanel), so when the keyboard goes the panel follows it down to its
+   place above the dock in one glide, not in two steps. */
+body.kb #cpanel{padding-bottom:10px}
 .cp-veil{position:absolute;inset:0;width:100%;padding:0;border:0;border-radius:0;background:rgba(var(--bg-rgb),.42);cursor:default}
 .cp{position:relative;width:100%;max-width:420px;display:flex;flex-direction:column;min-height:0;
   max-height:min(70vh,calc(var(--vvh,100dvh) - var(--navh) - 72px));max-height:min(70dvh,calc(var(--vvh,100dvh) - var(--navh) - 72px));
   border-radius:var(--r5);border:1px solid var(--card-edge);color:var(--text);
   background:var(--raised);box-shadow:inset 0 1px 0 var(--glass-hi),var(--shadow-float);outline:none;
-  transform-origin:calc(100% - 32px) calc(100% + var(--navh))}
+  transform-origin:calc(100% - 32px) calc(100% + var(--navh));
+  /* Its height is held to what the keyboard leaves, so it eases with the keyboard too,
+     not just the panel around it (owner, 28 Oct: compact, the box snapped). */
+  transition:max-height var(--m-kb) var(--e-ios)}
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
   .cp{background:rgba(var(--bg-rgb),.86);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%)}}
 .cp.full{position:fixed;left:8px;right:8px;width:auto;max-width:none;max-height:none;
   transition:top var(--m-kb) var(--e-ios),height var(--m-kb) var(--e-ios);
   top:calc(var(--vvt,0px) + max(8px,env(safe-area-inset-top)));
   height:calc(var(--vvh,100dvh) - max(8px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))}
+/* With a conversation the compact box keeps one height, all of what it may have, and the
+   conversation scrolls inside it: a question added or an answer arriving moves nothing
+   (owner, 28 Oct: it grew in jumps as each part came in, and the sent question flew into
+   a box that was still moving). Empty, it is only as tall as the welcome. */
+.cp.has-log:not(.full){height:min(70vh,calc(var(--vvh,100dvh) - var(--navh) - 72px));height:min(70dvh,calc(var(--vvh,100dvh) - var(--navh) - 72px));
+  transition:max-height var(--m-kb) var(--e-ios),height var(--m-kb) var(--e-ios)}
 #cpanel.opening .cp{animation:cpIn var(--m-panel) var(--e-spring)}
 #cpanel.opening .cp-veil{animation:fadeIn var(--m-comp) var(--e-standard)}
 /* Resized (js/ui/coachfab.js flip): the box itself glides; its contents return once it has. */
-#cpanel.closing .cp{animation:cpOut 260ms var(--e-accel) forwards}
-#cpanel.closing .cp-veil{animation:fadeIn 260ms var(--e-standard) reverse forwards}
+#cpanel.closing .cp{animation:cpOut var(--m-close) var(--e-accel) forwards}
+#cpanel.closing .cp-veil{animation:fadeIn var(--m-close) var(--e-standard) reverse forwards}
 @keyframes cpIn{from{opacity:0;transform:scale(.12);border-radius:50%}}
 @keyframes cpOut{to{opacity:0;transform:scale(.12)}}
 .cp-h{display:flex;align-items:center;gap:var(--s2);padding:10px 8px 8px var(--s4);border-bottom:1px solid var(--hair)}
@@ -5335,6 +5364,7 @@ body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
 .cp-send .gl{width:20px;height:20px}
 @media (prefers-reduced-motion:reduce){.cfab,#cpanel .cp,#cpanel .cp-veil{animation:none!important}}
 body.noanim .cfab,body.noanim #cpanel .cp,body.noanim #cpanel .cp-veil,:root.reduced .cfab,:root.reduced #cpanel .cp,:root.reduced #cpanel .cp-veil{animation:none!important}
+body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced #cpanel .cp{transition:none!important}
 /* ---- Glass, everywhere -----------------------------------------------------------
    The owner's references: frosted glass over a blended, drawn ground. Cards, buttons,
    chips, fields, the segmented control, the round header buttons and the dock are

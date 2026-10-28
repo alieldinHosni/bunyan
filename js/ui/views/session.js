@@ -280,12 +280,16 @@ function r2(x){return Math.round(x*100)/100;}
    set and the question goes. Not asked again once answered or once another set is in. */
 function vRpeAsk(e,workN){
   if(S.prefs.rpe==="off")return "";
-  var i=e.sets.length-1,x=e.sets[i];if(!x||x.wu||x.rpe)return "";
+  var i=e.sets.length-1,x=e.sets[i];if(!x||x.wu)return "";
+  /* Answered: drawn on while it plays out (V.rpeOut, handlers/session.js rpeset), the
+     chosen number held, so a render in the meantime (the rest clock) does not cut it. */
+  var out=V.rpeOut&&V.rpeOut.x===V.logIdx&&V.rpeOut.i===i?V.rpeOut:null;
+  if(x.rpe&&!out)return "";
   var k=e.sets.filter(function(s){return !s.wu;}).length;
-  if(!rpeWanted(k-1,workN))return "";
-  return '<section class="sc-rpe rpeask wglass" data-k="rpeask" role="group" aria-label="'+esc(t("How hard was set {n}?").replace("{n}",k))+' (RPE)">'
+  if(!out&&!rpeWanted(k-1,workN))return "";
+  return '<section class="sc-rpe rpeask wglass'+(out&&out.go?' rowout slow':'')+'" data-k="rpeask" role="group" aria-label="'+esc(t("How hard was set {n}?").replace("{n}",k))+' (RPE)">'
    +'<span class="val-k">'+esc(t("How hard was set {n}?").replace("{n}",k))+' · RPE</span><div class="sc-rpe-c">'
-   +[6,7,8,9,10].map(function(v){return '<button class="num" data-rpeset="'+i+':'+v+'">'+v+'</button>';}).join("")
+   +[6,7,8,9,10].map(function(v){return '<button class="num'+(out&&out.v===v?' on':'')+'" data-rpeset="'+i+':'+v+'"'+(out?' disabled':'')+'>'+v+'</button>';}).join("")
    +'</div></section>';}
 /* ---- the one primary action -------------------------------------------------------
    The check. It logs from the rest too; for a moment after, it says the set is logged
@@ -297,7 +301,8 @@ function vLogControl(e,row){
     +'<button class="undo" data-undolog="1">'+t("Undo")+'</button></div>';
   if(!row){
     var last=V.logIdx>=S.active.entries.length-1;
-    return '<button class="log" data-k="log" data-nextex="1"><span>'+t(last?"Finish workout":"Next exercise")+'</span>'
+    /* Its own key: a new button arriving, not the log button relabelled in place. */
+    return '<button class="log" data-k="lognext" data-nextex="1"><span>'+t(last?"Finish workout":"Next exercise")+'</span>'
      +'<span class="log-c" aria-hidden="true">'+IC.chev+'</span></button>';}
   return '<button class="log" data-k="log" data-logset="1" aria-label="'+(row.wu?t("Log warm-up"):t("Complete set")+' '+row.n)+'">'
    +'<span>'+(row.wu?t("Log warm-up"):fill(t("Log set {n}"),row.n))+'</span>'

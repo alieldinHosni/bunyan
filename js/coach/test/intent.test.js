@@ -6,7 +6,7 @@ var EN=[
   ["What should I train today?","today"],["what's my workout today","today"],["Which day is next?","today"],
   ["How much weight should I lift on bench?","weights"],["how heavy should I squat","weights"],["when do I add weight","weights"],
   ["What should I eat now?","eat"],["how many calories left today","eat"],["I'm hungry","eat"],
-  ["Am I on track?","track"],["How was my week?","week"],["why is my bench stuck?","plateau"],["what does my InBody say?","inbody"],["The barbell weight per hand?","loadlog"],["The barbell weight per hand, total, and is it including the barbell weight?","loadlog"],
+  ["Am I on track?","track"],["How was my week?","week"],["why is my bench stuck?","plateau"],["what does my InBody say?","inbody"],["Can I have two training sessions in a single day?","twice"],["How to create two sessions then? Can u help with that?","twice"],["add another session today","twice"],["The barbell weight per hand?","loadlog"],["The barbell weight per hand, total, and is it including the barbell weight?","loadlog"],
   ["When u calculate the volume, does that include the bar weight? And when I log weight is it per hand for the bar or total?","loadlog"],["is the bar counted in my volume","loadlog"],
   ["وزن البار محسوب في الفوليوم؟","loadlog"],["الدمبل بسجله لكل ايد ولا الاتنين مع بعض؟","loadlog"],["what dumbbell weight should I use","weights"],["include curls in push day","exadd"],["my squat has plateaued","plateau"],["weekly check-in","week"],["Am I improving?","track"],["how am I doing","track"],
   ["Why is my weight stuck?","weight"],["I'm not losing weight","weight"],["the scale hasn't moved","weight"],
@@ -31,6 +31,7 @@ var EN=[
   ["how many warm up sets","kwarm"],["how long should a workout be","kdur"],["how is my 1rm calculated","k1rm"],
   ["what's today","today"],["What have I told you?","facts"]];
 var AR=[
+  ["ينفع اتمرن مرتين في اليوم","twice"],["عايز سيشن تاني النهارده","twice"],
   ["اتمرن ايه النهارده؟","today"],["تمرين النهارده ايه","today"],["اشيل كام في البنش؟","weights"],["ازود الوزن امتى","weights"],
   ["اكل ايه دلوقتي","eat"],["فاضل كام سعرات","eat"],["انا جعان","eat"],["انا ماشي صح؟","track"],["عامل ايه الاسبوع ده","track"],
   ["وزني ثابت ليه","weight"],["الميزان مش بينزل","weight"],["محتاج بروتين قد ايه","protein"],["سعراتي ليه كده","calories"],
