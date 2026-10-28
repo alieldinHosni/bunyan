@@ -6,10 +6,9 @@
    you back exactly where you were: it lives in its own containers outside #app, so the
    screen under it is never rebuilt, and nothing in it touches the route.
 
-   Where it shows is decided here, once (fabShown): the roots of Training, Food, Progress
-   and Coach, and nowhere a launcher could cover something that matters — not over a
-   live workout or run (the workout opens it from its ⋯ menu instead), a sheet, the
-   assessment, a builder, a meal, or while the keyboard is up.
+   Where it shows is decided here, once (fabShown): wherever the dock is (owner, 28 Oct),
+   so not over a live workout or run (the workout opens it from its ⋯ menu instead), a
+   sheet, or while the keyboard is up.
 
    V.coach: null (closed), "compact" or "full". */
 import {t} from "../i18n/dict.js";
@@ -33,16 +32,16 @@ function where(){return S.active&&V.tab==="train"&&V.train!=="hub"?"workout":(SU
 
 /* ---- where the launcher may sit ------------------------------------------------------ */
 function fabShown(){
-  if(V.coach||V.sheet||V.assess||V.chat)return false;
-  /* The keyboard up hides it, but not the panel's own field's: closing while typing (a
-     tap in the panel keeps the field's focus, bindPanel) the field goes with the panel. */
+  if(V.coach||V.sheet||V.chat)return false;
+  /* The keyboard up hides it, as it hides the dock — but not the panel's own field's:
+     closing while typing (a tap in the panel keeps the field's focus, bindPanel), the
+     field goes with the panel. */
   if(typeof document!=="undefined"&&document.body.classList.contains("kb")){
     var ae=document.activeElement;if(!(ae&&ae.id==="chatq"))return false;}
-  if(V.tab==="train")return !S.run&&(!S.active||V.train==="hub")&&(V.train==="days"||V.train==="hub");
-  if(V.tab==="food")return !V.meal;
-  if(V.tab==="progress")return !V.phist;
-  if(V.tab==="coach")return !V.smeal&&!V.pslot&&!V.pimport&&(V.train==="days"||!V.train);
-  return false;}
+  /* Wherever the dock is, the coach is (owner, 28 Oct: "available anywhere the dock is
+     available"): only a live workout or run puts the dock away (render.js body.focus),
+     and there the workout's ⋯ menu opens the coach. */
+  return !(V.tab==="train"&&!V.assess&&((!!S.active&&V.train!=="hub")||(!!S.run&&!S.active)));}
 
 /* The coach's mark: a speech outline with the coach's whistle line, on the dock's grid. */
 var MARK='<svg class="gl" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5.5h16v10.5H11l-4.5 3.5V16H4z"/><path d="M8.5 10.75h7"/></svg>';
@@ -117,7 +116,10 @@ function syncCoach(){
      through the box's glide, and the two fought). Within the tap, so iOS keeps it up. */
   var q0=resized&&document.activeElement&&document.activeElement.id==="chatq"?document.activeElement:null;
   var typed=q0?{v:q0.value,s:q0.selectionStart,e:q0.selectionEnd}:null;
-  if(opening||resized)replace(pan,html);else patch(pan,html);
+  /* Bigger or smaller is the same panel changed in place, not rebuilt: the field is the
+     same element, so with the keyboard up it stays up the whole way and the box grows
+     from where it sits above the keyboard (owner, 28 Oct). */
+  if(opening)replace(pan,html);else patch(pan,html);
   pan.classList.toggle("opening",opening);
   if(r0)flip(pan.querySelector(".cp"),r0);
   pan.classList.remove("resized");

@@ -162,7 +162,10 @@ await test("an exercise leaves today's workout at once with Undo, or after askin
 await test("an exercise can be added to today's workout, at the end, with Undo",async page=>{
   await startWorkout(page);
   const n=await ev(page,"S.active.entries.length");
-  await page.tap('[data-addlive]');await pause(page,500);
+  if(await page.$('#app [data-addlive]'))throw new Error("Add exercise is under the sets again");
+  /* From today's list, the title's ⌄. */
+  await page.tap('[data-exlist]');await pause(page,400);
+  await page.tap('#sheet [data-addlive]');await pause(page,500);
   eq(await page.$eval('#sheet h2',e=>e.textContent),"Add exercise");
   const pick=await page.$eval('#sheet [data-pickex]',e=>e.getAttribute("data-pickex"));
   await page.tap('#sheet [data-pickex]');await pause(page);
@@ -3168,7 +3171,8 @@ await test("Workout motion, with motion on: the RPE card holds the chosen number
   for(let k=0;k<sets;k++){await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
     if(k<sets-1){const r=await page.$('.rpeask [data-rpeset$=":7"]');if(r){await r.tap();await pause(page,1000);}}}
   eq(!!(await page.$('.rpeask')),true,"asked after the last set");
-  const before=await page.$eval('[data-nextex]',e=>e.getBoundingClientRect().top);
+  await page.waitForSelector('[data-k="lognext"]',{timeout:5000});
+  const before=await page.$eval('[data-k="lognext"]',e=>e.getBoundingClientRect().top);
   await page.tap('.rpeask [data-rpeset$=":8"]');await pause(page,80);
   eq(await page.$eval('.rpeask [data-rpeset$=":8"]',e=>e.classList.contains("on")),true,"the chosen number is held");
   await page.waitForSelector('.rpeask.rowout.slow',{timeout:1500});
@@ -3176,9 +3180,10 @@ await test("Workout motion, with motion on: the RPE card holds the chosen number
   eq(mid,"0.4s","it plays out over the unhurried flow, not cut");
   await pause(page,900);
   eq(!!(await page.$('.rpeask')),false,"then it is gone");
-  const after=await page.$eval('[data-nextex]',e=>e.getBoundingClientRect().top);
+  const after=await page.$eval('[data-k="lognext"]',e=>e.getBoundingClientRect().top);
   if(!(after<before))throw new Error("Next exercise did not rise into its place: "+before+" → "+after);
-  eq(await page.$eval('[data-nextex]',e=>[e.getAttribute("data-k"),e.hasAttribute("data-anim"),getComputedStyle(e).animationName]),["lognext",true,"cardIn"],"Next exercise arrives as a card of its own");
+  eq(await page.$eval('[data-k="lognext"]',e=>[e.getAttribute("data-k"),e.hasAttribute("data-anim"),getComputedStyle(e).animationName]),["lognext",true,"cardIn"],"Next exercise arrives as a card of its own");
+  eq(await page.$$eval('#app .tools [data-nextex]',a=>a.length),0,"with the sets done, no Skip beside Next exercise");
   /* The rest, put away: it plays out where it was; nothing is left behind. */
   if(!(await page.$('.sess [data-k="rest"]')))throw new Error("no rest to put away");
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.restEnd=Date.now()+300;});
@@ -3904,7 +3909,7 @@ await test("Workout screen: a logged set's numbers can be corrected in place; a 
   eq(await ev(page,"S.active.entries[0].sets[0].r"),7,"corrected in place");
 },{prefs:{autorest:false}});
 /* ---- The floating Coach (js/ui/coachfab.js) ---- */
-await test("Floating Coach: on the tab roots, never over a workout, a sheet or the keyboard; opening it from a workout keeps every value; Escape closes it",async page=>{
+await test("Floating Coach: on every tab, never over a workout, a sheet or the keyboard; opening it from a workout keeps every value; Escape closes it",async page=>{
   const fab=()=>page.$$eval('#cfab .cfab',a=>a.length);
   for(const tab of ["train","food","progress","coach"]){await tapTab(page,tab);await pause(page,300);eq(await fab(),1,"on "+tab);}
   /* Docked beside the dock, in its band: it covers no content and nothing of the dock. */
@@ -3925,6 +3930,23 @@ await test("Floating Coach: on the tab roots, never over a workout, a sheet or t
   eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["busy","weights","sore"],"the workout's own questions: a machine taken first");
   await page.keyboard.press("Escape");await pause(page,500);
   eq(await ev(page,"[V.coach,V.logIdx,V.draft.w,S.active.entries[0].sets.length,document.getElementById('in_r').value]"),[null,...before,"11"],"closed, the workout as it was");
+});
+await test("Coach launcher wherever the dock is: a day, the program builder, a meal, the history, the profile; beside the dock, covering nothing; not over a live workout",async page=>{
+  const at=async(label,set)=>{
+    await page.evaluate(async src=>{const V=(await import("/js/ui/view.js")).V,S=(await import("/js/state.js")).S;(new Function("V","S",src))(V,S);(await import("/js/ui/render.js")).render();},set);
+    await pause(page,400);
+    const r=await page.evaluate(()=>{const nav=document.getElementById("nav"),d=document.querySelector("nav .dock").getBoundingClientRect(),f=document.querySelector("#cfab .cfab");
+      const dock=getComputedStyle(nav).visibility==="visible";const fr=f&&f.getBoundingClientRect();
+      return {dock,fab:!!f,beside:!!fr&&Math.abs(fr.bottom-d.bottom)<2&&fr.left>=d.right-1};});
+    eq([r.dock,r.fab,r.beside],[true,true,true],label+": the dock and the coach beside it");};
+  const day=await page.evaluate(async()=>(await import("/js/state.js")).split().days[0].id);
+  await at("a day of the plan",'V.tab="train";V.train="day";V.dayId='+JSON.stringify(day)+';');
+  await at("the program builder",'V.tab="coach";V.train="builder";V.previewId=null;');
+  await at("a meal",'V.tab="food";V.train="days";V.meal="Lunch";');
+  await at("the history",'V.tab="progress";V.meal=null;V.phist=true;');
+  await at("the profile",'V.tab="profile";V.phist=false;');
+  await startWorkout(page);
+  eq(await page.$$eval('#cfab .cfab',a=>a.length),0,"not over a live workout, where the dock is away too");
 });
 await test("Layout: scrolled to the end, every screen's content ends above the dock, and the Coach launcher covers no card on any of them",async page=>{
   for(const w of [390,320])for(const lang of ["en","ar"]){

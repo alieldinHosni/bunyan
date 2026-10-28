@@ -2542,6 +2542,8 @@ with an unrelated passage; and the two-sessions option could not be found.
 
 ## Audit, 28 Oct — branch session/polish
 
+CACHE `bunyan-v179`.
+
 Owner, 28 Oct: "look for any enhancement, bugs … UI, interface, design, UX, CSS, functionality,
 efficiency … fix them and merge". A crawl of every tab, page under them and sheet, English and
 Arabic, at 390 and 320 wide (errors, sideways overflow, English left in Arabic, small targets), the
@@ -2558,3 +2560,20 @@ assessment end to end at 320 in both languages, and full-page screenshots read b
 - **Assessment**: a figure out of range said "Enter your age, height and weight" with all three
   entered; it now names the figure and its range (assess.js youWhy; weight in the person's unit).
 - Test: regression "Audit: …".
+## The coach wherever the dock is; bigger with the keyboard up, in place — branch session/coach-everywhere
+
+CACHE `bunyan-v178`. Owner, 28 Oct: "I need the coach icon available anywhere the dock is
+available"; and minimised with the keyboard up, Maximise should grow the chat from its bottom
+without the keyboard closing.
+- **fabShown** (coachfab.js): the launcher is wherever the dock is: every tab and every page under
+  them (a day, the builder, a meal, the history, the profile, the assessment). Not over a live workout
+  or run (the dock is away there too; the workout's header opens the coach), a sheet, the full chat
+  page, or the keyboard (other than the panel's own field). It sits in the dock's band, beside it, and
+  the dock makes room (cfab-on), so it covers no content.
+- **Bigger or smaller is patched, not rebuilt**: the field stays the same element, so the keyboard is
+  never touched and the box grows from where it sits above the keyboard (flip from its old rectangle).
+- Tests: regression "Coach launcher wherever the dock is: …"; "Floating Coach: on every tab, …".
+- **Under the sets, no Add exercise** (owner, 28 Oct, screenshot: "makes no sense to be here"): adding
+  one is in today's list (the title's ⌄, "Add an exercise"). And **no Skip once the sets are done**: the
+  big button is Next exercise then, and Skip beside it was the same thing twice. Skip shows only while
+  the exercise has sets still to do.
