@@ -161,8 +161,12 @@ function syncViewport(){
   var r=document.documentElement.style,ih=window.innerHeight,h=vv.height;
   /* While the keyboard is moving the way it was predicted to (kbPredict), a reading
      from before it moved is not let pull the panel back: iOS reports the new size only
-     once the keyboard has finished, and an early scroll event still has the old one. */
-  if(Date.now()<KB.until&&(KB.dir>0?h>ih-100:h<ih-100))return;
+     once the keyboard has finished, and an early scroll event still has the old one.
+     Going down, nothing it says in between is taken (owner, 28 Oct: Done on the keyboard
+     and the panel bounced): its sizes on the way, and the page's offset still held up
+     until the very end, each pulled the panel back up mid-glide. It goes to the whole
+     screen once, and the reading after the keyboard has gone settles it. */
+  if(Date.now()<KB.until&&(KB.dir<0||h>ih-100))return;
   if(ih-h>120)KB.h=ih-h;
   r.setProperty("--vvh",Math.round(h)+"px");
   r.setProperty("--vvt",Math.round(vv.offsetTop)+"px");}
@@ -173,11 +177,17 @@ function syncViewport(){
    the keyboard will leave, and losing it to the whole screen, at that moment: the panel
    glides (its own transition, --m-kb) alongside the keyboard instead of after it. The
    real reading arrives as it finishes and takes over. */
-var KB={h:0,dir:0,until:0};
+var KB={h:0,dir:0,until:0,t:0};
 function kbPredict(up){
   var r=document.documentElement.style,ih=window.innerHeight;
   if(up&&!KB.h)return;
   KB.dir=up?1:-1;KB.until=Date.now()+800;
+  /* Going down, the panel's room above the dock comes back in the same instant as the
+     screen it fills (index.html body.kbdown), not 60ms later when the keyboard flag
+     drops: two moves started apart made the glide wobble. */
+  var bd=document.body;clearTimeout(KB.t);
+  if(up)bd.classList.remove("kbdown");
+  else{bd.classList.add("kbdown");KB.t=setTimeout(function(){bd.classList.remove("kbdown");},900);}
   r.setProperty("--vvh",Math.round(up?ih-KB.h:ih)+"px");
   if(!up)r.setProperty("--vvt","0px");
   /* Should it never move (a hardware keyboard), the reading wins after the window. */

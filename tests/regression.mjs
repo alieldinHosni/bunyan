@@ -3177,6 +3177,38 @@ await test("Chat motion: typing, bigger or smaller keeps the field, its text and
   const tr=await page.evaluate(()=>[getComputedStyle(document.getElementById("cpanel")).transitionProperty,getComputedStyle(document.querySelector("#cpanel .cp")).transitionProperty]);
   if(!/top/.test(tr[0])||!/height/.test(tr[0])||!/max-height/.test(tr[1]))throw new Error("transitions: "+tr);
 },{prefs:{anim:true}});
+await test("Chat, iPhone keyboard closed with Done: the panel glides once to its place, no bounce, whatever iOS reports on the way",async page=>{
+  const vv=()=>page.evaluate(()=>[getComputedStyle(document.documentElement).getPropertyValue("--vvh").trim(),getComputedStyle(document.documentElement).getPropertyValue("--vvt").trim()]);
+  const ih=await page.evaluate(()=>innerHeight);
+  await openChat(page);
+  await page.evaluate(async()=>{const c=await import("/js/ui/views/chat.js");document.getElementById("chatq").value="how much protein";});
+  await page.press('#chatq','Enter');await pause(page,500);
+  /* The keyboard up: iOS says what it leaves once it has finished. */
+  await page.tap('#chatq');await pause(page,100);
+  await page.evaluate(h=>{const v=window.visualViewport;v._h=h;v._t=0;v.dispatchEvent(new Event("resize"));},ih-300);await pause(page,600);
+  eq((await vv())[0],(ih-300)+"px","up: the panel above the keyboard");
+  /* Done: the field lets go, and iOS reports its way down, the page still offset. */
+  const samples=[];
+  await page.evaluate(()=>{window.__s=[];const cp=document.querySelector("#cpanel .cp");const t0=performance.now();
+    (function f(){const r=cp.getBoundingClientRect();window.__s.push([Math.round(performance.now()-t0),Math.round(r.top),Math.round(r.bottom)]);if(performance.now()-t0<1100)requestAnimationFrame(f);})();
+    document.getElementById("chatq").blur();});
+  for(const [h,t,ms] of [[ih-200,40,90],[ih-90,60,120],[ih-20,30,120]]){await pause(page,ms);
+    await page.evaluate(([h,t])=>{const v=window.visualViewport;v._h=h;v._t=t;v.dispatchEvent(new Event("scroll"));v.dispatchEvent(new Event("resize"));},[h,t]);}
+  eq(await vv(),[ih+"px","0px"],"down: the whole screen at once, nothing in between taken");
+  await pause(page,900);
+  await page.evaluate(h=>{const v=window.visualViewport;v._h=h;v._t=0;v.dispatchEvent(new Event("resize"));},ih);await pause(page,200);
+  const s2=await page.evaluate(()=>window.__s);
+  /* One way only: the bottom edge moves down and never back up; the top never turns. */
+  const turns=k=>{let dir=0,n=0;for(let i=1;i<s2.length;i++){const d=s2[i][k]-s2[i-1][k];if(Math.abs(d)<1)continue;const sg=Math.sign(d);if(dir&&sg!==dir)n++;dir=sg;}return n;};
+  eq([turns(1),turns(2)],[0,0],"no bounce: "+JSON.stringify(s2.filter((x,i)=>i%6===0)));
+  const last=s2[s2.length-1],first=s2[0];
+  if(!(last[2]>first[2]+100))throw new Error("it did not move down to its place: "+JSON.stringify([first,last]));
+},{prefs:{anim:true},ua:"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
+  init:()=>{const real=window.visualViewport;const fake=new EventTarget();fake._h=null;fake._t=0;
+    Object.defineProperty(fake,"height",{get(){return fake._h==null?innerHeight:fake._h;}});
+    Object.defineProperty(fake,"offsetTop",{get(){return fake._t;}});
+    Object.defineProperty(fake,"width",{get(){return innerWidth;}});
+    Object.defineProperty(window,"visualViewport",{get(){return fake;},configurable:true});}});
 await test("Workout motion, with motion on: the RPE card holds the chosen number, then plays out while the cards below rise; Next exercise arrives, it does not pop in",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.rpe="every";});
   await startWorkout(page);
