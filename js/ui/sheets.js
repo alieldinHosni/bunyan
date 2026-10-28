@@ -702,22 +702,19 @@ function vSheet(){
   }
   else if(V.sheet==="gear"){
     b='<h2>'+t("My equipment")+'</h2><p class="tiny" style="margin:2px 0 14px">'
-     +'Pick what you actually have. Exercise suggestions and replacements will stick to it. '
-     +'Bodyweight is always included.</p><div class="list">';
+     +esc(t("Pick what you actually have. Exercise suggestions and replacements will stick to it. Bodyweight is always included."))+'</p><div class="list">';
     EQUIP.filter(function(q3){return q3!=="Bodyweight";}).forEach(function(q3){
       var on=!S.gear||S.gear.indexOf(q3)>=0;
-      b+='<button class="item" data-gear="'+q3+'"><span>'+q3+'</span>'
-       +'<span class="'+(on?"pill ok":"dim")+'">'+(on?"Have it":"No")+'</span></button>';});
+      b+='<button class="item" data-gear="'+q3+'" aria-pressed="'+on+'"><span>'+esc(t(q3))+'</span>'
+       +'<span class="'+(on?"pill ok":"dim")+'">'+esc(t(on?"Have it":"Not here"))+'</span></button>';});
     b+='</div><p class="tiny">'+t("Leave everything on if you train in a full gym.")+'</p>';
   }
   else if(V.sheet==="likes"){
     b='<h2>'+t("Favourites")+'</h2>';
-    b+='<div class="sec">'+t("Favourites")+'</div>';
-    if(!S.favs.length)b+='<p class="tiny">None yet. Star an exercise from its detail page and it '
-      +'will be suggested first.</p>';
+    if(!S.favs.length)b+='<p class="tiny">'+esc(t("None yet. Star an exercise from its detail page and it will be suggested first."))+'</p>';
     else{b+='<div class="list">';
       S.favs.forEach(function(n){b+='<button class="item" data-fav="'+esc(n)+'">'+thumb(n,36)
-        +'<span style="flex:1">'+esc(n)+'</span><span class="pill a">'+t("Remove")+'</span></button>';});
+        +'<span style="flex:1">'+esc(exName(n))+'</span><span class="pill a">'+t("Remove")+'</span></button>';});
       b+='</div>';}
   }
   else if(V.sheet==="exhist"){
