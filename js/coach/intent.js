@@ -72,6 +72,16 @@ var INTENTS=[
     "double session|sessions|day","second session|workout today|day","another session|workout today","add|create|make another|second session|workout",
     "add|create|make two sessions|workouts",
     "مرتين في اليوم","مرتين اليوم","تمرينتين|تمرينين في اليوم","سيشنين|حصتين","تمرين تاني النهارده","سيشن تاني|تانيه"]],
+  /* Whether the warm-up and the stretches after are made for each session (owner, 28 Oct:
+     "can the warm up be customized based on the type of exercise I am going to do
+     after?"). How to warm up in general is kwarm. */
+  ["warmplan",[
+    "warm up custom|customize|customise|customized|customised|change|different|differ|same|each|every|based|vary|varies|specific|tailor|tailored|personal|personalised|personalized|split",
+    "warmup|warm-up|warmups custom|customize|customise|customized|customised|change|different|differ|same|each|every|based|vary|varies|specific|tailor|tailored|personal|split",
+    "cool down|cooldown custom|customize|customized|change|different|same|each|every|based|vary|specific|split",
+    "stretches|stretching|stretch custom|customize|customized|different|same|each|every|based|vary|specific|split end$|after",
+    "static stretches|stretching end$|after|session|workout",
+    "تسخين|احماء|الاحماء|الاطاله|اطالات|استرتش مختلف|مختلفه|نفس|كل|حسب|اغير|يتغير|مخصص|تخصيص"]],
   /* An InBody (bioimpedance) result: read by chat.js aInBody from the body entries. */
   ["inbody",[
     "inbody|in-body","in body scan|test|result|sheet","body composition scan|test|result","my scan|scan result","skeletal muscle mass|smm","visceral fat",

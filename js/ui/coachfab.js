@@ -121,7 +121,8 @@ function syncCoach(){
      from where it sits above the keyboard (owner, 28 Oct). */
   if(opening)replace(pan,html);else patch(pan,html);
   pan.classList.toggle("opening",opening);
-  if(r0)flip(pan.querySelector(".cp"),r0);
+  if(r0)flip(pan.querySelector(".cp"),r0,resized&&slowGrow);
+  slowGrow=false;
   pan.classList.remove("resized");
   lastMode=mode;
   if(opening||resized){
@@ -134,15 +135,18 @@ function syncCoach(){
    the old way scaled a picture of the box and faded what was in it out and back, which
    flashed dark). */
 var MORPH=["position","left","top","width","height","max-width","max-height","margin","transition"];
-function flip(box,r0){
+/* slow: the panel opening by itself as the keyboard comes up (bindPanel) takes the
+   calendar's slower, even pace: nothing was tapped, so nothing should snap. */
+function flip(box,r0,slow){
   if(!box||document.body.classList.contains("noanim")||document.documentElement.classList.contains("reduced"))return;
   var r1=box.getBoundingClientRect();if(!r1.width||!r1.height)return;
   var set=function(r){box.style.left=r.left+"px";box.style.top=r.top+"px";box.style.width=r.width+"px";box.style.height=r.height+"px";};
   box.style.transition="none";box.style.position="fixed";box.style.margin="0";box.style.maxWidth="none";box.style.maxHeight="none";
   set(r0);box.getBoundingClientRect();
-  box.style.transition="left var(--m-panel) var(--e-ios),top var(--m-panel) var(--e-ios),width var(--m-panel) var(--e-ios),height var(--m-panel) var(--e-ios)";
+  var d=slow?"var(--m-cal) var(--e-cal)":"var(--m-panel) var(--e-ios)";
+  box.style.transition="left "+d+",top "+d+",width "+d+",height "+d;
   set(r1);
-  var t=setTimeout(done,560);
+  var t=setTimeout(done,slow?900:560);
   function done(){clearTimeout(t);box.removeEventListener("transitionend",end);MORPH.forEach(function(k){box.style.removeProperty(k);});}
   function end(e){if(e.target===box&&e.propertyName==="height")done();}
   box.addEventListener("transitionend",end);}
@@ -176,8 +180,23 @@ function closeCoach(render){
    bigger or smaller, close) does not take the focus from the field: the keyboard stays
    and nothing moves under the finger before the tap lands, as in a messaging app. A tap
    that closes the panel takes the field with it, and the keyboard goes then. */
-function bindPanel(){
+/* The field tapped in the small panel on a phone (owner, 28 Oct: "when chat is minimized
+   and I open the keyboard, make chat automatically maximize with slow animation so the
+   user can see the chat"): once the keyboard is up, the panel grows to the whole
+   conversation above it, slowly, the field and the keyboard staying where they are.
+   Waiting for the keyboard first keeps the two from moving the panel at once. grow is
+   app.js's: V.coach to "full" and a render. */
+var GROW_AFTER=480,slowGrow=false,growT=0;
+function touchPhone(){try{return matchMedia("(pointer: coarse)").matches;}catch(e){return false;}}
+function bindPanel(grow){
   var pan=document.getElementById("cpanel");if(!pan)return;
+  pan.addEventListener("focusin",function(e){
+    if(!grow||!e.target||e.target.id!=="chatq"||V.coach!=="compact"||!touchPhone())return;
+    clearTimeout(growT);
+    growT=setTimeout(function(){
+      var q=document.getElementById("chatq");
+      if(V.coach!=="compact"||!q||document.activeElement!==q)return;
+      slowGrow=true;grow();},GROW_AFTER);});
   pan.addEventListener("mousedown",function(e){
     var b=e.target&&e.target.closest&&e.target.closest("button");
     if(!b)return;

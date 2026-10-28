@@ -153,7 +153,14 @@ var EX_TERMS={
 "world's greatest stretch":"أعظم إطالة","arm circles":"دوائر بالدراع","scapular pull up":"عقلة لوح الكتف",
 "bodyweight squat":"سكوات بوزن الجسم","inchworm":"مشية الدودة","triceps stretch":"إطالة الترايسبس",
 "child's pose":"وضعية الطفل","hip flexor":"إطالة ثني الورك","kneeling hip flexor":"إطالة ثني الورك على ركبة",
-"hamstring stretch":"إطالة الخلفية","gastrocnemius calf stretch":"إطالة السمانة","calf stretch":"إطالة السمانة"
+"hamstring stretch":"إطالة الخلفية","gastrocnemius calf stretch":"إطالة السمانة","calf stretch":"إطالة السمانة",
+"ankle circle":"دوائر بالكاحل","shoulder circle":"دوائر بالكتف","elbow circle":"دوائر بالكوع",
+"wrist circle":"دوائر بالمعصم","hip circle":"دوائر بالورك","cat stretch":"إطالة القطة","groiner":"إطالة الحوض الديناميكية",
+"dynamic chest stretch":"إطالة صدر ديناميكية","dynamic back stretch":"إطالة ظهر ديناميكية",
+"front deltoid":"إطالة الكتف الأمامي",
+"overhead triceps":"إطالة ترايسبس فوق الراس","middle back stretch":"إطالة نص الظهر","biceps stretch":"إطالة البايسبس",
+"forearm stretch":"إطالة الساعد","floor hamstring stretch":"إطالة الخلفية على الأرض",
+"soleus and achilles stretch":"إطالة السمانة السفلية ووتر أكيليس","lateral stretch":"إطالة جانبية"
 };
 /* In Arabic the modifier follows the noun, so these are collected and appended rather
    than left where English put them: "Standing Calf Raise" is "رفع سمانة واقف", not

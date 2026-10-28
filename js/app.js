@@ -189,7 +189,8 @@ initSheetDrag(requestCloseSheet);
 initChatGest(function(){tap();if(V.coach==="full"){V.coach="compact";render();}else closeCoach(render);});
 /* A field in a sheet takes the keyboard without the page jumping under it (iPhone). */
 initKeyboard(kbPredict);
-bindPanel();
+/* The small panel's field tapped on a phone: the whole conversation, once the keyboard is up. */
+bindPanel(function(){V.coach="full";render();});
 /* What the keyboard and the browser chrome leave visible (--vvh, --vvt), measured again
    whenever it can have changed. A cold launch from the Home Screen is the case that bit:
    iOS reports a short viewport for the first frames, and a value read once at boot kept the

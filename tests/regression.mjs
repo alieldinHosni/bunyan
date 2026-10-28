@@ -1434,6 +1434,22 @@ await test("Warm-up engine: drills follow what the day trains, ramp sets lead to
       W.warmupFor(day(["Football"])).drills.some(d=>d.name==="High Knees")];});
   eq(r,[false,true,"Barbell Bench Press - Medium Grip","20x10,40x5,60x3",true,0,null,true,false,true]);
 });
+await test("Warm-up engine: each day warms up for its own lifts: a press, a pull and a leg day differ, and the stretches follow the movement",async page=>{
+  const r=await page.evaluate(async()=>{
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const W=await import("/js/engine/warmup.js");
+    const day=n=>n.map(x=>({name:x,planned:{sets:3}}));
+    const names=w=>w.drills.map(d=>d.name);
+    const push=names(W.warmupFor(day(["Barbell Bench Press - Medium Grip","Incline Dumbbell Press","Triceps Pushdown"])));
+    const pull=names(W.warmupFor(day(["Wide-Grip Lat Pulldown","Seated Cable Rows","Barbell Curl"])));
+    const legs=names(W.warmupFor(day(["Barbell Squat","Leg Press","Standing Calf Raises"])));
+    const st=n=>W.cooldownFor(day(n)).stretches.map(s=>s.name);
+    return [push.includes("Scapular Push-Up"),pull.includes("Scapular Pull-Up"),legs.includes("Bodyweight Squat"),
+      push.filter(n=>pull.includes(n)).length<=1,
+      st(["Seated Cable Rows"])[0],st(["Wide-Grip Lat Pulldown"])[0],st(["Barbell Curl"]).includes("Doorway Chest Stretch"),
+      W.warmupFor(day(["Lying Leg Curls","Barbell Squat"])).drills.some(d=>/Elbow|Wrist/.test(d.name))];});
+  eq(r,[true,true,true,true,"Middle Back Stretch","Overhead Lat Stretch",false,false]);
+});
 await test("Warm-up: shown before the first exercise; ticks and a hold timer; Start goes to the work; ⋯ brings it back",async page=>{
   await startWorkout(page);
   if(!(await page.$('.wu'))||(await page.$('.wsc')))throw new Error("the warm-up is not the first screen");
@@ -1577,6 +1593,17 @@ await test("No weight: the You sheet shows none and saves none",async page=>{
   await page.fill('#p_age','40');await page.tap('[data-saveyou]');await pause(page);
   eq(await ev(page,"[S.profile.age,S.profile.weight>0]"),[40,false],"age saved, no weight invented");
 },{db:noWeight()});
+await test("Coach, warm-up: asked whether it is made for each session, it says so and shows the next one; \"split\" is the program, not Split Squats",async page=>{
+  const r=await page.evaluate(async()=>{const C=await import("/js/ui/views/chat.js");const st=await import("/js/state.js");const S=st.S;
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    st.split().days.filter(d=>d.ex.length)[0].ex.push({id:"ssq",name:"Split Squats",sets:3,lo:10,hi:15});
+    const a=C.ask("Can the warm up be customized based on the type of exercise I am going to do after?");
+    const b=C.ask("Yes, I would like to customize my warm up for each session in split based on the exercise session");
+    const c=C.ask("what is in my split");
+    const drills=(a.b||[]).filter(x=>x.l).map(x=>x.l.length)[0]||0;
+    return [a.id,b.id,drills>=4,c.id!=="weights"];});
+  eq(r,["warmplan","warmplan",true,true]);
+});
 await test("No weight: the coach chat asks for one instead of working out calories",async page=>{
   const r=await page.evaluate(async()=>{const C=await import("/js/ui/views/chat.js");const S=(await import("/js/state.js")).S;
     const out={};for(const id of ["calories","protein","goal"]){C.ask("",id);out[id]=JSON.stringify(S.chat[S.chat.length-1]);}return out;});
@@ -3633,6 +3660,22 @@ await test("Coach chat in motion: a sent question flies to its place, the coach 
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.anim=false;document.body.classList.add("noanim");});
   await page.fill('#chatq','how is my weight');await page.tap('.cp-send');await pause(page,250);
   eq(await page.evaluate(()=>[!!document.querySelector(".chat-typing,.chat-ghost"),getComputedStyle([...document.querySelectorAll(".chat-a")].pop()).display!=="none"]),[false,true],"no motion, no wait");
+},{prefs:{anim:true}});
+await test("Coach panel: the small panel's field tapped on a phone, it grows by itself, slowly, to the whole conversation, the field and what is typed staying",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,now=Date.now();
+    S.chat=Array.from({length:4},(_,i)=>({at:now-(4-i)*60000,q:"question "+i,id:"protein",lang:"en",b:[{p:"An answer, number "+i+"."}]}));});
+  await openChat(page);await pause(page,500);
+  eq(await ev(page,"V.coach"),"compact","opens small");
+  await page.tap('#chatq');await page.keyboard.type("how much");await pause(page,200);
+  eq(await ev(page,"V.coach"),"compact","not at once: the keyboard comes up first");
+  await pause(page,450);
+  const mid=await page.evaluate(()=>{const c=document.querySelector(".cp");return [c.classList.contains("full"),c.style.position,c.style.transition.indexOf("cubic-bezier")>=0||c.style.transition.indexOf("var(--e-cal)")>=0];});
+  eq(mid,[true,"fixed",true],"growing, at the slow even pace");
+  await pause(page,900);
+  eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,document.getElementById("chatq").value,document.querySelector(".cp").style.height]),["chatq","how much",""],"settled, still typing");
+  /* Made smaller while typing, it stays small. */
+  await page.tap('.cp [data-coachsize="compact"]');await pause(page,1200);
+  eq(await ev(page,"V.coach"),"compact","smaller stays smaller");
 },{prefs:{anim:true}});
 await test("Coach panel: it opens on the newest message; smaller and bigger glide with the conversation in view, never fading out",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,now=Date.now();
