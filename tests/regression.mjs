@@ -3887,7 +3887,7 @@ await test("Workout screen: a logged set's numbers can be corrected in place; a 
   eq(await ev(page,"S.active.entries[0].sets[0].r"),7,"corrected in place");
 },{prefs:{autorest:false}});
 /* ---- The floating Coach (js/ui/coachfab.js) ---- */
-await test("Floating Coach: on the tab roots, never over a workout, a sheet or the keyboard; opening it from a workout keeps every value; Escape closes it",async page=>{
+await test("Floating Coach: on every tab, never over a workout, a sheet or the keyboard; opening it from a workout keeps every value; Escape closes it",async page=>{
   const fab=()=>page.$$eval('#cfab .cfab',a=>a.length);
   for(const tab of ["train","food","progress","coach"]){await tapTab(page,tab);await pause(page,300);eq(await fab(),1,"on "+tab);}
   /* Docked beside the dock, in its band: it covers no content and nothing of the dock. */
@@ -3908,6 +3908,23 @@ await test("Floating Coach: on the tab roots, never over a workout, a sheet or t
   eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["busy","weights","sore"],"the workout's own questions: a machine taken first");
   await page.keyboard.press("Escape");await pause(page,500);
   eq(await ev(page,"[V.coach,V.logIdx,V.draft.w,S.active.entries[0].sets.length,document.getElementById('in_r').value]"),[null,...before,"11"],"closed, the workout as it was");
+});
+await test("Coach launcher wherever the dock is: a day, the program builder, a meal, the history, the profile; beside the dock, covering nothing; not over a live workout",async page=>{
+  const at=async(label,set)=>{
+    await page.evaluate(async src=>{const V=(await import("/js/ui/view.js")).V,S=(await import("/js/state.js")).S;(new Function("V","S",src))(V,S);(await import("/js/ui/render.js")).render();},set);
+    await pause(page,400);
+    const r=await page.evaluate(()=>{const nav=document.getElementById("nav"),d=document.querySelector("nav .dock").getBoundingClientRect(),f=document.querySelector("#cfab .cfab");
+      const dock=getComputedStyle(nav).visibility==="visible";const fr=f&&f.getBoundingClientRect();
+      return {dock,fab:!!f,beside:!!fr&&Math.abs(fr.bottom-d.bottom)<2&&fr.left>=d.right-1};});
+    eq([r.dock,r.fab,r.beside],[true,true,true],label+": the dock and the coach beside it");};
+  const day=await page.evaluate(async()=>(await import("/js/state.js")).split().days[0].id);
+  await at("a day of the plan",'V.tab="train";V.train="day";V.dayId='+JSON.stringify(day)+';');
+  await at("the program builder",'V.tab="coach";V.train="builder";V.previewId=null;');
+  await at("a meal",'V.tab="food";V.train="days";V.meal="Lunch";');
+  await at("the history",'V.tab="progress";V.meal=null;V.phist=true;');
+  await at("the profile",'V.tab="profile";V.phist=false;');
+  await startWorkout(page);
+  eq(await page.$$eval('#cfab .cfab',a=>a.length),0,"not over a live workout, where the dock is away too");
 });
 await test("Layout: scrolled to the end, every screen's content ends above the dock, and the Coach launcher covers no card on any of them",async page=>{
   for(const w of [390,320])for(const lang of ["en","ar"]){
