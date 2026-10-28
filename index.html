@@ -1435,7 +1435,7 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 .dnav-t{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .dnav.art .dnav-t{font-size:20px;letter-spacing:.01em;text-transform:none}
-.dnav-c{display:inline-flex;color:var(--dim);transition:transform var(--m-micro) var(--e-standard)}
+.dnav-c{display:inline-flex;color:var(--dim);transition:transform var(--m-cal) var(--e-cal)}
 .dnav-c svg{width:16px;height:16px}
 .dnav-c.up{transform:rotate(180deg)}
 .dnav-s{font-size:12.5px;color:var(--dim);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1453,6 +1453,13 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 :root:not(.tch) .dnav-back:active,.dnav-back.tapd{background:var(--accent-tint)}
 [dir="rtl"] .dnav-k,[dir="rtl"] .dnav-t,[dir="rtl"] .dnav-back{letter-spacing:0}
 /* The month, when the date is tapped. */
+/* The bar's month unfolds under it, slowly, as Training's calendar does (--m-cal,
+   --e-cal), and folds back the same way. Its own look is the .dbcal below, unchanged. */
+.dbfold{display:grid;grid-template-rows:0fr;opacity:0;
+  transition:grid-template-rows var(--m-cal) var(--e-cal),opacity var(--m-cal) var(--e-cal)}
+.dbfold.open{grid-template-rows:1fr;opacity:1}
+.dbfold-in{min-height:0;overflow:hidden}
+:root.reduced .dbfold,body.noanim .dbfold{transition:none}
 .dbcal{margin-top:10px;padding:12px;border-radius:var(--r5);background:var(--raised);border:1px solid var(--border)}
 .dbcal-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .dbgrid{display:grid;grid-template-columns:repeat(7,1fr);margin-top:10px;

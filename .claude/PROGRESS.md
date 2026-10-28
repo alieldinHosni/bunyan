@@ -2629,3 +2629,8 @@ check training days from past weeks".
   today and its month (handlers/train.js caltoday). V.calOpen, V.calM.
 - Tests: regression "Training calendar: …" (⌄, months, a past training day shown below, Today, held
   both ways, the hold's tap swallowed); "week strip: …" now counts the week's row.
+- **Food's calendar, the same way** (owner, 28 Oct: "do the same for this calendar … keep its style,
+  just add the animation"): js/ui/datebar.js rendered its month only when open, so it appeared and
+  vanished. It is now always in the page, folded (`.dbfold`, inert) and unfolding with `--m-cal` /
+  `--e-cal` as Training's does; the bar's ⌄ turns at the same pace. Its look (.dbcal) is unchanged.
+  Test: regression "Food's calendar unfolds slowly …".

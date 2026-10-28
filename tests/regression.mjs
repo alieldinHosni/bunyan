@@ -3244,6 +3244,18 @@ await test("Training calendar: the ⌄ or a held press opens the week into the m
   await pause(page,800);
   eq(await page.$eval('.twk.cal',e=>e.classList.contains("open")),true,"held on the week: the month");
 },{prefs:{anim:true}});
+await test("Food's calendar unfolds slowly under the date bar and folds back; a day picked folds it away",async page=>{
+  await tapTab(page,"food");await pause(page,400);
+  eq(await page.evaluate(()=>{const f=document.querySelector(".dbfold");return [!!f,f&&f.hasAttribute("inert"),f&&Math.round(f.getBoundingClientRect().height)];}),[true,true,0],"folded: in the page, nothing to see or tap");
+  await page.tap('[data-dopen]');
+  const early=await page.evaluate(()=>new Promise(r=>setTimeout(()=>r(Math.round(document.querySelector(".dbfold").getBoundingClientRect().height)),200)));
+  await pause(page,900);
+  const full=await page.$eval('.dbfold',e=>Math.round(e.getBoundingClientRect().height));
+  if(!(full>250&&early<full*0.6))throw new Error("not a slow unfold: "+early+" at 200ms of "+full);
+  const y=await page.evaluate(()=>{const b=[...document.querySelectorAll(".dbfold [data-dpick]:not([disabled])")];return b[Math.max(0,b.length-3)].getAttribute("data-dpick");});
+  await page.tap('.dbfold [data-dpick="'+y+'"]');await pause(page,900);
+  eq(await page.evaluate(async()=>[(await import("/js/ui/view.js")).V.fdate,document.querySelector(".dbfold").classList.contains("open"),Math.round(document.querySelector(".dbfold").getBoundingClientRect().height)]),[y,false,0],"the day picked, the month folded away");
+},{prefs:{anim:true}});
 await test("Workout motion, with motion on: the RPE card holds the chosen number, then plays out while the cards below rise; Next exercise arrives, it does not pop in",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.rpe="every";});
   await startWorkout(page);
