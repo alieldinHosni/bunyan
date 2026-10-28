@@ -19,6 +19,18 @@ import {bestFacts, prose, search} from "./kbsearch.js";
 
 var MAXCTX=1400,MAXPASS=3;
 
+/* How the app works, where each thing is: a question about doing something in Bunyan is
+   answered from this, never guessed (owner, 28 Oct: asked how to have two sessions in a
+   day, it said only "don't forget to rest"). Kept to what the app does. */
+var APP=[
+  "Training tab: today's card starts the day's workout; Change swaps it for another day of the program; Add another session today adds a second session for today only.",
+  "Coach > Training: the program. Days, their exercises, sets and reps. Schedule By weekday (fixed weekdays) or In rotation (the next day whenever you train). By weekday, giving two days the same weekday makes two sessions that day, every week.",
+  "In a workout: log each set's weight and reps, the rest timer runs between sets, a tap on 6 to 10 says how hard a set was (RPE). The exercise name at the top lists today's exercises, to jump to or reorder. Next exercise, Skip exercise and Add exercise are under the sets; the ⋯ menu has a note, warm-up again, it hurts, and remove this exercise.",
+  "Food tab: today's meals and targets; log a food by name or barcode; the meal plan is built from the targets.",
+  "Progress: weight, body measurements, InBody results (read from the sheet's photo), records and charts.",
+  "Profile: You (age, height, weight, goal), Smart coach, and sharing a program or meal plan with another Bunyan user (Add a shared plan to receive one).",
+  "The coach can change things when asked: add, remove or swap an exercise in a day, log a set or a food, log a weigh-in, change the goal."];
+
 /* The passages a question reaches, as numbered notes the answer can lean on. */
 function passagesFor(q){
   var r=[];try{r=search(q,MAXPASS);}catch(e){r=[];}
@@ -30,7 +42,7 @@ function passagesFor(q){
    strings the caller wrote from the log. lang: "ar" or "en". hist: [{q, a}] newest last. */
 function buildMessages(q,snap,lang,hist){
   snap=snap||{};
-  var me=[["Goal",snap.goal],["Daily targets",snap.targets],["Today",snap.today],["Workout under way",snap.workout],
+  var me=[["Goal",snap.goal],["Daily targets",snap.targets],["Program",snap.program],["Today",snap.today],["Workout under way",snap.workout],
     ["Body",snap.body],["InBody",snap.inbody],["Recent training",(snap.recent||[]).join("; ")],
     ["What they told you",(snap.facts||[]).join("; ")]]
     .filter(function(p){return p[1];}).map(function(p){return "- "+p[0]+": "+p[1];}).join("\n").slice(0,MAXCTX);
@@ -38,13 +50,16 @@ function buildMessages(q,snap,lang,hist){
   var sys=[
     "You are Bunyan's coach, inside a training and nutrition app, talking to "+(snap.name||"the person")+".",
     "Answer in "+(lang==="ar"?"Egyptian Arabic, as a friend from Cairo would write it":"plain English")+", in at most four short sentences.",
-    "Use only the person's figures and the textbook notes below. Never invent a number, a food's macros, or a weight. If they do not hold the answer, say you do not have that, and say what would.",
+    "Use only the person's figures, the textbook notes and how the app works, below. Never invent a number, a food's macros, or a weight. If they do not hold the answer, say you do not have that, and say what would.",
+    "Answer the question asked, for this person: name their own plan, days and figures where they bear on it. When the app does what they ask about, say exactly where (the tab, the button). No filler and no general reminders.",
     "No diagnosis, no injury treatment, no medication or supplement doses: for pain, illness or medicine, say to see a doctor or a physiotherapist.",
     "If they ask you to change or log something, answer briefly, then end with one last line: DO: followed by the request in plain English, the way the app's buttons would say it (for example: DO: add face pulls to Pull day / DO: next exercise / DO: log 80 kg for 8 / DO: skip today). Only one DO line, only when asked to act.",
     "",
     "The person:",me||"- (nothing logged yet)",
     "",
-    "Textbook notes:",notes||"- (none match this question)"].join("\n");
+    "Textbook notes:",notes||"- (none match this question)",
+    "",
+    "How the app works:",APP.map(function(x){return "- "+x;}).join("\n")].join("\n");
   var msgs=[{role:"system",content:sys}];
   (hist||[]).slice(-2).forEach(function(h){
     if(h&&h.q&&h.a){msgs.push({role:"user",content:String(h.q).slice(0,300)});msgs.push({role:"assistant",content:String(h.a).slice(0,500)});}});
