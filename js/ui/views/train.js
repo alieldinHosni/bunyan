@@ -11,8 +11,8 @@ import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../stat
 import {SPLIT_LEVEL} from "../../engine/plan.js";
 import {deloadDue, inDeload} from "../../engine/formulas.js";
 import {blockNow, offPlanLight, shiftNow} from "../../engine/blocks.js";
-import {isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder} from "../../engine/schedule.js";
-import {esc, fmtN, pretty, shortd, today} from "../../util.js";
+import {addDays, isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
+import {dfmt, esc, fmtN, pretty, shortd, today} from "../../util.js";
 import {tokenMatch} from "../../engine/text.js";
 import {actIcon, actInfo, intensityOf, isActivity, outdoorOf} from "../../data/activities.js";
 import {head, reorderBtn, seg, V} from "../view.js";
@@ -189,18 +189,58 @@ function trainSub(){
    tap shows that day in the card below; tapping today again goes back to it. */
 /* attr: what a day's tap does — "tweek" shows it here; Home passes "openday" for the
    day's details. */
+/* One day's state, for the week and the month alike. */
+function dayState(sp,iso){
+  var p=planOn(sp,iso),st=p.kind==="done"?"done":p.kind==="past"?"past":(p.rest||p.kind==="none")?"rest":"plan";
+  return {p:p,st:st,lbl:pretty(iso)+", "+t({done:"Done",past:"Nothing logged",rest:"Rest day",plan:"Planned"}[st])+(p.name&&st!=="rest"&&st!=="past"?", "+planName(p.name):"")};}
+function dayBtn(iso,d,sel,now,attr,cls){
+  return '<button class="twk-d '+d.st+(iso===now?' today':'')+(iso===sel?' sel':'')+(cls||"")+'" data-'+(attr||"tweek")+'="'+iso+'" aria-pressed="'+(iso===sel)+'" aria-label="'+esc(d.lbl)+'">'
+   +(cls?'':'<span class="twk-w">'+esc(wdName(isoWeekday(iso)))+'</span>')
+   +'<span class="twk-n">'+new Date(iso+"T00:00:00").getDate()+'</span>'
+   +'<i aria-hidden="true">'+(d.st==="done"?TICKSVG:'')+'</i></button>';}
+/* The week, and folded under it the month (owner, 28 Oct: "a small return to today
+   button, … expand with slow animation when I tap and hold to see the whole calendar and
+   check training days from past weeks"). Held (js/ui/calhold.js) or its ⌄, the week
+   gives way to the month, any month back; a day there shows in the card below as a day
+   of the week does. Today comes back with one tap from wherever it was left. Both are
+   always in the page, one folded to nothing, so the change is a glide, not a swap. */
+var CHEV='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9.5l6 6 6-6"/></svg>';
+function monthOf(iso){return iso.slice(0,7);}
 function weekStrip(sp,sel,attr){
-  var now=today(),done=0,plan=0,h="";
+  var now=today(),done=0,plan=0,h="",open=!!V.calOpen&&!attr;
   weekDates(now).forEach(function(iso){
-    var p=planOn(sp,iso),st=p.kind==="done"?"done":p.kind==="past"?"past":(p.rest||p.kind==="none")?"rest":"plan";
-    if(st==="done")done++;if(st==="done"||st==="plan")plan++;
-    var lbl=pretty(iso)+", "+t({done:"Done",past:"Nothing logged",rest:"Rest day",plan:"Planned"}[st])+(p.name&&st!=="rest"&&st!=="past"?", "+planName(p.name):"");
-    h+='<button class="twk-d '+st+(iso===now?' today':'')+(iso===sel?' sel':'')+'" data-'+(attr||"tweek")+'="'+iso+'" aria-pressed="'+(iso===sel)+'" aria-label="'+esc(lbl)+'">'
-     +'<span class="twk-w">'+esc(wdName(isoWeekday(iso)))+'</span>'
-     +'<span class="twk-n">'+new Date(iso+"T00:00:00").getDate()+'</span>'
-     +'<i aria-hidden="true">'+(st==="done"?TICKSVG:'')+'</i></button>';});
-  return '<div class="twk"><div class="twk-h"><span class="klabel dim">'+t("This week")+'</span>'
-   +'<b>'+done+' / '+plan+' '+t("done")+'</b></div><div class="twk-r" role="group" aria-label="'+esc(t("This week"))+'">'+h+'</div></div>';}
+    var d=dayState(sp,iso);
+    if(d.st==="done")done++;if(d.st==="done"||d.st==="plan")plan++;
+    h+=dayBtn(iso,d,sel,now,attr);});
+  if(attr)return '<div class="twk"><div class="twk-h"><span class="klabel dim">'+t("This week")+'</span>'
+   +'<b>'+done+' / '+plan+' '+t("done")+'</b></div><div class="twk-r" role="group" aria-label="'+esc(t("This week"))+'">'+h+'</div></div>';
+  var cm=V.calM||monthOf(sel),away=sel!==now||(open&&cm!==monthOf(now));
+  return '<div class="twk cal'+(open?' open':'')+'" data-k="twk">'
+   +'<div class="twk-h"><span class="klabel dim">'+t(open?"Training calendar":"This week")+'</span>'
+   +'<span class="twk-ha">'
+   +(away?'<button class="twk-today" data-caltoday="1">'+t("Today")+'</button>':'')
+   +(open?'':'<b>'+done+' / '+plan+' '+t("done")+'</b>')
+   +'<button class="twk-x" data-calopen="1" aria-expanded="'+open+'" aria-label="'+esc(t(open?"Back to this week":"See the whole month"))+'">'+CHEV+'</button>'
+   +'</span></div>'
+   +'<div class="twk-fold"'+(open?' inert':'')+'><div class="twk-in"><div class="twk-r" role="group" aria-label="'+esc(t("This week"))+'">'+h+'</div></div></div>'
+   +'<div class="twk-mo"'+(open?'':' inert aria-hidden="true"')+'><div class="twk-in">'+monthGrid(sp,cm,sel,now)+'</div></div>'
+   +'</div>';}
+/* A month: its weeks as the week strip lays them (the person's first weekday), the days of
+   the months either side quieter. Training days ticked, planned ones dotted. */
+function monthGrid(sp,cm,sel,now){
+  var first=cm+"-01",start=weekStartOf(first),days=0,n=0,cells="";
+  var d0=new Date(first+"T00:00:00");
+  var nextM=new Date(d0.getFullYear(),d0.getMonth()+1,1),endIso=nextM.getFullYear()+"-"+String(nextM.getMonth()+1).padStart(2,"0")+"-01";
+  for(var iso=start;iso<endIso||days%7;iso=addDays(iso,1)){
+    var d=dayState(sp,iso),inM=monthOf(iso)===cm;
+    if(inM&&d.st==="done")n++;
+    cells+=dayBtn(iso,d,sel,now,"tweek"," m"+(inM?"":" out"));days++;}
+  var name=dfmt(d0,{month:"long",year:"numeric"});
+  return '<div class="twk-mh"><button class="twk-mnav" data-calm="-1" aria-label="'+esc(t("Previous month"))+'">'+glyph("chev")+'</button>'
+   +'<div class="twk-mt"><b>'+esc(name)+'</b><span><span class="num">'+n+'</span> '+esc(t(n===1?"session":"sessions"))+'</span></div>'
+   +'<button class="twk-mnav" data-calm="1" aria-label="'+esc(t("Next month"))+'">'+glyph("chev")+'</button></div>'
+   +'<div class="twk-dow" aria-hidden="true">'+weekOrder().map(function(w){return '<span>'+esc(wdName(w))+'</span>';}).join("")+'</div>'
+   +'<div class="twk-grid" role="group" aria-label="'+esc(name)+'">'+cells+'</div>';}
 var TICKSVG='<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>';
 
 /* Coach → Training → Programs: a new one from scratch, one brought in from a coach's

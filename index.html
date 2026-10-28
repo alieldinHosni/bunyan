@@ -103,7 +103,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --m-sheet:380ms; --m-screen:380ms; --m-data:480ms; --m-reveal:600ms; --m-fade:260ms;
   /* A change of tab and the coach panel: a touch slower than a screen, with a little
      spring at the end so they land rather than stop. --m-kb follows the iPhone keyboard. */
-  --m-tab:460ms; --m-panel:420ms; --m-kb:440ms; --m-close:340ms;
+  --m-tab:460ms; --m-panel:420ms; --m-kb:440ms; --m-close:340ms; --m-cal:620ms; --e-cal:cubic-bezier(.45,0,.2,1);
   --e-standard:cubic-bezier(0.2, 0, 0, 1); --e-decel:cubic-bezier(0.05, 0.7, 0.1, 1);
   --e-accel:cubic-bezier(0.3, 0, 0.8, 0.15); --e-spring:cubic-bezier(.2,.9,.3,1.06);
   --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
@@ -1435,7 +1435,7 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 .dnav-t{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .dnav.art .dnav-t{font-size:20px;letter-spacing:.01em;text-transform:none}
-.dnav-c{display:inline-flex;color:var(--dim);transition:transform var(--m-micro) var(--e-standard)}
+.dnav-c{display:inline-flex;color:var(--dim);transition:transform var(--m-cal) var(--e-cal)}
 .dnav-c svg{width:16px;height:16px}
 .dnav-c.up{transform:rotate(180deg)}
 .dnav-s{font-size:12.5px;color:var(--dim);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1453,6 +1453,13 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 :root:not(.tch) .dnav-back:active,.dnav-back.tapd{background:var(--accent-tint)}
 [dir="rtl"] .dnav-k,[dir="rtl"] .dnav-t,[dir="rtl"] .dnav-back{letter-spacing:0}
 /* The month, when the date is tapped. */
+/* The bar's month unfolds under it, slowly, as Training's calendar does (--m-cal,
+   --e-cal), and folds back the same way. Its own look is the .dbcal below, unchanged. */
+.dbfold{display:grid;grid-template-rows:0fr;opacity:0;
+  transition:grid-template-rows var(--m-cal) var(--e-cal),opacity var(--m-cal) var(--e-cal)}
+.dbfold.open{grid-template-rows:1fr;opacity:1}
+.dbfold-in{min-height:0;overflow:hidden}
+:root.reduced .dbfold,body.noanim .dbfold{transition:none}
 .dbcal{margin-top:10px;padding:12px;border-radius:var(--r5);background:var(--raised);border:1px solid var(--border)}
 .dbcal-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .dbgrid{display:grid;grid-template-columns:repeat(7,1fr);margin-top:10px;
@@ -2108,6 +2115,41 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .twk-d.today{border-color:rgba(var(--accentHi-rgb),.55)}
 .twk-d.sel{background:linear-gradient(180deg,rgba(var(--accent-rgb),.26),rgba(var(--accent-rgb),.10));border-color:rgba(var(--accentHi-rgb),.7)}
 .twk-d.sel .twk-w{color:var(--sub)}
+/* ---- The training calendar (views/train.js weekStrip, js/ui/calhold.js) ------------
+   The week and the month are both in the card, one folded to nothing: held or its ⌄, the
+   week folds away as the month unfolds, together, slowly (--m-cal), and back: an even ease in and out (--e-cal), since
+   the app's usual curves cover most of the way in the first third and read as quick. */
+.twk.cal{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.twk.cal .twk-h{align-items:center;min-height:32px}
+.twk-ha{display:flex;align-items:center;gap:var(--s2)}
+.twk-today{min-height:32px;padding:0 var(--s3);border-radius:var(--rpill);border:1px solid rgba(var(--accentHi-rgb),.55);
+  background:var(--accent-tint);color:var(--accentHi);font-size:12.5px;font-weight:700;animation:fadeIn var(--m-comp) var(--e-standard)}
+.twk-x{width:32px;height:32px;display:grid;place-items:center;padding:0;border-radius:50%;border:1px solid var(--border);background:var(--surface);color:var(--sub)}
+.twk-x svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;
+  transition:transform var(--m-cal) var(--e-cal)}
+.twk.open .twk-x svg{transform:rotate(180deg)}
+.twk-fold,.twk-mo{display:grid;transition:grid-template-rows var(--m-cal) var(--e-cal),opacity var(--m-cal) var(--e-cal)}
+.twk-fold{grid-template-rows:1fr;opacity:1}
+.twk-mo{grid-template-rows:0fr;opacity:0}
+.twk.open .twk-fold{grid-template-rows:0fr;opacity:0}
+.twk.open .twk-mo{grid-template-rows:1fr;opacity:1}
+.twk-in{min-height:0;overflow:hidden}
+.twk.held{transform:scale(.985);transition:transform var(--m-press) var(--e-standard)}
+.twk-mh{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);margin:var(--s1) 0 var(--s2)}
+.twk-mt{flex:1;min-width:0;text-align:center;display:flex;flex-direction:column;gap:2px}
+.twk-mt b{font-family:var(--display);font-size:16px}
+.twk-mt>span{font-size:12px;color:var(--dim)}
+.twk-mnav{width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:none;color:var(--sub)}
+.twk-mnav .gl{width:20px;height:20px}
+.twk-mnav[data-calm="-1"] .gl,[dir="rtl"] .twk-mnav[data-calm="1"] .gl{transform:scaleX(-1)}
+[dir="rtl"] .twk-mnav[data-calm="-1"] .gl{transform:none}
+.twk-dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--s1);margin-bottom:var(--s1)}
+.twk-dow span{text-align:center;font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--dim);text-transform:uppercase}
+.twk-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--s1)}
+.twk-d.m{padding:var(--s1) 0;gap:2px;border-radius:var(--r2)}
+.twk-d.m .twk-n{font-size:15px}
+.twk-d.m.out{opacity:.38}
+:root.reduced .twk-fold,:root.reduced .twk-mo,:root.reduced .twk-x svg,body.noanim .twk-fold,body.noanim .twk-mo,body.noanim .twk-x svg{transition:none}
 .tquick{width:100%;margin-top:14px}
 /* Schedule: two choices side by side; weekday chips under each day. */
 .bsched{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 4px}

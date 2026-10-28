@@ -62,7 +62,7 @@ var BACK='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d=
 function weekInitials(){
   return weekOrder().map(function(n){return dfmt(new Date(2024,0,n),{weekday:"narrow"});});}
 
-/* The month grid. Only rendered when the navigator is open. Past and today are
+/* The month grid, folded under the bar until it is opened. Past and today are
    pickable everywhere; the future only where the screen plans ahead (Train). */
 function monthGrid(sel,monthOffset,future){
   var base=new Date();base.setDate(1);base.setMonth(base.getMonth()+(monthOffset||0));
@@ -133,7 +133,11 @@ function dateBar(o){
    +' aria-label="'+t("Next day")+'">'+CHEV_R+'</button>'
    +'</div>'
    +(isToday?'':'<button class="dnav-back" data-dday="0">'+BACK+'<span>'+t("Back to today")+'</span></button>')
-   +(o.open?monthGrid(sel,o.monthOffset,o.future):'')
+   /* The month is always in the page, folded to nothing until the bar is opened, so it
+      unfolds slowly and folds back the same way (owner, 28 Oct: "no animations … need to
+      be slow and smooth"), rather than appearing and vanishing. Folded, it is inert. */
+   +'<div class="dbfold'+(o.open?' open':'')+'"'+(o.open?'':' inert aria-hidden="true"')+'><div class="dbfold-in">'
+   +monthGrid(sel,o.monthOffset,o.future)+'</div></div>'
    +'</div>';
 }
 

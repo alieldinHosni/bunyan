@@ -1,7 +1,8 @@
 /* Bunyan — app
    Entry point: event listeners, wiring and boot. */
 import {register as shellTaps} from "./ui/handlers/shell.js";
-import {register as trainTaps} from "./ui/handlers/train.js";
+import {register as trainTaps, toggleCal} from "./ui/handlers/train.js";
+import {initCalHold} from "./ui/calhold.js";
 import {backBlocked, navGuard, register as sessionTaps, sessionLocked} from "./ui/handlers/session.js";
 import {register as foodTaps} from "./ui/handlers/food.js";
 import {register as coachTaps} from "./ui/handlers/coach.js";
@@ -159,6 +160,8 @@ function applyExReconcile(){
    in (js/ui/handlers/registry.js). No two domains answer the same element, so the
    order only matters inside a module, but it is written here rather than left to
    the import graph. */
+/* Training's week held open into the month (js/ui/calhold.js), with the tap it answers. */
+initCalHold(function(){tap("ok");toggleCal();});
 shellTaps();trainTaps();sessionTaps();foodTaps();coachTaps();progressTaps();profileTaps();
 /* The installed app gets the full-screen page height (see "The Home Screen app" in
    index.html). The display-mode query covers current iOS; this covers older ones. */
