@@ -25,7 +25,7 @@
    opening it again finds it still going, and watching resumes. One saved before there
    was a choice of activity is a run. */
 import {t} from "../i18n/dict.js";
-import {addFix, kmMarks, newRun, outdoorKcal, paceOf, pauseRun, resumeRun, routePath, routeXY, runMs, speedOf, thin} from "../engine/run.js";
+import {addFix, isMoving, kmMarks, newRun, outdoorKcal, paceNow, paceOf, pauseRun, resumeRun, routePath, routeXY, runMs, speedNow, speedOf, splitsOf, thin} from "../engine/run.js";
 import {actIcon, outdoorOf} from "../data/activities.js";
 import {outdoorName} from "../i18n/exnames.js";
 import {groundFor, mapSeed} from "./runmap.js";
@@ -34,7 +34,7 @@ import {S, saveDB} from "../state.js";
 import {esc, fmtN} from "../util.js";
 import {finishSession, startActivity} from "./actions.js";
 import {glyph} from "./glyphs.js";
-import {keepAwake, toast, V} from "./view.js";
+import {keepAwake, tap, toast, V} from "./view.js";
 
 var W=340,H=300,PAD=28;
 var watchId=null;
@@ -61,11 +61,21 @@ function stopWatch(){
   watchId=null;}
 function onFix(pos){
   if(!S.run)return;
-  var c=pos.coords||{},res=addFix(S.run,{lat:c.latitude,lon:c.longitude,acc:c.accuracy,t:pos.timestamp||Date.now()},cfg(S.run).top);
-  var was=S.run.gps;S.run.gps=c.accuracy<=35?"on":"weak";
-  if(res==="kept"){saveDB();paintRoute();}
+  var c=pos.coords||{},spd=typeof c.speed==="number"&&isFinite(c.speed)&&c.speed>=0?c.speed:null;
+  var res=addFix(S.run,{lat:c.latitude,lon:c.longitude,acc:c.accuracy,t:pos.timestamp||Date.now(),spd:spd},cfg(S.run).top);
+  var was=S.run.gps;S.run.gps=c.accuracy<=20?"on":c.accuracy<=25?"ok":"weak";
+  if(res==="kept"){saveDB();paintRoute();kmSaid();}
   if(was!==S.run.gps)paintGps();
   paintRun();}
+/* Each whole kilometre said as it is passed: a tap on the phone, and its time on the
+   screen (owner, 28 Oct: "think as a runner"). */
+function kmSaid(){
+  var r=S.run,n=Math.floor(r.dist/1000);
+  if(!(n>(r.kmSaid||0)))return;
+  r.kmSaid=n;var sp=splitsOf(r.pts),last=sp[sp.length-1];
+  tap("ok");
+  toast(t("Kilometre {n}").replace("{n}",n)+(last?" · "+mss(last):""));
+  paintSplits();}
 function onErr(e){
   if(!S.run)return;
   /* 1 is "permission denied": it will not come back by waiting. Anything else (no fix
@@ -98,11 +108,25 @@ function finishRun(render){
 
 /* ---- the screen -------------------------------------------------------------------- */
 function gpsWord(g){
-  return t(g==="on"?"GPS on":g==="weak"?"Weak GPS signal":g==="denied"?"Location is off":g==="off"?"No GPS on this device":"Finding GPS…");}
+  return t(g==="on"?"GPS on":g==="ok"?"GPS fair":g==="weak"?"Weak GPS signal":g==="denied"?"Location is off":g==="off"?"No GPS on this device":"Finding GPS…");}
 /* Pace for a run, a walk or a hike; speed for a ride. */
 function rate(r,ms){var o=cfg(r);return o.read==="speed"?speedOf(ms,r.dist):paceOf(ms,r.dist);}
+function rateNow(r,now){var o=cfg(r);return o.read==="speed"?speedNow(r,now):paceNow(r,now);}
+/* What the screen says of the session, when there is something to say: paused, the GPS
+   still finding itself, or not moving (the distance holds until you do). */
+function statusOf(r,now){
+  if(r.since==null)return t("Paused");
+  if(r.gps==="denied"||r.gps==="off")return "";
+  if(!r.pts.length)return t("Finding GPS… the distance starts once it is sure where you are. Outdoors, with open sky, it is quicker.");
+  if(!isMoving(r,now))return t("Not moving: the distance waits until you do.");
+  return "";}
+/* Redesigned (owner, 28 Oct: "think as a runner … the buttons should be fixed to the
+   bottom"): the route, then the numbers a runner reads mid-stride, large — time,
+   distance, the pace now and the average — the kilometres so far, and one control
+   fixed under the thumb. Running, it is Pause only; paused, Carry on and Finish, so a
+   run is never ended by a brush of the screen. */
 function vRun(){
-  var r=S.run,o=cfg(r),act=actOf(r),going=r.since!=null,ms=runMs(r,Date.now()),spd=o.read==="speed";
+  var r=S.run,o=cfg(r),act=actOf(r),going=r.since!=null,now=Date.now(),ms=runMs(r,now),spd=o.read==="speed",st=statusOf(r,now);
   /* Always the dark side of the theme, as the reference is: data-theme on the screen
      itself, so the theme blocks colour it dark whatever the mode. */
   var h='<div class="run'+(going?'':' paused')+'" data-theme="dark" data-act="'+esc(act)+'">'
@@ -111,20 +135,35 @@ function vRun(){
    +'<span class="run-h">'+esc(outdoorName(act,true))+'</span>'
    +'<span class="run-gps '+esc(r.gps||"wait")+'" id="runGps" role="status">'+esc(gpsWord(r.gps))+'</span></div>'
    +'<div class="run-map" aria-hidden="true">'+mapSvg(r)+'</div>'
-   +'<div class="run-big"><b class="num" id="runT" dir="ltr">'+clock(ms)+'</b><span>'+esc(t(going?"Total duration":"Paused"))+'</span></div>'
-   +'<div class="run-mid"><span class="run-pin">'+actIcon(act,22)+'</span><b class="num" id="runD" dir="ltr">'+km(r.dist)+'</b><span>'+esc(t("km"))+'</span></div>'
-   +'<div class="run-bar">'
-   +'<div class="run-pill"><span class="run-pi">'+glyph("flame")+'</span><span class="run-pt"><span>'+esc(t("Kcal"))+'</span>'
-   +'<b class="num" id="runK">'+fmtN(outdoorKcal(act,r.dist,ms,lastWeight()))+'</b></span></div>'
-   +'<button class="run-play" data-run="'+(going?"pause":"resume")+'" aria-label="'+esc(t(going?"Pause":"Carry on"))+'">'
-   +(going?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15L19.5 12z"/></svg>')+'</button>'
-   +'<div class="run-pill"><span class="run-pi">'+glyph(spd?"route":"clock")+'</span><span class="run-pt"><span>'+esc(t(spd?"Speed km/h":"Pace /km"))+'</span>'
-   +'<b class="num" id="runP" dir="ltr">'+(rate(r,ms)||"—")+'</b></span></div></div>'
-   +'<button class="btn run-end" data-run="finish">'+esc(t("Finish and save"))+'</button>'
+   +'<p class="run-st" id="runSt" role="status"'+(st?'':' hidden')+'>'+esc(st)+'</p>'
+   +'<div class="run-big"><b class="num" id="runT" dir="ltr">'+clock(ms)+'</b><span>'+esc(t("Moving time"))+'</span></div>'
+   +'<div class="run-grid">'
+   +'<div class="run-c run-c-d"><b class="num" id="runD" dir="ltr">'+km(r.dist)+'</b><span>'+esc(t("km"))+'</span></div>'
+   +'<div class="run-c"><b class="num" id="runPn" dir="ltr">'+(rateNow(r,now)||"—")+'</b><span>'+esc(t(spd?"Speed now km/h":"Pace now /km"))+'</span></div>'
+   +'<div class="run-c"><b class="num" id="runP" dir="ltr">'+(rate(r,ms)||"—")+'</b><span>'+esc(t(spd?"Average km/h":"Average /km"))+'</span></div>'
+   +'<div class="run-c"><b class="num" id="runK">≈'+fmtN(outdoorKcal(act,r.dist,ms,lastWeight()))+'</b><span>'+esc(t("kcal, an estimate"))+'</span></div>'
+   +'</div>'
+   +'<div class="run-splits" id="runSplits">'+splitsHtml(r)+'</div>'
    +'<p class="run-note">'+esc(t(r.gps==="denied"||r.gps==="off"?"Without location this is timed only. Add the distance when you finish."
       :"Keep the screen on: a phone stops sharing its position with an app in the background. The time keeps counting."))+'</p>'
-   +'</div>';
+   /* Fixed to the bottom of the screen, under the thumb, whatever is above it. */
+   +'<div class="run-ctl'+(going?'':' two')+'">'
+   +(going
+     ?'<button class="run-play" data-run="pause" aria-label="'+esc(t("Pause"))+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>'
+     :'<button class="run-play" data-run="resume" aria-label="'+esc(t("Carry on"))+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15L19.5 12z"/></svg></button>'
+      +'<button class="btn run-end" data-run="finish">'+esc(t("Finish and save"))+'</button>')
+   +'</div></div>';
   return h;}
+/* Each whole kilometre, its time, and how it compares with the one before. */
+function splitsHtml(r){
+  var sp=splitsOf(r.pts),o=cfg(r);if(!sp.length||o.read==="speed")return "";
+  return '<div class="run-sh"><span>'+esc(t("Splits"))+'</span></div><ol class="run-sl">'
+   +sp.map(function(ms,i){var d=i?ms-sp[i-1]:0;
+     return '<li><span class="num">'+(i+1)+'</span><b class="num" dir="ltr">'+mss(ms)+'</b>'
+      +(i?'<em class="num'+(d<0?' up':' down')+'" dir="ltr">'+(d<0?"−":"+")+mss(Math.abs(d))+'</em>':'<em></em>')+'</li>';}).join("")+'</ol>';}
+/* A split as a runner reads it: 4:52, 12:05, 1:02:10. */
+function mss(ms){var s=Math.round(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);
+  return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(s%60).padStart(2,"0");}
 /* The ground (js/ui/runmap.js: drawn, not fetched, its kind the activity's) and the route on it: a
    glow under it, the line, and a bright thread down its middle; a mark at each whole
    kilometre; the start ringed, where you are now a dot with a ring that breathes. */
@@ -148,11 +187,15 @@ function clock(ms){
   return (hh?hh+":"+String(mm).padStart(2,"0"):String(mm).padStart(2,"0"))+":"+String(ss).padStart(2,"0");}
 function km(m){return (Math.floor(m/10)/100).toFixed(2);}
 
-/* Every second, the numbers only; the route when a point is added. */
+/* Every second, the numbers only; the route and the splits when a point is added. */
 function paintRun(){
   var r=S.run;if(!r)return;
-  var ms=runMs(r,Date.now()),set=function(id,v){var el=document.getElementById(id);if(el&&el.textContent!==v)el.textContent=v;};
-  set("runT",clock(ms));set("runD",km(r.dist));set("runP",rate(r,ms)||"—");set("runK",fmtN(outdoorKcal(actOf(r),r.dist,ms,lastWeight())));}
+  var now=Date.now(),ms=runMs(r,now),set=function(id,v){var el=document.getElementById(id);if(el&&el.textContent!==v)el.textContent=v;};
+  set("runT",clock(ms));set("runD",km(r.dist));set("runP",rate(r,ms)||"—");set("runPn",rateNow(r,now)||"—");
+  set("runK","≈"+fmtN(outdoorKcal(actOf(r),r.dist,ms,lastWeight())));
+  var st=statusOf(r,now),el=document.getElementById("runSt");
+  if(el){if(el.textContent!==st)el.textContent=st;el.hidden=!st;}}
+function paintSplits(){var el=document.getElementById("runSplits");if(el&&S.run)el.innerHTML=splitsHtml(S.run);}
 function paintRoute(){
   var r=S.run;if(!r)return;
   var d=routePath(r.pts,W,H,PAD),e=endsOf(r.pts);

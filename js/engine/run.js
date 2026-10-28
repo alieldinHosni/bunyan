@@ -11,12 +11,22 @@
      since  when the current stretch began, or null while paused
      pts    the positions kept, oldest first; dist the metres between them
 
-   A phone's position wanders even standing still, and now and then leaps. So a fix is
-   kept only when it is accurate to 35 m or better, when it is at least 4 m from the
-   last one kept (closer is the same spot, and adding it would count the wander as
-   moving), and when getting there would not have needed more than the activity's top
-   speed (js/data/activities.js: 9 m/s for a run, 20 for a ride), which is a leap, not
-   a stride. */
+   A phone's position wanders even standing still, and now and then leaps (owner, 28 Oct:
+   sitting on a chair, a shaken phone drew a run). Each fix goes through, in turn:
+   - its accuracy: worse than 25 m is not trusted ("rough"), and the route starts only
+     at a fix of 20 m or better;
+   - a leap: further from where we are than the activity's top speed could have gone
+     (js/data/activities.js: 9 m/s for a run, 20 for a ride) plus the fix's own
+     uncertainty is a jump of the GPS, not a stride ("leap");
+   - smoothing: a Kalman filter on the position, each fix weighed by its accuracy, the
+     route allowed to move about as fast as the activity goes (run.kf);
+   - stillness: when the phone's own speed says it is not moving, a step smaller than
+     twice the fix's uncertainty is the wander ("still"); so is not having got further
+     in the last 15 seconds than the fixes' uncertainty, whatever the phone says;
+     otherwise a step has to clear the uncertainty (at least 10 m, up to twice the
+     accuracy) before it counts ("same").
+   A point kept carries the moving time at that moment, for the splits and the pace now:
+   [lat, lon, t, moving ms]. */
 
 var R=6371008.8;   /* the Earth's mean radius, m */
 
@@ -32,19 +42,74 @@ function runMs(run,now){return run.ms+(run.since!=null?Math.max(0,now-run.since)
 function pauseRun(run,now){if(run.since!=null){run.ms=runMs(run,now);run.since=null;}return run;}
 function resumeRun(run,now){if(run.since==null)run.since=now;return run;}
 
-/* A position from the phone: {lat, lon, acc (m), t (ms)}, and the activity's top
-   speed in m/s (a run's 9 when not given). Returns what happened, for the screen:
-   "kept", "same" (too close to count), "rough" (not accurate enough), "leap"
+/* A position from the phone: {lat, lon, acc (m), t (ms), spd (m/s, or null when the
+   phone does not say)}, and the activity's top speed in m/s (a run's 9 when not given).
+   Returns what happened, for the screen: "kept", "same" (not far enough to count),
+   "still" (the phone says it is not moving), "rough" (not accurate enough), "leap"
    (impossibly fast), "paused" (not counted while paused). */
+/* The tuning, chosen by simulation (white and drifting GPS noise of 3 to 16 m, runs,
+   a track, walks, and a phone left on a table for ten minutes): distance within 5% on
+   every run and walk (0.7% on average); still, with the phone saying its speed, under
+   20 m in ten minutes. Exported for the engine's tests. */
+var T={accMax:25,accStart:20,stepMin:10,stepK:2,qK:0.8,win:15000,winK:1.5,winMin:10};
 function addFix(run,f,top){
   if(run.since==null)return "paused";
-  if(!(f.acc<=35))return "rough";
-  var p=[+f.lat.toFixed(6),+f.lon.toFixed(6),f.t],last=run.pts[run.pts.length-1];
-  if(!last){run.pts.push(p);return "kept";}
-  var d=metres(last,p),dt=(p[2]-last[2])/1000;
-  if(d<4)return "same";
-  if(dt>0&&d/dt>(top>0?top:9))return "leap";
-  run.pts.push(p);run.dist+=d;return "kept";}
+  var acc=+f.acc,t=+f.t;top=top>0?top:9;
+  if(!(acc<=T.accMax))return "rough";
+  var kf=run.kf;
+  if(!kf){
+    if(acc>T.accStart)return "rough";
+    kf=run.kf={lat:+f.lat,lon:+f.lon,v:acc*acc,t:t};}
+  else{
+    var dt=Math.max(0,(t-kf.t)/1000),raw=metres([kf.lat,kf.lon],[f.lat,f.lon]);
+    if(raw>top*Math.max(dt,1)+3*acc+Math.sqrt(kf.v))return "leap";
+    var q=f.spd!=null&&f.spd>=0?Math.max(1,f.spd*T.qK):top/3;kf.v+=dt*q*q;
+    var k=kf.v/(kf.v+acc*acc);
+    kf.lat+=k*(f.lat-kf.lat);kf.lon+=k*(f.lon-kf.lon);kf.v=(1-k)*kf.v;kf.t=t;}
+  /* The last stretch of smoothed positions, to tell moving from wandering by how far
+     they have got in it, whatever the phone says of its speed. */
+  var rec=run.rec||(run.rec=[]);rec.push([kf.lat,kf.lon,t]);
+  while(rec.length>2&&t-rec[1][2]>=T.win)rec.shift();
+  var p=[+kf.lat.toFixed(6),+kf.lon.toFixed(6),t,runMs(run,t)],last=run.pts[run.pts.length-1];
+  if(!last){run.pts.push(p);run.moved=t;return "kept";}
+  var d=metres(last,p);
+  if(f.spd!=null&&f.spd>=0&&f.spd<0.4&&d<2*acc)return "still";
+  /* Over the last stretch (once it is long enough to say), not further from where it
+     began than the fixes' own uncertainty: wandering, not moving. */
+  if(t-rec[0][2]>=T.win*0.66&&metres(rec[0],p)<Math.max(T.winMin,T.winK*acc))return "still";
+  if(d<Math.max(T.stepMin,Math.min(T.stepK*acc,T.accMax)))return "same";
+  run.pts.push(p);run.dist+=d;run.moved=t;return "kept";}
+/* Moving, by the fixes: the last point kept within the last 15 seconds. */
+function isMoving(run,now){return run.since!=null&&run.moved!=null&&now-run.moved<15000;}
+/* Each whole kilometre's time, by the moving time the points carry: [ms, …], the first
+   kilometre first. Points saved before they carried it are left out. */
+function splitsOf(pts){
+  var out=[],done=0,next=1000,lastMs=0;
+  for(var i=1;i<pts.length;i++){
+    var a=pts[i-1],b=pts[i];if(a[3]==null||b[3]==null)return out;
+    var d=metres(a,b);
+    while(d>0&&done+d>=next){
+      var at=a[3]+(b[3]-a[3])*((next-done)/d);
+      out.push(Math.round(at-lastMs));lastMs=at;next+=1000;}
+    done+=d;}
+  return out;}
+/* The pace now: over the last 30 seconds of moving (at least 40 m of it), as paceOf
+   writes it; "" with too little to say. */
+function paceNow(run,now){
+  var w=lastStretch(run,now,30000);return w?paceOf(w.ms,Math.max(w.m,50)):"";}
+/* The last points kept, back over win ms of moving: {m, ms} up to the newest point (the
+   seconds since it are not yet ground covered), or null with too little (under 40 m). */
+function lastStretch(run,now,win){
+  var pts=run.pts;if(pts.length<2||!isMoving(run,now))return null;
+  var end=pts[pts.length-1][3],m=0,from=null;
+  if(end==null)return null;
+  for(var i=pts.length-1;i>0;i--){
+    if(pts[i-1][3]==null)break;
+    m+=metres(pts[i-1],pts[i]);from=pts[i-1][3];
+    if(end-from>=win)break;}
+  return from==null||m<40||end<=from?null:{m:m,ms:end-from};}
+function speedNow(run,now){
+  var w=lastStretch(run,now,15000);return w?speedOf(w.ms,Math.max(w.m,50)):"";}
 
 /* Minutes per kilometre as "m:ss", or "" with too little distance to say (under 50 m). */
 function paceOf(ms,m){
@@ -116,4 +181,4 @@ function thin(pts,n){
   for(var i=0;i<n;i++)out.push(pts[Math.round(i*step)]);
   return out;}
 
-export {addFix, kmMarks, metres, newRun, outdoorKcal, paceOf, pauseRun, resumeRun, routePath, routeXY, runKcal, runMs, speedOf, thin};
+export {addFix, isMoving, kmMarks, metres, newRun, outdoorKcal, paceNow, paceOf, pauseRun, resumeRun, routePath, routeXY, runKcal, runMs, speedNow, speedOf, splitsOf, T as RUNTUNE, thin};

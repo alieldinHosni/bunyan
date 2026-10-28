@@ -1,4 +1,4 @@
-import {addFix, kmMarks, metres, newRun, outdoorKcal, paceOf, pauseRun, resumeRun, routePath, routeXY, runKcal, runMs, speedOf, thin} from "../run.js";
+import {addFix, isMoving, kmMarks, metres, newRun, outdoorKcal, paceNow, paceOf, pauseRun, resumeRun, routePath, routeXY, runKcal, runMs, speedOf, splitsOf, thin} from "../run.js";
 
 /* A point d metres north of 30°N 31°E (Cairo), at time s seconds. One degree of
    latitude is 111.2 km. */
@@ -16,17 +16,38 @@ function run(t){
   resumeRun(r,300000);t.eq(runMs(r,330000),90000,"resumed: it goes on from where it was");
   pauseRun(r,330000);pauseRun(r,400000);t.eq(r.ms,90000,"pausing twice changes nothing");
 
-  /* ---- distance ---- */
-  r=newRun(0);
-  t.eq(addFix(r,north(0,0)),"kept","the first fix");
-  for(var i=1;i<=10;i++)addFix(r,north(i*30,i*10));   /* 3 m/s for 100 s */
-  t.ok(Math.abs(r.dist-300)<1,"300 m at a jog: "+r.dist.toFixed(1));
-  t.eq(addFix(r,north(302,111)),"same","2 m on: the same spot, not counted");
-  t.eq(addFix(r,north(330,112,80)),"rough","80 m accuracy: not trusted");
-  t.eq(addFix(r,north(800,113)),"leap","500 m in a few seconds: a leap");
-  t.eq(addFix(r,north(330,120)),"kept","and the run goes on from the last good fix");
-  t.ok(Math.abs(r.dist-330)<1,"330 m in all");
-  pauseRun(r,120000);t.eq(addFix(r,north(400,130)),"paused","nothing counts while paused");
+  /* ---- distance: what counts as moving (owner, 28 Oct: a phone shaken on a chair drew
+     a run). Fixes once a second, as a phone gives them, with GPS noise (seeded). ---- */
+  var seed=7,rnd=function(){seed=(seed*16807)%2147483647;return seed/2147483647;};
+  var gauss=function(){var u=rnd()||1e-9,v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};
+  var at=function(x,y,s,acc,spd){return {lat:30+y/111195,lon:31+x/(111195*Math.cos(30*Math.PI/180)),acc:acc,t:s*1000,spd:spd};};
+  var still=function(sd,spd){var r=newRun(0);for(var i=0;i<600;i++)addFix(r,at(gauss()*sd,gauss()*sd,i,sd*1.3,spd));return r;};
+  [[5,0],[10,0],[15,0],[5,null],[10,null],[15,null]].forEach(function(c){
+    var r=still(c[0],c[1]);
+    /* Poor GPS and no speed from the phone (an iPhone gives it) is the hardest: a few
+       tens of metres in ten minutes, not a run. */
+    var lim=c[1]==null&&c[0]>=15?75:30;
+    t.ok(r.dist<lim,"ten minutes on a table, GPS wandering "+c[0]+" m"+(c[1]==null?", no speed from the phone":"")+": "+Math.round(r.dist)+" m, not a run");});
+  var line=function(sd,spd){var r=newRun(0);for(var i=0;i<=334;i++)addFix(r,at(gauss()*sd,i*3+gauss()*sd,i,sd*1.3,spd));return r;};
+  [[3,3],[5,3],[8,3],[5,null]].forEach(function(c){
+    var r=line(c[0],c[1]);
+    t.ok(Math.abs(r.dist-1000)<40,"a kilometre run at 3 m/s, GPS noise "+c[0]+" m: "+Math.round(r.dist)+" m");});
+  var r=newRun(0);
+  t.eq(addFix(r,at(0,0,0,30)),"rough","a first fix of 30 m: the route waits for a better one");
+  t.eq(addFix(r,at(0,0,1,8)),"kept","then starts at one of 8 m");
+  t.eq(addFix(r,at(0,500,3,8)),"leap","500 m in two seconds: a leap");
+  t.eq(addFix(r,at(0,3,4,8,0)),"still","3 m with the phone saying it is still: not counted");
+  t.eq(addFix(r,at(0,50,6,40)),"rough","40 m accuracy: not trusted");
+  pauseRun(r,10000);t.eq(addFix(r,at(0,80,12,8)),"paused","nothing counts while paused");
+
+  /* ---- splits, the pace now, moving ---- */
+  r=newRun(0);for(var i=0;i<=700;i++)addFix(r,at(0,i*3,i,5,3));
+  var sp=splitsOf(r.pts);
+  t.eq(sp.length,2,"2.1 km run: two whole kilometres");
+  t.ok(sp.every(function(ms){return Math.abs(ms-333333)<15000;}),"each about 5:33 at 3 m/s: "+sp.join(", "));
+  t.ok(/^5:[23]\d$/.test(paceNow(r,700000)),"the pace now, about 5:33: "+paceNow(r,700000));
+  t.eq(isMoving(r,700000),true,"moving");
+  t.eq([isMoving(r,730000),paceNow(r,730000)],[false,""],"20 s with no stride kept: not moving, no pace now");
 
   /* ---- pace, energy ---- */
   t.eq(paceOf(330000,1000),"5:30","5:30 a kilometre");

@@ -3837,26 +3837,44 @@ await test("Live tracking: a run's positions become distance and a route; pause 
   await liveStart(page,"Running");
   eq(await page.evaluate(()=>[!!document.querySelector(".run"),document.body.classList.contains("focus"),document.querySelector(".run-h").textContent]),[true,true,"Running"],"the run fills the screen, no dock");
   eq(await page.evaluate(()=>[document.querySelectorAll(".run-map .rm-blk rect").length>20,!!document.querySelector(".run-map .rm-river")]),[true,true],"on a city");
-  for(let i=1;i<=6;i++){await ctx.setGeolocation({latitude:30.0444+i*0.00009,longitude:31.2357,accuracy:8});await pause(page,1500);}
+  /* About 7 m/s, a fix every 1.5 s: a stride the filter counts (js/engine/run.js). */
+  for(let i=1;i<=12;i++){await ctx.setGeolocation({latitude:30.0444+i*0.00009,longitude:31.2357,accuracy:8});await pause(page,1500);}
   const r=await ev(page,"[S.run.pts.length,Math.round(S.run.dist),S.run.gps,S.run.act]");
-  if(r[0]<5||r[1]<40||r[2]!=="on"||r[3]!=="Running")throw new Error("not tracking: "+JSON.stringify(r));
+  if(r[0]<3||r[1]<70||r[2]!=="on"||r[3]!=="Running")throw new Error("not tracking: "+JSON.stringify(r));
   if(!/^M[\d.]+ [\d.]+L/.test(await page.$eval('#runRoute',e=>e.getAttribute("d"))))throw new Error("no route drawn");
   if(!/^\d+:\d\d$/.test(await page.$eval('#runP',e=>e.textContent)))throw new Error("no pace");
   await page.tap('[data-run="pause"]');await pause(page,300);
   const t1=await page.$eval('#runT',e=>e.textContent);await pause(page,1600);
   eq(await page.$eval('#runT',e=>e.textContent),t1,"paused: the clock holds");
+  eq(await page.$$eval('.run-ctl button',a=>a.map(b=>b.dataset.run)),["resume","finish"],"paused: Carry on and Finish, fixed at the bottom");
   await page.tap('[data-run="resume"]');await pause(page,300);
+  eq(await page.$$eval('.run-ctl button',a=>a.map(b=>b.dataset.run)),["pause"],"running: Pause only, so a brush of the screen never ends it");
+  eq(await page.$eval('.run-ctl',e=>getComputedStyle(e).position),"fixed","the controls stay put as the page scrolls");
   const seed=await ev(page,"Math.floor(S.run.started/1000)");
+  await page.tap('[data-run="pause"]');await pause(page,300);
   await page.tap('[data-run="finish"]');await pause(page,800);
   const s=await ev(page,"[!!S.run,!!S.active,S.sessions[0].entries[0].name,S.sessions[0].entries[0].sets[0].km>0.03,S.sessions[0].entries[0].sets[0].route.length>=5,S.sessions[0].entries[0].sets[0].kcal>0,S.sessions[0].entries[0].sets[0].map]");
   eq(s,[false,false,"Running",true,true,true,seed],"saved as a run with its distance, route, calories and ground");
+});
+await test("Live tracking: a phone sitting still, its GPS wandering, is not a run — no distance, no route, and it says it is not moving",async page=>{
+  const ctx=page.context();
+  await ctx.grantPermissions(["geolocation"]);await ctx.setGeolocation({latitude:30.0444,longitude:31.2357,accuracy:12});
+  await liveStart(page,"Running");
+  /* About 10 m of wander each way, a fix a second, for twenty seconds (owner, 28 Oct:
+     a shaken phone on a chair drew a line across the map). */
+  const w=[[8,-6],[-9,4],[3,10],[-7,-8],[10,2],[-4,-9],[6,7],[-10,1],[2,-10],[9,5],[-6,8],[4,-7],[-8,-3],[7,9],[-3,6],[10,-4],[-9,-6],[5,3],[-2,-9],[8,8]];
+  for(const [dx,dy] of w){await ctx.setGeolocation({latitude:30.0444+dy/111195,longitude:31.2357+dx/96300,accuracy:12});await pause(page,1000);}
+  const r=await ev(page,"[Math.round(S.run.dist),S.run.pts.length]");
+  if(r[0]>15)throw new Error("counted the wander as a run: "+JSON.stringify(r));
+  eq(await page.$eval('#runD',e=>e.textContent),"0.00","the distance stays at nothing");
+  if(!/Not moving/.test(await page.$eval('#runSt',e=>e.hidden?"":e.textContent)))throw new Error("it does not say it is not moving");
 });
 await test("Live tracking: a ride is its own: Cycling, speed in km/h, a countryside under the route, saved as a ride with a ride's calories",async page=>{
   const ctx=page.context();
   await ctx.grantPermissions(["geolocation"]);await ctx.setGeolocation({latitude:30.0444,longitude:31.2357,accuracy:8});
   await liveStart(page,"Cycling");
   eq(await page.evaluate(()=>[document.querySelector(".run").dataset.act,document.querySelector(".run-h").textContent,
-    [...document.querySelectorAll(".run-pt>span")].map(e=>e.textContent)]),["Cycling","Cycling",["Kcal","Speed km/h"]],"a ride, read as speed");
+    [...document.querySelectorAll(".run-c>span")].map(e=>e.textContent)]),["Cycling","Cycling",["km","Speed now km/h","Average km/h","kcal, an estimate"]],"a ride, read as speed");
   eq(await page.evaluate(()=>[document.querySelectorAll(".run-map .rm-field rect").length>10,document.querySelectorAll(".run-map .rm-road path").length,
     document.querySelectorAll(".run-map .rm-blk rect").length]),[true,3,0],"fields and roads, not a city");
   /* 22 m a fix every 1.5 s is about 15 m/s (53 km/h): a run would call each a leap,
@@ -3865,6 +3883,7 @@ await test("Live tracking: a ride is its own: Cycling, speed in km/h, a countrys
   const r=await ev(page,"[S.run.pts.length,Math.round(S.run.dist)]");
   if(r[0]<5||r[1]<80)throw new Error("a ride's speed was taken for a leap: "+JSON.stringify(r));
   if(!/^\d+\.\d$/.test(await page.$eval('#runP',e=>e.textContent)))throw new Error("no speed: "+await page.$eval('#runP',e=>e.textContent));
+  await page.tap('[data-run="pause"]');await pause(page,300);
   await page.tap('[data-run="finish"]');await pause(page,900);
   const e=await ev(page,"[S.sessions[0].entries[0].name,S.sessions[0].entries[0].sets[0].km>0.07,S.sessions[0].entries[0].sets[0].kcal>0]");
   eq(e,["Cycling",true,true],"saved as a ride");
@@ -3884,7 +3903,7 @@ await test("Live tracking: a walk is drawn on a park and a hike on hills",async 
   eq(await ev(page,"!!S.run"),false,"discarded");
   await liveStart(page,"Hiking");
   eq(await page.evaluate(()=>[document.querySelector(".run-h").textContent,document.querySelectorAll(".run-map .rm-contour path").length>20,
-    !!document.querySelector(".run-map .rm-peak path"),document.querySelector("#runP").previousElementSibling.textContent]),["Hiking",true,true,"Pace /km"],"a hike: contours and peaks, read as pace");
+    !!document.querySelector(".run-map .rm-peak path"),document.querySelector("#runP").nextElementSibling.textContent]),["Hiking",true,true,"Average /km"],"a hike: contours and peaks, read as pace");
 });
 await test("Live tracking: with location refused it is timed only, says so, and Finish opens the logger with the minutes in",async page=>{
   await page.evaluate(()=>{Object.defineProperty(navigator,"geolocation",{configurable:true,value:{watchPosition:(ok,err)=>{setTimeout(()=>err({code:1}),50);return 1;},clearWatch:()=>{}}});});
@@ -3892,6 +3911,7 @@ await test("Live tracking: with location refused it is timed only, says so, and 
   eq(await page.$eval('#runGps',e=>[e.className,e.textContent]),["run-gps denied","Location is off"],"the chip says so");
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.run.ms=125000;(await import("/js/ui/render.js")).render();});await pause(page,300);
   if(!/timed only/.test(await page.$eval('.run-note',e=>e.textContent)))throw new Error("no note");
+  await page.tap('[data-run="pause"]');await pause(page,300);
   await page.tap('[data-run="finish"]');await pause(page,600);
   eq(await ev(page,"[!!S.run,!!S.active&&S.active.entries[0].name,V.draft.min>=2]"),[false,"Walking",true],"the logger, for the walk, with the time");
 });

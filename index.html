@@ -4651,26 +4651,44 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .run-big b{font-family:var(--display);font-size:clamp(52px,17vw,72px);font-weight:800;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
 .run-big span{margin-top:6px;font-size:13px;color:var(--sub)}
 .run.paused .run-big b{color:var(--dim)}
-.run-mid{display:flex;flex-direction:column;align-items:center;margin-top:14px}
-.run-pin{display:grid;place-items:center;width:40px;height:40px;margin-bottom:6px;border-radius:50%;border:1px solid var(--card-edge);background:var(--card);color:var(--accentHi)}
-.run-pin .gl{width:19px;height:19px}
-.run-mid b{font-family:var(--display);font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
-.run-mid>span:last-child{font-size:12.5px;color:var(--sub)}
-.run-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin-top:18px}
-.run-pill{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 12px 8px 8px;border-radius:var(--rpill);
-  border:1px solid var(--card-edge);background:var(--card)}
-.run-pi{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;background:var(--well);color:var(--accentHi)}
-.run-pi .gl{width:17px;height:17px}
-.run-pt{display:flex;flex-direction:column;min-width:0}
-.run-pt span{font-size:11px;color:var(--dim)}
-.run-pt b{font-family:var(--display);font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+/* The numbers read mid-stride: distance large, then the pace now, the average and the
+   energy, in a grid that keeps its columns while the figures change. */
+.run-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2);margin-top:var(--s4)}
+.run-c{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:var(--s3) var(--s1);border-radius:var(--r4);
+  border:1px solid var(--card-edge);background:var(--card);text-align:center}
+.run-c b{font-family:var(--display);font-size:22px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.run-c span{font-size:11.5px;color:var(--dim);line-height:1.3}
+.run-c-d{grid-column:1 / -1;padding:var(--s2) 0 var(--s3)}
+.run-c-d b{font-size:clamp(40px,13vw,56px)}
+.run-c-d span{font-size:13px;color:var(--sub)}
+.run-st{margin:var(--s2) 0 var(--s4);padding:var(--s2) var(--s3);border-radius:var(--rpill);background:var(--card);border:1px solid var(--card-edge);
+  font-size:13px;line-height:1.4;color:var(--sub);text-align:center}
+.run-st[hidden]{display:none}
+.run.paused .run-st{color:var(--warning)}
+/* Each kilometre's time; faster than the one before in green, slower quieter. */
+.run-splits:empty{display:none}
+.run-sh{margin:var(--s4) 2px var(--s2);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.run-sl{margin:0;padding:0;list-style:none;border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card);overflow:hidden}
+.run-sl li{display:grid;grid-template-columns:2.2em 1fr auto;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3);border-top:1px solid var(--hair)}
+.run-sl li:first-child{border-top:0}
+.run-sl li>span{color:var(--dim);font-weight:700}
+.run-sl b{font-family:var(--display);font-size:17px;font-variant-numeric:tabular-nums}
+.run-sl em{font-style:normal;font-size:12.5px;font-weight:700}
+.run-sl em.up{color:var(--ok)}
+.run-sl em.down{color:var(--dim)}
+/* The controls, fixed under the thumb (owner, 28 Oct): Pause alone while moving; paused,
+   Carry on and Finish side by side. The page keeps room for them at its end. */
+.run{padding-bottom:calc(132px + env(safe-area-inset-bottom))}
+.run-ctl{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:center;justify-content:center;gap:var(--s4);
+  padding:var(--s4) var(--gutter) calc(var(--s4) + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,transparent,rgba(var(--bg-rgb),.92) 30%);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.run-ctl .btn.run-end{flex:1;max-width:280px;margin:0;min-height:60px}
 .run-play{display:grid;place-items:center;width:72px;height:72px;padding:0;border-radius:50%;border:0;
   background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent);
   box-shadow:0 0 0 7px var(--accent-tint),0 12px 30px -10px rgba(var(--accent-rgb),.9);transition:transform var(--m-press) var(--e-standard)}
 .run-play svg{width:28px;height:28px;stroke-width:2.6}
 .run-play svg path[d^="M7"]{fill:currentColor}
 :root:not(.tch) .run-play:active,.run-play.tapd{transform:scale(.94)}
-.btn.run-end{margin:20px 0 0}
 .run-note{margin:12px 4px 0;font-size:12.5px;line-height:1.5;color:var(--dim);text-align:center}
 /* Training's way in. */
 .ttile.trun .ttile-i .gl{width:22px;height:22px}
