@@ -106,14 +106,20 @@ function syncCoach(){
      going (measured before and after, then played back), rather than jumping and
      fading in. With the keyboard up or not, it is the same two boxes. */
   var was=resized&&pan.querySelector(".cp"),r0=was?was.getBoundingClientRect():null;
+  /* Typing when it is resized: the field, what is in it and the keyboard stay (owner,
+     28 Oct: maximised with the keyboard up, the rebuild dropped the keyboard halfway
+     through the box's glide, and the two fought). Within the tap, so iOS keeps it up. */
+  var q0=resized&&document.activeElement&&document.activeElement.id==="chatq"?document.activeElement:null;
+  var typed=q0?{v:q0.value,s:q0.selectionStart,e:q0.selectionEnd}:null;
   if(opening||resized)replace(pan,html);else patch(pan,html);
   pan.classList.toggle("opening",opening);
   if(r0)flip(pan.querySelector(".cp"),r0);
   pan.classList.remove("resized");
   lastMode=mode;
   if(opening||resized){
-    var box=pan.querySelector(".cp");
-    if(box)try{box.focus({preventScroll:true});}catch(e){}
+    var box=pan.querySelector(".cp"),q1=typed&&document.getElementById("chatq");
+    if(q1){q1.value=typed.v;try{q1.focus({preventScroll:true});q1.setSelectionRange(typed.s,typed.e);}catch(e){}}
+    else if(box)try{box.focus({preventScroll:true});}catch(e){}
     toEnd();}}
 /* The box itself moves: its edges glide from the old rectangle to the new one, and the
    conversation inside stays in view the whole way, reflowing as it goes (owner, 27 Oct:
@@ -157,7 +163,16 @@ function closeCoach(render){
   var reduced=document.documentElement.classList.contains("reduced")||document.body.classList.contains("noanim");
   if(!pan||!pan.firstChild||reduced){render();focusFab();return;}
   pan.classList.add("closing");
-  setTimeout(function(){pan.classList.remove("closing");pan.textContent="";render();focusFab();},260);}
+  setTimeout(function(){pan.classList.remove("closing");pan.textContent="";render();focusFab();},340);}
+/* While typing, a tap on a button in the panel (send, a suggestion, an answer's button,
+   bigger or smaller) does not take the focus from the field: the keyboard stays and
+   nothing moves under the finger, as in a messaging app. Closing lets it go. */
+function bindPanel(){
+  var pan=document.getElementById("cpanel");if(!pan)return;
+  pan.addEventListener("mousedown",function(e){
+    var b=e.target&&e.target.closest&&e.target.closest("button");
+    if(!b||b.matches("[data-coachclose]"))return;
+    if(document.activeElement&&document.activeElement.id==="chatq")e.preventDefault();});}
 function focusFab(){var b=document.querySelector("#cfab .cfab");if(b)try{b.focus({preventScroll:true});}catch(e){}}
 
-export {closeCoach, fabShown, holdCoach, syncCoach, toEnd};
+export {bindPanel, closeCoach, fabShown, holdCoach, syncCoach, toEnd};

@@ -2489,3 +2489,37 @@ copied off by hand, and the InBody result put to the plans.
   weight, as the book gives it. InBody's weight is the day's weigh-in, so targets already follow it.
 - Tests: engine inbody (right-to-left photo text); regression "InBody from its photo: …" (a drawn sheet
   read in the browser, outside requests blocked and none made, figures in fields, save opens the coach).
+
+## Motion, two sessions a day, a smarter smart coach — branch session/motion-coach
+
+CACHE `bunyan-v177`. Owner, 28 Oct (screenshots): the RPE card "disappears" on a tap; motion in the
+workout and in every phase of the chat (keyboard up or down, bigger or smaller, sending) too fast or
+jumping; the smart coach answered "two sessions a day?" with "don't forget to rest" and the follow-up
+with an unrelated passage; and the two-sessions option could not be found.
+- **Motion token** `flow` 400 ms (motion.js, Base Web timing400): a card arriving on, or leaving, a
+  screen in use. `leave(el, done, slow)`; `.rowout.slow`.
+- **Workout**: render.js marks `.sess [data-k]` (not inputs), so each card that appears (rest, RPE,
+  Next exercise, a set row) arrives (`cardIn`, decelerate). Next exercise has its own key (`lognext`):
+  a new card, not the log button relabelled. The RPE question: the chosen number is held a moment
+  (`V.rpeOut`, drawn by vRpeAsk so the rest clock's renders do not cut it), then it plays out and the
+  cards below rise. `.sess .rpeask` lost its own animation, which outranked the exit. The rest card,
+  once over or put away, plays out where it was (render.js `leavingCards`/`playOut`: the removed node
+  put back as an inert, id-less `.ghost`; patch.js steps over ghosts).
+- **Chat**: the keyboard, ahead of itself (view.js `kbPredict`, keyboard.js focusin/focusout on iOS):
+  once its height is known, a field taking or losing the focus sets `--vvh` at once, so the panel and
+  sheets glide alongside the keyboard (`--m-kb` 380 ms) instead of after it; readings from before it
+  moved are ignored for 800 ms. The compact box's max-height eases too. Bigger/smaller while typing
+  keeps the field, its text, caret and keyboard (coachfab.js). A tap on a panel button keeps the
+  field's focus (bindPanel, mousedown), so the keyboard stays and nothing moves under the finger; the
+  panel's two-step drop after the keyboard (`body.kbleave`) is gone. Close 260 → 340 ms (`--m-close`).
+  Reduced motion: no transitions on the panel.
+- **Two sessions a day**: Training's today card always offers "Add another session today" (the
+  `another` sheet, worded for before or after today's first); the builder says how, By weekday (tap a
+  weekday another day has; such a chip is dashed, not faded) and In rotation (switch to By weekday).
+  Coach intent `twice` (EN/AR) → aTwice: the two ways, with buttons for each.
+- **Smart coach**: a question met only loosely by a passage now goes to the smart coach whenever it is
+  ready (not only when no rule knew it). smart.js gives it "How the app works" (where each feature is)
+  and the person's program (name, schedule, days, weekdays), and tells it to answer for this person,
+  name the place in the app, and leave out filler.
+- Tests: regression "Workout motion, with motion on: …", "Chat motion: …"; coach intent cases; engine
+  smart (app guide and program in the prompt).

@@ -3120,6 +3120,20 @@ await test("Coach memory: a fact that contradicts or updates one kept is asked a
   await page.tap('#cpanel .chat-x.live [data-ctxrep]');await pause(page,400);
   eq(await ev(page,"S.context.items.map(i=>i.text)"),["I work 12-hour days now"],"replaced: one statement, the newer");
 });
+await test("Chat motion: typing, bigger or smaller keeps the field, its text and the keyboard; a tap on send keeps them; the panel and its box ease with the keyboard",async page=>{
+  await openChat(page);
+  await page.tap('#chatq');await page.fill('#chatq','how much protein');
+  await page.evaluate(()=>{const q=document.getElementById("chatq");q.setSelectionRange(4,8);});
+  await page.tap('[data-coachsize="full"]');await pause(page,700);
+  eq(await page.evaluate(()=>{const q=document.activeElement;return [!!document.querySelector(".cp.full"),q&&q.id,q&&q.value,q&&q.selectionStart,q&&q.selectionEnd];}),
+    [true,"chatq","how much protein",4,8],"made bigger while typing: the same text, the caret where it was, still focused");
+  await page.tap('[data-coachsize="compact"]');await pause(page,700);
+  eq(await page.evaluate(()=>[!document.querySelector(".cp.full"),document.activeElement&&document.activeElement.id]),[true,"chatq"],"and smaller again, still typing");
+  await page.tap('.cp-send');await pause(page,600);
+  eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,document.getElementById("chatq").value]),["chatq",""],"sent: the field keeps the focus (the keyboard stays), emptied");
+  const tr=await page.evaluate(()=>[getComputedStyle(document.getElementById("cpanel")).transitionProperty,getComputedStyle(document.querySelector("#cpanel .cp")).transitionProperty]);
+  if(!/top/.test(tr[0])||!/height/.test(tr[0])||!/max-height/.test(tr[1]))throw new Error("transitions: "+tr);
+},{prefs:{anim:true}});
 await test("Workout motion, with motion on: the RPE card holds the chosen number, then plays out while the cards below rise; Next exercise arrives, it does not pop in",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.rpe="every";});
   await startWorkout(page);

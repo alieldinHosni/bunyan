@@ -103,7 +103,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --m-sheet:380ms; --m-screen:380ms; --m-data:480ms; --m-reveal:600ms; --m-fade:260ms;
   /* A change of tab and the coach panel: a touch slower than a screen, with a little
      spring at the end so they land rather than stop. --m-kb follows the iPhone keyboard. */
-  --m-tab:460ms; --m-panel:420ms; --m-kb:340ms;
+  --m-tab:460ms; --m-panel:420ms; --m-kb:380ms; --m-close:340ms;
   --e-standard:cubic-bezier(0.2, 0, 0, 1); --e-decel:cubic-bezier(0.05, 0.7, 0.1, 1);
   --e-accel:cubic-bezier(0.3, 0, 0.8, 0.15); --e-spring:cubic-bezier(.2,.9,.3,1.06);
   --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
@@ -5261,16 +5261,19 @@ body.cfab-on nav .dock{margin-right:calc(var(--dock-h) + var(--s2));gap:calc(var
      panel glides with it, at the keyboard's own pace, instead of jumping. */
   transition:top var(--m-kb) var(--e-ios),height var(--m-kb) var(--e-ios),padding-bottom var(--m-kb) var(--e-ios)}
 #cpanel[hidden]{display:none}
-/* On the keyboard while typing, and for a moment after it goes (body.kbleave): a tap on
-   send or an answer's button blurs the field first, and moving the panel then would put
-   something else under the finger. */
-body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
+/* On the keyboard while typing. A tap on the panel's buttons keeps the field focused
+   (coachfab.js bindPanel), so when the keyboard goes the panel follows it down to its
+   place above the dock in one glide, not in two steps. */
+body.kb #cpanel{padding-bottom:10px}
 .cp-veil{position:absolute;inset:0;width:100%;padding:0;border:0;border-radius:0;background:rgba(var(--bg-rgb),.42);cursor:default}
 .cp{position:relative;width:100%;max-width:420px;display:flex;flex-direction:column;min-height:0;
   max-height:min(70vh,calc(var(--vvh,100dvh) - var(--navh) - 72px));max-height:min(70dvh,calc(var(--vvh,100dvh) - var(--navh) - 72px));
   border-radius:var(--r5);border:1px solid var(--card-edge);color:var(--text);
   background:var(--raised);box-shadow:inset 0 1px 0 var(--glass-hi),var(--shadow-float);outline:none;
-  transform-origin:calc(100% - 32px) calc(100% + var(--navh))}
+  transform-origin:calc(100% - 32px) calc(100% + var(--navh));
+  /* Its height is held to what the keyboard leaves, so it eases with the keyboard too,
+     not just the panel around it (owner, 28 Oct: compact, the box snapped). */
+  transition:max-height var(--m-kb) var(--e-ios)}
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
   .cp{background:rgba(var(--bg-rgb),.86);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%)}}
 .cp.full{position:fixed;left:8px;right:8px;width:auto;max-width:none;max-height:none;
@@ -5280,8 +5283,8 @@ body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
 #cpanel.opening .cp{animation:cpIn var(--m-panel) var(--e-spring)}
 #cpanel.opening .cp-veil{animation:fadeIn var(--m-comp) var(--e-standard)}
 /* Resized (js/ui/coachfab.js flip): the box itself glides; its contents return once it has. */
-#cpanel.closing .cp{animation:cpOut 260ms var(--e-accel) forwards}
-#cpanel.closing .cp-veil{animation:fadeIn 260ms var(--e-standard) reverse forwards}
+#cpanel.closing .cp{animation:cpOut var(--m-close) var(--e-accel) forwards}
+#cpanel.closing .cp-veil{animation:fadeIn var(--m-close) var(--e-standard) reverse forwards}
 @keyframes cpIn{from{opacity:0;transform:scale(.12);border-radius:50%}}
 @keyframes cpOut{to{opacity:0;transform:scale(.12)}}
 .cp-h{display:flex;align-items:center;gap:var(--s2);padding:10px 8px 8px var(--s4);border-bottom:1px solid var(--hair)}
@@ -5352,6 +5355,7 @@ body.kb #cpanel,body.kbleave #cpanel{padding-bottom:10px}
 .cp-send .gl{width:20px;height:20px}
 @media (prefers-reduced-motion:reduce){.cfab,#cpanel .cp,#cpanel .cp-veil{animation:none!important}}
 body.noanim .cfab,body.noanim #cpanel .cp,body.noanim #cpanel .cp-veil,:root.reduced .cfab,:root.reduced #cpanel .cp,:root.reduced #cpanel .cp-veil{animation:none!important}
+body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced #cpanel .cp{transition:none!important}
 /* ---- Glass, everywhere -----------------------------------------------------------
    The owner's references: frosted glass over a blended, drawn ground. Cards, buttons,
    chips, fields, the segmented control, the round header buttons and the dock are

@@ -158,9 +158,30 @@ async function keepAwake(on){
    keyboard does not shrink, so without this a sheet ran on underneath the keyboard. */
 function syncViewport(){
   var vv=window.visualViewport;if(!vv)return;
-  var r=document.documentElement.style;
-  r.setProperty("--vvh",Math.round(vv.height)+"px");
+  var r=document.documentElement.style,ih=window.innerHeight,h=vv.height;
+  /* While the keyboard is moving the way it was predicted to (kbPredict), a reading
+     from before it moved is not let pull the panel back: iOS reports the new size only
+     once the keyboard has finished, and an early scroll event still has the old one. */
+  if(Date.now()<KB.until&&(KB.dir>0?h>ih-100:h<ih-100))return;
+  if(ih-h>120)KB.h=ih-h;
+  r.setProperty("--vvh",Math.round(h)+"px");
   r.setProperty("--vvt",Math.round(vv.offsetTop)+"px");}
+/* The keyboard, ahead of itself (owner, 28 Oct: the chat "jumps" as the keyboard opens
+   and closes). iOS says how much it covers only after it has finished moving, so the
+   panel and the sheets, sized from --vvh, moved late and then all at once. Once its
+   height is known (the first time it opens), a field taking the focus sets --vvh to what
+   the keyboard will leave, and losing it to the whole screen, at that moment: the panel
+   glides (its own transition, --m-kb) alongside the keyboard instead of after it. The
+   real reading arrives as it finishes and takes over. */
+var KB={h:0,dir:0,until:0};
+function kbPredict(up){
+  var r=document.documentElement.style,ih=window.innerHeight;
+  if(up&&!KB.h)return;
+  KB.dir=up?1:-1;KB.until=Date.now()+800;
+  r.setProperty("--vvh",Math.round(up?ih-KB.h:ih)+"px");
+  if(!up)r.setProperty("--vvt","0px");
+  /* Should it never move (a hardware keyboard), the reading wins after the window. */
+  setTimeout(syncViewport,820);}
 /* undo: a function for the toast's button, which says Undo unless label says
    otherwise ("Show me" for a plan check). */
 function toast(msg,undo,label){
@@ -482,4 +503,4 @@ function curDate(){return V.fdate||today();}
 /* The meal a quick add goes into: the next one not yet logged on that date. */
 function mealNow(d){return nextMeal(d||curDate());}
 
-export {canBuzz, curDate, inDays, mealNow, GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};
+export {canBuzz, curDate, inDays, kbPredict, mealNow, GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepper, stepperInput, streak, tap, toast, V};
