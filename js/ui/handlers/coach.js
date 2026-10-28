@@ -18,7 +18,7 @@ import {pushNav, resetNav} from "../nav.js";
 import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
-import {draftFrom, foodPrefs, GEARS, profileOf, STEPS, youOk} from "../views/assess.js";
+import {draftFrom, foodPrefs, GEARS, profileOf, STEPS, youOk, youWhy} from "../views/assess.js";
 import {ask, findMsg, follow} from "../views/chat.js";
 import {coachAct} from "../views/pcheck.js";
 import {chatSend, sendText, slotsFrom, toCoach} from "./common.js";
@@ -149,7 +149,7 @@ function register(){
   on(function(D){return D.asm!==undefined&&V.asd;},function(D){var mp=D.asm.split("|"),ml=V.asd[mp[0]],mi=ml.indexOf(mp[1]);
     if(mi>=0)ml.splice(mi,1);else ml.push(mp[1]);render();return;});
   on(function(D){return D.asnext&&V.asd;},function(){
-    if(STEPS[V.asd.step]==="you"&&!youOk(V.asd)){toast(t("Enter your age, height and weight to go on."));return;}
+    if(STEPS[V.asd.step]==="you"&&!youOk(V.asd)){toast(youWhy(V.asd));return;}
     V.asd.step=Math.min(STEPS.length-1,V.asd.step+1);render();window.scrollTo(0,0);
     if(STEPS[V.asd.step]==="result"&&!FOODDB)loadFoods(function(){render();});
     return;});

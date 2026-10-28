@@ -2539,3 +2539,22 @@ with an unrelated passage; and the two-sessions option could not be found.
 - **Test, not app**: "Coach, a rough day" put 1,100 kcal over on any day; from Wednesday of a Saturday
   week that is more than two days can take, and the app rightly said the week is fine. The overage is
   now sized to the days left (300 kcal each); on the week's last day it expects "a new one starts".
+
+## Audit, 28 Oct — branch session/polish
+
+Owner, 28 Oct: "look for any enhancement, bugs … UI, interface, design, UX, CSS, functionality,
+efficiency … fix them and merge". A crawl of every tab, page under them and sheet, English and
+Arabic, at 390 and 320 wide (errors, sideways overflow, English left in Arabic, small targets), the
+assessment end to end at 320 in both languages, and full-page screenshots read by eye.
+- **Clean**: no page errors, no sideways overflow anywhere, the assessment runs through in both
+  languages at 320. The rest clock already paints only its numbers each second (app.js tickSession).
+- **Equipment sheet**: was entirely English (intro, the equipment names, "Have it"/"No"); now through
+  t(), and "No" reads "Not here"; each row says its state (aria-pressed).
+- **Favourites sheet**: the empty message was English, the title shown twice, the names untranslated
+  (exName now).
+- **Water glasses**: the targets were 13px wide (7 at 320); the buttons now share the row with no
+  gaps (about 20–24px each), the drawn glass still at most 20px.
+- **Plates line** in the set card: a 28px-tall button mid-set; at least 36px now.
+- **Assessment**: a figure out of range said "Enter your age, height and weight" with all three
+  entered; it now names the figure and its range (assess.js youWhy; weight in the person's unit).
+- Test: regression "Audit: …".

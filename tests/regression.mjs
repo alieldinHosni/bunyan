@@ -2331,6 +2331,23 @@ await test("Coach chat: the panel opens on three questions for where it was open
   await page.tap('#cfab .cfab');await pause(page,400);
   eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["rest","eat","protein"],"Food's questions");
 });
+await test("Audit: the equipment and favourites sheets in Arabic; the water glasses wide enough to tap; the assessment says which figure is out of range",async page=>{
+  await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  for(const sh of ["gear","likes"]){
+    await page.evaluate(async s=>{(await import("/js/ui/actions.js")).openSheet(s);},sh);await pause(page,300);
+    const en=await page.evaluate(()=>(document.querySelector("#sheet").innerText.match(/[A-Za-z]{3,}/g)||[]));
+    eq(en,[],sh+": no English left");
+    await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);}
+  await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.lang="en";const V=(await import("/js/ui/view.js")).V;V.tab="food";V.meal=null;(await import("/js/ui/render.js")).render();});await pause(page,400);
+  const g=await page.$$eval('.fglass',a=>a.map(e=>e.getBoundingClientRect().width));
+  if(!g.length||Math.min(...g)<18)throw new Error("a glass too narrow to tap: "+g);
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.onboarded=false;V.assess=true;V.asd=null;(await import("/js/ui/render.js")).render();});await pause(page,400);
+  await page.tap('#app [data-asnext]');await pause(page,300);
+  await page.fill('#as_age','30');await page.fill('#as_height','30');await page.fill('#as_weight','84');
+  await page.evaluate(()=>["as_age","as_height","as_weight"].forEach(id=>document.getElementById(id).dispatchEvent(new Event("change",{bubbles:true}))));
+  await page.tap('#app [data-asnext]');await pause(page,300);
+  eq(await page.$eval('.toast',e=>e.textContent.trim()),"Height: 120 to 230 cm.","the figure out of range, and its range");
+});
 await test("Settings: every choice in sight, switches that say their state, a tap sets the value; no drop-down anywhere",async page=>{
   await sheet(page,"set_training");
   const sw=()=>page.$eval('[data-toggle="nowarm"]',e=>[e.getAttribute("role"),e.getAttribute("aria-checked")]);

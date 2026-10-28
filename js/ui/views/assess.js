@@ -18,7 +18,7 @@ import {buildMealPlan} from "../../engine/mealplan.js";
 import {FOODDB, sumNutrition} from "../../engine/nutrition.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {S} from "../../state.js";
-import {toDisp, toKg, wUnit} from "../../units.js";
+import {fmtW, toDisp, toKg, wUnit} from "../../units.js";
 import {esc, fmtN, num, today} from "../../util.js";
 import {V} from "../view.js";
 import {backArrow} from "../nav.js";
@@ -104,9 +104,17 @@ function card(field,val,title,desc,on){
 function q(title,sub){return '<h2 class="as-q">'+esc(title)+'</h2>'+(sub?'<p class="as-sub">'+esc(sub)+'</p>':'');}
 function lbl(text){return '<div class="as-l">'+esc(text)+'</div>';}
 
-function youOk(a){
-  var kg=num(a.weight);
-  return num(a.age)>=13&&num(a.age)<=95&&num(a.height)>=120&&num(a.height)<=230&&kg>=30&&kg<=300;}
+function youOk(a){return !youWhy(a);}
+/* Why the step cannot go on, said about the figure that stops it (the audit, 28 Oct: a
+   height typed as 30 was answered "Enter your age, height and weight", all three of
+   which were there). "" when it can. */
+function youWhy(a){
+  var kg=num(a.weight),age=num(a.age),cm=num(a.height);
+  if(!a.age||!a.height||!a.weight)return t("Enter your age, height and weight to go on.");
+  if(!(age>=13&&age<=95))return t("Age: 13 to 95.");
+  if(!(cm>=120&&cm<=230))return t("Height: 120 to 230 cm.");
+  if(!(kg>=30&&kg<=300))return t("Weight: {a} to {b}.").replace("{a}",fmtW(30)).replace("{b}",fmtW(300));
+  return "";}
 
 function body(a){
   var s=STEPS[a.step],h='';
@@ -283,4 +291,4 @@ function vAssess(){
      +'<button class="btn" data-asnext="1">'+t(s==="intro"?"Start":s==="sleep"?"See my plan":"Next")+'</button></div>';}
   return h;}
 
-export {activityOf, draftFrom, foodPrefs, GEARS, preview, profileOf, STEPS, vAssess, youOk};
+export {activityOf, draftFrom, foodPrefs, GEARS, preview, profileOf, STEPS, vAssess, youOk, youWhy};
