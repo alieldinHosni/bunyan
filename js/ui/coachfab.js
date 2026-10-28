@@ -196,6 +196,9 @@ function bindPanel(grow){
     growT=setTimeout(function(){
       var q=document.getElementById("chatq");
       if(V.coach!=="compact"||!q||document.activeElement!==q)return;
+      /* Already sent: the message is flying into the conversation, or the answer is on
+         its way. The panel does not move under it. */
+      if(document.querySelector("#cpanel .chat-ghost,#cpanel .chat-typing,.chat-ghost"))return;
       slowGrow=true;grow();},GROW_AFTER);});
   pan.addEventListener("mousedown",function(e){
     var b=e.target&&e.target.closest&&e.target.closest("button");

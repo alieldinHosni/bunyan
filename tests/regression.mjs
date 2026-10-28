@@ -740,7 +740,8 @@ await test("Coach chat: suggestions and typed questions, English and Arabic, ans
   eq(await ev(page,"[S.profile.goal,S.goals.kcal]"),["lose",2500],"Undo puts goal and targets back");
   /* Kept, cleared with Undo (from the panel at full height), and closing returns to Coach AI. */
   const n=await ev(page,"S.chat.length");
-  await page.tap('.cp [data-coachsize="full"]');await pause(page);
+  /* Typing in the small panel grew it to the whole conversation (coachfab.js bindPanel). */
+  eq(await ev(page,"V.coach"),"full","typed in, it is at full height");
   await page.tap('[data-chatclear]');await pause(page);
   eq([await page.$$eval('#cpanel .chat-x',a=>a.length),await ev(page,"S.chat.length")],[0,n],"cleared from the chat, kept in the history");
   await page.tap('.toast-undo');await pause(page);
@@ -2722,11 +2723,11 @@ await test("Coach agent: an unknown exercise gets real close matches, then a day
   eq(await page.$eval('#cpanel [data-agok]',b=>b.textContent),"Add it","Add it, never Confirm");
   eq(await dayEx(page,2),before,"nothing changed before the tap");
   /* The panel is inline: no sheet, no dialog over it. */
-  eq(await ev(page,"[V.sheet,V.coach]"),[null,"compact"],"inline, not modal");
+  eq(await ev(page,"[V.sheet,!!V.coach]"),[null,true],"inline, not modal");
   await page.tap('#cpanel [data-agok]');await pause(page,500);
   r=await agLast(page);
   const after=await dayEx(page,2);
-  eq([after.length,/^Added .+ to Full Body B\.$/.test(r.done.replace(/Undo$/,"")),await ev(page,"V.coach")],[before.length+1,true,"compact"],"applied, said, the panel still open");
+  eq([after.length,/^Added .+ to Full Body B\.$/.test(r.done.replace(/Undo$/,"")),await ev(page,"!!V.coach")],[before.length+1,true,true],"applied, said, the panel still open");
   /* Asked something else, the Undo stays on the applied row. */
   await agSay(page,"how much protein do I need");
   if(!(await page.$('#cpanel [data-agundo]')))throw new Error("the Undo went away");
@@ -3187,7 +3188,8 @@ await test("Chat motion: typing, bigger or smaller keeps the field, its text and
   await openChat(page);
   await page.tap('#chatq');await page.fill('#chatq','how much protein');
   await page.evaluate(()=>{const q=document.getElementById("chatq");q.setSelectionRange(4,8);});
-  await page.tap('[data-coachsize="full"]');await pause(page,700);
+  /* It grows by itself once the keyboard is up (coachfab.js bindPanel). */
+  await pause(page,1400);
   eq(await page.evaluate(()=>{const q=document.activeElement;return [!!document.querySelector(".cp.full"),q&&q.id,q&&q.value,q&&q.selectionStart,q&&q.selectionEnd];}),
     [true,"chatq","how much protein",4,8],"made bigger while typing: the same text, the caret where it was, still focused");
   await page.tap('[data-coachsize="compact"]');await pause(page,700);
@@ -3417,7 +3419,9 @@ await test("Coach follow-ups: a typed answer to a choice, yes or no to a change,
   r=await agSay(page,"Full Body B");
   await page.fill('#chatq','no');await page.press('#chatq','Enter');await pause(page,400);
   eq(await page.evaluate(()=>!![...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector(".chat-n")),true,"no is Not now");
-  /* Compact: every exchange is there, and the panel scrolls through them. */
+  /* Compact: every exchange is there, and the panel scrolls through them. (Typing in it
+     grew it: made smaller again while typing, it stays.) */
+  if(await ev(page,"V.coach==='full'")){await page.tap('.cp [data-coachsize="compact"]');await pause(page,700);}
   const sc=await page.evaluate(()=>{const b=document.getElementById("cpB"),xs=[...b.querySelectorAll(".chat-x")];
     return {n:xs.length,hidden:xs.filter(x=>!x.getClientRects().length).length,scrolls:b.scrollHeight>b.clientHeight};});
   eq([sc.n>=6,sc.hidden,sc.scrolls,await ev(page,"V.coach")],[true,0,true,"compact"],"compact scrolls through the whole conversation");
