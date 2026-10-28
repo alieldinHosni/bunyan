@@ -461,12 +461,14 @@ function vLogger(){
         :t("+KG is weight added to you, like a belt or vest; leave it at 0 for bodyweight. Log your weight and it is counted in volume and records."))+'</p>';}
   }
 
-  /* --- what can happen to today's workout. Skip and Add are tiles; Remove and
-     Something hurts? are quiet links under them, lower in the hierarchy. Today only:
-     the program keeps its plan. --- */
-  h+='<div class="tools">'
-   +(V.logIdx<a.entries.length-1?'<button data-nextex="1">'+IC.skip+'<span>'+t("Skip exercise")+'</span></button>':'')
-   +'<button data-addlive="1">'+IC.plus+'<span>'+t("Add exercise")+'</span></button></div>';
+  /* --- what can happen to this exercise: Skip, a tile. Adding one is in today's list
+     (the title's ⌄), with the rest of today's order (owner, 28 Oct: "Add exercise …
+     makes no sense to be here", under the sets of the one being done). Today only: the
+     program keeps its plan. --- */
+  /* Only while there are sets still to do: once they are done, the big button is Next
+     exercise, and a Skip beside it would be the same thing twice. */
+  if(V.logIdx<a.entries.length-1&&(act||row))
+    h+='<div class="tools"><button data-nextex="1">'+IC.skip+'<span>'+t("Skip exercise")+'</span></button></div>';
   return h+'</div></div>';}
 
 /* ---- cardio, sports, classes ----------------------------------------------------

@@ -2553,3 +2553,7 @@ without the keyboard closing.
 - **Bigger or smaller is patched, not rebuilt**: the field stays the same element, so the keyboard is
   never touched and the box grows from where it sits above the keyboard (flip from its old rectangle).
 - Tests: regression "Coach launcher wherever the dock is: …"; "Floating Coach: on every tab, …".
+- **Under the sets, no Add exercise** (owner, 28 Oct, screenshot: "makes no sense to be here"): adding
+  one is in today's list (the title's ⌄, "Add an exercise"). And **no Skip once the sets are done**: the
+  big button is Next exercise then, and Skip beside it was the same thing twice. Skip shows only while
+  the exercise has sets still to do.

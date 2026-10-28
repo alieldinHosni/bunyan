@@ -162,7 +162,10 @@ await test("an exercise leaves today's workout at once with Undo, or after askin
 await test("an exercise can be added to today's workout, at the end, with Undo",async page=>{
   await startWorkout(page);
   const n=await ev(page,"S.active.entries.length");
-  await page.tap('[data-addlive]');await pause(page,500);
+  if(await page.$('#app [data-addlive]'))throw new Error("Add exercise is under the sets again");
+  /* From today's list, the title's ⌄. */
+  await page.tap('[data-exlist]');await pause(page,400);
+  await page.tap('#sheet [data-addlive]');await pause(page,500);
   eq(await page.$eval('#sheet h2',e=>e.textContent),"Add exercise");
   const pick=await page.$eval('#sheet [data-pickex]',e=>e.getAttribute("data-pickex"));
   await page.tap('#sheet [data-pickex]');await pause(page);
@@ -3151,7 +3154,8 @@ await test("Workout motion, with motion on: the RPE card holds the chosen number
   for(let k=0;k<sets;k++){await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
     if(k<sets-1){const r=await page.$('.rpeask [data-rpeset$=":7"]');if(r){await r.tap();await pause(page,1000);}}}
   eq(!!(await page.$('.rpeask')),true,"asked after the last set");
-  const before=await page.$eval('[data-nextex]',e=>e.getBoundingClientRect().top);
+  await page.waitForSelector('[data-k="lognext"]',{timeout:5000});
+  const before=await page.$eval('[data-k="lognext"]',e=>e.getBoundingClientRect().top);
   await page.tap('.rpeask [data-rpeset$=":8"]');await pause(page,80);
   eq(await page.$eval('.rpeask [data-rpeset$=":8"]',e=>e.classList.contains("on")),true,"the chosen number is held");
   await page.waitForSelector('.rpeask.rowout.slow',{timeout:1500});
@@ -3159,9 +3163,10 @@ await test("Workout motion, with motion on: the RPE card holds the chosen number
   eq(mid,"0.4s","it plays out over the unhurried flow, not cut");
   await pause(page,900);
   eq(!!(await page.$('.rpeask')),false,"then it is gone");
-  const after=await page.$eval('[data-nextex]',e=>e.getBoundingClientRect().top);
+  const after=await page.$eval('[data-k="lognext"]',e=>e.getBoundingClientRect().top);
   if(!(after<before))throw new Error("Next exercise did not rise into its place: "+before+" → "+after);
-  eq(await page.$eval('[data-nextex]',e=>[e.getAttribute("data-k"),e.hasAttribute("data-anim"),getComputedStyle(e).animationName]),["lognext",true,"cardIn"],"Next exercise arrives as a card of its own");
+  eq(await page.$eval('[data-k="lognext"]',e=>[e.getAttribute("data-k"),e.hasAttribute("data-anim"),getComputedStyle(e).animationName]),["lognext",true,"cardIn"],"Next exercise arrives as a card of its own");
+  eq(await page.$$eval('#app .tools [data-nextex]',a=>a.length),0,"with the sets done, no Skip beside Next exercise");
   /* The rest, put away: it plays out where it was; nothing is left behind. */
   if(!(await page.$('.sess [data-k="rest"]')))throw new Error("no rest to put away");
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.restEnd=Date.now()+300;});
