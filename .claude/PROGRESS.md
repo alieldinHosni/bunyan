@@ -2663,3 +2663,38 @@ this while I was sitting on the chair and shook my phone … think as a runner".
 - Tests: engine run.test.js (noise tables, still phone, km runs, rough / leap / paused, splits, pace now);
   regression "Live tracking: a phone sitting still, its GPS wandering, is not a run …" (105 m on the old
   code, nothing now), and the run / ride / hike tests for the new layout and fixed controls.
+
+## Warm-up for each session's own lifts; the coach on it; the chat opens up as you type — branch session/warmup
+
+CACHE `bunyan-v184`. Owner, 28 Oct (screenshots of the coach): "I am not sure why I see the same warm up
+in every session, I think warm up and static stretches at the end could vary based on the exercise and
+the training session itself"; the coach answered "customise my warm-up for each session in split" with
+Split Squats; "when chat is minimized and I open the keyboard … automatically maximize with slow
+animation so the user can see the chat".
+- **Why the warm-ups looked alike**: js/engine/warmup.js chose drills by muscle only, two or three per
+  muscle, so every upper-body day came out Thoracic Rotation, Pass-Through, Arm Circles, Arm Swings, and
+  push and pull days nearly matched. It now reads each lift's **movement** (`moveOf`: press to the front,
+  overhead, raise, row, pull-down, arms, squat, lunge, hinge, glute bridge/thrust, hamstrings,
+  adductors, calves, core), weights the first lifts more (×2, ×1.5: done fresh and heaviest), and takes
+  drills per movement, the main one two (`DRILLS_FOR`, 14 movements, 32 drills, the new ones all
+  photographed library entries). The count follows the day: 4 to 6 (the book: 3 to 10). The opener
+  follows the day too (whole body with legs in it, upper back on a pull day, shoulders on a press day).
+  Mobility work in the plan does not count as load. The library calls leg curls elbow flexion: arms
+  drills only for arm muscles.
+- **Stretches after**: per muscle as before (the book: static stretches of the muscles worked, 30 s),
+  more of them (biceps, forearms, a second for shoulders, triceps, hamstrings, calves, core), and the
+  movement picks which comes first (`STRETCH_FIRST`: a row ends on the middle back, a pull-down on the
+  lats, an overhead press on the front delt, a lunge on the hip flexor). Biceps no longer get the chest
+  stretch. Simulated over every preset day (scratchpad wu2.mjs): push, pull and leg days now differ.
+- Arabic names for the new drills and stretches (exnames.js whole-name terms).
+- **Coach**: new intent `warmplan` ("can the warm up be customised…", "why is my warm-up the same every
+  session", "الاحماء نفس الشكل كل تمرين ليه") → chat.js aWarmPlan: yes, how it is built, and the next
+  session's actual drills and stretches. Before, no rule knew it, the smart coach offered to "set a
+  custom warm-up" (nothing to set), and the follow-up's "split" matched Split Squats in the plan:
+  "split", "session" and "exercise" no longer name an exercise on their own (GENERIC).
+- **Chat**: the small panel's field tapped on a phone (pointer: coarse) grows the panel to the whole
+  conversation once the keyboard is up (480 ms), at the calendar's slower even pace (flip `slow`,
+  --m-cal / --e-cal); the field, what is typed and the keyboard stay. Made smaller while typing, it
+  stays small (no new focus).
+- Tests: regression "Warm-up engine: each day warms up for its own lifts …", "Coach, warm-up: …",
+  "Coach panel: the small panel's field tapped on a phone, it grows by itself …"; intent cases.

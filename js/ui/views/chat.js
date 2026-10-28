@@ -22,6 +22,7 @@ import {KINDS, listFacts} from "../../coach/context.js";
 import {reconcileNutrition, reconcileTraining} from "../../coach/reconcile.js";
 import {addDays as addDaysW, pinnedOn, weekDates, weekStartOf} from "../../engine/schedule.js";
 import {muscleOf, secondaryOf} from "../../data/exercises.js";
+import {cooldownFor, warmupFor} from "../../engine/warmup.js";
 import {LANDMARKS} from "../../coach/landmarks.js";
 import * as KB from "../../engine/kb.js";
 import {lookup, ownTerms} from "../../engine/kbsearch.js";
@@ -59,7 +60,7 @@ var KEEP=500;
 /* The suggestions: what each asks, as the person would ask it. */
 var ASK={
   today:"What do I train today?",weights:"How much should I lift?",eat:"What should I eat now?",
-  plateau:"Why isn't my lift going up?",inbody:"What does my InBody say?",twice:"Can I train twice in a day?",loadlog:"How are weights logged?",week:"How was my week?",busy:"This machine is taken",track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
+  plateau:"Why isn't my lift going up?",inbody:"What does my InBody say?",twice:"Can I train twice in a day?",warmplan:"Is my warm-up made for each session?",loadlog:"How are weights logged?",week:"How was my week?",busy:"This machine is taken",track:"How am I doing?",weight:"Is my weight on track?",protein:"How much protein do I need?",
   calories:"Why are my calories set like this?",sore:"I'm sore or tired",missed:"I'm short on time today",
   balance:"Is my program balanced?",strong:"How strong am I?",goal:"Should I change my goal?",
   plan:"Build me a new plan",water:"How much water should I drink?",steps:"How are my steps and cardio?",
@@ -69,7 +70,7 @@ var ASK={
   letgo:"Just move on",lowday:"Adjust today for a low day",facts:"What have I told you?"};
 /* What to offer next, after each kind of answer. */
 var NEXT={
-  plateau:["strong","weights","sore"],inbody:["weight","calories","goal"],twice:["today","sore","missed"],loadlog:["weights","strong","today"],week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
+  plateau:["strong","weights","sore"],inbody:["weight","calories","goal"],twice:["today","sore","missed"],warmplan:["today","weights","sore"],loadlog:["weights","strong","today"],week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
   track:["weight","strong","balance"],weight:["calories","eat","goal"],protein:["eat","calories","track"],
   calories:["protein","weight","goal"],sore:["today","missed","balance"],missed:["today","weights","track"],
   balance:["today","strong","plan"],strong:["weights","track","balance"],goal:["calories","plan","weight"],
@@ -151,8 +152,9 @@ function aToday(a,q){
   return act(a,t("Change the day"),{"data-tab":"train"});}
 
 /* The exercises the question names, or today's (or the next) workout's main ones. */
-/* Words that name how, not what: a match on them alone is not a match. */
-var GENERIC=/^(barbell|dumbbell|dumbbells|machine|cable|medium|grip|press|with|standing|seated|bar|بالبار|بالدمبل|بالدمبلز|بالجهاز|بالكابل|بريس|واقف|قاعد|قبضه)$/;
+/* Words that name how, not what: a match on them alone is not a match. "Split" is also
+   the program ("each session in my split" is not Split Squats, owner 28 Oct). */
+var GENERIC=/^(barbell|dumbbell|dumbbells|machine|cable|medium|grip|press|with|standing|seated|bar|split|session|exercise|بالبار|بالدمبل|بالدمبلز|بالجهاز|بالكابل|بريس|واقف|قاعد|قبضه)$/;
 function namedExercises(q){
   /* The question's words, and each again without the Arabic article it may carry
      ("البنش" is "بنش"). */
@@ -334,6 +336,25 @@ function aTwice(a){
   p(a,t("Every week: in your program, set the schedule By weekday and give two days the same weekday. Both are trained that day, the upper one first."));
   if(!S.active)act(a,t("Add another session today"),{"data-another":"1"});
   var sp=split();if(sp)act(a,t("Set it in my program"),{"data-editsplit":sp.id});
+  return a;}
+/* Whether the warm-up is made for the session (owner, 28 Oct): it is, from its lifts
+   (js/engine/warmup.js), so the answer says how and shows the one for the next
+   session to train, rather than offering to set up something that already happens. */
+function aWarmPlan(a){
+  p(a,t("Yes: each session gets its own warm-up, built from its lifts."));
+  p(a,t("It warms up the movements the session makes: a pressing day the shoulders and chest, a pulling day the upper back, a leg day the hips, knees and ankles. Then a few lighter sets lead up to the first heavy lift."));
+  p(a,t("At the end, a static stretch for each muscle the session worked, held 30 seconds."));
+  var sp=split(),pl=sp?planOn(sp,today()):null,d=null;
+  if(S.active)d={name:S.active.dayName,ex:S.active.entries};
+  else if(pl&&pl.day&&!pl.rest)d=pl.day;
+  else if(sp)d=nextDayOf(sp);
+  var lifts=d&&(d.ex||[]).filter(function(e){return !isActivity(e.name);});
+  var w=lifts&&lifts.length?warmupFor(lifts,{gear:S.gear||null}):null,c=w?cooldownFor(lifts,{}):null;
+  if(w&&w.drills.length){
+    p(a,fill(t("For {d}:"),{d:planName(d.name||"")}));
+    l(a,w.drills.map(function(x){return exName(x.name);}));
+    if(c)n(a,t("Stretches after:")+" "+list(c.stretches.map(function(x){return exName(x.name);})));}
+  n(a,t("It shows before the first exercise; the workout's ⋯ menu brings it back. Both can be switched off in Workout settings."));
   return a;}
 function aPlateau(a,q){
   var named=namedExercises(q),name=named.length?named[0].name:null,lifts=[];
@@ -1150,7 +1171,7 @@ function aReassess(a){
 
 /* An answer, with what the person told the coach that bears on it said back. */
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
-var ANSWER={plateau:aPlateau,inbody:aInBody,twice:aTwice,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
+var ANSWER={plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
   help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
@@ -1422,7 +1443,7 @@ function findMsg(at){return (S.chat||[]).filter(function(x){return x&&x.at===+at
    apart, and its buttons last. Nothing is coloured by who said it; the accent is kept
    for the one button an answer leads to. */
 /* What each answer is about, and its glyph (js/ui/glyphs.js). */
-var TOPIC={plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],twice:["Two sessions in a day","dumbbell"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
+var TOPIC={plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],twice:["Two sessions in a day","dumbbell"],warmplan:["Your warm-up","flame"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
   track:["How you're doing","bars"],weight:["Weight trend","scale"],protein:["Protein","shaker"],calories:["Calories","flame"],
   sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
   goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],
