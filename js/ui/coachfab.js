@@ -34,7 +34,10 @@ function where(){return S.active&&V.tab==="train"&&V.train!=="hub"?"workout":(SU
 /* ---- where the launcher may sit ------------------------------------------------------ */
 function fabShown(){
   if(V.coach||V.sheet||V.assess||V.chat)return false;
-  if(typeof document!=="undefined"&&document.body.classList.contains("kb"))return false;
+  /* The keyboard up hides it, but not the panel's own field's: closing while typing (a
+     tap in the panel keeps the field's focus, bindPanel) the field goes with the panel. */
+  if(typeof document!=="undefined"&&document.body.classList.contains("kb")){
+    var ae=document.activeElement;if(!(ae&&ae.id==="chatq"))return false;}
   if(V.tab==="train")return !S.run&&(!S.active||V.train==="hub")&&(V.train==="days"||V.train==="hub");
   if(V.tab==="food")return !V.meal;
   if(V.tab==="progress")return !V.phist;
@@ -56,7 +59,7 @@ function panelHtml(){
   /* The veil is a button so a tap on it reaches the tap handler; it closes the panel and
      does nothing else. Not in the tab order: the panel's own ✕ is the control. */
   var h='<button class="cp-veil" type="button" tabindex="-1" data-coachclose="1" aria-hidden="true"></button>'
-   +'<section class="cp'+(full?' full':'')+'" role="dialog" aria-modal="true" aria-labelledby="cpT" tabindex="-1">'
+   +'<section class="cp'+(full?' full':'')+(log.length?' has-log':'')+'" role="dialog" aria-modal="true" aria-labelledby="cpT" tabindex="-1">'
    +'<header class="cp-h"><span class="cp-mark" aria-hidden="true">'+MARK+'</span>'
    +'<div class="cp-ht"><h2 id="cpT">'+esc(t("Coach"))+'</h2><p>'+esc(t("From your log, worked out on this phone"))+'</p></div>'
    +(full&&log.length?'<button class="cp-ib" data-chatclear="1" aria-label="'+esc(t("Clear"))+'">'+glyph("trash")+'</button>':'')
@@ -105,7 +108,10 @@ function syncCoach(){
   /* Smaller or bigger: the panel grows or shrinks from where it was to where it is
      going (measured before and after, then played back), rather than jumping and
      fading in. With the keyboard up or not, it is the same two boxes. */
-  var was=resized&&pan.querySelector(".cp"),r0=was?was.getBoundingClientRect():null;
+  /* The first exchange takes the compact box from the welcome's height to the
+     conversation's: that one change glides too (flip), rather than jumping. */
+  var cp0=pan.querySelector(".cp"),grow=!opening&&!resized&&cp0&&!cp0.classList.contains("has-log")&&chatShown().length>0;
+  var was=(resized||grow)&&cp0,r0=was?was.getBoundingClientRect():null;
   /* Typing when it is resized: the field, what is in it and the keyboard stay (owner,
      28 Oct: maximised with the keyboard up, the rebuild dropped the keyboard halfway
      through the box's glide, and the two fought). Within the tap, so iOS keeps it up. */
@@ -165,13 +171,14 @@ function closeCoach(render){
   pan.classList.add("closing");
   setTimeout(function(){pan.classList.remove("closing");pan.textContent="";render();focusFab();},340);}
 /* While typing, a tap on a button in the panel (send, a suggestion, an answer's button,
-   bigger or smaller) does not take the focus from the field: the keyboard stays and
-   nothing moves under the finger, as in a messaging app. Closing lets it go. */
+   bigger or smaller, close) does not take the focus from the field: the keyboard stays
+   and nothing moves under the finger before the tap lands, as in a messaging app. A tap
+   that closes the panel takes the field with it, and the keyboard goes then. */
 function bindPanel(){
   var pan=document.getElementById("cpanel");if(!pan)return;
   pan.addEventListener("mousedown",function(e){
     var b=e.target&&e.target.closest&&e.target.closest("button");
-    if(!b||b.matches("[data-coachclose]"))return;
+    if(!b)return;
     if(document.activeElement&&document.activeElement.id==="chatq")e.preventDefault();});}
 function focusFab(){var b=document.querySelector("#cfab .cfab");if(b)try{b.focus({preventScroll:true});}catch(e){}}
 

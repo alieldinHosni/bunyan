@@ -271,7 +271,11 @@ function ibPhoto(file){
   ibStatus(t("Reading the photo…"),0);
   readPhoto(file,function(p){if(my===OCR)ibStatus(t("Reading the photo…"),Math.round(p*100));}).then(function(txt){
     if(my!==OCR||V.sheet!=="inbody"||(V.sd&&V.sd.img)!==img)return;
-    var f=document.getElementById("ib_text");if(f)f.value=txt;
+    /* What the person pasted or typed meanwhile is theirs: the photo's text goes in
+       only where the box is still empty, and is read only when it holds figures. */
+    var f=document.getElementById("ib_text");
+    if(f&&f.value.trim())return;
+    if(f)f.value=txt;
     if(Object.keys(readInBody(txt)).length){ibRead(txt);return;}
     ibStatus(t("No InBody figures found on the photo. Copy its text and paste it below."));
   },function(){if(my===OCR&&V.sheet==="inbody")ibStatus(t("The photo couldn't be read on this phone. Copy its text and paste it below."));});}

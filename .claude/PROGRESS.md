@@ -2523,3 +2523,19 @@ with an unrelated passage; and the two-sessions option could not be found.
   name the place in the app, and leave out filler.
 - Tests: regression "Workout motion, with motion on: …", "Chat motion: …"; coach intent cases; engine
   smart (app guide and program in the prompt).
+- **The sent question, seen flying** (owner, 28 Oct: "the moment I tap send … leaves the text box and
+  drops into the chat"): the flight existed but went behind the panel (`.chat-ghost` z-index 60 under
+  #cpanel's 95) and aimed at where the question was before the conversation scrolled to it. Now over
+  the panel (97, under sheets), the conversation brought to the new exchange before measuring, and it
+  leaves from the field's text (its leading edge, the field's line), lifts a little and drops in.
+- **Compact box, one height with a conversation** (`.cp.has-log`): it grew in jumps as the question,
+  the dots and the answer came in, under a question still in flight. Empty it fits the welcome; the
+  first exchange takes it to its full compact height in one glide (flip).
+- **Close keeps the field too** (bindPanel): the one button that let the field go dropped the keyboard
+  flag, the panel shifted and the tap missed (the reason `body.kbleave` existed). fabShown ignores a
+  "kb" that is the panel's own field, so the launcher returns as the panel closes.
+- **Fixed, InBody photo**: a finished reading wrote its text over what the person had pasted or typed
+  meanwhile, even when it found nothing. It now fills the box only when the box is empty.
+- **Test, not app**: "Coach, a rough day" put 1,100 kcal over on any day; from Wednesday of a Saturday
+  week that is more than two days can take, and the app rightly said the week is fine. The overage is
+  now sized to the days left (300 kcal each); on the week's last day it expects "a new one starts".

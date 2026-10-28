@@ -47,6 +47,10 @@ function land(from){
     var xs=document.querySelectorAll(".chat-x"),x=xs[xs.length-1];
     var q=x&&x.querySelector(".chat-q"),a=x&&x.querySelector(".chat-a");
     bringUp(q);
+    /* In the panel, the conversation is brought to the new exchange first, so the
+       question flies to where it will be, not to where it was before the scroll. */
+    var pb=q&&q.closest("#cpB");
+    if(pb){var y=0,el=x;while(el&&el!==pb){y+=el.offsetTop;el=el.offsetParent;}pb.scrollTop=Math.max(0,y-12);}
     if(!q||!a||off())return;
     /* The answer waits; the dots come once the question has landed. */
     a.classList.add("wait");
@@ -63,11 +67,18 @@ function land(from){
       ghost.classList.add("chat-ghost");
       ghost.style.cssText="position:fixed;left:"+to.left+"px;top:"+to.top+"px;width:"+to.width+"px;margin:0;visibility:visible";
       document.body.appendChild(ghost);
-      var dx=from.left+Math.min(from.width,to.width)/2-(to.left+to.width/2),dy=from.top+from.height/2-(to.top+to.height/2);
+      /* It leaves from where the words were typed: its leading edge on the field's text,
+         its middle on the field's line; then it lifts a little and drops into its place
+         (owner, 28 Oct: "the moment I tap send … the message leaves the text box and
+         drops into the chat"). */
+      var rtl=document.documentElement.dir==="rtl";
+      var dx=rtl?(from.left+from.width-14)-(to.left+to.width):(from.left+14)-to.left;
+      var dy=from.top+from.height/2-(to.top+to.height/2);
       var fly=ghost.animate([
-        {transform:"translate("+dx+"px,"+dy+"px) scale(.86)",opacity:.35},
-        {transform:"translate("+(dx*.35)+"px,"+(dy*.35-10)+"px) scale(1.02)",opacity:1,offset:.6},
-        {transform:"none",opacity:1}],{duration:FLY_MS,easing:"cubic-bezier(.2,.8,.2,1)"});
+        {transform:"translate("+dx+"px,"+dy+"px) scale(.92)",opacity:.6,offset:0},
+        {transform:"translate("+(dx*.45)+"px,"+(dy*.45-18)+"px) scale(1.03)",opacity:1,offset:.55},
+        {transform:"translate(0,3px) scale(.995)",opacity:1,offset:.85},
+        {transform:"none",opacity:1}],{duration:FLY_MS,easing:"cubic-bezier(.3,.7,.2,1)"});
       var done=function(){if(ghost.parentNode)ghost.parentNode.removeChild(ghost);q.style.visibility="";};
       fly.onfinish=done;fly.oncancel=done;
       setTimeout(done,FLY_MS+400);}
