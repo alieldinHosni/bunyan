@@ -2577,3 +2577,21 @@ without the keyboard closing.
   one is in today's list (the title's ⌄, "Add an exercise"). And **no Skip once the sets are done**: the
   big button is Next exercise then, and Skip beside it was the same thing twice. Skip shows only while
   the exercise has sets still to do.
+
+## Audit, round two: the core flows by touch — branch session/polish2
+
+CACHE `bunyan-v180`. The flows driven as a person would, by tapping and typing (not by setting state):
+log a food from search, add an exercise from search mid-workout, log a set after typing the reps,
+save a weigh-in.
+- **Fixed, the first tap on a search result did nothing** (food and exercise search sheets): while
+  typing, the sheet hides its title and counts (`body.kb .srch`); the tap that takes the keyboard away
+  brought them back and pushed the list down 65px under the finger, so the + was missed and only a
+  second tap added. They now stay aside for a moment after the keyboard goes (`body.kbleave`). The
+  full chat page's box had the same move and gets the same moment.
+- **Fixed, the weigh-in could only be stepped in tenths**: with a weight on record the sheet showed a
+  display-only stepper (84 to 79.6 was 44 taps). It is always the typable one now, starting from the
+  last weight; the display-only `stepper()` had no other use and is removed.
+- Checked and right: a set logs on the first tap after typing its reps; an exercise is added on the
+  first tap after a search.
+- Tests: regression "Search sheets: typing, then the first tap …" (fails on the old CSS, passes now);
+  "Weigh-in: with a weight on record …".
