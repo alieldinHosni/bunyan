@@ -232,11 +232,11 @@ var PLAN_AR={
   "Shoulders & Arms":"أكتاف ودراعات","Chest & Back":"صدر وظهر","Cardio":"كارديو","Workout":"تمرين",
   "Strength":"قوة","Shoulders":"أكتاف","Power & Upper":"قوة انفجارية وعلوي","Glutes":"مؤخرة",
   "Anterior":"أمامي","Posterior":"خلفي","Core & Conditioning":"وسط ولياقة","Conditioning":"لياقة",
-  "Chest":"صدر","Back":"ظهر","Arms":"دراعات","Day":"يوم"};
-var LETTER_AR={A:"أ",B:"ب",C:"ج"};
+  "Chest":"صدر","Back":"ظهر","Arms":"دراعات","Day":"يوم","Built for you":"متبني ليك"};
+var LETTER_AR={A:"أ",B:"ب",C:"ج",D:"د",E:"هـ",F:"و"};
 function planPart(n){
   if(PLAN_AR[n])return PLAN_AR[n];
-  var m=/^(.+) ([ABC])$/.exec(n);
+  var m=/^(.+) ([A-F])$/.exec(n);
   if(m&&PLAN_AR[m[1]])return PLAN_AR[m[1]]+" "+LETTER_AR[m[2]];
   return null;}
 function planName(n){

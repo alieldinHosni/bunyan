@@ -446,4 +446,4 @@ function buildPlan(id){
 }
 
 
-export {adaptOf, AVOID, avoids, buildPlan, dayMinutes, doseFor, generatePlan, GOALS, LEVELS, rebalance, shapePlan, splitCandidates, SPLIT_LEVEL, standIn, usable};
+export {adaptOf, AVOID, avoids, BUILT, buildPlan, dayMinutes, doseFor, generatePlan, GOALS, LEVELS, rebalance, shapePlan, splitCandidates, SPLIT_LEVEL, standIn, usable};

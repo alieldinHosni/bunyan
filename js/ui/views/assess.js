@@ -11,7 +11,8 @@
    it came from. */
 import {t, tm} from "../../i18n/dict.js";
 import {GOAL_ORDER, GOALS, goalOf, trainOf} from "../../data/goals.js";
-import {dayMinutes, generatePlan, LEVELS, splitCandidates} from "../../engine/plan.js";
+import {BUILT, dayMinutes, generatePlan, LEVELS, splitCandidates} from "../../engine/plan.js";
+import {wdName, weekOrder} from "../../engine/schedule.js";
 import {lastWeight, macroTargets, tdee} from "../../engine/formulas.js";
 import {volumeCheck} from "../../engine/volume.js";
 import {buildMealPlan} from "../../engine/mealplan.js";
@@ -49,7 +50,15 @@ var HEALTH=[["heart","A heart condition or high blood pressure, as a doctor told
   ["dizzy","Dizziness that cost you your balance, or fainting, in the last 12 months"],["chronic","Another long-term condition a doctor diagnosed"],
   ["meds","Medication prescribed for a long-term condition"],["joint","A bone, joint or muscle problem in the last year that activity could worsen"],
   ["supervised","A doctor said to exercise only under medical supervision"]];
-var STEPS=["intro","you","goal","level","week","gear","life","limits","health","food","sleep","result"];
+var STEPS=["intro","you","goal","level","week","gear","focus","life","limits","health","food","sleep","result"];
+/* The muscles someone can ask to bring up (up to FOCUS_MAX), and the big lifts someone
+   can say they will not do: those are hidden from the plan, as the ⋯ menu's "Never
+   suggest" would, and the week is built without them. */
+var FOCUS=[["Chest","Chest"],["Back","Back"],["Shoulders","Shoulders"],["Biceps","Biceps"],["Triceps","Triceps"],
+  ["Quads","Quads"],["Hamstrings","Hamstrings"],["Glutes","Glutes"],["Calves","Calves"],["Core","Core"]];
+var FOCUS_MAX=3;
+var NOLIFT=["Barbell Squat","Barbell Deadlift","Barbell Bench Press - Medium Grip","Standing Military Press",
+  "Bent Over Barbell Row","Pullups","Leg Press","Barbell Walking Lunge"];
 
 function draftFrom(){
   var p=S.profile||{},pr=S.prefs||{};
@@ -57,12 +66,20 @@ function draftFrom(){
     weight:lastWeight()||num(p.weight)||"",goal:GOALS[p.goal]?p.goal:"lose",level:LEVELS[p.level]?p.level:"some",
     days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),
     meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",
-    sleep:num(p.sleep)||7.5,split:null,done:false};}
+    sleep:num(p.sleep)||7.5,stress:p.stress||"normal",wd:(p.wd||[]).map(Number),focus:(p.focus||[]).slice(),
+    nolift:NOLIFT.filter(function(n){return (S.skip||[]).indexOf(n)>=0;}),split:null,done:false};}
 
 /* The profile the draft describes. */
 function profileOf(a){
   return {sex:a.sex,age:num(a.age),height:num(a.height),weight:num(a.weight),goal:a.goal,level:a.level,
-    days:num(a.days),mins:num(a.mins),job:a.job,activity:activityOf(a),limits:a.limits.slice(),health:(a.health||[]).slice(),sleep:num(a.sleep)};}
+    days:(a.wd||[]).length>=2?a.wd.length:num(a.days),mins:num(a.mins),job:a.job,activity:activityOf(a),limits:a.limits.slice(),
+    health:(a.health||[]).slice(),sleep:num(a.sleep),stress:a.stress||"normal",
+    wd:(a.wd||[]).length>=2?a.wd.map(Number).sort(function(x,y){return x-y;}):[],focus:(a.focus||[]).slice(0,FOCUS_MAX)};}
+/* What "Never suggest" holds once the answers are used: the lifts they ticked, and none
+   of the ones they unticked. */
+function skipOf(a){
+  var keep=(S.skip||[]).filter(function(n){return NOLIFT.indexOf(n)<0;});
+  return keep.concat((a.nolift||[]).filter(function(n){return keep.indexOf(n)<0;}));}
 function foodPrefs(a,variant){
   return {meals:num(a.meals)||4,diet:a.diet,avoid:a.avoid.slice(),powder:!!a.powder,style:a.style,variant:variant||0};}
 
@@ -70,22 +87,24 @@ function foodPrefs(a,variant){
    is saved, then put back. Cached on the answers. */
 var CACHE={k:null,v:null};
 function preview(a){
-  var key=JSON.stringify([profileOf(a),a.gear,a.split,foodPrefs(a),!!FOODDB]);
+  var key=JSON.stringify([profileOf(a),a.gear,a.split,foodPrefs(a),skipOf(a),!!FOODDB]);
   if(CACHE.k===key)return CACHE.v;
-  var keep={profile:S.profile,gear:S.gear,body:S.body},out=null;
+  var keep={profile:S.profile,gear:S.gear,body:S.body,skip:S.skip},out=null;
   try{
     S.profile=Object.assign({},S.profile,profileOf(a));
     S.gear=GEARS[a.gear]?GEARS[a.gear].slice():null;
-    S.body=[{date:today(),weight:num(a.weight)}];
-    var cands=[];try{cands=splitCandidates(num(a.days),a.level,a.goal,S.gear);}catch(e){}
-    var plan=generatePlan(a.split||(cands[0]&&cands[0].id));
+    S.body=[{date:today(),weight:num(a.weight)}];S.skip=skipOf(a);
+    var cands=[];try{cands=splitCandidates(S.profile.days,a.level,a.goal,S.gear);}catch(e){}
+    /* The week built from these answers first; the app's programs as other choices. */
+    cands=[{id:BUILT,name:"Built for you"}].concat(cands);
+    var plan=generatePlan(a.split||BUILT);
     var tg=macroTargets(),meals=null;
     /* The assessment asks for a weight before this step (youOk); without one there are no targets. */
     if(!tg)return out;
     /* The meals need the food database, which loads on the way to this screen. */
     if(FOODDB)try{meals=buildMealPlan(tg,foodPrefs(a));}catch(e){meals=null;}
     out={tg:tg,td:tdee(),plan:plan,cands:cands,vol:volumeCheck(plan,a.level,goalOf(a.goal).train),meals:meals};
-  }finally{S.profile=keep.profile;S.gear=keep.gear;S.body=keep.body;}
+  }finally{S.profile=keep.profile;S.gear=keep.gear;S.body=keep.body;S.skip=keep.skip;}
   CACHE={k:key,v:out};
   return out;}
 
@@ -120,7 +139,7 @@ function body(a){
   var s=STEPS[a.step],h='';
   if(s==="intro"){
     h+='<div class="as-hero"><span class="shk">'+t("A few minutes")+'</span><h1>'+t("Let's build your plan")+'</h1>'
-     +'<p class="as-sub">'+t("Ten short questions about you, your goal, your week and your food. From them: your daily targets, a training plan with the right volume and effort, and a meal plan from foods you eat.")+'</p>'
+     +'<p class="as-sub">'+t("Short questions about you, your goal, your week, what you want to bring up and your food. From them: your daily targets, a training week built for you with the right volume and effort, and a meal plan from foods you eat.")+'</p>'
      +'<p class="as-sub">'+t("Everything stays on this phone. You see the whole plan before anything changes, and every part of it can be edited afterwards.")+'</p></div>';}
   else if(s==="you"){
     h+=q(t("About you"),t("For your calorie needs. Nothing leaves this phone."));
@@ -139,7 +158,13 @@ function body(a){
     h+='<div class="ascards">'+Object.keys(LEVELS).map(function(k){return card("level",k,t(LEVELS[k].label),t(LD[k]),a.level===k);}).join("")+'</div>';}
   else if(s==="week"){
     h+=q(t("Your week"),t("What you can keep up on a normal week, not your best one."));
-    h+=lbl(t("Days a week you can train"))+chips("days",[[2,"2"],[3,"3"],[4,"4"],[5,"5"],[6,"6"]],a.days);
+    var fixed=(a.wd||[]).length>=2;
+    h+=lbl(t("Days a week you can train"))+chips("days",[[2,"2"],[3,"3"],[4,"4"],[5,"5"],[6,"6"]],fixed?a.wd.length:a.days);
+    /* The days they train on, if they are fixed: the week is built on those, the rest
+       days between a muscle's sessions where the week puts them. */
+    h+=lbl(t("Days that are fixed (optional)"))+'<div class="aschips">'+weekOrder().map(function(n){
+        return chip("wd",n,wdName(n),(a.wd||[]).indexOf(n)>=0,true);}).join("")+'</div>'
+     +'<p class="as-note">'+t(fixed?"The week is built on these days.":"None picked: the days are spread through the week, with rest between.")+'</p>';
     /* The textbook's sessions a week for this much experience (acute-variables). */
     var fr=KB.frequency(a.level),pw=fr&&fr.per;
     var lo=pw?(pw.min!=null?pw.min:Math.min(pw.totalBody||3,pw.split||4)):0,hi=pw?(pw.max!=null?pw.max:Math.max(pw.totalBody||3,pw.split||4)):0;
@@ -150,6 +175,12 @@ function body(a){
     h+='<div class="ascards">'+card("gear","gym",t("A gym"),t("Machines, cables, barbells and dumbbells."),a.gear==="gym")
      +card("gear","home",t("At home, with dumbbells"),t("Dumbbells, bands or a kettlebell, and a bench or a chair."),a.gear==="home")
      +card("gear","bw",t("Bodyweight only"),t("The floor, and a bar or a door frame to pull on if you have one."),a.gear==="bw")+'</div>';}
+  else if(s==="focus"){
+    h+=q(t("What do you want to bring up?"),t("Up to three. They get more weekly sets and go first in their session, while you are fresh."));
+    h+='<div class="aschips">'+FOCUS.map(function(x){return chip("focus",x[0],tm(x[1]).trim(),(a.focus||[]).indexOf(x[0])>=0,true);}).join("")+'</div>';
+    h+=lbl(t("Lifts you won't do (optional)"))+'<div class="aschips">'+NOLIFT.map(function(n){
+        return chip("nolift",n,exName(n),(a.nolift||[]).indexOf(n)>=0,true);}).join("")+'</div>'
+     +'<p class="as-note">'+t("Left out of your plan, and never suggested. Exercises you have starred are used first. Both can be changed any time from an exercise's menu.")+'</p>';}
   else if(s==="life"){
     h+=q(t("The rest of your day"),t("Outside training. It decides most of what you burn."));
     h+='<div class="ascards">'+card("job","desk",t("Mostly sitting"),t("A desk, a car, a sofa."),a.job==="desk")
@@ -178,9 +209,24 @@ function body(a){
     h+=q(t("How do you sleep?"),t("Most nights. Short sleep slows recovery, so the plan asks a little less of you."));
     h+=chips("sleep",[[5,t("Under 6 hours")],[6.5,t("6 to 7 hours")],[8,t("7 to 9 hours")],[9.5,t("More than 9")]],a.sleep);
     var sl=KB.sleep();
-    if(sl)h+='<p class="as-note">'+fill(t("Adults do best on {lo} to {hi} hours a night."),{lo:sl.min,hi:sl.max})+'</p>';}
+    if(sl)h+='<p class="as-note">'+fill(t("Adults do best on {lo} to {hi} hours a night."),{lo:sl.min,hi:sl.max})+'</p>';
+    h+=lbl(t("Stress from work and life, lately"))+chips("stress",[["low",t("Low")],["normal",t("Normal")],["high",t("High")]],a.stress||"normal");
+    if(a.stress==="high"||(num(a.sleep)>0&&num(a.sleep)<6))h+='<p class="as-note">'+t("Recovery is slower like this, so each muscle is built to the bottom of its range for now.")+'</p>';}
   else if(s==="result")h+=result(a);
   return h;}
+
+/* Why the built week looks as it does, from what it was built on. */
+function builtWhy(a,plan){
+  var p=profileOf(a),fr=plan.built.freq||{},twice=Object.keys(fr).filter(function(m){return fr[m]>=2;}).length;
+  var x=t(p.wd.length?"Built on the days you gave":"Built from your answers")+": "
+    +t(twice?"each muscle trained {n} times a week, with a rest day between sessions on it.":"the whole body each session, with a rest day between.")
+      .replace("{n}",Math.max.apply(null,Object.keys(fr).map(function(m){return fr[m];}).concat([1])));
+  if(p.focus.length){var fm=p.focus.map(function(m){return tm(m).trim();}),and=S.prefs.lang==="ar"?" و":" and ";
+    x+=" "+t(fm.length>1?"More for {m}, and they go first in their sessions.":"More for {m}, and it goes first in its sessions.")
+      .replace("{m}",fm.length>1?fm.slice(0,-1).join(S.prefs.lang==="ar"?"، ":", ")+and+fm[fm.length-1]:fm[0]);}
+  if(p.stress==="high"||(p.sleep>0&&p.sleep<6))x+=" "+t("Volume at the bottom of the range while sleep or stress slow recovery.");
+  if((a.nolift||[]).length)x+=" "+t("Without the lifts you left out.");
+  return x;}
 
 /* What the energy target means, said once: maintenance, the change, the pace. */
 function kcalWhy(a,r){
@@ -224,11 +270,12 @@ function result(a){
    +(tg.steps?tile("route",fmtN(tg.steps),t("Steps")):'')+'</div>'
    +'<p class="as-note">'+esc(t("Protein at {g} g per kg keeps and builds muscle; fat at about a quarter of your energy; carbs fuel the training.").replace("{g}",G.protein))+'</p></section>';
   /* Training. */
-  var c0=r.cands.filter(function(c){return c.id===(a.split||(r.cands[0]&&r.cands[0].id));})[0];
+  var c0=r.cands.filter(function(c){return c.id===(a.split||BUILT);})[0];
   h+='<section class="ascard2">'+cardHead("dumbbell",t("Training"))
-   +'<h2 class="as-split">'+esc(planName(plan.name))+'</h2>'+(c0?'<p class="as-why">'+esc(c0.why)+'</p>':'');
+   +'<h2 class="as-split">'+esc(planName(plan.name))+'</h2>'
+   +(plan.built?'<p class="as-why">'+esc(builtWhy(a,plan))+'</p>':c0&&c0.why?'<p class="as-why">'+esc(c0.why)+'</p>':'');
   if(r.cands.length>1)h+='<div class="aschips as-alt">'+r.cands.map(function(c){
-      var on=c.id===(a.split||r.cands[0].id);
+      var on=c.id===(a.split||BUILT);
       return '<button class="aschip'+(on?' on':'')+'" data-assplit="'+esc(c.id)+'" aria-pressed="'+on+'">'+esc(planName(c.name))+'</button>';}).join("")+'</div>';
   h+='<div class="as-days">'+plan.days.filter(function(d){return d.ex.length;}).map(function(d){
       var names=d.ex.slice(0,3).map(function(e){return exName(e.name);}).join(", ");
@@ -291,4 +338,4 @@ function vAssess(){
      +'<button class="btn" data-asnext="1">'+t(s==="intro"?"Start":s==="sleep"?"See my plan":"Next")+'</button></div>';}
   return h;}
 
-export {activityOf, draftFrom, foodPrefs, GEARS, preview, profileOf, STEPS, vAssess, youOk, youWhy};
+export {activityOf, draftFrom, foodPrefs, FOCUS_MAX, GEARS, preview, profileOf, skipOf, STEPS, vAssess, youOk, youWhy};

@@ -204,6 +204,10 @@ function buildWeek(p,gear,h){
   var onDay=pos.map(function(){return {};});
   function add(m,d,first){
     var list=CANDS[m]||[];
+    /* A muscle the day's presses or rows already work (the shoulders after a bench
+       press) gets the exercise that works what they miss, a raise, not another press. */
+    var worked=0;ex[d].forEach(function(e){(secondaryOf(e.name)||[]).forEach(function(o){if(o===m)worked+=e.sets/2;});});
+    if(worked>=1.5&&!first){var iso=list.filter(function(c){return !c.c&&!used[c.n];});list=iso.concat(list.filter(function(c){return iso.indexOf(c)<0;}));}
     var pick=list.filter(function(c){return !used[c.n]&&(!first||c.c)&&!usedMv[m][c.mv];})[0]
       ||list.filter(function(c){return !used[c.n]&&(!first||c.c);})[0]
       ||list.filter(function(c){return !used[c.n];})[0];
@@ -225,7 +229,9 @@ function buildWeek(p,gear,h){
     x.days.forEach(function(d,k){
       var share=(T[m]-credit[m])/(x.days.length-k);
       if(share<1.5&&!isF&&!(big&&!k&&credit[m]<T[m]*0.5))return;
-      if(!add(m,d,big||isF)&&big)add(m,d,false);});});
+      var covered=ex[d].some(function(e){return (secondaryOf(e.name)||[]).indexOf(m)>=0;});
+      var first=(big||isF)&&!covered;
+      if(!add(m,d,first)&&first)add(m,d,false);});});
   for(var round=0;round<2;round++)pl.plan.forEach(function(x){
     var m=x.muscle;
     x.days.forEach(function(d){
