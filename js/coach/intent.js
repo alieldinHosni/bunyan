@@ -22,22 +22,27 @@
 
 var INTENTS=[
   ["today",[
+    "plan today","on the plan","يوم ايه في البرنامج","hatmaren|enharda|elnaharda",
     "today workout|session|train|training|plan|program|gym","what train|training|workout|lift|do$","whats on","next workout|session",
     "start workout|training","which day","whats|what today","تمرين|تمريني|اتمرن|هتمرن نهارده|النهارده|انهارده|اليوم","اتمرن|هتمرن|العب ايه|اي",
     "التمرين الجاي|اللي جاي","ابدا تمرين|التمرين","rest day|days","day off","today rest|off","راحه|اجازه النهارده|اليوم",
     "ماذا|ايش|شو اتمرن|العب","atmaren|atmarren|etmaren|tamreen|tamrin"]],
   ["tomorrow",[
+    "tomorrow rest day|off","next after today","workout after today","بكره راحه|اجازه","بكره تمرين","bokra|bokrah tamreen|tamrin|eh|ra7a",
     "tomorrow|tmrw|tomorow","train|training|workout|session|gym|lift|plan tomorrow|tmrw|tomorow","next day",
     "بكره|بكرا","اتمرن|تمرين|هتمرن|العب ايه|اي بكره|بكرا"]],
   ["last",[
     "last workout|session|training|gym|time","previous workout|session","how did i do","my last workout|session","how yesterday workout|session|training|gym",
     "اخر تمرين|جلسه|مره","التمرين اللي فات","عملت ايه اخر|المره"]],
   ["weights",[
+    "وزن قد ايه",
+    "lifting|lift enough","العب وزن","ازود ولا اثبت","azawed|wazn|el wazn",
     "how much weight|lift|squat|bench|deadlift|press|row|curl","what weight|load","how heavy","weight should","increase|add|raise weight|load",
     "next weight","go heavier","heavier","progressive overload","how many reps|sets",
     "وزن كام","اشيل|ارفع|العب كام|قد","ازود|زود الوزن|وزن|التقل","الوزن المناسب","كام كيلو","كام عده|تكرار",
     "بنش|سكوات|ديدلفت|بريس|كيرل|عقله|سحب|تجديف|ليج كام|كم|قد|وزن","كم كيلو|وزن"]],
   ["eat",[
+    "whats|what for dinner|lunch|breakfast|supper","suggest meal|a meal","عشا|غدا|فطار ايه",
     "what eat","eat today|now|next","left today","calories|kcal|protein left|remaining","remaining","food today","how much eat|food",
     "hungry","starving|starved|famished","next meal","meal now","have i eaten",
     "اكل ايه|اي","اكل النهارده|دلوقتي","ماذا|ايش|شو اكل","اكل الان|الحين","akol|akl|aakol|kol eh|e$|eih|eah","فاضل|باقي كام|ايه|سعرات|بروتين","اكل كام|قد","جعان|جعانه","الوجبه الجايه","وجبه دلوقتي"]],
@@ -54,6 +59,7 @@ var INTENTS=[
     "كام|كم بروتين|سعر|سعره|سعرات|كارب|دهون|جرام في","فيه|فيها|في كام|كم بروتين|سعر|سعره|سعرات|كارب|دهون","القيمه الغذائيه"]],
   /* A lift that has stopped moving (chat.js aPlateau). */
   ["plateau",[
+    "bench|squat|deadlift|press|lift|lifts hasnt|havent|not moved|moving|budged","stuck same weight","no progress on","بنش|سكوات|ديدلفت|بريس|الحديد واقف","بقالي اسابيع|فتره نفس|على الوزن","wa2ef|waaef",
     "why not going up","why isnt going up","not going up","bench|squat|deadlift|press|lift|lifts|row|curl|pullups|chinups stuck","stuck on|at","plateau","plateaued","stalled","not getting stronger","stopped going up|improving|progressing",
     "not progressing","cant increase|add weight","bench|squat|deadlift|press|lift|row|curl stalled|stalling|plateaued",
     "bench|squat|deadlift|press|lift|row|curl isnt|not going|moving|increasing","ليه مش بيزيد","مش بيزيد","واقف عند","ثابت مش بيزيد","مش بقوي"]],
@@ -63,12 +69,13 @@ var INTENTS=[
     "check in","checkin","last week","my week",
     "الاسبوع كان|عدي|فات","ملخص الاسبوع","الاسبوع اللي فات","اسبوعي كان|عامل","مراجعه الاسبوع"]],
   ["track",[
+    "is it working","mashy|mashi sa7|sah",
     "on track","how am i doing","how doing","my progress","progress","results","improving","getting better","summary","overview",
     "this week",
     "ماشي صح","عامل|ماشي ايه|اي","تقدمي|التقدم","اتحسنت|بتحسن","نتايج|نتائج|النتيجه","ملخص","الاسبوع ده|الاسبوع"]],
   /* Two sessions in one day (owner, 28 Oct): how, for today or every week (chat.js aTwice). */
   ["twice",[
-    "two|2 sessions|workouts|trainings a|per|in day","two|2 sessions|workouts|trainings in one|single|same day","twice a|per day","train|workout twice",
+    "two|2 sessions|workouts|trainings a|per|in day","two|2 sessions|workouts|trainings in one|single|same day","twice a|per day","train|workout twice day|today|daily",
     "double session|sessions|day","second session|workout today|day","another session|workout today","add|create|make another|second session|workout",
     "add|create|make two sessions|workouts",
     "مرتين في اليوم","مرتين اليوم","تمرينتين|تمرينين في اليوم","سيشنين|حصتين","تمرين تاني النهارده","سيشن تاني|تانيه"]],
@@ -87,6 +94,8 @@ var INTENTS=[
     "inbody|in-body","in body scan|test|result|sheet","body composition scan|test|result","my scan|scan result","skeletal muscle mass|smm","visceral fat",
     "انبودي|انبودى","ان بودي","تحليل|تكوين الجسم","كتله العضلات","الدهون الحشويه"]],
   ["weight",[
+    "wazny|wazni msh|mesh|mish beynzel|byenzel|nazel|beyenzel",
+    "gaining too|so fast","wazny|wazni",
     "my weight","scale","weight stuck|same|plateau|stall|not","not losing|dropping","not gaining","weigh|weighed|weigh-in","body weight","plateau","stalled",
     "lost|gained how much","losing weight","gaining weight",
     "وزني","الميزان","wazny|wazni","مش بخس|بنزل|بزيد|بتخن","ثابت|واقف","نزلت|زدت كام","وزن ثابت"]],
@@ -94,9 +103,12 @@ var INTENTS=[
     "protein","enough protein","how much protein",
     "بروتين","البروتين"]],
   ["calories",[
+    "اكل كام سعر",
+    "كام سعر","so3rat|so3raty",
     "calories|calorie|kcal","why target|targets|calories","maintenance","tdee","bmr","macros|macro","carbs|carb|carbohydrates","fat$|fats$",
     "سعرات|سعر|كالوري","احتياجي|احتياج","ماكروز|الماكرو","كارب|كاربز|نشويات","دهون"]],
   ["sore",[
+    "train if|when sore","destroyed|wrecked|killing","مكسره|متكسره|مكسر",
     "sore","soreness","tired","exhausted","fatigue|fatigued","pain","hurt|hurts","injur","no energy","low energy","slept|sleep",
     "sick","recover|recovery","deload","lighter week|session",
     "تعبان|تعبانه|تعب","مرهق|ارهاق","واجعني|بيوجعني|بتوجع|بيوجع|توجع|يوجع|وجع|الم","مصاب|اصابه|متصاب","منمتش|نوم|نايم","عيان|عيانه","ريكفري|استشفاء","اسبوع خفيف"]],
@@ -105,14 +117,18 @@ var INTENTS=[
     "quick workout|session","shorter","minutes|mins$",
     "فوت|فاتني|فوتت","مروحتش|ماروحتش","معنديش|مفيش وقت","مش فاضي","وقت قليل|مش كتير","مستعجل|مستعجله","تمرين قصير|سريع","دقيقه|دقايق"]],
   ["balance",[
+    "train everything",
     "balanced|balance","enough sets|volume","volume","muscle groups","too much|many sets","overtraining|overtrained","weak point|points|spot",
     "lagging","neglect|neglecting","program|split|routine good|ok|okay|right|decent","missing muscles|muscle|anything",
     "متوازن|توازن","مجموعات كفايه","حجم التمرين|الفوليوم","عضله متاخره|ضعيفه","مهمل|مهمله"]],
   ["strong",[
+    "ريكورد|الريكوردات",
+    "max bench|squat|deadlift|press","my 1rm|max on","اعلي وزن رفعته|شلته|لعبته","ارقامي|القياسيه|قياسي",
     "how strong","strong am i","my max|maxes","1rm","one rep max","record|records|pr$|prs$","strength","compare|compared","percentile",
     "squat|bench|deadlift","best lifts|lift|numbers",
     "قوتي|قوي|قويه","اقصي وزن|اقصي","رقم قياسي|ارقامي|الارقام","اقارن|مقارنه"]],
   ["goal",[
+    "a5es|adakham",
     "change goal|goals","my goal","goal","bulk|bulking","cut$|cutting","lose fat","build muscle","recomp","get stronger",
     "هدفي|الهدف|هدف","اخس|خساره","انشف|تنشيف","تضخيم|اضخم|تضخم","اغير الهدف"]],
   ["plan",[
@@ -120,15 +136,19 @@ var INTENTS=[
     "build plan|program","make plan|program",
     "برنامج جديد","خطه جديده","نظام اكل|غذائي","دايت","اغير البرنامج|التمرين|النظام","التقييم","اعمل برنامج|خطه"]],
   ["water",[
+    "liters|litres|liter|litre a|per day","لتر|لترات|لترين",
     "water","drink|drinking","hydrate|hydration",
     "مايه|ميه|مياه|المايه","اشرب|بشرب"]],
   ["steps",[
+    "how much cardio","خطواتي عامله|ايه",
+    "my steps","steps today","walk enough","steps enough","cardio did i","cardio this week","خطواتي",
     "steps","walk|walking","cardio","run|running",
     "خطوات|خطوه","مشي|امشي","كارديو","جري"]],
   ["help",[
     "help","what can you","what do you","how does this work","options","questions",
     "مساعده|ساعدني","تقدر تعمل|تساعد","بتعمل ايه","اسال ايه|اسال"]],
   ["hello",[
+    "ahlan|ahla|hii$|hey$",
     "hi$|hello|hey|salam|yo$","good morning|evening","morning",
     "اهلا|ازيك|ازيكم|السلام|سلام|هاي","صباح|مساء"]],
   /* ---- things to change (js/ui/agent.js resolves what they name; nothing here
@@ -158,28 +178,39 @@ var INTENTS=[
   /* ---- how training works: answered from js/knowledge/ (js/engine/kb.js) with the
      person's own program and log beside it. */
   ["kreps",[
+    "high|low reps","reps toning|tone","عدات كام","3adat|3adda kam",
     "how many reps should|for|to","rep range","reps for muscle|size|hypertrophy|strength|growth|endurance","best reps",
     "كام عده|تكرار المفروض|للعضل|للتضخيم|للقوه","عدد العدات|التكرارات"]],
   ["ksets",[
+    "is sets enough",
+    "sets enough","كام مجموعه|سيت",
     "how many sets should|per|for|each","sets per exercise","sets for muscle|size|hypertrophy|strength",
     "كام مجموعه|سيت المفروض|للعضل|لكل","عدد المجموعات|السيتات"]],
   ["krest",[
+    "rest between sets for",
+    "rest enough","minute|minutes rest","دقيقه|دقايق راحه",
     "how long rest|wait between","rest between sets","rest time","how much rest","rest period|periods|interval",
     "ارتاح|راحه قد|كام ايه بين","الراحه بين","وقت الراحه"]],
   ["kfreq",[
+    "train every day|everyday|daily","twice week","2 times week","days a week enough",
     "how many days|times week|train","how often train|should|lift|workout","times a week","days per|a week train|lift|gym",
     "كام يوم|مره في الاسبوع","اتمرن كام"]],
   ["kvolume",[
+    "سيت|مجموعه|مجموعات في الاسبوع",
+    "what is volume","training volume","volume mean|meaning","الفوليوم|فوليوم",
     "how many sets week|weekly","sets a|per week","weekly sets|volume","enough sets for","enough volume","too many sets",
     "chest|back|shoulders|quads|hamstrings|glutes|biceps|triceps|calves|legs|arms volume|sets",
     "مجموعات|سيتات في الاسبوع","كفايه صدر|ضهر|كتف|رجل|باي|تراي"]],
   ["ktempo",[
+    "lift slow|slowly|fast",
     "tempo","tempo lift|should|for|reps|rep","how fast lift|rep|reps|lower","lifting speed","slow reps|negatives",
     "سرعه العده|التكرار","بالراحه ولا بسرعه"]],
   ["kwarm",[
+    "warm|warmup up before","اسخن",
     "warm up|warmup sets|set|how many","warmup|warm-up","before lifting|working sets","how do|should i warm|warmup",
     "تسخين|احماء"]],
   ["kdur",[
+    "hour|hours workout|session","workout too long","ساعتين|ساعه تمرين",
     "how long workout|session|train|training|should","workout length|duration","session length|duration","how long gym",
     "مده التمرين","التمرين ياخد قد|كام"]],
   /* How the weight box is read: a barbell's total, a dumbbell per hand or both, and what
@@ -195,6 +226,8 @@ var INTENTS=[
     "وزن البار|الباربل","البار محسوب|بيتحسب|داخل|معاه|مع","الفوليوم|الحجم|الفوليوم بيتحسب|محسوب|ازاي",
     "لكل|كل ايد|ايده","الدمبل|الدامبل|دمبل|دامبل لكل|كل|الاتنين|مع|واحد|واحده","اسجل|بسجل الوزن|وزن لكل|كل|الاتنين|مع|الاجمالي"]],
   ["k1rm",[
+    "what is one rep max",
+    "what is 1rm|max","one rep max mean",
     "1rm|one rep max|max calculate|formula|estimate","estimated max|1rm","how is max|1rm calculated",
     "اقصي وزن مره|لعده","الماكس"]],
   /* What the person has told the coach to keep (js/coach/context.js). */
@@ -330,9 +363,13 @@ function situationOf(q){
    ever the words as said; nothing about the person is guessed here. Pure: true/false. */
 var FACT=/^(i|im|i am|i ve|ive|my)( .*)?( )(work|works|working|shift|shifts|job|nights|commute|kids|travel|cant|cannot|dont eat|do not eat|avoid|allergic|vegetarian|vegan|hate|prefer|gym closes|gym opens|no gym|train at home|only train)( |$)/;
 var FACT_AR=/(بشتغل|شغلي|شيفت|مبقدرش|مقدرش|مش بقدر|مش باكل|مبكلش|مباكلش|عندي حساسيه|حساسيه من|نباتي|نباتيه|بفضل|مش بحب|مبحبش|بكره|الجيم بيقفل|بتمرن في البيت)/;
+/* "بكره" is both "I hate" and, folded, "بكرة" (tomorrow): followed by a day's plan, or
+   in a question, it is tomorrow. A question word anywhere makes it a question. */
+var TOMORROW_AR=/(^| )بكره (تمرين|راحه|اجازه|هتمرن|اتمرن|هلعب|العب|هروح|اروح|ايه|الصبح|بالليل|يوم)/;
+var ASKED_AR=/(^| )(ايه|ازاي|ليه|امتي|فين|كام)( |$)/;
 function factOf(q){
   var raw=String(q||""),text=fold(raw);
-  if(!text||ASKING.test(raw.trim().toLowerCase())||ASKING.test(text))return false;
+  if(!text||ASKING.test(raw.trim().toLowerCase())||ASKING.test(text)||TOMORROW_AR.test(text)||ASKED_AR.test(text))return false;
   return FACT.test(text+" ")||FACT_AR.test(text);}
 
 var IDS=INTENTS.map(function(x){return x[0];});
