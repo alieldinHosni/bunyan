@@ -16,7 +16,8 @@
       sensible bounds (no 600 g of chicken in one sitting).
    Vegetables are fixed: they are there to be eaten, not to hit a number.
 
-   4. From the person's own food first (js/engine/habits.js): a meal they eat again
+   4. From the person's own food first (js/engine/habits.js, and the foods they said they
+      like in the assessment, pref.likes): a meal they eat again
       and again is served again, the amounts solved for this meal's share the same
       way, when it lands within USUAL_FIT of the meal's energy; and in every plate a
       slot takes the food they log most, when one fits it, before the app's choice.
@@ -112,7 +113,7 @@ function pick(slot,pref,seed){
   var ok=slot.ids.map(food).filter(function(f){return f&&allowed(f,pref);});
   /* What they eat, when the slot has it: the most logged first, "another version"
      moving on to the next of theirs. */
-  var eaten=(pref.habits&&pref.habits.eaten)||{};
+  var eaten=pref.mine_eaten||(pref.habits&&pref.habits.eaten)||{};
   var theirs=ok.filter(function(f){return eaten[f.id]>0;}).sort(function(a,b){return eaten[b.id]-eaten[a.id];});
   if(theirs.length)return theirs[seed%theirs.length];
   return ok.length?ok[seed%ok.length]:null;}
@@ -189,6 +190,10 @@ function buildMealPlan(targets,pref){
   pref=pref||{};
   var n=Math.max(2,Math.min(6,+pref.meals||4)),shape=SHAPE[n],names=NAMES[n],v=+pref.variant||0;
   var used={},out=[],H=pref.habits||null;
+  /* The foods they said they like (the assessment) count as eaten on a couple of days:
+     ahead of the app's own choice, behind what the log shows they eat most. */
+  var me=Object.assign({},(H&&H.eaten)||{});(pref.likes||[]).forEach(function(id){me[id]=(me[id]||0)+2;});
+  pref=Object.assign({},pref,{mine_eaten:me});
   MINE={};(pref.mine||[]).forEach(function(f){if(f&&f.id)MINE[f.id]=f;});
   var usedUsual={};
   shape.forEach(function(sh,i){

@@ -3,7 +3,7 @@
      node tests/coach.mjs */
 import {makeT} from "../js/coach/test/assert.js";
 
-const names=["volume","fatigue","strength","autoreg","weakpoints","insights","percentile","intent","corpus","energy","block","context","reconcile","recovery","checkin","missed"];
+const names=["volume","fatigue","strength","autoreg","weakpoints","insights","percentile","intent","corpus","energy","block","context","reconcile","recovery","checkin","missed","recap"];
 let pass=0,fail=0;
 for(const n of names){
   const mod=await import("../js/coach/test/"+n+".test.js");

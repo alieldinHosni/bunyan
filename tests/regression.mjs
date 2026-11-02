@@ -1016,7 +1016,8 @@ await test("Themes: Sage light, as the reference: white type on the ground, deep
   /* The dock is the reference's: a slate bar, white buttons, the open tab a white pill
      (once its change of tab, --m-tab, has played). */
   await pause(page,500);
-  eq(await page.$eval(".dock-b.on",e=>getComputedStyle(e).backgroundColor),"rgb(255, 255, 255)","the open tab");
+  /* The pill is the shape that travels between tabs (js/ui/dock.js), under the open one. */
+  eq(await page.$eval("nav .dock-hl",e=>getComputedStyle(e).backgroundColor),"rgb(255, 255, 255)","the open tab");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
 await test("Themes: the stylesheet names no colour outside the theme blocks",async page=>{
   const bad=await page.evaluate(async()=>{
@@ -3343,6 +3344,23 @@ await test("Coach memory: a fact that contradicts or updates one kept is asked a
   eq(await ev(page,"S.context.items.map(i=>i.text)"),["I work 13-hour days"],"nothing changed before the answer");
   await page.tap('#cpanel .chat-x.live [data-ctxrep]');await pause(page,400);
   eq(await ev(page,"S.context.items.map(i=>i.text)"),["I work 12-hour days now"],"replaced: one statement, the newer");
+});
+await test("A day told in one message, in Arabic with the app in English: the foods found with their meals, the sweets asked about, the chest workout noted, what else to do; one tap adds it all, with Undo",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="en";st.S.goals.p=160;st.S.goals.kcal=2400;st.S.goals.water=3000;st.S.days={};});
+  await openChat(page);
+  await page.fill('#chatq',"اتا كلت بيض النهاردة في ساندويتش و سكريات الصبح مش عارف قد ايه بالظبط، و كلت فراخ اخر النهار، و اتمرنت صدر في الجيم، ايه تاني ممكن اعمله؟ ولو ينفع تدخلي المعلومات ديه في اليوم بتاعي");
+  await page.press('#chatq','Enter');await pause(page,700);
+  const x=await page.evaluate(()=>{const e=[...document.querySelectorAll("#cpanel .chat-x")].pop();return {lang:e.getAttribute("lang"),items:[...e.querySelectorAll(".ag-item b")].map(b=>b.textContent),
+    notes:[...e.querySelectorAll(".ag-notes li")].map(l=>l.textContent),ok:!!e.querySelector(".ag-ok")};});
+  eq([x.lang,x.items,x.ok],["ar",["ساندوتش بيض · الفطار","فراخ مشوية · العشا"],true],"answered in Arabic: the egg sandwich at breakfast, chicken at dinner, one button");
+  const all=x.notes.join(" | ");
+  for(const re of [/تمرين الصدر/,/البروتين: فاضل/,/سكريات/,/الكميات حصة عادية/])if(!re.test(all))throw new Error("missing "+re+" in "+all);
+  await page.tap('#cpanel .chat-x.live .ag-ok');await pause(page,500);
+  const day=()=>page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");const r=st.S.days[U.today()]||{meals:{}};
+    return Object.keys(r.meals).sort().map(k=>k+":"+(r.meals[k].items||[]).map(i=>i.fid).join(","));});
+  eq(await day(),["Breakfast:egg_sandwich","Dinner:chicken_breast_ck"],"added to today, each to its meal");
+  await page.tap('#cpanel .ag-undo');await pause(page,400);
+  eq(await day(),[],"Undo takes it all back");
 });
 await test("Chat motion: typing, bigger or smaller keeps the field, its text and the keyboard; a tap on send keeps them; the panel and its box ease with the keyboard",async page=>{
   await openChat(page);

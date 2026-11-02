@@ -353,6 +353,38 @@ function lookupBarcode(code,cb){
   });
 }
 
+/* ---- a food's name, as people call it ------------------------------------------------
+   Owner, 2 Nov: "the food names [should] be the common ones, example: Tilapia in Egypt is
+   called سمك بلطي, Bolti". The database names a food for search ("Tilapia, Raw"); this
+   is what is shown. In Arabic, the everyday Egyptian name: its first Arabic alias, with
+   the few that need it written out (AR_NAME: "بلطي" is said "سمك بلطي") and "(ني)" on a
+   raw one. In English, the database name, with the local name beside it where Egypt
+   calls the food something else (EN_LOCAL). A food the person added, or one not in the
+   list, keeps its own name. Shown, never stored: the log keeps the food id and its
+   name as logged, so changing a name here changes it everywhere at once. */
+var AR_NAME={tilapia:"سمك بلطي",tilapia_ck:"سمك بلطي مشوي",seabass:"سمك قاروص",mullet:"سمك بوري",salmon:"سمك سلمون",
+  salmon_ck:"سمك سلمون مشوي",cod:"سمك قد",cod_ck:"سمك قد مشوي",shrimp:"جمبري",shrimp_ck:"جمبري مطبوخ",chicken_breast:"صدور فراخ",
+  beef_lean:"لحمة حمرا",rice_egyptian:"رز مصري",shawarma_ch:"شاورما فراخ",chicken_wing:"جوانح فراخ"};
+var EN_LOCAL={tilapia:"Bolti",tilapia_ck:"Bolti",mullet:"Bouri",seabass:"Karous",shrimp:"Gambari",shrimp_ck:"Gambari",crab:"Kaboria",
+  lupini:"Termes"};
+var BYID={n:-1,m:{}};
+function foodById(id){
+  var my=S.myFoods||[],n=(FOODDB||[]).length+my.length;
+  if(BYID.n!==n){BYID={n:n,m:{}};(FOODDB||[]).forEach(function(f){BYID.m[f.id]=f;});my.forEach(function(f){BYID.m[f.id]=f;});}
+  return BYID.m[id]||null;}
+/* x: a food, or a logged item ({fid, n}). */
+function foodName(x){
+  if(!x)return "";
+  var f=x.kcal!=null&&x.per!=null&&x.id?x:foodById(x.fid||x.id),own=x.n||(f&&f.n)||"";
+  if(!f||f.src==="you"||f.cat==="My Foods")return own;
+  if(S.prefs&&S.prefs.lang==="ar"){
+    var a=AR_NAME[f.id]||(f.a||[]).filter(function(z){return /[؀-ۿ]/.test(z);})[0];
+    if(!a)return own;
+    if(/, Raw$/.test(f.n)&&!/(ني|ناشف)/.test(a))a+=" (ني)";
+    return a;}
+  var loc=EN_LOCAL[f.id];
+  return loc&&f.n.toLowerCase().indexOf(loc.toLowerCase())<0?f.n.replace(/^([^,]+)/,"$1 ("+loc+")"):f.n;}
+
 /* What the person eats, from the log (js/engine/habits.js), and their own foods: what
    the meal plan is written from first. */
 function ownFood(){
@@ -360,4 +392,4 @@ function ownFood(){
   (FOODDB||[]).forEach(function(f){by[f.id]=f;});my.forEach(function(f){by[f.id]=f;});
   return {habits:habits(S.days||{},today(),function(id){return by[id]||null;}),mine:my.slice()};}
 
-export {density, ownFood, FOODDB, findByBarcode, fuzzyFoods, gramsFor, isDrink, isMeasure, loadFoods, lookupBarcode, normBarcode, normFood, nutritionFor, offBarcode, offSearch, parseFoodInput, recalcItem, rememberBarcode, resolveItem, roundUnit, searchFoods, sumNutrition, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, unitsFor};
+export {density, foodById, foodName, ownFood, FOODDB, findByBarcode, fuzzyFoods, gramsFor, isDrink, isMeasure, loadFoods, lookupBarcode, normBarcode, normFood, nutritionFor, offBarcode, offSearch, parseFoodInput, recalcItem, rememberBarcode, resolveItem, roundUnit, searchFoods, sumNutrition, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, unitsFor};

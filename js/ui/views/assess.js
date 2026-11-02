@@ -16,7 +16,7 @@ import {wdName, weekOrder} from "../../engine/schedule.js";
 import {lastWeight, macroTargets, tdee} from "../../engine/formulas.js";
 import {volumeCheck} from "../../engine/volume.js";
 import {buildMealPlan} from "../../engine/mealplan.js";
-import {FOODDB, ownFood, sumNutrition} from "../../engine/nutrition.js";
+import {FOODDB, foodById, foodName, ownFood, sumNutrition} from "../../engine/nutrition.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {S} from "../../state.js";
 import {fmtW, toDisp, toKg, wUnit} from "../../units.js";
@@ -65,7 +65,7 @@ function draftFrom(){
   return {step:0,sex:p.sex||"m",age:num(p.age)||"",height:num(p.height)||"",
     weight:lastWeight()||num(p.weight)||"",goal:GOALS[p.goal]?p.goal:"lose",level:LEVELS[p.level]?p.level:"some",
     days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),
-    meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",
+    meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",likes:(pr.likes||[]).slice(),
     sleep:num(p.sleep)||7.5,stress:p.stress||"normal",wd:(p.wd||[]).map(Number),focus:(p.focus||[]).slice(),
     nolift:NOLIFT.filter(function(n){return (S.skip||[]).indexOf(n)>=0;}),split:null,done:false};}
 
@@ -83,7 +83,11 @@ function skipOf(a){
   var keep=(S.skip||[]).filter(function(n){return NOLIFT.indexOf(n)<0;});
   return keep.concat((a.nolift||[]).filter(function(n){return keep.indexOf(n)<0;}));}
 function foodPrefs(a,variant){
-  return Object.assign({meals:num(a.meals)||4,diet:a.diet,avoid:a.avoid.slice(),powder:!!a.powder,style:a.style,variant:variant||0},FOODDB?ownFood():{});}
+  return Object.assign({meals:num(a.meals)||4,diet:a.diet,avoid:a.avoid.slice(),powder:!!a.powder,style:a.style,likes:(a.likes||[]).slice(),variant:variant||0},FOODDB?ownFood():{});}
+/* Foods to say you like (the meal plan's own staples, so a pick always has a place): the
+   plan uses them first where they fit. */
+var LIKES=["ful","egg_boiled","chicken_breast_ck","tilapia_ck","beef_lean_ck","tuna_water","gebna_areesh","greek_yog","lentils",
+  "rice_egyptian","baladi","pasta_ck","oats","potato","sweet_potato_baked","molokhia_plain","lupini","banana"];
 
 /* Everything "Use this plan" would set, worked out with the draft in place of what
    is saved, then put back. Cached on the answers. */
@@ -206,7 +210,10 @@ function body(a){
     h+=lbl(t("Diet"))+chips("diet",[["any",t("Everything")],["veg",t("Vegetarian")],["pesc",t("Pescatarian")],["vegan",t("Vegan")]],a.diet);
     h+=lbl(t("Leave out"))+mchips("avoid",AVOIDS,a.avoid);
     h+=lbl(t("Protein powder"))+chips("powder",[["1",t("I use it")],["0",t("No powder")]],a.powder?"1":"0");
-    h+=lbl(t("Food style"))+chips("style",[["egy",t("Egyptian home food")],["mixed",t("A mix")],["intl",t("International")]],a.style);}
+    h+=lbl(t("Food style"))+chips("style",[["egy",t("Egyptian home food")],["mixed",t("A mix")],["intl",t("International")]],a.style);
+    if(FOODDB)h+=lbl(t("Foods you like (optional)"))+'<div class="aschips">'+LIKES.map(function(id){var f=foodById(id);
+        return f?chip("likes",id,foodName(f),(a.likes||[]).indexOf(id)>=0,true):"";}).join("")+'</div>'
+      +'<p class="as-note">'+t("The plan uses them first where they fit, with the foods you log.")+'</p>';}
   else if(s==="sleep"){
     h+=q(t("How do you sleep?"),t("Most nights. Short sleep slows recovery, so the plan asks a little less of you."));
     h+=chips("sleep",[[5,t("Under 6 hours")],[6.5,t("6 to 7 hours")],[8,t("7 to 9 hours")],[9.5,t("More than 9")]],a.sleep);
@@ -216,6 +223,20 @@ function body(a){
     if(a.stress==="high"||(num(a.sleep)>0&&num(a.sleep)<6))h+='<p class="as-note">'+t("Recovery is slower like this, so each muscle is built to the bottom of its range for now.")+'</p>';}
   else if(s==="result")h+=result(a);
   return h;}
+
+/* What the meals were built from, said: the meals a day, the style, what is left out,
+   the foods they picked or log that made it in, and a usual meal served again. */
+function mealsWhy(a,meals){
+  var P=foodPrefs(a),eat=(P.habits&&P.habits.eaten)||{},likes=a.likes||[],mine=[],usual=0,ar=S.prefs.lang==="ar";
+  meals.forEach(function(m){if(m.usual)usual++;m.items.forEach(function(it){if((likes.indexOf(it.fid)>=0||eat[it.fid])&&mine.indexOf(it.fid)<0)mine.push(it.fid);});});
+  var x=fill(t("Built for {n} meals a day, {s}"),{n:num(a.meals)||4,s:t(a.style==="intl"?"international food first":a.style==="mixed"?"a mix of Egyptian and international food":"Egyptian home food first")});
+  if(a.diet&&a.diet!=="any")x+=", "+t({veg:"vegetarian",pesc:"pescatarian",vegan:"vegan"}[a.diet]||a.diet);
+  if((a.avoid||[]).length)x+=", "+t("without")+" "+a.avoid.map(function(v){return t((AVOIDS.filter(function(z){return z[0]===v;})[0]||[v,v])[1]).toLowerCase();}).join(ar?" و":", ");
+  x+=".";
+  if(mine.length)x+=" "+t("With your foods:")+" "+mine.slice(0,6).map(function(id){return foodName({fid:id});}).join(ar?"، ":", ")+".";
+  if(usual)x+=" "+t(usual===1?"One of them is a meal you eat often, sized for your targets.":"{n} are meals you eat often, sized for your targets.").replace("{n}",usual);
+  if(!mine.length&&!likes.length)x+=" "+t("Pick foods you like above, or log a few days of food, and the plan is written from them.");
+  return x;}
 
 /* Why the built week looks as it does, from what it was built on. */
 function builtWhy(a,plan){
@@ -249,10 +270,7 @@ var MUSCLE_INK={Chest:"--accent",Back:"--mac-p",Shoulders:"--gold",Quads:"--acce
 var MEAL_GLYPH=[[/breakfast|فطار|فطور/i,"grain"],[/lunch|غدا/i,"bowl"],[/dinner|عشا/i,"flame"],[/snack|سناك/i,"avocado"]];
 function mealGlyph(name){for(var i=0;i<MEAL_GLYPH.length;i++)if(MEAL_GLYPH[i][0].test(name))return MEAL_GLYPH[i][1];return "bowl";}
 /* A food by its Arabic name where the database has one, as the Food page shows it. */
-function foodLabel(x){
-  if(S.prefs.lang!=="ar"||!FOODDB)return x.n;
-  var f=FOODDB.filter(function(y){return y.id===x.fid;})[0],a=f&&(f.a||[]).filter(function(z){return /[\u0600-\u06FF]/.test(z);})[0];
-  return a||x.n;}
+function foodLabel(x){return foodName(x);}
 function tile(ico,v,label){return '<div class="as-tile">'+glyph(ico)+'<b class="num">'+v+'</b><span>'+esc(label)+'</span></div>';}
 function cardHead(ico,label){return '<div class="as-ch">'+glyph(ico)+'<span>'+esc(label)+'</span></div>';}
 function result(a){
@@ -308,6 +326,7 @@ function result(a){
   h+='<section class="ascard2">'+cardHead("bowl",t("Meal plan"));
   if(!r.meals)h+='<p class="as-why">'+esc(t("Putting your meals together…"))+'</p>';
   else{
+    h+='<p class="as-why">'+esc(mealsWhy(a,r.meals))+'</p>';
     var all=[];r.meals.forEach(function(m){all=all.concat(m.items);});
     var mt=sumNutrition(all);
     h+='<div class="as-meals">'+r.meals.map(function(m,i){
