@@ -1,7 +1,8 @@
 /* Bunyan — nutrition
    Food database, natural-language parsing and macro maths. */
 import {S} from "../state.js";
-import {num, uid} from "../util.js";
+import {num, today, uid} from "../util.js";
+import {habits} from "./habits.js";
 import {fuzzyRank, matchScore, norm, tokenMatch} from "./text.js";
 /* An item list's totals live with the rest of the intake maths, which reads no state. */
 import {sumNutrition} from "./intake.js";
@@ -352,4 +353,11 @@ function lookupBarcode(code,cb){
   });
 }
 
-export {density, FOODDB, findByBarcode, fuzzyFoods, gramsFor, isDrink, isMeasure, loadFoods, lookupBarcode, normBarcode, normFood, nutritionFor, offBarcode, offSearch, parseFoodInput, recalcItem, rememberBarcode, resolveItem, roundUnit, searchFoods, sumNutrition, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, unitsFor};
+/* What the person eats, from the log (js/engine/habits.js), and their own foods: what
+   the meal plan is written from first. */
+function ownFood(){
+  var my=S.myFoods||[],by={};
+  (FOODDB||[]).forEach(function(f){by[f.id]=f;});my.forEach(function(f){by[f.id]=f;});
+  return {habits:habits(S.days||{},today(),function(id){return by[id]||null;}),mine:my.slice()};}
+
+export {density, ownFood, FOODDB, findByBarcode, fuzzyFoods, gramsFor, isDrink, isMeasure, loadFoods, lookupBarcode, normBarcode, normFood, nutritionFor, offBarcode, offSearch, parseFoodInput, recalcItem, rememberBarcode, resolveItem, roundUnit, searchFoods, sumNutrition, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, unitsFor};

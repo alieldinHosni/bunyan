@@ -39,6 +39,8 @@
                                        DEF, or normalize would mark old blobs as current
    @property {number=}  logFixV        the one-time log corrections done (js/engine/logfix.js)
    @property {Slot[]=}  mealSlots      the day's meals, when not the usual four
+   @property {string=}  ckDone         the week (its first day) the weekly check-in was closed
+   @property {{w:string,k:string[]}=} ckDid  the check-in's changes made that week
    @property {Object<string,number>=} missedDone  a missed day dealt with (date → 1)
    @property {Object<string,Object[]>=} dayAdd  lifts carried onto a date from a missed day
    @property {Object[]=} chat          the coach chat's kept conversation (30 days)
@@ -179,6 +181,9 @@ function normalize(o){
   if(o.chat!=null&&!Array.isArray(o.chat))delete o.chat;
   /* The week whose check-in was last read (its first date): the coach offers the next. */
   if(o.ckSeen!=null&&!/^\d{4}-\d\d-\d\d$/.test(String(o.ckSeen)))delete o.ckSeen;
+  /* The weekly check-in: the week marked done, and the changes made from it that week. */
+  if(o.ckDone!=null&&!/^\d{4}-\d\d-\d\d$/.test(String(o.ckDone)))delete o.ckDone;
+  if(o.ckDid!=null&&!(o.ckDid&&/^\d{4}-\d\d-\d\d$/.test(String(o.ckDid.w))&&Array.isArray(o.ckDid.k)))delete o.ckDid;
   /* A missed day dealt with (date → 1), and lifts carried onto dates still ahead. */
   if(o.missedDone!=null&&(typeof o.missedDone!=="object"||Array.isArray(o.missedDone)))delete o.missedDone;
   if(o.dayAdd!=null){

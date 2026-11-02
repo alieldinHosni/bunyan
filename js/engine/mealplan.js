@@ -16,6 +16,10 @@
       sensible bounds (no 600 g of chicken in one sitting).
    Vegetables are fixed: they are there to be eaten, not to hit a number.
 
+   4. From the person's own food first (js/engine/habits.js): a meal they eat again
+      and again is served again, the amounts solved for this meal's share the same
+      way, when it lands within USUAL_FIT of the meal's energy; and in every plate a
+      slot takes the food they log most, when one fits it, before the app's choice.
    The result goes to the same review as an imported plan, where every food and
    amount can be changed before anything is saved. The same answers always give the
    same day; "variant" shuffles the plates for another one. */
@@ -97,16 +101,50 @@ var SHAPE={
 /* Names for the four named meals; a fifth and sixth are numbered. */
 var NAMES={2:["Breakfast","Dinner"],3:["Breakfast","Lunch","Dinner"],4:["Breakfast","Lunch","Snack","Dinner"]};
 
-var BYID=null;
+var BYID=null,MINE={};
 function food(id){
   if(!BYID){BYID={};(FOODDB||[]).forEach(function(f){BYID[f.id]=f;});}
-  return BYID[id]||null;}
+  return BYID[id]||MINE[id]||null;}
 
 function roundTo(g,step){return Math.round(g/step)*step;}
 /* The food a slot uses: the first one that fits, after a rotation by seed. */
 function pick(slot,pref,seed){
   var ok=slot.ids.map(food).filter(function(f){return f&&allowed(f,pref);});
+  /* What they eat, when the slot has it: the most logged first, "another version"
+     moving on to the next of theirs. */
+  var eaten=(pref.habits&&pref.habits.eaten)||{};
+  var theirs=ok.filter(function(f){return eaten[f.id]>0;}).sort(function(a,b){return eaten[b.id]-eaten[a.id];});
+  if(theirs.length)return theirs[seed%theirs.length];
   return ok.length?ok[seed%ok.length]:null;}
+
+/* ---- the person's usual meals, as plates ---------------------------------------
+   Each food takes the part its energy says it plays: protein when a third or more of
+   its energy is protein, fat when three fifths is fat, carbohydrate when half is;
+   anything else (vegetables, a sauce, tea with milk) stays at what they usually have.
+   An amount moves between half and twice the usual, in a serving they count by (two
+   eggs, not 113 g) or in grams. A meal with nothing that can move is not used: it
+   could not be fitted to anything. */
+var USUAL_FIT=0.2;
+function roleOf(f){
+  var k=+f.kcal||0;if(!k)return null;
+  if(f.p*4/k>=0.3)return "P";
+  if(f.f*9/k>=0.6)return "F";
+  if(f.c*4/k>=0.5)return "C";
+  return null;}
+function stepOf(f,g,r){
+  var c=(f.s||[]).filter(function(u){return u[1]>0&&!/^\d/.test(u[0]);})[0];
+  if(c&&g>=c[1]&&Math.abs(g/c[1]-Math.round(g/c[1]))<0.04)return c[1];
+  return r==="F"||g<60?5:g<150?10:25;}
+function usualPlate(u,pref){
+  var s=[],moves=0;
+  for(var i=0;i<u.fids.length;i++){
+    var f=food(u.fids[i]);
+    if(!f||!allowed(f,pref))return null;
+    var g=u.grams[f.id],r=roleOf(f);
+    if(!r){s.push(FX("V",[f.id],g));continue;}
+    var st=stepOf(f,g,r);
+    s.push(S(r,[f.id],Math.max(st,roundTo(g/2,st)),Math.max(st,roundTo(g*2,st)),st));moves++;}
+  return moves?{k:"usual:"+u.fids.join(","),s:s,usual:u}:null;}
 
 /* Solve one plate for one meal's macros. Returns items, or null if a slot the
    plate cannot do without has nothing that fits. */
@@ -122,12 +160,12 @@ function solve(plate,target,pref,seed){
       var adj=it.filter(function(x){return x.sl.r===r&&x.sl.g==null;});
       if(!adj.length)return;
       var k=KEY[r],others=0;
-      it.forEach(function(x){if(adj.indexOf(x)<0)others+=x.f[k]*x.g/100;});
+      it.forEach(function(x){if(adj.indexOf(x)<0)others+=x.f[k]*x.g/(x.f.per||100);});
       var need=Math.max(0,target[k]-others);
       /* Shared out by how much of it each food carries, the first food first. */
       adj.forEach(function(x,j){
         var share=adj.length===1?1:j===0?0.65:0.35/(adj.length-1);
-        var dens=x.f[k]/100;
+        var dens=x.f[k]/(x.f.per||100);
         var g=dens>0.01?need*share/dens:x.sl.min;
         x.g=Math.max(x.sl.min,Math.min(x.sl.max,roundTo(g,x.sl.step)));});});}
   return it.filter(function(x){return x.g>0;});}
@@ -150,7 +188,9 @@ function itemOf(x){
 function buildMealPlan(targets,pref){
   pref=pref||{};
   var n=Math.max(2,Math.min(6,+pref.meals||4)),shape=SHAPE[n],names=NAMES[n],v=+pref.variant||0;
-  var used={},out=[];
+  var used={},out=[],H=pref.habits||null;
+  MINE={};(pref.mine||[]).forEach(function(f){if(f&&f.id)MINE[f.id]=f;});
+  var usedUsual={};
   shape.forEach(function(sh,i){
     var kind=sh[0],share=sh[1];
     /* Protein is spread more evenly than energy: half by the meal's share, half equally. */
@@ -158,18 +198,29 @@ function buildMealPlan(targets,pref){
     var plates=PLATES[kind].slice();
     if(pref.style==="intl")plates.sort(function(a,b){return (a.egy?1:0)-(b.egy?1:0);});
     else plates.sort(function(a,b){return (b.egy?1:0)-(a.egy?1:0);});
-    var meal=null;
+    var meal=null,usual=null;
+    /* Their own meal for this kind first, the one usually eaten at this meal before
+       another; each once a day. */
+    var own=H&&H.usual&&H.usual[kind]?H.usual[kind].slice():[];
+    if(names)own.sort(function(a,b){return (b.slot===names[i]?1:0)-(a.slot===names[i]?1:0);});
+    for(var q=0;q<own.length&&!meal;q++){
+      var up=usualPlate(own[q],pref);
+      if(!up||usedUsual[up.k])continue;
+      var it=solve(up,tg,pref,0);
+      if(!it||!it.length)continue;
+      var e=0;it.forEach(function(x){e+=x.f.kcal*x.g/(x.f.per||100);});
+      if(Math.abs(e-tg.kcal)<=tg.kcal*USUAL_FIT){usedUsual[up.k]=1;meal=it;usual=own[q];}}
     for(var k=0;k<plates.length&&!meal;k++){
       var pl=plates[(k+v+i)%plates.length];
       if(used[pl.k]&&k<plates.length-1)continue;
       var items=solve(pl,tg,pref,v);
       if(items&&items.length){used[pl.k]=1;meal=items;}}
     if(!meal)meal=solve(FALLBACK,tg,pref,v+i);
-    out.push({named:names?names[i]:null,n:names?null:i+1,name:"",solved:meal||[],items:[],todo:[]});});
+    out.push({named:names?names[i]:null,n:names?null:i+1,name:"",solved:meal||[],items:[],todo:[],usual:usual?usual.days:0});});
   /* The day as a whole: rounding to servings drifts. Carbs in the meals take up the
      difference, a serving step at a time, within their bounds. */
   for(var round=0;round<12;round++){
-    var kc=0;out.forEach(function(m){m.solved.forEach(function(x){kc+=x.f.kcal*x.g/100;});});
+    var kc=0;out.forEach(function(m){m.solved.forEach(function(x){kc+=x.f.kcal*x.g/(x.f.per||100);});});
     var diff=targets.kcal-kc;
     if(Math.abs(diff)<targets.kcal*0.04)break;
     var moved=false;

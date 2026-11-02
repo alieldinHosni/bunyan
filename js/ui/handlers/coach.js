@@ -5,8 +5,10 @@ import {coachNow} from "../../engine/coachinfo.js";
 import {addDaysISO} from "../../engine/dayplan.js";
 import {kcalFloor, lastWeight, macroTargets} from "../../engine/formulas.js";
 import {buildMealPlan} from "../../engine/mealplan.js";
-import {FOODDB, loadFoods} from "../../engine/nutrition.js";
+import {FOODDB, loadFoods, ownFood} from "../../engine/nutrition.js";
 import {buildPlan, rebalance} from "../../engine/plan.js";
+import {checkinOpen} from "../../engine/checkin.js";
+import {weekStartOf} from "../../engine/schedule.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {t} from "../../i18n/dict.js";
 import {S, saveDB, split} from "../../state.js";
@@ -100,6 +102,40 @@ function pcFix(id){
   saveDB();render();
   toast(msg,function(){S.goals=before.goals;S.profile.goal=before.goal;if(prog&&before.days)prog.days=before.days;
     S.pcDismiss=before.dis;if(before.energy)S.energy=before.energy;else delete S.energy;saveDB();render();});}
+/* The weekly check-in's changes (js/engine/checkin.js), each with Undo. A change made
+   is left off the check-in for the rest of the week; "Not this week" closes it. */
+function ckDid(kind){var ws=weekStartOf(today());
+  if(!S.ckDid||S.ckDid.w!==ws)S.ckDid={w:ws,k:[]};
+  if(S.ckDid.k.indexOf(kind)<0)S.ckDid.k.push(kind);}
+function ckApply(kind){
+  var c=checkinOpen(),x=c&&c.changes.filter(function(y){return y.kind===kind;})[0];if(!x)return;
+  var snap=JSON.parse(JSON.stringify({profile:S.profile,goals:S.goals,programs:S.programs,activeProgram:S.activeProgram,
+    deload:S.deload||null,block:S.block||null,ckDid:S.ckDid||null}));
+  var msg="";
+  if(kind==="days"){
+    S.profile.days=x.to;if((S.profile.wd||[]).length&&S.profile.wd.length!==x.to)S.profile.wd=[];
+    buildPlan();msg=t("A {n}-day week is built for you. It is on the Training page.").replace("{n}",x.to);}
+  else if(kind==="kcal"){
+    /* The step comes off or goes on carbohydrate; protein and fat stay. */
+    S.goals.kcal=x.to;S.goals.c=Math.max(0,Math.round(num(S.goals.c)+x.by/4));
+    msg=t("Daily target now {k} kcal.").replace("{k}",fmtN(x.to));}
+  else if(kind==="deload"){
+    var dl=S.deload=S.deload||{};dl.until=addDaysISO(today(),6);dl.last=today();delete dl.snooze;
+    if(S.block)restartAfter(dl.until);
+    msg=t("Lighter week on. Your next workouts have fewer sets and lighter suggestions.");}
+  else if(kind==="balance"){
+    var sp=split();if(!sp)return;
+    var r=rebalance(sp,S.profile,S.gear);
+    msg=r.sets||r.added?t("Volume balanced: {s} sets moved, {a} exercises added.").replace("{s}",r.sets).replace("{a}",r.added)
+      :t("Nothing could be moved without making sessions longer.");}
+  ckDid(kind);saveDB();render();
+  toast(msg,function(){
+    ["profile","goals","programs","activeProgram"].forEach(function(k){S[k]=snap[k];});
+    if(snap.deload)S.deload=snap.deload;else delete S.deload;
+    if(snap.block)S.block=snap.block;else delete S.block;
+    if(snap.ckDid)S.ckDid=snap.ckDid;else delete S.ckDid;
+    saveDB();render();});}
+
 /* The coach's insights: act on one, or set it aside for two weeks. Taking a lighter
    week also quiets the insight that asked for it until well after the week ends. */
 function coachSetAside(id,days){S.coachDismiss=S.coachDismiss||{};S.coachDismiss[id]=addDaysISO(today(),days);}
@@ -129,6 +165,8 @@ function coachFix(id){
 function openMealPlan(prefs){
   loadFoods(function(){
     V.assess=false;V.pcheck=false;resetNav();V.tab="coach";V.csec="food";V.cfsub="plan";S.prefs.csec="food";saveDB();pushNav();
+    /* Read once the food database is in: the log's foods are looked up in it. */
+    Object.assign(prefs,ownFood());
     V.pimport=true;V.pgen=prefs;V.pitext="";V.ptargets=null;
     V.pparse=buildMealPlan(S.goals,prefs);
     render();window.scrollTo(0,0);});}
@@ -166,6 +204,8 @@ function register(){
   on(function(D){return D.asback&&V.asd;},function(){V.asd.step=Math.max(0,V.asd.step-1);render();window.scrollTo(0,0);return;});
   on(function(D){return D.assplit&&V.asd;},function(D){V.asd.split=D.assplit;render();return;});
   key("asuse",function(){useAssessment();return;});
+  key("ckdo",function(D){ckApply(D.ckdo);return;});
+  key("ckok",function(){S.ckDone=weekStartOf(today());saveDB();render();return;});
   key("astrain",function(){V.assess=false;V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tdate=null;render();window.scrollTo(0,0);return;});
   key("asfood",function(){V.assess=false;V.pcheck=false;resetNav();V.tab="food";V.train="days";V.fdate=null;render();window.scrollTo(0,0);return;});
   /* The plan check: open it, fix a finding, keep one as it is, look at kept ones again. */
