@@ -9,7 +9,7 @@ import {addDaysISO} from "../../engine/dayplan.js";
 import {spreadWd, suggestWd, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
 import {missedNow} from "../../engine/missed.js";
 import {dayOptions} from "../../engine/recovery.js";
-import {conformProgram, doseFor} from "../../engine/plan.js";
+import {avoids, conformProgram, doseFor, limitsOf} from "../../engine/plan.js";
 import {restartAfter, restartBlock} from "../../engine/blocks.js";
 import {t, tm} from "../../i18n/dict.js";
 import {exName, planName} from "../../i18n/exnames.js";
@@ -277,7 +277,15 @@ function register(){
     askText({title:t("Add your own exercise"),value:V.exq||"",
       body:t("It joins your library under the muscle you have filtered to. No illustration, everything else works."),
       cta:t("Add it"),act:"customex",data:{from:V.sd}});return;});
-  key("pickex",function(D){addExercise(D.pickex);return;});
+  /* One the person's limits or a condition rule out asks first (sheets.js marks it). */
+  key("pickex",function(D){
+    if(avoids(D.pickex,limitsOf(S.profile))&&!(V.sd&&V.sd.pkok)){var keep=V.sd;
+      askConfirm({title:t("Add {x} anyway?").replace("{x}",exName(D.pickex)),
+        body:t("It goes against what your plan works around: a health condition or a sore spot you named. The plan's other exercises keep away from it."),
+        cta:t("Add it anyway"),act:"pickforce",data:{name:D.pickex,sd:keep},mid:t("Pick another"),midact:"pickback"});return;}
+    addExercise(D.pickex);return;});
+  ACT.pickforce=function(v,d){if(!d)return;openSheet("exercise",Object.assign({},d.sd||{},{pkok:true}));addExercise(d.name);};
+  ACT.pickback=function(v,d){if(d)openSheet("exercise",d.sd||{});};
   key("replaceex",function(D){
     var dR=dayOf(V.dayId),eR2=dR?dR.ex.filter(function(x){return x.id===D.replaceex;})[0]:null;
     /* The frame opens a replacement with the current exercise's muscle already

@@ -10,6 +10,7 @@ import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay} from "./views/train.js";
 import {planOn} from "../engine/dayplan.js";
 import {dayOptions} from "../engine/recovery.js";
+import {avoids, limitsOf} from "../engine/plan.js";
 import {addDays} from "../engine/schedule.js";
 import {stageFor, zonesFor} from "../engine/zones.js";
 import {ACT_GROUPS, actIcon, actInfo, actRate, actsIn, INTENSITY, intensityOf, isActivity, outdoorOf} from "../data/activities.js";
@@ -224,12 +225,18 @@ function vSheet(){
     /* The frame's result row: picture, name, then variant · muscle · equipment ·
        difficulty, then the action. The muscle only earns a slot when the muscle
        filter is not already showing it. Picking one adds it and returns to the day. */
+    var LIMS=limitsOf(S.profile);
+    function whyNot(n){for(var i=0;i<LIMS.length;i++)if(avoids(n,[LIMS[i]]))return LIMS[i];return "";}
     function exRow(l,k){
       var meta=[exVariant(l[0])?esc(exVariant(l[0])):"",
                 V.exm==="All"?tm(l[1]):"",
                 t(l[2]),t(difficultyOf(l[0]))].filter(Boolean).join(" \u00b7 ");
-      return '<button class="trow libtrow pkrow" data-k="'+k+':'+esc(l[0])+'" data-pickex="'+esc(l[0])+'">'+thumb(l[0],48)
-       +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span><span class="trow-s">'+meta+'</span></span>'
+      /* What the person's limits or a health condition rule out is still there, marked, and
+         asks before it goes in (handlers/train.js pickex). */
+      var no=avoids(l[0],LIMS);
+      return '<button class="trow libtrow pkrow'+(no?' pkwarn':'')+'" data-k="'+k+':'+esc(l[0])+'" data-pickex="'+esc(l[0])+'">'+thumb(l[0],48)
+       +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span><span class="trow-s">'+meta+'</span>'
+       +(no?'<span class="pk-no">'+esc(t(/^floor$/.test(whyNot(l[0]))?"Lies down: not for your health":"Loads an area you're working around"))+'</span>':'')+'</span>'
        +(swapping?'<span class="pkswap">'+t("Swap")+'</span>'
           :'<span class="pkadd" aria-hidden="true">+</span>')+'</button>';}
     b+='<div class="srch-body"><p class="srch-n srch-hide">'

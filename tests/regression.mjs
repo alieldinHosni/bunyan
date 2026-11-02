@@ -2019,6 +2019,22 @@ await test("Health conditions: the assessment asks which; the plan follows the b
   for(let i=0;i<6&&!(await page.$('.sc-cond'));i++){const n=await page.$('[data-nextex]');if(n){await n.tap();await pause(page,300);}else break;}
   if(!(await page.$('.sc-cond')))throw new Error("no breathing cue on the set");
 },{db:Object.assign(seed(),{onboarded:false})});
+await test("Exercise picker: what a health condition rules out is marked, and asks before it goes in",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.profile.conds=["hypertension"];st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.dayId=st.split().days[0].id;V.exm="Chest";V.exe="All";V.exq="bench press";
+    (await import("/js/ui/actions.js")).openSheet("exercise",{});});
+  await pause(page,500);
+  const w=await page.$('#sheet .pkwarn[data-pickex]');if(!w)throw new Error("nothing marked");
+  const name=await w.getAttribute("data-pickex");
+  const n0=await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days[0].ex.length");
+  await w.tap();await pause(page,400);
+  eq(await ev(page,"V.sheet"),"confirm","asks first");
+  await page.tap('#sheet [data-confirmmid]');await pause(page,400);
+  eq(await ev(page,"[V.sheet,S.programs.find(p=>p.id===S.activeProgram).days[0].ex.length]"),["exercise",n0],"Pick another: back, nothing added");
+  await page.tap('#sheet .pkwarn[data-pickex="'+name+'"]');await pause(page,400);
+  await page.tap('#sheet [data-confirmok]');await pause(page,500);
+  eq(await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days[0].ex.some(e=>e.name===\""+name+"\")"),true,"added when they say so");
+});
 await test("Plan check: targets that work against the goal are found in Coach AI with a dot on Coach, fixed with Undo, and kept until the numbers change",async page=>{
   /* Building muscle on 2,500 kcal against about 2,550 maintenance, and 110 g of protein. */
   eq(await page.$eval('nav [data-tab="coach"]',e=>e.classList.contains("advice")),true,"a dot on Coach");
