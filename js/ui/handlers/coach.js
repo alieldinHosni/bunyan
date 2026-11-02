@@ -5,7 +5,7 @@ import {coachNow} from "../../engine/coachinfo.js";
 import {addDaysISO} from "../../engine/dayplan.js";
 import {kcalFloor, lastWeight, macroTargets} from "../../engine/formulas.js";
 import {buildMealPlan} from "../../engine/mealplan.js";
-import {FOODDB, loadFoods} from "../../engine/nutrition.js";
+import {FOODDB, loadFoods, ownFood} from "../../engine/nutrition.js";
 import {buildPlan, rebalance} from "../../engine/plan.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {t} from "../../i18n/dict.js";
@@ -129,6 +129,8 @@ function coachFix(id){
 function openMealPlan(prefs){
   loadFoods(function(){
     V.assess=false;V.pcheck=false;resetNav();V.tab="coach";V.csec="food";V.cfsub="plan";S.prefs.csec="food";saveDB();pushNav();
+    /* Read once the food database is in: the log's foods are looked up in it. */
+    Object.assign(prefs,ownFood());
     V.pimport=true;V.pgen=prefs;V.pitext="";V.ptargets=null;
     V.pparse=buildMealPlan(S.goals,prefs);
     render();window.scrollTo(0,0);});}

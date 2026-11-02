@@ -1785,6 +1785,33 @@ await test("Warm-up: Start stays on the bottom edge all the way down",async page
     return page.evaluate(()=>Math.round(document.querySelector(".wu-foot").getBoundingClientRect().bottom)-innerHeight);};
   eq([await at(0),await at(300),await at(99999)],[0,0,0],"the footer's bottom is the screen's");
 });
+await test("Meal plan from your own food: a breakfast eaten most days comes back scaled to the targets, your rice in place of the app's, and it says so; in Arabic too",async page=>{
+  await page.evaluate(async()=>{
+    const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods(r));
+    const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js");
+    const by={};N.FOODDB.forEach(f=>by[f.id]=f);
+    const item=(id,g)=>Object.assign({fid:id,n:by[id].n,grams:g,label:g+" g",src:"db"},N.nutritionFor(by[id],g));
+    for(let i=1;i<=4;i++){const d=new Date(Date.parse(U.today()+"T00:00:00Z")-i*864e5).toISOString().slice(0,10);
+      S.days[d]={water:0,steps:0,sleep:0,sore:0,energy:0,notes:"",meals:{
+        Breakfast:{items:[item("ful",200),item("egg_boiled",100),item("baladi",90)],done:true},
+        Lunch:{items:[item("rice_basmati",200),item("tilapia_ck",150)],done:true}}};}
+    S.goals.kcal=2400;S.goals.p=160;S.goals.c=260;S.goals.f=75;S.prefs.meals=4;S.prefs.diet="any";S.prefs.avoid=[];st.saveDB();});
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="coach";(await import("/js/ui/render.js")).render();});
+  await page.evaluate(()=>{const b=document.createElement("button");b.setAttribute("data-pgen","1");b.id="pgen_t";document.body.appendChild(b);});
+  await page.tap('#pgen_t');
+  for(let i=0;i<30&&!(await page.$('.picard'));i++)await pause(page,200);
+  const r=await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;const pp=V.pparse;
+    const b=pp[0],kc=pp.reduce((a,m)=>a+m.items.reduce((x,i)=>x+i.kcal,0),0),bk=b.items.reduce((x,i)=>x+i.kcal,0);
+    return [b.items.map(i=>i.fid).sort(),b.usual,Math.abs(kc-2400)/2400<0.06,Math.abs(bk-2400*0.25)/(2400*0.25)<=0.2,
+      pp.some(m=>m.items.some(i=>i.fid==="rice_basmati")),pp.some(m=>m.items.some(i=>i.fid==="rice_egyptian"))];});
+  eq(r,[["baladi","egg_boiled","ful"],4,true,true,true,false],"their breakfast, scaled; their rice");
+  const txt=await page.textContent("body");
+  if(!/Your usual: logged on 4 days/.test(txt))throw new Error("no word that the breakfast is their usual");
+  if(!/of the day's \d+ foods are ones you log/.test(txt))throw new Error("no count of their own foods");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";(await import("/js/i18n/exnames.js")).applyLang();(await import("/js/ui/render.js")).render();});
+  await pause(page,200);
+  if(!/وجبتك المعتادة: سجّلتها 4 أيام/.test(await page.textContent("body")))throw new Error("no Arabic note");
+});
 await test("Meal plan: a day built from the targets, within 5%, servings as labels, diet and leave-outs respected",async page=>{
   const r=await page.evaluate(async()=>{
     const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods?N.loadFoods(r):r());
