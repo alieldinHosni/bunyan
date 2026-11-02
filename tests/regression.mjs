@@ -2576,7 +2576,8 @@ await test("Coach brain: questions no fixed answer is for are answered from the 
     return {lead:(x.querySelector(".chat-lead")||{}).textContent||"",all:x.querySelector(".chat-a").textContent,topic:(x.querySelector(".chat-at")||{}).textContent||""};});
   await agSay(page,"How many hours I should sleep?");let r=await last();
   if(!/7.9 hours|hours: 7.9/.test(r.lead))throw new Error("sleep: "+r.lead);
-  eq(r.topic,"Good to know","not soreness");
+  /* The coach's answer bank answers it now (js/data/faq.js), under its own heading. */
+  eq(r.topic,"Sleep","not soreness");
   await agSay(page,"Yeah but how many hours?");r=await last();
   if(!/7.9/.test(r.lead))throw new Error("the follow-up lost the question: "+r.lead);
   await agSay(page,"why?");r=await last();

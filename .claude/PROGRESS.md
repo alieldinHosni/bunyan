@@ -2698,3 +2698,46 @@ animation so the user can see the chat".
   stays small (no new focus).
 - Tests: regression "Warm-up engine: each day warms up for its own lifts …", "Coach, warm-up: …",
   "Coach panel: the small panel's field tapped on a phone, it grows by itself …"; intent cases.
+
+## Training the coach: a question bank, an answer bank, and a measured loop — branch session/coachtrain
+
+CACHE `bunyan-v185`. Owner, 28 Oct: "train my smart coach, do a full program on how to make it smarter …
+simulation of every question that could be asked … start training and entering these info to its
+database". The on-device model itself (Qwen 2.5, prebuilt) cannot be retrained here; what makes a small
+model smart is what it is given and what answers before it, so that is what was trained.
+- **Measuring first.** tools/coach-eval.mjs runs every question in a bank through chat.js ask() in the
+  real app (Playwright, a seeded lifter, smart coach off) and checks where the answer came from (a rule
+  on the person's own log, the textbook search, the answer bank, the limits). Banks, EN / Egyptian
+  Arabic / Franco-Arabic: tools/coachdata/questions.mjs (537, the tuning set), heldout.mjs (173, written
+  after round 1), heldout2.mjs (136, written after round 2, run once). Reports beside them.
+- **Results.** On questions never tuned on (heldout2): main 41.2 % → 77.2 % (Arabic 16/41 → 31/41;
+  no answer at all 18 → 5). Tuning set: 56.2 % → 99.3 %. Held-out round 1 (now tuned on): 45.1 % →
+  80.9 %.
+- **The answer bank** (js/data/faq.js, matched by js/engine/faq.js): 70 answers (training, cardio,
+  mobility, food, body, habits, and 21 on where things are in the app, each with a button there),
+  1,125 example wordings, every line in English and Arabic (FAQ_AR joins the dictionary). Each answer
+  is written from the knowledge passages it cites or from the app's own code; js/engine/test/faq.test.js
+  fails if a figure is not in a cited passage (or listed from the app), a source does not exist, a line
+  has no Arabic or its Arabic carries other figures, or an answer cannot be found from its own examples.
+  Where the textbooks do not cover something (alcohol, intermittent fasting, Ramadan, cheat days, cardio
+  order), the answer says so and gives only what they do say around it. Matching: the knowledge search's
+  terms plus gym slang and Arabic skeletons, idf-weighted best-example overlap; an answer's defining
+  word missing makes a match 0.55 as strong (need).
+- **Routing (chat.js).** The bank answers when no rule knew the question; stands in for a rule the words
+  only touched (beats, ≥ 0.6) unless the question is about the person's own log ("am I", "did I",
+  "بتاعي"); a very close answer (≥ 0.75) beats a barely-matched rule. It never takes requests, logging,
+  the limits, a pending choice, or "my heart rate"-style no-data questions. Follow-ups ("why?", "but how
+  many?") stay with the answer before. A request whose object is neither an exercise nor a food ("how do I
+  add another profile") goes to the app answer. A logging command is not run from a question ("اشرب
+  مايه قد ايه" no longer logs a glass).
+- **Fixed on the way**: the limits matched inside Arabic words ("ملخص" as a sprain, "التوتر" and "سبوتر"
+  as a tendon, "مكسره" as a fracture) — whole words now; "سكر", "ضغط", "حمل", "cholesterol", "vitamin"
+  and "pre-workout" count only in their medical / supplement sense; "do I have" needs a condition after
+  it. "بكره" (tomorrow, folded) was saved as "I hate". "Kept" facts no longer swallow questions. Pain
+  reported as a situation now says to see a physio or a doctor if sharp, swollen or lasting. The warm-up
+  answer no longer names a "+ Warm-up" button that is gone. ~60 intent wordings added (tomorrow, stuck
+  lifts, records, steps, sets, rest, tempo, 1RM, Arabic and Franco).
+- **Smart coach**: buildMessages now gives the model the two closest bank answers as notes.
+- Tests: engine faq.test.js (7 checks over all 70); regression "Coach brain" now expects the Sleep answer.
+- Next rounds: run heldout2, fix by pattern, write heldout3 and run it once; add answers where a topic
+  keeps missing.

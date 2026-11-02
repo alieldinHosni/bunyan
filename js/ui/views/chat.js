@@ -26,7 +26,7 @@ import {cooldownFor, warmupFor} from "../../engine/warmup.js";
 import {faqById, faqMatch} from "../../engine/faq.js";
 /* How close a question must be to an answer for the answer to stand in for a rule the
    words also touched (below it, the rule answers). */
-var FAQ_OVER=0.6;
+var FAQ_OVER=0.6,FAQ_STRONG=0.75;
 /* A question about the person's own log ("am I", "my", "بتاعي") stays with the rule that
    reads it: "did I walk enough" is their steps, not how much cardio people need. */
 var MINE=/ (am i|did i|have i|was i|is my|are my|how is my|how are my|how was my|whats my|what is my|انا|بتاعي|بتاعتي|عملت|خطواتي)( |$)/;
@@ -1436,11 +1436,22 @@ function askOne(q,id,lang){
          answer may stand in for (its beats): "are carbs bad" shares a word with the
          calorie target, but asks about carbs. Requests, logging and the limits never
          come here. */
-      if(iid!=="scope"&&iid!=="situation"&&iid!=="remember"&&ACTION_IDS.indexOf(iid)<0){
+      var picking=prev&&prev.ag&&prev.ag.s==="pick",fqx=fold(text);
+      if(iid!=="scope"&&iid!=="situation"&&iid!=="remember"&&ACTION_IDS.indexOf(iid)<0&&!picking
+        &&!(ELSEWHERE.some(function(x){return x[1].test(fqx);})&&/(^| )(my|mine|whats my|بتاعي|بتاعتي|عندي|طولي|عمري|سني)( |$)/.test(fqx))){
         var fm=null;try{fm=faqMatch(text);}catch(e){fm=null;}
+        /* A follow-up to an answer from the bank ("why?", "but how many hours?") is read
+           with the question before it. */
+        var fprev=prev&&prev.id==="faq"&&prev.faq?faqById(prev.faq):null;
+        if(fprev&&fqx.split(" ").length<=6){
+          if(DEEPER.test(fqx)&&!fm)fm={f:fprev,score:1};
+          else if(ONTO.test(fqx)){var fm2=null;try{fm2=faqMatch(String(prev.q||"")+" "+text);}catch(e){fm2=null;}if(fm2&&fm2.f.id===fprev.id)fm=fm2;}}
         var many=fold(text).split(" ").length>2;
         if(fm&&(iid==="unknown"||(iid==="thanks"||iid==="hello")&&many
-          ||fm.f.beats.indexOf(iid)>=0&&fm.score>=FAQ_OVER&&!ownQuestion(text,iid))){iid="faq";it.faq=fm.f;}}
+          ||fm.f.beats.indexOf(iid)>=0&&fm.score>=FAQ_OVER&&!ownQuestion(text,iid)
+          /* A very close answer against a rule the words barely touched ("are sweets
+             ruining my diet" brushing "running" in the steps rule). */
+          ||fm.score>=FAQ_STRONG&&(it.score||0)<=8&&!ownQuestion(text,iid)&&!/^(today|tomorrow|goal)$/.test(iid))){iid="faq";it.faq=fm.f;}}
       /* "How do I add another profile", "how do I delete a workout": the words of a
          request, about something that is not an exercise or a food. A question the bank
          answers well goes there instead of a request with nothing to act on. */

@@ -16,6 +16,7 @@
 
    Pure: messages in, text out. */
 import {bestFacts, prose, search} from "./kbsearch.js";
+import {faqRank} from "./faq.js";
 
 var MAXCTX=1400,MAXPASS=3;
 
@@ -38,6 +39,16 @@ function passagesFor(q){
     var lines=bestFacts(x.doc,q,4).map(prose);
     return "["+(i+1)+"] "+(x.doc.title||x.doc.file||"")+": "+lines.join(" ");});}
 
+/* The coach's own written answers (js/data/faq.js) closest to the question: the two
+   best, if they are near enough to be about it, their plain paragraphs only (a line
+   with a slot for the person's figures is left out: the figures are under The person). */
+var FAQNOTE=0.3;
+function answersFor(q){
+  var r=[];try{r=faqRank(q).slice(0,2);}catch(e){r=[];}
+  return r.filter(function(x){return x.score>=FAQNOTE;}).map(function(x){
+    var lines=x.f.a.filter(function(y){return y.p&&!y.if||y.n;}).map(function(y){return y.p||y.n;}).slice(0,3);
+    return "- "+x.f.title+": "+lines.join(" ");});}
+
 /* snap: {name, goal, targets, today, recent[], body, facts[], inbody, workout} — short
    strings the caller wrote from the log. lang: "ar" or "en". hist: [{q, a}] newest last. */
 function buildMessages(q,snap,lang,hist){
@@ -50,7 +61,7 @@ function buildMessages(q,snap,lang,hist){
   var sys=[
     "You are Bunyan's coach, inside a training and nutrition app, talking to "+(snap.name||"the person")+".",
     "Answer in "+(lang==="ar"?"Egyptian Arabic, as a friend from Cairo would write it":"plain English")+", in at most four short sentences.",
-    "Use only the person's figures, the textbook notes and how the app works, below. Never invent a number, a food's macros, or a weight. If they do not hold the answer, say you do not have that, and say what would.",
+    "Use only the person's figures, the textbook notes, the coach's own answers and how the app works, below. Never invent a number, a food's macros, or a weight. If they do not hold the answer, say you do not have that, and say what would.",
     "Answer the question asked, for this person: name their own plan, days and figures where they bear on it. When the app does what they ask about, say exactly where (the tab, the button). No filler and no general reminders.",
     "No diagnosis, no injury treatment, no medication or supplement doses: for pain, illness or medicine, say to see a doctor or a physiotherapist.",
     "If they ask you to change or log something, answer briefly, then end with one last line: DO: followed by the request in plain English, the way the app's buttons would say it (for example: DO: add face pulls to Pull day / DO: next exercise / DO: log 80 kg for 8 / DO: skip today). Only one DO line, only when asked to act.",
@@ -58,6 +69,8 @@ function buildMessages(q,snap,lang,hist){
     "The person:",me||"- (nothing logged yet)",
     "",
     "Textbook notes:",notes||"- (none match this question)",
+    "",
+    "The coach's own answers on this (use them; they are checked against the textbooks):",answersFor(q).join("\n")||"- (none)",
     "",
     "How the app works:",APP.map(function(x){return "- "+x;}).join("\n")].join("\n");
   var msgs=[{role:"system",content:sys}];
@@ -75,4 +88,4 @@ function readReply(raw){
   s=s.replace(/\n{3,}/g,"\n\n");
   return {text:s,act:act};}
 
-export {buildMessages, passagesFor, readReply};
+export {answersFor, buildMessages, passagesFor, readReply};
