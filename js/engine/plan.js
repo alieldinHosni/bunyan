@@ -2,7 +2,9 @@
    Split recommendation and plan generation. */
 import {EXDB, isCompound, LIB, movementOfEx, muscleOf, patternOf} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
-import {PRESETS} from "../data/splits.js";
+import {day as dayOfList, ex as exOfList, PRESETS} from "../data/splits.js";
+import {buildWeek} from "./build.js";
+import {spreadWd} from "./schedule.js";
 import {addProgram, makeProgram, S, saveDB} from "../state.js";
 import {num, uid} from "../util.js";
 import {t} from "../i18n/dict.js";
@@ -407,11 +409,30 @@ function rebalance(prog,p,gear){
 
 /* The plan for the profile as it stands, not yet saved: what the assessment shows
    before anything is used. id picks a split other than the recommended one. */
+/* A week built for the person (js/engine/build.js), from nothing: the default. A
+   template is still there for anyone who picks one (the assessment's choices, Coach →
+   Training → Programs). */
+var BUILT="built";
+/* What the person has logged: the exercises they know. */
+function logged(){
+  var o={};(S.sessions||[]).forEach(function(s){(s.entries||[]).forEach(function(e){if(e&&e.name)o[e.name]=1;});});
+  return o;}
+function builtProgram(p,gear){
+  var w=buildWeek(p,gear,{usable:usable,avoids:avoids,familiar:logged,train:function(g){return goalOf(g).train;},
+    pool:familiar(),dose:function(n){return doseFor(n,p);},
+    favs:S.favs||[],skip:S.skip||[],skilled:p.level==="experienced"||p.level==="advanced",weekdays:spreadWd});
+  var plan=makeProgram({id:BUILT,from:BUILT,name:w.name,days:w.days.map(function(d){
+    return dayOfList(d.name,d.ex.map(function(e){return exOfList(e.name,e.sets,8,12);}));})});
+  /* On the weekdays it was built for (the ones they gave, or spread through the week):
+     the rest days between a muscle's sessions are where the week puts them. */
+  plan.schedule="week";plan.days.forEach(function(d,i){d.wd=[w.days[i].wd];});
+  plan.built={targets:w.targets,freq:w.freq};
+  return plan;}
 function generatePlan(id){
   var p=S.profile, L=LEVELS[p.level]||LEVELS.some, G=goalOf(p.goal);
-  id=id||recommendSplit(num(p.days,3),p.level,p.goal,S.gear);
-  var base=PRESETS().filter(function(x){return x.id===id;})[0];
-  var plan=makeProgram(base);
+  id=id||BUILT;
+  var base=id===BUILT?null:PRESETS().filter(function(x){return x.id===id;})[0];
+  var plan=base?makeProgram(base):builtProgram(p,S.gear);
   plan.tag=L.label.toLowerCase()+" · "+G.label.toLowerCase()+" · "+p.days+" days";
   plan.meta={goal:p.goal,phase:G.label,swaps:shapePlan(plan,p,S.gear)};
   plan.days.forEach(function(d){d.ex.forEach(function(e){if(!e.id)e.id=uid();});});
