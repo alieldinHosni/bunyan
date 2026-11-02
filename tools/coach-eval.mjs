@@ -1,0 +1,89 @@
+/* Bunyan — how well the coach understands: the question bank, asked
+   node tools/coach-eval.mjs [url] [--out tools/coachdata/report.md] [--topic name]
+
+   Runs every question in tools/coachdata/questions.mjs through the coach exactly as the
+   chat does (js/ui/views/chat.js ask), in the real app in a browser, for a person with a
+   plan, a log and targets, and the smart coach off: what is measured is what the coach
+   answers on its own. Each answer is recorded as an outcome (questions.mjs says how) and
+   checked against where a right answer comes from. The report lists each topic's score
+   and every miss with what it got instead: the work list for the next round.
+
+   Needs the app served (python3 -m http.server) and Playwright with its Chromium. Never
+   runs in the browser itself (tools/). */
+import {createRequire} from "module";
+import fs from "fs";
+var require=createRequire(process.env.PW_PATH||import.meta.url);
+var chromium=require("playwright").chromium;
+
+var args=process.argv.slice(2);
+var URL_=args.find(function(a){return /^http/.test(a);})||"http://localhost:8796/index.html";
+var oi=args.indexOf("--out"),OUT=oi>=0?args[oi+1]:new URL("./coachdata/report.md",import.meta.url).pathname;
+var ti=args.indexOf("--topic"),ONLY=ti>=0?args[ti+1]:"";
+/* --set heldout: the questions the coach was never tuned on (tools/coachdata/heldout.mjs). */
+var si=args.indexOf("--set"),SET=si>=0?args[si+1]:"questions";
+var GROUPS=(await import("./coachdata/"+SET+".mjs")).GROUPS;
+
+var iso=function(d){var x=new Date(Date.now()-d*864e5);return new Date(x-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+/* A lifter a few weeks in: three lifts twice a week, a weigh-in, targets, a plan. */
+function seed(){
+  var lifts=[["Barbell Bench Press - Medium Grip","Chest"],["Barbell Squat","Quads"],["Pullups","Back"]],sessions=[];
+  for(var d=2;d<40;d+=3)sessions.push({id:"s"+d,date:iso(d),dayName:"Seed",activeMs:45*6e4,
+    entries:lifts.map(function(l,i){return {name:l[0],muscle:l[1],sets:[1,2,3].map(function(){return {w:60+i*20,r:8,rpe:8};})};})});
+  return {v:2,onboarded:true,prefs:{rpe:"last",autorest:true,sound:false,splash:false,unit:"kg",lang:"en",anim:false,haptic:false,nowarm:true},
+    profile:{age:30,height:180,weight:84,sex:"m",activity:1.4,goal:"gain",prog:"standard",level:"some",days:3},
+    goals:{kcal:2500,p:150,c:300,f:70,water:3000,steps:9000},sessions:sessions,body:[{date:iso(3),weight:84},{date:iso(10),weight:83.4}],days:{},
+    myFoods:[],savedMeals:[],freq:{},favs:[],skip:[],userSplits:[],myEx:[]};}
+
+var browser=await chromium.launch(process.env.CHROMIUM?{executablePath:process.env.CHROMIUM}:{});
+var ctx=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:"block"});
+await ctx.addInitScript(function(raw){if(!localStorage.getItem("t:seeded")){
+  localStorage.setItem("bunyan:profiles",JSON.stringify([{id:"me",name:"Me",owner:true}]));localStorage.setItem("bunyan:current",'"me"');
+  localStorage.setItem("bunyan:db:me",raw);localStorage.setItem("bunyan:notour","1");localStorage.setItem("t:seeded","1");}},JSON.stringify(seed()));
+var page=await ctx.newPage();
+var errs=[];page.on("pageerror",function(e){errs.push(e.message);});
+await page.goto(URL_);await page.waitForTimeout(1500);
+await page.evaluate(async function(){var X=await import("/js/data/exercises.js");await new Promise(function(r){X.loadExDB(r);});
+  var N=await import("/js/engine/nutrition.js");if(N.loadFoods)await new Promise(function(r){try{N.loadFoods(r);}catch(e){r();}});});
+
+/* One question → its outcome string. The conversation is emptied first, so nothing is
+   read as a follow-up to the question before. */
+async function outcome(q){
+  return page.evaluate(async function(q){
+    var C=await import("/js/ui/views/chat.js"),S=(await import("/js/state.js")).S,K=await import("/js/engine/kbsearch.js");
+    S.chat=[];S.chatFrom=0;
+    var m=null;try{m=C.ask(q);}catch(e){return "error:"+e.message;}
+    if(!m)return "none:";
+    if(m.tap)return "app:tap";
+    var d="";
+    if(m.id==="know"){var k=K.lookup(m.kq||q);d=k?k.doc.file+" "+k.doc.title:"";}
+    else if(m.id==="faq")d=m.faq||"";
+    return m.id+":"+d;},q);}
+
+var rows=[],byTopic={};
+for(var g of GROUPS){
+  if(ONLY&&g.topic!==ONLY)continue;
+  var re=new RegExp(g.expect);
+  for(var q of g.qs){
+    var o=await outcome(q),ok=re.test(o);
+    rows.push({topic:g.topic,q:q,o:o,ok:ok});
+    var t=byTopic[g.topic]||(byTopic[g.topic]={n:0,ok:0});t.n++;if(ok)t.ok++;}}
+await browser.close();
+
+var n=rows.length,ok=rows.filter(function(r){return r.ok;}).length;
+var ar=rows.filter(function(r){return /[؀-ۿ]/.test(r.q);}),arOk=ar.filter(function(r){return r.ok;}).length;
+var unk=rows.filter(function(r){return /^unknown:/.test(r.o);}).length;
+var pct=function(a,b){return b?Math.round(a/b*1000)/10:0;};
+var lines=["# Coach understanding — "+(SET==="heldout"?"held-out questions":"question bank")+" report","",
+  "Generated by tools/coach-eval.mjs on "+new Date().toISOString().slice(0,16).replace("T"," ")+", smart coach off.","",
+  "| | |","|---|---|",
+  "| Questions | "+n+" |","| Answered from the right place | "+ok+" ("+pct(ok,n)+" %) |",
+  "| Arabic and Franco-Arabic | "+arOk+" / "+ar.length+" ("+pct(arOk,ar.length)+" %) |",
+  "| No answer at all (unknown) | "+unk+" ("+pct(unk,n)+" %) |",
+  errs.length?"| Page errors | "+errs.length+" |":"","",
+  "## By topic","","| Topic | Right | of | % |","|---|---|---|---|"];
+Object.keys(byTopic).forEach(function(k){var t=byTopic[k];lines.push("| "+k+" | "+t.ok+" | "+t.n+" | "+pct(t.ok,t.n)+" |");});
+lines.push("","## Misses","","| Topic | Question | Got |","|---|---|---|");
+rows.filter(function(r){return !r.ok;}).forEach(function(r){lines.push("| "+r.topic+" | "+r.q.replace(/\|/g,"/")+" | `"+r.o.replace(/\|/g,"/")+"` |");});
+fs.writeFileSync(OUT,lines.filter(function(l){return l!==null;}).join("\n")+"\n");
+fs.writeFileSync(OUT.replace(/\.md$/,".json"),JSON.stringify({n:n,ok:ok,ar:[arOk,ar.length],unknown:unk,topics:byTopic,rows:rows},null,0));
+console.log(ok+"/"+n+" right ("+pct(ok,n)+" %), Arabic "+arOk+"/"+ar.length+", unknown "+unk+(errs.length?", page errors "+errs.length:""));

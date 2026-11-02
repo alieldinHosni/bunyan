@@ -280,4 +280,4 @@ function lookup(q,prevQ){
 function wantsNumber(q){return QUANT.test(fold(q));}
 function hasNumber(s){return /\d/.test(s);}
 
-export {bestFacts, build, hasNumber, lookup, ownTerms, prose, queryTerms, search, wantsNumber};
+export {bestFacts, build, hasNumber, lookup, ownTerms, prose, queryTerms, search, wantsNumber, weighted};

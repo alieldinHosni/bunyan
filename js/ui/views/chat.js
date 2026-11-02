@@ -23,6 +23,16 @@ import {reconcileNutrition, reconcileTraining} from "../../coach/reconcile.js";
 import {addDays as addDaysW, pinnedOn, weekDates, weekStartOf} from "../../engine/schedule.js";
 import {muscleOf, secondaryOf} from "../../data/exercises.js";
 import {cooldownFor, warmupFor} from "../../engine/warmup.js";
+import {faqById, faqMatch} from "../../engine/faq.js";
+/* How close a question must be to an answer for the answer to stand in for a rule the
+   words also touched (below it, the rule answers). */
+var FAQ_OVER=0.6,FAQ_STRONG=0.75;
+/* A question about the person's own log ("am I", "my", "بتاعي") stays with the rule that
+   reads it: "did I walk enough" is their steps, not how much cardio people need. */
+var MINE=/ (am i|did i|have i|was i|is my|are my|how is my|how are my|how was my|whats my|what is my|انا|بتاعي|بتاعتي|عملت|خطواتي)( |$)/;
+/* Where something is, or how to do it, is about the app even with "my" in it. */
+function ownQuestion(text,iid){var f=" "+fold(text)+" ";return MINE.test(f)&&OWNLOG.test(iid)&&!/^ (where|how do i|how can i|how to|فين|ازاي) /.test(f);}
+var OWNLOG=/^(weight|track|strong|steps|week|last|today|tomorrow|weights|goal|plateau|calories|protein|eat|rest)$/;
 import {LANDMARKS} from "../../coach/landmarks.js";
 import * as KB from "../../engine/kb.js";
 import {lookup, ownTerms} from "../../engine/kbsearch.js";
@@ -68,6 +78,9 @@ var ASK={
   rest:"What's left to eat today?",swap:"Other foods with the same macros",
   weekfood:"Work out what's left in the week",logfood:"Just log it and move on",weektrain:"Work out the rest of the week",
   letgo:"Just move on",lowday:"Adjust today for a low day",facts:"What have I told you?"};
+/* What to offer next after an answer from the bank, by what it was about. */
+var FAQNEXT={train:["today","weights","sore"],cardio:["steps","today","track"],mobility:["today","sore","balance"],
+  food:["eat","protein","calories"],body:["weight","track","goal"],habit:["today","track","missed"],app:["help","today","track"]};
 /* What to offer next, after each kind of answer. */
 var NEXT={
   plateau:["strong","weights","sore"],inbody:["weight","calories","goal"],twice:["today","sore","missed"],warmplan:["today","weights","sore"],loadlog:["weights","strong","today"],week:["track","strong","protein"],today:["weights","tomorrow","missed"],weights:["today","strong","balance"],eat:["rest","swap","protein"],
@@ -355,6 +368,28 @@ function aWarmPlan(a){
     l(a,w.drills.map(function(x){return exName(x.name);}));
     if(c)n(a,t("Stretches after:")+" "+list(c.stretches.map(function(x){return exName(x.name);})));}
   n(a,t("It shows before the first exercise; the workout's ⋯ menu brings it back. Both can be switched off in Workout settings."));
+  return a;}
+/* The answer bank (js/data/faq.js, matched by js/engine/faq.js): a written answer,
+   in the conversation's language, with this person's own figures where it has a place
+   for them, and its buttons. */
+function faqSlots(){
+  var g=S.goals||{},kg=lastWeight()||num(S.profile&&S.profile.weight)||0,o={};
+  if(num(g.kcal))o.kcal=fmtN(num(g.kcal));
+  if(num(g.p))o.p=num(g.p);
+  if(num(g.c))o.c=num(g.c);
+  if(num(g.f))o.f=num(g.f);
+  if(num(g.water))o.water=r1(num(g.water)/1000);
+  if(kg){o.kg=fmtW(kg);if(num(g.p))o.pkg=r1(num(g.p)/kg);}
+  return o;}
+function aFaq(a,q,it){
+  var f=it.faq,sl=faqSlots();
+  f.a.forEach(function(x){
+    if(x.if){if(sl[x.if]!=null)p(a,fill(t(x.p),sl));}
+    else if(x.p)p(a,t(x.p));
+    else if(x.l)l(a,x.l.map(function(y){return t(y);}));
+    else if(x.n)n(a,t(x.n));});
+  f.acts.forEach(function(b){act(a,t(b[0]),b[1]["data-chatq"]?Object.assign({"data-chatl":uiLang()},b[1]):b[1]);});
+  a.src=f.src.slice();
   return a;}
 function aPlateau(a,q){
   var named=namedExercises(q),name=named.length?named[0].name:null,lifts=[];
@@ -899,7 +934,7 @@ function aKTempo(a){var k=KB.tempo();
   return src(a,k.src);}
 function aKWarm(a){var w=KB.warmup();
   p(a,fill(t("Before the work sets, 1–2 light sets of {r} reps, without tiring yourself."),{r:range(w.reps)}));
-  n(a,t("The workout screen adds warm-up sets with + Warm-up."));
+  n(a,t("Each workout opens with a warm-up made from its own lifts, and the first heavy lift gets its lighter sets on the way up."));
   return src(a,w.src);}
 function aKDur(a){
   var d=KB.duration(),sp=split(),pl=planOn(sp,today()),day=pl.day&&!pl.rest?pl.day:nextDayOf(sp);
@@ -917,11 +952,24 @@ function aK1RM(a){
    Checked before anything else, however the question is put: no diagnosis, no injury
    assessment, no medical advice, no supplement or therapeutic-diet advice, no mental
    health care. The answer says who to see instead and what the app can show. */
+/* The hard limits. English by its stems; Egyptian Arabic as whole words (with the
+   article and the endings Arabic writes onto them), so a word inside another is not it:
+   "ملخص" (a summary) is not "ملخ" (a sprain), "التوتر" (stress) is not "وتر" (a tendon),
+   "مكسره" (sore, as gym slang says it) is not "كسر" (a fracture). Words that mean
+   something ordinary too count only in their medical sense (owner, 28 Oct: "السكر وحش
+   للتنشيف؟" asked about sugar, not diabetes): "عندي السكر", "ضغط الدم", "حامل". */
+function arw(words){return "(^| )(و|ف|ب|ل|ال|وال|بال|فال|لل)?("+words+")(ه|ي|ك|ها|ني|نا|هم|ات|ين)?(?= |$)";}
 var SCOPE=[
-  ["mental","no_mental_health_care",/(depress|anxiety|anxious|panic attack|eating disorder|bulimi|anorexi|binge|purg|self harm|suicid|اكتئاب|مكتئب|قلق|اضطراب|نوبه هلع)/],
-  ["medical","no_treatment",/(medicine|medication|painkiller|pain killer|ibuprofen|paracetamol|panadol|aspirin|pills?\b|antibiotic|steroid|injection|insulin|blood pressure|cholesterol|diabet|pregnan|heart condition|asthma|دوا|دواء|ادويه|مسكن|برشام|حبوب|حقنه|انسولين|سكر|ضغط|كوليسترول|حامل|حمل)/],
-  ["diagnosis","no_diagnosis",/(diagnos|whats wrong with|what is wrong with|do i have|is it (torn|broken|fractured|sprained|a tear|serious)|tendon|tendinitis|tendonitis|hernia|arthritis|sciatica|\btorn\b|tear in|fractur|sprain|dislocat|meniscus|ligament|rotator cuff|slipped disc|herniat|تشخيص|عندي ايه|مقطوع|قطع في|كسر|التواء|ملخ|خشونه|انزلاق|غضروف|رباط|اربطه|وتر)/],
-  ["supplement","no_nutrition_or_supplement_advice",/(supplement|creatine|pre.?workout|fat burner|vitamin|mineral pill|مكمل|مكملات|كرياتين|فيتامين|حارق)/]];
+  ["mental","no_mental_health_care",new RegExp("(depress|anxiety|anxious|panic attack|eating disorder|bulimi|anorexi|binge|purg|self harm|suicid)|"
+    +arw("اكتئاب|مكتئب|قلق|اضطراب|نوبه هلع"))],
+  ["medical","no_treatment",new RegExp("(medicine|medication|painkiller|pain killer|ibuprofen|paracetamol|panadol|aspirin|pills?\\b|antibiotic|steroid|injection|insulin|blood pressure|"
+    +"(high|my|blood|raised|bad) cholesterol|cholesterol (level|is high|medication)|diabet|pregnan|heart condition|asthma)|"
+    +arw("دوا|دواء|ادويه|مسكن|مسكنات|برشام|حقنه|حقن|انسولين|حامل|السكري|سكر في الدم|عندي السكر|عندي سكر|مريض سكر|مريض ضغط|عندي ضغط|ضغط الدم|ضغط عالي|الضغط عالي|كوليسترول عالي|عندي كوليسترول|حبوب منع|باخد حبوب|اخد حبوب"))],
+  ["diagnosis","no_diagnosis",new RegExp("(diagnos|whats wrong with|what is wrong with|do i have (a |an )?(tear|torn|hernia|fracture|sprain|tendinitis|tendonitis|arthritis|sciatica|injury|disease|condition)|is it (torn|broken|fractured|sprained|a tear|serious)|tendon|tendinitis|tendonitis|hernia|arthritis|sciatica|\\btorn\\b|tear in|fractur|sprain|dislocat|meniscus|ligament|rotator cuff|slipped disc|herniat)|"
+    +arw("تشخيص|عندي ايه|مقطوع|قطع في|كسر|مكسور|التواء|ملخ|خشونه|انزلاق|غضروف|رباط|اربطه|وتر|اوتار"))],
+  ["supplement","no_nutrition_or_supplement_advice",new RegExp("(supplement|creatine|pre.?workout(?! (meal|food|snack|carbs?|eat))|fat burner|mineral pill|"
+    +"(take|taking|dose|dosage|pills?|tablets?|capsules?|shots?|inject\\w*) (of )?vitamin|vitamin \\w* ?(pills?|tablets?|dose|dosage|supplements?|shots?))|"
+    +arw("مكمل|مكملات|كرياتين|حارق|حوارق")+"|(اخد|باخد|ناخد|جرعه|حبوب|برشام|حقن) فيتامين|فيتامين \\S* ?(حبوب|برشام|جرعه|حقن)")]];
 function scopeOf(q){var fq=fold(q);for(var i=0;i<SCOPE.length;i++)if(SCOPE[i][2].test(fq))return SCOPE[i];return null;}
 function aScope(a,q){
   var sc=scopeOf(q)||SCOPE[2],ar=areaOf(fold(q)),rule=KB.scopeRule(sc[1]);
@@ -1032,6 +1080,8 @@ function aSituation(a,q,it,sit){
   var go=function(label,id){return act(a,label,Object.assign({"data-chatq":id},L));};
   if(sit.kind==="pain"){
     p(a,t("Noted. Want me to put it in today's recovery log?"));
+    /* The limits hold here too: pain is for a professional to look at (js/knowledge/scope.js). */
+    n(a,t("If it is sharp, swollen, or still there in a few days, see a physio or a doctor."));
     act(a,t("Log it"),{"data-sheet":"recovery"});
     /* An area named: the same offer as the pain answer's, to keep the program off it. */
     var ar=areaOf(fold(q));
@@ -1171,7 +1221,7 @@ function aReassess(a){
 
 /* An answer, with what the person told the coach that bears on it said back. */
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
-var ANSWER={plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
+var ANSWER={faq:aFaq,plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
   help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
@@ -1197,6 +1247,12 @@ var VERB=[["exadd",/^(please |pls |can you |could you |i want to |i wanna |)(cre
 var QSTART=/^(does|do|did|is|are|was|were|when|what|whats|why|how|where|which|who|whose|will|hal|هل|امتي|امتى|ازاي|ليه|ايه|فين|انهي|اني)( |$)/;
 var ASKOK=/^(can|could|would|will you|may|should|shall|please|pls|i|id|im|lets|let|ممكن|عايز|عاوز|عايزه|لو سمحت)( |$)/;
 var HOWDO=/^(how (do|can|would|should) i (add|put|include|remove|delete|drop|swap|replace|switch)|(is it possible to|هل ممكن|هو ممكن) )( |$)?/;
+/* "اشرب مايه قد ايه" asks how much water to drink; it does not log a glass. A command
+   that logs something is not run from a question. */
+var LOGCMD=/\.(add|log)$/;
+function isQuestion(text){var f=fold(text);return /[?؟]/.test(text)||ASKQ.test(f)||/(^| )(ايه|ازاي|ليه|امتي|فين|كام|قد ايه|how much|how many|should i)( |$)/.test(f);}
+/* A message that starts with a request's verb ("add squats…", "log 2 eggs"). */
+function verb0(text){var f=fold(text);return VERB.some(function(v){return v[1].test(f);});}
 function askedOnly(text){var fq=fold(text);if(HOWDO.test(fq))return false;return QSTART.test(fq)||(/[?؟]/.test(text)&&!ASKOK.test(fq));}
 function route(iid,text,it){
   var fq0=fold(text),verb=false;
@@ -1209,6 +1265,9 @@ function route(iid,text,it){
   if(iid==="exswap"&&!namesExercise(text)&&namesFood(text))return "swap";
   if(iid==="swap"&&/ instead of | in place of /.test(" "+fq0+" ")&&namesExercise(text)&&!namesFood(text))return "exswap";
   if(iid==="exadd"&&!namesExercise(text)&&namesFood(text))return "foodlog";
+  /* "Protein in foul", "سعرات الكشري": a food named in a protein or calorie question is
+     about the food, not the person's target. */
+  if((iid==="protein"||iid==="calories")&&FOODDB&&!/ (per|a|each|every|ل?كل) (meal|وجبه)( |$)/.test(" "+fq0+" ")&&namedFood(text,true)&&!/ (my|i|me|انا|بتاعي|محتاج|احتاج)( |$)/.test(" "+fq0+" "))return "foodinfo";
   return iid;}
 /* Ask: q is what the person typed, or a suggestion's id (with the conversation's
    language, lang). Kept with its answer and the language it was answered in. */
@@ -1245,7 +1304,7 @@ var SOFT=/^(sore|steps|help|track|hello|thanks|missed|goal|strong|balance|today|
 var DEFINE=/^(what is|what are|whats|what s|define|explain|tell me about|why (is|are|do|does|should|would|must)|is it (good|bad|ok|okay|better|safe|true)|benefits? of|difference between|يعني ايه|ايه هو|ايه هي|ايه فايده|فايده|ليه)( |$)|\b(before|after) (a |my |the |)(workout|training|session|gym|lifting|run)\b|\b(how (many|much|long|often))\b/;
 var ASKQ=/[?؟]|^(how|what|why|when|which|should|is|are|do|does|can|كام|ايه|ازاي|ليه|امتي|هل)( |$)|(^| )(كام|قد ايه|ازاي)( |$)/;
 /* A short follow-up to the last answer: "why?", "more", "but how many hours?". */
-var EXQ=/\b(exercises?|moves?|movements?|lifts?)\b.*\b(for|to (build|grow|train|work|target|hit))\b|\b(best|good|what|which|suggest|recommend)\b.*\b(exercises?|moves?|lifts?)\b|\b(train|work|hit|grow|build)\b.*\b(chest|back|shoulders?|quads?|legs?|hamstrings?|glutes?|biceps?|triceps?|calves)\b.*\?|تمارين|تمرين ل/;
+var EXQ=/\b(exercises?|moves?|movements?|lifts?)\b.*\b(for|to (build|grow|train|work|target|hit))\b|\b(best|good|what|which|suggest|recommend)\b.*\b(exercises?|moves?|lifts?)\b|\b(train|work|hit|grow|build)\b.*\b(chest|back|shoulders?|quads?|legs?|hamstrings?|glutes?|biceps?|triceps?|calves)\b.*\?|تمارين|تمرين ل|(اكبر|اكبّر|تكبير|اضخم|اقوي|اقوى) (ال)?(صدر|ضهر|ظهر|كتف|اكتاف|رجل|فخذ|باي|تراي|سمانه|مؤخره|خلفيه)/;
 var ONTO=/^(yeah|yes|ok|okay|but|and|so|hmm|well|what about|how about|then|طب|طيب|بس|و|يعني|ماشي|اه)( |$)/;
 var DEEPER=/^(why|how come|more|tell me more|explain|details|go on|really|ليه|ازاي|اكتر|وضح|كمل)( |$)/;
 var DOWORK=/ (complete|finish|end|stop|skip|delete|remove|add|log|undo|redo|repeat|move|swap|done with) (the |this |my |a |one |current |last |next )*(set|sets|exercise|exercises|workout|session|rep|reps) /;
@@ -1259,6 +1318,8 @@ function knowFor(text,iid,it,prev){
   /* Something to do to the workout ("complete the current exercise", "delete this set")
      is never read as a question for the knowledge files. */
   if(DOWORK.test(" "+fq+" "))return null;
+  /* "What's my max bench": the person's own figures, not the textbook's. */
+  if(ownQuestion(text,iid))return null;
   var loose=iid==="unknown"||(SOFT.test(iid)&&it.score<=7&&asked)||(DEFINE.test(fq)&&it.score<15&&(SOFT.test(iid)||iid==="eat"));
   if(!loose)return null;
   var k=lookup(text);
@@ -1361,7 +1422,7 @@ function askOne(q,id,lang){
       var sit=null,cm=null;
       if(scopeOf(text))iid="scope";
       /* Something to do in the app: it is done, or asked for, the way its button does. */
-      else if(S.onboarded&&(cm=commandOf(text,S.prefs.unit))){
+      else if(S.onboarded&&(cm=commandOf(text,S.prefs.unit))&&!(LOGCMD.test(cm.cmd)&&isQuestion(text))){
         var cg=null;try{cg=cm.cmd==="undo.last"?undoLast():planCommand(cm);}catch(e){cg=null;}
         if(cg)return {q:text,id:"app",at:Date.now(),b:[],acts:cg.acts||[],ag:cg,lang:L};}
       /* A report rather than a question or a request: one question back. */
@@ -1370,6 +1431,33 @@ function askOne(q,id,lang){
       else iid=route(iid,text,it);
       /* Not phrased as anything known, but it names an exercise in the plan, or a
          food by its name: that is what it is about. A near miss is not a match. */
+      /* A question the answer bank was written for (js/data/faq.js): it answers when
+         nothing else knew the question, or when the rule the words touched is one the
+         answer may stand in for (its beats): "are carbs bad" shares a word with the
+         calorie target, but asks about carbs. Requests, logging and the limits never
+         come here. */
+      var picking=prev&&prev.ag&&prev.ag.s==="pick",fqx=fold(text);
+      if(iid!=="scope"&&iid!=="situation"&&iid!=="remember"&&ACTION_IDS.indexOf(iid)<0&&!picking
+        &&!(ELSEWHERE.some(function(x){return x[1].test(fqx);})&&/(^| )(my|mine|whats my|بتاعي|بتاعتي|عندي|طولي|عمري|سني)( |$)/.test(fqx))){
+        var fm=null;try{fm=faqMatch(text);}catch(e){fm=null;}
+        /* A follow-up to an answer from the bank ("why?", "but how many hours?") is read
+           with the question before it. */
+        var fprev=prev&&prev.id==="faq"&&prev.faq?faqById(prev.faq):null;
+        if(fprev&&fqx.split(" ").length<=6){
+          if(DEEPER.test(fqx)&&!fm)fm={f:fprev,score:1};
+          else if(ONTO.test(fqx)){var fm2=null;try{fm2=faqMatch(String(prev.q||"")+" "+text);}catch(e){fm2=null;}if(fm2&&fm2.f.id===fprev.id)fm=fm2;}}
+        var many=fold(text).split(" ").length>2;
+        if(fm&&(iid==="unknown"||(iid==="thanks"||iid==="hello")&&many
+          ||fm.f.beats.indexOf(iid)>=0&&fm.score>=FAQ_OVER&&!ownQuestion(text,iid)
+          /* A very close answer against a rule the words barely touched ("are sweets
+             ruining my diet" brushing "running" in the steps rule). */
+          ||fm.score>=FAQ_STRONG&&(it.score||0)<=8&&!ownQuestion(text,iid)&&!/^(today|tomorrow|goal)$/.test(iid))){iid="faq";it.faq=fm.f;}}
+      /* "How do I add another profile", "how do I delete a workout": the words of a
+         request, about something that is not an exercise or a food. A question the bank
+         answers well goes there instead of a request with nothing to act on. */
+      else if(/^(exadd|exremove|exswap|foodlog)$/.test(iid)&&!verb0(text)){
+        var fa=null;try{fa=faqMatch(text);}catch(e){fa=null;}
+        if(fa&&fa.score>=FAQ_OVER&&fa.f.group==="app"&&!(iid==="foodlog"?namesFood(text):namesExercise(text))){iid="faq";it.faq=fa.f;}}
       if(iid==="unknown"){
         if(namedExercises(text).length)iid="weights";
         else if(FOODDB&&!YES.test(fold(text))&&!NO.test(fold(text))&&namedFood(text,true))iid="foodinfo";}}
@@ -1411,6 +1499,7 @@ function askOne(q,id,lang){
        words could have meant, one tap each (owner, 27 Oct). */
     var alt=!id&&it.unsure&&iid===it.id?(it.ranked||[]).filter(function(x){return x!==iid&&ACTION_IDS.indexOf(x)<0&&ASK[x];}).slice(0,2):[];
     return {q:text,id:iid,at:Date.now(),b:a.b,acts:a.acts,src:a.src&&a.src.length?a.src:undefined,ag:a.ag,lang:L,kq:iid==="know"?it.kq:undefined,
+      faq:iid==="faq"?it.faq.id:undefined,
       alt:alt.length?alt:undefined};});
   S.chat=(S.chat||[]).concat([msg]).slice(-KEEP);
   return msg;}
@@ -1517,7 +1606,7 @@ function agHtml(m,live,ro){
   if(g.s==="say"&&live)h+=buttons(Array.isArray(g.acts)?g.acts:[]);
   return h;}
 function bubbleIn(m,live,L,prev,ro){
-  var tp=TOPIC[m.id];
+  var fq=m.id==="faq"&&m.faq?faqById(m.faq):null,tp=fq?[fq.title,fq.glyph]:TOPIC[m.id];
   var h='<div class="chat-x'+(live?' live':'')+(prev?' prev':'')+(ro?' ro':'')+'" data-k="'+(ro?'h':'x')+esc(String(m.at||""))+'" lang="'+L+'" dir="'+(L==="ar"?"rtl":"ltr")+'"><div class="chat-q"><p dir="auto">'+esc(String(m.q||""))+'</p></div><div class="chat-a">'
    +'<div class="chat-ah"><span class="chat-gl">'+glyph(tp?tp[1]:"question")+'</span><span class="chat-ah-t">'
    +'<span class="chat-ak">'+esc(t("Coach"))+'</span>'+(tp?'<span class="chat-at">'+esc(t(tp[0]))+'</span>':'')+'</span></div>';
@@ -1582,7 +1671,7 @@ function askNext(last,n){
   return withLang(LL,function(){return '<div class="chat-next'+(slim?' slim':'')+'" lang="'+LL+'" dir="'+(LL==="ar"?"rtl":"ltr")+'"'
     +(slim?' role="group" aria-label="'+esc(t("Ask next"))+'">':'><div class="chat-next-h">'+esc(t("Ask next"))+'</div>')
     /* What the answer already offers under "Or did you mean" is not offered twice. */
-    +chips((NEXT[last.id]||NEXT.unknown).filter(function(x){return !(Array.isArray(last.alt)&&last.alt.indexOf(x)>=0);}),"",own)+'</div>';});}
+    +chips((last.id==="faq"&&faqById(last.faq)?FAQNEXT[faqById(last.faq).group]||NEXT.unknown:NEXT[last.id]||NEXT.unknown).filter(function(x){return !(Array.isArray(last.alt)&&last.alt.indexOf(x)>=0);}),"",own)+'</div>';});}
 
 /* ---- the chat history (Profile → Chat history) ----------------------------------
    Thirty days of the conversation, by day, newest day first, to read: nothing in it
