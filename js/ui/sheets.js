@@ -11,7 +11,7 @@ import {exHay} from "./views/train.js";
 import {planOn} from "../engine/dayplan.js";
 import {ACT_GROUPS, actIcon, actInfo, actRate, actsIn, INTENSITY, intensityOf, isActivity, outdoorOf} from "../data/activities.js";
 import {barKg, bwShare, incrementFor, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
-import {sumNutrition} from "../engine/nutrition.js";
+import {sumNutrition, foodName} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {groupLabel, groupRun, ivText, mmss, platePlan, rowsFor} from "./views/session.js";
 import {sessionById, ensureSessionIds, dayOf, dayRec, S, split} from "../state.js";
@@ -420,7 +420,7 @@ function vSheet(){
     cur.alts.forEach(function(f,i){
       var on=f.id===cur.food.id;
       b+='<div class="afres"><button class="afres-b" data-choose="'+pi+'|'+i+'">'
-       +'<span class="afres-n">'+esc(f.n)+'</span>'
+       +'<span class="afres-n">'+esc(foodName(f))+'</span>'
        +'<span class="afres-m">'+fmtN(f.kcal)+' kcal / 100 g'+(f.cat?' · '+esc(t(f.cat)):'')+'</span></button>'
        +(on?'<span class="afcur">'+esc(t("Current"))+'</span>':'')+'</div>';});
     b+='</div><button class="btn g" data-online="'+esc(cur.parsed.query)+'">'+esc(t("Search online instead"))+'</button>';
@@ -444,7 +444,7 @@ function vSheet(){
       b+='<div class="dv-card"><div class="dv-row"><b>'+esc(mealName(mn))+'</b>'
        +'<span class="dv-k">'+fmtN(sumNutrition(mm.items).kcal)+' kcal</span></div>';
       mm.items.forEach(function(it){
-        b+='<div class="dv-row dv-it"><span>'+esc(it.n)+'</span><span>'+fmtN(it.kcal)+'</span></div>';});
+        b+='<div class="dv-row dv-it"><span>'+esc(foodName(it))+'</span><span>'+fmtN(it.kcal)+'</span></div>';});
       b+='</div>';});
     if(!anyMeal)b+='<p class="dv-none">'+t("No food logged.")+'</p>';
     b+='<h3 class="dv-h">'+t("Training")+'</h3>';

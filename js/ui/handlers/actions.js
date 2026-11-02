@@ -13,7 +13,8 @@
    no history behind it (SESSION-AGENT.md §4). Before an action runs, the part of the
    state it touches is copied (snap); Undo puts that copy back. A reload ends the session,
    and the Undo with it. */
-import {FOODDB} from "../../engine/nutrition.js";
+import {FOODDB, nutritionFor} from "../../engine/nutrition.js";
+import {addItems} from "../../engine/formulas.js";
 import {itemOf} from "../../engine/mealplan.js";
 import {ownSlot} from "../../engine/meals.js";
 import {dayOf, dayRec, recordSession, removeSession, S, saveDB, saveSession} from "../../state.js";
@@ -168,6 +169,13 @@ var ACTIONS={
     run:function(p){var f=(S.myFoods||[]).concat(FOODDB||[]).filter(function(x){return x.id===p.fid;})[0];if(!f)return false;
       if(p.meal){V.sheet="addfood";V.sd={meal:p.meal};}
       if(!LENT.logFood)return false;LENT.logFood(f,p.g,p.label);return true;}},
+  "food.logMany":{desc:"Log several foods to today's meals at once (a day told in one message)",params:{items:"[{fid, g, label, meal}]"},
+    confirm:true,snap:"day",
+    run:function(p){var all=(S.myFoods||[]).concat(FOODDB||[]),n=0;
+      (p.items||[]).forEach(function(x){var f=all.filter(function(y){return y.id===x.fid;})[0];if(!f||!(x.g>0))return;
+        var v=nutritionFor(f,x.g);
+        addItems(x.meal||"Snack",[{fid:f.id,n:f.n,label:x.label,grams:x.g,src:f.src||"db",kcal:v.kcal,p:v.p,c:v.c,f:v.f,fib:v.fib}]);n++;});
+      return n>0;}},
   "progress.weighIn":{desc:"Save today's weigh-in",params:{kg:"body weight, kg"},confirm:true,snap:"body",
     /* The weigh-in sheet's Save, with the weight in the field. */
     run:function(p){V.draft.bw=toDisp(p.kg);tap({saveweight:"1"});return true;}},

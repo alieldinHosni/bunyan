@@ -45,9 +45,11 @@ import {checkPlans} from "../../engine/plancheck.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
 import {bestE1RM, bmr, bwShare, dbTotal, deloadDue, plateauOf, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
-import {mealName, mealSlots} from "../../engine/meals.js";
+import {mealName, mealSlots, nextMeal} from "../../engine/meals.js";
 import {editDist} from "../../engine/text.js";
-import {FOODDB, fuzzyFoods, isDrink, nutritionFor, searchFoods, sumNutrition} from "../../engine/nutrition.js";
+import {FOODDB, foodName, fuzzyFoods, gramsFor, isDrink, nutritionFor, searchFoods, sumNutrition} from "../../engine/nutrition.js";
+import {allowed} from "../../engine/mealplan.js";
+import {recapOf} from "../../coach/recap.js";
 import {nutrition, topLifts, weeklyCardio, weighIns, weightChange, weightTrend} from "../../engine/stats.js";
 import {S, split} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
@@ -703,9 +705,8 @@ function aLast(a){
   return act(a,t("View session"),{"data-openday":s.date});}
 
 /* ---- foods: the rest of today, swaps, what is in one ------------------------------ */
-/* A food's name in the answer's language: its Arabic alias in Arabic. */
+/* A food's Arabic alias (foodName, js/engine/nutrition.js, is the name shown). */
 function arName(f){var a=(f&&f.a||[]).filter(function(x){return /[\u0600-\u06FF]/.test(x);})[0];return a||"";}
-function foodName(f){return uiLang()==="ar"&&arName(f)?arName(f):(f&&f.n)||"";}
 function foodOf(it){
   var db=FOODDB||[];
   return (it.fid&&db.filter(function(f){return f.id===it.fid;})[0])||(it.n&&(searchFoods(it.n,1)[0]||{}).f)||null;}
@@ -1401,6 +1402,75 @@ function undoLast(){
     if(m&&m.ag&&m.ag.s==="applied"&&canUndo(m.at))
       return {s:"say",lead:fill(t("Undo “{d}”?"),{d:String(m.ag.done||"")}),acts:[{l:t("Undo it"),a:{"data-agundo":String(m.at)}}]};}
   return {s:"say",lead:t("There's nothing recent to undo."),acts:[]};}
+/* ---- a day told in one message (js/coach/recap.js) -------------------------------------
+   The foods found (each in one usual serving unless the amount was said, which is said
+   as an estimate), offered to the day with one tap and Undo; what could not be found
+   named; the training noted (no sets are made up); and what else to do today: the
+   protein and energy left, water, and rest for what was trained, tomorrow's plan
+   included. */
+/* A serving as stored ("1 × can", "100 g"), said in the reader's language. */
+function shownLabel(l){return String(l||"").replace(/^(\S+ × )(.+)$/,function(_,a,u){return a+t(u);}).replace(/(\d) g$/,function(_,d){return d+" "+t("g");});}
+function shownFood(f){return foodName(f);}
+function findFood(q){
+  var tries=[q],m=/^(.+?) (في|in a|in) (ساندوتش|sandwich|sandwiches)$/.exec(q);
+  if(m)tries=["ساندوتش "+m[1],m[1]+" sandwich",m[1]];
+  for(var i=0;i<tries.length;i++){
+    var hits=searchFoods(tries[i],5).filter(function(h){return h.score>=85;});
+    if(!hits.length)continue;
+    var eat=hits.filter(function(h){return h.score>=hits[0].score-12&&!INGREDIENT.test(h.f.n);});
+    return (eat[0]||hits[0]).f;}
+  return null;}
+/* A day told, and something in it the coach can act on: a food it knows, or a workout.
+   "I had a bad day, didn't stick to the diet" reads like meals and is not one. */
+function dayTold(q){
+  var rc=recapOf(q);if(!rc)return null;
+  var any=rc.muscles.length||rc.foods.some(function(f){return findFood(f.q)||(f.parts||[]).some(findFood);});
+  return any?rc:null;}
+var MUSCLEOF={Legs:["Quads","Hamstrings","Glutes","Calves"],Arms:["Biceps","Triceps"]};
+function recapMsg(text,rc,L){
+  var items=[],miss=[],guess=false;
+  rc.foods.forEach(function(x){
+    var list=[x.q],f=findFood(x.q);
+    if(!f&&x.parts)list=x.parts;
+    (f?[f]:list.map(findFood)).forEach(function(ff,k){
+      if(!ff){miss.push(f?x.q:list[k]);return;}
+      var gq=gramsFor(ff,1,null),n=nutritionFor(ff,gq.g);
+      items.push({f:ff,g:gq.g,label:gq.label,meal:x.meal||nextMeal(today()),n:n});if(x.guess)guess=true;});});
+  /* Today, with these added. */
+  var now=today(),r=(S.days||{})[now]||{},had=[];
+  Object.keys(r.meals||{}).forEach(function(k){had=had.concat((r.meals[k]&&r.meals[k].items)||[]);});
+  var tot=sumNutrition(had.concat(items.map(function(i){return i.n;}))),G=S.goals||{};
+  var notes=[];
+  if(rc.muscles.length){
+    var mm=rc.muscles.map(function(m){return tm(m).trim();}).join(uiLang()==="ar"?" و":" and ");
+    var logged=(S.sessions||[]).some(function(s){return s.date===now&&(s.entries||[]).some(function(e){return !isActivity(e.name);});});
+    if(!logged)notes.push(fill(t("I haven't logged the {m} workout: I don't know your sets, and I won't make them up. Add it in Training when you can."),{m:mm}));
+    var tmw=addDaysISO(now,1),pd=planOn(split(),tmw),hit=false;
+    if(pd&&pd.day&&!pd.rest){var mus={};(pd.day.ex||[]).forEach(function(e){mus[muscleOf(e.name)]=(mus[muscleOf(e.name)]||0)+num(e.sets);});
+      rc.muscles.forEach(function(m){(MUSCLEOF[m]||[m]).forEach(function(x){if(num(mus[x])>=3)hit=true;});});}
+    notes.push(fill(t(hit?"{m} trained today needs a rest day before it's trained hard again, and tomorrow's {d} trains it too: Training will offer a fresher day.":"{m} trained today: give it a rest day before training it hard again."),
+      {m:mm,d:pd&&pd.day?planName(pd.day.name):""}));}
+  if(num(G.p)){var pl=Math.round(num(G.p)-tot.p);
+    if(pl>=15){var pf=["tuna_water","greek_yog_0","gebna_areesh","chicken_breast_ck","egg_boiled"].map(function(id){return (FOODDB||[]).filter(function(y){return y.id===id;})[0];}).filter(Boolean)
+        .filter(function(y){return allowed(y,{diet:S.prefs.diet,avoid:S.prefs.avoid||[],powder:true});})[0];
+      if(pf){var pg=gramsFor(pf,1,null),pn=nutritionFor(pf,pg.g);
+        notes.push(fill(t("Protein: about {p} g still to go today. {f}, {a}, adds {x} g."),{p:pl,f:shownFood(pf),a:shownLabel(pg.label),x:Math.round(pn.p)}));}
+      else notes.push(fill(t("Protein: about {p} g still to go today."),{p:pl}));}
+    else notes.push(t("Protein: on target for today."));}
+  if(num(G.kcal)){var kl=Math.round((num(G.kcal)-tot.kcal)/10)*10;
+    notes.push(kl>=0?fill(t("About {k} kcal left for the day."),{k:fmtN(kl)}):fill(t("About {k} kcal over today's target. No need to make it up tomorrow: eat to target and the week evens out."),{k:fmtN(-kl)}));}
+  var wl=num(G.water)-num(r.water);
+  if(num(G.water)&&wl>200)notes.push(fill(t("Water: {l} L still to drink."),{l:(Math.round(wl/100)/10).toFixed(1)}));
+  if(rc.muscles.length||rc.ask){var sl=KB.sleep();if(sl)notes.push(fill(t("Sleep {lo} to {hi} hours tonight: it's when the training pays off."),{lo:sl.min,hi:sl.max}));}
+  if(miss.length)notes.push(fill(t("I couldn't tell which food “{q}” is, or how much: add it on Food so the day is complete."),{q:miss.join(uiLang()==="ar"?"، ":", ")}));
+  if(items.length&&guess)notes.push(t("Amounts are one usual serving each, an estimate: change any of them on Food."));
+  var lead=items.length?t("Here's your day as I read it. Add it?"):t("Here's what I'd do with the rest of today.");
+  var ag=items.length?{s:"confirm",act:"food.logMany",p:{items:items.map(function(i){return {fid:i.f.id,g:i.g,label:i.label,meal:i.meal};})},
+      lead:lead,items:items.map(function(i){return {item:shownFood(i.f)+" · "+mealName(i.meal),detail:shownLabel(i.label)+" · "+fill(t("{k} kcal · {p} g protein"),{k:fmtN(i.n.kcal),p:Math.round(i.n.p)})};}),
+      notes:notes,cta:t("Add to my day"),done:t("Added to today."),undone:t("Undone. Today is as it was.")}
+    :{s:"say",lead:lead,notes:notes,acts:[{l:t("Open Food"),a:{"data-tab":"food"}}]};
+  return {q:text,id:"recap",at:Date.now(),b:[],acts:[],ag:ag,lang:L};}
+
 /* The coach's indexes (the knowledge search, the answer bank, the phrases, the food and
    exercise names) are built the first time they are used, which made the first question
    wait 60–100 ms (more on a phone) before the message even left the box. They are built
@@ -1413,6 +1483,8 @@ function warmCoach(){
   var idle=typeof requestIdleCallback==="function"?function(f){requestIdleCallback(f,{timeout:300});}:function(f){setTimeout(f,30);};
   (function next(){var f=steps.shift();if(!f)return;idle(function(){try{f();}catch(e){}next();});})();}
 function ask(q,id,lang){
+  /* A day told in one message is read whole, not cut in two. */
+  if(!id&&S.onboarded&&FOODDB&&dayTold(q))return askOne(q,null,lang);
   if(!id&&S.onboarded){
     var rw=null;try{rw=rewrite(q);}catch(e){rw=null;}
     if(rw){var mr=askOne(rw,null,lang);if(mr&&!mr.tap){mr.qq=rw;mr.q=String(q).trim().slice(0,300);}return mr;}
@@ -1444,7 +1516,11 @@ function askOne(q,id,lang){
     if(!id){
       /* The hard limits first, whatever else the question seems to be. */
       var sit=null,cm=null;
+      var rcp=null;
       if(scopeOf(text))iid="scope";
+      /* A day told in one message: what was eaten and trained, "what else", "put it in
+         my day" (js/coach/recap.js). */
+      else if(S.onboarded&&FOODDB&&(rcp=dayTold(text)))return recapMsg(text,rcp,L);
       /* Something to do in the app: it is done, or asked for, the way its button does. */
       else if(S.onboarded&&(cm=commandOf(text,S.prefs.unit))&&!(LOGCMD.test(cm.cmd)&&isQuestion(text))){
         var cg=null;try{cg=cm.cmd==="undo.last"?undoLast():planCommand(cm);}catch(e){cg=null;}
@@ -1556,7 +1632,7 @@ function findMsg(at){return (S.chat||[]).filter(function(x){return x&&x.at===+at
    apart, and its buttons last. Nothing is coloured by who said it; the accent is kept
    for the one button an answer leads to. */
 /* What each answer is about, and its glyph (js/ui/glyphs.js). */
-var TOPIC={plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],twice:["Two sessions in a day","dumbbell"],warmplan:["Your warm-up","flame"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
+var TOPIC={recap:["Your day","bowl"],plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],twice:["Two sessions in a day","dumbbell"],warmplan:["Your warm-up","flame"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
   track:["How you're doing","bars"],weight:["Weight trend","scale"],protein:["Protein","shaker"],calories:["Calories","flame"],
   sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
   goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],
@@ -1616,7 +1692,11 @@ var AGSTATE={confirm:1,applied:1,undone:1,declined:1,failed:1,pick:1,say:1};
 function agHtml(m,live,ro){
   var g=m.ag,at=esc(String(m.at)),h=g.lead?'<p class="chat-lead">'+figures(String(g.lead))+'</p>':'';
   if(g.s==="confirm"||g.s==="applied"||g.s==="undone"||g.s==="declined"||g.s==="failed"){
-    if(g.item)h+='<div class="ag-item"><b>'+esc(String(g.item))+'</b>'+(g.detail?'<span>'+figures(String(g.detail))+'</span>':'')+'</div>';}
+    if(g.item)h+='<div class="ag-item"><b>'+esc(String(g.item))+'</b>'+(g.detail?'<span>'+figures(String(g.detail))+'</span>':'')+'</div>';
+    /* Several at once (a day told in one message). */
+    if(Array.isArray(g.items))g.items.forEach(function(x){h+='<div class="ag-item"><b>'+esc(String(x.item||""))+'</b>'+(x.detail?'<span>'+figures(String(x.detail))+'</span>':'')+'</div>';});}
+  /* What else to say with it: advice that goes with the request. */
+  if(Array.isArray(g.notes)&&g.notes.length)h+='<ul class="chat-l ag-notes">'+g.notes.map(function(x){return '<li>'+figures(String(x))+'</li>';}).join("")+'</ul>';
   if(g.s==="confirm"&&live)h+='<div class="ag-acts"><button class="btn ag-ok" data-agok="'+at+'">'+esc(String(g.cta||t("Do it")))+'</button>'
     +'<button class="btn g ag-no" data-agno="'+at+'">'+esc(t("Not now"))+'</button></div>';
   else if(g.s==="applied")h+='<div class="ag-done" role="status"><span class="ag-ck">'+glyph("check")+'</span><span class="ag-t">'+esc(String(g.done||""))+'</span>'

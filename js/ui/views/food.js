@@ -7,7 +7,7 @@ import {t} from "../../i18n/dict.js";
 import {eatenToday, energyMissing, macroKcal, macroTargets, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
 import {checkPlans} from "../../engine/plancheck.js";
-import {FOODDB, sumNutrition} from "../../engine/nutrition.js";
+import {FOODDB, sumNutrition, foodName} from "../../engine/nutrition.js";
 import {foodPic} from "../../data/foodicons.js";
 import {dayRec, S} from "../../state.js";
 import {dfmt, esc, fmtN, r1, today} from "../../util.js";
@@ -186,8 +186,8 @@ function vMeal(dsel,name){
   items.forEach(function(it,i){
     h+='<div class="fitemrow">'
      +'<button class="fitemrow-b" data-editfood="'+esc("day|"+name+"|"+i)+'" aria-label="'
-     +esc(t("Change the amount of")+" "+it.n)+'">'+foodPic(foodOfItem(it))
-     +'<div style="flex:1;min-width:0"><div class="fitemrow-n">'+esc(it.n)
+     +esc(t("Change the amount of")+" "+foodName(it))+'">'+foodPic(foodOfItem(it))
+     +'<div style="flex:1;min-width:0"><div class="fitemrow-n">'+esc(foodName(it))
      +(it.label?' <span style="font-weight:400;color:var(--dim)">('+esc(it.label)+')</span>':'')
      +'</div>'
      +'<div class="fitemrow-m">'+esc(t("P:"))+' '+r1(it.p)+'g · '
@@ -196,7 +196,7 @@ function vMeal(dsel,name){
      +'</div></div>'
      +'<span class="fitemrow-k">'+fmtN(it.kcal)+' kcal</span></button>'
      +'<button class="fitemrow-x" data-dropfood="'+name+'|'+i+'" aria-label="'
-     +esc(t("Remove")+" "+it.n)+'"><i class="ico ico-trash"></i></button></div>';});
+     +esc(t("Remove")+" "+foodName(it))+'"><i class="ico ico-trash"></i></button></div>';});
 
   /* The plan for this meal, under what was eaten: one tap logs it as written. */
   var plan=planOf(name);
@@ -204,7 +204,7 @@ function vMeal(dsel,name){
     var pt=sumNutrition(plan);
     h+='<div class="tsec"><h2 class="tsec-h">'+t("Your plan")+'</h2><span class="dhint">'+fmtN(pt.kcal)+' kcal</span></div>'
      +'<div class="plist">'+plan.map(function(it){
-        return '<div class="plist-r"><span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')
+        return '<div class="plist-r"><span>'+esc(foodName(it))+(it.label?' <i>'+esc(it.label)+'</i>':'')
           +(it.note?'<small class="plist-note">'+esc(it.note)+'</small>':'')+'</span><b>'+fmtN(it.kcal)+'</b></div>';}).join("")+'</div>'
      +'<button class="btn'+(items.length?' g':'')+' plog" data-logplan="'+esc(name)+'">'+esc(t(items.length?"Add the plan again":"Log as planned"))+'</button>';}
   h+='<button class="btn'+(plan.length&&!items.length?' g':'')+'" data-addfood="'+esc(name)+'">+ '
@@ -260,8 +260,8 @@ function vMyFoods(){
 /* A food in a meal being built: tap it to change its amount (the servings screen
    opens on what it is now), ✕ beside it to take it out. */
 function amountRow(where,it){
-  return '<button class="dmain dedit" data-editfood="'+esc(where)+'" aria-label="'+esc(t("Change the amount of")+" "+it.n)+'">'
-   +'<span class="dtext"><span class="drow-n">'+esc(it.n)+'</span>'
+  return '<button class="dmain dedit" data-editfood="'+esc(where)+'" aria-label="'+esc(t("Change the amount of")+" "+foodName(it))+'">'
+   +'<span class="dtext"><span class="drow-n">'+esc(foodName(it))+'</span>'
    +'<span class="drow-s">'+(it.label?esc(it.label)+'<i class="ddot"></i>':'')+fmtN(it.kcal)+' kcal<i class="ddot"></i>'
    +esc(t("P:"))+' '+r1(it.p)+'g</span></span>'
    +'<span class="ico ico-edit" aria-hidden="true"></span></button>';}
@@ -283,8 +283,8 @@ function vSavedMeal(id){
    +'<span>'+esc(t("F:"))+' '+r1(tot.f)+'g</span></div></div>';
   h+='<div class="drows">';
   items.forEach(function(it,i){
-    h+='<div class="drow" data-k="si:'+i+':'+esc(it.n)+'">'
-     +'<button class="drm" data-rmsmitem="'+m.id+'|'+i+'" aria-label="'+esc(t("Remove")+" "+it.n)+'"><i>'+XSVG+'</i></button>'
+    h+='<div class="drow" data-k="si:'+i+':'+esc(foodName(it))+'">'
+     +'<button class="drm" data-rmsmitem="'+m.id+'|'+i+'" aria-label="'+esc(t("Remove")+" "+foodName(it))+'"><i>'+XSVG+'</i></button>'
      +amountRow("saved|"+m.id+"|"+i,it)+'</div>';});
   h+='</div>';
   if(!items.length)h+='<p class="dempty">'+esc(t("Add the foods that go in it. They are logged together, in these amounts."))+'</p>';
@@ -444,8 +444,8 @@ function vPlanSlot(id){
    +'<span>'+esc(t("F:"))+' '+r1(tot.f)+'g</span></div></div>';
   h+='<div class="drows">';
   pl.forEach(function(it,i){
-    h+='<div class="drow" data-k="pi:'+i+':'+esc(it.n)+'">'
-     +'<button class="drm" data-prmitem="'+esc(id)+'|'+i+'" aria-label="'+esc(t("Remove")+" "+it.n)+'"><i>'+XSVG+'</i></button>'
+    h+='<div class="drow" data-k="pi:'+i+':'+esc(foodName(it))+'">'
+     +'<button class="drm" data-prmitem="'+esc(id)+'|'+i+'" aria-label="'+esc(t("Remove")+" "+foodName(it))+'"><i>'+XSVG+'</i></button>'
      +amountRow("plan|"+id+"|"+i,it)+'</div>';});
   h+='</div>';
   if(!pl.length&&!todo.length)h+='<p class="dempty">'+esc(t("Add what this meal should be. Logging it is then one tap, from here or from the meal on Today."))+'</p>';
@@ -506,10 +506,11 @@ function vImport(){
       h+='<div class="tsec"><h2 class="tsec-h">'+t(V.pgen?"Your day":"What Bunyan found")+'</h2><span class="dhint">'
        +esc(pp.length+" "+t(pp.length===1?"meal":"meals")+" · "+fmtN(kc)+" kcal")+'</span></div>';
       /* How much of the day is their own food, said once. */
-      if(V.pgen){var eat=(V.pgen.habits&&V.pgen.habits.eaten)||{},all=0,own=0;
+      if(V.pgen){var eat=Object.assign({},(V.pgen.habits&&V.pgen.habits.eaten)||{}),all=0,own=0;
+        (V.pgen.likes||[]).forEach(function(id){eat[id]=1;});
         pp.forEach(function(m){m.items.forEach(function(it){all++;if(eat[it.fid])own++;});});
-        h+='<p class="dsub pgen-own">'+esc(own?t("{a} of the day's {b} foods are ones you log.").replace("{a}",own).replace("{b}",all)
-          :t("Log a few days of food and the plan is written from what you eat."))+'</p>';}
+        h+='<p class="dsub pgen-own">'+esc(own?t("{a} of the day's {b} foods are ones you log or picked.").replace("{a}",own).replace("{b}",all)
+          :t("Pick foods you like in the assessment, or log a few days of food, and the plan is written from them."))+'</p>';}
       /* Every meal, every food and every unmatched line can be changed here, before
          anything is saved: rename or drop a meal, tap a food to change its amount, ✕
          to drop it, Find for a line that matched nothing, + for something missing. */
@@ -523,9 +524,9 @@ function vImport(){
          /* A meal they eat again and again, served again (js/engine/habits.js). */
          +(m.usual?'<p class="picard-own">'+esc(t("Your usual: logged on {n} days in the last four weeks. The amounts are set for your targets.").replace("{n}",m.usual))+'</p>':'')
          +m.items.map(function(it,j){return '<div class="plist-r pied"><button class="pied-b" data-editfood="imp|'+i+'|'+j+'"'+(it.grams?'':' disabled')+'>'
-           +'<span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')
+           +'<span>'+esc(foodName(it))+(it.label?' <i>'+esc(it.label)+'</i>':'')
            +(it.note?'<small class="plist-note">'+esc(it.note)+'</small>':'')+'</span><b>'+fmtN(it.kcal)+'</b></button>'
-           +'<button class="pied-x" data-pirm="'+i+'|'+j+'" aria-label="'+esc(t("Remove")+" "+it.n)+'">✕</button></div>';}).join("")
+           +'<button class="pied-x" data-pirm="'+i+'|'+j+'" aria-label="'+esc(t("Remove")+" "+foodName(it))+'">✕</button></div>';}).join("")
          +m.todo.map(function(raw,j){return '<div class="plist-r miss pied"><span>'+esc(raw)+'</span>'
            +'<button class="btn sm g ptodo-b" data-pifind="'+i+'|'+j+'">'+esc(t("Find"))+'</button>'
            +'<button class="pied-x" data-pidrop="'+i+'|'+j+'" aria-label="'+esc(t("Remove")+" "+raw)+'">✕</button></div>';}).join("")
