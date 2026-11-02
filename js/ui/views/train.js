@@ -25,7 +25,7 @@ import {shown} from "../more.js";
 import {vTImport} from "./timport.js";
 import {condCard, doseText, weeksText} from "../dose.js";
 import {addDaysISO, estMinutes, planOn} from "../../engine/dayplan.js";
-import {swapAdvice} from "../../engine/recovery.js";
+import {swapAdvice, tooSoon} from "../../engine/recovery.js";
 import {addsOn, missedNow} from "../../engine/missed.js";
 import {monthGrid} from "../datebar.js";
 import {paceOf, routePath, speedOf} from "../../engine/run.js";
@@ -284,6 +284,9 @@ function railDay(sp,iso,now){
     if(pd&&pd.ex.length){x.mark="miss";x.word=planName(pd.name);x.lbl+=", "+t("missed");}else x.word="—";}
   else x.word="—";
   x.swap=!!(S.daySwap&&S.daySwap[iso]&&iso>=now);
+  /* Planned, still ahead, and too soon for the muscles it trains (engine/recovery.js). */
+  if(x.mark==="plan"||x.mark==="proj"){var ts=null;try{ts=tooSoon(sp,iso);}catch(e){ts=null;}
+    if(ts&&ts.length){x.soon=ts;x.lbl+=", "+t("too soon for {m}").replace("{m}",ts.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();}).join(", "));}}
   x.word=shortWord(x.word);
   return x;}
 /* What the chosen day holds, unfolded in the card by tapping it again (owner, 2 Nov:
@@ -311,6 +314,8 @@ function railPeek(sp,iso,now){
    +(x.swap?'<span class="wkr-chip">'+esc(t("Moved"))+'</span>':'')+'</div>'
    +(meta.length?'<div class="wkr-pk-m">'+meta.join('<span class="wkr-dot" aria-hidden="true">·</span>')+'</div>':'')
    +(top.length?'<div class="wkr-pk-mu">'+top.map(function(m){return '<span>'+esc(tm(m).trim())+'</span>';}).join("")+'</div>':'')
+   +(x.soon?'<p class="wkr-pk-soon">'+esc(t("Too soon for {m}: they are still recovering from the day before.").replace("{m}",x.soon.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();}).join(", ")))
+      +' <button class="wkr-pk-ch" data-swapday="'+iso+'">'+esc(t("Change"))+'</button></p>':'')
    +(x.mark==="proj"?'<p class="wkr-pk-n">'+esc(t("A rotation moves with what you train, so this day may shift."))+'</p>':'')
    +'</div>';}
 function weekRail(sp,sel){
@@ -322,7 +327,7 @@ function weekRail(sp,sel){
     if(x.mark==="done")done++;if(x.mark==="done"||x.mark==="plan"||x.mark==="proj"||x.mark==="miss")plan++;
     if(iso===sel)idx=i;
     var dt=new Date(iso+"T00:00:00");
-    cells+='<button class="wkr-d '+x.mark+(iso===now?' today':'')+(iso===sel?' sel':'')+(x.word==="—"?' rest':'')+'" data-wkday="'+iso+'"'
+    cells+='<button class="wkr-d '+x.mark+(x.soon?' soon':'')+(iso===now?' today':'')+(iso===sel?' sel':'')+(x.word==="—"?' rest':'')+'" data-wkday="'+iso+'"'
      +' aria-pressed="'+(iso===sel)+'"'+(iso===sel?' aria-expanded="'+peek+'" aria-controls="wkr-pk"':'')
      +' aria-label="'+esc(x.lbl+(x.swap?", "+t("moved"):""))+'">'
      +'<span class="wkr-w" aria-hidden="true">'+esc(dfmt(dt,{weekday:"narrow"}))+'</span>'

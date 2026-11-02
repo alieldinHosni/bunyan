@@ -1458,6 +1458,12 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 .wkr-d.done .wkr-m{background:var(--ok)}
 .wkr-d.plan .wkr-m{box-shadow:inset 0 0 0 1.5px var(--accentHi)}
 .wkr-d.proj .wkr-m{box-shadow:inset 0 0 0 1.5px var(--dim);opacity:.8}
+/* Planned too soon for its muscles (views/train.js railDay): an amber ring. */
+.wkr-d.soon .wkr-m{box-shadow:inset 0 0 0 1.5px var(--warning)}
+.wkr-d.soon .wkr-t{color:var(--warning)}
+.wkr-d.sel.soon .wkr-t{color:var(--onAccent)}
+.wkr-pk-soon{margin:var(--s2) 0 0;font-size:12.5px;line-height:1.45;color:var(--warning)}
+.wkr-pk-ch{border:0;background:none;padding:0 var(--s1);color:var(--accentHi);font-weight:800;font-size:12.5px}
 .wkr-d.miss .wkr-m{width:8px;height:8px;border-radius:0;
   background:linear-gradient(45deg,transparent 40%,var(--danger) 40% 60%,transparent 60%),linear-gradient(-45deg,transparent 40%,var(--danger) 40% 60%,transparent 60%)}
 .wkr-t{max-width:100%;padding:0;font-size:10px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:clip}

@@ -90,4 +90,13 @@ function dayOptions(sp,iso){
     best=bi>=0?out[bi].id:"rest";}
   return {date:iso,days:out,best:best};}
 
-export {dayOptions, readyOn, swapAdvice};
+/* A planned day still ahead that comes too soon for the muscles it trains, judged with
+   everything planned before it counted as done: the muscles, or null (the week rail
+   marks it, owner, 2 Nov: "the app should identify the next possible day"). */
+function tooSoon(sp,iso){
+  if(!sp||iso<today())return null;
+  var p=planOn(sp,iso);if(!p||p.rest||!p.day||!(p.day.ex||[]).length)return null;
+  var r=readyOn(iso,sp),k=dayReady(p.day.ex,r,INFO);
+  return k<LOW?tiredOn(p.day.ex,r,INFO):null;}
+
+export {dayOptions, readyOn, swapAdvice, tooSoon};

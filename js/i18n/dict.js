@@ -1344,6 +1344,8 @@ var AR={"Most of {a} lands on {m}, trained {w}. They need a rest day between har
 "You haven't told me about a health condition. If a doctor has, add it in the assessment's health step: the plan then follows the book's guidelines for it.": "مقلتليش على حالة صحية. لو دكتور قالك على حاجة، ضيفها في خطوة الصحة في التقييم: الخطة ساعتها هتمشي على إرشادات الكتاب ليها.",
 "Open the health step": "افتح خطوة الصحة",
 "Your plan is adjusted for: {c}.": "خطتك متظبطة على: {c}.",
+"too soon for {m}": "بدري على {m}",
+"Too soon for {m}: they are still recovering from the day before.": "بدري على {m}: لسه بيستشفوا من اليوم اللي قبله.",
 "Your week": "أسبوعك",
 "Leave every day on Rest to run the days in rotation instead.": "سيب كل الأيام راحة لو عايز الأيام تمشي بالدور بدل كده.",
 "Day name": "اسم اليوم",

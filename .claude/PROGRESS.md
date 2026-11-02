@@ -3135,3 +3135,16 @@ come up (entries' painArea), with "get it looked at" from the second time; and "
 (the area into profile.limits, each program exercise that loads it swapped by standIn, Undo). The flag keeps
 its area (workout.js flagPain). Never a diagnosis: the sheet still says Bunyan cannot tell what it is.
 Test: regression "Something hurts: …".
+
+## Own additions (item 8) — same branch
+
+- Exercise picker: an exercise the person's limits or a health condition rule out is marked ("Lies down: not
+  for your health" / "Loads an area you're working around") and asks before it is added (Add it anyway /
+  Pick another).
+- Coach chat: three new intents — phase (block, phase, reps, tempo, the sequence and next block), zones
+  (cardio stage, zones by feel or bpm, Find your zones), health (what the conditions change; points to the
+  assessment's health step when none). A medical statement ("I have high blood pressure") still goes to the
+  scope guard; asking what the plan does about it is answered.
+- Week rail: a planned day still ahead that comes too soon for the muscles it trains (engine/recovery.js
+  tooSoon, everything planned before it counted) gets an amber ring and word; its details say which
+  muscles, with Change.

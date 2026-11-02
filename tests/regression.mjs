@@ -3642,6 +3642,8 @@ await test("Change workout judges each day against the muscles: after Full A tod
   await page.tap('#sheet .trow.warn');await pause(page,400);
   await page.tap('#sheet [data-confirmok]');await pause(page,400);
   eq(await ev(page,"Object.keys(S.daySwap||{}).length"),1,"trained anyway: the person decides");
+  await pause(page,300);
+  eq(await page.$eval('.wkr [data-wkday="'+tm+'"]',b=>b.classList.contains("soon")),true,"the week rail marks the day too soon");
   /* Upper/Lower: after Upper today, Lower is ready and the best fit; Upper again is too soon. */
   const tm2=await setUp("ul");await pause(page,300);
   await page.evaluate(async d=>{(await import("/js/ui/actions.js")).openSheet("swapday",{date:d});},tm2);await pause(page,400);
