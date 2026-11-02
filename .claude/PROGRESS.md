@@ -2766,3 +2766,26 @@ and make the click to full calendar animate well, not too slow, or fast".
   --m-cal 620 → 380 ms on an ease-out curve (it read as lag), opacity at 0.6 of it; Food's month too.
 - Tests: coach recovery.test.js (10); regression "Recovery: Pull trained yesterday, Pull due today …";
   calendar tests updated to the new cells and to "paced, not slow".
+
+## Meals from your own food — branch session/ownmeals
+
+CACHE `bunyan-v188` (after session/builder's v187). Owner, 2 Nov: "Then start on the meals from my own
+food" (the suggestion: a meal plan written from what you log, not the app's plates).
+- **js/engine/habits.js** (pure; in architecture's PURE list): the last 28 days of the food log →
+  `eaten` (days each food was logged) and `usual` meals: the same two or more foods together in a meal
+  on 3+ days, up to two per kind (Breakfast; Main = Lunch/Dinner; Snack; a meal of their own by its
+  energy, 350 kcal+ is a main), with median grams and the meal it is usually eaten at. Only items with a
+  food id the database or My Foods knows, energy above zero, and grams.
+- **js/engine/mealplan.js**: a usual meal is tried first for its kind (the one usually eaten at that
+  meal first, each once a day). Each food takes the part its energy says (protein ≥ 30 % of kcal, fat
+  ≥ 60 %, carbohydrate ≥ 50 %; anything else stays at its usual amount), moves between half and twice
+  the usual amount in a counted serving or grams, and the same solver as the plates fits it to the
+  meal's share; it is used when it lands within 20 % of the meal's energy, otherwise the app's plates
+  as before. In every plate a slot now takes the food the person logs most when one fits ("Another
+  version" moves to the next of theirs). Densities use the food's own `per`, so My Foods work.
+- nutrition.js `ownFood()` reads it with the database loaded; the assessment's meal plan and Coach's
+  "New meal plan from my targets" pass it (refreshed after the database loads).
+- Review screen: a usual meal says "Your usual: logged on N days in the last four weeks. The amounts are
+  set for your targets."; the day says how many of its foods are ones they log, or, with no log, that a
+  few days of logging makes the plan theirs. Arabic for all three.
+- Tests: engine habits.test.js (9); regression "Meal plan from your own food: …" (EN + Arabic).

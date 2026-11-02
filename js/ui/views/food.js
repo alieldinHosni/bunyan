@@ -505,6 +505,11 @@ function vImport(){
       pp.forEach(function(m){nItems+=m.items.length;nTodo+=m.todo.length;kc+=sumNutrition(m.items).kcal;});
       h+='<div class="tsec"><h2 class="tsec-h">'+t(V.pgen?"Your day":"What Bunyan found")+'</h2><span class="dhint">'
        +esc(pp.length+" "+t(pp.length===1?"meal":"meals")+" · "+fmtN(kc)+" kcal")+'</span></div>';
+      /* How much of the day is their own food, said once. */
+      if(V.pgen){var eat=(V.pgen.habits&&V.pgen.habits.eaten)||{},all=0,own=0;
+        pp.forEach(function(m){m.items.forEach(function(it){all++;if(eat[it.fid])own++;});});
+        h+='<p class="dsub pgen-own">'+esc(own?t("{a} of the day's {b} foods are ones you log.").replace("{a}",own).replace("{b}",all)
+          :t("Log a few days of food and the plan is written from what you eat."))+'</p>';}
       /* Every meal, every food and every unmatched line can be changed here, before
          anything is saved: rename or drop a meal, tap a food to change its amount, ✕
          to drop it, Find for a line that matched nothing, + for something missing. */
@@ -515,6 +520,8 @@ function vImport(){
          +'<input id="pm_n_'+i+'" class="tiday" type="text" value="'+esc(importName(m,i))+'" aria-label="'+esc(t("Meal name"))+'" autocomplete="off" spellcheck="false">'
          +'<span class="picard-k">'+fmtN(mt.kcal)+' kcal</span>'
          +'<button class="ticard-x" data-pmrm="'+i+'" aria-label="'+esc(t("Remove")+" "+importName(m,i))+'">✕</button></div>'
+         /* A meal they eat again and again, served again (js/engine/habits.js). */
+         +(m.usual?'<p class="picard-own">'+esc(t("Your usual: logged on {n} days in the last four weeks. The amounts are set for your targets.").replace("{n}",m.usual))+'</p>':'')
          +m.items.map(function(it,j){return '<div class="plist-r pied"><button class="pied-b" data-editfood="imp|'+i+'|'+j+'"'+(it.grams?'':' disabled')+'>'
            +'<span>'+esc(it.n)+(it.label?' <i>'+esc(it.label)+'</i>':'')
            +(it.note?'<small class="plist-note">'+esc(it.note)+'</small>':'')+'</span><b>'+fmtN(it.kcal)+'</b></button>'

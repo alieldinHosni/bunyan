@@ -15,7 +15,7 @@ import {dayMinutes, generatePlan, LEVELS, splitCandidates} from "../../engine/pl
 import {lastWeight, macroTargets, tdee} from "../../engine/formulas.js";
 import {volumeCheck} from "../../engine/volume.js";
 import {buildMealPlan} from "../../engine/mealplan.js";
-import {FOODDB, sumNutrition} from "../../engine/nutrition.js";
+import {FOODDB, ownFood, sumNutrition} from "../../engine/nutrition.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {S} from "../../state.js";
 import {fmtW, toDisp, toKg, wUnit} from "../../units.js";
@@ -64,7 +64,7 @@ function profileOf(a){
   return {sex:a.sex,age:num(a.age),height:num(a.height),weight:num(a.weight),goal:a.goal,level:a.level,
     days:num(a.days),mins:num(a.mins),job:a.job,activity:activityOf(a),limits:a.limits.slice(),health:(a.health||[]).slice(),sleep:num(a.sleep)};}
 function foodPrefs(a,variant){
-  return {meals:num(a.meals)||4,diet:a.diet,avoid:a.avoid.slice(),powder:!!a.powder,style:a.style,variant:variant||0};}
+  return Object.assign({meals:num(a.meals)||4,diet:a.diet,avoid:a.avoid.slice(),powder:!!a.powder,style:a.style,variant:variant||0},FOODDB?ownFood():{});}
 
 /* Everything "Use this plan" would set, worked out with the draft in place of what
    is saved, then put back. Cached on the answers. */
