@@ -2914,3 +2914,27 @@ the coach moves its key work into the rest of the week instead of dropping it").
   Over Barbell Row from a missed day" and counts it in. Arabic throughout; figures in .num.
 - Tests: coach missed.test.js (9); regression "A missed day: moved to a free day …, or its key lift
   carried into the next day and into that workout …".
+
+## Dock "Coach" / Coach Hub, the travelling red, stress kept in mind, a warm coach — branch session/dockhub
+
+CACHE `bunyan-v192`. Owner, 2 Nov.
+- **Dock**: the planning tab is "Coach" (الكوتش), its page "Coach Hub" (مركز الكوتش). The red is one shape
+  (`.dock-hl`) under the buttons (js/ui/dock.js moveHl): on a change of tab it eases from the old button
+  to the new one, following the new one as it opens into its pill, and lands on it; reduced motion, it is
+  simply there. The open tab's own fill is transparent.
+- **Stress** ("I set stress to high so it lowered the volume, but afterwards it shows 'Some muscles get
+  little training' … it should remember … and schedule a follow-up"): js/engine/stress.js. High stress or
+  sleep under 6 h keeps the week light on purpose; while it does, the plan check's vol-low, the coach's
+  "under" insight and the weekly check-in's "under your range" stay quiet (too much is still flagged).
+  profile.stressAt is the day it was said (assessment); the coach asks again after 28 days (the
+  textbook reassesses assessment answers "monthly or quarterly", assessments.js protocol · reassess) or
+  when told "It's better now". A Coach card says it is light on purpose and when it will ask; the
+  follow-up asks stress (and sleep, if that was the reason), one tap: no longer the reason → stressAt
+  cleared and the built week rebuilt, with Undo; still high → asked again in four weeks.
+- **Chat**: the coach's indexes (knowledge search ~265 ms cold, answer bank ~48, phrases, food and
+  exercise names) are built when the chat panel is bound, a piece per idle moment (warmCoach); the
+  first question no longer waits 60–100 ms before the message leaves the box (the intermittent
+  "no message flying from the box").
+- Tests: "Dock: the red travels …", "Stress said high: …"; the dock label test reads Coach/الكوتش; the
+  light-theme dock test reads the red off the travelling shape; the Arabic figures test no longer needs
+  the week strip's fraction (gone with the day bar).
