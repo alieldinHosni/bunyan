@@ -58,6 +58,7 @@ import {backArrow} from "../nav.js";
 import {doseText} from "../dose.js";
 import {blockDay, blockNow} from "../../engine/blocks.js";
 import {addDaysISO, estMinutes, nextDayOf, planOn} from "../../engine/dayplan.js";
+import {swapAdvice} from "../../engine/recovery.js";
 import {adaptOf, avoids, standIn} from "../../engine/plan.js";
 import {rangeFor} from "../../coach/landmarks.js";
 import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
@@ -149,6 +150,13 @@ function aToday(a,q){
     return a;}
   var d=pl.day,ex=d.ex.filter(function(e){return !isActivity(e.name);});
   p(a,fill(t("Today is {d}: {n} exercises, about {m} min."),{d:planName(d.name),n:d.ex.length,m:estMinutes(d)}));
+  /* Most of it on muscles trained yesterday, with a fresh day in the program: said, and
+     offered (js/engine/recovery.js), as Training's card does. */
+  var rs=null;try{rs=swapAdvice(sp,now,pl);}catch(e){rs=null;}
+  if(rs){
+    p(a,fill(t("Most of {a} lands on {m}, trained {w}. They need a rest day between hard sessions; {b} is fresh."),
+      {a:planName(rs.fromDay.name),m:list(rs.tired.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();})),w:t("yesterday"),b:planName(rs.toDay.name)}));
+    act(a,fill(t("Train {b} instead"),{b:planName(rs.toDay.name)}),{"data-recoswap":rs.to,"data-recodate":now});}
   /* As the workout will start: this week of the block's effort, and sets moved by the
      answers after earlier workouts. */
   var bl=blockNow(),dx=blockDay(d.ex);

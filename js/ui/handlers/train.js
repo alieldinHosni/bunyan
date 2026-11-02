@@ -17,7 +17,7 @@ import {addExercise, askConfirm, askText, closeSheet, openSheet, val} from "../a
 import {grow} from "../more.js";
 import {pushNav} from "../nav.js";
 import {render} from "../render.js";
-import {toast, V} from "../view.js";
+import {tap, toast, V} from "../view.js";
 import {groupRun} from "../views/session.js";
 import {newNames, programFromDraft} from "../views/timport.js";
 import {builderId, editedEx, pcAfter, readTraining, requestCloseSheet, setDbLoad, setExField, tidyGroups, toCoach, topOfResults} from "./common.js";
@@ -95,6 +95,11 @@ function register(){
     saveDB();render();return;});
   key("clearexq",function(){V.exq="";render();topOfResults();var qq=document.getElementById("exq");if(qq)qq.focus();return;});
   key("swapday",function(D){openSheet("swapday",{date:D.swapday});return;});
+  /* The coach's offer on a day due (views/train.js recoCard): the fresher day, or the
+     planned one kept. Either is a decision, kept as the day's swap so it is not asked again. */
+  key("recoswap",function(D){var dt=D.recodate;if(!dt)return;S.daySwap=S.daySwap||{};
+    Object.keys(S.daySwap).forEach(function(k){if(k<today())delete S.daySwap[k];});
+    S.daySwap[dt]=D.recoswap;saveDB();tap("ok");render();return;});
   on(function(D){return D.swapto!==undefined&&V.sheet==="swapday";},function(D){
     var swd=V.sd.date;S.daySwap=S.daySwap||{};
     /* Old swaps are dropped as they pass; only dates still ahead mean anything. */

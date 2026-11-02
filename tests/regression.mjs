@@ -3245,21 +3245,21 @@ await test("Training calendar: the ⌄ or a held press opens the week into the m
   await page.tap('[data-calopen]');await pause(page,800);
   eq(await page.evaluate(()=>[document.querySelector(".twk.cal").classList.contains("open"),document.querySelector("[data-calopen]").getAttribute("aria-expanded"),document.querySelector(".twk-fold").hasAttribute("inert")]),[true,"true",true],"open: the month, the week folded away");
   const mh=await page.$eval('.twk-mo',e=>e.getBoundingClientRect().height);if(mh<200)throw new Error("the month did not unfold: "+mh);
-  const m0=await page.$eval('.twk-mt b',e=>e.textContent);
+  const m0=await page.$eval('.twk-mt strong',e=>e.textContent);
   await page.tap('[data-calm="-1"]');await pause(page,300);
-  if(await page.$eval('.twk-mt b',e=>e.textContent)===m0)throw new Error("the month did not change");
+  if(await page.$eval('.twk-mt strong',e=>e.textContent)===m0)throw new Error("the month did not change");
   eq(await page.$$eval('.twk.cal .twk-today',a=>a.length),1,"another month: Today offered");
   /* A past training day (the seed's sessions are every third day) shows in the card below. */
-  const past=await page.evaluate(()=>{const b=[...document.querySelectorAll(".twk-grid .twk-d.done:not(.out)")].pop();return b&&b.getAttribute("data-tweek");});
+  const past=await page.evaluate(()=>{const b=[...document.querySelectorAll(".twk-mo .dbday.trained")].pop();return b&&b.getAttribute("data-tweek");});
   if(!past)throw new Error("no training day ticked in the month before");
-  await page.tap('.twk-grid [data-tweek="'+past+'"]');await pause(page,400);
+  await page.tap('.twk-mo [data-tweek="'+past+'"]');await pause(page,400);
   eq(await ev(page,"V.tdate"),past,"the day picked is the one shown below");
   if(!(await page.$('.thero2 [data-openday="'+past+'"]')))throw new Error("its session is not offered below");
   await page.tap('[data-caltoday]');await pause(page,400);
-  eq(await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,U=await import("/js/util.js");return [V.tdate,document.querySelector(".twk-mt b").textContent,!!document.querySelector(".twk-today"),!!document.querySelector('.twk-grid .twk-d.today.sel[data-tweek="'+U.today()+'"]')];}),
+  eq(await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,U=await import("/js/util.js");return [V.tdate,document.querySelector(".twk-mt strong").textContent,!!document.querySelector(".twk-today"),!!document.querySelector('.twk-mo .dbday.today.sel[data-tweek="'+U.today()+'"]')];}),
     [null,m0,false,true],"Today: today picked, its month shown, the button gone");
   /* Held: folds back; the day under the finger is not picked by it. */
-  const d=await page.$('.twk-grid .twk-d:not(.today):not(.out)');const box=await d.boundingBox();
+  const d=await page.$('.twk-mo .dbday:not(.today)');const box=await d.boundingBox();
   await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX:x,clientY:y,pointerType:"touch",isPrimary:true}));},[box.x+box.width/2,box.y+box.height/2]);
   await pause(page,650);
   await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,clientX:x,clientY:y,pointerType:"touch"}));el.click();},[box.x+box.width/2,box.y+box.height/2]);
@@ -3273,14 +3273,17 @@ await test("Training calendar: the ⌄ or a held press opens the week into the m
   await pause(page,800);
   eq(await page.$eval('.twk.cal',e=>e.classList.contains("open")),true,"held on the week: the month");
 },{prefs:{anim:true}});
-await test("Food's calendar unfolds slowly under the date bar and folds back; a day picked folds it away",async page=>{
+await test("Food's calendar unfolds at an easy pace under the date bar and folds back; a day picked folds it away",async page=>{
   await tapTab(page,"food");await pause(page,400);
   eq(await page.evaluate(()=>{const f=document.querySelector(".dbfold");return [!!f,f&&f.hasAttribute("inert"),f&&Math.round(f.getBoundingClientRect().height)];}),[true,true,0],"folded: in the page, nothing to see or tap");
   await page.tap('[data-dopen]');
-  const early=await page.evaluate(()=>new Promise(r=>setTimeout(()=>r(Math.round(document.querySelector(".dbfold").getBoundingClientRect().height)),200)));
-  await pause(page,900);
+  /* Paced, not slow (owner, 2 Nov: "not too slow, or fast, just animate right"): under
+     way at 80 ms, not there yet; settled within half a second. */
+  const early=await page.evaluate(()=>new Promise(r=>setTimeout(()=>r(Math.round(document.querySelector(".dbfold").getBoundingClientRect().height)),80)));
+  const half=await page.evaluate(()=>new Promise(r=>setTimeout(()=>r(Math.round(document.querySelector(".dbfold").getBoundingClientRect().height)),420)));
+  await pause(page,500);
   const full=await page.$eval('.dbfold',e=>Math.round(e.getBoundingClientRect().height));
-  if(!(full>250&&early<full*0.6))throw new Error("not a slow unfold: "+early+" at 200ms of "+full);
+  if(!(full>250&&early<full*0.8&&half>=full-2))throw new Error("not a paced unfold: "+early+" at 80ms, "+half+" at 500ms, of "+full);
   const y=await page.evaluate(()=>{const b=[...document.querySelectorAll(".dbfold [data-dpick]:not([disabled])")];return b[Math.max(0,b.length-3)].getAttribute("data-dpick");});
   await page.tap('.dbfold [data-dpick="'+y+'"]');await pause(page,900);
   eq(await page.evaluate(async()=>[(await import("/js/ui/view.js")).V.fdate,document.querySelector(".dbfold").classList.contains("open"),Math.round(document.querySelector(".dbfold").getBoundingClientRect().height)]),[y,false,0],"the day picked, the month folded away");
@@ -3342,6 +3345,29 @@ await test("Workout fixes: the chat finishes the exercise on screen; RPE is aske
   if(!/Done with .+: 1 set logged\. On to the next\./.test(x))throw new Error("chat: "+x);
   eq(await ev(page,"V.logIdx"),1,"on to the next exercise");
 },{prefs:{autorest:false}});
+await test("Recovery: Pull trained yesterday, Pull due today: the coach offers the fresh Legs day, names the tired muscles, and one tap moves today; keeping the plan is one tap too",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js");
+    const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
+    const sp=st.split(),now=U.today(),y=new Date(Date.now()-864e5-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+    const ex=(n,s)=>({id:n,name:n,sets:s,lo:8,hi:12});
+    sp.schedule="rotation";
+    sp.days=[{id:"dpush",name:"Push",ex:[ex("Barbell Bench Press - Medium Grip",4),ex("Standing Military Press",3)]},
+      {id:"dpull",name:"Pull",ex:[ex("Bent Over Barbell Row",4),ex("Wide-Grip Lat Pulldown",3),ex("Barbell Curl",3)]},
+      {id:"dlegs",name:"Legs",ex:[ex("Barbell Squat",4),ex("Romanian Deadlift",3)]}];
+    const set=()=>[1,2,3,4].map(()=>({w:60,r:8,rpe:8}));
+    /* Push was due yesterday; Pull was trained instead. In rotation the next day would be
+       Legs; so the planned day is made Pull by logging Push the day before yesterday and
+       the swap is what was trained. */
+    S.sessions=[{id:"y",date:y,dayId:"dpush",dayName:"Pull",entries:[{name:"Bent Over Barbell Row",muscle:"Back",sets:set()},{name:"Wide-Grip Lat Pulldown",muscle:"Back",sets:set()},{name:"Barbell Curl",muscle:"Biceps",sets:set()}]}];
+    S.daySwap={};st.saveDB();(await import("/js/ui/render.js")).render();});
+  await pause(page,400);
+  const card=await page.$eval('.reco',e=>e.textContent).catch(()=>null);
+  if(!card)throw new Error("no coach card for a Pull day after Pull");
+  if(!/Most of Pull lands on back, biceps.*, trained yesterday/.test(card)||!/Legs is fresh/.test(card))throw new Error("card: "+card);
+  await page.tap('.reco [data-recoswap="dlegs"]');await pause(page,400);
+  eq(await ev(page,"[S.daySwap[Object.keys(S.daySwap)[0]],!!document.querySelector('.reco')]"),["dlegs",false],"today moved to Legs, no card again");
+  eq(await page.$eval('.thero2',e=>/Legs/.test(e.textContent)),true,"today's card is Legs");
+});
 await test("Two sessions in a day: by weekday, the second pinned day is today's once the first is done; on the go, Start another session starts any day",async page=>{
   const ids=await page.evaluate(async()=>{const st=await import("/js/state.js"),S=st.S,sp=st.split();const wd=((new Date().getDay()+6)%7)+1;
     sp.schedule="week";const tr=sp.days.filter(d=>d.ex.length);tr.forEach(d=>d.wd=[]);tr[0].wd=[wd];tr[1].wd=[wd];
