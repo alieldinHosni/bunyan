@@ -33,6 +33,7 @@ import {S, split} from "../state.js";
 import {fmtW, toDisp, wUnit} from "../units.js";
 import {fmtN, num, pretty, today} from "../util.js";
 import {doseText} from "./dose.js";
+import {rulesFor} from "../engine/conditions.js";
 import {mealNow, V} from "./view.js";
 import {exHay} from "./views/train.js";
 import {platePlan} from "./views/session.js";
@@ -560,6 +561,39 @@ function planFeel(dir){
   return confirm("set.next",{w:nw,r:nr},{lead:fill(t(dir>0?"Then go up a step. Next set: {s}?":"Then ease off. Next set: {s}?"),{s:line}),
     item:line,detail:fill(t("{ex}, last set {w} × {r}. Only the next set changes."),{ex:exName(e.name),w:w?fmtW(w):"",r:r}).replace(" ×  "," × ").replace(",  ×",","),
     cta:t("Use it"),done:fill(t("Next set: {s}."),{s:line}),undone:t("Undone. The next set is as it was.")});}
+/* "I'm not sure I can do 20 push-ups", "change the reps to something reasonable": for the
+   exercise on screen (or the one named), today only. The range: from the best set the
+   person has logged on it (a few under it to a couple over), else the health condition's
+   range (engine/conditions.js), else 8–12 (the plan's own accessory range for building
+   muscle, data/goals.js), never above what was planned. For a body-weight exercise, an
+   easier version of the same movement, where the library has one (an incline or knee
+   version). Said as a choice; the program is not changed. */
+/* Easier: the hands higher or the knees down; never feet up, which is harder. */
+var EASIER=/Incline|Knee|Wall|Assisted|Modified/i;
+function planFit(c){
+  var a=S.active;
+  if(!a)return say(t("During a workout, tell me and I'll fit today's reps to you. To change your program for good, say it with numbers, like “make Push-Ups 3 sets of 10”."));
+  var names=a.entries.map(function(e){return e.name;}),q=String(c.text||""),i=a.idx||0,r=findExercise(q,names);
+  if(r.kind==="one")i=names.indexOf(r.name);
+  var e=a.entries[i];if(!e||isActivity(e.name))return say(t("Nothing to fit on this one."));
+  var best=0;(S.sessions||[]).forEach(function(s){(s.entries||[]).forEach(function(x){if(x.name===e.name)(x.sets||[]).forEach(function(y){if(!y.wu&&num(y.r)>best)best=num(y.r);});});});
+  var R=rulesFor(S.profile),hi0=num(e.planned.hi)||20,lo,hi,why;
+  /* A number they asked for ("to 10"): that, two either side of it at most. */
+  var asked=/(?:^| )(?:to|into|الى|ل) ?(\d{1,2})(?: reps?| عده| عدات|)( |$)/.exec(fold(q));
+  if(asked&&+asked[1]>=1&&+asked[1]<=50){lo=+asked[1];hi=+asked[1];why=t("The number you asked for.");}
+  else if(best){lo=Math.max(3,best-3);hi=Math.min(hi0,best+2);if(hi<=lo)hi=lo+2;why=fill(t("Your best set on it so far is {n} reps."),{n:best});}
+  else if(R&&R.reps){lo=R.reps.min;hi=Math.min(R.reps.max,hi0);why=t("The range your health guidelines give.");}
+  else{lo=8;hi=Math.min(12,hi0);why=t("A range you can finish with good form, then build from.");}
+  if(hi<lo)hi=lo;
+  var opts=[{v:"reps:"+lo+"-"+hi,l:fill(t("Today: {a}–{b} reps"),{a:lo,b:hi}),sub:why}];
+  var bw=(EXDB&&EXDB[e.name]||{}).e==="Bodyweight";
+  if(bw&&!e.sets.length){var mv=movementOfEx(e.name),mus=muscleOfName(e.name);
+    var ez=LIB.filter(function(l){return l[0]!==e.name&&!/Feet Elevated|Decline/i.test(l[0])&&l[1]===mus&&EASIER.test(l[0])&&movementOfEx(l[0])===mv&&pickable(l[0])&&!avoids(l[0],limitsOf(S.profile));})
+      .sort(function(x,y){return (/Incline/.test(y[0])?1:0)-(/Incline/.test(x[0])?1:0)||x[0].length-y[0].length;})[0];
+    if(ez)opts.push({v:"swap:"+ez[0],l:fill(t("Switch to {ex}"),{ex:exName(ez[0])}),
+      sub:t(c.heavy?"Less of your body weight on the hands: the same movement, easier. Build back to the floor version.":"The same movement with less of your body weight: build back to the floor version.")});}
+  return pick("fit",fill(t("{ex} is planned at {d} today. Pick what fits you; only today changes:"),{ex:exName(e.name),d:(e.planned.lo&&e.planned.hi?e.planned.lo+"–"+e.planned.hi:e.planned.hi||"")+" "+t("reps")}),
+    opts,"live.fit",{i:i},"v",false);}
 /* "How do I do this?": the steps for the exercise on screen, and its full guide. */
 function planHow(){
   var a=S.active,e=a&&a.entries[a.idx||0];
@@ -638,6 +672,7 @@ function planCommand(c){
   if(!c)return null;
   if(c.cmd==="ex.busy")return planBusy();
   if(c.cmd==="set.feel")return planFeel(c.dir);
+  if(c.cmd==="ex.fit")return planFit(c);
   if(c.cmd==="act.log")return planAct(c);
   if(c.cmd==="limit.add")return planLimit(c);
   if(c.cmd==="travel.set"||c.cmd==="travel.end")return planTravel(c);
@@ -741,6 +776,15 @@ function proceed(ag,v){
     item:exName(p.name),detail:t("Your program stays as it is."),cta:t("Swap it"),
     done:fill(t("Swapped {old} for {new} for today."),{old:exName(p.from),new:exName(p.name)}),
     undone:t("Undone. Today's workout is as it was.")});
+  /* Today's reps or an easier version (planFit): said before it is made. */
+  if(ag.act==="live.fit"){var e=S.active&&S.active.entries[p.i];if(!e)return null;
+    var sw=/^swap:(.+)$/.exec(p.v||""),rp=/^reps:(\d+)-(\d+)$/.exec(p.v||"");
+    var line=sw?exName(sw[1]):rp?(rp[1]===rp[2]?rp[1]:rp[1]+"–"+rp[2])+" "+t("reps"):"";
+    return confirm("live.fit",{i:p.i,v:p.v},{lead:sw?fill(t("Swap {old} for {new} for today?"),{old:exName(e.name),new:line})
+        :fill(t("{ex} at {r} today?"),{ex:exName(e.name),r:line}),
+      item:sw?line:exName(e.name),detail:t("Your program stays as it is."),cta:t(sw?"Swap it":"Use it"),
+      done:sw?fill(t("Swapped {old} for {new} for today."),{old:exName(e.name),new:line}):fill(t("{ex}: {r} today."),{ex:exName(e.name),r:line}),
+      undone:t("Undone. Today's workout is as it was.")});}
   if(ag.act==="exercise.remove")return planRemove("",p);
   if(ag.act==="exercise.swap")return planSwap("",p);
   if(ag.act==="food.log")return planLog("",p);

@@ -2051,6 +2051,34 @@ await test("Coach chat knows the phase, the cardio zones and the health adjustme
   txt=await page.textContent('#cpanel');
   if(!/خطتك متظبطة على/.test(txt))throw new Error("health in Arabic: "+txt.slice(-500));
 });
+await test("Coach, in a workout: 'not sure I can do 20 push-ups, shall I adjust it?' offers today's reps from your own best and an easier version; one tap changes only today",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),Sp=await import("/js/data/splits.js");
+    const p=st.makeProgram({id:"pu",name:"PU",days:[Sp.day("Upper",[Sp.ex("Pushups",3,15,20),Sp.ex("Dumbbell Bench Press",3,8,12)])]});p.id="pu";
+    st.S.programs=[p];st.S.activeProgram="pu";st.S.block=null;st.S.prefs.noblocks=true;
+    st.S.sessions=[{id:"pp",date:"2026-10-20",entries:[{name:"Pushups",sets:[{w:0,r:9},{w:0,r:7}]}]}];st.saveDB();});
+  await startWorkout(page);
+  await page.tap('[data-coachopen]');await pause(page,500);
+  await page.fill('#chatq',"I am overweight, I am not sure I can do the 20 reps pushups today. Shall I adjust it?");await page.press('#chatq','Enter');await pause(page,700);
+  const opts=await page.$$eval('#cpanel .ag-opt .ag-ol',a=>a.map(e=>e.textContent));
+  if(!opts.some(o=>/Today: 6–11 reps/.test(o)))throw new Error("no fitted reps from the best set of 9: "+JSON.stringify(opts));
+  const easier=opts.find(o=>/Switch to/.test(o));
+  await page.tap('#cpanel .ag-opt');await pause(page,600);
+  if(await page.$('#cpanel .ag-ok')){await page.tap('#cpanel .ag-ok');await pause(page,600);}
+  eq(await ev(page,"[S.active.entries[0].planned.lo,S.active.entries[0].planned.hi,S.programs[0].days[0].ex[0].lo]"),[6,11,15],"today only: the program keeps 15–20");
+  await page.fill('#chatq',"Can you change the 20 reps in my current active training to something reasonable for me?");await page.press('#chatq','Enter');await pause(page,700);
+  if(!(await page.$$('#cpanel .ag-opt')).length)throw new Error("the second wording is not understood: "+(await page.textContent('#cpanel')).slice(-300));
+  eq(easier,"Switch to Incline Push-Up","an easier version of the same movement");
+});
+await test("Rest complete, closed: the band leaves (fades and folds), never fading back in first",async page=>{
+  await startWorkout(page);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.restDone=true;V.restEnd=0;(await import("/js/ui/render.js")).render();});
+  await pause(page,900);
+  await page.tap('.rb.over .rb-close');await pause(page,60);
+  const g=await page.evaluate(()=>{const e=document.querySelector('.sess .rb.ghost');return e?[getComputedStyle(e).animationName,+getComputedStyle(e).opacity]:null;});
+  if(g)eq(g[0],"rowOut","leaving, not arriving again: "+JSON.stringify(g));
+  await pause(page,900);
+  eq(await page.$$eval('.sess .rb',a=>a.length),0,"gone");
+},{prefs:{anim:true}});
 await test("Plan check: targets that work against the goal are found in Coach AI with a dot on Coach, fixed with Undo, and kept until the numbers change",async page=>{
   /* Building muscle on 2,500 kcal against about 2,550 maintenance, and 110 g of protein. */
   eq(await page.$eval('nav [data-tab="coach"]',e=>e.classList.contains("advice")),true,"a dot on Coach");

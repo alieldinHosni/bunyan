@@ -3148,3 +3148,18 @@ Test: regression "Something hurts: …".
 - Week rail: a planned day still ahead that comes too soon for the muscles it trains (engine/recovery.js
   tooSoon, everything planned before it counted) gets an amber ring and word; its details say which
   muscles, with Change.
+
+## Rest band flash; "I can't do 20 push-ups" in the chat — same branch
+
+Owner, 3 Nov (screenshot): closing the finished rest band flashed before it went; and the coach answered
+"I'm overweight, not sure I can do the 20 reps push-ups, shall I adjust it?" with the generic weights rule and
+"change the 20 reps in my active training to something reasonable" with "I don't have that".
+- Rest band: `.rb{animation:wkIn}` came after `.rowout` with the same weight and won, so the leaving ghost
+  faded back in from 0 (the flash) and then vanished at the timeout. Now `.rb:not(.rowout)`. Test: "Rest
+  complete, closed: …".
+- Coach: command "ex.fit" (coach/commands.js: can't / not sure I can / too many / reasonable / adjust …
+  reps / push-ups; Arabic too) → agent.js planFit: for the exercise on screen (or named), today only: a
+  range from the person's best logged set (best−3 to best+2, never above the plan), else a health condition's
+  range, else 8–12; a number they asked for ("to 10") is used; for a body-weight lift, an easier version of
+  the same movement (incline / knee; never feet up). Pick → confirm → action "live.fit" (snap live, Undo).
+  The program is not changed. Test: "Coach, in a workout: 'not sure I can do 20 push-ups…'".

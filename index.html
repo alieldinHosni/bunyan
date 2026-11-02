@@ -4104,7 +4104,9 @@ body.wkflat #app{--gutter:20px}
 .sess .log{position:sticky;bottom:calc(var(--s3) + env(safe-area-inset-bottom));z-index:2}
 .sess .log.ok{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 @keyframes wkIn{from{opacity:0;transform:translateY(4px)}}
-.rb{animation:wkIn var(--m-comp) var(--e-decel)}
+/* Not on its way out: this rule comes after .rowout with the same weight, and won, so the
+   closed band faded back in (a flash) and then vanished instead of leaving (owner, 3 Nov). */
+.rb:not(.rowout){animation:wkIn var(--m-comp) var(--e-decel)}
 
 /* "How do you feel today?" (readiness for the day, before the first set), compact. */
 .sess .ready{margin:0;padding:0;border:0;background:none}

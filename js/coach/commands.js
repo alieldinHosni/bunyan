@@ -212,6 +212,11 @@ function commandOf(text,unit){
      ||/(shorter|longer|less|more) (rest|rests)|(rest|rests) (shorter|longer)|(قلل|زود) (ال)?راحه/.test(fq))){
     var dz=doseOf(fq);if(dz)return Object.assign({cmd:"ex.dose",text:raw},dz);}
 
+  /* ---- "I can't do 20 reps", "change the reps to something reasonable": today's target
+     fitted, with no number given (one with numbers is ex.dose above) ---- */
+  if(/(cant|can t|cannot|can not|not sure i can|unable to|struggle to|too many|too much|adjust|change|lower|reduce|fewer|easier|reasonable|realistic|doable).*( reps?| pushups?| push ups?)( |$)|(reps?|pushups?|push ups?).*(too (many|much|high|hard)|reasonable|realistic|easier|lower|adjust|for me)|^(shall|should|can|could) (i|you) (adjust|lower|reduce) (it|this|that|them)( |$)|(مش هقدر|مقدرش|مش قادر|كتير|قلل|غير|ظبط|سهل).*(عدات|عده|العدات|ضغط|بوش)/.test(fq))
+    return {cmd:"ex.fit",text:raw,heavy:/(overweight|heavy|obese|big guy|too fat|وزني زياده|وزني تقيل|تخين|زياده وزن)/.test(fq)};
+
   /* ---- water and steps ---- */
   var water=/(^| )(water|مايه|ميه|مياه|مية)( |$)/.test(q),glass=/(glass|glasses|cup|cups|كوبايه|كوبايتين|كوبايات|كباية)/.test(fq);
   if((water||glass&&/(drank|drink|had)/.test(fq))&&!asks&&/^(add|log|drank|i drank|i had|had|drink|record|track|ضيف|سجل|شربت|زود|اشرب|حط)( |$)/.test(fq)){
