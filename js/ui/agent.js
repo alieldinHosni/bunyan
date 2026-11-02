@@ -20,7 +20,7 @@ import {difficultyOf, exSteps, EXDB, isCompound as isCompoundName, isFav, LIB, m
 import {planOn} from "../engine/dayplan.js";
 import {avoids, doseFor, standIn, usable} from "../engine/plan.js";
 import {goalOf} from "../data/goals.js";
-import {FOODDB, fuzzyFoods, gramsFor, nutritionFor, parseFoodInput, searchFoods} from "../engine/nutrition.js";
+import {FOODDB, foodName, fuzzyFoods, gramsFor, nutritionFor, parseFoodInput, searchFoods} from "../engine/nutrition.js";
 import {mealName} from "../engine/meals.js";
 import {matchExercise} from "../engine/splitparse.js";
 import {editDist, fuzzTol, fuzzyRank, matchScore, norm, tokenMatch} from "../engine/text.js";
@@ -351,7 +351,7 @@ var MEALS=[["Breakfast",/(^| )(breakfast|فطار|فطور|الفطار|الفط
 function mealIn(fq){for(var i=0;i<MEALS.length;i++)if(MEALS[i][1].test(fq))return MEALS[i][0];return "";}
 var INGREDIENT=/raw|powder|dry|dried|flour|starch|uncooked/i;
 function foodById(id){return (S.myFoods||[]).concat(FOODDB||[]).filter(function(f){return f.id===id;})[0]||null;}
-function foodShown(f){var a=(f.a||[]).filter(function(x){return /[؀-ۿ]/.test(x);})[0];return S.prefs.lang==="ar"&&a?a:f.n;}
+function foodShown(f){return foodName(f);}
 function planLog(text,p,it){
   p=p||{};
   var fq=" "+fold(text)+" ",meal=p.meal!=null?p.meal:mealIn(fq);

@@ -12,7 +12,7 @@ import {empty} from "../../data/exercises.js";
 import {foodPic} from "../../data/foodicons.js";
 import {frequentFoods} from "../../engine/formulas.js";
 import {density, FOODDB, isMeasure, nutritionFor, searchFoods, sumNutrition, unitGrams, unitKey,
-        unitLabel, UNIT_STEP, unitsFor} from "../../engine/nutrition.js";
+        unitLabel, UNIT_STEP, unitsFor, foodName} from "../../engine/nutrition.js";
 import {scanSupported} from "../../scan.js";
 import {S} from "../../state.js";
 import {esc, fmtN, r1} from "../../util.js";
@@ -85,9 +85,9 @@ function card(f,pick,add){
   var s=servs(f)[0],n=nutritionFor(f,s[1]);
   return '<div class="afres">'
    +'<button class="afres-b" '+pick+'>'+foodPic(f)
-   +'<span class="afres-t"><span class="afres-n">'+esc(f.n)+' <span>('+esc(s[0])+')</span></span>'
+   +'<span class="afres-t"><span class="afres-n">'+esc(foodName(f))+' <span>('+esc(s[0])+')</span></span>'
    +'<span class="afres-m">'+macroLine(n)+'</span></span></button>'
-   +(add?'<button class="afadd" '+add+' aria-label="'+esc(t("Add")+" "+f.n)+'">'
+   +(add?'<button class="afadd" '+add+' aria-label="'+esc(t("Add")+" "+foodName(f))+'">'
      +'<span class="ico ico-plus" aria-hidden="true"></span></button>':'')
    +'</div>';}
 function localCards(foods){
@@ -111,7 +111,7 @@ function recentFoods(){
 function searchHome(){
   var h="",fq=frequentFoods(5);
   if(fq.length)h+='<div class="afpills">'+fq.map(function(f){
-    return '<button class="afpill" data-fpick="'+esc(f.id)+'">'+esc(f.n)+'</button>';}).join("")+'</div>';
+    return '<button class="afpill" data-fpick="'+esc(f.id)+'">'+esc(foodName(f))+'</button>';}).join("")+'</div>';
   /* The way into Quick Add. The frames show it as its own screen but not how it is
      reached, so it is the first thing under an empty search. */
   h+='<button class="afquick" data-fmode="quick">'
@@ -383,7 +383,7 @@ function vQuick(){
      +esc(it.parsed.query)+'”</span></div><div class="afresults">'
      +(it.alts||[]).map(function(f,k){
         return '<div class="afres"><button class="afres-b" data-choose="'+idx+'|'+k+'">'
-         +'<span class="afres-n">'+esc(f.n)+'</span>'
+         +'<span class="afres-n">'+esc(foodName(f))+'</span>'
          +'<span class="afres-m">'+fmtN(f.kcal)+' kcal / 100 g</span></button></div>';}).join("")
      +'</div><button class="btn g sm afnone" data-dropitem="'+idx+'">'+esc(t("None of these"))+'</button>';});
   if(known.length){

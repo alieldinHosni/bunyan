@@ -2938,3 +2938,32 @@ CACHE `bunyan-v192`. Owner, 2 Nov.
 - Tests: "Dock: the red travels …", "Stress said high: …"; the dock label test reads Coach/الكوتش; the
   light-theme dock test reads the red off the travelling shape; the Arabic figures test no longer needs
   the week strip's fraction (gone with the day bar).
+
+## A day told in one message; food by its everyday name; foods you like — branch session/dayrecap
+
+CACHE `bunyan-v193`. Owner, 2 Nov: "the coach should be smart … I should be able to ask things like … or vent
+out: اتا كلت بيض النهاردة في ساندويتش … ولو ينفع تدخلي المعلومات ديه في اليوم بتاعي"; "the food names [should] be the
+common ones: Tilapia in Egypt is called سمك بلطي, Bolti"; "I am not sure if the food is being customized … if
+there are better assessments for food … start displaying it".
+- **js/coach/recap.js** (pure): a day told in one message → foods (the words, the meal from a time word,
+  whether the amount was a guess, the pieces of an "و" written onto the next word), muscles trained,
+  "what else" and "put it in my day". Clauses start at each verb, so "… الضهر وكمان اتمرنت ضهر" is a meal
+  then a workout. A single food, a question, or "I had a bad day" is not a day told.
+- **Chat** (recapMsg): only when a food it knows or a workout is in it. Foods found by the food search
+  (score ≥ 85, cooked over raw; "X في ساندويتش" tried as the sandwich first), one usual serving each unless
+  said (said as an estimate); one card "Add to my day" (new action food.logMany, each to its meal, Undo).
+  What it couldn't find is named ("سكريات"), the workout noted without inventing sets, and what else today:
+  rest for what was trained (and tomorrow's plan if it trains it too), protein left with a protein food and
+  how much it adds, kcal left or over (no stricter tomorrow), water left, sleep 7–9 h (KB). Answered in the
+  language asked, whatever the app's language (as every answer already was).
+- **Food names** (nutrition.js foodName): in Arabic the everyday Egyptian name (first Arabic alias; AR_NAME
+  where it needs writing out, e.g. سمك بلطي, شاورما فراخ, رز مصري; "(ني)" on raw); in English the database
+  name with the local one beside it where Egypt says it differently (Tilapia (Bolti), Grey Mullet (Bouri)).
+  Shown everywhere a food is (Food, the add-food sheet, the day sheet, the assessment, the coach); stored
+  names are untouched. chat.js's own foodName removed in favour of this one.
+- **Foods you like**: the assessment's food step offers the meal plan's staples to pick (prefs.likes); the
+  plan counts them as eaten on two days (ahead of its own choice, behind what the log shows). The result says
+  what the meals were built from: meals a day, style, diet, what is left out, the person's foods that made
+  it in, and usual meals served again; the plan review counts foods "you log or picked".
+- Tests: coach recap.test.js (11); regression "A day told in one message, in Arabic with the app in
+  English …".
