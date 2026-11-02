@@ -1249,6 +1249,7 @@ var AR={"Most of {a} lands on {m}, trained {w}. They need a rest day between har
 "Stretches for what you trained": "إطالات للعضلات اللي اتمرنت",
 "A few minutes": "دقايق قليلة",
 "Let's build your plan": "يلا نعمل خطتك",
+"Coach Hub": "مركز الكوتش",
 "Weekly check-in": "المراجعة الأسبوعية",
 "From last week's check-in:": "من مراجعة الأسبوع اللي فات:",
 "Last week": "الأسبوع اللي فات",

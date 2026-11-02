@@ -789,7 +789,12 @@ body.focus nav{opacity:0;visibility:hidden;pointer-events:none;
   font-size:12.5px;line-height:1.2;font-weight:700;letter-spacing:.01em;
   transition:max-width var(--m-tab) var(--e-spring),opacity var(--m-comp) var(--e-standard),margin var(--m-tab) var(--e-spring)}
 [dir="rtl"] .dock-l{--dir:rtl;font-size:13px;letter-spacing:0}
-.dock-b.on{flex-shrink:1;min-width:0;padding:0 15px 0 12px;background:var(--dock-pill);color:var(--dock-pill-ink);border-color:transparent}
+.dock-b.on{flex-shrink:1;min-width:0;padding:0 15px 0 12px;background:transparent;color:var(--dock-pill-ink);border-color:transparent}
+/* The red that travels between tabs (js/ui/dock.js moveHl): one shape under the buttons,
+   placed by script each frame of a change. */
+.dock-b{z-index:1}
+.dock-hl{position:absolute;z-index:0;left:0;top:50%;width:0;height:var(--dot);margin-top:calc(var(--dot) / -2);
+  border-radius:var(--rpill);background:var(--dock-pill);pointer-events:none;will-change:transform,width}
 .dock-b.on svg{stroke-width:2}
 .dock-b.on .dock-l{max-width:96px;opacity:1;margin-left:7px;transition-delay:0s,60ms,0s}
 /* In Arabic the open pill reads from the right: the icon first, at the right, then its

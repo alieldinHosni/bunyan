@@ -776,7 +776,9 @@ await test("Arabic: the dock keeps its order, dates are Arabic, figures stay one
   eq([r.dir,r.dock,r.leftToRight,r.first],["rtl","ltr",true,"train"],"dock");
   if(!/[\u0600-\u06FF]/.test(r.date)||/[A-Za-z]/.test(r.date))throw new Error("date not Arabic: "+r.date);
   if(/[\u0660-\u0669]/.test(r.date))throw new Error("Arabic-Indic digits in date: "+r.date);
-  if(!r.runs.some(x=>/^\d[\d,]* \/ \d/.test(x)))throw new Error("no isolated fraction among "+JSON.stringify(r.runs));
+  /* Figures are isolated runs, and none has Arabic letters cut into it. (The week's "2 / 4"
+     went with the week strip, 2 Nov: Training's day bar has no fraction.) */
+  if(!r.runs.length||r.runs.some(x=>/[\u0600-\u06FF]/.test(x)))throw new Error("figures not isolated: "+JSON.stringify(r.runs));
 },{prefs:{lang:"ar"}});
 await test("Arabic: template program and day names are shown in Arabic, fractions keep their slash",async page=>{
   await coach(page,"train","program");await pause(page,200);
@@ -793,7 +795,10 @@ await test("Arabic: template program and day names are shown in Arabic, fraction
 /* On accent-deep since token-requests.md §3 (owner, 20 Oct): Glacier Blue on Machine Red was 3.27:1. */
 /* Red is red on navy since 26 Oct: white on Signal Red (#E7172E), 4.6:1. */
 await test("Light: the open tab reads on the dark dock: white on Signal Red",async page=>{
-  const c=await page.$eval('nav .dock-b.on',e=>[getComputedStyle(e).color,getComputedStyle(e).backgroundColor]);
+  /* The red is the shape that travels between tabs (js/ui/dock.js), under the open tab. */
+  await pause(page,600);
+  const c=await page.evaluate(()=>{const b=document.querySelector('nav .dock-b.on'),h=document.querySelector('nav .dock-hl'),rb=b.getBoundingClientRect(),rh=h.getBoundingClientRect();
+    return [getComputedStyle(b).color,Math.abs(rb.left-rh.left)<1.5&&Math.abs(rb.width-rh.width)<1.5?getComputedStyle(h).backgroundColor:"not under the tab"];});
   eq(c,["rgb(255, 255, 255)","rgb(231, 23, 46)"]);
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"red"}});
 await test("One place for each thing: the assessment in Coach AI only, how you feel asked when a workout starts, nothing of it on Profile",async page=>{
@@ -2214,12 +2219,26 @@ await test("Dock: the workout bar takes the dock's place while it is away, and s
   eq(await ev(page,"V.tab"),"train");
 },{prefs:{anim:true}});
 /* ---- the good parts of an outside proposal, built in ---------------------------------- */
+await test("Dock: the red travels from the tab left to the tab tapped, and lands on it",async page=>{
+  await tapTab(page,"train");await pause(page,700);
+  const at=()=>page.evaluate(()=>{const h=document.querySelector("nav .dock-hl").getBoundingClientRect();return Math.round(h.left+h.width/2);});
+  const mid=t=>page.evaluate(t=>{const b=document.querySelector('nav .dock-b[data-tab="'+t+'"]').getBoundingClientRect();return Math.round(b.left+b.width/2);},t);
+  const a=await at(),trainMid=await mid("train");
+  if(Math.abs(a-trainMid)>3)throw new Error("not on Training to begin with");
+  await page.tap('nav .dock-b[data-tab="progress"]');
+  const half=await page.evaluate(()=>new Promise(r=>setTimeout(()=>{const h=document.querySelector("nav .dock-hl").getBoundingClientRect();r(Math.round(h.left+h.width/2));},140)));
+  await pause(page,700);
+  const end=await at(),progMid=await mid("progress");
+  if(!(half>a+10&&half<progMid-10))throw new Error("not on its way: "+a+" → "+half+" → "+end+" (Progress at "+progMid+")");
+  if(Math.abs(end-progMid)>3)throw new Error("did not land on Progress: "+end+" vs "+progMid);
+  eq(await page.$eval('nav .dock-b[data-tab="train"]',b=>getComputedStyle(b).backgroundColor!=="rgba(0, 0, 0, 0)"),true,"Training is a plain circle again");
+},{prefs:{anim:true}});
 await test("Dock: every tab is labelled, in English and Arabic, and the label starts its accessible name",async page=>{
   const lab=()=>page.$$eval("nav .dock-b",a=>a.map(b=>[b.querySelector(".dock-l").textContent,b.getAttribute("aria-label").indexOf(b.querySelector(".dock-l").textContent)===0]));
-  /* The planning tab is "Plan"; the coach itself floats (js/ui/coachfab.js). */
-  eq(await lab(),[["Train",true],["Food",true],["Plan",true],["Progress",true]],"English");
+  /* The planning tab is "Coach" (owner, 2 Nov), its page "Coach Hub"; the chat floats (js/ui/coachfab.js). */
+  eq(await lab(),[["Train",true],["Food",true],["Coach",true],["Progress",true]],"English");
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});await pause(page);
-  eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الخطة","التقدم"],"Arabic");
+  eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الكوتش","التقدم"],"Arabic");
 });
 await test("Dock: round tabs; the one that is on opens into a pill with its name, uncut in either language, even on a small phone",async page=>{
   const st=()=>page.evaluate(()=>[...document.querySelectorAll("nav .dock-b")].map(b=>{const l=b.querySelector(".dock-l"),r=b.getBoundingClientRect();
@@ -3930,7 +3949,7 @@ await test("Progress: the controls carry icons, the halves are a figure with the
   const keep=await page.$('.pghalf');await page.tap('[data-phalf="lower"]');await pause(page);
   eq(await page.$eval('[data-phalf="lower"]',e=>e.getAttribute("aria-pressed")),"true","Lower chosen");
   eq(await keep.evaluate(e=>e.isConnected),true,"the control is kept, not rebuilt");
-  eq(await page.$eval('.dock-b[data-tab="coach"] svg path',e=>e.getAttribute("d").startsWith("M6.2 15.2")),true,"Plan's icon is the brain");
+  eq(await page.$eval('.dock-b[data-tab="coach"] svg path',e=>e.getAttribute("d").startsWith("M6.2 15.2")),true,"Coach's icon is the brain");
 });
 await test("Progress: training volume over a month is capsule bars, the newest in the accent with its figure",async page=>{
   await tapTab(page,"progress");await pause(page);

@@ -39,7 +39,7 @@ var ICON={
    accessible name, so what is read aloud matches what is seen. Short enough for the
    open pill on a small phone, in either language. */
 function items(){return [
-  ["train",t("Training"),t("Train")],["food",t("Food"),t("Food")],["coach",t("Plan"),t("Plan")],
+  ["train",t("Training"),t("Train")],["food",t("Food"),t("Food")],["coach",t("Coach"),t("Coach")],
   ["progress",t("Progress"),t("Progress")]];}
 
 var built=null;   /* the label set the markup was written with */
@@ -52,9 +52,38 @@ function build(el){
      return '<button type="button" class="dock-b" data-tab="'+it[0]+'" aria-label="'+it[1]+'">'
       +'<svg viewBox="0 0 22 22" width="24" height="24" aria-hidden="true" focusable="false">'
       +ICON[it[0]]+'</svg><span class="dock-l" aria-hidden="true">'+it[2]+'</span></button>';}).join("")
-   +'</div>';
-  built=key(list);
+   +'<span class="dock-hl" aria-hidden="true"></span></div>';
+  built=key(list);hlOn=null;
 }
+
+/* ---- the highlight that travels --------------------------------------------------
+   Owner, 2 Nov: "the red highlight … should be animated as it's moving from training to
+   progress". The red is one shape under the buttons, not each button's own fill: on a
+   change of tab it leaves the old button and lands on the new one. The new button opens
+   into its pill as it arrives (its width is a CSS transition), so each frame the shape
+   is eased from where it started towards where the new button is at that frame, and it
+   lands exactly on it. Reduced motion: it is simply there. */
+var HL_MS=460,hlOn=null,hlAnim=0;
+function ease(x){var c=1.25;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2);}   /* out, with a small overshoot */
+function rectOf(b){return {x:b.offsetLeft,w:b.offsetWidth};}
+function place(hl,r){hl.style.transform="translate3d("+r.x.toFixed(1)+"px,0,0)";hl.style.width=r.w.toFixed(1)+"px";}
+function moveHl(el,btn){
+  var hl=el.querySelector(".dock-hl");if(!hl||!btn)return;
+  var id=btn.getAttribute("data-tab");
+  cancelAnimationFrame(hlAnim);
+  var from=hl.style.width?{x:parseFloat((hl.style.transform.match(/translate3d\(([-\d.]+)px/)||[0,0])[1]),w:parseFloat(hl.style.width)}:null;
+  if(!from||hlOn===null||hlOn===id||reducedMotion()){
+    hlOn=id;
+    /* Follow the button while it opens, without travelling. */
+    var t0=performance.now();
+    (function stick(){place(hl,rectOf(btn));if(performance.now()-t0<HL_MS)hlAnim=requestAnimationFrame(stick);})();
+    return;}
+  hlOn=id;
+  var start=performance.now();
+  (function step(now){
+    var k=Math.min(1,(now-start)/HL_MS),e=ease(k),to=rectOf(btn);
+    place(hl,{x:from.x+(to.x-from.x)*e,w:Math.max(8,from.w+(to.w-from.w)*e)});
+    if(k<1)hlAnim=requestAnimationFrame(step);})(start);}
 function key(list){return list.map(function(it){return it[1]+"/"+it[2];}).join("|");}
 
 /* ---- out of the way while reading ------------------------------------------------
@@ -154,7 +183,8 @@ function initDockScroll(){
   window.addEventListener("scroll",onScroll,{passive:true});
   /* Only re-measured: Safari fires resize as its toolbar collapses mid-scroll, and
      showing the dock then would bring it back while scrolling down. */
-  window.addEventListener("resize",function(){measure();lastMax=maxScroll();});
+  window.addEventListener("resize",function(){measure();lastMax=maxScroll();
+    var on=navEl&&navEl.querySelector(".dock-b.on"),hl=navEl&&navEl.querySelector(".dock-hl");if(on&&hl)place(hl,rectOf(on));});
   /* Keyboard and screen-reader users reach the dock by focus, not by scrolling. */
   if(navEl)navEl.addEventListener("focusin",showDock);}
 /* After every render. A new screen — another tab, or a page inside one, like a day or
@@ -172,7 +202,7 @@ function checkDock(screen){
   if(moved||tooShort())showDock();}
 
 /* The whole of what changes when the tab does. */
-/* advice: how many things Coach AI has to say. A dot on Plan says there is
+/* advice: how many things Coach AI has to say. A dot on Coach says there is
    something; the number is in its accessible name. */
 function syncDock(el,tab,advice){
   if(!el)return;
@@ -183,12 +213,12 @@ function syncDock(el,tab,advice){
   for(var i=0;i<btns.length;i++){
     var id=btns[i].getAttribute("data-tab"),on=id===tab;
     btns[i].classList.toggle("on",on);
-    if(on)btns[i].setAttribute("aria-current","page");
+    if(on){btns[i].setAttribute("aria-current","page");if(hlOn!==id)moveHl(el,btns[i]);}
     else btns[i].removeAttribute("aria-current");
     if(id==="coach"){
       var dot=!!advice;
       if(btns[i].classList.contains("advice")!==dot)btns[i].classList.toggle("advice",dot);
-      var lbl=t("Plan")+(dot?", "+t(advice===1?"1 thing to look at":"{n} things to look at").replace("{n}",advice):"");
+      var lbl=t("Coach")+(dot?", "+t(advice===1?"1 thing to look at":"{n} things to look at").replace("{n}",advice):"");
       if(btns[i].getAttribute("aria-label")!==lbl)btns[i].setAttribute("aria-label",lbl);}
   }
 }
