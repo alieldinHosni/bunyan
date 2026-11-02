@@ -15,6 +15,7 @@ import {FOODDB, nutritionFor, recalcItem, toLogItem} from "../engine/nutrition.j
 import {render} from "./render.js";
 import {pushNav, resetNav} from "./nav.js";
 import {spreadWd} from "../engine/schedule.js";
+import {addsOn} from "../engine/missed.js";
 import {day, ex} from "../data/splits.js";
 import {addProgram, makeProgram, editSplit, ownerOf, allSplits, CUR, curProfile, dayOf, dayRec, DEF, dropProfileData, migrate, PROFILES, recordSession, S, saveDB, setProfiles, setS, split, switchProfile} from "../state.js";
 import {MEM, num, PERSIST, r1, today, uid, wr} from "../util.js";
@@ -179,6 +180,9 @@ function startDay(dayId){
   ensureBlock();
   var blk=blockNow();
   list=blockDay(list);
+  /* Lifts carried onto today from a missed day (js/engine/missed.js), after the day's own. */
+  var carried=addsOn(today(),d.id).filter(function(a){return !list.some(function(e){return e.name===a.name;});});
+  if(carried.length)list=list.concat(carried.map(function(a){return {name:a.name,sets:a.sets,lo:a.lo,hi:a.hi,rest:a.rest,rir:a.rir};}));
   /* Created on the tap that starts the workout (a user gesture, which iOS requires),
      so logging the first set does not pay for it. */
   audioOn();

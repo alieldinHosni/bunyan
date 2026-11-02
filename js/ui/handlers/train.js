@@ -6,13 +6,15 @@ import * as W from "../workout.js";
 import {LIB, loadInstructions} from "../../data/exercises.js";
 import {day} from "../../data/splits.js";
 import {addDaysISO} from "../../engine/dayplan.js";
-import {spreadWd, suggestWd, weekOrder} from "../../engine/schedule.js";
+import {spreadWd, suggestWd, weekDates, weekOrder} from "../../engine/schedule.js";
+import {missedNow} from "../../engine/missed.js";
+import {doseFor} from "../../engine/plan.js";
 import {restartAfter, restartBlock} from "../../engine/blocks.js";
 import {t} from "../../i18n/dict.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {addProgram, allSplits, dayOf, editSplit, makeProgram, S, saveDB, split} from "../../state.js";
 import {toKg} from "../../units.js";
-import {num, r1, today, uid} from "../../util.js";
+import {dfmt, num, r1, today, uid} from "../../util.js";
 import {addExercise, askConfirm, askText, closeSheet, openSheet, val} from "../actions.js";
 import {grow} from "../more.js";
 import {pushNav} from "../nav.js";
@@ -68,17 +70,27 @@ function useDraft(){
     if(before)S.activeProgram=before;saveDB();render();});
   pcAfter();}
 
+/* Missed days dealt with, and carried lifts, kept only while they mean anything: from the
+   start of this week on. */
+function missMark(date){
+  var ws=weekDates(today())[0],keep=function(o){Object.keys(o).forEach(function(k){if(k<ws)delete o[k];});return o;};
+  S.missedDone=keep(S.missedDone||{});S.missedDone[date]=1;
+  if(S.dayAdd){S.dayAdd=keep(S.dayAdd);Object.keys(S.dayAdd).forEach(function(k){if(k<today())delete S.dayAdd[k];});}}
+function missApply(kind){
+  var r=missedNow();if(!r||r.kind!==kind)return;
+  var snap=JSON.parse(JSON.stringify({sw:S.daySwap||{},add:S.dayAdd||{},done:S.missedDone||{}})),p=S.profile||{},msg="";
+  if(kind==="move"){S.daySwap=S.daySwap||{};S.daySwap[r.to]=r.missed.dayId;
+    msg=t("{a} moved to {d}.").replace("{a}",planName(r.missed.name)).replace("{d}",dfmt(new Date(r.to+"T00:00:00"),{weekday:"long"}));}
+  else if(kind==="fold"){S.dayAdd=S.dayAdd||{};
+    r.adds.forEach(function(a){var e=doseFor(a.name,p);
+      (S.dayAdd[a.date]=S.dayAdd[a.date]||[]).push({dayId:a.dayId,name:a.name,sets:a.sets,lo:e.lo,hi:e.hi,rest:e.rest,rir:e.rir,from:r.missed.date});});
+    msg=t(r.adds.length===1?"Added to the day left.":"Added to the days left.");}
+  missMark(r.missed.date);saveDB();tap("ok");render();
+  toast(msg,function(){S.daySwap=snap.sw;S.dayAdd=snap.add;S.missedDone=snap.done;saveDB();render();});}
+
 /* What this module answers. app.js calls register() once, at boot, in the order
    the branches are tried in (see registry.js). */
-function toggleCal(){V.calOpen=!V.calOpen;V.calM=V.calOpen?(V.tdate||today()).slice(0,7):null;render();}
 function register(){
-  key("tweek",function(D){V.tdate=D.tweek===today()?null:D.tweek;render();return;});
-  /* The training calendar (views/train.js weekStrip): the week opens into the month and
-     folds back; a month either side; Today brings the day and the month back. */
-  key("calopen",function(){toggleCal();return;});
-  key("calm",function(D){var m=V.calM||(V.tdate||today()).slice(0,7),d=new Date(m+"-01T00:00:00");
-    d.setMonth(d.getMonth()+(+D.calm<0?-1:1));V.calM=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");render();return;});
-  key("caltoday",function(){V.tdate=null;V.calM=null;render();return;});
   /* A lighter week: started, put off for a week, or ended early. With training blocks
      running, the next block starts after it: the day after an unplanned one ends, or
      today when either kind is ended early. */
@@ -100,6 +112,12 @@ function register(){
   key("recoswap",function(D){var dt=D.recodate;if(!dt)return;S.daySwap=S.daySwap||{};
     Object.keys(S.daySwap).forEach(function(k){if(k<today())delete S.daySwap[k];});
     S.daySwap[dt]=D.recoswap;saveDB();tap("ok");render();return;});
+  /* A missed day (views/train.js missedCard): moved to the free day, its key lifts carried
+     onto the days left, or let go; each marks it dealt with, and has Undo. */
+  key("missdo",function(D){missApply(D.missdo);return;});
+  key("missok",function(){var r=missedNow();if(!r)return;
+    var before=JSON.parse(JSON.stringify(S.missedDone||{}));missMark(r.missed.date);saveDB();render();
+    toast(t("Let go. The plan carries on."),function(){S.missedDone=before;saveDB();render();});return;});
   on(function(D){return D.swapto!==undefined&&V.sheet==="swapday";},function(D){
     var swd=V.sd.date;S.daySwap=S.daySwap||{};
     /* Old swaps are dropped as they pass; only dates still ahead mean anything. */
@@ -311,4 +329,4 @@ function register(){
     groupRun(du.ex,ui).forEach(function(k){du.ex[k].grp=null;});
     saveDB();render();toast(t("Superset broken."));return;});}
 
-export {register, toggleCal};
+export {register};

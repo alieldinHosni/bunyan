@@ -1401,6 +1401,17 @@ function undoLast(){
     if(m&&m.ag&&m.ag.s==="applied"&&canUndo(m.at))
       return {s:"say",lead:fill(t("Undo “{d}”?"),{d:String(m.ag.done||"")}),acts:[{l:t("Undo it"),a:{"data-agundo":String(m.at)}}]};}
   return {s:"say",lead:t("There's nothing recent to undo."),acts:[]};}
+/* The coach's indexes (the knowledge search, the answer bank, the phrases, the food and
+   exercise names) are built the first time they are used, which made the first question
+   wait 60–100 ms (more on a phone) before the message even left the box. They are built
+   when the chat opens instead, a piece per idle moment, before anything is typed. */
+var WARM=false;
+function warmCoach(){
+  if(WARM)return;WARM=true;
+  var steps=[function(){lookup("protein");},function(){faqMatch("how much protein");},function(){intentOf("how much protein");},
+    function(){situationOf("i had a bad day");},function(){namesExercise("bench press");},function(){namesFood("rice");}];
+  var idle=typeof requestIdleCallback==="function"?function(f){requestIdleCallback(f,{timeout:300});}:function(f){setTimeout(f,30);};
+  (function next(){var f=steps.shift();if(!f)return;idle(function(){try{f();}catch(e){}next();});})();}
 function ask(q,id,lang){
   if(!id&&S.onboarded){
     var rw=null;try{rw=rewrite(q);}catch(e){rw=null;}
@@ -1721,4 +1732,4 @@ function dayWord(at){
 function liveAt(log,i){var m=log[i],n=log.length-1;
   return i===n||(i===n-1&&m&&m.pair&&log[n].pair&&m.ag&&(m.ag.s==="confirm"||m.ag.s==="pick"));}
 
-export {ASK, ask, askNext, bubble, liveAt, chatShown, findMsg, follow, histLink, histSheet, NEXT, pruneChat, vChat};
+export {warmCoach, ASK, ask, askNext, bubble, liveAt, chatShown, findMsg, follow, histLink, histSheet, NEXT, pruneChat, vChat};

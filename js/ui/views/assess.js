@@ -74,6 +74,8 @@ function profileOf(a){
   return {sex:a.sex,age:num(a.age),height:num(a.height),weight:num(a.weight),goal:a.goal,level:a.level,
     days:(a.wd||[]).length>=2?a.wd.length:num(a.days),mins:num(a.mins),job:a.job,activity:activityOf(a),limits:a.limits.slice(),
     health:(a.health||[]).slice(),sleep:num(a.sleep),stress:a.stress||"normal",
+    /* The day high stress or short sleep was said, for the coach's follow-up (js/engine/stress.js). */
+    stressAt:a.stress==="high"||(num(a.sleep)>0&&num(a.sleep)<6)?today():null,
     wd:(a.wd||[]).length>=2?a.wd.map(Number).sort(function(x,y){return x-y;}):[],focus:(a.focus||[]).slice(0,FOCUS_MAX)};}
 /* What "Never suggest" holds once the answers are used: the lifts they ticked, and none
    of the ones they unticked. */

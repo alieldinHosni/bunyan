@@ -2865,3 +2865,76 @@ days, then proposes specific changes for you to approve").
 - js/ui/checkin.js (shared ui module): the words, figures in .num (a trailing full stop kept out).
   Arabic for every string; checked in RTL.
 - Tests: coach checkin.test.js (14); regression "Weekly check-in: last week read on Coach …".
+
+## One calendar: Food's day bar on Training too, the month unfolding inside the bar — branch session/datebar
+
+Owner, 2 Nov (screenshots of Food's bar, then of its month as a separate card under it): "I meant all the
+calendar to look like this one, and when it expands, it expands from the calendar bar body, not as a
+separate full calendar".
+- **js/ui/datebar.js**: the bar and its month are one card (`.dnav-card`, carrying the surface, the
+  today accent and the shadow that `.dnav` had); the month (`.dbfold` → `.dbcal`) unfolds inside it under
+  a hairline, with no card of its own (`.dnav-card .dbcal`), so the bar's own body grows and folds back.
+  "Back to today" sits under the card. New `o.mark(iso) → {t, p, lbl}` for a screen's own marks.
+- **Training**: the week strip and its separate month (and the press-and-hold, js/ui/calhold.js, and its
+  handlers tweek/calopen/calm/caltoday) are gone; Training uses the same dateBar (future days open), its
+  second line saying what the day holds (the plan's day, "Done", "Rest day", "Nothing logged"), its
+  month a dot for a day trained and a ring for one planned (ring 6 px so it reads as a ring). The shell's
+  dday/dopen/dmonth/dpick handlers already served Train (V.tdate, V.tcal).
+- The guide's Training tip now points at the bar; the light theme's glass list names .dnav-card.
+- Tests updated: Training opens with the bar; "Training's day bar: the next day …"; the week-starts-on-
+  Saturday checks read the month's first column; the Training calendar test checks the month is inside
+  the bar's card under a hairline with no card of its own, rings for planned days, a past day picked folds
+  it back; Coach AI's gauge is checked against the plan's week.
+
+## A missed day, rebalanced — branch session/missed (on session/datebar)
+
+CACHE `bunyan-v191`. Owner, 2 Nov: "start rebalancing a missed day" (the suggestion: "if you skip a day,
+the coach moves its key work into the rest of the week instead of dropping it").
+- **js/coach/missed.js** (pure) `rebalanceWeek`: only a program on weekdays loses a day by missing it (a
+  rotating one carries on from what was trained), so only that is read. The latest planned day before
+  today this week with no session and not yet dealt with; its main muscles are what its exercises
+  mainly train, a quarter of its sets or more (a row's half-set to the biceps does not make biceps a
+  main muscle); it tires nothing, since it did not happen.
+  1. move: the first free day from today on, with no session of 2+ sets on those muscles the day before
+     or after (the textbook's rest day between sessions on the same muscles);
+  2. fold: else, for each main muscle the days left will not train (as main muscle) at half the missed
+     day's sets, the missed day's first multi-joint lift for it, KEY_SETS = 2 sets (a modelling choice),
+     onto the first day left whose neighbours do not train that muscle and that has the time
+     (session length − 8 min warm-up, +5 slack, the lift timed with doseFor's rest);
+  3. covered: the days left train those muscles anyway: nothing to carry, and it says so;
+  4. none: nothing fits; let it go, said plainly, naming what could not fit.
+- **js/engine/missed.js**: this week with a day either side (sessions for days trained; pinnedOn for days
+  past, planOn — swaps included — for days ahead; lifts already carried counted in).
+  `S.dayAdd {date: [lift]}` holds carried lifts (with doseFor's reps, rest and effort, 2 sets);
+  `S.missedDone {date: 1}` marks a missed day dealt with; both validated in schema.js and pruned to this
+  week. startDay adds a date's carried lifts after the day's own.
+- **Training** (today only): a coach card, "You missed Pull on Sunday." then: "Today is free … train it
+  today." [Move it to today] · or "… its key lifts go into the days left: Bent Over Barbell Row, 2 sets,
+  today." [Add it] · or covered / none [OK]; [Let it go]. Each with Undo. Today's card says "plus Bent
+  Over Barbell Row from a missed day" and counts it in. Arabic throughout; figures in .num.
+- Tests: coach missed.test.js (9); regression "A missed day: moved to a free day …, or its key lift
+  carried into the next day and into that workout …".
+
+## Dock "Coach" / Coach Hub, the travelling red, stress kept in mind, a warm coach — branch session/dockhub
+
+CACHE `bunyan-v192`. Owner, 2 Nov.
+- **Dock**: the planning tab is "Coach" (الكوتش), its page "Coach Hub" (مركز الكوتش). The red is one shape
+  (`.dock-hl`) under the buttons (js/ui/dock.js moveHl): on a change of tab it eases from the old button
+  to the new one, following the new one as it opens into its pill, and lands on it; reduced motion, it is
+  simply there. The open tab's own fill is transparent.
+- **Stress** ("I set stress to high so it lowered the volume, but afterwards it shows 'Some muscles get
+  little training' … it should remember … and schedule a follow-up"): js/engine/stress.js. High stress or
+  sleep under 6 h keeps the week light on purpose; while it does, the plan check's vol-low, the coach's
+  "under" insight and the weekly check-in's "under your range" stay quiet (too much is still flagged).
+  profile.stressAt is the day it was said (assessment); the coach asks again after 28 days (the
+  textbook reassesses assessment answers "monthly or quarterly", assessments.js protocol · reassess) or
+  when told "It's better now". A Coach card says it is light on purpose and when it will ask; the
+  follow-up asks stress (and sleep, if that was the reason), one tap: no longer the reason → stressAt
+  cleared and the built week rebuilt, with Undo; still high → asked again in four weeks.
+- **Chat**: the coach's indexes (knowledge search ~265 ms cold, answer bank ~48, phrases, food and
+  exercise names) are built when the chat panel is bound, a piece per idle moment (warmCoach); the
+  first question no longer waits 60–100 ms before the message leaves the box (the intermittent
+  "no message flying from the box").
+- Tests: "Dock: the red travels …", "Stress said high: …"; the dock label test reads Coach/الكوتش; the
+  light-theme dock test reads the red off the travelling shape; the Arabic figures test no longer needs
+  the week strip's fraction (gone with the day bar).

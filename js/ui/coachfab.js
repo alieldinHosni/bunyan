@@ -19,7 +19,7 @@ import {addDays, weekStartOf} from "../engine/schedule.js";
 import {V} from "./view.js";
 import {glyph} from "./glyphs.js";
 import {patch, replace} from "./patch.js";
-import {ASK, askNext, bubble, chatShown, histLink, liveAt, pruneChat} from "./views/chat.js";
+import {ASK, askNext, bubble, chatShown, histLink, liveAt, pruneChat, warmCoach} from "./views/chat.js";
 
 /* What to offer first, by where it was opened. Only questions the coach answers. */
 var SUGGEST={train:["today","weights","tomorrow"],workout:["busy","weights","sore"],food:["rest","eat","protein"],
@@ -190,6 +190,7 @@ var GROW_AFTER=480,slowGrow=false,growT=0;
 function touchPhone(){try{return matchMedia("(pointer: coarse)").matches;}catch(e){return false;}}
 function bindPanel(grow){
   var pan=document.getElementById("cpanel");if(!pan)return;
+  warmCoach();
   pan.addEventListener("focusin",function(e){
     if(!grow||!e.target||e.target.id!=="chatq"||V.coach!=="compact"||!touchPhone())return;
     clearTimeout(growT);

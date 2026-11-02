@@ -497,7 +497,7 @@ await test("library growth: plyometrics, holds, drills and stretches load; kinds
 /* ---- the Training page, Coach's sections, and the workout bar ----------------------- */
 await test("Training opens on today with no sections; Coach's sections switch and are remembered after a reload",async page=>{
   await tapTab(page,"train");await pause(page);
-  if(!(await page.$('.twk'))||!(await page.$('[data-startday]')))throw new Error("Training has no week strip or start");
+  if(!(await page.$('.dnav-card'))||!(await page.$('[data-startday]')))throw new Error("Training has no day bar or start");
   eq(await page.$$eval('#app .tsecs,#app [data-tsec]',a=>a.length),0,"no sections on Training");
   await coach(page,"train","program");
   if(!(await page.$('.bsched'))||!(await page.$('.drows [data-day]')))throw new Error("My program is not the builder");
@@ -517,14 +517,15 @@ await test("Back goes up one level: a day to My program, a template to Programs"
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.train,V.ctsub,!!document.querySelector('.tprog-card')]"),["days","programs",true],"template → Programs");
 });
-await test("week strip: a tapped day shows its plan, today returns to now",async page=>{
+await test("Training's day bar: the next day shows its plan, Back to today returns to now",async page=>{
   await tapTab(page,"train");await pause(page);
-  /* The week's row (the month folded under it is the calendar's, not tapped here). */
-  eq(await page.$$eval('.twk-r .twk-d',a=>a.length),7);
-  const other=await page.$eval('.twk-r .twk-d:not(.today)',b=>b.getAttribute("data-tweek"));
-  await page.tap('.twk-r .twk-d[data-tweek="'+other+'"]');await pause(page);
-  eq(await ev(page,"[V.tdate,document.querySelector('.twk-r .twk-d.sel').getAttribute('data-tweek')]"),[other,other]);
-  await page.tap('.twk-r .twk-d.today');await pause(page);
+  if(await page.$('.twk'))throw new Error("the old week strip is still there");
+  await page.tap('.dnav-card [data-dday="1"]');await pause(page);
+  const tm=await page.evaluate(async()=>{const U=await import("/js/util.js");const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()+1);
+    return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);});
+  eq(await ev(page,"V.tdate"),tm,"tomorrow: Train looks ahead");
+  if(await page.$eval('.dnav-card [data-dday="1"]',b=>b.disabled))throw new Error("the days after today are closed on Train");
+  await page.tap('.dnav-back');await pause(page);
   eq(await ev(page,"V.tdate"),null);
 });
 await test("My program edits the active program in place",async page=>{
@@ -562,7 +563,8 @@ await test("the week starts on Saturday everywhere, and the setting moves it",as
     const f=sc.weekStartOf(u.today());return [sc.isoWeekday(f),sc.weekDates(u.today()).length,st.weeklyVolume().from===f,sc.spreadWd(3),sc.weekOrder()[6]];});
   eq(r,[6,7,true,[6,1,3],5],"Saturday first, Friday last and free");
   await tapTab(page,"train");await pause(page);
-  eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");return sc.isoWeekday(document.querySelector('.twk-d').getAttribute('data-tweek'));}),6,"strip opens on Saturday");
+  eq(await page.evaluate(()=>{const g=document.querySelector('.dnav-card .dbgrid'),kids=[...g.children].filter(e=>!e.classList.contains("dbwk"));
+    const lead=kids.findIndex(e=>e.classList.contains("dbday")),d1=new Date(new Date().getFullYear(),new Date().getMonth(),1).getDay()||7;return (d1-lead+7)%7||7;}),6,"the month opens on Saturday");
   await tapTab(page,"profile");await pause(page);await page.tap('[data-sheet="set_app"]');await pause(page);
   await page.tap('[data-wkstart="7"]');await pause(page);
   eq(await ev(page,"S.prefs.wkstart"),7,"then Sunday");
@@ -642,7 +644,8 @@ await test("Training: opens the app, one reminder at most, today's card, weigh-i
   eq(await page.$$eval('.hnote',a=>a.length)<=1,true,"one reminder");
   if(!(await page.$('#app .thero2 [data-startday]')))throw new Error("no today card");
   eq(await page.$$eval('#app .htile',a=>a.map(e=>["weight","steps"].filter(c=>e.classList.contains(c))[0])),["weight","steps"],"weigh-in and steps");
-  eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");return sc.isoWeekday(document.querySelector('.twk-d').getAttribute('data-tweek'));}),6,"Saturday first");
+  eq(await page.evaluate(()=>{const g=document.querySelector('.dnav-card .dbgrid'),kids=[...g.children].filter(e=>!e.classList.contains("dbwk"));
+    const lead=kids.findIndex(e=>e.classList.contains("dbday")),d1=new Date(new Date().getFullYear(),new Date().getMonth(),1).getDay()||7;return (d1-lead+7)%7||7;}),6,"Saturday first");
   await tapTab(page,"food");await pause(page);
   const w0=await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;});
   await page.tap('.fwater-add');await pause(page);
@@ -773,7 +776,9 @@ await test("Arabic: the dock keeps its order, dates are Arabic, figures stay one
   eq([r.dir,r.dock,r.leftToRight,r.first],["rtl","ltr",true,"train"],"dock");
   if(!/[\u0600-\u06FF]/.test(r.date)||/[A-Za-z]/.test(r.date))throw new Error("date not Arabic: "+r.date);
   if(/[\u0660-\u0669]/.test(r.date))throw new Error("Arabic-Indic digits in date: "+r.date);
-  if(!r.runs.some(x=>/^\d[\d,]* \/ \d/.test(x)))throw new Error("no isolated fraction among "+JSON.stringify(r.runs));
+  /* Figures are isolated runs, and none has Arabic letters cut into it. (The week's "2 / 4"
+     went with the week strip, 2 Nov: Training's day bar has no fraction.) */
+  if(!r.runs.length||r.runs.some(x=>/[\u0600-\u06FF]/.test(x)))throw new Error("figures not isolated: "+JSON.stringify(r.runs));
 },{prefs:{lang:"ar"}});
 await test("Arabic: template program and day names are shown in Arabic, fractions keep their slash",async page=>{
   await coach(page,"train","program");await pause(page,200);
@@ -790,7 +795,10 @@ await test("Arabic: template program and day names are shown in Arabic, fraction
 /* On accent-deep since token-requests.md §3 (owner, 20 Oct): Glacier Blue on Machine Red was 3.27:1. */
 /* Red is red on navy since 26 Oct: white on Signal Red (#E7172E), 4.6:1. */
 await test("Light: the open tab reads on the dark dock: white on Signal Red",async page=>{
-  const c=await page.$eval('nav .dock-b.on',e=>[getComputedStyle(e).color,getComputedStyle(e).backgroundColor]);
+  /* The red is the shape that travels between tabs (js/ui/dock.js), under the open tab. */
+  await pause(page,600);
+  const c=await page.evaluate(()=>{const b=document.querySelector('nav .dock-b.on'),h=document.querySelector('nav .dock-hl'),rb=b.getBoundingClientRect(),rh=h.getBoundingClientRect();
+    return [getComputedStyle(b).color,Math.abs(rb.left-rh.left)<1.5&&Math.abs(rb.width-rh.width)<1.5?getComputedStyle(h).backgroundColor:"not under the tab"];});
   eq(c,["rgb(255, 255, 255)","rgb(231, 23, 46)"]);
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"red"}});
 await test("One place for each thing: the assessment in Coach AI only, how you feel asked when a workout starts, nothing of it on Profile",async page=>{
@@ -1008,7 +1016,8 @@ await test("Themes: Sage light, as the reference: white type on the ground, deep
   /* The dock is the reference's: a slate bar, white buttons, the open tab a white pill
      (once its change of tab, --m-tab, has played). */
   await pause(page,500);
-  eq(await page.$eval(".dock-b.on",e=>getComputedStyle(e).backgroundColor),"rgb(255, 255, 255)","the open tab");
+  /* The pill is the shape that travels between tabs (js/ui/dock.js), under the open one. */
+  eq(await page.$eval("nav .dock-hl",e=>getComputedStyle(e).backgroundColor),"rgb(255, 255, 255)","the open tab");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
 await test("Themes: the stylesheet names no colour outside the theme blocks",async page=>{
   const bad=await page.evaluate(async()=>{
@@ -2211,12 +2220,51 @@ await test("Dock: the workout bar takes the dock's place while it is away, and s
   eq(await ev(page,"V.tab"),"train");
 },{prefs:{anim:true}});
 /* ---- the good parts of an outside proposal, built in ---------------------------------- */
+await test("Stress said high: the week stays light and nothing asks for more volume; the coach says when it will ask again, asks then (or when told it's better), and rebuilds the week",async page=>{
+  const setUp=async(daysAgo)=>page.evaluate(async(daysAgo)=>{
+    const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),P=await import("/js/engine/plan.js");
+    const d=new Date(U.today()+"T00:00:00Z");d.setUTCDate(d.getUTCDate()-daysAgo);
+    Object.assign(S.profile,{goal:"recomp",level:"advanced",days:5,wd:[],mins:60,stress:"high",sleep:8,stressAt:d.toISOString().slice(0,10)});
+    S.programs=[];S.activeProgram=null;P.buildPlan();st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.assess=false;V.stressAsk=false;V.tab="coach";V.csec="ai";S.prefs.csec="ai";(await import("/js/ui/render.js")).render();},daysAgo);
+  await setUp(3);await pause(page,300);
+  const txt=await page.textContent('#app');
+  if(/Some muscles get little training/.test(txt))throw new Error("asks for more volume on a week kept light on purpose");
+  if(!/Kept light on purpose/.test(txt)||!/I'll ask again on/.test(txt))throw new Error("does not say the week is light on purpose, or when it will ask");
+  eq(await page.evaluate(async()=>{const C=await import("/js/engine/plancheck.js");return C.checkPlans().some(f=>f.id==="vol-low");}),false,"the plan check agrees");
+  await page.tap('[data-stressask]');await pause(page,300);
+  if(!(await page.$('[data-stressnow="stress|normal"]')))throw new Error("no question after It's better now");
+  const before=await ev(page,"S.activeProgram");
+  await page.tap('[data-stressnow="stress|normal"]');await pause(page,400);
+  eq(await ev(page,"[S.profile.stress,S.profile.stressAt===undefined,S.activeProgram!==\""+before+"\",!!document.querySelector('.stresscard')]"),["normal",true,true,false],"better: kept, the week built again, the card gone");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[S.profile.stress,S.activeProgram===\""+before+"\"]"),["high",true],"Undo puts it back");
+  /* Four weeks on: the question comes by itself. */
+  await setUp(29);await pause(page,300);
+  if(!/How are you now\?/.test(await page.textContent('.stresscard')))throw new Error("the follow-up is not asked after four weeks");
+  await page.tap('[data-stressnow="stress|high"]');await pause(page,300);
+  eq(await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");return [st.S.profile.stressAt===U.today(),/Kept light on purpose/.test(document.querySelector('.stresscard').textContent)];}),[true,true],"still high: asked again in four weeks");
+});
+await test("Dock: the red travels from the tab left to the tab tapped, and lands on it",async page=>{
+  await tapTab(page,"train");await pause(page,700);
+  const at=()=>page.evaluate(()=>{const h=document.querySelector("nav .dock-hl").getBoundingClientRect();return Math.round(h.left+h.width/2);});
+  const mid=t=>page.evaluate(t=>{const b=document.querySelector('nav .dock-b[data-tab="'+t+'"]').getBoundingClientRect();return Math.round(b.left+b.width/2);},t);
+  const a=await at(),trainMid=await mid("train");
+  if(Math.abs(a-trainMid)>3)throw new Error("not on Training to begin with");
+  await page.tap('nav .dock-b[data-tab="progress"]');
+  const half=await page.evaluate(()=>new Promise(r=>setTimeout(()=>{const h=document.querySelector("nav .dock-hl").getBoundingClientRect();r(Math.round(h.left+h.width/2));},140)));
+  await pause(page,700);
+  const end=await at(),progMid=await mid("progress");
+  if(!(half>a+10&&half<progMid-10))throw new Error("not on its way: "+a+" → "+half+" → "+end+" (Progress at "+progMid+")");
+  if(Math.abs(end-progMid)>3)throw new Error("did not land on Progress: "+end+" vs "+progMid);
+  eq(await page.$eval('nav .dock-b[data-tab="train"]',b=>getComputedStyle(b).backgroundColor!=="rgba(0, 0, 0, 0)"),true,"Training is a plain circle again");
+},{prefs:{anim:true}});
 await test("Dock: every tab is labelled, in English and Arabic, and the label starts its accessible name",async page=>{
   const lab=()=>page.$$eval("nav .dock-b",a=>a.map(b=>[b.querySelector(".dock-l").textContent,b.getAttribute("aria-label").indexOf(b.querySelector(".dock-l").textContent)===0]));
-  /* The planning tab is "Plan"; the coach itself floats (js/ui/coachfab.js). */
-  eq(await lab(),[["Train",true],["Food",true],["Plan",true],["Progress",true]],"English");
+  /* The planning tab is "Coach" (owner, 2 Nov), its page "Coach Hub"; the chat floats (js/ui/coachfab.js). */
+  eq(await lab(),[["Train",true],["Food",true],["Coach",true],["Progress",true]],"English");
   await page.evaluate(async()=>{(await import("/js/state.js")).S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});await pause(page);
-  eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الخطة","التقدم"],"Arabic");
+  eq((await lab()).map(x=>x[0]),["التمرين","الأكل","الكوتش","التقدم"],"Arabic");
 });
 await test("Dock: round tabs; the one that is on opens into a pill with its name, uncut in either language, even on a small phone",async page=>{
   const st=()=>page.evaluate(()=>[...document.querySelectorAll("nav .dock-b")].map(b=>{const l=b.querySelector(".dock-l"),r=b.getBoundingClientRect();
@@ -3352,39 +3400,58 @@ await test("Chat, iPhone keyboard closed with Done: the panel glides once to its
     Object.defineProperty(fake,"offsetTop",{get(){return fake._t;}});
     Object.defineProperty(fake,"width",{get(){return innerWidth;}});
     Object.defineProperty(window,"visualViewport",{get(){return fake;},configurable:true});}});
-await test("Training calendar: the ⌄ or a held press opens the week into the month and back; months either side; a past day shows below; Today comes back",async page=>{
+await test("A missed day: moved to a free day with rest either side, or its key lift carried into the next day and into that workout; each with Undo, offered once",async page=>{
+  const setUp=async(full)=>page.evaluate(async(full)=>{
+    const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sc=await import("/js/engine/schedule.js"),Sp=await import("/js/data/splits.js");
+    const now=U.today(),add=n=>{const d=new Date(now+"T00:00:00");d.setDate(d.getDate()+n);return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+    /* The week starts two days ago, so yesterday is always in it. */
+    S.prefs.wkstart=Sc.isoWeekday(add(-2));
+    const PULL=[Sp.ex("Bent Over Barbell Row",3,8,12),Sp.ex("Wide-Grip Lat Pulldown",3,8,12)],PUSH=[Sp.ex("Barbell Bench Press - Medium Grip",3,8,12),Sp.ex("Standing Military Press",3,8,12)],
+          LEGS=[Sp.ex("Barbell Squat",3,8,12),Sp.ex("Romanian Deadlift",3,8,12)];
+    const days=[Sp.day("Pull",PULL)],wd=n=>[Sc.isoWeekday(add(n))];
+    days[0].wd=wd(-1);
+    if(full){[[0,"Push",PUSH],[1,"Legs",LEGS],[2,"Push",PUSH],[3,"Legs",LEGS],[4,"Push",PUSH],[-2,"Legs",LEGS]].forEach(([n,nm,ex])=>{const d=Sp.day(nm,JSON.parse(JSON.stringify(ex)));d.wd=wd(n);days.push(d);});}
+    else{const d=Sp.day("Push",PUSH);d.wd=wd(1);days.push(d);const l=Sp.day("Legs",LEGS);l.wd=wd(3);days.push(l);}
+    const p=st.makeProgram({id:"miss",name:"Mine",days:days});p.schedule="week";
+    days.forEach((d,i)=>{p.days[i].wd=d.wd;});
+    S.programs=[p];S.activeProgram=p.id;S.sessions=[];S.daySwap={};delete S.dayAdd;delete S.missedDone;S.profile.mins=90;st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.assess=false;V.tab="train";V.train="days";V.tdate=null;(await import("/js/ui/render.js")).render();},full);
+  await setUp(false);await pause(page,300);
+  const c1=await page.textContent('#app');
+  if(!/You missed Pull on/.test(c1)||!(await page.$('[data-missdo="move"]')))throw new Error("no offer to move the missed day: "+c1.slice(0,400));
+  await page.tap('[data-missdo="move"]');await pause(page,300);
+  eq(await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");const sp=st.split();return [sp.days.find(d=>d.id===st.S.daySwap[U.today()]).name,document.querySelector('.thero2-n').textContent];}),["Pull","Pull"],"moved to today, a free day with no back work either side");
+  if(await page.$('[data-missdo]'))throw new Error("offered again after it was dealt with");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[Object.keys(S.daySwap||{}).length,!!document.querySelector('[data-missdo=\"move\"]')]"),[0,true],"Undo: back as it was, and offered again");
+  /* Every day of the week taken: the row goes into today's Push, two sets, and into its workout. */
+  await setUp(true);await pause(page,300);
+  if(!(await page.$('[data-missdo="fold"]')))throw new Error("no offer to carry the key lift: "+(await page.textContent('#app')).slice(0,400));
+  if(!/Bent Over Barbell Row, 2 sets, today/.test(await page.textContent('.reco')))throw new Error("the lift and its sets not named");
+  await page.tap('[data-missdo="fold"]');await pause(page,300);
+  if(!/plus Bent Over Barbell Row from a missed day/.test(await page.textContent('.thero2')))throw new Error("today's card does not say what was carried");
+  await page.tap('.thero2 [data-startday]');await pause(page,500);
+  eq(await ev(page,"S.active.entries.map(e=>[e.name,e.planned.sets])"),[["Barbell Bench Press - Medium Grip",3],["Standing Military Press",3],["Bent Over Barbell Row",2]],"the workout carries it");
+  /* Arabic. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;delete st.S.missedDone;delete st.S.dayAdd;st.S.prefs.lang="ar";(await import("/js/i18n/exnames.js")).applyLang();(await import("/js/ui/render.js")).render();});
+  await pause(page,300);
+  if(!/فاتك/.test(await page.textContent('.reco')))throw new Error("not in Arabic");
+});
+await test("Training calendar: Food's day bar; the month unfolds inside the bar's own card, a dot for a day trained, a ring for one planned; a past day shows below",async page=>{
   await tapTab(page,"train");await pause(page,300);
-  eq(await page.$$eval('.twk.cal .twk-today',a=>a.length),0,"on today, no Today button");
-  await page.tap('[data-calopen]');await pause(page,800);
-  eq(await page.evaluate(()=>[document.querySelector(".twk.cal").classList.contains("open"),document.querySelector("[data-calopen]").getAttribute("aria-expanded"),document.querySelector(".twk-fold").hasAttribute("inert")]),[true,"true",true],"open: the month, the week folded away");
-  const mh=await page.$eval('.twk-mo',e=>e.getBoundingClientRect().height);if(mh<200)throw new Error("the month did not unfold: "+mh);
-  const m0=await page.$eval('.twk-mt strong',e=>e.textContent);
-  await page.tap('[data-calm="-1"]');await pause(page,300);
-  if(await page.$eval('.twk-mt strong',e=>e.textContent)===m0)throw new Error("the month did not change");
-  eq(await page.$$eval('.twk.cal .twk-today',a=>a.length),1,"another month: Today offered");
-  /* A past training day (the seed's sessions are every third day) shows in the card below. */
-  const past=await page.evaluate(()=>{const b=[...document.querySelectorAll(".twk-mo .dbday.trained")].pop();return b&&b.getAttribute("data-tweek");});
-  if(!past)throw new Error("no training day ticked in the month before");
-  await page.tap('.twk-mo [data-tweek="'+past+'"]');await pause(page,400);
-  eq(await ev(page,"V.tdate"),past,"the day picked is the one shown below");
+  eq(await page.$$eval('#app .dnav-card',a=>a.length),1,"one bar, Food's");
+  await page.tap('.dnav-card [data-dopen]');await pause(page,800);
+  const g=await page.evaluate(()=>{const c=document.querySelector(".dnav-card"),f=c.querySelector(".dbfold"),cal=f&&f.querySelector(".dbcal");
+    return [c.classList.contains("open"),!!f&&f.parentElement===c,f.getBoundingClientRect().height>200,getComputedStyle(cal).backgroundColor==="rgba(0, 0, 0, 0)",
+      parseFloat(getComputedStyle(cal).borderTopWidth)>0,Math.round(c.getBoundingClientRect().bottom)===Math.round(f.getBoundingClientRect().bottom)+1];});
+  eq(g,[true,true,true,true,true,true],"open: the month inside the bar's card, under a hairline, no card of its own");
+  eq(await page.evaluate(()=>!!document.querySelector(".dnav-card .dbday .dbdot.p")),true,"planned days ringed");
+  await page.tap('.dnav-card [data-dmonth="-1"]');await pause(page,300);
+  const past=await page.evaluate(()=>{const b=[...document.querySelectorAll(".dnav-card .dbday.trained")].pop();return b&&b.getAttribute("data-dpick");});
+  if(!past)throw new Error("no training day dotted in the month before");
+  await page.tap('.dnav-card [data-dpick="'+past+'"]');await pause(page,700);
+  eq(await page.evaluate(async()=>[(await import("/js/ui/view.js")).V.tdate,document.querySelector(".dnav-card").classList.contains("open")]),[past,false],"the day picked, the month folded back into the bar");
   if(!(await page.$('.thero2 [data-openday="'+past+'"]')))throw new Error("its session is not offered below");
-  await page.tap('[data-caltoday]');await pause(page,400);
-  eq(await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,U=await import("/js/util.js");return [V.tdate,document.querySelector(".twk-mt strong").textContent,!!document.querySelector(".twk-today"),!!document.querySelector('.twk-mo .dbday.today.sel[data-tweek="'+U.today()+'"]')];}),
-    [null,m0,false,true],"Today: today picked, its month shown, the button gone");
-  /* Held: folds back; the day under the finger is not picked by it. */
-  const d=await page.$('.twk-mo .dbday:not(.today)');const box=await d.boundingBox();
-  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX:x,clientY:y,pointerType:"touch",isPrimary:true}));},[box.x+box.width/2,box.y+box.height/2]);
-  await pause(page,650);
-  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,clientX:x,clientY:y,pointerType:"touch"}));el.click();},[box.x+box.width/2,box.y+box.height/2]);
-  await pause(page,800);
-  eq(await page.evaluate(async()=>[document.querySelector(".twk.cal").classList.contains("open"),(await import("/js/ui/view.js")).V.tdate]),[false,null],"held: back to the week, and no day picked by the hold");
-  /* And held on the week opens it. */
-  const w=await (await page.$('.twk-r .twk-d')).boundingBox();
-  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX:x,clientY:y,pointerType:"touch",isPrimary:true}));},[w.x+w.width/2,w.y+w.height/2]);
-  await pause(page,650);
-  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,clientX:x,clientY:y,pointerType:"touch"}));},[w.x+w.width/2,w.y+w.height/2]);
-  await pause(page,800);
-  eq(await page.$eval('.twk.cal',e=>e.classList.contains("open")),true,"held on the week: the month");
 },{prefs:{anim:true}});
 await test("Food's calendar unfolds at an easy pace under the date bar and folds back; a day picked folds it away",async page=>{
   await tapTab(page,"food");await pause(page,400);
@@ -3908,7 +3975,7 @@ await test("Progress: the controls carry icons, the halves are a figure with the
   const keep=await page.$('.pghalf');await page.tap('[data-phalf="lower"]');await pause(page);
   eq(await page.$eval('[data-phalf="lower"]',e=>e.getAttribute("aria-pressed")),"true","Lower chosen");
   eq(await keep.evaluate(e=>e.isConnected),true,"the control is kept, not rebuilt");
-  eq(await page.$eval('.dock-b[data-tab="coach"] svg path',e=>e.getAttribute("d").startsWith("M6.2 15.2")),true,"Plan's icon is the brain");
+  eq(await page.$eval('.dock-b[data-tab="coach"] svg path',e=>e.getAttribute("d").startsWith("M6.2 15.2")),true,"Coach's icon is the brain");
 });
 await test("Progress: training volume over a month is capsule bars, the newest in the accent with its figure",async page=>{
   await tapTab(page,"progress");await pause(page);
@@ -3924,11 +3991,13 @@ await test("Progress: training volume over a month is capsule bars, the newest i
 });
 await test("Coach AI: this week's gauge agrees with Training's week; Ask me anything opens the chat ready to type; each plan tile opens its part",async page=>{
   await tapTab(page,"train");await pause(page);
-  const wk=await page.$eval('.twk-h b',e=>e.textContent.match(/(\d+) \/ (\d+)/).slice(1).map(Number));
+  const wk=await page.evaluate(async()=>{const st=await import("/js/state.js"),D=await import("/js/engine/dayplan.js"),Sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js");
+    const sp=st.split(),now=U.today();let done=0,plan=0;
+    Sc.weekDates(now).forEach(iso=>{const d=D.planOn(sp,iso);if(d.kind==="done")done++;if(d.kind==="done"||(d.kind!=="past"&&!d.rest&&d.kind!=="none"))plan++;});return [done,plan];});
   await coach(page,"ai");
   const g=await page.evaluate(()=>({v:document.querySelector(".cweek-gv b").textContent,w:document.querySelector(".cweek-st b").textContent,
     on:document.querySelectorAll(".cweek-svg line.on").length,dot:!!document.querySelector(".cweek-svg .dot")}));
-  eq(g.w,wk[0]+"/"+wk[1],"the same workouts as Training's week");
+  eq(g.w,wk[0]+"/"+wk[1],"the same workouts as the plan's week");
   eq(g.v,wk[1]?Math.round(wk[0]/wk[1]*100)+"%":"—","the share");
   if(wk[0]&&!g.on)throw new Error("no ticks filled");
   await page.tap('#cfab .cfab');await pause(page,400);await page.focus('#chatq');

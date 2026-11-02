@@ -64,7 +64,9 @@ function weekInitials(){
 
 /* The month grid, folded under the bar until it is opened. Past and today are
    pickable everywhere; the future only where the screen plans ahead (Train). */
-function monthGrid(sel,monthOffset,future){
+/* mark(iso) → {t, p, lbl}: a screen's own marks (Train: a day trained, a day planned,
+   and how to say it); without one, the log's (trained, food logged). */
+function monthGrid(sel,monthOffset,future,mark){
   var base=new Date();base.setDate(1);base.setMonth(base.getMonth()+(monthOffset||0));
   var y=base.getFullYear(),m=base.getMonth();
   var first=((new Date(y,m,1).getDay()||7)-weekStart()+7)%7,days=new Date(y,m+1,0).getDate();
@@ -78,7 +80,8 @@ function monthGrid(sel,monthOffset,future){
   for(var i=0;i<first;i++)h+='<div></div>';
   for(var d=1;d<=days;d++){
     var iso=y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
-    var mk=marks[iso]||0, trained=mk&TRAINED, ate=mk&ATE;
+    var mk=marks[iso]||0, trained=mk&TRAINED, ate=mk&ATE, own=mark?mark(iso):null, plan=false;
+    if(own){trained=!!own.t;ate=false;plan=!own.t&&!!own.p;}
     var cls="dbday";
     if(trained)cls+=" trained";
     if(iso===now)cls+=" today";
@@ -86,10 +89,10 @@ function monthGrid(sel,monthOffset,future){
     var off=!future&&iso>now;
     /* Picking a day folds the month away and scopes the screen. */
     h+='<button class="'+cls+'" data-dpick="'+iso+'"'+(off?' disabled':'')
-     +' aria-label="'+dfmt(new Date(iso+"T00:00:00"),{weekday:"long",day:"numeric",month:"long"})
-     +(trained?", "+t("trained"):"")+(ate?", "+t("food logged"):"")+'"'
+     +' aria-label="'+esc(own&&own.lbl?own.lbl:dfmt(new Date(iso+"T00:00:00"),{weekday:"long",day:"numeric",month:"long"})
+     +(trained?", "+t("trained"):"")+(ate?", "+t("food logged"):""))+'"'
      +(iso===sel?' aria-current="date"':'')+'>'+d
-     +(trained||ate?'<span class="dbdot'+(trained?' t':'')+'" aria-hidden="true"></span>':'')+'</button>';}
+     +(trained||ate||plan?'<span class="dbdot'+(trained?' t':plan?' p':'')+'" aria-hidden="true"></span>':'')+'</button>';}
   return h+'</div></div>';
 }
 
@@ -105,6 +108,11 @@ function monthGrid(sel,monthOffset,future){
    o.kicker       a small label above the date ("Workout plan")
    o.note         what the day holds, in place of "Today" on the second line
    o.art          the Bunyan horse drawn into the right of the surface
+   o.mark         the month's marks, for a screen with its own (see monthGrid)
+
+   The bar and its month are one card (owner, 2 Nov: "when it expands, it expands
+   from the calendar bar body, not as a separate full calendar"): the month unfolds
+   inside the bar's own surface, under a hairline, and folds back into it.
 
    The date text is keyed by the date, so a change replaces it and its short slide
    plays in the direction the day moved (V.dnavDir). The surface itself stays put.
@@ -120,7 +128,8 @@ function dateBar(o){
   var dir=V.dnavDir>0?" fwd":V.dnavDir<0?" back":"";
   var full=dfmt(d,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   return '<div class="dnav-wrap" data-k="dnav-wrap">'
-   +'<div class="dnav'+(isToday?' now':'')+(o.art?' art':'')+'" data-swipe="day">'
+   +'<div class="dnav-card'+(isToday?' now':'')+(o.open?' open':'')+'">'
+   +'<div class="dnav'+(o.art?' art':'')+'" data-swipe="day">'
    +(o.art?markArt("dnav-art"):'')
    +'<button class="dnav-arrow" data-dday="-1" aria-label="'+t("Previous day")+'">'+CHEV_L+'</button>'
    +'<button class="dnav-mid" data-dopen="1" aria-expanded="'+(o.open?"true":"false")+'"'
@@ -132,12 +141,13 @@ function dateBar(o){
    +'<button class="dnav-arrow" data-dday="1"'+(nextOff?' disabled':'')
    +' aria-label="'+t("Next day")+'">'+CHEV_R+'</button>'
    +'</div>'
-   +(isToday?'':'<button class="dnav-back" data-dday="0">'+BACK+'<span>'+t("Back to today")+'</span></button>')
    /* The month is always in the page, folded to nothing until the bar is opened, so it
       unfolds slowly and folds back the same way (owner, 28 Oct: "no animations … need to
       be slow and smooth"), rather than appearing and vanishing. Folded, it is inert. */
    +'<div class="dbfold'+(o.open?' open':'')+'"'+(o.open?'':' inert aria-hidden="true"')+'><div class="dbfold-in">'
-   +monthGrid(sel,o.monthOffset,o.future)+'</div></div>'
+   +monthGrid(sel,o.monthOffset,o.future,o.mark)+'</div></div>'
+   +'</div>'
+   +(isToday?'':'<button class="dnav-back" data-dday="0">'+BACK+'<span>'+t("Back to today")+'</span></button>')
    +'</div>';
 }
 

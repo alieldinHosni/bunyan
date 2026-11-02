@@ -8,6 +8,7 @@ import {buildMealPlan} from "../../engine/mealplan.js";
 import {FOODDB, loadFoods, ownFood} from "../../engine/nutrition.js";
 import {buildPlan, rebalance} from "../../engine/plan.js";
 import {checkinOpen} from "../../engine/checkin.js";
+import {lightOnPurpose} from "../../engine/stress.js";
 import {weekStartOf} from "../../engine/schedule.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {t} from "../../i18n/dict.js";
@@ -205,6 +206,22 @@ function register(){
   on(function(D){return D.assplit&&V.asd;},function(D){V.asd.split=D.assplit;render();return;});
   key("asuse",function(){useAssessment();return;});
   key("ckdo",function(D){ckApply(D.ckdo);return;});
+  /* The stress follow-up (views/coach.js stressCard): what they say now is kept; when it
+     is no longer the reason for a light week, the week built for them is built again,
+     with Undo; still high, the coach asks again in four weeks. */
+  key("stressask",function(){V.stressAsk=true;render();return;});
+  key("stressnow",function(D){var ps=D.stressnow.split("|"),f=ps[0],v=ps[1];
+    var before=JSON.parse(JSON.stringify({profile:S.profile,programs:S.programs,activeProgram:S.activeProgram}));
+    if(f==="stress")S.profile.stress=v;else S.profile.sleep=num(v);
+    var msg;
+    if(lightOnPurpose(S.profile)){S.profile.stressAt=today();
+      msg=t("Noted. Your week stays light; I'll ask again in four weeks.");}
+    else{delete S.profile.stressAt;V.stressAsk=false;
+      var sp=split(),built=sp&&sp.from==="built";
+      if(built)buildPlan();
+      msg=t(built?"Good to hear. Your week is built again for full recovery.":"Good to hear. The volume checks are back on.");}
+    saveDB();render();
+    toast(msg,function(){S.profile=before.profile;S.programs=before.programs;S.activeProgram=before.activeProgram;saveDB();render();});return;});
   key("ckok",function(){S.ckDone=weekStartOf(today());saveDB();render();return;});
   key("astrain",function(){V.assess=false;V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tdate=null;render();window.scrollTo(0,0);return;});
   key("asfood",function(){V.assess=false;V.pcheck=false;resetNav();V.tab="food";V.train="days";V.fdate=null;render();window.scrollTo(0,0);return;});
