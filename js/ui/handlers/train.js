@@ -121,7 +121,9 @@ function register(){
     V.twkBase=addDaysISO(ws,7*n);if(V.twkBase===weekStartOf(today())&&!V.tdate)V.twkBase=null;V.wkDir=n;render();return;});
   key("wktoday",function(){V.tdate=null;V.twkBase=null;V.tcal=false;V.wkDir=0;render();return;});
   key("wkopen",function(){V.tcal=!V.tcal;
-    var ws=V.twkBase||weekStartOf(V.tdate||today()),a=new Date(ws+"T00:00:00"),b=new Date();
+    /* The month of the day chosen, or of the middle of the week shown when paged away. */
+    var sel=V.tdate||today(),ws=V.twkBase||weekStartOf(sel),on=sel>=ws&&sel<=addDaysISO(ws,6)?sel:addDaysISO(ws,3),
+      a=new Date(on+"T00:00:00"),b=new Date();
     V.cal=(a.getFullYear()-b.getFullYear())*12+a.getMonth()-b.getMonth();render();return;});
   key("missdo",function(D){missApply(D.missdo);return;});
   key("missok",function(){var r=missedNow();if(!r)return;
