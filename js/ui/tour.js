@@ -21,13 +21,13 @@ var GUIDES={
   train:{name:"Training",steps:[
     {sel:'.hacts [data-csec="ai"]',h:"What the coach noticed",p:"The bell opens what your coach has spotted in your log. A dot on it means there is something to look at."},
     {sel:".hacts .havatar",h:"You",p:"Your picture opens Profile: your details, your picture, the app's settings and your backups."},
-    {sel:".twk",h:"Your week",p:"Every day of this week. A tick is a workout done. Tap a day to see what it holds."},
+    {sel:".dnav-card",h:"Your days",p:"Swipe or tap the arrows to see another day and what it holds. Tap the date for the month: a dot is a workout done, a ring one planned."},
     {sel:".thero2",h:"Today's workout",p:"Start it here. Change swaps today for another day of your plan."},
     {sel:".htiles",h:"Weigh-in and steps",p:"Tap either one to log it, and type the number. The ring fills toward your daily steps goal."},
     {sel:"[data-actsheet]",h:"Cardio and sports",p:"Log a match or a class by time and effort. Pick a run, a walk, a ride or a hike to track it live with your phone's GPS."},
     {sel:"nav .dock",fixed:true,h:"Getting around",p:"Training, Food, Coach and Progress. The tab you are on opens to show its name."}]},
   food:{name:"Food",steps:[
-    {sel:".dnav",h:"The day",p:"Swipe or tap the arrows to see another day. Food always opens on today."},
+    {sel:".dnav-card",h:"The day",p:"Swipe or tap the arrows to see another day. Food always opens on today."},
     {sel:".fsum",h:"Today against your targets",p:"Calories eaten and left, and protein, carbs and fat, against what your plan asks for."},
     {sel:".fmt",h:"Your meals",p:"Tap a meal to see it, log it as planned, or change any food's amount."},
     {sel:"[data-addfood]",h:"Add food",p:"Search the food list, scan a barcode, or describe a meal in words."},

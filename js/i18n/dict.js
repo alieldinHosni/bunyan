@@ -1249,6 +1249,8 @@ var AR={"Most of {a} lands on {m}, trained {w}. They need a rest day between har
 "Stretches for what you trained": "إطالات للعضلات اللي اتمرنت",
 "A few minutes": "دقايق قليلة",
 "Let's build your plan": "يلا نعمل خطتك",
+"Your days": "أيامك",
+"Swipe or tap the arrows to see another day and what it holds. Tap the date for the month: a dot is a workout done, a ring one planned.": "اسحب أو دوس على الأسهم تشوف يوم تاني وفيه إيه. دوس على التاريخ تشوف الشهر: النقطة تمرين اتعمل، والدايرة تمرين مخطط.",
 "Short questions about you, your goal, your week, what you want to bring up and your food. From them: your daily targets, a training week built for you with the right volume and effort, and a meal plan from foods you eat.": "أسئلة قصيرة عنك وعن هدفك وأسبوعك والعضلات اللي عايز تكبّرها وأكلك. ومنهم: أهدافك اليومية، وأسبوع تمرين متبني ليك بالحجم والمجهود المناسبين، وخطة أكل من الأكل اللي بتاكله.",
 "Normal": "عادي",
 "Days that are fixed (optional)": "أيام ثابتة (اختياري)",

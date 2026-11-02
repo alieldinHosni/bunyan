@@ -25,7 +25,7 @@ import {vTImport} from "./timport.js";
 import {doseText, weeksText} from "../dose.js";
 import {estMinutes, planOn} from "../../engine/dayplan.js";
 import {swapAdvice} from "../../engine/recovery.js";
-import {CHEV_L, CHEV_R, weekInitials} from "../datebar.js";
+import {dateBar} from "../datebar.js";
 import {paceOf, routePath, speedOf} from "../../engine/run.js";
 import {groundFor, mapSeed} from "../runmap.js";
 import {bodyTiles, trainTop} from "./home.js";
@@ -143,7 +143,7 @@ function vTrainHome(){
   if(V.train!=="days"&&V.train!=="hub")V.train="days";
   h+=trainTop();
   if(S.active)h+=resumeHero();
-  else{var pd=planOn(sp,sel);h+=weekStrip(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);}
+  else{var pd=planOn(sp,sel);h+=trainBar(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);}
   if(!S.active)h+=blockCard();
   h+=deloadCard()+travelCard();
   h+=bodyTiles();
@@ -209,61 +209,16 @@ function trainSub(){
 function dayState(sp,iso){
   var p=planOn(sp,iso),st=p.kind==="done"?"done":p.kind==="past"?"past":(p.rest||p.kind==="none")?"rest":"plan";
   return {p:p,st:st,lbl:pretty(iso)+", "+t({done:"Done",past:"Nothing logged",rest:"Rest day",plan:"Planned"}[st])+(p.name&&st!=="rest"&&st!=="past"?", "+planName(p.name):"")};}
-function dayBtn(iso,d,sel,now,attr,cls){
-  return '<button class="twk-d '+d.st+(iso===now?' today':'')+(iso===sel?' sel':'')+(cls||"")+'" data-'+(attr||"tweek")+'="'+iso+'" aria-pressed="'+(iso===sel)+'" aria-label="'+esc(d.lbl)+'">'
-   +(cls?'':'<span class="twk-w">'+esc(wdName(isoWeekday(iso)))+'</span>')
-   +'<span class="twk-n">'+new Date(iso+"T00:00:00").getDate()+'</span>'
-   +'<i aria-hidden="true">'+(d.st==="done"?TICKSVG:'')+'</i></button>';}
-/* The week, and folded under it the month (owner, 28 Oct: "a small return to today
-   button, … expand with slow animation when I tap and hold to see the whole calendar and
-   check training days from past weeks"). Held (js/ui/calhold.js) or its ⌄, the week
-   gives way to the month, any month back; a day there shows in the card below as a day
-   of the week does. Today comes back with one tap from wherever it was left. Both are
-   always in the page, one folded to nothing, so the change is a glide, not a swap. */
-var CHEV='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9.5l6 6 6-6"/></svg>';
-function monthOf(iso){return iso.slice(0,7);}
-function weekStrip(sp,sel,attr){
-  var now=today(),done=0,plan=0,h="",open=!!V.calOpen&&!attr;
-  weekDates(now).forEach(function(iso){
-    var d=dayState(sp,iso);
-    if(d.st==="done")done++;if(d.st==="done"||d.st==="plan")plan++;
-    h+=dayBtn(iso,d,sel,now,attr);});
-  if(attr)return '<div class="twk"><div class="twk-h"><span class="klabel dim">'+t("This week")+'</span>'
-   +'<b>'+done+' / '+plan+' '+t("done")+'</b></div><div class="twk-r" role="group" aria-label="'+esc(t("This week"))+'">'+h+'</div></div>';
-  var cm=V.calM||monthOf(sel),away=sel!==now||(open&&cm!==monthOf(now));
-  return '<div class="twk cal'+(open?' open':'')+'" data-k="twk">'
-   +'<div class="twk-h"><span class="klabel dim">'+t(open?"Training calendar":"This week")+'</span>'
-   +'<span class="twk-ha">'
-   +(away?'<button class="twk-today" data-caltoday="1">'+t("Today")+'</button>':'')
-   +(open?'':'<b>'+done+' / '+plan+' '+t("done")+'</b>')
-   +'<button class="twk-x" data-calopen="1" aria-expanded="'+open+'" aria-label="'+esc(t(open?"Back to this week":"See the whole month"))+'">'+CHEV+'</button>'
-   +'</span></div>'
-   +'<div class="twk-fold"'+(open?' inert':'')+'><div class="twk-in"><div class="twk-r" role="group" aria-label="'+esc(t("This week"))+'">'+h+'</div></div></div>'
-   +'<div class="twk-mo"'+(open?'':' inert aria-hidden="true"')+'><div class="twk-in">'+monthGrid(sp,cm,sel,now)+'</div></div>'
-   +'</div>';}
-/* A month, in Food's calendar's own look (owner, 2 Nov: "make the calendar in the
-   training page look like the one in food"): the same day cells, round arrows and
-   initials (js/ui/datebar.js, .dbcal), only this month's days. A day trained carries a
-   filled dot, one planned a ring; a tap shows it in the card below. */
-function monthGrid(sp,cm,sel,now){
-  var first=cm+"-01",d0=new Date(first+"T00:00:00"),n=0;
-  var lead=((d0.getDay()||7)-isoWeekday(weekStartOf(first))+7)%7,len=new Date(d0.getFullYear(),d0.getMonth()+1,0).getDate();
-  var cells="";
-  weekInitials().forEach(function(w){cells+='<div class="dbwk" aria-hidden="true">'+esc(w)+'</div>';});
-  for(var i=0;i<lead;i++)cells+='<div></div>';
-  for(var k=1;k<=len;k++){
-    var iso=cm+"-"+String(k).padStart(2,"0"),d=dayState(sp,iso);
-    if(d.st==="done")n++;
-    cells+='<button class="dbday'+(d.st==="done"?' trained':'')+(iso===now?' today':'')+(iso===sel?' sel':'')+'" data-tweek="'+iso+'"'
-     +' aria-pressed="'+(iso===sel)+'" aria-label="'+esc(d.lbl)+'"'+(iso===sel?' aria-current="date"':'')+'>'+k
-     +(d.st==="done"?'<span class="dbdot t" aria-hidden="true"></span>':d.st==="plan"?'<span class="dbdot p" aria-hidden="true"></span>':'')+'</button>';}
-  var name=dfmt(d0,{month:"long",year:"numeric"});
-  return '<div class="dbcal twk-cal"><div class="dbcal-h">'
-   +'<button class="dnav-arrow sm" data-calm="-1" aria-label="'+esc(t("Previous month"))+'">'+CHEV_L+'</button>'
-   +'<div class="twk-mt"><strong aria-live="polite">'+esc(name)+'</strong><span><span class="num">'+n+'</span> '+esc(t(n===1?"session":"sessions"))+'</span></div>'
-   +'<button class="dnav-arrow sm" data-calm="1" aria-label="'+esc(t("Next month"))+'">'+CHEV_R+'</button></div>'
-   +'<div class="dbgrid" role="group" aria-label="'+esc(name)+'">'+cells+'</div></div>';}
-var TICKSVG='<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>';
+/* The day navigator, Food's own (js/ui/datebar.js; owner, 2 Nov: "I meant all the
+   calendar to look like this one, and when it expands, it expands from the calendar bar
+   body"): the arrows, the day, what it holds, and the month unfolding inside the bar,
+   with a filled dot for a day trained and a ring for one planned. Train looks ahead, so
+   the days after today are open. */
+function trainBar(sp,sel){
+  var d=dayState(sp,sel),p=d.p,nm=p.name?planName(p.name):"";
+  var note=d.st==="done"?(nm?nm+" · ":"")+t("Done"):d.st==="plan"?nm:d.st==="rest"?t("Rest day"):t("Nothing logged");
+  return dateBar({date:sel,open:V.tcal,monthOffset:V.cal,future:true,note:note,
+    mark:function(iso){var x=dayState(sp,iso);return {t:x.st==="done",p:x.st==="plan",lbl:x.lbl};}});}
 
 /* Coach → Training → Programs: a new one from scratch, one brought in from a coach's
    PDF, every program you own, and the templates. (Letting Bunyan build it is Coach AI's
@@ -685,4 +640,4 @@ function vDay(){
   h+='</div>';
   return h;}
 
-export {builderBody, dayHero, exercisesPage, exHay, programsPage, resumeHero, trainSub, vTrain, wdName, weekOffer, weekStrip};
+export {builderBody, dayHero, exercisesPage, exHay, programsPage, resumeHero, trainSub, vTrain, wdName, weekOffer};

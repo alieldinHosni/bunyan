@@ -497,7 +497,7 @@ await test("library growth: plyometrics, holds, drills and stretches load; kinds
 /* ---- the Training page, Coach's sections, and the workout bar ----------------------- */
 await test("Training opens on today with no sections; Coach's sections switch and are remembered after a reload",async page=>{
   await tapTab(page,"train");await pause(page);
-  if(!(await page.$('.twk'))||!(await page.$('[data-startday]')))throw new Error("Training has no week strip or start");
+  if(!(await page.$('.dnav-card'))||!(await page.$('[data-startday]')))throw new Error("Training has no day bar or start");
   eq(await page.$$eval('#app .tsecs,#app [data-tsec]',a=>a.length),0,"no sections on Training");
   await coach(page,"train","program");
   if(!(await page.$('.bsched'))||!(await page.$('.drows [data-day]')))throw new Error("My program is not the builder");
@@ -517,14 +517,15 @@ await test("Back goes up one level: a day to My program, a template to Programs"
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.train,V.ctsub,!!document.querySelector('.tprog-card')]"),["days","programs",true],"template → Programs");
 });
-await test("week strip: a tapped day shows its plan, today returns to now",async page=>{
+await test("Training's day bar: the next day shows its plan, Back to today returns to now",async page=>{
   await tapTab(page,"train");await pause(page);
-  /* The week's row (the month folded under it is the calendar's, not tapped here). */
-  eq(await page.$$eval('.twk-r .twk-d',a=>a.length),7);
-  const other=await page.$eval('.twk-r .twk-d:not(.today)',b=>b.getAttribute("data-tweek"));
-  await page.tap('.twk-r .twk-d[data-tweek="'+other+'"]');await pause(page);
-  eq(await ev(page,"[V.tdate,document.querySelector('.twk-r .twk-d.sel').getAttribute('data-tweek')]"),[other,other]);
-  await page.tap('.twk-r .twk-d.today');await pause(page);
+  if(await page.$('.twk'))throw new Error("the old week strip is still there");
+  await page.tap('.dnav-card [data-dday="1"]');await pause(page);
+  const tm=await page.evaluate(async()=>{const U=await import("/js/util.js");const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()+1);
+    return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);});
+  eq(await ev(page,"V.tdate"),tm,"tomorrow: Train looks ahead");
+  if(await page.$eval('.dnav-card [data-dday="1"]',b=>b.disabled))throw new Error("the days after today are closed on Train");
+  await page.tap('.dnav-back');await pause(page);
   eq(await ev(page,"V.tdate"),null);
 });
 await test("My program edits the active program in place",async page=>{
@@ -562,7 +563,8 @@ await test("the week starts on Saturday everywhere, and the setting moves it",as
     const f=sc.weekStartOf(u.today());return [sc.isoWeekday(f),sc.weekDates(u.today()).length,st.weeklyVolume().from===f,sc.spreadWd(3),sc.weekOrder()[6]];});
   eq(r,[6,7,true,[6,1,3],5],"Saturday first, Friday last and free");
   await tapTab(page,"train");await pause(page);
-  eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");return sc.isoWeekday(document.querySelector('.twk-d').getAttribute('data-tweek'));}),6,"strip opens on Saturday");
+  eq(await page.evaluate(()=>{const g=document.querySelector('.dnav-card .dbgrid'),kids=[...g.children].filter(e=>!e.classList.contains("dbwk"));
+    const lead=kids.findIndex(e=>e.classList.contains("dbday")),d1=new Date(new Date().getFullYear(),new Date().getMonth(),1).getDay()||7;return (d1-lead+7)%7||7;}),6,"the month opens on Saturday");
   await tapTab(page,"profile");await pause(page);await page.tap('[data-sheet="set_app"]');await pause(page);
   await page.tap('[data-wkstart="7"]');await pause(page);
   eq(await ev(page,"S.prefs.wkstart"),7,"then Sunday");
@@ -642,7 +644,8 @@ await test("Training: opens the app, one reminder at most, today's card, weigh-i
   eq(await page.$$eval('.hnote',a=>a.length)<=1,true,"one reminder");
   if(!(await page.$('#app .thero2 [data-startday]')))throw new Error("no today card");
   eq(await page.$$eval('#app .htile',a=>a.map(e=>["weight","steps"].filter(c=>e.classList.contains(c))[0])),["weight","steps"],"weigh-in and steps");
-  eq(await page.evaluate(async()=>{const sc=await import("/js/engine/schedule.js");return sc.isoWeekday(document.querySelector('.twk-d').getAttribute('data-tweek'));}),6,"Saturday first");
+  eq(await page.evaluate(()=>{const g=document.querySelector('.dnav-card .dbgrid'),kids=[...g.children].filter(e=>!e.classList.contains("dbwk"));
+    const lead=kids.findIndex(e=>e.classList.contains("dbday")),d1=new Date(new Date().getFullYear(),new Date().getMonth(),1).getDay()||7;return (d1-lead+7)%7||7;}),6,"Saturday first");
   await tapTab(page,"food");await pause(page);
   const w0=await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;});
   await page.tap('.fwater-add');await pause(page);
@@ -3285,39 +3288,21 @@ await test("Chat, iPhone keyboard closed with Done: the panel glides once to its
     Object.defineProperty(fake,"offsetTop",{get(){return fake._t;}});
     Object.defineProperty(fake,"width",{get(){return innerWidth;}});
     Object.defineProperty(window,"visualViewport",{get(){return fake;},configurable:true});}});
-await test("Training calendar: the ⌄ or a held press opens the week into the month and back; months either side; a past day shows below; Today comes back",async page=>{
+await test("Training calendar: Food's day bar; the month unfolds inside the bar's own card, a dot for a day trained, a ring for one planned; a past day shows below",async page=>{
   await tapTab(page,"train");await pause(page,300);
-  eq(await page.$$eval('.twk.cal .twk-today',a=>a.length),0,"on today, no Today button");
-  await page.tap('[data-calopen]');await pause(page,800);
-  eq(await page.evaluate(()=>[document.querySelector(".twk.cal").classList.contains("open"),document.querySelector("[data-calopen]").getAttribute("aria-expanded"),document.querySelector(".twk-fold").hasAttribute("inert")]),[true,"true",true],"open: the month, the week folded away");
-  const mh=await page.$eval('.twk-mo',e=>e.getBoundingClientRect().height);if(mh<200)throw new Error("the month did not unfold: "+mh);
-  const m0=await page.$eval('.twk-mt strong',e=>e.textContent);
-  await page.tap('[data-calm="-1"]');await pause(page,300);
-  if(await page.$eval('.twk-mt strong',e=>e.textContent)===m0)throw new Error("the month did not change");
-  eq(await page.$$eval('.twk.cal .twk-today',a=>a.length),1,"another month: Today offered");
-  /* A past training day (the seed's sessions are every third day) shows in the card below. */
-  const past=await page.evaluate(()=>{const b=[...document.querySelectorAll(".twk-mo .dbday.trained")].pop();return b&&b.getAttribute("data-tweek");});
-  if(!past)throw new Error("no training day ticked in the month before");
-  await page.tap('.twk-mo [data-tweek="'+past+'"]');await pause(page,400);
-  eq(await ev(page,"V.tdate"),past,"the day picked is the one shown below");
+  eq(await page.$$eval('#app .dnav-card',a=>a.length),1,"one bar, Food's");
+  await page.tap('.dnav-card [data-dopen]');await pause(page,800);
+  const g=await page.evaluate(()=>{const c=document.querySelector(".dnav-card"),f=c.querySelector(".dbfold"),cal=f&&f.querySelector(".dbcal");
+    return [c.classList.contains("open"),!!f&&f.parentElement===c,f.getBoundingClientRect().height>200,getComputedStyle(cal).backgroundColor==="rgba(0, 0, 0, 0)",
+      parseFloat(getComputedStyle(cal).borderTopWidth)>0,Math.round(c.getBoundingClientRect().bottom)===Math.round(f.getBoundingClientRect().bottom)+1];});
+  eq(g,[true,true,true,true,true,true],"open: the month inside the bar's card, under a hairline, no card of its own");
+  eq(await page.evaluate(()=>!!document.querySelector(".dnav-card .dbday .dbdot.p")),true,"planned days ringed");
+  await page.tap('.dnav-card [data-dmonth="-1"]');await pause(page,300);
+  const past=await page.evaluate(()=>{const b=[...document.querySelectorAll(".dnav-card .dbday.trained")].pop();return b&&b.getAttribute("data-dpick");});
+  if(!past)throw new Error("no training day dotted in the month before");
+  await page.tap('.dnav-card [data-dpick="'+past+'"]');await pause(page,700);
+  eq(await page.evaluate(async()=>[(await import("/js/ui/view.js")).V.tdate,document.querySelector(".dnav-card").classList.contains("open")]),[past,false],"the day picked, the month folded back into the bar");
   if(!(await page.$('.thero2 [data-openday="'+past+'"]')))throw new Error("its session is not offered below");
-  await page.tap('[data-caltoday]');await pause(page,400);
-  eq(await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,U=await import("/js/util.js");return [V.tdate,document.querySelector(".twk-mt strong").textContent,!!document.querySelector(".twk-today"),!!document.querySelector('.twk-mo .dbday.today.sel[data-tweek="'+U.today()+'"]')];}),
-    [null,m0,false,true],"Today: today picked, its month shown, the button gone");
-  /* Held: folds back; the day under the finger is not picked by it. */
-  const d=await page.$('.twk-mo .dbday:not(.today)');const box=await d.boundingBox();
-  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX:x,clientY:y,pointerType:"touch",isPrimary:true}));},[box.x+box.width/2,box.y+box.height/2]);
-  await pause(page,650);
-  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,clientX:x,clientY:y,pointerType:"touch"}));el.click();},[box.x+box.width/2,box.y+box.height/2]);
-  await pause(page,800);
-  eq(await page.evaluate(async()=>[document.querySelector(".twk.cal").classList.contains("open"),(await import("/js/ui/view.js")).V.tdate]),[false,null],"held: back to the week, and no day picked by the hold");
-  /* And held on the week opens it. */
-  const w=await (await page.$('.twk-r .twk-d')).boundingBox();
-  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerdown",{bubbles:true,clientX:x,clientY:y,pointerType:"touch",isPrimary:true}));},[w.x+w.width/2,w.y+w.height/2]);
-  await pause(page,650);
-  await page.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);el.dispatchEvent(new PointerEvent("pointerup",{bubbles:true,clientX:x,clientY:y,pointerType:"touch"}));},[w.x+w.width/2,w.y+w.height/2]);
-  await pause(page,800);
-  eq(await page.$eval('.twk.cal',e=>e.classList.contains("open")),true,"held on the week: the month");
 },{prefs:{anim:true}});
 await test("Food's calendar unfolds at an easy pace under the date bar and folds back; a day picked folds it away",async page=>{
   await tapTab(page,"food");await pause(page,400);
@@ -3857,11 +3842,13 @@ await test("Progress: training volume over a month is capsule bars, the newest i
 });
 await test("Coach AI: this week's gauge agrees with Training's week; Ask me anything opens the chat ready to type; each plan tile opens its part",async page=>{
   await tapTab(page,"train");await pause(page);
-  const wk=await page.$eval('.twk-h b',e=>e.textContent.match(/(\d+) \/ (\d+)/).slice(1).map(Number));
+  const wk=await page.evaluate(async()=>{const st=await import("/js/state.js"),D=await import("/js/engine/dayplan.js"),Sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js");
+    const sp=st.split(),now=U.today();let done=0,plan=0;
+    Sc.weekDates(now).forEach(iso=>{const d=D.planOn(sp,iso);if(d.kind==="done")done++;if(d.kind==="done"||(d.kind!=="past"&&!d.rest&&d.kind!=="none"))plan++;});return [done,plan];});
   await coach(page,"ai");
   const g=await page.evaluate(()=>({v:document.querySelector(".cweek-gv b").textContent,w:document.querySelector(".cweek-st b").textContent,
     on:document.querySelectorAll(".cweek-svg line.on").length,dot:!!document.querySelector(".cweek-svg .dot")}));
-  eq(g.w,wk[0]+"/"+wk[1],"the same workouts as Training's week");
+  eq(g.w,wk[0]+"/"+wk[1],"the same workouts as the plan's week");
   eq(g.v,wk[1]?Math.round(wk[0]/wk[1]*100)+"%":"—","the share");
   if(wk[0]&&!g.on)throw new Error("no ticks filled");
   await page.tap('#cfab .cfab');await pause(page,400);await page.focus('#chatq');

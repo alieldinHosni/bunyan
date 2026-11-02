@@ -2813,3 +2813,23 @@ input and assessment, which you can change if it doesn't collect all the needed 
   new "Assessment: fixed days set the week, stress and short sleep lower the volume …" (EN + Arabic RTL).
 - Not changed: the assessment's chips still re-render the screen (as they did before this branch);
   that is against the innerHTML rule and is left for its own change rather than widened here.
+
+## One calendar: Food's day bar on Training too, the month unfolding inside the bar — branch session/datebar
+
+Owner, 2 Nov (screenshots of Food's bar, then of its month as a separate card under it): "I meant all the
+calendar to look like this one, and when it expands, it expands from the calendar bar body, not as a
+separate full calendar".
+- **js/ui/datebar.js**: the bar and its month are one card (`.dnav-card`, carrying the surface, the
+  today accent and the shadow that `.dnav` had); the month (`.dbfold` → `.dbcal`) unfolds inside it under
+  a hairline, with no card of its own (`.dnav-card .dbcal`), so the bar's own body grows and folds back.
+  "Back to today" sits under the card. New `o.mark(iso) → {t, p, lbl}` for a screen's own marks.
+- **Training**: the week strip and its separate month (and the press-and-hold, js/ui/calhold.js, and its
+  handlers tweek/calopen/calm/caltoday) are gone; Training uses the same dateBar (future days open), its
+  second line saying what the day holds (the plan's day, "Done", "Rest day", "Nothing logged"), its
+  month a dot for a day trained and a ring for one planned (ring 6 px so it reads as a ring). The shell's
+  dday/dopen/dmonth/dpick handlers already served Train (V.tdate, V.tcal).
+- The guide's Training tip now points at the bar; the light theme's glass list names .dnav-card.
+- Tests updated: Training opens with the bar; "Training's day bar: the next day …"; the week-starts-on-
+  Saturday checks read the month's first column; the Training calendar test checks the month is inside
+  the bar's card under a hairline with no card of its own, rings for planned days, a past day picked folds
+  it back; Coach AI's gauge is checked against the plan's week.
