@@ -203,6 +203,14 @@ function warmupFor(entries,ctx){
   if(!w.moving)return null;
   var gear=ctx.gear||null;
   var names={};(entries||[]).forEach(function(e){names[e.name]=1;});
+  /* The squat check's corrective work (engine/corrective.js), in the book's order: roll,
+     stretch, wake up. It comes before the moving drills, and a drill it already holds is
+     not given twice. */
+  var fix=[];
+  if(ctx.fix){
+    [["roll",ctx.fix.inhibit],["stretch",ctx.fix.lengthen],["wake",ctx.fix.activate]].forEach(function(g){
+      (g[1]||[]).forEach(function(x){if(!have(x.name,gear)||names[x.name])return;names[x.name]=1;
+        fix.push({name:x.name,kind:g[0],n:x.n||0,sec:x.sec||0,side:!!x.side});});});}
   var lower=w.moves.some(function(m){return LOWER_MOVE[m];}),
       upper=w.moves.some(function(m){return UPPER_MOVE[m];});
   var acts=(entries||[]).filter(function(e){return isActivity(e.name);});
@@ -246,9 +254,10 @@ function warmupFor(entries,ctx){
     else if(muscleOf(n)!==muscleOf(ramp.name))more++;}
 
   /* The ramp-up sets happen at the bar, as part of the first lift: not counted here. */
-  var mins=(runDay?5:4)+Math.round(drills.length*0.75);
+  var fixS=fix.reduce(function(n,x){return n+(x.sec||x.n*3)*(x.side?2:1)+10;},0);
+  var mins=(runDay?5:4)+Math.round(drills.length*0.75)+Math.round(fixS/60);
   return {focus:w.ranked.slice(0,4),pulse:{min:runDay?5:4,how:runDay?"run":gear&&gear.indexOf("Machine")<0?"home":"gym"},
-          drills:drills,own:own>=2,ramp:ramp,moreLifts:more,min:mins};}
+          fix:fix,drills:drills,own:own>=2,ramp:ramp,moreLifts:more,min:mins};}
 
 function cooldownFor(entries,ctx){
   ctx=ctx||{};

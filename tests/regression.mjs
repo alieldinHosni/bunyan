@@ -1487,6 +1487,19 @@ await test("Warm-up: shown before the first exercise; ticks and a hold timer; St
   await page.tap('[data-wuskip]');await pause(page);
   eq(await ev(page,"[S.active.warm,!!document.querySelector('.wsc')]"),[0,true],"back to the work");
 },{prefs:{nowarm:false}});
+await test("Squat check: what was ticked opens every warm-up with roll, stretch and wake-up work for it, in the book's order; nothing on the floor with high blood pressure",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.profile.faults=["ohsa_knees_in","ohsa_low_back_arch"];(await import("/js/state.js")).saveDB();});
+  await startWorkout(page);
+  if(!(await page.$('.wu .wu-fix')))throw new Error("no corrective card");
+  const rows=await page.$$eval('.wu-fix .wu-row',a=>a.map(r=>[r.querySelector('.wu-n').textContent,r.querySelector('.wu-d').textContent]));
+  const kinds=rows.map(r=>r[1].split(" · ")[0]);
+  eq([kinds[0],kinds[kinds.length-1],kinds.indexOf("Stretch")>kinds.lastIndexOf("Roll")],["Roll","Wake up",true],"roll, then stretch, then wake up: "+JSON.stringify(rows));
+  const [step,drills]=await page.evaluate(()=>{const c=[...document.querySelectorAll('.wu-step')];return [c.findIndex(x=>x.classList.contains("wu-fix")),c.findIndex(x=>/Move what/.test(x.textContent))];});
+  eq(step>=0&&(step<drills||drills<0),true,"before the moving drills");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.profile.conds=["hypertension"];st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,300);
+  const fl=await page.$$eval('.wu-fix .wu-n',a=>a.map(e=>e.textContent));
+  eq(fl.some(n=>/SMR|Rolling|Bridge|Dead Bug|Child/i.test(n)),false,"nothing lying down: "+JSON.stringify(fl));
+},{prefs:{nowarm:false}});
 await test("Warm-up, quicker: the name ticks and the next comes into view; the pulse timer shows at the bottom only when its row is away; the ramp-up sets are on the lift as warm-ups, filled in",async page=>{
   await startWorkout(page);
   const first=await page.$$eval('.wu2 .wu-ex[data-wutick]:not([data-wutick="wp"])',a=>a[0].dataset.wutick);

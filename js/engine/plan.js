@@ -150,8 +150,9 @@ var AVOID={
 /* Lying on the back or front, for a health condition that rules it out (engine/
    conditions.js noFloor: high blood pressure, pregnancy past 12 weeks). An incline
    bench, a seat, standing or kneeling keeps the head above the heart; a decline or a
-   handstand puts it below, which the book singles out. */
-var FLOOR_ON=/Bench Press|Lying|Floor Press|Crunch|Sit-Up|Leg Raise|Bridge|Hip Thrust|Skull|Pullover|Dead Bug|Flye|Decline|Prone|Plank|Push-?Up|Superman|Hyperextension|Back Extension|Mountain Climber|Supine|Handstand/i,
+   handstand puts it below, which the book singles out. Rolling on the floor too (high
+   blood pressure: "floor foam rolling may be contraindicated"). */
+var FLOOR_ON=/-SMR|Child's Pose|Ball Leg Curl|Bench Press|Lying|Floor Press|Crunch|Sit-Up|Leg Raise|Bridge|Hip Thrust|Skull|Pullover|Dead Bug|Flye|Decline|Prone|Plank|Push-?Up|Superman|Hyperextension|Back Extension|Mountain Climber|Supine|Handstand/i,
     FLOOR_OFF=/Incline|Seated|Standing|Hanging|Kneeling|Cable|Machine|Captain|Vertical|Wall|Back Flyes - With Bands|Reverse Flyes|Front Leg Raises|Rear Leg Raises|Side Leg Raises|Gorilla|Sled/i;
 AVOID.floor={test:function(n){return FLOOR_ON.test(n)&&(!FLOOR_OFF.test(n)||/Decline|Handstand/i.test(n));}};
 /* What the plan works around: the sore spots they named, and what a condition rules out. */

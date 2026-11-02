@@ -3068,3 +3068,19 @@ complex system); plyometrics need 24 h between sessions, beginners 48–72 h (pl
 is used). coach/recovery.js readiness(…, o.novice): a muscle that jumped after a heavy lift for it, or a
 beginner's jumps, stays tired on the third day (LONG_DAYS=3). engine/recovery.js passes plyo (jump names),
 compound, and novice (level "new"). Swap confirm text names both rules. Coach tests added.
+
+## Squat check → corrective warm-up — same branch
+
+Item 3. Assessment (limits step): "A quick squat check (optional)" with how to do it (assessments.js
+overhead_squat, paraphrased) and seven faults (feet out, knees in, low back arches, chest drops forward, arms
+drift forward; shoulders shrug / head pokes forward when pressing or rowing). profile.faults, faultsAt.
+- js/engine/corrective.js correctiveFor(faults, {avoid, has}): imbalances.js MOVEMENT_FAULTS → overactive and
+  underactive muscles (ranked by how many faults name them) → the corrective continuum (corrective.js
+  SEQUENCE): roll (30 s), stretch (30 s), wake up (slow 12–20 or a hold). Two of each (the book's 1–3).
+  MAP muscle → library exercise is ours (named as such); muscles with no fitting exercise are left out; no
+  rolling over the lower back or neck (the book's warning). Lying-down versions swapped when a condition
+  rules them out (rolling on the floor included, per the hypertension guideline).
+- Warm-up (engine/warmup.js ctx.fix; views/warmup.js): "For your squat check" card before the moving drills,
+  each row "Roll / Stretch / Wake up · dose", with a Why fold; counted in the progress and the minutes.
+- exnames.js: "-SMR" entries display as "Foam roll · IT band" / "رول فوم · …".
+- Tests: engine corrective.test.js; regression "Squat check: …".

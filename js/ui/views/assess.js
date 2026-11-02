@@ -30,6 +30,7 @@ import {exThumb} from "../../data/exercises.js";
 import {doseText} from "../dose.js";
 import {glyph} from "../glyphs.js";
 import {condLines, CONDS_ASK, rulesFor} from "../../engine/conditions.js";
+import {FAULTS_ASK} from "../../engine/corrective.js";
 import {condCard} from "../dose.js";
 
 /* Equipment as a choice of three, and what each means in the equipment list. */
@@ -66,7 +67,7 @@ function draftFrom(){
   var p=S.profile||{},pr=S.prefs||{};
   return {step:0,sex:p.sex||"m",age:num(p.age)||"",height:num(p.height)||"",
     weight:lastWeight()||num(p.weight)||"",goal:GOALS[p.goal]?p.goal:"lose",level:LEVELS[p.level]?p.level:"some",
-    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),conds:(p.conds||[]).slice(),
+    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),conds:(p.conds||[]).slice(),faults:(p.faults||[]).slice(),
     meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",likes:(pr.likes||[]).slice(),
     sleep:num(p.sleep)||7.5,stress:p.stress||"normal",wd:(p.wd||[]).map(Number),focus:(p.focus||[]).slice(),
     nolift:NOLIFT.filter(function(n){return (S.skip||[]).indexOf(n)>=0;}),split:null,done:false};}
@@ -75,7 +76,7 @@ function draftFrom(){
 function profileOf(a){
   return {sex:a.sex,age:num(a.age),height:num(a.height),weight:num(a.weight),goal:a.goal,level:a.level,
     days:(a.wd||[]).length>=2?a.wd.length:num(a.days),mins:num(a.mins),job:a.job,activity:activityOf(a),limits:a.limits.slice(),
-    health:(a.health||[]).slice(),conds:(a.conds||[]).filter(function(c){return a.sex==="f"||!/^pregnancy/.test(c);}),sleep:num(a.sleep),stress:a.stress||"normal",
+    health:(a.health||[]).slice(),faults:(a.faults||[]).slice(),faultsAt:(a.faults||[]).length?today():null,conds:(a.conds||[]).filter(function(c){return a.sex==="f"||!/^pregnancy/.test(c);}),sleep:num(a.sleep),stress:a.stress||"normal",
     /* The day high stress or short sleep was said, for the coach's follow-up (js/engine/stress.js). */
     stressAt:a.stress==="high"||(num(a.sleep)>0&&num(a.sleep)<6)?today():null,
     wd:(a.wd||[]).length>=2?a.wd.map(Number).sort(function(x,y){return x-y;}):[],focus:(a.focus||[]).slice(0,FOCUS_MAX)};}
@@ -198,7 +199,13 @@ function body(a){
   else if(s==="limits"){
     h+=q(t("Anything to work around?"),t("A sore spot steers the plan away from what loads it. This is not a diagnosis: pain that lasts or is sharp deserves a physio."));
     h+=mchips("limits",LIMITS,a.limits);
-    h+='<p class="as-note">'+t(a.limits.length?"Leave these on only while they are a problem.":"Nothing selected: nothing is worked around.")+'</p>';}
+    h+='<p class="as-note">'+t(a.limits.length?"Leave these on only while they are a problem.":"Nothing selected: nothing is worked around.")+'</p>';
+    /* The overhead squat self-check (js/knowledge/assessments.js, 12.3): what they notice
+       maps to the muscles to calm and to wake (engine/corrective.js), in every warm-up. */
+    h+=lbl(t("A quick squat check (optional)"))
+     +'<p class="as-sub">'+esc(t("Barefoot, feet shoulder-width and pointing ahead, arms straight overhead. Squat to about chair height five times, in front of a mirror or filmed from the front and the side. Tick what you see."))+'</p>'
+     +mchips("faults",FAULTS_ASK,a.faults||[]);
+    if((a.faults||[]).length)h+='<p class="as-note">'+t("Your warm-up will open with a few minutes of work for these: release and stretch what is tight, then wake up what is weak.")+'</p>';}
   else if(s==="health"){
     h+=q(t("Your health"),t("The standard questions before starting a new programme. Tick any that apply to you."));
     h+=mchips("health",HEALTH,a.health||[]);
