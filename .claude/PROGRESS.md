@@ -2767,6 +2767,52 @@ and make the click to full calendar animate well, not too slow, or fast".
 - Tests: coach recovery.test.js (10); regression "Recovery: Pull trained yesterday, Pull due today …";
   calendar tests updated to the new cells and to "paced, not slow".
 
+## A week built for the person, not a template; a deeper assessment — branch session/builder
+
+CACHE `bunyan-v187`. Owner, 2 Nov: "the food and workout plan are not customized based on each person
+… you have ready templates, which shouldn't be the case; everything should be tailored to the user's
+input and assessment, which you can change if it doesn't collect all the needed info".
+- **js/engine/build.js** (pure; added to architecture's PURE list): buildWeek(p, gear, helpers).
+  1. Weekly hard sets per muscle from js/coach/landmarks.js RANGE for the experience: the middle for a
+     size goal, the bottom for other goals and whenever sleep is under 6 h or stress is high; one level
+     up for up to three priority muscles. Arms get half of their own (presses and rows give the rest);
+     calves and core 6 (8 if priority). Nothing here is a new figure: the range is the app's existing one.
+  2. Placement: push (chest/shoulders/triceps), pull (back/biceps) and legs are each placed as a unit
+     on as many days as their sets need (2–3; every day for ≤3 days, the whole body each session), with
+     every pair of a unit's days at least two apart round the week (the textbook's rest day between
+     sessions on the same muscles). Every combination is tried; the chosen one uses every day, keeps
+     the days' work even, and with four or more days does not mix an upper day with legs. Core goes
+     on the lightest days. Upper/Lower, Push/Pull/Legs or full body come out of that, not from a list.
+  3. Exercises: from the movements the app's own programs use (PRESETS' names), plus starred and
+     logged ones; nothing hidden, out of reach for the equipment, or loading a sore spot; no slams,
+     olympic lifts, strongman, jumps, mobility or conditioning; Nordic/glute-ham/pistol and the
+     library's Advanced only for experienced lifters; a deadlift is a leg day's hinge, a shrug is not
+     back work. Only when the equipment leaves a muscle under two kinds of movement does the wider
+     library (plain strength, beginner–intermediate) fill in. Starred +8, logged +4, in the pool +3.
+  4. Volume: each muscle gets the exercises its weekly sets still need after the half-sets earlier
+     muscles' exercises gave it (the same counting as volume.js), sets per exercise from doseFor so
+     the week is what the plan engine will hold; one exercise per muscle per day first, then more
+     while the session length (mins − 8 for the warm-up) has room, up to three per muscle per day. A
+     muscle the day's presses or rows already work gets an isolation exercise next (a raise, not a
+     second press). The priority muscles come first in their sessions.
+  plan.js: generatePlan() now builds this by default (id "built", schedule "week" on the given or
+  spread weekdays, plan.built = {targets, freq}); a preset id still gives that template, shaped as
+  before. Shoulders read high on the volume bars in most weeks: rows and presses count half a shoulder
+  set each under the app's counting, and the builder already gives shoulders a single raise a day.
+- **Assessment** (js/ui/views/assess.js, handlers/coach.js): a new step after "Where do you train":
+  muscles to bring up (up to three, cap enforced with a toast) and big lifts you won't do (merged
+  into S.skip on "Use this plan", and back out on Undo). The week step takes fixed weekdays (two or
+  more set the day count; picking a different count lets them go). The sleep step asks stress
+  (low / normal / high) and says what it changes. Profile now carries wd, focus and stress. The
+  result shows "Built for you" first, chosen, with why from what it was built on; the templates stay
+  as alternatives. Intro no longer counts the questions.
+- Arabic for every new string; "Built for you" and day letters D–F in exnames.
+- Tests: js/engine/test/build.test.js (7 profiles × rest rule, every day used, no odd movements, only
+  owned gear, session length, full body on ≤3 days; targets for focus, sleep and stress; hidden and
+  starred exercises; priority first). Regression: the first-run assessment test walks the new step;
+  new "Assessment: fixed days set the week, stress and short sleep lower the volume …" (EN + Arabic RTL).
+- Not changed: the assessment's chips still re-render the screen (as they did before this branch);
+  that is against the innerHTML rule and is left for its own change rather than widened here.
 ## Meals from your own food — branch session/ownmeals
 
 CACHE `bunyan-v188` (after session/builder's v187). Owner, 2 Nov: "Then start on the meals from my own

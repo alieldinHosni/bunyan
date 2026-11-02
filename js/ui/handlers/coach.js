@@ -18,7 +18,7 @@ import {pushNav, resetNav} from "../nav.js";
 import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
-import {draftFrom, foodPrefs, GEARS, profileOf, STEPS, youOk, youWhy} from "../views/assess.js";
+import {draftFrom, FOCUS_MAX, foodPrefs, GEARS, profileOf, skipOf, STEPS, youOk, youWhy} from "../views/assess.js";
 import {ask, findMsg, follow} from "../views/chat.js";
 import {coachAct} from "../views/pcheck.js";
 import {chatSend, sendText, slotsFrom, toCoach} from "./common.js";
@@ -46,11 +46,12 @@ function lastAsked(){var c=S.chat||[];return c[c.length-1]||null;}
    plan, all at once and all with one Undo. */
 function useAssessment(){
   var A=V.asd;if(!A)return;
-  var keys=["profile","prefs","gear","goals","programs","activeProgram","onboarded","plannedWeekly","body","mealSlots"];
+  var keys=["profile","prefs","gear","skip","goals","programs","activeProgram","onboarded","plannedWeekly","body","mealSlots"];
   var before=JSON.parse(JSON.stringify(keys.reduce(function(o,k){o[k]=S[k];return o;},{})));
   Object.assign(S.profile,profileOf(A));
   S.prefs.meals=num(A.meals);S.prefs.diet=A.diet;S.prefs.avoid=A.avoid.slice();S.prefs.powder=!!A.powder;S.prefs.fstyle=A.style;
   S.gear=GEARS[A.gear]?GEARS[A.gear].slice():null;
+  S.skip=skipOf(A);
   var bt=S.body.filter(function(b){return b.date===today();})[0];
   if(bt)bt.weight=S.profile.weight;else S.body.push({date:today(),weight:S.profile.weight});
   /* The assessment asks for a weight (youOk), so there are targets; if not, none are set. */
@@ -145,11 +146,20 @@ function register(){
   key("setup",function(){if(V.sheet)closeSheet();pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);return;});
   on(function(D){return D.as!==undefined&&V.asd;},function(D){var ap=D.as.split("|"),af=ap[0],av=ap[1];
     V.asd[af]=/^(days|mins|meals|sleep)$/.test(af)?num(av):af==="powder"?av==="1":av;
+    /* A number of days other than the fixed days picked lets the fixed days go. */
+    if(af==="days"&&(V.asd.wd||[]).length>=2&&V.asd.wd.length!==num(av))V.asd.wd=[];
     /* A different goal, level, week or kit can change which splits are on offer. */
     if(/^(goal|level|days|gear)$/.test(af))V.asd.split=null;
     render();return;});
-  on(function(D){return D.asm!==undefined&&V.asd;},function(D){var mp=D.asm.split("|"),ml=V.asd[mp[0]],mi=ml.indexOf(mp[1]);
-    if(mi>=0)ml.splice(mi,1);else ml.push(mp[1]);render();return;});
+  on(function(D){return D.asm!==undefined&&V.asd;},function(D){var mp=D.asm.split("|"),f=mp[0],v=f==="wd"?num(mp[1]):mp[1];
+    var ml=V.asd[f]||(V.asd[f]=[]),mi=ml.indexOf(v);
+    if(mi<0&&f==="focus"&&ml.length>=FOCUS_MAX){toast(t("Up to three. Take one off first."));return;}
+    if(mi>=0)ml.splice(mi,1);else ml.push(v);
+    /* Fixed days set how many: two or more picked are the week. */
+    if(f==="wd"&&ml.length>=2)V.asd.days=Math.min(6,ml.length);
+    if(f==="wd"&&ml.length>6){ml.splice(ml.indexOf(v),1);toast(t("Six days at most: keep one for rest."));return;}
+    if(f==="wd"||f==="nolift"||f==="focus")V.asd.split=null;
+    render();return;});
   on(function(D){return D.asnext&&V.asd;},function(){
     if(STEPS[V.asd.step]==="you"&&!youOk(V.asd)){toast(youWhy(V.asd));return;}
     V.asd.step=Math.min(STEPS.length-1,V.asd.step+1);render();window.scrollTo(0,0);
