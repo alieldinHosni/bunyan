@@ -2614,6 +2614,14 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
    label in the accent, then the figures; tiles for the targets, rows for the days and
    the meals that open in place, a bar per muscle in its own ink. */
 .as-ch{display:flex;align-items:center;gap:var(--s2);margin:0 0 var(--s2);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+/* A health condition's card (ui/dose.js condCard): which, and what the plan does about it. */
+.condcard{border-color:var(--accent-edge)}
+.cond-ids{margin-bottom:var(--s2)}
+.cond-ids .aschip{pointer-events:none;min-height:0;padding:5px var(--s3);font-size:12.5px}
+.cond-l{margin:0;padding-inline-start:var(--s4);display:grid;gap:6px;font-size:13.5px;line-height:1.45;color:var(--text)}
+.cond-fix{display:flex;flex-direction:column;gap:var(--s2);margin:0 0 var(--s3);padding:var(--s3);border-radius:var(--r3);background:var(--glass);border:1px solid var(--warning)}
+.cond-fix p{margin:0;font-size:13px;line-height:1.45;color:var(--text)}
+.cond-fix .btn{align-self:flex-start}
 .as-ch .gl{width:18px;height:18px;color:var(--accentHi)}
 .as-ch2{margin-top:var(--s4)}
 .as-kcal{display:flex;align-items:baseline;gap:6px}
@@ -3991,7 +3999,8 @@ body.wkflat #app{--gutter:20px}
 
 /* SetCard: the one thing to read at arm's length. */
 .wsc{display:grid;gap:var(--s3);padding:var(--s4);border-radius:var(--r5)}
-.sc-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);min-height:24px}
+.sc-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s2);min-height:24px}
+.sc-cond{flex-basis:100%;margin:0;font-size:12px;line-height:1.4;color:var(--sub)}
 .sg-tag{margin-inline-start:auto;padding:2px 10px;border-radius:var(--rpill);border:1px solid var(--border);
   color:var(--sub);font-size:12px;font-weight:700}
 .sg-tag[hidden]{display:none}

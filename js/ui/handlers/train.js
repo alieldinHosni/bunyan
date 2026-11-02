@@ -9,7 +9,7 @@ import {addDaysISO} from "../../engine/dayplan.js";
 import {spreadWd, suggestWd, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
 import {missedNow} from "../../engine/missed.js";
 import {dayOptions} from "../../engine/recovery.js";
-import {doseFor} from "../../engine/plan.js";
+import {conformProgram, doseFor} from "../../engine/plan.js";
 import {restartAfter, restartBlock} from "../../engine/blocks.js";
 import {t, tm} from "../../i18n/dict.js";
 import {exName, planName} from "../../i18n/exnames.js";
@@ -108,6 +108,11 @@ function register(){
       if(S.block){restartBlock(today());toast(t("A new training block starts today."));}}
     saveDB();render();return;});
   key("clearexq",function(){V.exq="";render();topOfResults();var qq=document.getElementById("exq");if(qq)qq.focus();return;});
+  /* My program brought into line with a health condition (views/train.js builderBody). */
+  key("condfix",function(D){var sp=editSplit(D.condfix);if(!sp)return;
+    var before=JSON.parse(JSON.stringify(sp.days)),ch=conformProgram(sp,S.profile,S.gear,false);
+    saveDB();render();
+    toast(t("Fitted to your health: {n} changes.").replace("{n}",ch.length),function(){sp.days=before;saveDB();render();});return;});
   key("swapday",function(D){openSheet("swapday",{date:D.swapday});return;});
   /* The coach's offer on a day due (views/train.js recoCard): the fresher day, or the
      planned one kept. Either is a decision, kept as the day's swap so it is not asked again. */

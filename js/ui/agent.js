@@ -18,7 +18,7 @@
 import {actKcal, actRate, isActivity} from "../data/activities.js";
 import {difficultyOf, exSteps, EXDB, isCompound as isCompoundName, isFav, LIB, movementOfEx, muscleOf as muscleOfName, MUSCLES, patternOf, pickable} from "../data/exercises.js";
 import {planOn} from "../engine/dayplan.js";
-import {avoids, doseFor, standIn, usable} from "../engine/plan.js";
+import {avoids, doseFor, standIn, usable, limitsOf} from "../engine/plan.js";
 import {goalOf} from "../data/goals.js";
 import {FOODDB, foodName, fuzzyFoods, gramsFor, nutritionFor, parseFoodInput, searchFoods} from "../engine/nutrition.js";
 import {mealName} from "../engine/meals.js";
@@ -232,7 +232,7 @@ function doseLine(z){return z.sets+" × "+(z.lo===z.hi?z.lo:z.lo+"–"+z.hi)+" �
    to a day, asking which, the same as "add … to …". */
 var SKILL=/Nordic|Pistol|Muscle[- ]Up|Handstand|One[- ]Arm Push|Planche|Dragon|Human Flag|Front Lever|Back Lever/i;
 function suggestExercises(muscle){
-  var p=S.profile||{},limits=p.limits||[],gear=S.gear,mine={};
+  var p=S.profile||{},limits=limitsOf(p),gear=S.gear,mine={};
   split().days.forEach(function(d){d.ex.forEach(function(e){mine[e.name]=1;});});
   var pool=LIB.filter(function(l){var n=l[0];
     return pickable(n)&&!isActivity(n)&&muscleOfName(n)===muscle&&usable(n,gear)&&!avoids(n,limits)&&!(p.level==="new"&&(SKILL.test(n)||/Advanced|Expert/.test(difficultyOf(n)||"")));})

@@ -2,7 +2,7 @@
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
 import {exIdOf, isBarbell, kindOf, LIB, muscleOf, muscleOfEntry, pickable} from "../data/exercises.js";
-import {doseFor, standIn, usable} from "../engine/plan.js";
+import {doseFor, standIn, usable, limitsOf} from "../engine/plan.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
 import {barKg, deloadSets, inDeload, recordsIn, avgRPE, prevPerf, progressionHint, recommend, sessionVolume} from "../engine/formulas.js";
@@ -208,8 +208,8 @@ function startDay(dayId){
       /* Travel mode: what needs kit left at home is swapped for the closest stand-in with
          the kit at hand, for this workout; the original stays a tap away (alt). */
       var tg=travelGear();
-      if(tg&&!isActivity(e.name)&&!usable(e.name,tg)){var ts=standIn(e.name,tg,(S.profile||{}).limits);if(ts){alt=e.name;altWhy="travel";nm=ts;}}
-      else if(!alt&&!isActivity(e.name)&&!pickable(e.name)){alt=standIn(e.name,S.gear,(S.profile||{}).limits)||null;if(alt)altWhy="gear";}
+      if(tg&&!isActivity(e.name)&&!usable(e.name,tg)){var ts=standIn(e.name,tg,limitsOf(S.profile));if(ts){alt=e.name;altWhy="travel";nm=ts;}}
+      else if(!alt&&!isActivity(e.name)&&!pickable(e.name)){alt=standIn(e.name,S.gear,limitsOf(S.profile))||null;if(alt)altWhy="gear";}
       if(nm!==e.name)return {name:nm,exId:exIdOf(nm),kind:kindOf(nm),muscle:muscleOf(nm),planned:pl,rest:e.rest,grp:e.grp||null,alt:alt,altWhy:altWhy,sets:[]};
       return {name:e.name,exId:e.exId||exIdOf(e.name),kind:e.timed&&!isActivity(e.name)?"timed":kindOf(e.name),muscle:muscleOfEntry(e),planned:pl,
               rest:e.rest,grp:e.grp||null,alt:alt,altWhy:altWhy||undefined,sets:[]};})};

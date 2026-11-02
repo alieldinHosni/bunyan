@@ -3038,3 +3038,23 @@ the muscles in my split and identify the next possible day from the load on each
   too soon; Best fit marked (rest when nothing fits, with a note why). Picking a day too soon asks first, with
   the rule (Train it anyway / Pick another / Cancel): the person decides.
 - Test: regression "Change workout judges each day against the muscles…" (full-body and upper/lower).
+
+## Health conditions shape the plan — branch session/conditions
+
+Owner, 2 Nov ("all, in order"): item 1 of the knowledge-base plan. CACHE `bunyan-v197`.
+- js/engine/conditions.js: rulesFor(profile) reads js/knowledge/conditions.js (chapter 23) for each condition
+  the person picked (profile.conds) and the age groups that follow from age (older adults 65+, youth <18):
+  reps (the narrowest range all agree on), sets max, strength days/week (said, never forced), no jumps, no
+  lying on the back or front (high blood pressure; pregnancy past 12 weeks), steady breathing (no Valsalva),
+  talk test (medication blunts heart rate), stand up slowly. No figure of our own: all read from the data.
+- Assessment (health step): "Do any of these apply?" — high blood pressure, heart disease, diabetes,
+  osteoporosis, arthritis, lung condition, PAD, cancer, pregnancy (first 12 weeks / past 12; women only).
+- Plan (engine/plan.js): limitsOf(p) adds "floor" (AVOID.floor: supine/prone/head-down names; incline,
+  seated, standing, cable, machine kept) so standIn swaps those lifts; a last pass fits every loaded lift's
+  reps/sets (fitDose: into the range, two reps wide at least); noPlyo drops jumps and intervals. doseFor,
+  the coach's swaps (agent.js) and travel/gear stand-ins use limitsOf too.
+- conformProgram(sp, p, gear, dry): a program the builder did not make, brought into line; My program shows
+  "Adjusted for your health" (ui/dose.js condCard) with what does not fit and "Make it fit" (Undo).
+- Assessment result and My program show the card: which conditions, what changes, "your doctor comes first".
+- Workout set card: a one-line breathing / stand-up-slowly cue for those conditions.
+- Tests: engine conditions.test.js; regression "Health conditions: …".

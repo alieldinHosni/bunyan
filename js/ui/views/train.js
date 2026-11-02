@@ -8,7 +8,8 @@ import {alsoKnown, empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} f
 import {exName, planName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../state.js";
-import {SPLIT_LEVEL} from "../../engine/plan.js";
+import {conformProgram, SPLIT_LEVEL} from "../../engine/plan.js";
+import {rulesFor} from "../../engine/conditions.js";
 import {deloadDue, inDeload} from "../../engine/formulas.js";
 import {blockNow, offPlanLight, shiftNow} from "../../engine/blocks.js";
 import {addDays, isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
@@ -22,7 +23,7 @@ import {glyph} from "../glyphs.js";
 import {programCover} from "../cover.js";
 import {shown} from "../more.js";
 import {vTImport} from "./timport.js";
-import {doseText, weeksText} from "../dose.js";
+import {condCard, doseText, weeksText} from "../dose.js";
 import {addDaysISO, estMinutes, planOn} from "../../engine/dayplan.js";
 import {swapAdvice} from "../../engine/recovery.js";
 import {addsOn, missedNow} from "../../engine/missed.js";
@@ -656,6 +657,16 @@ function builderBody(sp,id,inline){
      +[2,3,4,5,6,7].map(function(n){return '<button class="'+(sp.days.length===n?'on':'')+'" data-bdays="'+n+'" aria-pressed="'+(sp.days.length===n)+'">'+n+'</button>';}).join("")
      +'</div></div>';
   h+='</div>';
+  /* A health condition: what the book says for it, and anything in this program that
+     does not fit yet, with one tap to make it fit (engine/plan.js conformProgram). */
+  if(active&&rulesFor(S.profile)){
+    var iss=conformProgram(JSON.parse(JSON.stringify(sp)),S.profile,S.gear,true),fx="";
+    if(iss.length){var sw=iss.filter(function(x){return x.from;}),ds=iss.filter(function(x){return x.dose;});
+      fx='<div class="cond-fix"><p>'+esc(t("{n} things in this program don't fit yet.").replace("{n}",iss.length))
+       +(sw.length?' '+esc(t("To swap:"))+' '+esc(sw.slice(0,3).map(function(x){return exName(x.from);}).join(S.prefs&&S.prefs.lang==="ar"?"، ":", "))+(sw.length>3?'…':'.'):'')
+       +(ds.length?' '+esc(t("Sets or reps to adjust: {n}.").replace("{n}",ds.length)):'')+'</p>'
+       +'<button class="btn" data-condfix="'+esc(id)+'">'+esc(t("Make it fit"))+'</button></div>';}
+    h+=condCard(S.profile,fx);}
   /* How the days fall: pinned to weekdays, or one after another whenever you train. */
   h+='<div class="bsched" role="group" aria-label="'+esc(t("Schedule"))+'">'
    +'<button class="'+(week?'on':'')+'" data-sched="week" aria-pressed="'+week+'"><b>'+t("By weekday")+'</b><span>'+t("Same days every week")+'</span></button>'

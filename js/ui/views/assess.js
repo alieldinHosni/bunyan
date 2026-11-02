@@ -29,6 +29,8 @@ import * as KB from "../../engine/kb.js";
 import {exThumb} from "../../data/exercises.js";
 import {doseText} from "../dose.js";
 import {glyph} from "../glyphs.js";
+import {condLines, CONDS_ASK, rulesFor} from "../../engine/conditions.js";
+import {condCard} from "../dose.js";
 
 /* Equipment as a choice of three, and what each means in the equipment list. */
 var GEARS={gym:null,home:["Dumbbell","Band","Kettlebell"],bw:["Bodyweight"]};
@@ -64,7 +66,7 @@ function draftFrom(){
   var p=S.profile||{},pr=S.prefs||{};
   return {step:0,sex:p.sex||"m",age:num(p.age)||"",height:num(p.height)||"",
     weight:lastWeight()||num(p.weight)||"",goal:GOALS[p.goal]?p.goal:"lose",level:LEVELS[p.level]?p.level:"some",
-    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),
+    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),conds:(p.conds||[]).slice(),
     meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",likes:(pr.likes||[]).slice(),
     sleep:num(p.sleep)||7.5,stress:p.stress||"normal",wd:(p.wd||[]).map(Number),focus:(p.focus||[]).slice(),
     nolift:NOLIFT.filter(function(n){return (S.skip||[]).indexOf(n)>=0;}),split:null,done:false};}
@@ -73,7 +75,7 @@ function draftFrom(){
 function profileOf(a){
   return {sex:a.sex,age:num(a.age),height:num(a.height),weight:num(a.weight),goal:a.goal,level:a.level,
     days:(a.wd||[]).length>=2?a.wd.length:num(a.days),mins:num(a.mins),job:a.job,activity:activityOf(a),limits:a.limits.slice(),
-    health:(a.health||[]).slice(),sleep:num(a.sleep),stress:a.stress||"normal",
+    health:(a.health||[]).slice(),conds:(a.conds||[]).filter(function(c){return a.sex==="f"||!/^pregnancy/.test(c);}),sleep:num(a.sleep),stress:a.stress||"normal",
     /* The day high stress or short sleep was said, for the coach's follow-up (js/engine/stress.js). */
     stressAt:a.stress==="high"||(num(a.sleep)>0&&num(a.sleep)<6)?today():null,
     wd:(a.wd||[]).length>=2?a.wd.map(Number).sort(function(x,y){return x-y;}):[],focus:(a.focus||[]).slice(0,FOCUS_MAX)};}
@@ -203,7 +205,13 @@ function body(a){
     h+='<p class="as-note">'+t((a.health||[]).length
       ?"Then check with your doctor or a qualified exercise professional before hard training. Until then your plan keeps to low and moderate effort: no jumps and no intervals."
       :"None ticked: you're clear to start. Build up gradually.")+'</p>';
-    if(num(a.age)>45)h+='<p class="as-note">'+t("Over 45 and not used to hard efforts? Check with a qualified exercise professional before training at a vigorous intensity.")+'</p>';}
+    if(num(a.age)>45)h+='<p class="as-note">'+t("Over 45 and not used to hard efforts? Check with a qualified exercise professional before training at a vigorous intensity.")+'</p>';
+    /* Which condition, so the plan can follow the book's guidelines for it (engine/
+       conditions.js), not only stay easy. */
+    h+=lbl(t("Do any of these apply? (optional)"))
+     +mchips("conds",CONDS_ASK.filter(function(x){return a.sex==="f"||!/^pregnancy/.test(x[0]);}),a.conds||[]);
+    var cl=condLines(rulesFor(profileOf(a)),profileOf(a));
+    h+='<p class="as-note">'+esc(cl.length?t("Your plan follows the textbook's guidelines for these. Your doctor's advice comes first."):t("Pick any that a doctor has told you about. Each one changes how the plan is built."))+'</p>';}
   else if(s==="food"){
     h+=q(t("How you eat"),t("For the meal plan. It uses foods from the app's database, Egyptian home food first."));
     h+=lbl(t("Meals a day"))+chips("meals",[[3,"3"],[4,"4"],[5,"5"],[6,"6"]],a.meals);
@@ -279,6 +287,7 @@ function result(a){
   var G=goalOf(a.goal),T=trainOf(a.goal),tg=r.tg,plan=r.plan,h='';
   h+='<div class="as-hero"><span class="shk">'+t("Your plan")+'</span><h1>'+esc(t(G.label))+'</h1>'
    +'<p class="as-sub">'+esc(t(LEVELS[a.level].label)+" · "+a.days+" "+t("days a week")+" · "+a.mins+" "+t("min"))+'</p></div>';
+  h+=condCard(profileOf(a));
   if((a.health||[]).length)h+='<div class="as-warn" role="note">'+glyph("info")+'<span>'+t("You ticked a health question: check with your doctor or a qualified exercise professional before hard training. This plan keeps to low and moderate effort.")+'</span></div>';
   if(a.done)h+='<div class="as-done" role="status">'+t("Your plan is in: today's training is on the Training page and today's meals on the Food page. Change anything in Coach.")+'</div>';
   /* Daily targets. */

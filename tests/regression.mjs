@@ -1931,6 +1931,42 @@ await test("Assessment: first run opens it; answers become targets and training 
   eq(await page.$$eval('.fmt-c .fmt-plan',a=>a.length),4,"every meal of the day shows its plan");
   if(!(await page.$('[data-logday]')))throw new Error("no Log today's plan on Food");
 },{db:Object.assign(seed(),{onboarded:false})});
+await test("Health conditions: the assessment asks which; the plan follows the book for it (nothing lying down, 10–20 reps, steady breathing) and says so; My program fits one it did not build with one tap",async page=>{
+  await page.evaluate(async()=>{const A=await import("/js/ui/views/assess.js"),V=(await import("/js/ui/view.js")).V;
+    V.asd=A.draftFrom();Object.assign(V.asd,{sex:"m",age:50,height:178,weight:88,days:3,wd:[],goal:"gain",level:"some"});V.asd.step=A.STEPS.indexOf("health");V.assess=true;(await import("/js/ui/render.js")).render();});
+  await pause(page,300);
+  eq(await page.$$eval('[data-asm^="conds|"]',a=>a.map(b=>b.getAttribute("data-asm").split("|")[1]).filter(x=>/pregnancy/.test(x)).length),0,"no pregnancy for a man");
+  await page.tap('[data-asm="conds|hypertension"]');await pause(page,200);
+  if(!/textbook's guidelines/.test(await page.textContent('#app')))throw new Error("no word on what it changes");
+  await page.evaluate(async()=>{const A=await import("/js/ui/views/assess.js"),V=(await import("/js/ui/view.js")).V;V.asd.step=A.STEPS.indexOf("result");(await import("/js/ui/render.js")).render();});
+  for(let i=0;i<20&&!(await page.$('.condcard'));i++)await pause(page,250);
+  const card=await page.textContent('.condcard');
+  if(!/High blood pressure/.test(card)||!/No lying on your back or front/.test(card)||!/never hold your breath/.test(card)||!/10–20 reps/.test(card))throw new Error("the card does not say it: "+card);
+  await page.tap('[data-asuse]');await pause(page,600);
+  const bad=await page.evaluate(async()=>{const st=await import("/js/state.js"),P=await import("/js/engine/plan.js"),X=await import("/js/data/exercises.js");
+    const sp=st.split(),out=[];
+    sp.days.forEach(d=>d.ex.forEach(e=>{if(P.avoids(e.name,["floor"]))out.push("floor:"+e.name);
+      const bw=(X.EXDB[e.name]||{}).e==="Bodyweight";if(!bw&&!/Hold|Plank|Stretch|Carry|Bridge/i.test(e.name)&&(e.lo<10||e.hi>20||e.sets>3))out.push("dose:"+e.name+" "+e.sets+"x"+e.lo+"-"+e.hi);}));
+    return [st.S.profile.conds,out];});
+  eq(bad,[["hypertension"],[]],"the plan keeps to it");
+  /* A program it did not build: bench press and crunches, five sets of five. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),Sp=await import("/js/data/splits.js");
+    const p=st.makeProgram({id:"mine",name:"Mine",days:[Sp.day("Chest",[Sp.ex("Barbell Bench Press - Medium Grip",5,5,5),Sp.ex("Crunches",3,15,20),Sp.ex("Cable Crossover",3,8,12)])]});
+    p.id="mine";st.S.programs.push(p);st.S.activeProgram="mine";st.saveDB();});
+  await coach(page,"train","program");await pause(page,300);
+  if(!(await page.$('.condcard [data-condfix]')))throw new Error("no fix offered: "+(await page.textContent('#app')).slice(0,400));
+  await page.tap('.condcard [data-condfix]');await pause(page,400);
+  const ex=await ev(page,"S.programs.find(p=>p.id==='mine').days[0].ex.map(e=>[e.name,e.sets,e.lo,e.hi])");
+  eq([ex.some(e=>/^Barbell Bench Press - Medium/.test(e[0])||e[0]==="Crunches"),ex[0][1]<=3&&ex[0][2]>=10],[false,true],"swapped and dosed: "+JSON.stringify(ex));
+  eq(await page.$$eval('.condcard [data-condfix]',a=>a.length),0,"nothing left to fit");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"S.programs.find(p=>p.id==='mine').days[0].ex[0].name"),"Barbell Bench Press - Medium Grip","Undo puts it back");
+  /* The workout says how to breathe. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.activeProgram=st.S.programs[0].id;st.saveDB();});
+  await startWorkout(page);
+  for(let i=0;i<6&&!(await page.$('.sc-cond'));i++){const n=await page.$('[data-nextex]');if(n){await n.tap();await pause(page,300);}else break;}
+  if(!(await page.$('.sc-cond')))throw new Error("no breathing cue on the set");
+},{db:Object.assign(seed(),{onboarded:false})});
 await test("Plan check: targets that work against the goal are found in Coach AI with a dot on Coach, fixed with Undo, and kept until the numbers change",async page=>{
   /* Building muscle on 2,500 kcal against about 2,550 maintenance, and 110 g of protein. */
   eq(await page.$eval('nav [data-tab="coach"]',e=>e.classList.contains("advice")),true,"a dot on Coach");

@@ -1,5 +1,6 @@
 /* Bunyan — session
    The live session surface and rest screen. Execution, not editing. */
+import {rulesFor} from "../../engine/conditions.js";
 import {t} from "../../i18n/dict.js";
 import {exMedia, isBarbell, isUnilateral, thumb} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
@@ -204,6 +205,11 @@ function vSetCard(e,row,rows,o){
   var top=row.wu?'<div class="sc-wu"><span class="wub" aria-hidden="true">W</span><p>'+t("Warm-up")
     +' <span>· '+t("Not counted in volume or records")+'</span></p></div>':'';
   if(V.draftSg)top+='<span class="sg-tag" id="sgTag">'+t("Suggested")+'</span>';
+  /* A health condition's cue on every working set (engine/conditions.js): how to breathe,
+     and to get up slowly. Quiet, one line. */
+  var CR=row.wu?null:rulesFor(S.profile);
+  if(CR&&(CR.steady||CR.slowStand))top+='<p class="sc-cond">'+esc(t(CR.steady&&CR.slowStand?"Breathe out on the effort, never hold your breath, and stand up slowly."
+    :CR.steady?"Breathe out on the effort and never hold your breath.":"Stand up slowly between exercises."))+'</p>';
   if(top)h+='<div class="sc-top">'+top+'</div>';
   /* What the weight box holds: added load on a bodyweight lift, how a dumbbell's
      weight reads (per hand unless the lifter chose totals), and a barbell's total with

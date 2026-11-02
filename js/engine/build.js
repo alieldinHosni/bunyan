@@ -148,7 +148,7 @@ function candidates(m,gear,p,h){
   var fam=h.familiar(),favs=h.favs||[],skip=h.skip||[],pool=h.pool||{},out=[],wide=[];
   LIB.forEach(function(l){
     var n=l[0];
-    if(l[1]!==m||isActivity(n)||skip.indexOf(n)>=0||!h.usable(n,gear)||h.avoids(n,p.limits||[]))return;
+    if(l[1]!==m||isActivity(n)||skip.indexOf(n)>=0||!h.usable(n,gear)||h.avoids(n,h.limits||p.limits||[]))return;
     var v=EXDB&&EXDB[n]||{},mv=movementOfEx(n),fav=favs.indexOf(n)>=0;
     if(NOT_MV[mv]||v.p==="Mobility"||v.p==="Conditioning")return;
     if(TIMED.test(n)&&m!=="Core")return;
