@@ -20,7 +20,7 @@
    Imports nothing. */
 
 var UNIT = "(?:kcal|cal|kg|lb|ml|km|cm|min|sec|reps?|g|L|l|m|s|h|%)";
-var FIG = "(?:[+\\-−±~↑↓]\\s?){0,2}\\d+(?:[.,]\\d+)*(?:\\s?" + UNIT + "(?![A-Za-z]))?";
+var FIG = "(?:[+\\-−±~↑↓≈]\\s?){0,2}\\d+(?:[.,]\\d+)*(?:\\s?" + UNIT + "(?![A-Za-z]))?";
 var JOIN = "\\s?[/×x–\\-:]\\s?";
 var RUN = new RegExp(FIG + "(?:" + JOIN + FIG + ")*", "g");
 var SKIP = /^<(\/?)(svg|option|textarea|script|style)\b/i;

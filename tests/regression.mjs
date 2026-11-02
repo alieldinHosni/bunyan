@@ -3695,6 +3695,8 @@ await test("Change workout judges each day against the muscles: after Full A tod
   eq([full.length,full.every(r=>r[1]&&/Too soon for/.test(r[2]))],[3,true],"every full-body day too soon the day after Full A: "+JSON.stringify(rows));
   eq(rows.filter(r=>/Best fit/.test(r[2])).map(r=>r[0]),["rest"],"rest is the best fit");
   if(!(await page.$('#sheet .swnote')))throw new Error("no word on why");
+  const rcv=await page.$$eval('#sheet .rcv li',a=>a.map(l=>[l.querySelector('.rcv-m').textContent,l.querySelector('.rcv-p').textContent,l.querySelector('.rcv-d').textContent]));
+  eq(rcv.length>0&&rcv.length<=6&&rcv.every(r=>/^≈(0|25|50|75)%$/.test(r[1])&&/^ready /.test(r[2])),true,"each muscle's recovery in quarters, with the day it is ready: "+JSON.stringify(rcv));
   await page.tap('#sheet .trow.warn');await pause(page,400);
   const cf=await page.textContent('#sheet');
   if(!/anyway\?/.test(cf)||!/at least a day of rest/.test(cf))throw new Error("no question before a day too soon: "+cf.slice(0,300));

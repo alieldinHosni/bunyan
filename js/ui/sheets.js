@@ -9,7 +9,7 @@ import {exName, outdoorName, planName} from "../i18n/exnames.js";
 import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay} from "./views/train.js";
 import {planOn} from "../engine/dayplan.js";
-import {dayOptions} from "../engine/recovery.js";
+import {dayOptions, muscleStatus, q25} from "../engine/recovery.js";
 import {avoids, limitsOf} from "../engine/plan.js";
 import {addDays} from "../engine/schedule.js";
 import {stageFor, zonesFor} from "../engine/zones.js";
@@ -51,6 +51,19 @@ var CFICON={
   swap:'<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
   route:'<path d="M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 17h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/>'
 };
+/* The change-workout sheet: each muscle still recovering on the date, how far (in
+   quarters: the model is an estimate) and the day it is ready by the rest-day rule. */
+function recoveryList(iso){
+  var st={list:[],planned:false};try{st=muscleStatus(split(),iso);}catch(e){}
+  var ms=st.list;
+  if(!ms.length)return '<p class="rcv-none">'+esc(t("Every muscle is recovered for this day."))+'</p>';
+  return '<section class="rcv" aria-label="'+esc(t("How recovered your muscles are"))+'"><div class="rcv-h">'+esc(t("How recovered your muscles are"))+'</div>'
+   +'<ul>'+ms.slice(0,6).map(function(x){return '<li><span class="rcv-m">'+esc(tm(x.m).trim())+'</span>'
+     +'<span class="rcv-bar" aria-hidden="true"><i style="width:'+x.pct+'%"></i></span>'
+     +'<span class="rcv-p num">≈'+x.pct+'%</span><span class="rcv-d">'+esc(t("ready {d}").replace("{d}",wdShort(x.ready)))+'</span></li>';}).join("")+'</ul>'
+   +(ms.length>6?'<p class="rcv-n">'+esc(t("+{n} more, nearly recovered.").replace("{n}",ms.length-6))+'</p>':'')
+   +'<p class="rcv-n">'+esc(t("An estimate from the sets you logged and the book's rest day between sessions on the same muscles, in steps of 25%."))
+   +(st.planned?' '+esc(t("Workouts planned before this day count as done.")):'')+'</p></section>';}
 /* The change-workout sheet's words: muscles as a short list, a date as its weekday. */
 function listOf(ms){var a=ms.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();}),ar=S.prefs&&S.prefs.lang==="ar";
   return a.length<2?a.join(""):a.slice(0,-1).join(ar?"، ":", ")+(ar?" و":" "+t("and")+" ")+a[a.length-1];}
@@ -563,14 +576,16 @@ function vSheet(){
     b='<div class="se-top"><span class="se-k">'+esc(pretty(sd2))+'</span><h2>'+t("Change workout")+'</h2>'
      +'<p class="shsub">'+t("Pick what you want to do on this day. The rest of the plan moves on from what you actually train.")+'</p>'
      +(restBest?'<p class="swnote">'+glyphI+esc(t("Every workout in your plan trains muscles that are still recovering. A rest day here lets them come back."))+'</p>':'')
-     +'</div><div class="card tdays">';
+     +'</div>'+recoveryList(sd2)+'<div class="card tdays">';
     var restId=null;spx.days.forEach(function(d){if(!d.ex.length&&!restId)restId=d.id;});
     spx.days.forEach(function(d){
       var on=cur.day&&cur.day.id===d.id,o=byId[d.id],best=opt&&(opt.best===d.id||(restBest&&d.id===restId));
       var why="";
       if(o&&!o.rest){
-        if(o.tired.length)why=t("Too soon for {m}").replace("{m}",listOf(o.tired));
-        else if(o.next&&o.next.tired.length)why=t("Leaves {d}'s {x} too soon").replace("{d}",wdShort(o.next.date)).replace("{x}",planName(o.next.name));
+        /* How ready the day's planned work is, in quarters (an estimate). */
+        why=t("≈{p}% ready").replace("{p}",q25(o.ready)>=75&&o.ready>=1?100:q25(o.ready))+" · ";
+        if(o.tired.length)why+=t("Too soon for {m}").replace("{m}",listOf(o.tired));
+        else if(o.next&&o.next.tired.length)why+=t("Leaves {d}'s {x} too soon").replace("{d}",wdShort(o.next.date)).replace("{x}",planName(o.next.name));
         else why=t("Ready");}
       b+='<button class="trow'+(on?' on':'')+(o&&!o.ok?' warn':'')+'" data-swapto="'+d.id+'" aria-pressed="'+(on?"true":"false")+'">'
        +'<span><span class="trow-n">'+esc(planName(d.name))+'</span>'

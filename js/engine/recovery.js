@@ -99,4 +99,23 @@ function tooSoon(sp,iso){
   var r=readyOn(iso,sp),k=dayReady(p.day.ex,r,INFO);
   return k<LOW?tiredOn(p.day.ex,r,INFO):null;}
 
-export {dayOptions, readyOn, swapAdvice, tooSoon};
+/* How recovered each muscle is on a date, from what was logged (owner, 3 Nov: "can this
+   show percentages, recovered at how many percent"). The model is an estimate (hard sets
+   in the last two or three days against the book's rest-day rule, js/coach/recovery.js),
+   so it is said in quarters, never to the percent, and with the day each muscle is ready
+   by the rule, which the rule does fix. Muscles still recovering, least ready first:
+   [{m, pct (0, 25, 50, 75), ready: the first date it is fully ready}] */
+function q25(x){return Math.max(0,Math.min(75,Math.floor(x*4)*25));}
+function muscleStatus(sp,iso){
+  /* What is logged, and for a date ahead what is planned before it (counted as done, as
+     the day options count it): the same basis as the days judged below it. */
+  var now=today(),log=(S.sessions||[]).filter(function(s){return s.date<=iso;});
+  var planned=sp&&iso>now?plannedBetween(sp,now,iso):[];log=log.concat(planned);
+  var days=S.days||{},sore=+((days[iso]||{}).sore)||0,o=opts();
+  var r=readiness(log,iso,INFO,sore,o),out=[];
+  Object.keys(r).forEach(function(m){if(r[m]>=1)return;
+    var d=iso;for(var k=1;k<=4;k++){d=addDaysISO(iso,k);var rr=readiness(log,d,INFO,0,o);if(rr[m]==null||rr[m]>=1)break;}
+    out.push({m:m,pct:q25(r[m]),ready:d});});
+  return {list:out.sort(function(a,b){return a.pct-b.pct||(a.m<b.m?-1:1);}),planned:planned.length>0};}
+
+export {dayOptions, muscleStatus, q25, readyOn, swapAdvice, tooSoon};

@@ -1982,6 +1982,18 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   padding:4px 10px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;
   box-shadow:0 4px 12px -4px var(--accent-glow)}
 /* Change workout (sheets.js swapday): each day judged against what the muscles have had. */
+.rcv{margin:0 0 var(--s3);padding:var(--s3);border-radius:var(--r4);background:var(--glass);border:1px solid var(--border)}
+.rcv-h{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:var(--s2)}
+.rcv ul{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
+.rcv li{display:grid;grid-template-columns:minmax(72px,auto) 1fr auto auto;align-items:center;gap:var(--s2);font-size:13.5px}
+.rcv-m{font-weight:700;color:var(--text)}
+.rcv-bar{height:6px;border-radius:3px;background:var(--hair);overflow:hidden}
+.rcv-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--warning),var(--ok))}
+[dir="rtl"] .rcv-bar i{background:linear-gradient(270deg,var(--warning),var(--ok))}
+.rcv-p{font-weight:800;color:var(--text);min-width:3.2em;text-align:end}
+.rcv-d{color:var(--sub);font-size:12.5px;white-space:nowrap}
+.rcv-n,.rcv-none{margin:var(--s2) 0 0;font-size:12px;line-height:1.4;color:var(--dim)}
+.rcv-none{margin:0 0 var(--s3)}
 .trow-r{color:var(--warning)}
 .trow-r.ok{color:var(--ok)}
 .trow.warn .trow-n{color:var(--sub)}

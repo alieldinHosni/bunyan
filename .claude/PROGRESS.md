@@ -3184,3 +3184,12 @@ the workout plan and the diet"; (3) "in a live workout the chat should put the s
   messages, for the exercise on screen (set n of N, target, weight, rest, tempo, next). OFFSESS (food,
   water, sleep, body weight, steps, other days) keeps their own answers; an exercise named that is not in
   today's workout keeps its own answer. Test: "Coach in a live workout: …".
+
+## Recovery in numbers on Change workout — same branch
+
+Owner, 3 Nov: "can this show percentages, recovered at how many percent". engine/recovery.js muscleStatus(sp,
+iso): each muscle still recovering on the date (logged sessions, plus for a date ahead the workouts planned
+before it, counted as done — the same basis as the day rows), its readiness in quarters (≈0/25/50/75%: the
+model is an estimate, so no false precision) and the first day it is ready by the rest-day rule. The sheet
+lists the six least ready (bar, ≈%, "ready Wed", "+N more"), with the note that it is an estimate; each day
+row says "≈N% ready". bidi.js: "≈" is part of a figure (RTL kept "≈0%" in order).
