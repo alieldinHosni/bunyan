@@ -2944,3 +2944,19 @@ CACHE `bunyan-v192`. Owner, 2 Nov.
 CACHE `bunyan-v194`. Owner, 2 Nov: "the days I trained should be green dots". In the month (Food's and
 Training's, js/ui/datebar.js): a day trained is a solid green dot (--ok), a planned day a ring in the accent, a
 day with only food logged (Food) a dot in the accent. Dots 5 px round, so they read on a phone.
+
+## The next day follows today's, live, in a rotation as on weekdays — branch session/greendot
+
+Owner, 2 Nov: "the app changing the next day based on the previous day doesn't work when I make it in rotation,
+it only works by week". It did work once a workout was logged (a rotation follows on from what was trained),
+but not as soon as today was changed, and the coach only judged a day by what was already logged:
+- dayplan.js: in a rotation, today changed by hand to another day (S.daySwap) and not yet trained counts as
+  the last day trained for the days after it, so tomorrow follows on from it at once (Pull today → Legs
+  tomorrow, not Pull again).
+- recovery.js readyOn(iso, sp): for a day ahead, the workouts planned between now and then count as done
+  (planned sets), so tomorrow is judged against today's workout, trained or not yet.
+- Training, on today (views/train.js aheadCard): "Coach · tomorrow": on weekdays, tomorrow's day checked
+  against today's muscles with "Train Legs tomorrow instead" / "Keep Pull"; in a rotation changed by hand,
+  "Your rotation follows on from Pull: tomorrow is Legs." Arabic for both.
+- Tests: regression "Tomorrow follows today, live, …"; the recovery test now expects the rotation's word on
+  what follows after today is moved.
