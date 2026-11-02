@@ -3058,3 +3058,13 @@ Owner, 2 Nov ("all, in order"): item 1 of the knowledge-base plan. CACHE `bunyan
 - Assessment result and My program show the card: which conditions, what changes, "your doctor comes first".
 - Workout set card: a one-line breathing / stand-up-slowly cue for those conditions.
 - Tests: engine conditions.test.js; regression "Health conditions: …".
+
+## Recovery time by what was trained — same branch
+
+Item 2. What the knowledge base says (correcting the owner-facing summary, which said 72 h for maximal
+strength — the 72 h is not that): at least a day of rest between sessions on the same muscles (48 h, as
+before); 72 h after a complex (a heavy lift then a similar jump for the same muscles, acute-variables.js
+complex system); plyometrics need 24 h between sessions, beginners 48–72 h (plyometrics.js recovery: the top
+is used). coach/recovery.js readiness(…, o.novice): a muscle that jumped after a heavy lift for it, or a
+beginner's jumps, stays tired on the third day (LONG_DAYS=3). engine/recovery.js passes plyo (jump names),
+compound, and novice (level "new"). Swap confirm text names both rules. Coach tests added.

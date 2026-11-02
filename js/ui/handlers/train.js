@@ -146,7 +146,7 @@ function register(){
     if(D.swapto&&D.swapto!=="rest"){var opt=null;try{opt=dayOptions(split(),swd);}catch(e){opt=null;}
       var o=opt&&opt.days.filter(function(x){return x.id===D.swapto;})[0];
       if(o&&!o.ok){
-        var why=o.tired.length?t("{m} trained hard in the last day still need rest: the book's rule is at least one day of rest between sessions that load the same muscles.").replace("{m}",o.tired.slice(0,3).map(function(m){return tm(m).trim();}).join(", "))
+        var why=o.tired.length?t("{m} still need rest: the book asks for at least a day of rest between sessions on the same muscles, and up to 72 hours after jumps.").replace("{m}",o.tired.slice(0,3).map(function(m){return tm(m).trim();}).join(", "))
           :t("It trains the same muscles as {x} the day after, so that one would come too soon.").replace("{x}",planName(o.next.name));
         askConfirm({title:t("Train {x} anyway?").replace("{x}",planName(o.name)),body:why,cta:t("Train it anyway"),act:"swapforce",data:{date:swd,id:D.swapto},
           mid:t("Pick another"),midact:"swappick"});

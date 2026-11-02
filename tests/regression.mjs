@@ -3520,7 +3520,7 @@ await test("Change workout judges each day against the muscles: after Full A tod
   if(!(await page.$('#sheet .swnote')))throw new Error("no word on why");
   await page.tap('#sheet .trow.warn');await pause(page,400);
   const cf=await page.textContent('#sheet');
-  if(!/anyway\?/.test(cf)||!/at least one day of rest/.test(cf))throw new Error("no question before a day too soon: "+cf.slice(0,300));
+  if(!/anyway\?/.test(cf)||!/at least a day of rest/.test(cf))throw new Error("no question before a day too soon: "+cf.slice(0,300));
   await page.tap('#sheet [data-confirmmid]');await pause(page,400);
   eq(await ev(page,"[V.sheet,Object.keys(S.daySwap||{}).length]"),["swapday",0],"Pick another goes back, nothing changed");
   await page.tap('#sheet .trow.warn');await pause(page,400);

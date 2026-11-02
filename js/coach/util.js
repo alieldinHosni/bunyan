@@ -14,6 +14,8 @@ function infoOf(info){
     muscle:info.muscle||function(){return "Other";},
     secondary:info.secondary||function(){return [];},
     activity:info.activity||function(){return false;},
+    plyo:info.plyo||function(){return false;},
+    compound:info.compound||function(){return false;},
     load:info.load||function(n,w){return +w||0;}};}
 
 function num(v){v=+v;return isFinite(v)?v:0;}

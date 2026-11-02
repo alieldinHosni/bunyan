@@ -1191,7 +1191,7 @@ var AR={"Most of {a} lands on {m}, trained {w}. They need a rest day between har
 "Leaves {d}'s {x} too soon": "يخلّي {x} يوم {d} بدري",
 "Ready": "جاهز",
 "Best fit": "الأنسب",
-"{m} trained hard in the last day still need rest: the book's rule is at least one day of rest between sessions that load the same muscles.": "{m} اتمرنوا جامد في آخر يوم ولسه محتاجين راحة: القاعدة يوم راحة على الأقل بين أي تمرينين على نفس العضلات.",
+"{m} still need rest: the book asks for at least a day of rest between sessions on the same muscles, and up to 72 hours after jumps.": "{m} لسه محتاجين راحة: الكتاب بيطلب يوم راحة على الأقل بين أي تمرينين على نفس العضلات، ولحد 72 ساعة بعد النط.",
 "It trains the same muscles as {x} the day after, so that one would come too soon.": "ده بيشتغل على نفس عضلات {x} اللي بعده بيوم، فده هييجي بدري.",
 "Train {x} anyway?": "تتمرن {x} برضه؟",
 "Train it anyway": "اتمرنه برضه",

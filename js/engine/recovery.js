@@ -7,13 +7,16 @@
    Nothing is changed by itself: the person decides (Training's card, the coach). A day
    already moved or kept by hand (S.daySwap) is the person's decision and is left alone. */
 import {dayReady, LOW, readiness, suggest, tiredOn} from "../coach/recovery.js";
-import {muscleOf, secondaryOf} from "../data/exercises.js";
+import {isCompound, muscleOf, secondaryOf} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {S} from "../state.js";
 import {addDaysISO, planOn} from "./dayplan.js";
 import {today} from "../util.js";
 
-var INFO={muscle:muscleOf,secondary:secondaryOf,activity:isActivity};
+var JUMPY=/\b(jumps?|hops?|bounds?|plyo|depth jump|box jump)\b/i;
+var INFO={muscle:muscleOf,secondary:secondaryOf,activity:isActivity,plyo:function(n){return JUMPY.test(n);},compound:isCompound};
+/* A beginner gets the top of the book's 48–72 h after jumps. */
+function opts(){return {novice:((S.profile||{}).level)==="new"};}
 
 /* Readiness on a date, from everything logged before it (and earlier that day). For a
    date ahead, the workouts planned between now and then count as done, as they will be:
@@ -31,7 +34,7 @@ function readyOn(iso,sp){
   var days=S.days||{},sore=Math.max(+((days[iso]||{}).sore)||0,+((days[addDaysISO(iso,-1)]||{}).sore)||0),now=today();
   var log=(S.sessions||[]).filter(function(s){return s.date<=iso;});
   if(sp&&iso>now)log=log.concat(plannedBetween(sp,now,iso));
-  return readiness(log,iso,INFO,sore);}
+  return readiness(log,iso,INFO,sore,opts());}
 
 /* p: dayplan.js planOn for that date. → {from, to, fromDay, toDay, tired} or null. */
 function swapAdvice(sp,iso,p){
@@ -74,7 +77,7 @@ function dayOptions(sp,iso){
     var nd=null;
     if(sp.schedule==="week"){var np=planOn(sp,nx);nd=np&&!np.rest&&np.day&&(np.day.ex||[]).length?np.day:null;}
     else{var c=sp.days[(i+1)%len];nd=c&&(c.ex||[]).length&&len>1?c:null;}
-    if(nd){var r2=readiness(base.concat([virt(d,iso)]),nx,INFO,sore),nr=dayReady(nd.ex,r2,INFO);
+    if(nd){var r2=readiness(base.concat([virt(d,iso)]),nx,INFO,sore,opts()),nr=dayReady(nd.ex,r2,INFO);
       o.next={date:nx,id:nd.id,name:nd.name,ready:nr,tired:nr<LOW?tiredOn(nd.ex,r2,INFO):[]};}
     o.ok=o.ready>=LOW&&(!o.next||o.next.ready>=LOW);
     return o;});
