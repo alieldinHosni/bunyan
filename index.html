@@ -1413,19 +1413,30 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 .wkr-ti b{font-family:var(--display);font-size:16px;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wkr-p{font-size:12px;color:var(--dim)}
 .wkr-ha{display:flex;align-items:center;gap:6px;flex:none}
-.wkr .dnav-arrow.sm{flex-basis:34px;width:34px;height:34px}
-.wkr .dnav-arrow.sm svg{width:17px;height:17px}
-.wkr-x svg{transition:transform var(--m-cal) var(--e-cal)}
-.wkr.open .wkr-x svg{transform:rotate(180deg)}
+/* The month, from a small calendar in the corner: lit while it is open. */
+.wkr-cal{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:var(--r3);border:1px solid var(--border);
+  background:var(--glass);color:var(--sub);transition:background var(--m-micro) var(--e-standard),color var(--m-micro) var(--e-standard),border-color var(--m-micro) var(--e-standard)}
+.wkr-cal svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.wkr.open .wkr-cal{background:var(--accent-tint);border-color:var(--accent-edge);color:var(--accentHi)}
+:root:not(.tch) .wkr-cal:active{transform:scale(.94)}
+/* A new week's title arrives from the side it came from. */
+.wkr-ti.fwd{animation:dnavFwd var(--m-comp) var(--e-ios)}
+.wkr-ti.back{animation:dnavBack var(--m-comp) var(--e-ios)}
+[dir="rtl"] .wkr-ti.fwd{animation-name:dnavBack}
+[dir="rtl"] .wkr-ti.back{animation-name:dnavFwd}
 .wkr-today{height:30px;padding:0 var(--s3);border-radius:var(--rpill);border:1px solid var(--accent-edge);background:var(--accent-tint);
   color:var(--accentHi);font-size:12px;font-weight:800;letter-spacing:.04em}
 .wkr-bar{height:3px;margin:var(--s2) var(--s3) 0;border-radius:2px;background:var(--hair);overflow:hidden}
 .wkr-bar i{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,var(--ok),var(--accentHi));transition:width var(--m-tab) var(--e-spring)}
+.wkr-bar i{transform-origin:left center;animation:wkrGrow var(--m-cal) var(--e-cal) both}
+[dir="rtl"] .wkr-bar i{transform-origin:right center;background:linear-gradient(270deg,var(--ok),var(--accentHi))}
+@keyframes wkrGrow{from{transform:scaleX(0)}to{transform:none}}
 .wkr-fold{display:grid;grid-template-rows:1fr;opacity:1;
   transition:grid-template-rows var(--m-cal) var(--e-cal),opacity calc(var(--m-cal) * .6) var(--e-cal)}
 .wkr.open .wkr-fold{grid-template-rows:0fr;opacity:0}
 .wkr-in{min-height:0;overflow:hidden}
-.wkr-r{position:relative;margin-top:var(--s2);touch-action:pan-y}
+.wkr-r{position:relative;margin-top:var(--s2);touch-action:pan-y;transition:translate var(--m-micro) var(--e-standard),opacity var(--m-micro) var(--e-standard)}
+.wkr-r.drag{transition:none}
 .wkr-days{position:relative;z-index:1;display:grid;grid-template-columns:repeat(7,1fr)}
 .wkr-days.fwd{animation:dnavFwd var(--m-comp) var(--e-ios)}
 .wkr-days.back{animation:dnavBack var(--m-comp) var(--e-ios)}
@@ -1458,6 +1469,24 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 .wkr-d.sel.today .wkr-n{box-shadow:inset 0 0 0 1.5px var(--onAccent)}
 .wkr-d.sel .wkr-m{box-shadow:inset 0 0 0 1.5px var(--onAccent)}
 .wkr-d.sel.done .wkr-m{background:var(--onAccent)}
+/* The chosen day, tapped again, unfolds what it holds under the row (railPeek). */
+.wkr-pk{display:grid;grid-template-rows:0fr;opacity:0;
+  transition:grid-template-rows var(--m-cal) var(--e-cal),opacity calc(var(--m-cal) * .6) var(--e-cal)}
+.wkr.peek .wkr-pk{grid-template-rows:1fr;opacity:1}
+.wkr-pk-in{min-height:0;overflow:hidden}
+.wkr-pk-c{margin:var(--s2) var(--s1) 0;padding:var(--s3);border-radius:var(--r3);background:var(--glass);border:1px solid var(--hair)}
+.wkr-pk-h{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2)}
+.wkr-pk-h b{font-family:var(--display);font-size:16px;margin-inline-end:auto}
+.wkr-chip{padding:2px var(--s2);border-radius:var(--rpill);font-size:11px;font-weight:800;letter-spacing:.03em;
+  color:var(--accentHi);background:var(--accent-tint);border:1px solid var(--accent-edge)}
+.wkr-chip.ok{color:var(--ok);background:transparent;border-color:currentColor}
+.wkr-chip.bad{color:var(--danger);background:transparent;border-color:currentColor}
+.wkr-pk-m{margin-top:6px;font-size:13px;color:var(--sub)}
+.wkr-pk-m i{font-style:normal;font-size:11px;color:var(--dim)}
+.wkr-dot{margin:0 6px;color:var(--dim)}
+.wkr-pk-mu{display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--s2)}
+.wkr-pk-mu span{padding:3px var(--s2);border-radius:var(--rpill);font-size:12px;font-weight:600;color:var(--text);background:var(--hair)}
+.wkr-pk-n{margin:var(--s2) 0 0;font-size:12px;color:var(--dim)}
 /* The month, inside the rail's card: no card of its own. */
 .wkr .dbcal{margin:var(--s2) var(--s1) 0;padding:var(--s3) var(--s1) var(--s1);border:0;border-top:1px solid var(--hair);border-radius:0;background:none}
 /* One surface for the bar and its month: the month unfolds inside it (owner, 2 Nov). */

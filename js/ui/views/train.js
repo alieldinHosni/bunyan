@@ -26,7 +26,7 @@ import {doseText, weeksText} from "../dose.js";
 import {addDaysISO, estMinutes, planOn} from "../../engine/dayplan.js";
 import {swapAdvice} from "../../engine/recovery.js";
 import {addsOn, missedNow} from "../../engine/missed.js";
-import {CHEV_D, CHEV_L, CHEV_R, monthGrid} from "../datebar.js";
+import {monthGrid} from "../datebar.js";
 import {paceOf, routePath, speedOf} from "../../engine/run.js";
 import {groundFor, mapSeed} from "../runmap.js";
 import {bodyTiles, trainTop} from "./home.js";
@@ -265,9 +265,11 @@ function dayState(sp,iso){
      red ✕       a weekday's workout that went by without a session
      ⇄           a day the coach or the person moved
    The selected day sits on an accent pill that glides between days (one shape, its place a
-   CSS variable, so the move is the compositor's). A tap shows the day below; a swipe or the
-   arrows go a week either side; "Today" brings it back; ⌄ opens the month inside the same
-   card (Food's month, js/ui/datebar.js, the same marks) and folds it back. */
+   CSS variable, so the move is the compositor's). A tap shows the day below, and a second
+   tap unfolds what it holds in the card (railPeek); a swipe goes a week either side, the
+   row following the finger (owner, 2 Nov: "remove the arrows … gesture-first"); "Today"
+   brings it back; the calendar icon opens the month inside the same card (Food's month,
+   js/ui/datebar.js, the same marks) and folds it back. */
 function shortWord(name){
   var w=String(name||"").replace(/\s+/g," ").trim().split(" ");
   /* "Full Body A" → "Full A", "Upper B" stays: the letter tells the sessions apart. */
@@ -283,38 +285,70 @@ function railDay(sp,iso,now){
   x.swap=!!(S.daySwap&&S.daySwap[iso]&&iso>=now);
   x.word=shortWord(x.word);
   return x;}
+/* What the chosen day holds, unfolded in the card by tapping it again (owner, 2 Nov:
+   "tap the selected day again to expand its details … tap again or outside to collapse"):
+   its whole name, where it stands, and its size. The time is the plan's estimate
+   (dayplan estMinutes), shown as one; a session done shows the minutes it took. */
+function railPeek(sp,iso,now){
+  var x=railDay(sp,iso,now),d=dayState(sp,iso),p=d.p,ex=[],name,st,stc="",meta=[],mins=0,est=false;
+  if(x.mark==="done"){var sv=p.session;
+    name=planName(p.name||sv.dayName||t("Workout"));st=t("Done");stc=" ok";
+    ex=(sv.entries||[]).filter(function(e){return (e.sets||[]).length;}).map(function(e){return {name:e.name,sets:e.sets.length};});
+    mins=+sv.mins||0;}
+  else if(x.mark==="miss"){var pd=pinnedOn(sp,iso);name=planName(pd.name);st=t("Missed");stc=" bad";ex=pd.ex;}
+  else if(x.mark==="plan"||x.mark==="proj"){
+    if(p.rest||!p.day){name=t("Rest day");st=t("Rest day");}
+    else{var add=addsOn(iso,p.day.id),all={ex:p.day.ex.concat(add)};name=planName(p.name);ex=all.ex;
+      st=iso===now?t("Today"):x.mark==="proj"?t("In your rotation"):t("Planned");mins=estMinutes(all);est=true;}}
+  else{name=x.st==="past"?t("Rest or unlogged"):t("Rest day");st=x.st==="past"?t("Nothing logged"):t("Rest day");}
+  var sets=0,mus={};ex.forEach(function(e){var n=Math.max(1,+e.sets||0);sets+=n;var m=muscleOf(e.name);if(m&&m!=="Other")mus[m]=(mus[m]||0)+n;});
+  if(ex.length){meta.push('<span class="num">'+ex.length+'</span> '+esc(t("exercises")));meta.push('<span class="num">'+sets+'</span> '+esc(t("sets")));}
+  if(mins)meta.push((est?'~':'')+'<span class="num">'+mins+'</span> '+esc(t("min"))+(est?' <i>'+esc(t("Estimated"))+'</i>':''));
+  var top=Object.keys(mus).sort(function(a,b){return mus[b]-mus[a];}).slice(0,4);
+  return '<div class="wkr-pk-c" data-k="pk'+iso+'">'
+   +'<div class="wkr-pk-h"><b>'+esc(name)+'</b><span class="wkr-chip'+stc+'">'+esc(st)+'</span>'
+   +(x.swap?'<span class="wkr-chip">'+esc(t("Moved"))+'</span>':'')+'</div>'
+   +(meta.length?'<div class="wkr-pk-m">'+meta.join('<span class="wkr-dot" aria-hidden="true">·</span>')+'</div>':'')
+   +(top.length?'<div class="wkr-pk-mu">'+top.map(function(m){return '<span>'+esc(tm(m).trim())+'</span>';}).join("")+'</div>':'')
+   +(x.mark==="proj"?'<p class="wkr-pk-n">'+esc(t("A rotation moves with what you train, so this day may shift."))+'</p>':'')
+   +'</div>';}
 function weekRail(sp,sel){
   var now=today(),ws=V.twkBase||weekStartOf(sel),days=weekDates(ws),done=0,plan=0,cells="",idx=-1;
   var nowWs=weekStartOf(now),off=Math.round((Date.parse(ws)-Date.parse(nowWs))/6048e5),open=!!V.tcal;
+  var peek=!!V.wkPeek&&!open&&days.indexOf(sel)>=0;
   days.forEach(function(iso,i){
     var x=railDay(sp,iso,now);
     if(x.mark==="done")done++;if(x.mark==="done"||x.mark==="plan"||x.mark==="proj"||x.mark==="miss")plan++;
     if(iso===sel)idx=i;
     var dt=new Date(iso+"T00:00:00");
     cells+='<button class="wkr-d '+x.mark+(iso===now?' today':'')+(iso===sel?' sel':'')+(x.word==="—"?' rest':'')+'" data-wkday="'+iso+'"'
-     +' aria-pressed="'+(iso===sel)+'" aria-label="'+esc(x.lbl+(x.swap?", "+t("moved"):""))+'">'
+     +' aria-pressed="'+(iso===sel)+'"'+(iso===sel?' aria-expanded="'+peek+'" aria-controls="wkr-pk"':'')
+     +' aria-label="'+esc(x.lbl+(x.swap?", "+t("moved"):""))+'">'
      +'<span class="wkr-w" aria-hidden="true">'+esc(dfmt(dt,{weekday:"narrow"}))+'</span>'
      +'<span class="wkr-n num" aria-hidden="true">'+dt.getDate()+'</span>'
      +'<i class="wkr-m" aria-hidden="true"></i>'
      +'<span class="wkr-t" aria-hidden="true">'+esc(x.word)+'</span>'+(x.swap?'<b class="wkr-sw" aria-hidden="true">⇄</b>':'')+'</button>';});
   var title=off===0?t("This week"):off===1?t("Next week"):off===-1?t("Last week")
-    :dfmt(new Date(days[0]+"T00:00:00"),{day:"numeric",month:"short"})+" – "+dfmt(new Date(days[6]+"T00:00:00"),{day:"numeric",month:"short"});
-  var away=sel!==now||off!==0;
+    :off<0?t("{n} weeks ago").replace("{n}",-off):t("In {n} weeks").replace("{n}",off);
+  var range=dfmt(new Date(days[0]+"T00:00:00"),{day:"numeric",month:"short"})+" – "+dfmt(new Date(days[6]+"T00:00:00"),{day:"numeric",month:"short"});
+  var away=sel!==now||off!==0,dir=V.wkDir>0?' fwd':V.wkDir<0?' back':'';
   var pct=plan?Math.round(done/plan*100):0;
-  return '<section class="wkr'+(open?' open':'')+'" data-k="wkr">'
-   +'<div class="wkr-h"><div class="wkr-ti"><b>'+esc(open?t("Training calendar"):title)+'</b>'
-   +(open?'':'<span class="wkr-p"><span class="num">'+done+'</span> '+esc(t("of"))+' <span class="num">'+plan+'</span> '+esc(t("done"))+'</span>')+'</div>'
+  return '<section class="wkr'+(open?' open':'')+(peek?' peek':'')+'" data-k="wkr">'
+   +'<div class="wkr-h"><div class="wkr-ti'+dir+'" data-k="wkt'+(open?'cal':ws)+'" aria-live="polite"><b>'+esc(open?t("Training calendar"):title)+'</b>'
+   +(open?'':'<span class="wkr-p">'+esc(range)+' · <span class="num">'+done+'</span> '+esc(t("of"))+' <span class="num">'+plan+'</span> '+esc(t("done"))+'</span>')+'</div>'
    +'<div class="wkr-ha">'
    +(away?'<button class="wkr-today" data-wktoday="1">'+esc(t("Today"))+'</button>':'')
-   +(open?'':'<button class="dnav-arrow sm" data-wkpage="-1" aria-label="'+esc(t("Previous week"))+'">'+CHEV_L+'</button>'
-     +'<button class="dnav-arrow sm" data-wkpage="1" aria-label="'+esc(t("Next week"))+'">'+CHEV_R+'</button>')
-   +'<button class="dnav-arrow sm wkr-x" data-wkopen="1" aria-expanded="'+open+'" aria-label="'+esc(t(open?"Back to the week":"See the whole month"))+'">'+CHEV_D+'</button>'
+   /* No arrows on screen: the row swipes. These two are for a keyboard or a screen reader. */
+   +(open?'':'<button class="vh" data-wkpage="-1">'+esc(t("Previous week"))+'</button><button class="vh" data-wkpage="1">'+esc(t("Next week"))+'</button>')
+   +'<button class="wkr-cal" data-wkopen="1" aria-expanded="'+open+'" aria-label="'+esc(t(open?"Back to the week":"See the whole month"))+'">'+CAL+'</button>'
    +'</div></div>'
    +(open?'':'<div class="wkr-bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div>')
    +'<div class="wkr-fold"'+(open?' inert aria-hidden="true"':'')+'><div class="wkr-in">'
-   +'<div class="wkr-r" data-swipe="week" role="group" aria-label="'+esc(title)+'" style="--i:'+(idx<0?0:idx)+'">'
+   +'<div class="wkr-r" data-swipe="week" role="group" aria-label="'+esc(title+", "+range)+'" style="--i:'+(idx<0?0:idx)+'">'
    +'<span class="wkr-hl'+(idx<0?' off':'')+'" aria-hidden="true"></span>'
-   +'<div class="wkr-days'+(V.wkDir>0?' fwd':V.wkDir<0?' back':'')+'" data-k="wkd'+ws+'">'+cells+'</div></div></div></div>'
+   +'<div class="wkr-days'+dir+'" data-k="wkd'+ws+'">'+cells+'</div></div>'
+   +'<div class="wkr-pk" id="wkr-pk"'+(peek?'':' inert aria-hidden="true"')+'><div class="wkr-pk-in">'+(idx<0?'':railPeek(sp,sel,now))+'</div></div>'
+   +'</div></div>'
    +'<div class="dbfold'+(open?' open':'')+'"'+(open?'':' inert aria-hidden="true"')+'><div class="dbfold-in">'
    +monthGrid(sel,V.cal,true,function(iso){var x=railDay(sp,iso,now);return {t:x.mark==="done",p:x.mark==="plan"||x.mark==="proj",lbl:x.lbl};})
    +'</div></div></section>';}

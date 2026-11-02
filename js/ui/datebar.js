@@ -151,4 +151,15 @@ function dateBar(o){
    +'</div>';
 }
 
-export {CHEV_D, CHEV_L, CHEV_R, dateBar, monthGrid, shiftDay, weekInitials};
+/* Training's week rail: the chosen day's details unfold or fold (views/train.js railPeek).
+   Classes and attributes only, so the card animates instead of being drawn again. */
+function setPeek(on){
+  V.wkPeek=!!on;
+  var c=document.querySelector("#app .wkr");if(!c)return;
+  var pk=c.querySelector(".wkr-pk"),sel=c.querySelector(".wkr-d.sel");
+  on=V.wkPeek&&!c.classList.contains("open")&&!!sel;
+  c.classList.toggle("peek",on);
+  if(pk){pk.inert=!on;if(on)pk.removeAttribute("aria-hidden");else pk.setAttribute("aria-hidden","true");}
+  if(sel)sel.setAttribute("aria-expanded",String(on));}
+
+export {dateBar, setPeek, monthGrid, shiftDay, weekInitials};

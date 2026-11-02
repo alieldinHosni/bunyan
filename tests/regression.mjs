@@ -63,7 +63,8 @@ const pause=(page,ms=300)=>page.waitForTimeout(ms);
 async function railTo(page,iso){
   for(let i=0;i<6&&!(await page.$('.wkr [data-wkday="'+iso+'"]'));i++){
     const first=await page.$eval('.wkr [data-wkday]',b=>b.getAttribute("data-wkday"));
-    await page.tap('.wkr [data-wkpage="'+(iso<first?-1:1)+'"]');await page.waitForTimeout(250);}
+    /* No arrows on screen (the row swipes); the screen reader's buttons page it. */
+    await page.$eval('.wkr [data-wkpage="'+(iso<first?-1:1)+'"]',b=>b.click());await page.waitForTimeout(250);}
   await page.tap('.wkr [data-wkday="'+iso+'"]');await page.waitForTimeout(300);}
 async function tapTab(page,tab){
   /* Profile is not on the dock: it opens from the person at the top right of Training. */
@@ -3524,10 +3525,12 @@ await test("Training's week rail: words for the days, the pill glides to the day
     const x1=await page.$eval(".wkr-hl",e=>e.getBoundingClientRect().left);
     eq([await page.$eval(".wkr-r",e=>e.style.getPropertyValue("--i")),x1!==x0],[String(iso.indexOf(nx)),true],"the pill moves to the day");}
   const first=await page.$eval(".wkr .wkr-d",b=>b.getAttribute("data-wkday"));
-  await page.tap('.wkr [data-wkpage="1"]');await pause(page,300);
+  eq(await page.$$eval('.wkr [data-wkpage]',a=>a.map(b=>b.getBoundingClientRect().width<=1)),[true,true],"no arrows on screen: paging is a swipe");
+  await page.$eval('.wkr [data-wkpage="1"]',b=>b.click());await pause(page,300);
   const f2=await page.$eval(".wkr .wkr-d",b=>b.getAttribute("data-wkday"));
   eq(Math.round((Date.parse(f2)-Date.parse(first))/864e5),7,"next week");
   eq(await page.textContent(".wkr-ti b"),"Next week");
+  if(!/ – /.test(await page.textContent(".wkr-p")))throw new Error("no date range under the title");
   if(!(await page.$('.wkr [data-wktoday]')))throw new Error("no Today on another week");
   /* A swipe back, as a finger would, pages back. */
   await page.evaluate(()=>{const r=document.querySelector(".wkr-r"),b=r.getBoundingClientRect(),y=b.top+b.height/2;
@@ -3538,6 +3541,32 @@ await test("Training's week rail: words for the days, the pill glides to the day
   await pause(page,400);
   eq(await page.$eval(".wkr .wkr-d",b=>b.getAttribute("data-wkday")),first,"swiped back to this week");
 });
+await test("Training's week rail: the chosen day tapped again unfolds what it holds in the card; again or a tap outside folds it",async page=>{
+  await tapTab(page,"train");await pause(page,300);
+  const st=()=>page.evaluate(()=>{const c=document.querySelector(".wkr"),pk=c.querySelector(".wkr-pk");
+    return [c.classList.contains("peek"),pk.inert,Math.round(pk.getBoundingClientRect().height)>40,document.querySelector(".wkr-d.sel").getAttribute("aria-expanded")];});
+  eq(await st(),[false,true,false,"false"],"folded at first");
+  await page.evaluate(()=>{window.__keep=document.querySelector(".wkr-days");});
+  await page.tap(".wkr .wkr-d.sel");await pause(page,700);
+  eq(await st(),[true,false,true,"true"],"unfolded");
+  eq(await page.evaluate(()=>window.__keep===document.querySelector(".wkr-days")),true,"nothing drawn again");
+  const t=await page.textContent(".wkr-pk-c");
+  if(!/exercises/.test(t)||!/sets/.test(t)||!/Estimated/.test(t))throw new Error("no size or estimate: "+t);
+  if(!(await page.$(".wkr-pk-mu span")))throw new Error("no muscles");
+  await page.tap(".wkr .wkr-d.sel");await pause(page,700);
+  eq((await st()).slice(0,2),[false,true],"folded again");
+  await page.tap(".wkr .wkr-d.sel");await pause(page,500);
+  await page.tap(".thero2-n");await pause(page,700);
+  eq((await st())[0],false,"a tap outside folds it");
+  /* Another day picked while it is open: the card shows that day. */
+  await page.tap(".wkr .wkr-d.sel");await pause(page,400);
+  const other=await page.$eval(".wkr .wkr-d:not(.sel)",b=>b.getAttribute("data-wkday"));
+  await page.tap('.wkr [data-wkday="'+other+'"]');await pause(page,500);
+  eq(await page.evaluate(o=>[document.querySelector(".wkr").classList.contains("peek"),!!document.querySelector('.wkr-pk-c[data-k="pk'+o+'"]')],other),[true,true],"open on the day picked");
+  /* The month from the calendar icon. */
+  await page.tap(".wkr .wkr-cal");await pause(page,700);
+  eq(await page.evaluate(()=>[document.querySelector(".wkr").classList.contains("open"),document.querySelector(".wkr-cal").getAttribute("aria-expanded"),!!document.querySelector(".wkr .dbcal")]),[true,"true",true]);
+},{prefs:{anim:true}});
 await test("Training's week rail in Arabic: right to left, the pill from the right, figures isolated",async page=>{
   await tapTab(page,"train");await pause(page,300);
   const r=await page.evaluate(()=>{const row=document.querySelector(".wkr-days"),c=[...row.children],hl=document.querySelector(".wkr-hl"),sel=document.querySelector(".wkr-d.sel");

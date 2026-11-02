@@ -18,6 +18,7 @@ import {dfmt, num, r1, today, uid} from "../../util.js";
 import {addExercise, askConfirm, askText, closeSheet, openSheet, val} from "../actions.js";
 import {grow} from "../more.js";
 import {pushNav} from "../nav.js";
+import {setPeek} from "../datebar.js";
 import {render} from "../render.js";
 import {tap, toast, V} from "../view.js";
 import {groupRun} from "../views/session.js";
@@ -116,10 +117,14 @@ function register(){
      onto the days left, or let go; each marks it dealt with, and has Undo. */
   /* The week rail (views/train.js weekRail): a day shown below, a week either side, back
      to today, the month opened inside the card and folded back. */
-  key("wkday",function(D){V.tdate=D.wkday===today()?null:D.wkday;V.twkBase=null;V.wkDir=0;render();return;});
+  key("wkday",function(D,el){
+    /* The chosen day tapped again: its details unfold in the card, or fold away. Only
+       classes change; nothing is drawn again. */
+    if(D.wkday===(V.tdate||today())&&el.classList.contains("sel")){setPeek(!V.wkPeek);return;}
+    V.tdate=D.wkday===today()?null:D.wkday;V.twkBase=null;V.wkDir=0;render();return;});
   key("wkpage",function(D){var n=+D.wkpage,ws=V.twkBase||weekStartOf(V.tdate||today());
     V.twkBase=addDaysISO(ws,7*n);if(V.twkBase===weekStartOf(today())&&!V.tdate)V.twkBase=null;V.wkDir=n;render();return;});
-  key("wktoday",function(){V.tdate=null;V.twkBase=null;V.tcal=false;V.wkDir=0;render();return;});
+  key("wktoday",function(){V.tdate=null;V.twkBase=null;V.tcal=false;V.wkDir=0;V.wkPeek=false;render();return;});
   key("wkopen",function(){V.tcal=!V.tcal;
     /* The month of the day chosen, or of the middle of the week shown when paged away. */
     var sel=V.tdate||today(),ws=V.twkBase||weekStartOf(sel),on=sel>=ws&&sel<=addDaysISO(ws,6)?sel:addDaysISO(ws,3),

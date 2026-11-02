@@ -3006,3 +3006,18 @@ replaced on Training by `.wkr` (js/ui/views/train.js weekRail/railDay); Food kee
 - Tour: the Training tip is "Your week" on `.wkr`. Arabic for every new string.
 - Tests: the Training day-bar tests now drive the rail (helper railTo); new: the rail's words, pill, paging,
   swipe and moved mark; the rail in Arabic.
+
+Then, same day (owner, with a concept image): "remove the arrow buttons … gesture-first … tap the selected
+day again to expand its details … tap again or outside to collapse … the header transitions with the date
+range underneath":
+- No arrows on screen. Swipe pages the week; the row follows the finger while dragging (app.js touchmove,
+  `translate` on `.wkr-r`, snaps back under 48 px), and a page change gives the haptic. Two visually hidden
+  buttons (`.vh` data-wkpage) remain for keyboard and screen readers.
+- The month opens from a small calendar icon (`.wkr-cal`, lit while open), in the same card as before.
+- Header: "This week / Next week / Last week / N weeks ago / In N weeks", the date range and "N of M done"
+  underneath; a new week's title and days slide in from the side they came from. The bar grows in.
+- The chosen day tapped again unfolds `.wkr-pk` (views/train.js railPeek): full name, a status chip (Done,
+  Today, Planned, In your rotation, Missed, Rest day; Moved), exercises and sets, minutes (a session's own,
+  or the plan's estMinutes shown as "~N min Estimated"), and the top muscles by sets. Tapped again or a tap
+  outside the rail folds it (datebar.js setPeek: classes and inert only, no render). It stays open when
+  another day is picked and shows that day. V.wkPeek holds it.
