@@ -9,7 +9,7 @@ import {FOODDB, loadFoods, ownFood} from "../../engine/nutrition.js";
 import {buildPlan, rebalance} from "../../engine/plan.js";
 import {checkinOpen} from "../../engine/checkin.js";
 import {lightOnPurpose} from "../../engine/stress.js";
-import {weekStartOf} from "../../engine/schedule.js";
+import {addDays, weekStartOf} from "../../engine/schedule.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {t} from "../../i18n/dict.js";
 import {S, saveDB, split} from "../../state.js";
@@ -28,7 +28,7 @@ import {chatSend, sendText, slotsFrom, toCoach} from "./common.js";
 import {closeCoach, holdCoach, toEnd} from "../coachfab.js";
 import {perform, undo} from "./actions.js";
 import {addFact, removeFact} from "../../coach/context.js";
-import {key, on} from "./registry.js";
+import {has, key, on} from "./registry.js";
 import {closeMenu, msgText} from "../chatgest.js";
 /* Where the clipboard API is missing or refused: a hidden field, selected and copied. */
 function copyOld(tx){try{var f=document.createElement("textarea");f.value=tx;f.setAttribute("readonly","");f.style.position="fixed";f.style.opacity="0";
@@ -222,6 +222,15 @@ function register(){
       msg=t(built?"Good to hear. Your week is built again for full recovery.":"Good to hear. The volume checks are back on.");}
     saveDB();render();
     toast(msg,function(){S.profile=before.profile;S.programs=before.programs;S.activeProgram=before.activeProgram;saveDB();render();});return;});
+  /* What got in the way last week (ui/checkin.js ckWhy), kept by week; "" takes it back. */
+  has("ckwhy",function(D){var ws=weekStartOf(today());S.ckWhy=S.ckWhy||{};
+    if(D.ckwhy)S.ckWhy[ws]=D.ckwhy;else delete S.ckWhy[ws];
+    /* Only the last couple of months are kept: older answers say nothing about now. */
+    Object.keys(S.ckWhy).forEach(function(k){if(k<addDays(ws,-56))delete S.ckWhy[k];});
+    saveDB();render();return;});
+  /* The assessment, opened at one step (a check-in's strategy, the squat check again). */
+  key("setupstep",function(D){if(V.sheet)closeSheet();pushNav();V.assess=true;V.asd=draftFrom();
+    var i=STEPS.indexOf(D.setupstep);if(i>=0)V.asd.step=i;render();window.scrollTo(0,0);return;});
   key("ckok",function(){S.ckDone=weekStartOf(today());saveDB();render();return;});
   key("astrain",function(){V.assess=false;V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tdate=null;render();window.scrollTo(0,0);return;});
   key("asfood",function(){V.assess=false;V.pcheck=false;resetNav();V.tab="food";V.train="days";V.fdate=null;render();window.scrollTo(0,0);return;});

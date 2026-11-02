@@ -1816,6 +1816,26 @@ await test("Warm-up: Start stays on the bottom edge all the way down",async page
     return page.evaluate(()=>Math.round(document.querySelector(".wu-foot").getBoundingClientRect().bottom)-innerHeight);};
   eq([await at(0),await at(300),await at(99999)],[0,0,0],"the footer's bottom is the screen's");
 });
+await test("Check-in barriers: fewer workouts than planned asks what got in the way; the answer gives that barrier's strategy and its action, and next week recalls it",async page=>{
+  await page.evaluate(async()=>{
+    const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sc=await import("/js/engine/schedule.js"),P=await import("/js/engine/plan.js");
+    const ws=Sc.weekStartOf(U.today()),add=(d,n)=>new Date(Date.parse(d+"T00:00:00Z")+n*864e5).toISOString().slice(0,10);
+    Object.assign(S.profile,{goal:"gain",level:"some",days:4,wd:[],mins:60,age:30,height:180,sex:"m",weight:80});
+    S.programs=[];S.activeProgram=null;P.buildPlan();
+    S.sessions=[{id:"b1",date:add(ws,-4),entries:[{name:"Barbell Squat",muscle:"Quads",sets:[{w:80,r:8,rpe:8}]}]}];
+    S.ckWhy={[add(ws,-7)]:"time"};delete S.ckDone;delete S.ckDid;st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.csec="ai";S.prefs.csec="ai";(await import("/js/ui/render.js")).render();});
+  await pause(page,300);
+  if(!(await page.$('.ckcard [data-ckwhy="time"]')))throw new Error("no question: "+(await page.textContent('.ckcard')).slice(0,400));
+  if(!/Better than the week before, when it was: not enough time/.test(await page.textContent(".ckwhy")))throw new Error("last week's answer not recalled, nor that the week went better");
+  await page.tap('.ckcard [data-ckwhy="no_social_support"]');await pause(page,300);
+  const w=await page.textContent('.ckwhy');
+  if(!/training partner/.test(w)||!(await page.$('.ckwhy [data-share]')))throw new Error("no strategy or action: "+w);
+  await page.tap('.ckwhy [data-ckwhy=""]');await pause(page,300);
+  await page.tap('.ckcard [data-ckwhy="time"]');await pause(page,300);
+  await page.tap('.ckwhy [data-setupstep="week"]');await pause(page,400);
+  eq(await ev(page,"[V.assess,V.asd&&V.asd.step]"),[true,(await page.evaluate(async()=>(await import("/js/ui/views/assess.js")).STEPS.indexOf("week")))],"the assessment opens on the week");
+});
 await test("Weekly check-in: last week read on Coach — two short weeks and slow loss give a shorter week and 100 kcal less, each one tap with Undo, then closed for the week; in Arabic too",async page=>{
   const setUp=async()=>page.evaluate(async()=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sc=await import("/js/engine/schedule.js"),P=await import("/js/engine/plan.js");

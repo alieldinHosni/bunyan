@@ -3114,3 +3114,14 @@ a condition, or a modest goal (lose/recomp/maintain/mobility). Stages 4–5 not 
   (feel + bpm or RPE). "Find your zones" sheet: the talk test in four steps (paraphrased), VT1/VT2 inputs,
   validated (60–230, VT2 > VT1), per profile (S.profile.vt1/vt2).
 - Tests: engine zones.test.js (the book's worked example 145/165); regression "Cardio zones: …".
+
+## Barriers in the weekly check-in — same branch
+
+Item 6. Fewer workouts than planned last week → the check-in asks "What got in the way?" (engine/barriers.js:
+time, convenience, unrealistic goals, social physique anxiety, ambivalence, no social support — adherence.js
+BARRIERS — and "ill or injured", the book's physical barrier). The answer (S.ckWhy by week, 8 weeks kept)
+shows that barrier's strategy, paraphrased, with the app's action: fit the week to my time / plan for home /
+review my goal (the assessment at that step, data-setupstep) or share my plan. Next week recalls it
+("Better than the week before, when it was: …" / "Is it still?"). A check-in now shows even with only missed
+workouts logged. Also: four weeks after the squat check, "Redo the squat check" (assessments: repeat
+periodically). Test: regression "Check-in barriers: …".

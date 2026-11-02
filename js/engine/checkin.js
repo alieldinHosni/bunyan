@@ -12,7 +12,7 @@ import {isActivity} from "../data/activities.js";
 import {S, split} from "../state.js";
 import {num, today} from "../util.js";
 import {inDeload, kcalFloor, tdee} from "./formulas.js";
-import {weekStartOf} from "./schedule.js";
+import {addDays, weekStartOf} from "./schedule.js";
 import {JUDGED, weeklySets} from "./volume.js";
 import {lightOnPurpose} from "./stress.js";
 
@@ -42,7 +42,17 @@ function checkinOpen(){
   /* Kept light on purpose (js/engine/stress.js): no "under your range". */
   if(lightOnPurpose(S.profile))c.changes=c.changes.map(function(x){return x.kind==="balance"?Object.assign({},x,{low:[]}):x;})
     .filter(function(x){return x.kind!=="balance"||x.high.length;});
-  if(!c.done&&!c.food&&!c.weight&&!c.sore)return null;
+  /* Fewer workouts than planned: worth a check-in even with nothing else logged, to ask
+     what got in the way (js/knowledge/adherence.js BARRIERS). The answer is kept by week
+     and read again next week (BARRIER_RULES.coachRole: check in often, barriers change). */
+  c.missed=!!(c.planned&&c.done<c.planned);
+  var why=S.ckWhy||{},pw=addDays(ws,-7);
+  c.barrier=why[ws]||null;c.prevBarrier=why[pw]||null;
+  /* The squat check again after four weeks (assessments.js overhead_squat: repeat it
+     periodically to track progress). */
+  var fa=(S.profile||{}).faultsAt;
+  c.recheck=!!(fa&&((S.profile||{}).faults||[]).length&&(Date.parse(today())-Date.parse(fa))/864e5>=28);
+  if(!c.done&&!c.food&&!c.weight&&!c.sore&&!c.missed)return null;
   var did=S.ckDid&&S.ckDid.w===ws?S.ckDid.k||[]:[];
   c.changes=c.changes.filter(function(x){return did.indexOf(x.kind)<0;});
   c.week=ws;
