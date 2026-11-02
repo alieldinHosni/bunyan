@@ -2614,6 +2614,24 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
    label in the accent, then the figures; tiles for the targets, rows for the days and
    the meals that open in place, a bar per muscle in its own ink. */
 .as-ch{display:flex;align-items:center;gap:var(--s2);margin:0 0 var(--s2);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+/* Cardio & Sports: the stage and zones (sheets.js cardioCard, zones). */
+.zcard{margin:0 0 var(--s4);padding:var(--s3) var(--s4);border-radius:var(--r4);background:var(--glass);border:1px solid var(--border)}
+.zc-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
+.zc-h b{font-family:var(--display);font-size:16px}
+.zc-st{padding:2px var(--s2);border-radius:var(--rpill);font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--accentHi);background:var(--accent-tint);border:1px solid var(--accent-edge)}
+.zc-do{margin:var(--s2) 0 0;font-size:13.5px;line-height:1.45;color:var(--text)}
+.zc-next,.zc-note{margin:var(--s2) 0 0;font-size:12.5px;line-height:1.45;color:var(--sub)}
+.zrows{list-style:none;margin:var(--s3) 0 0;padding:0;display:grid;gap:6px}
+.zrows li{display:grid;grid-template-columns:auto 1fr auto;gap:var(--s2);align-items:baseline;font-size:13px}
+.zn{font-weight:800;color:var(--text);white-space:nowrap}
+.zf{color:var(--sub);min-width:0}
+.zb{font-weight:700;color:var(--text);white-space:nowrap}
+.zc-set{margin-top:var(--s3)}
+.zsteps{margin:0 0 var(--s4);padding-inline-start:var(--s4);display:grid;gap:var(--s2);font-size:13.5px;line-height:1.45;color:var(--text)}
+.zin{display:grid;gap:var(--s3);margin-bottom:var(--s4)}
+.zin label{display:grid;grid-template-columns:1fr 96px auto;align-items:center;gap:var(--s2);font-size:14px;color:var(--text)}
+.zin input{height:44px;padding:0 var(--s3);border-radius:var(--r3);border:1px solid var(--border);background:var(--raised);color:var(--text);font-size:16px}
+.zin i{font-style:normal;color:var(--dim);font-size:13px}
 /* A health condition's card (ui/dose.js condCard): which, and what the plan does about it. */
 .condcard{border-color:var(--accent-edge)}
 .cond-ids{margin-bottom:var(--s2)}

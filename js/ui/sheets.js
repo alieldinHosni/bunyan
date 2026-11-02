@@ -10,6 +10,7 @@ import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay} from "./views/train.js";
 import {planOn} from "../engine/dayplan.js";
 import {dayOptions} from "../engine/recovery.js";
+import {stageFor, zonesFor} from "../engine/zones.js";
 import {ACT_GROUPS, actIcon, actInfo, actRate, actsIn, INTENSITY, intensityOf, isActivity, outdoorOf} from "../data/activities.js";
 import {barKg, bwShare, incrementFor, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition, foodName} from "../engine/nutrition.js";
@@ -54,6 +55,29 @@ function listOf(ms){var a=ms.slice(0,3).map(function(m){return tm(m).trim().toLo
 function wdShort(iso){return dfmt(new Date(iso+"T00:00:00"),{weekday:"short"});}
 var glyphI='<span class="swnote-i" aria-hidden="true"></span>';
 
+/* Cardio: the stage to train at and the zones (engine/zones.js), at the top of Cardio &
+   Sports. Heart rates where they are the person's own; feel otherwise. */
+var ZFEEL={1:"Easy: you can talk comfortably",2:"Talking in full sentences gets hard",3:"Short phrases only",4:"You can hardly speak"};
+var STAGE_DO={1:"Steady, in zone 1. Start around 15 minutes three times a week and add a few minutes each week, no more than a tenth more a week.",
+  2:"Intervals: a minute just above VT1 (zone 2), then three minutes in zone 1, repeated; warm up and cool down 5–10 minutes. New to intervals: alternate these with steady days.",
+  3:"Mostly zone 1 with short zone 2 and 3 intervals, zone 2 the longer ones. Rotate an easy, a medium and a hard day. Never zone 4."};
+function cardioCard(){
+  var p=S.profile||{},z=zonesFor(p),st=stageFor(p,S.sessions,today(),{cardio:function(n){var a=actInfo(n);return !!(a&&a.grp==="Cardio");}});
+  var h='<section class="zcard" data-k="zcard"><div class="zc-h"><b>'+esc(t("Your cardio"))+'</b><span class="zc-st">'+esc(t("Stage {n}").replace("{n}",st.stage))+'</span></div>'
+   +'<p class="zc-do">'+esc(t(STAGE_DO[st.stage]))+'</p>';
+  if(st.needVT1)h+='<p class="zc-next">'+esc(t("Three easy 30-minute sessions this week: you are ready for intervals. Do the talk test first to find your zones."))+'</p>';
+  else if(st.needVT2)h+='<p class="zc-next">'+esc(t("Ready for harder intervals: add your VT2 heart rate to unlock stage 3."))+'</p>';
+  else if(st.stage===1)h+='<p class="zc-next">'+esc(t("Stage 2 opens after three easy sessions of 30 minutes or more in a week."))+'</p>';
+  h+='<ul class="zrows">'+z.rows.filter(function(r){return st.stage>=3||r.zone<=Math.max(2,st.stage);}).map(function(r){
+    /* The figure isolated from its unit, so Arabic keeps "<145" and "145–154" in order. */
+    var fig=r.min||r.max?(r.min&&r.max?r.min+"–"+r.max:r.min?r.min+"+":"<"+(r.max+1)):"";
+    var bpm=fig?'<bdi dir="ltr">'+esc(fig)+'</bdi> '+esc(t("bpm")):"";
+    return '<li><span class="zn">'+esc(t("Zone {n}").replace("{n}",r.zone))+'</span><span class="zf">'+esc(t(ZFEEL[r.zone]))+'</span>'
+      +'<span class="zb num">'+(bpm||esc(t("RPE {a}–{b}")).replace("{a}–{b}",'<bdi dir="ltr">'+r.rpe.min+"–"+r.rpe.max+'</bdi>'))+'</span></li>';}).join("")+'</ul>';
+  if(z.feelOnly)h+='<p class="zc-note">'+esc(t("Your medication can change your heart rate, so go by feel and the talk test, not a number."))+'</p>';
+  else if(!z.measured&&z.hrmax)h+='<p class="zc-note">'+esc(t("Estimated maximum heart rate about {n} bpm (208 − 0.7 × age): a starting point only.").replace("{n}",z.hrmax))+'</p>';
+  if(!z.feelOnly)h+='<button class="btn g zc-set" data-zones="1">'+esc(t(z.measured?"Change your zones":"Find your zones"))+'</button>';
+  return h+'</section>';}
 function vSheet(){
   if(!V.sheet)return "";
   var b="";
@@ -469,10 +493,26 @@ function vSheet(){
     if(rv2.steps)b+='<div class="dv-card dv-row"><b>'+t("Steps")+'</b><span class="dv-k">'+fmtN(rv2.steps)+'</span></div>';
     b+='<div class="cf-acts se-acts"><button class="btn g cf-no" data-jumpfood="'+dv+'">'+t("Open this day in Food")+'</button></div>';
   }
+  else if(V.sheet==="zones"){
+    /* The talk test that finds VT1 (js/knowledge/assessments.js talk_test_vt1, paraphrased),
+       and the heart rates it gives. */
+    var pz=S.profile||{};
+    b='<div class="se-top"><span class="se-k">'+t("Cardio")+'</span><h2>'+t("Find your zones")+'</h2>'
+     +'<p class="shsub">'+t("Your zones come from your own heart rate where talking gets hard, found with the talk test.")+'</p></div>'
+     +'<ol class="zsteps">'+["Warm up on a bike or treadmill with a heart-rate monitor.","Start light. Every 1 to 3 minutes, once your heart rate has settled, go up a step and say something from memory for 20 seconds.",
+       "The first step where talking without a break gets challenging (not yet difficult) is VT1. Note your heart rate there.",
+       "VT2, for performance goals only: the hardest pace you could hold for 20 minutes, where you can no longer speak. Note that heart rate too."]
+       .map(function(x){return '<li>'+esc(t(x))+'</li>';}).join("")+'</ol>'
+     +'<div class="zin"><label><span>'+t("Heart rate at VT1")+'</span><input id="z_vt1" class="num" type="number" inputmode="numeric" min="60" max="230" value="'+(num(pz.vt1)||"")+'"><i>'+t("bpm")+'</i></label>'
+     +'<label><span>'+t("Heart rate at VT2 (optional)")+'</span><input id="z_vt2" class="num" type="number" inputmode="numeric" min="60" max="230" value="'+(num(pz.vt2)||"")+'"><i>'+t("bpm")+'</i></label></div>'
+     +'<div class="cf-acts se-acts"><button class="btn" data-zsave="1">'+t("Save")+'</button>'
+     +((pz.vt1||pz.vt2)?'<button class="btn g" data-zsave="clear">'+t("Clear them")+'</button>':'')+'</div>';
+  }
   else if(V.sheet==="acts"){
     /* A run, a match, a class: pick one and it opens straight into logging it. */
     b='<div class="se-top"><span class="se-k">'+t("Training")+'</span><h2>'+t("Cardio & Sports")+'</h2>'
-     +'<p class="shsub">'+t("Log time, distance and effort instead of sets.")+'</p></div>';
+     +'<p class="shsub">'+t("Log time, distance and effort instead of sets.")+'</p></div>'
+     +cardioCard();
     ACT_GROUPS.forEach(function(g){
       b+='<div class="exd-h">'+t(g)+'</div><div class="actgrid">';
       actsIn(g).forEach(function(n){

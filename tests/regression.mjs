@@ -2452,6 +2452,19 @@ await test("Phases: block 1 is stabilisation (12–20 reps, slow tempo), block 3
   const c3=await page.textContent('.blk');
   if(!/Block 3/.test(c3)||!/Muscular development/.test(c3)||!/6–12 reps/.test(c3))throw new Error("block 3 card: "+c3);
 });
+await test("Cardio zones: Cardio & Sports opens with the stage and zones by feel; the talk test's heart rates make them bands; bad numbers are refused",async page=>{
+  await tapTab(page,"train");await pause(page);
+  await page.tap('[data-actsheet]');await pause(page,400);
+  const c=await page.textContent('#sheet .zcard');
+  if(!/Stage 1/.test(c)||!/Zone 1/.test(c)||!/talk comfortably/.test(c)||!/starting point only/.test(c))throw new Error("card: "+c);
+  await page.tap('#sheet [data-zones]');await pause(page,400);
+  await page.fill('#z_vt1','170');await page.fill('#z_vt2','150');await page.tap('[data-zsave="1"]');await pause(page,300);
+  eq(await ev(page,"[V.sheet,S.profile.vt1]"),["zones",undefined],"VT2 below VT1 refused");
+  await page.fill('#z_vt1','145');await page.fill('#z_vt2','165');await page.tap('[data-zsave="1"]');await pause(page,400);
+  eq(await ev(page,"[V.sheet,S.profile.vt1,S.profile.vt2]"),["acts",145,165],"saved, back to the list");
+  const rows=await page.$$eval('#sheet .zrows li .zb',a=>a.map(e=>e.textContent));
+  eq(rows[0],"<145 bpm","zone 1 below VT1, as the book's example: "+JSON.stringify(rows));
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);

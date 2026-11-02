@@ -3100,3 +3100,17 @@ mobility 1; any health condition or age group 1→2. Phase 1 comes round again a
 - Training block card: the phase, its reps and tempo, what it is for, and the next block's phase. The set
   line shows "Tempo 4-2-1-1". Existing users: the phase follows their current block number at once.
 - Tests: engine phase.test.js; regression "Phases: …".
+
+## Cardio zones and stages — same branch
+
+Item 5. js/engine/zones.js. The book prescribes from the person's own VT1/VT2 (talk test); zones are heart-rate
+bands only with those (ZONE_CALC: zone 2 VT1→midpoint, zone 3 midpoint→VT2); otherwise said by feel (RPE and
+the talk test), with Tanaka's 208 − 0.7 × age shown as "a starting point only". No bpm band invented per zone.
+Medication that blunts heart rate (conditions talkTest): feel only, no numbers.
+Stage: 1 (steady zone 1) until three easy (RPE ≤ 4 or unrated) cardio sessions of 30+ min in the last 7 days;
+then 2 (intervals just above VT1) once VT1 is known, else "do the talk test"; 3 needs VT2 and not a beginner,
+a condition, or a modest goal (lose/recomp/maintain/mobility). Stages 4–5 not offered.
+- Cardio & Sports sheet opens with "Your cardio · Stage N": what to do, what opens the next stage, the zones
+  (feel + bpm or RPE). "Find your zones" sheet: the talk test in four steps (paraphrased), VT1/VT2 inputs,
+  validated (60–230, VT2 > VT1), per profile (S.profile.vt1/vt2).
+- Tests: engine zones.test.js (the book's worked example 145/165); regression "Cardio zones: …".
