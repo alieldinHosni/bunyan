@@ -147,7 +147,9 @@ function repsText(e,timed){
   if(!p.lo&&!p.hi)return "";
   var r=p.lo+(p.hi&&p.hi!==p.lo?"–"+p.hi:"");
   return t("Target")+" "+r+" "+(timed?t("s"):t("reps"))+(p.side?" "+t("/ side"):"")
-    +(p.rir!=null&&!timed?" · "+t("{n} in reserve").replace("{n}",p.rir):"");}
+    +(p.rir!=null&&!timed?" · "+t("{n} in reserve").replace("{n}",p.rir):"")
+    /* The phase's tempo (engine/phase.js), as the book writes it: lower, pause, lift, pause. */
+    +(p.tempo&&!timed&&/[\dX]-[\dX]-[\dX]-[\dX]/.test(p.tempo)?" · "+t("Tempo {t}").replace("{t}",p.tempo.match(/[\dX]-[\dX]-[\dX]-[\dX]/)[0]):"");}
 /* A set as the rows and the reference line say it: "60 kg × 8", "+10 kg × 6", "BW × 12",
    "45 s". */
 function setText(name,x,timed){

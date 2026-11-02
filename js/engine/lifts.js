@@ -232,6 +232,14 @@ function recommendIn(log,e,ctx){
     return {w:0,lo:e.planned.lo,hi:e.planned.hi,note:"Find a weight you can control for "+e.planned.lo+" reps."};}
   /* Short of the range: held twice, lighter the third time (js/coach/autoreg.js). The
      load is the logged one, so a suggestion is a weight on the bar, not body weight. */
+  /* A new rep range (a new training phase, engine/phase.js): last time's weight was for
+     other reps. Estimated from last time's best set by the estimated max (Epley, capped
+     at 12 reps), aiming at the middle of the new range, and said to be an estimate. */
+  var lo=num(e.planned.lo),hi=num(e.planned.hi);
+  if(!ctx.deload&&topR&&lo&&hi&&(topR<lo-2||topR>hi+2)){
+    var est=e1RM(top,topR),aim=Math.min(12,Math.round((lo+hi)/2)),nw=snapDown(est/(1+aim/30),inc);
+    if(nw>0)return {w:nw,lo:lo,hi:hi,last:top+" × "+topR,est:true,
+      note:"A new rep range this block: a weight estimated from your last best set. Adjust after the first set."};}
   var adv=progressionAdvice(log.sessions,e.name,{lo:e.planned.lo,hi:e.planned.hi},{load:function(n,x){return num(x);}});
   if(ctx.deload){w=snapDown(top*0.9,inc)||top;note="Lighter week: about 10% less and fewer sets. Leave three or four reps in the tank.";}
   else if(adv.kind==="deload"){w=snapDown(adv.w*0.9,inc)||top;note="Short of the range three sessions running. About 10% lighter for a week, same reps, then build back up.";}

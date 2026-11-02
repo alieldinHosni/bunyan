@@ -3084,3 +3084,19 @@ drift forward; shoulders shrug / head pokes forward when pressing or rowing). pr
   each row "Roll / Stretch / Wake up · dose", with a Why fold; counted in the progress and the minutes.
 - exnames.js: "-SMR" entries display as "Foam roll · IT band" / "رول فوم · …".
 - Tests: engine corrective.test.js; regression "Squat check: …".
+
+## Training phases — same branch
+
+Item 4. js/engine/phase.js: each four-week block runs a phase of the book's model (knowledge/phases.js):
+everyone starts at 1 (stabilisation endurance), then 2 (strength endurance), then the goal's. Sequences:
+lose/recomp/gain/general 1→2→3 (fat loss is the book's GOAL_PLANS; the rest are ours, the source's plans being
+absent — gap 9); strength 1→2→4 (3 for a beginner); athletic 1→2→4→5 (1→2 for a beginner); endurance 1→2;
+mobility 1; any health condition or age group 1→2. Phase 1 comes round again after the goal's phase.
+- engine/blocks.js blockDay: the phase's reps, sets range and tempo on every lift first (phases 4–5: the heavy
+  range on multi-joint lifts only, single-joint keep 6–12 — ours), rest capped (not phase 2's superset rest),
+  a condition's range still wins; then the answers' set shifts on top. phaseNow().
+- engine/lifts.js recommendIn: last time's reps outside the new range by more than 2 → a weight estimated
+  from the last best set (Epley, capped at 12, aiming at the middle of the range), said to be an estimate.
+- Training block card: the phase, its reps and tempo, what it is for, and the next block's phase. The set
+  line shows "Tempo 4-2-1-1". Existing users: the phase follows their current block number at once.
+- Tests: engine phase.test.js; regression "Phases: …".

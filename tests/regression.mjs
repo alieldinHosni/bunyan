@@ -2433,6 +2433,25 @@ await test("Blocks: 'too easy' after a workout adds a set for the muscle it trai
   await pause(page,300);
   if(!/1 more than the plan/.test(await page.textContent("#app")))throw new Error("the logger does not say so");
 },{prefs:{autorest:false}});
+await test("Phases: block 1 is stabilisation (12–20 reps, slow tempo), block 3 the goal's phase; Training says which and what comes next; a new rep range gets an estimated weight",async page=>{
+  const at=async(weeksAgo)=>page.evaluate(async w=>{const st=await import("/js/state.js"),U=await import("/js/util.js"),sc=await import("/js/engine/schedule.js");
+    const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()-7*w);
+    st.S.block={start:sc.weekStartOf(new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10))};st.S.profile.goal="gain";st.saveDB();
+    (await import("/js/ui/render.js")).render();},weeksAgo);
+  await at(0);await tapTab(page,"train");await pause(page,300);
+  const c1=await page.textContent('.blk');
+  if(!/Stabilisation endurance/.test(c1)||!/12–20 reps/.test(c1)||!/4-2-1-1/.test(c1)||!/Next block: Strength endurance/.test(c1))throw new Error("block 1 card: "+c1);
+  await page.tap('[data-startday]');await pause(page,500);
+  const e1=await ev(page,"S.active.entries.filter(e=>e.planned&&e.planned.lo&&!e.planned.timed&&e.planned.lo<30).map(e=>[e.planned.lo,e.planned.hi,e.planned.tempo||''])");
+  eq(e1.length>2&&e1.every(x=>x[0]>=12&&x[1]<=20&&/4-2-1-1/.test(x[2])),true,"phase 1 doses: "+JSON.stringify(e1));
+  /* Last time's best set was 8 reps: the 12–20 range gets a lighter, estimated weight. */
+  const rec=await page.evaluate(async()=>{const st=await import("/js/state.js"),F=await import("/js/engine/formulas.js");const e=st.S.active.entries[0];return F.recommend(e);});
+  if(rec&&rec.last){if(!rec.est||!(rec.w<parseFloat(rec.last)))throw new Error("no estimate for the new range: "+JSON.stringify(rec));}
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;st.saveDB();});
+  await at(9);await tapTab(page,"train");await pause(page,300);
+  const c3=await page.textContent('.blk');
+  if(!/Block 3/.test(c3)||!/Muscular development/.test(c3)||!/6–12 reps/.test(c3))throw new Error("block 3 card: "+c3);
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);

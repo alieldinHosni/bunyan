@@ -198,6 +198,7 @@ function startDay(dayId){
       if(e.note)pl.note=e.note;
       if(e.w0!=null)pl.w0=e.w0;
       if(e.timed)pl.timed=true;
+      if(e.tempo)pl.tempo=e.tempo;if(e.phase)pl.phase=e.phase;
       if(e.side)pl.side=true;
       if(e.amrap)pl.amrap=true;
       if(e.rir!=null)pl.rir=e.rir;
