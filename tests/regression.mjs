@@ -1016,7 +1016,8 @@ await test("Themes: Sage light, as the reference: white type on the ground, deep
   /* The dock is the reference's: a slate bar, white buttons, the open tab a white pill
      (once its change of tab, --m-tab, has played). */
   await pause(page,500);
-  eq(await page.$eval(".dock-b.on",e=>getComputedStyle(e).backgroundColor),"rgb(255, 255, 255)","the open tab");
+  /* The pill is the shape that travels between tabs (js/ui/dock.js), under the open one. */
+  eq(await page.$eval("nav .dock-hl",e=>getComputedStyle(e).backgroundColor),"rgb(255, 255, 255)","the open tab");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
 await test("Themes: the stylesheet names no colour outside the theme blocks",async page=>{
   const bad=await page.evaluate(async()=>{
