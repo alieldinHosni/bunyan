@@ -23,8 +23,9 @@ import {programCover} from "../cover.js";
 import {shown} from "../more.js";
 import {vTImport} from "./timport.js";
 import {doseText, weeksText} from "../dose.js";
-import {estMinutes, planOn} from "../../engine/dayplan.js";
+import {addDaysISO, estMinutes, planOn} from "../../engine/dayplan.js";
 import {swapAdvice} from "../../engine/recovery.js";
+import {addsOn, missedNow} from "../../engine/missed.js";
 import {dateBar} from "../datebar.js";
 import {paceOf, routePath, speedOf} from "../../engine/run.js";
 import {groundFor, mapSeed} from "../runmap.js";
@@ -74,6 +75,29 @@ function recoCard(sp,p,iso){
    +'<div class="reco-a"><button class="btn" data-recoswap="'+esc(s.to)+'" data-recodate="'+iso+'">'
    +esc(t("Train {b} instead").replace("{b}",planName(s.toDay.name)))+'</button>'
    +'<button class="btn g" data-recoswap="'+esc(s.from)+'" data-recodate="'+iso+'">'+esc(t("Keep {a}").replace("{a}",planName(s.fromDay.name)))+'</button></div></div>';}
+/* A day missed this week (js/engine/missed.js): moved to a free day, its key lifts carried
+   into the days left, or let go, said plainly. Shown on today only, once, until dealt with. */
+function missedCard(iso){
+  if(iso!==today())return "";
+  var r=missedNow();if(!r)return "";
+  var ar=S.prefs&&S.prefs.lang==="ar",tm1=addDaysISO(iso,1),name=function(d){return dfmt(new Date(d+"T00:00:00"),{weekday:"long"});};
+  /* Today and tomorrow by those words; another day by its name. */
+  var wd=function(d){return d===iso?t("today"):d===tm1?t("tomorrow"):name(d);};
+  var when=function(d){return d===iso?t("today"):d===tm1?t("tomorrow"):t("on {d}").replace("{d}",name(d));};
+  var head=t("You missed {a} on {d}.").replace("{a}",planName(r.missed.name)).replace("{d}",name(r.missed.date)),body="",acts="";
+  if(r.kind==="move"){
+    body=t(r.to===iso?"Today is free, with a rest day either side for those muscles: train it today.":"{d} is free, with a rest day either side for those muscles: train it then.").replace("{d}",wd(r.to));
+    acts='<button class="btn" data-missdo="move">'+esc(t("Move it to {d}").replace("{d}",wd(r.to)))+'</button>';}
+  else if(r.kind==="fold"){
+    var L=r.adds.map(function(a){return t("{x}, {n} sets, {w}").replace("{x}",exName(a.name)).replace("{n}",a.sets).replace("{w}",when(a.date));});
+    body=t("No free day keeps a rest day either side, so its key lifts go into the days left:")+" "+L.join(ar?"؛ ":"; ")+".";
+    if(r.left.length)body+=" "+t("{m} can't fit without breaking a rest day.").replace("{m}",r.left.map(function(m){return tm(m).trim();}).join(ar?"، ":", "));
+    acts='<button class="btn" data-missdo="fold">'+esc(t(r.adds.length===1?"Add it":"Add them"))+'</button>';}
+  else if(r.kind==="covered")body=t("The days left train the same muscles, so nothing needs carrying.");
+  else body=t("Nothing fits this week without breaking a rest day or making a session too long. Let it go: the plan carries on.");
+  acts+='<button class="btn g" data-missok="1">'+esc(t(acts?"Let it go":"OK"))+'</button>';
+  return '<div class="reco" data-k="miss'+r.missed.date+'"><div class="reco-h">'+glyph("whistle")+'<b>'+esc(t("Coach"))+'</b></div>'
+   +'<p>'+esc(head+" "+body).replace(/\d+/g,'<span class="num">$&</span>')+'</p><div class="reco-a">'+acts+'</div></div>';}
 function dayHero(sp,p,iso){
   var label,cta="",meta="";
   if(p.kind==="done"){
@@ -97,7 +121,10 @@ function dayHero(sp,p,iso){
     if(p.kind==="today")cta+=ANOTHER();
   }else{
     label=p.kind==="today"?(p.again?t("Session {n} today").replace("{n}",p.again):t("Current workout")):t("Planned");
-    meta=p.day.ex.length+' '+t("exercises")+' · ~'+estMinutes(p.day)+' '+t("min");
+    /* Lifts carried here from a missed day count in, and are named. */
+    var add=addsOn(iso,p.day.id),all={ex:p.day.ex.concat(add)};
+    meta=all.ex.length+' '+t("exercises")+' · ~'+estMinutes(all)+' '+t("min")
+      +(add.length?' · '+t("plus {x} from a missed day").replace("{x}",add.map(function(a){return exName(a.name);}).join(", ")):'');
     cta=p.kind==="today"
       ?'<button class="btn" data-startday="'+p.day.id+'"><span class="ico ico-play" aria-hidden="true"></span>'+t("Start workout")+'</button>'+ANOTHER()
       :'<button class="btn g" data-day="'+p.day.id+'">'+t("Preview the day")+'</button>';
@@ -143,7 +170,7 @@ function vTrainHome(){
   if(V.train!=="days"&&V.train!=="hub")V.train="days";
   h+=trainTop();
   if(S.active)h+=resumeHero();
-  else{var pd=planOn(sp,sel);h+=trainBar(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);}
+  else{var pd=planOn(sp,sel);h+=trainBar(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);h+=missedCard(sel);}
   if(!S.active)h+=blockCard();
   h+=deloadCard()+travelCard();
   h+=bodyTiles();

@@ -2833,3 +2833,32 @@ separate full calendar".
   Saturday checks read the month's first column; the Training calendar test checks the month is inside
   the bar's card under a hairline with no card of its own, rings for planned days, a past day picked folds
   it back; Coach AI's gauge is checked against the plan's week.
+
+## A missed day, rebalanced — branch session/missed (on session/datebar)
+
+CACHE `bunyan-v191`. Owner, 2 Nov: "start rebalancing a missed day" (the suggestion: "if you skip a day,
+the coach moves its key work into the rest of the week instead of dropping it").
+- **js/coach/missed.js** (pure) `rebalanceWeek`: only a program on weekdays loses a day by missing it (a
+  rotating one carries on from what was trained), so only that is read. The latest planned day before
+  today this week with no session and not yet dealt with; its main muscles are what its exercises
+  mainly train, a quarter of its sets or more (a row's half-set to the biceps does not make biceps a
+  main muscle); it tires nothing, since it did not happen.
+  1. move: the first free day from today on, with no session of 2+ sets on those muscles the day before
+     or after (the textbook's rest day between sessions on the same muscles);
+  2. fold: else, for each main muscle the days left will not train (as main muscle) at half the missed
+     day's sets, the missed day's first multi-joint lift for it, KEY_SETS = 2 sets (a modelling choice),
+     onto the first day left whose neighbours do not train that muscle and that has the time
+     (session length − 8 min warm-up, +5 slack, the lift timed with doseFor's rest);
+  3. covered: the days left train those muscles anyway: nothing to carry, and it says so;
+  4. none: nothing fits; let it go, said plainly, naming what could not fit.
+- **js/engine/missed.js**: this week with a day either side (sessions for days trained; pinnedOn for days
+  past, planOn — swaps included — for days ahead; lifts already carried counted in).
+  `S.dayAdd {date: [lift]}` holds carried lifts (with doseFor's reps, rest and effort, 2 sets);
+  `S.missedDone {date: 1}` marks a missed day dealt with; both validated in schema.js and pruned to this
+  week. startDay adds a date's carried lifts after the day's own.
+- **Training** (today only): a coach card, "You missed Pull on Sunday." then: "Today is free … train it
+  today." [Move it to today] · or "… its key lifts go into the days left: Bent Over Barbell Row, 2 sets,
+  today." [Add it] · or covered / none [OK]; [Let it go]. Each with Undo. Today's card says "plus Bent
+  Over Barbell Row from a missed day" and counts it in. Arabic throughout; figures in .num.
+- Tests: coach missed.test.js (9); regression "A missed day: moved to a free day …, or its key lift
+  carried into the next day and into that workout …".

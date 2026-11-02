@@ -3288,6 +3288,43 @@ await test("Chat, iPhone keyboard closed with Done: the panel glides once to its
     Object.defineProperty(fake,"offsetTop",{get(){return fake._t;}});
     Object.defineProperty(fake,"width",{get(){return innerWidth;}});
     Object.defineProperty(window,"visualViewport",{get(){return fake;},configurable:true});}});
+await test("A missed day: moved to a free day with rest either side, or its key lift carried into the next day and into that workout; each with Undo, offered once",async page=>{
+  const setUp=async(full)=>page.evaluate(async(full)=>{
+    const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sc=await import("/js/engine/schedule.js"),Sp=await import("/js/data/splits.js");
+    const now=U.today(),add=n=>{const d=new Date(now+"T00:00:00");d.setDate(d.getDate()+n);return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+    /* The week starts two days ago, so yesterday is always in it. */
+    S.prefs.wkstart=Sc.isoWeekday(add(-2));
+    const PULL=[Sp.ex("Bent Over Barbell Row",3,8,12),Sp.ex("Wide-Grip Lat Pulldown",3,8,12)],PUSH=[Sp.ex("Barbell Bench Press - Medium Grip",3,8,12),Sp.ex("Standing Military Press",3,8,12)],
+          LEGS=[Sp.ex("Barbell Squat",3,8,12),Sp.ex("Romanian Deadlift",3,8,12)];
+    const days=[Sp.day("Pull",PULL)],wd=n=>[Sc.isoWeekday(add(n))];
+    days[0].wd=wd(-1);
+    if(full){[[0,"Push",PUSH],[1,"Legs",LEGS],[2,"Push",PUSH],[3,"Legs",LEGS],[4,"Push",PUSH],[-2,"Legs",LEGS]].forEach(([n,nm,ex])=>{const d=Sp.day(nm,JSON.parse(JSON.stringify(ex)));d.wd=wd(n);days.push(d);});}
+    else{const d=Sp.day("Push",PUSH);d.wd=wd(1);days.push(d);const l=Sp.day("Legs",LEGS);l.wd=wd(3);days.push(l);}
+    const p=st.makeProgram({id:"miss",name:"Mine",days:days});p.schedule="week";
+    days.forEach((d,i)=>{p.days[i].wd=d.wd;});
+    S.programs=[p];S.activeProgram=p.id;S.sessions=[];S.daySwap={};delete S.dayAdd;delete S.missedDone;S.profile.mins=90;st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.assess=false;V.tab="train";V.train="days";V.tdate=null;(await import("/js/ui/render.js")).render();},full);
+  await setUp(false);await pause(page,300);
+  const c1=await page.textContent('#app');
+  if(!/You missed Pull on/.test(c1)||!(await page.$('[data-missdo="move"]')))throw new Error("no offer to move the missed day: "+c1.slice(0,400));
+  await page.tap('[data-missdo="move"]');await pause(page,300);
+  eq(await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");const sp=st.split();return [sp.days.find(d=>d.id===st.S.daySwap[U.today()]).name,document.querySelector('.thero2-n').textContent];}),["Pull","Pull"],"moved to today, a free day with no back work either side");
+  if(await page.$('[data-missdo]'))throw new Error("offered again after it was dealt with");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[Object.keys(S.daySwap||{}).length,!!document.querySelector('[data-missdo=\"move\"]')]"),[0,true],"Undo: back as it was, and offered again");
+  /* Every day of the week taken: the row goes into today's Push, two sets, and into its workout. */
+  await setUp(true);await pause(page,300);
+  if(!(await page.$('[data-missdo="fold"]')))throw new Error("no offer to carry the key lift: "+(await page.textContent('#app')).slice(0,400));
+  if(!/Bent Over Barbell Row, 2 sets, today/.test(await page.textContent('.reco')))throw new Error("the lift and its sets not named");
+  await page.tap('[data-missdo="fold"]');await pause(page,300);
+  if(!/plus Bent Over Barbell Row from a missed day/.test(await page.textContent('.thero2')))throw new Error("today's card does not say what was carried");
+  await page.tap('.thero2 [data-startday]');await pause(page,500);
+  eq(await ev(page,"S.active.entries.map(e=>[e.name,e.planned.sets])"),[["Barbell Bench Press - Medium Grip",3],["Standing Military Press",3],["Bent Over Barbell Row",2]],"the workout carries it");
+  /* Arabic. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;delete st.S.missedDone;delete st.S.dayAdd;st.S.prefs.lang="ar";(await import("/js/i18n/exnames.js")).applyLang();(await import("/js/ui/render.js")).render();});
+  await pause(page,300);
+  if(!/فاتك/.test(await page.textContent('.reco')))throw new Error("not in Arabic");
+});
 await test("Training calendar: Food's day bar; the month unfolds inside the bar's own card, a dot for a day trained, a ring for one planned; a past day shows below",async page=>{
   await tapTab(page,"train");await pause(page,300);
   eq(await page.$$eval('#app .dnav-card',a=>a.length),1,"one bar, Food's");

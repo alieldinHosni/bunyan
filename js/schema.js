@@ -39,6 +39,8 @@
                                        DEF, or normalize would mark old blobs as current
    @property {number=}  logFixV        the one-time log corrections done (js/engine/logfix.js)
    @property {Slot[]=}  mealSlots      the day's meals, when not the usual four
+   @property {Object<string,number>=} missedDone  a missed day dealt with (date → 1)
+   @property {Object<string,Object[]>=} dayAdd  lifts carried onto a date from a missed day
    @property {Object[]=} chat          the coach chat's kept conversation (30 days)
    @property {number=} chatFrom        when the chat was last cleared (ms); the history keeps it
    @property {Object[]=} missed        questions marked Not what I asked: {q, id, at, lang}
@@ -177,6 +179,14 @@ function normalize(o){
   if(o.chat!=null&&!Array.isArray(o.chat))delete o.chat;
   /* The week whose check-in was last read (its first date): the coach offers the next. */
   if(o.ckSeen!=null&&!/^\d{4}-\d\d-\d\d$/.test(String(o.ckSeen)))delete o.ckSeen;
+  /* A missed day dealt with (date → 1), and lifts carried onto dates still ahead. */
+  if(o.missedDone!=null&&(typeof o.missedDone!=="object"||Array.isArray(o.missedDone)))delete o.missedDone;
+  if(o.dayAdd!=null){
+    if(typeof o.dayAdd!=="object"||Array.isArray(o.dayAdd))delete o.dayAdd;
+    else Object.keys(o.dayAdd).forEach(function(k){
+      var v=o.dayAdd[k];
+      if(!/^\d{4}-\d\d-\d\d$/.test(k)||!Array.isArray(v))delete o.dayAdd[k];
+      else o.dayAdd[k]=v.filter(function(a){return a&&typeof a.name==="string"&&a.name&&+a.sets>0;});});}
   /* When the conversation was last cleared (ms): the chat shows only what came after. */
   if(o.chatFrom!=null&&!(typeof o.chatFrom==="number"&&isFinite(o.chatFrom)&&o.chatFrom>=0))delete o.chatFrom;
   /* Own exercises put back after the library adopted them: left as the person's own. */
