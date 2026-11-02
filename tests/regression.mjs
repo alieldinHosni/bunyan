@@ -1785,6 +1785,46 @@ await test("Warm-up: Start stays on the bottom edge all the way down",async page
     return page.evaluate(()=>Math.round(document.querySelector(".wu-foot").getBoundingClientRect().bottom)-innerHeight);};
   eq([await at(0),await at(300),await at(99999)],[0,0,0],"the footer's bottom is the screen's");
 });
+await test("Weekly check-in: last week read on Coach — two short weeks and slow loss give a shorter week and 100 kcal less, each one tap with Undo, then closed for the week; in Arabic too",async page=>{
+  const setUp=async()=>page.evaluate(async()=>{
+    const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sc=await import("/js/engine/schedule.js"),P=await import("/js/engine/plan.js");
+    const ws=Sc.weekStartOf(U.today()),add=(d,n)=>new Date(Date.parse(d+"T00:00:00Z")+n*864e5).toISOString().slice(0,10);
+    Object.assign(S.profile,{goal:"lose",level:"some",days:4,wd:[],mins:60,age:30,height:180,sex:"m",weight:90});
+    S.programs=[];S.activeProgram=null;P.buildPlan();
+    const lift=d=>({id:"ck"+d,date:d,entries:[{name:"Barbell Squat",muscle:"Quads",sets:[{w:80,r:8,rpe:8},{w:80,r:8,rpe:8}]}]});
+    S.sessions=[add(ws,-6),add(ws,-3),add(ws,-12),add(ws,-10)].map(lift);
+    S.days={};for(let i=1;i<=7;i++)S.days[add(ws,-i)]={water:0,steps:0,sleep:0,sore:0,energy:0,notes:"",meals:{Lunch:{items:[{n:"Food",kcal:2000,p:150,c:200,f:60}]}}};
+    S.body=[];for(let i=1;i<=21;i+=3)S.body.push({date:add(ws,-i),weight:Math.round((90+i*0.1/7)*100)/100});
+    S.body.sort((a,b)=>a.date<b.date?-1:1);
+    S.goals.kcal=2000;S.goals.c=200;delete S.ckDone;delete S.ckDid;st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.csec="ai";S.prefs.csec="ai";(await import("/js/ui/render.js")).render();});
+  await setUp();await pause(page,300);
+  if(!(await page.$('.ckcard')))throw new Error("no check-in card on Coach");
+  const txt=await page.textContent('.ckcard');
+  for(const re of [/Workouts: 2 of 4 planned/,/Food: logged on 7 days/,/an estimate from 7 weigh-ins/,/Build a 2-day week/,/Set 1,900 kcal/])
+    if(!re.test(txt))throw new Error("check-in missing "+re+": "+txt.slice(0,500));
+  await page.tap('[data-ckdo="kcal"]');await pause(page,300);
+  eq(await ev(page,"[S.goals.kcal,S.goals.c]"),[1900,175],"100 kcal less, off the carbs");
+  if(await page.$('[data-ckdo="kcal"]'))throw new Error("a change made is still offered");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[S.goals.kcal,S.goals.c]"),[2000,200],"Undo puts the target back");
+  await page.tap('[data-ckdo="days"]');await pause(page,400);
+  eq(await ev(page,"[S.profile.days,(S.programs.find(p=>p.id===S.activeProgram)||{}).from,(S.programs.find(p=>p.id===S.activeProgram)||{days:[]}).days.filter(d=>d.ex.length).length]"),[2,"built",2],"a two-day week, built");
+  /* The chat's weekly answer offers what is left, the same button. */
+  await openChat(page);
+  await page.fill('#chatq',"how was my week");await page.press('#chatq','Enter');await pause(page,600);
+  if(!(await page.$('#cpanel [data-ckdo="kcal"]')))throw new Error("the chat's week answer does not offer the check-in's change");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.coach=false;V.chat=false;V.tab="coach";V.csec="ai";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  await page.tap('[data-ckok]');await pause(page,300);
+  if(await page.$('.ckcard'))throw new Error("closed for the week, still shown");
+  /* Again, in Arabic. */
+  await setUp();
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";(await import("/js/i18n/exnames.js")).applyLang();(await import("/js/ui/render.js")).render();});
+  await pause(page,300);
+  const ar=await page.textContent('.ckcard');
+  if(!/المراجعة الأسبوعية/.test(ar)||!/ابني أسبوع 2 أيام/.test(ar))throw new Error("check-in not in Arabic: "+ar.slice(0,300));
+  eq(await ev(page,"getComputedStyle(document.querySelector('.ckcard')).direction"),"rtl","right to left");
+});
 await test("Meal plan from your own food: a breakfast eaten most days comes back scaled to the targets, your rice in place of the app's, and it says so; in Arabic too",async page=>{
   await page.evaluate(async()=>{
     const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods(r));
