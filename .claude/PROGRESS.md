@@ -2741,3 +2741,28 @@ model smart is what it is given and what answers before it, so that is what was 
 - Tests: engine faq.test.js (7 checks over all 70); regression "Coach brain" now expects the Sleep answer.
 - Next rounds: run heldout2, fix by pattern, write heldout3 and run it once; add answers where a topic
   keeps missing.
+
+## The coach reads recovery before the next day; Training's calendar in Food's look, paced — branch session/recovery
+
+CACHE `bunyan-v186`. Owner, 2 Nov: "I have push today, but I decided to train pull, and tomorrow was
+planned to be pull: the app should understand that the muscles trained today need time to recover …
+and suggest or change the next day"; "make the calendar in the training page look like the one in food,
+and make the click to full calendar animate well, not too slow, or fast".
+- **js/coach/recovery.js** (pure): readiness per muscle from the log. The textbook's rule (acute
+  variables · frequency): at least one rest day between sessions on the same muscles, so a muscle is
+  fully ready two days after a hard session and part-way the day after, by how much it did (a set counts
+  in full for its main muscle, half for the ones it helps, half again at RPE 6 or easier; FULL = 4 such
+  sets is a full session's dose, a modelling choice, so readiness is only ever said in words). Soreness
+  7+/10 logged in the last two days holds recent muscles back. A planned day's readiness is its planned
+  sets weighted by each muscle's; when under 0.65 and another training day of the split is at least 0.25
+  fresher, the nearest such day after it in the split's order is suggested, naming the tired muscles.
+- **js/engine/recovery.js**: the same for this profile and a date (log, soreness, library); a day already
+  moved or kept by hand (S.daySwap) is left alone.
+- **Training**: a coach card under the day's card offers the fresher day ("Most of Pull lands on back
+  and biceps, trained yesterday … Legs is fresh") with Train Legs instead / Keep Pull; either is kept as
+  that day's swap. The chat's "What do I train today?" says the same with the same button.
+- **Calendar**: Training's month is now Food's calendar markup (.dbcal / .dbgrid / .dbday): round
+  arrows, this month's days only, a filled dot for a day trained, a ring for one planned. Motion:
+  --m-cal 620 → 380 ms on an ease-out curve (it read as lag), opacity at 0.6 of it; Food's month too.
+- Tests: coach recovery.test.js (10); regression "Recovery: Pull trained yesterday, Pull due today …";
+  calendar tests updated to the new cells and to "paced, not slow".

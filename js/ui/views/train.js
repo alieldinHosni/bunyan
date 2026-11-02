@@ -24,6 +24,8 @@ import {shown} from "../more.js";
 import {vTImport} from "./timport.js";
 import {doseText, weeksText} from "../dose.js";
 import {estMinutes, planOn} from "../../engine/dayplan.js";
+import {swapAdvice} from "../../engine/recovery.js";
+import {CHEV_L, CHEV_R, weekInitials} from "../datebar.js";
 import {paceOf, routePath, speedOf} from "../../engine/run.js";
 import {groundFor, mapSeed} from "../runmap.js";
 import {bodyTiles, trainTop} from "./home.js";
@@ -58,6 +60,20 @@ function planNote(p){
 function ANOTHER(){return '<button class="thero2-add" data-another="1"><span aria-hidden="true">+</span> '+t("Add another session today")+'</button>';}
 /* The selected day's card. What it offers depends on when the day is: today can be
    started, a future day previewed, a finished one opened. */
+/* The coach, on the day due (owner, 2 Nov): when most of it lands on muscles trained
+   the day before, and another day of the program is fresh, it says so and offers that
+   day instead; keeping the plan is one tap too (js/engine/recovery.js). */
+function recoCard(sp,p,iso){
+  var s=swapAdvice(sp,iso,p);if(!s)return "";
+  var names=s.tired.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();}),ar=S.prefs&&S.prefs.lang==="ar";
+  var list=names.length>1?names.slice(0,-1).join(ar?"، ":", ")+(ar?" و":" and ")+names[names.length-1]:names[0]||"";
+  var when=iso===today()?t("yesterday"):t("the day before");
+  return '<div class="reco" data-k="reco'+iso+'"><div class="reco-h">'+glyph("whistle")+'<b>'+esc(t("Coach"))+'</b></div>'
+   +'<p>'+esc(t("Most of {a} lands on {m}, trained {w}. They need a rest day between hard sessions; {b} is fresh.")
+       .replace("{a}",planName(s.fromDay.name)).replace("{m}",list).replace("{w}",when).replace("{b}",planName(s.toDay.name)))+'</p>'
+   +'<div class="reco-a"><button class="btn" data-recoswap="'+esc(s.to)+'" data-recodate="'+iso+'">'
+   +esc(t("Train {b} instead").replace("{b}",planName(s.toDay.name)))+'</button>'
+   +'<button class="btn g" data-recoswap="'+esc(s.from)+'" data-recodate="'+iso+'">'+esc(t("Keep {a}").replace("{a}",planName(s.fromDay.name)))+'</button></div></div>';}
 function dayHero(sp,p,iso){
   var label,cta="",meta="";
   if(p.kind==="done"){
@@ -127,7 +143,7 @@ function vTrainHome(){
   if(V.train!=="days"&&V.train!=="hub")V.train="days";
   h+=trainTop();
   if(S.active)h+=resumeHero();
-  else{h+=weekStrip(sp,sel);h+=dayHero(sp,planOn(sp,sel),sel);}
+  else{var pd=planOn(sp,sel);h+=weekStrip(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);}
   if(!S.active)h+=blockCard();
   h+=deloadCard()+travelCard();
   h+=bodyTiles();
@@ -225,22 +241,28 @@ function weekStrip(sp,sel,attr){
    +'<div class="twk-fold"'+(open?' inert':'')+'><div class="twk-in"><div class="twk-r" role="group" aria-label="'+esc(t("This week"))+'">'+h+'</div></div></div>'
    +'<div class="twk-mo"'+(open?'':' inert aria-hidden="true"')+'><div class="twk-in">'+monthGrid(sp,cm,sel,now)+'</div></div>'
    +'</div>';}
-/* A month: its weeks as the week strip lays them (the person's first weekday), the days of
-   the months either side quieter. Training days ticked, planned ones dotted. */
+/* A month, in Food's calendar's own look (owner, 2 Nov: "make the calendar in the
+   training page look like the one in food"): the same day cells, round arrows and
+   initials (js/ui/datebar.js, .dbcal), only this month's days. A day trained carries a
+   filled dot, one planned a ring; a tap shows it in the card below. */
 function monthGrid(sp,cm,sel,now){
-  var first=cm+"-01",start=weekStartOf(first),days=0,n=0,cells="";
-  var d0=new Date(first+"T00:00:00");
-  var nextM=new Date(d0.getFullYear(),d0.getMonth()+1,1),endIso=nextM.getFullYear()+"-"+String(nextM.getMonth()+1).padStart(2,"0")+"-01";
-  for(var iso=start;iso<endIso||days%7;iso=addDays(iso,1)){
-    var d=dayState(sp,iso),inM=monthOf(iso)===cm;
-    if(inM&&d.st==="done")n++;
-    cells+=dayBtn(iso,d,sel,now,"tweek"," m"+(inM?"":" out"));days++;}
+  var first=cm+"-01",d0=new Date(first+"T00:00:00"),n=0;
+  var lead=((d0.getDay()||7)-isoWeekday(weekStartOf(first))+7)%7,len=new Date(d0.getFullYear(),d0.getMonth()+1,0).getDate();
+  var cells="";
+  weekInitials().forEach(function(w){cells+='<div class="dbwk" aria-hidden="true">'+esc(w)+'</div>';});
+  for(var i=0;i<lead;i++)cells+='<div></div>';
+  for(var k=1;k<=len;k++){
+    var iso=cm+"-"+String(k).padStart(2,"0"),d=dayState(sp,iso);
+    if(d.st==="done")n++;
+    cells+='<button class="dbday'+(d.st==="done"?' trained':'')+(iso===now?' today':'')+(iso===sel?' sel':'')+'" data-tweek="'+iso+'"'
+     +' aria-pressed="'+(iso===sel)+'" aria-label="'+esc(d.lbl)+'"'+(iso===sel?' aria-current="date"':'')+'>'+k
+     +(d.st==="done"?'<span class="dbdot t" aria-hidden="true"></span>':d.st==="plan"?'<span class="dbdot p" aria-hidden="true"></span>':'')+'</button>';}
   var name=dfmt(d0,{month:"long",year:"numeric"});
-  return '<div class="twk-mh"><button class="twk-mnav" data-calm="-1" aria-label="'+esc(t("Previous month"))+'">'+glyph("chev")+'</button>'
-   +'<div class="twk-mt"><b>'+esc(name)+'</b><span><span class="num">'+n+'</span> '+esc(t(n===1?"session":"sessions"))+'</span></div>'
-   +'<button class="twk-mnav" data-calm="1" aria-label="'+esc(t("Next month"))+'">'+glyph("chev")+'</button></div>'
-   +'<div class="twk-dow" aria-hidden="true">'+weekOrder().map(function(w){return '<span>'+esc(wdName(w))+'</span>';}).join("")+'</div>'
-   +'<div class="twk-grid" role="group" aria-label="'+esc(name)+'">'+cells+'</div>';}
+  return '<div class="dbcal twk-cal"><div class="dbcal-h">'
+   +'<button class="dnav-arrow sm" data-calm="-1" aria-label="'+esc(t("Previous month"))+'">'+CHEV_L+'</button>'
+   +'<div class="twk-mt"><strong aria-live="polite">'+esc(name)+'</strong><span><span class="num">'+n+'</span> '+esc(t(n===1?"session":"sessions"))+'</span></div>'
+   +'<button class="dnav-arrow sm" data-calm="1" aria-label="'+esc(t("Next month"))+'">'+CHEV_R+'</button></div>'
+   +'<div class="dbgrid" role="group" aria-label="'+esc(name)+'">'+cells+'</div></div>';}
 var TICKSVG='<svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-9"/></svg>';
 
 /* Coach → Training → Programs: a new one from scratch, one brought in from a coach's

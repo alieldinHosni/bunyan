@@ -103,7 +103,7 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --m-sheet:380ms; --m-screen:380ms; --m-data:480ms; --m-reveal:600ms; --m-fade:260ms;
   /* A change of tab and the coach panel: a touch slower than a screen, with a little
      spring at the end so they land rather than stop. --m-kb follows the iPhone keyboard. */
-  --m-tab:460ms; --m-panel:420ms; --m-kb:440ms; --m-close:340ms; --m-cal:620ms; --e-cal:cubic-bezier(.45,0,.2,1);
+  --m-tab:460ms; --m-panel:420ms; --m-kb:440ms; --m-close:340ms; --m-cal:380ms; --e-cal:cubic-bezier(.22,.8,.3,1);
   --e-standard:cubic-bezier(0.2, 0, 0, 1); --e-decel:cubic-bezier(0.05, 0.7, 0.1, 1);
   --e-accel:cubic-bezier(0.3, 0, 0.8, 0.15); --e-spring:cubic-bezier(.2,.9,.3,1.06);
   --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
@@ -1456,7 +1456,7 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 /* The bar's month unfolds under it, slowly, as Training's calendar does (--m-cal,
    --e-cal), and folds back the same way. Its own look is the .dbcal below, unchanged. */
 .dbfold{display:grid;grid-template-rows:0fr;opacity:0;
-  transition:grid-template-rows var(--m-cal) var(--e-cal),opacity var(--m-cal) var(--e-cal)}
+  transition:grid-template-rows var(--m-cal) var(--e-cal),opacity calc(var(--m-cal) * .6) var(--e-cal)}
 .dbfold.open{grid-template-rows:1fr;opacity:1}
 .dbfold-in{min-height:0;overflow:hidden}
 :root.reduced .dbfold,body.noanim .dbfold{transition:none}
@@ -1479,6 +1479,13 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 .dbdot{position:absolute;bottom:5px;width:4px;height:4px;border-radius:2px;background:var(--ok)}
 .dbdot.t{background:var(--accentHi)}
 .dbday.sel .dbdot{background:var(--onAccent)}
+/* Training's month (views/train.js monthGrid): a planned day is a ring, inside its card. */
+.dbdot.p{background:none;box-shadow:inset 0 0 0 1.5px var(--accentHi)}
+.dbday.sel .dbdot.p{box-shadow:inset 0 0 0 1.5px var(--onAccent)}
+.twk .dbcal.twk-cal{margin:0;padding:0;border:0;background:none}
+.twk-cal .twk-mt{flex:1;min-width:0;text-align:center;display:flex;flex-direction:column;gap:2px}
+.twk-cal .twk-mt strong{font-family:var(--display);font-size:16px}
+.twk-cal .twk-mt>span{font-size:12px;color:var(--dim)}
 .target{display:flex;align-items:center;justify-content:space-between;gap:10px;
   border:1px dashed var(--border);border-radius:12px;padding:11px 13px;margin-top:4px}
 .target .tl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
@@ -2128,7 +2135,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .twk-x svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;
   transition:transform var(--m-cal) var(--e-cal)}
 .twk.open .twk-x svg{transform:rotate(180deg)}
-.twk-fold,.twk-mo{display:grid;transition:grid-template-rows var(--m-cal) var(--e-cal),opacity var(--m-cal) var(--e-cal)}
+.twk-fold,.twk-mo{display:grid;transition:grid-template-rows var(--m-cal) var(--e-cal),opacity calc(var(--m-cal) * .6) var(--e-cal)}
 .twk-fold{grid-template-rows:1fr;opacity:1}
 .twk-mo{grid-template-rows:0fr;opacity:0}
 .twk.open .twk-fold{grid-template-rows:0fr;opacity:0}
@@ -4316,6 +4323,14 @@ body.wkflat #app{--gutter:20px}
 .dlcard-i svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .dlcard-a{display:flex;flex-direction:column;align-items:stretch;gap:2px}
 .dlcard-a .btn{margin:0}
+/* The coach's offer of a fresher day (views/train.js recoCard). */
+.reco{margin-top:14px;padding:16px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+.reco-h{display:flex;align-items:center;gap:8px;color:var(--accent)}
+.reco-h svg{width:18px;height:18px}
+.reco-h b{font-family:var(--display);font-size:15px;color:var(--text)}
+.reco p{margin:8px 0 12px;color:var(--dim);font-size:14px;line-height:1.45}
+.reco-a{display:flex;flex-direction:column;align-items:stretch;gap:2px}
+.reco-a .btn{margin:0}
 .dlcard-later{align-self:center;min-height:44px;padding:0 16px;background:none;border:none;color:var(--dim);font-size:14px;font-weight:600}
 .dlcard.on{display:flex;align-items:center;gap:12px;padding:12px 14px}
 .dlcard-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
