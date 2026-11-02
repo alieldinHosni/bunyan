@@ -10,6 +10,7 @@ import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay} from "./views/train.js";
 import {planOn} from "../engine/dayplan.js";
 import {dayOptions} from "../engine/recovery.js";
+import {addDays} from "../engine/schedule.js";
 import {stageFor, zonesFor} from "../engine/zones.js";
 import {ACT_GROUPS, actIcon, actInfo, actRate, actsIn, INTENSITY, intensityOf, isActivity, outdoorOf} from "../data/activities.js";
 import {barKg, bwShare, incrementFor, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
@@ -78,6 +79,25 @@ function cardioCard(){
   else if(!z.measured&&z.hrmax)h+='<p class="zc-note">'+esc(t("Estimated maximum heart rate about {n} bpm (208 − 0.7 × age): a starting point only.").replace("{n}",z.hrmax))+'</p>';
   if(!z.feelOnly)h+='<button class="btn g zc-set" data-zones="1">'+esc(t(z.measured?"Change your zones":"Find your zones"))+'</button>';
   return h+'</section>';}
+/* The pain sheet's areas: the plan's work-around keys (engine/plan.js AVOID) and the
+   neck, which the book covers but no lift is steered away from. */
+var HURT_AREAS=[["knee","Knee"],["back","Lower back or hip"],["shoulder","Shoulder"],["wrist","Wrist or elbow"],["ankle","Ankle or foot"],["neck","Neck"]];
+/* What protects each area, paraphrased from injuries.js REGIONS and imbalances.js
+   INJURY_EFFECTS; the wrist has no entry there, so it gets none here. */
+var HURT_NOTE={knee:"Knees are protected by good technique (knees tracking over the toes), supportive shoes, a thorough warm-up, and regular strength and flexibility work. The ankle and hip often decide how the knee moves.",
+  back:"A strong, stable core protects the lower back: keep the spine neutral under load, and keep up core stability work.",
+  shoulder:"Keep overhead work to what you can control, keep up upper-body flexibility, and leave out swinging (kipping) pull-ups. An injured shoulder often needs its rotator cuff strengthened again.",
+  ankle:"An ankle hurt once is easily hurt again until it is made strong and stable: balance work helps. Trouble here can travel up to the knee, hip and back.",
+  neck:"Neck pain often comes from the head drifting forward. Keep your head in line with your body as you lift, and look up from the phone between sets."};
+function hurtNote(area){
+  if(!area)return "";
+  var since=addDays(today(),-28),n=0;
+  (S.sessions||[]).forEach(function(s){if(s.date>=since&&(s.entries||[]).some(function(e){return e.painArea===area;}))n++;});
+  var lim=((S.profile||{}).limits||[]).indexOf(area)>=0,canAvoid=/^(knee|back|shoulder|wrist|ankle)$/.test(area);
+  return '<div class="hurt-note">'+(HURT_NOTE[area]?'<p>'+esc(t(HURT_NOTE[area]))+'</p>':'')
+   +(n?'<p class="hurt-rep">'+esc(t(n===1?"It hurt there once already in the last four weeks: worth getting it looked at.":"It has hurt there in {n} sessions in the last four weeks: get it looked at before training through it.").replace("{n}",n))+'</p>':'')
+   +(canAvoid&&!lim?'<button class="btn g sm" data-hurtavoid="'+area+'">'+esc(t("Steer my plan away from it"))+'</button>'
+     :canAvoid?'<p class="hurt-ok">'+esc(t("Your plan already works around it."))+'</p>':'')+'</div>';}
 function vSheet(){
   if(!V.sheet)return "";
   var b="";
@@ -565,6 +585,11 @@ function vSheet(){
      +'<span class="cf-i bad" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg></span>'
      +'<h2>'+t("Something hurts?")+'</h2>'
      +'<p class="cf-b">'+t("Stop this exercise. Sharp, sudden or lasting pain is a reason to see a professional, not to push through. Bunyan cannot tell what it is.")+'</p>'
+     /* Where (js/knowledge/injuries.js REGIONS): what the book says protects that area, how
+        often it has come up lately, and the plan steered away from it. Never a diagnosis. */
+     +'<div class="hurt-where"><span>'+esc(t("Where?"))+'</span><div class="aschips">'+HURT_AREAS.map(function(x){var on=(V.sd||{}).area===x[0];
+       return '<button class="aschip'+(on?' on':'')+'" data-hurtarea="'+x[0]+'" aria-pressed="'+on+'">'+esc(t(x[1]))+'</button>';}).join("")+'</div></div>'
+     +hurtNote((V.sd||{}).area)
      +'<div class="cf-acts">'
      +'<button class="btn cf-ok" data-hurtdo="swap">'+t("Replace this exercise")+'</button>'
      +'<button class="btn g cf-no" data-hurtdo="skip">'+t("Skip it today")+'</button>'

@@ -251,6 +251,25 @@ await test("new workout entries carry a stable exercise id, and ids heal renamed
     const e=s.S.active.entries[0],orig=e.name;e.name="Renamed";ex.reconcileExercises(s.S);return e.name===orig;});
   eq(healed,true);
 });
+await test("Something hurts: where, what protects that area, how often it came up lately, and the plan steered away from it with Undo; never a diagnosis",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");
+    const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()-6);const iso=new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+    st.S.sessions.push({id:"hp",date:iso,entries:[{name:"Standing Military Press",pain:true,painArea:"shoulder",sets:[{w:40,r:8}]}]});
+    st.S.profile.limits=[];st.saveDB();});
+  await startWorkout(page);
+  await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-hurt]');await pause(page);
+  await page.tap('[data-hurtarea="shoulder"]');await pause(page,300);
+  const note=await page.textContent('#sheet .hurt-note');
+  if(!/kipping/.test(note)||!/once already in the last four weeks/.test(note))throw new Error("note: "+note);
+  const had=await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days.some(d=>d.ex.some(e=>/Military Press|Overhead Press|Upright Row|Dips/.test(e.name)))");
+  await page.tap('[data-hurtavoid="shoulder"]');await pause(page,400);
+  eq(await ev(page,"[S.profile.limits,S.programs.find(p=>p.id===S.activeProgram).days.some(d=>d.ex.some(e=>/Military Press|Overhead Press|Upright Row|Behind|Push Press|Dips/.test(e.name)))]"),[["shoulder"],false],"the area in the limits, nothing loading it left"+(had?"":" (none to swap)"));
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"S.profile.limits"),[],"Undo");
+  if(!(await page.$('#sheet [data-hurtdo="skip"]'))){await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-hurt]');await pause(page);await page.tap('[data-hurtarea="shoulder"]');await pause(page,300);}
+  await page.tap('[data-hurtdo="skip"]');await pause(page,300);
+  eq(await ev(page,"S.active.entries.some(e=>e.painArea==='shoulder')"),true,"the area kept with the flag");
+});
 await test("readiness, pain flag and session effort are kept with the workout",async page=>{
   await startWorkout(page);
   await page.tap('[data-ready="4"]');await pause(page);

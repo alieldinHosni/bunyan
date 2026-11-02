@@ -3125,3 +3125,13 @@ review my goal (the assessment at that step, data-setupstep) or share my plan. N
 ("Better than the week before, when it was: …" / "Is it still?"). A check-in now shows even with only missed
 workouts logged. Also: four weeks after the squat check, "Redo the squat check" (assessments: repeat
 periodically). Test: regression "Check-in barriers: …".
+
+## Something hurts: where, and the plan steered away — same branch
+
+Item 7. The pain sheet (sheets.js hurt) asks where: knee, lower back or hip, shoulder, wrist or elbow, ankle or
+foot, neck. For each, what protects that area, paraphrased from injuries.js REGIONS and imbalances.js
+INJURY_EFFECTS (the wrist has no entry there, so no note); how many sessions in the last four weeks it has
+come up (entries' painArea), with "get it looked at" from the second time; and "Steer my plan away from it"
+(the area into profile.limits, each program exercise that loads it swapped by standIn, Undo). The flag keeps
+its area (workout.js flagPain). Never a diagnosis: the sheet still says Bunyan cannot tell what it is.
+Test: regression "Something hurts: …".
