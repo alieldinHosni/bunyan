@@ -1676,6 +1676,44 @@ await test("Harmony: a plan the assessment just built is not flagged by the plan
       St.filter(e=>e.rest>=180).length>0,out.gain.l.every(e=>e.rest<=180)];});
   eq(r,[[],[],[],true,true,true]);
 });
+await test("Assessment: fixed days set the week, stress and short sleep lower the volume, and the result is a week built for you, first, with its reasons; in Arabic too",async page=>{
+  const go=async(step)=>{await page.evaluate(async st=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");
+    V.asd.step=A.STEPS.indexOf(st);(await import("/js/ui/render.js")).render();},step);await pause(page,200);};
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");
+    V.asd=A.draftFrom();Object.assign(V.asd,{age:30,height:180,weight:82,days:3,wd:[]});V.assess=true;});
+  await go("week");
+  for(const n of [1,3,5])await page.tap('[data-asm="wd|'+n+'"]'),await pause(page,150);
+  eq(await ev(page,"[V.asd.days,V.asd.wd.slice().sort()]"),[3,[1,3,5]],"three fixed days are three days a week");
+  if(!/built on these days/i.test(await page.textContent(".as")))throw new Error("no word that the week is built on the days");
+  await go("focus");
+  for(const m of ["Chest","Back","Glutes","Calves"])await page.tap('[data-asm="focus|'+m+'"]'),await pause(page,150);
+  eq(await ev(page,"V.asd.focus"),["Chest","Back","Glutes"],"up to three to bring up");
+  await go("sleep");
+  await page.tap('[data-as="stress|high"]');await pause(page,150);
+  if(!/bottom of its range/.test(await page.textContent(".as")))throw new Error("no word on slower recovery");
+  await go("result");
+  for(let i=0;i<20&&!(await page.$('.as-split'));i++)await pause(page,250);
+  eq(await page.textContent('.as-split'),"Built for you","the week built for them is the plan shown");
+  eq(await page.$eval('[data-assplit]',b=>b.textContent+"|"+b.getAttribute("aria-pressed")),"Built for you|true","first among the choices, and chosen");
+  const why=await page.$$eval('.as-why',a=>a.map(x=>x.textContent).join(" "));
+  if(!/Built on the days you gave/.test(why)||!/More for Chest, Back and Glutes/.test(why)||!/bottom of the range/.test(why))throw new Error("why: "+why);
+  eq(await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");
+    const pl=A.preview(V.asd).plan;return [pl.schedule,pl.days.map(d=>d.wd[0]).sort()];}),["week",[1,3,5]],"on the days they gave");
+  /* A template is still there to pick. */
+  const tpl=await page.$$eval('[data-assplit]',a=>a.slice(1).map(b=>b.getAttribute("data-assplit")));
+  if(!tpl.length)throw new Error("no template offered beside the built week");
+  await page.tap('[data-assplit="'+tpl[0]+'"]');await pause(page,300);
+  if((await page.textContent('.as-split'))==="Built for you")throw new Error("the template was not shown");
+  /* Arabic, right to left. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";(await import("/js/i18n/exnames.js")).applyLang();});
+  await page.tap('[data-assplit="built"]');await pause(page,300);
+  eq(await page.textContent('.as-split'),"متبني ليك","the built week's name in Arabic");
+  if(!/متبني على الأيام اللي اخترتها/.test(await page.textContent('.as')))throw new Error("no Arabic reason");
+  await go("focus");
+  const txt=await page.textContent(".as");
+  if(!/عايز تكبّر إيه أكتر/.test(txt)||/[A-Za-z]{4,}/.test(txt.replace(/\s+/g," ")))throw new Error("focus step not all Arabic: "+txt.slice(0,300));
+  eq(await ev(page,"getComputedStyle(document.querySelector('.as')).direction"),"rtl","right to left");
+});
 await test("Assessment health questions: a ticked one keeps the plan to low and moderate effort and says to check first; the week and sleep steps show the textbook's figures",async page=>{
   const r=await page.evaluate(async()=>{
     const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
@@ -1774,7 +1812,12 @@ await test("Assessment: first run opens it; answers become targets and training 
   await page.fill('#as_age','31');await page.fill('#as_height','178');await page.fill('#as_weight','84');
   await page.tap('[data-asnext]');await pause(page,200);
   await page.tap('[data-as="goal|recomp"]');await pause(page,150);
-  for(let i=0;i<5;i++){await page.tap('[data-asnext]');await pause(page,150);}
+  for(let i=0;i<4;i++){await page.tap('[data-asnext]');await pause(page,150);}
+  /* What to bring up, and a lift they will not do: the week is built with both. */
+  if(!(await page.$('[data-asm="focus|Back"]')))throw new Error("no focus step after where you train");
+  await page.tap('[data-asm="focus|Back"]');await pause(page,150);
+  await page.tap('[data-asm="nolift|Barbell Deadlift"]');await pause(page,150);
+  for(let i=0;i<2;i++){await page.tap('[data-asnext]');await pause(page,150);}
   await page.tap('[data-asm="limits|back"]');await pause(page,150);
   await page.tap('[data-asnext]');await pause(page,150);
   /* The health questions (the PAR-Q+ topics): none ticked. */
@@ -1789,6 +1832,9 @@ await test("Assessment: first run opens it; answers become targets and training 
   await page.tap('[data-asuse]');await pause(page,500);
   eq(await ev(page,"[S.onboarded,S.profile.goal,S.profile.limits,String(S.goals.kcal),S.prefs.avoid,!!S.activeProgram]"),
     [true,"recomp",["back"],shown,["nuts"],true],"applied as shown");
+  eq(await ev(page,"[S.profile.focus,(S.skip||[]).indexOf('Barbell Deadlift')>=0,(S.programs.filter(p=>p.id===S.activeProgram)[0]||{}).from,"
+    +"(S.programs.filter(p=>p.id===S.activeProgram)[0]||{days:[]}).days.some(d=>d.ex.some(e=>e.name==='Barbell Deadlift'))]"),
+    [["Back"],true,"built",false],"built for them: the focus kept, the lift they left out hidden and not in the week");
   eq(await ev(page,"S.mealSlots.length===4&&S.mealSlots.every(s=>(s.plan||[]).length>=2)"),true,"meals planned in the same step");
   const prog=await ev(page,"S.activeProgram");
   await page.tap('.toast-undo');await pause(page,400);
