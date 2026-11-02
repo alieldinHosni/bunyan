@@ -2938,3 +2938,9 @@ CACHE `bunyan-v192`. Owner, 2 Nov.
 - Tests: "Dock: the red travels …", "Stress said high: …"; the dock label test reads Coach/الكوتش; the
   light-theme dock test reads the red off the travelling shape; the Arabic figures test no longer needs
   the week strip's fraction (gone with the day bar).
+
+## Trained days are green dots — branch session/greendot
+
+CACHE `bunyan-v194`. Owner, 2 Nov: "the days I trained should be green dots". In the month (Food's and
+Training's, js/ui/datebar.js): a day trained is a solid green dot (--ok), a planned day a ring in the accent, a
+day with only food logged (Food) a dot in the accent. Dots 5 px round, so they read on a phone.
