@@ -18,7 +18,7 @@ import {sumNutrition} from "../../engine/nutrition.js";
 import {planOn} from "../../engine/dayplan.js";
 import {weekDates} from "../../engine/schedule.js";
 import {S, split} from "../../state.js";
-import {esc, fmtN, today} from "../../util.js";
+import {esc, fmtN, num, pretty, today} from "../../util.js";
 import {seg, streak, V} from "../view.js";
 import {art} from "../art.js";
 import {glyph} from "../glyphs.js";
@@ -28,6 +28,7 @@ import {adviceBody, adviceNote} from "./pcheck.js";
 import {vChat} from "./chat.js";
 import {ckCard} from "../checkin.js";
 import {checkinOpen} from "../../engine/checkin.js";
+import {followDue, followOn, lightOnPurpose} from "../../engine/stress.js";
 
 var CSECS=[["train","Training"],["food","Nutrition"],["ai","Coach"]];
 var TSUBS=[["program","My program"],["programs","Programs"],["exercises","Exercises"]];
@@ -75,6 +76,7 @@ function vCoachAI(){
     return h;}
   h+=weekCard();
   /* Last week, read and turned into changes to approve, until done for the week. */
+  h+=stressCard();
   h+=ckCard(checkinOpen());
   h+=adviceBody();
   /* The conversation is reached from the floating Coach button only (js/ui/coachfab.js). */
@@ -82,6 +84,29 @@ function vCoachAI(){
   /* The small print belongs to the advice: a week with nothing to say has none. */
   if(V.advice)h+=adviceNote();
   return h;}
+
+/* ---- a week kept light on purpose (js/engine/stress.js) ------------------------------
+   While stress is high or sleep short, a line says so and when the coach will ask again;
+   on that day, or when the person says it is better, the question itself: stress now
+   (and sleep, if that was the reason), one tap each. */
+function stressCard(){
+  var p=S.profile||{};if(!lightOnPurpose(p))return "";
+  var why=p.stress==="high"&&num(p.sleep)>0&&num(p.sleep)<6?t("stress was high and sleep short"):p.stress==="high"?t("stress was high"):t("sleep was short");
+  var due=followDue(p)||V.stressAsk,h='<section class="ckcard stresscard" data-k="stresscard">'
+   +'<div class="ckcard-h"><span class="ckcard-i" aria-hidden="true">'+glyph("whistle")+'</span><div><span class="shk">'+esc(t("Your coach"))+'</span>'
+   +'<h2>'+esc(t(due?"How are you now?":"Kept light on purpose"))+'</h2></div></div>';
+  if(!due){
+    var on=followOn(p);
+    h+='<p class="ckcard-ok">'+esc(t("You said {w}, so your week is built to the bottom of the range while you recover. I'll ask again on {d}.").replace("{w}",why).replace("{d}",on?pretty(on):""))+'</p>'
+     +'<button class="btn g sm ckcard-done" data-stressask="1">'+esc(t("It's better now"))+'</button>';
+    return h+'</section>';}
+  h+='<p class="ckcard-ok">'+esc(t(V.stressAsk?"Glad to hear it. Where are things now?":"A while ago you said {w}. Where are things now?").replace("{w}",why))+'</p>';
+  var chips=function(f,list,cur){return '<div class="aschips">'+list.map(function(x){var on=String(cur)===String(x[0]);
+    return '<button class="aschip'+(on?' on':'')+'" data-stressnow="'+f+'|'+x[0]+'" aria-pressed="'+on+'">'+esc(x[1])+'</button>';}).join("")+'</div>';};
+  h+='<div class="as-l">'+esc(t("Stress from work and life, lately"))+'</div>'+chips("stress",[["low",t("Low")],["normal",t("Normal")],["high",t("High")]],p.stress||"normal");
+  if(num(p.sleep)>0&&num(p.sleep)<6)h+='<div class="as-l">'+esc(t("How do you sleep?"))+'</div>'
+    +chips("sleep",[[5,t("Under 6 hours")],[6.5,t("6 to 7 hours")],[8,t("7 to 9 hours")],[9.5,t("More than 9")]],p.sleep);
+  return h+'</section>';}
 
 /* ---- this week, at a glance ----------------------------------------------------
    The coach's mark and what it makes of things (on track, or how many things it has

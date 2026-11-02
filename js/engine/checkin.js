@@ -14,6 +14,7 @@ import {num, today} from "../util.js";
 import {inDeload, kcalFloor, tdee} from "./formulas.js";
 import {weekStartOf} from "./schedule.js";
 import {JUDGED, weeklySets} from "./volume.js";
+import {lightOnPurpose} from "./stress.js";
 
 var INFO={muscle:muscleOf,secondary:secondaryOf,activity:isActivity};
 
@@ -38,6 +39,9 @@ function checkinOpen(){
   var ws=weekStartOf(today());
   if(S.ckDone===ws)return null;
   var c=checkinNow();
+  /* Kept light on purpose (js/engine/stress.js): no "under your range". */
+  if(lightOnPurpose(S.profile))c.changes=c.changes.map(function(x){return x.kind==="balance"?Object.assign({},x,{low:[]}):x;})
+    .filter(function(x){return x.kind!=="balance"||x.high.length;});
   if(!c.done&&!c.food&&!c.weight&&!c.sore)return null;
   var did=S.ckDid&&S.ckDid.w===ws?S.ckDid.k||[]:[];
   c.changes=c.changes.filter(function(x){return did.indexOf(x.kind)<0;});

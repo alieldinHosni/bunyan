@@ -2219,6 +2219,31 @@ await test("Dock: the workout bar takes the dock's place while it is away, and s
   eq(await ev(page,"V.tab"),"train");
 },{prefs:{anim:true}});
 /* ---- the good parts of an outside proposal, built in ---------------------------------- */
+await test("Stress said high: the week stays light and nothing asks for more volume; the coach says when it will ask again, asks then (or when told it's better), and rebuilds the week",async page=>{
+  const setUp=async(daysAgo)=>page.evaluate(async(daysAgo)=>{
+    const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),P=await import("/js/engine/plan.js");
+    const d=new Date(U.today()+"T00:00:00Z");d.setUTCDate(d.getUTCDate()-daysAgo);
+    Object.assign(S.profile,{goal:"recomp",level:"advanced",days:5,wd:[],mins:60,stress:"high",sleep:8,stressAt:d.toISOString().slice(0,10)});
+    S.programs=[];S.activeProgram=null;P.buildPlan();st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.assess=false;V.stressAsk=false;V.tab="coach";V.csec="ai";S.prefs.csec="ai";(await import("/js/ui/render.js")).render();},daysAgo);
+  await setUp(3);await pause(page,300);
+  const txt=await page.textContent('#app');
+  if(/Some muscles get little training/.test(txt))throw new Error("asks for more volume on a week kept light on purpose");
+  if(!/Kept light on purpose/.test(txt)||!/I'll ask again on/.test(txt))throw new Error("does not say the week is light on purpose, or when it will ask");
+  eq(await page.evaluate(async()=>{const C=await import("/js/engine/plancheck.js");return C.checkPlans().some(f=>f.id==="vol-low");}),false,"the plan check agrees");
+  await page.tap('[data-stressask]');await pause(page,300);
+  if(!(await page.$('[data-stressnow="stress|normal"]')))throw new Error("no question after It's better now");
+  const before=await ev(page,"S.activeProgram");
+  await page.tap('[data-stressnow="stress|normal"]');await pause(page,400);
+  eq(await ev(page,"[S.profile.stress,S.profile.stressAt===undefined,S.activeProgram!==\""+before+"\",!!document.querySelector('.stresscard')]"),["normal",true,true,false],"better: kept, the week built again, the card gone");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[S.profile.stress,S.activeProgram===\""+before+"\"]"),["high",true],"Undo puts it back");
+  /* Four weeks on: the question comes by itself. */
+  await setUp(29);await pause(page,300);
+  if(!/How are you now\?/.test(await page.textContent('.stresscard')))throw new Error("the follow-up is not asked after four weeks");
+  await page.tap('[data-stressnow="stress|high"]');await pause(page,300);
+  eq(await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");return [st.S.profile.stressAt===U.today(),/Kept light on purpose/.test(document.querySelector('.stresscard').textContent)];}),[true,true],"still high: asked again in four weeks");
+});
 await test("Dock: the red travels from the tab left to the tab tapped, and lands on it",async page=>{
   await tapTab(page,"train");await pause(page,700);
   const at=()=>page.evaluate(()=>{const h=document.querySelector("nav .dock-hl").getBoundingClientRect();return Math.round(h.left+h.width/2);});

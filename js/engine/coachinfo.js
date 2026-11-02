@@ -16,6 +16,7 @@ import {S, split} from "../state.js";
 import {num, today} from "../util.js";
 import {LANDMARKS} from "../coach/landmarks.js";
 import {weeklySets} from "./volume.js";
+import {lightOnPurpose} from "./stress.js";
 
 var INFO={muscle:muscleOf,secondary:secondaryOf,activity:isActivity,load:loadOf};
 /* A cheap fingerprint of the log, so an edited workout (a set, a weight, a date) is
@@ -62,11 +63,14 @@ function coachNow(){
   var dis=dismissals();
   /* The library loads after the first render; until it has, muscles are guesses, so
      the answer is worked out again once it is in. */
-  var k=[!!EXDB,today(),logSig(ss),pf.id,progSig(split()),JSON.stringify(dis)].join("|");
+  var light=lightOnPurpose(S.profile);
+  var k=[!!EXDB,today(),logSig(ss),pf.id,progSig(split()),JSON.stringify(dis),light].join("|");
   if(MEMO.k===k)return MEMO.v;
   var v=[];
   try{v=insights(ss,INFO,{today:today(),mains:pf.mains,ranges:pf.ranges,planned:pf.planned,dismissed:dis});}
   catch(e){v=[];}
+  /* A week kept light on purpose (js/engine/stress.js) is not "under its minimum". */
+  if(light)v=v.filter(function(x){return x.kind!=="under";});
   MEMO={k:k,v:v};
   return v;}
 

@@ -25,6 +25,7 @@ import {LEVELS, rebalance} from "./plan.js";
 import {S, split} from "../state.js";
 import {fmtN, num} from "../util.js";
 import {t, tm} from "../i18n/dict.js";
+import {lightOnPurpose} from "./stress.js";
 
 function r50(v){return Math.round(v/50)*50;}
 /* Shown with thousands separators: 2,800 kcal. */
@@ -121,6 +122,9 @@ function checkPlans(){
        Balance the volume would move nothing (the sessions are full), offering it is a
        button that does nothing, and the app arguing with its own plan. */
     if(low.length&&!canBalance(prog,p))low=[];
+    /* Kept light on purpose while stress is high or sleep short (js/engine/stress.js):
+       asking for more would argue with the plan built for it. */
+    if(lightOnPurpose(p))low=[];
     var high=vc.filter(function(v){return v.status==="high";}).map(function(v){return v.m;});
     if(low.length)
       out.push({id:"vol-low",area:"train",sev:G.train==="hyp"?2:1,title:t("Some muscles get little training"),
