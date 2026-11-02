@@ -7,8 +7,9 @@
 
    The textbook's rule (js/knowledge/acute-variables.js, variables · frequency): at least
    one day of rest between sessions that stress the same muscles. So a muscle trained
-   hard on a day is fully ready two days later, and part-way there the day after.
-   How far part-way depends on how much it did: a muscle that only helped (half a set
+   hard on a day is ready two days later, and not the day after: that day is the rest
+   the rule asks for (owner, 2 Nov: Full A the day after Full A was let through when the
+   day after counted as half-way there). How tired it is depends on how much it did: a muscle that only helped (half a set
    for each set it assisted, as the app counts everywhere) or did a couple of sets is
    less tired than one that did a full session's work. FULL is the dose taken as a full
    session for one muscle; it is the app's modelling choice, not a figure from a source,
@@ -47,7 +48,9 @@ function readiness(sessions,today,info,sore){
   (sessions||[]).forEach(function(s){
     var ago=t-dayNo(s.date);
     if(ago<0||ago>=REST_DAYS)return;
-    var load=loadOf(s,I),left=1-ago/REST_DAYS;
+    /* The day of the session and the day after are both inside the rest the rule asks
+       for; from the second day on, the muscle is ready. */
+    var load=loadOf(s,I),left=1;
     Object.keys(load).forEach(function(mu){
       var f=Math.min(1,load[mu]/FULL)*left;
       if(f>(tired[mu]||0))tired[mu]=f;});});
@@ -77,7 +80,9 @@ function dayReady(dayEx,ready,info){
    still tired, most work first. */
 function tiredOn(dayEx,ready,info){
   var I=infoOf(info),pl=plannedLoad(dayEx,I);
-  return Object.keys(pl.m).filter(function(mu){return ready[mu]!=null&&ready[mu]<0.75&&pl.m[mu]>=pl.tot*0.15;})
+  /* A real share: two sets or more of it, or a sixth of the day. A full-body day gives
+     each muscle a small share, and every one still tired is worth naming. */
+  return Object.keys(pl.m).filter(function(mu){return ready[mu]!=null&&ready[mu]<0.75&&(pl.m[mu]>=2||pl.m[mu]>=pl.tot*0.15);})
     .sort(function(a,b){return pl.m[b]-pl.m[a];});}
 
 /* days: the program's days in order ({id, name, ex}); plannedIdx: the one due. When it
@@ -98,4 +103,4 @@ function suggest(days,plannedIdx,ready,info){
   if(!best)return null;
   return {from:d.id,to:days[best.i].id,ready:r0,toReady:best.r,tired:tiredOn(d.ex,ready,info)};}
 
-export {dayReady, readiness, suggest, tiredOn, REST_DAYS};
+export {dayReady, readiness, suggest, tiredOn, LOW, REST_DAYS};

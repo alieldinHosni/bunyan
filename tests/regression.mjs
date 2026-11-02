@@ -3463,6 +3463,40 @@ await test("A missed day: moved to a free day with rest either side, or its key 
   await pause(page,300);
   if(!/فاتك/.test(await page.textContent('.reco')))throw new Error("not in Arabic");
 });
+await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
+  const setUp=async(kind)=>page.evaluate(async kind=>{
+    const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
+    const add=n=>{const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()+n);return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+    const E=(n,s)=>Sp.ex(n,s,8,12);
+    const FULL=n=>[E("Barbell Squat",3),E("Barbell Bench Press - Medium Grip",3),E("Bent Over Barbell Row",3),E("Standing Military Press",2)];
+    const UP=[E("Barbell Bench Press - Medium Grip",4),E("Bent Over Barbell Row",4),E("Standing Military Press",3)],LO=[E("Barbell Squat",4),E("Romanian Deadlift",4),E("Leg Press",3)];
+    const days=kind==="full"?[Sp.day("Full Body A",FULL()),Sp.day("Full Body B",FULL()),Sp.day("Full Body C",FULL())]:[Sp.day("Upper",UP),Sp.day("Lower",LO)];
+    const p=st.makeProgram({id:"pp",name:"P",days});p.schedule="week";
+    p.days.forEach((d,i)=>{d.wd=[Sc.isoWeekday(add(i*(kind==="full"?2:3)))];});
+    S.programs=[p];S.activeProgram="pp";S.sessions=[];S.daySwap={};st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.assess=false;V.tab="train";V.tdate=add(1);V.twkBase=null;(await import("/js/ui/render.js")).render();return add(1);},kind);
+  const tm=await setUp("full");await pause(page,300);
+  await page.evaluate(async d=>{(await import("/js/ui/actions.js")).openSheet("swapday",{date:d});},tm);await pause(page,400);
+  const rows=await page.$$eval('#sheet [data-swapto]',a=>a.map(b=>[b.getAttribute("data-swapto"),b.classList.contains("warn"),b.textContent]));
+  const full=rows.filter(r=>/Full/.test(r[2]));
+  eq([full.length,full.every(r=>r[1]&&/Too soon for/.test(r[2]))],[3,true],"every full-body day too soon the day after Full A: "+JSON.stringify(rows));
+  eq(rows.filter(r=>/Best fit/.test(r[2])).map(r=>r[0]),["rest"],"rest is the best fit");
+  if(!(await page.$('#sheet .swnote')))throw new Error("no word on why");
+  await page.tap('#sheet .trow.warn');await pause(page,400);
+  const cf=await page.textContent('#sheet');
+  if(!/anyway\?/.test(cf)||!/at least one day of rest/.test(cf))throw new Error("no question before a day too soon: "+cf.slice(0,300));
+  await page.tap('#sheet [data-confirmmid]');await pause(page,400);
+  eq(await ev(page,"[V.sheet,Object.keys(S.daySwap||{}).length]"),["swapday",0],"Pick another goes back, nothing changed");
+  await page.tap('#sheet .trow.warn');await pause(page,400);
+  await page.tap('#sheet [data-confirmok]');await pause(page,400);
+  eq(await ev(page,"Object.keys(S.daySwap||{}).length"),1,"trained anyway: the person decides");
+  /* Upper/Lower: after Upper today, Lower is ready and the best fit; Upper again is too soon. */
+  const tm2=await setUp("ul");await pause(page,300);
+  await page.evaluate(async d=>{(await import("/js/ui/actions.js")).openSheet("swapday",{date:d});},tm2);await pause(page,400);
+  const r2=await page.$$eval('#sheet [data-swapto]',a=>a.map(b=>[b.querySelector(".trow-n").textContent,b.classList.contains("warn"),/Best fit|Selected/.test(b.textContent),/Ready/.test(b.textContent)]));
+  eq(r2.filter(r=>r[0]==="Upper")[0].slice(1,2),[true],"Upper again is too soon: "+JSON.stringify(r2));
+  eq(r2.filter(r=>r[0]==="Lower")[0][3],true,"Lower is ready");
+});
 await test("Tomorrow follows today, live, in a rotation as on weekdays: today changed to Pull moves a rotation on to Legs, and on weekdays offers Legs for tomorrow's Pull",async page=>{
   const setUp=async(week)=>page.evaluate(async(week)=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js");

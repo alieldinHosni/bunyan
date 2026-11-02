@@ -8,14 +8,15 @@ import {day} from "../../data/splits.js";
 import {addDaysISO} from "../../engine/dayplan.js";
 import {spreadWd, suggestWd, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
 import {missedNow} from "../../engine/missed.js";
+import {dayOptions} from "../../engine/recovery.js";
 import {doseFor} from "../../engine/plan.js";
 import {restartAfter, restartBlock} from "../../engine/blocks.js";
-import {t} from "../../i18n/dict.js";
+import {t, tm} from "../../i18n/dict.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {addProgram, allSplits, dayOf, editSplit, makeProgram, S, saveDB, split} from "../../state.js";
 import {toKg} from "../../units.js";
 import {dfmt, num, r1, today, uid} from "../../util.js";
-import {addExercise, askConfirm, askText, closeSheet, openSheet, val} from "../actions.js";
+import {ACT, addExercise, askConfirm, askText, closeSheet, openSheet, val} from "../actions.js";
 import {grow} from "../more.js";
 import {pushNav} from "../nav.js";
 import {setPeek} from "../datebar.js";
@@ -135,11 +136,24 @@ function register(){
     var before=JSON.parse(JSON.stringify(S.missedDone||{}));missMark(r.missed.date);saveDB();render();
     toast(t("Let go. The plan carries on."),function(){S.missedDone=before;saveDB();render();});return;});
   on(function(D){return D.swapto!==undefined&&V.sheet==="swapday";},function(D){
-    var swd=V.sd.date;S.daySwap=S.daySwap||{};
+    var swd=V.sd.date;
+    /* A day that comes too soon for the muscles it trains asks first, and says why. */
+    if(D.swapto&&D.swapto!=="rest"){var opt=null;try{opt=dayOptions(split(),swd);}catch(e){opt=null;}
+      var o=opt&&opt.days.filter(function(x){return x.id===D.swapto;})[0];
+      if(o&&!o.ok){
+        var why=o.tired.length?t("{m} trained hard in the last day still need rest: the book's rule is at least one day of rest between sessions that load the same muscles.").replace("{m}",o.tired.slice(0,3).map(function(m){return tm(m).trim();}).join(", "))
+          :t("It trains the same muscles as {x} the day after, so that one would come too soon.").replace("{x}",planName(o.next.name));
+        askConfirm({title:t("Train {x} anyway?").replace("{x}",planName(o.name)),body:why,cta:t("Train it anyway"),act:"swapforce",data:{date:swd,id:D.swapto},
+          mid:t("Pick another"),midact:"swappick"});
+        return;}}
+    setSwap(swd,D.swapto);return;});
+  ACT.swapforce=function(v,d){if(d)setSwap(d.date,d.id);};
+  ACT.swappick=function(v,d){if(d)openSheet("swapday",{date:d.date});};
+  function setSwap(swd,to){S.daySwap=S.daySwap||{};
     /* Old swaps are dropped as they pass; only dates still ahead mean anything. */
     Object.keys(S.daySwap).forEach(function(k){if(k<today())delete S.daySwap[k];});
-    if(D.swapto)S.daySwap[swd]=D.swapto;else delete S.daySwap[swd];
-    saveDB();closeSheet();toast(t("Workout changed"));return;});
+    if(to)S.daySwap[swd]=to;else delete S.daySwap[swd];
+    saveDB();closeSheet();toast(t("Workout changed"));}
   /* From the My Training sheet, a day or the programs list replaces the sheet. */
   on(function(D){return (D.train||D.day)&&V.sheet;},function(){V.sheet=null;V.sd=null;return NEXT;});
   key("train",function(D){pushNav();V.tab="coach";V.train=D.train;render();window.scrollTo(0,0);return;});

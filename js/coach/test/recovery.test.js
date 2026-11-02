@@ -14,7 +14,7 @@ function run(t){
   var today="2026-11-02",tomorrow="2026-11-03";
   var log=[{date:today,entries:[{name:"Row",sets:sets(4)},{name:"Pulldown",sets:sets(3)},{name:"Curl",sets:sets(3)}]}];
   var r=readiness(log,tomorrow,info,0);
-  t.eq([r.Back,r.Biceps,r.Chest],[0.5,0.5,undefined],"a day after a full Pull: back and biceps half ready; chest untouched");
+  t.eq([r.Back,r.Biceps,r.Chest],[0,0,undefined],"a day after a full Pull: back and biceps need that day of rest; chest untouched");
   t.eq(readiness(log,"2026-11-04",info,0),{},"two days after: ready again (a rest day between)");
   t.eq(dayReady(pull.ex,r,info)<0.65&&dayReady(legs.ex,r,info)===1,true,"tomorrow's Pull is not ready; Legs is fresh");
   var s=suggest([push,pull,legs,rest],1,r,info);
@@ -22,9 +22,10 @@ function run(t){
   t.eq(suggest([push,pull,legs],0,r,info),null,"Push is ready: no suggestion");
   /* A light touch is not a full session. */
   var light=readiness([{date:today,entries:[{name:"Curl",sets:sets(2)}]}],tomorrow,info,0);
-  t.eq(light.Biceps,0.75,"two sets the day before: three quarters ready");
-  t.eq(readiness([{date:today,entries:[{name:"Row",sets:sets(4,6)}]}],tomorrow,info,0).Back,0.75,"easy sets (RPE 6) count half");
-  t.eq(readiness(log,tomorrow,info,8).Back,0.5,"sore 8/10: held back to half at most");
+  t.eq(light.Biceps,0.5,"two sets the day before: half ready");
+  t.eq(readiness([{date:today,entries:[{name:"Row",sets:sets(4,6)}]}],tomorrow,info,0).Back,0.5,"easy sets (RPE 6) count half");
+  var one=[{date:today,entries:[{name:"Curl",sets:sets(1)}]}];
+  t.eq([readiness(one,tomorrow,info,0).Biceps,readiness(one,tomorrow,info,8).Biceps],[0.75,0.5],"sore 8/10: held back to half at most");
   t.eq(readiness([{date:today,entries:[{name:"Running",sets:[{r:30}]}]}],tomorrow,info,0),{},"a run is not lifting");
   /* No day is fresher: nothing is suggested (rest is always open). */
   var all=[{date:today,entries:[{name:"Bench",sets:sets(4)},{name:"Row",sets:sets(4)},{name:"Squat",sets:sets(4)},{name:"RDL",sets:sets(3)}]}];

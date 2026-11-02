@@ -6,7 +6,7 @@
 
    Nothing is changed by itself: the person decides (Training's card, the coach). A day
    already moved or kept by hand (S.daySwap) is the person's decision and is left alone. */
-import {readiness, suggest} from "../coach/recovery.js";
+import {dayReady, LOW, readiness, suggest, tiredOn} from "../coach/recovery.js";
 import {muscleOf, secondaryOf} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {S} from "../state.js";
@@ -44,4 +44,47 @@ function swapAdvice(sp,iso,p){
   s.fromDay=sp.days[idx];s.toDay=sp.days.filter(function(d){return d.id===s.to;})[0];
   return s;}
 
-export {readyOn, swapAdvice};
+/* Owner, 2 Nov (today Full A, and the app let tomorrow be Full A too): "the app should
+   scan the muscles in my split and find the next possible day from the load on each
+   muscle and the rest it needs". Every day of the plan, judged for a date before it is
+   picked, by the textbook's rule (at least one day of rest between sessions that stress
+   the same muscles, acute-variables · frequency):
+     ready   how ready that day's planned work is on the date (dayReady, 0..1)
+     tired   the muscles still recovering that carry a real share of it
+     next    the day after: the workout it would then hold, and whether this choice
+             leaves that one too soon (on weekdays the day pinned there; in a rotation
+             the day that follows this one)
+     ok      ready, and the day after still ready
+   best: the plan's own day when it is ok, else the readiest ok day nearest after it in
+   the program's order, else "rest" — nothing fits, and resting is the right call.
+   → {date, days:[{id, name, rest, ready, tired[], next, ok}], best} */
+function virt(d,iso){return {date:iso,entries:(d.ex||[]).map(function(e){var n=Math.max(1,+e.sets||3),sets=[];for(var i=0;i<n;i++)sets.push({w:0,r:8});
+  return {name:e.name,muscle:e.muscle,sets:sets};})};}
+function dayOptions(sp,iso){
+  if(!sp||!(sp.days||[]).length)return null;
+  var now=today(),ready=readyOn(iso,sp),cur=planOn(sp,iso),nx=addDaysISO(iso,1),len=sp.days.length;
+  var days=S.days||{},sore=Math.max(+((days[iso]||{}).sore)||0,+((days[nx]||{}).sore)||0);
+  var base=(S.sessions||[]).filter(function(s){return s.date<=iso;});
+  if(iso>now)base=base.concat(plannedBetween(sp,now,iso));
+  var out=sp.days.map(function(d,i){
+    var o={id:d.id,name:d.name,rest:!(d.ex||[]).length,ready:1,tired:[],next:null,ok:true};
+    if(o.rest)return o;
+    o.ready=dayReady(d.ex,ready,INFO);o.tired=o.ready<LOW?tiredOn(d.ex,ready,INFO):[];
+    /* The day after, if this one is trained. */
+    var nd=null;
+    if(sp.schedule==="week"){var np=planOn(sp,nx);nd=np&&!np.rest&&np.day&&(np.day.ex||[]).length?np.day:null;}
+    else{var c=sp.days[(i+1)%len];nd=c&&(c.ex||[]).length&&len>1?c:null;}
+    if(nd){var r2=readiness(base.concat([virt(d,iso)]),nx,INFO,sore),nr=dayReady(nd.ex,r2,INFO);
+      o.next={date:nx,id:nd.id,name:nd.name,ready:nr,tired:nr<LOW?tiredOn(nd.ex,r2,INFO):[]};}
+    o.ok=o.ready>=LOW&&(!o.next||o.next.ready>=LOW);
+    return o;});
+  var at=-1;sp.days.forEach(function(d,i){if(cur.day&&d.id===cur.day.id)at=i;});
+  var best=null;
+  if(at>=0&&out[at].ok&&!out[at].rest)best=out[at].id;
+  else{var bi=-1;
+    for(var k=0;k<len;k++){var j=((at<0?0:at)+k)%len,c=out[j];
+      if(c.rest||!c.ok)continue;if(bi<0||c.ready>out[bi].ready+0.05)bi=j;}
+    best=bi>=0?out[bi].id:"rest";}
+  return {date:iso,days:out,best:best};}
+
+export {dayOptions, readyOn, swapAdvice};
