@@ -5,6 +5,8 @@
    it back. The cool-down is a card on the Workout complete sheet: a stretch for
    each muscle worked, each with a hold timer. What they contain comes from
    js/engine/warmup.js; this file only draws it. */
+import {correctiveFor, FAULTS_ASK} from "../../engine/corrective.js";
+import {avoids, limitsOf} from "../../engine/plan.js";
 import {t, tm} from "../../i18n/dict.js";
 import {exName} from "../../i18n/exnames.js";
 import {barKg, recommend} from "../../engine/formulas.js";
@@ -25,8 +27,14 @@ function workKg(e){
   var r=null;try{r=recommend(e);}catch(err){}
   return (r&&num(r.w))||num(e.planned&&e.planned.w0)||0;}
 
+/* The squat check's corrective work for this person (engine/corrective.js), without
+   what a health condition rules out (lying down). */
+function fixOf(){
+  var f=(S.profile||{}).faults||[];if(!f.length)return null;
+  var lim=limitsOf(S.profile);
+  return correctiveFor(f,{avoid:function(n){return avoids(n,lim);}});}
 function warmOf(a){
-  return warmupFor(a.entries,{work:workKg,gear:S.gear||null,bar:barKg()});}
+  return warmupFor(a.entries,{work:workKg,gear:S.gear||null,bar:barKg(),fix:fixOf()});}
 
 /* The warm-up shows before the first set of a session, unless it is switched off;
    from the ⋯ menu it shows whenever asked for. */
@@ -37,6 +45,9 @@ function warmShown(a){
   if(a.entries.some(function(e){return e.sets&&e.sets.length;}))return false;
   return !!warmOf(a);}
 
+function faultWords(ids){
+  var m={};FAULTS_ASK.forEach(function(x){m[x[0]]=x[1];});
+  return ids.filter(function(i){return m[i];}).map(function(i){return t(m[i]).toLowerCase();}).join(S.prefs.lang==="ar"?"، ":", ");}
 function muscles(list){
   return list.map(function(m){return tm(m).toLowerCase();}).join(S.prefs.lang==="ar"?"، ":", ");}
 
@@ -75,7 +86,7 @@ function vWarm(a){
   var w=warmOf(a);
   if(!w)return "";
   var done=a.wuDone||{},pk="wp";
-  var keys=[pk].concat(w.own?[]:w.drills.map(function(d){return d.name;}));
+  var keys=[pk].concat((w.fix||[]).map(function(d){return d.name;})).concat(w.own?[]:w.drills.map(function(d){return d.name;}));
   var nDone=keys.filter(function(k){return done[k];}).length;
   var h='<section class="wu wu2">'
    /* The warm-up's picture: the runner on the steps, behind the header (the workout's
@@ -96,7 +107,16 @@ function vWarm(a){
    +'<button class="wu-hold'+(phs?' timing':'')+'" data-hold="'+pk+'" data-secs="'+w.pulse.min*60+'" data-side="0" data-holdn="'+pk+'" data-holdt="'+pk+'"'
    +(phs?' style="--p:'+phs.p.toFixed(3)+'"':'')+' aria-label="'+esc(t(phs?"Stop the timer":"Start the timer"))+'">'
    +PLAY+'<span class="hold-l">'+esc(holdLabel(pk,w.pulse.min*60))+'</span></button></div></div>';
-  /* 2. The drills for what the day trains, or a word that the plan has its own. */
+  /* 2. The squat check's corrective work: roll, stretch, wake up (the book's order). */
+  if((w.fix||[]).length){
+    var FK={roll:"Roll",stretch:"Stretch",wake:"Wake up"};
+    h+='<div class="wu-step wu-card wu-fix"><div class="wu-sh"><b>'+(++step)+'</b><span>'+t("For your squat check")+'</span></div>';
+    w.fix.forEach(function(d,i){
+      h+=row("wf"+i,d.name,t(FK[d.kind])+" · "+doseOf(d),d.sec,d.side,done[d.name],"data-wutick");});
+    h+='<details class="wu-why"><summary>'+t("Why")+'</summary><p>'
+     +esc(t("Your squat check showed {f}. Tight muscles are calmed and lengthened first, then the weak ones are woken up, so the lifts that follow move better: the book's corrective order.")
+       .replace("{f}",faultWords((S.profile||{}).faults||[])))+'</p></details></div>';}
+  /* 3. The drills for what the day trains, or a word that the plan has its own. */
   if(w.own)
     h+='<div class="wu-step wu-card"><div class="wu-sh"><b>'+(++step)+'</b><span>'+t("Move what you'll train")+'</span></div>'
      +'<p class="wu-note">'+t("Your plan opens with its own mobility work. Do that next, as the session lists it.")+'</p></div>';

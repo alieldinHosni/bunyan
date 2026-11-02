@@ -11,6 +11,7 @@ import {t} from "../i18n/dict.js";
 import {goalOf, GOALS, trainOf} from "../data/goals.js";
 import {JUDGED, RANGE, rangeFor, weeklySets} from "./volume.js";
 import {BY_ADAPTATION} from "../knowledge/acute-variables.js";
+import {fitDose, rulesFor} from "./conditions.js";
 
 /* ============================================================ plan engine */
 /* sets and rest are [compound, isolation]. Compounds always get more of both. */
@@ -146,6 +147,16 @@ var AVOID={
   wrist:/Front Squat|Plyo Push|Handstand|Barbell Curl|Clean/i,
   ankle:/Jump|Hop|Bound|Pogo|Skater|Sprint|Rope Jumping/i
 };
+/* Lying on the back or front, for a health condition that rules it out (engine/
+   conditions.js noFloor: high blood pressure, pregnancy past 12 weeks). An incline
+   bench, a seat, standing or kneeling keeps the head above the heart; a decline or a
+   handstand puts it below, which the book singles out. Rolling on the floor too (high
+   blood pressure: "floor foam rolling may be contraindicated"). */
+var FLOOR_ON=/-SMR|Child's Pose|Ball Leg Curl|Bench Press|Lying|Floor Press|Crunch|Sit-Up|Leg Raise|Bridge|Hip Thrust|Skull|Pullover|Dead Bug|Flye|Decline|Prone|Plank|Push-?Up|Superman|Hyperextension|Back Extension|Mountain Climber|Supine|Handstand/i,
+    FLOOR_OFF=/Incline|Seated|Standing|Hanging|Kneeling|Cable|Machine|Captain|Vertical|Wall|Back Flyes - With Bands|Reverse Flyes|Front Leg Raises|Rear Leg Raises|Side Leg Raises|Gorilla|Sled/i;
+AVOID.floor={test:function(n){return FLOOR_ON.test(n)&&(!FLOOR_OFF.test(n)||/Decline|Handstand/i.test(n));}};
+/* What the plan works around: the sore spots they named, and what a condition rules out. */
+function limitsOf(p){var l=((p&&p.limits)||[]).slice(),R=rulesFor(p);if(R&&R.noFloor)l.push("floor");return l;}
 function avoids(name,limits){
   return (limits||[]).some(function(k){return AVOID[k]&&AVOID[k].test(name);});}
 function usable(name,gear){
@@ -252,7 +263,7 @@ function adaptOf(goal){var id=ADAPT[goalOf(goal).train];
 function within(v,r){return r?Math.max(num(r.min),Math.min(num(r.max)||v,v)):v;}
 function shapePlan(plan,p,gear){
   var AD=adaptOf(p.goal);
-  var L=LEVELS[p.level]||LEVELS.some,T=trainOf(p.goal),limits=p.limits||[];
+  var L=LEVELS[p.level]||LEVELS.some,T=trainOf(p.goal),limits=limitsOf(p),R=rulesFor(p);
   var budget=Math.max(25,(num(p.mins)||60)-8);   /* the warm-up takes about eight */
   var tired=num(p.sleep)>0&&num(p.sleep)<6;
   var swaps=[];KEEP=[];MAINS=[];
@@ -289,10 +300,11 @@ function shapePlan(plan,p,gear){
          the main lift, and no longer than the range for the rest. */
       if(AD){e.sets=within(e.sets,AD.sets);
         e.rest=main?within(e.rest,AD.restS):Math.min(e.rest,num(AD.restS&&AD.restS.max)||e.rest);
-        if(AD.restS&&e.rest<num(AD.restS.min)&&ADAPT[goalOf(p.goal).train]==="stabilization_endurance")e.rest=num(AD.restS.min);}});
+        if(AD.restS&&e.rest<num(AD.restS.min)&&ADAPT[goalOf(p.goal).train]==="stabilization_endurance")e.rest=num(AD.restS.min);}
+      });
     /* A health question ticked in the assessment (the PAR-Q+ topics): low and moderate
        effort only until a professional clears it, so no jumps and no intervals. */
-    var screened=(p.health||[]).length>0;
+    var screened=(p.health||[]).length>0||!!(R&&R.noPlyo);
     var extra=T.add==="plyo"&&!screened?plyoFor(d,limits):T.add==="cond"&&!screened?condFor(gear):T.add==="mob"?mobFor(d):[];
     keep=keep.concat(extra);
     d.ex=T.add==="plyo"?extra.concat(d.ex):d.ex.concat(extra);
@@ -309,8 +321,37 @@ function shapePlan(plan,p,gear){
       for(var k=d.ex.length-1;k>=0&&!cut;k--){var e=d.ex[k];
         if(KEEP.indexOf(e)<0&&!isActivity(e.name)&&e.sets>2){e.sets--;cut=true;}}
       if(!cut)break;}});
+  /* Last, over everything the week holds now: a health condition's range from the book
+     wins over the goal's (engine/conditions.js). */
+  if(R)plan.days.forEach(function(d){d.ex.forEach(function(e){
+    if(isActivity(e.name))return;
+    if((EXDB&&EXDB[e.name]||{}).e!=="Bodyweight"&&!TIMED.test(e.name))fitDose(e,R);else if(R.sets&&e.sets>R.sets.max)e.sets=R.sets.max;});});
   KEEP=[];MAINS=[];SKILLED=true;SUBS={};
   return swaps;}
+
+/* A program the builder did not make (a template, an import, one built by hand) brought
+   into line with a health condition: what it rules out swapped for the closest that fits,
+   and every loaded lift into the book's range. dry: count only. → [{from, to}|{name, dose}] */
+function conformProgram(sp,p,gear,dry){
+  p=p||S.profile||{};var R=rulesFor(p);if(!R||!sp)return [];
+  var limits=limitsOf(p),out=[];
+  SKILLED=p.level==="experienced"||p.level==="advanced";SUBS={};
+  sp.days.forEach(function(d){
+    var taken={};d.ex.forEach(function(e){taken[e.name]=1;});
+    d.ex=d.ex.map(function(e){
+      if(isActivity(e.name))return e;
+      var x=e;
+      if(avoids(e.name,limits)){var n=standIn(e.name,gear,limits,taken);
+        out.push({from:e.name,to:n||null});
+        if(dry)return e;
+        if(!n)return null;
+        taken[n]=1;x=JSON.parse(JSON.stringify(e));x.name=n;x.muscle=muscleOf(n);delete x.exId;}
+      var bw=(EXDB&&EXDB[x.name]||{}).e==="Bodyweight",was=[x.sets,x.lo,x.hi].join(),c=dry?JSON.parse(JSON.stringify(x)):x;
+      if(!bw&&!TIMED.test(x.name))fitDose(c,R);else if(R.sets&&c.sets>R.sets.max)c.sets=R.sets.max;
+      if([c.sets,c.lo,c.hi].join()!==was)out.push({name:x.name,dose:true});
+      return x;}).filter(Boolean);});
+  SKILLED=true;SUBS={};
+  return out;}
 
 /* What one more exercise gets, for this person: the same rules as the builder's
    accessories (sets from experience, reps, effort and rest from the goal, then into
@@ -324,6 +365,7 @@ function doseFor(name,p){
     rest:round30((comp?Math.max(90,L.rest[0]-30):L.rest[1])*T.rest)};
   if(AD){e.sets=within(e.sets,AD.sets);e.rest=Math.min(e.rest,num(AD.restS&&AD.restS.max)||e.rest);
     if(ADAPT[goalOf(p.goal).train]==="stabilization_endurance")e.rest=Math.max(e.rest,num(AD.restS.min));}
+  fitDose(e,rulesFor(p));
   return e;}
 
 /* ---- volume per muscle -------------------------------------------------------------
@@ -348,7 +390,7 @@ function lifts(e){return !isActivity(e.name)&&!TIMED.test(e.name)&&!e.timed;}
 function balance(plan,p,gear,budget,T){
   /* Only a goal trained for muscle has a floor to build up to (js/coach/landmarks.js
      rangeFor); every goal is kept under the ceiling. */
-  var r=rangeFor(p.level,goalOf(p.goal).train)||[0,(RANGE[p.level]||RANGE.some)[1]],limits=p.limits||[];
+  var r=rangeFor(p.level,goalOf(p.goal).train)||[0,(RANGE[p.level]||RANGE.some)[1]],limits=limitsOf(p);
   for(var it=0;it<30;it++){
     var w=weeklySets(plan),changed=false;
     for(var q=0;q<JUDGED.length&&!changed;q++){
@@ -418,7 +460,7 @@ function logged(){
   var o={};(S.sessions||[]).forEach(function(s){(s.entries||[]).forEach(function(e){if(e&&e.name)o[e.name]=1;});});
   return o;}
 function builtProgram(p,gear){
-  var w=buildWeek(p,gear,{usable:usable,avoids:avoids,familiar:logged,train:function(g){return goalOf(g).train;},
+  var w=buildWeek(p,gear,{usable:usable,avoids:avoids,limits:limitsOf(p),familiar:logged,train:function(g){return goalOf(g).train;},
     pool:familiar(),dose:function(n){return doseFor(n,p);},
     favs:S.favs||[],skip:S.skip||[],skilled:p.level==="experienced"||p.level==="advanced",weekdays:spreadWd});
   var plan=makeProgram({id:BUILT,from:BUILT,name:w.name,days:w.days.map(function(d){
@@ -446,4 +488,4 @@ function buildPlan(id){
 }
 
 
-export {adaptOf, AVOID, avoids, BUILT, buildPlan, dayMinutes, doseFor, generatePlan, GOALS, LEVELS, rebalance, shapePlan, splitCandidates, SPLIT_LEVEL, standIn, usable};
+export {adaptOf, AVOID, avoids, conformProgram, limitsOf, BUILT, buildPlan, dayMinutes, doseFor, generatePlan, GOALS, LEVELS, rebalance, shapePlan, splitCandidates, SPLIT_LEVEL, standIn, usable};

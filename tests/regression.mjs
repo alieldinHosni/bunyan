@@ -251,6 +251,25 @@ await test("new workout entries carry a stable exercise id, and ids heal renamed
     const e=s.S.active.entries[0],orig=e.name;e.name="Renamed";ex.reconcileExercises(s.S);return e.name===orig;});
   eq(healed,true);
 });
+await test("Something hurts: where, what protects that area, how often it came up lately, and the plan steered away from it with Undo; never a diagnosis",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");
+    const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()-6);const iso=new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+    st.S.sessions.push({id:"hp",date:iso,entries:[{name:"Standing Military Press",pain:true,painArea:"shoulder",sets:[{w:40,r:8}]}]});
+    st.S.profile.limits=[];st.saveDB();});
+  await startWorkout(page);
+  await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-hurt]');await pause(page);
+  await page.tap('[data-hurtarea="shoulder"]');await pause(page,300);
+  const note=await page.textContent('#sheet .hurt-note');
+  if(!/kipping/.test(note)||!/once already in the last four weeks/.test(note))throw new Error("note: "+note);
+  const had=await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days.some(d=>d.ex.some(e=>/Military Press|Overhead Press|Upright Row|Dips/.test(e.name)))");
+  await page.tap('[data-hurtavoid="shoulder"]');await pause(page,400);
+  eq(await ev(page,"[S.profile.limits,S.programs.find(p=>p.id===S.activeProgram).days.some(d=>d.ex.some(e=>/Military Press|Overhead Press|Upright Row|Behind|Push Press|Dips/.test(e.name)))]"),[["shoulder"],false],"the area in the limits, nothing loading it left"+(had?"":" (none to swap)"));
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"S.profile.limits"),[],"Undo");
+  if(!(await page.$('#sheet [data-hurtdo="skip"]'))){await page.tap('[data-sessmore]');await pause(page);await page.tap('#sheet [data-hurt]');await pause(page);await page.tap('[data-hurtarea="shoulder"]');await pause(page,300);}
+  await page.tap('[data-hurtdo="skip"]');await pause(page,300);
+  eq(await ev(page,"S.active.entries.some(e=>e.painArea==='shoulder')"),true,"the area kept with the flag");
+});
 await test("readiness, pain flag and session effort are kept with the workout",async page=>{
   await startWorkout(page);
   await page.tap('[data-ready="4"]');await pause(page);
@@ -1487,6 +1506,19 @@ await test("Warm-up: shown before the first exercise; ticks and a hold timer; St
   await page.tap('[data-wuskip]');await pause(page);
   eq(await ev(page,"[S.active.warm,!!document.querySelector('.wsc')]"),[0,true],"back to the work");
 },{prefs:{nowarm:false}});
+await test("Squat check: what was ticked opens every warm-up with roll, stretch and wake-up work for it, in the book's order; nothing on the floor with high blood pressure",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.profile.faults=["ohsa_knees_in","ohsa_low_back_arch"];(await import("/js/state.js")).saveDB();});
+  await startWorkout(page);
+  if(!(await page.$('.wu .wu-fix')))throw new Error("no corrective card");
+  const rows=await page.$$eval('.wu-fix .wu-row',a=>a.map(r=>[r.querySelector('.wu-n').textContent,r.querySelector('.wu-d').textContent]));
+  const kinds=rows.map(r=>r[1].split(" · ")[0]);
+  eq([kinds[0],kinds[kinds.length-1],kinds.indexOf("Stretch")>kinds.lastIndexOf("Roll")],["Roll","Wake up",true],"roll, then stretch, then wake up: "+JSON.stringify(rows));
+  const [step,drills]=await page.evaluate(()=>{const c=[...document.querySelectorAll('.wu-step')];return [c.findIndex(x=>x.classList.contains("wu-fix")),c.findIndex(x=>/Move what/.test(x.textContent))];});
+  eq(step>=0&&(step<drills||drills<0),true,"before the moving drills");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.profile.conds=["hypertension"];st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,300);
+  const fl=await page.$$eval('.wu-fix .wu-n',a=>a.map(e=>e.textContent));
+  eq(fl.some(n=>/SMR|Rolling|Bridge|Dead Bug|Child/i.test(n)),false,"nothing lying down: "+JSON.stringify(fl));
+},{prefs:{nowarm:false}});
 await test("Warm-up, quicker: the name ticks and the next comes into view; the pulse timer shows at the bottom only when its row is away; the ramp-up sets are on the lift as warm-ups, filled in",async page=>{
   await startWorkout(page);
   const first=await page.$$eval('.wu2 .wu-ex[data-wutick]:not([data-wutick="wp"])',a=>a[0].dataset.wutick);
@@ -1803,6 +1835,26 @@ await test("Warm-up: Start stays on the bottom edge all the way down",async page
     return page.evaluate(()=>Math.round(document.querySelector(".wu-foot").getBoundingClientRect().bottom)-innerHeight);};
   eq([await at(0),await at(300),await at(99999)],[0,0,0],"the footer's bottom is the screen's");
 });
+await test("Check-in barriers: fewer workouts than planned asks what got in the way; the answer gives that barrier's strategy and its action, and next week recalls it",async page=>{
+  await page.evaluate(async()=>{
+    const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sc=await import("/js/engine/schedule.js"),P=await import("/js/engine/plan.js");
+    const ws=Sc.weekStartOf(U.today()),add=(d,n)=>new Date(Date.parse(d+"T00:00:00Z")+n*864e5).toISOString().slice(0,10);
+    Object.assign(S.profile,{goal:"gain",level:"some",days:4,wd:[],mins:60,age:30,height:180,sex:"m",weight:80});
+    S.programs=[];S.activeProgram=null;P.buildPlan();
+    S.sessions=[{id:"b1",date:add(ws,-4),entries:[{name:"Barbell Squat",muscle:"Quads",sets:[{w:80,r:8,rpe:8}]}]}];
+    S.ckWhy={[add(ws,-7)]:"time"};delete S.ckDone;delete S.ckDid;st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.csec="ai";S.prefs.csec="ai";(await import("/js/ui/render.js")).render();});
+  await pause(page,300);
+  if(!(await page.$('.ckcard [data-ckwhy="time"]')))throw new Error("no question: "+(await page.textContent('.ckcard')).slice(0,400));
+  if(!/Better than the week before, when it was: not enough time/.test(await page.textContent(".ckwhy")))throw new Error("last week's answer not recalled, nor that the week went better");
+  await page.tap('.ckcard [data-ckwhy="no_social_support"]');await pause(page,300);
+  const w=await page.textContent('.ckwhy');
+  if(!/training partner/.test(w)||!(await page.$('.ckwhy [data-share]')))throw new Error("no strategy or action: "+w);
+  await page.tap('.ckwhy [data-ckwhy=""]');await pause(page,300);
+  await page.tap('.ckcard [data-ckwhy="time"]');await pause(page,300);
+  await page.tap('.ckwhy [data-setupstep="week"]');await pause(page,400);
+  eq(await ev(page,"[V.assess,V.asd&&V.asd.step]"),[true,(await page.evaluate(async()=>(await import("/js/ui/views/assess.js")).STEPS.indexOf("week")))],"the assessment opens on the week");
+});
 await test("Weekly check-in: last week read on Coach — two short weeks and slow loss give a shorter week and 100 kcal less, each one tap with Undo, then closed for the week; in Arabic too",async page=>{
   const setUp=async()=>page.evaluate(async()=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sc=await import("/js/engine/schedule.js"),P=await import("/js/engine/plan.js");
@@ -1930,6 +1982,135 @@ await test("Assessment: first run opens it; answers become targets and training 
   eq(await ev(page,"V.tab"),"food","today's food");
   eq(await page.$$eval('.fmt-c .fmt-plan',a=>a.length),4,"every meal of the day shows its plan");
   if(!(await page.$('[data-logday]')))throw new Error("no Log today's plan on Food");
+},{db:Object.assign(seed(),{onboarded:false})});
+await test("Health conditions: the assessment asks which; the plan follows the book for it (nothing lying down, 10–20 reps, steady breathing) and says so; My program fits one it did not build with one tap",async page=>{
+  await page.evaluate(async()=>{const A=await import("/js/ui/views/assess.js"),V=(await import("/js/ui/view.js")).V;
+    V.asd=A.draftFrom();Object.assign(V.asd,{sex:"m",age:50,height:178,weight:88,days:3,wd:[],goal:"gain",level:"some"});V.asd.step=A.STEPS.indexOf("health");V.assess=true;(await import("/js/ui/render.js")).render();});
+  await pause(page,300);
+  eq(await page.$$eval('[data-asm^="conds|"]',a=>a.map(b=>b.getAttribute("data-asm").split("|")[1]).filter(x=>/pregnancy/.test(x)).length),0,"no pregnancy for a man");
+  await page.tap('[data-asm="conds|hypertension"]');await pause(page,200);
+  if(!/textbook's guidelines/.test(await page.textContent('#app')))throw new Error("no word on what it changes");
+  await page.evaluate(async()=>{const A=await import("/js/ui/views/assess.js"),V=(await import("/js/ui/view.js")).V;V.asd.step=A.STEPS.indexOf("result");(await import("/js/ui/render.js")).render();});
+  for(let i=0;i<20&&!(await page.$('.condcard'));i++)await pause(page,250);
+  const card=await page.textContent('.condcard');
+  if(!/High blood pressure/.test(card)||!/No lying on your back or front/.test(card)||!/never hold your breath/.test(card)||!/10–20 reps/.test(card))throw new Error("the card does not say it: "+card);
+  await page.tap('[data-asuse]');await pause(page,600);
+  const bad=await page.evaluate(async()=>{const st=await import("/js/state.js"),P=await import("/js/engine/plan.js"),X=await import("/js/data/exercises.js");
+    const sp=st.split(),out=[];
+    sp.days.forEach(d=>d.ex.forEach(e=>{if(P.avoids(e.name,["floor"]))out.push("floor:"+e.name);
+      const bw=(X.EXDB[e.name]||{}).e==="Bodyweight";if(!bw&&!/Hold|Plank|Stretch|Carry|Bridge/i.test(e.name)&&(e.lo<10||e.hi>20||e.sets>3))out.push("dose:"+e.name+" "+e.sets+"x"+e.lo+"-"+e.hi);}));
+    return [st.S.profile.conds,out];});
+  eq(bad,[["hypertension"],[]],"the plan keeps to it");
+  /* A program it did not build: bench press and crunches, five sets of five. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),Sp=await import("/js/data/splits.js");
+    const p=st.makeProgram({id:"mine",name:"Mine",days:[Sp.day("Chest",[Sp.ex("Barbell Bench Press - Medium Grip",5,5,5),Sp.ex("Crunches",3,15,20),Sp.ex("Cable Crossover",3,8,12)])]});
+    p.id="mine";st.S.programs.push(p);st.S.activeProgram="mine";st.saveDB();});
+  await coach(page,"train","program");await pause(page,300);
+  if(!(await page.$('.condcard [data-condfix]')))throw new Error("no fix offered: "+(await page.textContent('#app')).slice(0,400));
+  await page.tap('.condcard [data-condfix]');await pause(page,400);
+  const ex=await ev(page,"S.programs.find(p=>p.id==='mine').days[0].ex.map(e=>[e.name,e.sets,e.lo,e.hi])");
+  eq([ex.some(e=>/^Barbell Bench Press - Medium/.test(e[0])||e[0]==="Crunches"),ex[0][1]<=3&&ex[0][2]>=10],[false,true],"swapped and dosed: "+JSON.stringify(ex));
+  eq(await page.$$eval('.condcard [data-condfix]',a=>a.length),0,"nothing left to fit");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"S.programs.find(p=>p.id==='mine').days[0].ex[0].name"),"Barbell Bench Press - Medium Grip","Undo puts it back");
+  /* The workout says how to breathe. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.activeProgram=st.S.programs[0].id;st.saveDB();});
+  await startWorkout(page);
+  for(let i=0;i<6&&!(await page.$('.sc-cond'));i++){const n=await page.$('[data-nextex]');if(n){await n.tap();await pause(page,300);}else break;}
+  if(!(await page.$('.sc-cond')))throw new Error("no breathing cue on the set");
+},{db:Object.assign(seed(),{onboarded:false})});
+await test("Exercise picker: what a health condition rules out is marked, and asks before it goes in",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.profile.conds=["hypertension"];st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.dayId=st.split().days[0].id;V.exm="Chest";V.exe="All";V.exq="bench press";
+    (await import("/js/ui/actions.js")).openSheet("exercise",{});});
+  await pause(page,500);
+  const w=await page.$('#sheet .pkwarn[data-pickex]');if(!w)throw new Error("nothing marked");
+  const name=await w.getAttribute("data-pickex");
+  const n0=await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days[0].ex.length");
+  await w.tap();await pause(page,400);
+  eq(await ev(page,"V.sheet"),"confirm","asks first");
+  await page.tap('#sheet [data-confirmmid]');await pause(page,400);
+  eq(await ev(page,"[V.sheet,S.programs.find(p=>p.id===S.activeProgram).days[0].ex.length]"),["exercise",n0],"Pick another: back, nothing added");
+  await page.tap('#sheet .pkwarn[data-pickex="'+name+'"]');await pause(page,400);
+  await page.tap('#sheet [data-confirmok]');await pause(page,500);
+  eq(await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days[0].ex.some(e=>e.name===\""+name+"\")"),true,"added when they say so");
+});
+await test("Coach chat knows the phase, the cardio zones and the health adjustments, in English and Arabic",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js");
+    st.S.block={start:sc.weekStartOf(U.today())};st.S.profile.conds=["hypertension"];st.S.profile.goal="gain";st.saveDB();});
+  await openChat(page);await page.fill('#chatq',"What phase am I in?");await page.press('#chatq','Enter');await pause(page,600);
+  let txt=await page.textContent('#cpanel');
+  if(!/Stabilisation endurance/.test(txt)||!/12–20 reps a set/.test(txt))throw new Error("phase: "+txt.slice(-500));
+  await page.fill('#chatq',"what are my heart rate zones");await page.press('#chatq','Enter');await pause(page,600);
+  txt=await page.textContent('#cpanel');
+  if(!/cardio stage 1/.test(txt)||!/go by feel/.test(txt))throw new Error("zones: "+txt.slice(-500));
+  await page.fill('#chatq',"what is adjusted for my health");await page.press('#chatq','Enter');await pause(page,600);
+  txt=await page.textContent('#cpanel');
+  if(!/Your plan is adjusted for: high blood pressure/.test(txt))throw new Error("health: "+txt.slice(-500));
+  await page.fill('#chatq',"ايه اللي اتغير في خطتي علشان حالتي الصحيه");await page.press('#chatq','Enter');await pause(page,600);
+  txt=await page.textContent('#cpanel');
+  if(!/خطتك متظبطة على/.test(txt))throw new Error("health in Arabic: "+txt.slice(-500));
+});
+await test("Coach, in a workout: 'not sure I can do 20 push-ups, shall I adjust it?' offers today's reps from your own best and an easier version; one tap changes only today",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),Sp=await import("/js/data/splits.js");
+    const p=st.makeProgram({id:"pu",name:"PU",days:[Sp.day("Upper",[Sp.ex("Pushups",3,15,20),Sp.ex("Dumbbell Bench Press",3,8,12)])]});p.id="pu";
+    st.S.programs=[p];st.S.activeProgram="pu";st.S.block=null;st.S.prefs.noblocks=true;
+    st.S.sessions=[{id:"pp",date:"2026-10-20",entries:[{name:"Pushups",sets:[{w:0,r:9},{w:0,r:7}]}]}];st.saveDB();});
+  await startWorkout(page);
+  await page.tap('[data-coachopen]');await pause(page,500);
+  await page.fill('#chatq',"I am overweight, I am not sure I can do the 20 reps pushups today. Shall I adjust it?");await page.press('#chatq','Enter');await pause(page,700);
+  const opts=await page.$$eval('#cpanel .ag-opt .ag-ol',a=>a.map(e=>e.textContent));
+  if(!opts.some(o=>/Today: 6–11 reps/.test(o)))throw new Error("no fitted reps from the best set of 9: "+JSON.stringify(opts));
+  const easier=opts.find(o=>/Switch to/.test(o));
+  await page.tap('#cpanel .ag-opt');await pause(page,600);
+  if(await page.$('#cpanel .ag-ok')){await page.tap('#cpanel .ag-ok');await pause(page,600);}
+  eq(await ev(page,"[S.active.entries[0].planned.lo,S.active.entries[0].planned.hi,S.programs[0].days[0].ex[0].lo]"),[6,11,15],"today only: the program keeps 15–20");
+  await page.fill('#chatq',"Can you change the 20 reps in my current active training to something reasonable for me?");await page.press('#chatq','Enter');await pause(page,700);
+  if(!(await page.$$('#cpanel .ag-opt')).length)throw new Error("the second wording is not understood: "+(await page.textContent('#cpanel')).slice(-300));
+  eq(easier,"Switch to Incline Push-Up","an easier version of the same movement");
+});
+await test("Rest complete, closed: the band leaves (fades and folds), never fading back in first",async page=>{
+  await startWorkout(page);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.restDone=true;V.restEnd=0;(await import("/js/ui/render.js")).render();});
+  await pause(page,900);
+  await page.tap('.rb.over .rb-close');await pause(page,60);
+  const g=await page.evaluate(()=>{const e=document.querySelector('.sess .rb.ghost');return e?[getComputedStyle(e).animationName,+getComputedStyle(e).opacity]:null;});
+  if(g)eq(g[0],"rowOut","leaving, not arriving again: "+JSON.stringify(g));
+  await pause(page,900);
+  eq(await page.$$eval('.sess .rb',a=>a.length),0,"gone");
+},{prefs:{anim:true}});
+await test("Coach in a live workout: the session comes first — 'what now?', 'how long do I rest?' answer for the exercise on screen; food or tomorrow still get their own answer",async page=>{
+  await startWorkout(page);
+  await page.tap('[data-coachopen]');await pause(page,500);
+  const ex=await ev(page,"S.active.entries[0].name");
+  const askIt=async q=>{await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,700);
+    return page.evaluate(()=>{const x=[...document.querySelectorAll('#cpanel .chat-x')].pop();return x?x.textContent:"";});};
+  let a=await askIt("what now?");
+  if(!/This workout/.test(a)||!a.includes("Now:"))throw new Error("what now: "+a.slice(0,300));
+  a=await askIt("how long do I rest between sets");
+  if(!/Rest \d+ s between sets/.test(a))throw new Error("rest: "+a.slice(0,300));
+  a=await askIt("how much protein should I eat today?");
+  if(/This workout/.test(a))throw new Error("food went to the workout: "+a.slice(0,200));
+});
+await test("Coming back: an experienced lifter mostly off for months gets a phase-1 block now, a 'Coming back' card, and old weights not suggested after six weeks",async page=>{
+  await page.evaluate(async()=>{const A=await import("/js/ui/views/assess.js"),V=(await import("/js/ui/view.js")).V,st=await import("/js/state.js");
+    st.S.block={start:"2025-01-04"};
+    V.asd=A.draftFrom();Object.assign(V.asd,{sex:"m",age:34,height:180,weight:92,days:4,wd:[],goal:"recomp",level:"experienced"});V.asd.step=A.STEPS.indexOf("level");V.assess=true;(await import("/js/ui/render.js")).render();});
+  await pause(page,300);
+  await page.tap('[data-as="lapse|off"]');await pause(page,200);
+  if(!/rebuild/.test(await page.textContent('#app')))throw new Error("no word on what coming back changes");
+  await page.evaluate(async()=>{const A=await import("/js/ui/views/assess.js"),V=(await import("/js/ui/view.js")).V;V.asd.step=A.STEPS.indexOf("result");(await import("/js/ui/render.js")).render();});
+  for(let i=0;i<20&&!(await page.$('[data-k="backcard"]'));i++)await pause(page,250);
+  if(!(await page.$('[data-k="backcard"]')))throw new Error("no Coming back card");
+  await page.tap('[data-asuse]');await pause(page,600);
+  const r=await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js"),B=await import("/js/engine/blocks.js");
+    return [st.S.profile.lapse,st.S.block.start===sc.weekStartOf(U.today()),(B.phaseNow()||{}).n];});
+  eq(r,["off",true,1],"blocks start again, at phase 1");
+  /* A lift last done months ago: last time shown, no old weight suggested. */
+  const rec=await page.evaluate(async()=>{const st=await import("/js/state.js"),F=await import("/js/engine/formulas.js");
+    st.S.sessions.push({id:"old",date:"2026-03-01",entries:[{name:"Barbell Deadlift",sets:[{w:140,r:5}]}]});
+    return F.recommend({name:"Barbell Deadlift",planned:{lo:12,hi:20,sets:3}});});
+  eq([rec.gap,rec.w,/140 × 5/.test(rec.last)],[true,0,true],"found afresh, last time for reference");
 },{db:Object.assign(seed(),{onboarded:false})});
 await test("Plan check: targets that work against the goal are found in Coach AI with a dot on Coach, fixed with Undo, and kept until the numbers change",async page=>{
   /* Building muscle on 2,500 kcal against about 2,550 maintenance, and 110 g of protein. */
@@ -2384,6 +2565,55 @@ await test("Blocks: 'too easy' after a workout adds a set for the muscle it trai
   await pause(page,300);
   if(!/1 more than the plan/.test(await page.textContent("#app")))throw new Error("the logger does not say so");
 },{prefs:{autorest:false}});
+await test("Phases: block 1 is stabilisation (12–20 reps, slow tempo), block 3 the goal's phase; Training says which and what comes next; a new rep range gets an estimated weight",async page=>{
+  const at=async(weeksAgo)=>page.evaluate(async w=>{const st=await import("/js/state.js"),U=await import("/js/util.js"),sc=await import("/js/engine/schedule.js");
+    const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()-7*w);
+    st.S.block={start:sc.weekStartOf(new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10))};st.S.profile.goal="gain";st.saveDB();
+    (await import("/js/ui/render.js")).render();},weeksAgo);
+  await at(0);await tapTab(page,"train");await pause(page,300);
+  const c1=await page.textContent('.blk');
+  if(!/Stabilisation endurance/.test(c1)||!/12–20 reps/.test(c1)||!/4-2-1-1/.test(c1)||!/Next block: Strength endurance/.test(c1))throw new Error("block 1 card: "+c1);
+  await page.tap('[data-startday]');await pause(page,500);
+  const e1=await ev(page,"S.active.entries.filter(e=>e.planned&&e.planned.lo&&!e.planned.timed&&e.planned.lo<30).map(e=>[e.planned.lo,e.planned.hi,e.planned.tempo||''])");
+  eq(e1.length>2&&e1.every(x=>x[0]>=12&&x[1]<=20&&/4-2-1-1/.test(x[2])),true,"phase 1 doses: "+JSON.stringify(e1));
+  /* Last time's best set was 8 reps: the 12–20 range gets a lighter, estimated weight. */
+  const rec=await page.evaluate(async()=>{const st=await import("/js/state.js"),F=await import("/js/engine/formulas.js");const e=st.S.active.entries[0];return F.recommend(e);});
+  if(rec&&rec.last){if(!rec.est||!(rec.w<parseFloat(rec.last)))throw new Error("no estimate for the new range: "+JSON.stringify(rec));}
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;st.saveDB();});
+  await at(9);await tapTab(page,"train");await pause(page,300);
+  const c3=await page.textContent('.blk');
+  if(!/Block 3/.test(c3)||!/Muscular development/.test(c3)||!/6–12 reps/.test(c3))throw new Error("block 3 card: "+c3);
+});
+await test("Cardio zones: Cardio & Sports opens with the stage and zones by feel; the talk test's heart rates make them bands; bad numbers are refused",async page=>{
+  await tapTab(page,"train");await pause(page);
+  await page.tap('[data-actsheet]');await pause(page,400);
+  const c=await page.textContent('#sheet .zcard');
+  if(!/Stage 1/.test(c)||!/Zone 1/.test(c)||!/talk comfortably/.test(c)||!/starting point only/.test(c))throw new Error("card: "+c);
+  await page.tap('#sheet [data-zones]');await pause(page,400);
+  await page.fill('#z_vt1','170');await page.fill('#z_vt2','150');await page.tap('[data-zsave="1"]');await pause(page,300);
+  eq(await ev(page,"[V.sheet,S.profile.vt1]"),["zones",undefined],"VT2 below VT1 refused");
+  await page.fill('#z_vt1','145');await page.fill('#z_vt2','165');await page.tap('[data-zsave="1"]');await pause(page,400);
+  eq(await ev(page,"[V.sheet,S.profile.vt1,S.profile.vt2]"),["acts",145,165],"saved, back to the list");
+  const rows=await page.$$eval('#sheet .zrows li .zb',a=>a.map(e=>e.textContent));
+  eq(rows[0],"<145 bpm","zone 1 below VT1, as the book's example: "+JSON.stringify(rows));
+});
+await test("Experienced lifters choose: stabilisation is a suggestion they can skip (and take back); phase 2 pairs the bench with push-ups as a superset",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js"),Sp=await import("/js/data/splits.js");
+    const p=st.makeProgram({id:"ss",name:"SS",days:[Sp.day("Upper",[Sp.ex("Barbell Bench Press - Medium Grip",3,6,10),Sp.ex("Bent Over Barbell Row",3,6,10)])]});p.id="ss";
+    st.S.programs=[p];st.S.activeProgram="ss";st.S.profile.level="experienced";st.S.profile.goal="gain";delete st.S.profile.skipStab;st.S.profile.conds=[];
+    st.S.block={start:sc.weekStartOf(U.today())};st.saveDB();(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"train");await pause(page,300);
+  if(!(await page.$('.blk [data-skipstab="1"]')))throw new Error("no choice offered: "+(await page.textContent('.blk')));
+  await page.tap('.blk [data-skipstab="1"]');await pause(page,300);
+  eq(await page.evaluate(async()=>[(await import("/js/state.js")).S.profile.skipStab,((await import("/js/engine/blocks.js")).phaseNow()||{}).n]),[true,2],"skipped: block 1 runs strength endurance");
+  await page.tap('[data-startday]');await pause(page,500);
+  const ex=await ev(page,"S.active.entries.map(e=>[e.name,e.grp||'',e.planned.lo,e.planned.hi])");
+  eq([ex[0][0],ex[1][0],!!ex[0][1]&&ex[0][1]===ex[1][1],ex[2][1]],["Barbell Bench Press - Medium Grip","Pushups",true,""],"bench then push-ups as one superset, the row on its own: "+JSON.stringify(ex));
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;st.saveDB();(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"train");await pause(page,300);
+  await page.tap('.blk [data-skipstab="0"]');await pause(page,300);
+  eq(await ev(page,"S.profile.skipStab"),false,"back to the book's order");
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
@@ -3481,15 +3711,19 @@ await test("Change workout judges each day against the muscles: after Full A tod
   const full=rows.filter(r=>/Full/.test(r[2]));
   eq([full.length,full.every(r=>r[1]&&/Too soon for/.test(r[2]))],[3,true],"every full-body day too soon the day after Full A: "+JSON.stringify(rows));
   eq(rows.filter(r=>/Best fit/.test(r[2])).map(r=>r[0]),["rest"],"rest is the best fit");
-  if(!(await page.$('#sheet .swnote')))throw new Error("no word on why");
+  if(!(await page.$('#sheet .swnote [data-actsheet]')))throw new Error("no word on why, nor easy cardio offered for recovery");
+  const rcv=await page.$$eval('#sheet .rcv li',a=>a.map(l=>[l.querySelector('.rcv-m').textContent,l.querySelector('.rcv-p').textContent,l.querySelector('.rcv-d').textContent]));
+  eq(rcv.length>0&&rcv.length<=6&&rcv.every(r=>/^≈(0|25|50|75)%$/.test(r[1])&&/^ready /.test(r[2])),true,"each muscle's recovery in quarters, with the day it is ready: "+JSON.stringify(rcv));
   await page.tap('#sheet .trow.warn');await pause(page,400);
   const cf=await page.textContent('#sheet');
-  if(!/anyway\?/.test(cf)||!/at least one day of rest/.test(cf))throw new Error("no question before a day too soon: "+cf.slice(0,300));
+  if(!/anyway\?/.test(cf)||!/at least a day of rest/.test(cf))throw new Error("no question before a day too soon: "+cf.slice(0,300));
   await page.tap('#sheet [data-confirmmid]');await pause(page,400);
   eq(await ev(page,"[V.sheet,Object.keys(S.daySwap||{}).length]"),["swapday",0],"Pick another goes back, nothing changed");
   await page.tap('#sheet .trow.warn');await pause(page,400);
   await page.tap('#sheet [data-confirmok]');await pause(page,400);
   eq(await ev(page,"Object.keys(S.daySwap||{}).length"),1,"trained anyway: the person decides");
+  await pause(page,300);
+  eq(await page.$eval('.wkr [data-wkday="'+tm+'"]',b=>b.classList.contains("soon")),true,"the week rail marks the day too soon");
   /* Upper/Lower: after Upper today, Lower is ready and the best fit; Upper again is too soon. */
   const tm2=await setUp("ul");await pause(page,300);
   await page.evaluate(async d=>{(await import("/js/ui/actions.js")).openSheet("swapday",{date:d});},tm2);await pause(page,400);
@@ -3902,7 +4136,7 @@ await test("Coach actions: every action in the registry runs through a branch th
       described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
       domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
   eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");
-  eq(r.domains,["act","app","cardio","deload","exercise","food","meal","past","plan","profile","progress","recovery","rest","sched","set","steps","travel","water","workout"],"grouped by domain");
+  eq(r.domains,["act","app","cardio","deload","exercise","food","live","meal","past","plan","profile","progress","recovery","rest","sched","set","steps","travel","water","workout"],"grouped by domain");
   /* set.log, in a live workout: the logger's own Log set. */
   await startWorkout(page);
   const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");

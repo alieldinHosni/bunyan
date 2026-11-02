@@ -63,6 +63,21 @@ var INTENTS=[
     "why not going up","why isnt going up","not going up","bench|squat|deadlift|press|lift|lifts|row|curl|pullups|chinups stuck","stuck on|at","plateau","plateaued","stalled","not getting stronger","stopped going up|improving|progressing",
     "not progressing","cant increase|add weight","bench|squat|deadlift|press|lift|row|curl stalled|stalling|plateaued",
     "bench|squat|deadlift|press|lift|row|curl isnt|not going|moving|increasing","ليه مش بيزيد","مش بيزيد","واقف عند","ثابت مش بيزيد","مش بقوي"]],
+  /* The training phase this block runs (chat.js aPhase, engine/phase.js). */
+  ["phase",[
+    "what phase","which phase","my phase","training phase","phase am i","this block","current block","why reps changed|different","why are my reps|sets different|higher|lower",
+    "stabilisation|stabilization endurance","strength endurance","muscular development","maximal strength phase","next block","tempo 4-2-1-1|4 2 1 1","what does tempo mean",
+    "المرحله|مرحله التمرين","انا في انهي مرحله","البلوك ده|الجاي","ليه العدات اتغيرت","الايقاع"]],
+  /* Cardio zones and the stage to train at (chat.js aZones, engine/zones.js). */
+  ["zones",[
+    "heart rate zones","my zones","cardio zones","zone 1|2|3|4","what zone","target heart rate","what heart rate","vt1","vt2","talk test","cardio stage|level",
+    "how hard cardio|run","how fast should i run","max heart rate",
+    "مناطق النبض","النبض المستهدف","انهي منطقه","اختبار الكلام","نبضي المفروض"]],
+  /* What a health condition changes (chat.js aHealth, engine/conditions.js). */
+  ["health",[
+    "my condition|conditions","high blood pressure","blood pressure","hypertension","diabetes|diabetic","osteoporosis","arthritis","pregnant|pregnancy","asthma",
+    "heart disease|condition","adjusted for my health","safe with my","can i train with",
+    "الضغط","ضغط عالي","السكر","مرض السكر","هشاشه","حامل","الربو","القلب","حالتي الصحيه"]],
   /* The weekly check-in: the week, from the log (chat.js aWeek). */
   ["week",[
     "how was my week","how was week","how did week go","week review|recap|summary|check|checkin","weekly review|recap|summary|check|checkin|report",

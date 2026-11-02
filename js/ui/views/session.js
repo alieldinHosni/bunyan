@@ -1,5 +1,6 @@
 /* Bunyan — session
    The live session surface and rest screen. Execution, not editing. */
+import {rulesFor} from "../../engine/conditions.js";
 import {t} from "../../i18n/dict.js";
 import {exMedia, isBarbell, isUnilateral, thumb} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
@@ -8,7 +9,7 @@ import {incrementOf} from "../../engine/lifts.js";
 import {actInfo, actKcal, actRate, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
 import {S} from "../../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
-import {esc, fmtN, num} from "../../util.js";
+import {esc, fmtN, num, shortd} from "../../util.js";
 import {ex_isTimed, stepperInput, V} from "../view.js";
 import {vWarm, warmShown} from "./warmup.js";
 import {glyph} from "../glyphs.js";
@@ -146,7 +147,9 @@ function repsText(e,timed){
   if(!p.lo&&!p.hi)return "";
   var r=p.lo+(p.hi&&p.hi!==p.lo?"–"+p.hi:"");
   return t("Target")+" "+r+" "+(timed?t("s"):t("reps"))+(p.side?" "+t("/ side"):"")
-    +(p.rir!=null&&!timed?" · "+t("{n} in reserve").replace("{n}",p.rir):"");}
+    +(p.rir!=null&&!timed?" · "+t("{n} in reserve").replace("{n}",p.rir):"")
+    /* The phase's tempo (engine/phase.js), as the book writes it: lower, pause, lift, pause. */
+    +(p.tempo&&!timed&&/[\dX]-[\dX]-[\dX]-[\dX]/.test(p.tempo)?" · "+t("Tempo {t}").replace("{t}",p.tempo.match(/[\dX]-[\dX]-[\dX]-[\dX]/)[0]):"");}
 /* A set as the rows and the reference line say it: "60 kg × 8", "+10 kg × 6", "BW × 12",
    "45 s". */
 function setText(name,x,timed){
@@ -204,6 +207,11 @@ function vSetCard(e,row,rows,o){
   var top=row.wu?'<div class="sc-wu"><span class="wub" aria-hidden="true">W</span><p>'+t("Warm-up")
     +' <span>· '+t("Not counted in volume or records")+'</span></p></div>':'';
   if(V.draftSg)top+='<span class="sg-tag" id="sgTag">'+t("Suggested")+'</span>';
+  /* A health condition's cue on every working set (engine/conditions.js): how to breathe,
+     and to get up slowly. Quiet, one line. */
+  var CR=row.wu?null:rulesFor(S.profile);
+  if(CR&&(CR.steady||CR.slowStand))top+='<p class="sc-cond">'+esc(t(CR.steady&&CR.slowStand?"Breathe out on the effort, never hold your breath, and stand up slowly."
+    :CR.steady?"Breathe out on the effort and never hold your breath.":"Stand up slowly between exercises."))+'</p>';
   if(top)h+='<div class="sc-top">'+top+'</div>';
   /* What the weight box holds: added load on a bodyweight lift, how a dumbbell's
      weight reads (per hand unless the lifter chose totals), and a barbell's total with
@@ -248,6 +256,10 @@ function vSetCard(e,row,rows,o){
         :esc(t(S.profile&&S.profile.level==="new"
           ?"First time on this one. Pick a weight you could lift three or four more times than the reps asked, and learn the movement before adding load."
           :"First time on this one. Use the first set to find a working weight, then settle in.")))+'</span>';
+    /* Back on a lift after six weeks or more (engine/lifts.js): last time, for reference,
+       and to find today's weight rather than take the old one. */
+    else if(rec&&rec.gap)
+      hint='<span>'+t("Last time")+' <b><span class="num">'+esc(rec.last)+'</span></b> · '+esc(shortd(rec.lastDate))+'</span><span>'+esc(t(rec.note))+'</span>';
     else if(rec&&rec.amrap)
       hint='<span>'+(rec.w?t("Recommended")+' <b>'+fmtW(rec.w)+'</b> · ':'')
        +esc(t("As many clean reps as you can. Beat last time."))+(rec.last?' ('+esc(rec.last)+')':'')+'</span>';

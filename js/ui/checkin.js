@@ -2,6 +2,7 @@
    What last week's log shows, a line each where there is data, and each change the
    coach proposes with the one button that makes it. Shared by Coach's card and the
    chat's "How was my week?", so the two say the same. */
+import {BARRIER_HELP, BARRIERS_ASK} from "../engine/barriers.js";
 import {t, tm} from "../i18n/dict.js";
 import {fmtW} from "../units.js";
 import {esc, fmtN, pretty} from "../util.js";
@@ -42,6 +43,22 @@ function ckChange(x){
       x.high.length?fill(t("Well over {hi} sets a week: {m}."),{hi:x.hi,m:list(x.high)}):""].filter(Boolean).join(" "),btn:t("Balance the volume")};
   return {text:"",btn:""};}
 
+/* Fewer workouts than planned: what got in the way (engine/barriers.js), and once said,
+   that barrier's strategy with what the app can do about it. Last week's answer is
+   recalled when this week went better or no better. */
+function ckWhy(c){
+  if(!c.missed)return "";
+  var h='<div class="ckwhy" data-k="ckwhy">';
+  if(c.prevBarrier&&c.donePrev!=null){var lab=(BARRIERS_ASK.filter(function(x){return x[0]===c.prevBarrier;})[0]||[])[1];
+    if(lab)h+='<p class="ckwhy-p">'+esc(fill(t(c.done>c.donePrev?"Better than the week before, when it was: {b}.":"The week before, it was: {b}. Is it still?"),{b:t(lab).toLowerCase()}))+'</p>';}
+  if(!c.barrier){
+    h+='<p class="ckwhy-q">'+esc(t("Fewer workouts than planned. What got in the way?"))+'</p><div class="aschips">'
+     +BARRIERS_ASK.map(function(x){return '<button class="aschip" data-ckwhy="'+x[0]+'">'+esc(t(x[1]))+'</button>';}).join("")+'</div>';}
+  else{var H=BARRIER_HELP[c.barrier]||{},lb=(BARRIERS_ASK.filter(function(x){return x[0]===c.barrier;})[0]||[])[1]||"";
+    h+='<p class="ckwhy-q"><b>'+esc(t(lb))+'</b> <button class="ckwhy-x" data-ckwhy="">'+esc(t("Change"))+'</button></p>'
+     +'<p>'+esc(t(H.text||""))+'</p>'
+     +(H.act==="setup"?'<button class="btn sm" data-setupstep="'+H.step+'">'+esc(t(H.btn))+'</button>':H.act==="share"?'<button class="btn sm" data-share="1">'+esc(t(H.btn))+'</button>':'');}
+  return h+'</div>';}
 /* Coach's card: last week, what changes, and done for the week. */
 function ckCard(c){
   if(!c)return "";
@@ -51,6 +68,8 @@ function ckCard(c){
    +'<div><span class="shk">'+esc(t("Weekly check-in"))+'</span><h2 id="ck_h">'+esc(t("Last week"))+'</h2>'
    +'<p>'+esc(pretty(c.from)+" – "+pretty(c.to))+'</p></div></div>'
    +(facts.length?'<ul class="ckcard-f">'+facts.map(function(f){return '<li>'+nums(f)+'</li>';}).join("")+'</ul>':'')
+   +ckWhy(c)
+   +(c.recheck?'<div class="ckcard-c"><p>'+esc(t("Four weeks since your squat check: do it again to see what has changed."))+'</p><button class="btn sm" data-setupstep="limits">'+esc(t("Redo the squat check"))+'</button></div>':'')
    +(c.changes.length?c.changes.map(function(x){var w=ckChange(x);
       return '<div class="ckcard-c"><p>'+nums(w.text)+'</p><button class="btn sm" data-ckdo="'+esc(x.kind)+'">'+nums(w.btn)+'</button></div>';}).join("")
      :'<p class="ckcard-ok">'+esc(t("Nothing to change: keep going as you are."))+'</p>')

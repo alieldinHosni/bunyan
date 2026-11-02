@@ -9,7 +9,10 @@ import {exName, outdoorName, planName} from "../i18n/exnames.js";
 import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay} from "./views/train.js";
 import {planOn} from "../engine/dayplan.js";
-import {dayOptions} from "../engine/recovery.js";
+import {dayOptions, muscleStatus, q25} from "../engine/recovery.js";
+import {avoids, limitsOf} from "../engine/plan.js";
+import {addDays} from "../engine/schedule.js";
+import {stageFor, zonesFor} from "../engine/zones.js";
 import {ACT_GROUPS, actIcon, actInfo, actRate, actsIn, INTENSITY, intensityOf, isActivity, outdoorOf} from "../data/activities.js";
 import {barKg, bwShare, incrementFor, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition, foodName} from "../engine/nutrition.js";
@@ -48,12 +51,75 @@ var CFICON={
   swap:'<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
   route:'<path d="M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 17h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/>'
 };
+/* The change-workout sheet: each muscle still recovering on the date, how far (in
+   quarters: the model is an estimate) and the day it is ready by the rest-day rule. */
+function recoveryList(iso){
+  var st={list:[],planned:false};try{st=muscleStatus(split(),iso);}catch(e){}
+  var ms=st.list;
+  if(!ms.length)return '<p class="rcv-none">'+esc(t("Every muscle is recovered for this day."))+'</p>';
+  return '<section class="rcv" aria-label="'+esc(t("How recovered your muscles are"))+'"><div class="rcv-h">'+esc(t("How recovered your muscles are"))+'</div>'
+   +'<ul>'+ms.slice(0,6).map(function(x){return '<li><span class="rcv-m">'+esc(tm(x.m).trim())+'</span>'
+     +'<span class="rcv-bar" aria-hidden="true"><i style="width:'+x.pct+'%"></i></span>'
+     +'<span class="rcv-p num">≈'+x.pct+'%</span><span class="rcv-d">'+esc(t("ready {d}").replace("{d}",wdShort(x.ready)))+'</span></li>';}).join("")+'</ul>'
+   +(ms.length>6?'<p class="rcv-n">'+esc(t("+{n} more, nearly recovered.").replace("{n}",ms.length-6))+'</p>':'')
+   +'<p class="rcv-n">'+esc(t("An estimate from the sets you logged and the book's rest day between sessions on the same muscles, in steps of 25%."))
+   +(st.planned?' '+esc(t("Workouts planned before this day count as done.")):'')+'</p></section>';}
 /* The change-workout sheet's words: muscles as a short list, a date as its weekday. */
 function listOf(ms){var a=ms.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();}),ar=S.prefs&&S.prefs.lang==="ar";
   return a.length<2?a.join(""):a.slice(0,-1).join(ar?"، ":", ")+(ar?" و":" "+t("and")+" ")+a[a.length-1];}
 function wdShort(iso){return dfmt(new Date(iso+"T00:00:00"),{weekday:"short"});}
 var glyphI='<span class="swnote-i" aria-hidden="true"></span>';
 
+/* Cardio: the stage to train at and the zones (engine/zones.js), at the top of Cardio &
+   Sports. Heart rates where they are the person's own; feel otherwise. */
+var ZFEEL={1:"Easy: you can talk comfortably",2:"Talking in full sentences gets hard",3:"Short phrases only",4:"You can hardly speak"};
+var STAGE_DO={1:"Steady, in zone 1. Start around 15 minutes three times a week and add a few minutes each week, no more than a tenth more a week.",
+  2:"Intervals: a minute just above VT1 (zone 2), then three minutes in zone 1, repeated; warm up and cool down 5–10 minutes. New to intervals: alternate these with steady days.",
+  3:"Mostly zone 1 with short zone 2 and 3 intervals, zone 2 the longer ones. Rotate an easy, a medium and a hard day. Never zone 4.",
+  4:"Mostly zone 1, with brief intervals up through zone 4: about 10 seconds in zone 4, then a minute in zone 1 as the gauge. If your heart rate has not come down in that minute, stay in zone 1 for the rest of the session."};
+function cardioCard(){
+  var p=S.profile||{},z=zonesFor(p),st=stageFor(p,S.sessions,today(),{cardio:function(n){var a=actInfo(n);return !!(a&&a.grp==="Cardio");}});
+  var h='<section class="zcard" data-k="zcard"><div class="zc-h"><b>'+esc(t("Your cardio"))+'</b><span class="zc-st">'+esc(t("Stage {n}").replace("{n}",st.stage))+'</span></div>'
+   +'<p class="zc-do">'+esc(t(STAGE_DO[st.stage]))+'</p>';
+  if(st.needVT1)h+='<p class="zc-next">'+esc(t("Three easy 30-minute sessions this week: you are ready for intervals. Do the talk test first to find your zones."))+'</p>';
+  else if(st.needVT2)h+='<p class="zc-next">'+esc(t("Ready for harder intervals: add your VT2 heart rate to unlock stage 3."))+'</p>';
+  else if(st.stage===1)h+='<p class="zc-next">'+esc(t("Stage 2 opens after three easy sessions of 30 minutes or more in a week."))+'</p>';
+  h+='<ul class="zrows">'+z.rows.filter(function(r){return st.stage>=4||r.zone<=Math.max(2,Math.min(3,st.stage));}).map(function(r){
+    /* The figure isolated from its unit, so Arabic keeps "<145" and "145–154" in order. */
+    var fig=r.min||r.max?(r.min&&r.max?r.min+"–"+r.max:r.min?r.min+"+":"<"+(r.max+1)):"";
+    var bpm=fig?'<bdi dir="ltr">'+esc(fig)+'</bdi> '+esc(t("bpm")):"";
+    return '<li><span class="zn">'+esc(t("Zone {n}").replace("{n}",r.zone))+'</span><span class="zf">'+esc(t(ZFEEL[r.zone]))+'</span>'
+      +'<span class="zb num">'+(bpm||esc(t("RPE {a}–{b}")).replace("{a}–{b}",'<bdi dir="ltr">'+r.rpe.min+"–"+r.rpe.max+'</bdi>'))+'</span></li>';}).join("")+'</ul>';
+  if(z.feelOnly)h+='<p class="zc-note">'+esc(t("Your medication can change your heart rate, so go by feel and the talk test, not a number."))+'</p>';
+  else if(!z.measured&&z.hrmax)h+='<p class="zc-note">'+esc(t("Estimated maximum heart rate about {n} bpm (208 − 0.7 × age): a starting point only.").replace("{n}",z.hrmax))+'</p>';
+  /* Stage 3 for an experienced lifter with a modest goal: their choice (zones.js can3). */
+  if(st.can3)h+='<p class="zc-next">'+esc(t(p.cardio3?"You chose stage 3 with your experience: the book keeps it for performance goals.":"The book keeps stage 3 for performance goals. With your experience you can choose it."))
+    +' <button class="blk-optb" data-cardio3="'+(p.cardio3?"0":"1")+'">'+esc(t(p.cardio3?"Back to stage 2":"Use stage 3"))+'</button></p>';
+  /* Stage 4: the advanced athlete's choice (engine/zones.js can4). */
+  if(st.can4)h+='<p class="zc-next">'+esc(t(p.cardio4?"You chose stage 4: maximal performance in short bursts, not maximal effort. Signs of overtraining (poor sleep, heavy fatigue, falling performance) mean back to stage 3."
+      :"Stage 4 is open to you: very short zone 4 intervals for anaerobic power. A choice for advanced athletes, not a requirement."))
+    +' <button class="blk-optb" data-cardio4="'+(p.cardio4?"0":"1")+'">'+esc(t(p.cardio4?"Back to stage 3":"Use stage 4"))+'</button></p>';
+  if(!z.feelOnly)h+='<button class="btn g zc-set" data-zones="1">'+esc(t(z.measured?"Change your zones":"Find your zones"))+'</button>';
+  return h+'</section>';}
+/* The pain sheet's areas: the plan's work-around keys (engine/plan.js AVOID) and the
+   neck, which the book covers but no lift is steered away from. */
+var HURT_AREAS=[["knee","Knee"],["back","Lower back or hip"],["shoulder","Shoulder"],["wrist","Wrist or elbow"],["ankle","Ankle or foot"],["neck","Neck"]];
+/* What protects each area, paraphrased from injuries.js REGIONS and imbalances.js
+   INJURY_EFFECTS; the wrist has no entry there, so it gets none here. */
+var HURT_NOTE={knee:"Knees are protected by good technique (knees tracking over the toes), supportive shoes, a thorough warm-up, and regular strength and flexibility work. The ankle and hip often decide how the knee moves.",
+  back:"A strong, stable core protects the lower back: keep the spine neutral under load, and keep up core stability work.",
+  shoulder:"Keep overhead work to what you can control, keep up upper-body flexibility, and leave out swinging (kipping) pull-ups. An injured shoulder often needs its rotator cuff strengthened again.",
+  ankle:"An ankle hurt once is easily hurt again until it is made strong and stable: balance work helps. Trouble here can travel up to the knee, hip and back.",
+  neck:"Neck pain often comes from the head drifting forward. Keep your head in line with your body as you lift, and look up from the phone between sets."};
+function hurtNote(area){
+  if(!area)return "";
+  var since=addDays(today(),-28),n=0;
+  (S.sessions||[]).forEach(function(s){if(s.date>=since&&(s.entries||[]).some(function(e){return e.painArea===area;}))n++;});
+  var lim=((S.profile||{}).limits||[]).indexOf(area)>=0,canAvoid=/^(knee|back|shoulder|wrist|ankle)$/.test(area);
+  return '<div class="hurt-note">'+(HURT_NOTE[area]?'<p>'+esc(t(HURT_NOTE[area]))+'</p>':'')
+   +(n?'<p class="hurt-rep">'+esc(t(n===1?"It hurt there once already in the last four weeks: worth getting it looked at.":"It has hurt there in {n} sessions in the last four weeks: get it looked at before training through it.").replace("{n}",n))+'</p>':'')
+   +(canAvoid&&!lim?'<button class="btn g sm" data-hurtavoid="'+area+'">'+esc(t("Steer my plan away from it"))+'</button>'
+     :canAvoid?'<p class="hurt-ok">'+esc(t("Your plan already works around it."))+'</p>':'')+'</div>';}
 function vSheet(){
   if(!V.sheet)return "";
   var b="";
@@ -180,12 +246,18 @@ function vSheet(){
     /* The frame's result row: picture, name, then variant · muscle · equipment ·
        difficulty, then the action. The muscle only earns a slot when the muscle
        filter is not already showing it. Picking one adds it and returns to the day. */
+    var LIMS=limitsOf(S.profile);
+    function whyNot(n){for(var i=0;i<LIMS.length;i++)if(avoids(n,[LIMS[i]]))return LIMS[i];return "";}
     function exRow(l,k){
       var meta=[exVariant(l[0])?esc(exVariant(l[0])):"",
                 V.exm==="All"?tm(l[1]):"",
                 t(l[2]),t(difficultyOf(l[0]))].filter(Boolean).join(" \u00b7 ");
-      return '<button class="trow libtrow pkrow" data-k="'+k+':'+esc(l[0])+'" data-pickex="'+esc(l[0])+'">'+thumb(l[0],48)
-       +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span><span class="trow-s">'+meta+'</span></span>'
+      /* What the person's limits or a health condition rule out is still there, marked, and
+         asks before it goes in (handlers/train.js pickex). */
+      var no=avoids(l[0],LIMS);
+      return '<button class="trow libtrow pkrow'+(no?' pkwarn':'')+'" data-k="'+k+':'+esc(l[0])+'" data-pickex="'+esc(l[0])+'">'+thumb(l[0],48)
+       +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span><span class="trow-s">'+meta+'</span>'
+       +(no?'<span class="pk-no">'+esc(t(/^floor$/.test(whyNot(l[0]))?"Lies down: not for your health":"Loads an area you're working around"))+'</span>':'')+'</span>'
        +(swapping?'<span class="pkswap">'+t("Swap")+'</span>'
           :'<span class="pkadd" aria-hidden="true">+</span>')+'</button>';}
     b+='<div class="srch-body"><p class="srch-n srch-hide">'
@@ -469,10 +541,26 @@ function vSheet(){
     if(rv2.steps)b+='<div class="dv-card dv-row"><b>'+t("Steps")+'</b><span class="dv-k">'+fmtN(rv2.steps)+'</span></div>';
     b+='<div class="cf-acts se-acts"><button class="btn g cf-no" data-jumpfood="'+dv+'">'+t("Open this day in Food")+'</button></div>';
   }
+  else if(V.sheet==="zones"){
+    /* The talk test that finds VT1 (js/knowledge/assessments.js talk_test_vt1, paraphrased),
+       and the heart rates it gives. */
+    var pz=S.profile||{};
+    b='<div class="se-top"><span class="se-k">'+t("Cardio")+'</span><h2>'+t("Find your zones")+'</h2>'
+     +'<p class="shsub">'+t("Your zones come from your own heart rate where talking gets hard, found with the talk test.")+'</p></div>'
+     +'<ol class="zsteps">'+["Warm up on a bike or treadmill with a heart-rate monitor.","Start light. Every 1 to 3 minutes, once your heart rate has settled, go up a step and say something from memory for 20 seconds.",
+       "The first step where talking without a break gets challenging (not yet difficult) is VT1. Note your heart rate there.",
+       "VT2, for performance goals only: the hardest pace you could hold for 20 minutes, where you can no longer speak. Note that heart rate too."]
+       .map(function(x){return '<li>'+esc(t(x))+'</li>';}).join("")+'</ol>'
+     +'<div class="zin"><label><span>'+t("Heart rate at VT1")+'</span><input id="z_vt1" class="num" type="number" inputmode="numeric" min="60" max="230" value="'+(num(pz.vt1)||"")+'"><i>'+t("bpm")+'</i></label>'
+     +'<label><span>'+t("Heart rate at VT2 (optional)")+'</span><input id="z_vt2" class="num" type="number" inputmode="numeric" min="60" max="230" value="'+(num(pz.vt2)||"")+'"><i>'+t("bpm")+'</i></label></div>'
+     +'<div class="cf-acts se-acts"><button class="btn" data-zsave="1">'+t("Save")+'</button>'
+     +((pz.vt1||pz.vt2)?'<button class="btn g" data-zsave="clear">'+t("Clear them")+'</button>':'')+'</div>';
+  }
   else if(V.sheet==="acts"){
     /* A run, a match, a class: pick one and it opens straight into logging it. */
     b='<div class="se-top"><span class="se-k">'+t("Training")+'</span><h2>'+t("Cardio & Sports")+'</h2>'
-     +'<p class="shsub">'+t("Log time, distance and effort instead of sets.")+'</p></div>';
+     +'<p class="shsub">'+t("Log time, distance and effort instead of sets.")+'</p></div>'
+     +cardioCard();
     ACT_GROUPS.forEach(function(g){
       b+='<div class="exd-h">'+t(g)+'</div><div class="actgrid">';
       actsIn(g).forEach(function(n){
@@ -495,15 +583,21 @@ function vSheet(){
     var restBest=opt&&opt.best==="rest";
     b='<div class="se-top"><span class="se-k">'+esc(pretty(sd2))+'</span><h2>'+t("Change workout")+'</h2>'
      +'<p class="shsub">'+t("Pick what you want to do on this day. The rest of the plan moves on from what you actually train.")+'</p>'
-     +(restBest?'<p class="swnote">'+glyphI+esc(t("Every workout in your plan trains muscles that are still recovering. A rest day here lets them come back."))+'</p>':'')
-     +'</div><div class="card tdays">';
+     +(restBest?'<p class="swnote">'+glyphI+'<span>'+esc(t("Every workout in your plan trains muscles that are still recovering. A rest day here lets them come back."))
+       /* The book's own recovery option: steady zone-1 cardio (cardio.js STAGES, stage 1:
+          "also recovery after hard sessions"). */
+       +' '+esc(t("Want to move anyway? Easy cardio in zone 1, a walk or a ride where you can talk comfortably, helps recovery."))
+       +' <button class="swnote-b" data-actsheet="1">'+esc(t("Cardio & Sports"))+'</button></span></p>':'')
+     +'</div>'+recoveryList(sd2)+'<div class="card tdays">';
     var restId=null;spx.days.forEach(function(d){if(!d.ex.length&&!restId)restId=d.id;});
     spx.days.forEach(function(d){
       var on=cur.day&&cur.day.id===d.id,o=byId[d.id],best=opt&&(opt.best===d.id||(restBest&&d.id===restId));
       var why="";
       if(o&&!o.rest){
-        if(o.tired.length)why=t("Too soon for {m}").replace("{m}",listOf(o.tired));
-        else if(o.next&&o.next.tired.length)why=t("Leaves {d}'s {x} too soon").replace("{d}",wdShort(o.next.date)).replace("{x}",planName(o.next.name));
+        /* How ready the day's planned work is, in quarters (an estimate). */
+        why=t("≈{p}% ready").replace("{p}",q25(o.ready)>=75&&o.ready>=1?100:q25(o.ready))+" · ";
+        if(o.tired.length)why+=t("Too soon for {m}").replace("{m}",listOf(o.tired));
+        else if(o.next&&o.next.tired.length)why+=t("Leaves {d}'s {x} too soon").replace("{d}",wdShort(o.next.date)).replace("{x}",planName(o.next.name));
         else why=t("Ready");}
       b+='<button class="trow'+(on?' on':'')+(o&&!o.ok?' warn':'')+'" data-swapto="'+d.id+'" aria-pressed="'+(on?"true":"false")+'">'
        +'<span><span class="trow-n">'+esc(planName(d.name))+'</span>'
@@ -525,6 +619,11 @@ function vSheet(){
      +'<span class="cf-i bad" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3zM12 10v4M12 17h.01"/></svg></span>'
      +'<h2>'+t("Something hurts?")+'</h2>'
      +'<p class="cf-b">'+t("Stop this exercise. Sharp, sudden or lasting pain is a reason to see a professional, not to push through. Bunyan cannot tell what it is.")+'</p>'
+     /* Where (js/knowledge/injuries.js REGIONS): what the book says protects that area, how
+        often it has come up lately, and the plan steered away from it. Never a diagnosis. */
+     +'<div class="hurt-where"><span>'+esc(t("Where?"))+'</span><div class="aschips">'+HURT_AREAS.map(function(x){var on=(V.sd||{}).area===x[0];
+       return '<button class="aschip'+(on?' on':'')+'" data-hurtarea="'+x[0]+'" aria-pressed="'+on+'">'+esc(t(x[1]))+'</button>';}).join("")+'</div></div>'
+     +hurtNote((V.sd||{}).area)
      +'<div class="cf-acts">'
      +'<button class="btn cf-ok" data-hurtdo="swap">'+t("Replace this exercise")+'</button>'
      +'<button class="btn g cf-no" data-hurtdo="skip">'+t("Skip it today")+'</button>'

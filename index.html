@@ -1458,6 +1458,12 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 .wkr-d.done .wkr-m{background:var(--ok)}
 .wkr-d.plan .wkr-m{box-shadow:inset 0 0 0 1.5px var(--accentHi)}
 .wkr-d.proj .wkr-m{box-shadow:inset 0 0 0 1.5px var(--dim);opacity:.8}
+/* Planned too soon for its muscles (views/train.js railDay): an amber ring. */
+.wkr-d.soon .wkr-m{box-shadow:inset 0 0 0 1.5px var(--warning)}
+.wkr-d.soon .wkr-t{color:var(--warning)}
+.wkr-d.sel.soon .wkr-t{color:var(--onAccent)}
+.wkr-pk-soon{margin:var(--s2) 0 0;font-size:12.5px;line-height:1.45;color:var(--warning)}
+.wkr-pk-ch{border:0;background:none;padding:0 var(--s1);color:var(--accentHi);font-weight:800;font-size:12.5px}
 .wkr-d.miss .wkr-m{width:8px;height:8px;border-radius:0;
   background:linear-gradient(45deg,transparent 40%,var(--danger) 40% 60%,transparent 60%),linear-gradient(-45deg,transparent 40%,var(--danger) 40% 60%,transparent 60%)}
 .wkr-t{max-width:100%;padding:0;font-size:10px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:clip}
@@ -1976,12 +1982,25 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   padding:4px 10px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;
   box-shadow:0 4px 12px -4px var(--accent-glow)}
 /* Change workout (sheets.js swapday): each day judged against what the muscles have had. */
+.rcv{margin:0 0 var(--s3);padding:var(--s3);border-radius:var(--r4);background:var(--glass);border:1px solid var(--border)}
+.rcv-h{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:var(--s2)}
+.rcv ul{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
+.rcv li{display:grid;grid-template-columns:minmax(72px,auto) 1fr auto auto;align-items:center;gap:var(--s2);font-size:13.5px}
+.rcv-m{font-weight:700;color:var(--text)}
+.rcv-bar{height:6px;border-radius:3px;background:var(--hair);overflow:hidden}
+.rcv-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--warning),var(--ok))}
+[dir="rtl"] .rcv-bar i{background:linear-gradient(270deg,var(--warning),var(--ok))}
+.rcv-p{font-weight:800;color:var(--text);min-width:3.2em;text-align:end}
+.rcv-d{color:var(--sub);font-size:12.5px;white-space:nowrap}
+.rcv-n,.rcv-none{margin:var(--s2) 0 0;font-size:12px;line-height:1.4;color:var(--dim)}
+.rcv-none{margin:0 0 var(--s3)}
 .trow-r{color:var(--warning)}
 .trow-r.ok{color:var(--ok)}
 .trow.warn .trow-n{color:var(--sub)}
 .tnext.best{background:transparent;color:var(--ok);box-shadow:inset 0 0 0 1px var(--ok)}
 .swnote{display:flex;gap:var(--s2);align-items:flex-start;margin:var(--s2) 0 0;padding:var(--s2) var(--s3);border-radius:var(--r3);
   font-size:13px;color:var(--text);background:var(--okSoft);border:1px solid var(--ok)}
+.swnote-b{border:0;background:none;padding:0;color:var(--ok);font-weight:800;text-decoration:underline;font-size:inherit}
 .swnote-i{flex:none;width:8px;height:8px;margin-top:6px;border-radius:50%;background:var(--ok)}
 .tadd .trow-n{color:var(--accentHi)}
 .trow>span:first-child{flex:1;min-width:0}
@@ -2614,6 +2633,32 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
    label in the accent, then the figures; tiles for the targets, rows for the days and
    the meals that open in place, a bar per muscle in its own ink. */
 .as-ch{display:flex;align-items:center;gap:var(--s2);margin:0 0 var(--s2);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+/* Cardio & Sports: the stage and zones (sheets.js cardioCard, zones). */
+.zcard{margin:0 0 var(--s4);padding:var(--s3) var(--s4);border-radius:var(--r4);background:var(--glass);border:1px solid var(--border)}
+.zc-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
+.zc-h b{font-family:var(--display);font-size:16px}
+.zc-st{padding:2px var(--s2);border-radius:var(--rpill);font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--accentHi);background:var(--accent-tint);border:1px solid var(--accent-edge)}
+.zc-do{margin:var(--s2) 0 0;font-size:13.5px;line-height:1.45;color:var(--text)}
+.zc-next,.zc-note{margin:var(--s2) 0 0;font-size:12.5px;line-height:1.45;color:var(--sub)}
+.zrows{list-style:none;margin:var(--s3) 0 0;padding:0;display:grid;gap:6px}
+.zrows li{display:grid;grid-template-columns:auto 1fr auto;gap:var(--s2);align-items:baseline;font-size:13px}
+.zn{font-weight:800;color:var(--text);white-space:nowrap}
+.zf{color:var(--sub);min-width:0}
+.zb{font-weight:700;color:var(--text);white-space:nowrap}
+.zc-set{margin-top:var(--s3)}
+.zsteps{margin:0 0 var(--s4);padding-inline-start:var(--s4);display:grid;gap:var(--s2);font-size:13.5px;line-height:1.45;color:var(--text)}
+.zin{display:grid;gap:var(--s3);margin-bottom:var(--s4)}
+.zin label{display:grid;grid-template-columns:1fr 96px auto;align-items:center;gap:var(--s2);font-size:14px;color:var(--text)}
+.zin input{height:44px;padding:0 var(--s3);border-radius:var(--r3);border:1px solid var(--border);background:var(--raised);color:var(--text);font-size:16px}
+.zin i{font-style:normal;color:var(--dim);font-size:13px}
+/* A health condition's card (ui/dose.js condCard): which, and what the plan does about it. */
+.condcard{border-color:var(--accent-edge)}
+.cond-ids{margin-bottom:var(--s2)}
+.cond-ids .aschip{pointer-events:none;min-height:0;padding:5px var(--s3);font-size:12.5px}
+.cond-l{margin:0;padding-inline-start:var(--s4);display:grid;gap:6px;font-size:13.5px;line-height:1.45;color:var(--text)}
+.cond-fix{display:flex;flex-direction:column;gap:var(--s2);margin:0 0 var(--s3);padding:var(--s3);border-radius:var(--r3);background:var(--glass);border:1px solid var(--warning)}
+.cond-fix p{margin:0;font-size:13px;line-height:1.45;color:var(--text)}
+.cond-fix .btn{align-self:flex-start}
 .as-ch .gl{width:18px;height:18px;color:var(--accentHi)}
 .as-ch2{margin-top:var(--s4)}
 .as-kcal{display:flex;align-items:baseline;gap:6px}
@@ -3991,7 +4036,8 @@ body.wkflat #app{--gutter:20px}
 
 /* SetCard: the one thing to read at arm's length. */
 .wsc{display:grid;gap:var(--s3);padding:var(--s4);border-radius:var(--r5)}
-.sc-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);min-height:24px}
+.sc-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--s2);min-height:24px}
+.sc-cond{flex-basis:100%;margin:0;font-size:12px;line-height:1.4;color:var(--sub)}
 .sg-tag{margin-inline-start:auto;padding:2px 10px;border-radius:var(--rpill);border:1px solid var(--border);
   color:var(--sub);font-size:12px;font-weight:700}
 .sg-tag[hidden]{display:none}
@@ -4071,7 +4117,9 @@ body.wkflat #app{--gutter:20px}
 .sess .log{position:sticky;bottom:calc(var(--s3) + env(safe-area-inset-bottom));z-index:2}
 .sess .log.ok{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 @keyframes wkIn{from{opacity:0;transform:translateY(4px)}}
-.rb{animation:wkIn var(--m-comp) var(--e-decel)}
+/* Not on its way out: this rule comes after .rowout with the same weight, and won, so the
+   closed band faded back in (a flash) and then vanished instead of leaving (owner, 3 Nov). */
+.rb:not(.rowout){animation:wkIn var(--m-comp) var(--e-decel)}
 
 /* "How do you feel today?" (readiness for the day, before the first set), compact. */
 .sess .ready{margin:0;padding:0;border:0;background:none}
@@ -4456,6 +4504,12 @@ body.wkflat #app{--gutter:20px}
 .blk-bar i.lt{background:rgba(var(--gold-rgb),.25)}
 .blk-bar i.lt.on{background:var(--gold)}
 .blk-l{margin:0;font-size:14px;color:var(--color-text-secondary);line-height:1.45}
+.blk-ph{margin:var(--s2) 0 0;font-size:13px;color:var(--text)}
+.blk-ph b{font-weight:800}
+.blk-ph .num{white-space:nowrap;unicode-bidi:isolate}
+.bphase{margin:0 0 var(--s3);padding:var(--s2) var(--s3);border-radius:var(--r3);background:var(--accent-tint);border:1px solid var(--accent-edge);font-size:13px;line-height:1.45;color:var(--text)}
+.blk-opt{margin:var(--s2) 0 0;font-size:12.5px;line-height:1.45;color:var(--sub)}
+.blk-optb{border:0;background:none;padding:0;color:var(--accentHi);font-weight:800;font-size:inherit}
 .blk-m{margin:6px 0 0;font-size:13px;color:var(--color-text-tertiary);line-height:1.4}
 .blk.light{border-color:rgba(var(--gold-rgb),.45);background:radial-gradient(90% 90% at 100% 0%,rgba(var(--gold-rgb),.10),transparent 70%),var(--color-surface-1)}
 /* The complete sheet's second question: three answers, not five. */
@@ -4810,6 +4864,7 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .run-play svg{width:28px;height:28px;stroke-width:2.6}
 .run-play svg path[d^="M7"]{fill:currentColor}
 :root:not(.tch) .run-play:active,.run-play.tapd{transform:scale(.94)}
+.run-zone{margin:var(--s3) var(--s4) 0;font-size:13px;font-weight:700;color:var(--ok);text-align:center}
 .run-note{margin:12px 4px 0;font-size:12.5px;line-height:1.5;color:var(--dim);text-align:center}
 /* Training's way in. */
 .ttile.trun .ttile-i .gl{width:22px;height:22px}
@@ -5392,6 +5447,23 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 .ckcard-h p{margin:2px 0 0;color:var(--dim);font-size:13px}
 .ckcard-f{margin:var(--s3) 0 0;padding-inline-start:var(--s4);color:var(--sub);font-size:14px;line-height:1.5}
 .ckcard-c{margin-top:var(--s3);padding:var(--s3);border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+/* The exercise picker: one the person's limits rule out, marked (sheets.js exRow). */
+.pk-no{display:block;margin-top:2px;font-size:11.5px;font-weight:700;color:var(--warning)}
+.pkwarn .trow-n{color:var(--sub)}
+/* Where it hurts (sheets.js hurt). */
+.hurt-where{margin:var(--s3) 0 0;text-align:start}
+.hurt-where>span{display:block;margin-bottom:var(--s2);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.hurt-note{margin:var(--s3) 0 0;padding:var(--s3);border-radius:var(--r3);background:var(--glass);border:1px solid var(--hair);text-align:start}
+.hurt-note p{margin:0 0 var(--s2);font-size:13px;line-height:1.45;color:var(--text)}
+.hurt-note .hurt-rep{color:var(--warning);font-weight:600}
+.hurt-note .hurt-ok{color:var(--ok);margin:0}
+/* What got in the way (ui/checkin.js ckWhy). */
+.ckwhy{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--hair)}
+.ckwhy p{margin:0 0 var(--s2);font-size:13.5px;line-height:1.45;color:var(--text)}
+.ckwhy .ckwhy-p{color:var(--sub);font-size:12.5px}
+.ckwhy-q{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
+.ckwhy-x{border:0;background:none;color:var(--accentHi);font-size:12.5px;font-weight:700;padding:var(--s1) 0}
+.ckwhy .aschips{margin-bottom:var(--s2)}
 .ckcard-c p{margin:0 0 var(--s2);color:var(--text);font-size:14px;line-height:1.45}
 .ckcard-c .btn{margin:0}
 .ckcard-ok{margin:var(--s3) 0 0;color:var(--sub);font-size:14px}

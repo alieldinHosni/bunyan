@@ -3038,3 +3038,181 @@ the muscles in my split and identify the next possible day from the load on each
   too soon; Best fit marked (rest when nothing fits, with a note why). Picking a day too soon asks first, with
   the rule (Train it anyway / Pick another / Cancel): the person decides.
 - Test: regression "Change workout judges each day against the muscles…" (full-body and upper/lower).
+
+## Health conditions shape the plan — branch session/conditions
+
+Owner, 2 Nov ("all, in order"): item 1 of the knowledge-base plan. CACHE `bunyan-v197`.
+- js/engine/conditions.js: rulesFor(profile) reads js/knowledge/conditions.js (chapter 23) for each condition
+  the person picked (profile.conds) and the age groups that follow from age (older adults 65+, youth <18):
+  reps (the narrowest range all agree on), sets max, strength days/week (said, never forced), no jumps, no
+  lying on the back or front (high blood pressure; pregnancy past 12 weeks), steady breathing (no Valsalva),
+  talk test (medication blunts heart rate), stand up slowly. No figure of our own: all read from the data.
+- Assessment (health step): "Do any of these apply?" — high blood pressure, heart disease, diabetes,
+  osteoporosis, arthritis, lung condition, PAD, cancer, pregnancy (first 12 weeks / past 12; women only).
+- Plan (engine/plan.js): limitsOf(p) adds "floor" (AVOID.floor: supine/prone/head-down names; incline,
+  seated, standing, cable, machine kept) so standIn swaps those lifts; a last pass fits every loaded lift's
+  reps/sets (fitDose: into the range, two reps wide at least); noPlyo drops jumps and intervals. doseFor,
+  the coach's swaps (agent.js) and travel/gear stand-ins use limitsOf too.
+- conformProgram(sp, p, gear, dry): a program the builder did not make, brought into line; My program shows
+  "Adjusted for your health" (ui/dose.js condCard) with what does not fit and "Make it fit" (Undo).
+- Assessment result and My program show the card: which conditions, what changes, "your doctor comes first".
+- Workout set card: a one-line breathing / stand-up-slowly cue for those conditions.
+- Tests: engine conditions.test.js; regression "Health conditions: …".
+
+## Recovery time by what was trained — same branch
+
+Item 2. What the knowledge base says (correcting the owner-facing summary, which said 72 h for maximal
+strength — the 72 h is not that): at least a day of rest between sessions on the same muscles (48 h, as
+before); 72 h after a complex (a heavy lift then a similar jump for the same muscles, acute-variables.js
+complex system); plyometrics need 24 h between sessions, beginners 48–72 h (plyometrics.js recovery: the top
+is used). coach/recovery.js readiness(…, o.novice): a muscle that jumped after a heavy lift for it, or a
+beginner's jumps, stays tired on the third day (LONG_DAYS=3). engine/recovery.js passes plyo (jump names),
+compound, and novice (level "new"). Swap confirm text names both rules. Coach tests added.
+
+## Squat check → corrective warm-up — same branch
+
+Item 3. Assessment (limits step): "A quick squat check (optional)" with how to do it (assessments.js
+overhead_squat, paraphrased) and seven faults (feet out, knees in, low back arches, chest drops forward, arms
+drift forward; shoulders shrug / head pokes forward when pressing or rowing). profile.faults, faultsAt.
+- js/engine/corrective.js correctiveFor(faults, {avoid, has}): imbalances.js MOVEMENT_FAULTS → overactive and
+  underactive muscles (ranked by how many faults name them) → the corrective continuum (corrective.js
+  SEQUENCE): roll (30 s), stretch (30 s), wake up (slow 12–20 or a hold). Two of each (the book's 1–3).
+  MAP muscle → library exercise is ours (named as such); muscles with no fitting exercise are left out; no
+  rolling over the lower back or neck (the book's warning). Lying-down versions swapped when a condition
+  rules them out (rolling on the floor included, per the hypertension guideline).
+- Warm-up (engine/warmup.js ctx.fix; views/warmup.js): "For your squat check" card before the moving drills,
+  each row "Roll / Stretch / Wake up · dose", with a Why fold; counted in the progress and the minutes.
+- exnames.js: "-SMR" entries display as "Foam roll · IT band" / "رول فوم · …".
+- Tests: engine corrective.test.js; regression "Squat check: …".
+
+## Training phases — same branch
+
+Item 4. js/engine/phase.js: each four-week block runs a phase of the book's model (knowledge/phases.js):
+everyone starts at 1 (stabilisation endurance), then 2 (strength endurance), then the goal's. Sequences:
+lose/recomp/gain/general 1→2→3 (fat loss is the book's GOAL_PLANS; the rest are ours, the source's plans being
+absent — gap 9); strength 1→2→4 (3 for a beginner); athletic 1→2→4→5 (1→2 for a beginner); endurance 1→2;
+mobility 1; any health condition or age group 1→2. Phase 1 comes round again after the goal's phase.
+- engine/blocks.js blockDay: the phase's reps, sets range and tempo on every lift first (phases 4–5: the heavy
+  range on multi-joint lifts only, single-joint keep 6–12 — ours), rest capped (not phase 2's superset rest),
+  a condition's range still wins; then the answers' set shifts on top. phaseNow().
+- engine/lifts.js recommendIn: last time's reps outside the new range by more than 2 → a weight estimated
+  from the last best set (Epley, capped at 12, aiming at the middle of the range), said to be an estimate.
+- Training block card: the phase, its reps and tempo, what it is for, and the next block's phase. The set
+  line shows "Tempo 4-2-1-1". Existing users: the phase follows their current block number at once.
+- Tests: engine phase.test.js; regression "Phases: …".
+
+## Cardio zones and stages — same branch
+
+Item 5. js/engine/zones.js. The book prescribes from the person's own VT1/VT2 (talk test); zones are heart-rate
+bands only with those (ZONE_CALC: zone 2 VT1→midpoint, zone 3 midpoint→VT2); otherwise said by feel (RPE and
+the talk test), with Tanaka's 208 − 0.7 × age shown as "a starting point only". No bpm band invented per zone.
+Medication that blunts heart rate (conditions talkTest): feel only, no numbers.
+Stage: 1 (steady zone 1) until three easy (RPE ≤ 4 or unrated) cardio sessions of 30+ min in the last 7 days;
+then 2 (intervals just above VT1) once VT1 is known, else "do the talk test"; 3 needs VT2 and not a beginner,
+a condition, or a modest goal (lose/recomp/maintain/mobility). Stages 4–5 not offered.
+- Cardio & Sports sheet opens with "Your cardio · Stage N": what to do, what opens the next stage, the zones
+  (feel + bpm or RPE). "Find your zones" sheet: the talk test in four steps (paraphrased), VT1/VT2 inputs,
+  validated (60–230, VT2 > VT1), per profile (S.profile.vt1/vt2).
+- Tests: engine zones.test.js (the book's worked example 145/165); regression "Cardio zones: …".
+
+## Barriers in the weekly check-in — same branch
+
+Item 6. Fewer workouts than planned last week → the check-in asks "What got in the way?" (engine/barriers.js:
+time, convenience, unrealistic goals, social physique anxiety, ambivalence, no social support — adherence.js
+BARRIERS — and "ill or injured", the book's physical barrier). The answer (S.ckWhy by week, 8 weeks kept)
+shows that barrier's strategy, paraphrased, with the app's action: fit the week to my time / plan for home /
+review my goal (the assessment at that step, data-setupstep) or share my plan. Next week recalls it
+("Better than the week before, when it was: …" / "Is it still?"). A check-in now shows even with only missed
+workouts logged. Also: four weeks after the squat check, "Redo the squat check" (assessments: repeat
+periodically). Test: regression "Check-in barriers: …".
+
+## Something hurts: where, and the plan steered away — same branch
+
+Item 7. The pain sheet (sheets.js hurt) asks where: knee, lower back or hip, shoulder, wrist or elbow, ankle or
+foot, neck. For each, what protects that area, paraphrased from injuries.js REGIONS and imbalances.js
+INJURY_EFFECTS (the wrist has no entry there, so no note); how many sessions in the last four weeks it has
+come up (entries' painArea), with "get it looked at" from the second time; and "Steer my plan away from it"
+(the area into profile.limits, each program exercise that loads it swapped by standIn, Undo). The flag keeps
+its area (workout.js flagPain). Never a diagnosis: the sheet still says Bunyan cannot tell what it is.
+Test: regression "Something hurts: …".
+
+## Own additions (item 8) — same branch
+
+- Exercise picker: an exercise the person's limits or a health condition rule out is marked ("Lies down: not
+  for your health" / "Loads an area you're working around") and asks before it is added (Add it anyway /
+  Pick another).
+- Coach chat: three new intents — phase (block, phase, reps, tempo, the sequence and next block), zones
+  (cardio stage, zones by feel or bpm, Find your zones), health (what the conditions change; points to the
+  assessment's health step when none). A medical statement ("I have high blood pressure") still goes to the
+  scope guard; asking what the plan does about it is answered.
+- Week rail: a planned day still ahead that comes too soon for the muscles it trains (engine/recovery.js
+  tooSoon, everything planned before it counted) gets an amber ring and word; its details say which
+  muscles, with Change.
+
+## Rest band flash; "I can't do 20 push-ups" in the chat — same branch
+
+Owner, 3 Nov (screenshot): closing the finished rest band flashed before it went; and the coach answered
+"I'm overweight, not sure I can do the 20 reps push-ups, shall I adjust it?" with the generic weights rule and
+"change the 20 reps in my active training to something reasonable" with "I don't have that".
+- Rest band: `.rb{animation:wkIn}` came after `.rowout` with the same weight and won, so the leaving ghost
+  faded back in from 0 (the flash) and then vanished at the timeout. Now `.rb:not(.rowout)`. Test: "Rest
+  complete, closed: …".
+- Coach: command "ex.fit" (coach/commands.js: can't / not sure I can / too many / reasonable / adjust …
+  reps / push-ups; Arabic too) → agent.js planFit: for the exercise on screen (or named), today only: a
+  range from the person's best logged set (best−3 to best+2, never above the plan), else a health condition's
+  range, else 8–12; a number they asked for ("to 10") is used; for a body-weight lift, an easier version of
+  the same movement (incline / knee; never feet up). Pick → confirm → action "live.fit" (snap live, Undo).
+  The program is not changed. Test: "Coach, in a workout: 'not sure I can do 20 push-ups…'".
+
+## Rest by the book's heavy phases; coming back after a lapse; the workout first in the chat — same branch
+
+Owner, 3 Nov: (1) "confirm rest is calculated from the trained muscle and goal, whatever is in the knowledge
+base"; (2) "a long-time lifter, an inconsistent year, six months almost off: consider it in the assessment,
+the workout plan and the diet"; (3) "in a live workout the chat should put the session first".
+- Rest (answer): the book sets rest by the adaptation and the load (acute-variables.js BY_ADAPTATION, restRule),
+  not by muscle. The plan: experience base (main lift / multi-joint / single-joint) × the goal's factor,
+  clamped into the goal's adaptation range; the block's phase caps it (phase 1 ≤ 90 s). New: phases 4–5 put
+  multi-joint lifts at the book's 3–5 min (BY_ADAPTATION maximal_strength/power restS) — phase.js.
+- Coming back: assessment "Training lately" (steady / on and off this past year / mostly off for months),
+  profile.lapse/lapseAt. On use with a lapse: blocks restart this week (phase 1). Result card "Coming back".
+  ensureBlock: four weeks or more with no lifting (our threshold) restarts the blocks at phase 1.
+  recommendIn: a lift last done six weeks or more ago (our threshold; the book gives no detraining figure)
+  suggests no old weight — last time shown, "start lighter and find today's weight". Food: habits first
+  (protein daily, logging most days); calories at the check-in once the log is steady (it already needs 4+
+  logged days). Level "new" now reads "New to lifting." (returning lifters keep their level).
+- Chat in a workout: aLive answers "what now", rest/reps/sets/weight questions about this session, vague
+  messages, for the exercise on screen (set n of N, target, weight, rest, tempo, next). OFFSESS (food,
+  water, sleep, body weight, steps, other days) keeps their own answers; an exercise named that is not in
+  today's workout keeps its own answer. Test: "Coach in a live workout: …".
+
+## Recovery in numbers on Change workout — same branch
+
+Owner, 3 Nov: "can this show percentages, recovered at how many percent". engine/recovery.js muscleStatus(sp,
+iso): each muscle still recovering on the date (logged sessions, plus for a date ahead the workouts planned
+before it, counted as done — the same basis as the day rows), its readiness in quarters (≈0/25/50/75%: the
+model is an estimate, so no false precision) and the first day it is ready by the rest-day rule. The sheet
+lists the six least ready (bar, ≈%, "ready Wed", "+N more"), with the note that it is an estimate; each day
+row says "≈N% ready". bidi.js: "≈" is part of a figure (RTL kept "≈0%" in order).
+- On a day where every workout comes too soon (always the day after on a full-body plan), the note offers easy zone-1 cardio, the book's recovery option (cardio.js stage 1), with a Cardio & Sports button.
+
+## Experienced lifters choose; the rest of the open list — same branch (CACHE v199)
+
+Owner, 3 Nov: "anything mandatory by the book that could be optional by experience: a suggestion, and experienced
+lifters decide; work on everything else".
+- Stabilisation (phase 1): experienced/advanced with no health condition get it as a suggestion on the block card
+  ("Skip it" / "Use the book's order", profile.skipStab; phase.js canSkipStab, seqFor drops 1).
+- Cardio: stage 3 for an experienced lifter whose only bar is a modest goal (fat loss, keeping) is their choice
+  (profile.cardio3); stage 4 offered to advanced athletes (athletic/endurance/strength) with VT1+VT2 at stage 3
+  (profile.cardio4), with the book's recovery gauge and overtraining signs.
+- Already the person's call: Train it anyway on a day too soon; Skip warm-up (corrective work included).
+- My program: "This block is {phase}: your workouts use {a}–{b} reps…; the reps below are used when blocks are off".
+- Phase 2 supersets (phase.js supersetsFor; actions.js startDay): the book's pairs the library has both halves of —
+  bench → push-ups, chest press → standing cable chest press, calf raise → single-leg calf raise — grouped (grp),
+  the partner at 8–12, slow tempo; kit and limits respected. Squat/RDL/row/pulldown/press pairs are not in the
+  library: those lifts stay alone (nothing invented).
+- Higher body weight: opt-in in the assessment's conditions (never from BMI): conditions.js obesity — 10–15 reps,
+  standing or seated (no floor), steady breathing.
+- Chat warm-up answer opens with the squat check's corrective work. Run screen: today's target zone by feel (and
+  zone 1's bpm when measured). Chat: a resting heart rate question is not the zones answer (no data; says so).
+- Tests: engine phase/zones/conditions additions; regression "Experienced lifters choose: …"; coach actions domain
+  list includes live.

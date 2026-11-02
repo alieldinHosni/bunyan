@@ -27,6 +27,14 @@ function run(t){
   var one=[{date:today,entries:[{name:"Curl",sets:sets(1)}]}];
   t.eq([readiness(one,tomorrow,info,0).Biceps,readiness(one,tomorrow,info,8).Biceps],[0.75,0.5],"sore 8/10: held back to half at most");
   t.eq(readiness([{date:today,entries:[{name:"Running",sets:[{r:30}]}]}],tomorrow,info,0),{},"a run is not lifting");
+  /* Jumps (plyometrics.js recovery; the complex system): a squat then squat jumps holds the
+     legs three days; jumps alone, two; a beginner's jumps, three. */
+  var pinfo=Object.assign({},info,{plyo:function(n){return /Jump/.test(n);},compound:function(n){return n==="Squat";},
+    muscle:function(n){return n==="Squat Jump"?"Quads":info.muscle(n);}});
+  var cx=[{date:today,entries:[{name:"Squat",sets:sets(4)},{name:"Squat Jump",sets:sets(3)}]}],jo=[{date:today,entries:[{name:"Squat Jump",sets:sets(4)}]}];
+  t.eq([readiness(cx,"2026-11-04",pinfo,0).Quads,readiness(cx,"2026-11-05",pinfo,0).Quads],[0,undefined],"a complex: 72 h, ready on the third day");
+  t.eq(readiness(jo,"2026-11-04",pinfo,0).Quads,undefined,"jumps alone: the usual day of rest");
+  t.eq(readiness(jo,"2026-11-04",pinfo,0,{novice:true}).Quads,0,"a beginner's jumps: 72 h");
   /* No day is fresher: nothing is suggested (rest is always open). */
   var all=[{date:today,entries:[{name:"Bench",sets:sets(4)},{name:"Row",sets:sets(4)},{name:"Squat",sets:sets(4)},{name:"RDL",sets:sets(3)}]}];
   t.eq(suggest([push,pull,legs],1,readiness(all,tomorrow,info,0),info),null,"everything trained: no better day to offer");}

@@ -14,7 +14,9 @@
    lighter week (started from the card) starts the next block the day after it ends. */
 import {blockAt, LIGHT_RIR, planVolume, setShift, shiftDay} from "../coach/block.js";
 import {isActivity} from "../data/activities.js";
-import {muscleOf, secondaryOf} from "../data/exercises.js";
+import {isCompound, muscleOf, secondaryOf} from "../data/exercises.js";
+import {phaseDose, phaseOf} from "./phase.js";
+import {fitDose, rulesFor} from "./conditions.js";
 import {S, split} from "../state.js";
 import {today} from "../util.js";
 import {addDays, weekStartOf} from "./schedule.js";
@@ -34,8 +36,16 @@ function blockNow(date){
 function plannedLight(date){var b=blockNow(date);return !!(b&&b.light);}
 /* Called as a workout starts: begins block 1 if none has been — after an unplanned
    lighter week if one is running, so the block does not start inside it. */
+var GAP_DAYS=28;
 function ensureBlock(){
-  if(!blocksOn()||(S.block&&S.block.start))return;
+  if(!blocksOn())return;
+  /* Back after four weeks or more with no lifting (our threshold, not the book's): the
+     blocks start again at phase 1, which the book puts first and between harder phases. */
+  if(S.block&&S.block.start){
+    var last=(S.sessions||[]).filter(function(s){return (s.entries||[]).some(function(e){return !isActivity(e.name)&&(e.sets||[]).length;});})
+      .map(function(s){return s.date;}).sort().pop();
+    if(last&&(Date.parse(today())-Date.parse(last))/864e5>=GAP_DAYS)S.block={start:weekStartOf(today())};
+    return;}
   var dl=S.deload;
   S.block={start:dl&&dl.until&&today()<=dl.until?addDays(dl.until,1):weekStartOf(today())};}
 /* An unplanned lighter week is running (started from the card or the coach). */
@@ -56,9 +66,17 @@ function shiftNow(date){
    (deloadSets). Activities and timed holds keep the plan's own prescription. */
 function blockDay(exs,date){
   var b=blockNow(date);if(!b)return exs;
-  var out=b.light?exs.map(function(e){var c={};Object.keys(e).forEach(function(k){c[k]=e[k];});return c;})
-    :shiftDay(exs,shiftNow(date).shift,INFO);
+  /* The block's phase (engine/phase.js) first: its reps, sets and tempo on every lift (a
+     jump or a timed hold keeps its own); a health condition's range still wins, as it
+     keeps to phases 1 and 2, whose ranges it overlaps. Then the answers move sets on top. */
+  var ph=phaseOf(b.block,S.profile),R=rulesFor(S.profile);
+  exs=exs.map(function(e){var c={};Object.keys(e).forEach(function(k){c[k]=e[k];});
+    if(isActivity(c.name)||c.timed||/\b(jumps?|hops?|bounds?|plyo)\b|Hold|Plank|Stretch|SMR/i.test(c.name))return c;
+    phaseDose(c,ph,isCompound(c.name));if(R)fitDose(c,R);return c;});
+  var out=b.light?exs:shiftDay(exs,shiftNow(date).shift,INFO);
   out.forEach(function(e){if(!isActivity(e.name)&&!e.timed)e.rir=b.light?LIGHT_RIR:b.rir;});
   return out;}
+/* The phase the current block runs, or null when blocks are off. */
+function phaseNow(date){var b=blockNow(date);return b?phaseOf(b.block,S.profile):null;}
 
-export {blockDay, blockNow, blocksOn, ensureBlock, offPlanLight, ownWeeks, plannedLight, restartAfter, restartBlock, shiftNow, INFO as BLOCK_INFO};
+export {blockDay, blockNow, phaseNow, blocksOn, ensureBlock, offPlanLight, ownWeeks, plannedLight, restartAfter, restartBlock, shiftNow, INFO as BLOCK_INFO};

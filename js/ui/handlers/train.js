@@ -9,7 +9,7 @@ import {addDaysISO} from "../../engine/dayplan.js";
 import {spreadWd, suggestWd, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
 import {missedNow} from "../../engine/missed.js";
 import {dayOptions} from "../../engine/recovery.js";
-import {doseFor} from "../../engine/plan.js";
+import {avoids, conformProgram, doseFor, limitsOf} from "../../engine/plan.js";
 import {restartAfter, restartBlock} from "../../engine/blocks.js";
 import {t, tm} from "../../i18n/dict.js";
 import {exName, planName} from "../../i18n/exnames.js";
@@ -108,6 +108,25 @@ function register(){
       if(S.block){restartBlock(today());toast(t("A new training block starts today."));}}
     saveDB();render();return;});
   key("clearexq",function(){V.exq="";render();topOfResults();var qq=document.getElementById("exq");if(qq)qq.focus();return;});
+  /* My program brought into line with a health condition (views/train.js builderBody). */
+  key("condfix",function(D){var sp=editSplit(D.condfix);if(!sp)return;
+    var before=JSON.parse(JSON.stringify(sp.days)),ch=conformProgram(sp,S.profile,S.gear,false);
+    saveDB();render();
+    toast(t("Fitted to your health: {n} changes.").replace("{n}",ch.length),function(){sp.days=before;saveDB();render();});return;});
+  /* Cardio zones (sheets.js zones): the heart rates from the talk test, per profile. */
+  key("zones",function(){openSheet("zones");return;});
+  has("cardio3",function(D){S.profile.cardio3=D.cardio3==="1";saveDB();render();return;});
+  has("cardio4",function(D){S.profile.cardio4=D.cardio4==="1";saveDB();render();return;});
+  key("zsave",function(D){var p=S.profile;
+    if(D.zsave==="clear"){delete p.vt1;delete p.vt2;}
+    else{var a=Math.round(num(val("z_vt1"))),b=Math.round(num(val("z_vt2")));
+      if(a&&(a<60||a>230)){toast(t("A heart rate between 60 and 230, please."));return;}
+      if(b&&a&&b<=a){toast(t("VT2 is higher than VT1."));return;}
+      if(a)p.vt1=a;else delete p.vt1;if(b)p.vt2=b;else delete p.vt2;}
+    saveDB();openSheet("acts");return;});
+  /* Stabilisation skipped, or the book's order back (views/train.js blockCard). */
+  has("skipstab",function(D){var was=!!S.profile.skipStab;S.profile.skipStab=D.skipstab==="1";saveDB();render();
+    toast(t(S.profile.skipStab?"Stabilisation skipped: the next phases follow your goal.":"Back to the book's order."),function(){S.profile.skipStab=was;saveDB();render();});return;});
   key("swapday",function(D){openSheet("swapday",{date:D.swapday});return;});
   /* The coach's offer on a day due (views/train.js recoCard): the fresher day, or the
      planned one kept. Either is a decision, kept as the day's swap so it is not asked again. */
@@ -141,7 +160,7 @@ function register(){
     if(D.swapto&&D.swapto!=="rest"){var opt=null;try{opt=dayOptions(split(),swd);}catch(e){opt=null;}
       var o=opt&&opt.days.filter(function(x){return x.id===D.swapto;})[0];
       if(o&&!o.ok){
-        var why=o.tired.length?t("{m} trained hard in the last day still need rest: the book's rule is at least one day of rest between sessions that load the same muscles.").replace("{m}",o.tired.slice(0,3).map(function(m){return tm(m).trim();}).join(", "))
+        var why=o.tired.length?t("{m} still need rest: the book asks for at least a day of rest between sessions on the same muscles, and up to 72 hours after jumps.").replace("{m}",o.tired.slice(0,3).map(function(m){return tm(m).trim();}).join(", "))
           :t("It trains the same muscles as {x} the day after, so that one would come too soon.").replace("{x}",planName(o.next.name));
         askConfirm({title:t("Train {x} anyway?").replace("{x}",planName(o.name)),body:why,cta:t("Train it anyway"),act:"swapforce",data:{date:swd,id:D.swapto},
           mid:t("Pick another"),midact:"swappick"});
@@ -263,7 +282,15 @@ function register(){
     askText({title:t("Add your own exercise"),value:V.exq||"",
       body:t("It joins your library under the muscle you have filtered to. No illustration, everything else works."),
       cta:t("Add it"),act:"customex",data:{from:V.sd}});return;});
-  key("pickex",function(D){addExercise(D.pickex);return;});
+  /* One the person's limits or a condition rule out asks first (sheets.js marks it). */
+  key("pickex",function(D){
+    if(avoids(D.pickex,limitsOf(S.profile))&&!(V.sd&&V.sd.pkok)){var keep=V.sd;
+      askConfirm({title:t("Add {x} anyway?").replace("{x}",exName(D.pickex)),
+        body:t("It goes against what your plan works around: a health condition or a sore spot you named. The plan's other exercises keep away from it."),
+        cta:t("Add it anyway"),act:"pickforce",data:{name:D.pickex,sd:keep},mid:t("Pick another"),midact:"pickback"});return;}
+    addExercise(D.pickex);return;});
+  ACT.pickforce=function(v,d){if(!d)return;openSheet("exercise",Object.assign({},d.sd||{},{pkok:true}));addExercise(d.name);};
+  ACT.pickback=function(v,d){if(d)openSheet("exercise",d.sd||{});};
   key("replaceex",function(D){
     var dR=dayOf(V.dayId),eR2=dR?dR.ex.filter(function(x){return x.id===D.replaceex;})[0]:null;
     /* The frame opens a replacement with the current exercise's muscle already

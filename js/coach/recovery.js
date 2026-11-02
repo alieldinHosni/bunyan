@@ -43,15 +43,32 @@ function loadOf(s,I){
     (I.secondary(e.name)||[]).forEach(function(x){if(x!==main)m[x]=(m[x]||0)+n/2;});});
   return m;}
 
-function readiness(sessions,today,info,sore){
-  var I=infoOf(info),t=dayNo(today),tired={};
+/* Longer for jumps (js/knowledge/plyometrics.js recovery; acute-variables.js, the
+   complex system): a muscle that jumped after a heavy lift for it in the same session
+   (a complex: squat then squat jump) needs 72 hours, and so does one a beginner jumped
+   with (novices 48–72 h: the top of it). Three days, where everything else needs two. */
+var LONG_DAYS=3;
+function longOf(s,I,novice){
+  var jumped={},heavy={};
+  (s.entries||[]).forEach(function(e){
+    if(I.activity(e.name)||!workSets(e).length)return;
+    var m=e.muscle||I.muscle(e.name);
+    if(I.plyo(e.name)){jumped[m]=1;(I.secondary(e.name)||[]).forEach(function(x){jumped[x]=1;});}
+    else if(I.compound(e.name))heavy[m]=1;});
+  var out={};Object.keys(jumped).forEach(function(m){if(novice||heavy[m])out[m]=1;});
+  return out;}
+function readiness(sessions,today,info,sore,o){
+  var I=infoOf(info),t=dayNo(today),tired={},novice=!!(o&&o.novice);
   (sessions||[]).forEach(function(s){
     var ago=t-dayNo(s.date);
-    if(ago<0||ago>=REST_DAYS)return;
+    if(ago<0||ago>=LONG_DAYS)return;
+    var long=ago>=REST_DAYS?longOf(s,I,novice):null;
+    if(long&&!Object.keys(long).length)return;
     /* The day of the session and the day after are both inside the rest the rule asks
        for; from the second day on, the muscle is ready. */
     var load=loadOf(s,I),left=1;
     Object.keys(load).forEach(function(mu){
+      if(long&&!long[mu])return;
       var f=Math.min(1,load[mu]/FULL)*left;
       if(f>(tired[mu]||0))tired[mu]=f;});});
   var out={};
@@ -103,4 +120,4 @@ function suggest(days,plannedIdx,ready,info){
   if(!best)return null;
   return {from:d.id,to:days[best.i].id,ready:r0,toReady:best.r,tired:tiredOn(d.ex,ready,info)};}
 
-export {dayReady, readiness, suggest, tiredOn, LOW, REST_DAYS};
+export {dayReady, LONG_DAYS, readiness, suggest, tiredOn, LOW, REST_DAYS};

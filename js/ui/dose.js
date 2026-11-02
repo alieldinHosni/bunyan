@@ -4,6 +4,9 @@
    ways. */
 import {t} from "../i18n/dict.js";
 import {ex_isTimed} from "./view.js";
+import {COND_LABEL, condLines, rulesFor} from "../engine/conditions.js";
+import {esc} from "../util.js";
+import {glyph} from "./glyphs.js";
 
 /* Held for seconds: what the plan says, or else the exercise itself. A plank is held;
    a carry is loaded and walked, as the workout screen has it. A template's plank has
@@ -26,4 +29,16 @@ function weeksText(wk){
   return wk[1]>=99?t("From week {n}").replace("{n}",wk[0])
     :t("Weeks {a}–{b}").replace("{a}",wk[0]).replace("{b}",wk[1]);}
 
-export {doseText, weeksText};
+/* What a health condition changed in the plan, and why: on the plan the assessment
+   shows, and on My program (exported). */
+function condCard(p,extra){
+  var R=rulesFor(p);if(!R)return "";
+  var L=condLines(R,p);
+  return '<section class="ascard2 condcard" data-k="condcard">'+'<div class="as-ch">'+glyph("info")+'<span>'+esc(t("Adjusted for your health"))+'</span></div>'
+   +'<div class="aschips cond-ids">'+R.ids.map(function(id){return '<span class="aschip on">'+esc(t(COND_LABEL[id]))+'</span>';}).join("")+'</div>'
+   +(extra||'')
+   +'<ul class="cond-l">'+L.map(function(x){var s=esc(t(x[0]));Object.keys(x[1]).forEach(function(k){s=s.replace("{"+k+"}",'<span class="num">'+x[1][k]+'</span>');});
+       return '<li>'+s+'</li>';}).join("")+'</ul>'
+   +'<p class="as-note">'+esc(t("From the textbook's guidelines for training with each one. Your doctor's advice comes first; stop and get checked if anything feels wrong."))+'</p></section>';}
+
+export {condCard, doseText, weeksText};

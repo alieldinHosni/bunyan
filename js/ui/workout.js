@@ -109,7 +109,10 @@ function lighterDay(){
    it for today, or note it and carry on. */
 function flagPain(mode){
   var eh=current();if(!eh){closeSheet();return;}
-  eh.pain=true;saveDB();
+  eh.pain=true;
+  /* Where, when they said (sheets.js hurt): counted there again next time. */
+  if(V.sd&&V.sd.area)eh.painArea=V.sd.area;
+  saveDB();
   /* The replacement for something that hurts: the same movement, loaded another way. */
   if(mode==="swap"){
     V.exm=pickMuscle(eh.name);V.exe="All";V.exq="";

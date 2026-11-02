@@ -24,14 +24,15 @@
    S.run is the session in progress, saved with the profile: closing the app midway and
    opening it again finds it still going, and watching resumes. One saved before there
    was a choice of activity is a run. */
+import {stageFor, zonesFor} from "../engine/zones.js";
 import {t} from "../i18n/dict.js";
 import {addFix, isMoving, kmMarks, newRun, outdoorKcal, paceNow, paceOf, pauseRun, resumeRun, routePath, routeXY, runMs, speedNow, speedOf, splitsOf, thin} from "../engine/run.js";
-import {actIcon, outdoorOf} from "../data/activities.js";
+import {actIcon, actInfo, outdoorOf} from "../data/activities.js";
 import {outdoorName} from "../i18n/exnames.js";
 import {groundFor, mapSeed} from "./runmap.js";
 import {lastWeight} from "../engine/formulas.js";
 import {S, saveDB} from "../state.js";
-import {esc, fmtN} from "../util.js";
+import {esc, fmtN, today} from "../util.js";
 import {finishSession, startActivity} from "./actions.js";
 import {glyph} from "./glyphs.js";
 import {keepAwake, tap, toast, V} from "./view.js";
@@ -143,6 +144,7 @@ function vRun(){
    +'<div class="run-c"><b class="num" id="runP" dir="ltr">'+(rate(r,ms)||"—")+'</b><span>'+esc(t(spd?"Average km/h":"Average /km"))+'</span></div>'
    +'<div class="run-c"><b class="num" id="runK">≈'+fmtN(outdoorKcal(act,r.dist,ms,lastWeight()))+'</b><span>'+esc(t("kcal, an estimate"))+'</span></div>'
    +'</div>'
+   +zoneLine()
    +'<div class="run-splits" id="runSplits">'+splitsHtml(r)+'</div>'
    +'<p class="run-note">'+esc(t(r.gps==="denied"||r.gps==="off"?"Without location this is timed only. Add the distance when you finish."
       :"Keep the screen on: a phone stops sharing its position with an app in the background. The time keeps counting."))+'</p>'
@@ -154,6 +156,14 @@ function vRun(){
       +'<button class="btn run-end" data-run="finish">'+esc(t("Finish and save"))+'</button>')
    +'</div></div>';
   return h;}
+/* What today's effort should be, from the cardio stage (engine/zones.js): by feel, with
+   the heart rates where the person has their own (no heart-rate sensor is read here). */
+function zoneLine(){
+  var p=S.profile||{},z=zonesFor(p),st=stageFor(p,S.sessions,today(),{cardio:function(n){var a=actInfo(n);return !!(a&&a.grp==="Cardio");}});
+  var z1=z.rows[0],bpm=z1&&z1.max?" (<"+(z1.max+1)+" "+t("bpm")+")":"";
+  var line=st.stage===1?t("Target: zone 1, easy, you can talk comfortably")+bpm
+    :t("Target: mostly zone 1, intervals as your stage plans them")+bpm;
+  return '<p class="run-zone">'+esc(line)+'</p>';}
 /* Each whole kilometre, its time, and how it compares with the one before. */
 function splitsHtml(r){
   var sp=splitsOf(r.pts),o=cfg(r);if(!sp.length||o.read==="speed")return "";

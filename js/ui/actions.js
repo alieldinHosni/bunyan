@@ -2,11 +2,12 @@
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
 import {exIdOf, isBarbell, kindOf, LIB, muscleOf, muscleOfEntry, pickable} from "../data/exercises.js";
-import {doseFor, standIn, usable} from "../engine/plan.js";
+import {avoids, doseFor, standIn, usable, limitsOf} from "../engine/plan.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
 import {barKg, deloadSets, inDeload, recordsIn, avgRPE, prevPerf, progressionHint, recommend, sessionVolume} from "../engine/formulas.js";
-import {blockDay, blockNow, ensureBlock} from "../engine/blocks.js";
+import {blockDay, blockNow, ensureBlock, phaseNow} from "../engine/blocks.js";
+import {supersetsFor} from "../engine/phase.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
 import {coolFor} from "./views/warmup.js";
 import {stopHold} from "./hold.js";
@@ -180,6 +181,16 @@ function startDay(dayId){
   ensureBlock();
   var blk=blockNow();
   list=blockDay(list);
+  /* Phase 2 runs in supersets (engine/phase.js supersetsFor): the stable lift, then the
+     less stable one of the same movement, slow, then the rest. Only pairs the library has
+     both halves of, with the kit at hand and nothing a limit rules out. */
+  var ph2=phaseNow();
+  if(ph2&&ph2.n===2&&!(blk&&blk.light)){
+    var lim2=limitsOf(S.profile),pv=ph2.reps||{min:8,max:12},tg2=travelGear()||S.gear;
+    var prs=supersetsFor(list,function(n){return LIB.some(function(l){return l[0]===n;})&&usable(n,tg2)&&!avoids(n,lim2);});
+    prs.slice().reverse().forEach(function(x){var e0=list[x.after],g="p2"+x.after;
+      list=list.slice();list[x.after]=Object.assign({},e0,{grp:g});
+      list.splice(x.after+1,0,{id:uid(),name:x.name,sets:e0.sets,lo:pv.min,hi:pv.max,rest:e0.rest,rir:e0.rir,grp:g,tempo:"slow (4-2-1-1)",phase:2});});}
   /* Lifts carried onto today from a missed day (js/engine/missed.js), after the day's own. */
   var carried=addsOn(today(),d.id).filter(function(a){return !list.some(function(e){return e.name===a.name;});});
   if(carried.length)list=list.concat(carried.map(function(a){return {name:a.name,sets:a.sets,lo:a.lo,hi:a.hi,rest:a.rest,rir:a.rir};}));
@@ -198,6 +209,7 @@ function startDay(dayId){
       if(e.note)pl.note=e.note;
       if(e.w0!=null)pl.w0=e.w0;
       if(e.timed)pl.timed=true;
+      if(e.tempo)pl.tempo=e.tempo;if(e.phase)pl.phase=e.phase;
       if(e.side)pl.side=true;
       if(e.amrap)pl.amrap=true;
       if(e.rir!=null)pl.rir=e.rir;
@@ -208,8 +220,8 @@ function startDay(dayId){
       /* Travel mode: what needs kit left at home is swapped for the closest stand-in with
          the kit at hand, for this workout; the original stays a tap away (alt). */
       var tg=travelGear();
-      if(tg&&!isActivity(e.name)&&!usable(e.name,tg)){var ts=standIn(e.name,tg,(S.profile||{}).limits);if(ts){alt=e.name;altWhy="travel";nm=ts;}}
-      else if(!alt&&!isActivity(e.name)&&!pickable(e.name)){alt=standIn(e.name,S.gear,(S.profile||{}).limits)||null;if(alt)altWhy="gear";}
+      if(tg&&!isActivity(e.name)&&!usable(e.name,tg)){var ts=standIn(e.name,tg,limitsOf(S.profile));if(ts){alt=e.name;altWhy="travel";nm=ts;}}
+      else if(!alt&&!isActivity(e.name)&&!pickable(e.name)){alt=standIn(e.name,S.gear,limitsOf(S.profile))||null;if(alt)altWhy="gear";}
       if(nm!==e.name)return {name:nm,exId:exIdOf(nm),kind:kindOf(nm),muscle:muscleOf(nm),planned:pl,rest:e.rest,grp:e.grp||null,alt:alt,altWhy:altWhy,sets:[]};
       return {name:e.name,exId:e.exId||exIdOf(e.name),kind:e.timed&&!isActivity(e.name)?"timed":kindOf(e.name),muscle:muscleOfEntry(e),planned:pl,
               rest:e.rest,grp:e.grp||null,alt:alt,altWhy:altWhy||undefined,sets:[]};})};

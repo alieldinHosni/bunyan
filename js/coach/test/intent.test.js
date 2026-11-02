@@ -3,6 +3,8 @@ import {factOf, IDS, intentOf, situationOf} from "../intent.js";
 /* Questions people type, and what each is asking. English and Egyptian Arabic, typed
    the way phones type them: no capitals, no hamza, ة as ه, Arabic or Western digits. */
 var EN=[
+  ["What phase am I in?","phase"],["why did my reps change this block","phase"],["what are my heart rate zones","zones"],["what heart rate should I run at?","zones"],
+  ["I have high blood pressure, is my plan safe?","health"],["what is adjusted for my health","health"],
   ["What should I train today?","today"],["what's my workout today","today"],["Which day is next?","today"],
   ["How much weight should I lift on bench?","weights"],["how heavy should I squat","weights"],["when do I add weight","weights"],
   ["What should I eat now?","eat"],["how many calories left today","eat"],["I'm hungry","eat"],
@@ -31,6 +33,7 @@ var EN=[
   ["how many warm up sets","kwarm"],["how long should a workout be","kdur"],["how is my 1rm calculated","k1rm"],
   ["what's today","today"],["What have I told you?","facts"]];
 var AR=[
+  ["انا في انهي مرحله؟","phase"],["مناطق النبض بتاعتي","zones"],["ايه اللي اتغير في خطتي علشان حالتي الصحيه","health"],
   ["ينفع اتمرن مرتين في اليوم","twice"],["عايز سيشن تاني النهارده","twice"],
   ["اتمرن ايه النهارده؟","today"],["تمرين النهارده ايه","today"],["اشيل كام في البنش؟","weights"],["ازود الوزن امتى","weights"],
   ["اكل ايه دلوقتي","eat"],["فاضل كام سعرات","eat"],["انا جعان","eat"],["انا ماشي صح؟","track"],["عامل ايه الاسبوع ده","track"],

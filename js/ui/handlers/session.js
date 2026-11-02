@@ -6,7 +6,9 @@ import {leave, ms} from "../motion.js";
 import * as W from "../workout.js";
 import {lastWeight} from "../../engine/formulas.js";
 import {t} from "../../i18n/dict.js";
-import {dayRec, S, saveDB, saveSession, sessionById} from "../../state.js";
+import {dayRec, S, saveDB, saveSession, sessionById, split} from "../../state.js";
+import {avoids, limitsOf, standIn} from "../../engine/plan.js";
+import {muscleOf} from "../../data/exercises.js";
 import {toDisp} from "../../units.js";
 import {num, r1} from "../../util.js";
 import {ACT, askConfirm, closeSheet, openSheet, startActivity, startDay, swapAlt, syncDraft, val} from "../actions.js";
@@ -17,7 +19,7 @@ import {render} from "../render.js";
 import {endRest, keepAwake, toast, V} from "../view.js";
 import {warmShown} from "../views/warmup.js";
 import {discardRun, finishRun, pauseIt, resumeIt, startRun} from "../run.js";
-import {outdoorOf} from "../../data/activities.js";
+import {isActivity, outdoorOf} from "../../data/activities.js";
 import {outdoorName} from "../../i18n/exnames.js";
 import {has, key, NEXT, on} from "./registry.js";
 
@@ -119,6 +121,23 @@ function register(){
     var sw9=V.sd&&sessionById(V.sd.id);if(!sw9)return;
     sw9.srpe=+D.srpe;saveSession(sw9);render();return;});
   key("hurt",function(){openSheet("hurt");return;});
+  /* Where it hurts (sheets.js hurt): the note for that area. */
+  key("hurtarea",function(D){V.sd=Object.assign({},V.sd||{},{area:(V.sd||{}).area===D.hurtarea?null:D.hurtarea});render();return;});
+  /* The plan steered away from it: the area joins the profile's limits, and each exercise
+     in the program that loads it is swapped for the closest stand-in that does not, with
+     Undo. What has no stand-in stays, and is said. */
+  key("hurtavoid",function(D){var area=D.hurtavoid,sp=split();if(!sp)return;
+    var before={programs:JSON.parse(JSON.stringify(S.programs)),limits:((S.profile||{}).limits||[]).slice()};
+    var lim=S.profile.limits=(S.profile.limits||[]);if(lim.indexOf(area)<0)lim.push(area);
+    var all=limitsOf(S.profile),taken={},n=0,kept=0;
+    sp.days.forEach(function(d){d.ex.forEach(function(e){taken[e.name]=1;});});
+    sp.days.forEach(function(d){d.ex.forEach(function(e){
+      if(isActivity(e.name)||!avoids(e.name,[area]))return;
+      var to=standIn(e.name,S.gear,all,taken);
+      if(to){taken[to]=1;e.name=to;e.muscle=muscleOf(to);delete e.exId;n++;}else kept++;});});
+    saveDB();render();
+    toast(t(n?(kept?"Plan steered away from it: {n} swapped, {k} with no stand-in kept.":"Plan steered away from it: {n} swapped."):"Nothing in your plan loads it. New plans will keep away from it too.")
+      .replace("{n}",n).replace("{k}",kept),function(){S.programs=before.programs;S.profile.limits=before.limits;saveDB();render();});return;});
   key("hurtdo",function(D){W.flagPain(D.hurtdo);return;});
   key("startday",function(D){if(V.sheet==="another"){V.sheet=null;V.sd=null;}pushNav();startDay(D.startday);return;});
   has("continue",function(){W.resume();return;});

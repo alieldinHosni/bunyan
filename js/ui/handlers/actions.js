@@ -118,6 +118,20 @@ var ACTIONS={
     confirm:true,snap:"live",
     run:function(p){if(!S.active||!S.active.entries[p.i]||S.active.entries[p.i].sets.length)return false;
       V.logIdx=p.i;S.active.idx=p.i;V.sd={swaplive:true};tap({pickex:p.name});return true;}},
+  /* "I can't do 20 reps": today's target for an exercise in the workout in progress, or an
+     easier version of it (agent.js planFit). The program itself is not changed. */
+  "live.fit":{desc:"Fit today's reps of an exercise in the workout in progress, or swap it for an easier version, for today only",
+    params:{i:"its place in the workout",v:"reps:LO-HI or swap:NAME"},confirm:true,snap:"live",
+    run:function(p){var a=S.active,e=a&&a.entries[p.i];if(!e||!p.v)return false;
+      var m=/^reps:(\d+)-(\d+)$/.exec(p.v);
+      if(m){var lo=+m[1],hi=+m[2];if(!(lo>=1&&hi>=lo&&hi<=50))return false;
+        e.planned.lo=lo;e.planned.hi=hi;e.planned.fit=true;
+        if(V.logIdx===p.i&&V.draft){V.draft.r=lo;V.draftSg=false;}
+        saveDB();render();return true;}
+      var sw=/^swap:(.+)$/.exec(p.v);
+      if(sw){if(e.sets.length||!LIB.some(function(l){return l[0]===sw[1];}))return false;
+        V.logIdx=p.i;a.idx=p.i;V.sd={swaplive:true};tap({pickex:sw[1]});return true;}
+      return false;}},
   "set.next":{desc:"Put the next set's weight and reps in the logger (how the last one felt)",params:{w:"weight, kg",r:"reps"},
     confirm:true,snap:"draft",
     /* The logger's two fields, as the person would type them. */

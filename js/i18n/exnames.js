@@ -209,8 +209,16 @@ function exAr(name){
 /* Display only. Every lookup, favourite and session entry still keys off the English. */
 /* Display only: the qualifier is shown separately, never glued back onto the name.
    The full English name remains the key everywhere it is stored. */
+/* The library's foam-rolling entries ("Iliotibial Tract-SMR") read as what they are:
+   "Foam roll · IT band". Display only, like the rest. */
+var ROLL={"Iliotibial Tract":["IT band","الجنب الخارجي للفخذ"],"Quadriceps":["quads","أمامية الفخذ"],"Latissimus Dorsi":["lats","جانب الضهر"],
+  "Calves":["calves","السمانة"],"Hamstring":["hamstrings","خلفية الفخذ"],"Anterior Tibialis":["shins","قصبة الرجل"],"Brachialis":["upper arm","الدراع"],
+  "Foot":["foot","باطن الرجل"],"Lower Back":["lower back","أسفل الضهر"],"Neck":["neck","الرقبة"],"Peroneals":["outer shin","جنب الساق"],
+  "Piriformis":["deep glute","عمق المؤخرة"],"Rhomboids":["upper back","أعلى الضهر"]};
 function exName(n){
   var ar=S.prefs&&S.prefs.lang==="ar",a=actInfo(n);
+  var rm=/^(.+)-SMR$/.exec(String(n||""));
+  if(rm&&ROLL[rm[1]])return ar?"رول فوم · "+ROLL[rm[1]][1]:"Foam roll · "+ROLL[rm[1]][0];
   if(a)return ar&&a.ar?a.ar:(a.lib?exShort(n):n);
   if(ar&&EXDB&&EXDB[n]&&EXDB[n].ar)return EXDB[n].ar;
   var s=exShort(n);return ar?exAr(s):s;}

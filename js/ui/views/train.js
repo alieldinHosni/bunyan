@@ -8,9 +8,11 @@ import {alsoKnown, empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} f
 import {exName, planName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../state.js";
-import {SPLIT_LEVEL} from "../../engine/plan.js";
+import {conformProgram, SPLIT_LEVEL} from "../../engine/plan.js";
+import {rulesFor} from "../../engine/conditions.js";
+import {canSkipStab} from "../../engine/phase.js";
 import {deloadDue, inDeload} from "../../engine/formulas.js";
-import {blockNow, offPlanLight, shiftNow} from "../../engine/blocks.js";
+import {blockNow, offPlanLight, phaseNow, shiftNow} from "../../engine/blocks.js";
 import {addDays, isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
 import {dfmt, esc, fmtN, pretty, shortd, today} from "../../util.js";
 import {tokenMatch} from "../../engine/text.js";
@@ -22,9 +24,9 @@ import {glyph} from "../glyphs.js";
 import {programCover} from "../cover.js";
 import {shown} from "../more.js";
 import {vTImport} from "./timport.js";
-import {doseText, weeksText} from "../dose.js";
+import {condCard, doseText, weeksText} from "../dose.js";
 import {addDaysISO, estMinutes, planOn} from "../../engine/dayplan.js";
-import {swapAdvice} from "../../engine/recovery.js";
+import {swapAdvice, tooSoon} from "../../engine/recovery.js";
 import {addsOn, missedNow} from "../../engine/missed.js";
 import {monthGrid} from "../datebar.js";
 import {paceOf, routePath, speedOf} from "../../engine/run.js";
@@ -283,6 +285,9 @@ function railDay(sp,iso,now){
     if(pd&&pd.ex.length){x.mark="miss";x.word=planName(pd.name);x.lbl+=", "+t("missed");}else x.word="—";}
   else x.word="—";
   x.swap=!!(S.daySwap&&S.daySwap[iso]&&iso>=now);
+  /* Planned, still ahead, and too soon for the muscles it trains (engine/recovery.js). */
+  if(x.mark==="plan"||x.mark==="proj"){var ts=null;try{ts=tooSoon(sp,iso);}catch(e){ts=null;}
+    if(ts&&ts.length){x.soon=ts;x.lbl+=", "+t("too soon for {m}").replace("{m}",ts.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();}).join(", "));}}
   x.word=shortWord(x.word);
   return x;}
 /* What the chosen day holds, unfolded in the card by tapping it again (owner, 2 Nov:
@@ -310,6 +315,8 @@ function railPeek(sp,iso,now){
    +(x.swap?'<span class="wkr-chip">'+esc(t("Moved"))+'</span>':'')+'</div>'
    +(meta.length?'<div class="wkr-pk-m">'+meta.join('<span class="wkr-dot" aria-hidden="true">·</span>')+'</div>':'')
    +(top.length?'<div class="wkr-pk-mu">'+top.map(function(m){return '<span>'+esc(tm(m).trim())+'</span>';}).join("")+'</div>':'')
+   +(x.soon?'<p class="wkr-pk-soon">'+esc(t("Too soon for {m}: they are still recovering from the day before.").replace("{m}",x.soon.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();}).join(", ")))
+      +' <button class="wkr-pk-ch" data-swapday="'+iso+'">'+esc(t("Change"))+'</button></p>':'')
    +(x.mark==="proj"?'<p class="wkr-pk-n">'+esc(t("A rotation moves with what you train, so this day may shift."))+'</p>':'')
    +'</div>';}
 function weekRail(sp,sel){
@@ -321,7 +328,7 @@ function weekRail(sp,sel){
     if(x.mark==="done")done++;if(x.mark==="done"||x.mark==="plan"||x.mark==="proj"||x.mark==="miss")plan++;
     if(iso===sel)idx=i;
     var dt=new Date(iso+"T00:00:00");
-    cells+='<button class="wkr-d '+x.mark+(iso===now?' today':'')+(iso===sel?' sel':'')+(x.word==="—"?' rest':'')+'" data-wkday="'+iso+'"'
+    cells+='<button class="wkr-d '+x.mark+(x.soon?' soon':'')+(iso===now?' today':'')+(iso===sel?' sel':'')+(x.word==="—"?' rest':'')+'" data-wkday="'+iso+'"'
      +' aria-pressed="'+(iso===sel)+'"'+(iso===sel?' aria-expanded="'+peek+'" aria-controls="wkr-pk"':'')
      +' aria-label="'+esc(x.lbl+(x.swap?", "+t("moved"):""))+'">'
      +'<span class="wkr-w" aria-hidden="true">'+esc(dfmt(dt,{weekday:"narrow"}))+'</span>'
@@ -436,6 +443,13 @@ function deloadCard(){
    +t("One lighter week — fewer sets, about 10% less weight — usually brings progress back.")+'</p>'
    +'<div class="dlcard-a"><button class="btn" data-deload="start">'+t("Start a lighter week")+'</button>'
    +'<button class="dlcard-later" data-deload="later">'+t("Not now")+'</button></div></div>';}
+/* What each phase is for, in a line (js/knowledge/phases.js PHASES, paraphrased). */
+var PHASE_NAME={1:"Stabilisation endurance",2:"Strength endurance",3:"Muscular development",4:"Maximal strength",5:"Power"};
+var PHASE_WHY={1:"Lighter loads, slow and controlled: movement quality, joint stability and endurance first. Progress by control, not weight.",
+  2:"More strength in the main movers while keeping the stability you built.",
+  3:"More sets in the growth range: building muscle.",
+  4:"Heavy, low-rep work on the big lifts: the most force you can make.",
+  5:"Heavy lifts paired with fast, light ones: strength turned into speed."};
 /* Where the training block stands: four segments for its weeks, this one lit, and
    what this week asks — reps to leave in reserve, or the lighter week with a way to
    end it early. Then what the answers after earlier workouts have moved, if anything.
@@ -449,10 +463,26 @@ function blockCard(){
     :t(b.rir===1?"Stop each set with 1 rep in reserve.":"Stop each set with {n} reps in reserve.").replace("{n}",b.rir);
   var sh=b.light?{}:shiftNow().shift,moved=Object.keys(sh).sort().map(function(m){
     return tm(m)+" "+(sh[m]>0?"+":"\u2212")+Math.abs(sh[m]);});
+  /* The phase this block runs (engine/phase.js): its name, what it asks, and where it
+     sits in the goal's sequence, the coming one named. */
+  var ph=phaseNow(),phl="";
+  if(ph){var tmp=(ph.tempo.match(/[\dX]-[\dX]-[\dX]-[\dX]/)||[""])[0];
+    var fig=function(x){return '<span class="num" dir="ltr">'+x+'</span>';};
+    phl='<p class="blk-ph"><b>'+esc(t(ph.name))+'</b> · '+esc(t("{a}–{b} reps")).replace("{a}–{b}",fig(ph.reps.min+"–"+ph.reps.max))
+     +(tmp?' · '+esc(t("tempo {t}")).replace("{t}",fig(tmp)):'')+'</p>'
+     +'<p class="blk-l">'+esc(t(PHASE_WHY[ph.n]||""))
+     +(ph.seq.length>1?' '+esc(t("Next block: {p}.").replace("{p}",t(PHASE_NAME[ph.seq[b.block%ph.seq.length]]))):'')+'</p>';
+    /* The book starts everyone at stabilisation; an experienced lifter may skip it, as a
+       choice they make here, and take it back (engine/phase.js canSkipStab). */
+    if(canSkipStab(S.profile)){
+      if(!S.profile.skipStab&&ph.n===1)phl+='<p class="blk-opt">'+esc(t("The book starts everyone here. With your experience it's a suggestion: you can skip stabilisation and go straight to the heavier phases."))
+        +' <button class="blk-optb" data-skipstab="1">'+esc(t("Skip it"))+'</button></p>';
+      else if(S.profile.skipStab)phl+='<p class="blk-opt">'+esc(t("You chose to skip stabilisation."))+' <button class="blk-optb" data-skipstab="0">'+esc(t("Use the book's order"))+'</button></p>';}}
   return '<div class="blk'+(b.light?' light':'')+'" role="group" aria-label="'+esc(t("Training block"))+'">'
    +'<div class="blk-h"><b>'+esc(t("Block {b} · Week {w} of {n}").replace("{b}",b.block).replace("{w}",b.week).replace("{n}",b.of))+'</b>'
    +(b.light?'<button class="dlcard-x" data-deload="end">'+t("End it")+'</button>':'')+'</div>'
    +'<div class="blk-bar" aria-hidden="true">'+segs+'</div>'
+   +phl
    +'<p class="blk-l">'+esc(line)+'</p>'
    +(moved.length?'<p class="blk-m">'+esc(t("Sets per workout, from your answers:"))+' '+esc(moved.join(", "))+'</p>':'')
    +'</div>';}
@@ -656,6 +686,21 @@ function builderBody(sp,id,inline){
      +[2,3,4,5,6,7].map(function(n){return '<button class="'+(sp.days.length===n?'on':'')+'" data-bdays="'+n+'" aria-pressed="'+(sp.days.length===n)+'">'+n+'</button>';}).join("")
      +'</div></div>';
   h+='</div>';
+  /* A health condition: what the book says for it, and anything in this program that
+     does not fit yet, with one tap to make it fit (engine/plan.js conformProgram). */
+  if(active&&rulesFor(S.profile)){
+    var iss=conformProgram(JSON.parse(JSON.stringify(sp)),S.profile,S.gear,true),fx="";
+    if(iss.length){var sw=iss.filter(function(x){return x.from;}),ds=iss.filter(function(x){return x.dose;});
+      fx='<div class="cond-fix"><p>'+esc(t("{n} things in this program don't fit yet.").replace("{n}",iss.length))
+       +(sw.length?' '+esc(t("To swap:"))+' '+esc(sw.slice(0,3).map(function(x){return exName(x.from);}).join(S.prefs&&S.prefs.lang==="ar"?"، ":", "))+(sw.length>3?'…':'.'):'')
+       +(ds.length?' '+esc(t("Sets or reps to adjust: {n}.").replace("{n}",ds.length)):'')+'</p>'
+       +'<button class="btn" data-condfix="'+esc(id)+'">'+esc(t("Make it fit"))+'</button></div>';}
+    h+=condCard(S.profile,fx);}
+  /* The block's phase sets the reps in the workout, not the numbers below (owner, 3 Nov:
+     the program showed 8–12 while the workout asked 12–20). Said where the numbers are. */
+  var phb=active?phaseNow():null;
+  if(phb&&phb.reps)h+='<p class="bphase">'+esc(t("This block is {p}: your workouts use {a}–{b} reps on the lifts, as each phase sets its own. The reps below are the program's, used when training blocks are off in Settings.")
+      .replace("{p}",t(phb.name)).replace("{a}",phb.reps.min).replace("{b}",phb.reps.max)).replace(/(\d+)–(\d+)/,'<span class="num" dir="ltr">$1–$2</span>')+'</p>';
   /* How the days fall: pinned to weekdays, or one after another whenever you train. */
   h+='<div class="bsched" role="group" aria-label="'+esc(t("Schedule"))+'">'
    +'<button class="'+(week?'on':'')+'" data-sched="week" aria-pressed="'+week+'"><b>'+t("By weekday")+'</b><span>'+t("Same days every week")+'</span></button>'
