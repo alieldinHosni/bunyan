@@ -16,9 +16,12 @@ import {nextPinned, pinnedAllOn, pinnedOn} from "./schedule.js";
    skipped: once due, the next session stays due until it is done. */
 function addDaysISO(iso,n){var d=new Date(iso+"T00:00:00");d.setDate(d.getDate()+n);
   return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
-function rotation(sp){
+/* virt: a day of the program taken as the last one trained, today (a day changed by hand
+   and not yet trained): what comes after it follows from it. */
+function rotation(sp,virt){
   var len=sp.days.length,now=today();if(!len)return null;
   var ls=null,li=-1;
+  if(virt)sp.days.forEach(function(d,i){if(d.id===virt.dayId){ls=virt;li=i;}});
   for(var j=0;j<S.sessions.length&&!ls;j++){
     var s=S.sessions[j];if(!s.dayId)continue;
     for(var i=0;i<len;i++)if(sp.days[i].id===s.dayId){ls=s;li=i;break;}}
@@ -75,7 +78,13 @@ function planOn(sp,iso){
     if(pd)return {kind:kw,day:pd,name:pd.name,rest:false};
     var nx=nextPinned(sp,iso);
     return {kind:kw,day:null,name:t("Rest day"),rest:true,next:nx&&nx.day};}
-  var r=rotation(sp);
+  /* Today changed by hand to another day of the rotation, and not trained yet: the days
+     after it follow on from that one, as they will once it is trained (owner, 2 Nov: the
+     next day has to change with today's, in a rotation as on weekdays). */
+  var virt=null;
+  if(iso>now&&S.daySwap&&S.daySwap[now]&&S.daySwap[now]!=="rest"&&!S.sessions.some(function(x){return x.date===now&&x.dayId;}))
+    virt={date:now,dayId:S.daySwap[now]};
+  var r=rotation(sp,virt);
   if(!r)return {kind:"none"};
   var len=sp.days.length,kind=iso===now?"today":"plan",d;
   /* Still inside the rest that follows the last session. */

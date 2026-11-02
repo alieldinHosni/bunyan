@@ -3454,6 +3454,30 @@ await test("A missed day: moved to a free day with rest either side, or its key 
   await pause(page,300);
   if(!/فاتك/.test(await page.textContent('.reco')))throw new Error("not in Arabic");
 });
+await test("Tomorrow follows today, live, in a rotation as on weekdays: today changed to Pull moves a rotation on to Legs, and on weekdays offers Legs for tomorrow's Pull",async page=>{
+  const setUp=async(week)=>page.evaluate(async(week)=>{
+    const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js");
+    const add=n=>{const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()+n);return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+    const PUSH=[Sp.ex("Barbell Bench Press - Medium Grip",4,8,12),Sp.ex("Standing Military Press",3,8,12)],PULL=[Sp.ex("Bent Over Barbell Row",4,8,12),Sp.ex("Wide-Grip Lat Pulldown",3,8,12),Sp.ex("Barbell Curl",3,8,12)],
+          LEGS=[Sp.ex("Barbell Squat",4,8,12),Sp.ex("Romanian Deadlift",3,8,12)];
+    const p=st.makeProgram({id:"ppl",name:"PPL",days:[Sp.day("Push",PUSH),Sp.day("Pull",PULL),Sp.day("Legs",LEGS)]});
+    const wd=n=>{const x=new Date(add(n)+"T00:00:00");return x.getDay()||7;};
+    if(week){p.schedule="week";p.days[0].wd=[wd(0)];p.days[1].wd=[wd(1)];p.days[2].wd=[wd(3)];S.sessions=[];}
+    else{const ss=(n,d)=>({id:"r"+n,date:add(n),dayId:d.id,dayName:d.name,entries:d.ex.map(e=>({name:e.name,sets:[{w:60,r:8},{w:60,r:8}]}))});
+      S.sessions=[ss(-2,p.days[2]),ss(-3,p.days[1]),ss(-4,p.days[0])];}
+    S.programs=[p];S.activeProgram=p.id;S.daySwap={[U.today()]:p.days[1].id};delete S.missedDone;st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.assess=false;V.tab="train";V.train="days";V.tdate=null;(await import("/js/ui/render.js")).render();},week);
+  await setUp(false);await pause(page,300);
+  if(!/Your rotation follows on from Pull: tomorrow is Legs\./.test(await page.textContent('#app')))throw new Error("rotation: tomorrow not said: "+(await page.textContent('.thero2')));
+  await page.tap('.dnav-card [data-dday="1"]');await pause(page,300);
+  eq(await page.textContent('.thero2-n'),"Legs","rotation: tomorrow is Legs, not Pull again");
+  await setUp(true);await pause(page,300);
+  const card=await page.textContent('#app');
+  if(!/Tomorrow's Pull lands mostly on back/.test(card)||!(await page.$('[data-recoswap]')))throw new Error("weekdays: no word on tomorrow: "+card.slice(0,600));
+  await page.tap('.reco [data-recoswap]');await pause(page,300);
+  eq(await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()+1);
+    const tm=new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);return st.split().days.find(x=>x.id===st.S.daySwap[tm]).name;}),"Legs","weekdays: tomorrow is Legs");
+});
 await test("Training calendar: Food's day bar; the month unfolds inside the bar's own card, a dot for a day trained, a ring for one planned; a past day shows below",async page=>{
   await tapTab(page,"train");await pause(page,300);
   eq(await page.$$eval('#app .dnav-card',a=>a.length),1,"one bar, Food's");
@@ -3562,7 +3586,9 @@ await test("Recovery: Pull trained yesterday, Pull due today: the coach offers t
   if(!card)throw new Error("no coach card for a Pull day after Pull");
   if(!/Most of Pull lands on back, biceps.*, trained yesterday/.test(card)||!/Legs is fresh/.test(card))throw new Error("card: "+card);
   await page.tap('.reco [data-recoswap="dlegs"]');await pause(page,400);
-  eq(await ev(page,"[S.daySwap[Object.keys(S.daySwap)[0]],!!document.querySelector('.reco')]"),["dlegs",false],"today moved to Legs, no card again");
+  eq(await ev(page,"[S.daySwap[Object.keys(S.daySwap)[0]],!!document.querySelector('.reco [data-recoswap]')]"),["dlegs",false],"today moved to Legs, no offer again");
+  /* What comes after it is said: the rotation follows on from Legs. */
+  if(!/Your rotation follows on from Legs: tomorrow is Push\./.test(await page.textContent('#app')))throw new Error("tomorrow not said after the change");
   eq(await page.$eval('.thero2',e=>/Legs/.test(e.textContent)),true,"today's card is Legs");
 });
 await test("Two sessions in a day: by weekday, the second pinned day is today's once the first is done; on the go, Start another session starts any day",async page=>{

@@ -64,17 +64,31 @@ function ANOTHER(){return '<button class="thero2-add" data-another="1"><span ari
 /* The coach, on the day due (owner, 2 Nov): when most of it lands on muscles trained
    the day before, and another day of the program is fresh, it says so and offers that
    day instead; keeping the plan is one tap too (js/engine/recovery.js). */
-function recoCard(sp,p,iso){
+/* ahead: the card for tomorrow, shown on today: its muscles are today's, trained or
+   planned (js/engine/recovery.js readyOn counts today's plan for a day ahead). */
+function recoCard(sp,p,iso,ahead){
   var s=swapAdvice(sp,iso,p);if(!s)return "";
   var names=s.tired.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();}),ar=S.prefs&&S.prefs.lang==="ar";
   var list=names.length>1?names.slice(0,-1).join(ar?"، ":", ")+(ar?" و":" and ")+names[names.length-1]:names[0]||"";
-  var when=iso===today()?t("yesterday"):t("the day before");
-  return '<div class="reco" data-k="reco'+iso+'"><div class="reco-h">'+glyph("whistle")+'<b>'+esc(t("Coach"))+'</b></div>'
-   +'<p>'+esc(t("Most of {a} lands on {m}, trained {w}. They need a rest day between hard sessions; {b} is fresh.")
+  var when=ahead?t("today"):iso===today()?t("yesterday"):t("the day before");
+  return '<div class="reco" data-k="reco'+iso+'"><div class="reco-h">'+glyph("whistle")+'<b>'+esc(t(ahead?"Coach · tomorrow":"Coach"))+'</b></div>'
+   +'<p>'+esc(t(ahead?"Tomorrow's {a} lands mostly on {m}, trained {w}. They need a rest day between hard sessions; {b} is fresh.":"Most of {a} lands on {m}, trained {w}. They need a rest day between hard sessions; {b} is fresh.")
        .replace("{a}",planName(s.fromDay.name)).replace("{m}",list).replace("{w}",when).replace("{b}",planName(s.toDay.name)))+'</p>'
    +'<div class="reco-a"><button class="btn" data-recoswap="'+esc(s.to)+'" data-recodate="'+iso+'">'
-   +esc(t("Train {b} instead").replace("{b}",planName(s.toDay.name)))+'</button>'
+   +esc(t(ahead?"Train {b} tomorrow instead":"Train {b} instead").replace("{b}",planName(s.toDay.name)))+'</button>'
    +'<button class="btn g" data-recoswap="'+esc(s.from)+'" data-recodate="'+iso+'">'+esc(t("Keep {a}").replace("{a}",planName(s.fromDay.name)))+'</button></div></div>';}
+/* Today, what today's workout means for tomorrow, live: on weekdays, tomorrow's day
+   checked against today's muscles (a fresher one offered); in a rotation, tomorrow follows
+   on from today's day, so a day changed by hand is said with what comes after it. */
+function aheadCard(sp,iso){
+  if(iso!==today()||!sp)return "";
+  var tm=addDaysISO(iso,1),p1=planOn(sp,tm),h=recoCard(sp,p1,tm,true);
+  if(h)return h;
+  var p0=planOn(sp,iso);
+  if(sp.schedule!=="week"&&S.daySwap&&S.daySwap[iso]&&p0.swapped&&p0.day&&p1&&p1.day&&!p1.rest)
+    return '<div class="reco" data-k="ahead'+iso+'"><div class="reco-h">'+glyph("whistle")+'<b>'+esc(t("Coach · tomorrow"))+'</b></div>'
+     +'<p>'+esc(t("Your rotation follows on from {a}: tomorrow is {b}.").replace("{a}",planName(p0.day.name)).replace("{b}",planName(p1.day.name)))+'</p></div>';
+  return "";}
 /* A day missed this week (js/engine/missed.js): moved to a free day, its key lifts carried
    into the days left, or let go, said plainly. Shown on today only, once, until dealt with. */
 function missedCard(iso){
@@ -170,7 +184,7 @@ function vTrainHome(){
   if(V.train!=="days"&&V.train!=="hub")V.train="days";
   h+=trainTop();
   if(S.active)h+=resumeHero();
-  else{var pd=planOn(sp,sel);h+=trainBar(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);h+=missedCard(sel);}
+  else{var pd=planOn(sp,sel);h+=trainBar(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);h+=aheadCard(sp,sel);h+=missedCard(sel);}
   if(!S.active)h+=blockCard();
   h+=deloadCard()+travelCard();
   h+=bodyTiles();

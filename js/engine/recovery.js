@@ -10,14 +10,28 @@ import {readiness, suggest} from "../coach/recovery.js";
 import {muscleOf, secondaryOf} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {S} from "../state.js";
-import {addDaysISO} from "./dayplan.js";
+import {addDaysISO, planOn} from "./dayplan.js";
+import {today} from "../util.js";
 
 var INFO={muscle:muscleOf,secondary:secondaryOf,activity:isActivity};
 
-/* Readiness on a date, from everything logged before it (and earlier that day). */
-function readyOn(iso){
-  var days=S.days||{},sore=Math.max(+((days[iso]||{}).sore)||0,+((days[addDaysISO(iso,-1)]||{}).sore)||0);
-  return readiness((S.sessions||[]).filter(function(s){return s.date<=iso;}),iso,INFO,sore);}
+/* Readiness on a date, from everything logged before it (and earlier that day). For a
+   date ahead, the workouts planned between now and then count as done, as they will be:
+   tomorrow is judged against today's workout, trained or not yet (owner, 2 Nov: change the
+   next day from the day before, in a rotation as on weekdays). */
+function plannedBetween(sp,from,to){
+  var out=[];
+  for(var d=from;d<to;d=addDaysISO(d,1)){
+    if((S.sessions||[]).some(function(s){return s.date===d&&(s.entries||[]).length;}))continue;
+    var p=planOn(sp,d);if(!p||p.rest||!p.day||!(p.day.ex||[]).length)continue;
+    out.push({date:d,entries:p.day.ex.map(function(e){var n=Math.max(1,+e.sets||3),sets=[];for(var i=0;i<n;i++)sets.push({w:0,r:8});
+      return {name:e.name,muscle:e.muscle,sets:sets};})});}
+  return out;}
+function readyOn(iso,sp){
+  var days=S.days||{},sore=Math.max(+((days[iso]||{}).sore)||0,+((days[addDaysISO(iso,-1)]||{}).sore)||0),now=today();
+  var log=(S.sessions||[]).filter(function(s){return s.date<=iso;});
+  if(sp&&iso>now)log=log.concat(plannedBetween(sp,now,iso));
+  return readiness(log,iso,INFO,sore);}
 
 /* p: dayplan.js planOn for that date. → {from, to, fromDay, toDay, tired} or null. */
 function swapAdvice(sp,iso,p){
@@ -25,7 +39,7 @@ function swapAdvice(sp,iso,p){
   if(S.daySwap&&S.daySwap[iso])return null;
   var idx=-1;sp.days.forEach(function(d,i){if(d.id===p.day.id)idx=i;});
   if(idx<0)return null;
-  var s=suggest(sp.days,idx,readyOn(iso),INFO);
+  var s=suggest(sp.days,idx,readyOn(iso,sp),INFO);
   if(!s)return null;
   s.fromDay=sp.days[idx];s.toDay=sp.days.filter(function(d){return d.id===s.to;})[0];
   return s;}
