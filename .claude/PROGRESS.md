@@ -2988,3 +2988,21 @@ but not as soon as today was changed, and the coach only judged a day by what wa
   "Your rotation follows on from Pull: tomorrow is Legs." Arabic for both.
 - Tests: regression "Tomorrow follows today, live, …"; the recovery test now expects the rotation's word on
   what follows after today is moved.
+
+## Training's calendar is a week rail — branch session/weekrail
+
+CACHE `bunyan-v195`. Owner, 2 Nov: "Go with words and Saturday weeks … smart, not taking too much space,
+function well … modern and premium with option to expand". Training's day bar (Food's `.dnav-card`) is
+replaced on Training by `.wkr` (js/ui/views/train.js weekRail/railDay); Food keeps its day bar.
+- One glass card: "This week / Next week / Last week / a date range", "N of M done" and a thin progress bar.
+- Seven days from the week start setting (Saturday by default), each with its weekday, date and a word for
+  what it holds (planName shortened: "Upper A", "Push", "—" for rest). Marks: green dot done, accent ring
+  planned, dim ring a rotation's projected day, square a weekday-pinned day gone by unlogged, ⇄ moved.
+- The chosen day sits on a pill that glides (--i, spring) to the day tapped; RTL mirrored.
+- Arrows and a swipe on the row page a week (data-wkpage; app.js swipe takes `[data-swipe]`, "week" or day);
+  "Today" appears when away. The corner chevron (data-wkopen) folds the week away and opens the month inside
+  the same card (datebar.js monthGrid, exported); a day picked there folds it back onto its week.
+- View state: V.twkBase (week shown, null = the selected day's), V.wkDir (slide direction), V.tcal.
+- Tour: the Training tip is "Your week" on `.wkr`. Arabic for every new string.
+- Tests: the Training day-bar tests now drive the rail (helper railTo); new: the rail's words, pill, paging,
+  swipe and moved mark; the rail in Arabic.

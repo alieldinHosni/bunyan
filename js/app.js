@@ -63,7 +63,7 @@ document.addEventListener("change",onChange);
    these listeners never block (passive). */
 var swipe=null;
 document.addEventListener("touchstart",function(ev){
-  var el=ev.touches.length===1&&ev.target.closest&&ev.target.closest('[data-swipe="day"]');
+  var el=ev.touches.length===1&&ev.target.closest&&ev.target.closest('[data-swipe]');
   swipe=el?{el:el,x:ev.touches[0].clientX,y:ev.touches[0].clientY,at:Date.now()}:null;
 },{passive:true});
 document.addEventListener("touchend",function(ev){
@@ -74,14 +74,16 @@ document.addEventListener("touchend",function(ev){
   /* Content follows the finger: dragging left brings the next day in. */
   var step=dx<0?1:-1;
   if(document.documentElement.getAttribute("dir")==="rtl")step=-step;
-  var btn=sw.el.querySelector('[data-dday="'+step+'"]');
+  /* A day on Food's bar; a week on Training's rail, whose arrows sit in its card. */
+  var wk=sw.el.getAttribute("data-swipe")==="week",scope=wk?(sw.el.closest(".wkr")||sw.el):sw.el;
+  var btn=scope.querySelector(wk?'[data-wkpage="'+step+'"]':'[data-dday="'+step+'"]');
   if(btn&&!btn.disabled){swipedAt=Date.now();btn.click();tap();}
 },{passive:true});
 /* A handled swipe must not also count as a tap on whatever the finger ended over —
    the date itself would open the month. Only the click that immediately follows. */
 var swipedAt=0;
 document.addEventListener("click",function(ev){
-  if(swipedAt&&Date.now()-swipedAt<400&&!(ev.target.closest&&ev.target.closest("[data-dday]"))){
+  if(swipedAt&&Date.now()-swipedAt<400&&!(ev.target.closest&&ev.target.closest("[data-dday],[data-wkpage]"))){
     swipedAt=0;ev.preventDefault();ev.stopPropagation();}
 },true);
 

@@ -447,13 +447,13 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
 [data-palette="mono"][data-theme="light"] #app :is(.hgreet-t,.thead h1,.thead-s,.tsec-h,.tlink,.tsec>.libn,.pglbl h2,
   .pglbl .pglink,.pgaside,.pgnone,.pgnote,.dhead-t,.dsub,.sg-h,.as-note,.chat-head-t,.chat-hi,.chat-grp-h,.chat-dis,.empty):not(:is(
   .card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.pgstat,.pgmac,.sg-list,.pid,.chat-a,
-  .chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.dnav-card,.glass) *){
+  .chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.dnav-card,.wkr,.glass) *){
   --text:#FFFFFF; --sub:#F0F5F4; --dim:#E2EBE9; --faint:#E2EBE9; --accentHi:#FFFFFF;
   text-shadow:0 1px 2px rgba(20,46,51,.28)}
 /* the ones that take their parent's colour rather than a token of their own */
 [data-palette="mono"][data-theme="light"] #app :is(.hgreet-t,.thead h1,.tsec-h,.pglbl h2,.dhead-t,.sg-h,.chat-head-t,.empty):not(:is(
   .card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.pgstat,.pgmac,.sg-list,.pid,.chat-a,
-  .chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.dnav-card,.glass) *){color:var(--text)}
+  .chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.dnav-card,.wkr,.glass) *){color:var(--text)}
 /* and the ground's drawing is drawn in the same white, like the reference's headings */
 [data-palette="mono"][data-theme="light"] #bgart{--bga:#F3F7F6; --bgb:#D6E1DF}
 /* An element that carries its own theme or mode (the rest screen, the splash, a theme
@@ -1403,6 +1403,63 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
    moves. */
 .dnav-wrap{margin-bottom:var(--s3)}
 .seg+.dnav-wrap{margin-top:12px}
+/* Training's week rail (views/train.js weekRail): the week at a glance in one card, the
+   selected day on a pill that glides between days, the month unfolding inside the card. */
+.wkr{position:relative;margin-bottom:var(--s3);padding:var(--s3) var(--s2) var(--s2);border-radius:var(--r5);overflow:hidden;isolation:isolate;
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,0) 110px),var(--raised);
+  border:1px solid var(--border);box-shadow:var(--shadow-card)}
+.wkr-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);padding:0 var(--s2) 0 var(--s3)}
+.wkr-ti{display:flex;flex-direction:column;gap:2px;min-width:0}
+.wkr-ti b{font-family:var(--display);font-size:16px;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wkr-p{font-size:12px;color:var(--dim)}
+.wkr-ha{display:flex;align-items:center;gap:6px;flex:none}
+.wkr .dnav-arrow.sm{flex-basis:34px;width:34px;height:34px}
+.wkr .dnav-arrow.sm svg{width:17px;height:17px}
+.wkr-x svg{transition:transform var(--m-cal) var(--e-cal)}
+.wkr.open .wkr-x svg{transform:rotate(180deg)}
+.wkr-today{height:30px;padding:0 var(--s3);border-radius:var(--rpill);border:1px solid var(--accent-edge);background:var(--accent-tint);
+  color:var(--accentHi);font-size:12px;font-weight:800;letter-spacing:.04em}
+.wkr-bar{height:3px;margin:var(--s2) var(--s3) 0;border-radius:2px;background:var(--hair);overflow:hidden}
+.wkr-bar i{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,var(--ok),var(--accentHi));transition:width var(--m-tab) var(--e-spring)}
+.wkr-fold{display:grid;grid-template-rows:1fr;opacity:1;
+  transition:grid-template-rows var(--m-cal) var(--e-cal),opacity calc(var(--m-cal) * .6) var(--e-cal)}
+.wkr.open .wkr-fold{grid-template-rows:0fr;opacity:0}
+.wkr-in{min-height:0;overflow:hidden}
+.wkr-r{position:relative;margin-top:var(--s2);touch-action:pan-y}
+.wkr-days{position:relative;z-index:1;display:grid;grid-template-columns:repeat(7,1fr)}
+.wkr-days.fwd{animation:dnavFwd var(--m-comp) var(--e-ios)}
+.wkr-days.back{animation:dnavBack var(--m-comp) var(--e-ios)}
+[dir="rtl"] .wkr-days.fwd{animation-name:dnavBack}
+[dir="rtl"] .wkr-days.back{animation-name:dnavFwd}
+/* The pill: one shape, its column a CSS variable, so the glide is a transform. */
+.wkr-hl{position:absolute;z-index:0;top:0;bottom:0;left:0;width:calc(100% / 7);border-radius:var(--r3);
+  background:linear-gradient(180deg,var(--accent),var(--accent-deep));box-shadow:0 8px 20px -6px var(--accent-glow);
+  transform:translateX(calc(var(--i) * 100%));transition:transform var(--m-tab) var(--e-spring),opacity var(--m-micro) var(--e-standard)}
+[dir="rtl"] .wkr-hl{left:auto;right:0;transform:translateX(calc(var(--i) * -100%))}
+.wkr-hl.off{opacity:0}
+.wkr-d{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0;padding:var(--s2) 0 7px;border:0;background:none;
+  color:var(--sub);border-radius:var(--r3);transition:color var(--m-micro) var(--e-standard),transform var(--m-press) var(--e-standard)}
+:root:not(.tch) .wkr-d:active,.wkr-d.tapd{transform:scale(.94)}
+.wkr-w{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase}
+.wkr-n{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;font-size:15.5px;font-weight:700;color:var(--text)}
+.wkr-d.today .wkr-n{box-shadow:inset 0 0 0 1.5px var(--accent-edge)}
+.wkr-m{display:block;width:6px;height:6px;border-radius:50%}
+.wkr-d.done .wkr-m{background:var(--ok)}
+.wkr-d.plan .wkr-m{box-shadow:inset 0 0 0 1.5px var(--accentHi)}
+.wkr-d.proj .wkr-m{box-shadow:inset 0 0 0 1.5px var(--dim);opacity:.8}
+.wkr-d.miss .wkr-m{width:8px;height:8px;border-radius:0;
+  background:linear-gradient(45deg,transparent 40%,var(--danger) 40% 60%,transparent 60%),linear-gradient(-45deg,transparent 40%,var(--danger) 40% 60%,transparent 60%)}
+.wkr-t{max-width:100%;padding:0;font-size:10px;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.wkr-d.rest .wkr-t{color:var(--dim);font-weight:500}
+.wkr-d.proj .wkr-t{color:var(--dim)}
+.wkr-sw{position:absolute;top:5px;inset-inline-end:5px;font-size:10px;font-weight:800;color:var(--accentHi)}
+.wkr-d{position:relative}
+.wkr-d.sel,.wkr-d.sel .wkr-w,.wkr-d.sel .wkr-n,.wkr-d.sel .wkr-t,.wkr-d.sel .wkr-sw{color:var(--onAccent)}
+.wkr-d.sel.today .wkr-n{box-shadow:inset 0 0 0 1.5px var(--onAccent)}
+.wkr-d.sel .wkr-m{box-shadow:inset 0 0 0 1.5px var(--onAccent)}
+.wkr-d.sel.done .wkr-m{background:var(--onAccent)}
+/* The month, inside the rail's card: no card of its own. */
+.wkr .dbcal{margin:var(--s2) var(--s1) 0;padding:var(--s3) var(--s1) var(--s1);border:0;border-top:1px solid var(--hair);border-radius:0;background:none}
 /* One surface for the bar and its month: the month unfolds inside it (owner, 2 Nov). */
 .dnav-card{position:relative;border-radius:var(--r5);overflow:hidden;isolation:isolate;
   background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 96px),var(--raised);

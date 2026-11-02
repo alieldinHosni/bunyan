@@ -151,4 +151,4 @@ function dateBar(o){
    +'</div>';
 }
 
-export {CHEV_L, CHEV_R, dateBar, shiftDay, weekInitials};
+export {CHEV_D, CHEV_L, CHEV_R, dateBar, monthGrid, shiftDay, weekInitials};

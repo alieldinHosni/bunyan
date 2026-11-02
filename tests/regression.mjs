@@ -58,6 +58,13 @@ const pause=(page,ms=300)=>page.waitForTimeout(ms);
 /* The dock as a thumb taps it. page.tap first scrolls its target into view, and for a
    fixed bar that can scroll the page — which, since the dock moves out of the way of
    scrolling, takes the target away mid-tap. A finger scrolls nothing. */
+/* Training's week rail to a day: a page of weeks forward or back if the day is not in the
+   week shown, then the day itself. */
+async function railTo(page,iso){
+  for(let i=0;i<6&&!(await page.$('.wkr [data-wkday="'+iso+'"]'));i++){
+    const first=await page.$eval('.wkr [data-wkday]',b=>b.getAttribute("data-wkday"));
+    await page.tap('.wkr [data-wkpage="'+(iso<first?-1:1)+'"]');await page.waitForTimeout(250);}
+  await page.tap('.wkr [data-wkday="'+iso+'"]');await page.waitForTimeout(300);}
 async function tapTab(page,tab){
   /* Profile is not on the dock: it opens from the person at the top right of Training. */
   if(tab==="profile"){await tapTab(page,"train");await page.waitForTimeout(150);await page.evaluate(()=>window.scrollTo(0,0));
@@ -497,7 +504,7 @@ await test("library growth: plyometrics, holds, drills and stretches load; kinds
 /* ---- the Training page, Coach's sections, and the workout bar ----------------------- */
 await test("Training opens on today with no sections; Coach's sections switch and are remembered after a reload",async page=>{
   await tapTab(page,"train");await pause(page);
-  if(!(await page.$('.dnav-card'))||!(await page.$('[data-startday]')))throw new Error("Training has no day bar or start");
+  if(!(await page.$('.wkr'))||!(await page.$('[data-startday]')))throw new Error("Training has no week rail or start");
   eq(await page.$$eval('#app .tsecs,#app [data-tsec]',a=>a.length),0,"no sections on Training");
   await coach(page,"train","program");
   if(!(await page.$('.bsched'))||!(await page.$('.drows [data-day]')))throw new Error("My program is not the builder");
@@ -517,16 +524,17 @@ await test("Back goes up one level: a day to My program, a template to Programs"
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.train,V.ctsub,!!document.querySelector('.tprog-card')]"),["days","programs",true],"template → Programs");
 });
-await test("Training's day bar: the next day shows its plan, Back to today returns to now",async page=>{
+await test("Training's week rail: tomorrow shows its plan, Today returns to now",async page=>{
   await tapTab(page,"train");await pause(page);
-  if(await page.$('.twk'))throw new Error("the old week strip is still there");
-  await page.tap('.dnav-card [data-dday="1"]');await pause(page);
+  if(await page.$('.twk')||await page.$('#app .dnav-card'))throw new Error("the old strip or day bar is still on Training");
   const tm=await page.evaluate(async()=>{const U=await import("/js/util.js");const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()+1);
     return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);});
+  await railTo(page,tm);
   eq(await ev(page,"V.tdate"),tm,"tomorrow: Train looks ahead");
-  if(await page.$eval('.dnav-card [data-dday="1"]',b=>b.disabled))throw new Error("the days after today are closed on Train");
-  await page.tap('.dnav-back');await pause(page);
-  eq(await ev(page,"V.tdate"),null);
+  if(!(await page.$('.wkr [data-wktoday]')))throw new Error("no way back to today");
+  await page.tap('.wkr [data-wktoday]');await pause(page);
+  eq(await ev(page,"[V.tdate,V.twkBase]"),[null,null]);
+  eq(await page.$$eval('.wkr [data-wktoday]',a=>a.length),0,"Today is hidden on today");
 });
 await test("My program edits the active program in place",async page=>{
   await coach(page,"train","program");
@@ -563,7 +571,7 @@ await test("the week starts on Saturday everywhere, and the setting moves it",as
     const f=sc.weekStartOf(u.today());return [sc.isoWeekday(f),sc.weekDates(u.today()).length,st.weeklyVolume().from===f,sc.spreadWd(3),sc.weekOrder()[6]];});
   eq(r,[6,7,true,[6,1,3],5],"Saturday first, Friday last and free");
   await tapTab(page,"train");await pause(page);
-  eq(await page.evaluate(()=>{const g=document.querySelector('.dnav-card .dbgrid'),kids=[...g.children].filter(e=>!e.classList.contains("dbwk"));
+  eq(await page.evaluate(()=>{const g=document.querySelector('.wkr .dbgrid'),kids=[...g.children].filter(e=>!e.classList.contains("dbwk"));
     const lead=kids.findIndex(e=>e.classList.contains("dbday")),d1=new Date(new Date().getFullYear(),new Date().getMonth(),1).getDay()||7;return (d1-lead+7)%7||7;}),6,"the month opens on Saturday");
   await tapTab(page,"profile");await pause(page);await page.tap('[data-sheet="set_app"]');await pause(page);
   await page.tap('[data-wkstart="7"]');await pause(page);
@@ -644,7 +652,7 @@ await test("Training: opens the app, one reminder at most, today's card, weigh-i
   eq(await page.$$eval('.hnote',a=>a.length)<=1,true,"one reminder");
   if(!(await page.$('#app .thero2 [data-startday]')))throw new Error("no today card");
   eq(await page.$$eval('#app .htile',a=>a.map(e=>["weight","steps"].filter(c=>e.classList.contains(c))[0])),["weight","steps"],"weigh-in and steps");
-  eq(await page.evaluate(()=>{const g=document.querySelector('.dnav-card .dbgrid'),kids=[...g.children].filter(e=>!e.classList.contains("dbwk"));
+  eq(await page.evaluate(()=>{const g=document.querySelector('.wkr .dbgrid'),kids=[...g.children].filter(e=>!e.classList.contains("dbwk"));
     const lead=kids.findIndex(e=>e.classList.contains("dbday")),d1=new Date(new Date().getFullYear(),new Date().getMonth(),1).getDay()||7;return (d1-lead+7)%7||7;}),6,"Saturday first");
   await tapTab(page,"food");await pause(page);
   const w0=await page.evaluate(async()=>{const s=await import("/js/state.js");const u=await import("/js/util.js");return s.dayRec(u.today()).water;});
@@ -3469,7 +3477,8 @@ await test("Tomorrow follows today, live, in a rotation as on weekdays: today ch
     const V=(await import("/js/ui/view.js")).V;V.assess=false;V.tab="train";V.train="days";V.tdate=null;(await import("/js/ui/render.js")).render();},week);
   await setUp(false);await pause(page,300);
   if(!/Your rotation follows on from Pull: tomorrow is Legs\./.test(await page.textContent('#app')))throw new Error("rotation: tomorrow not said: "+(await page.textContent('.thero2')));
-  await page.tap('.dnav-card [data-dday="1"]');await pause(page,300);
+  await railTo(page,await page.evaluate(async()=>{const U=await import("/js/util.js");const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()+1);
+    return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}));
   eq(await page.textContent('.thero2-n'),"Legs","rotation: tomorrow is Legs, not Pull again");
   await setUp(true);await pause(page,300);
   const card=await page.textContent('#app');
@@ -3478,22 +3487,65 @@ await test("Tomorrow follows today, live, in a rotation as on weekdays: today ch
   eq(await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()+1);
     const tm=new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);return st.split().days.find(x=>x.id===st.S.daySwap[tm]).name;}),"Legs","weekdays: tomorrow is Legs");
 });
-await test("Training calendar: Food's day bar; the month unfolds inside the bar's own card, a dot for a day trained, a ring for one planned; a past day shows below",async page=>{
+await test("Training calendar: the week rail opens to the month inside its own card, a dot for a day trained, a ring for one planned; a past day shows below",async page=>{
   await tapTab(page,"train");await pause(page,300);
-  eq(await page.$$eval('#app .dnav-card',a=>a.length),1,"one bar, Food's");
-  await page.tap('.dnav-card [data-dopen]');await pause(page,800);
-  const g=await page.evaluate(()=>{const c=document.querySelector(".dnav-card"),f=c.querySelector(".dbfold"),cal=f&&f.querySelector(".dbcal");
+  eq(await page.$$eval('#app .wkr',a=>a.length),1,"one rail");
+  eq(await page.$$eval('#app .dnav-card',a=>a.length),0,"no day bar on Training");
+  await page.tap('.wkr [data-wkopen]');await pause(page,800);
+  const g=await page.evaluate(()=>{const c=document.querySelector(".wkr"),f=c.querySelector(".dbfold"),cal=f&&f.querySelector(".dbcal"),w=c.querySelector(".wkr-fold");
     return [c.classList.contains("open"),!!f&&f.parentElement===c,f.getBoundingClientRect().height>200,getComputedStyle(cal).backgroundColor==="rgba(0, 0, 0, 0)",
-      parseFloat(getComputedStyle(cal).borderTopWidth)>0,Math.round(c.getBoundingClientRect().bottom)===Math.round(f.getBoundingClientRect().bottom)+1];});
-  eq(g,[true,true,true,true,true,true],"open: the month inside the bar's card, under a hairline, no card of its own");
-  eq(await page.evaluate(()=>!!document.querySelector(".dnav-card .dbday .dbdot.p")),true,"planned days ringed");
-  await page.tap('.dnav-card [data-dmonth="-1"]');await pause(page,300);
-  const past=await page.evaluate(()=>{const b=[...document.querySelectorAll(".dnav-card .dbday.trained")].pop();return b&&b.getAttribute("data-dpick");});
+      parseFloat(getComputedStyle(cal).borderTopWidth)>0,w.hasAttribute("inert")&&w.getBoundingClientRect().height<2];});
+  eq(g,[true,true,true,true,true,true],"open: the month inside the rail's card, under a hairline, the week folded away");
+  eq(await page.evaluate(()=>!!document.querySelector(".wkr .dbday .dbdot.p")),true,"planned days ringed");
+  await page.tap('.wkr [data-dmonth="-1"]');await pause(page,300);
+  const past=await page.evaluate(()=>{const b=[...document.querySelectorAll(".wkr .dbday.trained")].pop();return b&&b.getAttribute("data-dpick");});
   if(!past)throw new Error("no training day dotted in the month before");
-  await page.tap('.dnav-card [data-dpick="'+past+'"]');await pause(page,700);
-  eq(await page.evaluate(async()=>[(await import("/js/ui/view.js")).V.tdate,document.querySelector(".dnav-card").classList.contains("open")]),[past,false],"the day picked, the month folded back into the bar");
+  await page.tap('.wkr [data-dpick="'+past+'"]');await pause(page,700);
+  eq(await page.evaluate(async()=>[(await import("/js/ui/view.js")).V.tdate,document.querySelector(".wkr").classList.contains("open"),
+    !!document.querySelector('.wkr [data-wkday="'+(await import("/js/ui/view.js")).V.tdate+'"].sel')]),[past,false,true],"the day picked, the month folded back, its week on the rail");
   if(!(await page.$('.thero2 [data-openday="'+past+'"]')))throw new Error("its session is not offered below");
 },{prefs:{anim:true}});
+await test("Training's week rail: words for the days, the pill glides to the day tapped, weeks page and swipe, marks for done, planned and moved",async page=>{
+  const iso=await page.evaluate(async()=>{const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),sc=await import("/js/engine/schedule.js");
+    const days=sc.weekDates(sc.weekStartOf(U.today())),sp=st.split();
+    S.daySwap=S.daySwap||{};const later=days.filter(d=>d>U.today());if(later.length)S.daySwap[later[0]]=sp.days[0].id;st.saveDB();
+    (await import("/js/ui/render.js")).render();return days;});
+  await tapTab(page,"train");await pause(page,300);
+  const r=await page.evaluate(()=>{const c=[...document.querySelectorAll(".wkr .wkr-d")];
+    return [c.length,c.every(b=>b.querySelector(".wkr-t").textContent.trim().length>0),c.filter(b=>b.classList.contains("sel")).length,
+      c.every(b=>b.querySelector(".wkr-t").scrollWidth<=b.querySelector(".wkr-t").clientWidth+1)];});
+  eq(r,[7,true,1,true],"seven days, each with its word, the word fits, one chosen");
+  eq(await page.$eval(".wkr .wkr-d",b=>b.getAttribute("data-wkday")),iso[0],"Saturday first");
+  if(await page.evaluate(()=>!!document.querySelector(".wkr .wkr-d.today ~ .wkr-d"))){
+    const nx=await page.$eval(".wkr .wkr-d.today ~ .wkr-d",b=>b.getAttribute("data-wkday"));
+    eq(await page.$eval('.wkr [data-wkday="'+nx+'"]',b=>!!b.querySelector(".wkr-sw")),true,"the moved day carries its mark");
+    const x0=await page.$eval(".wkr-hl",e=>e.getBoundingClientRect().left);
+    await page.tap('.wkr [data-wkday="'+nx+'"]');await pause(page,500);
+    const x1=await page.$eval(".wkr-hl",e=>e.getBoundingClientRect().left);
+    eq([await page.$eval(".wkr-r",e=>e.style.getPropertyValue("--i")),x1!==x0],[String(iso.indexOf(nx)),true],"the pill moves to the day");}
+  const first=await page.$eval(".wkr .wkr-d",b=>b.getAttribute("data-wkday"));
+  await page.tap('.wkr [data-wkpage="1"]');await pause(page,300);
+  const f2=await page.$eval(".wkr .wkr-d",b=>b.getAttribute("data-wkday"));
+  eq(Math.round((Date.parse(f2)-Date.parse(first))/864e5),7,"next week");
+  eq(await page.textContent(".wkr-ti b"),"Next week");
+  if(!(await page.$('.wkr [data-wktoday]')))throw new Error("no Today on another week");
+  /* A swipe back, as a finger would, pages back. */
+  await page.evaluate(()=>{const r=document.querySelector(".wkr-r"),b=r.getBoundingClientRect(),y=b.top+b.height/2;
+    const T=(x)=>new Touch({identifier:1,target:r,clientX:x,clientY:y});
+    r.dispatchEvent(new TouchEvent("touchstart",{bubbles:true,cancelable:true,touches:[T(b.left+40)],changedTouches:[T(b.left+40)]}));
+    r.dispatchEvent(new TouchEvent("touchmove",{bubbles:true,cancelable:true,touches:[T(b.left+200)],changedTouches:[T(b.left+200)]}));
+    r.dispatchEvent(new TouchEvent("touchend",{bubbles:true,cancelable:true,touches:[],changedTouches:[T(b.left+200)]}));});
+  await pause(page,400);
+  eq(await page.$eval(".wkr .wkr-d",b=>b.getAttribute("data-wkday")),first,"swiped back to this week");
+});
+await test("Training's week rail in Arabic: right to left, the pill from the right, figures isolated",async page=>{
+  await tapTab(page,"train");await pause(page,300);
+  const r=await page.evaluate(()=>{const row=document.querySelector(".wkr-days"),c=[...row.children],hl=document.querySelector(".wkr-hl"),sel=document.querySelector(".wkr-d.sel");
+    const a=c[0].getBoundingClientRect(),b=c[6].getBoundingClientRect(),h=hl.getBoundingClientRect(),s=sel.getBoundingClientRect();
+    return [document.dir||document.documentElement.dir,a.left>b.left,Math.abs(h.left-s.left)<3,[...document.querySelectorAll(".wkr-n")].every(n=>n.classList.contains("num")),
+      /[؀-ۿ]/.test(document.querySelector(".wkr-ti").textContent)];});
+  eq(r,["rtl",true,true,true,true]);
+},{prefs:{lang:"ar",anim:false}});
 await test("Food's calendar unfolds at an easy pace under the date bar and folds back; a day picked folds it away",async page=>{
   await tapTab(page,"food");await pause(page,400);
   eq(await page.evaluate(()=>{const f=document.querySelector(".dbfold");return [!!f,f&&f.hasAttribute("inert"),f&&Math.round(f.getBoundingClientRect().height)];}),[true,true,0],"folded: in the page, nothing to see or tap");

@@ -106,6 +106,8 @@ function register(){
   has("dmonth",function(D){V.cal+= +D.dmonth;render();return;});
   key("dpick",function(D){
     dbSet(D.dpick);
+    /* Training's week rail follows the day picked in its month. */
+    if(V.tab==="train")V.twkBase=null;
     calOpen(false);
     render();return;});}
 

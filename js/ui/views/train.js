@@ -26,7 +26,7 @@ import {doseText, weeksText} from "../dose.js";
 import {addDaysISO, estMinutes, planOn} from "../../engine/dayplan.js";
 import {swapAdvice} from "../../engine/recovery.js";
 import {addsOn, missedNow} from "../../engine/missed.js";
-import {dateBar} from "../datebar.js";
+import {CHEV_D, CHEV_L, CHEV_R, monthGrid} from "../datebar.js";
 import {paceOf, routePath, speedOf} from "../../engine/run.js";
 import {groundFor, mapSeed} from "../runmap.js";
 import {bodyTiles, trainTop} from "./home.js";
@@ -184,7 +184,7 @@ function vTrainHome(){
   if(V.train!=="days"&&V.train!=="hub")V.train="days";
   h+=trainTop();
   if(S.active)h+=resumeHero();
-  else{var pd=planOn(sp,sel);h+=trainBar(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);h+=aheadCard(sp,sel);h+=missedCard(sel);}
+  else{var pd=planOn(sp,sel);h+=weekRail(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);h+=aheadCard(sp,sel);h+=missedCard(sel);}
   if(!S.active)h+=blockCard();
   h+=deloadCard()+travelCard();
   h+=bodyTiles();
@@ -255,11 +255,69 @@ function dayState(sp,iso){
    body"): the arrows, the day, what it holds, and the month unfolding inside the bar,
    with a filled dot for a day trained and a ring for one planned. Train looks ahead, so
    the days after today are open. */
-function trainBar(sp,sel){
-  var d=dayState(sp,sel),p=d.p,nm=p.name?planName(p.name):"";
-  var note=d.st==="done"?(nm?nm+" · ":"")+t("Done"):d.st==="plan"?nm:d.st==="rest"?t("Rest day"):t("Nothing logged");
-  return dateBar({date:sel,open:V.tcal,monthOffset:V.cal,future:true,note:note,
-    mark:function(iso){var x=dayState(sp,iso);return {t:x.st==="done",p:x.st==="plan",lbl:x.lbl};}});}
+/* ---- the week rail ---------------------------------------------------------------------
+   Owner, 2 Nov: Training's calendar should answer the week, not one date ("words under each
+   day, Saturday weeks; smart, not taking too much space, modern and premium, with an option
+   to expand"). One card: "This week · 2 of 4 done" with its bar, then the seven days, each
+   its initial, its date, a mark and the one word of what it holds:
+     green dot   trained            ring          planned
+     faint ring  a rotation's day ahead, which moves with what is trained
+     red ✕       a weekday's workout that went by without a session
+     ⇄           a day the coach or the person moved
+   The selected day sits on an accent pill that glides between days (one shape, its place a
+   CSS variable, so the move is the compositor's). A tap shows the day below; a swipe or the
+   arrows go a week either side; "Today" brings it back; ⌄ opens the month inside the same
+   card (Food's month, js/ui/datebar.js, the same marks) and folds it back. */
+function shortWord(name){
+  var w=String(name||"").replace(/\s+/g," ").trim().split(" ");
+  /* "Full Body A" → "Full A", "Upper B" stays: the letter tells the sessions apart. */
+  if(w.length>2&&/^([A-F]|[أبجدهـو])$/.test(w[w.length-1]))return w[0]+" "+w[w.length-1];
+  return w.length>2?w.slice(0,2).join(" "):w.join(" ");}
+function railDay(sp,iso,now){
+  var d=dayState(sp,iso),p=d.p,x={st:d.st,lbl:d.lbl,word:"",mark:""};
+  if(d.st==="done"){x.mark="done";x.word=planName(p.name||(p.session&&p.session.dayName)||t("Workout"));}
+  else if(d.st==="plan"){x.mark=sp.schedule!=="week"&&iso>now?"proj":"plan";x.word=planName(p.name);}
+  else if(d.st==="past"){var pd=sp.schedule==="week"?pinnedOn(sp,iso):null;
+    if(pd&&pd.ex.length){x.mark="miss";x.word=planName(pd.name);x.lbl+=", "+t("missed");}else x.word="—";}
+  else x.word="—";
+  x.swap=!!(S.daySwap&&S.daySwap[iso]&&iso>=now);
+  x.word=shortWord(x.word);
+  return x;}
+function weekRail(sp,sel){
+  var now=today(),ws=V.twkBase||weekStartOf(sel),days=weekDates(ws),done=0,plan=0,cells="",idx=-1;
+  var nowWs=weekStartOf(now),off=Math.round((Date.parse(ws)-Date.parse(nowWs))/6048e5),open=!!V.tcal;
+  days.forEach(function(iso,i){
+    var x=railDay(sp,iso,now);
+    if(x.mark==="done")done++;if(x.mark==="done"||x.mark==="plan"||x.mark==="proj"||x.mark==="miss")plan++;
+    if(iso===sel)idx=i;
+    var dt=new Date(iso+"T00:00:00");
+    cells+='<button class="wkr-d '+x.mark+(iso===now?' today':'')+(iso===sel?' sel':'')+(x.word==="—"?' rest':'')+'" data-wkday="'+iso+'"'
+     +' aria-pressed="'+(iso===sel)+'" aria-label="'+esc(x.lbl+(x.swap?", "+t("moved"):""))+'">'
+     +'<span class="wkr-w" aria-hidden="true">'+esc(dfmt(dt,{weekday:"narrow"}))+'</span>'
+     +'<span class="wkr-n num" aria-hidden="true">'+dt.getDate()+'</span>'
+     +'<i class="wkr-m" aria-hidden="true"></i>'
+     +'<span class="wkr-t" aria-hidden="true">'+esc(x.word)+'</span>'+(x.swap?'<b class="wkr-sw" aria-hidden="true">⇄</b>':'')+'</button>';});
+  var title=off===0?t("This week"):off===1?t("Next week"):off===-1?t("Last week")
+    :dfmt(new Date(days[0]+"T00:00:00"),{day:"numeric",month:"short"})+" – "+dfmt(new Date(days[6]+"T00:00:00"),{day:"numeric",month:"short"});
+  var away=sel!==now||off!==0;
+  var pct=plan?Math.round(done/plan*100):0;
+  return '<section class="wkr'+(open?' open':'')+'" data-k="wkr">'
+   +'<div class="wkr-h"><div class="wkr-ti"><b>'+esc(open?t("Training calendar"):title)+'</b>'
+   +(open?'':'<span class="wkr-p"><span class="num">'+done+'</span> '+esc(t("of"))+' <span class="num">'+plan+'</span> '+esc(t("done"))+'</span>')+'</div>'
+   +'<div class="wkr-ha">'
+   +(away?'<button class="wkr-today" data-wktoday="1">'+esc(t("Today"))+'</button>':'')
+   +(open?'':'<button class="dnav-arrow sm" data-wkpage="-1" aria-label="'+esc(t("Previous week"))+'">'+CHEV_L+'</button>'
+     +'<button class="dnav-arrow sm" data-wkpage="1" aria-label="'+esc(t("Next week"))+'">'+CHEV_R+'</button>')
+   +'<button class="dnav-arrow sm wkr-x" data-wkopen="1" aria-expanded="'+open+'" aria-label="'+esc(t(open?"Back to the week":"See the whole month"))+'">'+CHEV_D+'</button>'
+   +'</div></div>'
+   +(open?'':'<div class="wkr-bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div>')
+   +'<div class="wkr-fold"'+(open?' inert aria-hidden="true"':'')+'><div class="wkr-in">'
+   +'<div class="wkr-r" data-swipe="week" role="group" aria-label="'+esc(title)+'" style="--i:'+(idx<0?0:idx)+'">'
+   +'<span class="wkr-hl'+(idx<0?' off':'')+'" aria-hidden="true"></span>'
+   +'<div class="wkr-days'+(V.wkDir>0?' fwd':V.wkDir<0?' back':'')+'" data-k="wkd'+ws+'">'+cells+'</div></div></div></div>'
+   +'<div class="dbfold'+(open?' open':'')+'"'+(open?'':' inert aria-hidden="true"')+'><div class="dbfold-in">'
+   +monthGrid(sel,V.cal,true,function(iso){var x=railDay(sp,iso,now);return {t:x.mark==="done",p:x.mark==="plan"||x.mark==="proj",lbl:x.lbl};})
+   +'</div></div></section>';}
 
 /* Coach → Training → Programs: a new one from scratch, one brought in from a coach's
    PDF, every program you own, and the templates. (Letting Bunyan build it is Coach AI's
