@@ -26,6 +26,8 @@ import {builderBody, exercisesPage, programsPage, trainSub, weekOffer} from "./t
 import {foodSub, vMyFoods, vPlan, vTargets} from "./food.js";
 import {adviceBody, adviceNote} from "./pcheck.js";
 import {vChat} from "./chat.js";
+import {ckCard} from "../checkin.js";
+import {checkinOpen} from "../../engine/checkin.js";
 
 var CSECS=[["train","Training"],["food","Nutrition"],["ai","Coach"]];
 var TSUBS=[["program","My program"],["programs","Programs"],["exercises","Exercises"]];
@@ -72,6 +74,8 @@ function vCoachAI(){
      +'<button class="btn" data-setup="1">'+t("Start the assessment")+'</button></div>';
     return h;}
   h+=weekCard();
+  /* Last week, read and turned into changes to approve, until done for the week. */
+  h+=ckCard(checkinOpen());
   h+=adviceBody();
   /* The conversation is reached from the floating Coach button only (js/ui/coachfab.js). */
   h+=planTiles();

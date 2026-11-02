@@ -59,6 +59,8 @@ import {doseText} from "../dose.js";
 import {blockDay, blockNow} from "../../engine/blocks.js";
 import {addDaysISO, estMinutes, nextDayOf, planOn} from "../../engine/dayplan.js";
 import {swapAdvice} from "../../engine/recovery.js";
+import {checkinOpen} from "../../engine/checkin.js";
+import {ckChange} from "../checkin.js";
 import {adaptOf, avoids, standIn} from "../../engine/plan.js";
 import {rangeFor} from "../../coach/landmarks.js";
 import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
@@ -296,6 +298,9 @@ function aWeek(a){
   if(!tip)tip=t("Keep it as it is: it's working.");
   p(a,tip);
   S.ckSeen=weekStartOf(today());
+  /* Last week's check-in: the changes it proposes, one tap each (js/engine/checkin.js). */
+  var ck=checkinOpen();
+  if(ck&&ck.changes.length){if(!w.last)p(a,t("From last week's check-in:"));ck.changes.forEach(function(x){var c=ckChange(x);p(a,c.text);act(a,c.btn,{"data-ckdo":x.kind});});return a;}
   return act(a,t("Open Progress"),{"data-tab":"progress"});}
 
 /* ---- why a lift is stuck ---------------------------------------------------------------
