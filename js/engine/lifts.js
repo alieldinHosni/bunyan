@@ -235,7 +235,13 @@ function recommendIn(log,e,ctx){
   /* A new rep range (a new training phase, engine/phase.js): last time's weight was for
      other reps. Estimated from last time's best set by the estimated max (Epley, capped
      at 12 reps), aiming at the middle of the new range, and said to be an estimate. */
+  /* Six weeks or more since this lift was last done (our threshold: the book gives no
+     figure for detraining): last time's weight is not today's. No number is made up for
+     how much was lost; the set asks to start lighter and find it, with last time shown. */
   var lo=num(e.planned.lo),hi=num(e.planned.hi);
+  if(p.date&&ctx.today&&(Date.parse(ctx.today)-Date.parse(p.date))/864e5>=42&&top)
+    return {w:0,lo:lo,hi:hi,gap:true,last:top+" × "+topR,lastDate:p.date,
+      note:"Six weeks or more since you last did this: start lighter than last time and use the first set to find today's weight."};
   if(!ctx.deload&&topR&&lo&&hi&&(topR<lo-2||topR>hi+2)){
     var est=e1RM(top,topR),aim=Math.min(12,Math.round((lo+hi)/2)),nw=snapDown(est/(1+aim/30),inc);
     if(nw>0)return {w:nw,lo:lo,hi:hi,last:top+" × "+topR,est:true,

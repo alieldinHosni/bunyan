@@ -2079,6 +2079,39 @@ await test("Rest complete, closed: the band leaves (fades and folds), never fadi
   await pause(page,900);
   eq(await page.$$eval('.sess .rb',a=>a.length),0,"gone");
 },{prefs:{anim:true}});
+await test("Coach in a live workout: the session comes first — 'what now?', 'how long do I rest?' answer for the exercise on screen; food or tomorrow still get their own answer",async page=>{
+  await startWorkout(page);
+  await page.tap('[data-coachopen]');await pause(page,500);
+  const ex=await ev(page,"S.active.entries[0].name");
+  const askIt=async q=>{await page.fill('#chatq',q);await page.press('#chatq','Enter');await pause(page,700);
+    return page.evaluate(()=>{const x=[...document.querySelectorAll('#cpanel .chat-x')].pop();return x?x.textContent:"";});};
+  let a=await askIt("what now?");
+  if(!/This workout/.test(a)||!a.includes("Now:"))throw new Error("what now: "+a.slice(0,300));
+  a=await askIt("how long do I rest between sets");
+  if(!/Rest \d+ s between sets/.test(a))throw new Error("rest: "+a.slice(0,300));
+  a=await askIt("how much protein should I eat today?");
+  if(/This workout/.test(a))throw new Error("food went to the workout: "+a.slice(0,200));
+});
+await test("Coming back: an experienced lifter mostly off for months gets a phase-1 block now, a 'Coming back' card, and old weights not suggested after six weeks",async page=>{
+  await page.evaluate(async()=>{const A=await import("/js/ui/views/assess.js"),V=(await import("/js/ui/view.js")).V,st=await import("/js/state.js");
+    st.S.block={start:"2025-01-04"};
+    V.asd=A.draftFrom();Object.assign(V.asd,{sex:"m",age:34,height:180,weight:92,days:4,wd:[],goal:"recomp",level:"experienced"});V.asd.step=A.STEPS.indexOf("level");V.assess=true;(await import("/js/ui/render.js")).render();});
+  await pause(page,300);
+  await page.tap('[data-as="lapse|off"]');await pause(page,200);
+  if(!/rebuild/.test(await page.textContent('#app')))throw new Error("no word on what coming back changes");
+  await page.evaluate(async()=>{const A=await import("/js/ui/views/assess.js"),V=(await import("/js/ui/view.js")).V;V.asd.step=A.STEPS.indexOf("result");(await import("/js/ui/render.js")).render();});
+  for(let i=0;i<20&&!(await page.$('[data-k="backcard"]'));i++)await pause(page,250);
+  if(!(await page.$('[data-k="backcard"]')))throw new Error("no Coming back card");
+  await page.tap('[data-asuse]');await pause(page,600);
+  const r=await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js"),B=await import("/js/engine/blocks.js");
+    return [st.S.profile.lapse,st.S.block.start===sc.weekStartOf(U.today()),(B.phaseNow()||{}).n];});
+  eq(r,["off",true,1],"blocks start again, at phase 1");
+  /* A lift last done months ago: last time shown, no old weight suggested. */
+  const rec=await page.evaluate(async()=>{const st=await import("/js/state.js"),F=await import("/js/engine/formulas.js");
+    st.S.sessions.push({id:"old",date:"2026-03-01",entries:[{name:"Barbell Deadlift",sets:[{w:140,r:5}]}]});
+    return F.recommend({name:"Barbell Deadlift",planned:{lo:12,hi:20,sets:3}});});
+  eq([rec.gap,rec.w,/140 × 5/.test(rec.last)],[true,0,true],"found afresh, last time for reference");
+},{db:Object.assign(seed(),{onboarded:false})});
 await test("Plan check: targets that work against the goal are found in Coach AI with a dot on Coach, fixed with Undo, and kept until the numbers change",async page=>{
   /* Building muscle on 2,500 kcal against about 2,550 maintenance, and 110 g of protein. */
   eq(await page.$eval('nav [data-tab="coach"]',e=>e.classList.contains("advice")),true,"a dot on Coach");

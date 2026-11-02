@@ -24,6 +24,10 @@
    phaseOf(block, p) → {n, id, name, seq[], reps{min,max}, sets{min,max}, restMax, tempo, why}
    Pure apart from the profile it is handed. */
 import {PHASES, PHASE_VARIABLES} from "../knowledge/phases.js";
+import {BY_ADAPTATION} from "../knowledge/acute-variables.js";
+var ADAPT_REST={};
+[[4,"maximal_strength"],[5,"power"]].forEach(function(x){var a=BY_ADAPTATION.filter(function(r){return r.adaptation===x[1];})[0];
+  if(a&&a.restS)ADAPT_REST[x[0]]={min:+a.restS.min,max:+a.restS.max};});
 import {goalOf} from "../data/goals.js";
 import {rulesFor} from "./conditions.js";
 
@@ -62,6 +66,11 @@ function phaseDose(e,ph,compound){
   /* Phase 2's short rest is the rest after a superset, which the plan does not build: not
      applied to a lift done on its own. */
   if(ph.restMax&&ph.n!==2&&+e.rest>ph.restMax)e.rest=ph.restMax;
+  /* The heavy phases' rest is the book's for the adaptation (acute-variables.js
+     BY_ADAPTATION): maximal strength and power 3–5 min, "more effective and safer for
+     multi-joint lifts", ATP taking about 4 min to come back. On the multi-joint lifts. */
+  var AD=compound?ADAPT_REST[ph.n]:null;
+  if(AD&&AD.min)e.rest=Math.max(AD.min,Math.min(AD.max||AD.min,+e.rest||AD.min));
   e.phase=ph.n;if(ph.tempo)e.tempo=ph.tempo;
   return e;}
 

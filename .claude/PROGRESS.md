@@ -3163,3 +3163,24 @@ Owner, 3 Nov (screenshot): closing the finished rest band flashed before it went
   range, else 8–12; a number they asked for ("to 10") is used; for a body-weight lift, an easier version of
   the same movement (incline / knee; never feet up). Pick → confirm → action "live.fit" (snap live, Undo).
   The program is not changed. Test: "Coach, in a workout: 'not sure I can do 20 push-ups…'".
+
+## Rest by the book's heavy phases; coming back after a lapse; the workout first in the chat — same branch
+
+Owner, 3 Nov: (1) "confirm rest is calculated from the trained muscle and goal, whatever is in the knowledge
+base"; (2) "a long-time lifter, an inconsistent year, six months almost off: consider it in the assessment,
+the workout plan and the diet"; (3) "in a live workout the chat should put the session first".
+- Rest (answer): the book sets rest by the adaptation and the load (acute-variables.js BY_ADAPTATION, restRule),
+  not by muscle. The plan: experience base (main lift / multi-joint / single-joint) × the goal's factor,
+  clamped into the goal's adaptation range; the block's phase caps it (phase 1 ≤ 90 s). New: phases 4–5 put
+  multi-joint lifts at the book's 3–5 min (BY_ADAPTATION maximal_strength/power restS) — phase.js.
+- Coming back: assessment "Training lately" (steady / on and off this past year / mostly off for months),
+  profile.lapse/lapseAt. On use with a lapse: blocks restart this week (phase 1). Result card "Coming back".
+  ensureBlock: four weeks or more with no lifting (our threshold) restarts the blocks at phase 1.
+  recommendIn: a lift last done six weeks or more ago (our threshold; the book gives no detraining figure)
+  suggests no old weight — last time shown, "start lighter and find today's weight". Food: habits first
+  (protein daily, logging most days); calories at the check-in once the log is steady (it already needs 4+
+  logged days). Level "new" now reads "New to lifting." (returning lifters keep their level).
+- Chat in a workout: aLive answers "what now", rest/reps/sets/weight questions about this session, vague
+  messages, for the exercise on screen (set n of N, target, weight, rest, tempo, next). OFFSESS (food,
+  water, sleep, body weight, steps, other days) keeps their own answers; an exercise named that is not in
+  today's workout keeps its own answer. Test: "Coach in a live workout: …".

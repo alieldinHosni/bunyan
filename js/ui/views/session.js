@@ -9,7 +9,7 @@ import {incrementOf} from "../../engine/lifts.js";
 import {actInfo, actKcal, actRate, INTENSITY, intensityOf, isActivity} from "../../data/activities.js";
 import {S} from "../../state.js";
 import {fmtW, inLb, toDisp, wUnit} from "../../units.js";
-import {esc, fmtN, num} from "../../util.js";
+import {esc, fmtN, num, shortd} from "../../util.js";
 import {ex_isTimed, stepperInput, V} from "../view.js";
 import {vWarm, warmShown} from "./warmup.js";
 import {glyph} from "../glyphs.js";
@@ -256,6 +256,10 @@ function vSetCard(e,row,rows,o){
         :esc(t(S.profile&&S.profile.level==="new"
           ?"First time on this one. Pick a weight you could lift three or four more times than the reps asked, and learn the movement before adding load."
           :"First time on this one. Use the first set to find a working weight, then settle in.")))+'</span>';
+    /* Back on a lift after six weeks or more (engine/lifts.js): last time, for reference,
+       and to find today's weight rather than take the old one. */
+    else if(rec&&rec.gap)
+      hint='<span>'+t("Last time")+' <b><span class="num">'+esc(rec.last)+'</span></b> · '+esc(shortd(rec.lastDate))+'</span><span>'+esc(t(rec.note))+'</span>';
     else if(rec&&rec.amrap)
       hint='<span>'+(rec.w?t("Recommended")+' <b>'+fmtW(rec.w)+'</b> · ':'')
        +esc(t("As many clean reps as you can. Beat last time."))+(rec.last?' ('+esc(rec.last)+')':'')+'</span>';

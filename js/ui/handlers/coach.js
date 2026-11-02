@@ -49,7 +49,7 @@ function lastAsked(){var c=S.chat||[];return c[c.length-1]||null;}
    plan, all at once and all with one Undo. */
 function useAssessment(){
   var A=V.asd;if(!A)return;
-  var keys=["profile","prefs","gear","skip","goals","programs","activeProgram","onboarded","plannedWeekly","body","mealSlots"];
+  var keys=["profile","prefs","gear","skip","goals","programs","activeProgram","onboarded","plannedWeekly","body","mealSlots","block"];
   var before=JSON.parse(JSON.stringify(keys.reduce(function(o,k){o[k]=S[k];return o;},{})));
   Object.assign(S.profile,profileOf(A));
   S.prefs.meals=num(A.meals);S.prefs.diet=A.diet;S.prefs.avoid=A.avoid.slice();S.prefs.powder=!!A.powder;S.prefs.fstyle=A.style;S.prefs.likes=(A.likes||[]).slice();
@@ -61,6 +61,9 @@ function useAssessment(){
   var m=macroTargets();
   if(m)["kcal","p","c","f","water","steps"].forEach(function(k){if(m[k])S.goals[k]=m[k];});
   buildPlan(A.split||undefined);
+  /* Coming back after a lapse: the blocks start again at phase 1 this week (the book:
+     everyone starts there; it returns between harder phases for recovery). */
+  if(A.lapse==="off"||A.lapse==="patchy")S.block={start:weekStartOf(today())};
   /* The meals the result showed, worked out again from the targets just set. */
   if(FOODDB){var mp=buildMealPlan(S.goals,foodPrefs(A));if(mp&&mp.length)S.mealSlots=slotsFrom(mp);}
   S.onboarded=true;A.done=true;saveDB();render();window.scrollTo(0,0);

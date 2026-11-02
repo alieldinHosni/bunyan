@@ -36,8 +36,16 @@ function blockNow(date){
 function plannedLight(date){var b=blockNow(date);return !!(b&&b.light);}
 /* Called as a workout starts: begins block 1 if none has been — after an unplanned
    lighter week if one is running, so the block does not start inside it. */
+var GAP_DAYS=28;
 function ensureBlock(){
-  if(!blocksOn()||(S.block&&S.block.start))return;
+  if(!blocksOn())return;
+  /* Back after four weeks or more with no lifting (our threshold, not the book's): the
+     blocks start again at phase 1, which the book puts first and between harder phases. */
+  if(S.block&&S.block.start){
+    var last=(S.sessions||[]).filter(function(s){return (s.entries||[]).some(function(e){return !isActivity(e.name)&&(e.sets||[]).length;});})
+      .map(function(s){return s.date;}).sort().pop();
+    if(last&&(Date.parse(today())-Date.parse(last))/864e5>=GAP_DAYS)S.block={start:weekStartOf(today())};
+    return;}
   var dl=S.deload;
   S.block={start:dl&&dl.until&&today()<=dl.until?addDays(dl.until,1):weekStartOf(today())};}
 /* An unplanned lighter week is running (started from the card or the coach). */

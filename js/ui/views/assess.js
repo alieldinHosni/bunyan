@@ -67,7 +67,7 @@ function draftFrom(){
   var p=S.profile||{},pr=S.prefs||{};
   return {step:0,sex:p.sex||"m",age:num(p.age)||"",height:num(p.height)||"",
     weight:lastWeight()||num(p.weight)||"",goal:GOALS[p.goal]?p.goal:"lose",level:LEVELS[p.level]?p.level:"some",
-    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),conds:(p.conds||[]).slice(),faults:(p.faults||[]).slice(),
+    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),conds:(p.conds||[]).slice(),faults:(p.faults||[]).slice(),lapse:p.lapse||"steady",
     meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",likes:(pr.likes||[]).slice(),
     sleep:num(p.sleep)||7.5,stress:p.stress||"normal",wd:(p.wd||[]).map(Number),focus:(p.focus||[]).slice(),
     nolift:NOLIFT.filter(function(n){return (S.skip||[]).indexOf(n)>=0;}),split:null,done:false};}
@@ -76,7 +76,7 @@ function draftFrom(){
 function profileOf(a){
   return {sex:a.sex,age:num(a.age),height:num(a.height),weight:num(a.weight),goal:a.goal,level:a.level,
     days:(a.wd||[]).length>=2?a.wd.length:num(a.days),mins:num(a.mins),job:a.job,activity:activityOf(a),limits:a.limits.slice(),
-    health:(a.health||[]).slice(),faults:(a.faults||[]).slice(),faultsAt:(a.faults||[]).length?today():null,conds:(a.conds||[]).filter(function(c){return a.sex==="f"||!/^pregnancy/.test(c);}),sleep:num(a.sleep),stress:a.stress||"normal",
+    health:(a.health||[]).slice(),lapse:a.lapse||"steady",lapseAt:a.lapse&&a.lapse!=="steady"?today():null,faults:(a.faults||[]).slice(),faultsAt:(a.faults||[]).length?today():null,conds:(a.conds||[]).filter(function(c){return a.sex==="f"||!/^pregnancy/.test(c);}),sleep:num(a.sleep),stress:a.stress||"normal",
     /* The day high stress or short sleep was said, for the coach's follow-up (js/engine/stress.js). */
     stressAt:a.stress==="high"||(num(a.sleep)>0&&num(a.sleep)<6)?today():null,
     wd:(a.wd||[]).length>=2?a.wd.map(Number).sort(function(x,y){return x-y;}):[],focus:(a.focus||[]).slice(0,FOCUS_MAX)};}
@@ -162,9 +162,15 @@ function body(a){
     h+='<div class="ascards">'+GOAL_ORDER.map(function(k){return card("goal",k,t(GOALS[k].label),t(GOALS[k].desc),a.goal===k);}).join("")+'</div>';}
   else if(s==="level"){
     h+=q(t("How long have you been lifting?"),t("Consistently, not counting long breaks."));
-    var LD={new:"New to it, or back after a long time off.",some:"Training regularly for six months or more.",
+    var LD={new:"New to lifting.",some:"Training regularly for six months or more.",
       experienced:"A couple of years, and you know the main lifts.",advanced:"Many years, and progress has slowed right down."};
-    h+='<div class="ascards">'+Object.keys(LEVELS).map(function(k){return card("level",k,t(LEVELS[k].label),t(LD[k]),a.level===k);}).join("")+'</div>';}
+    h+='<div class="ascards">'+Object.keys(LEVELS).map(function(k){return card("level",k,t(LEVELS[k].label),t(LD[k]),a.level===k);}).join("")+'</div>';
+    /* Experience and recent training are two things (owner, 3 Nov: "a long-time lifter, but
+       an inconsistent year and six months almost off"): the skill stays, the fitness and the
+       habit need rebuilding. The plan starts at phase 1 again, weights are found afresh after
+       a long gap, and food starts from habits before numbers. */
+    h+=lbl(t("Training lately"))+chips("lapse",[["steady",t("Steady")],["patchy",t("On and off this past year")],["off",t("Mostly off for months")]],a.lapse||"steady");
+    if(a.lapse==="off"||a.lapse==="patchy")h+='<p class="as-note">'+esc(t("Your plan starts with a lighter block to rebuild, finds your working weights again instead of using old ones, and starts food with habits you can keep."))+'</p>';}
   else if(s==="week"){
     h+=q(t("Your week"),t("What you can keep up on a normal week, not your best one."));
     var fixed=(a.wd||[]).length>=2;
@@ -288,6 +294,15 @@ function mealGlyph(name){for(var i=0;i<MEAL_GLYPH.length;i++)if(MEAL_GLYPH[i][0]
 function foodLabel(x){return foodName(x);}
 function tile(ico,v,label){return '<div class="as-tile">'+glyph(ico)+'<b class="num">'+v+'</b><span>'+esc(label)+'</span></div>';}
 function cardHead(ico,label){return '<div class="as-ch">'+glyph(ico)+'<span>'+esc(label)+'</span></div>';}
+/* Coming back after a lapse: what the plan does about it, training and food. */
+function backCard(a){
+  var L=[t("A lighter first block (stabilisation): higher reps, slower, to rebuild joints, tendons and the habit before the heavy work."),
+    t("Your working weights found afresh: where your last time on a lift is six weeks old or more, the set asks you to start lighter and find today's weight."),
+    t("A full rest day between sessions on the same muscles: soreness comes back hard after time off."),
+    t("Food: two habits first, protein every day and logging most days. Calories are fine-tuned at the weekly check-in once the log is steady.")];
+  return '<section class="ascard2 condcard" data-k="backcard">'+cardHead("info",t("Coming back"))
+   +'<ul class="cond-l">'+L.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul>'
+   +'<p class="as-note">'+esc(t("Goals you can keep beat goals that look good: the book's advice for getting back to it."))+'</p></section>';}
 function result(a){
   var r=preview(a);
   if(!r)return '<p class="as-sub">'+t("Something went wrong working this out. Go back a step and try again.")+'</p>';
@@ -295,6 +310,7 @@ function result(a){
   h+='<div class="as-hero"><span class="shk">'+t("Your plan")+'</span><h1>'+esc(t(G.label))+'</h1>'
    +'<p class="as-sub">'+esc(t(LEVELS[a.level].label)+" · "+a.days+" "+t("days a week")+" · "+a.mins+" "+t("min"))+'</p></div>';
   h+=condCard(profileOf(a));
+  if(a.lapse==="off"||a.lapse==="patchy")h+=backCard(a);
   if((a.health||[]).length)h+='<div class="as-warn" role="note">'+glyph("info")+'<span>'+t("You ticked a health question: check with your doctor or a qualified exercise professional before hard training. This plan keeps to low and moderate effort.")+'</span></div>';
   if(a.done)h+='<div class="as-done" role="status">'+t("Your plan is in: today's training is on the Training page and today's meals on the Food page. Change anything in Coach.")+'</div>';
   /* Daily targets. */

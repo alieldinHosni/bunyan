@@ -262,6 +262,29 @@ function weekSpan(){
   var from=last?addDaysW(ws,-7):ws,to=last?addDaysW(ws,-1):n;
   return {from:from,to:to,last:last,prevFrom:addDaysW(from,-7),prevTo:addDaysW(from,-1)};}
 function inSpan(d,a,b){return d>=a&&d<=b;}
+/* In a workout, the workout first (owner, 3 Nov: "when I chat in a live session, most
+   probably I need something within this session; that should be the priority unless I say
+   something not related"). The exercise on screen: what is asked of it now, where the
+   person is in it, the weight to use, the rest and tempo, what comes next, and what can be
+   asked. */
+function aLive(a){
+  var A0=S.active,i=Math.min(A0.idx||0,A0.entries.length-1),e=A0.entries[i];
+  if(!e){p(a,t("Your workout is on. Ask me about the exercise on screen."));return a;}
+  var pl=e.planned||{},done=(e.sets||[]).filter(function(x){return !x.wu;}).length;
+  p(a,fill(t("Now: {ex}, set {n} of {s}."),{ex:exName(e.name),n:Math.min(done+1,pl.sets||done+1),s:pl.sets||"?"}));
+  var L2=[];
+  if(isActivity(e.name))L2.push(fill(t("{m} min, effort {r} of 10"),{m:pl.min||30,r:pl.rpe||6}));
+  else{
+    if(pl.lo||pl.hi)L2.push(fill(t("Target {r} reps"),{r:pl.lo&&pl.hi&&pl.lo!==pl.hi?pl.lo+"–"+pl.hi:(pl.hi||pl.lo)})+(pl.rir!=null?", "+fill(t("{n} in reserve"),{n:pl.rir}):""));
+    var rc=null;try{rc=recommend(e);}catch(err){rc=null;}
+    if(rc&&rc.w)L2.push(fill(t("Weight: {w}"),{w:fmtW(rc.w)})+(rc.note?" — "+t(rc.note):""));
+    if(e.rest)L2.push(fill(t("Rest {s} s between sets"),{s:e.rest}));
+    var tmp=pl.tempo&&(pl.tempo.match(/[\dX]-[\dX]-[\dX]-[\dX]/)||[""])[0];if(tmp)L2.push(fill(t("Tempo {t}"),{t:tmp}));}
+  l(a,L2);
+  var nx=A0.entries[i+1];if(nx)n(a,fill(t("Then {ex}."),{ex:exName(nx.name)}));
+  n(a,t("Ask me to fit the reps, swap it if the machine is taken, or how to do it."));
+  act(a,t("How to do it"),{"data-exdetail":e.name});
+  return a;}
 /* The phase this block runs, what it asks and why, and what comes next (engine/phase.js). */
 var PHASE_LINE={1:"Lighter loads, slow and controlled: movement quality, joint stability and endurance first. Progress by control, not weight.",
   2:"More strength in the main movers while keeping the stability you built.",3:"More sets in the growth range: building muscle.",
@@ -1273,7 +1296,7 @@ function aReassess(a){
 
 /* An answer, with what the person told the coach that bears on it said back. */
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
-var ANSWER={phase:aPhase,zones:aZones,health:aHealth,faq:aFaq,plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
+var ANSWER={live:aLive,phase:aPhase,zones:aZones,health:aHealth,faq:aFaq,plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
   help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
@@ -1359,6 +1382,13 @@ var ASKQ=/[?؟]|^(how|what|why|when|which|should|is|are|do|does|can|كام|اي�
 var EXQ=/\b(exercises?|moves?|movements?|lifts?)\b.*\b(for|to (build|grow|train|work|target|hit))\b|\b(best|good|what|which|suggest|recommend)\b.*\b(exercises?|moves?|lifts?)\b|\b(train|work|hit|grow|build)\b.*\b(chest|back|shoulders?|quads?|legs?|hamstrings?|glutes?|biceps?|triceps?|calves)\b.*\?|تمارين|تمرين ل|(اكبر|اكبّر|تكبير|اضخم|اقوي|اقوى) (ال)?(صدر|ضهر|ظهر|كتف|اكتاف|رجل|فخذ|باي|تراي|سمانه|مؤخره|خلفيه)/;
 var ONTO=/^(yeah|yes|ok|okay|but|and|so|hmm|well|what about|how about|then|طب|طيب|بس|و|يعني|ماشي|اه)( |$)/;
 var DEEPER=/^(why|how come|more|tell me more|explain|details|go on|really|ليه|ازاي|اكتر|وضح|كمل)( |$)/;
+/* An exercise named that is not in today's workout: a question about it, not the session. */
+function namedOther(text){var ns=namedExercises(text)||[];if(!ns.length||!S.active)return false;
+  return ns.some(function(n){return !S.active.entries.some(function(e){return e.name===n;});});}
+/* What a message in a workout is about when it is not the workout: food, water, sleep,
+   body weight, steps, another day. And the words that tie a question to the session. */
+var OFFSESS=/(^| )(eat|ate|food|meal|breakfast|lunch|dinner|snack|protein|calorie|calories|kcal|carbs?|diet|water|drink|sleep|slept|weigh|my weight|body weight|bodyweight scale|steps|walked|tomorrow|yesterday|next week|last week|program|my plan|split|اكل|كلت|وجبه|فطار|غدا|عشا|بروتين|سعرات|كارب|دايت|مايه|ميه|نوم|نمت|وزني|خطوات|بكره|امبارح|الاسبوع)( |$)/;
+var SESSW=/(^| )(this|current|now|next|set|sets|rep|reps|rest|resting|weight|exercise|machine|form|tempo|warm|heavy|light|ده|دي|دلوقتي|الجاي|مجموعه|عده|عدات|راحه|وزن|التمرين|تقيل|خفيف)( |$)/;
 var DOWORK=/ (complete|finish|end|stop|skip|delete|remove|add|log|undo|redo|repeat|move|swap|done with) (the |this |my |a |one |current |last |next )*(set|sets|exercise|exercises|workout|session|rep|reps) /;
 function knowFor(text,iid,it,prev){
   var fq=fold(text),short=fq.split(" ").length<=8;
@@ -1590,6 +1620,11 @@ function askOne(q,id,lang){
           /* A very close answer against a rule the words barely touched ("are sweets
              ruining my diet" brushing "running" in the steps rule). */
           ||fm.score>=FAQ_STRONG&&(it.score||0)<=8&&!ownQuestion(text,iid)&&!/^(today|tomorrow|goal)$/.test(iid))){iid="faq";it.faq=fm.f;}}
+      /* In a workout, the workout first: anything not plainly about something else is
+         answered for the exercise on screen (aLive). A question the bank answers, or one
+         the knowledge base does, goes there only when it does not speak of the session. */
+      if(S.active&&!picking&&!OFFSESS.test(fqx)&&(/^(unknown|today|track|week|tomorrow|goal|plan)$/.test(iid)
+        ||/^(faq|know|krest|kreps|ksets|weights)$/.test(iid)&&SESSW.test(fqx)&&!namedOther(text)))iid="live";
       /* "How do I add another profile", "how do I delete a workout": the words of a
          request, about something that is not an exercise or a food. A question the bank
          answers well goes there instead of a request with nothing to act on. */
@@ -1670,7 +1705,7 @@ function findMsg(at){return (S.chat||[]).filter(function(x){return x&&x.at===+at
    apart, and its buttons last. Nothing is coloured by who said it; the accent is kept
    for the one button an answer leads to. */
 /* What each answer is about, and its glyph (js/ui/glyphs.js). */
-var TOPIC={recap:["Your day","bowl"],plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],twice:["Two sessions in a day","dumbbell"],warmplan:["Your warm-up","flame"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
+var TOPIC={live:["This workout","dumbbell"],phase:["Your phase","bars"],zones:["Cardio zones","route"],health:["Your health","target"],recap:["Your day","bowl"],plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],twice:["Two sessions in a day","dumbbell"],warmplan:["Your warm-up","flame"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
   track:["How you're doing","bars"],weight:["Weight trend","scale"],protein:["Protein","shaker"],calories:["Calories","flame"],
   sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
   goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],

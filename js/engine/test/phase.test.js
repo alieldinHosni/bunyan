@@ -11,6 +11,8 @@ function run(t){
   t.eq([p1.reps,p1.sets,p1.restMax,/4-2-1-1/.test(p1.tempo)],[{min:12,max:20},{min:1,max:3},90,true],"phase 1 from the data: 12–20, 1–3 sets, rest up to 90 s, slow tempo");
   var p4=phaseOf(3,{goal:"strength",level:"some"});
   t.eq([phaseDose({sets:3,lo:8,hi:12,rest:120},p4,true).lo,phaseDose({sets:3,lo:8,hi:12,rest:120},p4,false).lo],[1,6],"maximal strength: 1–5 on the big lifts, the growth range on single-joint ones");
-  t.eq(phaseDose({sets:3,lo:8,hi:12,rest:120},phaseOf(2,{goal:"gain"}),true).rest,120,"phase 2's superset rest is not put on a lift done alone");}
+  t.eq(phaseDose({sets:3,lo:8,hi:12,rest:120},phaseOf(2,{goal:"gain"}),true).rest,120,"phase 2's superset rest is not put on a lift done alone");
+  t.eq([phaseDose({sets:3,lo:8,hi:12,rest:120},p4,true).rest,phaseDose({sets:3,lo:8,hi:12,rest:120},p4,false).rest],[180,120],"maximal strength: 3–5 min on the multi-joint lifts (the book's), the rest as planned");
+  t.eq(phaseDose({sets:3,lo:8,hi:12,rest:150},phaseOf(1,{goal:"gain"}),true).rest,90,"phase 1: rest no longer than 90 s");}
 
 export {run};
