@@ -2035,6 +2035,22 @@ await test("Exercise picker: what a health condition rules out is marked, and as
   await page.tap('#sheet [data-confirmok]');await pause(page,500);
   eq(await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days[0].ex.some(e=>e.name===\""+name+"\")"),true,"added when they say so");
 });
+await test("Coach chat knows the phase, the cardio zones and the health adjustments, in English and Arabic",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js");
+    st.S.block={start:sc.weekStartOf(U.today())};st.S.profile.conds=["hypertension"];st.S.profile.goal="gain";st.saveDB();});
+  await openChat(page);await page.fill('#chatq',"What phase am I in?");await page.press('#chatq','Enter');await pause(page,600);
+  let txt=await page.textContent('#cpanel');
+  if(!/Stabilisation endurance/.test(txt)||!/12–20 reps a set/.test(txt))throw new Error("phase: "+txt.slice(-500));
+  await page.fill('#chatq',"what are my heart rate zones");await page.press('#chatq','Enter');await pause(page,600);
+  txt=await page.textContent('#cpanel');
+  if(!/cardio stage 1/.test(txt)||!/go by feel/.test(txt))throw new Error("zones: "+txt.slice(-500));
+  await page.fill('#chatq',"what is adjusted for my health");await page.press('#chatq','Enter');await pause(page,600);
+  txt=await page.textContent('#cpanel');
+  if(!/Your plan is adjusted for: high blood pressure/.test(txt))throw new Error("health: "+txt.slice(-500));
+  await page.fill('#chatq',"ايه اللي اتغير في خطتي علشان حالتي الصحيه");await page.press('#chatq','Enter');await pause(page,600);
+  txt=await page.textContent('#cpanel');
+  if(!/خطتك متظبطة على/.test(txt))throw new Error("health in Arabic: "+txt.slice(-500));
+});
 await test("Plan check: targets that work against the goal are found in Coach AI with a dot on Coach, fixed with Undo, and kept until the numbers change",async page=>{
   /* Building muscle on 2,500 kcal against about 2,550 maintenance, and 110 g of protein. */
   eq(await page.$eval('nav [data-tab="coach"]',e=>e.classList.contains("advice")),true,"a dot on Coach");

@@ -16,7 +16,7 @@
 import {t, tm} from "../../i18n/dict.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {goalOf} from "../../data/goals.js";
-import {isActivity} from "../../data/activities.js";
+import {actInfo, isActivity} from "../../data/activities.js";
 import {ACTION_IDS, factOf, fold, intentOf, KNOW_IDS, situationOf, skel, spell} from "../../coach/intent.js";
 import {KINDS, listFacts} from "../../coach/context.js";
 import {reconcileNutrition, reconcileTraining} from "../../coach/reconcile.js";
@@ -58,7 +58,9 @@ import {FAT_RANGE, fatBand} from "../../engine/inbody.js";
 import {isReady} from "../smartcoach.js";
 import {backArrow} from "../nav.js";
 import {doseText} from "../dose.js";
-import {blockDay, blockNow} from "../../engine/blocks.js";
+import {blockDay, blockNow, phaseNow} from "../../engine/blocks.js";
+import {stageFor, zonesFor} from "../../engine/zones.js";
+import {COND_LABEL, condLines, rulesFor} from "../../engine/conditions.js";
 import {addDaysISO, estMinutes, nextDayOf, planOn} from "../../engine/dayplan.js";
 import {swapAdvice} from "../../engine/recovery.js";
 import {checkinOpen} from "../../engine/checkin.js";
@@ -260,6 +262,42 @@ function weekSpan(){
   var from=last?addDaysW(ws,-7):ws,to=last?addDaysW(ws,-1):n;
   return {from:from,to:to,last:last,prevFrom:addDaysW(from,-7),prevTo:addDaysW(from,-1)};}
 function inSpan(d,a,b){return d>=a&&d<=b;}
+/* The phase this block runs, what it asks and why, and what comes next (engine/phase.js). */
+var PHASE_LINE={1:"Lighter loads, slow and controlled: movement quality, joint stability and endurance first. Progress by control, not weight.",
+  2:"More strength in the main movers while keeping the stability you built.",3:"More sets in the growth range: building muscle.",
+  4:"Heavy, low-rep work on the big lifts: the most force you can make.",5:"Heavy lifts paired with fast, light ones: strength turned into speed."};
+function aPhase(a){
+  var b=blockNow(),ph=phaseNow();
+  if(!b||!ph){p(a,t("Training blocks are off, so there is no phase. Turn them on in Settings to train in the book's phases."));return a;}
+  p(a,fill(t("Block {b}, week {w} of {n}: {p}."),{b:b.block,w:b.week,n:b.of,p:t(ph.name)}));
+  p(a,t(PHASE_LINE[ph.n]||""));
+  var tmp=(ph.tempo.match(/[\dX]-[\dX]-[\dX]-[\dX]/)||[""])[0];
+  l(a,[fill(t("{a}–{b} reps a set"),{a:ph.reps.min,b:ph.reps.max})].concat(tmp?[fill(t("Tempo {t}: seconds lowering, pausing, lifting, pausing"),{t:tmp})]:[]));
+  if(ph.seq.length>1)n(a,fill(t("Your goal runs {s}, then round again. Next block: {p}."),{s:ph.seq.map(function(x){return x;}).join(" → "),p:t(PHASE_NAME_CHAT[ph.seq[b.block%ph.seq.length]])}));
+  src(a,"phases 13.3");
+  return a;}
+var PHASE_NAME_CHAT={1:"Stabilisation endurance",2:"Strength endurance",3:"Muscular development",4:"Maximal strength",5:"Power"};
+/* The cardio stage and zones (engine/zones.js), as Cardio & Sports shows them. */
+function aZones(a){
+  var pz=S.profile||{},z=zonesFor(pz),st=stageFor(pz,S.sessions,today(),{cardio:function(nm){var x=actInfo(nm);return !!(x&&x.grp==="Cardio");}});
+  p(a,fill(t("You are at cardio stage {n}."),{n:st.stage}));
+  if(z.feelOnly)p(a,t("Your medication can change your heart rate, so go by feel and the talk test, not a number."));
+  l(a,z.rows.filter(function(r){return r.zone<=Math.max(2,st.stage);}).map(function(r){
+    var fig=r.min||r.max?(r.min&&r.max?r.min+"–"+r.max:r.min?r.min+"+":"<"+(r.max+1))+" "+t("bpm"):fill(t("RPE {a}–{b}"),{a:r.rpe.min,b:r.rpe.max});
+    return fill(t("Zone {n}"),{n:r.zone})+": "+fig;}));
+  if(!z.measured&&!z.feelOnly)n(a,t("These are by feel until you do the talk test: it finds the heart rate where talking gets hard, and your zones follow from it."));
+  act(a,t(z.measured?"Change your zones":"Find your zones"),{"data-zones":"1"});
+  src(a,"cardio 15.4");
+  return a;}
+/* What the person's health conditions change in the plan (engine/conditions.js). */
+function aHealth(a){
+  var R=rulesFor(S.profile);
+  if(!R){p(a,t("You haven't told me about a health condition. If a doctor has, add it in the assessment's health step: the plan then follows the book's guidelines for it."));
+    act(a,t("Open the health step"),{"data-setupstep":"health"});return a;}
+  p(a,fill(t("Your plan is adjusted for: {c}."),{c:R.ids.map(function(i){return t(COND_LABEL[i]).toLowerCase();}).join(S.prefs.lang==="ar"?"، ":", ")}));
+  l(a,condLines(R,S.profile).map(function(x){var s0=t(x[0]);Object.keys(x[1]).forEach(function(k){s0=s0.replace("{"+k+"}",x[1][k]);});return s0;}));
+  n(a,t("From the textbook's guidelines for training with each one. Your doctor's advice comes first; stop and get checked if anything feels wrong."));
+  return a;}
 function aWeek(a){
   var w=weekSpan(),ss=S.sessions||[],G=S.goals||{};
   var wk=ss.filter(function(s){return inSpan(s.date,w.from,w.to);}),pv=ss.filter(function(s){return inSpan(s.date,w.prevFrom,w.prevTo);});
@@ -1235,7 +1273,7 @@ function aReassess(a){
 
 /* An answer, with what the person told the coach that bears on it said back. */
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
-var ANSWER={faq:aFaq,plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
+var ANSWER={phase:aPhase,zones:aZones,health:aHealth,faq:aFaq,plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
   help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
