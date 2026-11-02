@@ -6,7 +6,7 @@ import * as W from "../workout.js";
 import {LIB, loadInstructions} from "../../data/exercises.js";
 import {day} from "../../data/splits.js";
 import {addDaysISO} from "../../engine/dayplan.js";
-import {spreadWd, suggestWd, weekDates, weekOrder} from "../../engine/schedule.js";
+import {spreadWd, suggestWd, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
 import {missedNow} from "../../engine/missed.js";
 import {doseFor} from "../../engine/plan.js";
 import {restartAfter, restartBlock} from "../../engine/blocks.js";
@@ -18,6 +18,7 @@ import {dfmt, num, r1, today, uid} from "../../util.js";
 import {addExercise, askConfirm, askText, closeSheet, openSheet, val} from "../actions.js";
 import {grow} from "../more.js";
 import {pushNav} from "../nav.js";
+import {setPeek} from "../datebar.js";
 import {render} from "../render.js";
 import {tap, toast, V} from "../view.js";
 import {groupRun} from "../views/session.js";
@@ -114,6 +115,21 @@ function register(){
     S.daySwap[dt]=D.recoswap;saveDB();tap("ok");render();return;});
   /* A missed day (views/train.js missedCard): moved to the free day, its key lifts carried
      onto the days left, or let go; each marks it dealt with, and has Undo. */
+  /* The week rail (views/train.js weekRail): a day shown below, a week either side, back
+     to today, the month opened inside the card and folded back. */
+  key("wkday",function(D,el){
+    /* The chosen day tapped again: its details unfold in the card, or fold away. Only
+       classes change; nothing is drawn again. */
+    if(D.wkday===(V.tdate||today())&&el.classList.contains("sel")){setPeek(!V.wkPeek);return;}
+    V.tdate=D.wkday===today()?null:D.wkday;V.twkBase=null;V.wkDir=0;render();return;});
+  key("wkpage",function(D){var n=+D.wkpage,ws=V.twkBase||weekStartOf(V.tdate||today());
+    V.twkBase=addDaysISO(ws,7*n);if(V.twkBase===weekStartOf(today())&&!V.tdate)V.twkBase=null;V.wkDir=n;render();return;});
+  key("wktoday",function(){V.tdate=null;V.twkBase=null;V.tcal=false;V.wkDir=0;V.wkPeek=false;render();return;});
+  key("wkopen",function(){V.tcal=!V.tcal;
+    /* The month of the day chosen, or of the middle of the week shown when paged away. */
+    var sel=V.tdate||today(),ws=V.twkBase||weekStartOf(sel),on=sel>=ws&&sel<=addDaysISO(ws,6)?sel:addDaysISO(ws,3),
+      a=new Date(on+"T00:00:00"),b=new Date();
+    V.cal=(a.getFullYear()-b.getFullYear())*12+a.getMonth()-b.getMonth();render();return;});
   key("missdo",function(D){missApply(D.missdo);return;});
   key("missok",function(){var r=missedNow();if(!r)return;
     var before=JSON.parse(JSON.stringify(S.missedDone||{}));missMark(r.missed.date);saveDB();render();

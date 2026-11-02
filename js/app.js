@@ -33,6 +33,7 @@ import {setStorageErrorHandler} from "./util.js";
 import {syncWbar} from "./ui/wbar.js";
 import {paintRun} from "./ui/run.js";
 import {t} from "./i18n/dict.js";
+import {setPeek} from "./ui/datebar.js";
 
 /* Read as the finger lands, not on the click: by then Chrome has already taken the
    focus off the field for a tap outside it, and iOS has not. */
@@ -63,25 +64,43 @@ document.addEventListener("change",onChange);
    these listeners never block (passive). */
 var swipe=null;
 document.addEventListener("touchstart",function(ev){
-  var el=ev.touches.length===1&&ev.target.closest&&ev.target.closest('[data-swipe="day"]');
+  var el=ev.touches.length===1&&ev.target.closest&&ev.target.closest('[data-swipe]');
   swipe=el?{el:el,x:ev.touches[0].clientX,y:ev.touches[0].clientY,at:Date.now()}:null;
 },{passive:true});
+/* Training's week follows the finger while it drags, so the swipe is felt before it lands. */
+function dragOff(sw){if(sw&&sw.drag){sw.el.classList.remove("drag");sw.el.style.removeProperty("translate");sw.el.style.removeProperty("opacity");}}
+document.addEventListener("touchmove",function(ev){
+  var sw=swipe;if(!sw||sw.el.getAttribute("data-swipe")!=="week"||ev.touches.length!==1)return;
+  var dx=ev.touches[0].clientX-sw.x,dy=ev.touches[0].clientY-sw.y;
+  if(!sw.drag&&(Math.abs(dx)<8||Math.abs(dx)<Math.abs(dy)*1.5))return;
+  if(!sw.drag)sw.el.classList.add("drag");
+  sw.drag=true;
+  var m=Math.max(-120,Math.min(120,dx*0.55));
+  sw.el.style.translate=m+"px 0";sw.el.style.opacity=String(1-Math.abs(m)/300);
+},{passive:true});
+document.addEventListener("touchcancel",function(){dragOff(swipe);swipe=null;},{passive:true});
 document.addEventListener("touchend",function(ev){
   var sw=swipe;swipe=null;
+  dragOff(sw);
   if(!sw||!ev.changedTouches.length)return;
   var dx=ev.changedTouches[0].clientX-sw.x,dy=ev.changedTouches[0].clientY-sw.y;
   if(Math.abs(dx)<48||Math.abs(dx)<Math.abs(dy)*1.5||Date.now()-sw.at>700)return;
   /* Content follows the finger: dragging left brings the next day in. */
   var step=dx<0?1:-1;
   if(document.documentElement.getAttribute("dir")==="rtl")step=-step;
-  var btn=sw.el.querySelector('[data-dday="'+step+'"]');
+  /* A day on Food's bar; a week on Training's rail, whose arrows sit in its card. */
+  var wk=sw.el.getAttribute("data-swipe")==="week",scope=wk?(sw.el.closest(".wkr")||sw.el):sw.el;
+  var btn=scope.querySelector(wk?'[data-wkpage="'+step+'"]':'[data-dday="'+step+'"]');
   if(btn&&!btn.disabled){swipedAt=Date.now();btn.click();tap();}
 },{passive:true});
 /* A handled swipe must not also count as a tap on whatever the finger ended over —
    the date itself would open the month. Only the click that immediately follows. */
 var swipedAt=0;
+/* The week rail's open day folds away at a tap anywhere outside the rail. */
+document.addEventListener("pointerdown",function(ev){
+  if(V.wkPeek&&!(ev.target.closest&&ev.target.closest(".wkr")))setPeek(false);},true);
 document.addEventListener("click",function(ev){
-  if(swipedAt&&Date.now()-swipedAt<400&&!(ev.target.closest&&ev.target.closest("[data-dday]"))){
+  if(swipedAt&&Date.now()-swipedAt<400&&!(ev.target.closest&&ev.target.closest("[data-dday],[data-wkpage]"))){
     swipedAt=0;ev.preventDefault();ev.stopPropagation();}
 },true);
 
