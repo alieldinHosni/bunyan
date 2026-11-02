@@ -3021,3 +3021,20 @@ range underneath":
   or the plan's estMinutes shown as "~N min Estimated"), and the top muscles by sets. Tapped again or a tap
   outside the rail folds it (datebar.js setPeek: classes and inert only, no render). It stays open when
   another day is picked and shows that day. V.wkPeek holds it.
+
+## Change workout judges each day against the muscles — branch session/smartswap
+
+CACHE `bunyan-v196`. Owner, 2 Nov (today Full A, and the app let tomorrow be Full A too): "the app didn't scan
+the muscles in my split and identify the next possible day from the load on each muscle and the rest it needs".
+- Recovery model corrected (js/coach/recovery.js readiness): the day after a session is inside the textbook's
+  "at least one day of rest between sessions that stress the same muscles" (acute-variables · frequency), so a
+  muscle trained hard is not ready the day after (it counted as half ready, which let a full-body day follow a
+  full-body day). Ready from the second day on, as before. Coach tests updated to the rule; tiredOn now names
+  every tired muscle with 2+ planned sets (a full-body day gives each muscle a small share).
+- engine/recovery.js dayOptions(sp, iso): every day of the plan judged for a date: readiness, the muscles still
+  recovering, and the day after (weekdays: the day pinned there; rotation: the day that follows) — whether this
+  choice leaves it too soon. best: the plan's own day if it fits, else the readiest that fits, else rest.
+- Change workout sheet (sheets.js swapday): each row says Ready / Too soon for {muscles} / Leaves {day}'s {x}
+  too soon; Best fit marked (rest when nothing fits, with a note why). Picking a day too soon asks first, with
+  the rule (Train it anyway / Pick another / Cancel): the person decides.
+- Test: regression "Change workout judges each day against the muscles…" (full-body and upper/lower).

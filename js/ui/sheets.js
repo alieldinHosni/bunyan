@@ -9,6 +9,7 @@ import {exName, outdoorName, planName} from "../i18n/exnames.js";
 import {dayMeals, mealName} from "../engine/meals.js";
 import {exHay} from "./views/train.js";
 import {planOn} from "../engine/dayplan.js";
+import {dayOptions} from "../engine/recovery.js";
 import {ACT_GROUPS, actIcon, actInfo, actRate, actsIn, INTENSITY, intensityOf, isActivity, outdoorOf} from "../data/activities.js";
 import {barKg, bwShare, incrementFor, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition, foodName} from "../engine/nutrition.js";
@@ -18,7 +19,7 @@ import {sessionById, ensureSessionIds, dayOf, dayRec, S, split} from "../state.j
 import {blockNow} from "../engine/blocks.js";
 import {friends, snapStats} from "../engine/share.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
-import {esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
+import {dfmt, esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
 import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, stepperInput, V} from "./view.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
@@ -47,6 +48,12 @@ var CFICON={
   swap:'<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
   route:'<path d="M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM8 17h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/>'
 };
+/* The change-workout sheet's words: muscles as a short list, a date as its weekday. */
+function listOf(ms){var a=ms.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();}),ar=S.prefs&&S.prefs.lang==="ar";
+  return a.length<2?a.join(""):a.slice(0,-1).join(ar?"، ":", ")+(ar?" و":" "+t("and")+" ")+a[a.length-1];}
+function wdShort(iso){return dfmt(new Date(iso+"T00:00:00"),{weekday:"short"});}
+var glyphI='<span class="swnote-i" aria-hidden="true"></span>';
+
 function vSheet(){
   if(!V.sheet)return "";
   var b="";
@@ -480,21 +487,34 @@ function vSheet(){
     /* Which day of the plan this date runs. The rotation's own pick is marked, and
        choosing it again clears the swap. */
     var sd2=V.sd.date,spx=split(),cur=planOn(spx,sd2);
-    var auto=(S.daySwap||{})[sd2]?null:(cur.day||{}).id;
+    /* Each day judged for this date by what the muscles have had (engine/recovery.js
+       dayOptions): ready, or which muscles are still recovering, and what it leaves for
+       the day after. The best fit is marked; a day that comes too soon asks first. */
+    var opt=null;try{opt=dayOptions(spx,sd2);}catch(e){opt=null;}
+    var byId={};((opt&&opt.days)||[]).forEach(function(o){byId[o.id]=o;});
+    var restBest=opt&&opt.best==="rest";
     b='<div class="se-top"><span class="se-k">'+esc(pretty(sd2))+'</span><h2>'+t("Change workout")+'</h2>'
-     +'<p class="shsub">'+t("Pick what you want to do on this day. The rest of the plan moves on from what you actually train.")+'</p></div>'
-     +'<div class="card tdays">';
+     +'<p class="shsub">'+t("Pick what you want to do on this day. The rest of the plan moves on from what you actually train.")+'</p>'
+     +(restBest?'<p class="swnote">'+glyphI+esc(t("Every workout in your plan trains muscles that are still recovering. A rest day here lets them come back."))+'</p>':'')
+     +'</div><div class="card tdays">';
+    var restId=null;spx.days.forEach(function(d){if(!d.ex.length&&!restId)restId=d.id;});
     spx.days.forEach(function(d){
-      var on=cur.day&&cur.day.id===d.id;
-      b+='<button class="trow'+(on?' on':'')+'" data-swapto="'+d.id+'" aria-pressed="'+(on?"true":"false")+'">'
+      var on=cur.day&&cur.day.id===d.id,o=byId[d.id],best=opt&&(opt.best===d.id||(restBest&&d.id===restId));
+      var why="";
+      if(o&&!o.rest){
+        if(o.tired.length)why=t("Too soon for {m}").replace("{m}",listOf(o.tired));
+        else if(o.next&&o.next.tired.length)why=t("Leaves {d}'s {x} too soon").replace("{d}",wdShort(o.next.date)).replace("{x}",planName(o.next.name));
+        else why=t("Ready");}
+      b+='<button class="trow'+(on?' on':'')+(o&&!o.ok?' warn':'')+'" data-swapto="'+d.id+'" aria-pressed="'+(on?"true":"false")+'">'
        +'<span><span class="trow-n">'+esc(planName(d.name))+'</span>'
-       +'<span class="trow-s">'+(d.ex.length?d.ex.length+' '+t("exercises"):t("rest day"))+'</span></span>'
-       +(on?'<span class="tnext">'+t("Selected")+'</span>':'')+'</button>';});
+       +'<span class="trow-s">'+(d.ex.length?'<span class="num">'+d.ex.length+'</span> '+esc(t("exercises")):esc(t("rest day")))
+       +(why?' · <span class="trow-r'+(o.ok?' ok':'')+'">'+esc(why)+'</span>':'')+'</span></span>'
+       +(on?'<span class="tnext">'+t("Selected")+'</span>':best?'<span class="tnext best">'+t("Best fit")+'</span>':'')+'</button>';});
     /* The day taken off (the coach's "skip today" is this row). Only where the program has
        no rest day of its own to pick. */
-    if(!spx.days.some(function(d){return !d.ex.length;})){var off=(S.daySwap||{})[sd2]==="rest";
+    if(!restId){var off=(S.daySwap||{})[sd2]==="rest";
       b+='<button class="trow'+(off?' on':'')+'" data-swapto="rest" aria-pressed="'+off+'"><span><span class="trow-n">'+t("Rest day")+'</span>'
-       +'<span class="trow-s">'+t("Take this day off")+'</span></span>'+(off?'<span class="tnext">'+t("Selected")+'</span>':'')+'</button>';}
+       +'<span class="trow-s">'+t("Take this day off")+'</span></span>'+(off?'<span class="tnext">'+t("Selected")+'</span>':restBest?'<span class="tnext best">'+t("Best fit")+'</span>':'')+'</button>';}
     b+='</div>';
     if((S.daySwap||{})[sd2])b+='<button class="btn g" data-swapto="">'+t("Back to the plan")+'</button>';
   }
