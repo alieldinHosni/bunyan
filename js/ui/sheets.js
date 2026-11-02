@@ -575,7 +575,11 @@ function vSheet(){
     var restBest=opt&&opt.best==="rest";
     b='<div class="se-top"><span class="se-k">'+esc(pretty(sd2))+'</span><h2>'+t("Change workout")+'</h2>'
      +'<p class="shsub">'+t("Pick what you want to do on this day. The rest of the plan moves on from what you actually train.")+'</p>'
-     +(restBest?'<p class="swnote">'+glyphI+esc(t("Every workout in your plan trains muscles that are still recovering. A rest day here lets them come back."))+'</p>':'')
+     +(restBest?'<p class="swnote">'+glyphI+'<span>'+esc(t("Every workout in your plan trains muscles that are still recovering. A rest day here lets them come back."))
+       /* The book's own recovery option: steady zone-1 cardio (cardio.js STAGES, stage 1:
+          "also recovery after hard sessions"). */
+       +' '+esc(t("Want to move anyway? Easy cardio in zone 1, a walk or a ride where you can talk comfortably, helps recovery."))
+       +' <button class="swnote-b" data-actsheet="1">'+esc(t("Cardio & Sports"))+'</button></span></p>':'')
      +'</div>'+recoveryList(sd2)+'<div class="card tdays">';
     var restId=null;spx.days.forEach(function(d){if(!d.ex.length&&!restId)restId=d.id;});
     spx.days.forEach(function(d){

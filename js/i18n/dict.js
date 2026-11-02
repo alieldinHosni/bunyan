@@ -1389,6 +1389,7 @@ var AR={"Most of {a} lands on {m}, trained {w}. They need a rest day between har
 "An estimate from the sets you logged and the book's rest day between sessions on the same muscles, in steps of 25%.": "تقدير من المجموعات اللي سجلتها وقاعدة الكتاب بيوم راحة بين التمارين على نفس العضلات، بخطوات 25%.",
 "Workouts planned before this day count as done.": "التمارين المخططة قبل اليوم ده محسوبة كأنها اتعملت.",
 "+{n} more, nearly recovered.": "+{n} كمان، قربت تستشفى.",
+"Want to move anyway? Easy cardio in zone 1, a walk or a ride where you can talk comfortably, helps recovery.": "عايز تتحرك برضه؟ كارديو سهل في المنطقة 1، مشي أو عجلة وانت قادر تتكلم براحتك، بيساعد على الاستشفاء.",
 "Your week": "أسبوعك",
 "Leave every day on Rest to run the days in rotation instead.": "سيب كل الأيام راحة لو عايز الأيام تمشي بالدور بدل كده.",
 "Day name": "اسم اليوم",

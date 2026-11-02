@@ -3193,3 +3193,4 @@ before it, counted as done — the same basis as the day rows), its readiness in
 model is an estimate, so no false precision) and the first day it is ready by the rest-day rule. The sheet
 lists the six least ready (bar, ≈%, "ready Wed", "+N more"), with the note that it is an estimate; each day
 row says "≈N% ready". bidi.js: "≈" is part of a figure (RTL kept "≈0%" in order).
+- On a day where every workout comes too soon (always the day after on a full-body plan), the note offers easy zone-1 cardio, the book's recovery option (cardio.js stage 1), with a Cardio & Sports button.
