@@ -13,6 +13,10 @@ function run(t){
   t.eq(stageFor({goal:"lose"},three.slice(0,2),"2026-11-02",cardio).stage,1,"two easy sessions: stage 1 still");
   t.eq([stageFor({goal:"lose"},three,"2026-11-02",cardio).needVT1,stageFor({goal:"lose",vt1:150},three,"2026-11-02",cardio).stage],[true,2],"three easy 30-minute sessions: stage 2 once VT1 is known");
   t.eq(stageFor({goal:"lose"},[day("2026-11-01",35,7),day("2026-10-30",30,8),day("2026-10-28",40,7)],"2026-11-02",cardio).ready,false,"hard sessions are not zone 1");
-  t.eq([stageFor({goal:"endurance",level:"some",vt1:150,vt2:170},three,"2026-11-02",cardio).stage,stageFor({goal:"endurance",level:"new",vt1:150,vt2:170},three,"2026-11-02",cardio).stage],[3,2],"stage 3 needs VT2 and is not for a beginner");}
+  t.eq([stageFor({goal:"endurance",level:"some",vt1:150,vt2:170},three,"2026-11-02",cardio).stage,stageFor({goal:"endurance",level:"new",vt1:150,vt2:170},three,"2026-11-02",cardio).stage],[3,2],"stage 3 needs VT2 and is not for a beginner");
+  var fl={goal:"lose",level:"experienced",vt1:150,vt2:170};
+  t.eq([stageFor(fl,three,"2026-11-02",cardio).stage,stageFor(fl,three,"2026-11-02",cardio).can3,stageFor(Object.assign({cardio3:true},fl),three,"2026-11-02",cardio).stage],[2,true,3],"fat loss: stage 3 is the experienced lifter's choice");
+  var ad={goal:"athletic",level:"advanced",vt1:150,vt2:170};
+  t.eq([stageFor(ad,three,"2026-11-02",cardio).can4,stageFor(Object.assign({cardio4:true},ad),three,"2026-11-02",cardio).stage],[true,4],"stage 4: offered to the advanced athlete, theirs to take");}
 
 export {run};

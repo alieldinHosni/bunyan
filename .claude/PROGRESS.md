@@ -3194,3 +3194,25 @@ model is an estimate, so no false precision) and the first day it is ready by th
 lists the six least ready (bar, ≈%, "ready Wed", "+N more"), with the note that it is an estimate; each day
 row says "≈N% ready". bidi.js: "≈" is part of a figure (RTL kept "≈0%" in order).
 - On a day where every workout comes too soon (always the day after on a full-body plan), the note offers easy zone-1 cardio, the book's recovery option (cardio.js stage 1), with a Cardio & Sports button.
+
+## Experienced lifters choose; the rest of the open list — same branch (CACHE v199)
+
+Owner, 3 Nov: "anything mandatory by the book that could be optional by experience: a suggestion, and experienced
+lifters decide; work on everything else".
+- Stabilisation (phase 1): experienced/advanced with no health condition get it as a suggestion on the block card
+  ("Skip it" / "Use the book's order", profile.skipStab; phase.js canSkipStab, seqFor drops 1).
+- Cardio: stage 3 for an experienced lifter whose only bar is a modest goal (fat loss, keeping) is their choice
+  (profile.cardio3); stage 4 offered to advanced athletes (athletic/endurance/strength) with VT1+VT2 at stage 3
+  (profile.cardio4), with the book's recovery gauge and overtraining signs.
+- Already the person's call: Train it anyway on a day too soon; Skip warm-up (corrective work included).
+- My program: "This block is {phase}: your workouts use {a}–{b} reps…; the reps below are used when blocks are off".
+- Phase 2 supersets (phase.js supersetsFor; actions.js startDay): the book's pairs the library has both halves of —
+  bench → push-ups, chest press → standing cable chest press, calf raise → single-leg calf raise — grouped (grp),
+  the partner at 8–12, slow tempo; kit and limits respected. Squat/RDL/row/pulldown/press pairs are not in the
+  library: those lifts stay alone (nothing invented).
+- Higher body weight: opt-in in the assessment's conditions (never from BMI): conditions.js obesity — 10–15 reps,
+  standing or seated (no floor), steady breathing.
+- Chat warm-up answer opens with the squat check's corrective work. Run screen: today's target zone by feel (and
+  zone 1's bpm when measured). Chat: a resting heart rate question is not the zones answer (no data; says so).
+- Tests: engine phase/zones/conditions additions; regression "Experienced lifters choose: …"; coach actions domain
+  list includes live.

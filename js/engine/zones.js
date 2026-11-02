@@ -64,6 +64,13 @@ function stageFor(p,sessions,today,info){
   out.stage=2;
   var modest=p.level==="new"||!!R||/^(lose|recomp|maintain|mobility)$/.test(p.goal||"");
   if(!modest){if(z.both)out.stage=3;else out.needVT2=true;}
+  /* The book skips stage 3 for a modest goal; for an experienced lifter whose only bar is
+     the goal (fat loss, keeping), it is a choice they make (p.cardio3). */
+  else if(z.both&&!R&&(p.level==="experienced"||p.level==="advanced")){out.can3=true;if(p.cardio3)out.stage=3;}
+  /* Stage 4, for advanced athletes after anaerobic capacity (the book's notFor: modest
+     fitness, averse to high intensity): offered, never given; they choose it (p.cardio4). */
+  out.can4=out.stage===3&&p.level==="advanced"&&/^(athletic|endurance|strength)$/.test(p.goal||"");
+  if(out.can4&&p.cardio4)out.stage=4;
   return out;}
 
 export {stageFor, zonesFor};

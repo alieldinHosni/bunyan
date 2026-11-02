@@ -1,4 +1,4 @@
-import {phaseDose, phaseOf, seqFor} from "../phase.js";
+import {canSkipStab, phaseDose, phaseOf, seqFor, supersetsFor} from "../phase.js";
 
 /* The book's phases (js/knowledge/phases.js): everyone starts at 1, then 2, then the goal's. */
 function run(t){
@@ -13,6 +13,14 @@ function run(t){
   t.eq([phaseDose({sets:3,lo:8,hi:12,rest:120},p4,true).lo,phaseDose({sets:3,lo:8,hi:12,rest:120},p4,false).lo],[1,6],"maximal strength: 1–5 on the big lifts, the growth range on single-joint ones");
   t.eq(phaseDose({sets:3,lo:8,hi:12,rest:120},phaseOf(2,{goal:"gain"}),true).rest,120,"phase 2's superset rest is not put on a lift done alone");
   t.eq([phaseDose({sets:3,lo:8,hi:12,rest:120},p4,true).rest,phaseDose({sets:3,lo:8,hi:12,rest:120},p4,false).rest],[180,120],"maximal strength: 3–5 min on the multi-joint lifts (the book's), the rest as planned");
-  t.eq(phaseDose({sets:3,lo:8,hi:12,rest:150},phaseOf(1,{goal:"gain"}),true).rest,90,"phase 1: rest no longer than 90 s");}
+  t.eq(phaseDose({sets:3,lo:8,hi:12,rest:150},phaseOf(1,{goal:"gain"}),true).rest,90,"phase 1: rest no longer than 90 s");
+  /* Experienced lifters may skip stabilisation; nobody else, and not with a condition. */
+  t.eq([seqFor({goal:"gain",level:"experienced",skipStab:true}),seqFor({goal:"gain",level:"some",skipStab:true}),seqFor({goal:"gain",level:"advanced",skipStab:true,conds:["diabetes"]})],
+    [[2,3],[1,2,3],[1,2]],"skipping stabilisation: the experienced lifter's choice only");
+  t.eq([canSkipStab({level:"advanced"}),canSkipStab({level:"new"})],[true,false],"who may choose");
+  /* Phase 2's supersets: only pairs the library has both halves of. */
+  var day=[{name:"Barbell Bench Press - Medium Grip"},{name:"Barbell Squat"},{name:"Standing Calf Raises"},{name:"Wide-Grip Lat Pulldown"}];
+  t.eq(supersetsFor(day,function(){return true;}),[{after:0,name:"Pushups"},{after:2,name:"Single-Leg Calf Raise"}],"bench with push-ups, calves with single-leg calves; the squat and the pulldown on their own");
+  t.eq(supersetsFor(day,function(n){return n!=="Pushups";}),[{after:2,name:"Single-Leg Calf Raise"}],"a partner ruled out (lying down): no pair");}
 
 export {run};

@@ -28,7 +28,10 @@ import {CONDITIONS, POPULATIONS} from "../knowledge/conditions.js";
 var ASK=[["hypertension","High blood pressure"],["coronary_heart_disease","Heart disease"],["diabetes","Diabetes"],
   ["osteoporosis","Osteoporosis or low bone density"],["arthritis","Arthritis"],["chronic_lung_disease","Asthma or another lung condition"],
   ["peripheral_arterial_disease","Leg pain from poor circulation (PAD)"],["cancer","Cancer, during or after treatment"],
-  ["pregnancy_early","Pregnant, first 12 weeks"],["pregnancy_late","Pregnant, past 12 weeks"]];
+  ["pregnancy_early","Pregnant, first 12 weeks"],["pregnancy_late","Pregnant, past 12 weeks"],
+  /* Opt-in, never inferred from a BMI (owner, 3 Nov): the book's guidelines for a higher
+     body weight are about comfort — standing or seated work, 10–15 reps, breathing. */
+  ["obesity","Higher body weight: comfort first (standing or seated)"]];
 var LABEL={older_adults:"Age 65 and over",youth:"Under 18"};
 ASK.forEach(function(x){LABEL[x[0]]=x[1];});
 
@@ -65,7 +68,9 @@ function rulesFor(p){
     /* Lying on the back or front: high blood pressure (head below the heart above all),
        and pregnancy past 12 weeks. */
     var pos=txt(c.positions);
-    if((id==="hypertension"&&/supine or prone/.test(pos))||(id==="pregnancy_late"&&/no prone or supine/.test(sp))){R.noFloor=true;why.push("floor");}
+    if((id==="hypertension"&&/supine or prone/.test(pos))||(id==="pregnancy_late"&&/no prone or supine/.test(sp))
+       ||(id==="obesity"&&/standing/.test(pos)&&/prone and supine/.test(pos))){R.noFloor=true;why.push("floor");}
+    if(id==="obesity"&&/breathe properly/.test(txt(c.breathing))){R.steady=true;why.push("breath");}
     /* Jumps: not with osteoporosis ("not typically recommended"), diabetes ("avoid
        excessive"), heart disease, nor in the second and third trimesters. */
     var ply=txt(c.plyometrics);

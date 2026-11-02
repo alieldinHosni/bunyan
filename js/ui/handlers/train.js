@@ -115,6 +115,8 @@ function register(){
     toast(t("Fitted to your health: {n} changes.").replace("{n}",ch.length),function(){sp.days=before;saveDB();render();});return;});
   /* Cardio zones (sheets.js zones): the heart rates from the talk test, per profile. */
   key("zones",function(){openSheet("zones");return;});
+  has("cardio3",function(D){S.profile.cardio3=D.cardio3==="1";saveDB();render();return;});
+  has("cardio4",function(D){S.profile.cardio4=D.cardio4==="1";saveDB();render();return;});
   key("zsave",function(D){var p=S.profile;
     if(D.zsave==="clear"){delete p.vt1;delete p.vt2;}
     else{var a=Math.round(num(val("z_vt1"))),b=Math.round(num(val("z_vt2")));
@@ -122,6 +124,9 @@ function register(){
       if(b&&a&&b<=a){toast(t("VT2 is higher than VT1."));return;}
       if(a)p.vt1=a;else delete p.vt1;if(b)p.vt2=b;else delete p.vt2;}
     saveDB();openSheet("acts");return;});
+  /* Stabilisation skipped, or the book's order back (views/train.js blockCard). */
+  has("skipstab",function(D){var was=!!S.profile.skipStab;S.profile.skipStab=D.skipstab==="1";saveDB();render();
+    toast(t(S.profile.skipStab?"Stabilisation skipped: the next phases follow your goal.":"Back to the book's order."),function(){S.profile.skipStab=was;saveDB();render();});return;});
   key("swapday",function(D){openSheet("swapday",{date:D.swapday});return;});
   /* The coach's offer on a day due (views/train.js recoCard): the fresher day, or the
      planned one kept. Either is a decision, kept as the day's swap so it is not asked again. */

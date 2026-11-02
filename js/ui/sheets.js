@@ -75,7 +75,8 @@ var glyphI='<span class="swnote-i" aria-hidden="true"></span>';
 var ZFEEL={1:"Easy: you can talk comfortably",2:"Talking in full sentences gets hard",3:"Short phrases only",4:"You can hardly speak"};
 var STAGE_DO={1:"Steady, in zone 1. Start around 15 minutes three times a week and add a few minutes each week, no more than a tenth more a week.",
   2:"Intervals: a minute just above VT1 (zone 2), then three minutes in zone 1, repeated; warm up and cool down 5–10 minutes. New to intervals: alternate these with steady days.",
-  3:"Mostly zone 1 with short zone 2 and 3 intervals, zone 2 the longer ones. Rotate an easy, a medium and a hard day. Never zone 4."};
+  3:"Mostly zone 1 with short zone 2 and 3 intervals, zone 2 the longer ones. Rotate an easy, a medium and a hard day. Never zone 4.",
+  4:"Mostly zone 1, with brief intervals up through zone 4: about 10 seconds in zone 4, then a minute in zone 1 as the gauge. If your heart rate has not come down in that minute, stay in zone 1 for the rest of the session."};
 function cardioCard(){
   var p=S.profile||{},z=zonesFor(p),st=stageFor(p,S.sessions,today(),{cardio:function(n){var a=actInfo(n);return !!(a&&a.grp==="Cardio");}});
   var h='<section class="zcard" data-k="zcard"><div class="zc-h"><b>'+esc(t("Your cardio"))+'</b><span class="zc-st">'+esc(t("Stage {n}").replace("{n}",st.stage))+'</span></div>'
@@ -83,7 +84,7 @@ function cardioCard(){
   if(st.needVT1)h+='<p class="zc-next">'+esc(t("Three easy 30-minute sessions this week: you are ready for intervals. Do the talk test first to find your zones."))+'</p>';
   else if(st.needVT2)h+='<p class="zc-next">'+esc(t("Ready for harder intervals: add your VT2 heart rate to unlock stage 3."))+'</p>';
   else if(st.stage===1)h+='<p class="zc-next">'+esc(t("Stage 2 opens after three easy sessions of 30 minutes or more in a week."))+'</p>';
-  h+='<ul class="zrows">'+z.rows.filter(function(r){return st.stage>=3||r.zone<=Math.max(2,st.stage);}).map(function(r){
+  h+='<ul class="zrows">'+z.rows.filter(function(r){return st.stage>=4||r.zone<=Math.max(2,Math.min(3,st.stage));}).map(function(r){
     /* The figure isolated from its unit, so Arabic keeps "<145" and "145–154" in order. */
     var fig=r.min||r.max?(r.min&&r.max?r.min+"–"+r.max:r.min?r.min+"+":"<"+(r.max+1)):"";
     var bpm=fig?'<bdi dir="ltr">'+esc(fig)+'</bdi> '+esc(t("bpm")):"";
@@ -91,6 +92,13 @@ function cardioCard(){
       +'<span class="zb num">'+(bpm||esc(t("RPE {a}–{b}")).replace("{a}–{b}",'<bdi dir="ltr">'+r.rpe.min+"–"+r.rpe.max+'</bdi>'))+'</span></li>';}).join("")+'</ul>';
   if(z.feelOnly)h+='<p class="zc-note">'+esc(t("Your medication can change your heart rate, so go by feel and the talk test, not a number."))+'</p>';
   else if(!z.measured&&z.hrmax)h+='<p class="zc-note">'+esc(t("Estimated maximum heart rate about {n} bpm (208 − 0.7 × age): a starting point only.").replace("{n}",z.hrmax))+'</p>';
+  /* Stage 3 for an experienced lifter with a modest goal: their choice (zones.js can3). */
+  if(st.can3)h+='<p class="zc-next">'+esc(t(p.cardio3?"You chose stage 3 with your experience: the book keeps it for performance goals.":"The book keeps stage 3 for performance goals. With your experience you can choose it."))
+    +' <button class="blk-optb" data-cardio3="'+(p.cardio3?"0":"1")+'">'+esc(t(p.cardio3?"Back to stage 2":"Use stage 3"))+'</button></p>';
+  /* Stage 4: the advanced athlete's choice (engine/zones.js can4). */
+  if(st.can4)h+='<p class="zc-next">'+esc(t(p.cardio4?"You chose stage 4: maximal performance in short bursts, not maximal effort. Signs of overtraining (poor sleep, heavy fatigue, falling performance) mean back to stage 3."
+      :"Stage 4 is open to you: very short zone 4 intervals for anaerobic power. A choice for advanced athletes, not a requirement."))
+    +' <button class="blk-optb" data-cardio4="'+(p.cardio4?"0":"1")+'">'+esc(t(p.cardio4?"Back to stage 3":"Use stage 4"))+'</button></p>';
   if(!z.feelOnly)h+='<button class="btn g zc-set" data-zones="1">'+esc(t(z.measured?"Change your zones":"Find your zones"))+'</button>';
   return h+'</section>';}
 /* The pain sheet's areas: the plan's work-around keys (engine/plan.js AVOID) and the

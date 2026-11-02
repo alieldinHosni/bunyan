@@ -31,10 +31,20 @@ var ADAPT_REST={};
 import {goalOf} from "../data/goals.js";
 import {rulesFor} from "./conditions.js";
 
+/* What the book makes everyone do but an experienced lifter may choose to leave out
+   (owner, 3 Nov: "anything mandatory by the book that could be optional by experience:
+   a suggestion, and experienced lifters decide"): the stabilisation phase. Experienced or
+   advanced, no health condition, and they said so (p.skipStab): the sequence starts at
+   phase 2 and does not come back to 1. */
+function canSkipStab(p){p=p||{};return (p.level==="experienced"||p.level==="advanced")&&!rulesFor(p);}
 function seqFor(p){
   p=p||{};
   var tr=goalOf(p.goal).train,novice=p.level==="new";
   if(rulesFor(p))return [1,2];
+  var sq=seqBook(p,tr,novice);
+  if(p.skipStab&&canSkipStab(p)&&sq.length>1)sq=sq.filter(function(n){return n!==1;});
+  return sq;}
+function seqBook(p,tr,novice){
   if(tr==="mob")return [1];
   if(tr==="end")return [1,2];
   if(tr==="str")return novice?[1,2,3]:[1,2,4];
@@ -74,4 +84,25 @@ function phaseDose(e,ph,compound){
   e.phase=ph.n;if(ph.tempo)e.tempo=ph.tempo;
   return e;}
 
-export {phaseDose, phaseOf, seqFor};
+/* Phase 2 is supersets (PHASE_VARIABLES[2].supersets, 13.3): a stable strength exercise,
+   then straight away a less stable one with the same joint actions, slow. Of the book's
+   pairs, the ones this library has both halves of: chest (bench press → push-up; machine
+   or cable chest press → standing cable chest press) and calves (machine or standing
+   calf raise → single-leg calf raise). The book's single-leg squat, single-leg Romanian
+   deadlift and standing rows are not in the library, so those lifts stay on their own;
+   nothing is put in their place. ok(name) → the partner can be done (kit, limits).
+   → [{after: index in exs, name}] */
+var PAIRS=[[/^(Barbell|Dumbbell)( Incline)? Bench Press|^Dumbbell Bench Press/i,"Pushups"],
+  [/Chest Press/i,"Standing Cable Chest Press"],
+  [/Calf (Raise|Press)/i,"Single-Leg Calf Raise"]];
+function supersetsFor(exs,ok){
+  var out=[],used={},have={};(exs||[]).forEach(function(e){have[e.name]=1;});
+  (exs||[]).forEach(function(e,i){
+    if(e.grp)return;
+    for(var k=0;k<PAIRS.length;k++){var pr=PAIRS[k];
+      if(!pr[0].test(e.name)||/Single-Leg|Standing Cable/i.test(e.name))continue;
+      if(used[pr[1]]||have[pr[1]]||!(ok?ok(pr[1]):true))break;
+      used[pr[1]]=1;out.push({after:i,name:pr[1]});break;}});
+  return out;}
+
+export {canSkipStab, phaseDose, phaseOf, seqFor, supersetsFor};

@@ -2597,6 +2597,23 @@ await test("Cardio zones: Cardio & Sports opens with the stage and zones by feel
   const rows=await page.$$eval('#sheet .zrows li .zb',a=>a.map(e=>e.textContent));
   eq(rows[0],"<145 bpm","zone 1 below VT1, as the book's example: "+JSON.stringify(rows));
 });
+await test("Experienced lifters choose: stabilisation is a suggestion they can skip (and take back); phase 2 pairs the bench with push-ups as a superset",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js"),Sp=await import("/js/data/splits.js");
+    const p=st.makeProgram({id:"ss",name:"SS",days:[Sp.day("Upper",[Sp.ex("Barbell Bench Press - Medium Grip",3,6,10),Sp.ex("Bent Over Barbell Row",3,6,10)])]});p.id="ss";
+    st.S.programs=[p];st.S.activeProgram="ss";st.S.profile.level="experienced";st.S.profile.goal="gain";delete st.S.profile.skipStab;st.S.profile.conds=[];
+    st.S.block={start:sc.weekStartOf(U.today())};st.saveDB();(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"train");await pause(page,300);
+  if(!(await page.$('.blk [data-skipstab="1"]')))throw new Error("no choice offered: "+(await page.textContent('.blk')));
+  await page.tap('.blk [data-skipstab="1"]');await pause(page,300);
+  eq(await page.evaluate(async()=>[(await import("/js/state.js")).S.profile.skipStab,((await import("/js/engine/blocks.js")).phaseNow()||{}).n]),[true,2],"skipped: block 1 runs strength endurance");
+  await page.tap('[data-startday]');await pause(page,500);
+  const ex=await ev(page,"S.active.entries.map(e=>[e.name,e.grp||'',e.planned.lo,e.planned.hi])");
+  eq([ex[0][0],ex[1][0],!!ex[0][1]&&ex[0][1]===ex[1][1],ex[2][1]],["Barbell Bench Press - Medium Grip","Pushups",true,""],"bench then push-ups as one superset, the row on its own: "+JSON.stringify(ex));
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;st.saveDB();(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"train");await pause(page,300);
+  await page.tap('.blk [data-skipstab="0"]');await pause(page,300);
+  eq(await ev(page,"S.profile.skipStab"),false,"back to the book's order");
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
@@ -4119,7 +4136,7 @@ await test("Coach actions: every action in the registry runs through a branch th
       described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
       domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
   eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");
-  eq(r.domains,["act","app","cardio","deload","exercise","food","meal","past","plan","profile","progress","recovery","rest","sched","set","steps","travel","water","workout"],"grouped by domain");
+  eq(r.domains,["act","app","cardio","deload","exercise","food","live","meal","past","plan","profile","progress","recovery","rest","sched","set","steps","travel","water","workout"],"grouped by domain");
   /* set.log, in a live workout: the logger's own Log set. */
   await startWorkout(page);
   const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");

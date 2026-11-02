@@ -14,6 +14,8 @@ function run(t){
   t.eq([idsFor({age:70}),idsFor({age:16}),idsFor({age:40,conds:["nonsense"]})],[["older_adults"],["youth"],[]],"age groups from the age; unknown ids ignored");
   t.eq(fitDose({sets:5,lo:4,hi:6},hb),{sets:3,lo:10,hi:12},"a heavy dose brought into the range, its width kept");
   t.eq(fitDose({sets:3,lo:8,hi:12},hb),{sets:3,lo:10,hi:12},"a dose half in the range: only the part outside moves");
+  var ob=rulesFor({conds:["obesity"],age:40});
+  t.eq([ob.reps,ob.noFloor,ob.steady],[{min:10,max:15},true,true],"higher body weight, opted in: 10–15 reps, standing or seated, steady breathing");
   t.eq(condLines(hb,{days:5}).some(function(x){return /strength days a week/.test(x[0])&&x[1].n===3&&x[1].d===5;}),true,"more days than the book gives: said, not forced");}
 
 export {run};

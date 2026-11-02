@@ -61,11 +61,12 @@ import {doseText} from "../dose.js";
 import {blockDay, blockNow, phaseNow} from "../../engine/blocks.js";
 import {stageFor, zonesFor} from "../../engine/zones.js";
 import {COND_LABEL, condLines, rulesFor} from "../../engine/conditions.js";
+import {correctiveFor} from "../../engine/corrective.js";
 import {addDaysISO, estMinutes, nextDayOf, planOn} from "../../engine/dayplan.js";
 import {swapAdvice} from "../../engine/recovery.js";
 import {checkinOpen} from "../../engine/checkin.js";
 import {ckChange} from "../checkin.js";
-import {adaptOf, avoids, standIn} from "../../engine/plan.js";
+import {adaptOf, avoids, limitsOf, standIn} from "../../engine/plan.js";
 import {rangeFor} from "../../coach/landmarks.js";
 import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
 import {words} from "../coachwords.js";
@@ -438,7 +439,10 @@ function aWarmPlan(a){
   else if(pl&&pl.day&&!pl.rest)d=pl.day;
   else if(sp)d=nextDayOf(sp);
   var lifts=d&&(d.ex||[]).filter(function(e){return !isActivity(e.name);});
-  var w=lifts&&lifts.length?warmupFor(lifts,{gear:S.gear||null}):null,c=w?cooldownFor(lifts,{}):null;
+  /* The squat check's corrective work comes first, as the workout's warm-up has it. */
+  var fx=((S.profile||{}).faults||[]).length?correctiveFor(S.profile.faults,{avoid:function(nm){return avoids(nm,limitsOf(S.profile));}}):null;
+  var w=lifts&&lifts.length?warmupFor(lifts,{gear:S.gear||null,fix:fx}):null,c=w?cooldownFor(lifts,{}):null;
+  if(w&&(w.fix||[]).length){p(a,t("For your squat check first:"));l(a,w.fix.map(function(x){return exName(x.name);}));}
   if(w&&w.drills.length){
     p(a,fill(t("For {d}:"),{d:planName(d.name||"")}));
     l(a,w.drills.map(function(x){return exName(x.name);}));
@@ -1331,6 +1335,8 @@ function verb0(text){var f=fold(text);return VERB.some(function(v){return v[1].t
 function askedOnly(text){var fq=fold(text);if(HOWDO.test(fq))return false;return QSTART.test(fq)||(/[?؟]/.test(text)&&!ASKOK.test(fq));}
 function route(iid,text,it){
   var fq0=fold(text),verb=false;
+  /* A resting heart rate is not a zone: the app has no data on it, and says so. */
+  if(iid==="zones"&&/resting (heart|pulse|hr)|heart rate at rest|نبض الراحه|النبض وانا مرتاح/.test(fq0))iid="unknown";
   for(var vi=0;vi<VERB.length;vi++)if(VERB[vi][1].test(fq0)&&!(VERB[vi][0]==="foodlog"&&/^log /.test(fq0)&&/weight|وزن/.test(fq0))){iid=VERB[vi][0];verb=true;break;}
   if(!verb&&/^(exadd|exremove|exswap)$/.test(iid)&&askedOnly(text))
     iid=(it.ranked||[]).filter(function(x){return ACTION_IDS.indexOf(x)<0;})[0]||"unknown";

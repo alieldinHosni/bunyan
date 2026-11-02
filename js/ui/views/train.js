@@ -10,6 +10,7 @@ import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../state.js";
 import {conformProgram, SPLIT_LEVEL} from "../../engine/plan.js";
 import {rulesFor} from "../../engine/conditions.js";
+import {canSkipStab} from "../../engine/phase.js";
 import {deloadDue, inDeload} from "../../engine/formulas.js";
 import {blockNow, offPlanLight, phaseNow, shiftNow} from "../../engine/blocks.js";
 import {addDays, isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
@@ -470,7 +471,13 @@ function blockCard(){
     phl='<p class="blk-ph"><b>'+esc(t(ph.name))+'</b> · '+esc(t("{a}–{b} reps")).replace("{a}–{b}",fig(ph.reps.min+"–"+ph.reps.max))
      +(tmp?' · '+esc(t("tempo {t}")).replace("{t}",fig(tmp)):'')+'</p>'
      +'<p class="blk-l">'+esc(t(PHASE_WHY[ph.n]||""))
-     +(ph.seq.length>1?' '+esc(t("Next block: {p}.").replace("{p}",t(PHASE_NAME[ph.seq[b.block%ph.seq.length]]))):'')+'</p>';}
+     +(ph.seq.length>1?' '+esc(t("Next block: {p}.").replace("{p}",t(PHASE_NAME[ph.seq[b.block%ph.seq.length]]))):'')+'</p>';
+    /* The book starts everyone at stabilisation; an experienced lifter may skip it, as a
+       choice they make here, and take it back (engine/phase.js canSkipStab). */
+    if(canSkipStab(S.profile)){
+      if(!S.profile.skipStab&&ph.n===1)phl+='<p class="blk-opt">'+esc(t("The book starts everyone here. With your experience it's a suggestion: you can skip stabilisation and go straight to the heavier phases."))
+        +' <button class="blk-optb" data-skipstab="1">'+esc(t("Skip it"))+'</button></p>';
+      else if(S.profile.skipStab)phl+='<p class="blk-opt">'+esc(t("You chose to skip stabilisation."))+' <button class="blk-optb" data-skipstab="0">'+esc(t("Use the book's order"))+'</button></p>';}}
   return '<div class="blk'+(b.light?' light':'')+'" role="group" aria-label="'+esc(t("Training block"))+'">'
    +'<div class="blk-h"><b>'+esc(t("Block {b} · Week {w} of {n}").replace("{b}",b.block).replace("{w}",b.week).replace("{n}",b.of))+'</b>'
    +(b.light?'<button class="dlcard-x" data-deload="end">'+t("End it")+'</button>':'')+'</div>'
@@ -689,6 +696,11 @@ function builderBody(sp,id,inline){
        +(ds.length?' '+esc(t("Sets or reps to adjust: {n}.").replace("{n}",ds.length)):'')+'</p>'
        +'<button class="btn" data-condfix="'+esc(id)+'">'+esc(t("Make it fit"))+'</button></div>';}
     h+=condCard(S.profile,fx);}
+  /* The block's phase sets the reps in the workout, not the numbers below (owner, 3 Nov:
+     the program showed 8–12 while the workout asked 12–20). Said where the numbers are. */
+  var phb=active?phaseNow():null;
+  if(phb&&phb.reps)h+='<p class="bphase">'+esc(t("This block is {p}: your workouts use {a}–{b} reps on the lifts, as each phase sets its own. The reps below are the program's, used when training blocks are off in Settings.")
+      .replace("{p}",t(phb.name)).replace("{a}",phb.reps.min).replace("{b}",phb.reps.max)).replace(/(\d+)–(\d+)/,'<span class="num" dir="ltr">$1–$2</span>')+'</p>';
   /* How the days fall: pinned to weekdays, or one after another whenever you train. */
   h+='<div class="bsched" role="group" aria-label="'+esc(t("Schedule"))+'">'
    +'<button class="'+(week?'on':'')+'" data-sched="week" aria-pressed="'+week+'"><b>'+t("By weekday")+'</b><span>'+t("Same days every week")+'</span></button>'
