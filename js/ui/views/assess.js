@@ -16,7 +16,7 @@ import {wdName, weekOrder} from "../../engine/schedule.js";
 import {lastWeight, macroTargets, tdee} from "../../engine/formulas.js";
 import {volumeCheck} from "../../engine/volume.js";
 import {buildMealPlan} from "../../engine/mealplan.js";
-import {FOODDB, sumNutrition} from "../../engine/nutrition.js";
+import {FOODDB, ownFood, sumNutrition} from "../../engine/nutrition.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {S} from "../../state.js";
 import {fmtW, toDisp, toKg, wUnit} from "../../units.js";
@@ -81,7 +81,7 @@ function skipOf(a){
   var keep=(S.skip||[]).filter(function(n){return NOLIFT.indexOf(n)<0;});
   return keep.concat((a.nolift||[]).filter(function(n){return keep.indexOf(n)<0;}));}
 function foodPrefs(a,variant){
-  return {meals:num(a.meals)||4,diet:a.diet,avoid:a.avoid.slice(),powder:!!a.powder,style:a.style,variant:variant||0};}
+  return Object.assign({meals:num(a.meals)||4,diet:a.diet,avoid:a.avoid.slice(),powder:!!a.powder,style:a.style,variant:variant||0},FOODDB?ownFood():{});}
 
 /* Everything "Use this plan" would set, worked out with the draft in place of what
    is saved, then put back. Cached on the answers. */

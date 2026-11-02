@@ -2695,6 +2695,7 @@ body.focus:has(.wu-foot){padding-bottom:0}
 .picard-h.ticard-h{align-items:center;gap:6px}
 .picard-h .tiday{font-family:var(--display);font-size:16px}
 .picard-k{flex:none;font-size:13px;color:var(--dim);font-variant-numeric:tabular-nums}
+.picard-own{margin:0 0 var(--s2);font-size:12px;color:var(--sub)}
 .pied{align-items:center;gap:6px;padding:0}
 .pied>span{flex:1;min-width:0;padding:8px 0}
 .pied-b{flex:1;min-width:0;display:flex;justify-content:space-between;align-items:baseline;gap:12px;min-height:44px;
@@ -5281,6 +5282,19 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 .cweek{position:relative;margin:0 0 var(--s4);padding:18px 16px 16px;border-radius:var(--r5);border:1px solid var(--card-edge);
   background:radial-gradient(110% 80% at 100% 0%,rgba(var(--accent-rgb),.16),transparent 62%),var(--card);box-shadow:var(--shadow-card)}
 .cweek-top{display:flex;align-items:center;gap:12px}
+/* The weekly check-in (js/ui/views/checkin.js): last week in lines, each change with its button. */
+.ckcard{margin:0 0 var(--s4);padding:var(--s4);border-radius:var(--r5);border:1px solid var(--card-edge);background:var(--card);box-shadow:var(--shadow-card)}
+.ckcard-h{display:flex;align-items:center;gap:var(--s3)}
+.ckcard-i{display:grid;place-items:center;flex:none;width:40px;height:40px;border-radius:50%;background:var(--raised);color:var(--accent)}
+.ckcard-i svg{width:20px;height:20px}
+.ckcard-h h2{margin:2px 0 0;font-family:var(--display);font-size:18px}
+.ckcard-h p{margin:2px 0 0;color:var(--dim);font-size:13px}
+.ckcard-f{margin:var(--s3) 0 0;padding-inline-start:var(--s4);color:var(--sub);font-size:14px;line-height:1.5}
+.ckcard-c{margin-top:var(--s3);padding:var(--s3);border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+.ckcard-c p{margin:0 0 var(--s2);color:var(--text);font-size:14px;line-height:1.45}
+.ckcard-c .btn{margin:0}
+.ckcard-ok{margin:var(--s3) 0 0;color:var(--sub);font-size:14px}
+.ckcard-done{margin-top:var(--s3)}
 .cweek-mark{display:grid;place-items:center;flex:none;width:48px;height:48px;border-radius:50%;
   background:var(--accent);color:var(--onAccent);box-shadow:0 8px 20px -10px rgba(var(--accent-rgb),.9)}
 .cweek-mark .gl{width:26px;height:26px;stroke-width:2}

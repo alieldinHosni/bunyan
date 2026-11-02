@@ -2813,6 +2813,58 @@ input and assessment, which you can change if it doesn't collect all the needed 
   new "Assessment: fixed days set the week, stress and short sleep lower the volume …" (EN + Arabic RTL).
 - Not changed: the assessment's chips still re-render the screen (as they did before this branch);
   that is against the innerHTML rule and is left for its own change rather than widened here.
+## Meals from your own food — branch session/ownmeals
+
+CACHE `bunyan-v188` (after session/builder's v187). Owner, 2 Nov: "Then start on the meals from my own
+food" (the suggestion: a meal plan written from what you log, not the app's plates).
+- **js/engine/habits.js** (pure; in architecture's PURE list): the last 28 days of the food log →
+  `eaten` (days each food was logged) and `usual` meals: the same two or more foods together in a meal
+  on 3+ days, up to two per kind (Breakfast; Main = Lunch/Dinner; Snack; a meal of their own by its
+  energy, 350 kcal+ is a main), with median grams and the meal it is usually eaten at. Only items with a
+  food id the database or My Foods knows, energy above zero, and grams.
+- **js/engine/mealplan.js**: a usual meal is tried first for its kind (the one usually eaten at that
+  meal first, each once a day). Each food takes the part its energy says (protein ≥ 30 % of kcal, fat
+  ≥ 60 %, carbohydrate ≥ 50 %; anything else stays at its usual amount), moves between half and twice
+  the usual amount in a counted serving or grams, and the same solver as the plates fits it to the
+  meal's share; it is used when it lands within 20 % of the meal's energy, otherwise the app's plates
+  as before. In every plate a slot now takes the food the person logs most when one fits ("Another
+  version" moves to the next of theirs). Densities use the food's own `per`, so My Foods work.
+- nutrition.js `ownFood()` reads it with the database loaded; the assessment's meal plan and Coach's
+  "New meal plan from my targets" pass it (refreshed after the database loads).
+- Review screen: a usual meal says "Your usual: logged on N days in the last four weeks. The amounts are
+  set for your targets."; the day says how many of its foods are ones they log, or, with no log, that a
+  few days of logging makes the plan theirs. Arabic for all three.
+- Tests: engine habits.test.js (9); regression "Meal plan from your own food: …" (EN + Arabic).
+
+## The weekly check-in: last week read, specific changes to approve — branch session/checkin
+
+CACHE `bunyan-v189` (after ownmeals' v188). Owner, 2 Nov: "start the weekly check-in" (the suggestion:
+"each week the coach reads volume per muscle, how hard sets felt, soreness, bodyweight trend and missed
+days, then proposes specific changes for you to approve").
+- **js/coach/checkin.js** (pure): last week (the seven days before this week began) and the week before.
+  Facts, each only with data: workouts against planned (a session of activities alone is not one),
+  average RPE of working sets against 10 − the goal's accessory RIR, soreness from the recovery sheet,
+  food days and average kcal against the target, and the weight's slope (least squares, 3 weeks, 4+
+  weigh-ins over 10+ days, said as an estimate) against the goal's pace = (target − maintenance) × 7 /
+  7,700 kcal per kg (the app's own gap, the same constant as coach/energy.js). Changes:
+  - days: planned ≥ 3 and both weeks short → a week built for the average trained (≥ 2);
+  - kcal: under ½ or over 1½ × the pace (or drifting > 0.25 kg/wk on a hold goal), only on a week with
+    food logged on 4+ days within 10 % of the target (else the eating, not the target, is off), STEP =
+    100 kcal (a modelling choice: a small step, then another week), never under kcalFloor;
+  - deload: soreness ≥ 6 on 3+ days, or 12+ sets averaging ≥ 1.5 RPE over plan; not during one;
+  - balance: the program's planned weekly sets per judged muscle under the range or > 1.15 × its top.
+- **js/engine/checkin.js**: the inputs from state; open while a new week's check-in is not closed
+  (`S.ckDone`) and last week has something logged; changes made this week (`S.ckDid`) drop off. Both
+  validated in schema.js.
+- **Coach page**: a "Weekly check-in · Last week" card under the week card: facts, each change with its
+  button (Build a 2-day week / Set 1,900 kcal / Start a lighter week / Balance the volume), "Not this
+  week" or "Got it". Each change has Undo; kcal moves carbs by kcal/4, protein and fat stay; days sets
+  profile.days (clears fixed weekdays that no longer match) and rebuilds the built week.
+- **Chat**: "How was my week?" ends with the open check-in's changes and the same buttons ("From last
+  week's check-in:" outside the first two days).
+- js/ui/checkin.js (shared ui module): the words, figures in .num (a trailing full stop kept out).
+  Arabic for every string; checked in RTL.
+- Tests: coach checkin.test.js (14); regression "Weekly check-in: last week read on Coach …".
 
 ## One calendar: Food's day bar on Training too, the month unfolding inside the bar — branch session/datebar
 
