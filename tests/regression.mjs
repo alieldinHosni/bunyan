@@ -123,6 +123,28 @@ await test("double tap on ✓ logs exactly one set",async page=>{
   await page.touchscreen.tap(b.x+b.width/2,b.y+b.height/2);await page.touchscreen.tap(b.x+b.width/2,b.y+b.height/2);await pause(page);
   eq(await ev(page,"S.active.entries[0].sets.length"),1);
 },{prefs:{autorest:false}});
+await test("Complete set, with haptics: a label around a hidden native switch, one focusable control announced as a button; a tap, Enter or Space logs one set and leaves it off; haptics off is the plain button",async page=>{
+  await startWorkout(page);await page.fill('#in_r','8');
+  const shape=await page.evaluate(()=>{const l=document.querySelector('.sess [data-logset]'),i=l&&l.querySelector('input');
+    return l?[l.tagName,i&&i.type,i&&i.hasAttribute("switch"),i&&i.getAttribute("role"),i&&i.getAttribute("aria-label"),
+      [...l.querySelectorAll(":scope>span")].every(s=>s.getAttribute("aria-hidden")==="true"),getComputedStyle(i).position,l.querySelectorAll("button,[tabindex]").length]:null;});
+  eq(shape,["LABEL","checkbox",true,"button","Complete set 1",true,"absolute",0],"the label, its hidden switch as the one control");
+  const n=()=>ev(page,"S.active.entries[0].sets.length");
+  const back=async()=>{await page.waitForSelector('.sess label[data-logset] input',{timeout:4000,state:"attached"});};
+  await page.tap('.sess [data-logset]');await pause(page,300);
+  eq([await n(),await page.evaluate(()=>{const i=document.querySelector('.sess .hapt-in');return i?i.checked:false;})],[1,false],"a tap logs one set; the switch is off again");
+  await back();await page.fill('#in_r','8');
+  await page.focus('.sess .hapt-in');await page.keyboard.press("Enter");await pause(page,300);
+  eq(await n(),2,"Enter logs one");
+  await back();
+  /* Haptics off in Settings: the plain button, as before; back on, the switch again. */
+  const hap=on=>page.evaluate(async v=>{const st=await import("/js/state.js");st.S.prefs.haptic=v;st.saveDB();(await import("/js/ui/render.js")).render();},on);
+  await hap(false);
+  eq(await page.evaluate(()=>[!!document.querySelector('.sess button[data-logset]'),document.querySelectorAll('.sess .hapt-in').length]),[true,0],"haptics off: the plain button, no switch");
+  await hap(true);await back();await page.fill('#in_r','8');
+  await page.focus('.sess .hapt-in');await page.keyboard.press(" ");await pause(page,300);
+  eq(await n(),3,"Space logs one");
+},{prefs:{autorest:false,haptic:true}});
 await test("removing a set offers undo, and undo restores it",async page=>{
   await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
   await page.tap('[data-unlog="0"]');await pause(page);eq(await ev(page,"S.active.entries[0].sets.length"),0,"removed");

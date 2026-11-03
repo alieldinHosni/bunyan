@@ -316,8 +316,21 @@ function vLogControl(e,row){
     /* Its own key: a new button arriving, not the log button relabelled in place. */
     return '<button class="log" data-k="lognext" data-nextex="1"><span>'+t(last?"Finish workout":"Next exercise")+'</span>'
      +'<span class="log-c" aria-hidden="true">'+IC.chev+'</span></button>';}
-  return '<button class="log" data-k="log" data-logset="1" aria-label="'+(row.wu?t("Log warm-up"):t("Complete set")+' '+row.n)+'">'
-   +'<span>'+(row.wu?t("Log warm-up"):fill(t("Log set {n}"),row.n))+'</span>'
+  var lbl=row.wu?t("Log warm-up"):t("Complete set")+' '+row.n,txt=row.wu?t("Log warm-up"):fill(t("Log set {n}"),row.n);
+  /* The tick in the hand (owner, 3 Nov; tested on the iPhone with tests/haptics.html):
+     Safari has no vibration API, but a native switch ticks the Taptic Engine when a tap
+     toggles it, through its label too. So the control is a label around a visually hidden
+     switch, looking and acting as the button did. The switch is the one focusable control,
+     announced as a button with the same name; Space toggles it natively and Enter is
+     wired in fields.js; app.js logs on the switch's click and ignores the label's own,
+     so a tap logs once. With haptics off in Settings it is the plain button again. */
+  if(S.prefs.haptic!==false)
+    return '<label class="log" data-k="log" data-logset="1">'
+     +'<input type="checkbox" switch class="vh hapt-in" role="button" aria-label="'+esc(lbl)+'">'
+     +'<span aria-hidden="true">'+txt+'</span>'
+     +'<span class="log-c" aria-hidden="true">'+IC.check+'</span></label>';
+  return '<button class="log" data-k="log" data-logset="1" aria-label="'+esc(lbl)+'">'
+   +'<span>'+txt+'</span>'
    +'<span class="log-c" aria-hidden="true">'+IC.check+'</span></button>';}
 
 /* ---- sets so far ----------------------------------------------------------------

@@ -4105,7 +4105,11 @@ body.wkflat #app{--gutter:20px}
   background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);color:var(--onAccent);
   font-family:var(--display);font-size:19px;font-weight:700;text-align:start;
   transition:transform var(--m-press) var(--e-standard),filter var(--m-press) var(--e-standard)}
-:root:not(.tch) .sess button.log:active,.sess button.log.tapd{transform:scale(.98);filter:brightness(1.08)}
+:root:not(.tch) .sess :is(button,label).log:active,.sess :is(button,label).log.tapd{transform:scale(.98);filter:brightness(1.08)}
+/* The complete-set control as a label around its hidden switch: a button's manners, and
+   the switch's focus drawn on the pill. */
+.sess label.log{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.sess label.log:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-offset:3px}
 .log-c{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;border:2px solid currentColor}
 .log-c .gl{width:22px;height:22px;stroke-width:2.6}
 /* Logged: said quietly, in the button's place, for a moment (owner, 27 Oct: the solid
@@ -4221,7 +4225,7 @@ body.wkflat #app{--gutter:20px}
   background:var(--wk-well);border-color:var(--wk-well-rim)}
 .sess .wexl .chip.wkwu{background:var(--wk-chip);border-color:var(--wk-chip-rim)}
 .sess .wexl .chip{border-color:var(--wk-well-rim)}
-.sess button.log{background:linear-gradient(180deg,var(--wk-act-top),var(--wk-act-bot));
+.sess :is(button,label).log{background:linear-gradient(180deg,var(--wk-act-top),var(--wk-act-bot));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 0 0 1.5px var(--color-action-edge),0 14px 30px -12px var(--wk-act-glow)}
 .sess .wsr.on{background:var(--wk-now)}
 .sess .wtick{background:var(--wk-tick);color:var(--wk-onTick)}
