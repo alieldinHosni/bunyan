@@ -4659,12 +4659,19 @@ await test("Copy in: a plan another Bunyan user shared works in Food's Copy in a
   await page.tap('#sheet [data-rplanadd="keep"]');await pause(page,400);
   eq(await ev(page,"[S.programs.length,S.programs[S.programs.length-1].name]"),[n+1,"Omar's split"],"added to my programs");
 });
-await test("My program: Copy in a program sits right above Share my program, as Copy in a plan does above Share my meal plan",async page=>{
+await test("My program: switch and share are icons by the name, Workout settings the gear at the top right, the training block at the foot; no list of buttons under it",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js");
+    st.S.block={start:sc.weekStartOf(U.today())};st.saveDB();});
   await coach(page,"train","program");
-  const rows=await page.$$eval('#app .plset .srow',a=>a.map(r=>r.getAttribute("data-timport")?"in":(r.getAttribute("data-shareplan")||"").startsWith("p:")?"share":r.getAttribute("data-tplan")||r.getAttribute("data-sheet")));
-  eq(rows,["set_training","in","share"],"settings, then in and out together; no Switch program beside the Programs tab");
-  await page.tap('#app .plset [data-timport]');await pause(page,400);
-  eq(await page.textContent('#app .dhead-t'),"Copy in a program","it opens the Copy in screen");
+  eq(await page.evaluate(()=>[!!document.querySelector('.bname-a [data-tplan="programs"]'),!!document.querySelector('.bname-a [data-shareplan^="p:"]'),
+    !!document.querySelector('.dhead .dhead-a[data-sheet="set_training"]'),!document.querySelector('#app .plset'),!document.querySelector('#app .psec [data-timport]')]),
+    [true,true,true,true,true],"icons, the gear, and no Copy in or settings list here");
+  eq(await page.evaluate(()=>{const p=document.querySelector('#app .psec'),b=p.querySelector('.blk');return !!b&&b===p.lastElementChild;}),true,"the block is last");
+  await page.tap('.dhead-a');await pause(page,500);
+  eq(await ev(page,"V.sheet"),"set_training","the gear opens Workout settings");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  await page.tap('.bname-a [data-tplan="programs"]');await pause(page,500);
+  eq(await ev(page,"V.tplan"),"programs","the arrows open Programs & exercises");
 });
 await test("Your meal plan: cards with what the day comes to; a food is one tap — change the amount, remove it, or swap it for one of similar nutrition, sized to the same calories and within the diet; Undo puts it back",async page=>{
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.diet="veg";st.saveDB();});

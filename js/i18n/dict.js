@@ -5,7 +5,11 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Your usual: {n} days in the last 4 weeks": "معتادك: {n} أيام في آخر 4 أسابيع",
+var AR={"This block is {p}: your workouts use {a}–{b} reps on the lifts, as each phase sets its own. The reps above are the program's, used when training blocks are off in Settings.": "البلوك ده {p}: تمارينك بتستخدم {a}–{b} عدة، لأن كل مرحلة ليها عدّاتها. العدّات اللي فوق بتاعة البرنامج، وبتتستخدم لما البلوكات تتقفل من الإعدادات.",
+"Switch and share": "غيّر وشارك",
+"The arrows switch to another of your programs or a template. The other icon shares this program with another Bunyan user.": "الأسهم بتغيّر لبرنامج تاني من بتوعك أو جاهز. والأيقونة التانية بتشارك البرنامج ده مع حد بيستخدم بنيان.",
+"The gear holds how weight goes up, the warm-up, the rest timer and your equipment.": "الترس فيه إزاي الوزن بيزيد، والإحماء، وتايمر الراحة، وأدواتك.",
+"Your usual: {n} days in the last 4 weeks": "معتادك: {n} أيام في آخر 4 أسابيع",
 "{a} of {b} foods are ones you eat": "{a} من {b} أكلات بتاكلها",
 "Made from your goals. Tap any food to change it or swap it.": "معمولة من أهدافك. دوس على أي أكلة تغيّرها أو تبدّلها.",
 "{n} kcal under your goal.": "{n} سعرة أقل من هدفك.",

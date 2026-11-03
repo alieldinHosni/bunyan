@@ -5611,6 +5611,14 @@ button.pgc{padding:var(--s3) var(--s4)}
 .bname .dname{min-width:0}
 .bname-t{margin:0;font-family:var(--display);font-size:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bname-s{flex:none;font-size:13px;color:var(--sub)}
+/* The name with its count under it; switch and share as round icons beside it. */
+.bname-l{display:grid;gap:2px;min-width:0;flex:1}
+.bname-a{display:flex;gap:var(--s2);flex:none}
+.bname-a .icobtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--card-edge);background:var(--glass-btn);color:var(--text)}
+.icobtn .gl{width:20px;height:20px}
+/* A page's own setting, at the top right of its header. */
+.dhead-a{margin-inline-start:auto;color:var(--sub)}
+.dhead-a .gl{width:22px;height:22px}
 /* The plan pages' one row of tabs, and the part under it. */
 .psecs{margin:0 0 var(--s4)}
 .psec{min-height:40vh}

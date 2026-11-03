@@ -3508,3 +3508,15 @@ nutrition or preference, well structured. views/food.js planReview (a built plan
   shares of those calories, the same kind of food first, impractical amounts left out; one tap swaps it in
   its place, with Undo.
 - Use this plan sits in reach above the dock.
+
+## My program: icons by the name, settings gear, block at the foot — branch session/progicons (CACHE v214)
+
+Owner, 3 Nov: the block card should sit at the bottom; Switch program, Share and Workout settings should be
+icons; remove "Copy in a program" (Programs & exercises already has it). views/train.js builderBody:
+- The program name row carries two round icon buttons: switch (opens Programs & exercises) and share (shown
+  once a day has exercises). The list of buttons under the plan (.plset) is gone, Copy in with it.
+- Workout settings is a gear (glyphs.js `gear`) at the top right of the Training plan header (.dhead-a,
+  margin-inline-start:auto, so it sits top left in Arabic).
+- The training block card and its phase note are the last things on My program; the note now says "the reps
+  above". Guide: 8 steps, with Switch and share and Workout settings. Tests: the My program test asserts all
+  of it.

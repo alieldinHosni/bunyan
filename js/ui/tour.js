@@ -36,10 +36,12 @@ var GUIDES={
   tplan:{name:"Training plan",steps:[
     {sel:".psecs",v:3,h:"Two tabs",p:"My program is what you follow now. Programs & exercises has other programs, templates and the exercise library. Swipe left or right to switch."},
     {sel:".bname .dname",v:3,h:"The name",p:"Tap it to rename your program."},
-    {sel:".blk",v:3,h:"Training block",p:"Where you are in this block, and the reps and effort it asks for. Tap it to see why, and what comes next."},
+    {sel:".bname-a",v:5,h:"Switch and share",p:"The arrows switch to another of your programs or a template. The other icon shares this program with another Bunyan user."},
     {sel:".drows",v:3,h:"Your days",p:"Tap a day to add, remove or change its exercises."},
     {sel:".droutine [data-reorder]",v:3,h:"Edit",p:"Shows a ✕ to remove a day and a handle to drag days into a new order. Tap Done when you have finished."},
-    {sel:".bsched",v:3,h:"Schedule",p:"By weekday: each day falls on the same weekdays, picked under each day. In rotation: the next day comes whenever you train."}]},
+    {sel:".bsched",v:3,h:"Schedule",p:"By weekday: each day falls on the same weekdays, picked under each day. In rotation: the next day comes whenever you train."},
+    {sel:".blk",v:3,h:"Training block",p:"Where you are in this block, and the reps and effort it asks for. Tap it to see why, and what comes next."},
+    {sel:".dhead-a",fixed:true,v:5,h:"Workout settings",p:"The gear holds how weight goes up, the warm-up, the rest timer and your equipment."}]},
   food:{name:"Food",steps:[
     {sel:".dnav-card",v:3,h:"The day",p:"Food opens on today. Swipe or use the arrows to look at or fill in another day."},
     {sel:".fsum",v:3,h:"Today's numbers",p:"Calories eaten and left, with protein, carbs and fat against your targets."},
