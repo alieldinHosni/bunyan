@@ -68,8 +68,9 @@ var SNAP={
     S.prefs=pr;};}};
 /* Where "open …" goes: the tap the screen itself makes to get there. */
 var PLACE={food:[{tab:"food"}],train:[{tab:"train"}],progress:[{tab:"progress"}],coach:[{tab:"coach"}],profile:[{prof:"1"}],
-  mealplan:[{csec:"food",cfsub:"plan"}],targets:[{csec:"food",cfsub:"targets"}],program:[{csec:"train",ctsub:"program"}],
-  programs:[{csec:"train",ctsub:"programs"}],history:[{tab:"progress"},{phist:"1"}],weigh:[{sheet:"weigh"}],steps:[{sheet:"steps"}],
+  /* The plan pages (3 Nov): Food's and Training's, opened on the part asked for. */
+  mealplan:[{fplan:"plan"}],targets:[{fplan:"targets"}],myfoods:[{fplan:"foods"}],program:[{tplan:"program"}],
+  programs:[{tplan:"programs"}],exercises:[{tplan:"exercises"}],history:[{tab:"progress"},{phist:"1"}],weigh:[{sheet:"weigh"}],steps:[{sheet:"steps"}],
   recovery:[{sheet:"recovery"}],activities:[{actsheet:"1"}],assessment:[{setup:"1"}],settings:[{sheet:"set_app"}],
   you:[{sheet:"set_you"}],backup:[{"export":"1"}],newmeals:[{pgen:"1"}]};
 

@@ -33,8 +33,6 @@ function where(){return S.active&&V.tab==="train"&&V.train!=="hub"?"workout":(SU
 /* ---- where the launcher may sit ------------------------------------------------------ */
 function fabShown(){
   if(V.coach||V.sheet||V.chat)return false;
-  /* The Coach page has its own way in, the ask box at its top (views/coach.js). */
-  if(V.tab==="coach"&&!V.assess)return false;
   /* The keyboard up hides it, as it hides the dock — but not the panel's own field's:
      closing while typing (a tap in the panel keeps the field's focus, bindPanel), the
      field goes with the panel. */

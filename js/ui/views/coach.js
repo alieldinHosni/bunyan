@@ -6,7 +6,8 @@
    vFoodPlan). What is left here, top to bottom:
      · the coach's mark, the goal and the program
      · a box to ask it anything, with three questions to start from (the conversation
-       itself is the one panel, js/ui/coachfab.js; on this page the box is its way in)
+       itself is the one panel, js/ui/coachfab.js, whose button stays beside the dock here
+       as on every page: owner, 28 Oct, "available anywhere the dock is")
      · this week in one strip: workouts done, protein days, the streak
      · "For you": one numbered list of everything that wants a decision this week, the
        check-in, a week kept light and what the coach noticed, each with its own buttons,
