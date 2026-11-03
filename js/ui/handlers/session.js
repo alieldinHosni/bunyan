@@ -2,7 +2,7 @@
    A workout under way: starting and resuming, the warm-up and cool-down, how you feel,
    moving between exercises, logging sets and activities, rest, swapping and adding,
    pain, plates, notes, finishing and leaving. */
-import {leave, ms} from "../motion.js";
+import {ms} from "../motion.js";
 import * as W from "../workout.js";
 import {lastWeight} from "../../engine/formulas.js";
 import {t} from "../../i18n/dict.js";
@@ -188,12 +188,11 @@ function register(){
   /* How hard a logged set was, written to that set; the question leaves in place. */
   key("rpeset",function(D){var pr=String(D.rpeset).split(":"),e=S.active&&S.active.entries[V.logIdx],x=e&&e.sets[+pr[0]];
     if(!x||V.rpeOut)return;x.rpe=+pr[1];S.active.lastSet=S.active.lastSet||Date.now();saveDB();
-    /* The chosen number held a moment, then the card plays out and what is below rises
-       into its place (js/ui/motion.js leave); views/session.js vRpeAsk draws it till then. */
+    /* The chosen number held a moment, then the card fades where it was while what is
+       below glides up into its place (js/ui/motion.js glideCards); views/session.js
+       vRpeAsk draws it till then. */
     var out=V.rpeOut={x:V.logIdx,i:+pr[0],v:+pr[1],go:false};render();
-    setTimeout(function(){if(V.rpeOut!==out)return;out.go=true;
-      var box=document.querySelector(".rpeask");
-      leave(box,function(){if(V.rpeOut===out)V.rpeOut=null;render();},true);},ms("comp"));
+    setTimeout(function(){if(V.rpeOut!==out)return;V.rpeOut=null;render();},ms("comp")+150);
     return;});
   key("sstep",function(D){W.stepDraft(D.sstep,+D.d<0?-1:1);return;});
   key("addwu",function(){W.addWarmup();return;});
@@ -238,7 +237,9 @@ function register(){
     var eS=S.active.entries[V.logIdx];
     V.exm=W.pickMuscle(eS&&eS.name);V.exe="All";V.exq="";
     openSheet("exercise",{swaplive:true,like:eS?eS.name:null});return;});
-  key("nextex",function(){W.nextExercise();return;});
+  /* The next exercise slides in as a swipe brings it (owner, 3 Nov: every move animated);
+     the workout ending is its own screen. */
+  key("nextex",function(){var was=V.logIdx;W.nextExercise();if(S.active&&V.logIdx!==was)enterEx(fromOf(V.logIdx-was));return;});
   /* From ⋯: the menu goes first, so Undo or the question is what is left on screen. */
   key("rmlive",function(){if(V.sheet==="sessmore")closeSheet();W.removeExercise();return;});
   /* Added to this workout only: the picker starts from the whole library. */

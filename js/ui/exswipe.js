@@ -58,7 +58,7 @@ function onMove(ev){
 
 function springBack(p){
   if(isReduced()){p.style.transition="";p.style.transform="";p.style.opacity="";return;}
-  p.style.transition="transform 220ms cubic-bezier(0.05,0.7,0.1,1),opacity 220ms ease";
+  p.style.transition="transform 320ms cubic-bezier(0.2,0,0,1),opacity 320ms ease";
   p.style.transform="";p.style.opacity="";}
 
 function cancel(){var s=st;st=null;if(s&&s.mode==="h")springBack(s.p);}
@@ -79,10 +79,11 @@ function onEnd(){
      the right; dragged right, the other way round. */
   var from=s.dx<0?1:-1;
   if(isReduced()){s.p.style.transition="";s.p.style.transform="";s.p.style.opacity="";H.go(step);return;}
-  s.p.style.transition="transform 150ms cubic-bezier(0.3,0,0.8,0.15),opacity 150ms ease";
+  /* Unhurried both ways (owner, 3 Nov): out over 220 ms, in over 380 ms. */
+  s.p.style.transition="transform 220ms cubic-bezier(0.4,0,1,1),opacity 220ms ease";
   s.p.style.transform="translateX("+(s.dx<0?-s.w:s.w)+"px)";
   s.p.style.opacity="0";
-  setTimeout(function(){H.go(step);enter(from);},150);}
+  setTimeout(function(){H.go(step);enter(from);},220);}
 
 /* The new exercise arriving: from +1 the right, -1 the left. */
 function enter(from){
@@ -93,7 +94,7 @@ function enter(from){
   p.style.transform="translateX("+Math.round(from*w*0.35)+"px)";
   p.style.opacity="0";
   void p.offsetWidth;
-  p.style.transition="transform 240ms cubic-bezier(0.05,0.7,0.1,1),opacity 200ms ease";
+  p.style.transition="transform 380ms cubic-bezier(0.05,0.7,0.1,1),opacity 300ms ease";
   p.style.transform="";p.style.opacity="";}
 
 /* Where an exercise change by step comes in from, on screen. */

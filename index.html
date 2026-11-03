@@ -4123,7 +4123,13 @@ body.wkflat #app{--gutter:20px}
 @keyframes wkIn{from{opacity:0;transform:translateY(4px)}}
 /* Not on its way out: this rule comes after .rowout with the same weight, and won, so the
    closed band faded back in (a flash) and then vanished instead of leaving (owner, 3 Nov). */
-.rb:not(.rowout){animation:wkIn var(--m-comp) var(--e-decel)}
+.rb:not(.rowout):not(.ghost){animation:wkIn var(--m-comp) var(--e-decel)}
+/* A card that has gone, fading where it was (motion.js glideCards): no entrance of its own. */
+.sess .ghost{animation:none}
+/* The workout's own pace (owner, 3 Nov: "not too fast, smooth, a little slow"): rows,
+   pops and the cards arriving all a step slower than elsewhere. Reduced motion keeps its
+   1 ms (:root.reduced). */
+:root:not(.reduced) .sess{--m-micro:200ms;--m-pop:260ms;--m-comp:320ms;--m-flow:460ms}
 
 /* "How do you feel today?" (readiness for the day, before the first set), compact. */
 .sess .ready{margin:0;padding:0;border:0;background:none}
