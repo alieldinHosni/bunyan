@@ -237,38 +237,4 @@ function buildMealPlan(targets,pref){
   out.forEach(function(m){m.items=m.solved.filter(function(x){return x.g>0;}).map(itemOf);delete m.solved;});
   return out;}
 
-/* One meal for what is left of today (owner, 3 Nov: "Build today's meal" should build
-   it, not send you to the chat). left: {kcal,p,c,f} still to eat; kind: "Breakfast",
-   "Main" or "Snack", by the time of day and how much is left. The same plates and the
-   same solving as a day's plan, the person's own usual meal of that kind first. One
-   sitting is capped at MEAL_CAP kcal, protein scaled with it; less than that left, the
-   meal is what is left. variant shuffles to another plate. Returns
-   {items:[...], kind} or null when nothing fits. Pure apart from the food database. */
-var MEAL_CAP=1100;
-function buildOneMeal(left,kind,pref){
-  pref=pref||{};
-  var k=Math.max(0,+left.kcal||0);if(k<80)return null;
-  var cap=Math.min(k,MEAL_CAP),sc=cap/k;
-  var tg={kcal:cap,p:Math.max(0,+left.p||0)*Math.min(1,sc*1.15),c:Math.max(0,+left.c||0)*sc,f:Math.max(0,+left.f||0)*sc};
-  var v=+pref.variant||0,H=pref.habits||null;
-  var me=Object.assign({},(H&&H.eaten)||{});(pref.likes||[]).forEach(function(id){me[id]=(me[id]||0)+2;});
-  pref=Object.assign({},pref,{mine_eaten:me});
-  MINE={};(pref.mine||[]).forEach(function(f){if(f&&f.id)MINE[f.id]=f;});
-  var meal=null;
-  var own=H&&H.usual&&H.usual[kind]?H.usual[kind].slice():[];
-  if(!v)for(var q=0;q<own.length&&!meal;q++){
-    var up=usualPlate(own[q],pref);if(!up)continue;
-    var it=solve(up,tg,pref,0);if(!it||!it.length)continue;
-    var e=0;it.forEach(function(x){e+=x.f.kcal*x.g/(x.f.per||100);});
-    if(Math.abs(e-tg.kcal)<=tg.kcal*USUAL_FIT)meal=it;}
-  var plates=(PLATES[kind]||PLATES.Main).slice();
-  if(pref.style==="intl")plates.sort(function(a,b){return (a.egy?1:0)-(b.egy?1:0);});
-  else plates.sort(function(a,b){return (b.egy?1:0)-(a.egy?1:0);});
-  for(var i=0;i<plates.length&&!meal;i++){
-    var items=solve(plates[(i+v)%plates.length],tg,pref,v);
-    if(items&&items.length)meal=items;}
-  if(!meal)meal=solve(FALLBACK,tg,pref,v);
-  if(!meal||!meal.length)return null;
-  return {kind:kind,items:meal.filter(function(x){return x.g>0;}).map(itemOf)};}
-
-export {allowed, buildMealPlan, buildOneMeal, itemOf};
+export {allowed, buildMealPlan, itemOf};

@@ -91,7 +91,7 @@ function vFoodPlan(){
   var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Nutrition plan"))+'</h1></div>'
    +'<p class="dsub">'+esc(t("{k} kcal · {p} g protein a day").replace("{k}",fmtN(Math.round(num(g.kcal)))).replace("{p}",Math.round(num(g.p))))+'</p>';
   h+=seg({items:FPLAN.map(function(x){return [x[0],t(x[1])];}),value:fs,attr:"fplan",tabs:true,cls:"psecs",label:t("Nutrition plan"),key:"fplan"});
-  h+='<div class="psec" data-k="psec-'+fs+'">'+(fs==="targets"?vTargets():fs==="foods"?vMyFoods():vPlan())+'</div>';
+  h+='<div class="psec" data-pswipe="fplan" data-k="psec-'+fs+'">'+(fs==="targets"?vTargets():fs==="foods"?vMyFoods():vPlan())+'</div>';
   return h;}
 /* Your plan, on Food: what is planned and the targets, the way into the plan page. */
 function foodPlanCard(){

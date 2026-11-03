@@ -216,4 +216,6 @@ window.addEventListener("popstate",function(ev){
    physics for free, and the arrow and the gesture are the same thing by
    construction rather than by keeping two implementations in step. */
 
-export {backArrow, backBar, canBack, initNav, goBack, pushNav, resetNav};
+/* How deep the screen on show is: 0 a tab's own page, 1 a page opened from it, and so on. */
+function navDepth(){return DEPTH;}
+export {backArrow, backBar, canBack, initNav, goBack, navDepth, pushNav, resetNav};

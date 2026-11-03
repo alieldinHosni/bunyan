@@ -237,9 +237,18 @@ initReorder(moveRow,function(){tap("light");});
 initDockScroll();
 initPress();
 /* A swipe on the exercise moves through the workout (js/ui/exswipe.js). */
+/* The plan pages' tabs, in the order they sit (views/train.js TPLAN, views/food.js FPLAN). */
+var PTABS={tplan:["program","programs"],fplan:["plan","targets","foods"]};
+function ptabNow(k){var l=PTABS[k],v=k==="tplan"?V.tplan:V.fplan;return Math.max(0,l.indexOf(v));}
 initExSwipe({
-  can:function(step){var a=S.active,n=V.logIdx+step;return !!(a&&!V.sheet&&V.tab==="train"&&n>=0&&n<a.entries.length);},
-  go:function(step){W.jumpTo(V.logIdx+step);tap("light");}});
+  can:function(step,k){
+    if(k&&k!=="ex"){var n2=ptabNow(k)+step;return !V.sheet&&n2>=0&&n2<PTABS[k].length;}
+    var a=S.active,n=V.logIdx+step;return !!(a&&!V.sheet&&V.tab==="train"&&n>=0&&n<a.entries.length);},
+  go:function(step,k){
+    if(k&&k!=="ex"){var v=PTABS[k][ptabNow(k)+step];if(k==="tplan")V.tplan=v;else V.fplan=v;
+      /* The swipe brings the tab in itself; the section's own slide stays out of it. */
+      V.pswiped=true;render();return;}
+    W.jumpTo(V.logIdx+step);tap("light");}});
 /* History comes from IndexedDB, so it arrives a tick later than everything else.
    Painting first and repainting when it lands keeps a slow or wedged IndexedDB from
    holding the whole app behind the intro; in practice it resolves well inside it. */

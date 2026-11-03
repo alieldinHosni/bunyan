@@ -1,7 +1,6 @@
 /* Bunyan — Coach AI
    Coach AI: the assessment, the plan check and the coach's cards, the chat, and a meal
    plan built from the targets. */
-import {mealPrefs} from "../todaymeal.js";
 import {coachNow} from "../../engine/coachinfo.js";
 import {addDaysISO} from "../../engine/dayplan.js";
 import {kcalFloor, lastWeight, macroTargets} from "../../engine/formulas.js";
@@ -9,13 +8,13 @@ import {buildMealPlan} from "../../engine/mealplan.js";
 import {FOODDB, loadFoods, ownFood} from "../../engine/nutrition.js";
 import {buildPlan, rebalance} from "../../engine/plan.js";
 import {checkinOpen} from "../../engine/checkin.js";
-import {lightOnPurpose} from "../../engine/stress.js";
+import {followOn, lightOnPurpose} from "../../engine/stress.js";
 import {addDays, weekStartOf} from "../../engine/schedule.js";
 import {checkPlans, heavyMains, shortRests} from "../../engine/plancheck.js";
 import {t} from "../../i18n/dict.js";
 import {S, saveDB, split} from "../../state.js";
 import {restartAfter} from "../../engine/blocks.js";
-import {fmtN, num, today} from "../../util.js";
+import {fmtN, num, pretty, today} from "../../util.js";
 import {ACT, askConfirm, closeSheet, openSheet} from "../actions.js";
 import {isReady, run as runSmart, start as smartStart, state as smartState, stop as smartStop} from "../smartcoach.js";
 import {pushNav, resetNav} from "../nav.js";
@@ -30,6 +29,11 @@ import {closeCoach, holdCoach, toEnd} from "../coachfab.js";
 import {perform, undo} from "./actions.js";
 import {addFact, removeFact} from "../../coach/context.js";
 import {has, key, on} from "./registry.js";
+
+/* The meal plan's preferences as saved (diet, foods left out, style, likes). */
+function mealPrefs(){
+  var pr=S.prefs||{};
+  return {meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",likes:(pr.likes||[]).slice(),variant:0};}
 import {closeMenu, msgText} from "../chatgest.js";
 /* Where the clipboard API is missing or refused: a hidden field, selected and copied. */
 function copyOld(tx){try{var f=document.createElement("textarea");f.value=tx;f.setAttribute("readonly","");f.style.position="fixed";f.style.opacity="0";
@@ -217,13 +221,18 @@ function register(){
      is no longer the reason for a light week, the week built for them is built again,
      with Undo; still high, the coach asks again in four weeks. */
   key("stressask",function(){V.stressAsk=true;render();return;});
+  /* Still stressed: the week stays light, the card leaves the list, the date stands. */
+  key("stresskeep",function(){var was=S.profile.stressOk;S.profile.stressOk=today();saveDB();render();
+    var on=followOn(S.profile);
+    toast(t("Kept light. I'll ask again on {d}.").replace("{d}",on?pretty(on):""),function(){
+      if(was)S.profile.stressOk=was;else delete S.profile.stressOk;saveDB();render();});return;});
   key("stressnow",function(D){var ps=D.stressnow.split("|"),f=ps[0],v=ps[1];
     var before=JSON.parse(JSON.stringify({profile:S.profile,programs:S.programs,activeProgram:S.activeProgram}));
     if(f==="stress")S.profile.stress=v;else S.profile.sleep=num(v);
     var msg;
-    if(lightOnPurpose(S.profile)){S.profile.stressAt=today();
+    if(lightOnPurpose(S.profile)){S.profile.stressAt=today();S.profile.stressOk=today();V.stressAsk=false;
       msg=t("Noted. Your week stays light; I'll ask again in four weeks.");}
-    else{delete S.profile.stressAt;V.stressAsk=false;
+    else{delete S.profile.stressAt;delete S.profile.stressOk;V.stressAsk=false;
       var sp=split(),built=sp&&sp.from==="built";
       if(built)buildPlan();
       msg=t(built?"Good to hear. Your week is built again for full recovery.":"Good to hear. The volume checks are back on.");}

@@ -1,7 +1,6 @@
 /* Bunyan — sheets
    Every bottom sheet, dispatched by vSheet(). */
 import {inbodyReading} from "./views/chat.js";
-import {vTodayMeal} from "./todaymeal.js";
 import {hb} from "./haptic.js";
 import {t, tm} from "../i18n/dict.js";
 import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exFigs, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
@@ -413,8 +412,6 @@ function vSheet(){
      +'<button class="btn" data-saveex="'+e.id+'">'+t("Done")+'</button>'
      +'<button class="ddel exrm" data-delex="'+e.id+'">'+t("Remove from this day")+'</button>';
   }
-  /* Today's meal, built here (js/ui/todaymeal.js). */
-  else if(V.sheet==="todaymeal")b=vTodayMeal();
   /* An InBody result, read the moment it is saved (views/chat.js inbodyReading). */
   else if(V.sheet==="ibread")b='<h2>'+esc(t("What your InBody says"))+'</h2><div class="ibread">'+inbodyReading()+'</div>';
   else if(V.sheet==="weigh"){

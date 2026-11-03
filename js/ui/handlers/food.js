@@ -2,7 +2,6 @@
    Food: the day, its meals and water, adding food every way (search, scan, typing a
    meal, by hand), the meal plan and a plan brought in, saved meals and your own foods,
    and the targets. */
-import {todayMeal} from "../todaymeal.js";
 import {day} from "../../data/splits.js";
 import {addItems, macroKcal, macroTargets} from "../../engine/formulas.js";
 import {importName, mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "../../engine/meals.js";
@@ -518,23 +517,12 @@ function register(){
      Both used to go to Snack whatever the meal — including from a sheet opened for
      Breakfast. logFood takes the sheet's meal, or the time of day's without one. */
   /* A suggestion under the body diagram: that food, in that portion, into the meal for
-     the time of day. "Build today's meal" asks the coach what is left to eat today. */
+     the time of day. */
   key("fsug",function(D){
     var fs=D.fsug.split("|");
     loadFoods(function(){
       var f=(FOODDB||[]).filter(function(x){return x.id===fs[0];})[0];
       if(f)logFood(f,+fs[1],fs.slice(2).join("|"));});
-    return;});
-  /* Today's meal, built in a sheet over Food (js/ui/todaymeal.js): no trip to the chat. */
-  key("fbuild",function(){loadFoods(function(){openSheet("todaymeal",{v:0});});return;});
-  key("tmanother",function(){V.sd=V.sd||{};V.sd.v=(V.sd.v||0)+1;render();return;});
-  key("tmadd",function(){
-    var m=todayMeal((V.sd||{}).v||0);if(!m||!m.items.length)return;
-    var d=today(),r=dayRec(d),before=JSON.parse(JSON.stringify(r.meals[m.slot]||null));
-    addItems(m.slot,JSON.parse(JSON.stringify(m.items)),d);
-    closeSheet();render();play("set");
-    toast(t("Added to {m}.").replace("{m}",mealName(m.slot)),function(){
-      var r2=dayRec(d);if(before)r2.meals[m.slot]=before;else delete r2.meals[m.slot];saveDB();render();});
     return;});
   key("quickfood",function(D){
     var f10=(S.myFoods||[]).concat(FOODDB||[]).filter(function(x){return x.id===D.quickfood;})[0];

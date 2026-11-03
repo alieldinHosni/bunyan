@@ -88,7 +88,10 @@ async function coach(page,sec,sub){
     if(card)await card.tap();
     else await page.evaluate(async([a,f])=>{const v=await import("/js/ui/view.js");if(a==="tplan"){v.V.train="plan";v.V.tplan=f;}else v.V.fplan=f;(await import("/js/ui/render.js")).render();},[attr,first]);
     await page.waitForTimeout(250);
+    /* Exercises live under Programs since 3 Nov: that tab, at the library. */
+    const ex=sec==="train"&&sub==="exercises";if(ex)sub="programs";
     if(sub&&sub!==first){await page.tap('.psecs [data-'+attr+'="'+sub+'"]');await page.waitForTimeout(250);}
+    if(ex){await page.evaluate(()=>document.getElementById("pex").scrollIntoView({block:"start"}));await page.waitForTimeout(150);}
     return;}
   await tapTab(page,"coach");await page.waitForTimeout(200);}
 /* The conversation opens from the floating Coach only. With q, that question is asked. */
@@ -1372,8 +1375,11 @@ await test("Press: a finger starting a scroll never flashes what it lands on; a 
   await coach(page,"train","exercises");await pause(page,500);
   const cdp=await env.ctx.newCDPSession(page);
   const touch=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
-  const b=await (await page.$(".ttile")).boundingBox();
-  const x=b.x+b.width/2,y=b.y+b.height/2;
+  /* The tile sits on a page that scrolls: aim at it afresh before each gesture. */
+  let x=0,y=0;
+  const aim=async()=>{await page.evaluate(()=>document.querySelector(".ttile").scrollIntoView({block:"center"}));await page.waitForTimeout(120);
+    const b=await (await page.$(".ttile")).boundingBox();x=b.x+b.width/2;y=b.y+b.height/2;};
+  await aim();
   const lit=()=>page.evaluate(()=>document.querySelector(".ttile").classList.contains("tapd"));
   /* A scroll: the finger lands and moves at once. */
   await page.evaluate(()=>{window.__clk=0;document.addEventListener("click",()=>window.__clk++,true);});
@@ -1384,7 +1390,7 @@ await test("Press: a finger starting a scroll never flashes what it lands on; a 
   await touch("touchEnd");await page.waitForTimeout(200);
   eq(await page.evaluate(()=>window.__clk),0,"the scroll was not a tap");
   /* A held press shows once the finger has rested. */
-  await touch("touchStart",x,y);await page.waitForTimeout(150);
+  await aim();await touch("touchStart",x,y);await page.waitForTimeout(150);
   eq(await lit(),true,"a resting finger presses");
   eq(await page.evaluate(()=>getComputedStyle(document.querySelector(".ttile")).transform!=="none"),true,"the press look applies");
   await touch("touchMove",x,y-30);await page.waitForTimeout(30);
@@ -1394,7 +1400,7 @@ await test("Press: a finger starting a scroll never flashes what it lands on; a 
   /* A quick tap answers as it lifts, then the tap goes through. */
   await page.evaluate(()=>{window.__lit=0;new MutationObserver(m=>{if(m.some(r=>r.target.classList.contains("tapd")))window.__lit++;})
     .observe(document.getElementById("app"),{attributes:true,attributeFilter:["class"],subtree:true});});
-  await touch("touchStart",x,y);await page.waitForTimeout(20);await touch("touchEnd");
+  await aim();await touch("touchStart",x,y);await page.waitForTimeout(20);await touch("touchEnd");
   await page.waitForTimeout(500);
   eq([await page.evaluate(()=>window.__lit>0),await page.evaluate(()=>window.__clk),await page.evaluate(()=>document.querySelectorAll(".tapd").length)],[true,1,0],"a quick tap flashes once and goes through");
   /* With a mouse it is plain :active again. */
@@ -2482,7 +2488,15 @@ await test("Stress said high: the week stays light and nothing asks for more vol
   if(/Some muscles get little training/.test(txt))throw new Error("asks for more volume on a week kept light on purpose");
   if(!/Kept light on purpose/.test(txt)||!/I'll ask again on/.test(txt))throw new Error("does not say the week is light on purpose, or when it will ask");
   eq(await page.evaluate(async()=>{const C=await import("/js/engine/plancheck.js");return C.checkPlans().some(f=>f.id==="vol-low");}),false,"the plan check agrees");
-  await page.tap('[data-stressask]');await pause(page,300);
+  /* Still stressed (owner, 3 Nov): the week stays light, the card leaves the list for one
+     line that still says when, and Better now? is on it. Undo brings the card back. */
+  const at0=await ev(page,"S.profile.stressAt");
+  await page.tap('[data-stresskeep]');await pause(page,300);
+  eq(await ev(page,"[S.profile.stress,S.profile.stressAt,!!document.querySelector('.stresscard'),!!document.querySelector('.stressline [data-stressask]')]"),["high",at0,false,true],"still stressed: kept light, a line instead of the card");
+  if(!/I'll ask again on/.test(await page.textContent('.stressline')))throw new Error("the line does not say when");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[S.profile.stressOk===undefined,!!document.querySelector('.stresscard')]"),[true,true],"Undo: the card is back");
+  await page.tap('.stresscard [data-stressask]');await pause(page,300);
   if(!(await page.$('[data-stressnow="stress|normal"]')))throw new Error("no question after It's better now");
   const before=await ev(page,"S.activeProgram");
   await page.tap('[data-stressnow="stress|normal"]');await pause(page,400);
@@ -2493,7 +2507,7 @@ await test("Stress said high: the week stays light and nothing asks for more vol
   await setUp(29);await pause(page,300);
   if(!/How are you now\?/.test(await page.textContent('.stresscard')))throw new Error("the follow-up is not asked after four weeks");
   await page.tap('[data-stressnow="stress|high"]');await pause(page,300);
-  eq(await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");return [st.S.profile.stressAt===U.today(),/Kept light on purpose/.test(document.querySelector('.stresscard').textContent)];}),[true,true],"still high: asked again in four weeks");
+  eq(await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");return [st.S.profile.stressAt===U.today(),!document.querySelector('.stresscard'),/I'll ask again on/.test((document.querySelector('.stressline')||{}).textContent||"")];}),[true,true,true],"still high: asked again in four weeks, said in one line");
 });
 await test("Dock: the red travels from the tab left to the tab tapped, and lands on it",async page=>{
   await tapTab(page,"train");await pause(page,700);
@@ -2576,18 +2590,18 @@ await test("Blocks: the first workout starts block 1, and week 1 leaves three in
   eq(r,[true,{n:1,week:1,light:false},true]);
   if(!/3 in reserve/.test(await page.textContent("#app")))throw new Error("the dose does not say 3 in reserve");
 });
-await test("Blocks: the Train page shows the week, and week 3 asks for one in reserve",async page=>{
+await test("Blocks: My program shows the week of the block, and week 3 asks for one in reserve",async page=>{
   await blockAt(page,iso(15));
-  await tapTab(page,"train");await pause(page);
+  await coach(page,"train","program");await pause(page);
   const t=await page.$eval(".blk",e=>e.innerText);
   if(!/Block 1 · Week 3 of 4/.test(t)||!/\b1 (rep )?in reserve/.test(t))throw new Error("card: "+t);
   eq(await page.$$eval(".blk-bar i",a=>a.map(i=>i.className)),["done","done","on"," lt"],"two weeks done, this one lit, the lighter one last");
-  await page.tap("[data-startday]");await pause(page,400);
+  await tapTab(page,"train");await pause(page,300);await page.tap("[data-startday]");await pause(page,400);
   eq(await ev(page,"S.active.entries.filter(e=>e.kind!=='activity'&&!e.planned.timed).every(e=>e.planned.rir===1)"),true,"one in reserve");
 });
 await test("Blocks: the planned lighter week thins the sets, and ending it starts the next block",async page=>{
   await blockAt(page,iso(23));
-  await tapTab(page,"train");await pause(page);
+  await coach(page,"train","program");await pause(page);
   if(!(await page.$(".blk.light")))throw new Error("no lighter-week card");
   if(await page.$(".dlcard.on"))throw new Error("the deload card shows as well");
   eq(await ev(page,"S.block.start"),iso(23));
@@ -2630,17 +2644,17 @@ await test("Phases: block 1 is stabilisation (12–20 reps, slow tempo), block 3
     const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()-7*w);
     st.S.block={start:sc.weekStartOf(new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10))};st.S.profile.goal="gain";st.saveDB();
     (await import("/js/ui/render.js")).render();},weeksAgo);
-  await at(0);await tapTab(page,"train");await pause(page,300);
+  await at(0);await coach(page,"train","program");await pause(page,300);
   const c1=await page.textContent('.blk');
   if(!/Stabilisation endurance/.test(c1)||!/12–20 reps/.test(c1)||!/4-2-1-1/.test(c1)||!/Next block: Strength endurance/.test(c1))throw new Error("block 1 card: "+c1);
-  await page.tap('[data-startday]');await pause(page,500);
+  await tapTab(page,"train");await pause(page,300);await page.tap('[data-startday]');await pause(page,500);
   const e1=await ev(page,"S.active.entries.filter(e=>e.planned&&e.planned.lo&&!e.planned.timed&&e.planned.lo<30).map(e=>[e.planned.lo,e.planned.hi,e.planned.tempo||''])");
   eq(e1.length>2&&e1.every(x=>x[0]>=12&&x[1]<=20&&/4-2-1-1/.test(x[2])),true,"phase 1 doses: "+JSON.stringify(e1));
   /* Last time's best set was 8 reps: the 12–20 range gets a lighter, estimated weight. */
   const rec=await page.evaluate(async()=>{const st=await import("/js/state.js"),F=await import("/js/engine/formulas.js");const e=st.S.active.entries[0];return F.recommend(e);});
   if(rec&&rec.last){if(!rec.est||!(rec.w<parseFloat(rec.last)))throw new Error("no estimate for the new range: "+JSON.stringify(rec));}
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;st.saveDB();});
-  await at(9);await tapTab(page,"train");await pause(page,300);
+  await at(9);await coach(page,"train","program");await pause(page,300);
   const c3=await page.textContent('.blk');
   if(!/Block 3/.test(c3)||!/Muscular development/.test(c3)||!/6–12 reps/.test(c3))throw new Error("block 3 card: "+c3);
 });
@@ -2662,16 +2676,16 @@ await test("Experienced lifters choose: stabilisation is a suggestion they can s
     const p=st.makeProgram({id:"ss",name:"SS",days:[Sp.day("Upper",[Sp.ex("Barbell Bench Press - Medium Grip",3,6,10),Sp.ex("Bent Over Barbell Row",3,6,10)])]});p.id="ss";
     st.S.programs=[p];st.S.activeProgram="ss";st.S.profile.level="experienced";st.S.profile.goal="gain";delete st.S.profile.skipStab;st.S.profile.conds=[];
     st.S.block={start:sc.weekStartOf(U.today())};st.saveDB();(await import("/js/ui/render.js")).render();});
-  await tapTab(page,"train");await pause(page,300);
+  await coach(page,"train","program");await pause(page,300);
   if(!(await page.$('.blk [data-skipstab="1"]')))throw new Error("no choice offered: "+(await page.textContent('.blk')));
   await page.tap('.blk [data-fold]');await pause(page,200);
   await page.tap('.blk [data-skipstab="1"]');await pause(page,300);
   eq(await page.evaluate(async()=>[(await import("/js/state.js")).S.profile.skipStab,((await import("/js/engine/blocks.js")).phaseNow()||{}).n]),[true,2],"skipped: block 1 runs strength endurance");
-  await page.tap('[data-startday]');await pause(page,500);
+  await tapTab(page,"train");await pause(page,300);await page.tap('[data-startday]');await pause(page,500);
   const ex=await ev(page,"S.active.entries.map(e=>[e.name,e.grp||'',e.planned.lo,e.planned.hi])");
   eq([ex[0][0],ex[1][0],!!ex[0][1]&&ex[0][1]===ex[1][1],ex[2][1]],["Barbell Bench Press - Medium Grip","Pushups",true,""],"bench then push-ups as one superset, the row on its own: "+JSON.stringify(ex));
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;st.saveDB();(await import("/js/ui/render.js")).render();});
-  await tapTab(page,"train");await pause(page,300);
+  await coach(page,"train","program");await pause(page,300);
   if(!(await page.$('.blk.open')))await page.tap('.blk [data-fold]');await pause(page,200);
   await page.tap('.blk [data-skipstab="0"]');await pause(page,300);
   eq(await ev(page,"S.profile.skipStab"),false,"stabilisation back");
@@ -2680,7 +2694,7 @@ await test("Compact: the block card is one line until its arrow opens it, in pla
   await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js");
     st.S.profile.level="experienced";st.S.profile.goal="gain";st.S.profile.conds=[];delete st.S.profile.skipStab;
     st.S.block={start:sc.weekStartOf(U.today())};st.saveDB();(await import("/js/ui/render.js")).render();});
-  await tapTab(page,"train");await pause(page,300);
+  await coach(page,"train","program");await pause(page,300);
   const shut=await page.evaluate(()=>{const b=document.querySelector('.blk'),f=b.querySelector('.fold-body');return [b.classList.contains('open'),getComputedStyle(f).display,/Stabilisation endurance/.test(b.querySelector('.blk-s').textContent),/\bbook\b/i.test(b.textContent)];});
   eq(shut,[false,"none",true,false],"folded, the phase in the header, no talk of a book");
   await page.evaluate(()=>{window.__blk=document.querySelector('.blk');});
@@ -4420,18 +4434,20 @@ await test("Guide: the first time Training opens, glass tips point at each thing
     return {k:c.querySelector(".tour-k").textContent,h:c.querySelector(".tour-h").textContent,dir:c.classList.contains("up")?"up":c.classList.contains("down")?"down":"none",hole:[Math.round(h.width),Math.round(h.height)]};});
   let c=await card();
   if(!c)throw new Error("no guide on first opening");
-  eq([c.k,c.h],["Training · 1 of 8","What the coach noticed"],"the first tip");
-  const bell=await page.$eval('.hacts [data-csec="ai"]',e=>{const r=e.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];});
-  if(Math.abs(c.hole[0]-bell[0]-16)>2||Math.abs(c.hole[1]-bell[1]-16)>2)throw new Error("the light is not on the bell: "+JSON.stringify([c.hole,bell]));
+  /* Rewritten 3 Nov (owner: "I didn't understand what the buttons do"): how the app fits
+     together first, in the middle of the screen, then each thing and what a tap does. */
+  eq([c.k,c.h,c.hole],["Training · 1 of 10","How Bunyan works",[0,0]],"the first tip: the app as a whole, nothing lit");
+  if(!/Four tabs at the bottom/.test(await page.textContent('.tour-p')))throw new Error("the overview does not say the tabs");
   eq(await ev(page,"V.tab"),"train","the page under it is untouched");
   /* Anywhere: even over a button, a tap only moves the guide on. */
-  const seen=[c.h];
-  for(let i=0;i<7;i++){await page.mouse.click(30+i*40,300+i*30);await pause(page,500);c=await card();if(c)seen.push(c.h);}
-  eq(seen.length,8,"eight tips (live tracking is reached through Cardio and sports; the program card opens the plan)");
-  eq(seen[7],"Getting around","the last points at the dock");
+  const seen=[c.h];let bellHole=null;
+  for(let i=0;i<9;i++){await page.mouse.click(30+i*30,300+i*30);await pause(page,500);c=await card();if(c){seen.push(c.h);if(c.h==="Coach's notes")bellHole=c.hole;}}
+  eq(seen,["How Bunyan works","Your week","Today","Your program","Weight and steps","Cardio and sports","Coach's notes","Profile","Ask the coach","The tabs"],"each thing, in turn");
+  const bell=await page.$eval('.hacts [data-csec="ai"]',e=>{const r=e.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];});
+  if(!bellHole||Math.abs(bellHole[0]-bell[0]-16)>2||Math.abs(bellHole[1]-bell[1]-16)>2)throw new Error("the light is not on the bell: "+JSON.stringify([bellHole,bell]));
   eq(await ev(page,"[V.tab,V.sheet]"),["train",null],"no tap reached the page");
   await page.mouse.click(200,200);await pause(page,600);
-  eq([await card(),await ev(page,"S.prefs.toured.train")],[null,2],"finished, and remembered (at the guide's version)");
+  eq([await card(),await ev(page,"S.prefs.toured.train")],[null,3],"finished, and remembered (at the guide's version)");
   await page.reload();await pause(page,2200);
   eq(await card(),null,"not again");
   /* Profile → Show the guide again: Training's guide, from the start. */
@@ -4440,9 +4456,9 @@ await test("Guide: the first time Training opens, glass tips point at each thing
   await page.evaluate(()=>localStorage.removeItem("bunyan:notour"));
   await page.$eval('[data-tourreset]',e=>e.click());await pause(page,1800);
   c=await card();
-  eq([await ev(page,"V.tab"),c&&c.k],["train","Training · 1 of 8"],"back from the start");
+  eq([await ev(page,"V.tab"),c&&c.k],["train","Training · 1 of 10"],"back from the start");
   await page.click('.tour-skip');await pause(page,500);
-  eq([await card(),await ev(page,"S.prefs.toured.train")],[null,2],"Skip ends it, seen");
+  eq([await card(),await ev(page,"S.prefs.toured.train")],[null,3],"Skip ends it, seen");
 },{tour:true});
 await test("Warm-up pictures: drills the library shot under another name use its photos; the rest are drawn as figures, in the list and on their sheet",async page=>{
   const r=await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
@@ -4466,6 +4482,93 @@ await test("Steps: tap the number and type any count (456); Done saves it; the b
   await page.tap('.stfield [data-d="500"]');await pause(page,200);
   eq(await page.$eval('#in_st',e=>e.value),"956","+ still steps by 500");
 });
+/* ---- plan pages, round 2 (owner, 3 Nov) ------------------------------------------------ */
+await test("Plan pages: a sideways swipe moves between the tabs on Training and Food; a nudge, a vertical drag or a drag on the templates row does not; Arabic goes the other way",async(page,env)=>{
+  const cdp=await env.ctx.newCDPSession(page);
+  const drag=async(x0,y0,x1,y1,steps=12)=>{
+    await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x0,y:y0}]});
+    for(let i=1;i<=steps;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x0+(x1-x0)*i/steps,y:y0+(y1-y0)*i/steps}]});await page.waitForTimeout(16);}
+    await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(700);};
+  const paneY=()=>page.evaluate(()=>{window.scrollTo(0,0);const r=document.querySelector("#app .psec").getBoundingClientRect();return Math.round(Math.min(r.top+90,innerHeight-160));});
+  await coach(page,"train","program");
+  let y=await paneY();
+  await drag(320,y,60,y+4);eq(await ev(page,"V.tplan"),"programs","swipe left: Programs & exercises");
+  y=await paneY();
+  await drag(320,y,280,y+2);eq(await ev(page,"V.tplan"),"programs","a nudge springs back");
+  await drag(200,y,205,y-200);eq(await ev(page,"V.tplan"),"programs","a vertical drag is a scroll");
+  /* The templates row scrolls sideways: a drag that starts on it is the row's. */
+  const row=await page.evaluate(()=>{const e=document.querySelector("#app .psec .tscroll");e.scrollIntoView({block:"center"});const r=e.getBoundingClientRect();return [Math.round(r.top+r.height/2),e.scrollLeft];});
+  await drag(320,row[0],60,row[0]+2);
+  eq(await ev(page,"[V.tplan,document.querySelector('#app .psec .tscroll').scrollLeft>"+row[1]+"]"),["programs",true],"the templates row scrolled, the tab stayed");
+  y=await paneY();
+  await drag(60,y,330,y+4);eq(await ev(page,"V.tplan"),"program","swipe right: back to My program");
+  await drag(60,y,330,y+4);eq(await ev(page,"V.tplan"),"program","the first tab resists");
+  eq(await page.$eval('#app .psec',e=>e.style.transform),"","nothing left offset");
+  await coach(page,"food","plan");
+  y=await paneY();
+  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"targets","Food: Meal plan → Targets");
+  y=await paneY();
+  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"foods","→ My foods");
+  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"foods","the last tab resists");
+  /* Arabic: what comes next is on the left, so dragging right brings it. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});
+  await coach(page,"train","program");y=await paneY();
+  await drag(60,y,330,y+4);eq(await ev(page,"V.tplan"),"programs","Arabic: swipe right for the next tab");
+});
+await test("Plan pages: opening one slides it in over Training while Training eases back; back slides it off; a tab tap keeps its own entrance; reduced motion has neither",async page=>{
+  await tapTab(page,"train");await pause(page,600);
+  const ghost=()=>page.evaluate(()=>{const g=document.querySelector(".pghost");return g?[!!g.querySelector(".pgc"),g.getAttribute("aria-hidden"),getComputedStyle(g).pointerEvents,document.querySelectorAll("#app").length>=1&&document.getElementById("app")!==g]:null;});
+  await page.tap('.pgc [data-tplan="program"]');await pause(page,120);
+  eq(await ghost(),[true,"true","none",true],"Training stays as a still copy, out of reach, under the new page");
+  eq(await page.evaluate(()=>document.getElementById("app").getAnimations().length>0),true,"the new page is moving in");
+  await pause(page,900);
+  eq(await page.evaluate(()=>[!!document.querySelector(".pghost"),document.documentElement.classList.contains("pgmoving"),document.getElementById("app").classList.contains("pgfront")]),[false,false,false],"and gone when it lands");
+  await page.tap('#app .dhead [data-back]');await pause(page,120);
+  eq(await page.evaluate(()=>{const g=document.querySelector(".pghost");return g?[!!g.querySelector(".psecs"),+getComputedStyle(g).zIndex>0]:null;}),[true,true],"back: the plan page slides off over Training");
+  await pause(page,900);
+  eq(await ev(page,"[V.tab,V.train]"),["train","days"],"on Training");
+  await tapTab(page,"food");await pause(page,100);
+  eq(await page.evaluate(()=>!!document.querySelector(".pghost")),false,"a tab change is not a page push");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=false;(await import("/js/ui/render.js")).render();});
+  await page.tap('#app [data-fplan="plan"]');await pause(page,60);
+  eq(await page.evaluate(()=>!!document.querySelector(".pghost")),false,"reduced motion: no slide");
+},{prefs:{anim:true}});
+await test("Schedule: one card — the choice with icons, then the week it makes: in rotation the days in order and round again, by weekday each day's number on its weekday; the page line names the weekdays alike",async page=>{
+  await coach(page,"train","program");
+  const n=await ev(page,"S.programs.find(p=>p.id===S.activeProgram).days.length");
+  const cy=await page.$$eval('.bsched .bsch-cy li',a=>a.map(l=>l.className));
+  eq([cy.length,cy[cy.length-1]],[n+1,"again"],"in rotation: every day, then round again");
+  eq(await page.$$eval('.bsched .seg-b .seg-i',a=>a.length),2,"both choices carry an icon");
+  await page.tap('[data-sched="week"]');await pause(page,400);
+  const wk=await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/engine/schedule.js");
+    const p=st.S.programs.find(x=>x.id===st.S.activeProgram);
+    const want=sc.weekOrder().map(w=>p.days.map((d,i)=>(d.wd||[]).indexOf(w)>=0?String(i+1):"").join(""));
+    const got=[...document.querySelectorAll('.bsched .bsch-wk li')].map(l=>[...l.querySelectorAll("b i")].map(i=>i.textContent).join(""));
+    const pinned=[...new Set(p.days.flatMap(d=>d.wd||[]))].sort((a,b)=>sc.weekOrder().indexOf(a)-sc.weekOrder().indexOf(b));
+    return {want,got,line:document.querySelector("#app .dsub").textContent,names:pinned.map(w=>sc.wdName(w,true)).join(", ")};});
+  eq(wk.got,wk.want,"each weekday shows the numbers of the days on it");
+  eq(wk.line.split(", ").sort(),wk.names.split(", ").sort(),"the page line names every weekday the same way, in full (it said “Mon, Wednesday, Saturday”)");
+  if(!/two days the same weekday|another day already has/.test(await page.textContent('.bsched .bsch-n')))throw new Error("no line on two sessions a day");
+});
+await test("Programs & exercises: the library, favourites and bodyweight work sit under the programs; two tabs; an old route to Exercises lands there",async page=>{
+  await coach(page,"train","programs");
+  eq(await page.$$eval('#app .psecs .seg-b',a=>a.map(b=>b.textContent)),["My program","Programs & exercises"],"two tabs");
+  eq(await page.evaluate(()=>[!!document.querySelector('#app .psec [data-newsplit]'),!!document.querySelector('#app .psec #pex'),!!document.querySelector('#app .psec [data-train="library"]'),!!document.querySelector('#app .psec [data-train="favs"]')]),[true,true,true,true],"programs, then the exercises");
+  await tapTab(page,"train");await pause(page,300);
+  await page.evaluate(async()=>{const v=await import("/js/ui/view.js");v.V.train="plan";v.V.tplan="exercises";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await ev(page,"V.tplan"),"programs","Exercises is Programs & exercises now");
+  eq(await page.evaluate(()=>{const r=document.getElementById("pex").getBoundingClientRect();return window.scrollY>0&&r.top>=0&&r.top<innerHeight-120;}),true,"scrolled to the library");
+  /* The block card is on My program, not Training's card. */
+  await tapTab(page,"train");await pause(page,300);
+  eq(await page.$$eval('#app .pgc .blk',a=>a.length),0,"Training's program card is just the way in");
+});
+await test("Guide: Training's plan page has its own, which says what the tabs, Edit and the schedule do",async page=>{
+  await pause(page,1200);
+  await coach(page,"train","program");await pause(page,1600);
+  const k=await page.evaluate(()=>{const c=document.querySelector(".tour-card");return c?[c.querySelector(".tour-k").textContent,c.querySelector(".tour-h").textContent]:null;});
+  if(!k||!/^Training plan · 1 of /.test(k[0])||k[1]!=="Two tabs")throw new Error("guide: "+JSON.stringify(k));
+  if(!/Swipe left or right/.test(await page.textContent('.tour-p')))throw new Error("does not say a swipe switches");
+},{tour:true,prefs:{toured:{train:9,food:9,coach:9,progress:9,profile:9}}});
 await test("Meal plan: “Build it from my targets” lives on the meal plan page, beside Import, and opens the plan to review",async page=>{
   await coach(page,"food","plan");
   if(!(await page.$('.psec [data-pgen]'))||!(await page.$('.psec [data-pimport]')))throw new Error("the two ways to fill the plan are not on the meal plan page");
@@ -4561,10 +4664,8 @@ await test("Food: in the evening with protein short, the body says so, lights pr
   const after=await ev(page,"Object.values(S.days[Object.keys(S.days).sort().pop()].meals).flatMap(m=>m.items||[])");
   eq([after.length,after.some(x=>x.fid===fid&&x.p>10)],[before+1,true],"logged, with its protein");
   if(!/Coach noticed/.test(await page.$eval('.fnoticed',e=>e.innerText)))throw new Error("no week card");
-  await page.$eval('[data-fbuild]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-fbuild]');await pause(page,600);
-  /* Built where it was asked for, not by sending you to the chat (owner, 3 Nov). */
-  await page.waitForSelector('#sheet .tm-list li',{timeout:15000});
-  eq(await ev(page,"[V.tab,V.sheet,!!V.coach]"),["food","todaymeal",false],"Build today's meal builds it, over Food");
+  /* "Build today's meal" is gone (owner, 3 Nov: "no actual value"). */
+  eq(await page.$$eval('[data-fbuild]',a=>a.length),0,"no Build today's meal");
 },{db:lowProtein()});
 await test("Food: in the morning nothing is behind yet; with water short in the afternoon, a glass is offered instead of food",async page=>{
   await page.addInitScript(()=>{Date.prototype.getHours=function(){return 9;};});await page.reload();await pause(page,1200);

@@ -17,30 +17,46 @@ import {S, saveDB} from "../state.js";
 import {esc} from "../util.js";
 import {V} from "./view.js";
 
+/* Rewritten 3 Nov (v 3; owner: "un useful and unclear info, I didn't understand what the
+   buttons do"). Each tip names the thing, then says what a tap on it does, in those
+   words. Training opens with how the app fits together (a step with center: no target,
+   the card in the middle). The plan pages have guides of their own. */
 var GUIDES={
   train:{name:"Training",steps:[
-    {sel:'.hacts [data-csec="ai"]',h:"What the coach noticed",p:"The bell opens what your coach has spotted in your log. A dot on it means there is something to look at."},
-    {sel:".hacts .havatar",h:"You",p:"Your picture opens Profile: your details, your picture, the app's settings and your backups."},
-    {sel:".wkr",h:"Your week",p:"Each day shows what it holds. Tap one to choose it and tap it again for its details. Swipe for another week, and open the month from the calendar: a dot is a workout done, a ring one planned."},
-    {sel:".thero2",h:"Today's workout",p:"Start it here. Change swaps today for another day of your plan."},
-    {sel:".pgc",v:2,h:"Your program",p:"Your program and the training block it is in. Plan opens it: its days, other programs and the exercise library."},
-    {sel:".htiles",h:"Weigh-in and steps",p:"Tap either one to log it, and type the number. The ring fills toward your daily steps goal."},
-    {sel:"[data-actsheet]",h:"Cardio and sports",p:"Log a match or a class by time and effort. Pick a run, a walk, a ride or a hike to track it live with your phone's GPS."},
-    {sel:"nav .dock",fixed:true,h:"Getting around",p:"Training, Food, Coach and Progress. The tab you are on opens to show its name."}]},
+    {center:true,v:3,h:"How Bunyan works",p:"Four tabs at the bottom. Training: today's workout and your program. Food: what you eat against your targets. Coach: what to change this week. Progress: your results. Tap anywhere to walk through this page."},
+    {sel:".wkr",v:3,h:"Your week",p:"Every day of this week with what is planned on it. Tap a day to see its workout below; tap it again to open it. The calendar button opens the whole month."},
+    {sel:".thero2",v:3,h:"Today",p:"Start begins today's workout and logs your sets as you go. Change trains another day of your program instead. On a rest day you can add a session."},
+    {sel:".pgc",v:3,h:"Your program",p:"The days and exercises you follow. Tap Plan to edit your days, change when you train, switch to another program or browse exercises."},
+    {sel:".htiles",v:3,h:"Weight and steps",p:"Tap Weight to log today's weight, and Steps to type today's count. Your coach reads both."},
+    {sel:"[data-actsheet]",v:3,h:"Cardio and sports",p:"Log a game, a class or a swim by minutes and effort. A run, walk, ride or hike can be tracked live with your phone's GPS."},
+    {sel:'.hacts [data-csec="ai"]',v:3,h:"Coach's notes",p:"Opens the Coach tab. A dot means the coach has something for you to decide."},
+    {sel:".hacts .havatar",v:3,h:"Profile",p:"Your details and targets, the app's settings, and your backups."},
+    {sel:"#cfab .cfab",fixed:true,v:3,h:"Ask the coach",p:"On every page. Tap it to chat: ask anything, or tell the coach what to change, in English or Arabic."},
+    {sel:"nav .dock",fixed:true,v:3,h:"The tabs",p:"Tap one to switch between Training, Food, Coach and Progress."}]},
+  /* Training's plan page (views/train.js vTrainPlan). */
+  tplan:{name:"Training plan",steps:[
+    {sel:".psecs",v:3,h:"Two tabs",p:"My program is what you follow now. Programs & exercises has other programs, templates and the exercise library. Swipe left or right to switch."},
+    {sel:".bname .dname",v:3,h:"The name",p:"Tap it to rename your program."},
+    {sel:".blk",v:3,h:"Training block",p:"Where you are in this block, and the reps and effort it asks for. Tap it to see why, and what comes next."},
+    {sel:".drows",v:3,h:"Your days",p:"Tap a day to add, remove or change its exercises."},
+    {sel:".droutine [data-reorder]",v:3,h:"Edit",p:"Shows a ✕ to remove a day and a handle to drag days into a new order. Tap Done when you have finished."},
+    {sel:".bsched",v:3,h:"Schedule",p:"By weekday: each day falls on the same weekdays, picked under each day. In rotation: the next day comes whenever you train."}]},
   food:{name:"Food",steps:[
-    {sel:".dnav-card",h:"The day",p:"Swipe or tap the arrows to see another day. Food always opens on today."},
-    {sel:".fsum",h:"Today against your targets",p:"Calories eaten and left, and protein, carbs and fat, against what your plan asks for."},
-    {sel:".fmt",h:"Your meals",p:"Tap a meal to see it, log it as planned, or change any food's amount."},
-    {sel:"[data-addfood]",h:"Add food",p:"Search the food list, scan a barcode, or describe a meal in words."},
-    {sel:".fpc",v:2,h:"Your plan",p:"Your meal plan and daily targets. Plan opens them, with the foods and meals of your own."},
-    {sel:".fbody",h:"What your body needs",p:"What is behind for the time of day, and everyday foods that bring it. One tap logs one."},
-    {sel:".fwater",h:"Water",p:"Tap the glasses to set how much you have drunk today."}]},
-  /* The Coach page as it is from 3 Nov (v 2): planning moved to Training and Food. */
+    {sel:".dnav-card",v:3,h:"The day",p:"Food opens on today. Swipe or use the arrows to look at or fill in another day."},
+    {sel:".fsum",v:3,h:"Today's numbers",p:"Calories eaten and left, with protein, carbs and fat against your targets."},
+    {sel:".fmt",v:3,h:"Meals",p:"Tap a meal to log it as planned, change an amount or remove a food."},
+    {sel:"[data-addfood]",v:3,h:"Add food",p:"Search the food list, scan a barcode, or type what you ate in words."},
+    {sel:".fpc",v:3,h:"Your plan",p:"Tap Plan for your meal plan, your daily targets and the foods you saved."},
+    {sel:".fbody",v:3,h:"What you are short of",p:"What is behind for this time of day, and foods that cover it. Tap one to log it."},
+    {sel:".fwater",v:3,h:"Water",p:"Tap a glass for each one you drink."}]},
+  /* Food's plan page (views/food.js vFoodPlan). */
+  fplan:{name:"Nutrition plan",steps:[
+    {sel:".psecs",v:3,h:"Three tabs",p:"Meal plan: your meals for a day. Targets: your calories and macros. My foods: foods and meals you saved. Swipe left or right to switch."}]},
   coach:{name:"Coach",steps:[
-    {sel:".cask",v:2,h:"Ask me anything",p:"Ask about training, food or progress, in English or Arabic, or tap a question. Answers come from your own log."},
-    {sel:".cweek2",v:2,h:"This week",p:"Workouts done against those planned, the days protein reached its target, and your streak."},
-    {sel:".cfor",v:2,h:"For you",p:"Everything that wants a decision this week, most important first. Each has its own buttons, and nothing changes until you tap one."},
-    {sel:".crow",v:2,h:"Start again",p:"Take the assessment again to rebuild your training and meals. You see both before anything changes."}]},
+    {sel:".cask",v:3,h:"Ask your coach",p:"Type a question, or tap one of the suggestions under it. The answer uses your own log, plan and targets."},
+    {sel:".cweek2",v:3,h:"This week",p:"Workouts done out of those planned, the days you reached your protein, and your streak."},
+    {sel:".cfor",v:3,h:"For you",p:"What the coach wants you to decide, most important first. Nothing changes until you tap, and most changes can be undone."},
+    {sel:".crow",v:3,h:"Start again",p:"Answers the starting questions again, then rebuilds your training and meals. You see both before anything changes."}]},
   progress:{name:"Progress",steps:[
     {sel:".pgtabs2",h:"Three views",p:"Overview for the big picture, Strength for your lifts, Body for weight, measurements and photos."},
     {sel:".pgrange",h:"How far back",p:"From the last week to the last year. Every chart on the page follows it."},
@@ -64,9 +80,9 @@ function pageKey(){
   if(V.tab==="train"&&S.run&&!S.active)return "run";
   if(S.active)return null;
   if(V.tab==="coach"&&V.chat)return "chat";
-  if(V.tab==="train")return V.train==="days"?"train":null;
+  if(V.tab==="train")return V.train==="days"?"train":V.train==="plan"?"tplan":null;
   if(V.tab==="coach")return !V.pcheck?"coach":null;
-  if(V.tab==="food")return !V.meal&&!V.fplan&&!V.smeal&&!V.pslot&&!V.pimport?"food":null;
+  if(V.tab==="food")return V.smeal||V.pslot||V.pimport||V.meal?null:V.fplan?"fplan":"food";
   if(V.tab==="progress")return !V.phist?"progress":null;
   if(V.tab==="profile")return "profile";
   return null;}
@@ -134,7 +150,7 @@ function tourCheck(){
     start(key);},900);}
 
 function start(key){
-  var steps=stepsFor(key).filter(function(st){return !!visibleEl(st.sel);});
+  var steps=stepsFor(key).filter(function(st){return st.center||!!visibleEl(st.sel);});
   if(!steps.length){finish(key);return;}
   T={key:key,steps:steps,i:0,el:null};
   var el=document.createElement("div");
@@ -171,7 +187,7 @@ function show(){
   /* The page changed under the guide (a redraw, a reminder): it stops, unseen, and
      the page now on screen gets its own. */
   if(pageKey()!==T.key){quit();tourCheck();return;}
-  var st=T.steps[T.i],tgt=visibleEl(st.sel);
+  var st=T.steps[T.i],tgt=st.center?document.body:visibleEl(st.sel);
   if(!tgt){next();return;}
   var card=T.el.querySelector(".tour-card");
   card.classList.remove("in");
@@ -179,11 +195,15 @@ function show(){
   card.querySelector(".tour-h").textContent=t(st.h);
   card.querySelector(".tour-p").textContent=t(st.p);
   card.querySelector(".tour-tap").textContent=t(T.i===T.steps.length-1?"Tap anywhere to finish":"Tap anywhere for the next tip");
-  if(!st.fixed)tgt.scrollIntoView({block:"center",inline:"nearest"});
+  if(st.center)window.scrollTo(0,0);
+  else if(!st.fixed)tgt.scrollIntoView({block:"center",inline:"nearest"});
   /* After the scroll has landed. */
   setTimeout(function(){if(T)place();},st.fixed?20:260);}
 function place(){
-  var st=T.steps[T.i],tgt=visibleEl(st.sel);if(!tgt)return;
+  var st=T.steps[T.i];
+  if(st.center){placeCenter();return;}
+  var tgt=visibleEl(st.sel);if(!tgt)return;
+  T.el.querySelector(".tour-hole").classList.remove("off");
   var r=tgt.getBoundingClientRect(),vw=window.innerWidth,vh=window.innerHeight,pad=8;
   var hole=T.el.querySelector(".tour-hole"),card=T.el.querySelector(".tour-card"),arrow=card.querySelector(".tour-arrow");
   var rad=parseFloat(getComputedStyle(tgt).borderTopLeftRadius)||12;
@@ -208,6 +228,14 @@ function end(){
   window.scrollTo(0,0);
   /* Another page's guide may be waiting where this one ended. */
   tourCheck();}
+/* A step about the whole app: the screen dimmed, nothing lit, the card in the middle. */
+function placeCenter(){
+  var vw=window.innerWidth,vh=window.innerHeight,hole=T.el.querySelector(".tour-hole"),card=T.el.querySelector(".tour-card");
+  hole.classList.add("off");hole.style.left=(vw/2)+"px";hole.style.top=(vh/2)+"px";hole.style.width="0px";hole.style.height="0px";
+  var cw=Math.min(340,vw-32);card.style.width=cw+"px";
+  card.style.left=((vw-cw)/2)+"px";card.style.top=Math.max(16,(vh-card.offsetHeight)/2)+"px";
+  card.className="tour-card none in";
+  try{card.focus({preventScroll:true});}catch(e){}}
 /* Takes the guide off the screen. */
 function quit(){
   if(!T)return;

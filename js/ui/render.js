@@ -22,6 +22,7 @@ import {patch, replace} from "./patch.js";
 import {checkDock, syncDock} from "./dock.js";
 import {syncWbar} from "./wbar.js";
 import {applyMotion, countTo, glideCards, isReduced, once, snapCards} from "./motion.js";
+import {navDepth} from "./nav.js";
 import {applyLook} from "./theme.js";
 import {bindExSwipe} from "./exswipe.js";
 import {bindMore} from "./more.js";
@@ -73,19 +74,58 @@ var lastView="",lastSheet=null,lastEx=-2,lastSec=null;
    my foods): changing part slides the new one in from the side it is on, the way the
    week moves, rather than swapping in place (owner, 3 Nov: everything animated). The
    page itself arriving is a page change and has its own entrance. */
-var SECS={t:["program","programs","exercises"],f:["plan","targets","foods"]};
+var SECS={t:["program","programs"],f:["plan","targets","foods"]};
 function secNow(){
   if(V.tab==="train"&&V.train==="plan"&&!S.active)return "t:"+(V.tplan||"program");
   if(V.tab==="food"&&V.fplan&&!V.smeal&&!V.pslot&&!V.pimport)return "f:"+V.fplan;
   return null;}
 function slideSection(root,moved){
-  var now=secNow(),was=lastSec;lastSec=now;
-  if(moved||!now||!was||now===was||now[0]!==was[0]||isReduced())return;
+  var now=secNow(),was=lastSec,swiped=V.pswiped;lastSec=now;V.pswiped=false;
+  if(swiped||moved||!now||!was||now===was||now[0]!==was[0]||isReduced())return;
   var list=SECS[now[0]],dir=list.indexOf(now.slice(2))>list.indexOf(was.slice(2))?1:-1;
   if(document.documentElement.getAttribute("dir")==="rtl")dir=-dir;
   var el=root.querySelector(".psec");if(!el||!el.animate)return;
   el.animate([{transform:"translateX("+(dir*28)+"px)",opacity:0},{transform:"none",opacity:1}],
     {duration:360,easing:"cubic-bezier(0.2, 0, 0, 1)"});}
+/* Going one page deeper within a tab, or back up (owner, 3 Nov: Training → Plan "needs
+   to be a little bit slower, and smooth"): the page you were on stays as a still copy and
+   eases back a little, dimming, while the new one slides in over it from the side, the
+   way a phone's own pages do. Back plays it the other way round: the page you leave
+   slides off over the one you return to. Transform and opacity on the copy only: the
+   page's frosted cards lose their blur under a fading parent, and the live page never
+   fades. A tab change keeps its own entrance; reduced motion has neither. */
+var lastDepth=0,lastTab="",PG_MS=600,pgTimer=0;
+function pageMoveOf(moved,view){
+  var d=navDepth(),dd=d-lastDepth,same=V.tab===lastTab;lastDepth=d;lastTab=V.tab;
+  if(!moved||!same||!dd||isReduced()||V.assess||/\/(session|run)$/.test(view))return 0;
+  return dd>0?1:-1;}
+function pageGhost(appEl,dir){
+  var old=document.querySelector(".pghost");if(old)old.remove();
+  var r=appEl.getBoundingClientRect(),g=appEl.cloneNode(true);
+  g.querySelectorAll("[id]").forEach(function(e){e.removeAttribute("id");});
+  /* The copy is at rest: no press frozen on the button that opened the page. */
+  g.classList.remove("tapd");g.querySelectorAll(".tapd").forEach(function(e){e.classList.remove("tapd");});
+  g.classList.remove("pagein");g.classList.add("pghost");g.setAttribute("aria-hidden","true");g.inert=true;
+  g.style.cssText="position:fixed;left:"+r.left+"px;top:"+r.top+"px;width:"+r.width+"px;margin:0;box-sizing:border-box;pointer-events:none;z-index:"+(dir>0?0:3);
+  appEl.parentNode.insertBefore(g,appEl.nextSibling);
+  return g;}
+function pageMove(appEl,g,dir){
+  var side=document.documentElement.getAttribute("dir")==="rtl"?-1:1,ease="cubic-bezier(0.22, 0.61, 0.36, 1)";
+  document.documentElement.classList.add("pgmoving");
+  appEl.classList.add("pgfront");
+  var a,b;
+  if(dir>0){
+    a=appEl.animate([{transform:"translateX("+(side*100)+"%)"},{transform:"none"}],{duration:PG_MS,easing:ease});
+    /* Gone before the new page has covered it: the new page's cards are glass, and the
+       old page read through them as clutter. */
+    b=g.animate([{transform:"none",opacity:1},{transform:"translateX("+(-side*10)+"%)",opacity:0,offset:.42},{transform:"translateX("+(-side*24)+"%)",opacity:0}],{duration:PG_MS,easing:ease,fill:"forwards"});}
+  else{
+    a=appEl.animate([{transform:"translateX("+(-side*24)+"%)"},{transform:"none"}],{duration:PG_MS,easing:ease});
+    b=g.animate([{transform:"none",opacity:1},{transform:"translateX("+(side*80)+"%)",opacity:0,offset:.8},{transform:"translateX("+(side*100)+"%)",opacity:0}],{duration:PG_MS,easing:ease,fill:"forwards"});}
+  clearTimeout(pgTimer);
+  var done=function(){clearTimeout(pgTimer);if(g.parentNode)g.remove();appEl.classList.remove("pgfront");
+    if(!document.querySelector(".pghost"))document.documentElement.classList.remove("pgmoving");};
+  a.onfinish=done;a.oncancel=done;pgTimer=setTimeout(done,PG_MS+200);}
 /* Which picture a place stands on: Training's first page is home; a day about to be
    started is the workout's; planning a program is training's; Coach's sections are
    their own; the assessment is Coach's. */
@@ -171,10 +211,12 @@ function render(){
      the cards it brings are new ones, not the old ones moved. */
   var exNow=S.active?V.logIdx:-1,sameEx=exNow===lastEx;lastEx=exNow;
   var before=moved||!sameEx?null:snapCards(appEl);
+  var pm=pageMoveOf(moved,view),ghost=pm?pageGhost(appEl,pm):null;
   if(moved)replace(appEl,h); else patch(appEl,h);
   glideCards(appEl,before);
   slideSection(appEl,moved);
-  if(moved){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
+  if(ghost)pageMove(appEl,ghost,pm);
+  else if(moved){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
   bindExSwipe();
   bindMore(render);
 
