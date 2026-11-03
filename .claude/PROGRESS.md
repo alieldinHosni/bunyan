@@ -3249,3 +3249,11 @@ cards that a new card pushed down.
 - The workout's own pace: .sess sets --m-micro 200, --m-pop 260, --m-comp 320, --m-flow 460 (not under .reduced).
   leave()'s fallback timeout is generous so it never cuts a slower animation short.
 - Tests: "Workout motion" and "Rest complete, closed" check ghost + glide instead of rowOut.
+
+## Haptics device test page — same branch
+
+Owner, 3 Nov: is real haptics possible on the complete-set control? `tests/haptics.html` (not part of the app: not
+linked, not precached, not translated) has four controls to tap on the iPhone: A plain button, B a visually hidden
+`<input type="checkbox" switch>` inside a label styled as the check control, C the switch itself, D the app's
+current trick (view.js iosTick: a button that clicks a hidden switch in code). Each has Felt it / Nothing and a
+summary to send back. Waiting on the owner's results; no app change until then.
