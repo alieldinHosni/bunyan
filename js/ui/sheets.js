@@ -1,5 +1,6 @@
 /* Bunyan — sheets
    Every bottom sheet, dispatched by vSheet(). */
+import {hb} from "./haptic.js";
 import {t, tm} from "../i18n/dict.js";
 import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exFigs, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
 import {hasPose, poseSvg} from "../data/poses.js";
@@ -173,7 +174,7 @@ function vSheet(){
      +'<h2>'+esc(c.title||"")+'</h2>'
      +(c.body?'<p class="cf-b">'+esc(c.body)+'</p>':'')
      +'<div class="cf-acts">'
-     +'<button class="btn cf-ok" data-confirmok="1">'+esc(c.cta||t("Delete"))+'</button>'
+     +hb('<button class="btn cf-ok" data-confirmok="1">'+esc(c.cta||t("Delete"))+'</button>')
      /* mid: a second real choice beside the primary, as plain as Cancel. */
      +(c.mid?'<button class="btn g cf-mid" data-confirmmid="1">'+esc(c.mid)+'</button>':'')
      +'<button class="btn g cf-no" '+(c.back?'data-restore="1"':'data-close="1"')+'>'+esc(c.cancel||t("Cancel"))+'</button>'
@@ -422,7 +423,7 @@ function vSheet(){
      /* Typed or stepped (the audit, 28 Oct: only − and + in tenths, so 84 to 79.6 was
         44 taps). From the last weight known, or empty to type into. */
      +'<div class="stfield">'+stepperInput("bw",V.draft.bw!=null?V.draft.bw:(lw?toDisp(lw):""),bst,wUnit())+'</div>'
-     +'<button class="btn" data-saveweight="1">'+esc(t("Save for today"))+'</button>';
+     +hb('<button class="btn" data-saveweight="1">'+esc(t("Save for today"))+'</button>');
   }
   /* An InBody result (owner, 27 Oct; js/engine/inbody.js): the sheet's photo, read on
      the phone (js/engine/ocr.js) or its text copied off it and pasted, every figure
@@ -449,7 +450,7 @@ function vSheet(){
     b='<h2>'+t("Steps today")+'</h2><p class="tiny" style="margin:2px 0 14px">'
      +esc(t("Target {n}. Tap the number to type it, or step by 500.").replace("{n}",fmtN(S.goals.steps)))+'</p>'
      +'<div class="stfield">'+stepperInput("st",V.draft.st!=null?V.draft.st:(dayRec().steps||0),500,t("steps"),true)+'</div>'
-     +'<button class="btn" data-savesteps="1">'+esc(t("Save"))+'</button>';
+     +hb('<button class="btn" data-savesteps="1">'+esc(t("Save"))+'</button>');
   }
   else if(V.sheet==="recovery"){
     var r=dayRec();
@@ -606,16 +607,16 @@ function vSheet(){
         if(o.tired.length)why+=t("Too soon for {m}").replace("{m}",listOf(o.tired));
         else if(o.next&&o.next.tired.length)why+=t("Leaves {d}'s {x} too soon").replace("{d}",wdShort(o.next.date)).replace("{x}",planName(o.next.name));
         else why=t("Ready");}
-      b+='<button class="trow'+(on?' on':'')+(o&&!o.ok?' warn':'')+'" data-swapto="'+d.id+'" aria-pressed="'+(on?"true":"false")+'">'
+      b+=hb('<button class="trow'+(on?' on':'')+(o&&!o.ok?' warn':'')+'" data-swapto="'+d.id+'" aria-pressed="'+(on?"true":"false")+'">'
        +'<span><span class="trow-n">'+esc(planName(d.name))+'</span>'
        +'<span class="trow-s">'+(d.ex.length?'<span class="num">'+d.ex.length+'</span> '+esc(t("exercises")):esc(t("rest day")))
        +(why?' · <span class="trow-r'+(o.ok?' ok':'')+'">'+esc(why)+'</span>':'')+'</span></span>'
-       +(on?'<span class="tnext">'+t("Selected")+'</span>':best?'<span class="tnext best">'+t("Best fit")+'</span>':'')+'</button>';});
+       +(on?'<span class="tnext">'+t("Selected")+'</span>':best?'<span class="tnext best">'+t("Best fit")+'</span>':'')+'</button>');});
     /* The day taken off (the coach's "skip today" is this row). Only where the program has
        no rest day of its own to pick. */
     if(!restId){var off=(S.daySwap||{})[sd2]==="rest";
-      b+='<button class="trow'+(off?' on':'')+'" data-swapto="rest" aria-pressed="'+off+'"><span><span class="trow-n">'+t("Rest day")+'</span>'
-       +'<span class="trow-s">'+t("Take this day off")+'</span></span>'+(off?'<span class="tnext">'+t("Selected")+'</span>':restBest?'<span class="tnext best">'+t("Best fit")+'</span>':'')+'</button>';}
+      b+=hb('<button class="trow'+(off?' on':'')+'" data-swapto="rest" aria-pressed="'+off+'"><span><span class="trow-n">'+t("Rest day")+'</span>'
+       +'<span class="trow-s">'+t("Take this day off")+'</span></span>'+(off?'<span class="tnext">'+t("Selected")+'</span>':restBest?'<span class="tnext best">'+t("Best fit")+'</span>':'')+'</button>');}
     b+='</div>';
     if((S.daySwap||{})[sd2])b+='<button class="btn g" data-swapto="">'+t("Back to the plan")+'</button>';
   }
@@ -817,7 +818,7 @@ function vSheet(){
       var fl=(sessionById(w.id)||{}).feel||"";
       b+='<div class="wc2-effort wc2-feel"><div class="wc2-effort-h">'+t("How was the amount of work?")+'</div><div class="ready-c feel-c">'
        +[["easy","Too easy"],["right","About right"],["much","Too much"]].map(function(x){
-          return '<button class="'+(fl===x[0]?'on':'')+'" data-sfeel="'+x[0]+'" aria-pressed="'+(fl===x[0])+'">'+t(x[1])+'</button>';}).join("")
+          return hb('<button class="'+(fl===x[0]?'on':'')+'" data-sfeel="'+x[0]+'" aria-pressed="'+(fl===x[0])+'">'+t(x[1])+'</button>');}).join("")
        +'</div><p class="wc2-feel-n">'+t("Your answer adjusts the sets for these muscles for the rest of this block.")+'</p></div>';}
     /* Stretches for what was trained, with a timer each. */
     b+=coolCard(w.cool);

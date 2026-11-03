@@ -35,7 +35,7 @@ document.addEventListener("touchstart",function(ev){
   var head=el.closest(".sheethead");
   if(!head)return;
   /* The close button is a control, not a grip. */
-  if(el.closest("button"))return;
+  if(el.closest("button,label.hap"))return;
   /* No handle, no drag. A destructive confirmation omits the grab handle precisely
      because it must not be dismissable by a stray gesture, and the handle is the only
      thing on the sheet that advertises the gesture in the first place. Keying off it

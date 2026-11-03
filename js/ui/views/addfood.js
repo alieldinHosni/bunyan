@@ -7,6 +7,7 @@
      Quick Add — describe a whole meal in words; it is parsed into items, all added
                  at once. This is the flow the app has always had.
    One sheet, three modes (V.food.mode): "search", "detail" and "quick". */
+import {hb} from "../haptic.js";
 import {t} from "../../i18n/dict.js";
 import {empty} from "../../data/exercises.js";
 import {foodPic} from "../../data/foodicons.js";
@@ -87,8 +88,8 @@ function card(f,pick,add){
    +'<button class="afres-b" '+pick+'>'+foodPic(f)
    +'<span class="afres-t"><span class="afres-n">'+esc(foodName(f))+' <span>('+esc(s[0])+')</span></span>'
    +'<span class="afres-m">'+macroLine(n)+'</span></span></button>'
-   +(add?'<button class="afadd" '+add+' aria-label="'+esc(t("Add")+" "+foodName(f))+'">'
-     +'<span class="ico ico-plus" aria-hidden="true"></span></button>':'')
+   +(add?hb('<button class="afadd" '+add+' aria-label="'+esc(t("Add")+" "+foodName(f))+'">'
+     +'<span class="ico ico-plus" aria-hidden="true"></span></button>'):'')
    +'</div>';}
 function localCards(foods){
   return '<div class="afresults">'+foods.map(function(f){
@@ -285,8 +286,8 @@ function vDetail(){
      +(f.src==="off"?'<div><span>'+esc(t("Source"))+'</span><b>Open Food Facts</b></div>'
       :f.src==="you"?'<div><span>'+esc(t("Source"))+'</span><b>'+esc(t("Your food"))+'</b></div>':'')
      +'</div>';}
-  h+=ed?'<button class="btn afcta" data-fupdate="1">'+esc(t("Update"))+'</button>'
-    :'<button class="btn afcta" data-faddpick="1">'+esc(t("Add to"))+' '+esc(t(curMeal()))+'</button>';
+  h+=hb(ed?'<button class="btn afcta" data-fupdate="1">'+esc(t("Update"))+'</button>'
+    :'<button class="btn afcta" data-faddpick="1">'+esc(t("Add to"))+' '+esc(t(curMeal()))+'</button>');
   return h;}
 
 /* ---- Quick Add (13:337, 13:403) --------------------------------------------- */

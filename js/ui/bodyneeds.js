@@ -8,6 +8,7 @@
    The numbers are js/engine/needs.js's. Nothing here is a judgement the log cannot
    support: behind means behind for the time of day, and the week's pattern needs three
    logged days before it says anything. */
+import {hb} from "./haptic.js";
 import {t} from "../i18n/dict.js";
 import {needsNow, suggestFor, toGo, weekPattern} from "../engine/needs.js";
 import {S} from "../state.js";
@@ -56,7 +57,7 @@ function bodyNeeds(eaten,water){
      +'<span class="fbody-pill">'+esc(t("+{n} "+unit+" to go").replace("{n}",fmtN(left)))+'</span></div>'
      +'<p>'+esc(t(NEED[focus]).replace("{n}",fmtN(left)))+'</p></div>';
     if(focus==="w")
-      h+='<button class="btn g fbody-glass" data-water="250">'+glyph("drop")+esc(t("Add a glass (250 ml)"))+'</button>';
+      h+=hb('<button class="btn g fbody-glass" data-water="250">'+glyph("drop")+esc(t("Add a glass (250 ml)"))+'</button>');
     else{
       var kl=(g.kcal||0)-(eaten.kcal||0);
       h+='<div class="eyebrow fsug-h">'+esc(t("Food suggestions"))+'</div><div class="fsug">'

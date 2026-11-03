@@ -3,6 +3,7 @@
    dashboard, node 13:12, and one meal's detail, node 13:118), My Foods (the meals you
    saved and the foods you made, kept and edited here) and Targets (what the day is
    measured against, with the evidence for whether it is working beside it). */
+import {hb} from "../haptic.js";
 import {t} from "../../i18n/dict.js";
 import {eatenToday, energyMissing, macroKcal, macroTargets, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
@@ -149,11 +150,11 @@ function vFoodToday(dsel){
     /* Tapping a glass sets the day to that many, so the glass just filled is also the
        one that empties it again — the frame's plus button with an undo built in. */
     var full=i<=done;
-    h+='<button class="fglass'+(full?' full':'')+'" data-wset="'+((full&&i===done?i-1:i)*unit)+'"'
-     +' aria-label="'+esc(i+" "+t("glasses"))+'"'+(full?' aria-pressed="true"':'')+'><i></i></button>';}
-  h+='</div><button class="fwater-add" data-water="'+unit+'"'
+    h+=hb('<button class="fglass'+(full?' full':'')+'" data-wset="'+((full&&i===done?i-1:i)*unit)+'"'
+     +' aria-label="'+esc(i+" "+t("glasses"))+'"'+(full?' aria-pressed="true"':'')+'><i></i></button>');}
+  h+='</div>'+hb('<button class="fwater-add" data-water="'+unit+'"'
    +' aria-label="'+esc(t("Add")+" "+unit+" ml "+t("Water"))+'">'
-   +'<i class="ico ico-plus"></i></button></div>'
+   +'<i class="ico ico-plus"></i></button>')+'</div>'
    /* The strands are the day's water: the bright one runs as far as the goal is met. */
    +'<div class="fwater-art">'+waterArt(g.water?r.water/g.water:0)+'</div></div>';
   return h;}

@@ -3287,3 +3287,24 @@ C the switch itself felt; D the app's old trick (a button clicking a hidden swit
   haptics. tap() is navigator.vibrate only (Android). canBuzz still true on iOS: the setting chooses switch or button.
 - Not yet felt in the installed home-screen app; the owner tested in Safari. If the home-screen app gives no tick,
   say so and revert to the button (no fallback).
+
+## Ticks across the app — branch session/haptics2 (CACHE v204)
+
+Owner, 3 Nov: the complete-set tick works; "go through the whole app and see what makes sense".
+- js/ui/haptic.js hb(html): one <button> → <label class="… hap"> with the same attributes and content and a visually
+  hidden <input type="checkbox" switch class="vh hapt-in"> LAST inside it (so :first-child rules still match). aria-label,
+  aria-pressed, aria-expanded, aria-controls move to the switch (role="button"). A role="switch" aria-checked button
+  becomes the native switch, checked as it was (Settings). Disabled or other-role buttons stay buttons. Haptics off in
+  Settings → every control is the plain button.
+- Used on: complete set; RPE chips; weight/reps steppers; rest −30, pause/resume, +30, +30 more, close; Next exercise /
+  Finish workout; delete-set confirm; readiness chips; activity intensity; Start / Begin / Resume workout; Train anyway;
+  the week rail's days; Change workout's rows; water (+, each glass, the body card's glass); food + and Add to / Update;
+  Settings switches; the confirm sheet's OK; save weigh-in, save steps; how the workout felt.
+  Not used on navigation, tabs, sheet openers, links or lists: a tick on every tap stops meaning anything.
+- app.js: label.hap joins the click selector; the label's own click is ignored, the switch's dispatches with the
+  label's dataset; then switch.checked = defaultChecked. fields.js Enter on .hapt-in clicks it. sheetdrag skips label.hap.
+- CSS: every selector naming `button` as a type now reads :is(button,label:where(.hap)) (same specificity; done by a
+  scanner over the <style> blocks, 69 rules). :where(label.hap) carries a button's defaults (inline-block, centred,
+  border-box, 1px 6px). The RPE chip and food + set their padding, the glass its colour, explicitly.
+- Verified by a computed-style comparison (button vs label, every converted control, every state it appears in,
+  children included): 0 differences. Tests: "Ticks across the app", "Complete set, with haptics", iPhone test.

@@ -13,6 +13,7 @@ import {esc, fmtN, num, shortd} from "../../util.js";
 import {ex_isTimed, stepperInput, V} from "../view.js";
 import {vWarm, warmShown} from "./warmup.js";
 import {glyph} from "../glyphs.js";
+import {hapOn, hb} from "../haptic.js";
 
 /* ============================================================ SESSION
    Execution surface, not an editor. vDay() prescribes the work; this screen only
@@ -181,15 +182,15 @@ function vRestBand(){
      +(V.restOver?'<div class="rb-sub"><span class="num" id="restOver">'+overText()+'</span> '+t("over your rest")+'</div>':'')
      +'</div><div class="rb-ctl">'
      /* More rest, or put it away: the choice is the lifter's, not the timer's. */
-     +'<button class="num rb-more" data-rest="extend" dir="ltr" aria-label="'+t("30 seconds more rest")+'">+30</button>'
-     +'<button class="rb-close" data-rest="skip" aria-label="'+t("Close")+'">'+IC.close+'</button></div></section>';
+     +hb('<button class="num rb-more" data-rest="extend" dir="ltr" aria-label="'+t("30 seconds more rest")+'">+30</button>')
+     +hb('<button class="rb-close" data-rest="skip" aria-label="'+t("Close")+'">'+IC.close+'</button>')+'</div></section>';
   var paused=V.restPaused;
   return '<section class="rb wglass'+(paused?' paused':'')+'" data-k="rest" id="restBand" aria-label="'+t("Rest")+'"><div class="rb-top">'
    +'<div class="rb-l"><div class="rb-k">'+t("Rest")+'</div><div class="rb-t num" id="restDig">'+mmss(restLeft())+'</div></div>'
    +'<div class="rb-ctl">'
-   +'<button class="num" data-rest="-30" aria-label="'+t("30 seconds less")+'">−30</button>'
-   +'<button id="restMain" data-rest="'+(paused?"resume":"pause")+'" aria-label="'+t(paused?"Resume":"Pause")+'">'+IC.pause+IC.play+'</button>'
-   +'<button class="num" data-rest="30" aria-label="'+t("30 seconds more")+'">+30</button></div></div>'
+   +hb('<button class="num" data-rest="-30" aria-label="'+t("30 seconds less")+'">−30</button>')
+   +hb('<button id="restMain" data-rest="'+(paused?"resume":"pause")+'" aria-label="'+t(paused?"Resume":"Pause")+'">'+IC.pause+IC.play+'</button>')
+   +hb('<button class="num" data-rest="30" aria-label="'+t("30 seconds more")+'">+30</button>')+'</div></div>'
    +'<div class="rb-bar" aria-hidden="true"><i id="restBar" style="width:'+restPct()+'%"></i></div></section>';}
 
 /* ---- the set being done -----------------------------------------------------------
@@ -228,15 +229,15 @@ function vSetCard(e,row,rows,o){
      +'value="'+toDisp(V.draft.w)+'" style="'+chW(toDisp(V.draft.w))+'" aria-label="'+(bwl?t("Added weight"):t("Weight"))+', '+wUnit()+(V.draftSg?', '+t("suggested"):'')+'">'
      +'<span class="val-u" aria-hidden="true">'+wUnit()+'</span></div>'
      +'<div class="wstp">'
-     +'<button data-sstep="w" data-d="-1" aria-label="'+t("Less")+' '+wStepD+' '+wUnit()+'">'+IC.minus+'<span class="num">'+wStepD+'</span></button>'
-     +'<button data-sstep="w" data-d="1" aria-label="'+t("More")+' '+wStepD+' '+wUnit()+'">'+IC.plus+'<span class="num">'+wStepD+'</span></button></div></div>';
+     +hb('<button data-sstep="w" data-d="-1" aria-label="'+t("Less")+' '+wStepD+' '+wUnit()+'">'+IC.minus+'<span class="num">'+wStepD+'</span></button>')
+     +hb('<button data-sstep="w" data-d="1" aria-label="'+t("More")+' '+wStepD+' '+wUnit()+'">'+IC.plus+'<span class="num">'+wStepD+'</span></button>')+'</div></div>';
   h+='<div class="val"><label class="val-k" for="in_r">'+rLbl+(rUnit?'<span class="val-ku"> · '+rUnit+'</span>':'')+'</label>'
    +'<div class="val-nw"><input class="val-n num'+(V.draftSg?' sg':'')+'" id="in_r" type="number" inputmode="numeric" step="1" min="0" enterkeyhint="done" '
    +'value="'+num(V.draft.r)+'" style="'+chW(num(V.draft.r))+'" aria-label="'+rLbl+(V.draftSg?', '+t("suggested"):'')+'">'
    +(rUnit?'<span class="val-u" aria-hidden="true">'+rUnit+'</span>':'')+'</div>'
    +'<div class="wstp">'
-   +'<button data-sstep="r" data-d="-1" aria-label="'+t("Less")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.minus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>'
-   +'<button data-sstep="r" data-d="1" aria-label="'+t("More")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.plus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button></div></div>';
+   +hb('<button data-sstep="r" data-d="-1" aria-label="'+t("Less")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.minus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>')
+   +hb('<button data-sstep="r" data-d="1" aria-label="'+t("More")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.plus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>')+'</div></div>';
   h+='</div>';
   /* The plates, without opening anything (owner, 27 Oct): a barbell's total read as the
      bar and what goes on each side. A tap opens the plates sheet to change the bar. */
@@ -301,7 +302,7 @@ function vRpeAsk(e,workN){
   if(!out&&!rpeWanted(k-1,workN))return "";
   return '<section class="sc-rpe rpeask wglass'+(out&&out.go?' rowout slow':'')+'" data-k="rpeask" role="group" aria-label="'+esc(t("How hard was set {n}?").replace("{n}",k))+' (RPE)">'
    +'<span class="val-k">'+esc(t("How hard was set {n}?").replace("{n}",k))+' · RPE</span><div class="sc-rpe-c">'
-   +[6,7,8,9,10].map(function(v){return '<button class="num'+(out&&out.v===v?' on':'')+'" data-rpeset="'+i+':'+v+'"'+(out?' disabled':'')+'>'+v+'</button>';}).join("")
+   +[6,7,8,9,10].map(function(v){return hb('<button class="num'+(out&&out.v===v?' on':'')+'" data-rpeset="'+i+':'+v+'"'+(out?' disabled':'')+'>'+v+'</button>');}).join("")
    +'</div></section>';}
 /* ---- the one primary action -------------------------------------------------------
    The check. It logs from the rest too; for a moment after, it says the set is logged
@@ -314,8 +315,8 @@ function vLogControl(e,row){
   if(!row){
     var last=V.logIdx>=S.active.entries.length-1;
     /* Its own key: a new button arriving, not the log button relabelled in place. */
-    return '<button class="log" data-k="lognext" data-nextex="1"><span>'+t(last?"Finish workout":"Next exercise")+'</span>'
-     +'<span class="log-c" aria-hidden="true">'+IC.chev+'</span></button>';}
+    return hb('<button class="log" data-k="lognext" data-nextex="1"><span>'+t(last?"Finish workout":"Next exercise")+'</span>'
+     +'<span class="log-c" aria-hidden="true">'+IC.chev+'</span></button>');}
   var lbl=row.wu?t("Log warm-up"):t("Complete set")+' '+row.n,txt=row.wu?t("Log warm-up"):fill(t("Log set {n}"),row.n);
   /* The tick in the hand (owner, 3 Nov; tested on the iPhone with tests/haptics.html):
      Safari has no vibration API, but a native switch ticks the Taptic Engine when a tap
@@ -324,14 +325,9 @@ function vLogControl(e,row){
      announced as a button with the same name; Space toggles it natively and Enter is
      wired in fields.js; app.js logs on the switch's click and ignores the label's own,
      so a tap logs once. With haptics off in Settings it is the plain button again. */
-  if(S.prefs.haptic!==false)
-    return '<label class="log" data-k="log" data-logset="1">'
-     +'<input type="checkbox" switch class="vh hapt-in" role="button" aria-label="'+esc(lbl)+'">'
-     +'<span aria-hidden="true">'+txt+'</span>'
-     +'<span class="log-c" aria-hidden="true">'+IC.check+'</span></label>';
-  return '<button class="log" data-k="log" data-logset="1" aria-label="'+esc(lbl)+'">'
-   +'<span>'+txt+'</span>'
-   +'<span class="log-c" aria-hidden="true">'+IC.check+'</span></button>';}
+  return hb('<button class="log" data-k="log" data-logset="1" aria-label="'+esc(lbl)+'">'
+   +'<span'+(hapOn()?' aria-hidden="true"':'')+'>'+txt+'</span>'
+   +'<span class="log-c" aria-hidden="true">'+IC.check+'</span></button>');}
 
 /* ---- sets so far ----------------------------------------------------------------
    Delete leads the row (settled), the tick ends it and takes the set back. Delete asks
@@ -352,7 +348,7 @@ function vHistory(e,plan,cur,timed){
     var lbl=r.wu?t("Warm-up"):t("Set")+' '+r.n;
     if(r.done&&V.askDel&&V.askDel.x===V.logIdx&&V.askDel.i===r.i){
       h+='<div class="wsr ask" role="listitem" data-k="set:'+r.i+'"><span>'+(r.wu?t("Delete warm-up?"):fill(t("Delete set {n}?"),r.n))+' '+setText(e.name,r.set,timed)+'</span>'
-       +'<button class="del" data-delok="'+r.i+'">'+t("Delete")+'</button>'
+       +hb('<button class="del" data-delok="'+r.i+'">'+t("Delete")+'</button>')
        +'<button class="keep" data-delno="1">'+t("Cancel")+'</button></div>';
       return;}
     var now=r.i===cur;
@@ -456,7 +452,7 @@ function vLogger(){
   if(doneAll===0&&a.ready==null){
     h+='<section class="ready"><div class="ready-h"><span>'+t("How do you feel today?")+'</span>'
      +'<button class="ready-skip" data-ready="0">'+t("Skip")+'</button></div><div class="ready-c">'
-     +READY.map(function(x){return '<button data-ready="'+x[0]+'">'+t(x[1])+'</button>';}).join("")
+     +READY.map(function(x){return hb('<button data-ready="'+x[0]+'">'+t(x[1])+'</button>');}).join("")
      +'</div></section>';
   }else if(a.ready&&a.ready<=2&&doneAll===0){
     /* Today's suggestions are already lighter (see recommend()); fewer sets is offered. */
@@ -527,7 +523,7 @@ function actBody(a,e,rows,active){
      +(num(V.draft.hr)?V.draft.hr:"")+'" placeholder="—" aria-label="'+t("Avg heart rate")+'"><span>bpm</span></div>'
      +'<div class="act-lbl">'+t("Intensity")+'</div><div class="act-int" role="group" aria-label="'+t("Intensity")+'">'
      +INTENSITY.map(function(x){
-        return '<button class="'+(cur===x[0]?'on':'')+'" data-actint="'+x[0]+'" aria-pressed="'+(cur===x[0])+'">'+t(x[1])+'</button>';}).join("")
+        return hb('<button class="'+(cur===x[0]?'on':'')+'" data-actint="'+x[0]+'" aria-pressed="'+(cur===x[0])+'">'+t(x[1])+'</button>');}).join("")
      +'</div>'
      +(kg?'<div class="act-kcal"><span>'+t("Estimated burn")+'</span><b id="actKcal">'+fmtN(actKcal(e.name,mins,rpe,kg))+' kcal</b></div>'
         :'<p class="act-note">'+t("Log a weigh-in and Bunyan estimates the calories burned.")+'</p>')
@@ -545,7 +541,7 @@ function actBody(a,e,rows,active){
     if(active<0)h+='<div class="addrow"><button class="addset2" data-addrow="1"><span aria-hidden="true">+</span>'+t("Add another bout")+'</button></div>';
   }
   h+='</section>';
-  if(active<0)h+='<button class="btn ss-next" data-nextex="1">'+(last?t("Finish workout"):t("Next exercise"))+'</button>';
+  if(active<0)h+=hb('<button class="btn ss-next" data-nextex="1">'+(last?t("Finish workout"):t("Next exercise"))+'</button>');
   return h;}
 
 /* What to hang on each side of the bar. Greedy from the heaviest plate down, which is
@@ -576,7 +572,9 @@ function paintRest(){
   if(band)band.classList.toggle("paused",!!paused);
   var main=document.getElementById("restMain");
   if(main){
-    main.setAttribute("aria-label",paused?t("Resume"):t("Pause"));
+    /* Its name is on the switch inside when it carries a tick (js/ui/haptic.js). */
+    var nm=main.querySelector(".hapt-in")||main;
+    nm.setAttribute("aria-label",paused?t("Resume"):t("Pause"));
     main.setAttribute("data-rest",paused?"resume":"pause");}
 }
 /* Time since the rest ran out, as "+m:ss". Empty when it is not known. */

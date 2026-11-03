@@ -134,7 +134,7 @@ await test("Complete set, with haptics: a label around a hidden native switch, o
   await page.tap('.sess [data-logset]');await pause(page,300);
   eq([await n(),await page.evaluate(()=>{const i=document.querySelector('.sess .hapt-in');return i?i.checked:false;})],[1,false],"a tap logs one set; the switch is off again");
   await back();await page.fill('#in_r','8');
-  await page.focus('.sess .hapt-in');await page.keyboard.press("Enter");await pause(page,300);
+  await page.focus('.sess [data-logset] .hapt-in');await page.keyboard.press("Enter");await pause(page,300);
   eq(await n(),2,"Enter logs one");
   await back();
   /* Haptics off in Settings: the plain button, as before; back on, the switch again. */
@@ -142,9 +142,35 @@ await test("Complete set, with haptics: a label around a hidden native switch, o
   await hap(false);
   eq(await page.evaluate(()=>[!!document.querySelector('.sess button[data-logset]'),document.querySelectorAll('.sess .hapt-in').length]),[true,0],"haptics off: the plain button, no switch");
   await hap(true);await back();await page.fill('#in_r','8');
-  await page.focus('.sess .hapt-in');await page.keyboard.press(" ");await pause(page,300);
+  await page.focus('.sess [data-logset] .hapt-in');await page.keyboard.press(" ");await pause(page,300);
   eq(await n(),3,"Space logs one");
 },{prefs:{autorest:false,haptic:true}});
+await test("Ticks across the app: a setting's switch is the native switch, checked as the setting, one tap one change; an RPE chip, Start workout and the week's day each act once; nothing ticks with haptics off",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page,600);
+  const sw=()=>page.$eval('#sheet [data-toggle="nowarm"]',e=>{const i=e.querySelector("input");return [e.tagName,i.type,i.hasAttribute("switch"),i.getAttribute("role"),i.checked];});
+  const was=await ev(page,"!!S.prefs.nowarm");
+  eq(await sw(),["LABEL","checkbox",true,null,!was],"the warm-up setting: a native switch, checked as the setting");
+  await page.tap('#sheet [data-toggle="nowarm"]');await pause(page,400);
+  eq([await ev(page,"!!S.prefs.nowarm"),(await sw())[4]],[!was,was],"one tap: one change, and the switch says so");
+  await page.focus('#sheet [data-toggle="nowarm"] input');await page.keyboard.press(" ");await pause(page,400);
+  eq([await ev(page,"!!S.prefs.nowarm"),(await sw())[4]],[was,!was],"Space: back again");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,500);
+  /* The week's day and Start workout. */
+  await tapTab(page,"train");await pause(page,400);
+  const other=await page.$eval(".wkr .wkr-d:not(.sel)",b=>b.getAttribute("data-wkday"));
+  await page.tap('.wkr [data-wkday="'+other+'"]');await pause(page,400);
+  eq(await ev(page,"V.tdate"),other,"the day picked");
+  await page.tap(".wkr-today");await pause(page,400);
+  eq(await page.$eval('.thero2 [data-startday]',e=>e.tagName),"LABEL");
+  await page.tap('.thero2 [data-startday]');await pause(page,600);
+  eq(await ev(page,"[!!S.active,S.active&&S.active.entries.reduce((n,e)=>n+e.sets.length,0)]"),[true,0],"the workout started, nothing logged");
+  await page.fill('#in_r','8');await page.tap('.sess [data-logset]');await pause(page,900);
+  const r=await page.$('.sess .rpeask [data-rpeset$=":8"]');
+  if(r){await r.tap();await pause(page,300);eq(await ev(page,"S.active.entries[0].sets[0].rpe"),8,"the RPE chip, once");}
+  /* Off: every one of them is a plain button again. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.haptic=false;st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$$eval('#app .hapt-in',a=>a.length),0,"no switches with haptics off");
+},{prefs:{autorest:true,haptic:true,rpe:"every"}});
 await test("removing a set offers undo, and undo restores it",async page=>{
   await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
   await page.tap('[data-unlog="0"]');await pause(page);eq(await ev(page,"S.active.entries[0].sets.length"),0,"removed");

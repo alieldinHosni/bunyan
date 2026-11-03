@@ -13,6 +13,7 @@
      - a row that opens somewhere else has a chevron.
    Nothing here is a native drop-down, and no raw backup text is on screen unless
    asked for. */
+import {hb} from "./haptic.js";
 import {t} from "../i18n/dict.js";
 import {exName, planName} from "../i18n/exnames.js";
 import {GOAL_ORDER, GOALS} from "../data/goals.js";
@@ -38,8 +39,9 @@ function words(name,sub){
   return '<span class="srow-t"><span class="srow-n">'+esc(name)+'</span>'+(sub?'<span class="srow-s">'+esc(sub)+'</span>':'')+'</span>';}
 /* A switch: the row is the control, so the whole width answers a thumb. */
 function sw(attr,name,sub,on){
-  return '<button class="srow" '+attr+' role="switch" aria-checked="'+(on?"true":"false")+'">'+words(name,sub)
-   +'<span class="tgl'+(on?' on':'')+'" aria-hidden="true"><i></i></span></button>';}
+  /* A real switch underneath when haptics are on (js/ui/haptic.js): it ticks as it flips. */
+  return hb('<button class="srow" '+attr+' role="switch" aria-checked="'+(on?"true":"false")+'">'+words(name,sub)
+   +'<span class="tgl'+(on?' on':'')+'" aria-hidden="true"><i></i></span></button>');}
 /* A choice among a few, all of them in sight. */
 function pick(name,sub,o){
   o.soft=true;
