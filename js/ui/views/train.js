@@ -185,16 +185,20 @@ function vTrain(){
   return vTrainHome();}
 
 /* ---- Training's plan page -------------------------------------------------------------
-   Where the training is planned: your program (its days, inline), the other programs
-   and templates, and the exercise library. One row of tabs; back returns to Training. */
-var TPLAN=[["program","My program"],["programs","Programs"],["exercises","Exercises"]];
+   Where the training is planned: your program (its block and days, inline), and the other
+   programs, templates and the exercise library on one page (owner, 3 Nov: "the exercise
+   page could be inside Programs"). Two tabs, swiped between (js/ui/exswipe.js); back
+   returns to Training. An old route to "exercises" lands on Programs at the library. */
+var TPLAN=[["program","My program"],["programs","Programs & exercises"]];
 function vTrainPlan(){
+  if(V.tplan==="exercises"){V.tplan="programs";
+    setTimeout(function(){var x=document.getElementById("pex");if(x)x.scrollIntoView({block:"start"});},0);}
   var ts=TPLAN.some(function(x){return x[0]===V.tplan;})?V.tplan:"program",sp=split();
   var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Training plan"))+'</h1></div>'
    +'<p class="dsub">'+esc(sp?schedLine(sp):t("No program yet"))+'</p>';
   h+=seg({items:TPLAN.map(function(x){return [x[0],t(x[1])];}),value:ts,attr:"tplan",tabs:true,cls:"psecs",label:t("Training plan"),key:"tplan"});
-  h+='<div class="psec" data-k="psec-'+ts+'">'
-   +(ts==="programs"?programsPage():ts==="exercises"?exercisesPage():builderBody(sp,S.activeProgram,true))+'</div>';
+  h+='<div class="psec" data-pswipe="tplan" data-k="psec-'+ts+'">'
+   +(ts==="programs"?programsPage()+exercisesPage():builderBody(sp,S.activeProgram,true))+'</div>';
   return h;}
 /* How the program falls in a week, in words: its weekdays, or "in rotation". */
 function schedLine(sp){
@@ -203,7 +207,7 @@ function schedLine(sp){
   if(sp.schedule!=="week")return days+" · "+t("in rotation");
   var wd={};sp.days.forEach(function(d){if(d.ex.length)(d.wd||[]).forEach(function(w){wd[w]=1;});});
   var ws=Object.keys(wd).map(Number).sort();
-  return ws.length?ws.map(wdName).join(", "):days;}
+  return ws.length?ws.map(function(n){return wdName(n,true);}).join(", "):days;}
 
 /* ---- the Training page ------------------------------------------------------------
    One question: what do I train today? The greeting and at most one reminder, the
@@ -414,9 +418,9 @@ function programsPage(){
      +'<span class="tpc-m"><span>'+days+' '+t("days / week")+'</span>'
      +(lvl?'<span class="tchip">'+t(lvl)+'</span>':'')+'</span></span></button>';});
   return h+'</div>';}
-/* Coach → Training → Exercises: the library, favourites, and bodyweight work by area. */
+/* Under the programs: the library, favourites, and bodyweight work by area. */
 function exercisesPage(){
-  var h='<div class="ttiles">'
+  var h='<div class="tsec" id="pex"><h2 class="tsec-h">'+t("Exercises")+'</h2></div><div class="ttiles">'
    +'<button class="ttile" data-train="library">'+art("barbell",{cls:"btn-art"})+'<span class="ttile-i" aria-hidden="true"><span class="ico ico-search"></span></span>'
    +'<span class="ttile-n">'+t("Exercise Library")+'</span><span class="ttile-s">'+fmtN(LIB.length)+' '+t("exercises")+'</span></button>'
    +'<button class="ttile" data-train="favs">'+art("star",{cls:"btn-art"})+'<span class="ttile-i" aria-hidden="true"><span class="ico ico-star"></span></span>'
@@ -494,7 +498,8 @@ function programCard(){
    +'<b>'+esc(sp?planName(sp.name):t("No program yet"))+'</b>'
    +'<span class="pgc-s">'+esc(sp?schedLine(sp):t("Pick one, or build your own"))+'</span></span>'
    +'<span class="pgc-go">'+esc(t("Plan"))+'<span class="ico ico-chev" aria-hidden="true"></span></span></button>';
-  return '<section class="pgc">'+top+blockCard()+'</section>';}
+  /* The block lives on My program now (owner, 3 Nov): the card is the way in. */
+  return '<section class="pgc">'+top+'</section>';}
 function blockCard(){
   var b=blockNow();if(!b||offPlanLight())return "";
   var segs="";
@@ -531,6 +536,38 @@ function blockCard(){
    +(b.light?'<div class="blk-lt"><p class="blk-l">'+esc(line)+'</p><button class="dlcard-x" data-deload="end">'+t("End it")+'</button></div>':'')
    +(more?'<div class="fold-body">'+more+'</div>':'')
    +'</div>';}
+/* The schedule as one card: By weekday or In rotation, then the week it makes. By
+   weekday, the seven days with each training day's number on the weekday it falls (the
+   same numbers as the day rows above); in rotation, the days in their order, coming
+   round again. Then two sessions a day, how, in a line; then, once, the weekdays offer. */
+var LOOPI='<path d="M4 12a8 8 0 0 1 14-5.6M20 12a8 8 0 0 1-14 5.6"/><path d="M18 2.5v4h-4M6 21.5v-4h4"/>';
+var CALI='<rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>';
+function schedCard(sp,week,inline){
+  var h='<section class="bsched glass" aria-label="'+esc(t("Schedule"))+'">'
+   +'<div class="bsch-h"><h2 class="tsec-h">'+t("Schedule")+'</h2><span class="bsch-q">'+esc(t(week?"Same days every week":"Next day whenever you train"))+'</span></div>'
+   +seg({items:[["week",t("By weekday"),"",CALI],["cycle",t("In rotation"),"",LOOPI]],value:week?"week":"cycle",attr:"sched",label:t("Schedule"),key:"sched",cls:"bsch-seg",row:true});
+  var num=function(i){return '<i class="num">'+(i+1)+'</i>';};
+  if(week){
+    h+='<ol class="bsch-wk" data-k="schv-week">'+weekOrder().map(function(n){
+      var on=[];sp.days.forEach(function(d,i){if((d.wd||[]).indexOf(n)>=0)on.push(i);});
+      /* Arabic weekdays without their article, so seven fit across a phone. */
+      return '<li class="'+(on.length?'on':'')+(on.length>1?' two':'')+'"><span>'+esc(wdName(n).replace(/^ال/,""))+'</span>'
+        +(on.length?'<b>'+on.map(num).join("")+'</b>':'<b class="rest" aria-label="'+esc(t("Rest day"))+'"></b>')+'</li>';}).join("")+'</ol>';}
+  else{
+    h+='<ol class="bsch-cy" data-k="schv-cycle" style="--n:'+(sp.days.length+1)+'">'+sp.days.map(function(d,i){
+      var rest=!d.ex.length;
+      return '<li class="'+(rest?'rest':'on')+'"><b>'+(rest?'':num(i))+'</b><span>'+esc(rest?t("Rest"):t("Day")+" "+(i+1))+'</span></li>';}).join("")
+     +'<li class="again" aria-label="'+esc(t("Then again from day 1"))+'"><b><svg viewBox="0 0 24 24" aria-hidden="true">'+LOOPI+'</svg></b><span>'+esc(t("Again"))+'</span></li></ol>';}
+  /* Two sessions on one weekday, every week (owner, 28 Oct): said where the weekdays are
+     picked, and in rotation, how to get there. */
+  var twoOn=week&&sp.days.some(function(d){return (d.wd||[]).some(function(n){return sp.days.some(function(o){return o!==d&&(o.wd||[]).indexOf(n)>=0;});});});
+  var note=week?(twoOn?t("A weekday on two days is two sessions that day, the upper one first."):t("Two sessions on one day every week: tap a weekday another day already has. Both are trained that day, the upper one first."))
+    :sp.days.length>1?t("Two sessions on the same day every week? Set the schedule By weekday, then give two days the same weekday."):"";
+  if(note)h+='<p class="bsch-n"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/></svg><span>'+esc(note)+'</span></p>';
+  h+='</section>';
+  /* In rotation, offered once: the weekdays it would fall on, from when you train. */
+  if(inline)h+=weekOffer(sp);
+  return h;}
 /* Offered once, for a program running in rotation: fixed weekdays, suggested from
    when each day has actually been trained. */
 function weekOffer(sp){
@@ -538,7 +575,7 @@ function weekOffer(sp){
   var train=sp.days.filter(function(d){return d.ex.length;});
   if(train.length<2)return "";
   var sug=suggestWd(sp);
-  var line=train.map(function(d){return esc(planName(d.name))+' · '+(sug[d.id]||[]).map(wdName).join(", ");}).join('<br>');
+  var line=train.map(function(d){return esc(planName(d.name))+' · '+(sug[d.id]||[]).map(function(n){return wdName(n);}).join(", ");}).join('<br>');
   return '<div class="dlcard wkoffer"><div class="dlcard-h"><span class="dlcard-i" aria-hidden="true">'+CAL+'</span>'
    +'<b>'+t("Train on fixed weekdays?")+'</b></div>'
    +'<p>'+t("Your program runs in rotation. Pinned to weekdays, from when you usually train:")+'</p>'
@@ -722,7 +759,10 @@ function builderBody(sp,id,inline){
      name, to rename, and what it holds. */
   if(inline)h+='<div class="bname"><button class="dname" data-renamesplit="'+id+'" aria-label="'+esc(t("Rename program"))+': '+esc(planName(sp.name))+'">'
     +'<h2 class="bname-t">'+esc(planName(sp.name))+'</h2><span class="ico ico-edit" aria-hidden="true"></span></button>'
-    +'<span class="bname-s"><span class="num">'+nEx+'</span> '+esc(t(nEx===1?"exercise":"exercises"))+'</span></div>';
+    +'<span class="bname-s"><span class="num">'+nEx+'</span> '+esc(t(nEx===1?"exercise":"exercises"))+'</span></div>'
+    /* Where the program is in its training block, folded (owner, 3 Nov: on My program,
+       not on Training's card). */
+    +(active?blockCard():'');
   else h+='<div class="libhero bhero">'+HERO_ART
    +'<span class="shk">'+t(active?"Your training":"Program builder")+'</span>'
    +'<button class="dname" data-renamesplit="'+id+'" aria-label="'+esc(t("Rename program"))+': '+esc(planName(sp.name))+'">'
@@ -784,19 +824,10 @@ function builderBody(sp,id,inline){
   h+='</div>';
   h+='<button class="dadd" data-bday="1"><span aria-hidden="true">+</span>'+t("Add day")+'</button>';
   /* How the days fall, set once: pinned to weekdays, or one after another whenever you
-     train. Under the days it shapes, not above them (owner, 3 Nov). */
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Schedule")+'</h2></div>'
-   +'<div class="bsched" role="group" aria-label="'+esc(t("Schedule"))+'">'
-   +'<button class="'+(week?'on':'')+'" data-sched="week" aria-pressed="'+week+'"><b>'+t("By weekday")+'</b><span>'+t("Same days every week")+'</span></button>'
-   +'<button class="'+(week?'':'on')+'" data-sched="cycle" aria-pressed="'+!week+'"><b>'+t("In rotation")+'</b><span>'+t("Next day whenever you train")+'</span></button></div>';
-  /* In rotation, offered once: the weekdays it would fall on, from when you train. */
-  if(inline)h+=weekOffer(sp);
-  /* Two sessions on one weekday, every week (owner, 28 Oct: "from the coach training hub
-     as a permanent session in that day"): said where the weekdays are picked, and in
-     rotation, how to get there. */
-  var twoOn=week&&sp.days.some(function(d){return (d.wd||[]).some(function(n){return sp.days.some(function(o){return o!==d&&(o.wd||[]).indexOf(n)>=0;});});});
-  if(week)h+='<p class="bnote">'+(twoOn?t("A weekday on two days is two sessions that day, the upper one first."):t("Two sessions on one day every week: tap a weekday another day already has. Both are trained that day, the upper one first."))+'</p>';
-  else if(sp.days.length>1)h+='<p class="bnote">'+t("Two sessions on the same day every week? Set the schedule By weekday, then give two days the same weekday.")+'</p>';
+     train. Under the days it shapes. One card (owner, 3 Nov: the two boxes and the lines
+     under them "look like a PDF"): the choice, a picture of what it means for this
+     program, and what it allows. */
+  h+=schedCard(sp,week,inline);
   /* What an imported program came with: its phase and length, and the coach's notes —
      the rules, the reasons, the warnings — kept with it rather than thrown away. */
   if(sp.meta&&(sp.meta.phase||sp.meta.weeks))

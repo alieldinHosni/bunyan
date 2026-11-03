@@ -71,7 +71,6 @@ function bodyNeeds(eaten,water){
        +'</div>';}}
   h+='</section>';
   h+=noticed(g,now);
-  h+='<button class="btn g fbuild" data-fbuild="1">'+esc(t("Build today's meal"))+glyph("arrow")+'</button>';
   return h;}
 
 /* The ellipse the four sit on, faint, with a few points of light along it. */

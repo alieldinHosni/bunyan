@@ -901,6 +901,11 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
    not cut the glass off from the ground. */
 #app.pagein{animation:pageIn var(--m-tab) var(--e-spring)}
 @keyframes pageIn{from{transform:translateY(16px)}to{transform:none}}
+/* A page opened from a page, or back (render.js pageMove): the new one over a still copy
+   of the old, and nothing sideways scrolls while they pass. */
+html.pgmoving,html.pgmoving body{overflow-x:clip}
+#app.pgfront{position:relative;z-index:1}
+.pghost{will-change:transform,opacity}
 /* Gated: entry animations run when a surface appears, never on a re-render. */
 .sheet.entering .sheetbox{animation:sheetIn var(--m-sheet) var(--e-decel)}
 @keyframes sheetIn{from{transform:translateY(14%)}to{transform:none}}
@@ -2298,14 +2303,37 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .twk-d.m.out{opacity:.38}
 :root.reduced .twk-fold,:root.reduced .twk-mo,:root.reduced .twk-x svg,body.noanim .twk-fold,body.noanim .twk-mo,body.noanim .twk-x svg{transition:none}
 .tquick{width:100%;margin-top:14px}
-/* Schedule: two choices side by side; weekday chips under each day. */
-.bsched{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 4px}
-.bsched :is(button,label:where(.hap)){display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;border-radius:var(--r4);
-  border:1px solid var(--border);background:var(--raised);color:var(--text);text-align:start}
-.bsched :is(button,label:where(.hap)) b{font-family:var(--display);font-size:15px}
-.bsched :is(button,label:where(.hap)) span{font-size:12px;color:var(--dim)}
-.bsched :is(button,label:where(.hap)).on{border-color:rgba(var(--accentHi-rgb),.6);background:linear-gradient(180deg,rgba(var(--accent-rgb),.18),rgba(var(--accent-rgb),.05)),var(--raised)}
-.bsched :is(button,label:where(.hap)).on b{color:var(--accentHi)}
+/* Schedule (views/train.js schedCard): one card — the choice, the week it makes, and a
+   line on two sessions a day. The week: seven weekdays, each with the training day's
+   number that falls on it (the day rows' own numbers); rest is a faint ring. Rotation:
+   the days in order, then round again. */
+.bsched{margin:var(--s5) 0 var(--s2);padding:var(--s4);border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card)}
+.bsch-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s3)}
+.bsch-h .tsec-h{margin:0}
+.bsch-q{font-size:12.5px;color:var(--dim);text-align:end}
+.bsch-seg{margin:0}
+.bsch-wk,.bsch-cy{list-style:none;margin:var(--s4) 0 0;padding:0;animation:fadeIn var(--m-comp) var(--e-standard)}
+.bsch-wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--s1)}
+.bsch-wk li,.bsch-cy li{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.bsch-wk li>span,.bsch-cy li>span{font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bsch-wk li.on>span{color:var(--text)}
+.bsch-wk b,.bsch-cy b{display:flex;align-items:center;justify-content:center;gap:2px;width:34px;height:34px;border-radius:50%;
+  border:1.5px dashed var(--border);color:var(--dim)}
+.bsch-wk li.on b,.bsch-cy li.on b{border:0;background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent);
+  box-shadow:0 6px 16px -8px rgba(var(--accent-rgb),.8)}
+.bsch-wk li.two b{width:auto;min-width:34px;padding:0 6px;border-radius:17px;box-shadow:inset 0 0 0 2px var(--gold)}
+.bsch-wk b i,.bsch-cy b i{font-style:normal;font-family:var(--display);font-size:14px;font-weight:800}
+.bsch-wk li.two b i+i::before{content:"+";opacity:.7;margin-inline-end:1px}
+.bsch-cy{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:var(--s1)}
+.bsch-cy li{position:relative}
+/* The thread from one day to the next, across the gap between their rings. */
+.bsch-cy li+li::before{content:"";position:absolute;top:16px;inset-inline-end:calc(50% + 15px);width:calc(100% - 30px + var(--s1));height:1.5px;background:var(--border)}
+.bsch-cy b{width:32px;height:32px}
+.bsch-cy li.again b{border:1.5px solid rgba(var(--accentHi-rgb),.45);color:var(--accentHi)}
+.bsch-cy li.again svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.bsch-n{display:flex;align-items:flex-start;gap:var(--s2);margin:var(--s4) 0 0;padding-top:var(--s3);border-top:1px solid var(--hair);
+  font-size:12.5px;line-height:1.5;color:var(--sub)}
+.bsch-n svg{flex:none;width:16px;height:16px;margin-top:1px;fill:none;stroke:var(--dim);stroke-width:1.8;stroke-linecap:round}
 .bkday{flex-wrap:wrap}
 .bwd{flex:1 0 100%;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;padding:0 12px 12px 12px}
 .bwd :is(button,label:where(.hap)){min-height:34px;padding:0;border-radius:10px;border:1px solid var(--border);background:var(--surface);
@@ -4798,22 +4826,6 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .fnoticed-i .gl{width:22px;height:22px}
 .fnoticed b{display:block;font-size:15px}
 .fnoticed p{margin:3px 0 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
-.btn.fbuild{margin:var(--s3) 0 var(--s4);gap:8px;border-color:var(--accent-edge);color:var(--accentHi)}
-.btn.fbuild .gl{width:18px;height:18px}
-[dir="rtl"] .btn.fbuild .gl{transform:scaleX(-1)}
-/* Today's meal (js/ui/todaymeal.js): the foods, what they come to, and two actions. */
-.tm-for{margin:2px 0 var(--s3)}
-.tm-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2);animation:fadeIn var(--m-comp) var(--e-standard)}
-.tm-list li{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);padding:var(--s3);border-radius:var(--r3);background:var(--glass);border:1px solid var(--border)}
-.tm-n{display:grid;gap:2px;min-width:0;font-weight:700;color:var(--text)}
-.tm-n small,.tm-v small{font-weight:500;font-size:12.5px;color:var(--sub)}
-.tm-v{display:grid;gap:2px;text-align:end;font-weight:700;white-space:nowrap}
-.tm-tot{display:grid;gap:2px;margin:var(--s3) 0 0;padding:var(--s3);border-radius:var(--r3);background:var(--accent-tint);border:1px solid var(--accent-edge)}
-.tm-tot span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
-.tm-tot b{font-size:14px;color:var(--text)}
-.tm-after{margin:var(--s2) 0 0}
-.tm-done{margin:var(--s2) 0 var(--s3);color:var(--sub);line-height:1.5}
-.tm-act{display:grid;gap:var(--s2);margin-top:var(--s4)}
 /* ---- Running mode (js/ui/run.js) ------------------------------------------------
    The reference's running screen in the theme's dark: the route on a quiet grid, the
    time large, the distance, and calories and pace either side of the round pause. The
@@ -5362,6 +5374,7 @@ body.noanim .chat-orb::before,body.noanim .chat-orb::after{animation:none!import
   transition:left .42s cubic-bezier(.2,.8,.2,1),top .42s cubic-bezier(.2,.8,.2,1),width .42s cubic-bezier(.2,.8,.2,1),height .42s cubic-bezier(.2,.8,.2,1),border-radius .42s;pointer-events:none}
 .tour-hole::after{content:"";position:absolute;inset:-6px;border-radius:inherit;border:1.5px solid rgba(var(--accentHi-rgb),.6);animation:tourPing 1.8s ease-out infinite}
 @keyframes tourPing{from{transform:scale(.96);opacity:.9}to{transform:scale(1.08);opacity:0}}
+.tour-hole.off{box-shadow:0 0 0 200vmax rgba(0,0,0,.6)}
 .tour-card{position:fixed;padding:16px 18px 14px;border-radius:20px;color:var(--text);
   background:rgba(var(--bg-rgb),.66);border:1px solid var(--card-edge);
   box-shadow:inset 0 1px 0 var(--hair-hi),0 22px 50px -18px rgba(0,0,0,.7);
@@ -5559,7 +5572,6 @@ button.pgc{padding:var(--s3) var(--s4)}
 .pgc-go{display:inline-flex;align-items:center;gap:2px;flex:none;color:var(--accentHi);font-size:13px;font-weight:800}
 .pgc-go .ico{width:16px;height:16px}
 [dir="rtl"] .pgc-go .ico{transform:scaleX(-1)}
-.pgc .blk{margin:0;border:0;border-top:1px solid var(--hair);border-radius:0;background:none}
 /* An empty state over a busy picture keeps its words on a card of its own. */
 .psec .artempty{background:var(--card);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 /* The program's name on the plan page: to rename, and what it holds. */
@@ -5600,6 +5612,10 @@ button.pgc{padding:var(--s3) var(--s4)}
 .ckcard-c .btn{margin:0}
 .ckcard-ok{margin:var(--s3) 0 0;color:var(--sub);font-size:14px}
 .ckcard-done{margin-top:var(--s3)}
+.ckcard-acts{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s3)}
+.ckcard-acts .ckcard-done{margin-top:0}
+/* Still stressed, said: one line under the list, not a card in it. */
+.stressline{margin:var(--s3) 2px 0;font-size:13.5px;line-height:1.5;color:var(--sub)}
 .cweek-mark{display:grid;place-items:center;flex:none;width:48px;height:48px;border-radius:50%;
   background:var(--accent);color:var(--onAccent);box-shadow:0 8px 20px -10px rgba(var(--accent-rgb),.9)}
 .cweek-mark .gl{width:26px;height:26px;stroke-width:2}

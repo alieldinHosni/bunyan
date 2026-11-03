@@ -3367,3 +3367,35 @@ Found by the full suite and fixed
 - The test rewrites had dropped eight unrelated tests and the liveStart helper (Offline, Arabic type, the
   powerlifter placing, two Food body-needs tests, a Phase 4 test, live tracking's way in); restored from main and
   checked against main's list. Tests that described the old Coach hub now describe the new places.
+
+## Plan pages, round 2 — branch session/plan2 (CACHE v206)
+
+Owner, 3 Nov, after the restructure (PR #106).
+- The training block card moved from Training's program card to My program (under the name). The card on
+  Training is the way in only.
+- Exercises are part of Programs: Training's plan page has two tabs, "My program" and "Programs & exercises"
+  (programs, templates, then the library, favourites and bodyweight work under an "Exercises" heading, #pex).
+  An old route to tplan "exercises" lands on Programs, scrolled to the library.
+- Swipe between plan tabs, on Training and Food, the workout's way (js/ui/exswipe.js, now for any pane marked
+  data-pswipe): the pane follows the finger and travels the whole width (no fade: its cards are frosted). A drag
+  that starts on something that scrolls sideways (templates, pills) or on a grip is not a swipe. Arabic is
+  mirrored. render.js slideSection stays out of a swiped change (V.pswiped).
+- Page push/back within a tab (render.js pageMove, nav.js navDepth): the old page stays as a still copy
+  (.pghost, inert, out of the tab order) and fades out early while the new one slides over it, 600 ms; back
+  plays it the other way. Tab changes keep their own entrance; reduced motion has neither.
+- Schedule redesigned as one card (views/train.js schedCard): a segmented choice with icons, then a picture of
+  the week it makes — by weekday, the seven weekdays with each day's number on its weekday (two numbers = two
+  sessions); in rotation, the days in order then "Again" — and one line on two sessions a day. The one-time
+  weekdays offer follows it.
+- Fixed: weekday names mixed short and long ("Mon, Wednesday, Saturday") — .map(wdName) passed the index as the
+  "long" flag. schedLine now names them in full; the weekdays offer short.
+- "Build today's meal" removed (owner: no real value): the button, js/ui/todaymeal.js, its sheet, handlers,
+  CSS and engine/mealplan.js buildOneMeal. mealPrefs went back to handlers/coach.js.
+- Stress follow-up (owner: "What if I am still stressed?"): the card now has "Still stressed" beside "It's
+  better now". Still stressed keeps the week light, takes the card out of For you, and leaves one line under
+  the list with the date the coach asks again and "Better now?" (profile.stressOk). The follow-up date still
+  brings the question back.
+- The guide rewritten (v 3; owner: unclear, didn't say what buttons do): Training opens with "How Bunyan
+  works" (a centred step, nothing lit), then each thing and what a tap on it does, including the floating
+  Coach button; Food and Coach rewritten the same way; new guides for Training's plan page (tabs and swipe,
+  name, block, days, Edit, schedule) and Food's (its three tabs and swipe). Everyone sees the new version once.

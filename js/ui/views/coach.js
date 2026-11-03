@@ -100,21 +100,31 @@ function forYou(){
   if(ck)items.push(ck);
   adviceList().forEach(function(x){items.push(x.html());});
   if(!items.length)return '<p class="pcquiet"><span class="ico ico-check" aria-hidden="true"></span>'
-    +esc(t((S.sessions||[]).length<3?"Nothing to change. After a few weeks of sessions the coach reads your training too.":"On track. Nothing to change."))+'</p>'+pcAgain();
+    +esc(t((S.sessions||[]).length<3?"Nothing to change. After a few weeks of sessions the coach reads your training too.":"On track. Nothing to change."))+'</p>'+stressLine()+pcAgain();
   var open=V.advall||items.length<=3;
   var h='<div class="tsec"><h2 class="tsec-h">'+t("For you")+'</h2><span class="libn num">'+items.length+'</span></div>'
    +'<ol class="cfor">'+(open?items:items.slice(0,3)).map(function(x,i){return '<li><span class="cfor-n num" aria-hidden="true">'+(i+1)+'</span>'+x+'</li>';}).join("")+'</ol>';
   if(items.length>3)h+=open
     ?'<button class="btn g sm pcmore" data-advall="0">'+esc(t("Show fewer"))+'</button>'
     :'<button class="btn g pcmore" data-advall="1">'+esc(t(items.length===4?"1 more":"{n} more").replace("{n}",items.length-3))+'</button>';
-  return h+pcAgain();}
+  return h+stressLine()+pcAgain();}
 
 /* ---- a week kept light on purpose (js/engine/stress.js) ------------------------------
    While stress is high or sleep short, a line says so and when the coach will ask again;
    on that day, or when the person says it is better, the question itself: stress now
    (and sleep, if that was the reason), one tap each. */
+/* Owner, 3 Nov: "The only option here is It's better now? What if I am still stressed?"
+   Both answers are here. Still stressed keeps the week light and takes the card out of
+   the list; a line under it says so, until when, and keeps "Better now?" one tap away.
+   On the follow-up day the question comes back whatever was answered. */
+function stressKept(p){return !!p.stressOk&&!followDue(p)&&!V.stressAsk;}
+function stressLine(){
+  var p=S.profile||{};if(!lightOnPurpose(p)||!stressKept(p))return "";
+  var on=followOn(p);
+  return '<p class="stressline"><span>'+esc(t("Your week is kept light while you recover. I'll ask again on {d}.").replace("{d}",on?pretty(on):""))+'</span>'
+   +' <button class="linkbtn" data-stressask="1">'+esc(t("Better now?"))+'</button></p>';}
 function stressCard(){
-  var p=S.profile||{};if(!lightOnPurpose(p))return "";
+  var p=S.profile||{};if(!lightOnPurpose(p)||stressKept(p))return "";
   var why=p.stress==="high"&&num(p.sleep)>0&&num(p.sleep)<6?t("stress was high and sleep short"):p.stress==="high"?t("stress was high"):t("sleep was short");
   var due=followDue(p)||V.stressAsk,h='<section class="ckcard stresscard" data-k="stresscard">'
    +'<div class="ckcard-h"><span class="ckcard-i" aria-hidden="true">'+glyph("whistle")+'</span><div><span class="shk">'+esc(t("Your coach"))+'</span>'
@@ -122,7 +132,8 @@ function stressCard(){
   if(!due){
     var on=followOn(p);
     h+='<p class="ckcard-ok">'+esc(t("You said {w}, so your week is built to the bottom of the range while you recover. I'll ask again on {d}.").replace("{w}",why).replace("{d}",on?pretty(on):""))+'</p>'
-     +'<button class="btn g sm ckcard-done" data-stressask="1">'+esc(t("It's better now"))+'</button>';
+     +'<div class="ckcard-acts"><button class="btn g sm ckcard-done" data-stresskeep="1">'+esc(t("Still stressed"))+'</button>'
+     +'<button class="btn g sm ckcard-done" data-stressask="1">'+esc(t("It's better now"))+'</button></div>';
     return h+'</section>';}
   h+='<p class="ckcard-ok">'+esc(t(V.stressAsk?"Glad to hear it. Where are things now?":"A while ago you said {w}. Where are things now?").replace("{w}",why))+'</p>';
   var chips=function(f,list,cur){return '<div class="aschips">'+list.map(function(x){var on=String(cur)===String(x[0]);
