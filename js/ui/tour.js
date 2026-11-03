@@ -51,7 +51,8 @@ var GUIDES={
     {sel:".fwater",v:3,h:"Water",p:"Tap a glass for each one you drink."}]},
   /* Food's plan page (views/food.js vFoodPlan). */
   fplan:{name:"Nutrition plan",steps:[
-    {sel:".psecs",v:3,h:"Three tabs",p:"Meal plan: your meals for a day. Targets: your calories and macros. My foods: foods and meals you saved. Swipe left or right to switch."}]},
+    {sel:".psecs",v:4,h:"Two tabs",p:"Meal plan: your meals for a day, and how to fill them. Targets: your calories and macros. Swipe left or right to switch."},
+    {sel:".plset",v:4,h:"The plan's settings",p:"How meals are named, the foods and meals you saved, and sharing your plan."}]},
   coach:{name:"Coach",steps:[
     {sel:".cask",v:3,h:"Ask your coach",p:"Type a question, or tap one of the suggestions under it. The answer uses your own log, plan and targets."},
     {sel:".cweek2",v:3,h:"This week",p:"Workouts done out of those planned, the days you reached your protein, and your streak."},
@@ -82,7 +83,7 @@ function pageKey(){
   if(V.tab==="coach"&&V.chat)return "chat";
   if(V.tab==="train")return V.train==="days"?"train":V.train==="plan"?"tplan":null;
   if(V.tab==="coach")return !V.pcheck?"coach":null;
-  if(V.tab==="food")return V.smeal||V.pslot||V.pimport||V.meal?null:V.fplan?"fplan":"food";
+  if(V.tab==="food")return V.smeal||V.pslot||V.pimport||V.meal||V.fplan==="foods"?null:V.fplan?"fplan":"food";
   if(V.tab==="progress")return !V.phist?"progress":null;
   if(V.tab==="profile")return "profile";
   return null;}

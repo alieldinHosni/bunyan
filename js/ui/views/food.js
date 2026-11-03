@@ -18,6 +18,7 @@ import {dateBar} from "../datebar.js";
 import {backArrow} from "../nav.js";
 import {art, waterArt} from "../art.js";
 import {bodyNeeds} from "../bodyneeds.js";
+import {glyph} from "../glyphs.js";
 import {fitCh, afTile} from "./addfood.js";
 import {trendCard, vNutrition} from "./progress.js";
 
@@ -83,10 +84,13 @@ function vFood(){
    +art("loaf",{cls:"fthead-art"})+'</div>';
   return h+vFoodToday(dsel);}
 /* ---- Food's plan page ---------------------------------------------------------------
-   Where eating is planned: the meal plan, the daily targets, and the foods and meals of
-   your own. One row of tabs; back returns to Food. */
-var FPLAN=[["plan","Meal plan"],["targets","Targets"],["foods","My foods"]];
+   Where eating is planned: the day's meal plan and the daily targets, two tabs swiped
+   between (owner, 3 Nov: "some of the tabs logically don't make sense" — My foods is a
+   library you log from, not a plan, so it is a page of its own, reached from the meal
+   plan's list and from adding food). Back returns to Food. */
+var FPLAN=[["plan","Meal plan"],["targets","Targets"]];
 function vFoodPlan(){
+  if(V.fplan==="foods")return vMyFoodsPage();
   var fs=FPLAN.some(function(x){return x[0]===V.fplan;})?V.fplan:"plan",g=S.goals||{};
   var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Nutrition plan"))+'</h1></div>'
    +'<p class="dsub">'+esc(t("{k} kcal · {p} g protein a day").replace("{k}",fmtN(Math.round(num(g.kcal)))).replace("{p}",Math.round(num(g.p))))+'</p>';
@@ -241,49 +245,44 @@ function vMeal(dsel,name){
    moment. A new meal is built the way a training day is: name it, then add to it. */
 var XSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 var PLUS='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+var SPARK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M18 6l-2.5 2.5M8.5 15.5L6 18"/></svg>';
+var DOC='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></svg>';
+/* My foods: the foods and meals of your own, kept to be logged in one tap. Its own page
+   now, one step in from the meal plan. Two ways to add, side by side; the lists; Edit
+   for the ✕, as everywhere else. A list with nothing in it is not shown at all. */
+function vMyFoodsPage(){
+  return '<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("My foods"))+'</h1></div>'
+   +'<p class="dsub">'+esc(t("Foods and meals of your own, one tap away when you log."))+'</p>'+vMyFoods();}
 function vMyFoods(){
-  var sm=S.savedMeals||[],mf=S.myFoods||[],now=mealNow(today()),h='';
-  /* The two things that can be kept here, side by side and said apart (owner, 3 Nov: two
-     ways to add, neither saying how it differs): a meal is several foods logged together;
-     a food is one food with its own numbers, from its label. */
-  h+='<button class="bnew" data-newmeal="1"><span class="bnew-i">'+PLUS+'</span>'
-   +'<span class="bnew-t"><b>'+t("Save a meal")+'</b><span>'+t("Several foods you eat together, logged in one tap")+'</span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
-   +'<button class="bnew" data-myfood="new"><span class="bnew-i">'+PLUS+'</span>'
-   +'<span class="bnew-t"><b>'+t("Add a food")+'</b><span>'+t("One food with its own numbers, from its label")+'</span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  var sm=S.savedMeals||[],mf=S.myFoods||[],now=mealNow(today()),ed=V.reorder==="mf",h='';
+  h+='<div class="ptiles">'
+   +'<button class="ptile" data-newmeal="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Save a meal")+'</b><span>'+t("Several foods logged in one tap")+'</span></button>'
+   +'<button class="ptile" data-myfood="new"><span class="ptile-i">'+PLUS+'</span><b>'+t("Add a food")+'</b><span>'+t("From its label")+'</span></button></div>';
   if(!sm.length&&!mf.length){
     return h+'<div class="empty artempty">'+art("idra",{cls:"empty-art"})
      +'<h3>'+esc(t("Nothing saved yet"))+'</h3>'
      +'<p class="tiny">'+esc(t("What you keep here is one tap away when you log."))+'</p></div>';}
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Saved meals")+'</h2>'
-   +(sm.length?'<span class="dhint">'+sm.length+'</span>':'')+'</div>';
-  if(!sm.length)h+='<p class="dempty">'+esc(t("A saved meal logs everything in it in one tap."))+'</p>';
-  else{
-    h+='<div class="drows">';
+  var drm=function(attr,id,name){return ed?'<button class="drm" '+attr+'="'+esc(id)+'" aria-label="'+esc(t("Remove")+" "+name)+'"><i>'+XSVG+'</i></button>':'';};
+  if(sm.length){
+    h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Saved meals")+'</h2><span class="libn num">'+sm.length+'</span>'+reorderBtn("mf",ed,true)+'</div><div class="drows'+(ed?' ro ed':'')+'">';
     sm.forEach(function(m){
       var tot=sumNutrition(m.items||[]),n=(m.items||[]).length;
-      h+='<div class="drow" data-k="sm:'+m.id+'">'
-       +'<button class="drm" data-rmsaved="'+m.id+'" aria-label="'+esc(t("Remove")+" "+m.name)+'"><i>'+XSVG+'</i></button>'
+      h+='<div class="drow" data-k="sm:'+m.id+'">'+drm("data-rmsaved",m.id,m.name)
        +'<button class="dmain" data-smeal="'+m.id+'"><span class="dtext"><span class="drow-n">'+esc(m.name)+'</span>'
        +'<span class="drow-s">'+n+' '+t(n===1?"item":"items")+'<i class="ddot"></i>'+fmtN(tot.kcal)+' kcal<i class="ddot"></i>'
        +esc(t("P:"))+' '+r1(tot.p)+'g</span></span></button>'
-       +(n?'<button class="dquick" data-addsaved="'+m.id+'" aria-label="'+esc(t("Add")+" "+m.name+" "+t("to")+" "+mealName(now))+'">'+PLUS+'</button>':'')
+       +(n&&!ed?'<button class="dquick" data-addsaved="'+m.id+'" aria-label="'+esc(t("Add")+" "+m.name+" "+t("to")+" "+mealName(now))+'">'+PLUS+'</button>':'')
        +'</div>';});
     h+='</div>';}
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Your foods")+'</h2>'
-   +(mf.length?'<span class="dhint">'+mf.length+'</span>':'')+'</div>';
   if(mf.length){
-    h+='<div class="drows">';
+    h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Your foods")+'</h2><span class="libn num">'+mf.length+'</span>'+(sm.length?'':reorderBtn("mf",ed,true))+'</div><div class="drows'+(ed?' ro ed':'')+'">';
     mf.slice().reverse().forEach(function(f){
       var sv=(f.s&&f.s[0]&&f.s[0][0])||"100 g";
-      h+='<div class="drow" data-k="mf:'+esc(f.id)+'">'
-       +'<button class="drm" data-rmmyfood="'+esc(f.id)+'" aria-label="'+esc(t("Remove")+" "+f.n)+'"><i>'+XSVG+'</i></button>'
+      h+='<div class="drow" data-k="mf:'+esc(f.id)+'">'+drm("data-rmmyfood",f.id,f.n)
        +'<button class="dmain" data-myfood="'+esc(f.id)+'"><span class="dtext"><span class="drow-n">'+esc(f.n)+'</span>'
        +'<span class="drow-s">'+esc(sv)+'<i class="ddot"></i>'+fmtN(f.kcal)+' kcal<i class="ddot"></i>'
        +esc(t("P:"))+' '+r1(f.p)+'g</span></span><span class="ico ico-chev" aria-hidden="true"></span></button></div>';});
     h+='</div>';}
-  h+='<button class="dadd" data-myfood="new"><span aria-hidden="true">+</span>'+t("Add your own food")+'</button>';
   return h;}
 
 /* A food in a meal being built: tap it to change its amount (the servings screen
@@ -357,67 +356,56 @@ function maintSource(){
   return h;}
 var TRANGES=[[7,"1W"],[30,"1M"],[90,"3M"]];
 var TPAST={7:"Past 7 days",30:"Past 30 days",90:"Past 90 days"};
+/* Targets (owner, 3 Nov: "looks like a PDF", too much at once). One card says the
+   target: the calories, what they are made of, water and steps, and where maintenance
+   comes from. Edit opens the same card as fields; Save or Cancel closes it. The coach's
+   suggestion shows only when it differs, with Use. Then whether it is working; the
+   eating history folds away under one row. */
 function vTargets(){
-  var g=S.goals,h='';
-  var pc=macroPct(g.p,g.c,g.f);
-  /* One home for the target (owner, 3 Nov: three numbers, no clear one). The coach's
-     suggestion comes first when it differs from the target, beside it, with one Use;
-     when they agree it says so in a line. Then the target itself, to type. */
-  var sg=suggested();
+  var g=S.goals,h='',pc=macroPct(g.p,g.c,g.f),sg=suggested(),ed=!!V.tgedit;
+  var mk=macroKcal(g.p,g.c,g.f),gap=Math.round(num(g.kcal)-mk),fig=function(x){return '<span class="num">'+x+'</span>';};
   if(!sg)h+=energyMissing()==="no_weight"
     ?'<div class="pgcard tgneed"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Log your weight, and Bunyan works out your maintenance and a target for your goal. Nothing is worked out without it."))+'</p>'
       +'<button class="btn g" data-sheet="weigh">'+esc(t("Log weight"))+'</button></div>'
     :'<div class="pgcard tgneed"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Add your age, height and weight, and Bunyan works out a target for your goal."))+'</p>'
       +'<button class="btn g" data-sheet="set_you">'+esc(t("Add your details"))+'</button></div>';
+  var same=!!sg&&sg.kcal===g.kcal&&sg.p===g.p&&sg.c===g.c&&sg.f===g.f;
+  if(sg&&!same&&!ed)h+='<div class="tgoffer"><div><span class="klabel">'+esc(t("The coach suggests"))+'</span>'
+    +'<b>'+fig(fmtN(sg.kcal)+' kcal')+' · '+fig(sg.p+' g')+' '+esc(t("protein"))+'</b>'
+    +'<span class="tgoffer-s">'+esc(t("Maintenance {m} kcal, adjusted for your goal.")).replace("{m}",fig(fmtN(sg.tdee)))+'</span></div>'
+    +hb('<button class="btn sm" data-usesug="1">'+esc(t("Use"))+'</button>')+'</div>';
+  if(!ed){
+    h+='<section class="tgcard glass"><div class="tgcard-h"><span class="klabel">'+esc(t("Your daily target"))+'</span>'
+     +'<button class="tlink dreorder" data-tgedit="1">'+esc(t("Edit"))+'</button></div>'
+     +'<div class="tgcard-k">'+fig(fmtN(g.kcal)+' <small>kcal</small>')+'</div>'
+     +'<div class="ngsplit" role="img" aria-label="'+esc(t("Protein")+" "+pc[0]+"%, "+t("Carbs")+" "+pc[1]+"%, "+t("Fat")+" "+pc[2]+"%")+'">'
+     +(pc[0]?'<i class="p" style="flex-grow:'+pc[0]+'"></i>':'')+(pc[1]?'<i class="c" style="flex-grow:'+pc[1]+'"></i>':'')+(pc[2]?'<i class="f" style="flex-grow:'+pc[2]+'"></i>':'')+'</div>'
+     +'<div class="tgmac">'+[["p","Protein",g.p,pc[0]],["c","Carbs",g.c,pc[1]],["f","Fat",g.f,pc[2]]].map(function(x){
+        return '<div class="'+x[0]+'"><span>'+esc(t(x[1]))+'</span><b>'+fig(x[2]+' g')+'</b><em>'+fig(x[3]+'%')+'</em></div>';}).join("")+'</div>'
+     +'<div class="tgmore"><span>'+esc(t("Water"))+' <b>'+fig(fmtN(g.water))+'</b> ml</span><span>'+esc(t("Steps"))+' <b>'+fig(fmtN(g.steps))+'</b></span></div>'
+     +(Math.abs(gap)>40?'<div class="tgwarn"><p>'+esc(t(gap>0?"Your macros add up to {m} kcal, {d} under your target.":"Your macros add up to {m} kcal, {d} over your target."))
+        .replace("{m}",fig(fmtN(mk))).replace("{d}",fig(fmtN(Math.abs(gap))))+'</p><button class="btn g sm" data-fitmacros="1">'+esc(t("Fit carbs to the target"))+'</button></div>':'')
+     +(sg?'<div class="tgsrc-w">'+(same?'<p class="pgnote tgsame">'+esc(t("Matches the coach's suggestion."))+'</p>':'')+maintSource()+'</div>':'')
+     +'</section>';}
   else{
-    var same=sg.kcal===g.kcal&&sg.p===g.p&&sg.c===g.c&&sg.f===g.f;
-    h+='<div class="pgcard tgsug'+(same?' same':'')+'"><div class="aflbl">'+esc(t(same?"Your targets match the coach's":"The coach suggests"))+'</div>'
-     +'<div class="tgsug-r"><div><div class="pgstat-k">'+esc(t("Maintenance"))+'</div><b class="num">'+fmtN(sg.tdee)+'</b><small>kcal</small></div>'
-     +'<div><div class="pgstat-k">'+esc(t("For your goal"))+'</div><b class="a num">'+fmtN(sg.kcal)+'</b><small>kcal</small></div>'
-     +'<div><div class="pgstat-k">'+esc(t("Protein"))+'</div><b class="num">'+sg.p+'</b><small>g</small></div></div>'
-     +maintSource()
-     +(same?'':'<p class="pgnote">'+esc(t("Your target now: {k} kcal and {p} g protein.")).replace("{k}",'<span class="num">'+fmtN(g.kcal)+'</span>').replace("{p}",'<span class="num">'+g.p+'</span>')+'</p>'
-       +hb('<button class="btn" data-usesug="1">'+esc(t("Use the suggestion"))+'</button>'))+'</div>';}
-  /* The macros against the calories they should make: off by more than a rounding, it
-     says by how much and fits the carbohydrate to it in one tap (protein and fat kept). */
-  var mk=macroKcal(g.p,g.c,g.f),gap=Math.round(num(g.kcal)-mk);
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Your targets")+'</h2></div>'
-   +'<label class="ngcard ngenergy" for="g_kcal"><span class="ngenergy-t">'
-   +'<span class="aflbl">'+esc(t("Daily energy goal"))+'</span>'
-   +'<span class="ngbig"><input id="g_kcal" type="number" inputmode="numeric" style="width:'+fitCh(g.kcal,"")+'ch" value="'+g.kcal+'"><i>kcal</i></span></span>'
-   +'<span class="ico ico-edit" aria-hidden="true"></span></label>'
-   +'<div class="ngcard"><div class="aflbl">'+esc(t("Macronutrient split"))+'</div>'
-   +'<div class="ngsplit" role="img" aria-label="'
-   +esc(t("Protein")+" "+pc[0]+"%, "+t("Carbs")+" "+pc[1]+"%, "+t("Fat")+" "+pc[2]+"%")+'">'
-   +(pc[0]?'<i class="p" style="flex-grow:'+pc[0]+'"></i>':'')
-   +(pc[1]?'<i class="c" style="flex-grow:'+pc[1]+'"></i>':'')
-   +(pc[2]?'<i class="f" style="flex-grow:'+pc[2]+'"></i>':'')+'</div>'
-   +'<div class="nglegend"><span>'+esc(t("Protein"))+': <span class="num">'+pc[0]+'%</span></span>'
-   +'<span>'+esc(t("Carbs"))+': <span class="num">'+pc[1]+'%</span></span><span>'+esc(t("Fat"))+': <span class="num">'+pc[2]+'%</span></span></div>'
-   +'<div class="aftiles ng3">'
-   +afTile("g_p",t("Protein"),"g",g.p,"0","numeric")
-   +afTile("g_c",t("Carbs"),"g",g.c,"0","numeric")
-   +afTile("g_f",t("Fat"),"g",g.f,"0","numeric")+'</div>'
-   +(Math.abs(gap)>40
-     ?'<p class="afnote">'+esc(t(gap>0?"Your macros add up to {m} kcal, {d} under your target.":"Your macros add up to {m} kcal, {d} over your target."))
-        .replace("{m}",'<span class="num">'+fmtN(mk)+'</span>').replace("{d}",'<span class="num">'+fmtN(Math.abs(gap))+'</span>')+'</p>'
-       +'<button class="btn g sm afit" data-fitmacros="1">'+esc(t("Fit carbs to the target"))+'</button>'
-     :'<p class="afnote">'+esc(t("Your macros add up to {m} kcal.")).replace("{m}",'<span class="num">'+fmtN(mk)+'</span>')+'</p>')+'</div>'
-   +'<div class="ngcard"><div class="aflbl">'+esc(t("Other targets"))+'</div><div class="aftiles">'
-   +afTile("g_water",t("Water"),"ml",g.water,"0","numeric")
-   +afTile("g_steps",t("Steps"),"",g.steps,"0","numeric")+'</div></div>'
-   +hb('<button class="btn afcta" data-savegoals="1">'+esc(t("Save targets"))+'</button>');
+    h+='<section class="tgcard tgedit glass"><div class="tgcard-h"><span class="klabel">'+esc(t("Your daily target"))+'</span></div>'
+     +'<label class="ngenergy" for="g_kcal"><span class="ngbig"><input id="g_kcal" type="number" inputmode="numeric" style="width:'+fitCh(g.kcal,"")+'ch" value="'+g.kcal+'"><i>kcal</i></span></label>'
+     +'<div class="aftiles ng3">'+afTile("g_p",t("Protein"),"g",g.p,"0","numeric")+afTile("g_c",t("Carbs"),"g",g.c,"0","numeric")+afTile("g_f",t("Fat"),"g",g.f,"0","numeric")+'</div>'
+     +'<p class="afnote">'+esc(t("Your macros add up to {m} kcal.")).replace("{m}",fig(fmtN(mk)))+'</p>'
+     +(Math.abs(gap)>40?'<button class="btn g sm afit" data-fitmacros="1">'+esc(t("Fit carbs to the target"))+'</button>':'')
+     +'<div class="aftiles">'+afTile("g_water",t("Water"),"ml",g.water,"0","numeric")+afTile("g_steps",t("Steps"),"",g.steps,"0","numeric")+'</div>'
+     +'<div class="tgacts">'+hb('<button class="btn" data-savegoals="1">'+esc(t("Save targets"))+'</button>')
+     +'<button class="btn g" data-tgedit="0">'+esc(t("Cancel"))+'</button></div></section>';}
   /* Is it working: the weigh-ins against the goal. */
   var tc=trendCard(true);
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Is it working?")+'</h2></div>'
    +(tc||('<div class="pgcard"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Weigh in a few times over two weeks and this says whether the target is working."))+'</p>'
     +'<button class="btn g" data-sheet="weigh">'+esc(t("Log weight"))+'</button></div>'));
-  /* And how the eating has actually gone, over a range of its own. */
-  var r=[7,30,90].indexOf(+V.frange)>=0?+V.frange:30;
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("How you have been eating")+'</h2></div>';
-  h+=seg({items:TRANGES.map(function(x){return [x[0],t(x[1]),t(TPAST[x[0]])];}),value:r,attr:"frange",
-    soft:true,cls:"pgrange",label:t("Time range"),key:"frange"});
-  h+=vNutrition(r);
+  /* How the eating has actually gone: folded, one row until asked for. */
+  var r=[7,30,90].indexOf(+V.frange)>=0?+V.frange:30,open=!!(V.fold&&V.fold.feat);
+  h+='<div class="fold tgfold'+(open?' open':'')+'"><button class="tgfold-h" data-fold="feat" aria-expanded="'+open+'"><span>'+esc(t("How you have been eating"))+'</span>'+glyph("chev","fold-chev")+'</button>'
+   +'<div class="fold-body">'+seg({items:TRANGES.map(function(x){return [x[0],t(x[1]),t(TPAST[x[0]])];}),value:r,attr:"frange",
+    soft:true,cls:"pgrange",label:t("Time range"),key:"frange"})+vNutrition(r)+'</div></div>';
   return h;}
 
 /* ---- Plan: the day's meals and what is planned for each ---------------------------
@@ -429,16 +417,22 @@ function slotLine(id){
   if(pl.length)bits.push(pl.length+' '+t(pl.length===1?"food":"foods"),fmtN(tot.kcal)+' kcal',t("P:")+' '+tot.p+'g');
   if(td)bits.push(td+' '+t("to find"));
   return bits.length?bits.map(esc).join('<i class="ddot"></i>'):'<em>'+esc(t("No plan yet — tap to add foods"))+'</em>';}
+/* The meal plan (owner, 3 Nov: inconsistent, unorganised, "looks like a PDF"). What the
+   day's plan comes to against the target, in two bars and one verdict; the meals; two
+   ways to fill it at once, as two tiles; then the settings of the plan as one list — how
+   meals are named, your own foods, sharing — instead of cards and links one under
+   another. */
 function vPlan(){
   var sl=mealSlots(),g=S.goals,all=[],h='',style=mealStyle(),ro=sl.length>0&&V.reorder==="ms";
   sl.forEach(function(x){all=all.concat(x.plan||[]);});
-  var tot=sumNutrition(all);
-  h+='<div class="plhero"><span class="shk">'+esc(t("Your day"))+'</span>'
-   +'<h2 class="plhero-t">'+esc(t(sl.length===1?"1 meal":"{n} meals").replace("{n}",sl.length))+'</h2>'
-   +'<div class="plchips"><span><b>'+fmtN(tot.kcal)+'</b> / '+fmtN(g.kcal)+' kcal</span>'
-   +'<span><b>'+tot.p+'</b> / '+g.p+' g '+esc(t("Protein"))+'</span></div>'
-   +(all.length?'':'<p class="plhero-s">'+esc(t("Plan what goes in each meal, or import a plan you already have."))+'</p>')
-   +'</div>';
+  var tot=sumNutrition(all),fig=function(x){return '<span class="num">'+x+'</span>';};
+  var bar=function(cls,cur,goal){var p=goal?Math.min(1,cur/goal):0;return '<span class="plbar '+cls+'"><i style="width:'+Math.round(p*100)+'%"></i></span>';};
+  var d=Math.round(tot.kcal-num(g.kcal)),near=Math.abs(d)<=Math.max(60,num(g.kcal)*0.04);
+  var verdict=!all.length?t("Nothing planned yet."):near?t("On target."):d<0?t("{n} kcal left to plan.").replace("{n}",fmtN(-d)):t("{n} kcal over the target.").replace("{n}",fmtN(d));
+  h+='<section class="plsum glass"><div class="plsum-h"><span class="klabel">'+esc(t("Planned for a day"))+'</span>'
+   +'<span class="plsum-v'+(all.length&&near?' ok':'')+'">'+esc(verdict)+'</span></div>'
+   +'<div class="plsum-r"><span>'+esc(t("Calories"))+'</span>'+bar("k",tot.kcal,g.kcal)+'<b>'+fig(fmtN(tot.kcal)+' / '+fmtN(g.kcal))+'</b></div>'
+   +'<div class="plsum-r"><span>'+esc(t("Protein"))+'</span>'+bar("p",tot.p,g.p)+'<b>'+fig(Math.round(tot.p)+' / '+g.p+' g')+'</b></div></section>';
   /* Edit shows each meal's ✕ and grip; out of it, the list is the plan. */
   h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Meals")+'</h2>'
    +(sl.length?reorderBtn("ms",ro,true):'')+'</div>';
@@ -454,21 +448,19 @@ function vPlan(){
      +(ro?'<button class="dgrip" data-grip="'+esc(x.id)+'" aria-label="'+esc(t("Move")+" "+mealName(x.id))+'">'+GRIPSVG+'</button>':'')
      +'</div>';});
   h+='</div><button class="dadd" data-paddslot="1"><span aria-hidden="true">+</span>'+t("Add a meal")+'</button>';
-  /* Two ways to fill the plan at once: built from the targets, or brought in. */
-  h+='<button class="bnew" data-pgen="1"><span class="bnew-i">'+PLUS+'</span>'
-   +'<span class="bnew-t"><b>'+t("Build it from my targets")+'</b><span>'+t("A day of meals that adds up to your targets, to change before you use it")+'</span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
-  /* To another Bunyan user, as it is (owner, 27 Oct): js/engine/planshare.js. */
-  if(all.length)h+='<button class="ddel dset plshare" data-shareplan="meals">'+t("Share my meal plan")+'</button>';
-  h+='<button class="bnew" data-pimport="1">'+art("loaf",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
-   +'<span class="bnew-t"><b>'+t("Import a plan")+'</b><span>'+t("Paste it or open a file, and it is sorted into meals")+'</span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
-  /* How the meals are called, set once: the four named ones, or numbered as a coach
-     writes them. Under the meals, not above them (owner, 3 Nov). */
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Meal names")+'</h2></div>'
-   +'<div class="bsched" role="group" aria-label="'+esc(t("Meal names"))+'">'
-   +'<button class="'+(style==="named"?'on':'')+'" data-mstyle="named" aria-pressed="'+(style==="named")+'"><b>'+t("Named meals")+'</b><span>'+t("Breakfast, lunch, dinner, snacks")+'</span></button>'
-   +'<button class="'+(style==="numbered"?'on':'')+'" data-mstyle="numbered" aria-pressed="'+(style==="numbered")+'"><b>'+t("Numbered meals")+'</b><span>'+t("Meal 1, Meal 2, Meal 3…")+'</span></button></div>';
+  /* Two ways to fill the whole plan at once. */
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Fill the plan")+'</h2></div><div class="ptiles">'
+   +'<button class="ptile" data-pgen="1"><span class="ptile-i">'+SPARK+'</span><b>'+t("Build it from my targets")+'</b><span>'+t("A day that adds up, to check first")+'</span></button>'
+   +'<button class="ptile" data-pimport="1"><span class="ptile-i">'+DOC+'</span><b>'+t("Import a plan")+'</b><span>'+t("From text or a file")+'</span></button></div>';
+  /* The plan's settings, one list. */
+  var nmf=(S.myFoods||[]).length+(S.savedMeals||[]).length;
+  h+='<section class="sg plset"><div class="sg-list">'
+   +'<div class="srow srow-pick"><span class="srow-t"><span class="srow-n">'+esc(t("Meal names"))+'</span><span class="srow-s">'+esc(t(style==="named"?"Breakfast, lunch, dinner, snacks":"Meal 1, Meal 2, Meal 3…"))+'</span></span>'
+   +seg({items:[["named",t("Named")],["numbered",t("Numbered")]],value:style,attr:"mstyle",soft:true,label:t("Meal names"),key:"mstyle"})+'</div>'
+   +'<button class="srow" data-fplan="foods"><span class="srow-t"><span class="srow-n">'+esc(t("My foods"))+'</span><span class="srow-s">'+esc(t("Foods and meals of your own"))+'</span></span>'
+   +(nmf?'<span class="srow-v num">'+nmf+'</span>':'')+'<span class="ico ico-chev" aria-hidden="true"></span></button>'
+   +(all.length?'<button class="srow" data-shareplan="meals"><span class="srow-t"><span class="srow-n">'+esc(t("Share my meal plan"))+'</span><span class="srow-s">'+esc(t("With another Bunyan user"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>':'')
+   +'</div></section>';
   return h;}
 
 /* One meal's plan, built in place like a saved meal: the title renames it, ✕ takes a

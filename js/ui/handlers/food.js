@@ -553,7 +553,9 @@ function register(){
     if(!m3){saveDB();render();toast(t("Enter your height, weight and age first."));return;}
     S.goals.kcal=m3.kcal;S.goals.p=m3.p;S.goals.f=m3.f;S.goals.c=m3.c;
     saveDB();render();toast(t("Targets updated."));return;});
-  key("savegoals",function(){
+  /* Targets: Edit opens the card as fields, Cancel closes it unchanged (views/food.js). */
+  key("tgedit",function(D){V.tgedit=D.tgedit==="1";render();return;});
+  key("savegoals",function(){V.tgedit=false;
     S.goals.kcal=num(val("g_kcal"),S.goals.kcal);S.goals.p=num(val("g_p"),S.goals.p);
     S.goals.c=num(val("g_c"),S.goals.c);S.goals.f=num(val("g_f"),S.goals.f);
     S.goals.water=num(val("g_water"),S.goals.water);S.goals.steps=num(val("g_steps"),S.goals.steps);

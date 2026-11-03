@@ -3402,3 +3402,26 @@ Owner, 3 Nov, after the restructure (PR #106).
 - Found by the full suite: the old page's copy kept the tapped button's press look (.tapd) while it slid out;
   the copy is now cleaned of it. Tests that reached the block on Training home, or the Exercises tab, now go to
   My program and Programs & exercises (the test helper maps "exercises" there).
+
+## Food's plan pages, round 3 — branch session/food3 (CACHE v207)
+
+Owner, 3 Nov: the app is glitching; the nutrition plan pages are inconsistent, unorganised, "look like a PDF",
+tabs that do not make sense; the swipe's tab highlight lags the page.
+- Glitch: Meal names was drawn with the old .bsched classes, whose styles the schedule card replaced in
+  round 2, so it showed as bare white boxes. It is now a settings row with the soft segment.
+- Two tabs, Meal plan and Targets. My foods is a library you log from, not a plan: a page of its own, one step
+  in (V.fplan "foods", pushNav), from the meal plan's settings list. Old routes to fplan foods land there.
+- Meal plan: one summary card (calories and protein planned against the target, bars, and a verdict: on
+  target / n kcal left / n over); the meals with Edit; "Fill the plan" as two tiles (Build from targets,
+  Import); one settings list (Meal names, My foods, Share). The two big cards and the loose link are gone.
+- Targets: one card says the target (kcal, the split bar, grams and shares of each macro, water and steps,
+  where maintenance comes from, a macro mismatch with Fit carbs); Edit opens it as fields with Save and
+  Cancel (V.tgedit). The coach's suggestion is a one-line offer with Use, only when it differs. "Is it
+  working?" stays; the eating history folds under one row.
+- My foods: two tiles to add; lists only when they hold something; ✕ behind Edit as on every other list; the
+  duplicate "Add your own food" button gone.
+- Swipe: the tabs' highlight follows the finger while the page is dragged (exswipe segFollow, .seg.drag) and
+  carries on to the landing tab in one movement with the page (--segdur), or springs back with it.
+- Figures and their units stay one left-to-right run in Arabic (they read "2,500 / 0").
+- Found by the full suite: the new cards (plan summary, target card, tiles, offer, fold) and the program,
+  plan and schedule cards were not in the frosted-card lists, so they were flat beside every other card. Added.
