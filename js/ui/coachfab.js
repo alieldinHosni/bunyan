@@ -83,7 +83,7 @@ function panelHtml(){
 
 /* ---- keeping the containers in step ---------------------------------------------------- */
 var lastMode=null,lastFab=null,openKey="",held=false;
-function routeKey(){return [V.tab,V.train,V.dayId,V.previewId,V.meal,V.smeal,V.pslot,V.pimport,V.phist,V.csec,V.ctsub,V.cfsub].join("|");}
+function routeKey(){return [V.tab,V.train,V.tplan,V.fplan,V.dayId,V.previewId,V.meal,V.smeal,V.pslot,V.pimport,V.phist].join("|");}
 function syncCoach(){
   var fab=document.getElementById("cfab"),pan=document.getElementById("cpanel");
   if(!fab||!pan)return;
@@ -211,4 +211,4 @@ function bindPanel(grow){
     if(document.activeElement&&document.activeElement.id==="chatq")e.preventDefault();});}
 function focusFab(){var b=document.querySelector("#cfab .cfab");if(b)try{b.focus({preventScroll:true});}catch(e){}}
 
-export {bindPanel, closeCoach, fabShown, holdCoach, syncCoach, toEnd};
+export {bindPanel, closeCoach, fabShown, holdCoach, suggestFor, syncCoach, toEnd};

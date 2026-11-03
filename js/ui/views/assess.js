@@ -367,7 +367,7 @@ function result(a){
          +'<span class="as-mt"><b>'+esc(nm)+'</b><small>'+esc(m.items.slice(0,3).map(foodLabel).join(S.prefs.lang==="ar"?"، ":", "))+'</small>'
          +'<small><span class="num">'+fmtN(tot.kcal)+'</span> '+t("kcal")+' · <span class="num">'+tot.p+'</span> g '+esc(t("protein"))+'</small></span>'+glyph("chev","as-chev")+'</summary>'
          +'<ul class="as-dex">'+m.items.map(function(x){return '<li><span>'+esc(foodLabel(x))+'</span><span class="num">'+esc(x.label||"")+'</span></li>';}).join("")+'</ul></details></div>';}).join("")+'</div>'
-     +'<p class="as-note">'+esc(t("The day comes to {k} kcal and {p} g of protein. Every food and amount can be changed in Coach → Nutrition.").replace("{k}",fmtN(mt.kcal)).replace("{p}",mt.p))+'</p>';}
+     +'<p class="as-note">'+esc(t("The day comes to {k} kcal and {p} g of protein. Every food and amount can be changed in Food → Plan.").replace("{k}",fmtN(mt.kcal)).replace("{p}",mt.p))+'</p>';}
   h+='</section>';
   h+='<p class="as-note as-disc">'+glyph("info")+'<span>'+t("Bunyan is a training log, not medical advice. If you have an injury or a health condition, check with a professional first, and stop any exercise that causes sharp pain.")+'</span></p>';
   if(!a.done)h+='<div class="as-cta"><button class="btn g" data-asback="1">'+glyph("arrow","as-back")+t("Back")+'</button>'

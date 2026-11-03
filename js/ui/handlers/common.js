@@ -17,7 +17,7 @@ import {CUR, dayOf, editSplit, S, saveDB, saveSession} from "../../state.js";
 import {toKg} from "../../units.js";
 import {num, r1, uid} from "../../util.js";
 import {askConfirm, closeSheet, openSheet, val} from "../actions.js";
-import {resetNav} from "../nav.js";
+import {pushNav, resetNav} from "../nav.js";
 import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
@@ -61,9 +61,9 @@ function tidyGroups(list){
 /* The program a builder control acts on: the one open in the builder, or the active
    one when Coach → Training → My program shows it inline. */
 function builderId(){
-  if(V.tab!=="coach")return null;
+  if(V.tab!=="train")return null;
   if(V.train==="builder")return V.previewId;
-  if(V.train==="days"&&(V.csec||S.prefs.csec)==="train"&&(V.ctsub||"program")==="program")return S.activeProgram;
+  if(V.train==="plan"&&(V.tplan||"program")==="program")return S.activeProgram;
   return null;}
 /* Drag and the arrow keys both land here: a day in the split builder, or an
    exercise in a day. */
@@ -75,7 +75,7 @@ function moveRow(id,to){
     if(!en[li]||to===li)return;
     en.splice(to,0,en.splice(li,1)[0]);tidyGroups(en);
     V.logIdx=Math.max(0,en.indexOf(cur));S.active.idx=V.logIdx;saveDB();render();return;}
-  if(V.tab==="coach"&&V.reorder==="ms"){
+  if(V.tab==="food"&&V.reorder==="ms"){
     var sl=ownSlots(),k0=sl.findIndex(function(x){return x.id===id;});
     to=Math.max(0,Math.min(sl.length-1,to));
     if(k0<0||to===k0)return;
@@ -160,12 +160,21 @@ function slotsFrom(pp){
     if(m.todo&&m.todo.length)x.todo=m.todo;
     return x;});}
 /* Coach, at a section and the view inside it: a change of place, so a fresh trail. */
-function toCoach(sec,sub){
+/* The places planning lives (owner, 3 Nov: the Coach hub restructured). area:
+     "train"  Training's plan page: sub "program" (default), "programs" or "exercises"
+     "food"   Food's plan page: sub "plan" (default), "targets" or "foods"
+     "ai"     the Coach page
+   From anywhere: the tab's own page first, then the plan page one step in, so back
+   lands on Training or Food, never somewhere unrelated. */
+function toPlan(area,sub){
   if(V.sheet)closeSheet();
-  resetNav();V.tab="coach";V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.assess=false;V.pcheck=false;
-  if(sec){V.csec=sec;S.prefs.csec=sec;}
-  if(sub){if(V.csec==="train")V.ctsub=sub;else if(V.csec==="food")V.cfsub=sub;}
-  saveDB();render();window.scrollTo(0,0);}
+  resetNav();V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.assess=false;V.pcheck=false;V.fplan=null;V.train="days";
+  if(area==="train"||area==="food"){
+    V.tab=area;pushNav();
+    if(area==="train"){V.train="plan";V.tplan=sub||"program";}
+    else V.fplan=sub||"plan";}
+  else V.tab="coach";
+  render();window.scrollTo(0,0);}
 /* After a plan is used, say what the check found, one tap from the details. */
 function pcAfter(){
   if(!checkPlans().length)return;
@@ -173,7 +182,7 @@ function pcAfter(){
   setTimeout(function(){
     var n=checkPlans().length;if(!n||V.pcheck)return;
     toast(t(n===1?"Plan check: 1 thing to look at":"Plan check: {n} things to look at").replace("{n}",n),
-      function(){toCoach("ai");},t("Show me"));},5600);}
+      function(){toPlan("ai");},t("Show me"));},5600);}
 /* ---- closing a sheet ------------------------------------------------------ */
 /* Most sheets show what is already stored, so closing them costs nothing. The ones
    holding typed input that has not been saved anywhere ask first. */
@@ -279,4 +288,4 @@ function ibPhoto(file){
     if(Object.keys(readInBody(txt)).length){ibRead(txt);return;}
     ibStatus(t("No InBody figures found on the photo. Copy its text and paste it below."));
   },function(){if(my===OCR&&V.sheet==="inbody")ibStatus(t("The photo couldn't be read on this phone. Copy its text and paste it below."));});}
-export {builderId, chatEnd, chatSend, editedEx, fixLogsNow, ibPhoto, ibRead, LENT, setDbLoad, MF, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, retargetNow, sendText, setExField, sheetDirty, slotsFrom, tidyGroups, toCoach, topOfResults, withNotes};
+export {builderId, chatEnd, chatSend, editedEx, fixLogsNow, ibPhoto, ibRead, LENT, setDbLoad, MF, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, retargetNow, sendText, setExField, sheetDirty, slotsFrom, tidyGroups, toPlan, topOfResults, withNotes};

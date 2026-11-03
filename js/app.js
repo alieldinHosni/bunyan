@@ -287,9 +287,8 @@ window.addEventListener("storage",function(ev){
 });
 /* Reopened mid-workout (a reload, or iOS having reclaimed the tab): straight back to
    the exercise and the rest that were on screen, not to Home. */
-V.csec=(S.prefs&&S.prefs.csec)||"ai";
 if(S.active){restoreWorkoutState();syncDraft();bootDraft=JSON.stringify(V.draft);V.tab="train";V.train="days";}
-if(!S.onboarded){V.tab="coach";V.csec="ai";V.assess=true;V.asd=draftFrom();}
+if(!S.onboarded){V.tab="coach";V.assess=true;V.asd=draftFrom();}
 render();
 
 if("serviceWorker" in navigator){

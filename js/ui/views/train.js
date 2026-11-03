@@ -178,7 +178,32 @@ function vTrain(){
   if(S.active&&V.train!=="hub")return vLogger();
   /* A day of the plan, opened from the week: what it holds, before you start it. */
   if(V.train==="day")return vDay();
+  /* Planning, one step in from here (owner, 3 Nov): the plan page, and the builders,
+     library and import it opens. */
+  if(V.train==="plan")return vTrainPlan();
+  var sub=trainSub();if(sub!=null)return sub;
   return vTrainHome();}
+
+/* ---- Training's plan page -------------------------------------------------------------
+   Where the training is planned: your program (its days, inline), the other programs
+   and templates, and the exercise library. One row of tabs; back returns to Training. */
+var TPLAN=[["program","My program"],["programs","Programs"],["exercises","Exercises"]];
+function vTrainPlan(){
+  var ts=TPLAN.some(function(x){return x[0]===V.tplan;})?V.tplan:"program",sp=split();
+  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Training plan"))+'</h1></div>'
+   +'<p class="dsub">'+esc(sp?schedLine(sp):t("No program yet"))+'</p>';
+  h+=seg({items:TPLAN.map(function(x){return [x[0],t(x[1])];}),value:ts,attr:"tplan",tabs:true,cls:"psecs",label:t("Training plan"),key:"tplan"});
+  h+='<div class="psec" data-k="psec-'+ts+'">'
+   +(ts==="programs"?programsPage():ts==="exercises"?exercisesPage():builderBody(sp,S.activeProgram,true))+'</div>';
+  return h;}
+/* How the program falls in a week, in words: its weekdays, or "in rotation". */
+function schedLine(sp){
+  var n=sp.days.filter(function(d){return d.ex.length;}).length;
+  var days=t(n===1?"{n} training day":"{n} training days").replace("{n}",n);
+  if(sp.schedule!=="week")return days+" · "+t("in rotation");
+  var wd={};sp.days.forEach(function(d){if(d.ex.length)(d.wd||[]).forEach(function(w){wd[w]=1;});});
+  var ws=Object.keys(wd).map(Number).sort();
+  return ws.length?ws.map(wdName).join(", "):days;}
 
 /* ---- the Training page ------------------------------------------------------------
    One question: what do I train today? The greeting and at most one reminder, the
@@ -190,7 +215,7 @@ function vTrainHome(){
   h+=trainTop();
   if(S.active)h+=resumeHero();
   else{var pd=planOn(sp,sel);h+=weekRail(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);h+=aheadCard(sp,sel);h+=missedCard(sel);}
-  if(!S.active)h+=blockCard();
+  if(!S.active)h+=programCard();
   h+=deloadCard()+travelCard();
   h+=bodyTiles();
   /* The last outdoor session of the fortnight (a run, a walk, a ride, a hike), as the
@@ -236,8 +261,9 @@ function lastRunCard(){
 
 /* The planning screens, for Coach: null when none is open. */
 function trainSub(){
-  if(V.train==="splits"){V.train="days";V.csec="train";V.ctsub="programs";}
-  if(V.train==="builder"&&V.previewId===S.activeProgram){V.train="days";V.csec="train";V.ctsub="program";}
+  /* Old routes land on the plan page: the program list, or the active program inline. */
+  if(V.train==="splits"){V.train="plan";V.tplan="programs";return vTrainPlan();}
+  if(V.train==="builder"&&V.previewId===S.activeProgram){V.train="plan";V.tplan="program";return vTrainPlan();}
   if(V.train==="builder")return vBuilder();
   if(V.train==="preview")return vPreview();
   if(V.train==="library")return vLibrary();
@@ -415,7 +441,7 @@ function programsList(){
      /* The active program cannot be deleted from here: switch away from it first. */
      +(on?'<span class="drm" aria-hidden="true"></span>'
         :'<button class="drm" data-delsplit="'+sp.id+'" aria-label="'+esc(t("Delete")+" "+planName(sp.name))+'"><i>'+XSVG+'</i></button>')
-     +'<button class="dmain" '+(on?'data-ctsub="program"':'data-editsplit="'+sp.id+'"')+'>'
+     +'<button class="dmain" '+(on?'data-tplan="program"':'data-editsplit="'+sp.id+'"')+'>'
      /* Its own cover: the program's week, drawn from its days. */
      +'<span class="drow-cov">'+programCover(sp,64,48)+'</span>'
      +'<span class="dtext"><span class="drow-n">'+esc(planName(sp.name))+'</span>'
@@ -460,6 +486,15 @@ var PHASE_WHY={1:"Lighter loads, slow and controlled: movement quality, joint st
    what this week asks — reps to leave in reserve, or the lighter week with a way to
    end it early. Then what the answers after earlier workouts have moved, if anything.
    Quiet: a line and a bar, not a card asking for anything. */
+/* Your program, on Training: its name and how it falls in the week, the way into the
+   plan page (one tap on the top row), and under it the training block, folded. */
+function programCard(){
+  var sp=split();
+  var top='<button class="pgc-h" data-tplan="program"><span class="pgc-t"><span class="klabel">'+esc(t("Your program"))+'</span>'
+   +'<b>'+esc(sp?planName(sp.name):t("No program yet"))+'</b>'
+   +'<span class="pgc-s">'+esc(sp?schedLine(sp):t("Pick one, or build your own"))+'</span></span>'
+   +'<span class="pgc-go">'+esc(t("Plan"))+'<span class="ico ico-chev" aria-hidden="true"></span></span></button>';
+  return '<section class="pgc">'+top+blockCard()+'</section>';}
 function blockCard(){
   var b=blockNow();if(!b||offPlanLight())return "";
   var segs="";
@@ -557,7 +592,7 @@ function vFavs(){
 
 function vPreview(){
   var sp=allSplits().filter(function(x){return x.id===V.previewId;})[0];
-  if(!sp){V.train="days";V.ctsub="programs";return "";}
+  if(!sp){V.train="plan";V.tplan="programs";return "";}
   var h=backBar();
   h+='<h1>'+esc(planName(sp.name))+'</h1><p class="sub">'+esc(sp.tag||"custom")+'</p>';
   sp.days.forEach(function(d){
@@ -673,7 +708,7 @@ var SPARK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19
    One screen per split you made: how many days, each day with an ✕ and a grip, a +
    for another, and a tap into any day to fill it from the library. */
 function vBuilder(){
-  var sp=editSplit(V.previewId);if(!sp){V.train="days";V.ctsub="programs";return "";}
+  var sp=editSplit(V.previewId);if(!sp){V.train="plan";V.tplan="programs";return "";}
   return backBar()+builderBody(sp,V.previewId,false);}
 /* One program, laid out for building: its name, its schedule, its days. Inline it is
    My Program (the active one, with Switch program); on its own it is the builder for
@@ -683,19 +718,26 @@ function builderBody(sp,id,inline){
   var tr=sp.days.filter(function(d){return d.ex.length;}).length;
   var nEx=sp.days.reduce(function(n,d){return n+d.ex.length;},0);
   var h='';
-  h+='<div class="libhero bhero">'+HERO_ART
+  /* On the plan page the page's own title and line say what the program is: here only its
+     name, to rename, and what it holds. */
+  if(inline)h+='<div class="bname"><button class="dname" data-renamesplit="'+id+'" aria-label="'+esc(t("Rename program"))+': '+esc(planName(sp.name))+'">'
+    +'<h2 class="bname-t">'+esc(planName(sp.name))+'</h2><span class="ico ico-edit" aria-hidden="true"></span></button>'
+    +'<span class="bname-s"><span class="num">'+nEx+'</span> '+esc(t(nEx===1?"exercise":"exercises"))+'</span></div>';
+  else h+='<div class="libhero bhero">'+HERO_ART
    +'<span class="shk">'+t(active?"Your training":"Program builder")+'</span>'
    +'<button class="dname" data-renamesplit="'+id+'" aria-label="'+esc(t("Rename program"))+': '+esc(planName(sp.name))+'">'
    +'<h1 class="dhead-t">'+esc(planName(sp.name))+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button>'
-   +'<div class="bstats"><span><b>'+sp.days.length+'</b>'+t(sp.days.length===1?"day":"days")+'</span>'
-   +'<span><b>'+tr+'</b>'+t(tr===1?"training day":"training days")+'</span>'
-   +'<span><b>'+nEx+'</b>'+t(nEx===1?"exercise":"exercises")+'</span></div>';
+   /* What the program holds (owner, 3 Nov: "7 days" beside "3 training days" read as a
+      contradiction): its training days and exercises; a rotation says its cycle once. */
+   +'<div class="bstats"><span><b>'+tr+'</b>'+t(tr===1?"training day":"training days")+'</span>'
+   +'<span><b>'+nEx+'</b>'+t(nEx===1?"exercise":"exercises")+'</span>'
+   +(!week&&sp.days.length>tr?'<span><b>'+sp.days.length+'</b>'+t("day cycle")+'</span>':'')+'</div>';
   /* Until anything is in it, the number of days is one tap. */
   if(!tr)
     h+='<div class="bcount"><span class="bcount-l">'+t("How many days in the cycle?")+'</span><div class="bcount-c">'
      +[2,3,4,5,6,7].map(function(n){return '<button class="'+(sp.days.length===n?'on':'')+'" data-bdays="'+n+'" aria-pressed="'+(sp.days.length===n)+'">'+n+'</button>';}).join("")
      +'</div></div>';
-  h+='</div>';
+  if(!inline)h+='</div>';
   /* A health condition: what the book says for it, and anything in this program that
      does not fit yet, with one tap to make it fit (engine/plan.js conformProgram). */
   if(active&&rulesFor(S.profile)){
@@ -713,18 +755,18 @@ function builderBody(sp,id,inline){
      it away until the next phase (S.phaseSeen, per profile). */
   if(phb&&phb.reps&&S.phaseSeen!==phb.n)h+='<div class="bphase"><p>'+esc(t("This block is {p}: your workouts use {a}–{b} reps on the lifts, as each phase sets its own. The reps below are the program's, used when training blocks are off in Settings.")
       .replace("{p}",t(phb.name)).replace("{a}",phb.reps.min).replace("{b}",phb.reps.max)).replace(/(\d+)–(\d+)/,'<span class="num" dir="ltr">$1–$2</span>')+'</p><button class="bphase-ok" data-phaseseen="'+phb.n+'">'+esc(t("Got it"))+'</button></div>';
-  /* How the days fall: pinned to weekdays, or one after another whenever you train. */
-  h+='<div class="bsched" role="group" aria-label="'+esc(t("Schedule"))+'">'
-   +'<button class="'+(week?'on':'')+'" data-sched="week" aria-pressed="'+week+'"><b>'+t("By weekday")+'</b><span>'+t("Same days every week")+'</span></button>'
-   +'<button class="'+(week?'':'on')+'" data-sched="cycle" aria-pressed="'+!week+'"><b>'+t("In rotation")+'</b><span>'+t("Next day whenever you train")+'</span></button></div>';
-  var roD=sp.days.length>1&&V.reorder==="bd:"+sp.id;
+  /* Edit (owner, 3 Nov: a ✕ on every row was always one slip away): the same place the
+     Reorder link was, now showing both the ✕ that removes a day (with Undo) and the
+     grips that move it. Out of it, the list is the plan and nothing else. */
+  var roD=sp.days.length>0&&V.reorder==="bd:"+sp.id;
   h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Days")+'</h2>'
-   +(sp.days.length>1?reorderBtn("bd:"+sp.id,roD):'')+'</div>';
-  h+='<div class="drows'+(roD?' ro':'')+'">';
+   +(sp.days.length?reorderBtn("bd:"+sp.id,roD,true):'')+'</div>';
+  h+='<div class="drows'+(roD?' ro ed':'')+'">';
   sp.days.forEach(function(d,i){
     var full=d.ex.length>0;
+    /* A day with nothing in it is a rest day in the cycle: a thin row, not a card. */
     h+='<div class="drow bkday'+(full?'':' blank')+'" data-k="bd:'+d.id+'" data-rowid="'+d.id+'">'
-     +'<button class="drm" data-rmday="'+d.id+'" aria-label="'+esc(t("Remove")+" "+planName(d.name))+'"><i>'+XSVG+'</i></button>'
+     +(roD?'<button class="drm" data-rmday="'+d.id+'" aria-label="'+esc(t("Remove")+" "+planName(d.name))+'"><i>'+XSVG+'</i></button>':'')
      +'<button class="dmain" data-day="'+d.id+'"><span class="bnum">'+(i+1)+'</span>'
      +'<span class="dtext"><span class="drow-n">'+esc(planName(d.name))+'</span>'
      +'<span class="drow-s">'+(full?d.ex.length+' '+t(d.ex.length===1?"exercise":"exercises")+'<i class="ddot"></i>~'+estMinutes(d)+' '+t("min")
@@ -740,13 +782,21 @@ function builderBody(sp,id,inline){
        +'</div>':'')
      +'</div>';});
   h+='</div>';
+  h+='<button class="dadd" data-bday="1"><span aria-hidden="true">+</span>'+t("Add day")+'</button>';
+  /* How the days fall, set once: pinned to weekdays, or one after another whenever you
+     train. Under the days it shapes, not above them (owner, 3 Nov). */
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Schedule")+'</h2></div>'
+   +'<div class="bsched" role="group" aria-label="'+esc(t("Schedule"))+'">'
+   +'<button class="'+(week?'on':'')+'" data-sched="week" aria-pressed="'+week+'"><b>'+t("By weekday")+'</b><span>'+t("Same days every week")+'</span></button>'
+   +'<button class="'+(week?'':'on')+'" data-sched="cycle" aria-pressed="'+!week+'"><b>'+t("In rotation")+'</b><span>'+t("Next day whenever you train")+'</span></button></div>';
+  /* In rotation, offered once: the weekdays it would fall on, from when you train. */
+  if(inline)h+=weekOffer(sp);
   /* Two sessions on one weekday, every week (owner, 28 Oct: "from the coach training hub
      as a permanent session in that day"): said where the weekdays are picked, and in
      rotation, how to get there. */
   var twoOn=week&&sp.days.some(function(d){return (d.wd||[]).some(function(n){return sp.days.some(function(o){return o!==d&&(o.wd||[]).indexOf(n)>=0;});});});
   if(week)h+='<p class="bnote">'+(twoOn?t("A weekday on two days is two sessions that day, the upper one first."):t("Two sessions on one day every week: tap a weekday another day already has. Both are trained that day, the upper one first."))+'</p>';
   else if(sp.days.length>1)h+='<p class="bnote">'+t("Two sessions on the same day every week? Set the schedule By weekday, then give two days the same weekday.")+'</p>';
-  h+='<button class="dadd" data-bday="1"><span aria-hidden="true">+</span>'+t("Add day")+'</button>';
   /* What an imported program came with: its phase and length, and the coach's notes —
      the rules, the reasons, the warnings — kept with it rather than thrown away. */
   if(sp.meta&&(sp.meta.phase||sp.meta.weeks))
@@ -759,7 +809,7 @@ function builderBody(sp,id,inline){
   h+='<div class="dcta">'
    /* To another Bunyan user, as it is (owner, 27 Oct): js/engine/planshare.js. */
    +(sp.days.some(function(d){return d.ex.length;})?'<button class="ddel dset" data-shareplan="p:'+esc(id)+'">'+t("Share this program")+'</button>':'')
-   +(active?(inline?'<button class="btn g dbegin" data-ctsub="programs">'+t("Switch program")+'</button>'
+   +(active?(inline?'<button class="ddel dset" data-tplan="programs">'+t("Switch program")+'</button>'
              +'<button class="ddel dset" data-sheet="set_training">'+t("Workout settings")+'</button>'
              :'<p class="bactive">✓ '+t("This is your training")+'</p>')
       :'<button class="btn dbegin" data-adopt="'+id+'"'+(tr?'':' disabled')+'>'+t("Make it active")+'</button>'
@@ -769,10 +819,10 @@ function builderBody(sp,id,inline){
   return h;}
 
 /* ---- a day: the routine, built in place --------------------------------------
-   Everything that shapes the day is on the screen itself: ✕ on a row removes it (with
-   Undo), Reorder shows the grips that drag a row to a new place, the dashed + under the
-   list adds, and the title renames. Tapping the exercise opens its sets, reps and
-   rest. There is no edit mode to find first. */
+   Everything that shapes the day is on this screen: Edit (where Reorder was) shows the
+   ✕ that removes a row (with Undo) and the grips that move it; the dashed + under the
+   list adds; the title renames. Tapping an exercise opens its sets, reps and rest. Out of
+   Edit the list is the workout and nothing else (owner, 3 Nov: no ✕ one slip away). */
 var XSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 var GRIPSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>'
   +'<circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
@@ -787,20 +837,21 @@ function vDay(){
    +'<p class="dsub">'+esc(planName(sp.name))+(pos?' • '+t("Day")+' '+pos:'')+'</p>';
   /* Every figure measured from the day itself. */
   h+='<div class="dstrip">'
-   +'<div><span class="klabel dim">'+t("Exercises")+'</span><b>'+d.ex.length+' '+t(d.ex.length===1?"Movement":"Movements")+'</b></div>'
+   +'<div><span class="klabel dim">'+t("Exercises")+'</span><b class="num">'+d.ex.length+'</b></div>'
    +'<div><span class="klabel dim">'+t("Duration")+'</span><b>~'+estMinutes(d)+' '+t("Min")+'</b></div>'
    +(lvl&&!d.ex.every(function(e){return isActivity(e.name);})?'<div><span class="klabel dim">'+t("Level")+'</span><b>'+t(lvl)+'</b></div>':'')
    +'</div>';
-  var roX=d.ex.length>1&&V.reorder==="dx:"+d.id;
-  h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Session Routine")+'</h2>'
-   +(d.ex.length>1?reorderBtn("dx:"+d.id,roX):'')+'</div>';
+  /* Edit shows each exercise's ✕ and grip; out of it, the list is the workout. */
+  var roX=d.ex.length>0&&V.reorder==="dx:"+d.id;
+  h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Exercises")+'</h2>'
+   +(d.ex.length?reorderBtn("dx:"+d.id,roX,true):'')+'</div>';
   if(!d.ex.length)
     h+='<p class="dempty">'+t("A rest day for now. Add exercises and it becomes a training day — sets, reps and rest are filled in for you and can be changed any time.")+'</p>';
-  h+='<div class="drows'+(roX?' ro':'')+'">';
+  h+='<div class="drows'+(roX?' ro ed':'')+'">';
   d.ex.forEach(function(e,i){
     var gl=groupLabel(d.ex,i),nm=exName(e.name);
     h+='<div class="drow" data-k="dx:'+e.id+'" data-rowid="'+e.id+'">'
-     +'<button class="drm" data-rmex="'+e.id+'" aria-label="'+esc(t("Remove")+" "+nm)+'"><i>'+XSVG+'</i></button>'
+     +(roX?'<button class="drm" data-rmex="'+e.id+'" aria-label="'+esc(t("Remove")+" "+nm)+'"><i>'+XSVG+'</i></button>':'')
      +'<button class="dmain" data-editex="'+e.id+'">'
      +'<span class="dnum">'+(i+1)+'</span>'
      +'<span class="dtext"><span class="drow-n">'

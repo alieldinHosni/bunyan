@@ -13,7 +13,7 @@ import {removePhoto} from "../photos.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {has, key} from "./registry.js";
-import {ibRead, sendText} from "./common.js";
+import {ibRead} from "./common.js";
 
 /* The edit sheet's inputs into its working copy, before anything re-renders it. */
 function readSE(){
@@ -123,10 +123,9 @@ function register(){
     saveDB();closeSheet();render();
     toast(t("InBody result saved. The coach reads it from now on."),function(){
       var i=S.body.indexOf(e);if(i<0)return;if(before)S.body[i]=before;else S.body.splice(i,1);saveDB();render();});
-    /* What it means for the plans, at once: the coach's reading of it, with the goal the
-       textbook's range points to and a button to change it (chat.js aInBody). */
-    if(!V.coach)V.coach="compact";
-    sendText("what does my inbody say",null,t("What does my InBody mean for my plans?"));
+    /* What it means for the plans, at once and right here: the coach's reading of it,
+       with the goal the range points to and a button to change it (chat.js inbodyReading). */
+    openSheet("ibread");
     return;});
   key("sessedit",function(D){
     ensureSessionIds();

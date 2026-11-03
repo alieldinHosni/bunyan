@@ -11,7 +11,7 @@ import {checkPlans} from "../../engine/plancheck.js";
 import {FOODDB, sumNutrition, foodName} from "../../engine/nutrition.js";
 import {foodPic} from "../../data/foodicons.js";
 import {dayRec, S} from "../../state.js";
-import {dfmt, esc, fmtN, r1, today} from "../../util.js";
+import {dfmt, esc, fmtN, num, r1, today} from "../../util.js";
 import {curDate, GRIPSVG, mealNow, progressBar, reorderBtn, seg, V} from "../view.js";
 import {dayMeals, importName, mealName, mealSlots, mealStyle, nextMeal, planOf, slotOf} from "../../engine/meals.js";
 import {dateBar} from "../datebar.js";
@@ -72,13 +72,35 @@ function glassUnit(goal){
    (js/ui/views/coach.js), which draws the pieces exported at the foot. */
 function vFood(){
   var dsel=curDate();
+  /* Planning, one step in from here (owner, 3 Nov): a meal's plan, a saved meal, an
+     import, and the plan page itself. */
+  var sub=foodSub();if(sub!=null)return sub;
+  if(V.fplan)return vFoodPlan();
   if(V.meal)return vMeal(dsel,V.meal);
   /* The drawing is the page's: a baladi loaf and a palm frond at the header's edge. */
   var h='<div class="thead fthead"><div><h1>'+t("Food")+'</h1>'
    +'<p class="thead-s">'+t("Fuel your progress")+'</p></div>'
    +art("loaf",{cls:"fthead-art"})+'</div>';
   return h+vFoodToday(dsel);}
-/* The planning screens, for Coach: null when none is open. */
+/* ---- Food's plan page ---------------------------------------------------------------
+   Where eating is planned: the meal plan, the daily targets, and the foods and meals of
+   your own. One row of tabs; back returns to Food. */
+var FPLAN=[["plan","Meal plan"],["targets","Targets"],["foods","My foods"]];
+function vFoodPlan(){
+  var fs=FPLAN.some(function(x){return x[0]===V.fplan;})?V.fplan:"plan",g=S.goals||{};
+  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Nutrition plan"))+'</h1></div>'
+   +'<p class="dsub">'+esc(t("{k} kcal · {p} g protein a day").replace("{k}",fmtN(Math.round(num(g.kcal)))).replace("{p}",Math.round(num(g.p))))+'</p>';
+  h+=seg({items:FPLAN.map(function(x){return [x[0],t(x[1])];}),value:fs,attr:"fplan",tabs:true,cls:"psecs",label:t("Nutrition plan"),key:"fplan"});
+  h+='<div class="psec" data-k="psec-'+fs+'">'+(fs==="targets"?vTargets():fs==="foods"?vMyFoods():vPlan())+'</div>';
+  return h;}
+/* Your plan, on Food: what is planned and the targets, the way into the plan page. */
+function foodPlanCard(){
+  var g=S.goals||{},planned=mealSlots().filter(function(x){return (x.plan||[]).length;}).length;
+  return '<button class="pgc pgc-h fpc" data-fplan="plan"><span class="pgc-t"><span class="klabel">'+esc(t("Your plan"))+'</span>'
+   +'<b>'+esc(planned?t(planned===1?"1 meal planned":"{n} meals planned").replace("{n}",planned):t("No meal plan yet"))+'</b>'
+   +'<span class="pgc-s">'+esc(t("{k} kcal · {p} g protein a day").replace("{k}",fmtN(Math.round(num(g.kcal)))).replace("{p}",Math.round(num(g.p))))+'</span></span>'
+   +'<span class="pgc-go">'+esc(t("Plan"))+'<span class="ico ico-chev" aria-hidden="true"></span></span></button>';}
+/* The planning screens: null when none is open. */
 function foodSub(){
   if(V.smeal){var a=vSavedMeal(V.smeal);if(a!=null)return a;}
   if(V.pslot){var b=vPlanSlot(V.pslot);if(b!=null)return b;}
@@ -135,6 +157,7 @@ function vFoodToday(dsel){
    +'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>'
    +esc(t("Add Food"))+' <span class="fadd-m">· '+esc(mealName(next))+'</span></button>';
 
+  h+=foodPlanCard();
   /* ---- what the body needs, today only (js/ui/bodyneeds.js) */
   if(dsel===today())h+=bodyNeeds(e,r.water||0);
 
@@ -220,14 +243,19 @@ var XSVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6
 var PLUS='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 function vMyFoods(){
   var sm=S.savedMeals||[],mf=S.myFoods||[],now=mealNow(today()),h='';
-  h+='<button class="bnew" data-newmeal="1">'+art("plate",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
-   +'<span class="bnew-t"><b>'+t("Build a meal")+'</b><span>'+t("Name it, then add what goes in it")+'</span></span>'
+  /* The two things that can be kept here, side by side and said apart (owner, 3 Nov: two
+     ways to add, neither saying how it differs): a meal is several foods logged together;
+     a food is one food with its own numbers, from its label. */
+  h+='<button class="bnew" data-newmeal="1"><span class="bnew-i">'+PLUS+'</span>'
+   +'<span class="bnew-t"><b>'+t("Save a meal")+'</b><span>'+t("Several foods you eat together, logged in one tap")+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
+   +'<button class="bnew" data-myfood="new"><span class="bnew-i">'+PLUS+'</span>'
+   +'<span class="bnew-t"><b>'+t("Add a food")+'</b><span>'+t("One food with its own numbers, from its label")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   if(!sm.length&&!mf.length){
     return h+'<div class="empty artempty">'+art("idra",{cls:"empty-art"})
      +'<h3>'+esc(t("Nothing saved yet"))+'</h3>'
-     +'<p class="tiny">'+esc(t("Save a meal you eat often, or add a food of your own, and it is one tap away when you log."))+'</p>'
-     +'<div class="empty-a"><button class="btn g" data-myfood="new">'+esc(t("Add your own food"))+'</button></div></div>';}
+     +'<p class="tiny">'+esc(t("What you keep here is one tap away when you log."))+'</p></div>';}
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Saved meals")+'</h2>'
    +(sm.length?'<span class="dhint">'+sm.length+'</span>':'')+'</div>';
   if(!sm.length)h+='<p class="dempty">'+esc(t("A saved meal logs everything in it in one tap."))+'</p>';
@@ -332,7 +360,28 @@ var TPAST={7:"Past 7 days",30:"Past 30 days",90:"Past 90 days"};
 function vTargets(){
   var g=S.goals,h='';
   var pc=macroPct(g.p,g.c,g.f);
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Daily targets")+'</h2></div>'
+  /* One home for the target (owner, 3 Nov: three numbers, no clear one). The coach's
+     suggestion comes first when it differs from the target, beside it, with one Use;
+     when they agree it says so in a line. Then the target itself, to type. */
+  var sg=suggested();
+  if(!sg)h+=energyMissing()==="no_weight"
+    ?'<div class="pgcard tgneed"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Log your weight, and Bunyan works out your maintenance and a target for your goal. Nothing is worked out without it."))+'</p>'
+      +'<button class="btn g" data-sheet="weigh">'+esc(t("Log weight"))+'</button></div>'
+    :'<div class="pgcard tgneed"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Add your age, height and weight, and Bunyan works out a target for your goal."))+'</p>'
+      +'<button class="btn g" data-sheet="set_you">'+esc(t("Add your details"))+'</button></div>';
+  else{
+    var same=sg.kcal===g.kcal&&sg.p===g.p&&sg.c===g.c&&sg.f===g.f;
+    h+='<div class="pgcard tgsug'+(same?' same':'')+'"><div class="aflbl">'+esc(t(same?"Your targets match the coach's":"The coach suggests"))+'</div>'
+     +'<div class="tgsug-r"><div><div class="pgstat-k">'+esc(t("Maintenance"))+'</div><b class="num">'+fmtN(sg.tdee)+'</b><small>kcal</small></div>'
+     +'<div><div class="pgstat-k">'+esc(t("For your goal"))+'</div><b class="a num">'+fmtN(sg.kcal)+'</b><small>kcal</small></div>'
+     +'<div><div class="pgstat-k">'+esc(t("Protein"))+'</div><b class="num">'+sg.p+'</b><small>g</small></div></div>'
+     +maintSource()
+     +(same?'':'<p class="pgnote">'+esc(t("Your target now: {k} kcal and {p} g protein.")).replace("{k}",'<span class="num">'+fmtN(g.kcal)+'</span>').replace("{p}",'<span class="num">'+g.p+'</span>')+'</p>'
+       +hb('<button class="btn" data-usesug="1">'+esc(t("Use the suggestion"))+'</button>'))+'</div>';}
+  /* The macros against the calories they should make: off by more than a rounding, it
+     says by how much and fits the carbohydrate to it in one tap (protein and fat kept). */
+  var mk=macroKcal(g.p,g.c,g.f),gap=Math.round(num(g.kcal)-mk);
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Your targets")+'</h2></div>'
    +'<label class="ngcard ngenergy" for="g_kcal"><span class="ngenergy-t">'
    +'<span class="aflbl">'+esc(t("Daily energy goal"))+'</span>'
    +'<span class="ngbig"><input id="g_kcal" type="number" inputmode="numeric" style="width:'+fitCh(g.kcal,"")+'ch" value="'+g.kcal+'"><i>kcal</i></span></span>'
@@ -343,34 +392,21 @@ function vTargets(){
    +(pc[0]?'<i class="p" style="flex-grow:'+pc[0]+'"></i>':'')
    +(pc[1]?'<i class="c" style="flex-grow:'+pc[1]+'"></i>':'')
    +(pc[2]?'<i class="f" style="flex-grow:'+pc[2]+'"></i>':'')+'</div>'
-   +'<div class="nglegend"><span>'+esc(t("Protein"))+': '+pc[0]+'%</span>'
-   +'<span>'+esc(t("Carbs"))+': '+pc[1]+'%</span><span>'+esc(t("Fat"))+': '+pc[2]+'%</span></div>'
+   +'<div class="nglegend"><span>'+esc(t("Protein"))+': <span class="num">'+pc[0]+'%</span></span>'
+   +'<span>'+esc(t("Carbs"))+': <span class="num">'+pc[1]+'%</span></span><span>'+esc(t("Fat"))+': <span class="num">'+pc[2]+'%</span></span></div>'
    +'<div class="aftiles ng3">'
    +afTile("g_p",t("Protein"),"g",g.p,"0","numeric")
    +afTile("g_c",t("Carbs"),"g",g.c,"0","numeric")
    +afTile("g_f",t("Fat"),"g",g.f,"0","numeric")+'</div>'
-   +'<p class="afnote">'+esc(t("Your macros add up to"))+' '+fmtN(macroKcal(g.p,g.c,g.f))+' kcal.</p></div>'
+   +(Math.abs(gap)>40
+     ?'<p class="afnote">'+esc(t(gap>0?"Your macros add up to {m} kcal, {d} under your target.":"Your macros add up to {m} kcal, {d} over your target."))
+        .replace("{m}",'<span class="num">'+fmtN(mk)+'</span>').replace("{d}",'<span class="num">'+fmtN(Math.abs(gap))+'</span>')+'</p>'
+       +'<button class="btn g sm afit" data-fitmacros="1">'+esc(t("Fit carbs to the target"))+'</button>'
+     :'<p class="afnote">'+esc(t("Your macros add up to {m} kcal.")).replace("{m}",'<span class="num">'+fmtN(mk)+'</span>')+'</p>')+'</div>'
    +'<div class="ngcard"><div class="aflbl">'+esc(t("Other targets"))+'</div><div class="aftiles">'
    +afTile("g_water",t("Water"),"ml",g.water,"0","numeric")
    +afTile("g_steps",t("Steps"),"",g.steps,"0","numeric")+'</div></div>'
-   +'<button class="btn afcta" data-savegoals="1">'+esc(t("Save targets"))+'</button>';
-  /* From the profile: maintenance and a target sized to the goal. */
-  var sg=suggested();
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Suggested for you")+'</h2></div>';
-  /* Only the weight missing: the weigh-in sheet. Anything more: the You sheet asks for all three. */
-  if(!sg)h+=energyMissing()==="no_weight"
-    ?'<div class="pgcard tgneed"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Log your weight, and Bunyan works out your maintenance and a target for your goal. Nothing is worked out without it."))+'</p>'
-      +'<button class="btn g" data-sheet="weigh">'+esc(t("Log weight"))+'</button></div>'
-    :'<div class="pgcard tgneed"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Add your age, height and weight, and Bunyan works out a target for your goal."))+'</p>'
-      +'<button class="btn g" data-sheet="set_you">'+esc(t("Add your details"))+'</button></div>';
-  else{
-    var same=sg.kcal===g.kcal&&sg.p===g.p&&sg.c===g.c&&sg.f===g.f;
-    h+='<div class="pgcard tgsug"><div class="tgsug-r"><div><div class="pgstat-k">'+esc(t("Maintenance"))+'</div><b>'+fmtN(sg.tdee)+'</b><small>kcal</small></div>'
-     +'<div><div class="pgstat-k">'+esc(t("For your goal"))+'</div><b class="a">'+fmtN(sg.kcal)+'</b><small>kcal</small></div>'
-     +'<div><div class="pgstat-k">'+esc(t("Protein"))+'</div><b>'+sg.p+'</b><small>g</small></div></div>'
-     +maintSource()
-     +(same?'<p class="pgnote">✓ '+esc(t("These are your targets."))+'</p>'
-       :'<button class="btn g" data-usesug="1">'+esc(t("Use these targets"))+'</button>')+'</div>';}
+   +hb('<button class="btn afcta" data-savegoals="1">'+esc(t("Save targets"))+'</button>');
   /* Is it working: the weigh-ins against the goal. */
   var tc=trendCard(true);
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Is it working?")+'</h2></div>'
@@ -394,7 +430,7 @@ function slotLine(id){
   if(td)bits.push(td+' '+t("to find"));
   return bits.length?bits.map(esc).join('<i class="ddot"></i>'):'<em>'+esc(t("No plan yet — tap to add foods"))+'</em>';}
 function vPlan(){
-  var sl=mealSlots(),g=S.goals,all=[],h='',style=mealStyle(),ro=sl.length>1&&V.reorder==="ms";
+  var sl=mealSlots(),g=S.goals,all=[],h='',style=mealStyle(),ro=sl.length>0&&V.reorder==="ms";
   sl.forEach(function(x){all=all.concat(x.plan||[]);});
   var tot=sumNutrition(all);
   h+='<div class="plhero"><span class="shk">'+esc(t("Your day"))+'</span>'
@@ -403,16 +439,13 @@ function vPlan(){
    +'<span><b>'+tot.p+'</b> / '+g.p+' g '+esc(t("Protein"))+'</span></div>'
    +(all.length?'':'<p class="plhero-s">'+esc(t("Plan what goes in each meal, or import a plan you already have."))+'</p>')
    +'</div>';
-  /* How the meals are called: the four named ones, or numbered as a coach writes them. */
-  h+='<div class="bsched" role="group" aria-label="'+esc(t("Meal names"))+'">'
-   +'<button class="'+(style==="named"?'on':'')+'" data-mstyle="named" aria-pressed="'+(style==="named")+'"><b>'+t("Named meals")+'</b><span>'+t("Breakfast, lunch, dinner, snacks")+'</span></button>'
-   +'<button class="'+(style==="numbered"?'on':'')+'" data-mstyle="numbered" aria-pressed="'+(style==="numbered")+'"><b>'+t("Numbered meals")+'</b><span>'+t("Meal 1, Meal 2, Meal 3…")+'</span></button></div>';
+  /* Edit shows each meal's ✕ and grip; out of it, the list is the plan. */
   h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Meals")+'</h2>'
-   +(sl.length>1?reorderBtn("ms",ro):'')+'</div>';
-  h+='<div class="drows'+(ro?' ro':'')+'">';
+   +(sl.length?reorderBtn("ms",ro,true):'')+'</div>';
+  h+='<div class="drows'+(ro?' ro ed':'')+'">';
   sl.forEach(function(x,i){
     h+='<div class="drow" data-k="ms:'+esc(x.id)+'" data-rowid="'+esc(x.id)+'">'
-     +'<button class="drm" data-rmslot="'+esc(x.id)+'" aria-label="'+esc(t("Remove")+" "+mealName(x.id))+'"><i>'+XSVG+'</i></button>'
+     +(ro?'<button class="drm" data-rmslot="'+esc(x.id)+'" aria-label="'+esc(t("Remove")+" "+mealName(x.id))+'"><i>'+XSVG+'</i></button>':'')
      +'<button class="dmain" data-pslot="'+esc(x.id)+'">'
      +(function(bd){return bd.icon?'<span class="bnum pli" aria-hidden="true">'+bd.icon+'</span>':'<span class="bnum">'+bd.n+'</span>';})(badgeOf(x,i))
      +'<span class="dtext"><span class="drow-n">'+esc(mealName(x.id))+'</span>'
@@ -421,11 +454,21 @@ function vPlan(){
      +(ro?'<button class="dgrip" data-grip="'+esc(x.id)+'" aria-label="'+esc(t("Move")+" "+mealName(x.id))+'">'+GRIPSVG+'</button>':'')
      +'</div>';});
   h+='</div><button class="dadd" data-paddslot="1"><span aria-hidden="true">+</span>'+t("Add a meal")+'</button>';
+  /* Two ways to fill the plan at once: built from the targets, or brought in. */
+  h+='<button class="bnew" data-pgen="1"><span class="bnew-i">'+PLUS+'</span>'
+   +'<span class="bnew-t"><b>'+t("Build it from my targets")+'</b><span>'+t("A day of meals that adds up to your targets, to change before you use it")+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   /* To another Bunyan user, as it is (owner, 27 Oct): js/engine/planshare.js. */
   if(all.length)h+='<button class="ddel dset plshare" data-shareplan="meals">'+t("Share my meal plan")+'</button>';
   h+='<button class="bnew" data-pimport="1">'+art("loaf",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
    +'<span class="bnew-t"><b>'+t("Import a plan")+'</b><span>'+t("Paste it or open a file, and it is sorted into meals")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  /* How the meals are called, set once: the four named ones, or numbered as a coach
+     writes them. Under the meals, not above them (owner, 3 Nov). */
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Meal names")+'</h2></div>'
+   +'<div class="bsched" role="group" aria-label="'+esc(t("Meal names"))+'">'
+   +'<button class="'+(style==="named"?'on':'')+'" data-mstyle="named" aria-pressed="'+(style==="named")+'"><b>'+t("Named meals")+'</b><span>'+t("Breakfast, lunch, dinner, snacks")+'</span></button>'
+   +'<button class="'+(style==="numbered"?'on':'')+'" data-mstyle="numbered" aria-pressed="'+(style==="numbered")+'"><b>'+t("Numbered meals")+'</b><span>'+t("Meal 1, Meal 2, Meal 3…")+'</span></button></div>';
   return h;}
 
 /* One meal's plan, built in place like a saved meal: the title renames it, ✕ takes a

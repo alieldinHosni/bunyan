@@ -54,6 +54,8 @@ function build(el){
       +ICON[it[0]]+'</svg><span class="dock-l" aria-hidden="true">'+it[2]+'</span></button>';}).join("")
    +'<span class="dock-hl" aria-hidden="true"></span></div>';
   built=key(list);hlOn=null;
+  if(ro){ro.disconnect();ro=null;}
+  watchHl(el);
 }
 
 /* ---- the highlight that travels --------------------------------------------------
@@ -70,7 +72,7 @@ function place(hl,r){hl.style.transform="translate3d("+r.x.toFixed(1)+"px,0,0)";
 function moveHl(el,btn){
   var hl=el.querySelector(".dock-hl");if(!hl||!btn)return;
   var id=btn.getAttribute("data-tab");
-  cancelAnimationFrame(hlAnim);
+  cancelAnimationFrame(hlAnim);traveling=false;
   var from=hl.style.width?{x:parseFloat((hl.style.transform.match(/translate3d\(([-\d.]+)px/)||[0,0])[1]),w:parseFloat(hl.style.width)}:null;
   if(!from||hlOn===null||hlOn===id||reducedMotion()){
     hlOn=id;
@@ -80,10 +82,29 @@ function moveHl(el,btn){
     return;}
   hlOn=id;
   var start=performance.now();
+  traveling=true;
   (function step(now){
     var k=Math.min(1,(now-start)/HL_MS),e=ease(k),to=rectOf(btn);
     place(hl,{x:from.x+(to.x-from.x)*e,w:Math.max(8,from.w+(to.w-from.w)*e)});
-    if(k<1)hlAnim=requestAnimationFrame(step);})(start);}
+    if(k<1)hlAnim=requestAnimationFrame(step);else{traveling=false;settleHl(el);}})(start);}
+/* The highlight put back on the button that is on, where that button is now (owner,
+   3 Nov: after the chat opened over a tab change and closed, the red sat half on the
+   wrong button). Its place is measured while it travels; if the dock moved or resized
+   in the meantime — hidden under a panel, a button still opening into its pill — that
+   measure was stale and nothing measured again until the next tab change. Now any
+   change of size in the dock, a window resize, and every sync settle it on the button,
+   unless it is mid-flight. A hidden dock (no width) is left for when it shows. */
+var traveling=false,ro=null;
+function settleHl(el){
+  if(traveling||!el)return;
+  var hl=el.querySelector(".dock-hl"),on=el.querySelector(".dock-b.on");
+  if(!hl||!on||!on.offsetWidth)return;
+  place(hl,rectOf(on));}
+function watchHl(el){
+  if(ro||typeof ResizeObserver==="undefined")return;
+  ro=new ResizeObserver(function(){settleHl(el);});
+  el.querySelectorAll(".dock,.dock-b").forEach(function(x){ro.observe(x);});
+  window.addEventListener("resize",function(){settleHl(el);});}
 function key(list){return list.map(function(it){return it[1]+"/"+it[2];}).join("|");}
 
 /* ---- out of the way while reading ------------------------------------------------
@@ -221,6 +242,7 @@ function syncDock(el,tab,advice){
       var lbl=t("Coach")+(dot?", "+t(advice===1?"1 thing to look at":"{n} things to look at").replace("{n}",advice):"");
       if(btns[i].getAttribute("aria-label")!==lbl)btns[i].setAttribute("aria-label",lbl);}
   }
+  settleHl(el);
 }
 
 export {checkDock, initDockScroll, syncDock};

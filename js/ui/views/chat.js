@@ -419,6 +419,14 @@ function aInBody(a){
   if(c.ibmr){var mine=bmr();n(a,fill(t(mine?"Its BMR, {i} kcal, is the device's own estimate. Your targets use Mifflin-St Jeor ({m} kcal), the same method for everyone.":"Its BMR, {i} kcal, is the device's own estimate. Your targets use Mifflin-St Jeor, the same method for everyone."),{i:fmtN(c.ibmr),m:fmtN(Math.round(mine||0))}));}
   n(a,t("Bioimpedance reads body water: compare tests taken at the same time of day, before eating or training."));
   return act(a,t("Add an InBody result"),{"data-sheet":"inbody"});}
+/* The same reading, for the sheet that opens where a result is saved (owner, 3 Nov: no
+   trip to the chat to be told what it means). Its "Change my goal" opens the goal where
+   it is set (Profile → You); "Add an InBody result" is not offered right after adding one. */
+function inbodyReading(){
+  var a={b:[],acts:[]};aInBody(a);
+  var acts=a.acts.filter(function(x){return !(x.a&&x.a["data-sheet"]==="inbody");}).map(function(x){
+    return x.a&&x.a["data-chatq"]==="goal"?{l:x.l,a:{"data-sheet":"set_you"}}:x;});
+  return blocks(a.b)+buttons(acts);}
 /* Two sessions in one day (owner, 28 Oct): the two ways the app has, each a tap away. */
 function aTwice(a){
   p(a,t("Yes, two ways."));
@@ -1891,4 +1899,4 @@ function dayWord(at){
 function liveAt(log,i){var m=log[i],n=log.length-1;
   return i===n||(i===n-1&&m&&m.pair&&log[n].pair&&m.ag&&(m.ag.s==="confirm"||m.ag.s==="pick"));}
 
-export {warmCoach, ASK, ask, askNext, bubble, liveAt, chatShown, findMsg, follow, histLink, histSheet, NEXT, pruneChat, vChat};
+export {warmCoach, ASK, ask, askNext, bubble, inbodyReading, liveAt, chatShown, findMsg, follow, histLink, histSheet, NEXT, pruneChat, vChat};

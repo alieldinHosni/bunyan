@@ -3308,3 +3308,62 @@ Owner, 3 Nov: the complete-set tick works; "go through the whole app and see wha
   border-box, 1px 6px). The RPE chip and food + set their padding, the glass its colour, explicitly.
 - Verified by a computed-style comparison (button vs label, every converted control, every state it appears in,
   children included): 0 differences. Tests: "Ticks across the app", "Complete set, with haptics", iPhone test.
+
+## The Coach hub restructured — branch session/coachre (CACHE v205)
+
+Owner, 3 Nov: "the worst part of the app, not easy to understand or navigate"; full restructure approved, plus the
+dock glitch and every button that sent you elsewhere (the chat) to do its job.
+
+Where things live now
+- Coach tab = the coach only (views/coach.js): mark, goal · program; an ask box (opens the one chat panel; the
+  floating Coach button stays beside the dock here too, owner 28 Oct); this week in one strip (workouts done of
+  planned with a bar, protein days, streak); "For you": ONE numbered list (stress follow-up, weekly check-in, what
+  the coach noticed), count = items, three shown and the rest opened in place; Take the assessment again; small print.
+  The gauge, plan tiles and the "Coach Hub / Plan it here" header are gone.
+- Training: a program card under today's card (views/train.js programCard: name, how it falls in the week, Plan ›,
+  the training block folded inside) opens Training's plan page (V.train="plan", V.tplan program|programs|exercises).
+- Food: a "Your plan" card after Add Food (views/food.js foodPlanCard) opens Food's plan page (V.fplan
+  plan|targets|foods). Meal screens (pslot, smeal, pimport) are under the Food tab.
+- toPlan(area, sub) (handlers/common.js) replaces toCoach: resetNav, the tab's own page, then pushNav into the plan
+  page, so back always lands on Training or Food. data-csec/ctsub/cfsub still arrive (chat answers, old links) and
+  map to the new places; data-tplan/data-fplan open or switch the plan page parts. A dock tab tap resets V.fplan.
+- nav.js loc/apply carry tplan and fplan. render.js view keys: food/plan|pslot|smeal|pimport; coach/hub.
+- Page guides (tour.js): Coach rewritten (v 2), Training gets the program card step, Food the plan card step.
+
+The pages
+- Program: Edit (where Reorder was) shows each day's ✕ and grip; out of Edit, no ✕. Rest days are thin rows. The
+  schedule (By weekday / In rotation) sits under the days as a setting, with the one-time "Train on fixed weekdays?"
+  offer for a rotation program right under it. Bottom: Share, Switch program, Workout settings as one list. On the plan page the hero is just the
+  name (rename) and the exercise count; the page line says how it falls in the week.
+- Day: "Session Routine" → Exercises; the strip's count is a number; Edit for ✕ and grips.
+- Programs: the new-program cards' pictures are faint marks clear of the words; My programs' active row switches
+  to My program in place.
+- Meal plan: Edit for ✕ and grips; "Build it from my targets" (data-pgen) beside Import; Meal names under the list.
+- Targets: the coach's suggestion first when it differs (current target beside it, one Use, with Undo), then the
+  targets; macros that do not add up say by how much and "Fit carbs to the target" (data-fitmacros, Undo).
+- My foods: "Save a meal" and "Add a food", each saying what it is; the empty state on a card of its own.
+
+No more detours
+- Build today's meal: a sheet over Food (js/ui/todaymeal.js) builds one meal of real foods for what is left today
+  (engine/mealplan.js buildOneMeal: the day plan's plates and solver, capped at 1,100 kcal a sitting), Add to the
+  next meal with Undo, Another for a different plate.
+- An InBody result: its reading opens in a sheet where it was saved (views/chat.js inbodyReading); Change my goal
+  opens Profile → You.
+- Findings "Heavy enough for strength?" and "Long rests for endurance" fix the program themselves
+  (engine/plancheck.js heavyMains / shortRests), with Undo, instead of opening it.
+
+Dock glitch
+- Reproduced: after a tab change under the chat panel, the dock re-centred and the highlight stayed at the old x.
+  dock.js settleHl puts it back on the active button on every sync, on any size change in the dock (ResizeObserver),
+  on window resize, and when a travel ends; an interrupted travel no longer leaves the "travelling" flag set.
+
+Motion
+- A plan page's parts slide in from the side they are on (render.js slideSection, 360 ms; reduced motion: none).
+- Coach page cards blur the photograph behind them, so its tablet's words never read through as the page's.
+
+Found by the full suite and fixed
+- toPlan used pushNav without importing it: every "go to the plan" (an import used, a template adopted) threw and
+  left you on Training. Old "builder"/"splits" routes now render the plan page instead of falling through to home.
+- The test rewrites had dropped eight unrelated tests and the liveStart helper (Offline, Arabic type, the
+  powerlifter placing, two Food body-needs tests, a Phase 4 test, live tracking's way in); restored from main and
+  checked against main's list. Tests that described the old Coach hub now describe the new places.

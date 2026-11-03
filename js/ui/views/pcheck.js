@@ -62,8 +62,16 @@ function adviceBody(){
     :'<button class="btn g pcmore" data-advall="1">'+esc(t(all.length===2?"1 more thing the coach sees":"{n} more things the coach sees").replace("{n}",all.length-1))+'</button>';
   if(kept)h+='<p class="dsub">'+esc(t("You chose to keep some as they are. They come back here if the numbers behind them change."))+'</p>'+again;
   return h;}
+/* For the Coach page's one list (views/coach.js forYou): the findings, most important
+   first, and the way back to the ones kept as they are. */
+function adviceList(){return allAdvice();}
+function pcAgain(){
+  var kept=Object.keys(S.pcDismiss||{}).length+Object.keys(S.coachDismiss||{}).length;
+  if(!kept)return "";
+  return '<p class="dsub">'+esc(t("You chose to keep some as they are. They come back here if the numbers behind them change."))+'</p>'
+    +'<button class="pglink pcagain" data-pcreset="1">'+esc(t("Check the ones you kept again"))+'</button>';}
 /* The small print under the whole of Coach AI. */
 function adviceNote(){
   return '<p class="as-note">'+esc(t("Ranges and targets here are starting points from the research, not rules. How you feel, recover and progress over a few weeks says more."))+'</p>';}
 
-export {adviceBody, adviceCount, adviceNote, coachAct};
+export {adviceBody, adviceCount, adviceList, adviceNote, coachAct, pcAgain};

@@ -118,7 +118,7 @@ function onKeydown(ev){
   var gp=(ev.key==="ArrowUp"||ev.key==="ArrowDown")&&ev.target.closest&&ev.target.closest("[data-grip]");
   if(gp){
     ev.preventDefault();
-    var gid=gp.getAttribute("data-grip"),gl=V.sheet==="exlist"&&S.active?S.active.entries.map(function(x,i){return {id:"le"+i};}):V.tab==="coach"&&V.reorder==="ms"?mealSlots()
+    var gid=gp.getAttribute("data-grip"),gl=V.sheet==="exlist"&&S.active?S.active.entries.map(function(x,i){return {id:"le"+i};}):V.tab==="food"&&V.reorder==="ms"?mealSlots()
       :builderId()?(editSplit(builderId())||{days:[]}).days:((dayOf(V.dayId)||{ex:[]}).ex);
     var gi=gl.findIndex(function(x){return x.id===gid;});
     if(gi<0)return;
@@ -176,7 +176,7 @@ function onChange(ev){
         V.pibusy=false;V.pitext=r.text;V.ptargets=r.targets;V.psupps=r.supps;V.papplyT=true;
         var box=document.getElementById("pi_text");
         if(!r.text&&!Object.keys(r.targets||{}).length){render();if(box)box.value="";
-          toast(t("No meals were found in that PDF. If it is a training program, import it under Coach → Training → Programs."));return;}
+          toast(t("No meals were found in that PDF. If it is a training program, import it under Training → Plan → Programs."));return;}
         loadFoods(function(){V.pparse=withNotes(parsePlan(V.pitext));render();
           var b2=document.getElementById("pi_text");if(b2)b2.value=V.pitext;
           var res=document.querySelector(".pitg,.picard");if(res)res.scrollIntoView({behavior:"smooth",block:"start"});});

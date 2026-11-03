@@ -9,7 +9,7 @@ import {shiftDay} from "../datebar.js";
 import {goBack, pushNav, resetNav} from "../nav.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
-import {requestCloseSheet, toCoach} from "./common.js";
+import {requestCloseSheet, toPlan} from "./common.js";
 import {has, key, on} from "./registry.js";
 
 /* What this module answers. app.js calls register() once, at boot, in the order
@@ -35,8 +35,9 @@ function register(){
   /* A tab is a change of place, not a step deeper, so it starts a fresh trail. */
   /* A tab tap is a fresh start: the top of the page, and Food on today — a past
      date left selected from earlier was where a meal logged later could land. */
-  key("tab",function(D){resetNav();var tb=D.tab==="home"?"train":D.tab,same=V.tab===tb,top=same&&V.train==="days"&&!V.meal&&!V.smeal&&!V.phist&&!V.pslot&&!V.pimport&&!V.chat;
-    V.tab=tb;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.advall=false;V.phist=false;V.dnavDir=0;V.assess=false;V.pcheck=false;
+  key("tab",function(D){resetNav();var tb=D.tab==="home"?"train":D.tab,same=V.tab===tb,top=same&&V.train==="days"&&!V.fplan&&!V.meal&&!V.smeal&&!V.phist&&!V.pslot&&!V.pimport&&!V.chat;
+    /* The plan pages included: a tab lands on its own page (owner, 3 Nov). */
+    V.tab=tb;V.train="days";V.fplan=null;V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.advall=false;V.phist=false;V.dnavDir=0;V.assess=false;V.pcheck=false;
     /* Tapping a tab while already at its top goes back to its first view. */
     if(tb==="train"&&top)V.tdate=null;
     if(tb==="food"&&top)V.fdate=null;
@@ -47,7 +48,7 @@ function register(){
      on the Train tab still showing whatever sub-view was open, with an empty stack
      behind it — a day view whose back arrow now correctly hides, and nothing to
      return to but the tab bar. */
-  key("go",function(D){resetNav();V.tab=D.go;V.train="days";V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.phist=false;V.assess=false;V.pcheck=false;render();return;});
+  key("go",function(D){resetNav();V.tab=D.go;V.train="days";V.fplan=null;V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.phist=false;V.assess=false;V.pcheck=false;render();return;});
   /* Profile is a step into Training, not a place of its own: it opens from the person
      at the top right, and back returns there. */
   /* Settings → Test haptics: the press has already ticked (app.js); nothing else to do. */
@@ -57,16 +58,24 @@ function register(){
      own are planned in Coach → Nutrition. */
   key("fsec",function(D){if(D.fsec==="today"){if(V.sheet)closeSheet();resetNav();V.tab="food";V.fdate=null;V.train="days";
       V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.assess=false;V.pcheck=false;render();window.scrollTo(0,0);return;}
-    toCoach("food",D.fsec==="foods"?"foods":D.fsec==="targets"?"targets":"plan");return;});
-  /* Coach's sections, and the views inside Training and Nutrition. A line of Coach AI's
-     plan carries both, so it lands on the very view. */
-  on(function(D){return D.csec||D.ctsub||D.cfsub;},function(D){toCoach(D.csec||(D.ctsub?"train":D.cfsub?"food":null),D.ctsub||D.cfsub);return;});
+    toPlan("food",D.fsec==="foods"?"foods":D.fsec==="targets"?"targets":"plan");return;});
+  /* Links into planning from elsewhere (a coach's answer, a finding): the old section
+     names still arrive and land on the new places (toPlan). */
+  on(function(D){return D.csec||D.ctsub||D.cfsub;},function(D){toPlan(D.csec||(D.ctsub?"train":D.cfsub?"food":null),D.ctsub||D.cfsub);return;});
+  /* The plan pages themselves: from Training's or Food's own page one step in, and on the
+     plan page the segment between its parts (no new step; the content slides, render.js). */
+  has("tplan",function(D){if(V.sheet)closeSheet();
+    if(V.tab!=="train"||V.train!=="plan"){if(V.tab!=="train"){resetNav();V.tab="train";}pushNav();V.train="plan";V.tplan=D.tplan||"program";render();window.scrollTo(0,0);return;}
+    V.tplan=D.tplan||"program";render();return;});
+  has("fplan",function(D){if(V.sheet)closeSheet();
+    if(V.tab!=="food"||!V.fplan||V.smeal||V.pslot||V.pimport){if(V.tab!=="food"){resetNav();V.tab="food";}pushNav();V.smeal=null;V.pslot=null;V.pimport=false;V.fplan=D.fplan||"plan";render();window.scrollTo(0,0);return;}
+    V.fplan=D.fplan||"plan";render();return;});
   key("reorder",function(D){V.reorder=V.reorder===D.reorder?null:D.reorder;render();return;});
   /* Train's old sections: today is the Training page; the program and the others are
      planned in Coach → Training. */
   key("tsec",function(D){if(D.tsec==="today"){if(V.sheet)closeSheet();resetNav();V.tab="train";V.train="days";V.tdate=null;
       V.meal=null;V.smeal=null;V.assess=false;V.pcheck=false;render();window.scrollTo(0,0);return;}
-    toCoach("train",D.tsec==="explore"?"programs":"program");return;});
+    toPlan("train",D.tsec==="explore"?"programs":"program");return;});
   /* Every back affordance in the app comes through here, so none of them can drift
      to a destination of its own. Discarding a session is now part of going back
      rather than a separate link. */

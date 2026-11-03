@@ -44,7 +44,7 @@ ACT.newsplit=function(name){
   var sp={id:uid(),name:String(name).trim(),from:null,schedule:"week",
     days:[1,2,3].map(function(n,i){var d=day(t("Day")+" "+n,[]);d.wd=[wd[i]];return d;})};
   (S.programs=S.programs||[]).push(sp);
-  saveDB();pushNav();V.tab="coach";V.previewId=sp.id;V.train="builder";render();window.scrollTo(0,0);};
+  saveDB();pushNav();V.tab="train";V.previewId=sp.id;V.train="builder";render();window.scrollTo(0,0);};
 ACT.renamesplit=function(name,id){
   var sp=editSplit(id);if(!sp)return;sp.name=String(name).trim();saveDB();render();};
 /* A saved meal is made the way a program is: named first, then filled in its own
@@ -52,14 +52,14 @@ ACT.renamesplit=function(name,id){
 ACT.newmeal=function(name){
   var m={id:uid(),name:String(name).trim(),items:[]};
   (S.savedMeals=S.savedMeals||[]).push(m);
-  saveDB();pushNav();V.tab="coach";V.meal=null;V.smeal=m.id;render();window.scrollTo(0,0);};
+  saveDB();pushNav();V.tab="food";V.meal=null;V.smeal=m.id;render();window.scrollTo(0,0);};
 ACT.renamemeal=function(name,id){
   var m=(S.savedMeals||[]).filter(function(x){return x.id===id;})[0];if(!m)return;
   m.name=String(name).trim();saveDB();render();};
 ACT.delsaved=function(_,id){
   var m=(S.savedMeals||[]).filter(function(x){return x.id===id;})[0];
   S.savedMeals=(S.savedMeals||[]).filter(function(x){return x.id!==id;});
-  if(V.smeal===id){resetNav();V.smeal=null;V.tab="coach";V.csec="food";V.cfsub="foods";}
+  if(V.smeal===id){resetNav();V.smeal=null;V.tab="food";pushNav();V.fplan="foods";}
   saveDB();render();if(m)toast(m.name+" "+t("deleted."));};
 ACT.addday=function(name){var d=day(name,[]);d.wd=[];split().days.push(d);saveDB();render();};
 ACT.renameday=function(name,id){
@@ -74,21 +74,23 @@ ACT.adopt=function(_,id){
   if(own)S.activeProgram=own.id;else own=useTemplate(id,true);
   if(!own)return;
   /* Back to the program, now the active one, where it was chosen. */
-  resetNav();V.tab="coach";V.csec="train";V.ctsub="program";S.prefs.csec="train";V.tdate=null;
-  saveDB();V.train="days";render();window.scrollTo(0,0);
+  resetNav();V.tab="train";V.train="days";V.tdate=null;pushNav();V.train="plan";V.tplan="program";
+  saveDB();render();window.scrollTo(0,0);
   toast(own.name+" "+t("is now your training."));};
 ACT.addprog=function(_,id){
   var own=useTemplate(id,false);if(!own)return;
-  saveDB();V.tab="coach";V.previewId=own.id;V.train="builder";render();window.scrollTo(0,0);
+  saveDB();V.tab="train";V.previewId=own.id;V.train="builder";render();window.scrollTo(0,0);
   toast(own.name+" "+t("is in My programs."));};
 ACT.delday=function(_,id){
   var sp=ownerOf(id)||split();sp.days=sp.days.filter(function(x){return x.id!==id;});
-  V.train=V.previewId&&editSplit(V.previewId)===sp?"builder":"days";saveDB();render();};
+  /* Back to where the day was opened from: the program's builder or the plan page. */
+  if(V.previewId&&editSplit(V.previewId)===sp)V.train="builder";else{V.train="plan";V.tplan="program";}
+  saveDB();render();};
 ACT.delsplit=function(_,id){
   if(id===S.activeProgram){toast(t("Switch to another program first."));return;}
   var gone=editSplit(id);
   S.programs=(S.programs||[]).filter(function(x){return x.id!==id;});
-  if(V.train==="builder"&&V.previewId===id){resetNav();V.train="days";V.ctsub="programs";V.previewId=null;}
+  if(V.train==="builder"&&V.previewId===id){resetNav();V.tab="train";V.train="days";pushNav();V.train="plan";V.tplan="programs";V.previewId=null;}
   saveDB();render();if(gone)toast(gone.name+" "+t("deleted."));};
 /* An amount set in grams: recompute from the source food where we still have it,
    scale what was stored where we do not. js/ui/handlers/food.js uses it for a food
