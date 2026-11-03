@@ -3444,3 +3444,14 @@ and robust, not a PDF, and random sentences everywhere".
   plan"; programs: "Build a program" / "Copy in a program".
 - Training's My program ends in the same settings list (Switch program, Workout settings, Share) instead of
   three lines of text; Programs & exercises opens with two tiles instead of two large cards.
+
+## Copy in reads a shared plan — branch session/sharein (CACHE v209)
+
+Owner, 3 Nov: "Copy in a plan should also work … when some other Bunyan user has shared his split with me,
+instead of me going to settings."
+- Food's Copy in a plan and Training's Copy in a program both recognise a Bunyan plan code (BNY0/BNY1) in
+  what is pasted, words around it included, and open the Add a shared plan sheet with what it holds (meal plan
+  and/or program, each added on its own tap). Anything else is read as before. readPlan/isShared moved to
+  handlers/common.js; Settings' own Add a shared plan still works.
+- Both screens are titled as their buttons (Copy in a plan / Copy in a program) and say a shared message works
+  there; the buttons' lines say so too.

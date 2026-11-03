@@ -11,6 +11,7 @@ import {readPhoto} from "../../engine/ocr.js";
 import {retarget} from "../../engine/retarget.js";
 import {adoptLibrary, convertDbLoads, fixBodyweightLogs} from "../../engine/logfix.js";
 import {readSplit} from "../../engine/splitparse.js";
+import {decodePlan} from "../../engine/planshare.js";
 import {t} from "../../i18n/dict.js";
 import {exName} from "../../i18n/exnames.js";
 import {CUR, dayOf, editSplit, S, saveDB, saveSession} from "../../state.js";
@@ -183,6 +184,16 @@ function pcAfter(){
     var n=checkPlans().length;if(!n||V.pcheck)return;
     toast(t(n===1?"Plan check: 1 thing to look at":"Plan check: {n} things to look at").replace("{n}",n),
       function(){toPlan("ai");},t("Show me"));},5600);}
+/* A plan another Bunyan user shared: what it holds, or why not, in the Add a shared plan
+   sheet. From Settings, and from either Copy in screen when what was pasted is one
+   (owner, 3 Nov: "Copy in a plan should also work … when some other Bunyan user has
+   shared his split with me"). */
+var SHARED=/BNY[01]\.[A-Za-z0-9_-]{8,}/;
+function isShared(text){return SHARED.test(String(text||""));}
+function readPlan(text){
+  decodePlan(text).then(function(g){
+    if(!g){openSheet("recvplan",{text:text,err:1});return;}
+    openSheet("recvplan",{got:g,done:{}});});}
 /* ---- closing a sheet ------------------------------------------------------ */
 /* Most sheets show what is already stored, so closing them costs nothing. The ones
    holding typed input that has not been saved anywhere ask first. */
@@ -288,4 +299,4 @@ function ibPhoto(file){
     if(Object.keys(readInBody(txt)).length){ibRead(txt);return;}
     ibStatus(t("No InBody figures found on the photo. Copy its text and paste it below."));
   },function(){if(my===OCR&&V.sheet==="inbody")ibStatus(t("The photo couldn't be read on this phone. Copy its text and paste it below."));});}
-export {builderId, chatEnd, chatSend, editedEx, fixLogsNow, ibPhoto, ibRead, LENT, setDbLoad, MF, moveDayEx, moveRow, pcAfter, readTraining, requestCloseSheet, retargetNow, sendText, setExField, sheetDirty, slotsFrom, tidyGroups, toPlan, topOfResults, withNotes};
+export {builderId, chatEnd, chatSend, editedEx, fixLogsNow, ibPhoto, ibRead, isShared, LENT, MF, moveDayEx, moveRow, pcAfter, readPlan, readTraining, requestCloseSheet, retargetNow, sendText, setDbLoad, setExField, sheetDirty, slotsFrom, tidyGroups, toPlan, topOfResults, withNotes};

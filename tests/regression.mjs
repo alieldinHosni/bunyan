@@ -4631,6 +4631,29 @@ await test("Plan tabs: the highlight over the tabs follows the finger while the 
   await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(900);
   eq([await ev(page,"V.fplan"),await iNow(),await page.evaluate(()=>document.querySelector("#app .psecs").classList.contains("drag"))],["targets",1,false],"landed on Targets");
 });
+await test("Copy in: a plan another Bunyan user shared works in Food's Copy in a plan and Training's Copy in a program — paste their message, read it, and it is added",async page=>{
+  /* A message as it arrives: words around the code. */
+  const msg=await page.evaluate(async()=>{const P=await import("/js/engine/planshare.js");
+    const code=await P.encodePlan(P.packPlan({from:"Omar",slots:[{id:"Breakfast",plan:[{n:"Foul",label:"1 plate",grams:250,kcal:330,p:18,c:44,f:9}]}],
+      program:{name:"Omar's split",schedule:"cycle",days:[{name:"Push",wd:[],ex:[{name:"Barbell Bench Press - Medium Grip",sets:3,lo:6,hi:10}]}]}}));
+    return "Here is my plan 👇 "+code+" enjoy";});
+  await coach(page,"food","plan");
+  await page.tap('[data-pimport]');await pause(page,400);
+  eq(await page.textContent('#app .dhead-t'),"Copy in a plan","the screen is named as the button");
+  await page.fill('#pi_text',msg);await page.tap('[data-pread]');await pause(page,800);
+  eq(await ev(page,"[V.sheet,!!(V.sd&&V.sd.got),V.sd&&V.sd.got&&V.sd.got.from]"),["recvplan",true,"Omar"],"read as a shared plan, not as text");
+  await page.tap('#sheet [data-rplanmeals]');await pause(page,400);
+  eq(await ev(page,"S.mealSlots.find(s=>s.id==='Breakfast').plan.map(x=>x.n)"),["Foul"],"their meal plan is mine");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  await coach(page,"train","programs");
+  await page.tap('[data-timport]');await pause(page,400);
+  eq(await page.textContent('#app .dhead-t'),"Copy in a program","Training's too");
+  await page.fill('#ti_text',msg);await page.tap('[data-tiread]');await pause(page,800);
+  eq(await ev(page,"[V.sheet,!!(V.sd&&V.sd.got&&V.sd.got.program)]"),["recvplan",true],"the program in it, ready to add");
+  const n=await ev(page,"S.programs.length");
+  await page.tap('#sheet [data-rplanadd="keep"]');await pause(page,400);
+  eq(await ev(page,"[S.programs.length,S.programs[S.programs.length-1].name]"),[n+1,"Omar's split"],"added to my programs");
+});
 await test("Meal plan: “Build it from my targets” lives on the meal plan page, beside Import, and opens the plan to review",async page=>{
   await coach(page,"food","plan");
   if(!(await page.$('.psec [data-pgen]'))||!(await page.$('.psec [data-pimport]')))throw new Error("the two ways to fill the plan are not on the meal plan page");

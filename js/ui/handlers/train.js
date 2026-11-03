@@ -24,7 +24,7 @@ import {render} from "../render.js";
 import {tap, toast, V} from "../view.js";
 import {groupRun} from "../views/session.js";
 import {newNames, programFromDraft} from "../views/timport.js";
-import {builderId, editedEx, pcAfter, readTraining, requestCloseSheet, setDbLoad, setExField, tidyGroups, toPlan, topOfResults} from "./common.js";
+import {builderId, editedEx, isShared, pcAfter, readPlan, readTraining, requestCloseSheet, setDbLoad, setExField, tidyGroups, toPlan, topOfResults} from "./common.js";
 import {has, key, NEXT, on} from "./registry.js";
 
 /* Moving a program to weekdays: the empty "Rest" days that spaced out a rotation
@@ -334,6 +334,7 @@ function register(){
   key("timport",function(){pushNav();V.tab="train";V.train="import";V.tp=null;V.tierr="";render();window.scrollTo(0,0);return;});
   key("tiread",function(){var tt=val("ti_text");V.titext=tt;
     if(!tt.trim()){toast(t("Paste your program first."));return;}
+    if(isShared(tt)){readPlan(tt);return;}
     readTraining(tt);return;});
   key("tirestart",function(){V.tp=null;V.tierr="";render();window.scrollTo(0,0);return;});
   key("tiex",function(D){var tx=D.tiex.split("|"),tdy=V.tp&&V.tp.days[+tx[0]],te=tdy&&tdy.ex[+tx[1]];if(!te)return;

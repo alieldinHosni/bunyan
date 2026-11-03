@@ -28,9 +28,9 @@ function withIds(tp){
 
 function vTImport(){
   var tp=V.tp;
-  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Import a program"))+'</h1></div>';
+  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Copy in a program"))+'</h1></div>';
   if(!tp){
-    h+='<p class="dsub">'+esc(t("Open the PDF your coach sent, or paste the program. It is read on this phone; nothing is uploaded."))+'</p>'
+    h+='<p class="dsub">'+esc(t("Open the PDF your coach sent, paste the program, or paste the message another Bunyan user sent you. Everything is read on this phone."))+'</p>'
      +'<textarea id="ti_text" class="pitext" rows="9" spellcheck="false" placeholder="'
      +esc(t("Day A — Push\nIncline bench press 3 x 6-8, 90s rest, 40 kg\nLateral raise 3 x 12-15\n\nDay B — Pull\nLat pulldown 3 x 8-10"))+'">'+esc(V.titext||"")+'</textarea>'
      +'<div class="piacts"><label class="btn g pifile"><input id="ti_file" type="file" accept=".pdf,application/pdf,.txt,.md,text/plain">'
