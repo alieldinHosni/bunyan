@@ -958,7 +958,7 @@ await test("Plan import: pasted text becomes meals with foods; an unmatched line
   await page.tap('[data-pimport]');await pause(page);
   await page.fill('#pi_text',"Meal 1 (8am):\n- 3 eggs\n- 2 slices toast\nMeal 2: 150g chicken breast, 200g rice\nSnack:\n200g greek yogurt\n1 cup zorblax");
   await page.tap('[data-pread]');await pause(page,1200);
-  eq(await page.$$eval('.picard',a=>a.length),3,"three meals found");
+  eq(await page.$$eval('.pmeal',a=>a.length),3,"three meals found");
   await page.tap('[data-puse]');await pause(page,500);
   eq(await ev(page,"S.mealSlots.map(x=>[x.id.startsWith('m_')?'m':x.id,(x.plan||[]).length,(x.todo||[]).length])"),[["m",2,0],["m",2,0],["Snack",1,1]],"slots with plans");
   eq(await page.$$eval('.drows .drow-n',a=>a.map(x=>x.textContent)),["Meal 1","Meal 2","Snacks"],"named as the app names them");
@@ -1156,11 +1156,11 @@ await test("PDF plan: meals, daily targets and supplements are read, reviewed an
   await page.tap('[data-pimport]');await pause(page);
   const before=await ev(page,"JSON.stringify(S.goals)");
   await page.setInputFiles("#pi_file",new URL("./fixtures/plan-sample.pdf",import.meta.url).pathname);
-  for(let i=0;i<60&&!(await page.$(".picard"));i++)await pause(page,250);
-  eq(await page.$$eval(".picard .picard-h .tiday",a=>a.map(e=>e.value)),["Meal 1","Meal 2","Snacks","Meal 3","Supplements"],"meals");
-  eq(await page.$$eval(".plist-r.miss",a=>a.length),0,"every line matched a food");
+  for(let i=0;i<60&&!(await page.$(".pmeal"));i++)await pause(page,250);
+  eq(await page.$$eval(".pmeal .pmeal-n",a=>a.map(e=>e.value)),["Meal 1","Meal 2","Snacks","Meal 3","Supplements"],"meals");
+  eq(await page.$$eval(".pmrow.miss",a=>a.length),0,"every line matched a food");
   eq(await page.$$eval(".pitg-r input",a=>a.map(e=>e.value)),["2200","160","230","70","2.75","9000"],"targets");
-  const supp=await page.$$eval(".picard",a=>a[4].innerText);
+  const supp=await page.$$eval(".pmeal",a=>a[4].innerText);
   for(const w of ["Vitamin D3","1,000 IU","With a fatty meal","Magnesium","200 mg","Before bed","Zinc","15 mg"])
     if(supp.indexOf(w)<0)throw new Error("supplements lack "+w+": "+supp);
   const box=await page.$eval("#pi_text",e=>e.value);
@@ -1177,15 +1177,18 @@ await test("PDF plan: everything can be changed on the review before it is used"
   await coach(page,"food","plan");
   await page.tap('[data-pimport]');await pause(page);
   await page.setInputFiles("#pi_file",new URL("./fixtures/plan-sample.pdf",import.meta.url).pathname);
-  for(let i=0;i<60&&!(await page.$(".picard"));i++)await pause(page,250);
+  for(let i=0;i<60&&!(await page.$(".pmeal"));i++)await pause(page,250);
   /* A meal renamed, a food dropped, an amount changed, a target changed. */
   await page.fill("#pm_n_0","Breakfast bowl");
   const dropped=await ev(page,"V.pparse[1].items[0].n");
-  await page.evaluate(()=>document.querySelector('[data-pirm="1|0"]').click());await pause(page,200);
+  /* Each food is one tap: its sheet has Change amount, Remove and Swap. */
+  await page.evaluate(()=>document.querySelector('[data-pfood="1|0"]').click());await pause(page,500);
+  await page.evaluate(()=>document.querySelector('#sheet [data-pfoodrm]').click());await pause(page,300);
   eq(await ev(page,"V.pparse[1].items.map(i=>i.n).indexOf("+JSON.stringify(dropped)+")"),-1,"dropped");
   const k0=await ev(page,"V.pparse[0].items[0].kcal"),g0=await ev(page,"V.pparse[0].items[0].grams");
   /* Tapping the food opens it on the servings screen; set it in grams and update. */
-  await page.evaluate(()=>document.querySelector('[data-editfood="imp|0|0"]').click());await pause(page,500);
+  await page.evaluate(()=>document.querySelector('[data-pfood="0|0"]').click());await pause(page,500);
+  await page.evaluate(()=>document.querySelector('#sheet [data-editfood="imp|0|0"]').click());await pause(page,500);
   await page.selectOption("#afsrv","ug");await pause(page,300);
   await page.fill("#afamt",String(g0*2));await pause(page,200);
   await page.evaluate(()=>document.querySelector("[data-fupdate]").click());await pause(page,300);
@@ -1985,18 +1988,18 @@ await test("Meal plan from your own food: a breakfast eaten most days comes back
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="coach";(await import("/js/ui/render.js")).render();});
   await page.evaluate(()=>{const b=document.createElement("button");b.setAttribute("data-pgen","1");b.id="pgen_t";document.body.appendChild(b);});
   await page.tap('#pgen_t');
-  for(let i=0;i<30&&!(await page.$('.picard'));i++)await pause(page,200);
+  for(let i=0;i<30&&!(await page.$('.pmeal'));i++)await pause(page,200);
   const r=await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;const pp=V.pparse;
     const b=pp[0],kc=pp.reduce((a,m)=>a+m.items.reduce((x,i)=>x+i.kcal,0),0),bk=b.items.reduce((x,i)=>x+i.kcal,0);
     return [b.items.map(i=>i.fid).sort(),b.usual,Math.abs(kc-2400)/2400<0.06,Math.abs(bk-2400*0.25)/(2400*0.25)<=0.2,
       pp.some(m=>m.items.some(i=>i.fid==="rice_basmati")),pp.some(m=>m.items.some(i=>i.fid==="rice_egyptian"))];});
   eq(r,[["baladi","egg_boiled","ful"],4,true,true,true,false],"their breakfast, scaled; their rice");
   const txt=await page.textContent("body");
-  if(!/Your usual: logged on 4 days/.test(txt))throw new Error("no word that the breakfast is their usual");
-  if(!/of the day's \d+ foods are ones you log/.test(txt))throw new Error("no count of their own foods");
+  if(!/Your usual: 4 days in the last 4 weeks/.test(txt))throw new Error("no word that the breakfast is their usual");
+  if(!/\d+ of \d+ foods are ones you eat/.test(await page.textContent('.prown')))throw new Error("no count of their own foods");
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";(await import("/js/i18n/exnames.js")).applyLang();(await import("/js/ui/render.js")).render();});
   await pause(page,200);
-  if(!/وجبتك المعتادة: سجّلتها 4 أيام/.test(await page.textContent("body")))throw new Error("no Arabic note");
+  if(!/معتادك: 4 أيام في آخر 4 أسابيع/.test(await page.textContent("body")))throw new Error("no Arabic note");
 });
 await test("Meal plan: a day built from the targets, within 5%, servings as labels, diet and leave-outs respected",async page=>{
   const r=await page.evaluate(async()=>{
@@ -4662,6 +4665,25 @@ await test("My program: Copy in a program sits right above Share my program, as 
   eq(rows,["set_training","in","share"],"settings, then in and out together; no Switch program beside the Programs tab");
   await page.tap('#app .plset [data-timport]');await pause(page,400);
   eq(await page.textContent('#app .dhead-t'),"Copy in a program","it opens the Copy in screen");
+});
+await test("Your meal plan: cards with what the day comes to; a food is one tap — change the amount, remove it, or swap it for one of similar nutrition, sized to the same calories and within the diet; Undo puts it back",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.diet="veg";st.saveDB();});
+  await coach(page,"food","plan");
+  await page.tap('[data-pgen]');for(let i=0;i<30&&!(await page.$('.pmeal'));i++)await pause(page,200);
+  eq(await page.evaluate(()=>[!!document.querySelector('.prsum [data-pgenmore]'),document.querySelectorAll('.prsum .plsum-r').length,!!document.querySelector('.prcta [data-puse]'),document.querySelectorAll('#app p.dsub').length]),[true,2,true,1],"one summary with Another version, Use this plan in reach, one line of words");
+  const it=await ev(page,"V.pparse[0].items[0]");
+  await page.tap('.pmrow[data-pfood="0|0"]');await pause(page,600);
+  const alts=await page.$$eval('#sheet .pf-alt',a=>a.map(b=>b.getAttribute("data-pswapto")));
+  if(alts.length<3)throw new Error("too few alternatives: "+alts.length);
+  const chk=await page.evaluate(async([alts,k0])=>{const N=await import("/js/engine/nutrition.js"),M=await import("/js/engine/mealplan.js");
+    return alts.map(a=>{const p=a.split("|"),f=N.FOODDB.find(x=>x.id===p[2]),n=N.nutritionFor(f,+p[3]);
+      return [Math.abs(n.kcal-k0)/k0<0.25,M.allowed(f,{diet:"veg"})];});},[alts,it.kcal]);
+  eq(chk.every(x=>x[0]&&x[1]),true,"each within a quarter of the calories, and vegetarian: "+JSON.stringify(chk));
+  const to=alts[0].split("|")[2];
+  await page.tap('#sheet .pf-alt');await pause(page,500);
+  eq(await ev(page,"[V.sheet,V.pparse[0].items[0].fid]"),[null,to],"swapped in its place");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"V.pparse[0].items[0].fid"),it.fid,"Undo puts the first one back");
 });
 await test("Meal plan: “Build it from my targets” lives on the meal plan page, beside Import, and opens the plan to review",async page=>{
   await coach(page,"food","plan");

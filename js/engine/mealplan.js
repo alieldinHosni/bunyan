@@ -237,4 +237,39 @@ function buildMealPlan(targets,pref){
   out.forEach(function(m){m.items=m.solved.filter(function(x){return x.g>0;}).map(itemOf);delete m.solved;});
   return out;}
 
-export {allowed, buildMealPlan, itemOf};
+/* Foods that could take a plan food's place (owner, 3 Nov: "easy to find alternatives
+   for the food within the same range of nutrition facts, or preference"). it: a plan item
+   {fid, kcal, p, c, f}. Every food the person's diet and exclusions allow (pref, as
+   allowed() reads it; pref.mine: their own foods) is sized to the same calories — a
+   counted serving when one comes out whole or half, else grams to the nearest 5 — and
+   ranked by how close its protein, carbs and fat are, as shares of those calories, with
+   the same kind of food first. Impractical amounts (under 10 g, over 500 g) are left out.
+   Returns up to n of {food, grams, item}. Pure apart from the food database. */
+function similarFoods(it,pref,n){
+  pref=pref||{};n=n||6;
+  var k0=+it.kcal||0;if(k0<=0)return [];
+  var pool=(pref.mine||[]).concat(FOODDB||[]),f0=null;
+  for(var q=0;q<pool.length;q++)if(pool[q].id===it.fid){f0=pool[q];break;}
+  var share=function(p,c,f){var k=p*4+c*4+f*9||1;return [p*4/k,c*4/k,f*9/k];};
+  var s0=share(+it.p||0,+it.c||0,+it.f||0),seen={},out=[];
+  pool.forEach(function(f){
+    if(!f||f.id===it.fid||!(f.kcal>0)||!allowed(f,pref))return;
+    if(f.cat==="Supplements"&&!(f0&&f0.cat==="Supplements"))return;
+    var per=f.per||100,g=k0/(f.kcal/per);
+    var u=(f.s||[]).filter(function(x){return x[1]>0&&!/^\d/.test(x[0]);})[0];
+    if(u){var hk=Math.round(g/u[1]*2)/2;if(hk>=0.5&&Math.abs(hk*u[1]-g)/g<0.2)g=hk*u[1];else g=Math.round(g/5)*5;}
+    else g=Math.round(g/5)*5;
+    if(g<10||g>500)return;
+    var nn=nutritionFor(f,g),s1=share(nn.p,nn.c,nn.f);
+    var d=Math.abs(s1[0]-s0[0])+Math.abs(s1[1]-s0[1])+Math.abs(s1[2]-s0[2])
+      +(f0&&f.cat!==f0.cat?0.12:0)+Math.abs(nn.kcal-k0)/k0*0.5;
+    out.push({food:f,grams:g,d:d});});
+  out.sort(function(a,b){return a.d-b.d;});
+  var res=[];
+  for(var i=0;i<out.length&&res.length<n;i++){
+    var key=String(out[i].food.n||"").toLowerCase().split(/[,(]/)[0].trim();
+    if(seen[key])continue;seen[key]=1;
+    res.push({food:out[i].food,grams:out[i].grams,item:itemOf({f:out[i].food,g:out[i].grams})});}
+  return res;}
+
+export {allowed, buildMealPlan, itemOf, similarFoods};

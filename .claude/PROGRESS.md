@@ -3492,3 +3492,19 @@ saves space for what is useful. The summary card stays (calories ring, protein/c
 kcal left). The figure with its four rings is gone; what it said that the summary does not is one slim card
 right under the summary (js/ui/bodyneeds.js): what is behind for the time of day, how much to go, and three
 foods that bring it in one tap (a glass, for water). Nothing behind: no card. Coach noticed stays.
+
+## Your meal plan: a review built to be changed — branch session/foodtop (CACHE v213)
+
+Owner, 3 Nov: the plan review read like a PDF; it should be easy to amend, with alternatives of similar
+nutrition or preference, well structured. views/food.js planReview (a built plan and one copied in alike):
+- One summary card: meals and foods, a verdict against the goal, calories and protein bars, Another version
+  (a built plan) and a badge with how many of its foods are ones they eat. The explanatory paragraphs went.
+- Each meal a card: its name (rename in place), calories and protein, ✕; each food one row (name, amount,
+  protein, calories) and one tap; "Your usual: n days in the last 4 weeks" as a badge; lines that matched
+  nothing with Find; + Add food.
+- A food's sheet (vPlanFood): its numbers; Change amount; Remove (Undo); Swap for something similar —
+  engine/mealplan.js similarFoods: every food the diet and exclusions allow, sized to the same calories (a
+  whole or half serving when one fits, else 5 g steps), ranked by how close protein, carbs and fat are as
+  shares of those calories, the same kind of food first, impractical amounts left out; one tap swaps it in
+  its place, with Undo.
+- Use this plan sits in reach above the dock.
