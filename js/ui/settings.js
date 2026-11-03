@@ -291,7 +291,7 @@ function planLines(sm){
   return '<div class="shc-l">'+l.join("")+'</div>';}
 function sendPlanSheet(){
   var d=V.sd||{};if(!d.code)return '<h2>'+t("Share")+'</h2>';
-  return '<h2>'+esc(t(d.plan.program?"Share this program":"Share my meal plan"))+'</h2>'
+  return '<h2>'+esc(t(d.plan.program?"Share my program":"Share my meal plan"))+'</h2>'
    +'<p class="tiny">'+esc(t("Anyone with Bunyan can add it as you have it: they open Profile, then Add a shared plan, and paste your message. Your history, weight and targets stay with you."))+'</p>'
    +'<div class="bk-card shc">'+planLines(planSummary(d.plan))+'</div>'
    +'<button class="btn" data-sendplan="1">'+esc(t("Share…"))+'</button>'

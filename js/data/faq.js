@@ -798,8 +798,8 @@ var E=[
  beats:["exadd"],
  a:[["Profile > Profiles on this phone: anyone training on your phone gets their own profile, with their own log; nothing crosses over.",
      "الحساب > الحسابات على الموبايل ده: أي حد بيتمرن على موبايلك بياخد حساب خاص بيه وسجل خاص بيه؛ ومفيش حاجة بتتلخبط."],
-    ["To share a program, open it and use Share this program; your friend opens Profile > Add a shared plan and pastes it. Your history, weight and targets stay with you.",
-     "عشان تشارك برنامج، افتحه واستخدم «شارك البرنامج ده»؛ وصاحبك يفتح الحساب > إضافة خطة متشاركة ويلصقها. سجلك ووزنك وأهدافك بيفضلوا معاك."]],
+    ["To share your program, open Training > Plan and tap Share my program (Food > Plan > Share my meal plan for meals). Your friend taps Copy in a program, or Copy in a plan, and pastes your message. Your history, weight and targets stay with you.",
+     "عشان تشارك برنامجك، افتح التمرين > الخطة ودوس «شارك برنامجي» (والأكل > الخطة > «شارك خطة أكلي» للوجبات). وصاحبك يدوس «انقل برنامج» أو «انقل خطة» ويلصق رسالتك. سجلك ووزنك وأهدافك بيفضلوا معاك."]],
  acts:[[["Add a shared plan","إضافة خطة متشاركة"],{"data-sheet":"recvplan"}]],
  src:["app:ui/settings.js","app:ui/views/profile.js"]},
 
