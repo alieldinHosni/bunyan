@@ -52,28 +52,16 @@ function startRest(e){
   V.restTotal=e.rest||75;
   V.restEnd=Date.now()+V.restTotal*1000;
   beeped=false;lastTick=99;}
-/* Safari has no vibration API. Since iOS 18 a switch (<input type="checkbox" switch>)
-   ticks the Taptic Engine when it is toggled, and a tap on its label toggles it, so a
-   hidden one gives the iPhone the same light tick. It must be inside the tap's own
-   handler, which is where tap() is called. Its clicks stop at the label, so no branch
-   or outside-tap rule ever sees them. */
+/* Safari has no vibration API. The one real tick an iPhone gives a web page is a native
+   switch toggled by the person's own tap (tests/haptics.html, owner's iPhone, 3 Nov), so
+   the complete-set control is built around one (views/session.js vLogControl). Clicking
+   a hidden switch from code, which this file used to do on every tap, gave nothing on
+   the same phone and is gone: no stand-in that only pretends to be haptics. tap() is the
+   vibration API alone, where there is one. */
 var IOS=typeof navigator!=="undefined"&&(/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1));
-/* A fresh switch each time, clicked and taken away at once: the recipe known to tick on
-   iPhones (owner, 27 Oct: haptics not felt). One switch kept in the page and toggled
-   back and forth did not tick reliably. Out of sight in <head>, so no layout, focus or
-   screen reader ever meets it, and its click stops at the label. */
-function iosTick(){
-  var l=document.createElement("label"),i=document.createElement("input");
-  l.className="hapt";l.setAttribute("aria-hidden","true");l.style.display="none";
-  i.type="checkbox";i.setAttribute("switch","");i.tabIndex=-1;
-  l.appendChild(i);
-  ["click","change","input"].forEach(function(ev){l.addEventListener(ev,function(e){e.stopPropagation();});});
-  (document.head||document.body).appendChild(l);
-  l.click();
-  l.remove();}
 function canBuzz(){return typeof navigator!=="undefined"&&("vibrate" in navigator||IOS);}
 function buzz(ms){
-  try{if(navigator.vibrate)navigator.vibrate(ms||10);else if(IOS)iosTick();}catch(e){}}
+  try{if(navigator.vibrate)navigator.vibrate(ms||10);}catch(e){}}
 function tap(kind){
   if(S.prefs.haptic!==false)buzz(kind==="heavy"?18:kind==="ok"?[12,40,12]:9);
 }

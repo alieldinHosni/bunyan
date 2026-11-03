@@ -3270,3 +3270,20 @@ test watches the calendar button through Today and through tapping today's date:
 Owner, 3 Nov: the Change button covered the figure. It moved out of the card's top corner into the text column,
 as a see-through chip after the day's label (.thero2-k row; hairline border, accent icon, 44 px hit area through
 ::before). The title no longer reserves 86 px for it. Checked in English and Arabic, rest day and workout day.
+
+## Real haptics on the complete-set control (iPhone) — branch session/haptics (CACHE v203)
+
+Owner's iPhone, iOS 18.7, Safari, tests/haptics.html: A plain button nothing; B hidden switch inside a label felt;
+C the switch itself felt; D the app's old trick (a button clicking a hidden switch from code) nothing.
+- views/session.js vLogControl: with haptics on (S.prefs.haptic !== false) the control is
+  `<label class="log" data-k="log" data-logset="1">` around `<input type="checkbox" switch class="vh hapt-in"
+  role="button" aria-label="Complete set N">`, the visible text and check aria-hidden. Same look (CSS by class).
+  Haptics off: the plain `<button>` as before.
+- app.js click: label[data-logset] joins the selector; the label's own click is ignored (the browser passes it
+  to the switch), the switch's click dispatches with the label's dataset — one log for a tap, Space, or
+  VoiceOver's activate — then the switch is set back to unchecked.
+- fields.js: Enter on the switch clicks it (a button's Enter). Focus ring drawn on the pill (:has(:focus-visible)).
+- view.js: iosTick removed — it gave nothing on the owner's phone and would have been a stand-in pretending to be
+  haptics. tap() is navigator.vibrate only (Android). canBuzz still true on iOS: the setting chooses switch or button.
+- Not yet felt in the installed home-screen app; the owner tested in Safari. If the home-screen app gives no tick,
+  say so and revert to the button (no fallback).

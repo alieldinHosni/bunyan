@@ -106,6 +106,9 @@ function onInput(ev){
 function onKeydown(ev){
   if(ev.key==="Escape"&&V.sheet){ev.preventDefault();requestCloseSheet();return;}
   if(ev.key==="Escape"&&V.coach){ev.preventDefault();closeCoach(render);return;}
+  /* The complete-set switch is announced as a button, so Enter works on it as on one
+     (Space toggles a switch natively). */
+  if(ev.key==="Enter"&&ev.target.classList&&ev.target.classList.contains("hapt-in")){ev.preventDefault();ev.target.click();return;}
   /* Done on the number pad saves the steps typed. */
   if(ev.key==="Enter"&&ev.target.id==="in_st"){ev.preventDefault();var svb=document.querySelector("[data-savesteps]");if(svb)svb.click();return;}
   /* And a first weight typed into the weigh-in. */

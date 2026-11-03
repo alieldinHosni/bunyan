@@ -123,6 +123,28 @@ await test("double tap on ✓ logs exactly one set",async page=>{
   await page.touchscreen.tap(b.x+b.width/2,b.y+b.height/2);await page.touchscreen.tap(b.x+b.width/2,b.y+b.height/2);await pause(page);
   eq(await ev(page,"S.active.entries[0].sets.length"),1);
 },{prefs:{autorest:false}});
+await test("Complete set, with haptics: a label around a hidden native switch, one focusable control announced as a button; a tap, Enter or Space logs one set and leaves it off; haptics off is the plain button",async page=>{
+  await startWorkout(page);await page.fill('#in_r','8');
+  const shape=await page.evaluate(()=>{const l=document.querySelector('.sess [data-logset]'),i=l&&l.querySelector('input');
+    return l?[l.tagName,i&&i.type,i&&i.hasAttribute("switch"),i&&i.getAttribute("role"),i&&i.getAttribute("aria-label"),
+      [...l.querySelectorAll(":scope>span")].every(s=>s.getAttribute("aria-hidden")==="true"),getComputedStyle(i).position,l.querySelectorAll("button,[tabindex]").length]:null;});
+  eq(shape,["LABEL","checkbox",true,"button","Complete set 1",true,"absolute",0],"the label, its hidden switch as the one control");
+  const n=()=>ev(page,"S.active.entries[0].sets.length");
+  const back=async()=>{await page.waitForSelector('.sess label[data-logset] input',{timeout:4000,state:"attached"});};
+  await page.tap('.sess [data-logset]');await pause(page,300);
+  eq([await n(),await page.evaluate(()=>{const i=document.querySelector('.sess .hapt-in');return i?i.checked:false;})],[1,false],"a tap logs one set; the switch is off again");
+  await back();await page.fill('#in_r','8');
+  await page.focus('.sess .hapt-in');await page.keyboard.press("Enter");await pause(page,300);
+  eq(await n(),2,"Enter logs one");
+  await back();
+  /* Haptics off in Settings: the plain button, as before; back on, the switch again. */
+  const hap=on=>page.evaluate(async v=>{const st=await import("/js/state.js");st.S.prefs.haptic=v;st.saveDB();(await import("/js/ui/render.js")).render();},on);
+  await hap(false);
+  eq(await page.evaluate(()=>[!!document.querySelector('.sess button[data-logset]'),document.querySelectorAll('.sess .hapt-in').length]),[true,0],"haptics off: the plain button, no switch");
+  await hap(true);await back();await page.fill('#in_r','8');
+  await page.focus('.sess .hapt-in');await page.keyboard.press(" ");await pause(page,300);
+  eq(await n(),3,"Space logs one");
+},{prefs:{autorest:false,haptic:true}});
 await test("removing a set offers undo, and undo restores it",async page=>{
   await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
   await page.tap('[data-unlog="0"]');await pause(page);eq(await ev(page,"S.active.entries[0].sets.length"),0,"removed");
@@ -3074,17 +3096,18 @@ await test("Coach: asked to make the program home based with no equipment, it op
   eq([await ev(page,"V.assess"),await ev(page,"V.asd&&V.asd.gear"),await ev(page,"V.asd&&V.asd.step")===await page.evaluate(async()=>(await import("/js/ui/views/assess.js")).STEPS.indexOf("result"))],[true,"bw",true],"the result, for bodyweight");
   eq(await ev(page,"JSON.stringify(S.programs)")===before,true,"nothing changed before Use this plan");
 });
-await test("Haptics: on an iPhone a tap ticks the hidden switch, and no tap branch sees it",async page=>{
+await test("Haptics: on an iPhone no tap pretends to tick (no switch clicked from code); the complete-set control is the real one, a switch under the person's own tap",async page=>{
   const r=await page.evaluate(async()=>{
     const V=await import("/js/ui/view.js"),S=(await import("/js/state.js")).S;S.prefs.haptic=true;
-    let seen=0;document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(".hapt"))seen++;});
-    /* A fresh switch for each tick, clicked and gone: watch it come and go. */
-    let made=0,toggled=0;const mo=new MutationObserver(m=>m.forEach(x=>x.addedNodes.forEach(n=>{if(n.classList&&n.classList.contains("hapt")){made++;n.querySelector("input").addEventListener("change",()=>toggled++);}})));
-    mo.observe(document.head,{childList:true});
-    const clicked=[];const orig=HTMLLabelElement.prototype.click;HTMLLabelElement.prototype.click=function(){if(this.classList.contains("hapt"))clicked.push(!!this.querySelector("input[switch]")&&this.isConnected);return orig.call(this);};
-    V.tap("light");V.tap("ok");await new Promise(r=>setTimeout(r,30));mo.disconnect();HTMLLabelElement.prototype.click=orig;
-    return [made,clicked,document.querySelectorAll(".hapt").length,seen,typeof V.canBuzz()];});
-  eq(r,[2,[true,true],0,0,"boolean"],"a switch per tick, clicked while in the page, then removed; no tap branch sees it");
+    /* The old trick clicked a hidden switch from code on every tap: it gave nothing on the
+       owner's iPhone (tests/haptics.html, 3 Nov), so nothing like it may come back. */
+    let made=0;const mo=new MutationObserver(m=>m.forEach(x=>x.addedNodes.forEach(n=>{if(n.querySelector&&(n.matches("input[switch]")||n.querySelector("input[switch]")))made++;})));
+    mo.observe(document,{childList:true,subtree:true});
+    V.tap("light");V.tap("ok");await new Promise(r=>setTimeout(r,30));mo.disconnect();
+    return [made,typeof V.canBuzz(),V.canBuzz()];});
+  eq(r,[0,"boolean",true],"tap() adds no switch; the setting is still offered on an iPhone");
+  await startWorkout(page);
+  eq(await page.evaluate(()=>{const l=document.querySelector('.sess [data-logset]');return [l.tagName,!!l.querySelector('input[type=checkbox][switch]')];}),["LABEL",true],"the complete-set control carries the switch");
 },{init:()=>{Object.defineProperty(navigator,"userAgent",{get:()=>"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"});
   try{Object.defineProperty(Navigator.prototype,"vibrate",{value:undefined,configurable:true});delete Navigator.prototype.vibrate;}catch(e){}}});
 await test("Coach tailors: exercises for a muscle fit the kit, the sore spots and the goal, each with the goal's dose; an exercise added by hand takes the goal's dose too",async page=>{
