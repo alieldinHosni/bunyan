@@ -3096,17 +3096,18 @@ await test("Coach: asked to make the program home based with no equipment, it op
   eq([await ev(page,"V.assess"),await ev(page,"V.asd&&V.asd.gear"),await ev(page,"V.asd&&V.asd.step")===await page.evaluate(async()=>(await import("/js/ui/views/assess.js")).STEPS.indexOf("result"))],[true,"bw",true],"the result, for bodyweight");
   eq(await ev(page,"JSON.stringify(S.programs)")===before,true,"nothing changed before Use this plan");
 });
-await test("Haptics: on an iPhone a tap ticks the hidden switch, and no tap branch sees it",async page=>{
+await test("Haptics: on an iPhone no tap pretends to tick (no switch clicked from code); the complete-set control is the real one, a switch under the person's own tap",async page=>{
   const r=await page.evaluate(async()=>{
     const V=await import("/js/ui/view.js"),S=(await import("/js/state.js")).S;S.prefs.haptic=true;
-    let seen=0;document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(".hapt"))seen++;});
-    /* A fresh switch for each tick, clicked and gone: watch it come and go. */
-    let made=0,toggled=0;const mo=new MutationObserver(m=>m.forEach(x=>x.addedNodes.forEach(n=>{if(n.classList&&n.classList.contains("hapt")){made++;n.querySelector("input").addEventListener("change",()=>toggled++);}})));
-    mo.observe(document.head,{childList:true});
-    const clicked=[];const orig=HTMLLabelElement.prototype.click;HTMLLabelElement.prototype.click=function(){if(this.classList.contains("hapt"))clicked.push(!!this.querySelector("input[switch]")&&this.isConnected);return orig.call(this);};
-    V.tap("light");V.tap("ok");await new Promise(r=>setTimeout(r,30));mo.disconnect();HTMLLabelElement.prototype.click=orig;
-    return [made,clicked,document.querySelectorAll(".hapt").length,seen,typeof V.canBuzz()];});
-  eq(r,[2,[true,true],0,0,"boolean"],"a switch per tick, clicked while in the page, then removed; no tap branch sees it");
+    /* The old trick clicked a hidden switch from code on every tap: it gave nothing on the
+       owner's iPhone (tests/haptics.html, 3 Nov), so nothing like it may come back. */
+    let made=0;const mo=new MutationObserver(m=>m.forEach(x=>x.addedNodes.forEach(n=>{if(n.querySelector&&(n.matches("input[switch]")||n.querySelector("input[switch]")))made++;})));
+    mo.observe(document,{childList:true,subtree:true});
+    V.tap("light");V.tap("ok");await new Promise(r=>setTimeout(r,30));mo.disconnect();
+    return [made,typeof V.canBuzz(),V.canBuzz()];});
+  eq(r,[0,"boolean",true],"tap() adds no switch; the setting is still offered on an iPhone");
+  await startWorkout(page);
+  eq(await page.evaluate(()=>{const l=document.querySelector('.sess [data-logset]');return [l.tagName,!!l.querySelector('input[type=checkbox][switch]')];}),["LABEL",true],"the complete-set control carries the switch");
 },{init:()=>{Object.defineProperty(navigator,"userAgent",{get:()=>"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"});
   try{Object.defineProperty(Navigator.prototype,"vibrate",{value:undefined,configurable:true});delete Navigator.prototype.vibrate;}catch(e){}}});
 await test("Coach tailors: exercises for a muscle fit the kit, the sore spots and the goal, each with the goal's dose; an exercise added by hand takes the goal's dose too",async page=>{
