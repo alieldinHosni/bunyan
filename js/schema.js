@@ -51,7 +51,8 @@
    @property {number}   backupSnooze   ms; no reminder before then
    @property {boolean}  onboarded
    Also kept, each optional and read where it is written: coachDismiss and pcDismiss
-   (id → date a card was set aside until), barcodes (code → food), wdOffered.
+   (id → date a card was set aside until), barcodes (code → food), wdOffered, phaseSeen (the phase whose
+   note on My program was put away).
 
    @typedef {Object} Profile
    @property {?number} age  @property {?number} height  cm  @property {?number} weight  kg

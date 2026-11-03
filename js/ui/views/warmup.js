@@ -114,7 +114,7 @@ function vWarm(a){
     w.fix.forEach(function(d,i){
       h+=row("wf"+i,d.name,t(FK[d.kind])+" · "+doseOf(d),d.sec,d.side,done[d.name],"data-wutick");});
     h+='<details class="wu-why"><summary>'+t("Why")+'</summary><p>'
-     +esc(t("Your squat check showed {f}. Tight muscles are calmed and lengthened first, then the weak ones are woken up, so the lifts that follow move better: the book's corrective order.")
+     +esc(t("Your squat check showed {f}. Tight muscles are calmed and lengthened first, then the weak ones are woken up, so the lifts that follow move better.")
        .replace("{f}",faultWords((S.profile||{}).faults||[])))+'</p></details></div>';}
   /* 3. The drills for what the day trains, or a word that the plan has its own. */
   if(w.own)

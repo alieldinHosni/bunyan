@@ -1989,7 +1989,7 @@ await test("Health conditions: the assessment asks which; the plan follows the b
   await pause(page,300);
   eq(await page.$$eval('[data-asm^="conds|"]',a=>a.map(b=>b.getAttribute("data-asm").split("|")[1]).filter(x=>/pregnancy/.test(x)).length),0,"no pregnancy for a man");
   await page.tap('[data-asm="conds|hypertension"]');await pause(page,200);
-  if(!/textbook's guidelines/.test(await page.textContent('#app')))throw new Error("no word on what it changes");
+  if(!/training guidelines/.test(await page.textContent('#app')))throw new Error("no word on what it changes");
   await page.evaluate(async()=>{const A=await import("/js/ui/views/assess.js"),V=(await import("/js/ui/view.js")).V;V.asd.step=A.STEPS.indexOf("result");(await import("/js/ui/render.js")).render();});
   for(let i=0;i<20&&!(await page.$('.condcard'));i++)await pause(page,250);
   const card=await page.textContent('.condcard');
@@ -2520,7 +2520,7 @@ await test("Blocks: the Train page shows the week, and week 3 asks for one in re
   await blockAt(page,iso(15));
   await tapTab(page,"train");await pause(page);
   const t=await page.$eval(".blk",e=>e.innerText);
-  if(!/Block 1 · Week 3 of 4/.test(t)||!/1 rep in reserve/.test(t))throw new Error("card: "+t);
+  if(!/Block 1 · Week 3 of 4/.test(t)||!/\b1 (rep )?in reserve/.test(t))throw new Error("card: "+t);
   eq(await page.$$eval(".blk-bar i",a=>a.map(i=>i.className)),["done","done","on"," lt"],"two weeks done, this one lit, the lighter one last");
   await page.tap("[data-startday]");await pause(page,400);
   eq(await ev(page,"S.active.entries.filter(e=>e.kind!=='activity'&&!e.planned.timed).every(e=>e.planned.rir===1)"),true,"one in reserve");
@@ -2604,6 +2604,7 @@ await test("Experienced lifters choose: stabilisation is a suggestion they can s
     st.S.block={start:sc.weekStartOf(U.today())};st.saveDB();(await import("/js/ui/render.js")).render();});
   await tapTab(page,"train");await pause(page,300);
   if(!(await page.$('.blk [data-skipstab="1"]')))throw new Error("no choice offered: "+(await page.textContent('.blk')));
+  await page.tap('.blk [data-fold]');await pause(page,200);
   await page.tap('.blk [data-skipstab="1"]');await pause(page,300);
   eq(await page.evaluate(async()=>[(await import("/js/state.js")).S.profile.skipStab,((await import("/js/engine/blocks.js")).phaseNow()||{}).n]),[true,2],"skipped: block 1 runs strength endurance");
   await page.tap('[data-startday]');await pause(page,500);
@@ -2611,8 +2612,39 @@ await test("Experienced lifters choose: stabilisation is a suggestion they can s
   eq([ex[0][0],ex[1][0],!!ex[0][1]&&ex[0][1]===ex[1][1],ex[2][1]],["Barbell Bench Press - Medium Grip","Pushups",true,""],"bench then push-ups as one superset, the row on its own: "+JSON.stringify(ex));
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;st.saveDB();(await import("/js/ui/render.js")).render();});
   await tapTab(page,"train");await pause(page,300);
+  if(!(await page.$('.blk.open')))await page.tap('.blk [data-fold]');await pause(page,200);
   await page.tap('.blk [data-skipstab="0"]');await pause(page,300);
-  eq(await ev(page,"S.profile.skipStab"),false,"back to the book's order");
+  eq(await ev(page,"S.profile.skipStab"),false,"stabilisation back");
+});
+await test("Compact: the block card is one line until its arrow opens it, in place; My program's phase note goes with Got it and stays gone; the change-workout sheet folds the muscles",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js");
+    st.S.profile.level="experienced";st.S.profile.goal="gain";st.S.profile.conds=[];delete st.S.profile.skipStab;
+    st.S.block={start:sc.weekStartOf(U.today())};st.saveDB();(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"train");await pause(page,300);
+  const shut=await page.evaluate(()=>{const b=document.querySelector('.blk'),f=b.querySelector('.fold-body');return [b.classList.contains('open'),getComputedStyle(f).display,/Stabilisation endurance/.test(b.querySelector('.blk-s').textContent),/\bbook\b/i.test(b.textContent)];});
+  eq(shut,[false,"none",true,false],"folded, the phase in the header, no talk of a book");
+  await page.evaluate(()=>{window.__blk=document.querySelector('.blk');});
+  await page.tap('.blk [data-fold]');await pause(page,250);
+  eq(await page.evaluate(()=>{const b=document.querySelector('.blk');return [b===window.__blk,b.classList.contains('open'),getComputedStyle(b.querySelector('.fold-body')).display,b.querySelector('[data-fold]').getAttribute('aria-expanded')];}),[true,true,"block","true"],"opened in place");
+  await page.tap('.blk [data-fold]');await pause(page,250);
+  eq(await page.evaluate(()=>document.querySelector('.blk').classList.contains('open')),false,"and closed again");
+  /* My program: the note, then Got it. */
+  await coach(page,"train","program");await pause(page,300);
+  if(!(await page.$('.bphase')))throw new Error("no phase note on My program");
+  await page.tap('.bphase [data-phaseseen]');await pause(page,200);
+  eq(await page.evaluate(async()=>[!!document.querySelector('.bphase'),(await import("/js/state.js")).S.phaseSeen]),[false,1],"put away for this phase");
+  await page.reload();await pause(page,1000);await coach(page,"train","program");await pause(page,300);
+  eq(!!(await page.$('.bphase')),false,"still away after a reload");
+  /* Change workout: one line, then the muscles. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");
+    const sp=st.split(),d=sp.days.find(x=>x.ex.length);
+    st.S.sessions.unshift({id:"rc1",date:U.today(),day:d.id,dayName:d.name,entries:d.ex.map(e=>({name:e.name,sets:[{w:40,r:10},{w:40,r:10},{w:40,r:10}]}))});st.saveDB();
+    const a=await import("/js/ui/actions.js");a.openSheet("swapday",{date:(()=>{const x=new Date(U.today()+"T00:00:00");x.setDate(x.getDate()+1);return new Date(x.getTime()-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);})()});});
+  await pause(page,400);
+  const r=await page.evaluate(()=>{const s=document.querySelector('#sheet .rcv');if(!s)return null;return [s.classList.contains('open'),getComputedStyle(s.querySelector('.fold-body')).display,/still recovering/.test(s.querySelector('.rcv-s').textContent)];});
+  eq(r,[false,"none",true],"the recovery list folded to a line");
+  await page.tap('#sheet .rcv [data-fold]');await pause(page,250);
+  eq(await page.evaluate(()=>document.querySelectorAll('#sheet .rcv.open li').length>0),true,"the muscles on tap");
 });
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
@@ -3540,7 +3572,7 @@ await test("InBody: the photo shown to copy from, the copied text read into fiel
   await agSay(page,"what does my inbody say");await pause(page,300);
   const x=await page.evaluate(()=>{const e=[...document.querySelectorAll("#cpanel .chat-x")].pop();e.querySelectorAll(".chat-more").forEach(d=>d.open=true);return [(e.querySelector(".chat-at")||{}).textContent,e.innerText.replace(/[\u2066-\u2069]/g,"")];});
   eq(x[0],"Your InBody","the coach reads it");
-  if(!/body fat 19\.6%/.test(x[1])||!/within the range the textbook gives for most men \(10–20%\)/.test(x[1])||!/Mifflin-St Jeor/.test(x[1]))throw new Error("answer: "+x[1]);
+  if(!/body fat 19\.6%/.test(x[1])||!/within the usual range for most men \(10–20%\)/.test(x[1])||!/Mifflin-St Jeor/.test(x[1]))throw new Error("answer: "+x[1]);
 });
 await test("InBody from its photo: read on the phone, nothing fetched from outside, every figure in its field to check; saved, the coach says what it means for the plans",async page=>{
   const outside=[];
@@ -3569,7 +3601,7 @@ await test("InBody from its photo: read on the phone, nothing fetched from outsi
       return [(e.querySelector(".chat-at")||{}).textContent,e.innerText.replace(/[⁦-⁩]/g,""),!!e.querySelector('[data-chatq="goal"]')];});
     if(!x)throw new Error("the coach did not open on saving");
     eq(x[0],"Your InBody","the coach reads it at once");
-    if(!/above the range the textbook gives for most men/.test(x[1]))throw new Error("answer: "+x[1]);
+    if(!/above the usual range for most men/.test(x[1]))throw new Error("answer: "+x[1]);
     eq(x[2],true,"with the goal to change, which rebuilds both plans");
   }finally{await page.unroute("**/*");}
 });
@@ -3716,7 +3748,7 @@ await test("Change workout judges each day against the muscles: after Full A tod
   eq(rcv.length>0&&rcv.length<=6&&rcv.every(r=>/^≈(0|25|50|75)%$/.test(r[1])&&/^ready /.test(r[2])),true,"each muscle's recovery in quarters, with the day it is ready: "+JSON.stringify(rcv));
   await page.tap('#sheet .trow.warn');await pause(page,400);
   const cf=await page.textContent('#sheet');
-  if(!/anyway\?/.test(cf)||!/at least a day of rest/.test(cf))throw new Error("no question before a day too soon: "+cf.slice(0,300));
+  if(!/anyway\?/.test(cf)||!/at least a day between sessions/.test(cf))throw new Error("no question before a day too soon: "+cf.slice(0,300));
   await page.tap('#sheet [data-confirmmid]');await pause(page,400);
   eq(await ev(page,"[V.sheet,Object.keys(S.daySwap||{}).length]"),["swapday",0],"Pick another goes back, nothing changed");
   await page.tap('#sheet .trow.warn');await pause(page,400);

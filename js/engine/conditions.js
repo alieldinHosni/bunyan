@@ -105,7 +105,7 @@ function lines(R,p){
   if(R.sets)out.push([R.sets.max===1?"One set an exercise.":"Up to {n} sets an exercise.",{n:R.sets.max}]);
   if(R.talkTest)out.push(["Judge effort by the talk test: you should still be able to speak. Medication can change your heart rate, so a heart-rate number may mislead.",{}]);
   if(R.slowStand)out.push(["Stand up slowly between exercises.",{}]);
-  if(R.days&&p&&+p.days>R.days.max)out.push(["The book gives up to {n} strength days a week for this; you chose {d}.",{n:R.days.max,d:+p.days}]);
+  if(R.days&&p&&+p.days>R.days.max)out.push(["The guidelines give up to {n} strength days a week for this; you chose {d}.",{n:R.days.max,d:+p.days}]);
   return out;}
 
 export {lines as condLines, ASK as CONDS_ASK, LABEL as COND_LABEL, fitDose, idsFor, rulesFor};

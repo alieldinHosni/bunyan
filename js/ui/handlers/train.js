@@ -126,7 +126,14 @@ function register(){
     saveDB();openSheet("acts");return;});
   /* Stabilisation skipped, or the book's order back (views/train.js blockCard). */
   has("skipstab",function(D){var was=!!S.profile.skipStab;S.profile.skipStab=D.skipstab==="1";saveDB();render();
-    toast(t(S.profile.skipStab?"Stabilisation skipped: the next phases follow your goal.":"Back to the book's order."),function(){S.profile.skipStab=was;saveDB();render();});return;});
+    toast(t(S.profile.skipStab?"Stabilisation skipped: the next phases follow your goal.":"Stabilisation is back in your blocks."),function(){S.profile.skipStab=was;saveDB();render();});return;});
+  /* A folding card's arrow (views/train.js blockCard, sheets.js recoveryList): only that
+     card opens or closes, and the choice is kept while the app is open (V.fold). */
+  key("fold",function(D,el){var box=el.closest(".fold");if(!box)return;
+    var open=!box.classList.contains("open");box.classList.toggle("open",open);el.setAttribute("aria-expanded",String(open));
+    V.fold=V.fold||{};V.fold[D.fold]=open;tap("light");return;});
+  /* My program's phase note put away until the next phase (views/train.js). */
+  key("phaseseen",function(D,el){S.phaseSeen=+D.phaseseen;saveDB();var n=el.closest(".bphase");if(n)n.remove();return;});
   key("swapday",function(D){openSheet("swapday",{date:D.swapday});return;});
   /* The coach's offer on a day due (views/train.js recoCard): the fresher day, or the
      planned one kept. Either is a decision, kept as the day's swap so it is not asked again. */
@@ -160,7 +167,7 @@ function register(){
     if(D.swapto&&D.swapto!=="rest"){var opt=null;try{opt=dayOptions(split(),swd);}catch(e){opt=null;}
       var o=opt&&opt.days.filter(function(x){return x.id===D.swapto;})[0];
       if(o&&!o.ok){
-        var why=o.tired.length?t("{m} still need rest: the book asks for at least a day of rest between sessions on the same muscles, and up to 72 hours after jumps.").replace("{m}",o.tired.slice(0,3).map(function(m){return tm(m).trim();}).join(", "))
+        var why=o.tired.length?t("{m} still need rest: give the same muscles at least a day between sessions, and up to 72 hours after jumps.").replace("{m}",o.tired.slice(0,3).map(function(m){return tm(m).trim();}).join(", "))
           :t("It trains the same muscles as {x} the day after, so that one would come too soon.").replace("{x}",planName(o.next.name));
         askConfirm({title:t("Train {x} anyway?").replace("{x}",planName(o.name)),body:why,cta:t("Train it anyway"),act:"swapforce",data:{date:swd,id:D.swapto},
           mid:t("Pick another"),midact:"swappick"});

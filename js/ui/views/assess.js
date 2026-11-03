@@ -224,7 +224,7 @@ function body(a){
     h+=lbl(t("Do any of these apply? (optional)"))
      +mchips("conds",CONDS_ASK.filter(function(x){return a.sex==="f"||!/^pregnancy/.test(x[0]);}),a.conds||[]);
     var cl=condLines(rulesFor(profileOf(a)),profileOf(a));
-    h+='<p class="as-note">'+esc(cl.length?t("Your plan follows the textbook's guidelines for these. Your doctor's advice comes first."):t("Pick any that a doctor has told you about. Each one changes how the plan is built."))+'</p>';}
+    h+='<p class="as-note">'+esc(cl.length?t("Your plan follows the training guidelines for these. Your doctor's advice comes first."):t("Pick any that a doctor has told you about. Each one changes how the plan is built."))+'</p>';}
   else if(s==="food"){
     h+=q(t("How you eat"),t("For the meal plan. It uses foods from the app's database, Egyptian home food first."));
     h+=lbl(t("Meals a day"))+chips("meals",[[3,"3"],[4,"4"],[5,"5"],[6,"6"]],a.meals);
@@ -302,7 +302,7 @@ function backCard(a){
     t("Food: two habits first, protein every day and logging most days. Calories are fine-tuned at the weekly check-in once the log is steady.")];
   return '<section class="ascard2 condcard" data-k="backcard">'+cardHead("info",t("Coming back"))
    +'<ul class="cond-l">'+L.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul>'
-   +'<p class="as-note">'+esc(t("Goals you can keep beat goals that look good: the book's advice for getting back to it."))+'</p></section>';}
+   +'<p class="as-note">'+esc(t("Goals you can keep beat goals that look good: the surest way back to it."))+'</p></section>';}
 function result(a){
   var r=preview(a);
   if(!r)return '<p class="as-sub">'+t("Something went wrong working this out. Go back a step and try again.")+'</p>';

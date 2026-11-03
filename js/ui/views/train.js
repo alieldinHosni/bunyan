@@ -463,28 +463,32 @@ function blockCard(){
     :t(b.rir===1?"Stop each set with 1 rep in reserve.":"Stop each set with {n} reps in reserve.").replace("{n}",b.rir);
   var sh=b.light?{}:shiftNow().shift,moved=Object.keys(sh).sort().map(function(m){
     return tm(m)+" "+(sh[m]>0?"+":"\u2212")+Math.abs(sh[m]);});
-  /* The phase this block runs (engine/phase.js): its name, what it asks, and where it
-     sits in the goal's sequence, the coming one named. */
-  var ph=phaseNow(),phl="";
+  /* The phase this block runs (engine/phase.js). Folded by default (owner, 3 Nov: "taking
+     all the screen"): the header says the block, the week, the phase, its reps and the
+     reserve; the arrow opens why, what comes next, the tempo and the choices. */
+  var ph=phaseNow(),sum="",more="";
+  var fig=function(x){return '<span class="num" dir="ltr">'+x+'</span>';};
   if(ph){var tmp=(ph.tempo.match(/[\dX]-[\dX]-[\dX]-[\dX]/)||[""])[0];
-    var fig=function(x){return '<span class="num" dir="ltr">'+x+'</span>';};
-    phl='<p class="blk-ph"><b>'+esc(t(ph.name))+'</b> · '+esc(t("{a}–{b} reps")).replace("{a}–{b}",fig(ph.reps.min+"–"+ph.reps.max))
-     +(tmp?' · '+esc(t("tempo {t}")).replace("{t}",fig(tmp)):'')+'</p>'
-     +'<p class="blk-l">'+esc(t(PHASE_WHY[ph.n]||""))
-     +(ph.seq.length>1?' '+esc(t("Next block: {p}.").replace("{p}",t(PHASE_NAME[ph.seq[b.block%ph.seq.length]]))):'')+'</p>';
-    /* The book starts everyone at stabilisation; an experienced lifter may skip it, as a
-       choice they make here, and take it back (engine/phase.js canSkipStab). */
+    sum=esc(t(ph.name))+' · '+esc(t("{a}–{b} reps")).replace("{a}–{b}",fig(ph.reps.min+"–"+ph.reps.max));
+    more+='<p class="blk-l">'+esc(t(PHASE_WHY[ph.n]||""))
+     +(ph.seq.length>1?' '+esc(t("Next block: {p}.").replace("{p}",t(PHASE_NAME[ph.seq[b.block%ph.seq.length]]))):'')+'</p>'
+     +(tmp?'<p class="blk-l">'+esc(t("tempo {t}")).replace("{t}",fig(tmp))+'</p>':'');
+    /* Most people start at stabilisation; an experienced lifter may skip it, as a choice
+       they make here, and take it back (engine/phase.js canSkipStab). */
     if(canSkipStab(S.profile)){
-      if(!S.profile.skipStab&&ph.n===1)phl+='<p class="blk-opt">'+esc(t("The book starts everyone here. With your experience it's a suggestion: you can skip stabilisation and go straight to the heavier phases."))
+      if(!S.profile.skipStab&&ph.n===1)more+='<p class="blk-opt">'+esc(t("Most people start here. With your experience it's optional: you can skip stabilisation and go straight to the heavier phases."))
         +' <button class="blk-optb" data-skipstab="1">'+esc(t("Skip it"))+'</button></p>';
-      else if(S.profile.skipStab)phl+='<p class="blk-opt">'+esc(t("You chose to skip stabilisation."))+' <button class="blk-optb" data-skipstab="0">'+esc(t("Use the book's order"))+'</button></p>';}}
-  return '<div class="blk'+(b.light?' light':'')+'" role="group" aria-label="'+esc(t("Training block"))+'">'
-   +'<div class="blk-h"><b>'+esc(t("Block {b} · Week {w} of {n}").replace("{b}",b.block).replace("{w}",b.week).replace("{n}",b.of))+'</b>'
-   +(b.light?'<button class="dlcard-x" data-deload="end">'+t("End it")+'</button>':'')+'</div>'
+      else if(S.profile.skipStab)more+='<p class="blk-opt">'+esc(t("You chose to skip stabilisation."))+' <button class="blk-optb" data-skipstab="0">'+esc(t("Add it back"))+'</button></p>';}}
+  if(!b.light)sum+=(sum?' · ':'')+esc(t("{n} in reserve")).replace("{n}",fig(b.rir));
+  if(moved.length)more+='<p class="blk-m">'+esc(t("Sets per workout, from your answers:"))+' '+esc(moved.join(", "))+'</p>';
+  var open=!!(more&&V.fold&&V.fold.blk);
+  return '<div class="blk fold'+(b.light?' light':'')+(open?' open':'')+'" role="group" aria-label="'+esc(t("Training block"))+'">'
+   +(more?'<button class="blk-h" data-fold="blk" aria-expanded="'+open+'">':'<div class="blk-h">')
+   +'<span class="blk-t"><b>'+esc(t("Block {b} · Week {w} of {n}").replace("{b}",b.block).replace("{w}",b.week).replace("{n}",b.of))+'</b>'
+   +(sum?'<span class="blk-s">'+sum+'</span>':'')+'</span>'+(more?glyph("chev","fold-chev")+'</button>':'</div>')
    +'<div class="blk-bar" aria-hidden="true">'+segs+'</div>'
-   +phl
-   +'<p class="blk-l">'+esc(line)+'</p>'
-   +(moved.length?'<p class="blk-m">'+esc(t("Sets per workout, from your answers:"))+' '+esc(moved.join(", "))+'</p>':'')
+   +(b.light?'<div class="blk-lt"><p class="blk-l">'+esc(line)+'</p><button class="dlcard-x" data-deload="end">'+t("End it")+'</button></div>':'')
+   +(more?'<div class="fold-body">'+more+'</div>':'')
    +'</div>';}
 /* Offered once, for a program running in rotation: fixed weekdays, suggested from
    when each day has actually been trained. */
@@ -699,8 +703,10 @@ function builderBody(sp,id,inline){
   /* The block's phase sets the reps in the workout, not the numbers below (owner, 3 Nov:
      the program showed 8–12 while the workout asked 12–20). Said where the numbers are. */
   var phb=active?phaseNow():null;
-  if(phb&&phb.reps)h+='<p class="bphase">'+esc(t("This block is {p}: your workouts use {a}–{b} reps on the lifts, as each phase sets its own. The reps below are the program's, used when training blocks are off in Settings.")
-      .replace("{p}",t(phb.name)).replace("{a}",phb.reps.min).replace("{b}",phb.reps.max)).replace(/(\d+)–(\d+)/,'<span class="num" dir="ltr">$1–$2</span>')+'</p>';
+  /* Said once a phase (owner, 3 Nov: "I should be able to acknowledge it"): Got it puts
+     it away until the next phase (S.phaseSeen, per profile). */
+  if(phb&&phb.reps&&S.phaseSeen!==phb.n)h+='<div class="bphase"><p>'+esc(t("This block is {p}: your workouts use {a}–{b} reps on the lifts, as each phase sets its own. The reps below are the program's, used when training blocks are off in Settings.")
+      .replace("{p}",t(phb.name)).replace("{a}",phb.reps.min).replace("{b}",phb.reps.max)).replace(/(\d+)–(\d+)/,'<span class="num" dir="ltr">$1–$2</span>')+'</p><button class="bphase-ok" data-phaseseen="'+phb.n+'">'+esc(t("Got it"))+'</button></div>';
   /* How the days fall: pinned to weekdays, or one after another whenever you train. */
   h+='<div class="bsched" role="group" aria-label="'+esc(t("Schedule"))+'">'
    +'<button class="'+(week?'on':'')+'" data-sched="week" aria-pressed="'+week+'"><b>'+t("By weekday")+'</b><span>'+t("Same days every week")+'</span></button>'

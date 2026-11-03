@@ -39,6 +39,6 @@ function condCard(p,extra){
    +(extra||'')
    +'<ul class="cond-l">'+L.map(function(x){var s=esc(t(x[0]));Object.keys(x[1]).forEach(function(k){s=s.replace("{"+k+"}",'<span class="num">'+x[1][k]+'</span>');});
        return '<li>'+s+'</li>';}).join("")+'</ul>'
-   +'<p class="as-note">'+esc(t("From the textbook's guidelines for training with each one. Your doctor's advice comes first; stop and get checked if anything feels wrong."))+'</p></section>';}
+   +'<p class="as-note">'+esc(t("From the guidelines for training with each one. Your doctor's advice comes first; stop and get checked if anything feels wrong."))+'</p></section>';}
 
 export {condCard, doseText, weeksText};

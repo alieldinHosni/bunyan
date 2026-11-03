@@ -1983,7 +1983,11 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   box-shadow:0 4px 12px -4px var(--accent-glow)}
 /* Change workout (sheets.js swapday): each day judged against what the muscles have had. */
 .rcv{margin:0 0 var(--s3);padding:var(--s3);border-radius:var(--r4);background:var(--glass);border:1px solid var(--border)}
-.rcv-h{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:var(--s2)}
+.rcv-h{display:grid;grid-template-columns:1fr auto;grid-template-areas:"t c" "s c";align-items:center;gap:2px var(--s2);width:100%;border:0;background:none;padding:0;text-align:start;color:inherit;font:inherit;min-height:44px}
+.rcv-t{grid-area:t;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.rcv-s{grid-area:s;font-size:13.5px;color:var(--text)}
+.rcv-h .fold-chev{grid-area:c}
+.rcv .fold-body ul{margin-top:var(--s2)}
 .rcv ul{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2)}
 .rcv li{display:grid;grid-template-columns:minmax(72px,auto) 1fr auto auto;align-items:center;gap:var(--s2);font-size:13.5px}
 .rcv-m{font-weight:700;color:var(--text)}
@@ -4495,8 +4499,19 @@ body.wkflat #app{--gutter:20px}
    Four segments, one per week: done ones filled, this one in the accent, the lighter
    week (the fourth) drawn in the deload card's gold so the two read as one idea. */
 .blk{margin-top:14px;padding:14px 16px;border-radius:var(--r4);border:1px solid var(--color-border-subtle);background:var(--color-surface-1)}
-.blk-h{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:28px}
-.blk-h b{font-family:var(--display);font-size:15px;letter-spacing:.01em}
+.blk-h{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;width:100%;border:0;background:none;padding:0;text-align:start;color:inherit;font:inherit}
+.blk-t{display:grid;gap:2px;min-width:0}
+.blk-t b{font-family:var(--display);font-size:15px;letter-spacing:.01em}
+.blk-s{font-size:13px;color:var(--color-text-secondary)}
+.blk-s .num{white-space:nowrap;unicode-bidi:isolate}
+.blk-lt{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.blk .fold-body>p:first-child{margin-top:0}
+/* A card that folds (views/train.js blockCard, sheets.js recoveryList): the arrow turns,
+   the body shows; only the card changes, nothing is re-rendered. */
+.fold-chev{flex:none;width:18px;height:18px;color:var(--dim);transform:rotate(90deg);transition:transform var(--m-press) var(--e-standard)}
+.fold.open .fold-chev{transform:rotate(-90deg)}
+.fold>.fold-body{display:none}
+.fold.open>.fold-body{display:block;animation:wkIn var(--m-micro) var(--e-standard)}
 .blk-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:10px 0 8px}
 .blk-bar i{height:6px;border-radius:2px;background:var(--color-surface-well)}
 .blk-bar i.done{background:rgba(var(--accent-rgb),.45)}
@@ -4507,7 +4522,9 @@ body.wkflat #app{--gutter:20px}
 .blk-ph{margin:var(--s2) 0 0;font-size:13px;color:var(--text)}
 .blk-ph b{font-weight:800}
 .blk-ph .num{white-space:nowrap;unicode-bidi:isolate}
-.bphase{margin:0 0 var(--s3);padding:var(--s2) var(--s3);border-radius:var(--r3);background:var(--accent-tint);border:1px solid var(--accent-edge);font-size:13px;line-height:1.45;color:var(--text)}
+.bphase{display:flex;align-items:flex-start;gap:var(--s3);margin:0 0 var(--s3);padding:var(--s2) var(--s3);border-radius:var(--r3);background:var(--accent-tint);border:1px solid var(--accent-edge);font-size:13px;line-height:1.45;color:var(--text)}
+.bphase p{margin:0;flex:1;min-width:0}
+.bphase-ok{flex:none;border:0;background:none;padding:var(--s1) 0;min-height:32px;color:var(--accentHi);font-weight:800;font-size:13px}
 .blk-opt{margin:var(--s2) 0 0;font-size:12.5px;line-height:1.45;color:var(--sub)}
 .blk-optb{border:0;background:none;padding:0;color:var(--accentHi);font-weight:800;font-size:inherit}
 .blk-m{margin:6px 0 0;font-size:13px;color:var(--color-text-tertiary);line-height:1.4}

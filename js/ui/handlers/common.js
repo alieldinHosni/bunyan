@@ -208,7 +208,7 @@ function retargetNow(){
   var s0=S,before=r.before;
   setTimeout(function(){
     if(S!==s0)return;
-    toast(t("Your targets now follow the textbook: 500 kcal under maintenance to lose fat, 350 over to build muscle, 2.4 g of protein per kg while losing."),
+    toast(t("Your targets now follow the guidelines: 500 kcal under maintenance to lose fat, 350 over to build muscle, 2.4 g of protein per kg while losing."),
       function(){if(S!==s0)return;Object.assign(S.goals,before);saveDB();render();});},1200);}
 /* Body-weight sets logged with the body weight as the weight (js/engine/logfix.js),
    read back as body weight, once per profile, when the history and the exercise

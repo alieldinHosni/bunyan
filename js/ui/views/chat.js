@@ -292,7 +292,7 @@ var PHASE_LINE={1:"Lighter loads, slow and controlled: movement quality, joint s
   4:"Heavy, low-rep work on the big lifts: the most force you can make.",5:"Heavy lifts paired with fast, light ones: strength turned into speed."};
 function aPhase(a){
   var b=blockNow(),ph=phaseNow();
-  if(!b||!ph){p(a,t("Training blocks are off, so there is no phase. Turn them on in Settings to train in the book's phases."));return a;}
+  if(!b||!ph){p(a,t("Training blocks are off, so there is no phase. Turn them on in Settings to train in phases."));return a;}
   p(a,fill(t("Block {b}, week {w} of {n}: {p}."),{b:b.block,w:b.week,n:b.of,p:t(ph.name)}));
   p(a,t(PHASE_LINE[ph.n]||""));
   var tmp=(ph.tempo.match(/[\dX]-[\dX]-[\dX]-[\dX]/)||[""])[0];
@@ -316,11 +316,11 @@ function aZones(a){
 /* What the person's health conditions change in the plan (engine/conditions.js). */
 function aHealth(a){
   var R=rulesFor(S.profile);
-  if(!R){p(a,t("You haven't told me about a health condition. If a doctor has, add it in the assessment's health step: the plan then follows the book's guidelines for it."));
+  if(!R){p(a,t("You haven't told me about a health condition. If a doctor has, add it in the assessment's health step: the plan then follows the guidelines for it."));
     act(a,t("Open the health step"),{"data-setupstep":"health"});return a;}
   p(a,fill(t("Your plan is adjusted for: {c}."),{c:R.ids.map(function(i){return t(COND_LABEL[i]).toLowerCase();}).join(S.prefs.lang==="ar"?"، ":", ")}));
   l(a,condLines(R,S.profile).map(function(x){var s0=t(x[0]);Object.keys(x[1]).forEach(function(k){s0=s0.replace("{"+k+"}",x[1][k]);});return s0;}));
-  n(a,t("From the textbook's guidelines for training with each one. Your doctor's advice comes first; stop and get checked if anything feels wrong."));
+  n(a,t("From the guidelines for training with each one. Your doctor's advice comes first; stop and get checked if anything feels wrong."));
   return a;}
 function aWeek(a){
   var w=weekSpan(),ss=S.sessions||[],G=S.goals||{};
@@ -405,14 +405,14 @@ function aInBody(a){
   if(c.weight)bits.push(fill(t("weight {w}"),{w:iso(fmtW(c.weight))}));
   p(a,fill(t("Your InBody from {d}: {list}."),{d:shortd(c.date),list:list(bits)}));
   var band=fatBand(c.bf,sex),R=FAT_RANGE[sex];
-  if(band)p(a,fill(t(band==="over"?"That's above the range the textbook gives for most {who} ({lo}–{hi}%). It varies with age."
-    :band==="under"?"That's under the range the textbook gives for most {who} ({lo}–{hi}%).":"That's within the range the textbook gives for most {who} ({lo}–{hi}%)."),
+  if(band)p(a,fill(t(band==="over"?"That's above the usual range for most {who} ({lo}–{hi}%). It varies with age."
+    :band==="under"?"That's under the usual range for most {who} ({lo}–{hi}%).":"That's within the usual range for most {who} ({lo}–{hi}%)."),
     {who:t(sex==="f"?"women":"men"),lo:iso(R[0]),hi:iso(R[1])}));
   if(pv){var fk=function(e){return e.fatkg!=null?e.fatkg:(e.bf&&e.weight?e.weight*e.bf/100:null);},ch=[];
     var f0=fk(pv),f1=fk(c);if(f0!=null&&f1!=null)ch.push(fill(t("fat {d}"),{d:iso((f1-f0>=0?"+":"−")+fmtW(Math.abs(Math.round((f1-f0)*10)/10)))}));
     if(pv.smm&&c.smm)ch.push(fill(t("skeletal muscle {d}"),{d:iso((c.smm-pv.smm>=0?"+":"−")+fmtW(Math.abs(Math.round((c.smm-pv.smm)*10)/10)))}));
     if(ch.length)p(a,fill(t("Since your test on {d}: {list}."),{d:shortd(pv.date),list:list(ch)}));}
-  if(band==="over"&&goal!=="lose"){p(a,t("With body fat above that range, losing fat first is the direction the textbook points to. Change the goal and both plans are rebuilt."));
+  if(band==="over"&&goal!=="lose"){p(a,t("With body fat above that range, losing fat first is the better direction. Change the goal and both plans are rebuilt."));
     act(a,t("Change my goal"),{"data-chatq":"goal"});}
   else if(band&&band!=="over"&&goal==="lose"){p(a,t("You're within that range already. Building muscle may suit you better than losing more."));
     act(a,t("Change my goal"),{"data-chatq":"goal"});}
