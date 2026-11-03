@@ -17,7 +17,7 @@ import {CUR, dayOf, editSplit, S, saveDB, saveSession} from "../../state.js";
 import {toKg} from "../../units.js";
 import {num, r1, uid} from "../../util.js";
 import {askConfirm, closeSheet, openSheet, val} from "../actions.js";
-import {resetNav} from "../nav.js";
+import {pushNav, resetNav} from "../nav.js";
 import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";

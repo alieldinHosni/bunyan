@@ -2206,7 +2206,7 @@ await test("Plan check: a meal plan off its targets and a thin program are found
   eq(await page.evaluate(async()=>{const St=await import("/js/state.js"),Vo=await import("/js/engine/volume.js");
     return Vo.volumeCheck(St.split(),"some").filter(v=>v.status==="low").length;}),0,"balanced");
   await page.tap('[data-k="pc:meals-off"] [data-pcfix]');await pause(page,1200);
-  eq(await ev(page,"[V.tab,V.pimport,!!V.pgen]"),["coach",true,true],"rebuild opens a generated plan");
+  eq(await ev(page,"[V.tab,V.pimport,!!V.pgen]"),["food",true,true],"rebuild opens a generated plan");
   await page.tap('[data-puse]');await pause(page,300);
   eq(await page.evaluate(async()=>(await import("/js/engine/plancheck.js")).checkPlans().map(f=>f.id).includes("meals-off")),false,"fixed");
 },{db:Object.assign(seed(),{goals:{kcal:2800,p:150,c:350,f:85,water:3000,steps:9000}})});
@@ -2355,17 +2355,13 @@ await test("Readiness: drained takes about 5% off today's suggestion, low holds 
   eq(await ev(page,"S.active.entries.map(e=>e.planned.sets)"),before,"Undo");
 });
 /* ---- how coaching is surfaced (coach phase 4) ---------------------------------------- */
-await test("Phase 4: Coach AI shows the most important thing first, the rest behind a tap; the dot still counts them all",async page=>{
+await test("Phase 4: the Coach page lists the most important thing first, three at most until asked; the dot still counts them all",async page=>{
   const n=await page.evaluate(async()=>(await import("/js/ui/views/pcheck.js")).adviceCount());
   if(n<2)throw new Error("the seed should give at least two findings, got "+n);
   await coach(page,"ai");
-  eq(await page.$$eval('#app .pcf',a=>a.length),1,"one card");
-  eq(await page.$eval('#app .pcf h3',e=>e.textContent),"Your calories will not build muscle","the most important one");
-  eq(await page.$eval('[data-advall="1"]',b=>b.textContent),n===2?"1 more thing the coach sees":(n-1)+" more things the coach sees","the rest, counted");
-  await page.tap('[data-advall="1"]');await pause(page);
-  eq(await page.$$eval('#app .pcf',a=>a.length),n,"all of them");
-  await page.tap('[data-advall="0"]');await pause(page);
-  eq(await page.$$eval('#app .pcf',a=>a.length),1,"folded again");
+  eq(await page.$eval('#app .cfor>li .pcf h3',e=>e.textContent),"Your calories will not build muscle","the most important one first");
+  const shown=await page.$$eval('#app .cfor>li',a=>a.length);
+  if(shown>3)throw new Error("more than three before asking: "+shown);
   eq(await page.$eval('nav [data-tab="coach"]',e=>e.getAttribute("aria-label")).then(x=>x.includes(String(n))),true,"the dock still counts all of them");
 },{db:Object.assign(seed(),{goals:{kcal:2500,p:110,c:300,f:70,water:3000,steps:9000}})});
 await test("Coach page: one numbered list whose count is what it shows (three, the rest one tap away), each set aside in turn, then one quiet line",async page=>{
@@ -2386,6 +2382,58 @@ await test("Coach page: one numbered list whose count is what it shows (three, t
   if(!rest){
     eq(await page.$$eval('#app .tsec-h',a=>a.length),0,"no heading over an empty list");
     if(!/On track|Nothing to change/.test(await page.textContent('.pcquiet')))throw new Error("no quiet line");}
+});
+await test("Phase 4: one session and one weigh-in say \"not enough yet\" everywhere, never a trend",async page=>{
+  await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));});
+  eq(await page.evaluate(async()=>(await import("/js/engine/coachinfo.js")).coachNow().length),0,"the coach says nothing");
+  const cards=await page.evaluate(async()=>Object.fromEntries((await import("/js/ui/facts.js")).simpleFacts().map(f=>[f.k,f.head+" "+f.line])));
+  if(!/Not enough yet/.test(cards.Strength))throw new Error("strength: "+cards.Strength);
+  if(!/A few more weigh-ins/.test(cards.Weight))throw new Error("weight: "+cards.Weight);
+  await openChat(page);
+  await page.fill('#chatq','is my weight on track');await page.press('#chatq','Enter');await pause(page,300);
+  /* The answer's own words, under the card's header that names its subject. */
+  const a=await page.evaluate(()=>[...(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop()).children].filter(c=>!c.classList.contains("chat-ah")).map(c=>c.innerText).join("\n"));
+  if(!/^1 weigh-in so far/.test(a)||!/four weigh-ins over two weeks/.test(a)||/a week\./.test(a))throw new Error("weight answer: "+a);
+},{db:Object.assign(seed(),{sessions:seed().sessions.slice(0,1)})});
+await test("Offline: with the network off, the installed app opens, every tab works, food search and the coach chat answer",async(page,env)=>{
+  /* Installed: the service worker has cached everything and controls the page. */
+  await page.evaluate(()=>navigator.serviceWorker.ready);
+  await page.reload();await pause(page,1200);
+  eq(await page.evaluate(()=>!!navigator.serviceWorker.controller),true,"the service worker controls the page");
+  await env.ctx.setOffline(true);
+  await page.reload();await pause(page,1500);
+  for(const tab of ["train","food","coach","progress","profile"]){await tapTab(page,tab);await pause(page,300);
+    if(!(await page.$eval('#app',e=>e.children.length)))throw new Error(tab+" is empty offline");}
+  await openChat(page,"today");
+  if(!/Today is|rest day|Done for today/.test(await page.evaluate(()=>(document.querySelectorAll(".chat-more").forEach(d=>d.open=true),[...document.querySelectorAll(".chat-a")].pop()).innerText)))throw new Error("the chat did not answer offline");
+  eq(await page.evaluate(async()=>{const n=await import("/js/engine/nutrition.js");await new Promise(f=>n.loadFoods(f));return n.searchFoods("chicken").length>0;}),true,"food search works offline");
+  await env.ctx.setOffline(false);
+},{sw:true});
+/* ---- where the three judged lifts sit among raw competitors (coach phase 3) ------- */
+async function strengthTab(page){
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.ptab="strength";V.phalf="all";
+    (await import("/js/ui/render.js")).render();});await pause(page,400);}
+await test("Among powerlifters: squat and bench placed against raw competitors of the same class, said as such; silent without data",async page=>{
+  await strengthTab(page);
+  /* The seed: 84 kg (the 93 class), squat 80 × 8 and bench 60 × 8, no deadlift. */
+  const card=await page.$eval('.pgopl',e=>({rows:[...e.querySelectorAll('.pgshare-r')].map(r=>[r.querySelector('span').textContent,r.querySelector('b').textContent]),
+    text:e.innerText,aside:e.previousElementSibling.innerText}));
+  const want=await page.evaluate(async()=>{const P=await import("/js/coach/percentile.js");
+    /* 8 reps at RPE 8 is 10 reps of effort: the estimate counts the two left in reserve. */
+    return ["squat","bench"].map((l,i)=>{const x=P.percentileOf("m",84,l,[80,60][i]*(1+10/30));return x.edge==="below"?"<10":x.edge==="above"?">90":String(x.pct);});});
+  eq(card.rows,[["Squat",want[0]],["Bench press",want[1]]],"two lifts logged, two rows, from the table");
+  if(!/93 kg class/.test(card.aside)||!/raw/i.test(card.aside))throw new Error("class and raw not said: "+card.aside);
+  if(!/competitors/.test(card.text)||!/Anywhere on this scale is strong/.test(card.text)||!/rough guide/.test(card.text))
+    throw new Error("the comparison is not explained: "+card.text);
+  /* Arabic, mirrored. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.lang="ar";document.documentElement.dir="rtl";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$eval('.pgopl',e=>e.previousElementSibling.querySelector('h2,b,span').textContent.trim()),"وسط لاعبي الباورليفتنج","in Arabic");
+  /* No sex on the profile, or nothing from the last 12 weeks: nothing shown. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.lang="en";document.documentElement.dir="ltr";S.profile.sex="";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$$eval('.pgopl',a=>a.length),0,"no sex, no comparison");
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.profile.sex="m";
+    const d=new Date(Date.now()-120*864e5).toISOString().slice(0,10);S.sessions.forEach(x=>{x.date=d;});(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$$eval('.pgopl',a=>a.length),0,"an edited log with nothing recent: gone");
 });
 await test("Training import: a program pasted as text is read the same way",async page=>{
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="import";V.tp=null;(await import("/js/ui/render.js")).render();});await pause(page,300);
@@ -3579,6 +3627,8 @@ await test("InBody: the photo shown to copy from, the copied text read into fiel
   await page.tap('[data-ibsave]');await pause(page,400);
   const e=await ev(page,"S.body.filter(b=>b.src==='inbody').map(b=>[b.weight,b.bf,b.smm,b.fatkg,b.vfl,b.ibmr,b.tbw,b.ibscore])");
   eq(e,[[84.2,19.6,38.1,16.3,7,1820,49.8,78]],"saved as checked, the edited figure kept");
+  if(!(await page.$('#sheet .ibread')))throw new Error("the reading does not open where it was saved");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,400);
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.ptab="body";(await import("/js/ui/render.js")).render();});await pause(page,500);
   const pg=await page.evaluate(()=>document.body.innerText);
   if(!/From your InBody test/.test(pg)||!/Skeletal muscle mass/.test(pg))throw new Error("Progress doesn't show it");
@@ -3610,11 +3660,12 @@ await test("InBody from its photo: read on the phone, nothing fetched from outsi
     eq(outside,[],"nothing fetched from outside the app");
     await page.tap('[data-ibsave]');await pause(page,800);
     eq(await ev(page,"S.body.filter(b=>b.src==='inbody').map(b=>[b.weight,b.bf])"),[[84.2,24.5]],"saved");
-    const x=await page.evaluate(()=>{const e=[...document.querySelectorAll("#cpanel .chat-x")].pop();if(!e)return null;
+    /* Read where it was saved, in a sheet, not by sending you to the chat (owner, 3 Nov). */
+    const x=await page.evaluate(()=>{const e=document.querySelector("#sheet .ibread");if(!e)return null;
       e.querySelectorAll(".chat-more").forEach(d=>d.open=true);
-      return [(e.querySelector(".chat-at")||{}).textContent,e.innerText.replace(/[⁦-⁩]/g,""),!!e.querySelector('[data-chatq="goal"]')];});
-    if(!x)throw new Error("the coach did not open on saving");
-    eq(x[0],"Your InBody","the coach reads it at once");
+      return [(document.querySelector("#sheet h2")||{}).textContent,e.innerText.replace(/[⁦-⁩]/g,""),!!e.querySelector('[data-sheet="set_you"]')];});
+    if(!x)throw new Error("the reading did not open on saving");
+    eq(x[0],"What your InBody says","the coach reads it at once");
     if(!/above the usual range for most men/.test(x[1]))throw new Error("answer: "+x[1]);
     eq(x[2],true,"with the goal to change, which rebuilds both plans");
   }finally{await page.unroute("**/*");}
@@ -4364,18 +4415,18 @@ await test("Guide: the first time Training opens, glass tips point at each thing
     return {k:c.querySelector(".tour-k").textContent,h:c.querySelector(".tour-h").textContent,dir:c.classList.contains("up")?"up":c.classList.contains("down")?"down":"none",hole:[Math.round(h.width),Math.round(h.height)]};});
   let c=await card();
   if(!c)throw new Error("no guide on first opening");
-  eq([c.k,c.h],["Training · 1 of 7","What the coach noticed"],"the first tip");
+  eq([c.k,c.h],["Training · 1 of 8","What the coach noticed"],"the first tip");
   const bell=await page.$eval('.hacts [data-csec="ai"]',e=>{const r=e.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];});
   if(Math.abs(c.hole[0]-bell[0]-16)>2||Math.abs(c.hole[1]-bell[1]-16)>2)throw new Error("the light is not on the bell: "+JSON.stringify([c.hole,bell]));
   eq(await ev(page,"V.tab"),"train","the page under it is untouched");
   /* Anywhere: even over a button, a tap only moves the guide on. */
   const seen=[c.h];
-  for(let i=0;i<6;i++){await page.mouse.click(30+i*40,300+i*30);await pause(page,500);c=await card();if(c)seen.push(c.h);}
-  eq(seen.length,7,"seven tips (live tracking is reached through Cardio and sports)");
-  eq(seen[6],"Getting around","the last points at the dock");
+  for(let i=0;i<7;i++){await page.mouse.click(30+i*40,300+i*30);await pause(page,500);c=await card();if(c)seen.push(c.h);}
+  eq(seen.length,8,"eight tips (live tracking is reached through Cardio and sports; the program card opens the plan)");
+  eq(seen[7],"Getting around","the last points at the dock");
   eq(await ev(page,"[V.tab,V.sheet]"),["train",null],"no tap reached the page");
   await page.mouse.click(200,200);await pause(page,600);
-  eq([await card(),await ev(page,"S.prefs.toured.train")],[null,1],"finished, and remembered");
+  eq([await card(),await ev(page,"S.prefs.toured.train")],[null,2],"finished, and remembered (at the guide's version)");
   await page.reload();await pause(page,2200);
   eq(await card(),null,"not again");
   /* Profile → Show the guide again: Training's guide, from the start. */
@@ -4384,9 +4435,9 @@ await test("Guide: the first time Training opens, glass tips point at each thing
   await page.evaluate(()=>localStorage.removeItem("bunyan:notour"));
   await page.$eval('[data-tourreset]',e=>e.click());await pause(page,1800);
   c=await card();
-  eq([await ev(page,"V.tab"),c&&c.k],["train","Training · 1 of 7"],"back from the start");
+  eq([await ev(page,"V.tab"),c&&c.k],["train","Training · 1 of 8"],"back from the start");
   await page.click('.tour-skip');await pause(page,500);
-  eq([await card(),await ev(page,"S.prefs.toured.train")],[null,1],"Skip ends it, seen");
+  eq([await card(),await ev(page,"S.prefs.toured.train")],[null,2],"Skip ends it, seen");
 },{tour:true});
 await test("Warm-up pictures: drills the library shot under another name use its photos; the rest are drawn as figures, in the list and on their sheet",async page=>{
   const r=await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
@@ -4478,6 +4529,71 @@ await test("Coach page in Arabic: the week's bar fills from the right, no Englis
   if(!/270deg/.test(r.bg))throw new Error("not mirrored: "+r.bg);
   if(/[A-Za-z]{3,}/.test(r.txt))throw new Error("English on the Coach page: "+r.txt);
 },{prefs:{lang:"ar"}});
+await test("Arabic type: titles in Alexandria and text in Readex Pro, bundled, and loaded for an Arabic screen",async page=>{
+  await page.evaluate(()=>document.fonts.ready);await pause(page,300);
+  const r=await page.evaluate(()=>[...document.fonts].filter(f=>f.status==="loaded").map(f=>f.family.replace(/"/g,"")+"|"+(f.unicodeRange.indexOf("U+600-6FF")>=0||f.unicodeRange.indexOf("U+0600-06FF")>=0?"ar":"latin")));
+  for(const f of ["Outfit|ar","Manrope|ar"])if(r.indexOf(f)<0)throw new Error(f+" not loaded: "+JSON.stringify(r));
+  eq(await page.evaluate(()=>getComputedStyle(document.body).fontFamily.split(",")[0].replace(/"/g,"").trim()),"Manrope","Arabic text starts from the bundled face");
+},{prefs:{lang:"ar"}});
+/* ---- Food: what the body needs (js/engine/needs.js, js/ui/bodyneeds.js) ---- */
+function lowProtein(){
+  const db=seed();db.goals={kcal:2500,p:150,c:300,f:70,water:3000,steps:9000};
+  const it=(n,k,p,c,f)=>({n,fid:"x"+n,grams:100,label:"1 serving",kcal:k,p,c,f});
+  db.days[iso(0)]={water:2800,meals:{Breakfast:{done:true,items:[it("Bread and jam",900,20,170,15)]},Lunch:{done:true,items:[it("Pasta",1000,30,140,40)]}}};
+  for(let i=1;i<=4;i++)db.days[iso(i)]={meals:{Lunch:{items:[it("Rice",2200,70,300,60)]}}};
+  return db;}
+await test("Food: in the evening with protein short, the body says so, lights protein, and offers three foods that log in one tap",async page=>{
+  await page.addInitScript(()=>{Date.prototype.getHours=function(){return 19;};});await page.reload();await pause(page,1200);
+  await tapTab(page,"food");await pause(page,400);
+  eq(await page.$eval('.fbody-h',e=>e.textContent),"Your body needs more protein.","the headline");
+  eq(await page.$$eval('.fbn',a=>a.map(x=>[x.querySelector('.fbn-k').textContent,x.classList.contains("on")])),
+    [["Protein",true],["Carbs",false],["Fat",false],["Water",false]],"four, protein lit");
+  eq(await page.$eval('.fbody-pill',e=>e.textContent),"+100 g to go","what is left, to the nearest 5 g");
+  eq(await page.$$eval('.fsug-t',a=>a.length),3,"three foods");
+  const before=await ev(page,"Object.values(S.days[Object.keys(S.days).sort().pop()].meals).reduce((n,m)=>n+(m.items||[]).length,0)");
+  const fid=await page.$eval('.fsug-t',e=>e.dataset.fsug.split("|")[0]);
+  await page.$eval('.fsug-t',e=>e.scrollIntoView({block:"center"}));await page.tap('.fsug-t');await pause(page,600);
+  const after=await ev(page,"Object.values(S.days[Object.keys(S.days).sort().pop()].meals).flatMap(m=>m.items||[])");
+  eq([after.length,after.some(x=>x.fid===fid&&x.p>10)],[before+1,true],"logged, with its protein");
+  if(!/Coach noticed/.test(await page.$eval('.fnoticed',e=>e.innerText)))throw new Error("no week card");
+  await page.$eval('[data-fbuild]',e=>e.scrollIntoView({block:"center"}));await page.tap('[data-fbuild]');await pause(page,600);
+  /* Built where it was asked for, not by sending you to the chat (owner, 3 Nov). */
+  await page.waitForSelector('#sheet .tm-list li',{timeout:15000});
+  eq(await ev(page,"[V.tab,V.sheet,!!V.coach]"),["food","todaymeal",false],"Build today's meal builds it, over Food");
+},{db:lowProtein()});
+await test("Food: in the morning nothing is behind yet; with water short in the afternoon, a glass is offered instead of food",async page=>{
+  await page.addInitScript(()=>{Date.prototype.getHours=function(){return 9;};});await page.reload();await pause(page,1200);
+  await tapTab(page,"food");await pause(page,400);
+  eq([await page.$eval('.fbody-h',e=>e.textContent),await page.$$eval('.fbn.on,.fsug-t',a=>a.length)],["Your body is on course today.",0],"on course at 9:00");
+  await page.evaluate(async()=>{Date.prototype.getHours=function(){return 17;};const s=await import("/js/state.js");
+    const d=Object.keys(s.S.days).sort().pop();s.S.days[d].water=300;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$eval('.fbn.on .fbn-k',e=>e.textContent),"Water","water lit");
+  const w=await ev(page,"S.days[Object.keys(S.days).sort().pop()].water");
+  await page.$eval('.fbody-glass',e=>e.scrollIntoView({block:"center"}));await page.tap('.fbody-glass');await pause(page,300);
+  eq(await ev(page,"S.days[Object.keys(S.days).sort().pop()].water"),w+250,"a glass added");
+},{db:lowProtein()});
+/* ---- Live tracking: a run, a walk, a ride, a hike (js/ui/run.js, js/engine/run.js) ----
+   The only way in is Log cardio: pick an outdoor activity, then "Track it live". */
+async function liveStart(page,act){
+  await tapTab(page,"train");await pause(page);
+  await page.tap('[data-actsheet]');await pause(page);
+  await page.tap('#sheet [data-quickact="'+act+'"]');await pause(page,500);
+  await page.tap('#sheet [data-confirmok]');await pause(page,700);}
+await test("Live tracking: no Running mode button on Training; Log cardio is the way in, for every outdoor activity",async page=>{
+  await tapTab(page,"train");await pause(page);
+  eq(await page.$$eval('#app [data-run]',a=>a.length),0,"no tile on Training");
+  await page.tap('[data-actsheet]');await pause(page);
+  eq(await page.$$eval('#sheet .actbtn.live',a=>a.map(e=>[e.dataset.quickact,e.querySelector("span").textContent,!!e.querySelector(".actbtn-gps")])),
+    [["Running","Running, outdoor",true],["Walking","Walking, outdoor",true],["Hiking","Hiking",true],["Cycling","Cycling, outdoor",true],
+     ["Trail Running/Walking","Trail Running/Walking",true]],"each outdoor one is marked as tracked live");
+  eq(await page.$$eval('#sheet .actbtn:not(.live)',a=>a.some(e=>["Swimming","Running, Treadmill","Bicycling, Stationary","Football"].includes(e.dataset.quickact))),true,"indoor and sports are logged as before");
+  await page.tap('#sheet [data-quickact="Cycling"]');await pause(page,500);
+  eq(await page.$$eval('#sheet [data-confirmok],#sheet [data-confirmalt]',a=>a.map(b=>b.textContent)),["Track it live","Log one I've done"],"both ways");
+  if(!/your speed/.test(await page.$eval('#sheet',e=>e.textContent)))throw new Error("a ride is read as speed");
+  /* Logged after the fact: the logger, for a ride. */
+  await page.tap('#sheet [data-confirmalt]');await pause(page,600);
+  eq(await ev(page,"[!!S.run,!!S.active&&S.active.entries[0].name]"),[false,"Cycling"],"the logger, for the ride");
+});
 await test("Live tracking: a run's positions become distance and a route; pause stops the clock; Finish saves a Running activity",async page=>{
   const ctx=page.context();
   await ctx.grantPermissions(["geolocation"]);await ctx.setGeolocation({latitude:30.0444,longitude:31.2357,accuracy:8});

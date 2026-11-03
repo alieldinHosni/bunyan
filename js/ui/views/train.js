@@ -262,8 +262,8 @@ function lastRunCard(){
 /* The planning screens, for Coach: null when none is open. */
 function trainSub(){
   /* Old routes land on the plan page: the program list, or the active program inline. */
-  if(V.train==="splits"){V.train="plan";V.tplan="programs";}
-  if(V.train==="builder"&&V.previewId===S.activeProgram){V.train="plan";V.tplan="program";}
+  if(V.train==="splits"){V.train="plan";V.tplan="programs";return vTrainPlan();}
+  if(V.train==="builder"&&V.previewId===S.activeProgram){V.train="plan";V.tplan="program";return vTrainPlan();}
   if(V.train==="builder")return vBuilder();
   if(V.train==="preview")return vPreview();
   if(V.train==="library")return vLibrary();
@@ -789,6 +789,8 @@ function builderBody(sp,id,inline){
    +'<div class="bsched" role="group" aria-label="'+esc(t("Schedule"))+'">'
    +'<button class="'+(week?'on':'')+'" data-sched="week" aria-pressed="'+week+'"><b>'+t("By weekday")+'</b><span>'+t("Same days every week")+'</span></button>'
    +'<button class="'+(week?'':'on')+'" data-sched="cycle" aria-pressed="'+!week+'"><b>'+t("In rotation")+'</b><span>'+t("Next day whenever you train")+'</span></button></div>';
+  /* In rotation, offered once: the weekdays it would fall on, from when you train. */
+  if(inline)h+=weekOffer(sp);
   /* Two sessions on one weekday, every week (owner, 28 Oct: "from the coach training hub
      as a permanent session in that day"): said where the weekdays are picked, and in
      rotation, how to get there. */
