@@ -400,12 +400,10 @@ function weekRail(sp,sel){
    PDF, every program you own, and the templates. (Letting Bunyan build it is Coach AI's
    job, so it is not offered twice.) */
 function programsPage(){
-  var h='<button class="bnew" data-newsplit="1">'+art("wall",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
-   +'<span class="bnew-t"><b>'+t("Build a program from scratch")+'</b><span>'+t("Name it, pick the days, fill them from the library")+'</span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
-  h+='<button class="bnew" data-timport="1">'+art("calendar",{cls:"btn-art"})+'<span class="bnew-i">'+PLUS+'</span>'
-   +'<span class="bnew-t"><b>'+t("Import a program")+'</b><span>'+t("Open your coach's PDF or paste it, check every day, then use it")+'</span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  /* Two ways to a new program, side by side, like the meal plan's. */
+  var h='<div class="ptiles">'
+   +'<button class="ptile" data-newsplit="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Build a program")+'</b><span>'+t("Pick the days, fill them from the library")+'</span></button>'
+   +'<button class="ptile" data-timport="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Copy in a program")+'</b><span>'+t("From your coach's PDF, or pasted")+'</span></button></div>';
   h+=programsList();
   var tpls=allSplits().filter(function(o){return !editSplit(o.id);});
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Templates")+'</h2><span class="dhint">'+t("Use one to get your own copy")+'</span></div>'
@@ -837,6 +835,15 @@ function builderBody(sp,id,inline){
     h+='<details class="tinotes bnotes"><summary>'+t("Coach's notes")+' <span class="num">'+sp.notes.length+'</span></summary>'
      +sp.notes.map(function(n){return (n.h?'<h3>'+esc(n.h)+'</h3>':'')+(n.t||[]).map(function(l){return '<p>'+esc(l)+'</p>';}).join("");}).join("")
      +'</details>';
+  /* On the plan page, the program's settings are one list, like the meal plan's (owner,
+     3 Nov: things that belong together, together; not loose lines of text). */
+  if(active&&inline){
+    var srow=function(attr,name,sub){return '<button class="srow" '+attr+'><span class="srow-t"><span class="srow-n">'+esc(name)+'</span><span class="srow-s">'+esc(sub)+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>';};
+    return h+'<section class="sg plset"><div class="sg-list">'
+     +srow('data-tplan="programs"',t("Switch program"),t("Another of yours, or a template"))
+     +srow('data-sheet="set_training"',t("Workout settings"),t("Progression, warm-up, rest timer, equipment"))
+     +(sp.days.some(function(d){return d.ex.length;})?srow('data-shareplan="p:'+esc(id)+'"',t("Share this program"),t("With another Bunyan user")):'')
+     +'</div></section>';}
   h+='<div class="dcta">'
    /* To another Bunyan user, as it is (owner, 27 Oct): js/engine/planshare.js. */
    +(sp.days.some(function(d){return d.ex.length;})?'<button class="ddel dset" data-shareplan="p:'+esc(id)+'">'+t("Share this program")+'</button>':'')

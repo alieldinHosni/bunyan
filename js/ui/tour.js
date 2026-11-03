@@ -57,7 +57,7 @@ var GUIDES={
     {sel:".cask",v:3,h:"Ask your coach",p:"Type a question, or tap one of the suggestions under it. The answer uses your own log, plan and targets."},
     {sel:".cweek2",v:3,h:"This week",p:"Workouts done out of those planned, the days you reached your protein, and your streak."},
     {sel:".cfor",v:3,h:"For you",p:"What the coach wants you to decide, most important first. Nothing changes until you tap, and most changes can be undone."},
-    {sel:".crow",v:3,h:"Start again",p:"Answers the starting questions again, then rebuilds your training and meals. You see both before anything changes."}]},
+    {sel:".cmore",v:4,h:"Your coach",p:"A lighter week, advice you set aside, the assessment, and how the coach works. Each row says what a tap does."}]},
   progress:{name:"Progress",steps:[
     {sel:".pgtabs2",h:"Three views",p:"Overview for the big picture, Strength for your lifts, Body for weight, measurements and photos."},
     {sel:".pgrange",h:"How far back",p:"From the last week to the last year. Every chart on the page follows it."},

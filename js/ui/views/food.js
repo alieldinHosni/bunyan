@@ -88,7 +88,7 @@ function vFood(){
    between (owner, 3 Nov: "some of the tabs logically don't make sense" — My foods is a
    library you log from, not a plan, so it is a page of its own, reached from the meal
    plan's list and from adding food). Back returns to Food. */
-var FPLAN=[["plan","Meal plan"],["targets","Targets"]];
+var FPLAN=[["plan","Meal plan"],["targets","Daily goals"]];
 function vFoodPlan(){
   if(V.fplan==="foods")return vMyFoodsPage();
   var fs=FPLAN.some(function(x){return x[0]===V.fplan;})?V.fplan:"plan",g=S.goals||{};
@@ -350,7 +350,7 @@ function maintSource(){
   if(use.source==="learned")h+=esc(t("Maintenance measured from your own log (the formula says {f}).").replace("{f}",fmtN(tdeeFormula())));
   else if(L.kind==="ok")h+=esc(t("Maintenance by formula. Your own log measures about {k} ({lo}–{hi}).")
     .replace("{k}",fmtN(L.kcal)).replace("{lo}",fmtN(L.low)).replace("{hi}",fmtN(L.high)));
-  else h+=esc(t("Maintenance by formula. After two weeks of logged food and a few weigh-ins, your own log measures it."));
+  else h+=esc(t("Worked out from your age, height, weight and activity. After two weeks of logging food and weight, Bunyan checks it against your own results."));
   h+='</p>';
   if(ld)h+='<button class="btn g sm tgsrc-b" data-pcfix="maint-learned">'+esc(t("Build my targets on {k} kcal").replace("{k}",fmtN(ld.learned.kcal)))+'</button>';
   return h;}
@@ -375,7 +375,7 @@ function vTargets(){
     +'<span class="tgoffer-s">'+esc(t("Maintenance {m} kcal, adjusted for your goal.")).replace("{m}",fig(fmtN(sg.tdee)))+'</span></div>'
     +hb('<button class="btn sm" data-usesug="1">'+esc(t("Use"))+'</button>')+'</div>';
   if(!ed){
-    h+='<section class="tgcard glass"><div class="tgcard-h"><span class="klabel">'+esc(t("Your daily target"))+'</span>'
+    h+='<section class="tgcard glass"><div class="tgcard-h"><span class="klabel">'+esc(t("Your daily goal"))+'</span>'
      +'<button class="tlink dreorder" data-tgedit="1">'+esc(t("Edit"))+'</button></div>'
      +'<div class="tgcard-k">'+fig(fmtN(g.kcal)+' <small>kcal</small>')+'</div>'
      +'<div class="ngsplit" role="img" aria-label="'+esc(t("Protein")+" "+pc[0]+"%, "+t("Carbs")+" "+pc[1]+"%, "+t("Fat")+" "+pc[2]+"%")+'">'
@@ -384,17 +384,17 @@ function vTargets(){
         return '<div class="'+x[0]+'"><span>'+esc(t(x[1]))+'</span><b>'+fig(x[2]+' g')+'</b><em>'+fig(x[3]+'%')+'</em></div>';}).join("")+'</div>'
      +'<div class="tgmore"><span>'+esc(t("Water"))+' <b>'+fig(fmtN(g.water))+'</b> ml</span><span>'+esc(t("Steps"))+' <b>'+fig(fmtN(g.steps))+'</b></span></div>'
      +(Math.abs(gap)>40?'<div class="tgwarn"><p>'+esc(t(gap>0?"Your macros add up to {m} kcal, {d} under your target.":"Your macros add up to {m} kcal, {d} over your target."))
-        .replace("{m}",fig(fmtN(mk))).replace("{d}",fig(fmtN(Math.abs(gap))))+'</p><button class="btn g sm" data-fitmacros="1">'+esc(t("Fit carbs to the target"))+'</button></div>':'')
+        .replace("{m}",fig(fmtN(mk))).replace("{d}",fig(fmtN(Math.abs(gap))))+'</p><button class="btn g sm" data-fitmacros="1">'+esc(t("Fix it for me"))+'</button></div>':'')
      +(sg?'<div class="tgsrc-w">'+(same?'<p class="pgnote tgsame">'+esc(t("Matches the coach's suggestion."))+'</p>':'')+maintSource()+'</div>':'')
      +'</section>';}
   else{
-    h+='<section class="tgcard tgedit glass"><div class="tgcard-h"><span class="klabel">'+esc(t("Your daily target"))+'</span></div>'
+    h+='<section class="tgcard tgedit glass"><div class="tgcard-h"><span class="klabel">'+esc(t("Your daily goal"))+'</span></div>'
      +'<label class="ngenergy" for="g_kcal"><span class="ngbig"><input id="g_kcal" type="number" inputmode="numeric" style="width:'+fitCh(g.kcal,"")+'ch" value="'+g.kcal+'"><i>kcal</i></span></label>'
      +'<div class="aftiles ng3">'+afTile("g_p",t("Protein"),"g",g.p,"0","numeric")+afTile("g_c",t("Carbs"),"g",g.c,"0","numeric")+afTile("g_f",t("Fat"),"g",g.f,"0","numeric")+'</div>'
      +'<p class="afnote">'+esc(t("Your macros add up to {m} kcal.")).replace("{m}",fig(fmtN(mk)))+'</p>'
-     +(Math.abs(gap)>40?'<button class="btn g sm afit" data-fitmacros="1">'+esc(t("Fit carbs to the target"))+'</button>':'')
+     +(Math.abs(gap)>40?'<button class="btn g sm afit" data-fitmacros="1">'+esc(t("Fix it for me"))+'</button>':'')
      +'<div class="aftiles">'+afTile("g_water",t("Water"),"ml",g.water,"0","numeric")+afTile("g_steps",t("Steps"),"",g.steps,"0","numeric")+'</div>'
-     +'<div class="tgacts">'+hb('<button class="btn" data-savegoals="1">'+esc(t("Save targets"))+'</button>')
+     +'<div class="tgacts">'+hb('<button class="btn" data-savegoals="1">'+esc(t("Save"))+'</button>')
      +'<button class="btn g" data-tgedit="0">'+esc(t("Cancel"))+'</button></div></section>';}
   /* Is it working: the weigh-ins against the goal. */
   var tc=trendCard(true);
@@ -428,8 +428,14 @@ function vPlan(){
   var tot=sumNutrition(all),fig=function(x){return '<span class="num">'+x+'</span>';};
   var bar=function(cls,cur,goal){var p=goal?Math.min(1,cur/goal):0;return '<span class="plbar '+cls+'"><i style="width:'+Math.round(p*100)+'%"></i></span>';};
   var d=Math.round(tot.kcal-num(g.kcal)),near=Math.abs(d)<=Math.max(60,num(g.kcal)*0.04);
-  var verdict=!all.length?t("Nothing planned yet."):near?t("On target."):d<0?t("{n} kcal left to plan.").replace("{n}",fmtN(-d)):t("{n} kcal over the target.").replace("{n}",fmtN(d));
-  h+='<section class="plsum glass"><div class="plsum-h"><span class="klabel">'+esc(t("Planned for a day"))+'</span>'
+  var verdict=!all.length?t("Nothing planned yet."):near?t("On target."):d<0?t("{n} kcal left to plan.").replace("{n}",fmtN(-d)):t("{n} kcal over your goal.").replace("{n}",fmtN(d));
+  /* Nothing planned yet: the first thing is how to start, not a summary of nothing. */
+  var tiles='<div class="ptiles">'
+   +'<button class="ptile" data-pgen="1"><span class="ptile-i">'+SPARK+'</span><b>'+t("Make it from my goals")+'</b><span>'+t("A full day that adds up. You check it first.")+'</span></button>'
+   +'<button class="ptile" data-pimport="1"><span class="ptile-i">'+DOC+'</span><b>'+t("Copy in a plan")+'</b><span>'+t("Paste it or open a file")+'</span></button></div>';
+  if(!all.length)h+='<section class="plstart glass"><span class="klabel">'+esc(t("Make your meal plan"))+'</span>'
+   +'<p>'+esc(t("Let the coach make a full day from your goals, or copy in a plan you already have."))+'</p>'+tiles+'</section>';
+  else h+='<section class="plsum glass"><div class="plsum-h"><span class="klabel">'+esc(t("Planned for a day"))+'</span>'
    +'<span class="plsum-v'+(all.length&&near?' ok':'')+'">'+esc(verdict)+'</span></div>'
    +'<div class="plsum-r"><span>'+esc(t("Calories"))+'</span>'+bar("k",tot.kcal,g.kcal)+'<b>'+fig(fmtN(tot.kcal)+' / '+fmtN(g.kcal))+'</b></div>'
    +'<div class="plsum-r"><span>'+esc(t("Protein"))+'</span>'+bar("p",tot.p,g.p)+'<b>'+fig(Math.round(tot.p)+' / '+g.p+' g')+'</b></div></section>';
@@ -448,10 +454,6 @@ function vPlan(){
      +(ro?'<button class="dgrip" data-grip="'+esc(x.id)+'" aria-label="'+esc(t("Move")+" "+mealName(x.id))+'">'+GRIPSVG+'</button>':'')
      +'</div>';});
   h+='</div><button class="dadd" data-paddslot="1"><span aria-hidden="true">+</span>'+t("Add a meal")+'</button>';
-  /* Two ways to fill the whole plan at once. */
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Fill the plan")+'</h2></div><div class="ptiles">'
-   +'<button class="ptile" data-pgen="1"><span class="ptile-i">'+SPARK+'</span><b>'+t("Build it from my targets")+'</b><span>'+t("A day that adds up, to check first")+'</span></button>'
-   +'<button class="ptile" data-pimport="1"><span class="ptile-i">'+DOC+'</span><b>'+t("Import a plan")+'</b><span>'+t("From text or a file")+'</span></button></div>';
   /* The plan's settings, one list. */
   var nmf=(S.myFoods||[]).length+(S.savedMeals||[]).length;
   h+='<section class="sg plset"><div class="sg-list">'
@@ -459,6 +461,8 @@ function vPlan(){
    +seg({items:[["named",t("Named")],["numbered",t("Numbered")]],value:style,attr:"mstyle",soft:true,label:t("Meal names"),key:"mstyle"})+'</div>'
    +'<button class="srow" data-fplan="foods"><span class="srow-t"><span class="srow-n">'+esc(t("My foods"))+'</span><span class="srow-s">'+esc(t("Foods and meals of your own"))+'</span></span>'
    +(nmf?'<span class="srow-v num">'+nmf+'</span>':'')+'<span class="ico ico-chev" aria-hidden="true"></span></button>'
+   +(all.length?'<button class="srow" data-pgen="1"><span class="srow-t"><span class="srow-n">'+esc(t("Make a new plan from my goals"))+'</span><span class="srow-s">'+esc(t("Replaces this one after you check it"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>'
+     +'<button class="srow" data-pimport="1"><span class="srow-t"><span class="srow-n">'+esc(t("Copy in a plan"))+'</span><span class="srow-s">'+esc(t("Paste it or open a file"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>':'')
    +(all.length?'<button class="srow" data-shareplan="meals"><span class="srow-t"><span class="srow-n">'+esc(t("Share my meal plan"))+'</span><span class="srow-s">'+esc(t("With another Bunyan user"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>':'')
    +'</div></section>';
   return h;}
