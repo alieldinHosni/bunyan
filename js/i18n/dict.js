@@ -5,7 +5,13 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"This block is {p}: your workouts use {a}–{b} reps on the lifts, as each phase sets its own. The reps above are the program's, used when training blocks are off in Settings.": "البلوك ده {p}: تمارينك بتستخدم {a}–{b} عدة، لأن كل مرحلة ليها عدّاتها. العدّات اللي فوق بتاعة البرنامج، وبتتستخدم لما البلوكات تتقفل من الإعدادات.",
+var AR={"Your plan's tools": "أدوات خطتك",
+"The bowl holds the foods and meals you saved. Once there is a plan: the spark makes a new one from your goals, the arrow down copies one in, the arrow up shares yours with another Bunyan user.": "الطبق فيه الأكلات والوجبات اللي حفظتها. ولما يبقى عندك خطة: النجمة بتعمل خطة جديدة من أهدافك، والسهم لتحت بينقل خطة جاهزة، والسهم لفوق بيشارك خطتك مع مستخدم تاني لبنيان.",
+"The gear holds how meals are named.": "الترس فيه طريقة تسمية الوجبات.",
+"Meal plan settings": "إعدادات خطة الأكل",
+"1 meal · {k} kcal": "وجبة واحدة · {k} سعرة",
+"{n} meals · {k} kcal": "{n} وجبات · {k} سعرة",
+"This block is {p}: your workouts use {a}–{b} reps on the lifts, as each phase sets its own. The reps above are the program's, used when training blocks are off in Settings.": "البلوك ده {p}: تمارينك بتستخدم {a}–{b} عدة، لأن كل مرحلة ليها عدّاتها. العدّات اللي فوق بتاعة البرنامج، وبتتستخدم لما البلوكات تتقفل من الإعدادات.",
 "Switch and share": "غيّر وشارك",
 "The arrows switch to another of your programs or a template. The other icon shares this program with another Bunyan user.": "الأسهم بتغيّر لبرنامج تاني من بتوعك أو جاهز. والأيقونة التانية بتشارك البرنامج ده مع حد بيستخدم بنيان.",
 "The gear holds how weight goes up, the warm-up, the rest timer and your equipment.": "الترس فيه إزاي الوزن بيزيد، والإحماء، وتايمر الراحة، وأدواتك.",

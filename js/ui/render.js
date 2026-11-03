@@ -121,6 +121,20 @@ function groundOf(){
   /* The Coach page stands on Coach's own ground. */
   if(V.tab==="coach")return "coach";
   return V.tab;}
+function dropSheetGhosts(){
+  document.querySelectorAll(".sheetghost").forEach(function(g){g.remove();});}
+function sheetLeave(sheetEl){
+  var old=sheetEl.firstElementChild;
+  if(!old||isReduced()||old.getAttribute("data-flung"))return;
+  dropSheetGhosts();
+  var g=old.cloneNode(true);
+  g.classList.remove("entering");g.classList.add("sheetghost");
+  g.removeAttribute("id");g.setAttribute("aria-hidden","true");
+  g.querySelectorAll("[id]").forEach(function(x){x.removeAttribute("id");});
+  var b=old.querySelector(".sheetbox"),gb=g.querySelector(".sheetbox");
+  if(b&&gb)gb.scrollTop=b.scrollTop;
+  sheetEl.parentNode.insertBefore(g,sheetEl.nextSibling);
+  setTimeout(function(){g.remove();},420);}
 function render(){
   if(syncWorkoutState())saveDB();
   applyLook();
@@ -229,6 +243,12 @@ function render(){
   var appearing=V.sheet&&V.sheet!==lastSheet;
   var sheetHtml=vSheet();
   if(rtl)sheetHtml=isolateNums(sheetHtml);
+  /* A sheet put away slides down rather than vanishing: what is left of it moves out of
+     #sheet into a still copy beside it, so nothing reads the closed sheet as open, and
+     goes when the slide ends (owner, 3 Nov: taps on the plan "glitch and flash"). One
+     already pulled off the screen by the finger has done its leaving (sheetdrag.js). */
+  if(!V.sheet&&lastSheet)sheetLeave(sheetEl);
+  else if(appearing)dropSheetGhosts();
   if(appearing||!V.sheet)replace(sheetEl,sheetHtml);
   else patch(sheetEl,sheetHtml);
   var boxEl=sheetEl.firstChild;

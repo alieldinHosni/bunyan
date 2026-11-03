@@ -53,7 +53,8 @@ var GUIDES={
   /* Food's plan page (views/food.js vFoodPlan). */
   fplan:{name:"Nutrition plan",steps:[
     {sel:".psecs",v:4,h:"Two tabs",p:"Meal plan: your meals for a day, and how to fill them. Targets: your calories and macros. Swipe left or right to switch."},
-    {sel:".plset",v:4,h:"The plan's settings",p:"How meals are named, the foods and meals you saved, and sharing your plan."}]},
+    {sel:".psec .bname-a",v:5,h:"Your plan's tools",p:"The bowl holds the foods and meals you saved. Once there is a plan: the spark makes a new one from your goals, the arrow down copies one in, the arrow up shares yours with another Bunyan user."},
+    {sel:".dhead-a",fixed:true,v:5,h:"Meal plan settings",p:"The gear holds how meals are named."}]},
   coach:{name:"Coach",steps:[
     {sel:".cask",v:4,h:"Ask your coach",p:"Tap a question and the coach answers it from your own log, plan and targets. To ask anything else, use the chat button beside the tabs."},
     {sel:".cweek2",v:3,h:"This week",p:"Workouts done out of those planned, the days you reached your protein, and your streak."},

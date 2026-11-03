@@ -3520,3 +3520,23 @@ icons; remove "Copy in a program" (Programs & exercises already has it). views/t
 - The training block card and its phase note are the last things on My program; the note now says "the reps
   above". Guide: 8 steps, with Switch and share and Workout settings. Tests: the My program test asserts all
   of it.
+
+## Fix round: plan review, sheets, swipe, Food plan icons — branch session/fixround (CACHE v215)
+
+Owner, 3 Nov (screenshots): "Use this plan" floats mid-screen; taps on the plan glitch and flash; the
+swipe still catches; Food's plan actions should be icons as on Training; the icons touch; water is stuck
+to the card above.
+- Use this plan (.prcta) is no longer sticky: it closes the review, in the page. Its glass over the meals
+  scrolling through it read as a glitch.
+- Every sheet now slides down when put away (render.js sheetLeave): a still copy of it beside #sheet, so
+  nothing reads it as open, gone after the slide. A sheet the finger already flung away is not slid again
+  (sheetdrag.js marks it). Closing used to cut it out in one frame — the flash after a swap or remove.
+- Swipe between plan tabs (exswipe.js): the tabs next door are drawn ahead, while idle after each paint,
+  instead of as the finger starts to move (that was laying out the whole page mid-gesture); on release the
+  tab under the finger and its neighbour travel together and the real tab is drawn only once they land,
+  where the neighbour stands, so nothing renders during the motion. Filmed: no flash, no jump.
+- Icons by a name no longer touch: .icobtn carries a -10px end margin for header use; .bname-a resets it.
+- Food's plan page: the settings list is gone. Icons by "Your meal plan" (bowl: My foods; once there is a
+  plan, spark: new from goals, arrow down: copy in, arrow up: share) and a gear at the top right for Meal
+  names (settings.js set_meals). Guide updated (fplan, v5). New glyph `download`.
+- Food: the plan card keeps a gap above the water card.

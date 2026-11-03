@@ -921,6 +921,11 @@ html,body{overflow-x:clip}
    frosted sheet inside it would see only the veil until the fade ended. */
 .sheet.entering{animation:veilIn var(--m-fade) var(--e-standard)}
 @keyframes veilIn{from{background-color:transparent}}
+/* Put away (render.js sheetLeave): a still copy slides down while the veil clears. */
+.sheet.sheetghost{pointer-events:none;animation:veilOut var(--m-sheet) var(--e-standard) forwards}
+.sheet.sheetghost .sheetbox{animation:sheetOut var(--m-sheet) var(--e-accel) forwards}
+@keyframes veilOut{to{background-color:transparent}}
+@keyframes sheetOut{to{transform:translateY(100%)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){
   #app,.sheetbox,.sheet,.restwrap,.logbtn.done.fresh,.wsr.fresh .wtick,.sess .log.ok,.rb,.sess [data-k][data-anim]{animation:none}}
@@ -5596,6 +5601,8 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 /* ---- the way into a plan page, on Training and Food (views/train.js programCard,
    views/food.js foodPlanCard): the name, how it falls, and Plan ›. */
 .pgc{display:block;margin:var(--s4) 0 0;border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card);overflow:hidden}
+/* The plan card on Food has the water card under it: the same space below as above. */
+.pgc.fpc{margin-bottom:var(--s4)}
 .pgc-h{display:flex;align-items:center;gap:var(--s3);width:100%;padding:var(--s3) var(--s4);border:0;background:none;color:var(--text);font:inherit;text-align:start}
 button.pgc{padding:var(--s3) var(--s4)}
 .pgc-t{display:grid;gap:2px;flex:1;min-width:0}
@@ -5614,7 +5621,7 @@ button.pgc{padding:var(--s3) var(--s4)}
 /* The name with its count under it; switch and share as round icons beside it. */
 .bname-l{display:grid;gap:2px;min-width:0;flex:1}
 .bname-a{display:flex;gap:var(--s2);flex:none}
-.bname-a .icobtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--card-edge);background:var(--glass-btn);color:var(--text)}
+.bname-a .icobtn{margin:0;width:40px;height:40px;border-radius:50%;border:1px solid var(--card-edge);background:var(--glass-btn);color:var(--text)}
 .icobtn .gl{width:20px;height:20px}
 /* A page's own setting, at the top right of its header. */
 .dhead-a{margin-inline-start:auto;color:var(--sub)}
@@ -5892,8 +5899,6 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
 .ptile-i svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ptile:active{transform:scale(.98)}
 /* The plan's settings as one list. */
-.plset{margin-top:var(--s5)}
-.plset .srow-pick .seg{min-width:168px}
 /* Targets: one card that says the target. */
 .tgcard{text-align:start;padding:var(--s4);border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card)}
 .tgcard-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
@@ -5959,8 +5964,9 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
 .pmadd{display:flex;align-items:center;justify-content:center;gap:var(--s2);width:100%;min-height:44px;margin-top:var(--s2);
   border:1px dashed var(--border);border-radius:var(--r3);background:none;color:var(--sub);font:inherit;font-size:14px;font-weight:700}
 .pmadd span{color:var(--accentHi)}
-/* Use this plan, in reach: it rides above the dock while the plan is long. */
-.prcta{position:sticky;bottom:calc(var(--navh) + var(--s2));z-index:2;margin-top:var(--s4);padding:var(--s3);border-radius:var(--r4);
+/* Use this plan closes the review, in the page. It used to ride above the dock, and the
+   meals scrolling through its glass read as a glitch (owner, 3 Nov). */
+.prcta{margin-top:var(--s4);padding:var(--s3);border-radius:var(--r4);
   background:var(--glass-solid);border:1px solid var(--card-edge);text-align:center}
 .prcta .btn{width:100%}
 .prcta p{margin:var(--s2) 0 0;font-size:12px;color:var(--dim)}
