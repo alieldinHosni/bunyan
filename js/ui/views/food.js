@@ -432,7 +432,7 @@ function vPlan(){
   /* Nothing planned yet: the first thing is how to start, not a summary of nothing. */
   var tiles='<div class="ptiles">'
    +'<button class="ptile" data-pgen="1"><span class="ptile-i">'+SPARK+'</span><b>'+t("Make it from my goals")+'</b><span>'+t("A full day that adds up. You check it first.")+'</span></button>'
-   +'<button class="ptile" data-pimport="1"><span class="ptile-i">'+DOC+'</span><b>'+t("Copy in a plan")+'</b><span>'+t("Paste it or open a file")+'</span></button></div>';
+   +'<button class="ptile" data-pimport="1"><span class="ptile-i">'+DOC+'</span><b>'+t("Copy in a plan")+'</b><span>'+t("Paste it, open a file, or one shared with you")+'</span></button></div>';
   if(!all.length)h+='<section class="plstart glass"><span class="klabel">'+esc(t("Make your meal plan"))+'</span>'
    +'<p>'+esc(t("Let the coach make a full day from your goals, or copy in a plan you already have."))+'</p>'+tiles+'</section>';
   else h+='<section class="plsum glass"><div class="plsum-h"><span class="klabel">'+esc(t("Planned for a day"))+'</span>'
@@ -462,7 +462,7 @@ function vPlan(){
    +'<button class="srow" data-fplan="foods"><span class="srow-t"><span class="srow-n">'+esc(t("My foods"))+'</span><span class="srow-s">'+esc(t("Foods and meals of your own"))+'</span></span>'
    +(nmf?'<span class="srow-v num">'+nmf+'</span>':'')+'<span class="ico ico-chev" aria-hidden="true"></span></button>'
    +(all.length?'<button class="srow" data-pgen="1"><span class="srow-t"><span class="srow-n">'+esc(t("Make a new plan from my goals"))+'</span><span class="srow-s">'+esc(t("Replaces this one after you check it"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>'
-     +'<button class="srow" data-pimport="1"><span class="srow-t"><span class="srow-n">'+esc(t("Copy in a plan"))+'</span><span class="srow-s">'+esc(t("Paste it or open a file"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>':'')
+     +'<button class="srow" data-pimport="1"><span class="srow-t"><span class="srow-n">'+esc(t("Copy in a plan"))+'</span><span class="srow-s">'+esc(t("Paste it, open a file, or one shared with you"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>':'')
    +(all.length?'<button class="srow" data-shareplan="meals"><span class="srow-t"><span class="srow-n">'+esc(t("Share my meal plan"))+'</span><span class="srow-s">'+esc(t("With another Bunyan user"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>':'')
    +'</div></section>';
   return h;}
@@ -513,8 +513,8 @@ function vImport(){
    +'<p class="dsub">'+esc(t("Built from your daily targets and the foods you eat, Egyptian home food first. Change anything before you use it, or ask for another version."))+'</p>'
    +'<div class="pgen-acts"><button class="btn g" data-pgenmore="1">'+esc(t("Another version"))+'</button>'
    +'<span class="pgen-tg">'+esc(fmtN(S.goals.kcal)+" kcal · "+t("Protein")+" "+S.goals.p+" g")+'</span></div>';
-  else h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Import a plan"))+'</h1></div>'
-   +'<p class="dsub">'+esc(t("Open the PDF your plan came in, or paste it from WhatsApp or Notes. The PDF is read on this phone; nothing is uploaded."))+'</p>';
+  else h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Copy in a plan"))+'</h1></div>'
+   +'<p class="dsub">'+esc(t("Paste it from WhatsApp or Notes, open the PDF it came in, or paste the message another Bunyan user sent you. Everything is read on this phone."))+'</p>';
   if(!V.pgen)h+='<textarea id="pi_text" class="pitext" rows="9" spellcheck="false" placeholder="'
    +esc(t("Meal 1: 3 eggs, 2 slices toast\nMeal 2: 150g chicken, 200g rice\nMeal 3: 200g yogurt, 30g almonds"))+'">'+esc(V.pitext||"")+'</textarea>'
    +'<div class="piacts"><label class="btn g pifile"><input id="pi_file" type="file" accept=".pdf,application/pdf,.txt,.csv,.md,text/plain,text/csv">'

@@ -403,7 +403,7 @@ function programsPage(){
   /* Two ways to a new program, side by side, like the meal plan's. */
   var h='<div class="ptiles">'
    +'<button class="ptile" data-newsplit="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Build a program")+'</b><span>'+t("Pick the days, fill them from the library")+'</span></button>'
-   +'<button class="ptile" data-timport="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Copy in a program")+'</b><span>'+t("From your coach's PDF, or pasted")+'</span></button></div>';
+   +'<button class="ptile" data-timport="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Copy in a program")+'</b><span>'+t("A PDF, pasted text, or one shared with you")+'</span></button></div>';
   h+=programsList();
   var tpls=allSplits().filter(function(o){return !editSplit(o.id);});
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Templates")+'</h2><span class="dhint">'+t("Use one to get your own copy")+'</span></div>'

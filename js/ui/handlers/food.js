@@ -19,7 +19,7 @@ import {render} from "../render.js";
 import {curDate, mealNow, play, toast, V} from "../view.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
 import {savedById} from "../views/food.js";
-import {LENT, pcAfter, slotsFrom, topOfResults, withNotes} from "./common.js";
+import {isShared, LENT, pcAfter, readPlan, slotsFrom, topOfResults, withNotes} from "./common.js";
 import {has, key, on} from "./registry.js";
 
 /* Logs one food to the add-food sheet's meal and closes it. The single path for the
@@ -449,6 +449,7 @@ function register(){
   key("pread",function(){
     var txt=val("pi_text");V.pitext=txt;
     if(!txt.trim()){toast(t("Paste your plan first."));return;}
+    if(isShared(txt)){readPlan(txt);return;}
     loadFoods(function(){V.pparse=withNotes(parsePlan(txt));render();
       var res=document.querySelector(".picard");if(res)res.scrollIntoView({behavior:"smooth",block:"start"});});
     return;});

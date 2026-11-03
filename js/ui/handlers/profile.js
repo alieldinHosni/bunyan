@@ -18,7 +18,7 @@ import {render} from "../render.js";
 import {changeLook, themeOf} from "../theme.js";
 import {tourReset} from "../tour.js";
 import {alarmStart, keepAwake, toast, V} from "../view.js";
-import {fixLogsNow, retargetNow, setDbLoad} from "./common.js";
+import {fixLogsNow, readPlan, retargetNow, setDbLoad} from "./common.js";
 import {has, key} from "./registry.js";
 
 /* The text of a backup, read and checked (js/schema.js checkBackup): {o, check}, or
@@ -49,11 +49,6 @@ function downloadBackup(){
 
 /* What this module answers. app.js calls register() once, at boot, in the order
    the branches are tried in (see registry.js). */
-/* The message read for a plan: what it holds, or why not, in the same sheet. */
-function readPlan(text){
-  decodePlan(text).then(function(g){
-    if(!g){openSheet("recvplan",{text:text,err:1});return;}
-    openSheet("recvplan",{got:g,done:{}});});}
 /* To the clipboard; where it is refused, the field holding it is opened and selected. */
 function copyText(tx,fieldId){
   var ok=function(){toast(t("Copied. Paste it in a message."));};
