@@ -871,8 +871,11 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
   transform:translateX(calc(var(--i) * 100%));z-index:0;pointer-events:none;
   border-radius:14px;background:linear-gradient(180deg,var(--accent),var(--accent-deep));
   box-shadow:0 6px 18px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,.16);
-  transition:transform var(--m-screen) var(--e-ios)}
+  transition:transform var(--segdur,var(--m-screen)) var(--segease,var(--e-ios))}
 [dir="rtl"] .seg-ind{transform:translateX(calc(var(--i) * -100%))}
+/* A plan page's tabs while the finger drags the page (js/ui/exswipe.js): the highlight is
+   the finger's, so it follows without easing. */
+.seg.drag .seg-ind{transition:none}
 .seg-b{position:relative;z-index:1;min-width:0;min-height:40px;padding:0 4px;border:0;border-radius:14px;
   background:none;color:var(--dim);font-size:13.5px;font-weight:700;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -5826,6 +5829,65 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
 /* In Red the label sits on flat accent-deep (token-requests.md §4): the light from above
    would lift the top of the fill back towards Machine Red, under the label. */
 [data-palette="red"] .btn:where(:not(.g):not(.o):not(.ok):not(.danger):not(.d)){background-image:none;background-color:var(--color-action-fill)}
+/* ---- Food's plan pages, round 3 (views/food.js) -------------------------------------- */
+/* What the day's plan comes to: two bars and a verdict. */
+.plsum{text-align:start;padding:var(--s4);border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card)}
+.plsum-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s3)}
+.plsum-v{font-size:13px;font-weight:700;color:var(--sub);text-align:end}
+.plsum-v.ok{color:var(--ok)}
+.plsum-r{display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:var(--s3);margin-top:var(--s2);font-size:13px;color:var(--sub)}
+.plsum-r b{font-weight:700;color:var(--text);white-space:nowrap}
+.plbar{display:block;height:8px;border-radius:4px;background:var(--hair);overflow:hidden}
+.plbar i{display:block;height:100%;border-radius:4px;transition:width var(--m-data) var(--e-standard)}
+.plbar.k i{background:linear-gradient(90deg,var(--accent-deep),var(--accent))}
+.plbar.p i{background:var(--mac-p)}
+/* Two ways in, side by side: a mark, a name, one line. */
+.ptiles{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);margin:var(--s3) 0 0}
+.ptile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:var(--s3) var(--s3) var(--s4);border-radius:var(--r4);
+  border:1px solid var(--card-edge);background:var(--card);color:var(--text);font:inherit;text-align:start}
+.ptile b{font-family:var(--display);font-size:14.5px;line-height:1.25}
+.ptile span:not(.ptile-i){font-size:12px;line-height:1.4;color:var(--dim)}
+.ptile-i{display:grid;place-items:center;width:32px;height:32px;margin-bottom:var(--s2);border-radius:10px;
+  background:rgba(var(--accent-rgb),.14);color:var(--accentHi)}
+.ptile-i svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ptile:active{transform:scale(.98)}
+/* The plan's settings as one list. */
+.plset{margin-top:var(--s5)}
+.plset .srow-pick .seg{min-width:168px}
+/* Targets: one card that says the target. */
+.tgcard{text-align:start;padding:var(--s4);border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card)}
+.tgcard-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
+.tgcard-k{margin:var(--s2) 0 var(--s3);font-family:var(--display);font-size:40px;font-weight:800;line-height:1;color:var(--text)}
+.tgcard-k small{font-family:inherit;font-size:15px;font-weight:600;color:var(--dim)}
+.tgcard .ngsplit{margin:0}
+.tgmac{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2);margin-top:var(--s3)}
+.tgmac div{display:grid;gap:2px;padding-inline-start:var(--s2);border-inline-start:3px solid var(--m)}
+.tgmac .p{--m:var(--mac-p)} .tgmac .c{--m:var(--mac-c)} .tgmac .f{--m:var(--mac-f)}
+.tgmac span{font-size:11.5px;font-weight:700;color:var(--dim)}
+.tgmac b{font-size:18px;font-weight:800;color:var(--text)}
+.tgmac em{font-style:normal;font-size:11.5px;color:var(--dim)}
+.tgmore{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--hair);font-size:13px;color:var(--sub)}
+.tgmore b{color:var(--text)}
+.tgwarn{margin-top:var(--s3);padding:var(--s3);border-radius:var(--r3);background:rgba(var(--warning-rgb),.10);border:1px solid rgba(var(--warning-rgb),.28)}
+.tgwarn p{margin:0 0 var(--s2);font-size:13px;color:var(--text)}
+.tgsrc-w{margin-top:var(--s3)}
+.tgsrc-w .pgnote{margin:0;font-size:12.5px;line-height:1.5}
+.tgsrc-w .tgsame{color:var(--ok);margin-bottom:2px}
+.tgedit .ngenergy{display:block;margin:var(--s2) 0 var(--s3)}
+.tgedit .aftiles{margin-top:var(--s2)}
+.tgedit .afnote{margin:var(--s2) 0}
+.tgacts{display:grid;grid-template-columns:1fr auto;gap:var(--s2);margin-top:var(--s4)}
+/* The coach's suggestion, only when it differs: one line and Use. */
+.tgoffer{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s3);padding:var(--s3) var(--s4);border-radius:var(--r4);
+  border:1px solid rgba(var(--accentHi-rgb),.35);background:linear-gradient(180deg,rgba(var(--accent-rgb),.14),rgba(var(--accent-rgb),.04)),var(--card)}
+.tgoffer>div{display:grid;gap:2px;flex:1;min-width:0}
+.tgoffer b{font-size:15px;color:var(--text)}
+.tgoffer-s{font-size:12px;color:var(--dim)}
+/* The eating history, folded under one row. */
+.tgfold{margin-top:var(--s5);border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card);overflow:hidden}
+.tgfold-h{display:flex;align-items:center;justify-content:space-between;width:100%;padding:var(--s4);border:0;background:none;color:var(--text);
+  font:inherit;font-family:var(--display);font-size:15px;font-weight:700;text-align:start}
+.tgfold .fold-body{padding:0 var(--s4) var(--s4)}
 </style>
 </head>
 <body>

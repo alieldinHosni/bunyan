@@ -90,6 +90,8 @@ async function coach(page,sec,sub){
     await page.waitForTimeout(250);
     /* Exercises live under Programs since 3 Nov: that tab, at the library. */
     const ex=sec==="train"&&sub==="exercises";if(ex)sub="programs";
+    /* My foods is a page one step in from the meal plan (3 Nov), reached from its list. */
+    if(sec==="food"&&sub==="foods"){await page.tap('.plset [data-fplan="foods"]');await page.waitForTimeout(300);return;}
     if(sub&&sub!==first){await page.tap('.psecs [data-'+attr+'="'+sub+'"]');await page.waitForTimeout(250);}
     if(ex){await page.evaluate(()=>document.getElementById("pex").scrollIntoView({block:"start"}));await page.waitForTimeout(150);}
     return;}
@@ -668,7 +670,7 @@ await test("Food is the day only; the plan, targets and your own foods are plann
   eq(await page.$$eval('#app .tsecs,#app [data-fsec]',a=>a.length),0,"no sections on Food");
   if(await page.$('[data-quickfood].pill'))throw new Error("frequent pills still on the page");
   await coach(page,"food","targets");
-  if(!(await page.$('#g_kcal')))throw new Error("Targets has no inline goals");
+  if(!(await page.$('.tgcard [data-tgedit="1"]')))throw new Error("Targets has no target card with Edit");
   eq(await page.$$eval('.tghero',a=>a.length),0,"no copy of Food's day summary");
   eq(await ev(page,"[V.tab,V.fplan]"),["food","targets"],"Food's plan page, its targets");
   await page.tap('[data-back]');await pause(page,500);
@@ -698,6 +700,9 @@ await test("My Foods: build a meal from search, log it whole, and ✕ removes it
     return Object.values(s.dayRec(u.today()).meals).reduce((n,m)=>n+m.items.length,0)>0;}),true,"logged whole");
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.tab,V.fplan,V.smeal]"),["food","foods",null],"back to My foods");
+  /* ✕ is behind Edit, as on every list. */
+  if(await page.$('[data-rmsaved]'))throw new Error("✕ shown outside Edit");
+  await page.tap('[data-reorder="mf"]');await pause(page,200);
   await page.tap('[data-rmsaved="'+id+'"]');await pause(page);
   eq(await ev(page,"S.savedMeals.length"),0,"removed");
   await page.tap('.toast-undo');await pause(page);
@@ -713,6 +718,7 @@ await test("your own food: edited in My Foods, blank calories come from the macr
   await page.tap('[data-myfood^="my_"]');await pause(page);
   await page.fill('#mf_k','600');await page.tap('[data-savemyfoodx]');await pause(page);
   eq(await ev(page,"[S.myFoods.length,S.myFoods[0].kcal]"),[1,600],"edited in place");
+  await page.tap('[data-reorder="mf"]');await pause(page,200);
   await page.tap('[data-rmmyfood]');await pause(page);
   eq(await ev(page,"S.myFoods.length"),0);
   await page.tap('.toast-undo');await pause(page);
@@ -720,8 +726,11 @@ await test("your own food: edited in My Foods, blank calories come from the macr
 });
 await test("Targets: goals save in place, the suggestion applies, and Progress no longer has Nutrition",async page=>{
   await coach(page,"food","targets");
+  /* The target is a card; Edit opens it as fields, Save closes it (3 Nov). */
+  if(await page.$('#g_kcal'))throw new Error("fields shown before Edit");
+  await page.tap('[data-tgedit="1"]');await pause(page,300);
   await page.fill('#g_kcal','2222');await page.tap('[data-savegoals]');await pause(page);
-  eq(await ev(page,"S.goals.kcal"),2222);
+  eq(await ev(page,"[S.goals.kcal,V.tgedit,!!document.querySelector('#g_kcal')]"),[2222,false,false],"saved, the card closed");
   await page.tap('[data-usesug]');await pause(page);
   eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const f=await import("/js/engine/formulas.js");
     return s.S.goals.kcal===Math.round(f.targetKcal()/10)*10&&s.S.goals.kcal!==2222;}),true,"suggested applied");
@@ -4508,8 +4517,7 @@ await test("Plan pages: a sideways swipe moves between the tabs on Training and 
   y=await paneY();
   await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"targets","Food: Meal plan → Targets");
   y=await paneY();
-  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"foods","→ My foods");
-  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"foods","the last tab resists");
+  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"targets","the last tab resists");
   /* Arabic: what comes next is on the left, so dragging right brings it. */
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});
   await coach(page,"train","program");y=await paneY();
@@ -4569,6 +4577,52 @@ await test("Guide: Training's plan page has its own, which says what the tabs, E
   if(!k||!/^Training plan · 1 of /.test(k[0])||k[1]!=="Two tabs")throw new Error("guide: "+JSON.stringify(k));
   if(!/Swipe left or right/.test(await page.textContent('.tour-p')))throw new Error("does not say a swipe switches");
 },{tour:true,prefs:{toured:{train:9,food:9,coach:9,progress:9,profile:9}}});
+/* ---- Food's plan pages, round 3 (owner, 3 Nov) ------------------------------------------ */
+await test("Meal plan: what the plan comes to in two bars and a verdict; two tiles to fill it; one list of settings with a working Meal names choice (it showed as bare white boxes)",async page=>{
+  await coach(page,"food","plan");
+  eq(await page.evaluate(()=>[document.querySelectorAll('.plsum .plsum-r').length,!!document.querySelector('.plsum-v'),document.querySelectorAll('.ptiles .ptile').length]),[2,true,2],"two bars, a verdict, two tiles");
+  eq(await page.evaluate(()=>[!!document.querySelector('.ptile[data-pgen]'),!!document.querySelector('.ptile[data-pimport]'),!!document.querySelector('.plset [data-fplan="foods"]'),document.querySelectorAll('.bnew').length]),[true,true,true,0],"Build and Import as tiles, My foods in the list, no big cards");
+  const look=await page.$eval('.plset .seg-b',b=>{const c=getComputedStyle(b);return [c.backgroundColor,c.color];});
+  if(look[0]==="rgb(255, 255, 255)"||look[0]==="rgb(239, 239, 239)")throw new Error("Meal names is unstyled: "+look);
+  await page.tap('.plset [data-mstyle="numbered"]');await pause(page,300);
+  eq(await page.evaluate(async()=>(await import("/js/engine/meals.js")).mealStyle()),"numbered","Numbered chosen");
+  await page.tap('.plset [data-mstyle="named"]');await pause(page,300);
+  eq(await page.evaluate(async()=>(await import("/js/engine/meals.js")).mealStyle()),"named","and back");
+  eq(await page.$$eval('#app .psecs .seg-b',a=>a.map(b=>b.textContent)),["Meal plan","Targets"],"two tabs: My foods is not one");
+  await page.tap('.plset [data-fplan="foods"]');await pause(page,400);
+  eq(await ev(page,"[V.fplan,!!document.querySelector('#app .psecs'),document.querySelector('#app .dhead-t').textContent]"),["foods",false,"My foods"],"My foods is a page of its own");
+  await page.tap('[data-back]');await pause(page,500);
+  eq(await ev(page,"[V.tab,V.fplan]"),["food","plan"],"back to the meal plan");
+});
+await test("Targets: one card says the target; Edit opens it as fields and Cancel closes it unchanged; the coach's suggestion only when it differs; the eating history folded",async page=>{
+  await coach(page,"food","targets");
+  const g=await ev(page,"S.goals");
+  const txt=await page.textContent('.tgcard');
+  if(!txt.includes(g.kcal.toLocaleString("en-US"))||!txt.includes(g.p+" g"))throw new Error("card: "+txt);
+  await page.tap('[data-tgedit="1"]');await pause(page,300);
+  await page.fill('#g_kcal','1111');await page.tap('[data-tgedit="0"]');await pause(page,300);
+  eq(await ev(page,"[S.goals.kcal,!!document.querySelector('#g_kcal')]"),[g.kcal,false],"Cancel: nothing changed");
+  const sug=await page.evaluate(async()=>{const f=await import("/js/engine/formulas.js");return f.macroTargets();});
+  const same=!!sug&&sug.kcal===g.kcal&&sug.p===g.p&&sug.c===g.c&&sug.f===g.f;
+  eq(!!(await page.$('.tgoffer [data-usesug]')),!!sug&&!same,"the suggestion shows only when it differs");
+  eq(await page.evaluate(()=>{const f=document.querySelector('.tgfold');return [f.classList.contains('open'),getComputedStyle(f.querySelector('.fold-body')).display];}),[false,"none"],"history folded");
+  await page.tap('.tgfold [data-fold="feat"]');await pause(page,300);
+  eq(await page.evaluate(()=>getComputedStyle(document.querySelector('.tgfold .fold-body')).display),"block","and opens in place");
+});
+await test("Plan tabs: the highlight over the tabs follows the finger while the page is dragged, and settles on the tab it lands on",async(page,env)=>{
+  const cdp=await env.ctx.newCDPSession(page);
+  await coach(page,"food","plan");
+  const y=await page.evaluate(()=>{window.scrollTo(0,0);const r=document.querySelector("#app .psec").getBoundingClientRect();return Math.round(Math.min(r.top+90,innerHeight-160));});
+  const iNow=()=>page.evaluate(()=>parseFloat(document.querySelector("#app .psecs").style.getPropertyValue("--i")));
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:320,y}]});
+  for(let i=1;i<=8;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:320-i*18,y}]});await page.waitForTimeout(16);}
+  const mid=await iNow();
+  if(!(mid>0.15&&mid<0.85))throw new Error("the highlight did not follow: --i "+mid);
+  eq(await page.evaluate(()=>document.querySelector("#app .psecs").classList.contains("drag")),true,"no easing while dragged");
+  for(let i=9;i<=14;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:320-i*18,y}]});await page.waitForTimeout(16);}
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(900);
+  eq([await ev(page,"V.fplan"),await iNow(),await page.evaluate(()=>document.querySelector("#app .psecs").classList.contains("drag"))],["targets",1,false],"landed on Targets");
+});
 await test("Meal plan: “Build it from my targets” lives on the meal plan page, beside Import, and opens the plan to review",async page=>{
   await coach(page,"food","plan");
   if(!(await page.$('.psec [data-pgen]'))||!(await page.$('.psec [data-pimport]')))throw new Error("the two ways to fill the plan are not on the meal plan page");

@@ -74,10 +74,10 @@ var lastView="",lastSheet=null,lastEx=-2,lastSec=null;
    my foods): changing part slides the new one in from the side it is on, the way the
    week moves, rather than swapping in place (owner, 3 Nov: everything animated). The
    page itself arriving is a page change and has its own entrance. */
-var SECS={t:["program","programs"],f:["plan","targets","foods"]};
+var SECS={t:["program","programs"],f:["plan","targets"]};
 function secNow(){
   if(V.tab==="train"&&V.train==="plan"&&!S.active)return "t:"+(V.tplan||"program");
-  if(V.tab==="food"&&V.fplan&&!V.smeal&&!V.pslot&&!V.pimport)return "f:"+V.fplan;
+  if(V.tab==="food"&&V.fplan&&V.fplan!=="foods"&&!V.smeal&&!V.pslot&&!V.pimport)return "f:"+V.fplan;
   return null;}
 function slideSection(root,moved){
   var now=secNow(),was=lastSec,swiped=V.pswiped;lastSec=now;V.pswiped=false;
@@ -161,7 +161,7 @@ function render(){
   /* Planning lives in its own tab now (owner, 3 Nov): Training's plan page and its
      builders under train/, Food's plan page and its meal screens under food/. */
   var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":S.run?"run":V.train)
-    :V.tab==="food"?(V.smeal?"smeal":V.pslot?"pslot":V.pimport?"pimport":V.fplan?"plan":"")
+    :V.tab==="food"?(V.smeal?"smeal":V.pslot?"pslot":V.pimport?"pimport":V.fplan==="foods"?"myfoods":V.fplan?"plan":"")
     :V.tab==="coach"?"hub":"");
   var moved=view!==lastView;lastView=view;
   /* Note what has focus and where the caret sits before the rebuild destroys it.

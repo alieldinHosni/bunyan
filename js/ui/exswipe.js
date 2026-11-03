@@ -66,16 +66,34 @@ function onMove(ev){
   st.samples.push([Date.now(),tt.clientX]);
   if(st.samples.length>6)st.samples.shift();
   var x=H.can(stepOf(dx),st.k)?dx:dx*0.3;
+  /* A plan page: the highlight over its tabs moves with the finger, the same share of a
+     tab as the page has moved of its width (owner, 3 Nov: it lagged behind the page). */
+  if(st.k!=="ex")segFollow(st,x);
   st.p.style.transition="none";
   st.p.style.transform="translateX("+Math.round(x)+"px)";
   if(st.k==="ex")st.p.style.opacity=String(1-Math.min(.35,Math.abs(x)/st.w*.5));}
 
-function springBack(p){
+/* The tabs' highlight: where it was when the drag began, and where the drag has it now. */
+function tabsOf(){return document.querySelector("#app .psecs");}
+function segFollow(s,x){
+  var g=tabsOf();if(!g)return;
+  if(s.i0==null){s.g=g;s.i0=parseFloat(g.style.getPropertyValue("--i"))||0;s.n=parseFloat(g.style.getPropertyValue("--n"))||2;}
+  var f=(rtl()?x:-x)/s.w;
+  g.classList.add("drag");
+  g.style.setProperty("--i",String(Math.max(-0.15,Math.min(s.n-0.85,s.i0+f))));}
+function segSettle(s,to,ms){
+  var g=s&&s.g;if(!g||s.i0==null)return;
+  g.style.setProperty("--segdur",(ms||320)+"ms");
+  g.classList.remove("drag");
+  void g.offsetWidth;
+  g.style.setProperty("--i",String(to));}
+function springBack(p,s){
+  if(s)segSettle(s,s.i0,320);
   if(isReduced()){p.style.transition="";p.style.transform="";p.style.opacity="";return;}
   p.style.transition="transform 320ms cubic-bezier(0.2,0,0,1),opacity 320ms ease";
   p.style.transform="";p.style.opacity="";}
 
-function cancel(){var s=st;st=null;if(s&&s.mode==="h")springBack(s.p);}
+function cancel(){var s=st;st=null;if(s&&s.mode==="h")springBack(s.p,s);}
 
 function onEnd(){
   var s=st;st=null;
@@ -85,7 +103,7 @@ function onEnd(){
   /* Speed over the last moments of the drag, px/ms. */
   var a=s.samples[0],b=s.samples[s.samples.length-1],v=b[0]>a[0]?(b[1]-a[1])/(b[0]-a[0]):0;
   var far=Math.abs(s.dx)>s.w*0.3,flick=Math.abs(v)>0.45&&Math.abs(s.dx)>40&&(v<0)===(s.dx<0);
-  if(!H.can(step,s.k)||!(far||flick)){springBack(s.p);return;}
+  if(!H.can(step,s.k)||!(far||flick)){springBack(s.p,s);return;}
   lockUntil=Date.now()+380;
   /* The touch's own end: the one moment an iPhone allows the tick. */
   tap();
@@ -118,6 +136,9 @@ function enter(from){
 function slidePlan(s,step,from){
   var w=s.w,rest=Math.abs(s.dx);
   var out=Math.max(160,Math.min(300,Math.round((w-rest)/w*300)));
+  /* The highlight carries on from where the finger left it and lands as the new tab
+     settles, one movement with the page's. */
+  segSettle(s,(s.i0||0)+step,out+380);
   s.p.style.transition="transform "+out+"ms cubic-bezier(0.4,0,1,1)";
   s.p.style.transform="translateX("+(s.dx<0?-w:w)+"px)";
   setTimeout(function(){

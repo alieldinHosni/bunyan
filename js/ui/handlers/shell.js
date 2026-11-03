@@ -37,7 +37,7 @@ function register(){
      date left selected from earlier was where a meal logged later could land. */
   key("tab",function(D){resetNav();var tb=D.tab==="home"?"train":D.tab,same=V.tab===tb,top=same&&V.train==="days"&&!V.fplan&&!V.meal&&!V.smeal&&!V.phist&&!V.pslot&&!V.pimport&&!V.chat;
     /* The plan pages included: a tab lands on its own page (owner, 3 Nov). */
-    V.tab=tb;V.train="days";V.fplan=null;V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.advall=false;V.phist=false;V.dnavDir=0;V.assess=false;V.pcheck=false;
+    V.tab=tb;V.train="days";V.fplan=null;V.tgedit=false;V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;V.chat=false;V.advall=false;V.phist=false;V.dnavDir=0;V.assess=false;V.pcheck=false;
     /* Tapping a tab while already at its top goes back to its first view. */
     if(tb==="train"&&top)V.tdate=null;
     if(tb==="food"&&top)V.fdate=null;
@@ -67,7 +67,9 @@ function register(){
   has("tplan",function(D){if(V.sheet)closeSheet();
     if(V.tab!=="train"||V.train!=="plan"){if(V.tab!=="train"){resetNav();V.tab="train";}pushNav();V.train="plan";V.tplan=D.tplan||"program";render();window.scrollTo(0,0);return;}
     V.tplan=D.tplan||"program";render();return;});
-  has("fplan",function(D){if(V.sheet)closeSheet();
+  has("fplan",function(D){if(V.sheet)closeSheet();V.tgedit=false;
+    /* My foods is a page one step in from the plan, not one of its tabs. */
+    if(D.fplan==="foods"&&V.tab==="food"&&V.fplan&&V.fplan!=="foods"&&!V.smeal&&!V.pslot&&!V.pimport){pushNav();V.fplan="foods";V.reorder=null;render();window.scrollTo(0,0);return;}
     if(V.tab!=="food"||!V.fplan||V.smeal||V.pslot||V.pimport){if(V.tab!=="food"){resetNav();V.tab="food";}pushNav();V.smeal=null;V.pslot=null;V.pimport=false;V.fplan=D.fplan||"plan";render();window.scrollTo(0,0);return;}
     V.fplan=D.fplan||"plan";render();return;});
   key("reorder",function(D){V.reorder=V.reorder===D.reorder?null:D.reorder;render();return;});
