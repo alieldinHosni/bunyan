@@ -3399,3 +3399,6 @@ Owner, 3 Nov, after the restructure (PR #106).
   works" (a centred step, nothing lit), then each thing and what a tap on it does, including the floating
   Coach button; Food and Coach rewritten the same way; new guides for Training's plan page (tabs and swipe,
   name, block, days, Edit, schedule) and Food's (its three tabs and swipe). Everyone sees the new version once.
+- Found by the full suite: the old page's copy kept the tapped button's press look (.tapd) while it slid out;
+  the copy is now cleaned of it. Tests that reached the block on Training home, or the Exercises tab, now go to
+  My program and Programs & exercises (the test helper maps "exercises" there).

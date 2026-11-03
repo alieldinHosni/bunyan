@@ -88,7 +88,10 @@ async function coach(page,sec,sub){
     if(card)await card.tap();
     else await page.evaluate(async([a,f])=>{const v=await import("/js/ui/view.js");if(a==="tplan"){v.V.train="plan";v.V.tplan=f;}else v.V.fplan=f;(await import("/js/ui/render.js")).render();},[attr,first]);
     await page.waitForTimeout(250);
+    /* Exercises live under Programs since 3 Nov: that tab, at the library. */
+    const ex=sec==="train"&&sub==="exercises";if(ex)sub="programs";
     if(sub&&sub!==first){await page.tap('.psecs [data-'+attr+'="'+sub+'"]');await page.waitForTimeout(250);}
+    if(ex){await page.evaluate(()=>document.getElementById("pex").scrollIntoView({block:"start"}));await page.waitForTimeout(150);}
     return;}
   await tapTab(page,"coach");await page.waitForTimeout(200);}
 /* The conversation opens from the floating Coach only. With q, that question is asked. */
@@ -1372,8 +1375,11 @@ await test("Press: a finger starting a scroll never flashes what it lands on; a 
   await coach(page,"train","exercises");await pause(page,500);
   const cdp=await env.ctx.newCDPSession(page);
   const touch=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
-  const b=await (await page.$(".ttile")).boundingBox();
-  const x=b.x+b.width/2,y=b.y+b.height/2;
+  /* The tile sits on a page that scrolls: aim at it afresh before each gesture. */
+  let x=0,y=0;
+  const aim=async()=>{await page.evaluate(()=>document.querySelector(".ttile").scrollIntoView({block:"center"}));await page.waitForTimeout(120);
+    const b=await (await page.$(".ttile")).boundingBox();x=b.x+b.width/2;y=b.y+b.height/2;};
+  await aim();
   const lit=()=>page.evaluate(()=>document.querySelector(".ttile").classList.contains("tapd"));
   /* A scroll: the finger lands and moves at once. */
   await page.evaluate(()=>{window.__clk=0;document.addEventListener("click",()=>window.__clk++,true);});
@@ -1384,7 +1390,7 @@ await test("Press: a finger starting a scroll never flashes what it lands on; a 
   await touch("touchEnd");await page.waitForTimeout(200);
   eq(await page.evaluate(()=>window.__clk),0,"the scroll was not a tap");
   /* A held press shows once the finger has rested. */
-  await touch("touchStart",x,y);await page.waitForTimeout(150);
+  await aim();await touch("touchStart",x,y);await page.waitForTimeout(150);
   eq(await lit(),true,"a resting finger presses");
   eq(await page.evaluate(()=>getComputedStyle(document.querySelector(".ttile")).transform!=="none"),true,"the press look applies");
   await touch("touchMove",x,y-30);await page.waitForTimeout(30);
@@ -1394,7 +1400,7 @@ await test("Press: a finger starting a scroll never flashes what it lands on; a 
   /* A quick tap answers as it lifts, then the tap goes through. */
   await page.evaluate(()=>{window.__lit=0;new MutationObserver(m=>{if(m.some(r=>r.target.classList.contains("tapd")))window.__lit++;})
     .observe(document.getElementById("app"),{attributes:true,attributeFilter:["class"],subtree:true});});
-  await touch("touchStart",x,y);await page.waitForTimeout(20);await touch("touchEnd");
+  await aim();await touch("touchStart",x,y);await page.waitForTimeout(20);await touch("touchEnd");
   await page.waitForTimeout(500);
   eq([await page.evaluate(()=>window.__lit>0),await page.evaluate(()=>window.__clk),await page.evaluate(()=>document.querySelectorAll(".tapd").length)],[true,1,0],"a quick tap flashes once and goes through");
   /* With a mouse it is plain :active again. */
@@ -2670,16 +2676,16 @@ await test("Experienced lifters choose: stabilisation is a suggestion they can s
     const p=st.makeProgram({id:"ss",name:"SS",days:[Sp.day("Upper",[Sp.ex("Barbell Bench Press - Medium Grip",3,6,10),Sp.ex("Bent Over Barbell Row",3,6,10)])]});p.id="ss";
     st.S.programs=[p];st.S.activeProgram="ss";st.S.profile.level="experienced";st.S.profile.goal="gain";delete st.S.profile.skipStab;st.S.profile.conds=[];
     st.S.block={start:sc.weekStartOf(U.today())};st.saveDB();(await import("/js/ui/render.js")).render();});
-  await tapTab(page,"train");await pause(page,300);
+  await coach(page,"train","program");await pause(page,300);
   if(!(await page.$('.blk [data-skipstab="1"]')))throw new Error("no choice offered: "+(await page.textContent('.blk')));
   await page.tap('.blk [data-fold]');await pause(page,200);
   await page.tap('.blk [data-skipstab="1"]');await pause(page,300);
   eq(await page.evaluate(async()=>[(await import("/js/state.js")).S.profile.skipStab,((await import("/js/engine/blocks.js")).phaseNow()||{}).n]),[true,2],"skipped: block 1 runs strength endurance");
-  await page.tap('[data-startday]');await pause(page,500);
+  await tapTab(page,"train");await pause(page,300);await page.tap('[data-startday]');await pause(page,500);
   const ex=await ev(page,"S.active.entries.map(e=>[e.name,e.grp||'',e.planned.lo,e.planned.hi])");
   eq([ex[0][0],ex[1][0],!!ex[0][1]&&ex[0][1]===ex[1][1],ex[2][1]],["Barbell Bench Press - Medium Grip","Pushups",true,""],"bench then push-ups as one superset, the row on its own: "+JSON.stringify(ex));
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;st.saveDB();(await import("/js/ui/render.js")).render();});
-  await tapTab(page,"train");await pause(page,300);
+  await coach(page,"train","program");await pause(page,300);
   if(!(await page.$('.blk.open')))await page.tap('.blk [data-fold]');await pause(page,200);
   await page.tap('.blk [data-skipstab="0"]');await pause(page,300);
   eq(await ev(page,"S.profile.skipStab"),false,"stabilisation back");

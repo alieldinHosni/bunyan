@@ -103,6 +103,8 @@ function pageGhost(appEl,dir){
   var old=document.querySelector(".pghost");if(old)old.remove();
   var r=appEl.getBoundingClientRect(),g=appEl.cloneNode(true);
   g.querySelectorAll("[id]").forEach(function(e){e.removeAttribute("id");});
+  /* The copy is at rest: no press frozen on the button that opened the page. */
+  g.classList.remove("tapd");g.querySelectorAll(".tapd").forEach(function(e){e.classList.remove("tapd");});
   g.classList.remove("pagein");g.classList.add("pghost");g.setAttribute("aria-hidden","true");g.inert=true;
   g.style.cssText="position:fixed;left:"+r.left+"px;top:"+r.top+"px;width:"+r.width+"px;margin:0;box-sizing:border-box;pointer-events:none;z-index:"+(dir>0?0:3);
   appEl.parentNode.insertBefore(g,appEl.nextSibling);
