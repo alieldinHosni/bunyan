@@ -842,11 +842,14 @@ function builderBody(sp,id,inline){
     return h+'<section class="sg plset"><div class="sg-list">'
      +srow('data-tplan="programs"',t("Switch program"),t("Another of yours, or a template"))
      +srow('data-sheet="set_training"',t("Workout settings"),t("Progression, warm-up, rest timer, equipment"))
-     +(sp.days.some(function(d){return d.ex.length;})?srow('data-shareplan="p:'+esc(id)+'"',t("Share this program"),t("With another Bunyan user")):'')
+     /* In and out side by side, as on the meal plan (owner, 3 Nov): copy one in (a PDF,
+        text, or one another Bunyan user shared), or share this one. */
+     +srow('data-timport="1"',t("Copy in a program"),t("A PDF, pasted text, or one shared with you"))
+     +(sp.days.some(function(d){return d.ex.length;})?srow('data-shareplan="p:'+esc(id)+'"',t("Share my program"),t("With another Bunyan user")):'')
      +'</div></section>';}
   h+='<div class="dcta">'
    /* To another Bunyan user, as it is (owner, 27 Oct): js/engine/planshare.js. */
-   +(sp.days.some(function(d){return d.ex.length;})?'<button class="ddel dset" data-shareplan="p:'+esc(id)+'">'+t("Share this program")+'</button>':'')
+   +(sp.days.some(function(d){return d.ex.length;})?'<button class="ddel dset" data-shareplan="p:'+esc(id)+'">'+t("Share my program")+'</button>':'')
    +(active?(inline?'<button class="ddel dset" data-tplan="programs">'+t("Switch program")+'</button>'
              +'<button class="ddel dset" data-sheet="set_training">'+t("Workout settings")+'</button>'
              :'<p class="bactive">✓ '+t("This is your training")+'</p>')

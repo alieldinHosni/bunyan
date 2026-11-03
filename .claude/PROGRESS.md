@@ -3455,3 +3455,11 @@ instead of me going to settings."
   handlers/common.js; Settings' own Add a shared plan still works.
 - Both screens are titled as their buttons (Copy in a plan / Copy in a program) and say a shared message works
   there; the buttons' lines say so too.
+
+## Copy in and Share side by side on My program — branch session/sharepair (CACHE v210)
+
+Owner, 3 Nov: "Can it be the same for share my program?" My program's settings list now ends with Copy in a
+program (PDF, text, or a program another Bunyan user shared) directly above Share my program, as the meal
+plan's does with Copy in a plan and Share my meal plan. "Share this program" is "Share my program"
+everywhere (the share sheet's title too); the coach's answer on sharing names the new places instead of
+Profile > Add a shared plan.

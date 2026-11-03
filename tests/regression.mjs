@@ -4654,6 +4654,13 @@ await test("Copy in: a plan another Bunyan user shared works in Food's Copy in a
   await page.tap('#sheet [data-rplanadd="keep"]');await pause(page,400);
   eq(await ev(page,"[S.programs.length,S.programs[S.programs.length-1].name]"),[n+1,"Omar's split"],"added to my programs");
 });
+await test("My program: Copy in a program sits right above Share my program, as Copy in a plan does above Share my meal plan",async page=>{
+  await coach(page,"train","program");
+  const rows=await page.$$eval('#app .plset .srow',a=>a.map(r=>r.getAttribute("data-timport")?"in":(r.getAttribute("data-shareplan")||"").startsWith("p:")?"share":r.getAttribute("data-tplan")||r.getAttribute("data-sheet")));
+  eq(rows,["programs","set_training","in","share"],"switch, settings, then in and out together");
+  await page.tap('#app .plset [data-timport]');await pause(page,400);
+  eq(await page.textContent('#app .dhead-t'),"Copy in a program","it opens the Copy in screen");
+});
 await test("Meal plan: “Build it from my targets” lives on the meal plan page, beside Import, and opens the plan to review",async page=>{
   await coach(page,"food","plan");
   if(!(await page.$('.psec [data-pgen]'))||!(await page.$('.psec [data-pimport]')))throw new Error("the two ways to fill the plan are not on the meal plan page");

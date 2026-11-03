@@ -5,7 +5,8 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Paste it, open a file, or one shared with you": "الصقها، أو افتح ملف، أو واحدة اتبعتتلك",
+var AR={"Share my program": "شارك برنامجي",
+"Paste it, open a file, or one shared with you": "الصقها، أو افتح ملف، أو واحدة اتبعتتلك",
 "Paste it from WhatsApp or Notes, open the PDF it came in, or paste the message another Bunyan user sent you. Everything is read on this phone.": "الصقها من واتساب أو الملاحظات، أو افتح الـPDF اللي جت فيه، أو الصق الرسالة اللي بعتهالك حد بيستخدم بنيان. كل حاجة بتتقري على موبايلك.",
 "Open the PDF your coach sent, paste the program, or paste the message another Bunyan user sent you. Everything is read on this phone.": "افتح الـPDF اللي بعته الكوتش، أو الصق البرنامج، أو الصق الرسالة اللي بعتهالك حد بيستخدم بنيان. كل حاجة بتتقري على موبايلك.",
 "A PDF, pasted text, or one shared with you": "PDF، أو كلام ملصوق، أو واحد اتبعتلك",
