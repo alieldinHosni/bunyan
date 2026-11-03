@@ -2136,6 +2136,18 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   border-radius:var(--rpill);padding:0 14px;min-height:34px;margin-inline-end:0}
 .drows.ro .drm{display:none}
 .drows.ro .dmain{padding-inline-start:16px}
+/* Edit (the program's days, a day's exercises, the meals): the ✕ and the grip together. */
+.drows.ro.ed .drm{display:grid}
+.drows.ro.ed .dmain{padding-inline-start:2px}
+/* A row without its ✕ (out of Edit): the content keeps its distance from the edge. */
+.drow:not(:has(>.drm)) .dmain{padding-inline-start:14px}
+.bsp .drow-s{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* A rest day in the cycle: a thin row, the name quiet, no second line. */
+.bkday.blank{min-height:46px}
+.bkday.blank .dmain{padding-block:6px}
+.bkday.blank .bnum{width:28px;height:28px;font-size:12px}
+.bkday.blank .drow-n{font-size:14px;font-weight:600;color:var(--sub)}
+.bkday.blank .drow-s{font-size:12px}
 .dempty{color:var(--dim);font-size:14px;line-height:1.5;margin:0 0 14px}
 .drows{display:flex;flex-direction:column;gap:10px}
 /* ✕ · the exercise · grip: three targets side by side, never one inside another. */
@@ -4606,6 +4618,11 @@ label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-
 .ttile.wide .btn-art,.bnew .btn-art{width:88px;top:50%;inset-inline-end:2px;transform:translateY(-50%);opacity:.34;
   -webkit-mask:linear-gradient(90deg,transparent,#000 60%);mask:linear-gradient(90deg,transparent,#000 60%)}
 .bnew:has(.btn-art) .bnew-t,.ttile.wide:has(.btn-art) .ttile-tx{padding-inline-end:28px}
+/* The "new" cards (a program from scratch, an import, a meal plan): the picture stays a
+   faint mark behind the arrow, never under the words (owner, 3 Nov: overlapping). */
+.bnew .btn-art{opacity:.16}
+.bnew:has(.btn-art) .bnew-t{padding-inline-end:52px}
+.bnew .ico-chev{position:relative;z-index:1}
 [dir="rtl"] .btn-art{transform:scaleX(-1)}
 [dir="rtl"] .ttile.wide .btn-art,[dir="rtl"] .bnew .btn-art{transform:translateY(-50%) scaleX(-1)}
 @media (prefers-reduced-motion:reduce){.art.draw path{animation:none;stroke-dashoffset:0}.art.draw .e{animation:none;opacity:.8}}
@@ -4784,6 +4801,19 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .btn.fbuild{margin:var(--s3) 0 var(--s4);gap:8px;border-color:var(--accent-edge);color:var(--accentHi)}
 .btn.fbuild .gl{width:18px;height:18px}
 [dir="rtl"] .btn.fbuild .gl{transform:scaleX(-1)}
+/* Today's meal (js/ui/todaymeal.js): the foods, what they come to, and two actions. */
+.tm-for{margin:2px 0 var(--s3)}
+.tm-list{list-style:none;margin:0;padding:0;display:grid;gap:var(--s2);animation:fadeIn var(--m-comp) var(--e-standard)}
+.tm-list li{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);padding:var(--s3);border-radius:var(--r3);background:var(--glass);border:1px solid var(--border)}
+.tm-n{display:grid;gap:2px;min-width:0;font-weight:700;color:var(--text)}
+.tm-n small,.tm-v small{font-weight:500;font-size:12.5px;color:var(--sub)}
+.tm-v{display:grid;gap:2px;text-align:end;font-weight:700;white-space:nowrap}
+.tm-tot{display:grid;gap:2px;margin:var(--s3) 0 0;padding:var(--s3);border-radius:var(--r3);background:var(--accent-tint);border:1px solid var(--accent-edge)}
+.tm-tot span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.tm-tot b{font-size:14px;color:var(--text)}
+.tm-after{margin:var(--s2) 0 0}
+.tm-done{margin:var(--s2) 0 var(--s3);color:var(--sub);line-height:1.5}
+.tm-act{display:grid;gap:var(--s2);margin-top:var(--s4)}
 /* ---- Running mode (js/ui/run.js) ------------------------------------------------
    The reference's running screen in the theme's dark: the route on a quiet grid, the
    time large, the distance, and calories and pace either side of the round pause. The
@@ -5473,6 +5503,73 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 .cweek{position:relative;margin:0 0 var(--s4);padding:18px 16px 16px;border-radius:var(--r5);border:1px solid var(--card-edge);
   background:radial-gradient(110% 80% at 100% 0%,rgba(var(--accent-rgb),.16),transparent 62%),var(--card);box-shadow:var(--shadow-card)}
 .cweek-top{display:flex;align-items:center;gap:12px}
+/* ---- the Coach page (views/coach.js): the mark and title, the ask box, this week in one
+   strip, one numbered list, the assessment row. */
+.chead{justify-content:flex-start;gap:var(--s3)}
+.chead-mark{display:grid;place-items:center;flex:none;width:44px;height:44px;border-radius:50%;background:var(--accent-tint);border:1px solid var(--accent-edge);color:var(--accentHi)}
+.chead-mark .gl{width:22px;height:22px}
+.cask{margin:0 0 var(--s4);display:grid;gap:var(--s2)}
+.cask-in{display:flex;align-items:center;gap:var(--s3);width:100%;min-height:52px;padding:0 var(--s4);border-radius:var(--rpill);
+  border:1px solid var(--accent-edge);background:var(--card);box-shadow:var(--shadow-card);color:var(--sub);font:inherit;font-size:15px;text-align:start;
+  transition:transform var(--m-press) var(--e-standard),border-color var(--m-micro) var(--e-standard)}
+:root:not(.tch) .cask-in:active,.cask-in.tapd{transform:scale(.985);border-color:var(--accent)}
+.cask-i{display:grid;place-items:center;flex:none;color:var(--accentHi)}
+.cask-i .gl{width:20px;height:20px}
+.cask-q{display:flex;gap:var(--s2);overflow-x:auto;scrollbar-width:none;margin:0 calc(var(--s4) * -1);padding:0 var(--s4)}
+.cask-q::-webkit-scrollbar{display:none}
+.cask-q .cp-chip{flex:none}
+.cweek2{margin:0 0 var(--s4);padding:var(--s3) var(--s4);border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card)}
+.cweek2-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2)}
+.cweek2-w{font-size:14px;color:var(--sub)}
+.cweek2-w b{color:var(--text);font-weight:800}
+.cweek2-bar{height:6px;margin:var(--s2) 0;border-radius:3px;background:var(--hair);overflow:hidden}
+.cweek2-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accentHi));transition:width var(--m-data) var(--e-standard)}
+[dir="rtl"] .cweek2-bar i{background:linear-gradient(270deg,var(--accent),var(--accentHi))}
+.cweek2-s{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s4);font-size:13px;color:var(--sub)}
+.cweek2-s span{display:inline-flex;align-items:center;gap:6px}
+.cweek2-s .gl{width:16px;height:16px;color:var(--accentHi)}
+.cweek2-s b{color:var(--text);font-weight:800}
+.cfor{list-style:none;margin:0;padding:0}
+.cfor>li{position:relative}
+.cfor-n{position:absolute;z-index:2;top:-8px;inset-inline-start:-6px;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;
+  background:var(--accent);color:var(--onAccent);font-size:12px;font-weight:800;box-shadow:0 0 0 3px var(--bg)}
+.crow{display:flex;align-items:center;gap:var(--s3);width:100%;margin:var(--s4) 0 0;padding:var(--s3) var(--s4);border-radius:var(--r4);
+  border:1px solid var(--border);background:var(--glass);color:var(--text);font:inherit;text-align:start}
+.crow-i{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:50%;background:var(--raised);color:var(--accentHi)}
+.crow-i .gl{width:18px;height:18px}
+.crow-t{display:grid;gap:2px;flex:1;min-width:0}
+.crow-t b{font-size:15px}
+.crow-t span{font-size:12.5px;color:var(--sub);line-height:1.4}
+/* The Coach page stands on a photograph with words in it (a coach's tablet): its cards
+   blur what is behind them, so no word of the picture reads through as if it were the
+   page's own (owner, 3 Nov: it looked like a glitch). */
+.cask-in,.cweek2,.cfor>li>section,.cfor>li>div,.crow{-webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1)}
+/* The check-in's "what got in the way" answers, in the Coach page's list: compact, two
+   to a line where they fit, so one question does not take the screen. */
+.cfor .ckcard .aschips{gap:6px}
+.cfor .ckcard .aschip{min-height:36px;padding:0 12px;font-size:13px}
+/* ---- the way into a plan page, on Training and Food (views/train.js programCard,
+   views/food.js foodPlanCard): the name, how it falls, and Plan ›. */
+.pgc{display:block;margin:var(--s4) 0 0;border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card);overflow:hidden}
+.pgc-h{display:flex;align-items:center;gap:var(--s3);width:100%;padding:var(--s3) var(--s4);border:0;background:none;color:var(--text);font:inherit;text-align:start}
+button.pgc{padding:var(--s3) var(--s4)}
+.pgc-t{display:grid;gap:2px;flex:1;min-width:0}
+.pgc-t b{font-family:var(--display);font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pgc-s{font-size:13px;color:var(--sub)}
+.pgc-go{display:inline-flex;align-items:center;gap:2px;flex:none;color:var(--accentHi);font-size:13px;font-weight:800}
+.pgc-go .ico{width:16px;height:16px}
+[dir="rtl"] .pgc-go .ico{transform:scaleX(-1)}
+.pgc .blk{margin:0;border:0;border-top:1px solid var(--hair);border-radius:0;background:none}
+/* An empty state over a busy picture keeps its words on a card of its own. */
+.psec .artempty{background:var(--card);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+/* The program's name on the plan page: to rename, and what it holds. */
+.bname{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);margin:0 0 var(--s3)}
+.bname .dname{min-width:0}
+.bname-t{margin:0;font-family:var(--display);font-size:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bname-s{flex:none;font-size:13px;color:var(--sub)}
+/* The plan pages' one row of tabs, and the part under it. */
+.psecs{margin:0 0 var(--s4)}
+.psec{min-height:40vh}
 /* The weekly check-in (js/ui/views/checkin.js): last week in lines, each change with its button. */
 .ckcard{margin:0 0 var(--s4);padding:var(--s4);border-radius:var(--r5);border:1px solid var(--card-edge);background:var(--card);box-shadow:var(--shadow-card)}
 .ckcard-h{display:flex;align-items:center;gap:var(--s3)}

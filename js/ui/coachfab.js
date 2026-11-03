@@ -33,6 +33,8 @@ function where(){return S.active&&V.tab==="train"&&V.train!=="hub"?"workout":(SU
 /* ---- where the launcher may sit ------------------------------------------------------ */
 function fabShown(){
   if(V.coach||V.sheet||V.chat)return false;
+  /* The Coach page has its own way in, the ask box at its top (views/coach.js). */
+  if(V.tab==="coach"&&!V.assess)return false;
   /* The keyboard up hides it, as it hides the dock — but not the panel's own field's:
      closing while typing (a tap in the panel keeps the field's focus, bindPanel), the
      field goes with the panel. */
@@ -83,7 +85,7 @@ function panelHtml(){
 
 /* ---- keeping the containers in step ---------------------------------------------------- */
 var lastMode=null,lastFab=null,openKey="",held=false;
-function routeKey(){return [V.tab,V.train,V.dayId,V.previewId,V.meal,V.smeal,V.pslot,V.pimport,V.phist,V.csec,V.ctsub,V.cfsub].join("|");}
+function routeKey(){return [V.tab,V.train,V.tplan,V.fplan,V.dayId,V.previewId,V.meal,V.smeal,V.pslot,V.pimport,V.phist].join("|");}
 function syncCoach(){
   var fab=document.getElementById("cfab"),pan=document.getElementById("cpanel");
   if(!fab||!pan)return;
@@ -211,4 +213,4 @@ function bindPanel(grow){
     if(document.activeElement&&document.activeElement.id==="chatq")e.preventDefault();});}
 function focusFab(){var b=document.querySelector("#cfab .cfab");if(b)try{b.focus({preventScroll:true});}catch(e){}}
 
-export {bindPanel, closeCoach, fabShown, holdCoach, syncCoach, toEnd};
+export {bindPanel, closeCoach, fabShown, holdCoach, suggestFor, syncCoach, toEnd};

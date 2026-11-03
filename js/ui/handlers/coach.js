@@ -1,6 +1,7 @@
 /* Bunyan — Coach AI
    Coach AI: the assessment, the plan check and the coach's cards, the chat, and a meal
    plan built from the targets. */
+import {mealPrefs} from "../todaymeal.js";
 import {coachNow} from "../../engine/coachinfo.js";
 import {addDaysISO} from "../../engine/dayplan.js";
 import {kcalFloor, lastWeight, macroTargets} from "../../engine/formulas.js";
@@ -10,7 +11,7 @@ import {buildPlan, rebalance} from "../../engine/plan.js";
 import {checkinOpen} from "../../engine/checkin.js";
 import {lightOnPurpose} from "../../engine/stress.js";
 import {addDays, weekStartOf} from "../../engine/schedule.js";
-import {checkPlans} from "../../engine/plancheck.js";
+import {checkPlans, heavyMains, shortRests} from "../../engine/plancheck.js";
 import {t} from "../../i18n/dict.js";
 import {S, saveDB, split} from "../../state.js";
 import {restartAfter} from "../../engine/blocks.js";
@@ -24,7 +25,7 @@ import {toast, V} from "../view.js";
 import {draftFrom, FOCUS_MAX, foodPrefs, GEARS, profileOf, skipOf, STEPS, youOk, youWhy} from "../views/assess.js";
 import {ask, findMsg, follow} from "../views/chat.js";
 import {coachAct} from "../views/pcheck.js";
-import {chatSend, sendText, slotsFrom, toCoach} from "./common.js";
+import {chatSend, sendText, slotsFrom, toPlan} from "./common.js";
 import {closeCoach, holdCoach, toEnd} from "../coachfab.js";
 import {perform, undo} from "./actions.js";
 import {addFact, removeFact} from "../../coach/context.js";
@@ -78,7 +79,13 @@ function pcFix(id){
   var f=checkPlans().filter(function(x){return x.id===id;})[0];if(!f)return;
   var act=f.fix.act;
   if(act==="meals"){openMealPlan(mealPrefs());return;}
-  if(act==="program"){toCoach("train","program");return;}
+  /* Fixed in the program itself, with Undo (engine/plancheck.js). */
+  if(act==="heavy"||act==="shortrest"){
+    var pg=split();if(!pg)return;
+    var dB=JSON.parse(JSON.stringify(pg.days)),nC=act==="heavy"?heavyMains(pg):shortRests(pg);saveDB();render();
+    toast(t(act==="heavy"?"Main lifts set to 3–6 reps with longer rests: {n} changed.":"Rests shortened to 60 s: {n} exercises changed.").replace("{n}",nC),
+      function(){pg.days=dB;saveDB();render();});return;}
+  if(act==="program"){toPlan("train","program");return;}
   if(act==="assess"){V.pcheck=false;pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);return;}
   var prog=split(),before={goals:JSON.parse(JSON.stringify(S.goals)),goal:S.profile.goal,
     days:prog?JSON.parse(JSON.stringify(prog.days)):null,dis:JSON.parse(JSON.stringify(S.pcDismiss||{})),
@@ -162,21 +169,18 @@ function coachFix(id){
     toast(r.sets||r.added?t("Volume balanced: {s} sets moved, {a} exercises added.").replace("{s}",r.sets).replace("{a}",r.added)
       :t("Nothing could be moved without making sessions longer."),function(){prog.days=daysBefore;S.coachDismiss=disB;saveDB();render();});
     return;}
-  if(act==="program"){coachSetAside(id,14);saveDB();toCoach("train","program");return;}
+  if(act==="program"){coachSetAside(id,14);saveDB();toPlan("train","program");return;}
   coachSetAside(id,28);saveDB();render();}
 /* A meal plan built from the daily targets, opened on the same review an imported
    plan gets: every food and amount can be changed before it is used. */
 function openMealPlan(prefs){
   loadFoods(function(){
-    V.assess=false;V.pcheck=false;resetNav();V.tab="coach";V.csec="food";V.cfsub="plan";S.prefs.csec="food";saveDB();pushNav();
+    V.assess=false;V.pcheck=false;resetNav();V.tab="food";V.fplan="plan";pushNav();
     /* Read once the food database is in: the log's foods are looked up in it. */
     Object.assign(prefs,ownFood());
     V.pimport=true;V.pgen=prefs;V.pitext="";V.ptargets=null;
     V.pparse=buildMealPlan(S.goals,prefs);
     render();window.scrollTo(0,0);});}
-function mealPrefs(){
-  var pr=S.prefs;
-  return {meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",likes:(pr.likes||[]).slice(),variant:0};}
 
 /* What this module answers. app.js calls register() once, at boot, in the order
    the branches are tried in (see registry.js). */
@@ -238,7 +242,7 @@ function register(){
   key("astrain",function(){V.assess=false;V.pcheck=false;resetNav();V.tab="train";V.train="days";V.tdate=null;render();window.scrollTo(0,0);return;});
   key("asfood",function(){V.assess=false;V.pcheck=false;resetNav();V.tab="food";V.train="days";V.fdate=null;render();window.scrollTo(0,0);return;});
   /* The plan check: open it, fix a finding, keep one as it is, look at kept ones again. */
-  key("pcopen",function(){toCoach("ai");V.advall=true;render();return;});
+  key("pcopen",function(){toPlan("ai");V.advall=true;render();return;});
   /* Coach AI's advice: the most important thing, or all of it. */
   key("advall",function(D){V.advall=D.advall==="1";render();return;});
   key("pcfix",function(D){pcFix(D.pcfix);return;});

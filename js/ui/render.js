@@ -21,7 +21,7 @@ import {lockScroll, syncWorkoutState, V} from "./view.js";
 import {patch, replace} from "./patch.js";
 import {checkDock, syncDock} from "./dock.js";
 import {syncWbar} from "./wbar.js";
-import {applyMotion, countTo, glideCards, once, snapCards} from "./motion.js";
+import {applyMotion, countTo, glideCards, isReduced, once, snapCards} from "./motion.js";
 import {applyLook} from "./theme.js";
 import {bindExSwipe} from "./exswipe.js";
 import {bindMore} from "./more.js";
@@ -68,7 +68,24 @@ function paintMotion(root,viewKey){
   for(i=0;i<els.length;i++)countTo(els[i],els[i].getAttribute("data-count-to"));
 }
 
-var lastView="",lastSheet=null,lastEx=-2;
+var lastView="",lastSheet=null,lastEx=-2,lastSec=null;
+/* A plan page's parts (Training: program, programs, exercises; Food: meal plan, targets,
+   my foods): changing part slides the new one in from the side it is on, the way the
+   week moves, rather than swapping in place (owner, 3 Nov: everything animated). The
+   page itself arriving is a page change and has its own entrance. */
+var SECS={t:["program","programs","exercises"],f:["plan","targets","foods"]};
+function secNow(){
+  if(V.tab==="train"&&V.train==="plan"&&!S.active)return "t:"+(V.tplan||"program");
+  if(V.tab==="food"&&V.fplan&&!V.smeal&&!V.pslot&&!V.pimport)return "f:"+V.fplan;
+  return null;}
+function slideSection(root,moved){
+  var now=secNow(),was=lastSec;lastSec=now;
+  if(moved||!now||!was||now===was||now[0]!==was[0]||isReduced())return;
+  var list=SECS[now[0]],dir=list.indexOf(now.slice(2))>list.indexOf(was.slice(2))?1:-1;
+  if(document.documentElement.getAttribute("dir")==="rtl")dir=-dir;
+  var el=root.querySelector(".psec");if(!el||!el.animate)return;
+  el.animate([{transform:"translateX("+(dir*28)+"px)",opacity:0},{transform:"none",opacity:1}],
+    {duration:360,easing:"cubic-bezier(0.2, 0, 0, 1)"});}
 /* Which picture a place stands on: Training's first page is home; a day about to be
    started is the workout's; planning a program is training's; Coach's sections are
    their own; the assessment is Coach's. */
@@ -79,7 +96,8 @@ function groundOf(){
      its own in its card, so the ground stays clear while it is up. */
   if(V.tab==="train"&&S.active&&V.train!=="hub")return warmShown(S.active)?"":"training";
   if(V.tab==="train")return V.train==="day"||V.train==="preview"?"workout":V.train==="days"?"home":"training";
-  if(V.tab==="coach")return V.csec==="train"?"training":V.csec==="food"?"food":"coach";
+  /* The Coach page stands on Coach's own ground. */
+  if(V.tab==="coach")return "coach";
   return V.tab;}
 function render(){
   if(syncWorkoutState())saveDB();
@@ -94,13 +112,17 @@ function render(){
      route to either lands on its new place. */
   if(V.tab==="home"||!V.tab)V.tab="train";
   /* The plan check, asked for: Coach AI with every finding open. */
-  if(V.pcheck){V.pcheck=false;V.tab="coach";V.csec="ai";V.advall=true;}
+  if(V.pcheck){V.pcheck=false;V.tab="coach";V.advall=true;}
   /* The chat is a Coach screen; leaving Coach leaves it (back restores it from the trail). */
   if(V.tab!=="coach")V.chat=false;
   /* The conversation is the floating Coach's now (js/ui/coachfab.js): a route that
      still asks for the old chat screen (an answer asked from Food) opens the panel. */
   if(V.chat){V.chat=false;V.coach=V.coach||"compact";}
-  var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":S.run?"run":V.train):V.tab==="coach"?(V.train!=="days"?V.train:V.pslot?"pslot":V.pimport?"pimport":V.smeal?"smeal":V.chat?"chat":"hub"):"");
+  /* Planning lives in its own tab now (owner, 3 Nov): Training's plan page and its
+     builders under train/, Food's plan page and its meal screens under food/. */
+  var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":S.run?"run":V.train)
+    :V.tab==="food"?(V.smeal?"smeal":V.pslot?"pslot":V.pimport?"pimport":V.fplan?"plan":"")
+    :V.tab==="coach"?"hub":"");
   var moved=view!==lastView;lastView=view;
   /* Note what has focus and where the caret sits before the rebuild destroys it.
      Restoring the caret to the end of the value, which is what this used to do,
@@ -151,6 +173,7 @@ function render(){
   var before=moved||!sameEx?null:snapCards(appEl);
   if(moved)replace(appEl,h); else patch(appEl,h);
   glideCards(appEl,before);
+  slideSection(appEl,moved);
   if(moved){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
   bindExSwipe();
   bindMore(render);

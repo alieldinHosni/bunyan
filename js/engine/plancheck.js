@@ -138,11 +138,11 @@ function checkPlans(){
     if(p.goal==="strength"&&lo>6)
       out.push({id:"int-str",area:"train",sev:2,title:t("Heavy enough for strength?"),
         why:fill(t("Your main lifts start at about {lo} reps. Strength comes fastest from heavier sets of 3 to 6, with longer rests."),{lo:Math.round(lo)}),
-        fix:{label:t("Open my program"),act:"program"},sig:[Math.round(lo)]});
+        fix:{label:t("Make the main lifts 3–6 reps"),act:"heavy"},sig:[Math.round(lo)]});
     if(p.goal==="endurance"&&f.rest>150)
       out.push({id:"int-end",area:"train",sev:1,title:t("Long rests for endurance"),
         why:fill(t("Rests average {s} seconds. For endurance, 30 to 90 seconds keeps your heart rate up between sets."),{s:Math.round(f.rest)}),
-        fix:{label:t("Open my program"),act:"program"},sig:[Math.round(f.rest/15)]});
+        fix:{label:t("Shorten rests to 60 s"),act:"shortrest"},sig:[Math.round(f.rest/15)]});
     if(p.goal==="mobility"&&!f.mob)
       out.push({id:"mob-none",area:"train",sev:2,title:t("No mobility work in your program"),
         why:t("Your goal is mobility, but the program has no stretches or mobility drills. The warm-up and cool-down help; a few minutes at the end of each session helps more."),
@@ -181,4 +181,24 @@ function checkPlans(){
   out.sort(function(a,b){return b.sev-a.sev;});
   return out;}
 
-export {checkPlans, planTotals};
+/* The two training findings fixed in place (owner, 3 Nov: a button does what it says,
+   rather than opening the program to do it by hand). Both change the program passed in
+   and return how many exercises changed.
+   heavyMains  each day's first multi-joint lift (the "main lift" the check reads) to
+               3–6 reps, rest at least 3 minutes: the finding's own range for strength.
+   shortRests  every lift's rest over 90 s down to 60 s: inside the finding's 30–90 s. */
+function heavyMains(prog){
+  var n=0;
+  (prog.days||[]).forEach(function(d){var first=true;
+    (d.ex||[]).forEach(function(e){
+      if(isActivity(e.name)||!first||!isCompound(e.name))return;
+      first=false;
+      if(num(e.lo)>6||num(e.hi)>6){e.lo=3;e.hi=6;n++;}
+      if(num(e.rest)<180)e.rest=180;});});
+  return n;}
+function shortRests(prog){
+  var n=0;
+  (prog.days||[]).forEach(function(d){(d.ex||[]).forEach(function(e){
+    if(isActivity(e.name)||num(e.rest)<=90)return;e.rest=60;n++;});});
+  return n;}
+export {checkPlans, heavyMains, planTotals, shortRests};

@@ -2,6 +2,7 @@
    Food: the day, its meals and water, adding food every way (search, scan, typing a
    meal, by hand), the meal plan and a plan brought in, saved meals and your own foods,
    and the targets. */
+import {todayMeal} from "../todaymeal.js";
 import {day} from "../../data/splits.js";
 import {addItems, macroKcal, macroTargets} from "../../engine/formulas.js";
 import {importName, mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "../../engine/meals.js";
@@ -18,9 +19,8 @@ import {goBack, pushNav} from "../nav.js";
 import {render} from "../render.js";
 import {curDate, mealNow, play, toast, V} from "../view.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
-import {ask} from "../views/chat.js";
 import {savedById} from "../views/food.js";
-import {chatEnd, LENT, pcAfter, slotsFrom, topOfResults, withNotes} from "./common.js";
+import {LENT, pcAfter, slotsFrom, topOfResults, withNotes} from "./common.js";
 import {has, key, on} from "./registry.js";
 
 /* Logs one food to the add-food sheet's meal and closes it. The single path for the
@@ -383,7 +383,7 @@ function register(){
     var keepS=JSON.parse(JSON.stringify(mealSlots()));
     setStyle(D.mstyle);V.reorder=null;saveDB();render();
     toast(t(D.mstyle==="named"?"Meals are named.":"Meals are numbered."),function(){S.mealSlots=keepS;saveDB();render();});return;});
-  key("pslot",function(D){pushNav();V.tab="coach";V.pslot=D.pslot;render();window.scrollTo(0,0);return;});
+  key("pslot",function(D){pushNav();V.tab="food";V.pslot=D.pslot;render();window.scrollTo(0,0);return;});
   key("paddslot",function(){askText({title:t("Add a meal"),ph:t("For example, Pre-workout"),
     body:t("Leave it blank and it is numbered by its place in the day."),required:false,cta:t("Add"),act:"addslot"});return;});
   key("prename",function(D){var rsl=slotOf(D.prename);if(!rsl)return;
@@ -431,7 +431,7 @@ function register(){
     render();
     if(nL){play("set");toast(t(nL===1?"1 meal logged from your plan.":"{n} meals logged from your plan.").replace("{n}",nL));}
     else toast(t("Every planned meal is already logged today."));return;});
-  key("pimport",function(){pushNav();V.tab="coach";V.pimport=true;V.pparse=null;V.pgen=null;render();window.scrollTo(0,0);return;});
+  key("pimport",function(){pushNav();V.tab="food";V.pimport=true;V.pparse=null;V.pgen=null;render();window.scrollTo(0,0);return;});
   on(function(D){return D.pirm||D.pidrop;},function(D){
     var pk=D.pirm?"items":"todo",pa2=(D.pirm||D.pidrop).split("|"),pmd=V.pparse&&V.pparse[+pa2[0]];if(!pmd)return;
     var pj=+pa2[1],gonePI=pmd[pk].splice(pj,1)[0];if(gonePI==null)return;render();
@@ -463,10 +463,10 @@ function register(){
     if(tg&&V.papplyT!==false)["kcal","p","c","f","water","steps"].forEach(function(k){
       if(tg[k]>0){S.goals[k]=tg[k];tSet++;}});
     V.pparse=null;V.pitext="";V.reorder=null;V.ptargets=null;V.psupps=null;V.pgen=null;saveDB();
-    goBack();V.pimport=false;V.chat=false;V.tab="coach";V.csec="food";V.cfsub="plan";render();window.scrollTo(0,0);
+    goBack();V.pimport=false;V.chat=false;V.tab="food";V.fplan="plan";render();window.scrollTo(0,0);
     toast(t(tSet?"Your plan and its daily targets are in.":"Your plan is in."),function(){S.mealSlots=before;S.goals=goalsBefore;saveDB();render();});
     pcAfter();return;});
-  key("smeal",function(D){pushNav();V.tab="coach";V.smeal=D.smeal;render();window.scrollTo(0,0);return;});
+  key("smeal",function(D){pushNav();V.tab="food";V.smeal=D.smeal;render();window.scrollTo(0,0);return;});
   key("newmeal",function(){askText({title:t("New meal"),ph:t("For example, Ful breakfast"),act:"newmeal"});return;});
   key("renamemeal",function(D){var rm=savedById(D.renamemeal);if(!rm)return;
     askText({title:t("Rename meal"),value:rm.name,act:"renamemeal",data:D.renamemeal});return;});
@@ -504,8 +504,16 @@ function register(){
   key("usesug",function(){
     var mS=macroTargets();
     if(!mS){openSheet("weigh");return;}
+    var was=Object.assign({},S.goals);
     S.goals.kcal=mS.kcal;S.goals.p=mS.p;S.goals.f=mS.f;S.goals.c=mS.c;
-    saveDB();render();toast(t("Targets updated."));return;});
+    saveDB();render();toast(t("Targets updated."),function(){S.goals=was;saveDB();render();});return;});
+  /* The macros made to add up to the calories: carbohydrate takes the difference,
+     protein and fat as typed (views/food.js vTargets). Whatever is in the fields counts. */
+  key("fitmacros",function(){
+    var was=Object.assign({},S.goals),k=num(val("g_kcal"),S.goals.kcal),p=num(val("g_p"),S.goals.p),f=num(val("g_f"),S.goals.f);
+    var c=Math.max(0,Math.round((k-p*4-f*9)/4));
+    S.goals.kcal=k;S.goals.p=p;S.goals.f=f;S.goals.c=c;saveDB();render();
+    toast(t("Carbs set to {n} g: your macros now make your target.").replace("{n}",c),function(){S.goals=was;saveDB();render();});return;});
   /* A frequent-food pill on the dashboard, or the + beside a result in the sheet.
      Both used to go to Snack whatever the meal — including from a sheet opened for
      Breakfast. logFood takes the sheet's meal, or the time of day's without one. */
@@ -517,10 +525,16 @@ function register(){
       var f=(FOODDB||[]).filter(function(x){return x.id===fs[0];})[0];
       if(f)logFood(f,+fs[1],fs.slice(2).join("|"));});
     return;});
-  key("fbuild",function(){
-    pushNav();V.tab="coach";V.csec="ai";V.chat=true;
-    loadFoods(function(){ask("",S.mealSlots&&S.mealSlots.some(function(x){return (x.plan||[]).length;})?"rest":"eat");
-      saveDB();render();chatEnd();});
+  /* Today's meal, built in a sheet over Food (js/ui/todaymeal.js): no trip to the chat. */
+  key("fbuild",function(){loadFoods(function(){openSheet("todaymeal",{v:0});});return;});
+  key("tmanother",function(){V.sd=V.sd||{};V.sd.v=(V.sd.v||0)+1;render();return;});
+  key("tmadd",function(){
+    var m=todayMeal((V.sd||{}).v||0);if(!m||!m.items.length)return;
+    var d=today(),r=dayRec(d),before=JSON.parse(JSON.stringify(r.meals[m.slot]||null));
+    addItems(m.slot,JSON.parse(JSON.stringify(m.items)),d);
+    closeSheet();render();play("set");
+    toast(t("Added to {m}.").replace("{m}",mealName(m.slot)),function(){
+      var r2=dayRec(d);if(before)r2.meals[m.slot]=before;else delete r2.meals[m.slot];saveDB();render();});
     return;});
   key("quickfood",function(D){
     var f10=(S.myFoods||[]).concat(FOODDB||[]).filter(function(x){return x.id===D.quickfood;})[0];

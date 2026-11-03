@@ -84,7 +84,7 @@ function youSheet(){
    +'<section class="sg"><h3 class="sg-h">'+t("Goal")+'</h3>'
    /* The one list of goals (js/data/goals.js), the same the assessment offers. */
    +choose("p_goal",goal,GOAL_ORDER.map(function(k){return [k,t(GOALS[k].label),t(GOALS[k].desc||"")];}))+'</section>'
-   +'<p class="sg-f">'+t("Your calorie and protein targets are worked out from these, in Coach → Nutrition → Targets.")+'</p>'
+   +'<p class="sg-f">'+t("Your calorie and protein targets are worked out from these, in Food → Plan → Targets.")+'</p>'
    +'<button class="btn" data-saveyou="1">'+t("Save")+'</button>'
    +'<button class="btn g" data-fsec="targets">'+t("See my targets")+'</button>';}
 

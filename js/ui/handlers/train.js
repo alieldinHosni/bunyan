@@ -24,7 +24,7 @@ import {render} from "../render.js";
 import {tap, toast, V} from "../view.js";
 import {groupRun} from "../views/session.js";
 import {newNames, programFromDraft} from "../views/timport.js";
-import {builderId, editedEx, pcAfter, readTraining, requestCloseSheet, setDbLoad, setExField, tidyGroups, toCoach, topOfResults} from "./common.js";
+import {builderId, editedEx, pcAfter, readTraining, requestCloseSheet, setDbLoad, setExField, tidyGroups, toPlan, topOfResults} from "./common.js";
 import {has, key, NEXT, on} from "./registry.js";
 
 /* Moving a program to weekdays: the empty "Rest" days that spaced out a rotation
@@ -66,7 +66,7 @@ function useDraft(){
   var p=makeProgram(programFromDraft(tp,today())),before=S.activeProgram;
   addProgram(p,true);saveDB();
   V.tp=null;V.titext="";
-  toCoach("train","program");
+  toPlan("train","program");
   toast(t("{name} is your program now.").replace("{name}",p.name),function(){
     S.programs=(S.programs||[]).filter(function(q){return q.id!==p.id;});
     if(before)S.activeProgram=before;saveDB();render();});
@@ -182,7 +182,7 @@ function register(){
     saveDB();closeSheet();toast(t("Workout changed"));}
   /* From the My Training sheet, a day or the programs list replaces the sheet. */
   on(function(D){return (D.train||D.day)&&V.sheet;},function(){V.sheet=null;V.sd=null;return NEXT;});
-  key("train",function(D){pushNav();V.tab="coach";V.train=D.train;render();window.scrollTo(0,0);return;});
+  key("train",function(D){pushNav();V.tab="train";V.train=D.train;render();window.scrollTo(0,0);return;});
   key("day",function(D){pushNav();V.dayId=D.day;V.train="day";render();return;});
   /* A template asks whether to start on it now (the default) or only add your copy
      to My programs; one of yours asks only whether to switch. */
@@ -196,8 +196,8 @@ function register(){
       body:t("You get your own copy to change as you like. Every session you have already logged is kept."),
       cta:t("Use it now"),act:"adopt",data:D.adopt,alt:t("Just add it to My programs"),altact:"addprog"});
     return;});
-  key("preview",function(D){pushNav();V.tab="coach";V.previewId=D.preview;V.train="preview";render();window.scrollTo(0,0);return;});
-  key("editsplit",function(D){pushNav();V.tab="coach";V.previewId=D.editsplit;V.train="builder";render();window.scrollTo(0,0);return;});
+  key("preview",function(D){pushNav();V.tab="train";V.previewId=D.preview;V.train="preview";render();window.scrollTo(0,0);return;});
+  key("editsplit",function(D){pushNav();V.tab="train";V.previewId=D.editsplit;V.train="builder";render();window.scrollTo(0,0);return;});
   key("renamesplit",function(D){var rs=editSplit(D.renamesplit);if(!rs)return;
     askText({title:t("Rename program"),value:planName(rs.name),act:"renamesplit",data:D.renamesplit});return;});
   has("bday",function(){var bs=editSplit(builderId());if(!bs)return;
@@ -264,10 +264,10 @@ function register(){
   key("exsteps",function(){V.exsteps=!V.exsteps;render();return;});
   key("exmiss",function(){V.exmiss=!V.exmiss;render();return;});
   key("showall",function(){V.showAll=!V.showAll;render();return;});
-  key("bwsplit",function(){pushNav();V.tab="coach";V.train="bodyweight";render();return;});
-  key("bwcat",function(D){pushNav();V.tab="coach";V.exm=D.bwcat==="All"?"All":D.bwcat;V.exe="Bodyweight";V.exq="";
+  key("bwsplit",function(){pushNav();V.tab="train";V.train="bodyweight";render();return;});
+  key("bwcat",function(D){pushNav();V.tab="train";V.exm=D.bwcat==="All"?"All":D.bwcat;V.exe="Bodyweight";V.exq="";
     V.train="library";render();return;});
-  key("bwdiff",function(D){pushNav();V.tab="coach";V.exd=D.bwdiff;V.exe="Bodyweight";V.exm="All";V.exq="";V.train="library";render();return;});
+  key("bwdiff",function(D){pushNav();V.tab="train";V.exd=D.bwdiff;V.exe="Bodyweight";V.exm="All";V.exq="";V.train="library";render();return;});
   key("exdetail",function(D){var nm5=D.exdetail;V.exsteps=false;V.exmiss=false;
     /* Opened from inside the sheet (a similar exercise): remember the trail, so back
        returns to the exercise this one was reached from instead of closing. */
@@ -331,7 +331,7 @@ function register(){
   /* The ✕ on the row: gone at once, with Undo rather than a question. */
   key("rmex",function(D){removeDayEx(D.rmex);return;});
   key("grip",function(){return;});
-  key("timport",function(){pushNav();V.tab="coach";V.train="import";V.tp=null;V.tierr="";render();window.scrollTo(0,0);return;});
+  key("timport",function(){pushNav();V.tab="train";V.train="import";V.tp=null;V.tierr="";render();window.scrollTo(0,0);return;});
   key("tiread",function(){var tt=val("ti_text");V.titext=tt;
     if(!tt.trim()){toast(t("Paste your program first."));return;}
     readTraining(tt);return;});

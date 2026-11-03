@@ -23,6 +23,7 @@ var GUIDES={
     {sel:".hacts .havatar",h:"You",p:"Your picture opens Profile: your details, your picture, the app's settings and your backups."},
     {sel:".wkr",h:"Your week",p:"Each day shows what it holds. Tap one to choose it and tap it again for its details. Swipe for another week, and open the month from the calendar: a dot is a workout done, a ring one planned."},
     {sel:".thero2",h:"Today's workout",p:"Start it here. Change swaps today for another day of your plan."},
+    {sel:".pgc",v:2,h:"Your program",p:"Your program and the training block it is in. Plan opens it: its days, other programs and the exercise library."},
     {sel:".htiles",h:"Weigh-in and steps",p:"Tap either one to log it, and type the number. The ring fills toward your daily steps goal."},
     {sel:"[data-actsheet]",h:"Cardio and sports",p:"Log a match or a class by time and effort. Pick a run, a walk, a ride or a hike to track it live with your phone's GPS."},
     {sel:"nav .dock",fixed:true,h:"Getting around",p:"Training, Food, Coach and Progress. The tab you are on opens to show its name."}]},
@@ -31,14 +32,15 @@ var GUIDES={
     {sel:".fsum",h:"Today against your targets",p:"Calories eaten and left, and protein, carbs and fat, against what your plan asks for."},
     {sel:".fmt",h:"Your meals",p:"Tap a meal to see it, log it as planned, or change any food's amount."},
     {sel:"[data-addfood]",h:"Add food",p:"Search the food list, scan a barcode, or describe a meal in words."},
+    {sel:".fpc",v:2,h:"Your plan",p:"Your meal plan and daily targets. Plan opens them, with the foods and meals of your own."},
     {sel:".fbody",h:"What your body needs",p:"What is behind for the time of day, and everyday foods that bring it. One tap logs one."},
     {sel:".fwater",h:"Water",p:"Tap the glasses to set how much you have drunk today."}]},
+  /* The Coach page as it is from 3 Nov (v 2): planning moved to Training and Food. */
   coach:{name:"Coach",steps:[
-    {sel:".csecs",h:"Three parts",p:"Training is your program, Nutrition your meal plan and targets, Coach what the coach sees and the chat."},
-    {sel:".cweek",h:"Your week, judged",p:"The coach's word on this week, with workouts done, protein days and your streak."},
-    {sel:".pcf",h:"Coach noticed",p:"One thing at a time from your log. Act on it with its button, or set it aside."},
-    {sel:".chatcard",h:"Ask me anything",p:"Ask about training, food or progress, in English or Arabic. Answers come from your own log."},
-    {sel:".cplan",h:"Your plan",p:"Your program and meal plan at a glance. Tap one to open it."}]},
+    {sel:".cask",v:2,h:"Ask me anything",p:"Ask about training, food or progress, in English or Arabic, or tap a question. Answers come from your own log."},
+    {sel:".cweek2",v:2,h:"This week",p:"Workouts done against those planned, the days protein reached its target, and your streak."},
+    {sel:".cfor",v:2,h:"For you",p:"Everything that wants a decision this week, most important first. Each has its own buttons, and nothing changes until you tap one."},
+    {sel:".crow",v:2,h:"Start again",p:"Take the assessment again to rebuild your training and meals. You see both before anything changes."}]},
   progress:{name:"Progress",steps:[
     {sel:".pgtabs2",h:"Three views",p:"Overview for the big picture, Strength for your lifts, Body for weight, measurements and photos."},
     {sel:".pgrange",h:"How far back",p:"From the last week to the last year. Every chart on the page follows it."},
@@ -63,8 +65,8 @@ function pageKey(){
   if(S.active)return null;
   if(V.tab==="coach"&&V.chat)return "chat";
   if(V.tab==="train")return V.train==="days"?"train":null;
-  if(V.tab==="coach")return V.train==="days"&&!V.pslot&&!V.pimport&&!V.smeal&&!V.pcheck?"coach":null;
-  if(V.tab==="food")return !V.meal?"food":null;
+  if(V.tab==="coach")return !V.pcheck?"coach":null;
+  if(V.tab==="food")return !V.meal&&!V.fplan&&!V.smeal&&!V.pslot&&!V.pimport?"food":null;
   if(V.tab==="progress")return !V.phist?"progress":null;
   if(V.tab==="profile")return "profile";
   return null;}
