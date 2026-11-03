@@ -4539,13 +4539,17 @@ body.wkflat #app{--gutter:20px}
 .ready-c.feel-c{grid-template-columns:repeat(3,minmax(0,1fr))}
 .wc2-feel-n{margin:8px 0 0;font-size:12px;color:var(--color-text-tertiary);line-height:1.4}
 /* ---- Train: switch the day's workout ----------------------------------------------- */
-.thero2-swap{position:absolute;top:14px;inset-inline-end:14px;z-index:2;display:flex;align-items:center;gap:6px;
-  min-height:36px;padding:0 14px;border-radius:var(--rpill);border:1px solid var(--hair-hi);
-  background:rgba(var(--bg-rgb),.55);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
-  color:var(--text);font-size:13px;font-weight:700;transition:transform var(--m-press) var(--e-standard)}
-:root:not(.tch) .thero2-swap:active,.thero2-swap.tapd{transform:scale(.95)}
-.thero2-swap svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.thero2:has(.thero2-swap) .thero2-t{padding-inline-end:86px}
+.thero2-k{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s1) var(--s2)}
+/* A quiet chip beside the label: see-through, a hairline, the icon in the accent. Its
+   hit area reaches 44 px around it without growing the chip. */
+.thero2-swap{position:relative;display:inline-flex;align-items:center;gap:5px;min-height:26px;padding:0 10px;
+  border-radius:var(--rpill);border:1px solid var(--hair-hi);background:transparent;
+  color:var(--sub);font-size:12px;font-weight:700;letter-spacing:.01em;
+  transition:transform var(--m-press) var(--e-standard),color var(--m-micro) var(--e-standard),border-color var(--m-micro) var(--e-standard),background var(--m-micro) var(--e-standard)}
+.thero2-swap::before{content:"";position:absolute;inset:-9px -4px}
+.thero2-swap svg{width:14px;height:14px;fill:none;stroke:var(--accentHi);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+:root:not(.tch) .thero2-swap:hover{color:var(--text);border-color:var(--accent-edge)}
+:root:not(.tch) .thero2-swap:active,.thero2-swap.tapd{transform:scale(.95);color:var(--text);border-color:var(--accent-edge);background:var(--accent-tint)}
 /* Another session today (train.js ANOTHER): a quiet second action under the card's own. */
 .thero2-add{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;margin-top:var(--s2);
   border-radius:var(--rpill);border:1px dashed var(--hair-hi);background:transparent;color:var(--sub);font-size:14px;font-weight:700;

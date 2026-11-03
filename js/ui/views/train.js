@@ -151,10 +151,12 @@ function dayHero(sp,p,iso){
     ?'<button class="thero2-swap" data-swapday="'+iso+'" aria-label="'+esc(t("Change this day's workout"))+'">'
       +'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg><span>'+t("Change")+'</span></button>':'';
   return '<div class="thero2'+(p.kind==="today"&&!p.rest?' live':'')+'">'
-   +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'+swap
+   +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'
    +'<div class="thero2-top"><span class="tbadge'+(p.rest||p.kind==="past"?' rest':'')+'" aria-hidden="true">'
    +(p.rest||p.kind==="past"?MOON:DUMBBELL)+'</span>'
-   +'<div class="thero2-t"><span class="klabel">'+esc(label)+'</span>'
+   /* Change sits beside the day's label, in the text, not over the rider (owner, 3 Nov:
+      "the change button is hiding the cool figure"). */
+   +'<div class="thero2-t"><div class="thero2-k"><span class="klabel">'+esc(label)+'</span>'+swap+'</div>'
    +'<div class="thero2-n">'+esc(name)+'</div>'
    +'<div class="thero2-m">'+esc(meta)+'</div></div></div>'
    +cta+'</div>';}
@@ -344,10 +346,13 @@ function weekRail(sp,sel){
    +'<div class="wkr-h"><div class="wkr-ti'+dir+'" data-k="wkt'+(open?'cal':ws)+'" aria-live="polite"><b>'+esc(open?t("Training calendar"):title)+'</b>'
    +(open?'':'<span class="wkr-p">'+esc(range)+' · <span class="num">'+done+'</span> '+esc(t("of"))+' <span class="num">'+plan+'</span> '+esc(t("done"))+'</span>')+'</div>'
    +'<div class="wkr-ha">'
-   +(away?'<button class="wkr-today" data-wktoday="1">'+esc(t("Today"))+'</button>':'')
+   /* Each keyed (owner, 3 Nov: the calendar flashed on Today): without a key the patcher
+      matches by position, so Today going made the hidden week button turn into the
+      calendar one, replaying its colour transition. */
+   +(away?'<button class="wkr-today" data-k="wkr-today" data-wktoday="1">'+esc(t("Today"))+'</button>':'')
    /* No arrows on screen: the row swipes. These two are for a keyboard or a screen reader. */
-   +(open?'':'<button class="vh" data-wkpage="-1">'+esc(t("Previous week"))+'</button><button class="vh" data-wkpage="1">'+esc(t("Next week"))+'</button>')
-   +'<button class="wkr-cal" data-wkopen="1" aria-expanded="'+open+'" aria-label="'+esc(t(open?"Back to the week":"See the whole month"))+'">'+CAL+'</button>'
+   +(open?'':'<button class="vh" data-k="wkr-prev" data-wkpage="-1">'+esc(t("Previous week"))+'</button><button class="vh" data-k="wkr-next" data-wkpage="1">'+esc(t("Next week"))+'</button>')
+ +'<button class="wkr-cal" data-k="wkr-cal" data-wkopen="1" aria-expanded="'+open+'" aria-label="'+esc(t(open?"Back to the week":"See the whole month"))+'">'+CAL+'</button>'
    +'</div></div>'
    +(open?'':'<div class="wkr-bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div>')
    +'<div class="wkr-fold"'+(open?' inert aria-hidden="true"':'')+'><div class="wkr-in">'

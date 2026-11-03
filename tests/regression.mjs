@@ -3870,6 +3870,23 @@ await test("Training's week rail: the chosen day tapped again unfolds what it ho
   await page.tap(".wkr .wkr-cal");await pause(page,700);
   eq(await page.evaluate(()=>[document.querySelector(".wkr").classList.contains("open"),document.querySelector(".wkr-cal").getAttribute("aria-expanded"),!!document.querySelector(".wkr .dbcal")]),[true,"true",true]);
 },{prefs:{anim:true}});
+await test("Training's week rail: back to today, by Today or by tapping today's date, leaves the calendar button untouched (no flash)",async page=>{
+  await tapTab(page,"train");await pause(page,300);
+  const watch=()=>page.evaluate(()=>{const c=document.querySelector(".wkr-cal");window.__cal=c;window.__muts=[];
+    new MutationObserver(m=>m.forEach(x=>window.__muts.push(x.attributeName||x.type))).observe(c,{attributes:true,childList:true,subtree:true});});
+  const check=async how=>eq(await page.evaluate(()=>[window.__cal===document.querySelector(".wkr-cal"),window.__muts.join(","),document.querySelector(".wkr-cal").className]),[true,"","wkr-cal"],how+": the same button, nothing about it changed");
+  for(const how of ["Today","today's date"]){
+    const other=await page.$eval(".wkr .wkr-d:not(.sel)",b=>b.getAttribute("data-wkday"));
+    await page.tap('.wkr [data-wkday="'+other+'"]');await pause(page,500);
+    if(!(await page.$(".wkr-today")))throw new Error("no Today button away from today");
+    await watch();
+    if(how==="Today")await page.tap(".wkr-today");
+    else await page.tap('.wkr [data-wkday="'+(await page.evaluate(async()=>(await import("/js/util.js")).today()))+'"]');
+    await pause(page,500);
+    eq(!!(await page.$(".wkr-today")),false,how+": Today goes");
+    await check(how);
+    if(await page.$(".wkr.peek"))await page.tap(".thero2-n").catch(()=>{});await pause(page,300);}
+},{prefs:{anim:true}});
 await test("Training's week rail in Arabic: right to left, the pill from the right, figures isolated",async page=>{
   await tapTab(page,"train");await pause(page,300);
   const r=await page.evaluate(()=>{const row=document.querySelector(".wkr-days"),c=[...row.children],hl=document.querySelector(".wkr-hl"),sel=document.querySelector(".wkr-d.sel");
