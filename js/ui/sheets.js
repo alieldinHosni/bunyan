@@ -24,6 +24,7 @@ import {friends, snapStats} from "../engine/share.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {dfmt, esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
 import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, stepperInput, V} from "./view.js";
+import {glyph} from "./glyphs.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 import {tiexSheet} from "./views/timport.js";
@@ -57,13 +58,19 @@ function recoveryList(iso){
   var st={list:[],planned:false};try{st=muscleStatus(split(),iso);}catch(e){}
   var ms=st.list;
   if(!ms.length)return '<p class="rcv-none">'+esc(t("Every muscle is recovered for this day."))+'</p>';
-  return '<section class="rcv" aria-label="'+esc(t("How recovered your muscles are"))+'"><div class="rcv-h">'+esc(t("How recovered your muscles are"))+'</div>'
+  /* Folded to one line (owner, 3 Nov: "in a drop down to save space"): how many are still
+     recovering and the day all are ready; the arrow opens the muscles. */
+  var last=ms.reduce(function(a,x){return x.ready>a?x.ready:a;},ms[0].ready),open=!!(V.fold&&V.fold.rcv);
+  return '<section class="rcv fold'+(open?' open':'')+'" aria-label="'+esc(t("How recovered your muscles are"))+'">'
+   +'<button class="rcv-h" data-fold="rcv" aria-expanded="'+open+'"><span class="rcv-t">'+esc(t("How recovered your muscles are"))+'</span>'
+   +'<span class="rcv-s">'+esc(t("{n} still recovering · all ready {d}")).replace("{n}",'<span class="num">'+ms.length+'</span>').replace("{d}",esc(wdShort(last)))+'</span>'
+   +glyph("chev","fold-chev")+'</button><div class="fold-body">'
    +'<ul>'+ms.slice(0,6).map(function(x){return '<li><span class="rcv-m">'+esc(tm(x.m).trim())+'</span>'
      +'<span class="rcv-bar" aria-hidden="true"><i style="width:'+x.pct+'%"></i></span>'
      +'<span class="rcv-p num">≈'+x.pct+'%</span><span class="rcv-d">'+esc(t("ready {d}").replace("{d}",wdShort(x.ready)))+'</span></li>';}).join("")+'</ul>'
    +(ms.length>6?'<p class="rcv-n">'+esc(t("+{n} more, nearly recovered.").replace("{n}",ms.length-6))+'</p>':'')
-   +'<p class="rcv-n">'+esc(t("An estimate from the sets you logged and the book's rest day between sessions on the same muscles, in steps of 25%."))
-   +(st.planned?' '+esc(t("Workouts planned before this day count as done.")):'')+'</p></section>';}
+   +'<p class="rcv-n">'+esc(t("An estimate from the sets you logged and a day of rest between sessions on the same muscles, in steps of 25%."))
+   +(st.planned?' '+esc(t("Workouts planned before this day count as done.")):'')+'</p></div></section>';}
 /* The change-workout sheet's words: muscles as a short list, a date as its weekday. */
 function listOf(ms){var a=ms.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();}),ar=S.prefs&&S.prefs.lang==="ar";
   return a.length<2?a.join(""):a.slice(0,-1).join(ar?"، ":", ")+(ar?" و":" "+t("and")+" ")+a[a.length-1];}
@@ -93,7 +100,7 @@ function cardioCard(){
   if(z.feelOnly)h+='<p class="zc-note">'+esc(t("Your medication can change your heart rate, so go by feel and the talk test, not a number."))+'</p>';
   else if(!z.measured&&z.hrmax)h+='<p class="zc-note">'+esc(t("Estimated maximum heart rate about {n} bpm (208 − 0.7 × age): a starting point only.").replace("{n}",z.hrmax))+'</p>';
   /* Stage 3 for an experienced lifter with a modest goal: their choice (zones.js can3). */
-  if(st.can3)h+='<p class="zc-next">'+esc(t(p.cardio3?"You chose stage 3 with your experience: the book keeps it for performance goals.":"The book keeps stage 3 for performance goals. With your experience you can choose it."))
+  if(st.can3)h+='<p class="zc-next">'+esc(t(p.cardio3?"You chose stage 3 with your experience: it's usually kept for performance goals.":"Stage 3 is usually kept for performance goals. With your experience you can choose it."))
     +' <button class="blk-optb" data-cardio3="'+(p.cardio3?"0":"1")+'">'+esc(t(p.cardio3?"Back to stage 2":"Use stage 3"))+'</button></p>';
   /* Stage 4: the advanced athlete's choice (engine/zones.js can4). */
   if(st.can4)h+='<p class="zc-next">'+esc(t(p.cardio4?"You chose stage 4: maximal performance in short bursts, not maximal effort. Signs of overtraining (poor sleep, heavy fatigue, falling performance) mean back to stage 3."

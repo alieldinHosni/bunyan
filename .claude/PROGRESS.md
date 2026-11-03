@@ -3216,3 +3216,19 @@ lifters decide; work on everything else".
   zone 1's bpm when measured). Chat: a resting heart rate question is not the zones answer (no data; says so).
 - Tests: engine phase/zones/conditions additions; regression "Experienced lifters choose: …"; coach actions domain
   list includes live.
+
+## Compact cards; no "the book" on screen — branch session/compact (CACHE v200)
+
+Owner, 3 Nov (screenshots): the block card took the screen, My program's phase note could not be put away,
+Change workout's recovery list was long, and the screens talked about "the book" — the person never chose a book.
+- Training's block card (views/train.js blockCard) is one line until its arrow opens it: "Block 1 · Week 2 of 4",
+  then "phase · reps · N in reserve" and the week bar. The arrow opens why, next block, tempo, the skip-stabilisation
+  choice and the set shifts. The lighter week keeps its line and End it outside the fold.
+- Folding is generic: `.fold` > `[data-fold=key]` + `.fold-body`; handlers/train.js toggles the class on that card
+  only (no render) and keeps the choice in V.fold for the session.
+- My program's phase note has Got it: S.phaseSeen = the phase number (per profile, schema.js "Also kept"); it comes
+  back when the block moves to another phase.
+- Change workout (sheets.js recoveryList): folded to "N still recovering · all ready {day}", the muscles on tap.
+- Every user-facing "the book"/"the textbook" string reworded (guidelines, usual range, most people) in the
+  source and dict.js, Arabic too. Code comments still cite the book; that is for us.
+- Tests: regression "Compact: …"; updated wording in four tests.

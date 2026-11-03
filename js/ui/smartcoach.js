@@ -88,7 +88,7 @@ function run(m,save,paint){
   llmAsk(msgs,function(txt){var el=rowOf(m);if(el)el.textContent=readReply(txt).text||"…";}).then(function(full){
     var r=readReply(full);
     m.pending=false;m.b=[{p:r.text||t("I don't have that. Ask me about your training, food or progress.")},
-      {n:t("Written by the model on this phone, from your log and the textbook notes. It can be wrong: check a figure against your plan before you act on it.")}];
+      {n:t("Written by the model on this phone, from your log and the training notes. It can be wrong: check a figure against your plan before you act on it.")}];
     m.acts=[];
     /* A change it suggests: a button that sends the request through the app's own
        parser, which shows it and asks before anything changes. Only one the parser knows. */
@@ -100,7 +100,7 @@ function run(m,save,paint){
 /* ---- the setting -------------------------------------------------------------------- */
 function sheet(){
   var st=state(),sz=st.size||"small",h='<h2>'+esc(t("Smart coach"))+'</h2>'
-   +'<p class="tiny">'+esc(t("A language model that runs on this phone, so the coach understands questions it has no rule for. It answers from your own log and the textbook notes, and nothing you type leaves the phone."))+'</p>'
+   +'<p class="tiny">'+esc(t("A language model that runs on this phone, so the coach understands questions it has no rule for. It answers from your own log and the training notes, and nothing you type leaves the phone."))+'</p>'
    +'<div class="sg-card smc"><p>'+esc(t("It is a download of its own, works on recent iPhones (iOS 26) and other phones with WebGPU, and is slower and heavier on the battery than the rest of the app. Turn it off any time and the download is removed."))+'</p></div>';
   if(st.st==="unsupported")return h+'<p class="smc-st bad" role="status">'+esc(t(st.why==="nogpu"?"This browser can't run it: it has no WebGPU. On iPhone it needs iOS 26 or later.":"This phone's GPU isn't available to the browser, so it can't run here."))+'</p>';
   if(st.st==="loading"||st.st==="checking")return h+'<div class="smc-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(st.p*100)+'"><i style="width:'+Math.round(st.p*100)+'%"></i></div>'
