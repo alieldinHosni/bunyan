@@ -30,6 +30,8 @@
 import {S} from "../state.js";
 
 var MOVE=/\s(aria-label|aria-pressed|aria-expanded|aria-controls|aria-describedby)="([^"]*)"/g;
+/* Where a control's state is said: the switch inside a ticking label, else the element. */
+function ariaOf(el){return el&&el.querySelector&&el.querySelector(":scope>.hapt-in")||el;}
 function hapOn(){return !(S.prefs&&S.prefs.haptic===false);}
 
 function hb(html){
@@ -48,4 +50,4 @@ function hb(html){
   return '<label'+attrs+'>'+inner+'<input type="checkbox" switch class="vh hapt-in"'
     +(sw?(on?' checked':''):' role="button"')+aria+'></label>';}
 
-export {hapOn, hb};
+export {ariaOf, hapOn, hb};

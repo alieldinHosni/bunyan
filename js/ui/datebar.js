@@ -12,6 +12,7 @@
      - Only Progress could open a month view at all.
 
    None of those needed finding twice. That is the whole argument for this file. */
+import {ariaOf} from "./haptic.js";
 import {t} from "../i18n/dict.js";
 import {S} from "../state.js";
 import {dfmt, esc, today} from "../util.js";
@@ -160,6 +161,6 @@ function setPeek(on){
   on=V.wkPeek&&!c.classList.contains("open")&&!!sel;
   c.classList.toggle("peek",on);
   if(pk){pk.inert=!on;if(on)pk.removeAttribute("aria-hidden");else pk.setAttribute("aria-hidden","true");}
-  if(sel)sel.setAttribute("aria-expanded",String(on));}
+  if(sel)ariaOf(sel).setAttribute("aria-expanded",String(on));}
 
 export {dateBar, setPeek, monthGrid, shiftDay, weekInitials};

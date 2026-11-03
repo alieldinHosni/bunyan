@@ -2603,7 +2603,7 @@ await test("Blocks: 'too easy' after a workout adds a set for the muscle it trai
   await page.tap('[data-confirmok]');await pause(page,600);
   if(!(await page.$('[data-sfeel="easy"]')))throw new Error("the complete sheet does not ask");
   await page.tap('[data-sfeel="easy"]');await pause(page);
-  eq(await ev(page,"[S.sessions[0].feel,document.querySelector('[data-sfeel=\"easy\"]').getAttribute('aria-pressed')]"),["easy","true"]);
+  eq(await ev(page,"[S.sessions[0].feel,(e=>(e.querySelector(':scope>.hapt-in')||e).getAttribute('aria-pressed'))(document.querySelector('[data-sfeel=\"easy\"]'))]"),["easy","true"]);
   const sh=await page.evaluate(async()=>(await import("/js/engine/blocks.js")).shiftNow().shift);
   eq(sh[m],1,"one more set of "+m+" per workout");
   /* The next workout with that muscle carries it, and says so. */
@@ -2877,7 +2877,8 @@ await test("Audit: the equipment and favourites sheets in Arabic; the water glas
 });
 await test("Settings: every choice in sight, switches that say their state, a tap sets the value; no drop-down anywhere",async page=>{
   await sheet(page,"set_training");
-  const sw=()=>page.$eval('[data-toggle="nowarm"]',e=>[e.getAttribute("role"),e.getAttribute("aria-checked")]);
+  /* With haptics on the row is a label around the native switch, which says its own state. */
+  const sw=()=>page.$eval('[data-toggle="nowarm"]',e=>{const i=e.querySelector(":scope>.hapt-in");return i?["switch",String(i.checked)]:[e.getAttribute("role"),e.getAttribute("aria-checked")];});
   eq(await sw(),["switch","false"],"warm-up is off in the seed, and says so");
   await page.tap('[data-toggle="nowarm"]');await pause(page);
   eq([await sw(),await ev(page,"S.prefs.nowarm")],[["switch","true"],false],"one tap on the row turns it on");
@@ -3896,7 +3897,7 @@ await test("Training's week rail: words for the days, the pill glides to the day
 await test("Training's week rail: the chosen day tapped again unfolds what it holds in the card; again or a tap outside folds it",async page=>{
   await tapTab(page,"train");await pause(page,300);
   const st=()=>page.evaluate(()=>{const c=document.querySelector(".wkr"),pk=c.querySelector(".wkr-pk");
-    return [c.classList.contains("peek"),pk.inert,Math.round(pk.getBoundingClientRect().height)>40,document.querySelector(".wkr-d.sel").getAttribute("aria-expanded")];});
+    return [c.classList.contains("peek"),pk.inert,Math.round(pk.getBoundingClientRect().height)>40,(e=>(e.querySelector(":scope>.hapt-in")||e).getAttribute("aria-expanded"))(document.querySelector(".wkr-d.sel"))];});
   eq(await st(),[false,true,false,"false"],"folded at first");
   await page.evaluate(()=>{window.__keep=document.querySelector(".wkr-days");});
   await page.tap(".wkr .wkr-d.sel");await pause(page,700);
@@ -4718,7 +4719,7 @@ await test("Workout screen: steppers move by the engine's own step; the check lo
   const w0=await ev(page,"V.draft.w"),step=await F(page,`F.incrementFor(S.active.entries[0].name,${w0})`);
   await page.tap('[data-sstep="w"][data-d="1"]');await pause(page,200);
   eq(await ev(page,"V.draft.w"),Math.round((w0+step)*100)/100,"one tap, one step");
-  eq(await page.$eval('[data-sstep="w"][data-d="1"]',e=>[e.textContent,e.getAttribute("aria-label")]),[String(step),"More "+step+" kg"],"the button says the step");
+  eq(await page.$eval('[data-sstep="w"][data-d="1"]',e=>[e.textContent,(e.querySelector(":scope>.hapt-in")||e).getAttribute("aria-label")]),[String(step),"More "+step+" kg"],"the button says the step");
   await page.tap('[data-sstep="r"][data-d="-1"]');await pause(page,200);
   const r=await ev(page,"V.draft.r");
   await page.tap('[data-logset]');await pause(page,300);
