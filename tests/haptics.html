@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Haptics test</title>
+<!-- Bunyan: a device test, not part of the app. Not linked from it, not precached, not
+     translated: it exists to answer one question on a real iPhone (owner, 3 Nov) —
+     does a native switch give the complete-set control real haptics? Each variant below
+     is tapped by hand; the person says whether they felt it. Nothing here vibrates by
+     any other means, so what is felt can only come from the control itself. -->
+<style>
+  :root{--bg:#0b1020;--card:#141a2e;--line:#26304d;--text:#eef1f8;--sub:#9aa4bf;--accent:#e3132f;--ok:#2fbf71;--no:#8a93ab}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 -apple-system,system-ui,sans-serif;
+       padding:calc(16px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom))}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--sub);font-size:14px;margin:0 0 16px}
+  .env{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;color:var(--sub);margin-bottom:16px}
+  .env b{color:var(--text);font-weight:600}
+  section{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:14px}
+  section h2{font-size:16px;margin:0 0 2px}
+  section p{margin:0 0 12px;color:var(--sub);font-size:13.5px}
+  .count{font-variant-numeric:tabular-nums;color:var(--sub);font-size:13px;margin-top:10px}
+  .ask{display:flex;gap:8px;margin-top:10px}
+  .ask button{flex:1;min-height:44px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--text);font:inherit;font-size:14px}
+  .ask button[aria-pressed="true"].y{background:var(--ok);border-color:var(--ok);color:#04150b}
+  .ask button[aria-pressed="true"].n{background:var(--no);border-color:var(--no);color:#0b1020}
+
+  /* The complete-set control's look (index.html .sess .log, .log-c), copied for the test. */
+  .log{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:64px;margin:0;
+       padding:0 10px 0 22px;border:0;border-radius:999px;background:var(--accent);color:#fff;font:inherit;font-size:20px;font-weight:700;
+       -webkit-tap-highlight-color:transparent;cursor:pointer;user-select:none;-webkit-user-select:none}
+  .log:active{transform:scale(.985)}
+  .log-c{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;border:2px solid currentColor}
+  .log-c svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+  /* Hidden the accessible way: still rendered and hit-testable through its label, not
+     display:none (a control that is not rendered cannot be "tapped"). */
+  .vh{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+  .log:has(.vh:focus-visible){outline:3px solid #fff;outline-offset:3px}
+
+  /* Variant C: the switch itself, made big enough to hit with a thumb. */
+  .bigsw{display:flex;align-items:center;gap:14px;min-height:64px}
+  .bigsw input{transform:scale(1.8);transform-origin:left center;margin:0 34px 0 4px;accent-color:var(--accent)}
+
+  .sum{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:12px 14px;font-size:14px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h1>Haptics test</h1>
+<p class="sub">Tap each control a few times, then say whether you <b>felt</b> a tick in your hand. A sound alone doesn't count.
+Before you start: Settings → Sounds &amp; Haptics → <b>System Haptics on</b>. Open this page in Safari, then try it again from your home-screen icon if you use one.</p>
+
+<div class="env" id="env"></div>
+
+<section data-v="A">
+  <h2>A · Plain button</h2>
+  <p>A normal &lt;button&gt;. Expected: nothing (iPhone has no vibration API).</p>
+  <button class="log" type="button" id="a"><span>Log set 3</span><span class="log-c" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></button>
+  <div class="count">Taps: <span>0</span></div>
+  <div class="ask"><button class="y" type="button" aria-pressed="false">Felt it</button><button class="n" type="button" aria-pressed="false">Nothing</button></div>
+</section>
+
+<section data-v="B">
+  <h2>B · Hidden switch inside a label, styled as the check control</h2>
+  <p>Looks like A. The whole pill is a &lt;label&gt; around a visually hidden &lt;input type="checkbox" switch&gt;, so your tap toggles the switch.</p>
+  <label class="log" id="b"><input class="vh" type="checkbox" switch id="bsw"><span>Log set 3</span><span class="log-c" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></label>
+  <div class="count">Taps: <span>0</span></div>
+  <div class="ask"><button class="y" type="button" aria-pressed="false">Felt it</button><button class="n" type="button" aria-pressed="false">Nothing</button></div>
+</section>
+
+<section data-v="C">
+  <h2>C · The switch itself</h2>
+  <p>A visible &lt;input type="checkbox" switch&gt;, tapped directly. If this gives nothing, the phone does not give switch haptics to web pages at all.</p>
+  <label class="bigsw"><input type="checkbox" switch id="c"><span>Tap the switch</span></label>
+  <div class="count">Taps: <span>0</span></div>
+  <div class="ask"><button class="y" type="button" aria-pressed="false">Felt it</button><button class="n" type="button" aria-pressed="false">Nothing</button></div>
+</section>
+
+<section data-v="D">
+  <h2>D · What the app does today (for comparison)</h2>
+  <p>A plain button whose tap makes the page click a hidden switch in code — the app's current trick. You reported not feeling it on 27 Oct; this checks it again on the same footing as A–C.</p>
+  <button class="log" type="button" id="d"><span>Log set 3</span><span class="log-c" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></button>
+  <div class="count">Taps: <span>0</span></div>
+  <div class="ask"><button class="y" type="button" aria-pressed="false">Felt it</button><button class="n" type="button" aria-pressed="false">Nothing</button></div>
+</section>
+
+<p class="sub">Your answers, for a screenshot or to paste back:</p>
+<div class="sum" id="sum">Nothing answered yet.</div>
+
+<script>
+(function(){
+  var ua=navigator.userAgent,m=ua.match(/OS (\d+)_(\d+)/);
+  var inp=document.createElement("input");
+  var sw="switch" in inp;
+  var standalone=window.navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
+  document.getElementById("env").innerHTML=
+    "iOS: <b>"+(m?m[1]+"."+m[2]:"not an iPhone/iPad")+"</b> · switch supported: <b>"+(sw?"yes":"no")+"</b>"+
+    " · opened from: <b>"+(standalone?"home-screen icon":"browser")+"</b>"+
+    " · vibrate API: <b>"+("vibrate" in navigator?"yes":"no")+"</b>";
+
+  var ans={};
+  function count(sec){var s=sec.querySelector(".count span");s.textContent=String(+s.textContent+1);}
+  document.querySelectorAll("section[data-v]").forEach(function(sec){
+    var v=sec.getAttribute("data-v");
+    sec.querySelectorAll(".ask button").forEach(function(b){
+      b.addEventListener("click",function(){
+        sec.querySelectorAll(".ask button").forEach(function(x){x.setAttribute("aria-pressed","false");});
+        b.setAttribute("aria-pressed","true");ans[v]=b.classList.contains("y")?"felt":"nothing";summary();});});});
+  function summary(){
+    var names={A:"A plain button",B:"B hidden switch in label",C:"C switch itself",D:"D app's current trick"};
+    var lines=["iOS "+(m?m[1]+"."+m[2]:"?")+", switch "+(sw?"yes":"no")+", "+(standalone?"home screen":"browser")];
+    Object.keys(names).forEach(function(k){lines.push(names[k]+": "+(ans[k]||"—"));});
+    document.getElementById("sum").textContent=lines.join("\n");}
+
+  document.getElementById("a").addEventListener("click",function(){count(this.closest("section"));});
+  /* B: the label's own click toggles the switch natively; the count follows the change. */
+  document.getElementById("bsw").addEventListener("change",function(){count(this.closest("section"));});
+  document.getElementById("c").addEventListener("change",function(){count(this.closest("section"));});
+  /* D: the app's iosTick (js/ui/view.js), unchanged. */
+  document.getElementById("d").addEventListener("click",function(){
+    count(this.closest("section"));
+    var l=document.createElement("label"),i=document.createElement("input");
+    l.style.display="none";l.setAttribute("aria-hidden","true");
+    i.type="checkbox";i.setAttribute("switch","");i.tabIndex=-1;l.appendChild(i);
+    ["click","change","input"].forEach(function(ev){l.addEventListener(ev,function(e){e.stopPropagation();});});
+    document.head.appendChild(l);l.click();l.remove();});
+})();
+</script>
+</body>
+</html>

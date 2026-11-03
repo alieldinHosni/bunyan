@@ -141,7 +141,9 @@ function leave(el,done,slow){
   el.addEventListener("animationend",go);
   /* animationend does not arrive if the element is hidden or the animation is
      cancelled, and a row that never disappears is worse than one that vanishes. */
-  setTimeout(go,(slow?DUR.flow:DUR.comp)+60);
+  /* Generous: the workout runs its own, slower durations (index.html, .sess), and a
+     fallback that fires first cuts the last frames off. */
+  setTimeout(go,(slow?DUR.flow:DUR.comp)+260);
 }
 
 /* Runs an entry animation exactly once per element, keyed by a name. The patcher keeps
@@ -155,4 +157,69 @@ function once(el,key,fn){
   fn(el);
 }
 
-export {applyMotion, countTo, DUR, EASE, isReduced, leave, motionOff, ms, once};
+
+/* ---- the workout's cards moving as one surface (owner, 3 Nov: "the box with the reps
+   and weight lags while it jumps upwards … everything streamlined, a little slow, never
+   glitching").
+
+   A re-render changes the layout in one frame: a card that appears or leaves pushes the
+   ones below by its height, at once. snapCards() notes where each card is on screen
+   before the change; glideCards() then starts every card that moved from where it was
+   and lets it travel to where it now is (FLIP). A card that has gone (the rest put
+   away) is put back as a ghost over its old place, out of the layout, and fades there,
+   so nothing waits on it and nothing snaps when it finally goes.
+
+   Cards are the workout's top-level keyed blocks: [data-k] inside .sess that are not
+   inside another keyed block. Inputs are never moved. Positions are read with the
+   transform in place, so a card caught mid-glide carries on from where it is seen. */
+var GLIDE=440, GHOST=320;
+var GLIDE_EASE="cubic-bezier(0.2, 0, 0, 1)";
+function cardsOf(root){
+  var out=[];if(!root)return out;
+  root.querySelectorAll(".sess [data-k]:not(input)").forEach(function(el){
+    var up=el.parentElement&&el.parentElement.closest("[data-k]");
+    if(up&&root.contains(up))return;
+    if(el.classList.contains("ghost"))return;
+    out.push(el);});
+  return out;}
+function snapCards(root){
+  if(_reduced)return null;
+  var m={};cardsOf(root).forEach(function(el){m[el.getAttribute("data-k")]={el:el,r:el.getBoundingClientRect()};});
+  /* A card that may leave as a ghost is noted wherever it sits (the RPE question is
+     inside the set card). */
+  Object.keys(GHOSTK).forEach(function(k){if(m[k])return;var el=root.querySelector('.sess [data-k="'+k+'"]');
+    if(el)m[k]={el:el,r:el.getBoundingClientRect(),inner:true};});
+  return m;}
+/* The keys whose cards may play out as ghosts when they go: those that stand alone. The
+   log button turns into the next one in place and needs no ghost of the last. */
+var GHOSTK={rest:1,rpeask:1};
+function glideCards(root,before){
+  if(!before||_reduced)return;
+  var now=cardsOf(root);
+  /* Stop any glide still running so the new layout is measured without it. */
+  now.forEach(function(el){(el.getAnimations?el.getAnimations():[]).forEach(function(a){if(a.id==="glide")a.cancel();});});
+  now.forEach(function(el){
+    var k=el.getAttribute("data-k"),b=before[k];if(!b)return;
+    var r=el.getBoundingClientRect(),dy=b.r.top-r.top,dh=b.r.height-r.height;
+    if(!el.animate)return;
+    if(Math.abs(dy)>=1){var a=el.animate([{transform:"translateY("+dy+"px)"},{transform:"translateY(0)"}],{duration:GLIDE,easing:GLIDE_EASE});a.id="glide";}
+    /* A card that grew or shrank (a question added inside it, or answered) changes its
+       height over the same time, its contents clipped to it, so its edge never jumps. */
+    if(Math.abs(dh)>=1&&b.el===el){
+      el.style.overflow="clip";
+      var h=el.animate([{height:b.r.height+"px"},{height:r.height+"px"}],{duration:GLIDE,easing:GLIDE_EASE});h.id="glide";
+      var done=function(){el.style.overflow="";};h.onfinish=done;h.oncancel=done;}});
+  Object.keys(before).forEach(function(k){
+    if(!GHOSTK[k]||root.querySelector('.sess [data-k="'+k+'"]'))return;
+    var g=before[k].el,host=root.querySelector(".sess");
+    if(!host||g.isConnected||!g.animate)return;
+    var hr=host.getBoundingClientRect(),r=before[k].r;
+    g.removeAttribute("data-k");g.removeAttribute("id");g.querySelectorAll("[id]").forEach(function(x){x.removeAttribute("id");});
+    g.classList.add("ghost");g.classList.remove("rowout");g.setAttribute("aria-hidden","true");g.inert=true;
+    g.style.cssText="position:absolute;margin:0;z-index:0;pointer-events:none;top:"+(r.top-hr.top)+"px;left:"+(r.left-hr.left)+"px;width:"+r.width+"px;height:"+r.height+"px";
+    host.appendChild(g);
+    var a=g.animate([{opacity:1,transform:"none"},{opacity:0,transform:"translateY(-8px) scale(.97)"}],{duration:GHOST,easing:"cubic-bezier(0.3, 0, 0.8, 0.15)",fill:"forwards"});
+    var gone=function(){if(g.parentNode)g.parentNode.removeChild(g);};
+    a.onfinish=gone;a.oncancel=gone;setTimeout(gone,GHOST+120);});}
+
+export {applyMotion, countTo, DUR, EASE, glideCards, isReduced, leave, motionOff, ms, once, snapCards};

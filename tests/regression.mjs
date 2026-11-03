@@ -2069,13 +2069,16 @@ await test("Coach, in a workout: 'not sure I can do 20 push-ups, shall I adjust 
   if(!(await page.$$('#cpanel .ag-opt')).length)throw new Error("the second wording is not understood: "+(await page.textContent('#cpanel')).slice(-300));
   eq(easier,"Switch to Incline Push-Up","an easier version of the same movement");
 });
-await test("Rest complete, closed: the band leaves (fades and folds), never fading back in first",async page=>{
+await test("Rest complete, closed: the band fades where it was, never fading back in first",async page=>{
   await startWorkout(page);
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.restDone=true;V.restEnd=0;(await import("/js/ui/render.js")).render();});
   await pause(page,900);
   await page.tap('.rb.over .rb-close');await pause(page,60);
   const g=await page.evaluate(()=>{const e=document.querySelector('.sess .rb.ghost');return e?[getComputedStyle(e).animationName,+getComputedStyle(e).opacity]:null;});
-  if(g)eq(g[0],"rowOut","leaving, not arriving again: "+JSON.stringify(g));
+  await pause(page,120);
+  const g2=await page.evaluate(()=>{const e=document.querySelector('.sess .rb.ghost');return e?+getComputedStyle(e).opacity:0;});
+  if(!g)throw new Error("no ghost of the band");
+  eq([g[0],g2<g[1]],["none",true],"leaving, fading only, never an entrance again: "+JSON.stringify([g,g2]));
   await pause(page,900);
   eq(await page.$$eval('.sess .rb',a=>a.length),0,"gone");
 },{prefs:{anim:true}});
@@ -3890,7 +3893,7 @@ await test("Food's calendar unfolds at an easy pace under the date bar and folds
   await page.tap('.dbfold [data-dpick="'+y+'"]');await pause(page,900);
   eq(await page.evaluate(async()=>[(await import("/js/ui/view.js")).V.fdate,document.querySelector(".dbfold").classList.contains("open"),Math.round(document.querySelector(".dbfold").getBoundingClientRect().height)]),[y,false,0],"the day picked, the month folded away");
 },{prefs:{anim:true}});
-await test("Workout motion, with motion on: the RPE card holds the chosen number, then plays out while the cards below rise; Next exercise arrives, it does not pop in",async page=>{
+await test("Workout motion, with motion on: the RPE card holds the chosen number, then fades where it was while the cards below glide up; Next exercise arrives, it does not pop in",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.rpe="every";});
   await startWorkout(page);
   const sets=await ev(page,"S.active.entries[0].planned.sets||3");
@@ -3901,9 +3904,9 @@ await test("Workout motion, with motion on: the RPE card holds the chosen number
   const before=await page.$eval('[data-k="lognext"]',e=>e.getBoundingClientRect().top);
   await page.tap('.rpeask [data-rpeset$=":8"]');await pause(page,80);
   eq(await page.$eval('.rpeask [data-rpeset$=":8"]',e=>e.classList.contains("on")),true,"the chosen number is held");
-  await page.waitForSelector('.rpeask.rowout.slow',{timeout:1500});
-  const mid=await page.$eval('.rpeask',e=>getComputedStyle(e).animationDuration);
-  eq(mid,"0.4s","it plays out over the unhurried flow, not cut");
+  await page.waitForFunction(()=>!!document.querySelector('.rpeask.ghost'),null,{polling:"raf",timeout:1500});
+  eq(await page.$eval('.rpeask.ghost',e=>[getComputedStyle(e).position,e.inert,e.getAnimations().length>0]),["absolute",true,true],"it fades where it was, out of the layout");
+  eq(await page.$eval('[data-k="lognext"]',e=>e.getAnimations().some(a=>a.id==="glide")),true,"while Next exercise glides up into its place");
   await pause(page,900);
   eq(!!(await page.$('.rpeask')),false,"then it is gone");
   const after=await page.$eval('[data-k="lognext"]',e=>e.getBoundingClientRect().top);
@@ -3915,7 +3918,9 @@ await test("Workout motion, with motion on: the RPE card holds the chosen number
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.restEnd=Date.now()+300;});
   await page.waitForSelector('.sess [data-k="rest"] [data-rest="skip"]',{timeout:5000});
   await page.tap('.sess [data-k="rest"] [data-rest="skip"]');await pause(page,60);
-  eq(await page.evaluate(()=>{const g=document.querySelector('.sess .rb.ghost');return g?[g.classList.contains("rowout"),g.inert,!!g.querySelector("[id]")]:null;}),[true,true,false],"the rest card plays out, inert, its ids gone");
+  eq(await page.evaluate(()=>{const g=document.querySelector('.sess .rb.ghost');return g?[getComputedStyle(g).position,g.inert,!!g.querySelector("[id]"),g.getAnimations().length>0]:null;}),["absolute",true,false,true],"the rest card fades where it was, inert, its ids gone");
+  /* The card below glides up from where it was: never a jump (owner, 3 Nov). */
+  eq(await page.evaluate(()=>document.querySelector('.sess [data-k="lognext"]').getAnimations().some(a=>a.id==="glide")),true,"what was below glides up");
   await pause(page,900);
   eq(await page.evaluate(()=>document.querySelectorAll('.sess .rb').length),0,"then it is gone, and no rest is left");
 },{prefs:{anim:true}});

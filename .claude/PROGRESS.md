@@ -3232,3 +3232,28 @@ Change workout's recovery list was long, and the screens talked about "the book"
 - Every user-facing "the book"/"the textbook" string reworded (guidelines, usual range, most people) in the
   source and dict.js, Arabic too. Code comments still cite the book; that is for us.
 - Tests: regression "Compact: …"; updated wording in four tests.
+
+## Workout motion: cards glide, leaving cards fade in place — branch session/motion (CACHE v201)
+
+Owner, 3 Nov: closing the rest, the set card "lags while it jumps upwards"; every move in the workout should be
+smooth, a little slow, never glitching. Cause: the leaving card collapsed in the layout (rowOut, height to 0), but
+the pane's grid gap stayed until it was removed, so the cards below snapped the last 12px; and nothing moved the
+cards that a new card pushed down.
+- motion.js snapCards/glideCards (FLIP), called from render() around every workout patch: each top-level keyed
+  card in .sess that moved glides from its old place (440 ms, standard easing). A card that grew or shrank changes
+  height over the same time, clipped to it. A card in GHOSTK (rest, rpeask) that has gone is put back absolutely
+  positioned over its old place and fades (320 ms) — out of the layout, so nothing waits on it.
+  Skipped under reduced motion, on a screen change, and when the exercise changes (that is the pane's slide).
+- The RPE answer: the number held ~400 ms, then the card goes through the same ghost path (no more leave()).
+- Next exercise (button) slides the new exercise in as a swipe does. Swipe: out 220 ms, in 380 ms, spring back 320.
+- The workout's own pace: .sess sets --m-micro 200, --m-pop 260, --m-comp 320, --m-flow 460 (not under .reduced).
+  leave()'s fallback timeout is generous so it never cuts a slower animation short.
+- Tests: "Workout motion" and "Rest complete, closed" check ghost + glide instead of rowOut.
+
+## Haptics device test page — same branch
+
+Owner, 3 Nov: is real haptics possible on the complete-set control? `tests/haptics.html` (not part of the app: not
+linked, not precached, not translated) has four controls to tap on the iPhone: A plain button, B a visually hidden
+`<input type="checkbox" switch>` inside a label styled as the check control, C the switch itself, D the app's
+current trick (view.js iosTick: a button that clicks a hidden switch in code). Each has Felt it / Nothing and a
+summary to send back. Waiting on the owner's results; no app change until then.
