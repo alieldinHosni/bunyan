@@ -3044,14 +3044,11 @@ await test("Coach chat: tomorrow's workout and how the last one went",async page
   if(!(await page.$('.chat-acts [data-openday]')))throw new Error("no way to the session");
 });
 /* ---- the new look: the top of Training, capsule bars (views/home.js, views/progress.js) ---- */
-await test("Training: the bell says what the coach noticed and opens it; the initial opens Profile",async page=>{
+await test("Training: no bell (the dock's Coach tab is that, with its dot); the initial opens Profile",async page=>{
   await tapTab(page,"train");await pause(page);
   const n=await ev(page,"V.advice");
-  const b=await page.$eval('.hacts [data-csec="ai"]',e=>[e.classList.contains("flag"),e.getAttribute("aria-label")]);
-  eq(b[0],n>0,"the dot is there exactly when there is something");
-  if(n>0&&b[1].indexOf(String(n))<0)throw new Error("the count is not in its name: "+b[1]);
-  await page.tap('.hacts [data-csec="ai"]');await pause(page,400);
-  eq(await ev(page,"V.tab"),"coach","the bell opens the Coach page");
+  eq(await page.$$eval('.hacts [data-csec]',a=>a.length),0,"no second way to the Coach page");
+  eq(await page.$eval('nav .dock-b[data-tab="coach"]',e=>e.classList.contains("advice")),n>0,"the dock's Coach tab carries the dot when there is something");
   await tapTab(page,"train");await pause(page);
   await page.tap('.hacts .havatar');await pause(page,400);
   eq(await ev(page,"V.tab"),"profile","the initial opens Profile");
@@ -4450,15 +4447,15 @@ await test("Guide: the first time Training opens, glass tips point at each thing
   if(!c)throw new Error("no guide on first opening");
   /* Rewritten 3 Nov (owner: "I didn't understand what the buttons do"): how the app fits
      together first, in the middle of the screen, then each thing and what a tap does. */
-  eq([c.k,c.h,c.hole],["Training · 1 of 10","How Bunyan works",[0,0]],"the first tip: the app as a whole, nothing lit");
+  eq([c.k,c.h,c.hole],["Training · 1 of 9","How Bunyan works",[0,0]],"the first tip: the app as a whole, nothing lit");
   if(!/Four tabs at the bottom/.test(await page.textContent('.tour-p')))throw new Error("the overview does not say the tabs");
   eq(await ev(page,"V.tab"),"train","the page under it is untouched");
   /* Anywhere: even over a button, a tap only moves the guide on. */
   const seen=[c.h];let bellHole=null;
-  for(let i=0;i<9;i++){await page.mouse.click(30+i*30,300+i*30);await pause(page,500);c=await card();if(c){seen.push(c.h);if(c.h==="Coach's notes")bellHole=c.hole;}}
-  eq(seen,["How Bunyan works","Your week","Today","Your program","Weight and steps","Cardio and sports","Coach's notes","Profile","Ask the coach","The tabs"],"each thing, in turn");
-  const bell=await page.$eval('.hacts [data-csec="ai"]',e=>{const r=e.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];});
-  if(!bellHole||Math.abs(bellHole[0]-bell[0]-16)>2||Math.abs(bellHole[1]-bell[1]-16)>2)throw new Error("the light is not on the bell: "+JSON.stringify([bellHole,bell]));
+  for(let i=0;i<8;i++){await page.mouse.click(30+i*30,300+i*30);await pause(page,500);c=await card();if(c){seen.push(c.h);if(c.h==="Profile")bellHole=c.hole;}}
+  eq(seen,["How Bunyan works","Your week","Today","Your program","Weight and steps","Cardio and sports","Profile","Ask the coach","The tabs"],"each thing, in turn");
+  const bell=await page.$eval('.hacts .havatar',e=>{const r=e.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];});
+  if(!bellHole||Math.abs(bellHole[0]-bell[0]-16)>2||Math.abs(bellHole[1]-bell[1]-16)>2)throw new Error("the light is not on the picture: "+JSON.stringify([bellHole,bell]));
   eq(await ev(page,"[V.tab,V.sheet]"),["train",null],"no tap reached the page");
   await page.mouse.click(200,200);await pause(page,600);
   eq([await card(),await ev(page,"S.prefs.toured.train")],[null,3],"finished, and remembered (at the guide's version)");
@@ -4470,7 +4467,7 @@ await test("Guide: the first time Training opens, glass tips point at each thing
   await page.evaluate(()=>localStorage.removeItem("bunyan:notour"));
   await page.$eval('[data-tourreset]',e=>e.click());await pause(page,1800);
   c=await card();
-  eq([await ev(page,"V.tab"),c&&c.k],["train","Training · 1 of 10"],"back from the start");
+  eq([await ev(page,"V.tab"),c&&c.k],["train","Training · 1 of 9"],"back from the start");
   await page.click('.tour-skip');await pause(page,500);
   eq([await card(),await ev(page,"S.prefs.toured.train")],[null,3],"Skip ends it, seen");
 },{tour:true});
@@ -4528,23 +4525,28 @@ await test("Plan pages: a sideways swipe moves between the tabs on Training and 
   await coach(page,"train","program");y=await paneY();
   await drag(60,y,330,y+4);eq(await ev(page,"V.tplan"),"programs","Arabic: swipe right for the next tab");
 });
-await test("Plan pages: opening one slides it in over Training while Training eases back; back slides it off; a tab tap keeps its own entrance; reduced motion has neither",async page=>{
+await test("Plan pages: opening one, Training and the plan page travel together edge to edge (no fading: frosted cards lose their blur under a fade); back the other way; a tab tap slides its tabs the same way; a tab change is its own; reduced motion has none",async page=>{
   await tapTab(page,"train");await pause(page,600);
-  const ghost=()=>page.evaluate(()=>{const g=document.querySelector(".pghost");return g?[!!g.querySelector(".pgc"),g.getAttribute("aria-hidden"),getComputedStyle(g).pointerEvents,document.querySelectorAll("#app").length>=1&&document.getElementById("app")!==g]:null;});
-  await page.tap('.pgc [data-tplan="program"]');await pause(page,120);
-  eq(await ghost(),[true,"true","none",true],"Training stays as a still copy, out of reach, under the new page");
-  eq(await page.evaluate(()=>document.getElementById("app").getAnimations().length>0),true,"the new page is moving in");
+  const copy=()=>page.evaluate(()=>{const g=document.querySelector(".stillcopy");if(!g)return null;
+    const a=g.getAnimations(),k=a[0]&&a[0].effect.getKeyframes();
+    return [g.getAttribute("aria-hidden"),getComputedStyle(g).pointerEvents,!!k&&k.every(f=>f.opacity==null),document.getElementById("app")!==g];});
+  await page.tap('.pgc [data-tplan="program"]');await pause(page,100);
+  eq(await copy(),["true","none",true,true],"Training as a still copy, out of reach, moving without a fade");
+  eq(await page.evaluate(()=>{const a=document.getElementById("app").getAnimations();return a.length>0&&a[0].effect.getKeyframes().every(f=>f.opacity==null);}),true,"the plan page moving in, no fade");
   await pause(page,900);
-  eq(await page.evaluate(()=>[!!document.querySelector(".pghost"),document.documentElement.classList.contains("pgmoving"),document.getElementById("app").classList.contains("pgfront")]),[false,false,false],"and gone when it lands");
-  await page.tap('#app .dhead [data-back]');await pause(page,120);
-  eq(await page.evaluate(()=>{const g=document.querySelector(".pghost");return g?[!!g.querySelector(".psecs"),+getComputedStyle(g).zIndex>0]:null;}),[true,true],"back: the plan page slides off over Training");
+  eq(await page.evaluate(()=>[!!document.querySelector(".stillcopy"),document.documentElement.classList.contains("pgmoving"),document.getElementById("app").classList.contains("pgfront")]),[false,false,false],"and gone when it lands");
+  await page.tap('.psecs [data-tplan="programs"]');await pause(page,80);
+  eq(await page.evaluate(()=>{const g=document.querySelector(".stillcopy");return !!g&&!!g.querySelector(".bsched,.drows");}),true,"a tab tap: My program slides out as Programs comes in");
+  await pause(page,700);
+  await page.tap('#app .dhead [data-back]');await pause(page,100);
+  eq(await page.evaluate(()=>{const g=document.querySelector(".stillcopy");return !!g&&!!g.querySelector(".psecs");}),true,"back: the plan page goes the other way");
   await pause(page,900);
   eq(await ev(page,"[V.tab,V.train]"),["train","days"],"on Training");
   await tapTab(page,"food");await pause(page,100);
-  eq(await page.evaluate(()=>!!document.querySelector(".pghost")),false,"a tab change is not a page push");
+  eq(await page.evaluate(()=>!!document.querySelector(".stillcopy")),false,"a tab change is not a page push");
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=false;(await import("/js/ui/render.js")).render();});
   await page.tap('#app [data-fplan="plan"]');await pause(page,60);
-  eq(await page.evaluate(()=>!!document.querySelector(".pghost")),false,"reduced motion: no slide");
+  eq(await page.evaluate(()=>!!document.querySelector(".stillcopy")),false,"reduced motion: no slide");
 },{prefs:{anim:true}});
 await test("Schedule: one card — the choice with icons, then the week it makes: in rotation the days in order and round again, by weekday each day's number on its weekday; the page line names the weekdays alike",async page=>{
   await coach(page,"train","program");
@@ -4657,7 +4659,7 @@ await test("Copy in: a plan another Bunyan user shared works in Food's Copy in a
 await test("My program: Copy in a program sits right above Share my program, as Copy in a plan does above Share my meal plan",async page=>{
   await coach(page,"train","program");
   const rows=await page.$$eval('#app .plset .srow',a=>a.map(r=>r.getAttribute("data-timport")?"in":(r.getAttribute("data-shareplan")||"").startsWith("p:")?"share":r.getAttribute("data-tplan")||r.getAttribute("data-sheet")));
-  eq(rows,["programs","set_training","in","share"],"switch, settings, then in and out together");
+  eq(rows,["set_training","in","share"],"settings, then in and out together; no Switch program beside the Programs tab");
   await page.tap('#app .plset [data-timport]');await pause(page,400);
   eq(await page.textContent('#app .dhead-t'),"Copy in a program","it opens the Copy in screen");
 });
@@ -4706,7 +4708,8 @@ await test("Coach page: this week's strip agrees with Training's week; the ask b
   eq(w,wk[1]?[String(wk[0]),String(wk[1])]:[],"the same workouts as the plan's week");
   const bar=await page.$eval(".cweek2-bar i",e=>parseFloat(e.style.width));
   eq(bar,wk[1]?Math.round(wk[0]/wk[1]*100):0,"the bar is the share");
-  await page.tap('.cask-in');await pause(page,400);await page.focus('#chatq');
+  eq(await page.$$eval('.cask [data-coachopen]',a=>a.length),0,"no box that opens the same chat as the Coach button");
+  await page.tap('#cfab .cfab');await pause(page,400);await page.focus('#chatq');
   eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,!!document.querySelector("#cpanel .cp-f")]),["chatq",true],"the box has the caret");
   const bb=await (await page.$('.cp [data-coachclose]')).boundingBox();
   if(bb.y<0)throw new Error("the close is off the top of the screen");

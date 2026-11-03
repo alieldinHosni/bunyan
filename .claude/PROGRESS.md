@@ -3463,3 +3463,24 @@ program (PDF, text, or a program another Bunyan user shared) directly above Shar
 plan's does with Copy in a plan and Share my meal plan. "Share this program" is "Share my program"
 everywhere (the share sheet's title too); the coach's answer on sharing names the new places instead of
 Profile > Add a shared plan.
+
+## Motion sweep: no jumps, no flashes, a real carousel; no duplicate buttons — branch session/sweep (CACHE v211)
+
+Owner, 3 Nov: "bugs in motion when I swipe between pages, or flashes … give the impression that the app is
+buggy"; duplicate buttons for the same job. Each interaction was filmed frame by frame (CDP screencast) and
+scanned for frames that jump, flash or stall; the causes found and fixed:
+- Mid-swipe the whole background photo jumped and zoomed: a tab sliding sideways stuck out past the screen
+  and the phone widened the page to fit, rescaling everything fixed to the screen. html,body{overflow-x:clip}
+  for good (clip, not hidden: no scroll container, sticky and scrolling untouched).
+- Fades switched off the frosted cards' blur (a fading parent is a backdrop root), so cards popped between
+  frosted and plain: the old page faded under a push, a tapped tab faded in. Now nothing that holds cards
+  fades: old and new travel together edge to edge, transform only (motion.js stillCopy/slidePair) — a page
+  push, back, and a tab tap alike.
+- A swipe was sequential (old out, then new in) with empty ground under the finger: now the next tab is
+  drawn when the drag picks a direction (app.js peek) and follows the finger beside the dragged one; on
+  release both carry on together from where the finger left them, and the tab highlight with them; a nudge
+  springs both back.
+- The background photograph swapped at once when a page's ground changed: it now decodes, then crossfades.
+- Duplicates removed: the bell on Training's header (the dock's Coach tab opens the same page and carries
+  the same dot), the Coach page's "Ask your coach anything" box (the floating Coach button opens the same
+  chat; the ready questions stay), and My program's Switch program row (the Programs & exercises tab above).

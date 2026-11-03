@@ -906,9 +906,14 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
 @keyframes pageIn{from{transform:translateY(16px)}to{transform:none}}
 /* A page opened from a page, or back (render.js pageMove): the new one over a still copy
    of the old, and nothing sideways scrolls while they pass. */
-html.pgmoving,html.pgmoving body{overflow-x:clip}
+/* Nothing is ever wider than the screen. A tab or a page sliding sideways stuck out past
+   the edge for a moment, and a phone then widened the page to fit it: everything fixed to
+   the screen (the background photograph, the dock) rescaled and jumped mid-swipe (owner,
+   3 Nov: "bugs in motion when I swipe between pages"). Clip, not hidden: it makes no
+   scroll container, so sticky headers and the page's own scrolling are untouched. */
+html,body{overflow-x:clip}
 #app.pgfront{position:relative;z-index:1}
-.pghost{will-change:transform,opacity}
+.stillcopy{will-change:transform}
 /* Gated: entry animations run when a surface appears, never on a re-render. */
 .sheet.entering .sheetbox{animation:sheetIn var(--m-sheet) var(--e-decel)}
 @keyframes sheetIn{from{transform:translateY(14%)}to{transform:none}}

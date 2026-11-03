@@ -840,7 +840,7 @@ function builderBody(sp,id,inline){
   if(active&&inline){
     var srow=function(attr,name,sub){return '<button class="srow" '+attr+'><span class="srow-t"><span class="srow-n">'+esc(name)+'</span><span class="srow-s">'+esc(sub)+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>';};
     return h+'<section class="sg plset"><div class="sg-list">'
-     +srow('data-tplan="programs"',t("Switch program"),t("Another of yours, or a template"))
+     /* No Switch program row: the Programs & exercises tab above is that (owner, 3 Nov). */
      +srow('data-sheet="set_training"',t("Workout settings"),t("Progression, warm-up, rest timer, equipment"))
      /* In and out side by side, as on the meal plan (owner, 3 Nov): copy one in (a PDF,
         text, or one another Bunyan user shared), or share this one. */

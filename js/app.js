@@ -29,6 +29,9 @@ import {mmss, paintOver, paintRest, sessionClock} from "./ui/views/session.js";
 import {fixLogsNow, moveRow, requestCloseSheet, retargetNow} from "./ui/handlers/common.js";
 import {onChange, onInput, onKeydown} from "./ui/handlers/fields.js";
 import {render, syncKeyboard} from "./ui/render.js";
+import {vTrain} from "./ui/views/train.js";
+import {vFood} from "./ui/views/food.js";
+import {isolateNums} from "./i18n/bidi.js";
 import {setStorageErrorHandler} from "./util.js";
 import {syncWbar} from "./ui/wbar.js";
 import {paintRun} from "./ui/run.js";
@@ -244,6 +247,17 @@ initExSwipe({
   can:function(step,k){
     if(k&&k!=="ex"){var n2=ptabNow(k)+step;return !V.sheet&&n2>=0&&n2<PTABS[k].length;}
     var a=S.active,n=V.logIdx+step;return !!(a&&!V.sheet&&V.tab==="train"&&n>=0&&n<a.entries.length);},
+  /* The tab next door, drawn as it would be, for the swipe to bring in under the finger
+     (exswipe.js peek). Nothing is changed: the tab is put back at once. */
+  peek:function(step,k){
+    var l=PTABS[k],i=ptabNow(k)+step;if(!l||i<0||i>=l.length)return null;
+    var was=k==="tplan"?V.tplan:V.fplan,h="";
+    if(k==="tplan")V.tplan=l[i];else V.fplan=l[i];
+    try{h=k==="tplan"?vTrain():vFood();}catch(e){h="";}
+    if(k==="tplan")V.tplan=was;else V.fplan=was;
+    if(S.prefs&&S.prefs.lang==="ar")h=isolateNums(h);
+    var box=document.createElement("div");box.innerHTML=h;
+    var p=box.querySelector(".psec");return p?p.innerHTML:null;},
   go:function(step,k){
     if(k&&k!=="ex"){var v=PTABS[k][ptabNow(k)+step];if(k==="tplan")V.tplan=v;else V.fplan=v;
       /* The swipe brings the tab in itself; the section's own slide stays out of it. */

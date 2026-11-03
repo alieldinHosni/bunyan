@@ -68,15 +68,15 @@ var HI={
    right, two round glass buttons: the bell, which opens what the coach has noticed and
    carries a dot while there is something, and the person, which opens Profile. */
 function trainTop(){
-  var name=ownName(),hr=new Date().getHours(),scene=hr<12?"sunrise":hr<17?"sun":"moon",n=V.advice||0;
-  var bell=t("What the coach noticed")+(n?", "+t(n===1?"1 thing to look at":"{n} things to look at").replace("{n}",n):"");
+  var name=ownName(),hr=new Date().getHours(),scene=hr<12?"sunrise":hr<17?"sun":"moon";
   return '<div class="hgreet">'+art(scene,{cls:"hgreet-art"})+'<div class="hgreet-t">'
    +'<div class="hdate">'+esc(dfmt(new Date(),{weekday:"long",day:"numeric",month:"short"}))+'</div>'
    /* The name is its own run: a Latin name beside an Arabic greeting otherwise drags
       the comma to the wrong side ("Khalid ,صباح الخير"). Arabic takes its own comma. */
    +'<h1>'+esc(greeting())+(name?esc(S.prefs.lang==="ar"?"، ":", ")+'<bdi>'+esc(name)+'</bdi>':'')+'</h1></div>'
    +'<div class="hacts">'
-   +'<button class="hbtn'+(n?' flag':'')+'" data-csec="ai" aria-label="'+esc(bell)+'">'+glyph("bell")+'</button>'
+   /* No bell here (owner, 3 Nov: no two buttons for one job): the dock's Coach tab opens
+      the same page and carries the same dot. */
    +'<button class="hbtn havatar" data-prof="1" aria-label="'+esc(t("Profile"))+'">'
    +(S.profile.photo||name?avatar(name,"",true):glyph("person"))+'</button>'
    +'</div></div>'+reminder();}

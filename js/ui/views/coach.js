@@ -73,10 +73,10 @@ function coachList(){
 /* ---- ask -------------------------------------------------------------------------
    A field-shaped button that opens the conversation, and three questions that ask at
    once (the same ones the panel starts with on this page). */
+/* Questions that ask at once. Asking anything else is the floating Coach button beside
+   the dock: no second box here that opens the same chat (owner, 3 Nov). */
 function askBox(){
-  return '<section class="cask" aria-label="'+esc(t("Ask your coach"))+'">'
-   +'<button class="cask-in" data-coachopen="1"><span class="cask-i" aria-hidden="true">'+glyph("whistle")+'</span>'
-   +'<span>'+esc(t("Ask your coach anything"))+'</span></button>'
+  return '<section class="cask" aria-label="'+esc(t("Ask your coach"))+'"><span class="shk">'+esc(t("Ask your coach"))+'</span>'
    +'<div class="cask-q">'+suggestFor("coach").map(function(id){
      return '<button class="cp-chip" data-chatq="'+id+'">'+esc(t(ASK[id]))+'</button>';}).join("")+'</div></section>';}
 
