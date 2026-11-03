@@ -3264,3 +3264,9 @@ Owner, 3 Nov. The rail header's buttons (Today, the two hidden week buttons, the
 Today went the patcher matched by position: the hidden next-week button was turned into the calendar button and
 its colour transition replayed. Each now carries a data-k (wkr-today, wkr-prev, wkr-next, wkr-cal). Regression
 test watches the calendar button through Today and through tapping today's date: same node, no attribute change.
+
+## Training hero: Change beside the label, off the rider — same branch
+
+Owner, 3 Nov: the Change button covered the figure. It moved out of the card's top corner into the text column,
+as a see-through chip after the day's label (.thero2-k row; hairline border, accent icon, 44 px hit area through
+::before). The title no longer reserves 86 px for it. Checked in English and Arabic, rest day and workout day.

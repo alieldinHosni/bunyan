@@ -151,10 +151,12 @@ function dayHero(sp,p,iso){
     ?'<button class="thero2-swap" data-swapday="'+iso+'" aria-label="'+esc(t("Change this day's workout"))+'">'
       +'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg><span>'+t("Change")+'</span></button>':'';
   return '<div class="thero2'+(p.kind==="today"&&!p.rest?' live':'')+'">'
-   +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'+swap
+   +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'
    +'<div class="thero2-top"><span class="tbadge'+(p.rest||p.kind==="past"?' rest':'')+'" aria-hidden="true">'
    +(p.rest||p.kind==="past"?MOON:DUMBBELL)+'</span>'
-   +'<div class="thero2-t"><span class="klabel">'+esc(label)+'</span>'
+   /* Change sits beside the day's label, in the text, not over the rider (owner, 3 Nov:
+      "the change button is hiding the cool figure"). */
+   +'<div class="thero2-t"><div class="thero2-k"><span class="klabel">'+esc(label)+'</span>'+swap+'</div>'
    +'<div class="thero2-n">'+esc(name)+'</div>'
    +'<div class="thero2-m">'+esc(meta)+'</div></div></div>'
    +cta+'</div>';}
