@@ -93,7 +93,9 @@ var FPLAN=[["plan","Meal plan"],["targets","Daily goals"]];
 function vFoodPlan(){
   if(V.fplan==="foods")return vMyFoodsPage();
   var fs=FPLAN.some(function(x){return x[0]===V.fplan;})?V.fplan:"plan",g=S.goals||{};
-  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Nutrition plan"))+'</h1></div>'
+  /* How meals are named is the gear at the top right, as on Training's plan page. */
+  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Nutrition plan"))+'</h1>'
+   +'<button class="icobtn dhead-a" data-sheet="set_meals" aria-label="'+esc(t("Meal plan settings"))+'">'+glyph("gear")+'</button></div>'
    +'<p class="dsub">'+esc(t("{k} kcal · {p} g protein a day").replace("{k}",fmtN(Math.round(num(g.kcal)))).replace("{p}",Math.round(num(g.p))))+'</p>';
   h+=seg({items:FPLAN.map(function(x){return [x[0],t(x[1])];}),value:fs,attr:"fplan",tabs:true,cls:"psecs",label:t("Nutrition plan"),key:"fplan"});
   h+='<div class="psec" data-pswipe="fplan" data-k="psec-'+fs+'">'+(fs==="targets"?vTargets():fs==="foods"?vMyFoods():vPlan())+'</div>';
@@ -435,6 +437,15 @@ function vPlan(){
   var tiles='<div class="ptiles">'
    +'<button class="ptile" data-pgen="1"><span class="ptile-i">'+SPARK+'</span><b>'+t("Make it from my goals")+'</b><span>'+t("A full day that adds up. You check it first.")+'</span></button>'
    +'<button class="ptile" data-pimport="1"><span class="ptile-i">'+DOC+'</span><b>'+t("Copy in a plan")+'</b><span>'+t("Paste it, open a file, or one shared with you")+'</span></button></div>';
+  /* The plan's own actions are icons by its name, as a program's are (owner, 3 Nov):
+     your foods, a new plan from the goals, copy one in, share it. Starting from nothing,
+     the first two are the card below, so only your foods is here. */
+  var np=sl.filter(function(x){return (x.plan||[]).length;}).length,nmf=(S.myFoods||[]).length+(S.savedMeals||[]).length,ib=function(a,g,l){return '<button class="icobtn" '+a+' aria-label="'+esc(l)+'">'+glyph(g)+'</button>';};
+  h+='<div class="bname"><div class="bname-l"><h2 class="bname-t">'+esc(t("Your meal plan"))+'</h2>'
+   +'<span class="bname-s">'+esc(np?t(np===1?"1 meal · {k} kcal":"{n} meals · {k} kcal").replace("{n}",np).replace("{k}",fmtN(tot.kcal)):t("No meal plan yet"))+'</span></div>'
+   +'<div class="bname-a">'+ib('data-fplan="foods"',"bowl",t("My foods")+(nmf?", "+nmf:""))
+   +(all.length?ib('data-pgen="1"',"spark",t("Make a new plan from my goals"))+ib('data-pimport="1"',"download",t("Copy in a plan"))+ib('data-shareplan="meals"',"share",t("Share my meal plan")):'')
+   +'</div></div>';
   if(!all.length)h+='<section class="plstart glass"><span class="klabel">'+esc(t("Make your meal plan"))+'</span>'
    +'<p>'+esc(t("Let the coach make a full day from your goals, or copy in a plan you already have."))+'</p>'+tiles+'</section>';
   else h+='<section class="plsum glass"><div class="plsum-h"><span class="klabel">'+esc(t("Planned for a day"))+'</span>'
@@ -456,17 +467,6 @@ function vPlan(){
      +(ro?'<button class="dgrip" data-grip="'+esc(x.id)+'" aria-label="'+esc(t("Move")+" "+mealName(x.id))+'">'+GRIPSVG+'</button>':'')
      +'</div>';});
   h+='</div><button class="dadd" data-paddslot="1"><span aria-hidden="true">+</span>'+t("Add a meal")+'</button>';
-  /* The plan's settings, one list. */
-  var nmf=(S.myFoods||[]).length+(S.savedMeals||[]).length;
-  h+='<section class="sg plset"><div class="sg-list">'
-   +'<div class="srow srow-pick"><span class="srow-t"><span class="srow-n">'+esc(t("Meal names"))+'</span><span class="srow-s">'+esc(t(style==="named"?"Breakfast, lunch, dinner, snacks":"Meal 1, Meal 2, Meal 3…"))+'</span></span>'
-   +seg({items:[["named",t("Named")],["numbered",t("Numbered")]],value:style,attr:"mstyle",soft:true,label:t("Meal names"),key:"mstyle"})+'</div>'
-   +'<button class="srow" data-fplan="foods"><span class="srow-t"><span class="srow-n">'+esc(t("My foods"))+'</span><span class="srow-s">'+esc(t("Foods and meals of your own"))+'</span></span>'
-   +(nmf?'<span class="srow-v num">'+nmf+'</span>':'')+'<span class="ico ico-chev" aria-hidden="true"></span></button>'
-   +(all.length?'<button class="srow" data-pgen="1"><span class="srow-t"><span class="srow-n">'+esc(t("Make a new plan from my goals"))+'</span><span class="srow-s">'+esc(t("Replaces this one after you check it"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>'
-     +'<button class="srow" data-pimport="1"><span class="srow-t"><span class="srow-n">'+esc(t("Copy in a plan"))+'</span><span class="srow-s">'+esc(t("Paste it, open a file, or one shared with you"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>':'')
-   +(all.length?'<button class="srow" data-shareplan="meals"><span class="srow-t"><span class="srow-n">'+esc(t("Share my meal plan"))+'</span><span class="srow-s">'+esc(t("With another Bunyan user"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>':'')
-   +'</div></section>';
   return h;}
 
 /* One meal's plan, built in place like a saved meal: the title renames it, ✕ takes a
@@ -548,7 +548,7 @@ function vImport(){
    against the goals, with Another version for a built one; each meal a card of its foods,
    one tap on a food for everything that can be done to it (vPlanFood: the amount, a swap
    for something similar, removing it); lines that matched nothing, each with Find; and
-   Use this plan, kept in reach at the foot of the screen. */
+   Use this plan, at the end of the plan. */
 function planReview(pp){
   var g=S.goals||{},all=[],nTodo=0,fig=function(x){return '<span class="num">'+x+'</span>';};
   pp.forEach(function(m){all=all.concat(m.items);nTodo+=m.todo.length;});

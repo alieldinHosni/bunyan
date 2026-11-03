@@ -23,7 +23,7 @@
    hold frosted cards, which lose their blur under a fading parent, so they travel the
    whole width instead of fading. A touch that starts in something that scrolls sideways
    (templates, pills) or on a grip is that thing's, not a swipe. */
-import {isReduced, stillCopy} from "./motion.js";
+import {isReduced} from "./motion.js";
 import {tap} from "./view.js";
 
 var H=null,st=null,lockUntil=0,swallowUntil=0;
@@ -95,15 +95,35 @@ function peekFollow(s,x){
   if(!H.can(step,s.k)||!H.peek){peekDrop(s);return;}
   if(!s.nb||s.nbStep!==step){
     peekDrop(s);
-    var html=H.peek(step,s.k);if(html==null)return;
+    var w=takePeek(step,s.k);if(!w)return;
     if(!s.base){var t0=s.p.style.transform;s.p.style.transform="";s.base=s.p.getBoundingClientRect();s.p.style.transform=t0;}
-    var w=document.createElement("div");w.id="app";w.className="stillcopy peek";w.setAttribute("aria-hidden","true");w.inert=true;
     w.style.cssText="position:fixed;left:"+s.base.left+"px;top:"+s.base.top+"px;width:"+s.base.width+"px;margin:0;padding:0;max-width:none;pointer-events:none;z-index:0";
-    var p=document.createElement("div");p.className="psec";p.innerHTML=html;
-    p.querySelectorAll("[id]").forEach(function(e){e.removeAttribute("id");});
-    w.appendChild(p);document.body.appendChild(w);
+    w.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";
+    document.body.appendChild(w);
     s.nb=w;s.nbStep=step;}
   s.nb.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";}
+/* The tabs next door, drawn ahead while nothing is happening (owner, 3 Nov: the swipe
+   still caught). Drawing one meant laying out the whole page as it would be, and doing
+   that as the finger began to move was the hitch at the start of every swipe. Made
+   again after every paint, since what they show may have changed. */
+var pre={},preT=0;
+function buildPeek(step,k){
+  var html=H.peek(step,k);if(html==null)return null;
+  var w=document.createElement("div");w.id="app";w.className="stillcopy peek";w.setAttribute("aria-hidden","true");w.inert=true;
+  var p=document.createElement("div");p.className="psec";p.innerHTML=html;
+  p.querySelectorAll("[id]").forEach(function(e){e.removeAttribute("id");});
+  w.appendChild(p);return w;}
+function takePeek(step,k){
+  var c=pre[step],w=c&&c.k===k?c.w:null;pre[step]=null;
+  return w||buildPeek(step,k);}
+function prepPeeks(){
+  pre={};clearTimeout(preT);
+  var p=pane();if(!p||!H||!H.peek)return;
+  var k=kindOf(p);if(k==="ex")return;
+  var idle=window.requestIdleCallback||function(f){return setTimeout(f,120);};
+  preT=setTimeout(function(){idle(function(){
+    if(st||pane()!==p)return;
+    [-1,1].forEach(function(step){if(H.can(step,k)){var w=buildPeek(step,k);if(w)pre[step]={k:k,w:w};}});});},250);}
 function peekDrop(s){if(s&&s.nb){s.nb.remove();s.nb=null;s.nbStep=0;}}
 function springBack(p,s){
   if(s)segSettle(s,s.i0,320);
@@ -162,20 +182,23 @@ var SE="cubic-bezier(0.22, 1, 0.36, 1)";
 function slidePlan(s,step){
   var w=s.w,dx=s.dx,ms=Math.max(260,Math.min(440,Math.round((w-Math.abs(dx))/w*440)));
   segSettle(s,(s.i0||0)+step,ms);
-  s.p.style.transition="none";s.p.style.transform="";s.p.style.opacity="";
-  var g=stillCopy(s.p);g.style.transform="translateX("+dx+"px)";
-  H.go(step,s.k);
-  /* The real tab is drawn exactly where the one under the finger was: that one goes. */
-  peekDrop(s);
-  var p=pane();if(!p){g.remove();return;}
-  p.style.transition="none";p.style.transform="";p.style.opacity="";
+  var nb=s.nb,p=s.p,out=dx<0?-w:w;s.nb=null;
   document.documentElement.classList.add("pgmoving");
-  var fin=false,end=function(){if(fin)return;fin=true;if(g.parentNode)g.remove();
+  var fin=false,end=function(){if(fin)return;fin=true;
+    /* The real tab is drawn now that nothing moves: exactly where the one that came in
+       stands, so swapping one for the other cannot be seen. */
+    H.go(step,s.k);
+    var np=pane();
+    [p,np].forEach(function(e){if(e){e.style.transition="none";e.style.transform="";e.style.opacity="";
+      if(e.getAnimations)e.getAnimations().forEach(function(x){x.cancel();});}});
+    if(nb)nb.remove();
     if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");
     var tabs=document.querySelector("#app .psecs");
     if(tabs){var top=tabs.getBoundingClientRect().top;if(top<0)window.scrollBy({top:top-12,behavior:"smooth"});}};
-  var a=p.animate([{transform:"translateX("+(dx+(dx<0?w:-w))+"px)"},{transform:"none"}],{duration:ms,easing:SE});
-  g.animate([{transform:"translateX("+dx+"px)"},{transform:"translateX("+(dx<0?-w:w)+"px)"}],{duration:ms,easing:SE,fill:"forwards"});
+  /* Both travel on together, edge to edge, from where the finger left them, transform
+     only; nothing is drawn until they land. */
+  var a=p.animate([{transform:"translateX("+dx+"px)"},{transform:"translateX("+out+"px)"}],{duration:ms,easing:SE,fill:"forwards"});
+  if(nb)nb.animate([{transform:"translateX("+(dx+(dx<0?w:-w))+"px)"},{transform:"translateX(0px)"}],{duration:ms,easing:SE,fill:"forwards"});
   a.onfinish=end;a.oncancel=end;setTimeout(end,ms+250);}
 /* Where an exercise change by step comes in from, on screen. */
 function fromOf(step){return (rtl()?-1:1)*(step>0?1:-1);}
@@ -186,7 +209,8 @@ function fromOf(step){return (rtl()?-1:1)*(step>0?1:-1);}
    render() calls this after each paint; a pane already bound is left alone. */
 function bindExSwipe(){
   var p=pane();
-  if(p&&!p._exswipe){p._exswipe=true;p.addEventListener("touchmove",onMove,{passive:false});}}
+  if(p&&!p._exswipe){p._exswipe=true;p.addEventListener("touchmove",onMove,{passive:false});}
+  prepPeeks();}
 
 function initExSwipe(hooks){
   H=hooks;

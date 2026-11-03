@@ -27,6 +27,7 @@ import {esc, fmtN, num, shortd} from "../util.js";
 import {canBuzz, seg, V} from "./view.js";
 import {iconOf, modeOf, themeOf, THEMES} from "./theme.js";
 import {glyph} from "./glyphs.js";
+import {mealStyle} from "../engine/meals.js";
 import {afTile} from "./views/addfood.js";
 import {histSheet} from "./views/chat.js";
 import {sheet as smartSheet, state as smartState} from "./smartcoach.js";
@@ -327,7 +328,14 @@ function aboutSheet(){
    +'<section class="sg"><h3 class="sg-h">'+t("How the numbers work")+'</h3><div class="sg-card"><span class="gtile">'+glyph("info")+'</span><p>'
    +t("Estimated 1RM uses the Epley formula and is only meaningful up to about 12 reps. Volume is the sum of weight × reps for every set, not an average.")+'</p></div></section>';}
 
-var SHEETS={set_you:youSheet,set_avatar:avatarSheet,set_training:trainingSheet,set_app:appSheet,set_profiles:profilesSheet,
+/* Food's plan page gear: how meals are named (views/food.js). */
+function mealsSheet(){
+  var st=mealStyle();
+  return '<h2>'+t("Meal plan settings")+'</h2>'
+   +group(t("Meals"),pick(t("Meal names"),t(st==="named"?"Breakfast, lunch, dinner, snacks":"Meal 1, Meal 2, Meal 3…"),
+      {items:[["named",t("Named")],["numbered",t("Numbered")]],value:st,attr:"mstyle",label:t("Meal names")}));}
+
+var SHEETS={set_meals:mealsSheet,set_you:youSheet,set_avatar:avatarSheet,set_training:trainingSheet,set_app:appSheet,set_profiles:profilesSheet,
   set_data:dataSheet,backup:backupSheet,share:shareSheet,about:aboutSheet,set_chat:histSheet,sendplan:sendPlanSheet,recvplan:recvPlanSheet,set_smart:smartSheet};
 /* The inside of a settings sheet, or null when the name is not one of these. */
 function settingsSheet(name){return SHEETS[name]?SHEETS[name]():null;}

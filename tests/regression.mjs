@@ -91,7 +91,7 @@ async function coach(page,sec,sub){
     /* Exercises live under Programs since 3 Nov: that tab, at the library. */
     const ex=sec==="train"&&sub==="exercises";if(ex)sub="programs";
     /* My foods is a page one step in from the meal plan (3 Nov), reached from its list. */
-    if(sec==="food"&&sub==="foods"){await page.tap('.plset [data-fplan="foods"]');await page.waitForTimeout(300);return;}
+    if(sec==="food"&&sub==="foods"){await page.tap('.bname-a [data-fplan="foods"]');await page.waitForTimeout(300);return;}
     if(sub&&sub!==first){await page.tap('.psecs [data-'+attr+'="'+sub+'"]');await page.waitForTimeout(250);}
     if(ex){await page.evaluate(()=>document.getElementById("pex").scrollIntoView({block:"start"}));await page.waitForTimeout(150);}
     return;}
@@ -937,7 +937,9 @@ await test("Food: no Now label; Add Food goes to the meal after the last one log
 });
 await test("Plan: numbered meals, add and rename a meal, reorder them, and every name reaches Today",async page=>{
   await coach(page,"food","plan");
-  await page.tap('[data-mstyle="numbered"]');await pause(page);
+  await page.tap('.dhead-a[data-sheet="set_meals"]');await pause(page,400);
+  await page.tap('#sheet [data-mstyle="numbered"]');await pause(page);
+  await page.tap('#sheet .x[data-close]');await pause(page,500);
   eq(await page.$$eval('.drows .drow-n',a=>a.map(x=>x.textContent)),["Meal 1","Meal 2","Meal 3","Meal 4"],"numbered");
   await page.tap('[data-paddslot]');await pause(page,400);
   await page.fill('#askv','Pre-workout');await page.tap('[data-askok]');await pause(page);
@@ -4588,21 +4590,30 @@ await test("Guide: Training's plan page has its own, which says what the tabs, E
   if(!/Swipe left or right/.test(await page.textContent('.tour-p')))throw new Error("does not say a swipe switches");
 },{tour:true,prefs:{toured:{train:9,food:9,coach:9,progress:9,profile:9}}});
 /* ---- Food's plan pages, round 3 (owner, 3 Nov) ------------------------------------------ */
-await test("Meal plan: with nothing planned, how to start comes first; once planned, two bars and a verdict, and starting again moves into the settings list (Meal names works: it showed as bare white boxes)",async page=>{
+await test("Meal plan: with nothing planned, how to start comes first; once planned, two bars and a verdict; the plan's tools are icons by its name and Meal names is the gear (owner, 3 Nov: as on Training)",async page=>{
   await page.evaluate(async()=>{const st=await import("/js/state.js");(st.S.mealSlots||[]).forEach(x=>{x.plan=[];});st.saveDB();});
   await coach(page,"food","plan");
-  eq(await page.evaluate(()=>[!!document.querySelector('.plstart'),!document.querySelector('.plsum'),!!document.querySelector('.plstart .ptile[data-pgen]'),!!document.querySelector('.plstart .ptile[data-pimport]')]),[true,true,true,true],"empty: Make your meal plan first, with its two ways");
+  eq(await page.evaluate(()=>[!!document.querySelector('.plstart'),!document.querySelector('.plsum'),!!document.querySelector('.plstart .ptile[data-pgen]'),!!document.querySelector('.plstart .ptile[data-pimport]'),
+    [...document.querySelectorAll('.psec .bname-a .icobtn')].map(b=>Object.keys(b.dataset)[0])]),[true,true,true,true,["fplan"]],"empty: Make your meal plan first, with its two ways; only My foods among the icons");
   await page.evaluate(async()=>{const st=await import("/js/state.js"),M=await import("/js/engine/meals.js");const x=M.ownSlots()[0];
     x.plan=[{n:"Eggs",kcal:300,p:24,c:2,f:20,grams:150,label:"3 eggs"}];st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,300);
-  eq(await page.evaluate(()=>[document.querySelectorAll('.plsum .plsum-r').length,!!document.querySelector('.plsum-v'),!document.querySelector('.plstart'),!!document.querySelector('.plset [data-pgen]'),!!document.querySelector('.plset [data-pimport]'),!!document.querySelector('.plset [data-fplan="foods"]')]),[2,true,true,true,true,true],"planned: two bars and a verdict; starting again is in the list");
-  const look=await page.$eval('.plset .seg-b',b=>{const c=getComputedStyle(b);return [c.backgroundColor,c.color];});
+  eq(await page.evaluate(()=>[document.querySelectorAll('.plsum .plsum-r').length,!!document.querySelector('.plsum-v'),!document.querySelector('.plstart'),!document.querySelector('.plset'),
+    [...document.querySelectorAll('.psec .bname-a .icobtn')].map(b=>Object.keys(b.dataset)[0]),document.querySelector('.psec .bname-s').textContent]),
+    [2,true,true,true,["fplan","pgen","pimport","shareplan"],"1 meal · 300 kcal"],"planned: two bars and a verdict; four icons by the name, no list");
+  /* Not touching: each icon has room of its own. */
+  const gap=await page.evaluate(()=>{const b=[...document.querySelectorAll('.psec .bname-a .icobtn')].map(x=>x.getBoundingClientRect());return Math.min(...b.slice(1).map((r,i)=>r.left-b[i].right));});
+  if(!(gap>=6))throw new Error("icons touch: "+gap);
+  await page.tap('.dhead-a[data-sheet="set_meals"]');await pause(page,500);
+  const look=await page.$eval('#sheet .seg-b',b=>{const c=getComputedStyle(b);return [c.backgroundColor,c.color];});
   if(look[0]==="rgb(255, 255, 255)"||look[0]==="rgb(239, 239, 239)")throw new Error("Meal names is unstyled: "+look);
-  await page.tap('.plset [data-mstyle="numbered"]');await pause(page,300);
+  await page.tap('#sheet [data-mstyle="numbered"]');await pause(page,300);
   eq(await page.evaluate(async()=>(await import("/js/engine/meals.js")).mealStyle()),"numbered","Numbered chosen");
-  await page.tap('.plset [data-mstyle="named"]');await pause(page,300);
+  await page.tap('#sheet [data-mstyle="named"]');await pause(page,300);
   eq(await page.evaluate(async()=>(await import("/js/engine/meals.js")).mealStyle()),"named","and back");
+  await page.tap('#sheet .x[data-close]');await pause(page,600);
+  eq(await page.evaluate(()=>[!!document.querySelector('#sheet .sheet'),!!document.querySelector('.sheetghost')]),[false,false],"the sheet slides away and is gone");
   eq(await page.$$eval('#app .psecs .seg-b',a=>a.map(b=>b.textContent)),["Meal plan","Daily goals"],"two tabs: My foods is not one");
-  await page.tap('.plset [data-fplan="foods"]');await pause(page,400);
+  await page.tap('.bname-a [data-fplan="foods"]');await pause(page,400);
   eq(await ev(page,"[V.fplan,!!document.querySelector('#app .psecs'),document.querySelector('#app .dhead-t').textContent]"),["foods",false,"My foods"],"My foods is a page of its own");
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.tab,V.fplan]"),["food","plan"],"back to the meal plan");

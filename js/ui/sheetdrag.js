@@ -92,7 +92,7 @@ function end(){
        sheet's own height, so a drag further than that animated *upwards* first. */
     var gap=window.innerHeight-b.getBoundingClientRect().top;
     b.style.transform="translateY("+(moved+Math.max(gap,0)+24)+"px)";
-    once(b,function(){ reset(); if(closeFn)closeFn(); },340);
+    once(b,function(){ var v=b.closest(".sheet"); if(v)v.setAttribute("data-flung","1"); reset(); if(closeFn)closeFn(); },340);
     return;
   }
   b.style.transform="translateY(0px)";   /* springs back, and never closes */
