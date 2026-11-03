@@ -3423,3 +3423,5 @@ tabs that do not make sense; the swipe's tab highlight lags the page.
 - Swipe: the tabs' highlight follows the finger while the page is dragged (exswipe segFollow, .seg.drag) and
   carries on to the landing tab in one movement with the page (--segdur), or springs back with it.
 - Figures and their units stay one left-to-right run in Arabic (they read "2,500 / 0").
+- Found by the full suite: the new cards (plan summary, target card, tiles, offer, fold) and the program,
+  plan and schedule cards were not in the frosted-card lists, so they were flat beside every other card. Added.
