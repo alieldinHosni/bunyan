@@ -2341,7 +2341,7 @@ await test("Maintenance learned: too little logged says how much more is needed,
   eq([L.kind,L.why],["insufficient","food"],"a few days are not enough");
   eq(await page.evaluate(async()=>(await import("/js/engine/plancheck.js")).checkPlans().some(f=>f.id==="maint-learned")),false,"no card");
   await coach(page,"food","targets");
-  if(!/After two weeks of logged food/.test(await page.$eval('.tgsrc',e=>e.textContent)))throw new Error("Targets does not say what it needs");
+  if(!/After two weeks of logging food/.test(await page.$eval('.tgsrc',e=>e.textContent)))throw new Error("Targets does not say what it needs");
 },{db:Object.assign(seed(),{days:Object.fromEntries([1,2,3].map(d=>[iso(d),{meals:{Lunch:{done:true,items:[{n:"x",kcal:2000,p:150,c:200,f:67}]}}}]))})});
 /* ---- readiness that acts (roadmap B3) ------------------------------------------------ */
 await test("Readiness: drained takes about 5% off today's suggestion, low holds last time's weight, great allows the bigger step; one set fewer on each exercise, with Undo",async page=>{
