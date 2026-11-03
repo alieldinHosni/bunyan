@@ -3709,9 +3709,14 @@ await test("Chat motion: typing, bigger or smaller keeps the field, its text and
   await page.tap('[data-coachsize="compact"]');await pause(page,700);
   eq(await page.evaluate(()=>[!document.querySelector(".cp.full"),document.activeElement&&document.activeElement.id]),[true,"chatq"],"and smaller again, still typing");
   const f0=await page.$eval('#chatq',e=>{const r=e.getBoundingClientRect();return r.top+r.height/2;});
-  await page.tap('.cp-send');await pause(page,40);
-  const g=await page.evaluate(()=>{const g=document.querySelector(".chat-ghost");if(!g)return null;const r=g.getBoundingClientRect();
-    return {z:+getComputedStyle(g).zIndex,pz:+getComputedStyle(document.getElementById("cpanel")).zIndex,mid:r.top+r.height/2,text:g.textContent.trim()};});
+  /* Read the flying words the moment they are added, not after a fixed wait a loaded
+     machine can overshoot or undershoot. */
+  await page.evaluate(()=>{window.__ghost=null;const o=new MutationObserver(()=>{const g=document.querySelector(".chat-ghost");if(!g||window.__ghost)return;
+    const r=g.getBoundingClientRect();window.__ghost={z:+getComputedStyle(g).zIndex,pz:+getComputedStyle(document.getElementById("cpanel")).zIndex,mid:r.top+r.height/2,text:g.textContent.trim()};o.disconnect();});
+    o.observe(document.body,{childList:true,subtree:true});});
+  await page.tap('.cp-send');
+  await page.waitForFunction(()=>!!window.__ghost,null,{timeout:3000,polling:"raf"}).catch(()=>{});
+  const g=await page.evaluate(()=>window.__ghost);
   if(!g)throw new Error("no message flying from the box");
   eq([g.z>g.pz,/how much protein/i.test(g.text)],[true,true],"the sent words fly over the panel, not behind it");
   if(Math.abs(g.mid-f0)>60)throw new Error("it does not leave from the box: "+g.mid+" vs "+f0);
