@@ -344,10 +344,13 @@ function weekRail(sp,sel){
    +'<div class="wkr-h"><div class="wkr-ti'+dir+'" data-k="wkt'+(open?'cal':ws)+'" aria-live="polite"><b>'+esc(open?t("Training calendar"):title)+'</b>'
    +(open?'':'<span class="wkr-p">'+esc(range)+' · <span class="num">'+done+'</span> '+esc(t("of"))+' <span class="num">'+plan+'</span> '+esc(t("done"))+'</span>')+'</div>'
    +'<div class="wkr-ha">'
-   +(away?'<button class="wkr-today" data-wktoday="1">'+esc(t("Today"))+'</button>':'')
+   /* Each keyed (owner, 3 Nov: the calendar flashed on Today): without a key the patcher
+      matches by position, so Today going made the hidden week button turn into the
+      calendar one, replaying its colour transition. */
+   +(away?'<button class="wkr-today" data-k="wkr-today" data-wktoday="1">'+esc(t("Today"))+'</button>':'')
    /* No arrows on screen: the row swipes. These two are for a keyboard or a screen reader. */
-   +(open?'':'<button class="vh" data-wkpage="-1">'+esc(t("Previous week"))+'</button><button class="vh" data-wkpage="1">'+esc(t("Next week"))+'</button>')
-   +'<button class="wkr-cal" data-wkopen="1" aria-expanded="'+open+'" aria-label="'+esc(t(open?"Back to the week":"See the whole month"))+'">'+CAL+'</button>'
+   +(open?'':'<button class="vh" data-k="wkr-prev" data-wkpage="-1">'+esc(t("Previous week"))+'</button><button class="vh" data-k="wkr-next" data-wkpage="1">'+esc(t("Next week"))+'</button>')
+ +'<button class="wkr-cal" data-k="wkr-cal" data-wkopen="1" aria-expanded="'+open+'" aria-label="'+esc(t(open?"Back to the week":"See the whole month"))+'">'+CAL+'</button>'
    +'</div></div>'
    +(open?'':'<div class="wkr-bar" aria-hidden="true"><i style="width:'+pct+'%"></i></div>')
    +'<div class="wkr-fold"'+(open?' inert aria-hidden="true"':'')+'><div class="wkr-in">'

@@ -3257,3 +3257,10 @@ linked, not precached, not translated) has four controls to tap on the iPhone: A
 `<input type="checkbox" switch>` inside a label styled as the check control, C the switch itself, D the app's
 current trick (view.js iosTick: a button that clicks a hidden switch in code). Each has Felt it / Nothing and a
 summary to send back. Waiting on the owner's results; no app change until then.
+
+## Week rail: the calendar button flashed going back to today — branch session/railfix (CACHE v202)
+
+Owner, 3 Nov. The rail header's buttons (Today, the two hidden week buttons, the calendar) had no keys, so when
+Today went the patcher matched by position: the hidden next-week button was turned into the calendar button and
+its colour transition replayed. Each now carries a data-k (wkr-today, wkr-prev, wkr-next, wkr-cal). Regression
+test watches the calendar button through Today and through tapping today's date: same node, no attribute change.
