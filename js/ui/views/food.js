@@ -137,6 +137,9 @@ function vFoodToday(dsel){
   /* ---- the day's meals as tiles: a logged one is ticked and opens the meal, an empty
      one adds to it — or, when it has a plan, opens it so the plan is one tap away.
      Nothing is marked "Now": the day is the user's, not the clock's. */
+  /* ---- what is behind for the time of day, right under the day's numbers, today only
+     (js/ui/bodyneeds.js): one slim card, or none. */
+  if(dsel===today())h+=bodyNeeds(e,r.water||0);
   var ids=dayMeals(dsel),next=nextMeal(dsel),n=ids.length;
   h+='<div class="tsec"><h2 class="tsec-h">'+t(dsel===today()?"Today's Meals":"Meals")+'</h2>'
    +'<button class="tlink" data-openday="'+dsel+'">'+t("Day details")+'</button></div>';
@@ -162,8 +165,6 @@ function vFoodToday(dsel){
    +esc(t("Add Food"))+' <span class="fadd-m">· '+esc(mealName(next))+'</span></button>';
 
   h+=foodPlanCard();
-  /* ---- what the body needs, today only (js/ui/bodyneeds.js) */
-  if(dsel===today())h+=bodyNeeds(e,r.water||0);
 
   /* ---- water */
   var unit=glassUnit(g.water),ng=Math.max(1,Math.round(g.water/unit)),

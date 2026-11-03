@@ -4749,8 +4749,8 @@ await test("Food: in the evening with protein short, the body says so, lights pr
   await page.addInitScript(()=>{Date.prototype.getHours=function(){return 19;};});await page.reload();await pause(page,1200);
   await tapTab(page,"food");await pause(page,400);
   eq(await page.$eval('.fbody-h',e=>e.textContent),"Your body needs more protein.","the headline");
-  eq(await page.$$eval('.fbn',a=>a.map(x=>[x.querySelector('.fbn-k').textContent,x.classList.contains("on")])),
-    [["Protein",true],["Carbs",false],["Fat",false],["Water",false]],"four, protein lit");
+  /* One slim card under the day's numbers, no figure repeating them (owner, 3 Nov). */
+  eq(await page.evaluate(()=>[!document.querySelector('.fbody-d,.fbn'),!!document.querySelector('.fsum + .fneed'),!!document.querySelector('.fneed .fneed-i.f-p')]),[true,true,true],"protein, in one card right under the summary; no figure");
   eq(await page.$eval('.fbody-pill',e=>e.textContent),"+100 g to go","what is left, to the nearest 5 g");
   eq(await page.$$eval('.fsug-t',a=>a.length),3,"three foods");
   const before=await ev(page,"Object.values(S.days[Object.keys(S.days).sort().pop()].meals).reduce((n,m)=>n+(m.items||[]).length,0)");
@@ -4765,10 +4765,10 @@ await test("Food: in the evening with protein short, the body says so, lights pr
 await test("Food: in the morning nothing is behind yet; with water short in the afternoon, a glass is offered instead of food",async page=>{
   await page.addInitScript(()=>{Date.prototype.getHours=function(){return 9;};});await page.reload();await pause(page,1200);
   await tapTab(page,"food");await pause(page,400);
-  eq([await page.$eval('.fbody-h',e=>e.textContent),await page.$$eval('.fbn.on,.fsug-t',a=>a.length)],["Your body is on course today.",0],"on course at 9:00");
+  eq(await page.$$eval('.fneed,.fsug-t',a=>a.length),0,"on course at 9:00: no card at all");
   await page.evaluate(async()=>{Date.prototype.getHours=function(){return 17;};const s=await import("/js/state.js");
     const d=Object.keys(s.S.days).sort().pop();s.S.days[d].water=300;(await import("/js/ui/render.js")).render();});await pause(page,300);
-  eq(await page.$eval('.fbn.on .fbn-k',e=>e.textContent),"Water","water lit");
+  eq([await page.$eval('.fbody-h',e=>e.textContent),!!(await page.$('.fneed .fneed-i.f-w'))],["Your body needs more water.",true],"water is what is behind");
   const w=await ev(page,"S.days[Object.keys(S.days).sort().pop()].water");
   await page.$eval('.fbody-glass',e=>e.scrollIntoView({block:"center"}));await page.tap('.fbody-glass');await pause(page,300);
   eq(await ev(page,"S.days[Object.keys(S.days).sort().pop()].water"),w+250,"a glass added");

@@ -3484,3 +3484,11 @@ scanned for frames that jump, flash or stall; the causes found and fixed:
 - Duplicates removed: the bell on Training's header (the dock's Coach tab opens the same page and carries
   the same dot), the Coach page's "Ask your coach anything" box (the floating Coach button opens the same
   chat; the ready questions stay), and My program's Switch program row (the Programs & exercises tab above).
+
+## Food: one summary, one slim card — branch session/foodtop (CACHE v212)
+
+Owner, 3 Nov: the summary card and the body figure showed the same numbers twice; keep one, or a mix that
+saves space for what is useful. The summary card stays (calories ring, protein/carbs/fat against the goals,
+kcal left). The figure with its four rings is gone; what it said that the summary does not is one slim card
+right under the summary (js/ui/bodyneeds.js): what is behind for the time of day, how much to go, and three
+foods that bring it in one tap (a glass, for water). Nothing behind: no card. Coach noticed stays.
