@@ -134,7 +134,7 @@ await test("Complete set, with haptics: a label around a hidden native switch, o
   await page.tap('.sess [data-logset]');await pause(page,300);
   eq([await n(),await page.evaluate(()=>{const i=document.querySelector('.sess .hapt-in');return i?i.checked:false;})],[1,false],"a tap logs one set; the switch is off again");
   await back();await page.fill('#in_r','8');
-  await page.focus('.sess .hapt-in');await page.keyboard.press("Enter");await pause(page,300);
+  await page.focus('.sess [data-logset] .hapt-in');await page.keyboard.press("Enter");await pause(page,300);
   eq(await n(),2,"Enter logs one");
   await back();
   /* Haptics off in Settings: the plain button, as before; back on, the switch again. */
@@ -142,9 +142,35 @@ await test("Complete set, with haptics: a label around a hidden native switch, o
   await hap(false);
   eq(await page.evaluate(()=>[!!document.querySelector('.sess button[data-logset]'),document.querySelectorAll('.sess .hapt-in').length]),[true,0],"haptics off: the plain button, no switch");
   await hap(true);await back();await page.fill('#in_r','8');
-  await page.focus('.sess .hapt-in');await page.keyboard.press(" ");await pause(page,300);
+  await page.focus('.sess [data-logset] .hapt-in');await page.keyboard.press(" ");await pause(page,300);
   eq(await n(),3,"Space logs one");
 },{prefs:{autorest:false,haptic:true}});
+await test("Ticks across the app: a setting's switch is the native switch, checked as the setting, one tap one change; an RPE chip, Start workout and the week's day each act once; nothing ticks with haptics off",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page,600);
+  const sw=()=>page.$eval('#sheet [data-toggle="nowarm"]',e=>{const i=e.querySelector("input");return [e.tagName,i.type,i.hasAttribute("switch"),i.getAttribute("role"),i.checked];});
+  const was=await ev(page,"!!S.prefs.nowarm");
+  eq(await sw(),["LABEL","checkbox",true,null,!was],"the warm-up setting: a native switch, checked as the setting");
+  await page.tap('#sheet [data-toggle="nowarm"]');await pause(page,400);
+  eq([await ev(page,"!!S.prefs.nowarm"),(await sw())[4]],[!was,was],"one tap: one change, and the switch says so");
+  await page.focus('#sheet [data-toggle="nowarm"] input');await page.keyboard.press(" ");await pause(page,400);
+  eq([await ev(page,"!!S.prefs.nowarm"),(await sw())[4]],[was,!was],"Space: back again");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,500);
+  /* The week's day and Start workout. */
+  await tapTab(page,"train");await pause(page,400);
+  const other=await page.$eval(".wkr .wkr-d:not(.sel)",b=>b.getAttribute("data-wkday"));
+  await page.tap('.wkr [data-wkday="'+other+'"]');await pause(page,400);
+  eq(await ev(page,"V.tdate"),other,"the day picked");
+  await page.tap(".wkr-today");await pause(page,400);
+  eq(await page.$eval('.thero2 [data-startday]',e=>e.tagName),"LABEL");
+  await page.tap('.thero2 [data-startday]');await pause(page,600);
+  eq(await ev(page,"[!!S.active,S.active&&S.active.entries.reduce((n,e)=>n+e.sets.length,0)]"),[true,0],"the workout started, nothing logged");
+  await page.fill('#in_r','8');await page.tap('.sess [data-logset]');await pause(page,900);
+  const r=await page.$('.sess .rpeask [data-rpeset$=":8"]');
+  if(r){await r.tap();await pause(page,300);eq(await ev(page,"S.active.entries[0].sets[0].rpe"),8,"the RPE chip, once");}
+  /* Off: every one of them is a plain button again. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.haptic=false;st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.$$eval('#app .hapt-in',a=>a.length),0,"no switches with haptics off");
+},{prefs:{autorest:true,haptic:true,rpe:"every"}});
 await test("removing a set offers undo, and undo restores it",async page=>{
   await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
   await page.tap('[data-unlog="0"]');await pause(page);eq(await ev(page,"S.active.entries[0].sets.length"),0,"removed");
@@ -2577,7 +2603,7 @@ await test("Blocks: 'too easy' after a workout adds a set for the muscle it trai
   await page.tap('[data-confirmok]');await pause(page,600);
   if(!(await page.$('[data-sfeel="easy"]')))throw new Error("the complete sheet does not ask");
   await page.tap('[data-sfeel="easy"]');await pause(page);
-  eq(await ev(page,"[S.sessions[0].feel,document.querySelector('[data-sfeel=\"easy\"]').getAttribute('aria-pressed')]"),["easy","true"]);
+  eq(await ev(page,"[S.sessions[0].feel,(e=>(e.querySelector(':scope>.hapt-in')||e).getAttribute('aria-pressed'))(document.querySelector('[data-sfeel=\"easy\"]'))]"),["easy","true"]);
   const sh=await page.evaluate(async()=>(await import("/js/engine/blocks.js")).shiftNow().shift);
   eq(sh[m],1,"one more set of "+m+" per workout");
   /* The next workout with that muscle carries it, and says so. */
@@ -2851,7 +2877,8 @@ await test("Audit: the equipment and favourites sheets in Arabic; the water glas
 });
 await test("Settings: every choice in sight, switches that say their state, a tap sets the value; no drop-down anywhere",async page=>{
   await sheet(page,"set_training");
-  const sw=()=>page.$eval('[data-toggle="nowarm"]',e=>[e.getAttribute("role"),e.getAttribute("aria-checked")]);
+  /* With haptics on the row is a label around the native switch, which says its own state. */
+  const sw=()=>page.$eval('[data-toggle="nowarm"]',e=>{const i=e.querySelector(":scope>.hapt-in");return i?["switch",String(i.checked)]:[e.getAttribute("role"),e.getAttribute("aria-checked")];});
   eq(await sw(),["switch","false"],"warm-up is off in the seed, and says so");
   await page.tap('[data-toggle="nowarm"]');await pause(page);
   eq([await sw(),await ev(page,"S.prefs.nowarm")],[["switch","true"],false],"one tap on the row turns it on");
@@ -3870,7 +3897,7 @@ await test("Training's week rail: words for the days, the pill glides to the day
 await test("Training's week rail: the chosen day tapped again unfolds what it holds in the card; again or a tap outside folds it",async page=>{
   await tapTab(page,"train");await pause(page,300);
   const st=()=>page.evaluate(()=>{const c=document.querySelector(".wkr"),pk=c.querySelector(".wkr-pk");
-    return [c.classList.contains("peek"),pk.inert,Math.round(pk.getBoundingClientRect().height)>40,document.querySelector(".wkr-d.sel").getAttribute("aria-expanded")];});
+    return [c.classList.contains("peek"),pk.inert,Math.round(pk.getBoundingClientRect().height)>40,(e=>(e.querySelector(":scope>.hapt-in")||e).getAttribute("aria-expanded"))(document.querySelector(".wkr-d.sel"))];});
   eq(await st(),[false,true,false,"false"],"folded at first");
   await page.evaluate(()=>{window.__keep=document.querySelector(".wkr-days");});
   await page.tap(".wkr .wkr-d.sel");await pause(page,700);
@@ -4692,7 +4719,7 @@ await test("Workout screen: steppers move by the engine's own step; the check lo
   const w0=await ev(page,"V.draft.w"),step=await F(page,`F.incrementFor(S.active.entries[0].name,${w0})`);
   await page.tap('[data-sstep="w"][data-d="1"]');await pause(page,200);
   eq(await ev(page,"V.draft.w"),Math.round((w0+step)*100)/100,"one tap, one step");
-  eq(await page.$eval('[data-sstep="w"][data-d="1"]',e=>[e.textContent,e.getAttribute("aria-label")]),[String(step),"More "+step+" kg"],"the button says the step");
+  eq(await page.$eval('[data-sstep="w"][data-d="1"]',e=>[e.textContent,(e.querySelector(":scope>.hapt-in")||e).getAttribute("aria-label")]),[String(step),"More "+step+" kg"],"the button says the step");
   await page.tap('[data-sstep="r"][data-d="-1"]');await pause(page,200);
   const r=await ev(page,"V.draft.r");
   await page.tap('[data-logset]');await pause(page,300);

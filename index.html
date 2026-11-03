@@ -58,11 +58,31 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   font-weight:400 700;font-style:normal;font-display:swap;
   unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
 :root{
-  /* Colours are not here: every colour token is set by the theme blocks that follow this
-     one (---- themes), so a theme is one place to read and one place to change. */
+  
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
   --r1:8px; --r2:12px; --r3:14px;
-  /* ---- the dock and the surfaces that borrow from it --------------------------
+  
+  --r4:18px; --r5:28px; --rpill:999px;
+  --dock-hair:rgba(255,255,255,.08);     
+  --shadow-float:0 18px 48px rgba(0,0,0,.45),0 4px 14px rgba(0,0,0,.28);
+  --ico-size:24px; --hit:44px;
+  
+  --dock-h:64px; --dock-mx:16px;
+  --dock-lift:max(12px, env(safe-area-inset-bottom));
+  --navh:calc(var(--dock-h) + var(--dock-lift));
+  
+  --wbar-h:48px; --wbar-gap:8px;
+  
+  
+  --m-press:110ms; --m-micro:190ms; --m-pop:260ms; --m-comp:320ms;
+  --m-sheet:380ms; --m-screen:380ms; --m-data:480ms; --m-reveal:600ms; --m-fade:260ms;
+  
+  --m-tab:460ms; --m-panel:420ms; --m-kb:440ms; --m-close:340ms; --m-cal:380ms; --e-cal:cubic-bezier(.22,.8,.3,1);
+  --e-standard:cubic-bezier(0.2, 0, 0, 1); --e-decel:cubic-bezier(0.05, 0.7, 0.1, 1);
+  --e-accel:cubic-bezier(0.3, 0, 0.8, 0.15); --e-spring:cubic-bezier(.2,.9,.3,1.06);
+  --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
+}/* Colours are not here: every colour token is set by the theme blocks that follow this
+     one (---- themes), so a theme is one place to read and one place to change. *//* ---- the dock and the surfaces that borrow from it --------------------------
      One visual language, taken from the floating dock: large radii, a translucent
      dark surface with a hairline edge, depth from a soft shadow rather than from
      borders, and the accent as a tinted glow rather than a fill. Components that are
@@ -70,24 +90,13 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
      read these rather than carrying their own numbers.
 
      Radii run 8 / 12 / 14 (--r1–r3, cards and fields), 18 for controls inside a
-     surface, 28 for floating surfaces, and a pill. */
-  --r4:18px; --r5:28px; --rpill:999px;
-  --dock-hair:rgba(255,255,255,.08);     /* the dock's own, the same in every theme */
-  --shadow-float:0 18px 48px rgba(0,0,0,.45),0 4px 14px rgba(0,0,0,.28);
-  --ico-size:24px; --hit:44px;
-  /* The dock's geometry, and the one reserve every screen keeps for it. The dock
+     surface, 28 for floating surfaces, and a pill. *//* the dock's own, the same in every theme *//* The dock's geometry, and the one reserve every screen keeps for it. The dock
      floats --dock-lift above the bottom edge, which is the safe area on a phone with
      a home indicator and 12px on anything else; --navh is everything from the bottom
      of the viewport to the top of the dock. The body pads by it, and the toast and
-     the floating add button sit above it, so no screen carries its own number. */
-  --dock-h:64px; --dock-mx:16px;
-  --dock-lift:max(12px, env(safe-area-inset-bottom));
-  --navh:calc(var(--dock-h) + var(--dock-lift));
-  /* The workout bar above the dock (see "The workout bar"). While it shows, --navh
+     the floating add button sit above it, so no screen carries its own number. *//* The workout bar above the dock (see "The workout bar"). While it shows, --navh
      grows by it, so the page, the toast and anything else that clears the dock clear
-     the bar too. */
-  --wbar-h:48px; --wbar-gap:8px;
-  /* Motion tokens. js/ui/motion.js writes all fourteen of these onto documentElement at
+     the bar too. *//* Motion tokens. js/ui/motion.js writes all fourteen of these onto documentElement at
      boot and whenever the in-app animation toggle changes, and an inline property beats
      a stylesheet rule, so these values apply only to the first paint before the module
      runs — and to any load where it fails to.
@@ -96,18 +105,9 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
      for a while: nine of the thirteen were the pre-Phase-3 values, left behind when
      motion.js was introduced, while this comment claimed they matched. If you change a
      duration or a curve, change it in motion.js and mirror it here, or delete this block
-     and accept one unstyled frame. Do not let them drift again. */
-  /* Unhurried, so one move flows into the next (owner, 27 Oct: slower, more blended);
-     a press stays quick, since it answers a finger. */
-  --m-press:110ms; --m-micro:190ms; --m-pop:260ms; --m-comp:320ms;
-  --m-sheet:380ms; --m-screen:380ms; --m-data:480ms; --m-reveal:600ms; --m-fade:260ms;
-  /* A change of tab and the coach panel: a touch slower than a screen, with a little
+     and accept one unstyled frame. Do not let them drift again. *//* Unhurried, so one move flows into the next (owner, 27 Oct: slower, more blended);
+     a press stays quick, since it answers a finger. *//* A change of tab and the coach panel: a touch slower than a screen, with a little
      spring at the end so they land rather than stop. --m-kb follows the iPhone keyboard. */
-  --m-tab:460ms; --m-panel:420ms; --m-kb:440ms; --m-close:340ms; --m-cal:380ms; --e-cal:cubic-bezier(.22,.8,.3,1);
-  --e-standard:cubic-bezier(0.2, 0, 0, 1); --e-decel:cubic-bezier(0.05, 0.7, 0.1, 1);
-  --e-accel:cubic-bezier(0.3, 0, 0.8, 0.15); --e-spring:cubic-bezier(.2,.9,.3,1.06);
-  --e-ios:cubic-bezier(0.22, 1, 0.36, 1);
-}
 /* ---- themes ---------------------------------------------------------------------
    Three BUNYAN themes — Blue (the default), Red and Sage (stored as "mono", once
    Monochrome) — each in dark and light,
@@ -616,7 +616,7 @@ html.standalone,html.standalone body{min-height:100vh;min-height:100lvh}
    that bleeds to the screen edge has to pull out by exactly this much. */
 :root{--gutter:24px}
 #app{max-width:560px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) var(--gutter) 0}
-button,input,select{font-family:inherit;font-size:16px}
+:is(button,label:where(.hap)),input,select{font-family:inherit;font-size:16px}
 input,select{background:var(--surface);border:1px solid var(--border);color:var(--text);
   border-radius:var(--r1);padding:14px;width:100%}
 input:focus,select:focus{outline:none;border-color:var(--accent)}
@@ -925,9 +925,9 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wti
 .sheetbox{overflow-x:hidden;background:var(--bg);width:100%;max-width:560px;margin:0 auto;
   border-radius:22px 22px 0 0;padding:20px 16px calc(28px + env(safe-area-inset-bottom));
   max-height:88vh;max-height:min(88dvh,calc(var(--vvh,100dvh) - 10px));overflow-y:auto;border:1px solid var(--border);
-  /* Without this, reaching the top or bottom of a sheet hands the scroll to the
+  
+  overscroll-behavior:contain}/* Without this, reaching the top or bottom of a sheet hands the scroll to the
      page behind it, which then moves under the sheet. */
-  overscroll-behavior:contain}
 /* The ask dialog: a card rounded on every corner, never a sheet with an edge to show.
    It hangs in the upper part of what the keyboard leaves (--vvh), centred only when
    there is room, so the keyboard coming and going moves it a little, smoothly, rather
@@ -1004,8 +1004,8 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wti
 ::view-transition-old(root),::view-transition-new(root){animation-duration:280ms;animation-timing-function:var(--e-standard)}
 /* Icon-only controls need a real hit area even when the glyph is small. */
 .iconbtn{width:44px;min-height:44px;padding:0;font-size:20px;line-height:1}
-button.pill{position:relative;min-height:34px}
-button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bottom:-6px}
+:is(button,label:where(.hap)).pill{position:relative;min-height:34px}
+:is(button,label:where(.hap)).pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bottom:-6px}
 .list{background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);
   overflow:hidden;margin-bottom:var(--s3)}
 .item{display:flex;justify-content:space-between;align-items:center;gap:var(--s3);
@@ -1039,12 +1039,12 @@ button.pill:after{content:"";position:absolute;left:-2px;right:-2px;top:-6px;bot
   background-repeat:no-repeat;
   background-position:center 18%;
   background-size:min(130%,640px) auto;
-  /* Feathered so the square artwork dissolves into the ground instead of showing
-     its edge as a seam across the screen. */
+  
   -webkit-mask-image:radial-gradient(74% 64% at 50% 42%,#000 54%,transparent 100%);
   mask-image:radial-gradient(74% 64% at 50% 42%,#000 54%,transparent 100%);
   opacity:0;transform:scale(1.12);
-  animation:spArt 2.7s cubic-bezier(.16,.72,.24,1) .12s forwards}
+  animation:spArt 2.7s cubic-bezier(.16,.72,.24,1) .12s forwards}/* Feathered so the square artwork dissolves into the ground instead of showing
+     its edge as a seam across the screen. */
 #splash .sp-glow{position:absolute;left:50%;top:60%;width:132vw;height:132vw;
   transform:translate(-50%,-50%);pointer-events:none;opacity:0;
   background:radial-gradient(closest-side,rgba(var(--glow-rgb),.34),rgba(4,4,6,0) 70%);
@@ -1141,9 +1141,9 @@ body.noanim #splash .sp-embers{display:none}
 [dir="rtl"] th:first-child,[dir="rtl"] td:first-child{text-align:right}
 [dir="rtl"] .settbl th,[dir="rtl"] .settbl td{text-align:center}
 [dir="rtl"] .tap,[dir="rtl"] .item{text-align:right}
-[dir="rtl"] .topbar button:first-child{transform:scaleX(-1)}
+[dir="rtl"] .topbar :is(button,label:where(.hap)):first-child{transform:scaleX(-1)}
 [dir="rtl"] h1,[dir="rtl"] h2,[dir="rtl"] h3{letter-spacing:0}
-[dir="rtl"] .overline,[dir="rtl"] .sec,[dir="rtl"] nav button{letter-spacing:0}
+[dir="rtl"] .overline,[dir="rtl"] .sec,[dir="rtl"] nav :is(button,label:where(.hap)){letter-spacing:0}
 /* Numbers run LTR inside RTL text. isolate keeps each one a self-contained run so an
    adjacent pair separated only by a neutral cannot be reordered into each other. */
 [dir="rtl"] .num,[dir="rtl"] .metric,[dir="rtl"] .stat{direction:ltr;display:inline-block;
@@ -1241,10 +1241,10 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
   font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
 :root:not(.tch) .fqty-v:active,.fqty-v.tapd{background:var(--raised)}
 .facts{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;padding-inline-start:2px}
-.facts button{background:none;border:none;padding:6px 0;min-height:44px;
+.facts :is(button,label:where(.hap)){background:none;border:none;padding:6px 0;min-height:44px;
   color:var(--dim);font-size:13.5px;font-weight:600;letter-spacing:.02em}
-.facts button.danger{color:var(--faint)}
-:root:not(.tch) .facts button:active,.facts button.tapd{color:var(--accentHi)}
+.facts :is(button,label:where(.hap)).danger{color:var(--faint)}
+:root:not(.tch) .facts :is(button,label:where(.hap)):active,.facts :is(button,label:where(.hap)).tapd{color:var(--accentHi)}
 .sheetbox.dragging{transition:none!important;animation:none!important}
 /* animation:none on both, not just .dragging. A CSS animation outranks an inline
    style, so releasing mid-entry handed the sheet back to sheetIn, which pulled it
@@ -1306,25 +1306,25 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
    panning stays the browser's; sideways is the swipe's. */
 .ex-pane{touch-action:pan-y;will-change:auto}
 .ss-seg{display:flex;gap:4px;margin:0 0 18px}
-.ss-seg button{flex:1;padding:9px 0;background:none;border:none;position:relative}
-.ss-seg button:after{content:"";position:absolute;left:0;right:0;top:-11px;bottom:-11px}
+.ss-seg :is(button,label:where(.hap)){flex:1;padding:9px 0;background:none;border:none;position:relative}
+.ss-seg :is(button,label:where(.hap)):after{content:"";position:absolute;left:0;right:0;top:-11px;bottom:-11px}
 .ss-seg span{display:block;height:4px;border-radius:2px;background:var(--raised)}
 /* Superset members share one continuous bar so the pair reads as a unit. */
-.ss-seg button.gp{padding-left:1px;padding-right:1px}
-.ss-seg button.gp span{border-radius:0}
-.ss-seg button.gp1 span{border-radius:2px 0 0 2px}
-.ss-seg button.gpN span{border-radius:0 2px 2px 0}
-.ss-seg button.gp:after{content:"";position:absolute;left:0;right:0;top:2px;height:1px;
+.ss-seg :is(button,label:where(.hap)).gp{padding-left:1px;padding-right:1px}
+.ss-seg :is(button,label:where(.hap)).gp span{border-radius:0}
+.ss-seg :is(button,label:where(.hap)).gp1 span{border-radius:2px 0 0 2px}
+.ss-seg :is(button,label:where(.hap)).gpN span{border-radius:0 2px 2px 0}
+.ss-seg :is(button,label:where(.hap)).gp:after{content:"";position:absolute;left:0;right:0;top:2px;height:1px;
   background:var(--gold);opacity:.55}
-.ss-seg button.gp1:after{left:2px}
-.ss-seg button.gpN:after{right:2px}
+.ss-seg :is(button,label:where(.hap)).gp1:after{left:2px}
+.ss-seg :is(button,label:where(.hap)).gpN:after{right:2px}
 .pill.sup{background:var(--accentSoft);color:var(--gold);border-color:transparent}
 .glabel{display:inline-block;min-width:22px;color:var(--gold);font-weight:800;
   font-size:12px;letter-spacing:.04em}
 .item.grouped{border-left:2px solid var(--gold)}
 [dir="rtl"] .item.grouped{border-left:none;border-right:2px solid var(--gold)}
-.ss-seg button.on span{background:var(--accent)}
-.ss-seg button.did span{background:var(--ok)}
+.ss-seg :is(button,label:where(.hap)).on span{background:var(--accent)}
+.ss-seg :is(button,label:where(.hap)).did span{background:var(--ok)}
 
 .ex-head{display:flex;align-items:center;gap:13px;margin-bottom:6px}
 .ex-head .exth{border:none;background:none;padding:0;flex-shrink:0}
@@ -1564,9 +1564,9 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 .dnav-card .dbcal{margin:0 var(--s2);padding:var(--s3) var(--s1) var(--s3);border:0;border-top:1px solid var(--hair);border-radius:0;background:none}
 .dbcal-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .dbgrid{display:grid;grid-template-columns:repeat(7,1fr);margin-top:10px;
-  /* As wide as 5px where there is room, and never so wide that a day falls under the
+  
+  gap:max(0px,min(5px,calc((100% - 7 * 44px) / 6)))}/* As wide as 5px where there is room, and never so wide that a day falls under the
      44px hit-area minimum. */
-  gap:max(0px,min(5px,calc((100% - 7 * 44px) / 6)))}
 .dbwk{text-align:center;font-size:11px;font-weight:700;color:var(--dim);padding-bottom:4px}
 .dbday{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
   border-radius:12px;font-size:13.5px;border:1px solid transparent;padding:0;position:relative;
@@ -1595,7 +1595,7 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
   color:var(--faint)}
 .target .tv{font-size:14px;font-weight:800;color:var(--accentHi);font-variant-numeric:tabular-nums}
 .ss-foot{display:flex;gap:8px;margin-top:18px}
-.ss-foot button{flex:1;padding:12px 0;border-radius:var(--r1);border:1px solid var(--border);
+.ss-foot :is(button,label:where(.hap)){flex:1;padding:12px 0;border-radius:var(--r1);border:1px solid var(--border);
   background:var(--surface);color:var(--dim);font-size:12.5px;font-weight:700}
 
 /* ================= rest: full-screen, one job */
@@ -2206,10 +2206,10 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .bcount{margin:14px 0 0;padding:12px;border-radius:var(--r4);border:1px solid var(--border);background:var(--well)}
 .bcount-l{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 .bcount-c{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:10px}
-.bcount-c button{min-height:46px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);
+.bcount-c :is(button,label:where(.hap)){min-height:46px;border-radius:14px;border:1px solid var(--border);background:var(--surface);color:var(--text);
   font-family:var(--display);font-size:18px;font-weight:800;transition:transform var(--m-press) var(--e-standard)}
-:root:not(.tch) .bcount-c button:active,.bcount-c button.tapd{transform:scale(.94)}
-.bcount-c button.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:transparent;color:var(--onAccent);
+:root:not(.tch) .bcount-c :is(button,label:where(.hap)):active,.bcount-c :is(button,label:where(.hap)).tapd{transform:scale(.94)}
+.bcount-c :is(button,label:where(.hap)).on{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:transparent;color:var(--onAccent);
   box-shadow:0 8px 18px -10px var(--accent-glow)}
 .bnum{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:12px;
   background:var(--surface);border:1px solid var(--border);color:var(--text);
@@ -2288,21 +2288,21 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tquick{width:100%;margin-top:14px}
 /* Schedule: two choices side by side; weekday chips under each day. */
 .bsched{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 4px}
-.bsched button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;border-radius:var(--r4);
+.bsched :is(button,label:where(.hap)){display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px 14px;border-radius:var(--r4);
   border:1px solid var(--border);background:var(--raised);color:var(--text);text-align:start}
-.bsched button b{font-family:var(--display);font-size:15px}
-.bsched button span{font-size:12px;color:var(--dim)}
-.bsched button.on{border-color:rgba(var(--accentHi-rgb),.6);background:linear-gradient(180deg,rgba(var(--accent-rgb),.18),rgba(var(--accent-rgb),.05)),var(--raised)}
-.bsched button.on b{color:var(--accentHi)}
+.bsched :is(button,label:where(.hap)) b{font-family:var(--display);font-size:15px}
+.bsched :is(button,label:where(.hap)) span{font-size:12px;color:var(--dim)}
+.bsched :is(button,label:where(.hap)).on{border-color:rgba(var(--accentHi-rgb),.6);background:linear-gradient(180deg,rgba(var(--accent-rgb),.18),rgba(var(--accent-rgb),.05)),var(--raised)}
+.bsched :is(button,label:where(.hap)).on b{color:var(--accentHi)}
 .bkday{flex-wrap:wrap}
 .bwd{flex:1 0 100%;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;padding:0 12px 12px 12px}
-.bwd button{min-height:34px;padding:0;border-radius:10px;border:1px solid var(--border);background:var(--surface);
+.bwd :is(button,label:where(.hap)){min-height:34px;padding:0;border-radius:10px;border:1px solid var(--border);background:var(--surface);
   color:var(--sub);font-size:11.5px;font-weight:700}
-.bwd button.on{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:transparent;color:var(--onAccent)}
+.bwd :is(button,label:where(.hap)).on{background:linear-gradient(180deg,var(--accent),var(--accent-deep));border-color:transparent;color:var(--onAccent)}
 /* A weekday another day has: still open to this one too, as a second session that day. */
-.bwd button.taken{border-style:dashed;color:var(--dim)}
+.bwd :is(button,label:where(.hap)).taken{border-style:dashed;color:var(--dim)}
 /* A weekday this day shares with another: two sessions that day. */
-.bwd button.on.two{box-shadow:inset 0 0 0 2px var(--gold)}
+.bwd :is(button,label:where(.hap)).on.two{box-shadow:inset 0 0 0 2px var(--gold)}
 .wkoffer-l{margin:-4px 0 12px;font-weight:600;color:var(--text);font-size:14px;line-height:1.6}
 .bactive{margin:0;text-align:center;color:var(--ok);font-weight:700;font-size:15px}
 .bnote{margin:0;text-align:center;color:var(--dim);font-size:13px}
@@ -2377,7 +2377,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 
 /* Two secondary actions, as the frame has. Everything else is in the overflow. */
 .ss-links{display:flex;justify-content:center;gap:24px;margin-top:20px}
-.ss-links button{background:none;border:none;color:var(--dim);font-size:13px;font-weight:600;
+.ss-links :is(button,label:where(.hap)){background:none;border:none;color:var(--dim);font-size:13px;font-weight:600;
   text-decoration:underline;min-height:44px;padding:0 4px}
 
 /* ================= Food — dashboard and meal detail (nodes 13:12, 13:118) */
@@ -2400,7 +2400,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
    as the row allows (twelve glasses: about 24px at 390, 20 at 320; with gaps and a 20px
    cap they were 13 and 7). The glass drawn in each keeps its 20px at most, centred, and
    the space around it is the gap you see. 44px tall, the row's height. */
-.fglass{flex:1 1 0;min-width:0;height:44px;padding:0;background:none;
+.fglass{flex:1 1 0;min-width:0;height:44px;padding:0;background:none;color:inherit;
   border:none;display:flex;align-items:center;justify-content:center}
 .fglass i{display:block;width:calc(100% - 6px);max-width:20px;height:20px;background:var(--raised);
   border:1px solid var(--border);border-radius:2px;
@@ -2740,9 +2740,9 @@ details[open]>summary .as-chev{transform:rotate(90deg)}
 .hapt{position:fixed;left:0;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;clip-path:inset(50%)}
 .wu-art{position:absolute;z-index:-1;inset:calc(var(--s3) * -1) calc(var(--gutter,var(--s4)) * -1) auto;height:260px;opacity:.55;
   background:linear-gradient(to bottom,rgba(var(--bg-rgb),.55),rgba(var(--bg-rgb),.2)),url("img/page-warmup.jpg") center 60%/cover no-repeat;
-  /* Soft on every side: the picture melts into the page instead of ending in a box. */
+  
   -webkit-mask-image:radial-gradient(ellipse 75% 85% at 50% 25%,var(--bg) 30%,transparent 100%);
-  mask-image:radial-gradient(ellipse 75% 85% at 50% 25%,var(--bg) 30%,transparent 100%)}
+  mask-image:radial-gradient(ellipse 75% 85% at 50% 25%,var(--bg) 30%,transparent 100%)}/* Soft on every side: the picture melts into the page instead of ending in a box. */
 [data-theme="light"] .wu-art{opacity:.2}
 .wu-head h1{font-family:var(--display);font-size:clamp(22px,6.6vw,27px);line-height:1.12;margin:2px 0 4px}
 .wu-head .sub{margin:0;font-size:13.5px;color:var(--sub)}
@@ -2765,7 +2765,7 @@ details[open]>summary .as-chev{transform:rotate(90deg)}
 .wu-row.did .wu-n{color:var(--sub)}
 :root:not(.tch) .wu-ex:active .wu-n,.wu-ex.tapd .wu-n{color:var(--accentHi)}
 .wu-txt{flex:1;margin:0;font-size:13.5px;line-height:1.45;color:var(--sub)}
-button.wu-txt{padding:0;border:0;background:transparent;text-align:start;font-family:inherit}
+:is(button,label:where(.hap)).wu-txt{padding:0;border:0;background:transparent;text-align:start;font-family:inherit}
 /* How to do a drill: a small ⓘ at the row's end, so the name itself can tick it. */
 .wu-info{flex:none;width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border:0;background:transparent;color:var(--dim)}
 .wu-info svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
@@ -2928,10 +2928,10 @@ body.focus:has(.wu-foot){padding-bottom:0}
    their height rather than sliding under them on a short screen. */
 .restwrap:not(.done){padding-top:68px;
   padding-bottom:calc(92px + env(safe-area-inset-bottom));overflow-y:auto;
-  /* The frame packs the scaffold under the banner and pins the footer, rather than
+  
+  justify-content:flex-start}/* The frame packs the scaffold under the banner and pins the footer, rather than
      centring the column — centred, the reserved footer space pushed everything high
      and left a gap under the banner. */
-  justify-content:flex-start}
 .restwrap.done .restbanner{display:none}
 
 .restwrap:not(.done) .restlabel{color:var(--dim);letter-spacing:.14em;font-size:12px}
@@ -3126,9 +3126,9 @@ body.focus:has(.wu-foot){padding-bottom:0}
    Scoped here so the filled pill everywhere else is untouched. */
 .libfilters .pill{flex-shrink:0;border:1px solid var(--border);min-height:44px;
   padding:0 16px;display:flex;align-items:center;border-radius:22px;
-  /* The base pill is an 11px uppercase tag. These are filter controls meant to be
+  
+  font-size:13px;font-weight:600;letter-spacing:0;text-transform:none}/* The base pill is an 11px uppercase tag. These are filter controls meant to be
      read, which is how the frame draws them — sentence case, legible size. */
-  font-size:13px;font-weight:600;letter-spacing:0;text-transform:none}
 .libfilters .pill.a{background:transparent;border-color:var(--accent);color:var(--accentHi)}
 
 /* "Chest Exercises (4)" — the filter and the count, which the tiny "N of M shown"
@@ -3174,13 +3174,13 @@ body.focus:has(.wu-foot){padding-bottom:0}
   background:radial-gradient(120% 120% at 30% 20%,rgba(255,255,255,.16),transparent 55%),rgba(var(--accent-rgb),.14);
   box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),.28),inset 0 1px 0 rgba(255,255,255,.18)}
 #app .srow-danger .gtile,#app .gtile.warn{color:var(--warning);background:rgba(var(--warning-rgb),.12);box-shadow:inset 0 0 0 1px rgba(var(--warning-rgb),.28)}
-#app button.srow:not(.srow-pick):active,#app button.srow.tapd{background:rgba(var(--accent-rgb),.08)}
+#app :is(button,label:where(.hap)).srow:not(.srow-pick):active,#app :is(button,label:where(.hap)).srow.tapd{background:rgba(var(--accent-rgb),.08)}
 .sg-f{margin:8px 4px 0;font-size:12.5px;line-height:1.55;color:var(--dim)}
 .srow{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;margin:0;padding:10px 14px;border:0;
   border-bottom:1px solid var(--border);border-radius:0;background:none;color:var(--text);font:inherit;text-align:start;cursor:pointer;
   transition:background var(--m-micro) var(--e-standard)}
 .srow:last-child{border-bottom:0}
-button.srow:not(.srow-pick):active,button.srow.tapd{background:var(--surface)}
+:is(button,label:where(.hap)).srow:not(.srow-pick):active,:is(button,label:where(.hap)).srow.tapd{background:var(--surface)}
 .srow-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .srow-n{font-size:15px;font-weight:600;line-height:1.3}
 .srow-s{font-size:12.5px;line-height:1.4;color:var(--dim)}
@@ -3394,7 +3394,7 @@ details.adv>.btn{margin:0 14px 14px;width:calc(100% - 28px)}
   overflow:hidden;text-overflow:ellipsis}
 /* 32px, as drawn, with the outset that makes it a 44px target. */
 .afadd{position:relative;flex:0 0 32px;width:32px;height:32px;border:none;border-radius:8px;
-  background:var(--accentSoft);color:var(--accentHi);display:flex;align-items:center;justify-content:center}
+  background:var(--accentSoft);color:var(--accentHi);display:flex;align-items:center;justify-content:center;padding:1px 6px}
 .afadd::after{content:"";position:absolute;inset:-6px}
 .afadd .ico{width:16px;height:16px;flex-basis:16px}
 :root:not(.tch) .afadd:active,.afadd.tapd{background:var(--accent);color:var(--onAccent)}
@@ -3426,11 +3426,11 @@ details.adv>.btn{margin:0 14px 14px;width:calc(100% - 28px)}
 
 .afstep{display:flex;align-items:center;justify-content:space-between;background:var(--surface);
   border-radius:12px;padding:10px 12px}
-.afstep button{width:44px;height:44px;border:none;border-radius:8px;font-size:20px;font-weight:700;
+.afstep :is(button,label:where(.hap)){width:44px;height:44px;border:none;border-radius:8px;font-size:20px;font-weight:700;
   display:flex;align-items:center;justify-content:center}
 .afstep-m{background:var(--border);color:var(--text)}
 .afstep-p{background:var(--accentSoft);color:var(--accentHi)}
-.afstep button:disabled{opacity:.4}
+.afstep :is(button,label:where(.hap)):disabled{opacity:.4}
 .afstep b{font-family:var(--display);font-weight:800;font-size:24px;font-variant-numeric:tabular-nums}
 /* An amount in a measure (tbsp, ml, cups): the figure, sized to itself so its unit
    stays beside it, in the stepper's own type. Without this the field kept the general
@@ -3501,7 +3501,7 @@ textarea.afnl.warn{border-color:var(--warning)}
 .afunk-n{font-family:var(--display);font-weight:700;font-size:16px;color:var(--warning);overflow-wrap:anywhere}
 .afunk-s{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--sub);margin-top:4px}
 .afunk-a{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;margin-top:12px}
-.afunk-a button{background:none;border:none;min-height:44px;padding:0 4px;color:var(--sub);
+.afunk-a :is(button,label:where(.hap)){background:none;border:none;min-height:44px;padding:0 4px;color:var(--sub);
   font-weight:700;font-size:14px}
 .afunk-a .afunk-p{border:1.5px solid var(--gold);border-radius:8px;padding:0 14px;color:var(--text)}
 
@@ -3638,7 +3638,7 @@ textarea.afnl.warn{border-color:var(--warning)}
 /* Rows: records, workouts, top lifts, the day card. */
 .pgrow{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;padding:14px 16px;margin-bottom:8px;
   background:var(--raised);border:1px solid var(--border);border-radius:var(--r2);color:var(--text);text-align:start}
-:root:not(.tch) button.pgrow:active,button.pgrow.tapd{background:var(--surface)}
+:root:not(.tch) :is(button,label:where(.hap)).pgrow:active,:is(button,label:where(.hap)).pgrow.tapd{background:var(--surface)}
 .pgrow.on{border-color:var(--accent)}
 .pgrow-t{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
 .pgrow-k{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
@@ -4013,7 +4013,7 @@ body.wkflat #app{--gutter:20px}
 [dir="rtl"] .rb-k{letter-spacing:0;font-size:13px}
 .rb-t{font-family:var(--display);font-size:44px;font-weight:700;line-height:1;letter-spacing:-.01em;color:var(--text)}
 .rb-ctl{display:flex;gap:var(--s2)}
-.rb-ctl button{width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border-radius:50%;border:1px solid var(--border);
+.rb-ctl :is(button,label:where(.hap)){width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border-radius:50%;border:1px solid var(--border);
   background:var(--surface);color:var(--text);font-weight:700;font-size:14px}
 .rb-ctl .gl{width:18px;height:18px}
 .rb-ctl :is(.i-pause,.i-play){fill:currentColor;stroke:none}
@@ -4027,7 +4027,7 @@ body.wkflat #app{--gutter:20px}
 .rb.over .rb-ctl{display:flex;gap:var(--s2);flex:none}
 /* Two equal circles, +30 and ✕, each centred on what it says: the base rule fixes a
    control's width, and "+30" ran past a circle that narrow, sitting off to one side. */
-.rb.over .rb-ctl button{width:calc(var(--hit) + var(--s2));height:calc(var(--hit) + var(--s2));padding:0;border-radius:50%;
+.rb.over .rb-ctl :is(button,label:where(.hap)){width:calc(var(--hit) + var(--s2));height:calc(var(--hit) + var(--s2));padding:0;border-radius:50%;
   border:1.5px solid currentColor;background:transparent;color:inherit;font-weight:800;font-size:14px;letter-spacing:-.01em;
   display:grid;place-items:center;text-align:center;line-height:1}
 .rb.over .rb-close svg,.rb.over .rb-close .gl{width:18px;height:18px}
@@ -4062,10 +4062,10 @@ body.wkflat #app{--gutter:20px}
 .sess .wsc .val-n.sg{color:var(--sub)}
 .val-u{font-size:18px;font-weight:600;color:var(--sub)}
 .wsc .wstp{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);width:100%}
-.wsc .wstp button{min-height:52px;display:flex;align-items:center;justify-content:center;gap:2px;padding:0;border-radius:var(--r4);
+.wsc .wstp :is(button,label:where(.hap)){min-height:52px;display:flex;align-items:center;justify-content:center;gap:2px;padding:0;border-radius:var(--r4);
   border:1px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--display);font-size:17px;font-weight:700}
 .wsc .wstp .gl{width:18px;height:18px;stroke-width:2.4}
-:root:not(.tch) .wsc .wstp button:active,.wsc .wstp button.tapd{background:var(--accent-tint);border-color:var(--accent-edge)}
+:root:not(.tch) .wsc .wstp :is(button,label:where(.hap)):active,.wsc .wstp :is(button,label:where(.hap)).tapd{background:var(--accent-tint);border-color:var(--accent-edge)}
 .sess .wsc.small .val-n{font-size:min(48px,45cqi)}
 /* The figure fits its half of the card at any width: 62.5 and 102.5 step down, and on
    the narrowest phones the unit moves up into the label. */
@@ -4075,7 +4075,7 @@ body.wkflat #app{--gutter:20px}
 .sess .wsc.small .val-n.long{font-size:min(40px,30cqi)}
 .val-ku{display:none}
 @container (max-width:130px){.wsc .val-u{display:none}.wsc .val-ku{display:inline}}
-.wsc.small .wstp button{min-height:48px}
+.wsc.small .wstp :is(button,label:where(.hap)){min-height:48px}
 .sc-h{display:grid;gap:2px;padding-top:var(--s3);border-top:1px solid var(--hair);color:var(--sub);font-size:14px;line-height:1.4}
 .sc-h b{color:var(--text);font-weight:700}
 .sc-h .sc-cue{font-style:italic}
@@ -4085,9 +4085,9 @@ body.wkflat #app{--gutter:20px}
    would also outrank its exit (.rowout). */
 .sess .rpeask{padding:var(--s3);border-radius:var(--r4)}
 .sc-rpe-c{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
-.sc-rpe-c button{min-height:var(--hit);border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
-  color:var(--text);font-weight:700;font-size:15px}
-.sc-rpe-c button.on{background:var(--accent-tint);border-color:var(--accent);color:var(--text)}
+.sc-rpe-c :is(button,label:where(.hap)){min-height:var(--hit);border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
+  color:var(--text);font-weight:700;font-size:15px;padding:1px 6px}
+.sc-rpe-c :is(button,label:where(.hap)).on{background:var(--accent-tint);border-color:var(--accent);color:var(--text)}
 .sc-wu{display:flex;align-items:center;gap:var(--s2);font-size:14px;font-weight:700;color:var(--text);min-width:0}
 .sc-wu p{margin:0;min-width:0}
 .sc-wu p span{color:var(--sub);font-weight:600}
@@ -4105,11 +4105,15 @@ body.wkflat #app{--gutter:20px}
   background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);color:var(--onAccent);
   font-family:var(--display);font-size:19px;font-weight:700;text-align:start;
   transition:transform var(--m-press) var(--e-standard),filter var(--m-press) var(--e-standard)}
-:root:not(.tch) .sess :is(button,label).log:active,.sess :is(button,label).log.tapd{transform:scale(.98);filter:brightness(1.08)}
+:root:not(.tch) .sess :is(:is(button,label:where(.hap)),label).log:active,.sess :is(:is(button,label:where(.hap)),label).log.tapd{transform:scale(.98);filter:brightness(1.08)}
 /* The complete-set control as a label around its hidden switch: a button's manners, and
    the switch's focus drawn on the pill. */
-.sess label.log{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-.sess label.log:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-offset:3px}
+/* Any control carrying a tick (js/ui/haptic.js): a label with a button's manners, and the
+   switch's focus drawn on it. */
+/* A button's own defaults, at no weight, so every class rule still wins as it did. */
+:where(label.hap){display:inline-block;text-align:center;box-sizing:border-box;padding:1px 6px}
+label.hap{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-offset:3px}
 .log-c{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;border:2px solid currentColor}
 .log-c .gl{width:22px;height:22px;stroke-width:2.6}
 /* Logged: said quietly, in the button's place, for a moment (owner, 27 Oct: the solid
@@ -4141,7 +4145,7 @@ body.wkflat #app{--gutter:20px}
   letter-spacing:0;text-transform:none;color:var(--sub)}
 .sess .ready-skip{color:var(--accentHi);font-weight:700;min-height:var(--hit)}
 .sess .ready-c{gap:6px}
-.sess .ready-c button{min-height:var(--hit);font-size:13.5px}
+.sess .ready-c :is(button,label:where(.hap)){min-height:var(--hit);font-size:13.5px}
 .sess .readynote,.sess .painnote{margin:0}
 .sess .exalt{margin:0;justify-self:start}
 
@@ -4189,27 +4193,27 @@ body.wkflat #app{--gutter:20px}
 .wtick{width:28px;height:28px;margin:auto;padding:0;display:grid;place-items:center;border-radius:50%;position:relative;
   border:0;background:var(--ok);color:var(--onOk)}
 /* 28px drawn, a 44px target. */
-.wsr button.wtick::after{content:"";position:absolute;inset:-8px}
+.wsr :is(button,label:where(.hap)).wtick::after{content:"";position:absolute;inset:-8px}
 .wtick .gl{width:16px;height:16px;stroke-width:2.6}
 .wtick.cur{background:transparent;border:2px solid var(--accent)}
 .wtick.off{background:transparent;border:1.5px solid var(--hair-hi)}
 .wsr.fresh .wtick{animation:setpop var(--m-pop) var(--e-spring)}
 .wsr.ask{grid-template-columns:minmax(0,1fr) auto auto;gap:6px;padding-inline:var(--s4) 6px;background:var(--surface);color:var(--text);
   box-shadow:inset 0 0 0 1px var(--danger)}
-.wsr.ask button{min-height:var(--hit);padding:0 var(--s4);border-radius:var(--rpill);font-weight:700;font-size:15px}
+.wsr.ask :is(button,label:where(.hap)){min-height:var(--hit);padding:0 var(--s4);border-radius:var(--rpill);font-weight:700;font-size:15px}
 .wsr.ask .del{border:1px solid var(--danger);background:transparent;color:var(--danger)}
 .wsr.ask .keep{border:1px solid var(--border);background:var(--raised);color:var(--text)}
 .sess .bwnote{margin:0}
 
 /* Tools: Skip and Add exercise as tiles; Remove and Something hurts? as quiet links. */
 .sess .tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:var(--s2)}
-.sess .tools button{min-height:48px;display:flex;align-items:center;justify-content:center;gap:var(--s2);border-radius:var(--r4);
+.sess .tools :is(button,label:where(.hap)){min-height:48px;display:flex;align-items:center;justify-content:center;gap:var(--s2);border-radius:var(--r4);
   border:1px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;font-size:14.5px}
 .sess .tools .gl{width:18px;height:18px}
 .sess .quiet{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--s1) var(--s5);margin-bottom:var(--s5)}
-.sess .quiet button{min-height:var(--hit);padding:0 var(--s1);border:0;background:none;color:var(--dim);font-size:14px;font-weight:600;
+.sess .quiet :is(button,label:where(.hap)){min-height:var(--hit);padding:0 var(--s1);border:0;background:none;color:var(--dim);font-size:14px;font-weight:600;
   text-decoration:underline;text-underline-offset:3px}
-.sess .quiet button.on{color:var(--warning)}
+.sess .quiet :is(button,label:where(.hap)).on{color:var(--warning)}
 /* ---- the workout in the mockup's colours (the --wk-* tokens above) ---------------------- */
 /* On the root, not the body: a body background would cover the ground's picture. */
 :root:has(body.wkflat){background:var(--wk-page)}
@@ -4221,11 +4225,11 @@ body.wkflat #app{--gutter:20px}
 .sess .ss-back,.sess .ss-more,.sess .ib{background:var(--wk-well);border:1px solid var(--wk-well-rim);color:var(--text)}
 .sess .wglass{background:var(--wk-card);border:1px solid var(--wk-rim);border-top-color:var(--wk-rim-hi);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 14px 34px -20px var(--wk-glow),0 0 0 1px rgba(0,0,0,.12)}
-.sess .wsc .wstp button,.sess .rb-ctl button,.sess .tools button,.sess .ready-c button,.sess .sc-rpe-c button{
+.sess .wsc .wstp :is(button,label:where(.hap)),.sess .rb-ctl :is(button,label:where(.hap)),.sess .tools :is(button,label:where(.hap)),.sess .ready-c :is(button,label:where(.hap)),.sess .sc-rpe-c :is(button,label:where(.hap)){
   background:var(--wk-well);border-color:var(--wk-well-rim)}
 .sess .wexl .chip.wkwu{background:var(--wk-chip);border-color:var(--wk-chip-rim)}
 .sess .wexl .chip{border-color:var(--wk-well-rim)}
-.sess :is(button,label).log{background:linear-gradient(180deg,var(--wk-act-top),var(--wk-act-bot));
+.sess :is(:is(button,label:where(.hap)),label).log{background:linear-gradient(180deg,var(--wk-act-top),var(--wk-act-bot));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 0 0 1.5px var(--color-action-edge),0 14px 30px -12px var(--wk-act-glow)}
 .sess .wsr.on{background:var(--wk-now)}
 .sess .wtick{background:var(--wk-tick);color:var(--wk-onTick)}
@@ -4440,7 +4444,7 @@ body.wkflat #app{--gutter:20px}
 .dv-h{margin:22px 0 10px;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
 .dv-card{display:block;width:100%;margin-top:10px;padding:14px 16px;border-radius:var(--r4);border:1px solid var(--border);
   background:var(--raised);color:var(--text);text-align:start;transition:transform var(--m-press) var(--e-standard)}
-:root:not(.tch) button.dv-card:active,button.dv-card.tapd{transform:scale(.98)}
+:root:not(.tch) :is(button,label:where(.hap)).dv-card:active,:is(button,label:where(.hap)).dv-card.tapd{transform:scale(.98)}
 .dv-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .dv-row b{font-family:var(--display);font-size:15.5px}
 .dv-k{font-variant-numeric:tabular-nums;color:var(--sub);font-size:14px}
@@ -4705,9 +4709,9 @@ body.noanim .art.draw .e{animation:none;opacity:.8}
 .rchk-r{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}
 .rchk-r>span{font-size:13px;color:var(--sub);flex:0 0 auto}
 .rchk-c{display:flex;gap:6px}
-.rchk-c button{min-width:44px;min-height:36px;padding:0 10px;border-radius:var(--rpill);border:1px solid var(--border);
+.rchk-c :is(button,label:where(.hap)){min-width:44px;min-height:36px;padding:0 10px;border-radius:var(--rpill);border:1px solid var(--border);
   background:rgba(255,255,255,.04);color:var(--text);font-size:13px;font-weight:600}
-.rchk-c button.on{background:var(--accent-tint);border-color:var(--accent-edge);color:var(--accentHi)}
+.rchk-c :is(button,label:where(.hap)).on{background:var(--accent-tint);border-color:var(--accent-edge);color:var(--accentHi)}
 .rchk-more{margin-top:6px}
 .bauto{margin-top:10px}
 .bauto .bnew-i{background:var(--surface);box-shadow:inset 0 0 0 1px var(--accent-edge)}
@@ -5020,8 +5024,8 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .act-km input:focus{outline:none}
 .act-km span{color:var(--dim);font-weight:700}
 .act-int{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.act-int button{min-height:48px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);color:var(--sub);font-size:13.5px;font-weight:700;padding:0 4px}
-.act-int button.on{background:rgba(var(--accent-rgb),.16);border-color:rgba(var(--accentHi-rgb),.7);color:var(--text)}
+.act-int :is(button,label:where(.hap)){min-height:48px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);color:var(--sub);font-size:13.5px;font-weight:700;padding:0 4px}
+.act-int :is(button,label:where(.hap)).on{background:rgba(var(--accent-rgb),.16);border-color:rgba(var(--accentHi-rgb),.7);color:var(--text)}
 .act-kcal{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding:14px 16px;border-radius:var(--r4);
   background:rgba(var(--accent-rgb),.07);border:1px solid rgba(var(--accentHi-rgb),.25)}
 .act-kcal span{color:var(--dim);font-size:14px}
@@ -5070,12 +5074,12 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 /* ---- readiness, session effort, pain (session.js, sheets.js) ------------------------- */
 .ready{margin:12px 0 0;padding:10px 12px 12px;border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
 .ready .ready-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-.ready .ready-c button{min-height:36px}
+.ready .ready-c :is(button,label:where(.hap)){min-height:36px}
 .ready-h,.wc2-effort-h{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
 .ready-c{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
-.ready-c button{min-height:44px;padding:0 2px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
+.ready-c :is(button,label:where(.hap)){min-height:44px;padding:0 2px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
   color:var(--sub);font-size:12.5px;font-weight:700}
-.ready-c button.on{background:rgba(var(--accent-rgb),.16);border-color:rgba(var(--accentHi-rgb),.7);color:var(--text)}
+.ready-c :is(button,label:where(.hap)).on{background:rgba(var(--accent-rgb),.16);border-color:rgba(var(--accentHi-rgb),.7);color:var(--text)}
 .ready-skip{flex:none;margin-block:-6px;margin-inline:0 -6px;padding:0 8px;border:none;background:none;color:var(--dim);font-size:13px;font-weight:600;
   letter-spacing:0;text-transform:none;min-height:32px}
 .readynote,.painnote{margin:14px 0 0;padding:12px 14px;border-radius:var(--r4);font-size:13.5px;line-height:1.45}
@@ -5194,9 +5198,9 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .chat-x.held{transform:scale(.985);transition:transform var(--m-micro) var(--e-standard)}
 .msgmenu{position:fixed;z-index:130;display:flex;gap:var(--s1);padding:var(--s1);border-radius:var(--rpill);
   background:var(--raised);border:1px solid var(--card-edge);box-shadow:var(--shadow-float);animation:fadeIn var(--m-pop) var(--e-standard)}
-.msgmenu button{min-height:var(--hit);padding:0 var(--s4);border:0;border-radius:var(--rpill);background:none;color:var(--text);font-weight:700;font-size:14px}
-.msgmenu button.d{color:var(--danger)}
-.msgmenu button:focus-visible{outline:2px solid var(--accentHi);outline-offset:-2px}
+.msgmenu :is(button,label:where(.hap)){min-height:var(--hit);padding:0 var(--s4);border:0;border-radius:var(--rpill);background:none;color:var(--text);font-weight:700;font-size:14px}
+.msgmenu :is(button,label:where(.hap)).d{color:var(--danger)}
+.msgmenu :is(button,label:where(.hap)):focus-visible{outline:2px solid var(--accentHi);outline-offset:-2px}
 /* The coach's header is a grip: dragged down, the panel gets smaller or closes. */
 #cpanel .cp-h{touch-action:none}
 /* The way to the chat history, at the top of the conversation when it holds more than
@@ -5205,8 +5209,8 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
    being written. */
 .smc{margin:var(--s3) 0}
 .smc-pick{display:grid;gap:var(--s2);margin:var(--s3) 0}
-.smc-pick button{display:grid;gap:2px;text-align:start;padding:var(--s3);border-radius:var(--r3);border:1px solid var(--border);background:var(--surface);color:var(--text)}
-.smc-pick button.on{border-color:var(--accent);background:var(--accent-tint)}
+.smc-pick :is(button,label:where(.hap)){display:grid;gap:2px;text-align:start;padding:var(--s3);border-radius:var(--r3);border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.smc-pick :is(button,label:where(.hap)).on{border-color:var(--accent);background:var(--accent-tint)}
 .smc-pick b{font-size:16px}
 .smc-pick span{font-size:13px;color:var(--sub)}
 .smc-bar{height:8px;border-radius:var(--rpill);background:var(--surface);overflow:hidden;margin:var(--s4) 0 var(--s2)}
@@ -5565,9 +5569,9 @@ body.cfab-on nav .dock{margin-right:calc(var(--dock-h) + var(--s2));gap:calc(var
 
 #cpanel{position:fixed;left:0;right:0;top:var(--vvt,0px);height:var(--vvh,100dvh);z-index:95;display:flex;flex-direction:column;
   justify-content:flex-end;align-items:flex-end;padding:0 12px calc(var(--navh) + 10px);
-  /* It follows the keyboard: the visible part shrinks when the keyboard rises and the
+  
+  transition:top var(--m-kb) var(--e-ios),height var(--m-kb) var(--e-ios),padding-bottom var(--m-kb) var(--e-ios)}/* It follows the keyboard: the visible part shrinks when the keyboard rises and the
      panel glides with it, at the keyboard's own pace, instead of jumping. */
-  transition:top var(--m-kb) var(--e-ios),height var(--m-kb) var(--e-ios),padding-bottom var(--m-kb) var(--e-ios)}
 #cpanel[hidden]{display:none}
 /* On the keyboard while typing. A tap on the panel's buttons keeps the field focused
    (coachfab.js bindPanel), so when the keyboard goes the panel follows it down to its
@@ -5579,9 +5583,9 @@ body.kb:not(.kbdown) #cpanel{padding-bottom:10px}
   border-radius:var(--r5);border:1px solid var(--card-edge);color:var(--text);
   background:var(--raised);box-shadow:inset 0 1px 0 var(--glass-hi),var(--shadow-float);outline:none;
   transform-origin:calc(100% - 32px) calc(100% + var(--navh));
-  /* Its height is held to what the keyboard leaves, so it eases with the keyboard too,
+  
+  transition:max-height var(--m-kb) var(--e-ios)}/* Its height is held to what the keyboard leaves, so it eases with the keyboard too,
      not just the panel around it (owner, 28 Oct: compact, the box snapped). */
-  transition:max-height var(--m-kb) var(--e-ios)}
 @supports ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){
   .cp{background:rgba(var(--bg-rgb),.86);-webkit-backdrop-filter:blur(22px) saturate(140%);backdrop-filter:blur(22px) saturate(140%)}}
 .cp.full{position:fixed;left:8px;right:8px;width:auto;max-width:none;max-height:none;

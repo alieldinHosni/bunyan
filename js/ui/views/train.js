@@ -3,6 +3,7 @@
    run or a match, weigh in. Everything that is planning (the program's days, other
    programs, templates, imports, the library) is drawn here too but shown in Coach →
    Training (js/ui/views/coach.js), which calls the pieces exported at the foot. */
+import {hb} from "../haptic.js";
 import {t, tm} from "../../i18n/dict.js";
 import {alsoKnown, empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} from "../../data/exercises.js";
 import {exName, planName} from "../../i18n/exnames.js";
@@ -133,7 +134,7 @@ function dayHero(sp,p,iso){
     meta=t("Recover. The plan picks up the day after.");
     /* A rest day is advice, not a lock: someone who feels good can train anyway. */
     if(p.kind==="today"&&p.next)
-      cta='<button class="btn g" data-startday="'+p.next.id+'">'+t("Train anyway")+' · '+esc(p.next.name)+'</button>';
+      cta=hb('<button class="btn g" data-startday="'+p.next.id+'">'+t("Train anyway")+' · '+esc(p.next.name)+'</button>');
     if(p.kind==="today")cta+=ANOTHER();
   }else{
     label=p.kind==="today"?(p.again?t("Session {n} today").replace("{n}",p.again):t("Current workout")):t("Planned");
@@ -142,7 +143,7 @@ function dayHero(sp,p,iso){
     meta=all.ex.length+' '+t("exercises")+' · ~'+estMinutes(all)+' '+t("min")
       +(add.length?' · '+t("plus {x} from a missed day").replace("{x}",add.map(function(a){return exName(a.name);}).join(", ")):'');
     cta=p.kind==="today"
-      ?'<button class="btn" data-startday="'+p.day.id+'"><span class="ico ico-play" aria-hidden="true"></span>'+t("Start workout")+'</button>'+ANOTHER()
+      ?hb('<button class="btn" data-startday="'+p.day.id+'"><span class="ico ico-play" aria-hidden="true"></span>'+t("Start workout")+'</button>')+ANOTHER()
       :'<button class="btn g" data-day="'+p.day.id+'">'+t("Preview the day")+'</button>';
   }
   var name=p.kind==="past"?t("Rest or unlogged"):p.kind==="none"?esc(planName(sp.name)):(p.rest?t("Rest day"):planName(p.name));
@@ -170,7 +171,7 @@ function resumeHero(){
    +'<div class="thero2-t"><span class="klabel">'+esc(t("Workout in progress"))+'</span>'
    +'<div class="thero2-n">'+esc(planName(a.dayName))+'</div>'
    +'<div class="thero2-m">'+esc(t("Exercise")+" "+pos+" "+t("of")+" "+a.entries.length)+'</div></div></div>'
-   +'<button class="btn" data-continue="1"><span class="ico ico-play" aria-hidden="true"></span>'+t("Resume workout")+'</button></div>';}
+   +hb('<button class="btn" data-continue="1"><span class="ico ico-play" aria-hidden="true"></span>'+t("Resume workout")+'</button>')+'</div>';}
 
 function vTrain(){
   /* "hub": a workout left for later, seen from its Resume card. */
@@ -330,13 +331,13 @@ function weekRail(sp,sel){
     if(x.mark==="done")done++;if(x.mark==="done"||x.mark==="plan"||x.mark==="proj"||x.mark==="miss")plan++;
     if(iso===sel)idx=i;
     var dt=new Date(iso+"T00:00:00");
-    cells+='<button class="wkr-d '+x.mark+(x.soon?' soon':'')+(iso===now?' today':'')+(iso===sel?' sel':'')+(x.word==="—"?' rest':'')+'" data-wkday="'+iso+'"'
+    cells+=hb('<button class="wkr-d '+x.mark+(x.soon?' soon':'')+(iso===now?' today':'')+(iso===sel?' sel':'')+(x.word==="—"?' rest':'')+'" data-wkday="'+iso+'"'
      +' aria-pressed="'+(iso===sel)+'"'+(iso===sel?' aria-expanded="'+peek+'" aria-controls="wkr-pk"':'')
      +' aria-label="'+esc(x.lbl+(x.swap?", "+t("moved"):""))+'">'
      +'<span class="wkr-w" aria-hidden="true">'+esc(dfmt(dt,{weekday:"narrow"}))+'</span>'
      +'<span class="wkr-n num" aria-hidden="true">'+dt.getDate()+'</span>'
      +'<i class="wkr-m" aria-hidden="true"></i>'
-     +'<span class="wkr-t" aria-hidden="true">'+esc(x.word)+'</span>'+(x.swap?'<b class="wkr-sw" aria-hidden="true">⇄</b>':'')+'</button>';});
+     +'<span class="wkr-t" aria-hidden="true">'+esc(x.word)+'</span>'+(x.swap?'<b class="wkr-sw" aria-hidden="true">⇄</b>':'')+'</button>');});
   var title=off===0?t("This week"):off===1?t("Next week"):off===-1?t("Last week")
     :off<0?t("{n} weeks ago").replace("{n}",-off):t("In {n} weeks").replace("{n}",off);
   var range=dfmt(new Date(days[0]+"T00:00:00"),{day:"numeric",month:"short"})+" – "+dfmt(new Date(days[6]+"T00:00:00"),{day:"numeric",month:"short"});
@@ -824,7 +825,7 @@ function vDay(){
   h+='<div class="dcta">';
   /* A day of a split you are not training on is built here but not started: the
      workout would be filed against the wrong plan. */
-  if(d.ex.length&&live)h+='<button class="btn dbegin" data-startday="'+d.id+'">'+t("Begin Workout")+'</button>';
+  if(d.ex.length&&live)h+=hb('<button class="btn dbegin" data-startday="'+d.id+'">'+t("Begin Workout")+'</button>');
   h+='<button class="ddel" data-delday="'+d.id+'">'+t("Delete this day")+'</button>';
   h+='</div>';
   return h;}

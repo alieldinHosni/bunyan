@@ -46,20 +46,20 @@ document.addEventListener("pointerdown",function(){
    the element tapped, the haptic, and whether the name prompt was being typed in. */
 document.addEventListener("click",function(ev){
   /* Named el, not t: t() is the translator. */
-  var el=ev.target.closest("button,label[data-logset],[data-close],[data-stop]");
+  var el=ev.target.closest("button,label.hap,[data-close],[data-stop]");
   if(!el)return;
-  /* The complete-set control's label (views/session.js vLogControl): its own click is
-     passed on by the browser to the switch inside, and it is that click, from a tap,
-     Space or VoiceOver alike, that logs the set. The switch is put back to off at once:
-     the tick comes from the toggle, and nothing should ever read it as "on". */
+  /* A control with a tick in it (js/ui/haptic.js): its label's own click is passed on by
+     the browser to the switch inside, and it is that click, from a tap, Space or
+     VoiceOver alike, that does the thing. The switch goes back to what its markup says
+     after (off for a button, the setting's state for a switch). */
   var sw=null;
-  if(el.matches("label")){if(!(ev.target.matches&&ev.target.matches("input.hapt-in")))return;sw=ev.target;tap("light");}
+  if(el.matches("label")){if(!(ev.target.matches&&ev.target.matches("input.hapt-in")))return;sw=ev.target;tap(el.classList.contains("btn")?"heavy":"light");}
   if(el.matches("button"))tap(el.classList.contains("btn")?"heavy":"light");
   /* In the ask dialog a tap that misses the field lowers the keyboard first (see the
      stop and close branches in handlers/shell.js). */
   var typingAsk=V.sheet==="ask"&&askTyping;askTyping=false;
   dispatchTap(el.dataset,el,ev,{typingAsk:typingAsk});
-  if(sw)sw.checked=false;
+  if(sw)sw.checked=sw.defaultChecked;
 });
 document.addEventListener("input",onInput);
 document.addEventListener("keydown",onKeydown);
