@@ -2395,8 +2395,13 @@ await test("Coach page: one numbered list whose count is what it shows (three, t
   eq(await page.$$eval('#app .pcf',a=>a.length),0,"nothing the coach noticed is left");
   const rest=await page.$$eval('.cfor>li',a=>a.length);
   if(!rest){
-    eq(await page.$$eval('#app .tsec-h',a=>a.length),0,"no heading over an empty list");
-    if(!/On track|Nothing to change/.test(await page.textContent('.pcquiet')))throw new Error("no quiet line");}
+    /* Nothing left: one card where the list was, not a loose line (owner, 3 Nov). */
+    if(!/on track|Nothing to change/i.test(await page.textContent('.pcquiet')))throw new Error("no on-track card");
+    eq(await page.evaluate(()=>getComputedStyle(document.querySelector('.pcquiet')).backdropFilter.indexOf("blur")>=0||!CSS.supports("backdrop-filter","blur(1px)")),true,"a card like the others");}
+  /* The rest is one list of rows: the assessment and How the coach works, never loose lines. */
+  eq(await page.evaluate(()=>[!!document.querySelector('.cmore .srow[data-setup]'),!!document.querySelector('.cmore [data-sheet="coachinfo"]'),document.querySelectorAll('#app > p.dsub,#app > p.as-note').length]),[true,true,0],"one list, no loose sentences");
+  await page.tap('.cmore [data-sheet="coachinfo"]');await pause(page,400);
+  if(!/starting points from the research/.test(await page.textContent('#sheet')))throw new Error("the small print is not in How the coach works");
 });
 await test("Phase 4: one session and one weigh-in say \"not enough yet\" everywhere, never a trend",async page=>{
   await page.evaluate(async()=>{const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));});
@@ -4578,17 +4583,20 @@ await test("Guide: Training's plan page has its own, which says what the tabs, E
   if(!/Swipe left or right/.test(await page.textContent('.tour-p')))throw new Error("does not say a swipe switches");
 },{tour:true,prefs:{toured:{train:9,food:9,coach:9,progress:9,profile:9}}});
 /* ---- Food's plan pages, round 3 (owner, 3 Nov) ------------------------------------------ */
-await test("Meal plan: what the plan comes to in two bars and a verdict; two tiles to fill it; one list of settings with a working Meal names choice (it showed as bare white boxes)",async page=>{
+await test("Meal plan: with nothing planned, how to start comes first; once planned, two bars and a verdict, and starting again moves into the settings list (Meal names works: it showed as bare white boxes)",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");(st.S.mealSlots||[]).forEach(x=>{x.plan=[];});st.saveDB();});
   await coach(page,"food","plan");
-  eq(await page.evaluate(()=>[document.querySelectorAll('.plsum .plsum-r').length,!!document.querySelector('.plsum-v'),document.querySelectorAll('.ptiles .ptile').length]),[2,true,2],"two bars, a verdict, two tiles");
-  eq(await page.evaluate(()=>[!!document.querySelector('.ptile[data-pgen]'),!!document.querySelector('.ptile[data-pimport]'),!!document.querySelector('.plset [data-fplan="foods"]'),document.querySelectorAll('.bnew').length]),[true,true,true,0],"Build and Import as tiles, My foods in the list, no big cards");
+  eq(await page.evaluate(()=>[!!document.querySelector('.plstart'),!document.querySelector('.plsum'),!!document.querySelector('.plstart .ptile[data-pgen]'),!!document.querySelector('.plstart .ptile[data-pimport]')]),[true,true,true,true],"empty: Make your meal plan first, with its two ways");
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),M=await import("/js/engine/meals.js");const x=M.ownSlots()[0];
+    x.plan=[{n:"Eggs",kcal:300,p:24,c:2,f:20,grams:150,label:"3 eggs"}];st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.evaluate(()=>[document.querySelectorAll('.plsum .plsum-r').length,!!document.querySelector('.plsum-v'),!document.querySelector('.plstart'),!!document.querySelector('.plset [data-pgen]'),!!document.querySelector('.plset [data-pimport]'),!!document.querySelector('.plset [data-fplan="foods"]')]),[2,true,true,true,true,true],"planned: two bars and a verdict; starting again is in the list");
   const look=await page.$eval('.plset .seg-b',b=>{const c=getComputedStyle(b);return [c.backgroundColor,c.color];});
   if(look[0]==="rgb(255, 255, 255)"||look[0]==="rgb(239, 239, 239)")throw new Error("Meal names is unstyled: "+look);
   await page.tap('.plset [data-mstyle="numbered"]');await pause(page,300);
   eq(await page.evaluate(async()=>(await import("/js/engine/meals.js")).mealStyle()),"numbered","Numbered chosen");
   await page.tap('.plset [data-mstyle="named"]');await pause(page,300);
   eq(await page.evaluate(async()=>(await import("/js/engine/meals.js")).mealStyle()),"named","and back");
-  eq(await page.$$eval('#app .psecs .seg-b',a=>a.map(b=>b.textContent)),["Meal plan","Targets"],"two tabs: My foods is not one");
+  eq(await page.$$eval('#app .psecs .seg-b',a=>a.map(b=>b.textContent)),["Meal plan","Daily goals"],"two tabs: My foods is not one");
   await page.tap('.plset [data-fplan="foods"]');await pause(page,400);
   eq(await ev(page,"[V.fplan,!!document.querySelector('#app .psecs'),document.querySelector('#app .dhead-t').textContent]"),["foods",false,"My foods"],"My foods is a page of its own");
   await page.tap('[data-back]');await pause(page,500);

@@ -413,6 +413,11 @@ function vSheet(){
      +'<button class="ddel exrm" data-delex="'+e.id+'">'+t("Remove from this day")+'</button>';
   }
   /* An InBody result, read the moment it is saved (views/chat.js inbodyReading). */
+  /* The small print of the Coach page, as a page of its own (views/coach.js coachList). */
+  else if(V.sheet==="coachinfo")b='<h2>'+esc(t("How the coach works"))+'</h2><div class="cinfo">'
+    +'<p>'+esc(t("Everything the coach says comes from your own log, your plan and your targets. Nothing changes until you tap."))+'</p>'
+    +'<p>'+esc(t("Ranges and targets here are starting points from the research, not rules. How you feel, recover and progress over a few weeks says more."))+'</p>'
+    +'<p>'+esc(t("Advice you set aside stays away until the numbers behind it change."))+'</p></div>';
   else if(V.sheet==="ibread")b='<h2>'+esc(t("What your InBody says"))+'</h2><div class="ibread">'+inbodyReading()+'</div>';
   else if(V.sheet==="weigh"){
     /* The stepper starts from the last weight known. With none, an empty field to type

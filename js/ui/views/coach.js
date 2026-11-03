@@ -25,7 +25,7 @@ import {esc, num, pretty, today} from "../../util.js";
 import {streak, V} from "../view.js";
 import {art} from "../art.js";
 import {glyph} from "../glyphs.js";
-import {adviceList, adviceNote, pcAgain} from "./pcheck.js";
+import {adviceList} from "./pcheck.js";
 import {ASK, vChat} from "./chat.js";
 import {suggestFor} from "../coachfab.js";
 import {ckCard} from "../checkin.js";
@@ -50,11 +50,25 @@ function vCoach(){
   h+=askBox();
   h+=weekStrip();
   h+=forYou();
-  h+='<button class="crow" data-setup="1"><span class="crow-i" aria-hidden="true">'+glyph("restore")+'</span>'
-   +'<span class="crow-t"><b>'+esc(t("Take the assessment again"))+'</b><span>'+esc(t("Rebuilds your training and your meals, and shows you both before anything changes."))+'</span></span>'
-   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
-  h+=adviceNote();
+  h+=coachList();
   return h;}
+
+/* ---- your coach: the rest, as one list ---------------------------------------------
+   Owner, 3 Nov: "random sentences everywhere … not a PDF". What used to trail under the
+   list as loose lines (a week kept light, advice set aside, the small print) and the
+   assessment are rows of one list, each with its mark, its name, one line and what a tap
+   does. The small print is a page of its own, How the coach works. */
+function coachList(){
+  var p=S.profile||{},rows='',kept=Object.keys(S.pcDismiss||{}).length+Object.keys(S.coachDismiss||{}).length;
+  var row=function(gl,name,sub){return '<span class="gtile">'+glyph(gl)+'</span><span class="srow-t"><span class="srow-n">'+esc(name)+'</span>'+(sub?'<span class="srow-s">'+esc(sub)+'</span>':'')+'</span>';};
+  if(lightOnPurpose(p)&&stressKept(p)){var on=followOn(p);
+    rows+='<div class="srow stressline">'+row("moon",t("Your week is kept light"),t("I'll ask again on {d}").replace("{d}",on?pretty(on):""))
+     +'<button class="btn g sm" data-stressask="1">'+esc(t("Better now?"))+'</button></div>';}
+  if(kept)rows+='<div class="srow pcagain">'+row("archive",t("Advice you set aside"),t(kept===1?"1 item. It comes back if your numbers change.":"{n} items. They come back if your numbers change.").replace("{n}",kept))
+     +'<button class="btn g sm" data-pcreset="1">'+esc(t("Show again"))+'</button></div>';
+  rows+='<button class="srow crow" data-setup="1">'+row("restore",t("Take the assessment again"),t("Rebuilds your training and meals. You see both first."))+'<span class="ico ico-chev" aria-hidden="true"></span></button>'
+   +'<button class="srow" data-sheet="coachinfo">'+row("info",t("How the coach works"),"")+'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  return '<div class="tsec"><h2 class="tsec-h">'+t("Your coach")+'</h2></div><section class="sg cmore"><div class="sg-list">'+rows+'</div></section>';}
 
 /* ---- ask -------------------------------------------------------------------------
    A field-shaped button that opens the conversation, and three questions that ask at
@@ -99,15 +113,17 @@ function forYou(){
   if(st)items.push(st);
   if(ck)items.push(ck);
   adviceList().forEach(function(x){items.push(x.html());});
-  if(!items.length)return '<p class="pcquiet"><span class="ico ico-check" aria-hidden="true"></span>'
-    +esc(t((S.sessions||[]).length<3?"Nothing to change. After a few weeks of sessions the coach reads your training too.":"On track. Nothing to change."))+'</p>'+stressLine()+pcAgain();
+  /* Nothing to decide: one card that says so, where the list would be. */
+  if(!items.length)return '<div class="tsec"><h2 class="tsec-h">'+t("For you")+'</h2></div>'
+    +'<div class="pcquiet glass"><span class="pcquiet-i" aria-hidden="true">'+glyph("check")+'</span><span><b>'+esc(t("You're on track"))+'</b>'
+    +'<span>'+esc(t((S.sessions||[]).length<3?"Nothing to change. After a few weeks of workouts the coach reads your training too.":"Nothing needs a decision this week."))+'</span></span></div>';
   var open=V.advall||items.length<=3;
   var h='<div class="tsec"><h2 class="tsec-h">'+t("For you")+'</h2><span class="libn num">'+items.length+'</span></div>'
    +'<ol class="cfor">'+(open?items:items.slice(0,3)).map(function(x,i){return '<li><span class="cfor-n num" aria-hidden="true">'+(i+1)+'</span>'+x+'</li>';}).join("")+'</ol>';
   if(items.length>3)h+=open
     ?'<button class="btn g sm pcmore" data-advall="0">'+esc(t("Show fewer"))+'</button>'
     :'<button class="btn g pcmore" data-advall="1">'+esc(t(items.length===4?"1 more":"{n} more").replace("{n}",items.length-3))+'</button>';
-  return h+stressLine()+pcAgain();}
+  return h;}
 
 /* ---- a week kept light on purpose (js/engine/stress.js) ------------------------------
    While stress is high or sleep short, a line says so and when the coach will ask again;
@@ -118,11 +134,6 @@ function forYou(){
    the list; a line under it says so, until when, and keeps "Better now?" one tap away.
    On the follow-up day the question comes back whatever was answered. */
 function stressKept(p){return !!p.stressOk&&!followDue(p)&&!V.stressAsk;}
-function stressLine(){
-  var p=S.profile||{};if(!lightOnPurpose(p)||!stressKept(p))return "";
-  var on=followOn(p);
-  return '<p class="stressline"><span>'+esc(t("Your week is kept light while you recover. I'll ask again on {d}.").replace("{d}",on?pretty(on):""))+'</span>'
-   +' <button class="linkbtn" data-stressask="1">'+esc(t("Better now?"))+'</button></p>';}
 function stressCard(){
   var p=S.profile||{};if(!lightOnPurpose(p)||stressKept(p))return "";
   var why=p.stress==="high"&&num(p.sleep)>0&&num(p.sleep)<6?t("stress was high and sleep short"):p.stress==="high"?t("stress was high"):t("sleep was short");

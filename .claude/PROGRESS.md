@@ -3425,3 +3425,22 @@ tabs that do not make sense; the swipe's tab highlight lags the page.
 - Figures and their units stay one left-to-right run in Arabic (they read "2,500 / 0").
 - Found by the full suite: the new cards (plan summary, target card, tiles, offer, fold) and the program,
   plan and schedule cards were not in the frosted-card lists, so they were flat beside every other card. Added.
+
+## One grammar for the plan and coach pages — branch session/tidy (CACHE v208)
+
+Owner, 3 Nov: things that belong together, together; easy for someone not technical; "a platform streamlined
+and robust, not a PDF, and random sentences everywhere".
+- The grammar every planning page now follows: a card for what the page is about; the list it holds (Edit for
+  ✕); tiles for the ways to start something new; one settings list (rows with a name, one line and a chevron)
+  for everything else. No loose sentences between them.
+- Coach: "For you" is always a section; with nothing to decide it holds one card ("You're on track"). What
+  trailed under it as lines — a week kept light, advice set aside, the small print — and the assessment are
+  one list, "Your coach" (views/coach.js coachList): each row says what it is and has its button. The small
+  print is a sheet, How the coach works (coachinfo).
+- Meal plan: with nothing planned, "Make your meal plan" comes first with its two ways; once planned, the
+  summary card shows and starting again moves into the settings list (so it is not tapped by accident).
+- Plain words: Targets → Daily goals; "Fit carbs to the target" → "Fix it for me"; "Maintenance by formula…" →
+  "Worked out from your age, height, weight and activity…"; Build/Import → "Make it from my goals" / "Copy in a
+  plan"; programs: "Build a program" / "Copy in a program".
+- Training's My program ends in the same settings list (Switch program, Workout settings, Share) instead of
+  three lines of text; Programs & exercises opens with two tiles instead of two large cards.
