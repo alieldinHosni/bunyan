@@ -222,4 +222,35 @@ function glideCards(root,before){
     var gone=function(){if(g.parentNode)g.parentNode.removeChild(g);};
     a.onfinish=gone;a.oncancel=gone;setTimeout(gone,GHOST+120);});}
 
-export {applyMotion, countTo, DUR, EASE, glideCards, isReduced, leave, motionOff, ms, once, snapCards};
+/* ---- a still copy, for things that leave as their replacement arrives ----------------
+   A page, or a plan page's tab, about to be replaced is copied where it stands (fixed, out
+   of reach, ids and pressed looks removed) so the old and the new can travel together,
+   edge to edge. Transform only, never opacity: a fading parent switches off its frosted
+   cards' blur for the length of the fade, which read as a flash (owner, 3 Nov). */
+function stillCopy(el,z){
+  var r=el.getBoundingClientRect(),g=el.cloneNode(true);
+  g.querySelectorAll("[id]").forEach(function(e){e.removeAttribute("id");});
+  g.classList.remove("tapd","pagein");g.querySelectorAll(".tapd").forEach(function(e){e.classList.remove("tapd");});
+  g.classList.add("stillcopy");g.setAttribute("aria-hidden","true");g.inert=true;
+  var cs=getComputedStyle(el);
+  g.style.cssText="position:fixed;left:"+r.left+"px;top:"+r.top+"px;width:"+r.width+"px;margin:0;box-sizing:border-box;"
+    +"padding:"+cs.padding+";pointer-events:none;transform:none;transition:none;opacity:1;z-index:"+(z||0);
+  /* A part of the page is wrapped as the page, so the page's own styles (its frosted
+     cards are styled under #app) still draw it exactly as it was. */
+  if(el.id!=="app"&&el.closest("#app")){
+    var w=document.createElement("div");w.id="app";w.className="stillcopy";w.setAttribute("aria-hidden","true");w.inert=true;
+    w.style.cssText=g.style.cssText+";padding:0;max-width:none";g.classList.remove("stillcopy");g.style.cssText="margin:0;transform:none;transition:none;opacity:1";
+    w.appendChild(g);document.body.appendChild(w);return w;}
+  document.body.appendChild(g);
+  return g;}
+/* The new and the copy of the old, moving together: the new from `from` (a translateX
+   value) to rest, the copy from rest to `to`. done runs once, however it ends. */
+function slidePair(live,copy,from,to,ms,ease,done){
+  document.documentElement.classList.add("pgmoving");
+  var fin=false,end=function(){if(fin)return;fin=true;if(copy.parentNode)copy.remove();
+    if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");if(done)done();};
+  var a=live.animate([{transform:"translateX("+from+")"},{transform:"none"}],{duration:ms,easing:ease});
+  copy.animate([{transform:"none"},{transform:"translateX("+to+")"}],{duration:ms,easing:ease,fill:"forwards"});
+  a.onfinish=end;a.oncancel=end;setTimeout(end,ms+250);
+  return a;}
+export {applyMotion, countTo, DUR, EASE, glideCards, isReduced, leave, motionOff, ms, once, slidePair, snapCards, stillCopy};

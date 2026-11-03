@@ -23,7 +23,7 @@
    hold frosted cards, which lose their blur under a fading parent, so they travel the
    whole width instead of fading. A touch that starts in something that scrolls sideways
    (templates, pills) or on a grip is that thing's, not a swipe. */
-import {isReduced} from "./motion.js";
+import {isReduced, stillCopy} from "./motion.js";
 import {tap} from "./view.js";
 
 var H=null,st=null,lockUntil=0,swallowUntil=0;
@@ -68,7 +68,7 @@ function onMove(ev){
   var x=H.can(stepOf(dx),st.k)?dx:dx*0.3;
   /* A plan page: the highlight over its tabs moves with the finger, the same share of a
      tab as the page has moved of its width (owner, 3 Nov: it lagged behind the page). */
-  if(st.k!=="ex")segFollow(st,x);
+  if(st.k!=="ex"){segFollow(st,x);peekFollow(st,x);}
   st.p.style.transition="none";
   st.p.style.transform="translateX("+Math.round(x)+"px)";
   if(st.k==="ex")st.p.style.opacity=String(1-Math.min(.35,Math.abs(x)/st.w*.5));}
@@ -87,8 +87,31 @@ function segSettle(s,to,ms){
   g.classList.remove("drag");
   void g.offsetWidth;
   g.style.setProperty("--i",String(to));}
+/* The tab next door, under the finger: drawn when the drag picks a direction (H.peek),
+   placed beside the tab being dragged and moved with it, so the next tab slides in as
+   the finger goes rather than empty ground. Turning back the other way swaps it. */
+function peekFollow(s,x){
+  var step=stepOf(x);
+  if(!H.can(step,s.k)||!H.peek){peekDrop(s);return;}
+  if(!s.nb||s.nbStep!==step){
+    peekDrop(s);
+    var html=H.peek(step,s.k);if(html==null)return;
+    if(!s.base){var t0=s.p.style.transform;s.p.style.transform="";s.base=s.p.getBoundingClientRect();s.p.style.transform=t0;}
+    var w=document.createElement("div");w.id="app";w.className="stillcopy peek";w.setAttribute("aria-hidden","true");w.inert=true;
+    w.style.cssText="position:fixed;left:"+s.base.left+"px;top:"+s.base.top+"px;width:"+s.base.width+"px;margin:0;padding:0;max-width:none;pointer-events:none;z-index:0";
+    var p=document.createElement("div");p.className="psec";p.innerHTML=html;
+    p.querySelectorAll("[id]").forEach(function(e){e.removeAttribute("id");});
+    w.appendChild(p);document.body.appendChild(w);
+    s.nb=w;s.nbStep=step;}
+  s.nb.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";}
+function peekDrop(s){if(s&&s.nb){s.nb.remove();s.nb=null;s.nbStep=0;}}
 function springBack(p,s){
   if(s)segSettle(s,s.i0,320);
+  /* The tab next door goes back where it came from with the dragged one. */
+  if(s&&s.nb){var nb=s.nb;s.nb=null;
+    if(isReduced()||!nb.animate)nb.remove();
+    else{var a=nb.animate([{transform:nb.style.transform},{transform:"translateX("+(s.dx<0?s.w:-s.w)+"px)"}],{duration:320,easing:"cubic-bezier(0.2,0,0,1)",fill:"forwards"});
+      a.onfinish=function(){nb.remove();};setTimeout(function(){if(nb.parentNode)nb.remove();},600);}}
   if(isReduced()){p.style.transition="";p.style.transform="";p.style.opacity="";return;}
   p.style.transition="transform 320ms cubic-bezier(0.2,0,0,1),opacity 320ms ease";
   p.style.transform="";p.style.opacity="";}
@@ -110,8 +133,8 @@ function onEnd(){
   /* Dragged left, the old exercise leaves to the left and the new one comes in from
      the right; dragged right, the other way round. */
   var from=s.dx<0?1:-1;
-  if(isReduced()){s.p.style.transition="";s.p.style.transform="";s.p.style.opacity="";H.go(step,s.k);return;}
-  if(s.k!=="ex"){slidePlan(s,step,from);return;}
+  if(isReduced()){peekDrop(s);s.p.style.transition="";s.p.style.transform="";s.p.style.opacity="";H.go(step,s.k);return;}
+  if(s.k!=="ex"){slidePlan(s,step);return;}
   /* Unhurried both ways (owner, 3 Nov): out over 220 ms, in over 380 ms. */
   s.p.style.transition="transform 220ms cubic-bezier(0.4,0,1,1),opacity 220ms ease";
   s.p.style.transform="translateX("+(s.dx<0?-s.w:s.w)+"px)";
@@ -130,27 +153,30 @@ function enter(from){
   p.style.transition="transform 380ms cubic-bezier(0.05,0.7,0.1,1),opacity 300ms ease";
   p.style.transform="";p.style.opacity="";}
 
-/* A plan tab: the old one carries on off the side it was dragged to, the page returns to
-   its tabs if it was scrolled past them, and the new tab comes in from the other side,
-   the whole width, unhurried. */
-function slidePlan(s,step,from){
-  var w=s.w,rest=Math.abs(s.dx);
-  var out=Math.max(160,Math.min(300,Math.round((w-rest)/w*300)));
-  /* The highlight carries on from where the finger left it and lands as the new tab
-     settles, one movement with the page's. */
-  segSettle(s,(s.i0||0)+step,out+380);
-  s.p.style.transition="transform "+out+"ms cubic-bezier(0.4,0,1,1)";
-  s.p.style.transform="translateX("+(s.dx<0?-w:w)+"px)";
-  setTimeout(function(){
+/* A plan tab let go: the tab you dragged and the next one travel on together, edge to
+   edge, from where the finger left them (a still copy of the old one goes out as the new
+   one comes in; transform only, so the frosted cards never lose their blur), at the
+   pace the rest of the width needs. The highlight over the tabs lands with them. If the
+   page had been scrolled past its tabs, it eases back up to them once the tab is in. */
+var SE="cubic-bezier(0.22, 1, 0.36, 1)";
+function slidePlan(s,step){
+  var w=s.w,dx=s.dx,ms=Math.max(260,Math.min(440,Math.round((w-Math.abs(dx))/w*440)));
+  segSettle(s,(s.i0||0)+step,ms);
+  s.p.style.transition="none";s.p.style.transform="";s.p.style.opacity="";
+  var g=stillCopy(s.p);g.style.transform="translateX("+dx+"px)";
+  H.go(step,s.k);
+  /* The real tab is drawn exactly where the one under the finger was: that one goes. */
+  peekDrop(s);
+  var p=pane();if(!p){g.remove();return;}
+  p.style.transition="none";p.style.transform="";p.style.opacity="";
+  document.documentElement.classList.add("pgmoving");
+  var fin=false,end=function(){if(fin)return;fin=true;if(g.parentNode)g.remove();
+    if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");
     var tabs=document.querySelector("#app .psecs");
-    if(tabs){var top=tabs.getBoundingClientRect().top;if(top<0)window.scrollBy(0,top-12);}
-    H.go(step,s.k);
-    var p=pane();if(!p)return;
-    p.style.transition="none";p.style.opacity="";
-    p.style.transform="translateX("+Math.round(from*w)+"px)";
-    void p.offsetWidth;
-    p.style.transition="transform 460ms cubic-bezier(0.05,0.7,0.1,1)";
-    p.style.transform="";},out);}
+    if(tabs){var top=tabs.getBoundingClientRect().top;if(top<0)window.scrollBy({top:top-12,behavior:"smooth"});}};
+  var a=p.animate([{transform:"translateX("+(dx+(dx<0?w:-w))+"px)"},{transform:"none"}],{duration:ms,easing:SE});
+  g.animate([{transform:"translateX("+dx+"px)"},{transform:"translateX("+(dx<0?-w:w)+"px)"}],{duration:ms,easing:SE,fill:"forwards"});
+  a.onfinish=end;a.oncancel=end;setTimeout(end,ms+250);}
 /* Where an exercise change by step comes in from, on screen. */
 function fromOf(step){return (rtl()?-1:1)*(step>0?1:-1);}
 

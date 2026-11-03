@@ -29,6 +29,7 @@ import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, stepperInput, V} fro
 import {glyph} from "./glyphs.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
+import {vPlanFood} from "./views/food.js";
 import {tiexSheet} from "./views/timport.js";
 import {coolCard, warmOf} from "./views/warmup.js";
 import {settingsSheet} from "./settings.js";
@@ -418,6 +419,8 @@ function vSheet(){
     +'<p>'+esc(t("Everything the coach says comes from your own log, your plan and your targets. Nothing changes until you tap."))+'</p>'
     +'<p>'+esc(t("Ranges and targets here are starting points from the research, not rules. How you feel, recover and progress over a few weeks says more."))+'</p>'
     +'<p>'+esc(t("Advice you set aside stays away until the numbers behind it change."))+'</p></div>';
+  /* A food of the plan under review: amount, swap, remove (views/food.js vPlanFood). */
+  else if(V.sheet==="pfood")b=vPlanFood();
   else if(V.sheet==="ibread")b='<h2>'+esc(t("What your InBody says"))+'</h2><div class="ibread">'+inbodyReading()+'</div>';
   else if(V.sheet==="weigh"){
     /* The stepper starts from the last weight known. With none, an empty field to type

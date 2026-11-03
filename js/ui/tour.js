@@ -29,7 +29,6 @@ var GUIDES={
     {sel:".pgc",v:3,h:"Your program",p:"The days and exercises you follow. Tap Plan to edit your days, change when you train, switch to another program or browse exercises."},
     {sel:".htiles",v:3,h:"Weight and steps",p:"Tap Weight to log today's weight, and Steps to type today's count. Your coach reads both."},
     {sel:"[data-actsheet]",v:3,h:"Cardio and sports",p:"Log a game, a class or a swim by minutes and effort. A run, walk, ride or hike can be tracked live with your phone's GPS."},
-    {sel:'.hacts [data-csec="ai"]',v:3,h:"Coach's notes",p:"Opens the Coach tab. A dot means the coach has something for you to decide."},
     {sel:".hacts .havatar",v:3,h:"Profile",p:"Your details and targets, the app's settings, and your backups."},
     {sel:"#cfab .cfab",fixed:true,v:3,h:"Ask the coach",p:"On every page. Tap it to chat: ask anything, or tell the coach what to change, in English or Arabic."},
     {sel:"nav .dock",fixed:true,v:3,h:"The tabs",p:"Tap one to switch between Training, Food, Coach and Progress."}]},
@@ -37,10 +36,12 @@ var GUIDES={
   tplan:{name:"Training plan",steps:[
     {sel:".psecs",v:3,h:"Two tabs",p:"My program is what you follow now. Programs & exercises has other programs, templates and the exercise library. Swipe left or right to switch."},
     {sel:".bname .dname",v:3,h:"The name",p:"Tap it to rename your program."},
-    {sel:".blk",v:3,h:"Training block",p:"Where you are in this block, and the reps and effort it asks for. Tap it to see why, and what comes next."},
+    {sel:".bname-a",v:5,h:"Switch and share",p:"The arrows switch to another of your programs or a template. The other icon shares this program with another Bunyan user."},
     {sel:".drows",v:3,h:"Your days",p:"Tap a day to add, remove or change its exercises."},
     {sel:".droutine [data-reorder]",v:3,h:"Edit",p:"Shows a ✕ to remove a day and a handle to drag days into a new order. Tap Done when you have finished."},
-    {sel:".bsched",v:3,h:"Schedule",p:"By weekday: each day falls on the same weekdays, picked under each day. In rotation: the next day comes whenever you train."}]},
+    {sel:".bsched",v:3,h:"Schedule",p:"By weekday: each day falls on the same weekdays, picked under each day. In rotation: the next day comes whenever you train."},
+    {sel:".blk",v:3,h:"Training block",p:"Where you are in this block, and the reps and effort it asks for. Tap it to see why, and what comes next."},
+    {sel:".dhead-a",fixed:true,v:5,h:"Workout settings",p:"The gear holds how weight goes up, the warm-up, the rest timer and your equipment."}]},
   food:{name:"Food",steps:[
     {sel:".dnav-card",v:3,h:"The day",p:"Food opens on today. Swipe or use the arrows to look at or fill in another day."},
     {sel:".fsum",v:3,h:"Today's numbers",p:"Calories eaten and left, with protein, carbs and fat against your targets."},
@@ -54,7 +55,7 @@ var GUIDES={
     {sel:".psecs",v:4,h:"Two tabs",p:"Meal plan: your meals for a day, and how to fill them. Targets: your calories and macros. Swipe left or right to switch."},
     {sel:".plset",v:4,h:"The plan's settings",p:"How meals are named, the foods and meals you saved, and sharing your plan."}]},
   coach:{name:"Coach",steps:[
-    {sel:".cask",v:3,h:"Ask your coach",p:"Type a question, or tap one of the suggestions under it. The answer uses your own log, plan and targets."},
+    {sel:".cask",v:4,h:"Ask your coach",p:"Tap a question and the coach answers it from your own log, plan and targets. To ask anything else, use the chat button beside the tabs."},
     {sel:".cweek2",v:3,h:"This week",p:"Workouts done out of those planned, the days you reached your protein, and your streak."},
     {sel:".cfor",v:3,h:"For you",p:"What the coach wants you to decide, most important first. Nothing changes until you tap, and most changes can be undone."},
     {sel:".cmore",v:4,h:"Your coach",p:"A lighter week, advice you set aside, the assessment, and how the coach works. Each row says what a tap does."}]},

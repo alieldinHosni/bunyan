@@ -958,7 +958,7 @@ await test("Plan import: pasted text becomes meals with foods; an unmatched line
   await page.tap('[data-pimport]');await pause(page);
   await page.fill('#pi_text',"Meal 1 (8am):\n- 3 eggs\n- 2 slices toast\nMeal 2: 150g chicken breast, 200g rice\nSnack:\n200g greek yogurt\n1 cup zorblax");
   await page.tap('[data-pread]');await pause(page,1200);
-  eq(await page.$$eval('.picard',a=>a.length),3,"three meals found");
+  eq(await page.$$eval('.pmeal',a=>a.length),3,"three meals found");
   await page.tap('[data-puse]');await pause(page,500);
   eq(await ev(page,"S.mealSlots.map(x=>[x.id.startsWith('m_')?'m':x.id,(x.plan||[]).length,(x.todo||[]).length])"),[["m",2,0],["m",2,0],["Snack",1,1]],"slots with plans");
   eq(await page.$$eval('.drows .drow-n',a=>a.map(x=>x.textContent)),["Meal 1","Meal 2","Snacks"],"named as the app names them");
@@ -1156,11 +1156,11 @@ await test("PDF plan: meals, daily targets and supplements are read, reviewed an
   await page.tap('[data-pimport]');await pause(page);
   const before=await ev(page,"JSON.stringify(S.goals)");
   await page.setInputFiles("#pi_file",new URL("./fixtures/plan-sample.pdf",import.meta.url).pathname);
-  for(let i=0;i<60&&!(await page.$(".picard"));i++)await pause(page,250);
-  eq(await page.$$eval(".picard .picard-h .tiday",a=>a.map(e=>e.value)),["Meal 1","Meal 2","Snacks","Meal 3","Supplements"],"meals");
-  eq(await page.$$eval(".plist-r.miss",a=>a.length),0,"every line matched a food");
+  for(let i=0;i<60&&!(await page.$(".pmeal"));i++)await pause(page,250);
+  eq(await page.$$eval(".pmeal .pmeal-n",a=>a.map(e=>e.value)),["Meal 1","Meal 2","Snacks","Meal 3","Supplements"],"meals");
+  eq(await page.$$eval(".pmrow.miss",a=>a.length),0,"every line matched a food");
   eq(await page.$$eval(".pitg-r input",a=>a.map(e=>e.value)),["2200","160","230","70","2.75","9000"],"targets");
-  const supp=await page.$$eval(".picard",a=>a[4].innerText);
+  const supp=await page.$$eval(".pmeal",a=>a[4].innerText);
   for(const w of ["Vitamin D3","1,000 IU","With a fatty meal","Magnesium","200 mg","Before bed","Zinc","15 mg"])
     if(supp.indexOf(w)<0)throw new Error("supplements lack "+w+": "+supp);
   const box=await page.$eval("#pi_text",e=>e.value);
@@ -1177,15 +1177,18 @@ await test("PDF plan: everything can be changed on the review before it is used"
   await coach(page,"food","plan");
   await page.tap('[data-pimport]');await pause(page);
   await page.setInputFiles("#pi_file",new URL("./fixtures/plan-sample.pdf",import.meta.url).pathname);
-  for(let i=0;i<60&&!(await page.$(".picard"));i++)await pause(page,250);
+  for(let i=0;i<60&&!(await page.$(".pmeal"));i++)await pause(page,250);
   /* A meal renamed, a food dropped, an amount changed, a target changed. */
   await page.fill("#pm_n_0","Breakfast bowl");
   const dropped=await ev(page,"V.pparse[1].items[0].n");
-  await page.evaluate(()=>document.querySelector('[data-pirm="1|0"]').click());await pause(page,200);
+  /* Each food is one tap: its sheet has Change amount, Remove and Swap. */
+  await page.evaluate(()=>document.querySelector('[data-pfood="1|0"]').click());await pause(page,500);
+  await page.evaluate(()=>document.querySelector('#sheet [data-pfoodrm]').click());await pause(page,300);
   eq(await ev(page,"V.pparse[1].items.map(i=>i.n).indexOf("+JSON.stringify(dropped)+")"),-1,"dropped");
   const k0=await ev(page,"V.pparse[0].items[0].kcal"),g0=await ev(page,"V.pparse[0].items[0].grams");
   /* Tapping the food opens it on the servings screen; set it in grams and update. */
-  await page.evaluate(()=>document.querySelector('[data-editfood="imp|0|0"]').click());await pause(page,500);
+  await page.evaluate(()=>document.querySelector('[data-pfood="0|0"]').click());await pause(page,500);
+  await page.evaluate(()=>document.querySelector('#sheet [data-editfood="imp|0|0"]').click());await pause(page,500);
   await page.selectOption("#afsrv","ug");await pause(page,300);
   await page.fill("#afamt",String(g0*2));await pause(page,200);
   await page.evaluate(()=>document.querySelector("[data-fupdate]").click());await pause(page,300);
@@ -1985,18 +1988,18 @@ await test("Meal plan from your own food: a breakfast eaten most days comes back
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="coach";(await import("/js/ui/render.js")).render();});
   await page.evaluate(()=>{const b=document.createElement("button");b.setAttribute("data-pgen","1");b.id="pgen_t";document.body.appendChild(b);});
   await page.tap('#pgen_t');
-  for(let i=0;i<30&&!(await page.$('.picard'));i++)await pause(page,200);
+  for(let i=0;i<30&&!(await page.$('.pmeal'));i++)await pause(page,200);
   const r=await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;const pp=V.pparse;
     const b=pp[0],kc=pp.reduce((a,m)=>a+m.items.reduce((x,i)=>x+i.kcal,0),0),bk=b.items.reduce((x,i)=>x+i.kcal,0);
     return [b.items.map(i=>i.fid).sort(),b.usual,Math.abs(kc-2400)/2400<0.06,Math.abs(bk-2400*0.25)/(2400*0.25)<=0.2,
       pp.some(m=>m.items.some(i=>i.fid==="rice_basmati")),pp.some(m=>m.items.some(i=>i.fid==="rice_egyptian"))];});
   eq(r,[["baladi","egg_boiled","ful"],4,true,true,true,false],"their breakfast, scaled; their rice");
   const txt=await page.textContent("body");
-  if(!/Your usual: logged on 4 days/.test(txt))throw new Error("no word that the breakfast is their usual");
-  if(!/of the day's \d+ foods are ones you log/.test(txt))throw new Error("no count of their own foods");
+  if(!/Your usual: 4 days in the last 4 weeks/.test(txt))throw new Error("no word that the breakfast is their usual");
+  if(!/\d+ of \d+ foods are ones you eat/.test(await page.textContent('.prown')))throw new Error("no count of their own foods");
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";(await import("/js/i18n/exnames.js")).applyLang();(await import("/js/ui/render.js")).render();});
   await pause(page,200);
-  if(!/وجبتك المعتادة: سجّلتها 4 أيام/.test(await page.textContent("body")))throw new Error("no Arabic note");
+  if(!/معتادك: 4 أيام في آخر 4 أسابيع/.test(await page.textContent("body")))throw new Error("no Arabic note");
 });
 await test("Meal plan: a day built from the targets, within 5%, servings as labels, diet and leave-outs respected",async page=>{
   const r=await page.evaluate(async()=>{
@@ -3044,14 +3047,11 @@ await test("Coach chat: tomorrow's workout and how the last one went",async page
   if(!(await page.$('.chat-acts [data-openday]')))throw new Error("no way to the session");
 });
 /* ---- the new look: the top of Training, capsule bars (views/home.js, views/progress.js) ---- */
-await test("Training: the bell says what the coach noticed and opens it; the initial opens Profile",async page=>{
+await test("Training: no bell (the dock's Coach tab is that, with its dot); the initial opens Profile",async page=>{
   await tapTab(page,"train");await pause(page);
   const n=await ev(page,"V.advice");
-  const b=await page.$eval('.hacts [data-csec="ai"]',e=>[e.classList.contains("flag"),e.getAttribute("aria-label")]);
-  eq(b[0],n>0,"the dot is there exactly when there is something");
-  if(n>0&&b[1].indexOf(String(n))<0)throw new Error("the count is not in its name: "+b[1]);
-  await page.tap('.hacts [data-csec="ai"]');await pause(page,400);
-  eq(await ev(page,"V.tab"),"coach","the bell opens the Coach page");
+  eq(await page.$$eval('.hacts [data-csec]',a=>a.length),0,"no second way to the Coach page");
+  eq(await page.$eval('nav .dock-b[data-tab="coach"]',e=>e.classList.contains("advice")),n>0,"the dock's Coach tab carries the dot when there is something");
   await tapTab(page,"train");await pause(page);
   await page.tap('.hacts .havatar');await pause(page,400);
   eq(await ev(page,"V.tab"),"profile","the initial opens Profile");
@@ -4450,15 +4450,15 @@ await test("Guide: the first time Training opens, glass tips point at each thing
   if(!c)throw new Error("no guide on first opening");
   /* Rewritten 3 Nov (owner: "I didn't understand what the buttons do"): how the app fits
      together first, in the middle of the screen, then each thing and what a tap does. */
-  eq([c.k,c.h,c.hole],["Training · 1 of 10","How Bunyan works",[0,0]],"the first tip: the app as a whole, nothing lit");
+  eq([c.k,c.h,c.hole],["Training · 1 of 9","How Bunyan works",[0,0]],"the first tip: the app as a whole, nothing lit");
   if(!/Four tabs at the bottom/.test(await page.textContent('.tour-p')))throw new Error("the overview does not say the tabs");
   eq(await ev(page,"V.tab"),"train","the page under it is untouched");
   /* Anywhere: even over a button, a tap only moves the guide on. */
   const seen=[c.h];let bellHole=null;
-  for(let i=0;i<9;i++){await page.mouse.click(30+i*30,300+i*30);await pause(page,500);c=await card();if(c){seen.push(c.h);if(c.h==="Coach's notes")bellHole=c.hole;}}
-  eq(seen,["How Bunyan works","Your week","Today","Your program","Weight and steps","Cardio and sports","Coach's notes","Profile","Ask the coach","The tabs"],"each thing, in turn");
-  const bell=await page.$eval('.hacts [data-csec="ai"]',e=>{const r=e.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];});
-  if(!bellHole||Math.abs(bellHole[0]-bell[0]-16)>2||Math.abs(bellHole[1]-bell[1]-16)>2)throw new Error("the light is not on the bell: "+JSON.stringify([bellHole,bell]));
+  for(let i=0;i<8;i++){await page.mouse.click(30+i*30,300+i*30);await pause(page,500);c=await card();if(c){seen.push(c.h);if(c.h==="Profile")bellHole=c.hole;}}
+  eq(seen,["How Bunyan works","Your week","Today","Your program","Weight and steps","Cardio and sports","Profile","Ask the coach","The tabs"],"each thing, in turn");
+  const bell=await page.$eval('.hacts .havatar',e=>{const r=e.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];});
+  if(!bellHole||Math.abs(bellHole[0]-bell[0]-16)>2||Math.abs(bellHole[1]-bell[1]-16)>2)throw new Error("the light is not on the picture: "+JSON.stringify([bellHole,bell]));
   eq(await ev(page,"[V.tab,V.sheet]"),["train",null],"no tap reached the page");
   await page.mouse.click(200,200);await pause(page,600);
   eq([await card(),await ev(page,"S.prefs.toured.train")],[null,3],"finished, and remembered (at the guide's version)");
@@ -4470,7 +4470,7 @@ await test("Guide: the first time Training opens, glass tips point at each thing
   await page.evaluate(()=>localStorage.removeItem("bunyan:notour"));
   await page.$eval('[data-tourreset]',e=>e.click());await pause(page,1800);
   c=await card();
-  eq([await ev(page,"V.tab"),c&&c.k],["train","Training · 1 of 10"],"back from the start");
+  eq([await ev(page,"V.tab"),c&&c.k],["train","Training · 1 of 9"],"back from the start");
   await page.click('.tour-skip');await pause(page,500);
   eq([await card(),await ev(page,"S.prefs.toured.train")],[null,3],"Skip ends it, seen");
 },{tour:true});
@@ -4528,23 +4528,28 @@ await test("Plan pages: a sideways swipe moves between the tabs on Training and 
   await coach(page,"train","program");y=await paneY();
   await drag(60,y,330,y+4);eq(await ev(page,"V.tplan"),"programs","Arabic: swipe right for the next tab");
 });
-await test("Plan pages: opening one slides it in over Training while Training eases back; back slides it off; a tab tap keeps its own entrance; reduced motion has neither",async page=>{
+await test("Plan pages: opening one, Training and the plan page travel together edge to edge (no fading: frosted cards lose their blur under a fade); back the other way; a tab tap slides its tabs the same way; a tab change is its own; reduced motion has none",async page=>{
   await tapTab(page,"train");await pause(page,600);
-  const ghost=()=>page.evaluate(()=>{const g=document.querySelector(".pghost");return g?[!!g.querySelector(".pgc"),g.getAttribute("aria-hidden"),getComputedStyle(g).pointerEvents,document.querySelectorAll("#app").length>=1&&document.getElementById("app")!==g]:null;});
-  await page.tap('.pgc [data-tplan="program"]');await pause(page,120);
-  eq(await ghost(),[true,"true","none",true],"Training stays as a still copy, out of reach, under the new page");
-  eq(await page.evaluate(()=>document.getElementById("app").getAnimations().length>0),true,"the new page is moving in");
+  const copy=()=>page.evaluate(()=>{const g=document.querySelector(".stillcopy");if(!g)return null;
+    const a=g.getAnimations(),k=a[0]&&a[0].effect.getKeyframes();
+    return [g.getAttribute("aria-hidden"),getComputedStyle(g).pointerEvents,!!k&&k.every(f=>f.opacity==null),document.getElementById("app")!==g];});
+  await page.tap('.pgc [data-tplan="program"]');await pause(page,100);
+  eq(await copy(),["true","none",true,true],"Training as a still copy, out of reach, moving without a fade");
+  eq(await page.evaluate(()=>{const a=document.getElementById("app").getAnimations();return a.length>0&&a[0].effect.getKeyframes().every(f=>f.opacity==null);}),true,"the plan page moving in, no fade");
   await pause(page,900);
-  eq(await page.evaluate(()=>[!!document.querySelector(".pghost"),document.documentElement.classList.contains("pgmoving"),document.getElementById("app").classList.contains("pgfront")]),[false,false,false],"and gone when it lands");
-  await page.tap('#app .dhead [data-back]');await pause(page,120);
-  eq(await page.evaluate(()=>{const g=document.querySelector(".pghost");return g?[!!g.querySelector(".psecs"),+getComputedStyle(g).zIndex>0]:null;}),[true,true],"back: the plan page slides off over Training");
+  eq(await page.evaluate(()=>[!!document.querySelector(".stillcopy"),document.documentElement.classList.contains("pgmoving"),document.getElementById("app").classList.contains("pgfront")]),[false,false,false],"and gone when it lands");
+  await page.tap('.psecs [data-tplan="programs"]');await pause(page,80);
+  eq(await page.evaluate(()=>{const g=document.querySelector(".stillcopy");return !!g&&!!g.querySelector(".bsched,.drows");}),true,"a tab tap: My program slides out as Programs comes in");
+  await pause(page,700);
+  await page.tap('#app .dhead [data-back]');await pause(page,100);
+  eq(await page.evaluate(()=>{const g=document.querySelector(".stillcopy");return !!g&&!!g.querySelector(".psecs");}),true,"back: the plan page goes the other way");
   await pause(page,900);
   eq(await ev(page,"[V.tab,V.train]"),["train","days"],"on Training");
   await tapTab(page,"food");await pause(page,100);
-  eq(await page.evaluate(()=>!!document.querySelector(".pghost")),false,"a tab change is not a page push");
+  eq(await page.evaluate(()=>!!document.querySelector(".stillcopy")),false,"a tab change is not a page push");
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=false;(await import("/js/ui/render.js")).render();});
   await page.tap('#app [data-fplan="plan"]');await pause(page,60);
-  eq(await page.evaluate(()=>!!document.querySelector(".pghost")),false,"reduced motion: no slide");
+  eq(await page.evaluate(()=>!!document.querySelector(".stillcopy")),false,"reduced motion: no slide");
 },{prefs:{anim:true}});
 await test("Schedule: one card — the choice with icons, then the week it makes: in rotation the days in order and round again, by weekday each day's number on its weekday; the page line names the weekdays alike",async page=>{
   await coach(page,"train","program");
@@ -4654,12 +4659,38 @@ await test("Copy in: a plan another Bunyan user shared works in Food's Copy in a
   await page.tap('#sheet [data-rplanadd="keep"]');await pause(page,400);
   eq(await ev(page,"[S.programs.length,S.programs[S.programs.length-1].name]"),[n+1,"Omar's split"],"added to my programs");
 });
-await test("My program: Copy in a program sits right above Share my program, as Copy in a plan does above Share my meal plan",async page=>{
+await test("My program: switch and share are icons by the name, Workout settings the gear at the top right, the training block at the foot; no list of buttons under it",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/engine/schedule.js"),U=await import("/js/util.js");
+    st.S.block={start:sc.weekStartOf(U.today())};st.saveDB();});
   await coach(page,"train","program");
-  const rows=await page.$$eval('#app .plset .srow',a=>a.map(r=>r.getAttribute("data-timport")?"in":(r.getAttribute("data-shareplan")||"").startsWith("p:")?"share":r.getAttribute("data-tplan")||r.getAttribute("data-sheet")));
-  eq(rows,["programs","set_training","in","share"],"switch, settings, then in and out together");
-  await page.tap('#app .plset [data-timport]');await pause(page,400);
-  eq(await page.textContent('#app .dhead-t'),"Copy in a program","it opens the Copy in screen");
+  eq(await page.evaluate(()=>[!!document.querySelector('.bname-a [data-tplan="programs"]'),!!document.querySelector('.bname-a [data-shareplan^="p:"]'),
+    !!document.querySelector('.dhead .dhead-a[data-sheet="set_training"]'),!document.querySelector('#app .plset'),!document.querySelector('#app .psec [data-timport]')]),
+    [true,true,true,true,true],"icons, the gear, and no Copy in or settings list here");
+  eq(await page.evaluate(()=>{const p=document.querySelector('#app .psec'),b=p.querySelector('.blk');return !!b&&b===p.lastElementChild;}),true,"the block is last");
+  await page.tap('.dhead-a');await pause(page,500);
+  eq(await ev(page,"V.sheet"),"set_training","the gear opens Workout settings");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  await page.tap('.bname-a [data-tplan="programs"]');await pause(page,500);
+  eq(await ev(page,"V.tplan"),"programs","the arrows open Programs & exercises");
+});
+await test("Your meal plan: cards with what the day comes to; a food is one tap — change the amount, remove it, or swap it for one of similar nutrition, sized to the same calories and within the diet; Undo puts it back",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.diet="veg";st.saveDB();});
+  await coach(page,"food","plan");
+  await page.tap('[data-pgen]');for(let i=0;i<30&&!(await page.$('.pmeal'));i++)await pause(page,200);
+  eq(await page.evaluate(()=>[!!document.querySelector('.prsum [data-pgenmore]'),document.querySelectorAll('.prsum .plsum-r').length,!!document.querySelector('.prcta [data-puse]'),document.querySelectorAll('#app p.dsub').length]),[true,2,true,1],"one summary with Another version, Use this plan in reach, one line of words");
+  const it=await ev(page,"V.pparse[0].items[0]");
+  await page.tap('.pmrow[data-pfood="0|0"]');await pause(page,600);
+  const alts=await page.$$eval('#sheet .pf-alt',a=>a.map(b=>b.getAttribute("data-pswapto")));
+  if(alts.length<3)throw new Error("too few alternatives: "+alts.length);
+  const chk=await page.evaluate(async([alts,k0])=>{const N=await import("/js/engine/nutrition.js"),M=await import("/js/engine/mealplan.js");
+    return alts.map(a=>{const p=a.split("|"),f=N.FOODDB.find(x=>x.id===p[2]),n=N.nutritionFor(f,+p[3]);
+      return [Math.abs(n.kcal-k0)/k0<0.25,M.allowed(f,{diet:"veg"})];});},[alts,it.kcal]);
+  eq(chk.every(x=>x[0]&&x[1]),true,"each within a quarter of the calories, and vegetarian: "+JSON.stringify(chk));
+  const to=alts[0].split("|")[2];
+  await page.tap('#sheet .pf-alt');await pause(page,500);
+  eq(await ev(page,"[V.sheet,V.pparse[0].items[0].fid]"),[null,to],"swapped in its place");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"V.pparse[0].items[0].fid"),it.fid,"Undo puts the first one back");
 });
 await test("Meal plan: “Build it from my targets” lives on the meal plan page, beside Import, and opens the plan to review",async page=>{
   await coach(page,"food","plan");
@@ -4706,7 +4737,8 @@ await test("Coach page: this week's strip agrees with Training's week; the ask b
   eq(w,wk[1]?[String(wk[0]),String(wk[1])]:[],"the same workouts as the plan's week");
   const bar=await page.$eval(".cweek2-bar i",e=>parseFloat(e.style.width));
   eq(bar,wk[1]?Math.round(wk[0]/wk[1]*100):0,"the bar is the share");
-  await page.tap('.cask-in');await pause(page,400);await page.focus('#chatq');
+  eq(await page.$$eval('.cask [data-coachopen]',a=>a.length),0,"no box that opens the same chat as the Coach button");
+  await page.tap('#cfab .cfab');await pause(page,400);await page.focus('#chatq');
   eq(await page.evaluate(()=>[document.activeElement&&document.activeElement.id,!!document.querySelector("#cpanel .cp-f")]),["chatq",true],"the box has the caret");
   const bb=await (await page.$('.cp [data-coachclose]')).boundingBox();
   if(bb.y<0)throw new Error("the close is off the top of the screen");
@@ -4746,8 +4778,8 @@ await test("Food: in the evening with protein short, the body says so, lights pr
   await page.addInitScript(()=>{Date.prototype.getHours=function(){return 19;};});await page.reload();await pause(page,1200);
   await tapTab(page,"food");await pause(page,400);
   eq(await page.$eval('.fbody-h',e=>e.textContent),"Your body needs more protein.","the headline");
-  eq(await page.$$eval('.fbn',a=>a.map(x=>[x.querySelector('.fbn-k').textContent,x.classList.contains("on")])),
-    [["Protein",true],["Carbs",false],["Fat",false],["Water",false]],"four, protein lit");
+  /* One slim card under the day's numbers, no figure repeating them (owner, 3 Nov). */
+  eq(await page.evaluate(()=>[!document.querySelector('.fbody-d,.fbn'),!!document.querySelector('.fsum + .fneed'),!!document.querySelector('.fneed .fneed-i.f-p')]),[true,true,true],"protein, in one card right under the summary; no figure");
   eq(await page.$eval('.fbody-pill',e=>e.textContent),"+100 g to go","what is left, to the nearest 5 g");
   eq(await page.$$eval('.fsug-t',a=>a.length),3,"three foods");
   const before=await ev(page,"Object.values(S.days[Object.keys(S.days).sort().pop()].meals).reduce((n,m)=>n+(m.items||[]).length,0)");
@@ -4762,10 +4794,10 @@ await test("Food: in the evening with protein short, the body says so, lights pr
 await test("Food: in the morning nothing is behind yet; with water short in the afternoon, a glass is offered instead of food",async page=>{
   await page.addInitScript(()=>{Date.prototype.getHours=function(){return 9;};});await page.reload();await pause(page,1200);
   await tapTab(page,"food");await pause(page,400);
-  eq([await page.$eval('.fbody-h',e=>e.textContent),await page.$$eval('.fbn.on,.fsug-t',a=>a.length)],["Your body is on course today.",0],"on course at 9:00");
+  eq(await page.$$eval('.fneed,.fsug-t',a=>a.length),0,"on course at 9:00: no card at all");
   await page.evaluate(async()=>{Date.prototype.getHours=function(){return 17;};const s=await import("/js/state.js");
     const d=Object.keys(s.S.days).sort().pop();s.S.days[d].water=300;(await import("/js/ui/render.js")).render();});await pause(page,300);
-  eq(await page.$eval('.fbn.on .fbn-k',e=>e.textContent),"Water","water lit");
+  eq([await page.$eval('.fbody-h',e=>e.textContent),!!(await page.$('.fneed .fneed-i.f-w'))],["Your body needs more water.",true],"water is what is behind");
   const w=await ev(page,"S.days[Object.keys(S.days).sort().pop()].water");
   await page.$eval('.fbody-glass',e=>e.scrollIntoView({block:"center"}));await page.tap('.fbody-glass');await pause(page,300);
   eq(await ev(page,"S.days[Object.keys(S.days).sort().pop()].water"),w+250,"a glass added");

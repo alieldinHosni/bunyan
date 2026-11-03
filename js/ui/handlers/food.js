@@ -5,7 +5,7 @@
 import {day} from "../../data/splits.js";
 import {addItems, macroKcal, macroTargets} from "../../engine/formulas.js";
 import {importName, mealName, mealSlots, mealStyle, newSlot, ownSlot, ownSlots, planOf, setStyle, slotOf} from "../../engine/meals.js";
-import {FOODDB, gramsFor, isMeasure, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, UNIT_STEP, unitKey, unitLabel} from "../../engine/nutrition.js";
+import {FOODDB, foodName, gramsFor, isMeasure, loadFoods, lookupBarcode, normBarcode, nutritionFor, offSearch, parseFoodInput, recalcItem, resolveItem, roundUnit, toLogItem, UNIT_STEP, unitKey, unitLabel} from "../../engine/nutrition.js";
 import {parsePlan} from "../../engine/planparse.js";
 import {t} from "../../i18n/dict.js";
 import {startScan} from "../../scan.js";
@@ -16,7 +16,8 @@ import {ACT, askConfirm, askText, closeSheet, openSheet, scaleItem, val} from ".
 import {leave} from "../motion.js";
 import {goBack, pushNav} from "../nav.js";
 import {render} from "../render.js";
-import {curDate, mealNow, play, toast, V} from "../view.js";
+import {curDate, mealNow, play, tap, toast, V} from "../view.js";
+import {itemOf} from "../../engine/mealplan.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
 import {savedById} from "../views/food.js";
 import {isShared, LENT, pcAfter, readPlan, slotsFrom, topOfResults, withNotes} from "./common.js";
@@ -435,6 +436,17 @@ function register(){
     var pk=D.pirm?"items":"todo",pa2=(D.pirm||D.pidrop).split("|"),pmd=V.pparse&&V.pparse[+pa2[0]];if(!pmd)return;
     var pj=+pa2[1],gonePI=pmd[pk].splice(pj,1)[0];if(gonePI==null)return;render();
     toast((gonePI.n||gonePI)+" "+t("removed."),function(){pmd[pk].splice(Math.min(pj,pmd[pk].length),0,gonePI);render();});return;});
+  /* A food of the plan under review: its sheet (views/food.js vPlanFood). */
+  key("pfood",function(D){var a=D.pfood.split("|");loadFoods(function(){openSheet("pfood",{i:+a[0],j:+a[1]});});return;});
+  key("pfoodrm",function(){var a=V.sd||{},m=V.pparse&&V.pparse[a.i];if(!m||!m.items[a.j])return;
+    closeSheet();var gone=m.items.splice(a.j,1)[0];render();
+    toast(foodName(gone)+" "+t("removed."),function(){m.items.splice(Math.min(a.j,m.items.length),0,gone);render();});return;});
+  /* Swapped for one of the similar foods the sheet offered: the same place in the meal,
+     the amount it was sized to; Undo puts the first one back. */
+  key("pswapto",function(D){var a=D.pswapto.split("|"),i=+a[0],j=+a[1],g=+a[3],m=V.pparse&&V.pparse[i];if(!m||!m.items[j])return;
+    var f=(S.myFoods||[]).concat(FOODDB||[]).filter(function(x){return x.id===a[2];})[0];if(!f||!(g>0))return;
+    var was=m.items[j],nw=itemOf({f:f,g:g});m.items[j]=nw;closeSheet();render();tap("light");
+    toast(t("Swapped for {x}.").replace("{x}",foodName(nw)),function(){m.items[j]=was;render();});return;});
   on(function(D){return D.pmrm!==undefined&&V.pparse;},function(D){var pmi=+D.pmrm,goneM=V.pparse.splice(pmi,1)[0];if(!goneM)return;render();
     toast(importName(goneM,pmi)+" "+t("removed."),function(){V.pparse.splice(Math.min(pmi,V.pparse.length),0,goneM);render();});return;});
 

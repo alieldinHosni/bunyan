@@ -21,7 +21,7 @@ import {lockScroll, syncWorkoutState, V} from "./view.js";
 import {patch, replace} from "./patch.js";
 import {checkDock, syncDock} from "./dock.js";
 import {syncWbar} from "./wbar.js";
-import {applyMotion, countTo, glideCards, isReduced, once, snapCards} from "./motion.js";
+import {applyMotion, countTo, glideCards, isReduced, once, slidePair, snapCards, stillCopy} from "./motion.js";
 import {navDepth} from "./nav.js";
 import {applyLook} from "./theme.js";
 import {bindExSwipe} from "./exswipe.js";
@@ -79,53 +79,35 @@ function secNow(){
   if(V.tab==="train"&&V.train==="plan"&&!S.active)return "t:"+(V.tplan||"program");
   if(V.tab==="food"&&V.fplan&&V.fplan!=="foods"&&!V.smeal&&!V.pslot&&!V.pimport)return "f:"+V.fplan;
   return null;}
-function slideSection(root,moved){
-  var now=secNow(),was=lastSec,swiped=V.pswiped;lastSec=now;V.pswiped=false;
-  if(swiped||moved||!now||!was||now===was||now[0]!==was[0]||isReduced())return;
+/* Before the page is redrawn: if a plan page's tab is about to change by a tap (a swipe
+   moves its own), a still copy of the tab on show, and which way the new one comes. */
+function sectionCopy(root,moved){
+  var now=secNow(),was=lastSec;
+  if(moved||V.pswiped||!now||!was||now===was||now[0]!==was[0]||isReduced())return null;
+  var el=root.querySelector(".psec");if(!el||!el.animate)return null;
   var list=SECS[now[0]],dir=list.indexOf(now.slice(2))>list.indexOf(was.slice(2))?1:-1;
   if(document.documentElement.getAttribute("dir")==="rtl")dir=-dir;
-  var el=root.querySelector(".psec");if(!el||!el.animate)return;
-  el.animate([{transform:"translateX("+(dir*28)+"px)",opacity:0},{transform:"none",opacity:1}],
-    {duration:360,easing:"cubic-bezier(0.2, 0, 0, 1)"});}
-/* Going one page deeper within a tab, or back up (owner, 3 Nov: Training → Plan "needs
-   to be a little bit slower, and smooth"): the page you were on stays as a still copy and
-   eases back a little, dimming, while the new one slides in over it from the side, the
-   way a phone's own pages do. Back plays it the other way round: the page you leave
-   slides off over the one you return to. Transform and opacity on the copy only: the
-   page's frosted cards lose their blur under a fading parent, and the live page never
-   fades. A tab change keeps its own entrance; reduced motion has neither. */
-var lastDepth=0,lastTab="",PG_MS=600,pgTimer=0;
+  return {g:stillCopy(el),dir:dir};}
+/* After it: the new tab and the copy of the old one travel together, the way a swipe does. */
+function slideSection(root,moved,sc){
+  var swiped=V.pswiped;lastSec=secNow();V.pswiped=false;
+  if(!sc)return;
+  var el=root.querySelector(".psec");if(!el){sc.g.remove();return;}
+  slidePair(el,sc.g,(sc.dir*100)+"%",(-sc.dir*100)+"%",400,"cubic-bezier(0.22, 1, 0.36, 1)");}
+/* Going one page deeper within a tab, or back up (owner, 3 Nov: slower and smooth, then
+   "flashes … give the impression that the app is buggy"): the page you were on and the
+   new one travel together, edge to edge, the new one in from the side it lies on, the old
+   one out the other way — transform only (motion.js stillCopy, slidePair). Back plays it
+   the other way round. A tab change keeps its own entrance; reduced motion has neither. */
+var lastDepth=0,lastTab="",PG_MS=520,PG_EASE="cubic-bezier(0.25, 0.8, 0.25, 1)";
 function pageMoveOf(moved,view){
   var d=navDepth(),dd=d-lastDepth,same=V.tab===lastTab;lastDepth=d;lastTab=V.tab;
   if(!moved||!same||!dd||isReduced()||V.assess||/\/(session|run)$/.test(view))return 0;
   return dd>0?1:-1;}
-function pageGhost(appEl,dir){
-  var old=document.querySelector(".pghost");if(old)old.remove();
-  var r=appEl.getBoundingClientRect(),g=appEl.cloneNode(true);
-  g.querySelectorAll("[id]").forEach(function(e){e.removeAttribute("id");});
-  /* The copy is at rest: no press frozen on the button that opened the page. */
-  g.classList.remove("tapd");g.querySelectorAll(".tapd").forEach(function(e){e.classList.remove("tapd");});
-  g.classList.remove("pagein");g.classList.add("pghost");g.setAttribute("aria-hidden","true");g.inert=true;
-  g.style.cssText="position:fixed;left:"+r.left+"px;top:"+r.top+"px;width:"+r.width+"px;margin:0;box-sizing:border-box;pointer-events:none;z-index:"+(dir>0?0:3);
-  appEl.parentNode.insertBefore(g,appEl.nextSibling);
-  return g;}
 function pageMove(appEl,g,dir){
-  var side=document.documentElement.getAttribute("dir")==="rtl"?-1:1,ease="cubic-bezier(0.22, 0.61, 0.36, 1)";
-  document.documentElement.classList.add("pgmoving");
+  var side=document.documentElement.getAttribute("dir")==="rtl"?-1:1;
   appEl.classList.add("pgfront");
-  var a,b;
-  if(dir>0){
-    a=appEl.animate([{transform:"translateX("+(side*100)+"%)"},{transform:"none"}],{duration:PG_MS,easing:ease});
-    /* Gone before the new page has covered it: the new page's cards are glass, and the
-       old page read through them as clutter. */
-    b=g.animate([{transform:"none",opacity:1},{transform:"translateX("+(-side*10)+"%)",opacity:0,offset:.42},{transform:"translateX("+(-side*24)+"%)",opacity:0}],{duration:PG_MS,easing:ease,fill:"forwards"});}
-  else{
-    a=appEl.animate([{transform:"translateX("+(-side*24)+"%)"},{transform:"none"}],{duration:PG_MS,easing:ease});
-    b=g.animate([{transform:"none",opacity:1},{transform:"translateX("+(side*80)+"%)",opacity:0,offset:.8},{transform:"translateX("+(side*100)+"%)",opacity:0}],{duration:PG_MS,easing:ease,fill:"forwards"});}
-  clearTimeout(pgTimer);
-  var done=function(){clearTimeout(pgTimer);if(g.parentNode)g.remove();appEl.classList.remove("pgfront");
-    if(!document.querySelector(".pghost"))document.documentElement.classList.remove("pgmoving");};
-  a.onfinish=done;a.oncancel=done;pgTimer=setTimeout(done,PG_MS+200);}
+  slidePair(appEl,g,(dir*side*100)+"%",(-dir*side*100)+"%",PG_MS,PG_EASE,function(){appEl.classList.remove("pgfront");});}
 /* Which picture a place stands on: Training's first page is home; a day about to be
    started is the workout's; planning a program is training's; Coach's sections are
    their own; the assessment is Coach's. */
@@ -211,10 +193,10 @@ function render(){
      the cards it brings are new ones, not the old ones moved. */
   var exNow=S.active?V.logIdx:-1,sameEx=exNow===lastEx;lastEx=exNow;
   var before=moved||!sameEx?null:snapCards(appEl);
-  var pm=pageMoveOf(moved,view),ghost=pm?pageGhost(appEl,pm):null;
+  var pm=pageMoveOf(moved,view),ghost=pm?stillCopy(appEl):null,sc=sectionCopy(appEl,moved);
   if(moved)replace(appEl,h); else patch(appEl,h);
   glideCards(appEl,before);
-  slideSection(appEl,moved);
+  slideSection(appEl,moved,sc);
   if(ghost)pageMove(appEl,ghost,pm);
   else if(moved){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
   bindExSwipe();

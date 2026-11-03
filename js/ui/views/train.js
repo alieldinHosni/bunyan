@@ -194,7 +194,9 @@ function vTrainPlan(){
   if(V.tplan==="exercises"){V.tplan="programs";
     setTimeout(function(){var x=document.getElementById("pex");if(x)x.scrollIntoView({block:"start"});},0);}
   var ts=TPLAN.some(function(x){return x[0]===V.tplan;})?V.tplan:"program",sp=split();
-  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Training plan"))+'</h1></div>'
+  /* Workout settings is the gear at the top right, as in a phone's own apps. */
+  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Training plan"))+'</h1>'
+   +'<button class="icobtn dhead-a" data-sheet="set_training" aria-label="'+esc(t("Workout settings"))+'">'+glyph("gear")+'</button></div>'
    +'<p class="dsub">'+esc(sp?schedLine(sp):t("No program yet"))+'</p>';
   h+=seg({items:TPLAN.map(function(x){return [x[0],t(x[1])];}),value:ts,attr:"tplan",tabs:true,cls:"psecs",label:t("Training plan"),key:"tplan"});
   h+='<div class="psec" data-pswipe="tplan" data-k="psec-'+ts+'">'
@@ -755,12 +757,15 @@ function builderBody(sp,id,inline){
   var h='';
   /* On the plan page the page's own title and line say what the program is: here only its
      name, to rename, and what it holds. */
-  if(inline)h+='<div class="bname"><button class="dname" data-renamesplit="'+id+'" aria-label="'+esc(t("Rename program"))+': '+esc(planName(sp.name))+'">'
+  /* The name, to rename, with what it holds under it; beside it, as icons (owner, 3 Nov),
+     switching to another program (the Programs & exercises tab) and sharing this one. */
+  if(inline){var shareable=sp.days.some(function(d){return d.ex.length;});
+    h+='<div class="bname"><div class="bname-l"><button class="dname" data-renamesplit="'+id+'" aria-label="'+esc(t("Rename program"))+': '+esc(planName(sp.name))+'">'
     +'<h2 class="bname-t">'+esc(planName(sp.name))+'</h2><span class="ico ico-edit" aria-hidden="true"></span></button>'
     +'<span class="bname-s"><span class="num">'+nEx+'</span> '+esc(t(nEx===1?"exercise":"exercises"))+'</span></div>'
-    /* Where the program is in its training block, folded (owner, 3 Nov: on My program,
-       not on Training's card). */
-    +(active?blockCard():'');
+    +(active?'<div class="bname-a"><button class="icobtn" data-tplan="programs" aria-label="'+esc(t("Switch program"))+'">'+glyph("swap")+'</button>'
+      +(shareable?'<button class="icobtn" data-shareplan="p:'+esc(id)+'" aria-label="'+esc(t("Share my program"))+'">'+glyph("share")+'</button>':'')+'</div>':'')
+    +'</div>';}
   else h+='<div class="libhero bhero">'+HERO_ART
    +'<span class="shk">'+t(active?"Your training":"Program builder")+'</span>'
    +'<button class="dname" data-renamesplit="'+id+'" aria-label="'+esc(t("Rename program"))+': '+esc(planName(sp.name))+'">'
@@ -791,8 +796,11 @@ function builderBody(sp,id,inline){
   var phb=active?phaseNow():null;
   /* Said once a phase (owner, 3 Nov: "I should be able to acknowledge it"): Got it puts
      it away until the next phase (S.phaseSeen, per profile). */
-  if(phb&&phb.reps&&S.phaseSeen!==phb.n)h+='<div class="bphase"><p>'+esc(t("This block is {p}: your workouts use {a}–{b} reps on the lifts, as each phase sets its own. The reps below are the program's, used when training blocks are off in Settings.")
-      .replace("{p}",t(phb.name)).replace("{a}",phb.reps.min).replace("{b}",phb.reps.max)).replace(/(\d+)–(\d+)/,'<span class="num" dir="ltr">$1–$2</span>')+'</p><button class="bphase-ok" data-phaseseen="'+phb.n+'">'+esc(t("Got it"))+'</button></div>';
+  /* On the plan page it goes to the foot with the block it is about (owner, 3 Nov), so
+     the program's reps are then above it. */
+  var phNote=phb&&phb.reps&&S.phaseSeen!==phb.n?'<div class="bphase"><p>'+esc(t(inline?"This block is {p}: your workouts use {a}–{b} reps on the lifts, as each phase sets its own. The reps above are the program's, used when training blocks are off in Settings.":"This block is {p}: your workouts use {a}–{b} reps on the lifts, as each phase sets its own. The reps below are the program's, used when training blocks are off in Settings.")
+      .replace("{p}",t(phb.name)).replace("{a}",phb.reps.min).replace("{b}",phb.reps.max)).replace(/(\d+)–(\d+)/,'<span class="num" dir="ltr">$1–$2</span>')+'</p><button class="bphase-ok" data-phaseseen="'+phb.n+'">'+esc(t("Got it"))+'</button></div>':'';
+  if(!inline)h+=phNote;
   /* Edit (owner, 3 Nov: a ✕ on every row was always one slip away): the same place the
      Reorder link was, now showing both the ✕ that removes a day (with Undo) and the
      grips that move it. Out of it, the list is the plan and nothing else. */
@@ -835,18 +843,10 @@ function builderBody(sp,id,inline){
     h+='<details class="tinotes bnotes"><summary>'+t("Coach's notes")+' <span class="num">'+sp.notes.length+'</span></summary>'
      +sp.notes.map(function(n){return (n.h?'<h3>'+esc(n.h)+'</h3>':'')+(n.t||[]).map(function(l){return '<p>'+esc(l)+'</p>';}).join("");}).join("")
      +'</details>';
-  /* On the plan page, the program's settings are one list, like the meal plan's (owner,
-     3 Nov: things that belong together, together; not loose lines of text). */
-  if(active&&inline){
-    var srow=function(attr,name,sub){return '<button class="srow" '+attr+'><span class="srow-t"><span class="srow-n">'+esc(name)+'</span><span class="srow-s">'+esc(sub)+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>';};
-    return h+'<section class="sg plset"><div class="sg-list">'
-     +srow('data-tplan="programs"',t("Switch program"),t("Another of yours, or a template"))
-     +srow('data-sheet="set_training"',t("Workout settings"),t("Progression, warm-up, rest timer, equipment"))
-     /* In and out side by side, as on the meal plan (owner, 3 Nov): copy one in (a PDF,
-        text, or one another Bunyan user shared), or share this one. */
-     +srow('data-timport="1"',t("Copy in a program"),t("A PDF, pasted text, or one shared with you"))
-     +(sp.days.some(function(d){return d.ex.length;})?srow('data-shareplan="p:'+esc(id)+'"',t("Share my program"),t("With another Bunyan user")):'')
-     +'</div></section>';}
+  /* On the plan page nothing trails the program but where it is in its training block,
+     folded, at the foot (owner, 3 Nov). Switch and share are icons by the name, Workout
+     settings the gear at the top, Copy in a program on the Programs & exercises tab. */
+  if(active&&inline)return h+phNote+blockCard();
   h+='<div class="dcta">'
    /* To another Bunyan user, as it is (owner, 27 Oct): js/engine/planshare.js. */
    +(sp.days.some(function(d){return d.ex.length;})?'<button class="ddel dset" data-shareplan="p:'+esc(id)+'">'+t("Share my program")+'</button>':'')

@@ -3463,3 +3463,60 @@ program (PDF, text, or a program another Bunyan user shared) directly above Shar
 plan's does with Copy in a plan and Share my meal plan. "Share this program" is "Share my program"
 everywhere (the share sheet's title too); the coach's answer on sharing names the new places instead of
 Profile > Add a shared plan.
+
+## Motion sweep: no jumps, no flashes, a real carousel; no duplicate buttons — branch session/sweep (CACHE v211)
+
+Owner, 3 Nov: "bugs in motion when I swipe between pages, or flashes … give the impression that the app is
+buggy"; duplicate buttons for the same job. Each interaction was filmed frame by frame (CDP screencast) and
+scanned for frames that jump, flash or stall; the causes found and fixed:
+- Mid-swipe the whole background photo jumped and zoomed: a tab sliding sideways stuck out past the screen
+  and the phone widened the page to fit, rescaling everything fixed to the screen. html,body{overflow-x:clip}
+  for good (clip, not hidden: no scroll container, sticky and scrolling untouched).
+- Fades switched off the frosted cards' blur (a fading parent is a backdrop root), so cards popped between
+  frosted and plain: the old page faded under a push, a tapped tab faded in. Now nothing that holds cards
+  fades: old and new travel together edge to edge, transform only (motion.js stillCopy/slidePair) — a page
+  push, back, and a tab tap alike.
+- A swipe was sequential (old out, then new in) with empty ground under the finger: now the next tab is
+  drawn when the drag picks a direction (app.js peek) and follows the finger beside the dragged one; on
+  release both carry on together from where the finger left them, and the tab highlight with them; a nudge
+  springs both back.
+- The background photograph swapped at once when a page's ground changed: it now decodes, then crossfades.
+- Duplicates removed: the bell on Training's header (the dock's Coach tab opens the same page and carries
+  the same dot), the Coach page's "Ask your coach anything" box (the floating Coach button opens the same
+  chat; the ready questions stay), and My program's Switch program row (the Programs & exercises tab above).
+
+## Food: one summary, one slim card — branch session/foodtop (CACHE v212)
+
+Owner, 3 Nov: the summary card and the body figure showed the same numbers twice; keep one, or a mix that
+saves space for what is useful. The summary card stays (calories ring, protein/carbs/fat against the goals,
+kcal left). The figure with its four rings is gone; what it said that the summary does not is one slim card
+right under the summary (js/ui/bodyneeds.js): what is behind for the time of day, how much to go, and three
+foods that bring it in one tap (a glass, for water). Nothing behind: no card. Coach noticed stays.
+
+## Your meal plan: a review built to be changed — branch session/foodtop (CACHE v213)
+
+Owner, 3 Nov: the plan review read like a PDF; it should be easy to amend, with alternatives of similar
+nutrition or preference, well structured. views/food.js planReview (a built plan and one copied in alike):
+- One summary card: meals and foods, a verdict against the goal, calories and protein bars, Another version
+  (a built plan) and a badge with how many of its foods are ones they eat. The explanatory paragraphs went.
+- Each meal a card: its name (rename in place), calories and protein, ✕; each food one row (name, amount,
+  protein, calories) and one tap; "Your usual: n days in the last 4 weeks" as a badge; lines that matched
+  nothing with Find; + Add food.
+- A food's sheet (vPlanFood): its numbers; Change amount; Remove (Undo); Swap for something similar —
+  engine/mealplan.js similarFoods: every food the diet and exclusions allow, sized to the same calories (a
+  whole or half serving when one fits, else 5 g steps), ranked by how close protein, carbs and fat are as
+  shares of those calories, the same kind of food first, impractical amounts left out; one tap swaps it in
+  its place, with Undo.
+- Use this plan sits in reach above the dock.
+
+## My program: icons by the name, settings gear, block at the foot — branch session/progicons (CACHE v214)
+
+Owner, 3 Nov: the block card should sit at the bottom; Switch program, Share and Workout settings should be
+icons; remove "Copy in a program" (Programs & exercises already has it). views/train.js builderBody:
+- The program name row carries two round icon buttons: switch (opens Programs & exercises) and share (shown
+  once a day has exercises). The list of buttons under the plan (.plset) is gone, Copy in with it.
+- Workout settings is a gear (glyphs.js `gear`) at the top right of the Training plan header (.dhead-a,
+  margin-inline-start:auto, so it sits top left in Arabic).
+- The training block card and its phase note are the last things on My program; the note now says "the reps
+  above". Guide: 8 steps, with Switch and share and Workout settings. Tests: the My program test asserts all
+  of it.
