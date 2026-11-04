@@ -3567,3 +3567,12 @@ fails on the previous build (12 vs 24) and passes now.
   swipe's own slide (exswipe.js slideTab, from shell.js tplan/fplan): the next tab drawn beside, both
   travel the screen's width, the real tab drawn where it landed. Tapping had kept the old render-then-slide
   path with its leftover strip and offset (owner: "the same old issue if I tap the word"). CACHE v218.
+
+## Copy in a plan is a sheet — branch session/importsheet (CACHE v219)
+
+Owner, 4 Nov: the Copy in a plan page should be a pop-up from the icon. The arrow icon (and the empty
+plan's tile) open sheet "pimport" (views/food.js vImportSheet): the paste box, Open a file, Read the plan,
+the PDF's progress line. Once read (handlers/common.js toReview) the sheet goes and the plan opens one
+step in as "Check the plan" (vImport, no paste box), Back returns to the meal plan, and the pasted text is
+kept for the next time the sheet opens. Nothing found: the sheet stays with a toast. A Bunyan share
+pasted there opens its own sheet as before. Training's Copy in a program is still a page.

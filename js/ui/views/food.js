@@ -514,14 +514,9 @@ function vImport(){
      amendments, easy to find alternatives"): the title, one line, then the plan itself. */
   if(V.pgen)h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Your meal plan"))+'</h1></div>'
    +'<p class="dsub">'+esc(t("Made from your goals. Tap any food to change it or swap it."))+'</p>';
-  else h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Copy in a plan"))+'</h1></div>'
-   +'<p class="dsub">'+esc(t("Paste it from WhatsApp or Notes, open the PDF it came in, or paste the message another Bunyan user sent you. Everything is read on this phone."))+'</p>';
-  if(!V.pgen)h+='<textarea id="pi_text" class="pitext" rows="9" spellcheck="false" placeholder="'
-   +esc(t("Meal 1: 3 eggs, 2 slices toast\nMeal 2: 150g chicken, 200g rice\nMeal 3: 200g yogurt, 30g almonds"))+'">'+esc(V.pitext||"")+'</textarea>'
-   +'<div class="piacts"><label class="btn g pifile"><input id="pi_file" type="file" accept=".pdf,application/pdf,.txt,.csv,.md,text/plain,text/csv">'
-   +esc(t("Open a file"))+'</label>'
-   +'<button class="btn" data-pread="1">'+esc(t("Read the plan"))+'</button></div>';
-  if(V.pibusy)h+='<p class="pibusy" role="status"><span class="pispin" aria-hidden="true"></span>'+esc(t("Reading the PDF…"))+'</p>';
+  /* Copied in: the paste box is a sheet now (vImportSheet); this page is the review. */
+  else h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Check the plan"))+'</h1></div>'
+   +'<p class="dsub">'+esc(t("Read from what you copied in. Tap any food to change it or swap it."))+'</p>';
   if(pp){
     /* What the PDF sets for the day, beside what the app uses now. Applied with the plan
        unless switched off. */
@@ -543,6 +538,17 @@ function vImport(){
     if(!pp.length)h+='<div class="empty"><p>'+esc(t("No meals or foods were found in that text."))+'</p></div>';
     else h+=planReview(pp);}
   return h;}
+/* Copy in a plan, as a sheet over the meal plan (owner, 4 Nov: a pop-up from the icon,
+   not a page of its own): paste, or open a file; once read, the plan opens for review. */
+function vImportSheet(){
+  return '<h2>'+esc(t("Copy in a plan"))+'</h2>'
+   +'<p class="pf-n">'+esc(t("Paste it from WhatsApp or Notes, open the PDF it came in, or paste the message another Bunyan user sent you. Everything is read on this phone."))+'</p>'
+   +'<textarea id="pi_text" class="pitext" rows="7" spellcheck="false" placeholder="'
+   +esc(t("Meal 1: 3 eggs, 2 slices toast\nMeal 2: 150g chicken, 200g rice\nMeal 3: 200g yogurt, 30g almonds"))+'">'+esc(V.pitext||"")+'</textarea>'
+   +(V.pibusy?'<p class="pibusy" role="status"><span class="pispin" aria-hidden="true"></span>'+esc(t("Reading the PDF…"))+'</p>':'')
+   +'<div class="piacts"><label class="btn g pifile"><input id="pi_file" type="file" accept=".pdf,application/pdf,.txt,.csv,.md,text/plain,text/csv">'
+   +esc(t("Open a file"))+'</label>'
+   +'<button class="btn" data-pread="1">'+esc(t("Read the plan"))+'</button></div>';}
 /* The plan under review, as cards (a built plan, or one copied in): what the day comes to
    against the goals, with Another version for a built one; each meal a card of its foods,
    one tap on a food for everything that can be done to it (vPlanFood: the amount, a swap
@@ -611,4 +617,4 @@ function vPlanFood(){
 /* A meal the plan numbered keeps its number: a plan's Meal 3 after its snack is still
    Meal 3, not the fourth meal of the day. */
 
-export {foodSub, glassUnit, MICON, savedById, vFood, vMyFoods, vPlan, vPlanFood, vTargets};
+export {foodSub, glassUnit, MICON, savedById, vFood, vImportSheet, vMyFoods, vPlan, vPlanFood, vTargets};

@@ -20,7 +20,7 @@ import {closeCoach} from "../coachfab.js";
 import {render} from "../render.js";
 import {mealNow, toast, V} from "../view.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
-import {builderId, chatSend, ibPhoto, editedEx, moveRow, readTraining, requestCloseSheet, setExField, topOfResults, withNotes} from "./common.js";
+import {builderId, chatSend, ibPhoto, editedEx, moveRow, readTraining, requestCloseSheet, setExField, toReview, topOfResults, withNotes} from "./common.js";
 
 /* A weekday holds one thing: a day of the program, an activity, or rest. */
 function assignWd(n,val){
@@ -177,16 +177,14 @@ function onChange(ev){
         var box=document.getElementById("pi_text");
         if(!r.text&&!Object.keys(r.targets||{}).length){render();if(box)box.value="";
           toast(t("No meals were found in that PDF. If it is a training program, import it under Training → Plan → Programs."));return;}
-        loadFoods(function(){V.pparse=withNotes(parsePlan(V.pitext));render();
-          var b2=document.getElementById("pi_text");if(b2)b2.value=V.pitext;
-          var res=document.querySelector(".pitg,.picard");if(res)res.scrollIntoView({behavior:"smooth",block:"start"});});
+        loadFoods(function(){V.pparse=withNotes(parsePlan(V.pitext));toReview();});
       }).catch(function(){V.pibusy=false;render();
         toast(t("That PDF could not be read. Copy its text and paste it instead."));});
       return;}
     V.ptargets=null;V.psupps=null;
     var pfr=new FileReader();
     pfr.onload=function(){V.pitext=String(pfr.result||"");
-      loadFoods(function(){V.pparse=withNotes(parsePlan(V.pitext));render();});};
+      loadFoods(function(){V.pparse=withNotes(parsePlan(V.pitext));toReview();});};
     pfr.readAsText(pfile);ev.target.value="";return;}
   /* A profile picture from the camera or the gallery. */
   if(ev.target.id==="av_file"){

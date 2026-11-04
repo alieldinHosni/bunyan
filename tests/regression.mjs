@@ -961,6 +961,13 @@ await test("Plan import: pasted text becomes meals with foods; an unmatched line
   await page.fill('#pi_text',"Meal 1 (8am):\n- 3 eggs\n- 2 slices toast\nMeal 2: 150g chicken breast, 200g rice\nSnack:\n200g greek yogurt\n1 cup zorblax");
   await page.tap('[data-pread]');await pause(page,1200);
   eq(await page.$$eval('.pmeal',a=>a.length),3,"three meals found");
+  eq(await ev(page,"[V.sheet,V.pimport]"),[null,true],"read, the sheet goes and the plan opens to check");
+  /* Back from the check is the meal plan, and the copy-in sheet opens again over it. */
+  await page.tap('#app [data-back]');await pause(page,600);
+  eq(await ev(page,"[V.pimport,V.fplan]"),[false,"plan"],"back to the meal plan");
+  await page.tap('[data-pimport]');await pause(page,500);
+  eq(await ev(page,"[V.sheet,document.querySelector('#pi_text').value.indexOf('zorblax')>0]"),["pimport",true],"the text is still there");
+  await page.tap('[data-pread]');await pause(page,1200);
   await page.tap('[data-puse]');await pause(page,500);
   eq(await ev(page,"S.mealSlots.map(x=>[x.id.startsWith('m_')?'m':x.id,(x.plan||[]).length,(x.todo||[]).length])"),[["m",2,0],["m",2,0],["Snack",1,1]],"slots with plans");
   eq(await page.$$eval('.drows .drow-n',a=>a.map(x=>x.textContent)),["Meal 1","Meal 2","Snacks"],"named as the app names them");
@@ -1165,8 +1172,9 @@ await test("PDF plan: meals, daily targets and supplements are read, reviewed an
   const supp=await page.$$eval(".pmeal",a=>a[4].innerText);
   for(const w of ["Vitamin D3","1,000 IU","With a fatty meal","Magnesium","200 mg","Before bed","Zinc","15 mg"])
     if(supp.indexOf(w)<0)throw new Error("supplements lack "+w+": "+supp);
-  const box=await page.$eval("#pi_text",e=>e.value);
-  if(!/^Meal 1 \(Breakfast\):/.test(box))throw new Error("the plan text is not in the box: "+box.slice(0,60));
+  const box=await ev(page,"V.pitext");
+  if(!/^Meal 1 \(Breakfast\):/.test(box))throw new Error("the plan text was not kept: "+box.slice(0,60));
+  eq(await ev(page,"[V.sheet,V.pimport,document.querySelector('#app .dhead-t').textContent]"),[null,true,"Check the plan"],"the sheet is put away; the plan is a page to check");
   await page.tap("[data-puse]");await pause(page,500);
   eq(await ev(page,"[S.goals.kcal,S.goals.p,S.goals.c,S.goals.f,S.goals.water,S.goals.steps]"),[2200,160,230,70,2750,9000],"applied");
   eq(await page.evaluate(async()=>{const M=await import("/js/engine/meals.js");return M.mealSlots().map(x=>M.mealName(x.id));}),
@@ -4723,8 +4731,9 @@ await test("Copy in: a plan another Bunyan user shared works in Food's Copy in a
       program:{name:"Omar's split",schedule:"cycle",days:[{name:"Push",wd:[],ex:[{name:"Barbell Bench Press - Medium Grip",sets:3,lo:6,hi:10}]}]}}));
     return "Here is my plan 👇 "+code+" enjoy";});
   await coach(page,"food","plan");
-  await page.tap('[data-pimport]');await pause(page,400);
-  eq(await page.textContent('#app .dhead-t'),"Copy in a plan","the screen is named as the button");
+  await page.tap('[data-pimport]');await pause(page,500);
+  /* A sheet over the meal plan, not a page (owner, 4 Nov). */
+  eq(await ev(page,"[V.sheet,V.pimport,document.querySelector('#sheet h2').textContent]"),["pimport",false,"Copy in a plan"],"a sheet named as the button");
   await page.fill('#pi_text',msg);await page.tap('[data-pread]');await pause(page,800);
   eq(await ev(page,"[V.sheet,!!(V.sd&&V.sd.got),V.sd&&V.sd.got&&V.sd.got.from]"),["recvplan",true,"Omar"],"read as a shared plan, not as text");
   await page.tap('#sheet [data-rplanmeals]');await pause(page,400);

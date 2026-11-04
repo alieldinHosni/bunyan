@@ -5,7 +5,9 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Copy in and share": "انقل وشارك",
+var AR={"Check the plan": "راجع الخطة",
+"Read from what you copied in. Tap any food to change it or swap it.": "اتقرت من اللي نقلته. دوس على أي أكلة عشان تغيرها أو تبدلها.",
+"Copy in and share": "انقل وشارك",
 "The arrow down copies a plan in; the arrow up shares yours with another Bunyan user.": "السهم لتحت بينقل خطة جاهزة، والسهم لفوق بيشارك خطتك مع مستخدم تاني لبنيان.",
 "The gear holds how meals are named, your own foods, and a new plan made from your goals.": "الترس فيه طريقة تسمية الوجبات، وأكلاتك، وخطة جديدة معمولة من أهدافك.",
 "Your plan's tools": "أدوات خطتك",

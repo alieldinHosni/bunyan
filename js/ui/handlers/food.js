@@ -20,7 +20,7 @@ import {curDate, mealNow, play, tap, toast, V} from "../view.js";
 import {itemOf} from "../../engine/mealplan.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
 import {savedById} from "../views/food.js";
-import {isShared, LENT, pcAfter, readPlan, slotsFrom, topOfResults, withNotes} from "./common.js";
+import {isShared, LENT, pcAfter, readPlan, slotsFrom, toReview, topOfResults, withNotes} from "./common.js";
 import {has, key, on} from "./registry.js";
 
 /* Logs one food to the add-food sheet's meal and closes it. The single path for the
@@ -431,7 +431,9 @@ function register(){
     render();
     if(nL){play("set");toast(t(nL===1?"1 meal logged from your plan.":"{n} meals logged from your plan.").replace("{n}",nL));}
     else toast(t("Every planned meal is already logged today."));return;});
-  key("pimport",function(){pushNav();V.tab="food";V.pimport=true;V.pparse=null;V.pgen=null;render();window.scrollTo(0,0);return;});
+  /* Copy in a plan is a sheet over the plan (views/food.js vImportSheet); once read, the
+     plan opens as a page to check (toReview). */
+  key("pimport",function(){V.pparse=null;V.pgen=null;V.ptargets=null;V.psupps=null;openSheet("pimport");return;});
   on(function(D){return D.pirm||D.pidrop;},function(D){
     var pk=D.pirm?"items":"todo",pa2=(D.pirm||D.pidrop).split("|"),pmd=V.pparse&&V.pparse[+pa2[0]];if(!pmd)return;
     var pj=+pa2[1],gonePI=pmd[pk].splice(pj,1)[0];if(gonePI==null)return;render();
@@ -462,8 +464,7 @@ function register(){
     var txt=val("pi_text");V.pitext=txt;
     if(!txt.trim()){toast(t("Paste your plan first."));return;}
     if(isShared(txt)){readPlan(txt);return;}
-    loadFoods(function(){V.pparse=withNotes(parsePlan(txt));render();
-      var res=document.querySelector(".picard");if(res)res.scrollIntoView({behavior:"smooth",block:"start"});});
+    loadFoods(function(){V.pparse=withNotes(parsePlan(txt));toReview();});
     return;});
   key("puse",function(){
     var pp=V.pparse;if(!pp||!pp.length)return;
