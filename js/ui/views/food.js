@@ -167,8 +167,6 @@ function vFoodToday(dsel){
    +'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>'
    +esc(t("Add Food"))+' <span class="fadd-m">· '+esc(mealName(next))+'</span></button>';
 
-  h+=foodPlanCard();
-
   /* ---- water */
   var unit=glassUnit(g.water),ng=Math.max(1,Math.round(g.water/unit)),
       done=Math.min(ng,Math.floor(r.water/unit));
@@ -188,6 +186,8 @@ function vFoodToday(dsel){
    +'<i class="ico ico-plus"></i></button>')+'</div>'
    /* The strands are the day's water: the bright one runs as far as the goal is met. */
    +'<div class="fwater-art">'+waterArt(g.water?r.water/g.water:0)+'</div></div>';
+  /* The way into planning, last: the day itself first (owner, 4 Nov). */
+  h+=foodPlanCard();
   return h;}
 
 /* ---- one meal (node 13:118). Reached from a logged row above; back returns here. */

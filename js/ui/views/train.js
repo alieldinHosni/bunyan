@@ -221,7 +221,6 @@ function vTrainHome(){
   h+=trainTop();
   if(S.active)h+=resumeHero();
   else{var pd=planOn(sp,sel);h+=weekRail(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);h+=aheadCard(sp,sel);h+=missedCard(sel);}
-  if(!S.active)h+=programCard();
   h+=deloadCard()+travelCard();
   h+=bodyTiles();
   /* The last outdoor session of the fortnight (a run, a walk, a ride, a hike), as the
@@ -234,6 +233,8 @@ function vTrainHome(){
    +'<span class="ttile-tx"><span class="ttile-n">'+t("Log cardio or a sport")+'</span>'
    +'<span class="ttile-s">'+t("Track a run, a walk or a ride live, or log football, padel, classes…")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  /* The way into planning, last: today's training first (owner, 4 Nov). */
+  if(!S.active)h+=programCard();
   return h;}
 
 /* The most recent outdoor session of the last 14 days with a distance (Running,

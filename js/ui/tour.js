@@ -26,9 +26,9 @@ var GUIDES={
     {center:true,v:3,h:"How Bunyan works",p:"Four tabs at the bottom. Training: today's workout and your program. Food: what you eat against your targets. Coach: what to change this week. Progress: your results. Tap anywhere to walk through this page."},
     {sel:".wkr",v:3,h:"Your week",p:"Every day of this week with what is planned on it. Tap a day to see its workout below; tap it again to open it. The calendar button opens the whole month."},
     {sel:".thero2",v:3,h:"Today",p:"Start begins today's workout and logs your sets as you go. Change trains another day of your program instead. On a rest day you can add a session."},
-    {sel:".pgc",v:3,h:"Your program",p:"The days and exercises you follow. Tap Plan to edit your days, change when you train, switch to another program or browse exercises."},
     {sel:".htiles",v:3,h:"Weight and steps",p:"Tap Weight to log today's weight, and Steps to type today's count. Your coach reads both."},
     {sel:"[data-actsheet]",v:3,h:"Cardio and sports",p:"Log a game, a class or a swim by minutes and effort. A run, walk, ride or hike can be tracked live with your phone's GPS."},
+    {sel:".pgc",v:3,h:"Your program",p:"The days and exercises you follow. Tap Plan to edit your days, change when you train, switch to another program or browse exercises."},
     {sel:".hacts .havatar",v:3,h:"Profile",p:"Your details and targets, the app's settings, and your backups."},
     {sel:"#cfab .cfab",fixed:true,v:3,h:"Ask the coach",p:"On every page. Tap it to chat: ask anything, or tell the coach what to change, in English or Arabic."},
     {sel:"nav .dock",fixed:true,v:3,h:"The tabs",p:"Tap one to switch between Training, Food, Coach and Progress."}]},
@@ -47,9 +47,9 @@ var GUIDES={
     {sel:".fsum",v:3,h:"Today's numbers",p:"Calories eaten and left, with protein, carbs and fat against your targets."},
     {sel:".fmt",v:3,h:"Meals",p:"Tap a meal to log it as planned, change an amount or remove a food."},
     {sel:"[data-addfood]",v:3,h:"Add food",p:"Search the food list, scan a barcode, or type what you ate in words."},
-    {sel:".fpc",v:3,h:"Your plan",p:"Tap Plan for your meal plan, your daily targets and the foods you saved."},
     {sel:".fbody",v:3,h:"What you are short of",p:"What is behind for this time of day, and foods that cover it. Tap one to log it."},
-    {sel:".fwater",v:3,h:"Water",p:"Tap a glass for each one you drink."}]},
+    {sel:".fwater",v:3,h:"Water",p:"Tap a glass for each one you drink."},
+    {sel:".fpc",v:3,h:"Your plan",p:"Tap Plan for your meal plan, your daily targets and the foods you saved."}]},
   /* Food's plan page (views/food.js vFoodPlan). */
   fplan:{name:"Nutrition plan",steps:[
     {sel:".psecs",v:7,h:"Three tabs",p:"Meal plan: your meals for a day. My foods: the foods and meals you made, which a plan from your goals draws on. Daily goals: your calories and macros. Swipe left or right to switch."},

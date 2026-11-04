@@ -3634,3 +3634,6 @@ Owner, 4 Nov: "On target based on what? I didn't enter anything for that day." I
 plan's total with the goal, not what was eaten, and read as a judgement of the day. Now: label
 "Plan vs. goal"; "The plan matches your goal." / "The plan is {n} kcal under (over) your goal." on its
 own line under the label, on the plan page and on the plan under review.
+- Owner, 4 Nov: the plan cards go last — Food's "Your plan" under Water, Training's program card under
+  Log cardio or a sport — the day first, the way into planning after it. The guides follow the page
+  order. CACHE v225.

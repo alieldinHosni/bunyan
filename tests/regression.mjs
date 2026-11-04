@@ -4488,7 +4488,7 @@ await test("Guide: the first time Training opens, glass tips point at each thing
   /* Anywhere: even over a button, a tap only moves the guide on. */
   const seen=[c.h];let bellHole=null;
   for(let i=0;i<8;i++){await page.mouse.click(30+i*30,300+i*30);await pause(page,500);c=await card();if(c){seen.push(c.h);if(c.h==="Profile")bellHole=c.hole;}}
-  eq(seen,["How Bunyan works","Your week","Today","Your program","Weight and steps","Cardio and sports","Profile","Ask the coach","The tabs"],"each thing, in turn");
+  eq(seen,["How Bunyan works","Your week","Today","Weight and steps","Cardio and sports","Your program","Profile","Ask the coach","The tabs"],"each thing, in turn");
   const bell=await page.$eval('.hacts .havatar',e=>{const r=e.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];});
   if(!bellHole||Math.abs(bellHole[0]-bell[0]-16)>2||Math.abs(bellHole[1]-bell[1]-16)>2)throw new Error("the light is not on the picture: "+JSON.stringify([bellHole,bell]));
   eq(await ev(page,"[V.tab,V.sheet]"),["train",null],"no tap reached the page");
