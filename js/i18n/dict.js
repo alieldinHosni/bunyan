@@ -5,7 +5,8 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Meal plan: your daily goal, and the meals for a day against it. My foods: the foods and meals you made, which a plan from your goals draws on. Swipe left or right to switch.": "خطة الوجبات: هدفك اليومي، ووجبات اليوم قصاده. أكلاتي: الأكلات والوجبات اللي عملتها، واللي الخطة المعمولة من أهدافك بتاخد منها. اسحب يمين أو شمال عشان تبدّل.",
+var AR={"Your training routines, all in one place.": "روتينات تمرينك، كلها في مكان واحد.",
+"Meal plan: your daily goal, and the meals for a day against it. My foods: the foods and meals you made, which a plan from your goals draws on. Swipe left or right to switch.": "خطة الوجبات: هدفك اليومي، ووجبات اليوم قصاده. أكلاتي: الأكلات والوجبات اللي عملتها، واللي الخطة المعمولة من أهدافك بتاخد منها. اسحب يمين أو شمال عشان تبدّل.",
 "Calories, protein, carbs and fat for a day, with Edit to change them. Under it, what your meal plan comes to against it. How it has been going is in Progress.": "السعرات والبروتين والكارب والدهون في اليوم، و\"تعديل\" عشان تغيرهم. وتحته خطة أكلك قصاده. وإزاي ماشي معاك موجود في التقدم.",
 "This plan": "الخطة دي",
 "Plan vs. goal": "الخطة قصاد الهدف",

@@ -403,10 +403,9 @@ function weekRail(sp,sel){
    PDF, every program you own, and the templates. (Letting Bunyan build it is Coach AI's
    job, so it is not offered twice.) */
 function programsPage(){
-  /* A new program from scratch. Copying one in is the icon by My program's name now
-     (owner, 4 Nov), so this is the one way here, across the width. */
-  var h='<div class="ptiles one">'
-   +'<button class="ptile bprog" data-newsplit="1">'+art("figure",{cls:"bprog-art"})+'<span class="ptile-i">'+PLUS+'</span><b>'+t("Build a program")+'</b><span>'+t("Pick the days, fill them from the library")+'</span></button></div>';
+  /* A new program from scratch is Create, by the heading of the programs (owner, 4 Nov: "very
+     simple, just Create"); copying one in is the icon by My program's name. */
+  var h="";
   h+=programsList();
   var tpls=allSplits().filter(function(o){return !editSplit(o.id);});
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Templates")+'</h2><span class="dhint">'+t("Use one to get your own copy")+'</span></div>'
@@ -439,7 +438,8 @@ function exercisesPage(){
 /* Every program you own. The active one opens My Program; the others their builder. */
 function programsList(){
   var mine=S.activeProgram,us=S.programs||[];
-  var h='<div class="tsec"><h2 class="tsec-h">'+t("My programs")+'</h2><span class="libn">'+us.length+'</span></div><div class="drows">';
+  var h='<div class="tsec bphead"><div><h2 class="tsec-h">'+t("My programs")+'</h2><p class="bphead-s">'+esc(t("Your training routines, all in one place."))+'</p></div>'
+   +'<button class="btn sm bcreate" data-newsplit="1">'+PLUS+'<span>'+esc(t("Create"))+'</span></button></div><div class="drows">';
   us.forEach(function(sp){
     var tr=sp.days.filter(function(d){return d.ex.length;}).length,on=mine===sp.id;
     h+='<div class="drow bsp'+(on?' on':'')+'" data-k="us:'+sp.id+'">'

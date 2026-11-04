@@ -124,6 +124,15 @@ function peekFollow(s,x,toStep){
         mb=tabs?parseFloat(getComputedStyle(tabs).marginBottom)||0:0,
         mn=fc?parseFloat(getComputedStyle(fc).marginTop)||0:0,mc=cur?parseFloat(getComputedStyle(cur).marginTop)||0:0;
     if(fc)fc.style.marginTop="0px";
+    /* Scrolled down this tab, the next comes in from its top, unless it is too short for
+       the page to scroll that far: then it stands where the page will come to rest with
+       it (the end of the page), not where it could never land. */
+    var sy=window.scrollY||0;
+    if(sy>0){
+      var docH=document.documentElement.scrollHeight,vh=window.innerHeight,
+          newDoc=docH-s.p.offsetHeight+w.offsetHeight,maxS=Math.max(0,newDoc-vh),
+          paneDoc=s.base.top+sy,want=paneDoc-s.top;
+      if(want>maxS){s.top=paneDoc-maxS;if(tabk)w.style.top=s.top+"px";}}
     if(!tabk)w.style.top=(s.top+Math.max(mb,mn)-Math.max(mb,mc))+"px";
     s.nb=w;s.nbStep=step;}
   s.nb.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";}
@@ -229,7 +238,10 @@ function slidePlan(s,step){
     /* The real tab exactly where the one that came in stands: if the page had been
        scrolled down the old tab, it is moved up to it in the same frame, unseen. Easing
        the page back up to the tabs afterwards was the jump (owner, 4 Nov). */
-    if(np&&nb&&s.top!=null){var d=np.getBoundingClientRect().top-nb.getBoundingClientRect().top;if(Math.abs(d)>=1)window.scrollBy({top:d,behavior:"instant"});}
+    /* Lined up by the first thing on the tab, where the eye is: the pane's own top can sit
+       a margin away from it, differently in the page and in the copy. */
+    var ft=function(e){var c=e&&e.firstElementChild;return (c||e).getBoundingClientRect().top;};
+    if(np&&nb&&s.top!=null){var d=ft(np)-ft(nb.querySelector(".psec,.tpeek")||nb);if(Math.abs(d)>=1)window.scrollBy({top:d,behavior:"instant"});}
     if(nb)nb.remove();
     if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");};
   /* Both travel on together, edge to edge, from where the finger left them, transform
