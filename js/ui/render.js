@@ -237,7 +237,9 @@ function render(){
   glideCards(appEl,before);
   slideSection(appEl,moved,sc);
   if(ghost)pageMove(appEl,ghost,pm);
-  else if(moved){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
+  /* A swipe between the dock's tabs brought the page in itself (exswipe.js). */
+  else if(moved&&!V.tswiped){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
+  V.tswiped=false;
   bindExSwipe();
   bindMore(render);
 

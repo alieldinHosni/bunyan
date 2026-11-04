@@ -5,7 +5,14 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Your own meal": "وجبتك الخاصة",
+var AR={"Meal plan: your daily goal, and the meals for a day against it. My foods: the foods and meals you made, which a plan from your goals draws on. Swipe left or right to switch.": "خطة الوجبات: هدفك اليومي، ووجبات اليوم قصاده. أكلاتي: الأكلات والوجبات اللي عملتها، واللي الخطة المعمولة من أهدافك بتاخد منها. اسحب يمين أو شمال عشان تبدّل.",
+"Calories, protein, carbs and fat for a day, with Edit to change them. Under it, what your meal plan comes to against it. How it has been going is in Progress.": "السعرات والبروتين والكارب والدهون في اليوم، و\"تعديل\" عشان تغيرهم. وتحته خطة أكلك قصاده. وإزاي ماشي معاك موجود في التقدم.",
+"This plan": "الخطة دي",
+"Plan vs. goal": "الخطة قصاد الهدف",
+"The plan matches your goal.": "الخطة ماشية مع هدفك.",
+"The plan is {n} kcal under your goal.": "الخطة أقل من هدفك بـ {n} سعرة.",
+"The plan is {n} kcal over your goal.": "الخطة أكتر من هدفك بـ {n} سعرة.",
+"Your own meal": "وجبتك الخاصة",
 "Meal plan: your meals for a day. My foods: the foods and meals you made, which a plan from your goals draws on. Daily goals: your calories and macros. Swipe left or right to switch.": "خطة الوجبات: وجباتك في اليوم. أكلاتي: الأكلات والوجبات اللي عملتها، واللي الخطة المعمولة من أهدافك بتاخد منها. الأهداف اليومية: سعراتك والماكروز. اسحب يمين أو شمال عشان تبدّل.",
 "Put in my meal plan": "حطها في خطة أكلي",
 "{x} takes the place of what that meal holds now. Undo puts it back.": "{x} هتاخد مكان اللي في الوجبة دي دلوقتي. تراجع بيرجعها.",

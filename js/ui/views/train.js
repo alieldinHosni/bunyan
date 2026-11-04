@@ -221,7 +221,6 @@ function vTrainHome(){
   h+=trainTop();
   if(S.active)h+=resumeHero();
   else{var pd=planOn(sp,sel);h+=weekRail(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);h+=aheadCard(sp,sel);h+=missedCard(sel);}
-  if(!S.active)h+=programCard();
   h+=deloadCard()+travelCard();
   h+=bodyTiles();
   /* The last outdoor session of the fortnight (a run, a walk, a ride, a hike), as the
@@ -234,6 +233,8 @@ function vTrainHome(){
    +'<span class="ttile-tx"><span class="ttile-n">'+t("Log cardio or a sport")+'</span>'
    +'<span class="ttile-s">'+t("Track a run, a walk or a ride live, or log football, padel, classes…")+'</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  /* The way into planning, last: today's training first (owner, 4 Nov). */
+  if(!S.active)h+=programCard();
   return h;}
 
 /* The most recent outdoor session of the last 14 days with a distance (Running,
@@ -405,7 +406,7 @@ function programsPage(){
   /* A new program from scratch. Copying one in is the icon by My program's name now
      (owner, 4 Nov), so this is the one way here, across the width. */
   var h='<div class="ptiles one">'
-   +'<button class="ptile" data-newsplit="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Build a program")+'</b><span>'+t("Pick the days, fill them from the library")+'</span></button></div>';
+   +'<button class="ptile bprog" data-newsplit="1">'+art("figure",{cls:"bprog-art"})+'<span class="ptile-i">'+PLUS+'</span><b>'+t("Build a program")+'</b><span>'+t("Pick the days, fill them from the library")+'</span></button></div>';
   h+=programsList();
   var tpls=allSplits().filter(function(o){return !editSplit(o.id);});
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Templates")+'</h2><span class="dhint">'+t("Use one to get your own copy")+'</span></div>'

@@ -529,7 +529,7 @@ function register(){
     S.goals.kcal=mS.kcal;S.goals.p=mS.p;S.goals.f=mS.f;S.goals.c=mS.c;
     saveDB();render();toast(t("Targets updated."),function(){S.goals=was;saveDB();render();});return;});
   /* The macros made to add up to the calories: carbohydrate takes the difference,
-     protein and fat as typed (views/food.js vTargets). Whatever is in the fields counts. */
+     protein and fat as typed (views/food.js goalCard). Whatever is in the fields counts. */
   key("fitmacros",function(){
     var was=Object.assign({},S.goals),k=num(val("g_kcal"),S.goals.kcal),p=num(val("g_p"),S.goals.p),f=num(val("g_f"),S.goals.f);
     var c=Math.max(0,Math.round((k-p*4-f*9)/4));

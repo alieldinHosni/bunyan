@@ -347,6 +347,9 @@ function vOverview(r){
        +'<span class="pgrow-e">'+esc(ago(s.date))+'</span>'
        +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});}
 
+  /* How the eating has gone, over the range chosen above (owner, 4 Nov: from Food's goals,
+     which looked ahead; this looks back). */
+  h+=vNutrition(r,t("How you have been eating"));
   /* ---- the frame's closing banner, over the Bunyan artwork. It only says "you are
      getting stronger" when the numbers above say so. */
   h+='<button class="pgbanner" data-ptab="strength">'+art("mane",{cls:"pgbanner-art"})
@@ -523,6 +526,8 @@ function trendCard(bare){
 /* ---- Body ---------------------------------------------------------------------- */
 function vBody(r){
   var h="",wc=weightChange(),goal=(S.profile||{}).goal;
+  /* Is the target working: the weigh-ins against the goal's rate (it was on Food's goals). */
+  var tc=trendCard(true);
   /* Which way is progress for the scale depends on the goal. Maintaining, neither. */
   var gw={lose:-1,gain:1}[rateOf(goal)[0]]||0;
   h+='<div class="pgcard">';
@@ -542,6 +547,8 @@ function vBody(r){
        +esc(t("Average for the range"))+' · '+avg+' '+esc(wUnit())+'</p>';}
     else h+=tooFew(t("Fewer than two weigh-ins in this range. Pick a longer one, or weigh in again."));}
   h+='<button class="btn g" data-sheet="weigh">'+esc(t("Log weight"))+'</button></div>';
+  /* Under the weight, whether it is moving as the goal wants. */
+  h+=lbl(t("Is it working?"))+(tc||tooFew(t("Weigh in a few times over two weeks and this says whether the target is working.")));
 
   var ms=measurements();
   h+=lbl(t("Measurements"),'<button class="pglink" data-sheet="measure">'+esc(t(ms.length?"Update":"Add"))+'</button>');
@@ -604,10 +611,11 @@ function ringSvg(pct){
    +'<circle cx="24" cy="24" r="'+R+'" class="pgring-v" stroke-dasharray="'+(f*C).toFixed(1)+' '+C.toFixed(1)+'"'
    +' transform="rotate(-90 24 24)"/></svg>';}
 
-function vNutrition(r){
+/* head: the section's own name, in place of "Calorie trend", where it opens a section. */
+function vNutrition(r,head){
   var g=S.goals||{},n=nutrition(r),h="";
   var tol=Math.round(TOL*100);
-  h+=lbl(t("Calorie trend"),'<span class="pgaside">'+esc(t("today not counted"))+'</span>');
+  h+=lbl(head||t("Calorie trend"),'<span class="pgaside">'+esc(t("today not counted"))+'</span>');
   if(!n.count){
     h+=empty("chart",t("No finished days logged in this range"),
       t("A day counts once it is over. Log what you eat and yesterday shows here tomorrow."),"");

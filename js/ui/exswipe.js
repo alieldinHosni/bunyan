@@ -32,9 +32,11 @@ var EDGE=20,SLOP=10,RATIO=1.3;
 function rtl(){return document.documentElement.getAttribute("dir")==="rtl";}
 /* The exercise a drag of dx moves to: +1 next, -1 previous. */
 function stepOf(dx){var s=dx<0?1:-1;return rtl()?-s:s;}
-var SEL="[data-exswipe],[data-pswipe]";
-function pane(){return document.querySelector("#app [data-exswipe],#app [data-pswipe]");}
-function kindOf(p){return p.getAttribute("data-pswipe")||"ex";}
+var SEL="[data-exswipe],[data-pswipe],#app[data-tswipe]";
+/* The thing a swipe moves: an exercise, a plan page's tab, or, on a main tab's own page
+   (render.js marks #app data-tswipe), the page itself, between the four tabs of the dock. */
+function pane(){return document.querySelector("#app [data-exswipe],#app [data-pswipe]")||document.querySelector("#app[data-tswipe]");}
+function kindOf(p){return p.getAttribute("data-pswipe")||(p.hasAttribute("data-tswipe")?"tab":"ex");}
 /* Something between the touch and the pane that scrolls sideways keeps the touch. */
 function sideScroller(el,p){
   for(var e=el;e&&e!==p;e=e.parentElement){
@@ -46,6 +48,8 @@ function onStart(ev){
   if(!H||ev.touches.length!==1||Date.now()<lockUntil)return;
   var t0=ev.target,p=t0&&t0.closest&&t0.closest(SEL);
   if(!p||t0.closest("input,textarea,select,[contenteditable],[data-grip]")||sideScroller(t0,p))return;
+  /* On a main tab's page, the day's card and Training's week keep their own swipes. */
+  if(p.hasAttribute("data-tswipe")&&t0.closest("[data-swipe]"))return;
   var tt=ev.touches[0];
   if(tt.clientX<EDGE||tt.clientX>window.innerWidth-EDGE)return;
   /* A plan tab travels the whole screen, not its own width: by its own width the margin
@@ -65,7 +69,7 @@ function onMove(ev){
     if(st.mode==="v"){st=null;return;}
     /* Measured from here, so the pane does not jump by the slop. */
     st.x=tt.clientX;dx=0;}
-  if(ev.cancelable)ev.preventDefault();
+  if(ev.cancelable&&st.k!=="tab")ev.preventDefault();
   st.dx=dx;
   st.samples.push([Date.now(),tt.clientX]);
   if(st.samples.length>6)st.samples.shift();
@@ -105,18 +109,22 @@ function peekFollow(s,x,toStep){
       /* Scrolled down this tab, the next one comes in from its own top, at the top of the
          screen, not from as far down it as this one was; landing puts the page there. */
       s.top=Math.max(s.base.top,safeTop()+12);}
-    w.style.cssText="position:fixed;left:"+s.base.left+"px;top:"+s.top+"px;width:"+s.base.width+"px;margin:0;padding:0;max-width:none;pointer-events:none;z-index:0";
+    var tabk=s.k==="tab";
+    /* A whole page comes in from its top, at the top of the screen, with the page's own
+       padding round it; a plan tab's content sits where the tab's pane stands. */
+    if(tabk)s.top=Math.max(s.base.top,0);
+    w.style.cssText="position:fixed;left:"+s.base.left+"px;top:"+s.top+"px;width:"+s.base.width+"px;margin:0;padding:"+(tabk?getComputedStyle(s.p).padding:"0")+";max-width:none;pointer-events:none;z-index:0";
     w.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";
     document.body.appendChild(w);
     /* In the page the first card's top margin merges with the gap under the tabs; drawn
        on its own it does not, and the tab came in lower than it then landed: the page
        jumped up as it arrived (owner, 4 Nov: Programs, 12 px). Placed as the page will
        place it. */
-    var fc=w.querySelector(".psec").firstElementChild,cur=s.p.firstElementChild,tabs=tabsOf(),
+    var fc=tabk?null:w.querySelector(".psec").firstElementChild,cur=s.p.firstElementChild,tabs=tabsOf(),
         mb=tabs?parseFloat(getComputedStyle(tabs).marginBottom)||0:0,
         mn=fc?parseFloat(getComputedStyle(fc).marginTop)||0:0,mc=cur?parseFloat(getComputedStyle(cur).marginTop)||0:0;
     if(fc)fc.style.marginTop="0px";
-    w.style.top=(s.top+Math.max(mb,mn)-Math.max(mb,mc))+"px";
+    if(!tabk)w.style.top=(s.top+Math.max(mb,mn)-Math.max(mb,mc))+"px";
     s.nb=w;s.nbStep=step;}
   s.nb.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";}
 /* The tabs next door, drawn ahead while nothing is happening (owner, 3 Nov: the swipe
@@ -127,7 +135,7 @@ var pre={},preT=0;
 function buildPeek(step,k){
   var html=H.peek(step,k);if(html==null)return null;
   var w=document.createElement("div");w.id="app";w.className="stillcopy peek";w.setAttribute("aria-hidden","true");w.inert=true;
-  var p=document.createElement("div");p.className="psec";p.innerHTML=html;
+  var p=document.createElement("div");p.className=k==="tab"?"tpeek":"psec";p.innerHTML=html;
   p.querySelectorAll("[id]").forEach(function(e){e.removeAttribute("id");});
   /* Off the screen until the finger brings it, so a lazy picture would wait to load
      until it was already showing: asked for now. */
@@ -261,8 +269,14 @@ function fromOf(step){return (rtl()?-1:1)*(step>0?1:-1);}
    made every scroll in the app wait for script before it could start, on every tab.
    render() calls this after each paint; a pane already bound is left alone. */
 function bindExSwipe(){
+  /* A main tab's own page swipes as a whole; any other page does not. */
+  var app=document.getElementById("app");
+  if(app&&H&&H.root)app.toggleAttribute("data-tswipe",!!H.root());
   var p=pane();
-  if(p&&!p._exswipe){p._exswipe=true;p.addEventListener("touchmove",onMove,{passive:false});}
+  /* The whole page of a main tab listens without the power to stop a scroll (the page
+     says pan-y in CSS, so a sideways drag is not the browser's): every scroll there would
+     otherwise wait for script. */
+  if(p&&!p._exswipe){p._exswipe=true;p.addEventListener("touchmove",onMove,{passive:kindOf(p)==="tab"});}
   prepPeeks();}
 
 function initExSwipe(hooks){

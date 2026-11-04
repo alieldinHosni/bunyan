@@ -21,7 +21,6 @@ import {bodyNeeds} from "../bodyneeds.js";
 import {similarFoods} from "../../engine/mealplan.js";
 import {glyph} from "../glyphs.js";
 import {fitCh, afTile} from "./addfood.js";
-import {trendCard, vNutrition} from "./progress.js";
 
 /* ============================================================ FOOD */
 /* Meal glyphs, on the dock's grid and stroke: sun, sun on the horizon, moon, apple. A
@@ -90,15 +89,17 @@ function vFood(){
    library you log from, not a plan, so it is a page of its own, reached from the meal
    plan's list and from adding food). Back returns to Food. */
 /* Three tabs (owner, 4 Nov): the day's plan, your own foods and meals it draws on, the goals. */
-var FPLAN=[["plan","Meal plan"],["foods","My foods"],["targets","Daily goals"]];
+var FPLAN=[["plan","Meal plan"],["foods","My foods"]];
 function vFoodPlan(){
+  /* Daily goals was a tab; an old way to it lands on the meal plan, where the goal is. */
+  if(V.fplan==="targets")V.fplan="plan";
   var fs=FPLAN.some(function(x){return x[0]===V.fplan;})?V.fplan:"plan",g=S.goals||{};
   /* How meals are named is the gear at the top right, as on Training's plan page. */
   var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Nutrition plan"))+'</h1>'
    +'<button class="icobtn dhead-a" data-sheet="set_meals" aria-label="'+esc(t("Meal plan settings"))+'">'+glyph("gear")+'</button></div>'
    +'<p class="dsub">'+esc(t("{k} kcal · {p} g protein a day").replace("{k}",fmtN(Math.round(num(g.kcal)))).replace("{p}",Math.round(num(g.p))))+'</p>';
   h+=seg({items:FPLAN.map(function(x){return [x[0],t(x[1])];}),value:fs,attr:"fplan",tabs:true,cls:"psecs",label:t("Nutrition plan"),key:"fplan"});
-  h+='<div class="psec" data-pswipe="fplan" data-k="psec-'+fs+'">'+(fs==="targets"?vTargets():fs==="foods"?vMyFoods():vPlan())+'</div>';
+  h+='<div class="psec" data-pswipe="fplan" data-k="psec-'+fs+'">'+(fs==="foods"?vMyFoods():vPlan())+'</div>';
   return h;}
 /* Your plan, on Food: what is planned and the targets, the way into the plan page. */
 function foodPlanCard(){
@@ -167,8 +168,6 @@ function vFoodToday(dsel){
    +'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>'
    +esc(t("Add Food"))+' <span class="fadd-m">· '+esc(mealName(next))+'</span></button>';
 
-  h+=foodPlanCard();
-
   /* ---- water */
   var unit=glassUnit(g.water),ng=Math.max(1,Math.round(g.water/unit)),
       done=Math.min(ng,Math.floor(r.water/unit));
@@ -188,6 +187,8 @@ function vFoodToday(dsel){
    +'<i class="ico ico-plus"></i></button>')+'</div>'
    /* The strands are the day's water: the bright one runs as far as the goal is met. */
    +'<div class="fwater-art">'+waterArt(g.water?r.water/g.water:0)+'</div></div>';
+  /* The way into planning, last: the day itself first (owner, 4 Nov). */
+  h+=foodPlanCard();
   return h;}
 
 /* ---- one meal (node 13:118). Reached from a logged row above; back returns here. */
@@ -368,14 +369,16 @@ function maintSource(){
   h+='</p>';
   if(ld)h+='<button class="btn g sm tgsrc-b" data-pcfix="maint-learned">'+esc(t("Build my targets on {k} kcal").replace("{k}",fmtN(ld.learned.kcal)))+'</button>';
   return h;}
-var TRANGES=[[7,"1W"],[30,"1M"],[90,"3M"]];
-var TPAST={7:"Past 7 days",30:"Past 30 days",90:"Past 90 days"};
 /* Targets (owner, 3 Nov: "looks like a PDF", too much at once). One card says the
    target: the calories, what they are made of, water and steps, and where maintenance
    comes from. Edit opens the same card as fields; Save or Cancel closes it. The coach's
    suggestion shows only when it differs, with Use. Then whether it is working; the
    eating history folds away under one row. */
-function vTargets(){
+/* The day's goal and the meal plan against it, as one card (owner, 4 Nov: "those two could
+   be combined, and the daily goals page could be removed"). plan: what the plan comes to,
+   or null when nothing is planned. How it has been going (the weight trend, how the
+   eating has gone) is Progress's now. */
+function goalCard(plan){
   var g=S.goals,h='',pc=macroPct(g.p,g.c,g.f),sg=suggested(),ed=!!V.tgedit;
   var mk=macroKcal(g.p,g.c,g.f),gap=Math.round(num(g.kcal)-mk),fig=function(x){return '<span class="num">'+x+'</span>';};
   if(!sg)h+=energyMissing()==="no_weight"
@@ -397,6 +400,7 @@ function vTargets(){
      +'<div class="tgmac">'+[["p","Protein",g.p,pc[0]],["c","Carbs",g.c,pc[1]],["f","Fat",g.f,pc[2]]].map(function(x){
         return '<div class="'+x[0]+'"><span>'+esc(t(x[1]))+'</span><b>'+fig(x[2]+' g')+'</b><em>'+fig(x[3]+'%')+'</em></div>';}).join("")+'</div>'
      +'<div class="tgmore"><span>'+esc(t("Water"))+' <b>'+fig(fmtN(g.water))+'</b> ml</span><span>'+esc(t("Steps"))+' <b>'+fig(fmtN(g.steps))+'</b></span></div>'
+     +(plan||'')
      +(Math.abs(gap)>40?'<div class="tgwarn"><p>'+esc(t(gap>0?"Your macros add up to {m} kcal, {d} under your target.":"Your macros add up to {m} kcal, {d} over your target."))
         .replace("{m}",fig(fmtN(mk))).replace("{d}",fig(fmtN(Math.abs(gap))))+'</p><button class="btn g sm" data-fitmacros="1">'+esc(t("Fix it for me"))+'</button></div>':'')
      +(sg?'<div class="tgsrc-w">'+(same?'<p class="pgnote tgsame">'+esc(t("Matches the coach's suggestion."))+'</p>':'')+maintSource()+'</div>':'')
@@ -410,16 +414,6 @@ function vTargets(){
      +'<div class="aftiles">'+afTile("g_water",t("Water"),"ml",g.water,"0","numeric")+afTile("g_steps",t("Steps"),"",g.steps,"0","numeric")+'</div>'
      +'<div class="tgacts">'+hb('<button class="btn" data-savegoals="1">'+esc(t("Save"))+'</button>')
      +'<button class="btn g" data-tgedit="0">'+esc(t("Cancel"))+'</button></div></section>';}
-  /* Is it working: the weigh-ins against the goal. */
-  var tc=trendCard(true);
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Is it working?")+'</h2></div>'
-   +(tc||('<div class="pgcard"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Weigh in a few times over two weeks and this says whether the target is working."))+'</p>'
-    +'<button class="btn g" data-sheet="weigh">'+esc(t("Log weight"))+'</button></div>'));
-  /* How the eating has actually gone: folded, one row until asked for. */
-  var r=[7,30,90].indexOf(+V.frange)>=0?+V.frange:30,open=!!(V.fold&&V.fold.feat);
-  h+='<div class="fold tgfold'+(open?' open':'')+'"><button class="tgfold-h" data-fold="feat" aria-expanded="'+open+'"><span>'+esc(t("How you have been eating"))+'</span>'+glyph("chev","fold-chev")+'</button>'
-   +'<div class="fold-body">'+seg({items:TRANGES.map(function(x){return [x[0],t(x[1]),t(TPAST[x[0]])];}),value:r,attr:"frange",
-    soft:true,cls:"pgrange",label:t("Time range"),key:"frange"})+vNutrition(r)+'</div></div>';
   return h;}
 
 /* ---- Plan: the day's meals and what is planned for each ---------------------------
@@ -442,7 +436,9 @@ function vPlan(){
   var tot=sumNutrition(all),fig=function(x){return '<span class="num">'+x+'</span>';};
   var bar=function(cls,cur,goal){var p=goal?Math.min(1,cur/goal):0;return '<span class="plbar '+cls+'"><i style="width:'+Math.round(p*100)+'%"></i></span>';};
   var d=Math.round(tot.kcal-num(g.kcal)),near=Math.abs(d)<=Math.max(60,num(g.kcal)*0.04);
-  var verdict=!all.length?t("Nothing planned yet."):near?t("On target."):d<0?t("{n} kcal left to plan.").replace("{n}",fmtN(-d)):t("{n} kcal over your goal.").replace("{n}",fmtN(d));
+  /* The plan's own total against the goal, not what was eaten (owner, 4 Nov: "On target
+     based on what? I didn't enter anything"): said as the plan's. */
+  var verdict=!all.length?t("Nothing planned yet."):near?t("The plan matches your goal."):d<0?t("The plan is {n} kcal under your goal.").replace("{n}",fmtN(-d)):t("The plan is {n} kcal over your goal.").replace("{n}",fmtN(d));
   /* Nothing planned yet: the first thing is how to start, not a summary of nothing. */
   var tiles='<div class="ptiles">'
    +'<button class="ptile" data-pgen="1"><span class="ptile-i">'+SPARK+'</span><b>'+t("Make it from my goals")+'</b><span>'+t("A full day that adds up. You check it first.")+'</span></button>'
@@ -455,15 +451,18 @@ function vPlan(){
    +'<span class="bname-s">'+esc(t(np===1?"1 meal · {k} kcal":"{n} meals · {k} kcal").replace("{n}",np).replace("{k}",fmtN(tot.kcal)))+'</span></div>'
    +'<div class="bname-a">'+ib('data-pimport="1"',"download",t("Copy in a plan"))+ib('data-shareplan="meals"',"share",t("Share my meal plan"))
    +'</div></div>';
-  if(!all.length)h+='<section class="plstart glass"><span class="klabel">'+esc(t("Make your meal plan"))+'</span>'
-   +'<p>'+esc(t("Let the coach make a full day from your goals, or copy in a plan you already have."))+'</p>'+tiles+'</section>';
-  else h+='<section class="plsum glass"><div class="plsum-h"><span class="klabel">'+esc(t("Planned for a day"))+'</span>'
-   +'<span class="plsum-v'+(all.length&&near?' ok':'')+'">'+esc(verdict)+'</span></div>'
+  /* What the plan comes to, inside the goal's card; nothing planned yet, the card and
+     then how to start. */
+  var planBit=all.length?'<div class="tgplan"><div class="plsum-h"><span class="klabel">'+esc(t("This plan"))+'</span>'
+   +'<span class="plsum-v'+(near?' ok':'')+'">'+esc(verdict)+'</span></div>'
    +'<div class="plsum-r"><span>'+esc(t("Calories"))+'</span>'+bar("k",tot.kcal,g.kcal)+'<b>'+fig(fmtN(tot.kcal)+' / '+fmtN(g.kcal))+'</b></div>'
    +'<div class="plsum-r"><span>'+esc(t("Protein"))+'</span>'+bar("p",tot.p,g.p)+'<b>'+fig(Math.round(tot.p)+' / '+g.p+' g')+'</b></div>'
-   /* A new plan from the goals, on the plan it would replace (owner, 4 Nov); it opens to
-      check before anything changes, and draws on My foods. */
-   +'<div class="prfoot"><button class="prmore" data-pgen="1">'+glyph("spark")+'<span>'+esc(t("Rebuild from my goals"))+'</span></button></div></section>';
+   /* A new plan from the goals, on the plan it would replace; it opens to check before
+      anything changes, and draws on My foods. */
+   +'<div class="prfoot"><button class="prmore" data-pgen="1">'+glyph("spark")+'<span>'+esc(t("Rebuild from my goals"))+'</span></button></div></div>':null;
+  h+=goalCard(planBit);
+  if(!all.length)h+='<section class="plstart glass"><span class="klabel">'+esc(t("Make your meal plan"))+'</span>'
+   +'<p>'+esc(t("Let the coach make a full day from your goals, or copy in a plan you already have."))+'</p>'+tiles+'</section>';
   /* Edit shows each meal's ✕ and grip; out of it, the list is the plan. */
   h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Meals")+'</h2>'
    +(sl.length?reorderBtn("ms",ro,true):'')+'</div>';
@@ -572,7 +571,7 @@ function planReview(pp){
   pp.forEach(function(m){all=all.concat(m.items);nTodo+=m.todo.length;});
   var tot=sumNutrition(all),d=Math.round(tot.kcal-num(g.kcal)),near=Math.abs(d)<=Math.max(60,num(g.kcal)*0.04);
   var bar=function(cls,cur,goal){var q=goal?Math.min(1,cur/goal):0;return '<span class="plbar '+cls+'"><i style="width:'+Math.round(q*100)+'%"></i></span>';};
-  var verdict=near?t("On target."):d<0?t("{n} kcal under your goal.").replace("{n}",fmtN(-d)):t("{n} kcal over your goal.").replace("{n}",fmtN(d));
+  var verdict=near?t("The plan matches your goal."):d<0?t("The plan is {n} kcal under your goal.").replace("{n}",fmtN(-d)):t("The plan is {n} kcal over your goal.").replace("{n}",fmtN(d));
   var h='<section class="plsum prsum glass"><div class="plsum-h"><span class="klabel">'+esc(t(pp.length===1?"1 meal":"{n} meals").replace("{n}",pp.length)+" · "+t(all.length===1?"1 food":"{n} foods").replace("{n}",all.length))+'</span>'
    +'<span class="plsum-v'+(near?' ok':'')+'">'+esc(verdict)+'</span></div>'
    +'<div class="plsum-r"><span>'+esc(t("Calories"))+'</span>'+bar("k",tot.kcal,g.kcal)+'<b>'+fig(fmtN(tot.kcal)+' / '+fmtN(g.kcal))+'</b></div>'
@@ -631,4 +630,4 @@ function vPlanFood(){
 /* A meal the plan numbered keeps its number: a plan's Meal 3 after its snack is still
    Meal 3, not the fourth meal of the day. */
 
-export {foodSub, glassUnit, MICON, savedById, vFood, vImportSheet, vPutMeal, vMyFoods, vPlan, vPlanFood, vTargets};
+export {foodSub, glassUnit, MICON, savedById, vFood, vImportSheet, vPutMeal, vMyFoods, vPlan, vPlanFood};

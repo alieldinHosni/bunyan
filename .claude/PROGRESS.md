@@ -3627,3 +3627,47 @@ meal plan with Undo.
   own (82 passed; Plan tabs expected Targets one swipe from Meal plan, now My foods; Press found the
   helper's tab tap had not landed yet, since a tab tap now draws the tab when its slide ends). The
   coach() helper waits for the tab to land; the 17 tests that switch tabs through it pass again.
+
+## The plan's verdict says it is the plan's — branch session/ontarget (CACHE v224)
+
+Owner, 4 Nov: "On target based on what? I didn't enter anything for that day." It compared the meal
+plan's total with the goal, not what was eaten, and read as a judgement of the day. Now: label
+"Plan vs. goal"; "The plan matches your goal." / "The plan is {n} kcal under (over) your goal." on its
+own line under the label, on the plan page and on the plan under review.
+- Owner, 4 Nov: the plan cards go last — Food's "Your plan" under Water, Training's program card under
+  Log cardio or a sport — the day first, the way into planning after it. The guides follow the page
+  order. CACHE v225.
+
+## Daily goals folded into the meal plan; looking back is Progress's — branch session/goalsmerge (CACHE v226)
+
+Owner, 4 Nov: the plan-vs-goal card and the Daily goals card "could be combined, and the daily goals
+page could be removed", with How you have been eating in Progress.
+- Nutrition plan has two tabs, Meal plan · My foods. The Meal plan opens on the goal's card (views/food.js
+  goalCard: the coach's suggestion when it differs, the goal with Edit in place, macros, water and steps,
+  where maintenance comes from) and inside it "This plan": the verdict, the two bars, Rebuild from my
+  goals. Nothing planned: the card, then Make your meal plan. An old way to Daily goals (V.fplan
+  "targets") lands on the meal plan.
+- Progress → Overview ends with How you have been eating (vNutrition over Progress's own range, its first
+  heading the section's name); Progress → Body has Is it working? under the weight.
+- Tests: the helper sends "targets" to the meal plan; the plan card is clicked, not tapped (last on its
+  page, a toast or the dock can be over it on a short page); goal tests check Progress for the history;
+  the tab tests for two tabs.
+- Owner, 4 Nov: the New meal dialog "lags while opening and while disappearing". A dialog with a field
+  now opens where the keyboard leaves it (it was placed by the space left, so it opened mid-screen and
+  slid up as the keyboard rose, and back down as it went); put away, a dialog fades and shrinks a little
+  in 170 ms instead of the sheet's slide down. Build a program is the accent's glass with the standing
+  figure drawn at its edge. CACHE v227.
+
+## The dock's tabs swipe — branch session/mainswipe (CACHE v228)
+
+Owner, 4 Nov: "the same swipe structure between Train, Food, Coach and Progress, to function really
+well". On a main tab's own page (app.js atRoot: Training's day page, Food's day, the Coach page,
+Progress; no sheet, panel, workout or run) #app is marked data-tswipe and swipes as a whole, through the
+same machinery as the plan tabs (exswipe.js kind "tab"): the next tab's page drawn ahead while idle
+(app.js peek renders it as the dock's tap would leave it, then puts the state back), both pages travel
+the screen's width, and the real tab is drawn only when they land (go = the dock's tap, without the
+page entrance). The day's card and Training's week keep their own swipes; side-scrolling rows keep
+theirs; one step in, the plan page's tabs swipe instead. On the page as a whole the listener is passive
+and the page is touch-action: pan-y, so no scroll waits for script. Arabic runs the other way. Filmed:
+no flash, no jump; the next page lands where it was drawn. Test: the four tabs both ways, the last
+resisting, the day's card, and no tab swipe one step in.

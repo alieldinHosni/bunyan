@@ -84,12 +84,19 @@ async function coach(page,sec,sub){
   if(sec==="train"||sec==="food"){
     await tapTab(page,sec);await page.waitForTimeout(200);
     const attr=sec==="train"?"tplan":"fplan",first=sec==="train"?"program":"plan";
-    const card=await page.$('#app [data-'+attr+'="'+first+'"]');
-    if(card)await card.tap();
+    /* The live page, once nothing is still sliding: a still copy of a page in motion
+       carries the same markup (and id), and a tap aimed at it waits for it to go. */
+    for(let i=0;i<30&&(await page.evaluate(()=>!!document.querySelector(".stillcopy")));i++)await page.waitForTimeout(40);
+    const card=await page.$('#app:not(.stillcopy) [data-'+attr+'="'+first+'"]');
+    /* The plan cards sit last on their pages (4 Nov), where the dock or a toast can be
+       over them on a short page: the way in, clicked (a tap would wait for them to go). */
+    if(card){await card.evaluate(e=>{e.scrollIntoView({block:"center"});e.click();});}
     else await page.evaluate(async([a,f])=>{const v=await import("/js/ui/view.js");if(a==="tplan"){v.V.train="plan";v.V.tplan=f;}else v.V.fplan=f;(await import("/js/ui/render.js")).render();},[attr,first]);
     await page.waitForTimeout(250);
     /* Exercises live under Programs since 3 Nov: that tab, at the library. */
     const ex=sec==="train"&&sub==="exercises";if(ex)sub="programs";
+    /* Daily goals is on the meal plan since 4 Nov: the goal's card is its first thing. */
+    if(sec==="food"&&sub==="targets")sub="plan";
     /* My foods is the plan page's middle tab (4 Nov). */
     /* A tab tap slides, and the tab is drawn once it lands (exswipe.js slideTab). */
     if(sub&&sub!==first){await page.tap('.psecs [data-'+attr+'="'+sub+'"]');
@@ -674,7 +681,7 @@ await test("Food is the day only; the plan, targets and your own foods are plann
   await coach(page,"food","targets");
   if(!(await page.$('.tgcard [data-tgedit="1"]')))throw new Error("Targets has no target card with Edit");
   eq(await page.$$eval('.tghero',a=>a.length),0,"no copy of Food's day summary");
-  eq(await ev(page,"[V.tab,V.fplan]"),["food","targets"],"Food's plan page, its targets");
+  eq(await ev(page,"[V.tab,V.fplan]"),["food","plan"],"Food's plan page: the goal is on the meal plan (4 Nov)");
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.tab,V.fplan,!!document.querySelector('.fsum')]"),["food",null,true],"back to Food");
 });
@@ -726,7 +733,7 @@ await test("your own food: edited in My Foods, blank calories come from the macr
   await page.tap('.toast-undo');await pause(page);
   eq(await ev(page,"S.myFoods.length"),1);
 });
-await test("Targets: goals save in place, the suggestion applies, and Progress no longer has Nutrition",async page=>{
+await test("Targets: goals save in place, the suggestion applies, and how the eating has gone is in Progress (4 Nov)",async page=>{
   await coach(page,"food","targets");
   /* The target is a card; Edit opens it as fields, Save closes it (3 Nov). */
   if(await page.$('#g_kcal'))throw new Error("fields shown before Edit");
@@ -736,8 +743,8 @@ await test("Targets: goals save in place, the suggestion applies, and Progress n
   await page.tap('[data-usesug]');await pause(page);
   eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const f=await import("/js/engine/formulas.js");
     return s.S.goals.kcal===Math.round(f.targetKcal()/10)*10&&s.S.goals.kcal!==2222;}),true,"suggested applied");
-  if(!(await page.$('.pgadh'))&&!(await page.$('.empty')))throw new Error("no eating trends");
   await tapTab(page,"progress");await pause(page);
+  if(!(await page.$('.pgadh'))&&!(await page.$('#app .empty')))throw new Error("no eating trends in Progress");
   eq(await page.$$eval('[data-ptab]',a=>a.map(b=>b.getAttribute("data-ptab")).filter((v,i,x)=>x.indexOf(v)===i).sort()),["body","overview","strength"]);
 });
 
@@ -4488,7 +4495,7 @@ await test("Guide: the first time Training opens, glass tips point at each thing
   /* Anywhere: even over a button, a tap only moves the guide on. */
   const seen=[c.h];let bellHole=null;
   for(let i=0;i<8;i++){await page.mouse.click(30+i*30,300+i*30);await pause(page,500);c=await card();if(c){seen.push(c.h);if(c.h==="Profile")bellHole=c.hole;}}
-  eq(seen,["How Bunyan works","Your week","Today","Your program","Weight and steps","Cardio and sports","Profile","Ask the coach","The tabs"],"each thing, in turn");
+  eq(seen,["How Bunyan works","Your week","Today","Weight and steps","Cardio and sports","Your program","Profile","Ask the coach","The tabs"],"each thing, in turn");
   const bell=await page.$eval('.hacts .havatar',e=>{const r=e.getBoundingClientRect();return [Math.round(r.width),Math.round(r.height)];});
   if(!bellHole||Math.abs(bellHole[0]-bell[0]-16)>2||Math.abs(bellHole[1]-bell[1]-16)>2)throw new Error("the light is not on the picture: "+JSON.stringify([bellHole,bell]));
   eq(await ev(page,"[V.tab,V.sheet]"),["train",null],"no tap reached the page");
@@ -4554,9 +4561,7 @@ await test("Plan pages: a sideways swipe moves between the tabs on Training and 
   y=await paneY();
   await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"foods","Food: Meal plan → My foods");
   y=await paneY();
-  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"targets","My foods → Daily goals");
-  y=await paneY();
-  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"targets","the last tab resists");
+  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"foods","the last tab resists: Daily goals is on the meal plan now");
   /* Arabic: what comes next is on the left, so dragging right brings it. */
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});
   await coach(page,"train","program");y=await paneY();
@@ -4629,7 +4634,7 @@ await test("Meal plan: with nothing planned, how to start comes first; once plan
     !document.querySelector('.psec .bname')]),[true,true,true,true,true],"empty: Make your meal plan first, with its two ways, and no row of icons over it");
   await page.evaluate(async()=>{const st=await import("/js/state.js"),M=await import("/js/engine/meals.js");const x=M.ownSlots()[0];
     x.plan=[{n:"Eggs",kcal:300,p:24,c:2,f:20,grams:150,label:"3 eggs"}];st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,300);
-  eq(await page.evaluate(()=>[document.querySelectorAll('.plsum .plsum-r').length,!!document.querySelector('.plsum-v'),!document.querySelector('.plstart'),!document.querySelector('.plset'),
+  eq(await page.evaluate(()=>[document.querySelectorAll('.tgplan .plsum-r').length,!!document.querySelector('.plsum-v'),!document.querySelector('.plstart'),!document.querySelector('.plset'),
     [...document.querySelectorAll('.psec .bname-a .icobtn')].map(b=>Object.keys(b.dataset)[0]),document.querySelector('.psec .bname-s').textContent]),
     [2,true,true,true,["pimport","shareplan"],"1 meal · 300 kcal"],"planned: two bars and a verdict; copy in and share by the name, no list");
   /* Not touching: each icon has room of its own. */
@@ -4646,11 +4651,11 @@ await test("Meal plan: with nothing planned, how to start comes first; once plan
   await page.tap('#sheet .x[data-close]');await pause(page,600);
   eq(await page.evaluate(()=>[!!document.querySelector('#sheet .sheet'),!!document.querySelector('.sheetghost')]),[false,false],"the sheet slides away and is gone");
   /* Owner, 4 Nov: My foods is a tab, and a new plan from the goals is a button on the plan. */
-  eq(await page.$$eval('#app .psecs .seg-b',a=>a.map(b=>b.textContent)),["Meal plan","My foods","Daily goals"],"three tabs, My foods between");
+  eq(await page.$$eval('#app .psecs .seg-b',a=>a.map(b=>b.textContent)),["Meal plan","My foods"],"two tabs: the goal is on the meal plan (4 Nov)");
   await page.tap('.psecs [data-fplan="foods"]');await pause(page,800);
   eq(await ev(page,"[V.fplan,!!document.querySelector('#app .psecs'),!!document.querySelector('#app .psec [data-newmeal]')]"),["foods",true,true],"My foods is the middle tab");
   await page.tap('.psecs [data-fplan="plan"]');await pause(page,800);
-  await page.tap('.plsum [data-pgen]');await pause(page,1500);
+  await page.tap('.tgplan [data-pgen]');await pause(page,1500);
   eq(await ev(page,"[!!V.pgen,!!document.querySelector('#app .pmeal')]"),[true,true],"Rebuild from my goals, on the plan: the review");
 });
 await test("My foods and the meal plan together (owner, 4 Nov): a meal you built comes into a plan made from your goals, sized to its meal and named; and from its own page it goes into a meal of the plan, with Undo",async page=>{
@@ -4661,7 +4666,7 @@ await test("My foods and the meal plan together (owner, 4 Nov): a meal you built
     st.S.myFoods=st.S.myFoods||[];st.saveDB();return a.map(f=>f.id);});
   eq(ids.length,3,"three foods found");
   await coach(page,"food","plan");
-  await page.tap('.plstart [data-pgen], .plsum [data-pgen]');await pause(page,1500);
+  await page.tap('.plstart [data-pgen], .tgplan [data-pgen]');await pause(page,1500);
   const got=await ev(page,"(V.pparse||[]).filter(m=>m.saved==='Ful breakfast').map(m=>m.items.map(i=>i.fid).sort().join())");
   eq(got,[ids.slice().sort().join()],"the built meal is one of the day's meals, with its own foods");
   eq(await page.$$eval('.pmeal-own',a=>a.some(e=>e.textContent==="Your meal: Ful breakfast")),true,"and it says so");
@@ -4703,7 +4708,7 @@ await test("Plan swipe (owner, 4 Nov): the tab going out leaves the screen entir
   /* Unscrolled, each way on both plan pages: the first card of the tab coming in stands
      where the real one then lands (Programs' first card has a top margin of its own, and
      drawn apart from the page it came in 12 px low: the jump as it arrived). */
-  for(const [sec,from,x0,x1] of [["train","program",330,60],["food","plan",330,60],["food","targets",60,330]]){
+  for(const [sec,from,x0,x1] of [["train","program",330,60],["food","plan",330,60],["food","foods",60,330]]){
     await coach(page,sec,from);await pause(page,900);
     await page.evaluate(()=>window.scrollTo(0,0));await pause(page,200);
     await move(x0,500,x1);
@@ -4715,7 +4720,7 @@ await test("Plan swipe (owner, 4 Nov): the tab going out leaves the screen entir
   /* A tap on the tab's word is the same slide (owner, 4 Nov: tapping still showed the old
      issue): the next tab comes in beside the old one, which travels the screen's width,
      and lands where it stood. */
-  for(const [sec,from,to,attr] of [["train","program","programs","tplan"],["train","programs","program","tplan"],["food","plan","targets","fplan"],["food","targets","plan","fplan"],["food","plan","foods","fplan"]]){
+  for(const [sec,from,to,attr] of [["train","program","programs","tplan"],["train","programs","program","tplan"],["food","plan","foods","fplan"],["food","foods","plan","fplan"]]){
     await coach(page,sec,from);await pause(page,900);
     await page.evaluate(()=>window.scrollTo(0,0));await pause(page,200);
     await page.tap('#app .psecs [data-'+attr+'="'+to+'"]');await page.waitForTimeout(60);
@@ -4757,7 +4762,36 @@ await test("Opening the Exercise Library (owner, 4 Nov): the old page travels pa
   await pause(page,900);
   eq(await ev(page,"V.train"),"library","the library is open");
 });
-await test("Targets: one card says the target; Edit opens it as fields and Cancel closes it unchanged; the coach's suggestion only when it differs; the eating history folded",async page=>{
+await test("Main tabs (owner, 4 Nov): a swipe on a tab's own page moves along the dock, Training → Food → Coach → Progress and back, the next page beside it as it goes; the last resists; the day's card and the week keep their own swipes; a page one step in does not swipe tabs",async(page,env)=>{
+  const cdp=await env.ctx.newCDPSession(page);
+  const move=async(x0,y,x1,steps=12)=>{await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x0,y}]});
+    for(let i=1;i<=steps;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x0+(x1-x0)*i/steps,y}]});await page.waitForTimeout(16);}};
+  const up=async()=>{await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(900);};
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"train");await pause(page,800);
+  for(const want of ["food","coach","progress"]){
+    await move(330,650,60);
+    eq(await page.evaluate(()=>!!document.querySelector(".stillcopy.peek .tpeek")),true,"the next page beside it, to "+want);
+    await up();
+    eq(await ev(page,"[V.tab,document.querySelectorAll('.stillcopy').length,document.getElementById('app').className.includes('pagein')]"),[want,0,false],"landed on "+want+", nothing left over, no second entrance");
+    eq(await page.$eval('nav [data-tab="'+want+'"]',b=>b.classList.contains("on")||b.getAttribute("aria-current")==="page"),true,"the dock says "+want);
+  }
+  await move(330,650,60);await up();
+  eq(await ev(page,"V.tab"),"progress","the last resists");
+  await move(60,650,330);await up();
+  eq(await ev(page,"V.tab"),"coach","and back");
+  /* Food's day card changes the day, not the tab. */
+  await tapTab(page,"food");await pause(page,600);
+  const dc=await page.evaluate(()=>{const r=document.querySelector('[data-swipe="day"]').getBoundingClientRect();return Math.round(r.top+r.height/2);});
+  await move(60,dc,330);
+  eq(await page.evaluate(()=>!!document.querySelector(".stillcopy.peek")),false,"a drag on the day's card brings no tab in");
+  await up();
+  eq(await ev(page,"V.tab"),"food","a swipe on the day's card stays on Food");
+  /* One step in (the plan page), the swipe is the plan's tabs, not the dock's. */
+  await coach(page,"food","plan");await pause(page,500);
+  eq(await page.evaluate(()=>document.getElementById("app").hasAttribute("data-tswipe")),false,"the plan page is not a main tab's own page");
+});
+await test("Targets: one card says the target; Edit opens it as fields and Cancel closes it unchanged; the coach's suggestion only when it differs; the Progress has how it has been going",async page=>{
   await coach(page,"food","targets");
   const g=await ev(page,"S.goals");
   const txt=await page.textContent('.tgcard');
@@ -4768,9 +4802,15 @@ await test("Targets: one card says the target; Edit opens it as fields and Cance
   const sug=await page.evaluate(async()=>{const f=await import("/js/engine/formulas.js");return f.macroTargets();});
   const same=!!sug&&sug.kcal===g.kcal&&sug.p===g.p&&sug.c===g.c&&sug.f===g.f;
   eq(!!(await page.$('.tgoffer [data-usesug]')),!!sug&&!same,"the suggestion shows only when it differs");
-  eq(await page.evaluate(()=>{const f=document.querySelector('.tgfold');return [f.classList.contains('open'),getComputedStyle(f.querySelector('.fold-body')).display];}),[false,"none"],"history folded");
-  await page.tap('.tgfold [data-fold="feat"]');await pause(page,300);
-  eq(await page.evaluate(()=>getComputedStyle(document.querySelector('.tgfold .fold-body')).display),"block","and opens in place");
+  /* Looking back is Progress's (4 Nov): no history or trend on the plan. A weigh-in, so
+     Progress has something to show. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");(st.S.body=st.S.body||[]).push({date:U.today(),weight:80});st.saveDB();});
+  eq(await page.evaluate(()=>[!!document.querySelector('.tgfold'),!!document.querySelector('#app .pgtrend')]),[false,false],"no eating history or weight trend on the meal plan");
+  /* The dock takes no taps for a moment after the keyboard goes (render.js kbleave). */
+  await pause(page,500);await tapTab(page,"progress");await pause(page,500);
+  eq(await page.evaluate(()=>[...document.querySelectorAll('#app .pglbl h2')].some(h=>h.textContent==="How you have been eating")),true,"Progress: how you have been eating");
+  await page.tap('[data-ptab="body"]');await pause(page,800);
+  eq(await page.evaluate(()=>[...document.querySelectorAll('#app .pglbl h2')].some(h=>h.textContent==="Is it working?")),true,"Progress, Body: is it working");
 });
 await test("Plan tabs: the highlight over the tabs follows the finger while the page is dragged, and settles on the tab it lands on",async(page,env)=>{
   const cdp=await env.ctx.newCDPSession(page);
