@@ -297,9 +297,17 @@ function stillCopy(el,z){
    value) to rest, the copy from rest to `to`. done runs once, however it ends. */
 function slidePair(live,copy,from,to,ms,ease,done){
   document.documentElement.classList.add("pgmoving");
-  var fin=false,end=function(){if(fin)return;fin=true;if(copy.parentNode)copy.remove();
+  /* The new page is held where it starts by its own style until the animation has it,
+     and the animation holds where it ends until it is let go here. WebKit draws a
+     frame between asking for an animation and starting it: without the hold the new
+     page showed in its place for that frame, then jumped out to slide in (owner,
+     4 Nov: the page before "flashes" on back). */
+  live.style.transform="translateX("+from+")";
+  var a=live.animate([{transform:"translateX("+from+")"},{transform:"none"}],{duration:ms,easing:ease,fill:"forwards"});
+  var fin=false,end=function(){if(fin)return;fin=true;
+    live.style.transform="";try{a.cancel();}catch(e){}
+    if(copy.parentNode)copy.remove();
     if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");if(done)done();};
-  var a=live.animate([{transform:"translateX("+from+")"},{transform:"none"}],{duration:ms,easing:ease});
   copy.animate([{transform:"none"},{transform:"translateX("+to+")"}],{duration:ms,easing:ease,fill:"forwards"});
   a.onfinish=end;a.oncancel=end;setTimeout(end,ms+250);
   return a;}

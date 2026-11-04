@@ -196,6 +196,10 @@ window.addEventListener("popstate",function(ev){
     repush();
     return;
   }
+  /* The phone's own back swipe has already slid the page before in, natively: the app
+     drawing its own slide after it ran the move twice, a second sweep from the left
+     before the page settled (owner, 4 Nov). The page is put in place, still. */
+  V.osBack=!byControl;
   fallback();
   /* A back that landed on the app's own entry spent the spare: put it back, or the
      next back would leave the app. */
