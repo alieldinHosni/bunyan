@@ -372,6 +372,9 @@ function register(){
      tab (which logs into the sheet's meal and closes it). */
   /* A built meal into the meal plan (views/food.js vPutMeal): the meal chosen takes its
      foods in place of its own, with Undo. */
+  /* The note under the goal, put away until what it says changes (views/food.js srcNote);
+     only the note goes, nothing else is redrawn. */
+  key("tgsrcok",function(D,el){S.prefs.tgsrcSeen=D.tgsrcok;saveDB();var n=el.closest(".tgsrc-w");if(n)n.remove();return;});
   key("putmeal",function(D){openSheet("putmeal",{id:D.putmeal});return;});
   key("putin",function(D){var a=D.putin.split("|"),sm=savedById(a[0]),sl=ownSlot(a[1]);
     if(!sm||!sl||!(sm.items||[]).length)return;

@@ -369,6 +369,19 @@ function maintSource(){
   h+='</p>';
   if(ld)h+='<button class="btn g sm tgsrc-b" data-pcfix="maint-learned">'+esc(t("Build my targets on {k} kcal").replace("{k}",fmtN(ld.learned.kcal)))+'</button>';
   return h;}
+/* Where the goal comes from, under the goal's card, with Got it (owner, 4 Nov: "this
+   shouldn't appear all the time"). Put away, it stays away (per profile) until what it
+   says changes: the coach's suggestion matching or not, maintenance by formula or
+   measured from the log, or an offer to build the targets on what the log measures. */
+function srcKey(same){
+  var use=maintenanceInUse(),L=learnedNow(),
+      ld=checkPlans().some(function(f){return f.id==="maint-learned";});
+  return [same?"same":"diff",use.source||"",L.kind||"",ld?"offer":""].join("|");}
+function srcNote(same){
+  var k=srcKey(same);
+  if((S.prefs||{}).tgsrcSeen===k)return '';
+  return '<div class="tgsrc-w">'+(same?'<p class="pgnote tgsame">'+esc(t("Matches the coach's suggestion."))+'</p>':'')+maintSource()
+   +'<button class="tlink tgsrc-ok" data-tgsrcok="'+esc(k)+'">'+esc(t("Got it"))+'</button></div>';}
 /* Targets (owner, 3 Nov: "looks like a PDF", too much at once). One card says the
    target: the calories, what they are made of, water and steps, and where maintenance
    comes from. Edit opens the same card as fields; Save or Cancel closes it. The coach's
@@ -403,7 +416,7 @@ function goalCard(plan){
      +(plan||'')
      +(Math.abs(gap)>40?'<div class="tgwarn"><p>'+esc(t(gap>0?"Your macros add up to {m} kcal, {d} under your target.":"Your macros add up to {m} kcal, {d} over your target."))
         .replace("{m}",fig(fmtN(mk))).replace("{d}",fig(fmtN(Math.abs(gap))))+'</p><button class="btn g sm" data-fitmacros="1">'+esc(t("Fix it for me"))+'</button></div>':'')
-     +(sg?'<div class="tgsrc-w">'+(same?'<p class="pgnote tgsame">'+esc(t("Matches the coach's suggestion."))+'</p>':'')+maintSource()+'</div>':'')
+     +(sg?srcNote(same):'')
      +'</section>';}
   else{
     h+='<section class="tgcard tgedit glass"><div class="tgcard-h"><span class="klabel">'+esc(t("Your daily goal"))+'</span></div>'

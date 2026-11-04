@@ -3671,3 +3671,15 @@ theirs; one step in, the plan page's tabs swipe instead. On the page as a whole 
 and the page is touch-action: pan-y, so no scroll waits for script. Arabic runs the other way. Filmed:
 no flash, no jump; the next page lands where it was drawn. Test: the four tabs both ways, the last
 resisting, the day's card, and no tab swipe one step in.
+
+## Create, by My programs — branch session/createbtn (CACHE v229)
+
+Owner, 4 Nov (a mock): Build a program "could be very simple, just Create". The card is gone; My programs
+has a line under it ("Your training routines, all in one place.") and a Create button beside it.
+The Programs tab got shorter with it, and a swipe from far down My program put the tab coming in higher
+than the page could scroll to: exswipe.js now places it where the page will come to rest (the tab's
+height measured in its copy), and lands by the first thing on the tab, not the pane's edge.
+- Owner, 4 Nov: the note under the goal ("Matches the coach's suggestion. Worked out from your age…")
+  "shouldn't appear all the time". It has Got it (views/food.js srcNote): put away per profile under a
+  key of what it says (the suggestion matching or not, maintenance by formula or measured, the build-on-
+  your-log offer), so it comes back only when that changes; only the note leaves the page. CACHE v230.

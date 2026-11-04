@@ -5909,15 +5909,11 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
 /* Two ways in, side by side: a mark, a name, one line. */
 .ptiles{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);margin:var(--s3) 0 0}
 .ptiles.one{grid-template-columns:1fr}
-/* Build a program (owner, 4 Nov: "could be designed better, with a drawing or my character,
-   and transparent red"): the accent's glass, the standing figure at its edge. */
-#app .ptiles .ptile.bprog{position:relative;overflow:hidden;isolation:isolate;min-height:136px;justify-content:flex-end;padding:var(--s4);
-  background:linear-gradient(135deg,rgba(var(--accent-rgb),.34),rgba(var(--accent-rgb),.10) 70%);border:1px solid rgba(var(--accentHi-rgb),.5)}
-#app .ptile.bprog b{font-size:18px;color:var(--text)}
-#app .ptile.bprog span:not(.ptile-i){max-width:21ch;color:var(--sub)}
-#app .ptile.bprog .ptile-i{background:rgba(var(--accent-rgb),.28);color:var(--text)}
-.bprog-art{position:absolute;z-index:-1;inset-inline-end:var(--s4);bottom:calc(-1 * var(--s3));height:160px;width:auto;opacity:.6;pointer-events:none}
-[dir="rtl"] .bprog-art{transform:scaleX(-1)}
+/* My programs: its heading with what it holds under it, and Create beside it (owner, 4 Nov). */
+.bphead{align-items:center}
+.bphead-s{margin:2px 0 0;font-size:13px;color:var(--sub)}
+.bcreate{flex:none;display:inline-flex;align-items:center;gap:var(--s2);padding-inline:var(--s4)}
+.bcreate svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
 .tierr{margin:var(--s2) 0 0;font-size:13px;line-height:1.45;color:var(--warning)}
 .ptile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:var(--s3) var(--s3) var(--s4);border-radius:var(--r4);
   border:1px solid var(--card-edge);background:var(--card);color:var(--text);font:inherit;text-align:start}
@@ -5947,6 +5943,7 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
 .tgwarn{margin-top:var(--s3);padding:var(--s3);border-radius:var(--r3);background:rgba(var(--warning-rgb),.10);border:1px solid rgba(var(--warning-rgb),.28)}
 .tgwarn p{margin:0 0 var(--s2);font-size:13px;color:var(--text)}
 .tgsrc-w{margin-top:var(--s3)}
+.tgsrc-ok{display:block;margin-top:var(--s2);margin-inline-start:auto;min-height:var(--hit)}
 .tgsrc-w .pgnote{margin:0;font-size:12.5px;line-height:1.5}
 .tgsrc-w .tgsame{color:var(--ok);margin-bottom:2px}
 .tgedit .ngenergy{display:block;margin:var(--s2) 0 var(--s3)}
