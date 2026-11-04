@@ -225,6 +225,30 @@ function slidePlan(s,step){
   var a=p.animate([{transform:"translateX("+dx+"px)"},{transform:"translateX("+out+"px)"}],{duration:ms,easing:SE,fill:"forwards"});
   if(nb)nb.animate([{transform:"translateX("+(dx+(dx<0?w:-w))+"px)"},{transform:"translateX(0px)"}],{duration:ms,easing:SE,fill:"forwards"});
   a.onfinish=end;a.oncancel=end;setTimeout(end,ms+250);}
+/* A tap on a plan page's tab (or anything else there that names one, like the switch
+   icon): the same slide as a swipe let go at the start, so the two cannot look different.
+   Tapped, it used to be drawn first and then slid, with the old tab's copy only its own
+   width away and the new one placed apart from the page (owner, 4 Nov: "the same old
+   issue if I tap the word"). True when it took the change; false leaves it to the caller. */
+function slideTab(k,to){
+  var p=pane();if(!p||!H||!H.peek||isReduced()||st)return false;
+  if(kindOf(p)!==k)return false;
+  if(document.documentElement.classList.contains("pgmoving"))return true;
+  var g=tabsOf();if(!g)return false;
+  var bs=[].slice.call(g.querySelectorAll(".seg-b")),
+      from=bs.findIndex(function(b){return b.classList.contains("on");}),
+      dest=bs.findIndex(function(b){return b.getAttribute("data-"+k)===String(to);});
+  var step=dest-from;if(from<0||dest<0||!step||!H.can(step,k))return false;
+  var w=document.documentElement.clientWidth||window.innerWidth;
+  var s={p:p,k:k,mode:"h",w:w,dx:0,g:g,i0:parseFloat(g.style.getPropertyValue("--i"))||from,n:bs.length};
+  /* The sign a finger would have had for this step. */
+  var x=(step>0?-1:1)*(rtl()?-1:1);
+  peekFollow(s,x);
+  if(!s.nb)return false;
+  s.dx=x;lockUntil=Date.now()+460;
+  slidePlan(s,step);
+  return true;}
+
 /* Where an exercise change by step comes in from, on screen. */
 function fromOf(step){return (rtl()?-1:1)*(step>0?1:-1);}
 
@@ -245,4 +269,4 @@ function initExSwipe(hooks){
   document.addEventListener("click",function(ev){
     if(swallowUntil&&Date.now()<swallowUntil){swallowUntil=0;ev.preventDefault();ev.stopPropagation();}},true);}
 
-export {bindExSwipe, enter, fromOf, initExSwipe};
+export {bindExSwipe, enter, fromOf, initExSwipe, slideTab};

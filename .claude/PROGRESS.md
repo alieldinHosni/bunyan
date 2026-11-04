@@ -3563,3 +3563,7 @@ copy is a fixed box) it did not. exswipe.js peekFollow now zeroes that margin in
 where the page will (max(gap, new margin) − max(gap, current margin)); landing aligns on the copy's own
 position. The Plan swipe test compares the first card, scrolled and unscrolled, both pages, each way; it
 fails on the previous build (12 vs 24) and passes now.
+- Same day: a tap on a plan tab's word (or the switch icon, anything on the page naming a tab) now runs the
+  swipe's own slide (exswipe.js slideTab, from shell.js tplan/fplan): the next tab drawn beside, both
+  travel the screen's width, the real tab drawn where it landed. Tapping had kept the old render-then-slide
+  path with its leftover strip and offset (owner: "the same old issue if I tap the word"). CACHE v218.

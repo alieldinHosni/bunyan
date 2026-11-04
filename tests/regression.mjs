@@ -4661,6 +4661,22 @@ await test("Plan swipe (owner, 4 Nov): the tab going out leaves the screen entir
     const rl=await page.evaluate(()=>Math.round(document.querySelector("#app .psec").firstElementChild.getBoundingClientRect().top));
     if(pk==null||Math.abs(pk-rl)>1)throw new Error(sec+" from "+from+": came in at "+pk+", landed at "+rl);
   }
+  /* A tap on the tab's word is the same slide (owner, 4 Nov: tapping still showed the old
+     issue): the next tab comes in beside the old one, which travels the screen's width,
+     and lands where it stood. */
+  for(const [sec,from,to,attr] of [["train","program","programs","tplan"],["train","programs","program","tplan"],["food","plan","targets","fplan"],["food","targets","plan","fplan"]]){
+    await coach(page,sec,from);await pause(page,900);
+    await page.evaluate(()=>window.scrollTo(0,0));await pause(page,200);
+    await page.tap('#app .psecs [data-'+attr+'="'+to+'"]');await page.waitForTimeout(60);
+    const m=await page.evaluate(()=>{const n=document.querySelector(".stillcopy.peek .psec"),p=document.querySelector("#app .psec"),an=p.getAnimations()[0];
+      return [n?Math.round(n.firstElementChild.getBoundingClientRect().top):null,an?an.effect.getKeyframes().slice(-1)[0].transform:null,document.documentElement.clientWidth];});
+    if(m[0]==null)throw new Error(sec+" tap "+to+": no tab coming in beside the old one");
+    if(!m[1]||Math.abs(parseFloat(m[1].replace(/[^-\d.]/g,"")))!==m[2])throw new Error(sec+" tap "+to+": the old tab should travel the screen's width: "+m[1]);
+    await page.waitForTimeout(900);
+    const r=await ev(page,"[V."+attr+",Math.round(document.querySelector('#app .psec').firstElementChild.getBoundingClientRect().top),!!document.querySelector('.stillcopy')]");
+    eq([r[0],r[2]],[to,false],sec+": the tap lands on "+to);
+    if(Math.abs(r[1]-m[0])>1)throw new Error(sec+" tap "+to+": came in at "+m[0]+", landed at "+r[1]);
+  }
 });
 await test("How do you feel today?: on a phone each choice's word sits in the middle of its pill (owner, 4 Nov: it sat at the top), and so do the effort choices",async page=>{
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.haptic=true;st.saveDB();});await page.reload();await pause(page,1500);
