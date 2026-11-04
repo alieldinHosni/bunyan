@@ -3739,3 +3739,15 @@ causes:
   that frame, then jumped out to slide in. The new page now holds its start in its own style, and the
   animation holds its end (fill forwards) until it is let go. Chromium never showed the flash; the
   hold makes it impossible in WebKit too.
+
+## Pictures that do not flash as a page opens or a swipe lands — branch session/imgflash (CACHE v235)
+
+Owner, 4 Nov: the templates' pictures on Programs & exercises "flash when I open the page or swipe right or
+left". They are small (16–47 KB) and precached, so the cause was not the download:
+- They were loading="lazy". A lazy picture drawn afresh is not even requested until the phone has seen it
+  on screen, so every redraw showed it blank first. Templates are eager now (train.js splitCover, with
+  width and height).
+- When a swipe landed, the tab that came in was removed in the same frame as the real one was drawn, so
+  the real one's freshly made pictures were blank until decoded. The incoming tab now stays above
+  (z-index 5) until the real one's on-screen pictures are decoded, at most 200 ms (exswipe.js
+  seenImgs). The prebuilt neighbours decode their pictures ahead.

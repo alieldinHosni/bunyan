@@ -2853,6 +2853,23 @@ await test("Back (owner, 4 Nov): the phone's own back swipe has already slid the
   await pause(page,900);
   eq(await ev(page,"[V.fplan,document.getElementById('app').style.transform||'',document.getElementById('app').getAnimations().length,!!document.querySelector('.stillcopy')]"),["plan","",0,false],"landed, nothing left held");
 });
+await test("Pictures on a swipe (owner, 4 Nov): the templates' pictures are not lazy, and as a swipe lands on Programs no frame shows the real tab with a picture on screen not yet there",async(page,env)=>{
+  const cdp=await env.ctx.newCDPSession(page);
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await coach(page,"train","program");await pause(page,1200);
+  const y=await page.evaluate(()=>{window.scrollTo(0,0);const r=document.querySelector("#app .psec").getBoundingClientRect();return Math.round(Math.min(r.top+90,innerHeight-160));});
+  await page.evaluate(()=>{window.__blank=0;window.__fr=0;const t0=performance.now();const f=()=>{
+    if(!document.querySelector(".stillcopy")){const h=innerHeight,w=innerWidth;
+      for(const im of document.querySelectorAll("#app img")){const r=im.getBoundingClientRect();
+        if(r.width>0&&r.bottom>0&&r.top<h&&r.right>0&&r.left<w&&!(im.complete&&im.naturalWidth>0)){window.__blank++;break;}}}
+    window.__fr++;if(performance.now()-t0<2500)requestAnimationFrame(f);};requestAnimationFrame(f);});
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:330,y}]});
+  for(let i=1;i<=12;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:330-i*24,y}]});await page.waitForTimeout(16);}
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(2600);
+  eq(await ev(page,"V.tplan"),"programs","landed on Programs");
+  eq(await page.$$eval('#app .tcover img',a=>a.length>0&&a.every(i=>i.loading!=="lazy")),true,"the templates' pictures are not lazy");
+  eq(await page.evaluate(()=>window.__blank),0,"no frame with a picture missing");
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);

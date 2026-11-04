@@ -47,7 +47,11 @@ var SPLIT_IMG={ap:"split-ap",arnold:"split-arnold",ppl:"split-ppl",
    js/ui/cover.js) instead of borrowing another programme's picture. */
 function splitCover(sp){
   var f=SPLIT_IMG[sp.id];
-  return f?'<span class="tcover"><img src="img/'+f+'.jpg" alt="" loading="lazy"></span>'
+  /* Not lazy (owner, 4 Nov: the templates' pictures "flash" as the page opens or a swipe
+     lands). A lazy picture drawn afresh waits for the phone to see it on screen before it
+     is even asked for, so each one came in blank first. Thirteen small pictures, all
+     kept offline. */
+  return f?'<span class="tcover"><img src="img/'+f+'.jpg" alt="" width="360" height="200"></span>'
           :'<span class="tcover tcover-gen">'+programCover(sp,180,100)+'</span>';}
 
 

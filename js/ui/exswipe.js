@@ -155,6 +155,8 @@ function buildPeek(step,k){
   /* Off the screen until the finger brings it, so a lazy picture would wait to load
      until it was already showing: asked for now. */
   p.querySelectorAll('img[loading="lazy"]').forEach(function(im){im.loading="eager";});
+  /* And decoded ahead, so they are drawn as the finger brings them, not a frame after. */
+  p.querySelectorAll("img").forEach(function(im){if(im.decode)im.decode().catch(function(){});});
   w.appendChild(p);return w;}
 function takePeek(step,k){
   var c=pre[step],w=c&&c.k===k?c.w:null;pre[step]=null;
@@ -167,6 +169,13 @@ function prepPeeks(){
   preT=setTimeout(function(){idle(function(){
     if(st||pane()!==p)return;
     [-1,1].forEach(function(step){if(H.can(step,k)){var w=buildPeek(step,k);if(w)pre[step]={k:k,w:w};}});});},250);}
+/* The pictures of a page within the screen, asked for now rather than lazily. */
+function seenImgs(root){
+  var h=window.innerHeight||800,w=window.innerWidth||400,out=[];
+  root.querySelectorAll("img").forEach(function(im){
+    var r=im.getBoundingClientRect();
+    if(r.bottom>-50&&r.top<h+50&&r.right>-50&&r.left<w+50&&r.width>0){if(im.loading==="lazy")im.loading="eager";out.push(im);}});
+  return out;}
 var _sat=null;
 function safeTop(){
   if(_sat==null){var d=document.createElement("div");d.style.cssText="position:fixed;top:0;height:0;padding-top:env(safe-area-inset-top);visibility:hidden";
@@ -250,8 +259,17 @@ function slidePlan(s,step){
        a margin away from it, differently in the page and in the copy. */
     var ft=function(e){var c=e&&e.firstElementChild;return (c||e).getBoundingClientRect().top;};
     if(np&&nb&&s.top!=null){var d=ft(np)-ft(nb.querySelector(".psec,.tpeek")||nb);if(Math.abs(d)>=1)window.scrollBy({top:d,behavior:"instant"});}
-    if(nb)nb.remove();
-    if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");};
+    /* The tab that came in stays over the real one until the real one's pictures on the
+       screen are ready to draw (a fifth of a second at most): drawn fresh, a picture is
+       blank until it is decoded, and that blank was the flash as a swipe landed (owner,
+       4 Nov: Programs' templates). */
+    var ims=np?seenImgs(np):[];
+    var drop=function(){if(nb)nb.remove();
+      if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");};
+    if(!nb||!ims.length){drop();return;}
+    nb.style.zIndex="5";
+    Promise.race([Promise.all(ims.map(function(im){return im.decode?im.decode().catch(function(){}):null;})),
+      new Promise(function(r){setTimeout(r,200);})]).then(drop);};
   /* Both travel on together, edge to edge, from where the finger left them, transform
      only; nothing is drawn until they land. */
   var a=p.animate([{transform:"translateX("+dx+"px)"},{transform:"translateX("+out+"px)"}],{duration:ms,easing:SE,fill:"forwards"});
