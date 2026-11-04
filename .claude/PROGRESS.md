@@ -3627,3 +3627,10 @@ meal plan with Undo.
   own (82 passed; Plan tabs expected Targets one swipe from Meal plan, now My foods; Press found the
   helper's tab tap had not landed yet, since a tab tap now draws the tab when its slide ends). The
   coach() helper waits for the tab to land; the 17 tests that switch tabs through it pass again.
+
+## The plan's verdict says it is the plan's — branch session/ontarget (CACHE v224)
+
+Owner, 4 Nov: "On target based on what? I didn't enter anything for that day." It compared the meal
+plan's total with the goal, not what was eaten, and read as a judgement of the day. Now: label
+"Plan vs. goal"; "The plan matches your goal." / "The plan is {n} kcal under (over) your goal." on its
+own line under the label, on the plan page and on the plan under review.

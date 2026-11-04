@@ -5879,8 +5879,10 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
 /* ---- Food's plan pages, round 3 (views/food.js) -------------------------------------- */
 /* What the day's plan comes to: two bars and a verdict. */
 .plsum{text-align:start;padding:var(--s4);border-radius:var(--r4);border:1px solid var(--card-edge);background:var(--card)}
-.plsum-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s3);margin-bottom:var(--s3)}
-.plsum-v{font-size:13px;font-weight:700;color:var(--sub);text-align:end}
+/* The label, then what the plan comes to on a line of its own: side by side, a sentence
+   such as "The plan is 2,200 kcal under your goal" squeezed the label onto two lines. */
+.plsum-h{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s1);margin-bottom:var(--s3)}
+.plsum-v{font-size:14px;font-weight:700;color:var(--sub);text-align:start}
 .plsum-v.ok{color:var(--ok)}
 .plsum-r{display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:var(--s3);margin-top:var(--s2);font-size:13px;color:var(--sub)}
 .plsum-r b{font-weight:700;color:var(--text);white-space:nowrap}

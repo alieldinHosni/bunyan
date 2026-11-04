@@ -442,7 +442,9 @@ function vPlan(){
   var tot=sumNutrition(all),fig=function(x){return '<span class="num">'+x+'</span>';};
   var bar=function(cls,cur,goal){var p=goal?Math.min(1,cur/goal):0;return '<span class="plbar '+cls+'"><i style="width:'+Math.round(p*100)+'%"></i></span>';};
   var d=Math.round(tot.kcal-num(g.kcal)),near=Math.abs(d)<=Math.max(60,num(g.kcal)*0.04);
-  var verdict=!all.length?t("Nothing planned yet."):near?t("On target."):d<0?t("{n} kcal left to plan.").replace("{n}",fmtN(-d)):t("{n} kcal over your goal.").replace("{n}",fmtN(d));
+  /* The plan's own total against the goal, not what was eaten (owner, 4 Nov: "On target
+     based on what? I didn't enter anything"): said as the plan's. */
+  var verdict=!all.length?t("Nothing planned yet."):near?t("The plan matches your goal."):d<0?t("The plan is {n} kcal under your goal.").replace("{n}",fmtN(-d)):t("The plan is {n} kcal over your goal.").replace("{n}",fmtN(d));
   /* Nothing planned yet: the first thing is how to start, not a summary of nothing. */
   var tiles='<div class="ptiles">'
    +'<button class="ptile" data-pgen="1"><span class="ptile-i">'+SPARK+'</span><b>'+t("Make it from my goals")+'</b><span>'+t("A full day that adds up. You check it first.")+'</span></button>'
@@ -457,7 +459,7 @@ function vPlan(){
    +'</div></div>';
   if(!all.length)h+='<section class="plstart glass"><span class="klabel">'+esc(t("Make your meal plan"))+'</span>'
    +'<p>'+esc(t("Let the coach make a full day from your goals, or copy in a plan you already have."))+'</p>'+tiles+'</section>';
-  else h+='<section class="plsum glass"><div class="plsum-h"><span class="klabel">'+esc(t("Planned for a day"))+'</span>'
+  else h+='<section class="plsum glass"><div class="plsum-h"><span class="klabel">'+esc(t("Plan vs. goal"))+'</span>'
    +'<span class="plsum-v'+(all.length&&near?' ok':'')+'">'+esc(verdict)+'</span></div>'
    +'<div class="plsum-r"><span>'+esc(t("Calories"))+'</span>'+bar("k",tot.kcal,g.kcal)+'<b>'+fig(fmtN(tot.kcal)+' / '+fmtN(g.kcal))+'</b></div>'
    +'<div class="plsum-r"><span>'+esc(t("Protein"))+'</span>'+bar("p",tot.p,g.p)+'<b>'+fig(Math.round(tot.p)+' / '+g.p+' g')+'</b></div>'
@@ -572,7 +574,7 @@ function planReview(pp){
   pp.forEach(function(m){all=all.concat(m.items);nTodo+=m.todo.length;});
   var tot=sumNutrition(all),d=Math.round(tot.kcal-num(g.kcal)),near=Math.abs(d)<=Math.max(60,num(g.kcal)*0.04);
   var bar=function(cls,cur,goal){var q=goal?Math.min(1,cur/goal):0;return '<span class="plbar '+cls+'"><i style="width:'+Math.round(q*100)+'%"></i></span>';};
-  var verdict=near?t("On target."):d<0?t("{n} kcal under your goal.").replace("{n}",fmtN(-d)):t("{n} kcal over your goal.").replace("{n}",fmtN(d));
+  var verdict=near?t("The plan matches your goal."):d<0?t("The plan is {n} kcal under your goal.").replace("{n}",fmtN(-d)):t("The plan is {n} kcal over your goal.").replace("{n}",fmtN(d));
   var h='<section class="plsum prsum glass"><div class="plsum-h"><span class="klabel">'+esc(t(pp.length===1?"1 meal":"{n} meals").replace("{n}",pp.length)+" · "+t(all.length===1?"1 food":"{n} foods").replace("{n}",all.length))+'</span>'
    +'<span class="plsum-v'+(near?' ok':'')+'">'+esc(verdict)+'</span></div>'
    +'<div class="plsum-r"><span>'+esc(t("Calories"))+'</span>'+bar("k",tot.kcal,g.kcal)+'<b>'+fig(fmtN(tot.kcal)+' / '+fmtN(g.kcal))+'</b></div>'
