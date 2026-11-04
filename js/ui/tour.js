@@ -52,9 +52,10 @@ var GUIDES={
     {sel:".fpc",v:3,h:"Your plan",p:"Tap Plan for your meal plan, your daily targets and the foods you saved."}]},
   /* Food's plan page (views/food.js vFoodPlan). */
   fplan:{name:"Nutrition plan",steps:[
-    {sel:".psecs",v:7,h:"Three tabs",p:"Meal plan: your meals for a day. My foods: the foods and meals you made, which a plan from your goals draws on. Daily goals: your calories and macros. Swipe left or right to switch."},
-    {sel:".psec .bname-a",v:7,h:"Copy in and share",p:"The arrow down copies a plan in; the arrow up shares yours with another Bunyan user."},
-    {sel:".dhead-a",fixed:true,v:7,h:"Meal plan settings",p:"The gear holds how meals are named."}]},
+    {sel:".psecs",v:8,h:"Two tabs",p:"Meal plan: your daily goal, and the meals for a day against it. My foods: the foods and meals you made, which a plan from your goals draws on. Swipe left or right to switch."},
+    {sel:".tgcard",v:8,h:"Your daily goal",p:"Calories, protein, carbs and fat for a day, with Edit to change them. Under it, what your meal plan comes to against it. How it has been going is in Progress."},
+    {sel:".psec .bname-a",v:8,h:"Copy in and share",p:"The arrow down copies a plan in; the arrow up shares yours with another Bunyan user."},
+    {sel:".dhead-a",fixed:true,v:8,h:"Meal plan settings",p:"The gear holds how meals are named."}]},
   coach:{name:"Coach",steps:[
     {sel:".cask",v:4,h:"Ask your coach",p:"Tap a question and the coach answers it from your own log, plan and targets. To ask anything else, use the chat button beside the tabs."},
     {sel:".cweek2",v:3,h:"This week",p:"Workouts done out of those planned, the days you reached your protein, and your streak."},

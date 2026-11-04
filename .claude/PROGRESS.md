@@ -3637,3 +3637,18 @@ own line under the label, on the plan page and on the plan under review.
 - Owner, 4 Nov: the plan cards go last — Food's "Your plan" under Water, Training's program card under
   Log cardio or a sport — the day first, the way into planning after it. The guides follow the page
   order. CACHE v225.
+
+## Daily goals folded into the meal plan; looking back is Progress's — branch session/goalsmerge (CACHE v226)
+
+Owner, 4 Nov: the plan-vs-goal card and the Daily goals card "could be combined, and the daily goals
+page could be removed", with How you have been eating in Progress.
+- Nutrition plan has two tabs, Meal plan · My foods. The Meal plan opens on the goal's card (views/food.js
+  goalCard: the coach's suggestion when it differs, the goal with Edit in place, macros, water and steps,
+  where maintenance comes from) and inside it "This plan": the verdict, the two bars, Rebuild from my
+  goals. Nothing planned: the card, then Make your meal plan. An old way to Daily goals (V.fplan
+  "targets") lands on the meal plan.
+- Progress → Overview ends with How you have been eating (vNutrition over Progress's own range, its first
+  heading the section's name); Progress → Body has Is it working? under the weight.
+- Tests: the helper sends "targets" to the meal plan; the plan card is clicked, not tapped (last on its
+  page, a toast or the dock can be over it on a short page); goal tests check Progress for the history;
+  the tab tests for two tabs.
