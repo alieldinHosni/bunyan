@@ -88,19 +88,27 @@ function vFood(){
    between (owner, 3 Nov: "some of the tabs logically don't make sense" — My foods is a
    library you log from, not a plan, so it is a page of its own, reached from the meal
    plan's list and from adding food). Back returns to Food. */
-/* Three tabs (owner, 4 Nov): the day's plan, your own foods and meals it draws on, the goals. */
-var FPLAN=[["plan","Meal plan"],["foods","My foods"]];
+/* One page now (owner, 4 Nov: "remove the page My foods"): the meal plan, with the foods
+   and meals of your own behind the star at the top, beside the gear. */
 function vFoodPlan(){
   /* Daily goals was a tab; an old way to it lands on the meal plan, where the goal is. */
   if(V.fplan==="targets")V.fplan="plan";
-  var fs=FPLAN.some(function(x){return x[0]===V.fplan;})?V.fplan:"plan",g=S.goals||{};
+  if(V.fplan==="foods")return vMyFoodsPage();
+  var g=S.goals||{};
   /* How meals are named is the gear at the top right, as on Training's plan page. */
   var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Nutrition plan"))+'</h1>'
+   +'<button class="icobtn dhead-a" data-myfoods="1" aria-label="'+esc(t("My foods"))+'">'+glyph("star")+'</button>'
    +'<button class="icobtn dhead-a" data-sheet="set_meals" aria-label="'+esc(t("Meal plan settings"))+'">'+glyph("gear")+'</button></div>'
    +'<p class="dsub">'+esc(t("{k} kcal · {p} g protein a day").replace("{k}",fmtN(Math.round(num(g.kcal)))).replace("{p}",Math.round(num(g.p))))+'</p>';
-  h+=seg({items:FPLAN.map(function(x){return [x[0],t(x[1])];}),value:fs,attr:"fplan",tabs:true,cls:"psecs",label:t("Nutrition plan"),key:"fplan"});
-  h+='<div class="psec" data-pswipe="fplan" data-k="psec-'+fs+'">'+(fs==="foods"?vMyFoods():vPlan())+'</div>';
+  h+='<div class="psec" data-k="psec-plan">'+vPlan()+'</div>';
   return h;}
+/* The foods you created and the meals you saved, one step in from the plan's star: to
+   look at, change, remove, or log in one tap. A new food is made here or from Add Food. */
+function vMyFoodsPage(){
+  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("My foods"))+'</h1>'
+   +'<button class="btn sm bcreate dhead-c" data-myfood="new">'+PLUS+'<span>'+esc(t("Create a food"))+'</span></button></div>'
+   +'<p class="dsub">'+esc(t("The foods you created and the meals you saved, one tap away when you log."))+'</p>';
+  return h+'<div class="psec" data-k="psec-foods">'+vMyFoods()+'</div>';}
 /* Your plan, on Food: what is planned and the targets, the way into the plan page. */
 function foodPlanCard(){
   var g=S.goals||{},planned=mealSlots().filter(function(x){return (x.plan||[]).length;}).length;
@@ -257,10 +265,6 @@ var DOC='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/
    for the ✕, as everywhere else. A list with nothing in it is not shown at all. */
 function vMyFoods(){
   var sm=S.savedMeals||[],mf=S.myFoods||[],now=mealNow(today()),ed=V.reorder==="mf",h='';
-  h+='<div class="ptiles">'
-   /* Named for what is made (owner, 4 Nov: "Save a meal" and "Add a food" did not say it). */
-   +'<button class="ptile" data-newmeal="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Build your own meal")+'</b><span>'+t("Foods you eat together, logged in one tap")+'</span></button>'
-   +'<button class="ptile" data-myfood="new"><span class="ptile-i">'+PLUS+'</span><b>'+t("Create a food")+'</b><span>'+t("Type it in from its nutrition label")+'</span></button></div>';
   if(!sm.length&&!mf.length){
     return h+'<div class="empty artempty">'+art("idra",{cls:"empty-art"})
      +'<h3>'+esc(t("Nothing saved yet"))+'</h3>'
@@ -490,7 +494,7 @@ function vPlan(){
      +'<span class="ico ico-chev" aria-hidden="true"></span></button>'
      +(ro?'<button class="dgrip" data-grip="'+esc(x.id)+'" aria-label="'+esc(t("Move")+" "+mealName(x.id))+'">'+GRIPSVG+'</button>':'')
      +'</div>';});
-  h+='</div><button class="dadd" data-paddslot="1"><span aria-hidden="true">+</span>'+t("Add a meal")+'</button>';
+  h+='</div><button class="dadd" data-paddslot="1"><span aria-hidden="true">+</span>'+t("Create a meal")+'</button>';
   return h;}
 
 /* One meal's plan, built in place like a saved meal: the title renames it, ✕ takes a

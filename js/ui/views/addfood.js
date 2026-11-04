@@ -120,6 +120,13 @@ function searchHome(){
    +'<span class="afquick-t"><b>'+esc(t("Quick Add"))+'</b>'
    +'<span>'+esc(t("Describe a whole meal"))+' — “'+esc(t("3 eggs, 2 brown toast"))+'”</span></span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
+  /* Making a food of your own starts here too (owner, 4 Nov), not only under Custom:
+     typed in from its label, kept to log again. */
+  h+='<button class="afquick afmake" data-manual="">'
+   +'<span class="ico ico-plus" aria-hidden="true"></span>'
+   +'<span class="afquick-t"><b>'+esc(t("Create a food"))+'</b>'
+   +'<span>'+esc(t("Type it in from its nutrition label"))+'</span></span>'
+   +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   return h;}
 
 function results(q){

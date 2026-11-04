@@ -77,7 +77,6 @@ var lastView="",lastSheet=null,lastEx=-2,lastSec=null;
 var SECS={t:["program","programs"],f:["plan","targets"]};
 function secNow(){
   if(V.tab==="train"&&V.train==="plan"&&!S.active)return "t:"+(V.tplan||"program");
-  if(V.tab==="food"&&V.fplan&&!V.smeal&&!V.pslot&&!V.pimport)return "f:"+V.fplan;
   return null;}
 /* Before the page is redrawn: if a plan page's tab is about to change by a tap (a swipe
    moves its own), a still copy of the tab on show, and which way the new one comes. */
@@ -182,7 +181,7 @@ function render(){
   /* Planning lives in its own tab now (owner, 3 Nov): Training's plan page and its
      builders under train/, Food's plan page and its meal screens under food/. */
   var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":S.run?"run":V.train)
-    :V.tab==="food"?(V.smeal?"smeal":V.pslot?"pslot":V.pimport?"pimport":V.fplan?"plan":"")
+    :V.tab==="food"?(V.smeal?"smeal":V.pslot?"pslot":V.pimport?"pimport":V.fplan==="foods"?"myfoods":V.fplan?"plan":"")
     :V.tab==="coach"?"hub":"");
   var moved=view!==lastView;lastView=view;
   /* Note what has focus and where the caret sits before the rebuild destroys it.

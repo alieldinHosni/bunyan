@@ -3443,7 +3443,8 @@ details.adv>.btn{margin:0 14px 14px;width:calc(100% - 28px)}
 .afquick{display:flex;align-items:center;gap:12px;width:100%;text-align:start;margin-top:16px;
   background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;
   color:var(--text)}
-.afquick>.ico-edit{width:20px;height:20px;flex:0 0 20px;color:var(--accentHi)}
+.afquick>.ico-edit,.afquick>.ico-plus{width:20px;height:20px;flex:0 0 20px;color:var(--accentHi)}
+.afquick+.afquick{margin-top:var(--s2)}
 .afquick-t{flex:1;min-width:0}
 .afquick-t b{display:block;font-family:var(--display);font-weight:700;font-size:15px}
 .afquick-t span{display:block;font-size:12px;color:var(--dim);margin-top:2px}
@@ -5642,6 +5643,9 @@ button.pgc{padding:var(--s3) var(--s4)}
 /* A page's own setting, at the top right of its header. */
 .dhead-a{margin-inline-start:auto;color:var(--sub)}
 .dhead-a .gl{width:22px;height:22px}
+/* Two icons at the top right (the meal plan's star and gear): the second sits beside the first. */
+.dhead-a+.dhead-a{margin-inline-start:var(--s1)}
+.dhead .dhead-c{margin-inline-start:auto}
 /* The plan pages' one row of tabs, and the part under it. */
 .psecs{margin:0 0 var(--s4)}
 .psec{min-height:40vh}

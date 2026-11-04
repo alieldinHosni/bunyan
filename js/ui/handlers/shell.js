@@ -72,8 +72,8 @@ function register(){
   has("fplan",function(D){if(V.sheet)closeSheet();V.tgedit=false;
     /* My foods is a page one step in from the plan, not one of its tabs. */
     if(V.tab!=="food"||!V.fplan||V.smeal||V.pslot||V.pimport){if(V.tab!=="food"){resetNav();V.tab="food";}pushNav();V.smeal=null;V.pslot=null;V.pimport=false;V.fplan=D.fplan||"plan";render();window.scrollTo(0,0);return;}
-    if(slideTab("fplan",D.fplan||"plan"))return;
-    V.fplan=D.fplan||"plan";render();return;});
+    /* The meal plan and My foods are two pages now, one in from the other. */
+    if((D.fplan||"plan")!==V.fplan){pushNav();V.fplan=D.fplan||"plan";render();window.scrollTo(0,0);}return;});
   key("reorder",function(D){V.reorder=V.reorder===D.reorder?null:D.reorder;render();return;});
   /* Train's old sections: today is the Training page; the program and the others are
      planned in Coach → Training. */
