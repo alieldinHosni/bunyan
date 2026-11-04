@@ -260,8 +260,9 @@ function vMyFoodsPage(){
 function vMyFoods(){
   var sm=S.savedMeals||[],mf=S.myFoods||[],now=mealNow(today()),ed=V.reorder==="mf",h='';
   h+='<div class="ptiles">'
-   +'<button class="ptile" data-newmeal="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Save a meal")+'</b><span>'+t("Several foods logged in one tap")+'</span></button>'
-   +'<button class="ptile" data-myfood="new"><span class="ptile-i">'+PLUS+'</span><b>'+t("Add a food")+'</b><span>'+t("From its label")+'</span></button></div>';
+   /* Named for what is made (owner, 4 Nov: "Save a meal" and "Add a food" did not say it). */
+   +'<button class="ptile" data-newmeal="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Build your own meal")+'</b><span>'+t("Foods you eat together, logged in one tap")+'</span></button>'
+   +'<button class="ptile" data-myfood="new"><span class="ptile-i">'+PLUS+'</span><b>'+t("Create a food")+'</b><span>'+t("Type it in from its nutrition label")+'</span></button></div>';
   if(!sm.length&&!mf.length){
     return h+'<div class="empty artempty">'+art("idra",{cls:"empty-art"})
      +'<h3>'+esc(t("Nothing saved yet"))+'</h3>'

@@ -3600,3 +3600,6 @@ and decoded: they are loading="lazy", and a lazy picture on a page still off the
 until it comes in, so each appeared after the page had. The tab swipe's copy of the next tab asks for
 its pictures eagerly too. Filmed: no blank pictures, ground between the pages. Test fails on the
 previous build and passes now.
+- My foods (owner, 4 Nov): the two tiles are "Build your own meal" (foods you eat together, logged in one
+  tap) and "Create a food" (type it in from its nutrition label), in place of Save a meal and Add a food.
+  CACHE v222.
