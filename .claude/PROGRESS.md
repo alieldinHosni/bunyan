@@ -3540,3 +3540,16 @@ to the card above.
   plan, spark: new from goals, arrow down: copy in, arrow up: share) and a gear at the top right for Meal
   names (settings.js set_meals). Guide updated (fplan, v5). New glyph `download`.
 - Food: the plan card keeps a gap above the water card.
+
+## Fix round 2 — branch session/fixround2 (CACHE v216)
+
+Owner, 4 Nov (screenshots):
+- How do you feel today?: on a phone every choice is a label round its button (haptic.js hb), an inline
+  block, so the word sat at the top of the pill. .ready-c and .sc-rpe-c choices are flex-centred. Test runs
+  with haptics on (the suite's default has them off, which is why no test saw it).
+- Plan swipe: a plan tab now travels the screen's width (it travelled its own, and the gutter beside it
+  left a strip of the old tab at the edge until the slide ended). Scrolled down a tab, the next one comes
+  in from its own top at the top of the screen, and on landing the page is moved to it in the same frame;
+  easing back up to the tabs after landing was the jump. The tab's word turns as the highlight arrives.
+- Food's plan page: My foods and Make a new plan from my goals moved into the gear (set_meals); by the
+  name only Copy in and Share; no row at all before there is a plan. Guide v6.

@@ -437,14 +437,13 @@ function vPlan(){
   var tiles='<div class="ptiles">'
    +'<button class="ptile" data-pgen="1"><span class="ptile-i">'+SPARK+'</span><b>'+t("Make it from my goals")+'</b><span>'+t("A full day that adds up. You check it first.")+'</span></button>'
    +'<button class="ptile" data-pimport="1"><span class="ptile-i">'+DOC+'</span><b>'+t("Copy in a plan")+'</b><span>'+t("Paste it, open a file, or one shared with you")+'</span></button></div>';
-  /* The plan's own actions are icons by its name, as a program's are (owner, 3 Nov):
-     your foods, a new plan from the goals, copy one in, share it. Starting from nothing,
-     the first two are the card below, so only your foods is here. */
-  var np=sl.filter(function(x){return (x.plan||[]).length;}).length,nmf=(S.myFoods||[]).length+(S.savedMeals||[]).length,ib=function(a,g,l){return '<button class="icobtn" '+a+' aria-label="'+esc(l)+'">'+glyph(g)+'</button>';};
-  h+='<div class="bname"><div class="bname-l"><h2 class="bname-t">'+esc(t("Your meal plan"))+'</h2>'
-   +'<span class="bname-s">'+esc(np?t(np===1?"1 meal · {k} kcal":"{n} meals · {k} kcal").replace("{n}",np).replace("{k}",fmtN(tot.kcal)):t("No meal plan yet"))+'</span></div>'
-   +'<div class="bname-a">'+ib('data-fplan="foods"',"bowl",t("My foods")+(nmf?", "+nmf:""))
-   +(all.length?ib('data-pgen="1"',"spark",t("Make a new plan from my goals"))+ib('data-pimport="1"',"download",t("Copy in a plan"))+ib('data-shareplan="meals"',"share",t("Share my meal plan")):'')
+  /* Copying a plan in and sharing it are icons by its name, as a program's are; making a
+     new one from the goals and your own foods are in the gear (owner, 4 Nov). With
+     nothing planned yet the card below is the way in, so no row. */
+  var np=sl.filter(function(x){return (x.plan||[]).length;}).length,ib=function(a,g,l){return '<button class="icobtn" '+a+' aria-label="'+esc(l)+'">'+glyph(g)+'</button>';};
+  if(all.length)h+='<div class="bname"><div class="bname-l"><h2 class="bname-t">'+esc(t("Your meal plan"))+'</h2>'
+   +'<span class="bname-s">'+esc(t(np===1?"1 meal · {k} kcal":"{n} meals · {k} kcal").replace("{n}",np).replace("{k}",fmtN(tot.kcal)))+'</span></div>'
+   +'<div class="bname-a">'+ib('data-pimport="1"',"download",t("Copy in a plan"))+ib('data-shareplan="meals"',"share",t("Share my meal plan"))
    +'</div></div>';
   if(!all.length)h+='<section class="plstart glass"><span class="klabel">'+esc(t("Make your meal plan"))+'</span>'
    +'<p>'+esc(t("Let the coach make a full day from your goals, or copy in a plan you already have."))+'</p>'+tiles+'</section>';

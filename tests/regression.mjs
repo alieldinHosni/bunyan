@@ -91,7 +91,7 @@ async function coach(page,sec,sub){
     /* Exercises live under Programs since 3 Nov: that tab, at the library. */
     const ex=sec==="train"&&sub==="exercises";if(ex)sub="programs";
     /* My foods is a page one step in from the meal plan (3 Nov), reached from its list. */
-    if(sec==="food"&&sub==="foods"){await page.tap('.bname-a [data-fplan="foods"]');await page.waitForTimeout(300);return;}
+    if(sec==="food"&&sub==="foods"){await page.tap('.dhead-a[data-sheet="set_meals"]');await page.waitForTimeout(400);await page.tap('#sheet [data-fplan="foods"]');await page.waitForTimeout(500);return;}
     if(sub&&sub!==first){await page.tap('.psecs [data-'+attr+'="'+sub+'"]');await page.waitForTimeout(250);}
     if(ex){await page.evaluate(()=>document.getElementById("pex").scrollIntoView({block:"start"}));await page.waitForTimeout(150);}
     return;}
@@ -4590,16 +4590,16 @@ await test("Guide: Training's plan page has its own, which says what the tabs, E
   if(!/Swipe left or right/.test(await page.textContent('.tour-p')))throw new Error("does not say a swipe switches");
 },{tour:true,prefs:{toured:{train:9,food:9,coach:9,progress:9,profile:9}}});
 /* ---- Food's plan pages, round 3 (owner, 3 Nov) ------------------------------------------ */
-await test("Meal plan: with nothing planned, how to start comes first; once planned, two bars and a verdict; the plan's tools are icons by its name and Meal names is the gear (owner, 3 Nov: as on Training)",async page=>{
+await test("Meal plan: with nothing planned, how to start comes first; once planned, two bars and a verdict; copy in and share are icons by its name, and Meal names, My foods and a new plan from the goals are in the gear (owner, 4 Nov)",async page=>{
   await page.evaluate(async()=>{const st=await import("/js/state.js");(st.S.mealSlots||[]).forEach(x=>{x.plan=[];});st.saveDB();});
   await coach(page,"food","plan");
   eq(await page.evaluate(()=>[!!document.querySelector('.plstart'),!document.querySelector('.plsum'),!!document.querySelector('.plstart .ptile[data-pgen]'),!!document.querySelector('.plstart .ptile[data-pimport]'),
-    [...document.querySelectorAll('.psec .bname-a .icobtn')].map(b=>Object.keys(b.dataset)[0])]),[true,true,true,true,["fplan"]],"empty: Make your meal plan first, with its two ways; only My foods among the icons");
+    !document.querySelector('.psec .bname')]),[true,true,true,true,true],"empty: Make your meal plan first, with its two ways, and no row of icons over it");
   await page.evaluate(async()=>{const st=await import("/js/state.js"),M=await import("/js/engine/meals.js");const x=M.ownSlots()[0];
     x.plan=[{n:"Eggs",kcal:300,p:24,c:2,f:20,grams:150,label:"3 eggs"}];st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,300);
   eq(await page.evaluate(()=>[document.querySelectorAll('.plsum .plsum-r').length,!!document.querySelector('.plsum-v'),!document.querySelector('.plstart'),!document.querySelector('.plset'),
     [...document.querySelectorAll('.psec .bname-a .icobtn')].map(b=>Object.keys(b.dataset)[0]),document.querySelector('.psec .bname-s').textContent]),
-    [2,true,true,true,["fplan","pgen","pimport","shareplan"],"1 meal · 300 kcal"],"planned: two bars and a verdict; four icons by the name, no list");
+    [2,true,true,true,["pimport","shareplan"],"1 meal · 300 kcal"],"planned: two bars and a verdict; copy in and share by the name, no list");
   /* Not touching: each icon has room of its own. */
   const gap=await page.evaluate(()=>{const b=[...document.querySelectorAll('.psec .bname-a .icobtn')].map(x=>x.getBoundingClientRect());return Math.min(...b.slice(1).map((r,i)=>r.left-b[i].right));});
   if(!(gap>=6))throw new Error("icons touch: "+gap);
@@ -4610,13 +4610,54 @@ await test("Meal plan: with nothing planned, how to start comes first; once plan
   eq(await page.evaluate(async()=>(await import("/js/engine/meals.js")).mealStyle()),"numbered","Numbered chosen");
   await page.tap('#sheet [data-mstyle="named"]');await pause(page,300);
   eq(await page.evaluate(async()=>(await import("/js/engine/meals.js")).mealStyle()),"named","and back");
+  eq(await page.$$eval('#sheet .srow[data-fplan],#sheet .srow[data-pgen]',a=>a.map(b=>Object.keys(b.dataset)[0])),["fplan","pgen"],"the gear: My foods and a new plan from the goals");
   await page.tap('#sheet .x[data-close]');await pause(page,600);
   eq(await page.evaluate(()=>[!!document.querySelector('#sheet .sheet'),!!document.querySelector('.sheetghost')]),[false,false],"the sheet slides away and is gone");
   eq(await page.$$eval('#app .psecs .seg-b',a=>a.map(b=>b.textContent)),["Meal plan","Daily goals"],"two tabs: My foods is not one");
-  await page.tap('.bname-a [data-fplan="foods"]');await pause(page,400);
+  await page.tap('.dhead-a[data-sheet="set_meals"]');await pause(page,500);
+  await page.tap('#sheet [data-fplan="foods"]');await pause(page,600);
+  eq(await ev(page,"V.sheet"),null,"the sheet is put away");
   eq(await ev(page,"[V.fplan,!!document.querySelector('#app .psecs'),document.querySelector('#app .dhead-t').textContent]"),["foods",false,"My foods"],"My foods is a page of its own");
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.tab,V.fplan]"),["food","plan"],"back to the meal plan");
+  await page.tap('.dhead-a[data-sheet="set_meals"]');await pause(page,500);
+  await page.tap('#sheet [data-pgen]');await pause(page,1500);
+  eq(await ev(page,"[V.sheet,!!V.pgen,!!document.querySelector('#app .pmeal')]"),[null,true,true],"a new plan from the goals, from the gear: the review, sheet away");
+});
+await test("Plan swipe (owner, 4 Nov): the tab going out leaves the screen entirely, nothing of it at the edge; scrolled down a tab, the next comes in from its top and lands there with no jump; the tab's word turns as the highlight arrives",async(page,env)=>{
+  const cdp=await env.ctx.newCDPSession(page);
+  const move=async(x0,y,x1,steps=12)=>{
+    await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x0,y}]});
+    for(let i=1;i<=steps;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x0+(x1-x0)*i/steps,y}]});await page.waitForTimeout(16);}};
+  const up=()=>cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await coach(page,"train","program");await pause(page,600);
+  /* Scrolled well down My program. */
+  await page.evaluate(()=>window.scrollTo(0,500));await pause(page,300);
+  await move(330,420,60);
+  const mid=await page.evaluate(()=>{const nb=document.querySelector(".stillcopy.peek");return nb?Math.round(nb.getBoundingClientRect().top):null;});
+  if(mid==null||mid<0)throw new Error("the next tab should come in from its own top, at the top of the screen: "+mid);
+  await up();await page.waitForTimeout(60);
+  /* The old tab travels the screen's width, so none of it can stay at the edge. */
+  const kf=await page.evaluate(()=>{const p=document.querySelector("#app .psec"),an=p.getAnimations()[0];
+    return an?[an.effect.getKeyframes().slice(-1)[0].transform,"translateX(-"+document.documentElement.clientWidth+"px)"]:null;});
+  if(!kf||kf[0]!==kf[1])throw new Error("the tab going out should travel the whole screen: "+kf);
+  eq(await page.evaluate(()=>[...document.querySelectorAll('#app .psecs .seg-b')].map(b=>b.classList.contains("on"))),[false,true],"the word turns with the highlight, mid-slide");
+  await page.waitForTimeout(700);
+  const after=await ev(page,"[V.tplan,Math.round(document.querySelector('#app .psec').getBoundingClientRect().top),!!document.querySelector('.stillcopy'),document.querySelector('#app .psec').style.transform]");
+  eq([after[0],after[2],after[3]],["programs",false,""],"landed on Programs, nothing left over");
+  if(Math.abs(after[1]-mid)>2)throw new Error("the real tab should land where the incoming one stood: "+after[1]+" vs "+mid);
+  await page.waitForTimeout(500);
+  eq(await page.evaluate(()=>Math.round(document.querySelector("#app .psec").getBoundingClientRect().top)),after[1],"and does not move after it lands");
+});
+await test("How do you feel today?: on a phone each choice's word sits in the middle of its pill (owner, 4 Nov: it sat at the top), and so do the effort choices",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.haptic=true;st.saveDB();});await page.reload();await pause(page,1500);
+  await startWorkout(page);await pause(page,500);
+  const off=await page.evaluate(()=>[...document.querySelectorAll(".ready-c > *")].map(l=>{const b=l.getBoundingClientRect(),rg=document.createRange();rg.selectNodeContents(l);const r=rg.getBoundingClientRect();
+    return [l.tagName,Math.round((r.top+r.bottom)/2-(b.top+b.bottom)/2)];}));
+  eq(off.length,5,"five choices");
+  if(off.some(x=>x[0]!=="LABEL"))throw new Error("expected the phone's labels: "+JSON.stringify(off));
+  if(off.some(x=>Math.abs(x[1])>2))throw new Error("words off centre: "+JSON.stringify(off));
 });
 await test("Targets: one card says the target; Edit opens it as fields and Cancel closes it unchanged; the coach's suggestion only when it differs; the eating history folded",async page=>{
   await coach(page,"food","targets");

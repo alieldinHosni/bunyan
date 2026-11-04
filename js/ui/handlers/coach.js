@@ -393,7 +393,7 @@ function register(){
   key("cokeep",function(D){var ck=D.cokeep,cb=JSON.parse(JSON.stringify(S.coachDismiss||{}));coachSetAside(ck,14);saveDB();render();
     toast(t("Set aside for two weeks."),function(){S.coachDismiss=cb;saveDB();render();});return;});
   /* A meal plan from the targets, from Food's plan section, and another version of it. */
-  key("pgen",function(){openMealPlan(mealPrefs());return;});
+  key("pgen",function(){if(V.sheet){V.sheet=null;V.sd=null;}openMealPlan(mealPrefs());return;});
   on(function(D){return D.pgenmore&&V.pgen;},function(){V.pgen.variant=(V.pgen.variant||0)+1;V.pparse=buildMealPlan(S.goals,V.pgen);render();return;});}
 
 export {register};
