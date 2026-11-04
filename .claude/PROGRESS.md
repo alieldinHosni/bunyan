@@ -3683,3 +3683,17 @@ height measured in its copy), and lands by the first thing on the tab, not the p
   "shouldn't appear all the time". It has Got it (views/food.js srcNote): put away per profile under a
   key of what it says (the suggestion matching or not, maintenance by formula or measured, the build-on-
   your-log offer), so it comes back only when that changes; only the note leaves the page. CACHE v230.
+
+## "How do you feel today?" goes without a bounce — branch session/readyskip (CACHE v231)
+
+Owner, 4 Nov: Skip scrolled down "bounces up in an odd way"; scrolled up, "a big noticed bounce when the
+survey disappears". Two causes, measured frame by frame. The question was not a keyed card, so the
+patch dropped it in one frame. And at the end of the page, the page lost its height at once, so the
+browser pulled everything down by 88px while the cards glided back.
+- The question is now a keyed card ("ready"). When it is answered or skipped, it folds in the page's
+  flow (motion.js FOLDK/foldAway): it is put back where it was, fades, and closes up with the grid
+  gap, so the cards below follow its edge. A ghost floating over the rising set list read as two
+  things stacked on each other. The low-day note is keyed too and arrives as the workout cards do.
+- The workout's page keeps its place (motion.js holdScroll). After a same-screen render it keeps the
+  room the page had below the view as an empty block after #app, and shrinks that block only as the
+  person scrolls up. A new screen or exercise drops it (clearHold). This holds with reduced motion too.

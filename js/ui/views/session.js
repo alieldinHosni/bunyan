@@ -450,13 +450,13 @@ function vLogger(){
   /* --- before the first set only, under the check so it no longer pushes the numbers
      down: how you feel, the day's notes, a pain flag, the plan's other choice. --- */
   if(doneAll===0&&a.ready==null){
-    h+='<section class="ready"><div class="ready-h"><span>'+t("How do you feel today?")+'</span>'
+    h+='<section class="ready" data-k="ready"><div class="ready-h"><span>'+t("How do you feel today?")+'</span>'
      +'<button class="ready-skip" data-ready="0">'+t("Skip")+'</button></div><div class="ready-c">'
      +READY.map(function(x){return hb('<button data-ready="'+x[0]+'">'+t(x[1])+'</button>');}).join("")
      +'</div></section>';
   }else if(a.ready&&a.ready<=2&&doneAll===0){
     /* Today's suggestions are already lighter (see recommend()); fewer sets is offered. */
-    h+='<div class="readynote">'+t("A low day. Today's suggestions are lighter; drop a set if you need to, or stop early. It still counts.")
+    h+='<div class="readynote" data-k="readynote">'+t("A low day. Today's suggestions are lighter; drop a set if you need to, or stop early. It still counts.")
      +(a.lighter?'':'<button class="btn g sm readyless" data-readyless="1">'+t("One set fewer on each exercise")+'</button>')+'</div>';
   }
   if(doneAll===0&&a.dayNotes&&a.dayNotes.length)

@@ -2776,6 +2776,30 @@ await test("Compact: the block card is one line until its arrow opens it, in pla
   await page.tap('#sheet .rcv [data-fold]');await pause(page,250);
   eq(await page.evaluate(()=>document.querySelectorAll('#sheet .rcv.open li').length>0),true,"the muscles on tap");
 });
+await test("Feel today: Skip or an answer fades the question where it was; scrolled to the end, nothing above it moves and the page keeps its place",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;});
+  await startWorkout(page);await pause(page,800);
+  await page.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));await pause(page,400);
+  const y0=await ev(page,"scrollY");if(y0<40)throw new Error("the workout does not scroll here: "+y0);
+  const top0=await ev(page,"Math.round(document.querySelector('#app .sess [data-k=\"sc\"]').getBoundingClientRect().top)");
+  const mid=await page.evaluate(async()=>{document.querySelector('#app .ready-skip').click();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    return [Math.round(scrollY),Math.round(document.querySelector('#app .sess [data-k="sc"]').getBoundingClientRect().top),!!document.querySelector('#app .sess .ready.ghost')];});
+  eq(mid,[y0,top0,true],"same place, the card above still, the question fading");
+  await pause(page,700);
+  eq(await ev(page,"[Math.round(scrollY),document.querySelectorAll('#app .ready').length,S.active.ready]"),[y0,0,0],"still there, the question gone, skipped");
+  /* The room kept below is given back as the page is scrolled up. */
+  await page.evaluate(()=>scrollTo(0,0));await pause(page,200);
+  eq(await ev(page,"document.querySelectorAll('.phold').length"),0,"the held room goes on the way up");
+  /* At the top: an answer, and the card above the question does not move. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active.ready=null;(await import("/js/ui/render.js")).render();});await pause(page,400);
+  const t1=await ev(page,"Math.round(document.querySelector('#app .sess [data-k=\"sc\"]').getBoundingClientRect().top)");
+  await page.tap('[data-ready="4"]');await pause(page,700);
+  eq(await ev(page,"[S.active.ready,document.querySelectorAll('#app .ready').length,Math.round(document.querySelector('#app .sess [data-k=\"sc\"]').getBoundingClientRect().top)]"),[4,0,t1]);
+  /* A low answer: the note takes its place. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active.ready=null;(await import("/js/ui/render.js")).render();});await pause(page,400);
+  await page.tap('[data-ready="2"]');await pause(page,700);
+  eq(await ev(page,"[document.querySelectorAll('#app .ready').length,document.querySelectorAll('#app .readynote').length]"),[0,1]);
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
