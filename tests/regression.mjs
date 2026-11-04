@@ -2793,11 +2793,12 @@ await test("Feel today: Skip or an answer fades the question where it was; scrol
   /* At the top: an answer, and the card above the question does not move. */
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active.ready=null;(await import("/js/ui/render.js")).render();});await pause(page,400);
   const t1=await ev(page,"Math.round(document.querySelector('#app .sess [data-k=\"sc\"]').getBoundingClientRect().top)");
-  await page.tap('[data-ready="4"]');await pause(page,700);
+  /* A direct click: a tap would first scroll the chip into view where it sits below the fold. */
+  await page.evaluate(()=>document.querySelector('#app [data-ready="4"]').click());await pause(page,700);
   eq(await ev(page,"[S.active.ready,document.querySelectorAll('#app .ready').length,Math.round(document.querySelector('#app .sess [data-k=\"sc\"]').getBoundingClientRect().top)]"),[4,0,t1]);
   /* A low answer: the note takes its place. */
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active.ready=null;(await import("/js/ui/render.js")).render();});await pause(page,400);
-  await page.tap('[data-ready="2"]');await pause(page,700);
+  await page.evaluate(()=>document.querySelector('#app [data-ready="2"]').click());await pause(page,700);
   eq(await ev(page,"[document.querySelectorAll('#app .ready').length,document.querySelectorAll('#app .readynote').length]"),[0,1]);
 });
 await test("Blocks: answering again takes the answer back",async page=>{
