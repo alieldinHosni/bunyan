@@ -912,6 +912,9 @@ body.noanim .wbar,body.noanim .wbar-dot{animation:none}
    3 Nov: "bugs in motion when I swipe between pages"). Clip, not hidden: it makes no
    scroll container, so sticky headers and the page's own scrolling are untouched. */
 html,body{overflow-x:clip}
+/* A main tab's own page swipes between the dock's tabs (js/ui/exswipe.js): the page scrolls
+   up and down, and leaves sideways to the swipe. */
+#app[data-tswipe]{touch-action:pan-y}
 #app.pgfront{position:relative;z-index:1}
 .stillcopy{will-change:transform}
 /* Gated: entry animations run when a surface appears, never on a re-render. */

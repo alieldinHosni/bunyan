@@ -4762,6 +4762,35 @@ await test("Opening the Exercise Library (owner, 4 Nov): the old page travels pa
   await pause(page,900);
   eq(await ev(page,"V.train"),"library","the library is open");
 });
+await test("Main tabs (owner, 4 Nov): a swipe on a tab's own page moves along the dock, Training → Food → Coach → Progress and back, the next page beside it as it goes; the last resists; the day's card and the week keep their own swipes; a page one step in does not swipe tabs",async(page,env)=>{
+  const cdp=await env.ctx.newCDPSession(page);
+  const move=async(x0,y,x1,steps=12)=>{await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x0,y}]});
+    for(let i=1;i<=steps;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x0+(x1-x0)*i/steps,y}]});await page.waitForTimeout(16);}};
+  const up=async()=>{await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(900);};
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"train");await pause(page,800);
+  for(const want of ["food","coach","progress"]){
+    await move(330,650,60);
+    eq(await page.evaluate(()=>!!document.querySelector(".stillcopy.peek .tpeek")),true,"the next page beside it, to "+want);
+    await up();
+    eq(await ev(page,"[V.tab,document.querySelectorAll('.stillcopy').length,document.getElementById('app').className.includes('pagein')]"),[want,0,false],"landed on "+want+", nothing left over, no second entrance");
+    eq(await page.$eval('nav [data-tab="'+want+'"]',b=>b.classList.contains("on")||b.getAttribute("aria-current")==="page"),true,"the dock says "+want);
+  }
+  await move(330,650,60);await up();
+  eq(await ev(page,"V.tab"),"progress","the last resists");
+  await move(60,650,330);await up();
+  eq(await ev(page,"V.tab"),"coach","and back");
+  /* Food's day card changes the day, not the tab. */
+  await tapTab(page,"food");await pause(page,600);
+  const dc=await page.evaluate(()=>{const r=document.querySelector('[data-swipe="day"]').getBoundingClientRect();return Math.round(r.top+r.height/2);});
+  await move(60,dc,330);
+  eq(await page.evaluate(()=>!!document.querySelector(".stillcopy.peek")),false,"a drag on the day's card brings no tab in");
+  await up();
+  eq(await ev(page,"V.tab"),"food","a swipe on the day's card stays on Food");
+  /* One step in (the plan page), the swipe is the plan's tabs, not the dock's. */
+  await coach(page,"food","plan");await pause(page,500);
+  eq(await page.evaluate(()=>document.getElementById("app").hasAttribute("data-tswipe")),false,"the plan page is not a main tab's own page");
+});
 await test("Targets: one card says the target; Edit opens it as fields and Cancel closes it unchanged; the coach's suggestion only when it differs; the Progress has how it has been going",async page=>{
   await coach(page,"food","targets");
   const g=await ev(page,"S.goals");

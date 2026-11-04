@@ -17,7 +17,7 @@ import {dispatchTap} from "./ui/handlers/registry.js";
 import {draftFrom} from "./ui/views/assess.js";
 import {initDockScroll} from "./ui/dock.js";
 import {initExSwipe} from "./ui/exswipe.js";
-import {initNav} from "./ui/nav.js";
+import {initNav, resetNav} from "./ui/nav.js";
 import {bindPanel, closeCoach} from "./ui/coachfab.js";
 import {initPress} from "./ui/press.js";
 import {initReorder} from "./ui/reorder.js";
@@ -31,6 +31,8 @@ import {onChange, onInput, onKeydown} from "./ui/handlers/fields.js";
 import {render, syncKeyboard} from "./ui/render.js";
 import {vTrain} from "./ui/views/train.js";
 import {vFood} from "./ui/views/food.js";
+import {vCoach} from "./ui/views/coach.js";
+import {vProgress} from "./ui/views/progress.js";
 import {isolateNums} from "./i18n/bidi.js";
 import {setStorageErrorHandler} from "./util.js";
 import {syncWbar} from "./ui/wbar.js";
@@ -242,14 +244,38 @@ initPress();
 /* A swipe on the exercise moves through the workout (js/ui/exswipe.js). */
 /* The plan pages' tabs, in the order they sit (views/train.js TPLAN, views/food.js FPLAN). */
 var PTABS={tplan:["program","programs"],fplan:["plan","foods"]};
+/* The dock's four tabs, swiped between on their own pages (owner, 4 Nov). */
+var MTABS=["train","food","coach","progress"];
+/* A main tab's own page: what a tap on its dock button opens. */
+function atRoot(){
+  if(V.sheet||V.coach||V.assess||V.pcheck)return false;
+  if(V.tab==="train")return !S.active&&!S.run&&(V.train==="days"||V.train==="hub");
+  if(V.tab==="food")return !V.fplan&&!V.meal&&!V.smeal&&!V.pslot&&!V.pimport;
+  if(V.tab==="coach")return !V.chat;
+  if(V.tab==="progress")return !V.phist;
+  return false;}
+/* Where a tab's own page starts, as the dock's tap leaves it (handlers/shell.js "tab"). */
+var ROOTV=["tab","train","fplan","tgedit","meal","smeal","pslot","pimport","chat","advall","phist","dnavDir","fdate"];
+function asRoot(tb){V.tab=tb;V.train="days";V.fplan=null;V.tgedit=false;V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;
+  V.chat=false;V.advall=false;V.phist=false;V.dnavDir=0;if(tb==="food")V.fdate=null;}
 function ptabNow(k){var l=PTABS[k],v=k==="tplan"?V.tplan:V.fplan;return Math.max(0,l.indexOf(v));}
 initExSwipe({
+  root:atRoot,
   can:function(step,k){
+    if(k==="tab"){var m=MTABS.indexOf(V.tab)+step;return atRoot()&&m>=0&&m<MTABS.length;}
     if(k&&k!=="ex"){var n2=ptabNow(k)+step;return !V.sheet&&n2>=0&&n2<PTABS[k].length;}
     var a=S.active,n=V.logIdx+step;return !!(a&&!V.sheet&&V.tab==="train"&&n>=0&&n<a.entries.length);},
   /* The tab next door, drawn as it would be, for the swipe to bring in under the finger
      (exswipe.js peek). Nothing is changed: the tab is put back at once. */
   peek:function(step,k){
+    if(k==="tab"){
+      var nt=MTABS[MTABS.indexOf(V.tab)+step];if(!nt)return null;
+      var keep={},hm="";ROOTV.forEach(function(f){keep[f]=V[f];});
+      asRoot(nt);
+      try{hm=nt==="train"?vTrain():nt==="food"?vFood():nt==="coach"?vCoach():vProgress();}catch(e){hm="";}
+      ROOTV.forEach(function(f){V[f]=keep[f];});
+      if(S.prefs&&S.prefs.lang==="ar")hm=isolateNums(hm);
+      return hm||null;}
     var l=PTABS[k],i=ptabNow(k)+step;if(!l||i<0||i>=l.length)return null;
     var was=k==="tplan"?V.tplan:V.fplan,h="";
     if(k==="tplan")V.tplan=l[i];else V.fplan=l[i];
@@ -259,6 +285,10 @@ initExSwipe({
     var box=document.createElement("div");box.innerHTML=h;
     var p=box.querySelector(".psec");return p?p.innerHTML:null;},
   go:function(step,k){
+    /* The same move as the dock's tap, without its page entrance: the swipe brought the
+       page in itself. */
+    if(k==="tab"){var gt=MTABS[MTABS.indexOf(V.tab)+step];if(!gt)return;
+      resetNav();asRoot(gt);V.tswiped=true;render();return;}
     if(k&&k!=="ex"){var v=PTABS[k][ptabNow(k)+step];if(k==="tplan")V.tplan=v;else V.fplan=v;
       /* The swipe brings the tab in itself; the section's own slide stays out of it. */
       V.pswiped=true;render();return;}

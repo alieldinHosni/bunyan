@@ -3657,3 +3657,17 @@ page could be removed", with How you have been eating in Progress.
   slid up as the keyboard rose, and back down as it went); put away, a dialog fades and shrinks a little
   in 170 ms instead of the sheet's slide down. Build a program is the accent's glass with the standing
   figure drawn at its edge. CACHE v227.
+
+## The dock's tabs swipe — branch session/mainswipe (CACHE v228)
+
+Owner, 4 Nov: "the same swipe structure between Train, Food, Coach and Progress, to function really
+well". On a main tab's own page (app.js atRoot: Training's day page, Food's day, the Coach page,
+Progress; no sheet, panel, workout or run) #app is marked data-tswipe and swipes as a whole, through the
+same machinery as the plan tabs (exswipe.js kind "tab"): the next tab's page drawn ahead while idle
+(app.js peek renders it as the dock's tap would leave it, then puts the state back), both pages travel
+the screen's width, and the real tab is drawn only when they land (go = the dock's tap, without the
+page entrance). The day's card and Training's week keep their own swipes; side-scrolling rows keep
+theirs; one step in, the plan page's tabs swipe instead. On the page as a whole the listener is passive
+and the page is touch-action: pan-y, so no scroll waits for script. Arabic runs the other way. Filmed:
+no flash, no jump; the next page lands where it was drawn. Test: the four tabs both ways, the last
+resisting, the day's card, and no tab swipe one step in.
