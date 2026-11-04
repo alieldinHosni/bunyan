@@ -6,6 +6,7 @@ import {t} from "../../i18n/dict.js";
 import {today} from "../../util.js";
 import {ACT, closeSheet, openSheet, runAct, val} from "../actions.js";
 import {shiftDay} from "../datebar.js";
+import {slideTab} from "../exswipe.js";
 import {goBack, pushNav, resetNav} from "../nav.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
@@ -66,11 +67,12 @@ function register(){
      plan page the segment between its parts (no new step; the content slides, render.js). */
   has("tplan",function(D){if(V.sheet)closeSheet();
     if(V.tab!=="train"||V.train!=="plan"){if(V.tab!=="train"){resetNav();V.tab="train";}pushNav();V.train="plan";V.tplan=D.tplan||"program";render();window.scrollTo(0,0);return;}
+    if(slideTab("tplan",D.tplan||"program"))return;
     V.tplan=D.tplan||"program";render();return;});
   has("fplan",function(D){if(V.sheet)closeSheet();V.tgedit=false;
     /* My foods is a page one step in from the plan, not one of its tabs. */
-    if(D.fplan==="foods"&&V.tab==="food"&&V.fplan&&V.fplan!=="foods"&&!V.smeal&&!V.pslot&&!V.pimport){pushNav();V.fplan="foods";V.reorder=null;render();window.scrollTo(0,0);return;}
     if(V.tab!=="food"||!V.fplan||V.smeal||V.pslot||V.pimport){if(V.tab!=="food"){resetNav();V.tab="food";}pushNav();V.smeal=null;V.pslot=null;V.pimport=false;V.fplan=D.fplan||"plan";render();window.scrollTo(0,0);return;}
+    if(slideTab("fplan",D.fplan||"plan"))return;
     V.fplan=D.fplan||"plan";render();return;});
   key("reorder",function(D){V.reorder=V.reorder===D.reorder?null:D.reorder;render();return;});
   /* Train's old sections: today is the Training page; the program and the others are

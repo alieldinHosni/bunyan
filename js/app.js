@@ -241,7 +241,7 @@ initDockScroll();
 initPress();
 /* A swipe on the exercise moves through the workout (js/ui/exswipe.js). */
 /* The plan pages' tabs, in the order they sit (views/train.js TPLAN, views/food.js FPLAN). */
-var PTABS={tplan:["program","programs"],fplan:["plan","targets"]};
+var PTABS={tplan:["program","programs"],fplan:["plan","foods","targets"]};
 function ptabNow(k){var l=PTABS[k],v=k==="tplan"?V.tplan:V.fplan;return Math.max(0,l.indexOf(v));}
 initExSwipe({
   can:function(step,k){

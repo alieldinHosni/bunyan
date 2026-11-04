@@ -29,8 +29,8 @@ import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, stepperInput, V} fro
 import {glyph} from "./glyphs.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
-import {vPlanFood} from "./views/food.js";
-import {tiexSheet} from "./views/timport.js";
+import {vImportSheet, vPlanFood, vPutMeal} from "./views/food.js";
+import {tiexSheet, vTImportSheet} from "./views/timport.js";
 import {coolCard, warmOf} from "./views/warmup.js";
 import {settingsSheet} from "./settings.js";
 import {fig3dHtml, hasMannequin} from "./mannequin.js";
@@ -47,7 +47,7 @@ function exStep(k,label,v,unit){
 /* ============================================================ sheets */
 var SHEET_KICK={editex:"Exercise",tiex:"Import",recovery:"Recovery",weigh:"Body",measure:"Body",photo:"Body",steps:"Activity",recovery:"Recovery",
   gear:"Training",likes:"Training",exercise:"Training",exhist:"History",share:"Sharing",coach:"Sharing",
-  backup:"Your data",restore:"Your data",set_you:"Settings",set_avatar:"Profile",set_training:"Settings",set_meals:"Settings",set_app:"Settings",
+  backup:"Your data",restore:"Your data",set_you:"Settings",set_avatar:"Profile",set_training:"Settings",set_meals:"Settings",pimport:"Nutrition",putmeal:"Nutrition",timport:"Training",set_app:"Settings",
   set_profiles:"Settings",set_data:"Settings",set_chat:"Settings",about:"Settings",plates:"Workout",note:"Workout",text:"Nutrition",exdetail:"Exercise"};
 var CFICON={
   leave:'<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M9 16l-4-4 4-4M5 12h11"/>',
@@ -421,6 +421,9 @@ function vSheet(){
     +'<p>'+esc(t("Advice you set aside stays away until the numbers behind it change."))+'</p></div>';
   /* A food of the plan under review: amount, swap, remove (views/food.js vPlanFood). */
   else if(V.sheet==="pfood")b=vPlanFood();
+  else if(V.sheet==="pimport")b=vImportSheet();
+  else if(V.sheet==="putmeal")b=vPutMeal();
+  else if(V.sheet==="timport")b=vTImportSheet();
   else if(V.sheet==="ibread")b='<h2>'+esc(t("What your InBody says"))+'</h2><div class="ibread">'+inbodyReading()+'</div>';
   else if(V.sheet==="weigh"){
     /* The stepper starts from the last weight known. With none, an empty field to type

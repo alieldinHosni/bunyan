@@ -28,17 +28,10 @@ function withIds(tp){
 
 function vTImport(){
   var tp=V.tp;
-  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Copy in a program"))+'</h1></div>';
-  if(!tp){
-    h+='<p class="dsub">'+esc(t("Open the PDF your coach sent, paste the program, or paste the message another Bunyan user sent you. Everything is read on this phone."))+'</p>'
-     +'<textarea id="ti_text" class="pitext" rows="9" spellcheck="false" placeholder="'
-     +esc(t("Day A — Push\nIncline bench press 3 x 6-8, 90s rest, 40 kg\nLateral raise 3 x 12-15\n\nDay B — Pull\nLat pulldown 3 x 8-10"))+'">'+esc(V.titext||"")+'</textarea>'
-     +'<div class="piacts"><label class="btn g pifile"><input id="ti_file" type="file" accept=".pdf,application/pdf,.txt,.md,text/plain">'
-     +esc(t("Open a file"))+'</label>'
-     +'<button class="btn" data-tiread="1">'+esc(t("Read the program"))+'</button></div>';
-    if(V.tibusy)h+='<p class="pibusy" role="status"><span class="pispin" aria-hidden="true"></span>'+esc(t("Reading the PDF…"))+'</p>';
-    if(V.tierr)h+='<div class="empty"><p>'+esc(t(V.tierr))+'</p></div>';
-    return h;}
+  /* The paste box is a sheet now (vTImportSheet, owner 4 Nov); this page is the draft. */
+  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Check the program"))+'</h1></div>';
+  if(!tp)return h+'<p class="dsub">'+esc(t("Nothing has been read yet."))+'</p>'
+   +'<button class="btn" data-timport="1">'+esc(t("Copy in a program"))+'</button>';
   var nEx=0,nNew=0,nCheck=0;
   tp.days.forEach(function(d){d.ex.forEach(function(e){nEx++;if(!e.name)nNew++;else if(e.conf==="close")nCheck++;});});
   h+='<p class="dsub">'+esc(t("Everything here can be changed before it is saved. Tap an exercise to edit it."))+'</p>';
@@ -72,6 +65,20 @@ function vTImport(){
    +'<p class="bnote">'+esc(t("It becomes your active program. The one you have now stays in My programs."))+'</p>'
    +'<button class="ddel" data-tirestart="1">'+esc(t("Start over"))+'</button></div>';
   return h;}
+
+/* Copy in a program, as a sheet from the icon by the program's name (owner, 4 Nov: the
+   same as Food's): paste, or open a file; once read, the draft opens as a page to check.
+   What could not be read is said here, where the text can be fixed. */
+function vTImportSheet(){
+  return '<h2>'+esc(t("Copy in a program"))+'</h2>'
+   +'<p class="pf-n">'+esc(t("Open the PDF your coach sent, paste the program, or paste the message another Bunyan user sent you. Everything is read on this phone."))+'</p>'
+   +'<textarea id="ti_text" class="pitext" rows="7" spellcheck="false" placeholder="'
+   +esc(t("Day A — Push\nIncline bench press 3 x 6-8, 90s rest, 40 kg\nLateral raise 3 x 12-15\n\nDay B — Pull\nLat pulldown 3 x 8-10"))+'">'+esc(V.titext||"")+'</textarea>'
+   +(V.tibusy?'<p class="pibusy" role="status"><span class="pispin" aria-hidden="true"></span>'+esc(t("Reading the PDF…"))+'</p>':'')
+   +(V.tierr?'<p class="tierr" role="alert">'+esc(t(V.tierr))+'</p>':'')
+   +'<div class="piacts"><label class="btn g pifile"><input id="ti_file" type="file" accept=".pdf,application/pdf,.txt,.md,text/plain">'
+   +esc(t("Open a file"))+'</label>'
+   +'<button class="btn" data-tiread="1">'+esc(t("Read the program"))+'</button></div>';}
 
 /* Headings arrive in capitals from a designed PDF; a note reads better in sentence case. */
 function cap(s){s=String(s||"");return s===s.toUpperCase()?s.charAt(0)+s.slice(1).toLowerCase():s;}
@@ -194,4 +201,4 @@ function newNames(tp){
     if(!e.name&&e.raw&&!have[e.raw.toLowerCase()]){have[e.raw.toLowerCase()]=1;out.push({n:e.raw,m:guessMuscle(e.raw)});}});});
   return out;}
 
-export {guessMuscle, newNames, programFromDraft, tiexSheet, vTImport, withIds};
+export {guessMuscle, newNames, programFromDraft, tiexSheet, vTImport, vTImportSheet, withIds};

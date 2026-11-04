@@ -77,7 +77,7 @@ var lastView="",lastSheet=null,lastEx=-2,lastSec=null;
 var SECS={t:["program","programs"],f:["plan","targets"]};
 function secNow(){
   if(V.tab==="train"&&V.train==="plan"&&!S.active)return "t:"+(V.tplan||"program");
-  if(V.tab==="food"&&V.fplan&&V.fplan!=="foods"&&!V.smeal&&!V.pslot&&!V.pimport)return "f:"+V.fplan;
+  if(V.tab==="food"&&V.fplan&&!V.smeal&&!V.pslot&&!V.pimport)return "f:"+V.fplan;
   return null;}
 /* Before the page is redrawn: if a plan page's tab is about to change by a tap (a swipe
    moves its own), a still copy of the tab on show, and which way the new one comes. */
@@ -104,10 +104,35 @@ function pageMoveOf(moved,view){
   var d=navDepth(),dd=d-lastDepth,same=V.tab===lastTab;lastDepth=d;lastTab=V.tab;
   if(!moved||!same||!dd||isReduced()||V.assess||/\/(session|run)$/.test(view))return 0;
   return dd>0?1:-1;}
+/* A page opened from a page, or back: the new one and a still copy of the old travel
+   together. Each goes the screen's width and a little more, so in the slide's slow end
+   what shows between them is ground, not the old page's edge (owner, 4 Nov: the Exercise
+   Library "has the same old swiping issue"). And it waits, a quarter of a second at most,
+   for the pictures it opens on: they are lazy, and a lazy picture on a page still off
+   the screen is not fetched until it comes in, so each one appeared after the page had
+   (the flash). */
+var PG_GAP=40;
 function pageMove(appEl,g,dir){
-  var side=document.documentElement.getAttribute("dir")==="rtl"?-1:1;
+  var side=document.documentElement.getAttribute("dir")==="rtl"?-1:1,
+      d=dir*side*((document.documentElement.clientWidth||window.innerWidth)+PG_GAP);
+  var imgs=firstScreenImgs(appEl);
   appEl.classList.add("pgfront");
-  slidePair(appEl,g,(dir*side*100)+"%",(-dir*side*100)+"%",PG_MS,PG_EASE,function(){appEl.classList.remove("pgfront");});}
+  var go=function(){if(go.done)return;go.done=true;appEl.style.transform="";
+    slidePair(appEl,g,d+"px",(-d)+"px",PG_MS,PG_EASE,function(){appEl.classList.remove("pgfront");});};
+  if(!imgs.length){go();return;}
+  appEl.style.transform="translateX("+d+"px)";
+  readyImgs(imgs,250).then(go);}
+/* The pictures within the first screen of a page, asked for now rather than lazily. */
+function firstScreenImgs(root){
+  var h=window.innerHeight||800,out=[];
+  root.querySelectorAll("img").forEach(function(im){
+    var r=im.getBoundingClientRect();
+    if(r.bottom>-50&&r.top<h+50&&r.width>0){if(im.loading==="lazy")im.loading="eager";out.push(im);}});
+  return out;}
+function readyImgs(imgs,cap){
+  return Promise.race([
+    Promise.all(imgs.map(function(im){return im.decode?im.decode().catch(function(){}):Promise.resolve();})),
+    new Promise(function(r){setTimeout(r,cap);})]);}
 /* Which picture a place stands on: Training's first page is home; a day about to be
    started is the workout's; planning a program is training's; Coach's sections are
    their own; the assessment is Coach's. */
@@ -157,7 +182,7 @@ function render(){
   /* Planning lives in its own tab now (owner, 3 Nov): Training's plan page and its
      builders under train/, Food's plan page and its meal screens under food/. */
   var view=V.assess?"assess":V.tab+"/"+(V.tab==="train"?(S.active?"session":S.run?"run":V.train)
-    :V.tab==="food"?(V.smeal?"smeal":V.pslot?"pslot":V.pimport?"pimport":V.fplan==="foods"?"myfoods":V.fplan?"plan":"")
+    :V.tab==="food"?(V.smeal?"smeal":V.pslot?"pslot":V.pimport?"pimport":V.fplan?"plan":"")
     :V.tab==="coach"?"hub":"");
   var moved=view!==lastView;lastView=view;
   /* Note what has focus and where the caret sits before the rebuild destroys it.

@@ -117,7 +117,10 @@ function readTraining(src){
     if(!r||!r.days.length){V.tp=null;
       V.tierr="No training days or exercises were found in that file. If it is a meal plan, import it under Food.";
       render();return;}
-    V.tp=withIds(r);render();window.scrollTo(0,0);});}
+    /* Read: the sheet goes and the draft opens one step in from the plan page. */
+    V.tp=withIds(r);V.sheet=null;V.sd=null;
+    if(V.tab!=="train"||V.train!=="import"){pushNav();V.tab="train";V.train="import";}
+    render();window.scrollTo(0,0);});}
 /* The question typed into the chat, asked; and the newest question brought into view
    with its answer under it. */
 function chatSend(){
@@ -190,6 +193,16 @@ function pcAfter(){
    shared his split with me"). */
 var SHARED=/BNY[01]\.[A-Za-z0-9_-]{8,}/;
 function isShared(text){return SHARED.test(String(text||""));}
+/* A plan copied in has been read: the sheet goes and the plan opens as a page to check,
+   one step in from the meal plan (views/food.js vImport). */
+function toReview(){
+  V.pibusy=false;
+  /* Nothing to check: say so where the text is, so it can be fixed there. */
+  if(!(V.pparse&&V.pparse.length)&&!(V.ptargets&&Object.keys(V.ptargets).length)){
+    render();toast(t("No meals or foods were found in that text."));return;}
+  V.sheet=null;V.sd=null;
+  if(!V.pimport){pushNav();V.tab="food";V.pimport=true;V.pgen=null;}
+  render();window.scrollTo(0,0);}
 function readPlan(text){
   decodePlan(text).then(function(g){
     if(!g){openSheet("recvplan",{text:text,err:1});return;}
@@ -299,4 +312,4 @@ function ibPhoto(file){
     if(Object.keys(readInBody(txt)).length){ibRead(txt);return;}
     ibStatus(t("No InBody figures found on the photo. Copy its text and paste it below."));
   },function(){if(my===OCR&&V.sheet==="inbody")ibStatus(t("The photo couldn't be read on this phone. Copy its text and paste it below."));});}
-export {builderId, chatEnd, chatSend, editedEx, fixLogsNow, ibPhoto, ibRead, isShared, LENT, MF, moveDayEx, moveRow, pcAfter, readPlan, readTraining, requestCloseSheet, retargetNow, sendText, setDbLoad, setExField, sheetDirty, slotsFrom, tidyGroups, toPlan, topOfResults, withNotes};
+export {toReview, builderId, chatEnd, chatSend, editedEx, fixLogsNow, ibPhoto, ibRead, isShared, LENT, MF, moveDayEx, moveRow, pcAfter, readPlan, readTraining, requestCloseSheet, retargetNow, sendText, setDbLoad, setExField, sheetDirty, slotsFrom, tidyGroups, toPlan, topOfResults, withNotes};

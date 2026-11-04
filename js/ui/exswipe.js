@@ -94,8 +94,9 @@ function segSettle(s,to,ms){
 /* The tab next door, under the finger: drawn when the drag picks a direction (H.peek),
    placed beside the tab being dragged and moved with it, so the next tab slides in as
    the finger goes rather than empty ground. Turning back the other way swaps it. */
-function peekFollow(s,x){
-  var step=stepOf(x);
+function peekFollow(s,x,toStep){
+  /* A tap can name a tab further than next door (Meal plan straight to Daily goals). */
+  var step=toStep||stepOf(x);
   if(!H.can(step,s.k)||!H.peek){peekDrop(s);return;}
   if(!s.nb||s.nbStep!==step){
     peekDrop(s);
@@ -107,6 +108,15 @@ function peekFollow(s,x){
     w.style.cssText="position:fixed;left:"+s.base.left+"px;top:"+s.top+"px;width:"+s.base.width+"px;margin:0;padding:0;max-width:none;pointer-events:none;z-index:0";
     w.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";
     document.body.appendChild(w);
+    /* In the page the first card's top margin merges with the gap under the tabs; drawn
+       on its own it does not, and the tab came in lower than it then landed: the page
+       jumped up as it arrived (owner, 4 Nov: Programs, 12 px). Placed as the page will
+       place it. */
+    var fc=w.querySelector(".psec").firstElementChild,cur=s.p.firstElementChild,tabs=tabsOf(),
+        mb=tabs?parseFloat(getComputedStyle(tabs).marginBottom)||0:0,
+        mn=fc?parseFloat(getComputedStyle(fc).marginTop)||0:0,mc=cur?parseFloat(getComputedStyle(cur).marginTop)||0:0;
+    if(fc)fc.style.marginTop="0px";
+    w.style.top=(s.top+Math.max(mb,mn)-Math.max(mb,mc))+"px";
     s.nb=w;s.nbStep=step;}
   s.nb.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";}
 /* The tabs next door, drawn ahead while nothing is happening (owner, 3 Nov: the swipe
@@ -119,6 +129,9 @@ function buildPeek(step,k){
   var w=document.createElement("div");w.id="app";w.className="stillcopy peek";w.setAttribute("aria-hidden","true");w.inert=true;
   var p=document.createElement("div");p.className="psec";p.innerHTML=html;
   p.querySelectorAll("[id]").forEach(function(e){e.removeAttribute("id");});
+  /* Off the screen until the finger brings it, so a lazy picture would wait to load
+     until it was already showing: asked for now. */
+  p.querySelectorAll('img[loading="lazy"]').forEach(function(im){im.loading="eager";});
   w.appendChild(p);return w;}
 function takePeek(step,k){
   var c=pre[step],w=c&&c.k===k?c.w:null;pre[step]=null;
@@ -208,7 +221,7 @@ function slidePlan(s,step){
     /* The real tab exactly where the one that came in stands: if the page had been
        scrolled down the old tab, it is moved up to it in the same frame, unseen. Easing
        the page back up to the tabs afterwards was the jump (owner, 4 Nov). */
-    if(np&&nb&&s.top!=null){var d=np.getBoundingClientRect().top-s.top;if(Math.abs(d)>=1)window.scrollBy({top:d,behavior:"instant"});}
+    if(np&&nb&&s.top!=null){var d=np.getBoundingClientRect().top-nb.getBoundingClientRect().top;if(Math.abs(d)>=1)window.scrollBy({top:d,behavior:"instant"});}
     if(nb)nb.remove();
     if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");};
   /* Both travel on together, edge to edge, from where the finger left them, transform
@@ -216,6 +229,30 @@ function slidePlan(s,step){
   var a=p.animate([{transform:"translateX("+dx+"px)"},{transform:"translateX("+out+"px)"}],{duration:ms,easing:SE,fill:"forwards"});
   if(nb)nb.animate([{transform:"translateX("+(dx+(dx<0?w:-w))+"px)"},{transform:"translateX(0px)"}],{duration:ms,easing:SE,fill:"forwards"});
   a.onfinish=end;a.oncancel=end;setTimeout(end,ms+250);}
+/* A tap on a plan page's tab (or anything else there that names one, like the switch
+   icon): the same slide as a swipe let go at the start, so the two cannot look different.
+   Tapped, it used to be drawn first and then slid, with the old tab's copy only its own
+   width away and the new one placed apart from the page (owner, 4 Nov: "the same old
+   issue if I tap the word"). True when it took the change; false leaves it to the caller. */
+function slideTab(k,to){
+  var p=pane();if(!p||!H||!H.peek||isReduced()||st)return false;
+  if(kindOf(p)!==k)return false;
+  if(document.documentElement.classList.contains("pgmoving"))return true;
+  var g=tabsOf();if(!g)return false;
+  var bs=[].slice.call(g.querySelectorAll(".seg-b")),
+      from=bs.findIndex(function(b){return b.classList.contains("on");}),
+      dest=bs.findIndex(function(b){return b.getAttribute("data-"+k)===String(to);});
+  var step=dest-from;if(from<0||dest<0||!step||!H.can(step,k))return false;
+  var w=document.documentElement.clientWidth||window.innerWidth;
+  var s={p:p,k:k,mode:"h",w:w,dx:0,g:g,i0:parseFloat(g.style.getPropertyValue("--i"))||from,n:bs.length};
+  /* The sign a finger would have had for this step. */
+  var x=(step>0?-1:1)*(rtl()?-1:1);
+  peekFollow(s,x,step);
+  if(!s.nb)return false;
+  s.dx=x;lockUntil=Date.now()+460;
+  slidePlan(s,step);
+  return true;}
+
 /* Where an exercise change by step comes in from, on screen. */
 function fromOf(step){return (rtl()?-1:1)*(step>0?1:-1);}
 
@@ -236,4 +273,4 @@ function initExSwipe(hooks){
   document.addEventListener("click",function(ev){
     if(swallowUntil&&Date.now()<swallowUntil){swallowUntil=0;ev.preventDefault();ev.stopPropagation();}},true);}
 
-export {bindExSwipe, enter, fromOf, initExSwipe};
+export {bindExSwipe, enter, fromOf, initExSwipe, slideTab};

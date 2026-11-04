@@ -402,10 +402,10 @@ function weekRail(sp,sel){
    PDF, every program you own, and the templates. (Letting Bunyan build it is Coach AI's
    job, so it is not offered twice.) */
 function programsPage(){
-  /* Two ways to a new program, side by side, like the meal plan's. */
-  var h='<div class="ptiles">'
-   +'<button class="ptile" data-newsplit="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Build a program")+'</b><span>'+t("Pick the days, fill them from the library")+'</span></button>'
-   +'<button class="ptile" data-timport="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Copy in a program")+'</b><span>'+t("A PDF, pasted text, or one shared with you")+'</span></button></div>';
+  /* A new program from scratch. Copying one in is the icon by My program's name now
+     (owner, 4 Nov), so this is the one way here, across the width. */
+  var h='<div class="ptiles one">'
+   +'<button class="ptile" data-newsplit="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Build a program")+'</b><span>'+t("Pick the days, fill them from the library")+'</span></button></div>';
   h+=programsList();
   var tpls=allSplits().filter(function(o){return !editSplit(o.id);});
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Templates")+'</h2><span class="dhint">'+t("Use one to get your own copy")+'</span></div>'
@@ -449,7 +449,9 @@ function programsList(){
      /* Its own cover: the program's week, drawn from its days. */
      +'<span class="drow-cov">'+programCover(sp,64,48)+'</span>'
      +'<span class="dtext"><span class="drow-n">'+esc(planName(sp.name))+'</span>'
-     +'<span class="drow-s">'+tr+' '+t(tr===1?"training day":"training days")+'<i class="ddot"></i>'
+     /* A middle dot as text: this line is not a flex row, so the drawn dot had no size and
+        the two ran together ("3 training daysIn rotation"). */
+     +'<span class="drow-s">'+tr+' '+t(tr===1?"training day":"training days")+' · '
      +t(sp.schedule==="week"?"By weekday":"In rotation")+'</span></span>'
      +(on?'<span class="bpill">'+t("Active")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')
      +'</button></div>';});
@@ -764,6 +766,8 @@ function builderBody(sp,id,inline){
     +'<h2 class="bname-t">'+esc(planName(sp.name))+'</h2><span class="ico ico-edit" aria-hidden="true"></span></button>'
     +'<span class="bname-s"><span class="num">'+nEx+'</span> '+esc(t(nEx===1?"exercise":"exercises"))+'</span></div>'
     +(active?'<div class="bname-a"><button class="icobtn" data-tplan="programs" aria-label="'+esc(t("Switch program"))+'">'+glyph("swap")+'</button>'
+      /* Copying a program in, beside sharing one, as on Food (owner, 4 Nov). */
+      +'<button class="icobtn" data-timport="1" aria-label="'+esc(t("Copy in a program"))+'">'+glyph("download")+'</button>'
       +(shareable?'<button class="icobtn" data-shareplan="p:'+esc(id)+'" aria-label="'+esc(t("Share my program"))+'">'+glyph("share")+'</button>':'')+'</div>':'')
     +'</div>';}
   else h+='<div class="libhero bhero">'+HERO_ART

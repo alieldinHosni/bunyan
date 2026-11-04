@@ -390,6 +390,16 @@ function foodName(x){
 function ownFood(){
   var my=S.myFoods||[],by={};
   (FOODDB||[]).forEach(function(f){by[f.id]=f;});my.forEach(function(f){by[f.id]=f;});
-  return {habits:habits(S.days||{},today(),function(id){return by[id]||null;}),mine:my.slice()};}
+  return {habits:habits(S.days||{},today(),function(id){return by[id]||null;}),mine:my.slice(),saved:savedPlates()};}
+/* The meals they built (My foods → Build your own meal), as plates the meal plan can size
+   to a meal's calories: each food and its amount. A meal with anything in it the food
+   lists do not hold (a quick add with no food behind it) cannot be resized honestly, so
+   it is left out. */
+function savedPlates(){
+  return (S.savedMeals||[]).map(function(m){
+    var it=m.items||[],g={},ids=[];
+    if(!it.length||it.some(function(x){return !x.fid||!(x.grams>0);}))return null;
+    it.forEach(function(x){if(!g[x.fid]){g[x.fid]=0;ids.push(x.fid);}g[x.fid]+=x.grams;});
+    return {name:m.name,id:m.id,fids:ids,grams:g};}).filter(Boolean);}
 
 export {density, foodById, foodName, ownFood, FOODDB, findByBarcode, fuzzyFoods, gramsFor, isDrink, isMeasure, loadFoods, lookupBarcode, normBarcode, normFood, nutritionFor, offBarcode, offSearch, parseFoodInput, recalcItem, rememberBarcode, resolveItem, roundUnit, searchFoods, sumNutrition, toLogItem, unitGrams, unitKey, unitLabel, UNIT_STEP, unitsFor};

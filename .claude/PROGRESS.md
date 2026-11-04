@@ -3553,3 +3553,77 @@ Owner, 4 Nov (screenshots):
   easing back up to the tabs after landing was the jump. The tab's word turns as the highlight arrives.
 - Food's plan page: My foods and Make a new plan from my goals moved into the gear (set_meals); by the
   name only Copy in and Share; no row at all before there is a plan. Guide v6.
+
+## Plan swipe lands without a jump — branch session/swipejump (CACHE v217)
+
+Owner, 4 Nov: the swipe is good now, but Programs & exercises still jumps up at the start. Measured: the
+tab coming in stood 12 px lower than the real one then landed. Programs' first card (.ptiles) has a 12 px
+top margin; in the page it merges with the 16 px gap under the tabs, drawn on its own (the swipe's still
+copy is a fixed box) it did not. exswipe.js peekFollow now zeroes that margin in the copy and places it
+where the page will (max(gap, new margin) − max(gap, current margin)); landing aligns on the copy's own
+position. The Plan swipe test compares the first card, scrolled and unscrolled, both pages, each way; it
+fails on the previous build (12 vs 24) and passes now.
+- Same day: a tap on a plan tab's word (or the switch icon, anything on the page naming a tab) now runs the
+  swipe's own slide (exswipe.js slideTab, from shell.js tplan/fplan): the next tab drawn beside, both
+  travel the screen's width, the real tab drawn where it landed. Tapping had kept the old render-then-slide
+  path with its leftover strip and offset (owner: "the same old issue if I tap the word"). CACHE v218.
+
+## Copy in a plan is a sheet — branch session/importsheet (CACHE v219)
+
+Owner, 4 Nov: the Copy in a plan page should be a pop-up from the icon. The arrow icon (and the empty
+plan's tile) open sheet "pimport" (views/food.js vImportSheet): the paste box, Open a file, Read the plan,
+the PDF's progress line. Once read (handlers/common.js toReview) the sheet goes and the plan opens one
+step in as "Check the plan" (vImport, no paste box), Back returns to the meal plan, and the pasted text is
+kept for the next time the sheet opens. Nothing found: the sheet stays with a toast. A Bunyan share
+pasted there opens its own sheet as before. Training's Copy in a program is still a page.
+
+## Copy in a program is a sheet too — branch session/tsheet (CACHE v220)
+
+Owner, 4 Nov: as on Food, the Copy in a program tile leaves Programs & exercises; an icon beside Share on
+My program (swap · copy in · share) opens sheet "timport" (views/timport.js vTImportSheet): paste box,
+Open a file, Read the program, the PDF's progress line, and what could not be read, said in the sheet.
+Read (common.js readTraining), the sheet goes and the draft opens one step in as "Check the program".
+Start over, and the icon from the draft, go back to My program first and open the sheet once Back has
+landed (handlers/train.js copyInSheet: Back goes through history). Programs keeps Build a program, full
+width. Also: the My programs row read "3 training daysIn rotation" (its dot had no size outside a flex
+row); a middle dot as text now. Guide v6.
+Rename question (owner): renaming only changes the program's name (actions.js renamesplit); a probe that
+renames, reloads and lists finds one program. Asked the owner for the steps that showed a second one.
+
+## Opening a page: no strip of the old one, pictures ready — branch session/libpage (CACHE v221)
+
+Owner, 4 Nov: opening the Exercise Library has "the same old swiping issue" and its pictures flash.
+render.js pageMove: the new page and the old one's copy each travel the screen's width plus 40 px
+(they went 100% of #app, and in the slide's slow end the old page's last cards showed at the edge);
+and the slide waits, 250 ms at most, for the pictures on the new page's first screen, asked for eagerly
+and decoded: they are loading="lazy", and a lazy picture on a page still off the screen is not fetched
+until it comes in, so each appeared after the page had. The tab swipe's copy of the next tab asks for
+its pictures eagerly too. Filmed: no blank pictures, ground between the pages. Test fails on the
+previous build and passes now.
+- My foods (owner, 4 Nov): the two tiles are "Build your own meal" (foods you eat together, logged in one
+  tap) and "Create a food" (type it in from its nutrition label), in place of Save a meal and Add a food.
+  CACHE v222.
+
+## My foods and the meal plan, together — branch session/mfnames (CACHE v223)
+
+Owner, 4 Nov: My foods and Make a new plan from my goals "have common functions"; owner chose: My foods
+a tab, the new plan a button, the gear for settings only, and the two wired together.
+- Nutrition plan has three tabs: Meal plan · My foods · Daily goals (FPLAN, app.js PTABS). My foods is no
+  longer a page one step in; swipe and tab taps go through all three (a tap two tabs away brings in the
+  tab tapped: exswipe.js peekFollow takes the step).
+- The gear holds Meal names only. "Rebuild from my goals" is a button on the plan's summary card; it
+  opens the review as before.
+- The plan builder (engine/mealplan.js) now draws on the meals built in My foods (nutrition.js
+  ownFood().saved, savedPlates: every food with its amount; a meal with a quick add in it cannot be
+  resized honestly and is left out). After the meals eaten most days and before the app's own, sized to
+  the meal's calories within the same 20% as the usual ones, each once a day, Another version starts the
+  list elsewhere. The review says "Your meal: {name}".
+- A built meal's own page has "Put in my meal plan": a sheet of the plan's meals, each with what it holds;
+  the one chosen takes its foods, with Undo.
+- Names: "Your meals" over the built meals, "Your own meal" on a meal's page.
+Tests: the meal plan, swipe and tap tests for three tabs; a built meal in a rebuilt plan and Put in my
+meal plan with Undo.
+- Suite: the container restarted twice mid-run; 244 passed before it, the remaining 83 were run on their
+  own (82 passed; Plan tabs expected Targets one swipe from Meal plan, now My foods; Press found the
+  helper's tab tap had not landed yet, since a tab tap now draws the tab when its slide ends). The
+  coach() helper waits for the tab to land; the 17 tests that switch tabs through it pass again.
