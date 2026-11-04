@@ -4791,6 +4791,18 @@ await test("Main tabs (owner, 4 Nov): a swipe on a tab's own page moves along th
   await coach(page,"food","plan");await pause(page,500);
   eq(await page.evaluate(()=>document.getElementById("app").hasAttribute("data-tswipe")),false,"the plan page is not a main tab's own page");
 });
+await test("The note under the goal (owner, 4 Nov): Got it puts it away, it stays away after a reload, and it comes back only when what it says changes",async page=>{
+  await coach(page,"food","plan");
+  if(!(await page.$('.tgsrc-w .tgsrc-ok')))throw new Error("no Got it on the note");
+  await page.tap('.tgsrc-ok');await pause(page,300);
+  eq(await page.evaluate(()=>!!document.querySelector('.tgsrc-w')),false,"gone at once");
+  await page.reload();await pause(page,1500);
+  await coach(page,"food","plan");
+  eq(await page.evaluate(()=>!!document.querySelector('.tgsrc-w')),false,"still gone after a reload");
+  /* What it says changes (here: the key it was put away under no longer matches). */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.tgsrcSeen="same|formula|insufficient|offer";st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await page.evaluate(()=>!!document.querySelector('.tgsrc-w')),true,"back when it says something new");
+});
 await test("Targets: one card says the target; Edit opens it as fields and Cancel closes it unchanged; the coach's suggestion only when it differs; the Progress has how it has been going",async page=>{
   await coach(page,"food","targets");
   const g=await ev(page,"S.goals");
