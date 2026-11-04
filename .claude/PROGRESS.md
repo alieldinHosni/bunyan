@@ -3697,3 +3697,12 @@ browser pulled everything down by 88px while the cards glided back.
 - The workout's page keeps its place (motion.js holdScroll). After a same-screen render it keeps the
   room the page had below the view as an empty block after #app, and shrinks that block only as the
   person scrolls up. A new screen or exercise drops it (clearHold). This holds with reduced motion too.
+
+## A change of mind mid-swipe stays put — branch session/swipecancel (CACHE v232)
+
+Owner, 4 Nov: "when I hold my finger to swipe left then change my mind half distance, the app glitch and
+restart". A drag that came back past where it started was read as a new swipe the other way. Let go
+past a third of the width (or with a flick), it went to the tab before. From Food that is Training,
+which looked like the app starting again. exswipe.js now keeps the direction a drag set out in
+(st.dir). Brought back past its start, the pane rests at zero with its peek on its own side, and when
+let go it springs back. The test reproduces Food → Training on the old code.

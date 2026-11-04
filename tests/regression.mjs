@@ -2801,6 +2801,26 @@ await test("Feel today: Skip or an answer fades the question where it was; scrol
   await page.evaluate(()=>document.querySelector('#app [data-ready="2"]').click());await pause(page,700);
   eq(await ev(page,"[document.querySelectorAll('#app .ready').length,document.querySelectorAll('#app .readynote').length]"),[0,1]);
 });
+await test("A change of mind (owner, 4 Nov): a page dragged halfway and brought back past where it started stays, on the dock's tabs and on a plan page's, even let go with a flick",async(page,env)=>{
+  const cdp=await env.ctx.newCDPSession(page);
+  const T=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
+  const there=async(xs,y)=>{await T("touchStart",xs[0],y);
+    for(let k=1;k<xs.length;k++){const a=xs[k-1],b=xs[k];for(let i=1;i<=8;i++){await T("touchMove",a+(b-a)*i/8,y);await page.waitForTimeout(16);}}
+    await T("touchEnd",0,0);await page.waitForTimeout(900);};
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"food");await pause(page,800);
+  /* Halfway left (towards Coach), then back right past the start, quickly. */
+  await there([240,110,368],650);
+  eq(await ev(page,"[V.tab,document.querySelectorAll('.stillcopy').length,document.getElementById('app').style.transform||'']"),["food",0,""],"still Food, nothing left over");
+  /* A plan page: Meal plan dragged towards My foods and brought back. */
+  await coach(page,"food","plan");await pause(page,800);
+  const y=await page.evaluate(()=>{const r=document.querySelector("#app .psec").getBoundingClientRect();return Math.round(Math.min(r.top+90,innerHeight-160));});
+  await there([240,110,368],y);
+  eq(await ev(page,"[V.fplan,document.querySelectorAll('.stillcopy').length]"),["plan",0],"still the meal plan");
+  /* And a swipe that means it still goes. */
+  await there([330,60],y);
+  eq(await ev(page,"V.fplan"),"foods","a full swipe still moves on");
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);

@@ -67,16 +67,22 @@ function onMove(ev){
     if(Math.abs(dx)<SLOP&&Math.abs(dy)<SLOP)return;
     st.mode=Math.abs(dx)>Math.abs(dy)*RATIO?"h":"v";
     if(st.mode==="v"){st=null;return;}
+    /* The way the drag set out is the only way it can go. Brought back past where it
+       started, the finger has changed its mind: the pane rests there and, let go, stays.
+       Read the other way, coming back went on to the tab before, and from Food that is
+       Training, which looked like the app starting again (owner, 4 Nov). */
+    st.dir=dx<0?-1:1;
     /* Measured from here, so the pane does not jump by the slop. */
     st.x=tt.clientX;dx=0;}
+  if(dx*st.dir<0)dx=0;
   if(ev.cancelable&&st.k!=="tab")ev.preventDefault();
   st.dx=dx;
   st.samples.push([Date.now(),tt.clientX]);
   if(st.samples.length>6)st.samples.shift();
-  var x=H.can(stepOf(dx),st.k)?dx:dx*0.3;
+  var x=H.can(stepOf(st.dir),st.k)?dx:dx*0.3;
   /* A plan page: the highlight over its tabs moves with the finger, the same share of a
      tab as the page has moved of its width (owner, 3 Nov: it lagged behind the page). */
-  if(st.k!=="ex"){segFollow(st,x);peekFollow(st,x);}
+  if(st.k!=="ex"){segFollow(st,x);peekFollow(st,x,stepOf(st.dir));}
   st.p.style.transition="none";
   st.p.style.transform="translateX("+Math.round(x)+"px)";
   if(st.k==="ex")st.p.style.opacity=String(1-Math.min(.35,Math.abs(x)/st.w*.5));}
@@ -114,7 +120,7 @@ function peekFollow(s,x,toStep){
        padding round it; a plan tab's content sits where the tab's pane stands. */
     if(tabk)s.top=Math.max(s.base.top,0);
     w.style.cssText="position:fixed;left:"+s.base.left+"px;top:"+s.top+"px;width:"+s.base.width+"px;margin:0;padding:"+(tabk?getComputedStyle(s.p).padding:"0")+";max-width:none;pointer-events:none;z-index:0";
-    w.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";
+    w.style.transform="translateX("+Math.round(x+((x||s.dir)<0?s.w:-s.w))+"px)";
     document.body.appendChild(w);
     /* In the page the first card's top margin merges with the gap under the tabs; drawn
        on its own it does not, and the tab came in lower than it then landed: the page
@@ -135,7 +141,7 @@ function peekFollow(s,x,toStep){
       if(want>maxS){s.top=paneDoc-maxS;if(tabk)w.style.top=s.top+"px";}}
     if(!tabk)w.style.top=(s.top+Math.max(mb,mn)-Math.max(mb,mc))+"px";
     s.nb=w;s.nbStep=step;}
-  s.nb.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";}
+  s.nb.style.transform="translateX("+Math.round(x+((x||s.dir)<0?s.w:-s.w))+"px)";}
 /* The tabs next door, drawn ahead while nothing is happening (owner, 3 Nov: the swipe
    still caught). Drawing one meant laying out the whole page as it would be, and doing
    that as the finger began to move was the hitch at the start of every swipe. Made
@@ -172,7 +178,7 @@ function springBack(p,s){
   /* The tab next door goes back where it came from with the dragged one. */
   if(s&&s.nb){var nb=s.nb;s.nb=null;
     if(isReduced()||!nb.animate)nb.remove();
-    else{var a=nb.animate([{transform:nb.style.transform},{transform:"translateX("+(s.dx<0?s.w:-s.w)+"px)"}],{duration:320,easing:"cubic-bezier(0.2,0,0,1)",fill:"forwards"});
+    else{var a=nb.animate([{transform:nb.style.transform},{transform:"translateX("+(((s.dir||s.dx)<0)?s.w:-s.w)+"px)"}],{duration:320,easing:"cubic-bezier(0.2,0,0,1)",fill:"forwards"});
       a.onfinish=function(){nb.remove();};setTimeout(function(){if(nb.parentNode)nb.remove();},600);}}
   if(isReduced()){p.style.transition="";p.style.transform="";p.style.opacity="";return;}
   p.style.transition="transform 320ms cubic-bezier(0.2,0,0,1),opacity 320ms ease";
@@ -184,7 +190,9 @@ function onEnd(){
   var s=st;st=null;
   if(!s||s.mode!=="h")return;
   swallowUntil=Date.now()+400;
-  var step=stepOf(s.dx);
+  var step=stepOf(s.dir);
+  /* Back where it started, or nearly: a change of mind, never the other tab. */
+  if(s.dx*s.dir<=0){springBack(s.p,s);return;}
   /* Speed over the last moments of the drag, px/ms. */
   var a=s.samples[0],b=s.samples[s.samples.length-1],v=b[0]>a[0]?(b[1]-a[1])/(b[0]-a[0]):0;
   var far=Math.abs(s.dx)>s.w*0.3,flick=Math.abs(v)>0.45&&Math.abs(s.dx)>40&&(v<0)===(s.dx<0);
