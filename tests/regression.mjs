@@ -90,8 +90,7 @@ async function coach(page,sec,sub){
     await page.waitForTimeout(250);
     /* Exercises live under Programs since 3 Nov: that tab, at the library. */
     const ex=sec==="train"&&sub==="exercises";if(ex)sub="programs";
-    /* My foods is a page one step in from the meal plan (3 Nov), reached from its list. */
-    if(sec==="food"&&sub==="foods"){await page.tap('.dhead-a[data-sheet="set_meals"]');await page.waitForTimeout(400);await page.tap('#sheet [data-fplan="foods"]');await page.waitForTimeout(500);return;}
+    /* My foods is the plan page's middle tab (4 Nov). */
     if(sub&&sub!==first){await page.tap('.psecs [data-'+attr+'="'+sub+'"]');await page.waitForTimeout(250);}
     if(ex){await page.evaluate(()=>document.getElementById("pex").scrollIntoView({block:"start"}));await page.waitForTimeout(150);}
     return;}
@@ -4550,7 +4549,9 @@ await test("Plan pages: a sideways swipe moves between the tabs on Training and 
   eq(await page.$eval('#app .psec',e=>e.style.transform),"","nothing left offset");
   await coach(page,"food","plan");
   y=await paneY();
-  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"targets","Food: Meal plan → Targets");
+  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"foods","Food: Meal plan → My foods");
+  y=await paneY();
+  await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"targets","My foods → Daily goals");
   y=await paneY();
   await drag(320,y,60,y+4);eq(await ev(page,"V.fplan"),"targets","the last tab resists");
   /* Arabic: what comes next is on the left, so dragging right brings it. */
@@ -4618,7 +4619,7 @@ await test("Guide: Training's plan page has its own, which says what the tabs, E
   if(!/Swipe left or right/.test(await page.textContent('.tour-p')))throw new Error("does not say a swipe switches");
 },{tour:true,prefs:{toured:{train:9,food:9,coach:9,progress:9,profile:9}}});
 /* ---- Food's plan pages, round 3 (owner, 3 Nov) ------------------------------------------ */
-await test("Meal plan: with nothing planned, how to start comes first; once planned, two bars and a verdict; copy in and share are icons by its name, and Meal names, My foods and a new plan from the goals are in the gear (owner, 4 Nov)",async page=>{
+await test("Meal plan: with nothing planned, how to start comes first; once planned, two bars and a verdict; copy in and share are icons by its name; the gear is Meal names; My foods a tab; Rebuild from my goals on the plan (owner, 4 Nov)",async page=>{
   await page.evaluate(async()=>{const st=await import("/js/state.js");(st.S.mealSlots||[]).forEach(x=>{x.plan=[];});st.saveDB();});
   await coach(page,"food","plan");
   eq(await page.evaluate(()=>[!!document.querySelector('.plstart'),!document.querySelector('.plsum'),!!document.querySelector('.plstart .ptile[data-pgen]'),!!document.querySelector('.plstart .ptile[data-pimport]'),
@@ -4638,19 +4639,38 @@ await test("Meal plan: with nothing planned, how to start comes first; once plan
   eq(await page.evaluate(async()=>(await import("/js/engine/meals.js")).mealStyle()),"numbered","Numbered chosen");
   await page.tap('#sheet [data-mstyle="named"]');await pause(page,300);
   eq(await page.evaluate(async()=>(await import("/js/engine/meals.js")).mealStyle()),"named","and back");
-  eq(await page.$$eval('#sheet .srow[data-fplan],#sheet .srow[data-pgen]',a=>a.map(b=>Object.keys(b.dataset)[0])),["fplan","pgen"],"the gear: My foods and a new plan from the goals");
+  eq(await page.$$eval('#sheet .srow[data-fplan],#sheet .srow[data-pgen]',a=>a.length),0,"the gear is Meal names alone");
   await page.tap('#sheet .x[data-close]');await pause(page,600);
   eq(await page.evaluate(()=>[!!document.querySelector('#sheet .sheet'),!!document.querySelector('.sheetghost')]),[false,false],"the sheet slides away and is gone");
-  eq(await page.$$eval('#app .psecs .seg-b',a=>a.map(b=>b.textContent)),["Meal plan","Daily goals"],"two tabs: My foods is not one");
-  await page.tap('.dhead-a[data-sheet="set_meals"]');await pause(page,500);
-  await page.tap('#sheet [data-fplan="foods"]');await pause(page,600);
-  eq(await ev(page,"V.sheet"),null,"the sheet is put away");
-  eq(await ev(page,"[V.fplan,!!document.querySelector('#app .psecs'),document.querySelector('#app .dhead-t').textContent]"),["foods",false,"My foods"],"My foods is a page of its own");
-  await page.tap('[data-back]');await pause(page,500);
-  eq(await ev(page,"[V.tab,V.fplan]"),["food","plan"],"back to the meal plan");
-  await page.tap('.dhead-a[data-sheet="set_meals"]');await pause(page,500);
-  await page.tap('#sheet [data-pgen]');await pause(page,1500);
-  eq(await ev(page,"[V.sheet,!!V.pgen,!!document.querySelector('#app .pmeal')]"),[null,true,true],"a new plan from the goals, from the gear: the review, sheet away");
+  /* Owner, 4 Nov: My foods is a tab, and a new plan from the goals is a button on the plan. */
+  eq(await page.$$eval('#app .psecs .seg-b',a=>a.map(b=>b.textContent)),["Meal plan","My foods","Daily goals"],"three tabs, My foods between");
+  await page.tap('.psecs [data-fplan="foods"]');await pause(page,800);
+  eq(await ev(page,"[V.fplan,!!document.querySelector('#app .psecs'),!!document.querySelector('#app .psec [data-newmeal]')]"),["foods",true,true],"My foods is the middle tab");
+  await page.tap('.psecs [data-fplan="plan"]');await pause(page,800);
+  await page.tap('.plsum [data-pgen]');await pause(page,1500);
+  eq(await ev(page,"[!!V.pgen,!!document.querySelector('#app .pmeal')]"),[true,true],"Rebuild from my goals, on the plan: the review");
+});
+await test("My foods and the meal plan together (owner, 4 Nov): a meal you built comes into a plan made from your goals, sized to its meal and named; and from its own page it goes into a meal of the plan, with Undo",async page=>{
+  const ids=await page.evaluate(async()=>{const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods(r));
+    const by=n=>N.FOODDB.find(f=>f.n===n);const a=[by("Boiled Egg"),by("Ful Medames"),by("Baladi Bread")].filter(Boolean);
+    const st=await import("/js/state.js");
+    st.S.savedMeals=[{id:"smx",name:"Ful breakfast",items:a.map(f=>{const g=f.id===a[0].id?100:150;return {fid:f.id,n:f.n,grams:g,kcal:Math.round(f.kcal*g/(f.per||100)),p:f.p*g/(f.per||100),c:f.c*g/(f.per||100),f:f.f*g/(f.per||100)};})}];
+    st.S.myFoods=st.S.myFoods||[];st.saveDB();return a.map(f=>f.id);});
+  eq(ids.length,3,"three foods found");
+  await coach(page,"food","plan");
+  await page.tap('.plstart [data-pgen], .plsum [data-pgen]');await pause(page,1500);
+  const got=await ev(page,"(V.pparse||[]).filter(m=>m.saved==='Ful breakfast').map(m=>m.items.map(i=>i.fid).sort().join())");
+  eq(got,[ids.slice().sort().join()],"the built meal is one of the day's meals, with its own foods");
+  eq(await page.$$eval('.pmeal-own',a=>a.some(e=>e.textContent==="Your meal: Ful breakfast")),true,"and it says so");
+  /* From the meal's own page, into the plan. */
+  await page.evaluate(async()=>{const v=await import("/js/ui/view.js");v.V.pimport=false;v.V.pgen=null;v.V.pparse=null;v.V.smeal="smx";(await import("/js/ui/render.js")).render();});await pause(page,500);
+  await page.tap('[data-putmeal="smx"]');await pause(page,500);
+  eq(await ev(page,"V.sheet"),"putmeal","which meal it goes into");
+  const slot=await page.$eval('#sheet [data-putin]',e=>e.getAttribute("data-putin").split("|")[1]);
+  await page.tap('#sheet [data-putin]');await pause(page,500);
+  eq(await ev(page,"(S.mealSlots.find(x=>x.id==='"+slot+"').plan||[]).map(i=>i.fid).sort().join()"),ids.slice().sort().join(),"that meal of the plan is it now");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"(S.mealSlots.find(x=>x.id==='"+slot+"').plan||[]).length"),0,"Undo puts it back");
 });
 await test("Plan swipe (owner, 4 Nov): the tab going out leaves the screen entirely, nothing of it at the edge; scrolled down a tab, the next comes in from its top and lands there with no jump; the tab's word turns as the highlight arrives",async(page,env)=>{
   const cdp=await env.ctx.newCDPSession(page);
@@ -4692,17 +4712,18 @@ await test("Plan swipe (owner, 4 Nov): the tab going out leaves the screen entir
   /* A tap on the tab's word is the same slide (owner, 4 Nov: tapping still showed the old
      issue): the next tab comes in beside the old one, which travels the screen's width,
      and lands where it stood. */
-  for(const [sec,from,to,attr] of [["train","program","programs","tplan"],["train","programs","program","tplan"],["food","plan","targets","fplan"],["food","targets","plan","fplan"]]){
+  for(const [sec,from,to,attr] of [["train","program","programs","tplan"],["train","programs","program","tplan"],["food","plan","targets","fplan"],["food","targets","plan","fplan"],["food","plan","foods","fplan"]]){
     await coach(page,sec,from);await pause(page,900);
     await page.evaluate(()=>window.scrollTo(0,0));await pause(page,200);
     await page.tap('#app .psecs [data-'+attr+'="'+to+'"]');await page.waitForTimeout(60);
     const m=await page.evaluate(()=>{const n=document.querySelector(".stillcopy.peek .psec"),p=document.querySelector("#app .psec"),an=p.getAnimations()[0];
-      return [n?Math.round(n.firstElementChild.getBoundingClientRect().top):null,an?an.effect.getKeyframes().slice(-1)[0].transform:null,document.documentElement.clientWidth];});
+      return [n?Math.round(n.firstElementChild.getBoundingClientRect().top):null,an?an.effect.getKeyframes().slice(-1)[0].transform:null,document.documentElement.clientWidth,n?n.firstElementChild.className:""];});
     if(m[0]==null)throw new Error(sec+" tap "+to+": no tab coming in beside the old one");
     if(!m[1]||Math.abs(parseFloat(m[1].replace(/[^-\d.]/g,"")))!==m[2])throw new Error(sec+" tap "+to+": the old tab should travel the screen's width: "+m[1]);
     await page.waitForTimeout(900);
     const r=await ev(page,"[V."+attr+",Math.round(document.querySelector('#app .psec').firstElementChild.getBoundingClientRect().top),!!document.querySelector('.stillcopy')]");
     eq([r[0],r[2]],[to,false],sec+": the tap lands on "+to);
+    eq(await page.evaluate(()=>document.querySelector("#app .psec").firstElementChild.className),m[3],sec+": what came in is the tab tapped");
     if(Math.abs(r[1]-m[0])>1)throw new Error(sec+" tap "+to+": came in at "+m[0]+", landed at "+r[1]);
   }
 });

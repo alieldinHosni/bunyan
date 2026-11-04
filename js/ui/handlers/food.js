@@ -370,6 +370,14 @@ function register(){
       cta:t("Save"),act:"savemeal",data:{meal:V.sd&&V.sd.meal}});return;});
   /* A saved meal, logged whole: from My Foods, its own screen, or the sheet's Meals
      tab (which logs into the sheet's meal and closes it). */
+  /* A built meal into the meal plan (views/food.js vPutMeal): the meal chosen takes its
+     foods in place of its own, with Undo. */
+  key("putmeal",function(D){openSheet("putmeal",{id:D.putmeal});return;});
+  key("putin",function(D){var a=D.putin.split("|"),sm=savedById(a[0]),sl=ownSlot(a[1]);
+    if(!sm||!sl||!(sm.items||[]).length)return;
+    var was=JSON.parse(JSON.stringify(sl.plan||[]));
+    sl.plan=JSON.parse(JSON.stringify(sm.items));saveDB();closeSheet();
+    toast(t("{x} is your {m} now.").replace("{x}",sm.name).replace("{m}",mealName(sl.id)),function(){var s2=ownSlot(a[1]);if(s2){s2.plan=was;saveDB();render();}});return;});
   key("addsaved",function(D){
     var sm=savedById(D.addsaved)||(S.savedMeals||[])[+D.addsaved];
     if(!sm||!(sm.items||[]).length)return;

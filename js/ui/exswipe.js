@@ -94,8 +94,9 @@ function segSettle(s,to,ms){
 /* The tab next door, under the finger: drawn when the drag picks a direction (H.peek),
    placed beside the tab being dragged and moved with it, so the next tab slides in as
    the finger goes rather than empty ground. Turning back the other way swaps it. */
-function peekFollow(s,x){
-  var step=stepOf(x);
+function peekFollow(s,x,toStep){
+  /* A tap can name a tab further than next door (Meal plan straight to Daily goals). */
+  var step=toStep||stepOf(x);
   if(!H.can(step,s.k)||!H.peek){peekDrop(s);return;}
   if(!s.nb||s.nbStep!==step){
     peekDrop(s);
@@ -246,7 +247,7 @@ function slideTab(k,to){
   var s={p:p,k:k,mode:"h",w:w,dx:0,g:g,i0:parseFloat(g.style.getPropertyValue("--i"))||from,n:bs.length};
   /* The sign a finger would have had for this step. */
   var x=(step>0?-1:1)*(rtl()?-1:1);
-  peekFollow(s,x);
+  peekFollow(s,x,step);
   if(!s.nb)return false;
   s.dx=x;lockUntil=Date.now()+460;
   slidePlan(s,step);

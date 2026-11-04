@@ -215,13 +215,23 @@ function buildMealPlan(targets,pref){
       if(!it||!it.length)continue;
       var e=0;it.forEach(function(x){e+=x.f.kcal*x.g/(x.f.per||100);});
       if(Math.abs(e-tg.kcal)<=tg.kcal*USUAL_FIT){usedUsual[up.k]=1;meal=it;usual=own[q];}}
+    /* Then a meal they built themselves (pref.saved, from My foods), sized the same way
+       and each once a day; Another version starts the list somewhere else. */
+    var sv=pref.saved||[],saved=null;
+    for(var q2=0;q2<sv.length&&!meal;q2++){
+      var sm=sv[(q2+v+i)%sv.length],up2=usualPlate(sm,pref);
+      if(!up2||usedUsual[up2.k])continue;
+      var it2=solve(up2,tg,pref,0);
+      if(!it2||!it2.length)continue;
+      var e2=0;it2.forEach(function(x){e2+=x.f.kcal*x.g/(x.f.per||100);});
+      if(Math.abs(e2-tg.kcal)<=tg.kcal*USUAL_FIT){usedUsual[up2.k]=1;meal=it2;saved=sm;}}
     for(var k=0;k<plates.length&&!meal;k++){
       var pl=plates[(k+v+i)%plates.length];
       if(used[pl.k]&&k<plates.length-1)continue;
       var items=solve(pl,tg,pref,v);
       if(items&&items.length){used[pl.k]=1;meal=items;}}
     if(!meal)meal=solve(FALLBACK,tg,pref,v+i);
-    out.push({named:names?names[i]:null,n:names?null:i+1,name:"",solved:meal||[],items:[],todo:[],usual:usual?usual.days:0});});
+    out.push({named:names?names[i]:null,n:names?null:i+1,name:"",solved:meal||[],items:[],todo:[],usual:usual?usual.days:0,saved:saved?saved.name:""});});
   /* The day as a whole: rounding to servings drifts. Carbs in the meals take up the
      difference, a serving step at a time, within their bounds. */
   for(var round=0;round<12;round++){

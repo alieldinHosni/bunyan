@@ -3603,3 +3603,23 @@ previous build and passes now.
 - My foods (owner, 4 Nov): the two tiles are "Build your own meal" (foods you eat together, logged in one
   tap) and "Create a food" (type it in from its nutrition label), in place of Save a meal and Add a food.
   CACHE v222.
+
+## My foods and the meal plan, together — branch session/mfnames (CACHE v223)
+
+Owner, 4 Nov: My foods and Make a new plan from my goals "have common functions"; owner chose: My foods
+a tab, the new plan a button, the gear for settings only, and the two wired together.
+- Nutrition plan has three tabs: Meal plan · My foods · Daily goals (FPLAN, app.js PTABS). My foods is no
+  longer a page one step in; swipe and tab taps go through all three (a tap two tabs away brings in the
+  tab tapped: exswipe.js peekFollow takes the step).
+- The gear holds Meal names only. "Rebuild from my goals" is a button on the plan's summary card; it
+  opens the review as before.
+- The plan builder (engine/mealplan.js) now draws on the meals built in My foods (nutrition.js
+  ownFood().saved, savedPlates: every food with its amount; a meal with a quick add in it cannot be
+  resized honestly and is left out). After the meals eaten most days and before the app's own, sized to
+  the meal's calories within the same 20% as the usual ones, each once a day, Another version starts the
+  list elsewhere. The review says "Your meal: {name}".
+- A built meal's own page has "Put in my meal plan": a sheet of the plan's meals, each with what it holds;
+  the one chosen takes its foods, with Undo.
+- Names: "Your meals" over the built meals, "Your own meal" on a meal's page.
+Tests: the meal plan, swipe and tap tests for three tabs; a built meal in a rebuilt plan and Put in my
+meal plan with Undo.

@@ -5,7 +5,14 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Build your own meal": "اعمل وجبتك",
+var AR={"Your own meal": "وجبتك الخاصة",
+"Meal plan: your meals for a day. My foods: the foods and meals you made, which a plan from your goals draws on. Daily goals: your calories and macros. Swipe left or right to switch.": "خطة الوجبات: وجباتك في اليوم. أكلاتي: الأكلات والوجبات اللي عملتها، واللي الخطة المعمولة من أهدافك بتاخد منها. الأهداف اليومية: سعراتك والماكروز. اسحب يمين أو شمال عشان تبدّل.",
+"Put in my meal plan": "حطها في خطة أكلي",
+"{x} takes the place of what that meal holds now. Undo puts it back.": "{x} هتاخد مكان اللي في الوجبة دي دلوقتي. تراجع بيرجعها.",
+"{x} is your {m} now.": "{x} بقت {m} بتاعك.",
+"Your meal: {x}": "وجبتك: {x}",
+"Rebuild from my goals": "اعملها من جديد من أهدافي",
+"Build your own meal": "اعمل وجبتك",
 "Foods you eat together, logged in one tap": "أكلات بتاكلها مع بعض، تتسجّل بدوسة",
 "Create a food": "اعمل أكلة",
 "Type it in from its nutrition label": "اكتبها من البيانات الغذائية اللي على العلبة",

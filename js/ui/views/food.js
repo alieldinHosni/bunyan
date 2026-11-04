@@ -89,9 +89,9 @@ function vFood(){
    between (owner, 3 Nov: "some of the tabs logically don't make sense" — My foods is a
    library you log from, not a plan, so it is a page of its own, reached from the meal
    plan's list and from adding food). Back returns to Food. */
-var FPLAN=[["plan","Meal plan"],["targets","Daily goals"]];
+/* Three tabs (owner, 4 Nov): the day's plan, your own foods and meals it draws on, the goals. */
+var FPLAN=[["plan","Meal plan"],["foods","My foods"],["targets","Daily goals"]];
 function vFoodPlan(){
-  if(V.fplan==="foods")return vMyFoodsPage();
   var fs=FPLAN.some(function(x){return x[0]===V.fplan;})?V.fplan:"plan",g=S.goals||{};
   /* How meals are named is the gear at the top right, as on Training's plan page. */
   var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Nutrition plan"))+'</h1>'
@@ -254,9 +254,6 @@ var DOC='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/
 /* My foods: the foods and meals of your own, kept to be logged in one tap. Its own page
    now, one step in from the meal plan. Two ways to add, side by side; the lists; Edit
    for the ✕, as everywhere else. A list with nothing in it is not shown at all. */
-function vMyFoodsPage(){
-  return '<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("My foods"))+'</h1></div>'
-   +'<p class="dsub">'+esc(t("Foods and meals of your own, one tap away when you log."))+'</p>'+vMyFoods();}
 function vMyFoods(){
   var sm=S.savedMeals||[],mf=S.myFoods||[],now=mealNow(today()),ed=V.reorder==="mf",h='';
   h+='<div class="ptiles">'
@@ -269,7 +266,7 @@ function vMyFoods(){
      +'<p class="tiny">'+esc(t("What you keep here is one tap away when you log."))+'</p></div>';}
   var drm=function(attr,id,name){return ed?'<button class="drm" '+attr+'="'+esc(id)+'" aria-label="'+esc(t("Remove")+" "+name)+'"><i>'+XSVG+'</i></button>':'';};
   if(sm.length){
-    h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Saved meals")+'</h2><span class="libn num">'+sm.length+'</span>'+reorderBtn("mf",ed,true)+'</div><div class="drows'+(ed?' ro ed':'')+'">';
+    h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Your meals")+'</h2><span class="libn num">'+sm.length+'</span>'+reorderBtn("mf",ed,true)+'</div><div class="drows'+(ed?' ro ed':'')+'">';
     sm.forEach(function(m){
       var tot=sumNutrition(m.items||[]),n=(m.items||[]).length;
       h+='<div class="drow" data-k="sm:'+m.id+'">'+drm("data-rmsaved",m.id,m.name)
@@ -308,7 +305,7 @@ function vSavedMeal(id){
   var h='<div class="dhead">'+backArrow()
    +'<button class="dname" data-renamemeal="'+m.id+'" aria-label="'+esc(t("Rename meal")+": "+m.name)+'">'
    +'<h1 class="dhead-t">'+esc(m.name)+'</h1><span class="ico ico-edit" aria-hidden="true"></span></button></div>'
-   +'<p class="dsub">'+esc(t("Saved meal"))+'</p>';
+   +'<p class="dsub">'+esc(t("Your own meal"))+'</p>';
   h+='<div class="mealbanner"><div><div class="mealbanner-k">'+esc(t("Total calories"))+'</div>'
    +'<div class="mealbanner-v">'+fmtN(tot.kcal)+' kcal</div></div>'
    +'<div class="mealbanner-m"><span>'+esc(t("P:"))+' '+r1(tot.p)+'g</span>'
@@ -325,8 +322,20 @@ function vSavedMeal(id){
   h+='<div class="dcta">'
    +'<button class="btn dbegin" data-addsaved="'+m.id+'"'+(items.length?'':' disabled')+'>'
    +esc(t("Add to")+" "+mealName(now))+'</button>'
+   /* Into the meal plan as it is, at a meal of their choosing (owner, 4 Nov: My foods and
+      the plan should work together). */
+   +(items.length?'<button class="btn g dput" data-putmeal="'+m.id+'">'+esc(t("Put in my meal plan"))+'</button>':'')
    +'<button class="ddel" data-delsaved="'+m.id+'">'+t("Delete this meal")+'</button></div>';
   return h;}
+/* Which meal of the plan a built meal goes into: each meal with what it holds now. */
+function vPutMeal(){
+  var m=savedById((V.sd||{}).id);if(!m)return "";
+  return '<h2>'+esc(t("Put in my meal plan"))+'</h2>'
+   +'<p class="pf-n">'+esc(t("{x} takes the place of what that meal holds now. Undo puts it back.").replace("{x}",m.name))+'</p>'
+   +'<div class="sg-list">'+mealSlots().map(function(x){var pl=x.plan||[],tt=sumNutrition(pl);
+      return '<button class="srow" data-putin="'+esc(m.id)+'|'+esc(x.id)+'"><span class="srow-t"><span class="srow-n">'+esc(mealName(x.id))+'</span>'
+       +'<span class="srow-s">'+esc(pl.length?pl.length+" "+t(pl.length===1?"food":"foods")+" · "+fmtN(tt.kcal)+" kcal":t("Nothing planned"))+'</span></span>'
+       +'<span class="ico ico-chev" aria-hidden="true"></span></button>';}).join("")+'</div>';}
 
 /* ---- Targets: what the day is measured against, and whether it is working ------
    The gauge's sword stands upright on a day that meets the calorie target. Every
@@ -451,7 +460,10 @@ function vPlan(){
   else h+='<section class="plsum glass"><div class="plsum-h"><span class="klabel">'+esc(t("Planned for a day"))+'</span>'
    +'<span class="plsum-v'+(all.length&&near?' ok':'')+'">'+esc(verdict)+'</span></div>'
    +'<div class="plsum-r"><span>'+esc(t("Calories"))+'</span>'+bar("k",tot.kcal,g.kcal)+'<b>'+fig(fmtN(tot.kcal)+' / '+fmtN(g.kcal))+'</b></div>'
-   +'<div class="plsum-r"><span>'+esc(t("Protein"))+'</span>'+bar("p",tot.p,g.p)+'<b>'+fig(Math.round(tot.p)+' / '+g.p+' g')+'</b></div></section>';
+   +'<div class="plsum-r"><span>'+esc(t("Protein"))+'</span>'+bar("p",tot.p,g.p)+'<b>'+fig(Math.round(tot.p)+' / '+g.p+' g')+'</b></div>'
+   /* A new plan from the goals, on the plan it would replace (owner, 4 Nov); it opens to
+      check before anything changes, and draws on My foods. */
+   +'<div class="prfoot"><button class="prmore" data-pgen="1">'+glyph("spark")+'<span>'+esc(t("Rebuild from my goals"))+'</span></button></div></section>';
   /* Edit shows each meal's ✕ and grip; out of it, the list is the plan. */
   h+='<div class="tsec droutine"><h2 class="tsec-h">'+t("Meals")+'</h2>'
    +(sl.length?reorderBtn("ms",ro,true):'')+'</div>';
@@ -575,6 +587,7 @@ function planReview(pp){
      +'<span class="pmeal-k">'+fig(fmtN(mt.kcal)+' kcal')+' · '+fig(Math.round(mt.p)+' g')+' '+esc(t("protein"))+'</span>'
      +'<button class="pmeal-x" data-pmrm="'+i+'" aria-label="'+esc(t("Remove")+" "+importName(m,i))+'">'+XSVG+'</button></div>'
      +(m.usual?'<span class="pmeal-own">'+esc(t("Your usual: {n} days in the last 4 weeks").replace("{n}",m.usual))+'</span>':'')
+     +(m.saved?'<span class="pmeal-own">'+esc(t("Your meal: {x}").replace("{x}",m.saved))+'</span>':'')
      +m.items.map(function(it,j){return '<button class="pmrow" data-pfood="'+i+'|'+j+'">'
        +'<span class="pmrow-t"><b>'+esc(foodName(it))+'</b><span>'+esc(it.label||"")+(it.label?' · ':'')+fig(r1(it.p)+' g')+' '+esc(t("protein"))+'</span>'
        +(it.note?'<small class="plist-note">'+esc(it.note)+'</small>':'')+'</span>'
@@ -618,4 +631,4 @@ function vPlanFood(){
 /* A meal the plan numbered keeps its number: a plan's Meal 3 after its snack is still
    Meal 3, not the fourth meal of the day. */
 
-export {foodSub, glassUnit, MICON, savedById, vFood, vImportSheet, vMyFoods, vPlan, vPlanFood, vTargets};
+export {foodSub, glassUnit, MICON, savedById, vFood, vImportSheet, vPutMeal, vMyFoods, vPlan, vPlanFood, vTargets};
