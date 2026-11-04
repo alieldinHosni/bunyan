@@ -184,7 +184,8 @@ function cardsOf(root){
   return out;}
 function snapCards(root){
   if(_reduced)return null;
-  var m={};cardsOf(root).forEach(function(el){m[el.getAttribute("data-k")]={el:el,r:el.getBoundingClientRect()};});
+  var m={};cardsOf(root).forEach(function(el){var k=el.getAttribute("data-k");m[k]={el:el,r:el.getBoundingClientRect()};
+    if(FOLDK[k]){m[k].up=el.parentElement;m[k].next=el.nextElementSibling;}});
   /* A card that may leave as a ghost is noted wherever it sits (the RPE question is
      inside the set card). */
   Object.keys(GHOSTK).forEach(function(k){if(m[k])return;var el=root.querySelector('.sess [data-k="'+k+'"]');
@@ -193,8 +194,16 @@ function snapCards(root){
 /* The keys whose cards may play out as ghosts when they go: those that stand alone. The
    log button turns into the next one in place and needs no ghost of the last. */
 var GHOSTK={rest:1,rpeask:1};
+/* Cards that fold away in the page's flow instead: put back where they were, they fade
+   and close up, and the cards below follow their edge rather than gliding beneath them.
+   The readiness question (owner, 4 Nov: Skip "bounces"; a ghost over the rising set
+   list read as two things on top of each other). */
+var FOLDK={ready:1};
 function glideCards(root,before){
   if(!before||_reduced)return;
+  Object.keys(FOLDK).forEach(function(k){
+    var b=before[k];if(!b||b.el.isConnected||!b.up||!b.up.isConnected||root.querySelector('.sess [data-k="'+k+'"]'))return;
+    foldAway(b.el,b.up,b.next&&b.next.parentElement===b.up?b.next:null,b.r.height);});
   var now=cardsOf(root);
   /* Stop any glide still running so the new layout is measured without it. */
   now.forEach(function(el){(el.getAnimations?el.getAnimations():[]).forEach(function(a){if(a.id==="glide")a.cancel();});});
@@ -221,6 +230,47 @@ function glideCards(root,before){
     var a=g.animate([{opacity:1,transform:"none"},{opacity:0,transform:"translateY(-8px) scale(.97)"}],{duration:GHOST,easing:"cubic-bezier(0.3, 0, 0.8, 0.15)",fill:"forwards"});
     var gone=function(){if(g.parentNode)g.parentNode.removeChild(g);};
     a.onfinish=gone;a.oncancel=gone;setTimeout(gone,GHOST+120);});}
+
+function foldAway(g,up,next,h){
+  g.removeAttribute("data-k");g.removeAttribute("id");g.querySelectorAll("[id]").forEach(function(x){x.removeAttribute("id");});
+  g.classList.add("ghost");g.setAttribute("aria-hidden","true");g.inert=true;
+  up.insertBefore(g,next);
+  if(!g.animate){g.remove();return;}
+  var gap=parseFloat(getComputedStyle(up).rowGap)||0;
+  g.style.overflow="clip";g.style.pointerEvents="none";
+  var a=g.animate([{height:h+"px",opacity:1,marginBottom:"0px"},{opacity:0,offset:.45},{height:"0px",opacity:0,marginBottom:(-gap)+"px"}],
+    {duration:GLIDE,easing:GLIDE_EASE,fill:"forwards"});
+  var gone=function(){if(g.parentNode)g.parentNode.removeChild(g);};
+  a.onfinish=gone;a.oncancel=gone;setTimeout(gone,GLIDE+160);}
+
+/* ---- the page keeps its place when a card leaves near its end ----------------------
+   A card that goes shortens the page. Scrolled to the bottom, the browser then pulls the
+   whole page down by that much in one frame, and everything above the card moves though
+   nothing there changed (owner, 4 Nov: Skip on "How do you feel today?" scrolled down
+   "bounces up in an odd way"). So the page keeps the room it had below the view, as an
+   empty block after it, and gives it back only as the person scrolls up, where it is
+   never seen to go. A new screen drops it (clearHold). */
+var _hold=null,_holdOn=false;
+function holdFit(){
+  var sp=_hold;if(!sp||!sp.isConnected){clearHold();return;}
+  var se=document.scrollingElement||document.documentElement;
+  var content=se.scrollHeight-sp.offsetHeight,need=Math.max(0,Math.ceil(window.scrollY+window.innerHeight-content));
+  if(need<1){clearHold();return;}
+  sp.style.height=need+"px";}
+function holdScroll(after,y0){
+  if(!after||y0==null)return;
+  var se=document.scrollingElement||document.documentElement;
+  var cur=_hold&&_hold.isConnected?_hold.offsetHeight:0;
+  var content=se.scrollHeight-cur,need=Math.max(0,Math.ceil(y0+window.innerHeight-content));
+  if(need<1){clearHold();if(Math.abs(window.scrollY-y0)>=1&&y0<=se.scrollHeight-window.innerHeight)window.scrollTo(0,y0);return;}
+  if(!_hold||!_hold.isConnected){_hold=document.createElement("div");_hold.className="phold";_hold.setAttribute("aria-hidden","true");}
+  if(_hold.previousElementSibling!==after)after.after(_hold);
+  _hold.style.height=need+"px";
+  if(Math.abs(window.scrollY-y0)>=1)window.scrollTo(0,y0);
+  if(!_holdOn){_holdOn=true;window.addEventListener("scroll",holdFit,{passive:true});}}
+function clearHold(){
+  if(_holdOn){_holdOn=false;window.removeEventListener("scroll",holdFit);}
+  if(_hold&&_hold.parentNode)_hold.parentNode.removeChild(_hold);_hold=null;}
 
 /* ---- a still copy, for things that leave as their replacement arrives ----------------
    A page, or a plan page's tab, about to be replaced is copied where it stands (fixed, out
@@ -253,4 +303,4 @@ function slidePair(live,copy,from,to,ms,ease,done){
   copy.animate([{transform:"none"},{transform:"translateX("+to+")"}],{duration:ms,easing:ease,fill:"forwards"});
   a.onfinish=end;a.oncancel=end;setTimeout(end,ms+250);
   return a;}
-export {applyMotion, countTo, DUR, EASE, glideCards, isReduced, leave, motionOff, ms, once, slidePair, snapCards, stillCopy};
+export {applyMotion, clearHold, countTo, DUR, EASE, glideCards, holdScroll, isReduced, leave, motionOff, ms, once, slidePair, snapCards, stillCopy};

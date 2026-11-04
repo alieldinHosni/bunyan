@@ -21,7 +21,7 @@ import {lockScroll, syncWorkoutState, V} from "./view.js";
 import {patch, replace} from "./patch.js";
 import {checkDock, syncDock} from "./dock.js";
 import {syncWbar} from "./wbar.js";
-import {applyMotion, countTo, glideCards, isReduced, once, slidePair, snapCards, stillCopy} from "./motion.js";
+import {applyMotion, clearHold, countTo, glideCards, holdScroll, isReduced, once, slidePair, snapCards, stillCopy} from "./motion.js";
 import {navDepth} from "./nav.js";
 import {applyLook} from "./theme.js";
 import {bindExSwipe} from "./exswipe.js";
@@ -233,7 +233,10 @@ function render(){
   var exNow=S.active?V.logIdx:-1,sameEx=exNow===lastEx;lastEx=exNow;
   var before=moved||!sameEx?null:snapCards(appEl);
   var pm=pageMoveOf(moved,view),ghost=pm?stillCopy(appEl):null,sc=sectionCopy(appEl,moved);
+  var keep=!moved&&sameEx&&!!S.active,y0=keep?window.scrollY:null;
   if(moved)replace(appEl,h); else patch(appEl,h);
+  /* The workout's page holds its place when a card near its end goes (motion.js). */
+  if(keep)holdScroll(appEl,y0);else clearHold();
   glideCards(appEl,before);
   slideSection(appEl,moved,sc);
   if(ghost)pageMove(appEl,ghost,pm);
