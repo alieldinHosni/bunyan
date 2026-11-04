@@ -18,7 +18,7 @@ import {toKg} from "../../units.js";
 import {dfmt, num, r1, today, uid} from "../../util.js";
 import {ACT, addExercise, askConfirm, askText, closeSheet, openSheet, val} from "../actions.js";
 import {grow} from "../more.js";
-import {pushNav} from "../nav.js";
+import {goBack, pushNav} from "../nav.js";
 import {setPeek} from "../datebar.js";
 import {render} from "../render.js";
 import {tap, toast, V} from "../view.js";
@@ -92,6 +92,14 @@ function missApply(kind){
 
 /* What this module answers. app.js calls register() once, at boot, in the order
    the branches are tried in (see registry.js). */
+/* The copy-in sheet over My program. From the draft's own page, back to the plan page
+   first: Back goes through the browser's history (nav.js), so the sheet opens once it
+   has landed, or it would be closed by the landing. */
+function copyInSheet(){
+  if(!(V.tab==="train"&&V.train==="import")){openSheet("timport");return;}
+  var done=false,on2=function(){go();},go=function(){if(done)return;done=true;window.removeEventListener("popstate",on2);setTimeout(function(){openSheet("timport");},0);};
+  window.addEventListener("popstate",on2);
+  goBack();setTimeout(go,700);}
 function register(){
   /* A lighter week: started, put off for a week, or ended early. With training blocks
      running, the next block starts after it: the day after an unplanned one ends, or
@@ -331,12 +339,14 @@ function register(){
   /* The ✕ on the row: gone at once, with Undo rather than a question. */
   key("rmex",function(D){removeDayEx(D.rmex);return;});
   key("grip",function(){return;});
-  key("timport",function(){pushNav();V.tab="train";V.train="import";V.tp=null;V.tierr="";render();window.scrollTo(0,0);return;});
+  /* Copy in a program: a sheet (views/timport.js vTImportSheet); read, the draft opens as
+     a page (common.js readTraining). From the draft's own page it goes back first. */
+  key("timport",function(){V.tp=null;V.tierr="";V.tibusy=false;copyInSheet();return;});
   key("tiread",function(){var tt=val("ti_text");V.titext=tt;
     if(!tt.trim()){toast(t("Paste your program first."));return;}
     if(isShared(tt)){readPlan(tt);return;}
     readTraining(tt);return;});
-  key("tirestart",function(){V.tp=null;V.tierr="";render();window.scrollTo(0,0);return;});
+  key("tirestart",function(){V.tp=null;V.tierr="";copyInSheet();return;});
   key("tiex",function(D){var tx=D.tiex.split("|"),tdy=V.tp&&V.tp.days[+tx[0]],te=tdy&&tdy.ex[+tx[1]];if(!te)return;
     openSheet("tiex",{d:+tx[0],j:+tx[1],e:JSON.parse(JSON.stringify(te))});return;});
   key("titgl",function(D){tieRead();var tg2=V.sd&&V.sd.e;if(!tg2)return;

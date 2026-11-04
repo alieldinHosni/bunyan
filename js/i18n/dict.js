@@ -5,7 +5,11 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Check the plan": "راجع الخطة",
+var AR={"Check the program": "راجع البرنامج",
+"Nothing has been read yet.": "لسه مفيش حاجة اتقرت.",
+"Switch, copy in, share": "بدّل، انقل، شارك",
+"The arrows switch to another of your programs or a template. The arrow down copies a program in from a PDF, text or another Bunyan user; the arrow up shares this one.": "الأسهم بتبدّل لبرنامج تاني من برامجك أو لقالب. السهم لتحت بينقل برنامج من PDF أو نص أو من مستخدم تاني لبنيان، والسهم لفوق بيشارك البرنامج ده.",
+"Check the plan": "راجع الخطة",
 "Read from what you copied in. Tap any food to change it or swap it.": "اتقرت من اللي نقلته. دوس على أي أكلة عشان تغيرها أو تبدلها.",
 "Copy in and share": "انقل وشارك",
 "The arrow down copies a plan in; the arrow up shares yours with another Bunyan user.": "السهم لتحت بينقل خطة جاهزة، والسهم لفوق بيشارك خطتك مع مستخدم تاني لبنيان.",

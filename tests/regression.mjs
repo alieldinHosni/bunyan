@@ -1499,10 +1499,12 @@ await test("Back never walks out of the app, even when a screen opens while a ta
   eq([await ix(),await ev(page,"V.tab")],[base,"progress"],"still in the app");
 });
 await test("Training import: a coach's PDF becomes a draft — days, week, cues, start weights, a block — edited, then a program",async page=>{
-  await coach(page,"train","programs");
-  await page.evaluate(()=>document.querySelector("[data-timport]").click());await pause(page,300);
+  await coach(page,"train","program");
+  await page.tap('.bname-a [data-timport]');await pause(page,500);
+  eq(await ev(page,"V.sheet"),"timport","a sheet from the icon by the name");
   await page.setInputFiles("#ti_file",new URL("./fixtures/split-sample.pdf",import.meta.url).pathname);
   await page.waitForSelector(".tisum",{timeout:20000});await pause(page,300);
+  eq(await ev(page,"[V.sheet,V.train,document.querySelector('#app .dhead-t').textContent]"),[null,"import","Check the program"],"read: the sheet goes, the draft is a page");
   const tp=await ev(page,"V.tp");
   eq([tp.name,tp.meta.phase,tp.meta.weeks],["Upper / Lower","Muscle gain",8],"cover");
   eq(tp.days.map(d=>[d.name,d.wd]),[["Day A — Upper",[1]],["Day B — Lower",[4]]],"days and weekdays");
@@ -2468,8 +2470,26 @@ await test("Among powerlifters: squat and bench placed against raw competitors o
     const d=new Date(Date.now()-120*864e5).toISOString().slice(0,10);S.sessions.forEach(x=>{x.date=d;});(await import("/js/ui/render.js")).render();});await pause(page,300);
   eq(await page.$$eval('.pgopl',a=>a.length),0,"an edited log with nothing recent: gone");
 });
+await test("Copy in a program (owner, 4 Nov): a sheet from the icon by the name; text with no program stays in the sheet and says why; read, the draft is a page; Start over opens the sheet again over My program; Back from the draft is My program",async page=>{
+  await coach(page,"train","program");
+  await page.tap('.bname-a [data-timport]');await pause(page,500);
+  await page.tap('#sheet [data-tiread]');await pause(page,400);
+  eq(await ev(page,"V.sheet"),"timport","nothing pasted: still the sheet");
+  await page.fill('#ti_text',"hello there, nothing to read");await page.tap('#sheet [data-tiread]');await pause(page,800);
+  eq(await ev(page,"[V.sheet,V.train,!!document.querySelector('#sheet .tierr')]"),["timport","plan",true],"no program in it: the sheet stays and says so");
+  await page.fill('#ti_text',"Day 1 — Push\nBench press 4x6-8\nLateral raises 3 x 12-15\n\nPull day\nLat pulldown 3x10");
+  await page.tap('#sheet [data-tiread]');await pause(page,900);
+  eq(await ev(page,"[V.sheet,V.train,V.tp.days.length]"),[null,"import",2],"read: the draft, as a page");
+  await page.tap('#app [data-tirestart]');await pause(page,600);
+  eq(await ev(page,"[V.sheet,V.train,V.tplan,!!V.tp]"),["timport","plan","program",false],"Start over: the sheet again, over My program");
+  eq(await page.$eval('#ti_text',e=>e.value.indexOf("Lat pulldown")>0),true,"the text kept");
+  await page.tap('#sheet [data-tiread]');await pause(page,900);
+  await page.tap('#app [data-back]');await pause(page,600);
+  eq(await ev(page,"[V.train,V.tplan,V.sheet]"),["plan","program",null],"Back from the draft: My program");
+});
 await test("Training import: a program pasted as text is read the same way",async page=>{
-  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="import";V.tp=null;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  await coach(page,"train","program");
+  await page.tap('.bname-a [data-timport]');await pause(page,500);
   await page.fill("#ti_text","Day 1 — Push\nBench press 4x6-8 @ 80kg, 2 min rest — pause on the chest\nLateral raises 3 x 12-15\n\nPull day\nLat pulldown 3x10\nFace pull 3 × 15 (light)\nPlank 3 x 45s");
   await page.evaluate(()=>document.querySelector("[data-tiread]").click());await pause(page,500);
   const tp=await ev(page,"V.tp");
@@ -4740,8 +4760,10 @@ await test("Copy in: a plan another Bunyan user shared works in Food's Copy in a
   eq(await ev(page,"S.mealSlots.find(s=>s.id==='Breakfast').plan.map(x=>x.n)"),["Foul"],"their meal plan is mine");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
   await coach(page,"train","programs");
-  await page.tap('[data-timport]');await pause(page,400);
-  eq(await page.textContent('#app .dhead-t'),"Copy in a program","Training's too");
+  eq(await page.$$eval('#app .psec [data-timport]',a=>a.length),0,"Programs has no Copy in tile: it is the icon on My program");
+  await coach(page,"train","program");
+  await page.tap('.bname-a [data-timport]');await pause(page,500);
+  eq(await ev(page,"[V.sheet,document.querySelector('#sheet h2').textContent]"),["timport","Copy in a program"],"Training's too, as a sheet");
   await page.fill('#ti_text',msg);await page.tap('[data-tiread]');await pause(page,800);
   eq(await ev(page,"[V.sheet,!!(V.sd&&V.sd.got&&V.sd.got.program)]"),["recvplan",true],"the program in it, ready to add");
   const n=await ev(page,"S.programs.length");
@@ -4753,8 +4775,8 @@ await test("My program: switch and share are icons by the name, Workout settings
     st.S.block={start:sc.weekStartOf(U.today())};st.saveDB();});
   await coach(page,"train","program");
   eq(await page.evaluate(()=>[!!document.querySelector('.bname-a [data-tplan="programs"]'),!!document.querySelector('.bname-a [data-shareplan^="p:"]'),
-    !!document.querySelector('.dhead .dhead-a[data-sheet="set_training"]'),!document.querySelector('#app .plset'),!document.querySelector('#app .psec [data-timport]')]),
-    [true,true,true,true,true],"icons, the gear, and no Copy in or settings list here");
+    !!document.querySelector('.dhead .dhead-a[data-sheet="set_training"]'),!document.querySelector('#app .plset'),[...document.querySelectorAll('.bname-a .icobtn')].map(b=>Object.keys(b.dataset)[0]).join()]),
+    [true,true,true,true,"tplan,timport,shareplan"],"icons (switch, copy in, share), the gear, and no settings list here");
   eq(await page.evaluate(()=>{const p=document.querySelector('#app .psec'),b=p.querySelector('.blk');return !!b&&b===p.lastElementChild;}),true,"the block is last");
   await page.tap('.dhead-a');await pause(page,500);
   eq(await ev(page,"V.sheet"),"set_training","the gear opens Workout settings");

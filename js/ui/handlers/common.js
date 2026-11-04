@@ -117,7 +117,10 @@ function readTraining(src){
     if(!r||!r.days.length){V.tp=null;
       V.tierr="No training days or exercises were found in that file. If it is a meal plan, import it under Food.";
       render();return;}
-    V.tp=withIds(r);render();window.scrollTo(0,0);});}
+    /* Read: the sheet goes and the draft opens one step in from the plan page. */
+    V.tp=withIds(r);V.sheet=null;V.sd=null;
+    if(V.tab!=="train"||V.train!=="import"){pushNav();V.tab="train";V.train="import";}
+    render();window.scrollTo(0,0);});}
 /* The question typed into the chat, asked; and the newest question brought into view
    with its answer under it. */
 function chatSend(){

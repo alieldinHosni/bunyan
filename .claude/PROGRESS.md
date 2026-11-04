@@ -3576,3 +3576,16 @@ the PDF's progress line. Once read (handlers/common.js toReview) the sheet goes 
 step in as "Check the plan" (vImport, no paste box), Back returns to the meal plan, and the pasted text is
 kept for the next time the sheet opens. Nothing found: the sheet stays with a toast. A Bunyan share
 pasted there opens its own sheet as before. Training's Copy in a program is still a page.
+
+## Copy in a program is a sheet too — branch session/tsheet (CACHE v220)
+
+Owner, 4 Nov: as on Food, the Copy in a program tile leaves Programs & exercises; an icon beside Share on
+My program (swap · copy in · share) opens sheet "timport" (views/timport.js vTImportSheet): paste box,
+Open a file, Read the program, the PDF's progress line, and what could not be read, said in the sheet.
+Read (common.js readTraining), the sheet goes and the draft opens one step in as "Check the program".
+Start over, and the icon from the draft, go back to My program first and open the sheet once Back has
+landed (handlers/train.js copyInSheet: Back goes through history). Programs keeps Build a program, full
+width. Also: the My programs row read "3 training daysIn rotation" (its dot had no size outside a flex
+row); a middle dot as text now. Guide v6.
+Rename question (owner): renaming only changes the program's name (actions.js renamesplit); a probe that
+renames, reloads and lists finds one program. Asked the owner for the steps that showed a second one.
