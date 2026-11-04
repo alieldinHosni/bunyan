@@ -243,7 +243,7 @@ initDockScroll();
 initPress();
 /* A swipe on the exercise moves through the workout (js/ui/exswipe.js). */
 /* The plan pages' tabs, in the order they sit (views/train.js TPLAN, views/food.js FPLAN). */
-var PTABS={tplan:["program","programs"],fplan:["plan","foods"]};
+var PTABS={tplan:["program","programs"],fplan:["plan"]};
 /* The dock's four tabs, swiped between on their own pages (owner, 4 Nov). */
 var MTABS=["train","food","coach","progress"];
 /* A main tab's own page: what a tap on its dock button opens. */

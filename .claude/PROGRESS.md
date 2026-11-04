@@ -3706,3 +3706,22 @@ past a third of the width (or with a flick), it went to the tab before. From Foo
 which looked like the app starting again. exswipe.js now keeps the direction a drag set out in
 (st.dir). Brought back past its start, the pane rests at zero with its peek on its own side, and when
 let go it springs back. The test reproduces Food → Training on the old code.
+
+## One page for the meal plan; My foods behind a star — branch session/myfoods (CACHE v233)
+
+Owner, 4 Nov: remove the My foods page as a tab and make your own foods reachable from an icon beside the
+settings gear. "Build your own meal" goes, and its job moves to "Add a meal". Create a food is offered
+where food is added. The owner chose: Create a meal makes a meal in the plan and opens it to be filled.
+- Nutrition plan has no tabs now. The star (new glyph "star") beside the gear opens My foods: the foods
+  you created and the meals you saved, to change, remove or log in one tap. It is a page one step in;
+  back returns to the plan. Its header has Create a food.
+- "Add a meal" is "Create a meal". It is named, then opens straight into the new meal to add its foods
+  (ACT.addslot opens V.pslot).
+- Build your own meal is gone. Saved meals are still made from Quick Add ("save as a meal"), still
+  listed under the star and in Add Food → Meals, and an empty one can still be filled from its own
+  screen.
+- Add Food's search home has Create a food under Quick Add, opening the label form. The Custom tab
+  keeps it too.
+- render: My foods is its own view ("myfoods"), so it arrives as a page. The plan page has no section
+  slide for Food. PTABS fplan is the plan alone. The guide's two-tabs step is replaced by the star.
+- Tests that swiped Food's tabs now swipe Training's, the only plan page with tabs.

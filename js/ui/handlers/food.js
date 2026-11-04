@@ -150,7 +150,9 @@ function register(){
   /* A meal of the day, added or renamed from Food → Plan. A blank name numbers it by its
      place; a name that is just what it would be called anyway is not stored, so a
      numbered meal keeps renumbering itself when the meals around it move. */
-  ACT.addslot=function(name){newSlot(name);saveDB();render();};
+  /* Create a meal (owner, 4 Nov: one way to make a meal, in place of Build your own meal):
+     named, then straight into it to add its foods. */
+  ACT.addslot=function(name){var ns=newSlot(name);saveDB();pushNav();V.tab="food";V.pslot=ns.id;render();window.scrollTo(0,0);};
   ACT.renameslot=function(name,id){
     var x=ownSlot(id);if(!x)return;
     name=String(name||"").trim();delete x.name;
@@ -395,8 +397,10 @@ function register(){
     setStyle(D.mstyle);V.reorder=null;saveDB();render();
     toast(t(D.mstyle==="named"?"Meals are named.":"Meals are numbered."),function(){S.mealSlots=keepS;saveDB();render();});return;});
   key("pslot",function(D){pushNav();V.tab="food";V.pslot=D.pslot;render();window.scrollTo(0,0);return;});
-  key("paddslot",function(){askText({title:t("Add a meal"),ph:t("For example, Pre-workout"),
-    body:t("Leave it blank and it is numbered by its place in the day."),required:false,cta:t("Add"),act:"addslot"});return;});
+  key("paddslot",function(){askText({title:t("Create a meal"),ph:t("For example, Pre-workout"),
+    body:t("Leave it blank and it is numbered by its place in the day. Then add its foods."),required:false,cta:t("Create"),act:"addslot"});return;});
+  /* The star on the meal plan: your own foods and saved meals, a page one step in. */
+  key("myfoods",function(){if(V.sheet)closeSheet();pushNav();V.tab="food";V.smeal=null;V.pslot=null;V.pimport=false;V.fplan="foods";render();window.scrollTo(0,0);return;});
   key("prename",function(D){var rsl=slotOf(D.prename);if(!rsl)return;
     askText({title:t("Rename meal"),value:mealName(rsl.id),required:false,
       body:t("Leave it blank to go back to its usual name."),act:"renameslot",data:rsl.id});return;});
