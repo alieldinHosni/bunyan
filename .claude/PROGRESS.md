@@ -3725,3 +3725,17 @@ where food is added. The owner chose: Create a meal makes a meal in the plan and
 - render: My foods is its own view ("myfoods"), so it arrives as a page. The plan page has no section
   slide for Food. PTABS fplan is the plan alone. The guide's two-tabs step is replaced by the star.
 - Tests that swiped Food's tabs now swipe Training's, the only plan page with tabs.
+
+## Back without a second slide — branch session/backmove (CACHE v234)
+
+Owner, 4 Nov: the back arrow or a swipe back from My foods made the Nutrition plan "flash, or start a
+weird motion from left to right before it stabilises", and the same happened on other backs. Two
+causes:
+- The swipe. The phone's back swipe slides the page before in natively, then fires popstate, and the
+  app ran its own slide again on top. nav.js now marks a popstate that its own controls did not ask
+  for (V.osBack). render.js puts that page in place with no copy, no slide and no entrance.
+- The arrow. slidePair asked for the new page's animation and cleared its starting transform in the
+  same moment. WebKit can draw a frame before an animation starts, so the new page showed in place for
+  that frame, then jumped out to slide in. The new page now holds its start in its own style, and the
+  animation holds its end (fill forwards) until it is let go. Chromium never showed the flash; the
+  hold makes it impossible in WebKit too.

@@ -2836,6 +2836,23 @@ await test("Add Food (owner, 4 Nov): Create a food sits under Quick Add, and ope
   await page.tap('#sheet .afmake');await pause(page,700);
   eq(await ev(page,"V.sheet"),"manual","the label form");
 });
+await test("Back (owner, 4 Nov): the phone's own back swipe has already slid the page in, so the app puts it in place without a second slide; the arrow slides it, the new page held off the screen until its slide has it",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await coach(page,"food","plan");await pause(page,800);
+  await page.tap('#app [data-myfoods]');await pause(page,900);
+  /* The gesture: a popstate the app's own controls did not ask for. */
+  const os=await page.evaluate(()=>new Promise(res=>{window.addEventListener("popstate",()=>setTimeout(()=>{const a=document.getElementById("app");
+    res([!!document.querySelector(".stillcopy"),a.getAnimations().length,a.classList.contains("pagein"),a.style.transform||""]);},0),{once:true});history.back();}));
+  eq(os,[false,0,false,""],"no copy, no slide, no entrance");
+  eq(await ev(page,"V.fplan"),"plan","back on the meal plan");
+  await page.tap('#app [data-myfoods]');await pause(page,900);
+  /* The arrow: the old page's copy goes, the new one slides in and starts off the screen. */
+  const ar=await page.evaluate(()=>new Promise(res=>{window.addEventListener("popstate",()=>setTimeout(()=>{const a=document.getElementById("app");
+    res([!!document.querySelector(".stillcopy"),a.style.transform.startsWith("translateX(-")]);},0),{once:true});document.querySelector('#app [data-back]').click();}));
+  eq(ar,[true,true],"the arrow slides, held at its start");
+  await pause(page,900);
+  eq(await ev(page,"[V.fplan,document.getElementById('app').style.transform||'',document.getElementById('app').getAnimations().length,!!document.querySelector('.stillcopy')]"),["plan","",0,false],"landed, nothing left held");
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);

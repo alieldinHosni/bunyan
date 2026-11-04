@@ -101,7 +101,7 @@ function slideSection(root,moved,sc){
 var lastDepth=0,lastTab="",PG_MS=520,PG_EASE="cubic-bezier(0.25, 0.8, 0.25, 1)";
 function pageMoveOf(moved,view){
   var d=navDepth(),dd=d-lastDepth,same=V.tab===lastTab;lastDepth=d;lastTab=V.tab;
-  if(!moved||!same||!dd||isReduced()||V.assess||/\/(session|run)$/.test(view))return 0;
+  if(!moved||!same||!dd||isReduced()||V.assess||V.osBack||/\/(session|run)$/.test(view))return 0;
   return dd>0?1:-1;}
 /* A page opened from a page, or back: the new one and a still copy of the old travel
    together. Each goes the screen's width and a little more, so in the slide's slow end
@@ -240,8 +240,8 @@ function render(){
   slideSection(appEl,moved,sc);
   if(ghost)pageMove(appEl,ghost,pm);
   /* A swipe between the dock's tabs brought the page in itself (exswipe.js). */
-  else if(moved&&!V.tswiped){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
-  V.tswiped=false;
+  else if(moved&&!V.tswiped&&!V.osBack){ void appEl.offsetWidth; appEl.classList.add("pagein"); }
+  V.tswiped=false;V.osBack=false;
   bindExSwipe();
   bindMore(render);
 
