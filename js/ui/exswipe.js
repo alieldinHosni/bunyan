@@ -48,7 +48,11 @@ function onStart(ev){
   if(!p||t0.closest("input,textarea,select,[contenteditable],[data-grip]")||sideScroller(t0,p))return;
   var tt=ev.touches[0];
   if(tt.clientX<EDGE||tt.clientX>window.innerWidth-EDGE)return;
-  st={p:p,k:kindOf(p),x:tt.clientX,y:tt.clientY,mode:null,dx:0,w:p.offsetWidth||window.innerWidth,
+  /* A plan tab travels the whole screen, not its own width: by its own width the margin
+     beside it was still on screen when the slide ended, and the old tab showed there for
+     a moment before it went (owner, 4 Nov). */
+  var k0=kindOf(p);
+  st={p:p,k:k0,x:tt.clientX,y:tt.clientY,mode:null,dx:0,w:k0!=="ex"?(document.documentElement.clientWidth||window.innerWidth):(p.offsetWidth||window.innerWidth),
       samples:[[Date.now(),tt.clientX]]};}
 
 function onMove(ev){
@@ -96,8 +100,11 @@ function peekFollow(s,x){
   if(!s.nb||s.nbStep!==step){
     peekDrop(s);
     var w=takePeek(step,s.k);if(!w)return;
-    if(!s.base){var t0=s.p.style.transform;s.p.style.transform="";s.base=s.p.getBoundingClientRect();s.p.style.transform=t0;}
-    w.style.cssText="position:fixed;left:"+s.base.left+"px;top:"+s.base.top+"px;width:"+s.base.width+"px;margin:0;padding:0;max-width:none;pointer-events:none;z-index:0";
+    if(!s.base){var t0=s.p.style.transform;s.p.style.transform="";s.base=s.p.getBoundingClientRect();s.p.style.transform=t0;
+      /* Scrolled down this tab, the next one comes in from its own top, at the top of the
+         screen, not from as far down it as this one was; landing puts the page there. */
+      s.top=Math.max(s.base.top,safeTop()+12);}
+    w.style.cssText="position:fixed;left:"+s.base.left+"px;top:"+s.top+"px;width:"+s.base.width+"px;margin:0;padding:0;max-width:none;pointer-events:none;z-index:0";
     w.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";
     document.body.appendChild(w);
     s.nb=w;s.nbStep=step;}
@@ -124,6 +131,11 @@ function prepPeeks(){
   preT=setTimeout(function(){idle(function(){
     if(st||pane()!==p)return;
     [-1,1].forEach(function(step){if(H.can(step,k)){var w=buildPeek(step,k);if(w)pre[step]={k:k,w:w};}});});},250);}
+var _sat=null;
+function safeTop(){
+  if(_sat==null){var d=document.createElement("div");d.style.cssText="position:fixed;top:0;height:0;padding-top:env(safe-area-inset-top);visibility:hidden";
+    document.body.appendChild(d);_sat=d.offsetHeight||0;d.remove();}
+  return _sat;}
 function peekDrop(s){if(s&&s.nb){s.nb.remove();s.nb=null;s.nbStep=0;}}
 function springBack(p,s){
   if(s)segSettle(s,s.i0,320);
@@ -182,6 +194,8 @@ var SE="cubic-bezier(0.22, 1, 0.36, 1)";
 function slidePlan(s,step){
   var w=s.w,dx=s.dx,ms=Math.max(260,Math.min(440,Math.round((w-Math.abs(dx))/w*440)));
   segSettle(s,(s.i0||0)+step,ms);
+  /* The words change colour as the highlight arrives under them, not after it has. */
+  if(s.g)s.g.querySelectorAll(".seg-b").forEach(function(b,i){b.classList.toggle("on",i===Math.round((s.i0||0)+step));});
   var nb=s.nb,p=s.p,out=dx<0?-w:w;s.nb=null;
   document.documentElement.classList.add("pgmoving");
   var fin=false,end=function(){if(fin)return;fin=true;
@@ -191,10 +205,12 @@ function slidePlan(s,step){
     var np=pane();
     [p,np].forEach(function(e){if(e){e.style.transition="none";e.style.transform="";e.style.opacity="";
       if(e.getAnimations)e.getAnimations().forEach(function(x){x.cancel();});}});
+    /* The real tab exactly where the one that came in stands: if the page had been
+       scrolled down the old tab, it is moved up to it in the same frame, unseen. Easing
+       the page back up to the tabs afterwards was the jump (owner, 4 Nov). */
+    if(np&&nb&&s.top!=null){var d=np.getBoundingClientRect().top-s.top;if(Math.abs(d)>=1)window.scrollBy({top:d,behavior:"instant"});}
     if(nb)nb.remove();
-    if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");
-    var tabs=document.querySelector("#app .psecs");
-    if(tabs){var top=tabs.getBoundingClientRect().top;if(top<0)window.scrollBy({top:top-12,behavior:"smooth"});}};
+    if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");};
   /* Both travel on together, edge to edge, from where the finger left them, transform
      only; nothing is drawn until they land. */
   var a=p.animate([{transform:"translateX("+dx+"px)"},{transform:"translateX("+out+"px)"}],{duration:ms,easing:SE,fill:"forwards"});

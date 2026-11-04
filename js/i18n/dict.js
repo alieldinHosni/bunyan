@@ -5,7 +5,10 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Your plan's tools": "أدوات خطتك",
+var AR={"Copy in and share": "انقل وشارك",
+"The arrow down copies a plan in; the arrow up shares yours with another Bunyan user.": "السهم لتحت بينقل خطة جاهزة، والسهم لفوق بيشارك خطتك مع مستخدم تاني لبنيان.",
+"The gear holds how meals are named, your own foods, and a new plan made from your goals.": "الترس فيه طريقة تسمية الوجبات، وأكلاتك، وخطة جديدة معمولة من أهدافك.",
+"Your plan's tools": "أدوات خطتك",
 "The bowl holds the foods and meals you saved. Once there is a plan: the spark makes a new one from your goals, the arrow down copies one in, the arrow up shares yours with another Bunyan user.": "الطبق فيه الأكلات والوجبات اللي حفظتها. ولما يبقى عندك خطة: النجمة بتعمل خطة جديدة من أهدافك، والسهم لتحت بينقل خطة جاهزة، والسهم لفوق بيشارك خطتك مع مستخدم تاني لبنيان.",
 "The gear holds how meals are named.": "الترس فيه طريقة تسمية الوجبات.",
 "Meal plan settings": "إعدادات خطة الأكل",
