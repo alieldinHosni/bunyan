@@ -4635,7 +4635,7 @@ await test("Plan swipe (owner, 4 Nov): the tab going out leaves the screen entir
   /* Scrolled well down My program. */
   await page.evaluate(()=>window.scrollTo(0,500));await pause(page,300);
   await move(330,420,60);
-  const mid=await page.evaluate(()=>{const nb=document.querySelector(".stillcopy.peek");return nb?Math.round(nb.getBoundingClientRect().top):null;});
+  const mid=await page.evaluate(()=>{const nb=document.querySelector(".stillcopy.peek .psec");return nb?Math.round(nb.firstElementChild.getBoundingClientRect().top):null;});
   if(mid==null||mid<0)throw new Error("the next tab should come in from its own top, at the top of the screen: "+mid);
   await up();await page.waitForTimeout(60);
   /* The old tab travels the screen's width, so none of it can stay at the edge. */
@@ -4644,11 +4644,23 @@ await test("Plan swipe (owner, 4 Nov): the tab going out leaves the screen entir
   if(!kf||kf[0]!==kf[1])throw new Error("the tab going out should travel the whole screen: "+kf);
   eq(await page.evaluate(()=>[...document.querySelectorAll('#app .psecs .seg-b')].map(b=>b.classList.contains("on"))),[false,true],"the word turns with the highlight, mid-slide");
   await page.waitForTimeout(700);
-  const after=await ev(page,"[V.tplan,Math.round(document.querySelector('#app .psec').getBoundingClientRect().top),!!document.querySelector('.stillcopy'),document.querySelector('#app .psec').style.transform]");
+  const after=await ev(page,"[V.tplan,Math.round(document.querySelector('#app .psec').firstElementChild.getBoundingClientRect().top),!!document.querySelector('.stillcopy'),document.querySelector('#app .psec').style.transform]");
   eq([after[0],after[2],after[3]],["programs",false,""],"landed on Programs, nothing left over");
   if(Math.abs(after[1]-mid)>2)throw new Error("the real tab should land where the incoming one stood: "+after[1]+" vs "+mid);
   await page.waitForTimeout(500);
-  eq(await page.evaluate(()=>Math.round(document.querySelector("#app .psec").getBoundingClientRect().top)),after[1],"and does not move after it lands");
+  eq(await page.evaluate(()=>Math.round(document.querySelector("#app .psec").firstElementChild.getBoundingClientRect().top)),after[1],"and does not move after it lands");
+  /* Unscrolled, each way on both plan pages: the first card of the tab coming in stands
+     where the real one then lands (Programs' first card has a top margin of its own, and
+     drawn apart from the page it came in 12 px low: the jump as it arrived). */
+  for(const [sec,from,x0,x1] of [["train","program",330,60],["food","plan",330,60],["food","targets",60,330]]){
+    await coach(page,sec,from);await pause(page,900);
+    await page.evaluate(()=>window.scrollTo(0,0));await pause(page,200);
+    await move(x0,500,x1);
+    const pk=await page.evaluate(()=>{const n=document.querySelector(".stillcopy.peek .psec");return n?Math.round(n.firstElementChild.getBoundingClientRect().top):null;});
+    await up();await page.waitForTimeout(900);
+    const rl=await page.evaluate(()=>Math.round(document.querySelector("#app .psec").firstElementChild.getBoundingClientRect().top));
+    if(pk==null||Math.abs(pk-rl)>1)throw new Error(sec+" from "+from+": came in at "+pk+", landed at "+rl);
+  }
 });
 await test("How do you feel today?: on a phone each choice's word sits in the middle of its pill (owner, 4 Nov: it sat at the top), and so do the effort choices",async page=>{
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.haptic=true;st.saveDB();});await page.reload();await pause(page,1500);

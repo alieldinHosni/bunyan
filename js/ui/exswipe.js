@@ -107,6 +107,15 @@ function peekFollow(s,x){
     w.style.cssText="position:fixed;left:"+s.base.left+"px;top:"+s.top+"px;width:"+s.base.width+"px;margin:0;padding:0;max-width:none;pointer-events:none;z-index:0";
     w.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";
     document.body.appendChild(w);
+    /* In the page the first card's top margin merges with the gap under the tabs; drawn
+       on its own it does not, and the tab came in lower than it then landed: the page
+       jumped up as it arrived (owner, 4 Nov: Programs, 12 px). Placed as the page will
+       place it. */
+    var fc=w.querySelector(".psec").firstElementChild,cur=s.p.firstElementChild,tabs=tabsOf(),
+        mb=tabs?parseFloat(getComputedStyle(tabs).marginBottom)||0:0,
+        mn=fc?parseFloat(getComputedStyle(fc).marginTop)||0:0,mc=cur?parseFloat(getComputedStyle(cur).marginTop)||0:0;
+    if(fc)fc.style.marginTop="0px";
+    w.style.top=(s.top+Math.max(mb,mn)-Math.max(mb,mc))+"px";
     s.nb=w;s.nbStep=step;}
   s.nb.style.transform="translateX("+Math.round(x+(x<0?s.w:-s.w))+"px)";}
 /* The tabs next door, drawn ahead while nothing is happening (owner, 3 Nov: the swipe
@@ -208,7 +217,7 @@ function slidePlan(s,step){
     /* The real tab exactly where the one that came in stands: if the page had been
        scrolled down the old tab, it is moved up to it in the same frame, unseen. Easing
        the page back up to the tabs afterwards was the jump (owner, 4 Nov). */
-    if(np&&nb&&s.top!=null){var d=np.getBoundingClientRect().top-s.top;if(Math.abs(d)>=1)window.scrollBy({top:d,behavior:"instant"});}
+    if(np&&nb&&s.top!=null){var d=np.getBoundingClientRect().top-nb.getBoundingClientRect().top;if(Math.abs(d)>=1)window.scrollBy({top:d,behavior:"instant"});}
     if(nb)nb.remove();
     if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");};
   /* Both travel on together, edge to edge, from where the finger left them, transform

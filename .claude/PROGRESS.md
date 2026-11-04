@@ -3553,3 +3553,13 @@ Owner, 4 Nov (screenshots):
   easing back up to the tabs after landing was the jump. The tab's word turns as the highlight arrives.
 - Food's plan page: My foods and Make a new plan from my goals moved into the gear (set_meals); by the
   name only Copy in and Share; no row at all before there is a plan. Guide v6.
+
+## Plan swipe lands without a jump — branch session/swipejump (CACHE v217)
+
+Owner, 4 Nov: the swipe is good now, but Programs & exercises still jumps up at the start. Measured: the
+tab coming in stood 12 px lower than the real one then landed. Programs' first card (.ptiles) has a 12 px
+top margin; in the page it merges with the 16 px gap under the tabs, drawn on its own (the swipe's still
+copy is a fixed box) it did not. exswipe.js peekFollow now zeroes that margin in the copy and places it
+where the page will (max(gap, new margin) − max(gap, current margin)); landing aligns on the copy's own
+position. The Plan swipe test compares the first card, scrolled and unscrolled, both pages, each way; it
+fails on the previous build (12 vs 24) and passes now.
