@@ -3589,3 +3589,14 @@ width. Also: the My programs row read "3 training daysIn rotation" (its dot had 
 row); a middle dot as text now. Guide v6.
 Rename question (owner): renaming only changes the program's name (actions.js renamesplit); a probe that
 renames, reloads and lists finds one program. Asked the owner for the steps that showed a second one.
+
+## Opening a page: no strip of the old one, pictures ready — branch session/libpage (CACHE v221)
+
+Owner, 4 Nov: opening the Exercise Library has "the same old swiping issue" and its pictures flash.
+render.js pageMove: the new page and the old one's copy each travel the screen's width plus 40 px
+(they went 100% of #app, and in the slide's slow end the old page's last cards showed at the edge);
+and the slide waits, 250 ms at most, for the pictures on the new page's first screen, asked for eagerly
+and decoded: they are loading="lazy", and a lazy picture on a page still off the screen is not fetched
+until it comes in, so each appeared after the page had. The tab swipe's copy of the next tab asks for
+its pictures eagerly too. Filmed: no blank pictures, ground between the pages. Test fails on the
+previous build and passes now.

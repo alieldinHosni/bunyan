@@ -4715,6 +4715,24 @@ await test("How do you feel today?: on a phone each choice's word sits in the mi
   if(off.some(x=>x[0]!=="LABEL"))throw new Error("expected the phone's labels: "+JSON.stringify(off));
   if(off.some(x=>Math.abs(x[1])>2))throw new Error("words off centre: "+JSON.stringify(off));
 });
+await test("Opening the Exercise Library (owner, 4 Nov): the old page travels past the screen's edge, so none of it shows in the slide's slow end, and the pictures on the first screen are there before the page moves",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await coach(page,"train","programs");await pause(page,900);
+  await page.evaluate(()=>document.querySelector('.ttile[data-train="library"]').scrollIntoView({block:"center"}));await pause(page,400);
+  await page.evaluate(()=>{window.__seen=null;const mo=new MutationObserver(()=>{const c=document.querySelector(".stillcopy");const a=c&&c.getAnimations()[0];
+    if(a&&!window.__seen){const app=document.getElementById("app");
+      const imgs=[...app.querySelectorAll("img")].filter(i=>{const r=i.getBoundingClientRect();return r.width>0&&r.top<innerHeight;});
+      window.__seen={to:a.effect.getKeyframes().slice(-1)[0].transform,w:document.documentElement.clientWidth,n:imgs.length,ready:imgs.filter(i=>i.complete&&i.naturalWidth>0).length};mo.disconnect();}});
+    mo.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["style","class"]});});
+  await page.tap('.ttile[data-train="library"]');
+  for(let i=0;i<20&&!(await page.evaluate(()=>window.__seen));i++)await page.waitForTimeout(30);
+  const s=await page.evaluate(()=>window.__seen);
+  if(!s)throw new Error("no slide seen");
+  eq(s.to,"translateX(-"+(s.w+40)+"px)","the old page goes the screen's width and a gap");
+  if(!(s.n>0&&s.ready===s.n))throw new Error("pictures not ready as the page moved: "+s.ready+" of "+s.n);
+  await pause(page,900);
+  eq(await ev(page,"V.train"),"library","the library is open");
+});
 await test("Targets: one card says the target; Edit opens it as fields and Cancel closes it unchanged; the coach's suggestion only when it differs; the eating history folded",async page=>{
   await coach(page,"food","targets");
   const g=await ev(page,"S.goals");

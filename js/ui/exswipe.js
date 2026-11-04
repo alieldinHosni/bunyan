@@ -128,6 +128,9 @@ function buildPeek(step,k){
   var w=document.createElement("div");w.id="app";w.className="stillcopy peek";w.setAttribute("aria-hidden","true");w.inert=true;
   var p=document.createElement("div");p.className="psec";p.innerHTML=html;
   p.querySelectorAll("[id]").forEach(function(e){e.removeAttribute("id");});
+  /* Off the screen until the finger brings it, so a lazy picture would wait to load
+     until it was already showing: asked for now. */
+  p.querySelectorAll('img[loading="lazy"]').forEach(function(im){im.loading="eager";});
   w.appendChild(p);return w;}
 function takePeek(step,k){
   var c=pre[step],w=c&&c.k===k?c.w:null;pre[step]=null;
