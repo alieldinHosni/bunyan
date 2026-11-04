@@ -91,7 +91,10 @@ async function coach(page,sec,sub){
     /* Exercises live under Programs since 3 Nov: that tab, at the library. */
     const ex=sec==="train"&&sub==="exercises";if(ex)sub="programs";
     /* My foods is the plan page's middle tab (4 Nov). */
-    if(sub&&sub!==first){await page.tap('.psecs [data-'+attr+'="'+sub+'"]');await page.waitForTimeout(250);}
+    /* A tab tap slides, and the tab is drawn once it lands (exswipe.js slideTab). */
+    if(sub&&sub!==first){await page.tap('.psecs [data-'+attr+'="'+sub+'"]');
+      for(let i=0;i<40&&!(await page.evaluate(async([a,v])=>{const m=await import("/js/ui/view.js");return m.V[a]===v&&!document.querySelector(".stillcopy");},[attr,sub]));i++)await page.waitForTimeout(50);
+      await page.waitForTimeout(100);}
     if(ex){await page.evaluate(()=>document.getElementById("pex").scrollIntoView({block:"start"}));await page.waitForTimeout(150);}
     return;}
   await tapTab(page,"coach");await page.waitForTimeout(200);}
@@ -4781,7 +4784,7 @@ await test("Plan tabs: the highlight over the tabs follows the finger while the 
   eq(await page.evaluate(()=>document.querySelector("#app .psecs").classList.contains("drag")),true,"no easing while dragged");
   for(let i=9;i<=14;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:320-i*18,y}]});await page.waitForTimeout(16);}
   await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(900);
-  eq([await ev(page,"V.fplan"),await iNow(),await page.evaluate(()=>document.querySelector("#app .psecs").classList.contains("drag"))],["targets",1,false],"landed on Targets");
+  eq([await ev(page,"V.fplan"),await iNow(),await page.evaluate(()=>document.querySelector("#app .psecs").classList.contains("drag"))],["foods",1,false],"landed on My foods, the next tab");
 });
 await test("Copy in: a plan another Bunyan user shared works in Food's Copy in a plan and Training's Copy in a program — paste their message, read it, and it is added",async page=>{
   /* A message as it arrives: words around the code. */

@@ -3623,3 +3623,7 @@ a tab, the new plan a button, the gear for settings only, and the two wired toge
 - Names: "Your meals" over the built meals, "Your own meal" on a meal's page.
 Tests: the meal plan, swipe and tap tests for three tabs; a built meal in a rebuilt plan and Put in my
 meal plan with Undo.
+- Suite: the container restarted twice mid-run; 244 passed before it, the remaining 83 were run on their
+  own (82 passed; Plan tabs expected Targets one swipe from Meal plan, now My foods; Press found the
+  helper's tab tap had not landed yet, since a tab tap now draws the tab when its slide ends). The
+  coach() helper waits for the tab to land; the 17 tests that switch tabs through it pass again.
