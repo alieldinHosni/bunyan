@@ -406,7 +406,7 @@ function programsPage(){
   /* A new program from scratch. Copying one in is the icon by My program's name now
      (owner, 4 Nov), so this is the one way here, across the width. */
   var h='<div class="ptiles one">'
-   +'<button class="ptile" data-newsplit="1"><span class="ptile-i">'+PLUS+'</span><b>'+t("Build a program")+'</b><span>'+t("Pick the days, fill them from the library")+'</span></button></div>';
+   +'<button class="ptile bprog" data-newsplit="1">'+art("figure",{cls:"bprog-art"})+'<span class="ptile-i">'+PLUS+'</span><b>'+t("Build a program")+'</b><span>'+t("Pick the days, fill them from the library")+'</span></button></div>';
   h+=programsList();
   var tpls=allSplits().filter(function(o){return !editSplit(o.id);});
   h+='<div class="tsec"><h2 class="tsec-h">'+t("Templates")+'</h2><span class="dhint">'+t("Use one to get your own copy")+'</span></div>'

@@ -3652,3 +3652,8 @@ page could be removed", with How you have been eating in Progress.
 - Tests: the helper sends "targets" to the meal plan; the plan card is clicked, not tapped (last on its
   page, a toast or the dock can be over it on a short page); goal tests check Progress for the history;
   the tab tests for two tabs.
+- Owner, 4 Nov: the New meal dialog "lags while opening and while disappearing". A dialog with a field
+  now opens where the keyboard leaves it (it was placed by the space left, so it opened mid-screen and
+  slid up as the keyboard rose, and back down as it went); put away, a dialog fades and shrinks a little
+  in 170 ms instead of the sheet's slide down. Build a program is the accent's glass with the standing
+  figure drawn at its edge. CACHE v227.

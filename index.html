@@ -961,6 +961,16 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wti
    it; it is a container, not a control, so it draws no ring. Its buttons keep theirs. */
 .sheetbox:focus{outline:none}
 @keyframes dlgIn{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:none}}
+/* A dialog that is typed into stands where the keyboard will leave it from the moment it
+   opens: placed by the space left (--vvh), it opened in the middle and then slid up as
+   the keyboard rose, and back down as it went (owner, 4 Nov: "lags while opening and
+   while disappearing"). */
+.sheet.dlg .dlgbox:has(input,textarea){margin-top:calc(env(safe-area-inset-top) + var(--s6) + var(--s5));transition:none}
+/* Put away, a dialog goes where it is, a little smaller, quickly; the sheet's slide down
+   (render.js sheetLeave) is for sheets that rise from the bottom. */
+.sheet.dlg.sheetghost{animation-duration:170ms}
+.sheet.dlg.sheetghost .sheetbox{animation:dlgOut 170ms var(--e-accel) forwards}
+@keyframes dlgOut{to{opacity:0;transform:scale(.96)}}
 .dlgbox h2{font-family:var(--display);font-size:22px;line-height:1.2;margin:0}
 .dlg-b{margin:8px 0 0;color:var(--dim);font-size:14px;line-height:1.45}
 .dlg-l{display:block;margin:16px 0 0;font-size:12px;font-weight:600;letter-spacing:.06em;
@@ -5896,6 +5906,15 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
 /* Two ways in, side by side: a mark, a name, one line. */
 .ptiles{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2);margin:var(--s3) 0 0}
 .ptiles.one{grid-template-columns:1fr}
+/* Build a program (owner, 4 Nov: "could be designed better, with a drawing or my character,
+   and transparent red"): the accent's glass, the standing figure at its edge. */
+#app .ptiles .ptile.bprog{position:relative;overflow:hidden;isolation:isolate;min-height:136px;justify-content:flex-end;padding:var(--s4);
+  background:linear-gradient(135deg,rgba(var(--accent-rgb),.34),rgba(var(--accent-rgb),.10) 70%);border:1px solid rgba(var(--accentHi-rgb),.5)}
+#app .ptile.bprog b{font-size:18px;color:var(--text)}
+#app .ptile.bprog span:not(.ptile-i){max-width:21ch;color:var(--sub)}
+#app .ptile.bprog .ptile-i{background:rgba(var(--accent-rgb),.28);color:var(--text)}
+.bprog-art{position:absolute;z-index:-1;inset-inline-end:var(--s4);bottom:calc(-1 * var(--s3));height:160px;width:auto;opacity:.6;pointer-events:none}
+[dir="rtl"] .bprog-art{transform:scaleX(-1)}
 .tierr{margin:var(--s2) 0 0;font-size:13px;line-height:1.45;color:var(--warning)}
 .ptile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:var(--s3) var(--s3) var(--s4);border-radius:var(--r4);
   border:1px solid var(--card-edge);background:var(--card);color:var(--text);font:inherit;text-align:start}
