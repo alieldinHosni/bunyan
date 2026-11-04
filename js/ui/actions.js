@@ -173,8 +173,12 @@ function programWeek(sp){
 function inWeek(e,wk){return !(e.wk&&wk&&(wk<e.wk[0]||wk>e.wk[1]));}
 /* The kit at hand while travel mode is on (S.travel, until its date), else null. */
 function travelGear(){var tv=S.travel;return tv&&tv.until&&today()<=tv.until&&Array.isArray(tv.gear)?tv.gear:null;}
-function startDay(dayId){
+/* past: a date before today (owner, 4 Nov: "sometimes I train but forget to use the
+   app"). The same workout screen, saved under that day: no clock, no rest timer, no
+   warm-up or how-do-you-feel question, and no time recorded, since none was. */
+function startDay(dayId,past){
   var d=dayOf(dayId);if(!d||!d.ex.length)return;
+  if(past&&!(/^\d{4}-\d{2}-\d{2}$/.test(past)&&past<today()))past=null;
   var sp=ownerOf(d.id)||split(),wk=programWeek(sp);
   var list=d.ex.filter(function(e){return inWeek(e,wk);});
   if(!list.length)list=d.ex;
@@ -194,12 +198,13 @@ function startDay(dayId){
       list=list.slice();list[x.after]=Object.assign({},e0,{grp:g});
       list.splice(x.after+1,0,{id:uid(),name:x.name,sets:e0.sets,lo:pv.min,hi:pv.max,rest:e0.rest,rir:e0.rir,grp:g,tempo:"slow (4-2-1-1)",phase:2});});}
   /* Lifts carried onto today from a missed day (js/engine/missed.js), after the day's own. */
-  var carried=addsOn(today(),d.id).filter(function(a){return !list.some(function(e){return e.name===a.name;});});
+  var carried=past?[]:addsOn(today(),d.id).filter(function(a){return !list.some(function(e){return e.name===a.name;});});
   if(carried.length)list=list.concat(carried.map(function(a){return {name:a.name,sets:a.sets,lo:a.lo,hi:a.hi,rest:a.rest,rir:a.rir};}));
   /* Created on the tap that starts the workout (a user gesture, which iOS requires),
      so logging the first set does not pay for it. */
   audioOn();
-  S.active={id:uid(),date:today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
+  S.active={id:uid(),date:past||today(),started:Date.now(),lastSet:Date.now(),activeMs:0,idx:0,
+    past:past?true:undefined,ready:past?0:undefined,warm:past?"done":undefined,
     splitId:split().id,dayId:d.id,dayName:d.name,dayNotes:(d.notes||[]).slice(),
     block:blk?{n:blk.block,week:blk.week,light:blk.light}:undefined,
     entries:list.map(function(e){
@@ -319,18 +324,22 @@ function finishSession(){
   a.entries.forEach(function(e){if(!isActivity(e.name))return;
     e.sets.forEach(function(x){actMin+=num(x.min);actKcalT+=num(x.kcal);actKm+=num(x.km);});});
   if(actMin*60000>(sessionClock(a).ms||0)){a.activeMs=actMin*60000;a.lastSet=Date.now();}
+  /* Logged afterwards: how long it took is not known, so none is kept (the averages
+     count timed sessions only), and it is put in its place among the days. */
+  var past=!!a.past;
+  if(past){a.activeMs=0;a.started=a.lastSet=Date.parse(a.date+"T12:00:00");}
   var vol=Math.round(sessionVolume(a));
   var allSets=[];a.entries.forEach(function(e){allSets=allSets.concat(e.sets);});
   if(!a.id)a.id="s"+Date.now().toString(36);
   var summary={id:a.id,actKcal:actKcalT,actKm:Math.round(actKm*10)/10,dayName:a.dayName,date:a.date,vol:vol,
     /* Active time, not wall clock: that is what was trained, and it keeps sessions
        comparable. The wall clock is stored too, since it cannot be recovered later. */
-    mins:Math.max(1,Math.round(sessionClock(a).ms/60000)),
+    mins:past?null:Math.max(1,Math.round(sessionClock(a).ms/60000)),past:past||undefined,
     /* The complete screen prints mm:ss. Deriving that from the rounded minutes would
        have put :00 after every workout ever logged — the format promising a precision
        the figure did not have. */
-    secs:Math.max(1,Math.round(sessionClock(a).ms/1000)),
-    wallMins:Math.max(1,Math.round(sessionWall(a)/60000)),
+    secs:past?null:Math.max(1,Math.round(sessionClock(a).ms/1000)),
+    wallMins:past?null:Math.max(1,Math.round(sessionWall(a)/60000)),
     sets:allSets.length,
     /* Lifting was done, so "how was the amount" means something. */
     lift:a.entries.some(function(e){return !isActivity(e.name)&&(e.sets||[]).some(function(x){return !x.wu;});}),
@@ -348,7 +357,9 @@ function finishSession(){
      record: history keeps what describes the sets, not the cues. */
   delete a.dayNotes;delete a.warm;delete a.wuDone;
   a.entries.forEach(function(e){delete e.alt;delete e.altWhy;delete e.wuq;delete e.wuRamp;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
-  recordSession(a);S.active=null;endRest();keepAwake(false);stopHold();V.cdDone={};
+  delete a.past;
+  recordSession(a);if(past)S.sessions.sort(function(x,y){return x.date<y.date?1:x.date>y.date?-1:0;});
+  S.active=null;endRest();keepAwake(false);stopHold();V.cdDone={};
   saveDB();V.tab="train";V.train="days";
   play(prs.length?"pr":"complete");tap("ok");
   openSheet("done",summary);}

@@ -593,6 +593,18 @@ function vSheet(){
          +(o?'<i class="actbtn-gps">'+esc(t("GPS"))+'</i>':'')+'</button>';});
       b+='</div>';});
   }
+  else if(V.sheet==="pastlog"){
+    /* A day trained without the app (owner, 4 Nov): which day of the program it was, then
+       the workout screen, saved under that date. */
+    var pd=V.sd.date,spp=split();
+    b='<div class="se-top"><span class="se-k">'+esc(pretty(pd))+'</span><h2>'+t("Log a past workout")+'</h2>'
+     +'<p class="shsub">'+t("Pick the day you trained, then log the sets you did. It is saved under this date, with no time, since none was kept.")+'</p></div>'
+     +'<div class="card tdays">';
+    spp.days.forEach(function(d){if(!d.ex.length)return;
+      b+=hb('<button class="trow" data-pastday="'+esc(pd)+'|'+esc(d.id)+'"><span><span class="trow-n">'+esc(planName(d.name))+'</span>'
+       +'<span class="trow-s"><span class="num">'+d.ex.length+'</span> '+esc(t("exercises"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>');});
+    b+='</div>';
+  }
   else if(V.sheet==="swapday"){
     /* Which day of the plan this date runs. The rotation's own pick is marked, and
        choosing it again clears the swap. */
@@ -793,7 +805,9 @@ function vSheet(){
      +'<h1 class="wfin-h">'+t("Workout complete")+'</h1>'
      +'<p class="wfin-sub">'+esc(planName(w.dayName))+' · '+pretty(w.date)+'</p>'
      +'<div class="wfin-stats">'
-     +'<div class="stat"><b class="num">'+(wsecs>=3600?Math.floor(wsecs/3600)+'<small>h</small> '+Math.round(wsecs%3600/60)+'<small>m</small>':mmss(wsecs))+'</b><small>'+t("Duration")+'</small></div>'
+     /* Logged afterwards, there is no duration to show: the sets, which there are. */
+     +(w.past?'<div class="stat"><b class="num">'+fmtN(w.sets)+'</b><small>'+t("Sets")+'</small></div>'
+     :'<div class="stat"><b class="num">'+(wsecs>=3600?Math.floor(wsecs/3600)+'<small>h</small> '+Math.round(wsecs%3600/60)+'<small>m</small>':mmss(wsecs))+'</b><small>'+t("Duration")+'</small></div>')
      /* A lifting day shows its tonnage; a run or a match shows what it burned. */
      +(w.vol||!w.actKcal
        ?'<div class="stat"><b class="num"><span data-count-to="'+Math.round(toDisp(w.vol))+'">'+fmtN(toDisp(w.vol))+'</span></b><small>'+t("Volume")+' · '+wUnit()+'</small></div>'

@@ -133,6 +133,8 @@ function dayHero(sp,p,iso){
     label=p.kind==="past"?t("No session"):t("Nothing planned");
     meta=p.kind==="past"?t("Nothing was logged on this day."):t("Your program has no training days yet. Plan them in Coach.");
     if(p.kind==="none")cta='<button class="btn" data-csec="train">'+t("Plan your training")+'</button>';
+    /* Trained without the app: log it now, under this day (owner, 4 Nov). */
+    else if(sp.days.some(function(d){return d.ex.length;}))cta='<button class="btn g" data-logpast="'+iso+'"><span aria-hidden="true">+</span> '+t("Log a workout for this day")+'</button>';
   }else if(p.rest){
     label=p.kind==="today"?t("Today"):t("Planned");
     meta=t("Recover. The plan picks up the day after.");

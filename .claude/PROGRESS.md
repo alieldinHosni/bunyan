@@ -3751,3 +3751,16 @@ left". They are small (16–47 KB) and precached, so the cause was not the downl
   the real one's freshly made pictures were blank until decoded. The incoming tab now stays above
   (z-index 5) until the real one's on-screen pictures are decoded, at most 200 ms (exswipe.js
   seenImgs). The prebuilt neighbours decode their pictures ahead.
+
+## A workout logged afterwards — same branch (CACHE v236)
+
+Owner, 4 Nov: "Sometimes I train but forget to use the app, so I need the option to log training from past
+days." On Training, a past day with nothing logged now has "Log a workout for this day". It opens a sheet
+(pastlog) with the program's training days, and the chosen one opens the usual workout screen for that
+date: startDay(dayId, past) sets S.active.date and past.
+- The past workout has no clock (the header shows the date), no rest timer, no warm-up and no
+  how-do-you-feel question. Lifts carried from a missed day are not added.
+- On finish no time is kept (activeMs 0, mins, secs and wallMins null), since none was measured. The
+  averages already count timed sessions only. The complete sheet shows Sets in place of Duration, and
+  history is re-sorted so the session sits on its date.
+- A workout already in progress has to be finished or saved first.

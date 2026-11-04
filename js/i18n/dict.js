@@ -5,7 +5,11 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"The star holds the foods you created and the meals you saved, to change or log in one tap.": "النجمة فيها الأكل اللي عملته والوجبات اللي حفظتها، تعدّلها أو تسجّلها بلمسة واحدة.",
+var AR={"Log a past workout": "سجّل تمرين فات",
+"Pick the day you trained, then log the sets you did. It is saved under this date, with no time, since none was kept.": "اختار اليوم اللي اتمرنت فيه، وبعدين سجّل المجموعات اللي عملتها. هيتحفظ على التاريخ ده من غير وقت، لأن مفيش وقت اتسجّل.",
+"Log a workout for this day": "سجّل تمرين لليوم ده",
+"Finish or save the workout in progress first.": "خلّص أو احفظ التمرين اللي شغال الأول.",
+"The star holds the foods you created and the meals you saved, to change or log in one tap.": "النجمة فيها الأكل اللي عملته والوجبات اللي حفظتها، تعدّلها أو تسجّلها بلمسة واحدة.",
 "Create a meal": "اعمل وجبة",
 "Leave it blank and it is numbered by its place in the day. Then add its foods.": "سيبها فاضية وهتاخد رقم حسب مكانها في اليوم. وبعدين ضيف أكلها.",
 "The foods you created and the meals you saved, one tap away when you log.": "الأكل اللي عملته والوجبات اللي حفظتها، بلمسة واحدة لما تسجّل.",

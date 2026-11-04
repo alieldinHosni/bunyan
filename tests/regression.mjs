@@ -2870,6 +2870,25 @@ await test("Pictures on a swipe (owner, 4 Nov): the templates' pictures are not 
   eq(await page.$$eval('#app .tcover img',a=>a.length>0&&a.every(i=>i.loading!=="lazy")),true,"the templates' pictures are not lazy");
   eq(await page.evaluate(()=>window.__blank),0,"no frame with a picture missing");
 });
+await test("A past workout (owner, 4 Nov): a past day with nothing logged offers Log a workout for this day; pick the day of the program, log it on the workout screen with no clock and no rest timer, and it is saved under that date with no time",async page=>{
+  await tapTab(page,"train");await pause(page,600);
+  const y=await page.evaluate(async()=>{const U=await import("/js/util.js");const d=new Date(U.today()+"T12:00:00");d.setDate(d.getDate()-1);
+    const iso=d.toISOString().slice(0,10);const st=await import("/js/state.js");st.S.sessions=st.S.sessions.filter(s=>s.date!==iso);
+    const V=(await import("/js/ui/view.js")).V;V.tdate=iso;(await import("/js/ui/render.js")).render();return iso;});
+  await pause(page,500);
+  await page.tap('#app [data-logpast="'+y+'"]');await pause(page,700);
+  eq(await ev(page,"V.sheet"),"pastlog","which day of the program");
+  await page.tap('#sheet [data-pastday]');await pause(page,900);
+  eq(await ev(page,"[S.active.date,!!S.active.past,!!document.querySelector('#sessClock'),!!document.querySelector('#app .ss-past'),!!document.querySelector('#app .ready')]"),[y,true,false,true,false],"the workout screen for that day: its date in place of the clock, no feel question");
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  eq(await ev(page,"[V.restEnd||0,S.active.entries[0].sets.length]"),[0,1],"no rest timer");
+  await finishEarly(page);
+  await page.tap('[data-confirmok]');await pause(page,900);
+  const s=await ev(page,"(()=>{const x=S.sessions.find(s=>s.date==='"+y+"');return x?[x.activeMs,x.past===undefined,S.sessions.indexOf(x)>=0]:null;})()");
+  eq(s,[0,true,true],"saved under that date, untimed");
+  eq(await ev(page,"[V.sd&&V.sd.past,V.sd&&V.sd.mins]"),[true,null],"the summary shows no duration");
+  eq(await page.$$eval('#sheet .wfin-stats .stat small',a=>a.map(x=>x.textContent).includes("Duration")),false,"no Duration on it");
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);

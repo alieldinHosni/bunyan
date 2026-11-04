@@ -139,6 +139,11 @@ function register(){
     toast(t(n?(kept?"Plan steered away from it: {n} swapped, {k} with no stand-in kept.":"Plan steered away from it: {n} swapped."):"Nothing in your plan loads it. New plans will keep away from it too.")
       .replace("{n}",n).replace("{k}",kept),function(){S.programs=before.programs;S.profile.limits=before.limits;saveDB();render();});return;});
   key("hurtdo",function(D){W.flagPain(D.hurtdo);return;});
+  /* A past day trained without the app: which day of the program, then the workout. */
+  key("logpast",function(D){
+    if(S.active){toast(t("Finish or save the workout in progress first."));return;}
+    openSheet("pastlog",{date:D.logpast});return;});
+  key("pastday",function(D){var pp=String(D.pastday).split("|");closeSheet();pushNav();startDay(pp[1],pp[0]);return;});
   key("startday",function(D){if(V.sheet==="another"){V.sheet=null;V.sd=null;}pushNav();startDay(D.startday);return;});
   has("continue",function(){W.resume();return;});
   /* Moving between exercises: the segments, the arrows either side of them, and the
