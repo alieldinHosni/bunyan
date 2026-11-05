@@ -3788,3 +3788,24 @@ so its rows blurred the real rows through them, and then they snapped clear. Tem
 pictures); the see-through program rows showed it. The real tab now waits hidden (visibility) under
 the incoming one and the two swap in one frame. The pictures-on-a-swipe test also checks that the two
 are never both on show; that check fails on v237.
+
+## Progress, second redesign — branch session/progress2 (CACHE v239)
+
+Owner, 5 Nov: "start working on them all" (the 21-point Progress review).
+- Correctness:
+  - Consistency is weeks kept against the plan's training days (figures.js weekRunIn), not days in a row.
+  - The scale's rate is one figure everywhere: the trend's regression per week (body.js); until there is one, the change since the weigh-in a week or more before, said the same way on Overview and Body.
+  - Every range-bound card names its range; this week's and all-time cards say so.
+  - Volume in kilograms is gone (it mostly counted sessions); hard sets a week took its place.
+  - Estimated maxes show to the half unit and are called estimates.
+  - A lift that moves the body and was never loaded in the range is scored by its reps (repsOnlyIn / repsSeriesIn).
+  - Cardio has a place: minutes a week, distance, best running pace over a km (cardioIn).
+  - The trend's advice has Apply (±150 kcal, the middle of the book's 100–200; ±200 for a gain trend going the wrong way; ±100 when holding). It changes carbohydrate, as the weekly check-in does, with Undo.
+- Structure: four views, Overview, Strength, Body and Habits, swipeable like the plan pages; at the first or last view the swipe carries on to the dock's tab.
+  - Overview: Is it working (verdict chip, rate against the goal's band, smoothed trend with the weigh-ins as dots, Apply); This week (a dot a day, weeks kept); Highlights for the range; Milestones; the month's recap; recent workouts.
+  - Strength: one list of lifts (figure, shape, change, PR badge), each opening its own sheet (chart, records, sessions); the muscles merged into one card (map, this week against the target, the range's weekly average); the powerlifting comparison only with all three judged lifts trained, at the bottom.
+  - Body: the smoothed trend chart with weigh-ins as dots and a legend; Apply under Is it working; photos can be compared (two chosen, one over the other with a slider, each with the weight nearest its date).
+  - Habits: eating (moved from Overview), steps against the goal, cardio.
+- Charts: a press held still reads a chart (js/ui/scrub.js) with a bubble and a tick per point, and a tap marks one point. A swipe across a chart is still a swipe. A new range draws its line on again (keyed by range), and figures count to their value (data-count-dp for decimals).
+- Drawings: milestones as eight-pointed stars (khatam), the newest shining once (prefs.msSeen); the month's card with the star; the recap sheet saved as a 1080×1350 picture in the app's colours and type (shared where the phone can share a file, else downloaded).
+- The smoothed line is an exponentially weighted average, a tenth of the way to each weigh-in per day (as the Hacker's Diet draws it). It is for the chart only: the rate against the goal stays the regression. No prescription formula changed.

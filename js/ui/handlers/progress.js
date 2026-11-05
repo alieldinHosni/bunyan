@@ -5,8 +5,11 @@ import {actKcal} from "../../data/activities.js";
 import {lastWeight} from "../../engine/formulas.js";
 import {t} from "../../i18n/dict.js";
 import {dayRec, ensureSessionIds, removeSession, S, saveDB, saveSession, sessionById} from "../../state.js";
-import {toKg} from "../../units.js";
-import {num, r1, today} from "../../util.js";
+
+import {dfmt, fmtN, num, r1, today} from "../../util.js";
+import {monthRecap} from "../../engine/stats.js";
+import {exName} from "../../i18n/exnames.js";
+import {toDisp, toKg, wUnit} from "../../units.js";
 import {ACT, askConfirm, closeSheet, openSheet, val} from "../actions.js";
 import {pushNav} from "../nav.js";
 import {removePhoto} from "../photos.js";
@@ -30,6 +33,37 @@ function readSE(){
         st.kcal=actKcal(e.name,st.min,st.rpe||6,lastWeight())||st.kcal||0;}
       if(k)st.km=k.value===""?0:Math.max(0,r1(num(k.value)));});});
 }
+/* The month in review as a picture to keep or send (1080 × 1350), drawn in the app's
+   own colours and type. Shared where the phone can share a file, else saved. */
+function saveRecap(mo){
+  var rc=monthRecap(mo),cs=getComputedStyle(document.documentElement),c=function(n,f){return (cs.getPropertyValue(n)||"").trim()||f;};
+  var ar=S.prefs&&S.prefs.lang==="ar",W=1080,H=1350,cv=document.createElement("canvas");cv.width=W;cv.height=H;
+  var x=cv.getContext("2d");if(!x){toast(t("This phone could not draw the picture."));return;}
+  var g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,c("--bg","#0b1226"));g.addColorStop(1,c("--surface","#121a30"));
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  var acc=c("--accent","#3f6fd8"),txt=c("--text","#eef2f8"),dim=c("--sub","#9aa6bf");
+  var disp=ar?"Alexandria":"Outfit",body=ar?"Readex Pro":"Manrope";
+  x.direction=ar?"rtl":"ltr";x.textAlign=ar?"right":"left";var X=ar?W-90:90;
+  var mname=dfmt(new Date(mo+"-01T00:00:00"),{month:"long",year:"numeric"});
+  x.fillStyle=acc;x.font="700 34px "+body;x.fillText(t("Month in review").toUpperCase(),X,150);
+  x.fillStyle=txt;x.font="800 96px "+disp;x.fillText(mname,X,260);
+  var stats=[[rc.workouts,t("workouts")],[rc.sets,t("hard sets")],[rc.prs,t("records")]];
+  stats.forEach(function(s,i){var sx=ar?W-90-i*310:90+i*310;x.textAlign=ar?"right":"left";
+    x.fillStyle=txt;x.font="800 120px "+disp;x.fillText(fmtN(s[0]),sx,470);
+    x.fillStyle=dim;x.font="500 36px "+body;x.fillText(s[1],sx,525);});
+  var y=650;
+  var line=function(a,b){x.textAlign=ar?"right":"left";x.fillStyle=dim;x.font="500 40px "+body;x.fillText(a,X,y);
+    x.textAlign=ar?"left":"right";x.fillStyle=txt;x.font="700 44px "+disp;x.fillText(b,ar?90:W-90,y);y+=86;};
+  rc.lifts.forEach(function(L){line(exName(L.name),(L.pct>0?"+":"")+Math.round(L.pct)+"%");});
+  if(rc.weight)line(t("Weight trend"),toDisp(rc.weight.from)+" → "+toDisp(rc.weight.to)+" "+wUnit());
+  if(rc.waist)line(t("Waist"),r1(rc.waist.from)+" → "+r1(rc.waist.to)+" "+t("cm"));
+  if(rc.cardio)line(t("Cardio & Sports"),fmtN(rc.cardio)+" "+t("min"));
+  x.textAlign=ar?"right":"left";x.fillStyle=acc;x.font="800 52px "+disp;x.fillText("Bunyan",X,H-110);
+  cv.toBlob(function(bl){if(!bl){toast(t("This phone could not draw the picture."));return;}
+    var name="bunyan-"+mo+".png",f=null;try{f=new File([bl],name,{type:"image/png"});}catch(e){f=null;}
+    if(f&&navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f]}).catch(function(){});return;}
+    var a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);toast(t("Saved."));},"image/png");}
 function askDelSession(id){
   if(!id)return;
   askConfirm({title:t("Delete this workout?"),icon:"trash",
@@ -57,11 +91,15 @@ function register(){
   key("seeall",function(){V.ptab="strength";render();window.scrollTo(0,0);return;});
   key("pall",function(){V.pall=!V.pall;render();return;});
   key("phalf",function(D){V.phalf=D.phalf;V.pall=false;render();return;});
-  /* A lift in the list is charted above it, so bring the chart into view. */
-  key("chartex",function(D){V.chartEx=D.chartex;render();
-    var pk=document.querySelector(".pgpick");
-    if(pk)pk.scrollIntoView({block:"start",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
-    return;});
+  /* A lift opens its own page: its trend, its records, its sessions. */
+  key("lift",function(D){openSheet("lift",{name:D.lift});return;});
+  key("recap",function(D){openSheet("recap",{mo:D.recap});return;});
+  key("recapsave",function(D){saveRecap(D.recapsave);return;});
+  key("phcmp",function(){openSheet("phcmp",{});return;});
+  /* The trend's advice, applied: the step on or off carbohydrate, with Undo. */
+  key("tradj",function(D){var by=Math.round(num(D.tradj)),g=S.goals;if(!by||!g||!num(g.kcal))return;
+    var was={kcal:g.kcal,c:g.c};g.kcal=num(g.kcal)+by;g.c=Math.max(0,Math.round(num(g.c)+by/4));saveDB();render();
+    toast(t("Daily target now {k} kcal.").replace("{k}",fmtN(g.kcal)),function(){g.kcal=was.kcal;g.c=was.c;saveDB();render();});return;});
   key("photo",function(D){openSheet("photo",{id:D.photo});return;});
   key("delphoto",function(D){
     askConfirm({title:t("Delete this photo?"),icon:"trash",

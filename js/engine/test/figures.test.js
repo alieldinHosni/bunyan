@@ -1,6 +1,7 @@
 import {bodyFatSeriesIn, consistencyMonthIn, e1rmSeriesIn, isoBack, liftHalf, liftProgressIn, liftsIn, muscleShareIn, overviewIn,
         pct100, recentRecordsIn, strengthIndexIn, topLiftsIn, volumeSeriesIn, weeklyCardioIn, weeklyVolumeIn, weighInsIn, win,
-        working} from "../figures.js";
+        working, weekRunIn, smoothWeightsIn, weeklySetsAvgIn, repsOnlyIn, repsSeriesIn, liftHistoryIn, milestonesIn, monthRecapIn,
+        cardioIn, stepsIn} from "../figures.js";
 
 /* The runner loads the exercise library first: muscles and body weight come from it. */
 var NOW="2026-10-07";
@@ -97,6 +98,47 @@ function run(t){
     [{n:0,pn:0,vol:0,pvol:0,vpct:null,compare:false,mins:null,timed:0},[],[],{tot:0,rows:[]},{pct:null,lifts:0,series:[]},
      {days:0,weeks:[0,0,0,0,0,0]},{min:0,target:150,recent:false},[]],"nothing logged: every figure has an answer, and none is made up");
   t.clean([overviewIn(log,30,NOW),strengthIndexIn(log,90,5,NOW),liftProgressIn(log,PU,90,NOW)],"no NaN or undefined");
+
+  /* ---- the second redesign (5 Nov) ---- */
+  /* Weeks kept: three training days a week planned. This week (from back(2)) has one; the
+     two weeks before had three each; the one before that, two. */
+  var ws=back(2),W=function(d){return sess(d,[[SQ,[set(100,5)]]]);};
+  var wl={sessions:[W(2),W(3),W(5),W(7),W(10),W(12),W(14),W(17),W(19)]};
+  t.eq(weekRunIn(wl,ws,3),{now:1,need:3,weeks:2},"two weeks kept in a row; this week, one of three so far, not yet a break");
+  wl.sessions.unshift(W(0),W(1));
+  t.eq(weekRunIn(wl,ws,3).weeks,3,"this week counts once it has its three");
+  t.eq(weekRunIn({sessions:[]},ws,3),{now:0,need:3,weeks:0},"nothing logged: no weeks");
+  /* The scale's trend: a tenth of the way per day, so one high weigh-in moves it a little. */
+  var sw=smoothWeightsIn([{date:back(2),weight:80},{date:back(1),weight:82},{date:back(0),weight:80}],0,NOW);
+  t.eq(sw.map(function(p){return p.v;}),[80,80.2,80.18],"the trend moves a tenth of the way each day");
+  t.eq(smoothWeightsIn([{date:back(10),weight:80},{date:back(0),weight:70}],0,NOW)[1].v,Math.round((80-10*(1-Math.pow(0.9,10)))*100)/100,"over a gap, the trend moves as far as those days would");
+  /* Sets a week, averaged over 14 days. */
+  var av=weeklySetsAvgIn({sessions:[sess(1,[[SQ,[set(100,5),set(100,5)]]]),sess(8,[[SQ,[set(100,5),set(100,5),set(100,5),set(100,5)]]])]},14,NOW);
+  t.eq(av.Quads,3,"six sets in two weeks: three a week");
+  /* Pull-ups never loaded are scored by reps; loaded, by the estimate. */
+  var pl={sessions:[sess(1,[[PU,[set(0,10)]]]),sess(3,[[PU,[set(0,8),set(0,6)]]])],body:[],weight:80};
+  t.eq([repsOnlyIn(pl,PU,30,NOW),repsSeriesIn(pl,PU,30,NOW)],[true,[{d:back(3),v:8},{d:back(1),v:10}]],"unloaded pull-ups: their best reps each day");
+  pl.sessions.unshift(sess(0,[[PU,[set(10,5)]]]));
+  t.eq([repsOnlyIn(pl,PU,30,NOW),repsOnlyIn(pl,SQ,30,NOW)],[false,false],"loaded once, or a barbell lift: the estimate");
+  t.eq(liftHistoryIn(pl,PU,2).map(function(x){return x.d;}),[back(0),back(1)],"its history, newest first");
+  /* Milestones: the first workout, the tenth, the first 100 kg set, and 2 kg lost on a fat-loss goal. */
+  var ml={sessions:[],body:[{date:back(30),weight:90},{date:back(5),weight:87.5}]};
+  for(var i=12;i>=1;i--)ml.sessions.push(sess(i*2,[[SQ,[set(i<=3?100:80,5)]]]));
+  var m=milestonesIn(ml,-1);
+  t.eq(m.earned.map(function(x){return x.kind+x.n;}),["work1","load60","work10","load100","move2"],"each milestone, on the day it was reached");
+  t.eq([m.next,m.workouts],[{kind:"work",n:25,left:13},12],"the next one, and how far off");
+  t.eq(milestonesIn(ml,0).earned.filter(function(x){return x.kind==="move";}).length,0,"no goal that leans a way: the scale is not a milestone");
+  /* A month: workouts, sets, the lift that moved, a record, the weight's trend. */
+  var mo=NOW.slice(0,7),mr={sessions:[sess(1,[[SQ,[set(105,5),set(105,5)]]]),sess(5,[[SQ,[set(100,5)]]]),sess(40,[[SQ,[set(100,5)]]])],
+    body:[{date:back(6),weight:82},{date:back(1),weight:81}]};
+  var rc=monthRecapIn(mr,mo);
+  t.eq([rc.workouts,rc.sets,rc.prs,rc.lifts.length,rc.lifts[0].name,rc.lifts[0].pct>0,!!rc.weight],[2,3,1,1,SQ,true,true],"two workouts, three sets, a record, the squat up, the weight's trend");
+  /* Cardio: minutes a week, the distance, the best pace of a run of 1 km or more. */
+  var cl={sessions:[sess(2,[["Running",[{min:30,km:5}]]]),sess(9,[["Running",[{min:12,km:0.8}]],["Cycling",[{min:40,km:15}]]])]};
+  var cd=cardioIn(cl,14,NOW);
+  t.eq([cd.weeks.map(function(x){return x.v;}),cd.min,cd.km,cd.best&&cd.best.pace],[[52,30],82,20.8,6],"52 then 30 minutes; 20.8 km; best pace 6 min/km (the 0.8 km bout too short to count)");
+  t.eq(stepsIn({[back(2)]:{steps:8000},[back(1)]:{steps:6000},[NOW]:{steps:100}},7,NOW),{days:[{d:back(2),v:8000},{d:back(1),v:6000}],avg:7000},"steps: finished days only");
+  t.clean([weekRunIn({sessions:[]},ws,0),milestonesIn({sessions:[],body:[]},1),monthRecapIn({sessions:[],body:[]},mo),cardioIn({sessions:[]},30,NOW)],"empty logs: no NaN");
 }
 
 export {run};

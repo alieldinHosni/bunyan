@@ -30,6 +30,7 @@ import {glyph} from "./glyphs.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 import {vImportSheet, vPlanFood, vPutMeal} from "./views/food.js";
+import {vLiftSheet, vPhotoCompare, vRecapSheet} from "./views/progress.js";
 import {tiexSheet, vTImportSheet} from "./views/timport.js";
 import {coolCard, warmOf} from "./views/warmup.js";
 import {settingsSheet} from "./settings.js";
@@ -495,6 +496,10 @@ function vSheet(){
         +'<input id="'+m[1]+'" type="number" inputmode="decimal" step="0.1" placeholder="'+esc(lastOf(m[2]))+'"></div>';}).join("")
      +'</div><button class="btn" data-savemeasure="1">'+t("Save for today")+'</button>';
   }
+  /* Progress: a lift's own page, the month in review, two photos compared. */
+  else if(V.sheet==="lift")b=vLiftSheet(V.sd&&V.sd.name);
+  else if(V.sheet==="recap")b=vRecapSheet(V.sd&&V.sd.mo);
+  else if(V.sheet==="phcmp")b=vPhotoCompare(V.sd||{});
   else if(V.sheet==="photo"){
     /* One progress photo, large, with its date and the way to delete it. */
     var ph=photoById(V.sd&&V.sd.id);

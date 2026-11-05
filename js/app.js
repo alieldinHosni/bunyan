@@ -33,6 +33,7 @@ import {vTrain} from "./ui/views/train.js";
 import {vFood} from "./ui/views/food.js";
 import {vCoach} from "./ui/views/coach.js";
 import {vProgress} from "./ui/views/progress.js";
+import {initScrub} from "./ui/scrub.js";
 import {isolateNums} from "./i18n/bidi.js";
 import {setStorageErrorHandler} from "./util.js";
 import {syncWbar} from "./ui/wbar.js";
@@ -241,9 +242,14 @@ document.addEventListener("visibilitychange",function(){if(document.visibilitySt
 initReorder(moveRow,function(){tap("light");});
 initDockScroll();
 initPress();
+/* Progress's charts, read with a finger (js/ui/scrub.js). */
+initScrub();
 /* A swipe on the exercise moves through the workout (js/ui/exswipe.js). */
 /* The plan pages' tabs, in the order they sit (views/train.js TPLAN, views/food.js FPLAN). */
-var PTABS={tplan:["program","programs"],fplan:["plan"]};
+var PTABS={tplan:["program","programs"],fplan:["plan"],ptab:["overview","strength","body","habits"]};
+/* Each kind's tab, as V holds it; Progress's starts on Overview. */
+function ptabOf(k){return k==="tplan"?V.tplan:k==="fplan"?V.fplan:(V.ptab||"overview");}
+function ptabSet(k,v){if(k==="tplan")V.tplan=v;else if(k==="fplan")V.fplan=v;else V.ptab=v;}
 /* The dock's four tabs, swiped between on their own pages (owner, 4 Nov). */
 var MTABS=["train","food","coach","progress"];
 /* A main tab's own page: what a tap on its dock button opens. */
@@ -258,7 +264,7 @@ function atRoot(){
 var ROOTV=["tab","train","fplan","tgedit","meal","smeal","pslot","pimport","chat","advall","phist","dnavDir","fdate"];
 function asRoot(tb){V.tab=tb;V.train="days";V.fplan=null;V.tgedit=false;V.meal=null;V.smeal=null;V.pslot=null;V.pimport=false;
   V.chat=false;V.advall=false;V.phist=false;V.dnavDir=0;if(tb==="food")V.fdate=null;}
-function ptabNow(k){var l=PTABS[k],v=k==="tplan"?V.tplan:V.fplan;return Math.max(0,l.indexOf(v));}
+function ptabNow(k){var l=PTABS[k],v=ptabOf(k);return Math.max(0,l.indexOf(v));}
 initExSwipe({
   root:atRoot,
   can:function(step,k){
@@ -277,10 +283,10 @@ initExSwipe({
       if(S.prefs&&S.prefs.lang==="ar")hm=isolateNums(hm);
       return hm||null;}
     var l=PTABS[k],i=ptabNow(k)+step;if(!l||i<0||i>=l.length)return null;
-    var was=k==="tplan"?V.tplan:V.fplan,h="";
-    if(k==="tplan")V.tplan=l[i];else V.fplan=l[i];
-    try{h=k==="tplan"?vTrain():vFood();}catch(e){h="";}
-    if(k==="tplan")V.tplan=was;else V.fplan=was;
+    var was=ptabOf(k),h="";
+    ptabSet(k,l[i]);
+    try{h=k==="tplan"?vTrain():k==="fplan"?vFood():vProgress();}catch(e){h="";}
+    ptabSet(k,was);
     if(S.prefs&&S.prefs.lang==="ar")h=isolateNums(h);
     var box=document.createElement("div");box.innerHTML=h;
     var p=box.querySelector(".psec");return p?p.innerHTML:null;},
@@ -289,7 +295,7 @@ initExSwipe({
        page in itself. */
     if(k==="tab"){var gt=MTABS[MTABS.indexOf(V.tab)+step];if(!gt)return;
       resetNav();asRoot(gt);V.tswiped=true;render();return;}
-    if(k&&k!=="ex"){var v=PTABS[k][ptabNow(k)+step];if(k==="tplan")V.tplan=v;else V.fplan=v;
+    if(k&&k!=="ex"){var v=PTABS[k][ptabNow(k)+step];ptabSet(k,v);
       /* The swipe brings the tab in itself; the section's own slide stays out of it. */
       V.pswiped=true;render();return;}
     W.jumpTo(V.logIdx+step);tap("light");}});

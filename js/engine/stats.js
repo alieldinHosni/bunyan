@@ -7,11 +7,12 @@
    profile's log and today's date, under the names the views already use, and keeps
    each answer until the data changes. */
 import {bodyFatOf, daysBetween, measurementsOf, rateOf, weightChangeOf, weightTrendOf} from "./body.js";
-import {bodyFatSeriesIn, byUse, consistencyMonthIn, e1rmSeriesIn, isoBack, liftHalf, liftProgressIn, liftsIn, muscleShareIn,
-        newest, overviewIn, strengthIndexIn, volumeSeriesIn, weeklyCardioIn, weeklyVolumeIn, weighInsIn} from "./figures.js";
+import {bodyFatSeriesIn, byUse, cardioIn, consistencyMonthIn, e1rmSeriesIn, isoBack, liftHalf, liftHistoryIn, liftProgressIn, liftsIn, milestonesIn,
+        monthRecapIn, muscleShareIn, newest, overviewIn, repsOnlyIn, repsSeriesIn, smoothWeightsIn, stepsIn, strengthIndexIn, volumeSeriesIn,
+        weekRunIn, weeklyCardioIn, weeklySetsAvgIn, weeklyVolumeIn, weighInsIn} from "./figures.js";
 import {nutritionOf, streaksOf, TOL} from "./intake.js";
-import {dataRev, S} from "../state.js";
-import {today} from "../util.js";
+import {dataRev, S, split} from "../state.js";
+import {num, today} from "../util.js";
 import {weekStartOf} from "./schedule.js";
 
 /* What the figures are handed: the workouts, the weigh-ins and the profile's weight
@@ -67,6 +68,24 @@ function bodyFatSeries(n){return bodyFatSeriesIn(S.body,n,today());}
 function nutrition(n){return nutritionOf(S.days,S.goals,n,today());}
 function streaks(){return streaksOf(S.days,S.goals,today());}
 
+/* ---- the second redesign (owner, 5 Nov) -------------------------------------- */
+/* The plan's training days a week: the program's days with exercises, else the profile's. */
+function plannedDays(){var sp=null;try{sp=split();}catch(e){sp=null;}
+  var n=sp&&sp.days?sp.days.filter(function(d){return (d.ex||[]).length;}).length:0;
+  return Math.min(7,n||num((S.profile||{}).days)||3);}
+function weekRun(){return weekRunIn(LOG(),weekStartOf(today()),plannedDays());}
+var smoothWeights=memo("smoothWeights",function(n){return smoothWeightsIn(S.body,n,today());});
+var weeklySetsAvg=memo("weeklySetsAvg",function(n){return weeklySetsAvgIn(LOG(),n,today());});
+var repsOnly=memo("repsOnly",function(name,n){return repsOnlyIn(LOG(),name,n,today());});
+var repsSeries=memo("repsSeries",function(name,n){return repsSeriesIn(LOG(),name,n,today());});
+var liftHistory=memo("liftHistory",function(name,k){return liftHistoryIn(LOG(),name,k);});
+/* lean: which way the goal wants the scale, -1, +1 or 0. */
+var milestones=memo("milestones",function(lean){return milestonesIn(LOG(),lean);});
+var monthRecap=memo("monthRecap",function(mo){return monthRecapIn(LOG(),mo);});
+var cardio=memo("cardio",function(n){return cardioIn(LOG(),n,today());});
+function steps(n){return stepsIn(S.days,n,today());}
+
+export {cardio, liftHistory, milestones, monthRecap, plannedDays, repsOnly, repsSeries, smoothWeights, steps, weekRun, weeklySetsAvg};
 export {rateOf, weeklyCardio, weightTrend, weeklyVolume, bodyFat, bodyFatSeries, consistencyMonth, daysBetween, e1rmSeries, isoAgo, liftHalf, liftProgress,
         measurements, muscleShare, nutrition, overview, recentRecords, streaks, strengthIndex, TOL,
         topLifts, volumeSeries, weighIns, weightChange};

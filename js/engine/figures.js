@@ -12,7 +12,7 @@
      - A food day counts once it is over (intake.js holds that rule). */
 import {muscleOfEntry} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
-import {e1RM, loadIn, sessionVolumeIn} from "./lifts.js";
+import {bwShare, e1RM, loadIn, sessionVolumeIn} from "./lifts.js";
 import {weighInsOf} from "./body.js";
 import {num} from "../util.js";
 
@@ -251,6 +251,145 @@ function consistencyMonthIn(log,now){
     weeks.push(c);}
   return {days:Object.keys(days).length,weeks:weeks};}
 
-export {bodyFatSeriesIn, byUse, consistencyMonthIn, e1rmSeriesIn, isoBack, liftHalf, liftProgressIn, liftsIn, muscleShareIn,
-        newest, overviewIn, pct100, recentRecordsIn, strengthIndexIn, topLiftsIn, volumeSeriesIn, weeklyCardioIn,
-        weeklyVolumeIn, weighInsIn, win, working};
+/* ---- the second redesign (owner, 5 Nov) ---------------------------------------- */
+/* Weeks kept: someone training three days a week has no "days in a row", so the streak
+   is weeks. ws: the first day of this week. need: the plan's sessions a week (at least 1).
+   A week counts when it held that many training days. This week counts once it has;
+   until then the run is the weeks before it, and this week is not yet a break. */
+function weekRunIn(log,ws,need){
+  need=Math.max(1,Math.round(num(need,3)));
+  var days={};sessionsOf(log).forEach(function(s){days[s.date]=1;});
+  var count=function(from){var c=0;for(var i=0;i<7;i++)if(days[isoBack(from,-i)])c++;return c;};
+  var now=count(ws),run=0;
+  for(var k=1;k<=260;k++){var c=count(isoBack(ws,7*k));if(c>=need)run++;else break;}
+  if(now>=need)run++;
+  return {now:now,need:need,weeks:run};}
+
+/* The trend of the scale, not its noise: each weigh-in moves the trend a tenth of the
+   way to it per day since the last (an exponentially weighted average, as the Hacker's
+   Diet draws it). For the chart only: the rate against the goal stays the regression in
+   body.js. Oldest first: {d, v: the trend, raw: the weigh-in}. */
+function smoothWeightsIn(body,n,now){
+  var list=weighInsOf(body),out=[],tr=null,prev=null;
+  list.forEach(function(b){
+    var w=num(b.weight);
+    if(tr==null)tr=w;
+    else{var gap=Math.max(1,Math.round((Date.parse(b.date)-Date.parse(prev))/864e5));tr+=(w-tr)*(1-Math.pow(0.9,gap));}
+    prev=b.date;out.push({d:b.date,v:Math.round(tr*100)/100,raw:w});});
+  if(!n)return out;
+  var w0=win(n,now);
+  return out.filter(function(p){return inWin(p.d,w0.from,w0.to);});}
+
+/* Hard sets per muscle, averaged per week over the window: the same muscles as this
+   week's, so the two can sit side by side. */
+function weeklySetsAvgIn(log,n,now){
+  var w=win(n,now),c={},wk=Math.max(1,n/7);
+  WORDER.forEach(function(g){c[g]=0;});
+  sessionsOf(log).forEach(function(s){
+    if(!inWin(s.date,w.from,w.to))return;
+    s.entries.forEach(function(e){
+      if(isActivity(e.name))return;
+      var g=WGROUP[muscleOfEntry(e)];if(!g)return;
+      c[g]+=working(e).length;});});
+  var out={};WORDER.forEach(function(g){out[g]=Math.round(c[g]/wk*10)/10;});
+  return out;}
+
+/* A lift scored by its reps: one that moves the body and was never loaded in the window.
+   An e1RM of the body plus nothing says little to anyone; the reps say what changed. */
+function repsOnlyIn(log,name,n,now){
+  if(!bwShare(name))return false;
+  var w=n?win(n,now):null,loaded=false;
+  sessionsOf(log).forEach(function(s){
+    if(w&&!inWin(s.date,w.from,w.to))return;
+    s.entries.forEach(function(e){if(e.name===name&&working(e).some(function(x){return num(x.w)>0;}))loaded=true;});});
+  return !loaded;}
+/* Best reps per session for one lift, oldest first. */
+function repsSeriesIn(log,name,n,now){
+  var w=n?win(n,now):null,out=[],ss=sessionsOf(log);
+  for(var i=ss.length-1;i>=0;i--){
+    var s=ss[i];if(w&&!inWin(s.date,w.from,w.to))continue;
+    var best=0;
+    s.entries.forEach(function(e){if(e.name!==name)return;working(e).forEach(function(x){if(num(x.r)>best)best=num(x.r);});});
+    if(best)out.push({d:s.date,v:best});}
+  return out;}
+/* One lift, every session of it, newest first: the date and its working sets. */
+function liftHistoryIn(log,name,k){
+  var out=[];
+  sessionsOf(log).forEach(function(s){
+    if(out.length>=(k||20))return;
+    s.entries.forEach(function(e){if(e.name!==name)return;var w=working(e);if(w.length)out.push({d:s.date,sets:w.map(function(x){return {w:num(x.w),r:num(x.r)};})});});});
+  return out;}
+
+/* Milestones, each with the day it was reached. Counts of workouts, weeks kept, the
+   heaviest set ever, and how far the scale has moved the way the goal wants. Only what
+   the log shows; nothing is predicted. lean: -1 losing, +1 gaining, 0 neither. */
+var MS_WORK=[1,10,25,50,100,200,300,500],MS_LOAD=[60,100,140,180,220],MS_MOVE=[2,5,10,15,20];
+function milestonesIn(log,lean){
+  var ss=sessionsOf(log).slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;}),out=[];
+  var seen={};ss.forEach(function(s){seen[s.date]=1;});
+  var dates=Object.keys(seen).sort();
+  MS_WORK.forEach(function(k){if(dates.length>=k)out.push({kind:"work",n:k,d:dates[k-1]});});
+  var top=0,hit={};
+  ss.forEach(function(s){s.entries.forEach(function(e){if(isActivity(e.name))return;
+    working(e).forEach(function(x){var w=num(x.w);if(w>top){top=w;MS_LOAD.forEach(function(k){if(w>=k&&!hit[k]){hit[k]=1;out.push({kind:"load",n:k,d:s.date});}});}});});});
+  var list=weighInsOf(log.body);
+  if(lean&&list.length>=2){
+    var start=num(list[0].weight),done={};
+    list.forEach(function(b){var moved=(num(b.weight)-start)*lean;
+      MS_MOVE.forEach(function(k){if(moved>=k&&!done[k]){done[k]=1;out.push({kind:"move",n:k,d:b.date});}});});}
+  out.sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0;});
+  var next=null,nw=MS_WORK.filter(function(k){return k>dates.length;})[0];
+  if(nw)next={kind:"work",n:nw,left:nw-dates.length};
+  return {earned:out,next:next,workouts:dates.length};}
+
+/* A month in figures ("YYYY-MM"): workouts, sets, the lifts that moved most (first and
+   last estimate in the month, two sessions at least), records set, the scale's trend and
+   the waist from first to last, cardio minutes and distance. */
+function monthRecapIn(log,mo){
+  var ss=sessionsOf(log).filter(function(s){return s.date.slice(0,7)===mo;}),days={},sets=0,cmin=0,km=0;
+  ss.forEach(function(s){days[s.date]=1;s.entries.forEach(function(e){
+    if(isActivity(e.name)){(e.sets||[]).forEach(function(x){cmin+=num(x.min);km+=num(x.km);});return;}
+    sets+=working(e).length;});});
+  var names={};ss.forEach(function(s){s.entries.forEach(function(e){if(!isActivity(e.name)&&working(e).length)names[e.name]=1;});});
+  var lifts=[];
+  Object.keys(names).forEach(function(nm){
+    var ser=e1rmSeriesIn({sessions:ss,body:log.body,weight:log.weight},nm,0);
+    if(ser.length<2||!(ser[0].v>0))return;
+    lifts.push({name:nm,from:ser[0].v,to:ser[ser.length-1].v,pct:(ser[ser.length-1].v-ser[0].v)/ser[0].v*100});});
+  lifts.sort(function(a,b){return b.pct-a.pct;});
+  /* Records: a lift's heaviest set first reached this month, over everything before it. */
+  var before={},prs=0,all=sessionsOf(log).slice().sort(function(a,b){return a.date<b.date?-1:1;});
+  all.forEach(function(s){s.entries.forEach(function(e){if(isActivity(e.name))return;
+    var top=0;working(e).forEach(function(x){if(num(x.w)>top)top=num(x.w);});
+    if(!top)return;
+    if(s.date.slice(0,7)===mo&&before[e.name]!=null&&top>before[e.name])prs++;
+    if(before[e.name]==null||top>before[e.name])before[e.name]=top;});});
+  var tr=smoothWeightsIn(log.body,0).filter(function(p){return p.d.slice(0,7)===mo;});
+  var wm=(log.body||[]).filter(function(b){return b.date.slice(0,7)===mo&&num(b.waist)>0;});
+  return {mo:mo,workouts:Object.keys(days).length,sets:sets,lifts:lifts.slice(0,3),prs:prs,
+    weight:tr.length>=2?{from:tr[0].v,to:tr[tr.length-1].v}:null,
+    waist:wm.length>=2?{from:num(wm[0].waist),to:num(wm[wm.length-1].waist)}:null,
+    cardio:Math.round(cmin),km:Math.round(km*10)/10};}
+
+/* Cardio and sport over the window: minutes a week (weeks with none as zero), the
+   distance, and the best running pace, from bouts of a kilometre or more. */
+function cardioIn(log,n,now){
+  var w=win(n,now),weeks=[],tot=0,km=0,best=null;
+  for(var b=Math.ceil(n/7)-1;b>=0;b--)weeks.push({d:isoBack(now,b*7),from:isoBack(now,b*7+6),v:0});
+  sessionsOf(log).forEach(function(s){
+    if(!inWin(s.date,w.from,w.to))return;
+    s.entries.forEach(function(e){if(!isActivity(e.name))return;
+      (e.sets||[]).forEach(function(x){var m=num(x.min),k=num(x.km);tot+=m;km+=k;
+        weeks.forEach(function(wk){if(inWin(s.date,wk.from,wk.d))wk.v+=m;});
+        if(/^Running|Trail Running/.test(e.name)&&k>=1&&m>0){var pace=m/k;if(!best||pace<best.pace)best={pace:pace,d:s.date,km:k};}});});});
+  return {weeks:weeks.map(function(x){return {d:x.d,v:Math.round(x.v)};}),min:Math.round(tot),km:Math.round(km*10)/10,best:best};}
+
+/* Steps on the days they were logged, oldest first, and their average. */
+function stepsIn(days,n,now){
+  var w=win(n,now),out=[];
+  Object.keys(days||{}).sort().forEach(function(d){var v=num((days[d]||{}).steps);if(v>0&&inWin(d,w.from,w.to)&&d<now)out.push({d:d,v:v});});
+  return {days:out,avg:out.length?Math.round(out.reduce(function(a,p){return a+p.v;},0)/out.length):0};}
+
+export {bodyFatSeriesIn, byUse, cardioIn, consistencyMonthIn, e1rmSeriesIn, isoBack, liftHalf, liftHistoryIn, liftProgressIn, liftsIn, milestonesIn,
+        monthRecapIn, muscleShareIn, newest, overviewIn, pct100, recentRecordsIn, repsOnlyIn, repsSeriesIn, smoothWeightsIn, stepsIn,
+        strengthIndexIn, topLiftsIn, volumeSeriesIn, weekRunIn, weeklyCardioIn, weeklySetsAvgIn, weeklyVolumeIn, weighInsIn, win, working};

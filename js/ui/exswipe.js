@@ -63,6 +63,9 @@ function onMove(ev){
   if(!st)return;
   if(ev.touches.length!==1){cancel();return;}
   var tt=ev.touches[0],dx=tt.clientX-st.x,dy=tt.clientY-st.y;
+  /* A chart held to be read (js/ui/scrub.js) keeps the finger; a swipe across one that
+     was not held is still a swipe. */
+  if(!st.mode&&document.documentElement.classList.contains("scrubbing")){st=null;return;}
   if(!st.mode){
     if(Math.abs(dx)<SLOP&&Math.abs(dy)<SLOP)return;
     st.mode=Math.abs(dx)>Math.abs(dy)*RATIO?"h":"v";
@@ -72,6 +75,10 @@ function onMove(ev){
        Read the other way, coming back went on to the tab before, and from Food that is
        Training, which looked like the app starting again (owner, 4 Nov). */
     st.dir=dx<0?-1:1;
+    /* At the first or last of a main tab's own tabs (Progress), the swipe carries on to
+       the dock's next tab, as it would on a page without tabs of its own. */
+    if(st.k!=="ex"&&st.k!=="tab"&&!H.can(stepOf(st.dir),st.k)){var ap=document.getElementById("app");
+      if(ap&&ap.hasAttribute("data-tswipe")&&H.can(stepOf(st.dir),"tab")){st.p=ap;st.k="tab";st.w=document.documentElement.clientWidth||window.innerWidth;}}
     /* Measured from here, so the pane does not jump by the slop. */
     st.x=tt.clientX;dx=0;}
   if(dx*st.dir<0)dx=0;
@@ -82,7 +89,7 @@ function onMove(ev){
   var x=H.can(stepOf(st.dir),st.k)?dx:dx*0.3;
   /* A plan page: the highlight over its tabs moves with the finger, the same share of a
      tab as the page has moved of its width (owner, 3 Nov: it lagged behind the page). */
-  if(st.k!=="ex"){segFollow(st,x);peekFollow(st,x,stepOf(st.dir));}
+  if(st.k!=="ex"){if(st.k!=="tab")segFollow(st,x);peekFollow(st,x,stepOf(st.dir));}
   st.p.style.transition="none";
   st.p.style.transform="translateX("+Math.round(x)+"px)";
   if(st.k==="ex")st.p.style.opacity=String(1-Math.min(.35,Math.abs(x)/st.w*.5));}

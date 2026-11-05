@@ -749,8 +749,10 @@ await test("Targets: goals save in place, the suggestion applies, and how the ea
   eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const f=await import("/js/engine/formulas.js");
     return s.S.goals.kcal===Math.round(f.targetKcal()/10)*10&&s.S.goals.kcal!==2222;}),true,"suggested applied");
   await tapTab(page,"progress");await pause(page);
+  /* Eating is under Habits (5 Nov), with steps and cardio. */
+  await page.tap('[data-ptab="habits"]');await pause(page,600);
   if(!(await page.$('.pgadh'))&&!(await page.$('#app .empty')))throw new Error("no eating trends in Progress");
-  eq(await page.$$eval('[data-ptab]',a=>a.map(b=>b.getAttribute("data-ptab")).filter((v,i,x)=>x.indexOf(v)===i).sort()),["body","overview","strength"]);
+  eq(await page.$$eval('.pgtabs2 [data-ptab]',a=>a.map(b=>b.getAttribute("data-ptab")).filter((v,i,x)=>x.indexOf(v)===i).sort()),["body","habits","overview","strength"]);
 });
 
 /* ---- Training's top, Progress, Profile ------------------------------------------------ */
@@ -792,10 +794,10 @@ await test("Progress: no date bar, History by month opens and Back returns",asyn
   await page.tap('[data-back]');await pause(page,500);
   eq(await ev(page,"[V.tab,!!V.phist]"),["progress",false]);
 });
-await test("Progress: one page in three views (Overview, Strength, Body), and each goal's weight trend is judged by its own rate",async page=>{
+await test("Progress: one page in four views (Overview, Strength, Body, Habits), and each goal's weight trend is judged by its own rate",async page=>{
   await tapTab(page,"progress");await pause(page);
   eq(await page.$$eval('#app [data-pview],#app .psimple',a=>a.length),0,"no Simple slide, no switch to it");
-  eq(await page.$$eval('.pgtabs2 [data-ptab]',a=>a.map(x=>x.dataset.ptab)),["overview","strength","body"],"the three views");
+  eq(await page.$$eval('.pgtabs2 [data-ptab]',a=>a.map(x=>x.dataset.ptab)),["overview","strength","body","habits"],"the four views");
   eq(await page.$eval('.pgtabs2 [data-ptab].on,.pgtabs2 [aria-selected="true"]',e=>e.dataset.ptab),"overview","Overview first");
   /* Three weeks of weigh-ins at a set rate, under each goal. */
   const r=await page.evaluate(async()=>{
@@ -2465,15 +2467,21 @@ await test("Offline: with the network off, the installed app opens, every tab wo
 async function strengthTab(page){
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.ptab="strength";V.phalf="all";
     (await import("/js/ui/render.js")).render();});await pause(page,400);}
-await test("Among powerlifters: squat and bench placed against raw competitors of the same class, said as such; silent without data",async page=>{
+await test("Among powerlifters: the three judged lifts placed against raw competitors of the same class, said as such; silent with fewer than three, or without data",async page=>{
   await strengthTab(page);
-  /* The seed: 84 kg (the 93 class), squat 80 × 8 and bench 60 × 8, no deadlift. */
+  /* The seed: 84 kg (the 93 class), squat 80 × 8 and bench 60 × 8, no deadlift. Two of the
+     three (5 Nov): no card, since a percentile of one lift reads as a verdict on the person. */
+  eq(await page.$$eval('.pgopl',a=>a.length),0,"squat and bench alone: not shown");
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");const S=st.S;
+    const d=new Date(U.today()+"T12:00:00");d.setDate(d.getDate()-1);
+    S.sessions.unshift({id:"dl",date:d.toISOString().slice(0,10),dayName:"Pull",entries:[{name:"Barbell Deadlift",sets:[{w:100,r:8,rpe:8}]}]});
+    (await import("/js/ui/render.js")).render();});await pause(page,400);
   const card=await page.$eval('.pgopl',e=>({rows:[...e.querySelectorAll('.pgshare-r')].map(r=>[r.querySelector('span').textContent,r.querySelector('b').textContent]),
     text:e.innerText,aside:e.previousElementSibling.innerText}));
   const want=await page.evaluate(async()=>{const P=await import("/js/coach/percentile.js");
     /* 8 reps at RPE 8 is 10 reps of effort: the estimate counts the two left in reserve. */
-    return ["squat","bench"].map((l,i)=>{const x=P.percentileOf("m",84,l,[80,60][i]*(1+10/30));return x.edge==="below"?"<10":x.edge==="above"?">90":String(x.pct);});});
-  eq(card.rows,[["Squat",want[0]],["Bench press",want[1]]],"two lifts logged, two rows, from the table");
+    return ["squat","bench","deadlift"].map((l,i)=>{const x=P.percentileOf("m",84,l,[80,60,100][i]*(1+10/30));return x.edge==="below"?"<10":x.edge==="above"?">90":String(x.pct);});});
+  eq(card.rows,[["Squat",want[0]],["Bench press",want[1]],["Deadlift",want[2]]],"all three logged, three rows, from the table");
   if(!/93 kg class/.test(card.aside)||!/raw/i.test(card.aside))throw new Error("class and raw not said: "+card.aside);
   if(!/competitors/.test(card.text)||!/Anywhere on this scale is strong/.test(card.text)||!/rough guide/.test(card.text))
     throw new Error("the comparison is not explained: "+card.text);
@@ -2902,6 +2910,55 @@ await test("A launch that fails (owner, 5 Nov: only the background showed until 
   eq(await page.evaluate(()=>[document.getElementById("app").children.length>0,!!localStorage.getItem("bunyan:booterr")]),[true,true],"drawn after one reload, the error kept");
   /* The broken load's error was the point of the test. */
   env.errs.length=0;
+});
+await test("Progress, second redesign (owner, 5 Nov): is it working with Apply and Undo; this week and the weeks kept; milestones; the month as a picture; each lift's own page; push-ups by reps; a chart read with a held finger; the four views swiped",async(page,env)=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js");
+    const b=n=>{const d=new Date(U.today()+"T12:00:00");d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);};
+    S.profile.goal="lose";S.goals.kcal=2500;S.goals.c=300;
+    S.body=[];for(let d=28;d>=0;d-=4)S.body.push({date:b(d),weight:90-(28-d)*0.01});
+    S.sessions.unshift({id:"pu1",date:b(1),dayName:"Push",entries:[{name:"Pushups",sets:[{w:0,r:20},{w:0,r:18}]}]});
+    S.sessions.push({id:"pu0",date:b(20),dayName:"Push",entries:[{name:"Pushups",sets:[{w:0,r:15}]}]});
+    S.sessions.sort((x,y)=>x.date<y.date?1:-1);S.prefs.anim=true;st.saveDB();
+    (await import("/js/ui/render.js")).render();});
+  await tapTab(page,"progress");await pause(page,800);
+  /* Is it working: a slow fat loss (0.07 kg a week), said, with the step applied and undone. */
+  eq(await ev(page,"[!!document.querySelector('.pghero .pgchip.slow'),document.querySelector('.pghero [data-tradj]').getAttribute('data-tradj')]"),[true,"-150"],"slower than planned, 150 kcal less offered");
+  await page.tap('.pghero [data-tradj]');await pause(page,400);
+  eq(await ev(page,"[S.goals.kcal,S.goals.c]"),[2350,263],"applied: 2,350 kcal, off carbohydrate");
+  await page.tap('.toast-undo');await pause(page,400);
+  eq(await ev(page,"[S.goals.kcal,S.goals.c]"),[2500,300],"and undone");
+  /* This week: a dot a day, the plan's count. */
+  eq(await page.$$eval('.pgwk-d',a=>a.length),7,"a dot a day");
+  if(!/\d+\/\d+/.test(await page.textContent('.pgwk .pgcard-r')))throw new Error("no count against the plan");
+  /* Milestones and the month. */
+  if(!(await page.$('.pgms .pgms-s.on')))throw new Error("no milestone drawn");
+  await page.tap('[data-recap]');await pause(page,700);
+  eq(await ev(page,"V.sheet"),"recap","the month opens");
+  const dl=page.waitForEvent("download",{timeout:5000}).catch(()=>null);
+  await page.tap('#sheet [data-recapsave]');
+  const d=await dl;if(!d||!/^bunyan-\d{4}-\d{2}\.png$/.test(d.suggestedFilename()))throw new Error("the month as a picture: "+(d&&d.suggestedFilename()));
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,500);
+  /* Strength: pull-ups scored by reps, a lift's own page. */
+  await page.tap('[data-ptab="strength"]');await pause(page,700);
+  if(!(await page.$('[data-lift="Pushups"]'))&&(await page.$('[data-pall]'))){await page.tap('[data-pall]');await pause(page,500);}
+  const pu=await page.$eval('[data-lift="Pushups"] .pgex-s',e=>e.textContent);
+  if(!/20\s*reps/.test(pu))throw new Error("push-ups by their reps: "+pu);
+  await page.tap('[data-lift="Barbell Squat"]');await pause(page,700);
+  eq(await ev(page,"[V.sheet,V.sd.name,!!document.querySelector('#sheet .pgchart'),document.querySelectorAll('#sheet .pghist .pgm').length>0]"),["lift","Barbell Squat",true,true],"its page: chart and sessions");
+  /* A held finger reads the chart: the bubble shows a date and a value. */
+  const box=await page.$eval('#sheet .pgchart svg',e=>{const r=e.getBoundingClientRect();return [r.left+r.width*0.8,r.top+r.height/2];});
+  const cdp=await env.ctx.newCDPSession(page);
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:box[0],y:box[1]}]});await page.waitForTimeout(400);
+  const bub=await page.evaluate(()=>{const b=document.querySelector('#sheet .pgscrub-b');return b?b.textContent:"";});
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});
+  if(!/kg/.test(bub))throw new Error("the held chart reads: "+bub);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,500);
+  /* The four views swipe like the plan pages: Strength, then Body. */
+  const y=await page.evaluate(()=>{const r=document.querySelector("#app .psec").getBoundingClientRect();return Math.round(Math.min(r.top+60,innerHeight-200));});
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:330,y}]});
+  for(let i=1;i<=12;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:330-i*24,y}]});await page.waitForTimeout(16);}
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(900);
+  eq(await ev(page,"V.ptab"),"body","swiped from Strength to Body");
 });
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
@@ -4912,10 +4969,13 @@ await test("Main tabs (owner, 4 Nov): a swipe on a tab's own page moves along th
     eq(await ev(page,"[V.tab,document.querySelectorAll('.stillcopy').length,document.getElementById('app').className.includes('pagein')]"),[want,0,false],"landed on "+want+", nothing left over, no second entrance");
     eq(await page.$eval('nav [data-tab="'+want+'"]',b=>b.classList.contains("on")||b.getAttribute("aria-current")==="page"),true,"the dock says "+want);
   }
+  /* Progress has views of its own (5 Nov): a swipe moves through them first, and from the
+     first one on to the dock's tab before it. */
   await move(330,650,60);await up();
-  eq(await ev(page,"V.tab"),"progress","the last resists");
+  eq(await ev(page,"[V.tab,V.ptab]"),["progress","strength"],"Progress: on to its next view");
   await move(60,650,330);await up();
-  eq(await ev(page,"V.tab"),"coach","and back");
+  await move(60,650,330);await up();
+  eq(await ev(page,"V.tab"),"coach","and back, through Overview to Coach");
   /* Food's day card changes the day, not the tab. */
   await tapTab(page,"food");await pause(page,600);
   const dc=await page.evaluate(()=>{const r=document.querySelector('[data-swipe="day"]').getBoundingClientRect();return Math.round(r.top+r.height/2);});
@@ -4956,7 +5016,8 @@ await test("Targets: one card says the target; Edit opens it as fields and Cance
   eq(await page.evaluate(()=>[!!document.querySelector('.tgfold'),!!document.querySelector('#app .pgtrend')]),[false,false],"no eating history or weight trend on the meal plan");
   /* The dock takes no taps for a moment after the keyboard goes (render.js kbleave). */
   await pause(page,500);await tapTab(page,"progress");await pause(page,500);
-  eq(await page.evaluate(()=>[...document.querySelectorAll('#app .pglbl h2')].some(h=>h.textContent==="How you have been eating")),true,"Progress: how you have been eating");
+  await page.tap('[data-ptab="habits"]');await pause(page,800);
+  eq(await page.evaluate(()=>[...document.querySelectorAll('#app .pglbl h2')].some(h=>h.textContent==="How you have been eating")),true,"Progress, Habits: how you have been eating");
   await page.tap('[data-ptab="body"]');await pause(page,800);
   eq(await page.evaluate(()=>[...document.querySelectorAll('#app .pglbl h2')].some(h=>h.textContent==="Is it working?")),true,"Progress, Body: is it working");
 });
@@ -5041,7 +5102,8 @@ await test("Meal plan: “Build it from my targets” lives on the meal plan pag
 });
 await test("Progress: the controls carry icons, the halves are a figure with their own names, and Plan is a brain",async page=>{
   await tapTab(page,"progress");await pause(page);
-  eq(await page.$$eval('.pgtabs2 .seg-b',a=>a.map(b=>!!b.querySelector("svg.seg-i")&&b.querySelector(".seg-l").textContent)),["Overview","Strength","Body"],"an icon beside each view's name");
+  /* Four views do not fit with their icons (5 Nov): the words alone, each whole. */
+  eq(await page.$$eval('.pgtabs2 .seg-b',a=>a.map(b=>[b.textContent,b.scrollWidth<=b.clientWidth+1])),[["Overview",true],["Strength",true],["Body",true],["Habits",true]],"each view's name, whole");
   eq(await page.$eval('.thead-ic svg',e=>getComputedStyle(e).fill!=="none"),true,"the page's mark beside its name");
   await page.tap('[data-ptab="strength"]');await pause(page);
   eq(await page.$$eval('.pghalf .seg-b',a=>a.map(b=>[b.getAttribute("aria-label"),b.querySelectorAll(".seg-dim").length])),
@@ -5056,16 +5118,24 @@ await test("Progress: the controls carry icons, the halves are a figure with the
   eq(await keep.evaluate(e=>e.isConnected),true,"the control is kept, not rebuilt");
   eq(await page.$eval('.dock-b[data-tab="coach"] svg path',e=>e.getAttribute("d").startsWith("M6.2 15.2")),true,"Coach's icon is the brain");
 });
-await test("Progress: training volume over a month is capsule bars, the newest in the accent with its figure",async page=>{
+await test("Progress: cardio over a month is capsule bars a week, the newest in the accent with its figure",async page=>{
   await tapTab(page,"progress");await pause(page);
+  /* Two runs, a week apart (5 Nov: total kilos lifted mostly counted the sessions, so the bars are cardio's minutes now). */
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");const S=st.S;
+    const b=n=>{const d=new Date(U.today()+"T12:00:00");d.setDate(d.getDate()-n);return d.toISOString().slice(0,10);};
+    S.sessions.unshift({id:"r1",date:b(0),dayName:"Running",entries:[{name:"Running",sets:[{min:30,km:5}]}]});
+    S.sessions.push({id:"r2",date:b(9),dayName:"Running",entries:[{name:"Running",sets:[{min:20,km:3}]}]});
+    S.sessions.sort((x,y)=>x.date<y.date?1:-1);
+    const V=(await import("/js/ui/view.js")).V;V.ptab="habits";(await import("/js/ui/render.js")).render();});await pause(page,600);
   const r=await page.evaluate(()=>{const c=document.querySelector(".caps");if(!c)return null;
     const cs=[...c.querySelectorAll(".caps-c")];
     return {n:cs.length,on:cs.map(x=>x.classList.contains("on")).lastIndexOf(true),v:(c.querySelector(".caps-c.on .caps-v")||{}).textContent,
       label:c.getAttribute("aria-label"),round:getComputedStyle(c.querySelector(".caps-b")).borderTopLeftRadius};});
   if(!r)throw new Error("no capsule bars");
   eq(r.on,r.n-1,"the newest is the one marked");
-  if(!/^[\d,]+ kg$/.test(r.v||""))throw new Error("its figure: "+r.v);
-  if(!/^Training volume, /.test(r.label))throw new Error("no name for a screen reader: "+r.label);
+  if(!/^[\d,]+ min$/.test(r.v||""))throw new Error("its figure: "+r.v);
+  if(!/^Cardio minutes a week/.test(r.label))throw new Error("no name for a screen reader: "+r.label);
+  eq(await page.$eval('.pgstats3',e=>e.textContent.includes("6:00")),true,"the best pace, 6:00 a km");
   if(parseFloat(r.round)<10)throw new Error("not rounded: "+r.round);
 });
 await test("Coach page: this week's strip agrees with Training's week; the ask box opens the chat ready to type; Training's and Food's cards open their plan pages",async page=>{
@@ -5525,7 +5595,7 @@ await test("A weight change says its period the same way on Training, Overview a
   const tr=await page.$eval('[data-sheet="weigh"]',e=>e.innerText);
   if(!/kg in \d+ days/.test(tr))throw new Error("Training: "+tr);
   await tapTab(page,"progress");await pause(page,300);
-  const ov=await page.$eval(".pgkm .pgd",e=>e.textContent);
+  const ov=await page.$eval(".pghero .pgd",e=>e.textContent);
   if(!/kg in \d+ days$/.test(ov))throw new Error("Overview: "+ov);
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.ptab="body";(await import("/js/ui/render.js")).render();});await pause(page,300);
   const bd=await page.$eval(".pgwd .pgd",e=>e.textContent);
