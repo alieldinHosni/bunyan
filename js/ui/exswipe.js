@@ -264,10 +264,13 @@ function slidePlan(s,step){
        blank until it is decoded, and that blank was the flash as a swipe landed (owner,
        4 Nov: Programs' templates). */
     var ims=np?seenImgs(np):[];
-    var drop=function(){if(nb)nb.remove();
+    /* The real tab waits unseen under it, not drawn through it: the tab that came in is
+       frosted, and over the real one it blurred the real one's rows into its own, which
+       read as the program rows flashing (owner, 5 Nov). */
+    var drop=function(){if(np)np.style.visibility="";if(nb)nb.remove();
       if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");};
     if(!nb||!ims.length){drop();return;}
-    nb.style.zIndex="5";
+    if(np)np.style.visibility="hidden";
     Promise.race([Promise.all(ims.map(function(im){return im.decode?im.decode().catch(function(){}):null;})),
       new Promise(function(r){setTimeout(r,200);})]).then(drop);};
   /* Both travel on together, edge to edge, from where the finger left them, transform

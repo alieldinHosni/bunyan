@@ -3779,3 +3779,12 @@ Owner, 5 Nov:
 - "I trained it but forgot to log it": the missed-day card has "I trained it: log it", which opens that
   day's workout for its date (startDay past). Once logged, the day counts as done and the card goes. The
   past-workout sheet lists the day the plan had there first, marked Planned.
+
+## The program rows flashing as Programs opens — branch session/rowflash (CACHE v238)
+
+Owner, 5 Nov: the My programs rows "flashing when I open the page". The cause was v235's hold. The tab that
+slid in stayed over the real one (z-index 5) until the real one's pictures were decoded. It is frosted,
+so its rows blurred the real rows through them, and then they snapped clear. Templates hid it (opaque
+pictures); the see-through program rows showed it. The real tab now waits hidden (visibility) under
+the incoming one and the two swap in one frame. The pictures-on-a-swipe test also checks that the two
+are never both on show; that check fails on v237.

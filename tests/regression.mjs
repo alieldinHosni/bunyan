@@ -2858,7 +2858,10 @@ await test("Pictures on a swipe (owner, 4 Nov): the templates' pictures are not 
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
   await coach(page,"train","program");await pause(page,1200);
   const y=await page.evaluate(()=>{window.scrollTo(0,0);const r=document.querySelector("#app .psec").getBoundingClientRect();return Math.round(Math.min(r.top+90,innerHeight-160));});
-  await page.evaluate(()=>{window.__blank=0;window.__fr=0;const t0=performance.now();const f=()=>{
+  await page.evaluate(()=>{window.__blank=0;window.__fr=0;window.__both=0;const t0=performance.now();const f=()=>{
+    /* The tab that came in and the real one never both on show: frosted, one over the other read as a flash (5 Nov). */
+    const pk=document.querySelector(".stillcopy.peek"),rp=document.querySelector('#app:not(.stillcopy) [data-pswipe][data-k="psec-programs"]');
+    if(pk&&rp&&getComputedStyle(rp).visibility==="visible")window.__both++;
     if(!document.querySelector(".stillcopy")){const h=innerHeight,w=innerWidth;
       for(const im of document.querySelectorAll("#app img")){const r=im.getBoundingClientRect();
         if(r.width>0&&r.bottom>0&&r.top<h&&r.right>0&&r.left<w&&!(im.complete&&im.naturalWidth>0)){window.__blank++;break;}}}
@@ -2869,6 +2872,7 @@ await test("Pictures on a swipe (owner, 4 Nov): the templates' pictures are not 
   eq(await ev(page,"V.tplan"),"programs","landed on Programs");
   eq(await page.$$eval('#app .tcover img',a=>a.length>0&&a.every(i=>i.loading!=="lazy")),true,"the templates' pictures are not lazy");
   eq(await page.evaluate(()=>window.__blank),0,"no frame with a picture missing");
+  eq(await page.evaluate(()=>window.__both),0,"never the incoming tab over the real one");
 });
 await test("A past workout (owner, 4 Nov): a past day with nothing logged offers Log a workout for this day; pick the day of the program, log it on the workout screen with no clock and no rest timer, and it is saved under that date with no time",async page=>{
   await tapTab(page,"train");await pause(page,600);
