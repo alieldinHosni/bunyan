@@ -143,7 +143,7 @@ function register(){
   key("logpast",function(D){
     if(S.active){toast(t("Finish or save the workout in progress first."));return;}
     openSheet("pastlog",{date:D.logpast});return;});
-  key("pastday",function(D){var pp=String(D.pastday).split("|");closeSheet();pushNav();startDay(pp[1],pp[0]);return;});
+  key("pastday",function(D){if(S.active){toast(t("Finish or save the workout in progress first."));return;}var pp=String(D.pastday).split("|");closeSheet();pushNav();startDay(pp[1],pp[0]);return;});
   key("startday",function(D){if(V.sheet==="another"){V.sheet=null;V.sd=null;}pushNav();startDay(D.startday);return;});
   has("continue",function(){W.resume();return;});
   /* Moving between exercises: the segments, the arrows either side of them, and the

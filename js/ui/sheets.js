@@ -13,7 +13,7 @@ import {exHay} from "./views/train.js";
 import {planOn} from "../engine/dayplan.js";
 import {dayOptions, muscleStatus, q25} from "../engine/recovery.js";
 import {avoids, limitsOf} from "../engine/plan.js";
-import {addDays} from "../engine/schedule.js";
+import {addDays, pinnedOn} from "../engine/schedule.js";
 import {stageFor, zonesFor} from "../engine/zones.js";
 import {ACT_GROUPS, actIcon, actInfo, actRate, actsIn, INTENSITY, intensityOf, isActivity, outdoorOf} from "../data/activities.js";
 import {barKg, bwShare, incrementFor, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
@@ -597,12 +597,16 @@ function vSheet(){
     /* A day trained without the app (owner, 4 Nov): which day of the program it was, then
        the workout screen, saved under that date. */
     var pd=V.sd.date,spp=split();
+    /* The day the plan had there comes first, marked. */
+    var pin=spp.schedule==="week"?pinnedOn(spp,pd):null,order=spp.days.slice();
+    if(pin)order.sort(function(a,b){return (b.id===pin.id)-(a.id===pin.id);});
     b='<div class="se-top"><span class="se-k">'+esc(pretty(pd))+'</span><h2>'+t("Log a past workout")+'</h2>'
      +'<p class="shsub">'+t("Pick the day you trained, then log the sets you did. It is saved under this date, with no time, since none was kept.")+'</p></div>'
      +'<div class="card tdays">';
-    spp.days.forEach(function(d){if(!d.ex.length)return;
+    order.forEach(function(d){if(!d.ex.length)return;var was=pin&&pin.id===d.id;
       b+=hb('<button class="trow" data-pastday="'+esc(pd)+'|'+esc(d.id)+'"><span><span class="trow-n">'+esc(planName(d.name))+'</span>'
-       +'<span class="trow-s"><span class="num">'+d.ex.length+'</span> '+esc(t("exercises"))+'</span></span><span class="ico ico-chev" aria-hidden="true"></span></button>');});
+       +'<span class="trow-s"><span class="num">'+d.ex.length+'</span> '+esc(t("exercises"))+'</span></span>'
+       +(was?'<span class="tnext best">'+t("Planned")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')+'</button>');});
     b+='</div>';
   }
   else if(V.sheet==="swapday"){

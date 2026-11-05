@@ -5,7 +5,8 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Log a past workout": "سجّل تمرين فات",
+var AR={"I trained it: log it": "اتمرنته: سجّله",
+"Log a past workout": "سجّل تمرين فات",
 "Pick the day you trained, then log the sets you did. It is saved under this date, with no time, since none was kept.": "اختار اليوم اللي اتمرنت فيه، وبعدين سجّل المجموعات اللي عملتها. هيتحفظ على التاريخ ده من غير وقت، لأن مفيش وقت اتسجّل.",
 "Log a workout for this day": "سجّل تمرين لليوم ده",
 "Finish or save the workout in progress first.": "خلّص أو احفظ التمرين اللي شغال الأول.",

@@ -4578,7 +4578,8 @@ label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-
 .reco-h svg{width:18px;height:18px}
 .reco-h b{font-family:var(--display);font-size:15px;color:var(--text)}
 .reco p{margin:8px 0 12px;color:var(--dim);font-size:14px;line-height:1.45}
-.reco-a{display:flex;flex-direction:column;align-items:stretch;gap:2px}
+/* Stacked actions stand apart (owner, 5 Nov: Move it to today and Let it go touched). */
+.reco-a{display:flex;flex-direction:column;align-items:stretch;gap:var(--s2)}
 .reco-a .btn{margin:0}
 .dlcard-later{align-self:center;min-height:44px;padding:0 16px;background:none;border:none;color:var(--dim);font-size:14px;font-weight:600}
 .dlcard.on{display:flex;align-items:center;gap:12px;padding:12px 14px}
@@ -6057,6 +6058,34 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
 <div id="cpanel" hidden></div>
 <div id="sheet"></div>
 <div id="rest" data-theme="dark"></div>
+<script>
+/* A launch that never draws (owner, 5 Nov: "sometimes when I open the app I see" only the
+   background, "then I have to close and open"). The app's code failed before its first
+   paint: most often an update arriving mid-launch on a weak signal, so the page and its
+   modules came from two releases. Nothing in the modules can catch that, so this sits
+   outside them. An error before the first paint, or nothing drawn after twelve seconds:
+   the cached releases are dropped when online and the app is loaded again, once a session.
+   The error is kept (bunyan:booterr) so a repeat can be traced. */
+(function(){
+  var K="bunyan:bootfix",bad=null,done=false;
+  function drawn(){var a=document.getElementById("app");return !!(a&&a.children.length);}
+  function note(m){try{localStorage.setItem("bunyan:booterr",new Date().toISOString()+" "+String(m).slice(0,300));}catch(e){}}
+  function recover(){
+    if(done||drawn())return;done=true;
+    try{if(sessionStorage.getItem(K))return;sessionStorage.setItem(K,"1");}catch(e){return;}
+    note(bad||"nothing drawn");
+    var go=function(){location.reload();};
+    if(navigator.onLine!==false&&window.caches&&caches.keys)
+      caches.keys().then(function(ks){return Promise.all(ks.filter(function(k){return /^bunyan-v\d+$/.test(k);}).map(function(k){return caches.delete(k);}));}).then(go,go);
+    else go();}
+  /* A script that failed, or code that threw; a missing picture is not a failed launch. */
+  window.addEventListener("error",function(ev){var tg=ev&&ev.target;if(tg&&tg!==window&&tg.tagName!=="SCRIPT")return;if(!drawn()){bad=(ev&&(ev.message||(ev.target&&ev.target.src)))||"error";setTimeout(recover,1500);}},true);
+  window.addEventListener("unhandledrejection",function(ev){if(!drawn()){bad="rejection: "+(ev&&ev.reason&&ev.reason.message||ev.reason);setTimeout(recover,1500);}});
+  setTimeout(recover,12000);
+  /* Drawn: a later failure can be recovered from again. */
+  var ok=setInterval(function(){if(drawn()){clearInterval(ok);try{sessionStorage.removeItem(K);}catch(e){}}},1000);
+})();
+</script>
 <script type="module" src="./js/app.js"></script>
 </body>
 </html>

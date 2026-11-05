@@ -3764,3 +3764,18 @@ date: startDay(dayId, past) sets S.active.date and past.
   averages already count timed sessions only. The complete sheet shows Sets in place of Duration, and
   history is re-sorted so the session sits on its date.
 - A workout already in progress has to be finished or saved first.
+
+## Launch that never draws; coach card spacing; log the missed day — branch session/pastlog2 (CACHE v237)
+
+Owner, 5 Nov:
+- "Sometimes when I open the app I see" only the background, "then I will have to close and open". The
+  app always paints once at boot, so a blank page means its code failed before that. The likely cause is
+  an update landing mid-launch on a weak signal, so the page and its modules come from two releases.
+  An inline watchdog (index.html, before app.js) handles it. If a script error or unhandled rejection
+  happens before the first paint, or nothing is drawn after 12 s, it drops the cached bunyan-v* releases
+  when online and reloads, once per session. It keeps the error in localStorage bunyan:booterr for
+  tracing. Missing images are ignored.
+- The coach card's Move it to today and Let it go touched: .reco-a gap is var(--s2).
+- "I trained it but forgot to log it": the missed-day card has "I trained it: log it", which opens that
+  day's workout for its date (startDay past). Once logged, the day counts as done and the card goes. The
+  past-workout sheet lists the day the plan had there first, marked Planned.

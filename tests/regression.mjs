@@ -2889,6 +2889,16 @@ await test("A past workout (owner, 4 Nov): a past day with nothing logged offers
   eq(await ev(page,"[V.sd&&V.sd.past,V.sd&&V.sd.mins]"),[true,null],"the summary shows no duration");
   eq(await page.$$eval('#sheet .wfin-stats .stat small',a=>a.map(x=>x.textContent).includes("Duration")),false,"no Duration on it");
 });
+await test("A launch that fails (owner, 5 Nov: only the background showed until the app was closed and opened): the app's code failing before it draws loads it again once, by itself, and keeps the error",async(page,env)=>{
+  let broken=1;
+  await env.ctx.route(/\/js\/app\.js(\?.*)?$/,r=>{if(broken>0){broken--;return r.fulfill({status:200,contentType:"text/javascript",body:"import {nope} from './util.js';"});}return r.continue();});
+  await page.evaluate(()=>{try{sessionStorage.removeItem("bunyan:bootfix");localStorage.removeItem("bunyan:booterr");}catch(e){}});
+  await page.reload();await page.waitForTimeout(9000);
+  await env.ctx.unroute(/\/js\/app\.js(\?.*)?$/);
+  eq(await page.evaluate(()=>[document.getElementById("app").children.length>0,!!localStorage.getItem("bunyan:booterr")]),[true,true],"drawn after one reload, the error kept");
+  /* The broken load's error was the point of the test. */
+  env.errs.length=0;
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
@@ -3962,6 +3972,14 @@ await test("A missed day: moved to a free day with rest either side, or its key 
   if(await page.$('[data-missdo]'))throw new Error("offered again after it was dealt with");
   await page.tap('.toast-undo');await pause(page,300);
   eq(await ev(page,"[Object.keys(S.daySwap||{}).length,!!document.querySelector('[data-missdo=\"move\"]')]"),[0,true],"Undo: back as it was, and offered again");
+  /* Trained it, just not logged (owner, 5 Nov): the workout for that day, saved under its date, and the card goes. */
+  const yd=await page.evaluate(async()=>{const U=await import("/js/util.js");const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()-1);return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);});
+  await page.tap('.reco [data-pastday]');await pause(page,700);
+  eq(await ev(page,"[S.active.date,S.active.dayName,!!S.active.past]"),[yd,"Pull",true],"yesterday's Pull, on the workout screen");
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,700);
+  await finishEarly(page);await page.tap('[data-confirmok]');await pause(page,900);
+  await page.evaluate(async()=>{const a=await import("/js/ui/actions.js");a.closeSheet();});await pause(page,400);
+  eq(await ev(page,"[S.sessions.some(s=>s.date==='"+yd+"'&&s.dayName==='Pull'),!!document.querySelector('[data-missdo]')]"),[true,false],"logged under yesterday; nothing missed now");
   /* Every day of the week taken: the row goes into today's Push, two sets, and into its workout. */
   await setUp(true);await pause(page,300);
   if(!(await page.$('[data-missdo="fold"]')))throw new Error("no offer to carry the key lift: "+(await page.textContent('#app')).slice(0,400));

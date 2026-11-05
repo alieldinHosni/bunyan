@@ -116,7 +116,10 @@ function missedCard(iso){
     acts='<button class="btn" data-missdo="fold">'+esc(t(r.adds.length===1?"Add it":"Add them"))+'</button>';}
   else if(r.kind==="covered")body=t("The days left train the same muscles, so nothing needs carrying.");
   else body=t("Nothing fits this week without breaking a rest day or making a session too long. Let it go: the plan carries on.");
-  acts+='<button class="btn g" data-missok="1">'+esc(t(acts?"Let it go":"OK"))+'</button>';
+  /* Trained, just not logged (owner, 5 Nov: "I trained it but forgot to log it"): the
+     workout screen for that day, saved under its date. */
+  acts+='<button class="btn g" data-pastday="'+esc(r.missed.date)+'|'+esc(r.missed.dayId)+'">'+esc(t("I trained it: log it"))+'</button>';
+  acts+='<button class="btn g" data-missok="1">'+esc(t("Let it go"))+'</button>';
   return '<div class="reco" data-k="miss'+r.missed.date+'"><div class="reco-h">'+glyph("whistle")+'<b>'+esc(t("Coach"))+'</b></div>'
    +'<p>'+esc(head+" "+body).replace(/\d+/g,'<span class="num">$&</span>')+'</p><div class="reco-a">'+acts+'</div></div>';}
 function dayHero(sp,p,iso){
