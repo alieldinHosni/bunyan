@@ -66,9 +66,12 @@ function paintMotion(root,viewKey){
   /* Numbers that changed count to their new value. Opt-in from the view, because
      only some numbers are the thing the user just altered. */
   els=root.querySelectorAll("[data-count-to]");
-  for(i=0;i<els.length;i++)countTo(els[i],els[i].getAttribute("data-count-to"));
+  /* data-count-dp: its decimals (a weight to the tenth). */
+  for(i=0;i<els.length;i++){var dp=+els[i].getAttribute("data-count-dp")||0;
+    countTo(els[i],els[i].getAttribute("data-count-to"),dp?{format:fmtDp(dp)}:undefined);}
 }
 
+function fmtDp(dp){return function(v){return Number(v).toFixed(dp);};}
 var lastView="",lastSheet=null,lastEx=-2,lastSec=null;
 /* A plan page's parts (Training: program, programs, exercises; Food: meal plan, targets,
    my foods): changing part slides the new one in from the side it is on, the way the

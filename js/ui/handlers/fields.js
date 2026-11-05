@@ -35,6 +35,10 @@ function assignWd(n,val){
    immediately; the redraw waits for a pause in typing. */
 var exqTimer=null;
 function onInput(ev){
+  /* Progress's photo comparison: the slider moves the line and what of each photo shows,
+     nothing else (not a render). */
+  if(ev.target.id==="pgcmpr"){var cv=num(ev.target.value),cb=document.getElementById("pgcmpb"),cl=document.getElementById("pgcmpl");
+    if(cb)cb.style.clipPath="inset(0 0 0 "+cv+"%)";if(cl)cl.style.left=cv+"%";return;}
   var id=ev.target.id||"";
   if(id==="pi_text"){V.pitext=ev.target.value;return;}
   if(id==="ti_text"){V.titext=ev.target.value;return;}
@@ -140,7 +144,9 @@ function onKeydown(ev){
     if(ao.required!==false&&!String(av2).trim()){toast(t("Enter something first."));return;}
     runAct(ao.act,av2);}}
 function onChange(ev){
-  if(ev.target.id==="chartsel"){V.chartEx=ev.target.value;render();return;}
+  /* Progress's photo comparison: which photo is before, which after. */
+  if(ev.target.getAttribute&&(ev.target.hasAttribute("data-pca")||ev.target.hasAttribute("data-pcb"))){
+    V.sd=V.sd||{};V.sd[ev.target.hasAttribute("data-pca")?"a":"b"]=ev.target.value;render();return;}
   /* The InBody sheet's photo, shown in the sheet and read on the phone; kept in memory
      only, never stored. */
   if(ev.target.id==="ib_img"){var ibf=ev.target.files&&ev.target.files[0];if(!ibf)return;

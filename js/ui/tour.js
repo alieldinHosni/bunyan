@@ -62,9 +62,9 @@ var GUIDES={
     {sel:".cfor",v:3,h:"For you",p:"What the coach wants you to decide, most important first. Nothing changes until you tap, and most changes can be undone."},
     {sel:".cmore",v:4,h:"Your coach",p:"A lighter week, advice you set aside, the assessment, and how the coach works. Each row says what a tap does."}]},
   progress:{name:"Progress",steps:[
-    {sel:".pgtabs2",h:"Three views",p:"Overview for the big picture, Strength for your lifts, Body for weight, measurements and photos."},
+    {sel:".pgtabs2",v:2,h:"Four views",p:"Overview: is it working. Strength: your lifts. Body: weight, measurements and photos. Habits: eating, steps and cardio. Swipe between them."},
     {sel:".pgrange",h:"How far back",p:"From the last week to the last year. Every chart on the page follows it."},
-    {sel:".pgkm",h:"Key numbers",p:"Weight, strength and consistency, with how they changed. Tap one for its details."}]},
+    {sel:".pghero",v:2,h:"Is it working?",p:"Your weight's trend against your goal, and what to change if it is off. Press and hold any chart to read it."}]},
   profile:{name:"Profile",steps:[
     {sel:".pid-av",h:"Your picture",p:"Tap it to upload a photo from your phone, or keep your initial."},
     {sel:".pid-top",h:"Your details",p:"Age, height, weight, goal and activity. Your calorie and macro targets are worked out from them."},
