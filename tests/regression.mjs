@@ -2467,15 +2467,21 @@ await test("Offline: with the network off, the installed app opens, every tab wo
 async function strengthTab(page){
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.ptab="strength";V.phalf="all";
     (await import("/js/ui/render.js")).render();});await pause(page,400);}
-await test("Among powerlifters: squat and bench placed against raw competitors of the same class, said as such; silent without data",async page=>{
+await test("Among powerlifters: the three judged lifts placed against raw competitors of the same class, said as such; silent with fewer than three, or without data",async page=>{
   await strengthTab(page);
-  /* The seed: 84 kg (the 93 class), squat 80 × 8 and bench 60 × 8, no deadlift. */
+  /* The seed: 84 kg (the 93 class), squat 80 × 8 and bench 60 × 8, no deadlift. Two of the
+     three (5 Nov): no card, since a percentile of one lift reads as a verdict on the person. */
+  eq(await page.$$eval('.pgopl',a=>a.length),0,"squat and bench alone: not shown");
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");const S=st.S;
+    const d=new Date(U.today()+"T12:00:00");d.setDate(d.getDate()-1);
+    S.sessions.unshift({id:"dl",date:d.toISOString().slice(0,10),dayName:"Pull",entries:[{name:"Barbell Deadlift",sets:[{w:100,r:8,rpe:8}]}]});
+    (await import("/js/ui/render.js")).render();});await pause(page,400);
   const card=await page.$eval('.pgopl',e=>({rows:[...e.querySelectorAll('.pgshare-r')].map(r=>[r.querySelector('span').textContent,r.querySelector('b').textContent]),
     text:e.innerText,aside:e.previousElementSibling.innerText}));
   const want=await page.evaluate(async()=>{const P=await import("/js/coach/percentile.js");
     /* 8 reps at RPE 8 is 10 reps of effort: the estimate counts the two left in reserve. */
-    return ["squat","bench"].map((l,i)=>{const x=P.percentileOf("m",84,l,[80,60][i]*(1+10/30));return x.edge==="below"?"<10":x.edge==="above"?">90":String(x.pct);});});
-  eq(card.rows,[["Squat",want[0]],["Bench press",want[1]]],"two lifts logged, two rows, from the table");
+    return ["squat","bench","deadlift"].map((l,i)=>{const x=P.percentileOf("m",84,l,[80,60,100][i]*(1+10/30));return x.edge==="below"?"<10":x.edge==="above"?">90":String(x.pct);});});
+  eq(card.rows,[["Squat",want[0]],["Bench press",want[1]],["Deadlift",want[2]]],"all three logged, three rows, from the table");
   if(!/93 kg class/.test(card.aside)||!/raw/i.test(card.aside))throw new Error("class and raw not said: "+card.aside);
   if(!/competitors/.test(card.text)||!/Anywhere on this scale is strong/.test(card.text)||!/rough guide/.test(card.text))
     throw new Error("the comparison is not explained: "+card.text);
