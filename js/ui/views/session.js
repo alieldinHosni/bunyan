@@ -400,8 +400,10 @@ function vLogger(){
    +' <span class="num">'+a.entries.length+'</span>'+IC.down+'</span></button>'
    /* A stopped clock with nothing to explain it reads as a bug, so the paused state
       says so rather than just freezing. */
-   +'<div class="ss-clock"><span class="num" id="sessClock">'+mmss(clock.ms/1000)+'</span>'
-   +'<span class="ss-paused" id="sessPaused"'+(clock.paused?'':' hidden')+'>'+t("Paused")+'</span></div>'
+   /* Logged afterwards: the day it is for, in place of a clock that would time nothing. */
+   +(a.past?'<div class="ss-clock ss-past"><span>'+esc(shortd(a.date))+'</span></div>'
+   :'<div class="ss-clock"><span class="num" id="sessClock">'+mmss(clock.ms/1000)+'</span>'
+   +'<span class="ss-paused" id="sessPaused"'+(clock.paused?'':' hidden')+'>'+t("Paused")+'</span></div>')
    /* The coach, one tap away mid-workout (owner, 27 Oct): a machine taken, a set that
       felt off, how to do this one. The floating button stays off the workout. */
    +'<button class="ss-coach" data-coachopen="1" aria-label="'+t("Ask Coach")+'">'

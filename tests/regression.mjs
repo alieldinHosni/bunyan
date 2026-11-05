@@ -2853,6 +2853,52 @@ await test("Back (owner, 4 Nov): the phone's own back swipe has already slid the
   await pause(page,900);
   eq(await ev(page,"[V.fplan,document.getElementById('app').style.transform||'',document.getElementById('app').getAnimations().length,!!document.querySelector('.stillcopy')]"),["plan","",0,false],"landed, nothing left held");
 });
+await test("Pictures on a swipe (owner, 4 Nov): the templates' pictures are not lazy, and as a swipe lands on Programs no frame shows the real tab with a picture on screen not yet there",async(page,env)=>{
+  const cdp=await env.ctx.newCDPSession(page);
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await coach(page,"train","program");await pause(page,1200);
+  const y=await page.evaluate(()=>{window.scrollTo(0,0);const r=document.querySelector("#app .psec").getBoundingClientRect();return Math.round(Math.min(r.top+90,innerHeight-160));});
+  await page.evaluate(()=>{window.__blank=0;window.__fr=0;const t0=performance.now();const f=()=>{
+    if(!document.querySelector(".stillcopy")){const h=innerHeight,w=innerWidth;
+      for(const im of document.querySelectorAll("#app img")){const r=im.getBoundingClientRect();
+        if(r.width>0&&r.bottom>0&&r.top<h&&r.right>0&&r.left<w&&!(im.complete&&im.naturalWidth>0)){window.__blank++;break;}}}
+    window.__fr++;if(performance.now()-t0<2500)requestAnimationFrame(f);};requestAnimationFrame(f);});
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:330,y}]});
+  for(let i=1;i<=12;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:330-i*24,y}]});await page.waitForTimeout(16);}
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(2600);
+  eq(await ev(page,"V.tplan"),"programs","landed on Programs");
+  eq(await page.$$eval('#app .tcover img',a=>a.length>0&&a.every(i=>i.loading!=="lazy")),true,"the templates' pictures are not lazy");
+  eq(await page.evaluate(()=>window.__blank),0,"no frame with a picture missing");
+});
+await test("A past workout (owner, 4 Nov): a past day with nothing logged offers Log a workout for this day; pick the day of the program, log it on the workout screen with no clock and no rest timer, and it is saved under that date with no time",async page=>{
+  await tapTab(page,"train");await pause(page,600);
+  const y=await page.evaluate(async()=>{const U=await import("/js/util.js");const d=new Date(U.today()+"T12:00:00");d.setDate(d.getDate()-1);
+    const iso=d.toISOString().slice(0,10);const st=await import("/js/state.js");st.S.sessions=st.S.sessions.filter(s=>s.date!==iso);
+    const V=(await import("/js/ui/view.js")).V;V.tdate=iso;(await import("/js/ui/render.js")).render();return iso;});
+  await pause(page,500);
+  await page.tap('#app [data-logpast="'+y+'"]');await pause(page,700);
+  eq(await ev(page,"V.sheet"),"pastlog","which day of the program");
+  await page.tap('#sheet [data-pastday]');await pause(page,900);
+  eq(await ev(page,"[S.active.date,!!S.active.past,!!document.querySelector('#sessClock'),!!document.querySelector('#app .ss-past'),!!document.querySelector('#app .ready')]"),[y,true,false,true,false],"the workout screen for that day: its date in place of the clock, no feel question");
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  eq(await ev(page,"[V.restEnd||0,S.active.entries[0].sets.length]"),[0,1],"no rest timer");
+  await finishEarly(page);
+  await page.tap('[data-confirmok]');await pause(page,900);
+  const s=await ev(page,"(()=>{const x=S.sessions.find(s=>s.date==='"+y+"');return x?[x.activeMs,x.past===undefined,S.sessions.indexOf(x)>=0]:null;})()");
+  eq(s,[0,true,true],"saved under that date, untimed");
+  eq(await ev(page,"[V.sd&&V.sd.past,V.sd&&V.sd.mins]"),[true,null],"the summary shows no duration");
+  eq(await page.$$eval('#sheet .wfin-stats .stat small',a=>a.map(x=>x.textContent).includes("Duration")),false,"no Duration on it");
+});
+await test("A launch that fails (owner, 5 Nov: only the background showed until the app was closed and opened): the app's code failing before it draws loads it again once, by itself, and keeps the error",async(page,env)=>{
+  let broken=1;
+  await env.ctx.route(/\/js\/app\.js(\?.*)?$/,r=>{if(broken>0){broken--;return r.fulfill({status:200,contentType:"text/javascript",body:"import {nope} from './util.js';"});}return r.continue();});
+  await page.evaluate(()=>{try{sessionStorage.removeItem("bunyan:bootfix");localStorage.removeItem("bunyan:booterr");}catch(e){}});
+  await page.reload();await page.waitForTimeout(9000);
+  await env.ctx.unroute(/\/js\/app\.js(\?.*)?$/);
+  eq(await page.evaluate(()=>[document.getElementById("app").children.length>0,!!localStorage.getItem("bunyan:booterr")]),[true,true],"drawn after one reload, the error kept");
+  /* The broken load's error was the point of the test. */
+  env.errs.length=0;
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
@@ -3926,6 +3972,14 @@ await test("A missed day: moved to a free day with rest either side, or its key 
   if(await page.$('[data-missdo]'))throw new Error("offered again after it was dealt with");
   await page.tap('.toast-undo');await pause(page,300);
   eq(await ev(page,"[Object.keys(S.daySwap||{}).length,!!document.querySelector('[data-missdo=\"move\"]')]"),[0,true],"Undo: back as it was, and offered again");
+  /* Trained it, just not logged (owner, 5 Nov): the workout for that day, saved under its date, and the card goes. */
+  const yd=await page.evaluate(async()=>{const U=await import("/js/util.js");const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()-1);return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);});
+  await page.tap('.reco [data-pastday]');await pause(page,700);
+  eq(await ev(page,"[S.active.date,S.active.dayName,!!S.active.past]"),[yd,"Pull",true],"yesterday's Pull, on the workout screen");
+  await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,700);
+  await finishEarly(page);await page.tap('[data-confirmok]');await pause(page,900);
+  await page.evaluate(async()=>{const a=await import("/js/ui/actions.js");a.closeSheet();});await pause(page,400);
+  eq(await ev(page,"[S.sessions.some(s=>s.date==='"+yd+"'&&s.dayName==='Pull'),!!document.querySelector('[data-missdo]')]"),[true,false],"logged under yesterday; nothing missed now");
   /* Every day of the week taken: the row goes into today's Push, two sets, and into its workout. */
   await setUp(true);await pause(page,300);
   if(!(await page.$('[data-missdo="fold"]')))throw new Error("no offer to carry the key lift: "+(await page.textContent('#app')).slice(0,400));

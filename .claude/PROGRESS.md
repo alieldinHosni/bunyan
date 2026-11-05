@@ -3739,3 +3739,43 @@ causes:
   that frame, then jumped out to slide in. The new page now holds its start in its own style, and the
   animation holds its end (fill forwards) until it is let go. Chromium never showed the flash; the
   hold makes it impossible in WebKit too.
+
+## Pictures that do not flash as a page opens or a swipe lands — branch session/imgflash (CACHE v235)
+
+Owner, 4 Nov: the templates' pictures on Programs & exercises "flash when I open the page or swipe right or
+left". They are small (16–47 KB) and precached, so the cause was not the download:
+- They were loading="lazy". A lazy picture drawn afresh is not even requested until the phone has seen it
+  on screen, so every redraw showed it blank first. Templates are eager now (train.js splitCover, with
+  width and height).
+- When a swipe landed, the tab that came in was removed in the same frame as the real one was drawn, so
+  the real one's freshly made pictures were blank until decoded. The incoming tab now stays above
+  (z-index 5) until the real one's on-screen pictures are decoded, at most 200 ms (exswipe.js
+  seenImgs). The prebuilt neighbours decode their pictures ahead.
+
+## A workout logged afterwards — same branch (CACHE v236)
+
+Owner, 4 Nov: "Sometimes I train but forget to use the app, so I need the option to log training from past
+days." On Training, a past day with nothing logged now has "Log a workout for this day". It opens a sheet
+(pastlog) with the program's training days, and the chosen one opens the usual workout screen for that
+date: startDay(dayId, past) sets S.active.date and past.
+- The past workout has no clock (the header shows the date), no rest timer, no warm-up and no
+  how-do-you-feel question. Lifts carried from a missed day are not added.
+- On finish no time is kept (activeMs 0, mins, secs and wallMins null), since none was measured. The
+  averages already count timed sessions only. The complete sheet shows Sets in place of Duration, and
+  history is re-sorted so the session sits on its date.
+- A workout already in progress has to be finished or saved first.
+
+## Launch that never draws; coach card spacing; log the missed day — branch session/pastlog2 (CACHE v237)
+
+Owner, 5 Nov:
+- "Sometimes when I open the app I see" only the background, "then I will have to close and open". The
+  app always paints once at boot, so a blank page means its code failed before that. The likely cause is
+  an update landing mid-launch on a weak signal, so the page and its modules come from two releases.
+  An inline watchdog (index.html, before app.js) handles it. If a script error or unhandled rejection
+  happens before the first paint, or nothing is drawn after 12 s, it drops the cached bunyan-v* releases
+  when online and reloads, once per session. It keeps the error in localStorage bunyan:booterr for
+  tracing. Missing images are ignored.
+- The coach card's Move it to today and Let it go touched: .reco-a gap is var(--s2).
+- "I trained it but forgot to log it": the missed-day card has "I trained it: log it", which opens that
+  day's workout for its date (startDay past). Once logged, the day counts as done and the card goes. The
+  past-workout sheet lists the day the plan had there first, marked Planned.

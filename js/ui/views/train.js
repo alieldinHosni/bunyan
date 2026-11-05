@@ -47,7 +47,11 @@ var SPLIT_IMG={ap:"split-ap",arnold:"split-arnold",ppl:"split-ppl",
    js/ui/cover.js) instead of borrowing another programme's picture. */
 function splitCover(sp){
   var f=SPLIT_IMG[sp.id];
-  return f?'<span class="tcover"><img src="img/'+f+'.jpg" alt="" loading="lazy"></span>'
+  /* Not lazy (owner, 4 Nov: the templates' pictures "flash" as the page opens or a swipe
+     lands). A lazy picture drawn afresh waits for the phone to see it on screen before it
+     is even asked for, so each one came in blank first. Thirteen small pictures, all
+     kept offline. */
+  return f?'<span class="tcover"><img src="img/'+f+'.jpg" alt="" width="360" height="200"></span>'
           :'<span class="tcover tcover-gen">'+programCover(sp,180,100)+'</span>';}
 
 
@@ -112,7 +116,10 @@ function missedCard(iso){
     acts='<button class="btn" data-missdo="fold">'+esc(t(r.adds.length===1?"Add it":"Add them"))+'</button>';}
   else if(r.kind==="covered")body=t("The days left train the same muscles, so nothing needs carrying.");
   else body=t("Nothing fits this week without breaking a rest day or making a session too long. Let it go: the plan carries on.");
-  acts+='<button class="btn g" data-missok="1">'+esc(t(acts?"Let it go":"OK"))+'</button>';
+  /* Trained, just not logged (owner, 5 Nov: "I trained it but forgot to log it"): the
+     workout screen for that day, saved under its date. */
+  acts+='<button class="btn g" data-pastday="'+esc(r.missed.date)+'|'+esc(r.missed.dayId)+'">'+esc(t("I trained it: log it"))+'</button>';
+  acts+='<button class="btn g" data-missok="1">'+esc(t("Let it go"))+'</button>';
   return '<div class="reco" data-k="miss'+r.missed.date+'"><div class="reco-h">'+glyph("whistle")+'<b>'+esc(t("Coach"))+'</b></div>'
    +'<p>'+esc(head+" "+body).replace(/\d+/g,'<span class="num">$&</span>')+'</p><div class="reco-a">'+acts+'</div></div>';}
 function dayHero(sp,p,iso){
@@ -129,6 +136,8 @@ function dayHero(sp,p,iso){
     label=p.kind==="past"?t("No session"):t("Nothing planned");
     meta=p.kind==="past"?t("Nothing was logged on this day."):t("Your program has no training days yet. Plan them in Coach.");
     if(p.kind==="none")cta='<button class="btn" data-csec="train">'+t("Plan your training")+'</button>';
+    /* Trained without the app: log it now, under this day (owner, 4 Nov). */
+    else if(sp.days.some(function(d){return d.ex.length;}))cta='<button class="btn g" data-logpast="'+iso+'"><span aria-hidden="true">+</span> '+t("Log a workout for this day")+'</button>';
   }else if(p.rest){
     label=p.kind==="today"?t("Today"):t("Planned");
     meta=t("Recover. The plan picks up the day after.");
