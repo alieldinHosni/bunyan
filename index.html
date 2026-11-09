@@ -4188,7 +4188,9 @@ body.wkflat #app{--gutter:20px}
 /* Any control carrying a tick (js/ui/haptic.js): a label with a button's manners, and the
    switch's focus drawn on it. */
 /* A button's own defaults, at no weight, so every class rule still wins as it did. */
-:where(label.hap){display:inline-block;text-align:center;box-sizing:border-box;padding:1px 6px}
+/* Centred both ways, as a button centres its words (owner, 5 Nov: on the iPhone the words of
+   every ticking chip sat at the top of their pill: the feel chips, then the intensity). */
+:where(label.hap){display:inline-flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;padding:1px 6px}
 label.hap{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-offset:3px}
 .log-c{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;border:2px solid currentColor}

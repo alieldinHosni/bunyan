@@ -2960,6 +2960,15 @@ await test("Progress, second redesign (owner, 5 Nov): is it working with Apply a
   await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(900);
   eq(await ev(page,"V.ptab"),"body","swiped from Strength to Body");
 });
+await test("Intensity (owner, 6 Nov): on a phone each choice's word sits in the middle of its pill, as every ticking chip does",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.haptic=true;st.saveDB();});await page.reload();await pause(page,1500);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).startActivity("Football");});await pause(page,800);
+  const off=await page.evaluate(()=>[...document.querySelectorAll(".act-int > *")].map(l=>{const b=l.getBoundingClientRect(),rg=document.createRange();rg.selectNodeContents(l);const r=rg.getBoundingClientRect();
+    return [l.tagName,Math.round((r.top+r.bottom)/2-(b.top+b.bottom)/2),Math.round((r.left+r.right)/2-(b.left+b.right)/2)];}));
+  eq(off.length,4,"four choices");
+  if(off.some(x=>x[0]!=="LABEL"))throw new Error("expected the phone's labels: "+JSON.stringify(off));
+  if(off.some(x=>Math.abs(x[1])>2||Math.abs(x[2])>2))throw new Error("words off centre: "+JSON.stringify(off));
+});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
