@@ -25,6 +25,7 @@ import {planSummary} from "../engine/planshare.js";
 import {CUR, PROFILES, S} from "../state.js";
 import {fmtW, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, shortd} from "../util.js";
+import {VERSION} from "../version.js";
 import {canBuzz, seg, V} from "./view.js";
 import {iconOf, modeOf, themeOf, THEMES} from "./theme.js";
 import {glyph} from "./glyphs.js";
@@ -51,6 +52,8 @@ function pick(name,sub,o){
 /* Every choice in settings is the soft segment: the chosen one tinted and edged in
    the accent rather than filled with it, so a sheet of choices is not a sheet of red;
    the filled accent stays for the button a sheet leads to. */
+/* A footnote's figures kept whole in Arabic ("و2 كجم" read "2و"): each number isolated. */
+function figs(x){return esc(x).replace(/\d+(?:[.,]\d+)?/g,'<bdi class="num">$&</bdi>');}
 /* Somewhere else: a chevron, and what is there now. */
 function nav(attr,name,sub,val,gl){
   return '<button class="srow" '+attr+'>'+(gl?'<span class="gtile">'+glyph(gl)+'</span>':'')+words(name,sub)
@@ -87,28 +90,30 @@ function youSheet(){
    /* The one list of goals (js/data/goals.js), the same the assessment offers. */
    +choose("p_goal",goal,GOAL_ORDER.map(function(k){return [k,t(GOALS[k].label),t(GOALS[k].desc||"")];}))+'</section>'
    +'<p class="sg-f">'+t("Your calorie and protein targets are worked out from these, in Food → Plan → Targets.")+'</p>'
-   +'<button class="btn" data-saveyou="1">'+t("Save")+'</button>'
-   +'<button class="btn g" data-fsec="targets">'+t("See my targets")+'</button>';}
+   /* Pinned at the foot of the sheet (owner, 9 Nov review): an edit at the top is never
+      left unsaved below a long list of goals. */
+   +'<div class="sfoot"><button class="btn" data-saveyou="1">'+t("Save")+'</button>'
+   +'<button class="btn g" data-fsec="targets">'+t("See my targets")+'</button></div>';}
 
 /* ---- Training ----------------------------------------------------------------------- */
 function trainingSheet(){
   var tp=S.prefs,pr=S.profile;
   return '<h2>'+t("Training")+'</h2>'
    +group(t("Progression"),
-      pick(t("Progression"),t("How fast Bunyan adds weight"),{items:[["conservative",t("Conservative")],["standard",t("Standard")],["aggressive",t("Aggressive")]],
+      pick(t("Weight increases"),t("How fast Bunyan adds weight"),{items:[["conservative",t("Conservative")],["standard",t("Standard")],["aggressive",t("Aggressive")]],
         value:pr.prog,attr:"setprog",label:t("Progression")})
      /* Stored as "off" flags, so everyone who had the app before these existed gets
         them on. */
      +sw('data-toggle="noblocks"',t("Training blocks"),t("Effort builds for three weeks, then a lighter week"),!tp.noblocks)
-     +pick(t("Ask for RPE"),"",{items:[["every",t("Every set")],["last",t("Last set only")],["off",t("Never")]],value:tp.rpe,attr:"setrpe",label:t("Ask for RPE")}),
-     t("Steps follow the equipment: 2.5 kg on a barbell (5 on the big leg lifts), 2 kg on dumbbells, never more than about a tenth of the load. Conservative halves them, aggressive doubles them. Any exercise can have its own step, set in its plan."))
+     +pick(t("Ask for RPE"),t("How hard a set felt, out of 10"),{items:[["every",t("Every set")],["last",t("Last set only")],["off",t("Never")]],value:tp.rpe,attr:"setrpe",label:t("Ask for RPE")}),
+     figs(t("Steps follow the equipment: 2.5 kg on a barbell (5 on the big leg lifts), 2 kg on dumbbells, never more than about a tenth of the load. Conservative halves them, aggressive doubles them. Any exercise can have its own step, set in its plan.")))
    +group(t("Workout"),
       sw('data-toggle="nowarm"',t("Warm-up before a workout"),t("Drills for what the day trains, and ramp-up sets"),!tp.nowarm)
      +sw('data-toggle="nocool"',t("Cool-down after a workout"),t("Stretches for what you trained"),!tp.nocool)
-     +sw('data-toggle="awake"',t("Keep screen awake"),"",!!tp.awake))
+     +sw('data-toggle="awake"',t("Keep screen awake"),t("During a workout"),!!tp.awake))
    +group(t("Rest timer"),
       sw('data-toggle="autorest"',t("Auto-start rest timer"),"",!!tp.autorest)
-     +pick(t("Countdown warning"),"",{items:[5,10,15].map(function(n){return [n,n+" "+t("sec")];}),value:tp.warn||10,attr:"setwarn",label:t("Countdown warning")})
+     +pick(t("Countdown warning"),t("A beep before the rest ends"),{items:[5,10,15].map(function(n){return [n,n+" "+t("sec")];}),value:tp.warn||10,attr:"setwarn",label:t("Countdown warning")})
      +sw('data-toggle="sound"',t("Sounds"),"",!!tp.sound)
      +'<button class="srow" data-testsound="1">'+words(t("Test sound"),t("Plays the 8-second rest alarm."))
      +'<span class="srow-play">'+glyph("sound")+t("Play")+'</span></button>',
@@ -116,7 +121,7 @@ function trainingSheet(){
         than in a gym when the timer runs out in silence. A limit of the phone, not of
         the app: iOS applies the hardware switch to all web audio and suspends the page
         when it is not in front. */
-     t("On iPhone the side switch silences this alarm, and it cannot play while the app is in the background or the phone is locked. The screen turns red when the rest is over, so you can see it with the sound off."))
+     figs(t("On iPhone the side switch silences this alarm, and it cannot play while the app is in the background or the phone is locked. The screen turns red when the rest is over, so you can see it with the sound off.")))
    +group(t("Equipment"),
       nav('data-sheet="gear"',t("My equipment"),"",S.gear&&S.gear.length?S.gear.length+" "+t("selected"):t("Everything"))
      +nav('data-sheet="likes"',t("Favourites"),"",S.favs.length+" ★")
@@ -157,11 +162,12 @@ function appSheet(){
    +seg({items:[["dark",t("Dark")],["light",t("Light")]],value:thMode,attr:"lookmode",cls:"thmode",label:t("Mode"),key:"lookmode",soft:true})
    +'</section>'
    +'<section class="sg"><h3 class="sg-h">'+t("App icon")+'</h3>'+icons
-   +'<p class="sg-f">'+esc(icCur==="auto"?t("The icon changes with the theme."):t("The icon stays this colour whatever the theme."))+' '
+   +'<p class="sg-f">'+esc(icCur==="auto"?t("The icon changes with the theme."):t("The icon stays this colour whatever the theme."))+'</p>'
    /* Said plainly, because it is the phone's rule and not something the app can change:
       a Home Screen app keeps the icon it was added with. Adding it again may start it
-      empty, so the backup goes first. */
-   +esc(t("On iPhone, the Home Screen keeps the icon BUNYAN had when it was added. To change it there, make a backup first (Profile → Backup and reset), add BUNYAN to the Home Screen again from Safari (Share → Add to Home Screen), and restore the backup in it if it opens empty."))+'</p>'
+      empty, so the backup goes first. Folded: five lines most people never need. */
+   +'<details class="adv sg-more"><summary>'+esc(t("Changing it on the Home Screen"))+'</summary><p class="sg-f">'
+   +esc(t("On iPhone, the Home Screen keeps the icon BUNYAN had when it was added. To change it there, make a backup first (Profile → Backup and reset), add BUNYAN to the Home Screen again from Safari (Share → Add to Home Screen), and restore the backup in it if it opens empty."))+'</p></details>'
    +'</section>'
    +group(t("Language and units"),
       pick(t("Language"),"",{items:[["en","English"],["ar","العربية"]],value:ap.lang==="ar"?"ar":"en",attr:"setlang",label:t("Language")})
@@ -175,7 +181,8 @@ function appSheet(){
          (js/ui/view.js buzz). */
       (canBuzz()?sw('data-toggle="haptic"',t("Haptic feedback"),"",ap.haptic!==false)
         /* To feel it now: the press itself ticks (app.js), and what is needed if it doesn't. */
-        +'<button class="srow" data-hapttest="1">'+words(t("Test haptics"),t("Tap to feel a tick. On iPhone it needs iOS 18 or later and System Haptics on in Settings → Sounds & Haptics."))+'</button>':"")
+        +'<button class="srow" data-hapttest="1">'+words(t("Test haptics"),t("Tap to feel a tick. On iPhone it needs iOS 18 or later and System Haptics on in Settings → Sounds & Haptics."))
+        +'<span class="srow-play">'+esc(t("Try"))+'</span></button>':"")
      +sw('data-toggle="anim"',t("Animations"),"",ap.anim!==false)
      +sw('data-toggle="splash"',t("Opening screen"),"",ap.splash!==false)
      +pick(t("Interface density"),"",{items:[["0",t("Comfortable")],["1",t("Compact")]],value:ap.compact?"1":"0",attr:"setcompact",label:t("Interface density")}));}
@@ -328,6 +335,8 @@ function aboutSheet(){
    +t("Everything lives on this phone only. Nothing is uploaded anywhere. Export a backup every few weeks so a cleared browser cannot cost you your history.")+'</p></div></section>'
    +'<section class="sg"><h3 class="sg-h">'+t("How the numbers work")+'</h3><div class="sg-card"><span class="gtile">'+glyph("info")+'</span><p>'
    +t("Estimated 1RM uses the Epley formula and is only meaningful up to about 12 reps. Volume is the sum of weight × reps for every set, not an average.")+'</p></div></section>'
+   +'<section class="sg"><h3 class="sg-h">'+t("Version")+'</h3><div class="sg-card"><span class="gtile">'+glyph("spark")+'</span><p>'
+   +esc(t("Bunyan · version {n}")).replace("{n}",'<span class="num">'+VERSION+'</span>')+'</p></div></section>'
    +restartNotes();}
 /* Restarts nobody asked for (js/ui/crashnote.js): when, and what was tapped just before,
    so the cause can be found. Only shown once there is one. */

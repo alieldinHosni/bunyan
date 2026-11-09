@@ -4,7 +4,7 @@
 
      coach   js/coach/           pure coaching: imports only itself and the pure body maths
                                  (js/engine/body.js); no DOM, storage or network
-     core    util, db, photostore, scan, state, units, schema (what S holds: pure, imports nothing)
+     core    util, db, photostore, scan, state, units, schema (what S holds: pure, imports nothing), version
      data    js/data/            the libraries: imports only data and util
      i18n    js/i18n/            words: data, state and util at most
      engine  js/engine/          the app's logic: never the UI or app.js
@@ -36,7 +36,7 @@ function walk(d){
     return p.endsWith(".js") ? [p] : [];});}
 
 const files = walk(path.join(ROOT, "js")).map(rel);
-const CORE = new Set(["js/util.js", "js/db.js", "js/photostore.js", "js/scan.js", "js/state.js", "js/units.js", "js/schema.js"]);
+const CORE = new Set(["js/util.js", "js/db.js", "js/photostore.js", "js/scan.js", "js/state.js", "js/units.js", "js/schema.js", "js/version.js"]);
 function layer(f){
   if (f === "js/app.js") return "app";
   if (CORE.has(f)) return "core";
@@ -153,6 +153,9 @@ const reach = new Set(), todo = ["js/app.js"];
 while (todo.length){const f = todo.pop(); if (reach.has(f) || !(f in graph)) continue; reach.add(f); todo.push(...graph[f]);}
 for (const f of [...reach].sort()) if (!cached.has(f)) bad.push(`${f} is loaded by the app but not precached in sw.js: the app would not start offline`);
 
+/* The version shown in the app is the cache's (js/version.js): bumped together. */
+{const cv=(/bunyan-v(\d+)/.exec(sw)||[])[1],vv=(/VERSION=(\d+)/.exec(fs.readFileSync(path.join(ROOT,"js/version.js"),"utf8"))||[])[1];
+  if(cv!==vv)bad.push(`js/version.js says ${vv} but sw.js caches bunyan-v${cv}: bump both together`);}
 const edges = Object.values(graph).reduce((a, x) => a + x.length, 0);
 for (const b of bad) console.log("FAIL " + b);
 console.log(`\n${files.length} modules, ${edges} imports: ${bad.length ? bad.length + " broken rules" : "every layer rule holds"}`);

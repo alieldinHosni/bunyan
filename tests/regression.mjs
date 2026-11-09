@@ -1054,7 +1054,8 @@ await test("Themes: the app icon follows the theme, or stays the colour chosen i
   await page.tap('[data-sheet="set_app"]');await pause(page,400);
   await page.tap('[data-seticon="auto"]');await pause(page,400);
   eq([await ev(page,"S.prefs.icon"),await icons()],["auto",["icon-red-180.png","icon-red-180.png"]],"back to the theme's");
-  if(!/Home Screen/.test(await page.$eval('.icpicks+.sg-f',e=>e.textContent)))throw new Error("the Home Screen note is missing");
+  /* Folded under the icons since the 9 Nov review: there, a tap away. */
+  if(!/Home Screen/.test(await page.$eval('.icpicks~details.sg-more',e=>e.textContent)))throw new Error("the Home Screen note is missing");
 });
 await test("Themes: every theme and mode uses its reference colours exactly",async page=>{
   const r=await page.evaluate(()=>{
@@ -3245,7 +3246,10 @@ await test("Backup: what it holds, counted; the raw text folded away until asked
 });
 await test("Profile: a summary page; every row opens its sheet; the backup row warns when there is none; About holds the small print",async page=>{
   await tapTab(page,"profile");await pause(page);
-  eq(await page.$eval('.pid .pid-n',e=>e.textContent),await ev(page,"(Object.assign({},JSON.parse(localStorage.getItem('bunyan:profiles'))[0])).name"),"the name");
+  /* The name every profile starts with ("Me") is offered to be set; a real one is shown. */
+  const nm=await ev(page,"(Object.assign({},JSON.parse(localStorage.getItem('bunyan:profiles'))[0])).name");
+  if(!nm||nm==="Me")eq(await page.$eval('.pid .pid-name',e=>e.textContent),"Add your name","the default name: an offer to set one");
+  else eq(await page.$eval('.pid .pid-n',e=>e.textContent),nm,"the name");
   for(const s of ["set_you","set_training","set_app","set_profiles","set_data","about"])
     if(!(await page.$('#app [data-sheet="'+s+'"]')))throw new Error("no way to "+s);
   if(!(await page.$('#app [data-sheet="set_data"] .gtile.warn')))throw new Error("never backed up, and no warning");
@@ -4172,6 +4176,40 @@ await test("A restart nobody asked for (owner, 9 Nov: logging Football showed a 
   eq(await p2.evaluate(()=>JSON.parse(localStorage.getItem("bunyan:crash")||"[]").length),1,"nothing more after a clean reload");
   await p2.close();
 },{prefs:{autorest:false}});
+await test("Profile (owner, 9 Nov review): one door to You, weeks kept as Progress counts them, the default name offered to be set, chat history with the data, and the version",async page=>{
+  await tapTab(page,"profile");await pause(page,600);
+  eq(await page.$$eval('#app [data-sheet="set_you"]',a=>a.map(x=>x.className)),["pid-top"],"only the card opens You");
+  const kept=await page.evaluate(async()=>(await import("/js/engine/stats.js")).weekRun().weeks);
+  const st=await page.$$eval('#app .pid-stats>div',a=>a.map(d=>[d.querySelector("b").getAttribute("data-count-to")||d.querySelector("b").textContent,d.querySelector("span").textContent]));
+  eq(st[1],[String(kept),"Weeks kept"],"weeks kept, as Progress counts them");
+  if(!/yrs/.test(await page.$eval('#app .pid-top',e=>e.textContent)))throw new Error("age and height not on the card");
+  eq(await page.$$eval('#app .sg',a=>a.map(g=>[g.querySelector(".sg-h").textContent,g.querySelectorAll(".srow").length])),
+    [["Settings",4],["People",4],["Your data",2],["Help",2]],"the groups");
+  eq(await page.evaluate(()=>{const g=[...document.querySelectorAll('#app .sg')].find(x=>x.querySelector('.sg-h').textContent==="Your data");return !!(g&&g.querySelector('[data-sheet="set_chat"]'));}),true,"chat history with the data");
+  const v=await page.evaluate(async()=>(await import("/js/version.js")).VERSION);
+  eq(await page.$eval('#app .pver',e=>e.textContent),"Bunyan · version "+v,"the version at the foot");
+  await page.tap('#app .pid-name');await pause(page,500);
+  if(!(await page.$('#sheet input,#sheet textarea,.dlg input')))throw new Error("Add your name opens no name field");
+});
+await test("Settings (owner, 9 Nov review): You keeps Save in reach while it scrolls; Training says what RPE is; App folds the Home Screen note and About gives the version; Arabic's 'last set' fits its button",async page=>{
+  await tapTab(page,"profile");await pause(page,500);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_you");});await pause(page,700);
+  const f=await page.evaluate(()=>{const f=document.querySelector("#sheet .sfoot"),b=f.querySelector("[data-saveyou]").getBoundingClientRect(),box=document.querySelector("#sheet .sheetbox").getBoundingClientRect();
+    return [getComputedStyle(f).position,Math.round(b.bottom)<=Math.round(box.bottom),Math.round(b.width)];});
+  eq([f[0],f[1]],["sticky",true],"Save pinned in sight before scrolling");
+  if(f[2]<340)throw new Error("Save is narrow: "+f[2]);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page,600);
+  if(!/out of 10/.test(await page.textContent("#sheet")))throw new Error("RPE not explained");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_app");});await pause(page,600);
+  eq(await page.$eval("#sheet details.sg-more",d=>d.open),false,"the Home Screen note folded");
+  if(!(await page.$('#sheet [data-hapttest] .srow-play'))&&await page.$('#sheet [data-hapttest]'))throw new Error("Test haptics has no Try");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("about");});await pause(page,600);
+  if(!/version \d+/.test(await page.textContent("#sheet")))throw new Error("no version in About");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";(await import("/js/i18n/exnames.js")).applyLang();
+    (await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page,700);
+  const cut=await page.$$eval('#sheet .seg-b',a=>a.filter(b=>b.scrollWidth>b.clientWidth+1).map(b=>b.textContent));
+  eq(cut,[],"no choice cut short in Arabic");
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
