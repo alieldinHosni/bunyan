@@ -3884,3 +3884,30 @@ Owner, 9 Nov: "When I logged Football session today, the app showed a white page
 - **Test:** crashes the renderer (CDP Page.crash) after Log activity and relaunches. The note names
   `logact` and About shows it. A reload notes nothing.
 - **Next:** when the owner sees it again, read About and fix what it names.
+
+## Profile and settings, streamlined — branch session/profile2 (CACHE v243)
+
+Owner, 9 Nov: "do the same as the workout page with the profile and settings page, and execute".
+
+- **One door to You.** The top card opens it: name, goal · program, and age · height. The duplicate You
+  row is gone.
+- **Weeks kept** replaces Streak. Streak counted days in a row, nearly always 0 on a 3-day plan.
+  Weeks kept is `weekRun().weeks`, as Progress counts it. Workouts and weeks count up.
+- **The default name.** "Me" shows as أنا in Arabic, and the card offers Add your name (renames the
+  profile).
+- **Groups:**
+  - Settings: Training, Nutrition, Smart coach, App.
+  - People.
+  - Your data: Backup, Chat history.
+  - Help: Guide, About.
+- **Version.** js/version.js holds the version, shown at the foot of Profile and in About.
+  tests/architecture.mjs keeps it equal to sw.js's CACHE: bump both together.
+- **Training sheet:**
+  - The row under Progression is "Weight increases".
+  - RPE, countdown warning and keep-awake each get a line.
+  - Footnote figures isolated (`figs`) so Arabic keeps "و2 كجم" in order.
+- **You sheet.** Save and See my targets sit in a sticky `.sfoot`. `max-width:none` is needed: a sheet
+  rule caps children at 100%.
+- **App sheet.** The Home Screen icon note is folded (`details.sg-more`). Test haptics has a Try pill.
+- **Arabic.** "Last set only" is آخر مجموعة, so it fits its button.
+- **Kept as is.** Nutrition row units (kcal, g) stay untranslated, as everywhere else in the app.

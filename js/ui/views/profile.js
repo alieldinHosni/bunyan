@@ -9,7 +9,8 @@ import {curProfile, isOwner, PROFILES, S, split} from "../../state.js";
 import {friends} from "../../engine/share.js";
 import {fmtW, wUnit} from "../../units.js";
 import {esc, fmtN} from "../../util.js";
-import {streak} from "../view.js";
+import {weekRun} from "../../engine/stats.js";
+import {VERSION} from "../../version.js";
 import {themeName, themeOf} from "../theme.js";
 import {planName} from "../../i18n/exnames.js";
 import {glyph} from "../glyphs.js";
@@ -31,45 +32,45 @@ function group(title,rows){
 
 function vProfile(){
   var p=S.profile,g=S.goals,pf=curProfile(),pref=S.prefs;
-  var name=pf.name||t("Me"),kg=lastWeight()||p.weight;
+  /* The name every profile starts with is a word, not a name: said in the language on
+     screen, and the card offers to set a real one. */
+  var unnamed=!pf.name||pf.name==="Me",name=unnamed?t("Me"):pf.name,kg=lastWeight()||p.weight;
 
   var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+esc(t("Profile"))+'</h1></div>';
 
   /* Who: the picture in its orbit (tap it for the photo or the initial), the name, the
-     goal and the program (tap for You, where the body and the goal are set), and three
-     plain figures, over contour lines drawn still behind it all. */
+     goal and the program, and what of the body has been entered: one door to You, where
+     all of it is set (owner, 9 Nov: the card and a You row both opened it). Then three
+     plain figures, over contour lines drawn still behind it all. Only what has been
+     entered is said: these fields default to null. */
+  var you=[];
+  if(p.age)you.push(p.age+" "+t("yrs"));
+  if(p.height)you.push(p.height+" "+t("cm"));
+  var wr=weekRun();
   h+='<section class="pid">'+art("topo",{still:true,cls:"pid-bg"})
    +'<div class="pid-hero">'
    +'<button class="pid-av" data-sheet="set_avatar" aria-label="'+esc(t("Profile picture")+": "+t(S.profile.photo?"your photo. Change it":"your initial. Add a photo"))+'">'
    +art("orbit",{cls:"pid-orbit"})
    +'<span class="pmono xl">'+avatar(name)+'</span>'
    +'<span class="pid-cam" aria-hidden="true">'+glyph("camera")+'</span></button>'
+   +(unnamed?'<button class="pid-name" data-renameprofile="1">'+esc(t("Add your name"))+'</button>':'')
    +'<button class="pid-top" data-sheet="set_you">'
-   +'<span class="pid-t"><span class="pid-n">'+esc(name)+'</span>'
-   +'<span class="pid-s">'+esc([t(goalOf(p.goal).label),planName(split().name)].filter(Boolean).join(" · "))+'</span></span>'
+   +'<span class="pid-t">'+(unnamed?'':'<span class="pid-n">'+esc(name)+'</span>')
+   +'<span class="pid-s">'+esc([t(goalOf(p.goal).label),planName(split().name)].filter(Boolean).join(" · "))+'</span>'
+   +'<span class="pid-s">'+esc(you.length?you.join(" · "):t("Add your age, height and weight"))+'</span></span>'
    +'<span class="pid-edit">'+esc(t("Your details"))+'<span class="ico ico-chev" aria-hidden="true"></span></span></button></div>'
+   /* Weeks kept, as Progress counts them (a day-by-day streak is nearly always 0 on a
+      plan that trains three days a week). The two counts run up as the page opens. */
    +'<div class="pid-stats">'
-   +'<div><b>'+fmtN(S.sessions.length)+'</b><span>'+t("Workouts")+'</span></div>'
-   +'<div><b>'+streak()+'</b><span>'+t("Streak")+'</span></div>'
+   +'<div><b data-count-to="'+S.sessions.length+'">'+fmtN(S.sessions.length)+'</b><span>'+t("Workouts")+'</span></div>'
+   +'<div><b data-count-to="'+wr.weeks+'">'+wr.weeks+'</b><span>'+t("Weeks kept")+'</span></div>'
    +'<div><b>'+(kg?esc(fmtW(kg)):"—")+'</b><span>'+t("Weight")+'</span></div>'
    +'</div></section>';
 
-  /* Only what has actually been entered. This used to concatenate the fields whole,
-     and they default to null, so a profile that skipped them read "null · nullcm ·
-     86kg": the 86 a weight nobody gave, from a fallback meant for arithmetic. */
-  var you=[];
-  if(p.age)you.push(p.age+" "+t("yrs"));
-  if(p.height)you.push(p.height+" "+t("cm"));
-  if(kg)you.push(fmtW(kg));
   var rpeLabel={every:t("Every set"),last:t("Last set only"),off:t("Never")}[pref.rpe]||t("Every set");
   h+=group(t("Settings"),
-     prow('data-sheet="set_you"',"person",t("You"),you.length?you.join(" · "):t("Add your age, height and weight"))
-    +prow('data-sheet="set_training"',"dumbbell",t("Training"),
+     prow('data-sheet="set_training"',"dumbbell",t("Training"),
        t(p.prog.charAt(0).toUpperCase()+p.prog.slice(1))+" · "+t("RPE")+" "+rpeLabel.toLowerCase())
-    /* The conversation with the coach, 30 days of it, to read (js/ui/views/chat.js
-       histSheet). What the person told it to keep is asked in the chat ("What have I
-       told you?"), where it can be deleted. */
-    +prow('data-sheet="set_chat"',"clock",t("Chat history"),t("The last 30 days, to read"))
     +prow('data-fsec="targets"',"bowl",t("Nutrition"),fmtN(g.kcal)+" kcal · "+g.p+"g "+t("Protein").toLowerCase())
     /* The on-device model (js/ui/smartcoach.js): off until asked for. */
     +prow('data-sheet="set_smart"',"spark",t("Smart coach"),t(smartLabel()))
@@ -85,14 +86,18 @@ function vProfile(){
     +(isOwner()?prow('data-coach="1"',"eye",t("Friends I follow"),
        Object.keys(friends()).length+" "+t("shared with you")):""));
 
-  /* The backup row says how old the last one is, and turns to the caution colour when
-     there has never been one or it is over a month old. */
+  /* What is kept: the backup (it says how old the last one is, in the caution colour
+     when there has never been one or it is over a month old), and the conversation with
+     the coach, 30 days of it, to read (js/ui/views/chat.js histSheet). */
   var bk=backupState();
   h+=group(t("Your data"),
      prow('data-sheet="set_data"',"archive",t("Backup and reset"),bk.s,bk.k==="warn"?"warn":"")
-    +prow('data-sheet="about"',"info",t("About and privacy"),t("Everything stays on this phone")));
+    +prow('data-sheet="set_chat"',"clock",t("Chat history"),t("The last 30 days, to read")));
   h+=group(t("Help"),
-     prow('data-tourreset="1"',"question",t("Show the guide again"),t("The tips that point out what each button does")));
+     prow('data-tourreset="1"',"question",t("Show the guide again"),t("The tips that point out what each button does"))
+    +prow('data-sheet="about"',"info",t("About and privacy"),t("Everything stays on this phone")));
+  /* Which release this phone runs: what to read out when something looks wrong. */
+  h+='<p class="pver">'+esc(t("Bunyan · version {n}")).replace("{n}",'<span class="num">'+VERSION+'</span>')+'</p>';
   return h;}
 
 export {vProfile};
