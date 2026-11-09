@@ -22,6 +22,8 @@ import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {draftFrom, FOCUS_MAX, foodPrefs, GEARS, profileOf, skipOf, STEPS, youOk, youWhy} from "../views/assess.js";
+import {EXTRA_MAX} from "../../data/goals.js";
+import {focusMuscles} from "../../data/parts.js";
 import {ask, findMsg, follow} from "../views/chat.js";
 import {coachAct} from "../views/pcheck.js";
 import {chatSend, sendText, slotsFrom, toPlan} from "./common.js";
@@ -198,15 +200,23 @@ function register(){
     if(af==="days"&&(V.asd.wd||[]).length>=2&&V.asd.wd.length!==num(av))V.asd.wd=[];
     /* A different goal, level, week or kit can change which splits are on offer. */
     if(/^(goal|level|days|gear)$/.test(af))V.asd.split=null;
+    /* The main goal is not also one of the others. */
+    if(af==="goal"&&V.asd.goals2)V.asd.goals2=V.asd.goals2.filter(function(k){return k!==av;});
     render();return;});
   on(function(D){return D.asm!==undefined&&V.asd;},function(D){var mp=D.asm.split("|"),f=mp[0],v=f==="wd"?num(mp[1]):mp[1];
     var ml=V.asd[f]||(V.asd[f]=[]),mi=ml.indexOf(v);
-    if(mi<0&&f==="focus"&&ml.length>=FOCUS_MAX){toast(t("Up to three. Take one off first."));return;}
+    /* Focus: up to three muscles, any of their parts; a whole muscle and its parts
+       replace one another (js/data/parts.js). */
+    if(f==="focus"){var mu=String(v).split(".")[0];
+      if(mi<0&&focusMuscles(ml).indexOf(mu)<0&&focusMuscles(ml).length>=FOCUS_MAX){toast(t("Up to three muscles. Take one off first."));return;}
+      if(mi<0)for(var fi=ml.length-1;fi>=0;fi--){var fx=ml[fi];if(v===mu?fx.indexOf(mu+".")===0:fx===mu)ml.splice(fi,1);}
+      mi=ml.indexOf(v);}
+    if(f==="goals2"&&mi<0&&ml.length>=EXTRA_MAX){toast(t("Up to two more goals. Take one off first."));return;}
     if(mi>=0)ml.splice(mi,1);else ml.push(v);
     /* Fixed days set how many: two or more picked are the week. */
     if(f==="wd"&&ml.length>=2)V.asd.days=Math.min(6,ml.length);
     if(f==="wd"&&ml.length>6){ml.splice(ml.indexOf(v),1);toast(t("Six days at most: keep one for rest."));return;}
-    if(f==="wd"||f==="nolift"||f==="focus")V.asd.split=null;
+    if(f==="wd"||f==="nolift"||f==="focus"||f==="goals2")V.asd.split=null;
     render();return;});
   on(function(D){return D.asnext&&V.asd;},function(){
     if(STEPS[V.asd.step]==="you"&&!youOk(V.asd)){toast(youWhy(V.asd));return;}

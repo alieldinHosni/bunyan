@@ -71,7 +71,38 @@ var TRAIN={
   gen:{main:[8,12],acc:[10,15],rir:[2,2],rest:0.9,sets:0, add:null}
 };
 
+/* ---- more than one goal ---------------------------------------------------------------
+   Owner, 9 Nov: "Can I combine between these goals … based on knowledge base and still
+   be able to create a customized program". One main goal, up to two more (goals2):
+
+   - The main goal sets the food. Calories go one way or the other, never both, so the
+     goals that are about the calories (lose, recomp, maintain) are a main goal only;
+     protein is the highest any of the goals asks for (proteinOf), steps the same.
+   - The training days take turns, the textbook's undulating periodisation: "vary
+     volume, intensity and selection day to day … to improve all three adaptations
+     together", its example a week of endurance on Monday, power on Wednesday and
+     hypertrophy on Friday (js/knowledge/phases.js PERIODISATION.undulating). The main
+     goal keeps the larger share of the days (dayGoals); each day is dosed by its own
+     goal's style and gets that goal's addition (plyometrics, conditioning, mobility). */
+var EXTRA_OK=["gain","strength","athletic","endurance","mobility"],EXTRA_MAX=2;
+/* The goals someone trains for, the main one first, the others as they can be combined. */
+function goalsOf(p){
+  p=p||{};var main=GOALS[p.goal]?p.goal:"maintain",out=[main];
+  (p.goals2||[]).forEach(function(k){if(EXTRA_OK.indexOf(k)>=0&&out.indexOf(k)<0&&out.length<=EXTRA_MAX)out.push(k);});
+  return out;}
+/* Which goal each of n training days serves, in week order: the main goal on every
+   other day, the others between; with too few days for that, one day each. */
+function dayGoals(p,n){
+  var g=goalsOf(p),k=g.length-1,out=[];
+  for(var i=0;i<n;i++){
+    if(!k)out.push(g[0]);
+    else if(n<=k+1)out.push(g[Math.min(i,k)]);
+    else out.push(i%2===0?g[0]:g[1+((i-1)/2|0)%k]);}
+  return out;}
+/* Protein, g per kg: the most any of the goals asks for. */
+function proteinOf(p){return Math.max.apply(null,goalsOf(p).map(function(k){return GOALS[k].protein;}));}
+
 function goalOf(k){return GOALS[k]||GOALS.maintain;}
 function trainOf(k){return TRAIN[goalOf(k).train]||TRAIN.hyp;}
 
-export {GOAL_ORDER, GOALS, goalOf, TRAIN, trainOf};
+export {dayGoals, EXTRA_MAX, EXTRA_OK, GOAL_ORDER, GOALS, goalOf, goalsOf, proteinOf, TRAIN, trainOf};

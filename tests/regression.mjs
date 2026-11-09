@@ -4210,6 +4210,45 @@ await test("Settings (owner, 9 Nov review): You keeps Save in reach while it scr
   const cut=await page.$$eval('#sheet .seg-b',a=>a.filter(b=>b.scrollWidth>b.clientWidth+1).map(b=>b.textContent));
   eq(cut,[],"no choice cut short in Arabic");
 });
+await test("Assessment (owner, 9 Nov): a main goal and up to two more, the days taking turns between them; a muscle or its parts to bring up, each part given an exercise that works it",async page=>{
+  const go=async(step)=>{await page.evaluate(async st=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");
+    V.asd.step=A.STEPS.indexOf(st);(await import("/js/ui/render.js")).render();},step);await pause(page,250);};
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");
+    V.asd=A.draftFrom();Object.assign(V.asd,{age:30,height:180,weight:82,days:3,wd:[],goal:"gain",gear:"gym"});V.assess=true;});
+  await go("goal");
+  eq(await page.$$eval('[data-asm^="goals2|"]',a=>a.map(b=>b.getAttribute("data-asm").split("|")[1])),["strength","athletic","endurance","mobility"],"the goals that combine, the main one left out");
+  await page.tap('[data-asm="goals2|strength"]');await pause(page,150);
+  await page.tap('[data-asm="goals2|endurance"]');await pause(page,150);
+  await page.tap('[data-asm="goals2|mobility"]');await pause(page,200);
+  eq(await ev(page,"V.asd.goals2"),["strength","endurance"],"two at most");
+  await page.tap('[data-asm="goals2|endurance"]');await pause(page,150);
+  
+  await go("focus");
+  await page.tap('[data-asm="focus|Shoulders.side"]');await pause(page,120);
+  await page.tap('[data-asm="focus|Shoulders.rear"]');await pause(page,120);
+  await page.tap('[data-asm="focus|Chest"]');await pause(page,120);
+  await page.tap('[data-asm="focus|Chest.upper"]');await pause(page,120);
+  eq(await ev(page,"V.asd.focus"),["Shoulders.side","Shoulders.rear","Chest.upper"],"a part replaces its whole muscle");
+  await page.tap('[data-asm="focus|Back"]');await pause(page,120);
+  await page.tap('[data-asm="focus|Glutes.max"]');await pause(page,200);
+  eq(await ev(page,"V.asd.focus.length"),4,"three muscles at most, any of their parts");
+  
+  await go("result");for(let i=0;i<20&&!(await page.$('[data-asuse]'));i++)await pause(page,250);
+  await page.tap('[data-asuse]');await pause(page,700);
+  const r=await page.evaluate(async()=>{const st=await import("/js/state.js"),P=await import("/js/data/parts.js"),S=st.S,sp=st.split();
+    const days=sp.days.filter(d=>d.ex.length);
+    return {g2:S.profile.goals2,goals:days.map(d=>d.goal),
+      mainHi:days.map(d=>{const e=d.ex.find(x=>x.lo);return e?e.hi:null;}),
+      parts:["Shoulders.side","Shoulders.rear","Chest.upper"].map(pid=>days.some(d=>d.ex.some(e=>P.works(e.name,pid))))};});
+  eq(r.g2,["strength"],"kept on the profile");
+  eq(r.goals,["gain","strength","gain"],"the days take turns: muscle, strength, muscle");
+  if(!(r.mainHi[1]<r.mainHi[0]))throw new Error("the strength day's first lift is not heavier (fewer reps): "+JSON.stringify(r.mainHi));
+  eq(r.parts,[true,true,true],"each part has an exercise that works it");
+  await tapTab(page,"train");await pause(page,300);
+  await page.evaluate(()=>{const b=document.createElement("button");b.setAttribute("data-tplan","program");document.querySelector("#app").appendChild(b);b.click();});await pause(page,900);
+  eq(await page.$$eval('#app .dgoal',a=>a.map(x=>x.textContent)),["Build muscle","Get stronger","Build muscle"],"each day says its goal");
+  
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

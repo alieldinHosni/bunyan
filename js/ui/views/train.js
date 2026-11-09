@@ -6,6 +6,7 @@
 import {hb} from "../haptic.js";
 import {t, tm} from "../../i18n/dict.js";
 import {alsoKnown, empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} from "../../data/exercises.js";
+import {GOALS} from "../../data/goals.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
 import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../state.js";
@@ -832,6 +833,8 @@ function builderBody(sp,id,inline){
      +(roD?'<button class="drm" data-rmday="'+d.id+'" aria-label="'+esc(t("Remove")+" "+planName(d.name))+'"><i>'+XSVG+'</i></button>':'')
      +'<button class="dmain" data-day="'+d.id+'"><span class="bnum">'+(i+1)+'</span>'
      +'<span class="dtext"><span class="drow-n">'+esc(planName(d.name))+'</span>'
+     /* With more than one goal, the goal this day serves (js/engine/plan.js d.goal). */
+     +(full&&d.goal&&GOALS[d.goal]?'<span class="dgoal">'+esc(t(GOALS[d.goal].label))+'</span>':'')
      +'<span class="drow-s">'+(full?d.ex.length+' '+t(d.ex.length===1?"exercise":"exercises")+'<i class="ddot"></i>~'+estMinutes(d)+' '+t("min")
         :'<em>'+t("Tap to add exercises")+'</em>')+'</span></span>'
      +'<span class="ico ico-chev" aria-hidden="true"></span></button>'

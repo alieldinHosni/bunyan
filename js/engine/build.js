@@ -44,6 +44,7 @@
 import {EXDB, isCompound, LIB, movementOfEx, muscleOf, secondaryOf} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {RANGE} from "../coach/landmarks.js";
+import {focusMuscles, focusParts, works} from "../data/parts.js";
 
 var BIG=["Chest","Back","Quads","Shoulders","Hamstrings","Glutes"];
 var GROUP={Chest:"push",Shoulders:"push",Triceps:"push",Back:"pull",Biceps:"pull",
@@ -54,7 +55,7 @@ var TIMED=/plank|hold|hang|wall sit|bridge hold|isometric|stretch/i;
 /* Weekly hard sets each muscle is built to. */
 function targets(p,train){
   var r=RANGE[p.level]||RANGE.some,lo=r[0],hi=r[1],mid=Math.round((lo+hi)/2);
-  var slow=(+p.sleep>0&&+p.sleep<6)||p.stress==="high",focus=p.focus||[],out={};
+  var slow=(+p.sleep>0&&+p.sleep<6)||p.stress==="high",focus=focusMuscles(p.focus),out={};
   BIG.concat(["Biceps","Triceps"]).forEach(function(m){
     var t=train==="hyp"?mid:lo;
     if(slow)t=lo;
@@ -92,7 +93,7 @@ function spaced(pos,k){
    leg day. The core goes on the lightest days. */
 var UNITS={push:["Chest","Shoulders","Triceps"],pull:["Back","Biceps"],legs:["Quads","Hamstrings","Glutes","Calves"]};
 function place(T,pos,p){
-  var n=pos.length,focus=p.focus||[],names=Object.keys(UNITS);
+  var n=pos.length,focus=focusMuscles(p.focus),names=Object.keys(UNITS);
   var opts=names.map(function(u){
     var f=2;UNITS[u].forEach(function(m){if(T[m])f=Math.max(f,Math.ceil(T[m]/SESSION));});
     /* Three days or fewer, each a rest day apart: every muscle every session, the whole
@@ -178,6 +179,23 @@ function candidates(m,gear,p,h){
     out=out.concat(wide.filter(function(c){return !kinds[c.mv];}).slice(0,3));
   return out;}
 
+/* The exercises for one part of a muscle ("Shoulders.side": js/data/parts.js), from the
+   whole library whichever muscle it files them under, with the same rules as above. */
+function partCandidates(pid,gear,p,h){
+  var fam=h.familiar(),favs=h.favs||[],skip=h.skip||[],pool=h.pool||{},out=[],core=pid.indexOf("Core.")===0;
+  LIB.forEach(function(l){
+    var n=l[0];
+    if(isActivity(n)||skip.indexOf(n)>=0||!works(n,pid)||!h.usable(n,gear)||h.avoids(n,h.limits||p.limits||[]))return;
+    var v=EXDB&&EXDB[n]||{},mv=movementOfEx(n),fav=favs.indexOf(n)>=0;
+    if(NOT_MV[mv]||v.p==="Mobility"||v.p==="Conditioning")return;
+    if(TIMED.test(n)&&!core)return;
+    if(ODD.test(n)&&!fav&&!fam[n])return;
+    if((v.d==="Advanced"||v.d==="Expert")&&!h.skilled&&!fav)return;
+    var sc=(fav?8:0)+(fam[n]?4:0)+(pool[n]?3:0)+(v.d==="Beginner"?0.5:0)-(/ - |\(/.test(n)&&!pool[n]&&!fam[n]?1:0);
+    if(v.e==="Bodyweight"&&(!gear||gear.some(function(g){return g!=="Bodyweight";})))sc-=2;
+    out.push({n:n,sc:sc,c:isCompound(n),mv:mv,x:secondaryOf(n)||[],m:muscleOf(n)});});
+  return out.sort(function(a,b){return b.sc-a.sc||(a.n<b.n?-1:1);});}
+
 function dayName(muscles){
   var g={};muscles.forEach(function(m){g[GROUP[m]]=1;});
   var push=g.push,pull=g.pull,legs=g.legs;
@@ -192,7 +210,7 @@ function buildWeek(p,gear,h){
   var n=Math.max(1,Math.min(6,+p.days||3));
   var pos=(p.wd&&p.wd.length?p.wd.slice(0,7).map(Number):h.weekdays(n)).slice().sort(function(a,b){return a-b;});
   n=pos.length;
-  var train=h.train(p.goal),T=targets(p,train),pl=place(T,pos,p),focus=p.focus||[];
+  var train=h.train(p.goal),T=targets(p,train),pl=place(T,pos,p),focus=focusMuscles(p.focus);
   var CANDS={},used={},usedMv={},credit={},ex=pos.map(function(){return [];}),mins=pos.map(function(){return 0;});
   var budget=Math.max(25,(+p.mins||60)-8);
   Object.keys(T).forEach(function(m){CANDS[m]=candidates(m,gear,p,h);usedMv[m]={};credit[m]=0;});
@@ -237,6 +255,20 @@ function buildWeek(p,gear,h){
     x.days.forEach(function(d){
       if(T[m]-credit[m]<1.5)return;
       if((onDay[d][m]||0)<x.sets-1.5&&ex[d].filter(function(e){return e.muscle===m;}).length<3)add(m,d,false);});});
+  /* Each part they asked for (the side of the shoulder, the upper chest) has an exercise
+     that works it, first in its day: on the day that trains its muscle with the most time
+     left, else the lightest day. One that the week already holds is marked first instead. */
+  focusParts(p.focus).forEach(function(pid){
+    var m=pid.split(".")[0],have=null;
+    ex.forEach(function(list){list.forEach(function(e){if(!have&&works(e.name,pid))have=e;});});
+    if(have){have.f=true;return;}
+    var pick=partCandidates(pid,gear,p,h).filter(function(c){return !used[c.n];})[0];
+    if(!pick)return;
+    var ds=pos.map(function(_,i){return i;}).filter(function(i){return onDay[i][m];});
+    if(!ds.length)ds=pos.map(function(_,i){return i;});
+    var d=ds.sort(function(a,b){return mins[a]-mins[b];})[0];
+    var dose=h.dose(pick.n);used[pick.n]=1;mins[d]+=dose.sets*((dose.rest||75)+35)/60;
+    ex[d].push({name:pick.n,muscle:pick.m&&pick.m!=="Other"?pick.m:m,sets:dose.sets,c:pick.c,f:true});});
   var days=pos.map(function(wd,i){
     var e=ex[i];
     /* The priority first, then multi-joint before single-joint (the textbook's order). */

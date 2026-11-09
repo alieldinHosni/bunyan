@@ -8,7 +8,7 @@ import {spreadWd} from "./schedule.js";
 import {addProgram, makeProgram, S, saveDB} from "../state.js";
 import {num, uid} from "../util.js";
 import {t} from "../i18n/dict.js";
-import {goalOf, GOALS, trainOf} from "../data/goals.js";
+import {dayGoals, goalOf, GOALS, goalsOf, trainOf} from "../data/goals.js";
 import {JUDGED, RANGE, rangeFor, weeklySets} from "./volume.js";
 import {BY_ADAPTATION} from "../knowledge/acute-variables.js";
 import {fitDose, rulesFor} from "./conditions.js";
@@ -269,8 +269,17 @@ function shapePlan(plan,p,gear){
   var swaps=[];KEEP=[];MAINS=[];
   /* Nordic curls and pistols are not a stand-in for someone in their first years. */
   SKILLED=p.level==="experienced"||p.level==="advanced";SUBS={};
+  /* With more than one goal, each training day serves one of them in turn, in week order
+     (js/data/goals.js dayGoals, the textbook's undulating plan): it is dosed by that
+     goal's style and gets that goal's addition, and says which it is (d.goal). */
+  var multi=goalsOf(p).length>1,tds=plan.days.filter(function(d){return d.ex.length;});
+  var byWeek=tds.slice().sort(function(a,b){return num((a.wd||[])[0])-num((b.wd||[])[0]);});
+  var DG=dayGoals(p,byWeek.length),goalFor=function(d){var i=byWeek.indexOf(d);return i>=0?DG[i]:p.goal;};
+  var T0=T,AD0=AD;
   plan.days.forEach(function(d){
     if(!d.ex.length)return;
+    var gk=multi?goalFor(d):p.goal,T=multi?trainOf(gk):T0,AD=multi?adaptOf(gk):AD0;
+    if(multi)d.goal=gk;else delete d.goal;
     var taken={};d.ex.forEach(function(e){taken[e.name]=1;});
     d.ex=d.ex.map(function(e){
       if(isActivity(e.name)||(usable(e.name,gear)&&!avoids(e.name,limits)))return e;
@@ -300,7 +309,7 @@ function shapePlan(plan,p,gear){
          the main lift, and no longer than the range for the rest. */
       if(AD){e.sets=within(e.sets,AD.sets);
         e.rest=main?within(e.rest,AD.restS):Math.min(e.rest,num(AD.restS&&AD.restS.max)||e.rest);
-        if(AD.restS&&e.rest<num(AD.restS.min)&&ADAPT[goalOf(p.goal).train]==="stabilization_endurance")e.rest=num(AD.restS.min);}
+        if(AD.restS&&e.rest<num(AD.restS.min)&&ADAPT[goalOf(gk).train]==="stabilization_endurance")e.rest=num(AD.restS.min);}
       });
     /* A health question ticked in the assessment (the PAR-Q+ topics): low and moderate
        effort only until a professional clears it, so no jumps and no intervals. */
@@ -460,7 +469,10 @@ function logged(){
   var o={};(S.sessions||[]).forEach(function(s){(s.entries||[]).forEach(function(e){if(e&&e.name)o[e.name]=1;});});
   return o;}
 function builtProgram(p,gear){
-  var w=buildWeek(p,gear,{usable:usable,avoids:avoids,limits:limitsOf(p),familiar:logged,train:function(g){return goalOf(g).train;},
+  var w=buildWeek(p,gear,{usable:usable,avoids:avoids,limits:limitsOf(p),familiar:logged,
+    /* Built to the volume of size training when any of the goals is that (js/data/goals.js
+       goalsOf): its days need the sets, the other goals' days dose the same skeleton. */
+    train:function(g){return goalsOf(p).some(function(k){return goalOf(k).train==="hyp";})?"hyp":goalOf(g).train;},
     pool:familiar(),dose:function(n){return doseFor(n,p);},
     favs:S.favs||[],skip:S.skip||[],skilled:p.level==="experienced"||p.level==="advanced",weekdays:spreadWd});
   var plan=makeProgram({id:BUILT,from:BUILT,name:w.name,days:w.days.map(function(d){
@@ -475,8 +487,8 @@ function generatePlan(id){
   id=id||BUILT;
   var base=id===BUILT?null:PRESETS().filter(function(x){return x.id===id;})[0];
   var plan=base?makeProgram(base):builtProgram(p,S.gear);
-  plan.tag=L.label.toLowerCase()+" · "+G.label.toLowerCase()+" · "+p.days+" days";
-  plan.meta={goal:p.goal,phase:G.label,swaps:shapePlan(plan,p,S.gear)};
+  plan.tag=L.label.toLowerCase()+" · "+goalsOf(p).map(function(k){return GOALS[k].label.toLowerCase();}).join(" + ")+" · "+p.days+" days";
+  plan.meta={goal:p.goal,goals2:goalsOf(p).slice(1),phase:G.label,swaps:shapePlan(plan,p,S.gear)};
   plan.days.forEach(function(d){d.ex.forEach(function(e){if(!e.id)e.id=uid();});});
   return plan;}
 function buildPlan(id){
