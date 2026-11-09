@@ -3843,3 +3843,24 @@ Tests: four new workout tests. Each fails on the old code and passes now.
   "Feel today" now measures the glide (no late step over 8 px).
 - Tests updated for the new layout: the swipe test aims at the set line (the number boxes
   never start a swipe), and the bodyweight record test looks for the star toast.
+
+## Fix round, 9 Nov — branch session/fixes3 (CACHE v241)
+
+- **A missed day that fits nowhere** (owner: "Let it go should be Skip, option to log it, or to adjust
+  the whole week or a training day to fix the issue and the volume"):
+  - `rebalanceWeek` returns `adjust` when nothing fits, or some muscles are left over:
+    - `adjust.move`: the free day ahead whose neighbours train those muscles least, naming them;
+    - `adjust.fold`: the key lifts onto the days left anyway, time limit set aside, with each day's
+      extra minutes.
+  - The card offers Adjust the week (main), I trained it: log it, Skip. "Let it go" is now Skip
+    everywhere.
+  - The `missadj` sheet shows each choice with the rule it bends; the choice goes through
+    `missApply(kind,true)`, with Undo.
+- **Intensity words**: an explicit `.act-int label.hap` centring rule as well as the zero-weight
+  default. The owner's screenshot most likely predates v240, which already centred them (test
+  -14 px → 0).
+- **My programs flashing on iPhone**: no flash in Chromium. Recorded tap, swipe and open frame by
+  frame; nothing jumps. The rows are frosted glass inside a page that slides, and Safari redraws a
+  backdrop blur when a transformed layer comes to rest. The templates beside them, opaque, never
+  flashed. The program rows are now solid (`--glass-solid`), with no backdrop blur. To confirm on
+  the phone.

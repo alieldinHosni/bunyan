@@ -22,6 +22,7 @@ import {fuzzyRank, tokenMatch} from "../engine/text.js";
 import {groupLabel, groupRun, ivText, mmss, platePlan, rowsFor} from "./views/session.js";
 import {sessionById, ensureSessionIds, dayOf, dayRec, S, split} from "../state.js";
 import {blockNow} from "../engine/blocks.js";
+import {missedNow} from "../engine/missed.js";
 import {friends, snapStats} from "../engine/share.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {dfmt, esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
@@ -622,6 +623,22 @@ function vSheet(){
       b+=hb('<button class="trow" data-pastday="'+esc(pd)+'|'+esc(d.id)+'"><span><span class="trow-n">'+esc(planName(d.name))+'</span>'
        +'<span class="trow-s"><span class="num">'+d.ex.length+'</span> '+esc(t("exercises"))+'</span></span>'
        +(was?'<span class="tnext best">'+t("Planned")+'</span>':'<span class="ico ico-chev" aria-hidden="true"></span>')+'</button>');});
+    b+='</div>';
+  }
+  else if(V.sheet==="missadj"){
+    /* Making a missed day up when nothing fits by the rules (owner, 9 Nov): train it on a
+       free day, or put its key lifts into the days left, each with its cost said. */
+    var mr=missedNow(),MA=mr&&mr.adjust,nW=function(x){return x.replace(/\d+/g,'<span class="num">$&</span>');},wdL=function(d){return d===today()?t("today"):dfmt(new Date(d+"T00:00:00"),{weekday:"long"});};
+    b='<div class="se-top"><span class="se-k">'+esc(t("Coach"))+'</span><h2>'+esc(t("Make up {a}").replace("{a}",mr?planName(mr.missed.name):""))+'</h2>'
+     +'<p class="shsub">'+esc(t("Pick how to fit it in. Each choice bends one rule, and says which."))+'</p></div><div class="card tdays">';
+    if(MA&&MA.move){var nr=MA.move.near;
+      b+=hb('<button class="trow'+(nr.length?' warn':'')+'" data-missadj="move"><span><span class="trow-n">'
+       +esc(MA.move.to===today()?t("Train it today"):t("Train it on {d}").replace("{d}",wdL(MA.move.to)))+'</span>'
+       +'<span class="trow-s"><span class="trow-r'+(nr.length?'':' ok')+'">'+esc(nr.length?t("No rest day between it and {x}").replace("{x}",nr.map(function(n){return planName(n.name)+" ("+wdShort(n.date)+")";}).join(t(" and "))):t("A rest day either side"))+'</span></span></span></button>');}
+    if(MA&&MA.fold){
+      b+=hb('<button class="trow warn" data-missadj="fold"><span><span class="trow-n">'+esc(t("Add its key lifts to the days left"))+'</span>'
+       +'<span class="trow-s">'+MA.fold.adds.map(function(a){return nW(esc(t("{x}, {n} sets, {w}").replace("{x}",exName(a.name)).replace("{n}",a.sets).replace("{w}",wdL(a.date))));}).join("<br>")
+       +'<br><span class="trow-r">'+MA.fold.mins.map(function(m){return nW(esc(t("{d} about {n} min longer").replace("{d}",wdL(m.date)).replace("{n}",m.mins)));}).join(" · ")+'</span></span></span></button>');}
     b+='</div>';
   }
   else if(V.sheet==="swapday"){

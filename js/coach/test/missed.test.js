@@ -34,6 +34,18 @@ function run(t){
   t.ok(k.adds.every(function(a){return a.name!=="Curl";}),"a single-joint lift is not carried");
   var tight=rebalanceWeek(Object.assign({days:w4},base,{budget:38}));
   t.eq([tight.kind,tight.left],["none",["Back"]],"no day has the time: let it go, and say which muscle");
+  /* Nothing fits (owner, 9 Nov: "adjust the whole week or a training day"): the lift
+     goes in anyway, the time limit set aside, and says how much longer the day gets. */
+  t.eq([tight.adjust.fold.adds.map(function(a){return [a.date,a.name,a.sets];}),tight.adjust.fold.mins],
+    [[["2026-11-03","Row",2]],[{date:"2026-11-03",mins:5}]],"adjust: the row on Tuesday anyway, 5 min longer");
+  t.eq(tight.adjust.move,undefined,"no free day ahead: no move to offer");
+  /* A free day ahead, but beside back work: the move is offered, naming the day it crowds. */
+  /* Pull missed Thursday; Friday, the one day left, sits before next week's Pull. */
+  var w5=week([null,["Push",PUSH,true],null,["Legs",LEGS,true],null,null,["Pull",PULL],null,["Pull",PULL]]);
+  var m5=rebalanceWeek(Object.assign({},base,{days:w5,today:"2026-11-06"}));
+  t.eq(m5.kind!=="move"&&!!m5.adjust,true,"no clean move: adjust offered");
+  t.eq([m5.adjust.move.to,m5.adjust.move.near.length],["2026-11-06",1],"the free day with fewest clashing neighbours, and the one it crowds");
+  t.eq(k.adjust,undefined,"a clean fold needs no adjust");
   t.eq(rebalanceWeek(Object.assign({days:week([null,["Push",PUSH,true],null,null,null,null,null,null,null])},base)),null,"nothing missed: nothing");
   t.clean(k,"clean");}
 

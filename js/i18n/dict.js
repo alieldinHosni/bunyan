@@ -5,7 +5,18 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"As many as you can": "أكتر عدد تقدر عليه",
+var AR={"Adjust the week": "عدّل الأسبوع",
+"Nothing fits this week without breaking a rest day or making a session too long. You can still make it up, or skip it.": "مفيش حاجة تدخل الأسبوع ده من غير ما نكسر يوم راحة أو نطوّل تمرينة زيادة. لسه تقدر تعوّضه، أو تتخطاه.",
+"Skipped. The plan carries on.": "اتخطيناه. الخطة مكملة.",
+"Make up {a}": "عوّض {a}",
+"Pick how to fit it in. Each choice bends one rule, and says which.": "اختار إزاي تدخّله. كل اختيار بيكسر قاعدة واحدة، وبيقولك هي إيه.",
+"Train it today": "اتمرنه النهارده",
+"Train it on {d}": "اتمرنه يوم {d}",
+"No rest day between it and {x}": "مفيش يوم راحة بينه وبين {x}",
+"A rest day either side": "يوم راحة قبله وبعده",
+"Add its key lifts to the days left": "ضيف تمارينه الأساسية على الأيام الباقية",
+"{d} about {n} min longer": "{d} أطول بحوالي {n} دقيقة",
+"As many as you can": "أكتر عدد تقدر عليه",
 "What it means": "يعني إيه",
 "Reps in reserve": "العدّات اللي تسيبها",
 "Seconds for each part of a rep: lowering, the pause at the bottom, lifting, the pause at the top. 4-2-1-1 is four seconds down, two held, one up, one at the top. Slow lowering builds control.": "ثواني كل جزء من العدّة: النزول، الوقفة تحت، الطلوع، الوقفة فوق. 4-2-1-1 يعني أربع ثواني نزول، اتنين ثبات، واحدة طلوع، وواحدة فوق. النزول البطيء بيبني التحكم.",
