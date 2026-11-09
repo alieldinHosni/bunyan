@@ -12,7 +12,7 @@
      body     the weigh-ins and measurements, oldest first: [{date, weight, waist, …}]
      energy   the maintenance the person chose to build their targets on, or null:
               {kcal, at} (js/engine/energy.js) */
-import {goalOf} from "../data/goals.js";
+import {goalOf, proteinOf} from "../data/goals.js";
 import {num, r1} from "../util.js";
 
 function daysBetween(a,b){
@@ -85,13 +85,13 @@ function targetKcalOf(profile,body,energy){
   if(fl==null)return null;
   var td=tdeeOf(p,body,energy);
   return Math.max(fl,td+changeOf(p.goal,td));}
-/* Protein, g/day, from the goal's g/kg (js/data/goals.js). Above a BMI of 30 it is
+/* Protein, g/day, from the g/kg the goals ask for, the highest of them (js/data/goals.js proteinOf). Above a BMI of 30 it is
    scaled from the weight at a BMI of 27, since protein needs follow lean mass, not
    total mass. */
 function proteinFor(profile,kg){
   var h=num((profile||{}).height)/100;kg=num(kg);
   if(h>1&&kg/(h*h)>30)kg=27*h*h;
-  return Math.round(kg*goalOf((profile||{}).goal).protein);}
+  return Math.round(kg*proteinOf(profile));}
 /* The whole day's targets: energy, then protein, then fat as the goal's share of the
    energy, carbs with what is left (never under 50 g). Water is 35 ml per kg, rounded
    to a glass. Steps only where the goal leans on them. null when targetKcalOf is:

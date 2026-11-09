@@ -10,7 +10,8 @@
    is shown is exactly what "Use this plan" would do. Every number on it says where
    it came from. */
 import {t, tm} from "../../i18n/dict.js";
-import {GOAL_ORDER, GOALS, goalOf, trainOf} from "../../data/goals.js";
+import {EXTRA_MAX, EXTRA_OK, GOAL_ORDER, GOALS, goalOf, goalsOf, trainOf} from "../../data/goals.js";
+import {focusMuscles, partLabel, partsOf} from "../../data/parts.js";
 import {BUILT, dayMinutes, generatePlan, LEVELS, splitCandidates} from "../../engine/plan.js";
 import {wdName, weekOrder} from "../../engine/schedule.js";
 import {lastWeight, macroTargets, tdee} from "../../engine/formulas.js";
@@ -69,7 +70,7 @@ function draftFrom(){
     weight:lastWeight()||num(p.weight)||"",goal:GOALS[p.goal]?p.goal:"lose",level:LEVELS[p.level]?p.level:"some",
     days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),conds:(p.conds||[]).slice(),faults:(p.faults||[]).slice(),lapse:p.lapse||"steady",
     meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",likes:(pr.likes||[]).slice(),
-    sleep:num(p.sleep)||7.5,stress:p.stress||"normal",wd:(p.wd||[]).map(Number),focus:(p.focus||[]).slice(),
+    sleep:num(p.sleep)||7.5,stress:p.stress||"normal",wd:(p.wd||[]).map(Number),focus:(p.focus||[]).slice(),goals2:goalsOf(p).slice(1),
     nolift:NOLIFT.filter(function(n){return (S.skip||[]).indexOf(n)>=0;}),split:null,done:false};}
 
 /* The profile the draft describes. */
@@ -79,7 +80,8 @@ function profileOf(a){
     health:(a.health||[]).slice(),lapse:a.lapse||"steady",lapseAt:a.lapse&&a.lapse!=="steady"?today():null,faults:(a.faults||[]).slice(),faultsAt:(a.faults||[]).length?today():null,conds:(a.conds||[]).filter(function(c){return a.sex==="f"||!/^pregnancy/.test(c);}),sleep:num(a.sleep),stress:a.stress||"normal",
     /* The day high stress or short sleep was said, for the coach's follow-up (js/engine/stress.js). */
     stressAt:a.stress==="high"||(num(a.sleep)>0&&num(a.sleep)<6)?today():null,
-    wd:(a.wd||[]).length>=2?a.wd.map(Number).sort(function(x,y){return x-y;}):[],focus:(a.focus||[]).slice(0,FOCUS_MAX)};}
+    wd:(a.wd||[]).length>=2?a.wd.map(Number).sort(function(x,y){return x-y;}):[],focus:(a.focus||[]).slice(),
+    goals2:goalsOf({goal:a.goal,goals2:a.goals2}).slice(1)};}
 /* What "Never suggest" holds once the answers are used: the lifts they ticked, and none
    of the ones they unticked. */
 function skipOf(a){
@@ -158,8 +160,15 @@ function body(a){
      +'<label><span>'+t("Height (cm)")+'</span><input id="as_height" type="number" inputmode="numeric" value="'+esc(String(a.height))+'"></label>'
      +'<label><span>'+t("Weight")+' ('+wUnit()+')</span><input id="as_weight" type="number" inputmode="decimal" step="0.1" value="'+(num(a.weight)?toDisp(num(a.weight)):"")+'"></label></div>';}
   else if(s==="goal"){
-    h+=q(t("What are you after most?"),t("One main goal. The plan is built around it; you can change it any time."));
-    h+='<div class="ascards">'+GOAL_ORDER.map(function(k){return card("goal",k,t(GOALS[k].label),t(GOALS[k].desc),a.goal===k);}).join("")+'</div>';}
+    h+=q(t("What are you after most?"),t("One main goal. It sets your food and most of your training days; you can change it any time."));
+    h+='<div class="ascards">'+GOAL_ORDER.map(function(k){return card("goal",k,t(GOALS[k].label),t(GOALS[k].desc),a.goal===k);}).join("")+'</div>';
+    /* Up to two more (owner, 9 Nov). Each gets training days of its own in turn with the
+       main one, the textbook's undulating plan; the food stays the main goal's, so the
+       goals that are about calories are main goals only (js/data/goals.js). */
+    var g2=goalsOf({goal:a.goal,goals2:a.goals2}).slice(1);
+    h+=lbl(t("Also training for (optional, up to two)"))
+     +'<div class="aschips">'+EXTRA_OK.filter(function(k){return k!==a.goal;}).map(function(k){return chip("goals2",k,t(GOALS[k].label),g2.indexOf(k)>=0,true);}).join("")+'</div>'
+     +'<p class="as-note">'+esc(t(g2.length?"Your training days take turns: the main goal on most of them, each other goal on days of its own, with its own reps, rest and extras. Your food follows the main goal.":"Pick one or two if you want more than one thing from your training. The days then take turns between them."))+'</p>';}
   else if(s==="level"){
     h+=q(t("How long have you been lifting?"),t("Consistently, not counting long breaks."));
     var LD={new:"New to lifting.",some:"Training regularly for six months or more.",
@@ -191,8 +200,17 @@ function body(a){
      +card("gear","home",t("At home, with dumbbells"),t("Dumbbells, bands or a kettlebell, and a bench or a chair."),a.gear==="home")
      +card("gear","bw",t("Bodyweight only"),t("The floor, and a bar or a door frame to pull on if you have one."),a.gear==="bw")+'</div>';}
   else if(s==="focus"){
-    h+=q(t("What do you want to bring up?"),t("Up to three. They get more weekly sets and go first in their session, while you are fresh."));
-    h+='<div class="aschips">'+FOCUS.map(function(x){return chip("focus",x[0],tm(x[1]).trim(),(a.focus||[]).indexOf(x[0])>=0,true);}).join("")+'</div>';
+    h+=q(t("What do you want to bring up?"),t("Up to three muscles. Pick the whole muscle, or the parts of it you want most. They get more weekly sets and go first in their session, while you are fresh."));
+    /* Each muscle, then its parts (owner, 9 Nov: "the three shoulder muscles, and the
+       same for the other muscles"): a part gets an exercise that works it, first in its
+       day (js/data/parts.js, js/engine/build.js). The whole and its parts replace one
+       another. */
+    var fo=a.focus||[];
+    h+='<div class="asfocus">'+FOCUS.map(function(x){
+      var m=x[0],ps=partsOf(m),whole=fo.indexOf(m)>=0,some=fo.some(function(f){return f.indexOf(m+".")===0;});
+      return '<div class="asf'+(whole||some?' on':'')+'"><div class="asf-h">'+esc(tm(x[1]).trim())+'</div><div class="aschips">'
+       +chip("focus",m,ps.length?t("All of it"):tm(x[1]).trim(),whole,true)
+       +ps.map(function(pp){return chip("focus",pp.id,t(pp.label),fo.indexOf(pp.id)>=0,true);}).join("")+'</div></div>';}).join("")+'</div>';
     h+=lbl(t("Lifts you won't do (optional)"))+'<div class="aschips">'+NOLIFT.map(function(n){
         return chip("nolift",n,exName(n),(a.nolift||[]).indexOf(n)>=0,true);}).join("")+'</div>'
      +'<p class="as-note">'+t("Left out of your plan, and never suggested. Exercises you have starred are used first. Both can be changed any time from an exercise's menu.")+'</p>';}
@@ -265,7 +283,7 @@ function builtWhy(a,plan){
   var x=t(p.wd.length?"Built on the days you gave":"Built from your answers")+": "
     +t(twice?"each muscle trained {n} times a week, with a rest day between sessions on it.":"the whole body each session, with a rest day between.")
       .replace("{n}",Math.max.apply(null,Object.keys(fr).map(function(m){return fr[m];}).concat([1])));
-  if(p.focus.length){var fm=p.focus.map(function(m){return tm(m).trim();}),and=S.prefs.lang==="ar"?" و":" and ";
+  if(p.focus.length){var fm=p.focus.map(function(m){return m.indexOf(".")>0?t(partLabel(m)):tm(m).trim();}),and=S.prefs.lang==="ar"?" و":" and ";
     x+=" "+t(fm.length>1?"More for {m}, and they go first in their sessions.":"More for {m}, and it goes first in its sessions.")
       .replace("{m}",fm.length>1?fm.slice(0,-1).join(S.prefs.lang==="ar"?"، ":", ")+and+fm[fm.length-1]:fm[0]);}
   if(p.stress==="high"||(p.sleep>0&&p.sleep<6))x+=" "+t("Volume at the bottom of the range while sleep or stress slow recovery.");

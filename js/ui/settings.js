@@ -17,7 +17,7 @@ import {crashNotes} from "./crashnote.js";
 import {hb} from "./haptic.js";
 import {t} from "../i18n/dict.js";
 import {exName, planName} from "../i18n/exnames.js";
-import {GOAL_ORDER, GOALS} from "../data/goals.js";
+import {EXTRA_OK, GOAL_ORDER, GOALS, goalsOf} from "../data/goals.js";
 import {backupAgeDays, lastWeight} from "../engine/formulas.js";
 import {wdName, weekStart} from "../engine/schedule.js";
 import {buildSnapshot, snapStats} from "../engine/share.js";
@@ -74,6 +74,7 @@ var ACTIVITY=[[1.2,"Desk, no training"],[1.375,"Light, 1-3 days"],[1.4,"Desk plu
 function youSheet(){
   var yp=S.profile,d=V.sd||{};
   var sex=d.p_sex||yp.sex||"m",act=d.p_act!=null?+d.p_act:+yp.activity,goal=d.p_goal||yp.goal;
+  var g2=goalsOf({goal:goal,goals2:d.p_g2||yp.goals2}).slice(1);
   return '<h2>'+t("You")+'</h2><p class="tiny">'+t("These drive your calorie and macro estimates.")+'</p>'
    +'<div class="aftiles ng3 yt">'
    +afTile("p_age",t("Age"),t("yrs"),yp.age,"30","numeric")
@@ -89,6 +90,11 @@ function youSheet(){
    +'<section class="sg"><h3 class="sg-h">'+t("Goal")+'</h3>'
    /* The one list of goals (js/data/goals.js), the same the assessment offers. */
    +choose("p_goal",goal,GOAL_ORDER.map(function(k){return [k,t(GOALS[k].label),t(GOALS[k].desc||"")];}))+'</section>'
+   /* Up to two more, the days taking turns between them (js/data/goals.js). */
+   +'<section class="sg"><h3 class="sg-h">'+t("Also training for")+'</h3><div class="aschips">'
+   +EXTRA_OK.filter(function(k){return k!==goal;}).map(function(k){var on=g2.indexOf(k)>=0;
+      return hb('<button class="aschip'+(on?' on':'')+'" data-ypick2="'+k+'" aria-pressed="'+on+'">'+esc(t(GOALS[k].label))+'</button>');}).join("")
+   +'</div><p class="sg-f">'+esc(t("Up to two. Your training days take turns between your goals; your food follows the main one. Rebuild your plan from the assessment to change the week."))+'</p></section>'
    +'<p class="sg-f">'+t("Your calorie and protein targets are worked out from these, in Food → Plan → Targets.")+'</p>'
    /* Pinned at the foot of the sheet (owner, 9 Nov review): an edit at the top is never
       left unsaved below a long list of goals. */

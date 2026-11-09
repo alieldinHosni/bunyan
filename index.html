@@ -2177,6 +2177,15 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .drows.ro.ed .dmain{padding-inline-start:2px}
 /* A row without its ✕ (out of Edit): the content keeps its distance from the edge. */
 .drow:not(:has(>.drm)) .dmain{padding-inline-start:14px}
+/* The goal a day of the week serves, when there is more than one (views/train.js). */
+.dgoal{display:inline-block;align-self:flex-start;margin:2px 0;padding:1px var(--s2);border-radius:var(--rpill);font-size:11.5px;font-weight:700;
+  color:var(--accentHi);background:rgba(var(--accent-rgb),.12)}
+/* The muscles to bring up, each with its parts (views/assess.js). */
+.asfocus{display:grid;gap:var(--s3)}
+.asf{padding:var(--s3);border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
+.asf.on{border-color:rgba(var(--accentHi-rgb),.55)}
+.asf-h{font-weight:800;font-size:15px;margin-bottom:var(--s2)}
+.asf .aschips{margin:0}
 .bsp .drow-s{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* A rest day in the cycle: a thin row, the name quiet, no second line. */
 .bkday.blank{min-height:46px}

@@ -3911,3 +3911,38 @@ Owner, 9 Nov: "do the same as the workout page with the profile and settings pag
 - **App sheet.** The Home Screen icon note is folded (`details.sg-more`). Test haptics has a Try pill.
 - **Arabic.** "Last set only" is آخر مجموعة, so it fits its button.
 - **Kept as is.** Nutrition row units (kcal, g) stay untranslated, as everywhere else in the app.
+
+## More than one goal, and the parts of a muscle — branch session/goals2 (CACHE v244)
+
+Owner, 9 Nov: "Can I combine between these goals … based on knowledge base and still be able to
+create a customized program, same for the focused muscle … the three shoulder muscles".
+
+- **Goals** (js/data/goals.js): one main goal plus up to two more (`profile.goals2`, from
+  `EXTRA_OK`: gain, strength, athletic, endurance, mobility).
+  - The main goal sets the food. Calories go one way, so lose, recomp and maintain are main goals
+    only.
+  - `proteinOf` is the highest g/kg of the goals (body.js `proteinFor`). retarget.js is left alone:
+    it reproduces old formula versions.
+- **Training** follows the textbook's undulating periodisation (js/knowledge/phases.js: vary day
+  to day "to improve all three adaptations together").
+  - `dayGoals(p,n)`: the main goal on alternate days, the others between; one day each when there
+    are few days.
+  - `shapePlan` doses each training day by its goal's TRAIN and adaptation row, and adds that
+    goal's extra (plyo, cond, mob). It stores `d.goal`, shown as a tag on the program's day rows.
+  - The skeleton is built to hypertrophy volume when any goal is size.
+  - The plan tag lists all the goals.
+- **Parts** (js/data/parts.js): Shoulders front/side/rear; Chest upper/mid/lower; Back
+  lats/upper/lower; Biceps peak/brachialis; Triceps long/outer; Glutes max/medius; Calves
+  standing/seated; Core abs/obliques.
+  - A part is read from the movement's name, in order (incline before bench press).
+  - Focus holds "Muscle.part"; a whole muscle still works.
+  - build.js counts a part for its muscle (`focusMuscles`). Each focused part gets an exercise
+    that works it (`partCandidates`, from the whole library whichever muscle it is filed under),
+    placed on the day that trains its muscle and led first.
+  - The cap is three muscles; a whole muscle and its parts replace one another.
+- **UI:**
+  - Assessment goal step: "Also training for" chips.
+  - Assessment focus step: muscle groups with All of it plus their parts.
+  - The You sheet has "Also training for" too (takes effect when the plan is rebuilt).
+- **Tests:** engine (parts, dayGoals, goalsOf, proteinOf, parts in buildWeek) and a browser test
+  through Apply.

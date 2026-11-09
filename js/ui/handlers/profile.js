@@ -6,6 +6,7 @@ import {weekStart} from "../../engine/schedule.js";
 import {friends, saveFriends} from "../../engine/share.js";
 import {decodePlan, encodePlan, packPlan} from "../../engine/planshare.js";
 import {EXDB, exIdOf, LIB} from "../../data/exercises.js";
+import {EXTRA_MAX, goalsOf} from "../../data/goals.js";
 import {t} from "../../i18n/dict.js";
 import {applyLang, planName} from "../../i18n/exnames.js";
 import {addProgram, adoptRestored, CUR, curProfile, isOwner, makeProgram, migrate, normalize, programById, S, saveDB, setS, switchProfile} from "../../state.js";
@@ -74,7 +75,15 @@ function register(){
      Save, with the three numbers typed beside them. */
   key("ypick",function(D){
     var pk=String(D.ypick).split("|");if(pk.length!==2)return;
-    V.sd=V.sd||{};V.sd[pk[0]]=pk[1];render();return;});
+    V.sd=V.sd||{};V.sd[pk[0]]=pk[1];
+    /* The main goal is not also one of the others. */
+    if(pk[0]==="p_goal"&&V.sd.p_g2)V.sd.p_g2=V.sd.p_g2.filter(function(k){return k!==pk[1];});
+    render();return;});
+  /* The goals trained for besides the main one (js/data/goals.js): up to two, until Save. */
+  key("ypick2",function(D){
+    V.sd=V.sd||{};var l=V.sd.p_g2||(V.sd.p_g2=goalsOf(S.profile).slice(1)),i=l.indexOf(D.ypick2);
+    if(i>=0)l.splice(i,1);else if(l.length>=EXTRA_MAX){toast(t("Up to two more goals. Take one off first."));return;}else l.push(D.ypick2);
+    render();return;});
   key("saveyou",function(){
     var py=S.profile,d=V.sd||{};
     py.age=num(val("p_age"),py.age);
@@ -83,6 +92,7 @@ function register(){
     py.weight=toKg(num(val("p_weight"),toDisp(py.weight)));
     py.activity=num(d.p_act,py.activity);
     py.goal=d.p_goal||py.goal;
+    if(d.p_g2)py.goals2=goalsOf({goal:py.goal,goals2:d.p_g2}).slice(1);
     saveDB();render();toast(t("Saved."));return;});
   /* Test Sound plays the actual rest alarm, not a stand-in. A test that plays a
      different sound from the real one tests nothing the user cares about. */

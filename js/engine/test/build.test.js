@@ -1,6 +1,7 @@
 import {buildWeek, buildTargets} from "../build.js";
 import {EXDB} from "../../data/exercises.js";
 import {PRESETS} from "../../data/splits.js";
+import {works} from "../../data/parts.js";
 
 /* The week built from nothing keeps the rules it is built on (js/engine/build.js): a
    rest day between two sessions on the same muscles, every training day used, nothing
@@ -65,6 +66,16 @@ function run(t){
   t.ok(starred.days.some(function(d){return d.ex.some(function(e){return e.name===fav;});}),"a starred exercise is used");
   var cF=buildWeek({days:4,mins:60,level:"some",goal:"gain",focus:["Shoulders"]},null,helpers());
   var firstOf=cF.days.filter(function(d){return d.ex.some(function(e){return e.muscle==="Shoulders";});})[0];
-  t.eq(firstOf&&firstOf.ex[0].muscle,"Shoulders","the muscle to bring up comes first on its day");}
+  t.eq(firstOf&&firstOf.ex[0].muscle,"Shoulders","the muscle to bring up comes first on its day");
+  /* Parts (owner, 9 Nov): the side and the back of the shoulder each get an exercise that
+     works them, and it leads its day. */
+  var pF=buildWeek({days:3,mins:60,level:"some",goal:"gain",focus:["Shoulders.side","Shoulders.rear"]},null,helpers());
+  ["Shoulders.side","Shoulders.rear"].forEach(function(pid){
+    var d=pF.days.filter(function(d){return d.ex.some(function(e){return works(e.name,pid);});})[0];
+    t.ok(!!d,pid+": an exercise that works it is in the week");
+    if(d){var i=d.ex.findIndex(function(e){return works(e.name,pid);});
+      t.ok(i<=1,pid+": among the first on its day ("+d.ex.map(function(e){return e.name;}).join(", ")+")");}});
+  var pT=buildTargets({level:"some",goal:"gain",focus:["Shoulders.side"]},"hyp");
+  t.ok(pT.Shoulders>plain.Shoulders,"a part brings its muscle's weekly sets up too");}
 
 export {run};
