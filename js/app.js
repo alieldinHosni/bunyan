@@ -39,7 +39,10 @@ import {setStorageErrorHandler} from "./util.js";
 import {syncWbar} from "./ui/wbar.js";
 import {paintRun} from "./ui/run.js";
 import {t} from "./i18n/dict.js";
+import {bootCheck} from "./ui/crashnote.js";
 import {setPeek} from "./ui/datebar.js";
+/* A restart nobody asked for is noted before anything else runs (js/ui/crashnote.js). */
+bootCheck();
 
 /* Read as the finger lands, not on the click: by then Chrome has already taken the
    focus off the field for a tap outside it, and iOS has not. */

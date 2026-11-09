@@ -3864,3 +3864,23 @@ Tests: four new workout tests. Each fails on the old code and passes now.
   backdrop blur when a transformed layer comes to rest. The templates beside them, opaque, never
   flashed. The program rows are now solid (`--glass-solid`), with no backdrop blur. To confirm on
   the phone.
+
+## Restarts nobody asked for, noted — branch session/actlog (CACHE v242)
+
+Owner, 9 Nov: "When I logged Football session today, the app showed a white page, then reloaded."
+
+- **Not reproduced in Chromium.** Tried every path, with and without phone haptics and with animations
+  on: log only, Save and exit, and Finish workout through the finish screen. No page error, no empty
+  #app, and no redraw loop (4 mutations in 2 s).
+- **Likely cause:** a white page and a reload is Safari's recovery when the page's WebContent process
+  dies, usually from memory. The boot watchdog would have left the app's dark background and a
+  `bunyan:booterr`.
+- **What was added:** js/ui/crashnote.js.
+  - `dispatchTap` leaves a trace (`bunyan:last`, the first data key) before each tap.
+  - pagehide and visibility-hidden wipe it.
+  - At launch (`bootCheck`, first thing in app.js), a leftover trace is kept in `bunyan:crash` (last
+    three), with any script error from the 30 s before (`bunyan:lasterr`).
+  - Shown under Settings › About as "Unexpected restarts", only when there is one.
+- **Test:** crashes the renderer (CDP Page.crash) after Log activity and relaunches. The note names
+  `logact` and About shows it. A reload notes nothing.
+- **Next:** when the owner sees it again, read About and fix what it names.

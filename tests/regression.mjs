@@ -4151,6 +4151,27 @@ await test("My programs (owner, 9 Nov): the program rows are solid, not frosted,
   if(!r.length)throw new Error("no program rows");
   if(r.some(x=>x[0]!=="none"||x[2]!==true))throw new Error("a frosted or see-through row: "+JSON.stringify(r));
 });
+await test("A restart nobody asked for (owner, 9 Nov: logging Football showed a white page and reloaded): the next launch notes what was tapped last, shown under About; a reload or putting the app away notes nothing",async(page,env)=>{
+  /* An ordinary reload: nothing noted. */
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).startActivity("Football");});await pause(page,800);
+  await page.reload();await pause(page,1200);
+  eq(await page.evaluate(()=>localStorage.getItem("bunyan:crash")),null,"a reload is not a crash");
+  /* The page's process dies straight after a tap, as Safari's does when it runs out of memory. */
+  await page.tap('[data-logact]');await pause(page,300);
+  const cdp=await env.ctx.newCDPSession(page);cdp.send("Page.crash").catch(()=>{});await new Promise(r=>setTimeout(r,800));
+  const p2=await env.ctx.newPage();p2.on("pageerror",e=>env.errs.push(e.message));
+  await p2.goto(URL_);await p2.waitForTimeout(1500);
+  const notes=await p2.evaluate(()=>JSON.parse(localStorage.getItem("bunyan:crash")||"[]"));
+  eq([notes.length,notes[0]&&notes[0].after],[1,"logact"],"the restart and the tap before it");
+  await p2.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("about");});await p2.waitForTimeout(600);
+  const txt=await p2.textContent("#sheet");
+  if(!/Unexpected restarts/.test(txt)||!/logact/.test(txt))throw new Error("not under About: "+txt.slice(0,300));
+  /* Put away and brought back: still nothing new. */
+  await p2.evaluate(()=>{document.querySelector('[data-close]')&&document.querySelector('[data-close]').click();});
+  await p2.reload();await p2.waitForTimeout(1000);
+  eq(await p2.evaluate(()=>JSON.parse(localStorage.getItem("bunyan:crash")||"[]").length),1,"nothing more after a clean reload");
+  await p2.close();
+},{prefs:{autorest:false}});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

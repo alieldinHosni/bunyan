@@ -13,6 +13,7 @@
      - a row that opens somewhere else has a chevron.
    Nothing here is a native drop-down, and no raw backup text is on screen unless
    asked for. */
+import {crashNotes} from "./crashnote.js";
 import {hb} from "./haptic.js";
 import {t} from "../i18n/dict.js";
 import {exName, planName} from "../i18n/exnames.js";
@@ -326,7 +327,17 @@ function aboutSheet(){
    +'<section class="sg"><h3 class="sg-h">'+t("Privacy")+'</h3><div class="sg-card"><span class="gtile">'+glyph("lock")+'</span><p>'
    +t("Everything lives on this phone only. Nothing is uploaded anywhere. Export a backup every few weeks so a cleared browser cannot cost you your history.")+'</p></div></section>'
    +'<section class="sg"><h3 class="sg-h">'+t("How the numbers work")+'</h3><div class="sg-card"><span class="gtile">'+glyph("info")+'</span><p>'
-   +t("Estimated 1RM uses the Epley formula and is only meaningful up to about 12 reps. Volume is the sum of weight × reps for every set, not an average.")+'</p></div></section>';}
+   +t("Estimated 1RM uses the Epley formula and is only meaningful up to about 12 reps. Volume is the sum of weight × reps for every set, not an average.")+'</p></div></section>'
+   +restartNotes();}
+/* Restarts nobody asked for (js/ui/crashnote.js): when, and what was tapped just before,
+   so the cause can be found. Only shown once there is one. */
+function restartNotes(){
+  var L=crashNotes();if(!L.length)return "";
+  return '<section class="sg"><h3 class="sg-h">'+t("Unexpected restarts")+'</h3><div class="sg-card"><span class="gtile">'+glyph("info")+'</span><p>'
+   +t("The app restarted on its own. What it was doing just before is noted here, on this phone only, so the cause can be found.")
+   +L.map(function(x){var d=new Date(x.at);
+     return '<br><span class="num" dir="ltr">'+esc(d.toLocaleString())+'</span> · '+t("after")+' <code dir="ltr">'+esc(x.after||"?")+'</code>'
+       +(x.err?' · <code dir="ltr">'+esc(x.err)+'</code>':'');}).join("")+'</p></div></section>';}
 
 /* Food's plan page gear: how meals are named (views/food.js). */
 function mealsSheet(){
