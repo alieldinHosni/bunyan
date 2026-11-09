@@ -3809,3 +3809,37 @@ Owner, 5 Nov: "start working on them all" (the 21-point Progress review).
 - Charts: a press held still reads a chart (js/ui/scrub.js) with a bubble and a tick per point, and a tap marks one point. A swipe across a chart is still a swipe. A new range draws its line on again (keyed by range), and figures count to their value (data-count-dp for decimals).
 - Drawings: milestones as eight-pointed stars (khatam), the newest shining once (prefs.msSeen); the month's card with the star; the recap sheet saved as a 1080×1350 picture in the app's colours and type (shared where the phone can share a file, else downloaded).
 - The smoothed line is an exponentially weighted average, a tenth of the way to each weigh-in per day (as the Hacker's Diet draws it). It is for the chart only: the rate against the goal stays the regression. No prescription formula changed.
+
+## Workout page, streamlined — branch session/workout2 (CACHE v240)
+
+Owner's review, 6 Nov. What changed, and why:
+
+- **Ticking chips centre their words** (`label.hap` is inline-flex, centred). Intensity's
+  Easy/Moderate/Hard/All-out sat 14 px high on the iPhone, where the labels wrap the buttons.
+- **The dose is chips under the name**: target reps, reps in reserve, tempo. The set line
+  no longer repeats the reps. Reserve and tempo open a short "What it means" sheet
+  (`openSheet("explain",{k})`). Tempo is kept as one left-to-right run (`dir="ltr"`), or
+  Arabic showed 4-2-1-1 as 1-1-2-4. The same applies in the sheet's text.
+- **Draft reps start inside today's range.** Last time's 8 from an old range no longer opens
+  a 12–20 day (`syncDraft` clamps when the plan has lo/hi and is not timed). Within a
+  workout, the next set still copies the set just done: that is what was lifted.
+- **"Last time" sits beside "Recommended"** in the hint.
+- **How you feel is asked first**, above the set card. It used to sit under the log button,
+  in the middle of logging.
+- **`.wkdock`**: the rest band and the log button share one sticky block at the thumb.
+- **Header progress is one segment per exercise**, filling as its sets are done, the one on
+  show marked.
+- **A record set gets a gold eight-pointed star** in its toast (`toast(msg,null,null,"rec")`,
+  `STAR8` in view.js). The finish screen's record card carries the same star. The `mane`
+  drawing sits behind the tick: the one drawing that screen gets.
+- Not done: preloading the next exercise's image. The workout screen shows no photo, so
+  there is nothing to preload. The set-row ✕ already asks before deleting (`V.askDel`), so
+  the review overstated that risk.
+
+Tests: four new workout tests. Each fails on the old code and passes now.
+- **Fold motion in a grid** (motion.js foldAway): a grid row cannot shrink below zero, so
+  the folding card's negative margin never closed the gap, and the card below snapped
+  12 px when the ghost went. In a grid, the next card now takes the negative margin.
+  "Feel today" now measures the glide (no late step over 8 px).
+- Tests updated for the new layout: the swipe test aims at the set line (the number boxes
+  never start a swipe), and the bodyweight record test looks for the star toast.

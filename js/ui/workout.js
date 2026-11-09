@@ -158,7 +158,7 @@ function logSet(){
   var bestW=prFor(e3.name).w;
   if(!wu&&bestW>=20&&ns.w>bestW*1.3)setTimeout(function(){
     toast(t("That is well above your best of")+" "+fmtW(bestW)+". "+t("Check the weight. Tap the tick to undo."));},50);
-  else if(rec3)setTimeout(function(){toast("🏆 "+recordText(rec3));},50);
+  else if(rec3)setTimeout(function(){toast(recordText(rec3),null,null,"rec");},50);
   V.loggedAt=Date.now();V.askDel=null;
   /* For a moment the check says the set is logged and offers Undo, then reads the next
      set (workout-spec.md, LogControl). */

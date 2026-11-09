@@ -287,6 +287,10 @@ function syncDraft(){
   /* Never done before: the plan's own starting weight, if it gave one. */
   V.draft.w=rec&&rec.w?rec.w:(src?num(src.w):num(e.planned&&e.planned.w0));
   V.draft.r=src?num(src.r):e.planned.hi||8;
+  /* Inside today's range: last time's reps from an old range (8 when today asks 12–20)
+     contradicted the target and the recommendation on the same card (owner, 6 Nov). */
+  var plo=num(e.planned&&e.planned.lo),phi=num(e.planned&&e.planned.hi);
+  if(src&&plo&&phi>=plo&&!(e.planned&&e.planned.timed))V.draft.r=Math.max(plo,Math.min(phi,num(V.draft.r)));
   V.draft.rpe=null;
   /* A barbell is never lighter than its bar (owner, 27 Oct): a first time starts there. */
   if(isBarbell(e.name)&&num(V.draft.w)<barKg())V.draft.w=barKg();

@@ -151,6 +151,19 @@ function repsText(e,timed){
     +(p.rir!=null&&!timed?" · "+t("{n} in reserve").replace("{n}",p.rir):"")
     /* The phase's tempo (engine/phase.js), as the book writes it: lower, pause, lift, pause. */
     +(p.tempo&&!timed&&/[\dX]-[\dX]-[\dX]-[\dX]/.test(p.tempo)?" · "+t("Tempo {t}").replace("{t}",p.tempo.match(/[\dX]-[\dX]-[\dX]-[\dX]/)[0]):"");}
+/* The dose as chips under the set line (owner, 6 Nov: "Target 12–20 reps · 3 in reserve ·
+   Tempo 4-2-1-1" read as jargon): the reps, then what reserve and tempo mean, a tap away. */
+function doseChips(e,timed){
+  var p=e.planned||{},c=[];
+  if(p.amrap)c.push('<span class="dchip">'+esc(t("As many as you can"))+'</span>');
+  else if(p.lo||p.hi){var r=p.lo+(p.hi&&p.hi!==p.lo?"–"+p.hi:"");
+    c.push('<span class="dchip"><b class="num">'+r+'</b> '+esc(timed?t("s"):t("reps"))+(p.side?" "+esc(t("/ side")):"")+'</span>');}
+  if(p.rir!=null&&!timed)c.push('<button class="dchip i" data-explain="rir">'+esc(t("{n} in reserve")).replace("{n}",'<b class="num">'+num(p.rir)+'</b>')+IC.info+'</button>');
+  /* The tempo is read left to right in both languages (down, hold, up, hold): kept as
+     one left-to-right run, or Arabic shows 4-2-1-1 as 1-1-2-4. */
+  var tm=p.tempo&&!timed&&String(p.tempo).match(/[\dX]-[\dX]-[\dX]-[\dX]/);
+  if(tm)c.push('<button class="dchip i" data-explain="tempo">'+esc(t("Tempo {t}")).replace("{t}",'<b class="num" dir="ltr">'+tm[0]+'</b>')+IC.info+'</button>');
+  return c.length?'<div class="dchips">'+c.join("")+'</div>':'';}
 /* A set as the rows and the reference line say it: "60 kg × 8", "+10 kg × 6", "BW × 12",
    "45 s". */
 function setText(name,x,timed){
@@ -266,6 +279,8 @@ function vSetCard(e,row,rows,o){
        +esc(t("As many clean reps as you can. Beat last time."))+(rec.last?' ('+esc(rec.last)+')':'')+'</span>';
     else if(rec&&(rec.w||rec.bw))
       hint='<span>'+t("Recommended")+' <b>'+(rec.bw?t("BW"):fmtW(rec.w))+' × <span class="num">'+range+'</span></b></span>'
+       /* Last time beside it, before the first set (owner, 6 Nov): that is when the weight is chosen. */
+       +(ps?'<span>'+t("Last time")+' <b>'+setText(e.name,ps,timed)+'</b></span>':'')
        +(rec.note?'<span>'+esc(t(rec.note))+'</span>':'');
     else if(ps)hint='<span>'+t("Last time")+' <b>'+setText(e.name,ps,timed)+'</b></span>';
     /* The coach's cue for it, from an imported plan or a note of your own. */
@@ -368,6 +383,12 @@ function vHistory(e,plan,cur,timed){
   /* One more set, under the sets it adds to. */
   return h+'<button class="wsl-add" data-k="addrow" data-addrow="1">'+IC.plus+'<span>'+t("Add a set")+'</span></button></div>';}
 
+function readyAsk(a,doneAll){
+  if(doneAll!==0||a.ready!=null)return "";
+  return '<section class="ready" data-k="ready"><div class="ready-h"><span>'+t("How do you feel today?")+'</span>'
+   +'<button class="ready-skip" data-ready="0">'+t("Skip")+'</button></div><div class="ready-c">'
+   +READY.map(function(x){return hb('<button data-ready="'+x[0]+'">'+t(x[1])+'</button>');}).join("")
+   +'</div></section>';}
 function vLogger(){
   var a=S.active;
   if(V.logIdx>=a.entries.length)V.logIdx=a.entries.length-1;
@@ -409,7 +430,10 @@ function vLogger(){
    +'<button class="ss-coach" data-coachopen="1" aria-label="'+t("Ask Coach")+'">'
    +'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5.5h16v10.5H11l-4.5 3.5V16H4z"/><path d="M8.5 10.75h7"/></svg></button>'
    +'<button class="ss-more" data-sessmore="1" aria-label="'+t("More")+'">'+IC.more+'</button>'
-   +'</div><div class="ss-bar"><i style="width:'+pct+'%"></i></div></div>';
+   /* One segment an exercise, filling as its sets are done, the one on show marked: where
+      you are in the day at a glance (owner, 6 Nov). */
+   +'</div><div class="ss-bar ss-segs" aria-hidden="true">'+a.entries.map(function(x,i){var rr=rowsFor(x),dd=Math.min(rr,x.sets.length);
+     return '<i class="'+(i===V.logIdx?'on':dd>=rr&&rr?'done':'')+'"><b style="width:'+(rr?Math.round(dd/rr*100):0)+'%"></b></i>';}).join("")+'</div></div>';
 
   /* The warm-up routine comes first, in place of the first exercise, until it is done
      or skipped (js/ui/views/warmup.js). */
@@ -425,8 +449,7 @@ function vLogger(){
   var line;
   if(act)line=esc(t(actInfo(e.name).grp));
   else if(row&&row.wu)line=t("Warm-up");
-  else line=t("Set")+' <span class="num">'+Math.min(workN,row?row.n:workN)+'</span> '+t("of")+' <span class="num">'+workN+'</span>'
-    +(repsText(e,timed)?' · '+esc(repsText(e,timed)):'');
+  else line=t("Set")+' <span class="num">'+Math.min(workN,row?row.n:workN)+'</span> '+t("of")+' <span class="num">'+workN+'</span>';
   if(!act&&isUnilateral(e.name)&&!e.planned.side)line+=' · '+t("Each side");
   /* Inside a training block: how many sets the answers after earlier workouts moved it by. */
   var pd=!act&&e.planned&&e.planned.plan!=null?num(e.planned.sets)-num(e.planned.plan):0;
@@ -438,25 +461,25 @@ function vLogger(){
    +'<button class="ib" data-swap="1" aria-label="'+t("Replace this exercise")+'">'+IC.swap+'</button>'
    +'<p class="wexl-s"><span>'+line+'</span>'
    +'</p>'
+   +(act?'':doseChips(e,timed))
    +nextLine(a,run)
    +'</div>';
+  /* How you feel, asked once, first, before the first set (owner, 6 Nov: under the log
+     button it came in the middle of logging). */
+  h+=readyAsk(a,doneAll);
 
   if(act){h+=actBody(a,e,rows,active);}
   else{
-    if(restOn())h+=vRestBand();
     h+=vRpeAsk(e,workN);
-    if(row)h+=vSetCard(e,row,rows,{timed:timed,loaded:loaded,p:p,small:restOn()});
-    h+=vLogControl(e,row);
+    /* The card keeps its size through a rest: the rest no longer arrives above it and
+       pushes it down (owner, 6 Nov), it sits with the log button, at the thumb. */
+    if(row)h+=vSetCard(e,row,rows,{timed:timed,loaded:loaded,p:p,small:false});
+    h+='<div class="wkdock">'+(restOn()?vRestBand():'')+vLogControl(e,row)+'</div>';
   }
 
   /* --- before the first set only, under the check so it no longer pushes the numbers
      down: how you feel, the day's notes, a pain flag, the plan's other choice. --- */
-  if(doneAll===0&&a.ready==null){
-    h+='<section class="ready" data-k="ready"><div class="ready-h"><span>'+t("How do you feel today?")+'</span>'
-     +'<button class="ready-skip" data-ready="0">'+t("Skip")+'</button></div><div class="ready-c">'
-     +READY.map(function(x){return hb('<button data-ready="'+x[0]+'">'+t(x[1])+'</button>');}).join("")
-     +'</div></section>';
-  }else if(a.ready&&a.ready<=2&&doneAll===0){
+  if(a.ready&&a.ready<=2&&doneAll===0){
     /* Today's suggestions are already lighter (see recommend()); fewer sets is offered. */
     h+='<div class="readynote" data-k="readynote">'+t("A low day. Today's suggestions are lighter; drop a set if you need to, or stop early. It still counts.")
      +(a.lighter?'':'<button class="btn g sm readyless" data-readyless="1">'+t("One set fewer on each exercise")+'</button>')+'</div>';

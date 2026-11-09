@@ -5,7 +5,12 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Four views": "أربع شاشات",
+var AR={"As many as you can": "أكتر عدد تقدر عليه",
+"What it means": "يعني إيه",
+"Reps in reserve": "العدّات اللي تسيبها",
+"Seconds for each part of a rep: lowering, the pause at the bottom, lifting, the pause at the top. 4-2-1-1 is four seconds down, two held, one up, one at the top. Slow lowering builds control.": "ثواني كل جزء من العدّة: النزول، الوقفة تحت، الطلوع، الوقفة فوق. 4-2-1-1 يعني أربع ثواني نزول، اتنين ثبات، واحدة طلوع، وواحدة فوق. النزول البطيء بيبني التحكم.",
+"How many more good reps you could still have done when you stop the set. 3 in reserve means you stop with about three left in you: hard, but not to failure.": "كام عدّة كويسة كنت لسه تقدر تعملها لما توقف المجموعة. «سيب 3» يعني توقف وفاضل فيك حوالي تلات عدّات: صعب، بس مش لحد الفشل.",
+"Four views": "أربع شاشات",
 "Overview: is it working. Strength: your lifts. Body: weight, measurements and photos. Habits: eating, steps and cardio. Swipe between them.": "نظرة عامة: هل الموضوع ماشي. القوة: تمارينك. الجسم: الوزن والمقاسات والصور. العادات: الأكل والخطوات والكارديو. اسحب بينهم.",
 "Your weight's trend against your goal, and what to change if it is off. Press and hold any chart to read it.": "اتجاه وزنك مقارنة بهدفك، وإيه اللي تغيّره لو مش ماشي صح. دوس مطوّل على أي رسم عشان تقراه.",
 "Add two photos to compare them.": "ضيف صورتين عشان تقارن بينهم.",

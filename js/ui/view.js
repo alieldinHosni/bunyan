@@ -183,12 +183,18 @@ function kbPredict(up){
   setTimeout(syncViewport,820);}
 /* undo: a function for the toast's button, which says Undo unless label says
    otherwise ("Show me" for a plan check). */
-function toast(msg,undo,label){
+/* kind "rec": a record set, said with a gold eight-pointed star (the milestones' star on
+   Progress) that turns in, and held a little longer than a plain word. */
+var STAR8=(function(){var p=[];for(var i=0;i<16;i++){var a=Math.PI/8*i-Math.PI/2,r=i%2?7.6:10;
+  p.push((12+r*Math.cos(a)).toFixed(1)+","+(12+r*Math.sin(a)).toFixed(1));}
+  return '<svg class="toast-star" viewBox="0 0 24 24" aria-hidden="true"><polygon points="'+p.join(" ")+'"/></svg>';})();
+function toast(msg,undo,label,kind){
   /* A change the coach made says itself in the panel, with its own Undo
      (js/ui/handlers/actions.js): no second word of it over the field. */
   if(V.quietToast)return;
   var old=document.querySelector(".toast");if(old)old.remove();
   var d=document.createElement("div");d.className="toast";d.setAttribute("role","status");
+  if(kind==="rec"){d.classList.add("rec");d.insertAdjacentHTML("beforeend",STAR8);}
   var s=document.createElement("span");s.textContent=msg;d.appendChild(s);
   if(undo){
     var b=document.createElement("button");
@@ -202,7 +208,7 @@ function toast(msg,undo,label){
     if(!d.parentNode)return;
     d.classList.add("leaving");
     setTimeout(function(){if(d.parentNode)d.remove();},260);
-  },undo?5200:2600);}
+  },undo?5200:kind==="rec"?3600:2600);}
 
 var CUES={
  Push:["Set your shoulder blades down and back before the first rep.",
@@ -495,4 +501,4 @@ function curDate(){return V.fdate||today();}
 /* The meal a quick add goes into: the next one not yet logged on that date. */
 function mealNow(d){return nextMeal(d||curDate());}
 
-export {canBuzz, curDate, inDays, kbPredict, mealNow, GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, startRest, stepperInput, streak, tap, toast, V};
+export {canBuzz, curDate, inDays, kbPredict, mealNow, GRIPSVG, reorderBtn, mistakesFor, syncViewport, syncWorkoutState, restoreWorkoutState, alarmStart, alarmStop, audioOn, beeped, CUES, endRest, ex_isTimed, head, keepAwake, lastTick, lockScroll, MISTAKES, play, progressBar, recentPR, ring, seg, setBeeped, setLastTick, sparkline, STAR8, startRest, stepperInput, streak, tap, toast, V};

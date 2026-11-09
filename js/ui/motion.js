@@ -236,11 +236,17 @@ function foldAway(g,up,next,h){
   g.classList.add("ghost");g.setAttribute("aria-hidden","true");g.inert=true;
   up.insertBefore(g,next);
   if(!g.animate){g.remove();return;}
-  var gap=parseFloat(getComputedStyle(up).rowGap)||0;
+  var ucs=getComputedStyle(up),gap=parseFloat(ucs.rowGap)||0;
   g.style.overflow="clip";g.style.pointerEvents="none";
-  var a=g.animate([{height:h+"px",opacity:1,marginBottom:"0px"},{opacity:0,offset:.45},{height:"0px",opacity:0,marginBottom:(-gap)+"px"}],
+  /* The gap the ghost's row adds closes with it. A grid row never shrinks below zero, so
+     there the card below takes the negative margin (it pulls its row up); in a flex
+     column the ghost's own margin does (owner, 6 Nov: the set card under the question
+     glided, then snapped the last 12 px). */
+  var grid=/grid/.test(ucs.display)&&next,nx=null;
+  var a=g.animate([{height:h+"px",opacity:1,marginBottom:"0px"},{opacity:0,offset:.45},{height:"0px",opacity:0,marginBottom:(grid?0:-gap)+"px"}],
     {duration:GLIDE,easing:GLIDE_EASE,fill:"forwards"});
-  var gone=function(){if(g.parentNode)g.parentNode.removeChild(g);};
+  if(grid&&next.animate)nx=next.animate([{marginTop:"0px"},{marginTop:(-gap)+"px"}],{duration:GLIDE,easing:GLIDE_EASE,fill:"forwards"});
+  var gone=function(){if(g.parentNode)g.parentNode.removeChild(g);if(nx){nx.cancel();nx=null;}};
   a.onfinish=gone;a.oncancel=gone;setTimeout(gone,GLIDE+160);}
 
 /* ---- the page keeps its place when a card leaves near its end ----------------------

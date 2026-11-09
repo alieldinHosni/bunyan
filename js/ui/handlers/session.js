@@ -140,6 +140,7 @@ function register(){
       .replace("{n}",n).replace("{k}",kept),function(){S.programs=before.programs;S.profile.limits=before.limits;saveDB();render();});return;});
   key("hurtdo",function(D){W.flagPain(D.hurtdo);return;});
   /* A past day trained without the app: which day of the program, then the workout. */
+  key("explain",function(D){openSheet("explain",{k:D.explain});return;});
   key("logpast",function(D){
     if(S.active){toast(t("Finish or save the workout in progress first."));return;}
     openSheet("pastlog",{date:D.logpast});return;});

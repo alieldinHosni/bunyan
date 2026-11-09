@@ -25,7 +25,8 @@ import {blockNow} from "../engine/blocks.js";
 import {friends, snapStats} from "../engine/share.js";
 import {fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {dfmt, esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
-import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, stepperInput, V} from "./view.js";
+import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, STAR8, stepperInput, V} from "./view.js";
+import {art} from "./art.js";
 import {glyph} from "./glyphs.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
@@ -497,6 +498,15 @@ function vSheet(){
      +'</div><button class="btn" data-savemeasure="1">'+t("Save for today")+'</button>';
   }
   /* Progress: a lift's own page, the month in review, two photos compared. */
+  /* The dose's words, said plainly (the workout's chips). */
+  else if(V.sheet==="explain"){var xk=V.sd&&V.sd.k;
+    b='<div class="se-top"><span class="se-k">'+t("What it means")+'</span><h2>'+esc(t(xk==="tempo"?"Tempo":"Reps in reserve"))+'</h2></div>'
+     +'<p class="shsub">'+esc(t(xk==="tempo"
+       ?"Seconds for each part of a rep: lowering, the pause at the bottom, lifting, the pause at the top. 4-2-1-1 is four seconds down, two held, one up, one at the top. Slow lowering builds control."
+       :"How many more good reps you could still have done when you stop the set. 3 in reserve means you stop with about three left in you: hard, but not to failure."))
+       /* Left to right in Arabic too, as on the chip (views/session.js doseChips). */
+       .replace("4-2-1-1",'<bdi class="num" dir="ltr">4-2-1-1</bdi>')+'</p>'
+     +'<button class="btn" data-close="1">'+t("Got it")+'</button>';}
   else if(V.sheet==="lift")b=vLiftSheet(V.sd&&V.sd.name);
   else if(V.sheet==="recap")b=vRecapSheet(V.sd&&V.sd.mo);
   else if(V.sheet==="phcmp")b=vPhotoCompare(V.sd||{});
@@ -810,7 +820,9 @@ function vSheet(){
     /* Workout complete (workout-spec.md): the check, three figures, and the records,
        which are news here rather than mid-set; Done, then the questions under it. */
     b='<div class="wfin">'
-     +'<div class="wfin-c" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>'
+     /* The horse behind the tick: the one drawing this screen gets (art.js). */
+     +'<div class="wfin-hd">'+art("mane",{cls:"wfin-art"})
+     +'<div class="wfin-c" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div></div>'
      +'<h1 class="wfin-h">'+t("Workout complete")+'</h1>'
      +'<p class="wfin-sub">'+esc(planName(w.dayName))+' · '+pretty(w.date)+'</p>'
      +'<div class="wfin-stats">'
@@ -830,7 +842,7 @@ function vSheet(){
     var prs=w.prs.slice().sort(function(x,y){return (RK[y.k||"w"]-RK[x.k||"w"])||(y.w-x.w);});
     if(prs.length){
       var p0=prs[0],k0=p0.k||"w";
-      b+='<div class="wfin-rec"><b>'+(prs.length>1?'<span class="num">'+prs.length+'</span> '+t("new records")
+      b+='<div class="wfin-rec">'+STAR8+'<b>'+(prs.length>1?'<span class="num">'+prs.length+'</span> '+t("new records")
           :t(k0==="e"?"New best estimated max":k0==="r"?"Rep record":"New personal record"))+'</b>'
        +'<span>'+esc(exName(p0.n))+' · '+(k0==="e"?fmtW(p0.e):k0==="r"?p0.r+' × '+fmtW(p0.w):fmtW(p0.w)+' × '+p0.r)+'</span></div>';}
     else if(w.prevVol&&w.delta>0)
