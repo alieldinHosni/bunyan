@@ -125,7 +125,7 @@ function missedCard(iso){
   acts+='<button class="btn g" data-pastday="'+esc(r.missed.date)+'|'+esc(r.missed.dayId)+'">'+esc(t("I trained it: log it"))+'</button>';
   acts+='<button class="btn g" data-missok="1">'+esc(t("Skip"))+'</button>';
   return '<div class="reco" data-k="miss'+r.missed.date+'"><div class="reco-h">'+glyph("whistle")+'<b>'+esc(t("Coach"))+'</b></div>'
-   +'<p>'+esc(head+" "+body).replace(/\d+/g,'<span class="num">$&</span>')+'</p><div class="reco-a">'+acts+'</div></div>';}
+   +'<p>'+esc(head+" "+body).replace(/&#?\w+;|\d+/g,function(m){return m.charAt(0)==="&"?m:'<span class="num">'+m+'</span>';})+'</p><div class="reco-a">'+acts+'</div></div>';}
 function dayHero(sp,p,iso){
   var label,cta="",meta="";
   if(p.kind==="done"){

@@ -3946,3 +3946,47 @@ create a customized program, same for the focused muscle … the three shoulder 
   - The You sheet has "Also training for" too (takes effect when the plan is rebuilt).
 - **Tests:** engine (parts, dayGoals, goalsOf, proteinOf, parts in buildWeek) and a browser test
   through Apply.
+
+## The coach, reviewed — branch session/coach3 (CACHE v245)
+
+Owner, 9 Nov: "do as you did for the workout page … with the coach structure … smart … compared to
+knowledge base … weekly and monthly checks very accurate, suggested changes effective, and changing
+the surrounding factors if needed".
+
+- **Weekly check-in** (js/coach/checkin.js) also reads, and proposes:
+  - `eat`: weight off pace on a week eaten well off the target. The target stays and the coach
+    names the eating. Before, it said nothing, because a target change would not have helped.
+  - `protein`: under 85% of target on 4+ logged days.
+  - `steps`: under 70% of the goal on 4+ logged days. The proposal is a stepping stone 1,500 above
+    what was walked, a goal that gets met.
+  - Facts: protein, steps, and the main lifts over six weeks (rising, holding, slipping), so good
+    news is said too.
+  - The effort target comes from the program's planned RIR (`plannedRpe`), so combined-goal weeks
+    and edited programs are read as they are.
+- **Monthly review**, new: js/coach/monthly.js, js/engine/monthly.js, `moCard` in js/ui/checkin.js.
+  - Open on days 1–10 for the month before, until done (`S.moDone`).
+  - Facts: workouts against plan; weight change, first-week average against last-week average,
+    compared with the goal's pace over the month; the best lift; food days.
+  - Changes:
+    - `days`: under 60% done.
+    - `emphasis`: no main lift rising in a steady month. Adds strength (else size) as an extra goal
+      and rebuilds: the textbook's undulating plan.
+    - `weigh`: under 4 weigh-ins.
+    - `food`: under 10 food days on a calorie goal.
+    - `reassess`: 12 weeks since `profile.assessedAt`, now set on Apply. A profile without the date
+      is never asked.
+  - Undo on the plan changes. The chat answers "How was my month?" (intent `month`) with the same
+    facts and buttons.
+- **Coach page:**
+  - The header names every goal.
+  - The strip counts weeks kept (as Progress and Profile), not days in a row.
+  - The month card leads For you in its first days.
+- **Plan check:**
+  - With more than one goal, "Heavy enough for strength?" reads the strength days only, and
+    endurance rests the endurance days only. `heavyMains` and `shortRests` change only their days.
+  - The protein note uses `proteinOf`.
+  - New: a focused part (js/data/parts.js) the program no longer works. Fix `addpart`
+    (engine/plan.js `addPartExercise`, from `partCandidates`) puts one first in its day.
+- **Bug, older than today:** the number-wrapping helpers ran after escaping, so an apostrophe's
+  `&#39;` had its 39 wrapped and showed as typed. Affected: check-in `nums`, the missed-day card,
+  Settings `figs`, the missed-day sheet. All now keep entities whole.

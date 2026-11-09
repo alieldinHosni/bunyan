@@ -3,7 +3,7 @@
 import {EXDB, isCompound, LIB, movementOfEx, muscleOf, patternOf} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {day as dayOfList, ex as exOfList, PRESETS} from "../data/splits.js";
-import {buildWeek} from "./build.js";
+import {buildWeek, partCandidates} from "./build.js";
 import {spreadWd} from "./schedule.js";
 import {addProgram, makeProgram, S, saveDB} from "../state.js";
 import {num, uid} from "../util.js";
@@ -468,6 +468,29 @@ var BUILT="built";
 function logged(){
   var o={};(S.sessions||[]).forEach(function(s){(s.entries||[]).forEach(function(e){if(e&&e.name)o[e.name]=1;});});
   return o;}
+/* What the week builder needs to know about this person (js/engine/build.js h). */
+function helpersFor(p){
+  return {usable:usable,avoids:avoids,limits:limitsOf(p),familiar:logged,
+    train:function(g){return goalsOf(p).some(function(k){return goalOf(k).train==="hyp";})?"hyp":goalOf(g).train;},
+    pool:familiar(),dose:function(n){return doseFor(n,p);},
+    favs:S.favs||[],skip:S.skip||[],skilled:p.level==="experienced"||p.level==="advanced",weekdays:spreadWd};}
+/* An exercise for one part of a muscle (js/data/parts.js) into the program: on the day
+   that trains its muscle with the fewest minutes, else the lightest day, first in it,
+   dosed by that day's goal. The plan check's fix when the week no longer works a part
+   they asked for. Returns its name, or null when nothing they can do works it. */
+function addPartExercise(sp,pid){
+  var p=S.profile,pick=partCandidates(pid,S.gear,p,helpersFor(p)).filter(function(c){
+    return !sp.days.some(function(d){return (d.ex||[]).some(function(e){return e.name===c.n;});});})[0];
+  if(!pick)return null;
+  var m=pid.split(".")[0],tds=sp.days.filter(function(d){return d.ex.length;});
+  var withM=tds.filter(function(d){return d.ex.some(function(e){return muscleOf(e.name)===m;});});
+  var d=(withM.length?withM:tds).slice().sort(function(a,b){return dayMinutes(a)-dayMinutes(b);})[0];
+  if(!d)return null;
+  var T=trainOf(d.goal||p.goal),ds=doseFor(pick.n,p),e=exOfList(pick.n,ds.sets||3,T.acc[0],T.acc[1]);
+  e.id=uid();e.rir=T.rir[1];
+  var firstLift=d.ex.findIndex(function(x){return !isActivity(x.name);});
+  d.ex.splice(firstLift<0?0:firstLift,0,e);
+  return pick.n;}
 function builtProgram(p,gear){
   var w=buildWeek(p,gear,{usable:usable,avoids:avoids,limits:limitsOf(p),familiar:logged,
     /* Built to the volume of size training when any of the goals is that (js/data/goals.js
@@ -500,4 +523,4 @@ function buildPlan(id){
 }
 
 
-export {adaptOf, AVOID, avoids, conformProgram, limitsOf, BUILT, buildPlan, dayMinutes, doseFor, generatePlan, GOALS, LEVELS, rebalance, shapePlan, splitCandidates, SPLIT_LEVEL, standIn, usable};
+export {adaptOf, addPartExercise, AVOID, avoids, conformProgram, limitsOf, BUILT, buildPlan, dayMinutes, doseFor, generatePlan, GOALS, LEVELS, rebalance, shapePlan, splitCandidates, SPLIT_LEVEL, standIn, usable};

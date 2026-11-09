@@ -282,4 +282,4 @@ function buildWeek(p,gear,h){
   var freq={};pl.plan.forEach(function(x){freq[x.muscle]=x.days.length;});
   return {name:"Built for you",days:days,targets:T,freq:freq};}
 
-export {buildWeek, targets as buildTargets};
+export {buildWeek, partCandidates, targets as buildTargets};

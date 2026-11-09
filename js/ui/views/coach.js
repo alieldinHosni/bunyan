@@ -8,7 +8,7 @@
      · a box to ask it anything, with three questions to start from (the conversation
        itself is the one panel, js/ui/coachfab.js, whose button stays beside the dock here
        as on every page: owner, 28 Oct, "available anywhere the dock is")
-     · this week in one strip: workouts done, protein days, the streak
+     · this week in one strip: workouts done, protein days, weeks kept
      · "For you": one numbered list of everything that wants a decision this week, the
        check-in, a week kept light and what the coach noticed, each with its own buttons,
        the count above it the number shown
@@ -16,19 +16,21 @@
    Before the assessment, only the way to start it. */
 import {t} from "../../i18n/dict.js";
 import {planName} from "../../i18n/exnames.js";
-import {goalOf} from "../../data/goals.js";
+import {goalOf, goalsOf} from "../../data/goals.js";
+import {weekRun} from "../../engine/stats.js";
+import {monthlyOpen} from "../../engine/monthly.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {planOn} from "../../engine/dayplan.js";
 import {weekDates} from "../../engine/schedule.js";
 import {S, split} from "../../state.js";
 import {esc, num, pretty, today} from "../../util.js";
-import {streak, V} from "../view.js";
+import {V} from "../view.js";
 import {art} from "../art.js";
 import {glyph} from "../glyphs.js";
 import {adviceList} from "./pcheck.js";
 import {ASK, vChat} from "./chat.js";
 import {suggestFor} from "../coachfab.js";
-import {ckCard} from "../checkin.js";
+import {ckCard, moCard} from "../checkin.js";
 import {checkinOpen} from "../../engine/checkin.js";
 import {followDue, followOn, lightOnPurpose} from "../../engine/stress.js";
 
@@ -44,7 +46,8 @@ function vCoach(){
      +'<p>'+esc(t("Answer a short assessment: your goal, body, week, equipment, sore spots and how you eat. The coach builds your training and your meals, and puts them on the Training and Food pages. Nothing changes until you say so."))+'</p>'
      +'<button class="btn" data-setup="1">'+t("Start the assessment")+'</button></div>';
     return h;}
-  var sub=[t(goalOf(p.goal).label),sp?planName(sp.name):""].filter(Boolean).join(" · ");
+  /* Every goal trained for, the main one first (js/data/goals.js goalsOf). */
+  var sub=[goalsOf(p).map(function(k){return t(goalOf(k).label);}).join(" + "),sp?planName(sp.name):""].filter(Boolean).join(" · ");
   h+='<div class="thead chead"><span class="chead-mark" aria-hidden="true">'+glyph("whistle")+'</span><div><h1>'+t("Coach")+'</h1>'
    +'<p class="thead-s">'+esc(sub)+'</p></div></div>';
   h+=askBox();
@@ -82,7 +85,7 @@ function askBox(){
 
 /* ---- this week, in one strip -------------------------------------------------------
    Workouts done against those planned (a bar, the share in words), the days protein
-   reached its target so far, and the streak. */
+   reached its target so far, and the weeks kept. */
 function weekStrip(){
   var sp=split(),now=today(),done=0,plan=0,pdays=0,sofar=0,g=S.goals||{};
   weekDates(now).forEach(function(iso){
@@ -94,14 +97,16 @@ function weekStrip(){
     var items=[],ms=((S.days||{})[iso]||{}).meals||{};
     Object.keys(ms).forEach(function(k){items=items.concat((ms[k]&&ms[k].items)||[]);});
     if(items.length&&g.p&&sumNutrition(items).p>=g.p*0.9)pdays++;});
-  var pct=plan?Math.min(1,done/plan):0,st=streak(),fig=function(x){return '<b class="num">'+x+'</b>';};
+  /* Weeks kept, as Progress and Profile count them (a day-by-day streak is nearly always
+     0 on a plan with rest days). */
+  var pct=plan?Math.min(1,done/plan):0,st=weekRun().weeks,fig=function(x){return '<b class="num">'+x+'</b>';};
   return '<section class="cweek2" aria-label="'+esc(t("This week"))+'">'
    +'<div class="cweek2-h"><span class="shk">'+esc(t("This week"))+'</span>'
    +'<span class="cweek2-w">'+(plan?esc(t("{a} of {b} workouts")).replace("{a}",fig(done)).replace("{b}",fig(plan)):esc(t("No workouts planned this week")))+'</span></div>'
    +'<div class="cweek2-bar" aria-hidden="true"><i style="width:'+Math.round(pct*100)+'%"></i></div>'
    +'<div class="cweek2-s">'
    +'<span>'+glyph("shaker")+fig(pdays+"/"+sofar)+' '+esc(t("protein days"))+'</span>'
-   +'<span>'+glyph("flame")+fig(st)+' '+esc(t(st===1?"day in a row":"days in a row"))+'</span></div></section>';}
+   +'<span>'+glyph("flame")+fig(st)+' '+esc(t(st===1?"week kept":"weeks kept"))+'</span></div></section>';}
 
 /* ---- for you ------------------------------------------------------------------------
    Everything that wants a decision, in one list and in the order it matters: a week kept
@@ -109,8 +114,10 @@ function weekStrip(){
    the coach noticed, most important first. The count is what is listed. Three show; the
    rest are one tap away, opened in place. */
 function forYou(){
-  var items=[],st=stressCard(),ck=ckCard(checkinOpen());
+  var items=[],st=stressCard(),ck=ckCard(checkinOpen()),mo=moCard(monthlyOpen());
   if(st)items.push(st);
+  /* The month first in its first days: its changes are the larger ones. */
+  if(mo)items.push(mo);
   if(ck)items.push(ck);
   adviceList().forEach(function(x){items.push(x.html());});
   /* Nothing to decide: one card that says so, where the list would be. */

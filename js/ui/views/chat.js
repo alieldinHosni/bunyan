@@ -65,7 +65,8 @@ import {correctiveFor} from "../../engine/corrective.js";
 import {addDaysISO, estMinutes, nextDayOf, planOn} from "../../engine/dayplan.js";
 import {swapAdvice} from "../../engine/recovery.js";
 import {checkinOpen} from "../../engine/checkin.js";
-import {ckChange} from "../checkin.js";
+import {ckChange, moChange, moFacts} from "../checkin.js";
+import {lastMonth, monthlyNow} from "../../engine/monthly.js";
 import {adaptOf, avoids, limitsOf, standIn} from "../../engine/plan.js";
 import {rangeFor} from "../../coach/landmarks.js";
 import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
@@ -366,6 +367,17 @@ function aWeek(a){
   var ck=checkinOpen();
   if(ck&&ck.changes.length){if(!w.last)p(a,t("From last week's check-in:"));ck.changes.forEach(function(x){var c=ckChange(x);p(a,c.text);act(a,c.btn,{"data-ckdo":x.kind});});return a;}
   return act(a,t("Open Progress"),{"data-tab":"progress"});}
+
+/* The month that ended (js/engine/monthly.js), said as the Coach page's card says it:
+   the facts, then each change with its one tap. */
+function aMonth(a){
+  var r=monthlyNow(lastMonth(today()));
+  if(!r){p(a,t("Not enough was logged last month to review it yet. A few workouts and weigh-ins, and the next one has something to read."));return act(a,t("Open Progress"),{"data-tab":"progress"});}
+  l(a,moFacts(r));
+  var did=S.moDid&&S.moDid.m===r.month?S.moDid.k||[]:[],ch=r.changes.filter(function(x){return did.indexOf(x.kind)<0;});
+  if(!ch.length){p(a,t("A good month: nothing to change. Keep going as you are."));return a;}
+  ch.forEach(function(x){var c=moChange(x);p(a,c.text);act(a,c.btn,{"data-modo":x.kind});});
+  return a;}
 
 /* ---- why a lift is stuck ---------------------------------------------------------------
    The lift named (else one the log says has stalled, else the first big lift), read from
@@ -1308,7 +1320,7 @@ function aReassess(a){
 
 /* An answer, with what the person told the coach that bears on it said back. */
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
-var ANSWER={live:aLive,phase:aPhase,zones:aZones,health:aHealth,faq:aFaq,plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
+var ANSWER={month:aMonth,live:aLive,phase:aPhase,zones:aZones,health:aHealth,faq:aFaq,plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
   help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,

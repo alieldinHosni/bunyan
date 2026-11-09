@@ -87,4 +87,4 @@ function standingNow(){
   SMEMO={k:k,v:v};
   return v;}
 
-export {coachNow, standingNow};
+export {coachNow, standingNow, programFacts};

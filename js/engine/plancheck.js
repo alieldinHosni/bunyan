@@ -15,7 +15,8 @@
    Pure: it reads the state and returns findings; acting on them is the app's. */
 import {isActivity} from "../data/activities.js";
 import {isCompound, muscleOf} from "../data/exercises.js";
-import {goalOf} from "../data/goals.js";
+import {goalOf, goalsOf, proteinOf} from "../data/goals.js";
+import {focusParts, partLabel, works} from "../data/parts.js";
 import {hasPlan, mealSlots} from "./meals.js";
 import {lastWeight, macroTargets, tdee} from "./formulas.js";
 import {learnedDiffers} from "./energy.js";
@@ -101,7 +102,7 @@ function checkPlans(){
         fix:{label:fill(t("Use {sug} kcal"),{sug:fmtN(sug.kcal)}),act:"targets"},sig:[r50(cur),r50(td),p.goal]});
     if(num(g.p)&&num(g.p)<sug.p*0.85)
       out.push({id:"protein",area:"food",sev:2,title:t("Protein is low for your goal"),
-        why:fill(t("{p} g a day is {k} g per kg. For your goal about {s} g ({gk} g per kg) keeps and builds muscle."),{p:g.p,k:(g.p/w).toFixed(1),s:sug.p,gk:G.protein}),
+        why:fill(t("{p} g a day is {k} g per kg. For your goal about {s} g ({gk} g per kg) keeps and builds muscle."),{p:g.p,k:(g.p/w).toFixed(1),s:sug.p,gk:proteinOf(p)}),
         fix:{label:fill(t("Use {s} g"),{s:sug.p}),act:"protein"},sig:[g.p,sug.p]});}
 
   /* ---- the meal plan against the targets ---- */
@@ -134,19 +135,35 @@ function checkPlans(){
       out.push({id:"vol-high",area:"train",sev:1,title:t("A lot of volume for some muscles"),
         why:fill(t("{m}: well over {hi} hard sets a week. More is not always better: past what you recover from, it stops paying."),{m:list(high),hi:r[1]}),
         fix:{label:t("Balance the volume"),act:"balance"},sig:high});
-    var lo=f.mains.length?f.mains.reduce(function(a,e){return a+num(e.lo);},0)/f.mains.length:0;
-    if(p.goal==="strength"&&lo>6)
+    /* With more than one goal, each check reads the days of its own goal (js/engine/plan.js
+       d.goal): a size day's 8 reps are not a strength day that is too light. */
+    var GS=goalsOf(p),multi=prog.days.some(function(d){return d.goal;});
+    var mainsOn=function(k){var out=[];prog.days.forEach(function(d){if(multi&&d.goal!==k)return;var first=true;
+      (d.ex||[]).forEach(function(e){if(first&&!isActivity(e.name)&&isCompound(e.name)){out.push(e);first=false;}});});return out;};
+    var restOn=function(k){var rs=[];prog.days.forEach(function(d){if(multi&&d.goal!==k)return;
+      (d.ex||[]).forEach(function(e){if(!isActivity(e.name)&&num(e.rest))rs.push(num(e.rest));});});return rs.length?rs.reduce(function(a,b){return a+b;},0)/rs.length:0;};
+    var sm=mainsOn("strength"),lo=sm.length?sm.reduce(function(a,e){return a+num(e.lo);},0)/sm.length:0;
+    if(GS.indexOf("strength")>=0&&lo>6)
       out.push({id:"int-str",area:"train",sev:2,title:t("Heavy enough for strength?"),
         why:fill(t("Your main lifts start at about {lo} reps. Strength comes fastest from heavier sets of 3 to 6, with longer rests."),{lo:Math.round(lo)}),
         fix:{label:t("Make the main lifts 3–6 reps"),act:"heavy"},sig:[Math.round(lo)]});
-    if(p.goal==="endurance"&&f.rest>150)
+    var er=restOn("endurance");
+    if(GS.indexOf("endurance")>=0&&er>150)
       out.push({id:"int-end",area:"train",sev:1,title:t("Long rests for endurance"),
-        why:fill(t("Rests average {s} seconds. For endurance, 30 to 90 seconds keeps your heart rate up between sets."),{s:Math.round(f.rest)}),
-        fix:{label:t("Shorten rests to 60 s"),act:"shortrest"},sig:[Math.round(f.rest/15)]});
-    if(p.goal==="mobility"&&!f.mob)
+        why:fill(t("Rests average {s} seconds. For endurance, 30 to 90 seconds keeps your heart rate up between sets."),{s:Math.round(er)}),
+        fix:{label:t("Shorten rests to 60 s"),act:"shortrest"},sig:[Math.round(er/15)]});
+    if(GS.indexOf("mobility")>=0&&!f.mob)
       out.push({id:"mob-none",area:"train",sev:2,title:t("No mobility work in your program"),
         why:t("Your goal is mobility, but the program has no stretches or mobility drills. The warm-up and cool-down help; a few minutes at the end of each session helps more."),
         fix:{label:t("Rebuild my plan"),act:"assess"},sig:[f.mob]});
+    /* A part of a muscle they asked to bring up (js/data/parts.js) that the program no
+       longer works, after an edit or a swap: the assessment's priority and the week
+       have drifted apart. The fix adds an exercise for it, first in its day. */
+    focusParts(p.focus).forEach(function(pid){
+      var has=prog.days.some(function(d){return (d.ex||[]).some(function(e){return works(e.name,pid);});});
+      if(!has)out.push({id:"part:"+pid,area:"train",sev:2,title:fill(t("Nothing in your week works your {x}"),{x:t(partLabel(pid)).toLowerCase()}),
+        why:fill(t("You asked to bring up your {x}, but no exercise in your program trains it. One that does, first in its day while you are fresh, puts the priority back."),{x:t(partLabel(pid)).toLowerCase()}),
+        fix:{label:t("Add one for it"),act:"addpart",part:pid},sig:[pid]});});
     /* A coach's PDF names its phase; it may not be the goal set here. */
     var ph=prog.meta&&prog.meta.phase||"";
     var cutPh=/fat|cut|shred|loss|lean/i.test(ph),bulkPh=/bulk|mass|gain|size/i.test(ph);
@@ -188,8 +205,9 @@ function checkPlans(){
                3–6 reps, rest at least 3 minutes: the finding's own range for strength.
    shortRests  every lift's rest over 90 s down to 60 s: inside the finding's 30–90 s. */
 function heavyMains(prog){
-  var n=0;
+  var n=0,multi=(prog.days||[]).some(function(d){return d.goal;});
   (prog.days||[]).forEach(function(d){var first=true;
+    if(multi&&d.goal!=="strength")return;
     (d.ex||[]).forEach(function(e){
       if(isActivity(e.name)||!first||!isCompound(e.name))return;
       first=false;
@@ -197,8 +215,8 @@ function heavyMains(prog){
       if(num(e.rest)<180)e.rest=180;});});
   return n;}
 function shortRests(prog){
-  var n=0;
-  (prog.days||[]).forEach(function(d){(d.ex||[]).forEach(function(e){
+  var n=0,multi=(prog.days||[]).some(function(d){return d.goal;});
+  (prog.days||[]).forEach(function(d){if(multi&&d.goal!=="endurance")return;(d.ex||[]).forEach(function(e){
     if(isActivity(e.name)||num(e.rest)<=90)return;e.rest=60;n++;});});
   return n;}
 export {checkPlans, heavyMains, planTotals, shortRests};

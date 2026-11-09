@@ -15,8 +15,19 @@ import {inDeload, kcalFloor, tdee} from "./formulas.js";
 import {addDays, weekStartOf} from "./schedule.js";
 import {JUDGED, weeklySets} from "./volume.js";
 import {lightOnPurpose} from "./stress.js";
+import {programFacts} from "./coachinfo.js";
 
 var INFO={muscle:muscleOf,secondary:secondaryOf,activity:isActivity};
+
+/* The effort the program plans: 10 less its working sets' reps in reserve, on average.
+   From the program, not the goal, so a week whose days serve different goals (js/data/
+   goals.js dayGoals) and a hand-edited program are read as they are; the goal's own
+   effort when the program says none. */
+function plannedRpe(sp,p){
+  var n=0,sum=0;
+  ((sp&&sp.days)||[]).forEach(function(d){(d.ex||[]).forEach(function(e){
+    if(e&&e.rir!=null&&!isActivity(e.name)){sum+=num(e.rir);n++;}});});
+  return n?Math.round((10-sum/n)*10)/10:10-num(trainOf(p.goal).rir&&trainOf(p.goal).rir[1]);}
 
 /* How many workouts the program plans in a week. */
 function plannedWeek(sp){
@@ -29,8 +40,8 @@ function checkinNow(){
   var p=S.profile||{},g=S.goals||{},sp=split(),ws=weekStartOf(today()),tr=trainOf(p.goal);
   var maint=tdee(),kcal=num(g.kcal);
   return checkin({today:today(),weekStart:ws,sessions:S.sessions||[],days:S.days||{},body:S.body||[],
-    planned:plannedWeek(sp),kcal:kcal,gap:maint>0&&kcal>0?kcal-maint:null,floor:kcalFloor(),
-    rpeTarget:10-num(tr.rir&&tr.rir[1]),range:rangeFor(p.level,goalOf(p.goal).train),
+    planned:plannedWeek(sp),kcal:kcal,protein:num(g.p),steps:num(g.steps),gap:maint>0&&kcal>0?kcal-maint:null,floor:kcalFloor(),
+    rpeTarget:plannedRpe(sp,p),range:rangeFor(p.level,goalOf(p.goal).train),mains:programFacts().mains,
     plannedSets:sp?weeklySets(sp):null,judged:JUDGED,deloadOn:inDeload(),info:INFO});}
 
 /* Open: a new week, not marked done, and last week has something to read. The changes

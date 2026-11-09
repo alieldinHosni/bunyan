@@ -1959,7 +1959,7 @@ await test("Check-in barriers: fewer workouts than planned asks what got in the 
     S.ckWhy={[add(ws,-7)]:"time"};delete S.ckDone;delete S.ckDid;st.saveDB();
     const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.csec="ai";S.prefs.csec="ai";(await import("/js/ui/render.js")).render();});
   await pause(page,300);
-  if(!(await page.$('.ckcard [data-ckwhy="time"]')))throw new Error("no question: "+(await page.textContent('.ckcard')).slice(0,400));
+  if(!(await page.$('.ckcard [data-ckwhy="time"]')))throw new Error("no question: "+(await page.textContent('.ckcard:not(.mocard)')).slice(0,400));
   if(!/Better than the week before, when it was: not enough time/.test(await page.textContent(".ckwhy")))throw new Error("last week's answer not recalled, nor that the week went better");
   await page.tap('.ckcard [data-ckwhy="no_social_support"]');await pause(page,300);
   const w=await page.textContent('.ckwhy');
@@ -1983,8 +1983,8 @@ await test("Weekly check-in: last week read on Coach — two short weeks and slo
     S.goals.kcal=2000;S.goals.c=200;delete S.ckDone;delete S.ckDid;st.saveDB();
     const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.csec="ai";S.prefs.csec="ai";(await import("/js/ui/render.js")).render();});
   await setUp();await pause(page,300);
-  if(!(await page.$('.ckcard')))throw new Error("no check-in card on Coach");
-  const txt=await page.textContent('.ckcard');
+  if(!(await page.$('.ckcard:not(.mocard)')))throw new Error("no check-in card on Coach");
+  const txt=await page.textContent('.ckcard:not(.mocard)');
   for(const re of [/Workouts: 2 of 4 planned/,/Food: logged on 7 days/,/an estimate from 7 weigh-ins/,/Build a 2-day week/,/Set 1,900 kcal/])
     if(!re.test(txt))throw new Error("check-in missing "+re+": "+txt.slice(0,500));
   await page.tap('[data-ckdo="kcal"]');await pause(page,300);
@@ -2000,12 +2000,12 @@ await test("Weekly check-in: last week read on Coach — two short weeks and slo
   if(!(await page.$('#cpanel [data-ckdo="kcal"]')))throw new Error("the chat's week answer does not offer the check-in's change");
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.coach=false;V.chat=false;V.tab="coach";V.csec="ai";(await import("/js/ui/render.js")).render();});await pause(page,300);
   await page.tap('[data-ckok]');await pause(page,300);
-  if(await page.$('.ckcard'))throw new Error("closed for the week, still shown");
+  if(await page.$('.ckcard:not(.mocard)'))throw new Error("closed for the week, still shown");
   /* Again, in Arabic. */
   await setUp();
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";(await import("/js/i18n/exnames.js")).applyLang();(await import("/js/ui/render.js")).render();});
   await pause(page,300);
-  const ar=await page.textContent('.ckcard');
+  const ar=await page.textContent('.ckcard:not(.mocard)');
   if(!/المراجعة الأسبوعية/.test(ar)||!/ابني أسبوع 2 أيام/.test(ar))throw new Error("check-in not in Arabic: "+ar.slice(0,300));
   eq(await ev(page,"getComputedStyle(document.querySelector('.ckcard')).direction"),"rtl","right to left");
 });
@@ -4248,6 +4248,67 @@ await test("Assessment (owner, 9 Nov): a main goal and up to two more, the days 
   await page.evaluate(()=>{const b=document.createElement("button");b.setAttribute("data-tplan","program");document.querySelector("#app").appendChild(b);b.click();});await pause(page,900);
   eq(await page.$$eval('#app .dgoal',a=>a.map(x=>x.textContent)),["Build muscle","Get stronger","Build muscle"],"each day says its goal");
   
+});
+await test("Coach (owner, 9 Nov review): the month reviewed in its first days, its change made with one tap and Undo; the week strip counts weeks kept; the header names every goal",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),S=st.S;
+    S.sessions=[];for(let i=0;i<12;i++){const d=new Date(Date.UTC(2026,9,2+i*2)).toISOString().slice(0,10);
+      S.sessions.push({id:"m"+i,date:d,dayName:"Full Body",entries:[{name:"Barbell Bench Press - Medium Grip",sets:[{w:60,r:8},{w:60,r:8}]},{name:"Barbell Squat",sets:[{w:100,r:8},{w:100,r:8}]}]});}
+    S.profile.goal="gain";delete S.profile.goals2;st.saveDB();});
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),Sp=await import("/js/data/splits.js");
+    const p=st.makeProgram({id:"mo",name:"Mine",days:[Sp.day("Upper",[Sp.ex("Barbell Bench Press - Medium Grip",3,8,12)]),Sp.day("Lower",[Sp.ex("Barbell Squat",3,8,12)])]});
+    st.S.programs=[p];st.S.activeProgram="mo";st.saveDB();});
+  await tapTab(page,"coach");await pause(page,700);
+  if(!(await page.$('.mocard')))throw new Error("no monthly review: "+(await page.textContent('#app')).slice(0,300));
+  const txt=await page.textContent('.mocard');
+  if(!/October 2026/.test(txt))throw new Error("not October's: "+txt.slice(0,200));
+  if(!/2 holding|2 slipping|holding/.test(txt))throw new Error("the main lifts not read: "+txt);
+  if(!(await page.$('.mocard [data-modo="emphasis"]')))throw new Error("no new emphasis offered: "+txt);
+  /* An apostrophe stays an apostrophe ("the textbook&#39;s" showed as typed). */
+  if(/&#?\w+;/.test(txt)||!/textbook's/.test(txt))throw new Error("an escaped character shows as typed: "+txt);
+  const before=await ev(page,"S.activeProgram");
+  await page.tap('.mocard [data-modo="emphasis"]');await pause(page,700);
+  eq(await ev(page,"[S.profile.goals2,S.programs.filter(p=>p.id===S.activeProgram)[0].days.filter(d=>d.ex.length).map(d=>d.goal).filter(Boolean).length>0]"),[["strength"],true],"strength added and the week rebuilt with days of each goal");
+  if(!/Build muscle \+ Get stronger/.test(await page.textContent('.chead')))throw new Error("the header does not name both goals");
+  await page.tap('.toast-undo');await pause(page,500);
+  eq(await ev(page,"[S.profile.goals2===undefined||S.profile.goals2.length===0,S.activeProgram]"),[true,before],"Undo: as it was");
+  if(!/weeks? kept/.test(await page.textContent('.cweek2')))throw new Error("the strip still counts days");
+  await page.tap('.mocard [data-mook]');await pause(page,400);
+  eq(await ev(page,"[S.moDone,!!document.querySelector('.mocard')]"),["2026-10",false],"done for the month");
+});
+await test("Weekly check-in (owner, 9 Nov review): protein and steps read against their targets, a missed protein target said with the way to the meal plan",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js"),Sc=await import("/js/engine/schedule.js"),S=st.S;
+    const ws=Sc.weekStartOf(U.today());S.goals.p=160;S.goals.steps=10000;delete S.ckDone;
+    for(let i=1;i<=6;i++){const d=new Date(ws+"T00:00:00");d.setDate(d.getDate()-i);const iso=new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+      S.days[iso]=Object.assign({},S.days[iso]||{},{steps:4000,meals:{Lunch:{items:[{n:"x",kcal:S.goals.kcal,p:90,c:0,f:0}]}}});}
+    st.saveDB();});
+  await tapTab(page,"coach");await pause(page,700);
+  const ck=await page.textContent('.ckcard:not(.mocard)');
+  if(!/Protein: 90 g a day on average against 160 g/.test(ck))throw new Error("no protein line: "+ck.slice(0,400));
+  if(!/Steps: 4,000 a day/.test(ck))throw new Error("no steps line");
+  if(!(await page.$('.ckcard [data-ckdo="protein"]'))||!(await page.$('.ckcard [data-ckdo="steps"]')))throw new Error("protein or steps change missing");
+  await page.tap('.ckcard [data-ckdo="steps"]');await pause(page,400);
+  eq(await ev(page,"S.goals.steps"),5500,"a step goal that can be met");
+  await page.tap('.ckcard [data-ckdo="protein"]');await pause(page,700);
+  eq(await ev(page,"[V.tab,V.fplan]"),["food","plan"],"to the meal plan");
+});
+await test("Plan check (owner, 9 Nov review): a part asked for that the week no longer works is found and put back; a strength day among size days is not called too light",async page=>{
+  const r=await page.evaluate(async()=>{const st=await import("/js/state.js"),Sp=await import("/js/data/splits.js"),PC=await import("/js/engine/plancheck.js"),P=await import("/js/data/parts.js"),S=st.S;
+    const p=st.makeProgram({id:"pc",name:"Mine",days:[Sp.day("Upper",[Sp.ex("Barbell Bench Press - Medium Grip",3,8,12),Sp.ex("Bent Over Barbell Row",3,8,12)])]});
+    S.programs=[p];S.activeProgram=p.id;S.profile.focus=["Shoulders.side"];S.gear=null;st.saveDB();
+    const f=PC.checkPlans().filter(x=>x.id==="part:Shoulders.side")[0];
+    return {title:f&&f.title,act:f&&f.fix.act};});
+  eq(r,{title:"Nothing in your week works your side delts",act:"addpart"},"the missing part found");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.pcheck=true;(await import("/js/ui/render.js")).render();});await pause(page,500);
+  const btn=await page.$('[data-pcfix="part:Shoulders.side"]');
+  if(!btn)throw new Error("no fix button: "+(await page.textContent('#app')).slice(0,300));
+  await btn.tap();await pause(page,500);
+  eq(await page.evaluate(async()=>{const st=await import("/js/state.js"),P=await import("/js/data/parts.js");
+    const d=st.split().days[0];return [d.ex.some(e=>P.works(e.name,"Shoulders.side")),P.works(d.ex[0].name,"Shoulders.side")];}),[true,true],"a side-delt exercise, first in its day");
+  /* Built for size and strength: the strength day's first lift is heavy, the size days' are not, and nothing is flagged. */
+  const flags=await page.evaluate(async()=>{const st=await import("/js/state.js"),Pl=await import("/js/engine/plan.js"),PC=await import("/js/engine/plancheck.js"),S=st.S;
+    S.profile.goal="gain";S.profile.goals2=["strength"];S.profile.days=3;S.profile.wd=[];S.profile.focus=[];Pl.buildPlan();
+    return PC.checkPlans().map(x=>x.id);});
+  if(flags.indexOf("int-str")>=0)throw new Error("a strength day among size days called too light: "+flags.join(","));
 });
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
