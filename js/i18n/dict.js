@@ -5,7 +5,10 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Adjust the week": "عدّل الأسبوع",
+var AR={"Unexpected restarts": "إعادة تشغيل مفاجئة",
+"The app restarted on its own. What it was doing just before is noted here, on this phone only, so the cause can be found.": "الأبلكيشن اتقفل واشتغل تاني لوحده. اللي كان بيعمله قبلها متسجل هنا، على الموبايل ده بس، عشان نعرف السبب.",
+"after": "بعد",
+"Adjust the week": "عدّل الأسبوع",
 "Nothing fits this week without breaking a rest day or making a session too long. You can still make it up, or skip it.": "مفيش حاجة تدخل الأسبوع ده من غير ما نكسر يوم راحة أو نطوّل تمرينة زيادة. لسه تقدر تعوّضه، أو تتخطاه.",
 "Skipped. The plan carries on.": "اتخطيناه. الخطة مكملة.",
 "Make up {a}": "عوّض {a}",

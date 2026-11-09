@@ -8,6 +8,7 @@
 
    The branches themselves live by domain in js/ui/handlers/: shell (moving around and
    answering sheets), train, session, food, coach, progress and profile. */
+import {crumb} from "../crashnote.js";
 var LIST=[],NEXT={};
 function on(when,run){LIST.push([when,run]);}
 function key(k,run){on(function(D){return D[k];},run);}
@@ -15,6 +16,7 @@ function has(k,run){on(function(D){return D[k]!==undefined;},run);}
 /* D: the element's dataset. cx: what the listener knew before the tap was handled
    (whether the name prompt was being typed in). True when a branch answered it. */
 function dispatchTap(D,el,ev,cx){
+  crumb(D);
   for(var i=0;i<LIST.length;i++){
     if(!LIST[i][0](D,el,cx))continue;
     if(LIST[i][1](D,el,ev,cx)!==NEXT)return true;}
