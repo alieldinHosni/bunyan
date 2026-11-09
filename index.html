@@ -1689,6 +1689,10 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
   border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;
   font-size:14px;z-index:200;max-width:88%;text-align:center;
   display:flex;align-items:center;gap:14px}
+.toast.rec{border-color:rgba(var(--gold-rgb),.45);gap:var(--s2)}
+.toast-star{width:22px;height:22px;flex-shrink:0;fill:var(--gold);animation:toastStar var(--m-reveal) var(--e-decel) both}
+@keyframes toastStar{from{transform:scale(.4) rotate(-90deg);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.toast-star{animation:none}}
 .toast-undo{background:none;border:none;color:var(--accentHi);font-size:14px;font-weight:800;
   letter-spacing:.06em;text-transform:uppercase;padding:6px 2px;flex-shrink:0}
 
@@ -4188,7 +4192,9 @@ body.wkflat #app{--gutter:20px}
 /* Any control carrying a tick (js/ui/haptic.js): a label with a button's manners, and the
    switch's focus drawn on it. */
 /* A button's own defaults, at no weight, so every class rule still wins as it did. */
-:where(label.hap){display:inline-block;text-align:center;box-sizing:border-box;padding:1px 6px}
+/* Centred both ways, as a button centres its words (owner, 5 Nov: on the iPhone the words of
+   every ticking chip sat at the top of their pill: the feel chips, then the intensity). */
+:where(label.hap){display:inline-flex;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;padding:1px 6px}
 label.hap{cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-offset:3px}
 .log-c{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;border:2px solid currentColor}
@@ -4315,6 +4321,22 @@ label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-
 /* The figures stay white, as in the mockup: the "Suggested" tag above says what they are. */
 .sess .wsc .val-n.sg{color:var(--text)}
 .sess .rb-bar i,.sess .ss-bar i{background:var(--wk-act-bot)}
+/* ---- the workout, streamlined (owner, 6 Nov) ---------------------------------------- */
+/* The day as segments, one an exercise, each filling with its sets. */
+.sess .ss-segs{display:flex;gap:3px;height:4px;background:none;overflow:visible;margin-inline:0}
+.sess .ss-segs i{flex:1;display:block;height:4px;border-radius:var(--rpill);background:var(--bar-track);overflow:hidden}
+.sess .ss-segs i b{display:block;height:100%;border-radius:inherit;background:var(--wk-act-bot);transition:width var(--m-comp) var(--e-standard)}
+.sess .ss-segs i.done b{background:var(--ok)}
+.sess .ss-segs i.on{box-shadow:0 0 0 1px var(--accentHi)}
+/* The dose as chips; the two that need saying, a tap from their words. */
+.dchips{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s2)}
+.dchip{display:inline-flex;align-items:center;gap:var(--s1);min-height:32px;padding:0 var(--s3);border-radius:var(--rpill);
+  border:1px solid var(--wk-well-rim,var(--border));background:var(--wk-well,var(--surface));color:var(--text);font-size:13px;font-weight:600}
+.dchip.i .gl{width:15px;height:15px;color:var(--dim)}
+/* The rest and the log button together, held at the thumb while the sets scroll. */
+.sess .wkdock{position:sticky;bottom:max(var(--s3),env(safe-area-inset-bottom));z-index:3;display:grid;gap:var(--s2)}
+/* Skip exercise: there, but not as loud as the set. */
+.sess .tools :is(button,label:where(.hap)){min-height:var(--hit);background:none;border-color:transparent;color:var(--sub);font-weight:600}
 
 .ss-acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;margin:var(--s4) 0 8px}
 .ss-act{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 12px;border-radius:var(--r4);
@@ -4439,6 +4461,10 @@ label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-
 /* Workout complete (workout-spec.md): the ok check, the figures on raised, the record
    card in gold, Done in the log control's style, then the questions under it. */
 .wfin{display:grid;gap:var(--s4);justify-items:center;text-align:center;padding-top:var(--s4)}
+.wfin-hd{position:relative;display:grid;place-items:center;width:100%}
+.wfin-art{position:absolute;z-index:0;width:86%;max-width:340px;opacity:.38;pointer-events:none}
+.wfin-hd .wfin-c{position:relative;z-index:1}
+.wfin-rec .toast-star{width:28px;height:28px;justify-self:center;margin-bottom:var(--s1)}
 .wfin-c{width:96px;height:96px;display:grid;place-items:center;border-radius:50%;background:var(--ok);color:var(--onOk)}
 .wfin-c svg{width:48px;height:48px;fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
 .wfin-h{margin:0;font-family:var(--display);font-size:30px;font-weight:700}

@@ -1331,8 +1331,8 @@ await test("Bodyweight lifts: done only at body weight, more reps is a record, a
   const last=await ev(page,"S.active.entries.length-1");
   await page.tap('[data-exlist]');await pause(page,400);await page.tap('#sheet [data-jumpl="'+last+'"]');await pause(page,400);
   await page.fill('#in_w','0');await page.fill('#in_r','12');await page.tap('[data-logset]');await pause(page,300);
-  const msg=await page.$eval(".toast",e=>e.innerText);
-  if(msg.indexOf("\u{1F3C6}")<0||msg.indexOf("BW \u00d7 12")<0)throw new Error("no record toast for 0 × 12 after 0 × 10: "+msg);
+  const msg=await page.$eval(".toast.rec",e=>(e.querySelector(".toast-star")?"star ":"")+e.innerText).catch(()=>"");
+  if(msg.indexOf("star ")<0||msg.indexOf("BW \u00d7 12")<0)throw new Error("no record toast for 0 × 12 after 0 × 10: "+msg);
 },{prefs:{autorest:false}});
 await test("Exercises: a sideways swipe moves between them; a nudge or a vertical drag does not; arrows, list and segments agree",async(page,env)=>{
   await startWorkout(page);
@@ -1342,12 +1342,15 @@ await test("Exercises: a sideways swipe moves between them; a nudge or a vertica
     for(let i=1;i<=steps;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x0+(x1-x0)*i/steps,y:y0+(y1-y0)*i/steps}]});await page.waitForTimeout(16);}
     await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(650);};
   const idx=()=>ev(page,"V.logIdx");
-  await drag(300,520,80,525);eq(await idx(),1,"swipe left: next");
-  await drag(300,520,250,522);eq(await idx(),1,"a nudge springs back");
-  await drag(200,420,240,720);eq(await idx(),1,"a vertical drag scrolls");
-  await drag(80,520,320,525);eq(await idx(),0,"swipe right: previous");
-  await drag(80,520,320,525);eq(await idx(),0,"the first exercise resists");
-  await drag(10,520,300,525);eq(await idx(),0,"not from the screen edge");
+  /* On the set line under the name: the number boxes below never start a swipe, and
+     since how-you-feel moved above the card (owner, 6 Nov) they sit where 520 was. */
+  const Y=Math.round(await page.$eval(".wexl-s",e=>{const r=e.getBoundingClientRect();return r.top+r.height/2;}));
+  await drag(300,Y,80,Y+5);eq(await idx(),1,"swipe left: next");
+  await drag(300,Y,250,Y+2);eq(await idx(),1,"a nudge springs back");
+  await drag(200,Y,240,Y+300);eq(await idx(),1,"a vertical drag scrolls");
+  await drag(80,Y,320,Y+5);eq(await idx(),0,"swipe right: previous");
+  await drag(80,Y,320,Y+5);eq(await idx(),0,"the first exercise resists");
+  await drag(10,Y,300,Y+5);eq(await idx(),0,"not from the screen edge");
   /* The arrows and segments are gone (workout-spec.md): the next exercise is named on the
      screen and one tap away; the list from the title reaches any of them. */
   eq(await page.$eval('.wexl-nx b',e=>e.textContent),await ev(page,"(async()=>(await import('/js/i18n/exnames.js')).exName(S.active.entries[1].name))()"),"the next one is named");
@@ -2797,21 +2800,30 @@ await test("Feel today: Skip or an answer fades the question where it was; scrol
   await startWorkout(page);await pause(page,800);
   await page.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));await pause(page,400);
   const y0=await ev(page,"scrollY");if(y0<40)throw new Error("the workout does not scroll here: "+y0);
-  const top0=await ev(page,"Math.round(document.querySelector('#app .sess [data-k=\"sc\"]').getBoundingClientRect().top)");
+  /* The card above the question: the exercise's heading, since the question moved over
+     the set card (owner, 6 Nov). */
+  const top0=await ev(page,"Math.round(document.querySelector('#app .sess .wexl').getBoundingClientRect().top)");
   const mid=await page.evaluate(async()=>{document.querySelector('#app .ready-skip').click();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-    return [Math.round(scrollY),Math.round(document.querySelector('#app .sess [data-k="sc"]').getBoundingClientRect().top),!!document.querySelector('#app .sess .ready.ghost')];});
+    return [Math.round(scrollY),Math.round(document.querySelector('#app .sess .wexl').getBoundingClientRect().top),!!document.querySelector('#app .sess .ready.ghost')];});
   eq(mid,[y0,top0,true],"same place, the card above still, the question fading");
   await pause(page,700);
   eq(await ev(page,"[Math.round(scrollY),document.querySelectorAll('#app .ready').length,S.active.ready]"),[y0,0,0],"still there, the question gone, skipped");
   /* The room kept below is given back as the page is scrolled up. */
   await page.evaluate(()=>scrollTo(0,0));await pause(page,200);
   eq(await ev(page,"document.querySelectorAll('.phold').length"),0,"the held room goes on the way up");
-  /* At the top: an answer, and the card above the question does not move. */
+  /* At the top: an answer. The question sits above the set card now (owner, 6 Nov), so
+     the card rises into its place: closing up all the way as it folds, never a last
+     snap when the folded question goes (the grid's gap closed with it). */
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active.ready=null;(await import("/js/ui/render.js")).render();});await pause(page,400);
-  const t1=await ev(page,"Math.round(document.querySelector('#app .sess [data-k=\"sc\"]').getBoundingClientRect().top)");
-  /* A direct click: a tap would first scroll the chip into view where it sits below the fold. */
-  await page.evaluate(()=>document.querySelector('#app [data-ready="4"]').click());await pause(page,700);
-  eq(await ev(page,"[S.active.ready,document.querySelectorAll('#app .ready').length,Math.round(document.querySelector('#app .sess [data-k=\"sc\"]').getBoundingClientRect().top)]"),[4,0,t1]);
+  const ys=await page.evaluate(async()=>{const q=()=>document.querySelector('#app .sess [data-k="sc"]').getBoundingClientRect().top;
+    const out=[q()];document.querySelector('#app [data-ready="4"]').click();
+    for(let i=0;i<40;i++){await new Promise(r=>requestAnimationFrame(r));out.push(q());}return out.map(Math.round);});
+  eq(await ev(page,"[S.active.ready,document.querySelectorAll('#app .ready').length]"),[4,0]);
+  const steps=ys.slice(1).map((y,i)=>ys[i]-y);
+  if(steps.some(d=>d<0))throw new Error("the card went down: "+ys.join(","));
+  const late=steps.slice(Math.floor(steps.length/2));
+  if(late.some(d=>d>8))throw new Error("a snap at the end: "+ys.join(","));
+  if(ys[0]-ys[ys.length-1]<40)throw new Error("the card did not close up: "+ys.join(","));
   /* A low answer: the note takes its place. */
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active.ready=null;(await import("/js/ui/render.js")).render();});await pause(page,400);
   await page.evaluate(()=>document.querySelector('#app [data-ready="2"]').click());await pause(page,700);
@@ -2960,6 +2972,52 @@ await test("Progress, second redesign (owner, 5 Nov): is it working with Apply a
   await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(900);
   eq(await ev(page,"V.ptab"),"body","swiped from Strength to Body");
 });
+await test("Intensity (owner, 6 Nov): on a phone each choice's word sits in the middle of its pill, as every ticking chip does",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.haptic=true;st.saveDB();});await page.reload();await pause(page,1500);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).startActivity("Football");});await pause(page,800);
+  const off=await page.evaluate(()=>[...document.querySelectorAll(".act-int > *")].map(l=>{const b=l.getBoundingClientRect(),rg=document.createRange();rg.selectNodeContents(l);const r=rg.getBoundingClientRect();
+    return [l.tagName,Math.round((r.top+r.bottom)/2-(b.top+b.bottom)/2),Math.round((r.left+r.right)/2-(b.left+b.right)/2)];}));
+  eq(off.length,4,"four choices");
+  if(off.some(x=>x[0]!=="LABEL"))throw new Error("expected the phone's labels: "+JSON.stringify(off));
+  if(off.some(x=>Math.abs(x[1])>2||Math.abs(x[2])>2))throw new Error("words off centre: "+JSON.stringify(off));
+});
+await test("Workout (owner, 6 Nov): the dose sits under the name as chips; reserve and tempo each explain themselves; the tempo reads left to right in Arabic",async page=>{
+  await startWorkout(page);await pause(page,900);
+  const chips=await page.$$eval(".wexl .dchip",x=>x.map(c=>c.textContent.trim()));
+  if(!chips.length||!/12–20/.test(chips[0]))throw new Error("reps chip: "+JSON.stringify(chips));
+  if(await page.$eval(".wexl-s",e=>/12–20/.test(e.textContent)))throw new Error("the set line still repeats the reps");
+  const tc=await page.$('[data-explain="tempo"]');if(!tc)throw new Error("no tempo chip");
+  const xs=await page.evaluate(()=>{const b=document.querySelector('[data-explain="tempo"] .num');const w=document.createTreeWalker(b,NodeFilter.SHOW_TEXT);const n=w.nextNode();
+    const out=[];for(let i=0;i<n.length;i++){if(n.data[i]==="-")continue;const r=document.createRange();r.setStart(n,i);r.setEnd(n,i+1);out.push([n.data[i],r.getBoundingClientRect().left]);}return out;});
+  for(let i=1;i<xs.length;i++)if(xs[i][1]<=xs[i-1][1])throw new Error("tempo not left to right: "+JSON.stringify(xs));
+  await tc.tap();await pause(page,600);
+  eq(await page.$eval("#sheet h2",e=>e.textContent),"الإيقاع","the tempo sheet");
+  await page.tap('#sheet [data-close]');await pause(page,500);
+  await page.tap('[data-explain="rir"]');await pause(page,600);
+  eq(await page.$eval("#sheet h2",e=>e.textContent),"العدّات اللي تسيبها","the reserve sheet");
+},{prefs:{autorest:false,lang:"ar"}});
+await test("Workout (owner, 6 Nov): how you feel is asked first, above the set card, and the log button sits with the rest band at the thumb",async page=>{
+  await startWorkout(page);await pause(page,900);
+  const ord=await page.evaluate(()=>{const r=document.querySelector("[data-ready]"),c=document.querySelector(".sc-g");return !!(r&&c&&(r.compareDocumentPosition(c)&Node.DOCUMENT_POSITION_FOLLOWING));});
+  eq(ord,true,"ready before the set card");
+  eq(await page.evaluate(()=>!!document.querySelector(".wkdock [data-logset]")),true,"log button in the dock");
+  eq(await page.$eval(".wkdock",e=>getComputedStyle(e).position),"sticky");
+});
+await test("Workout (owner, 6 Nov): last time's reps from an older range open inside today's range, with last time shown beside the recommendation",async page=>{
+  await startWorkout(page);await pause(page,900);
+  const r=+await page.$eval("#in_r",e=>e.value);
+  if(r<12||r>20)throw new Error("draft reps outside 12–20: "+r);
+  const all=await page.evaluate(()=>document.querySelector(".ex-pane").textContent);
+  if(!/Last time\s*60 kg × 8/.test(all))throw new Error("no Last time line");
+});
+await test("Workout: a record set says so with the gold star, and the finish screen carries it with the drawing behind the tick",async page=>{
+  await startWorkout(page);await pause(page,900);
+  await page.fill('#in_w','62.5');await page.fill('#in_r','10');await page.tap('[data-logset]');await pause(page,300);
+  eq(await page.evaluate(()=>!!document.querySelector(".toast.rec .toast-star")),true,"the record toast");
+  await pause(page,900);
+  await finishEarly(page);await page.tap('[data-confirmok]');await pause(page,900);
+  eq(await page.evaluate(()=>[!!document.querySelector(".wfin-hd .wfin-art"),!!document.querySelector(".wfin-rec .toast-star")]),[true,true]);
+},{prefs:{autorest:false}});
 await test("Blocks: answering again takes the answer back",async page=>{
   await startWorkout(page);
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
