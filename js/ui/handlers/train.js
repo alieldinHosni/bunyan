@@ -78,8 +78,12 @@ function missMark(date){
   var ws=weekDates(today())[0],keep=function(o){Object.keys(o).forEach(function(k){if(k<ws)delete o[k];});return o;};
   S.missedDone=keep(S.missedDone||{});S.missedDone[date]=1;
   if(S.dayAdd){S.dayAdd=keep(S.dayAdd);Object.keys(S.dayAdd).forEach(function(k){if(k<today())delete S.dayAdd[k];});}}
-function missApply(kind){
-  var r=missedNow();if(!r||r.kind!==kind)return;
+function missApply(kind,adj){
+  var r=missedNow();if(!r)return;
+  /* From Adjust the week: the same two moves, built with the rules bent. */
+  if(adj){var A=r.adjust;if(!A||!A[kind])return;
+    r=Object.assign({},r,kind==="move"?{to:A.move.to}:{adds:A.fold.adds});closeSheet();}
+  else if(r.kind!==kind)return;
   var snap=JSON.parse(JSON.stringify({sw:S.daySwap||{},add:S.dayAdd||{},done:S.missedDone||{}})),p=S.profile||{},msg="";
   if(kind==="move"){S.daySwap=S.daySwap||{};S.daySwap[r.to]=r.missed.dayId;
     msg=t("{a} moved to {d}.").replace("{a}",planName(r.missed.name)).replace("{d}",dfmt(new Date(r.to+"T00:00:00"),{weekday:"long"}));}
@@ -166,9 +170,10 @@ function register(){
       a=new Date(on+"T00:00:00"),b=new Date();
     V.cal=(a.getFullYear()-b.getFullYear())*12+a.getMonth()-b.getMonth();render();return;});
   key("missdo",function(D){missApply(D.missdo);return;});
+  key("missadj",function(D){if(D.missadj==="open"){if(missedNow())openSheet("missadj");return;}missApply(D.missadj,true);return;});
   key("missok",function(){var r=missedNow();if(!r)return;
     var before=JSON.parse(JSON.stringify(S.missedDone||{}));missMark(r.missed.date);saveDB();render();
-    toast(t("Let go. The plan carries on."),function(){S.missedDone=before;saveDB();render();});return;});
+    toast(t("Skipped. The plan carries on."),function(){S.missedDone=before;saveDB();render();});return;});
   on(function(D){return D.swapto!==undefined&&V.sheet==="swapday";},function(D){
     var swd=V.sd.date;
     /* A day that comes too soon for the muscles it trains asks first, and says why. */

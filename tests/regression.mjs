@@ -4112,6 +4112,45 @@ await test("A missed day: moved to a free day with rest either side, or its key 
   await pause(page,300);
   if(!/فاتك/.test(await page.textContent('.reco')))throw new Error("not in Arabic");
 });
+await test("A missed day that fits nowhere (owner, 9 Nov): Skip, log it, or Adjust the week, which puts its key lift in anyway and says the day gets longer",async page=>{
+  const setUp=async(full)=>page.evaluate(async(full)=>{
+    const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sc=await import("/js/engine/schedule.js"),Sp=await import("/js/data/splits.js");
+    const now=U.today(),add=n=>{const d=new Date(now+"T00:00:00");d.setDate(d.getDate()+n);return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);};
+    /* The week starts two days ago, so yesterday is always in it. */
+    S.prefs.wkstart=Sc.isoWeekday(add(-2));
+    const PULL=[Sp.ex("Bent Over Barbell Row",3,8,12),Sp.ex("Wide-Grip Lat Pulldown",3,8,12)],PUSH=[Sp.ex("Barbell Bench Press - Medium Grip",3,8,12),Sp.ex("Standing Military Press",3,8,12)],
+          LEGS=[Sp.ex("Barbell Squat",3,8,12),Sp.ex("Romanian Deadlift",3,8,12)];
+    const days=[Sp.day("Pull",PULL)],wd=n=>[Sc.isoWeekday(add(n))];
+    days[0].wd=wd(-1);
+    if(full){[[0,"Push",PUSH],[1,"Legs",LEGS],[2,"Push",PUSH],[3,"Legs",LEGS],[4,"Push",PUSH],[-2,"Legs",LEGS]].forEach(([n,nm,ex])=>{const d=Sp.day(nm,JSON.parse(JSON.stringify(full==="tight"?ex.concat([Sp.ex("Leg Press",4,8,12),Sp.ex("Dumbbell Flyes",4,8,12),Sp.ex("Barbell Curl",4,8,12)]):ex)));d.wd=wd(n);days.push(d);});}
+    else{const d=Sp.day("Push",PUSH);d.wd=wd(1);days.push(d);const l=Sp.day("Legs",LEGS);l.wd=wd(3);days.push(l);}
+    const p=st.makeProgram({id:"miss",name:"Mine",days:days});p.schedule="week";
+    days.forEach((d,i)=>{p.days[i].wd=d.wd;});
+    S.programs=[p];S.activeProgram=p.id;S.sessions=[];S.daySwap={};delete S.dayAdd;delete S.missedDone;S.profile.mins=full==="tight"?20:90;st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.assess=false;V.tab="train";V.train="days";V.tdate=null;(await import("/js/ui/render.js")).render();},full);
+  await setUp("tight");await pause(page,300);
+  const txt=await page.textContent('.reco');
+  if(!/You can still make it up, or skip it/.test(txt))throw new Error("not the nothing-fits card: "+txt);
+  eq(await page.$$eval('.reco-a .btn',a=>a.map(b=>b.textContent)),["Adjust the week","I trained it: log it","Skip"],"the three choices, Adjust first");
+  await page.tap('[data-missadj="open"]');await pause(page,600);
+  const sh=await page.textContent('#sheet');
+  if(!/Make up Pull/.test(sh)||!/Bent Over Barbell Row, 2 sets/.test(sh)||!/min longer/.test(sh))throw new Error("the sheet: "+sh.slice(0,300));
+  await page.tap('#sheet [data-missadj="fold"]');await pause(page,500);
+  /* Pull dealt with; this test's week also left Legs two days ago unlogged, so that one may follow. */
+  const pullCard="/You missed Pull/.test((document.querySelector('.reco[data-k^=miss]')||{}).textContent||'')";
+  eq(await ev(page,"[!!V.sheet,Object.values(S.dayAdd||{}).flat().map(a=>a.name),"+pullCard+"]"),[false,["Bent Over Barbell Row"],false],"added anyway; Pull's card goes");
+  await page.tap('.toast-undo');await pause(page,300);
+  eq(await ev(page,"[Object.keys(S.dayAdd||{}).length,"+pullCard+"]"),[0,true],"Undo: as it was");
+  await page.tap('[data-missok]');await pause(page,300);
+  eq(await ev(page,"["+pullCard+",document.querySelector('.toast').textContent.indexOf('Skipped')>=0]"),[false,true],"Skip");
+});
+await test("My programs (owner, 9 Nov): the program rows are solid, not frosted, so Safari has no blur to redraw as the page comes to rest",async page=>{
+  await tapTab(page,"train");await pause(page,500);
+  await page.evaluate(()=>{const b=document.createElement("button");b.setAttribute("data-tplan","programs");document.querySelector("#app").appendChild(b);b.click();});await pause(page,900);
+  const r=await page.$$eval("#app .drow.bsp",a=>a.map(x=>{const c=getComputedStyle(x);return [c.backdropFilter,c.webkitBackdropFilter||"none",+(c.backgroundColor.match(/[\d.]+(?=\))/)||[1])[0]>=.9||!/rgba/.test(c.backgroundColor)];}));
+  if(!r.length)throw new Error("no program rows");
+  if(r.some(x=>x[0]!=="none"||x[2]!==true))throw new Error("a frosted or see-through row: "+JSON.stringify(r));
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

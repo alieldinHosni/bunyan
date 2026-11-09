@@ -2267,6 +2267,11 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .drow-s em{font-style:normal;color:var(--faint);font-weight:500}
 .dmain .ico-chev{flex:0 0 auto;margin-inline-end:6px;color:var(--dim)}
 .dedit .ico-edit{flex:0 0 auto;margin-inline-end:8px;opacity:.55}
+/* The program rows are solid, not frosted (owner, 9 Nov: they still "flash" as Programs
+   opens on the iPhone). Safari redraws a backdrop blur when the page that slid in comes
+   to rest, a blink a desktop engine never shows; the templates under them, opaque
+   pictures, never did. The fill is the glass's own solid tone, so they look the same. */
+#app .psec .drow.bsp{-webkit-backdrop-filter:none;backdrop-filter:none;background-color:var(--glass-solid)}
 .bsp.on{border-color:rgba(var(--accentHi-rgb),.55);background:linear-gradient(180deg,rgba(var(--accent-rgb),.10),transparent),var(--raised)}
 .bpill{flex:0 0 auto;margin-inline-end:10px;padding:5px 12px;border-radius:var(--rpill);font-size:12px;font-weight:700;
   background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent)}
@@ -5146,6 +5151,9 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .act-km span{color:var(--dim);font-weight:700}
 .act-int{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .act-int :is(button,label:where(.hap)){min-height:48px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);color:var(--sub);font-size:13.5px;font-weight:700;padding:0 4px}
+/* The phone's ticking labels centre their word by their own rule too, not only by the
+   zero-weight label.hap default, so nothing heavier can put the word back at the top. */
+.act-int label.hap{display:flex;align-items:center;justify-content:center;text-align:center}
 .act-int :is(button,label:where(.hap)).on{background:rgba(var(--accent-rgb),.16);border-color:rgba(var(--accentHi-rgb),.7);color:var(--text)}
 .act-kcal{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding:14px 16px;border-radius:var(--r4);
   background:rgba(var(--accent-rgb),.07);border:1px solid rgba(var(--accentHi-rgb),.25)}

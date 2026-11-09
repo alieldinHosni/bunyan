@@ -18,10 +18,18 @@
              carry, and it says so.
    4. none:  else nothing fits without breaking a rest day: let it go, and the plan
              carries on (said plainly, not forced).
+   When nothing fits (4), or some muscles are left over (2), adjust holds what it would
+   take anyway, for the lifter to choose (owner, 9 Nov: "adjust the whole week or a
+   training day to fix the issue and the volume"), each with what it costs said plainly:
+     adjust.move: the free day ahead whose neighbours train those muscles least, and
+                  the neighbouring days it leaves without a rest day between;
+     adjust.fold: every key lift onto a day left, a day without a clash first, else the
+                  one with fewest sets on that muscle, the time limit set aside; with the
+                  minutes each day gains.
    KEY_SETS is a modelling choice (enough to keep the lift moving, small enough to fit
    another session), not a figure from a source.
 
-   rebalanceWeek(o) → null | {missed:{date,dayId,name}, kind:"move"|"fold"|"covered"|"none", to?, adds[], left[]}
+   rebalanceWeek(o) → null | {missed:{date,dayId,name}, kind:"move"|"fold"|"covered"|"none", to?, adds[], left[], adjust?}
    o: {today, days:[{date, dayId, name, ex[], done, load:{muscle:sets}, mins}] — the week,
        with a day either side for the neighbours; handled:{date:1}; budget (minutes);
        addMin(name, sets) → minutes; info (muscle, secondary, activity, compound)}
@@ -77,6 +85,36 @@ function rebalanceWeek(o){
   if(out.adds.length)out.kind="fold";
   /* Nothing to carry: the days left train those muscles anyway. */
   else if(!out.left.length)out.kind="covered";
+  if(out.kind==="none"||out.left.length)out.adjust=adjustWeek(o,days,missed,mains,pm,ahead,left,at,clash,I,comp);
   return out;}
+
+/* What making the day up would take, rules bent and said so (see the head of the file). */
+function adjustWeek(o,days,missed,mains,pm,ahead,left,at,clash,I,comp){
+  var adj={};
+  /* A free day ahead: the one whose neighbours train those muscles least. */
+  var best=null;
+  for(var j=1;j<days.length-1;j++){var c=days[j];
+    if(c.date<o.today||c.dayId||c.done)continue;
+    var near=[j-1,j+1].filter(function(k){return clash(k,mains);}).map(function(k){return {date:days[k].date,name:days[k].name};});
+    if(!best||near.length<best.near.length)best={to:c.date,near:near};}
+  if(best)adj.move=best;
+  /* Every key lift into the days left, the time limit set aside. */
+  if(left.length){
+    var adds=[],mins={},seen={};
+    (missed.ex||[]).forEach(function(e){
+      if(I.activity(e.name)||!comp(e.name))return;
+      var m=e.muscle||I.muscle(e.name);
+      if(seen[m]||mains.indexOf(m)<0||num(ahead[m])>=pm[m]*0.5)return;
+      seen[m]=1;
+      var pick=null,pickLoad=1e9;
+      left.forEach(function(d){var idx=at[d.date];
+        var cl=clash(idx-1,[m])||clash(idx+1,[m]),ld=num(d.load[m])+(cl?100:0);
+        if(ld<pickLoad){pick=d;pickLoad=ld;}});
+      if(!pick)return;
+      var add=num(o.addMin?o.addMin(e.name,KEY_SETS):KEY_SETS*2.5);
+      pick.load[m]=(pick.load[m]||0)+KEY_SETS;mins[pick.date]=(mins[pick.date]||0)+add;
+      adds.push({date:pick.date,dayId:pick.dayId,dayName:pick.name,name:e.name,muscle:m,sets:KEY_SETS});});
+    if(adds.length)adj.fold={adds:adds,mins:Object.keys(mins).map(function(d){return {date:d,mins:Math.round(mins[d])};})};}
+  return adj.move||adj.fold?adj:null;}
 
 export {KEY_SETS, rebalanceWeek};
