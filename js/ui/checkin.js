@@ -5,14 +5,17 @@
 import {BARRIER_HELP, BARRIERS_ASK} from "../engine/barriers.js";
 import {t, tm} from "../i18n/dict.js";
 import {fmtW} from "../units.js";
-import {esc, fmtN, pretty} from "../util.js";
+import {dfmt, esc, fmtN, pretty} from "../util.js";
+import {exName} from "../i18n/exnames.js";
 import {glyph} from "./glyphs.js";
 
 function fill(x,o){Object.keys(o).forEach(function(k){x=x.split("{"+k+"}").join(o[k]);});return x;}
 function list(ms){return ms.map(function(m){return tm(m).trim();}).join(", ");}
 /* Escaped, with every figure (a sign and a unit with it) in .num, so right to left
    keeps "−0.1 kg" whole. */
-function nums(x){return esc(x).replace(/[−+]?\d(?:[\d,.]*\d)?(?:\s?(?:kg|lb|kcal))?/g,function(m){return '<span class="num">'+m+'</span>';});}
+/* An escaped character (&#39; for an apostrophe) is kept whole: its digits are not a
+   figure ("the textbook&#39;s" showed as typed). */
+function nums(x){return esc(x).replace(/&#?\w+;|[−+]?\d(?:[\d,.]*\d)?(?:\s?(?:kg|lb|kcal))?/g,function(m){return m.charAt(0)==="&"?m:'<span class="num">'+m+'</span>';});}
 function signed(kg){return (kg>0?"+":kg<0?"−":"")+fmtW(Math.abs(kg));}
 
 function ckFacts(c){
@@ -24,6 +27,13 @@ function ckFacts(c){
   if(c.sore)L.push(fill(t("Soreness: {s} out of 10 on average, on the {n} days you logged it"),{s:c.sore.avg,n:c.sore.n}));
   if(c.food)L.push(fill(t(c.food.target?"Food: logged on {n} days, {k} kcal a day on average against {t}":"Food: logged on {n} days, {k} kcal a day on average"),
     {n:c.food.n,k:fmtN(c.food.avg),t:fmtN(c.food.target||0)}));
+  if(c.food&&c.food.pTarget)L.push(fill(t("Protein: {p} g a day on average against {t} g"),{p:c.food.p,t:c.food.pTarget}));
+  if(c.steps)L.push(fill(t(c.steps.target?"Steps: {s} a day on average against {t}, on the {n} days you logged them":"Steps: {s} a day on average, on the {n} days you logged them"),
+    {s:fmtN(c.steps.avg),t:fmtN(c.steps.target||0),n:c.steps.n}));
+  /* The main lifts over the last six weeks: said when it is good news too. */
+  if(c.lifts)L.push([c.lifts.up?fill(t(c.lifts.up===1?"1 main lift rising":"{n} main lifts rising"),{n:c.lifts.up}):"",
+    c.lifts.flat?fill(t(c.lifts.flat===1?"1 holding":"{n} holding"),{n:c.lifts.flat}):"",
+    c.lifts.down?fill(t(c.lifts.down===1?"1 slipping":"{n} slipping"),{n:c.lifts.down}):""].filter(Boolean).join(" · "));
   if(c.weight)L.push(fill(t(c.weight.pace!=null?"Weight: {r} a week, an estimate from {n} weigh-ins over three weeks; your goal's pace is {p}":"Weight: {r} a week, an estimate from {n} weigh-ins over three weeks"),
     {r:signed(c.weight.perWeek),n:c.weight.n,p:signed(c.weight.pace||0)}));
   return L;}
@@ -41,6 +51,14 @@ function ckChange(x){
       :"Your sets were well harder than planned: a lighter week, then build back up."),btn:t("Start a lighter week")};
   if(x.kind==="balance")return {text:[x.low.length?fill(t("Under your range of {lo} sets a week: {m}."),{lo:x.lo,m:list(x.low)}):"",
       x.high.length?fill(t("Well over {hi} sets a week: {m}."),{hi:x.hi,m:list(x.high)}):""].filter(Boolean).join(" "),btn:t("Balance the volume")};
+  /* The target is right; the eating is what moved the scale (or held it). */
+  if(x.kind==="eat")return {text:fill(t(x.over>0?"You ate about {d} kcal a day over your target of {t}, so the target itself is not what slowed you down. Keep it, and bring the eating back to it: the meal plan is built to it."
+      :"You ate about {d} kcal a day under your target of {t}, so the target itself is not what held you back. Keep it, and eat up to it: the meal plan is built to it."),
+      {d:fmtN(Math.abs(x.over)),t:fmtN(x.target)}),btn:t("Open my meal plan")};
+  if(x.kind==="protein")return {text:fill(t("Protein averaged {p} g a day against {t} g. It is what keeps and builds muscle, whatever the goal: a protein food at each meal closes most of the gap."),
+      {p:x.avg,t:x.target}),btn:t("Open my meal plan")};
+  if(x.kind==="steps")return {text:fill(t("You walked about {s} steps a day against a goal of {t}. A goal you meet does more than one you miss: {n} for now, raised again once it is easy."),
+      {s:fmtN(x.avg),t:fmtN(x.target),n:fmtN(x.to)}),btn:fill(t("Set {n} steps"),{n:fmtN(x.to)})};
   return {text:"",btn:""};}
 
 /* Fewer workouts than planned: what got in the way (engine/barriers.js), and once said,
@@ -75,4 +93,43 @@ function ckCard(c){
      :'<p class="ckcard-ok">'+esc(t("Nothing to change: keep going as you are."))+'</p>')
    +'<button class="btn g sm ckcard-done" data-ckok="1">'+esc(t(c.changes.length?"Not this week":"Got it"))+'</button></section>';}
 
-export {ckCard, ckChange, ckFacts};
+/* ---- the month (js/engine/monthly.js) ----------------------------------------------
+   What the month shows, a line each where there is data, and the larger changes it
+   proposes, each with its one button. */
+var GOALWORD={strength:"Get stronger",gain:"Build muscle"};
+function moName(m){return dfmt(new Date(m+"-15T12:00:00"),{month:"long",year:"numeric"});}
+function moFacts(r){
+  var L=[];
+  L.push(fill(t(r.planned?"Workouts: {n} of {p} planned":"Workouts: {n}"),{n:r.done,p:r.planned}));
+  if(r.weight)L.push(fill(t(r.weight.expected!=null?"Weight: {c} over the month; your goal's pace would give about {e}":"Weight: {c} over the month"),
+    {c:signed(r.weight.change),e:signed(r.weight.expected||0)}));
+  if(r.lifts)L.push([r.lifts.up?fill(t(r.lifts.up===1?"1 main lift rising":"{n} main lifts rising"),{n:r.lifts.up}):"",
+    r.lifts.flat?fill(t(r.lifts.flat===1?"1 holding":"{n} holding"),{n:r.lifts.flat}):"",
+    r.lifts.down?fill(t(r.lifts.down===1?"1 slipping":"{n} slipping"),{n:r.lifts.down}):""].filter(Boolean).join(" · "));
+  if(r.best)L.push(fill(t("Best: {x}, estimated max {a} → {b}"),{x:exName(r.best.name),a:fmtW(r.best.from),b:fmtW(r.best.to)}));
+  L.push(fill(t(r.foodDays===1?"Food logged on 1 day":"Food logged on {n} days"),{n:r.foodDays}));
+  return L;}
+function moChange(x){
+  if(x.kind==="days")return {text:fill(t("You trained {n} of the {p} workouts planned. A week of the days you actually train fits better than one you keep missing: {d} days."),{n:x.done,p:x.planned,d:x.to}),
+    btn:fill(t("Build a {n}-day week"),{n:x.to})};
+  if(x.kind==="emphasis")return {text:fill(t("A month of steady training and no main lift rising: time to change the stimulus. Adding {g} gives it days of its own, taking turns with your main goal, as the textbook's undulating plan does."),{g:t(GOALWORD[x.add]).toLowerCase()}),
+    btn:fill(t("Add {g} and rebuild"),{g:t(GOALWORD[x.add]).toLowerCase()})};
+  if(x.kind==="weigh")return {text:fill(t(x.n===0?"No weigh-ins last month. Twice a week, same time, lets the coach read your trend and steer your calories.":x.n===1?"One weigh-in last month. Twice a week, same time, lets the coach read your trend and steer your calories.":"{n} weigh-ins last month. Twice a week, same time, lets the coach read your trend and steer your calories."),{n:x.n}),
+    btn:t("Log weight")};
+  if(x.kind==="food")return {text:fill(t("Food logged on {n} days. Your goal is about the calories, and the coach steers them from your log: most days logged is what lets it."),{n:x.n}),
+    btn:t("Open Food")};
+  if(x.kind==="reassess")return {text:fill(t("{w} weeks since your assessment. Your body, your week and your lifts have moved: answer it again and the plan is built from where you are now."),{w:x.weeks}),
+    btn:t("Take the assessment again")};
+  return {text:"",btn:""};}
+function moCard(r){
+  if(!r)return "";
+  return '<section class="ckcard mocard" aria-labelledby="mo_h">'
+   +'<div class="ckcard-h"><span class="ckcard-i" aria-hidden="true">'+glyph("clipboard")+'</span>'
+   +'<div><span class="shk">'+esc(t("Monthly review"))+'</span><h2 id="mo_h">'+esc(moName(r.month))+'</h2></div></div>'
+   +'<ul class="ckcard-f">'+moFacts(r).map(function(f){return '<li>'+nums(f)+'</li>';}).join("")+'</ul>'
+   +(r.changes.length?r.changes.map(function(x){var w=moChange(x);
+      return '<div class="ckcard-c"><p>'+nums(w.text)+'</p><button class="btn sm" data-modo="'+esc(x.kind)+'">'+nums(w.btn)+'</button></div>';}).join("")
+     :'<p class="ckcard-ok">'+esc(t("A good month: nothing to change. Keep going as you are."))+'</p>')
+   +'<button class="btn g sm ckcard-done" data-mook="1">'+esc(t(r.changes.length?"Not this month":"Got it"))+'</button></section>';}
+
+export {ckCard, ckChange, ckFacts, moCard, moChange, moFacts};

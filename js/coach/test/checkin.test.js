@@ -29,7 +29,24 @@ function run(t){
   var k=checkin(base({body:body,days:days,planned:0})).changes[0];
   t.eq([k.kind,k.by,k.to,k.why],["kcal",-100,1900,"slow"],"losing at under half the pace, eaten to target: 100 kcal less");
   var off={};for(var j2=0;j2<7;j2++)off[addDays("2026-11-01",-j2)]=food(2600);
-  t.eq(checkin(base({body:body,days:off,planned:0})).changes,[],"eaten well over target: the target is not what is off");
+  /* Eaten well over target (owner, 9 Nov: changes that work): the target stays, and the
+     coach says the eating is what slowed it. */
+  t.eq(checkin(base({body:body,days:off,planned:0})).changes.map(function(x){return [x.kind,x.over];}),[["eat",600]],"eaten well over target: the target stays, the eating is named");
+  /* Under target on a deficit and losing slowly: eating less is not the reason, so no "eat". */
+  var under={};for(var j3=0;j3<7;j3++)under[addDays("2026-11-01",-j3)]=food(1500);
+  t.eq(checkin(base({body:body,days:under,planned:0})).changes.filter(function(x){return x.kind==="eat";}),[],"under a deficit and losing slowly: not the eating");
+  /* Protein under 85% of the target on four days or more. */
+  var lowp={};for(var j4=0;j4<5;j4++)lowp[addDays("2026-11-01",-j4)]={meals:{L:{items:[{kcal:2000,p:90}]}}};
+  var pr=checkin(base({days:lowp,planned:0,protein:150}));
+  t.eq([pr.food.p,pr.changes.filter(function(x){return x.kind==="protein";}).map(function(x){return [x.avg,x.target];})],[90,[[90,150]]],"protein 90 g against 150: said");
+  t.eq(checkin(base({days:lowp,planned:0,protein:100})).changes.filter(function(x){return x.kind==="protein";}),[],"90 against 100: close enough");
+  /* Steps: 4,000 a day against 10,000, a stepping stone 1,500 above what was walked. */
+  var walk={};for(var j5=0;j5<5;j5++)walk[addDays("2026-11-01",-j5)]={steps:4000};
+  t.eq(checkin(base({days:walk,planned:0,steps:10000})).changes.filter(function(x){return x.kind==="steps";}).map(function(x){return x.to;}),[5500],"steps far under: a goal that can be met");
+  t.eq(checkin(base({days:walk,planned:0,steps:5000})).changes.filter(function(x){return x.kind==="steps";}),[],"steps near the goal: nothing");
+  /* The main lifts read for what they say: a bench rising week on week. */
+  var rise=[];for(var w=0;w<4;w++)rise.push({date:addDays("2026-11-01",-7*(3-w)),entries:[{name:"Bench",sets:[{w:60+w*5,r:8}]}]});
+  t.eq(checkin(base({sessions:rise,planned:0,mains:["Bench"]})).lifts,{up:1,flat:0,down:0},"a main lift rising is said too");
   t.eq(checkin(base({body:body,days:days,planned:0,floor:1950})).changes,[],"never under the floor");
   var fast=body.map(function(b,i){return {date:b.date,weight:80+i*3*1.2/7};});
   t.eq(checkin(base({body:fast,days:days,planned:0})).changes[0].by,100,"losing at over one and a half the pace: 100 more");

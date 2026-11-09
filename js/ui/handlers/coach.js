@@ -6,7 +6,8 @@ import {addDaysISO} from "../../engine/dayplan.js";
 import {kcalFloor, lastWeight, macroTargets} from "../../engine/formulas.js";
 import {buildMealPlan} from "../../engine/mealplan.js";
 import {FOODDB, loadFoods, ownFood} from "../../engine/nutrition.js";
-import {buildPlan, rebalance} from "../../engine/plan.js";
+import {addPartExercise, buildPlan, rebalance} from "../../engine/plan.js";
+import {exName} from "../../i18n/exnames.js";
 import {checkinOpen} from "../../engine/checkin.js";
 import {followOn, lightOnPurpose} from "../../engine/stress.js";
 import {addDays, weekStartOf} from "../../engine/schedule.js";
@@ -22,7 +23,8 @@ import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {draftFrom, FOCUS_MAX, foodPrefs, GEARS, profileOf, skipOf, STEPS, youOk, youWhy} from "../views/assess.js";
-import {EXTRA_MAX} from "../../data/goals.js";
+import {EXTRA_MAX, goalsOf} from "../../data/goals.js";
+import {lastMonth, monthlyNow, monthlyOpen} from "../../engine/monthly.js";
 import {focusMuscles} from "../../data/parts.js";
 import {ask, findMsg, follow} from "../views/chat.js";
 import {coachAct} from "../views/pcheck.js";
@@ -59,6 +61,9 @@ function useAssessment(){
   var keys=["profile","prefs","gear","skip","goals","programs","activeProgram","onboarded","plannedWeekly","body","mealSlots","block"];
   var before=JSON.parse(JSON.stringify(keys.reduce(function(o,k){o[k]=S[k];return o;},{})));
   Object.assign(S.profile,profileOf(A));
+  /* When the plan was last built from answers: the monthly review asks again after a
+     while (js/coach/monthly.js REASSESS_DAYS). */
+  S.profile.assessedAt=today();
   S.prefs.meals=num(A.meals);S.prefs.diet=A.diet;S.prefs.avoid=A.avoid.slice();S.prefs.powder=!!A.powder;S.prefs.fstyle=A.style;S.prefs.likes=(A.likes||[]).slice();
   S.gear=GEARS[A.gear]?GEARS[A.gear].slice():null;
   S.skip=skipOf(A);
@@ -91,6 +96,13 @@ function pcFix(id){
     var dB=JSON.parse(JSON.stringify(pg.days)),nC=act==="heavy"?heavyMains(pg):shortRests(pg);saveDB();render();
     toast(t(act==="heavy"?"Main lifts set to 3–6 reps with longer rests: {n} changed.":"Rests shortened to 60 s: {n} exercises changed.").replace("{n}",nC),
       function(){pg.days=dB;saveDB();render();});return;}
+  /* A part they asked to bring up, back in the week (engine/plan.js addPartExercise). */
+  if(act==="addpart"){
+    var pp=split();if(!pp)return;
+    var dP=JSON.parse(JSON.stringify(pp.days)),nm=addPartExercise(pp,f.fix.part);
+    if(!nm){toast(t("Nothing you can do with your equipment works it. Change your equipment, or the part you asked for."));return;}
+    saveDB();render();
+    toast(t("{x} added, first in its day.").replace("{x}",exName(nm)),function(){pp.days=dP;saveDB();render();});return;}
   if(act==="program"){toPlan("train","program");return;}
   if(act==="assess"){V.pcheck=false;pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);return;}
   var prog=split(),before={goals:JSON.parse(JSON.stringify(S.goals)),goal:S.profile.goal,
@@ -145,6 +157,10 @@ function ckApply(kind){
     var r=rebalance(sp,S.profile,S.gear);
     msg=r.sets||r.added?t("Volume balanced: {s} sets moved, {a} exercises added.").replace("{s}",r.sets).replace("{a}",r.added)
       :t("Nothing could be moved without making sessions longer.");}
+  else if(kind==="steps"){S.goals.steps=x.to;msg=t("Step goal now {n}.").replace("{n}",fmtN(x.to));}
+  /* The eating, not the target: to the meal plan, where it is built to the target. */
+  else if(kind==="eat"||kind==="protein"){ckDid(kind);saveDB();
+    if(V.tab!=="food"){resetNav();V.tab="food";}pushNav();V.fplan="plan";V.smeal=null;V.pslot=null;V.pimport=false;render();window.scrollTo(0,0);return;}
   ckDid(kind);saveDB();render();
   toast(msg,function(){
     ["profile","goals","programs","activeProgram"].forEach(function(k){S[k]=snap[k];});
@@ -152,6 +168,28 @@ function ckApply(kind){
     if(snap.block)S.block=snap.block;else delete S.block;
     if(snap.ckDid)S.ckDid=snap.ckDid;else delete S.ckDid;
     saveDB();render();});}
+
+/* The month's changes (js/engine/monthly.js): each made with its one tap, Undo where it
+   changes the plan; the ones that open a screen open it. */
+function moDid(kind){var m=lastMonth(today());
+  if(!S.moDid||S.moDid.m!==m)S.moDid={m:m,k:[]};
+  if(S.moDid.k.indexOf(kind)<0)S.moDid.k.push(kind);}
+function moApply(kind){
+  /* From the card in its first days, or from the chat's "How was my month?" any day. */
+  var r=monthlyOpen()||monthlyNow(lastMonth(today())),x=r&&r.changes.filter(function(y){return y.kind===kind;})[0];if(!x)return;
+  if(kind==="weigh"){moDid(kind);saveDB();openSheet("weigh");return;}
+  if(kind==="food"){moDid(kind);saveDB();resetNav();V.tab="food";render();window.scrollTo(0,0);return;}
+  if(kind==="reassess"){moDid(kind);saveDB();pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);return;}
+  var snap=JSON.parse(JSON.stringify({profile:S.profile,programs:S.programs,activeProgram:S.activeProgram,moDid:S.moDid||null})),msg="";
+  if(kind==="days"){
+    S.profile.days=x.to;if((S.profile.wd||[]).length&&S.profile.wd.length!==x.to)S.profile.wd=[];
+    buildPlan();msg=t("A {n}-day week is built for you. It is on the Training page.").replace("{n}",x.to);}
+  else if(kind==="emphasis"){
+    S.profile.goals2=goalsOf(S.profile).slice(1).concat([x.add]);
+    buildPlan();msg=t("Your week is rebuilt: your days now take turns between your goals.");}
+  moDid(kind);saveDB();render();
+  toast(msg,function(){["profile","programs","activeProgram"].forEach(function(k){S[k]=snap[k];});
+    if(snap.moDid)S.moDid=snap.moDid;else delete S.moDid;saveDB();render();});}
 
 /* The coach's insights: act on one, or set it aside for two weeks. Taking a lighter
    week also quiets the insight that asked for it until well after the week ends. */
@@ -227,6 +265,9 @@ function register(){
   on(function(D){return D.assplit&&V.asd;},function(D){V.asd.split=D.assplit;render();return;});
   key("asuse",function(){useAssessment();return;});
   key("ckdo",function(D){ckApply(D.ckdo);return;});
+  key("modo",function(D){moApply(D.modo);return;});
+  key("mook",function(){var m=lastMonth(today()),before=S.moDone;S.moDone=m;saveDB();render();
+    toast(t("Done for the month."),function(){if(before)S.moDone=before;else delete S.moDone;saveDB();render();});return;});
   /* The stress follow-up (views/coach.js stressCard): what they say now is kept; when it
      is no longer the reason for a light week, the week built for them is built again,
      with Undo; still high, the coach asks again in four weeks. */

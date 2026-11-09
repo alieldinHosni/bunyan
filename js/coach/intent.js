@@ -78,6 +78,11 @@ var INTENTS=[
     "my condition|conditions","high blood pressure","blood pressure","hypertension","diabetes|diabetic","osteoporosis","arthritis","pregnant|pregnancy","asthma",
     "heart disease|condition","adjusted for my health","safe with my","can i train with",
     "الضغط","ضغط عالي","السكر","مرض السكر","هشاشه","حامل","الربو","القلب","حالتي الصحيه"]],
+  /* The monthly review: the month that ended, from the log (chat.js aMonth). */
+  ["month",[
+    "how was my month","how was month","how did month go","month review|recap|summary|check","monthly review|recap|summary|check|checkin|report",
+    "last month","my month","review my month",
+    "الشهر كان|عدي|فات","ملخص الشهر","الشهر اللي فات","شهري كان|عامل","مراجعه الشهر"]],
   /* The weekly check-in: the week, from the log (chat.js aWeek). */
   ["week",[
     "how was my week","how was week","how did week go","week review|recap|summary|check|checkin","weekly review|recap|summary|check|checkin|report",

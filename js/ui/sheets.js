@@ -628,7 +628,7 @@ function vSheet(){
   else if(V.sheet==="missadj"){
     /* Making a missed day up when nothing fits by the rules (owner, 9 Nov): train it on a
        free day, or put its key lifts into the days left, each with its cost said. */
-    var mr=missedNow(),MA=mr&&mr.adjust,nW=function(x){return x.replace(/\d+/g,'<span class="num">$&</span>');},wdL=function(d){return d===today()?t("today"):dfmt(new Date(d+"T00:00:00"),{weekday:"long"});};
+    var mr=missedNow(),MA=mr&&mr.adjust,nW=function(x){return x.replace(/&#?\w+;|\d+/g,function(m){return m.charAt(0)==="&"?m:'<span class="num">'+m+'</span>';});},wdL=function(d){return d===today()?t("today"):dfmt(new Date(d+"T00:00:00"),{weekday:"long"});};
     b='<div class="se-top"><span class="se-k">'+esc(t("Coach"))+'</span><h2>'+esc(t("Make up {a}").replace("{a}",mr?planName(mr.missed.name):""))+'</h2>'
      +'<p class="shsub">'+esc(t("Pick how to fit it in. Each choice bends one rule, and says which."))+'</p></div><div class="card tdays">';
     if(MA&&MA.move){var nr=MA.move.near;

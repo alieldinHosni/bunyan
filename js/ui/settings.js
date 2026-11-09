@@ -53,7 +53,7 @@ function pick(name,sub,o){
    the accent rather than filled with it, so a sheet of choices is not a sheet of red;
    the filled accent stays for the button a sheet leads to. */
 /* A footnote's figures kept whole in Arabic ("و2 كجم" read "2و"): each number isolated. */
-function figs(x){return esc(x).replace(/\d+(?:[.,]\d+)?/g,'<bdi class="num">$&</bdi>');}
+function figs(x){return esc(x).replace(/&#?\w+;|\d+(?:[.,]\d+)?/g,function(m){return m.charAt(0)==="&"?m:'<bdi class="num">'+m+'</bdi>';});}
 /* Somewhere else: a chevron, and what is there now. */
 function nav(attr,name,sub,val,gl){
   return '<button class="srow" '+attr+'>'+(gl?'<span class="gtile">'+glyph(gl)+'</span>':'')+words(name,sub)
