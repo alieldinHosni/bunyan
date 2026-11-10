@@ -277,7 +277,7 @@ function body(a){
         return chip("nolift",n,exName(n),(a.nolift||[]).indexOf(n)>=0,true);}).join("")+'</div>'
      +'<p class="as-note">'+t("Left out of your plan, and never suggested. Exercises you have starred are used first. Both can be changed any time from an exercise's menu.")+'</p>';}
   else if(s==="life"){
-    h+=q(t("The rest of your day"),t("Outside training. It decides most of what you burn."));
+    h+=q(t("The rest of your day"),t("Outside training. It sets your daily calories, not your training; the weekly check-in corrects it from your weigh-ins."));
     h+='<div class="ascards">'+card("job","desk",t("Mostly sitting"),t("A desk, a car, a sofa."),a.job==="desk")
      +card("job","some",t("Some walking"),t("On your feet now and then, errands, stairs."),a.job==="some")
      +card("job","feet",t("On my feet most of the day"),t("Shop floor, teaching, nursing, a lot of walking."),a.job==="feet")

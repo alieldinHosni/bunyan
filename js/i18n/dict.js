@@ -5,7 +5,8 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Or pick exactly what you have": "أو اختار اللي عندك بالظبط",
+var AR={"Outside training. It sets your daily calories, not your training; the weekly check-in corrects it from your weigh-ins.": "برّه التمرين. ده بيحدد سعراتك اليومية، مش تمرينك؛ والمراجعة الأسبوعية بتظبطه من أوزانك.",
+"Or pick exactly what you have": "أو اختار اللي عندك بالظبط",
 "Your plan uses only these, and your own body weight.": "خطتك هتستخدم دول بس، ووزن جسمك.",
 "Tap any to change the list: barbell, dumbbells, kettlebell, bands, cables, machines. Your body weight is always in.": "دوس على أي واحدة تغيّر القايمة: بار، دمبل، كيتل بل، أساتك، كابلات، أجهزة. وزن جسمك موجود دايمًا.",
 "Back of the shoulder · reverse flyes, face pulls": "ورا الكتف · رفرفة عكسي، فيس بول",
