@@ -2605,11 +2605,16 @@ await test("Dock: the red travels from the tab left to the tab tapped, and lands
   const mid=t=>page.evaluate(t=>{const b=document.querySelector('nav .dock-b[data-tab="'+t+'"]').getBoundingClientRect();return Math.round(b.left+b.width/2);},t);
   const a=await at(),trainMid=await mid("train");
   if(Math.abs(a-trainMid)>3)throw new Error("not on Training to begin with");
+  /* Where the highlight is on every frame of the journey, recorded in the page from
+     before the tap: one reading taken a set time after the tap depended on how quick the
+     machine was (on a slow one it had all but arrived), and said nothing of the rest. */
+  await page.evaluate(()=>{window.__hl=[];const f=()=>{const e=document.querySelector("nav .dock-hl");if(e){const h=e.getBoundingClientRect();window.__hl.push(Math.round(h.left+h.width/2));}
+    if(window.__hl.length<240)requestAnimationFrame(f);};requestAnimationFrame(f);});
   await page.tap('nav .dock-b[data-tab="progress"]');
-  const half=await page.evaluate(()=>new Promise(r=>setTimeout(()=>{const h=document.querySelector("nav .dock-hl").getBoundingClientRect();r(Math.round(h.left+h.width/2));},140)));
-  await pause(page,700);
-  const end=await at(),progMid=await mid("progress");
-  if(!(half>a+10&&half<progMid-10))throw new Error("not on its way: "+a+" → "+half+" → "+end+" (Progress at "+progMid+")");
+  await pause(page,900);
+  const end=await at(),progMid=await mid("progress"),seen=await page.evaluate(()=>window.__hl);
+  const half=seen.filter(x=>x>a+10&&x<progMid-10);
+  if(!half.length)throw new Error("not on its way: "+a+" → (no frame in between; "+seen.filter((x,i)=>!i||x!==seen[i-1]).join(",")+") → "+end+" (Progress at "+progMid+")");
   if(Math.abs(end-progMid)>3)throw new Error("did not land on Progress: "+end+" vs "+progMid);
   eq(await page.$eval('nav .dock-b[data-tab="train"]',b=>getComputedStyle(b).backgroundColor!=="rgba(0, 0, 0, 0)"),true,"Training is a plain circle again");
 },{prefs:{anim:true}});
