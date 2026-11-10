@@ -261,7 +261,10 @@ function slidePlan(s,step){
     /* The real tab is drawn now that nothing moves: exactly where the one that came in
        stands, so swapping one for the other cannot be seen. */
     H.go(step,s.k);
-    var np=pane();
+    /* A main tab lands as the whole page: Progress has a pane of its own views inside it,
+       and lining that up with the top of the page that came in scrolled the page down by
+       its height (owner, 10 Nov: "opens then shifts the whole page upwards"). */
+    var np=s.k==="tab"?document.getElementById("app"):pane();
     [p,np].forEach(function(e){if(e){e.style.transition="none";e.style.transform="";e.style.opacity="";
       if(e.getAnimations)e.getAnimations().forEach(function(x){x.cancel();});}});
     /* The real tab exactly where the one that came in stands: if the page had been

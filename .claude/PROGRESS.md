@@ -4056,3 +4056,11 @@ finger has brought the page), dockLand (on release: the next tab is set on at on
 slides, and the highlight travels the rest over the slide's own duration with the page's ease-out curve) and
 dockBack (home with a page that springs back). exswipe.js calls them through app.js helpers (follow/land/back);
 moveHl takes a duration and a force flag. Regression test "Dock with the swipe".
+- Same round (owner, 10 Nov: "the best background blending is when I swipe to the coach page; Progress is the worst,
+  it opens then shifts the whole page upwards"):
+  - The ground's picture blends with the swipe (js/ui/bgart.js bgFollow/bgLand/bgBack through app.js GROUND): the
+    next tab's picture fades in over the old one with the finger (the old fading slower, so the ground does not
+    show between), finishes over the landing, and is made the shown one so the render after changes nothing.
+  - Progress's jump: at landing, exswipe lined up pane() with the copy that came in; on Progress pane() is its own
+    views' pane (data-pswipe), 187 px below the page's top, so the page was scrolled by that. A main-tab landing
+    now lines up #app itself. Test: "Progress lands at its top, no jump".

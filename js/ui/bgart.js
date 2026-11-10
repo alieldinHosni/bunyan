@@ -52,6 +52,45 @@ function syncBgArt(key){
   if(!m){go();return;}
   var im=new Image();im.src=m[1];
   (im.decode?im.decode():Promise.resolve()).then(go,go);}
+/* ---- with the finger ----------------------------------------------------------
+   Owner, 10 Nov: swiping between the main tabs, only Coach's ground seemed to blend; the
+   others changed after the page had landed (syncBgArt runs on the render that follows).
+   Now the next tab's picture comes in under the swipe: bgFollow fades it in over the old
+   one by the share of the screen the finger has brought the page, bgLand finishes the
+   fade over the page's own landing time and makes it the shown one (so the render after
+   does nothing), bgBack fades it out again with a page that springs back. */
+var drag=null;
+function bgFollow(key,f){
+  var el=document.getElementById("bgart");if(!el||!PAGES[key]||isReduced())return;
+  if(key===shown){return;}
+  if(!drag||drag.key!==key){
+    if(drag&&drag.nw.parentNode)drag.nw.remove();
+    var old=[].slice.call(el.children);old.slice(0,-1).forEach(function(o){o.remove();});
+    var prev=el.lastElementChild,box=document.createElement("div");box.innerHTML=bgArt(key);
+    var nw=box.firstElementChild;el.appendChild(nw);
+    var to=+getComputedStyle(nw).opacity||1,from=prev?(+getComputedStyle(prev).opacity||1):0;
+    drag={key:key,nw:nw,prev:prev,to:to,from:from};}
+  var k=Math.max(0,Math.min(1,f));
+  drag.nw.style.opacity=String(drag.to*k);
+  /* The old one goes slower than the new one comes, so the ground never shows through
+     between them. */
+  if(drag.prev)drag.prev.style.opacity=String(drag.from*(1-k*k));}
+function bgLand(key,ms){
+  var d=drag;drag=null;
+  if(!d||d.key!==key){syncBgArt(key);return;}
+  var el=document.getElementById("bgart");shown=key;if(el)el.setAttribute("data-page",key);
+  var nw=d.nw,prev=d.prev,dur=ms||320;
+  if(!nw.animate){nw.style.opacity="";if(prev)prev.remove();return;}
+  var a=nw.animate([{opacity:nw.style.opacity||0},{opacity:d.to}],{duration:dur,easing:"cubic-bezier(0.22,1,0.36,1)",fill:"forwards"});
+  if(prev)prev.animate([{opacity:prev.style.opacity||d.from},{opacity:0}],{duration:dur,easing:"cubic-bezier(0.22,1,0.36,1)",fill:"forwards"});
+  a.onfinish=function(){nw.style.opacity="";a.cancel();if(prev&&prev.parentNode)prev.remove();};}
+function bgBack(ms){
+  var d=drag;drag=null;if(!d)return;
+  var nw=d.nw,prev=d.prev,dur=ms||320;
+  if(!nw.animate){nw.remove();if(prev)prev.style.opacity="";return;}
+  var a=nw.animate([{opacity:nw.style.opacity||0},{opacity:0}],{duration:dur,fill:"forwards"});
+  if(prev)prev.animate([{opacity:prev.style.opacity||d.from},{opacity:d.from}],{duration:dur,fill:"forwards"}).onfinish=function(){prev.style.opacity="";this.cancel();};
+  a.onfinish=function(){if(nw.parentNode)nw.remove();};}
 /* For the tests. */
 function bgArtKey(){return shown;}
-export {bgArt, syncBgArt, bgArtKey};
+export {bgArt, bgBack, bgFollow, bgLand, syncBgArt, bgArtKey};

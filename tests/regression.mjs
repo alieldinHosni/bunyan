@@ -4399,10 +4399,14 @@ await test("Dock with the swipe (owner, 10 Nov: the highlight lagged behind the 
   await T("touchStart",330,650);for(let i=1;i<=10;i++){await T("touchMove",330-i*19,650);await page.waitForTimeout(16);}
   const mid=await hlx(),share=(mid-x0)/(xf-x0);
   if(!(share>0.3&&share<0.75))throw new Error("the highlight is not following the finger: "+share.toFixed(2));
+  /* The ground's picture blends with it: Food's coming in over Training's. */
+  const bgm=await page.evaluate(()=>[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p+":"+(+getComputedStyle(p).opacity).toFixed(2)));
+  if(bgm.length!==2||!/^home:/.test(bgm[0])||!/^food:0\.[1-9]/.test(bgm[1]))throw new Error("the pictures do not blend under the finger: "+bgm);
   /* Let go: Food is on at once, before the page has landed. */
   await T("touchEnd",0,0);await page.waitForTimeout(60);
   eq(await page.evaluate(async()=>[(await import("/js/ui/view.js")).V.tab,document.querySelector('nav [data-tab="food"]').classList.contains("on")]),["train",true],"Food lit while the page is still sliding");
   await page.waitForTimeout(800);
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p)),["food"],"Food's picture alone once landed");
   const land=await hlx(),fb=await btn("food");
   if(Math.abs(land-fb)>2)throw new Error("not on Food when the page landed: "+land+" vs "+fb);
   /* A short drag let go springs back, and the highlight with it. */
@@ -4412,6 +4416,12 @@ await test("Dock with the swipe (owner, 10 Nov: the highlight lagged behind the 
   await T("touchEnd",0,0);await page.waitForTimeout(600);
   eq(await ev(page,"V.tab"),"food","still on Food");
   if(Math.abs((await hlx())-(await btn("food")))>2)throw new Error("the highlight did not go home");
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p+":"+(p.style.opacity||"css"))),["food:css"],"and the picture back as it was");
+  /* Landing on Progress keeps the page where it was (it scrolled down by its own pane's height). */
+  await tapTab(page,"coach");await pause(page,900);
+  await T("touchStart",330,650);for(let i=1;i<=12;i++){await T("touchMove",330-i*22,650);await page.waitForTimeout(16);}
+  await T("touchEnd",0,0);await page.waitForTimeout(1200);
+  eq(await ev(page,"[V.tab,Math.round(scrollY)]"),["progress",0],"Progress lands at its top, no jump");
 });
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
