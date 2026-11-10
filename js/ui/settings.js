@@ -28,6 +28,7 @@ import {esc, fmtN, num, shortd} from "../util.js";
 import {VERSION} from "../version.js";
 import {canBuzz, seg, V} from "./view.js";
 import {iconOf, modeOf, themeOf, THEMES} from "./theme.js";
+import {skyInfo} from "./sky.js";
 import {glyph} from "./glyphs.js";
 import {mealStyle} from "../engine/meals.js";
 import {afTile} from "./views/addfood.js";
@@ -134,6 +135,26 @@ function trainingSheet(){
      +pick(t("Dumbbell weights"),t("How you enter them"),{items:[["hand",t("Per hand")],["total",t("Both together")]],
         value:tp.dbLoad==="total"?"total":"hand",attr:"setdb",label:t("Dumbbell weights")}));}
 
+/* The pictures under the sun (js/ui/sky.js): on or off, where the sun is taken from, and
+   today's sunrise and sunset there, so what the screen shows can be checked against the
+   window. */
+function hm(ms){
+  try{return new Date(ms).toLocaleTimeString(S.prefs.lang==="ar"?"ar-EG-u-nu-latn":"en-US",{hour:"numeric",minute:"2-digit"});}
+  catch(e){var d=new Date(ms);return d.getHours()+":"+String(d.getMinutes()).padStart(2,"0");}}
+function skyGroup(ap){
+  var on=!ap.nosky,rows=sw('data-toggle="nosky"',t("Background follows the sun"),t("Night blue after dark, warm at sunrise and sunset, brighter on summer days"),on);
+  if(on){var k=skyInfo(),pl=k.place;
+    var where=pl.src==="gps"?t("Your location"):pl.src==="zone"?t(pl.name)+" · "+t("from your time zone"):t("Your time zone (approximate)");
+    /* Each time kept whole in Arabic ("6:20 ص", not "20:6"). */
+    var tm=function(ms){return '<bdi class="num">'+esc(hm(ms))+'</bdi>';};
+    var when=k.polar==="day"?esc(t("The sun does not set today")):k.polar==="night"?esc(t("The sun does not rise today"))
+      :[k.rise?esc(t("Sunrise"))+" "+tm(k.rise):"",k.set?esc(t("Sunset"))+" "+tm(k.set):""].filter(Boolean).join(" · ");
+    rows+='<div class="srow srow-sky"><span class="srow-t"><span class="srow-n">'+esc(where)+'</span><span class="srow-s">'+when+'</span></span></div>'
+     +(pl.src==="gps"?'<button class="srow" data-skyloc="0">'+words(t("Use my time zone instead"),t("Forgets the location kept for the sky"))+'</button>'
+       :'<button class="srow" data-skyloc="1">'+words(t("Use my location"),t("Exact sunrise and sunset where you are"))+'<span class="srow-play">'+esc(t("Allow"))+'</span></button>');}
+  return group(t("Background"),rows,
+    on?figs(t("The sun's height is calculated for the place and the minute, to within a minute of the true sunrise. A location you share is rounded to about 10 km and stays on this phone.")):"");}
+
 /* ---- App ------------------------------------------------------------------------------ */
 function appSheet(){
   var ap=S.prefs,thCur=themeOf(),thMode=modeOf();
@@ -175,6 +196,7 @@ function appSheet(){
    +'<details class="adv sg-more"><summary>'+esc(t("Changing it on the Home Screen"))+'</summary><p class="sg-f">'
    +esc(t("On iPhone, the Home Screen keeps the icon BUNYAN had when it was added. To change it there, make a backup first (Profile → Backup and reset), add BUNYAN to the Home Screen again from Safari (Share → Add to Home Screen), and restore the backup in it if it opens empty."))+'</p></details>'
    +'</section>'
+   +skyGroup(ap)
    +group(t("Language and units"),
       pick(t("Language"),"",{items:[["en","English"],["ar","العربية"]],value:ap.lang==="ar"?"ar":"en",attr:"setlang",label:t("Language")})
      +pick(t("Units"),t("Display only. Your history is never rewritten."),{items:[["kg",t("Kilograms (kg)")],["lb",t("Pounds (lb)")]],
