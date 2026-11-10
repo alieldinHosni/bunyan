@@ -1104,7 +1104,7 @@ await test("Themes: the rest band takes the theme in light mode, with readable f
   await startWorkout(page);await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
   const r=await page.evaluate(()=>{const v=document.getElementById("restDig"),b=v&&v.closest(".rb");
     return v?[getComputedStyle(v).color,getComputedStyle(b).backgroundColor,!document.getElementById("rest").firstChild]:null;});
-  eq(r,["rgb(19, 38, 39)","rgba(224, 231, 230, 0.56)",true],"Sage light's text on its card glass; no full-screen rest");
+  eq(r,["rgb(19, 38, 39)","rgba(236, 242, 241, 0.78)",true],"Sage light's text on its card glass; no full-screen rest");
 },{db:Object.assign(seed(),{theme:"light"}),prefs:{palette:"mono"}});
 await test("Themes: each place stands on its own picture, under the glass, faint in light mode",async page=>{
   const look=()=>page.evaluate(()=>{const g=document.getElementById("bgart"),a=g&&g.querySelector(".art.photo");
@@ -4590,6 +4590,83 @@ await test("The app's own number keypad (owner, 10 Nov: sheets with a field boun
   await page.tap('.kpad [data-kp="next"]');await pause(page,1200);
   eq(await page.evaluate(()=>{const a=document.activeElement,r=a.getBoundingClientRect(),f=document.querySelector("#sheet .sfoot").getBoundingClientRect();return [a.id,r.bottom<=f.top,document.querySelector(".kpad").classList.contains("on")];}),["ib_pbf",true,true],"Next goes to the following field, in sight above the sheet's Save, the keypad staying");
 });
+/* Contrast (owner, 10 Nov: "text … flying in air … can't be seen due to the contrast").
+   Every line of text on the main pages, in the looks given, against what is really
+   behind it: the page is photographed with its text made transparent (halos kept, as
+   they are part of what the eye reads against), and each text box's background pixels
+   are compared with its colour. The worst tenth of its pixels must meet WCAG AA: 4.5:1,
+   or 3:1 for large type. Text under the dock's fade and outside a clipping scroller is
+   not judged: it is not meant to be read there. Returns what fails. */
+async function contrastAudit(page,looks,lang){
+  const out=[];
+  const audit=async(label)=>{
+    await pause(page,900);
+    const H=await page.evaluate(()=>Math.max(document.documentElement.scrollHeight,innerHeight));
+    for(let y=0;y<H;y+=440){
+      await page.evaluate(y=>window.scrollTo(0,y),y);await pause(page,700);
+      await page.evaluate(()=>document.getAnimations().forEach(a=>{try{const t=a.effect&&a.effect.getComputedTiming();if(t&&t.iterations!==Infinity)a.finish();}catch(e){}}));await pause(page,60);
+      const els=await page.evaluate(()=>{const r=[];let i=0;
+        const ok=e=>{const cs=getComputedStyle(e);return cs.visibility!=="hidden"&&cs.display!=="none"&&+cs.opacity>0.05;};
+        document.querySelectorAll("body *:not(script):not(style):not(svg *)").forEach(e=>{
+          if(e.closest("#bgart,.dock,nav,.kpad,[aria-hidden=true],.vh"))return;
+          const t=[...e.childNodes].filter(n=>n.nodeType===3&&n.textContent.trim()).map(n=>n.textContent.trim()).join(" ");if(!t)return;
+          let a=e,vis=true;while(a&&a!==document.body){if(!ok(a)){vis=false;break;}a=a.parentElement;}if(!vis)return;
+          const rg=document.createRange();const n=[...e.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());rg.selectNodeContents(n);let b=rg.getBoundingClientRect();
+          /* What is seen of it: inside every ancestor that clips (a scroller of chips),
+             above the dock and its fade, inside the screen. */
+          let L=b.left,T=b.top,R=b.right,B=b.bottom;
+          for(let a=e.parentElement;a&&a!==document.body;a=a.parentElement){const s=getComputedStyle(a);
+            if(/(hidden|auto|scroll|clip)/.test(s.overflowX+s.overflowY)){const r=a.getBoundingClientRect();L=Math.max(L,r.left);T=Math.max(T,r.top);R=Math.min(R,r.right);B=Math.min(B,r.bottom);}}
+          L=Math.max(L,0);R=Math.min(R,innerWidth);T=Math.max(T,0);B=Math.min(B,innerHeight-240);
+          if(R-L<Math.min(12,b.width*0.6)||B-T<b.height*0.6||R-L<b.width*0.5)return;
+          b={left:L,top:T,width:R-L,height:B-T};
+          const cs=getComputedStyle(e);e.setAttribute("data-cx",++i);
+          r.push({i,t:t.slice(0,40),c:cs.color,fs:parseFloat(cs.fontSize),fw:+cs.fontWeight,op:+cs.opacity,x:b.left,y:b.top,w:b.width,h:b.height,cls:(e.className&&e.className.baseVal===undefined?e.className:"")+"<"+(e.parentElement.className||"")});});
+        return r;});
+      await page.addStyleTag({content:"*{color:transparent!important;-webkit-text-stroke:0!important;caret-color:transparent!important} input::placeholder,textarea::placeholder{color:transparent!important}"});
+      await pause(page,80);
+      const png=(await page.screenshot()).toString("base64");
+      await page.evaluate(()=>{const s=[...document.querySelectorAll("style")].pop();s.remove();});
+      const res=await page.evaluate(async([png,els])=>{
+        const img=new Image();img.src="data:image/png;base64,"+png;await img.decode();
+        const cv=document.createElement("canvas");cv.width=img.width;cv.height=img.height;const x=cv.getContext("2d");x.drawImage(img,0,0);
+        const sc=img.width/innerWidth;
+        const lin=v=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);};
+        const L=(r,g,b)=>0.2126*lin(r)+0.7152*lin(g)+0.0722*lin(b);
+        const bad=[];
+        for(const e of els){
+          const m=e.c.match(/[\d.]+/g).map(Number);if(/^color\(srgb/.test(e.c)){m[0]*=255;m[1]*=255;m[2]*=255;}const al=(m[3]==null?1:m[3])*e.op;
+          const d=x.getImageData(Math.max(0,e.x*sc),Math.max(0,e.y*sc),Math.max(1,e.w*sc),Math.max(1,e.h*sc)).data;
+          const cr=[];
+          for(let k=0;k<d.length;k+=16){const br=d[k],bg=d[k+1],bb=d[k+2];
+            const tr=m[0]*al+br*(1-al),tg=m[1]*al+bg*(1-al),tb=m[2]*al+bb*(1-al);
+            const l1=L(tr,tg,tb),l2=L(br,bg,bb);cr.push((Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05));}
+          cr.sort((a,b)=>a-b);const worst=cr[Math.floor(cr.length*0.1)]||0;
+          const large=e.fs>=24||(e.fs>=18.6&&e.fw>=700);const need=large?3:4.5;
+          if(worst<need)bad.push(Math.round(worst*100)/100+" <"+need+" "+JSON.stringify(e.t)+" ."+e.cls.replace(/\s+/g,".").slice(0,60)+" fs"+e.fs);}
+        return bad;},[png,els]);
+      res.forEach(b=>out.push(label+" y"+y+": "+b));
+    }
+    await page.evaluate(()=>window.scrollTo(0,0));
+  };
+  for(const theme of looks){
+    await page.evaluate(async([t,lang])=>{const st=await import("/js/state.js");const [pal,mode]=t.split("/");st.S.theme=mode;st.S.prefs.palette=pal;st.S.prefs.lang=lang;st.saveDB();},[theme,lang]);
+    await page.reload();await pause(page,1200);
+    /* The sky lights the pictures by the clock (js/ui/sky.js): each look is judged at
+       its hardest hour, light ones at midnight (the darkest picture under dark type),
+       dark ones at noon (the brightest under light type). */
+    await page.evaluate(async m=>{(await import("/js/ui/sky.js")).setSkyClock(m==="light"?Date.UTC(2026,5,21,0):Date.UTC(2026,5,21,12));},theme.split("/")[1]);await pause(page,300);
+    for(const tab of ["train","food","coach","progress","profile"]){await tapTab(page,tab);await audit(theme+"/"+tab);}
+    /* and the plan pages: the program, the programs, the meal plan */
+    for(const [sec,sub] of [["train","program"],["train","programs"],["food","plan"]]){await coach(page,sec,sub);await audit(theme+"/"+sec+"-"+sub);}
+  }
+  return out;}
+await test("Contrast: no text under WCAG AA on the main pages — Blue, dark and light",async page=>{
+  const bad=await contrastAudit(page,["blue/dark","blue/light"],"en");if(bad.length)throw new Error(bad.length+" under AA:\n"+bad.join("\n"));});
+await test("Contrast: no text under WCAG AA on the main pages — Red, dark and light, in Arabic",async page=>{
+  const bad=await contrastAudit(page,["red/dark","red/light"],"ar");if(bad.length)throw new Error(bad.length+" under AA:\n"+bad.join("\n"));});
+await test("Contrast: no text under WCAG AA on the main pages — Sage, dark and light",async page=>{
+  const bad=await contrastAudit(page,["mono/dark","mono/light"],"en");if(bad.length)throw new Error(bad.length+" under AA:\n"+bad.join("\n"));});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

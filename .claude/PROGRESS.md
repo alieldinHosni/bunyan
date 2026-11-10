@@ -4172,3 +4172,24 @@ push to main: the Node suites (architecture, engine, coach) in one job, and test
 machines with the new SHARD=i/n (every n-th test from the i-th). Playwright 1.56.1 and Chromium are installed
 for the run only (npm -g, outside the repo: still no package.json). The suite now exits 1 on any failure
 (it exited with the failure count, which wraps past 255).
+
+## Contrast rules and the card surface — branch session/components (v256)
+Owner, 10 Nov (improvement list, fourth item; earlier: "text … flying in air … can't be seen due to the contrast").
+Measured, not eyeballed: tests/regression.mjs contrastAudit photographs each page with its text made transparent
+(halos kept) and compares every text box's background pixels (worst tenth) with its colour, against WCAG AA
+(4.5:1, 3:1 large). Pages: Training, Food, Coach, Progress, Profile, My program, Programs, Meal plan. Looks: all
+three palettes, dark and light, one in Arabic; each judged at its hardest hour of the sky (js/ui/sky.js: light at
+midnight, dark at noon). Three tests ("Contrast: no text under WCAG AA …"). Before: 103 lines under AA at a
+mild hour, more at noon. After: none.
+What was wrong, and the rule now:
+- --glass is the dock's dark glass in every mode. Seven content components used it as a card (the Coach page's
+  "Take the assessment again" row, the Programs list rows, the workout pill, zone/recovery/condition/hurt notes,
+  the calendar button, Use this plan): dark type on dark navy in light mode, ~1.1:1. They take --card / --raised.
+- Cards over the photographs are opaque enough to read on (light ~.80, dark ~.70–.80).
+- Small type on cards and on the ground uses --sub, not --dim (inside .pglbl/.tsec/.dadd/.bname/.bsched/
+  .tgsrc-w/.ptile/.tgcard, --dim and --faint resolve to --sub).
+- Type straight on the ground carries --ground-halo; ground links lean toward the type colour (color-mix).
+- Dark mode's veil over the pictures stays deeper below the top (the noon sun brightens them).
+- Light accents a shade deeper (Blue #244779, Red #960A14), Red dark's lighter (#FF7682).
+- Sage light: white ground type never inside a card (more card classes excluded), its dark halo only with it.
+- "Add day" stands on a card surface.
