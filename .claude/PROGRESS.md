@@ -4152,3 +4152,17 @@ jumped at drag start, the page before's entrance began during the drag).
   read it. The back swipe: bgart.holdBg/bgWanted keep the page before's picture for the finger (bgFollow/bgLand/
   bgBack), and its entrance is held until the landing.
 - Test "One way a page moves".
+
+## The app's own number keypad — branch session/transit (v255)
+Owner, 10 Nov (improvement list, second item; sheets with a field "bounce" as iOS's keyboard comes and goes:
+it reports its height only after it has moved). js/ui/keypad.js: on a touch device a number field in a sheet
+(type=number, inputmode decimal/numeric) gets the app's keypad — 1–9, 0, point, delete, Next, Done — drawn at
+the foot of the screen and slid in by the app, with --vvh/--kbh (what every sheet already sizes from) set to
+its height in the same motion. The field is marked inputmode="none" on touchstart, before the browser can
+raise its keyboard, and a type=number field becomes text while typed into (number fields drop "12.").
+Keys write the value and send the field's input event, so the sheets' own handlers are unchanged; Done sends
+change and blurs; Next goes to the sheet's following number field. Opening a field selects what it holds: the
+first digit types over it, Delete edits it. The field is scrolled clear of the sheet's sticky footer (.sfoot)
+and head. Whole-number fields (inputmode numeric, step 1) have no point. Keys stay 1-2-3 left to right in
+Arabic. Mouse and hardware keyboards are unaffected.
+- Test "The app's own number keypad"; "Keyboard (iPhone)" now measures Fat against the keypad's top.
