@@ -671,6 +671,10 @@ least 25% shorter (it is 6,300 lines).
 
 ### WP-8 — 3D, used where it matters
 
+> **Superseded by `docs/FIGURE-V3.md`** (the figure's review and full design, packages
+> F-0 to F-9). What follows is kept for the workout-stage and coverage parts, which
+> are F-9 there.
+
 **Goal.** The figure is seen every set, covers the exercises people actually do, and
 never costs a frame.
 

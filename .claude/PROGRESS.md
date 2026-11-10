@@ -4201,3 +4201,16 @@ v256 (contradicting prompts, the coach and the workout page giving different rep
 button, a hold with no timer, no finish screen, 199 requests / 4.2 MB at start), the rules for builders, and
 twelve work packages in build order (WP-0 … WP-11), each with files, steps and acceptance tests. Nothing in the
 app changed.
+
+## The 3D figure, third version: review and design — branch session/figure
+Owner, 10 Nov: feedback on the mannequin, then a clear design that looks far better, with a better
+environment and motion that follows the biomechanics; body, joints, muscles, structure, posture and movement
+realistic "as if it is an athlete". docs/FIGURE-V3.md: eleven exercises rendered at start, middle and end and
+reviewed (figure small in frame, clay skin, muscles a blue stain, empty stage with a banding artefact; deadlift
+bar swinging out in an arc, rounded-looking hinge, pulldown stopping at ear level, rocking row, flared push-up,
+fixed rhythm ignoring the prescribed tempo). Design: a realism standard made of tests (proportions, joint
+centres and limits, deformation, a muscle table with origins/insertions/joints crossed, neutral posture, centre
+of mass over the base, no foot slide), an athlete's body (skin, definition, muscles that bulge, hair, a female
+body), a gym (floor, wall, rack, true plates, moving stack), movement in phases with path constraints and the
+prescribed tempo, muscles by role × action × phase, teaching aids; ten packages F-0 … F-9. It replaces WP-8 of
+docs/NEXT-PHASE.md. Nothing in the app changed.
