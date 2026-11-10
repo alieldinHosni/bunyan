@@ -4006,6 +4006,21 @@ Owner, 10 Nov: "make it dark as a night in night, and bright and sunny in day, a
   each minute into the next (60 s linear); set at once at start and on coming back after two minutes away.
   Filter (brightness/saturate/sepia/hue) on the photo, night blue on .photo::before, the horizon's glow over the
   veil in ::after. Only the pictures: cards, words and the theme's ground are untouched, so contrast holds.
+## Profile › Nutrition is a settings sheet — branch session/nutset
+
+Owner, 9 Nov: "I hate it when there is no nutrition settings, it just directs me to the nutrition page
+… either remove it … or add actual useful settings".
+
+- `set_food` (js/ui/settings.js foodSheet):
+  - Daily targets: one row to where they are edited (the plan page's daily-goal card), showing what
+    they are now.
+  - Meals a day (3–6), Meal names (the existing `mstyle`), Food style (egy, mixed, intl).
+  - Diet (any, veg, pesc, vegan); Leave out (dairy, eggs, fish, nuts, gluten); Protein powder
+    (`toggle`).
+  - "Rebuild my meal plan" (`data-pgen`): the plan built from these, shown before it is used.
+- These are the assessment's food answers, in S.prefs, read by `mealPrefs`. Handlers `nset` and
+  `navoid` in handlers/profile.js.
+- The Profile row opens the sheet and says the meals a day too.
 ## The back swipe, drawn by the app on the Home Screen — branch session/backswipe (CACHE v246)
 
 Owner, 9 Nov: "When swiping back it shows a black page for a moment then gets to the previous page

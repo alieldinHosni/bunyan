@@ -376,6 +376,38 @@ function restartNotes(){
      return '<br><span class="num" dir="ltr">'+esc(d.toLocaleString())+'</span> · '+t("after")+' <code dir="ltr">'+esc(x.after||"?")+'</code>'
        +(x.err?' · <code dir="ltr">'+esc(x.err)+'</code>':'');}).join("")+'</p></div></section>';}
 
+/* ---- Nutrition ---------------------------------------------------------------------------
+   Owner, 9 Nov: "I hate it when there is no nutrition settings, it just directs me to the
+   nutrition page … add actual useful settings". What shapes the food, set here: the daily
+   targets (one row to where they are edited, with what they are now), how many meals and
+   what they are called, the kind of food, a diet, what is left out, protein powder. The
+   same answers the assessment's food question takes (views/assess.js), kept in S.prefs and
+   read by the meal plan builder (handlers/coach.js mealPrefs); a change is used the next
+   time the meal plan is built, which the button at the foot does now. */
+var NDIET=[["any","Everything"],["veg","Vegetarian"],["pesc","Pescatarian"],["vegan","Vegan"]];
+var NAVOID=[["dairy","Dairy"],["eggs","Eggs"],["fish","Fish and seafood"],["nuts","Nuts"],["gluten","Gluten"]];
+function nchip(attr,val,label,on){
+  return hb('<button class="aschip'+(on?' on':'')+'" data-'+attr+'="'+esc(val)+'" aria-pressed="'+(on?"true":"false")+'">'+esc(label)+'</button>');}
+function foodSheet(){
+  var pr=S.prefs||{},g=S.goals||{},av=pr.avoid||[],diet=pr.diet||"any";
+  return '<h2>'+t("Nutrition")+'</h2>'
+   +group(t("Daily targets"),
+      nav('data-fsec="targets"',t("Calories and macros"),t("Water and steps too"),fmtN(num(g.kcal))+" kcal · "+num(g.p)+" g","target"),
+      esc(t("Worked out from your body, activity and goal. The weekly check-in adjusts them from your log.")))
+   +group(t("Your meals"),
+      pick(t("Meals a day"),"",{items:[3,4,5,6].map(function(n){return ["meals|"+n,String(n)];}),value:"meals|"+(num(pr.meals)||4),attr:"nset",label:t("Meals a day")})
+     +pick(t("Meal names"),t(mealStyle()==="named"?"Breakfast, lunch, dinner, snacks":"Meal 1, Meal 2, Meal 3…"),
+        {items:[["named",t("Named")],["numbered",t("Numbered")]],value:mealStyle(),attr:"mstyle",label:t("Meal names")})
+     +pick(t("Food style"),"",{items:[["style|egy",t("Egyptian")],["style|mixed",t("A mix")],["style|intl",t("International")]],value:"style|"+(pr.fstyle||"egy"),attr:"nset",label:t("Food style")}))
+   +'<section class="sg"><h3 class="sg-h">'+t("What you eat")+'</h3><div class="sg-list"><div class="srow srow-pick">'+words(t("Diet"),"")
+   +'<div class="aschips">'+NDIET.map(function(d){return nchip("nset","diet|"+d[0],t(d[1]),diet===d[0]);}).join("")+'</div></div>'
+   +'<div class="srow srow-pick">'+words(t("Leave out"),t("Never put in your meal plan"))
+   +'<div class="aschips">'+NAVOID.map(function(d){return nchip("navoid",d[0],t(d[1]),av.indexOf(d[0])>=0);}).join("")+'</div></div>'
+   +sw('data-toggle="powder"',t("Protein powder"),t("A shake can close the protein gap in the plan"),!!pr.powder)
+   +'</div></section>'
+   +'<p class="sg-f">'+esc(t("These shape your meal plan. Rebuild it to use them now; you see it before anything changes."))+'</p>'
+   +'<button class="btn" data-pgen="1">'+esc(t("Rebuild my meal plan"))+'</button>';}
+
 /* Food's plan page gear: how meals are named (views/food.js). */
 function mealsSheet(){
   var st=mealStyle();
@@ -383,7 +415,7 @@ function mealsSheet(){
    +group(t("Meals"),pick(t("Meal names"),t(st==="named"?"Breakfast, lunch, dinner, snacks":"Meal 1, Meal 2, Meal 3…"),
       {items:[["named",t("Named")],["numbered",t("Numbered")]],value:st,attr:"mstyle",label:t("Meal names")}));}
 
-var SHEETS={set_meals:mealsSheet,set_you:youSheet,set_avatar:avatarSheet,set_training:trainingSheet,set_app:appSheet,set_profiles:profilesSheet,
+var SHEETS={set_food:foodSheet,set_meals:mealsSheet,set_you:youSheet,set_avatar:avatarSheet,set_training:trainingSheet,set_app:appSheet,set_profiles:profilesSheet,
   set_data:dataSheet,backup:backupSheet,share:shareSheet,about:aboutSheet,set_chat:histSheet,sendplan:sendPlanSheet,recvplan:recvPlanSheet,set_smart:smartSheet};
 /* The inside of a settings sheet, or null when the name is not one of these. */
 function settingsSheet(name){return SHEETS[name]?SHEETS[name]():null;}
