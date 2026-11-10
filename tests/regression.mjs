@@ -315,7 +315,8 @@ await test("tab taps do not grow the browser history",async page=>{
   const h1=await page.evaluate(()=>history.length);
   if(h1-h0>2)throw new Error("grew by "+(h1-h0));
   await page.evaluate(()=>history.back());await pause(page,400);
-  eq(await page.evaluate(()=>location.pathname),"/index.html","still in the app");
+  /* The app's page, under either of its addresses ("/" and "/index.html" serve the same file). */
+  eq(await page.evaluate(()=>/^\/(index\.html)?$/.test(location.pathname)),true,"still in the app");
 });
 await test("new workout entries carry a stable exercise id, and ids heal renamed names",async page=>{
   await startWorkout(page);
@@ -5252,6 +5253,7 @@ await test("How do you feel today?: on a phone each choice's word sits in the mi
 await test("Opening the Exercise Library (owner, 4 Nov): the old page travels past the screen's edge, so none of it shows in the slide's slow end, and the pictures on the first screen are there before the page moves",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
   await coach(page,"train","programs");await pause(page,900);
+  await page.waitForSelector('.ttile[data-train="library"]',{timeout:10000});
   await page.evaluate(()=>document.querySelector('.ttile[data-train="library"]').scrollIntoView({block:"center"}));await pause(page,400);
   await page.evaluate(()=>{window.__seen=null;const mo=new MutationObserver(()=>{const c=document.querySelector(".stillcopy");const a=c&&c.getAnimations()[0];
     if(a&&!window.__seen){const app=document.getElementById("app");
