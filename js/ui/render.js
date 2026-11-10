@@ -29,6 +29,7 @@ import {bindMore} from "./more.js";
 import {syncMannequins} from "./mannequin.js";
 import {syncBgArt} from "./bgart.js";
 import {startArts} from "./art.js";
+import {PAGE} from "./transit.js";
 import {syncCoach} from "./coachfab.js";
 
 /* ============================================================ render */
@@ -96,13 +97,13 @@ function slideSection(root,moved,sc){
   var swiped=V.pswiped;lastSec=secNow();V.pswiped=false;
   if(!sc)return;
   var el=root.querySelector(".psec");if(!el){sc.g.remove();return;}
-  slidePair(el,sc.g,(sc.dir*100)+"%",(-sc.dir*100)+"%",400,"cubic-bezier(0.22, 1, 0.36, 1)");}
+  slidePair(el,sc.g,(sc.dir*100)+"%",(-sc.dir*100)+"%",PAGE.ms,PAGE.ease);}
 /* Going one page deeper within a tab, or back up (owner, 3 Nov: slower and smooth, then
    "flashes … give the impression that the app is buggy"): the page you were on and the
    new one travel together, edge to edge, the new one in from the side it lies on, the old
    one out the other way — transform only (motion.js stillCopy, slidePair). Back plays it
    the other way round. A tab change keeps its own entrance; reduced motion has neither. */
-var lastDepth=0,lastTab="",PG_MS=520,PG_EASE="cubic-bezier(0.25, 0.8, 0.25, 1)";
+var lastDepth=0,lastTab="",PG_MS=PAGE.ms,PG_EASE=PAGE.ease;
 function pageMoveOf(moved,view){
   var d=navDepth(),dd=d-lastDepth,same=V.tab===lastTab;lastDepth=d;lastTab=V.tab;
   if(!moved||!same||!dd||isReduced()||V.assess||V.osBack||/\/(session|run)$/.test(view))return 0;

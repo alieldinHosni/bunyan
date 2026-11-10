@@ -4532,6 +4532,28 @@ await test("Keyboard over a sheet (owner, 10 Nov: the search sheet bounced as th
   eq(await page.evaluate(()=>/60vh|px/.test(getComputedStyle(document.querySelector("#sheet .sheetbox")).boxShadow)&&getComputedStyle(document.querySelector("#sheet .sheetbox")).boxShadow!=="none"),true,"its ground runs down under it");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});
 });
+await test("One way a page moves (owner, 10 Nov: the motion and the background differed by route): the Home Screen back swipe blends the picture with the finger and the page before waits at its entrance, then plays it on landing; every route shares one curve",async(page,env)=>{
+  await page.evaluate(async()=>{sessionStorage.setItem("bunyan:ownback","1");const st=await import("/js/state.js");st.S.prefs.anim=true;st.saveDB();});
+  await page.reload();await pause(page,1500);
+  const cdp=await env.ctx.newCDPSession(page);
+  const T=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
+  await tapTab(page,"train");await pause(page,1800);
+  await page.evaluate(()=>{const b=document.createElement("button");b.setAttribute("data-tplan","program");document.querySelector("#app").appendChild(b);b.click();});await pause(page,1200);
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p)),["training"],"on the plan page's picture");
+  await T("touchStart",6,400);for(let i=1;i<=8;i++){await T("touchMove",6+i*20,402);await page.waitForTimeout(16);}
+  const mid=await page.evaluate(()=>{const ph=[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p+":"+(+getComputedStyle(p).opacity).toFixed(2));
+    const a=document.querySelector("#app .art.draw path.a");return [ph,a?parseFloat(getComputedStyle(a).strokeDashoffset):null];});
+  if(mid[0].length!==2||!/^home:0\.[1-9]/.test(mid[0][1]))throw new Error("the picture does not come in with the finger: "+mid[0]);
+  if(mid[1]!==null&&mid[1]<0.9)throw new Error("the page before's drawing is not waiting at its start: "+mid[1]);
+  for(let i=9;i<=16;i++){await T("touchMove",6+i*20,402);await page.waitForTimeout(16);}
+  await T("touchEnd",0,0);await page.waitForTimeout(1500);
+  const after=await page.evaluate(async()=>{const a=document.querySelector("#app .art.draw path.a");
+    return [(await import("/js/ui/view.js")).V.train,[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p),a?parseFloat(getComputedStyle(a).strokeDashoffset)<0.05:true];});
+  eq(after,["days",["home"],true],"landed on Training: its picture alone, its drawing drawn in");
+  /* One curve for every route (js/ui/transit.js). */
+  eq(await page.evaluate(async()=>{const T=await import("/js/ui/transit.js");return [T.PAGE.ease,T.gestureMs(0,400),T.gestureMs(390,400)];}),["cubic-bezier(0.22, 1, 0.36, 1)",520,260],"one curve; the whole time from a tap, what is left from a finger");
+  await page.evaluate(()=>sessionStorage.removeItem("bunyan:ownback"));
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

@@ -23,7 +23,8 @@
    hold frosted cards, which lose their blur under a fading parent, so they travel the
    whole width instead of fading. A touch that starts in something that scrolls sideways
    (templates, pills) or on a grip is that thing's, not a swipe. */
-import {countTo, isReduced} from "./motion.js";
+import {isReduced} from "./motion.js";
+import {entranceAtStart, entranceGo, gestureMs, PAGE} from "./transit.js";
 import {tap} from "./view.js";
 
 var H=null,st=null,lockUntil=0,swallowUntil=0;
@@ -152,28 +153,6 @@ function peekFollow(s,x,toStep){
     if(!tabk)w.style.top=(s.top+Math.max(mb,mn)-Math.max(mb,mc))+"px";
     s.nb=w;s.nbStep=step;}
   s.nb.style.transform="translateX("+Math.round(x+((x||s.dir)<0?s.w:-s.w))+"px)";}
-/* The page that comes in, held at the first frame of its entrance (owner, 10 Nov: tapped
-   from the dock a page arrives with its motion, the drawing drawing in, the week's bar
-   filling, the figures counting; swiped, it arrived finished and the motion was gone).
-   Everything the real page will animate as it appears is marked as render.js marks it,
-   and every animation that starts is paused at its start: the drawing undrawn, the bars
-   empty, the figures at 0. At the landing the real page plays the same entrance from
-   there, and entranceGo runs the copy's with it, so whichever shows is at the same moment. */
-var ENTER=".empty,.setrow[data-k],.list .item[data-k],.bar,.sess [data-k]:not(input)";
-function entranceAtStart(w){
-  if(isReduced())return;
-  w.querySelectorAll(".art.draw").forEach(function(a){a.classList.add("go");});
-  w.querySelectorAll(ENTER).forEach(function(e){e.setAttribute("data-anim","peek");});
-  w.querySelectorAll("svg path.line").forEach(function(p){var len=0;try{len=p.getTotalLength();}catch(e){}
-    if(len){p.style.strokeDasharray=len;p.style.strokeDashoffset=len;p.setAttribute("data-anim","peek");}});
-  w.querySelectorAll("[data-count-to]").forEach(function(e){var dp=+e.getAttribute("data-count-dp")||0;
-    e.textContent=dp?(0).toFixed(dp):"0";e.setAttribute("data-count","0");});
-  (w.getAnimations?w.getAnimations({subtree:true}):[]).forEach(function(a){try{a.pause();a.currentTime=0;}catch(e){}});}
-function entranceGo(w){
-  if(!w||isReduced())return;
-  (w.getAnimations?w.getAnimations({subtree:true}):[]).forEach(function(a){try{a.play();}catch(e){}});
-  w.querySelectorAll("[data-count-to]").forEach(function(e){var dp=+e.getAttribute("data-count-dp")||0;
-    countTo(e,e.getAttribute("data-count-to"),dp?{format:function(v){return Number(v).toFixed(dp);}}:undefined);});}
 /* The tabs next door, drawn ahead while nothing is happening (owner, 3 Nov: the swipe
    still caught). Drawing one meant laying out the whole page as it would be, and doing
    that as the finger began to move was the hitch at the start of every swipe. Made
@@ -270,9 +249,10 @@ function enter(from){
    one comes in; transform only, so the frosted cards never lose their blur), at the
    pace the rest of the width needs. The highlight over the tabs lands with them. If the
    page had been scrolled past its tabs, it eases back up to them once the tab is in. */
-var SE="cubic-bezier(0.22, 1, 0.36, 1)";
+/* The one page curve (js/ui/transit.js). */
+var SE=PAGE.ease;
 function slidePlan(s,step){
-  var w=s.w,dx=s.dx,ms=Math.max(260,Math.min(440,Math.round((w-Math.abs(dx))/w*440)));
+  var w=s.w,dx=s.dx,ms=gestureMs(dx,w);
   segSettle(s,(s.i0||0)+step,ms);
   /* The dock lands with the page: the next tab on now, the highlight there as it arrives. */
   if(s.k==="tab"&&H.land)H.land(step,ms);
@@ -284,7 +264,7 @@ function slidePlan(s,step){
     /* The real tab is drawn now that nothing moves: exactly where the one that came in
        stands, so swapping one for the other cannot be seen. */
     H.go(step,s.k);
-    entranceGo(nb);
+    entranceGo(nb,true);
     /* A main tab lands as the whole page: Progress has a pane of its own views inside it,
        and lining that up with the top of the page that came in scrolled the page down by
        its height (owner, 10 Nov: "opens then shifts the whole page upwards"). */

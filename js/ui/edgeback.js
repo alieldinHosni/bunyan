@@ -23,9 +23,12 @@
    script. A tap that lands on the strip is passed to what is under it. */
 import {cancelPeek, commitPeek, ownBack, peekBack} from "./nav.js";
 import {stillCopy} from "./motion.js";
+import {entranceGo, entranceHold, gestureMs, PAGE} from "./transit.js";
+import {bgBack, bgFollow, bgLand, bgWanted, holdBg} from "./bgart.js";
 
-var START=10,COMMIT=0.35,FLICK=0.5,PARALLAX=0.3,SHADE=0.28,SETTLE=260;
-var EASE="cubic-bezier(0.25, 0.8, 0.25, 1)";
+var START=10,COMMIT=0.35,FLICK=0.5,PARALLAX=0.3,SHADE=0.28;
+/* The one page curve (js/ui/transit.js); the time is what is left of the travel. */
+var EASE=PAGE.ease;
 var g=null;   /* the gesture under way */
 
 function width(){return document.documentElement.clientWidth||window.innerWidth||390;}
@@ -33,7 +36,9 @@ function place(p){
   var w=width();
   g.copy.style.transform="translateX("+Math.round(p*w)+"px)";
   g.app.style.transform="translateX("+Math.round(-(1-p)*PARALLAX*w)+"px)";
-  g.shade.style.opacity=String((1-p)*SHADE);}
+  g.shade.style.opacity=String((1-p)*SHADE);
+  /* The page before's picture comes in with it (js/ui/bgart.js). */
+  if(g.bg)bgFollow(g.bg,p);}
 /* The page you are leaving moves as a whole page, not as glass over the one coming in:
    its own ground under its cards, the theme's and the picture it stood on (bgart.js),
    framed to the screen as they were. */
@@ -57,8 +62,13 @@ function begin(){
   /* The page you are on, frozen, above everything the page before will draw. */
   var copy=stillCopy(app,6);
   ground(copy);
+  /* The page before is drawn under the finger: its picture waits for the finger, and its
+     entrance (the drawing, the bars, the figures) waits at its start for the landing. */
+  holdBg(true);
   var cur=peekBack();
-  if(!cur){copy.remove();return false;}
+  if(!cur){holdBg(false);copy.remove();return false;}
+  g.bg=bgWanted();holdBg(false);
+  entranceHold(app);
   var shade=document.createElement("div");
   shade.className="ebshade";shade.setAttribute("aria-hidden","true");
   document.body.appendChild(shade);
@@ -69,14 +79,15 @@ function begin(){
   return true;}
 function finish(keep){
   var x=g;g=null;
-  var w=width(),p=x.p||0,to=keep?1:0,ms=Math.max(140,Math.round(SETTLE*Math.abs(to-p)/0.6));
+  var w=width(),p=x.p||0,to=keep?1:0,ms=gestureMs((1-Math.abs(to-p))*w,w);
+  if(x.bg){if(keep)bgLand(x.bg,ms);else bgBack(ms);}
   [x.copy,x.app,x.shade].forEach(function(e){e.style.transition="transform "+ms+"ms "+EASE+",opacity "+ms+"ms "+EASE;});
   requestAnimationFrame(function(){
     x.copy.style.transform="translateX("+(keep?w:0)+"px)";
     x.app.style.transform="translateX("+(keep?0:Math.round(-PARALLAX*w))+"px)";
     x.shade.style.opacity=String(keep?0:SHADE);});
   var done=false,end=function(){if(done)return;done=true;
-    if(keep)commitPeek();else cancelPeek(x.cur);
+    if(keep){commitPeek();entranceGo(x.app);}else cancelPeek(x.cur);
     x.copy.remove();x.shade.remove();
     x.app.style.transition="";x.app.style.transform="";
     document.documentElement.classList.remove("pgmoving","ebmoving");};

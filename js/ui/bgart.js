@@ -19,6 +19,7 @@
    (workout-spec.md). Which picture is the CSS's (#bgart .photo[data-p]), so nothing here
    runs per frame or per theme. */
 import {isReduced} from "./motion.js";
+import {PAGE} from "./transit.js";
 
 var PAGES={home:1,training:1,workout:1,warmup:1,food:1,coach:1,progress:1,profile:1};
 var shown="";
@@ -30,8 +31,17 @@ function bgArt(key){
    "flashes at some points … give the impression that the app is buggy"). Now the new
    picture is decoded first, then fades in over the old one as the old one fades out.
    Reduced motion, or nothing there yet: at once. */
-var FADE=420;
+/* Over the page's own time and curve (js/ui/transit.js), so the picture changes with the
+   page that brings it, not after it. */
+var FADE=PAGE.ms;
+/* Held while a gesture shows the page before under the finger (js/ui/edgeback.js): the
+   render that draws it says which picture it wants, and the gesture brings it in with
+   the finger (bgFollow) instead of at once. */
+var held=false,wanted=null;
+function holdBg(on){held=!!on;if(!on)wanted=null;}
+function bgWanted(){return wanted;}
 function syncBgArt(key){
+  if(held){wanted=key;return;}
   var el=document.getElementById("bgart");
   if(!el||key===shown)return;
   shown=key;el.setAttribute("data-page",key||"");
@@ -45,8 +55,8 @@ function syncBgArt(key){
   nw.style.opacity="0";
   var go=function(){
     if(!nw.parentNode)return;
-    var a=nw.animate([{opacity:0},{opacity:to}],{duration:FADE,easing:"ease-out",fill:"forwards"});
-    prev.animate([{opacity:from},{opacity:0}],{duration:FADE,easing:"ease-in",fill:"forwards"});
+    var a=nw.animate([{opacity:0},{opacity:to}],{duration:FADE,easing:PAGE.ease,fill:"forwards"});
+    prev.animate([{opacity:from},{opacity:0}],{duration:FADE,easing:"cubic-bezier(0.5, 0, 0.75, 0)",fill:"forwards"});
     a.onfinish=function(){if(prev.parentNode)prev.remove();nw.style.opacity="";a.cancel();};};
   var m=/url\(["']?([^"')]+)/.exec(getComputedStyle(nw).backgroundImage||"");
   if(!m){go();return;}
@@ -81,8 +91,8 @@ function bgLand(key,ms){
   var el=document.getElementById("bgart");shown=key;if(el)el.setAttribute("data-page",key);
   var nw=d.nw,prev=d.prev,dur=ms||320;
   if(!nw.animate){nw.style.opacity="";if(prev)prev.remove();return;}
-  var a=nw.animate([{opacity:nw.style.opacity||0},{opacity:d.to}],{duration:dur,easing:"cubic-bezier(0.22,1,0.36,1)",fill:"forwards"});
-  if(prev)prev.animate([{opacity:prev.style.opacity||d.from},{opacity:0}],{duration:dur,easing:"cubic-bezier(0.22,1,0.36,1)",fill:"forwards"});
+  var a=nw.animate([{opacity:nw.style.opacity||0},{opacity:d.to}],{duration:dur,easing:PAGE.ease,fill:"forwards"});
+  if(prev)prev.animate([{opacity:prev.style.opacity||d.from},{opacity:0}],{duration:dur,easing:PAGE.ease,fill:"forwards"});
   a.onfinish=function(){nw.style.opacity="";a.cancel();if(prev&&prev.parentNode)prev.remove();};}
 function bgBack(ms){
   var d=drag;drag=null;if(!d)return;
@@ -93,4 +103,4 @@ function bgBack(ms){
   a.onfinish=function(){if(nw.parentNode)nw.remove();};}
 /* For the tests. */
 function bgArtKey(){return shown;}
-export {bgArt, bgBack, bgFollow, bgLand, syncBgArt, bgArtKey};
+export {bgArt, bgBack, bgFollow, bgLand, bgWanted, holdBg, syncBgArt, bgArtKey};

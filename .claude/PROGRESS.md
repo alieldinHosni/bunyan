@@ -4139,3 +4139,16 @@ time 0. At the landing the real page plays its entrance as from a tap (art.js no
 entranceGo plays the copy's with it (and counts its figures) so whichever is showing is at the same moment. The
 copy of the page being left still never replays (.stillcopy:not(.peek)). Test "Drawings …" now checks the copy is
 held at the start and the swiped page draws in once without going back; the week bar traced 0 → full after a swipe.
+
+## One way a page moves — branch session/transit (v254)
+Owner, 10 Nov ("go ahead" on the improvement list, first item). Six routes moved pages, each its own way: tab tap
+(pagein, background faded after, 420 ms its own curve), tab swipe (≤440 ms), plan tab swipe, plan tab tap (400 ms),
+page open/back (520 ms, another curve, background faded separately), Home Screen back swipe (~260 ms, background
+jumped at drag start, the page before's entrance began during the drag).
+- js/ui/transit.js: PAGE {ms 520, ease cubic-bezier(0.22,1,0.36,1)}; gestureMs(dx,w) what is left of the travel
+  (≥260); entranceAtStart (a copy held at its entrance's first frame), entranceHold (the real page drawn under a
+  gesture), entranceGo (plays; counts a copy's figures).
+- exswipe.js, render.js (pageMove, slideSection), bgart.js (crossfade now PAGE.ms, PAGE.ease) and edgeback.js all
+  read it. The back swipe: bgart.holdBg/bgWanted keep the page before's picture for the finger (bgFollow/bgLand/
+  bgBack), and its entrance is held until the landing.
+- Test "One way a page moves".
