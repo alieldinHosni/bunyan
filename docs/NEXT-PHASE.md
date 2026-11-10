@@ -671,6 +671,10 @@ least 25% shorter (it is 6,300 lines).
 
 ### WP-8 — 3D, used where it matters
 
+> **Superseded by `docs/FIGURE-V3.md`** (the figure's review and full design, packages
+> F-0 to F-9). What follows is kept for the workout-stage and coverage parts, which
+> are F-9 there.
+
 **Goal.** The figure is seen every set, covers the exercises people actually do, and
 never costs a frame.
 
@@ -774,6 +778,9 @@ bug (remove `inputmode="none"` handling) makes it red.
 ---
 
 ### WP-11 — Coach gaps
+
+> **Superseded by `docs/COACH-AGENT.md`** (the coach's review and full upgrade plan,
+> packages C-0 to C-10). The items below are C-0, C-4, C-5 and C-8 there.
 
 **Files.** `js/ui/views/chat.js`, `js/coach/intent.js`, `js/knowledge/scope.js`,
 `js/engine/coachinfo.js`, tests in `js/coach/test/`.
