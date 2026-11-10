@@ -4667,6 +4667,49 @@ await test("Contrast: no text under WCAG AA on the main pages — Red, dark and 
   const bad=await contrastAudit(page,["red/dark","red/light"],"ar");if(bad.length)throw new Error(bad.length+" under AA:\n"+bad.join("\n"));});
 await test("Contrast: no text under WCAG AA on the main pages — Sage, dark and light",async page=>{
   const bad=await contrastAudit(page,["mono/dark","mono/light"],"en");if(bad.length)throw new Error(bad.length+" under AA:\n"+bad.join("\n"));});
+/* WP-0 (docs/NEXT-PHASE.md): a toast is never drawn over the button the next tap is
+   for, and a rep record is only said when it is one. */
+const toastClear=(page,sel)=>page.evaluate(sel=>{const t=document.querySelector(".toast");if(!t)return "no toast";
+  const a=t.getBoundingClientRect();const hit=[...document.querySelectorAll(sel)].filter(e=>{const b=e.getBoundingClientRect();
+    return b.width>0&&b.height>0&&a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom;});
+  return hit.length?"covers "+hit.map(e=>e.className||e.tagName).join(", "):"clear";},sel);
+/* On a phone shorter than the test's 844 the Log set dock sticks to the bottom of the
+   screen, where the toast used to be said over it. */
+for(const [lang,h] of [["en",844],["en",667],["ar",667]])await test("Toast: a record said after logging a set does not cover Log set ("+lang+", 390 × "+h+")",async page=>{
+  await startWorkout(page);
+  const name=await ev(page,"S.active.entries[0].name");
+  await page.evaluate(async n=>{const st=await import("/js/state.js");
+    st.S.sessions=[{id:"wp0",date:"2026-01-05",dayId:"x",entries:[{name:n,sets:[{w:40,r:5}]}]}];st.saveDB();},name);
+  await page.setViewportSize({width:390,height:h});await page.evaluate(()=>window.scrollTo(0,0));await pause(page,300);
+  await page.fill('#in_w','40');await page.fill('#in_r','10');await page.tap('[data-logset]');await pause(page,300);
+  if(!(await page.$(".toast.rec")))throw new Error("no record toast for 40 × 10 after 40 × 5");
+  eq(await toastClear(page,".sess .log"),"clear","the toast and Log set");
+  eq(await toastClear(page,".sess .log,.sess .wkdock,.sess .wtick,.sess .wsl-add,.sfoot,.kpad.on"),"clear","the toast and the controls at the bottom");
+  /* At 844 the dock sits in the page above the toast's place, so the toast stays where
+     it was; shorter, the dock sticks to the bottom and the toast goes to the top. */
+  if(h<844)eq(await page.evaluate(()=>document.querySelector(".toast").classList.contains("top")),true,"said at the top");
+  if(lang==="ar")eq(await page.evaluate(()=>document.documentElement.dir),"rtl","in RTL");
+},{prefs:Object.assign({autorest:false},lang==="ar"?{lang:"ar"}:{})});
+await test("Toast: with the close-workout sheet open, a toast covers none of its buttons",async page=>{
+  await startWorkout(page);
+  await page.tap('[data-back]');await pause(page,500);
+  if(!(await page.$("#sheet .btn")))throw new Error("the close sheet has no buttons");
+  await page.evaluate(async()=>{(await import("/js/ui/view.js")).toast("Saved",()=>{});});await pause(page,300);
+  eq(await toastClear(page,"#sheet .btn"),"clear","the toast and the sheet's buttons");
+  eq(await page.evaluate(()=>!!document.querySelector(".toast.top .toast-undo")),true,"at the top, Undo kept");
+},{prefs:{autorest:false}});
+await test("Records only when earned: 55 × 12 after a stronger 60 × 8 is not a rep record; 55 × 13 after 55 × 12 is",async page=>{
+  const r=await F(page,`(S.sessions=[mk("2099-01-01","Barbell Bench Press",[{w:60,r:8,rpe:8}])],
+    [F.recordOf("Barbell Bench Press",{w:55,r:12},[]),F.recordOf("Barbell Bench Press",{w:55,r:13},[{w:55,r:12}]).k,
+     (S.sessions=[mk("2099-01-01","Barbell Bench Press",[{w:60,r:8}])],F.recordOf("Barbell Bench Press",{w:55,r:12},[]).k),
+     F.recordOf("Barbell Bench Press",{w:55,r:9},[]),
+     (S.sessions=[mk("2099-01-02","Barbell Bench Press",[{w:55,r:12}]),mk("2099-01-01","Barbell Bench Press",[{w:60,r:8,rpe:8}])],
+      F.recordOf("Barbell Bench Press",{w:55,r:13},[]).k)])`);
+  /* 60 × 8 at RPE 8 is an estimated 80 kg, 55 × 12 77: lighter and weaker, the first time at
+     55, so nothing. Without the RPE 60 × 8 is 76, and 77 is a better estimated max — said as
+     that, never as a rep record. */
+  eq(r,[null,"r","e",null,"r"]);
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

@@ -170,7 +170,12 @@ function deloadSets(n){return Math.max(1,Math.round(num(n,3)*0.6));}
    sets already done today — by weight, by estimated max, or by reps at that weight
    or heavier. The first time a lift is ever logged there is nothing to beat, so it is
    not called a record. A bodyweight lift can set one with nothing added: more reps, or
-   a better estimated max as the lifter gets lighter or stronger. */
+   a better estimated max as the lifter gets lighter or stronger.
+   More reps is a record only when it means something (NEXT-PHASE.md WP-0): the set's
+   estimated max is at least the lift's best, or the weight has been done before and the
+   reps beat the most ever done at it or heavier. The first time at a weight lighter than
+   the best has nothing of its own to beat: 55 kg x 12 after 60 kg x 8 is a lighter set,
+   not a rep record. */
 function repsAtIn(log,name,w){
   var best=0;
   (log.sessions||[]).forEach(function(s){s.entries.forEach(function(e){
@@ -182,15 +187,20 @@ function recordIn(log,name,x,earlier,now){
   if(!x||x.wu||!(num(x.r)>0)||isActivity(name))return null;
   if(!(num(x.w)>0)&&!bwl)return null;
   var h=prIn(log,name);if(!h.date)return null;
-  var w=num(x.w),r=num(x.r),pw=h.w,pe=h.e,pr=repsAtIn(log,name,w);
+  var w=num(x.w),r=num(x.r),pw=h.w,pe=h.e,pr=repsAtIn(log,name,w),seen=doneAtIn(log,name,w);
   (earlier||[]).forEach(function(y){
     if(y.wu)return;var yw=num(y.w),yr=num(y.r);
-    if(yw>pw)pw=yw;var ye=e1RM(loadIn(log,name,yw,now),yr,y.rpe);if(ye>pe)pe=ye;if(yw>=w&&yr>pr)pr=yr;});
+    if(yw>pw)pw=yw;var ye=e1RM(loadIn(log,name,yw,now),yr,y.rpe);if(ye>pe)pe=ye;if(yw>=w&&yr>pr)pr=yr;
+    if(yw===w&&yr>0)seen=true;});
   if(w>pw)return {k:"w",n:name,w:w,r:r};
   var er=e1RM(loadIn(log,name,w,now),r,x.rpe);
   if(er&&er>pe)return {k:"e",n:name,w:w,r:r,e:er};
-  if(pr>0&&r>pr)return {k:"r",n:name,w:w,r:r};
+  if(pr>0&&r>pr&&(seen||(er&&er>=pe)))return {k:"r",n:name,w:w,r:r};
   return null;}
+/* Whether a working set at exactly this weight was ever logged for the lift. */
+function doneAtIn(log,name,w){
+  return (log.sessions||[]).some(function(s){return s.entries.some(function(e){
+    return e.name===name&&e.sets.some(function(x){return !x.wu&&num(x.r)>0&&num(x.w)===w;});});});}
 /* The best record in one exercise's sets: weight first, then estimated max, then reps. */
 var RANK={w:3,e:2,r:1};
 function recordsOfEntry(log,e,now){

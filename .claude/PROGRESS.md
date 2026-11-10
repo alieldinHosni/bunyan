@@ -4201,3 +4201,27 @@ v256 (contradicting prompts, the coach and the workout page giving different rep
 button, a hold with no timer, no finish screen, 199 requests / 4.2 MB at start), the rules for builders, and
 twelve work packages in build order (WP-0 … WP-11), each with files, steps and acceptance tests. Nothing in the
 app changed.
+
+## WP-0: toasts never cover an action; records only when earned — branch session/wp0-toast (v257)
+docs/NEXT-PHASE.md WP-0 (findings F-B1, F-B6).
+Toast placement (js/ui/view.js toast, index.html .toast.top): before a toast is shown it is measured, unseen, at
+its usual place above the tab bar. If that rectangle crosses a visible action (.sess .log, .sess .wkdock, any
+button in the workout, #sheet .sheetbox .btn, .sfoot, .kpad.on), or a sheet is open (V.sheet), it is said at the
+top instead: top calc(env(safe-area-inset-top) + var(--s3)), sliding down and leaving upward, same look, Undo
+kept. The case seen: on a page where the Log set dock sticks to the bottom of the screen (a short phone, or the
+RPE ask above the fields), the "record" toast sat on Log set. Where the dock sits higher in the page (390 × 844
+with nothing above the fields) the toast stays at the bottom, since it covers no control there. The top place
+overlaps the workout header's title for the few seconds the toast shows; the header is not what the next tap is
+for, and the doc fixes that position.
+Records (js/engine/lifts.js recordIn): a rep record is said only when the set's estimated max (Epley, 12-rep cap,
+unchanged) is at least the lift's best, or the weight was done before (earlier sessions or today) and the reps
+beat the most done at it or heavier. The first time at a weight lighter than the best is no longer a rep record.
+Weight records and estimated-max records are unchanged. Note on the doc's example: 60 kg × 8 is an estimated
+76 kg and 55 kg × 12 an estimated 77, so with no RPE logged 55 × 12 is a true estimated-max record and is said as
+"New best estimated max", never as "Rep record". The case the owner saw ("Rep record" after a stronger set) needs
+the 60 × 8 to have been the higher estimate, e.g. logged at RPE 8 (an estimated 80): that now says nothing.
+Tests: engine (js/engine/test/lifts.test.js, five cases); regression "Toast: a record said after logging a set
+does not cover Log set" at 390 × 844, 390 × 667 and 390 × 667 in Arabic; "Toast: with the close-workout sheet open,
+a toast covers none of its buttons"; "Records only when earned …". The existing "records: weight, estimated max
+and reps count; the first time does not" test needed no change: its rep case (70 × 9 after 70 × 8) is at a weight
+done before.
