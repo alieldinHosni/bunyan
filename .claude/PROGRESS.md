@@ -4062,3 +4062,12 @@ correctly. Need it smoother."
   tap one or up to three (data-asgoal; handlers/coach.js). The first picked is the main goal, tagged "Main goal";
   the others "Also". A calories goal (lose, recomp, maintain) is always the main one: picking one moves it to the
   front, and a second takes the first one's place. Tapping the main goal off makes the next one main.
+- Muscle picker, round 2 (owner, 10 Nov, an example with a picture per muscle and parts as cards): each muscle row
+  carries its own drawing (js/data/bodymap.js bodyView: one side, framed on the upper body or the legs, the muscle
+  lit) and a plain line of what it is; a row opens to the muscle drawn larger, the picked parts lit (part shapes
+  where the drawing has them: lats, traps, lower back, abs, obliques, tibialis), and the parts as cards: the
+  anatomical name, where it is and what trains it (parts.js 4th field; Calves: Tibialis / Soleus / Gastrocnemius).
+- Equipment (owner: "are those the only options?"): the three presets stay; under them, chips for the library's own
+  kinds (barbell, dumbbell, kettlebell, band, cable, machine), bodyweight always in (a.gear "custom", a.gearx;
+  gearOf). The knowledge base also names suspension, medicine balls, stability balls, sandbags, ropes: not offered,
+  the library has only a handful of photographed exercises for them, not enough to build a week from.

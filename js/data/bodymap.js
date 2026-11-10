@@ -75,6 +75,11 @@ var BACK=[
 /* The app's muscles (js/data/exercises.js MUSCLES) and the names its summaries use,
    as the shapes that show them on each side. */
 var MAP={
+  /* The parts someone can ask to bring up (js/data/parts.js), where the drawing has a
+     shape of their own; a part without one shows its whole muscle. */
+  "Back.lats":{b:["upper-back"]},"Back.upper":{b:["trapezius"]},"Back.lower":{b:["lower-back"]},
+  "Core.abs":{f:["abs"]},"Core.obl":{f:["obliques"]},
+  "Calves.tib":{f:["tibialis"]},"Calves.seated":{b:["calves"]},"Calves.standing":{b:["calves"]},
   Chest:{f:["chest"]},
   "Upper chest":{f:["chest"]},
   Back:{b:["upper-back","lower-back","trapezius"]},
@@ -120,5 +125,14 @@ function bodySvg(lit,label,cls){
    +(label?'role="img" aria-label="'+String(label).replace(/[&<>"]/g,function(ch){return "&#"+ch.charCodeAt(0)+";";})+'"':'aria-hidden="true"')
    +' focusable="false"><g class="bm-f">'+paths(FRONT,c.f)+'</g><g class="bm-b">'+paths(BACK,c.b)+'</g></svg>';}
 function onMap(m){return !!MAP[m];}
+/* One side, framed on part of the body: side "f" or "b", region "upper" (shoulders to
+   hips) or "legs" (hips to ankles). For a muscle's picture where the whole body would
+   make it small. */
+var FRAME={upper:[87,250,550,550],legs:[62,620,600,680]};
+function bodyView(lit,side,region,label,cls){
+  var c=classes(lit),r=FRAME[region]||[0,0,724,1448],x=r[0]+(side==="b"?724:0);
+  return '<svg class="bmap'+(cls?" "+cls:"")+'" viewBox="'+x+' '+r[1]+' '+r[2]+' '+r[3]+'" '
+   +(label?'role="img" aria-label="'+String(label).replace(/[&<>"]/g,function(ch){return "&#"+ch.charCodeAt(0)+";";})+'"':'aria-hidden="true"')
+   +' focusable="false"><g>'+(side==="b"?paths(BACK,c.b):paths(FRONT,c.f))+'</g></svg>';}
 
-export {bodySvg, onMap, classes};
+export {bodySvg, bodyView, onMap, classes};

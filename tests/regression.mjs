@@ -4337,6 +4337,17 @@ await test("Body and food round (owner, 10 Nov): muscles by region with their pa
   eq(await ev(page,"[V.asd.focus,document.querySelectorAll('#app .asfpick .asfx').length]"),[["Forearms.grip","Adductors"],2],"a part and a muscle picked, both in the summary");
   await page.click('#app .asfpick [data-asm="focus|Adductors"]');await pause(page,400);
   eq(await ev(page,"V.asd.focus"),["Forearms.grip"],"taken off from the summary");
+  /* Each muscle drawn, each part a card with what it is. */
+  await page.evaluate(()=>{const c=document.querySelector('#app [data-asm="focus|Forearms"]');c.closest("details").open=true;});
+  eq(await ev(page,"[document.querySelectorAll('#app .asfm-fig .bmap').length,document.querySelectorAll('#app .asfm-d[open] .aspart').length,document.querySelector('#app .asfm-d[open] .aspart.on b').textContent]"),[12,4,"Grip"],"a figure on every muscle; the opened one's parts as cards");
+  /* Equipment: the three, or exactly what is there. */
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.asd.step=5;V.asd.gear="bw";V.asd.gearx=null;(await import("/js/ui/render.js")).render();});await pause(page,400);
+  await page.tap('#app [data-asm="gearx|Barbell"]');await pause(page,250);
+  await page.tap('#app [data-asm="gearx|Dumbbell"]');await pause(page,250);
+  eq(await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");return [V.asd.gear,A.gearOf(V.asd)];}),["custom",["Barbell","Dumbbell","Bodyweight"]],"a barbell and dumbbells, and the body");
+  await page.tap('#app [data-as="gear|gym"]');await pause(page,250);
+  eq(await ev(page,"[V.asd.gear,V.asd.gearx,document.querySelectorAll('#app [data-asm^=\"gearx|\"].on').length]"),["gym",null,6],"a gym: every kind on");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.asd.step=6;(await import("/js/ui/render.js")).render();});await pause(page,300);
   /* The week built for forearms and inner thighs holds work for both. */
   const wk=await page.evaluate(async()=>{const st=await import("/js/state.js"),Pl=await import("/js/engine/plan.js"),X=await import("/js/data/exercises.js");
     const S=st.S;S.profile.goal="gain";S.profile.goals2=[];S.profile.days=4;S.profile.wd=[];S.profile.focus=["Forearms","Adductors","Hamstrings.curl"];S.gear=null;Pl.buildPlan();

@@ -12,6 +12,7 @@
 import {t, tm} from "../../i18n/dict.js";
 import {EXTRA_MAX, EXTRA_OK, GOAL_ORDER, GOALS, goalOf, goalsOf, trainOf} from "../../data/goals.js";
 import {focusMuscles, partLabel, partsOf} from "../../data/parts.js";
+import {bodyView} from "../../data/bodymap.js";
 import {BUILT, dayMinutes, generatePlan, LEVELS, splitCandidates} from "../../engine/plan.js";
 import {wdName, weekOrder} from "../../engine/schedule.js";
 import {lastWeight, macroTargets, tdee} from "../../engine/formulas.js";
@@ -36,6 +37,21 @@ import {condCard} from "../dose.js";
 
 /* Equipment as a choice of three, and what each means in the equipment list. */
 var GEARS={gym:null,home:["Dumbbell","Band","Kettlebell"],bw:["Bodyweight"]};
+/* Or exactly what someone has (owner, 10 Nov: "are those the only options?"): the
+   library's own equipment kinds, each a chip; bodyweight is always in. The builder and
+   the swaps match on these (js/engine/plan.js usable). */
+var KIT=["Barbell","Dumbbell","Kettlebell","Band","Cable","Machine"];
+function gearOf(a){
+  if(a.gear==="custom"&&a.gearx&&a.gearx.length)return a.gearx.concat(["Bodyweight"]);
+  return GEARS[a.gear]?GEARS[a.gear].slice():null;}
+/* What a saved equipment list is: one of the three, or a list of its own. */
+function gearDraft(g){
+  var k=gearKind(g);if(!g||!g.length)return {gear:"gym",gearx:null};
+  var own=KIT.filter(function(x){return g.indexOf(x)>=0;});
+  var same=function(p){return p&&p.filter(function(x){return x!=="Bodyweight";}).sort().join()===own.slice().sort().join();};
+  if(k==="gym"&&own.length===KIT.length)return {gear:"gym",gearx:null};
+  if(same(GEARS[k]))return {gear:k,gearx:null};
+  return own.length?{gear:"custom",gearx:own}:{gear:"bw",gearx:null};}
 function gearKind(g){
   if(!g||!g.length||g.indexOf("Machine")>=0||g.indexOf("Barbell")>=0)return "gym";
   return g.indexOf("Dumbbell")>=0?"home":"bw";}
@@ -64,6 +80,11 @@ var FOCUS=[["Chest","Chest"],["Back","Back"],["Shoulders","Shoulders"],["Biceps"
    engineered better to be more easy"): upper body, arms, legs, the middle. */
 var REGIONS=[["Upper body",["Chest","Back","Shoulders"]],["Arms",["Biceps","Triceps","Forearms"]],
   ["Legs",["Quads","Hamstrings","Glutes","Adductors","Calves"]],["Core",["Core"]]];
+/* Where each muscle is drawn (its side and half of the body) and what it is, in plain words. */
+var MUS={Chest:["f","upper","Pecs, the front of the chest"],Back:["b","upper","Lats, traps and the lower back"],Shoulders:["f","upper","The three delts"],
+  Biceps:["f","upper","Front of the upper arm"],Triceps:["b","upper","Back of the upper arm"],Forearms:["f","upper","Wrists and grip"],
+  Quads:["f","legs","Front of the thigh"],Hamstrings:["b","legs","Back of the thigh"],Glutes:["b","legs","Hips and seat"],
+  Adductors:["f","legs","Inside of the thigh"],Calves:["b","legs","Lower leg and shin"],Core:["f","upper","Abs and obliques"]};
 function focusName(m){var x=FOCUS.filter(function(f){return f[0]===m;})[0];return x?(x[0]===x[1]?tm(m).trim():t(x[1])):m;}
 var FOCUS_MAX=3;
 var NOLIFT=["Barbell Squat","Barbell Deadlift","Barbell Bench Press - Medium Grip","Standing Military Press",
@@ -73,7 +94,7 @@ function draftFrom(){
   var p=S.profile||{},pr=S.prefs||{};
   return {step:0,sex:p.sex||"m",age:num(p.age)||"",height:num(p.height)||"",
     weight:lastWeight()||num(p.weight)||"",goal:GOALS[p.goal]?p.goal:"lose",level:LEVELS[p.level]?p.level:"some",
-    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),conds:(p.conds||[]).slice(),faults:(p.faults||[]).slice(),lapse:p.lapse||"steady",
+    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearDraft(S.gear).gear,gearx:gearDraft(S.gear).gearx,job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),conds:(p.conds||[]).slice(),faults:(p.faults||[]).slice(),lapse:p.lapse||"steady",
     meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",likes:(pr.likes||[]).slice(),
     sleep:num(p.sleep)||7.5,stress:p.stress||"normal",wd:(p.wd||[]).map(Number),focus:(p.focus||[]).slice(),goals2:goalsOf(p).slice(1),
     nolift:NOLIFT.filter(function(n){return (S.skip||[]).indexOf(n)>=0;}),split:null,done:false};}
@@ -100,12 +121,12 @@ var STYLES=[["egy","Egyptian home food"],["lev","Levantine (Syrian, Lebanese)"],
    is saved, then put back. Cached on the answers. */
 var CACHE={k:null,v:null};
 function preview(a){
-  var key=JSON.stringify([profileOf(a),a.gear,a.split,foodPrefs(a),skipOf(a),!!FOODDB]);
+  var key=JSON.stringify([profileOf(a),a.gear,a.gearx,a.split,foodPrefs(a),skipOf(a),!!FOODDB]);
   if(CACHE.k===key)return CACHE.v;
   var keep={profile:S.profile,gear:S.gear,body:S.body,skip:S.skip},out=null;
   try{
     S.profile=Object.assign({},S.profile,profileOf(a));
-    S.gear=GEARS[a.gear]?GEARS[a.gear].slice():null;
+    S.gear=gearOf(a);
     S.body=[{date:today(),weight:num(a.weight)}];S.skip=skipOf(a);
     var cands=[];try{cands=splitCandidates(S.profile.days,a.level,a.goal,S.gear);}catch(e){}
     /* The week built from these answers first; the app's programs as other choices. */
@@ -207,7 +228,11 @@ function body(a){
     h+=q(t("Where do you train?"),t("Exercises you cannot do are swapped for ones that work the same muscles."));
     h+='<div class="ascards">'+card("gear","gym",t("A gym"),t("Machines, cables, barbells and dumbbells."),a.gear==="gym")
      +card("gear","home",t("At home, with dumbbells"),t("Dumbbells, bands or a kettlebell, and a bench or a chair."),a.gear==="home")
-     +card("gear","bw",t("Bodyweight only"),t("The floor, and a bar or a door frame to pull on if you have one."),a.gear==="bw")+'</div>';}
+     +card("gear","bw",t("Bodyweight only"),t("The floor, and a bar or a door frame to pull on if you have one."),a.gear==="bw")+'</div>';
+    var have=a.gear==="custom"?(a.gearx||[]):a.gear==="gym"?KIT:(GEARS[a.gear]||[]);
+    h+=lbl(t("Or pick exactly what you have"))
+     +'<div class="aschips">'+KIT.map(function(k){return chip("gearx",k,t(k),have.indexOf(k)>=0,true);}).join("")+'</div>'
+     +'<p class="as-note">'+esc(t(a.gear==="custom"?"Your plan uses only these, and your own body weight.":"Tap any to change the list: barbell, dumbbells, kettlebell, bands, cables, machines. Your body weight is always in."))+'</p>';}
   else if(s==="focus"){
     h+=q(t("What do you want to bring up?"),t("Up to three muscles. Pick the whole muscle, or the parts of it you want most. They get more weekly sets and go first in their session, while you are fresh."));
     /* Each muscle, then its parts (owner, 9 Nov: "the three shoulder muscles, and the
@@ -223,18 +248,31 @@ function body(a){
      +(fo.length?'<div class="aschips">'+fo.map(function(id){
         return '<button class="aschip on asfx" data-asm="focus|'+esc(id)+'" aria-label="'+esc(t("Take off")+": "+label(id))+'">'+esc(label(id))+'<span aria-hidden="true">×</span></button>';}).join("")+'</div>'
        :'<p class="as-note">'+esc(t("Nothing picked: every muscle gets its share. Pick up to three to bring up."))+'</p>')+'</div>';
+    /* Each muscle a row with its own picture (js/data/bodymap.js, framed on its side and
+       half of the body, the muscle lit) and what it is in plain words; a row opens to the
+       muscle drawn larger and its parts as cards, each with its anatomical name, where
+       it is and what trains it, the parts picked lit on the drawing. */
+    var fig=function(m,lit,cls){var mm=MUS[m]||["f","upper"];
+      var side=lit&&Object.keys(lit).some(function(k){return k==="Calves.tib";})&&!lit["Calves.seated"]&&!lit["Calves.standing"]&&!lit.Calves?"f":mm[0];
+      return bodyView(lit,side,mm[1],"",cls);};
     h+=REGIONS.map(function(rg){
       return '<section class="asreg"><h3>'+esc(t(rg[0]))+'</h3>'+rg[1].map(function(m){
         var ps=partsOf(m),whole=fo.indexOf(m)>=0,mine=fo.filter(function(f){return f.indexOf(m+".")===0;}),on=whole||mine.length;
+        var lit={};if(mine.length)mine.forEach(function(f){lit[f]="p";});else lit[m]="p";
+        var full=!on&&picked.length>=FOCUS_MAX,sub=MUS[m]?t(MUS[m][2]):"";
         var state=whole?t("All of it"):mine.map(function(f){return t(partLabel(f));}).join(t(", "));
-        var full=!on&&picked.length>=FOCUS_MAX;
+        var head='<span class="asfm-fig">'+fig(m,lit)+'</span><span class="asfm-t"><span class="asfm-n">'+esc(focusName(m))+'</span>'
+          +'<span class="asfm-s">'+esc(on?state:sub)+'</span></span>';
         if(!ps.length)return '<button class="asfm'+(on?' on':'')+(full?' full':'')+'" data-asm="focus|'+esc(m)+'" aria-pressed="'+(on?"true":"false")+'">'
-          +'<span class="asfm-n">'+esc(focusName(m))+'</span><span class="asfm-s">'+esc(on?t("Picked"):"")+'</span><span class="asfm-k" aria-hidden="true"></span></button>';
-        return '<details class="asfm-d" name="asfm"'+((a.fopen===m)?' open':'')+'><summary class="asfm'+(on?' on':'')+(full?' full':'')+'">'
-          +'<span class="asfm-n">'+esc(focusName(m))+'</span><span class="asfm-s">'+(on?esc(state):esc(t("{n} parts")).replace("{n}",'<bdi class="num">'+ps.length+'</bdi>'))+'</span>'
-          +'<span class="ico ico-chev asfm-c" aria-hidden="true"></span></summary>'
-          +'<div class="aschips asfm-p">'+chip("focus",m,t("All of it"),whole,true)
-          +ps.map(function(pp){return chip("focus",pp.id,t(pp.label),fo.indexOf(pp.id)>=0,true);}).join("")+'</div></details>';}).join("")+'</section>';}).join("");
+          +head+'<span class="asfm-k" aria-hidden="true"></span></button>';
+        var card=function(id,title,desc,sel){return '<button class="aspart'+(sel?' on':'')+'" data-asm="focus|'+esc(id)+'" aria-pressed="'+(sel?"true":"false")+'">'
+          +'<span class="aspart-k" aria-hidden="true"></span><b>'+esc(title)+'</b><span>'+esc(desc)+'</span></button>';};
+        return '<details class="asfm-d" name="asfm"'+((a.fopen===m)?' open':'')+'><summary class="asfm'+(on?' on':'')+(full?' full':'')+'">'+head
+          +'<span class="asfm-c-w">'+(on?'':'<span class="asfm-np">'+esc(t("{n} parts")).replace("{n}",'<bdi class="num">'+ps.length+'</bdi>')+'</span>')
+          +'<span class="ico ico-chev asfm-c" aria-hidden="true"></span></span></summary>'
+          +'<div class="asfm-body"><div class="asfm-big">'+fig(m,lit,"big")+'</div><div class="asparts">'
+          +card(m,t("All of it"),t("Every part of it, evenly"),whole)
+          +ps.map(function(pp){return card(pp.id,t(pp.label),t(pp.sub),fo.indexOf(pp.id)>=0);}).join("")+'</div></div></details>';}).join("")+'</section>';}).join("");
     h+=lbl(t("Lifts you won't do (optional)"))+'<div class="aschips">'+NOLIFT.map(function(n){
         return chip("nolift",n,exName(n),(a.nolift||[]).indexOf(n)>=0,true);}).join("")+'</div>'
      +'<p class="as-note">'+t("Left out of your plan, and never suggested. Exercises you have starred are used first. Both can be changed any time from an exercise's menu.")+'</p>';}
@@ -445,4 +483,4 @@ function vAssess(){
      +'<button class="btn" data-asnext="1">'+t(s==="intro"?"Start":s==="sleep"?"See my plan":"Next")+'</button></div>';}
   return h;}
 
-export {activityOf, draftFrom, foodPrefs, FOCUS_MAX, GEARS, preview, profileOf, skipOf, STEPS, vAssess, youOk, youWhy};
+export {activityOf, draftFrom, foodPrefs, FOCUS_MAX, GEARS, gearOf, KIT, preview, profileOf, skipOf, STEPS, vAssess, youOk, youWhy};

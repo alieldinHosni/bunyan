@@ -2192,21 +2192,38 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .asfx span{margin-inline-start:var(--s2);opacity:.75}
 .asreg{border-radius:var(--r3);border:1px solid var(--border);background:var(--raised);margin-bottom:var(--s3);overflow:hidden}
 .asreg>h3{margin:0;padding:var(--s3) var(--s4) var(--s1);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
-.asfm{display:flex;align-items:center;gap:var(--s3);width:100%;min-height:52px;padding:var(--s2) var(--s4);background:none;border:0;
+.asfm{display:flex;align-items:center;gap:var(--s3);width:100%;min-height:64px;padding:var(--s2) var(--s4);background:none;border:0;
   border-top:1px solid var(--border);color:var(--text);text-align:start;font:inherit;cursor:pointer;list-style:none}
 .asreg>h3+.asfm,.asreg>h3+.asfm-d>.asfm{border-top:0}
 .asfm::-webkit-details-marker{display:none}
-.asfm-n{flex:none;font-size:16px;font-weight:600}
-.asfm-s{flex:1;min-width:0;font-size:13px;color:var(--dim);text-align:end;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.asfm-fig{flex:none;width:48px;height:48px;border-radius:var(--r2);background:rgba(var(--bg-rgb),.55);border:1px solid var(--border);overflow:hidden;display:grid;place-items:center}
+.asfm-fig .bmap{width:100%;height:100%}
+.asfm.on .asfm-fig{border-color:var(--accent-edge)}
+.asfm-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.asfm-n{font-size:16px;font-weight:700}
+.asfm-s{font-size:12.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .asfm.on .asfm-s{color:var(--accentHi);font-weight:600}
-.asfm.on .asfm-n::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accentHi);margin-inline-end:var(--s2);vertical-align:middle}
 .asfm.full{opacity:.55}
-.asfm-c{flex:none;transition:transform .2s}
+.asfm-c-w{flex:none;display:flex;align-items:center;gap:var(--s2)}
+.asfm-np{font-size:12px;color:var(--dim)}
+.asfm-c{transition:transform .2s}
 [dir="rtl"] .asfm-c{transform:scaleX(-1)}
 .asfm-d[open] .asfm-c{transform:rotate(90deg)}
-.asfm-k{flex:none;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--dim)}
+.asfm-k{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--dim)}
 .asfm.on .asfm-k{border-color:var(--accentHi);background:var(--accentHi)}
-.asfm-p{margin:0;padding:0 var(--s4) var(--s3)}
+/* A muscle opened: drawn larger beside its parts, the parts picked lit on it. */
+.asfm-body{display:grid;grid-template-columns:96px minmax(0,1fr);gap:var(--s3);padding:0 var(--s4) var(--s4);align-items:start}
+.asfm-big{border-radius:var(--r3);background:rgba(var(--bg-rgb),.55);border:1px solid var(--border);padding:var(--s2);position:sticky;top:var(--s2)}
+.asfm-big .bmap{width:100%;height:auto}
+.asparts{display:grid;gap:var(--s2)}
+.aspart{position:relative;display:flex;flex-direction:column;gap:2px;width:100%;padding:var(--s3) var(--s3) var(--s3) 40px;border-radius:var(--r3);
+  border:1px solid var(--border);background:var(--surface);color:var(--text);text-align:start;font:inherit;cursor:pointer}
+[dir="rtl"] .aspart{padding:var(--s3) 40px var(--s3) var(--s3)}
+.aspart b{font-size:15px}
+.aspart span:not(.aspart-k){font-size:12.5px;color:var(--dim);line-height:1.35}
+.aspart-k{position:absolute;inset-inline-start:var(--s3);top:var(--s3);width:18px;height:18px;border-radius:50%;border:1.5px solid var(--dim)}
+.aspart.on{border-color:var(--accent-edge);background:rgba(var(--accent-rgb),.12)}
+.aspart.on .aspart-k{border-color:var(--accentHi);background:var(--accentHi);box-shadow:inset 0 0 0 3px var(--surface)}
 .bsp .drow-s{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* A rest day in the cycle: a thin row, the name quiet, no second line. */
 .bkday.blank{min-height:46px}
