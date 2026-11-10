@@ -67,14 +67,17 @@ function build(el){
    lands exactly on it. Reduced motion: it is simply there. */
 var HL_MS=460,hlOn=null,hlAnim=0;
 function ease(x){var c=1.25;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2);}   /* out, with a small overshoot */
+/* The page's own landing curve, for the highlight that lands with a swiped page. */
+function easeOut(x){return 1-Math.pow(1-x,3);}
 function rectOf(b){return {x:b.offsetLeft,w:b.offsetWidth};}
 function place(hl,r){hl.style.transform="translate3d("+r.x.toFixed(1)+"px,0,0)";hl.style.width=r.w.toFixed(1)+"px";}
-function moveHl(el,btn){
+function hlNow(hl){return hl.style.width?{x:parseFloat((hl.style.transform.match(/translate3d\(([-\d.]+)px/)||[0,0])[1]),w:parseFloat(hl.style.width)}:null;}
+function moveHl(el,btn,ms,force){
   var hl=el.querySelector(".dock-hl");if(!hl||!btn)return;
-  var id=btn.getAttribute("data-tab");
+  var id=btn.getAttribute("data-tab"),dur=ms||HL_MS;
   cancelAnimationFrame(hlAnim);traveling=false;
-  var from=hl.style.width?{x:parseFloat((hl.style.transform.match(/translate3d\(([-\d.]+)px/)||[0,0])[1]),w:parseFloat(hl.style.width)}:null;
-  if(!from||hlOn===null||hlOn===id||reducedMotion()){
+  var from=hlNow(hl);
+  if(!from||(!force&&(hlOn===null||hlOn===id))||reducedMotion()){
     hlOn=id;
     /* Follow the button while it opens, without travelling. */
     var t0=performance.now();
@@ -84,7 +87,7 @@ function moveHl(el,btn){
   var start=performance.now();
   traveling=true;
   (function step(now){
-    var k=Math.min(1,(now-start)/HL_MS),e=ease(k),to=rectOf(btn);
+    var k=Math.min(1,(now-start)/dur),e=ms?easeOut(k):ease(k),to=rectOf(btn);
     place(hl,{x:from.x+(to.x-from.x)*e,w:Math.max(8,from.w+(to.w-from.w)*e)});
     if(k<1)hlAnim=requestAnimationFrame(step);else{traveling=false;settleHl(el);}})(start);}
 /* The highlight put back on the button that is on, where that button is now (owner,
@@ -245,4 +248,31 @@ function syncDock(el,tab,advice){
   settleHl(el);
 }
 
-export {checkDock, initDockScroll, syncDock};
+/* ---- with the finger ----------------------------------------------------------
+   Owner, 10 Nov: swiping between the main tabs, the highlight moved only once the page
+   had landed and been drawn, half a second behind it. Now it travels with the page:
+   dockFollow moves it towards the next tab by the share of the screen the finger has
+   brought the page; dockLand sets the next tab on at once (its pill opens as the page
+   slides) and carries the highlight the rest of the way over the slide's own time;
+   dockBack takes it home with a page that springs back. */
+var dragFrom=null;
+function navOf(){return navEl||document.getElementById("nav");}
+function dockFollow(tab,f){
+  var el=navOf(),hl=el&&el.querySelector(".dock-hl"),cur=el&&el.querySelector(".dock-b.on"),to=el&&el.querySelector('.dock-b[data-tab="'+tab+'"]');
+  if(!hl||!cur||!to||reducedMotion())return;
+  cancelAnimationFrame(hlAnim);traveling=true;
+  if(!dragFrom)dragFrom=rectOf(cur);
+  var a=dragFrom,b=rectOf(to),k=Math.max(0,Math.min(1,f));
+  place(hl,{x:a.x+(b.x-a.x)*k,w:Math.max(8,a.w+(b.w-a.w)*k)});}
+function dockLand(tab,ms){
+  var el=navOf();if(!el)return;dragFrom=null;
+  var btns=el.querySelectorAll(".dock-b"),on=null;
+  for(var i=0;i<btns.length;i++){var id=btns[i].getAttribute("data-tab"),y=id===tab;
+    btns[i].classList.toggle("on",y);if(y){btns[i].setAttribute("aria-current","page");on=btns[i];}else btns[i].removeAttribute("aria-current");}
+  if(on){hlOn=null;moveHl(el,on,ms,true);hlOn=tab;}}
+function dockBack(ms){
+  var el=navOf();dragFrom=null;if(!el)return;
+  var on=el.querySelector(".dock-b.on");if(!on){traveling=false;return;}
+  moveHl(el,on,ms||320,true);}
+
+export {checkDock, dockBack, dockFollow, dockLand, initDockScroll, syncDock};

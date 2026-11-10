@@ -4073,6 +4073,23 @@ correctly. Need it smoother."
   the finger mid-drag, a short drag springs back, a long one lands, the root does nothing, and the
   arrow works.
 - **Not testable here:** Safari's own gesture. To confirm on the phone.
+
+## Dock with the swipe — branch session/docksync
+Owner, 10 Nov: "The synchronization between the main swipe and the dock highlights is delayed." Swiping between
+the main tabs, the dock's highlight moved only after the page had landed and render() ran syncDock, ~half a second
+late. js/ui/dock.js now has dockFollow (the highlight moves towards the next tab by the share of the screen the
+finger has brought the page), dockLand (on release: the next tab is set on at once, its pill opens while the page
+slides, and the highlight travels the rest over the slide's own duration with the page's ease-out curve) and
+dockBack (home with a page that springs back). exswipe.js calls them through app.js helpers (follow/land/back);
+moveHl takes a duration and a force flag. Regression test "Dock with the swipe".
+- Same round (owner, 10 Nov: "the best background blending is when I swipe to the coach page; Progress is the worst,
+  it opens then shifts the whole page upwards"):
+  - The ground's picture blends with the swipe (js/ui/bgart.js bgFollow/bgLand/bgBack through app.js GROUND): the
+    next tab's picture fades in over the old one with the finger (the old fading slower, so the ground does not
+    show between), finishes over the landing, and is made the shown one so the render after changes nothing.
+  - Progress's jump: at landing, exswipe lined up pane() with the copy that came in; on Progress pane() is its own
+    views' pane (data-pswipe), 187 px below the page's top, so the page was scrolled by that. A main-tab landing
+    now lines up #app itself. Test: "Progress lands at its top, no jump".
 - Goals (owner, 10 Nov: "so dumb… one option or two instead of a separate repeated list"): one list of goal cards,
   tap one or up to three (data-asgoal; handlers/coach.js). The first picked is the main goal, tagged "Main goal";
   the others "Also". A calories goal (lose, recomp, maintain) is always the main one: picking one moves it to the

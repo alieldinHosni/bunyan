@@ -15,7 +15,8 @@ import {decodePlan} from "./engine/planshare.js";
 import {boot as smartBoot, onChange as smartChanged} from "./ui/smartcoach.js";
 import {dispatchTap} from "./ui/handlers/registry.js";
 import {draftFrom} from "./ui/views/assess.js";
-import {initDockScroll} from "./ui/dock.js";
+import {dockBack, dockFollow, dockLand, initDockScroll} from "./ui/dock.js";
+import {bgBack, bgFollow, bgLand} from "./ui/bgart.js";
 import {initExSwipe} from "./ui/exswipe.js";
 import {initNav, resetNav} from "./ui/nav.js";
 import {initEdgeBack} from "./ui/edgeback.js";
@@ -262,6 +263,8 @@ function ptabOf(k){return k==="tplan"?V.tplan:k==="fplan"?V.fplan:(V.ptab||"over
 function ptabSet(k,v){if(k==="tplan")V.tplan=v;else if(k==="fplan")V.fplan=v;else V.ptab=v;}
 /* The dock's four tabs, swiped between on their own pages (owner, 4 Nov). */
 var MTABS=["train","food","coach","progress"];
+/* Each main tab's own page's picture (js/ui/render.js groundOf, at a tab's root). */
+var GROUND={train:"home",food:"food",coach:"coach",progress:"progress"};
 /* A main tab's own page: what a tap on its dock button opens. */
 function atRoot(){
   if(V.sheet||V.coach||V.assess||V.pcheck)return false;
@@ -300,6 +303,10 @@ initExSwipe({
     if(S.prefs&&S.prefs.lang==="ar")h=isolateNums(h);
     var box=document.createElement("div");box.innerHTML=h;
     var p=box.querySelector(".psec");return p?p.innerHTML:null;},
+  /* The dock's highlight with a main tab's swipe (js/ui/dock.js). */
+  follow:function(step,f){var nt=MTABS[MTABS.indexOf(V.tab)+step];if(nt){dockFollow(nt,f);bgFollow(GROUND[nt],f);}},
+  land:function(step,ms){var nt=MTABS[MTABS.indexOf(V.tab)+step];if(nt){dockLand(nt,ms);bgLand(GROUND[nt],ms);}},
+  back:function(ms){dockBack(ms);bgBack(ms);},
   go:function(step,k){
     /* The same move as the dock's tap, without its page entrance: the swipe brought the
        page in itself. */

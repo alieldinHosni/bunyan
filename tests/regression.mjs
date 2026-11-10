@@ -4449,6 +4449,42 @@ await test("Back swipe on the Home Screen (owner, 9 Nov: a black page for a mome
   eq(await ev(page,"[V.train,history.length]"),["days",h0],"the arrow goes back too, with no history spent");
   await page.evaluate(()=>sessionStorage.removeItem("bunyan:ownback"));
 });
+await test("Dock with the swipe (owner, 10 Nov: the highlight lagged behind the page): it moves with the finger, the next tab turns on as the page is let go, and it goes home with a page that springs back",async(page,env)=>{
+  const cdp=await env.ctx.newCDPSession(page);
+  const T=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"train");await pause(page,900);
+  const hlx=()=>page.evaluate(()=>{const h=document.querySelector("nav .dock-hl"),r=h.getBoundingClientRect();return r.left+r.width/2;});
+  const btn=t=>page.evaluate(t=>{const r=document.querySelector('nav [data-tab="'+t+'"]').getBoundingClientRect();return r.left+r.width/2;},t);
+  const x0=await hlx(),xf=await btn("food");
+  /* Half a screen's drag: the highlight is on its way, about half of it. */
+  await T("touchStart",330,650);for(let i=1;i<=10;i++){await T("touchMove",330-i*19,650);await page.waitForTimeout(16);}
+  const mid=await hlx(),share=(mid-x0)/(xf-x0);
+  if(!(share>0.3&&share<0.75))throw new Error("the highlight is not following the finger: "+share.toFixed(2));
+  /* The ground's picture blends with it: Food's coming in over Training's. */
+  const bgm=await page.evaluate(()=>[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p+":"+(+getComputedStyle(p).opacity).toFixed(2)));
+  if(bgm.length!==2||!/^home:/.test(bgm[0])||!/^food:0\.[1-9]/.test(bgm[1]))throw new Error("the pictures do not blend under the finger: "+bgm);
+  /* Let go: Food is on at once, before the page has landed. */
+  await T("touchEnd",0,0);await page.waitForTimeout(60);
+  eq(await page.evaluate(async()=>[(await import("/js/ui/view.js")).V.tab,document.querySelector('nav [data-tab="food"]').classList.contains("on")]),["train",true],"Food lit while the page is still sliding");
+  await page.waitForTimeout(800);
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p)),["food"],"Food's picture alone once landed");
+  const land=await hlx(),fb=await btn("food");
+  if(Math.abs(land-fb)>2)throw new Error("not on Food when the page landed: "+land+" vs "+fb);
+  /* A short drag let go springs back, and the highlight with it. */
+  const h0=await hlx();
+  await T("touchStart",330,650);for(let i=1;i<=4;i++){await T("touchMove",330-i*12,650);await page.waitForTimeout(16);}
+  if(Math.abs((await hlx())-h0)<1)throw new Error("no move on a short drag");
+  await T("touchEnd",0,0);await page.waitForTimeout(600);
+  eq(await ev(page,"V.tab"),"food","still on Food");
+  if(Math.abs((await hlx())-(await btn("food")))>2)throw new Error("the highlight did not go home");
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p+":"+(p.style.opacity||"css"))),["food:css"],"and the picture back as it was");
+  /* Landing on Progress keeps the page where it was (it scrolled down by its own pane's height). */
+  await tapTab(page,"coach");await pause(page,900);
+  await T("touchStart",330,650);for(let i=1;i<=12;i++){await T("touchMove",330-i*22,650);await page.waitForTimeout(16);}
+  await T("touchEnd",0,0);await page.waitForTimeout(1200);
+  eq(await ev(page,"[V.tab,Math.round(scrollY)]"),["progress",0],"Progress lands at its top, no jump");
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
