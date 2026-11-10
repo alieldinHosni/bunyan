@@ -4485,7 +4485,7 @@ await test("Dock with the swipe (owner, 10 Nov: the highlight lagged behind the 
   await T("touchEnd",0,0);await page.waitForTimeout(1200);
   eq(await ev(page,"[V.tab,Math.round(scrollY)]"),["progress",0],"Progress lands at its top, no jump");
 });
-await test("Drawings (owner, 10 Nov: they flashed then started, or stopped half way and restarted): a page's drawing draws in once, carried on through renders; one that came in by a swipe is already drawn",async(page,env)=>{
+await test("Drawings (owner, 10 Nov: they flashed then started, or stopped half way and restarted): a page's drawing draws in once, carried on through renders, and by a swipe as by a tap",async(page,env)=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
   await tapTab(page,"progress");await pause(page,600);
   /* Sampled every frame from the tap: never visible before it starts, never going back. */
@@ -4504,10 +4504,15 @@ await test("Drawings (owner, 10 Nov: they flashed then started, or stopped half 
   const T=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
   await tapTab(page,"train");await pause(page,2000);
   await T("touchStart",330,650);for(let i=1;i<=12;i++){await T("touchMove",330-i*22,650);await page.waitForTimeout(16);}
+  /* The page coming in is held at the start of its entrance: the loaf undrawn, the figure at 0. */
+  const held=await page.evaluate(()=>{const w=document.querySelector(".stillcopy.peek");const p=w&&w.querySelector(".fthead .art path.a"),n=w&&w.querySelector(".fring2-n");
+    return [p?parseFloat(getComputedStyle(p).strokeDashoffset):null,n?n.textContent:null];});
+  eq([held[0]>0.9,held[1]],[true,"0"],"the copy comes in at the entrance's first frame");
   await T("touchEnd",0,0);
-  const s2=await watch("#app .fthead .art path.a",900,false);
+  const s2=await watch("#app .fthead .art path.a",2000,false);
   const v2=s2.filter(v=>v>=0);
-  eq([v2.length>3,v2.every(v=>v<0.05)],[true,true],"Food by a swipe: the loaf is drawn from the first frame");
+  let back2=0;for(let i=1;i<v2.length;i++)if(v2[i]>v2[i-1]+0.02)back2++;
+  eq([v2.length>10,v2[0]>0.5,back2,v2[v2.length-1]<0.05],[true,true,0,true],"Food by a swipe: the loaf draws in as it does from the dock, once, never going back");
 });
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
