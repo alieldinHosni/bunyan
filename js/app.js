@@ -18,6 +18,7 @@ import {draftFrom} from "./ui/views/assess.js";
 import {initDockScroll} from "./ui/dock.js";
 import {initExSwipe} from "./ui/exswipe.js";
 import {initNav, resetNav} from "./ui/nav.js";
+import {initEdgeBack} from "./ui/edgeback.js";
 import {bindPanel, closeCoach} from "./ui/coachfab.js";
 import {initPress} from "./ui/press.js";
 import {initReorder} from "./ui/reorder.js";
@@ -219,6 +220,8 @@ initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,closeCoach:fu
          locked:sessionLocked,onBlocked:backBlocked});
 /* The pictures under the sun of this place and minute (js/ui/sky.js). */
 initSky();
+/* The back swipe drawn by the app, on the Home Screen only (js/ui/edgeback.js). */
+initEdgeBack();
 initSheetDrag(requestCloseSheet);
 /* The coach's header dragged down: the whole conversation gets smaller, the compact panel
    closes; with the tick, since the finger has just let go (a moment iOS allows it). */

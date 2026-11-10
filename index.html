@@ -3420,6 +3420,11 @@ body.noanim .pid-orbit .e{opacity:.8}
   background:linear-gradient(180deg,transparent,var(--bg) 28%)}
 .sheetbox>.sfoot{margin-inline:-16px;max-width:none}
 .sfoot .btn{margin:0}
+/* The back swipe drawn by the app (js/ui/edgeback.js): the shade over the page before,
+   under the page you are leaving, which casts a soft edge as it goes. */
+.ebedge{position:fixed;left:0;top:0;bottom:0;width:var(--s4);z-index:60;touch-action:none}
+.ebshade{position:fixed;inset:0;z-index:5;background:var(--zero-black);pointer-events:none;opacity:0}
+.ebcopy{box-shadow:var(--shadow-float)}
 /* A note folded under a group, opened when wanted. */
 details.sg-more{margin-top:var(--s2)}
 details.sg-more .sg-f{padding:0 var(--s3) var(--s3)}
