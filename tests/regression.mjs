@@ -2067,7 +2067,7 @@ await test("Assessment: first run opens it; answers become targets and training 
   eq(await ev(page,"V.asd.step"),1,"no numbers, no next");
   await page.fill('#as_age','31');await page.fill('#as_height','178');await page.fill('#as_weight','84');
   await page.tap('[data-asnext]');await pause(page,200);
-  await page.tap('[data-as="goal|recomp"]');await pause(page,150);
+  await page.tap('[data-asgoal="recomp"]');await pause(page,150);
   for(let i=0;i<4;i++){await page.tap('[data-asnext]');await pause(page,150);}
   /* What to bring up, and a lift they will not do: the week is built with both. */
   if(!(await page.$('[data-asm="focus|Back"]')))throw new Error("no focus step after where you train");
@@ -4221,12 +4221,22 @@ await test("Assessment (owner, 9 Nov): a main goal and up to two more, the days 
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");
     V.asd=A.draftFrom();Object.assign(V.asd,{age:30,height:180,weight:82,days:3,wd:[],goal:"gain",gear:"gym"});V.assess=true;});
   await go("goal");
-  eq(await page.$$eval('[data-asm^="goals2|"]',a=>a.map(b=>b.getAttribute("data-asm").split("|")[1])),["strength","athletic","endurance","mobility"],"the goals that combine, the main one left out");
-  await page.tap('[data-asm="goals2|strength"]');await pause(page,150);
-  await page.tap('[data-asm="goals2|endurance"]');await pause(page,150);
-  await page.tap('[data-asm="goals2|mobility"]');await pause(page,200);
-  eq(await ev(page,"V.asd.goals2"),["strength","endurance"],"two at most");
-  await page.tap('[data-asm="goals2|endurance"]');await pause(page,150);
+  /* One list (owner, 10 Nov): tap up to three; the first is the main goal. */
+  eq(await page.$$eval('[data-asgoal]',a=>a.length),8,"every goal once, in one list");
+  await page.tap('[data-asgoal="strength"]');await pause(page,150);
+  await page.tap('[data-asgoal="endurance"]');await pause(page,150);
+  await page.tap('[data-asgoal="mobility"]');await pause(page,200);
+  eq(await ev(page,"[V.asd.goal,V.asd.goals2]"),["gain",["strength","endurance"]],"three at most");
+  eq(await page.$$eval('[data-asgoal] .asg-tag',a=>a.map(x=>x.closest('[data-asgoal]').dataset.asgoal+":"+(x.classList.contains('main')?"main":"also"))),
+    ["gain:main","strength:also","endurance:also"],"the main goal marked, the others marked as also");
+  await page.tap('[data-asgoal="endurance"]');await pause(page,150);
+  /* A goal about calories is the main one, in place of another of its kind. */
+  await page.tap('[data-asgoal="lose"]');await pause(page,150);
+  eq(await ev(page,"[V.asd.goal,V.asd.goals2]"),["lose",["gain","strength"]],"losing fat becomes main; the other two stay, trained for too");
+  await page.tap('[data-asgoal="recomp"]');await pause(page,150);
+  eq(await ev(page,"[V.asd.goal,V.asd.goals2]"),["recomp",["gain","strength"]],"the other calories goal takes its place");
+  await page.tap('[data-asgoal="recomp"]');await pause(page,150);
+  eq(await ev(page,"[V.asd.goal,V.asd.goals2]"),["gain",["strength"]],"the main goal tapped off: the next is main");
   
   await go("focus");
   await focusTap(page,"Shoulders.side");await pause(page,120);

@@ -5,7 +5,12 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Levantine": "شامي",
+var AR={"Tap one goal, or up to three. The first one you pick is your main goal: it sets your food and most of your training days.": "اختار هدف واحد، أو لحد ٣. أول واحد تختاره هو هدفك الأساسي: هو اللي بيحدد أكلك ومعظم أيام تمرينك.",
+"Main goal": "الهدف الأساسي",
+"Also": "كمان",
+"Want more than one thing from your training? Tap another goal too, up to three.": "عايز أكتر من حاجة من تمرينك؟ اختار هدف تاني كمان، لحد ٣.",
+"Up to three goals. Take one off first.": "لحد ٣ أهداف. شيل واحد الأول.",
+"Levantine": "شامي",
 "Gulf": "خليجي",
 "The kitchen your meal plan comes from first": "المطبخ اللي خطة أكلك بتيجي منه الأول",
 "Updated. The new version opens next time you come back to the app.": "اتحدّث. النسخة الجديدة هتفتح المرة الجاية لما ترجع للتطبيق.",

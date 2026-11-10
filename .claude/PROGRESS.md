@@ -4058,3 +4058,7 @@ correctly. Need it smoother."
   the finger mid-drag, a short drag springs back, a long one lands, the root does nothing, and the
   arrow works.
 - **Not testable here:** Safari's own gesture. To confirm on the phone.
+- Goals (owner, 10 Nov: "so dumb… one option or two instead of a separate repeated list"): one list of goal cards,
+  tap one or up to three (data-asgoal; handlers/coach.js). The first picked is the main goal, tagged "Main goal";
+  the others "Also". A calories goal (lose, recomp, maintain) is always the main one: picking one moves it to the
+  front, and a second takes the first one's place. Tapping the main goal off makes the next one main.

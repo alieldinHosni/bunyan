@@ -162,15 +162,22 @@ function body(a){
      +'<label><span>'+t("Height (cm)")+'</span><input id="as_height" type="number" inputmode="numeric" value="'+esc(String(a.height))+'"></label>'
      +'<label><span>'+t("Weight")+' ('+wUnit()+')</span><input id="as_weight" type="number" inputmode="decimal" step="0.1" value="'+(num(a.weight)?toDisp(num(a.weight)):"")+'"></label></div>';}
   else if(s==="goal"){
-    h+=q(t("What are you after most?"),t("One main goal. It sets your food and most of your training days; you can change it any time."));
-    h+='<div class="ascards">'+GOAL_ORDER.map(function(k){return card("goal",k,t(GOALS[k].label),t(GOALS[k].desc),a.goal===k);}).join("")+'</div>';
-    /* Up to two more (owner, 9 Nov). Each gets training days of its own in turn with the
-       main one, the textbook's undulating plan; the food stays the main goal's, so the
-       goals that are about calories are main goals only (js/data/goals.js). */
-    var g2=goalsOf({goal:a.goal,goals2:a.goals2}).slice(1);
-    h+=lbl(t("Also training for (optional, up to two)"))
-     +'<div class="aschips">'+EXTRA_OK.filter(function(k){return k!==a.goal;}).map(function(k){return chip("goals2",k,t(GOALS[k].label),g2.indexOf(k)>=0,true);}).join("")+'</div>'
-     +'<p class="as-note">'+esc(t(g2.length?"Your training days take turns: the main goal on most of them, each other goal on days of its own, with its own reps, rest and extras. Your food follows the main goal.":"Pick one or two if you want more than one thing from your training. The days then take turns between them."))+'</p>';}
+    /* One list (owner, 10 Nov: "click on one option or two instead of a separate repeated
+       list"): tap one goal, or up to three. The first is the main one, marked so: it sets
+       the food and most training days; the others get training days of their own in turn
+       with it, the textbook's undulating plan. Goals about calories (lose, both, stay fit)
+       can only be the main one: a second of those takes the first one's place. Tapping
+       the main goal off hands "main" to the next. (js/data/goals.js; handlers/coach.js asgoal) */
+    var gl=goalsOf({goal:a.goal,goals2:a.goals2});
+    h+=q(t("What are you after?"),t("Tap one goal, or up to three. The first one you pick is your main goal: it sets your food and most of your training days."));
+    h+='<div class="ascards asgoals">'+GOAL_ORDER.map(function(k){
+      var at=gl.indexOf(k),on=at>=0;
+      return '<button class="ascard'+(on?' on':'')+'" data-asgoal="'+k+'" aria-pressed="'+(on?"true":"false")+'">'
+       +'<span class="asg-h"><b>'+esc(t(GOALS[k].label))+'</b>'
+       +(on?'<i class="asg-tag'+(at?'':' main')+'">'+esc(at?t("Also"):t("Main goal"))+'</i>':'')+'</span>'
+       +'<span>'+esc(t(GOALS[k].desc))+'</span></button>';}).join("")+'</div>';
+    h+='<p class="as-note">'+esc(t(gl.length>1?"Your training days take turns: the main goal on most of them, each other goal on days of its own, with its own reps, rest and extras. Your food follows the main goal."
+      :"Want more than one thing from your training? Tap another goal too, up to three."))+'</p>';}
   else if(s==="level"){
     h+=q(t("How long have you been lifting?"),t("Consistently, not counting long breaks."));
     var LD={new:"New to lifting.",some:"Training regularly for six months or more.",

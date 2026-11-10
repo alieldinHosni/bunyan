@@ -23,7 +23,7 @@ import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
 import {draftFrom, FOCUS_MAX, foodPrefs, GEARS, profileOf, skipOf, STEPS, youOk, youWhy} from "../views/assess.js";
-import {EXTRA_MAX, goalsOf} from "../../data/goals.js";
+import {EXTRA_MAX, EXTRA_OK, GOALS, goalsOf} from "../../data/goals.js";
 import {lastMonth, monthlyNow, monthlyOpen} from "../../engine/monthly.js";
 import {focusMuscles} from "../../data/parts.js";
 import {ask, findMsg, follow} from "../views/chat.js";
@@ -241,6 +241,19 @@ function register(){
     /* The main goal is not also one of the others. */
     if(af==="goal"&&V.asd.goals2)V.asd.goals2=V.asd.goals2.filter(function(k){return k!==av;});
     render();return;});
+  /* The goal list: the first picked is the main goal, up to two more (views/assess.js). */
+  on(function(D){return D.asgoal!==undefined&&V.asd;},function(D){
+    var k=D.asgoal,a=V.asd,list=goalsOf({goal:a.goal,goals2:a.goals2}),at=list.indexOf(k);
+    if(!GOALS[k])return;
+    if(at>0)list.splice(at,1);
+    else if(at===0){if(list.length<2)return;list.shift();}
+    else if(EXTRA_OK.indexOf(k)<0){
+      /* A calories goal: main, in place of the main one if that is one too. */
+      if(EXTRA_OK.indexOf(list[0])<0)list[0]=k;else{list.unshift(k);if(list.length>EXTRA_MAX+1)list.pop();}}
+    else{if(list.length>EXTRA_MAX){toast(t("Up to three goals. Take one off first."));return;}list.push(k);}
+    var main=list.filter(function(g){return EXTRA_OK.indexOf(g)<0;})[0]||list[0];
+    a.goal=main;a.goals2=list.filter(function(g){return g!==main;});
+    a.split=null;render();return;});
   on(function(D){return D.asm!==undefined&&V.asd;},function(D){var mp=D.asm.split("|"),f=mp[0],v=f==="wd"?num(mp[1]):mp[1];
     var ml=V.asd[f]||(V.asd[f]=[]),mi=ml.indexOf(v);
     /* Focus: up to three muscles, any of their parts; a whole muscle and its parts

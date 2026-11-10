@@ -2741,6 +2741,11 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .ascard b{font-size:15.5px;font-weight:700}
 .ascard span{font-size:13px;line-height:1.4;color:var(--sub)}
 .ascard.on{background:rgba(var(--accent-rgb),.12);border-color:var(--accent-edge);box-shadow:inset 3px 0 0 var(--accent)}
+/* The goal list (views/assess.js): which one is main, which are also trained for. */
+.asg-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
+.asg-tag{flex:none;font-style:normal;font-size:11.5px;font-weight:700;padding:2px var(--s2);border-radius:var(--rpill);
+  color:var(--sub);border:1px solid var(--border)}
+.asg-tag.main{color:var(--accentHi);border-color:var(--accent-edge);background:rgba(var(--accent-rgb),.14)}
 [dir="rtl"] .ascard.on{box-shadow:inset -3px 0 0 var(--accent)}
 :root:not(.tch) .ascard:active,.ascard.tapd{transform:scale(.985)}
 .as-in{margin-top:14px}
