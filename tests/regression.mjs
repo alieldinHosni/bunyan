@@ -4373,6 +4373,26 @@ await test("Body and food round (owner, 10 Nov): muscles by region with their pa
   await pause(page,800);
   eq(await ev(page,"[...document.querySelectorAll('#app .pgnone')].filter(p=>!p.closest('.pgcard,.pgtrend,.pghero,.empty,.sheetbox')).length"),0,"no loose words over the picture");
 });
+await test("Sky (owner, 10 Nov: dark at night, bright and sunny by day, by the season): the pictures take the sun's light for the place and minute; Settings → App turns it off and says where the sun is taken from",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.skyLoc={lat:30,lon:31.2};delete st.S.prefs.nosky;st.saveDB();});
+  await tapTab(page,"train");await pause(page,600);
+  const at=iso=>page.evaluate(async ms=>{const k=(await import("/js/ui/sky.js")).setSkyClock(ms);await new Promise(r=>setTimeout(r,120));
+    const el=document.getElementById("bgart"),ph=el.querySelector(".photo");
+    return [k.phase,el.getAttribute("data-sky"),+getComputedStyle(el).getPropertyValue("--sky-t"),ph?getComputedStyle(ph).filter:""];},Date.parse(iso));
+  const night=await at("2026-11-10T19:00:00Z"),noon=await at("2026-11-10T10:00:00Z"),dusk=await at("2026-11-10T14:52:00Z");
+  eq([night[0],night[1],night[2]>0.5,/brightness\(0\.3/.test(night[3])],["night","night",true,true],"Cairo at 21:00: night, dim and blue");
+  eq([noon[0],noon[2],/brightness\(1/.test(noon[3])],["day",0,true],"at noon: full day, no night blue");
+  eq([dusk[0],/sepia\(0\.[23]/.test(dusk[3])],["golden",true],"just before sunset: the golden hour, warm");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_app");});await pause(page,800);
+  const row=await ev(page,"[...document.querySelectorAll('.sheetbox .srow-sky')].map(r=>r.innerText).join()");
+  if(!/Your location/.test(row)||!/Sunrise/.test(row)||!/Sunset/.test(row))throw new Error("where the sun is taken from: "+row);
+  await page.click('.sheetbox [data-toggle="nosky"]');await pause(page,500);
+  eq(await ev(page,"[S.prefs.nosky,document.getElementById('bgart').hasAttribute('data-sky'),!!document.querySelector('.sheetbox .srow-sky')]"),[true,false,false],"off: the pictures as they are");
+  await page.click('.sheetbox [data-toggle="nosky"]');await pause(page,400);
+  await page.click('.sheetbox [data-skyloc="0"]');await pause(page,400);
+  eq(await ev(page,"[!!S.prefs.skyLoc,document.getElementById('bgart').hasAttribute('data-sky'),!!document.querySelector('.sheetbox [data-skyloc=\"1\"]')]"),[false,true,true],"back to the time zone, with Use my location offered");
+  await page.evaluate(async()=>{(await import("/js/ui/sky.js")).setSkyClock(null);(await import("/js/ui/actions.js")).closeSheet();});
+});
 await test("Profile › Nutrition (owner, 9 Nov: not a shortcut to another page): its own settings, the targets one row away; meals, names, style, diet, what is left out and powder set here and used by the meal plan",async page=>{
   await tapTab(page,"profile");await pause(page,500);
   await page.tap('#app [data-sheet="set_food"]');await pause(page,700);

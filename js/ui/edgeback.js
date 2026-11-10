@@ -40,10 +40,15 @@ function place(p){
 function ground(copy){
   var top=-(parseFloat(copy.style.top)||0),h=window.innerHeight||800;
   var pic=document.querySelector("#bgart .photo:last-child"),layer="";
-  if(pic){var cs=getComputedStyle(pic);
-    layer='<div aria-hidden="true" style="position:absolute;left:0;right:0;top:'+top+'px;height:'+h+'px;z-index:-1;pointer-events:none;'
-      +'background-image:'+cs.backgroundImage.replace(/"/g,"'")+';background-size:'+cs.backgroundSize+';background-position:'+cs.backgroundPosition
-      +';background-repeat:no-repeat;opacity:'+cs.opacity+'"></div>';}
+  /* With the light of the sky the picture is under now (js/ui/sky.js): its filter, the
+     night's blue over it and the veil and glow from its sky, as the ground shows them. */
+  if(pic){var cs=getComputedStyle(pic),bf=getComputedStyle(pic,"::before"),af=getComputedStyle(pic,"::after");
+    var q=function(x){return String(x).replace(/"/g,"'");};
+    var box='position:absolute;left:0;right:0;top:'+top+'px;height:'+h+'px;pointer-events:none;';
+    layer='<div aria-hidden="true" style="'+box+'z-index:-1;opacity:'+cs.opacity+';filter:'+q(cs.filter)+';-webkit-mask-image:'+q(cs.webkitMaskImage||cs.maskImage||"none")+';mask-image:'+q(cs.maskImage||cs.webkitMaskImage||"none")+'">'
+      +'<div style="position:absolute;inset:0;background-image:'+q(cs.backgroundImage)+';background-size:'+cs.backgroundSize+';background-position:'+cs.backgroundPosition+';background-repeat:no-repeat"></div>'
+      +(bf.content&&bf.content!=="none"?'<div style="position:absolute;inset:0;background:'+q(bf.backgroundColor)+';opacity:'+bf.opacity+'"></div>':'')
+      +(af.content&&af.content!=="none"?'<div style="position:absolute;inset:0;background-image:'+q(af.backgroundImage)+'"></div>':'')+'</div>';}
   copy.style.background="var(--ground,var(--bg))";copy.style.backgroundAttachment="scroll";
   copy.style.minHeight=(top+h)+"px";copy.style.isolation="isolate";
   if(layer)copy.insertAdjacentHTML("afterbegin",layer);}
