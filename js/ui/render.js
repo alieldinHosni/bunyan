@@ -28,6 +28,7 @@ import {bindExSwipe} from "./exswipe.js";
 import {bindMore} from "./more.js";
 import {syncMannequins} from "./mannequin.js";
 import {syncBgArt} from "./bgart.js";
+import {startArts} from "./art.js";
 import {syncCoach} from "./coachfab.js";
 
 /* ============================================================ render */
@@ -187,6 +188,8 @@ function render(){
     :V.tab==="food"?(V.smeal?"smeal":V.pslot?"pslot":V.pimport?"pimport":V.fplan==="foods"?"myfoods":V.fplan?"plan":"")
     :V.tab==="coach"?"hub":"");
   var moved=view!==lastView;lastView=view;
+  /* Came in by a swipe: its drawings were already drawn on the copy that brought it. */
+  var swipedIn=!!(V.tswiped||V.pswiped);
   /* Note what has focus and where the caret sits before the rebuild destroys it.
      Restoring the caret to the end of the value, which is what this used to do,
      threw the cursor to the end of the word on every debounced keystroke. */
@@ -328,6 +331,8 @@ function render(){
   /* The live 3D figures: new ones start, kept ones carry on, gone ones let go of the
      graphics card (js/ui/mannequin.js). */
   syncMannequins();
+  /* The drawings: each draws in once a screen, carried on through re-renders (js/ui/art.js). */
+  startArts(view,swipedIn);
 
   /* No search field is focused for you. Opening the picker with the keyboard already
      up hid half the list behind it before anything was typed; browsing by muscle

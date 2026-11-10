@@ -4828,15 +4828,23 @@ label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-
 .art .h1{opacity:.45}.art .h2{opacity:.7}.art .h3{opacity:1}
 .art .ridge{stroke:url(#artStroke) var(--accentHi);stroke-width:1.3;opacity:.8}
 .art .dsk{stroke:none;fill:url(#artGlow) none}
-.art.draw .a.c,.art.draw .h1,.art.draw .h2,.art.draw .h3,.art.draw .dsk{animation:artDraw 1.6s var(--e-decel) forwards,artFillIn 1.4s var(--e-standard) both}
+/* The draw-in runs once a drawing has been given its start (.go, js/ui/art.js
+   startArts): from the beginning on its first showing in a screen, from where it had got
+   to when a render redraws it mid-way (--art-t, a negative delay), and finished at once
+   when it arrived by a swipe. Until then, and in a still copy of a page, it is drawn.
+   "both": the delayed lines hold their start, unseen, instead of flashing in first. */
+.art.go .a.c,.art.go .h1,.art.go .h2,.art.go .h3,.art.go .dsk{animation:artDraw 1.6s var(--e-decel) var(--art-t,0s) both,artFillIn 1.4s var(--e-standard) var(--art-t,0s) both}
 @keyframes artFillIn{from{fill-opacity:0}to{fill-opacity:1}}
 .art .lvl{stroke-width:2.6;opacity:1}
-.art.draw path{stroke-dasharray:1 1;stroke-dashoffset:1;animation:artDraw 1.6s var(--e-decel) forwards}
-.art.draw path.b{animation-delay:.18s}
-.art.draw .sword path{animation-delay:.3s}
-.art.draw .e{opacity:0;animation:artEmber .9s var(--e-standard) .9s forwards}
-@keyframes artDraw{to{stroke-dashoffset:0}}
-@keyframes artEmber{to{opacity:.8}}
+.art.draw path{stroke-dasharray:1 1;stroke-dashoffset:0}
+.art.go path{animation:artDraw 1.6s var(--e-decel) var(--art-t,0s) both}
+.art.go path.b{animation-delay:calc(var(--art-t,0s) + .18s)}
+.art.go .sword path{animation-delay:calc(var(--art-t,0s) + .3s)}
+.art.go .e{animation:artEmber .9s var(--e-standard) calc(var(--art-t,0s) + .9s) both}
+@keyframes artDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes artEmber{from{opacity:0}to{opacity:.8}}
+/* A still copy of a page (motion.js stillCopy, the swipe's pages) never replays one. */
+.stillcopy .art.go path,.stillcopy .art.go .e,.stillcopy .art.go :is(.a.c,.h1,.h2,.h3,.dsk){animation:none}
 .art .sword{transition:transform var(--m-screen) var(--e-ios)}
 /* On a button: at the far edge, behind the label, faded out toward it. One per big tile
    or build button, never on a button whose job is a number, never on the main action.
@@ -4855,9 +4863,8 @@ label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-
 .bnew .ico-chev{position:relative;z-index:1}
 [dir="rtl"] .btn-art{transform:scaleX(-1)}
 [dir="rtl"] .ttile.wide .btn-art,[dir="rtl"] .bnew .btn-art{transform:translateY(-50%) scaleX(-1)}
-@media (prefers-reduced-motion:reduce){.art.draw path{animation:none;stroke-dashoffset:0}.art.draw .e{animation:none;opacity:.8}}
-body.noanim .art.draw path{animation:none;stroke-dashoffset:0}
-body.noanim .art.draw .e{animation:none;opacity:.8}
+@media (prefers-reduced-motion:reduce){.art.go path,.art.go .e,.art.go :is(.a.c,.h1,.h2,.h3,.dsk){animation:none}}
+body.noanim .art.go path,body.noanim .art.go .e,body.noanim .art.go :is(.a.c,.h1,.h2,.h3,.dsk){animation:none}
 /* Food. Today's loaf and frond sit at the header's far edge, clear of the title. */
 .fthead{position:relative;isolation:isolate}
 .fthead-art{position:absolute;z-index:-1;inset-inline-end:-6px;top:-10px;width:118px;height:auto;opacity:.75}

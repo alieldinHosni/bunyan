@@ -4103,3 +4103,14 @@ moveHl takes a duration and a force flag. Regression test "Dock with the swipe".
   kinds (barbell, dumbbell, kettlebell, band, cable, machine), bodyweight always in (a.gear "custom", a.gearx;
   gearOf). The knowledge base also names suspension, medicine balls, stability balls, sandbags, ropes: not offered,
   the library has only a handful of photographed exercises for them, not enough to build a week from.
+
+## The drawings draw in once — branch session/artmotion (v251)
+Owner, 10 Nov: "whenever I open their page, it either flashes then starts the motion, or does the motion once,
+stops half way and restarts" (Food's loaf, Training's sunrise). Causes: a rebuilt drawing started its CSS draw-in
+again; the swipe's copy of the next page showed it finished, so the real page's drawing began from nothing as it
+landed (the flash then the motion); the faint lines had a delay without a backwards fill. Now: the draw-in runs only
+on .art.go; js/ui/art.js startArts (called after every render) gives each drawing its start per screen: the first
+showing starts it, a drawing rebuilt while it runs gets a negative delay (--art-t) and carries on from the same
+moment, and one that arrived by a swipe (V.tswiped / V.pswiped) is finished at once, as its copy was. Still copies
+(.stillcopy) never replay one; fills are "both". Test "Drawings …" samples the stroke every frame (fails on the old
+code at the swipe).

@@ -4485,6 +4485,30 @@ await test("Dock with the swipe (owner, 10 Nov: the highlight lagged behind the 
   await T("touchEnd",0,0);await page.waitForTimeout(1200);
   eq(await ev(page,"[V.tab,Math.round(scrollY)]"),["progress",0],"Progress lands at its top, no jump");
 });
+await test("Drawings (owner, 10 Nov: they flashed then started, or stopped half way and restarted): a page's drawing draws in once, carried on through renders; one that came in by a swipe is already drawn",async(page,env)=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"progress");await pause(page,600);
+  /* Sampled every frame from the tap: never visible before it starts, never going back. */
+  const watch=async(sel,ms,poke)=>page.evaluate(async([sel,ms,poke])=>{const out=[];const t0=performance.now();
+    if(poke)setTimeout(async()=>{(await import("/js/ui/render.js")).render();},350);
+    await new Promise(r=>{(function f(){const p=document.querySelector(sel);out.push(p?parseFloat(getComputedStyle(p).strokeDashoffset):-1);if(performance.now()-t0<ms)requestAnimationFrame(f);else r();})();});return out;},[sel,ms,poke]);
+  await page.evaluate(()=>document.querySelector('nav [data-tab="food"]').click());
+  const s=await watch("#app .fthead .art path.a",1900,true);
+  const seen=s.filter(v=>v>=0);
+  if(seen.length<10)throw new Error("no drawing on Food: "+s.slice(0,5));
+  let back=0;for(let i=1;i<seen.length;i++)if(seen[i]>seen[i-1]+0.02)back++;
+  if(seen[0]<0.9)throw new Error("the drawing showed before it started drawing: "+seen[0]);
+  eq([back,seen[seen.length-1]<0.05],[0,true],"Food's loaf draws once, through a render in the middle, and finishes");
+  /* By a swipe, the copy that came in showed it drawn: the real page does not draw it again. */
+  const cdp=await env.ctx.newCDPSession(page);
+  const T=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
+  await tapTab(page,"train");await pause(page,2000);
+  await T("touchStart",330,650);for(let i=1;i<=12;i++){await T("touchMove",330-i*22,650);await page.waitForTimeout(16);}
+  await T("touchEnd",0,0);
+  const s2=await watch("#app .fthead .art path.a",900,false);
+  const v2=s2.filter(v=>v>=0);
+  eq([v2.length>3,v2.every(v=>v<0.05)],[true,true],"Food by a swipe: the loaf is drawn from the first frame");
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
