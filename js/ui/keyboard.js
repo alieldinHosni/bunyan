@@ -94,7 +94,14 @@ var kbUp=false,kbT=0;
 function onFocusInAny(ev){
   if(!opensKeyboard(ev.target)){return;}
   clearTimeout(kbT);
-  if(!kbUp){kbUp=true;predict(true);}}
+  if(!kbUp){kbUp=true;predict(true,kindOf(ev.target));}}
+/* The kind of keyboard a field brings up (view.js keeps a height for each). */
+function kindOf(el){
+  var m=(el.getAttribute("inputmode")||"").toLowerCase(),ty=(el.getAttribute("type")||"text").toLowerCase();
+  if(/^(decimal|numeric)$/.test(m)||ty==="number")return "num";
+  if(ty==="search"||m==="search")return "search";
+  if(el.matches("textarea"))return "area";
+  return "text";}
 function onFocusOutAny(ev){
   if(!opensKeyboard(ev.target))return;
   clearTimeout(kbT);

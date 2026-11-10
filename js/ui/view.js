@@ -156,9 +156,12 @@ function syncViewport(){
      until the very end, each pulled the panel back up mid-glide. It goes to the whole
      screen once, and the reading after the keyboard has gone settles it. */
   if(Date.now()<KB.until&&(KB.dir<0||h>ih-100))return;
-  if(ih-h>120)KB.h=ih-h;
+  if(ih-h>120){KB.h=ih-h;KB.hs[KB.kind]=ih-h;}
   r.setProperty("--vvh",Math.round(h)+"px");
-  r.setProperty("--vvt",Math.round(vv.offsetTop)+"px");}
+  r.setProperty("--vvt",Math.round(vv.offsetTop)+"px");
+  /* How much of the screen the keyboard covers, for what makes room for it without
+     moving (a search sheet's list, js/ui/keyboard.js). */
+  r.setProperty("--kbh",Math.max(0,Math.round(ih-h-vv.offsetTop))+"px");}
 /* The keyboard, ahead of itself (owner, 28 Oct: the chat "jumps" as the keyboard opens
    and closes). iOS says how much it covers only after it has finished moving, so the
    panel and the sheets, sized from --vvh, moved late and then all at once. Once its
@@ -166,10 +169,16 @@ function syncViewport(){
    the keyboard will leave, and losing it to the whole screen, at that moment: the panel
    glides (its own transition, --m-kb) alongside the keyboard instead of after it. The
    real reading arrives as it finishes and takes over. */
-var KB={h:0,dir:0,until:0,t:0};
-function kbPredict(up){
+/* Each kind of keyboard is its own height: the number pad, the letters, a search field's
+   (and iOS's bar of arrows and ✓ above some of them). Predicted from the last one of the
+   same kind, so the real reading as it lands does not move the sheet a second time, the
+   bounce (owner, 10 Nov). */
+var KB={h:0,dir:0,until:0,t:0,hs:{},kind:"text"};
+function kbPredict(up,kind){
   var r=document.documentElement.style,ih=window.innerHeight;
-  if(up&&!KB.h)return;
+  if(up&&kind)KB.kind=kind;
+  var kh=KB.hs[KB.kind]||KB.h;
+  if(up&&!kh)return;
   KB.dir=up?1:-1;KB.until=Date.now()+800;
   /* Going down, the panel's room above the dock comes back in the same instant as the
      screen it fills (index.html body.kbdown), not 60ms later when the keyboard flag
@@ -177,7 +186,8 @@ function kbPredict(up){
   var bd=document.body;clearTimeout(KB.t);
   if(up)bd.classList.remove("kbdown");
   else{bd.classList.add("kbdown");KB.t=setTimeout(function(){bd.classList.remove("kbdown");},900);}
-  r.setProperty("--vvh",Math.round(up?ih-KB.h:ih)+"px");
+  r.setProperty("--vvh",Math.round(up?ih-kh:ih)+"px");
+  r.setProperty("--kbh",(up?Math.round(kh):0)+"px");
   if(!up)r.setProperty("--vvt","0px");
   /* Should it never move (a hardware keyboard), the reading wins after the window. */
   setTimeout(syncViewport,820);}
