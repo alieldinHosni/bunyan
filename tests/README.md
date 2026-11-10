@@ -18,13 +18,18 @@ Also covered:
 ```sh
 python3 -m http.server 8765 &      # from the repo root
 npm i -g playwright                # once, if Playwright is not installed
-node tests/regression.mjs          # exit code = number of failures
+node tests/regression.mjs          # exits 1 if any test fails
 ```
 
 Options: `BUNYAN_URL` (default `http://localhost:8765/index.html`),
 `CHROMIUM` (path to a Chromium binary), `PW_PATH` (directory to resolve
 `playwright` from, e.g. the global `node_modules/`).
 
-Run it before every merge. What it cannot cover — iOS Safari, the Home Screen
+`ONLY=<text>` runs only the tests whose names contain it (`a|b` for either);
+`SHARD=<i>/<n>` runs every n-th test from the i-th.
+
+GitHub runs all of it on every pull request and every push to main
+(`.github/workflows/tests.yml`): the Node suites, and this suite split over six
+machines. Run it before every merge. What it cannot cover — iOS Safari, the Home Screen
 app, the lock screen, audio and the keyboard — is the manual checklist in
 `docs/AUDIT.md`, section H.

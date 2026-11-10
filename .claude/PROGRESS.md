@@ -4139,3 +4139,10 @@ time 0. At the landing the real page plays its entrance as from a tap (art.js no
 entranceGo plays the copy's with it (and counts its figures) so whichever is showing is at the same moment. The
 copy of the page being left still never replays (.stillcopy:not(.peek)). Test "Drawings …" now checks the copy is
 held at the start and the swiped page draws in once without going back; the week bar traced 0 → full after a swipe.
+
+## Tests on GitHub — branch session/ci
+Owner, 10 Nov (improvement list, fifth item). .github/workflows/tests.yml runs on every pull request and every
+push to main: the Node suites (architecture, engine, coach) in one job, and tests/regression.mjs split over six
+machines with the new SHARD=i/n (every n-th test from the i-th). Playwright 1.56.1 and Chromium are installed
+for the run only (npm -g, outside the repo: still no package.json). The suite now exits 1 on any failure
+(it exited with the failure count, which wraps past 255).
