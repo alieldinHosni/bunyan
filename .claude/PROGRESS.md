@@ -3990,3 +3990,19 @@ the surrounding factors if needed".
 - **Bug, older than today:** the number-wrapping helpers ran after escaping, so an apostrophe's
   `&#39;` had its 39 wrapped and showed as typed. Affected: check-in `nums`, the missed-day card,
   Settings `figs`, the missed-day sheet. All now keep entities whole.
+
+## Profile › Nutrition is a settings sheet — branch session/nutset
+
+Owner, 9 Nov: "I hate it when there is no nutrition settings, it just directs me to the nutrition page
+… either remove it … or add actual useful settings".
+
+- `set_food` (js/ui/settings.js foodSheet):
+  - Daily targets: one row to where they are edited (the plan page's daily-goal card), showing what
+    they are now.
+  - Meals a day (3–6), Meal names (the existing `mstyle`), Food style (egy, mixed, intl).
+  - Diet (any, veg, pesc, vegan); Leave out (dairy, eggs, fish, nuts, gluten); Protein powder
+    (`toggle`).
+  - "Rebuild my meal plan" (`data-pgen`): the plan built from these, shown before it is used.
+- These are the assessment's food answers, in S.prefs, read by `mealPrefs`. Handlers `nset` and
+  `navoid` in handlers/profile.js.
+- The Profile row opens the sheet and says the meals a day too.

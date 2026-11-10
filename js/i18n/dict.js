@@ -5,7 +5,16 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"No weigh-ins last month. Twice a week, same time, lets the coach read your trend and steer your calories.": "مفيش ولا وزنة الشهر اللي فات. مرتين في الأسبوع، نفس المعاد، بيخلّوا الكوتش يقرا اتجاهك ويظبط سعراتك.",
+var AR={"Calories and macros": "السعرات والماكروز",
+"Water and steps too": "والمية والخطوات كمان",
+"Worked out from your body, activity and goal. The weekly check-in adjusts them from your log.": "محسوبة من جسمك ونشاطك وهدفك. والمراجعة الأسبوعية بتظبطها من تسجيلك.",
+"Egyptian": "مصري",
+"What you eat": "بتاكل إيه",
+"Never put in your meal plan": "عمرها ما تدخل خطة أكلك",
+"A shake can close the protein gap in the plan": "شيك ممكن يقفل فرق البروتين في الخطة",
+"These shape your meal plan. Rebuild it to use them now; you see it before anything changes.": "دول بيشكّلوا خطة أكلك. اعملها من جديد عشان تستخدمهم دلوقتي، وهتشوفها قبل ما أي حاجة تتغير.",
+"Rebuild my meal plan": "اعمل خطة أكلي من جديد",
+"No weigh-ins last month. Twice a week, same time, lets the coach read your trend and steer your calories.": "مفيش ولا وزنة الشهر اللي فات. مرتين في الأسبوع، نفس المعاد، بيخلّوا الكوتش يقرا اتجاهك ويظبط سعراتك.",
 "1 holding": "1 ثابت",
 "{n} holding": "{n} ثابتين",
 "1 main lift rising": "تمرين أساسي واحد بيزيد",
