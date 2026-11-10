@@ -4114,3 +4114,15 @@ showing starts it, a drawing rebuilt while it runs gets a negative delay (--art-
 moment, and one that arrived by a swipe (V.tswiped / V.pswiped) is finished at once, as its copy was. Still copies
 (.stillcopy) never replay one; fills are "both". Test "Drawings …" samples the stroke every frame (fails on the old
 code at the swipe).
+
+## A swipe arrives with the same motion as a tap — branch session/swipemotion (v252)
+Owner, 10 Nov: "the dynamic, transition and motion of the background and drawings works well if I click on the page
+icon from the dock, but it's disabled when I swipe." Recorded both routes: the page a swipe brings in was a copy in
+its finished state (drawing drawn, the week's bar full, figures final), so at landing the real page's entrance
+either did not show (v251 had settled drawings on a swipe) or snapped back to its start. Now exswipe.js
+entranceAtStart holds the incoming copy at the first frame of its entrance: drawings given .go, the entry targets
+marked data-anim as render.js marks them, chart lines set to their dash, figures at 0, and every animation paused at
+time 0. At the landing the real page plays its entrance as from a tap (art.js no longer settles swiped drawings), and
+entranceGo plays the copy's with it (and counts its figures) so whichever is showing is at the same moment. The
+copy of the page being left still never replays (.stillcopy:not(.peek)). Test "Drawings …" now checks the copy is
+held at the start and the swiped page draws in once without going back; the week bar traced 0 → full after a swipe.

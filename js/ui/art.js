@@ -286,8 +286,6 @@ function startArts(screen,swiped){
     if(el.closest(".stillcopy"))return;
     var m=/\bart-([\w-]+)/.exec(el.getAttribute("class")||""),sh=el.closest("#sheet")?"sheet:":"";
     var k=sh+(m?m[1]:"art");
-    /* A swipe's landing (a main tab, or a plan page's tab): drawn already, as on the copy. */
-    if(swiped&&!sh&&ARTS[k]==null)ARTS[k]=now-10000;
     if(ARTS[k]!=null)el.style.setProperty("--art-t",Math.round(ARTS[k]-now)+"ms");
     else ARTS[k]=now;
     el.classList.add("go");});}

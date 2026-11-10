@@ -4844,7 +4844,7 @@ label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-
 @keyframes artDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
 @keyframes artEmber{from{opacity:0}to{opacity:.8}}
 /* A still copy of a page (motion.js stillCopy, the swipe's pages) never replays one. */
-.stillcopy .art.go path,.stillcopy .art.go .e,.stillcopy .art.go :is(.a.c,.h1,.h2,.h3,.dsk){animation:none}
+.stillcopy:not(.peek) .art.go path,.stillcopy:not(.peek) .art.go .e,.stillcopy:not(.peek) .art.go :is(.a.c,.h1,.h2,.h3,.dsk){animation:none}
 .art .sword{transition:transform var(--m-screen) var(--e-ios)}
 /* On a button: at the far edge, behind the label, faded out toward it. One per big tile
    or build button, never on a button whose job is a number, never on the main action.
