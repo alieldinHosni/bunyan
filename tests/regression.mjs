@@ -319,7 +319,8 @@ await test("tab taps do not grow the browser history",async page=>{
   const h1=await page.evaluate(()=>history.length);
   if(h1-h0>2)throw new Error("grew by "+(h1-h0));
   await page.evaluate(()=>history.back());await pause(page,400);
-  eq(await page.evaluate(()=>location.pathname),"/index.html","still in the app");
+  /* The app's page, under either of its addresses ("/" and "/index.html" serve the same file). */
+  eq(await page.evaluate(()=>/^\/(index\.html)?$/.test(location.pathname)),true,"still in the app");
 });
 await test("new workout entries carry a stable exercise id, and ids heal renamed names",async page=>{
   await startWorkout(page);
@@ -4351,6 +4352,62 @@ await test("Body and food round (owner, 10 Nov): muscles by region with their pa
   await pause(page,800);
   eq(await ev(page,"[...document.querySelectorAll('#app .pgnone')].filter(p=>!p.closest('.pgcard,.pgtrend,.pghero,.empty,.sheetbox')).length"),0,"no loose words over the picture");
 });
+await test("Profile › Nutrition (owner, 9 Nov: not a shortcut to another page): its own settings, the targets one row away; meals, names, style, diet, what is left out and powder set here and used by the meal plan",async page=>{
+  await tapTab(page,"profile");await pause(page,500);
+  await page.tap('#app [data-sheet="set_food"]');await pause(page,700);
+  eq(await ev(page,"[V.tab,V.sheet]"),["profile","set_food"],"a sheet of its own, not the Food page");
+  await page.tap('#sheet [data-nset="meals|5"]');await pause(page,200);
+  await page.tap('#sheet [data-nset="style|intl"]');await pause(page,200);
+  await page.tap('#sheet [data-nset="diet|pesc"]');await pause(page,200);
+  await page.tap('#sheet [data-navoid="nuts"]');await pause(page,200);
+  await page.tap('#sheet [data-toggle="powder"]');await pause(page,200);
+  eq(await ev(page,"[S.prefs.meals,S.prefs.fstyle,S.prefs.diet,S.prefs.avoid,!!S.prefs.powder]"),[5,"intl","pesc",["nuts"],true],"each choice kept");
+  await page.tap('#sheet [data-navoid="nuts"]');await pause(page,200);
+  eq(await ev(page,"S.prefs.avoid"),[],"taken off again");
+  await page.tap('#sheet [data-pgen]');await pause(page,900);
+  eq(await ev(page,"[V.tab,V.fplan,!!V.pimport,V.sheet]"),["food","plan",true,null],"rebuild: the new plan to see, built from these");
+  eq(await ev(page,"V.pgen&&[V.pgen.meals,V.pgen.style,V.pgen.diet]"),[5,"intl","pesc"],"built from the settings just made");
+  await tapTab(page,"profile");await pause(page,400);
+  await page.tap('#app [data-sheet="set_food"]');await pause(page,600);
+  await page.tap('#sheet [data-fsec="targets"]');await pause(page,800);
+  /* The targets are edited on the plan page's daily-goal card. */
+  eq(await ev(page,"[V.tab,V.fplan,V.sheet]"),["food","plan",null],"the targets row opens where they are edited");
+  if(!/YOUR DAILY GOAL|Your daily goal/i.test(await page.textContent("#app")))throw new Error("not the page with the daily goal");
+});
+await test("Back swipe on the Home Screen (owner, 9 Nov: a black page for a moment): no history entries for Safari's swipe; the app's own swipe shows the real page before under the finger, lands past a third or springs back",async(page,env)=>{
+  await page.evaluate(async()=>{sessionStorage.setItem("bunyan:ownback","1");const st=await import("/js/state.js");st.S.prefs.anim=true;st.saveDB();});
+  await page.reload();await pause(page,1500);
+  const cdp=await env.ctx.newCDPSession(page);
+  const T=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
+  await tapTab(page,"train");await pause(page,500);
+  const h0=await ev(page,"history.length");
+  await page.evaluate(()=>{const b=document.createElement("button");b.setAttribute("data-tplan","program");document.querySelector("#app").appendChild(b);b.click();});await pause(page,900);
+  eq(await ev(page,"[V.train,history.length]"),["plan",h0],"on the plan page, and no history entry for Safari to swipe to");
+  /* A short drag: the page before shows under the finger, then it springs back. */
+  await T("touchStart",6,400);for(let i=1;i<=6;i++){await T("touchMove",6+i*12,402);await page.waitForTimeout(16);}
+  const mid=await page.evaluate(async()=>[(await import("/js/ui/view.js")).V.train,!!document.querySelector(".ebcopy"),document.getElementById("app").style.transform,!!document.querySelector("#app .thero2,#app .twk")]);
+  if(mid[0]!=="days"||!mid[1]||!/translateX\(-/.test(mid[2])||!mid[3])throw new Error("the page before is not under the finger: "+JSON.stringify(mid));
+  await T("touchEnd",0,0);await page.waitForTimeout(500);
+  eq(await ev(page,"[V.train,!!document.querySelector('.ebcopy'),document.getElementById('app').style.transform]"),["plan",false,""],"a short drag springs back to the plan page");
+  /* Past a third: it lands on Training. */
+  await T("touchStart",6,400);for(let i=1;i<=10;i++){await T("touchMove",6+i*20,402);await page.waitForTimeout(16);}
+  await T("touchEnd",0,0);await page.waitForTimeout(500);
+  eq(await page.evaluate(async()=>[(await import("/js/ui/view.js")).V.train,!!document.querySelector(".ebcopy,.ebshade"),document.getElementById("app").style.transform,(await import("/js/ui/nav.js")).navDepth()]),["days",false,"",0],"past a third: on Training, one step back");
+  /* At a tab's own page there is nothing behind: the swipe does nothing. */
+  await T("touchStart",6,400);for(let i=1;i<=10;i++){await T("touchMove",6+i*20,402);await page.waitForTimeout(16);}
+  await T("touchEnd",0,0);await page.waitForTimeout(300);
+  eq(await ev(page,"[V.tab,V.train,!!document.querySelector('.ebcopy')]"),["train","days",false],"nothing behind a tab's own page: nothing moves");
+  /* A tap on the edge's strip reaches what is under it. */
+  await page.evaluate(()=>{const b=document.createElement("button");b.id="edgetap";b.style.cssText="position:fixed;left:0;top:300px;width:80px;height:60px;z-index:1";window._et=0;b.onclick=()=>window._et++;document.body.appendChild(b);});
+  await T("touchStart",6,320);await T("touchEnd",0,0);await page.waitForTimeout(200);
+  eq(await ev(page,"[window._et,!!document.querySelector('.ebedge')]"),[1,true],"a tap on the edge passes through");
+  await page.evaluate(()=>document.getElementById("edgetap").remove());
+  /* The arrow still goes back, with the app's own slide. */
+  await page.evaluate(()=>{const b=document.createElement("button");b.setAttribute("data-tplan","program");document.querySelector("#app").appendChild(b);b.click();});await pause(page,900);
+  await page.tap('#app [data-back]');await pause(page,800);
+  eq(await ev(page,"[V.train,history.length]"),["days",h0],"the arrow goes back too, with no history spent");
+  await page.evaluate(()=>sessionStorage.removeItem("bunyan:ownback"));
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
@@ -5237,6 +5294,7 @@ await test("How do you feel today?: on a phone each choice's word sits in the mi
 await test("Opening the Exercise Library (owner, 4 Nov): the old page travels past the screen's edge, so none of it shows in the slide's slow end, and the pictures on the first screen are there before the page moves",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
   await coach(page,"train","programs");await pause(page,900);
+  await page.waitForSelector('.ttile[data-train="library"]',{timeout:10000});
   await page.evaluate(()=>document.querySelector('.ttile[data-train="library"]').scrollIntoView({block:"center"}));await pause(page,400);
   await page.evaluate(()=>{window.__seen=null;const mo=new MutationObserver(()=>{const c=document.querySelector(".stillcopy");const a=c&&c.getAnimations()[0];
     if(a&&!window.__seen){const app=document.getElementById("app");

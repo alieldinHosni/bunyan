@@ -5,7 +5,10 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Updated. The new version opens next time you come back to the app.": "اتحدّث. النسخة الجديدة هتفتح المرة الجاية لما ترجع للتطبيق.",
+var AR={"Levantine": "شامي",
+"Gulf": "خليجي",
+"The kitchen your meal plan comes from first": "المطبخ اللي خطة أكلك بتيجي منه الأول",
+"Updated. The new version opens next time you come back to the app.": "اتحدّث. النسخة الجديدة هتفتح المرة الجاية لما ترجع للتطبيق.",
 "Read your sheet": "اقرا ورقة الجهاز",
 "Take or choose a photo": "صوّر أو اختار صورة",
 "Read here on the phone. The photo is not kept or sent anywhere.": "بتتقري هنا على الموبايل. الصورة مش بتتحفظ ولا بتتبعت لأي مكان.",
@@ -42,6 +45,15 @@ var AR={"Updated. The new version opens next time you come back to the app.": "�
 "Outer forearm (wrist extensors)": "السواعد من برّه (باسطات الرسغ)",
 "Inner forearm (wrist flexors)": "السواعد من جوه (قابضات الرسغ)",
 "Grip": "القبضة",
+"Calories and macros": "السعرات والماكروز",
+"Water and steps too": "والمية والخطوات كمان",
+"Worked out from your body, activity and goal. The weekly check-in adjusts them from your log.": "محسوبة من جسمك ونشاطك وهدفك. والمراجعة الأسبوعية بتظبطها من تسجيلك.",
+"Egyptian": "مصري",
+"What you eat": "بتاكل إيه",
+"Never put in your meal plan": "عمرها ما تدخل خطة أكلك",
+"A shake can close the protein gap in the plan": "شيك ممكن يقفل فرق البروتين في الخطة",
+"These shape your meal plan. Rebuild it to use them now; you see it before anything changes.": "دول بيشكّلوا خطة أكلك. اعملها من جديد عشان تستخدمهم دلوقتي، وهتشوفها قبل ما أي حاجة تتغير.",
+"Rebuild my meal plan": "اعمل خطة أكلي من جديد",
 "No weigh-ins last month. Twice a week, same time, lets the coach read your trend and steer your calories.": "مفيش ولا وزنة الشهر اللي فات. مرتين في الأسبوع، نفس المعاد، بيخلّوا الكوتش يقرا اتجاهك ويظبط سعراتك.",
 "1 holding": "1 ثابت",
 "{n} holding": "{n} ثابتين",

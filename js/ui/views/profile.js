@@ -71,7 +71,9 @@ function vProfile(){
   h+=group(t("Settings"),
      prow('data-sheet="set_training"',"dumbbell",t("Training"),
        t(p.prog.charAt(0).toUpperCase()+p.prog.slice(1))+" · "+t("RPE")+" "+rpeLabel.toLowerCase())
-    +prow('data-fsec="targets"',"bowl",t("Nutrition"),fmtN(g.kcal)+" kcal · "+g.p+"g "+t("Protein").toLowerCase())
+    /* Its own settings (owner, 9 Nov: not a shortcut to another page): what shapes the food. */
+    +prow('data-sheet="set_food"',"bowl",t("Nutrition"),fmtN(g.kcal)+" kcal · "+g.p+"g "+t("Protein").toLowerCase()+" · "
+      +t((S.prefs.meals||4)===1?"1 meal":"{n} meals").replace("{n}",S.prefs.meals||4))
     /* The on-device model (js/ui/smartcoach.js): off until asked for. */
     +prow('data-sheet="set_smart"',"spark",t("Smart coach"),t(smartLabel()))
     +prow('data-sheet="set_app"',"sliders",t("App"),
