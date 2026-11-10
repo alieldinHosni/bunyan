@@ -4233,3 +4233,19 @@ agent with instructions to make it smarter.
   local export of misses; packages C-0 … C-10. It replaces WP-11 of docs/NEXT-PHASE.md.
 - tests: the dock travel test reads the highlight on every frame (it failed once on a slow CI machine).
 Nothing in the app changed.
+
+## Plans revised: figures one exercise at a time; the coach's keep-or-delete test — branch session/plans2
+Owner, 11 Nov: two more broken figures (plank's wrist and forearm; decline push-up's head into the floor),
+"every exercise has its own safety rules… needs to be worked on one by one"; and on the coach: "I still think
+it's going to be dumb… thinking of deleting this feature completely, unless you can show… something to make it
+really smart and useful".
+- docs/FIGURE-V3.md: D5, D6; 2.8 "One exercise at a time": a dossier per exercise (its own safety rules, joints,
+  muscles by role, camera, sources, its own tests, a review with pictures), the order of work, the procedure,
+  and `checked` starting empty, so every exercise shows photographs until its own review is done. F-3 becomes
+  "Exercises, one by one".
+- docs/COACH-AGENT.md: section 0. The doubt is justified: a box that says "ask a question" promises what rules
+  cannot keep. Repositioned from chat bot to a coach that acts: a briefing, one field that shows what it
+  understood while typing (chips) and cannot send without a reading, three kinds of result only (a change with
+  Undo, a figure from the log, a written answer). Free conversation needs a language model; an online one is
+  the owner's decision and not in the plan. Phase A is the test, with pass marks and the rule for deleting.
+Nothing in the app changed.

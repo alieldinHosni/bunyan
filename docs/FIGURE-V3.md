@@ -60,7 +60,16 @@ one exercise:
 | D1 | **Incline push-up: the chest and stomach pass through the bar** at the bottom of every repetition. | A body cannot do it, so the picture teaches a depth and a hand position that do not exist. |
 | D2 | **Dips: the legs pass through the frame's cross-bars**, knees folded into the uprights. | Same. |
 | D3 | **Bench press: at one point of the lowering the bar is over the throat**, not the lower chest. | This is the one way a bench press kills. A demonstration must never show it. |
+| D5 | **Plank (owner's screenshot, 11 Nov): the forearm is twisted and the hand folds back through the wrist**; the elbow sits behind the shoulder instead of under it. | A wrist cannot do it; the support position shown is wrong. |
+| D6 | **Decline push-up (owner's screenshot): the face goes into the floor and the hands end up behind the head's line**; the body's line breaks at the hips. | Depth and hand position shown are impossible and unsafe to copy. |
 | D4 | **Nothing in the code checks any of this.** The body is posed by targets for hands, feet and pelvis; the equipment is drawn separately; no test asks whether they overlap. | Every new exercise can ship with the same fault. |
+
+Owner, 11 Nov: "I am sure there are others… every exercise has its own safety rules…
+it varies from one exercise to another, which is why it is crucial and not easy to
+standardise, and needs to be worked on one by one." That is taken as the rule of this
+design: **general checks only catch the impossible; what is *correct* is decided
+exercise by exercise** (2.8), and no figure is shown until its own exercise has been
+through that.
 
 A person copies what the figure does. **A wrong demonstration is worse than none**, so
 the design below makes it impossible to ship one (2.6): each figure must pass every
@@ -439,6 +448,75 @@ The sheets live in `docs/figures/<family>.md`, one file per family, and the unit
 read the numbers from the record, which is written from the sheet. A reviewer compares
 three things that must agree: the sheet, the record's tests, the rendered stills.
 
+### 2.8 One exercise at a time
+
+The general rules (2.0, 2.6) are a floor: they stop a body passing through a bar or a
+wrist bending backwards. They do not know that a decline push-up stops with the nose
+above the floor and the hands under the shoulders, that a plank's elbows sit under the
+shoulders with the forearms flat and parallel, or that a skull crusher's bar passes
+behind the head on purpose. **Each exercise has its own correct technique and its own
+ways to hurt someone, and gets its own file.**
+
+**The exercise dossier**: `docs/figures/ex/<library-id>.md`, one per exercise (not per
+family), written before any code for that exercise is touched. It is the technique
+sheet of 2.7 filled in for this exact exercise, plus:
+
+```
+Differs from its family in:   feet raised 40–60 cm on a box; more load on the shoulders;
+                              the head is the lowest point, so depth is limited by the face
+Its own safety rules:         1. nose and forehead stay ≥ 3 cm above the floor at the bottom
+                              2. hands under the shoulders (wrist within 5 cm of the shoulder's
+                                 vertical, seen from the side) — never forward of the head
+                              3. ear–shoulder–hip–ankle one line ±3° throughout: no sag at the hips
+                              4. elbows 30–60° from the trunk; wrists straight, fingers forward
+                              5. feet stay on the box (no slide)
+Joints, start → bottom:       shoulder: flexion ~90° → ~45° with horizontal abduction;
+                              elbow 170° → 85–95°; wrist extended ~70–80°, constant;
+                              scapula: protracted → retracted
+Muscles, by role:             prime: chest (upper fibres emphasised by the angle), front delts;
+                              synergist: triceps; stabiliser: core, serratus (shown as "Core")
+                              — must agree with exercises.json m and x for this id
+What the camera must show:    side view; the gap between face and floor visible at the bottom
+Sources:                      library photos <id>-0, <id>-1; the exercise's own instructions
+                              (instructions.json); KB cues if present; GEN rules named
+Exercise-specific tests:      the five rules above, each as an assertion with its number
+Reviewed:                     [ ] stills beside photos at start / middle / bottom
+                              [ ] played at 0.5× for a whole repetition, from two angles
+                              [ ] every rule above read against the picture
+```
+
+**The order of work** — by what people actually do, not alphabetically:
+1. Every exercise in the programs the app can build and in its templates (from
+   `tools/figure-coverage.mjs`, by how many programs use it).
+2. The owner's own program first of all.
+3. The rest of the library by family.
+
+**The procedure for each exercise** (the instruction for whoever builds it):
+1. Read the library's entry: name, muscles (`m`, `x`), equipment, its instructions
+   and its two photographs. Do not start from the family's record.
+2. Write the dossier. If a line cannot be filled from the sources above, write
+   "unknown" — and the exercise is **not animated**; it keeps its photographs.
+3. Only then write or adjust the record, as a variation of its family where it truly
+   is one.
+4. Write the exercise-specific tests from the dossier's rules, in
+   `js/data/mannequin/test/ex/<id>.test.js`. They run with the general ones.
+5. Render start, middle and bottom from the dossier's camera and from the opposite
+   side; put them beside the photographs; go down the dossier's rules one by one
+   against the pictures. Any doubt is a fail.
+6. Tick the review boxes, set `checked` on the record. One exercise per commit, so
+   one can be withdrawn without the others.
+
+**What the app shows meanwhile.** `checked` starts **empty**: when F-0b ships, every
+exercise shows its photographs, as the library did before the figure existed. Figures
+come back one exercise at a time as each passes. The exercise sheet says nothing
+about this; a photograph is not an error.
+
+**Not to be automated away.** A model doing this work must not batch-approve a family
+("all push-up variations pass"), must not copy one exercise's dossier to another and
+change the name, and must not mark `checked` on the strength of the automatic tests
+alone: the review in step 5 is done per exercise and its pictures are attached to the
+pull request.
+
 ---
 
 ## 3. Work packages
@@ -451,10 +529,10 @@ what is *wrong*), then the body, then the place.
 | # | Package | Fixes | Notes |
 | --- | --- | --- | --- |
 | F-0 | **The realism checks** | 2.0 | Write the tests first: proportions in the bake, joint limits, centre of mass over the base, no foot slide, neutral-standing alignment, the muscle table (`from`, `to`, `crosses`). Run them on today's figure and list what fails; that list is the work for F-2, F-3 and F-5. |
-| F-0b | **The safety gate** | D1–D4 | `collide.js`, declared contacts, the injury clearances, `checked` on records and the gate in `recordFor`; run it on every record today and **withdraw to photographs every figure that fails** (the incline push-up, dips and bench press among them) until F-3 fixes its family. Ship this before anything else about the figure: it is the only package here that removes a risk already in people's hands. |
+| F-0b | **The safety gate** | D1–D4 | `collide.js`, declared contacts, the injury clearances, `checked` on records and the gate in `recordFor`. **`checked` starts empty: every exercise shows its photographs** until its own dossier and review are done (2.8). Also writes `tools/figure-coverage.mjs` and the ordered list of exercises to do. Ship this before anything else about the figure: it is the only package here that removes a risk already in people's hands. |
 | F-1 | **Frame and stage fixes** | L1, L5 (artefact), L7 | `fitCamera` margin so the figure fills 70–80% of the height; analytic horizon; arrow follows the tracked point's real path. Small; do first — it improves every figure at once. |
 | F-2 | **Phases and constraints** | M1, M2, M8 | `motion.js`: multi-key spline, `path` rules (`overMidfoot`, `touch`, `arcAbout`), `spine:"neutral"`, tempo from the prescription (`fig3dHtml(name,{tempo})` from `js/ui/views/session.js`), asymmetric lift curve. Unit tests: bar x over the whole repetition for squat, deadlift, RDL, press. |
-| F-3 | **Family corrections** | M3–M7 | Re-key the families in `moves.js` to the table in 2.3, one family per commit, each with its angle tests. Re-render stills (`tools/figures/stills.mjs`) for changed records. |
+| F-3 | **Exercises, one by one** | M3–M7, D1–D6 | The procedure of 2.8 for each exercise in the order given there: dossier, record, its own tests, review with pictures, `checked`. One exercise per commit, a handful per pull request. The families in `moves.js` are corrected as their exercises need (table in 2.3), never approved wholesale. This is the long package; it runs alongside the others. |
 | F-4 | **Roles, actions, phase emphasis** | L3 (data), M9 | `rig.js highlight()` returns `{muscle:{level, role}}`; families gain `roles`; renderer gets role and action uniforms. Consistency test against `exercises.json` `m`/`x`. |
 | F-5 | **The body's shading and shape** | L2, L3, L4 | `tools/body/bake.py`: boundary+curvature, bulge direction, fibre direction, hair cap, face masks; shader: skin, definition, lit-muscle rendering, bulge. Then the three skin tones (Profile → App). |
 | F-6 | **The gym** | L5, L6 | Floor, reflection, back wall, contact shadows; rack, platform, true-size plates loaded to the set weight, moving weight stack, thigh pad, cables. |
