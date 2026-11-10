@@ -15,6 +15,7 @@ import {toDisp, toKg, wUnit} from "../../units.js";
 import {fmtN, num, today, uid} from "../../util.js";
 import {ACT, askConfirm, askText, openSheet, val} from "../actions.js";
 import {resetNav} from "../nav.js";
+import {applySky, forgetLocation, locate} from "../sky.js";
 import {render} from "../render.js";
 import {changeLook, themeOf} from "../theme.js";
 import {tourReset} from "../tour.js";
@@ -132,7 +133,15 @@ function register(){
     /* Turned off, the block is forgotten: turned on again, the next workout starts a
        fresh one rather than landing mid-block on old dates. */
     if(D.toggle==="noblocks"&&S.prefs.noblocks)delete S.block;
+    if(D.toggle==="nosky")applySky(true);
     saveDB();render();return;});
+  /* Settings → App → Background: the sky from the phone's location, or back to the time zone. */
+  key("skyloc",function(D){
+    if(D.skyloc==="0"){forgetLocation();saveDB();render();return;}
+    locate(function(ok,why){
+      if(ok){saveDB();render();toast(t("The sky now follows your location"));}
+      else toast(why==="denied"?t("Location is off for Bunyan. The time zone is used instead."):t("Could not find your location. The time zone is used instead."));});
+    return;});
   key("warnmode",function(){var w4=[5,10,15];S.prefs.warn=w4[(w4.indexOf(S.prefs.warn)+1)%3];saveDB();render();return;});
   key("langmode",function(){S.prefs.lang=S.prefs.lang==="ar"?"en":"ar";saveDB();applyLang();render();
     toast(S.prefs.lang==="ar"?"\u0627\u062a\u063a\u064a\u0631\u062a \u0644\u0644\u0639\u0631\u0628\u064a\u0629":"Switched to English");return;});

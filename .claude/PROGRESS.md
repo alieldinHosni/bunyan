@@ -3991,6 +3991,21 @@ the surrounding factors if needed".
   `&#39;` had its 39 wrapped and showed as typed. Affected: check-in `nums`, the missed-day card,
   Settings `figs`, the missed-day sheet. All now keep entities whole.
 
+## The pictures under the real sky — branch session/sky
+Owner, 10 Nov: "make it dark as a night in night, and bright and sunny in day, and depends on the season … very accurate."
+- js/engine/sun.js (pure): the sun's height and bearing from the NOAA solar equations (after Meeus) with refraction;
+  sunrise/sunset found by stepping and halving (midnight sun / polar night come out as such); the twilight bands
+  (civil 6°, nautical 12°, astronomical 18°, golden hour to 6° up); the season by hemisphere from the declination.
+  Checked against the astral library: sunrise and sunset within half a minute for Cairo, London, Sydney, Riyadh,
+  Tromsø across the year (js/engine/test/sun.test.js, published solstice times). skyLook's keyframes (how dark,
+  warm, blue each band looks) are a modelling choice, said so in the file.
+- js/data/tzplaces.js: the time zone's city stands for the place offline (~80 zones); an unknown zone takes its
+  meridian at 30°N and Settings says "approximate". "Use my location" (Settings → App → Background) asks once,
+  rounds to 0.1° and keeps it in this profile's prefs (S.prefs.skyLoc); S.prefs.nosky turns the whole thing off.
+- js/ui/sky.js: sets --sky-* on #bgart each minute; the CSS registers them with @property, so the browser eases
+  each minute into the next (60 s linear); set at once at start and on coming back after two minutes away.
+  Filter (brightness/saturate/sepia/hue) on the photo, night blue on .photo::before, the horizon's glow over the
+  veil in ::after. Only the pictures: cards, words and the theme's ground are untouched, so contrast holds.
 ## Profile › Nutrition is a settings sheet — branch session/nutset
 
 Owner, 9 Nov: "I hate it when there is no nutrition settings, it just directs me to the nutrition page

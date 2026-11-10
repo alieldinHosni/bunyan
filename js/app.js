@@ -42,6 +42,7 @@ import {paintRun} from "./ui/run.js";
 import {t} from "./i18n/dict.js";
 import {bootCheck} from "./ui/crashnote.js";
 import {setPeek} from "./ui/datebar.js";
+import {applySky, initSky} from "./ui/sky.js";
 /* A restart nobody asked for is noted before anything else runs (js/ui/crashnote.js). */
 bootCheck();
 
@@ -205,6 +206,7 @@ useUserData(function(){return S;});
 /* A profile switch leaves the screen, the rest timer and the workout in memory with the
    profile being left (state.js calls this rather than reaching into the view). */
 onProfileSwitch(function(){
+  applySky(true);
   V.tab="train";V.train="days";V.logIdx=0;
   V.restEnd=0;V.restPaused=false;V.restDone=false;V.justLogged=null;V.askDel=null;
   restoreWorkoutState();
@@ -216,6 +218,8 @@ setStorageErrorHandler(toast);
 /* One back path for the arrow, the edge swipe and the OS gesture. */
 initNav({render:render,guard:navGuard,closeSheet:requestCloseSheet,closeCoach:function(){closeCoach(render);},
          locked:sessionLocked,onBlocked:backBlocked});
+/* The pictures under the sun of this place and minute (js/ui/sky.js). */
+initSky();
 /* The back swipe drawn by the app, on the Home Screen only (js/ui/edgeback.js). */
 initEdgeBack();
 initSheetDrag(requestCloseSheet);

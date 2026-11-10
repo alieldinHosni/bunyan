@@ -58,6 +58,8 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   font-weight:400 700;font-style:normal;font-display:swap;
   unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC}
 :root{
+  /* The sky over the pictures (js/ui/sky.js): night's blue, and the glow before sky.js sets it. */
+  --sky-night:#0A1230; --sky-glow:255,160,80;
   
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
   --r1:8px; --r2:12px; --r3:14px;
@@ -551,7 +553,27 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 /* A veil of the ground's own tone over each, deepest at the top, so the page's title
    and line under it read on a bright sky. */
 #bgart .art.photo::after{content:"";position:absolute;inset:0;
-  background:linear-gradient(to bottom,rgba(var(--bg-rgb),.62),rgba(var(--bg-rgb),.38) 45%,rgba(var(--bg-rgb),.2))}
+  background:radial-gradient(130% 55% at 50% 0,rgba(var(--sky-g),var(--sky-ga)),rgba(var(--sky-g),0) 72%),
+    linear-gradient(to bottom,rgba(var(--bg-rgb),.62),rgba(var(--bg-rgb),.38) 45%,rgba(var(--bg-rgb),.2))}
+/* The pictures under the real sky (js/ui/sky.js, js/engine/sun.js): the sun's height
+   here and now sets their light. Registered as numbers, so the browser eases each
+   minute's step into the next and the light moves as the sun does; .sky-now sets it at
+   once (opening the app, coming back to it). The night's blue is laid over the picture
+   (::before), the horizon's glow comes down from its sky (::after, over the veil). Only
+   the pictures: cards, words and the theme's ground keep their contrast. Lighter in
+   light mode, where the pictures are already faint. */
+@property --sky-b{syntax:"<number>";inherits:true;initial-value:1}
+@property --sky-s{syntax:"<number>";inherits:true;initial-value:1}
+@property --sky-w{syntax:"<number>";inherits:true;initial-value:0}
+@property --sky-h{syntax:"<angle>";inherits:true;initial-value:0deg}
+@property --sky-t{syntax:"<number>";inherits:true;initial-value:0}
+@property --sky-ga{syntax:"<number>";inherits:true;initial-value:0}
+#bgart{--sky-g:var(--sky-glow);
+  transition:--sky-b 60s linear,--sky-s 60s linear,--sky-w 60s linear,--sky-h 60s linear,--sky-t 60s linear,--sky-ga 60s linear}
+#bgart.sky-now{transition:none}
+#bgart[data-sky] .art.photo{filter:brightness(var(--sky-b)) saturate(var(--sky-s)) sepia(var(--sky-w)) hue-rotate(var(--sky-h))}
+#bgart[data-sky] .art.photo::before{content:"";position:absolute;inset:0;background:var(--sky-night);opacity:var(--sky-t)}
+[data-theme="light"] #bgart[data-sky] .art.photo::before{opacity:calc(var(--sky-t) * .6)}
 /* The coach's tablet carries words of its own; under the cards they would read as the
    app's, so it is quieter. */
 #bgart .photo[data-p="coach"]{opacity:.5}
