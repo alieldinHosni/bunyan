@@ -2202,12 +2202,50 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 /* The goal a day of the week serves, when there is more than one (views/train.js). */
 .dgoal{display:inline-block;align-self:flex-start;margin:2px 0;padding:1px var(--s2);border-radius:var(--rpill);font-size:11.5px;font-weight:700;
   color:var(--accentHi);background:rgba(var(--accent-rgb),.12)}
-/* The muscles to bring up, each with its parts (views/assess.js). */
-.asfocus{display:grid;gap:var(--s3)}
-.asf{padding:var(--s3);border-radius:var(--r4);border:1px solid var(--border);background:var(--raised)}
-.asf.on{border-color:rgba(var(--accentHi-rgb),.55)}
-.asf-h{font-weight:800;font-size:15px;margin-bottom:var(--s2)}
-.asf .aschips{margin:0}
+/* The muscles to bring up (views/assess.js): what is picked at the top, then the
+   muscles by region as list rows; a row opens to its parts. */
+.asfpick{position:sticky;top:0;z-index:2;padding:var(--s3);margin-bottom:var(--s3);border-radius:var(--r3);
+  background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-card)}
+.asfpick-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--s2)}
+.asfpick-h b{font-size:15px}
+.asfpick-h span{font-size:13px;color:var(--dim)}
+.asfpick .aschips{margin:0}
+.asfpick .as-note{margin:0}
+.asfx span{margin-inline-start:var(--s2);opacity:.75}
+.asreg{border-radius:var(--r3);border:1px solid var(--border);background:var(--raised);margin-bottom:var(--s3);overflow:hidden}
+.asreg>h3{margin:0;padding:var(--s3) var(--s4) var(--s1);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.asfm{display:flex;align-items:center;gap:var(--s3);width:100%;min-height:64px;padding:var(--s2) var(--s4);background:none;border:0;
+  border-top:1px solid var(--border);color:var(--text);text-align:start;font:inherit;cursor:pointer;list-style:none}
+.asreg>h3+.asfm,.asreg>h3+.asfm-d>.asfm{border-top:0}
+.asfm::-webkit-details-marker{display:none}
+.asfm-fig{flex:none;width:48px;height:48px;border-radius:var(--r2);background:rgba(var(--bg-rgb),.55);border:1px solid var(--border);overflow:hidden;display:grid;place-items:center}
+.asfm-fig .bmap{width:100%;height:100%}
+.asfm.on .asfm-fig{border-color:var(--accent-edge)}
+.asfm-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.asfm-n{font-size:16px;font-weight:700}
+.asfm-s{font-size:12.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.asfm.on .asfm-s{color:var(--accentHi);font-weight:600}
+.asfm.full{opacity:.55}
+.asfm-c-w{flex:none;display:flex;align-items:center;gap:var(--s2)}
+.asfm-np{font-size:12px;color:var(--dim)}
+.asfm-c{transition:transform .2s}
+[dir="rtl"] .asfm-c{transform:scaleX(-1)}
+.asfm-d[open] .asfm-c{transform:rotate(90deg)}
+.asfm-k{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--dim)}
+.asfm.on .asfm-k{border-color:var(--accentHi);background:var(--accentHi)}
+/* A muscle opened: drawn larger beside its parts, the parts picked lit on it. */
+.asfm-body{display:grid;grid-template-columns:96px minmax(0,1fr);gap:var(--s3);padding:0 var(--s4) var(--s4);align-items:start}
+.asfm-big{border-radius:var(--r3);background:rgba(var(--bg-rgb),.55);border:1px solid var(--border);padding:var(--s2);position:sticky;top:var(--s2)}
+.asfm-big .bmap{width:100%;height:auto}
+.asparts{display:grid;gap:var(--s2)}
+.aspart{position:relative;display:flex;flex-direction:column;gap:2px;width:100%;padding:var(--s3) var(--s3) var(--s3) 40px;border-radius:var(--r3);
+  border:1px solid var(--border);background:var(--surface);color:var(--text);text-align:start;font:inherit;cursor:pointer}
+[dir="rtl"] .aspart{padding:var(--s3) 40px var(--s3) var(--s3)}
+.aspart b{font-size:15px}
+.aspart span:not(.aspart-k){font-size:12.5px;color:var(--dim);line-height:1.35}
+.aspart-k{position:absolute;inset-inline-start:var(--s3);top:var(--s3);width:18px;height:18px;border-radius:50%;border:1.5px solid var(--dim)}
+.aspart.on{border-color:var(--accent-edge);background:rgba(var(--accent-rgb),.12)}
+.aspart.on .aspart-k{border-color:var(--accentHi);background:var(--accentHi);box-shadow:inset 0 0 0 3px var(--surface)}
 .bsp .drow-s{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* A rest day in the cycle: a thin row, the name quiet, no second line. */
 .bkday.blank{min-height:46px}
@@ -2724,6 +2762,14 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .as-l{margin:16px 2px 8px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
 .as-note{margin:12px 2px 0;font-size:12.5px;line-height:1.5;color:var(--dim)}
 .aschips{display:flex;flex-wrap:wrap;gap:8px}
+/* Foods you like, by kind (views/assess.js): a few in sight, the rest folded. */
+.aslk{margin-top:var(--s3)}
+.aslk>h3{margin:0 0 var(--s2);font-size:13px;font-weight:700;color:var(--sub)}
+.aslk-more{margin-top:var(--s2)}
+.aslk-more>summary{display:inline-flex;align-items:center;min-height:40px;padding:0 var(--s3);border-radius:var(--rpill);
+  border:1px dashed var(--border);color:var(--accentHi);font-weight:600;font-size:14px;cursor:pointer;list-style:none}
+.aslk-more>summary::-webkit-details-marker{display:none}
+.aslk-more[open]>summary{margin-bottom:var(--s2)}
 .aschip{min-height:42px;padding:0 16px;border-radius:var(--rpill);border:1px solid var(--border);background:var(--surface);
   color:var(--text);font-size:14px;font-weight:600;transition:transform var(--m-press) var(--e-standard)}
 .aschip.on{background:rgba(var(--accent-rgb),.16);border-color:var(--accent-edge);color:var(--text)}
@@ -2734,6 +2780,11 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .ascard b{font-size:15.5px;font-weight:700}
 .ascard span{font-size:13px;line-height:1.4;color:var(--sub)}
 .ascard.on{background:rgba(var(--accent-rgb),.12);border-color:var(--accent-edge);box-shadow:inset 3px 0 0 var(--accent)}
+/* The goal list (views/assess.js): which one is main, which are also trained for. */
+.asg-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
+.asg-tag{flex:none;font-style:normal;font-size:11.5px;font-weight:700;padding:2px var(--s2);border-radius:var(--rpill);
+  color:var(--sub);border:1px solid var(--border)}
+.asg-tag.main{color:var(--accentHi);border-color:var(--accent-edge);background:rgba(var(--accent-rgb),.14)}
 [dir="rtl"] .ascard.on{box-shadow:inset -3px 0 0 var(--accent)}
 :root:not(.tch) .ascard:active,.ascard.tapd{transform:scale(.985)}
 .as-in{margin-top:14px}
@@ -3401,12 +3452,34 @@ body.noanim .pid-orbit .e{opacity:.8}
 .shc>.shc-l:first-child{margin-top:0;border-top:0}
 .plshare{display:block;margin:var(--s3) auto 0}
 /* The InBody sheet: its photo to read and copy from, the figures to check. */
-.ib-pick{display:flex;align-items:center;justify-content:center;width:100%}
-.ib-img{display:block;width:100%;max-height:60vh;object-fit:contain;margin:var(--s3) 0;border-radius:var(--r3);border:1px solid var(--border)}
-.ib-text{width:100%;margin:var(--s3) 0 var(--s2)}
-.ib-st{margin:0 0 var(--s2);color:var(--sub)}
-.ib-f{margin:var(--s3) 0}
-.ib-f input{width:100%}
+/* The InBody sheet (js/ui/sheets.js): two steps, each a card. */
+.ibstep{margin:var(--s3) 0;padding:var(--s4);border-radius:var(--r3);background:var(--raised);border:1px solid var(--border)}
+.ibstep>h3{display:flex;align-items:center;gap:var(--s2);margin:0 0 var(--s3);font-size:16px}
+.ibn{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;font-size:13px;font-weight:800;
+  background:rgba(var(--accent-rgb),.16);color:var(--accentHi)}
+.ib-drop{display:flex;align-items:center;gap:var(--s3);padding:var(--s3);border-radius:var(--r3);border:1.5px dashed rgba(var(--accentHi-rgb),.55);cursor:pointer;min-height:64px}
+.ib-drop.sm{border-style:solid;border-color:var(--border)}
+.ib-drop-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ib-drop-t b{font-size:15.5px}
+.ib-drop-t span{font-size:12.5px;color:var(--dim)}
+.ib-img{display:block;width:100%;max-height:40vh;object-fit:contain;margin:0 0 var(--s3);border-radius:var(--r2);border:1px solid var(--border)}
+.ib-st{margin:var(--s2) 0 0;font-size:13px;color:var(--sub)}
+.ib-paste{margin-top:var(--s3)}
+.ib-paste>summary{cursor:pointer;color:var(--accentHi);font-weight:600;font-size:14px;min-height:40px;display:flex;align-items:center;list-style:none}
+.ib-paste>summary::-webkit-details-marker{display:none}
+.ib-text{width:100%;margin:var(--s2) 0}
+.ib-hint{margin:0 0 var(--s3);font-size:12.5px;color:var(--dim);line-height:1.45}
+.ibstep .ib-hint:last-child{margin:var(--s3) 0 0}
+.ibgrp{margin-top:var(--s3)}
+.ibgrp h4{margin:0 0 var(--s2);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.ibgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2) var(--s3)}
+.ibf{display:flex;flex-direction:column;gap:var(--s1);min-width:0}
+.ibf label{font-size:12.5px;color:var(--sub);line-height:1.3;min-height:2.6em;display:flex;align-items:flex-end}
+.ibf-date label{min-height:0}
+.ibf-in{position:relative}
+.ibf-in input{width:100%;min-width:0;padding-inline-end:44px}
+.ibf-u{position:absolute;inset-inline-end:var(--s3);top:50%;transform:translateY(-50%);font-size:12.5px;color:var(--dim);pointer-events:none}
+.ibf-date input{display:block;width:100%;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none;text-align:start}
 .shc-l{margin-top:12px;border-top:1px solid var(--border)}
 .shc-l>div{display:flex;justify-content:space-between;gap:12px;padding:8px 2px;border-bottom:1px solid var(--border);font-size:13.5px}
 .shc-l>div:last-child{border-bottom:0}
@@ -3732,7 +3805,11 @@ textarea.afnl.warn{border-color:var(--warning)}
 /* Section labels: the frames' small grey capitals, with an action or note opposite. */
 .pglbl{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:var(--s5) 0 var(--s3);min-height:24px}
 .pglbl h2{font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--dim);margin:0}
+  color:var(--sub);margin:0}
+/* Words straight on the ground (a section's name, its link, a line under a list) stand
+   over the page's picture: a halo of the ground's own colour keeps them readable over a
+   bright sky (owner, 10 Nov: "can't be seen due to the contrast"). */
+.pglbl h2,.pglbl .pgaside,.pglbl .pglink,.pgphotos~.pgnote,.as-l,.as-sub,.as-note{text-shadow:0 0 2px rgba(var(--bg-rgb),.95),0 0 8px rgba(var(--bg-rgb),.85)}
 .pglink{background:none;border:none;color:var(--accentHi);font-weight:700;font-size:14px;
   min-height:44px;margin:-10px -2px;padding:0 2px}
 .pgaside{font-size:12px;color:var(--dim)}
@@ -3805,6 +3882,11 @@ textarea.afnl.warn{border-color:var(--warning)}
 .pgm.tall>span:first-child{display:flex;flex-direction:column;gap:2px}
 .pgm small{font-size:12.5px;color:var(--dim)}
 .pgm b.acc{color:var(--text)}
+/* Rows that belong together sit in one card as a list, not each a card of its own. */
+.pgcard .pgm{background:none;border:0;border-radius:0;margin:0;padding:12px 0;min-height:48px;border-bottom:1px solid var(--border)}
+.pgcard .pgm:last-child{border-bottom:0}
+.pgcard.pgrows{padding-block:4px}
+.pgcard.pgempty>.pgnone:first-child{margin-top:0}
 .pgcomp{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .pgcomp-e{text-align:end}
 .pgcomp-v{font-family:var(--display);font-size:30px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}

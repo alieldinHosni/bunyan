@@ -53,6 +53,10 @@ async function open(o={}){
   await page.goto(URL_);await page.waitForTimeout(1000);
   return {ctx,page,errs};
 }
+/* A muscle to bring up, as a person picks it: its row opened first when it is folded. */
+const focusTap=async(page,id)=>{const m=id.split(".")[0];
+  await page.evaluate(m=>{const c=document.querySelector('[data-asm="focus|'+m+'"]'),d=c&&c.closest("details");if(d)d.open=true;},m);
+  await page.tap('[data-asm="focus|'+id+'"]');};
 const ev=(page,expr)=>page.evaluate(async e=>{const S=(await import("/js/state.js")).S;const V=(await import("/js/ui/view.js")).V;return eval(e);},expr);
 const pause=(page,ms=300)=>page.waitForTimeout(ms);
 /* The dock as a thumb taps it. page.tap first scrolls its target into view, and for a
@@ -1851,7 +1855,7 @@ await test("Assessment: fixed days set the week, stress and short sleep lower th
   eq(await ev(page,"[V.asd.days,V.asd.wd.slice().sort()]"),[3,[1,3,5]],"three fixed days are three days a week");
   if(!/built on these days/i.test(await page.textContent(".as")))throw new Error("no word that the week is built on the days");
   await go("focus");
-  for(const m of ["Chest","Back","Glutes","Calves"])await page.tap('[data-asm="focus|'+m+'"]'),await pause(page,150);
+  for(const m of ["Chest","Back","Glutes","Calves"])await focusTap(page,m),await pause(page,150);
   eq(await ev(page,"V.asd.focus"),["Chest","Back","Glutes"],"up to three to bring up");
   await go("sleep");
   await page.tap('[data-as="stress|high"]');await pause(page,150);
@@ -2063,11 +2067,11 @@ await test("Assessment: first run opens it; answers become targets and training 
   eq(await ev(page,"V.asd.step"),1,"no numbers, no next");
   await page.fill('#as_age','31');await page.fill('#as_height','178');await page.fill('#as_weight','84');
   await page.tap('[data-asnext]');await pause(page,200);
-  await page.tap('[data-as="goal|recomp"]');await pause(page,150);
+  await page.tap('[data-asgoal="recomp"]');await pause(page,150);
   for(let i=0;i<4;i++){await page.tap('[data-asnext]');await pause(page,150);}
   /* What to bring up, and a lift they will not do: the week is built with both. */
   if(!(await page.$('[data-asm="focus|Back"]')))throw new Error("no focus step after where you train");
-  await page.tap('[data-asm="focus|Back"]');await pause(page,150);
+  await focusTap(page,"Back");await pause(page,150);
   await page.tap('[data-asm="nolift|Barbell Deadlift"]');await pause(page,150);
   for(let i=0;i<2;i++){await page.tap('[data-asnext]');await pause(page,150);}
   await page.tap('[data-asm="limits|back"]');await pause(page,150);
@@ -4217,21 +4221,31 @@ await test("Assessment (owner, 9 Nov): a main goal and up to two more, the days 
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");
     V.asd=A.draftFrom();Object.assign(V.asd,{age:30,height:180,weight:82,days:3,wd:[],goal:"gain",gear:"gym"});V.assess=true;});
   await go("goal");
-  eq(await page.$$eval('[data-asm^="goals2|"]',a=>a.map(b=>b.getAttribute("data-asm").split("|")[1])),["strength","athletic","endurance","mobility"],"the goals that combine, the main one left out");
-  await page.tap('[data-asm="goals2|strength"]');await pause(page,150);
-  await page.tap('[data-asm="goals2|endurance"]');await pause(page,150);
-  await page.tap('[data-asm="goals2|mobility"]');await pause(page,200);
-  eq(await ev(page,"V.asd.goals2"),["strength","endurance"],"two at most");
-  await page.tap('[data-asm="goals2|endurance"]');await pause(page,150);
+  /* One list (owner, 10 Nov): tap up to three; the first is the main goal. */
+  eq(await page.$$eval('[data-asgoal]',a=>a.length),8,"every goal once, in one list");
+  await page.tap('[data-asgoal="strength"]');await pause(page,150);
+  await page.tap('[data-asgoal="endurance"]');await pause(page,150);
+  await page.tap('[data-asgoal="mobility"]');await pause(page,200);
+  eq(await ev(page,"[V.asd.goal,V.asd.goals2]"),["gain",["strength","endurance"]],"three at most");
+  eq(await page.$$eval('[data-asgoal] .asg-tag',a=>a.map(x=>x.closest('[data-asgoal]').dataset.asgoal+":"+(x.classList.contains('main')?"main":"also"))),
+    ["gain:main","strength:also","endurance:also"],"the main goal marked, the others marked as also");
+  await page.tap('[data-asgoal="endurance"]');await pause(page,150);
+  /* A goal about calories is the main one, in place of another of its kind. */
+  await page.tap('[data-asgoal="lose"]');await pause(page,150);
+  eq(await ev(page,"[V.asd.goal,V.asd.goals2]"),["lose",["gain","strength"]],"losing fat becomes main; the other two stay, trained for too");
+  await page.tap('[data-asgoal="recomp"]');await pause(page,150);
+  eq(await ev(page,"[V.asd.goal,V.asd.goals2]"),["recomp",["gain","strength"]],"the other calories goal takes its place");
+  await page.tap('[data-asgoal="recomp"]');await pause(page,150);
+  eq(await ev(page,"[V.asd.goal,V.asd.goals2]"),["gain",["strength"]],"the main goal tapped off: the next is main");
   
   await go("focus");
-  await page.tap('[data-asm="focus|Shoulders.side"]');await pause(page,120);
-  await page.tap('[data-asm="focus|Shoulders.rear"]');await pause(page,120);
-  await page.tap('[data-asm="focus|Chest"]');await pause(page,120);
-  await page.tap('[data-asm="focus|Chest.upper"]');await pause(page,120);
+  await focusTap(page,"Shoulders.side");await pause(page,120);
+  await focusTap(page,"Shoulders.rear");await pause(page,120);
+  await focusTap(page,"Chest");await pause(page,120);
+  await focusTap(page,"Chest.upper");await pause(page,120);
   eq(await ev(page,"V.asd.focus"),["Shoulders.side","Shoulders.rear","Chest.upper"],"a part replaces its whole muscle");
-  await page.tap('[data-asm="focus|Back"]');await pause(page,120);
-  await page.tap('[data-asm="focus|Glutes.max"]');await pause(page,200);
+  await focusTap(page,"Back");await pause(page,120);
+  await focusTap(page,"Glutes.max");await pause(page,200);
   eq(await ev(page,"V.asd.focus.length"),4,"three muscles at most, any of their parts");
   
   await go("result");for(let i=0;i<20&&!(await page.$('[data-asuse]'));i++)await pause(page,250);
@@ -4310,6 +4324,54 @@ await test("Plan check (owner, 9 Nov review): a part asked for that the week no 
     S.profile.goal="gain";S.profile.goals2=["strength"];S.profile.days=3;S.profile.wd=[];S.profile.focus=[];Pl.buildPlan();
     return PC.checkPlans().map(x=>x.id);});
   if(flags.indexOf("int-str")>=0)throw new Error("a strength day among size days called too light: "+flags.join(","));
+});
+await test("Body and food round (owner, 10 Nov): muscles by region with their parts and a picks summary; forearms and inner thighs built into the week; six kitchens and liked foods by kind; InBody in two steps; Progress with no loose words",async page=>{
+  /* The muscle picker: regions, rows that open to their parts, the picks at the top. */
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");V.tab="coach";V.assess=true;V.asd=A.draftFrom();V.asd.step=6;V.asd.focus=[];(await import("/js/ui/render.js")).render();});
+  await pause(page,600);
+  eq(await ev(page,"[document.querySelectorAll('#app .asreg').length,document.querySelectorAll('#app .asfm-d').length,!!document.querySelector('#app .asfpick')]"),[4,11,true],"four regions, a row that opens for each muscle with parts, the picks on top");
+  await page.click('#app .asfm-d summary:has-text("Forearms")');await pause(page,200);
+  await page.click('#app [data-asm="focus|Forearms.grip"]');await pause(page,400);
+  eq(await ev(page,"document.querySelector('#app .asfm-d[open] summary').textContent.indexOf('Grip')>=0"),true,"the row stays open with its part named");
+  await page.click('#app [data-asm="focus|Adductors"]');await pause(page,400);
+  eq(await ev(page,"[V.asd.focus,document.querySelectorAll('#app .asfpick .asfx').length]"),[["Forearms.grip","Adductors"],2],"a part and a muscle picked, both in the summary");
+  await page.click('#app .asfpick [data-asm="focus|Adductors"]');await pause(page,400);
+  eq(await ev(page,"V.asd.focus"),["Forearms.grip"],"taken off from the summary");
+  /* Each muscle drawn, each part a card with what it is. */
+  await page.evaluate(()=>{const c=document.querySelector('#app [data-asm="focus|Forearms"]');c.closest("details").open=true;});
+  eq(await ev(page,"[document.querySelectorAll('#app .asfm-fig .bmap').length,document.querySelectorAll('#app .asfm-d[open] .aspart').length,document.querySelector('#app .asfm-d[open] .aspart.on b').textContent]"),[12,4,"Grip"],"a figure on every muscle; the opened one's parts as cards");
+  /* Equipment: the three, or exactly what is there. */
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.asd.step=5;V.asd.gear="bw";V.asd.gearx=null;(await import("/js/ui/render.js")).render();});await pause(page,400);
+  await page.tap('#app [data-asm="gearx|Barbell"]');await pause(page,250);
+  await page.tap('#app [data-asm="gearx|Dumbbell"]');await pause(page,250);
+  eq(await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V,A=await import("/js/ui/views/assess.js");return [V.asd.gear,A.gearOf(V.asd)];}),["custom",["Barbell","Dumbbell","Bodyweight"]],"a barbell and dumbbells, and the body");
+  await page.tap('#app [data-as="gear|gym"]');await pause(page,250);
+  eq(await ev(page,"[V.asd.gear,V.asd.gearx,document.querySelectorAll('#app [data-asm^=\"gearx|\"].on').length]"),["gym",null,6],"a gym: every kind on");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.asd.step=6;(await import("/js/ui/render.js")).render();});await pause(page,300);
+  /* The week built for forearms and inner thighs holds work for both. */
+  const wk=await page.evaluate(async()=>{const st=await import("/js/state.js"),Pl=await import("/js/engine/plan.js"),X=await import("/js/data/exercises.js");
+    const S=st.S;S.profile.goal="gain";S.profile.goals2=[];S.profile.days=4;S.profile.wd=[];S.profile.focus=["Forearms","Adductors","Hamstrings.curl"];S.gear=null;Pl.buildPlan();
+    const ex=[].concat(...st.split().days.map(d=>d.ex.map(e=>e.name)));return [ex.some(n=>X.muscleOf(n)==="Forearms"),ex.some(n=>X.muscleOf(n)==="Adductors"||/adduct/i.test(n)),ex.some(n=>/leg curl|nordic|glute.?ham/i.test(n))];});
+  eq(wk,[true,true,true],"forearms, inner thighs and a hamstring curl in the week");
+  /* Six kitchens; liked foods by kind, folded past eight. */
+  await page.evaluate(async()=>{const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods(r));const V=(await import("/js/ui/view.js")).V;V.asd.step=10;(await import("/js/ui/render.js")).render();});
+  await pause(page,600);
+  eq(await ev(page,"[...document.querySelectorAll('#app [data-as^=\"style|\"]')].map(b=>b.dataset.as.split('|')[1])"),["egy","lev","gulf","med","intl","mixed"],"six kitchens");
+  eq(await ev(page,"[document.querySelectorAll('#app .aslk').length>=4,document.querySelectorAll('#app .aslk-more').length>=3]"),[true,true],"liked foods by kind, the rest folded");
+  const plan=await page.evaluate(async()=>{const M=await import("/js/engine/mealplan.js");const d=M.buildMealPlan({kcal:2400,p:170,c:260,f:75},{meals:4,diet:"any",avoid:[],style:"gulf",powder:false});
+    return d.map(m=>m.items.map(i=>i.fid).join(",")).join("|");});
+  if(!/kabsa|machboos|mandi|saloona|harees|dates|laban_rayeb|ayran/.test(plan))throw new Error("a Gulf kitchen plan has no Gulf dish: "+plan);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.assess=false;V.asd=null;(await import("/js/ui/render.js")).render();});
+  /* InBody: two steps; the paste box folded; each figure with its unit inside. */
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("inbody");});await pause(page,700);
+  eq(await ev(page,"[document.querySelectorAll('#sheet .ibstep').length,document.getElementById('ibPaste').open,document.querySelectorAll('#sheet .ibf-u').length,!!document.querySelector('#sheet .sfoot [data-ibsave]')]"),[2,false,6,true],"read, then check; save at the foot");
+  const dw=await page.evaluate(()=>{const d=document.getElementById("ib_date").getBoundingClientRect(),s=document.querySelector("#sheet .ibstep:nth-of-type(2)").getBoundingClientRect();return d.right<=s.right+0.5&&d.left>=s.left-0.5;});
+  eq(dw,true,"the date stays inside its card");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,400);
+  /* Progress › Body: every line of words in a card. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.body=st.S.body.filter(b=>!b.waist&&!b.chest);const V=(await import("/js/ui/view.js")).V;V.tab="progress";V.ptab="body";(await import("/js/ui/render.js")).render();});
+  await pause(page,800);
+  eq(await ev(page,"[...document.querySelectorAll('#app .pgnone')].filter(p=>!p.closest('.pgcard,.pgtrend,.pghero,.empty,.sheetbox')).length"),0,"no loose words over the picture");
 });
 await test("Sky (owner, 10 Nov: dark at night, bright and sunny by day, by the season): the pictures take the sun's light for the place and minute; Settings → App turns it off and says where the sun is taken from",async page=>{
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.skyLoc={lat:30,lon:31.2};delete st.S.prefs.nosky;st.saveDB();});

@@ -14,28 +14,43 @@
    whole muscles a focus list touches, for everything that works by muscle. */
 
 var PARTS={
-  Shoulders:[["rear","Rear delts",/rear delt|rear lateral|reverse (machine |cable |dumbbell )?fl(y|ye)|back fl(y|ye)|face pull|pull[- ]?apart|bent[- ]over (dumbbell |cable )?(lateral )?raise|prone (y|t) raise|reverse pec deck/i],
-             ["side","Side delts",/lateral raise|side lateral|upright row|lu raise|\by[- ]raise|cable lateral|lean[- ]away/i],
-             ["front","Front delts",/front raise|overhead press|military|shoulder press|arnold|push press|landmine press|seated (dumbbell |barbell )?press|handstand|pike push/i]],
-  Chest:[["upper","Upper chest",/incline|low[- ]to[- ]high|reverse[- ]grip bench/i],
-         ["lower","Lower chest",/decline|\bdips?\b|high[- ]to[- ]low/i],
-         ["mid","Middle chest",/bench press|push-?ups?|fl(y|ye)s?\b|chest press|pec deck|cable cross|svend|floor press/i]],
-  Back:[["lats","Lats (width)",/pulldown|pull-?ups?|chin-?ups?|pullover|straight[- ]arm|muscle-?up/i],
-        ["upper","Upper back and traps",/\brows?\b|rowing|t-bar|shrug|rack pull|high pull/i],
-        ["lower","Lower back",/back extension|hyperextension|good morning|superman|reverse hyper/i]],
-  Biceps:[["brach","Brachialis (outer arm)",/hammer|reverse(-| )?grip curl|reverse curl|zottman|cross[- ]body/i],
-          ["biceps","Biceps peak",/curl/i]],
-  Triceps:[["long","Triceps long head",/overhead|french|skull|lying (triceps|extension)|tate|behind the head/i],
-           ["outer","Triceps outer heads",/push-?down|kickback|close[- ]grip|\bdips?\b|diamond/i]],
-  Glutes:[["med","Side glutes (medius)",/abduct|clam|lateral (band )?walk|side[- ]lying|fire hydrant|monster walk/i],
-          ["max","Glutes (max)",/hip thrust|glute bridge|bridge|kickback|step[- ]?up|bulgarian|frog pump|pull[- ]through/i]],
-  Calves:[["seated","Seated calves (soleus)",/seated/i],
-          ["standing","Standing calves",/calf/i]],
-  Core:[["obl","Obliques",/oblique|side plank|side bend|russian twist|wood ?chop|pallof|windmill|bicycle/i],
-        ["abs","Abs",/crunch|sit-?up|leg raise|knee raise|ab (wheel|roll)|rollout|hollow|v-?up|plank|dead bug|toes to bar/i]]
+  Shoulders:[["rear","Rear delts",/rear delt|rear lateral|reverse (machine |cable |dumbbell )?fl(y|ye)|back fl(y|ye)|face pull|pull[- ]?apart|bent[- ]over (dumbbell |cable )?(lateral )?raise|prone (y|t) raise|reverse pec deck/i,"Back of the shoulder · reverse flyes, face pulls"],
+             ["side","Side delts",/lateral raise|side lateral|upright row|lu raise|\by[- ]raise|cable lateral|lean[- ]away/i,"Width of the shoulder · lateral raises"],
+             ["front","Front delts",/front raise|overhead press|military|shoulder press|arnold|push press|landmine press|seated (dumbbell |barbell )?press|handstand|pike push/i,"Front of the shoulder · overhead presses"]],
+  Chest:[["upper","Upper chest",/incline|low[- ]to[- ]high|low cable crossover|reverse[- ]grip bench/i,"Under the collarbone · incline presses"],
+         ["lower","Lower chest",/decline|\bdips?\b|high[- ]to[- ]low|^(single-arm )?cable crossover/i,"Lower edge · dips, decline presses"],
+         ["mid","Middle chest",/bench press|push-?ups?|fl(y|ye)s?\b|chest press|pec deck|cable cross|svend|floor press/i,"The bulk of it · flat presses, flyes"]],
+  Back:[["lats","Lats",/pulldown|pull-?ups?|chin-?ups?|pullover|straight[- ]arm|muscle-?up/i,"Width, under the arms · pulldowns, pull-ups"],
+        ["upper","Upper back and traps",/\brows?\b|rowing|t-bar|shrug|rack pull|high pull/i,"Thickness · rows, shrugs"],
+        ["lower","Lower back",/back extension|hyperextension|good morning|superman|reverse hyper/i,"Along the spine · back extensions"]],
+  Biceps:[["brach","Brachialis",/hammer|reverse(-| )?grip curl|reverse curl|zottman|cross[- ]body/i,"Outer arm, under the biceps · hammer curls"],
+          ["biceps","Biceps peak",/curl/i,"Front of the arm · curls"]],
+  Triceps:[["long","Long head",/overhead|french|skull|lying (triceps|extension)|tate|behind the head/i,"Biggest part, inner back of the arm · overhead extensions"],
+           ["outer","Outer heads",/push-?down|kickback|close[- ]grip|\bdips?\b|diamond/i,"The horseshoe · pushdowns, close-grip presses"]],
+  Glutes:[["med","Gluteus medius",/abduct|clam|lateral (band )?walk|side[- ]lying|fire hydrant|monster walk/i,"Side of the hip · abductions, band walks"],
+          ["max","Gluteus maximus",/hip thrust|glute bridge|bridge|kickback|step[- ]?up|bulgarian|frog pump|pull[- ]through/i,"The main glute · hip thrusts, bridges"]],
+  /* The front of the shin is filed with the calves (js/knowledge/anatomy.js: tibialis
+     anterior, tag Calves); a reverse calf raise works it. */
+  Calves:[["tib","Tibialis",/reverse calf|tibialis raise|toe raise/i,"Front of the shin · reverse calf raises"],
+          ["seated","Soleus",/seated/i,"Lower calf · seated calf raises"],
+          ["standing","Gastrocnemius",/calf/i,"Upper calf · standing calf raises"]],
+  /* The quadriceps' one muscle that also crosses the hip (rectus femoris) is worked
+     hardest where the hip stays open and the knee does the work: a leg extension, a
+     sissy squat. Squats, presses and lunges load the vasti most. */
+  Quads:[["rf","Rectus femoris",/leg extension|sissy|reverse nordic|spanish squat/i,"Front of the thigh · leg extensions"],
+         ["vasti","Vasti",/squat|leg press|lunge|step[- ]?ups?|split|hack/i,"Rest of the thigh · squats, leg presses"]],
+  /* The hamstrings cross two joints: a hip hinge loads them long at the hip, a curl
+     shortens them at the knee. A plan that has only one misses half of what they do. */
+  Hamstrings:[["hinge","At the hip",/romanian|stiff[- ]leg|good morning|one-legged deadlift|single[- ]leg (romanian )?deadlift|pull[- ]?through/i,"Romanian deadlifts, good mornings"],
+              ["curl","At the knee",/leg curl|hamstring curl|nordic|glute[- ]ham|ball leg curl|hamstring slides/i,"Leg curls, Nordic curls"]],
+  Forearms:[["ext","Wrist extensors",/palms-down|reverse wrist|wrist roller/i,"Top of the forearm · reverse wrist curls"],
+            ["flex","Wrist flexors",/palms?-up|wrist curl|finger curl/i,"Underside of the forearm · wrist curls"],
+            ["grip","Grip",/plate pinch|hand squeeze|farmer|grip/i,"Hands and fingers · holds, pinches"]],
+  Core:[["obl","Obliques",/oblique|side plank|side bridge|side bend|russian twist|wood ?chop|pallof|windmill|bicycle/i,"Sides of the waist · side planks, rotations"],
+        ["abs","Abs",/crunch|sit-?up|leg raise|knee raise|ab (wheel|roll)|rollout|hollow|v-?up|plank|dead bug|toes to bar/i,"Front of the stomach · crunches, leg raises"]]
 };
 
-function partsOf(m){return (PARTS[m]||[]).map(function(x){return {id:m+"."+x[0],part:x[0],label:x[1]};});}
+function partsOf(m){return (PARTS[m]||[]).map(function(x){return {id:m+"."+x[0],part:x[0],label:x[1],sub:x[3]||""};});}
 /* The part of a muscle an exercise works, by its name: "Shoulders.side", or null. */
 function partOf(name,m){
   var L=PARTS[m];if(!L||!name)return null;

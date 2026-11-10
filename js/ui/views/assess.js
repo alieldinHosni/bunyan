@@ -12,11 +12,12 @@
 import {t, tm} from "../../i18n/dict.js";
 import {EXTRA_MAX, EXTRA_OK, GOAL_ORDER, GOALS, goalOf, goalsOf, trainOf} from "../../data/goals.js";
 import {focusMuscles, partLabel, partsOf} from "../../data/parts.js";
+import {bodyView} from "../../data/bodymap.js";
 import {BUILT, dayMinutes, generatePlan, LEVELS, splitCandidates} from "../../engine/plan.js";
 import {wdName, weekOrder} from "../../engine/schedule.js";
 import {lastWeight, macroTargets, tdee} from "../../engine/formulas.js";
 import {volumeCheck} from "../../engine/volume.js";
-import {buildMealPlan} from "../../engine/mealplan.js";
+import {allowed, buildMealPlan, plateFoods} from "../../engine/mealplan.js";
 import {FOODDB, foodById, foodName, ownFood, sumNutrition} from "../../engine/nutrition.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {S} from "../../state.js";
@@ -36,6 +37,21 @@ import {condCard} from "../dose.js";
 
 /* Equipment as a choice of three, and what each means in the equipment list. */
 var GEARS={gym:null,home:["Dumbbell","Band","Kettlebell"],bw:["Bodyweight"]};
+/* Or exactly what someone has (owner, 10 Nov: "are those the only options?"): the
+   library's own equipment kinds, each a chip; bodyweight is always in. The builder and
+   the swaps match on these (js/engine/plan.js usable). */
+var KIT=["Barbell","Dumbbell","Kettlebell","Band","Cable","Machine"];
+function gearOf(a){
+  if(a.gear==="custom"&&a.gearx&&a.gearx.length)return a.gearx.concat(["Bodyweight"]);
+  return GEARS[a.gear]?GEARS[a.gear].slice():null;}
+/* What a saved equipment list is: one of the three, or a list of its own. */
+function gearDraft(g){
+  var k=gearKind(g);if(!g||!g.length)return {gear:"gym",gearx:null};
+  var own=KIT.filter(function(x){return g.indexOf(x)>=0;});
+  var same=function(p){return p&&p.filter(function(x){return x!=="Bodyweight";}).sort().join()===own.slice().sort().join();};
+  if(k==="gym"&&own.length===KIT.length)return {gear:"gym",gearx:null};
+  if(same(GEARS[k]))return {gear:k,gearx:null};
+  return own.length?{gear:"custom",gearx:own}:{gear:"bw",gearx:null};}
 function gearKind(g){
   if(!g||!g.length||g.indexOf("Machine")>=0||g.indexOf("Barbell")>=0)return "gym";
   return g.indexOf("Dumbbell")>=0?"home":"bw";}
@@ -58,8 +74,18 @@ var STEPS=["intro","you","goal","level","week","gear","focus","life","limits","h
 /* The muscles someone can ask to bring up (up to FOCUS_MAX), and the big lifts someone
    can say they will not do: those are hidden from the plan, as the ⋯ menu's "Never
    suggest" would, and the week is built without them. */
-var FOCUS=[["Chest","Chest"],["Back","Back"],["Shoulders","Shoulders"],["Biceps","Biceps"],["Triceps","Triceps"],
-  ["Quads","Quads"],["Hamstrings","Hamstrings"],["Glutes","Glutes"],["Calves","Calves"],["Core","Core"]];
+var FOCUS=[["Chest","Chest"],["Back","Back"],["Shoulders","Shoulders"],["Biceps","Biceps"],["Triceps","Triceps"],["Forearms","Forearms"],
+  ["Quads","Quads"],["Hamstrings","Hamstrings"],["Glutes","Glutes"],["Adductors","Inner thighs"],["Calves","Calves"],["Core","Core"]];
+/* The muscles by region, as someone looks for them (owner, 10 Nov: "organized and
+   engineered better to be more easy"): upper body, arms, legs, the middle. */
+var REGIONS=[["Upper body",["Chest","Back","Shoulders"]],["Arms",["Biceps","Triceps","Forearms"]],
+  ["Legs",["Quads","Hamstrings","Glutes","Adductors","Calves"]],["Core",["Core"]]];
+/* Where each muscle is drawn (its side and half of the body) and what it is, in plain words. */
+var MUS={Chest:["f","upper","Pecs, the front of the chest"],Back:["b","upper","Lats, traps and the lower back"],Shoulders:["f","upper","The three delts"],
+  Biceps:["f","upper","Front of the upper arm"],Triceps:["b","upper","Back of the upper arm"],Forearms:["f","upper","Wrists and grip"],
+  Quads:["f","legs","Front of the thigh"],Hamstrings:["b","legs","Back of the thigh"],Glutes:["b","legs","Hips and seat"],
+  Adductors:["f","legs","Inside of the thigh"],Calves:["b","legs","Lower leg and shin"],Core:["f","upper","Abs and obliques"]};
+function focusName(m){var x=FOCUS.filter(function(f){return f[0]===m;})[0];return x?(x[0]===x[1]?tm(m).trim():t(x[1])):m;}
 var FOCUS_MAX=3;
 var NOLIFT=["Barbell Squat","Barbell Deadlift","Barbell Bench Press - Medium Grip","Standing Military Press",
   "Bent Over Barbell Row","Pullups","Leg Press","Barbell Walking Lunge"];
@@ -68,7 +94,7 @@ function draftFrom(){
   var p=S.profile||{},pr=S.prefs||{};
   return {step:0,sex:p.sex||"m",age:num(p.age)||"",height:num(p.height)||"",
     weight:lastWeight()||num(p.weight)||"",goal:GOALS[p.goal]?p.goal:"lose",level:LEVELS[p.level]?p.level:"some",
-    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearKind(S.gear),job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),conds:(p.conds||[]).slice(),faults:(p.faults||[]).slice(),lapse:p.lapse||"steady",
+    days:num(p.days)||3,mins:num(p.mins)||60,gear:gearDraft(S.gear).gear,gearx:gearDraft(S.gear).gearx,job:p.job||"desk",limits:(p.limits||[]).slice(),health:(p.health||[]).slice(),conds:(p.conds||[]).slice(),faults:(p.faults||[]).slice(),lapse:p.lapse||"steady",
     meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",likes:(pr.likes||[]).slice(),
     sleep:num(p.sleep)||7.5,stress:p.stress||"normal",wd:(p.wd||[]).map(Number),focus:(p.focus||[]).slice(),goals2:goalsOf(p).slice(1),
     nolift:NOLIFT.filter(function(n){return (S.skip||[]).indexOf(n)>=0;}),split:null,done:false};}
@@ -89,21 +115,18 @@ function skipOf(a){
   return keep.concat((a.nolift||[]).filter(function(n){return keep.indexOf(n)<0;}));}
 function foodPrefs(a,variant){
   return Object.assign({meals:num(a.meals)||4,diet:a.diet,avoid:a.avoid.slice(),powder:!!a.powder,style:a.style,likes:(a.likes||[]).slice(),variant:variant||0},FOODDB?ownFood():{});}
-/* Foods to say you like (the meal plan's own staples, so a pick always has a place): the
-   plan uses them first where they fit. */
-var LIKES=["ful","egg_boiled","chicken_breast_ck","tilapia_ck","beef_lean_ck","tuna_water","gebna_areesh","greek_yog","lentils",
-  "rice_egyptian","baladi","pasta_ck","oats","potato","sweet_potato_baked","molokhia_plain","lupini","banana"];
-
+/* The kitchens a meal plan can be written from (js/engine/mealplan.js). */
+var STYLES=[["egy","Egyptian home food"],["lev","Levantine (Syrian, Lebanese)"],["gulf","Gulf (Khaleeji)"],["med","Mediterranean"],["intl","International"],["mixed","A mix of all of them"]];
 /* Everything "Use this plan" would set, worked out with the draft in place of what
    is saved, then put back. Cached on the answers. */
 var CACHE={k:null,v:null};
 function preview(a){
-  var key=JSON.stringify([profileOf(a),a.gear,a.split,foodPrefs(a),skipOf(a),!!FOODDB]);
+  var key=JSON.stringify([profileOf(a),a.gear,a.gearx,a.split,foodPrefs(a),skipOf(a),!!FOODDB]);
   if(CACHE.k===key)return CACHE.v;
   var keep={profile:S.profile,gear:S.gear,body:S.body,skip:S.skip},out=null;
   try{
     S.profile=Object.assign({},S.profile,profileOf(a));
-    S.gear=GEARS[a.gear]?GEARS[a.gear].slice():null;
+    S.gear=gearOf(a);
     S.body=[{date:today(),weight:num(a.weight)}];S.skip=skipOf(a);
     var cands=[];try{cands=splitCandidates(S.profile.days,a.level,a.goal,S.gear);}catch(e){}
     /* The week built from these answers first; the app's programs as other choices. */
@@ -160,15 +183,22 @@ function body(a){
      +'<label><span>'+t("Height (cm)")+'</span><input id="as_height" type="number" inputmode="numeric" value="'+esc(String(a.height))+'"></label>'
      +'<label><span>'+t("Weight")+' ('+wUnit()+')</span><input id="as_weight" type="number" inputmode="decimal" step="0.1" value="'+(num(a.weight)?toDisp(num(a.weight)):"")+'"></label></div>';}
   else if(s==="goal"){
-    h+=q(t("What are you after most?"),t("One main goal. It sets your food and most of your training days; you can change it any time."));
-    h+='<div class="ascards">'+GOAL_ORDER.map(function(k){return card("goal",k,t(GOALS[k].label),t(GOALS[k].desc),a.goal===k);}).join("")+'</div>';
-    /* Up to two more (owner, 9 Nov). Each gets training days of its own in turn with the
-       main one, the textbook's undulating plan; the food stays the main goal's, so the
-       goals that are about calories are main goals only (js/data/goals.js). */
-    var g2=goalsOf({goal:a.goal,goals2:a.goals2}).slice(1);
-    h+=lbl(t("Also training for (optional, up to two)"))
-     +'<div class="aschips">'+EXTRA_OK.filter(function(k){return k!==a.goal;}).map(function(k){return chip("goals2",k,t(GOALS[k].label),g2.indexOf(k)>=0,true);}).join("")+'</div>'
-     +'<p class="as-note">'+esc(t(g2.length?"Your training days take turns: the main goal on most of them, each other goal on days of its own, with its own reps, rest and extras. Your food follows the main goal.":"Pick one or two if you want more than one thing from your training. The days then take turns between them."))+'</p>';}
+    /* One list (owner, 10 Nov: "click on one option or two instead of a separate repeated
+       list"): tap one goal, or up to three. The first is the main one, marked so: it sets
+       the food and most training days; the others get training days of their own in turn
+       with it, the textbook's undulating plan. Goals about calories (lose, both, stay fit)
+       can only be the main one: a second of those takes the first one's place. Tapping
+       the main goal off hands "main" to the next. (js/data/goals.js; handlers/coach.js asgoal) */
+    var gl=goalsOf({goal:a.goal,goals2:a.goals2});
+    h+=q(t("What are you after?"),t("Tap one goal, or up to three. The first one you pick is your main goal: it sets your food and most of your training days."));
+    h+='<div class="ascards asgoals">'+GOAL_ORDER.map(function(k){
+      var at=gl.indexOf(k),on=at>=0;
+      return '<button class="ascard'+(on?' on':'')+'" data-asgoal="'+k+'" aria-pressed="'+(on?"true":"false")+'">'
+       +'<span class="asg-h"><b>'+esc(t(GOALS[k].label))+'</b>'
+       +(on?'<i class="asg-tag'+(at?'':' main')+'">'+esc(at?t("Also"):t("Main goal"))+'</i>':'')+'</span>'
+       +'<span>'+esc(t(GOALS[k].desc))+'</span></button>';}).join("")+'</div>';
+    h+='<p class="as-note">'+esc(t(gl.length>1?"Your training days take turns: the main goal on most of them, each other goal on days of its own, with its own reps, rest and extras. Your food follows the main goal."
+      :"Want more than one thing from your training? Tap another goal too, up to three."))+'</p>';}
   else if(s==="level"){
     h+=q(t("How long have you been lifting?"),t("Consistently, not counting long breaks."));
     var LD={new:"New to lifting.",some:"Training regularly for six months or more.",
@@ -198,24 +228,56 @@ function body(a){
     h+=q(t("Where do you train?"),t("Exercises you cannot do are swapped for ones that work the same muscles."));
     h+='<div class="ascards">'+card("gear","gym",t("A gym"),t("Machines, cables, barbells and dumbbells."),a.gear==="gym")
      +card("gear","home",t("At home, with dumbbells"),t("Dumbbells, bands or a kettlebell, and a bench or a chair."),a.gear==="home")
-     +card("gear","bw",t("Bodyweight only"),t("The floor, and a bar or a door frame to pull on if you have one."),a.gear==="bw")+'</div>';}
+     +card("gear","bw",t("Bodyweight only"),t("The floor, and a bar or a door frame to pull on if you have one."),a.gear==="bw")+'</div>';
+    var have=a.gear==="custom"?(a.gearx||[]):a.gear==="gym"?KIT:(GEARS[a.gear]||[]);
+    h+=lbl(t("Or pick exactly what you have"))
+     +'<div class="aschips">'+KIT.map(function(k){return chip("gearx",k,t(k),have.indexOf(k)>=0,true);}).join("")+'</div>'
+     +'<p class="as-note">'+esc(t(a.gear==="custom"?"Your plan uses only these, and your own body weight.":"Tap any to change the list: barbell, dumbbells, kettlebell, bands, cables, machines. Your body weight is always in."))+'</p>';}
   else if(s==="focus"){
     h+=q(t("What do you want to bring up?"),t("Up to three muscles. Pick the whole muscle, or the parts of it you want most. They get more weekly sets and go first in their session, while you are fresh."));
     /* Each muscle, then its parts (owner, 9 Nov: "the three shoulder muscles, and the
        same for the other muscles"): a part gets an exercise that works it, first in its
        day (js/data/parts.js, js/engine/build.js). The whole and its parts replace one
        another. */
-    var fo=a.focus||[];
-    h+='<div class="asfocus">'+FOCUS.map(function(x){
-      var m=x[0],ps=partsOf(m),whole=fo.indexOf(m)>=0,some=fo.some(function(f){return f.indexOf(m+".")===0;});
-      return '<div class="asf'+(whole||some?' on':'')+'"><div class="asf-h">'+esc(tm(x[1]).trim())+'</div><div class="aschips">'
-       +chip("focus",m,ps.length?t("All of it"):tm(x[1]).trim(),whole,true)
-       +ps.map(function(pp){return chip("focus",pp.id,t(pp.label),fo.indexOf(pp.id)>=0,true);}).join("")+'</div></div>';}).join("")+'</div>';
+    var fo=a.focus||[],picked=focusMuscles(fo);
+    /* What is picked, at the top, each one a tap to take off; then the muscles by region,
+       one row each. A row opens to its parts (one open at a time: the one last touched
+       stays open across a re-render); a muscle with no parts is picked by its row. */
+    var label=function(id){return id.indexOf(".")>0?t(partLabel(id)):focusName(id);};
+    h+='<div class="asfpick" aria-live="polite"><div class="asfpick-h"><b>'+esc(t("Your picks"))+'</b><span class="num">'+picked.length+' / '+FOCUS_MAX+'</span></div>'
+     +(fo.length?'<div class="aschips">'+fo.map(function(id){
+        return '<button class="aschip on asfx" data-asm="focus|'+esc(id)+'" aria-label="'+esc(t("Take off")+": "+label(id))+'">'+esc(label(id))+'<span aria-hidden="true">×</span></button>';}).join("")+'</div>'
+       :'<p class="as-note">'+esc(t("Nothing picked: every muscle gets its share. Pick up to three to bring up."))+'</p>')+'</div>';
+    /* Each muscle a row with its own picture (js/data/bodymap.js, framed on its side and
+       half of the body, the muscle lit) and what it is in plain words; a row opens to the
+       muscle drawn larger and its parts as cards, each with its anatomical name, where
+       it is and what trains it, the parts picked lit on the drawing. */
+    var fig=function(m,lit,cls){var mm=MUS[m]||["f","upper"];
+      var side=lit&&Object.keys(lit).some(function(k){return k==="Calves.tib";})&&!lit["Calves.seated"]&&!lit["Calves.standing"]&&!lit.Calves?"f":mm[0];
+      return bodyView(lit,side,mm[1],"",cls);};
+    h+=REGIONS.map(function(rg){
+      return '<section class="asreg"><h3>'+esc(t(rg[0]))+'</h3>'+rg[1].map(function(m){
+        var ps=partsOf(m),whole=fo.indexOf(m)>=0,mine=fo.filter(function(f){return f.indexOf(m+".")===0;}),on=whole||mine.length;
+        var lit={};if(mine.length)mine.forEach(function(f){lit[f]="p";});else lit[m]="p";
+        var full=!on&&picked.length>=FOCUS_MAX,sub=MUS[m]?t(MUS[m][2]):"";
+        var state=whole?t("All of it"):mine.map(function(f){return t(partLabel(f));}).join(t(", "));
+        var head='<span class="asfm-fig">'+fig(m,lit)+'</span><span class="asfm-t"><span class="asfm-n">'+esc(focusName(m))+'</span>'
+          +'<span class="asfm-s">'+esc(on?state:sub)+'</span></span>';
+        if(!ps.length)return '<button class="asfm'+(on?' on':'')+(full?' full':'')+'" data-asm="focus|'+esc(m)+'" aria-pressed="'+(on?"true":"false")+'">'
+          +head+'<span class="asfm-k" aria-hidden="true"></span></button>';
+        var card=function(id,title,desc,sel){return '<button class="aspart'+(sel?' on':'')+'" data-asm="focus|'+esc(id)+'" aria-pressed="'+(sel?"true":"false")+'">'
+          +'<span class="aspart-k" aria-hidden="true"></span><b>'+esc(title)+'</b><span>'+esc(desc)+'</span></button>';};
+        return '<details class="asfm-d" name="asfm"'+((a.fopen===m)?' open':'')+'><summary class="asfm'+(on?' on':'')+(full?' full':'')+'">'+head
+          +'<span class="asfm-c-w">'+(on?'':'<span class="asfm-np">'+esc(t("{n} parts")).replace("{n}",'<bdi class="num">'+ps.length+'</bdi>')+'</span>')
+          +'<span class="ico ico-chev asfm-c" aria-hidden="true"></span></span></summary>'
+          +'<div class="asfm-body"><div class="asfm-big">'+fig(m,lit,"big")+'</div><div class="asparts">'
+          +card(m,t("All of it"),t("Every part of it, evenly"),whole)
+          +ps.map(function(pp){return card(pp.id,t(pp.label),t(pp.sub),fo.indexOf(pp.id)>=0);}).join("")+'</div></div></details>';}).join("")+'</section>';}).join("");
     h+=lbl(t("Lifts you won't do (optional)"))+'<div class="aschips">'+NOLIFT.map(function(n){
         return chip("nolift",n,exName(n),(a.nolift||[]).indexOf(n)>=0,true);}).join("")+'</div>'
      +'<p class="as-note">'+t("Left out of your plan, and never suggested. Exercises you have starred are used first. Both can be changed any time from an exercise's menu.")+'</p>';}
   else if(s==="life"){
-    h+=q(t("The rest of your day"),t("Outside training. It decides most of what you burn."));
+    h+=q(t("The rest of your day"),t("Outside training. It sets your daily calories, not your training; the weekly check-in corrects it from your weigh-ins."));
     h+='<div class="ascards">'+card("job","desk",t("Mostly sitting"),t("A desk, a car, a sofa."),a.job==="desk")
      +card("job","some",t("Some walking"),t("On your feet now and then, errands, stairs."),a.job==="some")
      +card("job","feet",t("On my feet most of the day"),t("Shop floor, teaching, nursing, a lot of walking."),a.job==="feet")
@@ -244,15 +306,27 @@ function body(a){
     var cl=condLines(rulesFor(profileOf(a)),profileOf(a));
     h+='<p class="as-note">'+esc(cl.length?t("Your plan follows the training guidelines for these. Your doctor's advice comes first."):t("Pick any that a doctor has told you about. Each one changes how the plan is built."))+'</p>';}
   else if(s==="food"){
-    h+=q(t("How you eat"),t("For the meal plan. It uses foods from the app's database, Egyptian home food first."));
+    h+=q(t("How you eat"),t("For the meal plan. It uses foods from the app's database, from the kitchen you pick first."));
     h+=lbl(t("Meals a day"))+chips("meals",[[3,"3"],[4,"4"],[5,"5"],[6,"6"]],a.meals);
     h+=lbl(t("Diet"))+chips("diet",[["any",t("Everything")],["veg",t("Vegetarian")],["pesc",t("Pescatarian")],["vegan",t("Vegan")]],a.diet);
     h+=lbl(t("Leave out"))+mchips("avoid",AVOIDS,a.avoid);
     h+=lbl(t("Protein powder"))+chips("powder",[["1",t("I use it")],["0",t("No powder")]],a.powder?"1":"0");
-    h+=lbl(t("Food style"))+chips("style",[["egy",t("Egyptian home food")],["mixed",t("A mix")],["intl",t("International")]],a.style);
-    if(FOODDB)h+=lbl(t("Foods you like (optional)"))+'<div class="aschips">'+LIKES.map(function(id){var f=foodById(id);
-        return f?chip("likes",id,foodName(f),(a.likes||[]).indexOf(id)>=0,true):"";}).join("")+'</div>'
-      +'<p class="as-note">'+t("The plan uses them first where they fit, with the foods you log.")+'</p>';}
+    h+=lbl(t("Food style"))+chips("style",STYLES.map(function(x){return [x[0],t(x[1])];}),a.style);
+    /* Foods to say you like: every food the meal plan can serve, by what it is in a
+       meal, only those this diet and these exclusions allow; the first few of each kind
+       in sight, the rest a tap away. Their own kitchen's first. */
+    if(FOODDB){
+      var pf=plateFoods(),pr={diet:a.diet,avoid:a.avoid,powder:!!a.powder},lk=a.likes||[];
+      pf.sort(function(x,y){return (y.cu===a.style?1:0)-(x.cu===a.style?1:0);});
+      h+=lbl(t("Foods you like (optional)"))+'<p class="as-note">'+t("The plan uses them first where they fit, with the foods you log.")+'</p>'
+       +[["P","Protein"],["C","Carbs and dishes"],["V","Vegetables and fruit"],["F","Fats"]].map(function(g){
+          var fs=pf.filter(function(x){return x.role===g[0];}).map(function(x){return foodById(x.id);})
+            .filter(function(f){return f&&allowed(f,pr);});
+          if(!fs.length)return "";
+          var ch=function(f){return chip("likes",f.id,foodName(f),lk.indexOf(f.id)>=0,true);};
+          var first=fs.slice(0,8),more=fs.slice(8),picked=more.filter(function(f){return lk.indexOf(f.id)>=0;}).length;
+          return '<div class="aslk"><h3>'+esc(t(g[1]))+'</h3><div class="aschips">'+first.map(ch).join("")+'</div>'
+           +(more.length?'<details class="aslk-more"'+(picked?' open':'')+'><summary><span>'+esc(t("{n} more")).replace("{n}",'<bdi class="num">'+more.length+'</bdi>')+'</span></summary><div class="aschips">'+more.map(ch).join("")+'</div></details>':'')+'</div>';}).join("");}}
   else if(s==="sleep"){
     h+=q(t("How do you sleep?"),t("Most nights. Short sleep slows recovery, so the plan asks a little less of you."));
     h+=chips("sleep",[[5,t("Under 6 hours")],[6.5,t("6 to 7 hours")],[8,t("7 to 9 hours")],[9.5,t("More than 9")]],a.sleep);
@@ -268,7 +342,7 @@ function body(a){
 function mealsWhy(a,meals){
   var P=foodPrefs(a),eat=(P.habits&&P.habits.eaten)||{},likes=a.likes||[],mine=[],usual=0,ar=S.prefs.lang==="ar";
   meals.forEach(function(m){if(m.usual)usual++;m.items.forEach(function(it){if((likes.indexOf(it.fid)>=0||eat[it.fid])&&mine.indexOf(it.fid)<0)mine.push(it.fid);});});
-  var x=fill(t("Built for {n} meals a day, {s}"),{n:num(a.meals)||4,s:t(a.style==="intl"?"international food first":a.style==="mixed"?"a mix of Egyptian and international food":"Egyptian home food first")});
+  var x=fill(t("Built for {n} meals a day, {s}"),{n:num(a.meals)||4,s:t({intl:"international food first",mixed:"a mix of every kitchen",lev:"Levantine food first",gulf:"Gulf food first",med:"Mediterranean food first"}[a.style]||"Egyptian home food first")});
   if(a.diet&&a.diet!=="any")x+=", "+t({veg:"vegetarian",pesc:"pescatarian",vegan:"vegan"}[a.diet]||a.diet);
   if((a.avoid||[]).length)x+=", "+t("without")+" "+a.avoid.map(function(v){return t((AVOIDS.filter(function(z){return z[0]===v;})[0]||[v,v])[1]).toLowerCase();}).join(ar?" و":", ");
   x+=".";
@@ -409,4 +483,4 @@ function vAssess(){
      +'<button class="btn" data-asnext="1">'+t(s==="intro"?"Start":s==="sleep"?"See my plan":"Next")+'</button></div>';}
   return h;}
 
-export {activityOf, draftFrom, foodPrefs, FOCUS_MAX, GEARS, preview, profileOf, skipOf, STEPS, vAssess, youOk, youWhy};
+export {activityOf, draftFrom, foodPrefs, FOCUS_MAX, GEARS, gearOf, KIT, preview, profileOf, skipOf, STEPS, vAssess, youOk, youWhy};

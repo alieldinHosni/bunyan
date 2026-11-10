@@ -120,7 +120,7 @@ function register(){
      left out of the meal plan. Used the next time the meal plan is built. */
   key("nset",function(D){var k=String(D.nset).split("|");if(k.length!==2)return;
     if(k[0]==="meals"&&/^[3-6]$/.test(k[1]))S.prefs.meals=+k[1];
-    else if(k[0]==="style"&&/^(egy|mixed|intl)$/.test(k[1]))S.prefs.fstyle=k[1];
+    else if(k[0]==="style"&&/^(egy|lev|gulf|med|intl|mixed)$/.test(k[1]))S.prefs.fstyle=k[1];
     else if(k[0]==="diet"&&/^(any|veg|pesc|vegan)$/.test(k[1]))S.prefs.diet=k[1];
     else return;
     saveDB();render();return;});

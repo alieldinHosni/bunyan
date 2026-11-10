@@ -384,6 +384,7 @@ function restartNotes(){
    same answers the assessment's food question takes (views/assess.js), kept in S.prefs and
    read by the meal plan builder (handlers/coach.js mealPrefs); a change is used the next
    time the meal plan is built, which the button at the foot does now. */
+var NSTYLE=[["egy","Egyptian"],["lev","Levantine"],["gulf","Gulf"],["med","Mediterranean"],["intl","International"],["mixed","A mix"]];
 var NDIET=[["any","Everything"],["veg","Vegetarian"],["pesc","Pescatarian"],["vegan","Vegan"]];
 var NAVOID=[["dairy","Dairy"],["eggs","Eggs"],["fish","Fish and seafood"],["nuts","Nuts"],["gluten","Gluten"]];
 function nchip(attr,val,label,on){
@@ -398,7 +399,10 @@ function foodSheet(){
       pick(t("Meals a day"),"",{items:[3,4,5,6].map(function(n){return ["meals|"+n,String(n)];}),value:"meals|"+(num(pr.meals)||4),attr:"nset",label:t("Meals a day")})
      +pick(t("Meal names"),t(mealStyle()==="named"?"Breakfast, lunch, dinner, snacks":"Meal 1, Meal 2, Meal 3…"),
         {items:[["named",t("Named")],["numbered",t("Numbered")]],value:mealStyle(),attr:"mstyle",label:t("Meal names")})
-     +pick(t("Food style"),"",{items:[["style|egy",t("Egyptian")],["style|mixed",t("A mix")],["style|intl",t("International")]],value:"style|"+(pr.fstyle||"egy"),attr:"nset",label:t("Food style")}))
+     /* The six kitchens the meal plan is written from (js/engine/mealplan.js), as chips:
+        six segments would not fit a phone's width. */
+     +'<div class="srow srow-pick">'+words(t("Food style"),t("The kitchen your meal plan comes from first"))
+     +'<div class="aschips">'+NSTYLE.map(function(d){return nchip("nset","style|"+d[0],t(d[1]),(pr.fstyle||"egy")===d[0]);}).join("")+'</div></div>')
    +'<section class="sg"><h3 class="sg-h">'+t("What you eat")+'</h3><div class="sg-list"><div class="srow srow-pick">'+words(t("Diet"),"")
    +'<div class="aschips">'+NDIET.map(function(d){return nchip("nset","diet|"+d[0],t(d[1]),diet===d[0]);}).join("")+'</div></div>'
    +'<div class="srow srow-pick">'+words(t("Leave out"),t("Never put in your meal plan"))

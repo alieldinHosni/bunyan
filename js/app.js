@@ -368,22 +368,31 @@ if(!S.onboarded){V.tab="coach";V.assess=true;V.asd=draftFrom();}
 render();
 
 if("serviceWorker" in navigator){
+  /* A new version is installed in the background and takes over at once (skipWaiting),
+     but the page in front still runs the old code until it loads again. On a Home Screen
+     app that happens almost never: it is rarely closed, only sent to the background
+     (owner, 10 Nov: the phone was still on a version from days before). So the reload
+     happens at the one moment nobody sees it: coming back to the app after a while
+     away, with no workout running, no sheet open and no assessment half answered. */
+  var updReady=false,hiddenAt=0;
+  var markReady=function(){if(!updReady){updReady=true;toast(t("Updated. The new version opens next time you come back to the app."));}};
   window.addEventListener("load",function(){
     navigator.serviceWorker.register("sw.js").then(function(reg){
       reg.update();
+      if(reg.waiting&&navigator.serviceWorker.controller){reg.waiting.postMessage("skipWaiting");markReady();}
       reg.addEventListener("updatefound",function(){
         var nw=reg.installing;
         if(!nw)return;
         nw.addEventListener("statechange",function(){
-          if(nw.state==="installed"&&navigator.serviceWorker.controller){
-            nw.postMessage("skipWaiting");
-            toast(t("Updated. Reopen the app to finish."));
-          }});});
+          if(nw.state==="installed"&&navigator.serviceWorker.controller){nw.postMessage("skipWaiting");markReady();}});});
     }).catch(function(){});
   });
-  /* No automatic reload. controllerchange fires on the first install as well as on
-     an update, so this reloaded the page at an arbitrary moment — which replayed the
-     intro and looked exactly like the app restarting under a back gesture. Reloading
-     mid-workout is hostile anyway; the toast above already says what to do, and the
-     new version is picked up on the next open. */
+  document.addEventListener("visibilitychange",function(){
+    if(document.visibilityState==="hidden"){hiddenAt=Date.now();return;}
+    if(!updReady||!hiddenAt||Date.now()-hiddenAt<30000)return;
+    if(S.active||V.sheet||V.assess||V.coach)return;
+    location.reload();});
+  /* Checked again whenever the app comes back, not only at a cold start. */
+  document.addEventListener("visibilitychange",function(){
+    if(document.visibilityState==="visible")navigator.serviceWorker.getRegistration().then(function(r){if(r)r.update();}).catch(function(){});});
 }
