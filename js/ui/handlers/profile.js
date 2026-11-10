@@ -115,6 +115,17 @@ function register(){
   key("setlang",function(D){if(!/^(en|ar)$/.test(D.setlang)||D.setlang===S.prefs.lang)return;
     S.prefs.lang=D.setlang;saveDB();applyLang();render();
     toast(S.prefs.lang==="ar"?"\u0627\u062a\u063a\u064a\u0631\u062a \u0644\u0644\u0639\u0631\u0628\u064a\u0629":"Switched to English");return;});
+  /* Nutrition settings (settings.js foodSheet): meals a day, food style, diet; what is
+     left out of the meal plan. Used the next time the meal plan is built. */
+  key("nset",function(D){var k=String(D.nset).split("|");if(k.length!==2)return;
+    if(k[0]==="meals"&&/^[3-6]$/.test(k[1]))S.prefs.meals=+k[1];
+    else if(k[0]==="style"&&/^(egy|mixed|intl)$/.test(k[1]))S.prefs.fstyle=k[1];
+    else if(k[0]==="diet"&&/^(any|veg|pesc|vegan)$/.test(k[1]))S.prefs.diet=k[1];
+    else return;
+    saveDB();render();return;});
+  key("navoid",function(D){if(!/^(dairy|eggs|fish|nuts|gluten)$/.test(D.navoid))return;
+    var l=S.prefs.avoid=(S.prefs.avoid||[]).slice(),i=l.indexOf(D.navoid);
+    if(i>=0)l.splice(i,1);else l.push(D.navoid);saveDB();render();return;});
   key("toggle",function(D){S.prefs[D.toggle]=!S.prefs[D.toggle];
     if(D.toggle==="anim")document.body.classList.toggle("noanim",S.prefs.anim===false);
     if(D.toggle==="awake")keepAwake(S.prefs.awake&&!!S.active);

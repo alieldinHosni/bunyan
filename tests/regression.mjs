@@ -315,7 +315,8 @@ await test("tab taps do not grow the browser history",async page=>{
   const h1=await page.evaluate(()=>history.length);
   if(h1-h0>2)throw new Error("grew by "+(h1-h0));
   await page.evaluate(()=>history.back());await pause(page,400);
-  eq(await page.evaluate(()=>location.pathname),"/index.html","still in the app");
+  /* The app's page, under either of its addresses ("/" and "/index.html" serve the same file). */
+  eq(await page.evaluate(()=>/^\/(index\.html)?$/.test(location.pathname)),true,"still in the app");
 });
 await test("new workout entries carry a stable exercise id, and ids heal renamed names",async page=>{
   await startWorkout(page);
@@ -4310,6 +4311,28 @@ await test("Plan check (owner, 9 Nov review): a part asked for that the week no 
     return PC.checkPlans().map(x=>x.id);});
   if(flags.indexOf("int-str")>=0)throw new Error("a strength day among size days called too light: "+flags.join(","));
 });
+await test("Profile › Nutrition (owner, 9 Nov: not a shortcut to another page): its own settings, the targets one row away; meals, names, style, diet, what is left out and powder set here and used by the meal plan",async page=>{
+  await tapTab(page,"profile");await pause(page,500);
+  await page.tap('#app [data-sheet="set_food"]');await pause(page,700);
+  eq(await ev(page,"[V.tab,V.sheet]"),["profile","set_food"],"a sheet of its own, not the Food page");
+  await page.tap('#sheet [data-nset="meals|5"]');await pause(page,200);
+  await page.tap('#sheet [data-nset="style|intl"]');await pause(page,200);
+  await page.tap('#sheet [data-nset="diet|pesc"]');await pause(page,200);
+  await page.tap('#sheet [data-navoid="nuts"]');await pause(page,200);
+  await page.tap('#sheet [data-toggle="powder"]');await pause(page,200);
+  eq(await ev(page,"[S.prefs.meals,S.prefs.fstyle,S.prefs.diet,S.prefs.avoid,!!S.prefs.powder]"),[5,"intl","pesc",["nuts"],true],"each choice kept");
+  await page.tap('#sheet [data-navoid="nuts"]');await pause(page,200);
+  eq(await ev(page,"S.prefs.avoid"),[],"taken off again");
+  await page.tap('#sheet [data-pgen]');await pause(page,900);
+  eq(await ev(page,"[V.tab,V.fplan,!!V.pimport,V.sheet]"),["food","plan",true,null],"rebuild: the new plan to see, built from these");
+  eq(await ev(page,"V.pgen&&[V.pgen.meals,V.pgen.style,V.pgen.diet]"),[5,"intl","pesc"],"built from the settings just made");
+  await tapTab(page,"profile");await pause(page,400);
+  await page.tap('#app [data-sheet="set_food"]');await pause(page,600);
+  await page.tap('#sheet [data-fsec="targets"]');await pause(page,800);
+  /* The targets are edited on the plan page's daily-goal card. */
+  eq(await ev(page,"[V.tab,V.fplan,V.sheet]"),["food","plan",null],"the targets row opens where they are edited");
+  if(!/YOUR DAILY GOAL|Your daily goal/i.test(await page.textContent("#app")))throw new Error("not the page with the daily goal");
+});
 await test("Back swipe on the Home Screen (owner, 9 Nov: a black page for a moment): no history entries for Safari's swipe; the app's own swipe shows the real page before under the finger, lands past a third or springs back",async(page,env)=>{
   await page.evaluate(async()=>{sessionStorage.setItem("bunyan:ownback","1");const st=await import("/js/state.js");st.S.prefs.anim=true;st.saveDB();});
   await page.reload();await pause(page,1500);
@@ -5230,6 +5253,7 @@ await test("How do you feel today?: on a phone each choice's word sits in the mi
 await test("Opening the Exercise Library (owner, 4 Nov): the old page travels past the screen's edge, so none of it shows in the slide's slow end, and the pictures on the first screen are there before the page moves",async page=>{
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
   await coach(page,"train","programs");await pause(page,900);
+  await page.waitForSelector('.ttile[data-train="library"]',{timeout:10000});
   await page.evaluate(()=>document.querySelector('.ttile[data-train="library"]').scrollIntoView({block:"center"}));await pause(page,400);
   await page.evaluate(()=>{window.__seen=null;const mo=new MutationObserver(()=>{const c=document.querySelector(".stillcopy");const a=c&&c.getAnimations()[0];
     if(a&&!window.__seen){const app=document.getElementById("app");
