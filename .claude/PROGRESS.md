@@ -4006,3 +4006,29 @@ Owner, 9 Nov: "I hate it when there is no nutrition settings, it just directs me
 - These are the assessment's food answers, in S.prefs, read by `mealPrefs`. Handlers `nset` and
   `navoid` in handlers/profile.js.
 - The Profile row opens the sheet and says the meals a day too.
+## The back swipe, drawn by the app on the Home Screen — branch session/backswipe (CACHE v246)
+
+Owner, 9 Nov: "When swiping back it shows a black page for a moment then gets to the previous page
+correctly. Need it smoother."
+
+- **Measured.** The app paints the page before in the frame after popstate: no hidden, transparent
+  or empty frame, and the ground cross-fades. The black is Safari's own swipe in a Home Screen app.
+  While the finger moves it shows its picture of the page before, and it has none, so it shows the
+  bare ground (--bg) until the swipe ends and popstate arrives. The same happened at a tab root,
+  where the spare entry let the swipe start and then repushed.
+- **The fix.** On the Home Screen (`navigator.standalone`, or sessionStorage `bunyan:ownback` for
+  tests), js/ui/nav.js makes no history entries (`OWN`), so Safari's swipe has nothing to go back
+  to and never starts.
+  - js/ui/edgeback.js draws the swipe. A touch within 20 px of the left edge (the strip exswipe
+    leaves alone) that moves right, on a page with a back arrow: the page on show becomes a still
+    copy with its own ground (theme gradient and its photo) and follows the finger. The real page
+    before is drawn under it at once (`peekBack`), a third of the way in, and shaded.
+  - Past 35% or a flick it lands (`commitPeek`); otherwise it springs back and the page is drawn
+    again (`cancelPeek`).
+  - The arrow goes back through `stepBack` (the workout guard, the app's own slide).
+- **Unchanged:** in a browser tab history drives everything as before; a live workout has no back
+  arrow, so it is never swiped; a sheet is closed by its own drag.
+- **Test:** turns the mode on and checks that no history entries are made, the page before is under
+  the finger mid-drag, a short drag springs back, a long one lands, the root does nothing, and the
+  arrow works.
+- **Not testable here:** Safari's own gesture. To confirm on the phone.
