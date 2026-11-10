@@ -119,6 +119,9 @@ function lineChart(pts,o){
    +'<span>'+esc(shortd(pts[last].d))+'</span></figcaption></figure>';
   return h;}
 function tooFew(text){return '<p class="pgnone">'+esc(text)+'</p>';}
+/* The same, standing on its own: in a card, never as loose words over the picture
+   (owner, 10 Nov: "text just flying in air with no structure"). */
+function noneCard(text,btn){return '<div class="pgcard pgempty">'+tooFew(text)+(btn||'')+'</div>';}
 /* Bars as capsules, the way the reference draws a week: each value a rounded column on
    a glass track, its date inside at the foot, and the newest filled in the accent with
    its figure above it. For a short series only (up to 16), where each bar is wide
@@ -415,7 +418,7 @@ function vStrength(r){
   var half=V.phalf||"all";
   var lifts=half==="all"?all:all.filter(function(L){return liftHalf(L.name)===half;});
   var h="";
-  if(!lifts.length)return h+tooFew(t("Nothing logged for this half of the body yet."));
+  if(!lifts.length)return h+noneCard(t("Nothing logged for this half of the body yet."));
   /* One line on the whole: the most-trained lifts' estimates across the range. */
   var si=strengthIndex(r);
   if(si.pct!=null){var up=si.pct>=0.5,down=si.pct<=-0.5;
@@ -505,15 +508,15 @@ function vBody(r){
        +' <span class="pglg-d" aria-hidden="true"></span>'+esc(t("Weigh-ins"))+'</p>';}
     else h+=tooFew(t("Fewer than two weigh-ins in this range. Pick a longer one, or weigh in again."));}
   h+='<button class="btn g" data-sheet="weigh">'+esc(t("Log weight"))+'</button></div>';
-  h+=lbl(t("Is it working?"))+(tc||tooFew(t("Weigh in a few times over two weeks and this says whether the target is working.")));
+  h+=lbl(t("Is it working?"))+(tc||noneCard(t("Weigh in a few times over two weeks and this says whether the target is working.")));
 
   var ms=measurements();
   h+=lbl(t("Measurements"),'<button class="pglink" data-sheet="measure">'+esc(t(ms.length?"Update":"Add"))+'</button>');
-  if(!ms.length)h+=tooFew(t("Chest, waist, arms and the rest, in centimetres. The change since last time shows beside each."));
-  ms.forEach(function(m){
-    h+='<div class="pgm"><span>'+esc(t(m.name))+'</span>'
+  if(!ms.length)h+=noneCard(t("Chest, waist, arms and the rest, in centimetres. The change since last time shows beside each."));
+  else h+='<div class="pgcard pgrows">'+ms.map(function(m){
+    return '<div class="pgm"><span>'+esc(t(m.name))+'</span>'
      +'<b>'+r1(m.v).toFixed(1)+' '+esc(t("cm"))+'</b>'
-     +'<span class="pgm-d">'+(m.delta?delta(m.delta,true,m.good," "+t("cm")):'')+'</span></div>';});
+     +'<span class="pgm-d">'+(m.delta?delta(m.delta,true,m.good," "+t("cm")):'')+'</span></div>';}).join("")+'</div>';
 
   var bf=bodyFat(),ibE=bf.src==="entered"?(S.body||[]).filter(function(b){return b.date===bf.date&&b.src==="inbody";})[0]:null;
   h+=lbl(t("Body composition"));
@@ -540,7 +543,7 @@ function vBody(r){
 
   var ph=photoList(function(){if(V.tab==="progress"&&V.ptab==="body")render();});
   h+=lbl(t("Progress photos"),ph&&ph.length>=2?'<button class="pglink" data-phcmp="1">'+esc(t("Compare"))+'</button>':'');
-  if(ph===false)h+=tooFew(t("This browser will not store photos. Open Bunyan from the home screen or in Safari or Chrome."));
+  if(ph===false)h+=noneCard(t("This browser will not store photos. Open Bunyan from the home screen or in Safari or Chrome."));
   else if(ph===null)h+='<div class="pgphotos"><div class="skel pgph-sk"></div></div>';
   else{
     var add='<label class="pgaddph'+(ph.length?' sm':'')+'">'
@@ -680,12 +683,12 @@ function vNutrition(r,head){
 
   var sk=streaks();
   h+=lbl(t("Consistency streaks"));
-  h+='<div class="pgm tall"><span>'+esc(t("Protein target met"))
+  h+='<div class="pgcard pgrows"><div class="pgm tall"><span>'+esc(t("Protein target met"))
    +'<small>'+esc(t("at least")+" "+(100-tol)+"% "+t("of")+" "+fmtN(g.p)+"g")+'</small></span>'
    +'<b class="acc">'+sk.protein+' '+esc(t(sk.protein===1?"day":"days"))+'</b></div>'
    +'<div class="pgm tall"><span>'+esc(t("Calorie goal adhered"))
    +'<small>'+esc(t("within")+" "+tol+"% "+t("of")+" "+fmtN(g.kcal)+" kcal")+'</small></span>'
-   +'<b class="acc">'+sk.kcal+' '+esc(t(sk.kcal===1?"day":"days"))+'</b></div>';
+   +'<b class="acc">'+sk.kcal+' '+esc(t(sk.kcal===1?"day":"days"))+'</b></div></div>';
   return h;}
 
 export {adjustBy, ptabBody, ptabNow, trendCard, vLiftSheet, vNutrition, vPhotoCompare, vProgress, vRecapSheet};

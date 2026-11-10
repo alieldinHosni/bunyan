@@ -47,8 +47,8 @@ import {RANGE} from "../coach/landmarks.js";
 import {focusMuscles, focusParts, works} from "../data/parts.js";
 
 var BIG=["Chest","Back","Quads","Shoulders","Hamstrings","Glutes"];
-var GROUP={Chest:"push",Shoulders:"push",Triceps:"push",Back:"pull",Biceps:"pull",
-  Quads:"legs",Hamstrings:"legs",Glutes:"legs",Calves:"legs",Core:"core"};
+var GROUP={Chest:"push",Shoulders:"push",Triceps:"push",Back:"pull",Biceps:"pull",Forearms:"pull",
+  Quads:"legs",Hamstrings:"legs",Glutes:"legs",Calves:"legs",Adductors:"legs",Core:"core"};
 var SESSION=10;
 var TIMED=/plank|hold|hang|wall sit|bridge hold|isometric|stretch/i;
 
@@ -67,6 +67,11 @@ function targets(p,train){
   out.Triceps=Math.max(4,Math.round(out.Triceps*(focus.indexOf("Triceps")>=0?0.7:0.5)));
   out.Calves=focus.indexOf("Calves")>=0?8:6;
   out.Core=focus.indexOf("Core")>=0?8:6;
+  /* Forearms and the inner thighs get work from every pull and every squat; their own
+     exercises go in only when they are asked for (js/engine/volume.js counts them, does
+     not judge them), at the calves' figure. */
+  if(focus.indexOf("Forearms")>=0)out.Forearms=6;
+  if(focus.indexOf("Adductors")>=0)out.Adductors=6;
   return out;}
 
 /* Days apart on the weekly cycle, both ways round. */
@@ -91,7 +96,7 @@ function spaced(pos,k){
    at least, three at most), the rest day kept for each, every training day used, the
    days' work as even as it can be, and with four days or more, an upper day not also a
    leg day. The core goes on the lightest days. */
-var UNITS={push:["Chest","Shoulders","Triceps"],pull:["Back","Biceps"],legs:["Quads","Hamstrings","Glutes","Calves"]};
+var UNITS={push:["Chest","Shoulders","Triceps"],pull:["Back","Biceps","Forearms"],legs:["Quads","Hamstrings","Glutes","Calves","Adductors"]};
 function place(T,pos,p){
   var n=pos.length,focus=focusMuscles(p.focus),names=Object.keys(UNITS);
   var opts=names.map(function(u){

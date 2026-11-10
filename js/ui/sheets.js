@@ -448,20 +448,35 @@ function vSheet(){
   else if(V.sheet==="inbody"){
     var ib=(V.sd&&V.sd.ib)||{},IBF=[["weight","Weight",wUnit()],["pbf","Body fat","%"],["smm","Skeletal muscle mass",wUnit()],
       ["fatkg","Body fat mass",wUnit()],["vfl","Visceral fat level",""],["ibmr","BMR (the device's)","kcal"],["tbw","Total body water","L"],["score","InBody score",""]];
-    var kgF={weight:1,smm:1,fatkg:1};
-    b='<h2>'+t("InBody result")+'</h2><p class="tiny" style="margin:2px 0 12px">'
-     +esc(t("Choose the photo of your sheet and the app reads it, here on the phone. Check every figure before saving. If one is missed, copy the photo's text and paste it below."))+'</p>'
-     +'<label class="btn g ib-pick">'+esc(t(V.sd&&V.sd.img?"Choose another photo":"Choose the photo"))+'<input id="ib_img" type="file" accept="image/*" hidden></label>'
-     +(V.sd&&V.sd.img?'<img class="ib-img" src="'+esc(V.sd.img)+'" alt="'+esc(t("Your InBody sheet"))+'">':'')
-     +'<p id="ibOcr" class="tiny ib-st" role="status" hidden><span class="ib-stl"></span> <span class="num ib-stn"></span></p>'
+    var kgF={weight:1,smm:1,fatkg:1},byK={};IBF.forEach(function(f){byK[f[0]]=f;});
+    /* Two steps, each in its own card (owner, 10 Nov: "fix this InBody page, as you did
+       with the workout pages"): read the sheet, then check the figures. The photo is the
+       way in; the pasted text is folded under it, for a figure the photo missed. Each
+       figure shows its unit inside the field and, faintly, the last test's value. */
+    var last=(S.body||[]).filter(function(x){return x.src==="inbody";}).slice(-1)[0]||null,lastK={pbf:"bf",score:"ibscore"};
+    var field=function(k){var f=byK[k],v=ib[k];if(v!=null&&kgF[k])v=toDisp(v);
+      var lv=last?last[lastK[k]||k]:null;if(lv!=null&&kgF[k])lv=toDisp(lv);
+      return '<div class="ibf"><label for="ib_'+k+'">'+esc(t(f[1]))+'</label><div class="ibf-in">'
+       +'<input id="ib_'+k+'" class="num" type="number" inputmode="decimal" step="any" value="'+(v!=null?v:"")+'"'+(lv!=null?' placeholder="'+esc(String(lv))+'"':'')+'>'
+       +(f[2]?'<span class="ibf-u">'+esc(f[2])+'</span>':'')+'</div></div>';};
+    var grp=function(title,ks){return '<div class="ibgrp"><h4>'+esc(t(title))+'</h4><div class="ibgrid">'+ks.map(field).join("")+'</div></div>';};
+    var img=V.sd&&V.sd.img;
+    b='<h2>'+t("InBody result")+'</h2>'
+     +'<section class="ibstep"><h3><span class="ibn num">1</span>'+esc(t("Read your sheet"))+'</h3>'
+     +(img?'<img class="ib-img" src="'+esc(img)+'" alt="'+esc(t("Your InBody sheet"))+'">':'')
+     +'<label class="ib-drop'+(img?' sm':'')+'"><span class="gtile">'+glyph("camera")+'</span><span class="ib-drop-t"><b>'
+     +esc(t(img?"Choose another photo":"Take or choose a photo"))+'</b><span>'+esc(t("Read here on the phone. The photo is not kept or sent anywhere."))+'</span></span>'
+     +'<input id="ib_img" type="file" accept="image/*" hidden></label>'
+     +'<p id="ibOcr" class="ib-st" role="status" hidden><span class="ib-stl"></span> <span class="num ib-stn"></span></p>'
+     +'<details id="ibPaste" class="ib-paste"><summary>'+esc(t("A figure missed? Paste the sheet's text"))+'</summary>'
      +'<textarea id="ib_text" class="adv-t ib-text" rows="3" placeholder="'+esc(t("Paste the copied text here"))+'"></textarea>'
-     +'<div class="sacts"><button class="btn g" data-ibpaste="1">'+esc(t("Paste"))+'</button><button class="btn g" data-ibread="1">'+esc(t("Read the numbers"))+'</button></div>'
-     +'<div class="grid2 ib-f"><div><label class="tiny" for="ib_date">'+esc(t("Date of the test"))+'</label><input id="ib_date" type="date" max="'+today()+'" value="'+esc(ib.date||today())+'"></div>'
-     +IBF.map(function(f){var v=ib[f[0]];if(v!=null&&kgF[f[0]])v=toDisp(v);
-        return '<div><label class="tiny" for="ib_'+f[0]+'">'+esc(t(f[1]))+(f[2]?' · '+esc(f[2]):'')+'</label>'
-         +'<input id="ib_'+f[0]+'" class="num" type="number" inputmode="decimal" step="any" value="'+(v!=null?v:"")+'"></div>';}).join("")+'</div>'
-     +'<p class="tiny">'+esc(t("Bioimpedance reads body water, so drinking, sweating or a full bladder moves it. Test at the same time of day each time, before eating or training."))+'</p>'
-     +'<button class="btn" data-ibsave="1">'+esc(t("Save the result"))+'</button>';
+     +'<div class="sacts"><button class="btn g" data-ibpaste="1">'+esc(t("Paste"))+'</button><button class="btn g" data-ibread="1">'+esc(t("Read the numbers"))+'</button></div></details></section>'
+     +'<section class="ibstep"><h3><span class="ibn num">2</span>'+esc(t("Check the figures"))+'</h3>'
+     +'<p class="ib-hint">'+esc(t(last?"Against your sheet. The faint figures are your last test's.":"Against your sheet. Leave blank what it does not show."))+'</p>'
+     +'<div class="ibf ibf-date"><label for="ib_date">'+esc(t("Date of the test"))+'</label><input id="ib_date" type="date" max="'+today()+'" value="'+esc(ib.date||today())+'"></div>'
+     +grp("Weight and fat",["weight","pbf","fatkg"])+grp("Muscle and water",["smm","tbw"])+grp("The device's readings",["vfl","ibmr","score"])
+     +'<p class="ib-hint">'+esc(t("Bioimpedance reads body water, so drinking, sweating or a full bladder moves it. Test at the same time of day each time, before eating or training."))+'</p></section>'
+     +'<div class="sfoot"><button class="btn" data-ibsave="1">'+esc(t("Save the result"))+'</button></div>';
   }
   else if(V.sheet==="steps"){
     b='<h2>'+t("Steps today")+'</h2><p class="tiny" style="margin:2px 0 14px">'

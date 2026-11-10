@@ -52,8 +52,13 @@ function allowed(f,pref){
 /* ---- the plates ------------------------------------------------------------------
    r: P protein, C carb, F fat (solved); V and X are fixed amounts (vegetables, a
    piece of fruit). ids are tried in order, after a rotation, so the same plate is
-   not the same food every time. min/max/step in grams. egy marks Egyptian home food,
-   put first unless the person prefers otherwise. */
+   not the same food every time. min/max/step in grams.
+   cu is the kitchen a plate comes from (owner, 10 Nov: "more food options and
+   variety"): egy Egyptian home food, lev the Levant (Syria, Lebanon, Palestine,
+   Jordan), gulf the Gulf, med the Mediterranean, intl international. The person's own
+   kitchen is tried first, the rest after (pref.style; "mixed" takes them as they
+   come). Every plate is made of foods in the database; a dish (kabsa, mujadara,
+   koshari) stands in a slot by what its energy mostly is. */
 function S(r,ids,min,max,step){return {r:r,ids:ids,min:min,max:max,step:step};}
 function FX(r,ids,g){return {r:r,ids:ids,g:g};}
 var BREAD=["baladi_bran","baladi","aish_shamsi","bread_wholegrain","potato","sweet_potato_baked"];
@@ -62,28 +67,75 @@ var SALAD=["salata_baladi","salad","cucumber","tomato"];
 var OIL=["olive_oil"];
 var PLATES={
   Breakfast:[
-    {k:"ful_eggs",egy:1,s:[S("P",["egg_boiled","egg_white_ck"],50,200,50),S("C",["ful","ful_tomato"],100,300,50),S("C",BREAD,45,135,45),FX("V",SALAD,100)]},
-    {k:"eggs_cheese",egy:1,s:[S("P",["egg_boiled","omelette","egg_scrambled"],50,200,50),S("P",["gebna_areesh","cottage_low","skyr","lupini"],0,200,25),S("C",BREAD,45,180,45),FX("V",["tomato","cucumber"],100)]},
-    {k:"oats_yogurt",s:[S("C",["oats","rice_cake","banana"],30,120,10),S("P",["greek_yog_0","skyr","greek_yog","soy_milk"],150,400,50),FX("X",["banana","blueberries","strawberry","apple"],100),S("F",["almonds","peanut_butter","walnuts","chia"],0,30,5)]},
-    {k:"tofu_toast",s:[S("P",["tofu_firm","tempeh"],100,250,25),S("C",["bread_wholegrain","baladi_bran","oats","sweet_potato_baked","potato"],38,152,38),FX("V",["tomato","spinach_ck"],100),S("F",["avocado","olive_oil"],0,60,5)]}
+    {k:"ful_eggs",cu:"egy",egy:1,s:[S("P",["egg_boiled","egg_white_ck"],50,200,50),S("C",["ful","ful_tomato"],100,300,50),S("C",BREAD,45,135,45),FX("V",SALAD,100)]},
+    {k:"eggs_cheese",cu:"egy",egy:1,s:[S("P",["egg_boiled","omelette","egg_scrambled"],50,200,50),S("P",["gebna_areesh","cottage_low","skyr","lupini"],0,200,25),S("C",BREAD,45,180,45),FX("V",["tomato","cucumber"],100)]},
+    {k:"oats_yogurt",cu:"intl",s:[S("C",["oats","rice_cake","banana"],30,120,10),S("P",["greek_yog_0","skyr","greek_yog","soy_milk"],150,400,50),FX("X",["banana","blueberries","strawberry","apple"],100),S("F",["almonds","peanut_butter","walnuts","chia"],0,30,5)]},
+    {k:"labneh_eggs",cu:"lev",s:[S("P",["egg_boiled","halloumi","omelette"],50,200,50),S("P",["labneh","gebna_areesh","greek_yog_0"],0,150,25),S("C",["pita","bread_wholegrain","baladi_bran"],60,180,60),FX("V",["tomato","cucumber"],100),S("F",["olive_oil","zaatar_oil"],0,20,5)]},
+    {k:"shakshuka",cu:"lev",s:[S("P",["shakshuka"],200,450,50),S("P",["egg_white_ck","gebna_areesh","labneh"],0,200,25),S("C",["pita","baladi","bread_wholegrain"],60,180,60)]},
+    {k:"eggs_dates",cu:"gulf",s:[S("P",["omelette","egg_boiled","egg_scrambled"],100,240,40),S("P",["laban_rayeb","ayran","greek_yog_0"],0,300,50),S("C",["pita","bread_wholegrain"],60,120,60),S("C",["dates"],0,40,8),FX("V",["tomato","cucumber"],100)]},
+    {k:"feta_omelette",cu:"med",s:[S("P",["omelette","egg_scrambled"],100,240,40),S("P",["feta","cottage_low"],0,60,10),S("C",["bread_wholegrain","toast_wholemeal"],38,152,38),FX("V",["tomato","spinach_ck","cucumber"],100),S("F",["olive_oil","avocado"],0,30,5)]},
+    {k:"cereal_milk",cu:"intl",s:[S("C",["muesli","bran_flakes","oats","granola"],30,120,10),S("P",["milk_skim","milk_semi","soy_milk"],200,400,50),S("P",["whey","greek_yog_0","skyr"],0,200,25),FX("X",["banana","blueberries","strawberry"],100)]},
+    {k:"toast_eggs",cu:"intl",s:[S("P",["egg_scrambled","egg_fried","egg_boiled"],100,240,40),S("P",["turkey_breast","cottage_low","egg_white_ck"],0,150,25),S("C",["toast_wholemeal","bagel_plain","bread_wholegrain"],38,152,38),S("F",["avocado","peanut_butter"],0,60,5)]},
+    {k:"tofu_toast",cu:"intl",s:[S("P",["tofu_firm","tempeh"],100,250,25),S("C",["bread_wholegrain","baladi_bran","oats","sweet_potato_baked","potato"],38,152,38),FX("V",["tomato","spinach_ck"],100),S("F",["avocado","olive_oil"],0,60,5)]}
   ],
   Main:[
-    {k:"chicken_rice",egy:1,s:[S("P",["chicken_breast_ck","charcoal_chicken","turkey_breast"],100,300,25),S("C",RICE,100,400,25),FX("V",["salata_baladi","mixed_veg","green_beans","broccoli_ck"],150),S("F",OIL,0,20,5)]},
-    {k:"fish_rice",egy:1,s:[S("P",["tilapia_ck","fish_grilled_generic","seabass","salmon_ck","shrimp_ck"],120,300,30),S("C",RICE,100,400,25),FX("V",["salata_baladi","salad"],150),S("F",["tahina","olive_oil"],0,30,5)]},
-    {k:"molokhia",egy:1,s:[S("P",["chicken_breast_ck","beef_lean_ck","rabbit"],100,250,25),FX("V",["molokhia_plain"],250),S("C",["rice_egyptian","baladi"],100,350,25),S("F",OIL,0,15,5)]},
-    {k:"beef_potato",s:[S("P",["beef_lean_ck","veal","beef_steak","mince_cooked"],100,250,25),S("C",["potato_baked","sweet_potato_baked","potato"],150,450,50),FX("V",["salad","salata_baladi","green_beans"],150),S("F",OIL,0,20,5)]},
-    {k:"pasta",s:[S("P",["chicken_breast_ck","tuna_water","mince_cooked","turkey_breast"],100,250,25),S("C",["pasta_ck","pasta_wholemeal","quinoa_ck"],100,400,25),FX("V",["tomato_sauce"],100),S("F",["olive_oil","parmesan"],0,20,5)]},
-    {k:"lentils",egy:1,s:[S("P",["lentils","lentils_yellow","chickpea"],150,400,50),S("P",["salata_zabady","greek_yog_0","egg_boiled","tofu_firm"],0,200,50),S("C",["rice_egyptian","baladi_bran","bulgur"],0,250,25),FX("V",SALAD,150),S("F",OIL,0,15,5)]},
-    {k:"eggs_light",egy:1,s:[S("P",["eggah","omelette","egg_boiled"],100,240,40),S("P",["gebna_areesh","cottage_low","lupini"],0,200,25),S("C",BREAD,45,180,45),FX("V",["salata_baladi","cucumber"],150)]},
-    {k:"tofu_bowl",s:[S("P",["tofu_firm","tempeh","edamame"],100,300,25),S("C",["rice_basmati","quinoa_ck","brown_rice"],100,350,25),FX("V",["broccoli_ck","mixed_veg"],150),S("F",["olive_oil","sesame"],0,20,5)]}
+    {k:"chicken_rice",cu:"egy",egy:1,s:[S("P",["chicken_breast_ck","charcoal_chicken","turkey_breast"],100,300,25),S("C",RICE,100,400,25),FX("V",["salata_baladi","mixed_veg","green_beans","broccoli_ck"],150),S("F",OIL,0,20,5)]},
+    {k:"fish_rice",cu:"egy",egy:1,s:[S("P",["tilapia_ck","fish_grilled_generic","seabass","salmon_ck","shrimp_ck"],120,300,30),S("C",RICE,100,400,25),FX("V",["salata_baladi","salad"],150),S("F",["tahina","olive_oil"],0,30,5)]},
+    {k:"molokhia",cu:"egy",egy:1,s:[S("P",["chicken_breast_ck","beef_lean_ck","rabbit"],100,250,25),FX("V",["molokhia_plain"],250),S("C",["rice_egyptian","baladi"],100,350,25),S("F",OIL,0,15,5)]},
+    {k:"beef_potato",cu:"intl",s:[S("P",["beef_lean_ck","veal","beef_steak","mince_cooked"],100,250,25),S("C",["potato_baked","sweet_potato_baked","potato"],150,450,50),FX("V",["salad","salata_baladi","green_beans"],150),S("F",OIL,0,20,5)]},
+    {k:"pasta",cu:"med",s:[S("P",["chicken_breast_ck","tuna_water","mince_cooked","turkey_breast"],100,250,25),S("C",["pasta_ck","pasta_wholemeal","quinoa_ck"],100,400,25),FX("V",["tomato_sauce"],100),S("F",["olive_oil","parmesan"],0,20,5)]},
+    {k:"lentils",cu:"egy",egy:1,s:[S("P",["lentils","lentils_yellow","chickpea"],150,400,50),S("P",["salata_zabady","greek_yog_0","egg_boiled","tofu_firm"],0,200,50),S("C",["rice_egyptian","baladi_bran","bulgur"],0,250,25),FX("V",SALAD,150),S("F",OIL,0,15,5)]},
+    {k:"eggs_light",cu:"egy",egy:1,s:[S("P",["eggah","omelette","egg_boiled"],100,240,40),S("P",["gebna_areesh","cottage_low","lupini"],0,200,25),S("C",BREAD,45,180,45),FX("V",["salata_baladi","cucumber"],150)]},
+    {k:"koshari",cu:"egy",s:[S("C",["koshari"],200,500,50),S("P",["salata_zabady","greek_yog_0","egg_boiled","lentils"],100,300,50),FX("V",["salata_baladi"],150)]},
+    {k:"kofta_rice",cu:"egy",s:[S("P",["kofta","kabab_halla","kamouneya","kebda_eskandarani"],100,250,25),S("C",["rice_egyptian","rice_with_vermicelli","baladi"],100,350,25),FX("V",["salata_baladi","salad"],150),S("F",["tahina"],0,20,5)]},
+    {k:"mahshi",cu:"egy",s:[S("C",["mahshi_mix","mahshi_kousa","mahshi_wara2","mahshi_felfel"],200,450,50),S("P",["chicken_breast_ck","charcoal_chicken","kofta","lentils"],100,250,25),S("P",["salata_zabady","greek_yog_0"],0,150,50)]},
+    {k:"stew",cu:"egy",s:[S("P",["chicken_breast_ck","beef_stew_meat","veal","lentils"],100,250,25),FX("V",["fasolia_stew","bazella","bamia_meat","batates_stew","sabanekh_stew"],250),S("C",["rice_egyptian","rice_with_vermicelli","baladi"],100,350,25)]},
+    {k:"sayadeya",cu:"egy",s:[S("C",["fish_sayadeya"],200,450,50),S("P",["fish_grilled_generic","tilapia_ck","shrimp_ck","mullet"],100,250,25),FX("V",["salata_baladi","salad"],150),S("F",["tahina"],0,20,5)]},
+    {k:"falafel",cu:"egy",s:[S("C",["tameya"],60,200,20),S("P",["greek_yog_0","salata_zabady","egg_boiled","lupini"],100,300,50),S("C",["baladi_bran","pita"],0,120,60),FX("V",["salata_baladi","salad"],150)]},
+    {k:"shish_tawook",cu:"lev",s:[S("P",["chicken_shish","grilled_platter","kebab"],100,300,25),S("C",["rice_basmati","bulgur","freekeh","pita"],100,350,25),FX("V",["tabbouleh","fattoush"],150),S("F",["hummus_dip","tahina","baba_ganoush"],0,80,10)]},
+    {k:"shawarma_plate",cu:"lev",s:[S("P",["shawarma_ch","shawarma_beef"],100,300,25),S("C",["pita","rice_basmati"],60,240,60),FX("V",["fattoush","salad"],150),S("F",["tahina"],0,30,5)]},
+    {k:"mujadara",cu:"lev",s:[S("C",["mujadara"],150,450,50),S("P",["greek_yog_0","labneh","salata_zabady","egg_boiled"],100,300,50),FX("V",["fattoush","salad","salata_baladi"],150)]},
+    {k:"maqluba",cu:"lev",s:[S("C",["maqluba","freekeh"],150,400,50),S("P",["chicken_breast_ck","lamb_leg"],50,200,25),S("P",["salata_zabady","greek_yog_0","yogurt"],0,200,50),FX("V",["salad"],150)]},
+    {k:"kabsa",cu:"gulf",s:[S("C",["kabsa","machboos","mandi"],200,500,50),S("P",["chicken_breast_ck","charcoal_chicken","lamb_leg","fish_grilled_generic"],50,200,25),FX("V",["salad","salata_baladi"],150),S("P",["salata_zabady","yogurt","laban_rayeb"],0,150,50)]},
+    {k:"saloona",cu:"gulf",s:[S("P",["chicken_breast_ck","fish_grilled_generic","beef_stew_meat"],100,250,25),FX("V",["saloona"],250),S("C",["rice_basmati","rice_egyptian"],100,350,25)]},
+    {k:"harees",cu:"gulf",s:[S("P",["harees"],250,500,50),S("P",["chicken_breast_ck"],0,150,25),FX("V",["salad","cucumber"],100)]},
+    {k:"fish_potato",cu:"med",s:[S("P",["salmon_ck","seabass","cod_ck","sardine"],100,250,25),S("C",["potato_baked","couscous","quinoa_ck","bulgur"],100,400,25),FX("V",["salad","mixed_veg","broccoli_ck"],150),S("F",["olive_oil"],0,20,5)]},
+    {k:"chicken_couscous",cu:"med",s:[S("P",["chicken_breast_ck","chicken_thigh_ck","turkey_breast"],100,300,25),S("C",["couscous","bulgur","freekeh"],100,400,25),FX("V",["mixed_veg","salad"],150),S("F",["olive_oil","feta"],0,30,5)]},
+    {k:"greek_bowl",cu:"med",s:[S("P",["chickpea","tuna_water","chicken_breast_ck"],100,300,25),S("C",["bread_wholegrain","pita","quinoa_ck"],0,200,25),FX("V",["salad","tomato","cucumber"],200),S("F",["feta","olive_oil"],10,60,10)]},
+    {k:"burrito_bowl",cu:"intl",s:[S("P",["chicken_breast_ck","mince_cooked","turkey_breast"],100,300,25),S("C",["brown_rice","rice_basmati"],100,350,25),S("C",["black_beans","kidney_beans"],0,150,25),FX("V",["salad","mixed_veg"],150),S("F",["avocado","cheddar"],0,80,10)]},
+    {k:"wrap",cu:"intl",s:[S("P",["turkey_breast","chicken_breast_ck","tuna_water"],100,250,25),S("C",["tortilla"],60,180,60),FX("V",["salad","tomato"],100),S("F",["avocado","cream_cheese","olive_oil"],0,50,5)]},
+    {k:"tofu_bowl",cu:"intl",s:[S("P",["tofu_firm","tempeh","edamame"],100,300,25),S("C",["rice_basmati","quinoa_ck","brown_rice"],100,350,25),FX("V",["broccoli_ck","mixed_veg"],150),S("F",["olive_oil","sesame"],0,20,5)]}
   ],
   Snack:[
-    {k:"yogurt_fruit",s:[S("P",["greek_yog_0","skyr","cottage_low","greek_yog"],150,350,50),S("C",["banana","guava","apple","orange","mango","blueberries"],0,250,50)]},
-    {k:"lupini",egy:1,s:[S("P",["lupini"],100,250,25),S("C",["orange","apple","guava"],0,250,50)]},
-    {k:"shake",s:[S("P",["whey","whey_isolate"],20,50,5),S("C",["banana","oats","dates"],0,150,10),S("P",["milk_skim","soy_milk"],0,300,50)]},
-    {k:"nuts_fruit",s:[S("F",["almonds","peanuts","walnuts","pistachios","pumpkin_seeds"],10,40,5),S("C",["banana","apple","dates"],0,200,50),S("P",["skyr","greek_yog_0","edamame"],0,200,50)]}
+    {k:"yogurt_fruit",cu:"med",s:[S("P",["greek_yog_0","skyr","cottage_low","greek_yog"],150,350,50),S("C",["banana","guava","apple","orange","mango","blueberries"],0,250,50)]},
+    {k:"lupini",cu:"egy",egy:1,s:[S("P",["lupini"],100,250,25),S("C",["orange","apple","guava"],0,250,50)]},
+    {k:"shake",cu:"intl",s:[S("P",["whey","whey_isolate"],20,50,5),S("C",["banana","oats","dates"],0,150,10),S("P",["milk_skim","soy_milk"],0,300,50)]},
+    {k:"hummus_veg",cu:"lev",s:[S("P",["greek_yog_0","labneh","halloumi"],0,200,25),S("C",["hummus_dip","baba_ganoush"],50,200,25),FX("V",["cucumber","tomato"],100),S("C",["pita"],0,60,30)]},
+    {k:"dates_laban",cu:"gulf",s:[S("C",["dates"],16,96,8),S("P",["laban_rayeb","ayran","greek_yog_0","yog_drink"],150,400,50),S("F",["almonds","pistachios"],0,30,5)]},
+    {k:"hummus_sham",cu:"egy",s:[S("C",["hummus_sham"],100,300,50),S("P",["lupini","greek_yog_0"],0,200,25)]},
+    {k:"cottage_crackers",cu:"intl",s:[S("P",["cottage_low","skyr","turkey_breast"],100,300,25),S("C",["rice_cake","crackers","apple"],20,90,10)]},
+    {k:"nuts_fruit",cu:"intl",s:[S("F",["almonds","peanuts","walnuts","pistachios","pumpkin_seeds"],10,40,5),S("C",["banana","apple","dates"],0,200,50),S("P",["skyr","greek_yog_0","edamame"],0,200,50)]}
   ]
 };
+
+/* The plates in the order they are tried: the person's kitchen first, each list turned
+   by the meal's place in the day and the variant, so two lunches are not the same dish
+   and "another version" moves on. "egy" is the default kitchen. */
+var KITCHENS=["egy","lev","gulf","med","intl"];
+function kitchen(p){return p.cu||(p.egy?"egy":"intl");}
+function turn(a,n){return a.length?a.slice(n%a.length).concat(a.slice(0,n%a.length)):a;}
+function ordered(list,style,n){
+  var st=KITCHENS.indexOf(style)>=0?style:style==="mixed"?null:"egy";
+  if(!st)return turn(list,n);
+  var mine=list.filter(function(p){return kitchen(p)===st;}),rest=list.filter(function(p){return kitchen(p)!==st;});
+  return turn(mine,n).concat(turn(rest,n));}
+/* Every food a plate can serve, for the assessment's "foods you like": a pick always
+   has a place. [{id, role}] in first-seen order, role P, C, F or V. */
+function plateFoods(){
+  var seen={},out=[];
+  Object.keys(PLATES).forEach(function(k){PLATES[k].forEach(function(p){p.s.forEach(function(sl){sl.ids.forEach(function(id){
+    if(seen[id])return;seen[id]=1;out.push({id:id,role:sl.r==="X"?"V":sl.r,cu:kitchen(p)});});});});});
+  return out;}
 
 /* When nothing above fits (a vegan who also avoids gluten, say), a plain plate
    from whatever is left: a protein, a carb, vegetables. */
@@ -200,9 +252,7 @@ function buildMealPlan(targets,pref){
     var kind=sh[0],share=sh[1];
     /* Protein is spread more evenly than energy: half by the meal's share, half equally. */
     var tg={kcal:targets.kcal*share,p:targets.p*(share+1/n)/2,c:targets.c*share,f:targets.f*share};
-    var plates=PLATES[kind].slice();
-    if(pref.style==="intl")plates.sort(function(a,b){return (a.egy?1:0)-(b.egy?1:0);});
-    else plates.sort(function(a,b){return (b.egy?1:0)-(a.egy?1:0);});
+    var plates=ordered(PLATES[kind],pref.style,v+i);
     var meal=null,usual=null;
     /* Their own meal for this kind first, the one usually eaten at this meal before
        another; each once a day. */
@@ -226,20 +276,23 @@ function buildMealPlan(targets,pref){
       var e2=0;it2.forEach(function(x){e2+=x.f.kcal*x.g/(x.f.per||100);});
       if(Math.abs(e2-tg.kcal)<=tg.kcal*USUAL_FIT){usedUsual[up2.k]=1;meal=it2;saved=sm;}}
     for(var k=0;k<plates.length&&!meal;k++){
-      var pl=plates[(k+v+i)%plates.length];
+      var pl=plates[k];
       if(used[pl.k]&&k<plates.length-1)continue;
       var items=solve(pl,tg,pref,v);
       if(items&&items.length){used[pl.k]=1;meal=items;}}
     if(!meal)meal=solve(FALLBACK,tg,pref,v+i);
     out.push({named:names?names[i]:null,n:names?null:i+1,name:"",solved:meal||[],items:[],todo:[],usual:usual?usual.days:0,saved:saved?saved.name:""});});
   /* The day as a whole: rounding to servings drifts. Carbs in the meals take up the
-     difference, a serving step at a time, within their bounds. */
+     difference, a serving step at a time, within their bounds: the app's plates first,
+     a meal of their own (usual or saved) only when nothing else can move, so it stays
+     as they eat it. */
+  var byOwn=out.slice().sort(function(a,b){return ((a.usual||a.saved)?1:0)-((b.usual||b.saved)?1:0);});
   for(var round=0;round<12;round++){
     var kc=0;out.forEach(function(m){m.solved.forEach(function(x){kc+=x.f.kcal*x.g/(x.f.per||100);});});
     var diff=targets.kcal-kc;
     if(Math.abs(diff)<targets.kcal*0.04)break;
     var moved=false;
-    out.forEach(function(m){m.solved.forEach(function(x){
+    byOwn.forEach(function(m){m.solved.forEach(function(x){
       if(moved||x.sl.r!=="C"||x.sl.g!=null)return;
       var g=x.g+(diff>0?x.sl.step:-x.sl.step);
       if(g>=x.sl.min&&g<=x.sl.max&&x.f.kcal>0){x.g=g;moved=true;}});});
@@ -282,4 +335,4 @@ function similarFoods(it,pref,n){
     res.push({food:out[i].food,grams:out[i].grams,item:itemOf({f:out[i].food,g:out[i].grams})});}
   return res;}
 
-export {allowed, buildMealPlan, itemOf, similarFoods};
+export {allowed, buildMealPlan, itemOf, plateFoods, similarFoods};

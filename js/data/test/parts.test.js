@@ -13,6 +13,15 @@ function run(t){
     ["Back.lats","Back.upper","Back.lower"],"width, thickness, lower back");
   t.eq([partOf("Hammer Curls","Biceps"),partOf("Barbell Curl","Biceps"),partOf("Triceps Pushdown","Triceps"),partOf("Standing Dumbbell Triceps Extension","Triceps")],
     ["Biceps.brach","Biceps.biceps","Triceps.outer",null],"arms; an exercise the patterns do not name is no part");
+  t.eq([partOf("Leg Extensions","Quads"),partOf("Weighted Sissy Squat","Quads"),partOf("Barbell Squat","Quads"),partOf("Leg Press","Quads")],
+    ["Quads.rf","Quads.rf","Quads.vasti","Quads.vasti"],"the quads: an extension and a sissy squat for the rectus femoris, squats and presses for the vasti");
+  t.eq([partOf("Romanian Deadlift","Hamstrings"),partOf("Kettlebell One-Legged Deadlift","Hamstrings"),partOf("Lying Leg Curls","Hamstrings"),partOf("Glute Ham Raise","Hamstrings")],
+    ["Hamstrings.hinge","Hamstrings.hinge","Hamstrings.curl","Hamstrings.curl"],"the hamstrings at the hip and at the knee");
+  t.eq([partOf("Smith Machine Reverse Calf Raises","Calves"),partOf("Seated Calf Raise","Calves"),partOf("Standing Calf Raises","Calves")],
+    ["Calves.tib","Calves.seated","Calves.standing"],"the front of the shin before any calf raise");
+  t.eq([partOf("Palms-Down Wrist Curl Over A Bench","Forearms"),partOf("Palms-Up Barbell Wrist Curl Over A Bench","Forearms"),partOf("Plate Pinch","Forearms")],
+    ["Forearms.ext","Forearms.flex","Forearms.grip"],"the forearms: extensors, flexors, grip");
+  t.eq([partOf("Low Cable Crossover","Chest"),partOf("Cable Crossover","Chest"),partOf("Side Bridge","Core")],["Chest.upper","Chest.lower","Core.obl"],"low-to-high is upper chest, high-to-low lower; a side bridge is the obliques");
   t.ok(works("Reverse Flyes","Shoulders.rear")&&!works("Incline Cable Flye","Chest.mid"),"works: the first part that matches, whichever muscle the library says");
   t.eq([focusMuscles(["Shoulders.side","Shoulders.rear","Chest"]),focusParts(["Shoulders.side","Chest"])],[["Shoulders","Chest"],["Shoulders.side"]],"a part counts for its muscle");
 
