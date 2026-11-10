@@ -17,8 +17,8 @@ var PARTS={
   Shoulders:[["rear","Rear delts",/rear delt|rear lateral|reverse (machine |cable |dumbbell )?fl(y|ye)|back fl(y|ye)|face pull|pull[- ]?apart|bent[- ]over (dumbbell |cable )?(lateral )?raise|prone (y|t) raise|reverse pec deck/i],
              ["side","Side delts",/lateral raise|side lateral|upright row|lu raise|\by[- ]raise|cable lateral|lean[- ]away/i],
              ["front","Front delts",/front raise|overhead press|military|shoulder press|arnold|push press|landmine press|seated (dumbbell |barbell )?press|handstand|pike push/i]],
-  Chest:[["upper","Upper chest",/incline|low[- ]to[- ]high|reverse[- ]grip bench/i],
-         ["lower","Lower chest",/decline|\bdips?\b|high[- ]to[- ]low/i],
+  Chest:[["upper","Upper chest",/incline|low[- ]to[- ]high|low cable crossover|reverse[- ]grip bench/i],
+         ["lower","Lower chest",/decline|\bdips?\b|high[- ]to[- ]low|^(single-arm )?cable crossover/i],
          ["mid","Middle chest",/bench press|push-?ups?|fl(y|ye)s?\b|chest press|pec deck|cable cross|svend|floor press/i]],
   Back:[["lats","Lats (width)",/pulldown|pull-?ups?|chin-?ups?|pullover|straight[- ]arm|muscle-?up/i],
         ["upper","Upper back and traps",/\brows?\b|rowing|t-bar|shrug|rack pull|high pull/i],
@@ -29,9 +29,24 @@ var PARTS={
            ["outer","Triceps outer heads",/push-?down|kickback|close[- ]grip|\bdips?\b|diamond/i]],
   Glutes:[["med","Side glutes (medius)",/abduct|clam|lateral (band )?walk|side[- ]lying|fire hydrant|monster walk/i],
           ["max","Glutes (max)",/hip thrust|glute bridge|bridge|kickback|step[- ]?up|bulgarian|frog pump|pull[- ]through/i]],
-  Calves:[["seated","Seated calves (soleus)",/seated/i],
+  /* The front of the shin is filed with the calves (js/knowledge/anatomy.js: tibialis
+     anterior, tag Calves); a reverse calf raise works it. */
+  Calves:[["tib","Front of the shin (tibialis)",/reverse calf|tibialis raise|toe raise/i],
+          ["seated","Seated calves (soleus)",/seated/i],
           ["standing","Standing calves",/calf/i]],
-  Core:[["obl","Obliques",/oblique|side plank|side bend|russian twist|wood ?chop|pallof|windmill|bicycle/i],
+  /* The quadriceps' one muscle that also crosses the hip (rectus femoris) is worked
+     hardest where the hip stays open and the knee does the work: a leg extension, a
+     sissy squat. Squats, presses and lunges load the vasti most. */
+  Quads:[["rf","Front of the thigh (rectus femoris)",/leg extension|sissy|reverse nordic|spanish squat/i],
+         ["vasti","Squat muscles (vasti)",/squat|leg press|lunge|step[- ]?ups?|split|hack/i]],
+  /* The hamstrings cross two joints: a hip hinge loads them long at the hip, a curl
+     shortens them at the knee. A plan that has only one misses half of what they do. */
+  Hamstrings:[["hinge","Hamstrings at the hip (hinges)",/romanian|stiff[- ]leg|good morning|one-legged deadlift|single[- ]leg (romanian )?deadlift|pull[- ]?through/i],
+              ["curl","Hamstrings at the knee (curls)",/leg curl|hamstring curl|nordic|glute[- ]ham|ball leg curl|hamstring slides/i]],
+  Forearms:[["ext","Outer forearm (wrist extensors)",/palms-down|reverse wrist|wrist roller/i],
+            ["flex","Inner forearm (wrist flexors)",/palms?-up|wrist curl|finger curl/i],
+            ["grip","Grip",/plate pinch|hand squeeze|farmer|grip/i]],
+  Core:[["obl","Obliques",/oblique|side plank|side bridge|side bend|russian twist|wood ?chop|pallof|windmill|bicycle/i],
         ["abs","Abs",/crunch|sit-?up|leg raise|knee raise|ab (wheel|roll)|rollout|hollow|v-?up|plank|dead bug|toes to bar/i]]
 };
 

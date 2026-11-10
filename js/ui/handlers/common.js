@@ -310,6 +310,8 @@ function ibPhoto(file){
     if(f&&f.value.trim())return;
     if(f)f.value=txt;
     if(Object.keys(readInBody(txt)).length){ibRead(txt);return;}
-    ibStatus(t("No InBody figures found on the photo. Copy its text and paste it below."));
-  },function(){if(my===OCR&&V.sheet==="inbody")ibStatus(t("The photo couldn't be read on this phone. Copy its text and paste it below."));});}
+    ibStatus(t("No InBody figures found on the photo. Copy its text and paste it below."));ibOpenPaste();
+  },function(){if(my===OCR&&V.sheet==="inbody"){ibStatus(t("The photo couldn't be read on this phone. Copy its text and paste it below."));ibOpenPaste();}});}
+/* The folded paste box, opened when the photo could not give the figures. */
+function ibOpenPaste(){var d=document.getElementById("ibPaste");if(d)d.open=true;}
 export {toReview, builderId, chatEnd, chatSend, editedEx, fixLogsNow, ibPhoto, ibRead, isShared, LENT, MF, moveDayEx, moveRow, pcAfter, readPlan, readTraining, requestCloseSheet, retargetNow, sendText, setDbLoad, setExField, sheetDirty, slotsFrom, tidyGroups, toPlan, topOfResults, withNotes};

@@ -3990,3 +3990,30 @@ the surrounding factors if needed".
 - **Bug, older than today:** the number-wrapping helpers ran after escaping, so an apostrophe's
   `&#39;` had its 39 wrapped and showed as typed. Affected: check-in `nums`, the missed-day card,
   Settings `figs`, the missed-day sheet. All now keep entities whole.
+
+## Body and food round — branch session/bodyfood
+Owner, 10 Nov (screenshots of InBody, Food style, Progress › Body, goals, focus muscles).
+- Updates reach the phone (js/app.js): the owner's phone was days behind (old goals/focus screens). A new service
+  worker took over but the open page kept old code until a cold start, which a Home Screen app rarely gets. Now:
+  once an update is installed, coming back to the app after 30 s away reloads it, unless a workout runs, a sheet is
+  open, the assessment is open or the coach panel is up. Also re-checks for an update each time the app comes back.
+- Muscle picker (views/assess.js): regions (upper body, arms, legs, core) as list rows; a row opens to its parts
+  (<details name> accordion, the one last touched stays open across renders, V.asd.fopen); the picks at the top in a
+  sticky card, each a tap to take off. New: Forearms (extensors, flexors, grip) and Inner thighs (Adductors) as
+  muscles; parts for Quads (rectus femoris / vasti), Hamstrings (hinge / curl), Calves (tibialis first). build.js
+  gives Forearms/Adductors 6 sets only when asked, in the pull / legs units. Low Cable Crossover = upper chest,
+  Cable Crossover = lower, Side Bridge = obliques. Exercises the knowledge base names but the library lacks
+  (fire hydrant, reverse nordic, band lateral walk) were NOT added: no photographs (CLAUDE.md honesty rule); the
+  library's own photographed movements cover each part.
+- Food (engine/mealplan.js): plates carry cu (egy, lev, gulf, med, intl); 26 new plates from database dishes
+  (kabsa, machboos, saloona, harees, shish tawook, shawarma, mujadara, maqluba, shakshuka, koshari, mahshi, stews,
+  sayadeya, ta'meya, burrito bowl, wrap, cereal, fish and couscous…). ordered(): the person's kitchen first, each
+  list turned by meal and variant. Every style × diet × 3–5 meals lands within 8% of the target (checked). Day
+  balancing moves the app's plates before the person's own usual/saved meal. Assessment: six kitchens; liked foods
+  are every plate food the diet allows, by kind (protein, carbs and dishes, veg and fruit, fats), eight in sight,
+  the rest folded.
+- InBody sheet: two step cards (read the sheet: photo tile, paste folded and opened when the photo fails; check the
+  figures: date full width, figures grouped, unit inside each field, last test's value as placeholder), save in
+  the sticky foot.
+- Progress › Body: no loose words over the picture: empty states in cards (noneCard), measurement and streak rows
+  as one card's list; section labels in --sub with a halo of the ground (also the assessment's labels).

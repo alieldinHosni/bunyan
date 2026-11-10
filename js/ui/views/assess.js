@@ -16,7 +16,7 @@ import {BUILT, dayMinutes, generatePlan, LEVELS, splitCandidates} from "../../en
 import {wdName, weekOrder} from "../../engine/schedule.js";
 import {lastWeight, macroTargets, tdee} from "../../engine/formulas.js";
 import {volumeCheck} from "../../engine/volume.js";
-import {buildMealPlan} from "../../engine/mealplan.js";
+import {allowed, buildMealPlan, plateFoods} from "../../engine/mealplan.js";
 import {FOODDB, foodById, foodName, ownFood, sumNutrition} from "../../engine/nutrition.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {S} from "../../state.js";
@@ -58,8 +58,13 @@ var STEPS=["intro","you","goal","level","week","gear","focus","life","limits","h
 /* The muscles someone can ask to bring up (up to FOCUS_MAX), and the big lifts someone
    can say they will not do: those are hidden from the plan, as the ⋯ menu's "Never
    suggest" would, and the week is built without them. */
-var FOCUS=[["Chest","Chest"],["Back","Back"],["Shoulders","Shoulders"],["Biceps","Biceps"],["Triceps","Triceps"],
-  ["Quads","Quads"],["Hamstrings","Hamstrings"],["Glutes","Glutes"],["Calves","Calves"],["Core","Core"]];
+var FOCUS=[["Chest","Chest"],["Back","Back"],["Shoulders","Shoulders"],["Biceps","Biceps"],["Triceps","Triceps"],["Forearms","Forearms"],
+  ["Quads","Quads"],["Hamstrings","Hamstrings"],["Glutes","Glutes"],["Adductors","Inner thighs"],["Calves","Calves"],["Core","Core"]];
+/* The muscles by region, as someone looks for them (owner, 10 Nov: "organized and
+   engineered better to be more easy"): upper body, arms, legs, the middle. */
+var REGIONS=[["Upper body",["Chest","Back","Shoulders"]],["Arms",["Biceps","Triceps","Forearms"]],
+  ["Legs",["Quads","Hamstrings","Glutes","Adductors","Calves"]],["Core",["Core"]]];
+function focusName(m){var x=FOCUS.filter(function(f){return f[0]===m;})[0];return x?(x[0]===x[1]?tm(m).trim():t(x[1])):m;}
 var FOCUS_MAX=3;
 var NOLIFT=["Barbell Squat","Barbell Deadlift","Barbell Bench Press - Medium Grip","Standing Military Press",
   "Bent Over Barbell Row","Pullups","Leg Press","Barbell Walking Lunge"];
@@ -89,11 +94,8 @@ function skipOf(a){
   return keep.concat((a.nolift||[]).filter(function(n){return keep.indexOf(n)<0;}));}
 function foodPrefs(a,variant){
   return Object.assign({meals:num(a.meals)||4,diet:a.diet,avoid:a.avoid.slice(),powder:!!a.powder,style:a.style,likes:(a.likes||[]).slice(),variant:variant||0},FOODDB?ownFood():{});}
-/* Foods to say you like (the meal plan's own staples, so a pick always has a place): the
-   plan uses them first where they fit. */
-var LIKES=["ful","egg_boiled","chicken_breast_ck","tilapia_ck","beef_lean_ck","tuna_water","gebna_areesh","greek_yog","lentils",
-  "rice_egyptian","baladi","pasta_ck","oats","potato","sweet_potato_baked","molokhia_plain","lupini","banana"];
-
+/* The kitchens a meal plan can be written from (js/engine/mealplan.js). */
+var STYLES=[["egy","Egyptian home food"],["lev","Levantine (Syrian, Lebanese)"],["gulf","Gulf (Khaleeji)"],["med","Mediterranean"],["intl","International"],["mixed","A mix of all of them"]];
 /* Everything "Use this plan" would set, worked out with the draft in place of what
    is saved, then put back. Cached on the answers. */
 var CACHE={k:null,v:null};
@@ -205,12 +207,27 @@ function body(a){
        same for the other muscles"): a part gets an exercise that works it, first in its
        day (js/data/parts.js, js/engine/build.js). The whole and its parts replace one
        another. */
-    var fo=a.focus||[];
-    h+='<div class="asfocus">'+FOCUS.map(function(x){
-      var m=x[0],ps=partsOf(m),whole=fo.indexOf(m)>=0,some=fo.some(function(f){return f.indexOf(m+".")===0;});
-      return '<div class="asf'+(whole||some?' on':'')+'"><div class="asf-h">'+esc(tm(x[1]).trim())+'</div><div class="aschips">'
-       +chip("focus",m,ps.length?t("All of it"):tm(x[1]).trim(),whole,true)
-       +ps.map(function(pp){return chip("focus",pp.id,t(pp.label),fo.indexOf(pp.id)>=0,true);}).join("")+'</div></div>';}).join("")+'</div>';
+    var fo=a.focus||[],picked=focusMuscles(fo);
+    /* What is picked, at the top, each one a tap to take off; then the muscles by region,
+       one row each. A row opens to its parts (one open at a time: the one last touched
+       stays open across a re-render); a muscle with no parts is picked by its row. */
+    var label=function(id){return id.indexOf(".")>0?t(partLabel(id)):focusName(id);};
+    h+='<div class="asfpick" aria-live="polite"><div class="asfpick-h"><b>'+esc(t("Your picks"))+'</b><span class="num">'+picked.length+' / '+FOCUS_MAX+'</span></div>'
+     +(fo.length?'<div class="aschips">'+fo.map(function(id){
+        return '<button class="aschip on asfx" data-asm="focus|'+esc(id)+'" aria-label="'+esc(t("Take off")+": "+label(id))+'">'+esc(label(id))+'<span aria-hidden="true">×</span></button>';}).join("")+'</div>'
+       :'<p class="as-note">'+esc(t("Nothing picked: every muscle gets its share. Pick up to three to bring up."))+'</p>')+'</div>';
+    h+=REGIONS.map(function(rg){
+      return '<section class="asreg"><h3>'+esc(t(rg[0]))+'</h3>'+rg[1].map(function(m){
+        var ps=partsOf(m),whole=fo.indexOf(m)>=0,mine=fo.filter(function(f){return f.indexOf(m+".")===0;}),on=whole||mine.length;
+        var state=whole?t("All of it"):mine.map(function(f){return t(partLabel(f));}).join(t(", "));
+        var full=!on&&picked.length>=FOCUS_MAX;
+        if(!ps.length)return '<button class="asfm'+(on?' on':'')+(full?' full':'')+'" data-asm="focus|'+esc(m)+'" aria-pressed="'+(on?"true":"false")+'">'
+          +'<span class="asfm-n">'+esc(focusName(m))+'</span><span class="asfm-s">'+esc(on?t("Picked"):"")+'</span><span class="asfm-k" aria-hidden="true"></span></button>';
+        return '<details class="asfm-d" name="asfm"'+((a.fopen===m)?' open':'')+'><summary class="asfm'+(on?' on':'')+(full?' full':'')+'">'
+          +'<span class="asfm-n">'+esc(focusName(m))+'</span><span class="asfm-s">'+(on?esc(state):esc(t("{n} parts")).replace("{n}",'<bdi class="num">'+ps.length+'</bdi>'))+'</span>'
+          +'<span class="ico ico-chev asfm-c" aria-hidden="true"></span></summary>'
+          +'<div class="aschips asfm-p">'+chip("focus",m,t("All of it"),whole,true)
+          +ps.map(function(pp){return chip("focus",pp.id,t(pp.label),fo.indexOf(pp.id)>=0,true);}).join("")+'</div></details>';}).join("")+'</section>';}).join("");
     h+=lbl(t("Lifts you won't do (optional)"))+'<div class="aschips">'+NOLIFT.map(function(n){
         return chip("nolift",n,exName(n),(a.nolift||[]).indexOf(n)>=0,true);}).join("")+'</div>'
      +'<p class="as-note">'+t("Left out of your plan, and never suggested. Exercises you have starred are used first. Both can be changed any time from an exercise's menu.")+'</p>';}
@@ -244,15 +261,27 @@ function body(a){
     var cl=condLines(rulesFor(profileOf(a)),profileOf(a));
     h+='<p class="as-note">'+esc(cl.length?t("Your plan follows the training guidelines for these. Your doctor's advice comes first."):t("Pick any that a doctor has told you about. Each one changes how the plan is built."))+'</p>';}
   else if(s==="food"){
-    h+=q(t("How you eat"),t("For the meal plan. It uses foods from the app's database, Egyptian home food first."));
+    h+=q(t("How you eat"),t("For the meal plan. It uses foods from the app's database, from the kitchen you pick first."));
     h+=lbl(t("Meals a day"))+chips("meals",[[3,"3"],[4,"4"],[5,"5"],[6,"6"]],a.meals);
     h+=lbl(t("Diet"))+chips("diet",[["any",t("Everything")],["veg",t("Vegetarian")],["pesc",t("Pescatarian")],["vegan",t("Vegan")]],a.diet);
     h+=lbl(t("Leave out"))+mchips("avoid",AVOIDS,a.avoid);
     h+=lbl(t("Protein powder"))+chips("powder",[["1",t("I use it")],["0",t("No powder")]],a.powder?"1":"0");
-    h+=lbl(t("Food style"))+chips("style",[["egy",t("Egyptian home food")],["mixed",t("A mix")],["intl",t("International")]],a.style);
-    if(FOODDB)h+=lbl(t("Foods you like (optional)"))+'<div class="aschips">'+LIKES.map(function(id){var f=foodById(id);
-        return f?chip("likes",id,foodName(f),(a.likes||[]).indexOf(id)>=0,true):"";}).join("")+'</div>'
-      +'<p class="as-note">'+t("The plan uses them first where they fit, with the foods you log.")+'</p>';}
+    h+=lbl(t("Food style"))+chips("style",STYLES.map(function(x){return [x[0],t(x[1])];}),a.style);
+    /* Foods to say you like: every food the meal plan can serve, by what it is in a
+       meal, only those this diet and these exclusions allow; the first few of each kind
+       in sight, the rest a tap away. Their own kitchen's first. */
+    if(FOODDB){
+      var pf=plateFoods(),pr={diet:a.diet,avoid:a.avoid,powder:!!a.powder},lk=a.likes||[];
+      pf.sort(function(x,y){return (y.cu===a.style?1:0)-(x.cu===a.style?1:0);});
+      h+=lbl(t("Foods you like (optional)"))+'<p class="as-note">'+t("The plan uses them first where they fit, with the foods you log.")+'</p>'
+       +[["P","Protein"],["C","Carbs and dishes"],["V","Vegetables and fruit"],["F","Fats"]].map(function(g){
+          var fs=pf.filter(function(x){return x.role===g[0];}).map(function(x){return foodById(x.id);})
+            .filter(function(f){return f&&allowed(f,pr);});
+          if(!fs.length)return "";
+          var ch=function(f){return chip("likes",f.id,foodName(f),lk.indexOf(f.id)>=0,true);};
+          var first=fs.slice(0,8),more=fs.slice(8),picked=more.filter(function(f){return lk.indexOf(f.id)>=0;}).length;
+          return '<div class="aslk"><h3>'+esc(t(g[1]))+'</h3><div class="aschips">'+first.map(ch).join("")+'</div>'
+           +(more.length?'<details class="aslk-more"'+(picked?' open':'')+'><summary><span>'+esc(t("{n} more")).replace("{n}",'<bdi class="num">'+more.length+'</bdi>')+'</span></summary><div class="aschips">'+more.map(ch).join("")+'</div></details>':'')+'</div>';}).join("");}}
   else if(s==="sleep"){
     h+=q(t("How do you sleep?"),t("Most nights. Short sleep slows recovery, so the plan asks a little less of you."));
     h+=chips("sleep",[[5,t("Under 6 hours")],[6.5,t("6 to 7 hours")],[8,t("7 to 9 hours")],[9.5,t("More than 9")]],a.sleep);
@@ -268,7 +297,7 @@ function body(a){
 function mealsWhy(a,meals){
   var P=foodPrefs(a),eat=(P.habits&&P.habits.eaten)||{},likes=a.likes||[],mine=[],usual=0,ar=S.prefs.lang==="ar";
   meals.forEach(function(m){if(m.usual)usual++;m.items.forEach(function(it){if((likes.indexOf(it.fid)>=0||eat[it.fid])&&mine.indexOf(it.fid)<0)mine.push(it.fid);});});
-  var x=fill(t("Built for {n} meals a day, {s}"),{n:num(a.meals)||4,s:t(a.style==="intl"?"international food first":a.style==="mixed"?"a mix of Egyptian and international food":"Egyptian home food first")});
+  var x=fill(t("Built for {n} meals a day, {s}"),{n:num(a.meals)||4,s:t({intl:"international food first",mixed:"a mix of every kitchen",lev:"Levantine food first",gulf:"Gulf food first",med:"Mediterranean food first"}[a.style]||"Egyptian home food first")});
   if(a.diet&&a.diet!=="any")x+=", "+t({veg:"vegetarian",pesc:"pescatarian",vegan:"vegan"}[a.diet]||a.diet);
   if((a.avoid||[]).length)x+=", "+t("without")+" "+a.avoid.map(function(v){return t((AVOIDS.filter(function(z){return z[0]===v;})[0]||[v,v])[1]).toLowerCase();}).join(ar?" و":", ");
   x+=".";

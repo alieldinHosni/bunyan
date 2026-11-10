@@ -245,7 +245,7 @@ function register(){
     var ml=V.asd[f]||(V.asd[f]=[]),mi=ml.indexOf(v);
     /* Focus: up to three muscles, any of their parts; a whole muscle and its parts
        replace one another (js/data/parts.js). */
-    if(f==="focus"){var mu=String(v).split(".")[0];
+    if(f==="focus"){var mu=String(v).split(".")[0];V.asd.fopen=mu;
       if(mi<0&&focusMuscles(ml).indexOf(mu)<0&&focusMuscles(ml).length>=FOCUS_MAX){toast(t("Up to three muscles. Take one off first."));return;}
       if(mi<0)for(var fi=ml.length-1;fi>=0;fi--){var fx=ml[fi];if(v===mu?fx.indexOf(mu+".")===0:fx===mu)ml.splice(fi,1);}
       mi=ml.indexOf(v);}
