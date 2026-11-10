@@ -4214,3 +4214,22 @@ of mass over the base, no foot slide), an athlete's body (skin, definition, musc
 body), a gym (floor, wall, rack, true plates, moving stack), movement in phases with path constraints and the
 prescribed tempo, muscles by role × action × phase, teaching aids; ten packages F-0 … F-9. It replaces WP-8 of
 docs/NEXT-PHASE.md. Nothing in the app changed.
+
+## Figure safety gate, and the coach agent's review and plan — branch session/figure
+Owner, 11 Nov: no female figure; "sometimes the 3D video glitches and I start seeing the human moving through
+the bar" (Incline Push-Up Medium), and a wrong demonstration can injure a trainee; and a review of the chat
+agent with instructions to make it smarter.
+- docs/FIGURE-V3.md: one male body only. The fault reproduced (incline push-up: chest through the bar; dips:
+  legs through the frame; bench press: the bar over the throat at one moment) and its cause (nothing checks the
+  body against the equipment). Added 2.6 the safety gate (collide.js: body capsules against the scene's solids
+  at 41 moments, declared contacts that must touch, injury clearances, `checked` on a record or the app shows
+  photographs) and 2.7 the technique sheet every movement is written from. New package F-0b, to ship first:
+  withdraw to photographs every figure that fails.
+- docs/COACH-AGENT.md: 45 things a person says were put to the coach; 16 did not answer what was asked, two of
+  them safety failures (chest pain treated as soreness). Causes in the code (keywords not meaning, no safety
+  precedence, raw search hits shown, requests answered with words, no reasons, little conversation state, one
+  156 KB file, no measure). Target pipeline (safety, understand, resolve, decide, compose, check), the answer
+  contract, commands to the engine, reason objects, an evaluation set of 300+ in both languages run on GitHub,
+  local export of misses; packages C-0 … C-10. It replaces WP-11 of docs/NEXT-PHASE.md.
+- tests: the dock travel test reads the highlight on every frame (it failed once on a slow CI machine).
+Nothing in the app changed.

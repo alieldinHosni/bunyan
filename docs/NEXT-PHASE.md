@@ -779,6 +779,9 @@ bug (remove `inputmode="none"` handling) makes it red.
 
 ### WP-11 — Coach gaps
 
+> **Superseded by `docs/COACH-AGENT.md`** (the coach's review and full upgrade plan,
+> packages C-0 to C-10). The items below are C-0, C-4, C-5 and C-8 there.
+
 **Files.** `js/ui/views/chat.js`, `js/coach/intent.js`, `js/knowledge/scope.js`,
 `js/engine/coachinfo.js`, tests in `js/coach/test/`.
 

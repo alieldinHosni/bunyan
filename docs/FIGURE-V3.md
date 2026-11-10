@@ -49,6 +49,23 @@ makes them was read (`js/data/mannequin/*`, `js/ui/mannequin.js`).
 | L6 | **Equipment is bare.** The squat has no rack; plates are oversized discs; the pulldown has no thigh pad and its weight stack does not move; cables are single lines. | Small tells that make the scene feel fake. |
 | L7 | **One arrow, loosely placed.** On the seated row it is drawn down at the foot plate, nowhere near the handle's path. | The arrow is the only motion cue and is sometimes wrong. |
 
+### What is dangerous to show
+
+Owner, 11 Nov (screenshot of Incline Push-Up Medium): "sometimes the 3D video glitches
+and I start seeing the human moving through the bar". Reproduced here, and it is not
+one exercise:
+
+| # | Seen | Why it is serious |
+| --- | --- | --- |
+| D1 | **Incline push-up: the chest and stomach pass through the bar** at the bottom of every repetition. | A body cannot do it, so the picture teaches a depth and a hand position that do not exist. |
+| D2 | **Dips: the legs pass through the frame's cross-bars**, knees folded into the uprights. | Same. |
+| D3 | **Bench press: at one point of the lowering the bar is over the throat**, not the lower chest. | This is the one way a bench press kills. A demonstration must never show it. |
+| D4 | **Nothing in the code checks any of this.** The body is posed by targets for hands, feet and pelvis; the equipment is drawn separately; no test asks whether they overlap. | Every new exercise can ship with the same fault. |
+
+A person copies what the figure does. **A wrong demonstration is worse than none**, so
+the design below makes it impossible to ship one (2.6): each figure must pass every
+check, or the exercise shows its photographs instead.
+
 ### What moves wrong
 
 The cause of most of these is one design limit: **every exercise is two poses (start
@@ -164,11 +181,8 @@ Keep MakeHuman's CC0 mesh, skeleton and weights (`tools/body/bake.py`). Change w
 is baked and how it is shaded.
 
 **Shape (bake).**
-- Keep the athletic male build, and bake a **second body, female**, from the same
-  base with MakeHuman's own sliders (the same 74-bone skeleton, so every pose and
-  record works unchanged). The figure follows the profile's sex; a setting in
-  Profile → App lets the person choose either. One `body-m.bin`, one `body-f.bin`;
-  only the one in use is fetched at start, both are precached.
+- **One body: the athletic male build**, as now (owner, 11 Nov: no female figure). No
+  second body is baked and nothing in the app chooses between bodies.
 - **Hair**: a short cropped cap as geometry (a shell 4–6 mm off the scalp from the
   scalp's own vertices, baked, carried by the head bone), and brows. No long hair,
   no cloth simulation.
@@ -176,7 +190,7 @@ is baked and how it is shaded.
   per-vertex values so the shader can tone them. No expression, no eye movement.
 - **Outfit**: shorts as now; add a fitted training top option (a per-vertex mask like
   the shorts) that is **off by default for men when the exercise lights trunk muscles
-  and on otherwise**, and always a sports top for the female body. The lit muscles
+  and on otherwise**. The lit muscles
   must never be hidden by clothing: where a muscle is lit under cloth, the cloth
   thins to show it (mask × glow).
 
@@ -350,6 +364,81 @@ all from data.
   toggle, each tied to its KB entry and its corrective work. No fault is animated
   that the KB does not describe.
 
+### 2.6 The safety gate: nothing through anything, nothing shipped unchecked
+
+**No part of the body passes through the equipment, the floor or the body itself.**
+- `js/data/mannequin/collide.js` (new, pure): the body as **capsules** from the solved
+  joints (head, neck, upper and lower trunk, pelvis, upper arms, forearms, hands,
+  thighs, shins, feet: about 17, with radii measured from the mesh in the bake), and
+  the scene's solids as they already are (`sceneAt().solids`: capsules, boxes,
+  cylinders).
+- `penetration(scene)` returns every pair that overlaps by more than **3 mm**, except
+  the pairs a record declares as contact (`contact:[["hand.l","bar"],["back","bench"],
+  ["foot.l","floor"]…]`): a hand round a handle, a back on a pad, a bar resting on the
+  traps or in the hip crease. Declared contacts are checked the other way too: they
+  must **touch** (within 5 mm), so a hand never floats beside its bar.
+- Body against body: forearm through thigh, hand through chest, knee through elbow.
+  Neighbouring segments are exempt.
+- Checked at **41 moments** of every repetition, for every record, in the unit tests.
+- The solver uses it, not only the tests: when a blended pose penetrates, `motion.js`
+  moves the offending target out along the contact normal and re-solves (two passes).
+  If it still penetrates, the record fails; it is not drawn "nearly right".
+
+**Clearances that are about injury, not looks** (GEN), each a unit test for the
+families it applies to:
+
+| Rule | Applies to |
+| --- | --- |
+| The bar is never over the neck or face while it is being lowered or pressed; at the bottom it is over the lower chest, the forearms upright under it | every bench press |
+| The bar or handle never comes within 5 cm of the head on its way past | overhead presses, pulldowns, skull crushers |
+| Depth stops where the hands' support allows: the chest reaches the bar or floor and stops, hands beside the chest | push-ups, incline push-ups, dips (upper arm no lower than level with the elbow) |
+| The knee never bends sideways, the lower back never rounds under load, the neck stays in line | every loaded lift (2.0) |
+| Feet stay flat and whole on the floor or plate unless the exercise is a calf raise | every standing lift, leg press |
+
+**The gate.** A record carries `checked:{by, on, version}` only when (a) every unit
+test of 2.0, 2.3 and 2.6 passes for it, and (b) its start, middle and end have been
+looked at beside the library's photographs of the same exercise
+(`tools/figures/review.mjs`). `recordFor(name)` returns nothing for a record without
+it, and the app shows the photographs, as it does today for exercises with no figure.
+A test counts them: **no unchecked record is reachable from the app.** When a family's
+code changes, its records lose `checked` until re-run (the version is a hash of the
+family's source).
+
+### 2.7 How an exercise is written: the technique sheet
+
+Each family, and each exercise that differs from its family, is written from one
+sheet. This is the instruction for whoever (person or model) authors a movement; a
+record that cannot fill every line is not written.
+
+```
+Exercise:        Incline Push-Up (hands on a bar at hip height)
+Family:          push-up
+Source:          library photographs bn_…-0 and -1; KB cues (cues.js) if any; GEN rules used
+Plane:           sagittal (KB PLANES); default view from the side-front, yaw 60–70°
+Equipment:       bar at 0.85–0.95 m, fixed; mat
+Contacts:        hands on bar (grip, a little wider than the shoulders); balls of feet on floor
+Setup (u=0):     arms long, not locked; body one line from ear to ankle (±3°);
+                 hands under the shoulders' line of push; blades flat
+Movement:        elbows bend to about 45° from the trunk; the body moves as one piece
+                 about the feet; chest travels to the bar
+Bottom (u=1):    lower chest 2–4 cm from the bar, never through it; forearms square to the bar;
+                 elbow about 90°; line ear–ankle still straight
+Order:           nothing leads; trunk rigid throughout
+Spine / neck:    neutral / in line
+Shoulder blade:  draws together going down, spreads coming up
+Tempo default:   2-0-1-0 unless the workout prescribes one
+Roles:           prime: chest; synergist: front delts, triceps; stabiliser: core
+                 (must agree with exercises.json m and x for this exercise)
+Must never show: hips sagging or piked; elbows straight out to the side; head dropping;
+                 the body through the bar; hands sliding
+Checks:          line ±3°; elbow angle 85–95° at bottom; clearance chest–bar ≥ 2 cm;
+                 penetration none; centre of mass over feet–hands base; no foot slide
+```
+
+The sheets live in `docs/figures/<family>.md`, one file per family, and the unit tests
+read the numbers from the record, which is written from the sheet. A reviewer compares
+three things that must agree: the sheet, the record's tests, the rendered stills.
+
 ---
 
 ## 3. Work packages
@@ -362,11 +451,12 @@ what is *wrong*), then the body, then the place.
 | # | Package | Fixes | Notes |
 | --- | --- | --- | --- |
 | F-0 | **The realism checks** | 2.0 | Write the tests first: proportions in the bake, joint limits, centre of mass over the base, no foot slide, neutral-standing alignment, the muscle table (`from`, `to`, `crosses`). Run them on today's figure and list what fails; that list is the work for F-2, F-3 and F-5. |
+| F-0b | **The safety gate** | D1–D4 | `collide.js`, declared contacts, the injury clearances, `checked` on records and the gate in `recordFor`; run it on every record today and **withdraw to photographs every figure that fails** (the incline push-up, dips and bench press among them) until F-3 fixes its family. Ship this before anything else about the figure: it is the only package here that removes a risk already in people's hands. |
 | F-1 | **Frame and stage fixes** | L1, L5 (artefact), L7 | `fitCamera` margin so the figure fills 70–80% of the height; analytic horizon; arrow follows the tracked point's real path. Small; do first — it improves every figure at once. |
 | F-2 | **Phases and constraints** | M1, M2, M8 | `motion.js`: multi-key spline, `path` rules (`overMidfoot`, `touch`, `arcAbout`), `spine:"neutral"`, tempo from the prescription (`fig3dHtml(name,{tempo})` from `js/ui/views/session.js`), asymmetric lift curve. Unit tests: bar x over the whole repetition for squat, deadlift, RDL, press. |
 | F-3 | **Family corrections** | M3–M7 | Re-key the families in `moves.js` to the table in 2.3, one family per commit, each with its angle tests. Re-render stills (`tools/figures/stills.mjs`) for changed records. |
 | F-4 | **Roles, actions, phase emphasis** | L3 (data), M9 | `rig.js highlight()` returns `{muscle:{level, role}}`; families gain `roles`; renderer gets role and action uniforms. Consistency test against `exercises.json` `m`/`x`. |
-| F-5 | **The body's shading and shape** | L2, L3, L4 | `tools/body/bake.py`: boundary+curvature, bulge direction, fibre direction, hair cap, face masks; shader: skin, definition, lit-muscle rendering, bulge. Then the female body and the three skin tones (Profile → App). |
+| F-5 | **The body's shading and shape** | L2, L3, L4 | `tools/body/bake.py`: boundary+curvature, bulge direction, fibre direction, hair cap, face masks; shader: skin, definition, lit-muscle rendering, bulge. Then the three skin tones (Profile → App). |
 | F-6 | **The gym** | L5, L6 | Floor, reflection, back wall, contact shadows; rack, platform, true-size plates loaded to the set weight, moving weight stack, thigh pad, cables. |
 | F-7 | **Life** | M10 | Breathing, brace, sway; holds that breathe. Off under reduced motion. |
 | F-8 | **Teaching aids** | — | Path trace, form lines, tap a muscle; then faults for the overhead squat. |
@@ -374,6 +464,8 @@ what is *wrong*), then the body, then the place.
 
 **Acceptance for the whole design** (a test page, `tools/figures/live.html`, plus unit
 tests):
+- No penetration over 3 mm at 41 moments of any reachable record; every declared contact
+  touches; the injury clearances of 2.6 hold; no unchecked record reachable from the app (unit).
 - Deadlift, RDL, squat, overhead press: bar within ±2 cm of mid-foot through the whole
   repetition (unit).
 - Every check in the table of 2.3 holds at 11 sampled moments of each family (unit).
