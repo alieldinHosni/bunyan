@@ -8,6 +8,8 @@
      BUNYAN_URL   default http://localhost:8765/index.html
      CHROMIUM     path to a Chromium binary (optional; Playwright's own otherwise)
      PW_PATH      directory to resolve "playwright" from (optional)
+     ONLY         run only the tests whose names contain this (a|b for either)
+     SHARD        i/n: run every n-th test from the i-th, to split the suite
 
    Every test starts from a fresh browser context seeded with a known profile, so the
    tests are independent and can run in any order. Exit code is the number of failures. */
@@ -123,10 +125,15 @@ async function startWorkout(page){await tapTab(page,"train");await pause(page);a
 /* Finishing before the last exercise: the close button's Finish workout (owner, 27 Oct). */
 async function finishEarly(page){await page.tap('[data-back]');await pause(page);await page.tap('#sheet [data-confirmmid]');await pause(page);}
 async function leaveWorkout(page){await page.tap('[data-back]');await pause(page);await page.tap('[data-confirmok]');await pause(page,400);}
-/* ONLY=<text> runs just the tests whose names contain it; ONLY=<a>|<b> runs either. */
+/* ONLY=<text> runs just the tests whose names contain it; ONLY=<a>|<b> runs either.
+   SHARD=<i>/<n> runs every n-th test from the i-th (1-based): the suite split over n
+   machines, as GitHub runs it (.github/workflows/tests.yml). */
 const ONLY=(process.env.ONLY||"").split("|").filter(Boolean);
+const SHARD=(/^(\d+)\/(\d+)$/.exec(process.env.SHARD||"")||[]).slice(1).map(Number);
+let seen=0;
 async function test(name,fn,o){
   if(ONLY.length&&!ONLY.some(x=>name.indexOf(x)>=0))return;
+  if(SHARD.length===2&&SHARD[1]>1&&(seen++%SHARD[1])!==SHARD[0]-1)return;
   const env=await open(o);
   try{await fn(env.page,env);if(env.errs.length)throw new Error("page errors: "+env.errs.join(" | "));passes++;console.log("PASS",name);}
   catch(e){fails++;console.log("FAIL",name,"—",e.message);}
@@ -6275,4 +6282,4 @@ await test("Live figure: the two pilot exercises have their drawn stills and lis
 });
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
-process.exit(fails);
+process.exit(fails?1:0);

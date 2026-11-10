@@ -4166,3 +4166,9 @@ first digit types over it, Delete edits it. The field is scrolled clear of the s
 and head. Whole-number fields (inputmode numeric, step 1) have no point. Keys stay 1-2-3 left to right in
 Arabic. Mouse and hardware keyboards are unaffected.
 - Test "The app's own number keypad"; "Keyboard (iPhone)" now measures Fat against the keypad's top.
+## Tests on GitHub — branch session/ci
+Owner, 10 Nov (improvement list, fifth item). .github/workflows/tests.yml runs on every pull request and every
+push to main: the Node suites (architecture, engine, coach) in one job, and tests/regression.mjs split over six
+machines with the new SHARD=i/n (every n-th test from the i-th). Playwright 1.56.1 and Chromium are installed
+for the run only (npm -g, outside the repo: still no package.json). The suite now exits 1 on any failure
+(it exited with the failure count, which wraps past 255).
