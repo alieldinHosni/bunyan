@@ -270,4 +270,26 @@ function gaugeArt(frac,o){
    put on, since a mask would cut those off the shape itself. */
 function markArt(cls){return '<span class="'+cls+'" aria-hidden="true"><i class="mk"></i></span>';}
 
-export {art, gaugeArt, markArt, waterArt};
+/* ---- once per screen ---------------------------------------------------------
+   Owner, 10 Nov: "whenever I open their page, it either flashes then starts the motion,
+   or does the motion once, stops half way and restarts". A render that rebuilt a drawing
+   started it again, and the swipe's copy of the next page showed it finished, so the
+   real page's drawing began from nothing as it landed. Now a drawing's draw-in is timed
+   per screen: the first showing starts it; a drawing rebuilt while it runs is given a
+   negative delay, so it carries on from the same moment; one that came in by a swipe,
+   whose copy was already drawn, is finished at once. Called after every render. */
+var ARTS={},ARTSCR=null;
+function startArts(screen,swiped){
+  if(screen!==ARTSCR){ARTSCR=screen;ARTS={};}
+  var now=performance.now();
+  document.querySelectorAll(".art.draw:not(.go)").forEach(function(el){
+    if(el.closest(".stillcopy"))return;
+    var m=/\bart-([\w-]+)/.exec(el.getAttribute("class")||""),sh=el.closest("#sheet")?"sheet:":"";
+    var k=sh+(m?m[1]:"art");
+    /* A swipe's landing (a main tab, or a plan page's tab): drawn already, as on the copy. */
+    if(swiped&&!sh&&ARTS[k]==null)ARTS[k]=now-10000;
+    if(ARTS[k]!=null)el.style.setProperty("--art-t",Math.round(ARTS[k]-now)+"ms");
+    else ARTS[k]=now;
+    el.classList.add("go");});}
+
+export {art, gaugeArt, markArt, startArts, waterArt};
