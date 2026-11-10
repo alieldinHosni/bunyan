@@ -1,0 +1,61 @@
+# Bunyan's tests, on every pull request and every push to main.
+# The app has no build step and no package.json: Playwright is installed for the run
+# only, outside the repository. The browser suite is split over six machines (SHARD in
+# tests/regression.mjs), so a full run takes minutes instead of half an hour.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Engine, coach and architecture
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tests/architecture.mjs
+      - run: node tests/engine.mjs
+      - run: node tests/coach.mjs
+
+  browser:
+    name: App in Chromium (${{ matrix.shard }}/6)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright and Chromium (for this run only)
+        run: |
+          npm install -g playwright@1.56.1
+          npx -y playwright@1.56.1 install --with-deps chromium
+          echo "PW_PATH=$(npm root -g)/" >> "$GITHUB_ENV"
+      - name: Serve the app
+        run: |
+          (python3 -m http.server 8765 > /dev/null 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://localhost:8765/index.html > /dev/null && break; sleep 1; done
+      - name: Regression suite, shard ${{ matrix.shard }} of 6
+        env:
+          SHARD: ${{ matrix.shard }}/6
+        run: node tests/regression.mjs
