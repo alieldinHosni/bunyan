@@ -21,6 +21,16 @@ var STACK=[];
    would walk out of the app. */
 var DEPTH=0;
 var H={};                       /* render, guard, closeSheet — wired by app.js */
+/* On the iPhone's Home Screen the app draws the back swipe itself (owner, 9 Nov: "when
+   swiping back it shows a black page for a moment"). There Safari has no picture of the
+   page before to show under the finger, so its own swipe showed the bare ground, near
+   black, until the app was told and drew it. In that mode no history entries are made,
+   so Safari's swipe has nothing to go back to and never starts; js/ui/edgeback.js draws
+   the real page before under the finger instead. In a browser tab, where the browser's
+   back button and swipe are expected, history drives everything as described below.
+   sessionStorage "bunyan:ownback" turns the mode on for the tests. */
+var OWN=(function(){try{return navigator.standalone===true||sessionStorage.getItem("bunyan:ownback")==="1";}catch(e){return false;}})();
+function ownBack(){return OWN;}
 
 function initNav(hooks){
   H=hooks||{};
@@ -31,6 +41,7 @@ function initNav(hooks){
      returns to it (fallback). Pushed entries inherit the mode, so setting it once
      covers every entry. */
   try{history.scrollRestoration="manual";}catch(e){}
+  if(OWN)return;
   try{
     history.replaceState({bunyan:1,d:-1},"");
     /* One spare entry, always, in front of wherever the user is. The browser's back
@@ -62,7 +73,7 @@ function pushNav(){
   if(UNWIND)HELD++;
   else entry(DEPTH);
 }
-function entry(d){ try{history.pushState({bunyan:1,d:d},"");}catch(e){} }
+function entry(d){ if(OWN)return; try{history.pushState({bunyan:1,d:d},"");}catch(e){} }
 /* A tab tap is not a navigation into depth — it is a change of place. Keeping the
    stack would let back walk through every tab the user had ever touched.
 
@@ -91,6 +102,7 @@ function resetNav(){
   /* Screens opened during an unwind and still held were never written, so there is
      nothing of theirs to unwind. */
   if(UNWIND){DEPTH-=HELD;HELD=0;}
+  if(OWN){DEPTH=0;return;}
   if(DEPTH>0){
     var n=DEPTH;DEPTH=0;
     UNWIND=true;clearTimeout(unwindT);unwindT=setTimeout(landed,UNWIND_MS);
@@ -147,6 +159,7 @@ function doBack(){
      costs no history entry, so nothing is popped here. */
   if(V.sheet){ if(H.closeSheet)H.closeSheet(); return; }
   if(V.coach){ if(H.closeCoach)H.closeCoach(); return; }
+  if(OWN&&DEPTH>0){ stepBack(); return; }
   if(DEPTH>0){ history.back(); return; }   /* popstate finishes the job, guard included */
   if(H.guard&&H.guard(fallback))return;
   fallback();
@@ -220,6 +233,28 @@ window.addEventListener("popstate",function(ev){
    physics for free, and the arrow and the gesture are the same thing by
    construction rather than by keeping two implementations in step. */
 
+/* ---- back without history (the Home Screen app, see OWN) --------------------------
+   The arrow: one step back, the workout's guard first, with the app's own slide. */
+function stepBack(){
+  var was=DEPTH;DEPTH=Math.max(0,DEPTH-1);
+  if(H.guard&&H.guard(function(){fallback();})){DEPTH=was;return;}
+  fallback();}
+/* The swipe (js/ui/edgeback.js): the page before is drawn under the finger before it is
+   decided, then kept (commitPeek) or put back (cancelPeek). peekBack returns the place
+   to come back to, or null where back is not available. */
+function peekBack(){
+  if(!OWN||V.sheet||V.coach||!canBack()||!STACK.length)return null;
+  var cur=loc();cur.y=window.pageYOffset||0;
+  var l=STACK[STACK.length-1];
+  apply(l);V.osBack=true;
+  if(H.render)H.render();
+  try{window.scrollTo(0,l.y||0);}catch(e){}
+  return cur;}
+function commitPeek(){STACK.pop();DEPTH=Math.max(0,DEPTH-1);}
+function cancelPeek(cur){
+  apply(cur);V.osBack=true;
+  if(H.render)H.render();
+  try{window.scrollTo(0,cur.y||0);}catch(e){}}
 /* How deep the screen on show is: 0 a tab's own page, 1 a page opened from it, and so on. */
 function navDepth(){return DEPTH;}
-export {backArrow, backBar, canBack, initNav, goBack, navDepth, pushNav, resetNav};
+export {backArrow, backBar, cancelPeek, canBack, commitPeek, initNav, goBack, navDepth, ownBack, peekBack, pushNav, resetNav};
