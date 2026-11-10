@@ -4509,6 +4509,24 @@ await test("Drawings (owner, 10 Nov: they flashed then started, or stopped half 
   const v2=s2.filter(v=>v>=0);
   eq([v2.length>3,v2.every(v=>v<0.05)],[true,true],"Food by a swipe: the loaf is drawn from the first frame");
 });
+await test("Keyboard over a sheet (owner, 10 Nov: the search sheet bounced as the keyboard came and went, and the page showed between the sheet and the keys): Add Food keeps its place and size, its list makes room at its end; other sheets carry their ground down under the keys",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("addfood",{meal:"Breakfast"});});await pause(page,900);
+  const box=()=>page.evaluate(()=>{const b=document.querySelector("#sheet .sheetbox"),l=b.querySelector(".srch-body"),r=b.getBoundingClientRect();
+    return [Math.round(r.top),Math.round(r.height),l?Math.round(parseFloat(getComputedStyle(l).paddingBottom)):null];});
+  const before=await box();
+  /* The keyboard up, as view.js sets it: the visible part 500 px, 344 px covered. */
+  await page.evaluate(()=>{const r=document.documentElement.style;r.setProperty("--vvh","500px");r.setProperty("--kbh","344px");});await pause(page,600);
+  const up=await box();
+  eq([up[0],up[1]],[before[0],before[1]],"the sheet stays where it is, its size too");
+  if(!(up[2]>=before[2]+340))throw new Error("the list did not make room for the keys: "+before[2]+" → "+up[2]);
+  await page.evaluate(()=>{const r=document.documentElement.style;r.setProperty("--vvh",innerHeight+"px");r.setProperty("--kbh","0px");});await pause(page,400);
+  eq(await box(),before,"and as it was once the keyboard has gone");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,500);
+  /* A sheet that rises with the keyboard has its ground under it, so a short guess shows no page. */
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("weigh");});await pause(page,700);
+  eq(await page.evaluate(()=>/60vh|px/.test(getComputedStyle(document.querySelector("#sheet .sheetbox")).boxShadow)&&getComputedStyle(document.querySelector("#sheet .sheetbox")).boxShadow!=="none"),true,"its ground runs down under it");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

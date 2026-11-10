@@ -4114,3 +4114,17 @@ showing starts it, a drawing rebuilt while it runs gets a negative delay (--art-
 moment, and one that arrived by a swipe (V.tswiped / V.pswiped) is finished at once, as its copy was. Still copies
 (.stillcopy) never replay one; fills are "both". Test "Drawings …" samples the stroke every frame (fails on the old
 code at the swipe).
+
+## The keyboard over sheets, without the bounce — branch session/kbsmooth (v253)
+Owner, 10 Nov (Add Food with the keyboard: the sheet jumped, its title went, the page showed between it and the
+keys; closing, it bounced back): every sheet sized itself to what the keyboard leaves (--vvh), so it moved with the
+keyboard twice, once on the prediction (kbPredict) and again on iOS's real reading as the keyboard landed; a short
+guess (the bar of arrows and ✓ above some keyboards) left a strip of the page showing.
+- Search sheets (.sheetbox.srch: Add Food, the exercise picker) no longer move for the keyboard: fixed 92dvh, the
+  overlay full height; the list's end grows by --kbh (the covered height, set by view.js from the prediction and
+  the readings) so the last row scrolls above the keys; a foot button rides up on the keyboard (transform).
+- Other sheets still rise with it, but carry their own ground down under them (box-shadow 60vh of --bg), so a short
+  guess shows the sheet's colour, not the page.
+- view.js remembers the keyboard's height per kind (num, search, text, area: keyboard.js kindOf), so the
+  prediction matches the keyboard that comes and the reading as it lands moves nothing.
+Test "Keyboard over a sheet".

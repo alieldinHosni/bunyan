@@ -963,6 +963,15 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wti
   cursor:pointer}
 /* The overlay covers what is actually visible: above the keyboard when it is up. */
 .sheet{bottom:auto;top:var(--vvt,0px);height:var(--vvh,100dvh)}
+/* A sheet that rises with the keyboard carries its own ground down behind it: where the
+   keyboard's height was guessed short, a strip of the page showed between the sheet and
+   the keys (owner, 10 Nov). The ground is drawn under the box, never seen otherwise. */
+.sheet:not(.dlg)>.sheetbox{box-shadow:0 60vh 0 0 var(--bg)}
+/* A search sheet (Add Food, the exercise picker) does not move for the keyboard at all
+   (owner, 10 Nov: "when I close the keyboard the app bounces, and vice versa"): it keeps
+   its height and place, the keyboard covers its foot, and its list makes room at its end
+   (--kbh, view.js) so the last row can still be scrolled above the keys. */
+.sheet:has(>.sheetbox.srch){top:0;height:100%}
 /* Sheets clip, never slide sideways. Even with the food row fixed, one long food or
    exercise name would reproduce the "corrupted sheet" report. */
 .sheetbox{overflow-x:hidden;background:var(--bg);width:100%;max-width:560px;margin:0 auto;
@@ -1239,7 +1248,7 @@ body.noanim #splash .sp-embers{display:none}
    than running on underneath it. The height is fixed, never "as tall as the
    results", so a search that finds nothing cannot collapse the sheet under a finger. */
 .sheetbox.srch{display:flex;flex-direction:column;overflow:hidden;padding-bottom:0;max-height:none;
-  height:min(92vh,calc(var(--vvh,100vh) - 10px));height:min(92dvh,calc(var(--vvh,100dvh) - 10px))}
+  height:92vh;height:92dvh}
 .srch .sheethead{position:relative;top:auto;flex:0 0 auto}
 /* These run edge to edge with negative margins, which the sheet's max-width guard
    would otherwise cap — the same fix the head needed. */
@@ -1253,9 +1262,11 @@ body.noanim #splash .sp-embers{display:none}
 .afq input::-webkit-search-cancel-button,.afq input::-webkit-search-decoration{-webkit-appearance:none;display:none}
 .afq input{-webkit-appearance:none;appearance:none}
 .srch-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
-  margin:0 -16px;padding:6px 16px calc(24px + env(safe-area-inset-bottom));border-top:1px solid var(--border)}
+  margin:0 -16px;padding:6px 16px calc(24px + env(safe-area-inset-bottom) + var(--kbh,0px));border-top:1px solid var(--border)}
+/* The foot's button rides on the keyboard, gliding with it. */
 .srch-foot{flex:0 0 auto;margin:0 -16px;padding:10px 16px calc(12px + env(safe-area-inset-bottom));
-  border-top:1px solid var(--border);background:var(--bg)}
+  border-top:1px solid var(--border);background:var(--bg);
+  transform:translateY(calc(-1 * var(--kbh,0px)));transition:transform var(--m-kb) var(--e-ios)}
 .srch-foot .btn{margin:0}
 .srch-n{font-size:12.5px;color:var(--dim);margin:4px 0 10px}
 /* While typing, the keyboard owns half the screen, so the title and the counts step
