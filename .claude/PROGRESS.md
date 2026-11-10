@@ -4193,3 +4193,11 @@ What was wrong, and the rule now:
 - Light accents a shade deeper (Blue #244779, Red #960A14), Red dark's lighter (#FF7682).
 - Sage light: white ground type never inside a card (more card classes excluded), its dark halo only with it.
 - "Add day" stands on a card surface.
+
+## The next phase: review and work packages — branch session/nextphase
+Owner, 10 Nov: a whole-app review as head of engineering, with every detail other models need to build it.
+docs/NEXT-PHASE.md: the verdict (many voices, no single head), findings with evidence from running the app at
+v256 (contradicting prompts, the coach and the workout page giving different rep ranges, a toast over the Log
+button, a hold with no timer, no finish screen, 199 requests / 4.2 MB at start), the rules for builders, and
+twelve work packages in build order (WP-0 … WP-11), each with files, steps and acceptance tests. Nothing in the
+app changed.
