@@ -4047,3 +4047,12 @@ correctly. Need it smoother."
   the finger mid-drag, a short drag springs back, a long one lands, the root does nothing, and the
   arrow works.
 - **Not testable here:** Safari's own gesture. To confirm on the phone.
+
+## Dock with the swipe — branch session/docksync
+Owner, 10 Nov: "The synchronization between the main swipe and the dock highlights is delayed." Swiping between
+the main tabs, the dock's highlight moved only after the page had landed and render() ran syncDock, ~half a second
+late. js/ui/dock.js now has dockFollow (the highlight moves towards the next tab by the share of the screen the
+finger has brought the page), dockLand (on release: the next tab is set on at once, its pill opens while the page
+slides, and the highlight travels the rest over the slide's own duration with the page's ease-out curve) and
+dockBack (home with a page that springs back). exswipe.js calls them through app.js helpers (follow/land/back);
+moveHl takes a duration and a force flag. Regression test "Dock with the swipe".

@@ -90,6 +90,8 @@ function onMove(ev){
   /* A plan page: the highlight over its tabs moves with the finger, the same share of a
      tab as the page has moved of its width (owner, 3 Nov: it lagged behind the page). */
   if(st.k!=="ex"){if(st.k!=="tab")segFollow(st,x);peekFollow(st,x,stepOf(st.dir));}
+  /* A main tab's page: the dock's highlight goes with it (js/ui/dock.js dockFollow). */
+  if(st.k==="tab"&&H.follow&&H.can(stepOf(st.dir),"tab"))H.follow(stepOf(st.dir),Math.abs(x)/st.w);
   st.p.style.transition="none";
   st.p.style.transform="translateX("+Math.round(x)+"px)";
   if(st.k==="ex")st.p.style.opacity=String(1-Math.min(.35,Math.abs(x)/st.w*.5));}
@@ -191,6 +193,7 @@ function safeTop(){
 function peekDrop(s){if(s&&s.nb){s.nb.remove();s.nb=null;s.nbStep=0;}}
 function springBack(p,s){
   if(s)segSettle(s,s.i0,320);
+  if(s&&s.k==="tab"&&H.back)H.back(320);
   /* The tab next door goes back where it came from with the dragged one. */
   if(s&&s.nb){var nb=s.nb;s.nb=null;
     if(isReduced()||!nb.animate)nb.remove();
@@ -248,6 +251,8 @@ var SE="cubic-bezier(0.22, 1, 0.36, 1)";
 function slidePlan(s,step){
   var w=s.w,dx=s.dx,ms=Math.max(260,Math.min(440,Math.round((w-Math.abs(dx))/w*440)));
   segSettle(s,(s.i0||0)+step,ms);
+  /* The dock lands with the page: the next tab on now, the highlight there as it arrives. */
+  if(s.k==="tab"&&H.land)H.land(step,ms);
   /* The words change colour as the highlight arrives under them, not after it has. */
   if(s.g)s.g.querySelectorAll(".seg-b").forEach(function(b,i){b.classList.toggle("on",i===Math.round((s.i0||0)+step));});
   var nb=s.nb,p=s.p,out=dx<0?-w:w;s.nb=null;
