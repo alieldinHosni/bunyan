@@ -26,6 +26,7 @@ import {initReorder} from "./ui/reorder.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
 import {initChatGest} from "./ui/chatgest.js";
 import {initKeyboard} from "./ui/keyboard.js";
+import {initKeypad} from "./ui/keypad.js";
 import {loadExDB, reconcileExercises, useUserData} from "./data/exercises.js";
 import {mmss, paintOver, paintRest, sessionClock} from "./ui/views/session.js";
 import {fixLogsNow, moveRow, requestCloseSheet, retargetNow} from "./ui/handlers/common.js";
@@ -229,6 +230,8 @@ initSheetDrag(requestCloseSheet);
 initChatGest(function(){tap();if(V.coach==="full"){V.coach="compact";render();}else closeCoach(render);});
 /* A field in a sheet takes the keyboard without the page jumping under it (iPhone). */
 initKeyboard(kbPredict);
+/* A number in a sheet is typed on the app's own keypad (js/ui/keypad.js). */
+initKeypad();
 /* The small panel's field tapped on a phone: the whole conversation, once the keyboard is up. */
 bindPanel(function(){V.coach="full";render();});
 /* What the keyboard and the browser chrome leave visible (--vvh, --vvt), measured again

@@ -4140,6 +4140,32 @@ entranceGo plays the copy's with it (and counts its figures) so whichever is sho
 copy of the page being left still never replays (.stillcopy:not(.peek)). Test "Drawings …" now checks the copy is
 held at the start and the swiped page draws in once without going back; the week bar traced 0 → full after a swipe.
 
+## One way a page moves — branch session/transit (v254)
+Owner, 10 Nov ("go ahead" on the improvement list, first item). Six routes moved pages, each its own way: tab tap
+(pagein, background faded after, 420 ms its own curve), tab swipe (≤440 ms), plan tab swipe, plan tab tap (400 ms),
+page open/back (520 ms, another curve, background faded separately), Home Screen back swipe (~260 ms, background
+jumped at drag start, the page before's entrance began during the drag).
+- js/ui/transit.js: PAGE {ms 520, ease cubic-bezier(0.22,1,0.36,1)}; gestureMs(dx,w) what is left of the travel
+  (≥260); entranceAtStart (a copy held at its entrance's first frame), entranceHold (the real page drawn under a
+  gesture), entranceGo (plays; counts a copy's figures).
+- exswipe.js, render.js (pageMove, slideSection), bgart.js (crossfade now PAGE.ms, PAGE.ease) and edgeback.js all
+  read it. The back swipe: bgart.holdBg/bgWanted keep the page before's picture for the finger (bgFollow/bgLand/
+  bgBack), and its entrance is held until the landing.
+- Test "One way a page moves".
+
+## The app's own number keypad — branch session/transit (v255)
+Owner, 10 Nov (improvement list, second item; sheets with a field "bounce" as iOS's keyboard comes and goes:
+it reports its height only after it has moved). js/ui/keypad.js: on a touch device a number field in a sheet
+(type=number, inputmode decimal/numeric) gets the app's keypad — 1–9, 0, point, delete, Next, Done — drawn at
+the foot of the screen and slid in by the app, with --vvh/--kbh (what every sheet already sizes from) set to
+its height in the same motion. The field is marked inputmode="none" on touchstart, before the browser can
+raise its keyboard, and a type=number field becomes text while typed into (number fields drop "12.").
+Keys write the value and send the field's input event, so the sheets' own handlers are unchanged; Done sends
+change and blurs; Next goes to the sheet's following number field. Opening a field selects what it holds: the
+first digit types over it, Delete edits it. The field is scrolled clear of the sheet's sticky footer (.sfoot)
+and head. Whole-number fields (inputmode numeric, step 1) have no point. Keys stay 1-2-3 left to right in
+Arabic. Mouse and hardware keyboards are unaffected.
+- Test "The app's own number keypad"; "Keyboard (iPhone)" now measures Fat against the keypad's top.
 ## Tests on GitHub — branch session/ci
 Owner, 10 Nov (improvement list, fifth item). .github/workflows/tests.yml runs on every pull request and every
 push to main: the Node suites (architecture, engine, coach) in one job, and tests/regression.mjs split over six

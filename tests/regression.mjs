@@ -1293,12 +1293,14 @@ await test("Keyboard (iPhone): a field in a sheet takes a tap without the page s
   eq(await touch(page,'label[for="mf_f"] .aftile-k'),true,"the tap is taken");
   await pause(page,900);
   eq(await page.evaluate(()=>{const f=document.getElementById("mf_f"),b=f.getBoundingClientRect();
-    return [document.activeElement&&document.activeElement.id,f.style.transform,Math.round(b.top)>=0&&Math.round(b.bottom)<=420,scrollY];}),
+    /* Fat is a number field: the app's own keypad (js/ui/keypad.js) is what comes up for it. */
+    const kp=document.querySelector(".kpad.on"),lim=kp?kp.getBoundingClientRect().top:420;
+    return [document.activeElement&&document.activeElement.id,f.style.transform,Math.round(b.top)>=0&&Math.round(b.bottom)<=lim,scrollY];}),
     ["mf_f","",true,y0],"Fat has the focus, back in place, in sight above the keys, the page where it was");
   /* The next field by the keyboard's arrow: brought into view by the sheet. */
   await page.evaluate(()=>{document.querySelector("#sheet .sheetbox").scrollTop=0;});
   await page.evaluate(async()=>{const K=await import("/js/ui/keyboard.js");const f=document.getElementById("mf_f");K.reveal(f);});
-  eq(await page.evaluate(()=>{const b=document.getElementById("mf_f").getBoundingClientRect();return Math.round(b.top)>=0&&Math.round(b.bottom)<=420;}),true,"revealed in the sheet");
+  eq(await page.evaluate(()=>{const b=document.getElementById("mf_f").getBoundingClientRect(),kp=document.querySelector(".kpad.on");return Math.round(b.top)>=0&&Math.round(b.bottom)<=(kp?kp.getBoundingClientRect().top:420);}),true,"revealed in the sheet");
   /* A finger that scrolls the sheet does not open the keyboard on the field it lifts over. */
   await page.evaluate(()=>document.activeElement.blur());await pause(page,200);
   eq(await touch(page,"#mf_n",-60),false,"a scroll is the browser's");
@@ -4538,6 +4540,55 @@ await test("Keyboard over a sheet (owner, 10 Nov: the search sheet bounced as th
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("weigh");});await pause(page,700);
   eq(await page.evaluate(()=>/60vh|px/.test(getComputedStyle(document.querySelector("#sheet .sheetbox")).boxShadow)&&getComputedStyle(document.querySelector("#sheet .sheetbox")).boxShadow!=="none"),true,"its ground runs down under it");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});
+});
+await test("One way a page moves (owner, 10 Nov: the motion and the background differed by route): the Home Screen back swipe blends the picture with the finger and the page before waits at its entrance, then plays it on landing; every route shares one curve",async(page,env)=>{
+  await page.evaluate(async()=>{sessionStorage.setItem("bunyan:ownback","1");const st=await import("/js/state.js");st.S.prefs.anim=true;st.saveDB();});
+  await page.reload();await pause(page,1500);
+  const cdp=await env.ctx.newCDPSession(page);
+  const T=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
+  await tapTab(page,"train");await pause(page,1800);
+  await page.evaluate(()=>{const b=document.createElement("button");b.setAttribute("data-tplan","program");document.querySelector("#app").appendChild(b);b.click();});await pause(page,1200);
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p)),["training"],"on the plan page's picture");
+  await T("touchStart",6,400);for(let i=1;i<=8;i++){await T("touchMove",6+i*20,402);await page.waitForTimeout(16);}
+  const mid=await page.evaluate(()=>{const ph=[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p+":"+(+getComputedStyle(p).opacity).toFixed(2));
+    const a=document.querySelector("#app .art.draw path.a");return [ph,a?parseFloat(getComputedStyle(a).strokeDashoffset):null];});
+  if(mid[0].length!==2||!/^home:0\.[1-9]/.test(mid[0][1]))throw new Error("the picture does not come in with the finger: "+mid[0]);
+  if(mid[1]!==null&&mid[1]<0.9)throw new Error("the page before's drawing is not waiting at its start: "+mid[1]);
+  for(let i=9;i<=16;i++){await T("touchMove",6+i*20,402);await page.waitForTimeout(16);}
+  await T("touchEnd",0,0);await page.waitForTimeout(1500);
+  const after=await page.evaluate(async()=>{const a=document.querySelector("#app .art.draw path.a");
+    return [(await import("/js/ui/view.js")).V.train,[...document.querySelectorAll("#bgart .photo")].map(p=>p.dataset.p),a?parseFloat(getComputedStyle(a).strokeDashoffset)<0.05:true];});
+  eq(after,["days",["home"],true],"landed on Training: its picture alone, its drawing drawn in");
+  /* One curve for every route (js/ui/transit.js). */
+  eq(await page.evaluate(async()=>{const T=await import("/js/ui/transit.js");return [T.PAGE.ease,T.gestureMs(0,400),T.gestureMs(390,400)];}),["cubic-bezier(0.22, 1, 0.36, 1)",520,260],"one curve; the whole time from a tap, what is left from a finger");
+  await page.evaluate(()=>sessionStorage.removeItem("bunyan:ownback"));
+});
+await test("The app's own number keypad (owner, 10 Nov: sheets with a field bounce as the keyboard comes and goes)",async page=>{
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("weigh");});await pause(page,400);
+  await page.tap('#in_bw');await pause(page,600);
+  eq(await page.evaluate(()=>{const p=document.querySelector(".kpad");return !!(p&&p.classList.contains("on"));}),true,"a touch on a number field brings the app's keypad");
+  eq(await page.$eval('#in_bw',e=>[e.getAttribute("inputmode"),e.type,document.activeElement===e]),["none","text",true],"the phone's keyboard is not asked for; the field keeps the focus");
+  const room=await page.evaluate(()=>{const r=document.documentElement,p=document.querySelector(".kpad");return [parseInt(getComputedStyle(r).getPropertyValue("--kbh")),p.offsetHeight,r.classList.contains("kpad-on")];});
+  eq(room[0]>0&&room[0]===room[1]&&room[2],true,"the sheet makes room the keypad's height: "+room);
+  await page.evaluate(()=>{window.__in=0;document.getElementById("in_bw").addEventListener("input",()=>window.__in++);});
+  const key=async k=>{await page.tap('.kpad [data-kp="'+k+'"]');await pause(page,60);};
+  await page.$eval('#in_bw',e=>{e.value="";});
+  for(const k of ["7","9",".","6","."])await key(k);
+  eq(await page.$eval('#in_bw',e=>e.value),"79.6","digits and one point are typed");
+  eq(await ev(page,"window.__in"),4,"each key sends the field's input event");
+  await key("bs");eq(await page.$eval('#in_bw',e=>e.value),"79.","delete takes the last character");
+  await key("6");await key("done");await pause(page,700);
+  eq(await page.evaluate(()=>[document.querySelector(".kpad").classList.contains("on"),document.documentElement.classList.contains("kpad-on"),getComputedStyle(document.documentElement).getPropertyValue("--kbh").trim()]),[false,false,"0px"],"Done puts the keypad away and gives the room back");
+  await page.tap('#in_bw');await pause(page,600);await key("8");await key("0");
+  eq(await page.$eval('#in_bw',e=>e.value),"80","opened again, the first key types over what it held, not after it");
+  await key("done");await pause(page,600);
+  await page.tap('[data-saveweight]');await pause(page,300);
+  eq(await ev(page,"S.body[S.body.length-1].weight"),80,"what the keypad typed is saved");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("inbody");});await pause(page,500);
+  await page.tap('#ib_weight');await pause(page,600);
+  eq(await page.$eval('.kp-next',e=>e.hidden),false,"a sheet of several number fields offers Next");
+  await page.tap('.kpad [data-kp="next"]');await pause(page,1200);
+  eq(await page.evaluate(()=>{const a=document.activeElement,r=a.getBoundingClientRect(),f=document.querySelector("#sheet .sfoot").getBoundingClientRect();return [a.id,r.bottom<=f.top,document.querySelector(".kpad").classList.contains("on")];}),["ib_pbf",true,true],"Next goes to the following field, in sight above the sheet's Save, the keypad staying");
 });
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
