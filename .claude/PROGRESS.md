@@ -4258,3 +4258,4 @@ and reps count; the first time does not" test needed no change: its rep case (70
 done before.
 - tests: a test that fails while the date changes under it (begun before midnight, ended after) is run once
   more on the new day; "Coach, a rough day" failed that way on GitHub at 00:00 UTC on 11 Nov.
+- tests: `clockAt(y,m,d)` moves a test's page clock to a date; the monthly review test runs on 5 Nov 2026 (it failed from the 11th of every month).
