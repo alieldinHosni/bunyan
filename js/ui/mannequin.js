@@ -37,7 +37,7 @@
    leaves it off, because a sideways swipe there moves between exercises. */
 import {phaseAt, sceneAt, framePoints, fitCamera, arrowShape} from "../data/mannequin/motion.js";
 import {highlight} from "../data/mannequin/rig.js";
-import {recordFor} from "../data/mannequin/records.js";
+import {recordFor, recordForUnchecked} from "../data/mannequin/records.js";
 import {BODY} from "../data/mannequin/body.js";
 import {NB} from "../data/mannequin/skin.js";
 import {place, build} from "../data/mannequin/mesh.js";
@@ -236,7 +236,8 @@ function lights(cam){
 /* ---- one live figure ---- */
 var LIVE=[];
 function Mannequin(el){
-  var name=el.getAttribute("data-mq"),rec=recordFor(name);
+  /* only a checked record (records.js); the offline tools may draw any */
+  var name=el.getAttribute("data-mq"),rec=el.hasAttribute("data-mq-unchecked")?recordForUnchecked(name):recordFor(name);
   var canvas=el.querySelector("canvas"),btn=el.querySelector(".fig3d-play");
   var gl=null,P={},body=null,boneTex=null,shadow=null,shapes={},vaoBody=null,vaoFloor=null,vaoArrow=null,bufArrow=null;
   var hl=highlight(muscleOf(name),secondaryOf(name),rec&&rec.refine),hlv=new Float32Array(21);
@@ -595,21 +596,24 @@ function syncMannequins(){
     requestAnimationFrame(function(){setTimeout(startQueued,0);});}}
 document.addEventListener("visibilitychange",function(){LIVE.forEach(function(m){m.wake&&m.wake();});});
 
-/* Whether an exercise is drawn live: it has a record (the phone may still fall back to
-   the stills). */
+/* Whether an exercise is drawn live: it has a record that has been reviewed and
+   marked checked (records.js recordFor: the safety gate); the phone may still fall back
+   to the stills. */
 function hasMannequin(name){return !!recordFor(name);}
 function mannequins(){return LIVE.slice();}
 
 /* The markup a view writes for it. stills: the start and end pictures, shown until the
    figure is live and wherever it cannot be; turn: a drag turns it; label: what it is,
    for a screen reader. Keyed by the exercise, so the patcher keeps one figure running
-   while the screen around it changes, and a different exercise gets a fresh one. */
+   while the screen around it changes, and a different exercise gets a fresh one.
+   Nothing for an exercise whose figure is not checked. unchecked: draw it all the
+   same, for the offline tools (tools/figures/) only; the app never asks for it. */
 var ICONS='<svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4zM9 2h3v12H9z"/></svg>'
   +'<svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
 function fig3dHtml(name,o){
   o=o||{};
-  if(!recordFor(name))return "";
-  return '<div class="fig3d" data-mq="'+esc(name)+'" data-k="mq:'+esc(name)+'"'+(o.turn?' data-mq-turn':'')+'>'
+  if(!(o.unchecked?recordForUnchecked(name):recordFor(name)))return "";
+  return '<div class="fig3d" data-mq="'+esc(name)+'" data-k="mq:'+esc(name)+'"'+(o.turn?' data-mq-turn':'')+(o.unchecked?' data-mq-unchecked':'')+'>'
     +'<canvas role="img" aria-label="'+esc(o.label||name)+'"></canvas>'
     +'<div class="fig3d-still">'+(o.stills||[]).slice(0,2).map(function(src,i){
       return src?'<figure><img src="'+esc(src)+'" alt="" decoding="async"><figcaption>'+t(i?"End":"Start")+'</figcaption></figure>':"";}).join("")+'</div>'

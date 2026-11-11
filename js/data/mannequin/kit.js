@@ -213,13 +213,16 @@ var PROPS={
   /* the same in iron (a footplate) or another material */
   slab:function(c,ex,ey,hs,m){return [box(c,norm(ex),norm(ey),norm(cross(norm(ex),norm(ey))),hs,.01,m||2,0)];}
 };
-/* A list of [name, ...arguments] as solids. */
+/* A list of [name, ...arguments] as solids. Each solid carries the name of the piece
+   it belongs to (tag: "barbell", "bench", "mat"...), so the collision checks
+   (collide.js) can say what the body went through and a record can name what a part
+   of the body rests on. The renderer does not read it. */
 function props(list){
   var out=[];
   (list||[]).forEach(function(p){
     var fn=PROPS[p[0]];
     if(!fn)throw new Error("no prop "+p[0]);
-    out.push.apply(out,fn.apply(null,p.slice(1)));});
+    fn.apply(null,p.slice(1)).forEach(function(q){if(!q.tag)q.tag=p[0];out.push(q);});});
   return out;}
 
 export {PROPS, props};

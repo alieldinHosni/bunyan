@@ -156,6 +156,18 @@ for (const f of [...reach].sort()) if (!cached.has(f)) bad.push(`${f} is loaded 
 /* The version shown in the app is the cache's (js/version.js): bumped together. */
 {const cv=(/bunyan-v(\d+)/.exec(sw)||[])[1],vv=(/VERSION=(\d+)/.exec(fs.readFileSync(path.join(ROOT,"js/version.js"),"utf8"))||[])[1];
   if(cv!==vv)bad.push(`js/version.js says ${vv} but sw.js caches bunyan-v${cv}: bump both together`);}
+/* The 3D figure's safety gate (docs/FIGURE-V3.md 2.6): the app shows a figure only
+   through records.js recordFor, which gives checked records alone. The way round it
+   (recordForUnchecked, and fig3dHtml's unchecked option that uses it) is for the
+   offline tools and the tests: in the app only the renderer may name it, to draw what
+   a tool asked for, and nothing in the app may ask. The safety checks (collide.js)
+   are for tests and tools and are not loaded by the app. */
+for (const f of files){
+  if (/\/test\//.test(f) || f === "js/data/mannequin/records.js" || f === "js/ui/mannequin.js") continue;
+  const src = fs.readFileSync(path.join(ROOT, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  if (/recordForUnchecked|markCheckedForTest/.test(src)) bad.push(`${f} reaches past the figure's safety gate (recordForUnchecked): the app may show checked figures only`);
+  if (/fig3dHtml\([^)]*unchecked/.test(src)) bad.push(`${f} asks fig3dHtml for an unchecked figure: only the offline tools may`);}
+if (reach.has("js/data/mannequin/collide.js")) bad.push("js/data/mannequin/collide.js is loaded by the app: it is for the tests and tools");
 const edges = Object.values(graph).reduce((a, x) => a + x.length, 0);
 for (const b of bad) console.log("FAIL " + b);
 console.log(`\n${files.length} modules, ${edges} imports: ${bad.length ? bad.length + " broken rules" : "every layer rule holds"}`);

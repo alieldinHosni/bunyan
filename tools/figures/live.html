@@ -55,7 +55,7 @@
   const grid=document.getElementById("grid");
   grid.innerHTML=names.map(n=>themes.map(th=>{const [p,m]=th.split("-");
     return '<div class="pv-cell" data-palette="'+p+'" data-theme="'+m+'"><h2>'+n+' · '+p+' '+m+'</h2>'
-      +M.fig3dHtml(n,{turn:true,stills:[exImg(n,0),exImg(n,1)]})+'<div class="pv-st"></div></div>';}).join("")).join("");
+      +M.fig3dHtml(n,{turn:true,unchecked:true,stills:[exImg(n,0),exImg(n,1)]})+'<div class="pv-st"></div></div>';}).join("")).join("");
   M.syncMannequins();
   const hold=document.getElementById("hold"),u=document.getElementById("u"),uv=document.getElementById("uv");
   function apply(){uv.textContent=(+u.value).toFixed(2);if(hold.checked)M.mannequins().forEach(m=>m.setU(+u.value));}
