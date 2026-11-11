@@ -17,6 +17,82 @@ profile, and each answer was read. The code behind it was read: the intent route
 
 ---
 
+## 0. Keep it or delete it? The honest answer, and the test
+
+Owner, 11 Nov: "I still think it's going to be dumb, and I am thinking of deleting this
+feature completely, unless you can show and work on something to make it really smart
+and useful."
+
+**The doubt is justified.** A box that says "ask a question" promises to understand
+any sentence. A rule-based coach, however many rules it has, understands the sentences
+it was written for. Every sentence outside them gets a wrong or empty answer, and each
+one teaches the person that the coach is dumb. More keywords do not fix this; the
+promise is the problem. Sections 2 and 3 below make the rules much better, but on
+their own they would produce a better switchboard, not a coach.
+
+**What actually makes a coach feel smart** is not conversation. It is three things,
+and the app can do all three well, offline:
+
+1. **It tells you before you ask.** "Bench has not moved in three sessions: hold 60 kg
+   and aim for 9 reps today." "You are 62 g of protein short and you train at 6."
+   That comes from the person's own data and the head (`js/engine/head.js`), not from
+   understanding language.
+2. **When you tell it to do something, it does exactly that, first time.** "Swap bench
+   for dumbbells today", "I've only got 30 minutes", "log 2 eggs and toast". A bounded
+   set of things, each done reliably, shown before it is applied, with Undo.
+3. **When you ask why, it can show its working.** From what the engines actually
+   decided (2.5), not from a search of the textbook.
+
+**So the feature is repositioned, not polished: from "chat bot" to "coach that acts".**
+
+| Today | Becomes |
+| --- | --- |
+| A chat window: "Ask a question" | **Coach**: a briefing at the top (what matters today, from the head; the debrief after a workout; the weekly review), and under it one field: **"Tell the coach what you need"** |
+| You type, send, and find out what it understood from the answer | **It shows what it understood while you type**: chips above the field ("Swap · Barbell Bench Press · today") that update with each word. Send is enabled only when it has a reading. No reading → the three nearest things it *can* do, as buttons. A wrong answer becomes nearly impossible, because the reading is seen and corrected before anything happens. |
+| Forty answer types of mixed quality | **Three kinds of result only**: a **change** (preview → apply → Undo), a **figure from your log** (with its period and source), or a **written answer** from the coach's library (about 150, each written from the knowledge base, with your numbers put in). Nothing else is ever produced: no fragments, no guesses. |
+| "I can't answer that" | "That is outside what I do" plus what is nearest — said **before** sending, in the chips, not after. |
+| Open-ended small talk | Not offered. The field does not pretend to converse. |
+
+**Free conversation ("explain like I'm new", "what would you do in my place?")
+needs a real language model.** There are only two honest ways to have one:
+- *On the phone* (the optional Smart coach, already built): private and offline, but a
+  very large download and, on most phones, slow and limited. It stays optional and
+  narrow (2.10).
+- *Online* (a hosted model with the app's commands as its tools): this would be
+  genuinely smart. It also means an internet connection, a running cost per message, a
+  small server to hold the key, and the person's data leaving the phone for each
+  question — against the app's first-screen promise. **This is the owner's decision
+  and is not part of this plan.** If wanted later, everything built here (commands,
+  reasons, the guard, the evaluation set) is exactly what such a model would be given
+  to work with, so none of it is wasted.
+
+### The test (Phase A), and the rule for deleting
+
+Phase A is small on purpose and ends in something the owner can try and judge.
+
+- **Built:** safety replies (C-0); the evaluation set and its score (C-1); reading the
+  sentence — exercise, food, time, duration, equipment, question vs request (C-3); the
+  live chips and the three-kinds-of-result rule on the existing panel (C-4a); the six
+  commands people ask for most (C-5a: fit today to N minutes and equipment, swap an
+  exercise today or in the program, avoid an exercise, move a workout, log food, log a
+  set).
+- **Shown to the owner:** the same 45 messages of this review, before and after, side
+  by side; and the score on 300+ messages in both languages.
+- **Kept if:** in-scope requests are read correctly at least **95%** of the time in
+  both languages; **no** message in the set produces a wrong answer (a refusal with
+  the nearest options is a pass; an answer to a different question is a fail); every
+  safety phrase gets its fixed reply; and the owner, using it for a week, agrees it
+  earns its place.
+- **Deleted if not:** the free-text field and the chat panel are removed. What stays
+  is what was never the problem: the briefing, the "For you" list, the buttons on each
+  page, and the written answers as a searchable Help page. The engines, commands and
+  reasons built in Phase A are used by those and are not thrown away.
+
+Phase B (reasons, conversation memory, a step ahead, the rest of the commands, the
+library to 150 answers, export of misses) is built only after the owner's "keep".
+
+---
+
 ## 1. Verdict
 
 **What is right, and stays.** The coach answers from the person's own log and from
@@ -307,7 +383,15 @@ kept **optional** and given a narrower, safer job:
 
 ## 3. Work packages
 
-Build in this order. C-0 and C-1 are small and remove real risk; do them first.
+**Phase A (the test of section 0):** C-0, C-1, C-3, C-4a, C-5a, in that order, then
+stop and show the owner. **Phase B (only after "keep"):** C-2, C-4, C-5, C-6, C-7,
+C-8, C-9, C-10.
+
+| # | Phase A additions | What is built | Accept |
+| --- | --- | --- | --- |
+| C-4a | **Live reading, three kinds of result** | In the coach panel (`js/ui/views/chat.js`, `js/ui/agent.js`): as the person types (debounced 120 ms), `understand()` runs and its reading is drawn as chips above the field (act · thing · when), each chip tappable to correct (a list of alternatives). Send is disabled with no reading; then the three nearest capabilities show as buttons. The field's label becomes "Tell the coach what you need". Every result is one of: change preview, figure from the log, written answer. The raw-search fallback (`know`) is switched off. | Browser tests: typing "swap bench for dumbbells today" shows three chips with those meanings before sending; typing nonsense shows no chips and three buttons, and nothing can be sent; no evaluation item yields an answer of any other kind. Arabic the same. |
+| C-5a | **The six commands** | From 2.4: `session.fit`, exercise swap (today / in the program), `exercise.avoid`, move a workout, log food (exists; route through the new reading), log a set (exists; same). | As C-5 for these six. |
+
 
 | # | Package | Fixes | What is built | Accept |
 | --- | --- | --- | --- | --- |
