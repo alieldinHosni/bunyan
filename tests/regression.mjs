@@ -35,6 +35,13 @@ function seed(){
     myFoods:[],savedMeals:[],freq:{},favs:[],skip:[],userSplits:[],myEx:[]};
 }
 
+/* A test that is about a date (the month's first days, a given weekday) runs with the
+   page's clock moved to it: {init:clockAt(2026,11,5)}. The clock still runs; only the
+   day is another one. Without it such a test passes or fails by the day it is run on. */
+function clockAt(y,m,d){return {content:"(function(){var R=Date,off=R.UTC("+y+","+(m-1)+","+d+",12)-R.now();"
+  +"function D(){if(!(this instanceof D))return new R(R.now()+off).toString();"
+  +"return arguments.length?new (Function.prototype.bind.apply(R,[null].concat([].slice.call(arguments))))():new R(R.now()+off);}"
+  +"D.prototype=R.prototype;D.UTC=R.UTC;D.parse=R.parse;D.now=function(){return R.now()+off;};window.Date=D;})();"};}
 const browser=await chromium.launch(process.env.CHROMIUM?{executablePath:process.env.CHROMIUM}:{});
 let fails=0,passes=0;
 async function open(o={}){
@@ -4303,7 +4310,7 @@ await test("Coach (owner, 9 Nov review): the month reviewed in its first days, i
   if(!/weeks? kept/.test(await page.textContent('.cweek2')))throw new Error("the strip still counts days");
   await page.tap('.mocard [data-mook]');await pause(page,400);
   eq(await ev(page,"[S.moDone,!!document.querySelector('.mocard')]"),["2026-10",false],"done for the month");
-});
+},{init:clockAt(2026,11,5)});
 await test("Weekly check-in (owner, 9 Nov review): protein and steps read against their targets, a missed protein target said with the way to the meal plan",async page=>{
   await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js"),Sc=await import("/js/engine/schedule.js"),S=st.S;
     const ws=Sc.weekStartOf(U.today());S.goals.p=160;S.goals.steps=10000;delete S.ckDone;

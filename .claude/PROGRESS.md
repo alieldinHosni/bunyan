@@ -4249,3 +4249,6 @@ really smart and useful".
   Undo, a figure from the log, a written answer). Free conversation needs a language model; an online one is
   the owner's decision and not in the plan. Phase A is the test, with pass marks and the rule for deleting.
 Nothing in the app changed.
+- tests: `clockAt(y,m,d)` moves a test's page clock to a date. "Coach (owner, 9 Nov review): the month reviewed
+  in its first days" runs on 5 Nov 2026: the monthly review opens only in a month's first 10 days, so the test
+  failed from the 11th of every month (first seen on GitHub on 11 Nov).
