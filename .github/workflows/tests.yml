@@ -60,3 +60,26 @@ jobs:
         env:
           SHARD: ${{ matrix.shard }}/6
         run: node tests/regression.mjs
+
+  coach-eval:
+    name: Coach evaluation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright and Chromium (for this run only)
+        run: |
+          npm install -g playwright@1.56.1
+          npx -y playwright@1.56.1 install --with-deps chromium
+          echo "PW_PATH=$(npm root -g)/" >> "$GITHUB_ENV"
+      - name: Serve the app
+        run: |
+          (python3 -m http.server 8765 > /dev/null 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://localhost:8765/index.html > /dev/null && break; sleep 1; done
+      - name: Coach evaluation set (fails only on a safety miss)
+        run: node tests/coach-eval.mjs
