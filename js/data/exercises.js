@@ -213,8 +213,16 @@ function exSteps(n){
    figure, so they pass the same gate as the figure itself (mannequin/records.js
    isChecked): a still of a figure nobody has reviewed is not shown either, in the
    exercise sheet or as a list thumbnail. */
+/* The two exercises the library has no photographs of keep their two still pictures
+   (start and end) while their figure is unreviewed: the project's rule is that no
+   exercise is shown without an image. The stills were looked at for this on 11 Nov
+   2026 (a seated press and a seated row, positions correct; the audit's one fault for
+   each is the hips sitting a few centimetres into the seat cushion). Pictures only:
+   the moving figure stays behind the gate. Nothing else may be added here; an exercise
+   with photographs shows its photographs. */
+var STILLS_KEPT={"Machine Chest Press":1,"Seated Machine Row":1};
 function exFigs(n){
-  var m=exMedia(n); return (m&&m.own&&!m.ph&&m.i&&isChecked(n)&&FIGS[m.i])||0;}
+  var m=exMedia(n); return (m&&m.own&&!m.ph&&m.i&&(isChecked(n)||STILLS_KEPT[n]===1)&&FIGS[m.i])||0;}
 function exImg(n,idx){
   var m=exMedia(n); if(!m)return null;
   var f=exFigs(n); if(f)return "img/fig/"+m.i+"-"+Math.min(idx||0,f-1)+".webp";

@@ -4318,3 +4318,7 @@ stills test now expects no figure thumbnail for Machine Chest Press while unchec
 workout sheet-loading test marks its exercise first. mannequin.test.js: the pilot records and the table are
 reached through recordForUnchecked, and recordFor gives neither. New: js/data/test/collide.test.js (synthetic
 scenes, real records, the gate) and the regression test "Live figure: no unchecked figure is shown".
+- After review: Machine Chest Press and Seated Machine Row have no photographs, and the gate left them with no
+  picture at all, against the rule that no exercise is shown without an image. They keep their two still
+  pictures (`STILLS_KEPT` in js/data/exercises.js; looked at on 11 Nov: positions correct, the audit's one fault
+  for each is the hips a few centimetres into the seat cushion). The moving figure stays behind the gate.

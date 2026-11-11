@@ -6430,8 +6430,9 @@ await test("Live figure: the two pilot exercises have their drawn stills and lis
     [{"bn_machine_chest_press":2,"bn_seated_machine_row":2},[]]);
   const th=()=>page.evaluate(async()=>{const E=await import("/js/data/exercises.js"),d=document.createElement("div");d.innerHTML=E.thumb("Machine Chest Press",52);document.body.appendChild(d);
     const i=d.querySelector("img");const r=i?[i.getAttribute("src"),i.classList.contains("fig"),getComputedStyle(i).backgroundColor]:[null,false,""];d.remove();return r;});
-  /* a still of a figure nobody has reviewed is not shown either: the dumbbell glyph */
-  eq((await th()).slice(0,2),[null,false],"unchecked: no still of it as its thumbnail");
+  /* it has no photographs, so its two reviewed stills stay as its pictures (no exercise
+     without an image); the moving figure is what waits for its review */
+  eq((await th()).slice(0,2),["img/ex/bn_machine_chest_press.webp",true],"unchecked: its still as its thumbnail");
   await checkFig(page,"Machine Chest Press");
   const bg=await th();
   eq(bg.slice(0,2),["img/ex/bn_machine_chest_press.webp",true],"checked: its still");
@@ -6445,9 +6446,9 @@ await test("Live figure: no unchecked figure is shown — Incline Push-Up Medium
     await page.evaluate(async n=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:n});},n);await pause(page,500);
     eq([n,await page.$$eval("#sheet canvas,#sheet .fig3d",a=>a.length),await page.$$eval("#sheet .exd-form2 img",a=>a.map(i=>/\/[01]\.jpg$/.test(i.getAttribute("src")))),(await mq(page)).length],
       [n,0,[true,true],0],n+": photographs, no figure");}
-  /* the pilot exercise has no photographs and its figure is unchecked: no picture at all, not its stills */
+  /* the pilot exercise has no photographs: its two stills as pictures, never the moving figure */
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Machine Chest Press"});});await pause(page,500);
-  eq(await page.$$eval("#sheet .fig3d,#sheet .exd-form2,#sheet [data-mq-unchecked]",a=>a.length),0,"Machine Chest Press: no figure and none of its stills");
+  eq([await page.$$eval("#sheet canvas,#sheet .fig3d,#sheet [data-mq-unchecked]",a=>a.length),await page.$$eval("#sheet img",a=>a.filter(i=>/img\/fig\/bn_machine_chest_press-[01]\.webp$/.test(i.getAttribute("src")||"")).length>0)],[0,true],"Machine Chest Press: its stills, no moving figure");
   eq(await page.$eval("#sheet h2",e=>e.textContent.length>0),true,"its sheet still opens");
   /* an exercise with no photographs and no figure: what it showed before (its drawing) */
   const drill=await page.evaluate(async()=>{const P=await import("/js/data/poses.js"),E=await import("/js/data/exercises.js");
