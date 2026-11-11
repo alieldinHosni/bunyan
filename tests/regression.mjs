@@ -134,10 +134,17 @@ let seen=0;
 async function test(name,fn,o){
   if(ONLY.length&&!ONLY.some(x=>name.indexOf(x)>=0))return;
   if(SHARD.length===2&&SHARD[1]>1&&(seen++%SHARD[1])!==SHARD[0]-1)return;
-  const env=await open(o);
-  try{await fn(env.page,env);if(env.errs.length)throw new Error("page errors: "+env.errs.join(" | "));passes++;console.log("PASS",name);}
-  catch(e){fails++;console.log("FAIL",name,"—",e.message);}
-  finally{await env.ctx.close();}
+  /* A test that fails while the day changes under it (it began before midnight and ended
+     after: what it logged for "today" became yesterday's) is run once more, on the new
+     day. Only then: the date at its start and at its end must differ. */
+  for(let go=0;go<2;go++){
+    const day=new Date().toDateString(),env=await open(o);let err=null;
+    try{await fn(env.page,env);if(env.errs.length)throw new Error("page errors: "+env.errs.join(" | "));}
+    catch(e){err=e;}
+    finally{await env.ctx.close();}
+    if(!err){passes++;console.log("PASS",name);return;}
+    if(go===0&&new Date().toDateString()!==day){console.log("AGAIN",name,"— the date changed during it:",err.message.slice(0,120));continue;}
+    fails++;console.log("FAIL",name,"—",err.message);return;}
 }
 function eq(a,b,msg){if(JSON.stringify(a)!==JSON.stringify(b))throw new Error((msg||"")+" expected "+JSON.stringify(b)+", got "+JSON.stringify(a));}
 

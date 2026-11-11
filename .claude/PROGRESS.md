@@ -4256,3 +4256,5 @@ does not cover Log set" at 390 × 844, 390 × 667 and 390 × 667 in Arabic; "Toa
 a toast covers none of its buttons"; "Records only when earned …". The existing "records: weight, estimated max
 and reps count; the first time does not" test needed no change: its rep case (70 × 9 after 70 × 8) is at a weight
 done before.
+- tests: a test that fails while the date changes under it (begun before midnight, ended after) is run once
+  more on the new day; "Coach, a rough day" failed that way on GitHub at 00:00 UTC on 11 Nov.
