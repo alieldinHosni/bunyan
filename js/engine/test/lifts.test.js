@@ -49,6 +49,18 @@ function run(t){
   t.eq(recordIn(log,SQ,set(108,6),[],NOW),{k:"e",n:SQ,w:108,r:6,e:129.6},"a better estimated max");
   t.eq(recordIn(log,SQ,set(100,6),[],NOW),{k:"r",n:SQ,w:100,r:6},"more reps at that weight or heavier");
   t.eq(recordIn(log,SQ,set(100,6),[set(100,7)],NOW),null,"not when a set earlier today already did it");
+  /* A rep record means something (WP-0): more reps than at that weight or heavier,
+     at a weight done before, or with an estimated max at least the best. */
+  var lt={body:[],weight:80,sessions:[sess(3,[[BP,[set(60,8,8)]]])]};
+  t.eq(recordIn(lt,BP,set(55,12),[],NOW),null,
+    "60 kg x 8 at RPE 8 (est. 80) last time, 55 kg x 12 (est. 77) the first time at 55: no record");
+  t.eq(recordIn(lt,BP,set(55,13),[set(55,12)],NOW),{k:"r",n:BP,w:55,r:13},"55 x 13 after 55 x 12 today: a rep record");
+  var lt2={body:[],weight:80,sessions:[sess(3,[[BP,[set(55,12)]]]),sess(8,[[BP,[set(60,8,8)]]])]};
+  t.eq(recordIn(lt2,BP,set(55,13),[],NOW),{k:"r",n:BP,w:55,r:13},"55 x 13 after 55 x 12 last session: a rep record");
+  t.eq(recordIn({body:[],weight:80,sessions:[sess(3,[[BP,[set(60,8)]]])]},BP,set(55,9),[],NOW),null,
+    "the first time at a lighter weight, below the best estimated max: no record");
+  t.eq(recordIn({body:[],weight:80,sessions:[sess(3,[[BP,[set(60,8)]]])]},BP,set(55,12),[],NOW),{k:"e",n:BP,w:55,r:12,e:77},
+    "with no RPE, 55 x 12 (est. 77) does beat 60 x 8 (est. 76): an estimated-max record, said as one");
   var pu={body:[],weight:80,sessions:[sess(4,[[PU,[set(0,10),set(0,8)]]])]};
   t.eq([prIn(pu,PU).date,recordIn(pu,PU,set(0,12),[],NOW),recordIn(pu,PU,set(0,10),[],NOW)],[back(4),{k:"e",n:PU,w:0,r:12,e:112},null],
     "a lift only done at body weight has history: more reps is a record, the same is not");

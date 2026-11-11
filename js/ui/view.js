@@ -198,6 +198,22 @@ function kbPredict(up,kind){
 var STAR8=(function(){var p=[];for(var i=0;i<16;i++){var a=Math.PI/8*i-Math.PI/2,r=i%2?7.6:10;
   p.push((12+r*Math.cos(a)).toFixed(1)+","+(12+r*Math.sin(a)).toFixed(1));}
   return '<svg class="toast-star" viewBox="0 0 24 24" aria-hidden="true"><polygon points="'+p.join(" ")+'"/></svg>';})();
+/* Where a toast may sit (NEXT-PHASE.md WP-0). Its place is above the tab bar, which is
+   where the Log set button, the workout dock, a sheet's buttons and the number pad also
+   live: a record said over Log set hid the button the next tap was for. When its rect
+   there would cross a visible primary action, or while a sheet is open, it is said at
+   the top instead. In a workout every control counts: a done set's tick and Add a set
+   can sit in the toast's place too. */
+var TOAST_AVOID=".sess .log,.sess .wkdock,.sess button,.sess [data-logset],#sheet .sheetbox .btn,.sfoot,.kpad.on";
+function cross(a,b){return a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom;}
+function toastAtTop(d){
+  if(V.sheet)return true;
+  var a=d.getBoundingClientRect(),els=document.querySelectorAll(TOAST_AVOID);
+  for(var i=0;i<els.length;i++){
+    var b=els[i].getBoundingClientRect();
+    if(!(b.width>0&&b.height>0)||getComputedStyle(els[i]).visibility==="hidden")continue;
+    if(cross(a,b))return true;}
+  return false;}
 function toast(msg,undo,label,kind){
   /* A change the coach made says itself in the panel, with its own Undo
      (js/ui/handlers/actions.js): no second word of it over the field. */
@@ -211,7 +227,12 @@ function toast(msg,undo,label,kind){
     b.className="toast-undo";b.type="button";b.textContent=label||t("Undo");
     b.onclick=function(){d.remove();undo();};
     d.appendChild(b);}
+  /* Measured where it would sit by default, unseen and without its slide (the slide
+     starts it lower), then placed; the animation starts once the style is restored. */
+  d.style.visibility="hidden";d.style.animation="none";
   document.body.appendChild(d);
+  if(toastAtTop(d))d.classList.add("top");
+  d.style.visibility="";d.style.animation="";
   /* Fade out rather than vanish. The keyframes were written for this and nothing was
      adding the class, so toasts blinked out of existence. */
   setTimeout(function(){
