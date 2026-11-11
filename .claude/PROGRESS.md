@@ -4278,3 +4278,43 @@ done before.
 - tests: a test that fails while the date changes under it (begun before midnight, ended after) is run once
   more on the new day; "Coach, a rough day" failed that way on GitHub at 00:00 UTC on 11 Nov.
 - tests: `clockAt(y,m,d)` moves a test's page clock to a date; the monthly review test runs on 5 Nov 2026 (it failed from the 11th of every month).
+## F-0b: the 3D figure's safety gate — branch session/figure-gate (v258)
+docs/FIGURE-V3.md 2.0, 2.6, 2.8 (findings D1–D6). No figure is shown in the app unless its exercise has been
+reviewed and marked checked, and none is yet: after this, every exercise shows its photographs, as the library
+did before the figure existed. The owner's call: a wrong demonstration is worse than none.
+The gate: records.js recordFor returns a record only when it carries checked {by, on, version} (a hand-written
+record's field, or the third entry of its row in moves.js TABLE). recordForUnchecked is for tools and tests;
+markCheckedForTest marks one for the length of a browser test. Every place the app decides to show a figure goes
+through recordFor: the exercise sheet (hasMannequin, fig3dHtml), the renderer itself, and the figure's stills
+(exercises.js exFigs: the pictures and list thumbnails of Machine Chest Press and Seated Machine Row, which are
+stills of the figure). Those two have no photographs, so until they are reviewed they show no picture: their
+sheet opens with the muscle map, facts and steps, and their list thumbnail is the dumbbell glyph. The muscle map,
+the warm-up and Progress never used the figure. tools/figures/live.html, stills.mjs and review.mjs draw unchecked
+records through fig3dHtml(name, {unchecked:true}); tests/architecture.mjs fails if anything in the app reaches
+past the gate or loads collide.js.
+The checks: js/data/mannequin/collide.js (pure, not loaded by the app). The body as 17 parts (capsules sized from
+body.bin's rest mesh: modelling constants for the checks only); penetration over 3 mm against the equipment, the
+floor or a non-neighbouring part; contact gaps over 5 mm; contacts derived from the data (a closed hand holds what
+passes within 2 cm of its grip point; a part touching a support at both ends must stay on it; pads and the body
+give 4 cm), plus a few declared ones (bench press, flyes and skull crushers lying on the bench, the bar allowed to
+touch the chest; the plank on its forearms; the two machines' seat and pad). Clearances that hold for a family:
+bench press (weight never past the shoulder line toward the head, over the chest at the bottom, forearms within
+10° of upright), 5 cm head clearance (overhead presses, pulldowns, skull crushers), feet flat (standing families).
+Joint limits of 2.0: elbow 145°, knee 140° and never sideways (against where the foot points), forearm turn,
+wrist 70°/40° and no turn at the wrist, neck within 10°. kit.js props() now tags each solid with its piece's name
+(the renderer ignores it).
+Audit (tools/figure-audit.mjs → docs/figures/AUDIT.md, 41 moments): 211 records, 13 pass every check; 153 fail
+penetration, 63 contacts, 50 of the 121 a clearance applies to (22 head clearance, 18 bench forearms, 10 feet
+flat), 149 limits. Deepest: Barbell Hip Thrust (upper trunk 16 cm into the bench), the preacher curls (the pad
+inside the chest, 14.6 cm), Hyperextensions, the seated presses (pelvis 13 cm into the incline bench's seat). The
+owner's cases are found: Incline Push-Up Medium (chest through the bar and its frame), Plank (hand folded back
+at the wrist, forearm turned), Decline Push-Up (head into the floor, elbows folded past 145°). The order of work
+(tools/figure-coverage.mjs) is in the audit: Pullups, Incline Dumbbell Press, Romanian Deadlift first.
+Found on the way, not changed: geom.js bound() overwrites a cylinder's radius with its bounding radius, and
+mesh.js draws that, so plates are drawn bigger than the kit asks; collide.js measures what is drawn.
+Test expectations changed: the "Live figure" tests (chest press, row, theme, workout ⓘ, Barbell Curl, no WebGL2)
+now mark their exercise checked through markCheckedForTest first, so the renderer stays covered; the pilot
+stills test now expects no figure thumbnail for Machine Chest Press while unchecked and its still once marked; the
+workout sheet-loading test marks its exercise first. mannequin.test.js: the pilot records and the table are
+reached through recordForUnchecked, and recordFor gives neither. New: js/data/test/collide.test.js (synthetic
+scenes, real records, the gate) and the regression test "Live figure: no unchecked figure is shown".

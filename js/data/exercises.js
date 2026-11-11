@@ -3,6 +3,7 @@
 import {esc} from "../util.js";
 import {hasPose, poseSvg} from "./poses.js";
 import {FIGS} from "./figures.js";
+import {isChecked} from "./mannequin/records.js";
 import {ACTS, actIcon, actMuscle, isActivity} from "./activities.js";
 import {EXTRA} from "./extra.js";
 import {movementOf} from "./movement.js";
@@ -208,9 +209,12 @@ function exSteps(n){
 }
 /* An exercise the library has no photographs of, drawn instead as the instructional
    figure (js/data/figures.js): how many frames it has, 2 (a start and an end) or 1 (a
-   hold); 0 when it is photographed or not drawn. */
+   hold); 0 when it is photographed or not drawn. The frames are stills of the 3D
+   figure, so they pass the same gate as the figure itself (mannequin/records.js
+   isChecked): a still of a figure nobody has reviewed is not shown either, in the
+   exercise sheet or as a list thumbnail. */
 function exFigs(n){
-  var m=exMedia(n); return (m&&m.own&&!m.ph&&m.i&&FIGS[m.i])||0;}
+  var m=exMedia(n); return (m&&m.own&&!m.ph&&m.i&&isChecked(n)&&FIGS[m.i])||0;}
 function exImg(n,idx){
   var m=exMedia(n); if(!m)return null;
   var f=exFigs(n); if(f)return "img/fig/"+m.i+"-"+Math.min(idx||0,f-1)+".webp";

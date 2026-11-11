@@ -489,6 +489,10 @@ function benchPress(o){
       if(o.smith)e.push(smithIn(J,onChest(J,ang>0?.33:.29,.16)[0]));
       if(!o.floor)e.push(benchFor(J,ang));
       return e;}};
+  /* lying: the upper back and the hips stay on the bench, or the floor (collide.js) */
+  rec.contact=[["trunk.upper",o.floor?"floor":"bench"],["pelvis",o.floor?"floor":"bench"]];
+  /* the bar may touch the chest at the bottom (it is not required to) */
+  if(imp==="bb")rec.contact.push(["trunk.upper","barbell","may"]);
   if(o.smith)rec.cam={yaw:26,pitch:18};
   /* between two cable columns: from the feet, above them */
   if(imp==="cable")rec.cam={yaw:20,pitch:26};
@@ -501,6 +505,7 @@ function fly(o){
   var ang=o.angle||0,imp=o.imp||"db";
   var b0=ang>0?sit({pelvis:[.02,.6,0],pitch:-90+ang,feet:S(.5,ANKLE,.26)}):ang<0?lie({pelvis:[.1,.62,0],pitch:-90+ang,feet:S(.5,.42,.16),footDir:S(1,.3,.1),knees:S(.3,1,.1),sole:S(-.3,1,0)}):lie();
   return {keys:[b0,b0],tempo:[1.1,.3,1.7,.5],cam:{yaw:20,pitch:28},arrow:{track:"wr.l"},
+    contact:[["trunk.upper","bench"],["pelvis","bench"]],
     refine:ang>0?{Chest:"Upper chest",Shoulders:"Front delts"}:{Shoulders:"Front delts"},
     drive:function(p,u){
       var J=base(p),up=[0,1,0],tf=mul(J.cf.u,-1);
@@ -529,6 +534,7 @@ function triceps(o){
     o.lean?stand({pitch:o.lean,head:-8,feet:{l:[.24,ANKLE,.13],r:[-.24,ANKLE,-.13]},knees:S(1,0,.1)}):stand();
   var lean=o.lean||0;
   return {keys:[b0,b0],tempo:[1.0,.3,1.5,.5],cam:{yaw:kind==="lying"?62:kind==="kickback"?100:kind==="pushdown"?82:40,pitch:kind==="lying"?18:8},arrow:{track:"wr."+(o.one||"l")},
+    contact:kind==="lying"?[["trunk.upper","bench"],["pelvis","bench"]]:undefined,
     drive:function(p,u){
       var J=base(p),both=imp==="db1"||imp==="ez"||imp==="bb"||imp==="rope"||imp==="bar";
       LR.forEach(function(s){
@@ -657,7 +663,8 @@ function plank(o){
   o=o||{};
   var p0={pelvis:[-.1,.3,0],pitch:84,head:-10,feet:S(-1.36,.12,.1),footDir:S(.15,-1,0),sole:S(1,.15,0),knees:S(0,-1,0),
     hands:S(.15,.06,.12),handDir:S(1,0,-.3),palm:S(0,-1,0),elbows:S(0,-1,.2),grip:"fist"};
-  return {keys:[p0],tempo:[1,1,1,1],cam:{yaw:62,pitch:10},refine:{Core:"Abs"},
+  /* held on the forearms: they lie on the mat (collide.js) */
+  return {keys:[p0],tempo:[1,1,1,1],cam:{yaw:62,pitch:10},refine:{Core:"Abs"},contact:[["forearm","mat"]],
     equip:function(){return [["mat",[-.5,0,0],{len:1.0,w:.38}]];}};}
 
 /* ---- lunges and split squats ----
@@ -1157,7 +1164,11 @@ function chop(o){
 
 /* ================= the library: which exercise is which family =================
    By the library's exact name (exercises.json). An exercise is added here only after
-   its family has been looked at beside its photographs (tools/figures/review.mjs). */
+   its family has been looked at beside its photographs (tools/figures/review.mjs).
+   Being here is not enough to be shown: a row is [family, parameters, checked], and
+   the app shows the figure only once checked ({by, on, version}) is filled in, after
+   the exercise's own review (docs/FIGURE-V3.md 2.8; records.js recordFor). None is
+   yet: every exercise shows its photographs. */
 var TABLE={
   "Barbell Curl":[curl,{imp:"bb"}],
   "Hammer Curls":[curl,{imp:"db",grip:"ham"}],

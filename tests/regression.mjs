@@ -6183,7 +6183,11 @@ await test("Workout: the next exercise is named under the current one, in view o
   await page.tap('[data-wuskip]');await pause(page,400);
   const r=await page.evaluate(()=>{const n=document.querySelector(".wexl-nx");if(!n)return null;const b=n.getBoundingClientRect();return [b.bottom<=innerHeight,!!document.querySelector("#app .nx")];});
   eq(r,[true,false],"Next is under the name, in view; the old card is gone");
-  /* The figure's stage holds its size and shows no photos until it is drawn. */
+  /* The figure's stage holds its size and shows no photos until it is drawn. No figure
+     is shown until its exercise is checked (the safety gate), so this one is marked
+     checked for the test, if it has a figure at all. */
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;
+    (await import("/js/data/mannequin/records.js")).markCheckedForTest(S.active.entries[V.logIdx].name);});
   await page.tap('[data-exdetail]');await pause(page,30);
   const f=await page.evaluate(()=>{const f=document.querySelector("#sheet .fig3d");if(!f)return "none";
     return [f.hasAttribute("data-still")||f.hasAttribute("data-live")?"ok":getComputedStyle(f.querySelector(".fig3d-still")).visibility];});
@@ -6312,10 +6316,15 @@ await test("Surfaces: changing page or opening a sheet never fades what holds th
    until asked, which also keeps these tests quick. */
 const mq=page=>page.evaluate(async()=>(await import("/js/ui/mannequin.js")).mannequins().map(m=>m.state()));
 const probe=page=>page.evaluate(async()=>(await import("/js/ui/mannequin.js")).mannequins()[0].probe());
+/* The safety gate (docs/FIGURE-V3.md 2.6): the app shows no figure that has not been
+   reviewed, and none has yet. The renderer is still tested, on a figure marked checked
+   for the length of one test through the records' test hook. */
+function checkFig(page,name){return page.evaluate(async n=>{(await import("/js/data/mannequin/records.js")).markCheckedForTest(n);},name);}
 async function waitLive(page){
   for(let i=0;i<40;i++){const s=await mq(page);if(s.length&&s[0].frames>0)return s;await pause(page,250);}
   throw new Error("the figure never drew: "+JSON.stringify(await mq(page)));}
 await test("Live figure: the Seated Chest Press moves in 3D in the exercise sheet, its muscles lit, and survives a repaint",async page=>{
+  await checkFig(page,"Machine Chest Press");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Machine Chest Press"});});await pause(page,600);
   const s=await waitLive(page);
   eq([s.length,s[0].live,s[0].err],[1,true,""],"one live figure");
@@ -6348,6 +6357,7 @@ await test("Live figure: the Seated Chest Press moves in 3D in the exercise shee
   eq((await mq(page)).length,0,"nothing left running");
 },{prefs:{palette:"red"}});
 await test("Live figure: a second exercise is the same figure on other equipment — the Seated Machine Row",async page=>{
+  await checkFig(page,"Seated Machine Row");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Seated Machine Row"});});await pause(page,600);
   const s=await waitLive(page);
   eq([s[0].live,s[0].yaw],[true,145],"live, from its own view: behind, where the back works");
@@ -6360,6 +6370,7 @@ await test("Live figure: a second exercise is the same figure on other equipment
     return Object.keys(hl).filter(k=>hl[k]>0).sort();}),["biceps","lats","reardelt","traps"]);
 },{prefs:{palette:"red"}});
 await test("Live figure: it takes the theme — light mode lights the stage, Sage and Blue have no red",async page=>{
+  await checkFig(page,"Machine Chest Press");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Machine Chest Press"});});await pause(page,600);
   await waitLive(page);
   const dark=await probe(page);
@@ -6379,6 +6390,7 @@ await test("Live figure: it takes the theme — light mode lights the stage, Sag
 /* The figure is off the workout screen (workout-spec.md): it lives behind ⓘ, in the
    exercise sheet, where it turns under a finger. */
 await test("Live figure: the workout shows none; ⓘ opens the exercise sheet, where it moves and turns",async page=>{
+  await checkFig(page,"Machine Chest Press");
   await startWorkout(page);
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.active.entries[V.logIdx].name="Machine Chest Press";(await import("/js/ui/render.js")).render();});await pause(page,600);
   eq(await page.$$eval("#app .fig3d,#app .formvis",a=>a.length),0,"no figure or photos on the workout");
@@ -6387,6 +6399,7 @@ await test("Live figure: the workout shows none; ⓘ opens the exercise sheet, w
   eq(await page.$eval("#sheet .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-mq-turn"),e.getAttribute("data-mq")]),[true,true,"Machine Chest Press"]);
 });
 await test("Live figure: the library's exercises are drawn by their movement's family — a Barbell Curl in the sheet",async page=>{
+  await checkFig(page,"Barbell Curl");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Barbell Curl"});});await pause(page,600);
   const s=await waitLive(page);
   eq([s.length,s[0].live,s[0].err],[1,true,""],"one live figure");
@@ -6403,21 +6416,45 @@ await test("Live figure: the library's exercises are drawn by their movement's f
   eq([(await mq(page)).length,await page.$$eval("#sheet .exd-form2 img",a=>a.length)],[0,2]);
 },{prefs:{palette:"red"}});
 await test("Live figure: a phone without WebGL2 keeps the start and end stills",async page=>{
+  await checkFig(page,"Machine Chest Press");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Machine Chest Press"});});await pause(page,800);
   eq((await mq(page)).length,0,"nothing started");
   const st=await page.$eval("#sheet .fig3d",e=>{const s=e.querySelector(".fig3d-still");
     return [e.hasAttribute("data-live"),getComputedStyle(e.querySelector("canvas")).display,getComputedStyle(s).display,[...s.querySelectorAll("img")].map(i=>i.naturalWidth)];});
   eq(st,[false,"none","grid",[720,720]]);
 },{init:()=>{try{delete window.WebGL2RenderingContext;}catch(e){}}});
-await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails (the library's fall back to their photographs)",async page=>{
+await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails, shown only once checked (the library's fall back to their photographs)",async page=>{
   eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];
     for(const id in F){const u=["img/ex/"+id+".webp"];for(let i=0;i<F[id];i++)u.push("img/fig/"+id+"-"+i+".webp");
       for(const x of u){const r=await fetch(x);if(!r.ok)out.push(x);}}return [F,out];}),
     [{"bn_machine_chest_press":2,"bn_seated_machine_row":2},[]]);
-  const bg=await page.evaluate(async()=>{const E=await import("/js/data/exercises.js"),d=document.createElement("div");d.innerHTML=E.thumb("Machine Chest Press",52);document.body.appendChild(d);
-    const i=d.querySelector("img");const r=[i.getAttribute("src"),i.classList.contains("fig"),getComputedStyle(i).backgroundColor];d.remove();return r;});
-  eq(bg.slice(0,2),["img/ex/bn_machine_chest_press.webp",true]);
+  const th=()=>page.evaluate(async()=>{const E=await import("/js/data/exercises.js"),d=document.createElement("div");d.innerHTML=E.thumb("Machine Chest Press",52);document.body.appendChild(d);
+    const i=d.querySelector("img");const r=i?[i.getAttribute("src"),i.classList.contains("fig"),getComputedStyle(i).backgroundColor]:[null,false,""];d.remove();return r;});
+  /* a still of a figure nobody has reviewed is not shown either: the dumbbell glyph */
+  eq((await th()).slice(0,2),[null,false],"unchecked: no still of it as its thumbnail");
+  await checkFig(page,"Machine Chest Press");
+  const bg=await th();
+  eq(bg.slice(0,2),["img/ex/bn_machine_chest_press.webp",true],"checked: its still");
   if(bg[2]==="rgb(255, 255, 255)")throw new Error("a figure thumbnail on white");
+});
+/* The safety gate: until each exercise's figure has been reviewed (docs/FIGURE-V3.md
+   2.8), every exercise shows its photographs, the three the owner saw going wrong
+   among them, and an exercise with neither keeps what it showed before. */
+await test("Live figure: no unchecked figure is shown — Incline Push-Up Medium, Plank and Decline Push-Up show their photographs and no canvas",async page=>{
+  for(const n of ["Incline Push-Up Medium","Plank","Decline Push-Up"]){
+    await page.evaluate(async n=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:n});},n);await pause(page,500);
+    eq([n,await page.$$eval("#sheet canvas,#sheet .fig3d",a=>a.length),await page.$$eval("#sheet .exd-form2 img",a=>a.map(i=>/\/[01]\.jpg$/.test(i.getAttribute("src")))),(await mq(page)).length],
+      [n,0,[true,true],0],n+": photographs, no figure");}
+  /* the pilot exercise has no photographs and its figure is unchecked: no picture at all, not its stills */
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Machine Chest Press"});});await pause(page,500);
+  eq(await page.$$eval("#sheet .fig3d,#sheet .exd-form2,#sheet [data-mq-unchecked]",a=>a.length),0,"Machine Chest Press: no figure and none of its stills");
+  eq(await page.$eval("#sheet h2",e=>e.textContent.length>0),true,"its sheet still opens");
+  /* an exercise with no photographs and no figure: what it showed before (its drawing) */
+  const drill=await page.evaluate(async()=>{const P=await import("/js/data/poses.js"),E=await import("/js/data/exercises.js");
+    return Object.keys(P.POSE).find(n=>!E.exImg(n,0));});
+  await page.evaluate(async n=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:n});},drill);await pause(page,500);
+  eq([await page.$$eval("#sheet .exd-pose svg",a=>a.length),await page.$$eval("#sheet .fig3d,#sheet canvas",a=>a.length)],[1,0],drill+": its drawing, as before");
+  eq(await page.evaluate(()=>document.querySelectorAll("[data-mq-unchecked]").length),0,"the app never asks for an unchecked figure");
 });
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();

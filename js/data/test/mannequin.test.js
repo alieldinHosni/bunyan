@@ -1,6 +1,6 @@
 import {V} from "../mannequin/geom.js";
 import {joints, highlight, MUSCLE_TAGS} from "../mannequin/rig.js";
-import {RECORDS, recordFor, levers, grip} from "../mannequin/records.js";
+import {RECORDS, recordFor, recordForUnchecked, levers, grip} from "../mannequin/records.js";
 import {phaseAt, poseAt, sceneAt, framePoints, fitCamera, motionPath, arrowShape, cycleOf} from "../mannequin/motion.js";
 import {BODY} from "../mannequin/body.js";
 import {solve, NB, IX, BONES, P0, ARM} from "../mannequin/skin.js";
@@ -17,7 +17,9 @@ const rot=(M,i)=>{const o=i*16;return [[M[o],M[o+1],M[o+2]],[M[o+4],M[o+5],M[o+6
 /* lib: the whole library, {name: {m, x}}, as the runner reads it. */
 function run(t,lib){
   /* ---- records come from the library ---- */
-  t.ok(recordFor(PRESS)&&recordFor(ROWX)&&!recordFor("constructor"),"the pilot exercises have records; a stray name has none");
+  t.ok(recordForUnchecked(PRESS)&&recordForUnchecked(ROWX)&&!recordForUnchecked("constructor"),"the pilot exercises have records; a stray name has none");
+  /* the safety gate (collide.test.js holds it for every record): not reviewed, not shown */
+  t.ok(!recordFor(PRESS)&&!recordFor(ROWX),"neither is shown by the app until it is checked");
   for(const n of [PRESS,ROWX]){
     t.ok(lib[n]&&lib[n].i===RECORDS[n].id,n+": the record's id is the library's");
     t.ok(!("m" in RECORDS[n])&&!("x" in RECORDS[n]),n+": the record names no muscles of its own");}
@@ -133,7 +135,7 @@ function run(t,lib){
   /* ---- the library's movements (moves.js): every exercise in the table ---- */
   const names=Object.keys(TABLE);
   t.eq(names.filter(n=>!lib[n]),[],"every exercise the families draw is in the library, by its exact name ("+names.length+")");
-  t.ok(names.every(n=>recordFor(n)===moveFor(n)&&recordFor(n)),"and recordFor finds each one's record");
+  t.ok(names.every(n=>recordForUnchecked(n)===moveFor(n)&&recordForUnchecked(n)),"and the tools' recordForUnchecked finds each one's record");
   const unreached=[],sunk=[],broken=[],still=[];
   for(const n of names){
     const rec=moveFor(n);

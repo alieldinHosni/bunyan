@@ -223,6 +223,34 @@ phones. A triangle renderer of 28,000 triangles is light work for any phone GPU 
 last several years, but that is an expectation, not a test; the first real-device
 check should be a mid-range Android phone with the preview page below.
 
+## The safety gate (v258)
+
+A person copies what the figure does, and a wrong demonstration is worse than none
+(`docs/FIGURE-V3.md` 2.6, 2.8). So:
+
+- **No figure is shown unless its exercise is checked.** `records.js recordFor(name)`
+  returns a record only when it carries `checked: {by, on, version}` (on a hand-written
+  record, or as the third entry of its row in `moves.js TABLE`). `hasMannequin`,
+  `fig3dHtml` and the renderer go through it, and so do the figure's stills
+  (`exercises.js exFigs`: the sheet's pictures and the list thumbnails of the two pilot
+  exercises). **None is checked yet**: every exercise shows its photographs; the two pilot
+  machines, which have no photographs, show no picture until they are reviewed. Checking
+  is done one exercise at a time, by the procedure of 2.8, never by the automatic tests
+  alone. `recordForUnchecked` and `fig3dHtml(name, {unchecked: true})` are for
+  `tools/figures/*` and the tests; `tests/architecture.mjs` stops the app using them.
+- **`js/data/mannequin/collide.js`** finds what must never be shown: the body (17 parts
+  as capsules, sized from the mesh) through the equipment, the floor or itself; contacts
+  that should touch and do not (hands on what they hold, a body on what it rests on,
+  declared `contact` lists); the injury clearances of 2.6 that hold for a whole family
+  (the bar never over the neck or face in a bench press, a bar or handle 5 cm from the
+  head in overhead presses, pulldowns and skull crushers, feet flat in standing lifts);
+  and the joint limits of 2.0. It changes no pose. Its header documents every threshold
+  and how contacts are derived.
+- **`tools/figure-audit.mjs`** runs all of it on every record at 41 moments and writes
+  `docs/figures/AUDIT.md`, the work list, with the order of work from
+  `tools/figure-coverage.mjs` (by how many built-in programs and built weeks use each
+  exercise). Unit tests: `js/data/test/collide.test.js`.
+
 ## The library's movements
 
 Most of the library is a few movements with different equipment, grips and positions,

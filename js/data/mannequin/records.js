@@ -20,6 +20,11 @@
      arrow     {track}: the joint whose path the arrow follows (wr.l, an.l, kn.l, P); by
                default whichever moves furthest
      refine    {Shoulders: "Front delts"}: a library name narrowed for this movement
+     contact   [[part, what], ...]: what the body touches, for the safety checks
+               (collide.js, which documents it and derives the usual ones)
+     checked   {by, on, version}: who reviewed this exercise's figure, when, and
+               against which version of its family (docs/FIGURE-V3.md 2.8). Without
+               it the app never shows the figure (recordFor, below)
    }
 
    Two exercises so far, the pilot: Machine Chest Press (the reference's Seated Chest
@@ -28,7 +33,7 @@
 import {V} from "./geom.js";
 import {joints, DIM} from "./rig.js";
 import {arc} from "./motion.js";
-import {moveFor} from "./moves.js";
+import {moveFor, TABLE} from "./moves.js";
 
 var add=V.add,sub=V.sub,mul=V.mul;
 
@@ -92,6 +97,8 @@ var RECORDS={
     equip:function(J,u,rec){
       return seat().concat(backPad(J),[["tower",[TW,0,0],[1,0,0]]],leverRig(J,u,rec,.78,TW+.1));},
     tempo:[1.0,.3,1.7,.5],
+    /* sitting on the seat, the back on its pad (collide.js) */
+    contact:[["pelvis","seat"],["trunk.upper","soft"]],
     cam:{yaw:55,pitch:8},
     arrow:{track:"wr.l"},
     refine:{Shoulders:"Front delts"}},
@@ -111,12 +118,36 @@ var RECORDS={
         ["beam",[.13,1.0,0],[tx-.13,1.0,0],.065,.065],["beam",[-.13,.022,0],[tx,.022,0],.09,.044]],
         leverRig(J,u,rec,.78,tx-.1));},
     tempo:[1.0,.4,1.6,.5],
+    /* sitting on the seat, the chest on its pad (collide.js) */
+    contact:[["pelvis","seat"],["trunk.upper","soft"]],
     /* from behind and to the side: the back is what works */
     cam:{yaw:145,pitch:10},
     arrow:{track:"wr.l"}}
 };
 /* The record for an exercise, by its name in the library: one written here, or one
-   built from its movement's family (moves.js); null when it has none yet. */
-function recordFor(name){return (name&&Object.prototype.hasOwnProperty.call(RECORDS,name))?RECORDS[name]:moveFor(name);}
+   built from its movement's family (moves.js); null when it has none yet. Whether or
+   not it has been reviewed: for the offline tools and the tests only. */
+function own(o,k){return !!k&&Object.prototype.hasOwnProperty.call(o,k);}
+function recordForUnchecked(name){return own(RECORDS,name)?RECORDS[name]:moveFor(name);}
+/* The safety gate (docs/FIGURE-V3.md 2.6, 2.8). A figure shows someone how to move,
+   and a wrong demonstration is worse than none, so an exercise's figure is shown
+   only once it has been reviewed, exercise by exercise, and marked checked: on its
+   record (a record here) or on its row of the families' table (moves.js TABLE, the
+   row's third entry). Until then the app shows the exercise's photographs, as it
+   does for an exercise with no figure. Every place the app decides whether to show a
+   figure, or a still of one, asks this. */
+function checkedOf(name){
+  var c=own(RECORDS,name)?RECORDS[name].checked:own(TABLE,name)?TABLE[name][2]:null;
+  return c&&c.by&&c.on&&c.version?c:null;}
+function isChecked(name){return !!checkedOf(name)&&!!recordForUnchecked(name);}
+/* The record the app may show: only a checked one. */
+function recordFor(name){return isChecked(name)?recordForUnchecked(name):null;}
+/* For the browser tests only: mark one exercise checked for the length of a test, so
+   the renderer stays covered while nothing in the app is checked. Returns the undo. */
+function markCheckedForTest(name){
+  var c={by:"test",on:"test",version:"test"};
+  if(own(RECORDS,name)){var was=RECORDS[name].checked;RECORDS[name].checked=c;return function(){RECORDS[name].checked=was;};}
+  if(own(TABLE,name)){var row=TABLE[name],old=row[2];row[2]=c;return function(){row[2]=old;};}
+  return function(){};}
 
-export {RECORDS, recordFor, seated, along, grip, wristFor, levers};
+export {RECORDS, recordFor, recordForUnchecked, checkedOf, isChecked, markCheckedForTest, seated, along, grip, wristFor, levers};

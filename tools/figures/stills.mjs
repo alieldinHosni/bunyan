@@ -30,7 +30,7 @@ for(const n of names){
       G=await import("/js/data/mannequin/geom.js"),rig=await import("/js/data/mannequin/rig.js");
     const grid=document.getElementById("grid");
     grid.style.display="block";
-    grid.innerHTML='<div class="pv-cell" data-palette="blue" data-theme="dark" style="width:1080px;padding:0;border-radius:0">'+M.fig3dHtml(n,{})+'</div>';
+    grid.innerHTML='<div class="pv-cell" data-palette="blue" data-theme="dark" style="width:1080px;padding:0;border-radius:0">'+M.fig3dHtml(n,{unchecked:true})+'</div>';
     M.syncMannequins();
     /* a new figure starts once the page has painted */
     let m;for(let i=0;i<100&&!(m=M.mannequins().find(x=>x.name===n));i++)await new Promise(r=>setTimeout(r,30));
