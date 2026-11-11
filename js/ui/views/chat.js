@@ -19,6 +19,7 @@ import {goalOf} from "../../data/goals.js";
 import {actInfo, isActivity} from "../../data/activities.js";
 import {ACTION_IDS, factOf, fold, intentOf, KNOW_IDS, situationOf, skel, spell} from "../../coach/intent.js";
 import {KINDS, listFacts} from "../../coach/context.js";
+import {classify as safetyOf} from "../../coach/safety.js";
 import {reconcileNutrition, reconcileTraining} from "../../coach/reconcile.js";
 import {addDays as addDaysW, pinnedOn, weekDates, weekStartOf} from "../../engine/schedule.js";
 import {muscleOf, secondaryOf} from "../../data/exercises.js";
@@ -1070,8 +1071,11 @@ var SCOPE=[
     +"(take|taking|dose|dosage|pills?|tablets?|capsules?|shots?|inject\\w*) (of )?vitamin|vitamin \\w* ?(pills?|tablets?|dose|dosage|supplements?|shots?))|"
     +arw("مكمل|مكملات|كرياتين|حارق|حوارق")+"|(اخد|باخد|ناخد|جرعه|حبوب|برشام|حقن) فيتامين|فيتامين \\S* ?(حبوب|برشام|جرعه|حقن)")]];
 function scopeOf(q){var fq=fold(q);for(var i=0;i<SCOPE.length;i++)if(SCOPE[i][2].test(fq))return SCOPE[i];return null;}
-function aScope(a,q){
-  var sc=scopeOf(q)||SCOPE[2],ar=areaOf(fold(q)),rule=KB.scopeRule(sc[1]);
+function aScope(a,q){return scopeAnswer(a,q,null);}
+/* The scope answer, for the limit given (a red flag's referral names it) or the one the
+   words touch. */
+function scopeAnswer(a,q,force){
+  var sc=force||scopeOf(q)||SCOPE[2],ar=areaOf(fold(q)),rule=KB.scopeRule(sc[1]);
   if(sc[0]==="mental"){
     p(a,t("That needs a professional, a doctor or a psychologist, not me. Please talk to one; it is worth it."));
     return src(a,rule&&rule.src);}
@@ -1565,6 +1569,35 @@ function recapMsg(text,rc,L){
     :{s:"say",lead:lead,notes:notes,acts:[{l:t("Open Food"),a:{"data-tab":"food"}}]};
   return {q:text,id:"recap",at:Date.now(),b:[],acts:[],ag:ag,lang:L};}
 
+/* ---- red flags first (js/coach/safety.js, docs/COACH-AGENT.md 2.2) ---------------------
+   Fixed text, worded from the scope rules (js/knowledge/scope.js emergency_certified,
+   refer_symptoms, refer_unusual_pain, refer_suspected_mental_illness), and nothing added
+   to it: no advice, no figures, no other suggestion. Stop now says stop and get help, and
+   with a workout open, the way to end it. Stop the session adds the recovery log. A
+   medicine, a condition or a pregnancy is the scope answer as it was; self-harm and
+   eating very little get a kind line and a person to talk to, nothing else. */
+var SAFETOPIC={stop:"Stop now",session:"Stop this session",refer:"Talk to someone"};
+function safetyReply(q,sf){
+  var L=sf.lang==="ar"?"ar":"en";
+  return withLang(L,function(){
+    var text=String(q).trim().slice(0,300),a=A(),id="safety";
+    if(sf.cls==="stop"){
+      p(a,t("Stop training now. This can be an emergency: call your local emergency number or get to a doctor now."));
+      if(S.active)act(a,t("End my workout"),{"data-finish":"1"});
+      src(a,(KB.scopeRule("emergency_certified")||{}).src);}
+    else if(sf.cls==="session"){
+      p(a,t("Stop this session, sit down and sip some water. If it doesn't pass in a few minutes, or it comes back, see a doctor before you train again."));
+      if(S.active)act(a,t("End my workout"),{"data-finish":"1"});
+      act(a,t("Note it in the recovery log"),{"data-sheet":"recovery"});
+      src(a,(KB.scopeRule("refer_unusual_pain")||{}).src);}
+    else if(sf.sub==="care"){
+      p(a,t("That sounds hard, and you don't have to carry it alone. Please talk to a doctor or someone you trust today."));
+      src(a,(KB.scopeRule("refer_suspected_mental_illness")||{}).src);}
+    else{id="scope";var sc=scopeOf(text);scopeAnswer(a,text,sc&&(sc[0]==="medical"||sc[0]==="mental")?sc:SCOPE[1]);}
+    return {q:text,id:id,at:Date.now(),b:a.b,acts:a.acts,src:a.src&&a.src.length?a.src:undefined,lang:L,safety:sf.cls,ssub:sf.sub};});}
+/* Whether a message is a red flag: then the on-device model never sees it. */
+function isSafety(q){try{return !!safetyOf(q).cls;}catch(e){return false;}}
+
 /* The coach's indexes (the knowledge search, the answer bank, the phrases, the food and
    exercise names) are built the first time they are used, which made the first question
    wait 60–100 ms (more on a phone) before the message even left the box. They are built
@@ -1577,6 +1610,8 @@ function warmCoach(){
   var idle=typeof requestIdleCallback==="function"?function(f){requestIdleCallback(f,{timeout:300});}:function(f){setTimeout(f,30);};
   (function next(){var f=steps.shift();if(!f)return;idle(function(){try{f();}catch(e){}next();});})();}
 function ask(q,id,lang){
+  /* A red flag is read before anything else, as said: never rewritten or split. */
+  if(!id&&isSafety(q))return askOne(q,null,lang);
   /* A day told in one message is read whole, not cut in two. */
   if(!id&&S.onboarded&&FOODDB&&dayTold(q))return askOne(q,null,lang);
   if(!id&&S.onboarded){
@@ -1589,6 +1624,9 @@ function ask(q,id,lang){
   return askOne(q,id,lang);}
 function askOne(q,id,lang){
   pruneChat();
+  /* Safety first: nothing else, the on-device model included, can answer a red flag. */
+  if(!id){var sf=null;try{sf=safetyOf(q);}catch(e){sf=null;}
+    if(sf&&sf.cls){var sm=safetyReply(q,sf);S.chat=(S.chat||[]).concat([sm]).slice(-KEEP);return sm;}}
   /* A short answer to the last question: yes or no to a change waiting for a tap is that
      tap (the caller runs it; nothing is added to the conversation). */
   var prev=id?null:lastExchange(),fq0=id?"":fold(q);
@@ -1809,7 +1847,7 @@ function agHtml(m,live,ro){
   if(g.s==="say"&&live)h+=buttons(Array.isArray(g.acts)?g.acts:[]);
   return h;}
 function bubbleIn(m,live,L,prev,ro){
-  var fq=m.id==="faq"&&m.faq?faqById(m.faq):null,tp=fq?[fq.title,fq.glyph]:TOPIC[m.id];
+  var fq=m.id==="faq"&&m.faq?faqById(m.faq):null,tp=fq?[fq.title,fq.glyph]:m.id==="safety"?[SAFETOPIC[m.safety]||"Stop now","info"]:TOPIC[m.id];
   var h='<div class="chat-x'+(live?' live':'')+(prev?' prev':'')+(ro?' ro':'')+'" data-k="'+(ro?'h':'x')+esc(String(m.at||""))+'" lang="'+L+'" dir="'+(L==="ar"?"rtl":"ltr")+'"><div class="chat-q"><p dir="auto">'+esc(String(m.q||""))+'</p></div><div class="chat-a">'
    +'<div class="chat-ah"><span class="chat-gl">'+glyph(tp?tp[1]:"question")+'</span><span class="chat-ah-t">'
    +'<span class="chat-ak">'+esc(t("Coach"))+'</span>'+(tp?'<span class="chat-at">'+esc(t(tp[0]))+'</span>':'')+'</span></div>';
@@ -1836,7 +1874,7 @@ function bubbleIn(m,live,L,prev,ro){
 function missHtml(m,live,ro){
   if(!live||ro||!m||!m.q||m.id==="app"&&!m.ag)return "";
   if(m.miss)return '<p class="chat-missd" data-k="miss'+esc(String(m.at))+'">'+esc(t("Kept, thanks. Try saying it another way, or tap a question below."))+'</p>'
-    +(m.id!=="smart"&&isReady()?'<button class="chat-altb" data-smarttry="'+esc(String(m.at))+'">'+esc(t("Let the smart coach try"))+'</button>':'');
+    +(m.id!=="smart"&&m.id!=="safety"&&!m.safety&&isReady()&&!isSafety(m.qq||m.q)?'<button class="chat-altb" data-smarttry="'+esc(String(m.at))+'">'+esc(t("Let the smart coach try"))+'</button>':'');
   return '<button class="chat-miss" data-chatmiss="'+esc(String(m.at))+'" data-k="miss'+esc(String(m.at))+'">'+esc(t("Not what I asked"))+'</button>';}
 
 /* The screen: a header that says where the answers come from, then either what can be
@@ -1870,6 +1908,8 @@ function vChat(){
    answers so far, above 1) one slim row that scrolls sideways, so it never takes the
    conversation's room (owner, 27 Oct). */
 function askNext(last,n){
+  /* After a red flag, nothing else is suggested. */
+  if(last&&last.id==="safety")return "";
   var LL=last.lang==="ar"||last.lang==="en"?last.lang:uiLang(),own=LL!==uiLang()?LL:"",slim=n>1;
   return withLang(LL,function(){return '<div class="chat-next'+(slim?' slim':'')+'" lang="'+LL+'" dir="'+(LL==="ar"?"rtl":"ltr")+'"'
     +(slim?' role="group" aria-label="'+esc(t("Ask next"))+'">':'><div class="chat-next-h">'+esc(t("Ask next"))+'</div>')
@@ -1911,4 +1951,4 @@ function dayWord(at){
 function liveAt(log,i){var m=log[i],n=log.length-1;
   return i===n||(i===n-1&&m&&m.pair&&log[n].pair&&m.ag&&(m.ag.s==="confirm"||m.ag.s==="pick"));}
 
-export {warmCoach, ASK, ask, askNext, bubble, inbodyReading, liveAt, chatShown, findMsg, follow, histLink, histSheet, NEXT, pruneChat, vChat};
+export {warmCoach, ASK, ask, isSafety, askNext, bubble, inbodyReading, liveAt, chatShown, findMsg, follow, histLink, histSheet, NEXT, pruneChat, vChat};

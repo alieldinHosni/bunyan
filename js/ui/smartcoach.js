@@ -20,6 +20,7 @@ import {bodyFat} from "../engine/stats.js";
 import {planOn} from "../engine/dayplan.js";
 import {commandOf} from "../coach/commands.js";
 import {intentOf, ACTION_IDS} from "../coach/intent.js";
+import {classify as safetyOf} from "../coach/safety.js";
 import {t} from "../i18n/dict.js";
 import {exName, planName} from "../i18n/exnames.js";
 import {curProfile, S, saveDB, split} from "../state.js";
@@ -82,7 +83,11 @@ function snapshot(){
 function rowOf(m){return document.querySelector('.chat-x[data-k="x'+m.at+'"] .chat-lead');}
 function run(m,save,paint){
   if(!m||!m.pending)return;
-  var prev=(S.chat||[]).filter(function(x){return x&&x!==m&&x.q&&Array.isArray(x.b)&&x.b[0]&&x.b[0].p;}).slice(-2)
+  /* A red flag (js/coach/safety.js) never reaches the model: its answer is the coach's
+     fixed text. The row the model would have written is taken away. */
+  if(safetyOf(m.qq||m.q).cls){S.chat=(S.chat||[]).filter(function(x){return x!==m;});save();paint();return;}
+  /* Nor does one said earlier, as the conversation it is given. */
+  var prev=(S.chat||[]).filter(function(x){return x&&x!==m&&x.q&&Array.isArray(x.b)&&x.b[0]&&x.b[0].p&&!x.safety&&!safetyOf(x.qq||x.q).cls;}).slice(-2)
     .map(function(x){return {q:x.qq||x.q,a:x.b[0].p};});
   var msgs=buildMessages(m.qq||m.q,snapshot(),m.lang==="ar"?"ar":"en",prev);
   llmAsk(msgs,function(txt){var el=rowOf(m);if(el)el.textContent=readReply(txt).text||"…";}).then(function(full){

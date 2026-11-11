@@ -4672,6 +4672,47 @@ await test("Contrast: no text under WCAG AA on the main pages — Red, dark and 
   const bad=await contrastAudit(page,["red/dark","red/light"],"ar");if(bad.length)throw new Error(bad.length+" under AA:\n"+bad.join("\n"));});
 await test("Contrast: no text under WCAG AA on the main pages — Sage, dark and light",async page=>{
   const bad=await contrastAudit(page,["mono/dark","mono/light"],"en");if(bad.length)throw new Error(bad.length+" under AA:\n"+bad.join("\n"));});
+/* ---- the coach's red flags (js/coach/safety.js, docs/COACH-AGENT.md 2.2) ---- */
+/* What the newest answer says and offers: its text, its buttons' attributes, whether
+   anything else is suggested under it, and its direction. */
+const safeLast=page=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();
+  x.querySelectorAll(".chat-more").forEach(d=>d.open=true);
+  return {a:x.querySelector(".chat-a").innerText,dir:x.getAttribute("dir"),lang:x.getAttribute("lang"),
+    acts:[...x.querySelectorAll(".chat-acts button")].map(b=>Object.keys(b.dataset).join(",")),
+    next:!!document.querySelector("#cpanel .chat-next"),alt:!!x.querySelector(".chat-alt")};});
+await test("Coach safety: chest pain, in English and Arabic, is told to stop and get emergency help, and offered nothing else",async page=>{
+  await openChat(page);
+  await page.fill('#chatq',"I feel chest pain");await page.press('#chatq','Enter');await pause(page,400);
+  let r=await safeLast(page);
+  if(!/Stop training now/.test(r.a)||!/emergency/.test(r.a))throw new Error("en: "+r.a);
+  if(/recovery log/i.test(r.a))throw new Error("en offers the recovery log: "+r.a);
+  eq([r.acts,r.next,r.alt,await ev(page,"[S.chat[S.chat.length-1].id,S.chat[S.chat.length-1].safety]")],[[],false,false,["safety","stop"]],"no button, nothing suggested");
+  await page.fill('#chatq',"حاسس بألم في صدري");await page.press('#chatq','Enter');await pause(page,400);
+  r=await safeLast(page);
+  if(!/وقّف التمرين حالًا/.test(r.a)||!/طوارئ/.test(r.a))throw new Error("ar: "+r.a);
+  if(/سجل الاستشفاء/.test(r.a))throw new Error("ar offers the recovery log: "+r.a);
+  eq([r.dir,r.lang,r.acts,r.next],["rtl","ar",[],false],"Arabic, right to left, nothing else");
+  /* With a workout open, the way to end it, and that only. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active={dayName:"Seed",entries:[],start:Date.now()};});
+  await page.fill('#chatq',"chest pain");await page.press('#chatq','Enter');await pause(page,400);
+  r=await safeLast(page);
+  eq(r.acts,["finish"],"a workout open: End my workout");
+});
+await test("Coach safety: dizzy is told to stop the session, sit and sip water, with the recovery log; sore from benching is not a red flag",async page=>{
+  await openChat(page);
+  await page.fill('#chatq',"I feel dizzy");await page.press('#chatq','Enter');await pause(page,400);
+  let r=await safeLast(page);
+  if(!/Stop this session/.test(r.a)||!/sip some water/.test(r.a)||!/see a doctor/.test(r.a))throw new Error("dizzy: "+r.a);
+  eq([r.acts,r.next],[["sheet"],false],"the recovery log, nothing suggested");
+  await page.fill('#chatq',"انا دايخ");await page.press('#chatq','Enter');await pause(page,400);
+  r=await safeLast(page);
+  if(!/وقّف التمرين ده/.test(r.a))throw new Error("ar dizzy: "+r.a);
+  eq([r.dir,r.acts],["rtl",["sheet"]],"Arabic, right to left");
+  await page.fill('#chatq',"my chest is sore from benching");await page.press('#chatq','Enter');await pause(page,400);
+  r=await safeLast(page);
+  if(/Stop training now|Stop this session|emergency/.test(r.a))throw new Error("soreness read as a red flag: "+r.a);
+  eq(await ev(page,"S.chat[S.chat.length-1].safety||null"),null,"no safety class");
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
@@ -5105,12 +5146,17 @@ await test("Coach scope: no diagnosis, no medical or supplement advice, however 
   const lead=()=>page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();return [x.querySelector(".chat-lead").textContent,[...x.querySelectorAll(".chat-acts button")].map(b=>b.textContent)];});
   for(const [q,re] of [["is my knee torn",/needs a physio or a doctor, not me/],["do I have tendonitis in my elbow",/needs a physio or a doctor, not me/],
     ["what's wrong with my shoulder",/needs a physio or a doctor, not me/],["should I take ibuprofen before training",/doctor or a pharmacist, not me/],
-    ["should I take creatine",/doctor or a registered dietitian, not me/],["I think I have an eating disorder",/a doctor or a psychologist, not me/],
+    ["should I take creatine",/doctor or a registered dietitian, not me/],["I think I'm depressed",/a doctor or a psychologist, not me/],
     ["ركبتي مقطوعة؟",/أخصائي علاج طبيعي أو دكتور، مش أنا/]]){
     await agSay(page,q);
     eq(await ev(page,"S.chat[S.chat.length-1].id"),"scope",q+": the hard limit");
     const [l]=await lead();if(!re.test(l))throw new Error(q+": "+l);
     if(/tendinitis|tendonitis|strain|sprain|tear/i.test(l))throw new Error(q+": names a condition: "+l);}
+  /* Eating-disorder language is a red flag now (js/coach/safety.js, refer): a kind line
+     and someone to talk to today, nothing else (docs/COACH-AGENT.md 2.2). */
+  await agSay(page,"I think I have an eating disorder");
+  eq(await ev(page,"[S.chat[S.chat.length-1].id,S.chat[S.chat.length-1].safety]"),["safety","refer"],"eating disorder: the referral");
+  {const [l2,b2]=await lead();if(!/someone you trust today/.test(l2)||b2.length)throw new Error("eating disorder: "+l2+" | "+b2);}
   await agSay(page,"change my height");
   let [l,b]=await lead();
   eq([/Profile > You/.test(l),b],[true,["Open it"]],"height: where it is, and a way there");
