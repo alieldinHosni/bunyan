@@ -4288,8 +4288,8 @@ docs/COACH-AGENT.md 2.2 and 2.8. CACHE `bunyan-v258`.
   fasting with a condition: sub "medical"; self-harm, eating very little, making oneself sick, eating-disorder
   words: sub "care"), or none. English and Egyptian Arabic, inside longer sentences, with typos (one-letter typos
   for long English words, listed misspellings for short ones), Arabic letter variants and prefixes, a word denied
-  just before it ("no chest pain", "مش دايخ") not counted. Decisions pinned in js/coach/test/safety.test.js (63 + 59
-  English, 60 + 49 Arabic cases): "chest pain" and "pain in my chest" always stop, even "from benching"; "my chest
+  just before it ("no chest pain", "مش دايخ") not counted. Decisions pinned in js/coach/test/safety.test.js (63 + 57
+  English, 64 + 44 Arabic cases): "chest pain" and "pain in my chest" always stop, even "from benching"; "my chest
   hurts" stops unless the person names a lift or workout as the cause ("from benching"), then it is soreness;
   "I'm dizzy with excitement" does not fire (figurative), "I feel dizzy" does; "my heart is racing" fires only
   with "at rest" or similar; "out of breath after sprints" does not; "I want to die" fires the care reply.
