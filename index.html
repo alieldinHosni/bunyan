@@ -1914,6 +1914,13 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .toast{animation:toastIn var(--m-comp) var(--e-decel)}
 .toast.leaving{animation:toastOut var(--m-fade) var(--e-accel) forwards}
 @keyframes toastOut{to{opacity:0;transform:translate(-50%,8px)}}
+/* At the top when the bottom would cover an action (view.js toastAtTop): the same
+   toast, above an open sheet, sliding down into place and back up as it leaves. */
+.toast.top{bottom:auto;top:calc(env(safe-area-inset-top) + var(--s3));animation-name:toastInTop}
+.toast.top.leaving{animation:toastOutTop var(--m-fade) var(--e-accel) forwards}
+@keyframes toastInTop{from{opacity:0;transform:translate(-50%,calc(-1 * var(--s3)))}
+  to{opacity:1;transform:translate(-50%,0)}}
+@keyframes toastOutTop{to{opacity:0;transform:translate(-50%,calc(-1 * var(--s2)))}}
 
 /* Reduced motion, through either route. Movement stops; fades stay, shortened, because
    a hard cut between screens is disorienting in a different way. */

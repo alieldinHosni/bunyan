@@ -35,6 +35,13 @@ function seed(){
     myFoods:[],savedMeals:[],freq:{},favs:[],skip:[],userSplits:[],myEx:[]};
 }
 
+/* A test that is about a date (the month's first days, a given weekday) runs with the
+   page's clock moved to it: {init:clockAt(2026,11,5)}. The clock still runs; only the
+   day is another one. Without it such a test passes or fails by the day it is run on. */
+function clockAt(y,m,d){return {content:"(function(){var R=Date,off=R.UTC("+y+","+(m-1)+","+d+",12)-R.now();"
+  +"function D(){if(!(this instanceof D))return new R(R.now()+off).toString();"
+  +"return arguments.length?new (Function.prototype.bind.apply(R,[null].concat([].slice.call(arguments))))():new R(R.now()+off);}"
+  +"D.prototype=R.prototype;D.UTC=R.UTC;D.parse=R.parse;D.now=function(){return R.now()+off;};window.Date=D;})();"};}
 const browser=await chromium.launch(process.env.CHROMIUM?{executablePath:process.env.CHROMIUM}:{});
 let fails=0,passes=0;
 async function open(o={}){
@@ -134,10 +141,17 @@ let seen=0;
 async function test(name,fn,o){
   if(ONLY.length&&!ONLY.some(x=>name.indexOf(x)>=0))return;
   if(SHARD.length===2&&SHARD[1]>1&&(seen++%SHARD[1])!==SHARD[0]-1)return;
-  const env=await open(o);
-  try{await fn(env.page,env);if(env.errs.length)throw new Error("page errors: "+env.errs.join(" | "));passes++;console.log("PASS",name);}
-  catch(e){fails++;console.log("FAIL",name,"—",e.message);}
-  finally{await env.ctx.close();}
+  /* A test that fails while the day changes under it (it began before midnight and ended
+     after: what it logged for "today" became yesterday's) is run once more, on the new
+     day. Only then: the date at its start and at its end must differ. */
+  for(let go=0;go<2;go++){
+    const day=new Date().toDateString(),env=await open(o);let err=null;
+    try{await fn(env.page,env);if(env.errs.length)throw new Error("page errors: "+env.errs.join(" | "));}
+    catch(e){err=e;}
+    finally{await env.ctx.close();}
+    if(!err){passes++;console.log("PASS",name);return;}
+    if(go===0&&new Date().toDateString()!==day){console.log("AGAIN",name,"— the date changed during it:",err.message.slice(0,120));continue;}
+    fails++;console.log("FAIL",name,"—",err.message);return;}
 }
 function eq(a,b,msg){if(JSON.stringify(a)!==JSON.stringify(b))throw new Error((msg||"")+" expected "+JSON.stringify(b)+", got "+JSON.stringify(a));}
 
@@ -4303,7 +4317,7 @@ await test("Coach (owner, 9 Nov review): the month reviewed in its first days, i
   if(!/weeks? kept/.test(await page.textContent('.cweek2')))throw new Error("the strip still counts days");
   await page.tap('.mocard [data-mook]');await pause(page,400);
   eq(await ev(page,"[S.moDone,!!document.querySelector('.mocard')]"),["2026-10",false],"done for the month");
-});
+},{init:clockAt(2026,11,5)});
 await test("Weekly check-in (owner, 9 Nov review): protein and steps read against their targets, a missed protein target said with the way to the meal plan",async page=>{
   await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js"),Sc=await import("/js/engine/schedule.js"),S=st.S;
     const ws=Sc.weekStartOf(U.today());S.goals.p=160;S.goals.steps=10000;delete S.ckDone;
@@ -4672,6 +4686,49 @@ await test("Contrast: no text under WCAG AA on the main pages — Red, dark and 
   const bad=await contrastAudit(page,["red/dark","red/light"],"ar");if(bad.length)throw new Error(bad.length+" under AA:\n"+bad.join("\n"));});
 await test("Contrast: no text under WCAG AA on the main pages — Sage, dark and light",async page=>{
   const bad=await contrastAudit(page,["mono/dark","mono/light"],"en");if(bad.length)throw new Error(bad.length+" under AA:\n"+bad.join("\n"));});
+/* WP-0 (docs/NEXT-PHASE.md): a toast is never drawn over the button the next tap is
+   for, and a rep record is only said when it is one. */
+const toastClear=(page,sel)=>page.evaluate(sel=>{const t=document.querySelector(".toast");if(!t)return "no toast";
+  const a=t.getBoundingClientRect();const hit=[...document.querySelectorAll(sel)].filter(e=>{const b=e.getBoundingClientRect();
+    return b.width>0&&b.height>0&&a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom;});
+  return hit.length?"covers "+hit.map(e=>e.className||e.tagName).join(", "):"clear";},sel);
+/* On a phone shorter than the test's 844 the Log set dock sticks to the bottom of the
+   screen, where the toast used to be said over it. */
+for(const [lang,h] of [["en",844],["en",667],["ar",667]])await test("Toast: a record said after logging a set does not cover Log set ("+lang+", 390 × "+h+")",async page=>{
+  await startWorkout(page);
+  const name=await ev(page,"S.active.entries[0].name");
+  await page.evaluate(async n=>{const st=await import("/js/state.js");
+    st.S.sessions=[{id:"wp0",date:"2026-01-05",dayId:"x",entries:[{name:n,sets:[{w:40,r:5}]}]}];st.saveDB();},name);
+  await page.setViewportSize({width:390,height:h});await page.evaluate(()=>window.scrollTo(0,0));await pause(page,300);
+  await page.fill('#in_w','40');await page.fill('#in_r','10');await page.tap('[data-logset]');await pause(page,300);
+  if(!(await page.$(".toast.rec")))throw new Error("no record toast for 40 × 10 after 40 × 5");
+  eq(await toastClear(page,".sess .log"),"clear","the toast and Log set");
+  eq(await toastClear(page,".sess .log,.sess .wkdock,.sess .wtick,.sess .wsl-add,.sfoot,.kpad.on"),"clear","the toast and the controls at the bottom");
+  /* At 844 the dock sits in the page above the toast's place, so the toast stays where
+     it was; shorter, the dock sticks to the bottom and the toast goes to the top. */
+  if(h<844)eq(await page.evaluate(()=>document.querySelector(".toast").classList.contains("top")),true,"said at the top");
+  if(lang==="ar")eq(await page.evaluate(()=>document.documentElement.dir),"rtl","in RTL");
+},{prefs:Object.assign({autorest:false},lang==="ar"?{lang:"ar"}:{})});
+await test("Toast: with the close-workout sheet open, a toast covers none of its buttons",async page=>{
+  await startWorkout(page);
+  await page.tap('[data-back]');await pause(page,500);
+  if(!(await page.$("#sheet .btn")))throw new Error("the close sheet has no buttons");
+  await page.evaluate(async()=>{(await import("/js/ui/view.js")).toast("Saved",()=>{});});await pause(page,300);
+  eq(await toastClear(page,"#sheet .btn"),"clear","the toast and the sheet's buttons");
+  eq(await page.evaluate(()=>!!document.querySelector(".toast.top .toast-undo")),true,"at the top, Undo kept");
+},{prefs:{autorest:false}});
+await test("Records only when earned: 55 × 12 after a stronger 60 × 8 is not a rep record; 55 × 13 after 55 × 12 is",async page=>{
+  const r=await F(page,`(S.sessions=[mk("2099-01-01","Barbell Bench Press",[{w:60,r:8,rpe:8}])],
+    [F.recordOf("Barbell Bench Press",{w:55,r:12},[]),F.recordOf("Barbell Bench Press",{w:55,r:13},[{w:55,r:12}]).k,
+     (S.sessions=[mk("2099-01-01","Barbell Bench Press",[{w:60,r:8}])],F.recordOf("Barbell Bench Press",{w:55,r:12},[]).k),
+     F.recordOf("Barbell Bench Press",{w:55,r:9},[]),
+     (S.sessions=[mk("2099-01-02","Barbell Bench Press",[{w:55,r:12}]),mk("2099-01-01","Barbell Bench Press",[{w:60,r:8,rpe:8}])],
+      F.recordOf("Barbell Bench Press",{w:55,r:13},[]).k)])`);
+  /* 60 × 8 at RPE 8 is an estimated 80 kg, 55 × 12 77: lighter and weaker, the first time at
+     55, so nothing. Without the RPE 60 × 8 is 76, and 77 is a better estimated max — said as
+     that, never as a rep record. */
+  eq(r,[null,"r","e",null,"r"]);
+});
 /* ---- the coach's red flags (js/coach/safety.js, docs/COACH-AGENT.md 2.2) ---- */
 /* What the newest answer says and offers: its text, its buttons' attributes, whether
    anything else is suggested under it, and its direction. */
