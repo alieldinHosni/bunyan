@@ -52,10 +52,19 @@
      5 housekeeping  never leads while anything at 40 or more is live, and one a day
      6 said-once     dismissed (S.pcDismiss, S.coachDismiss, kept as the stores), or put
                      away on its own card ("Still stressed"): not in the queue
+     7 lighter       one lighter week, said once: several sources can offer it on the same
+                     day (Training's lighter week due, the check-in's, a lift the coach saw
+                     getting harder, going backwards or stalled). One shows: a lighter week
+                     already running says it, else Training's own card (deload-due), else
+                     the highest priority. Read with rules 1-4.
 
    headNow()      {lead, queue, byPage:{train,food,coach,progress}, count, suppressed}
    headFor(page)  the queue's signals for that page, the lead left out
    headWhy(id)    the rule that took a signal out, or null
+   headFresh()    forget the memo: render() asks afresh once a screen
+   headOn(page)   what a page draws, in the head's order: the lead first when it is the
+                  page's own, then headFor(page). Every signal belongs to one page, so no
+                  advice is drawn on two, and the lead tops one page only.
    Worked out once per change to the data (dataRev), per day and per hour (the Food
    page's "behind for the time of day" moves with the clock). */
 import {checkPlansAll, pcKept, planTotals} from "./plancheck.js";
@@ -198,15 +207,19 @@ function fromNeeds(){
   if(b.week)out.push(sig({id:"needs-week",domain:"nutrition",kind:"info",pri:b.week.kind==="kept"?20:42,effect:{},page:"food",source:"needs",src:b.week}));
   return out;}
 /* The Nutrition plan page's own prompts: the coach's suggested targets when they differ,
-   and macros that do not add up to the calories. The page still decides them itself
-   (js/ui/views/food.js goalCard) until it asks the head. */
+   and macros that do not add up to the calories (drawn by js/ui/views/food.js goalCard
+   when the head keeps them). Both rank under the plan check's calorie findings: the
+   suggestion is the same formula's target that kcal-up/down/steep and phase already offer
+   with their reason, and maint-learned says that formula is off for this person; macros
+   that do not add up are tidied by whichever target is chosen. So a page prompt speaks
+   only when the plan check has no calorie voice. */
 function fromFood(){
   var g=S.goals||{},sg=macroTargets(),out=[];
   if(sg&&!(sg.kcal===g.kcal&&sg.p===g.p&&sg.c===g.c&&sg.f===g.f))
-    out.push(sig({id:"tg-suggest",domain:"nutrition",pri:61,effect:{kcal:sg.kcal-num(g.kcal),protein:sg.p-num(g.p)},page:"food",source:"food",src:sg}));
+    out.push(sig({id:"tg-suggest",domain:"nutrition",pri:33,effect:{kcal:sg.kcal-num(g.kcal),protein:sg.p-num(g.p)},page:"food",source:"food",src:sg}));
   var gap=Math.round(num(g.kcal)-macroKcal(g.p,g.c,g.f));
   if(num(g.kcal)&&Math.abs(gap)>40)
-    out.push(sig({id:"macro-gap",domain:"nutrition",pri:36,effect:{kcal:gap},page:"food",source:"food",src:{gap:gap}}));
+    out.push(sig({id:"macro-gap",domain:"nutrition",pri:24,effect:{kcal:gap},page:"food",source:"food",src:{gap:gap}}));
   return out;}
 function fromHouse(){
   var out=[];
@@ -263,6 +276,19 @@ function ruleHousekeeping(list,day){
   if(h.length<2)return [];
   var keep=h[((day||0)%h.length+h.length)%h.length];
   return out(h.filter(function(s){return s!==keep;}),"housekeeping",keep.id);}
+/* 7. One lighter week. What offers one: Training's card (deload-due, or deload-on while
+   one runs), the check-in's change, and the coach's insights whose one button is "Take a
+   lighter week" (js/ui/coachwords.js: fatigue, falling, stall). */
+var LIGHTER_COACH=["fatigue","falling","stall"];
+function isLighter(s){
+  return s.id==="deload-due"||s.id==="deload-on"||s.id==="checkin:deload"
+    ||(s.source==="coach"&&!!s.src&&LIGHTER_COACH.indexOf(s.src.kind)>=0);}
+function ruleLighter(list){
+  var l=list.filter(isLighter);
+  if(l.length<2)return [];
+  var win=l.filter(function(s){return s.id==="deload-on";})[0]||l.filter(function(s){return s.id==="deload-due";})[0]
+    ||l.reduce(function(a,s){return s.pri>a.pri?s:a;},l[0]);
+  return out(l.filter(function(s){return s!==win;}),"lighter",win.id);}
 /* 6. Said once: dismissed in its store, or its card put away. */
 function ruleSaidOnce(list){return out(list.filter(function(s){return s.dismissed||s.quiet;}),"said-once",null);}
 
@@ -281,7 +307,7 @@ function decide(signals,ctx){
   var take=function(list){list.forEach(function(x){if(!gone[x.id]){gone[x.id]=x;why.push(x);}});};
   take(out(signals.filter(function(s){return s.dismissed;}),"said-once",null));
   var live=signals.filter(function(s){return !s.dismissed;});
-  take(ruleRecovery(live));take(ruleCalories(live));take(ruleDeficit(live));take(ruleMissed(live,ctx));
+  take(ruleRecovery(live));take(ruleCalories(live));take(ruleDeficit(live));take(ruleMissed(live,ctx));take(ruleLighter(live));
   var left=live.filter(function(s){return !gone[s.id];});
   take(ruleHousekeeping(left,ctx.day));
   take(ruleSaidOnce(left));
@@ -314,10 +340,16 @@ function headNow(){
   v.errors=c.errors;v.all=c.signals;
   MEMO={k:k,s:S,v:v};
   return v;}
+/* Worked out again at the next ask: render() calls it once a screen, so the pages read the
+   state as it is even when something changed it without a save (about a millisecond). */
+function headFresh(){MEMO={k:null,s:null,v:null};}
 function headFor(page){return headNow().byPage[page]||[];}
+function headOn(page){
+  var h=headNow(),l=h.lead&&h.lead.page===page?[h.lead]:[];
+  return l.concat(h.byPage[page]||[]);}
 function headWhy(id){
   var x=headNow().suppressed.filter(function(s){return s.id===id;})[0];
   return x?x.why:null;}
 
-export {COACH, CHECKIN, decide, headFor, headNow, headWhy, MONTHLY, pickLead, PLAN, planMapping, rank, ruleCalories,
-  ruleDeficit, ruleHousekeeping, ruleMissed, ruleRecovery, ruleSaidOnce};
+export {COACH, CHECKIN, decide, headFor, headFresh, headNow, headOn, headWhy, isLighter, MONTHLY, pickLead, PLAN, planMapping, rank, ruleCalories,
+  ruleDeficit, ruleHousekeeping, ruleLighter, ruleMissed, ruleRecovery, ruleSaidOnce};

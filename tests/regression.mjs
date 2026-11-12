@@ -769,11 +769,19 @@ await test("Targets: goals save in place, the suggestion applies, and how the ea
   /* The target is a card; Edit opens it as fields, Save closes it (3 Nov). */
   if(await page.$('#g_kcal'))throw new Error("fields shown before Edit");
   await page.tap('[data-tgedit="1"]');await pause(page,300);
+  /* A little under the suggestion: the page's own offer is then the one calorie voice. Far
+     under (it was 2,222), the plan check's "will not build muscle" speaks on Coach instead
+     and the offer waits (js/engine/head.js rule 2), as the next lines check. */
+  const near=String(await page.evaluate(async()=>(await import("/js/engine/formulas.js")).macroTargets().kcal-20));
   await page.fill('#g_kcal','2222');await page.tap('[data-savegoals]');await pause(page);
   eq(await ev(page,"[S.goals.kcal,V.tgedit,!!document.querySelector('#g_kcal')]"),[2222,false,false],"saved, the card closed");
+  eq([!!(await page.$('[data-usesug]')),await page.evaluate(async()=>(await import("/js/engine/head.js")).headWhy("tg-suggest"))],[false,"calories"],"far under: the plan check speaks, the offer waits");
+  await page.tap('[data-tgedit="1"]');await pause(page,300);
+  await page.fill('#g_kcal',near);await page.tap('[data-savegoals]');await pause(page);
+  eq(await ev(page,"S.goals.kcal"),+near,"saved again");
   await page.tap('[data-usesug]');await pause(page);
-  eq(await page.evaluate(async()=>{const s=await import("/js/state.js");const f=await import("/js/engine/formulas.js");
-    return s.S.goals.kcal===Math.round(f.targetKcal()/10)*10&&s.S.goals.kcal!==2222;}),true,"suggested applied");
+  eq(await page.evaluate(async([n])=>{const s=await import("/js/state.js");const f=await import("/js/engine/formulas.js");
+    return s.S.goals.kcal===Math.round(f.targetKcal()/10)*10&&s.S.goals.kcal!==2222&&s.S.goals.kcal!==n;},[+near]),true,"suggested applied");
   await tapTab(page,"progress");await pause(page);
   /* Eating is under Habits (5 Nov), with steps and cardio. */
   await page.tap('[data-ptab="habits"]');await pause(page,600);
@@ -2280,6 +2288,10 @@ await test("Plan check: a meal plan off its targets and a thin program are found
     const X=await import("/js/data/exercises.js");await new Promise(r=>X.loadExDB(r));
     const S=(await import("/js/state.js")).S;
     S.mealSlots=[{id:"Breakfast",plan:[{fid:"egg",n:"Eggs",grams:100,kcal:143,p:12.6,c:0.7,f:9.5}]},{id:"Lunch",plan:[{fid:"rice_ck",n:"Rice",grams:300,kcal:390,p:8,c:84,f:1}]}];});
+  /* The seed's log has a lighter week due, and while it is, nothing that adds sets is said
+     (js/engine/head.js rule 1): put off, so the thin program is. */
+  eq(await page.evaluate(async()=>{const H=await import("/js/engine/head.js");H.headFresh();return H.headWhy("vol-low");}),"recovery","held back while the lighter week is due");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.deload={snooze:"2099-01-01"};st.saveDB();});
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.pcheck=true;(await import("/js/ui/render.js")).render();});await pause(page,300);
   const ids=await page.$$eval('.pcf',a=>a.map(e=>e.dataset.k));
   if(!ids.includes("pc:meals-off")||!ids.includes("pc:vol-low"))throw new Error("expected the meal plan and the volume findings, got "+ids.join(","));
@@ -4337,7 +4349,11 @@ await test("Weekly check-in (owner, 9 Nov review): protein and steps read agains
 await test("Plan check (owner, 9 Nov review): a part asked for that the week no longer works is found and put back; a strength day among size days is not called too light",async page=>{
   const r=await page.evaluate(async()=>{const st=await import("/js/state.js"),Sp=await import("/js/data/splits.js"),PC=await import("/js/engine/plancheck.js"),P=await import("/js/data/parts.js"),S=st.S;
     const p=st.makeProgram({id:"pc",name:"Mine",days:[Sp.day("Upper",[Sp.ex("Barbell Bench Press - Medium Grip",3,8,12),Sp.ex("Bent Over Barbell Row",3,8,12)])]});
-    S.programs=[p];S.activeProgram=p.id;S.profile.focus=["Shoulders.side"];S.gear=null;st.saveDB();
+    S.programs=[p];S.activeProgram=p.id;S.profile.focus=["Shoulders.side"];S.gear=null;
+    /* Adding an exercise adds sets: the head holds that back while the seed's lighter week
+       is due and its calories are under maintenance for the goal (rules 1 and 3). Put off,
+       and the targets the coach suggests, so the finding is said. */
+    S.deload={snooze:"2099-01-01"};Object.assign(S.goals,(await import("/js/engine/formulas.js")).macroTargets());st.saveDB();
     const f=PC.checkPlans().filter(x=>x.id==="part:Shoulders.side")[0];
     return {title:f&&f.title,act:f&&f.fix.act};});
   eq(r,{title:"Nothing in your week works your side delts",act:"addpart"},"the missing part found");
@@ -4770,6 +4786,94 @@ await test("Coach safety: dizzy is told to stop the session, sit and sip water, 
   if(/Stop training now|Stop this session|emergency/.test(r.a))throw new Error("soreness read as a red flag: "+r.a);
   eq(await ev(page,"S.chat[S.chat.length-1].safety||null"),null,"no safety class");
 });
+/* ---- the head, part 2: every page draws what js/engine/head.js keeps (WP-1 b) ---- */
+/* The seeded profile with its log dated back from 5 November 2026, the day the page's
+   clock is moved to, so what the head sees does not depend on the day the suite runs. */
+function seedNov5(){const db=seed(),k=Math.round((Date.parse(iso(0))-Date.UTC(2026,10,5))/864e5);
+  db.sessions.forEach(s=>{s.date=iso(Math.round((Date.parse(iso(0))-Date.parse(s.date))/864e5)+k);});
+  db.body.forEach(b=>{b.date=iso(Math.round((Date.parse(iso(0))-Date.parse(b.date))/864e5)+k);});return db;}
+const headOf=page=>page.evaluate(async()=>{const H=await import("/js/engine/head.js"),h=H.headNow();
+  return {lead:h.lead&&h.lead.id,count:h.count,noticed:h.queue.filter(s=>s.source==="plancheck"||s.source==="coach").length,coach:H.headOn("coach").map(s=>s.id),train:H.headOn("train").map(s=>s.id),food:H.headOn("food").map(s=>s.id),
+    gone:h.suppressed.map(s=>({id:s.id,why:s.why,source:(h.all.filter(x=>x.id===s.id)[0]||{}).source}))};});
+const dockN=page=>page.$eval('nav .dock-b[data-tab="coach"]',e=>{const m=/(\d+)/.exec(e.getAttribute("aria-label")||"");return m?+m[1]:0;});
+async function forYouAll(page){const b=await page.$('#app [data-advall="1"]');if(b){await b.evaluate(e=>e.click());await pause(page,300);}}
+await test("Coach and Training: in the seeded profile Training offers the lighter week and Coach shows nothing the head put away (no Under your range, no Balance the volume, no second lighter week)",async page=>{
+  const h=await headOf(page);
+  eq([h.lead,h.train.indexOf("deload-due")>=0],["deload-due",true],"the head leads with the lighter week, on Training");
+  for(const id of ["vol-low","under","checkin:balance-low"])eq((h.gone.filter(x=>x.id===id)[0]||{}).why,"recovery",id+" put away by the lighter week");
+  eq(h.gone.filter(x=>/^stall:/.test(x.id)).map(x=>x.why),["lighter"],"the stalled bench's own lighter week is folded into Training's");
+  await tapTab(page,"train");await pause(page,400);
+  if(!/Time for a lighter week/.test(await page.textContent('#app .dlcard')))throw new Error("no lighter week on Training");
+  if(await page.$('#app .pcf, #app .ckcard'))throw new Error("Coach's cards drawn on Training");
+  await coach(page);await pause(page,400);await forYouAll(page);
+  const txt=await page.textContent('#app');
+  for(const w of [/Under your range/,/Balance the volume/,/Less training than your program has/,/has stalled/,/lighter week/i])
+    if(w.test(txt))throw new Error("Coach shows what the head put away: "+w);
+  for(const g of h.gone){const sel=g.source==="plancheck"?'[data-k="pc:'+g.id+'"]':g.source==="coach"?'[data-k="co:'+g.id+'"]':null;
+    if(sel&&(await page.$('#app '+sel)))throw new Error("drawn though put away: "+g.id);}
+  eq(await page.$$eval('#app .cfor > li',l=>l.length),h.coach.length,"For you lists the head's Coach signals");
+  eq(+(await page.textContent('#app .tsec .libn')),h.coach.length,"and its count says so");
+  eq(await dockN(page),h.noticed,"the dock's Coach tab counts what the plan check and the coach noticed, as the head keeps it");
+},{db:seedNov5(),init:clockAt(2026,11,5)});
+await test("Coach and Food: one calorie suggestion across both pages (the plan check's; Food's coach suggests and macros line wait)",async page=>{
+  const KC='[data-pcfix="kcal-down"],[data-pcfix="kcal-up"],[data-pcfix="kcal-steep"],[data-pcfix="kcal-off"],[data-pcfix="maint-learned"],[data-pcfix="meals-off"],[data-pcfix="phase"],[data-pcfix="deficit-volume"],[data-ckdo="kcal"]';
+  await coach(page);await pause(page,400);await forYouAll(page);
+  const onCoach=await page.$$eval('#app '+KC,l=>l.length);
+  await coach(page,"food","plan");await pause(page,400);
+  const onFood=await page.$$eval('#app [data-usesug], #app .tgwarn [data-fitmacros], #app .tgsrc-b',l=>l.length);
+  eq([onCoach,onFood],[1,0],"one on Coach, none on Food");
+  if(!(await page.$('#app .tgcard')))throw new Error("the daily goal card is gone");
+  const h=await headOf(page);
+  eq(h.gone.filter(x=>x.id==="tg-suggest"||x.id==="macro-gap").map(x=>x.why),["calories","calories"],"Food's two wait behind the one calorie voice");
+},{db:seedNov5(),init:clockAt(2026,11,5)});
+await test("Coach and Training: dismissing a card takes only that card away, in place, and the dock's count drops by one for what Coach noticed",async page=>{
+  /* Not now on the backup reminder (Training). */
+  await tapTab(page,"train");await pause(page,400);
+  const n0=await dockN(page);
+  if(!(await page.$('#app [data-snoozebackup]')))throw new Error("no backup reminder");
+  /* What a render that changes nothing leaves in place must still be in place after it. */
+  await page.evaluate(async()=>{const a=[...document.querySelectorAll('#app *')];(await import("/js/ui/render.js")).render();
+    const card=document.querySelector('#app [data-snoozebackup]').closest('.hnote');
+    window.__kept=a.filter(e=>e.isConnected&&!card.contains(e)&&!e.contains(card));window.__dl=document.querySelector('#app .dlcard');});
+  await page.tap('#app [data-snoozebackup]');await pause(page,400);
+  eq(await page.evaluate(()=>[!!document.querySelector('#app [data-snoozebackup]'),window.__dl===document.querySelector('#app .dlcard'),
+    window.__kept.length>50&&window.__kept.filter(e=>!e.isConnected).length]),[false,true,0],"the reminder gone; the lighter week and the rest of the page the same nodes");
+  eq([await dockN(page),await ev(page,"!!S.backupSnooze")],[n0,true],"the snooze stored; the dock's count (what Coach noticed) as it was");
+  /* Not now on a coach insight (Coach), with the lighter week put off so the stalled lift is said. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.deload={snooze:"2099-01-01"};st.saveDB();(await import("/js/ui/render.js")).render();});
+  await coach(page);await pause(page,400);await forYouAll(page);
+  const n1=await dockN(page),li=await page.$$eval('#app .cfor > li',l=>l.length);
+  const k=await page.$eval('#app [data-k^="co:stall"]',e=>e.getAttribute("data-k"));
+  await page.evaluate(k=>{window.__others=[...document.querySelectorAll('#app .cfor > li > :not(.cfor-n)')].filter(e=>e.getAttribute("data-k")!==k).map(e=>[e,e.textContent]);},k);
+  await page.tap('#app [data-k="'+k+'"] [data-cokeep]');await pause(page,400);
+  eq(await page.evaluate(k=>[!!document.querySelector('#app [data-k="'+k+'"]'),window.__others.every(([e,t])=>e.isConnected&&e.textContent===t)],k),[false,true],
+    "that card gone; every other card the same node, saying the same");
+  eq([await page.$$eval('#app .cfor > li',l=>l.length),await dockN(page),await ev(page,"Object.keys(S.coachDismiss||{}).length")],[li-1,n1-1,1],"one fewer listed, the count down by one, set aside in its store");
+},{db:seedNov5(),init:clockAt(2026,11,5)});
+await test("Coach and Training: the head's cards in Arabic, right to left",async page=>{
+  const h=await headOf(page);
+  eq(await page.evaluate(()=>document.documentElement.dir),"rtl","right to left");
+  await tapTab(page,"train");await pause(page,400);
+  const dl=await page.textContent('#app .dlcard');
+  if(!/أسبوع/.test(dl)||/[A-Za-z]{4,}/.test(dl))throw new Error("the lighter week not in Arabic: "+dl);
+  await coach(page);await pause(page,400);await forYouAll(page);
+  eq(await page.$$eval('#app .cfor > li',l=>l.length),h.coach.length,"For you lists the head's Coach signals");
+  const txt=await page.$eval('#app .cfor',e=>e.innerText);
+  if(/[A-Za-z]{5,}/.test(txt.replace(/RPE/g,"")))throw new Error("English left in the cards: "+txt.slice(0,300));
+},{db:seedNov5(),init:clockAt(2026,11,5),prefs:{lang:"ar"}});
+await test("Coach and Training: offline, the head's cards are still drawn after a reload",async(page,env)=>{
+  await page.evaluate(()=>navigator.serviceWorker.ready);
+  await page.reload();await pause(page,1200);
+  const h=await headOf(page);
+  await env.ctx.setOffline(true);
+  await page.reload();await pause(page,1500);
+  await tapTab(page,"train");await pause(page,400);
+  eq(await page.$$eval('#app .dlcard',l=>l.length),h.train.filter(x=>/^deload-/.test(x)).length,"Training's lighter week as online");
+  await coach(page);await pause(page,400);await forYouAll(page);
+  eq([h.coach.length>0,await page.$$eval('#app .cfor > li',l=>l.length)],[true,h.coach.length],"For you as online");
+  eq(await dockN(page),h.noticed,"and the dock's count");
+  await env.ctx.setOffline(false);
+},{sw:true});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
@@ -5731,7 +5835,11 @@ await test("Targets: one card says the target; Edit opens it as fields and Cance
   eq(await ev(page,"[S.goals.kcal,!!document.querySelector('#g_kcal')]"),[g.kcal,false],"Cancel: nothing changed");
   const sug=await page.evaluate(async()=>{const f=await import("/js/engine/formulas.js");return f.macroTargets();});
   const same=!!sug&&sug.kcal===g.kcal&&sug.p===g.p&&sug.c===g.c&&sug.f===g.f;
-  eq(!!(await page.$('.tgoffer [data-usesug]')),!!sug&&!same,"the suggestion shows only when it differs");
+  /* One calorie voice (js/engine/head.js rule 2): while the plan check offers a target
+     with its reason on Coach, Food's own offer of the same waits. */
+  const held=await page.evaluate(async()=>(await import("/js/engine/head.js")).headWhy("tg-suggest"));
+  eq(!!(await page.$('.tgoffer [data-usesug]')),!!sug&&!same&&!held,"the suggestion shows only when it differs, and no other calorie voice is speaking");
+  if(held)eq([held,await page.evaluate(async()=>(await import("/js/engine/head.js")).headNow().queue.some(s=>s.source==="plancheck"&&s.effect.kcal!==0))],["calories",true],"held back for the plan check's");
   /* Looking back is Progress's (4 Nov): no history or trend on the plan. A weigh-in, so
      Progress has something to show. */
   await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");(st.S.body=st.S.body||[]).push({date:U.today(),weight:80});st.saveDB();});

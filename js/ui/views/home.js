@@ -3,7 +3,8 @@
    belongs to the day lives on: the greeting, one reminder at most, and the weigh-in
    and steps tiles here; calories and water on Food; the coach's advice in Coach. */
 import {t} from "../../i18n/dict.js";
-import {backupAgeDays, backupDue, lastWeight, weighInDue} from "../../engine/formulas.js";
+import {lastWeight} from "../../engine/formulas.js";
+import {headOn} from "../../engine/head.js";
 import {weightChange} from "../../engine/stats.js";
 import {curProfile, dayRec, S} from "../../state.js";
 import {toDisp, wUnit} from "../../units.js";
@@ -28,25 +29,27 @@ function ownName(){
   return n&&n!=="Me"?n:"";
 }
 
-/* One reminder at most, the most pressing first: the assessment that builds the plan,
-   then a backup, then a weigh-in. (A lighter week has its own card on this page, and
-   the coach's advice its own place in Coach.) */
+/* One reminder at most: the assessment that builds the plan, else the backup or the
+   weigh-in, whichever the head (js/engine/head.js) keeps for today (one a day, by its
+   housekeeping rule). (A lighter week has its own card on this page, and the coach's
+   advice its own place in Coach.) */
 function reminder(){
   if(!S.onboarded)
-    return '<button class="card tap hot hnote" data-setup="1"><div class="row"><h3>'+t("Build my plan")+'</h3>'
+    return '<button class="card tap hot hnote" data-k="hk:setup" data-setup="1"><div class="row"><h3>'+t("Build my plan")+'</h3>'
      +'<span class="pill a">'+t("Start here")+'</span></div>'
      +'<p class="tiny" style="margin:6px 0 0">'+t("A short assessment, and the coach builds your daily targets, your training and a meal plan, and puts them here and on Food.")+'</p></button>';
-  if(backupDue()){
-    var age=backupAgeDays();
-    return '<div class="card hnote gold"><h3>'+t("Back up your history")+'</h3>'
+  var hk=headOn("train").filter(function(s){return s.source==="housekeeping";})[0];
+  if(hk&&hk.id==="backup"){
+    var age=hk.src.age;
+    return '<div class="card hnote gold" data-k="hk:backup"><h3>'+t("Back up your history")+'</h3>'
      +'<p class="tiny" style="margin:6px 0 0">'
      +(age===null?t("You have never exported a backup. Everything lives in this browser — clearing its data would take your whole log with it.")
         :t("Your last backup was")+' '+age+' '+t("days ago."))+'</p>'
      +'<div class="rowc mt"><button class="btn sm" data-export="1">'+t("Export a backup")+'</button>'
      +'<button class="btn d sm" data-snoozebackup="1">'+t("Not now")+'</button></div></div>';}
-  var wd=weighInDue();
+  var wd=hk&&hk.id==="weigh-in"?hk.src:null;
   if(wd)
-    return '<button class="card tap hnote" data-sheet="weigh"><h3>'+t("Time to weigh in")+'</h3>'
+    return '<button class="card tap hnote" data-k="hk:weigh" data-sheet="weigh"><h3>'+t("Time to weigh in")+'</h3>'
      +'<p class="tiny" style="margin:6px 0 0">'+t(wd.last?"A week since the last one. Mornings, before eating, compare best.":"One weigh-in starts your trend. Mornings, before eating, compare best.")+'</p></button>';
   return "";}
 /* A tile: its icon in a round glass button at the top corner, the label, the figure and a

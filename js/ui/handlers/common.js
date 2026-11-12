@@ -5,7 +5,7 @@
 import {isActivity} from "../../data/activities.js";
 import {loadExDB} from "../../data/exercises.js";
 import {importName, ownSlots} from "../../engine/meals.js";
-import {checkPlans} from "../../engine/plancheck.js";
+import {headNow} from "../../engine/head.js";
 import {readInBody} from "../../engine/inbody.js";
 import {readPhoto} from "../../engine/ocr.js";
 import {retarget} from "../../engine/retarget.js";
@@ -180,11 +180,14 @@ function toPlan(area,sub){
   else V.tab="coach";
   render();window.scrollTo(0,0);}
 /* After a plan is used, say what the check found, one tap from the details. */
+/* What the plan check has that the head (js/engine/head.js) keeps: one it has put away
+   (a lighter week due holds back "add sets", one calorie voice) is not counted. */
+function pcKeptN(){return headNow().queue.filter(function(x){return x.source==="plancheck";}).length;}
 function pcAfter(){
-  if(!checkPlans().length)return;
+  if(!pcKeptN())return;
   /* Counted when it shows, not when the plan was used: fixes made in between count. */
   setTimeout(function(){
-    var n=checkPlans().length;if(!n||V.pcheck)return;
+    var n=pcKeptN();if(!n||V.pcheck)return;
     toast(t(n===1?"Plan check: 1 thing to look at":"Plan check: {n} things to look at").replace("{n}",n),
       function(){toPlan("ai");},t("Show me"));},5600);}
 /* A plan another Bunyan user shared: what it holds, or why not, in the Add a shared plan

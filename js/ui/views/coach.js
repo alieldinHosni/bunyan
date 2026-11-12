@@ -18,7 +18,6 @@ import {t} from "../../i18n/dict.js";
 import {planName} from "../../i18n/exnames.js";
 import {goalOf, goalsOf} from "../../data/goals.js";
 import {weekRun} from "../../engine/stats.js";
-import {monthlyOpen} from "../../engine/monthly.js";
 import {sumNutrition} from "../../engine/nutrition.js";
 import {planOn} from "../../engine/dayplan.js";
 import {weekDates} from "../../engine/schedule.js";
@@ -27,11 +26,10 @@ import {esc, num, pretty, today} from "../../util.js";
 import {V} from "../view.js";
 import {art} from "../art.js";
 import {glyph} from "../glyphs.js";
-import {adviceList} from "./pcheck.js";
+import {signalCard} from "./pcheck.js";
 import {ASK, vChat} from "./chat.js";
 import {suggestFor} from "../coachfab.js";
-import {ckCard, moCard} from "../checkin.js";
-import {checkinOpen} from "../../engine/checkin.js";
+import {headOn} from "../../engine/head.js";
 import {followDue, followOn, lightOnPurpose} from "../../engine/stress.js";
 
 function vCoach(){
@@ -109,24 +107,25 @@ function weekStrip(){
    +'<span>'+glyph("flame")+fig(st)+' '+esc(t(st===1?"week kept":"weeks kept"))+'</span></div></section>';}
 
 /* ---- for you ------------------------------------------------------------------------
-   Everything that wants a decision, in one list and in the order it matters: a week kept
-   light (when it is time to ask again), the weekly check-in (its first days), then what
-   the coach noticed, most important first. The count is what is listed. Three show; the
-   rest are one tap away, opened in place. */
+   Everything that wants a decision, in one list, in the order the head (js/engine/
+   head.js) puts it: a week kept light, the monthly review, the weekly check-in and what
+   the plan check and the coach noticed, whatever on Coach the head keeps once its rules
+   have settled what contradicts what. The count is what is listed. Three show; the rest
+   are one tap away, opened in place. */
 function forYou(){
-  var items=[],st=stressCard(),ck=ckCard(checkinOpen()),mo=moCard(monthlyOpen());
-  if(st)items.push(st);
-  /* The month first in its first days: its changes are the larger ones. */
-  if(mo)items.push(mo);
-  if(ck)items.push(ck);
-  adviceList().forEach(function(x){items.push(x.html());});
+  var items=[],sigs=headOn("coach"),st=sigs.some(function(s){return s.source==="stress";});
+  /* "Better now?" under the list asks for the stress card itself: it opens at the top. */
+  /* Each row keyed by its signal (js/ui/patch.js), so one set aside takes only its row. */
+  var row=function(k,h){return '<li data-k="fy:'+esc(k)+'">'+h+'</li>';};
+  if(!st&&V.stressAsk){var sc=stressCard();if(sc)items.push(row("stress",sc));}
+  sigs.forEach(function(s){var h=s.source==="stress"?stressCard():signalCard(s);if(h)items.push(row(s.source==="stress"?"stress":s.id,h));});
   /* Nothing to decide: one card that says so, where the list would be. */
   if(!items.length)return '<div class="tsec"><h2 class="tsec-h">'+t("For you")+'</h2></div>'
     +'<div class="pcquiet glass"><span class="pcquiet-i" aria-hidden="true">'+glyph("check")+'</span><span><b>'+esc(t("You're on track"))+'</b>'
     +'<span>'+esc(t((S.sessions||[]).length<3?"Nothing to change. After a few weeks of workouts the coach reads your training too.":"Nothing needs a decision this week."))+'</span></span></div>';
   var open=V.advall||items.length<=3;
   var h='<div class="tsec"><h2 class="tsec-h">'+t("For you")+'</h2><span class="libn num">'+items.length+'</span></div>'
-   +'<ol class="cfor">'+(open?items:items.slice(0,3)).map(function(x,i){return '<li><span class="cfor-n num" aria-hidden="true">'+(i+1)+'</span>'+x+'</li>';}).join("")+'</ol>';
+   +'<ol class="cfor">'+(open?items:items.slice(0,3)).map(function(x,i){return x.replace('">','"><span class="cfor-n num" aria-hidden="true">'+(i+1)+'</span>');}).join("")+'</ol>';
   if(items.length>3)h+=open
     ?'<button class="btn g sm pcmore" data-advall="0">'+esc(t("Show fewer"))+'</button>'
     :'<button class="btn g pcmore" data-advall="1">'+esc(t(items.length===4?"1 more":"{n} more").replace("{n}",items.length-3))+'</button>';

@@ -6,6 +6,7 @@ import {t} from "../i18n/dict.js";
 import {vFood} from "./views/food.js";
 import {vCoach} from "./views/coach.js";
 import {vAssess} from "./views/assess.js";
+import {headFresh} from "../engine/head.js";
 import {adviceCount} from "./views/pcheck.js";
 import {vProfile} from "./views/profile.js";
 import {vProgress} from "./views/progress.js";
@@ -198,9 +199,9 @@ function render(){
   if(wasId&&was.setSelectionRange){
     try{selS=was.selectionStart;selE=was.selectionEnd;}catch(e){selS=null;}
   }
-  /* How many things Coach AI has to say, counted once: the dock's dot and the bell at
-     the top of Training both show it. */
-  V.advice=adviceCount();
+  /* The head (js/engine/head.js) asked afresh once a screen; how many things the coach
+     has noticed, counted once from it: the dock's dot on Coach shows it. */
+  headFresh();V.advice=adviceCount();
   var h="";
   if(V.assess)h=vAssess();
   /* A run in progress is the Training tab, as a workout is (js/ui/run.js). */

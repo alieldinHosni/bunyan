@@ -13,7 +13,7 @@ import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../stat
 import {conformProgram, SPLIT_LEVEL} from "../../engine/plan.js";
 import {rulesFor} from "../../engine/conditions.js";
 import {canSkipStab} from "../../engine/phase.js";
-import {deloadDue, inDeload} from "../../engine/formulas.js";
+import {headOn} from "../../engine/head.js";
 import {blockNow, offPlanLight, phaseNow, shiftNow} from "../../engine/blocks.js";
 import {addDays, isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
 import {dfmt, esc, fmtN, pretty, shortd, today} from "../../util.js";
@@ -29,7 +29,7 @@ import {vTImport} from "./timport.js";
 import {condCard, doseText, weeksText} from "../dose.js";
 import {addDaysISO, estMinutes, planOn} from "../../engine/dayplan.js";
 import {swapAdvice, tooSoon} from "../../engine/recovery.js";
-import {addsOn, missedNow} from "../../engine/missed.js";
+import {addsOn} from "../../engine/missed.js";
 import {monthGrid} from "../datebar.js";
 import {paceOf, routePath, speedOf} from "../../engine/run.js";
 import {groundFor, mapSeed} from "../runmap.js";
@@ -98,10 +98,12 @@ function aheadCard(sp,iso){
      +'<p>'+esc(t("Your rotation follows on from {a}: tomorrow is {b}.").replace("{a}",planName(p0.day.name)).replace("{b}",planName(p1.day.name)))+'</p></div>';
   return "";}
 /* A day missed this week (js/engine/missed.js): moved to a free day, its key lifts carried
-   into the days left, or let go, said plainly. Shown on today only, once, until dealt with. */
+   into the days left, or let go, said plainly. Shown on today only, once, until dealt with,
+   and while the head (js/engine/head.js) keeps it. */
+function headSig(id){return headOn("train").filter(function(s){return s.id===id;})[0]||null;}
 function missedCard(iso){
   if(iso!==today())return "";
-  var r=missedNow();if(!r)return "";
+  var m=headSig("missed"),r=m&&m.src;if(!r)return "";
   var ar=S.prefs&&S.prefs.lang==="ar",tm1=addDaysISO(iso,1),name=function(d){return dfmt(new Date(d+"T00:00:00"),{weekday:"long"});};
   /* Today and tomorrow by those words; another day by its name. */
   var wd=function(d){return d===iso?t("today"):d===tm1?t("tomorrow"):name(d);};
@@ -478,17 +480,20 @@ function travelCard(){
   var tv=S.travel;if(!tv||!tv.until||today()>tv.until)return "";
   return '<div class="dlcard on"><span class="dlcard-t"><b>'+t("Travel mode")+'</b><span>'+t("Until")+' '+shortd(tv.until)
    +' · '+t("exercises swapped for your kit at hand")+'</span></span><button class="dlcard-x" data-travel="end">'+t("End it")+'</button></div>';}
+/* A lighter week due or running, when the head (js/engine/head.js) has it for Training:
+   it is the one card that offers a lighter week, whichever source saw the need first. */
 function deloadCard(){
+  var on=headSig("deload-on");
   /* The planned lighter week of a training block is shown by its own card. */
-  if(inDeload()&&!offPlanLight())return "";
-  if(inDeload()){
-    return '<div class="dlcard on"><span class="dlcard-i" aria-hidden="true">'+FEATHER+'</span>'
+  if(on&&on.src.planned)return "";
+  if(on){
+    return '<div class="dlcard on" data-k="deload-on"><span class="dlcard-i" aria-hidden="true">'+FEATHER+'</span>'
      +'<span class="dlcard-t"><b>'+t("Lighter week")+'</b><span>'+t("Until")+' '+shortd(S.deload.until)
      +' · '+t("fewer sets, about 10% lighter")+'</span></span>'
      +'<button class="dlcard-x" data-deload="end">'+t("End it")+'</button></div>';}
-  var due=deloadDue();
+  var ds=headSig("deload-due"),due=ds&&ds.src;
   if(!due)return "";
-  return '<div class="dlcard"><div class="dlcard-h"><span class="dlcard-i" aria-hidden="true">'+FEATHER+'</span>'
+  return '<div class="dlcard" data-k="deload-due"><div class="dlcard-h"><span class="dlcard-i" aria-hidden="true">'+FEATHER+'</span>'
    +'<b>'+t("Time for a lighter week")+'</b></div>'
    +'<p>'+t(due.why==="plateau"?"Several of your lifts have stalled for three sessions in a row."
       :"Your sets have been close to failure for two weeks running.")+' '
