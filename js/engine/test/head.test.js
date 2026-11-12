@@ -122,7 +122,10 @@ function run(t){
      check reads it as it does today; nothing else has anything to say. */
   var e=fresh();e.ckDone=weekStartOf(today());saveDB();
   var ev=headNow();
-  t.eq([ev.errors,ev.queue.filter(function(x){return x.source!=="plancheck";}).length],[[],0],"an empty profile: nothing from the log, and nothing fails");
+  /* Food's "your body needs" reads the clock: with nothing eaten, later in the day it says
+     the day is behind, as Food shows it. It is the only voice that may speak here. */
+  t.eq([ev.errors,ev.queue.filter(function(x){return x.source!=="plancheck"&&x.source!=="needs";}).length],[[],0],"an empty profile: nothing from the log, and nothing fails");
+  t.ok(ev.queue.filter(function(x){return x.source==="needs";}).every(function(x){return x.id==="needs-today";}),"…only today's body needs, which depends on the hour");
   e.ckDone=null;saveDB();
   t.ok(ids(headNow().queue).indexOf("checkin")>=0,"…with this week's check-in open, it asks what got in the way, as Coach shows it today");
   var n=fresh();n.onboarded=false;saveDB();

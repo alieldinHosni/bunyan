@@ -4412,3 +4412,5 @@ docs/COACH-AGENT.md 2.2 and 2.8. CACHE `bunyan-v258`.
   to "nothing from the log". (4) Several sources can suggest a lighter week at once (deload-due, the check-in's
   deload, the coach's fatigue/falling); no rule merges them yet. (5) Food's two plan-page prompts are decided in
   the head and still, separately, in `food.js` until part (b) makes the page ask.
+
+**Head test no longer depends on the hour.** The decision engine's "an empty profile" test (js/engine/test/head.test.js) passed in the morning and failed from midday: with nothing eaten, Food's "your body needs" says the day is behind once enough of it has gone, and the head rightly carries that as `needs-today`. The test now allows that one signal (and only it) besides the plan check's, so it holds at any hour. No app code changed.
