@@ -4459,3 +4459,4 @@ docs/COACH-AGENT.md 2.2 and 2.8. CACHE `bunyan-v258`.
   second item); the exercise guide shows no steps until the instructions file has loaded; `why` has no reasons to
   give until C-6; `fit`, `days` and `avoid` describe and point but do not change the program (C-5a).
 - Not mine: `tests/engine.mjs` has one failing check on main before this change ("head: an empty profile…").
+**Head test no longer depends on the hour.** The decision engine's "an empty profile" test (js/engine/test/head.test.js) passed in the morning and failed from midday: with nothing eaten, Food's "your body needs" says the day is behind once enough of it has gone, and the head rightly carries that as `needs-today`. The test now allows that one signal (and only it) besides the plan check's, so it holds at any hour. No app code changed.
