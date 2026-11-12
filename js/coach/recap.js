@@ -50,6 +50,8 @@ function recapOf(text){
   var parts=clausesOf(f),foods=[],muscles=[],ask=ASK.test(f),log=LOG.test(f),lastEat=false;
   parts.forEach(function(c){
     var cc=" "+c+" ";
+    /* "…, log it": the request to put it in the day, not a food. */
+    if(/^ *(please |)(log|add|save|record|put) (it|them|that|those|this)( in| to| into)?( my day| today| the day)? *$|^ *(سجله|سجلها|سجلهم|سجلي|ضيفه|ضيفها|ضيفهم) *$/.test(c))return;
     if(TRAIN_RE.test(cc)){MUSCLES.forEach(function(m){if(m[1].test(cc)&&muscles.indexOf(m[0])<0)muscles.push(m[0]);});lastEat=false;return;}
     var eating=EAT_RE.test(cc);
     /* "… و سكريات الصبح": a food after one, without its own verb, is still eating. */

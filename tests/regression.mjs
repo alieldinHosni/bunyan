@@ -6611,6 +6611,51 @@ await test("Live figure: no unchecked figure is shown — Incline Push-Up Medium
   eq([await page.$$eval("#sheet .exd-pose svg",a=>a.length),await page.$$eval("#sheet .fig3d,#sheet canvas",a=>a.length)],[1,0],drill+": its drawing, as before");
   eq(await page.evaluate(()=>document.querySelectorAll("[data-mq-unchecked]").length),0,"the app never asks for an unchecked figure");
 });
+/* C-4: several foods in one message, every one read and shown before it is logged; a
+   message nothing reads gets the nearest offers, never a passage; the written answers
+   with the person's own numbers in them; the clarifying question asks once. */
+await test("Coach answers (C-4): several foods logged at once with Undo, an unclear one asked about; no passage as an answer; the rate asked checked against the weight; no Not what I asked under a clarifying question",async page=>{
+  await openChat(page);
+  const items=()=>page.evaluate(()=>[...[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelectorAll(".ag-item b")].map(b=>b.textContent));
+  let r=await agSay(page,"log 200g chicken breast and rice and a banana for lunch");
+  eq([r.ok,await items()],[true,["Chicken Breast, Cooked","White Rice, Cooked","Banana"]],"three foods, each matched, shown before anything is logged");
+  const lunch="(()=>{const n=new Date(),d=S.days[new Date(n-n.getTimezoneOffset()*6e4).toISOString().slice(0,10)];return d&&d.meals&&d.meals.Lunch?(d.meals.Lunch.items||[]).length:0;})()";
+  eq(await ev(page,lunch),0,"nothing before the tap");
+  await page.tap('#cpanel [data-agok]');await pause(page,500);
+  eq(await ev(page,lunch),3,"all three logged to the meal said");
+  await page.tap('#cpanel [data-agundo]');await pause(page,400);
+  eq(await ev(page,lunch),0,"Undo takes all three back");
+  r=await agSay(page,"log 2 eggs and toast");
+  if(!/^So far: Eggs 2 × large egg\. Which food is “toast”\?/.test(r.lead)||!r.opts.some(o=>/Toast/.test(o)))throw new Error("the unclear one is asked about: "+JSON.stringify(r));
+  await page.tap('#cpanel .ag-opt:not(.none)');await pause(page,450);
+  eq([(await agLast(page)).ok,(await items()).length],[true,2],"chosen, then both shown to log");
+  r=await agSay(page,"log 2 eggs and xyzzq");
+  const nt=await page.evaluate(()=>[...[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelectorAll(".ag-notes li")].map(x=>x.textContent).join(" "));
+  if(!r.ok||!/“xyzzq” isn't in the food list/.test(nt))throw new Error("a food not in the list is named, not dropped: "+nt);
+  /* Nothing reads it: not sure, and the nearest things it can do, as buttons. */
+  r=await agSay(page,"what is the capital of france");
+  if(!/not sure/.test(r.lead)||!/won't guess/.test(r.lead))throw new Error("unknown: "+r.lead);
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelectorAll(".chat-acts button").length),3,"three nearest offers");
+  eq(await ev(page,"S.chat.filter(m=>m.id==='know').length"),0,"no passage of the knowledge base is ever an answer");
+  r=await agSay(page,"I want to lose 5 kg in a month");
+  if(!/1\.2 kg a week/.test(r.lead)||!/faster than the safe range/.test(r.lead))throw new Error("the rate: "+r.lead);
+  /* A clarifying question already asks: no Not what I asked under it. */
+  await agSay(page,"deadlift");
+  eq(await ev(page,"S.chat[S.chat.length-1].id"),"clarify","an unclear message gets one question back");
+  eq(await page.evaluate(()=>!![...document.querySelectorAll("#cpanel .chat-x")].pop().querySelector(".chat-miss")),false,"no Not what I asked under it");
+});
+await test("Coach answers in Arabic (C-4): several foods, a wedding tonight with what is left of today, tiredness that goes on, right to left",async page=>{
+  await openChat(page);
+  let r=await agSay(page,"سجل فول وطعمية وعيش بلدي");
+  eq([r.ok,r.lang,r.dir,(await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelectorAll(".ag-item").length))],[true,"ar","rtl",3],"three foods in Arabic");
+  r=await agSay(page,"رايح فرح النهارده بالليل، اعمل ايه في الاكل؟");
+  const all=await page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();x.querySelectorAll(".chat-more").forEach(d=>d.open=true);return x.querySelector(".chat-a").textContent;});
+  if(!/سعر/.test(all)||!/خطط يومك/.test(r.lead)||/[A-Za-z]{4,}/.test(all.replace(/Coach/g,"")))throw new Error("wedding in Arabic: "+all);
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#cpanel .chat-x")].pop().querySelectorAll(".chat-a .num").length>0),true,"its figures in .num");
+  r=await agSay(page,"انا تعبان على طول");
+  const tx=await page.evaluate(()=>{const x=[...document.querySelectorAll("#cpanel .chat-x")].pop();x.querySelectorAll(".chat-more").forEach(d=>d.open=true);return x.querySelector(".chat-a").textContent;});
+  if(!/دكتور/.test(tx)||/يوم واطي/.test(tx))throw new Error("tired in Arabic: "+tx);
+},{prefs:{lang:"ar"}});
 console.log("\n"+passes+" passed, "+fails+" failed");
 await browser.close();
 process.exit(fails?1:0);

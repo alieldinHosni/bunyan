@@ -347,40 +347,84 @@ function planSwap(text,p){
 
 /* Log: a food from the database, in the amount said or one serving, to the meal said
    or the time of day's. */
-var MEALS=[["Breakfast",/(^| )(breakfast|فطار|فطور|الفطار|الفطور)( |$)/],["Lunch",/(^| )(lunch|غدا|غداء|الغدا|الغداء)( |$)/],
-  ["Dinner",/(^| )(dinner|supper|عشا|عشاء|العشا|العشاء)( |$)/],["Snack",/(^| )(snack|snacks|سناك)( |$)/]];
+var MEALS=[["Breakfast",/(^| )(breakfast|فطار|فطور|الفطار|الفطور|للفطار|للفطور|عالفطار)( |$)/],["Lunch",/(^| )(lunch|غدا|غداء|الغدا|الغداء|للغدا|للغداء|عالغدا)( |$)/],
+  ["Dinner",/(^| )(dinner|supper|عشا|عشاء|العشا|العشاء|للعشا|للعشاء|عالعشا)( |$)/],["Snack",/(^| )(snack|snacks|سناك)( |$)/]];
 function mealIn(fq){for(var i=0;i<MEALS.length;i++)if(MEALS[i][1].test(fq))return MEALS[i][0];return "";}
 var INGREDIENT=/raw|powder|dry|dried|flour|starch|uncooked/i;
 function foodById(id){return (S.myFoods||[]).concat(FOODDB||[]).filter(function(f){return f.id===id;})[0]||null;}
 function foodShown(f){return foodName(f);}
+/* A food said, against the food list: one clear match, a few close ones to choose
+   from, or none (with the nearest names, if any). */
+function foodFor(query){
+  var hits=searchFoods(query,6).filter(function(h){return h.score>=60;});
+  if(!hits.length)return {kind:"none",opts:fuzzyFoods(query,4).map(function(x){return x.f;})};
+  /* As people eat it, as the food answers read it: "chicken breast" is the cooked
+     entry, not the raw one, when both match about as well. */
+  var eaten=hits.filter(function(h){return h.score>=hits[0].score-12&&!INGREDIENT.test(h.f.n);});
+  var pool=eaten.length?eaten:hits,top=pool[0],close=pool.filter(function(h){return h.score>=top.score-6;});
+  if(top.score<100&&close.length>1)return {kind:"some",opts:close.slice(0,4).map(function(h){return h.f;})};
+  return {kind:"one",f:top.f};}
+function foodOpt(f){return {v:f.id,l:foodShown(f),sub:fill(t("{n} kcal"),{n:fmtN(nutritionFor(f,f.per||100).kcal)})+" / "+fill(t("{n} g"),{n:f.per||100})};}
 function planLog(text,p,it){
   p=p||{};
-  var fq=" "+fold(text)+" ",meal=p.meal!=null?p.meal:mealIn(fq);
+  /* A comma between foods is a separator, and fold() would drop it. */
+  var fq=" "+fold(String(text||"").replace(/[,،]/g," and "))+" ",meal=p.meal!=null?p.meal:mealIn(fq);
   var s=fq;MEALS.forEach(function(m){s=s.replace(m[1]," ");});
-  var q=rest(s.replace(/(^| )(\d+(?:\.\d+)?) ?(g|gm|gr|grams?|جرام|جم)(?= |$)/g,"$1$2g"));
+  /* The foods are told apart before the filler words go ("and", "with" are filler to
+     rest(), and separators to parseFoodInput): each piece is cleaned on its own. */
+  var parts=s.replace(/(^| )(and|with|plus|on)(?= |$)|\+|،/g,",").replace(/\s+و\s+/g,",").replace(/\s+و(?=[ء-ي])/g,",").replace(/\s+مع\s+/g,",").split(",");
+  var q=parts.map(function(x){return rest(x.replace(/(^| )(\d+(?:\.\d+)?) ?(g|gm|gr|grams?|جرام|جم)(?= |$)/g,"$1$2g"));}).filter(Boolean).join(", ");
   if(!p.fid){
     if(!FOODDB)return say(t("The food list is still loading. Ask again in a moment."));
     var parsed=parseFoodInput(q),c=parsed[0];
     if(!c)return say(t("Which food? Say it with how much, like “log 200 g chicken breast for lunch”."));
-    var hits=searchFoods(c.query,6).filter(function(h){return h.score>=60;});
-    if(!hits.length){
-      var near=fuzzyFoods(c.query,4).map(function(x){return x.f;});
-      if(!near.length)return say(fill(t("No food called “{q}” in the food list."),{q:c.query}),[{l:t("Open Food"),a:{"data-tab":"food"}}]);
-      return pick("food",fill(t("No food called “{q}”. Closest:"),{q:c.query}),near.map(function(f){return {v:f.id,l:foodShown(f),sub:fill(t("{n} kcal"),{n:fmtN(nutritionFor(f,f.per||100).kcal)})+" / "+fill(t("{n} g"),{n:f.per||100})};}),
+    /* Several foods in one message ("2 eggs and toast", «بيض وعيش»): every one of them,
+       each matched on its own; one that is not clear is asked about, never dropped. */
+    if(parsed.length>1)return planMany({meal:meal,done:[],miss:[],todo:parsed.map(function(x){return {q:x.query,raw:x.raw,qty:x.qty,unit:x.unit};})});
+    var r=foodFor(c.query);
+    if(r.kind==="none"){
+      if(!r.opts.length)return say(fill(t("No food called “{q}” in the food list."),{q:c.query}),[{l:t("Open Food"),a:{"data-tab":"food"}}]);
+      return pick("food",fill(t("No food called “{q}”. Closest:"),{q:c.query}),r.opts.map(foodOpt),
         "food.log",{meal:meal,qty:c.qty,unit:c.unit},"fid",true);}
-    /* As people eat it, as the food answers read it: "chicken breast" is the cooked
-       entry, not the raw one, when both match about as well. */
-    var eaten=hits.filter(function(h){return h.score>=hits[0].score-12&&!INGREDIENT.test(h.f.n);});
-    var pool=eaten.length?eaten:hits,top=pool[0],close=pool.filter(function(h){return h.score>=top.score-6;});
-    if(top.score<100&&close.length>1)
-      return pick("food",t("Which food?"),close.slice(0,4).map(function(h){return {v:h.f.id,l:foodShown(h.f),sub:""};}),"food.log",{meal:meal,qty:c.qty,unit:c.unit},"fid",true);
-    p.fid=top.f.id;p.qty=c.qty;p.unit=c.unit;p.meal=meal;}
+    if(r.kind==="some")
+      return pick("food",t("Which food?"),r.opts.map(function(f){return {v:f.id,l:foodShown(f),sub:""};}),"food.log",{meal:meal,qty:c.qty,unit:c.unit},"fid",true);
+    p.fid=r.f.id;p.qty=c.qty;p.unit=c.unit;p.meal=meal;}
   var f=foodById(p.fid);if(!f)return say(t("That food isn't in the food list any more."));
   var gq=gramsFor(f,p.qty==null?1:p.qty,p.unit||null),n=nutritionFor(f,gq.g),m=p.meal||mealNow();
   return confirm("food.log",{fid:f.id,g:gq.g,label:gq.label,meal:p.meal||""},{
     lead:fill(t("Log {food}, {amount}, to {meal}?"),{food:foodShown(f),amount:gq.label,meal:mealName(m)}),
     item:foodShown(f),detail:fill(t("{k} kcal · {p} g protein"),{k:fmtN(n.kcal),p:Math.round(n.p)}),
     cta:t("Log it"),done:fill(t("Logged {food} to {meal}."),{food:foodShown(f),meal:mealName(m)}),
+    undone:fill(t("Undone. {meal} is as it was."),{meal:mealName(m)})});}
+/* The foods of one message, in order: p.todo still to match, p.done matched ({fid,
+   qty, unit}), p.miss said but not in the food list (named in the confirmation). The
+   first one that is not clear is asked about, with what was read so far; then the
+   rest go on (proceed). All of them, with their amounts, are shown before anything is
+   logged, and logged with one tap (food.logMany), with Undo. */
+function planMany(p){
+  p={meal:p.meal||"",done:(p.done||[]).slice(),miss:(p.miss||[]).slice(),todo:(p.todo||[]).slice()};
+  var sep=S.prefs&&S.prefs.lang==="ar"?"، ":", ";
+  while(p.todo.length){
+    var c=p.todo[0],r=foodFor(c.q);
+    if(r.kind==="one"){p.done.push({fid:r.f.id,qty:c.qty,unit:c.unit});p.todo.shift();continue;}
+    if(!r.opts.length){p.miss.push(c.raw||c.q);p.todo.shift();continue;}
+    var got=p.done.map(function(d){var f=foodById(d.fid);return f?foodShown(f)+" "+gramsFor(f,d.qty==null?1:d.qty,d.unit||null).label:"";}).filter(Boolean);
+    var lead=(got.length?fill(t("So far: {list}."),{list:got.join(" + ")})+" ":"")
+      +fill(t(r.kind==="some"?"Which food is “{q}”?":"No food called “{q}”. Closest:"),{q:c.raw||c.q});
+    return pick("food",lead,r.opts.map(foodOpt),"food.logMany",p,"fid",true);}
+  if(!p.done.length)return say(fill(t("No food called “{q}” in the food list."),{q:p.miss.join(sep)}),[{l:t("Open Food"),a:{"data-tab":"food"}}]);
+  var m=p.meal||mealNow(),one=false,rows=[],items=[];
+  p.done.forEach(function(d){var f=foodById(d.fid);if(!f)return;
+    if(d.qty==null)one=true;
+    var gq=gramsFor(f,d.qty==null?1:d.qty,d.unit||null),n=nutritionFor(f,gq.g);
+    items.push({fid:f.id,g:gq.g,label:gq.label,meal:m});
+    rows.push({item:foodShown(f),detail:gq.label+" · "+fill(t("{k} kcal · {p} g protein"),{k:fmtN(n.kcal),p:Math.round(n.p)})});});
+  var notes=[];
+  if(p.miss.length)notes.push(fill(t("“{q}” isn't in the food list, so it isn't in this. Add it on Food as one of your own foods."),{q:p.miss.join(sep)}));
+  if(one)notes.push(t("Where no amount was said, it is one serving: change it on Food if you had more or less."));
+  return confirm("food.logMany",{items:items},{
+    lead:fill(t("Log these to {meal}?"),{meal:mealName(m)}),items:rows,notes:notes,
+    cta:t("Log them"),done:fill(t("Logged {n} foods to {meal}."),{n:items.length,meal:mealName(m)}),
     undone:fill(t("Undone. {meal} is as it was."),{meal:mealName(m)})});}
 
 /* Weigh-in: a body weight the message names, saved as today's. */
@@ -791,6 +835,12 @@ function proceed(ag,v){
   if(ag.act==="exercise.remove")return planRemove("",p);
   if(ag.act==="exercise.swap")return planSwap("",p);
   if(ag.act==="food.log")return planLog("",p);
+  /* One of several foods chosen (or none of these: "" names it as not in the list),
+     and the rest go on. */
+  if(ag.act==="food.logMany"){var c=(p.todo||[])[0];if(!c)return planMany(p);
+    var v2=p.fid;delete p.fid;
+    if(v2)p.done=(p.done||[]).concat([{fid:v2,qty:c.qty,unit:c.unit}]);else p.miss=(p.miss||[]).concat([c.raw||c.q]);
+    p.todo=p.todo.slice(1);return planMany(p);}
   if(ag.act==="meal.swap")return swapNext(p);
   return null;}
 
