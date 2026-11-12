@@ -26,7 +26,7 @@ import {draftFrom, FOCUS_MAX, foodPrefs, gearOf, KIT, profileOf, skipOf, STEPS, 
 import {EXTRA_MAX, EXTRA_OK, GOALS, goalsOf} from "../../data/goals.js";
 import {lastMonth, monthlyNow, monthlyOpen} from "../../engine/monthly.js";
 import {focusMuscles} from "../../data/parts.js";
-import {ask, findMsg, follow} from "../views/chat.js";
+import {ask, findMsg, follow, isSafety} from "../views/chat.js";
 import {coachAct} from "../views/pcheck.js";
 import {chatSend, sendText, slotsFrom, toPlan} from "./common.js";
 import {closeCoach, holdCoach, toEnd} from "../coachfab.js";
@@ -358,7 +358,7 @@ function register(){
     if(el&&el.parentNode)el.parentNode.replaceChild(p,el);return;});
   /* The smart coach (js/ui/smartcoach.js): a question the rules missed, tried again by
      the model; the setting's buttons. */
-  key("smarttry",function(D){var m0=findMsg(D.smarttry);if(!m0||!isReady())return;
+  key("smarttry",function(D){var m0=findMsg(D.smarttry);if(!m0||!isReady()||m0.id==="safety"||isSafety(m0.qq||m0.q))return;
     var m={q:m0.qq||m0.q,id:"smart",at:Date.now(),b:[{p:""}],acts:[],lang:m0.lang,pending:true};
     S.chat=(S.chat||[]).concat([m]);saveDB();render();toEnd();
     runSmart(m,saveDB,function(){render();toEnd();});return;});

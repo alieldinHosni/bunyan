@@ -4322,3 +4322,53 @@ scenes, real records, the gate) and the regression test "Live figure: no uncheck
   picture at all, against the rule that no exercise is shown without an image. They keep their two still
   pictures (`STILLS_KEPT` in js/data/exercises.js; looked at on 11 Nov: positions correct, the audit's one fault
   for each is the hips a few centimetres into the seat cushion). The moving figure stays behind the gate.
+
+## Coach C-0 and C-1: safety replies first, and an evaluation set with its score — branch session/coach-safety
+docs/COACH-AGENT.md 2.2 and 2.8. CACHE `bunyan-v258`.
+- C-0. New pure module js/coach/safety.js: `classify(text)` gives stop (chest pain or pressure, pain spreading to
+  the arm or jaw, fainting, severe breathlessness, a sudden severe headache, one-sided numbness, slurred speech),
+  session (dizzy, light-headed, nauseous, blurred vision, heart racing or fluttering at rest, sharp or sudden pain,
+  a pop or snap, pain that shoots or tingles, short of breath), refer (medicines, a diagnosed condition, pregnancy,
+  fasting with a condition: sub "medical"; self-harm, eating very little, making oneself sick, eating-disorder
+  words: sub "care"), or none. English and Egyptian Arabic, inside longer sentences, with typos (one-letter typos
+  for long English words, listed misspellings for short ones), Arabic letter variants and prefixes, a word denied
+  just before it ("no chest pain", "مش دايخ") not counted. Decisions pinned in js/coach/test/safety.test.js (63 + 57
+  English, 64 + 44 Arabic cases): "chest pain" and "pain in my chest" always stop, even "from benching"; "my chest
+  hurts" stops unless the person names a lift or workout as the cause ("from benching"), then it is soreness;
+  "I'm dizzy with excitement" does not fire (figurative), "I feel dizzy" does; "my heart is racing" fires only
+  with "at rest" or similar; "out of breath after sprints" does not; "I want to die" fires the care reply.
+- Wired first in `askOne()` and in `ask()` (before the day-told, rewrite and split paths) in js/ui/views/chat.js.
+  The replies are fixed text through `t()` with Arabic: stop now ("Stop training now. This can be an emergency:
+  call your local emergency number or get to a doctor now.") with no button, or "End my workout" (data-finish,
+  the existing finish handler) when a workout is open; stop the session ("Stop this session, sit down and sip some
+  water. If it doesn't pass in a few minutes, or it comes back, see a doctor before you train again.") with "End my
+  workout" when one is open and "Note it in the recovery log" (data-sheet recovery); care ("That sounds hard, and
+  you don't have to carry it alone. Please talk to a doctor or someone you trust today.") with nothing; medical:
+  the existing scope answer. Nothing is suggested under a safety reply (askNext returns nothing), no "Or did you
+  mean". The on-device model never sees one: smartcoach.js run() drops a red-flag message and leaves earlier ones
+  out of the conversation it is given; the "Let the smart coach try" button is not drawn and its handler refuses.
+- Found by the evaluation and fixed in the same change: my first wiring made `aScope` take a third argument, and
+  ANSWER.scope is called with the intent object there, so every supplement question got the injury answer. Now a
+  separate `scopeAnswer(a,q,force)`.
+- Existing test changed: "Coach scope: no diagnosis…" expected "I think I have an eating disorder" to give the
+  scope answer ("a doctor or a psychologist"). 2.2 makes eating-disorder language a red flag with the kind line,
+  so that line now expects the safety referral (id safety, "someone you trust today", no buttons), and the loop
+  checks the psychologist answer with "I think I'm depressed" instead, which stays with the scope answer.
+- C-1. tests/coach-eval.json: 434 items, 217 English/Arabic pairs (safety 60 pairs incl. 15 negatives, requests 33,
+  own data 38, knowledge 35, statements 21, corrections 10, out of scope 20), from the review's messages, the
+  phrases in js/coach/test/intent.test.js and the chat tests, and the owner's misses in this file and in
+  chat.js comments. tests/coach-eval.mjs scores safety in Node and the answer in Chromium through `ask()` on the
+  regression seed, conversation cleared per item; prints by kind, language, parity, failing ids, and items whose
+  result differs from their `today` mark; exits 1 only on a safety miss. New CI job "Coach evaluation".
+- Baseline (with C-0 in): all 308 / 434 (71%); safety stage 434 / 434 (100%); answer stage 278 / 404 (68.8%).
+  By kind: safety 120/120, request 30/66 (45.5%), own data 46/76 (60.5%), knowledge 49/70 (70%), statement 26/42
+  (61.9%), correction 5/20 (25%), out of scope 32/40 (80%). English 162/217 (74.7%), Arabic 146/217 (67.3%).
+  Parity: 36 pairs pass in one language only (26 English only, 10 Arabic only). 126 items marked "today":"fail".
+- Of the review's sixteen, #1 (chest pain) and #2 (dizzy) are fixed; #3–#16 still fail in the set.
+- Unsure: (1) the expectations were tightened twice before the baseline was recorded, after reading the passing
+  answers (a loose list let "Hack squat: first time" pass for "my best squat"): every change made an item harder,
+  none easier; one safety negative's answer expectation was moved into its own statement item. (2) Some answers
+  depend on the weekday (rest day or not), so a "changed since marked" line can appear on another day; it never
+  changes the exit code. (3) "Not what I asked" stays under a safety reply, so a false alarm can be reported; the
+  owner may prefer it gone under stop now. (4) The Arabic "Your program has 3 training days." in the kfreq answer
+  is untranslated (seen in the evaluation; not touched here).
