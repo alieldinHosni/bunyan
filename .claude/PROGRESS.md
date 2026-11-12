@@ -4372,3 +4372,43 @@ docs/COACH-AGENT.md 2.2 and 2.8. CACHE `bunyan-v258`.
   changes the exit code. (3) "Not what I asked" stays under a safety reply, so a false alarm can be reported; the
   owner may prefer it gone under stop now. (4) The Arabic "Your program has 3 training days." in the kfreq answer
   is untranslated (seen in the evaluation; not touched here).
+
+## WP-1 (a): the head, one decision engine, with no page changed yet — branch session/head-engine (v260)
+
+- New `js/engine/head.js` (reads the state, no DOM; in `sw.js`). `headNow()` gives {lead, queue, byPage, count,
+  suppressed}; `headFor(page)`, `headWhy(id)`. Memoised on `dataRev()`, the date and the hour (the Food page's
+  "behind for the time of day" moves with the clock). The priority bands are written at the top of the file.
+- Providers wrap the sources as they are: the plan check, the coach's insights, the weekly check-in and the monthly
+  review (one signal for the card, one per change on it, `parent` pointing at the card; the check-in's balance
+  split into its under-range and over-range halves), a lighter week due or running, a week kept light and its
+  follow-up, a missed day, Food's body needs, the Nutrition plan's "coach suggests" and "macros add up to", the
+  backup and weigh-in reminders. Each signal carries the source's own data (`src`); no new words were written.
+- `effect` means what accepting a signal does to the plan: weekly sets, loads, the calories the plan has the
+  person eat (target, macros, meal plan), the protein target. Today's intake prompts and reminders are all 0.
+- The six rules are small exported pure functions (`ruleRecovery`, `ruleCalories`, `ruleDeficit`, `ruleMissed`,
+  `ruleHousekeeping`, `ruleSaidOnce`) applied by `decide()`, which the tests also feed plain signals. Rules 1–4
+  read the same list (what is not dismissed), so their order does not matter; rule 5 reads what they leave.
+  Dismissal keeps `S.pcDismiss` / `S.coachDismiss` as the stores.
+- To say why a dismissed finding is not shown, the sources now also give everything before dismissal:
+  `plancheck.js checkPlansAll()` + `pcKept()`, `coachinfo.js coachAll()` + `coachKept()`. `checkPlans()` and
+  `coachNow()` are built from those and return exactly what they did.
+- Pure decisions moved out of the UI, behaviour unchanged: `needs.js bodyNeedsOf()` (from `ui/bodyneeds.js`) and
+  `formulas.js weighInDue()` (from `ui/views/home.js`). The backup test was already in the engine
+  (`formulas.js backupDue()` / `backupAgeDays()`; it is drawn from `home.js reminder()`, not `train.js`), so
+  nothing moved for it.
+- Tests: `js/engine/test/head.test.js` (47, in `tests/engine.mjs`): each rule, ranking, the card's parts,
+  byPage, memoisation and a data change, a dismissal, an empty and a not-onboarded profile, and every id/kind of
+  the plan check, the insights, the check-in and the monthly review having a mapping (read from their own source,
+  so a new finding without one fails). No existing test changed. Related browser tests: 101 + 30 pass.
+- In the seeded regression profile today: lead `deload-due`; queue deload-due, kcal-down, checkin (its days
+  change), the bench stall, backup; suppressed vol-low, under and checkin:balance-low (recovery, by deload-due),
+  tg-suggest and macro-gap (calories, by kcal-down). That is F-A1 resolved inside the head.
+- Did not fit the doc as written, and what was done: (1) Rule 4 says "this week"; the only log-based "under your
+  range" (the coach's `under`) averages the complete weeks before this one, so the rule reads workouts done
+  against planned over those same weeks. The check-in's and the plan check's under-range read the program, which
+  missed workouts cannot explain, so rule 4 leaves them. A partly explained `under` is kept whole. (2) Readiness
+  ("drained") has no engine source yet; not a provider. (3) A new profile always has the default Full Body
+  program, whose plan check finds Biceps under range, so an empty profile's queue is not empty: the test holds it
+  to "nothing from the log". (4) Several sources can suggest a lighter week at once (deload-due, the check-in's
+  deload, the coach's fatigue/falling); no rule merges them yet. (5) Food's two plan-page prompts are decided in
+  the head and still, separately, in `food.js` until part (b) makes the page ask.

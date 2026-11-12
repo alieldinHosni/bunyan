@@ -11,7 +11,7 @@ import {blockNow, plannedLight} from "./blocks.js";
 import {avgRPE, bestE1RMIn, bodyAtIn, bwShare, consistencyIn, daysSinceIn, deloadDueIn, deloadSets, e1RM, incrementOf,
         loadIn, plateauIn, prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, recordsOfEntry, repsAtIn,
         sessionVolumeIn, snapDown, volumeIn, weeklySetsIn} from "./lifts.js";
-import {avg7Of, bmrOf, kcalFloorOf, lastWeightOf, macroTargetsOf, missingOf, proteinFor, sessionKcalOf, targetKcalOf,
+import {avg7Of, bmrOf, daysBetween, kcalFloorOf, lastWeightOf, macroTargetsOf, missingOf, proteinFor, sessionKcalOf, targetKcalOf,
         tdeeFormulaOf, tdeeOf} from "./body.js";
 
 /* ============================================================ formulas */
@@ -52,6 +52,12 @@ function backupDue(){
 function backupAgeDays(){
   if(!S.lastBackup)return null;
   return Math.floor((Date.now()-S.lastBackup)/864e5);}
+/* Time to weigh in: something logged, and no weigh-in yet or none for a week. Null when
+   not, else {last}: the date of the latest weigh-in, or null when there has been none. */
+function weighInDue(){
+  var w=(S.body||[]).filter(function(b){return num(b.weight)>0;}).map(function(b){return b.date;}).sort().pop();
+  if(!((S.sessions||[]).length&&(!w||daysBetween(w,today())>=7)))return null;
+  return {last:w||null};}
 
 function lastWeight(){return lastWeightOf(S.body);}
 /* Calories burned by a session (body.js has the equation), at the latest weigh-in.
@@ -127,4 +133,4 @@ function addItems(meal,items,d){
 
 
 
-export {bmr, energyMissing, kcalFloor, bodyAt, barKg, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, tdeeFormula, volume, weeklySets, macroTargets};
+export {bmr, energyMissing, kcalFloor, bodyAt, barKg, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, tdeeFormula, volume, weeklySets, macroTargets, weighInDue};

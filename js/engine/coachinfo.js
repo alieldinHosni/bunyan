@@ -14,6 +14,7 @@ import {EXDB, isCompound, muscleOf, secondaryOf} from "../data/exercises.js";
 import {lastWeight, loadOf} from "./formulas.js";
 import {S, split} from "../state.js";
 import {num, today} from "../util.js";
+import {dayNo} from "../coach/util.js";
 import {LANDMARKS} from "../coach/landmarks.js";
 import {weeklySets} from "./volume.js";
 import {lightOnPurpose} from "./stress.js";
@@ -58,20 +59,30 @@ function programFacts(){
   return {mains:mains,ranges:ranges,id:prog&&prog.id,
     planned:Object.keys(planned).filter(function(m){var L=LANDMARKS[m];return !L||num(ws[m])>=L.mev;})};}
 
-function coachNow(){
+/* Every insight, before the ones set aside are left out: the head (js/engine/head.js)
+   reads these, so it can say why one is not shown. */
+function coachAll(){
   var ss=S.sessions||[],pf=programFacts();
-  var dis=dismissals();
   /* The library loads after the first render; until it has, muscles are guesses, so
      the answer is worked out again once it is in. */
   var light=lightOnPurpose(S.profile);
-  var k=[!!EXDB,today(),logSig(ss),pf.id,progSig(split()),JSON.stringify(dis),light].join("|");
+  var k=[!!EXDB,today(),logSig(ss),pf.id,progSig(split()),light].join("|");
   if(MEMO.k===k)return MEMO.v;
   var v=[];
-  try{v=insights(ss,INFO,{today:today(),mains:pf.mains,ranges:pf.ranges,planned:pf.planned,dismissed:dis});}
+  try{v=insights(ss,INFO,{today:today(),mains:pf.mains,ranges:pf.ranges,planned:pf.planned});}
   catch(e){v=[];}
   /* A week kept light on purpose (js/engine/stress.js) is not "under its minimum". */
   if(light)v=v.filter(function(x){return x.kind!=="under";});
   MEMO={k:k,v:v};
+  return v;}
+/* Set aside ("Not now"), until the date it was set aside to (js/coach/insights.js). */
+function coachKept(c,dis){dis=dis||dismissals();return !!(dis[c.id]&&dayNo(today())<dayNo(dis[c.id]));}
+var NMEMO={a:null,d:null,v:[]};
+function coachNow(){
+  var all=coachAll(),dis=dismissals(),dk=JSON.stringify(dis);
+  if(NMEMO.a===all&&NMEMO.d===dk)return NMEMO.v;
+  var v=all.filter(function(x){return !coachKept(x,dis);});
+  NMEMO={a:all,d:dk,v:v};
   return v;}
 
 /* Where the squat, bench and deadlift sit among raw powerlifting competitors, from the
@@ -87,4 +98,4 @@ function standingNow(){
   SMEMO={k:k,v:v};
   return v;}
 
-export {coachNow, standingNow, programFacts};
+export {coachAll, coachKept, coachNow, standingNow, programFacts};

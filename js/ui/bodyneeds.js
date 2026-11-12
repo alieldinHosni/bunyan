@@ -10,7 +10,7 @@
    logged days before it says anything. */
 import {hb} from "./haptic.js";
 import {t} from "../i18n/dict.js";
-import {needsNow, suggestFor, toGo, weekPattern} from "../engine/needs.js";
+import {bodyNeedsOf, suggestFor} from "../engine/needs.js";
 import {S} from "../state.js";
 import {esc, fmtN, today} from "../util.js";
 import {art} from "./art.js";
@@ -37,13 +37,14 @@ function pctOf(n){return Math.round(n.pct*100);}
    (noticed) stays. */
 function bodyNeeds(eaten,water){
   var g=S.goals||{},now=today(),hour=new Date().getHours();
-  if(!(g.p>0))return "";
-  var r=needsNow(eaten,g,water,hour),focus=r.focus,fn=focus&&r.nodes.filter(function(n){return n.id===focus;})[0];
-  if(!fn)return noticed(g,now);
-  var trained=(S.sessions||[]).some(function(x){return x.date===now;});
+  var b=bodyNeedsOf(eaten,g,water,hour,S.sessions,S.days,now);
+  if(!b)return "";
+  var focus=b.focus,fn=b.node;
+  if(!fn)return noticed(b.week);
+  var trained=b.trained;
   var sub=(trained?t("You trained today, and {x} is at {n}% of your target."):t("{X} is at {n}% of today's target, behind for the time of day."))
       .replace("{x}",t(NAME[focus]).toLowerCase()).replace("{X}",t(NAME[focus])).replace("{n}",pctOf(fn));
-  var left=toGo(fn),unit=focus==="w"?"ml":"g";
+  var left=b.left,unit=focus==="w"?"ml":"g";
   var h='<section class="fbody fneed glass" aria-labelledby="fbody-h">'
    +'<div class="fneed-h"><span class="fneed-i f-'+focus+'" aria-hidden="true">'+glyph(GL[focus])+'</span>'
    +'<div class="fneed-t"><h2 class="fbody-h" id="fbody-h">'+esc(t(HEAD[focus]))+'</h2><p class="fbody-s">'+esc(sub)+'</p></div>'
@@ -61,12 +62,11 @@ function bodyNeeds(eaten,water){
         +'<span class="fsug-s">'+esc(t(x.label)+" · "+t("{n} kcal").replace("{n}",fmtN(x.kcal)))+'</span></button>';}).join("")
      +'</div>';}
   h+='</section>';
-  return h+noticed(g,now);}
+  return h+noticed(b.week);}
 
 /* What the last week shows about protein, in one card, or nothing. */
-function noticed(g,now){
-  var tr={};(S.sessions||[]).forEach(function(x){if(x.date)tr[x.date]=true;});
-  var w=weekPattern(S.days||{},g,now,tr);if(!w)return "";
+function noticed(w){
+  if(!w)return "";
   var s=w.kind==="train"?t(w.shortTrain===w.trainDays?"On each of your last {m} training days, protein stayed under target. Those are the days it matters most."
       :"On {n} of your last {m} training days, protein stayed under target. Those are the days it matters most.").replace("{n}",w.shortTrain).replace("{m}",w.trainDays)
     :w.kind==="short"?t("Protein was under target on {n} of the last {m} days you logged.").replace("{n}",w.short).replace("{m}",w.days)

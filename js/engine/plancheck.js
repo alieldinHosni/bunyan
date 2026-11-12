@@ -63,7 +63,9 @@ function canBalance(prog,p){
   try{r=rebalance(c,p,S.gear);}catch(e){return true;}
   return r.sets>0||r.added>0;}
 
-function checkPlans(){
+/* Every finding, before the ones kept as they are are left out and before sorting: the
+   head (js/engine/head.js) reads these, so it can say why one is not shown. */
+function checkPlansAll(){
   var out=[],p=S.profile||{},G=goalOf(p.goal),w=lastWeight()||num(p.weight);
   var known=num(p.age)>0&&num(p.height)>0&&w>0;
   var g=S.goals||{},cur=num(g.kcal);
@@ -192,9 +194,11 @@ function checkPlans(){
           why:fill(t("{m} minutes of cardio and sport a week on {c} g of carbs ({k} g per kg) can leave you flat. Around 3 to 5 g per kg fuels that much."),{m:f.sport,c:g.c,k:ck.toFixed(1)}),
           fix:{label:fill(t("Use {c} g of carbs"),{c:Math.round(w*3/5)*5}),act:"carbs"},sig:[g.c,f.sport]});}}
 
-  /* Kept as they are, until their numbers change. */
-  var dis=S.pcDismiss||{};
-  out=out.filter(function(x){return dis[x.id]!==JSON.stringify(x.sig);});
+  return out;}
+/* Kept as it is ("Keep it as it is"), until its numbers change. */
+function pcKept(f){var dis=S.pcDismiss||{};return dis[f.id]===JSON.stringify(f.sig);}
+function checkPlans(){
+  var out=checkPlansAll().filter(function(x){return !pcKept(x);});
   out.sort(function(a,b){return b.sev-a.sev;});
   return out;}
 
@@ -219,4 +223,4 @@ function shortRests(prog){
   (prog.days||[]).forEach(function(d){if(multi&&d.goal!=="endurance")return;(d.ex||[]).forEach(function(e){
     if(isActivity(e.name)||num(e.rest)<=90)return;e.rest=60;n++;});});
   return n;}
-export {checkPlans, heavyMains, planTotals, shortRests};
+export {checkPlans, checkPlansAll, heavyMains, pcKept, planTotals, shortRests};

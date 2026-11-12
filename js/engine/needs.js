@@ -97,4 +97,17 @@ function weekPattern(days,goals,now,trainedOn){
   var kind=shortTrain>=2?"train":(n-met)*2>=n?"short":"kept";
   return {kind:kind,days:n,met:met,short:n-met,trainDays:trainDays,shortTrain:shortTrain};}
 
-export {expected, needsNow, PICKS, suggestFor, toGo, weekPattern};
+/* The Food page's decision, whole (moved here from js/ui/bodyneeds.js so the head,
+   js/engine/head.js, reads the same answer the page draws): null without a protein
+   target; otherwise the nutrient behind for the hour (focus, its node and what is left
+   of it, or focus null), whether there was a workout today, and the week's pattern
+   (weekPattern, or null). sessions is the log ([{date}]), days the food log. */
+function bodyNeedsOf(eaten,goals,water,hour,sessions,days,now){
+  goals=goals||{};
+  if(!(goals.p>0))return null;
+  var r=needsNow(eaten||{},goals,water,hour),focus=r.focus,node=focus&&r.nodes.filter(function(n){return n.id===focus;})[0]||null;
+  var tr={};(sessions||[]).forEach(function(x){if(x&&x.date)tr[x.date]=true;});
+  return {focus:node?focus:null,node:node,left:node?toGo(node):0,trained:!!tr[now],
+    week:weekPattern(days||{},goals,now,tr)};}
+
+export {bodyNeedsOf, expected, needsNow, PICKS, suggestFor, toGo, weekPattern};
