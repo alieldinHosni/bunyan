@@ -398,9 +398,12 @@ function planWeigh(text,p,it){
 
 /* A request, from its intent and words: what the chat shows for it. */
 function plan(id,text,it){
-  if(id==="exadd")return planAdd(text);
-  if(id==="exremove")return planRemove(text);
-  if(id==="exswap")return planSwap(text);
+  /* it.p: what the sentence's reading already resolved (js/coach/understand.js): the
+     exercise names, so they are not looked up again from the words. */
+  var rp=it&&it.p?Object.assign({},it.p):null;
+  if(id==="exadd")return planAdd(text,rp);
+  if(id==="exremove")return planRemove(text,rp);
+  if(id==="exswap")return planSwap(text,rp);
   if(id==="foodlog")return planLog(text,null,it);
   if(id==="weighlog")return planWeigh(text,null,it);
   return null;}
