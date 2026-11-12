@@ -740,9 +740,77 @@ function pushup(o){
 
 /* ---- pull-ups and chin-ups: hanging from a bar, pulled until the chin is over it ----
    grip "pro" (palms away) | "sup" (palms toward) | "ham"; w */
+/* The body's centre of mass from its joints (GEN: Winter's segment table, the share of
+   the body's mass in each segment and where along it its centre lies): head and neck
+   8.1% at the head, trunk 49.7% halfway from the hips to the shoulders, upper arm 2.8%
+   at .436 from the shoulder, forearm 1.6% at .43, hand 0.6% at the grip, thigh 10% at
+   .433 from the hip, shank 4.65% at .433 from the knee, foot 1.45% at the ankle. */
+function massCentre(J){
+  var mh=lerp(J.hip.l,J.hip.r,.5),ms=lerp(J.sh.l,J.sh.r,.5),c=add(mul(J.head,.081),mul(lerp(mh,ms,.5),.497)),m=.578;
+  LR.forEach(function(s){
+    c=add(c,add(add(mul(lerp(J.sh[s],J.el[s],.436),.028),mul(lerp(J.el[s],J.wr[s],.43),.016)),mul(J.grip[s],.006)));
+    c=add(c,add(add(mul(lerp(J.hip[s],J.kn[s],.433),.1),mul(lerp(J.kn[s],J.an[s],.433),.0465)),mul(J.an[s],.0145)));
+    m+=.028+.016+.006+.1+.0465+.0145;});
+  return mul(c,1/m);}
+function elbowBend(J,s){var a=norm(sub(J.el[s],J.sh[s])),b=norm(sub(J.wr[s],J.el[s]));return Math.acos(Math.max(-1,Math.min(1,dot(a,b))))/R;}
+/* the bottom of the chin: the head's lowest point along its own up, as the capsules
+   measure it */
+function chinOf(sc){var h=bodyParts(sc).filter(function(p){return p.n==="head";})[0];return sub(h.a,mul(sc.J.hu,h.ra));}
+
+/* Pullups, written from its dossier (docs/figures/ex/Pullups.md): a strict pull-up.
+   Hanging still, the body's centre of mass stays under the bar (a body that hangs
+   from its hands and does not swing has nowhere else to put it), so every key is
+   solved for that as well as for its own aim:
+     u = 0     the hang: arms long (elbows 10 degrees short of straight), shoulders
+               engaged, not sunk to the ears (the blades a little down from where the
+               raised arms carry them)
+     u = .15   the blades drawn down first, the arms still long: the body rises by
+               what the shoulders drop
+     u = .55   halfway: the elbows at a right angle, the sticking region
+     u = 1     the chin 4 cm over the bar, the chest up, the trunk 22 degrees back
+   The trunk tips back as it rises (LIB: the torso back, the chest out), which is what
+   lets the face pass behind the bar (at least 3.9 cm from it) and the elbows finish at
+   about 140 degrees, inside their range: upright, this body would need 160. The grip
+   is 74 cm across (w .37), about one and a half shoulder widths: narrower, the elbows
+   run out of range before the chin clears the bar. The legs are one piece with the
+   pelvis, straight and a little in front of it (no kipping, no swing): they lean with
+   the trunk and do not move on it. */
+function strictPullup(o,grip,w,H){
+  var LEG_U=.955,LEG_F=.1,HANG=-4,SET=-16,CHIN=.04,LEAN=-22;
+  function body(x,y,lean,shrug){
+    var a=lean*R,up=[Math.sin(a),Math.cos(a),0],fw=[Math.cos(a),-Math.sin(a),0];
+    var ft=add([x,y,0],add(mul(up,-LEG_U),mul(fw,LEG_F)));
+    return {pelvis:[x,y,0],pitch:lean,spine:"neutral",head:0,shrug:shrug,
+      feet:{l:[ft[0],ft[1],.09],r:[ft[0],ft[1],-.09]},toes:{l:-35,r:-35},
+      knees:{l:add(fw,[0,0,.05]),r:add(fw,[0,0,-.05])}};}
+  function drive(p){onBar(p,[0,H,0],w,[1,0,0],[0,1,0],0);p.elbows=S(-.1,-1,1);p.grip="grip";}
+  function scene(q){var p=Object.assign({},q);drive(p);return solve(p);}
+  /* a key: the pelvis that puts the centre of mass under the bar and meets aim(scene),
+     which grows as the body rises (an arm that cannot reach the bar has no slope, so
+     the height is bisected; the centre of mass moves with the pelvis about one for
+     one, so a few such steps put it under the bar) */
+  function key(lean,shrug,aim){
+    var x=-.05,lo=.9,hi=2,y;
+    for(var it=0;it<30;it++){y=(lo+hi)/2;
+      for(var k=0;k<3;k++)x-=massCentre(scene(body(x,y,lean,shrug)).J)[0];
+      if(aim(scene(body(x,y,lean,shrug)))<0)lo=y;else hi=y;}
+    return body(x,(lo+hi)/2,lean,shrug);}
+  function elbowAt(e){return function(sc){return elbowBend(sc.J,"l")-e;};}
+  /* the blades' drop is keyed halfway as well, so the blend raises the body with them
+     and the arms never stretch past the hang */
+  var k0=key(-2,HANG,elbowAt(10)),kh=key(-2.5,(HANG+SET)/2,elbowAt(10)),k1=key(-3,SET,elbowAt(10)),
+    km=key(LEAN/2,SET,elbowAt(90)),
+    k2=key(LEAN,SET,function(sc){return chinOf(sc)[1]-(H+CHIN);});
+  return {keys:[{at:0,pose:k0},{at:.075,pose:kh},{at:.15,pose:k1},{at:.55,pose:km},{at:1,pose:k2}],spine:"neutral",
+    /* lift 1.2 s, a second's hold with the chin over the bar, lower 2 s, a moment in
+       the hang: the lowering slower than the lift (GEN; LIB "slowly lower") */
+    tempo:[1.2,1,2,.4],stick:[.35,.7],cam:{yaw:118,pitch:6},arrow:{track:"sh.l"},refine:{Back:"Lats"},
+    drive:drive,equip:function(){return [["bar",H,{w:.62}]];}};}
+
 function pullup(o){
   o=o||{};
   var grip=o.grip||"pro",w=o.w||(grip==="sup"?.2:.4),H=2.3;
+  if(o.strict)return strictPullup(o,grip,w,H);
   function pose(shY,x,lean){return {pelvis:[x-.02,shY-.4,0],pitch:lean,head:-14,feet:S(x+.06,shY-1.37,.1),footDir:S(.3,-1,0),sole:S(1,.3,0),knees:S(1,0,.05)};}
   var bot=pose(H-.57,-.02,-4),top=pose(H-.12,-.1,-14);
   return {keys:[bot,top],tempo:[1.1,.4,1.6,.6],cam:{yaw:150,pitch:4},arrow:{track:"sh.l"},refine:{Back:"Lats"},
@@ -1373,7 +1441,7 @@ var TABLE={
   "Pushups":[pushup,{}],
   "Incline Push-Up":[pushup,{hands:"bench"}],
   "Decline Push-Up":[pushup,{feet:"bench"}],
-  "Pullups":[pullup,{grip:"pro"}],
+  "Pullups":[pullup,{grip:"pro",w:.37,strict:true}],
   "Chin-Up":[pullup,{grip:"sup"}],
   "Dips - Triceps Version":[dip,{lean:2}],
   "Dips - Chest Version":[dip,{lean:20}],

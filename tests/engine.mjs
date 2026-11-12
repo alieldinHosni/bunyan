@@ -20,7 +20,7 @@ for(const n of Object.keys(EXTRA))if(!lib[n])lib[n]=EXTRA[n];
 globalThis.fetch=async()=>({json:async()=>JSON.parse(fs.readFileSync(new URL("../exercises.json",import.meta.url),"utf8"))});
 await new Promise(r=>loadExDB(r));
 
-const files=["engine/test/body","engine/test/retarget","engine/test/intake","engine/test/lifts","engine/test/figures","engine/test/needs","engine/test/run","engine/test/planshare","data/test/movement","data/test/parts","data/test/bodymap","data/test/mannequin","data/test/collide","data/test/motion","data/test/ex/Romanian_Deadlift","test/schema", "engine/test/inbody", "engine/test/smart", "engine/test/faq", "engine/test/build", "engine/test/habits", "engine/test/conditions", "engine/test/corrective", "engine/test/phase", "engine/test/zones", "engine/test/sun", "engine/test/head"];
+const files=["engine/test/body","engine/test/retarget","engine/test/intake","engine/test/lifts","engine/test/figures","engine/test/needs","engine/test/run","engine/test/planshare","data/test/movement","data/test/parts","data/test/bodymap","data/test/mannequin","data/test/collide","data/test/motion","data/test/ex/Romanian_Deadlift","data/test/ex/Pullups","test/schema", "engine/test/inbody", "engine/test/smart", "engine/test/faq", "engine/test/build", "engine/test/habits", "engine/test/conditions", "engine/test/corrective", "engine/test/phase", "engine/test/zones", "engine/test/sun", "engine/test/head"];
 let pass=0,fail=0;
 for(const f of files){
   const n=f.split("/").pop();
