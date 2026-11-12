@@ -1,7 +1,10 @@
 /* Runs the engine, data and schema tests (js/engine/test/, js/data/test/,
    js/test/) in Node. The modules they test take everything as arguments and import
    nothing that reads the app's state (tests/architecture.mjs holds them to that), so
-   they run here as they are:
+   they run here as they are. The head (js/engine/head.js) reads the state: its test puts
+   a profile in S first (state.js setS), as the app's boot leaves it.
+     node tests/engine.mjs
+   (the others:)
      node tests/engine.mjs
    The movement test also gets the whole exercise library, read from exercises.json
    and merged with the app's own additions, as the app merges them on load. */
@@ -17,7 +20,7 @@ for(const n of Object.keys(EXTRA))if(!lib[n])lib[n]=EXTRA[n];
 globalThis.fetch=async()=>({json:async()=>JSON.parse(fs.readFileSync(new URL("../exercises.json",import.meta.url),"utf8"))});
 await new Promise(r=>loadExDB(r));
 
-const files=["engine/test/body","engine/test/retarget","engine/test/intake","engine/test/lifts","engine/test/figures","engine/test/needs","engine/test/run","engine/test/planshare","data/test/movement","data/test/parts","data/test/bodymap","data/test/mannequin","data/test/collide","test/schema", "engine/test/inbody", "engine/test/smart", "engine/test/faq", "engine/test/build", "engine/test/habits", "engine/test/conditions", "engine/test/corrective", "engine/test/phase", "engine/test/zones", "engine/test/sun"];
+const files=["engine/test/body","engine/test/retarget","engine/test/intake","engine/test/lifts","engine/test/figures","engine/test/needs","engine/test/run","engine/test/planshare","data/test/movement","data/test/parts","data/test/bodymap","data/test/mannequin","data/test/collide","test/schema", "engine/test/inbody", "engine/test/smart", "engine/test/faq", "engine/test/build", "engine/test/habits", "engine/test/conditions", "engine/test/corrective", "engine/test/phase", "engine/test/zones", "engine/test/sun", "engine/test/head"];
 let pass=0,fail=0;
 for(const f of files){
   const n=f.split("/").pop();

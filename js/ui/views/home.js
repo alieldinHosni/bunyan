@@ -3,11 +3,11 @@
    belongs to the day lives on: the greeting, one reminder at most, and the weigh-in
    and steps tiles here; calories and water on Food; the coach's advice in Coach. */
 import {t} from "../../i18n/dict.js";
-import {backupAgeDays, backupDue, lastWeight} from "../../engine/formulas.js";
-import {daysBetween, weightChange} from "../../engine/stats.js";
+import {backupAgeDays, backupDue, lastWeight, weighInDue} from "../../engine/formulas.js";
+import {weightChange} from "../../engine/stats.js";
 import {curProfile, dayRec, S} from "../../state.js";
 import {toDisp, wUnit} from "../../units.js";
-import {dfmt, esc, fmtN, num, today} from "../../util.js";
+import {dfmt, esc, fmtN, today} from "../../util.js";
 import {art} from "../art.js";
 import {glyph} from "../glyphs.js";
 import {avatar} from "../settings.js";
@@ -44,10 +44,10 @@ function reminder(){
         :t("Your last backup was")+' '+age+' '+t("days ago."))+'</p>'
      +'<div class="rowc mt"><button class="btn sm" data-export="1">'+t("Export a backup")+'</button>'
      +'<button class="btn d sm" data-snoozebackup="1">'+t("Not now")+'</button></div></div>';}
-  var w=(S.body||[]).filter(function(b){return num(b.weight)>0;}).map(function(b){return b.date;}).sort().pop();
-  if(S.sessions.length&&(!w||daysBetween(w,today())>=7))
+  var wd=weighInDue();
+  if(wd)
     return '<button class="card tap hnote" data-sheet="weigh"><h3>'+t("Time to weigh in")+'</h3>'
-     +'<p class="tiny" style="margin:6px 0 0">'+t(w?"A week since the last one. Mornings, before eating, compare best.":"One weigh-in starts your trend. Mornings, before eating, compare best.")+'</p></button>';
+     +'<p class="tiny" style="margin:6px 0 0">'+t(wd.last?"A week since the last one. Mornings, before eating, compare best.":"One weigh-in starts your trend. Mornings, before eating, compare best.")+'</p></button>';
   return "";}
 /* A tile: its icon in a round glass button at the top corner, the label, the figure and a
    line under it. ring (0..1) draws the share of a goal as an arc round the icon, the way
