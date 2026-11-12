@@ -473,19 +473,31 @@ function pull(o){
     keys=[{at:0,pose:k0},{at:.45,pose:km},{at:1,pose:k1}];}
   else{
     var KNEE=17,PATH={path:[{track:"bar",rule:"touch:thigh+shin"},{track:"bar",rule:"overMidfoot"}]};
-    /* the knees soft and the same at the top and the bottom, as they are once the path
-       constraints have put the bar against the legs over the middle of the foot (they
-       move the body along the floor, which bends or straightens the knees): the pelvis
-       is found from where it ends up. The top upright; the bottom with the bar just
-       below the knees (4 cm), the hips gone back as far as that takes */
+    /* docs/figures/ex/Romanian_Deadlift.md. The knees soft (about 17 degrees) and the
+       shins near upright, the same at the top and the bottom. The path constraints put
+       the bar against the legs over the middle of the foot by moving the body along the
+       floor, so the knees come out of where the body ends up, not of the shin's lean
+       asked for: only the trunk's angle is chosen. The top upright. The bottom where the
+       hips stop: HIP_STOP degrees of hip flexion (the thigh's angle in front of the
+       trunk), about where the hamstrings of a trained man with his knees soft stop the
+       hips going further back without the back rounding (GEN: a straight-leg raise of
+       about 80 degrees, a few more with the knees soft). On this body that leaves the bar
+       a few centimetres above the knees: deeper would ask the hamstrings for more than
+       most have, and the figure must not teach chasing depth with the back. */
+    var HIP_STOP=85;
     function after(phi,th){var p=hangOn(pose(pullModel(b0,phi,KNEE,th)));p=constrain(PATH,p,0);var J=solve(p).J;
-      return {knee:kneeBend(J,"l"),bar:lerp(J.grip.l,J.grip.r,.5),kneeY:J.kn.l[1]};}
-    var t0=solveN([0],function(x){return [after(x[0],0).knee-KNEE];},[3]);
-    var t1=solveN([0,62],function(x){var a=after(x[0],x[1]);return [a.knee-KNEE,a.bar[1]-(a.kneeY-.04)];},[3,4]);
-    t0=[t0[0],0];
-    keys=[pose(pullModel(b0,t1[0],KNEE,t1[1])),pose(pullModel(b0,t0[0],KNEE,t0[1]))];}
+      return {knee:kneeBend(J,"l"),
+        hip:180-Math.acos(Math.max(-1,Math.min(1,dot(norm(sub(J.sh.l,J.hip.l)),norm(sub(J.kn.l,J.hip.l))))))/R};}
+    /* the shin's lean (it sets the pelvis's height) that leaves the knees at KNEE */
+    function shin(th){return solveN([0],function(x){return [after(x[0],th).knee-KNEE];},[3])[0];}
+    /* the trunk's pitch that brings the hips to HIP_STOP: hip flexion grows about one
+       for one with it, so a few steps of that slope, then the shin once more */
+    var th1=62,ph1=shin(th1);
+    for(var it=0;it<4;it++)th1+=HIP_STOP-after(ph1,th1).hip;
+    ph1=shin(th1);th1+=HIP_STOP-after(ph1,th1).hip;
+    keys=[pose(pullModel(b0,ph1,KNEE,th1)),pose(pullModel(b0,shin(0),KNEE,0))];}
   keys.forEach(function(k){k=k.pose||k;delete k.hands;delete k.handDir;delete k.palm;});
-  var rec={keys:keys,spine:"neutral",tempo:[1.6,.4,2,.6],cam:{yaw:72,pitch:6},arrow:{track:"wr.l"},refine:{Back:"Lower back"},
+  var rec={keys:keys,spine:"neutral",tempo:[1.6,.4,2,.6],cam:{yaw:rdl?64:72,pitch:rdl?9:6},arrow:{track:"wr.l"},refine:{Back:"Lower back"},
     /* the bar over the middle of the foot, against the legs (GEN) */
     path:[{track:"bar",rule:rdl?"touch:thigh+shin":"touch:shin+thigh"},{track:"bar",rule:"overMidfoot"}],
     /* slowest from the floor to just past the knees (GEN, the deadlift's sticking
