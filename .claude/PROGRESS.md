@@ -4412,3 +4412,50 @@ docs/COACH-AGENT.md 2.2 and 2.8. CACHE `bunyan-v258`.
   to "nothing from the log". (4) Several sources can suggest a lighter week at once (deload-due, the check-in's
   deload, the coach's fatigue/falling); no rule merges them yet. (5) Food's two plan-page prompts are decided in
   the head and still, separately, in `food.js` until part (b) makes the page ask.
+
+## Coach C-3: reading the sentence (v261, session/coach-understand)
+
+- New pure module `js/coach/understand.js` (docs/COACH-AGENT.md 2.3): `understand(text, ctx)` returns the kind
+  (request / own-data / knowledge / statement / correction / out-of-scope), the act, the topic and its mode, the
+  entities (exercise, numbers with units, minutes, day, span, meal, muscle, equipment, weekdays), negation, scope
+  (now / lately / always), a confidence and the next-best readings. English and Egyptian Arabic in the same tables,
+  with Arabic spelling variants, Arabic-Indic digits, the dual ("بيضتين", "ساعتين"), "نص/ربع ساعة", number words,
+  common typos and Franco-Arabic words. Exercises are read against the person's own first: a change to the program
+  takes the program's (so "swap squat" is the Hack Squat in it), a question takes the logged lift (so «سكوات» in
+  "my best squat" is their Barbell Squat, not Hack Squat), and a plain name is the plain lift before a variant.
+- Wired into `chat.js` after the safety check (unchanged, still first) and before the old router: `readOf()` builds
+  the context (program, log, library matcher), `decide()` turns a reading into an answer id, a command (move,
+  travel, log a set, goal), a re-ask (a correction or a follow-up said again with the change, `retell()`), or
+  nothing, in which case the old router reads the message exactly as before. A correction or follow-up goes before
+  the older `rewrite()`; requests pass the resolved names to the planners (`agent.js plan(id,text,it)` reads `it.p`).
+- New answers that take the entities: `record` (one lift: best with its date and an Epley estimate labelled as such,
+  last time, or the last 7 days / 4 weeks against the span before), `foodday` (what was logged on a past day),
+  `day` (what was trained on a day), `volume` (working sets of a muscle this week), `fit` (today's plan cut to the
+  minutes said, and for kit said the closest stand-in per exercise from `plan.js standIn`; nothing is changed),
+  `days`, `avoid`, `away` (asks what kit when none is said), `tired` (scope "always": sleep and food from the log,
+  and the refer_undiagnosed referral; not "a low day"), `why` (says plainly that it cannot show the working yet:
+  C-6), `technique` (the exercise's guide), `clarify` (low confidence: one question, the likeliest readings as
+  `data-chatsay` buttons) and `correction` (a bare "you're wrong": Undo for an applied change, else the last reading
+  named and the other readings offered). Out-of-scope (weather, who are you, reminders) gets a plain line.
+- Arabic knowledge questions no rule reads are tried once with their training words in English (`gloss()`) and
+  answered in Arabic; a passage found that way (`know`) is never shown. A general question the written answers know
+  well (`faqMatch` ≥ 0.75) is answered by them before a rule that only shares a word; a "does muscle turn into
+  fat"/"difference between" question is no longer answered with the person's own figures (honest miss instead).
+- Fixes asked for: no "Not what I asked" link under a safety reply; "Your program has {n} training days." now has
+  its Arabic entry (it showed in English inside Arabic answers); the scope rule's Arabic words are folded the way
+  the question is (ئ/ي), so «مكتئب» is referred; steroids, «بري وركاوت», «حباية فيتامين» are referred.
+- Tests: `js/coach/test/understand.test.js` (215 checks, in tests/coach.mjs and the browser test page): every kind
+  and topic in both languages, each entity type, negation, scope, Franco-Arabic, typos, corrections, follow-ups,
+  re-telling, low confidence, the gloss. Two browser expectations were met again after first failing on this
+  change and no test was edited: "my legs are very sore" is logged as said (a plain "I'm sore" is asked about), and
+  "no, I meant Monday" re-tells "skip Saturday" with the weekday replaced in place.
+- Evaluation (tests/coach-eval.mjs), before → after: all 308 → 421 of 434 (71% → 97%); answer stage 68.8% →
+  96.8%; safety 100% → 100%; request 45.5% → 97%, own-data 60.5% → 100%, knowledge 70% → 90%, statement 61.9%
+  → 90.5%, correction 25% → 100%, out-of-scope 80% → 100%; English 74.7% → 97.2%, Arabic 67.3% → 96.8%; pairs
+  passing in one language only 36 → 1. 113 items lost their `"today":"fail"` mark; no expectation was changed.
+  Related browser tests (ONLY="oach|hat"): 131 passed, 0 failed.
+- Left, and why: the written answers for "tired all the time", eating at a wedding, free weights vs machines,
+  muscle turning into fat (C-4: new `faq.js` entries); "log 2 eggs and toast" logs the eggs only (food parsing of a
+  second item); the exercise guide shows no steps until the instructions file has loaded; `why` has no reasons to
+  give until C-6; `fit`, `days` and `avoid` describe and point but do not change the program (C-5a).
+- Not mine: `tests/engine.mjs` has one failing check on main before this change ("head: an empty profile…").
