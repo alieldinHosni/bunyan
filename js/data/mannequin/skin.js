@@ -26,6 +26,9 @@ import {V} from "./geom.js";
 
 var add=V.add,sub=V.sub,mul=V.mul,dot=V.dot,cross=V.cross,len=V.len,norm=V.norm;
 var R=Math.PI/180;
+/* the neck held in line with a neutral spine: within this many degrees (GEN; collide.js
+   checks 10) */
+var NECK=8;
 
 /* ---- the rest skeleton ---- */
 var BONES=BODY.bones,NB=BONES.length,IX={};
@@ -127,16 +130,36 @@ function chestOf(base,twist,bend,lean){
 
 /* Two bones, lengths a and b, from root toward target, the middle joint out toward
    pole (a direction). Out of reach: the full stretch toward it; too close: as folded
-   as the joint goes. */
-function ik(root,target,a,b,pole){
-  var d=sub(target,root),dl=len(d),n=norm(d),mx=(a+b)*.9995,mn=Math.abs(a-b)+.02;
-  if(dl>mx){dl=mx;target=add(root,mul(n,mx));}
+   as the joint goes. The result says when the target is out of reach (reach "far"), or
+   nearer than the joint's range of maxBend degrees allows (reach "near"), and by how
+   much (miss, metres), so it is reported, not hidden. */
+function ik(root,target,a,b,pole,maxBend){
+  var d=sub(target,root),dl=len(d),n=norm(d),mx=(a+b)*.9995,mn=Math.abs(a-b)+.02,reach="",miss=0;
+  if(dl>mx){if(dl>(a+b)+REACH_TOL){reach="far";miss=dl-(a+b);}dl=mx;target=add(root,mul(n,mx));}
   if(dl<mn){dl=mn;target=add(root,mul(n,mn));}
+  /* closer than the joint's range allows: reported (the joint is not stopped short,
+     which would move the hand or foot off what it holds or stands on) */
+  if(maxBend!=null&&!reach){var lo=Math.sqrt(a*a+b*b-2*a*b*Math.cos((180-maxBend)*R));if(dl<lo-REACH_TOL){reach="near";miss=lo-dl;}}
   var x=(a*a-b*b+dl*dl)/(2*dl),h=Math.sqrt(Math.max(a*a-x*x,0));
   var pp=sub(pole,mul(n,dot(pole,n)));
   if(len(pp)<1e-6)pp=Math.abs(n[1])<.9?[0,1,0]:[1,0,0],pp=sub(pp,mul(n,dot(pp,n)));
   pp=norm(pp);
-  return {mid:add(add(root,mul(n,x)),mul(pp,h)),end:target,pole:pp};}
+  return {mid:add(add(root,mul(n,x)),mul(pp,h)),end:target,pole:pp,reach:reach,miss:miss};}
+/* The joints' ranges the solver keeps to (docs/FIGURE-V3.md 2.0; GEN: standard ranges
+   of motion, the same as collide.js LIM): the elbow bends 0-145 degrees, the knee
+   0-140, each only on its hinge (an elbow bends the forearm toward the front of the
+   arm, a knee the shin behind the thigh, by construction, so neither bends
+   backwards); the knee bends in the plane the foot points along, within 30 degrees
+   of it seen from above (the shin turns 30-40 degrees on the thigh at most), never sideways: a hint
+   further round is turned back. A target out of reach, or nearer than the elbow's or
+   the knee's range of bend allows, is reported in solve()'s faults. 2 mm of slack before a miss is
+   reported (rounding in the poses). */
+var LIMIT={elbow:145,knee:140,kneeTurn:30,wrist:70,roll:95};
+var REACH_TOL=.002;
+/* a foot pointing more than this far round from the knee is a foot behind the body on
+   its instep or a bench (kneeling, a rear foot raised), where the foot points along
+   the shin and says nothing of the knee's plane: not turned */
+var KNEEL=110;
 
 /* ---- solving a pose ---- */
 var M=new Float32Array(NB*16);
@@ -162,7 +185,15 @@ function curlOf(g){
 
 function solve(p,out){
   out=out||new Float32Array(NB*16);
-  var fr=p.axes?axesFrame(p.axes,p.twist,p.bend,p.lean):frame(p.yaw,p.pitch,p.roll,p.twist,p.bend,p.lean),pf=fr.pel,cf=fr.chest;
+  var faults=[];
+  /* p.spine "neutral": the trunk is one piece, turned about the hips with the rest
+     pose's own curves, the neck in line with it and the shoulder blades held (not
+     drawn forward by the arms); any bend, lean or twist is not used. Left out, or
+     "flex" (a crunch) or "extend" (a back extension), the spine is eased from the
+     pelvis to the chest by those angles, as it always has been. */
+  var neutral=p.spine==="neutral";
+  var tw=neutral?0:p.twist,bd=neutral?0:p.bend,ln=neutral?0:p.lean;
+  var fr=p.axes?axesFrame(p.axes,tw,bd,ln):frame(p.yaw,p.pitch,p.roll,tw,bd,ln),pf=fr.pel,cf=fr.chest;
   var Pp=p.pelvis||P0,Rp=frameMat(pf),Rc=frameMat(cf);
   /* the pelvis: root and both hip bones, rigid */
   ["root","pelvis.L","pelvis.R"].forEach(function(n){put(out,IX[n],Rp,P0,Pp);});
@@ -174,7 +205,8 @@ function solve(p,out){
   var Rch=rotOf(out,IX.spine01);
   /* the head: nodded by p.head degrees (down positive) from the chest, turned by
      p.look degrees to its left, carried through the three neck bones */
-  var Rh=mm(rot(mv(Rch,[0,1,0]),(p.look||0)*R),mm(rot(mv(Rch,[0,0,1]),-(p.head||0)*R),Rch));
+  var nod=neutral?Math.max(-NECK,Math.min(NECK,p.head||0)):(p.head||0),turnH=neutral?0:(p.look||0);
+  var Rh=mm(rot(mv(Rch,[0,1,0]),turnH*R),mm(rot(mv(Rch,[0,0,1]),-nod*R),Rch));
   var qch=quat(Rch),qh=quat(Rh);parent=IX.spine01;
   ["neck01","neck02","neck03","head"].forEach(function(n,k){
     var Rk=unquat(slerp(qch,qh,[.3,.55,.8,1][k])),h=apply(out,parent,H0(n));
@@ -193,14 +225,15 @@ function solve(p,out){
        to it */
     var to=norm(sub(target,shRest)),up=dot(to,chU),fw=dot(to,chF);
     var elev=Math.max(0,up+.15)*20+(p.shrug&&p.shrug[s]!=null?p.shrug[s]:(p.shrug&&typeof p.shrug==="number"?p.shrug:0));
-    var prot=fw*4*Math.min(1,len(sub(target,shRest))/(A.a+A.b))+(p.reach&&p.reach[s]!=null?p.reach[s]:0);
+    var prot=(neutral?Math.min(0,fw):fw)*4*Math.min(1,len(sub(target,shRest))/(A.a+A.b))+(p.reach&&p.reach[s]!=null?p.reach[s]:0);
     var Rcl=mm(rot(chU,side*prot*R),mm(rot(chF,-side*elev*R),Rch));
     var cl=apply(out,IX.spine01,CLAV0[s]);
     put(out,IX["clavicle."+S],Rcl,CLAV0[s],cl);
     put(out,IX["shoulder01."+S],Rcl,CLAV0[s],cl);
     var SH=apply(out,IX["shoulder01."+S],A.sh);
     var pole=(p.elbows&&p.elbows[s])||add(mul(cf.f,-1),mul(cf.l,side*.35));
-    var k=ik(SH,target,A.a,A.b,pole),EL=k.mid,WR=k.end;
+    var k=ik(SH,target,A.a,A.b,pole,LIMIT.elbow),EL=k.mid,WR=k.end;
+    if(k.reach)faults.push({joint:"elbow."+s,what:k.reach==="far"?"hand target out of reach":"elbow would bend past its range",miss:k.miss});
     var du=norm(sub(EL,SH)),df=norm(sub(WR,EL));
     /* the elbow's hinge: square to the arm and the forearm; straight, from its hint */
     var hg=cross(du,df);
@@ -223,6 +256,12 @@ function solve(p,out){
     var roll=0;
     if(len(want)>1e-4&&len(have)>1e-4){want=norm(want);have=norm(have);
       roll=Math.atan2(dot(cross(have,want),df),dot(have,want));}
+    /* reported, not changed: a hand asked to point or turn further than the wrist and the
+       forearm go (most such faults come from where a family puts the hand, not from
+       this solve: docs/MANNEQUIN3D.md, "Joint limits") */
+    var wb=Math.acos(Math.max(-1,Math.min(1,dot(hd,df))))/R;
+    if(wb>LIMIT.wrist)faults.push({joint:"wrist."+s,what:"hand asked to bend past the wrist's range",value:wb});
+    if(Math.abs(roll)/R>LIMIT.roll)faults.push({joint:"forearm."+s,what:"palm asked to turn past the forearm's range",value:roll/R});
     var Rf1=mm(rot(df,roll*.35),Rfa),Rf2=mm(rot(df,roll),Rfa);
     put(out,IX["lowerarm01."+S],Rf1,A.el,EL);
     var lo2=apply(out,IX["lowerarm01."+S],H0("lowerarm02."+S));
@@ -249,7 +288,20 @@ function solve(p,out){
     var HIP=apply(out,IX["pelvis."+S],Lg.hip);
     var at=(p.feet&&p.feet[s])||add(HIP,mul(pf.u,-(Lg.a+Lg.b-.01)));
     var kp=(p.knees&&p.knees[s])||add(pf.f,mul(pf.l,side*.12));
-    var lk=ik(HIP,at,Lg.a,Lg.b,kp),KN=lk.mid,AN=lk.end;
+    /* the knee points within 30 degrees of where the foot points (seen from above), so it
+       never bends sideways: a hint further round is turned back to that, and reported */
+    if(p.footDir&&p.footDir[s]){
+      var fh=norm([p.footDir[s][0],0,p.footDir[s][2]]),kh2=[kp[0],0,kp[2]],khl=len(kh2);
+      if(khl>1e-6&&len([p.footDir[s][0],0,p.footDir[s][2]])>1e-6){
+        var ka=Math.atan2(dot(cross(fh,mul(kh2,1/khl)),[0,1,0]),dot(fh,mul(kh2,1/khl)))/R;
+        if(Math.abs(ka)>LIMIT.kneeTurn&&Math.abs(ka)<KNEEL){
+          var lim=(ka>0?1:-1)*LIMIT.kneeTurn*R,c0=Math.cos(lim),s0=Math.sin(lim);
+          /* fh turned by lim about up: [x c + z s, 0, -x s + z c] */
+          var nh=[fh[0]*c0+fh[2]*s0,0,-fh[0]*s0+fh[2]*c0];
+          kp=[nh[0]*khl,kp[1],nh[2]*khl];
+          faults.push({joint:"knee."+s,what:"knee hint turned back toward the foot",value:ka});}}}
+    var lk=ik(HIP,at,Lg.a,Lg.b,kp,LIMIT.knee),KN=lk.mid,AN=lk.end;
+    if(lk.reach)faults.push({joint:"knee."+s,what:lk.reach==="far"?"foot target out of reach":"knee would bend past its range",miss:lk.miss});
     var dt=norm(sub(KN,HIP)),ds=norm(sub(AN,KN));
     /* the knee's hinge: across the thigh, the shin bending behind it */
     var back=cross(dt,mul(lk.pole,-1)),kh=cross(dt,ds);
@@ -273,7 +325,7 @@ function solve(p,out){
     var Rft=align(Lg.fdir,[0,1,0],fdir,sup);
     put(out,IX["foot."+S],Rft,Lg.an,AN);
     J.hip[s]=HIP;J.kn[s]=KN;J.an[s]=AN;J.fd[s]={dir:fdir,down:mul(sup,-1),fwd:fwd};});
-  return {J:J,M:out};}
+  return {J:J,M:out,faults:faults};}
 
 /* Where a rest point of the body goes in the pose, by the bones that carry it: for a
    point on the skin, the four bones and weights of its nearest vertex. Used by tests
@@ -283,4 +335,4 @@ function skinPoint(M,q,bones,weights){
   for(var k=0;k<4;k++){var w=weights[k];if(!w)continue;var a=apply(M,bones[k],q);o=add(o,mul(a,w));}
   return o;}
 
-export {BONES, IX, NB, DIM, P0, ARM, LEG, solve, skinPoint, frame, axesFrame, ik, basis, align, rot, mm, mv};
+export {BONES, IX, NB, DIM, P0, ARM, LEG, LIMIT, solve, skinPoint, frame, axesFrame, ik, basis, align, rot, mm, mv};

@@ -25,6 +25,12 @@
                             bend, never backwards or sideways; the forearm's turn; the
                             wrist's range; the neck in line
      audit(rec, n)          all of it over the repetition, by check, with the worst
+     jointSpeed(rec, tempo) no teleporting (2.0): the fastest any joint moves between
+                            two frames at 60 a second over one repetition, at the
+                            record's tempo (or a prescribed one): {speed, joint, u}
+     slide(rec, n)          no sliding (2.0): how far a planted foot or a gripping hand
+                            moves over the repetition: [{part, on, moved, u}], each
+                            planted part's largest move from where it is at u = 0
 
    What counts as contact. A record may say what touches what:
      contact: [["hand.l", "bar"], ["trunk", "bench"], ["forearm", "floor"]]
@@ -71,7 +77,8 @@
    left. Pure: no DOM, no state beyond a cache of what each record is. */
 import {V} from "./geom.js";
 import {IX, ARM} from "./skin.js";
-import {sceneAt} from "./motion.js";
+import {bodyParts, partVsPart, midfoot} from "./capsules.js";
+import {sceneAt, phaseAt, cycleOf} from "./motion.js";
 import {RECORDS} from "./records.js";
 import {TABLE, moveFor} from "./moves.js";
 
@@ -79,29 +86,6 @@ var add=V.add,sub=V.sub,mul=V.mul,dot=V.dot,cross=V.cross,len=V.len,norm=V.norm,
 var D=180/Math.PI,LR=["l","r"];
 var TOL=.003,GAP=.005,SOFT=.04,MAY=.02,HOLD=.02,NEAR=.01,BODYNEAR=.01;
 
-/* ---- the body ---- */
-/* The parts carried by a bone: their ends in the rest pose (metres, the body's own
-   frame) and radii, measured as above. */
-var BONE_PARTS=[
-  /* the head from the chin to the crown, 17.6 cm across */
-  {n:"head",bone:"head",a:[.065,1.655,0],b:[.06,1.715,0],ra:.088,rb:.088},
-  {n:"neck",bone:"neck01",a:[.019,1.549,0],b:[.055,1.649,0],ra:.055,rb:.05},
-  /* the trunk, across it: shoulders (the trapezius line), chest, lower ribs, waist */
-  {n:"trunk.upper",bone:"spine01",a:[0,1.46,-.12],b:[0,1.46,.12],ra:.075,rb:.075},
-  {n:"trunk.upper",bone:"spine01",a:[.04,1.36,-.07],b:[.04,1.36,.07],ra:.12,rb:.12},
-  {n:"trunk.upper",bone:"spine02",a:[.037,1.24,-.04],b:[.037,1.24,.04],ra:.109,rb:.109},
-  {n:"trunk.lower",bone:"spine04",a:[.048,1.12,-.045],b:[.048,1.12,.045],ra:.097,rb:.097},
-  {n:"pelvis",bone:"root",a:[.022,.97,-.06],b:[.022,.97,.06],ra:.11,rb:.11}];
-/* the hand, flat: two thin capsules from the wrist to the knuckles of the index and
-   the little finger (the hand is about 3 cm thick and 8 cm across); the foot (with
-   its trainer) from the heel to the ball, the sole at the floor in the rest pose.
-   Left side, mirrored for the right */
-var HANDS=[{a:[.229,1.104,.541],b:[.333,1.068,.573],ra:.016,rb:.013},{a:[.229,1.104,.551],b:[.273,1.035,.602],ra:.016,rb:.013}];
-var FOOT={a:[-.02,.035,.215],b:[.19,.03,.215],ra:.035,rb:.03};
-/* the limbs between their joints (J): radius at the near end and the far end, and
-   where along it the part starts (the top of the thigh is inside the pelvis: its
-   first 6 cm are the pelvis's) */
-var LIMBS=[["upperarm","sh","el",.058,.046,0],["forearm","el","wr",.042,.021,0],["thigh","hip","kn",.085,.058,.14],["shin","kn","an",.056,.038,0]];
 /* Parts that meet at a joint: never checked against each other. Across the hip's
    crease the belly and the thigh press together as the hip closes (sitting, the
    bottom of a squat): they may give as soft parts do, no more. */
@@ -117,21 +101,6 @@ function neighbours(a,b){
   if(sa&&sb&&sa!==sb)return false;
   return !!(NEXT[x+"|"+y]||NEXT[y+"|"+x]);}
 
-/* where bone i's matrix takes rest point q */
-function at(M,i,q){var o=i*16;
-  return [M[o]*q[0]+M[o+4]*q[1]+M[o+8]*q[2]+M[o+12],M[o+1]*q[0]+M[o+5]*q[1]+M[o+9]*q[2]+M[o+13],M[o+2]*q[0]+M[o+6]*q[1]+M[o+10]*q[2]+M[o+14]];}
-function mirror(q){return [q[0],q[1],-q[2]];}
-function cap(n,a,b,ra,rb){return {n:n,a:a,b:b,ra:ra,rb:rb,c:lerp(a,b,.5),r:len(sub(b,a))/2+Math.max(ra,rb)};}
-/* The body at a scene (sceneAt), as round cones. */
-function bodyParts(sc){
-  var J=sc.J,M=sc.M,out=[];
-  BONE_PARTS.forEach(function(p){out.push(cap(p.n,at(M,IX[p.bone],p.a),at(M,IX[p.bone],p.b),p.ra,p.rb));});
-  LR.forEach(function(s){
-    var S=s==="l"?"L":"R",f=s==="l"?function(q){return q;}:mirror;
-    LIMBS.forEach(function(L){out.push(cap(L[0]+"."+s,lerp(J[L[1]][s],J[L[2]][s],L[5]),J[L[2]][s],L[3],L[4]));});
-    HANDS.forEach(function(h){out.push(cap("hand."+s,at(M,IX["wrist."+S],f(h.a)),at(M,IX["wrist."+S],f(h.b)),h.ra,h.rb));});
-    out.push(cap("foot."+s,at(M,IX["foot."+S],f(FOOT.a)),at(M,IX["foot."+S],f(FOOT.b)),FOOT.ra,FOOT.rb));});
-  return out;}
 
 /* ---- distances ---- */
 function clamp(x,a,b){return x<a?a:x>b?b:x;}
@@ -168,20 +137,6 @@ function partVsSolid(c,q){
   var tt=(lo+hi)/2,vv=f(tt);
   if(vv<best){best=vv;bt=tt;}
   return {d:best,t:bt};}
-/* closest points of two segments: parameters s on p1-q1, t on p2-q2 */
-function segSeg(p1,q1,p2,q2){
-  var d1=sub(q1,p1),d2=sub(q2,p2),r=sub(p1,p2),a=dot(d1,d1),e=dot(d2,d2),f=dot(d2,r),s,t;
-  if(a<1e-12&&e<1e-12)return [0,0];
-  if(a<1e-12){s=0;t=clamp(f/e,0,1);}
-  else{var c=dot(d1,r);
-    if(e<1e-12){t=0;s=clamp(-c/a,0,1);}
-    else{var b=dot(d1,d2),dn=a*e-b*b;s=dn>1e-12?clamp((b*f-c*e)/dn,0,1):0;t=(b*s+f)/e;
-      if(t<0){t=0;s=clamp(-c/a,0,1);}else if(t>1){t=1;s=clamp((b-c)/a,0,1);}}}
-  return [s,t];}
-function partVsPart(x,y){
-  var st=segSeg(x.a,x.b,y.a,y.b),s=st[0],t=st[1];
-  var d=len(sub(lerp(x.a,x.b,s),lerp(y.a,y.b,t)));
-  return d-(x.ra+(x.rb-x.ra)*s)-(y.ra+(y.rb-y.ra)*t);}
 function near(a,b,m){return len(sub(a.c,b.c))<a.r+b.r+m;}
 
 /* ---- what each record is ---- */
@@ -508,6 +463,60 @@ function limitsAt(sc,u){
   return out;}
 function limits(rec,u){return limitsAt(sceneAt(rec,u),u);}
 
+/* ---- no teleporting, no sliding (2.0) ---- */
+/* Joint speed. The joints on a fine grid of u, then one repetition played at 60 frames
+   a second through phaseAt: the largest distance any joint travels in one frame, over
+   the frame's time. A joint that moves faster than SPEED_MAX (GEN: a modelling limit
+   for the animation, well above a hand's speed in a fast lift, so only a snap trips it)
+   has teleported. */
+var SPEED_MAX=4,FPS=60,SPEED_N=200;
+var JNAMES=["P","neck","head"],JSIDED=["sh","el","wr","hip","kn","an"];
+function jointList(J){
+  var o=[];JNAMES.forEach(function(k){o.push([k,J[k]]);});
+  JSIDED.forEach(function(k){LR.forEach(function(s){o.push([k+"."+s,J[k][s]]);});});
+  return o;}
+function jointSpeed(rec,tempo){
+  var grid=[],i;
+  for(i=0;i<=SPEED_N;i++)grid.push(jointList(sceneAt(rec,i/SPEED_N).J));
+  function at(u){
+    var x=Math.min(Math.max(u,0),1)*SPEED_N,k=Math.min(Math.floor(x),SPEED_N-1),f=x-k;
+    return grid[k].map(function(e,j){return [e[0],lerp(e[1],grid[k+1][j][1],f)];});}
+  var c=cycleOf(rec,tempo),n=Math.max(2,Math.round(c*FPS)),dt=c/n,best={speed:0,joint:"",u:0},prev=at(phaseAt(rec,0,tempo).u);
+  for(i=1;i<=n;i++){
+    var u=phaseAt(rec,i*dt,tempo).u,cur=at(u);
+    cur.forEach(function(e,j){var v=len(sub(e[1],prev[j][1]))/dt;if(v>best.speed)best={speed:v,joint:e[0],u:u};});
+    prev=cur;}
+  best.limit=SPEED_MAX;best.pass=best.speed<=SPEED_MAX;
+  return best;}
+/* Sliding. A foot resting at both ends on a support that does not move (the floor, a
+   bench, a box...), and a hand closed round a solid that does not move (a pull-up bar,
+   dip bars), are planted: the foot's heel and ball, or the hand's grip, may move less
+   than SLIDE_MAX (2 mm) from where they are at u = 0 over the whole repetition.
+   Equipment that moves with the body (a barbell, a lever) is not planted. */
+var SLIDE_MAX=.002;
+function sameSolid(a,b){return a&&b&&a.k===b.k&&len(sub(a.c,b.c))<1e-6&&Math.abs(a.r-b.r)<1e-6;}
+function slide(rec,n){
+  var us=moments(n||21),ws=us.map(function(u){return world(rec,u);}),rs=restsOf(rec),out=[];
+  var w0=ws[0];
+  /* a solid is fixed when it is the same in every moment */
+  function fixed(i){return ws.every(function(w){return w.solids[i]&&sameSolid(w.solids[i],w0.solids[i]);});}
+  var feet={};
+  LR.forEach(function(s){
+    var n0="foot."+s,both=rs.both[n0];
+    if(both&&Object.keys(both).some(function(k){return !isNaN(+k)&&fixed(+k);}))feet[s]=1;});
+  LR.forEach(function(s){
+    if(feet[s]){
+      var f0=w0.parts.filter(function(p){return p.n==="foot."+s;})[0],worst={part:"foot."+s,on:"its support",moved:0,u:0};
+      ws.forEach(function(w,j){var f=w.parts.filter(function(p){return p.n==="foot."+s;})[0];
+        var m=Math.max(len(sub(f.a,f0.a)),len(sub(f.b,f0.b)));if(m>worst.moved)worst={part:"foot."+s,on:"its support",moved:m,u:us[j]};});
+      worst.pass=worst.moved<=SLIDE_MAX;out.push(worst);}
+    var held=w0.held[s].filter(function(i){return w0.solids[i].k!=="floor"&&fixed(i)&&ws.every(function(w){return w.held[s].indexOf(i)>=0;});});
+    if(held.length){
+      var g0=w0.sc.J.grip[s],wh={part:"hand."+s,on:label(w0.solids[held[0]]),moved:0,u:0};
+      ws.forEach(function(w,j){var m=len(sub(w.sc.J.grip[s],g0));if(m>wh.moved){wh.moved=m;wh.u=us[j];}});
+      wh.pass=wh.moved<=SLIDE_MAX;out.push(wh);}});
+  return out;}
+
 /* ---- all of it ---- */
 function worst(list,key,big){
   var b=null;list.forEach(function(x){if(!b||(big?x[key]>b[key]:x[key]<b[key]))b=x;});return b;}
@@ -520,4 +529,4 @@ function audit(rec,n){
   return {penetration:pen,gaps:gaps,clearances:cl,limits:lim,rules:rulesFor(rec),
     pass:!pen.length&&!gaps.length&&!cl.length&&!lim.length};}
 
-export {bodyParts, sdf, partVsSolid, partVsPart, penetration, contactGaps, sweep, clearances, clearancesOver, limits, limitsAt, audit, infoOf, rulesFor, moments, worst, LIM};
+export {jointSpeed, slide, SPEED_MAX, SLIDE_MAX, midfoot, bodyParts, sdf, partVsSolid, partVsPart, penetration, contactGaps, sweep, clearances, clearancesOver, limits, limitsAt, audit, infoOf, rulesFor, moments, worst, LIM};

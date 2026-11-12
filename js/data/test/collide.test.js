@@ -51,8 +51,14 @@ function run(t){
   const A=n=>audit(recordForUnchecked(n),21);
   const ip=A("Incline Push-Up Medium");
   t.ok(ip.penetration.some(x=>x.a==="trunk.upper"&&/^bar:/.test(x.b)),"Incline Push-Up Medium: the chest through the bar (D1)");
-  const pl=A("Plank");
-  t.ok(pl.limits.some(x=>/^wrist/.test(x.joint)&&Math.abs(x.value)>LIM.wrist),"Plank: the hand folded back through the wrist (D5)");
+  /* the plank as it was drawn when the owner saw it (hands behind the elbows): the
+     record itself is corrected now (moves.js plank), so the fault is kept here, as it was */
+  const oldPlank={keys:[{pelvis:[-.1,.3,0],pitch:84,head:-10,feet:{l:[-1.36,.12,.1],r:[-1.36,.12,-.1]},footDir:{l:[.15,-1,0],r:[.15,-1,0]},sole:{l:[1,.15,0],r:[1,.15,0]},knees:{l:[0,-1,0],r:[0,-1,0]},
+    hands:{l:[.15,.06,.12],r:[.15,.06,-.12]},handDir:{l:[1,0,-.3],r:[1,0,.3]},palm:{l:[0,-1,0],r:[0,-1,0]},elbows:{l:[0,-1,.2],r:[0,-1,-.2]},grip:"fist"}],tempo:[1,1,1,1],
+    equip:()=>[["mat",[-.5,0,0],{len:1.0,w:.38}]],contact:[["forearm","mat"]]};
+  const pl=audit(oldPlank,3);
+  t.ok(pl.limits.some(x=>/^wrist/.test(x.joint)&&Math.abs(x.value)>LIM.wrist),"Plank as it was: the hand folded back through the wrist (D5)");
+  t.eq(A("Plank").limits,[],"Plank as it is now: forearms flat, wrists straight, no joint out of range");
   const dp=A("Decline Push-Up");
   t.ok(dp.penetration.some(x=>x.a==="head"&&(x.b==="floor"||/^mat/.test(x.b))),"Decline Push-Up: the head into the floor (D6)");
   const sk=A("EZ-Bar Skullcrusher");

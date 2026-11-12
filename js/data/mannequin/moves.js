@@ -19,6 +19,9 @@
    left. Pure: no DOM, no state. */
 import {V} from "./geom.js";
 import {joints, DIM} from "./rig.js";
+import {solve} from "./skin.js";
+import {midfoot, bodyParts} from "./capsules.js";
+import {constrain} from "./motion.js";
 
 var add=V.add,sub=V.sub,mul=V.mul,dot=V.dot,cross=V.cross,len=V.len,norm=V.norm,lerp=V.lerp;
 var R=Math.PI/180,LR=["l","r"],ANKLE=.078;
@@ -384,11 +387,123 @@ function squat(o){
   if(sm)rec.cam={yaw:30,pitch:8};
   return rec;}
 
+/* ---- the deadlift and the Romanian deadlift, in phases (docs/FIGURE-V3.md 2.3) ----
+   GEN: the bar travels in a near-vertical line over the middle of the foot, in
+   contact with the legs; the spine is neutral, the neck in line, the bend at the hips.
+   Deadlift: set up with the bar over the middle of the foot touching the shins, hips
+   above the knees and below the shoulders, shoulders a little ahead of the bar, arms
+   straight; the knees straighten first with the back's angle held, then the hips come
+   through to standing tall, no lean back. Romanian deadlift: from standing with the
+   knees soft (about 15-20 degrees, unchanged through the movement), the hips travel
+   back and the bar slides down the thighs to just below the knees.
+   Each key is found, not guessed: its legs' and trunk's angles are solved so that its
+   stated conditions hold on this body (solveN on pullModel), and the path constraints
+   of motion.js keep them between the keys. */
+var PULL_W=.25,BAR_ON_FLOOR=.225;
+function kneeBend(J,s){var a=norm(sub(J.kn[s],J.hip[s])),b=norm(sub(J.an[s],J.kn[s]));return Math.acos(Math.max(-1,Math.min(1,dot(a,b))))/R;}
+/* the hands hanging on the bar, arms straight (the elbow within ARM_STRAIGHT of
+   locked, GEN), plumb under the shoulders: the bar is lowered until the wrist is that
+   far from the shoulder */
+var ARM_STRAIGHT=4;
+function hangOn(p){
+  var J=base(p),c=hangBar(J,PULL_W,false),A=DIM.upArm,B=DIM.foreArm,want=Math.sqrt(A*A+B*B+2*A*B*Math.cos(ARM_STRAIGHT*R));
+  for(var k=0;k<3;k++){
+    onBar(p,c,PULL_W,[-1,0,0],[0,-1,0],0);
+    var d=len(sub(p.hands.l,J.sh.l)),dy=p.hands.l[1]-J.sh.l[1],dh=Math.sqrt(Math.max(d*d-dy*dy,0));
+    /* the wrist's drop that makes its distance want, the rest of its offset kept */
+    var ny=-Math.sqrt(Math.max(want*want-dh*dh,0));c=[c[0],c[1]+(ny-dy),c[2]];}
+  onBar(p,c,PULL_W,[-1,0,0],[0,-1,0],0);p.elbows=S(-1,0,.2);p.grip="grip";return p;}
+/* Newton's method on a few numbers x until every residual F(x) is zero (as many
+   residuals as numbers; numeric slopes, steps limited to lim). Deterministic. */
+function solveN(x,F,lim){
+  for(var it=0;it<40;it++){
+    var r=F(x),n=x.length,i,j,k;if(Math.max.apply(null,r.map(Math.abs))<1e-7)break;
+    var A=[];for(i=0;i<n;i++){A.push([]);}
+    for(j=0;j<n;j++){var h=1e-5,xh=x.slice();xh[j]+=h;var rh=F(xh);for(i=0;i<n;i++)A[i][j]=(rh[i]-r[i])/h;}
+    for(i=0;i<n;i++)A[i].push(-r[i]);
+    for(i=0;i<n;i++){var pv=i;for(k=i+1;k<n;k++)if(Math.abs(A[k][i])>Math.abs(A[pv][i]))pv=k;
+      var t=A[i];A[i]=A[pv];A[pv]=t;if(Math.abs(A[i][i])<1e-12)continue;
+      for(k=0;k<n;k++)if(k!==i){var f=A[k][i]/A[i][i];for(j=i;j<=n;j++)A[k][j]-=f*A[i][j];}}
+    x=x.map(function(v,i){var d=Math.abs(A[i][i])<1e-12?0:A[i][n]/A[i][i];return v+Math.max(-lim[i],Math.min(lim[i],d));});}
+  return x;}
+/* The pull seen from the side, as a chain the solver will reproduce exactly: the
+   ankle (where the foot stands), the shin leaning forward phi degrees, the knee bent
+   kap degrees, the trunk pitched th degrees with the arms hanging straight from the
+   shoulders. The trunk's and the arms' part is read from the body itself (a pose
+   solved at that pitch), the legs from their lengths. Returns the pelvis that puts
+   the hips there, and where the knee and the bar are. */
+function pullModel(base0,phi,kap,th){
+  var A=base0.feet.l,Ls=DIM.shin,Lt=DIM.thigh,f=phi*R,g=(phi-kap)*R;
+  var K=[A[0]+Ls*Math.sin(f),A[1]+Ls*Math.cos(f)],H=[K[0]+Lt*Math.sin(g),K[1]+Lt*Math.cos(g)];
+  var q=hangOn(Object.assign({},base0,{pelvis:[0,1,0],pitch:th})),J=solve(q).J,bar=lerp(J.grip.l,J.grip.r,.5);
+  var P=[H[0]-J.hip.l[0],H[1]-(J.hip.l[1]-1)];
+  return {pelvis:[P[0],P[1],0],pitch:th,knee:K,bar:[P[0]+bar[0],P[1]+bar[1]-1],hip:H};}
+/* the front of the shin (or the thigh) at height y, as the capsules measure it */
+function legFrontAt(m,base0,y,thigh){
+  var A=base0.feet.l,a=thigh?m.knee:A,b=thigh?m.hip:m.knee,t=(y-a[1])/(b[1]-a[1]);
+  var r=thigh?.058+(.085-.058)*t:.038+(.056-.038)*t,dx=(b[0]-a[0])/(b[1]-a[1]);
+  return a[0]+dx*(y-a[1])+r*Math.sqrt(1+dx*dx);}
+function pull(o){
+  var rdl=o.kind==="rdl",st=stance(o.w||.13,8);
+  /* neutral spine: the head is held in line by the solver (skin.js) */
+  function key(x){return Object.assign(stand({pitch:0,head:-4,spine:"neutral"}),st,{knees:S(1,0,.18)},x||{});}
+  var b0=key(),M=midfoot(solve(b0))[0],BR=.014,keys;
+  function pose(m){return key({pelvis:m.pelvis,pitch:m.pitch});}
+  if(!rdl){
+    /* the start: the bar on the floor over the middle of the foot, against the shins,
+       arms straight */
+    var s0=solveN([10,60,65],function(x){var m=pullModel(b0,x[0],x[1],x[2]);
+      return [m.bar[0]-M,m.bar[1]-BAR_ON_FLOOR,m.bar[0]-BR-.001-legFrontAt(m,b0,m.bar[1],false)];},[3,6,4]);
+    var k0=pose(pullModel(b0,s0[0],s0[1],s0[2]));
+    /* the bar at the knees: the knees have straightened most of the way (to KNEE_MID
+       degrees, the shins back near upright) while the trunk has risen only a little,
+       the bar still over the middle of the foot, the arms plumb. On this body (its arms
+       are short against its legs: the start comes out with the trunk 16 degrees above
+       level) holding the back's angle exactly would lock the knees before the bar
+       reached them, so the angle is let rise by what that takes (the test reports it) */
+    var KNEE_MID=12;
+    var s1=solveN([0,s0[2]-8],function(x){var m=pullModel(b0,x[0],KNEE_MID,x[1]);
+      return [m.bar[0]-M,m.bar[1]-(m.knee[1]+.02)];},[3,4]);
+    s1=[s1[0],KNEE_MID,s1[1]];
+    var km=pose(pullModel(b0,s1[0],s1[1],s1[2]));
+    /* standing tall: upright, knees just short of locked (4 degrees), over the middle of
+       the foot; the bar against the thighs is left to the path constraints */
+    var s2=solveN([0],function(x){return [pullModel(b0,x[0],4,0).bar[0]-M];},[3]);
+    var k1=pose(pullModel(b0,s2[0],4,0));
+    keys=[{at:0,pose:k0},{at:.45,pose:km},{at:1,pose:k1}];}
+  else{
+    var KNEE=17,PATH={path:[{track:"bar",rule:"touch:thigh+shin"},{track:"bar",rule:"overMidfoot"}]};
+    /* the knees soft and the same at the top and the bottom, as they are once the path
+       constraints have put the bar against the legs over the middle of the foot (they
+       move the body along the floor, which bends or straightens the knees): the pelvis
+       is found from where it ends up. The top upright; the bottom with the bar just
+       below the knees (4 cm), the hips gone back as far as that takes */
+    function after(phi,th){var p=hangOn(pose(pullModel(b0,phi,KNEE,th)));p=constrain(PATH,p,0);var J=solve(p).J;
+      return {knee:kneeBend(J,"l"),bar:lerp(J.grip.l,J.grip.r,.5),kneeY:J.kn.l[1]};}
+    var t0=solveN([0],function(x){return [after(x[0],0).knee-KNEE];},[3]);
+    var t1=solveN([0,62],function(x){var a=after(x[0],x[1]);return [a.knee-KNEE,a.bar[1]-(a.kneeY-.04)];},[3,4]);
+    t0=[t0[0],0];
+    keys=[pose(pullModel(b0,t1[0],KNEE,t1[1])),pose(pullModel(b0,t0[0],KNEE,t0[1]))];}
+  keys.forEach(function(k){k=k.pose||k;delete k.hands;delete k.handDir;delete k.palm;});
+  var rec={keys:keys,spine:"neutral",tempo:[1.6,.4,2,.6],cam:{yaw:72,pitch:6},arrow:{track:"wr.l"},refine:{Back:"Lower back"},
+    /* the bar over the middle of the foot, against the legs (GEN) */
+    path:[{track:"bar",rule:rdl?"touch:thigh+shin":"touch:shin+thigh"},{track:"bar",rule:"overMidfoot"}],
+    /* slowest from the floor to just past the knees (GEN, the deadlift's sticking
+       region); the Romanian deadlift's hardest part is out of the bottom */
+    stick:rdl?[.05,.35]:[.1,.45],
+    drive:function(p){hangOn(p);},
+    equip:function(J){return [barIn(J)];}};
+  /* the knees lead, the hips follow (GEN): a gentle lead on top of the keys, which
+     already hold the back's angle until the bar is past the knees */
+  if(!rdl)rec.order={knees:[0,.85],hips:[.15,1]};
+  return rec;}
+
 /* ---- hinges: deadlifts, Romanian deadlifts, good mornings ----
    kind "deadlift" | "rdl" | "stiff" | "sumo" | "goodmorning"; imp "bb" | "db" */
 function hinge(o){
   o=o||{};
   var kind=o.kind||"deadlift",imp=o.imp||"bb";
+  if((kind==="deadlift"||kind==="rdl")&&imp==="bb"&&!o.smith)return pull(Object.assign({},o,{kind:kind}));
   var sumo=kind==="sumo",gm=kind==="goodmorning";
   var st=sumo?stance(o.w||.36,35):stance(o.w||.13,o.w?20:8);
   var lo=kind==="deadlift"?{pelvis:[-.25,.63,0],pitch:58,head:-30}:sumo?{pelvis:[-.18,.6,0],pitch:40,head:-25}:
@@ -658,14 +773,43 @@ function crunch(o){
       p.grip=.5;},
     equip:function(){return [["mat",[-.15,0,0],{len:1.0,w:.38}]];}};}
 
-/* ---- planks: held still ---- side: on one forearm */
+/* ---- planks: held still ---- side: on one forearm
+   GEN: on the forearms, the elbows under the shoulders, the forearms flat on the mat
+   and parallel, pointing forward, the hands loose and the wrists straight (palms
+   down, the hand on the line of the forearm); the body one straight line from the
+   ear to the ankle, on the balls of the feet; the neck in line (a neutral spine). The
+   shoulders' height is what puts the elbows under them on the mat, and the trunk's
+   angle what puts the hips on the line from the shoulders to the ankles: both found
+   from the body, a few passes. */
+var MAT_TOP=.012,FOREARM_R=[.042,.021];
 function plank(o){
   o=o||{};
-  var p0={pelvis:[-.1,.3,0],pitch:84,head:-10,feet:S(-1.36,.12,.1),footDir:S(.15,-1,0),sole:S(1,.15,0),knees:S(0,-1,0),
-    hands:S(.15,.06,.12),handDir:S(1,0,-.3),palm:S(0,-1,0),elbows:S(0,-1,.2),grip:"fist"};
+  var feet=S(-1.36,.12,.1),p0={pelvis:[-.1,.3,0],pitch:84,head:-4,spine:"neutral",feet:feet,footDir:S(.15,-1,0),sole:S(1,.15,0),knees:S(0,-1,0)};
+  /* the elbow 3 mm higher than the forearm's own radius: the upper arm is the wider */
+  var Ey=MAT_TOP+FOREARM_R[0]+.003,Wy=MAT_TOP+FOREARM_R[1]+.004;
+  function arms(p){
+    /* from the shoulders as they are with the arms already on the mat (the shoulder
+       blade moves with the arm), or hanging on the first pass */
+    var J=joints(p),hands={},elbows={};
+    LR.forEach(function(s){var E=[J.sh[s][0],Ey,J.sh[s][2]];hands[s]=[E[0]+DIM.foreArm,Wy,E[2]];elbows[s]=[0,-1,0];});
+    return Object.assign(p,{hands:hands,handDir:S(1,0,0),palm:S(0,-1,0),elbows:elbows,grip:"open"});}
+  for(var k=0;k<8;k++){
+    p0=arms(p0);
+    var sc=solve(p0),J=sc.J,sh=lerp(J.sh.l,J.sh.r,.5),an=p0.feet.l,hip=lerp(J.hip.l,J.hip.r,.5);
+    /* the shoulders over the elbows: the elbow sits where the upper arm, hanging
+       straight down from the shoulder, meets the mat */
+    var dy=Ey+DIM.upArm-J.sh.l[1],dx=J.sh.l[0]-J.el.l[0];
+    /* the balls of the feet on the floor, no lower */
+    var low=Math.min.apply(null,bodyParts(sc).filter(function(c){return /^foot/.test(c.n);}).map(function(c){return Math.min(c.a[1]-c.ra,c.b[1]-c.rb);}));
+    /* the hips on the line from the shoulders to the ankles: turn the trunk by the
+       angle between that line and the shoulders-to-hips line */
+    var a1=Math.atan2(sh[1]-an[1],sh[0]-an[0]),a2=Math.atan2(sh[1]-hip[1],sh[0]-hip[0]);
+    p0=Object.assign({},p0,{pelvis:[p0.pelvis[0],p0.pelvis[1]+dy,0],pitch:p0.pitch+(a2-a1)/R,
+      feet:S(an[0]-dx*.5,an[1]-(low-MAT_TOP),an[2])});}
+  p0=arms(p0);
   /* held on the forearms: they lie on the mat (collide.js) */
-  return {keys:[p0],tempo:[1,1,1,1],cam:{yaw:62,pitch:10},refine:{Core:"Abs"},contact:[["forearm","mat"]],
-    equip:function(){return [["mat",[-.5,0,0],{len:1.0,w:.38}]];}};}
+  return {keys:[p0],spine:"neutral",tempo:[1,1,1,1],cam:{yaw:62,pitch:10},refine:{Core:"Abs"},contact:[["forearm","mat"]],
+    equip:function(){return [["mat",[-.38,0,0],{len:1.2,w:.38}]];}};}
 
 /* ---- lunges and split squats ----
    kind "split" (feet stay) | "forward" (a step forward and back) | "reverse";
@@ -1391,14 +1535,13 @@ function moveFor(name){
   if(!name||!Object.prototype.hasOwnProperty.call(TABLE,name))return null;
   if(!BUILT[name]){var t=TABLE[name];BUILT[name]=even(t[0](t[1]||{}));}
   return BUILT[name];}
-/* An angle one key gives and the other leaves out would be carried unchanged to the
-   other end (motion.js mix): the other end gets it as 0, the body's own default. */
+/* An angle one key gives and another leaves out would be carried unchanged across
+   (motion.js mix): the others get it as 0, the body's own default. */
 var ANGLES=["yaw","pitch","roll","twist","bend","lean","head","look","shrug"];
 function even(rec){
-  var k=rec.keys;
-  if(k&&k.length===2)ANGLES.forEach(function(a){
-    if(typeof k[0][a]==="number"&&k[1][a]==null)k[1][a]=0;
-    if(typeof k[1][a]==="number"&&k[0][a]==null)k[0][a]=0;});
+  var k=rec.keys,ps=k&&k.length>1?k.map(function(x){return x&&x.pose&&typeof x.at==="number"?x.pose:x;}):null;
+  if(ps)ANGLES.forEach(function(a){
+    if(ps.some(function(p){return typeof p[a]==="number";}))ps.forEach(function(p){if(p[a]==null)p[a]=0;});});
   return rec;}
 
 var FAMILIES={curl:curl,press:press,raise:raise,shrug:shrug,uprightRow:uprightRow,squat:squat,hinge:hinge,row:row,
