@@ -17,8 +17,9 @@
      sceneAt(rec, u)         what to draw: {pose, J, M, solids}: the joints, every
                              bone's matrix (skin.js) and the equipment's solids
      framePoints(rec)        what the camera must keep in view, over the movement
-     momentCamera(rec, u, ...) the camera the app draws with: the figure at u filling
-                             75% of the picture
+     repCamera(rec, ...)     the camera the app draws with, fixed for the whole
+                             repetition: the body's extent over it fills 75% of the
+                             picture
      fitCamera(rec, pts, ...) the camera at a yaw and pitch that keeps it all in the
                              picture
      motionPath(rec, n)      the world path the arrow follows, start to end
@@ -354,23 +355,26 @@ function framePoints(rec){
   feet.forEach(function(q){fl[0]=Math.min(fl[0],q[0]);fh[0]=Math.max(fh[0],q[0]);fl[1]=Math.min(fl[1],q[2]);fh[1]=Math.max(fh[1],q[2]);});
   return {list:list,lo:lo,hi:hi,center:center,radius:radius,
     foot:[(fl[0]+fh[0])/2,(fl[1]+fh[1])/2,Math.max((fh[0]-fl[0])*.75,.55),Math.max((fh[1]-fl[1])*.75,.5)]};}
-/* What the camera keeps in view at one moment u (docs/FIGURE-V3.md 2.2, framing): the
-   body as it is then, and what is in the hands or under the feet (a dumbbell, a
-   handle: the small solids within reach of a hand's grip or an ankle). The rest of the
-   equipment may be cropped where it reaches past the body (a machine's tower, the far
-   end of a bar, a bench's legs). So the figure fills the picture at every moment of
-   the movement, and the camera follows it smoothly (the body moves continuously, and
-   so does what is framed). */
-var HELD_R=.25,HELD_NEAR=.05;
-function momentPoints(rec,u){
-  var sc=sceneAt(rec,u),J=sc.J,list=[],ends=[J.grip.l,J.grip.r,J.an.l,J.an.r];
-  bodySpheres(J).forEach(function(b){list.push([b[0][0],b[0][1],b[0][2],b[1]]);});
-  sc.solids.forEach(function(q){
-    if(q.bg||q.r>HELD_R)return;
-    if(ends.some(function(e){return len(sub(q.c,e))<q.r*.8+HELD_NEAR;}))list.push([q.c[0],q.c[1],q.c[2],q.r*.7]);});
-  var lo=[1e9,1e9,1e9],hi=[-1e9,-1e9,-1e9];
+/* What the camera keeps in view (docs/FIGURE-V3.md 2.2, framing): the body over the
+   whole repetition (at REP_N moments) and what is in its hands or under its feet (a
+   dumbbell, a handle: the small solids within reach of a hand's grip or an ankle). The
+   rest of the equipment may be cropped where it reaches past the body (a machine's
+   tower, the far end of a bar, a bench's legs). nb: how many of the points are the
+   body's. Worked out once per record. */
+var HELD_R=.25,HELD_NEAR=.05,REP_N=11,REPS=new WeakMap();
+function repPoints(rec){
+  if(REPS.has(rec))return REPS.get(rec);
+  var body=[],held=[];
+  for(var i=0;i<REP_N;i++){
+    var sc=sceneAt(rec,i/(REP_N-1)),J=sc.J,ends=[J.grip.l,J.grip.r,J.an.l,J.an.r];
+    bodySpheres(J).forEach(function(b){body.push([b[0][0],b[0][1],b[0][2],b[1]]);});
+    sc.solids.forEach(function(q){
+      if(q.bg||q.r>HELD_R)return;
+      if(ends.some(function(e){return len(sub(q.c,e))<q.r*.8+HELD_NEAR;}))held.push([q.c[0],q.c[1],q.c[2],q.r*.7]);});}
+  var list=body.concat(held),lo=[1e9,1e9,1e9],hi=[-1e9,-1e9,-1e9];
   list.forEach(function(q){for(var k=0;k<3;k++){lo[k]=Math.min(lo[k],q[k]-q[3]);hi[k]=Math.max(hi[k],q[k]+q[3]);}});
-  return {list:list,lo:lo,hi:hi,center:mul(add(lo,hi),.5),radius:len(sub(hi,lo))/2,u:u};}
+  var r={list:list,nb:body.length,lo:lo,hi:hi,center:mul(add(lo,hi),.5),radius:len(sub(hi,lo))/2};
+  REPS.set(rec,r);return r;}
 /* The camera at yaw and pitch (degrees; yaw 0 looks at the figure's front, 90 at its
    left) that keeps everything in pts inside the picture with a margin (the largest
    distance from the picture's middle to its edge, 1 the edge itself): aimed at the
@@ -391,46 +395,49 @@ function fitCamera(rec,pts,aspect,yaw,pitch,zoom,margin){
       m=Math.max(m,Math.abs(pr[0])+rx,Math.abs(pr[1])+ry);}
     if(m>margin)a=d;else b=d;}
   return camera(target,b*(c.zoom||1)*(zoom||1),yaw,pitch,fov,aspect);}
-/* The picture at moment u: the figure fills FILL of the picture in the direction it is
-   largest (its height standing, its length lying down), centred. Fitted, then aimed at
-   the middle of the box the points make on the picture and brought nearer or further
-   until the body's share is FILL (perspective makes the first fit a little loose); what
-   is in the hands stays inside the picture. A few steps, each continuous in u, so the
-   camera follows the body without a jump. */
+/* The picture: one camera for the whole repetition, so nothing moves it during
+   playback. The body's extent over the repetition (repPoints) fills FILL of the
+   picture in the direction it is largest (its height standing, its length lying
+   down), centred. Fitted, then aimed at the middle of the box that extent makes on the
+   picture and brought nearer or further until it fills FILL (perspective makes the
+   first fit a little loose); what is in the hands stays inside the picture. */
 var FILL=.75;
 function boxOf(cam,L){
   var lo=[9,9],hi=[-9,-9],ok=true;
   L.forEach(function(q){var pr=project(cam,q);if(pr[2]<=.05){ok=false;return;}var rx=q[3]/pr[2]/cam.tx,ry=q[3]/pr[2]/cam.ty;
     lo[0]=Math.min(lo[0],pr[0]-rx);hi[0]=Math.max(hi[0],pr[0]+rx);lo[1]=Math.min(lo[1],pr[1]-ry);hi[1]=Math.max(hi[1],pr[1]+ry);});
   return {lo:lo,hi:hi,ok:ok};}
-function momentCamera(rec,u,aspect,yaw,pitch,zoom){
-  var pts=momentPoints(rec,u),c=rec.cam||{},fov=c.fov||28,cam=fitCamera(rec,pts,aspect,yaw,pitch,1,FILL),nb=bodySpheres(sceneAt(rec,u).J).length;
-  var body=pts.list.slice(0,nb),target=cam.target,dist=cam.dist;
+function repCamera(rec,aspect,yaw,pitch,zoom){
+  var pts=repPoints(rec),c=rec.cam||{},fov=c.fov||28,cam=fitCamera(rec,pts,aspect,yaw,pitch,1,FILL);
+  var body=pts.list.slice(0,pts.nb),target=cam.target,dist=cam.dist;
   for(var it=0;it<4;it++){
     var b=boxOf(cam,body),all=boxOf(cam,pts.list);
     if(!b.ok)break;
     var cx=(b.lo[0]+b.hi[0])/2,cy=(b.lo[1]+b.hi[1])/2,f=Math.max((b.hi[0]-b.lo[0])/2,(b.hi[1]-b.lo[1])/2);
-    /* the held things inside too: never closer than they allow */
     var g=Math.max(Math.abs(all.lo[0]-cx),Math.abs(all.hi[0]-cx),Math.abs(all.lo[1]-cy),Math.abs(all.hi[1]-cy))/.98;
     target=add(target,add(mul(cam.r,cx*dist*cam.tx),mul(cam.u,cy*dist*cam.ty)));
     dist*=Math.max(f/FILL,g);
     cam=camera(target,dist,yaw,pitch,fov,aspect);}
   return camera(target,dist*(c.zoom||1)*(zoom||1),yaw,pitch,fov,aspect);}
-/* How much of the picture the body fills at u through cam: {h, w} as fractions of the
-   picture's height and width, and fill, the larger. */
+/* How much of the picture the body fills through cam: {h, w} as fractions of the
+   picture's height and width, fill the larger, inside whether it is all in the
+   picture. At moment u, or over the whole repetition (its REP_N moments) when u is
+   left out. */
 function bodyFill(rec,u,cam){
-  var lo=[9,9],hi=[-9,-9];
-  bodySpheres(sceneAt(rec,u).J).forEach(function(b){var q=project(cam,b[0]),rx=b[1]/q[2]/cam.tx,ry=b[1]/q[2]/cam.ty;
-    lo[0]=Math.min(lo[0],q[0]-rx);hi[0]=Math.max(hi[0],q[0]+rx);lo[1]=Math.min(lo[1],q[1]-ry);hi[1]=Math.max(hi[1],q[1]+ry);});
+  var lo=[9,9],hi=[-9,-9],us=[];
+  if(u!=null)us=[u];else for(var i=0;i<REP_N;i++)us.push(i/(REP_N-1));
+  us.forEach(function(v){bodySpheres(sceneAt(rec,v).J).forEach(function(b){var q=project(cam,b[0]),rx=b[1]/q[2]/cam.tx,ry=b[1]/q[2]/cam.ty;
+    lo[0]=Math.min(lo[0],q[0]-rx);hi[0]=Math.max(hi[0],q[0]+rx);lo[1]=Math.min(lo[1],q[1]-ry);hi[1]=Math.max(hi[1],q[1]+ry);});});
   var w=(Math.min(hi[0],1)-Math.max(lo[0],-1))/2,h=(Math.min(hi[1],1)-Math.max(lo[1],-1))/2;
   return {w:w,h:h,fill:Math.max(w,h),inside:lo[0]>=-1&&hi[0]<=1&&lo[1]>=-1&&hi[1]<=1};}
-/* The record's own view, for the offline tools and the tests: at moment o.u (the
-   picture the app draws then), or framing the whole movement when no u is given. */
+/* The record's own view, for the offline tools and the tests: the camera the app
+   draws with (repCamera; an o.u changes nothing: the camera is the same at every
+   moment), or with o.all everything over the movement, equipment included. */
 function framing(rec,aspect,yaw,pitch,o){
   var c=rec.cam||{};
   yaw=yaw!=null?yaw:c.yaw!=null?c.yaw:60;pitch=pitch!=null?pitch:c.pitch!=null?c.pitch:8;
-  if(o&&o.u!=null)return momentCamera(rec,o.u,aspect,yaw,pitch,1);
-  return fitCamera(rec,framePoints(rec),aspect,yaw,pitch,1);}
+  if(o&&o.all)return fitCamera(rec,framePoints(rec),aspect,yaw,pitch,1);
+  return repCamera(rec,aspect,yaw,pitch,1);}
 
 /* The way the exercise moves, for its arrow: n+1 points from start to end along the
    path of what the record tracks (by default whichever of the hands, feet, knees or
@@ -535,4 +542,4 @@ function arrowShape(rec,cam,w,h,hl){
   return {body:r.slice(0,-1).concat([[e[0]-tx*9*S,e[1]-ty*9*S]]),
     head:[[e[0]+tx*3*S,e[1]+ty*3*S],[e[0]-tx*11*S+nx*7*S,e[1]-ty*11*S+ny*7*S],[e[0]-tx*11*S-nx*7*S,e[1]-ty*11*S-ny*7*S]]};}
 
-export {TEMPO, XFAST, MINMOVE, MIDFOOT_TOL, TOUCH_TOL, PARTS, ease, prescribed, tempoOf, liftU, liftGain, cycleOf, phaseAt, mix, lerpPose, keyList, crWeights, blend, orderSpans, warp, blendOrdered, overMidfoot, touch, barGap, arcAbout, constrain, arc, poseAt, sceneAt, bodySpheres, framePoints, momentPoints, fitCamera, momentCamera, bodyFill, FILL, framing, motionPath, arrowShape, ARROW_OFF};
+export {TEMPO, XFAST, MINMOVE, MIDFOOT_TOL, TOUCH_TOL, PARTS, ease, prescribed, tempoOf, liftU, liftGain, cycleOf, phaseAt, mix, lerpPose, keyList, crWeights, blend, orderSpans, warp, blendOrdered, overMidfoot, touch, barGap, arcAbout, constrain, arc, poseAt, sceneAt, bodySpheres, framePoints, repPoints, fitCamera, repCamera, bodyFill, FILL, framing, motionPath, arrowShape, ARROW_OFF};

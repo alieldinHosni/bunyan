@@ -35,7 +35,7 @@
      a play/pause button </div>
    data-mq-turn lets a drag turn the figure (the exercise sheet); the workout screen
    leaves it off, because a sideways swipe there moves between exercises. */
-import {phaseAt, sceneAt, framePoints, momentCamera, arrowShape} from "../data/mannequin/motion.js";
+import {phaseAt, sceneAt, framePoints, repCamera, arrowShape} from "../data/mannequin/motion.js";
 import {highlight} from "../data/mannequin/rig.js";
 import {recordFor, recordForUnchecked} from "../data/mannequin/records.js";
 import {BODY} from "../data/mannequin/body.js";
@@ -340,12 +340,15 @@ function Mannequin(el){
     W=w;H=h;canvas.width=W;canvas.height=H;return true;}
 
   /* ---- the camera ---- */
-  /* the camera follows the body at this moment (motion.js momentCamera: it fills the
-     picture all through the movement); the whole movement's points light the floor and
-     size the shadow */
-  function camNow(u){
+  /* one camera for the whole repetition (motion.js repCamera: the body's extent over
+     it fills the picture), changed only by the view (a turn, a zoom) and the size, so
+     nothing moves it during playback; the whole movement's points light the floor
+     and size the shadow */
+  var camKey="";
+  function camNow(){
     if(!pts)pts=framePoints(rec);
-    cam=momentCamera(rec,u,W/H,view.yaw,view.pitch,view.zoom);
+    var k=[view.yaw,view.pitch,view.zoom,W,H].join("|");
+    if(k!==camKey||!cam){camKey=k;cam=repCamera(rec,W/H,view.yaw,view.pitch,view.zoom);}
     return cam;}
   /* the view eases toward where the finger put it; let go, it carries on and settles */
   function settle(dt){
@@ -361,7 +364,7 @@ function Mannequin(el){
     try{
       resize();
       if(!theme)retheme();
-      var ph=playing?phaseAt(rec,s,tempo):{u:stillU,act:1},sc=sceneAt(rec,ph.u),c=camNow(ph.u),Ls=lights(c),th=theme;
+      var ph=playing?phaseAt(rec,s,tempo):{u:stillU,act:1},sc=sceneAt(rec,ph.u),c=camNow(),Ls=lights(c),th=theme;
       gl.bindTexture(gl.TEXTURE_2D,boneTex);
       gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,4,NB,gl.RGBA,gl.FLOAT,sc.M);
       var rad0=pts.radius*1.15,fog=[c.dist+rad0*1.5,c.dist+rad0*4],near=Math.max(.05,c.dist-4),far=Math.max(c.dist+6,fog[1]*1.3+1);

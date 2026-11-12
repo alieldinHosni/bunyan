@@ -244,12 +244,14 @@ smoothly across every triangle.
   settles: a turn has weight.
 - **Two fingers, or a wheel, bring it nearer or further** (0.7 to 1.6 times).
 - **A double tap** eases back to the exercise's own view.
-- **The figure fills the picture.** The camera frames the body as it is at this moment
-  (and what is in its hands), aimed at its middle, so it fills 75% of the picture in
-  the direction it is largest (its height standing, its length lying down) all through
-  the movement (`motion.js momentCamera`; a unit test holds every record to 70-80% at
-  u = 0, 0.5 and 1). The camera follows the body smoothly; large equipment that
-  reaches past the body (a machine's tower, a bar's far end) may be cropped.
+- **The figure fills the picture.** One camera for the whole repetition: the body's
+  extent over it (11 moments, and what is in its hands) fills 75% of the picture in the
+  direction it is largest (its height standing, its length lying down), aimed at its
+  middle (`motion.js repCamera`; a unit test holds every record to 70-80% and checks the
+  camera is identical at every moment). Nothing moves it during playback, so the figure
+  is smaller at its smallest moment (the bottom of a squat, a deadlift's start: 41% at
+  the least). Large equipment that reaches past the body (a machine's tower, a bar's
+  far end) may be cropped.
 - **Nothing jumps.** The framing is worked out exactly for the angle the camera is at,
   so the distance changes smoothly as it turns and as the body moves.
 

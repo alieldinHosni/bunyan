@@ -122,12 +122,18 @@ function run(t){
   t.ok(pl.pass,"Plank: forearms flat and parallel, elbows under the shoulders, wrists straight: every check passes");
 
   /* ---- F-1: the framing and the arrow ---- */
-  const bad=[];
-  for(const [n,rec] of recs)for(const u of [0,.5,1]){const f=bodyFill(rec,u,framing(rec,4/3,null,null,{u}));if(f.fill<.7||f.fill>.8||!f.inside)bad.push(n+"@"+u+" "+f.fill.toFixed(2));}
-  t.eq(bad,[],"the figure fills 70-80% of the picture (its height, or its length lying down) at u = 0, 0.5 and 1, for every record ("+recs.length+")");
+  const bad=[],moved=[],small=[];
+  for(const [n,rec] of recs){
+    const cam=framing(rec,4/3),f=bodyFill(rec,null,cam);
+    if(f.fill<.7||f.fill>.8||!f.inside)bad.push(n+" "+f.fill.toFixed(2));
+    if([0,.5,1].some(u=>JSON.stringify(framing(rec,4/3,null,null,{u}))!==JSON.stringify(cam)))moved.push(n);
+    small.push(Math.min(...[0,.5,1].map(u=>bodyFill(rec,u,cam).fill)));}
+  t.eq(bad,[],"the body's extent over the whole repetition fills 70-80% of the picture (its height, or its length lying down), all inside it, for every record ("+recs.length+")");
+  t.eq(moved,[],"and the camera is the same at every moment of the repetition: nothing moves it during playback");
+  t.ok(Math.min(...small)>.4,"at its smallest moment a figure still fills "+(Math.min(...small)*100).toFixed(0)+"% or more ("+small.filter(x=>x<.7).length+" records go under 70% at some moment, as a fixed camera must)");
   const far2=[];
   for(const [n,rec] of recs){
-    const cam=framing(rec,4/3,null,null,{u:1}),ar=arrowShape(rec,cam,720,540);if(!ar)continue;
+    const cam=framing(rec,4/3),ar=arrowShape(rec,cam,720,540);if(!ar)continue;
     const w=motionPath(rec,16,cam.p[2]>=0?"l":"r").map(q=>{const p=project(cam,q);return [(p[0]+1)/2*720,(p[1]+1)/2*540];});
     const dseg=(p,a,b)=>{const ab=[b[0]-a[0],b[1]-a[1]],l=ab[0]*ab[0]+ab[1]*ab[1],tt=l?Math.max(0,Math.min(1,((p[0]-a[0])*ab[0]+(p[1]-a[1])*ab[1])/l)):0;return Math.hypot(p[0]-a[0]-ab[0]*tt,p[1]-a[1]-ab[1]*tt);};
     const worst=Math.max(...ar.body.map(p=>Math.min(...w.slice(1).map((b,i)=>dseg(p,w[i],b)))));
