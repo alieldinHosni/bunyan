@@ -149,17 +149,85 @@ a name for another of the library's own names; it cannot invent one.
   the handle; the hips sit on the seat.
 - **Tempo.** Out of each end slowly, quickest through the middle; the lift (the working
   half) first, then a short hold, a slower lowering, a rest. The muscles glow hardest
-  during the lift.
-- **The arrow** follows the path the hand actually travels, the middle three quarters
-  of it, set beside it: of several places it takes the one that covers least of the
-  figure (with a little room round it). It is placed again when the figure is turned.
+  during the lift. A family may name the lift's sticking region (`stick`), where it is
+  then slowest, quickest after it toward lockout; the lowering stays even. A prescribed
+  tempo replaces the record's (below).
+- **The arrow** follows the path the tracked point actually travels, the middle three
+  quarters of it, on the path or at most 26 pixels beside it (on a 720-pixel picture):
+  of those few places it takes the one that covers least of the figure. It used to be
+  pushed up to 68 pixels away, or along its own line past the end, which drew the
+  seated cable row's arrow at the foot plate. It is placed again whenever the camera
+  moves.
+
+### Movement in phases (v262, `docs/FIGURE-V3.md` F-2)
+
+A record's `keys` may be phases, `[{at, pose}...]` with `at` from 0 to 1, blended by
+Catmull-Rom through them (positions and angles; directions renormalised by the rig).
+Today's `[start, end]` is blended exactly as before (a unit test compares every record
+that asks for nothing new with the old blend at 11 moments, to 1e-9). After the blend
+and the equipment's `drive`, **path constraints** (`path: {track, rule}` or a list)
+make the pose obey the lift's mechanics:
+
+- `overMidfoot`: the bar (halfway between the grips) is put over the middle of the feet
+  (`capsules.js midfoot`: halfway from the heel's back to the front of the shoe), the
+  pelvis and the hands moving together so the hands stay on it and the feet stay put.
+- `touch:<parts>`: the bar to within 1 cm of the named parts (`shin+thigh`), measured
+  with the same body capsules as the safety checks; the hands move along the floor and
+  the arms swing on the shoulders, never out of the middle of the foot's ±2 cm. With
+  both, the pair is applied five times so they settle together.
+- `arcAbout:<joint>`: the hand keeps its distance from where the joint is at the start
+  (an elbow pivot stays put): curls, push-downs, raises.
+- `onLever` is the machines' lever drive (`records.js`), unchanged. `onCable` was not
+  built: the cable families draw the cable to wherever the handle is, each with its
+  pulley written inline, and a real handle is not held to the line from its pulley;
+  there was nothing general to constrain.
+
+`spine: "neutral"` turns the trunk as one piece about the hips with the rest pose's own
+curves, holds the neck within 8° of the trunk's line and keeps the shoulder blades from
+being drawn forward by the arms; a bend, lean or twist is not used. Left out (every
+record before this), or `"flex"`/`"extend"`, the spine is eased from the pelvis to the
+chest as before. `order` makes joints lead: each named part (knees: where the pelvis
+is; hips: the trunk's angles; head, hands, shoulders, feet) runs on its own smoothstep
+clock over its span of the repetition. The tempo: `phaseAt(rec, s, tempo)` takes the
+workout's four numbers in the order it prints them (lower, hold, lift, hold: "4-2-1-1"
+is lower 4 s, hold 2 s at the bottom, lift 1 s, hold 1 s at the top); an X is 0.6 s.
+The workout's ⓘ carries the phase's tempo to the exercise sheet
+(`fig3dHtml(name, {tempo})`, `data-mq-tempo`), whose figure then performs it.
+
+The deadlift, the Romanian deadlift and the plank were rewritten with these (they stay
+unchecked): their key poses are solved on this body from their stated conditions (the
+bar on the floor over the middle of the foot against the shins with the arms straight;
+the knees held at 17° in the Romanian deadlift; the plank's elbows under the shoulders,
+forearms flat and parallel, wrists straight, the body one line) rather than written as
+numbers. What the body's proportions forced is recorded in `.claude/PROGRESS.md`.
+
+**The solver's limits.** `solve()` returns `faults`: a hand or foot target out of reach,
+an elbow or knee asked to bend past its range (145°, 140°), a hand asked past the
+wrist's range or a palm past the forearm's turn. A knee hint pointing more than 30°
+from the foot (seen from above) is turned back to 30° and reported, so a knee never
+bends sideways; an elbow and a knee bend only on their hinges, so never backwards. The
+bend's range is reported, not enforced: stopping a joint short moves the hand off what
+it holds, which the audit showed made other checks fail. The plank's folded wrist was
+not the solver's: its hands were placed behind its elbows, and the forearm pointed
+back while the hand pointed forward. Of the audit's other wrist and forearm faults,
+about four in five come from a family asking for a hand direction more than 30° off
+the forearm (a hand square to a handle the forearm is not square to, a flat hand in a
+push-up), which no roll of the forearm can straighten without twisting the hand on it;
+they are for each exercise's review (F-3).
+
+**No teleporting, no sliding.** `collide.js jointSpeed(rec)` plays one repetition at 60
+frames a second and reports the fastest joint (limit 4 m/s); `slide(rec)` reports how
+far a planted foot or a hand gripping something fixed moves (limit 2 mm). Both are
+columns of `docs/figures/AUDIT.md`, reported and not yet part of its "pass every check".
 
 ### Drawing it
 
 A frame: the pose at this moment gives every bone's matrix, which go up as a small
 float texture (4 texels a bone). A shadow map is drawn from the key light (1024 square).
-Then the stage, the floor with the figure's shadow and its pool of light, the
-equipment, the body (its skin moved by its bones in the vertex shader, four bones a
+Then the stage, the floor with the figure's shadow and its pool of light (a plane far
+wider than the picture that fades by its distance from the eye into the stage's far
+colour, below a horizon worked out from the camera: one analytic horizon, where the
+far rim of a floor disc used to draw a dark wavy band), the equipment, the body (its skin moved by its bones in the vertex shader, four bones a
 vertex) and the arrow over it.
 
 The light is a studio's, fixed to the camera so the figure is lit well from any side: a
@@ -176,10 +244,14 @@ smoothly across every triangle.
   settles: a turn has weight.
 - **Two fingers, or a wheel, bring it nearer or further** (0.7 to 1.6 times).
 - **A double tap** eases back to the exercise's own view.
+- **The figure fills the picture.** The camera frames the body as it is at this moment
+  (and what is in its hands), aimed at its middle, so it fills 75% of the picture in
+  the direction it is largest (its height standing, its length lying down) all through
+  the movement (`motion.js momentCamera`; a unit test holds every record to 70-80% at
+  u = 0, 0.5 and 1). The camera follows the body smoothly; large equipment that
+  reaches past the body (a machine's tower, a bar's far end) may be cropped.
 - **Nothing jumps.** The framing is worked out exactly for the angle the camera is at,
-  aimed at a fixed point (the middle of the whole movement), so the distance changes
-  smoothly as it turns (the unit tests measure it: at most 1.1% in 3°), and the whole
-  movement stays in the picture from every side.
+  so the distance changes smoothly as it turns and as the body moves.
 
 ### The themes
 

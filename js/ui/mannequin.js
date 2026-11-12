@@ -35,7 +35,7 @@
      a play/pause button </div>
    data-mq-turn lets a drag turn the figure (the exercise sheet); the workout screen
    leaves it off, because a sideways swipe there moves between exercises. */
-import {phaseAt, sceneAt, framePoints, fitCamera, arrowShape} from "../data/mannequin/motion.js";
+import {phaseAt, sceneAt, framePoints, momentCamera, arrowShape} from "../data/mannequin/motion.js";
 import {highlight} from "../data/mannequin/rig.js";
 import {recordFor, recordForUnchecked} from "../data/mannequin/records.js";
 import {BODY} from "../data/mannequin/body.js";
@@ -171,27 +171,36 @@ var FS_EQ=
  +"void main(){vec3 N=normalize(vN);\n"
  +" vec3 c=shade(vP,N,uAlb,uSpc.x,uSpc.y,.15,1.)+uAlb*uSpc.z;o=vec4(tone(c),1.);}";
 /* The stage behind: the theme's top colour above, its middle at the horizon, a soft
-   light behind the figure. */
+   light behind the figure. Below the horizon line (uHor, where the floor's plane meets
+   the sky on the picture, worked out from the camera) it is the floor's far colour,
+   reached through a thin haze on the line itself: the floor fades into the same colour
+   with distance, so floor and stage meet in one analytic horizon (there used to be a
+   dark wavy band there: the far rim of a floor disc, seen edge on). */
 var VS_FULL="out vec2 vU;void main(){vec2 p=vec2(gl_VertexID==1?3.:-1.,gl_VertexID==2?3.:-1.);vU=p*.5+.5;gl_Position=vec4(p,.9999,1.);}";
 var FS_BG=
-  "in vec2 vU;out vec4 o;uniform vec3 uTop,uMid,uEdge;uniform vec2 uFig;uniform float uAsp;\n"
- +"void main(){vec3 c=mix(uMid,uTop,smoothstep(.25,1.,vU.y));vec2 d=(vU-uFig)*vec2(uAsp,1.);\n"
+  "in vec2 vU;out vec4 o;uniform vec3 uTop,uMid,uEdge;uniform vec2 uFig;uniform float uAsp,uHor;\n"
+ +"void main(){float h=vU.y-uHor;vec3 far=mix(uMid,uEdge,.5);\n"
+ +" vec3 c=mix(uMid,uTop,smoothstep(.25,1.,vU.y));c=mix(far,c,smoothstep(-.09,.07,h));\n"
+ +" c=mix(c,uMid,.18*exp(-abs(h)*22.));vec2 d=(vU-uFig)*vec2(uAsp,1.);\n"
  +" c=mix(c,mix(uMid,vec3(1.),.06),.55*(1.-smoothstep(0.,.75,length(d))));\n"
  +" c=mix(c,uEdge,.45*smoothstep(.55,1.15,length((vU-.5)*vec2(uAsp,1.))));o=vec4(c,1.);}";
-/* The floor: a disc of the stage's middle colour, the theme's pool of light under the
-   figure, the figure's shadow, fading into the stage at its rim. */
-var VS_FLOOR="layout(location=0) in vec2 aP;uniform mat4 uVP;uniform vec2 uC;uniform float uR;out vec3 vP;\n"
- +"void main(){vec3 p=vec3(uC.x+aP.x*uR,0.,uC.y+aP.y*uR);vP=p;gl_Position=uVP*vec4(p,1.);}";
+/* The floor: the stage's middle colour darkening outward from the figure (uR), the
+   theme's pool of light under it, the figure's shadow; a plane far wider than the
+   picture (uG) that fades by its distance from the eye into the stage's far colour
+   (the analytic horizon above), so it has no visible rim. */
+var VS_FLOOR="layout(location=0) in vec2 aP;uniform mat4 uVP;uniform vec2 uC;uniform float uG;out vec3 vP;\n"
+ +"void main(){vec3 p=vec3(uC.x+aP.x*uG,0.,uC.y+aP.y*uG);vP=p;gl_Position=uVP*vec4(p,1.);}";
 var FS_FLOOR=
-  "in vec3 vP;out vec4 o;uniform vec3 uMid,uEdge,uPool;uniform float uPoolK;uniform vec2 uC;uniform float uR;\n"
+  "in vec3 vP;out vec4 o;uniform vec3 uMid,uEdge,uPool,uEye;uniform float uPoolK;uniform vec2 uC;uniform float uR;uniform vec2 uFog;\n"
  +"uniform sampler2DShadow uSh;uniform mat4 uLVP;uniform float uShOn;uniform vec4 uFoot;\n"
  +"float sh(vec3 p){if(uShOn<.5)return 1.;vec4 q=uLVP*vec4(p,1.);vec3 s=q.xyz/q.w*.5+.5;if(s.x<0.||s.x>1.||s.y<0.||s.y>1.)return 1.;\n"
  +" vec2 px=1./vec2(textureSize(uSh,0));float k=0.;for(int x=-2;x<=2;x++)for(int y=-2;y<=2;y++)k+=texture(uSh,vec3(s.xy+vec2(float(x),float(y))*px*1.8,s.z-.002));return k/25.;}\n"
  +"void main(){float r=length(vP.xz-uC)/uR;vec2 f=(vP.xz-uFoot.xy)/uFoot.zw;float pool=1.-smoothstep(0.,1.,length(f));\n"
- +" vec3 c=mix(mix(uMid,uEdge,.35),uEdge,smoothstep(.2,1.,r));c+=uPool*uPoolK*.35*pool*pool;\n"
+ +" vec3 far=mix(uMid,uEdge,.5);vec3 c=mix(mix(uMid,uEdge,.35),far,smoothstep(.2,1.,r));c+=uPool*uPoolK*.35*pool*pool;\n"
  +" float s=sh(vP);c*=mix(.5,1.,s);\n"
  +" float ao=1.-.35*(1.-smoothstep(0.,.8,length(f)))*(1.-s*.5);c*=ao;\n"
- +" o=vec4(c,1.-smoothstep(.62,1.,r));}";
+ +" float t=length(vP-uEye);c=mix(c,far,smoothstep(uFog.x,uFog.y,t));\n"
+ +" o=vec4(c,1.-smoothstep(uFog.y,uFog.y*1.3,t));}";
 var FS_DEPTH="out vec4 o;void main(){o=vec4(1.);}";
 /* The arrow, on the picture: pixels in, its colour by alpha. */
 var VS_ARROW="layout(location=0) in vec2 aP;layout(location=1) in float aA;uniform vec2 uRes;out float vA;\n"
@@ -235,8 +244,13 @@ function lights(cam){
 
 /* ---- one live figure ---- */
 var LIVE=[];
+/* the floor plane's half width, metres: past the horizon's haze from any view */
+var FLOOR_G=60;
 function Mannequin(el){
   /* only a checked record (records.js); the offline tools may draw any */
+  /* a prescribed tempo (data-mq-tempo, "4-2-1-1" as the workout prints it: motion.js
+     phaseAt reads the order) */
+  var tempo=el.getAttribute("data-mq-tempo")||null;
   var name=el.getAttribute("data-mq"),rec=el.hasAttribute("data-mq-unchecked")?recordForUnchecked(name):recordFor(name);
   var canvas=el.querySelector("canvas"),btn=el.querySelector(".fig3d-play");
   var gl=null,P={},body=null,boneTex=null,shadow=null,shapes={},vaoBody=null,vaoFloor=null,vaoArrow=null,bufArrow=null;
@@ -326,9 +340,12 @@ function Mannequin(el){
     W=w;H=h;canvas.width=W;canvas.height=H;return true;}
 
   /* ---- the camera ---- */
-  function camNow(){
+  /* the camera follows the body at this moment (motion.js momentCamera: it fills the
+     picture all through the movement); the whole movement's points light the floor and
+     size the shadow */
+  function camNow(u){
     if(!pts)pts=framePoints(rec);
-    cam=fitCamera(rec,pts,W/H,view.yaw,view.pitch,view.zoom);
+    cam=momentCamera(rec,u,W/H,view.yaw,view.pitch,view.zoom);
     return cam;}
   /* the view eases toward where the finger put it; let go, it carries on and settles */
   function settle(dt){
@@ -344,10 +361,10 @@ function Mannequin(el){
     try{
       resize();
       if(!theme)retheme();
-      var ph=playing?phaseAt(rec,s):{u:stillU,act:1},sc=sceneAt(rec,ph.u),c=camNow(),Ls=lights(c),th=theme;
+      var ph=playing?phaseAt(rec,s,tempo):{u:stillU,act:1},sc=sceneAt(rec,ph.u),c=camNow(ph.u),Ls=lights(c),th=theme;
       gl.bindTexture(gl.TEXTURE_2D,boneTex);
       gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,4,NB,gl.RGBA,gl.FLOAT,sc.M);
-      var near=Math.max(.05,c.dist-4),far=c.dist+6;
+      var rad0=pts.radius*1.15,fog=[c.dist+rad0*1.5,c.dist+rad0*4],near=Math.max(.05,c.dist-4),far=Math.max(c.dist+6,fog[1]*1.3+1);
       var VP=mul4(persp(c.ty,W/H,near,far),lookAt(c.p,c.f,c.r,c.u));
       /* the light's view: an orthographic box round everything, looking along the key */
       var ctr=pts.center,rad=pts.radius*1.15,lp=V.add(ctr,V.mul(Ls.key,rad*3));
@@ -374,11 +391,13 @@ function Mannequin(el){
       gl.disable(gl.DEPTH_TEST);gl.useProgram(P.bg.p);gl.bindVertexArray(null);
       gl.uniform3fv(P.bg.u.uTop,th.top);gl.uniform3fv(P.bg.u.uMid,th.mid);gl.uniform3fv(P.bg.u.uEdge,th.edge);
       gl.uniform2f(P.bg.u.uFig,mid[0]*.5+.5,mid[1]*.5+.5);gl.uniform1f(P.bg.u.uAsp,W/H);
+      gl.uniform1f(P.bg.u.uHor,horizon(c));
       gl.drawArrays(gl.TRIANGLES,0,3);
       /* the floor */
       gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
       var fu=P.floor.u,foot=pts.foot;gl.useProgram(P.floor.p);
       gl.uniformMatrix4fv(fu.uVP,false,VP);gl.uniform2f(fu.uC,ctr[0],ctr[2]);gl.uniform1f(fu.uR,Math.max(2.2,rad*2.2));
+      gl.uniform1f(fu.uG,FLOOR_G);gl.uniform3fv(fu.uEye,c.p);gl.uniform2f(fu.uFog,fog[0],fog[1]);
       gl.uniform3fv(fu.uMid,th.mid);gl.uniform3fv(fu.uEdge,th.edge);gl.uniform3fv(fu.uPool,th.pool);gl.uniform1f(fu.uPoolK,th.poolK);
       gl.uniform4f(fu.uFoot,foot[0],foot[1],foot[2],foot[3]);
       shadowUniforms(fu,LVP,shOn);
@@ -406,6 +425,11 @@ function Mannequin(el){
       if(!el.hasAttribute("data-live"))el.setAttribute("data-live","1");
       frames++;
     }catch(e){fail(e);}}
+  /* where the floor's plane meets the sky on the picture, 0 (bottom) to 1 (top): a
+     point far off along the floor, straight ahead of the camera */
+  function horizon(c){
+    var h=V.norm([c.f[0],0,c.f[2]]),z=V.dot(h,c.f);
+    return z>1e-4?Math.max(-1,Math.min(2,V.dot(h,c.u)/z/c.ty*.5+.5)):-1;}
   function project3(M,p){var x=M[0]*p[0]+M[4]*p[1]+M[8]*p[2]+M[12],y=M[1]*p[0]+M[5]*p[1]+M[9]*p[2]+M[13],w=M[3]*p[0]+M[7]*p[1]+M[11]*p[2]+M[15];
     return [x/w,y/w];}
   function bindBones(u){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,boneTex);gl.uniform1i(u.uBones,0);}
@@ -419,7 +443,7 @@ function Mannequin(el){
   /* the arrow: a soft glow under a solid line, and its head */
   var arrowKey="",arrowVerts=null;
   function drawArrow(c,ph){
-    var key=[c.yaw.toFixed(1),c.pitch.toFixed(1),c.dist.toFixed(3),W,H].join("|");
+    var key=[c.yaw.toFixed(1),c.pitch.toFixed(1),c.dist.toFixed(3),c.target.map(function(v){return v.toFixed(3);}).join(","),W,H].join("|");
     if(key!==arrowKey){arrowKey=key;arrowVerts=arrowMesh(arrowShape(rec,c,W,H),W/720);}
     if(!arrowVerts||!arrowVerts.n)return;
     gl.disable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
@@ -457,7 +481,7 @@ function Mannequin(el){
     el.toggleAttribute("data-paused",!playing);}
   function toggle(){
     playing=!playing;
-    if(!playing){var ph=phaseAt(rec,clock/1000);stillU=ph.u;}
+    if(!playing){var ph=phaseAt(rec,clock/1000,tempo);stillU=ph.u;}
     syncBtn();if(playing)start();else{stop();once();}}
   self.toggle=toggle;
 
@@ -613,7 +637,7 @@ var ICONS='<svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><path d="
 function fig3dHtml(name,o){
   o=o||{};
   if(!(o.unchecked?recordForUnchecked(name):recordFor(name)))return "";
-  return '<div class="fig3d" data-mq="'+esc(name)+'" data-k="mq:'+esc(name)+'"'+(o.turn?' data-mq-turn':'')+(o.unchecked?' data-mq-unchecked':'')+'>'
+  return '<div class="fig3d" data-mq="'+esc(name)+'" data-k="mq:'+esc(name)+'"'+(o.turn?' data-mq-turn':'')+(o.unchecked?' data-mq-unchecked':'')+(o.tempo&&/^[\dX]-[\dX]-[\dX]-[\dX]$/.test(String(o.tempo))?' data-mq-tempo="'+esc(String(o.tempo))+'"':'')+'>'
     +'<canvas role="img" aria-label="'+esc(o.label||name)+'"></canvas>'
     +'<div class="fig3d-still">'+(o.stills||[]).slice(0,2).map(function(src,i){
       return src?'<figure><img src="'+esc(src)+'" alt="" decoding="async"><figcaption>'+t(i?"End":"Start")+'</figcaption></figure>':"";}).join("")+'</div>'

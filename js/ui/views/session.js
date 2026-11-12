@@ -142,6 +142,9 @@ function nextLine(a,run){
   return '<button class="wexl-nx" data-jump="'+nxI+'"><span class="wexl-nk">'+t("Next")+'</span>'
     +'<b>'+(nxG?esc(nxG)+' · ':'')+esc(exName(nxE.name))+'</b>'+IC.chev+'</button>';}
 /* "6–10 reps", "40–60 s", "max": the reps half of the dose, for the set line. */
+/* The prescribed tempo, carried to the exercise sheet so its figure performs it
+   (js/ui/mannequin.js fig3dHtml tempo). */
+function exTempoAttr(e){var m=e.planned&&e.planned.tempo&&String(e.planned.tempo).match(/[\dX]-[\dX]-[\dX]-[\dX]/);return m?' data-tempo="'+m[0]+'"':"";}
 function repsText(e,timed){
   var p=e.planned||{};
   if(p.amrap)return t("Target")+" "+t("max");
@@ -457,7 +460,7 @@ function vLogger(){
   if(run.length>1)line+=' · '+t("Superset")+' '+groupLabel(a.entries,V.logIdx);
   if(inDeload())line+=' · <span class="ex-light">'+t("Lighter week")+'</span>';
   h+='<div class="wexl"><h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
-   +(act?'<span></span>':'<button class="ib" data-exdetail="'+esc(e.name)+'" aria-label="'+t("How to do it")+'">'+IC.info+'</button>')
+   +(act?'<span></span>':'<button class="ib" data-exdetail="'+esc(e.name)+'"'+exTempoAttr(e)+' aria-label="'+t("How to do it")+'">'+IC.info+'</button>')
    +'<button class="ib" data-swap="1" aria-label="'+t("Replace this exercise")+'">'+IC.swap+'</button>'
    +'<p class="wexl-s"><span>'+line+'</span>'
    +'</p>'

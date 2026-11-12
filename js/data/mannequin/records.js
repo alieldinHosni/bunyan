@@ -10,11 +10,19 @@
      id        the exercise's id in the library (its "i"): the still pictures and the
                thumbnail are named by it
      keys      [start, end] poses (rig.js); start is the stretched position, so the
-               lift (the working half) runs start to end
+               lift (the working half) runs start to end. Or phases: [{at, pose}...],
+               at from 0 to 1 ascending, blended by Catmull-Rom (motion.js)
+     path      {track, rule} or a list: constraints after the blend (motion.js):
+               "overMidfoot", "touch:<parts>", "arcAbout:<joint>"
+     order     ["knees", "hips"] or {part: [from, to]}: which joints lead
+     spine     "neutral" (the trunk one piece, the neck in line) | "flex" | "extend";
+               left out, as before
+     stick     [u0, u1]: the lift's sticking region, where it is slowest
      drive     (pose, u, rec): where the equipment moves the body (a lever's grip on its
                arc), applied after the keys are mixed
      equip     (J, u, rec): the equipment as a props list (kit.js), from the joints
-     tempo     [lift, hold, lower, rest] seconds
+     tempo     [lift, hold, lower, rest] seconds (a prescribed tempo replaces it:
+               motion.js phaseAt)
      cam       {yaw, pitch}: the view it is shown from; 0 looks at the figure's front,
                90 at its left side
      arrow     {track}: the joint whose path the arrow follows (wr.l, an.l, kn.l, P); by

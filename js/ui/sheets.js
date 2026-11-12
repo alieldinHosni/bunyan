@@ -771,7 +771,7 @@ function vSheet(){
        wherever it cannot be. The rest show their photographs, or the drawn figure
        (js/data/figures.js) where there are none. */
     if(hasMannequin(nD))
-      b+=fig3dHtml(nD,{turn:true,label:exName(nD),stills:[exImg(nD,0),exImg(nD,1)]});
+      b+=fig3dHtml(nD,{turn:true,label:exName(nD),stills:[exImg(nD,0),exImg(nD,1)],tempo:V.sd.tempo});
     else if(med&&exImg(nD,0))
       b+='<div class="exd-form2'+(figD?' fig':'')+'">'
        +'<figure><img src="'+exImg(nD,0)+'" alt="" decoding="async"><figcaption>'+t("Start")+'</figcaption></figure>'

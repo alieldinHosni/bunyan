@@ -288,7 +288,7 @@ function register(){
       ?((V.sd.prev||[]).concat(V.sd.name)).slice(-8):null;
     /* From the Workout complete sheet (a cool-down stretch), back returns to it. */
     var ret5=V.sheet==="done"?{s:"done",d:V.sd}:V.sheet==="exdetail"&&V.sd&&V.sd.ret||null;
-    loadInstructions(function(){var o={name:nm5};if(trail)o.prev=trail;if(ret5)o.ret=ret5;openSheet("exdetail",o);});return;});
+    loadInstructions(function(){var o={name:nm5};if(trail)o.prev=trail;if(ret5)o.ret=ret5;if(D.tempo)o.tempo=D.tempo;openSheet("exdetail",o);});return;});
   has("exback",function(){
     var tr=(V.sd&&V.sd.prev||[]).slice(),rt=V.sd&&V.sd.ret;
     if(!tr.length){if(rt){openSheet(rt.s,rt.d);return;}requestCloseSheet();return;}
