@@ -7,7 +7,7 @@ import {hb} from "../haptic.js";
 import {t} from "../../i18n/dict.js";
 import {eatenToday, energyMissing, macroKcal, macroTargets, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
-import {checkPlans} from "../../engine/plancheck.js";
+import {headNow, headOn} from "../../engine/head.js";
 import {FOODDB, sumNutrition, foodName} from "../../engine/nutrition.js";
 import {foodPic} from "../../data/foodicons.js";
 import {dayRec, S} from "../../state.js";
@@ -151,7 +151,7 @@ function vFoodToday(dsel){
      Nothing is marked "Now": the day is the user's, not the clock's. */
   /* ---- what is behind for the time of day, right under the day's numbers, today only
      (js/ui/bodyneeds.js): one slim card, or none. */
-  if(dsel===today())h+=bodyNeeds(e,r.water||0);
+  if(dsel===today())h+=bodyNeeds(e);
   var ids=dayMeals(dsel),next=nextMeal(dsel),n=ids.length;
   h+='<div class="tsec"><h2 class="tsec-h">'+t(dsel===today()?"Today's Meals":"Meals")+'</h2>'
    +'<button class="tlink" data-openday="'+dsel+'">'+t("Day details")+'</button></div>';
@@ -362,10 +362,15 @@ function suggested(){
   var m=macroTargets();
   if(!m)return null;
   return {tdee:tdee(),kcal:m.kcal,p:m.p,f:m.f,c:m.c};}
+/* The plan check's offer to build the targets on what the log measures, while the head
+   (js/engine/head.js) keeps it: it is a calorie voice, and only one is heard at a time. */
+function learnedKept(){return headNow().queue.some(function(s){return s.id==="maint-learned";});}
+/* The Nutrition plan's own prompts, when the head keeps them (tg-suggest, macro-gap). */
+function foodSig(id){return headOn("food").some(function(s){return s.id===id;});}
 /* Where the maintenance figure comes from, and what the log measures. */
 function maintSource(){
   var use=maintenanceInUse(),L=learnedNow(),h='<p class="pgnote tgsrc">';
-  var ld=checkPlans().some(function(f){return f.id==="maint-learned";})?learnedDiffers():null;
+  var ld=learnedKept()?learnedDiffers():null;
   if(use.source==="learned")h+=esc(t("Maintenance measured from your own log (the formula says {f}).").replace("{f}",fmtN(tdeeFormula())));
   else if(L.kind==="ok")h+=esc(t("Maintenance by formula. Your own log measures about {k} ({lo}–{hi}).")
     .replace("{k}",fmtN(L.kcal)).replace("{lo}",fmtN(L.low)).replace("{hi}",fmtN(L.high)));
@@ -379,7 +384,7 @@ function maintSource(){
    measured from the log, or an offer to build the targets on what the log measures. */
 function srcKey(same){
   var use=maintenanceInUse(),L=learnedNow(),
-      ld=checkPlans().some(function(f){return f.id==="maint-learned";});
+      ld=learnedKept();
   return [same?"same":"diff",use.source||"",L.kind||"",ld?"offer":""].join("|");}
 function srcNote(same){
   var k=srcKey(same);
@@ -404,7 +409,7 @@ function goalCard(plan){
     :'<div class="pgcard tgneed"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Add your age, height and weight, and Bunyan works out a target for your goal."))+'</p>'
       +'<button class="btn g" data-sheet="set_you">'+esc(t("Add your details"))+'</button></div>';
   var same=!!sg&&sg.kcal===g.kcal&&sg.p===g.p&&sg.c===g.c&&sg.f===g.f;
-  if(sg&&!same&&!ed)h+='<div class="tgoffer"><div><span class="klabel">'+esc(t("The coach suggests"))+'</span>'
+  if(sg&&!same&&!ed&&foodSig("tg-suggest"))h+='<div class="tgoffer" data-k="tg-suggest"><div><span class="klabel">'+esc(t("The coach suggests"))+'</span>'
     +'<b>'+fig(fmtN(sg.kcal)+' kcal')+' · '+fig(sg.p+' g')+' '+esc(t("protein"))+'</b>'
     +'<span class="tgoffer-s">'+esc(t("Maintenance {m} kcal, adjusted for your goal.")).replace("{m}",fig(fmtN(sg.tdee)))+'</span></div>'
     +hb('<button class="btn sm" data-usesug="1">'+esc(t("Use"))+'</button>')+'</div>';
@@ -418,7 +423,7 @@ function goalCard(plan){
         return '<div class="'+x[0]+'"><span>'+esc(t(x[1]))+'</span><b>'+fig(x[2]+' g')+'</b><em>'+fig(x[3]+'%')+'</em></div>';}).join("")+'</div>'
      +'<div class="tgmore"><span>'+esc(t("Water"))+' <b>'+fig(fmtN(g.water))+'</b> ml</span><span>'+esc(t("Steps"))+' <b>'+fig(fmtN(g.steps))+'</b></span></div>'
      +(plan||'')
-     +(Math.abs(gap)>40?'<div class="tgwarn"><p>'+esc(t(gap>0?"Your macros add up to {m} kcal, {d} under your target.":"Your macros add up to {m} kcal, {d} over your target."))
+     +(Math.abs(gap)>40&&foodSig("macro-gap")?'<div class="tgwarn" data-k="macro-gap"><p>'+esc(t(gap>0?"Your macros add up to {m} kcal, {d} under your target.":"Your macros add up to {m} kcal, {d} over your target."))
         .replace("{m}",fig(fmtN(mk))).replace("{d}",fig(fmtN(Math.abs(gap))))+'</p><button class="btn g sm" data-fitmacros="1">'+esc(t("Fix it for me"))+'</button></div>':'')
      +(sg?srcNote(same):'')
      +'</section>';}

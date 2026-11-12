@@ -10,9 +10,10 @@
    logged days before it says anything. */
 import {hb} from "./haptic.js";
 import {t} from "../i18n/dict.js";
-import {bodyNeedsOf, suggestFor} from "../engine/needs.js";
+import {suggestFor} from "../engine/needs.js";
+import {headOn} from "../engine/head.js";
 import {S} from "../state.js";
-import {esc, fmtN, today} from "../util.js";
+import {esc, fmtN} from "../util.js";
 import {art} from "./art.js";
 import {glyph} from "./glyphs.js";
 
@@ -34,18 +35,18 @@ function pctOf(n){return Math.round(n.pct*100);}
    the summary does not is kept, in one slim card under the summary: what is behind for
    the time of day and how much to go, and three everyday foods that bring it, one tap
    each to log (or a glass, for water). Nothing behind: no card. The week's pattern
-   (noticed) stays. */
-function bodyNeeds(eaten,water){
-  var g=S.goals||{},now=today(),hour=new Date().getHours();
-  var b=bodyNeedsOf(eaten,g,water,hour,S.sessions,S.days,now);
-  if(!b)return "";
+   (noticed) stays. Each of the two is drawn when the head (js/engine/head.js) keeps it:
+   needs-today (what is behind now) and needs-week (the week's pattern). */
+function bodyNeeds(eaten){
+  var g=S.goals||{},sigs=headOn("food"),of=function(id){return (sigs.filter(function(s){return s.id===id;})[0]||{}).src||null;};
+  var b=of("needs-today"),week=of("needs-week");
+  if(!b||!b.node)return noticed(week);
   var focus=b.focus,fn=b.node;
-  if(!fn)return noticed(b.week);
   var trained=b.trained;
   var sub=(trained?t("You trained today, and {x} is at {n}% of your target."):t("{X} is at {n}% of today's target, behind for the time of day."))
       .replace("{x}",t(NAME[focus]).toLowerCase()).replace("{X}",t(NAME[focus])).replace("{n}",pctOf(fn));
   var left=b.left,unit=focus==="w"?"ml":"g";
-  var h='<section class="fbody fneed glass" aria-labelledby="fbody-h">'
+  var h='<section class="fbody fneed glass" data-k="needs-today" aria-labelledby="fbody-h">'
    +'<div class="fneed-h"><span class="fneed-i f-'+focus+'" aria-hidden="true">'+glyph(GL[focus])+'</span>'
    +'<div class="fneed-t"><h2 class="fbody-h" id="fbody-h">'+esc(t(HEAD[focus]))+'</h2><p class="fbody-s">'+esc(sub)+'</p></div>'
    +'<span class="fbody-pill num">'+esc(t("+{n} "+unit+" to go").replace("{n}",fmtN(left)))+'</span></div>';
@@ -62,7 +63,7 @@ function bodyNeeds(eaten,water){
         +'<span class="fsug-s">'+esc(t(x.label)+" · "+t("{n} kcal").replace("{n}",fmtN(x.kcal)))+'</span></button>';}).join("")
      +'</div>';}
   h+='</section>';
-  return h+noticed(b.week);}
+  return h+noticed(week);}
 
 /* What the last week shows about protein, in one card, or nothing. */
 function noticed(w){
@@ -71,7 +72,7 @@ function noticed(w){
       :"On {n} of your last {m} training days, protein stayed under target. Those are the days it matters most.").replace("{n}",w.shortTrain).replace("{m}",w.trainDays)
     :w.kind==="short"?t("Protein was under target on {n} of the last {m} days you logged.").replace("{n}",w.short).replace("{m}",w.days)
     :t("Protein reached its target on {n} of the last {m} days you logged. Keep it there.").replace("{n}",w.met).replace("{m}",w.days);
-  return '<section class="fnoticed"><span class="fnoticed-i" aria-hidden="true">'+glyph("spark")+'</span>'
+  return '<section class="fnoticed" data-k="needs-week"><span class="fnoticed-i" aria-hidden="true">'+glyph("spark")+'</span>'
    +'<div><b>'+esc(t("Coach noticed"))+'</b><p>'+esc(s)+'</p></div></section>';}
 
 export {bodyNeeds};

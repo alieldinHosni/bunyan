@@ -81,7 +81,7 @@ function ckWhy(c){
 function ckCard(c){
   if(!c)return "";
   var facts=ckFacts(c);
-  return '<section class="ckcard" aria-labelledby="ck_h">'
+  return '<section class="ckcard" data-k="ckcard" aria-labelledby="ck_h">'
    +'<div class="ckcard-h"><span class="ckcard-i" aria-hidden="true">'+glyph("whistle")+'</span>'
    +'<div><span class="shk">'+esc(t("Weekly check-in"))+'</span><h2 id="ck_h">'+esc(t("Last week"))+'</h2>'
    +'<p>'+esc(pretty(c.from)+" – "+pretty(c.to))+'</p></div></div>'
@@ -123,7 +123,7 @@ function moChange(x){
   return {text:"",btn:""};}
 function moCard(r){
   if(!r)return "";
-  return '<section class="ckcard mocard" aria-labelledby="mo_h">'
+  return '<section class="ckcard mocard" data-k="mocard" aria-labelledby="mo_h">'
    +'<div class="ckcard-h"><span class="ckcard-i" aria-hidden="true">'+glyph("clipboard")+'</span>'
    +'<div><span class="shk">'+esc(t("Monthly review"))+'</span><h2 id="mo_h">'+esc(moName(r.month))+'</h2></div></div>'
    +'<ul class="ckcard-f">'+moFacts(r).map(function(f){return '<li>'+nums(f)+'</li>';}).join("")+'</ul>'

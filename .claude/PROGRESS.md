@@ -4464,3 +4464,76 @@ docs/COACH-AGENT.md 2.2 and 2.8. CACHE `bunyan-v258`.
 **3D figure: movement in phases with path constraints, neutral spine, prescribed tempo; the figure fills the frame (v262, FIGURE-V3 F-1 and F-2).** The motion engine can now express a correct lift; no exercise was marked checked and the gate is unchanged. `motion.js`: keys may be phases `[{at, pose}]` blended by Catmull-Rom (two-key records blend exactly as before: a unit test compares every record that asks for nothing new with the old blend at 11 moments to 1e-9); path constraints after the blend, `overMidfoot` (bar within ±2 cm of the middle of the foot, the pelvis and hands moved together), `touch:<parts>` (bar within 1 cm of the shins/thighs, using the body capsules now in `capsules.js`, shared with `collide.js`), `arcAbout:<joint>`; `onLever` unchanged; `onCable` not built (the cable families draw the cable to wherever the handle is, their pulleys inline, and a real handle is not held to the pulley's line: nothing general to constrain). `order` (a per-part smoothstep warp of u: knees = where the pelvis is, hips = the trunk's angles); `stick` (the lift slowest through a family's sticking region, quickest after it, the lowering even; no stick = today's ease); `phaseAt(rec, s, tempo)` takes the workout's printed order, lower-hold-lift-hold (4-2-1-1 = lower 4 s, hold 2 s at the bottom, lift 1 s, hold 1 s at the top; checked against `session.js` and `acute-variables.js`), passed from the workout's ⓘ through `fig3dHtml(name, {tempo})`. `skin.js`: `spine:"neutral"` (trunk one piece, neck within 8°, blades not drawn forward; default unchanged, so no existing record moved); `solve()` returns `faults` (target out of reach, elbow/knee past range, hand past the wrist's range, palm past the forearm's turn) and turns a knee hint more than 30° off the foot back to 30° (this moved 5 records' knees: Leg Press, Narrow Stance Leg Press, Bench Dips, Lying Leg Curls, Inverted Row; none got worse on any check). The bend's range is reported, not clamped: clamping elbows at 145° moved hands off their handles and made 3 records that passed a check fail it. The plank's wrist (176°) was its pose, not the solver: its hands were behind its elbows. Of the other wrist/forearm faults, about four in five are the family asking for a hand direction more than 30° off the forearm, which no forearm roll can straighten; left for F-3. `collide.js`: `jointSpeed` (60 fps, limit 4 m/s) and `slide` (planted foot or hand on a fixed solid, 2 mm), two reported columns in `tools/figure-audit.mjs` (not part of "pass every check", so the totals stay comparable). F-1: the renderer frames the body at each moment (`momentCamera`: 75% of the picture's larger dimension; a unit test holds every record to 70-80% at u = 0, 0.5, 1; for lying figures their length is what fills, since filling the height would push them off the sides); an analytic horizon (a 60 m floor fading with distance from the eye, the stage below the horizon line the same far colour) replaces the scalloped band; the arrow stays on its tracked point's path (at most 26 px beside it; it had been pushed up to 68 px and along its line, which put the row's at the foot plate). Demonstrations, still unchecked: Barbell Deadlift (three phase keys solved on this body, overMidfoot + touch shin/thigh + order knees→hips + neutral spine + sticking region), Romanian Deadlift (knees held at 17°, overMidfoot + touch + neutral), Plank (elbows under shoulders, forearms flat and parallel, wrists straight, one line). Audit before → after: pass every check 13 → 15 (Plank, Romanian Deadlift); penetration 153 → 152, contacts 63 → 62, clearances 50 → 50 (of 121 → 122: the deadlift's start is now standing high enough to be held to feet flat, and passes), limits 149 → 146; a script comparison over all 211 records shows no record that passed a check before fails it now. What this body forced, for the deadlift's own review: its arms are short against its legs, so the start comes out with the trunk 16° above level and the belly 7.5 cm into the thighs (its remaining fault); the back's angle cannot be held exactly until the bar passes the knees, so the knees lead (by u = 0.4 they have done most of their straightening, the back about 5%) and the arms swing back up to about 20° mid-pull to keep the bar on the legs; the Romanian deadlift stops with the bar a few cm above the knees, where the hips stop with the knees held. Tests: new `js/data/test/motion.test.js` (all of the above, the framing over all records, the arrow on its path, 4-2-1-1 lowering 4.0 s ± 0.05); one expectation changed: `collide.test.js` "Plank: the hand folded back through the wrist (D5)" now checks the plank as it was drawn (kept inline, so the detector stays tested) and adds that the plank as it is has no joint out of range. Related browser tests (ONLY="igure|3D|annequin|xercise sheet|photos|Photos"): 27 passed.
 
 **3D figure: the camera is fixed for the whole repetition (v262, follow-up in the same pull request).** A camera that framed the body at each moment zoomed in and out within every repetition, which reads as the figure pulsing. `motion.js repCamera` now fits the union of the body's extent over the repetition (11 moments, plus what the hands hold) so that it fills 75% of the picture (height upright, length lying down), and the renderer recomputes the camera only when the view (turn, zoom) or the size changes. The framing test now measures the fill on that union (every record 70-80%, all inside) and adds that the camera is identical at u = 0, 0.5 and 1. As expected with a fixed camera, 119 of 211 records go under 70% at their smallest moment; the lowest is Barbell Deadlift at 41% (its start), then Olympic Squat and Barbell Full Squat at 46%.
+
+## WP-1 (b): every page shows advice from the one decision engine — branch session/head-pages (v263)
+
+- The pages no longer decide what to tell the person; they ask `js/engine/head.js` and draw the cards they drew
+  before, from each signal's `src`, in the head's order. New `headOn(page)`: the lead first when it belongs to that
+  page, then `headFor(page)`. Every signal has one page, so no advice is drawn on two pages and the lead tops one
+  page only (the "one lead" of the brief; a lead drawn on its own across the app is WP-2's Today card).
+- Coach (`views/coach.js forYou`): For you lists `headOn("coach")` — plan check findings, coach insights, the
+  weekly check-in, the monthly review, the stress card — through `views/pcheck.js signalCard()`. A check-in's or
+  review's card shows only the changes the head kept (`parts`); a balance change shows only when neither of its
+  halves was put away, because its one button moves sets both ways. "Better now?" under the list still opens the
+  stress card on request (`V.stressAsk`), since the person asked for it.
+- Training (`views/train.js`, `views/home.js`): the lighter-week card (due or running), the missed-day card and the
+  backup / weigh-in reminder are drawn only when `headOn("train")` has them, from their `src`. The reminder is the
+  one housekeeping signal the head keeps for the day (rule 5), so with both due it now turns about by the date
+  instead of always being the backup.
+- Food: "your body needs" (`ui/bodyneeds.js`) draws needs-today / needs-week from the head; the Nutrition plan's
+  "The coach suggests" and "Your macros add up to…" show only when the head keeps tg-suggest / macro-gap. The
+  "Build my targets on {k} kcal" button under the goal shows only while the head keeps maint-learned (one calorie
+  voice). The edit form's own "Fix it for me" and the empty plan's "Make your meal plan" are not advice and stay.
+- Dock: `pcheck.js adviceCount()` is now the plan check findings and coach insights the head keeps (it was every
+  finding and insight, contradictions included). Not `headNow().count` as the doc says: the dot is on the Coach tab
+  and reads "Coach, N things to look at", so counting Training's backup reminder or Food's body needs in it sends
+  the person to a page that does not have them, and two existing tests hold the dot to what the coach noticed
+  ("the dock still counts all of them", "each set aside in turn"). The chat's "where am I" count is
+  `headOn("coach").length`; the toast after a plan is used counts the plan check findings the head keeps.
+- `render()` calls the new `headFresh()` once a screen, so the pages read the state as it is even after a change
+  made without a save (several tests and some code paths do that; the old views read the state live). The head
+  takes about a millisecond, and the old views already ran the plan check and the insights on every render.
+- Priorities changed in head.js: Food's "The coach suggests" (tg-suggest) 61 → 33 and "Your macros add up to"
+  (macro-gap) 36 → 24. At 61 the page's formula suggestion out-ranked the plan check's meal-plan finding and, worse,
+  maint-learned, which says that very formula is off for this person (the head showed "The coach suggests 2,548"
+  and hid "your log measures 2,000"). Now a page prompt speaks only when the plan check has no calorie voice. The
+  seeded profile is unchanged by it (kcal-down at 70 wins either way).
+- Removed, as the head now decides: `pcheck.js allAdvice / adviceCount / adviceList / adviceBody / pcAgain /
+  adviceNote` (the severity sort and the dead Coach AI section), the deload/missed/backup/weigh-in tests in the
+  views (`deloadDue`, `inDeload`, `missedNow`, `backupDue`, `weighInDue` calls), `bodyNeedsOf` in the view, the
+  view's own suggestion/macro-gap decision. The engine functions the head wraps are unchanged.
+- New rule 7 in head.js, `ruleLighter` (open question 4 of part a): several sources offering a lighter week on one
+  day show as one. What offers one: deload-due / deload-on, the check-in's deload change, and the coach insights
+  whose button is "Take a lighter week" (fatigue, falling, stall). One running wins, else Training's own card
+  (deload-due), else the highest priority; the others go with why "lighter". The per-lift 10% drop (`deload`
+  kind, "Got it") is not a lighter week. Unit tests (7) plus two for `headOn`. Open: when the check-in's deload is
+  folded into Training's card, the check-in may say "Nothing to change" for that week while Training offers the
+  lighter week; a line pointing to it would need new words.
+- The cards the head draws carry a `data-k` (the reminder, the lighter week, the check-in and monthly cards, Food's
+  two prompts and body needs, and each For you row by signal id), so `patch.js` takes away only the card set
+  aside: before, removing the unkeyed reminder re-made the week rail under it.
+- Seeded profile, before → after. Training: backup reminder + lighter week → the same. Coach For you: check-in
+  (with "Under your range… Balance the volume"), "Your calories will not build muscle", "Some muscles get little
+  training", "Bench Press has stalled", "Less training than your program has" → "Your calories will not build
+  muscle", check-in (its days change only). Food plan: "The coach suggests" + "Your macros add up to 2,430 kcal" →
+  neither. Food day: body needs → the same. Dock: 4 (plan check + insights) → 5 (everything the head has: the
+  lighter week, calories, check-in, body needs, backup).
+- Tests: five new browser tests ("Coach and Training: …", "Coach and Food: …"): the seeded profile shows nothing
+  the head put away; one calorie suggestion across Coach and Food; a dismissal ("Not now" on the backup, "Not now"
+  on a coach insight) takes only that card, keeps every other node, and the dock's count drops by one; Arabic RTL;
+  offline after a reload.
+- Existing tests changed, each because a contradiction is now resolved, none weakened:
+  (1) "Plan check: a meal plan off its targets and a thin program…": the seed has a lighter week due, so the head
+  holds back vol-low (rule 1). The test now asserts that (`headWhy("vol-low") === "recovery"`), then puts the
+  lighter week off (`S.deload.snooze`) and goes on as before.
+  (2) "Plan check (owner, 9 Nov review): a part asked for…": adding the side-delt exercise adds sets, held back by
+  the lighter week due and the seed's calories under maintenance for the goal (rules 1 and 3); the test puts the
+  lighter week off and sets the coach's suggested targets before checking, then goes on as before.
+  (3) "Targets: one card says the target…": the suggestion shows when it differs *and* no other calorie voice
+  speaks; when the head holds it back the test asserts why ("calories") and that a plan check calorie finding is
+  live. With the seed, that is kcal-down on Coach, so the offer is no longer on Food (the brief's "one calorie
+  suggestion across Coach and Food").
+  (4) "Targets: goals save in place, the suggestion applies…": it saved 2,222 kcal on a build-muscle goal and then
+  tapped Food's Use; at 2,222 the plan check's "will not build muscle" is the calorie voice (on Coach) and Food's
+  offer waits. The test now asserts exactly that, then saves a target 20 kcal under the suggestion, where the offer
+  is the one voice, and taps Use as before.

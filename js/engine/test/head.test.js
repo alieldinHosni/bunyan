@@ -1,7 +1,7 @@
 /* The head (js/engine/head.js): its conflict rules over plain signals, and the whole of
    it over a seeded profile. head.js reads the state, so the profile is put in S
    (state.js setS) the way the app's own boot leaves it: DEF, filled in by normalize. */
-import {decide, headFor, headNow, headWhy, pickLead, planMapping, COACH, CHECKIN, MONTHLY, rank, ruleCalories, ruleDeficit,
+import {decide, headFor, headNow, headOn, headWhy, isLighter, pickLead, ruleLighter, planMapping, COACH, CHECKIN, MONTHLY, rank, ruleCalories, ruleDeficit,
   ruleHousekeeping, ruleMissed, ruleRecovery, ruleSaidOnce} from "../head.js";
 import {checkPlansAll} from "../plancheck.js";
 import {insights} from "../../coach/insights.js";
@@ -117,6 +117,25 @@ function run(t){
   if(f){S.pcDismiss={"kcal-down":JSON.stringify(f.src.sig)};saveDB();
     t.eq([ids(headNow().queue).indexOf("kcal-down"),headWhy("kcal-down")],[-1,"said-once"],"Keep it as it is: out of the queue, said once");}
 
+  /* ---- 7. one lighter week ---- */
+  var ldue=s("deload-due",85,{volume:-1,load:-1},{page:"train",source:"deload"}),
+    lck=s("checkin:deload",82,{volume:-1,load:-1},{source:"checkin",parent:"checkin"}),
+    lfat=s("fat1",84,{volume:-1,load:-1},{source:"coach",src:{kind:"fatigue"}}),
+    lstall=s("stall1",36,{volume:-1,load:-1},{source:"coach",src:{kind:"stall"}}),
+    lper=s("dl1",38,{load:-1},{source:"coach",src:{kind:"deload"}});
+  t.eq([isLighter(ldue),isLighter(lck),isLighter(lfat),isLighter(lstall),isLighter(lper)],[true,true,true,true,false],
+    "lighter: what offers a lighter week (a per-lift 10% drop does not)");
+  t.eq(ruleLighter([lfat,ldue,lck,lstall]).map(function(x){return x.id+":"+x.why+":"+x.by;}),
+    ["fat1:lighter:deload-due","checkin:deload:lighter:deload-due","stall1:lighter:deload-due"],"lighter: Training's card wins over the others, whatever their priority");
+  t.eq(ids(ruleLighter([lck,lfat,lstall])),["checkin:deload","stall1"],"lighter: without it, the highest priority stays");
+  var lon=s("deload-on",80,{volume:-1,load:-1},{page:"train",source:"deload"});
+  t.eq(ids(ruleLighter([lon,lfat])),["fat1"],"lighter: one running says it; nothing offers another");
+  t.eq([ruleLighter([lfat,lper]).length,ruleLighter([lstall]).length],[0,0],"lighter: one alone, or with a per-lift drop, stays");
+  var r7=decide([ldue,lfat,lstall,lper,s("checkin",50,{},{source:"checkin"}),lck]);
+  t.eq([ids(r7.queue),r7.queue.filter(function(x){return x.id==="checkin";})[0].parts],[["deload-due","checkin","dl1"],[]],
+    "lighter: three sources in, one card out; the check-in's own change rides away from its card");
+  t.eq(headWhyOf(r7,"stall1"),"lighter","lighter: the reason given");
+
   /* ---- nothing to say ---- */
   /* A new profile has the default program (state.js split: Full Body), and the plan
      check reads it as it does today; nothing else has anything to say. */
@@ -133,6 +152,13 @@ function run(t){
   setS({onboarded:true});saveDB();
   var bare;try{bare=headNow();}catch(x){bare=null;}
   t.ok(bare&&bare.count===0,"a state with nothing in it does not throw");
+  /* ---- headOn: the lead on its own page only, then the page's queue ---- */
+  seeded();
+  var hn=headNow(),pages=["train","food","coach","progress"],drawn=[];
+  pages.forEach(function(p){drawn=drawn.concat(ids(headOn(p)));});
+  t.eq(drawn.slice().sort(),ids(hn.queue).slice().sort(),"headOn: every signal in the queue is drawn on exactly one page");
+  t.ok(hn.lead&&headOn(hn.lead.page)[0]===hn.lead&&pages.filter(function(p){return p!==hn.lead.page;}).every(function(p){return headOn(p).indexOf(hn.lead)<0;}),
+    "headOn: the lead tops its own page and no other");
   fresh();}
 
 function headWhyOf(r,id){var x=r.suppressed.filter(function(y){return y.id===id;})[0];return x?x.why:null;}

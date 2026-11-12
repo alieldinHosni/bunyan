@@ -45,6 +45,7 @@ import {canUndo} from "../handlers/actions.js";
 import {answerPick, createAsk, daysIn, namesExercise, namesFood, plan as planAction, planCommand, proceed, suggestExercises, swapPick} from "../agent.js";
 import {commandOf, whenIn} from "../../coach/commands.js";
 import {checkPlans} from "../../engine/plancheck.js";
+import {headOn} from "../../engine/head.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
 import {bestE1RM, bmr, bwShare, dbTotal, deloadDue, plateauOf, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
@@ -253,7 +254,8 @@ function aTrack(a){
   var f=simpleFacts();
   p(a,t("Where you are, in plain words:"));
   l(a,f.map(function(x){return x.k+": "+noTags(x.head)+". "+x.line;}));
-  var c=checkPlans().length+coachNow().length;
+  /* What Coach lists, as the head keeps it (js/engine/head.js). */
+  var c=headOn("coach").length;
   if(c)n(a,fill(t(c===1?"There is 1 thing in Coach worth a look.":"There are {n} things in Coach worth a look."),{n:c}));
   return act(a,t("Open Progress"),{"data-tab":"progress"});}
 
