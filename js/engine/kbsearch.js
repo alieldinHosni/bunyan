@@ -27,6 +27,7 @@ import * as CORE from "../knowledge/core.js";
 import * as CORR from "../knowledge/corrective.js";
 import * as EPI from "../knowledge/epidemiology.js";
 import * as GLOSS from "../knowledge/glossary.js";
+import * as GEN from "../knowledge/general.js";
 import * as IMB from "../knowledge/imbalances.js";
 import * as MOD from "../knowledge/modalities.js";
 import * as NUT from "../knowledge/nutrition-principles.js";
@@ -36,7 +37,7 @@ import * as SAQ from "../knowledge/saq.js";
 
 var FILES=[["acute-variables",ACUTE,"train"],["adherence",ADH,"habits"],["anatomy",ANAT,"body"],["assessments",ASSESS,"train"],
   ["balance",BAL,"train"],["cardio",CARDIO,"cardio"],["core",CORE,"train"],["corrective",CORR,"mobility"],["epidemiology",EPI,"health"],
-  ["glossary",GLOSS,"terms"],["imbalances",IMB,"mobility"],["modalities",MOD,"train"],["nutrition-principles",NUT,"food"],
+  ["general",GEN,"body"],["glossary",GLOSS,"terms"],["imbalances",IMB,"mobility"],["modalities",MOD,"train"],["nutrition-principles",NUT,"food"],
   ["phases",PHASES,"train"],["plyometrics",PLYO,"train"],["saq",SAQ,"train"]];
 
 /* ---- words ---------------------------------------------------------------------- */

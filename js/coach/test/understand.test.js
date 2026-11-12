@@ -152,6 +152,15 @@ function run(t){
   /* Arabic training words in English, for the written answers. */
   t.eq(gloss("يعني ايه زياده تدريجيه في الحمل"),"what is progressive overload?","a term glossed");t.eq(gloss("ليه سعراتي 2500"),"","a question word alone is not glossed");
   t.clean(understand("what's my best squat?",ctx()).entities,"no undefined in a reading");
+  /* C-4: eating at an event, and the rate asked with its numbers. */
+  [["I'm going to a wedding tonight, how do I handle food?","event"],["رايح فرح النهارده بالليل، اعمل ايه في الاكل؟","event"],["party later, what should I eat?","event"],
+   ["عندي عزومة بكره اكل ايه","event"],["how fast can I safely lose weight?","rate"]].forEach(function(x){t.eq(understand(x[0],ctx()).topic,x[1],x[0]);});
+  t.ok(understand("I ate too much at the party",ctx()).topic!=="event","a party already eaten is not planned for");
+  t.eq(understand("I want to lose 5 kg in a month",ctx()).rate,{kg:5,weeks:52/12},"5 kg in a month: the kilos and the weeks");
+  t.eq(understand("عايز اخس ١٠ كيلو في شهرين",ctx()).rate,{kg:10,weeks:2*52/12},"the Arabic dual: two months");
+  t.eq(understand("lose 3 kg in two weeks",ctx()).rate,{kg:3,weeks:2},"two weeks");
+  t.eq(understand("عايز انزل ٧ كيلو في شهر ونص",ctx()).rate,{kg:7,weeks:1.5*52/12},"a month and a half");
+  t.eq(Math.round(understand("drop 20 lbs in 3 weeks",ctx()).rate.kg*10)/10,9.1,"pounds as kilos");
   t.eq(understand("",ctx()).topic,null,"nothing said");t.eq(understand(null,ctx()).kind,null,"null");}
 
 export {run};

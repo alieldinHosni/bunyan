@@ -288,6 +288,19 @@ var CORRWITH=/^(no+|nope|sorry|oops|لا|لأ|لاء)?[ ,]*(i meant|i mean|meant
 var MOREW=/^(and|also|plus|what about|how about|and for|and on|and what about|طب و|طيب و|وكمان|طب|طيب|و)( |(?=ال|لل))/;
 var MAKEIT=/^(make it|change it to|make that|set it to|خليها|خليه|خليهم|خليها بقي|خليه بقي)( |$)/;
 
+/* How fast weight can safely come off, asked without the numbers; and the numbers said:
+   the kilos (pounds as kilos) and the weeks they are to go in. */
+var RATEQ=/(how (fast|quickly) (can|should|do|could) i (safely |)(lose|drop)|how (much|many (kg|kilos|pounds|lbs?)) (can|should) i (safely |)(lose|drop)( weight|)( a| per| each) week|(is|it) (it |)safe to lose|how many (kg|kilos|pounds|lbs?) (a|per) week|اخس بسرعه قد ايه|اخس قد ايه في الاسبوع|انزل كام كيلو في الاسبوع|انزل كام في الاسبوع|اخس كام كيلو في الاسبوع|(lose|losing|drop|dropping) (a |one |)(kg|kilo|kilos|pound|lb) (a|per|each) week|(انزل|اخس|نزول|انزال) (كيلو|نص كيلو) (في|كل) (الاسبوع|اسبوع))/;
+function rateSaid(f,kgW){
+  var g=numerals(digits(f)),kg=kgW.unit==="lb"?kgW.n*0.4536:kgW.n,weeks=0;
+  var w=g.match(/(\d+(?:\.\d+)?|a|one|an|two|per|each|في|كل)? ?(weeks?|(?:ال)?اسبوع|اسابيع)/),m=g.match(/(\d+(?:\.\d+)?|a|one|an|two|per|each|في|كل)? ?(months?|(?:ال)?شهر|شهور)( ونص)?/);
+  var n=function(x){return x==="two"?2:/^\d/.test(x||"")?+x:1;};
+  if(/اسبوعين/.test(g))weeks=2;else if(/شهرين/.test(g))weeks=2*52/12;
+  else if(w&&(!m||g.indexOf(w[0])<g.indexOf(m[0])))weeks=n(w[1]);
+  else if(m)weeks=(n(m[1])+(m[3]?0.5:0))*52/12;
+  return weeks&&kg>0?{kg:kg,weeks:weeks}:{kg:kg>0?kg:0,weeks:0};}
+var EVENTW=/ (wedding|weddings|party|parties|buffet|birthday|engagement|dinner out|eating out|restaurant|feast|celebration|event|banquet|فرح|الفرح|فرح صاحبي|عزومه|العزومه|حفله|الحفله|بوفيه|البوفيه|مطعم|المطعم|عيد ميلاد|خطوبه|الخطوبه|مناسبه|fara7|3azooma|اتعشي بره|اتعشى بره|اتغدي بره|اتغدى بره|اكل بره|هاكل بره|ناكل بره|خارجين نتعشي|خارجين نتعشى)( |$)/;
+var EVENTFOOD=/ (food|eat|eating|diet|calories|meal|handle|اكل|الاكل|اكل ايه|دايت|الدايت|سعرات|اعمل ايه|اتصرف)( |$)/;
 function has(re,f){return re.test(" "+f+" ")||re.test(f);}
 function exOfReading(R){return R&&R.entities&&R.entities.exercise&&R.entities.exercise[0]||null;}
 
@@ -339,7 +352,11 @@ function readings(f,E,ctx,neg,asked){
   if(/(^| )(tired|exhausted|drained|no energy|fatigued|تعبان|تعبانه|مرهق|مرهقه|مفيش طاقه|هلكان)( |$)/.test(f)&&scopeOf(f)==="always")add("tired","statement","always",9);
   /* "Lose 5 kg in a month": a rate, asked or said. */
   var kgW=E.numbers.filter(function(x){return x.unit==="kg"||x.unit==="lb";})[0];
-  if(kgW&&/(lose|drop|cut|اخس|انزل|اخسس|اشيل)/.test(f)&&/(week|month|weeks|months|اسبوع|شهر|اسابيع|شهور)/.test(f))add("rate","knowledge","",9);
+  if(kgW&&/(lose|losing|drop|cut|اخس|انزل|اخسس|اشيل|نزول)/.test(f)&&/(week|month|weeks|months|اسبوع|شهر|اسابيع|شهور|شهرين|اسبوعين)/.test(f))add("rate","knowledge","",9,{rate:rateSaid(f,kgW)});
+  /* "A kilo a week", «كيلو في الاسبوع»: one, said in words. */
+  else if(RATEQ.test(f))add("rate","knowledge","",9,{rate:/(^| )(a|one) (kg|kilo)( |$)|(^| )(كيلو|ك)( |$)/.test(f)&&/(week|month|اسبوع|شهر)/.test(f)?rateSaid(f,{n:1,unit:"kg"}):null});
+  /* Eating at a wedding, a party, a dinner out (C-4): planned around, not a log. */
+  if(EVENTW.test(" "+f+" ")&&(q||EVENTFOOD.test(" "+f+" "))&&!/(^| )(i ate|ate too much|i had|اكلت|كلت)( |$)/.test(f))add("event","knowledge","",9);
   if(/(^| )(missed|skipped|fell off|فوت|فوتت|فاتني|فاتوني|مروحتش|ماروحتش)( |$)/.test(f)&&(P==="week"||P==="lastweek"||E.numbers.some(function(x){return x.n>=2;}))&&!q)add("missed","statement","week",8);
   var hrs=E.numbers.filter(function(x){return x.unit==="h";})[0];
   if(/(^| )(slept|sleep|got|نمت|نوم)( |$)/.test(f)&&hrs&&hrs.n<6&&/(^| )(only|just|barely|بس|يادوب)( |$)/.test(f)&&!q)add("lowday","statement","sleep",8);
@@ -407,7 +424,7 @@ function understand(text,ctx){
   var rs=readings(f,E,ctx,R.neg,asked);
   if(rs.length){
     var top=rs[0];
-    R.topic=top.topic;R.kind=top.kind;R.mode=top.mode;if(top.n)R.n=top.n;
+    R.topic=top.topic;R.kind=top.kind;R.mode=top.mode;if(top.n)R.n=top.n;if(top.rate)R.rate=top.rate;
     var second=rs.filter(function(x){return x.topic!==top.topic;})[0];
     R.confidence=Math.min(1,top.score/10)-(second&&second.score>=top.score?0.4:second&&second.score>=top.score-1?0.15:0);
     /* A change to the program names what is in the program; anything else, what is logged. */

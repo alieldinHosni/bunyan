@@ -26,7 +26,8 @@ import {exSteps, muscleOf, secondaryOf} from "../../data/exercises.js";
 import {matchExercise} from "../../engine/splitparse.js";
 import {changeOf, gloss, retell, understand} from "../../coach/understand.js";
 import {cooldownFor, warmupFor} from "../../engine/warmup.js";
-import {faqById, faqMatch} from "../../engine/faq.js";
+import {faqById, faqMatch, faqRank} from "../../engine/faq.js";
+import {guard, guardNums} from "../../coach/guard.js";
 /* How close a question must be to an answer for the answer to stand in for a rule the
    words also touched (below it, the rule answers). */
 var FAQ_OVER=0.6,FAQ_STRONG=0.75;
@@ -480,21 +481,71 @@ function aWarmPlan(a){
 function faqSlots(){
   var g=S.goals||{},kg=lastWeight()||num(S.profile&&S.profile.weight)||0,o={};
   if(num(g.kcal))o.kcal=fmtN(num(g.kcal));
+  /* Only a fat-loss goal's target is a deficit: "already set this way" says so only then. */
+  if(num(g.kcal)&&S.profile&&S.profile.goal==="lose")o.kcalLose=o.kcal;
   if(num(g.p))o.p=num(g.p);
   if(num(g.c))o.c=num(g.c);
   if(num(g.f))o.f=num(g.f);
   if(num(g.water))o.water=r1(num(g.water)/1000);
   if(kg){o.kg=fmtW(kg);if(num(g.p))o.pkg=r1(num(g.p)/kg);}
   return o;}
+/* The person's own side of a written answer, where its entry asks for it ({mine:1}):
+   worked out from the log and the profile, never a figure of the answer's own. Each
+   returns nothing when there is nothing of theirs to say. */
+var FAQMINE={
+  /* Sleep and food over the last week, from the log (as aTired read them). */
+  "tired-always":function(a){
+    var nights=lastNights(),days=[],g=S.goals||{},ev=[];
+    for(var i=1;i<=7;i++){var k=kcalOn(addDaysW(today(),-i));if(k>0)days.push(k);}
+    if(nights.length)ev.push(fill(t("You logged {h} hours a night on average over your last {n} nights."),{h:r1(nights.reduce(function(x,y){return x+y;},0)/nights.length),n:nights.length}));
+    if(days.length&&num(g.kcal))ev.push(fill(t("Food logged on {n} of the last 7 days: about {k} kcal a day, against a target of {t}."),{n:days.length,k:fmtN(Math.round(days.reduce(function(x,y){return x+y;},0)/days.length)),t:fmtN(g.kcal)}));
+    if(ev.length)l(a,ev);else p(a,t("Your log has no sleep or food for the last week, so I can't see a cause in it."));},
+  /* What is left of today, from today's log and the targets; another day, the targets. */
+  "event-eating":function(a,q,it){
+    var g=S.goals||{},R=rd(it),dy=R&&R.entities&&R.entities.day;
+    if(!num(g.kcal))return;
+    if(dy&&dy.when!=="today"){p(a,fill(t("Your day's targets: {k} kcal and {p} g of protein."),{k:fmtN(g.kcal),p:num(g.p)}));return;}
+    var e=eatenToday(today()),kl=Math.round(num(g.kcal)-e.kcal),pl=Math.round(num(g.p)-e.p);
+    if(!e.kcal)p(a,fill(t("Nothing logged yet today. Your day is {k} kcal and {p} g of protein."),{k:fmtN(g.kcal),p:num(g.p)}));
+    else if(kl>=0)p(a,fill(t("So far {e} of {k} kcal and {pe} of {p} g protein. Left: {kl} kcal and {pl} g protein."),
+      {e:fmtN(e.kcal),k:fmtN(g.kcal),pe:Math.round(e.p),p:num(g.p),kl:fmtN(kl),pl:Math.max(0,pl)}));
+    else p(a,fill(t("You're {n} kcal over today already. Nothing to make up: tomorrow is a normal day."),{n:fmtN(-kl)}));},
+  /* The rate asked, from the numbers said and the person's weight, against the app's
+     band for losing (js/engine/body.js RATE: 0.5–1% of body weight a week). */
+  "loss-rate":function(a,q,it){
+    var bw=lastWeight()||num(S.profile&&S.profile.weight),r=it&&it.rate||null,u=" "+wUnit();
+    var lo=bw*0.005,hi=bw*0.01,band=toDisp(lo)+"–"+toDisp(hi)+u;
+    if(r&&r.kg>0&&r.weeks>0){
+      var wk=r.kg/r.weeks,one=r.weeks===1,said=one?fill(t("That's {wk} a week."),{wk:fmtW(wk)}):fill(t("{kg} in {w} weeks is about {wk} a week."),{kg:fmtW(r.kg),w:r1(r.weeks),wk:fmtW(wk)});
+      if(!bw){p(a,said+" "+t("With your weight logged, I can say whether that pace fits: the app's range is 0.5–1% of body weight a week."));
+        act(a,t("Log weight"),{"data-sheet":"weigh"});}
+      else if(wk>hi*1.02&&one)p(a,said+" "+fill(t("That's faster than the safe range at your weight ({bw}): {band} a week."),{bw:fmtW(bw),band:band}));
+      else if(wk>hi*1.02)p(a,said+" "+fill(t("That's faster than the safe range at your weight ({bw}): {band} a week. At a safe pace, {kg} takes about {a} to {b} weeks."),
+        {bw:fmtW(bw),band:band,kg:fmtW(r.kg),a:Math.ceil(r.kg/hi),b:Math.ceil(r.kg/lo)}));
+      else if(wk<lo*0.98)p(a,said+" "+fill(t("That's slower than the app's range at your weight ({band} a week), so it is safe."),{band:band}));
+      else p(a,said+" "+fill(t("That fits the safe range at your weight ({bw}): {band} a week."),{bw:fmtW(bw),band:band}));}
+    else if(bw)p(a,fill(t("At your weight, {bw}, a safe pace is about {band} a week."),{bw:fmtW(bw),band:band}));
+    else{p(a,t("With your weight logged, I can say whether that pace fits: the app's range is 0.5–1% of body weight a week."));act(a,t("Log weight"),{"data-sheet":"weigh"});}
+    var goal=S.profile&&S.profile.goal,g=S.goals||{};
+    if(goal==="lose"&&num(g.kcal))n(a,fill(t("Your target, {kcal} kcal a day, is already set to that deficit."),{kcal:fmtN(g.kcal)}));
+    else if(goal&&goal!=="lose"){n(a,fill(t("Your goal is set to {g}, so your calorie target is not a deficit yet."),{g:t(goalOf(goal).label).toLowerCase()}));
+      act(a,t("Change my goal to fat loss"),{"data-chatsay":uiLang()==="ar"?"غير هدفي لحرق الدهون":"change my goal to fat loss"});}}};
 function aFaq(a,q,it){
   var f=it.faq,sl=faqSlots();
+  /* The figures it may hold: its entry's own, from the English it was written and
+     checked in, and those worked out for this person (slots and FAQMINE). */
+  var ok=[],add=function(s){ok=ok.concat(guardNums(s));},b0;
   f.a.forEach(function(x){
-    if(x.if){if(sl[x.if]!=null)p(a,fill(t(x.p),sl));}
+    if(x.p&&!x.if)add(x.p);if(x.n)add(x.n);if(x.l)x.l.forEach(add);});
+  f.a.forEach(function(x){
+    if(x.mine){b0=a.b.length;if(FAQMINE[f.id])FAQMINE[f.id](a,q,it);
+      a.b.slice(b0).forEach(function(y){add(y.p||y.n||"");(y.l||[]).forEach(add);});}
+    else if(x.if){if(sl[x.if]!=null){p(a,fill(t(x.p),sl));add(fill(x.p,sl));}}
     else if(x.p)p(a,t(x.p));
     else if(x.l)l(a,x.l.map(function(y){return t(y);}));
     else if(x.n)n(a,t(x.n));});
   f.acts.forEach(function(b){act(a,t(b[0]),b[1]["data-chatq"]?Object.assign({"data-chatl":uiLang()},b[1]):b[1]);});
-  a.src=f.src.slice();
+  a.src=f.src.slice();a.allowed=ok;
   return a;}
 function aPlateau(a,q){
   var named=namedExercises(q),name=named.length?named[0].name:null,lifts=[];
@@ -755,8 +806,46 @@ function aHello(a){
   var nm=(S.profile.name||"").trim();
   return p(a,(nm&&nm!=="Me"?fill(t("Hi {n}."),{n:nm}):t("Hi."))+" "+t("Ask me about today's training, your food, or how things are going."));}
 function aThanks(a){return p(a,t("Any time."));}
-function aUnknown(a){
-  return p(a,t("That isn't something I can answer from your log or what I know, so I won't guess.")+" "+t("I can answer these, or you can say it another way:"));}
+/* Nothing reads the message (C-4): no passage of the knowledge base is shown as if it
+   were an answer. It says it is not sure, and offers the two or three nearest things
+   it can do: the closest written answers (js/engine/faq.js rank), the area the
+   knowledge search finds the words in (js/engine/kbsearch.js), then the usual ones. */
+var AREAASK={food:"eat",train:"weights",cardio:"steps",body:"weight",habits:"track",mobility:"sore",health:"track"};
+function nearOf(q,it){
+  var out=[],seen={},ar=uiLang()==="ar";
+  if(q){var rk=[];try{rk=faqRank(q);}catch(e){rk=[];}
+    rk.filter(function(x){return x.score>=0.3;}).slice(0,2).forEach(function(x){
+      var ex=x.f.ex.filter(function(e){return /[\u0600-\u06FF]/.test(e)===ar;})[0]||x.f.ex[0];
+      if(ex&&!seen["f:"+x.f.id]){seen["f:"+x.f.id]=1;out.push({l:t(x.f.title),say:ex});}});
+    var kn=it&&it.near||null;if(!kn){try{kn=lookup(q);}catch(e){kn=null;}}
+    var aid=kn&&AREAASK[kn.area];if(aid&&!seen[aid]){seen[aid]=1;out.push({id:aid});}}
+  ["help","today","eat"].forEach(function(id){if(out.length<3&&!seen[id]){seen[id]=1;out.push({id:id});}});
+  return out.slice(0,3);}
+/* What the guard is given: the answer's prose, its list rows, its source (an answer
+   worked out from the person's log and plan says so when nothing more exact is set),
+   the figures a written answer may hold, and the lifts asked against the person's
+   others, as the answer would name them. */
+function checked(a,iid,R){
+  var prose=[],items=[];
+  (a.b||[]).forEach(function(x){if(!x)return;if(x.p!=null)prose.push(String(x.p));if(x.n!=null)prose.push(String(x.n));if(Array.isArray(x.l))x.l.forEach(function(y){items.push(String(y));});});
+  if(!(a.src&&a.src.length)&&iid!=="faq"&&/\d/.test(prose.concat(items).join(" ")))a.src=[t("From your log and plan")];
+  var lifts=null,E=R&&R.entities;
+  if(E&&E.exercise&&E.exercise.length&&(R.kind==="own-data"||R.kind==="knowledge")){
+    var asked=E.exercise.map(function(x){return x.name;}).filter(Boolean),mine={};
+    (S.sessions||[]).slice(0,40).forEach(function(s){(s.entries||[]).forEach(function(e){mine[e.name]=1;});});
+    split().days.forEach(function(d){d.ex.forEach(function(e){mine[e.name]=1;});});
+    /* What was said may fit more than one of theirs ("squat": the Barbell Squat logged,
+       the Hack Squat in the program): all of those are what was asked. */
+    var keys=E.exercise.map(function(x){return String(x.key||"").toLowerCase().split(" ").filter(Boolean);}).filter(function(k){return k.length;});
+    Object.keys(mine).forEach(function(n){var ln=n.toLowerCase();if(asked.indexOf(n)<0&&keys.some(function(k){return k.every(function(w){return ln.indexOf(w)>=0;});}))asked.push(n);});
+    var others=Object.keys(mine).filter(function(n){return asked.indexOf(n)<0&&!isActivity(n);});
+    if(asked.length)lifts={asked:asked.map(exName),others:others.map(exName)};}
+  return guard({prose:prose,items:items,src:a.src||[],allowed:iid==="faq"&&a.allowed?a.allowed:null},lifts);}
+function aUnknown(a,q,it){
+  p(a,t("I'm not sure what you mean, so I won't guess.")+" "+t("The nearest things I can do:"));
+  nearOf(q,it).forEach(function(x){
+    if(x.id)act(a,t(ASK[x.id]),{"data-chatq":x.id,"data-chatl":uiLang()});else act(a,x.l,{"data-chatsay":x.say});});
+  return a;}
 
 /* ---- tomorrow, the last workout -------------------------------------------------- */
 function aTomorrow(a){
@@ -1114,69 +1203,13 @@ function aElse(a,q,it){
   if(hit&&hit[0]==="nodata"){
     p(a,t("That's not something I have data on. I can show you how your training and weight are going."));
     return act(a,t("How am I doing?"),{"data-chatq":"track","data-chatl":uiLang()});}
-  return aUnknown(a);}
+  return aUnknown(a,q,it);}
 
-/* ---- anything else the knowledge files answer -------------------------------------
-   A question none of the answers above is for, looked up across the whole knowledge
-   base (js/engine/kbsearch.js): what it says, lead first, then what of the person's own
-   log and targets bears on it, and where in the app to act on it. The knowledge files
-   are English data, so their lines stay English in an Arabic answer, as food names do.
-   A search that finds nothing good is not an answer: aElse says so. */
-function sexLine(s){var x=S.profile.sex;
-  return x==="f"?!/^(Men|Male)\b/.test(s):x==="m"?!/^(Women|Female)\b/.test(s):true;}
+/* The nights of sleep logged in the last week. (The knowledge-base passage answer,
+   aKnow, is gone: a passage is never shown as an answer, C-4.) */
 function lastNights(){
   var out=[];for(var i=0;i<7;i++){var r=S.days[addDaysISO(today(),-i)];if(r&&num(r.sleep)>0)out.push(num(r.sleep));}
   return out;}
-/* The person's side: by what the passage is about. */
-function mine(a,k){
-  var tt=k.doc.file+" "+k.doc.top+" "+k.doc.title,g=S.goals||{},r=S.days[today()]||{};
-  if(/sleep/i.test(tt)){
-    var ns=lastNights();
-    if(ns.length)p(a,fill(t("You logged {h} hours a night on average over your last {n} nights."),{h:r1(ns.reduce(function(x,y){return x+y;},0)/ns.length),n:ns.length}));
-    else if(num(S.profile.sleep))p(a,fill(t("In the assessment you said you sleep about {h} hours."),{h:r1(num(S.profile.sleep))}));
-    return act(a,t("Log sleep and energy"),{"data-sheet":"recovery"});}
-  if(/hydration|fluid|water/i.test(tt)){
-    if(g.water)p(a,fill(t("Your target is {g} ml a day. Today so far: {d} ml."),{g:fmtN(g.water),d:fmtN(r.water||0)}));
-    return act(a,t("Add a glass"),{"data-water":"250","data-wdate":today()});}
-  if(/protein/i.test(tt)&&g.p){p(a,fill(t("Your target is {p} g a day."),{p:g.p}));return act(a,t("Targets"),{"data-csec":"food","data-cfsub":"targets"});}
-  if(/carbohydrate|lipid|fat|energy|calori|weight management|macronutrient/i.test(tt)&&g.kcal){
-    p(a,fill(t("Your targets: {k} kcal, {p} g protein, {c} g carbs, {f} g fat a day."),{k:fmtN(g.kcal),p:g.p||0,c:g.c||0,f:g.f||0}));
-    return act(a,t("Targets"),{"data-csec":"food","data-cfsub":"targets"});}
-  if(k.area==="cardio"){var c=weeklyCardio();
-    p(a,fill(t("Cardio this week: {m} of the {t} minutes of moderate activity health guidelines suggest."),{m:c.min,t:c.target}));
-    return act(a,t("Log or start an activity"),{"data-actsheet":"1"});}
-  if(k.area==="train"&&S.onboarded){var sp=split(),dd=sp&&sp.days?sp.days.filter(function(d){return d.ex.length;}).length:0;
-    if(dd)p(a,fill(t("Your program has {n} training days a week."),{n:dd}));
-    return act(a,t("Open my program"),{"data-csec":"train","data-ctsub":"program"});}
-  if(k.area==="mobility")return act(a,t("Open Training"),{"data-tab":"train"});
-  return a;}
-function aKnow(a,q,it){
-  var k=it&&it.know||lookup(q);
-  if(!k)return aElse(a,q);
-  var lines=k.lines.filter(sexLine),also=k.also.filter(sexLine);
-  if(it&&it.deeper){lines=lines.slice(1);if(!lines.length&&!also.length)lines=k.lines.slice(0,1);}
-  var lead=k.needsFigure&&k.figure&&sexLine(k.figure)?k.figure:lines[0]||k.lines[0];
-  /* Asked for a figure the knowledge does not hold: said so, then what it does hold. */
-  if(k.needsFigure&&!k.figure)p(a,t("There's no single number for that. What holds:")+" "+lead+".");
-  else p(a,/[.!?]$/.test(lead)?lead:lead+".");
-  l(a,lines.filter(function(x){return x!==lead;}).concat(also.filter(function(x){return x!==lead&&lines.indexOf(x)<0;})).slice(0,5));
-  tailor(a,k);
-  return mine(a,k);}
-/* The answer for this person: their goal's prescription when the passage is about how
-   to train, a word when what they told the assessment changes it, and what they told
-   the coach that bears on it. */
-var VIGOROUS=/hiit|interval|plyometric|sprint|vigorous|maximal|power/i;
-function tailor(a,k){
-  var pr=S.profile||{},tt=k.doc.file+" "+k.doc.title,AD=adaptOf(pr.goal),G=goalOf(pr.goal);
-  if(S.onboarded&&AD&&/acute-variables|phases/.test(k.doc.file)&&/rep|set|rest|volume|intensity|tempo|adaptation|frequency|system/i.test(tt))
-    p(a,fill(t("For your goal, {g}: {s} sets of {r} reps an exercise, {rest} rest."),
-      {g:t(G.label).toLowerCase(),s:AD.sets.min+"–"+AD.sets.max,r:AD.reps.min+"–"+AD.reps.max,
-       rest:AD.restS.min?fill(t("{a}–{b} s"),{a:AD.restS.min,b:AD.restS.max}):fill(t("up to {b} s"),{b:AD.restS.max})}));
-  if((pr.health||[]).length&&VIGOROUS.test(tt+" "+k.lines.join(" ")))
-    n(a,t("You ticked a health question in the assessment: keep to moderate effort until a doctor or a qualified exercise professional has cleared you."));
-  if((pr.limits||[]).length&&/stretch|mobility|flexib|posture|movement|squat|lunge|press/i.test(tt))
-    n(a,t("Mind what you said hurts: stop anything that brings it on."));
-  told(a,/food|nutrition|hydration|protein|carbohydrate|lipid/i.test(tt)?["preference","constraint","obstacle"]:["schedule","obstacle","constraint"],/nutrition/.test(k.doc.file));}
 
 /* ---- a report, not a question: one question back, never a guess --------------------
    "I had a bad day, didn't stick to the diet" (js/coach/intent.js situationOf). The
@@ -1588,10 +1621,12 @@ function decide(R,text){
     case "week":return {id:"week"};
     case "plateau":return {id:"plateau"};
     case "kfreq":return {id:"kfreq"};
-    case "tired":return {id:"tired"};
-    /* How fast weight can safely come off: the written answer for it, the person's
-       numbers beside it. */
-    case "rate":var fr=null;try{fr=faqMatch("how fast can I safely lose weight");}catch(e){fr=null;}return fr?{id:"faq",faq:fr.f}:null;
+    /* Tired all the time, how fast weight can safely come off, eating at an event: the
+       written answer for each (js/data/faq.js), with the person's own figures in it
+       (FAQMINE). */
+    case "tired":var ft=faqById("tired-always");return ft?{id:"faq",faq:ft}:{id:"tired"};
+    case "rate":var fr=faqById("loss-rate");return fr?{id:"faq",faq:fr,rate:R.rate||null}:null;
+    case "event":var fe=faqById("event-eating");return fe?{id:"faq",faq:fe}:null;
     case "scope":return {id:"scope",force:R.mode};
     case "unknown":return {id:"unknown",out:R.mode};
     case "exswap":case "exadd":case "exremove":
@@ -1624,7 +1659,7 @@ function decide(R,text){
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
 var ANSWER={month:aMonth,live:aLive,phase:aPhase,zones:aZones,health:aHealth,faq:aFaq,plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
-  help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,know:aKnow,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
+  help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
   scope:aScope,reassess:aReassess,situation:function(a,q,it){return aSituation(a,q,it,it.sit||{kind:"day"});},weekfood:aWeekFood,logfood:aLogFood,weektrain:aWeekTrain,letgo:aLetGo,lowday:aLowDay,
   remember:aRemember,facts:aFacts,
@@ -1968,7 +2003,7 @@ function askOne(q,id,lang){
       else if(dz&&dz.cmd){var cr=null;try{cr=planCommand(dz.cmd);}catch(e){cr=null;}
         if(cr)return {q:text,id:"app",at:Date.now(),b:[],acts:cr.acts||[],ag:cr,lang:L};}
       else if(dz&&dz.say)return {q:text,id:"app",at:Date.now(),b:[],acts:dz.say.acts||[],ag:dz.say,lang:L};
-      else if(dz&&dz.id){iid=dz.id;byR=true;if(dz.text)ptext=dz.text;if(dz.force)it.force=dz.force;if(dz.p)it.p=dz.p;if(dz.faq)it.faq=dz.faq;}
+      else if(dz&&dz.id){iid=dz.id;byR=true;if(dz.text)ptext=dz.text;if(dz.force)it.force=dz.force;if(dz.p)it.p=dz.p;if(dz.faq)it.faq=dz.faq;if(dz.rate)it.rate=dz.rate;}
       /* A day told in one message: what was eaten and trained, "what else", "put it in
          my day" (js/coach/recap.js). */
       else if(S.onboarded&&FOODDB&&(rcp=dayTold(text)))return recapMsg(text,rcp,L);
@@ -1985,10 +2020,11 @@ function askOne(q,id,lang){
         if(R&&R.kind==="knowledge"&&!R.topic&&ACTION_IDS.indexOf(iid)<0){var fk=null;try{fk=faqMatch(text);}catch(e){fk=null;}
           if(fk&&fk.score>=FAQ_STRONG){iid="faq";it.faq=fk.f;byR=true;}
           /* A question about how things are ("does muscle turn into fat", "the difference
-             between…") is not answered with the person's own figures: an honest miss is
-             better than an answer to something else. */
-          else if(/^(does|do|is|are|will|can) (muscle|fat|lifting|cardio|weights|machines|it|stretching|protein|carbs|sugar)|difference between|الفرق بين|بيتحول|بتتحول/.test(R.norm)
-            &&/^(weights|calories|weight|protein|strong|track|today|eat|steps|water)$/.test(iid)){iid="unknown";byR=true;}}}
+             between…") is not answered with the person's own figures: the written answer
+             for it if there is one, else an honest miss, better than an answer to
+             something else. */
+          else if(/^(does|do|is|are|will|can) (muscle|fat|lifting|cardio|weights|machines|it|stretching|protein|carbs|sugar)|difference between|turn into|turns into|become fat|الفرق بين|بيتحول|بتتحول|تتحول|يتحول|هيتحول|هتتحول/.test(R.norm)
+            &&/^(weights|calories|weight|protein|strong|track|today|eat|steps|water)$/.test(iid)){if(fk){iid="faq";it.faq=fk.f;}else iid="unknown";byR=true;}}}
       /* Not phrased as anything known, but it names an exercise in the plan, or a
          food by its name: that is what it is about. A near miss is not a match. */
       /* A question the answer bank was written for (js/data/faq.js): it answers when
@@ -2048,7 +2084,8 @@ function askOne(q,id,lang){
          the same passages and the person's own figures (js/engine/smart.js). Owner, 28 Oct:
          "How to create two sessions then?" got a passage about session 1 of a phase. */
       if(kn&&!kn.deeper&&!id&&S.onboarded&&isReady()){kn=null;iid="unknown";}
-      if(kn){iid="know";it.know=kn.k;it.kq=kn.kq;it.deeper=!!kn.deeper;}}
+      /* A passage is never the answer (C-4): it only points the nearest offers. */
+      if(kn){iid="unknown";it.near=kn.k;}}
     if(ACTION_IDS.indexOf(iid)>=0&&iid!=="reassess"&&S.onboarded){
       /* Food said with Arabic digits or the dual ("بيضتين"): the amounts as numbers. */
       if(iid==="foodlog"&&!byR&&R&&R.lang==="ar"&&R.norm)ptext=R.norm;
@@ -2062,7 +2099,11 @@ function askOne(q,id,lang){
     if(!S.onboarded&&/^(today|tomorrow|weights|eat|rest|swap|weight|protein|calories|missed|balance|goal|exadd|exremove|exswap|foodlog|weighlog|kreps|ksets|krest|kfreq|kvolume|kdur)$/.test(iid)){
       p(a,t("First, the assessment: a few questions, and the coach builds your targets, training and meals. Then I can answer from your own plan."));
       act(a,t("Start the assessment"),{"data-setup":"1"});}
-    else{try{fn(a,text,it);}catch(e){a=aUnknown(A());}}
+    else{try{fn(a,text,it);}catch(e){a=aUnknown(A());}
+      /* The last check (js/coach/guard.js): an answer that breaks the contract is not
+         sent; the coach says it is not sure, with the nearest things it can do. */
+      if(!id&&!a.ag&&iid!=="unknown"){var gd=checked(a,iid,R);
+        if(!gd.ok){a=aUnknown(A(),text,it);iid="unknown";it.guard=gd.why;}}}
     /* A shaky reading (intent.js unsure): the answer, and under it the other things the
        words could have meant, one tap each (owner, 27 Oct). */
     var alt=!id&&it.unsure&&iid===it.id?(it.ranked||[]).filter(function(x){return x!==iid&&ACTION_IDS.indexOf(x)<0&&ASK[x];}).slice(0,2):[];
@@ -2081,6 +2122,9 @@ function follow(at,i){
     if(ag.act==="exercise.add"&&ag.p&&ag.p.q){
       var own={q:t("None of these"),id:m.id,at:Date.now(),b:[],acts:[],lang:L,ag:createAsk(ag.p.q,{day:ag.p.day||""})};
       S.chat=(S.chat||[]).concat([own]).slice(-KEEP);return own;}
+    /* One of several foods: that one is named as not in the list, and the rest go on. */
+    if(ag.act==="food.logMany"){var nm=null;try{nm=proceed(ag,"");}catch(e){nm=null;}
+      if(nm){var om={q:t("None of these"),id:m.id,at:Date.now(),b:[],acts:nm.acts||[],ag:nm,lang:L};S.chat=(S.chat||[]).concat([om]).slice(-KEEP);return om;}}
     var none={q:t("None of these"),id:m.id,at:Date.now(),b:[],acts:[],lang:L,ag:ag.what==="food"
       ?{s:"say",lead:t("Then it isn't in the food list. Food can add it as one of your own foods."),acts:[{l:t("Open Food"),a:{"data-tab":"food"}}]}
       :{s:"say",lead:t("Then it isn't in the library. The picker on any day lists every exercise, and can add one of your own."),acts:[{l:t("Open Training"),a:{"data-tab":"train"}}]}};
@@ -2144,9 +2188,10 @@ function blocks(list){
   var h="";
   list.forEach(function(x){
     if(!x)return;
-    if(x.p!=null)h+='<p>'+esc(String(x.p))+'</p>';
-    else if(Array.isArray(x.l))h+='<ul class="chat-l">'+x.l.map(function(i){return '<li>'+esc(String(i))+'</li>';}).join("")+'</ul>';
-    else if(x.n!=null)h+='<p class="chat-n">'+glyph("info")+'<span>'+esc(String(x.n))+'</span></p>';});
+    /* Figures in .num, as the lead's, so bidi does not reorder them in Arabic. */
+    if(x.p!=null)h+='<p>'+figures(String(x.p))+'</p>';
+    else if(Array.isArray(x.l))h+='<ul class="chat-l">'+x.l.map(function(i){return '<li>'+figures(String(i))+'</li>';}).join("")+'</ul>';
+    else if(x.n!=null)h+='<p class="chat-n">'+glyph("info")+'<span>'+figures(String(x.n))+'</span></p>';});
   return h;}
 /* A kept conversation comes back from storage and from backups, so a button is only
    ever its label and data-* attributes the app itself acts on. */
@@ -2207,6 +2252,8 @@ function bubbleIn(m,live,L,prev,ro){
 function missHtml(m,live,ro){
   /* Never under a safety reply: its words are fixed, and nothing is offered after them. */
   if(!live||ro||!m||!m.q||m.id==="app"&&!m.ag||m.safety||m.id==="safety")return "";
+  /* Under a clarifying question it would ask twice: that question is already asking. */
+  if(m.id==="clarify")return "";
   if(m.miss)return '<p class="chat-missd" data-k="miss'+esc(String(m.at))+'">'+esc(t("Kept, thanks. Try saying it another way, or tap a question below."))+'</p>'
     +(m.id!=="smart"&&m.id!=="safety"&&!m.safety&&isReady()&&!isSafety(m.qq||m.q)?'<button class="chat-altb" data-smarttry="'+esc(String(m.at))+'">'+esc(t("Let the smart coach try"))+'</button>':'');
   return '<button class="chat-miss" data-chatmiss="'+esc(String(m.at))+'" data-k="miss'+esc(String(m.at))+'">'+esc(t("Not what I asked"))+'</button>';}
@@ -2248,7 +2295,7 @@ function askNext(last,n){
   return withLang(LL,function(){return '<div class="chat-next'+(slim?' slim':'')+'" lang="'+LL+'" dir="'+(LL==="ar"?"rtl":"ltr")+'"'
     +(slim?' role="group" aria-label="'+esc(t("Ask next"))+'">':'><div class="chat-next-h">'+esc(t("Ask next"))+'</div>')
     /* What the answer already offers under "Or did you mean" is not offered twice. */
-    +chips((last.id==="faq"&&faqById(last.faq)?FAQNEXT[faqById(last.faq).group]||NEXT.unknown:NEXT[last.id]||NEXT.unknown).filter(function(x){return !(Array.isArray(last.alt)&&last.alt.indexOf(x)>=0);}),"",own)+'</div>';});}
+    +chips((last.id==="faq"&&faqById(last.faq)?FAQNEXT[faqById(last.faq).group]||NEXT.unknown:NEXT[last.id]||NEXT.unknown).filter(function(x){return !(Array.isArray(last.alt)&&last.alt.indexOf(x)>=0)&&!(last.acts||[]).some(function(b){return b&&b.a&&b.a["data-chatq"]===x;});}),"",own)+'</div>';});}
 
 /* ---- the chat history (Profile → Chat history) ----------------------------------
    Thirty days of the conversation, by day, newest day first, to read: nothing in it
