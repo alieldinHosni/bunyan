@@ -24,7 +24,7 @@ import {sessionById, ensureSessionIds, dayOf, dayRec, S, split} from "../state.j
 import {blockNow} from "../engine/blocks.js";
 import {missedNow} from "../engine/missed.js";
 import {friends, snapStats} from "../engine/share.js";
-import {fmtW, inLb, toDisp, wUnit} from "../units.js";
+import {fmtEst, fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {dfmt, esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
 import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, STAR8, stepperInput, V} from "./view.js";
 import {art} from "./art.js";
@@ -340,12 +340,14 @@ function vSheet(){
   else if(V.sheet==="sessmore"){
     var sm=S.active,smE=sm&&sm.entries[V.logIdx];
     if(!smE)return "";
-    /* Only what is nowhere else on the screen (owner, 27 Oct): the coach has its
-       button in the header, how to do it is ⓘ, the plates are under the weight, and
-       finishing or throwing the workout away is the close button's question. */
+    /* Only what is nowhere else on the screen (owner, 27 Oct): how to do it is ⓘ, the
+       plates are under the weight, and finishing or throwing the workout away is the
+       close button's question. The coach is here since WP-3 (the header keeps four
+       controls). */
     b='<h2>'+t("Session")+'</h2>'
      +'<p class="sub" style="margin:2px 0 16px">'+esc(exName(smE.name))+'</p>'
      +'<div class="list">'
+     +'<button class="item" data-coachopen="1"><span>'+t("Ask Coach")+'</span><span class="chev">›</span></button>'
      +'<button class="item" data-note="1"><span>'+t("Session note")+'</span>'
      +(sm.notes?'<span class="pill a">'+t("Saved")+'</span>':'<span class="chev">›</span>')+'</button>'
      /* The warm-up again, whenever it is wanted: after skipping it, or before a
@@ -515,6 +517,22 @@ function vSheet(){
   }
   /* Progress: a lift's own page, the month in review, two photos compared. */
   /* The dose's words, said plainly (the workout's chips). */
+  else if(V.sheet==="explain"&&V.sd&&V.sd.k==="dose"){
+    /* The stage's one line (views/session.js doseLine): reserve and tempo together. */
+    var ap=S.active&&S.active.entries[V.logIdx],pp=(ap&&ap.planned)||{};
+    b='<div class="se-top"><span class="se-k">'+t("What it means")+'</span><h2>'+esc(t("Today's target"))+'</h2></div>'
+     +(pp.rir!=null?'<h3 class="se-h">'+esc(t("Reps in reserve"))+'</h3><p class="shsub">'+esc(t("How many more good reps you could still have done when you stop the set. 3 in reserve means you stop with about three left in you: hard, but not to failure."))+'</p>':'')
+     +(pp.tempo&&/[\dX]-[\dX]-[\dX]-[\dX]/.test(pp.tempo)?'<h3 class="se-h">'+esc(t("Tempo"))+'</h3><p class="shsub">'+esc(t("Seconds for each part of a rep: lowering, the pause at the bottom, lifting, the pause at the top. 4-2-1-1 is four seconds down, two held, one up, one at the top. Slow lowering builds control."))
+       .replace("4-2-1-1",'<bdi class="num" dir="ltr">4-2-1-1</bdi>')+'</p>':'')
+     +'<button class="btn" data-close="1">'+t("Got it")+'</button>';}
+  /* How you feel, asked on Start, before the workout (WP-3): the answer sets today's
+     suggestions (engine readiness rules, unchanged); Skip starts it all the same. */
+  else if(V.sheet==="ready"){
+    b='<h2>'+t("How do you feel today?")+'</h2>'
+     +'<p class="shsub">'+esc(t("A low day makes today's suggestions lighter."))+'</p>'
+     +'<div class="ready-c rdy-c" role="group" aria-label="'+esc(t("How do you feel today?"))+'">'
+     +[[1,"Drained"],[2,"Low"],[3,"OK"],[4,"Good"],[5,"Great"]].map(function(x){return hb('<button data-readygo="'+x[0]+'">'+t(x[1])+'</button>');}).join("")
+     +'</div><button class="btn g rdy-skip" data-readygo="0">'+t("Skip")+'</button>';}
   else if(V.sheet==="explain"){var xk=V.sd&&V.sd.k;
     b='<div class="se-top"><span class="se-k">'+t("What it means")+'</span><h2>'+esc(t(xk==="tempo"?"Tempo":"Reps in reserve"))+'</h2></div>'
      +'<p class="shsub">'+esc(t(xk==="tempo"
@@ -827,7 +845,7 @@ function vSheet(){
       b+='<button class="btn exd-add" data-pickex="'+esc(nD)+'">'+t("Add to workout")+'</button>';
     if(prD.w)b+='<div class="exd-h">'+t("Your record")+'</div><div class="wc2-stats">'
      +'<div><b>'+fmtW(prD.w)+'</b><span>'+t("Heaviest")+'</span></div>'
-     +'<div><b>'+(prD.e?fmtW(prD.e):"\u2014")+'</b><span>'+t("Best 1RM")+'</span></div>'
+     +'<div><b>'+(prD.e?fmtEst(prD.e):"\u2014")+'</b><span>'+t("Best estimated max")+'</span></div>'
      +'<div><b>'+fmtN(prD.vol)+'</b><span>'+t("Best set")+'</span></div></div>';
     /* The star lives in the sheet header now, beside the \u2715, where a long exercise
        name wrapping to two lines cannot push it around. "Never suggest" is gone
@@ -943,8 +961,8 @@ function vSheet(){
              +(x.kcal?' · '+fmtN(x.kcal)+' kcal':'');}).join('<br>')+'</div></div>';
         return;}
       b+='<div class="card"><div class="row"><span class="tiny">'+pretty(r.d)+'</span>'
-       +'<span class="tiny">'+fmtW(volume(r.s,nm3,r.d))+' \u00b7 1RM '
-       +(bestE1RM(r.s,nm3,r.d)?toDisp(bestE1RM(r.s,nm3,r.d)):"\u2014")+'</span></div>'
+       +'<span class="tiny">'+fmtW(volume(r.s,nm3,r.d))+' \u00b7 '+t("estimated max")+' '
+       +(bestE1RM(r.s,nm3,r.d)?fmtEst(bestE1RM(r.s,nm3,r.d)):"\u2014")+'</span></div>'
        +'<div class="num mt" style="font-size:15px">'+r.s.map(function(x){
           /* A bodyweight lift shows what was added: "+10 × 6". */
           return x.w?(bwShare(nm3)?'+':'')+toDisp(x.w)+' \u00d7 '+x.r+(x.rpe?' <span class="tiny">@'+x.rpe+'</span>':''):x.r;

@@ -44,10 +44,12 @@ function paint(){
     els[i].classList.add("timing");}
   if(s.left<=0){var done=H.done;stopHold();play("set");tap("ok");if(done)done();}}
 
-function startHold(key,secs,side,done){
+/* at: when it began, for a hold carried on after a reload (the workout's own set, kept on
+   the open workout: workout.js holdStart); now when it is left out. */
+function startHold(key,secs,side,done,at){
   stopHold();
   var total=secs*(side?2:1);
-  H={key:key,total:total,half:side?secs:0,end:Date.now()+total*1000,done:done,switched:false};
+  H={key:key,total:total,half:side?secs:0,end:(at||Date.now())+total*1000,done:done,switched:false};
   H.timer=setInterval(paint,200);
   paint();}
 
