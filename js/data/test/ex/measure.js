@@ -4,7 +4,7 @@
 import {V} from "../../mannequin/geom.js";
 import {bodyParts} from "../../mannequin/capsules.js";
 import {audit, jointSpeed, slide} from "../../mannequin/collide.js";
-import {recordFor} from "../../mannequin/records.js";
+import {recordFor, checkedOf, versionOf} from "../../mannequin/records.js";
 
 const D=180/Math.PI;
 /* the angle between two directions, in degrees */
@@ -51,5 +51,8 @@ function auditAll(t,name,rec){
   t.ok(!a.limits.length,name+": every joint inside its limits"+say(a.limits));
   t.ok(sp.pass,name+": no joint faster than the limit ("+sp.speed.toFixed(1)+" m/s, "+sp.joint+")");
   t.ok(!sl.length,name+": no planted foot or gripping hand slides"+(sl.length?" — "+sl.map(x=>x.part).join(", "):""));
-  t.ok(recordFor(name)===null,name+": not reachable from the app until the owner has reviewed it (no checked)");}
+  /* Approved by the owner from its pictures (docs/figures/ex/), against this exact
+     record: if the movement changes, the approval stops counting and this fails until
+     the exercise is reviewed again and its version updated in moves.js TABLE. */
+  t.ok(!!checkedOf(name)&&!!recordFor(name),name+": approved, and the approval matches this record (version "+versionOf(name)+")");}
 export {D, deg, bend, knee, elbow, hipFlex, mid, barOf, centreOfMass, footSpan, moments, f1, cm, auditAll};

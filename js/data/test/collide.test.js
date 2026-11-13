@@ -79,6 +79,10 @@ function run(t){
   t.eq(all.filter(n=>!!recordFor(n)!==isChecked(n)),[],"recordFor gives exactly the checked ones");
   t.eq(all.filter(n=>checkedOf(n)&&!audit(recordForUnchecked(n),41).pass),[],"every checked record passes every automatic check (2.6: checked only when they hold)");
   t.ok(all.every(n=>recordForUnchecked(n)),"the tools still reach every record");
+  t.eq(all.filter(n=>checkedOf(n)).sort(),["Incline Dumbbell Press","Pullups","Romanian Deadlift"],"approved by the owner, one by one (13 Nov): exactly these");
+  { const row=TABLE["Pullups"][2],was=row.version;row.version="00000000";
+    t.ok(!checkedOf("Pullups")&&!recordFor("Pullups"),"an approval given against another version of the movement does not count");
+    row.version=was; }
   const undo=markCheckedForTest("Barbell Curl");
   t.ok(recordFor("Barbell Curl")===recordForUnchecked("Barbell Curl"),"the test hook marks one checked");
   undo();

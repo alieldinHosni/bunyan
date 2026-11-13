@@ -122,7 +122,7 @@ bar. A pure side view is blocked by the frame's upright, which stands in the bar
 
 ## Review
 
-**Ready for owner review — 2026-11-12.** Not marked `checked`.
+**Approved by the owner on 2026-11-13** from the review pictures (start, middle and end, both sides), with the choices above as drawn. Marked `checked` in `moves.js` TABLE against the record's current version; any change to the movement withdraws the approval until it is reviewed again.
 
 Pictures (not in the repository): `review/Pullups/` in the session's scratch folder:
 `cam-u0/u0.5/u1.png` (the record's view), `opp-u0/u0.5/u1.png` (the opposite side),
