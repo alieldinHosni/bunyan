@@ -4565,3 +4565,51 @@ docs/COACH-AGENT.md 2.2 and 2.8. CACHE `bunyan-v258`.
 - Tests: architecture, engine (826), coach (784) pass; `node --check tests/regression.mjs`; browser tests ONLY="igure|3D|annequin": 22 passed, 0 failed.
 
 **First three figures approved and shown (13 Nov).** The owner approved Romanian Deadlift, Pullups and Incline Dumbbell Press from their review pictures, with the choices as drawn (the RDL stopping about 3 cm above the knee, the pull-up's 22° lean and 74 cm grip, the press's depth and its elbows opening to about 86° halfway up). They are marked `checked` on their rows of `moves.js` TABLE, `{by:"owner", on:"2026-11-13", version}`, so the exercise sheet now shows their 3D figure; every other exercise still shows its photographs. The version is now enforced, as FIGURE-V3 2.6 asked: `records.js versionOf(name)` hashes the record exactly as the families build it, and `checkedOf` counts an approval only when its version matches, so any later change to one of these movements withdraws its approval until it is reviewed again (the per-exercise test then fails and says so). `markCheckedForTest` uses the real version. New unit checks: exactly these three are approved, and an approval against another version does not count. The dossiers record the approval.
+
+## WP-2: Training opens on one Today card that leads the day — branch session/today-card (v266)
+
+- New `todayPlan(iso)` in `js/engine/head.js` (no DOM): {state, session, lead, line, other, house, next, light, travel,
+  food}. state is setup (no assessment), resume (a workout open), none (no training days), done, rest, light (a training
+  day inside a lighter week), train (planned, not done), plan / past (another day picked on the week). lead is
+  `headNow().lead` when pri ≥ 60; a lighter week already running is the card's status, not a lead. What may be said is
+  ranked once: the lead, else the coach's fresher-day offer for today's session (engine/recovery.js swapAdvice, moved
+  out of the view), else Training's own signals (the missed day), else the word on tomorrow (also moved out of the
+  view). The first is the card's line; the next is the page's one other card; house is the one housekeeping signal the
+  head keeps (rule 5). The view decides nothing: `train.js` no longer imports swapAdvice or headOn.
+- Training, top to bottom: greeting and date; the Today card (`.thero2.tdc`, `data-k="today"`, `data-state`); the week;
+  weight and steps; at most one other prompt card; the last run, cardio, your program; the housekeeping card at the
+  foot. Prompt cards carry `data-prompt`; never more than two (other + house).
+- The card: the session's name, its exercises by name (three and "+N", figures in .num), exercises and minutes, Start
+  workout (or Resume; Done with the session's figures, View session and the next session; Rest day with "Next up ·
+  Pull · tomorrow" and Train anyway; Nothing planned → Plan your training; nothing set up → Start the assessment). A
+  lighter week or travel mode running is a status row inside it with End it. The lead is one line under a hairline with
+  one button and its quiet Not now / Keep it as it is: "Time for a lighter week" + why → Start a lighter week
+  (`data-deload="start"`, the existing handler); a plan check finding → its fix (`data-pcfix`); a coach insight → its
+  button (`data-cofix`); the stress card → Open in Coach. A missed day or the fresher-day offer, when they take the line,
+  keep their own wording and choices (the owner asked for Log it / Adjust / Skip), drawn flat inside the card with one
+  main button and the rest as quiet text buttons.
+- Moved or merged: the separate "Time for a lighter week" card (now the line; still drawn as a card only when something
+  higher leads), the lighter-week-running and travel cards (status rows in the card), the resume card (the same card),
+  the "Build my plan" reminder (the setup state of the card), the backup / weigh-in reminder (from first place to the
+  foot), recoCard / aheadCard / missedCard (line or the one other card, chosen by todayPlan).
+- Dismissals and a finished set go through render(), whose keyed patcher changes only the card: tested by keeping
+  every node outside it across Start a lighter week, Not now, and a set logged in a workout left open.
+- New string, with Egyptian Arabic: "Open in Coach". Everything else reuses existing entries. CSS: `.tdc*` in index.html,
+  spacing and radius from tokens; the day's name sits `--s3` below its label so a thumb on it is not snapped to
+  Change's 44 px hit area (Chromium's touch adjustment did exactly that once the card was the top of the page).
+- Tests: head.test.js +13 (states, the line, the lead after a dismissal, light not a lead, done with next, resume, rest,
+  another day without the line, setup). Four browser tests: the seeded profile's card and order with Start workout in
+  view at 390×844 and 375×667 in both languages and the lighter week starting from the line with only the card changing;
+  every state (train, nothing leading, light, rest, done, resume, missed, none, setup) in English and Arabic at 390×844
+  and 320×640, main action in view, no overflow, figures in .num, no English left in Arabic, one tap reaching what it
+  says; a profile that triggers every prompt (lighter week, missed day, backup, weigh-in) shows two prompt cards plus
+  the line; a finished set and offline.
+- Existing tests changed, none weakened: the four "Coach and Training" tests read the lighter week from the Today
+  card's line (`[data-k="lead:deload-due"]`) instead of `.dlcard`, and the first now also asserts there is no separate
+  card (the doc's acceptance). "Main tabs … a swipe": its Training drag started at y 650, which is now the week (it
+  keeps its own swipe); it starts on the Today card's text instead.
+  "Tomorrow follows today, live…": on weekdays its setup leaves this week's earlier days unlogged, so the missed day
+  is the one other card and the word on tomorrow waits (before, all three cards showed at once). The test now asserts
+  the missed day holds that place, skips it (and any next one), then checks the word on tomorrow as before.
+- Not done / open: `food` is returned (the day's kcal and protein targets) but not drawn: what to eat around the session
+  is WP-5. A day taken off by hand ("rest" swap) has no Train anyway, as before.

@@ -1,10 +1,9 @@
 /* Bunyan — the top of the Training page
    There is no Home tab any more: Training is where the app opens. What Home had that
-   belongs to the day lives on: the greeting, one reminder at most, and the weigh-in
+   belongs to the day lives on: the greeting, one reminder at most (now at the foot), the weigh-in
    and steps tiles here; calories and water on Food; the coach's advice in Coach. */
 import {t} from "../../i18n/dict.js";
 import {lastWeight} from "../../engine/formulas.js";
-import {headOn} from "../../engine/head.js";
 import {weightChange} from "../../engine/stats.js";
 import {curProfile, dayRec, S} from "../../state.js";
 import {toDisp, wUnit} from "../../units.js";
@@ -29,27 +28,31 @@ function ownName(){
   return n&&n!=="Me"?n:"";
 }
 
-/* One reminder at most: the assessment that builds the plan, else the backup or the
+/* Nothing set up yet: the assessment that builds the plan is what to do now, so it is the
+   Today card itself (WP-2), in the card's own frame. */
+function setupCard(){
+  return '<div class="thero2 tdc live" data-k="today" data-state="setup">'
+   +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'
+   +'<div class="thero2-top"><span class="tbadge" aria-hidden="true">'+glyph("person")+'</span>'
+   +'<div class="thero2-t"><div class="thero2-k"><span class="klabel">'+esc(t("Start here"))+'</span></div>'
+   +'<div class="thero2-n">'+esc(t("Build my plan"))+'</div>'
+   +'<div class="thero2-m">'+esc(t("A short assessment, and the coach builds your daily targets, your training and a meal plan, and puts them here and on Food."))+'</div></div></div>'
+   +'<button class="btn" data-setup="1">'+esc(t("Start the assessment"))+'</button></div>';}
+/* The one housekeeping card of the day, at the foot of Training: the backup or the
    weigh-in, whichever the head (js/engine/head.js) keeps for today (one a day, by its
-   housekeeping rule). (A lighter week has its own card on this page, and the coach's
-   advice its own place in Coach.) */
-function reminder(){
-  if(!S.onboarded)
-    return '<button class="card tap hot hnote" data-k="hk:setup" data-setup="1"><div class="row"><h3>'+t("Build my plan")+'</h3>'
-     +'<span class="pill a">'+t("Start here")+'</span></div>'
-     +'<p class="tiny" style="margin:6px 0 0">'+t("A short assessment, and the coach builds your daily targets, your training and a meal plan, and puts them here and on Food.")+'</p></button>';
-  var hk=headOn("train").filter(function(s){return s.source==="housekeeping";})[0];
+   housekeeping rule; it never leads). hk: that signal, from todayPlan().house. */
+function houseCard(hk){
   if(hk&&hk.id==="backup"){
     var age=hk.src.age;
-    return '<div class="card hnote gold" data-k="hk:backup"><h3>'+t("Back up your history")+'</h3>'
+    return '<div class="card hnote gold" data-k="hk:backup" data-prompt="1"><h3>'+t("Back up your history")+'</h3>'
      +'<p class="tiny" style="margin:6px 0 0">'
      +(age===null?t("You have never exported a backup. Everything lives in this browser — clearing its data would take your whole log with it.")
-        :t("Your last backup was")+' '+age+' '+t("days ago."))+'</p>'
+        :t("Your last backup was")+' <span class="num">'+age+'</span> '+t("days ago."))+'</p>'
      +'<div class="rowc mt"><button class="btn sm" data-export="1">'+t("Export a backup")+'</button>'
      +'<button class="btn d sm" data-snoozebackup="1">'+t("Not now")+'</button></div></div>';}
   var wd=hk&&hk.id==="weigh-in"?hk.src:null;
   if(wd)
-    return '<button class="card tap hnote" data-k="hk:weigh" data-sheet="weigh"><h3>'+t("Time to weigh in")+'</h3>'
+    return '<button class="card tap hnote" data-k="hk:weigh" data-sheet="weigh" data-prompt="1"><h3>'+t("Time to weigh in")+'</h3>'
      +'<p class="tiny" style="margin:6px 0 0">'+t(wd.last?"A week since the last one. Mornings, before eating, compare best.":"One weigh-in starts your trend. Mornings, before eating, compare best.")+'</p></button>';
   return "";}
 /* A tile: its icon in a round glass button at the top corner, the label, the figure and a
@@ -67,9 +70,8 @@ function tile(attr,cls,icon,label,value,sub,aria,ring,met){
 var HI={
   steps:'<path d="M8 3c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM6 16h4v2a2 2 0 0 1-4 0zM16 7c2 0 3 2 3 5s-1 5-3 5-3-2-3-5 1-5 3-5zM14 20h4"/>',
   weight:'<path d="M5 20h14l-2-12H7zM9 8a3 3 0 0 1 6 0M12 12v3"/>'};
-/* The greeting under a drawing for the time of day, then the one reminder. At the top
-   right, two round glass buttons: the bell, which opens what the coach has noticed and
-   carries a dot while there is something, and the person, which opens Profile. */
+/* The greeting and the date under a drawing for the time of day. At the top right, the
+   person, which opens Profile. Nothing else: the Today card comes next (WP-2). */
 function trainTop(){
   var name=ownName(),hr=new Date().getHours(),scene=hr<12?"sunrise":hr<17?"sun":"moon";
   return '<div class="hgreet">'+art(scene,{cls:"hgreet-art"})+'<div class="hgreet-t">'
@@ -82,7 +84,7 @@ function trainTop(){
       the same page and carries the same dot. */
    +'<button class="hbtn havatar" data-prof="1" aria-label="'+esc(t("Profile"))+'">'
    +(S.profile.photo||name?avatar(name,"",true):glyph("person"))+'</button>'
-   +'</div></div>'+reminder();}
+   +'</div></div>';}
 /* Weigh-in and steps, each one tap into its one-field sheet. */
 function bodyTiles(){
   var g=S.goals,r=dayRec(today()),kg=lastWeight(),wc=weightChange();
@@ -97,4 +99,4 @@ function bodyTiles(){
       g.steps?(r.steps||0)/g.steps:null,g.steps>0&&(r.steps||0)>=g.steps)
    +'</div>';}
 
-export {bodyTiles, trainTop};
+export {bodyTiles, houseCard, setupCard, trainTop};

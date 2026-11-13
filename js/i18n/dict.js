@@ -2958,7 +2958,9 @@ var AR={"Number keypad": "لوحة الأرقام",
 "That's outside what I do.": "ده برا اللي بعمله.",
 "Dumbbells": "دمبلز",
 "A hotel gym": "جيم فندق",
-"last week": "الأسبوع اللي فات"
+"last week": "الأسبوع اللي فات",
+/* The Today card (WP-2) */
+"Open in Coach": "افتحها في الكوتش"
 };
 /* Coaching cues (js/knowledge/cues.js AR) join the dictionary; the app's own strings win on a clash. */
 for(var ck in CUE_AR)if(!(ck in AR))AR[ck]=CUE_AR[ck];

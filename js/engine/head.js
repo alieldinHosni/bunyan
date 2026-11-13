@@ -65,6 +65,9 @@
    headOn(page)   what a page draws, in the head's order: the lead first when it is the
                   page's own, then headFor(page). Every signal belongs to one page, so no
                   advice is drawn on two, and the lead tops one page only.
+   todayPlan(iso) the Training page's Today card (WP-2): what the day is (state), its
+                  session, the lead worth a line in the card, and the at most one other
+                  prompt and one housekeeping card the page may draw below it.
    Worked out once per change to the data (dataRev), per day and per hour (the Food
    page's "behind for the time of day" moves with the clock). */
 import {checkPlansAll, pcKept, planTotals} from "./plancheck.js";
@@ -78,6 +81,8 @@ import {missedNow} from "./missed.js";
 import {bodyNeedsOf} from "./needs.js";
 import {sumNutrition} from "./intake.js";
 import {weeklyVolume} from "../coach/volume.js";
+import {addDaysISO, planOn} from "./dayplan.js";
+import {swapAdvice} from "./recovery.js";
 import {dayNo} from "../coach/util.js";
 import {EXDB, muscleOf, secondaryOf} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
@@ -351,5 +356,75 @@ function headWhy(id){
   var x=headNow().suppressed.filter(function(s){return s.id===id;})[0];
   return x?x.why:null;}
 
+/* ================================================================ today (WP-2) ====
+   What the top of Training says: what to do now. Read from the head and today's plan; the
+   page only draws it.
+     state    setup (no assessment yet) | resume (a workout is open) | none (the program
+              has no training days) | done (trained that day) | rest | light (a training
+              day inside a lighter week) | train (a session planned, not done) | plan (a
+              day still ahead) | past (a day gone with nothing logged)
+     session  the day of the program it is ({day, name}), or the session done
+     lead     headNow().lead when it is worth leading the day with (pri >= 60). A lighter
+              week already running is the card's own status (light), not a lead.
+     line     the one prompt drawn inside the card, today only: the lead, else what the
+              coach says about today's session (a fresher day), else what Training's own
+              signals say (a missed day), else a word on tomorrow
+     other    the next of those, drawn as its own card below the day: at most one
+     house    the one housekeeping signal the head keeps for the day (backup, weigh-in),
+              drawn at the foot of the page
+     next     the next session, on a day done or a rest day ({date, name})
+     light    the lighter week running ({until, planned}); travel ({until}) likewise
+     food     the day's targets the plan sets ({kcal, p}), for the card to grow into
+   Never more than two prompt cards on the page: other and house. */
+var LEAD=60;
+function nextSession(sp,iso){
+  for(var i=1;i<=14;i++){var d=addDaysISO(iso,i),p=planOn(sp,d);
+    if(p&&p.day&&!p.rest&&(p.kind==="plan"||p.kind==="today"))return {date:d,name:p.name,day:p.day};}
+  return null;}
+/* Tomorrow, from today: the fresher day the coach would train instead, or, in a rotation
+   changed by hand today, what tomorrow follows on with. */
+function aheadOf(sp,iso){
+  var tm=addDaysISO(iso,1),p1=planOn(sp,tm),s=swapAdvice(sp,tm,p1);
+  if(s)return {kind:"swap",id:"ahead"+iso,swap:s,date:tm,ahead:true};
+  var p0=planOn(sp,iso);
+  if(sp.schedule!=="week"&&S.daySwap&&S.daySwap[iso]&&p0.swapped&&p0.day&&p1&&p1.day&&!p1.rest)
+    return {kind:"note",id:"ahead"+iso,from:p0.day.name,to:p1.day.name,date:tm};
+  return null;}
+function todayPlan(iso){
+  var now=today();iso=iso||now;
+  var isNow=iso===now,sp=split(),g=S.goals||{};
+  var r={date:iso,state:null,session:null,plan:null,lead:null,line:null,other:null,house:null,next:null,light:null,travel:null,
+    food:num(g.kcal)>0?{kcal:num(g.kcal),p:num(g.p)||null}:null};
+  if(!S||!S.onboarded){r.state="setup";return r;}
+  var h=headNow(),train=headOn("train");
+  r.house=train.filter(function(s){return s.source==="housekeeping";})[0]||null;
+  var p=sp?planOn(sp,iso):{kind:"none"};r.plan=p;
+  if(isNow&&S.active)r.state="resume";
+  else if(p.kind==="none")r.state="none";
+  else if(p.kind==="done")r.state="done";
+  else if(p.kind==="past")r.state="past";
+  else if(p.rest)r.state="rest";
+  else r.state=!isNow?"plan":inDeload()?"light":"train";
+  if(r.state==="resume")r.session={name:S.active.dayName,day:null};
+  else if(p.kind==="done")r.session={name:p.name,day:p.day||null,done:p.session};
+  else if(p.day&&!p.rest)r.session={name:p.name,day:p.day};
+  if(sp&&(r.state==="done"||r.state==="rest"))r.next=nextSession(sp,iso);
+  var on=h.queue.filter(function(s){return s.id==="deload-on";})[0];
+  if(on)r.light={until:on.src.until,planned:!!on.src.planned};
+  var tv=S.travel;if(tv&&tv.until&&now<=tv.until)r.travel={until:tv.until};
+  var l=h.lead;r.lead=l&&l.pri>=LEAD&&l.id!=="deload-on"?l:null;
+  /* What may be said, in order; the first is the card's line, the next its one other card. */
+  var says=[];
+  if(isNow&&r.lead)says.push({kind:"lead",id:r.lead.id,sig:r.lead});
+  var sw=sp&&(r.state==="train"||r.state==="light"||r.state==="plan")?swapAdvice(sp,iso,p):null;
+  if(sw)says.push({kind:"swap",id:"reco"+iso,swap:sw,date:iso});
+  if(isNow)train.forEach(function(s){
+    if(s===r.lead||s.source==="housekeeping"||s.id==="deload-on")return;
+    says.push({kind:"sig",id:s.id,sig:s});});
+  if(isNow&&sp){var a=aheadOf(sp,iso);if(a)says.push(a);}
+  if(isNow&&r.state!=="setup"){r.line=says[0]||null;r.other=says[1]||null;}
+  else r.other=says[0]||null;
+  return r;}
+
 export {COACH, CHECKIN, decide, headFor, headFresh, headNow, headOn, headWhy, isLighter, MONTHLY, pickLead, PLAN, planMapping, rank, ruleCalories,
-  ruleDeficit, ruleHousekeeping, ruleLighter, ruleMissed, ruleRecovery, ruleSaidOnce};
+  ruleDeficit, ruleHousekeeping, ruleLighter, ruleMissed, ruleRecovery, ruleSaidOnce, todayPlan};
