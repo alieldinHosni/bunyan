@@ -188,7 +188,10 @@ function run(t){
   var other=todayPlan(addDays(1));
   t.eq([other.line,other.house&&other.house.id],[null,"backup"],"another day: no line in the card (the lead is today's)");
   var nb=fresh();nb.onboarded=false;saveDB();
-  t.eq([todayPlan().state,todayPlan().line],["setup",null],"nothing set up: the assessment is the card");
+  var ns=todayPlan();
+  t.ok(ns.state!=="setup"&&ns.line&&ns.line.kind==="setup","not set up, with a program that trains: the day as it is, the assessment as its line ("+ns.state+")");
+  split().days.forEach(function(d){d.ex=[];});saveDB();
+  t.eq([todayPlan().state,todayPlan().line],["setup",null],"not set up and nothing to train: the assessment is the card");
   fresh();}
 function addDays(n){var d=new Date(today()+"T00:00:00");d.setDate(d.getDate()+n);return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
 

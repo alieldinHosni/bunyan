@@ -4611,5 +4611,26 @@ docs/COACH-AGENT.md 2.2 and 2.8. CACHE `bunyan-v258`.
   "Tomorrow follows today, live…": on weekdays its setup leaves this week's earlier days unlogged, so the missed day
   is the one other card and the word on tomorrow waits (before, all three cards showed at once). The test now asserts
   the missed day holds that place, skips it (and any next one), then checks the word on tomorrow as before.
+- Review of #154 (amend):
+  (1) Not set up is the card's whole content (setup) only when there is no workout open and no program with training
+  days; otherwise the day is drawn as it is and "Build my plan · Start the assessment" is the card's line (before, a
+  new profile's default Full Body day was hidden behind the assessment).
+  (2) A rest day whose line moves a missed day to today no longer also offers "Train anyway · <next>" or "Add another
+  session today": one offer a day. At 320 × 640 Move it to today is in view without scrolling (tested).
+  (3) With the Next up line drawn, a rest day's meta is just "Recover." («ارتاح.»).
+  Also: Arabic exercise counts in the card's headline (تمرين, تمرينين, ٣–١٠ تمارين, ١١+ تمرين; new keys "1 exercise",
+  "2 exercises", "{n} exercises, eleven and up"; the existing "{n} exercises" is the 3–10 plural); «النهارده» for
+  "Today" and "Done today" (the dictionary had «النهاردة» there and «النهارده» everywhere else); the nothing-planned
+  name through t() (My program → برنامجي); a rest day with Train anyway no longer also offers Add another session;
+  Done's View session is quiet so Next up reads as the message; the card's End it for a lighter week now asks first
+  (confirm sheet, "End the lighter week?", act `deloadend`; the block card's own End it is unchanged, its test taps it
+  directly).
+- Prompt order (todayPlan): the assessment when not set up, then the head's lead (pri ≥ 60), the fresher day for
+  today's session, Training's own signals (the missed day), the word on tomorrow. The first is the line, the next
+  the one other card. The resume state drops the week strip and the program card on purpose: with a workout open,
+  the card's Resume is the one thing to do (as before WP-2).
+- CI on #154: "Drawings …" and "Dock with the swipe …" dragged across Training at y 650, now the week (its own swipe),
+  so no tab came in. The page swipe from the card works (the "Main tabs" test drags from it); their Training drags now
+  start on the Today card's text, as that test's does. Their Food and Coach drags are unchanged.
 - Not done / open: `food` is returned (the day's kcal and protein targets) but not drawn: what to eat around the session
   is WP-5. A day taken off by hand ("rest" swap) has no Train anyway, as before.

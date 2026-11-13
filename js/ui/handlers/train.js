@@ -104,6 +104,12 @@ function copyInSheet(){
   var done=false,on2=function(){go();},go=function(){if(done)return;done=true;window.removeEventListener("popstate",on2);setTimeout(function(){openSheet("timport");},0);};
   window.addEventListener("popstate",on2);
   goBack();setTimeout(go,700);}
+/* A lighter week ended today; a block's ending starts the next block. */
+function endDeload(){
+  var dl=S.deload=S.deload||{};
+  if(dl.until&&today()<=dl.until)dl.until=addDaysISO(today(),-1);
+  if(S.block){restartBlock(today());toast(t("A new training block starts today."));}}
+ACT.deloadend=function(){endDeload();saveDB();render();};
 function register(){
   /* A lighter week: started, put off for a week, or ended early. With training blocks
      running, the next block starts after it: the day after an unplanned one ends, or
@@ -115,9 +121,10 @@ function register(){
       if(S.block)restartAfter(dl.until);
       toast(t("Lighter week on. Your next workouts have fewer sets and lighter suggestions."));}
     else if(D.deload==="later"){dl.snooze=addDaysISO(today(),7);}
-    else if(D.deload==="end"){
-      if(dl.until&&today()<=dl.until)dl.until=addDaysISO(today(),-1);
-      if(S.block){restartBlock(today());toast(t("A new training block starts today."));}}
+    /* The Today card's End it asks first: a lighter week ended by a stray tap cannot be had back. */
+    else if(D.deload==="endask"){askConfirm({title:t("End the lighter week?"),body:t("Your next workouts go back to the full plan."),
+      cta:t("End it"),act:"deloadend",cancel:t("Keep it")});return;}
+    else if(D.deload==="end")endDeload();
     saveDB();render();return;});
   key("clearexq",function(){V.exq="";render();topOfResults();var qq=document.getElementById("exq");if(qq)qq.focus();return;});
   /* My program brought into line with a health condition (views/train.js builderBody). */

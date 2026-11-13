@@ -4501,8 +4501,10 @@ await test("Dock with the swipe (owner, 10 Nov: the highlight lagged behind the 
   const hlx=()=>page.evaluate(()=>{const h=document.querySelector("nav .dock-hl"),r=h.getBoundingClientRect();return r.left+r.width/2;});
   const btn=t=>page.evaluate(t=>{const r=document.querySelector('nav [data-tab="'+t+'"]').getBoundingClientRect();return r.left+r.width/2;},t);
   const x0=await hlx(),xf=await btn("food");
-  /* Half a screen's drag: the highlight is on its way, about half of it. */
-  await T("touchStart",330,650);for(let i=1;i<=10;i++){await T("touchMove",330-i*19,650);await page.waitForTimeout(16);}
+  /* Half a screen's drag: the highlight is on its way, about half of it. On Training y 650 is
+     the week since WP-2 (its own swipe): the drag starts on the Today card's text instead. */
+  const ty=await page.evaluate(()=>{const r=document.querySelector('#app [data-k="today"] .thero2-m').getBoundingClientRect();return Math.round(r.top+r.height/2);});
+  await T("touchStart",330,ty);for(let i=1;i<=10;i++){await T("touchMove",330-i*19,ty);await page.waitForTimeout(16);}
   const mid=await hlx(),share=(mid-x0)/(xf-x0);
   if(!(share>0.3&&share<0.75))throw new Error("the highlight is not following the finger: "+share.toFixed(2));
   /* The ground's picture blends with it: Food's coming in over Training's. */
@@ -4547,7 +4549,10 @@ await test("Drawings (owner, 10 Nov: they flashed then started, or stopped half 
   const cdp=await env.ctx.newCDPSession(page);
   const T=(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
   await tapTab(page,"train");await pause(page,2000);
-  await T("touchStart",330,650);for(let i=1;i<=12;i++){await T("touchMove",330-i*22,650);await page.waitForTimeout(16);}
+  /* y 650 on Training is the week since WP-2 put the Today card above it, and the week keeps
+     its own swipe (no tab comes in): the drag starts on the Today card's text, which has none. */
+  const ty=await page.evaluate(()=>{const r=document.querySelector('#app [data-k="today"] .thero2-m').getBoundingClientRect();return Math.round(r.top+r.height/2);});
+  await T("touchStart",330,ty);for(let i=1;i<=12;i++){await T("touchMove",330-i*22,ty);await page.waitForTimeout(16);}
   /* The page coming in is held at the start of its entrance: the loaf undrawn, the figure at 0. */
   const held=await page.evaluate(()=>{const w=document.querySelector(".stillcopy.peek");const p=w&&w.querySelector(".fthead .art path.a"),n=w&&w.querySelector(".fring2-n");
     return [p?parseFloat(getComputedStyle(p).strokeDashoffset):null,n?n.textContent:null];});
@@ -4909,7 +4914,10 @@ async function todayState(page,state){
       /* "all": the seed's log kept (its lighter week due) and no weigh-in for weeks, so every prompt wants a place. */
       if(state==="all"){s.body=[];}else{s.sessions=[];await calm();}}
     if(state==="none"){s.programs=[st.makeProgram({id:"empty",name:"PPL",days:[]})];s.activeProgram="empty";await calm();}
-    if(state==="setup")s.onboarded=false;
+    /* Not set up: with the seed's program, the day as it is and the assessment as the line;
+       with nothing to train, the assessment is the card. */
+    if(state==="setupday")s.onboarded=false;
+    if(state==="setup"){s.onboarded=false;s.programs=[st.makeProgram({id:"empty",name:"PPL",days:[]})];s.activeProgram="empty";}
     V.tab="train";V.train="days";V.tdate=null;st.saveDB();(await import("/js/engine/head.js")).headFresh();(await import("/js/ui/render.js")).render();
     if(state==="resume"){await calm();st.saveDB();document.querySelector('#app [data-startday]').click();await new Promise(r=>setTimeout(r,600));
       V.train="hub";(await import("/js/ui/render.js")).render();}
@@ -4917,7 +4925,7 @@ async function todayState(page,state){
     return (await import("/js/engine/head.js")).todayPlan();},state).then(tp=>({state:tp.state,line:tp.line&&tp.line.id,other:tp.other&&tp.other.id,house:tp.house&&tp.house.id}));}
 /* The card's main action, the selector each state draws it with. */
 const TODAY_MAIN={train:"[data-startday]",plain:"[data-startday]",light:"[data-startday]",rest:"[data-startday]",done:"[data-openday]",
-  resume:"[data-continue]",missed:'[data-missdo="move"]',none:'[data-csec="train"]',setup:"[data-setup]"};
+  resume:"[data-continue]",missed:'[data-missdo="move"]',none:'[data-csec="train"]',setupday:'[data-k="lead:setup"] [data-setup]',setup:"[data-setup]"};
 /* Where a box is on the screen: fully inside the viewport, above the dock. */
 const fullyIn=(page,sel)=>page.$eval(sel,e=>{const r=e.getBoundingClientRect(),nav=document.getElementById("nav"),top=nav?nav.getBoundingClientRect().top:innerHeight;
   return r.top>=0&&r.left>=0&&r.right<=innerWidth+0.5&&r.bottom<=Math.min(innerHeight,top)+0.5;});
@@ -4949,6 +4957,11 @@ await test("Today card: the top of Training is the one card that leads the day �
     return [c===window.__card,c.dataset.state,!!c.querySelector('[data-k="st:light"]'),!!c.querySelector('[data-k="lead:deload-due"]'),
       window.__kept.length>50&&window.__kept.filter(e=>!e.isConnected).length,!!(await import("/js/engine/formulas.js")).inDeload()];}),
     [true,"light",true,false,0,true],"the lighter week on: the same card, now light with its status, the line gone; every node outside it the same");
+  /* End it asks first (review of #154): Keep it changes nothing, End it ends the week. */
+  await page.tap('#app [data-k="st:light"] [data-deload="endask"]');await pause(page,500);
+  eq(await ev(page,"[V.sheet,/End the lighter week/.test(document.getElementById('sheet').innerText)]"),["confirm",true],"End it asks");
+  await page.tap('#sheet [data-confirmok]');await pause(page,500);
+  eq(await page.evaluate(async()=>[!!(await import("/js/engine/formulas.js")).inDeload(),!!document.querySelector('#app [data-k="st:light"]')]),[false,false],"ended after the confirm");
 },{db:seedNov5(),init:clockAt(2026,11,5)});
 await test("Today card: every state — a training day, nothing leading, a lighter week, a rest day, done, in progress, a missed day, nothing planned, nothing set up — is drawn in English and Arabic, at 390 × 844 and 320 × 640, with its main action in view, nothing wider than the screen, and one tap reaching what it says",async page=>{
   const db=JSON.stringify(seedNov5());
@@ -4958,13 +4971,12 @@ await test("Today card: every state — a training day, nothing leading, a light
       await page.evaluate(([db,lang])=>{const d=JSON.parse(db);d.prefs.lang=lang;localStorage.setItem("bunyan:db:me",JSON.stringify(d));},[db,lang]);
       await page.reload();await pause(page,900);
       const tp=await todayState(page,state);
-      const want=state==="plain"||state==="train"?"train":state==="missed"?null:state;
+      const want=state==="plain"||state==="train"||state==="setupday"?"train":state==="missed"?"rest":state;
       if(want)eq(tp.state,want,state+": the head's state");
       const sel='#app [data-k="today"] '+TODAY_MAIN[state];
       if(!(await page.$(sel)))throw new Error(state+" ("+lang+" "+w+"): no main action "+TODAY_MAIN[state]);
-      /* A missed day's line sits under the day's own button: it may be scrolled to, as a thumb would, to the middle of the screen. */
-      await page.$eval(sel,(e,st)=>e.scrollIntoView({block:st==="missed"?"center":"nearest"}),state);await pause(page,150);
-      if(state!=="missed")eq(await page.evaluate(()=>window.scrollY),0,state+" ("+lang+" "+w+"): the main action in view without scrolling");
+      await page.$eval(sel,e=>e.scrollIntoView({block:"nearest"}));await pause(page,150);
+      eq(await page.evaluate(()=>window.scrollY),0,state+" ("+lang+" "+w+"): the main action in view without scrolling");
       eq(await fullyIn(page,sel),true,state+" ("+lang+" "+w+"): the main action fully visible");
       const c=await page.evaluate(()=>{const c=document.querySelector('#app [data-k="today"]');
         return {wide:document.documentElement.scrollWidth>innerWidth+1,dir:document.documentElement.dir,txt:c.innerText,
@@ -4974,11 +4986,23 @@ await test("Today card: every state — a training day, nothing leading, a light
       eq(c.bare,[],state+" ("+lang+" "+w+"): every figure in the card in .num");
       if(lang==="ar"&&/[A-Za-z]{4,}/.test(c.txt))throw new Error(state+": English left in the Arabic card: "+c.txt);
       if(state==="missed"&&!(await page.$('#app [data-k="today"] [data-k^="lead:missed"]')))throw new Error("the missed day is not the card's line");
+      /* Review of #154: one day, one offer. A rest day whose line moves a missed day to today
+         offers no other workout; a rest day with the next session said is just "Recover.";
+         done points at the next session, View session quiet; not set up with a program to
+         train keeps the session and asks for the assessment in the line. */
+      const ck=await page.evaluate(()=>{const c=document.querySelector('#app [data-k="today"]');
+        return {startday:!!c.querySelector("[data-startday]"),another:!!c.querySelector("[data-another]"),meta:c.querySelector(".thero2-m").textContent,
+          next:!!c.querySelector(".tdc-next"),view:(c.querySelector("[data-openday]")||{}).className||"",setupLine:!!c.querySelector('[data-k="lead:setup"] [data-setup]'),
+          acts:c.querySelectorAll("button:not(.thero2-swap)").length};});
+      if(state==="missed")eq([ck.startday,ck.another,ck.next,ck.acts],[false,false,true,3],"missed on a rest day: Move it, log it and Skip only (and Change), Next up kept");
+      if(state==="rest")eq([ck.meta,ck.next,ck.startday,ck.another],[lang==="ar"?"ارتاح.":"Recover.",true,true,false],"rest: Recover., Next up, Train anyway and no second offer");
+      if(state==="done")eq([ck.view.split(" ").indexOf("g")>=0,ck.next],[true,true],"done: View session quiet, Next up the message");
+      if(state==="setupday")eq([ck.startday,ck.setupLine],[true,true],"not set up: the session kept, the assessment as the line");
       if(lang==="en"&&w===390){
         await page.$eval(sel,e=>e.click());await pause(page,700);
         const got=await page.evaluate(async state=>{const st=await import("/js/state.js"),V=(await import("/js/ui/view.js")).V,s=st.S;
           return state==="done"?V.sheet==="dayview":state==="resume"?!!s.active&&V.train!=="hub"&&!!document.querySelector(".sess"):state==="missed"?Object.keys(s.daySwap||{}).length===1
-            :state==="none"?V.train==="plan":state==="setup"?!!V.assess:!!s.active&&!!document.querySelector(".sess");},state);
+            :state==="none"?V.train==="plan":state==="setup"||state==="setupday"?!!V.assess:!!s.active&&!!document.querySelector(".sess");},state);
         eq(got,true,state+": one tap reaches what it says");}}}
 },{db:seedNov5(),init:clockAt(2026,11,5)});
 await test("Today card: never more than two prompt cards on Training home, whatever the data — the lead in the card, one other card, the one housekeeping card at the foot",async page=>{

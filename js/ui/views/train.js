@@ -133,6 +133,13 @@ var CHECK='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 function nums(x){return esc(x).replace(/&#?\w+;|[0-9٠-٩][0-9٠-٩.,:]*/g,function(m){return m.charAt(0)==="&"?m:'<span class="num">'+m+'</span>';});}
 /* When the next session is: tomorrow by that word, another day by its name. */
 function whenNext(d,iso){return d===addDaysISO(iso,1)?t("tomorrow"):dfmt(new Date(d+"T00:00:00"),{weekday:"long"});}
+/* How many exercises, as the headline says it. Arabic counts: one and two have their own
+   words, three to ten take the plural, eleven and up the singular. */
+function exCount(n){
+  var ar=S.prefs&&S.prefs.lang==="ar";
+  if(n===1)return nums(t("1 exercise"));
+  if(n===2)return nums(t("2 exercises"));
+  return nums(t(ar&&n>10?"{n} exercises, eleven and up":"{n} exercises").replace("{n}",n));}
 function nextLine(n,iso){
   if(!n)return "";
   return '<p class="tdc-next" data-k="next">'+esc(t("Next up"))+' · <b>'+esc(planName(n.name))+'</b> · '+esc(whenNext(n.date,iso))+'</p>';}
@@ -146,7 +153,7 @@ function statusLines(tp){
   var h="";
   if(tp.light)h+='<div class="tdc-st" data-k="st:light"><span class="dlcard-i" aria-hidden="true">'+FEATHER+'</span>'
     +'<span class="dlcard-t"><b>'+esc(t("Lighter week"))+'</b><span>'+(tp.light.until?esc(t("Until"))+' '+nums(shortd(tp.light.until))+' · ':'')+nums(t("fewer sets, about 10% lighter"))+'</span></span>'
-    +(tp.light.planned?'':'<button class="dlcard-x" data-deload="end">'+esc(t("End it"))+'</button>')+'</div>';
+    +(tp.light.planned?'':'<button class="dlcard-x" data-deload="endask">'+esc(t("End it"))+'</button>')+'</div>';
   if(tp.travel)h+='<div class="tdc-st" data-k="st:travel"><span class="dlcard-t"><b>'+esc(t("Travel mode"))+'</b><span>'+esc(t("Until"))+' '+nums(shortd(tp.travel.until))
     +' · '+esc(t("exercises swapped for your kit at hand"))+'</span></span><button class="dlcard-x" data-travel="end">'+esc(t("End it"))+'</button></div>';
   return h;}
@@ -161,6 +168,8 @@ function leadLine(c,iso){
   var flat=function(h){return h?'<div class="tdc-lead in" data-k="lead:'+esc(c.id)+'">'+h+'</div>':"";};
   if(c.kind==="swap")return flat(recoCard(c.swap,c.date,c.ahead));
   if(c.kind==="note")return flat(aheadNote(c,iso));
+  if(c.kind==="setup")return compact("setup",'<b>'+esc(t("Build my plan"))+'</b> '+esc(t("A short assessment, and the coach builds your daily targets, your training and a meal plan, and puts them here and on Food.")),
+    '<button class="btn sm" data-setup="1">'+esc(t("Start the assessment"))+'</button>');
   var s=c.sig;
   if(s.id==="deload-due"){var due=s.src||{};
     return compact(s.id,'<b>'+esc(t("Time for a lighter week"))+'</b> '+esc(t(due.why==="plateau"?"Several of your lifts have stalled for three sessions in a row."
@@ -199,15 +208,16 @@ function todayCard(sp,tp){
   else if(tp.state==="done"){
     var sv=p.session;badge=CHECK;
     label=now?t("Done today"):t("Completed");name=planName(p.name);
-    meta=nums((sv.mins?sv.mins+' '+t("min")+' · ':'')+sv.entries.filter(function(e){return (e.sets||[]).length;}).length+' '+t("exercises"));
-    cta='<button class="btn" data-openday="'+iso+'">'+esc(t("View session"))+'</button>';
+    meta=(sv.mins?nums(sv.mins+' '+t("min"))+' · ':'')+exCount(sv.entries.filter(function(e){return (e.sets||[]).length;}).length);
+    /* Quiet: the next session is the message (WP-2 review). */
+    cta='<button class="btn g" data-openday="'+iso+'">'+esc(t("View session"))+'</button>';
     /* Another session the same day, on the go (owner, 27 Oct): any day of the program,
        or a run, a class, a sport. */
     if(now)more='<button class="thero2-add" data-another="1"><span aria-hidden="true">+</span> '+esc(t("Start another session"))+'</button>';}
   else if(tp.state==="past"||tp.state==="none"){
     rest=tp.state==="past";badge=rest?MOON:DUMBBELL;
     label=rest?t("No session"):t("Nothing planned");
-    name=rest?t("Rest or unlogged"):planName(sp?sp.name:"");
+    name=rest?t("Rest or unlogged"):t(planName(sp?sp.name:""));
     meta=esc(rest?t("Nothing was logged on this day."):t("Your program has no training days yet. Plan them in Coach."));
     if(!rest)cta='<button class="btn" data-csec="train">'+esc(t("Plan your training"))+'</button>';
     /* Trained without the app: log it now, under this day (owner, 4 Nov). */
@@ -215,16 +225,20 @@ function todayCard(sp,tp){
   else if(tp.state==="rest"){
     rest=true;badge=MOON;
     label=now?t("Today"):t("Planned");name=t("Rest day");
-    meta=esc(t("Recover. The plan picks up the day after."));
-    /* A rest day is advice, not a lock: someone who feels good can train anyway. */
-    if(now&&p.next)cta=hb('<button class="btn g" data-startday="'+p.next.id+'">'+esc(t("Train anyway"))+' · '+esc(planName(p.next.name))+'</button>');
-    if(now)more=ANOTHER();}
+    /* With the next session said below it, the rest of the sentence would say it twice. */
+    meta=esc(t(tp.next?"Recover.":"Recover. The plan picks up the day after."));
+    /* A rest day is advice, not a lock: someone who feels good can train anyway. Not while
+       the line offers a missed day for today: two different workouts offered at once. */
+    var missing=now&&tp.line&&tp.line.kind==="sig"&&tp.line.sig.source==="missed";
+    if(now&&p.next&&!missing)cta=hb('<button class="btn g" data-startday="'+p.next.id+'">'+esc(t("Train anyway"))+' · '+esc(planName(p.next.name))+'</button>');
+    /* Another session is offered only where Train anyway is not (it would be the same thing). */
+    else if(now&&!missing)more=ANOTHER();}
   else{
     live=now;name=planName(p.name);
     label=now?(p.again?t("Session {n} today").replace("{n}",p.again):t("Today")):t("Planned");
     /* Lifts carried here from a missed day count in, and are named. */
     var add=addsOn(iso,p.day.id),all={ex:p.day.ex.concat(add)};
-    meta=nums(all.ex.length+' '+t("exercises")+' · ~'+estMinutes(all)+' '+t("min"))
+    meta=exCount(all.ex.length)+' · '+nums('~'+estMinutes(all)+' '+t("min"))
       +(add.length?' · '+esc(t("plus {x} from a missed day").replace("{x}",add.map(function(x){return exName(x.name);}).join(", "))):'');
     ex=exLine(p.day.ex);
     if(now){cta=hb('<button class="btn" data-startday="'+p.day.id+'"><span class="ico ico-play" aria-hidden="true"></span>'+esc(t("Start workout"))+'</button>');more=ANOTHER();}
@@ -564,7 +578,7 @@ var PHASE_WHY={1:"Lighter loads, slow and controlled: movement quality, joint st
 function programCard(){
   var sp=split();
   var top='<button class="pgc-h" data-tplan="program"><span class="pgc-t"><span class="klabel">'+esc(t("Your program"))+'</span>'
-   +'<b>'+esc(sp?planName(sp.name):t("No program yet"))+'</b>'
+   +'<b>'+esc(sp?t(planName(sp.name)):t("No program yet"))+'</b>'
    +'<span class="pgc-s">'+esc(sp?schedLine(sp):t("Pick one, or build your own"))+'</span></span>'
    +'<span class="pgc-go">'+esc(t("Plan"))+'<span class="ico ico-chev" aria-hidden="true"></span></span></button>';
   /* The block lives on My program now (owner, 3 Nov): the card is the way in. */

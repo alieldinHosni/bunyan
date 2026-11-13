@@ -359,14 +359,16 @@ function headWhy(id){
 /* ================================================================ today (WP-2) ====
    What the top of Training says: what to do now. Read from the head and today's plan; the
    page only draws it.
-     state    setup (no assessment yet) | resume (a workout is open) | none (the program
+     state    setup (no assessment yet, and nothing to train: otherwise the day as it is,
+              with the assessment as the line) | resume (a workout is open) | none (the program
               has no training days) | done (trained that day) | rest | light (a training
               day inside a lighter week) | train (a session planned, not done) | plan (a
               day still ahead) | past (a day gone with nothing logged)
      session  the day of the program it is ({day, name}), or the session done
      lead     headNow().lead when it is worth leading the day with (pri >= 60). A lighter
               week already running is the card's own status (light), not a lead.
-     line     the one prompt drawn inside the card, today only: the lead, else what the
+     line     the one prompt drawn inside the card, today only: the assessment when not
+              set up, else the lead, else what the
               coach says about today's session (a fresher day), else what Training's own
               signals say (a missed day), else a word on tomorrow
      other    the next of those, drawn as its own card below the day: at most one
@@ -395,7 +397,11 @@ function todayPlan(iso){
   var isNow=iso===now,sp=split(),g=S.goals||{};
   var r={date:iso,state:null,session:null,plan:null,lead:null,line:null,other:null,house:null,next:null,light:null,travel:null,
     food:num(g.kcal)>0?{kcal:num(g.kcal),p:num(g.p)||null}:null};
-  if(!S||!S.onboarded){r.state="setup";return r;}
+  /* Not set up: the assessment is the card only when there is nothing else to do today (no
+     workout open, no program with training days); otherwise the day is drawn as it is and
+     the assessment is the card's line. */
+  var setup=!S||!S.onboarded;
+  if(setup&&!S.active&&!(sp&&(sp.days||[]).some(function(d){return d.ex&&d.ex.length;}))){r.state="setup";return r;}
   var h=headNow(),train=headOn("train");
   r.house=train.filter(function(s){return s.source==="housekeeping";})[0]||null;
   var p=sp?planOn(sp,iso):{kind:"none"};r.plan=p;
@@ -415,6 +421,7 @@ function todayPlan(iso){
   var l=h.lead;r.lead=l&&l.pri>=LEAD&&l.id!=="deload-on"?l:null;
   /* What may be said, in order; the first is the card's line, the next its one other card. */
   var says=[];
+  if(isNow&&setup)says.push({kind:"setup",id:"setup"});
   if(isNow&&r.lead)says.push({kind:"lead",id:r.lead.id,sig:r.lead});
   var sw=sp&&(r.state==="train"||r.state==="light"||r.state==="plan")?swapAdvice(sp,iso,p):null;
   if(sw)says.push({kind:"swap",id:"reco"+iso,swap:sw,date:iso});
