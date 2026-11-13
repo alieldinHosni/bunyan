@@ -70,9 +70,10 @@ const CORE_MAY = {
 /* A view showing another view: the whole list. */
 const EMBEDS = {
   "coach.js":   ["train.js", "food.js", "pcheck.js", "chat.js"],
-  "train.js":   ["session.js", "timport.js", "home.js"],
+  "train.js":   ["session.js", "finish.js", "timport.js", "home.js"],
   "food.js":    ["addfood.js", "progress.js"],
-  "session.js": ["warmup.js"]};
+  "session.js": ["warmup.js"],
+  "finish.js":  ["warmup.js"]};
 
 const graph = {}, bad = [];
 for (const f of files){

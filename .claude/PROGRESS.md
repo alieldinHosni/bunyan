@@ -4710,3 +4710,63 @@ docs/NEXT-PHASE.md WP-3 (findings F-B2, F-B3, F-B4, F-B7). One glance, one thumb
   sheet's Tempo section has a section gap (--s5); the readiness sheet's "Low" is «تعبان» in Arabic (key "Low ", as
   "Back " is kept apart: the bare "Low" is also a stress level); the ⋯ sheet is titled "Workout" / «التمرين» (key
   "Workout ").
+
+## WP-4: the finish screen, and what happens next — branch session/finish-screen (v268)
+docs/NEXT-PHASE.md WP-4. Finishing a workout now ends on a page, not the old "done" sheet.
+- New `js/ui/views/finish.js` (`V.train="finish"`, a page under Training; in `sw.js` FILES). Routed from
+  `train.js vTrain()` before the day views; it draws only — every figure comes from the summary
+  `actions.js finishSession()` builds and from the stored session (`sessionById`). The summary lives in `V.fin`,
+  memory only: a reload has none, so `vTrain` sends a finish route without it to Training (the session was saved
+  before the page opened), which is the acceptance's "reload returns to Training without losing the session".
+- In order, as the doc asks: the horse drawing drawing in behind a tick and "Full Body A — done" with the date;
+  three figures (minutes/volume/sets, or for a day logged after the fact exercises/volume/sets) that count up
+  (`motion.js countTo`, `data-count-to`); the records this session earned, each a row, the best first (only real
+  ones, `lifts.js recordIn`/`recordsOfEntry`, the toast's own words via `formulas.js recordText`: estimated maxes
+  to 0.5 kg and called estimates); Next time, one line per lift whose weight the next session will change; How hard
+  was the session (and, inside a block, how the amount of work felt); Now, what is left of today's food target;
+  the cool-down; Done; Edit and Share.
+- Next time is the real suggestion, read now. New `lifts.js nextTimeIn(log,s,ctx)` / `formulas.js nextTime(s)`:
+  it runs the same `recommendIn` the next session will, on the log with this session already in it, with no
+  readiness answer (that is asked when the next workout starts and may still move the number). Only lifts whose
+  weight changes are listed; a lift the finished session is not the latest of (a day logged afterwards for an
+  earlier date) is left out, since its next suggestion follows a newer session; a step with no clean number (an
+  estimate from a new range, a six-week gap, body weight, AMRAP) is left out. This replaces the old strict
+  "top of the range on every set, by its own increment" (`progressionHint`) the summary carried: that could name a
+  weight the suggestion then beat. The acceptance test logs a lift at the top of its range on every set, reads the
+  Next time weight, then starts the next session and asserts the draft weight equals it exactly.
+- Volume is Σ(weight × reps) (`sessionVolume`, unchanged); the test asserts the shown figure equals it. Nothing is
+  invented: the food line reads `todayPlan().food` (new `kLeft`/`pLeft` on it, what is left of the target after
+  what is logged, never below 0; `pLeft` null with no protein target), and shows nothing without a calorie target
+  or on a past day. The card matches what Training's Today card then reads (Done, with the next session): both come
+  from the head.
+- Small changes patch, never rebuild: every section carries a `data-k`, so an RPE/feel tap changes only its own
+  node (tested: the records card keeps its identity across an RPE tap). Done, a tab tap and back all reach Training
+  (`resetNav` at finish; `findone` handler). The RPE and feel handlers read `V.fin` now, not the sheet's `V.sd`.
+- The old `V.sheet==="done"` block in `sheets.js` is gone (its imports with it: mmss, sessionById, blockNow,
+  STAR8, art, coolCard). `sharews` (Profile handler) reads `V.fin`, and drops the minutes from its share line on a
+  past day (no duration). The cool-down's stretch how-to opens from the page: its exdetail back button (`exback`)
+  closes the sheet and the finish page is underneath again (train.js ret `{close:true}`), replacing the old
+  `ret {s:"done"}` that reopened a sheet that no longer exists.
+- Strings through `t()` with Egyptian Arabic: "{d} — done", "Next time", "{w} next time", "You hit {n} on every
+  set.", "You hit {n} on {k} of {m} sets.", "Now", "You have {g} g of protein left today.", "Today's protein
+  target is met.", "You have {k} kcal left today.", "Today's calories are in." (reused: Records, Exercises,
+  Duration, Volume, Sets, Burned, Distance, min, Done, Edit, Share, Log food, the effort/feel labels). Numbers in
+  `.num`; design tokens only (new `.wfin-*` section/row styles in index.html); verified in RTL at 390 and 320.
+- Carry-overs from the #155 review: (a) the RPE question's "· RPE" suffix is now a `.rpe-sfx` span hidden below
+  360 px (`@media (max-width:359px)`), so it no longer wraps and leaves a dangling "·" on a narrow phone; it stays
+  on one line at 390. (b) The dictionary keys "Low " and "Workout " still rely on a trailing space to stay distinct
+  from "Low"/"Workout": `t()` has no context form (only the `tm()` special case for "Back"), so per the brief they
+  are left as they are.
+- Tests: three new browser tests before "Change workout judges…": (1) the finish page's figures equal the session's
+  (volume Σ w×r) and the Next time weight equals what the next session suggests, Done returns to Training; (2) a
+  real record row, the session RPE kept and its card not rebuilt by the tap, the food line reading the protein left,
+  the Log food button to Food, and the Today card then reading Done with the next session; (3) Arabic/RTL — every
+  string translated, figures in `.num`, Done on the page, and a reload returning to Training with the session kept.
+  `tests/architecture.mjs` EMBEDS gains `train.js → finish.js` and `finish.js → warmup.js` (the finish page embeds
+  the cool-down, as the workout page does).
+- Existing tests changed, none weakened, each because the finish is a page now, not a sheet: the Cool-down test
+  reads `V.train==="finish"`/no sheet and taps `.wfin-done` on the page (was `V.sheet==="done"` / `#sheet
+  .wfin-done`); the past-day test reads `V.fin.past`/`V.fin.mins` and the page's `.wfin-stats` (Exercises, not
+  Duration) in place of `V.sd` / `#sheet`. The record-toast test, the "too easy"/"answering again" block tests and
+  the readiness/effort test needed no change: `.wfin-rec`, `[data-srpe]` and `[data-sfeel]` are on the page as they
+  were on the sheet.

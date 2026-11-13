@@ -1735,8 +1735,9 @@ await test("Cool-down: stretches for what was trained on Workout complete, timed
   await page.tap('.cd .wu-info');await pause(page,500);
   eq(await ev(page,"V.sheet"),"exdetail");
   await page.tap('[data-exback]');await pause(page,400);
-  eq(await ev(page,"[V.sheet,!!document.querySelector('.cd .wu-row.did')]"),["done",true],"back to the summary, tick kept");
-  await page.tap('#sheet .wfin-done');await pause(page);
+  /* The finish is a page (WP-4), not a sheet: the sheet closes and the summary is under it. */
+  eq(await ev(page,"[V.sheet,!!document.querySelector('.cd .wu-row.did'),V.train]"),[null,true,"finish"],"back to the summary, tick kept");
+  await page.tap('.wfin-done');await pause(page);
   /* Both are on by default and switched off in Training settings. */
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page);
   await page.tap('[data-toggle="nowarm"]');await pause(page);await page.tap('[data-toggle="nocool"]');await pause(page);
@@ -1749,7 +1750,7 @@ await test("Cool-down: stretches for what was trained on Workout complete, timed
   await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,500);
   await finishEarly(page);
   await page.tap('[data-confirmok]');await pause(page,600);
-  eq(await ev(page,"[V.sheet,!!document.querySelector('.cd')]"),["done",false],"no cool-down when off");
+  eq(await ev(page,"[V.train,!!document.querySelector('.cd')]"),["finish",false],"no cool-down when off");
 },{prefs:{nowarm:false,autorest:false}});
 await test("Arabic: the muscle Back reads ظهر, not the back button's رجوع",async page=>{
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="train";V.train="library";V.exm="Back";(await import("/js/ui/render.js")).render();});
@@ -2942,8 +2943,8 @@ await test("A past workout (owner, 4 Nov): a past day with nothing logged offers
   await page.tap('[data-confirmok]');await pause(page,900);
   const s=await ev(page,"(()=>{const x=S.sessions.find(s=>s.date==='"+y+"');return x?[x.activeMs,x.past===undefined,S.sessions.indexOf(x)>=0]:null;})()");
   eq(s,[0,true,true],"saved under that date, untimed");
-  eq(await ev(page,"[V.sd&&V.sd.past,V.sd&&V.sd.mins]"),[true,null],"the summary shows no duration");
-  eq(await page.$$eval('#sheet .wfin-stats .stat small',a=>a.map(x=>x.textContent).includes("Duration")),false,"no Duration on it");
+  eq(await ev(page,"[V.fin&&V.fin.past,V.fin&&V.fin.mins]"),[true,null],"the summary shows no duration");
+  eq(await page.$$eval('.wfin-stats .stat small',a=>a.map(x=>x.textContent).join("|")),"Exercises|Volume · kg|Sets","the figures, exercises not duration");
 });
 await test("A launch that fails (owner, 5 Nov: only the background showed until the app was closed and opened): the app's code failing before it draws loads it again once, by itself, and keeps the error",async(page,env)=>{
   let broken=1;
@@ -5152,6 +5153,65 @@ await test("WP-3 workout page: at 320 × 640 the RPE question takes the logged p
     return s.getBoundingClientRect().bottom<=document.querySelector(".wkdock").getBoundingClientRect().top;});
   eq(clear,true,"the steppers can be scrolled clear of the dock");
 },{prefs:{autorest:true,rpe:"every"}});
+await test("Finish screen (WP-4): what you did, and next time equal to what the next session suggests",async page=>{
+  await startWorkout(page);await pause(page,500);
+  const name=await ev(page,"S.active.entries[0].name"),dayId=await ev(page,"S.active.dayId");
+  const hi=await ev(page,"S.active.entries[0].planned.hi"),nsets=await ev(page,"S.active.entries[0].planned.sets");
+  const draftW=await ev(page,"+V.draft.w");
+  for(let i=0;i<nsets;i++){await page.fill('#in_w',String(draftW));await page.fill('#in_r',String(hi));await page.tap('[data-logset]');await pause(page,700);}
+  await finishEarly(page);await page.tap('[data-confirmok]');await pause(page,800);
+  eq(await ev(page,"[V.train,!!V.fin,V.sheet]"),["finish",true,null],"the finish page, its summary, no sheet");
+  /* Minutes, sets and volume — the saved session's own figures; volume is Σ(weight × reps). */
+  const shown=await page.$$eval('.wfin-stats .stat [data-count-to]',a=>a.map(e=>+e.getAttribute("data-count-to")));
+  eq(shown,await ev(page,"[V.fin.mins,Math.round(V.fin.vol),V.fin.sets]"),"the three figures the finish shows: minutes, volume, sets");
+  eq(await ev(page,"[V.fin.mins>0,V.fin.vol,V.fin.sets]"),await ev(page,"[true,Math.round(S.sessions[0].entries.reduce((t,e)=>t+e.sets.reduce((a,x)=>a+(x.wu?0:(+x.w||0)*(+x.r||0)),0),0)),S.sessions[0].entries.reduce((n,e)=>n+e.sets.length,0)]"),"minutes positive; volume = Σ(weight × reps); sets counted");
+  /* The lift hit the top of its range on every set, so Next time shows a weight, and it is
+     what the next session's suggestion is — read from the card and from a fresh start. */
+  const g=await ev(page,"V.fin.next.find(x=>x.n==='"+name.replace(/'/g,"\\'")+"')");
+  if(!g||!g.up||g.hit!==g.of)throw new Error("no clean progression: "+JSON.stringify(g));
+  const row=await page.$eval('.wfin-next [data-k="nx:'+name.replace(/"/g,'')+'"] .wfin-row-v',e=>e.textContent);
+  if(row.indexOf(String(g.w))<0)throw new Error("the card does not show "+g.w+": "+row);
+  await page.tap('.wfin-done');await pause(page,500);
+  eq(await ev(page,"[V.train,!!V.fin]"),["days",false],"Done returns to Training");
+  await page.evaluate(async d=>{(await import("/js/ui/actions.js")).startDay(d);},dayId);await pause(page,400);await skipReady(page,0);
+  eq(await ev(page,"[S.active.entries[0].name,+V.draft.w]"),[name,g.w],"the next session suggests exactly the Next time weight");
+},{prefs:{autorest:false}});
+await test("Finish screen (WP-4): a record row, the session RPE kept, the food line, and the Today card then reads Done",async page=>{
+  await startWorkout(page);await pause(page,500);
+  const name=await ev(page,"S.active.entries[0].name");
+  await page.fill('#in_w','62.5');await page.fill('#in_r','10');await page.tap('[data-logset]');await pause(page,900);
+  await finishEarly(page);await page.tap('[data-confirmok]');await pause(page,800);
+  /* A real record (62.5 kg beats the seeded 60 kg best), its own row, with the gold star. */
+  eq(await page.evaluate(()=>!!document.querySelector('.wfin-rec .toast-star')),true,"the records card, with the star");
+  if(!(await page.$('.wfin-rec [data-k="rec:'+name.replace(/"/g,'')+'"]')))throw new Error("no record row for "+name);
+  /* The RPE tap is kept with the session, and taps only its own node (patched, not rebuilt). */
+  const id0=await page.$eval('.wfin [data-k="recs"]',e=>e.dataset.k);
+  await page.tap('[data-srpe="7"]');await pause(page,300);
+  eq(await ev(page,"S.sessions[0].srpe"),7,"the session RPE");
+  eq(await page.$eval('[data-srpe="7"]',b=>(b.querySelector(':scope>.hapt-in')||b).getAttribute("aria-pressed")),"true","the chosen tap marked");
+  eq(await page.$eval('.wfin [data-k="recs"]',e=>e.dataset.k),id0,"the records card was not rebuilt by an RPE tap");
+  /* Now: today's protein target left (the seed logs no food), with a way to Food. */
+  const now=await page.$eval('.wfin-now',e=>e.textContent);
+  if(now.indexOf("150")<0)throw new Error("the food line does not read the protein left: "+now);
+  await page.tap('.wfin-food');await pause(page,500);
+  eq(await ev(page,"V.tab"),"food","the button goes to Food");
+  /* Back on Training, the Today card reads Done, with the next session. */
+  await tapTab(page,"train");await pause(page,400);
+  eq(await page.evaluate(()=>{const c=document.querySelector('.tdc');return [c&&c.dataset.state,!!document.querySelector('.tdc-next')];}),["done",true],"the Today card: done, with the next session");
+},{prefs:{autorest:false}});
+await test("Finish screen (WP-4): in Arabic every string is translated, figures stay in .num, and a reload returns to Training without losing the session",async page=>{
+  await page.evaluate(async()=>{const m=await import("/js/state.js");m.S.prefs.lang="ar";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  await startWorkout(page);await pause(page,500);
+  await page.fill('#in_r','12');await page.tap('[data-logset]');await pause(page,900);
+  await finishEarly(page);await page.tap('[data-confirmok]');await pause(page,800);
+  eq(await ev(page,"[V.train,document.documentElement.dir]"),["finish","rtl"],"the finish page in RTL");
+  const txt=await page.$eval('.wfin',e=>e.textContent);
+  if(/[A-Za-z]{3,}/.test(txt.replace(/BUNYAN|kcal|km/g,"")))throw new Error("English left on the Arabic finish page: "+txt.slice(0,160));
+  eq(await page.$eval('.wfin-done',b=>b.offsetWidth>0),true,"Done is on the page");
+  eq(await page.evaluate(()=>[...document.querySelectorAll('.wfin-stats b')].every(b=>b.classList.contains("num")||b.querySelector(".num"))),true,"the figures are in .num");
+  await page.reload();await pause(page,1300);
+  eq(await ev(page,"[V.train,!!V.fin,!!S.active,S.sessions.length>0]"),["days",false,false,true],"a reload lands on Training, the session kept");
+},{prefs:{autorest:false}});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

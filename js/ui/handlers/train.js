@@ -293,12 +293,13 @@ function register(){
        returns to the exercise this one was reached from instead of closing. */
     var trail=(V.sheet==="exdetail"&&V.sd&&V.sd.name&&V.sd.name!==nm5)
       ?((V.sd.prev||[]).concat(V.sd.name)).slice(-8):null;
-    /* From the Workout complete sheet (a cool-down stretch), back returns to it. */
-    var ret5=V.sheet==="done"?{s:"done",d:V.sd}:V.sheet==="exdetail"&&V.sd&&V.sd.ret||null;
+    /* From the finish page's cool-down (a stretch's how-to, WP-4), back closes the sheet
+       and the finish page is underneath again. */
+    var ret5=!V.sheet&&V.tab==="train"&&V.train==="finish"?{close:true}:V.sheet==="exdetail"&&V.sd&&V.sd.ret||null;
     loadInstructions(function(){var o={name:nm5};if(trail)o.prev=trail;if(ret5)o.ret=ret5;if(D.tempo)o.tempo=D.tempo;openSheet("exdetail",o);});return;});
   has("exback",function(){
     var tr=(V.sd&&V.sd.prev||[]).slice(),rt=V.sd&&V.sd.ret;
-    if(!tr.length){if(rt){openSheet(rt.s,rt.d);return;}requestCloseSheet();return;}
+    if(!tr.length){if(rt&&!rt.close){openSheet(rt.s,rt.d);return;}requestCloseSheet();return;}
     var back5=tr.pop();V.exsteps=false;V.exmiss=false;
     var o5={name:back5};if(tr.length)o5.prev=tr;if(rt)o5.ret=rt;
     openSheet("exdetail",o5);return;});
