@@ -585,8 +585,57 @@ function row(o){
 /* ---- bench presses: lying, the weight from the chest to straight arms ----
    imp "bb" | "db"; angle: the bench's (0 flat, 30 incline, -20 decline); w half width;
    grip "pro" | "ham" (dumbbells, palms in); floor: on the floor, no bench */
+/* Incline Dumbbell Press, written from its dossier (docs/figures/ex/
+   Incline_Dumbbell_Press.md). Seated back on a bench at ANG degrees, feet flat, the
+   back and the hips on the bench, the shoulder blades set (drawn back and down: the
+   raised arms do not lift them), spine neutral, head in line.
+     u = 0   the bottom: each upper arm FLARE degrees out from the trunk and DEPTH
+             degrees behind its front, the forearm upright under the dumbbell, which
+             is beside the upper chest
+     u = 1   the top: the dumbbells over the shoulders, TOP_GAP apart at their inner
+             plates (they do not touch), the elbows TOP_BEND degrees short of straight
+   Between, each upper arm and forearm turn steadily from one to the other, so the
+   forearms stay near upright and the wrist straight under the load. The bench is put
+   where the back rests on it. */
+function inclineDbPress(o){
+  var ANG=o.angle,FLARE=50,DEPTH=15,TOP_BEND=12,TOP_Z=.17;
+  var b0=Object.assign(sit({pelvis:[.02,.6,0],pitch:-90+ANG,feet:S(.5,ANKLE,.26)}),{spine:"neutral",head:0});
+  var J0=solve(b0).J,A=DIM.upArm,B=DIM.foreArm;
+  /* the bench: its pad's surface against the upper back */
+  var a=ANG*R,n=[Math.sin(a),Math.cos(a),0],c0=padFoot(J0),gap=1e9;
+  bodyParts(solve(b0)).forEach(function(p){if(p.n!=="trunk.upper")return;
+    gap=Math.min(gap,dot(sub(p.a,c0),n)-p.ra,dot(sub(p.b,c0),n)-p.rb);});
+  var bench=["adjBench",add(c0,mul(n,gap)),ANG];
+  function slerpDir(x,y,t){var w=Math.acos(Math.max(-1,Math.min(1,dot(x,y))));if(w<1e-6)return x;
+    return norm(add(mul(x,Math.sin((1-t)*w)/Math.sin(w)),mul(y,Math.sin(t*w)/Math.sin(w))));}
+  /* each side's upper arm and forearm at the bottom (the forearm upright) and the top */
+  var ends={};
+  LR.forEach(function(s){
+    var cu=J0.cf.u,cf=J0.cf.f,lat=mul(J0.cf.l,sg(s)),f=FLARE*R,sh=J0.sh[s];
+    function arm(beta){var d=beta*R;return norm(add(mul(add(mul(cu,-Math.cos(f)),mul(lat,Math.sin(f))),Math.cos(d)),mul(cf,Math.sin(d))));}
+    var L=Math.sqrt(A*A+B*B+2*A*B*Math.cos(TOP_BEND*R)),dz=sg(s)*TOP_Z-sh[2];
+    var W=[sh[0],sh[1]+Math.sqrt(L*L-dz*dz),sg(s)*TOP_Z],Lh=norm(sub(W,sh));
+    var th=Math.acos((A*A+L*L-B*B)/(2*A*L)),pole=sub([0,0,sg(s)],mul(Lh,dot([0,0,sg(s)],Lh)));
+    var ua1=norm(add(mul(Lh,Math.cos(th)),mul(norm(pole),Math.sin(th)))),E1=add(sh,mul(ua1,A));
+    ends[s]={ua:[arm(-DEPTH),ua1],fa:[[0,1,0],norm(sub(W,E1))]};});
+  function drive(p,u){
+    var J=base(p),sh={};
+    LR.forEach(function(s){var e=ends[s],ua=slerpDir(e.ua[0],e.ua[1],u),fa=slerpDir(e.fa[0],e.fa[1],u);
+      /* the palm toward the feet, square to the forearm; the fingers along it */
+      var pn=norm(sub([1,0,0],mul(fa,fa[0])));
+      armTo(p,J,s,ua,fa,pn,fa);
+      /* the blades held set: the lift the raised arm would give them is taken off */
+      sh[s]=-Math.max(0,dot(norm(sub(p.hands[s],J.sh[s])),J.cf.u)+.15)*20;});
+    p.shrug=sh;p.grip="grip";}
+  var rec={keys:[b0,b0],spine:"neutral",tempo:[1.0,.5,2.0,.5],stick:[.05,.4],cam:{yaw:40,pitch:20},arrow:{track:"wr.l"},
+    refine:{Chest:"Upper chest",Shoulders:"Front delts"},drive:drive,
+    equip:function(J){return dbsIn(J).concat([bench]);}};
+  rec.contact=[["trunk.upper","bench"],["pelvis","bench"]];
+  return rec;}
+
 function benchPress(o){
   o=o||{};
+  if(o.strict)return inclineDbPress(o);
   var imp=o.imp||"bb",ang=o.angle||0,w=o.w||.4;
   var b0=o.floor?floorLie({pelvis:[.1,.12,0]}):ang>0?sit({pelvis:[.02,.6,0],pitch:-90+ang,feet:S(.5,ANKLE,.26)}):
     ang<0?lie({pelvis:[.1,.62,0],pitch:-90+ang,feet:S(.5,.42,.16),footDir:S(1,.3,.1),knees:S(.3,1,.1),sole:S(-.3,1,0)}):lie();
@@ -1505,7 +1554,7 @@ var TABLE={
   "Wide-Grip Decline Barbell Bench Press":[benchPress,{imp:"bb",angle:-20,w:.5}],
   "Bench Press - Powerlifting":[benchPress,{imp:"bb",w:.42}],
   "Dumbbell Bench Press with Neutral Grip":[benchPress,{imp:"db",grip:"ham"}],
-  "Incline Dumbbell Press":[benchPress,{imp:"db",angle:35}],
+  "Incline Dumbbell Press":[benchPress,{imp:"db",angle:35,strict:true}],
   "Hammer Grip Incline DB Bench Press":[benchPress,{imp:"db",angle:35,grip:"ham"}],
   "Incline Dumbbell Bench With Palms Facing In":[benchPress,{imp:"db",angle:35,grip:"ham"}],
   "Decline Dumbbell Bench Press":[benchPress,{imp:"db",angle:-20}],
