@@ -376,7 +376,9 @@ function headWhy(id){
               drawn at the foot of the page
      next     the next session, on a day done or a rest day ({date, name})
      light    the lighter week running ({until, planned}); travel ({until}) likewise
-     food     the day's targets the plan sets ({kcal, p}), for the card to grow into
+     food     the day's targets the plan sets ({kcal, p}) and what is left of them after
+              what is logged that day ({kLeft, pLeft}, never below 0; pLeft null with no
+              protein target); null with no calorie target
    Never more than two prompt cards on the page: other and house. */
 var LEAD=60;
 function nextSession(sp,iso){
@@ -392,11 +394,17 @@ function aheadOf(sp,iso){
   if(sp.schedule!=="week"&&S.daySwap&&S.daySwap[iso]&&p0.swapped&&p0.day&&p1&&p1.day&&!p1.rest)
     return {kind:"note",id:"ahead"+iso,from:p0.day.name,to:p1.day.name,date:tm};
   return null;}
+function foodOn(iso,g){
+  if(!(num(g.kcal)>0))return null;
+  var r=(S.days||{})[iso]||{},items=[];
+  Object.keys(r.meals||{}).forEach(function(k){items=items.concat((r.meals[k]&&r.meals[k].items)||[]);});
+  var e=sumNutrition(items),p=num(g.p)||null;
+  return {kcal:num(g.kcal),p:p,kLeft:Math.max(0,Math.round(num(g.kcal)-e.kcal)),pLeft:p?Math.max(0,Math.round(p-e.p)):null};}
 function todayPlan(iso){
   var now=today();iso=iso||now;
   var isNow=iso===now,sp=split(),g=S.goals||{};
   var r={date:iso,state:null,session:null,plan:null,lead:null,line:null,other:null,house:null,next:null,light:null,travel:null,
-    food:num(g.kcal)>0?{kcal:num(g.kcal),p:num(g.p)||null}:null};
+    food:foodOn(iso,g)};
   /* Not set up: the assessment is the card only when there is nothing else to do today (no
      workout open, no program with training days); otherwise the day is drawn as it is and
      the assessment is the card's line. */

@@ -294,6 +294,34 @@ function progressionHintOf(e,increment){
   var inc=increment(e.name,w);if(!inc)return null;
   return {inc:inc,next:Math.round((w+inc)*100)/100};}
 
+/* ---- next time, said at the finish (WP-4) --------------------------------------------
+   What the next session will suggest for each lift of a session just finished, read now:
+   the same recommendIn, on the log with this session in it, with no readiness answer (the
+   next one is asked when that workout starts and may still move it). Only lifts whose
+   weight changes are listed; one the session was not the latest of (a workout logged
+   afterwards for an earlier day) is left out, since its next suggestion follows a newer
+   session. Each: {n, w (next), from (this session's top weight), up, hi, hit (working sets
+   at the top of the range), of (working sets), note (the suggestion's own reason, a
+   dictionary key)}. */
+function nextTimeIn(log,s,ctx){
+  var out=[];
+  (s&&s.entries||[]).forEach(function(e){
+    if(isActivity(e.name)||!e.planned||e.planned.timed||e.planned.amrap)return;
+    var work=(e.sets||[]).filter(function(x){return !x.wu&&num(x.r)>0;});
+    if(!work.length)return;
+    var latest=null,ss=log.sessions||[];
+    for(var i=0;i<ss.length&&!latest;i++)
+      if(ss[i].entries.some(function(x){return x.name===e.name&&x.sets.some(function(y){return !y.wu;});}))latest=ss[i];
+    if(latest!==s&&!(latest&&s.id&&latest.id===s.id))return;
+    var r=recommendIn(log,e,Object.assign({},ctx,{ready:0}));
+    if(!r||r.est||r.gap||r.bw||r.amrap||!(num(r.w)>0))return;
+    var from=Math.max.apply(null,work.map(function(x){return num(x.w);}));
+    if(!(from>0)||Math.abs(r.w-from)<0.001)return;
+    var hi=num(e.planned.hi);
+    out.push({n:e.name,w:r.w,from:from,up:r.w>from,hi:hi,
+      hit:work.filter(function(x){return hi&&num(x.r)>=hi;}).length,of:work.length,note:r.note||""});});
+  return out;}
+
 /* ---- weeks and muscles ------------------------------------------------------------ */
 /* Working sets per muscle over the last seven days. Resolved from the library, not
    the copy stored on the entry: that copy is written when the exercise joins a plan
@@ -324,5 +352,5 @@ function consistencyIn(log,trainingDays,nowMs){
   return planned?Math.min(100,Math.round(n/planned*100)):0;}
 
 export {avgRPE, bestE1RMIn, bodyAtIn, bwShare, consistencyIn, daysSinceIn, deloadDueIn, deloadSets, e1RM, incrementOf, isoDays,
-        loadIn, plateauIn, prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, recordsOfEntry, repsAtIn, sessionVolumeIn,
+        loadIn, nextTimeIn, plateauIn, prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, recordsOfEntry, repsAtIn, sessionVolumeIn,
         setVolIn, snapDown, volumeIn, weeklySetsIn};

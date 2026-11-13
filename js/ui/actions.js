@@ -5,7 +5,7 @@ import {exIdOf, isBarbell, kindOf, LIB, muscleOf, muscleOfEntry, pickable} from 
 import {avoids, doseFor, standIn, usable, limitsOf} from "../engine/plan.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
 import {exName} from "../i18n/exnames.js";
-import {barKg, deloadSets, inDeload, recordsIn, avgRPE, prevPerf, progressionHint, recommend, sessionVolume} from "../engine/formulas.js";
+import {barKg, deloadSets, inDeload, recordsIn, avgRPE, nextTime, prevPerf, recommend, sessionVolume} from "../engine/formulas.js";
 import {blockDay, blockNow, ensureBlock, phaseNow} from "../engine/blocks.js";
 import {supersetsFor} from "../engine/phase.js";
 import {noteSet, sessionClock, sessionWall} from "./views/session.js";
@@ -313,10 +313,6 @@ function finishSession(){
      exercise. Measured against history, which this session has not joined yet. */
   var prs=[];
   a.entries.forEach(function(e){var rec=recordsIn(e);if(rec)prs.push(rec);});
-  /* Top of the range on every set: the next session's step, said on the complete
-     screen, where it is news (it used to be a card mid-workout). */
-  var prog=[];
-  a.entries.forEach(function(e){if(isActivity(e.name))return;var ph=progressionHint(e);if(ph)prog.push({n:e.name,next:ph.next});});
 
   var prev=null;
   for(var i=0;i<S.sessions.length;i++)
@@ -347,7 +343,7 @@ function finishSession(){
     sets:allSets.length,
     /* Lifting was done, so "how was the amount" means something. */
     lift:a.entries.some(function(e){return !isActivity(e.name)&&(e.sets||[]).some(function(x){return !x.wu;});}),
-    exs:a.entries.filter(function(e){return e.sets.length;}).length,rpe:avgRPE(allSets),prs:prs,prog:prog,
+    exs:a.entries.filter(function(e){return e.sets.length;}).length,rpe:avgRPE(allSets),prs:prs,
     notes:a.notes||"",
     /* What the complete screen needs to state an achievement rather than a number:
        the plan it is being measured against, and the session it is being compared to. */
@@ -363,10 +359,17 @@ function finishSession(){
   a.entries.forEach(function(e){delete e.alt;delete e.altWhy;delete e.wuq;delete e.wuRamp;if(e.planned){delete e.planned.note;delete e.planned.w0;}});
   delete a.past;
   recordSession(a);if(past)S.sessions.sort(function(x,y){return x.date<y.date?1:x.date>y.date?-1:0;});
+  /* Next time, per lift that changes: the next session's suggestion, read now from the
+     log with this session in it (lifts.js nextTimeIn), so the two cannot differ. It used
+     to be the strict every-set rule with its own step, which the suggestion could beat. */
+  summary.next=nextTime(a);
   S.active=null;endRest();keepAwake(false);stopHold();V.cdDone={};
-  saveDB();V.tab="train";V.train="days";
+  saveDB();
+  /* The finish page (js/ui/views/finish.js), at the root of Training: back, a tab tap or
+     Done all land on Training. */
+  resetNav();V.sheet=null;V.sd=null;V.fin=summary;V.tab="train";V.train="finish";
   play(prs.length?"pr":"complete");tap("ok");
-  openSheet("done",summary);}
+  render();window.scrollTo(0,0);}
 
 
 /* ---- changing the live workout --------------------------------------------------

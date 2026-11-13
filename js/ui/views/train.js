@@ -9,6 +9,7 @@ import {alsoKnown, empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} f
 import {GOALS} from "../../data/goals.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {groupLabel, vLogger} from "./session.js";
+import {vFinish} from "./finish.js";
 import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../state.js";
 import {conformProgram, SPLIT_LEVEL} from "../../engine/plan.js";
 import {rulesFor} from "../../engine/conditions.js";
@@ -261,6 +262,9 @@ function todayCard(sp,tp){
 function vTrain(){
   /* "hub": a workout left for later, seen from its Resume card. */
   if(S.active&&V.train!=="hub")return vLogger();
+  /* The page a workout ends on (WP-4). Its summary lives in memory: after a reload there is
+     none, and Training is drawn (the session was saved before the page opened). */
+  if(V.train==="finish"){if(V.fin&&!S.active)return vFinish();V.train="days";V.fin=null;}
   /* A day of the plan, opened from the week: what it holds, before you start it. */
   if(V.train==="day")return vDay();
   /* Planning, one step in from here (owner, 3 Nov): the plan page, and the builders,

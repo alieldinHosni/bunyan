@@ -9,7 +9,7 @@ import {t} from "../i18n/dict.js";
 import {fmtEst, fmtW} from "../units.js";
 import {blockNow, plannedLight} from "./blocks.js";
 import {avgRPE, bestE1RMIn, bodyAtIn, bwShare, consistencyIn, daysSinceIn, deloadDueIn, deloadSets, e1RM, incrementOf,
-        loadIn, plateauIn, prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, recordsOfEntry, repsAtIn,
+        loadIn, nextTimeIn, plateauIn, prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, recordsOfEntry, repsAtIn,
         sessionVolumeIn, snapDown, volumeIn, weeklySetsIn} from "./lifts.js";
 import {avg7Of, bmrOf, daysBetween, kcalFloorOf, lastWeightOf, macroTargetsOf, missingOf, proteinFor, sessionKcalOf, targetKcalOf,
         tdeeFormulaOf, tdeeOf} from "./body.js";
@@ -104,6 +104,10 @@ function recordText(rec){
 function recommend(e){
   return recommendIn(LOG(),e,{increment:function(n,top){return incrementFor(n,top);},deload:inDeload(),bodyKg:lastWeight()||num(S.profile.weight),today:today(),
     ready:S.active&&num(S.active.ready)});}
+/* The finish screen's "next time": what the next session will suggest, with the same
+   context recommend() gives it (lifts.js nextTimeIn). */
+function nextTime(s){
+  return nextTimeIn(LOG(),s,{increment:function(n,top){return incrementFor(n,top);},deload:inDeload(),bodyKg:lastWeight()||num(S.profile.weight),today:today()});}
 function progressionHint(e){return progressionHintOf(e,function(n,w){return incrementFor(n,w);});}
 function weeklySets(){return weeklySetsIn(LOG(),Date.now());}
 function daysSince(muscle){return daysSinceIn(LOG(),muscle,Date.now());}
@@ -133,4 +137,4 @@ function addItems(meal,items,d){
 
 
 
-export {bmr, energyMissing, kcalFloor, bodyAt, barKg, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, tdeeFormula, volume, weeklySets, macroTargets, weighInDue};
+export {bmr, energyMissing, kcalFloor, bodyAt, barKg, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, nextTime, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, tdeeFormula, volume, weeklySets, macroTargets, weighInDue};

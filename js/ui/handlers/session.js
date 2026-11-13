@@ -125,12 +125,14 @@ function register(){
   /* How the amount of work felt, inside a training block. Tapping the chosen answer
      again takes it back. */
   key("sfeel",function(D){
-    var sf=V.sd&&sessionById(V.sd.id);if(!sf)return;
+    var sf=V.fin&&sessionById(V.fin.id);if(!sf)return;
     if(sf.feel===D.sfeel)delete sf.feel;else sf.feel=D.sfeel;
     saveSession(sf);render();return;});
   key("srpe",function(D){
-    var sw9=V.sd&&sessionById(V.sd.id);if(!sw9)return;
+    var sw9=V.fin&&sessionById(V.fin.id);if(!sw9)return;
     sw9.srpe=+D.srpe;saveSession(sw9);render();return;});
+  /* The finish page's Done: Training, whose Today card now reads Done with the next session. */
+  key("findone",function(){V.fin=null;V.cdDone={};resetNav();V.tab="train";V.train="days";render();window.scrollTo(0,0);return;});
   key("hurt",function(){openSheet("hurt");return;});
   /* Where it hurts (sheets.js hurt): the note for that area. */
   key("hurtarea",function(D){V.sd=Object.assign({},V.sd||{},{area:(V.sd||{}).area===D.hurtarea?null:D.hurtarea});render();return;});
