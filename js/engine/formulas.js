@@ -6,7 +6,7 @@ import {FOODDB, sumNutrition} from "./nutrition.js";
 import {dayRec, S, saveDB, split} from "../state.js";
 import {num, r1, today} from "../util.js";
 import {t} from "../i18n/dict.js";
-import {fmtW} from "../units.js";
+import {fmtEst, fmtW} from "../units.js";
 import {blockNow, plannedLight} from "./blocks.js";
 import {avgRPE, bestE1RMIn, bodyAtIn, bwShare, consistencyIn, daysSinceIn, deloadDueIn, deloadSets, e1RM, incrementOf,
         loadIn, plateauIn, prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, recordsOfEntry, repsAtIn,
@@ -98,7 +98,7 @@ function loadText(name,w){
   return fmtW(w);}
 function recordText(rec){
   if(!rec)return "";
-  if(rec.k==="e")return t("New best estimated max")+": "+fmtW(rec.e)+" ("+loadText(rec.n,rec.w)+" \u00d7 "+rec.r+")";
+  if(rec.k==="e")return t("New best estimated max")+": "+fmtEst(rec.e)+" ("+loadText(rec.n,rec.w)+" \u00d7 "+rec.r+")";
   if(rec.k==="r")return t("Rep record")+": "+rec.r+" \u00d7 "+loadText(rec.n,rec.w);
   return t("New record")+": "+loadText(rec.n,rec.w)+" \u00d7 "+rec.r;}
 function recommend(e){

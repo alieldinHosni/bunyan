@@ -73,6 +73,9 @@ var GUIDES={
   chat:{name:"Ask the coach",steps:[
     {sel:".chat-topics",h:"Tap a question",p:"Pick one, and the coach answers from your own log, plan and targets."},
     {sel:".chat-form",fixed:true,h:"Or type your own",p:"In English or Arabic. Nothing you type leaves your phone."}]},
+  /* The workout's one guide (WP-3): a set held for seconds, the first time one is up. */
+  hold:{name:"Timed set",steps:[
+    {sel:"#app [data-holdgo]",h:"A timed set",p:"Start counts the seconds in this button and logs the set at zero. Tap it while it counts to log the seconds you held. Press and hold it to log the set without the timer, if you timed it on the gym's clock."}]},
   run:{name:"Live tracking",steps:[
     {sel:".run-gps",h:"GPS",p:"Whether your phone has your position. Green means the route and distance are being tracked."},
     {sel:".run-play",h:"Pause and carry on",p:"Pause stops the clock and the distance; tap again to carry on."},
@@ -82,7 +85,7 @@ var GUIDES={
 function pageKey(){
   if(V.sheet||V.assess)return null;
   if(V.tab==="train"&&S.run&&!S.active)return "run";
-  if(S.active)return null;
+  if(S.active)return !SH&&document.querySelector("#app [data-holdgo]")?"hold":null;
   if(V.tab==="coach"&&V.chat)return "chat";
   if(V.tab==="train")return V.train==="days"?"train":V.train==="plan"?"tplan":null;
   if(V.tab==="coach")return !V.pcheck?"coach":null;

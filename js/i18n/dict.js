@@ -2967,7 +2967,20 @@ var AR={"Number keypad": "لوحة الأرقام",
 "{n} exercises, eleven and up": "{n} تمرين",
 "Keep it": "سيبه",
 "End the lighter week?": "تخلّص الأسبوع الأخف؟",
-"Your next workouts go back to the full plan.": "تمارينك الجاية هترجع للخطة كاملة."
+"Your next workouts go back to the full plan.": "تمارينك الجاية هترجع للخطة كاملة.",
+"leave {n}": "سيب {n}",
+"Low ": "تعبان",
+"Workout ": "التمرين",
+"Best estimated max": "أحسن أقصى وزن تقديري",
+"tempo {t}": "إيقاع {t}",
+"Start {n} s": "ابدأ {n} ث",
+"Stop and log the seconds held": "وقّف وسجّل الثواني اللي ثبتّها",
+"Tap to stop": "دوس عشان توقّف",
+"Today's target": "هدف النهارده",
+"A low day makes today's suggestions lighter.": "لو يومك تعبان، اقتراحات النهارده هتبقى أخف.",
+"Timed set": "مجموعة بالوقت",
+"A timed set": "مجموعة بالوقت",
+"Start counts the seconds in this button and logs the set at zero. Tap it while it counts to log the seconds you held. Press and hold it to log the set without the timer, if you timed it on the gym's clock.": "ابدأ بيعدّ الثواني في الزرار ده وبيسجّل المجموعة لما يوصل صفر. دوس عليه وهو بيعدّ عشان تسجّل الثواني اللي ثبتّها. دوس عليه مطوّل عشان تسجّل من غير العدّاد، لو وقّتها على ساعة الجيم."
 };
 /* Coaching cues (js/knowledge/cues.js AR) join the dictionary; the app's own strings win on a clash. */
 for(var ck in CUE_AR)if(!(ck in AR))AR[ck]=CUE_AR[ck];

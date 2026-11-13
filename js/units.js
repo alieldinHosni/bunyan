@@ -15,8 +15,11 @@ function wUnit(){return t(inLb()?"lb":"kg");}
 function toDisp(kg){var v=num(kg);return inLb()?r1(v*LB_PER_KG):r1(v);}
 function toKg(v){v=num(v);return inLb()?Math.round(v/LB_PER_KG*100)/100:v;}
 function fmtW(kg){return toDisp(kg)+" "+wUnit();}
+/* An estimated max (Epley, a formula's guess, not a lift done): to the nearest 0.5 kg, or
+   the nearest pound, never a tenth that the method cannot tell. */
+function fmtEst(kg){var v=num(kg);return (inLb()?Math.round(v*LB_PER_KG):Math.round(v*2)/2)+" "+wUnit();}
 /* Plate maths differs by unit: 2.5 kg is the small jump, 5 lb is its counterpart. */
 function wStep(){return inLb()?5:2.5;}
 
 
-export {fmtW, inLb, toDisp, toKg, wUnit};
+export {fmtEst, fmtW, inLb, toDisp, toKg, wUnit};

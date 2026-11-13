@@ -21,6 +21,7 @@ import {render} from "./render.js";
 import {resetNav} from "./nav.js";
 import {groupNext, groupRun, LOGGED_MS, noteSet, paintRest, rowsFor, weightStep} from "./views/session.js";
 import {warmOf} from "./views/warmup.js";
+import {startHold, stopHold} from "./hold.js";
 import {endRest, ex_isTimed, play, setBeeped, startRest, syncWorkoutState, tap, toast, V} from "./view.js";
 
 function current(){return (S.active&&S.active.entries[V.logIdx])||null;}
@@ -56,11 +57,12 @@ function resume(){
    rest timer keeps running: checking what is next is not the end of a rest. */
 function jumpTo(n){
   if(!S.active||n<0||n>=S.active.entries.length||n===V.logIdx)return;
+  dropHold();
   V.logIdx=n;S.active.idx=n;V.fresh=-1;syncDraft();saveDB();render();}
 function nextExercise(){
   if(!S.active)return;
   if(V.logIdx>=S.active.entries.length-1){confirmFinish();return;}
-  play("set");endRest();V.fresh=-1;
+  dropHold();play("set");endRest();V.fresh=-1;
   V.logIdx=V.logIdx+1;
   saveDB();syncDraft();render();}
 
@@ -122,6 +124,37 @@ function flagPain(mode){
     if(V.logIdx>=S.active.entries.length-1){confirmFinish();return;}
     endRest();V.fresh=-1;V.logIdx=V.logIdx+1;syncDraft();saveDB();render();return;}
   toast(t("Noted. Stop if it gets worse."));}
+
+/* ---- a held set: counted in the log button (WP-3, F-B3) ------------------------------
+   The count is hold.js's one timer; when it began is kept on the open workout
+   (S.active.hold {x: the exercise, at, secs}), as the rest timer's end is, so a reload in
+   the middle carries on (resumeHold) and one that comes back after the end logs it. */
+function holdStart(){
+  var e=current();if(!e||!S.active||S.active.past)return;
+  var lr=document.getElementById("in_r");
+  if(lr&&lr.value!=="")V.draft.r=num(lr.value);
+  var secs=Math.round(num(V.draft.r));
+  if(!(secs>0)){toast(t("Enter the seconds first."));return;}
+  if(secs>3600){toast(t("That is longer than an hour."));return;}
+  endRest();
+  S.active.hold={x:V.logIdx,at:Date.now(),secs:secs};
+  saveDB();resumeHold();render();}
+function resumeHold(){
+  var h=S.active&&S.active.hold;if(!h)return;
+  startHold("wk",h.secs,false,function(){holdEnd(true);},h.at);}
+/* full: it ran to zero, the target is logged; else the whole seconds held, at least one. */
+function holdEnd(full){
+  var h=S.active&&S.active.hold;if(!h)return;
+  var held=full?h.secs:Math.max(1,Math.min(h.secs,Math.floor((Date.now()-h.at)/1000)));
+  S.active.hold=null;stopHold();
+  if(V.logIdx!==h.x){V.logIdx=h.x;S.active.idx=h.x;syncDraft();}
+  V.draft.r=held;
+  var lr=document.getElementById("in_r");if(lr)lr.value=String(held);
+  /* Logged straight after a set (within logSet's double-tap guard) it would be dropped. */
+  V.loggedAt=0;
+  logSet();}
+/* Moving to another exercise stops a count without logging it. */
+function dropHold(){if(S.active&&S.active.hold){S.active.hold=null;stopHold();}}
 
 /* ---- logging ------------------------------------------------------------------- */
 /* Complete the active set. Reads the live inputs first so a value typed but not
@@ -351,5 +384,5 @@ function askDiscard(){
     body:t("Every set you logged in this workout is thrown away. This cannot be undone."),
     cta:t("Discard it"),act:"discard",hard:true});}
 
-export {addRow, addWarmup, queueRamp, askDiscard, cancelDelete, confirmFinish, deleteSet, removeExercise, editLoggedSet, flagPain, jumpTo, logBout, logSet, nextExercise,
+export {holdStart, holdEnd, resumeHold, dropHold, addRow, addWarmup, queueRamp, askDiscard, cancelDelete, confirmFinish, deleteSet, removeExercise, editLoggedSet, flagPain, jumpTo, logBout, logSet, nextExercise,
         lighterDay, persistRest, pickMuscle, removeRow, restControl, resume, setProblem, setReady, stepDraft, undoLogged, unlogSet};

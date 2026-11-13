@@ -2,7 +2,9 @@
    The live session surface and rest screen. Execution, not editing. */
 import {rulesFor} from "../../engine/conditions.js";
 import {t} from "../../i18n/dict.js";
-import {exMedia, isBarbell, isUnilateral, thumb} from "../../data/exercises.js";
+import {exMedia, exThumb, isBarbell, isUnilateral, thumb} from "../../data/exercises.js";
+import {fig3dHtml, hasMannequin} from "../mannequin.js";
+import {holdState} from "../hold.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {barKg, bodyAt, bwShare, dbTotal, incrementFor, inDeload, lastWeight, prevPerf, recommend} from "../../engine/formulas.js";
 import {incrementOf} from "../../engine/lifts.js";
@@ -20,7 +22,6 @@ import {hapOn, hb} from "../haptic.js";
    runs it. Every control answers one of: what am I doing, which set am I on, what
    did I do last time, am I resting, what is next. */
 var LOADED=/Carry|Farmer|Yoke/i;
-var READY=[[1,"Drained"],[2,"Low"],[3,"OK"],[4,"Good"],[5,"Great"]];
 function painRecent(name){
   var n=0,seen=0;
   for(var i=0;i<S.sessions.length&&seen<3;i++){
@@ -132,8 +133,8 @@ function rowPlan(e){
   return out;}
 /* The working sets of an exercise, planned and done. */
 function workCount(plan){return plan.filter(function(r){return !r.wu;}).length;}
-/* What is next, one quiet line under the name, always in view: the next exercise, one
-   tap to go there. Inside a superset it is the next one in the round. */
+/* What is next: the next exercise, one tap to go there, under the set list where the eye
+   goes after the last set (WP-3). Inside a superset it is the next one in the round. */
 function nextLine(a,run){
   var nxI=run&&run.length>1?groupNext(a.entries,V.logIdx):null;
   if(nxI===null||nxI===V.logIdx)nxI=V.logIdx<a.entries.length-1?V.logIdx+1:null;
@@ -154,19 +155,35 @@ function repsText(e,timed){
     +(p.rir!=null&&!timed?" · "+t("{n} in reserve").replace("{n}",p.rir):"")
     /* The phase's tempo (engine/phase.js), as the book writes it: lower, pause, lift, pause. */
     +(p.tempo&&!timed&&/[\dX]-[\dX]-[\dX]-[\dX]/.test(p.tempo)?" · "+t("Tempo {t}").replace("{t}",p.tempo.match(/[\dX]-[\dX]-[\dX]-[\dX]/)[0]):"");}
-/* The dose as chips under the set line (owner, 6 Nov: "Target 12–20 reps · 3 in reserve ·
-   Tempo 4-2-1-1" read as jargon): the reps, then what reserve and tempo mean, a tap away. */
-function doseChips(e,timed){
+/* The dose as one line on the stage (WP-3; it was three chips, each with its own info
+   icon): "12–20 reps · leave 3 · tempo 4-2-1-1". A tap on it opens what reserve and tempo
+   mean (sheets.js explain, k "dose"). */
+function doseLine(e,timed){
   var p=e.planned||{},c=[];
-  if(p.amrap)c.push('<span class="dchip">'+esc(t("As many as you can"))+'</span>');
+  if(p.amrap)c.push(esc(t("As many as you can")));
   else if(p.lo||p.hi){var r=p.lo+(p.hi&&p.hi!==p.lo?"–"+p.hi:"");
-    c.push('<span class="dchip"><b class="num">'+r+'</b> '+esc(timed?t("s"):t("reps"))+(p.side?" "+esc(t("/ side")):"")+'</span>');}
-  if(p.rir!=null&&!timed)c.push('<button class="dchip i" data-explain="rir">'+esc(t("{n} in reserve")).replace("{n}",'<b class="num">'+num(p.rir)+'</b>')+IC.info+'</button>');
+    c.push('<b class="num">'+r+'</b> '+esc(timed?t("s"):t("reps"))+(p.side?" "+esc(t("/ side")):""));}
+  var rir=p.rir!=null&&!timed;
+  if(rir)c.push(esc(t("leave {n}")).replace("{n}",'<b class="num">'+num(p.rir)+'</b>'));
   /* The tempo is read left to right in both languages (down, hold, up, hold): kept as
      one left-to-right run, or Arabic shows 4-2-1-1 as 1-1-2-4. */
   var tm=p.tempo&&!timed&&String(p.tempo).match(/[\dX]-[\dX]-[\dX]-[\dX]/);
-  if(tm)c.push('<button class="dchip i" data-explain="tempo">'+esc(t("Tempo {t}")).replace("{t}",'<b class="num" dir="ltr">'+tm[0]+'</b>')+IC.info+'</button>');
-  return c.length?'<div class="dchips">'+c.join("")+'</div>':'';}
+  if(tm)c.push(esc(t("tempo {t}")).replace("{t}",'<b class="num" dir="ltr">'+tm[0]+'</b>'));
+  if(!c.length)return "";
+  var what=c.join('<span class="stg-sep" aria-hidden="true"> · </span>');
+  /* Something to explain only when reserve or tempo is in it. */
+  return rir||tm?'<button class="stg-dose" data-explain="dose">'+what+'</button>':'<p class="stg-dose">'+what+'</p>';}
+/* The stage's picture: the exercise's 3D figure, playing, where it has passed its review
+   (mannequin.js hasMannequin, the safety gate); else its photograph, kept with the app
+   (img/ex, so it shows offline); else the drawn drill or the glyph thumb() falls back to.
+   Never an empty box. The figure itself is never mirrored in Arabic: only the stage is. */
+function stageMedia(e,act){
+  var n=e.name,lbl=exName(n);
+  if(!act&&hasMannequin(n))
+    return '<div class="stg-m" data-k="stgm:'+esc(n)+'">'+fig3dHtml(n,{label:lbl,stills:[exThumb(n)],tempo:(exTempoAttr(e).match(/"(.*)"/)||[])[1]})+'</div>';
+  var u=act?null:exThumb(n);
+  if(u)return '<div class="stg-m" data-k="stgm:'+esc(n)+'"><img class="stg-img" src="'+u+'" alt="" decoding="async"></div>';
+  return '<div class="stg-m stg-ph" data-k="stgm:'+esc(n)+'">'+thumb(n,72)+'</div>';}
 /* A set as the rows and the reference line say it: "60 kg × 8", "+10 kg × 6", "BW × 12",
    "45 s". */
 function setText(name,x,timed){
@@ -229,7 +246,10 @@ function vSetCard(e,row,rows,o){
   var CR=row.wu?null:rulesFor(S.profile);
   if(CR&&(CR.steady||CR.slowStand))top+='<p class="sc-cond">'+esc(t(CR.steady&&CR.slowStand?"Breathe out on the effort, never hold your breath, and stand up slowly."
     :CR.steady?"Breathe out on the effort and never hold your breath.":"Stand up slowly between exercises."))+'</p>';
-  if(top)h+='<div class="sc-top">'+top+'</div>';
+  /* Keyed, as the numbers below are: the Suggested tag going (a stepper tap) took the
+     row away, and the patcher then matched the numbers' box to the tag's by position and
+     rebuilt both fields. */
+  if(top)h+='<div class="sc-top" data-k="sctop">'+top+'</div>';
   /* What the weight box holds: added load on a bodyweight lift, how a dumbbell's
      weight reads (per hand unless the lifter chose totals), and a barbell's total with
      the bar in it, what the plates sheet works from. */
@@ -237,60 +257,55 @@ function vSetCard(e,row,rows,o){
   var wKey=t(bwl?"Added weight":"Weight")
     +(med&&med.e==="Dumbbell"?' · '+t(dbTotal()&&!isUnilateral(e.name)?"both together":"per hand"):'')
     +(med&&med.e==="Barbell"?' · '+t("with bar"):'');
+  /* While a held set counts, its numbers are fixed: the steppers rest. */
+  var hd0=S.active&&S.active.hold&&S.active.hold.x===V.logIdx,dis=hd0?' disabled':'';
   var wStepD=stepOf(e),rLbl=timed||loaded?t("Duration"):t("Reps"),rStep=timed||loaded?5:1,rUnit=timed||loaded?t("s"):"";
-  h+='<div class="sc-g'+(timed?' one':'')+'">';
+  h+='<div class="sc-g'+(timed?' one':'')+'" data-k="scg">';
   if(!timed)
     h+='<div class="val"><label class="val-k" for="in_w">'+wKey+'<span class="val-ku"> · '+wUnit()+'</span></label>'
      +'<div class="val-nw"><input class="val-n num'+(V.draftSg?' sg':'')+(String(toDisp(V.draft.w)).length>3?' long':'')+'" id="in_w" type="number" inputmode="decimal" step="any" min="0" enterkeyhint="done" '
      +'value="'+toDisp(V.draft.w)+'" style="'+chW(toDisp(V.draft.w))+'" aria-label="'+(bwl?t("Added weight"):t("Weight"))+', '+wUnit()+(V.draftSg?', '+t("suggested"):'')+'">'
      +'<span class="val-u" aria-hidden="true">'+wUnit()+'</span></div>'
      +'<div class="wstp">'
-     +hb('<button data-sstep="w" data-d="-1" aria-label="'+t("Less")+' '+wStepD+' '+wUnit()+'">'+IC.minus+'<span class="num">'+wStepD+'</span></button>')
-     +hb('<button data-sstep="w" data-d="1" aria-label="'+t("More")+' '+wStepD+' '+wUnit()+'">'+IC.plus+'<span class="num">'+wStepD+'</span></button>')+'</div></div>';
+     +hb('<button data-sstep="w" data-d="-1"'+dis+' aria-label="'+t("Less")+' '+wStepD+' '+wUnit()+'">'+IC.minus+'<span class="num">'+wStepD+'</span></button>')
+     +hb('<button data-sstep="w" data-d="1"'+dis+' aria-label="'+t("More")+' '+wStepD+' '+wUnit()+'">'+IC.plus+'<span class="num">'+wStepD+'</span></button>')+'</div></div>';
   h+='<div class="val"><label class="val-k" for="in_r">'+rLbl+(rUnit?'<span class="val-ku"> · '+rUnit+'</span>':'')+'</label>'
    +'<div class="val-nw"><input class="val-n num'+(V.draftSg?' sg':'')+'" id="in_r" type="number" inputmode="numeric" step="1" min="0" enterkeyhint="done" '
    +'value="'+num(V.draft.r)+'" style="'+chW(num(V.draft.r))+'" aria-label="'+rLbl+(V.draftSg?', '+t("suggested"):'')+'">'
    +(rUnit?'<span class="val-u" aria-hidden="true">'+rUnit+'</span>':'')+'</div>'
    +'<div class="wstp">'
-   +hb('<button data-sstep="r" data-d="-1" aria-label="'+t("Less")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.minus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>')
-   +hb('<button data-sstep="r" data-d="1" aria-label="'+t("More")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.plus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>')+'</div></div>';
+   +hb('<button data-sstep="r" data-d="-1"'+dis+' aria-label="'+t("Less")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.minus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>')
+   +hb('<button data-sstep="r" data-d="1"'+dis+' aria-label="'+t("More")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.plus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>')+'</div></div>';
   h+='</div>';
   /* The plates, without opening anything (owner, 27 Oct): a barbell's total read as the
      bar and what goes on each side. A tap opens the plates sheet to change the bar. */
   if(!timed&&!row.wu&&isBarbell(e.name)&&barKg()>0){var pl=plateLine(V.draft.w);
     h+='<button class="sc-pl" id="scPl" data-plates="1" aria-label="'+esc(t("Plates"))+'"'+(pl?'':' hidden')+'>'+pl+'</button>';}
   /* How hard a set was is asked once it is done, about that set (vRpeAsk), not here
-     before it (owner, 27 Oct: asked ahead, the answer went to the wrong set). */
-  /* One reference line, for this set only. Before the first working set it is the
-     recommendation and its reason; after it, what this set was last time. */
-  var hint="";
-  if(!row.wu){
-    var started=e.sets.some(function(x){return !x.wu;}),ps=p&&p.sets[row.n-1];
-    var rec=started?null:recommend(e),range=(e.planned.lo||"")+(e.planned.hi&&e.planned.hi!==e.planned.lo?"–"+e.planned.hi:"");
-    if(!started&&!p&&!timed)
-      hint='<span>'+(num(e.planned.w0)
-        ?esc(t("First time on this one. Your plan starts it at"))+' <b>'+fmtW(e.planned.w0)+'</b>.'
-        :esc(t(S.profile&&S.profile.level==="new"
-          ?"First time on this one. Pick a weight you could lift three or four more times than the reps asked, and learn the movement before adding load."
-          :"First time on this one. Use the first set to find a working weight, then settle in.")))+'</span>';
-    /* Back on a lift after six weeks or more (engine/lifts.js): last time, for reference,
-       and to find today's weight rather than take the old one. */
-    else if(rec&&rec.gap)
-      hint='<span>'+t("Last time")+' <b><span class="num">'+esc(rec.last)+'</span></b> · '+esc(shortd(rec.lastDate))+'</span><span>'+esc(t(rec.note))+'</span>';
-    else if(rec&&rec.amrap)
-      hint='<span>'+(rec.w?t("Recommended")+' <b>'+fmtW(rec.w)+'</b> · ':'')
-       +esc(t("As many clean reps as you can. Beat last time."))+(rec.last?' ('+esc(rec.last)+')':'')+'</span>';
-    else if(rec&&(rec.w||rec.bw))
-      hint='<span>'+t("Recommended")+' <b>'+(rec.bw?t("BW"):fmtW(rec.w))+' × <span class="num">'+range+'</span></b></span>'
-       /* Last time beside it, before the first set (owner, 6 Nov): that is when the weight is chosen. */
-       +(ps?'<span>'+t("Last time")+' <b>'+setText(e.name,ps,timed)+'</b></span>':'')
-       +(rec.note?'<span>'+esc(t(rec.note))+'</span>':'');
-    else if(ps)hint='<span>'+t("Last time")+' <b>'+setText(e.name,ps,timed)+'</b></span>';
-    /* The coach's cue for it, from an imported plan or a note of your own. */
-    if(e.planned.note&&!started)hint+='<span class="sc-cue">'+esc(e.planned.note)+'</span>';
-  }
-  if(hint)h+='<div class="sc-h">'+hint+'</div>';
+     before it (owner, 27 Oct: asked ahead, the answer went to the wrong set). Under the
+     numbers, one line only (WP-3): the plates above, for a barbell; else nothing. The
+     recommendation is already in the fields, marked Suggested; last time is in the set
+     list; what else there is to say about the exercise is under the list (exNotes). */
   return h+'</section>';}
+/* What there is to say about the exercise before its first working set, under the set
+   list (WP-3 moved it off the set card): the first time on it, back after a long gap, the
+   rule of an AMRAP set, the plan's own cue. Quiet; nothing once a working set is in. */
+function exNotes(e,row,p,timed){
+  if(!row||row.wu||e.sets.some(function(x){return !x.wu;}))return "";
+  var rec=recommend(e),out=[];
+  if(!p&&!timed)
+    out.push(num(e.planned.w0)
+      ?esc(t("First time on this one. Your plan starts it at"))+' <b>'+fmtW(e.planned.w0)+'</b>.'
+      :esc(t(S.profile&&S.profile.level==="new"
+        ?"First time on this one. Pick a weight you could lift three or four more times than the reps asked, and learn the movement before adding load."
+        :"First time on this one. Use the first set to find a working weight, then settle in.")));
+  /* Back on a lift after six weeks or more (engine/lifts.js): today's weight is found,
+     not taken from then; last time is in the rows, for reference. */
+  else if(rec&&rec.gap)out.push(esc(t("Last time"))+' <b><span class="num">'+esc(rec.last)+'</span></b> · '+esc(shortd(rec.lastDate))+'. '+esc(t(rec.note)));
+  else if(rec&&rec.amrap)out.push(esc(t("As many clean reps as you can. Beat last time.")));
+  /* The coach's cue for it, from an imported plan or a note of your own. */
+  if(e.planned.note)out.push('<span class="sc-cue">'+esc(e.planned.note)+'</span>');
+  return out.length?'<p class="sl-note" data-k="slnote">'+out.join(" ")+'</p>':"";}
 /* The plates line's words for a total, kg: "" when there is nothing to load. The
    field's typing updates it in place (handlers/fields.js), the rest of the card as it is. */
 function plateLine(w){
@@ -316,16 +331,25 @@ function vRpeAsk(e,workN){
      chosen number held, so a render in the meantime (the rest clock) does not cut it. */
   var out=V.rpeOut&&V.rpeOut.x===V.logIdx&&V.rpeOut.i===i?V.rpeOut:null;
   if(x.rpe&&!out)return "";
+  if(!out&&V.rpeSkip&&V.rpeSkip.x===V.logIdx&&V.rpeSkip.i===i)return "";
   var k=e.sets.filter(function(s){return !s.wu;}).length;
   if(!out&&!rpeWanted(k-1,workN))return "";
   return '<section class="sc-rpe rpeask wglass'+(out&&out.go?' rowout slow':'')+'" data-k="rpeask" role="group" aria-label="'+esc(t("How hard was set {n}?").replace("{n}",k))+' (RPE)">'
-   +'<span class="val-k">'+esc(t("How hard was set {n}?").replace("{n}",k))+' · RPE</span><div class="sc-rpe-c">'
+   /* It takes the log control's place while it is asked (WP-3 review: a third tier hid the
+      numbers on a small phone), so the set's Undo is here for as long as it is offered;
+      after that, Skip puts the question away and Log set is back. */
+   +'<div class="sc-rpe-h"><span class="val-k">'+esc(t("How hard was set {n}?").replace("{n}",k))+' · RPE</span>'
+   +(out?'':justLogged()?'<button class="undo" data-undolog="1">'+t("Undo")+'</button>':'<button class="rpe-skip" data-rpeskip="'+i+'">'+t("Skip")+'</button>')
+   +'</div><div class="sc-rpe-c">'
    +[6,7,8,9,10].map(function(v){return hb('<button class="num'+(out&&out.v===v?' on':'')+'" data-rpeset="'+i+':'+v+'"'+(out?' disabled':'')+'>'+v+'</button>');}).join("")
    +'</div></section>';}
 /* ---- the one primary action -------------------------------------------------------
    The check. It logs from the rest too; for a moment after, it says the set is logged
    and offers Undo, then reads the next set. */
-function vLogControl(e,row){
+/* A tap on a counting hold ends it and logs it: a stop, not a pause. */
+var STOP='<svg class="gl i-stop" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>';
+function holdDigits(s){return s>=60?mmss(s):String(s);}
+function vLogControl(e,row,secs){
   var j=justLogged();
   if(j)return '<div class="log ok" data-k="logok" role="status"><span class="log-c" aria-hidden="true">'+IC.check+'</span>'
     +'<b>'+(j.wu?t("Warm-up logged"):fill(t("Set {n} logged"),j.n))+'</b>'
@@ -335,6 +359,21 @@ function vLogControl(e,row){
     /* Its own key: a new button arriving, not the log button relabelled in place. */
     return hb('<button class="log" data-k="lognext" data-nextex="1"><span>'+t(last?"Finish workout":"Next exercise")+'</span>'
      +'<span class="log-c" aria-hidden="true">'+IC.chev+'</span></button>');}
+  /* Held for seconds (a plank, a carry: the sets the card counts in Duration): the button
+     starts the count, in itself (WP-3, F-B3). The count is hold.js's, painted into the
+     button (data-holdt) a few times a second; at zero the set logs at the target. A tap
+     while it runs logs the seconds held; a long press logs without the timer. The start
+     is kept on the open workout (S.active.hold), so a reload carries on. */
+  if(secs&&!row.wu&&!(S.active&&S.active.past)){
+    var hd=S.active&&S.active.hold,run=hd&&hd.x===V.logIdx?holdState("wk"):null;
+    if(run)return '<button class="log hold timing" data-k="log" data-holdset="1" data-holdt="wk" style="--p:'+run.p.toFixed(3)+'" aria-label="'+esc(t("Stop and log the seconds held"))+'">'
+      /* Digits alone in .num (left to right); the unit beside it, so Arabic puts it on its own side. */
+      +'<span class="hold-l" aria-live="off"><span class="hold-n num">'+holdDigits(run.left)+'</span> <span class="hold-u"'+(run.left>=60?' hidden':'')+'>'+t("s")+'</span></span>'
+      +'<span class="hold-k">'+t("Tap to stop")+'</span>'
+      +'<span class="log-c" aria-hidden="true">'+STOP+'</span></button>';
+    return hb('<button class="log" data-k="log" id="holdGo" data-holdgo="1" aria-label="'+esc(t("Start {n} s").replace("{n}",num(V.draft.r)))+'">'
+      +'<span>'+fill(t("Start {n} s"),num(V.draft.r))+'</span>'
+      +'<span class="log-c" aria-hidden="true">'+IC.play+'</span></button>');}
   var lbl=row.wu?t("Log warm-up"):t("Complete set")+' '+row.n,txt=row.wu?t("Log warm-up"):fill(t("Log set {n}"),row.n);
   /* The tick in the hand (owner, 3 Nov; tested on the iPhone with tests/haptics.html):
      Safari has no vibration API, but a native switch ticks the Taptic Engine when a tap
@@ -360,7 +399,7 @@ function doneVals(e,r,timed,lbl){
   if(timed)return cellIn(r.i,"r",num(x.r),lbl+', '+t("Duration"))+' '+t("s");
   return (bwl?'+':'')+cellIn(r.i,"w",toDisp(x.w),lbl+', '+(bwl?t("Added weight"):t("Weight"))+' '+wUnit())+' '+wUnit()
     +' × '+cellIn(r.i,"r",num(x.r),lbl+', '+t("Reps"));}
-function vHistory(e,plan,cur,timed){
+function vHistory(e,plan,cur,timed,p){
   var h='<div class="wsl wglass" data-k="sl" role="list" aria-label="'+t("Sets")+'">';
   plan.forEach(function(r){
     var lbl=r.wu?t("Warm-up"):t("Set")+' '+r.n;
@@ -369,16 +408,19 @@ function vHistory(e,plan,cur,timed){
        +hb('<button class="del" data-delok="'+r.i+'">'+t("Delete")+'</button>')
        +'<button class="keep" data-delno="1">'+t("Cancel")+'</button></div>';
       return;}
-    var now=r.i===cur;
+    var now=r.i===cur,ps=!r.done&&!r.wu&&p&&p.sets?p.sets.filter(function(x){return !x.wu;})[r.n-1]:null;
     var cls="wsr"+(r.done?" did":now?" on":" pend")+(r.wu?" wkwu":"")+(r.done&&V.fresh===r.i?" fresh":"");
     h+='<div class="'+cls+'" role="listitem" data-k="set:'+r.i+'">'
      /* Delete leads every row, the one being done too (owner, 27 Oct): it leaves the
         plan for today and the next one, or Next exercise, takes its place. */
      +'<button class="x" data-delset="'+r.i+'" aria-label="'+t("Delete")+' '+esc(lbl)+'">'+IC.close+'</button>'
      +'<span class="wsr-t"><span class="wsr-n">'+(r.wu?'<span class="wub" aria-hidden="true">W</span>'+t("Warm-up"):t("Set")+' <span class="num">'+r.n+'</span>')+'</span>'
-     +'<span class="wsr-v">'+(now?t("now"):r.done?doneVals(e,r,timed,lbl)
-       /* A row still to do shows what it is planned at, quieter than what was done. */
-       :setText(e.name,V.draft,timed))+'</span></span>'
+     +'<span class="wsr-v">'+(r.done?doneVals(e,r,timed,lbl)
+       /* A row still to do shows, faint, what that set was last time (WP-3: it was a line
+          on the set card); with no last time, the one being done says so and the rest
+          what they are planned at. */
+       :ps?'<span class="wsr-lt">'+t("Last time")+' '+setText(e.name,ps,timed)+'</span>'
+       :now?t("now"):setText(e.name,V.draft,timed))+'</span></span>'
      /* Done: a filled tick that takes the set back. Now: the accent ring. To do: an empty ring. */
      +(r.done?'<button class="wtick" data-unlog="'+r.i+'" aria-label="'+t("Undo set")+' '+esc(lbl)+'">'+IC.check+'</button>'
        :'<span class="wtick '+(now?'cur':'off')+'" aria-hidden="true"></span>')
@@ -386,12 +428,6 @@ function vHistory(e,plan,cur,timed){
   /* One more set, under the sets it adds to. */
   return h+'<button class="wsl-add" data-k="addrow" data-addrow="1">'+IC.plus+'<span>'+t("Add a set")+'</span></button></div>';}
 
-function readyAsk(a,doneAll){
-  if(doneAll!==0||a.ready!=null)return "";
-  return '<section class="ready" data-k="ready"><div class="ready-h"><span>'+t("How do you feel today?")+'</span>'
-   +'<button class="ready-skip" data-ready="0">'+t("Skip")+'</button></div><div class="ready-c">'
-   +READY.map(function(x){return hb('<button data-ready="'+x[0]+'">'+t(x[1])+'</button>');}).join("")
-   +'</div></section>';}
 function vLogger(){
   var a=S.active;
   if(V.logIdx>=a.entries.length)V.logIdx=a.entries.length-1;
@@ -428,10 +464,8 @@ function vLogger(){
    +(a.past?'<div class="ss-clock ss-past"><span>'+esc(shortd(a.date))+'</span></div>'
    :'<div class="ss-clock"><span class="num" id="sessClock">'+mmss(clock.ms/1000)+'</span>'
    +'<span class="ss-paused" id="sessPaused"'+(clock.paused?'':' hidden')+'>'+t("Paused")+'</span></div>')
-   /* The coach, one tap away mid-workout (owner, 27 Oct): a machine taken, a set that
-      felt off, how to do this one. The floating button stays off the workout. */
-   +'<button class="ss-coach" data-coachopen="1" aria-label="'+t("Ask Coach")+'">'
-   +'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5.5h16v10.5H11l-4.5 3.5V16H4z"/><path d="M8.5 10.75h7"/></svg></button>'
+   /* The coach is in ⋯ (WP-3: four controls in the header, not five): a machine taken,
+      a set that felt off, how to do this one, two taps away. */
    +'<button class="ss-more" data-sessmore="1" aria-label="'+t("More")+'">'+IC.more+'</button>'
    /* One segment an exercise, filling as its sets are done, the one on show marked: where
       you are in the day at a glance (owner, 6 Nov). */
@@ -459,25 +493,29 @@ function vLogger(){
   if(pd)line+=' · '+t(pd>0?"{n} more than the plan":"{n} fewer than the plan").replace("{n}",Math.abs(pd));
   if(run.length>1)line+=' · '+t("Superset")+' '+groupLabel(a.entries,V.logIdx);
   if(inDeload())line+=' · <span class="ex-light">'+t("Lighter week")+'</span>';
-  h+='<div class="wexl"><h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
-   +(act?'<span></span>':'<button class="ib" data-exdetail="'+esc(e.name)+'"'+exTempoAttr(e)+' aria-label="'+t("How to do it")+'">'+IC.info+'</button>')
+  /* The stage (WP-3): the exercise's figure or photograph on one side; on the other its
+     name, which set, and the dose in one line; how to do it and swap as two round
+     buttons. The class names of the line before it (wexl, ex-name, wexl-s) are kept. */
+  h+='<section class="wexl stg" data-k="stage">'+stageMedia(e,act)
+   +'<div class="stg-t"><h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
+   +'<p class="wexl-s"><span>'+line+'</span></p>'
+   +(act?'':doseLine(e,timed))
+   +'<div class="stg-b">'
+   +(act?'':'<button class="ib" data-exdetail="'+esc(e.name)+'"'+exTempoAttr(e)+' aria-label="'+t("How to do it")+'">'+IC.info+'</button>')
    +'<button class="ib" data-swap="1" aria-label="'+t("Replace this exercise")+'">'+IC.swap+'</button>'
-   +'<p class="wexl-s"><span>'+line+'</span>'
-   +'</p>'
-   +(act?'':doseChips(e,timed))
-   +nextLine(a,run)
-   +'</div>';
-  /* How you feel, asked once, first, before the first set (owner, 6 Nov: under the log
-     button it came in the middle of logging). */
-  h+=readyAsk(a,doneAll);
+   +'</div></div></section>';
+  /* How you feel is asked before the workout starts, on Start (sheets.js "ready"; WP-3),
+     not above the first set. */
 
   if(act){h+=actBody(a,e,rows,active);}
   else{
-    h+=vRpeAsk(e,workN);
     /* The card keeps its size through a rest: the rest no longer arrives above it and
-       pushes it down (owner, 6 Nov), it sits with the log button, at the thumb. */
+       pushes it down (owner, 6 Nov), it sits with the log button, at the thumb. So does
+       the question about the set just done (WP-3: above the card it was out of the
+       thumb's reach and moved the card down). */
     if(row)h+=vSetCard(e,row,rows,{timed:timed,loaded:loaded,p:p,small:false});
-    h+='<div class="wkdock">'+(restOn()?vRestBand():'')+vLogControl(e,row)+'</div>';
+    var rpeQ=vRpeAsk(e,workN);
+    h+='<div class="wkdock">'+(restOn()?vRestBand():'')+(rpeQ||vLogControl(e,row,timed||loaded))+'</div>';
   }
 
   /* --- before the first set only, under the check so it no longer pushes the numbers
@@ -488,24 +526,26 @@ function vLogger(){
      +(a.lighter?'':'<button class="btn g sm readyless" data-readyless="1">'+t("One set fewer on each exercise")+'</button>')+'</div>';
   }
   if(doneAll===0&&a.dayNotes&&a.dayNotes.length)
-    h+='<details class="daynotes"><summary>'+t("Notes for today")+'</summary>'
+    h+='<details class="daynotes" data-k="daynotes"><summary>'+t("Notes for today")+'</summary>'
      +a.dayNotes.map(function(l){return '<p>'+esc(l)+'</p>';}).join("")+'</details>';
   /* Pain flagged on this exercise in two of its last three sessions: say so before
      the first set, once, and point at a substitute. */
   if(!e.sets.length&&painRecent(e.name))
-    h+='<div class="painnote">'+t("You flagged pain on this exercise recently. Consider a substitute, and if it keeps coming back, get it looked at.")
+    h+='<div class="painnote" data-k="painnote">'+t("You flagged pain on this exercise recently. Consider a substitute, and if it keeps coming back, get it looked at.")
      +' <button class="linkbtn" data-swap="1">'+t("Replace it")+'</button></div>';
   /* The plan's other choice for this slot ("Pull-Ups or Seated Row"), one tap away
-     until a set is logged. */
+     until a set is logged. These optional lines are keyed, so one coming or going is
+     put in or taken out and the set list after them is kept, not rebuilt. */
   if(e.alt&&!e.sets.length)
-    h+='<button class="linkbtn exalt" data-swapalt="1">'+esc(t(e.altWhy==="gear"?"Don't have the kit?":"Or"))+' '+esc(exName(e.alt))+'</button>';
+    h+='<button class="linkbtn exalt" data-k="exalt" data-swapalt="1">'+esc(t(e.altWhy==="gear"?"Don't have the kit?":"Or"))+' '+esc(exName(e.alt))+'</button>';
 
   if(!act){
-    h+=vHistory(e,plan,active,timed);
+    h+=vHistory(e,plan,active,timed,p);
+    h+=exNotes(e,row,p,timed||loaded);
     /* Said once, under the sets, so +KG is never a guess. */
     if(bwShare(e.name)>0&&!timed){
       var bwNow=bodyAt(null);
-      h+='<p class="bwnote">'+(bwNow
+      h+='<p class="bwnote" data-k="bwnote">'+(bwNow
         ?t("+KG is weight added to you, like a belt or vest; leave it at 0 for bodyweight. Your {w} is counted in volume and records.").replace("{w}",fmtW(bwNow))
         :t("+KG is weight added to you, like a belt or vest; leave it at 0 for bodyweight. Log your weight and it is counted in volume and records."))+'</p>';}
   }
@@ -516,6 +556,8 @@ function vLogger(){
      program keeps its plan. --- */
   /* Only while there are sets still to do: once they are done, the big button is Next
      exercise, and a Skip beside it would be the same thing twice. */
+  /* Next, where the eye goes after the last set (WP-3). */
+  var nx=nextLine(a,run);if(nx)h+='<div class="wexl-nxw" data-k="next">'+nx+'</div>';
   if(V.logIdx<a.entries.length-1&&(act||row))
     h+='<div class="tools"><button data-nextex="1">'+IC.skip+'<span>'+t("Skip exercise")+'</span></button></div>';
   return h+'</div></div>';}

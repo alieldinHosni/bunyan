@@ -4251,7 +4251,7 @@ body.wkflat #app{--gutter:20px}
 
 /* WorkoutHeader: close, day and position (opens today's list), clock, more, a 3px bar. */
 .sess .ss-top{margin-bottom:var(--s3);padding-bottom:0;border-bottom:1px solid var(--hair)}
-.sess .ss-row{display:grid;grid-template-columns:var(--hit) minmax(0,1fr) auto var(--hit) var(--hit);gap:var(--s2);align-items:center;min-height:52px}
+.sess .ss-row{display:grid;grid-template-columns:var(--hit) minmax(0,1fr) auto var(--hit);gap:var(--s2);align-items:center;min-height:52px}
 .sess .ss-back,.sess .ss-more{width:var(--hit);height:var(--hit);margin:0;padding:0;display:grid;place-items:center;border-radius:50%;
   border:1px solid var(--glass-btn-edge);background:var(--glass-btn);color:var(--text)}
 .sess .ss-title{min-height:var(--hit);justify-content:center;padding:0}
@@ -4282,14 +4282,60 @@ body.wkflat #app{--gutter:20px}
 .wexl .chip.wkwu{border:1px solid var(--border);background:var(--surface)}
 .wexl .chip.wkwu .gl{color:var(--gold)}
 
+/* The stage (WP-3): the figure or photograph on the start side, the name, the set and the
+   dose on the other, how to do it and swap as two round buttons. In Arabic the grid puts
+   the picture on the right; the picture itself is never mirrored. */
+.wexl.stg{grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:var(--s3);align-items:stretch;min-height:150px}
+.stg-m{position:relative;min-height:150px;border-radius:var(--r4);overflow:hidden;background:var(--surface);border:1px solid var(--border)}
+.stg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+[data-theme="light"] .stg-m .stg-img{filter:none}
+.stg-ph{display:grid;place-items:center}
+.stg-m .fig3d{position:absolute;inset:0;aspect-ratio:auto;margin:0;border:0;border-radius:0}
+.stg-m .fig3d-still{grid-template-columns:1fr}
+.stg-m .fig3d-still figcaption,.stg-m .fig3d-play{display:none}
+.stg-t{display:flex;flex-direction:column;gap:var(--s1);min-width:0}
+.wexl.stg .ex-name{font-size:21px;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.wexl.stg .wexl-s{font-size:14px}
+.stg-dose{display:block;margin:0;padding:var(--s1) 0;border:0;background:none;color:var(--sub);font:inherit;font-size:14px;line-height:1.35;text-align:start;min-height:var(--hit);
+  text-decoration:underline dotted var(--dim);text-underline-offset:4px}
+.stg-dose b{color:var(--text);font-weight:700}
+p.stg-dose{text-decoration:none;min-height:0}
+.stg-b{display:flex;gap:var(--s2);margin-top:auto}
+/* Next, under the set list. */
+.wexl-nxw .wexl-nx{margin:0;width:100%}
+.sess .sl-note{margin:0;color:var(--sub);font-size:14px;line-height:1.45}
+.sess .sl-note b{color:var(--text)}
+.sess .sl-note .sc-cue{font-style:italic}
+.wsr-lt{color:var(--dim);font-weight:500}
+.wsr.on .wsr-lt{color:var(--sub)}
+/* A held set's count, in the log button itself (WP-3): a fill moving across, the seconds
+   large. --p is painted by js/ui/hold.js. */
+.sess .log.hold{position:sticky;overflow:hidden;isolation:isolate}
+.sess .log.hold::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--onAccent);opacity:.18;
+  transform-origin:left center;transform:scaleX(var(--p,0));transition:transform var(--m-micro) linear}
+[dir="rtl"] .sess .log.hold::before{transform-origin:right center}
+.sess .log.hold .hold-l{font-size:32px;line-height:1;font-variant-numeric:tabular-nums}
+.sess .log.hold .hold-k{flex:1;font-size:15px;font-weight:600;opacity:.85}
+.sess .log.hold .log-c :is(.i-play){display:none}
+.sess .log .log-c :is(.i-pause,.i-play){fill:currentColor;stroke:none}
+.sess .log:not(.hold) .log-c .i-pause{display:none}
+/* How you feel, asked on Start (sheets.js "ready"). */
+#sheet .rdy-c{margin:var(--s4) 0 var(--s3)}
+#sheet .rdy-skip{margin-top:var(--s2)}
+/* The dose sheet: its second section a section's gap below the first. */
+#sheet .shsub+.se-h{margin-top:var(--s5)}
+
 /* RestBand: compact, above the set. Time up, it fills with the action fill and is the
    alert. */
 .rb{display:grid;gap:10px;padding:var(--s3) var(--s4);border-radius:var(--r4)}
 .rb-top{display:flex;align-items:center;justify-content:space-between;gap:var(--s2)}
+/* On the narrowest phones the clock gives way, not the band (it ran off the screen at 320 in Arabic). */
+.rb-top>*{min-width:0}
+@media (max-width:340px){.rb-l{gap:var(--s2)}.rb .rb-ctl{gap:var(--s1)}}
 .rb-l{display:flex;align-items:baseline;gap:var(--s3)}
 .rb-k{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
 [dir="rtl"] .rb-k{letter-spacing:0;font-size:13px}
-.rb-t{font-family:var(--display);font-size:44px;font-weight:700;line-height:1;letter-spacing:-.01em;color:var(--text)}
+.rb-t{font-family:var(--display);font-size:clamp(32px,10.5vw,44px);font-weight:700;line-height:1;letter-spacing:-.01em;color:var(--text)}
 .rb-ctl{display:flex;gap:var(--s2)}
 .rb-ctl :is(button,label:where(.hap)){width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border-radius:50%;border:1px solid var(--border);
   background:var(--surface);color:var(--text);font-weight:700;font-size:14px}
@@ -4358,6 +4404,15 @@ body.wkflat #app{--gutter:20px}
 .sc-h b{color:var(--text);font-weight:700}
 .sc-h .sc-cue{font-style:italic}
 .sc-rpe{display:grid;gap:var(--s2);text-align:center}
+.sc-rpe-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);min-width:0}
+.sc-rpe-h .val-k{text-align:start;min-width:0}
+.sess .sc-rpe-h :is(.undo,.rpe-skip){flex:none;min-height:var(--hit);padding:0 var(--s4)}
+.sess .rpe-skip{border:0;background:none;color:var(--accentHi);font-weight:700;font-size:15px}
+.sess .log .log-c .i-stop{fill:currentColor;stroke:none}
+/* A short phone: the dock packs closer, so the set's numbers stay in view above it while
+   the rest and the RPE question are up (WP-3 review, 320 × 640). */
+@media (max-height:700px){.sess .wkdock{gap:var(--s1)}.sess .wkdock .rb{padding:var(--s2) var(--s3);gap:var(--s1)}
+  .sess .wkdock .rpeask{padding:var(--s2) var(--s3);gap:var(--s1)}}
 /* Asked after a set, about it: a small card of its own above the next set. */
 /* Its entrance is the workout cards' own (cardIn, .sess [data-k]); an animation here
    would also outrank its exit (.rowout). */

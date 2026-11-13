@@ -4634,3 +4634,79 @@ docs/COACH-AGENT.md 2.2 and 2.8. CACHE `bunyan-v258`.
   start on the Today card's text, as that test's does. Their Food and Coach drags are unchanged.
 - Not done / open: `food` is returned (the day's kcal and protein targets) but not drawn: what to eat around the session
   is WP-5. A day taken off by hand ("rest" swap) has no Train anyway, as before.
+
+## WP-3: the workout page, the flagship — branch session/workout-page (v267)
+docs/NEXT-PHASE.md WP-3 (findings F-B2, F-B3, F-B4, F-B7). One glance, one thumb.
+- Header (views/session.js vLogger): close · day and "Exercise n of m" (opens the list) · elapsed · ⋯. The coach
+  button moved into ⋯ (sheets.js sessmore, first row). Segmented bar kept.
+- Stage (new, `section.wexl.stg` data-k "stage", ~150 px): the exercise's 3D figure where it has passed its review
+  (mannequin.js hasMannequin: today Romanian Deadlift, Pullups, Incline Dumbbell Press), playing, its pause button
+  hidden on the stage; else its photograph from img/ex (kept with the app, so offline); else the drawn drill or the
+  glyph thumb() falls back to. Never an empty box. Beside it the name (two lines at most), "Set 2 of 3", and the dose
+  as one line, "12–20 reps · leave 3 · tempo 4-2-1-1" (doseLine; the three chips and their info icons are gone); a
+  tap on the line opens the explanation sheet with both reserve and tempo (explain, k "dose", the existing texts).
+  ⓘ and swap are two round buttons on the stage. The grid mirrors in Arabic (picture on the right); the picture
+  is never mirrored. Class names wexl / ex-name / wexl-s kept for the tests that read them.
+- Set card: weight, reps and steppers as they were; under them one line only, the plates for a barbell. Removed from
+  the card: "Recommended" (the suggestion is the fields' value, marked Suggested), the new-range note, and last time.
+  Last time is now the faint value of each set-list row not yet done ("Last time 60 kg × 8"; a row with no last time
+  shows "now" or its planned value as before). The first-time / back-after-a-gap / AMRAP / plan cue lines moved under
+  the set list (`.sl-note`, before the first working set only). "Next: …" moved under the set list.
+- The RPE question about the set just done sits in the dock with the rest band and Log set (it was above the card,
+  out of the thumb's reach, and pushed the card down).
+- Readiness: Start (any data-startday with no workout open: the Today card, Begin Workout, the coach's Start, the
+  day list) opens a sheet "How do you feel today?" with the five answers and Skip; an answer or Skip starts the
+  workout and stores S.active.ready (0 for Skip), then the suggestion is drawn from it (recommend, unchanged). The
+  question is gone from the workout page; the low-day note and "One set fewer" stay.
+- Held sets (F-B3): an exercise measured in seconds (timed or loaded: the card's "Duration" test) has "Start 40 s"
+  in place of Log set (the figure follows the field as typed). Tapping it counts down in the button with hold.js
+  (the one timer; startHold takes a start time now): a fill across it, the seconds large, "Tap to stop". At zero the
+  set logs at the target and rest starts (hold.js's tick and haptic, then logSet's); a tap while it counts logs the
+  whole seconds held (at least 1). The start is kept on the open workout (S.active.hold {x, at, secs}); app.js
+  resumes it after a reload or profile switch, and one that ended while closed logs the target. A long press (600 ms,
+  finger still) logs as typed without the timer. Moving to another exercise stops a count without logging. A page
+  guide "A timed set" (tour.js, key hold) says so once, the first time a held set's Start is on screen (after the
+  swipe hint).
+- Estimated maxes where the workout shows them are to the nearest 0.5 kg (1 lb) and called estimates (units.js
+  fmtEst): the record toast ("New best estimated max: 78.5 kg"), the exercise sheet's "Best estimated max" (was
+  "Best 1RM", 0.1 kg) and its session rows ("estimated max", was "1RM"). Formulas unchanged (Epley capped at 12, Σ
+  w×r, recordIn).
+- Patching: the set card's rows are keyed (sc-top, sc-g): the Suggested tag going away on a stepper tap used to make
+  the patcher match the numbers' box to the tag's by position and rebuild both fields. The optional lines before the
+  set list (exalt, painnote, daynotes, bwnote) are keyed, so one appearing (a swap) no longer rebuilds the list.
+- Rest band at 320 px in Arabic ran off the screen (+30 cut): the clock shrinks with the width (clamp) and the gaps
+  narrow below 340 px.
+- Measured (Chromium, 390 × 844, first set of Barbell Bench Press): Log set's bottom 607 (237 px above the bottom;
+  was 832); 375 × 667 whole without scrolling; controls before the first number: close, list, ⋯, ⓘ, swap (5) plus
+  the dose line, which the doc's count does not treat as a control (it counted "7 plus three chip-info icons").
+- Not done: one canvas for the page with the move swapped and a cross-fade (WP-8/F-x territory: mannequin.js builds
+  one WebGL context per figure element, keyed by exercise); the stage slides with the pane (exswipe.js, PAGE) as
+  before, and an exercise with a figure gets a fresh one.
+- Tests: new "WP-3 workout page: …" (layout and control count; RTL stage and the figure; thumb reach at 390 × 844 and
+  320 × 640 in both languages; node identity through a stepper, a set, the rest ticking, an RPE tap and a swap; the
+  hold: countdown, zero, a tap, a reload, a long press; estimated-max precision; the guide).
+  Changed expectations, none weakened: start helpers skip the new readiness sheet (`skipReady`); "readiness, pain
+  flag…" and "Readiness: drained…" answer it on Start; "Feel today: Skip or an answer fades the question…" measured
+  the in-page question fading, which no longer exists: it is now "Feel today: asked on Start in a sheet…", asserting
+  the sheet, Skip, an answer and the low-day note; "How do you feel today?: …in the middle of its pill" measures the
+  sheet's pills; the dose test reads the one line and the combined sheet; "how you feel is asked first" asserts no
+  question on the page; "Logger: last time…" (both languages) reads the rows; the ⋯ test expects the coach first and
+  no coach button on the page; the seven tests that opened the coach from the header open it from ⋯; the 375 × 667
+  warm-up test checks Next sits under the set list (no longer in view on first open, as the doc asks); "Blocks: the
+  first workout…" reads "leave 3" on the stage (was "3 in reserve" on a chip); "Live figure: the workout shows none"
+  is now "…shows it on the stage" (F-B2 asks for it there), asserting the stage's figure does not turn; the Today
+  card tests: Start's one tap reaches How do you feel today? (the workout's first step), and the "resume" setup
+  skips it.
+- Review of #155 (amend):
+  (1) The held set's count keeps its digits alone in `.num` and the unit in its own span (`.hold-n` / `.hold-u`),
+  in the view and in hold.js's repaint, so Arabic reads «25 ث» as the card does. (2) Its round icon is a stop
+  (square), since a tap ends and logs the set; "Tap to stop" kept. (3) While the RPE question is asked it takes the
+  log control's place in the dock (rest band above it): Undo is in its header for as long as "Set n logged" would
+  have offered it, then Skip, which puts the question away and brings Log set back (V.rpeSkip). On a short phone
+  (max-height 700) the dock packs closer; at 320 × 640 weight and reps stay in view while it is asked (new test
+  "…at 320 × 640 the RPE question takes the logged pill's place…", which also checks the steppers scroll clear of
+  the dock). Changed expectation: "Workout motion…" no longer has Next exercise under the question to glide up; it
+  arrives when the question goes. Also: the weight and seconds steppers are disabled while a hold counts; the dose
+  sheet's Tempo section has a section gap (--s5); the readiness sheet's "Low" is «تعبان» in Arabic (key "Low ", as
+  "Back " is kept apart: the bare "Low" is also a stress level); the ⋯ sheet is titled "Workout" / «التمرين» (key
+  "Workout ").

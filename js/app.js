@@ -211,7 +211,7 @@ onProfileSwitch(function(){
   applySky(true);
   V.tab="train";V.train="days";V.logIdx=0;
   V.restEnd=0;V.restPaused=false;V.restDone=false;V.justLogged=null;V.askDel=null;
-  restoreWorkoutState();
+  restoreWorkoutState();W.resumeHold();
   retargetNow();});
 initState();
 /* Targets the old formula made are rebuilt on the current one, once per profile. */
@@ -366,7 +366,7 @@ window.addEventListener("storage",function(ev){
 });
 /* Reopened mid-workout (a reload, or iOS having reclaimed the tab): straight back to
    the exercise and the rest that were on screen, not to Home. */
-if(S.active){restoreWorkoutState();syncDraft();bootDraft=JSON.stringify(V.draft);V.tab="train";V.train="days";}
+if(S.active){restoreWorkoutState();W.resumeHold();syncDraft();bootDraft=JSON.stringify(V.draft);V.tab="train";V.train="days";}
 if(!S.onboarded){V.tab="coach";V.assess=true;V.asd=draftFrom();}
 render();
 

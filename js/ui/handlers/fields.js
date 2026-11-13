@@ -101,6 +101,9 @@ function onInput(ev){
     else if(k==="st")V.draft.st=0;
     else if(k==="bw")V.draft.bw=null;
     /* A barbell's plates follow the figure as it is typed, that line alone. */
+    /* A held set's button says the seconds it will count: that figure alone. */
+    if(k==="r"){var hg=document.getElementById("holdGo"),hn=hg&&hg.querySelector(".num");
+      if(hn&&isFinite(v)){hn.textContent=String(v);var hl=hg.querySelector(".hapt-in")||hg;hl.setAttribute("aria-label",t("Start {n} s").replace("{n}",v));}}
     if(k==="w"){var pe=document.getElementById("scPl");if(pe){var ph=plateLine(isFinite(v)?V.draft.w:0);pe.innerHTML=ph;pe.hidden=!ph;}}
     if(k==="min"){var ak=document.getElementById("actKcal"),ae2=S.active&&S.active.entries[V.logIdx];
       if(ak&&ae2)ak.textContent=fmtN(actKcal(ae2.name,num(V.draft.min),V.draft.rpe||6,lastWeight()))+" kcal";}
