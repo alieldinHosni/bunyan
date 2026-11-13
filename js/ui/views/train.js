@@ -13,7 +13,8 @@ import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, split} from "../../stat
 import {conformProgram, SPLIT_LEVEL} from "../../engine/plan.js";
 import {rulesFor} from "../../engine/conditions.js";
 import {canSkipStab} from "../../engine/phase.js";
-import {headOn} from "../../engine/head.js";
+import {todayPlan} from "../../engine/head.js";
+import {words} from "../coachwords.js";
 import {blockNow, offPlanLight, phaseNow, shiftNow} from "../../engine/blocks.js";
 import {addDays, isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
 import {dfmt, esc, fmtN, pretty, shortd, today} from "../../util.js";
@@ -28,12 +29,12 @@ import {shown} from "../more.js";
 import {vTImport} from "./timport.js";
 import {condCard, doseText, weeksText} from "../dose.js";
 import {addDaysISO, estMinutes, planOn} from "../../engine/dayplan.js";
-import {swapAdvice, tooSoon} from "../../engine/recovery.js";
+import {tooSoon} from "../../engine/recovery.js";
 import {addsOn} from "../../engine/missed.js";
 import {monthGrid} from "../datebar.js";
 import {paceOf, routePath, speedOf} from "../../engine/run.js";
 import {groundFor, mapSeed} from "../runmap.js";
-import {bodyTiles, trainTop} from "./home.js";
+import {bodyTiles, houseCard, setupCard, trainTop} from "./home.js";
 
 /* ============================================================ TRAIN */
 
@@ -74,8 +75,8 @@ function ANOTHER(){return '<button class="thero2-add" data-another="1"><span ari
    day instead; keeping the plan is one tap too (js/engine/recovery.js). */
 /* ahead: the card for tomorrow, shown on today: its muscles are today's, trained or
    planned (js/engine/recovery.js readyOn counts today's plan for a day ahead). */
-function recoCard(sp,p,iso,ahead){
-  var s=swapAdvice(sp,iso,p);if(!s)return "";
+function recoCard(s,iso,ahead){
+  if(!s)return "";
   var names=s.tired.slice(0,3).map(function(m){return tm(m).trim().toLowerCase();}),ar=S.prefs&&S.prefs.lang==="ar";
   var list=names.length>1?names.slice(0,-1).join(ar?"، ":", ")+(ar?" و":" and ")+names[names.length-1]:names[0]||"";
   var when=ahead?t("today"):iso===today()?t("yesterday"):t("the day before");
@@ -88,22 +89,14 @@ function recoCard(sp,p,iso,ahead){
 /* Today, what today's workout means for tomorrow, live: on weekdays, tomorrow's day
    checked against today's muscles (a fresher one offered); in a rotation, tomorrow follows
    on from today's day, so a day changed by hand is said with what comes after it. */
-function aheadCard(sp,iso){
-  if(iso!==today()||!sp)return "";
-  var tm=addDaysISO(iso,1),p1=planOn(sp,tm),h=recoCard(sp,p1,tm,true);
-  if(h)return h;
-  var p0=planOn(sp,iso);
-  if(sp.schedule!=="week"&&S.daySwap&&S.daySwap[iso]&&p0.swapped&&p0.day&&p1&&p1.day&&!p1.rest)
-    return '<div class="reco" data-k="ahead'+iso+'"><div class="reco-h">'+glyph("whistle")+'<b>'+esc(t("Coach · tomorrow"))+'</b></div>'
-     +'<p>'+esc(t("Your rotation follows on from {a}: tomorrow is {b}.").replace("{a}",planName(p0.day.name)).replace("{b}",planName(p1.day.name)))+'</p></div>';
-  return "";}
+function aheadNote(a,iso){
+  return '<div class="reco" data-k="ahead'+iso+'"><div class="reco-h">'+glyph("whistle")+'<b>'+esc(t("Coach · tomorrow"))+'</b></div>'
+   +'<p>'+esc(t("Your rotation follows on from {a}: tomorrow is {b}.").replace("{a}",planName(a.from)).replace("{b}",planName(a.to)))+'</p></div>';}
 /* A day missed this week (js/engine/missed.js): moved to a free day, its key lifts carried
    into the days left, or let go, said plainly. Shown on today only, once, until dealt with,
    and while the head (js/engine/head.js) keeps it. */
-function headSig(id){return headOn("train").filter(function(s){return s.id===id;})[0]||null;}
-function missedCard(iso){
-  if(iso!==today())return "";
-  var m=headSig("missed"),r=m&&m.src;if(!r)return "";
+function missedCard(iso,m){
+  var r=m&&m.src;if(!r)return "";
   var ar=S.prefs&&S.prefs.lang==="ar",tm1=addDaysISO(iso,1),name=function(d){return dfmt(new Date(d+"T00:00:00"),{weekday:"long"});};
   /* Today and tomorrow by those words; another day by its name. */
   var wd=function(d){return d===iso?t("today"):d===tm1?t("tomorrow"):name(d);};
@@ -128,66 +121,143 @@ function missedCard(iso){
   acts+='<button class="btn g" data-missok="1">'+esc(t("Skip"))+'</button>';
   return '<div class="reco" data-k="miss'+r.missed.date+'"><div class="reco-h">'+glyph("whistle")+'<b>'+esc(t("Coach"))+'</b></div>'
    +'<p>'+esc(head+" "+body).replace(/&#?\w+;|\d+/g,function(m){return m.charAt(0)==="&"?m:'<span class="num">'+m+'</span>';})+'</p><div class="reco-a">'+acts+'</div></div>';}
-function dayHero(sp,p,iso){
-  var label,cta="",meta="";
-  if(p.kind==="done"){
-    var sv=p.session;
-    label=iso===today()?t("Done today"):t("Completed");
-    meta=(sv.mins?sv.mins+' '+t("min")+' · ':'')+sv.entries.filter(function(e){return (e.sets||[]).length;}).length+' '+t("exercises");
-    cta='<button class="btn g" data-openday="'+iso+'">'+t("View session")+'</button>'
+/* ---- the Today card (docs/NEXT-PHASE.md WP-2) ------------------------------------
+   The top of Training answers "what do I do now?" in one card, from the head and the
+   day's plan (js/engine/head.js todayPlan): the session, its exercises and minutes and
+   Start workout; or Resume, Done with the next session, a rest day with what recovery
+   wants (rest, and when the plan picks up). The one thing worth leading the day with is one line inside it, with its one
+   button, not a card of its own. Another day picked on the week below is drawn in the
+   same card, without the line. */
+var CHECK='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+/* Figures in a line of text, each in .num, so bidi leaves them where they are. */
+function nums(x){return esc(x).replace(/&#?\w+;|[0-9٠-٩][0-9٠-٩.,:]*/g,function(m){return m.charAt(0)==="&"?m:'<span class="num">'+m+'</span>';});}
+/* When the next session is: tomorrow by that word, another day by its name. */
+function whenNext(d,iso){return d===addDaysISO(iso,1)?t("tomorrow"):dfmt(new Date(d+"T00:00:00"),{weekday:"long"});}
+/* How many exercises, as the headline says it. Arabic counts: one and two have their own
+   words, three to ten take the plural, eleven and up the singular. */
+function exCount(n){
+  var ar=S.prefs&&S.prefs.lang==="ar";
+  if(n===1)return nums(t("1 exercise"));
+  if(n===2)return nums(t("2 exercises"));
+  return nums(t(ar&&n>10?"{n} exercises, eleven and up":"{n} exercises").replace("{n}",n));}
+function nextLine(n,iso){
+  if(!n)return "";
+  return '<p class="tdc-next" data-k="next">'+esc(t("Next up"))+' · <b>'+esc(planName(n.name))+'</b> · '+esc(whenNext(n.date,iso))+'</p>';}
+/* What the day holds, by name: the first three, and how many more. */
+function exLine(ex){
+  var names=ex.map(function(e){return exName(e.name);}).filter(Boolean);if(!names.length)return "";
+  return '<p class="tdc-ex"><span class="tdc-exn">'+esc(names.slice(0,3).join(" · "))+'</span>'+(names.length>3?'<span class="num">+'+(names.length-3)+'</span>':'')+'</p>';}
+/* A lighter week or travel mode running: what the day is, said in the card, with the way
+   to end it. A block's planned lighter week is ended from the block's own card. */
+function statusLines(tp){
+  var h="";
+  if(tp.light)h+='<div class="tdc-st" data-k="st:light"><span class="dlcard-i" aria-hidden="true">'+FEATHER+'</span>'
+    +'<span class="dlcard-t"><b>'+esc(t("Lighter week"))+'</b><span>'+(tp.light.until?esc(t("Until"))+' '+nums(shortd(tp.light.until))+' · ':'')+nums(t("fewer sets, about 10% lighter"))+'</span></span>'
+    +(tp.light.planned?'':'<button class="dlcard-x" data-deload="endask">'+esc(t("End it"))+'</button>')+'</div>';
+  if(tp.travel)h+='<div class="tdc-st" data-k="st:travel"><span class="dlcard-t"><b>'+esc(t("Travel mode"))+'</b><span>'+esc(t("Until"))+' '+nums(shortd(tp.travel.until))
+    +' · '+esc(t("exercises swapped for your kit at hand"))+'</span></span><button class="dlcard-x" data-travel="end">'+esc(t("End it"))+'</button></div>';
+  return h;}
+/* The line in the card: what leads the day, with its one button and, where the source has
+   one, its quiet "not now". A missed day or the coach's word on today's session keeps its
+   own wording and choices, drawn flat inside the card. */
+function compact(id,text,btn,later){
+  return '<div class="tdc-lead" data-k="lead:'+esc(id)+'"><p class="tdc-lt">'+text+'</p><div class="tdc-la">'+btn
+   +(later||'')+'</div></div>';}
+function leadLine(c,iso){
+  if(!c)return "";
+  var flat=function(h){return h?'<div class="tdc-lead in" data-k="lead:'+esc(c.id)+'">'+h+'</div>':"";};
+  if(c.kind==="swap")return flat(recoCard(c.swap,c.date,c.ahead));
+  if(c.kind==="note")return flat(aheadNote(c,iso));
+  if(c.kind==="setup")return compact("setup",'<b>'+esc(t("Build my plan"))+'</b> '+esc(t("A short assessment, and the coach builds your daily targets, your training and a meal plan, and puts them here and on Food.")),
+    '<button class="btn sm" data-setup="1">'+esc(t("Start the assessment"))+'</button>');
+  var s=c.sig;
+  if(s.id==="deload-due"){var due=s.src||{};
+    return compact(s.id,'<b>'+esc(t("Time for a lighter week"))+'</b> '+esc(t(due.why==="plateau"?"Several of your lifts have stalled for three sessions in a row."
+      :"Your sets have been close to failure for two weeks running.")),
+      '<button class="btn sm" data-deload="start">'+esc(t("Start a lighter week"))+'</button>',
+      '<button class="tdc-later" data-deload="later">'+esc(t("Not now"))+'</button>');}
+  if(s.source==="missed")return flat(missedCard(iso,s));
+  if(s.source==="plancheck"){var f=s.src;
+    return compact(s.id,'<b>'+nums(f.title)+'</b>','<button class="btn sm" data-pcfix="'+esc(f.id)+'">'+nums(f.fix.label)+'</button>',
+      '<button class="tdc-later" data-pckeep="'+esc(f.id)+'">'+esc(t("Keep it as it is"))+'</button>');}
+  if(s.source==="coach"){var w=words(s.src);if(!w)return "";
+    return compact(s.id,'<b>'+nums(w[0])+'</b>','<button class="btn sm" data-cofix="'+esc(s.src.id)+'">'+nums(w[2])+'</button>',
+      w[3]!=="ok"?'<button class="tdc-later" data-cokeep="'+esc(s.src.id)+'">'+esc(t("Not now"))+'</button>':'');}
+  /* The rest are drawn on Coach in full (the stress card): the line names it and goes there. */
+  var title=s.source==="stress"?t(s.id==="stress-follow"?"How are you now?":"Kept light on purpose"):s.title;
+  if(!title)return "";
+  return compact(s.id,'<b>'+nums(title)+'</b>','<button class="btn sm" data-tab="coach">'+esc(t("Open in Coach"))+'</button>');}
+/* The one other prompt the page may draw, below the day: the next thing the head or the
+   day's plan has, in its own card. */
+function prompt(h){return h?h.replace(/^<(\w+)/,'<$1 data-prompt="1"'):"";}
+function otherCard(c,iso){
+  if(!c)return "";
+  if(c.kind==="swap")return prompt(recoCard(c.swap,c.date,c.ahead));
+  if(c.kind==="note")return prompt(aheadNote(c,iso));
+  if(c.sig.id==="deload-due")return prompt(deloadCard(c.sig.src));
+  if(c.sig.source==="missed")return prompt(missedCard(iso,c.sig));
+  return "";}
+function todayCard(sp,tp){
+  if(tp.state==="setup")return setupCard();
+  var p=tp.plan,iso=tp.date,now=iso===today(),label,cta="",more="",meta="",ex="",name,badge=DUMBBELL,rest=false,live=false;
+  if(tp.state==="resume"){
+    var a=S.active,pos=Math.min(+a.idx||0,a.entries.length-1)+1;
+    label=t("Workout in progress");name=planName(a.dayName);live=true;
+    meta=nums(t("Exercise")+" "+pos+" "+t("of")+" "+a.entries.length);
+    cta=hb('<button class="btn" data-continue="1"><span class="ico ico-play" aria-hidden="true"></span>'+esc(t("Resume workout"))+'</button>');}
+  else if(tp.state==="done"){
+    var sv=p.session;badge=CHECK;
+    label=now?t("Done today"):t("Completed");name=planName(p.name);
+    meta=(sv.mins?nums(sv.mins+' '+t("min"))+' · ':'')+exCount(sv.entries.filter(function(e){return (e.sets||[]).length;}).length);
+    /* Quiet: the next session is the message (WP-2 review). */
+    cta='<button class="btn g" data-openday="'+iso+'">'+esc(t("View session"))+'</button>';
     /* Another session the same day, on the go (owner, 27 Oct): any day of the program,
        or a run, a class, a sport. */
-     +(iso===today()?'<button class="btn" data-another="1"><span aria-hidden="true">+</span> '+t("Start another session")+'</button>':'');
-  }else if(p.kind==="past"||p.kind==="none"){
-    label=p.kind==="past"?t("No session"):t("Nothing planned");
-    meta=p.kind==="past"?t("Nothing was logged on this day."):t("Your program has no training days yet. Plan them in Coach.");
-    if(p.kind==="none")cta='<button class="btn" data-csec="train">'+t("Plan your training")+'</button>';
+    if(now)more='<button class="thero2-add" data-another="1"><span aria-hidden="true">+</span> '+esc(t("Start another session"))+'</button>';}
+  else if(tp.state==="past"||tp.state==="none"){
+    rest=tp.state==="past";badge=rest?MOON:DUMBBELL;
+    label=rest?t("No session"):t("Nothing planned");
+    name=rest?t("Rest or unlogged"):t(planName(sp?sp.name:""));
+    meta=esc(rest?t("Nothing was logged on this day."):t("Your program has no training days yet. Plan them in Coach."));
+    if(!rest)cta='<button class="btn" data-csec="train">'+esc(t("Plan your training"))+'</button>';
     /* Trained without the app: log it now, under this day (owner, 4 Nov). */
-    else if(sp.days.some(function(d){return d.ex.length;}))cta='<button class="btn g" data-logpast="'+iso+'"><span aria-hidden="true">+</span> '+t("Log a workout for this day")+'</button>';
-  }else if(p.rest){
-    label=p.kind==="today"?t("Today"):t("Planned");
-    meta=t("Recover. The plan picks up the day after.");
-    /* A rest day is advice, not a lock: someone who feels good can train anyway. */
-    if(p.kind==="today"&&p.next)
-      cta=hb('<button class="btn g" data-startday="'+p.next.id+'">'+t("Train anyway")+' · '+esc(p.next.name)+'</button>');
-    if(p.kind==="today")cta+=ANOTHER();
-  }else{
-    label=p.kind==="today"?(p.again?t("Session {n} today").replace("{n}",p.again):t("Current workout")):t("Planned");
+    else if(sp.days.some(function(d){return d.ex.length;}))cta='<button class="btn g" data-logpast="'+iso+'"><span aria-hidden="true">+</span> '+esc(t("Log a workout for this day"))+'</button>';}
+  else if(tp.state==="rest"){
+    rest=true;badge=MOON;
+    label=now?t("Today"):t("Planned");name=t("Rest day");
+    /* With the next session said below it, the rest of the sentence would say it twice. */
+    meta=esc(t(tp.next?"Recover.":"Recover. The plan picks up the day after."));
+    /* A rest day is advice, not a lock: someone who feels good can train anyway. Not while
+       the line offers a missed day for today: two different workouts offered at once. */
+    var missing=now&&tp.line&&tp.line.kind==="sig"&&tp.line.sig.source==="missed";
+    if(now&&p.next&&!missing)cta=hb('<button class="btn g" data-startday="'+p.next.id+'">'+esc(t("Train anyway"))+' · '+esc(planName(p.next.name))+'</button>');
+    /* Another session is offered only where Train anyway is not (it would be the same thing). */
+    else if(now&&!missing)more=ANOTHER();}
+  else{
+    live=now;name=planName(p.name);
+    label=now?(p.again?t("Session {n} today").replace("{n}",p.again):t("Today")):t("Planned");
     /* Lifts carried here from a missed day count in, and are named. */
     var add=addsOn(iso,p.day.id),all={ex:p.day.ex.concat(add)};
-    meta=all.ex.length+' '+t("exercises")+' · ~'+estMinutes(all)+' '+t("min")
-      +(add.length?' · '+t("plus {x} from a missed day").replace("{x}",add.map(function(a){return exName(a.name);}).join(", ")):'');
-    cta=p.kind==="today"
-      ?hb('<button class="btn" data-startday="'+p.day.id+'"><span class="ico ico-play" aria-hidden="true"></span>'+t("Start workout")+'</button>')+ANOTHER()
-      :'<button class="btn g" data-day="'+p.day.id+'">'+t("Preview the day")+'</button>';
-  }
-  var name=p.kind==="past"?t("Rest or unlogged"):p.kind==="none"?esc(planName(sp.name)):(p.rest?t("Rest day"):planName(p.name));
+    meta=exCount(all.ex.length)+' · '+nums('~'+estMinutes(all)+' '+t("min"))
+      +(add.length?' · '+esc(t("plus {x} from a missed day").replace("{x}",add.map(function(x){return exName(x.name);}).join(", "))):'');
+    ex=exLine(p.day.ex);
+    if(now){cta=hb('<button class="btn" data-startday="'+p.day.id+'"><span class="ico ico-play" aria-hidden="true"></span>'+esc(t("Start workout"))+'</button>');more=ANOTHER();}
+    else cta='<button class="btn g" data-day="'+p.day.id+'">'+esc(t("Preview the day"))+'</button>';}
   /* Any day still ahead can be switched to another day of the plan. */
-  var swap=(p.kind==="today"||p.kind==="plan")&&sp.days.length>1
+  var swap=(p&&(p.kind==="today"||p.kind==="plan"))&&tp.state!=="resume"&&sp&&sp.days.length>1
     ?'<button class="thero2-swap" data-swapday="'+iso+'" aria-label="'+esc(t("Change this day's workout"))+'">'
-      +'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg><span>'+t("Change")+'</span></button>':'';
-  return '<div class="thero2'+(p.kind==="today"&&!p.rest?' live':'')+'">'
+      +'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg><span>'+esc(t("Change"))+'</span></button>':'';
+  return '<div class="thero2 tdc'+(live?' live':'')+(tp.state==="done"?' done':'')+'" data-k="today" data-state="'+tp.state+'">'
    +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'
-   +'<div class="thero2-top"><span class="tbadge'+(p.rest||p.kind==="past"?' rest':'')+'" aria-hidden="true">'
-   +(p.rest||p.kind==="past"?MOON:DUMBBELL)+'</span>'
+   +'<div class="thero2-top"><span class="tbadge'+(rest?' rest':'')+(tp.state==="done"?' done':'')+'" aria-hidden="true">'+badge+'</span>'
    /* Change sits beside the day's label, in the text, not over the rider (owner, 3 Nov:
       "the change button is hiding the cool figure"). */
    +'<div class="thero2-t"><div class="thero2-k"><span class="klabel">'+esc(label)+'</span>'+swap+'</div>'
    +'<div class="thero2-n">'+esc(name)+'</div>'
-   +'<div class="thero2-m">'+esc(meta)+'</div></div></div>'
-   +cta+'</div>';}
-
-/* The same card for a workout already under way: Home shows it in place of Next up. */
-function resumeHero(){
-  var a=S.active,pos=Math.min(+a.idx||0,a.entries.length-1)+1;
-  return '<div class="thero2 live">'
-   +'<img class="thero2-art" src="intro.jpg" alt="" aria-hidden="true" width="902" height="897" decoding="async">'
-   +'<div class="thero2-top"><span class="tbadge" aria-hidden="true">'+DUMBBELL+'</span>'
-   +'<div class="thero2-t"><span class="klabel">'+esc(t("Workout in progress"))+'</span>'
-   +'<div class="thero2-n">'+esc(planName(a.dayName))+'</div>'
-   +'<div class="thero2-m">'+esc(t("Exercise")+" "+pos+" "+t("of")+" "+a.entries.length)+'</div></div></div>'
-   +hb('<button class="btn" data-continue="1"><span class="ico ico-play" aria-hidden="true"></span>'+t("Resume workout")+'</button>')+'</div>';}
-
+   +'<div class="thero2-m">'+meta+'</div>'+ex+'</div></div>'
+   +(now?statusLines(tp):'')
+   +(tp.state==="done"||tp.state==="rest"?nextLine(tp.next,iso):'')
+   +cta+more+(now?leadLine(tp.line,iso):'')+'</div>';}
 function vTrain(){
   /* "hub": a workout left for later, seen from its Resume card. */
   if(S.active&&V.train!=="hub")return vLogger();
@@ -227,17 +297,19 @@ function schedLine(sp){
   return ws.length?ws.map(function(n){return wdName(n,true);}).join(", "):days;}
 
 /* ---- the Training page ------------------------------------------------------------
-   One question: what do I train today? The greeting and at most one reminder, the
-   week with today ringed, the selected day's card (start it, or change it to another
-   day of the plan), weigh-in and steps, and a run or a match to log. */
+   One question: what do I do now? In this order, with nothing above it: the greeting and
+   the date; the Today card (js/engine/head.js todayPlan: the day, and the one line that
+   leads it); the week with today ringed; weigh-in and steps; at most one other prompt;
+   cardio and your program; and at the foot the one housekeeping card of the day (a backup,
+   a weigh-in). Never more than two prompt cards. */
 function vTrainHome(){
-  var sp=split(),sel=V.tdate||today(),h="";
+  var sp=split(),sel=S.active?today():V.tdate||today(),tp=todayPlan(sel),h="";
   if(V.train!=="days"&&V.train!=="hub")V.train="days";
   h+=trainTop();
-  if(S.active)h+=resumeHero();
-  else{var pd=planOn(sp,sel);h+=weekRail(sp,sel);h+=dayHero(sp,pd,sel);h+=recoCard(sp,pd,sel);h+=aheadCard(sp,sel);h+=missedCard(sel);}
-  h+=deloadCard()+travelCard();
+  h+=todayCard(sp,tp);
+  if(!S.active)h+=weekRail(sp,sel);
   h+=bodyTiles();
+  h+=otherCard(tp.other,sel);
   /* The last outdoor session of the fortnight (a run, a walk, a ride, a hike), as the
      reference's run card: its route, how far, how fast. Opens that day. */
   h+=lastRunCard();
@@ -250,6 +322,8 @@ function vTrainHome(){
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   /* The way into planning, last: today's training first (owner, 4 Nov). */
   if(!S.active)h+=programCard();
+  /* Housekeeping never leads (WP-1 rule 5): the one reminder of the day, at the foot. */
+  h+=houseCard(tp.house);
   return h;}
 
 /* The most recent outdoor session of the last 14 days with a distance (Running,
@@ -476,22 +550,10 @@ function programsList(){
 /* A suggestion with its reason and two answers, or — during the week — a quiet line
    saying it is on and until when, with a way out. Never shown mid-workout. */
 /* Travel mode on: a quiet line saying so, until when, and a way out (the coach turns it on). */
-function travelCard(){
-  var tv=S.travel;if(!tv||!tv.until||today()>tv.until)return "";
-  return '<div class="dlcard on"><span class="dlcard-t"><b>'+t("Travel mode")+'</b><span>'+t("Until")+' '+shortd(tv.until)
-   +' · '+t("exercises swapped for your kit at hand")+'</span></span><button class="dlcard-x" data-travel="end">'+t("End it")+'</button></div>';}
-/* A lighter week due or running, when the head (js/engine/head.js) has it for Training:
-   it is the one card that offers a lighter week, whichever source saw the need first. */
-function deloadCard(){
-  var on=headSig("deload-on");
-  /* The planned lighter week of a training block is shown by its own card. */
-  if(on&&on.src.planned)return "";
-  if(on){
-    return '<div class="dlcard on" data-k="deload-on"><span class="dlcard-i" aria-hidden="true">'+FEATHER+'</span>'
-     +'<span class="dlcard-t"><b>'+t("Lighter week")+'</b><span>'+t("Until")+' '+shortd(S.deload.until)
-     +' · '+t("fewer sets, about 10% lighter")+'</span></span>'
-     +'<button class="dlcard-x" data-deload="end">'+t("End it")+'</button></div>';}
-  var ds=headSig("deload-due"),due=ds&&ds.src;
+/* A lighter week due, as its own card: drawn only when something else leads the day (the
+   head's lead is the Today card's line). It is the one card that offers a lighter week,
+   whichever source saw the need first. */
+function deloadCard(due){
   if(!due)return "";
   return '<div class="dlcard" data-k="deload-due"><div class="dlcard-h"><span class="dlcard-i" aria-hidden="true">'+FEATHER+'</span>'
    +'<b>'+t("Time for a lighter week")+'</b></div>'
@@ -516,7 +578,7 @@ var PHASE_WHY={1:"Lighter loads, slow and controlled: movement quality, joint st
 function programCard(){
   var sp=split();
   var top='<button class="pgc-h" data-tplan="program"><span class="pgc-t"><span class="klabel">'+esc(t("Your program"))+'</span>'
-   +'<b>'+esc(sp?planName(sp.name):t("No program yet"))+'</b>'
+   +'<b>'+esc(sp?t(planName(sp.name)):t("No program yet"))+'</b>'
    +'<span class="pgc-s">'+esc(sp?schedLine(sp):t("Pick one, or build your own"))+'</span></span>'
    +'<span class="pgc-go">'+esc(t("Plan"))+'<span class="ico ico-chev" aria-hidden="true"></span></span></button>';
   /* The block lives on My program now (owner, 3 Nov): the card is the way in. */
@@ -947,4 +1009,4 @@ function vDay(){
   h+='</div>';
   return h;}
 
-export {builderBody, dayHero, exercisesPage, exHay, programsPage, resumeHero, trainSub, vTrain, wdName, weekOffer};
+export {builderBody, exercisesPage, exHay, programsPage, trainSub, vTrain, wdName, weekOffer};

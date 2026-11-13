@@ -1,14 +1,14 @@
 /* The head (js/engine/head.js): its conflict rules over plain signals, and the whole of
    it over a seeded profile. head.js reads the state, so the profile is put in S
    (state.js setS) the way the app's own boot leaves it: DEF, filled in by normalize. */
-import {decide, headFor, headNow, headOn, headWhy, isLighter, pickLead, ruleLighter, planMapping, COACH, CHECKIN, MONTHLY, rank, ruleCalories, ruleDeficit,
+import {decide, headFor, headNow, headOn, headWhy, todayPlan, isLighter, pickLead, ruleLighter, planMapping, COACH, CHECKIN, MONTHLY, rank, ruleCalories, ruleDeficit,
   ruleHousekeeping, ruleMissed, ruleRecovery, ruleSaidOnce} from "../head.js";
 import {checkPlansAll} from "../plancheck.js";
 import {insights} from "../../coach/insights.js";
 import {checkin} from "../../coach/checkin.js";
 import {monthly} from "../../coach/monthly.js";
 import {weekStartOf} from "../schedule.js";
-import {S, saveDB, setS} from "../../state.js";
+import {S, saveDB, setS, split} from "../../state.js";
 import {DEF, normalize} from "../../schema.js";
 import {today} from "../../util.js";
 
@@ -159,7 +159,41 @@ function run(t){
   t.eq(drawn.slice().sort(),ids(hn.queue).slice().sort(),"headOn: every signal in the queue is drawn on exactly one page");
   t.ok(hn.lead&&headOn(hn.lead.page)[0]===hn.lead&&pages.filter(function(p){return p!==hn.lead.page;}).every(function(p){return headOn(p).indexOf(hn.lead)<0;}),
     "headOn: the lead tops its own page and no other");
+
+  /* ---- todayPlan: the Training page's Today card (WP-2) ---- */
+  seeded();
+  var tp=todayPlan();
+  t.ok(tp.state==="train"||tp.state==="rest","today: a training day or a rest day in the seeded program ("+tp.state+")");
+  t.eq([tp.lead&&tp.lead.id,tp.line&&tp.line.kind,tp.line&&tp.line.id],["deload-due","lead","deload-due"],"today: the lighter week due leads, as the card's one line");
+  t.eq(tp.house&&tp.house.id,"backup","today: the backup reminder is the housekeeping card, never the line");
+  t.ok(!tp.other||tp.other.id!=="deload-due","today: what the line says is not a second card");
+  S.deload={snooze:"2099-01-01"};saveDB();
+  var tk=todayPlan();
+  t.eq([tk.lead&&tk.lead.id,tk.line&&tk.line.id],["kcal-down","kcal-down"],"today: the lighter week put off, the next lead (pri >= 60) takes the line, wherever it belongs");
+  S.deload={until:addDays(6),last:today()};saveDB();
+  var tl=todayPlan();
+  t.ok(tl.light&&tl.light.until===addDays(6)&&(tl.state==="light"||tl.state==="rest"),"today: a lighter week running is the card's status (light), not a lead");
+  t.ok(!tl.lead||tl.lead.id!=="deload-on","…and never the line");
+  S.deload={snooze:"2099-01-01"};
+  var day=(split().days.filter(function(d){return d.ex.length;})[0]);
+  S.sessions.push({id:"tdy",date:today(),dayId:day.id,dayName:day.name,entries:[{name:"Barbell Squat",muscle:"Quads",sets:[{w:80,r:8}]}]});saveDB();
+  var td=todayPlan();
+  t.eq([td.state,td.session&&td.session.name],["done",day.name],"today: trained today is done, with the session done");
+  t.ok(td.next&&td.next.date>today(),"…and the next session after it");
+  S.sessions.pop();S.active={dayName:day.name,idx:0,entries:[{name:"Barbell Squat",sets:[]}]};saveDB();
+  t.eq(todayPlan().state,"resume","today: a workout open is resume");
+  S.active=null;S.daySwap={};S.daySwap[today()]="rest";saveDB();
+  t.eq(todayPlan().state,"rest","today: a day taken off is a rest day");
+  S.daySwap={};saveDB();
+  var other=todayPlan(addDays(1));
+  t.eq([other.line,other.house&&other.house.id],[null,"backup"],"another day: no line in the card (the lead is today's)");
+  var nb=fresh();nb.onboarded=false;saveDB();
+  var ns=todayPlan();
+  t.ok(ns.state!=="setup"&&ns.line&&ns.line.kind==="setup","not set up, with a program that trains: the day as it is, the assessment as its line ("+ns.state+")");
+  split().days.forEach(function(d){d.ex=[];});saveDB();
+  t.eq([todayPlan().state,todayPlan().line],["setup",null],"not set up and nothing to train: the assessment is the card");
   fresh();}
+function addDays(n){var d=new Date(today()+"T00:00:00");d.setDate(d.getDate()+n);return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);}
 
 function headWhyOf(r,id){var x=r.suppressed.filter(function(y){return y.id===id;})[0];return x?x.why:null;}
 

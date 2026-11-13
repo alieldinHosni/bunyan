@@ -4865,6 +4865,33 @@ label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-
   transition:transform var(--m-press) var(--e-standard),color var(--m-press) var(--e-standard)}
 .thero2-add span{font-size:18px;line-height:1;color:var(--accentHi)}
 :root:not(.tch) .thero2-add:active,.thero2-add.tapd{transform:scale(.97)}
+/* The Today card (WP-2, js/ui/views/train.js todayCard): what the day holds by name, a
+   lighter week or travel mode as a status row, the next session on a day done or a rest
+   day, and the one line that leads the day, under a hairline, with its button. */
+.tdc{gap:var(--s4)}
+.tdc .thero2-top{align-items:flex-start}
+/* The day's name kept clear of Change's 44 px hit area, so a thumb on the name does not open it. */
+.tdc .thero2-n{margin-top:var(--s3)}
+.tdc-ex{display:flex;gap:var(--s2);margin:var(--s1) 0 0;font-size:13px;color:var(--sub)}
+.tdc-exn{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tdc-ex .num{flex:0 0 auto}
+.tdc-next{margin:0;font-size:14px;color:var(--sub)}
+.tdc-next b{color:var(--text);font-weight:700}
+.tdc-st{display:flex;align-items:center;gap:var(--s3);padding:var(--s3);border-radius:var(--r3);
+  border:1px solid rgba(var(--gold-rgb),.45);background:var(--card)}
+.tdc-st .dlcard-t span{color:var(--sub)}
+.tdc-lead{display:flex;flex-direction:column;gap:var(--s3);padding-top:var(--s4);border-top:1px solid var(--hair-hi)}
+.tdc-lt{margin:0;font-size:14px;line-height:1.45;color:var(--sub)}
+.tdc-lt b{display:block;margin-bottom:var(--s1);font-family:var(--display);font-size:16px;color:var(--text)}
+.tdc-la{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2)}
+.tdc-la .btn{flex:1 1 auto;width:auto}
+.tdc-later{min-height:var(--hit);padding:0 var(--s4);background:none;border:none;color:var(--sub);font-size:14px;font-weight:600}
+.tdc-lead.in .reco{margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+.tdc-lead.in .reco p{color:var(--sub)}
+.tdc-lead.in .reco-a{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:0 var(--s2)}
+.tdc-lead.in .reco-a .btn:not(.g){flex:1 0 100%}
+.tdc-lead.in .reco-a .btn.g{flex:0 1 auto;width:auto;min-height:var(--hit);padding:0 var(--s3);background:none;border:none;box-shadow:none;color:var(--sub);font-size:14px;font-weight:600}
+.tbadge.done{color:var(--onAccent)}
 .trow.on{background:rgba(var(--accent-rgb),.08)}
 .trow.on .trow-n{color:var(--accentHi)}
 /* ---- Exercise library (train.js vLibrary) and exercise sheet ------------------------ */
