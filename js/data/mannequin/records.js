@@ -144,18 +144,31 @@ function recordForUnchecked(name){return own(RECORDS,name)?RECORDS[name]:moveFor
    row's third entry). Until then the app shows the exercise's photographs, as it
    does for an exercise with no figure. Every place the app decides whether to show a
    figure, or a still of one, asks this. */
+/* The version an approval was given against: a short hash of the record exactly as the
+   families build it (keys, path rules, tempo, camera, equipment...). Any later change to
+   the movement changes it, and the approval then no longer counts until the exercise is
+   reviewed again (docs/FIGURE-V3.md 2.6). Worked out only for exercises that carry an
+   approval, once each. */
+var VER={};
+function versionOf(name){
+  if(own(VER,name))return VER[name];
+  var r=recordForUnchecked(name),v=null;
+  if(r){var s=JSON.stringify(r,function(k,x){return typeof x==="function"?"fn:"+x.toString():x;}),h=2166136261;
+    for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+    v=("0000000"+h.toString(16)).slice(-8);}
+  VER[name]=v;return v;}
 function checkedOf(name){
   var c=own(RECORDS,name)?RECORDS[name].checked:own(TABLE,name)?TABLE[name][2]:null;
-  return c&&c.by&&c.on&&c.version?c:null;}
+  return c&&c.by&&c.on&&c.version&&c.version===versionOf(name)?c:null;}
 function isChecked(name){return !!checkedOf(name)&&!!recordForUnchecked(name);}
 /* The record the app may show: only a checked one. */
 function recordFor(name){return isChecked(name)?recordForUnchecked(name):null;}
 /* For the browser tests only: mark one exercise checked for the length of a test, so
    the renderer stays covered while nothing in the app is checked. Returns the undo. */
 function markCheckedForTest(name){
-  var c={by:"test",on:"test",version:"test"};
+  var c={by:"test",on:"test",version:versionOf(name)};
   if(own(RECORDS,name)){var was=RECORDS[name].checked;RECORDS[name].checked=c;return function(){RECORDS[name].checked=was;};}
   if(own(TABLE,name)){var row=TABLE[name],old=row[2];row[2]=c;return function(){row[2]=old;};}
   return function(){};}
 
-export {RECORDS, recordFor, recordForUnchecked, checkedOf, isChecked, markCheckedForTest, seated, along, grip, wristFor, levers};
+export {RECORDS, recordFor, recordForUnchecked, checkedOf, isChecked, versionOf, markCheckedForTest, seated, along, grip, wristFor, levers};

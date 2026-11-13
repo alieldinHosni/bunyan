@@ -473,19 +473,31 @@ function pull(o){
     keys=[{at:0,pose:k0},{at:.45,pose:km},{at:1,pose:k1}];}
   else{
     var KNEE=17,PATH={path:[{track:"bar",rule:"touch:thigh+shin"},{track:"bar",rule:"overMidfoot"}]};
-    /* the knees soft and the same at the top and the bottom, as they are once the path
-       constraints have put the bar against the legs over the middle of the foot (they
-       move the body along the floor, which bends or straightens the knees): the pelvis
-       is found from where it ends up. The top upright; the bottom with the bar just
-       below the knees (4 cm), the hips gone back as far as that takes */
+    /* docs/figures/ex/Romanian_Deadlift.md. The knees soft (about 17 degrees) and the
+       shins near upright, the same at the top and the bottom. The path constraints put
+       the bar against the legs over the middle of the foot by moving the body along the
+       floor, so the knees come out of where the body ends up, not of the shin's lean
+       asked for: only the trunk's angle is chosen. The top upright. The bottom where the
+       hips stop: HIP_STOP degrees of hip flexion (the thigh's angle in front of the
+       trunk), about where the hamstrings of a trained man with his knees soft stop the
+       hips going further back without the back rounding (GEN: a straight-leg raise of
+       about 80 degrees, a few more with the knees soft). On this body that leaves the bar
+       a few centimetres above the knees: deeper would ask the hamstrings for more than
+       most have, and the figure must not teach chasing depth with the back. */
+    var HIP_STOP=85;
     function after(phi,th){var p=hangOn(pose(pullModel(b0,phi,KNEE,th)));p=constrain(PATH,p,0);var J=solve(p).J;
-      return {knee:kneeBend(J,"l"),bar:lerp(J.grip.l,J.grip.r,.5),kneeY:J.kn.l[1]};}
-    var t0=solveN([0],function(x){return [after(x[0],0).knee-KNEE];},[3]);
-    var t1=solveN([0,62],function(x){var a=after(x[0],x[1]);return [a.knee-KNEE,a.bar[1]-(a.kneeY-.04)];},[3,4]);
-    t0=[t0[0],0];
-    keys=[pose(pullModel(b0,t1[0],KNEE,t1[1])),pose(pullModel(b0,t0[0],KNEE,t0[1]))];}
+      return {knee:kneeBend(J,"l"),
+        hip:180-Math.acos(Math.max(-1,Math.min(1,dot(norm(sub(J.sh.l,J.hip.l)),norm(sub(J.kn.l,J.hip.l))))))/R};}
+    /* the shin's lean (it sets the pelvis's height) that leaves the knees at KNEE */
+    function shin(th){return solveN([0],function(x){return [after(x[0],th).knee-KNEE];},[3])[0];}
+    /* the trunk's pitch that brings the hips to HIP_STOP: hip flexion grows about one
+       for one with it, so a few steps of that slope, then the shin once more */
+    var th1=62,ph1=shin(th1);
+    for(var it=0;it<4;it++)th1+=HIP_STOP-after(ph1,th1).hip;
+    ph1=shin(th1);th1+=HIP_STOP-after(ph1,th1).hip;
+    keys=[pose(pullModel(b0,ph1,KNEE,th1)),pose(pullModel(b0,shin(0),KNEE,0))];}
   keys.forEach(function(k){k=k.pose||k;delete k.hands;delete k.handDir;delete k.palm;});
-  var rec={keys:keys,spine:"neutral",tempo:[1.6,.4,2,.6],cam:{yaw:72,pitch:6},arrow:{track:"wr.l"},refine:{Back:"Lower back"},
+  var rec={keys:keys,spine:"neutral",tempo:[1.6,.4,2,.6],cam:{yaw:rdl?64:72,pitch:rdl?9:6},arrow:{track:"wr.l"},refine:{Back:"Lower back"},
     /* the bar over the middle of the foot, against the legs (GEN) */
     path:[{track:"bar",rule:rdl?"touch:thigh+shin":"touch:shin+thigh"},{track:"bar",rule:"overMidfoot"}],
     /* slowest from the floor to just past the knees (GEN, the deadlift's sticking
@@ -573,8 +585,57 @@ function row(o){
 /* ---- bench presses: lying, the weight from the chest to straight arms ----
    imp "bb" | "db"; angle: the bench's (0 flat, 30 incline, -20 decline); w half width;
    grip "pro" | "ham" (dumbbells, palms in); floor: on the floor, no bench */
+/* Incline Dumbbell Press, written from its dossier (docs/figures/ex/
+   Incline_Dumbbell_Press.md). Seated back on a bench at ANG degrees, feet flat, the
+   back and the hips on the bench, the shoulder blades set (drawn back and down: the
+   raised arms do not lift them), spine neutral, head in line.
+     u = 0   the bottom: each upper arm FLARE degrees out from the trunk and DEPTH
+             degrees behind its front, the forearm upright under the dumbbell, which
+             is beside the upper chest
+     u = 1   the top: the dumbbells over the shoulders, TOP_GAP apart at their inner
+             plates (they do not touch), the elbows TOP_BEND degrees short of straight
+   Between, each upper arm and forearm turn steadily from one to the other, so the
+   forearms stay near upright and the wrist straight under the load. The bench is put
+   where the back rests on it. */
+function inclineDbPress(o){
+  var ANG=o.angle,FLARE=50,DEPTH=15,TOP_BEND=12,TOP_Z=.17;
+  var b0=Object.assign(sit({pelvis:[.02,.6,0],pitch:-90+ANG,feet:S(.5,ANKLE,.26)}),{spine:"neutral",head:0});
+  var J0=solve(b0).J,A=DIM.upArm,B=DIM.foreArm;
+  /* the bench: its pad's surface against the upper back */
+  var a=ANG*R,n=[Math.sin(a),Math.cos(a),0],c0=padFoot(J0),gap=1e9;
+  bodyParts(solve(b0)).forEach(function(p){if(p.n!=="trunk.upper")return;
+    gap=Math.min(gap,dot(sub(p.a,c0),n)-p.ra,dot(sub(p.b,c0),n)-p.rb);});
+  var bench=["adjBench",add(c0,mul(n,gap)),ANG];
+  function slerpDir(x,y,t){var w=Math.acos(Math.max(-1,Math.min(1,dot(x,y))));if(w<1e-6)return x;
+    return norm(add(mul(x,Math.sin((1-t)*w)/Math.sin(w)),mul(y,Math.sin(t*w)/Math.sin(w))));}
+  /* each side's upper arm and forearm at the bottom (the forearm upright) and the top */
+  var ends={};
+  LR.forEach(function(s){
+    var cu=J0.cf.u,cf=J0.cf.f,lat=mul(J0.cf.l,sg(s)),f=FLARE*R,sh=J0.sh[s];
+    function arm(beta){var d=beta*R;return norm(add(mul(add(mul(cu,-Math.cos(f)),mul(lat,Math.sin(f))),Math.cos(d)),mul(cf,Math.sin(d))));}
+    var L=Math.sqrt(A*A+B*B+2*A*B*Math.cos(TOP_BEND*R)),dz=sg(s)*TOP_Z-sh[2];
+    var W=[sh[0],sh[1]+Math.sqrt(L*L-dz*dz),sg(s)*TOP_Z],Lh=norm(sub(W,sh));
+    var th=Math.acos((A*A+L*L-B*B)/(2*A*L)),pole=sub([0,0,sg(s)],mul(Lh,dot([0,0,sg(s)],Lh)));
+    var ua1=norm(add(mul(Lh,Math.cos(th)),mul(norm(pole),Math.sin(th)))),E1=add(sh,mul(ua1,A));
+    ends[s]={ua:[arm(-DEPTH),ua1],fa:[[0,1,0],norm(sub(W,E1))]};});
+  function drive(p,u){
+    var J=base(p),sh={};
+    LR.forEach(function(s){var e=ends[s],ua=slerpDir(e.ua[0],e.ua[1],u),fa=slerpDir(e.fa[0],e.fa[1],u);
+      /* the palm toward the feet, square to the forearm; the fingers along it */
+      var pn=norm(sub([1,0,0],mul(fa,fa[0])));
+      armTo(p,J,s,ua,fa,pn,fa);
+      /* the blades held set: the lift the raised arm would give them is taken off */
+      sh[s]=-Math.max(0,dot(norm(sub(p.hands[s],J.sh[s])),J.cf.u)+.15)*20;});
+    p.shrug=sh;p.grip="grip";}
+  var rec={keys:[b0,b0],spine:"neutral",tempo:[1.0,.5,2.0,.5],stick:[.05,.4],cam:{yaw:40,pitch:20},arrow:{track:"wr.l"},
+    refine:{Chest:"Upper chest",Shoulders:"Front delts"},drive:drive,
+    equip:function(J){return dbsIn(J).concat([bench]);}};
+  rec.contact=[["trunk.upper","bench"],["pelvis","bench"]];
+  return rec;}
+
 function benchPress(o){
   o=o||{};
+  if(o.strict)return inclineDbPress(o);
   var imp=o.imp||"bb",ang=o.angle||0,w=o.w||.4;
   var b0=o.floor?floorLie({pelvis:[.1,.12,0]}):ang>0?sit({pelvis:[.02,.6,0],pitch:-90+ang,feet:S(.5,ANKLE,.26)}):
     ang<0?lie({pelvis:[.1,.62,0],pitch:-90+ang,feet:S(.5,.42,.16),footDir:S(1,.3,.1),knees:S(.3,1,.1),sole:S(-.3,1,0)}):lie();
@@ -728,9 +789,77 @@ function pushup(o){
 
 /* ---- pull-ups and chin-ups: hanging from a bar, pulled until the chin is over it ----
    grip "pro" (palms away) | "sup" (palms toward) | "ham"; w */
+/* The body's centre of mass from its joints (GEN: Winter's segment table, the share of
+   the body's mass in each segment and where along it its centre lies): head and neck
+   8.1% at the head, trunk 49.7% halfway from the hips to the shoulders, upper arm 2.8%
+   at .436 from the shoulder, forearm 1.6% at .43, hand 0.6% at the grip, thigh 10% at
+   .433 from the hip, shank 4.65% at .433 from the knee, foot 1.45% at the ankle. */
+function massCentre(J){
+  var mh=lerp(J.hip.l,J.hip.r,.5),ms=lerp(J.sh.l,J.sh.r,.5),c=add(mul(J.head,.081),mul(lerp(mh,ms,.5),.497)),m=.578;
+  LR.forEach(function(s){
+    c=add(c,add(add(mul(lerp(J.sh[s],J.el[s],.436),.028),mul(lerp(J.el[s],J.wr[s],.43),.016)),mul(J.grip[s],.006)));
+    c=add(c,add(add(mul(lerp(J.hip[s],J.kn[s],.433),.1),mul(lerp(J.kn[s],J.an[s],.433),.0465)),mul(J.an[s],.0145)));
+    m+=.028+.016+.006+.1+.0465+.0145;});
+  return mul(c,1/m);}
+function elbowBend(J,s){var a=norm(sub(J.el[s],J.sh[s])),b=norm(sub(J.wr[s],J.el[s]));return Math.acos(Math.max(-1,Math.min(1,dot(a,b))))/R;}
+/* the bottom of the chin: the head's lowest point along its own up, as the capsules
+   measure it */
+function chinOf(sc){var h=bodyParts(sc).filter(function(p){return p.n==="head";})[0];return sub(h.a,mul(sc.J.hu,h.ra));}
+
+/* Pullups, written from its dossier (docs/figures/ex/Pullups.md): a strict pull-up.
+   Hanging still, the body's centre of mass stays under the bar (a body that hangs
+   from its hands and does not swing has nowhere else to put it), so every key is
+   solved for that as well as for its own aim:
+     u = 0     the hang: arms long (elbows 10 degrees short of straight), shoulders
+               engaged, not sunk to the ears (the blades a little down from where the
+               raised arms carry them)
+     u = .15   the blades drawn down first, the arms still long: the body rises by
+               what the shoulders drop
+     u = .55   halfway: the elbows at a right angle, the sticking region
+     u = 1     the chin 4 cm over the bar, the chest up, the trunk 22 degrees back
+   The trunk tips back as it rises (LIB: the torso back, the chest out), which is what
+   lets the face pass behind the bar (at least 3.9 cm from it) and the elbows finish at
+   about 140 degrees, inside their range: upright, this body would need 160. The grip
+   is 74 cm across (w .37), about one and a half shoulder widths: narrower, the elbows
+   run out of range before the chin clears the bar. The legs are one piece with the
+   pelvis, straight and a little in front of it (no kipping, no swing): they lean with
+   the trunk and do not move on it. */
+function strictPullup(o,grip,w,H){
+  var LEG_U=.955,LEG_F=.1,HANG=-4,SET=-16,CHIN=.04,LEAN=-22;
+  function body(x,y,lean,shrug){
+    var a=lean*R,up=[Math.sin(a),Math.cos(a),0],fw=[Math.cos(a),-Math.sin(a),0];
+    var ft=add([x,y,0],add(mul(up,-LEG_U),mul(fw,LEG_F)));
+    return {pelvis:[x,y,0],pitch:lean,spine:"neutral",head:0,shrug:shrug,
+      feet:{l:[ft[0],ft[1],.09],r:[ft[0],ft[1],-.09]},toes:{l:-35,r:-35},
+      knees:{l:add(fw,[0,0,.05]),r:add(fw,[0,0,-.05])}};}
+  function drive(p){onBar(p,[0,H,0],w,[1,0,0],[0,1,0],0);p.elbows=S(-.1,-1,1);p.grip="grip";}
+  function scene(q){var p=Object.assign({},q);drive(p);return solve(p);}
+  /* a key: the pelvis that puts the centre of mass under the bar and meets aim(scene),
+     which grows as the body rises (an arm that cannot reach the bar has no slope, so
+     the height is bisected; the centre of mass moves with the pelvis about one for
+     one, so a few such steps put it under the bar) */
+  function key(lean,shrug,aim){
+    var x=-.05,lo=.9,hi=2,y;
+    for(var it=0;it<30;it++){y=(lo+hi)/2;
+      for(var k=0;k<3;k++)x-=massCentre(scene(body(x,y,lean,shrug)).J)[0];
+      if(aim(scene(body(x,y,lean,shrug)))<0)lo=y;else hi=y;}
+    return body(x,(lo+hi)/2,lean,shrug);}
+  function elbowAt(e){return function(sc){return elbowBend(sc.J,"l")-e;};}
+  /* the blades' drop is keyed halfway as well, so the blend raises the body with them
+     and the arms never stretch past the hang */
+  var k0=key(-2,HANG,elbowAt(10)),kh=key(-2.5,(HANG+SET)/2,elbowAt(10)),k1=key(-3,SET,elbowAt(10)),
+    km=key(LEAN/2,SET,elbowAt(90)),
+    k2=key(LEAN,SET,function(sc){return chinOf(sc)[1]-(H+CHIN);});
+  return {keys:[{at:0,pose:k0},{at:.075,pose:kh},{at:.15,pose:k1},{at:.55,pose:km},{at:1,pose:k2}],spine:"neutral",
+    /* lift 1.2 s, a second's hold with the chin over the bar, lower 2 s, a moment in
+       the hang: the lowering slower than the lift (GEN; LIB "slowly lower") */
+    tempo:[1.2,1,2,.4],stick:[.35,.7],cam:{yaw:118,pitch:6},arrow:{track:"sh.l"},refine:{Back:"Lats"},
+    drive:drive,equip:function(){return [["bar",H,{w:.62}]];}};}
+
 function pullup(o){
   o=o||{};
   var grip=o.grip||"pro",w=o.w||(grip==="sup"?.2:.4),H=2.3;
+  if(o.strict)return strictPullup(o,grip,w,H);
   function pose(shY,x,lean){return {pelvis:[x-.02,shY-.4,0],pitch:lean,head:-14,feet:S(x+.06,shY-1.37,.1),footDir:S(.3,-1,0),sole:S(1,.3,0),knees:S(1,0,.05)};}
   var bot=pose(H-.57,-.02,-4),top=pose(H-.12,-.1,-14);
   return {keys:[bot,top],tempo:[1.1,.4,1.6,.6],cam:{yaw:150,pitch:4},arrow:{track:"sh.l"},refine:{Back:"Lats"},
@@ -1338,7 +1467,7 @@ var TABLE={
   "Dumbbell Squat":[squat,{load:"db",w:.15,toe:12}],
   "Overhead Squat":[squat,{load:"overhead"}],
   "Barbell Deadlift":[hinge,{kind:"deadlift"}],
-  "Romanian Deadlift":[hinge,{kind:"rdl"}],
+  "Romanian Deadlift":[hinge,{kind:"rdl"},{by:"owner",on:"2026-11-13",version:"5f79fefb"}],
   "Stiff-Legged Barbell Deadlift":[hinge,{kind:"stiff"}],
   "Sumo Deadlift":[hinge,{kind:"sumo"}],
   "Good Morning":[hinge,{kind:"goodmorning"}],
@@ -1361,7 +1490,7 @@ var TABLE={
   "Pushups":[pushup,{}],
   "Incline Push-Up":[pushup,{hands:"bench"}],
   "Decline Push-Up":[pushup,{feet:"bench"}],
-  "Pullups":[pullup,{grip:"pro"}],
+  "Pullups":[pullup,{grip:"pro",w:.37,strict:true},{by:"owner",on:"2026-11-13",version:"d2acc13d"}],
   "Chin-Up":[pullup,{grip:"sup"}],
   "Dips - Triceps Version":[dip,{lean:2}],
   "Dips - Chest Version":[dip,{lean:20}],
@@ -1425,7 +1554,7 @@ var TABLE={
   "Wide-Grip Decline Barbell Bench Press":[benchPress,{imp:"bb",angle:-20,w:.5}],
   "Bench Press - Powerlifting":[benchPress,{imp:"bb",w:.42}],
   "Dumbbell Bench Press with Neutral Grip":[benchPress,{imp:"db",grip:"ham"}],
-  "Incline Dumbbell Press":[benchPress,{imp:"db",angle:35}],
+  "Incline Dumbbell Press":[benchPress,{imp:"db",angle:35,strict:true},{by:"owner",on:"2026-11-13",version:"c9a7173f"}],
   "Hammer Grip Incline DB Bench Press":[benchPress,{imp:"db",angle:35,grip:"ham"}],
   "Incline Dumbbell Bench With Palms Facing In":[benchPress,{imp:"db",angle:35,grip:"ham"}],
   "Decline Dumbbell Bench Press":[benchPress,{imp:"db",angle:-20}],

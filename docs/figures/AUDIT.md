@@ -1,6 +1,6 @@
 # The 3D figure: safety audit
 
-Written by `tools/figure-audit.mjs` (app version 262) from `js/data/mannequin/collide.js`. Do not edit by hand; run the tool again.
+Written by `tools/figure-audit.mjs` (app version 265) from `js/data/mannequin/collide.js`. Do not edit by hand; run the tool again.
 
 Every record the families' table (`moves.js` TABLE) and the hand-written records (`records.js` RECORDS) hold, checked at 41 moments of its repetition (u = 0 is the start, the stretched position; u = 1 the end of the lift). This is the work list for the per-exercise reviews of `docs/FIGURE-V3.md` 2.8. **No figure is shown in the app until its exercise has been reviewed and marked checked** (`records.js` recordFor), whatever this audit says: passing every check here is necessary, not enough.
 
@@ -20,11 +20,11 @@ Body parts: `head`, `neck`, `trunk.upper`, `trunk.lower`, `pelvis`, and per side
 | --- | --- |
 | Checked (shown in the app) | 0 |
 | Audited | 211 |
-| Pass every check | 15 |
-| Fail penetration | 152 |
-| Fail contacts | 62 |
-| Fail clearances | 50 of the 122 a clearance applies to |
-| Fail limits | 146 |
+| Pass every check | 17 |
+| Fail penetration | 151 |
+| Fail contacts | 61 |
+| Fail clearances | 49 of the 122 a clearance applies to |
+| Fail limits | 144 |
 | Fail joint speed (reported) | 8 |
 | Fail slide (reported) | 37 |
 
@@ -54,7 +54,6 @@ Failing first (most checks failed, then the deepest penetration). Each cell give
 | Hammer Grip Incline DB Bench Press | benchPress | **FAIL** 2: upperarm.l through dumbbell:cylinder 5.0 cm at u=0 | **FAIL** 2: trunk.upper off bench by 5.0 cm at u=0 | **FAIL** 2: forearms upright under the weight at the bottom (forearm.l), 50° from upright (limit 10°) at u=0 | **FAIL** 6: wrist.l bent sideways past its range -74° (limit ±40°) at u=0.775 | pass 1.8 m/s (el.l) | pass |
 | Incline Dumbbell Bench With Palms Facing In | benchPress | **FAIL** 2: upperarm.l through dumbbell:cylinder 5.0 cm at u=0 | **FAIL** 2: trunk.upper off bench by 5.0 cm at u=0 | **FAIL** 2: forearms upright under the weight at the bottom (forearm.l), 50° from upright (limit 10°) at u=0 | **FAIL** 6: wrist.l bent sideways past its range -74° (limit ±40°) at u=0.775 | pass 1.8 m/s (el.l) | pass |
 | Dumbbell Bench Press with Neutral Grip | benchPress | **FAIL** 2: upperarm.l through dumbbell:cylinder 5.0 cm at u=0 | **FAIL** 2: trunk.upper off bench by 3.0 cm at u=0 | **FAIL** 2: forearms upright under the weight at the bottom (forearm.l), 24° from upright (limit 10°) at u=0 | **FAIL** 2: elbow.l bent past its range 153° (limit ±145°) at u=0.075 | pass 1.2 m/s (el.l) | pass |
-| Incline Dumbbell Press | benchPress | **FAIL** 5: trunk.upper through dumbbell:cylinder 4.4 cm at u=0.125 | **FAIL** 2: trunk.upper off bench by 5.0 cm at u=0 | **FAIL** 2: forearms upright under the weight at the bottom (forearm.l), 83° from upright (limit 10°) at u=0 | **FAIL** 6: wrist.l bent sideways past its range -70° (limit ±40°) at u=0.6 | pass 1.6 m/s (el.l) | pass |
 | Dumbbell Bench Press | benchPress | **FAIL** 5: trunk.upper through dumbbell:cylinder 4.1 cm at u=0.1 | **FAIL** 2: trunk.upper off bench by 3.0 cm at u=0 | **FAIL** 2: forearms upright under the weight at the bottom (forearm.l), 50° from upright (limit 10°) at u=0 | **FAIL** 4: wrist.l bent sideways past its range -65° (limit ±40°) at u=0.55 | pass 1.1 m/s (el.l) | pass |
 | Decline Dumbbell Bench Press | benchPress | **FAIL** 5: trunk.upper through dumbbell:cylinder 4.1 cm at u=0.1 | **FAIL** 4: trunk.upper off bench by 4.0 cm at u=0 | **FAIL** 2: forearms upright under the weight at the bottom (forearm.l), 36° from upright (limit 10°) at u=0 | **FAIL** 4: wrist.l bent sideways past its range -65° (limit ±40°) at u=0.5 | pass 1.0 m/s (el.l) | pass |
 | Preacher Hammer Dumbbell Curl | curl | **FAIL** 11: trunk.upper through preacher:box 14.6 cm at u=1 | **FAIL** 4: forearm.l off preacher:box by 1.5 cm at u=0.6 | n/a | **FAIL** 1: neck out of line with the spine 12° (limit ±10°) at u=0 | pass 0.7 m/s (wr.l) | pass |
@@ -234,7 +233,6 @@ Failing first (most checks failed, then the deepest penetration). Each cell give
 | Incline Dumbbell Flyes | fly | pass | **FAIL** 2: trunk.upper off bench by 5.0 cm at u=0 | n/a | pass | pass 1.1 m/s (wr.l) | pass |
 | Inverted Row | invertedRow | pass | pass | n/a | **FAIL** 4: elbow.l bent past its range 158° (limit ±145°) at u=1 | pass 1.0 m/s (kn.l) | pass |
 | Overhead Squat | squat | pass | pass | n/a | **FAIL** 1: neck out of line with the spine 12° (limit ±10°) at u=0 | pass 0.7 m/s (head) | **FAIL** 2: foot.l moves 9 mm by u=0.85 |
-| Pullups | pullup | pass | pass | n/a | **FAIL** 1: neck out of line with the spine 14° (limit ±10°) at u=0.575 | pass 0.7 m/s (head) | pass |
 | Reverse Grip Bent-Over Rows | row | pass | pass | pass (feet) | **FAIL** 3: neck out of line with the spine 28° (limit ±10°) at u=0 | pass 0.6 m/s (el.l) | pass |
 | Reverse Grip Triceps Pushdown | triceps | pass | pass | pass (feet) | **FAIL** 2: forearm.l turned past palm-up or palm-down -12° (limit -5° to 185°) at u=0.8 | pass 0.6 m/s (wr.l) | pass |
 | Rope Straight-Arm Pulldown | straightArm | pass | pass | pass (feet) | **FAIL** 2: forearm.l turned past palm-up or palm-down -79° (limit -5° to 185°) at u=0 | pass 3.6 m/s (el.l) | pass |
@@ -247,8 +245,10 @@ Failing first (most checks failed, then the deepest penetration). Each cell give
 | Wide-Grip Standing Barbell Curl | curl | pass | pass | pass (feet) | **FAIL** 2: forearm.l turned past palm-up or palm-down -9° (limit -5° to 185°) at u=1 | pass 0.9 m/s (wr.l) | pass |
 | Barbell Curl | curl | pass | pass | pass (feet) | pass | pass 0.9 m/s (wr.l) | pass |
 | Front Plate Raise | raise | pass | pass | pass (feet) | pass | pass 1.1 m/s (wr.l) | pass |
+| Incline Dumbbell Press | benchPress | pass | pass | pass (bench) | pass | pass 1.6 m/s (wr.l) | pass |
 | One-Arm Side Laterals | raise | pass | pass | pass (feet) | pass | pass 1.2 m/s (wr.l) | pass |
 | Plank | plank | pass | pass | n/a | pass | pass 0.0 m/s | pass |
+| Pullups | pullup | pass | pass | n/a | pass | pass 1.7 m/s (an.l) | pass |
 | Romanian Deadlift | hinge | pass | pass | pass (feet) | pass | pass 1.3 m/s (head) | pass |
 | Side Lateral Raise | raise | pass | pass | pass (feet) | pass | pass 1.2 m/s (wr.l) | pass |
 | Smith Machine Calf Raise | calfRaise | pass | pass | n/a | pass | pass 0.2 m/s (kn.l) | pass |
@@ -350,26 +350,6 @@ benchPress · clearances: bench
 - Clearance: forearms upright under the weight at the bottom (forearm.r), 24° from upright (limit 10°) at u=0 (from u=0)
 - Limit: elbow.l bent past its range, 153° (limit ±145°) at u=0.075 (from u=0 to 0.275)
 - Limit: elbow.r bent past its range, 153° (limit ±145°) at u=0.075 (from u=0 to 0.275)
-
-### Incline Dumbbell Press
-
-benchPress · clearances: bench
-
-- Penetration: trunk.upper through dumbbell:cylinder, 4.4 cm deep at u=0.125 (from u=0 to 0.3)
-- Penetration: upperarm.l through dumbbell:cylinder, 2.6 cm deep at u=0.025 (from u=0 to 0.175)
-- Penetration: upperarm.r through dumbbell:cylinder, 2.6 cm deep at u=0.025 (from u=0 to 0.175)
-- Penetration: forearm.l through dumbbell:cylinder, 1.5 cm deep at u=0.6 (from u=0.425 to 0.875)
-- Penetration: forearm.r through dumbbell:cylinder, 1.5 cm deep at u=0.6 (from u=0.425 to 0.875)
-- Contact: trunk.upper off bench, 5.0 cm away at u=0 (from u=0 to 1)
-- Contact: pelvis off bench, 0.5 cm away at u=0 (from u=0 to 1)
-- Clearance: forearms upright under the weight at the bottom (forearm.l), 83° from upright (limit 10°) at u=0 (from u=0)
-- Clearance: forearms upright under the weight at the bottom (forearm.r), 83° from upright (limit 10°) at u=0 (from u=0)
-- Limit: wrist.l bent sideways past its range, -70° (limit ±40°) at u=0.6 (from u=0 to 1)
-- Limit: wrist.r bent sideways past its range, 70° (limit ±40°) at u=0.6 (from u=0 to 1)
-- Limit: elbow.l bent past its range, 159° (limit ±145°) at u=0.175 (from u=0 to 0.45)
-- Limit: elbow.r bent past its range, 159° (limit ±145°) at u=0.175 (from u=0 to 0.45)
-- Limit: wrist.l hand turned on the forearm, 27° (limit ±25°) at u=0 (from u=0)
-- Limit: wrist.r hand turned on the forearm, -27° (limit ±25°) at u=0 (from u=0)
 
 ### Dumbbell Bench Press
 
@@ -2766,12 +2746,6 @@ squat
 - Slide: foot.l on its support moves 9.1 mm by u=0.85
 - Slide: foot.r on its support moves 9.1 mm by u=0.85
 
-### Pullups
-
-pullup
-
-- Limit: neck out of line with the spine, 14° (limit ±10°) at u=0.575 (from u=0 to 1)
-
 ### Reverse Grip Bent-Over Rows
 
 row · clearances: feet
@@ -2853,8 +2827,8 @@ Written by `tools/figure-coverage.mjs`: every exercise with a figure record, by 
 
 | # | Exercise | Programs | Built weeks | Audit |
 | --- | --- | --- | --- | --- |
-| 1 | Pullups | 9 | 155 | fails 1 of 4 |
-| 2 | Incline Dumbbell Press | 9 | 128 | fails 4 of 4 |
+| 1 | Pullups | 9 | 155 | passes every check |
+| 2 | Incline Dumbbell Press | 9 | 128 | passes every check |
 | 3 | Romanian Deadlift | 8 | 19 | passes every check |
 | 4 | Seated Leg Curl | 8 | 18 | fails 2 of 4 |
 | 5 | Triceps Pushdown - Rope Attachment | 8 | 0 | passes every check |
