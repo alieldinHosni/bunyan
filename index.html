@@ -4322,6 +4322,8 @@ p.stg-dose{text-decoration:none;min-height:0}
 /* How you feel, asked on Start (sheets.js "ready"). */
 #sheet .rdy-c{margin:var(--s4) 0 var(--s3)}
 #sheet .rdy-skip{margin-top:var(--s2)}
+/* The dose sheet: its second section a section's gap below the first. */
+#sheet .shsub+.se-h{margin-top:var(--s5)}
 
 /* RestBand: compact, above the set. Time up, it fills with the action fill and is the
    alert. */
@@ -4402,6 +4404,15 @@ p.stg-dose{text-decoration:none;min-height:0}
 .sc-h b{color:var(--text);font-weight:700}
 .sc-h .sc-cue{font-style:italic}
 .sc-rpe{display:grid;gap:var(--s2);text-align:center}
+.sc-rpe-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);min-width:0}
+.sc-rpe-h .val-k{text-align:start;min-width:0}
+.sess .sc-rpe-h :is(.undo,.rpe-skip){flex:none;min-height:var(--hit);padding:0 var(--s4)}
+.sess .rpe-skip{border:0;background:none;color:var(--accentHi);font-weight:700;font-size:15px}
+.sess .log .log-c .i-stop{fill:currentColor;stroke:none}
+/* A short phone: the dock packs closer, so the set's numbers stay in view above it while
+   the rest and the RPE question are up (WP-3 review, 320 × 640). */
+@media (max-height:700px){.sess .wkdock{gap:var(--s1)}.sess .wkdock .rb{padding:var(--s2) var(--s3);gap:var(--s1)}
+  .sess .wkdock .rpeask{padding:var(--s2) var(--s3);gap:var(--s1)}}
 /* Asked after a set, about it: a small card of its own above the next set. */
 /* Its entrance is the workout cards' own (cardIn, .sess [data-k]); an animation here
    would also outrank its exit (.rowout). */

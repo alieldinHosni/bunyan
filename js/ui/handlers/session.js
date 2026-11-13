@@ -212,6 +212,8 @@ function register(){
      set felt is the lifter's to say or leave out. */
   key("rpe",function(D){V.draft.rpe=V.draft.rpe===+D.rpe?null:+D.rpe;render();return;});
   /* How hard a logged set was, written to that set; the question leaves in place. */
+  /* The RPE question put away unanswered: Log set takes its place again. */
+  has("rpeskip",function(D){V.rpeSkip={x:V.logIdx,i:+D.rpeskip};render();return;});
   key("rpeset",function(D){var pr=String(D.rpeset).split(":"),e=S.active&&S.active.entries[V.logIdx],x=e&&e.sets[+pr[0]];
     if(!x||V.rpeOut)return;x.rpe=+pr[1];S.active.lastSet=S.active.lastSet||Date.now();saveDB();
     /* The chosen number held a moment, then the card fades where it was while what is

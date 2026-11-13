@@ -4697,3 +4697,16 @@ docs/NEXT-PHASE.md WP-3 (findings F-B2, F-B3, F-B4, F-B7). One glance, one thumb
   is now "…shows it on the stage" (F-B2 asks for it there), asserting the stage's figure does not turn; the Today
   card tests: Start's one tap reaches How do you feel today? (the workout's first step), and the "resume" setup
   skips it.
+- Review of #155 (amend):
+  (1) The held set's count keeps its digits alone in `.num` and the unit in its own span (`.hold-n` / `.hold-u`),
+  in the view and in hold.js's repaint, so Arabic reads «25 ث» as the card does. (2) Its round icon is a stop
+  (square), since a tap ends and logs the set; "Tap to stop" kept. (3) While the RPE question is asked it takes the
+  log control's place in the dock (rest band above it): Undo is in its header for as long as "Set n logged" would
+  have offered it, then Skip, which puts the question away and brings Log set back (V.rpeSkip). On a short phone
+  (max-height 700) the dock packs closer; at 320 × 640 weight and reps stay in view while it is asked (new test
+  "…at 320 × 640 the RPE question takes the logged pill's place…", which also checks the steppers scroll clear of
+  the dock). Changed expectation: "Workout motion…" no longer has Next exercise under the question to glide up; it
+  arrives when the question goes. Also: the weight and seconds steppers are disabled while a hold counts; the dose
+  sheet's Tempo section has a section gap (--s5); the readiness sheet's "Low" is «تعبان» in Arabic (key "Low ", as
+  "Back " is kept apart: the bare "Low" is also a stress level); the ⋯ sheet is titled "Workout" / «التمرين» (key
+  "Workout ").

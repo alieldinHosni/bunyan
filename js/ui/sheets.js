@@ -344,7 +344,9 @@ function vSheet(){
        plates are under the weight, and finishing or throwing the workout away is the
        close button's question. The coach is here since WP-3 (the header keeps four
        controls). */
-    b='<h2>'+t("Session")+'</h2>'
+    /* "Workout", as Today calls it (the key with the space: the Arabic is the definite
+       «التمرين», where the bare word is «تمرين»). */
+    b='<h2>'+t("Workout ").trim()+'</h2>'
      +'<p class="sub" style="margin:2px 0 16px">'+esc(exName(smE.name))+'</p>'
      +'<div class="list">'
      +'<button class="item" data-coachopen="1"><span>'+t("Ask Coach")+'</span><span class="chev">›</span></button>'
@@ -531,7 +533,8 @@ function vSheet(){
     b='<h2>'+t("How do you feel today?")+'</h2>'
      +'<p class="shsub">'+esc(t("A low day makes today's suggestions lighter."))+'</p>'
      +'<div class="ready-c rdy-c" role="group" aria-label="'+esc(t("How do you feel today?"))+'">'
-     +[[1,"Drained"],[2,"Low"],[3,"OK"],[4,"Good"],[5,"Great"]].map(function(x){return hb('<button data-readygo="'+x[0]+'">'+t(x[1])+'</button>');}).join("")
+     /* "Low " with the space: how you feel, «تعبان»; the bare "Low" is also a low stress level. */
+     +[[1,"Drained"],[2,"Low "],[3,"OK"],[4,"Good"],[5,"Great"]].map(function(x){return hb('<button data-readygo="'+x[0]+'">'+t(x[1]).trim()+'</button>');}).join("")
      +'</div><button class="btn g rdy-skip" data-readygo="0">'+t("Skip")+'</button>';}
   else if(V.sheet==="explain"){var xk=V.sd&&V.sd.k;
     b='<div class="se-top"><span class="se-k">'+t("What it means")+'</span><h2>'+esc(t(xk==="tempo"?"Tempo":"Reps in reserve"))+'</h2></div>'
@@ -603,7 +606,7 @@ function vSheet(){
       var n=x.entries.filter(function(e){return e.sets.length;}).length;
       var extra=[];
       if(x.srpe)extra.push(t("Effort")+" "+x.srpe+"/10");
-      if(x.ready)extra.push(t("Felt")+" "+t(["","Drained","Low","OK","Good","Great"][x.ready]||""));
+      if(x.ready)extra.push(t("Felt")+" "+t(["","Drained","Low ","OK","Good","Great"][x.ready]||"").trim());
       if(x.entries.some(function(e){return e.pain;}))extra.push(t("pain noted"));
       b+='<button class="dv-card dv-sess" data-sessedit="'+esc(x.id)+'" aria-label="'+esc(t("Edit workout")+": "+planName(x.dayName))+'">'
        +'<span class="dv-row"><b>'+esc(planName(x.dayName))+'</b><span class="dv-k">'+fmtW(Math.round(sessionVolume(x)))+'</span></span>'

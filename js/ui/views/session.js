@@ -257,6 +257,8 @@ function vSetCard(e,row,rows,o){
   var wKey=t(bwl?"Added weight":"Weight")
     +(med&&med.e==="Dumbbell"?' · '+t(dbTotal()&&!isUnilateral(e.name)?"both together":"per hand"):'')
     +(med&&med.e==="Barbell"?' · '+t("with bar"):'');
+  /* While a held set counts, its numbers are fixed: the steppers rest. */
+  var hd0=S.active&&S.active.hold&&S.active.hold.x===V.logIdx,dis=hd0?' disabled':'';
   var wStepD=stepOf(e),rLbl=timed||loaded?t("Duration"):t("Reps"),rStep=timed||loaded?5:1,rUnit=timed||loaded?t("s"):"";
   h+='<div class="sc-g'+(timed?' one':'')+'" data-k="scg">';
   if(!timed)
@@ -265,15 +267,15 @@ function vSetCard(e,row,rows,o){
      +'value="'+toDisp(V.draft.w)+'" style="'+chW(toDisp(V.draft.w))+'" aria-label="'+(bwl?t("Added weight"):t("Weight"))+', '+wUnit()+(V.draftSg?', '+t("suggested"):'')+'">'
      +'<span class="val-u" aria-hidden="true">'+wUnit()+'</span></div>'
      +'<div class="wstp">'
-     +hb('<button data-sstep="w" data-d="-1" aria-label="'+t("Less")+' '+wStepD+' '+wUnit()+'">'+IC.minus+'<span class="num">'+wStepD+'</span></button>')
-     +hb('<button data-sstep="w" data-d="1" aria-label="'+t("More")+' '+wStepD+' '+wUnit()+'">'+IC.plus+'<span class="num">'+wStepD+'</span></button>')+'</div></div>';
+     +hb('<button data-sstep="w" data-d="-1"'+dis+' aria-label="'+t("Less")+' '+wStepD+' '+wUnit()+'">'+IC.minus+'<span class="num">'+wStepD+'</span></button>')
+     +hb('<button data-sstep="w" data-d="1"'+dis+' aria-label="'+t("More")+' '+wStepD+' '+wUnit()+'">'+IC.plus+'<span class="num">'+wStepD+'</span></button>')+'</div></div>';
   h+='<div class="val"><label class="val-k" for="in_r">'+rLbl+(rUnit?'<span class="val-ku"> · '+rUnit+'</span>':'')+'</label>'
    +'<div class="val-nw"><input class="val-n num'+(V.draftSg?' sg':'')+'" id="in_r" type="number" inputmode="numeric" step="1" min="0" enterkeyhint="done" '
    +'value="'+num(V.draft.r)+'" style="'+chW(num(V.draft.r))+'" aria-label="'+rLbl+(V.draftSg?', '+t("suggested"):'')+'">'
    +(rUnit?'<span class="val-u" aria-hidden="true">'+rUnit+'</span>':'')+'</div>'
    +'<div class="wstp">'
-   +hb('<button data-sstep="r" data-d="-1" aria-label="'+t("Less")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.minus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>')
-   +hb('<button data-sstep="r" data-d="1" aria-label="'+t("More")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.plus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>')+'</div></div>';
+   +hb('<button data-sstep="r" data-d="-1"'+dis+' aria-label="'+t("Less")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.minus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>')
+   +hb('<button data-sstep="r" data-d="1"'+dis+' aria-label="'+t("More")+' '+rStep+' '+(rUnit||rLbl)+'">'+IC.plus+(rStep>1?'<span class="num">'+rStep+'</span>':'')+'</button>')+'</div></div>';
   h+='</div>';
   /* The plates, without opening anything (owner, 27 Oct): a barbell's total read as the
      bar and what goes on each side. A tap opens the plates sheet to change the bar. */
@@ -329,15 +331,24 @@ function vRpeAsk(e,workN){
      chosen number held, so a render in the meantime (the rest clock) does not cut it. */
   var out=V.rpeOut&&V.rpeOut.x===V.logIdx&&V.rpeOut.i===i?V.rpeOut:null;
   if(x.rpe&&!out)return "";
+  if(!out&&V.rpeSkip&&V.rpeSkip.x===V.logIdx&&V.rpeSkip.i===i)return "";
   var k=e.sets.filter(function(s){return !s.wu;}).length;
   if(!out&&!rpeWanted(k-1,workN))return "";
   return '<section class="sc-rpe rpeask wglass'+(out&&out.go?' rowout slow':'')+'" data-k="rpeask" role="group" aria-label="'+esc(t("How hard was set {n}?").replace("{n}",k))+' (RPE)">'
-   +'<span class="val-k">'+esc(t("How hard was set {n}?").replace("{n}",k))+' · RPE</span><div class="sc-rpe-c">'
+   /* It takes the log control's place while it is asked (WP-3 review: a third tier hid the
+      numbers on a small phone), so the set's Undo is here for as long as it is offered;
+      after that, Skip puts the question away and Log set is back. */
+   +'<div class="sc-rpe-h"><span class="val-k">'+esc(t("How hard was set {n}?").replace("{n}",k))+' · RPE</span>'
+   +(out?'':justLogged()?'<button class="undo" data-undolog="1">'+t("Undo")+'</button>':'<button class="rpe-skip" data-rpeskip="'+i+'">'+t("Skip")+'</button>')
+   +'</div><div class="sc-rpe-c">'
    +[6,7,8,9,10].map(function(v){return hb('<button class="num'+(out&&out.v===v?' on':'')+'" data-rpeset="'+i+':'+v+'"'+(out?' disabled':'')+'>'+v+'</button>');}).join("")
    +'</div></section>';}
 /* ---- the one primary action -------------------------------------------------------
    The check. It logs from the rest too; for a moment after, it says the set is logged
    and offers Undo, then reads the next set. */
+/* A tap on a counting hold ends it and logs it: a stop, not a pause. */
+var STOP='<svg class="gl i-stop" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>';
+function holdDigits(s){return s>=60?mmss(s):String(s);}
 function vLogControl(e,row,secs){
   var j=justLogged();
   if(j)return '<div class="log ok" data-k="logok" role="status"><span class="log-c" aria-hidden="true">'+IC.check+'</span>'
@@ -356,9 +367,10 @@ function vLogControl(e,row,secs){
   if(secs&&!row.wu&&!(S.active&&S.active.past)){
     var hd=S.active&&S.active.hold,run=hd&&hd.x===V.logIdx?holdState("wk"):null;
     if(run)return '<button class="log hold timing" data-k="log" data-holdset="1" data-holdt="wk" style="--p:'+run.p.toFixed(3)+'" aria-label="'+esc(t("Stop and log the seconds held"))+'">'
-      +'<span class="hold-l num" aria-live="off">'+run.left+' '+t("s")+'</span>'
+      /* Digits alone in .num (left to right); the unit beside it, so Arabic puts it on its own side. */
+      +'<span class="hold-l" aria-live="off"><span class="hold-n num">'+holdDigits(run.left)+'</span> <span class="hold-u"'+(run.left>=60?' hidden':'')+'>'+t("s")+'</span></span>'
       +'<span class="hold-k">'+t("Tap to stop")+'</span>'
-      +'<span class="log-c" aria-hidden="true">'+IC.pause+'</span></button>';
+      +'<span class="log-c" aria-hidden="true">'+STOP+'</span></button>';
     return hb('<button class="log" data-k="log" id="holdGo" data-holdgo="1" aria-label="'+esc(t("Start {n} s").replace("{n}",num(V.draft.r)))+'">'
       +'<span>'+fill(t("Start {n} s"),num(V.draft.r))+'</span>'
       +'<span class="log-c" aria-hidden="true">'+IC.play+'</span></button>');}
@@ -502,7 +514,8 @@ function vLogger(){
        the question about the set just done (WP-3: above the card it was out of the
        thumb's reach and moved the card down). */
     if(row)h+=vSetCard(e,row,rows,{timed:timed,loaded:loaded,p:p,small:false});
-    h+='<div class="wkdock">'+vRpeAsk(e,workN)+(restOn()?vRestBand():'')+vLogControl(e,row,timed||loaded)+'</div>';
+    var rpeQ=vRpeAsk(e,workN);
+    h+='<div class="wkdock">'+(restOn()?vRestBand():'')+(rpeQ||vLogControl(e,row,timed||loaded))+'</div>';
   }
 
   /* --- before the first set only, under the check so it no longer pushes the numbers

@@ -38,8 +38,11 @@ function paint(){
       away=!!r&&(r.bottom<hb||r.top>innerHeight*0.75);
   for(var i=0;i<els.length;i++){
     if(els[i].classList.contains("wu-hold-mini"))els[i].classList.toggle("away",away);
-    var lab=els[i].querySelector(".hold-l");
-    if(lab)lab.textContent=holdLabel(H.key,0);
+    /* The workout's button keeps its digits and its unit apart (Arabic puts the unit on
+       its own side): only the digits are written there. */
+    var dg=els[i].querySelector(".hold-n"),un=els[i].querySelector(".hold-u"),lab=els[i].querySelector(".hold-l");
+    if(dg){dg.textContent=s.left>=60?Math.floor(s.left/60)+":"+String(s.left%60).padStart(2,"0"):String(s.left);if(un)un.hidden=s.left>=60;}
+    else if(lab)lab.textContent=holdLabel(H.key,0);
     els[i].style.setProperty("--p",s.p.toFixed(3));
     els[i].classList.add("timing");}
   if(s.left<=0){var done=H.done;stopHold();play("set");tap("ok");if(done)done();}}

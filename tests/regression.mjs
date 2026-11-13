@@ -5063,7 +5063,7 @@ await test("WP-3 workout page: what is used every set is in the bottom half and 
     const at=sel=>page.evaluate(s=>[...document.querySelectorAll(s)].map(e=>{const b=e.getBoundingClientRect();return Math.round(b.top+b.height/2);}),sel);
     const first=[...await at(".sess .log"),...await at("[data-sstep]")];
     await page.tap('[data-logset]');await pause(page,900);
-    const after=[...await at("[data-rpeset]"),...await at("[data-rest]"),...await at(".sess .log .undo")];
+    const after=[...await at("[data-rpeset]"),...await at("[data-rest]"),...await at(".sess .undo")];
     const all=first.concat(after);
     if(all.length<12||all.some(y=>y<h/2||y>h))throw new Error(lang+" "+w+": "+JSON.stringify(all));}
 });
@@ -5135,6 +5135,23 @@ await test("WP-3 workout page: the hold's long press is said once in a guide on 
   const g=await page.evaluate(()=>document.body.textContent);
   if(!/Press and hold it to log the set without the timer/.test(g))throw new Error("no guide on the timed set");
 });
+await test("WP-3 workout page: at 320 × 640 the RPE question takes the logged pill's place, with its Undo; the set's numbers stay in view; Skip brings Log set back",async page=>{
+  await page.setViewportSize({width:320,height:640});await pause(page,200);
+  await startWorkout(page);await pause(page,500);
+  await page.tap('[data-logset]');await pause(page,900);
+  const r=await page.evaluate(()=>{const d=document.querySelector(".wkdock"),dt=d.getBoundingClientRect().top;
+    return {pill:!!d.querySelector(".log"),q:!!d.querySelector(".rpeask"),undo:!!d.querySelector(".rpeask [data-undolog]"),tiers:d.children.length,
+      nums:[...document.querySelectorAll(".val-n")].map(n=>{const b=n.getBoundingClientRect();return b.top>=0&&b.bottom<=dt;})};});
+  eq([r.pill,r.q,r.undo,r.tiers,r.nums],[false,true,true,2,[true,true]],"no pill, the question with Undo, two tiers (rest, question), weight and reps in view");
+  await pause(page,2200);
+  eq(await page.evaluate(()=>[!!document.querySelector(".rpeask [data-rpeskip]"),!!document.querySelector(".wkdock .log")]),[true,false],"after the moment: Skip in its place");
+  await page.tap('.rpeask [data-rpeskip]');await pause(page,500);
+  eq(await page.evaluate(()=>[!!document.querySelector(".rpeask"),!!document.querySelector(".wkdock [data-logset]")]),[false,true],"skipped: Log set is back");
+  /* Scrolled to them, the steppers clear the dock. */
+  const clear=await page.evaluate(async()=>{const s=document.querySelector('[data-sstep="w"]');s.scrollIntoView({block:"center"});await new Promise(r=>setTimeout(r,200));
+    return s.getBoundingClientRect().bottom<=document.querySelector(".wkdock").getBoundingClientRect().top;});
+  eq(clear,true,"the steppers can be scrolled clear of the dock");
+},{prefs:{autorest:true,rpe:"every"}});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
@@ -5328,17 +5345,16 @@ await test("Workout motion, with motion on: the RPE card holds the chosen number
   for(let k=0;k<sets;k++){await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
     if(k<sets-1){const r=await page.$('.rpeask [data-rpeset$=":7"]');if(r){await r.tap();await pause(page,1000);}}}
   eq(!!(await page.$('.rpeask')),true,"asked after the last set");
-  await page.waitForSelector('[data-k="lognext"]',{timeout:5000});
-  const before=await page.$eval('[data-k="lognext"]',e=>e.getBoundingClientRect().top);
+  /* WP-3 review: the question takes the log control's place while it is asked, so Next
+     exercise is not under it; it comes when the question goes (it used to glide up). */
+  eq(!!(await page.$('[data-k="lognext"]')),false,"the question in Next exercise's place");
   await page.tap('.rpeask [data-rpeset$=":8"]');await pause(page,80);
   eq(await page.$eval('.rpeask [data-rpeset$=":8"]',e=>e.classList.contains("on")),true,"the chosen number is held");
   await page.waitForFunction(()=>!!document.querySelector('.rpeask.ghost'),null,{polling:"raf",timeout:1500});
   eq(await page.$eval('.rpeask.ghost',e=>[getComputedStyle(e).position,e.inert,e.getAnimations().length>0]),["absolute",true,true],"it fades where it was, out of the layout");
-  eq(await page.$eval('[data-k="lognext"]',e=>e.getAnimations().some(a=>a.id==="glide")),true,"while Next exercise glides up into its place");
+  await page.waitForSelector('[data-k="lognext"]',{timeout:3000});
   await pause(page,900);
   eq(!!(await page.$('.rpeask')),false,"then it is gone");
-  const after=await page.$eval('[data-k="lognext"]',e=>e.getBoundingClientRect().top);
-  if(!(after<before))throw new Error("Next exercise did not rise into its place: "+before+" → "+after);
   eq(await page.$eval('[data-k="lognext"]',e=>[e.getAttribute("data-k"),e.hasAttribute("data-anim"),getComputedStyle(e).animationName]),["lognext",true,"cardIn"],"Next exercise arrives as a card of its own");
   eq(await page.$$eval('#app .tools [data-nextex]',a=>a.length),0,"with the sets done, no Skip beside Next exercise");
   /* The rest, put away: it plays out where it was; nothing is left behind. */
