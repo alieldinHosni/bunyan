@@ -413,7 +413,7 @@ function fuelOn(f,state){
   var ns=headOn("food").filter(function(s){return s.id==="needs-today";})[0];
   var d=dayFuel(new Date(),{plan:FUELPLAN[state]||"other",sessions:S.sessions||[],goals:S.goals||{},eaten:f.eaten,water:f.water,days:S.days||{},
     needs:ns?ns.src:null});
-  f.notes=d.notes;f.note=d.notes[0]||null;f.line=f.note?fuelLine(f.note):null;f.usual=d.usual;
+  f.notes=d.notes;f.note=d.notes[0]||null;f.line=f.note?fuelLine(f.note):null;f.usual=d.usual;f.usualN=d.usualN;
   return f;}
 /* A note's sentence, in the language of the app. Figures go in as they are; a page puts
    them in .num. */

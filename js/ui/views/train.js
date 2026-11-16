@@ -14,7 +14,7 @@ import {allSplits, dayOf, dayRec, editSplit, ownerOf, S, sessionById, split} fro
 import {conformProgram, SPLIT_LEVEL} from "../../engine/plan.js";
 import {rulesFor} from "../../engine/conditions.js";
 import {canSkipStab} from "../../engine/phase.js";
-import {todayPlan} from "../../engine/head.js";
+import {fuelLine, todayPlan} from "../../engine/head.js";
 import {words} from "../coachwords.js";
 import {blockNow, offPlanLight, phaseNow, shiftNow} from "../../engine/blocks.js";
 import {addDays, isoWeekday, nextPinned, pinnedOn, suggestWd, wdName, weekDates, weekOrder, weekStartOf} from "../../engine/schedule.js";
@@ -264,11 +264,12 @@ function todayCard(sp,tp){
    is open, nor on a day with nothing planned. */
 var FUELGL={before:"clock",after:"clock",rest:"moon",behind:"bowl"};
 function fuelRow(tp){
-  var f=tp.food,n=f&&f.note;
+  /* The rest note stays on Food: the card already says "Rest day" (review of #158). */
+  var f=tp.food,n=f&&(f.notes||[]).filter(function(x){return x.kind!=="rest";})[0];
   if(!n||!/^(train|light|done|rest)$/.test(tp.state))return "";
   var pill=n.kind==="behind"?'<span class="tdc-fuel-p num">'+esc(t("+{n} "+n.unit+" to go").replace("{n}",fmtN(n.left)))+'</span>':'';
   return '<button class="tdc-fuel" data-tab="food" data-k="fuel:'+n.kind+'"><span class="tdc-fuel-i" aria-hidden="true">'+glyph(FUELGL[n.kind]||"bowl")+'</span>'
-   +'<span class="tdc-fuel-t">'+nums(f.line)+'</span>'+pill+'</button>';}
+   +'<span class="tdc-fuel-t">'+nums(fuelLine(n))+'</span>'+pill+'</button>';}
 function vTrain(){
   /* "hub": a workout left for later, seen from its Resume card. */
   if(S.active&&V.train!=="hub")return vLogger();

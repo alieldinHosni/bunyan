@@ -1,6 +1,6 @@
 /* The day's fuel (js/engine/dayfuel.js, docs/NEXT-PHASE.md WP-5). Plain data in: the
    sessions, the targets, the day's log, the clock. */
-import {afterNote, beforeNote, dayFuel, hhmm, leftOf, restNote, usualStart} from "../dayfuel.js";
+import {aboutTime, afterNote, beforeNote, dayFuel, hhmm, leftOf, restNote, usualStart} from "../dayfuel.js";
 import fs from "node:fs";
 import {FAQ, FAQ_AR} from "../../data/faq.js";
 
@@ -18,7 +18,9 @@ function kinds(r){return r.notes.map(function(n){return n.kind;});}
 function run(t){
   /* ---- when the person trains: learned, never asked ---- */
   t.eq(hhmm(usualStart(2,TUES)),"18:05","Tuesdays at 18:05, 17:50, 18:20: the usual start is the median, 18:05");
-  t.eq(hhmm(usualStart(4,TUES)),"07:00","Thursday has its own time");
+  t.eq(usualStart(4,TUES),Math.round((1070+1085)/2),"a single Thursday is too few for a habit: every weekday's median");
+  var thu=TUES.concat([ses("2026-10-29",7,10),ses("2026-10-22",6,50)]);
+  t.eq(hhmm(usualStart(4,thu)),"07:00","three Thursdays: Thursday has its own time");
   t.eq(usualStart(1,TUES),Math.round((1070+1085)/2),"a weekday never trained on falls back to all weekdays: the median of 07:00, 17:50, 18:05, 18:20");
   t.eq(usualStart(2,[]),null,"no sessions: null, not midnight");
   t.eq(usualStart(2,[{date:"2026-11-03",started:at("2026-11-03",12,0),lastSet:at("2026-11-03",12,0),activeMs:0}]),null,
@@ -30,7 +32,7 @@ function run(t){
   var tue={plan:"train",sessions:TUES,goals:G,eaten:{kcal:1200,p:70,c:150,f:40},water:1500,days:{}};
   var b=dayFuel(new Date(at("2026-11-17",16,30)),tue);
   t.eq(b.notes[0].kind,"before","16:30 on a Tuesday with a session planned: leads with before");
-  t.eq(b.notes[0].vars.t,"18:05","at the usual time");
+  t.eq(b.notes[0].vars.t,"18:00","at the usual time, said to the nearest quarter hour (18:05 → 18:00)");
   t.eq(kinds(dayFuel(new Date(at("2026-11-17",15,30)),tue)).indexOf("before"),-1,"15:30 is more than two hours before: no before");
   t.eq(kinds(dayFuel(new Date(at("2026-11-17",18,10)),tue)).indexOf("before"),-1,"after the usual start it is not before any more");
   var fin=TUES.concat([ses("2026-11-17",18,10)]);
@@ -60,11 +62,22 @@ function run(t){
     [n.key].concat(n.more).forEach(function(k){t.ok(hasAr(k),n.kind+": its words have Arabic ("+k.slice(0,30)+"…)");});});
   /* before: the textbook's own sentences, its figures said there only */
   var pre=ids["pre-workout"],bk=b.notes[0];
-  t.ok(bk.book&&bk.more.length>=2&&bk.more.every(function(k){return pre.a.some(function(x){return x.p===k;});}),"before: the pre-workout entry's text keys");
+  t.ok(bk.book&&bk.more.length>=1&&bk.more.every(function(k){return pre.a.some(function(x){return x.p===k;});}),"before: the pre-workout entry's text keys");
   t.ok(bk.more.some(function(k){return /400 to 600 ml/.test(k);}),"the 400–600 ml comes from that entry");
   t.ok(!/\d/.test(bk.key.replace("{t}","")),"the note's own sentence restates no figure");
   t.ok(!/\d/.test(afterNote(0,1).key.replace("{n}",""))&&!/\d/.test(restNote(G).key.replace(/\{\w\}/g,"")),"after and rest carry only the person's own figures");
-  t.eq(beforeNote(1083).vars.t,"18:05","an about-time to the nearest five minutes");
+  t.eq([aboutTime(1083),aboutTime(1093),aboutTime(1087),aboutTime(1088),aboutTime(1435)],["18:00","18:15","18:00","18:15","00:00"],"an about-time to the nearest 15 minutes (18:03, 18:13, 18:07, 18:08, 23:55)");
+  t.eq(beforeNote(1083).vars.t,"18:00","the before note says the rounded time");
+  /* the carbs paragraph (stores used overnight) only for a session before noon */
+  var am=beforeNote(7*60),pm=beforeNote(18*60);
+  t.eq([am.more.some(function(k){return /overnight/.test(k);}),pm.more.some(function(k){return /overnight/.test(k);})],[true,false],"the overnight-glycogen paragraph: 07:00 yes, 18:00 no");
+  t.ok(pm.more.some(function(k){return /400 to 600 ml/.test(k);}),"the rest of the entry stays for a later session");
+  t.ok(/long or hard/.test(pm.key),"the headline keeps the textbook's qualifier (long or hard training)");
+  /* one or two sessions are not a usual time */
+  var two=[ses("2026-11-03",18,5),ses("2026-11-10",17,50)];
+  var tw=dayFuel(new Date(at("2026-11-17",16,30)),Object.assign({},tue,{sessions:two}));
+  t.eq([tw.usual,tw.usualN,kinds(tw).indexOf("before")],[Math.round((1085+1070)/2),2,-1],"two timed sessions: a median, but no before note (fewer than three)");
+  t.eq(kinds(dayFuel(new Date(at("2026-11-17",16,30)),Object.assign({},tue,{sessions:two.concat([ses("2026-10-27",18,20)])}))).indexOf("before"),0,"three: before");
 
   /* ---- the targets do not move ---- */
   var g0=JSON.stringify(G);

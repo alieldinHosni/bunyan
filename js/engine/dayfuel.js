@@ -15,13 +15,15 @@
               person training for muscle (its anabolic window is "24 hours or more";
               the 0.3 g/kg an hour is for sport and multi-session days, and it says
               that for muscle gain the day's total matters more), so the note says only
-              what is left of today's target
+              what is left of today's target (its figure is the plan's: app-targets).
+              On Food it gives way to behind when protein is behind (one sentence)
      rest     a rest day: says so, with the plain targets
      behind   any time: what Food's body needs (js/engine/needs.js) says today, unchanged
 
    When the person trains is learned, never asked: usualStart(weekday) is the median
    start of the last six finished sessions on that weekday (all weekdays when there are
-   none on it; none at all is null, "no history"). Stored nowhere.
+   fewer than three on it; none at all is null, "no history"), and no before note rests
+   on fewer than three timed sessions. Stored nowhere.
 
    Pure: the sessions, the targets, the day's log and the clock come in; a small plan
    goes out. No state, no words: a note carries its dictionary key and figures, and the
@@ -31,6 +33,8 @@ import {bodyNeedsOf} from "./needs.js";
 import {FAQ} from "../data/faq.js";
 
 var WINDOW=120;
+/* A usual time needs a few sessions behind it: one session is not a habit. */
+var MINTIMED=3;
 var LAST=6;
 
 /* The behind note's headline, by nutrient: the words Food has always used. */
@@ -50,11 +54,15 @@ function median(a){
 
 /* Minutes after midnight the person usually starts on that weekday (0 = Sunday), or
    null with no timed session at all. */
-function usualStart(weekday,sessions){
+function usualOf(weekday,sessions){
   var all=(sessions||[]).filter(timed).sort(function(a,b){return b.started-a.started;});
   var on=all.filter(function(s){return weekdayOf(s.date)===weekday;});
-  var use=(on.length?on:all).slice(0,LAST);
-  return use.length?median(use.map(function(s){return minuteOf(s.started);})):null;}
+  /* Too few on that weekday to call a habit: every weekday's (review of #158). */
+  var use=(on.length>=MINTIMED?on:all).slice(0,LAST);
+  return {at:use.length?median(use.map(function(s){return minuteOf(s.started);})):null,n:use.length};}
+function usualStart(weekday,sessions){return usualOf(weekday,sessions).at;}
+/* Said to the nearest quarter hour: "about" is the precision a median of a few starts supports. */
+function aboutTime(m){return hhmm(Math.round(m/15)*15);}
 
 /* When a session ended: the last set, else its start and wall-clock length. */
 function endOf(s){
@@ -77,11 +85,13 @@ function faqKeys(id){
    entry it rests on: js/data/faq.js's id), book (it says the textbook's guidance, not
    only the person's own figures), at (minutes, for a timed note)}. */
 function beforeNote(at){
-  return {kind:"before",at:at,key:"Training at about {t}\u00a0— carbs and water before it.",vars:{t:hhmm(Math.round(at/5)*5)},
-    more:faqKeys("pre-workout"),source:"pre-workout",book:true};}
+  /* The entry's carbs paragraph is about the stores used overnight: said for a session
+     before noon only (the owner's lead, review of #158). The rest of the entry stays. */
+  return {kind:"before",at:at,key:"Training at about {t}\u00a0— water before it; carbs if it's long or hard.",vars:{t:aboutTime(at)},
+    more:faqKeys("pre-workout").filter(function(k){return at<720||!/overnight/.test(k);}),source:"pre-workout",book:true};}
 function afterNote(at,pLeft){
   return {kind:"after",at:at,key:pLeft>0?"You trained\u00a0— {n}\u00a0g of protein left today.":"You trained\u00a0— today's protein target is met.",
-    vars:{n:pLeft},more:[],source:"post-workout",book:false};}
+    vars:{n:pLeft},more:[],source:"app-targets",book:false};}
 function restNote(goals){
   var p=+goals.p||0;
   return {kind:"rest",at:null,key:p?"Rest day\u00a0— the same targets: {k}\u00a0kcal and {p}\u00a0g of protein.":"Rest day\u00a0— the same target: {k}\u00a0kcal.",
@@ -98,16 +108,16 @@ function behindNote(b){
    (minutes, or null), left (leftOf)}. */
 function dayFuel(now,c){
   c=c||{};var goals=c.goals||{},sessions=c.sessions||[],iso=isoOf(now),t=now.getTime(),m=now.getHours()*60+now.getMinutes();
-  var usual=usualStart(now.getDay(),sessions),left=leftOf(goals,c.eaten),notes=[];
-  if(!(+goals.kcal>0))return {notes:notes,usual:usual,left:left};
+  var uo=usualOf(now.getDay(),sessions),usual=uo.at,left=leftOf(goals,c.eaten),notes=[];
+  if(!(+goals.kcal>0))return {notes:notes,usual:usual,usualN:uo.n,left:left};
   /* After: the latest session finished today, for two hours. */
   var done=sessions.filter(function(s){return timed(s)&&s.date===iso&&endOf(s)>0;}).sort(function(a,b){return endOf(b)-endOf(a);})[0];
   var end=done?endOf(done):0;
   if(done&&left.p!=null&&t>=end&&t-end<WINDOW*6e4)notes.push(afterNote(minuteOf(end),left.p));
-  else if(c.plan==="train"&&usual!=null&&m>=usual-WINDOW&&m<usual)notes.push(beforeNote(usual));
+  else if(c.plan==="train"&&usual!=null&&uo.n>=MINTIMED&&m>=usual-WINDOW&&m<usual)notes.push(beforeNote(usual));
   else if(c.plan==="rest")notes.push(restNote(goals));
   var b=c.needs!==undefined?c.needs:bodyNeedsOf(c.eaten||{},goals,+c.water||0,now.getHours(),sessions,c.days||{},iso);
   if(b&&b.node)notes.push(behindNote(b));
-  return {notes:notes.slice(0,3),usual:usual,left:left};}
+  return {notes:notes.slice(0,3),usual:usual,usualN:uo.n,left:left};}
 
-export {afterNote, beforeNote, dayFuel, faqKeys, HEAD, hhmm, leftOf, restNote, usualStart};
+export {aboutTime, afterNote, beforeNote, MINTIMED, dayFuel, faqKeys, HEAD, hhmm, leftOf, restNote, usualStart};

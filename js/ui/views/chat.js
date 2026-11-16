@@ -47,7 +47,7 @@ import {answerPick, createAsk, daysIn, namesExercise, namesFood, plan as planAct
 import {commandOf, whenIn} from "../../coach/commands.js";
 import {checkPlans} from "../../engine/plancheck.js";
 import {fuelLine, headOn, todayPlan} from "../../engine/head.js";
-import {afterNote, beforeNote} from "../../engine/dayfuel.js";
+import {afterNote, beforeNote, MINTIMED} from "../../engine/dayfuel.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
 import {bestE1RM, bmr, bwShare, dbTotal, deloadDue, plateauOf, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
@@ -500,7 +500,7 @@ var FAQMINE={
   "pre-workout":function(a){
     var tp=todayPlan(),f=tp.food;if(!f)return;
     var d=new Date(),m=d.getHours()*60+d.getMinutes(),n=f.notes.filter(function(x){return x.kind==="before";})[0];
-    if(!n&&f.usual!=null&&m<f.usual&&/^(train|light)$/.test(tp.state))n=beforeNote(f.usual);
+    if(!n&&f.usual!=null&&f.usualN>=MINTIMED&&m<f.usual&&/^(train|light)$/.test(tp.state))n=beforeNote(f.usual);
     if(n)p(a,fuelLine(n));},
   "post-workout":function(a){
     var tp=todayPlan(),f=tp.food;if(!f)return;

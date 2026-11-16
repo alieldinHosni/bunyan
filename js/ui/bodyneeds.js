@@ -52,6 +52,9 @@ function bodyNeeds(eaten){
   var g=S.goals||{},sigs=headOn("food"),of=function(id){return (sigs.filter(function(s){return s.id===id;})[0]||{}).src||null;};
   var week=of("needs-week"),f=todayPlan().food,notes=f&&f.notes||[];
   var lead=notes[0]&&notes[0].kind!=="behind"?notes[0]:null,bn=notes.filter(function(n){return n.kind==="behind";})[0],b=bn?bn.needs:null;
+  /* Just trained with protein behind: the behind section says it, so the after note's
+     "N g of protein left" is not said twice (review of #158). */
+  if(lead&&lead.kind==="after"&&b&&b.focus==="p")lead=null;
   if(!b||!b.node)return (lead?'<section class="fbody ffuel glass" data-k="fuel">'+fuelLead(lead)+'</section>':'')+noticed(week);
   var focus=b.focus,fn=b.node;
   var trained=b.trained;

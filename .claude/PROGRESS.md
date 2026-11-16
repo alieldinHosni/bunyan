@@ -4852,3 +4852,24 @@ method). Only timing and emphasis inside the same targets change. No formula cha
   above); the 20–40 g per meal (faq "meals") is not after-training guidance and was not used. (3) Rest and behind cite
   "app-targets" (how the app sets targets), since their figures are the person's own. (4) The Today card now carries
   one more line on most days; at 320 × 640 the main action stays in view (the Today card test passes).
+- Review of #158 (amend, still v270 unless main moved):
+  (1) The before headline keeps the textbook's qualifier: "Training at about {t} — water before it; carbs if it's long
+  or hard." / «تمرينك حوالي {t} — مية قبله، وكارب لو التمرين طويل أو جامد.», one key, the coach's answer included.
+  (2) The usual time is said to the nearest 15 minutes (`aboutTime`; the engine's value stays the median minute), and
+  there is no before note with fewer than three timed sessions behind the usual time (`usualOf` gives the count;
+  `MINTIMED`, also in the coach's fallback). Unit tests for both.
+  With that gate, usualStart now falls back to every weekday when the weekday has fewer than three timed sessions
+  (it was: only when it had none). Otherwise anyone on a rotating schedule, with one or two sessions per weekday in
+  the last weeks, would never get a before note. The doc's example (three Tuesdays → 18:05) is unchanged; the unit
+  test "Thursday has its own time" now gives Thursday three sessions.
+  (3) Food after training with protein behind shows only the behind section (no "You trained — N g of protein left"
+  above it); with protein on course the after note leads Food. Finish and the Today card keep the after line.
+  (4) The rest note is no longer at the Today card's foot (the card already says "Rest day"); it stays on Food. The
+  card's foot shows the first other note (before, after or behind) in its own sentence (fuelLine).
+  Owner's lead: the pre-workout entry's carbs paragraph (glycogen used overnight) is shown only for a usual start before
+  12:00; later sessions get the rest of the entry. Also: «سعرة» for kcal in the strings added here, «عجز السعرات كبير
+  أوي», the after note's source app-targets (its figure is the plan's). Browser tests changed to these expectations
+  (18:05 → said 18:00; the Food-after check now asserts no duplicate, plus a protein-on-course case; the rest check
+  asserts the Today card does not carry it).
+- Follow-up (open): the older behind-section food tiles (`.fneed .fsug`) are cramped in Arabic at 320 wide (three
+  tiles, names wrapping to three lines). Not changed here.
