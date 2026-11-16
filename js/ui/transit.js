@@ -46,7 +46,12 @@ function entranceHold(el){
 /* Landed: the entrance plays. counts: a copy's figures count up with it. */
 function entranceGo(el,counts){
   if(!el||isReduced())return;
-  anims(el).forEach(function(a){try{a.play();}catch(e){}});
+  /* Only what was held: an animation that has already run to its end is left there.
+     Played again, a copy's own slide (finished, holding its last frame) started over from
+     where the finger let go, and the page that had just arrived jumped back and came in a
+     second time while the real one waited under it (owner, 16 Nov: "it flashes, and
+     bounce", Food back to Training). */
+  anims(el).forEach(function(a){try{if(a.playState==="paused")a.play();}catch(e){}});
   if(counts)el.querySelectorAll("[data-count-to]").forEach(function(e){var dp=+e.getAttribute("data-count-dp")||0;
     countTo(e,e.getAttribute("data-count-to"),dp?{format:function(v){return Number(v).toFixed(dp);}}:undefined);});}
 
