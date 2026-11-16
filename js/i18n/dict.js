@@ -2990,7 +2990,23 @@ var AR={"Number keypad": "لوحة الأرقام",
 "A low day makes today's suggestions lighter.": "لو يومك تعبان، اقتراحات النهارده هتبقى أخف.",
 "Timed set": "مجموعة بالوقت",
 "A timed set": "مجموعة بالوقت",
-"Start counts the seconds in this button and logs the set at zero. Tap it while it counts to log the seconds you held. Press and hold it to log the set without the timer, if you timed it on the gym's clock.": "ابدأ بيعدّ الثواني في الزرار ده وبيسجّل المجموعة لما يوصل صفر. دوس عليه وهو بيعدّ عشان تسجّل الثواني اللي ثبتّها. دوس عليه مطوّل عشان تسجّل من غير العدّاد، لو وقّتها على ساعة الجيم."
+"Start counts the seconds in this button and logs the set at zero. Tap it while it counts to log the seconds you held. Press and hold it to log the set without the timer, if you timed it on the gym's clock.": "ابدأ بيعدّ الثواني في الزرار ده وبيسجّل المجموعة لما يوصل صفر. دوس عليه وهو بيعدّ عشان تسجّل الثواني اللي ثبتّها. دوس عليه مطوّل عشان تسجّل من غير العدّاد، لو وقّتها على ساعة الجيم.",
+/* The day's fuel (js/engine/dayfuel.js, WP-5): one sentence on Food, the Today card, the
+   finish page and the coach; and the ring's caption when the plan is wrong for the goal. */
+"Training at about {t}\u00a0— carbs and water before it.": "تمرينك حوالي {t}\u00a0— كارب ومية قبله.",
+"You trained\u00a0— {n}\u00a0g of protein left today.": "اتمرنت\u00a0— باقي {n}\u00a0جم بروتين النهارده.",
+"You trained\u00a0— today's protein target is met.": "اتمرنت\u00a0— هدف البروتين بتاع النهارده اتحقق.",
+"Rest day\u00a0— the same targets: {k}\u00a0kcal and {p}\u00a0g of protein.": "يوم راحة\u00a0— نفس الأهداف: {k}\u00a0سعر و{p}\u00a0جم بروتين.",
+"Rest day\u00a0— the same target: {k}\u00a0kcal.": "يوم راحة\u00a0— نفس الهدف: {k}\u00a0سعر.",
+"Your targets already count your training, so they stay the same on a rest day.": "أهدافك محسوب فيها تمرينك أصلاً، فبتفضل زي ما هي في يوم الراحة.",
+"From the textbook": "من الكتاب",
+"Over what fat loss needs": "أكتر من اللي التخسيس محتاجه",
+"Under what building needs": "أقل من اللي البناء محتاجه",
+"Too steep a deficit": "عجز سعرات جامد أوي",
+"Far from your maintenance": "بعيد عن سعرات الثبات بتاعتك",
+"Big deficit, heavy training week": "عجز كبير وأسبوع تمرين تقيل",
+"Goal and program disagree": "هدفك وبرنامجك مش متفقين",
+"Surplus, but too little training": "فايض سعرات بس تمرين قليل",
 };
 /* Coaching cues (js/knowledge/cues.js AR) join the dictionary; the app's own strings win on a clash. */
 for(var ck in CUE_AR)if(!(ck in AR))AR[ck]=CUE_AR[ck];

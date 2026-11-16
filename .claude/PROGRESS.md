@@ -4789,3 +4789,66 @@ docs/NEXT-PHASE.md WP-4. Finishing a workout now ends on a page, not the old "do
   reason.
 - Follow-up (open): a context form for `t()` (e.g. `t(key, ctx)` looking up "ctx|key") to replace the
   trailing-space keys "Low " and "Workout " (and "Back " under `tm()`). Until then, add no more such keys.
+
+## WP-5: food and training as one plan — branch session/day-fuel (v270)
+
+docs/NEXT-PHASE.md WP-5 (findings F-C1, F-C2, F-C3). The rule first, kept: the day's calories and macros are the same
+on a training day and a rest day (Mifflin-St Jeor × activity already counts training; the knowledge base has no cycling
+method). Only timing and emphasis inside the same targets change. No formula changed; no target is written.
+- New `js/engine/dayfuel.js` (pure, in PURE in tests/architecture.mjs and in sw.js). `usualStart(weekday, sessions)`:
+  median start (local minutes) of the last six finished sessions on that weekday, else of the last six on any day,
+  else null. Read from `S.sessions[].started`, stored nowhere, never asked. A session logged afterwards (started at
+  noon, no active time) does not count. `dayFuel(now, {plan, sessions, goals, eaten, water, days, needs})` gives at
+  most three notes, each {kind, key, vars, more, source, book, at}:
+  - before (2 h before the usual start until it, a session planned and not done, a lighter week's included): the
+    sentence "Training at about 18:05 — carbs and water before it." and under it, on Food, the two paragraphs of
+    `js/data/faq.js` "pre-workout" by their own text keys (the 400–600 ml is said there only). source pre-workout,
+    "From the textbook". The time is to the nearest 5 minutes ("about").
+  - after (finishing until 2 h later, by the session's last set): "You trained — 80 g of protein left today." (or the
+    target met). The knowledge base's after-training protein guidance has no figure for training for muscle: the
+    anabolic window is "24 hours or more"; the 0.3 g/kg an hour (nutrition-principles performance.timing) is for
+    sport and several sessions a day, and the same passage says total protein over the day matters more for muscle
+    gain. So, as the doc says for that case, the note says only what is left of today's target. source post-workout,
+    "From your log and plan".
+  - rest (a rest day): "Rest day — the same targets: 2,500 kcal and 150 g of protein.", with "Your targets already
+    count your training, so they stay the same on a rest day." source app-targets.
+  - behind (any time): Food's body needs as before (needs.js bodyNeedsOf via the head's needs-today signal), its
+    headline and figures unchanged.
+  A lighter week says nothing about food. `leftOf(goals, eaten)` is the one "what is left" (never below 0, p null
+  without a protein target); `todayPlan().food` now uses it.
+- Head (`js/engine/head.js`): `todayPlan().food` (today) also carries notes, note (the lead), line (its sentence,
+  new `fuelLine(note)`) and usual. It is the one wording read by Food, the Today card, the finish page and the coach.
+- Food (`js/ui/bodyneeds.js`): the body needs card is the day's fuel card (`.ffuel`, `data-k="fuel"`): the timed note
+  or the rest day leads it (`.ffuel-l`, its sentence, the textbook's paragraphs, the source line), then what is behind
+  as before (`.fneed` only when something is behind, so "no card at 9:00" still holds on a training day).
+- Training's Today card: one line at its foot (`.tdc-fuel`, a button to Food) with `todayPlan().food.line`, on a day
+  to train, done, or rest (behind adds its "+n g to go"). Not while a workout is open.
+- Finish page: "Food today" says `food.line` (just finished: the after note). Without a protein target it keeps the
+  calories-left line it had.
+- Coach: "pre-workout" and "post-workout" in faq.js get `{mine:1}`; chat.js FAQMINE adds today's sentence (the before
+  note, or the session still ahead at the usual time; the after note, or the protein left after one done today).
+- Food's ring (item 4, F-C3): when the head keeps a plan-check calorie finding at pri ≥ 60 (kcal-up, kcal-down,
+  kcal-steep, kcal-off, deficit-volume, phase, surplus-low), a caption under the ring (`.fring-sig`) says it in at most
+  five words ("Under what building needs") with the finding's own fix button (`data-pcfix`, "Use 2,900 kcal"). Not
+  protein (not calories) and not meals-off (the plan against the targets, not the targets against the goal).
+- Words: 14 new keys with Egyptian Arabic; number and unit, and the word before a dash, bound with a no-break space.
+  No trailing-space keys.
+- Tests: `js/engine/test/dayfuel.test.js` (in tests/engine.mjs): usualStart 18:05 from 18:05/17:50/18:20 Tuesdays,
+  the fallback, no history → null, a past-logged session ignored, only the last six; 16:30 Tuesday → before, 15:30
+  and 18:10 → none; 19:30 after finishing at 19:10 → after with 150 − 70; two hours later none; rest → neither, plain
+  targets; every note's source is a faq entry and its words have Arabic; before's paragraphs are pre-workout's keys
+  and carry the 400–600 ml, the note's own sentence no figure; targets equal before and after. head.test.js: the
+  line is fuelLine's; finished five minutes ago → after with 150 g; S.goals unchanged; rest day line; another day no
+  notes. Browser (6, clock pinned to Tue 17 Nov 2026 with `clockAtTime`, seed sessions started at 18:05): before on
+  Food and the Today card, the same sentence, textbook line, 400–600 ml; after on the finish page, Today card and
+  Food, S.goals unchanged; rest day on both; the coach's pre-workout answer holds the sentence and the textbook's;
+  the ring's caption and its fix clearing it; Arabic/RTL with the time in .num.
+- Changed expectation: "Today card: every state…" counted every button in the card for "missed on a rest day: Move it,
+  log it and Skip only"; the card's food line is a button now (to Food), so the count leaves out `.tdc-fuel` as it
+  leaves out Change. No workout offer was added, which is what that check is about.
+- Open / doubts: (1) the before note's own sentence ("carbs and water before it") is the app's summary of the
+  pre-workout entry, without its "long or hard training" qualifier, which follows in the entry's own paragraph on Food
+  only; the Today card shows the sentence alone. (2) The after note shows no textbook guidance (no figure applies, see
+  above); the 20–40 g per meal (faq "meals") is not after-training guidance and was not used. (3) Rest and behind cite
+  "app-targets" (how the app sets targets), since their figures are the person's own. (4) The Today card now carries
+  one more line on most days; at 320 × 640 the main action stays in view (the Today card test passes).

@@ -46,7 +46,8 @@ import {canUndo} from "../handlers/actions.js";
 import {answerPick, createAsk, daysIn, namesExercise, namesFood, plan as planAction, planCommand, proceed, suggestExercises, swapPick} from "../agent.js";
 import {commandOf, whenIn} from "../../coach/commands.js";
 import {checkPlans} from "../../engine/plancheck.js";
-import {headOn} from "../../engine/head.js";
+import {fuelLine, headOn, todayPlan} from "../../engine/head.js";
+import {afterNote, beforeNote} from "../../engine/dayfuel.js";
 import {coachNow, standingNow} from "../../engine/coachinfo.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
 import {bestE1RM, bmr, bwShare, dbTotal, deloadDue, plateauOf, e1RM, eatenToday, energyMissing, inDeload, kcalFloor, lastWeight, loadText, macroTargets, prFor, recommend, sessionVolume, targetKcal, tdee, tdeeFormula} from "../../engine/formulas.js";
@@ -493,6 +494,19 @@ function faqSlots(){
    worked out from the log and the profile, never a figure of the answer's own. Each
    returns nothing when there is nothing of theirs to say. */
 var FAQMINE={
+  /* Today's training, in the sentence Food and the Today card say (js/engine/head.js
+     todayPlan().food, WP-5): the session still to come at the person's usual time, or the
+     protein left after one done today. Nothing to say: nothing added. */
+  "pre-workout":function(a){
+    var tp=todayPlan(),f=tp.food;if(!f)return;
+    var d=new Date(),m=d.getHours()*60+d.getMinutes(),n=f.notes.filter(function(x){return x.kind==="before";})[0];
+    if(!n&&f.usual!=null&&m<f.usual&&/^(train|light)$/.test(tp.state))n=beforeNote(f.usual);
+    if(n)p(a,fuelLine(n));},
+  "post-workout":function(a){
+    var tp=todayPlan(),f=tp.food;if(!f)return;
+    var n=f.notes.filter(function(x){return x.kind==="after";})[0];
+    if(!n&&tp.state==="done"&&f.pLeft!=null)n=afterNote(null,f.pLeft);
+    if(n)p(a,fuelLine(n));},
   /* Sleep and food over the last week, from the log (as aTired read them). */
   "tired-always":function(a){
     var nights=lastNights(),days=[],g=S.goals||{},ev=[];

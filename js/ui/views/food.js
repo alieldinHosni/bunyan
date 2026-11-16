@@ -123,6 +123,19 @@ function foodSub(){
   if(V.pimport)return vImport();
   return null;}
 
+/* The ring never looks fine while the plan is wrong for the goal (WP-5, F-C3): when the
+   head keeps a calorie signal worth leading with (pri >= 60), the ring's caption says it
+   in five words, with the finding's own one-tap fix. */
+var RINGSIG={"kcal-up":"Over what fat loss needs","kcal-down":"Under what building needs","kcal-steep":"Too steep a deficit",
+  "kcal-off":"Far from your maintenance","deficit-volume":"Big deficit, heavy training week","phase":"Goal and program disagree",
+  "surplus-low":"Surplus, but too little training"};
+function ringSig(){
+  var h=headNow(),all=(h.lead?[h.lead]:[]).concat(h.queue);
+  var s=all.filter(function(x){return RINGSIG[x.id]&&x.pri>=60&&x.source==="plancheck"&&x.src&&x.src.fix;})[0];
+  if(!s)return "";
+  return '<p class="fring-sig" data-k="ring:'+esc(s.id)+'"><span class="fring-sig-t">'+esc(t(RINGSIG[s.id]))+'</span>'
+   +'<button class="fring-sig-b" data-pcfix="'+esc(s.id)+'">'+numsIn(s.src.fix.label)+'</button></p>';}
+function numsIn(x){return esc(x).replace(/&#?\w+;|[0-9][0-9.,]*/g,function(m){return m.charAt(0)==="&"?m:'<span class="num">'+m+'</span>';});}
 function vFoodToday(dsel){
   var g=S.goals,e=eatenToday(dsel),r=dayRec(dsel);
   /* The same navigator Progress and Train use — js/ui/datebar.js. */
@@ -144,7 +157,7 @@ function vFoodToday(dsel){
        +'<div class="fmac2-v">'+m[2]+' g <span>/ '+m[3]+' g</span></div>'
        +'<div class="fmac2-b" aria-hidden="true"><i style="width:'+Math.min(100,mp)+'%"></i></div></div>';}).join("")
    +'<div class="fleft'+(over?' over':'')+'">'+esc(fmtN(diff)+" "+t(over?"kcal over":"kcal left"))+'</div>'
-   +'</div></div>';
+   +'</div>'+ringSig()+'</div>';
 
   /* ---- the day's meals as tiles: a logged one is ticked and opens the meal, an empty
      one adds to it — or, when it has a plan, opens it so the plan is one tap away.

@@ -258,7 +258,17 @@ function todayCard(sp,tp){
    +'<div class="thero2-m">'+meta+'</div>'+ex+'</div></div>'
    +(now?statusLines(tp):'')
    +(tp.state==="done"||tp.state==="rest"?nextLine(tp.next,iso):'')
-   +cta+more+(now?leadLine(tp.line,iso):'')+'</div>';}
+   +cta+more+(now?leadLine(tp.line,iso):'')+(now?fuelRow(tp):'')+'</div>';}
+/* The day's food, in one line at the foot of the card (WP-5): the head's sentence for it
+   (todayPlan().food.line), the one Food leads with; a tap opens Food. Not while a workout
+   is open, nor on a day with nothing planned. */
+var FUELGL={before:"clock",after:"clock",rest:"moon",behind:"bowl"};
+function fuelRow(tp){
+  var f=tp.food,n=f&&f.note;
+  if(!n||!/^(train|light|done|rest)$/.test(tp.state))return "";
+  var pill=n.kind==="behind"?'<span class="tdc-fuel-p num">'+esc(t("+{n} "+n.unit+" to go").replace("{n}",fmtN(n.left)))+'</span>':'';
+  return '<button class="tdc-fuel" data-tab="food" data-k="fuel:'+n.kind+'"><span class="tdc-fuel-i" aria-hidden="true">'+glyph(FUELGL[n.kind]||"bowl")+'</span>'
+   +'<span class="tdc-fuel-t">'+nums(f.line)+'</span>'+pill+'</button>';}
 function vTrain(){
   /* "hub": a workout left for later, seen from its Resume card. */
   if(S.active&&V.train!=="hub")return vLogger();

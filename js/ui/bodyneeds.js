@@ -11,7 +11,8 @@
 import {hb} from "./haptic.js";
 import {t} from "../i18n/dict.js";
 import {suggestFor} from "../engine/needs.js";
-import {headOn} from "../engine/head.js";
+import {fuelLine, headOn, todayPlan} from "../engine/head.js";
+import {HEAD} from "../engine/dayfuel.js";
 import {S} from "../state.js";
 import {esc, fmtN} from "../util.js";
 import {art} from "./art.js";
@@ -19,7 +20,6 @@ import {glyph} from "./glyphs.js";
 
 var NAME={p:"Protein",c:"Carbs",f:"Fat",w:"Water"};
 var GL={p:"molecule",c:"grain",f:"avocado",w:"drop"};
-var HEAD={p:"Your body needs more protein.",c:"Your body needs more fuel.",f:"Your body needs a little more fat.",w:"Your body needs more water."};
 var NEED={p:"About {n} g more protein today brings you to your target.",c:"About {n} g more carbs today brings you to your target.",
   f:"About {n} g more fat today brings you to your target.",w:"About {n} ml more water today brings you to your target."};
 var BRINGS={p:"+{n} g protein",c:"+{n} g carbs",f:"+{n} g fat"};
@@ -37,16 +37,28 @@ function pctOf(n){return Math.round(n.pct*100);}
    each to log (or a glass, for water). Nothing behind: no card. The week's pattern
    (noticed) stays. Each of the two is drawn when the head (js/engine/head.js) keeps it:
    needs-today (what is behind now) and needs-week (the week's pattern). */
+/* The day's fuel card (WP-5): the timed note (before or after training) or the rest day
+   leads it, then what is behind for the hour, both read from the head's
+   todayPlan().food, the sentence the Today card and the finish page say too. */
+var FGL={before:"clock",after:"clock",rest:"moon"};
+function fuelLead(n){
+  if(!n)return "";
+  return '<div class="ffuel-l" data-k="fuel:'+n.kind+'"><span class="fneed-i ffuel-i" aria-hidden="true">'+glyph(FGL[n.kind]||"bowl")+'</span>'
+   +'<div class="fneed-t"><h2 class="ffuel-h">'+nums(fuelLine(n))+'</h2>'
+   +(n.more||[]).map(function(k){return '<p class="ffuel-p">'+nums(t(k))+'</p>';}).join("")
+   +'<span class="ffuel-src" data-src="'+esc(n.source)+'">'+esc(t(n.book?"From the textbook":"From your log and plan"))+'</span></div></div>';}
+function nums(x){return esc(x).replace(/&#?\w+;|[0-9][0-9.,:]*/g,function(m){return m.charAt(0)==="&"?m:'<span class="num">'+m+'</span>';});}
 function bodyNeeds(eaten){
   var g=S.goals||{},sigs=headOn("food"),of=function(id){return (sigs.filter(function(s){return s.id===id;})[0]||{}).src||null;};
-  var b=of("needs-today"),week=of("needs-week");
-  if(!b||!b.node)return noticed(week);
+  var week=of("needs-week"),f=todayPlan().food,notes=f&&f.notes||[];
+  var lead=notes[0]&&notes[0].kind!=="behind"?notes[0]:null,bn=notes.filter(function(n){return n.kind==="behind";})[0],b=bn?bn.needs:null;
+  if(!b||!b.node)return (lead?'<section class="fbody ffuel glass" data-k="fuel">'+fuelLead(lead)+'</section>':'')+noticed(week);
   var focus=b.focus,fn=b.node;
   var trained=b.trained;
   var sub=(trained?t("You trained today, and {x} is at {n}% of your target."):t("{X} is at {n}% of today's target, behind for the time of day."))
       .replace("{x}",t(NAME[focus]).toLowerCase()).replace("{X}",t(NAME[focus])).replace("{n}",pctOf(fn));
   var left=b.left,unit=focus==="w"?"ml":"g";
-  var h='<section class="fbody fneed glass" data-k="needs-today" aria-labelledby="fbody-h">'
+  var h='<section class="fbody fneed ffuel glass" data-k="fuel" aria-labelledby="fbody-h">'+fuelLead(lead)
    +'<div class="fneed-h"><span class="fneed-i f-'+focus+'" aria-hidden="true">'+glyph(GL[focus])+'</span>'
    +'<div class="fneed-t"><h2 class="fbody-h" id="fbody-h">'+esc(t(HEAD[focus]))+'</h2><p class="fbody-s">'+esc(sub)+'</p></div>'
    +'<span class="fbody-pill num">'+esc(t("+{n} "+unit+" to go").replace("{n}",fmtN(left)))+'</span></div>';
