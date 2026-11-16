@@ -5284,7 +5284,9 @@ await test("Tomorrow follows today, live, in a rotation as on weekdays: today ch
   await page.tap('.reco [data-recoswap]');await pause(page,300);
   eq(await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");const d=new Date(U.today()+"T00:00:00");d.setDate(d.getDate()+1);
     const tm=new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);return st.split().days.find(x=>x.id===st.S.daySwap[tm]).name;}),"Legs","weekdays: tomorrow is Legs");
-});
+/* On a Friday, as written: the week's earlier days then hold a planned, unlogged one. On a
+   Monday the week (Saturday to Friday) has none before today, and the missed card cannot show. */
+},{init:clockAt(2026,11,13)});
 await test("Training calendar: the week rail opens to the month inside its own card, a dot for a day trained, a ring for one planned; a past day shows below",async page=>{
   await tapTab(page,"train");await pause(page,300);
   eq(await page.$$eval('#app .wkr',a=>a.length),1,"one rail");
