@@ -19,22 +19,20 @@ import {ACT_GROUPS, actIcon, actInfo, actRate, actsIn, INTENSITY, intensityOf, i
 import {barKg, bwShare, incrementFor, bestE1RM, eatenToday, lastWeight, macroKcal, prevPerf, prFor, sessionVolume, targetKcal, tdee, volume} from "../engine/formulas.js";
 import {sumNutrition, foodName} from "../engine/nutrition.js";
 import {fuzzyRank, tokenMatch} from "../engine/text.js";
-import {groupLabel, groupRun, ivText, mmss, platePlan, rowsFor} from "./views/session.js";
-import {sessionById, ensureSessionIds, dayOf, dayRec, S, split} from "../state.js";
-import {blockNow} from "../engine/blocks.js";
+import {groupLabel, groupRun, ivText, platePlan, rowsFor} from "./views/session.js";
+import {ensureSessionIds, dayOf, dayRec, S, split} from "../state.js";
 import {missedNow} from "../engine/missed.js";
 import {friends, snapStats} from "../engine/share.js";
 import {fmtEst, fmtW, inLb, toDisp, wUnit} from "../units.js";
 import {dfmt, esc, fmtN, num, pretty, r1, shortd, today} from "../util.js";
-import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, STAR8, stepperInput, V} from "./view.js";
-import {art} from "./art.js";
+import {CUES, GRIPSVG, mistakesFor, progressBar, sparkline, stepperInput, V} from "./view.js";
 import {glyph} from "./glyphs.js";
 import {photoById} from "./photos.js";
 import {afHead, afTile, fitCh, vAddFood, vManual} from "./views/addfood.js";
 import {vImportSheet, vPlanFood, vPutMeal} from "./views/food.js";
 import {vLiftSheet, vPhotoCompare, vRecapSheet} from "./views/progress.js";
 import {tiexSheet, vTImportSheet} from "./views/timport.js";
-import {coolCard, warmOf} from "./views/warmup.js";
+import {warmOf} from "./views/warmup.js";
 import {settingsSheet} from "./settings.js";
 import {fig3dHtml, hasMannequin} from "./mannequin.js";
 
@@ -864,72 +862,7 @@ function vSheet(){
          +'<span class="ico ico-chev" aria-hidden="true"></span></button>';});
       b+='</div>';}
   }
-  else if(V.sheet==="done"){
-    var w=V.sd;
-    /* Kept to what matters straight after a workout: that it is done, three figures,
-       a record if there was one — and what to do next. Everything else lives in
-       Progress. */
-    var wsecs=w.secs||w.mins*60;
-    /* Workout complete (workout-spec.md): the check, three figures, and the records,
-       which are news here rather than mid-set; Done, then the questions under it. */
-    b='<div class="wfin">'
-     /* The horse behind the tick: the one drawing this screen gets (art.js). */
-     +'<div class="wfin-hd">'+art("mane",{cls:"wfin-art"})
-     +'<div class="wfin-c" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div></div>'
-     +'<h1 class="wfin-h">'+t("Workout complete")+'</h1>'
-     +'<p class="wfin-sub">'+esc(planName(w.dayName))+' · '+pretty(w.date)+'</p>'
-     +'<div class="wfin-stats">'
-     /* Logged afterwards, there is no duration to show: the sets, which there are. */
-     +(w.past?'<div class="stat"><b class="num">'+fmtN(w.sets)+'</b><small>'+t("Sets")+'</small></div>'
-     :'<div class="stat"><b class="num">'+(wsecs>=3600?Math.floor(wsecs/3600)+'<small>h</small> '+Math.round(wsecs%3600/60)+'<small>m</small>':mmss(wsecs))+'</b><small>'+t("Duration")+'</small></div>')
-     /* A lifting day shows its tonnage; a run or a match shows what it burned. */
-     +(w.vol||!w.actKcal
-       ?'<div class="stat"><b class="num"><span data-count-to="'+Math.round(toDisp(w.vol))+'">'+fmtN(toDisp(w.vol))+'</span></b><small>'+t("Volume")+' · '+wUnit()+'</small></div>'
-       :'<div class="stat"><b class="num"><span data-count-to="'+w.actKcal+'">'+fmtN(w.actKcal)+'</span></b><small>'+t("Burned")+' · kcal</small></div>')
-     +(w.actKm&&!w.vol
-       ?'<div class="stat"><b class="num">'+w.actKm+'</b><small>'+t("Distance")+' · km</small></div>'
-       :'<div class="stat"><b class="num"><span data-count-to="'+w.sets+'">'+w.sets+'</span></b><small>'+t("Sets")+'</small></div>')
-     +'</div>';
-    /* The best record first: weight, then estimated max, then reps. */
-    var RK={w:3,e:2,r:1};
-    var prs=w.prs.slice().sort(function(x,y){return (RK[y.k||"w"]-RK[x.k||"w"])||(y.w-x.w);});
-    if(prs.length){
-      var p0=prs[0],k0=p0.k||"w";
-      b+='<div class="wfin-rec">'+STAR8+'<b>'+(prs.length>1?'<span class="num">'+prs.length+'</span> '+t("new records")
-          :t(k0==="e"?"New best estimated max":k0==="r"?"Rep record":"New personal record"))+'</b>'
-       +'<span>'+esc(exName(p0.n))+' · '+(k0==="e"?fmtW(p0.e):k0==="r"?p0.r+' × '+fmtW(p0.w):fmtW(p0.w)+' × '+p0.r)+'</span></div>';}
-    else if(w.prevVol&&w.delta>0)
-      b+='<p class="wfin-up"><span aria-hidden="true">↑</span> '+t("Volume up")+' '
-       +Math.round(w.delta/w.prevVol*100)+'% '+t("on last session")+'</p>';
-    /* Top of the range on every set: next session's step. */
-    (w.prog||[]).forEach(function(g){
-      b+='<div class="wfin-rec"><b>'+t("Progression earned")+'</b><span>'+esc(exName(g.n))+' · '
-       +t("Top of the range on every set. Try")+' '+fmtW(g.next)+' '+t("next session")+'.</span></div>';});
-    b+='<button class="wfin-done" data-close="1">'+t("Done")+'</button>';
-    /* One tap for how hard the whole session was. It is the one number that tracks
-       training load across lifting, cardio and sport alike. */
-    var sr=(sessionById(w.id)||{}).srpe||0;
-    b+='<div class="wc2-effort"><div class="wc2-effort-h">'+t("How hard was the session?")+'</div><div class="ready-c">'
-     +[[3,"Easy"],[5,"Moderate"],[7,"Hard"],[9,"Very hard"],[10,"Max"]].map(function(x){
-        return '<button class="'+(sr===x[0]?'on':'')+'" data-srpe="'+x[0]+'" aria-pressed="'+(sr===x[0])+'">'+t(x[1])+'</button>';}).join("")
-     +'</div></div>';
-    /* Inside a training block, one more tap: how the amount of work felt. It moves the
-       sets for the muscles this workout trained, next time and for the rest of the
-       block (js/coach/block.js). Not asked of a run or a match. */
-    if(w.lift&&blockNow()){
-      var fl=(sessionById(w.id)||{}).feel||"";
-      b+='<div class="wc2-effort wc2-feel"><div class="wc2-effort-h">'+t("How was the amount of work?")+'</div><div class="ready-c feel-c">'
-       +[["easy","Too easy"],["right","About right"],["much","Too much"]].map(function(x){
-          return hb('<button class="'+(fl===x[0]?'on':'')+'" data-sfeel="'+x[0]+'" aria-pressed="'+(fl===x[0])+'">'+t(x[1])+'</button>');}).join("")
-       +'</div><p class="wc2-feel-n">'+t("Your answer adjusts the sets for these muscles for the rest of this block.")+'</p></div>';}
-    /* Stretches for what was trained, with a timer each. */
-    b+=coolCard(w.cool);
-    b+='</div><div class="cf-acts wc2-acts">'
-     +'<div class="wc2-row">'
-     +(w.id?'<button class="btn g cf-no" data-sessedit="'+esc(w.id)+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>'+t("Edit")+'</button>':'')
-     +'<button class="btn g cf-no" data-sharews="1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>'+t("Share")+'</button>'
-     +'</div></div>';
-  }
+  /* The finish screen is a page now (js/ui/views/finish.js, WP-4), not a sheet. */
   else if(V.sheet==="gear"){
     b='<h2>'+t("My equipment")+'</h2><p class="tiny" style="margin:2px 0 14px">'
      +esc(t("Pick what you actually have. Exercise suggestions and replacements will stick to it. Bodyweight is always included."))+'</p><div class="list">';

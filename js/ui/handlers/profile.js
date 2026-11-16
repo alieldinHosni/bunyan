@@ -182,8 +182,8 @@ function register(){
      "share" sheet is a progress snapshot for friends, which is a different thing from
      this one workout, so it is not what this opens. */
   has("sharews",function(){
-    var ws=V.sd;if(!ws)return;
-    var line=ws.dayName+" · "+ws.mins+" "+t("min")+" · "
+    var ws=V.fin;if(!ws)return;
+    var line=ws.dayName+" · "+(ws.mins?ws.mins+" "+t("min")+" · ":"")
       +fmtN(toDisp(ws.vol))+" "+wUnit()+" "+t("lifted")+" · "
       +ws.sets+" "+t("sets")
       +(ws.prs.length?" · "+ws.prs.length+" "+t(ws.prs.length>1?"new records":"new record"):"")
