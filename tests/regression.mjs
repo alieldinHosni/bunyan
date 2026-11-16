@@ -4922,14 +4922,14 @@ await test("Today card: the top of Training is the one card that leads the day �
   const h=await headOf(page);
   eq(h.lead,"deload-due","the head leads with the lighter week");
   const shape=await page.evaluate(()=>{const app=document.getElementById("app"),kids=[...app.children].filter(e=>e.offsetHeight>0),c=app.querySelector('[data-k="today"]');
-    const order=["[data-k=\"today\"]",".wkr",".htiles",".tquick",".pgc-h",'[data-k="hk:backup"]'].map(s=>{const e=app.querySelector(s);return e?[...app.querySelectorAll("*")].indexOf(e):-1;});
-    return {first:kids[0].classList.contains("hgreet"),second:kids[1]===c,state:c.dataset.state,name:c.querySelector(".thero2-n").textContent,
+    const order=[".wkr","[data-k=\"today\"]",".htiles",".tquick",".pgc-h",'[data-k="hk:backup"]'].map(s=>{const e=app.querySelector(s);return e?[...app.querySelectorAll("*")].indexOf(e):-1;});
+    return {first:kids[0].classList.contains("hgreet"),second:kids[1].classList.contains("wkr")&&kids[2]===c,state:c.dataset.state,name:c.querySelector(".thero2-n").textContent,
       ex:!!c.querySelector(".tdc-ex"),metaNum:c.querySelectorAll(".thero2-m .num").length,lead:!!c.querySelector('[data-k="lead:deload-due"] [data-deload="start"]'),
       leadBtns:c.querySelectorAll('[data-k="lead:deload-due"] .btn').length,
       outside:[...app.querySelectorAll('.dlcard,[data-deload="start"]')].filter(e=>!c.contains(e)).length+(app.textContent.split("Time for a lighter week").length-1)-(c.textContent.split("Time for a lighter week").length-1),
       sorted:order.every((x,i)=>x>=0&&(i===0||x>order[i-1])),prompts:app.querySelectorAll("[data-prompt]").length};});
   eq([shape.first,shape.second,shape.state,shape.ex,shape.metaNum>=2,shape.lead,shape.leadBtns,shape.outside,shape.sorted,shape.prompts],
-    [true,true,"train",true,true,true,1,0,true,1],"greeting, then the card; the session with its exercises and figures in .num; the lighter week one line with one button, nowhere else; the order; one prompt card (the backup)");
+    [true,true,"train",true,true,true,1,0,true,1],"greeting, the week (owner, 16 Nov), then the card; the session with its exercises and figures in .num; the lighter week one line with one button, nowhere else; the order; one prompt card (the backup)");
   /* Start workout fully in view without scrolling, at 390 × 844 and 375 × 667, in both languages. */
   for(const lang of ["en","ar"]){
     await page.evaluate(async l=>{const st=await import("/js/state.js");st.S.prefs.lang=l;(await import("/js/i18n/exnames.js")).applyLang();(await import("/js/ui/render.js")).render();},lang);
@@ -4963,8 +4963,11 @@ await test("Today card: every state — a training day, nothing leading, a light
       if(want)eq(tp.state,want,state+": the head's state");
       const sel='#app [data-k="today"] '+TODAY_MAIN[state];
       if(!(await page.$(sel)))throw new Error(state+" ("+lang+" "+w+"): no main action "+TODAY_MAIN[state]);
-      await page.$eval(sel,e=>e.scrollIntoView({block:"nearest"}));await pause(page,150);
-      eq(await page.evaluate(()=>window.scrollY),0,state+" ("+lang+" "+w+"): the main action in view without scrolling");
+      await page.$eval(sel,(e,small)=>e.scrollIntoView({block:small?"center":"nearest"}),w<375);await pause(page,150);
+      /* Owner, 16 Nov: the week sits above the card again. At 390 wide (and 375 × 667, the
+         test above) the main action is in view without scrolling; on the smallest phone
+         (320 × 640) it is reached by scrolling, and then wholly in view. */
+      if(w>=375)eq(await page.evaluate(()=>window.scrollY),0,state+" ("+lang+" "+w+"): the main action in view without scrolling");
       eq(await fullyIn(page,sel),true,state+" ("+lang+" "+w+"): the main action fully visible");
       const c=await page.evaluate(()=>{const c=document.querySelector('#app [data-k="today"]');
         return {wide:document.documentElement.scrollWidth>innerWidth+1,dir:document.documentElement.dir,txt:c.innerText,
@@ -5040,8 +5043,9 @@ await test("WP-3 workout page: the first set of a barbell lift leaves Log set 96
   if(a.H-a.log[1]<96)throw new Error("Log set's bottom is "+(a.H-a.log[1])+" px above the bottom");
   eq(a.ctl,["ss-back","ss-title","ss-more","ib","ib"],"close, the list, ⋯, how to do it, swap");
   eq(a.dose,true,"and the dose line");
-  /* The stage: the photograph (this exercise's figure is not reviewed yet), never empty. */
-  eq(await page.evaluate(()=>{const m=document.querySelector(".stg .stg-m");const b=m.getBoundingClientRect();return [!!m.querySelector("img.stg-img"),b.height>=140];}),[true,true],"a picture on the stage");
+  /* The stage (owner, 16 Nov): no photograph or stand-in; without a reviewed figure it is
+     the name and the dose alone, at full width. */
+  eq(await page.evaluate(()=>{const s=document.querySelector(".stg"),t=s.querySelector(".stg-t");return [!!s.querySelector(".stg-m,img"),s.classList.contains("stg-solo"),t.getBoundingClientRect().width>s.getBoundingClientRect().width*0.8];}),[false,true,true],"no picture on the stage; the name and dose take its width");
   /* One line under the numbers: the plates. Recommended and last time are gone from the card. */
   eq(await page.evaluate(()=>[...document.querySelector(".wsc").children].map(c=>c.className.split(" ")[0])),["sc-top","sc-g","sc-pl"],"the card: Suggested, the numbers, the plates");
   await page.setViewportSize({width:375,height:667});await pause(page,400);
@@ -5076,7 +5080,7 @@ await test("WP-3 workout page: logging a set, a stepper, the rest ticking, an RP
   await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;(await import("/js/ui/actions.js")).swapAlt("Dumbbell Bench Press",V.logIdx,S.active.entries[V.logIdx].name);});
   await pause(page,600);
   eq(await ev(page,"S.active.entries[0].name"),"Dumbbell Bench Press","swapped");
-  eq((await kept()).filter(s=>s!==".stg-m"),[],"a swap: only the picture is new");
+  eq((await kept()).filter(s=>s!==".stg-m"),[],"a swap: only the picture (if any) is new");
   await page.evaluate(()=>{window.__n={};});await tagAll();
   await page.tap('[data-sstep="w"][data-d="1"]');await pause(page,300);eq(await kept(),[],"a stepper");
   await page.tap('[data-logset]');await pause(page,900);eq(await kept(),[],"logging a set");

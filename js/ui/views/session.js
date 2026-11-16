@@ -2,7 +2,7 @@
    The live session surface and rest screen. Execution, not editing. */
 import {rulesFor} from "../../engine/conditions.js";
 import {t} from "../../i18n/dict.js";
-import {exMedia, exThumb, isBarbell, isUnilateral, thumb} from "../../data/exercises.js";
+import {exMedia, exThumb, isBarbell, isUnilateral} from "../../data/exercises.js";
 import {fig3dHtml, hasMannequin} from "../mannequin.js";
 import {holdState} from "../hold.js";
 import {exName, planName} from "../../i18n/exnames.js";
@@ -174,16 +174,16 @@ function doseLine(e,timed){
   /* Something to explain only when reserve or tempo is in it. */
   return rir||tm?'<button class="stg-dose" data-explain="dose">'+what+'</button>':'<p class="stg-dose">'+what+'</p>';}
 /* The stage's picture: the exercise's 3D figure, playing, where it has passed its review
-   (mannequin.js hasMannequin, the safety gate); else its photograph, kept with the app
-   (img/ex, so it shows offline); else the drawn drill or the glyph thumb() falls back to.
-   Never an empty box. The figure itself is never mirrored in Arabic: only the stage is. */
+   (mannequin.js hasMannequin, the safety gate), and nothing otherwise. The figure itself
+   is never mirrored in Arabic: only the stage is. */
 function stageMedia(e,act){
   var n=e.name,lbl=exName(n);
   if(!act&&hasMannequin(n))
     return '<div class="stg-m" data-k="stgm:'+esc(n)+'">'+fig3dHtml(n,{label:lbl,stills:[exThumb(n)],tempo:(exTempoAttr(e).match(/"(.*)"/)||[])[1]})+'</div>';
-  var u=act?null:exThumb(n);
-  if(u)return '<div class="stg-m" data-k="stgm:'+esc(n)+'"><img class="stg-img" src="'+u+'" alt="" decoding="async"></div>';
-  return '<div class="stg-m stg-ph" data-k="stgm:'+esc(n)+'">'+thumb(n,72)+'</div>';}
+  /* Owner, 16 Nov: no photograph or drawn stand-in on the stage ("done in a very
+     unprofessional way, and looks odd"). Without a reviewed figure the stage is the name
+     and the dose alone, at full width; the photographs stay in the exercise sheet (ⓘ). */
+  return "";}
 /* A set as the rows and the reference line say it: "60 kg × 8", "+10 kg × 6", "BW × 12",
    "45 s". */
 function setText(name,x,timed){
@@ -496,7 +496,8 @@ function vLogger(){
   /* The stage (WP-3): the exercise's figure or photograph on one side; on the other its
      name, which set, and the dose in one line; how to do it and swap as two round
      buttons. The class names of the line before it (wexl, ex-name, wexl-s) are kept. */
-  h+='<section class="wexl stg" data-k="stage">'+stageMedia(e,act)
+  var stm=stageMedia(e,act);
+  h+='<section class="wexl stg'+(stm?'':' stg-solo')+'" data-k="stage">'+stm
    +'<div class="stg-t"><h1 class="ex-name">'+esc(exName(e.name))+'</h1>'
    +'<p class="wexl-s"><span>'+line+'</span></p>'
    +(act?'':doseLine(e,timed))

@@ -302,16 +302,17 @@ function schedLine(sp){
 
 /* ---- the Training page ------------------------------------------------------------
    One question: what do I do now? In this order, with nothing above it: the greeting and
-   the date; the Today card (js/engine/head.js todayPlan: the day, and the one line that
-   leads it); the week with today ringed; weigh-in and steps; at most one other prompt;
+   the date; the week with today ringed (owner, 16 Nov: above the card, where it was); the
+   Today card (js/engine/head.js todayPlan: the day, and the one line that leads it); weigh-in and steps; at most one other prompt;
    cardio and your program; and at the foot the one housekeeping card of the day (a backup,
    a weigh-in). Never more than two prompt cards. */
 function vTrainHome(){
   var sp=split(),sel=S.active?today():V.tdate||today(),tp=todayPlan(sel),h="";
   if(V.train!=="days"&&V.train!=="hub")V.train="days";
   h+=trainTop();
-  h+=todayCard(sp,tp);
+  /* Owner, 16 Nov: the week back in its place, above the Today card. */
   if(!S.active)h+=weekRail(sp,sel);
+  h+=todayCard(sp,tp);
   h+=bodyTiles();
   h+=otherCard(tp.other,sel);
   /* The last outdoor session of the fortnight (a run, a walk, a ride, a hike), as the
