@@ -5318,6 +5318,29 @@ await test("Food and training as one plan (WP-5): in Arabic the fuel card and th
   if(/[A-Za-z]{2,}/.test(f.t))throw new Error("English in the fuel card: "+f.t);
   eq(f.h,c.t.trim(),"the same sentence on both, in Arabic");
 },{db:seedFuel(),init:clockAtTime(2026,11,17,16,30),prefs:{lang:"ar"}});
+await test("Main tabs, landing (owner, 16 Nov: \"it flashes, and bounce\", Training to Food and back): the page that came in stays where it landed until the real one takes its place — it never goes back to where the finger let go",async(page,env)=>{
+  const cdp=await env.ctx.newCDPSession(page);
+  const move=async(x0,y,x1,steps=10)=>{await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x0,y}]});
+    for(let i=1;i<=steps;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x0+(x1-x0)*i/steps,y}]});await page.waitForTimeout(16);}};
+  const up=async()=>{await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});};
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"train");await pause(page,900);
+  /* Every frame: where the copy that came in stands, and whether the real page is shown. */
+  await page.evaluate(()=>{window.__lf=[];const rec=()=>{const a=document.getElementById("app"),c=document.querySelector(".stillcopy.peek");
+    window.__lf.push([c?Math.round(c.getBoundingClientRect().left):null,getComputedStyle(a).visibility==="hidden",Math.round(a.getBoundingClientRect().left)]);requestAnimationFrame(rec);};requestAnimationFrame(rec);});
+  const y=await page.evaluate(()=>{const r=document.querySelector('#app [data-k="today"] .thero2-m').getBoundingClientRect();return Math.round(r.top+r.height/2);});
+  for(const [x0,yy,x1,want] of [[330,y,120,"food"],[60,400,270,"train"]]){
+    await page.evaluate(()=>{window.__lf.length=0;});
+    await move(x0,yy,x1);await up();await page.waitForTimeout(1200);
+    eq(await ev(page,"[V.tab,document.querySelectorAll('.stillcopy').length]"),[want,0],"landed on "+want);
+    const f=await page.evaluate(()=>window.__lf.slice());
+    const at=f.findIndex(r=>r[0]!==null&&Math.abs(r[0])<=1);
+    if(at<0)throw new Error(want+": the page that came in never reached its place");
+    const after=f.slice(at).filter(r=>r[0]!==null);
+    eq(after.filter(r=>Math.abs(r[0])>1).map(r=>r[0]),[],want+": once in place, the page that came in does not move again");
+    /* The real page, whenever it is the one shown, stands at the screen's edge. */
+    eq(f.slice(at).filter(r=>r[0]===null&&!r[1]&&Math.abs(r[2])>1).length,0,want+": the real page takes its place where it stands");}
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
