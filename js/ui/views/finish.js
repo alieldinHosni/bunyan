@@ -88,14 +88,12 @@ function effort(w,s){
      +'</div><p class="wc2-feel-n">'+esc(t("Your answer adjusts the sets for these muscles for the rest of this block."))+'</p></div>';}
   return h;}
 
-/* Food today: what is left of today's food target, from the head (todayPlan().food.line), with the
+/* Food today: what is left of today's food target, from the head (todayPlan().food), with the
    way to Food. Only with a target, and only for a workout done today. */
 function nowLine(w){
   if(w.past||w.date!==today())return "";
   var f=todayPlan(today()).food;if(!f)return "";
-  /* The day's fuel sentence (WP-5), the one Food and the Today card say: just finished, it
-     is the after note. Without a protein target there is none, and the calories left are said. */
-  var line=f.line?f.line:f.p?(f.pLeft>0?t("You have {g} g of protein left today.").replace("{g}",fmtN(f.pLeft)):t("Today's protein target is met."))
+  var line=f.p?(f.pLeft>0?t("You have {g} g of protein left today.").replace("{g}",fmtN(f.pLeft)):t("Today's protein target is met."))
     :(f.kLeft>0?t("You have {k} kcal left today.").replace("{k}",fmtN(f.kLeft)):t("Today's calories are in."));
   return '<section class="wfin-now wfin-sec" data-k="now"><div class="wfin-sh"><b>'+esc(t("Food today"))+'</b></div>'
    +'<p class="wfin-now-t">'+nums(line)+'</p>'
