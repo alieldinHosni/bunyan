@@ -4984,7 +4984,7 @@ await test("Today card: every state — a training day, nothing leading, a light
       const ck=await page.evaluate(()=>{const c=document.querySelector('#app [data-k="today"]');
         return {startday:!!c.querySelector("[data-startday]"),another:!!c.querySelector("[data-another]"),meta:c.querySelector(".thero2-m").textContent,
           next:!!c.querySelector(".tdc-next"),view:(c.querySelector("[data-openday]")||{}).className||"",setupLine:!!c.querySelector('[data-k="lead:setup"] [data-setup]'),
-          acts:c.querySelectorAll("button:not(.thero2-swap)").length};});
+          acts:c.querySelectorAll("button:not(.thero2-swap):not(.tdc-fuel)").length};});
       if(state==="missed")eq([ck.startday,ck.another,ck.next,ck.acts],[false,false,true,3],"missed on a rest day: Move it, log it and Skip only (and Change), Next up kept");
       if(state==="rest")eq([ck.meta,ck.next,ck.startday,ck.another],[lang==="ar"?"ارتاح.":"Recover.",true,true,false],"rest: Recover., Next up, Train anyway and no second offer");
       if(state==="done")eq([ck.view.split(" ").indexOf("g")>=0,ck.next],[true,true],"done: View session quiet, Next up the message");
@@ -5222,6 +5222,102 @@ await test("Finish screen (WP-4): in Arabic every string is translated, figures 
   await page.reload();await pause(page,1300);
   eq(await ev(page,"[V.train,!!V.fin,!!S.active,S.sessions.length>0]"),["days",false,false,true],"a reload lands on Training, the session kept");
 },{prefs:{autorest:false}});
+/* ---- WP-5: food and training as one plan (js/engine/dayfuel.js) ----
+   The page's clock at a given local time on 17 Nov 2026 (a Tuesday), and the seed moved so
+   its sessions end two days before it, each started at 18:05: the usual start is 18:05, said as 18:00. */
+function clockAtTime(y,m,d,h,mi){return {content:"(function(){var R=Date,off=new R("+y+","+(m-1)+","+d+","+h+","+mi+").getTime()-R.now();"
+  +"function D(){if(!(this instanceof D))return new R(R.now()+off).toString();"
+  +"return arguments.length?new (Function.prototype.bind.apply(R,[null].concat([].slice.call(arguments))))():new R(R.now()+off);}"
+  +"D.prototype=R.prototype;D.UTC=R.UTC;D.parse=R.parse;D.now=function(){return R.now()+off;};window.Date=D;})();"};}
+const FUELDAY="2026-11-17";
+function seedFuel(o){const db=seed(),k=Math.round((Date.parse(iso(0))-Date.parse(FUELDAY))/864e5);
+  db.sessions.forEach(s=>{s.date=iso(Math.round((Date.parse(iso(0))-Date.parse(s.date))/864e5)+k);
+    s.started=new Date(s.date+"T18:05:00").getTime();s.lastSet=s.started+55*6e4;});
+  db.body.forEach(b=>{b.date=iso(Math.round((Date.parse(iso(0))-Date.parse(b.date))/864e5)+k);});
+  if(o&&o.rest)db.daySwap={[FUELDAY]:"rest"};
+  return db;}
+const fuelOf=page=>page.evaluate(async()=>{const H=await import("/js/engine/head.js"),tp=H.todayPlan();
+  return {state:tp.state,line:tp.food&&tp.food.line,kinds:(tp.food&&tp.food.notes||[]).map(n=>n.kind),usual:tp.food&&tp.food.usual};});
+await test("Food and training as one plan (WP-5): at 16:30 on a training day Food's fuel card leads with the textbook's before-training note, and the Today card says the same sentence",async page=>{
+  const f=await fuelOf(page);
+  eq([f.state,f.kinds[0],f.usual],["train","before",18*60+5],"a session planned, 90 minutes before the usual 18:05: before leads");
+  const g0=await ev(page,"JSON.stringify(S.goals)");
+  await tapTab(page,"train");await pause(page,400);
+  const card=await page.$eval('#app [data-k="today"] .tdc-fuel .tdc-fuel-t',e=>e.textContent);
+  eq(card,"Training at about 18:00\u00a0— water before it; carbs if it's long or hard.","the Today card's food line: the usual 18:05 to the quarter hour, with the textbook's qualifier");
+  await page.tap('#app [data-k="today"] .tdc-fuel');await pause(page,500);
+  eq(await ev(page,"V.tab"),"food","its tap opens Food");
+  const food=await page.evaluate(()=>{const c=document.querySelector('#app .ffuel[data-k="fuel"]');
+    return c&&{h:c.querySelector('.ffuel-h').textContent,p:[...c.querySelectorAll('.ffuel-p')].map(e=>e.textContent),src:c.querySelector('.ffuel-src').textContent,
+      id:c.querySelector('.ffuel-src').dataset.src,first:c.firstElementChild.dataset.k,nums:[...c.querySelectorAll('.ffuel-h .num')].map(e=>e.textContent)};});
+  if(!food)throw new Error("no fuel card on Food");
+  eq(food.h,card,"the same sentence on Food and on the Today card");
+  eq([food.first,food.src,food.id],["fuel:before","From the textbook","pre-workout"],"it leads the card, from the textbook's pre-workout entry");
+  if(!food.p.some(x=>/400 to 600 ml in the 20 to 30 minutes before/.test(x)))throw new Error("the textbook's fluid figure is not there: "+JSON.stringify(food.p));
+  eq(food.nums,["18:00"],"the time in .num");
+  eq(food.p.some(x=>/overnight/.test(x)),false,"an evening session: the overnight-glycogen paragraph is left out");
+  eq(await ev(page,"JSON.stringify(S.goals)"),g0,"no target changed");
+},{db:seedFuel(),init:clockAtTime(2026,11,17,16,30)});
+await test("Food and training as one plan (WP-5): after finishing, the finish page, Food and the Today card read one after-training sentence, and the targets are what they were",async page=>{
+  const g0=await ev(page,"JSON.stringify(S.goals)");
+  await startWorkout(page);await pause(page,500);
+  await page.fill('#in_w','60');await page.fill('#in_r','8');await page.tap('[data-logset]');await pause(page,900);
+  await finishEarly(page);await page.tap('[data-confirmok]');await pause(page,800);
+  const f=await fuelOf(page);
+  eq([f.state,f.kinds[0],f.line],["done","after","You trained\u00a0— 150\u00a0g of protein left today."],"just finished: after leads, with the protein left (nothing logged)");
+  eq(await page.$eval('.wfin-now-t',e=>e.textContent),f.line,"the finish page says it");
+  await page.tap('.wfin-done');await pause(page,500);
+  eq(await page.$eval('#app [data-k="today"] .tdc-fuel-t',e=>e.textContent),f.line,"the Today card, now Done, says it");
+  await tapTab(page,"food");await pause(page,500);
+  /* Protein behind as well: Food says it once, in the behind section, not the after line too. */
+  eq(await page.evaluate(()=>[!!document.querySelector('#app .ffuel .ffuel-l'),document.querySelector('#app .ffuel .fbody-h').textContent,document.querySelector('#app').innerText.indexOf("of protein left today")]),
+    [false,"Your body needs more protein.",-1],"Food after training with protein behind: only the behind section");
+  /* Protein on course: the after note leads Food, its figure the person's own. */
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");
+    st.dayRec(U.today()).meals.Lunch={done:true,items:[{n:"Chicken",fid:"xc",grams:400,label:"400 g",kcal:1300,p:130,c:150,f:30}]};st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,400);
+  const f2=await fuelOf(page);
+  eq(await page.evaluate(()=>{const l=document.querySelector('#app .ffuel .ffuel-l');return l&&[l.dataset.k,l.querySelector('.ffuel-h').textContent,l.querySelector('.ffuel-src').textContent];}),
+    ["fuel:after",f2.line,"From your log and plan"],"protein on course: Food leads with the after line");
+  eq(await ev(page,"JSON.stringify(S.goals)"),g0,"no change to S.goals: targets equal before and after a training day");
+  eq(await ev(page,"S.goals.kcal")+"|"+(await page.$eval('.fring2-g',e=>e.textContent)),"2500|of 2,500","the ring's target is the plan's");
+},{db:seedFuel(),init:clockAtTime(2026,11,17,17,40),prefs:{autorest:false}});
+await test("Food and training as one plan (WP-5): a rest day says so with the plain targets on Food (not at the Today card's foot, which already says Rest day), and no timed note",async page=>{
+  const f=await fuelOf(page);
+  eq([f.state,f.kinds.indexOf("before"),f.kinds.indexOf("after"),f.line],["rest",-1,-1,"Rest day\u00a0— the same targets: 2,500\u00a0kcal and 150\u00a0g of protein."],"rest: the plain targets");
+  await tapTab(page,"train");await pause(page,400);
+  eq(await page.evaluate(()=>[!!document.querySelector('#app [data-k="today"] .tdc-fuel[data-k="fuel:rest"]'),document.querySelector('#app [data-k="today"]').innerText.indexOf("the same targets")]),[false,-1],"not on the Today card");
+  await tapTab(page,"food");await pause(page,400);
+  eq(await page.$eval('#app .ffuel .ffuel-h',e=>e.textContent),f.line,"and on Food");
+},{db:seedFuel({rest:true}),init:clockAtTime(2026,11,17,16,30)});
+await test("Food and training as one plan (WP-5): the coach's answer on eating before training says today's sentence, the one Food and the Today card say",async page=>{
+  const f=await fuelOf(page);
+  await openChat(page);
+  const a=await chatAsk(page,"what should I eat before my workout today?");
+  if(a.a.indexOf(f.line)<0)throw new Error("the coach does not say today's line ("+f.line+"): "+a.a);
+  if(!/400 to 600 ml/.test(a.a))throw new Error("the textbook's answer is gone: "+a.a);
+},{db:seedFuel(),init:clockAtTime(2026,11,17,16,30)});
+await test("Food and training as one plan (WP-5): the ring's caption says the calorie finding in five words with its one-tap fix, and the fix clears it",async page=>{
+  if(!(await ev(page,"(async()=>{const H=await import('/js/engine/head.js');return H.headNow().queue.some(s=>s.id==='kcal-down'&&s.pri>=60);})()")))throw new Error("the seed has no kcal-down");
+  await tapTab(page,"food");await pause(page,400);
+  const r=await page.evaluate(()=>{const c=document.querySelector('.fsum .fring-sig');return c&&[c.dataset.k,c.querySelector('.fring-sig-t').textContent,c.querySelector('[data-pcfix]').dataset.pcfix,c.querySelector('[data-pcfix]').textContent];});
+  if(!r)throw new Error("no caption under the ring");
+  eq(r.slice(0,3),["ring:kcal-down","Under what building needs","kcal-down"],"the finding, in five words, with its own fix");
+  if(!/^Use [\d,]+ kcal$/.test(r[3]))throw new Error("the button is not the finding's: "+r[3]);
+  const want=+r[3].replace(/[^\d]/g,"");
+  await page.tap('.fring-sig [data-pcfix]');await pause(page,600);
+  eq(await ev(page,"S.goals.kcal"),want,"the tap uses the suggested calories");
+  eq(await page.$$eval('.fring-sig',a=>a.length),0,"and the caption is gone");
+},{});
+await test("Food and training as one plan (WP-5): in Arabic the fuel card and the Today card's line are translated, right to left, figures in .num",async page=>{
+  await tapTab(page,"train");await pause(page,400);
+  const c=await page.$eval('#app [data-k="today"] .tdc-fuel',e=>({t:e.innerText,n:[...e.querySelectorAll('.num')].map(x=>x.textContent),dir:getComputedStyle(e).direction}));
+  if(/[A-Za-z]{2,}/.test(c.t))throw new Error("English on the Today card's food line: "+c.t);
+  eq([c.n,c.dir],[["18:00"],"rtl"],"the time in .num, right to left");
+  await tapTab(page,"food");await pause(page,400);
+  const f=await page.$eval('#app .ffuel',e=>({t:e.innerText,h:e.querySelector('.ffuel-h').textContent}));
+  if(/[A-Za-z]{2,}/.test(f.t))throw new Error("English in the fuel card: "+f.t);
+  eq(f.h,c.t.trim(),"the same sentence on both, in Arabic");
+},{db:seedFuel(),init:clockAtTime(2026,11,17,16,30),prefs:{lang:"ar"}});
 await test("Main tabs, landing (owner, 16 Nov: \"it flashes, and bounce\", Training to Food and back): the page that came in stays where it landed until the real one takes its place — it never goes back to where the finger let go",async(page,env)=>{
   const cdp=await env.ctx.newCDPSession(page);
   const move=async(x0,y,x1,steps=10)=>{await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x0,y}]});
