@@ -368,6 +368,9 @@ function finishSession(){
   /* The finish page (js/ui/views/finish.js), at the root of Training: back, a tab tap or
      Done all land on Training. */
   resetNav();V.sheet=null;V.sd=null;V.fin=summary;V.tab="train";V.train="finish";
+  /* The Records row says it now: a record toast from the last set does not sit over the
+     page it lands on (WP-4 review). */
+  var tq=document.querySelector(".toast");if(tq)tq.remove();
   play(prs.length?"pr":"complete");tap("ok");
   render();window.scrollTo(0,0);}
 

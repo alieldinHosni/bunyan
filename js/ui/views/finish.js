@@ -37,8 +37,8 @@ function stats(w,s){
   var h='<div class="wfin-stats" data-k="stats">';
   h+=w.past?stat("exs",w.exs,esc(t("Exercises")),true):stat("min",w.mins,esc(t("Duration"))+' · '+esc(t("min")),true);
   h+=vol||!w.actKcal?stat("vol",Math.round(toDisp(vol)),esc(t("Volume"))+' · '+esc(wUnit()),true)
-    :stat("kcal",w.actKcal,esc(t("Burned"))+' · kcal',true);
-  h+=w.actKm&&!vol?'<div class="stat" data-k="km"><b class="num">'+w.actKm+'</b><small>'+esc(t("Distance"))+' · km</small></div>'
+    :stat("kcal",w.actKcal,esc(t("Burned"))+' · '+esc(t("kcal")),true);
+  h+=w.actKm&&!vol?'<div class="stat" data-k="km"><b class="num">'+w.actKm+'</b><small>'+esc(t("Distance"))+' · '+esc(t("km"))+'</small></div>'
     :stat("sets",sets,esc(t("Sets")),true);
   return h+'</div>';}
 
@@ -68,7 +68,7 @@ function nextTime(w){
    +nx.map(function(g){
       return '<div class="wfin-row" data-k="nx:'+esc(g.n)+'"><b class="wfin-row-n">'+esc(exName(g.n))+'</b>'
        +'<span class="wfin-row-v"><span class="wfin-arr '+(g.up?'up':'down')+'" aria-hidden="true">'+(g.up?'↑':'↓')+'</span> '
-       +nums(t("{w} next time").replace("{w}",fmtW(g.w)))+'</span>'
+       +nums(fmtW(g.w))+'</span>'
        +'<span class="wfin-why">'+nums(why(g))+'</span></div>';}).join("")+'</section>';}
 
 /* How hard the whole session was: one tap, kept with the session (handlers: srpe). */
@@ -88,14 +88,14 @@ function effort(w,s){
      +'</div><p class="wc2-feel-n">'+esc(t("Your answer adjusts the sets for these muscles for the rest of this block."))+'</p></div>';}
   return h;}
 
-/* Now: what is left of today's food target, from the head (todayPlan().food), with the
+/* Food today: what is left of today's food target, from the head (todayPlan().food), with the
    way to Food. Only with a target, and only for a workout done today. */
 function nowLine(w){
   if(w.past||w.date!==today())return "";
   var f=todayPlan(today()).food;if(!f)return "";
   var line=f.p?(f.pLeft>0?t("You have {g} g of protein left today.").replace("{g}",fmtN(f.pLeft)):t("Today's protein target is met."))
     :(f.kLeft>0?t("You have {k} kcal left today.").replace("{k}",fmtN(f.kLeft)):t("Today's calories are in."));
-  return '<section class="wfin-now wfin-sec" data-k="now"><div class="wfin-sh"><b>'+esc(t("Now"))+'</b></div>'
+  return '<section class="wfin-now wfin-sec" data-k="now"><div class="wfin-sh"><b>'+esc(t("Food today"))+'</b></div>'
    +'<p class="wfin-now-t">'+nums(line)+'</p>'
    +'<button class="btn g wfin-food" data-fsec="today">'+esc(t("Log food"))+'</button></section>';}
 
@@ -105,9 +105,9 @@ function vFinish(){
    /* The horse behind the tick, drawn in (art.js), as the page headers' drawings are. */
    +'<div class="wfin-hd">'+art("mane",{cls:"wfin-art"})
    +'<div class="wfin-c" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div></div>'
-   +'<h1 class="wfin-h">'+esc(t("{d} — done").replace("{d}",planName(w.dayName)||t("Workout")))+'</h1>'
+   +'<h1 class="wfin-h">'+esc(t("{d} —\u00a0done").replace("{d}",planName(w.dayName)||t("Workout")))+'</h1>'
    +'<p class="wfin-sub">'+nums(pretty(w.date))+'</p>'
-   +stats(w,s)+records(w)+nextTime(w)+effort(w,s)+nowLine(w)+coolCard(w.cool)
+   +stats(w,s)+records(w)+nextTime(w)+effort(w,s)+coolCard(w.cool)+nowLine(w)
    +'<button class="wfin-done" data-findone="1">'+esc(t("Done"))+'</button>'
    +'<div class="wfin-more">'
    +(w.id?'<button class="btn g" data-sessedit="'+esc(w.id)+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>'+esc(t("Edit"))+'</button>':'')

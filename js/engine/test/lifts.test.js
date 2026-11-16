@@ -1,5 +1,5 @@
 import {bestE1RMIn, bodyAtIn, bwShare, consistencyIn, daysSinceIn, deloadDueIn, e1RM, incrementOf, loadIn, plateauIn,
-        prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, repsAtIn, sessionVolumeIn, snapDown, volumeIn,
+        prevPerfIn, prIn, progressionHintOf, recommendIn, lighterOn, nextTimeIn, recordIn, repsAtIn, sessionVolumeIn, snapDown, volumeIn,
         weeklySetsIn} from "../lifts.js";
 import {convertDbLoads} from "../logfix.js";
 
@@ -113,6 +113,22 @@ function run(t){
   t.eq(progressionHintOf({name:BP,planned:{sets:3,hi:10},sets:[set(80,10),set(80,10),set(80,10)]},function(){return 2.5;}),{inc:2.5,next:82.5},
     "every working set at the top of the range: the next weight");
   t.eq(progressionHintOf({name:BP,planned:{sets:3,hi:10},sets:[set(80,10),set(80,8),set(80,10)]},function(){return 2.5;}),null,"not until every set gets there");
+
+  /* ---- next time, at the finish (WP-4) ---- */
+  var nf={name:BP,planned:{sets:3,lo:8,hi:10},sets:[set(80,10),set(80,10),set(80,10)]};
+  var nlog={body:[],sessions:[{id:"f",date:NOW,entries:[nf]}]},nctx={increment:function(){return 2.5;},today:NOW};
+  var up=nextTimeIn(nlog,nlog.sessions[0],Object.assign({deload:false},nctx));
+  t.eq(up.map(function(g){return [g.w,g.up,g.hit,g.of];}),[[82.5,true,3,3]],"top of the range on every set: the next weight, as the suggestion has it");
+  var hold={name:SQ,planned:{sets:3,lo:8,hi:10},sets:[set(100,9),set(100,8),set(100,8)]};
+  var hlog={body:[],sessions:[{id:"h",date:NOW,entries:[hold]}]};
+  t.eq(nextTimeIn(hlog,hlog.sessions[0],Object.assign({deload:false},nctx)),[],"the weight stays: nothing listed");
+  t.eq(nextTimeIn(hlog,hlog.sessions[0],Object.assign({deload:true},nctx)).map(function(g){return g.up;}),[false],"inside a lighter week: a step down");
+  /* The last day of a lighter week: the next session falls outside it, so no step down. */
+  var dl={until:NOW},nextDay="2026-10-09";
+  t.eq([lighterOn(NOW,dl,null),lighterOn(nextDay,dl,null),lighterOn(nextDay,null,function(d){return d===nextDay;}),lighterOn(null,dl,null)],[true,false,true,false],
+    "a lighter week covers a day up to its last; a planned light day counts; no day, none");
+  t.eq(nextTimeIn(hlog,hlog.sessions[0],Object.assign({deload:lighterOn(nextDay,dl,null)},nctx)),[],
+    "finished on the lighter week's last day: the next session is full, nothing listed as a step down");
 
   /* ---- weeks and muscles ---- */
   var wk={body:[],sessions:[sess(1,[[BP,[set(80,8),set(80,8),set(60,10,0,true)]],["Running",[{min:30}]]]),sess(5,[[SQ,[set(100,5)]]]),sess(10,[[BP,[set(80,8)]]])]};

@@ -5190,7 +5190,13 @@ await test("Finish screen (WP-4): a record row, the session RPE kept, the food l
   eq(await ev(page,"S.sessions[0].srpe"),7,"the session RPE");
   eq(await page.$eval('[data-srpe="7"]',b=>(b.querySelector(':scope>.hapt-in')||b).getAttribute("aria-pressed")),"true","the chosen tap marked");
   eq(await page.$eval('.wfin [data-k="recs"]',e=>e.dataset.k),id0,"the records card was not rebuilt by an RPE tap");
-  /* Now: today's protein target left (the seed logs no food), with a way to Food. */
+  /* Edit and return: the record set made lighter than the seeded best is no record, and
+     Records and the figures follow the edited session (they were the finish's, stale). */
+  await page.tap('.wfin [data-sessedit]');await pause(page,500);
+  await page.fill('#se_w_0_0','50');await page.tap('#sheet [data-sesssave]');await pause(page,600);
+  eq(await page.evaluate(()=>[!!document.querySelector('.wfin-rec'),+document.querySelector('.wfin-stats [data-k="vol"] [data-count-to]').getAttribute("data-count-to")]),[false,500],
+    "after an edit: no Records row, volume 50 × 10");
+  /* Food today: today's protein target left (the seed logs no food), with a way to Food. */
   const now=await page.$eval('.wfin-now',e=>e.textContent);
   if(now.indexOf("150")<0)throw new Error("the food line does not read the protein left: "+now);
   await page.tap('.wfin-food');await pause(page,500);

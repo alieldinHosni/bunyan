@@ -2,7 +2,7 @@
    Progress: its views and ranges, history, records and charts, weigh-ins, steps,
    recovery and measurements, photos, and correcting a past workout. */
 import {actKcal} from "../../data/activities.js";
-import {lastWeight} from "../../engine/formulas.js";
+import {lastWeight, nextTime, recordsOfSession} from "../../engine/formulas.js";
 import {t} from "../../i18n/dict.js";
 import {dayRec, ensureSessionIds, removeSession, S, saveDB, saveSession, sessionById} from "../../state.js";
 
@@ -183,6 +183,9 @@ function register(){
     S.sessions[ix]=wk2;
     /* Keep history newest-first by date, as loading it does. */
     S.sessions.sort(function(x,y){return x.date<y.date?1:x.date>y.date?-1:0;});
+    /* Edited from the finish page: its Records and Next time are read again from the
+       session as it now is (the figures already are). */
+    if(V.fin&&V.fin.id===wk2.id){V.fin.prs=recordsOfSession(wk2);V.fin.next=nextTime(wk2);}
     saveSession(wk2);closeSheet();toast(t("Workout updated"));return;});
   key("sessdel",function(){askDelSession(V.sd&&V.sd.id);return;});
   key("openday",function(D){openSheet("dayview",{date:D.openday});return;});}

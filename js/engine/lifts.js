@@ -303,6 +303,13 @@ function progressionHintOf(e,increment){
    session. Each: {n, w (next), from (this session's top weight), up, hi, hit (working sets
    at the top of the range), of (working sets), note (the suggestion's own reason, a
    dictionary key)}. */
+/* Whether a lighter week covers a given day: the one started by hand ({until}) runs to its
+   last day; planned(iso) says whether a training block plans that day light. Next time asks
+   it of the next session's day, not of today: on the last day of a lighter week the next
+   session is a full one, and today's lighter rule would list every lift as a step down. */
+function lighterOn(iso,dl,planned){
+  if(!iso)return false;
+  return !!(dl&&dl.until&&iso<=dl.until)||!!(planned&&planned(iso));}
 function nextTimeIn(log,s,ctx){
   var out=[];
   (s&&s.entries||[]).forEach(function(e){
@@ -352,5 +359,5 @@ function consistencyIn(log,trainingDays,nowMs){
   return planned?Math.min(100,Math.round(n/planned*100)):0;}
 
 export {avgRPE, bestE1RMIn, bodyAtIn, bwShare, consistencyIn, daysSinceIn, deloadDueIn, deloadSets, e1RM, incrementOf, isoDays,
-        loadIn, nextTimeIn, plateauIn, prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, recordsOfEntry, repsAtIn, sessionVolumeIn,
+        lighterOn, loadIn, nextTimeIn, plateauIn, prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, recordsOfEntry, repsAtIn, sessionVolumeIn,
         setVolIn, snapDown, volumeIn, weeklySetsIn};

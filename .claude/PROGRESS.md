@@ -4770,3 +4770,21 @@ docs/NEXT-PHASE.md WP-4. Finishing a workout now ends on a page, not the old "do
   Duration) in place of `V.sd` / `#sheet`. The record-toast test, the "too easy"/"answering again" block tests and
   the readiness/effort test needed no change: `.wfin-rec`, `[data-srpe]` and `[data-sfeel]` are on the page as they
   were on the sheet.
+- Review of #156 (amend, still v268: main has not moved):
+  (1) The stat labels' "kcal" and "km" go through `t()`. (2) The record toast of the last set no longer sits over the
+  finish page it lands on (finishSession takes away a live toast; the Records row says it). (3) The title's dash is
+  bound to "done" / «خلص» with a no-break space (key "{d} — done"), so at 320 in Arabic it no longer ends a line.
+  Also: Next time shows the arrow and the weight only (the header says "next time"), the reason line kept, the down
+  arrow neutral (--dim); the cool-down sits above the food line, now titled "Food today" / «أكل النهارده» (the stray
+  duplicate "Now" key I had added is gone; "{w} next time" removed).
+  Edit and return: Records and Next time were the finish's, stale after an edit; `sesssave` now reads them again
+  from the edited session (new `formulas.js recordsOfSession`, `nextTime`), the figures already were. A finish page
+  whose session was deleted lands on Training. Tested in "…a record row…": the record set edited to 50 kg drops the
+  Records row and the volume reads 500.
+  Lighter week: `nextTime` asked `inDeload()` of today, so a session finished on a lighter week's last day listed
+  every held lift as a step down although the next session is full. It now asks of the next training day (new pure
+  `lifts.js lighterOn(iso, deload, planned)`, `formulas.js nextTrainDay`). Unit tests in lifts.test.js (5).
+  docs/NEXT-PHASE.md WP-4 item 3 now says Next time is the next session's actual suggestion, up or down, with its
+  reason.
+- Follow-up (open): a context form for `t()` (e.g. `t(key, ctx)` looking up "ctx|key") to replace the
+  trailing-space keys "Low " and "Workout " (and "Back " under `tm()`). Until then, add no more such keys.
