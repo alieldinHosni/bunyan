@@ -4716,7 +4716,7 @@ label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-
 .wfin-hd{position:relative;display:grid;place-items:center;width:100%}
 .wfin-art{position:absolute;z-index:0;width:86%;max-width:340px;opacity:.38;pointer-events:none}
 .wfin-hd .wfin-c{position:relative;z-index:1}
-.wfin-rec .toast-star{width:28px;height:28px;justify-self:center;margin-bottom:var(--s1)}
+.wfin-rec .toast-star{width:22px;height:22px;flex:none}
 .wfin-c{width:96px;height:96px;display:grid;place-items:center;border-radius:50%;background:var(--ok);color:var(--onOk)}
 .wfin-c svg{width:48px;height:48px;fill:none;stroke:currentColor;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
 .wfin-h{margin:0;font-family:var(--display);font-size:30px;font-weight:700}
@@ -4726,11 +4726,30 @@ label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-
 .wfin-stats b{font-family:var(--display);font-size:30px;font-weight:700;line-height:1.1;white-space:nowrap;color:var(--text)}
 .wfin-stats b small{font-size:15px;color:var(--dim)}
 .wfin-stats>.stat>small{font-size:13px;font-weight:700;color:var(--dim)}
-.wfin-rec{width:100%;display:grid;gap:2px;padding:14px var(--s4);border-radius:var(--r4);border:1.5px solid var(--gold);
+/* WP-4: the finish page's sections — records, next time, now — one card each, rows inside. */
+.wfin-sec{width:100%;display:grid;gap:var(--s3);padding:var(--s4);border-radius:var(--r4);border:1px solid var(--border);
   background:var(--raised);text-align:start}
-.wfin-rec b{color:var(--gold);font-size:15px}
-.wfin-rec span{font-size:16px;font-weight:600;color:var(--text)}
-.wfin-up{margin:0;color:var(--sub);font-weight:600}
+.wfin-rec{border:1.5px solid var(--gold)}
+.wfin-sh{display:flex;align-items:center;gap:var(--s2);min-width:0}
+.wfin-sh b{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+[dir="rtl"] .wfin-sh b{letter-spacing:0;font-size:14px}
+.wfin-rec .wfin-sh b{color:var(--gold)}
+.wfin-n{margin-inline-start:auto;font-weight:700;color:var(--gold)}
+.wfin-row{display:grid;gap:var(--s1);min-width:0}
+.wfin-row+.wfin-row{padding-top:var(--s3);border-top:1px solid var(--border)}
+.wfin-row-n{font-size:16px;font-weight:700;color:var(--text);overflow-wrap:anywhere}
+.wfin-row-v{font-size:15px;font-weight:600;color:var(--text)}
+.wfin-why{font-size:13px;color:var(--sub);line-height:1.4}
+.wfin-arr{display:inline-block;font-weight:800}
+.wfin-arr.up{color:var(--ok)}
+.wfin-arr.down{color:var(--dim)}
+.wfin-now-t{margin:0;font-size:16px;font-weight:600;color:var(--text);line-height:1.4}
+.wfin-food{justify-self:start}
+.wfin .cd{width:100%;text-align:start}
+.wfin-more{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:var(--s2);width:100%;margin-top:calc(-1 * var(--s2))}
+.wfin-more .btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* The RPE question's " · RPE" goes on a narrow phone: it wrapped and left a lone "·". */
+@media (max-width:359px){.rpe-sfx{display:none}}
 .wfin-done{width:100%;min-height:76px;display:flex;align-items:center;justify-content:center;padding:0 var(--s5);
   border:0;border-radius:var(--rpill);background:var(--color-action-fill);box-shadow:inset 0 0 0 1.5px var(--color-action-edge);
   color:var(--onAccent);font-family:var(--display);font-size:20px;font-weight:700}

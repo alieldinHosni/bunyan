@@ -487,10 +487,12 @@ what it changes, what to do now.
    existing figure) counting up (`countTo` in `js/ui/motion.js`).
 2. **Records** from this session, each a row (only real ones, by WP-0's rule). None:
    the row is left out, not replaced with filler.
-3. **Next time**, one line per lift that changes: "Bench Press: 57.5 kg next time —
-   you hit 12 on every set". This is the progression rule the engine already applies
-   (`engine/lifts.js` suggestion); show its decision now instead of silently next
-   session. Lifts that stay the same are not listed.
+3. **Next time**, one line per lift that changes: the next session's actual suggestion
+   (`engine/lifts.js` `recommendIn`, read now through `nextTimeIn` for the day the next
+   session falls on), up or down, with its reason: "Bench Press ↑ 57.5 kg — you hit 12 on
+   every set"; a step down gives the suggestion's own reason. Lifts that stay the same are
+   not listed. (Built in v268; the earlier wording named the strict every-set rule,
+   which the suggestion could beat.)
 4. **How hard was it?** the session RPE taps, if not already answered.
 5. **Now**: one line from `todayPlan().food` (WP-5), e.g. "You have 62 g of protein
    left today — log your meal", with a button to Food. Only if a target exists.

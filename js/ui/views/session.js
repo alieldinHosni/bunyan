@@ -338,7 +338,7 @@ function vRpeAsk(e,workN){
    /* It takes the log control's place while it is asked (WP-3 review: a third tier hid the
       numbers on a small phone), so the set's Undo is here for as long as it is offered;
       after that, Skip puts the question away and Log set is back. */
-   +'<div class="sc-rpe-h"><span class="val-k">'+esc(t("How hard was set {n}?").replace("{n}",k))+' · RPE</span>'
+   +'<div class="sc-rpe-h"><span class="val-k">'+esc(t("How hard was set {n}?").replace("{n}",k))+'<span class="rpe-sfx"> · RPE</span></span>'
    +(out?'':justLogged()?'<button class="undo" data-undolog="1">'+t("Undo")+'</button>':'<button class="rpe-skip" data-rpeskip="'+i+'">'+t("Skip")+'</button>')
    +'</div><div class="sc-rpe-c">'
    +[6,7,8,9,10].map(function(v){return hb('<button class="num'+(out&&out.v===v?' on':'')+'" data-rpeset="'+i+':'+v+'"'+(out?' disabled':'')+'>'+v+'</button>');}).join("")

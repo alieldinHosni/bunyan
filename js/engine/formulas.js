@@ -8,8 +8,9 @@ import {num, r1, today} from "../util.js";
 import {t} from "../i18n/dict.js";
 import {fmtEst, fmtW} from "../units.js";
 import {blockNow, plannedLight} from "./blocks.js";
+import {addDaysISO, planOn} from "./dayplan.js";
 import {avgRPE, bestE1RMIn, bodyAtIn, bwShare, consistencyIn, daysSinceIn, deloadDueIn, deloadSets, e1RM, incrementOf,
-        loadIn, plateauIn, prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, recordsOfEntry, repsAtIn,
+        lighterOn, loadIn, nextTimeIn, plateauIn, prevPerfIn, prIn, progressionHintOf, recommendIn, recordIn, recordsOfEntry, repsAtIn,
         sessionVolumeIn, snapDown, volumeIn, weeklySetsIn} from "./lifts.js";
 import {avg7Of, bmrOf, daysBetween, kcalFloorOf, lastWeightOf, macroTargetsOf, missingOf, proteinFor, sessionKcalOf, targetKcalOf,
         tdeeFormulaOf, tdeeOf} from "./body.js";
@@ -104,6 +105,26 @@ function recordText(rec){
 function recommend(e){
   return recommendIn(LOG(),e,{increment:function(n,top){return incrementFor(n,top);},deload:inDeload(),bodyKg:lastWeight()||num(S.profile.weight),today:today(),
     ready:S.active&&num(S.active.ready)});}
+/* The finish screen's "next time": what the next session will suggest, with the same
+   context recommend() gives it (lifts.js nextTimeIn). */
+function nextTime(s){
+  var nd=nextTrainDay(s&&s.date||today());
+  return nextTimeIn(LOG(),s,{increment:function(n,top){return incrementFor(n,top);},
+    deload:nd?lighterOn(nd,S.deload,plannedLight):inDeload(),bodyKg:lastWeight()||num(S.profile.weight),today:today()});}
+/* The next day the program trains after iso, within two weeks; null with none. */
+function nextTrainDay(iso){
+  var sp=split();if(!sp)return null;
+  var from=iso>today()?iso:today();
+  for(var i=1;i<=14;i++){var d=addDaysISO(from,i),p=planOn(sp,d);
+    if(p&&p.day&&!p.rest&&(p.kind==="plan"||p.kind==="today"))return d;}
+  return null;}
+/* A finished session's records against everything else logged (the finish page's Records,
+   again after an edit): each exercise's best, as finishing measured it. */
+function recordsOfSession(s){
+  var log=LOG(),id=s&&s.id;
+  log.sessions=log.sessions.filter(function(x){return x!==s&&!(id&&x.id===id);});
+  var out=[];(s&&s.entries||[]).forEach(function(e){var r=recordsOfEntry(log,e,s.date);if(r)out.push(r);});
+  return out;}
 function progressionHint(e){return progressionHintOf(e,function(n,w){return incrementFor(n,w);});}
 function weeklySets(){return weeklySetsIn(LOG(),Date.now());}
 function daysSince(muscle){return daysSinceIn(LOG(),muscle,Date.now());}
@@ -133,4 +154,4 @@ function addItems(meal,items,d){
 
 
 
-export {bmr, energyMissing, kcalFloor, bodyAt, barKg, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, prevPerf, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, tdeeFormula, volume, weeklySets, macroTargets, weighInDue};
+export {bmr, energyMissing, kcalFloor, bodyAt, barKg, bwShare, loadOf, loadText, recordText, dbTotal, deloadDue, deloadSets, inDeload, recordOf, recordsIn, snapDown, proteinTarget, incrementFor, plateauOf, addItems, avg7, avgRPE, BACKUP_SNOOZE, backupAgeDays, backupDue, bestE1RM, consistency, e1RM, daysSince, eatenToday, frequentFoods, lastWeight, macroKcal, nextTime, prevPerf, recordsOfSession, prFor, progressionHint, recommend, sessionKcal, sessionVolume, targetKcal, tdee, tdeeFormula, volume, weeklySets, macroTargets, weighInDue};
