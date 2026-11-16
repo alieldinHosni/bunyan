@@ -22,7 +22,8 @@ var pad=null,field=null,H=0,fresh=false;
 
 function isNum(el){
   if(!el||!el.matches||el.disabled||el.readOnly)return false;
-  if(!el.closest("#sheet .sheetbox"))return false;
+  /* A sheet's fields, and the assessment's (a page, js/ui/views/assess.js: WP-6). */
+  if(!box(el))return false;
   if(el.hasAttribute("data-im"))return true;
   var m=(el.getAttribute("inputmode")||"").toLowerCase();
   return el.matches("input")&&(el.type==="number"||m==="decimal"||m==="numeric");}
@@ -34,7 +35,10 @@ function mark(el){
   if(el.getAttribute("inputmode")!=="none")el.setAttribute("inputmode","none");}
 function whole(el){var m=(el.getAttribute("data-im")||el.getAttribute("inputmode")||"").toLowerCase();
   return m==="numeric"||el.getAttribute("step")==="1";}
-function fields(){return [].slice.call(document.querySelectorAll("#sheet .sheetbox input")).filter(isNum);}
+function box(el){return el&&el.closest&&(el.closest("#sheet .sheetbox")||el.closest("#app .as"));}
+/* The number fields beside the one typed into: its sheet's, or its page's. */
+function fields(){var b=box(field)||document.querySelector("#sheet .sheetbox");
+  return b?[].slice.call(b.querySelectorAll("input")).filter(isNum):[];}
 
 function build(){
   pad=document.createElement("div");pad.className="kpad";pad.setAttribute("role","group");pad.setAttribute("aria-label",t("Number keypad"));
@@ -97,7 +101,15 @@ function hide(){
 function reveal(){
   setTimeout(function(){
     /* The field typed into now: a sheet redrawn in the meantime has put a new one in. */
-    var el=field,box=el&&el.isConnected&&el.closest(".sheetbox");if(!box)return;
+    var el=field;if(!el||!el.isConnected)return;
+    /* On a page (the assessment) the window scrolls; the page's Next stays above the keypad. */
+    if(!el.closest(".sheetbox")){var nav=document.querySelector("#app .as-nav"),
+        lim=window.innerHeight-H-(nav?nav.getBoundingClientRect().height:0)-24,
+        /* With what is said under the fields, if anything is. */
+        er=document.getElementById("as_err"),bot=el.getBoundingClientRect().bottom;
+      if(er&&er.textContent)bot=Math.max(bot,er.getBoundingClientRect().bottom);
+      if(bot>lim)window.scrollBy({top:bot-lim,behavior:"smooth"});return;}
+    var box=el.closest(".sheetbox");
     var r=el.getBoundingClientRect(),limit=window.innerHeight-H,top=box.getBoundingClientRect().top;
     [].forEach.call(box.querySelectorAll(".sfoot,.wu-foot"),function(f){var fr=f.getBoundingClientRect();
       if(fr.height)limit=Math.min(limit,fr.top);});
@@ -125,12 +137,12 @@ function initKeypad(){
   /* The sheet gone (closed, or redrawn without the field): the keypad goes with it. */
   /* A sheet redrawn while one is typed into puts the field back as it was written: marked
      again at once, so the phone's keyboard never takes over from the keypad. */
-  new MutationObserver(function(){
+  var mo=new MutationObserver(function(){
     if(!field)return;
     if(!field.isConnected){var id=field.id,f=id?document.getElementById(id):null;
       if(f&&isNum(f)){field=f;mark(f);}else hide();return;}
-    if(field.getAttribute("inputmode")!=="none"||field.type==="number")mark(field);})
-    .observe(document.getElementById("sheet")||document.body,{childList:true,subtree:true,attributes:true,attributeFilter:["inputmode","type"]});}
+    if(field.getAttribute("inputmode")!=="none"||field.type==="number")mark(field);});
+  [document.getElementById("sheet"),document.getElementById("app")].forEach(function(n){if(n)mo.observe(n,{childList:true,subtree:true,attributes:true,attributeFilter:["inputmode","type"]});});}
 
 /* For the tests. */
 function keypadOn(){return !!(pad&&pad.classList.contains("on"));}

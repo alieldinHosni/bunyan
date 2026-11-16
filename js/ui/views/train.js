@@ -170,7 +170,8 @@ function leadLine(c,iso){
   if(c.kind==="swap")return flat(recoCard(c.swap,c.date,c.ahead));
   if(c.kind==="note")return flat(aheadNote(c,iso));
   if(c.kind==="setup")return compact("setup",'<b>'+esc(t("Build my plan"))+'</b> '+esc(t("A short assessment, and the coach builds your daily targets, your training and a meal plan, and puts them here and on Food.")),
-    '<button class="btn sm" data-setup="1">'+esc(t("Start the assessment"))+'</button>');
+    '<button class="btn sm" data-setup="1">'+esc(t("Start the assessment"))+'</button>',
+    '<button class="tdc-later" data-setuplater="1">'+esc(t("Not now"))+'</button>');
   var s=c.sig;
   if(s.id==="deload-due"){var due=s.src||{};
     return compact(s.id,'<b>'+esc(t("Time for a lighter week"))+'</b> '+esc(t(due.why==="plateau"?"Several of your lifts have stalled for three sessions in a row."

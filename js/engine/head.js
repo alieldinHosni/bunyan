@@ -452,7 +452,9 @@ function todayPlan(iso){
   var l=h.lead;r.lead=l&&l.pri>=LEAD&&l.id!=="deload-on"?l:null;
   /* What may be said, in order; the first is the card's line, the next its one other card. */
   var says=[];
-  if(isNow&&setup)says.push({kind:"setup",id:"setup"});
+  /* Not set up leads the day (a new profile has no history for anything else to stand on)
+     unless it was set aside with its Not now, for a week (S.setupLater); Coach keeps it. */
+  if(isNow&&setup&&!(S.setupLater&&now<S.setupLater))says.push({kind:"setup",id:"setup"});
   if(isNow&&r.lead)says.push({kind:"lead",id:r.lead.id,sig:r.lead});
   var sw=sp&&(r.state==="train"||r.state==="light"||r.state==="plan")?swapAdvice(sp,iso,p):null;
   if(sw)says.push({kind:"swap",id:"reco"+iso,swap:sw,date:iso});

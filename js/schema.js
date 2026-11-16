@@ -50,6 +50,7 @@
    @property {number}   lastBackup     ms since 1970, 0 for never
    @property {number}   backupSnooze   ms; no reminder before then
    @property {boolean}  onboarded
+   @property {string=}  setupLater     not set up: the Today card's assessment line set aside until this date
    Also kept, each optional and read where it is written: coachDismiss and pcDismiss
    (id → date a card was set aside until), barcodes (code → food), wdOffered, phaseSeen (the phase whose
    note on My program was put away).
@@ -66,6 +67,8 @@
 
    @typedef {Object} Prefs  the Settings screens; the off flags (nowarm, nocool,
      noblocks) are false or missing for on, so a new setting needs no migration.
+     welcomed: the first run's welcome left for the questions ("plan") or for a plan of
+     their own copied in ("import"); missing until then.
 
    @typedef {Object} Goals
    @property {number} kcal @property {number} p @property {number} c @property {number} f

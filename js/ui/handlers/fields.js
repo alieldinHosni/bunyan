@@ -22,6 +22,12 @@ import {mealNow, toast, V} from "../view.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
 import {builderId, chatSend, ibPhoto, editedEx, moveRow, readTraining, requestCloseSheet, setExField, toReview, topOfResults, withNotes} from "./common.js";
 
+/* A field the assessment marked (views/assess.js youBad) is unmarked once typed into; the
+   message under the fields goes with the last of them. Only those elements change. */
+function asFixed(el){
+  var a=V.asd,k=el.id.slice(3),b=a.bad||[];if(b.indexOf(k)<0)return;
+  a.bad=b.filter(function(x){return x!==k;});el.removeAttribute("aria-invalid");el.removeAttribute("aria-describedby");
+  if(!a.bad.length){a.err="";var m=document.getElementById("as_err");if(m)m.textContent="";}}
 /* A weekday holds one thing: a day of the program, an activity, or rest. */
 function assignWd(n,val){
   var tp=V.tp;if(!tp)return;
@@ -48,8 +54,8 @@ function onInput(ev){
   if(pmn&&V.pparse&&V.pparse[+pmn[1]]){var nmv=ev.target.value.trim();V.pparse[+pmn[1]].custom=nmv||null;return;}
   if(id==="ti_name"&&V.tp){V.tp.name=ev.target.value;return;}
   /* The assessment's numbers, kept as typed; weight in kilograms whatever is shown. */
-  if(V.asd&&(id==="as_age"||id==="as_height")){V.asd[id.slice(3)]=num(ev.target.value,0)||"";return;}
-  if(V.asd&&id==="as_weight"){V.asd.weight=toKg(num(ev.target.value,0))||"";return;}
+  if(V.asd&&(id==="as_age"||id==="as_height")){V.asd[id.slice(3)]=num(ev.target.value,0)||"";asFixed(ev.target);return;}
+  if(V.asd&&id==="as_weight"){V.asd.weight=toKg(num(ev.target.value,0))||"";asFixed(ev.target);return;}
   var dnm=/^ti_dn_(\d+)$/.exec(id);if(dnm&&V.tp&&V.tp.days[+dnm[1]]){V.tp.days[+dnm[1]].name=ev.target.value;return;}
   if(id==="exq"){
     V.exq=ev.target.value;

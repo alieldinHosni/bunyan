@@ -4874,3 +4874,18 @@ method). Only timing and emphasis inside the same targets change. No formula cha
 - Follow-up (open): the older behind-section food tiles (`.fneed .fsug`) are cramped in Arabic at 320 wide (three
   tiles, names wrapping to three lines). Not changed here.
 **Tab swipe: the page that came in no longer jumps back and comes in twice (v271).** Owner, 16 Nov: "when you swipe from train to food then back to train, it flashes, and bounce". Recorded frame by frame: as a swipe lands, the copy of the page that came in is kept over the real page until the real page's pictures on screen are decoded (up to 200 ms; only pages with pictures, so Training and not Food). `transit.js entranceGo` played every animation under the copy to start its entrance, and that included the copy's own slide, already finished and holding its last frame: played again, it started over from where the finger let go (x = −201 px in the recording) and slid in a second time while the real page waited hidden. `entranceGo` now plays only what was held (paused); a finished animation stays at its end. New browser test "Main tabs, landing…" records every frame of Training → Food → Training and fails without the fix (`[-201]`). The same helper serves the plan tabs' swipe and the back swipe, which had the same fault in waiting.
+
+## WP-6: first run — branch session/first-run (IN PROGRESS, held; not released, no PR)
+
+Held on the coordinator's word (main rolled back to v269's code as v272). Where it stands: welcome cards (step 0 of the
+assessment when not set up: three scroll-snapped cards with drawings wall / plate / new `phone`, language switch, Build my
+plan, I have a plan already → copy-in sheet, `S.prefs.welcomed` "plan"/"import"); no dock and no coach button during the
+first-run assessment (render.js body.focus, coachfab.js); no back arrow on question 1 (Back returns to the welcome);
+three named steps over the bar (You · Your week · Your body); inline validation under the fields (`#as_err`,
+aria-live polite, aria-invalid; no toast); the build screen (views/assess.js STAGES run one engine call at a time,
+handlers/coach.js firstBuild, a line per returned call, 450 ms beat); keypad for the assessment's number fields
+(keypad.js box/fields/reveal, sticky Next above it); the Today card's "Build my plan" line gets a quiet Not now
+(`S.setupLater`, a week; head.js todayPlan), so it still leads but can be set aside. Tests: head.test.js +2; three new
+"First run…" browser tests; changed expectations: "Audit … out of range" reads `#as_err` (not the toast) and asserts no
+toast; "Assessment: first run…" waits for the build screen. To do on resume: merge the rolled-back main, review the
+screenshots (scratchpad/firstrun-shots), version bump to main + 1, run the related suites, PR.

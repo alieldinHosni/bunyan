@@ -5,7 +5,17 @@ import {AR as CUE_AR} from "../knowledge/cues.js";
 import {FAQ_AR} from "../data/faq.js";
 
 /* ============================================================ language */
-var AR={"Number keypad": "لوحة الأرقام",
+var AR={"A program built for you, and rebuilt as you change": "برنامج معمول ليك، وبيتظبط من جديد كل ما تتغير",
+"Food that follows your goal — in Arabic or English, offline": "أكل ماشي مع هدفك — بالعربي أو بالإنجليزي، ومن غير نت",
+"What you get": "هتاخد إيه",
+"I have a plan already": "عندي خطة جاهزة",
+"Your body": "جسمك",
+"Choosing your split…": "بنختار تقسيمة تمرينك…",
+"Setting your weekly sets…": "بنظبط مجموعاتك في الأسبوع…",
+"Working out your calories…": "بنحسب سعراتك…",
+"Building your plan": "بنعمل خطتك",
+"Set aside for a week. The assessment is in Coach any time.": "اتأجل أسبوع. التقييم موجود في الكوتش في أي وقت.",
+"Number keypad": "لوحة الأرقام",
 "Outside training. It sets your daily calories, not your training; the weekly check-in corrects it from your weigh-ins.": "برّه التمرين. ده بيحدد سعراتك اليومية، مش تمرينك؛ والمراجعة الأسبوعية بتظبطه من أوزانك.",
 "Or pick exactly what you have": "أو اختار اللي عندك بالظبط",
 "Your plan uses only these, and your own body weight.": "خطتك هتستخدم دول بس، ووزن جسمك.",
