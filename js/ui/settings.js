@@ -32,7 +32,7 @@ import {skyInfo} from "./sky.js";
 import {glyph} from "./glyphs.js";
 import {mealStyle} from "../engine/meals.js";
 import {afTile} from "./views/addfood.js";
-import {histSheet} from "./views/chat.js";
+import {chat, wanted} from "./chatload.js";
 import {sheet as smartSheet, state as smartState} from "./smartcoach.js";
 
 /* ---- the grammar ------------------------------------------------------------------ */
@@ -420,7 +420,7 @@ function mealsSheet(){
       {items:[["named",t("Named")],["numbered",t("Numbered")]],value:st,attr:"mstyle",label:t("Meal names")}));}
 
 var SHEETS={set_food:foodSheet,set_meals:mealsSheet,set_you:youSheet,set_avatar:avatarSheet,set_training:trainingSheet,set_app:appSheet,set_profiles:profilesSheet,
-  set_data:dataSheet,backup:backupSheet,share:shareSheet,about:aboutSheet,set_chat:histSheet,sendplan:sendPlanSheet,recvplan:recvPlanSheet,set_smart:smartSheet};
+  set_data:dataSheet,backup:backupSheet,share:shareSheet,about:aboutSheet,set_chat:function(){var c=chat();if(!c){wanted();return '<h2>'+t("Chat history")+'</h2>';}return c.histSheet();},sendplan:sendPlanSheet,recvplan:recvPlanSheet,set_smart:smartSheet};
 /* The inside of a settings sheet, or null when the name is not one of these. */
 function settingsSheet(name){return SHEETS[name]?SHEETS[name]():null;}
 

@@ -5444,6 +5444,14 @@ await test("First run: I have a plan already opens the copy-in and lands on Trai
   await page.tap('#app [data-setup]');await pause(page,400);
   eq([await ev(page,"V.asd.step"),!!(await page.$('#app .dhead [data-back]')),!!(await page.$('#app .wel'))],[1,true,false],"from Coach: the first question, with the way back, no welcome again");
 },{db:newbie(),init:clockAt(2026,11,5)});
+await test("Coach chat on demand (WP-9): the first screen does not load the chat; opening the coach or tapping a question chip before it is in waits for it once, then works",async page=>{
+  eq(await page.evaluate(()=>performance.getEntriesByType("resource").some(x=>/views\/chat\.js/.test(x.name))),false,"the first screen did not fetch the chat");
+  await page.tap("#cfab .cfab");await pause(page,1500);
+  eq(await page.evaluate(()=>[!!document.querySelector("#cpanel .cp"),document.querySelectorAll("#cpanel .cp-chip").length>0]),[true,true],"the panel opened, with its question chips");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.coach=null;V.tab="coach";(await import("/js/ui/render.js")).render();});await pause(page,600);
+  await page.tap("#app .cask [data-chatq]");await pause(page,1500);
+  eq(await page.evaluate(()=>document.querySelectorAll("#cpanel .chat-a").length>0),true,"a chip on the Coach page asked and was answered");
+},{init:()=>{window.requestIdleCallback=()=>0;}});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

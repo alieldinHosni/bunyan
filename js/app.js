@@ -21,6 +21,7 @@ import {initExSwipe} from "./ui/exswipe.js";
 import {initNav, resetNav} from "./ui/nav.js";
 import {initEdgeBack} from "./ui/edgeback.js";
 import {bindPanel, closeCoach} from "./ui/coachfab.js";
+import {onChatIn} from "./ui/chatload.js";
 import {initPress} from "./ui/press.js";
 import {initReorder} from "./ui/reorder.js";
 import {initSheetDrag} from "./ui/sheetdrag.js";
@@ -234,6 +235,9 @@ initKeyboard(kbPredict);
 initKeypad();
 /* The small panel's field tapped on a phone: the whole conversation, once the keyboard is up. */
 bindPanel(function(){V.coach="full";render();});
+/* A sheet drawn before the chat was in (its history, an InBody reading) draws again once it
+   lands (js/ui/chatload.js). */
+onChatIn(render);
 /* What the keyboard and the browser chrome leave visible (--vvh, --vvt), measured again
    whenever it can have changed. A cold launch from the Home Screen is the case that bit:
    iOS reports a short viewport for the first frames, and a value read once at boot kept the

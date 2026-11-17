@@ -1,6 +1,6 @@
 /* Bunyan — sheets
    Every bottom sheet, dispatched by vSheet(). */
-import {inbodyReading} from "./views/chat.js";
+import {chat, wanted} from "./chatload.js";
 import {hb} from "./haptic.js";
 import {t, tm} from "../i18n/dict.js";
 import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exFigs, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
@@ -429,7 +429,7 @@ function vSheet(){
   else if(V.sheet==="pimport")b=vImportSheet();
   else if(V.sheet==="putmeal")b=vPutMeal();
   else if(V.sheet==="timport")b=vTImportSheet();
-  else if(V.sheet==="ibread")b='<h2>'+esc(t("What your InBody says"))+'</h2><div class="ibread">'+inbodyReading()+'</div>';
+  else if(V.sheet==="ibread")b='<h2>'+esc(t("What your InBody says"))+'</h2><div class="ibread">'+(chat()?chat().inbodyReading():(wanted(),""))+'</div>';
   else if(V.sheet==="weigh"){
     /* The stepper starts from the last weight known. With none, an empty field to type
        it into: a stepper has to start somewhere, and any number put there would be a
