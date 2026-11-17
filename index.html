@@ -76,6 +76,11 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   --wbar-h:48px; --wbar-gap:8px;
   
   
+  /* The design system's four speeds (WP-7, docs/DESIGN-SYSTEM.md): press for touch
+     feedback, quick for a small change in place, move for sheets and cards arriving or
+     opening, page for travel between pages (transit.js PAGE.ms). The --m-* names below
+     are moved onto these one page at a time, then removed. */
+  --m-quick:200ms; --m-move:380ms; --m-page:520ms;
   --m-press:110ms; --m-micro:190ms; --m-pop:260ms; --m-comp:320ms;
   --m-sheet:380ms; --m-screen:380ms; --m-data:480ms; --m-reveal:600ms; --m-fade:260ms;
   

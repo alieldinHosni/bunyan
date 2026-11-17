@@ -31,6 +31,7 @@ jobs:
       - run: node tests/architecture.mjs
       - run: node tests/engine.mjs
       - run: node tests/coach.mjs
+      - run: node tests/design.mjs
 
   browser:
     name: App in Chromium (${{ matrix.shard }}/6)
