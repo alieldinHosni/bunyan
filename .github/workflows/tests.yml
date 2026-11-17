@@ -83,3 +83,39 @@ jobs:
           for i in $(seq 1 30); do curl -sf http://localhost:8765/index.html > /dev/null && break; sleep 1; done
       - name: Coach evaluation set (fails only on a safety miss)
         run: node tests/coach-eval.mjs
+
+  webkit-stress:
+    name: WebKit stress (${{ matrix.v }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        v: [v271, v272, v269]
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright and WebKit (for this run only)
+        run: |
+          npm install -g playwright@1.56.1
+          npx -y playwright@1.56.1 install --with-deps webkit
+          echo "PW_PATH=$(npm root -g)/" >> "$GITHUB_ENV"
+      - name: The app at that version
+        run: |
+          case "${{ matrix.v }}" in v271) REF=f828bdb;; v269) REF=672632e;; *) REF=HEAD;; esac
+          git worktree add /tmp/app $REF
+          cp tests/stress-webkit.mjs /tmp/stress.mjs
+          (cd /tmp/app && python3 -m http.server 8765 > /dev/null 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://localhost:8765/index.html > /dev/null && break; sleep 1; done
+          grep -o "VERSION=[0-9]*" /tmp/app/js/version.js
+      - name: Stress in WebKit
+        env:
+          LABEL: ${{ matrix.v }}
+          ROUNDS: "30"
+        run: node /tmp/stress.mjs
