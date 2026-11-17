@@ -742,7 +742,8 @@ h3{font-family:var(--display);font-size:16px;font-weight:700;margin:0}
 .stfield .stv:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accentSoft)}
 .stfield .stn:focus{outline:none}
 .plan{background:var(--accentSoft);border-radius:12px;padding:11px 13px;margin-bottom:12px}
-.thumb{border-radius:10px;object-fit:cover;background:#fff;flex-shrink:0}
+/* Every exercise picture, in every list, has the same corner (WP-7): --r2. */
+.thumb{border-radius:var(--r2);object-fit:cover;background:#fff;flex-shrink:0}
 .thumb.ph{display:flex;align-items:center;justify-content:center;background:var(--raised);
   color:var(--faint)}
 .demo{display:grid;grid-template-columns:1fr 1fr;gap:9px}
@@ -1068,16 +1069,16 @@ html.kpad-move .sheetbox{transition:max-height var(--m-kb) var(--e-ios),height v
   box-shadow:inset 0 0 0 1px var(--hair)}
 .thpv-card{display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:9px;background:var(--card);
   border:1px solid var(--card-edge);box-shadow:var(--shadow-card)}
-.thpv-k{width:46%;height:4px;border-radius:2px;background:var(--accentHi)}
+.thpv-k{width:46%;height:4px;border-radius:var(--rpill);background:var(--accentHi)}
 .thpv-n{font-family:var(--display);font-weight:800;font-size:15px;line-height:1;color:var(--figure);font-variant-numeric:tabular-nums}
-.thpv-bar{height:5px;border-radius:3px;background:var(--bar-track);overflow:hidden}
-.thpv-bar i{display:block;width:64%;height:100%;border-radius:3px;background:var(--accent)}
+.thpv-bar{height:5px;border-radius:var(--rpill);background:var(--bar-track);overflow:hidden}
+.thpv-bar i{display:block;width:64%;height:100%;border-radius:var(--rpill);background:var(--accent)}
 .thpv-btn{height:16px;border-radius:999px;background:linear-gradient(180deg,var(--accent),var(--accent-deep));
   box-shadow:0 6px 14px -8px rgba(var(--glow-rgb),.9)}
 .thpv-dock{position:absolute;left:7px;right:7px;bottom:7px;height:18px;display:flex;align-items:center;justify-content:space-between;
   padding:0 3px;border-radius:999px;background:var(--glass-solid);box-shadow:inset 0 0 0 1px var(--dock-hair)}
 .thpv-dock i{width:12px;height:12px;border-radius:50%;background:var(--dock-dot);box-shadow:inset 0 0 0 1px var(--dock-dot-edge)}
-.thpv-dock i.on{width:26px;border-radius:6px;background:var(--dock-pill);box-shadow:none}
+.thpv-dock i.on{width:26px;border-radius:var(--rpill);background:var(--dock-pill);box-shadow:none}
 .thpick-n{font-size:12.5px;font-weight:700;line-height:1.2;text-align:center}
 .thpick-sw{display:flex;gap:4px}
 .thpick-sw i{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(128,128,128,.4)}
@@ -1528,8 +1529,8 @@ body.kbleave .srch .srch-hide,body.kbleave .srch .srch-title{display:none}
 [dir="rtl"] .wkr-ti.back{animation-name:dnavFwd}
 .wkr-today{height:30px;padding:0 var(--s3);border-radius:var(--rpill);border:1px solid var(--accent-edge);background:var(--accent-tint);
   color:var(--accentHi);font-size:12px;font-weight:800;letter-spacing:.04em}
-.wkr-bar{height:3px;margin:var(--s2) var(--s3) 0;border-radius:2px;background:var(--hair);overflow:hidden}
-.wkr-bar i{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,var(--ok),var(--accentHi));transition:width var(--m-tab) var(--e-spring)}
+.wkr-bar{height:3px;margin:var(--s2) var(--s3) 0;border-radius:var(--rpill);background:var(--hair);overflow:hidden}
+.wkr-bar i{display:block;height:100%;border-radius:var(--rpill);background:linear-gradient(90deg,var(--ok),var(--accentHi));transition:width var(--m-tab) var(--e-spring)}
 .wkr-bar i{transform-origin:left center;animation:wkrGrow var(--m-cal) var(--e-cal) both}
 [dir="rtl"] .wkr-bar i{transform-origin:right center;background:linear-gradient(270deg,var(--ok),var(--accentHi))}
 @keyframes wkrGrow{from{transform:scaleX(0)}to{transform:none}}
@@ -2067,7 +2068,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .tprog{display:flex;flex-direction:column;gap:6px}
 .tprog-l{display:flex;justify-content:space-between;font-size:12px;color:var(--dim)}
 .tprog-l b{font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
-.tbar{height:4px;border-radius:2px;background:var(--bg);overflow:hidden}
+.tbar{height:4px;border-radius:var(--rpill);background:var(--bg);overflow:hidden}
 .tbar i{display:block;height:100%;background:var(--accent);
   transition:width var(--m-data) var(--e-decel)}
 .tsplit{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
@@ -2483,7 +2484,7 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
   border:1.5px dashed var(--border);color:var(--dim)}
 .bsch-wk li.on b,.bsch-cy li.on b{border:0;background:linear-gradient(180deg,var(--accent),var(--accent-deep));color:var(--onAccent);
   box-shadow:0 6px 16px -8px rgba(var(--accent-rgb),.8)}
-.bsch-wk li.two b{width:auto;min-width:34px;padding:0 6px;border-radius:17px;box-shadow:inset 0 0 0 2px var(--gold)}
+.bsch-wk li.two b{width:auto;min-width:34px;padding:0 6px;border-radius:var(--rpill);box-shadow:inset 0 0 0 2px var(--gold)}
 .bsch-wk b i,.bsch-cy b i{font-style:normal;font-family:var(--display);font-size:14px;font-weight:800}
 .bsch-wk li.two b i+i::before{content:"+";opacity:.7;margin-inline-end:1px}
 .bsch-cy{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:var(--s1)}
@@ -2719,11 +2720,11 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .ticard-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .ticard-h .tiday{flex:1;min-width:0;font-weight:700;background:transparent;border-color:transparent;padding-inline:4px}
 .ticard-h .tiday:focus{border-color:var(--accent);background:var(--raised)}
-.ticard-x{flex:none;width:44px;height:44px;border:0;border-radius:22px;background:none;color:var(--dim);font-size:16px}
+.ticard-x{flex:none;width:44px;height:44px;border:0;border-radius:var(--rpill);background:none;color:var(--dim);font-size:16px}
 .tifocus{margin:0 4px 8px;font-size:12.5px;color:var(--dim)}
 .tirow{display:flex;align-items:center;gap:12px;width:100%;padding:10px 2px;border:0;border-top:1px solid var(--border);
   background:none;color:var(--text);font:inherit;text-align:start}
-.tirow .thumbwrap,.tirow .thumb{flex:none;border-radius:10px}
+.tirow .thumbwrap,.tirow .thumb{flex:none;border-radius:var(--r2)}
 .tirow-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .tirow-t b{font-size:15px;font-weight:600;line-height:1.3}
 .tirow-raw{font-size:12px;color:var(--dim)}
@@ -3027,7 +3028,7 @@ details[open]>summary .as-chev{transform:rotate(90deg)}
 .wu-row.did .wu-tick{background:var(--ok);border-color:var(--ok);color:#fff}
 :root:not(.tch) .wu-tick:active,.wu-tick.tapd{transform:scale(.88)}
 .wu-ex{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:2px 0;border:0;background:transparent;color:inherit;text-align:start}
-.wu-ex .thumbwrap,.wu-ex .thumb{flex:none;border-radius:10px}
+.wu-ex .thumbwrap,.wu-ex .thumb{flex:none;border-radius:var(--r2)}
 .wu-t{min-width:0;display:flex;flex-direction:column;gap:2px}
 .wu-n{font-size:14.5px;font-weight:600;line-height:1.3}
 .wu-d{font-size:12.5px;color:var(--sub);font-variant-numeric:tabular-nums}
@@ -3407,7 +3408,7 @@ body.focus:has(.wu-foot){padding-bottom:0}
 .librow{display:flex;align-items:center;gap:16px;width:100%;text-align:start;
   background:var(--surface);border:1px solid var(--border);border-radius:12px;
   padding:12px;margin-bottom:10px;color:var(--text)}
-.librow .thumbwrap,.librow .thumb,.librow .thumb.ph{border-radius:8px;flex-shrink:0}
+.librow .thumbwrap,.librow .thumb,.librow .thumb.ph{border-radius:var(--r2);flex-shrink:0}
 /* Spans, so they need telling they are blocks — inline they ran the name and the
    detail together on one line and collapsed the row onto the thumbnail. */
 .librow-t{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
@@ -4555,7 +4556,7 @@ label.hap:has(.hapt-in:focus-visible){outline:2px solid var(--accentHi);outline-
 .wu-then b{color:var(--text)}
 .nx{display:grid;grid-template-columns:auto minmax(0,1fr) 20px;align-items:center;gap:var(--s3);min-height:56px;padding:var(--s2) var(--s3);
   border-radius:var(--r4);color:var(--text);text-align:start}
-.nx .thumbwrap,.nx .thumb{border-radius:10px}
+.nx .thumbwrap,.nx .thumb{border-radius:var(--r2)}
 .nx small{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-inline-end:6px}
 [dir="rtl"] .nx small{letter-spacing:0;font-size:13px}
 .nx b{font-family:var(--display);font-size:16px;font-weight:700}
@@ -5464,7 +5465,7 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .libtrow{gap:14px}
 .libtrow>span:first-child{flex:0 0 auto}
 .libtrow>span:nth-child(2){flex:1;min-width:0;text-align:start}
-.libtrow .thumbwrap,.libtrow .thumb,.libtrow .thumb.ph{flex:0 0 auto;border-radius:12px;overflow:hidden}
+.libtrow .thumbwrap,.libtrow .thumb,.libtrow .thumb.ph{flex:0 0 auto;border-radius:var(--r2);overflow:hidden}
 .libtrow .trow-s b{font-weight:500;color:var(--sub)}
 /* A row out of sight is not laid out or painted until it comes near the screen, so a
    long list costs what is in view. The size it held last stands in for it meanwhile,
@@ -5563,7 +5564,7 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .actbtn.live{position:relative;border-color:rgba(var(--accentHi-rgb),.45);background:linear-gradient(180deg,rgba(var(--accent-rgb),.12),transparent),var(--raised)}
 .actbtn-gps{position:absolute;top:7px;inset-inline-end:7px;padding:2px 6px;border-radius:var(--rpill);font-style:normal;font-size:9.5px;font-weight:800;
   letter-spacing:.06em;color:var(--onAccent);background:var(--accent)}
-.thumb.ph.act{display:grid;place-items:center;border-radius:12px;background:rgba(var(--accent-rgb),.12);color:var(--accentHi)}
+.thumb.ph.act{display:grid;place-items:center;border-radius:var(--r2);background:rgba(var(--accent-rgb),.12);color:var(--accentHi)}
 /* ---- Rest: hide to a bar (session.js) ------------------------------------------------ */
 .rt-hide{position:absolute;top:calc(14px + env(safe-area-inset-top));inset-inline-start:16px;z-index:2;display:flex;align-items:center;gap:6px;
   min-height:40px;padding:0 14px;border-radius:var(--rpill);border:1px solid var(--hair-hi);background:rgba(20,20,26,.7);
@@ -5947,7 +5948,7 @@ body.noanim .chat-orb::before,body.noanim .chat-orb::after{animation:none!import
    through a hole in the dim, and a glass card beside it with an arrow pointing at it.
    The hole glides from one thing to the next; the card comes in from the side it is
    pointing from. A tap anywhere is the next tip. */
-.tour{position:fixed;inset:0;z-index:90;touch-action:none;-webkit-tap-highlight-color:transparent;opacity:0;transition:opacity .24s var(--e-standard)}
+.tour{position:fixed;inset:0;z-index:90;touch-action:none;-webkit-tap-highlight-color:transparent;opacity:0;transition:opacity var(--m-quick) var(--e-standard)}
 .tour.on{opacity:1}
 .tour-hole{position:fixed;border-radius:16px;box-shadow:0 0 0 200vmax rgba(0,0,0,.6),0 0 0 2px rgba(var(--accentHi-rgb),.85),0 0 26px 4px rgba(var(--accent-rgb),.45);
   transition:left .42s cubic-bezier(.2,.8,.2,1),top .42s cubic-bezier(.2,.8,.2,1),width .42s cubic-bezier(.2,.8,.2,1),height .42s cubic-bezier(.2,.8,.2,1),border-radius .42s;pointer-events:none}
@@ -5958,7 +5959,7 @@ body.noanim .chat-orb::before,body.noanim .chat-orb::after{animation:none!import
   background:rgba(var(--bg-rgb),.66);border:1px solid var(--card-edge);
   box-shadow:inset 0 1px 0 var(--hair-hi),0 22px 50px -18px rgba(0,0,0,.7);
   -webkit-backdrop-filter:saturate(170%) blur(26px);backdrop-filter:saturate(170%) blur(26px);outline:none;opacity:0}
-.tour-card.in{animation:tourIn .36s cubic-bezier(.2,.8,.2,1) both}
+.tour-card.in{animation:tourIn var(--m-move) var(--e-ios) both}
 .tour-card.up.in{--from:10px}
 .tour-card.down.in{--from:-10px}
 @keyframes tourIn{from{opacity:0;transform:translateY(var(--from,8px)) scale(.97)}to{opacity:1;transform:none}}
