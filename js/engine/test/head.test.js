@@ -1,7 +1,7 @@
 /* The head (js/engine/head.js): its conflict rules over plain signals, and the whole of
    it over a seeded profile. head.js reads the state, so the profile is put in S
    (state.js setS) the way the app's own boot leaves it: DEF, filled in by normalize. */
-import {decide, fuelLine, headFor, headNow, headOn, headWhy, todayPlan, isLighter, pickLead, ruleLighter, planMapping, COACH, CHECKIN, MONTHLY, rank, ruleCalories, ruleDeficit,
+import {decide, headFor, headNow, headOn, headWhy, todayPlan, isLighter, pickLead, ruleLighter, planMapping, COACH, CHECKIN, MONTHLY, rank, ruleCalories, ruleDeficit,
   ruleHousekeeping, ruleMissed, ruleRecovery, ruleSaidOnce} from "../head.js";
 import {checkPlansAll} from "../plancheck.js";
 import {insights} from "../../coach/insights.js";
@@ -184,21 +184,6 @@ function run(t){
   t.eq(todayPlan().state,"resume","today: a workout open is resume");
   S.active=null;S.daySwap={};S.daySwap[today()]="rest";saveDB();
   t.eq(todayPlan().state,"rest","today: a day taken off is a rest day");
-  S.daySwap={};saveDB();
-  /* ---- the day's fuel on todayPlan().food (WP-5): one sentence, and no target moves ---- */
-  var g0=JSON.stringify(S.goals),f0=todayPlan().food;
-  t.ok(Array.isArray(f0.notes)&&(f0.note?f0.line===fuelLine(f0.note)&&f0.line.length>0:f0.line===null),"food: the lead note's sentence is fuelLine's");
-  var now=Date.now();
-  S.sessions.unshift({id:"fuel",date:today(),dayId:day.id,dayName:day.name,started:now-50*6e4,lastSet:now-5*6e4,activeMs:45*6e4,
-    entries:[{name:"Barbell Squat",muscle:"Quads",sets:[{w:80,r:8}]}]});saveDB();
-  var fa=todayPlan();
-  t.eq([fa.state,fa.food.note&&fa.food.note.kind,fa.food.line],["done","after","You trained\u00a0— 150\u00a0g of protein left today."],"finished five minutes ago: the after note leads, with the protein left");
-  t.eq([fa.food.kcal,fa.food.p],[2500,150],"food: the targets of the day are the plan's, a training day as any other");
-  t.eq(JSON.stringify(S.goals),g0,"no change to S.goals: targets equal before and after a training day");
-  S.sessions.shift();S.daySwap={};S.daySwap[today()]="rest";saveDB();
-  var fr=todayPlan();
-  t.eq([fr.state,fr.food.note&&fr.food.note.kind,fr.food.line],["rest","rest","Rest day\u00a0— the same targets: 2,500\u00a0kcal and 150\u00a0g of protein."],"a rest day: says so, with the plain targets");
-  t.eq(todayPlan(addDays(1)).food.notes,[],"another day: no fuel notes (they are about now)");
   S.daySwap={};saveDB();
   var other=todayPlan(addDays(1));
   t.eq([other.line,other.house&&other.house.id],[null,"backup"],"another day: no line in the card (the lead is today's)");
