@@ -453,17 +453,17 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
    every rule that reads them follows. Only what is known to sit on the ground turns
    white, and never inside glass: anything missed stays slate, which still reads on the
    sage, where white on the frosted glass would not. */
-[data-palette="mono"][data-theme="light"] #app :is(.hgreet-t,.thead h1,.thead-s,.tsec-h,.tlink,.tsec>.libn,.pglbl h2,.cask>.shk,.bname-t,.bname-s,.bphead-s,.dhint,.tgoffer-s,
+[data-palette="mono"][data-theme="light"] #app :is(.hgreet-t,.thead h1,.thead-s,.tsec-h,.tlink,.tsec>.libn,.pglbl h2,.bname-t,.bname-s,.bphead-s,.dhint,.tgoffer-s,
   .pglbl .pglink,.pgaside,.pgnone,.pgnote,.dhead-t,.dsub,.sg-h,.as-note,.chat-head-t,.chat-hi,.chat-grp-h,.chat-dis,.empty):not(:is(
   .card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.fneed,.ffuel,.pmeal,.plsum,.plstart,.pcquiet,.tgcard,.ptile,.tgoffer,.tgfold,.bsched,.pgc,.pgstat,.pgmac,.sg-list,.pid,.chat-a,
-  .chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.dnav-card,.wkr,.glass,.pghero,.crow,.fsug-t,.cweek2,.cfor) *){
+  .chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.dnav-card,.wkr,.glass,.pghero,.fsug-t,.cweek2,.cfor) *){
   --text:#FFFFFF; --sub:#FFFFFF; --dim:#FFFFFF; --faint:#F0F5F4; --accentHi:#FFFFFF;
   --ground-halo:0 0 1px rgba(20,46,51,.9),0 0 3px rgba(20,46,51,.8),0 0 8px rgba(20,46,51,.6),0 0 16px rgba(20,46,51,.45);
   text-shadow:var(--ground-halo)}
 /* the ones that take their parent's colour rather than a token of their own */
 [data-palette="mono"][data-theme="light"] #app :is(.hgreet-t,.thead h1,.tsec-h,.pglbl h2,.dhead-t,.sg-h,.chat-head-t,.empty,.bname-t):not(:is(
   .card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.fneed,.ffuel,.pmeal,.plsum,.plstart,.pcquiet,.tgcard,.ptile,.tgoffer,.tgfold,.bsched,.pgc,.pgstat,.pgmac,.sg-list,.pid,.chat-a,
-  .chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.dnav-card,.wkr,.glass,.pghero,.crow,.fsug-t,.cweek2,.cfor) *){color:var(--text)}
+  .chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.dnav-card,.wkr,.glass,.pghero,.fsug-t,.cweek2,.cfor) *){color:var(--text)}
 /* and the ground's drawing is drawn in the same white, like the reference's headings */
 [data-palette="mono"][data-theme="light"] #bgart{--bga:#F3F7F6; --bgb:#D6E1DF}
 /* An element that carries its own theme or mode (the rest screen, the splash, a theme
@@ -2079,7 +2079,8 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .card.thero .btn .ico{margin-inline-start:0}
 
 .tsec{display:flex;align-items:center;justify-content:space-between;margin:24px 0 12px}
-.tsec-h{font-family:var(--display);font-weight:800;font-size:18px;margin:0}
+/* The section header of every page (WP-7): sentence case, 17 px, display weight. */
+.tsec-h{font-family:var(--display);font-weight:800;font-size:17px;margin:0}
 .tlink{background:none;border:none;color:var(--accentHi);font-size:13px;font-weight:600;
   min-width:44px;min-height:44px;padding:0;margin-inline-end:-6px}
 
@@ -3921,7 +3922,7 @@ textarea.afnl.warn{border-color:var(--warning)}
    so it reads on the bright part of a picture and still reads as the accent. */
 .tsec .tlink,.pglbl .pglink{color:color-mix(in srgb,var(--accentHi) 72%,var(--text))}
 .pglbl h2,.pglbl .pgaside,.pglbl .pglink,.pgphotos~.pgnote,.as-l,.as-sub,.as-note,
-.thead h1,.thead-s,.hgreet-t,.hdate,.tsec-h,.tsec>.libn,.tlink,.sg-h,.cask>.shk,.pglbl,.pglbl *,.dsub,.dhint,.bname-t,.bname-s,.bphead-s{text-shadow:var(--ground-halo)}
+.thead h1,.thead-s,.hgreet-t,.hdate,.tsec-h,.tsec>.libn,.tlink,.sg-h,.pglbl,.pglbl *,.dsub,.dhint,.bname-t,.bname-s,.bphead-s{text-shadow:var(--ground-halo)}
 .pglink{background:none;border:none;color:var(--accentHi);font-weight:700;font-size:14px;
   min-height:44px;margin:-10px -2px;padding:0 2px}
 .pgaside{font-size:12px;color:var(--sub)}
@@ -6113,8 +6114,8 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 .cweek2-h{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2)}
 .cweek2-w{font-size:14px;color:var(--sub)}
 .cweek2-w b{color:var(--text);font-weight:800}
-.cweek2-bar{height:6px;margin:var(--s2) 0;border-radius:3px;background:var(--hair);overflow:hidden}
-.cweek2-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accentHi));transition:width var(--m-data) var(--e-standard)}
+.cweek2-bar{height:6px;margin:var(--s2) 0;border-radius:var(--rpill);background:var(--hair);overflow:hidden}
+.cweek2-bar i{display:block;height:100%;border-radius:var(--rpill);background:linear-gradient(90deg,var(--accent),var(--accentHi));transition:width var(--m-data) var(--e-standard)}
 [dir="rtl"] .cweek2-bar i{background:linear-gradient(270deg,var(--accent),var(--accentHi))}
 .cweek2-s{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s4);font-size:13px;color:var(--sub)}
 .cweek2-s span{display:inline-flex;align-items:center;gap:6px}
@@ -6124,17 +6125,10 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 .cfor>li{position:relative}
 .cfor-n{position:absolute;z-index:2;top:-8px;inset-inline-start:-6px;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;
   background:var(--accent);color:var(--onAccent);font-size:12px;font-weight:800;box-shadow:0 0 0 3px var(--bg)}
-.crow{display:flex;align-items:center;gap:var(--s3);width:100%;margin:var(--s4) 0 0;padding:var(--s3) var(--s4);border-radius:var(--r4);
-  border:1px solid var(--card-edge);background:var(--card);color:var(--text);font:inherit;text-align:start}
-.crow-i{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:50%;background:var(--raised);color:var(--accentHi)}
-.crow-i .gl{width:18px;height:18px}
-.crow-t{display:grid;gap:2px;flex:1;min-width:0}
-.crow-t b{font-size:15px}
-.crow-t span{font-size:12.5px;color:var(--sub);line-height:1.4}
 /* The Coach page stands on a photograph with words in it (a coach's tablet): its cards
    blur what is behind them, so no word of the picture reads through as if it were the
    page's own (owner, 3 Nov: it looked like a glitch). */
-.cask-in,.cweek2,.cfor>li>section,.cfor>li>div,.crow{-webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1)}
+.cask-in,.cweek2,.cfor>li>section,.cfor>li>div{-webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1)}
 /* The check-in's "what got in the way" answers, in the Coach page's list: compact, two
    to a line where they fit, so one question does not take the screen. */
 .cfor .ckcard .aschips{gap:6px}
@@ -6419,7 +6413,7 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
 :root{--card-fill:color-mix(in srgb,var(--card),var(--raised) 45%)}
 #app *,.stillcopy *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 :where(#app,.stillcopy) :is(.card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.fneed,.ffuel,.pmeal,.plsum,.plstart,.pcquiet,.tgcard,.ptile,.tgoffer,.tgfold,.bsched,.pgc,.pgstat,.pgmac,.sg-list,.pid,
-  .chat-a,.chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.cweek2,.crow,.cask-in){background-color:var(--card-fill)}
+  .chat-a,.chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.cweek2,.cask-in){background-color:var(--card-fill)}
 :where(#app,.stillcopy) :is(.btn.g,.seg,.hbtn:not(.havatar),.iconbtn){background-color:color-mix(in srgb,var(--glass-btn),var(--raised) 40%)}
 /* In the light looks a secondary button on a card is white on white, its white rim lost:
    it read as plain text (seen 17 Nov, Progress's Apply). The accent's own edge shows it. */
