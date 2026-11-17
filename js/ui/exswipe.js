@@ -158,20 +158,25 @@ function peekFollow(s,x,toStep){
    that as the finger began to move was the hitch at the start of every swipe. Made
    again after every paint, since what they show may have changed. */
 var pre={},preT=0;
-function buildPeek(step,k){
+function buildPeek(step,k,now){
   var html=H.peek(step,k);if(html==null)return null;
   var w=document.createElement("div");w.id="app";w.className="stillcopy peek";w.setAttribute("aria-hidden","true");w.inert=true;
   var p=document.createElement("div");p.className=k==="tab"?"tpeek":"psec";p.innerHTML=html;
   p.querySelectorAll("[id]").forEach(function(e){e.removeAttribute("id");});
   /* Off the screen until the finger brings it, so a lazy picture would wait to load
      until it was already showing: asked for now. */
-  p.querySelectorAll('img[loading="lazy"]').forEach(function(im){im.loading="eager";});
-  /* And decoded ahead, so they are drawn as the finger brings them, not a frame after. */
-  p.querySelectorAll("img").forEach(function(im){if(im.decode)im.decode().catch(function(){});});
+  /* Only for the copy a finger is about to bring in: built ahead while idle, after every
+     paint, the pictures of both neighbours were fetched and decoded each time, memory
+     the phone could not spare (owner, 17 Nov: restarts while swiping). */
+  if(now){
+    p.querySelectorAll('img[loading="lazy"]').forEach(function(im){im.loading="eager";});
+    p.querySelectorAll("img").forEach(function(im){if(im.decode)im.decode().catch(function(){});});}
   w.appendChild(p);return w;}
 function takePeek(step,k){
   var c=pre[step],w=c&&c.k===k?c.w:null;pre[step]=null;
-  return w||buildPeek(step,k);}
+  if(w){w.querySelectorAll('img[loading="lazy"]').forEach(function(im){im.loading="eager";});
+    w.querySelectorAll("img").forEach(function(im){if(im.decode)im.decode().catch(function(){});});}
+  return w||buildPeek(step,k,true);}
 function prepPeeks(){
   pre={};clearTimeout(preT);
   var p=pane();if(!p||!H||!H.peek)return;
