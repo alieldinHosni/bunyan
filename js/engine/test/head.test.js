@@ -205,6 +205,11 @@ function run(t){
   var nb=fresh();nb.onboarded=false;saveDB();
   var ns=todayPlan();
   t.ok(ns.state!=="setup"&&ns.line&&ns.line.kind==="setup","not set up, with a program that trains: the day as it is, the assessment as its line ("+ns.state+")");
+  S.setupLater=addDays(7);saveDB();
+  t.ok(!(todayPlan().line&&todayPlan().line.kind==="setup"),"its Not now sets the assessment line aside for a week");
+  S.setupLater=today();saveDB();
+  t.eq(todayPlan().line&&todayPlan().line.kind,"setup","a week on, the assessment line is back");
+  delete S.setupLater;saveDB();
   split().days.forEach(function(d){d.ex=[];});saveDB();
   t.eq([todayPlan().state,todayPlan().line],["setup",null],"not set up and nothing to train: the assessment is the card");
   fresh();}

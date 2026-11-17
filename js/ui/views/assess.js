@@ -34,6 +34,7 @@ import {glyph} from "../glyphs.js";
 import {condLines, CONDS_ASK, rulesFor} from "../../engine/conditions.js";
 import {FAULTS_ASK} from "../../engine/corrective.js";
 import {condCard} from "../dose.js";
+import {art, markArt} from "../art.js";
 
 /* Equipment as a choice of three, and what each means in the equipment list. */
 var GEARS={gym:null,home:["Dumbbell","Band","Kettlebell"],bw:["Bodyweight"]};
@@ -120,27 +121,37 @@ var STYLES=[["egy","Egyptian home food"],["lev","Levantine (Syrian, Lebanese)"],
 /* Everything "Use this plan" would set, worked out with the draft in place of what
    is saved, then put back. Cached on the answers. */
 var CACHE={k:null,v:null};
-function preview(a){
-  var key=JSON.stringify([profileOf(a),a.gear,a.gearx,a.split,foodPrefs(a),skipOf(a),!!FOODDB]);
-  if(CACHE.k===key)return CACHE.v;
-  var keep={profile:S.profile,gear:S.gear,body:S.body,skip:S.skip},out=null;
+function previewKey(a){return JSON.stringify([profileOf(a),a.gear,a.gearx,a.split,foodPrefs(a),skipOf(a),!!FOODDB]);}
+/* fn run with the draft in place of what is saved, then everything put back. */
+function withDraft(a,fn){
+  var keep={profile:S.profile,gear:S.gear,body:S.body,skip:S.skip};
   try{
     S.profile=Object.assign({},S.profile,profileOf(a));
     S.gear=gearOf(a);
     S.body=[{date:today(),weight:num(a.weight)}];S.skip=skipOf(a);
+    return fn();
+  }finally{S.profile=keep.profile;S.gear=keep.gear;S.body=keep.body;S.skip=keep.skip;}}
+/* The work "Use this plan" stands on, one engine call at a time, so the first run's build
+   screen can say each as it returns (STAGES). preview() runs them all at once. */
+var STAGES=[
+  ["split","Choosing your split…",function(a,o){
     var cands=[];try{cands=splitCandidates(S.profile.days,a.level,a.goal,S.gear);}catch(e){}
     /* The week built from these answers first; the app's programs as other choices. */
-    cands=[{id:BUILT,name:"Built for you"}].concat(cands);
-    var plan=generatePlan(a.split||BUILT);
-    var tg=macroTargets(),meals=null;
-    /* The assessment asks for a weight before this step (youOk); without one there are no targets. */
-    if(!tg)return out;
-    /* The meals need the food database, which loads on the way to this screen. */
-    if(FOODDB)try{meals=buildMealPlan(tg,foodPrefs(a));}catch(e){meals=null;}
-    out={tg:tg,td:tdee(),plan:plan,cands:cands,vol:volumeCheck(plan,a.level,goalOf(a.goal).train),meals:meals};
-  }finally{S.profile=keep.profile;S.gear=keep.gear;S.body=keep.body;S.skip=keep.skip;}
-  CACHE={k:key,v:out};
-  return out;}
+    o.cands=[{id:BUILT,name:"Built for you"}].concat(cands);
+    o.plan=generatePlan(a.split||BUILT);}],
+  ["sets","Setting your weekly sets…",function(a,o){o.vol=volumeCheck(o.plan,a.level,goalOf(a.goal).train);}],
+  ["kcal","Working out your calories…",function(a,o){o.tg=macroTargets();o.td=tdee();}],
+  /* The meals need the food database, which loads on the way to this screen. */
+  ["meals","Putting your meals together…",function(a,o){o.meals=null;
+    if(o.tg&&FOODDB)try{o.meals=buildMealPlan(o.tg,foodPrefs(a));}catch(e){o.meals=null;}}]];
+function stageRun(a,i,o){withDraft(a,function(){STAGES[i][2](a,o);});
+  /* The assessment asks for a weight before this step (youOk); without one there are no targets. */
+  if(i===STAGES.length-1)CACHE={k:previewKey(a),v:o.tg?{tg:o.tg,td:o.td,plan:o.plan,cands:o.cands,vol:o.vol,meals:o.meals}:null};}
+function preview(a){
+  var key=previewKey(a);
+  if(CACHE.k===key)return CACHE.v;
+  var o={};for(var i=0;i<STAGES.length;i++)stageRun(a,i,o);
+  return CACHE.v;}
 
 function fill(x,o){Object.keys(o).forEach(function(k){x=x.split("{"+k+"}").join(o[k]);});return x;}
 /* ---- pieces ------------------------------------------------------------------------- */
@@ -168,10 +179,57 @@ function youWhy(a){
   if(!(cm>=120&&cm<=230))return t("Height: 120 to 230 cm.");
   if(!(kg>=30&&kg<=300))return t("Weight: {a} to {b}.").replace("{a}",fmtW(30)).replace("{b}",fmtW(300));
   return "";}
+/* The fields youWhy is about: the empty ones, else the one out of range. */
+function youBad(a){
+  var e=["age","height","weight"].filter(function(k){return !a[k];});
+  if(e.length)return e;
+  var age=num(a.age),cm=num(a.height);
+  return !(age>=13&&age<=95)?["age"]:!(cm>=120&&cm<=230)?["height"]:youWhy(a)?["weight"]:[];}
+function field(a,k,label,mode,val,step){
+  var bad=(a.bad||[]).indexOf(k)>=0;
+  return '<label><span>'+label+'</span><input id="as_'+k+'" type="number" inputmode="'+mode+'"'+(step?' step="'+step+'"':'')+' value="'+val+'"'
+   +(bad?' aria-invalid="true" aria-describedby="as_err"':'')+'></label>';}
+
+/* ---- the first run: what Bunyan is, before anything is asked (docs/NEXT-PHASE.md WP-6) --
+   Three cards that swipe sideways (a scroll-snapped row: the browser moves it, nothing is
+   redrawn; js/ui/handlers/coach.js welDots marks the dot), each a drawing in the app's
+   line and one sentence. Build my plan and I have a plan already sit under every card, so
+   nothing has to be swiped through to get on. The language is chosen here too: card two
+   says Arabic or English, and there is no dock yet to reach Profile by. */
+var WELCOME=[["wall","A program built for you, and rebuilt as you change"],
+  ["plate","Food that follows your goal — in Arabic or English, offline"],
+  ["phone","Everything stays on this phone"]];
+function welcome(){
+  var ar=S.prefs.lang==="ar";
+  var lang=function(k,l){var on=ar===(k==="ar");
+    return '<button class="wel-lang'+(on?' on':'')+'" data-setlang="'+k+'" aria-pressed="'+on+'" lang="'+k+'">'+l+'</button>';};
+  return '<div class="wel" data-k="welcome">'
+   +'<div class="wel-top">'+markArt("wel-mk")+'<div class="wel-langs" role="group" aria-label="'+esc(t("Language"))+'">'+lang("en","English")+lang("ar","العربية")+'</div></div>'
+   +'<div class="wel-track" data-swipe="1" role="group" aria-label="'+esc(t("What you get"))+'">'
+   +WELCOME.map(function(c,i){
+      return '<section class="wel-card" data-wel="'+i+'" aria-label="'+esc(t("{i} of {n}").replace("{i}",i+1).replace("{n}",WELCOME.length))+'">'
+       +'<span class="wel-art">'+art(c[0])+'</span><h2 class="wel-h">'+esc(t(c[1]))+'</h2></section>';}).join("")+'</div>'
+   +'<div class="wel-dots" aria-hidden="true">'+WELCOME.map(function(c,i){return '<i'+(i===(V.welAt||0)?' class="on"':'')+'></i>';}).join("")+'</div></div>';}
+/* The eleven questions in three named steps, shown in the header so the assessment reads as
+   three short parts; the bar still fills per question. */
+var GROUPS=[["You",["you","goal","level"]],["Your week",["week","gear","focus","life"]],["Your body",["limits","health","food","sleep"]]];
+function groupOf(s){for(var i=0;i<GROUPS.length;i++)if(GROUPS[i][1].indexOf(s)>=0)return i;return -1;}
+function stepsHead(s){
+  var g=groupOf(s);
+  return '<ol class="as-steps">'+GROUPS.map(function(x,i){
+    return '<li class="'+(i<g?'done':i===g?'on':'')+'"'+(i===g?' aria-current="step"':'')+'>'+esc(t(x[0]))+'</li>';}).join("")+'</ol>';}
+/* The first run's reveal: each line is put in as its engine call returns (handlers/coach.js
+   firstBuild), then the plan. */
+function buildLine(i){return '<li data-k="b:'+STAGES[i][0]+'">'+glyph("check")+'<span>'+esc(t(STAGES[i][1]))+'</span></li>';}
+function building(a){
+  return '<div class="asb" data-k="build" role="status"><span class="asb-art">'+art("wall")+'</span>'
+   +'<h1 class="asb-h">'+esc(t("Building your plan"))+'</h1>'
+   +'<ul class="asb-l" aria-live="polite">'+a.building.map(buildLine).join("")+'</ul></div>';}
 
 function body(a){
   var s=STEPS[a.step],h='';
-  if(s==="intro"){
+  if(s==="intro"&&!S.onboarded)h+=welcome();
+  else if(s==="intro"){
     h+='<div class="as-hero"><span class="shk">'+t("A few minutes")+'</span><h1>'+t("Let's build your plan")+'</h1>'
      +'<p class="as-sub">'+t("Short questions about you, your goal, your week, what you want to bring up and your food. From them: your daily targets, a training week built for you with the right volume and effort, and a meal plan from foods you eat.")+'</p>'
      +'<p class="as-sub">'+t("Everything stays on this phone. You see the whole plan before anything changes, and every part of it can be edited afterwards.")+'</p></div>';}
@@ -179,9 +237,11 @@ function body(a){
     h+=q(t("About you"),t("For your calorie needs. Nothing leaves this phone."));
     h+=lbl(t("Sex"))+chips("sex",[["m",t("Male")],["f",t("Female")]],a.sex);
     h+='<div class="grid3 as-in">'
-     +'<label><span>'+t("Age")+'</span><input id="as_age" type="number" inputmode="numeric" value="'+esc(String(a.age))+'"></label>'
-     +'<label><span>'+t("Height (cm)")+'</span><input id="as_height" type="number" inputmode="numeric" value="'+esc(String(a.height))+'"></label>'
-     +'<label><span>'+t("Weight")+' ('+wUnit()+')</span><input id="as_weight" type="number" inputmode="decimal" step="0.1" value="'+(num(a.weight)?toDisp(num(a.weight)):"")+'"></label></div>';}
+     +field(a,"age",t("Age"),"numeric",esc(String(a.age)))
+     +field(a,"height",t("Height (cm)"),"numeric",esc(String(a.height)))
+     +field(a,"weight",t("Weight")+' ('+wUnit()+')',"decimal",num(a.weight)?toDisp(num(a.weight)):"","0.1")+'</div>'
+     /* What stops Next, said under the fields it is about (not a toast). */
+     +'<p class="as-err" id="as_err" aria-live="polite">'+esc(a.err||"")+'</p>';}
   else if(s==="goal"){
     /* One list (owner, 10 Nov: "click on one option or two instead of a separate repeated
        list"): tap one goal, or up to three. The first is the main one, marked so: it sets
@@ -470,17 +530,24 @@ function result(a){
   return h;}
 
 function vAssess(){
-  var a=V.asd||(V.asd=draftFrom()),s=STEPS[a.step],n=STEPS.length-2;
-  var h='<div class="dhead">'+backArrow()+'<h1 class="dhead-t">'+t("Assessment")+'</h1></div>';
+  var a=V.asd||(V.asd=draftFrom()),s=STEPS[a.step],n=STEPS.length-2,first=!S.onboarded;
+  if(s==="result"&&a.building)return building(a);
+  var wel=s==="intro"&&first,h='';
+  /* The first run has nothing behind it to go back to; the welcome is step 0, Back on the
+     first question returns to it. Someone who came in from Training (after choosing to copy
+     in a plan of their own) has the way back. */
+  if(!wel)h+='<div class="dhead">'+(first&&(S.prefs||{}).welcomed!=="import"?'':backArrow())+'<h1 class="dhead-t">'+t("Assessment")+'</h1></div>';
   if(s!=="intro"&&s!=="result")
-    h+='<div class="as-prog" role="progressbar" aria-valuemin="1" aria-valuemax="'+n+'" aria-valuenow="'+a.step+'"><i style="width:'+(a.step/n*100)+'%"></i></div>'
-     +'<p class="as-count">'+t("Question {i} of {n}").replace("{i}",a.step).replace("{n}",n)+'</p>';
+    h+='<div class="as-prog" role="progressbar" aria-valuemin="1" aria-valuemax="'+n+'" aria-valuenow="'+a.step+'" aria-valuetext="'+esc(t("Question {i} of {n}").replace("{i}",a.step).replace("{n}",n))+'"><i style="width:'+(a.step/n*100)+'%"></i></div>'
+     +stepsHead(s);
   h+='<div class="as">'+body(a)+'</div>';
-  if(s!=="result"){
+  if(wel)h+='<div class="as-nav wel-nav"><button class="btn" data-asnext="1">'+t("Build my plan")+'</button></div>'
+    +'<button class="tlink wel-have" data-welimport="1">'+t("I have a plan already")+'</button>';
+  else if(s!=="result"){
     /* Checked on Next rather than by disabling it: typing must not redraw the screen. */
     h+='<div class="as-nav">'
      +(a.step>0?'<button class="btn g" data-asback="1">'+t("Back")+'</button>':'')
      +'<button class="btn" data-asnext="1">'+t(s==="intro"?"Start":s==="sleep"?"See my plan":"Next")+'</button></div>';}
   return h;}
 
-export {activityOf, draftFrom, foodPrefs, FOCUS_MAX, GEARS, gearOf, KIT, preview, profileOf, skipOf, STEPS, vAssess, youOk, youWhy};
+export {activityOf, buildLine, draftFrom, foodPrefs, FOCUS_MAX, GEARS, gearOf, KIT, preview, previewKey, profileOf, skipOf, stageRun, STAGES, STEPS, vAssess, youBad, youOk, youWhy};

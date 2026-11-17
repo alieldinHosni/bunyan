@@ -41,6 +41,8 @@ function fabShown(){
   /* Wherever the dock is, the coach is (owner, 28 Oct: "available anywhere the dock is
      available"): only a live workout or run puts the dock away (render.js body.focus),
      and there the workout's ⋯ menu opens the coach. */
+  /* Nor during the first run's assessment, where the dock is away too (render.js). */
+  if(V.assess&&!S.onboarded)return false;
   return !(V.tab==="train"&&!V.assess&&((!!S.active&&V.train!=="hub")||(!!S.run&&!S.active)));}
 
 /* The coach's mark: a speech outline with the coach's whistle line, on the dock's grid. */

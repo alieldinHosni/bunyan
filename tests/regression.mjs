@@ -2118,7 +2118,9 @@ await test("Assessment: first run opens it; answers become targets and training 
   eq(await page.$$eval('[data-asm^="health|"]',a=>a.length),7,"seven health topics");
   await page.tap('[data-asnext]');await pause(page,150);
   await page.tap('[data-asm="avoid|nuts"]');await pause(page,150);
+  /* The first run builds the plan in front of them (WP-6), a line per engine call, then the result. */
   await page.tap('[data-asnext]');await pause(page,150);await page.tap('[data-asnext]');await pause(page,800);
+  for(let i=0;i<30&&!(await page.$('[data-asuse]'));i++)await pause(page,200);
   if(!(await page.$('[data-asuse]')))throw new Error("no result screen");
   for(let i=0;i<20&&!(await page.$('.as-meals'));i++)await pause(page,250);
   eq(await page.$$eval('.as-meals > div',a=>a.length),4,"the meals are on the result, with the training");
@@ -3228,7 +3230,9 @@ await test("Audit: the equipment and favourites sheets in Arabic; the water glas
   await page.fill('#as_age','30');await page.fill('#as_height','30');await page.fill('#as_weight','84');
   await page.evaluate(()=>["as_age","as_height","as_weight"].forEach(id=>document.getElementById(id).dispatchEvent(new Event("change",{bubbles:true}))));
   await page.tap('#app [data-asnext]');await pause(page,300);
-  eq(await page.$eval('.toast',e=>e.textContent.trim()),"Height: 120 to 230 cm.","the figure out of range, and its range");
+  /* Said under the fields since WP-6, not in a toast. */
+  eq(await page.$eval('#as_err',e=>e.textContent.trim()),"Height: 120 to 230 cm.","the figure out of range, and its range");
+  eq([await page.$('.toast'),await page.$eval('#as_height',e=>e.getAttribute("aria-invalid"))],[null,"true"],"no toast; the height field marked");
 });
 await test("Settings: every choice in sight, switches that say their state, a tap sets the value; no drop-down anywhere",async page=>{
   await sheet(page,"set_training");
@@ -5350,6 +5354,96 @@ await test("Food and training as one plan (WP-5): in Arabic the fuel card and th
   if(/[A-Za-z]{2,}/.test(f.t))throw new Error("English in the fuel card: "+f.t);
   eq(f.h,c.t.trim(),"the same sentence on both, in Arabic");
 },{db:seedFuel(),init:clockAtTime(2026,11,17,16,30),prefs:{lang:"ar"}});
+/* WP-6, the first run. A new person: nothing in the profile, nothing logged. */
+const newbie=()=>({v:2,onboarded:false,prefs:{sound:false,splash:false,anim:false,haptic:false,lang:"en"},sessions:[],body:[]});
+const navHidden=page=>page.evaluate(()=>{const n=document.getElementById("nav");return getComputedStyle(n).visibility==="hidden"&&!document.querySelector("#cfab .cfab");});
+await test("First run (WP-6): three welcome cards that swipe, then Build my plan; no dock and no coach until the plan is used; the questions in three named steps; age left empty is said by the field, no toast; the keypad opens for Age; the plan is built a line per engine call",async page=>{
+  eq(await page.$$eval('#app .wel-card h2',a=>a.map(e=>e.textContent)),["A program built for you, and rebuilt as you change",
+    "Food that follows your goal — in Arabic or English, offline".replace(" "," "),"Everything stays on this phone"],"the three cards, one sentence each");
+  eq(await page.$$eval('#app .wel-card .art',a=>a.length),3,"each card a drawing in the app's line");
+  eq(await navHidden(page),true,"no dock and no coach button on the welcome");
+  eq([await page.$('#app .dhead'),await page.$('#app [data-asnext]')!==null,await page.$('#app [data-welimport]')!==null],[null,true,true],"Build my plan and I have a plan already under the cards, no header to go back by");
+  /* A sideways swipe moves the cards, not the page or the tab: only the dot changes. */
+  const nodes=await page.evaluate(()=>{window.__k=[...document.querySelectorAll("#app .wel-card")];return window.__k.length;});
+  const tr=await page.$eval('#app .wel-track',e=>{const r=e.getBoundingClientRect();return [r.x+r.width*0.8,r.y+r.height/2];});
+  const cdp=await page.context().newCDPSession(page);
+  const touch=async(type,x,y)=>cdp.send("Input.dispatchTouchEvent",{type,touchPoints:type==="touchEnd"?[]:[{x,y}]});
+  await touch("touchStart",tr[0],tr[1]);for(let i=1;i<=8;i++){await touch("touchMove",tr[0]-i*30,tr[1]);await pause(page,16);}
+  await touch("touchEnd",0,0);await pause(page,900);
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#app .wel-dots i")].map(d=>d.classList.contains("on"))),[false,true,false],"swiped to the second card");
+  eq(await page.evaluate(()=>[...document.querySelectorAll("#app .wel-card")].every((c,i)=>c===window.__k[i])),true,"the cards were not redrawn");
+  eq(await ev(page,"[V.assess,V.asd.step]"),[true,0],"still the welcome");
+  await page.tap('#app [data-asnext]');await pause(page,300);
+  eq(await ev(page,"[V.asd.step,S.prefs.welcomed]"),[1,"plan"],"Build my plan: the first question");
+  eq(await page.$$eval('#app .as-steps li',a=>a.map(e=>[e.textContent,e.className])),[["You","on"],["Your week",""],["Your body",""]],"three named steps, the first on");
+  eq([await page.$('#app .dhead [data-back]'),await navHidden(page)],[null,true],"no back arrow, no dock on question 1");
+  await page.tap('#app [data-asback]');await pause(page,300);
+  eq(await ev(page,"V.asd.step"),0,"Back on question 1 returns to the welcome");
+  if(!(await page.$('#app .wel')))throw new Error("no welcome after Back");
+  await page.tap('#app [data-asnext]');await pause(page,300);
+  /* The keypad, for Age. */
+  await page.tap('#as_age');await pause(page,500);
+  eq(await page.evaluate(()=>[!!document.querySelector(".kpad.on"),document.getElementById("as_age").getAttribute("inputmode")]),[true,"none"],"the app's keypad opens for Age, not the phone's keyboard");
+  await page.tap('.kpad [data-kp="done"]');await pause(page,400);
+  await page.fill('#as_height','178');await page.fill('#as_weight','84');
+  await page.tap('.kpad [data-kp="done"]').catch(()=>{});await pause(page,400);
+  await page.tap('#app [data-asnext]');await pause(page,300);
+  eq(await ev(page,"V.asd.step"),1,"age empty: no next");
+  const msg=await page.evaluate(()=>{const m=document.getElementById("as_err"),g=document.querySelector("#app .as-in").getBoundingClientRect(),r=m.getBoundingClientRect();
+    return [m.textContent,m.getAttribute("aria-live"),document.getElementById("as_age").getAttribute("aria-invalid"),document.getElementById("as_height").getAttribute("aria-invalid"),Math.round(r.top-g.bottom)<=24,!!document.querySelector(".toast")];});
+  eq(msg,["Enter your age, height and weight to go on.","polite","true",null,true,false],"the message under the fields, polite; Age marked; no toast");
+  await page.fill('#as_age','31');await pause(page,150);
+  eq(await page.evaluate(()=>[document.getElementById("as_err").textContent,document.getElementById("as_age").getAttribute("aria-invalid")]),["",null],"typed: the mark and the message go");
+  await page.tap('.kpad [data-kp="done"]').catch(()=>{});await pause(page,300);
+  await page.tap('#app [data-asnext]');await pause(page,250);
+  eq(await page.$eval('#app .as-steps li.on',e=>e.textContent),"You","the goal is still You");
+  for(let i=0;i<9;i++){await page.tap('#app [data-asnext]');await pause(page,150);}
+  eq(await page.$eval('#app .as-steps li.on',e=>e.textContent),"Your body","the last question: Your body");
+  /* The reveal: each line goes in as its call returns; the plan after the last. */
+  await page.evaluate(()=>{window.__b=[];new MutationObserver(()=>{const l=document.querySelectorAll("#app .asb-l li");
+    if(l.length&&l.length!==(window.__b[window.__b.length-1]||{}).n)window.__b.push({n:l.length,t:performance.now(),txt:l[l.length-1].textContent});
+    if(document.querySelector("#app [data-asuse]")&&!window.__done)window.__done=performance.now();}).observe(document.getElementById("app"),{childList:true,subtree:true});window.__t0=performance.now();});
+  await page.tap('#app [data-asnext]');
+  for(let i=0;i<40&&!(await page.$('#app [data-asuse]'));i++)await pause(page,150);
+  const b=await page.evaluate(()=>({b:window.__b.map(x=>Object.assign(x,{t:x.t-window.__t0})),done:window.__done-window.__t0}));
+  eq(b.b.map(x=>[x.n,x.txt]),[[1,"Choosing your split…"],[2,"Setting your weekly sets…"],[3,"Working out your calories…"],[4,"Putting your meals together…"]],"a line per engine call, in order");
+  if(!(b.done>1400&&b.done<3200))throw new Error("the build screen should last 1.5–2.5 s, took "+Math.round(b.done));
+  eq(b.b.length===4&&b.b[3].t<b.done,true,"the plan only after the last line");
+  eq(await ev(page,"[!!(V.asd.building),S.onboarded]"),[false,false],"the plan shown, nothing used yet");
+  eq(await navHidden(page),true,"no dock until the plan is used");
+  await page.tap('#app [data-asuse]');await pause(page,600);
+  eq([await ev(page,"S.onboarded"),await page.evaluate(()=>getComputedStyle(document.getElementById("nav")).visibility),!!(await page.$("#cfab .cfab"))],[true,"visible",true],"used: the dock and the coach come back");
+  eq(await ev(page,"[S.profile.age,S.profile.weight,S.body.length]"),[31,84,1],"the answers are the profile; the weight typed is the first weigh-in");
+},{db:newbie()});
+await test("First run in Arabic: the welcome switches language in place, the cards, steps and the message under the fields in Egyptian Arabic, right to left",async page=>{
+  await page.tap('#app [data-setlang="ar"]');await pause(page,500);
+  eq(await page.evaluate(()=>[document.documentElement.dir,document.querySelector('#app [data-setlang="ar"]').getAttribute("aria-pressed")]),["rtl","true"],"Arabic, from the welcome");
+  const latin=async()=>page.evaluate(()=>{const c=document.getElementById("app").cloneNode(true);c.querySelectorAll('[lang="en"],.num,bdi').forEach(e=>e.remove());return (c.textContent.match(/[A-Za-z]{2,}/g)||[]);});
+  eq(await latin(),[],"no English on the welcome but the language's own name");
+  eq(await page.$$eval('#app .wel-card h2',a=>a[1].textContent.indexOf("بالعربي")>=0),true,"the second card in Arabic");
+  await page.tap('#app [data-asnext]');await pause(page,300);
+  eq(await page.$$eval('#app .as-steps li',a=>a.map(e=>e.textContent)),["أنت","أسبوعك","جسمك"],"the three steps");
+  await page.tap('#app [data-asnext]');await pause(page,300);
+  eq(await page.$eval('#as_err',e=>e.textContent.length>0&&!/[A-Za-z]/.test(e.textContent)),true,"the message in Arabic");
+  eq(await latin(),[],"no English on the first question");
+},{db:newbie()});
+await test("First run: I have a plan already opens the copy-in and lands on Training; the Today card's Build my plan line has a quiet Not now that sets it aside for a week, changing only the card; the assessment from Coach skips the welcome",async page=>{
+  await page.tap('#app [data-welimport]');await pause(page,600);
+  eq(await ev(page,"[V.assess,V.tab,V.sheet,S.prefs.welcomed]"),[false,"train","timport","import"],"the copy-in sheet over Training");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,500);
+  eq(await page.evaluate(()=>getComputedStyle(document.getElementById("nav")).visibility),"visible","the dock is there on Training");
+  if(!(await page.$('#app [data-k="today"] [data-k="lead:setup"] [data-setuplater]')))throw new Error("no Not now on the assessment line");
+  await page.evaluate(()=>{window.__keep=[...document.querySelectorAll("#app > *")].filter(e=>!e.matches('[data-k="today"]'));});
+  await page.tap('#app [data-setuplater]');await pause(page,400);
+  eq(await page.evaluate(()=>[!!document.querySelector('#app [data-k="lead:setup"]'),window.__keep.every(e=>e.isConnected)]),[false,true],"the line set aside; nothing outside the card redrawn");
+  const wk=await page.evaluate(async()=>{const U=await import("/js/util.js"),D=await import("/js/engine/dayplan.js");return D.addDaysISO(U.today(),7);});
+  eq(await ev(page,"S.setupLater"),wk,"for a week");
+  await page.reload();await pause(page,1200);
+  eq(await ev(page,"[!!V.assess,V.tab]"),[false,"train"],"reopened: Training, not the welcome");
+  await tapTab(page,"coach");await pause(page,400);
+  await page.tap('#app [data-setup]');await pause(page,400);
+  eq([await ev(page,"V.asd.step"),!!(await page.$('#app .dhead [data-back]')),!!(await page.$('#app .wel'))],[1,true,false],"from Coach: the first question, with the way back, no welcome again");
+},{db:newbie(),init:clockAt(2026,11,5)});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

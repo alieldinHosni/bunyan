@@ -117,6 +117,15 @@ var ART={
     ["M60 20L70.6 47.4L99.9 49L77.1 67.6L84.7 96L60 80L35.3 96L42.9 67.6L20.1 49L49.4 47.4Z","a"],
     ["M60 38L65.9 53.9L82.8 54.6L69.5 65.1L74.1 81.4L60 72L45.9 81.4L50.5 65.1L37.2 54.6L54.1 53.9Z","b"]],
     e:[[100,22,1.6],[16,30,1.2],[106,90,1]]},
+  /* The first run's third card (views/assess.js welcome): a phone with a padlock on its
+     screen, for "everything stays on this phone". */
+  phone:{vb:"0 0 120 140",s:[
+    ["M44 10H76A10 10 0 0 1 86 20V120A10 10 0 0 1 76 130H44A10 10 0 0 1 34 120V20A10 10 0 0 1 44 10Z","a"],
+    ["M54 20H66M56 120H64","b"],
+    ["M48 70H72A3 3 0 0 1 75 73V92A3 3 0 0 1 72 95H48A3 3 0 0 1 45 92V73A3 3 0 0 1 48 70Z","a"],
+    ["M52 70V62A8 8 0 0 1 68 62V70","a"],
+    ["M60 80V86","b"]],
+    e:[[100,30,1.6],[18,52,1.2],[104,104,1.1]]},
   /* Build a meal: a plate between a fork and a knife, steam over it. */
   plate:{vb:"0 0 160 120",s:[
     ["M40 70A40 40 0 1 0 120 70A40 40 0 1 0 40 70","a"],

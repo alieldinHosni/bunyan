@@ -22,7 +22,7 @@ import {pushNav, resetNav} from "../nav.js";
 import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
-import {draftFrom, FOCUS_MAX, foodPrefs, gearOf, KIT, profileOf, skipOf, STEPS, youOk, youWhy} from "../views/assess.js";
+import {buildLine, draftFrom, FOCUS_MAX, foodPrefs, gearOf, KIT, profileOf, skipOf, stageRun, STAGES, STEPS, youBad, youOk, youWhy} from "../views/assess.js";
 import {EXTRA_MAX, EXTRA_OK, GOALS, goalsOf} from "../../data/goals.js";
 import {lastMonth, monthlyNow, monthlyOpen} from "../../engine/monthly.js";
 import {focusMuscles} from "../../data/parts.js";
@@ -81,6 +81,26 @@ function useAssessment(){
   S.onboarded=true;A.done=true;saveDB();render();window.scrollTo(0,0);
   toast(t("Your plan is in: training and meals."),function(){
     keys.forEach(function(k){S[k]=before[k];});A.done=false;saveDB();render();});}
+/* The first run's reveal (docs/NEXT-PHASE.md WP-6 item 5): after the last question, the
+   work "Use this plan" stands on is done one engine call at a time (views/assess.js
+   STAGES), and each call's line is put in when it returns, then the plan. A short beat
+   between calls lets each line be read; no line is shown before its work is done, and the
+   plan only once all of it is. Leaving the assessment stops it. Only the element that
+   changes is touched: each line goes into the list. */
+var BEAT=450;
+function firstBuild(a){
+  a.building=[];render();window.scrollTo(0,0);
+  var o={},i=0,live=function(){return V.assess&&V.asd===a&&!!a.building;};
+  var finish=function(){if(!live())return;a.building=null;render();window.scrollTo(0,0);
+    if(!FOODDB)loadFoods(function(){render();});};
+  var go=function(){
+    if(!live())return;
+    if(STAGES[i][0]==="meals"&&!FOODDB&&!a.fwait){a.fwait=1;loadFoods(go);return;}
+    try{stageRun(a,i,o);}catch(e){a.building=null;render();return;}
+    a.building.push(i);
+    var ul=document.querySelector("#app .asb-l");if(ul)ul.insertAdjacentHTML("beforeend",buildLine(i));
+    i++;setTimeout(i<STAGES.length?go:finish,BEAT);};
+  requestAnimationFrame(function(){setTimeout(go,60);});}
 /* The plan check's fixes. Each one is what the finding offered, with Undo. A fix done
    here (targets, protein, carbs, the goal, the volume) always settles its card: if
    something is still off afterwards (a muscle that would need longer sessions), what
@@ -231,7 +251,16 @@ function openMealPlan(prefs){
 ACT.smartoff=function(){smartStop().then(function(){toast(t("Smart coach off. The download is removed."));});};
 function register(){
   /* The assessment, from Explore, Home or Profile: a fresh draft from what is saved. */
-  key("setup",function(){if(V.sheet)closeSheet();pushNav();V.assess=true;V.asd=draftFrom();render();window.scrollTo(0,0);return;});
+  key("setup",function(){if(V.sheet)closeSheet();pushNav();V.assess=true;V.asd=draftFrom();
+    /* Not set up, and the welcome already seen: straight to the first question. */
+    if(!S.onboarded&&S.prefs.welcomed)V.asd.step=1;
+    render();window.scrollTo(0,0);return;});
+  /* The welcome's cards: the dot of the one in view (only the dots change). */
+  document.addEventListener("scroll",function(ev){var el=ev.target;
+    if(!el||!el.classList||!el.classList.contains("wel-track"))return;
+    var w=el.clientWidth||1,i=Math.round(Math.abs(el.scrollLeft)/w);
+    if(i===V.welAt)return;V.welAt=i;
+    [].forEach.call(document.querySelectorAll("#app .wel-dots i"),function(d,k){d.classList.toggle("on",k===i);});},true);
   on(function(D){return D.as!==undefined&&V.asd;},function(D){var ap=D.as.split("|"),af=ap[0],av=ap[1];
     V.asd[af]=/^(days|mins|meals|sleep)$/.test(af)?num(av):af==="powder"?av==="1":av;
     /* A number of days other than the fixed days picked lets the fixed days go. */
@@ -278,10 +307,24 @@ function register(){
     if(f==="wd"||f==="nolift"||f==="focus"||f==="goals2")V.asd.split=null;
     render();return;});
   on(function(D){return D.asnext&&V.asd;},function(){
-    if(STEPS[V.asd.step]==="you"&&!youOk(V.asd)){toast(youWhy(V.asd));return;}
-    V.asd.step=Math.min(STEPS.length-1,V.asd.step+1);render();window.scrollTo(0,0);
-    if(STEPS[V.asd.step]==="result"&&!FOODDB)loadFoods(function(){render();});
+    var a=V.asd;
+    /* Leaving the first run's welcome for the questions: a reopened app starts on them. */
+    if(STEPS[a.step]==="intro"){V.welAt=0;if(!S.onboarded&&!S.prefs.welcomed){S.prefs.welcomed="plan";saveDB();}}
+    /* What stops Next is said under the fields it is about, and they are marked (WP-6
+       item 3). Nothing is focused for them: the keypad would cover what was said. */
+    if(STEPS[a.step]==="you"&&!youOk(a)){a.err=youWhy(a);a.bad=youBad(a);render();return;}
+    a.err="";a.bad=[];
+    a.step=Math.min(STEPS.length-1,a.step+1);
+    if(STEPS[a.step]==="result"&&!S.onboarded&&!a.done){firstBuild(a);return;}
+    render();window.scrollTo(0,0);
+    if(STEPS[a.step]==="result"&&!FOODDB)loadFoods(function(){render();});
     return;});
+  /* The welcome's other way on: a plan of their own, copied in (views/timport.js). */
+  key("welimport",function(){S.prefs.welcomed="import";saveDB();V.assess=false;V.asd=null;resetNav();V.tab="train";V.train="days";V.tdate=null;
+    render();window.scrollTo(0,0);V.tp=null;V.tierr="";V.tibusy=false;openSheet("timport");return;});
+  /* Not set up, on the Today card: set aside for a week (todayPlan); Coach keeps it. */
+  key("setuplater",function(){var b=S.setupLater;S.setupLater=addDaysISO(today(),7);saveDB();render();
+    toast(t("Set aside for a week. The assessment is in Coach any time."),function(){if(b)S.setupLater=b;else delete S.setupLater;saveDB();render();});return;});
   on(function(D){return D.asback&&V.asd;},function(){V.asd.step=Math.max(0,V.asd.step-1);render();window.scrollTo(0,0);return;});
   on(function(D){return D.assplit&&V.asd;},function(D){V.asd.split=D.assplit;render();return;});
   key("asuse",function(){useAssessment();return;});

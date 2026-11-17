@@ -367,7 +367,10 @@ window.addEventListener("storage",function(ev){
 /* Reopened mid-workout (a reload, or iOS having reclaimed the tab): straight back to
    the exercise and the rest that were on screen, not to Home. */
 if(S.active){restoreWorkoutState();W.resumeHold();syncDraft();bootDraft=JSON.stringify(V.draft);V.tab="train";V.train="days";}
-if(!S.onboarded){V.tab="coach";V.assess=true;V.asd=draftFrom();}
+/* Not set up: the first run's welcome, or its first question once the welcome has been
+   left for it. Someone who chose to copy in a plan of their own opens on Training, where
+   the Today card offers the assessment. */
+if(!S.onboarded&&(S.prefs||{}).welcomed!=="import"){V.tab="coach";V.assess=true;V.asd=draftFrom();if(S.prefs.welcomed)V.asd.step=1;}
 render();
 
 if("serviceWorker" in navigator){
