@@ -166,7 +166,7 @@ function vFoodToday(dsel){
      (js/ui/bodyneeds.js): one slim card, or none. */
   if(dsel===today())h+=bodyNeeds(e);
   var ids=dayMeals(dsel),next=nextMeal(dsel),n=ids.length;
-  h+='<div class="tsec"><h2 class="tsec-h">'+t(dsel===today()?"Today's Meals":"Meals")+'</h2>'
+  h+='<div class="tsec"><h2 class="tsec-h">'+t(dsel===today()?"Today's meals":"Meals")+'</h2>'
    +'<button class="tlink" data-openday="'+dsel+'">'+t("Day details")+'</button></div>';
   h+='<div class="fmt" style="--cols:'+(n<=4?n:n<=6?3:4)+'">';
   ids.forEach(function(id){
