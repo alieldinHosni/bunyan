@@ -6565,7 +6565,7 @@ await test("Coach page: this week's strip agrees with Training's week; the ask b
   await page.touchscreen.tap(bb.x+bb.width/2,bb.y+bb.height/2);await pause(page,500);
   eq(await ev(page,"[V.tab,!!V.coach]"),["coach",false],"back to the Coach page");
   await pause(page,600);
-  if(!(await page.$('.crow[data-setup]')))throw new Error("no way to take the assessment again");
+  if(!(await page.$('.sg-list [data-setup]')))throw new Error("no way to take the assessment again");
   await tapTab(page,"train");await pause(page,300);
   await page.tap('.pgc [data-tplan="program"]');await pause(page,400);
   eq(await ev(page,"[V.tab,V.train,V.tplan]"),["train","plan","program"],"Training's card: the program");

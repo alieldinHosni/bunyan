@@ -67,7 +67,7 @@ function coachList(){
      +'<button class="btn g sm" data-stressask="1">'+esc(t("Better now?"))+'</button></div>';}
   if(kept)rows+='<div class="srow pcagain">'+row("archive",t("Advice you set aside"),t(kept===1?"1 item. It comes back if your numbers change.":"{n} items. They come back if your numbers change.").replace("{n}",kept))
      +'<button class="btn g sm" data-pcreset="1">'+esc(t("Show again"))+'</button></div>';
-  rows+='<button class="srow crow" data-setup="1">'+row("restore",t("Take the assessment again"),t("Rebuilds your training and meals. You see both first."))+'<span class="ico ico-chev" aria-hidden="true"></span></button>'
+  rows+='<button class="srow" data-setup="1">'+row("restore",t("Take the assessment again"),t("Rebuilds your training and meals. You see both first."))+'<span class="ico ico-chev" aria-hidden="true"></span></button>'
    +'<button class="srow" data-sheet="coachinfo">'+row("info",t("How the coach works"),"")+'<span class="ico ico-chev" aria-hidden="true"></span></button>';
   return '<div class="tsec"><h2 class="tsec-h">'+t("Your coach")+'</h2></div><section class="sg cmore"><div class="sg-list">'+rows+'</div></section>';}
 
@@ -77,7 +77,7 @@ function coachList(){
 /* Questions that ask at once. Asking anything else is the floating Coach button beside
    the dock: no second box here that opens the same chat (owner, 3 Nov). */
 function askBox(){
-  return '<section class="cask" aria-label="'+esc(t("Ask your coach"))+'"><span class="shk">'+esc(t("Ask your coach"))+'</span>'
+  return '<section class="cask" aria-label="'+esc(t("Ask your coach"))+'"><h2 class="tsec-h">'+esc(t("Ask your coach"))+'</h2>'
    +'<div class="cask-q">'+suggestFor("coach").map(function(id){
      return '<button class="cp-chip" data-chatq="'+id+'">'+esc(t(ASK[id]))+'</button>';}).join("")+'</div></section>';}
 
