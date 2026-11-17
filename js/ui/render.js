@@ -2,7 +2,7 @@
    The single render entry point. */
 import {applyLang} from "../i18n/exnames.js";
 import {isolateNums} from "../i18n/bidi.js";
-import {t} from "../i18n/dict.js";
+import {arabicReady, loadArabic, t} from "../i18n/dict.js";
 import {vFood} from "./views/food.js";
 import {vCoach} from "./views/coach.js";
 import {vAssess} from "./views/assess.js";
@@ -166,6 +166,9 @@ function sheetLeave(sheetEl){
   sheetEl.parentNode.insertBefore(g,sheetEl.nextSibling);
   setTimeout(function(){g.remove();},420);}
 function render(){
+  /* Arabic: the dictionary loads on demand (WP-9). Nothing is drawn until it is in, so an
+     Arabic user never sees an English frame; the call that waited draws once it lands. */
+  if(S.prefs&&S.prefs.lang==="ar"&&!arabicReady()){loadArabic().then(render);return;}
   if(syncWorkoutState())saveDB();
   applyLook();
   applyLang();

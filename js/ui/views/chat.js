@@ -13,7 +13,7 @@
    An answer is in the language the question was asked in, whatever the app is set to:
    Arabic letters (or Egyptian Arabic typed in Latin letters) get Arabic, English gets
    English. A tapped suggestion follows the conversation. */
-import {t, tm} from "../../i18n/dict.js";
+import {loadArabic, t, tm} from "../../i18n/dict.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {goalOf} from "../../data/goals.js";
 import {actInfo, isActivity} from "../../data/activities.js";
@@ -133,6 +133,9 @@ function noTags(s){return String(s||"").replace(/<[^>]+>/g,"");}
 /* Run fn as if the app were in language l: t(), exercise and plan names and dates all
    follow S.prefs.lang, so an Arabic question gets an Arabic answer in the English app.
    Nothing is saved meanwhile, and the language is always put back. */
+/* An Arabic question gets an Arabic answer in the English app, so the Arabic dictionary
+   (js/i18n/ar.js, WP-9) is brought in once the first screen is up, when the phone is idle. */
+(window.requestIdleCallback||function(f){return setTimeout(f,2000);})(function(){loadArabic();});
 function uiLang(){return S.prefs&&S.prefs.lang==="ar"?"ar":"en";}
 function withLang(l,fn){
   var was=uiLang();if(!l||l===was)return fn();
