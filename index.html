@@ -3905,8 +3905,9 @@ textarea.afnl.warn{border-color:var(--warning)}
 .pgph:focus-visible,.pgaddph:focus-within{outline:2px solid var(--accentHi);outline-offset:2px}
 /* Section labels: the frames' small grey capitals, with an action or note opposite. */
 .pglbl{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:var(--s5) 0 var(--s3);min-height:24px}
-.pglbl h2{font-family:inherit;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--sub);margin:0}
+/* A section header: sentence case, 17 px, bold (WP-7). The small-caps label is kept only
+   as the eyebrow inside a card. */
+.pglbl h2{font-family:var(--display);font-size:17px;font-weight:800;color:var(--text);margin:0}
 /* Words straight on the ground (a section's name, its link, a line under a list) stand
    over the page's picture: a halo of the ground's own colour keeps them readable over a
    bright sky (owner, 10 Nov: "can't be seen due to the contrast"). */
@@ -3936,7 +3937,9 @@ textarea.afnl.warn{border-color:var(--warning)}
 .pgstat-d{font-size:12.5px;color:var(--dim);margin-top:6px}
 .pgd{font-variant-numeric:tabular-nums;color:var(--dim)}
 .pgd.ok{color:var(--ok)}
-.pgcard{background:var(--raised);border:1px solid var(--border);border-radius:var(--r3);padding:20px;margin-bottom:var(--s3)}
+/* Progress's card is the design system's card (docs/DESIGN-SYSTEM.md, WP-7): radius --r4,
+   padding and the gap below it --s4. */
+.pgcard{background:var(--raised);border:1px solid var(--border);border-radius:var(--r4);padding:var(--s4);margin-bottom:var(--s4)}
 .pgcard>.btn{margin-top:14px}
 .pgcard-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .pgcard-h h3{font-size:16px;margin:0}
@@ -3979,8 +3982,8 @@ textarea.afnl.warn{border-color:var(--warning)}
 /* Share of working sets by muscle group. */
 .pgshare-r{display:grid;grid-template-columns:minmax(0,7.5em) 1fr 3em;align-items:center;gap:12px;min-height:32px}
 .pgshare-r>span{font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pgshare-r .bar{height:8px;margin:0;background:var(--surface);border-radius:4px}
-.pgshare-r .bar i{height:8px;border-radius:4px;background:var(--accent)}
+.pgshare-r .bar{height:8px;margin:0;background:var(--surface);border-radius:var(--rpill)}
+.pgshare-r .bar i{height:8px;border-radius:var(--rpill);background:var(--accent)}
 .pgshare-r b{text-align:end;font-size:13.5px;font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums}
 /* Body. */
 .pgwhead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
@@ -4001,8 +4004,8 @@ textarea.afnl.warn{border-color:var(--warning)}
 .pgcomp{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .pgcomp-e{text-align:end}
 .pgcomp-v{font-family:var(--display);font-size:30px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
-.pgtrack{height:10px;border-radius:5px;background:var(--surface);overflow:hidden;margin-top:14px}
-.pgtrack i{display:block;height:100%;border-radius:5px;background:var(--accent)}
+.pgtrack{height:10px;border-radius:var(--rpill);background:var(--surface);overflow:hidden;margin-top:14px}
+.pgtrack i{display:block;height:100%;border-radius:var(--rpill);background:var(--accent)}
 .pgtrack.sm{height:5px;margin-top:10px}
 .pgtrack.c i{background:var(--text)}
 .pgtrack.f i{background:var(--dim)}
@@ -4127,7 +4130,7 @@ textarea.afnl.warn{border-color:var(--warning)}
   transition:transform var(--m-press) var(--e-standard)}
 .pgex.on{border-color:var(--accent-edge)}
 :root:not(.tch) .pgex:active,.pgex.tapd{transform:scale(.98)}
-.pgex .thumbwrap,.pgex .thumb.ph,.pgex img.thumb{border-radius:12px;flex-shrink:0}
+.pgex .thumbwrap,.pgex .thumb.ph,.pgex img.thumb{border-radius:var(--r2);flex-shrink:0}
 .pgex-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .pgex-n{font-weight:700;font-size:15px;overflow-wrap:anywhere}
 .pgex-s{font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums}
@@ -5496,7 +5499,7 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .pgbody{display:grid;justify-items:center;gap:8px;margin:2px 0 14px}
 .pgbody .bmap{max-width:240px}
 .pgbody-k{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
-.pgbody-k i{width:96px;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--bar-track),rgba(var(--accent-rgb),.38),var(--accent))}
+.pgbody-k i{width:96px;height:6px;border-radius:var(--rpill);background:linear-gradient(90deg,var(--bar-track),rgba(var(--accent-rgb),.38),var(--accent))}
 [dir="rtl"] .pgbody-k i{transform:scaleX(-1)}
 .exd-facts{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--border);border-radius:var(--r4);background:var(--raised);overflow:hidden;margin-bottom:20px}
 .exd-facts>div{display:flex;flex-direction:column;gap:3px;padding:12px 14px;min-width:0}
@@ -5645,7 +5648,7 @@ body.noanim .run-map .now-r,body.noanim .run-gps::before{animation:none}
 .pgms-s.off circle{stroke:var(--border)}
 .pgms-s.off text{fill:var(--dim)}
 @keyframes msShine{0%{transform:scale(.6) rotate(-20deg);opacity:0}60%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:none}}
-.pgms-c.fresh .pgms-s{animation:msShine var(--m-reveal,600ms) var(--e-spring) both}
+.pgms-c.fresh .pgms-s{animation:msShine var(--m-reveal) var(--e-spring) both}
 /* The month in review, a way in and the page itself. */
 .pgrecap{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;gap:var(--s3);width:100%;min-height:76px;
   padding:var(--s3) var(--s4);margin:var(--s3) 0;border-radius:var(--r3);border:1px solid rgba(var(--gold-rgb),.35);
@@ -6418,6 +6421,9 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
 :where(#app,.stillcopy) :is(.card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.fneed,.ffuel,.pmeal,.plsum,.plstart,.pcquiet,.tgcard,.ptile,.tgoffer,.tgfold,.bsched,.pgc,.pgstat,.pgmac,.sg-list,.pid,
   .chat-a,.chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.cweek2,.crow,.cask-in){background-color:var(--card-fill)}
 :where(#app,.stillcopy) :is(.btn.g,.seg,.hbtn:not(.havatar),.iconbtn){background-color:color-mix(in srgb,var(--glass-btn),var(--raised) 40%)}
+/* In the light looks a secondary button on a card is white on white, its white rim lost:
+   it read as plain text (seen 17 Nov, Progress's Apply). The accent's own edge shows it. */
+[data-theme="light"] :where(#app,.stillcopy) .btn.g{border-color:var(--accent-edge)}
 /* The primary action, lit from above. At a plain .btn's weight (:where adds none), so a
    button that is given its own fill (a delete's red, a sheet's own) keeps it. */
 .pill.a,.seg-ind,.btn.fadd,.btn.ss-next{
