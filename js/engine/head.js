@@ -79,6 +79,7 @@ import {offPlanLight} from "./blocks.js";
 import {followDue, followOn, lightOnPurpose} from "./stress.js";
 import {missedNow} from "./missed.js";
 import {bodyNeedsOf} from "./needs.js";
+import {dayFuel, leftOf} from "./dayfuel.js";
 import {sumNutrition} from "./intake.js";
 import {weeklyVolume} from "../coach/volume.js";
 import {addDaysISO, planOn} from "./dayplan.js";
@@ -88,7 +89,7 @@ import {EXDB, muscleOf, secondaryOf} from "../data/exercises.js";
 import {isActivity} from "../data/activities.js";
 import {t} from "../i18n/dict.js";
 import {dataRev, S, split} from "../state.js";
-import {num, today} from "../util.js";
+import {fmtN, num, today} from "../util.js";
 
 var PAGES=["train","food","coach","progress"];
 var HOUSE=20,ADHERE=40,RECOVER=80;
@@ -378,7 +379,11 @@ function headWhy(id){
      light    the lighter week running ({until, planned}); travel ({until}) likewise
      food     the day's targets the plan sets ({kcal, p}) and what is left of them after
               what is logged that day ({kLeft, pLeft}, never below 0; pLeft null with no
-              protein target); null with no calorie target
+              protein target); null with no calorie target. Today, also the day's fuel
+              (js/engine/dayfuel.js, WP-5): notes, the lead note (note) and its sentence
+              (line, fuelLine), and usual (the minute the person usually starts, or
+              null). The one wording Food, the Today card, the finish page and the coach
+              say. It changes no target: the same kcal and p on every day
    Never more than two prompt cards on the page: other and house. */
 var LEAD=60;
 function nextSession(sp,iso){
@@ -398,8 +403,25 @@ function foodOn(iso,g){
   if(!(num(g.kcal)>0))return null;
   var r=(S.days||{})[iso]||{},items=[];
   Object.keys(r.meals||{}).forEach(function(k){items=items.concat((r.meals[k]&&r.meals[k].items)||[]);});
-  var e=sumNutrition(items),p=num(g.p)||null;
-  return {kcal:num(g.kcal),p:p,kLeft:Math.max(0,Math.round(num(g.kcal)-e.kcal)),pLeft:p?Math.max(0,Math.round(p-e.p)):null};}
+  var e=sumNutrition(items),p=num(g.p)||null,l=leftOf(g,e);
+  return {kcal:num(g.kcal),p:p,kLeft:l.kcal,pLeft:l.p,eaten:e,water:num(r.water),notes:[],note:null,line:null,usual:null};}
+/* The day's fuel on the food of today (WP-5): what dayFuel says for the day as todayPlan
+   reads it. The behind note is Food's body needs as the head keeps it (needs-today). */
+var FUELPLAN={train:"train",light:"train",done:"done",rest:"rest"};
+function fuelOn(f,state){
+  if(!f)return f;
+  var ns=headOn("food").filter(function(s){return s.id==="needs-today";})[0];
+  var d=dayFuel(new Date(),{plan:FUELPLAN[state]||"other",sessions:S.sessions||[],goals:S.goals||{},eaten:f.eaten,water:f.water,days:S.days||{},
+    needs:ns?ns.src:null});
+  f.notes=d.notes;f.note=d.notes[0]||null;f.line=f.note?fuelLine(f.note):null;f.usual=d.usual;f.usualN=d.usualN;
+  return f;}
+/* A note's sentence, in the language of the app. Figures go in as they are; a page puts
+   them in .num. */
+function fuelLine(n){
+  if(!n)return "";
+  var s=t(n.key),v=n.vars||{};
+  Object.keys(v).forEach(function(k){s=s.split("{"+k+"}").join(k==="k"?fmtN(v[k]):String(v[k]));});
+  return s;}
 function todayPlan(iso){
   var now=today();iso=iso||now;
   var isNow=iso===now,sp=split(),g=S.goals||{};
@@ -426,6 +448,7 @@ function todayPlan(iso){
   var on=h.queue.filter(function(s){return s.id==="deload-on";})[0];
   if(on)r.light={until:on.src.until,planned:!!on.src.planned};
   var tv=S.travel;if(tv&&tv.until&&now<=tv.until)r.travel={until:tv.until};
+  if(isNow)fuelOn(r.food,r.state);
   var l=h.lead;r.lead=l&&l.pri>=LEAD&&l.id!=="deload-on"?l:null;
   /* What may be said, in order; the first is the card's line, the next its one other card. */
   var says=[];
@@ -441,5 +464,5 @@ function todayPlan(iso){
   else r.other=says[0]||null;
   return r;}
 
-export {COACH, CHECKIN, decide, headFor, headFresh, headNow, headOn, headWhy, isLighter, MONTHLY, pickLead, PLAN, planMapping, rank, ruleCalories,
+export {COACH, CHECKIN, decide, fuelLine, headFor, headFresh, headNow, headOn, headWhy, isLighter, MONTHLY, pickLead, PLAN, planMapping, rank, ruleCalories,
   ruleDeficit, ruleHousekeeping, ruleLighter, ruleMissed, ruleRecovery, ruleSaidOnce, todayPlan};

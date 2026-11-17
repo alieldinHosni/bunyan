@@ -352,7 +352,8 @@ var E=[
  a:[["Before long or hard training, carbs refill the stores used overnight; quick, easy-to-digest carbs suit the last bit before you start.",
      "قبل التمرين الطويل أو الجامد، الكارب بيعوض المخزون اللي اتصرف بالليل؛ والكارب السريع السهل الهضم مناسب في آخر وقت قبل ما تبدأ."],
     ["Drink too: about 400 to 600 ml in the 20 to 30 minutes before you start.","واشرب كمان: حوالي 400 لـ 600 مل في الـ 20 لـ 30 دقيقة قبل ما تبدأ."],
-    {n:["The textbooks give no exact time to eat before training, so I won't set one.","الكتب مش بتحدد وقت معين للأكل قبل التمرين، فمش هحدد."]}],
+    {n:["The textbooks give no exact time to eat before training, so I won't set one.","الكتب مش بتحدد وقت معين للأكل قبل التمرين، فمش هحدد."]},
+    {mine:1}],
  src:["nutrition-principles:carbohydrate · timing","nutrition-principles:carbohydrate · blood sugar","nutrition-principles:hydration · protocol"]},
 
 {id:"post-workout",group:"food",title:["Eating after training","الأكل بعد التمرين"],glyph:"shaker",
@@ -363,7 +364,8 @@ var E=[
  a:[["Carbs with protein after training help muscle building, recovery and refilling glycogen.","كارب مع بروتين بعد التمرين بيساعدوا في بناء العضل والاستشفاء وتعويض الجلايكوجين."],
     ["The old 30-to-45-minute window is outdated: the training stimulus lasts 24 to 48 hours, so the window is a day or more. There is still no benefit in putting the meal off, especially if it cuts the day's protein.",
      "فكرة الـ 30 لـ 45 دقيقة قديمة: تأثير التمرين بيستمر من 24 لـ 48 ساعة، يعني الفرصة يوم أو أكتر. بس برضه مفيش فايدة إنك تأخر الأكل، خصوصاً لو هيقلل بروتين اليوم."],
-    ["Drink back what you sweated: about 1.25 times the weight lost.","واشرب اللي عرقته: حوالي 1.25 مرة الوزن اللي نزل."]],
+    ["Drink back what you sweated: about 1.25 times the weight lost.","واشرب اللي عرقته: حوالي 1.25 مرة الوزن اللي نزل."],
+    {mine:1}],
  src:["nutrition-principles:carbohydrate · timing","nutrition-principles:goal strategies · muscle gain","nutrition-principles:hydration · protocol"]},
 
 {id:"meals",group:"food",title:["Meals and protein through the day","الوجبات والبروتين على مدار اليوم"],glyph:"bowl",
