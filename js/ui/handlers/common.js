@@ -22,7 +22,7 @@ import {pushNav, resetNav} from "../nav.js";
 import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
-import {ask} from "../views/chat.js";
+import {loadChat} from "../chatload.js";
 import {loadFoods} from "../../engine/nutrition.js";
 import {toEnd} from "../coachfab.js";
 import {run as runSmart} from "../smartcoach.js";
@@ -134,8 +134,8 @@ function chatSend(){
 /* A request sent as if typed: from the box, or from an answer's button that asks for
    something (data-chatsay), shown as that button's words. */
 function sendText(q,from,shown){
-  loadFoods(function(){
-    var m=ask(q);if(m&&!m.tap&&shown)m.q=shown;
+  loadChat().then(function(c){loadFoods(function(){
+    var m=c.ask(q);if(m&&!m.tap&&shown)m.q=shown;
     /* "yes" or "no" to a change waiting for a tap: that tap. */
     if(m&&m.tap){dispatchTap(m.tap,document.createElement("button"),{},{typingAsk:false});return;}
     /* Something to do at once: it runs, and its row says it was done. */
@@ -143,7 +143,7 @@ function sendText(q,from,shown){
       dispatchTap({agrun:String(m.at)},document.createElement("button"),{},{typingAsk:false});return;}
     saveDB();render();land(from);toEnd();
     /* No rule for it: the smart coach writes the answer into its row. */
-    if(m&&m.pending)runSmart(m,saveDB,function(){render();toEnd();});});}
+    if(m&&m.pending)runSmart(m,saveDB,function(){render();toEnd();});});});}
 function chatEnd(){
   requestAnimationFrame(function(){
     var qs=document.querySelectorAll(".chat-q"),q=qs[qs.length-1];

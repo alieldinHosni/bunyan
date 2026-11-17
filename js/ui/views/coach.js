@@ -27,14 +27,16 @@ import {V} from "../view.js";
 import {art} from "../art.js";
 import {glyph} from "../glyphs.js";
 import {signalCard} from "./pcheck.js";
-import {ASK, vChat} from "./chat.js";
+import {ASK} from "../ask.js";
+import {chat, wanted} from "../chatload.js";
 import {suggestFor} from "../coachfab.js";
 import {headOn} from "../../engine/head.js";
 import {followDue, followOn, lightOnPurpose} from "../../engine/stress.js";
 
 function vCoach(){
   /* The conversation, under anything an answer opened over it. */
-  if(V.chat)return vChat();
+  /* The chat loads on demand (js/ui/chatload.js): until it is in, nothing, then it. */
+  if(V.chat){var c=chat();if(!c){wanted();return '';}return c.vChat();}
   var p=S.profile||{},sp=split(),h='';
   if(!S.onboarded){
     h+='<div class="thead"><div><h1>'+t("Coach")+'</h1></div></div>';

@@ -19,7 +19,7 @@ import {addDays, weekStartOf} from "../engine/schedule.js";
 import {V} from "./view.js";
 import {glyph} from "./glyphs.js";
 import {patch, replace} from "./patch.js";
-import {ASK, askNext, bubble, chatShown, histLink, liveAt, pruneChat, warmCoach} from "./views/chat.js";
+import {chat, idleChat, loadChat} from "./chatload.js";
 
 /* What to offer first, by where it was opened. Only questions the coach answers. */
 var SUGGEST={train:["today","weights","tomorrow"],workout:["busy","weights","sore"],food:["rest","eat","protein"],
@@ -53,7 +53,7 @@ function fabHtml(){
 
 /* ---- the panel ------------------------------------------------------------------------ */
 function panelHtml(){
-  var full=V.coach==="full",log=chatShown();
+  var c=chat(),full=V.coach==="full",log=c.chatShown();
   /* Every exchange is in the panel and scrolls, compact or full height: a new one is one
      more row and nothing before it is rebuilt (js/ui/patch.js keys them). Compact opens
      on the newest; full height is the same conversation, taller. */
@@ -68,16 +68,16 @@ function panelHtml(){
    +(full?'<svg class="gl" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 4.5v5h-5M14.5 19.5v-5h5"/></svg>'
          :'<svg class="gl" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4.5h5.5V10M10 19.5H4.5V14"/></svg>')+'</button>'
    +'<button class="cp-ib" data-coachclose="1" aria-label="'+esc(t("Close"))+'">'+glyph("close")+'</button></header>'
-   +'<div class="cp-b" id="cpB" role="log" aria-live="polite">'+histLink();
+   +'<div class="cp-b" id="cpB" role="log" aria-live="polite">'+c.histLink();
   if(!log.length)h+='<p class="cp-hi">'+esc(t("Ask about training, food or progress"))+'</p>';
   else{
-    log.forEach(function(m,i){h+=bubble(m,liveAt(log,i),i<log.length-1);});}
+    log.forEach(function(m,i){h+=c.bubble(m,c.liveAt(log,i),i<log.length-1);});}
   /* What to ask: for where it was opened, then, after an answer, what follows from it,
      in the conversation's language. */
   var last=log[log.length-1];
-  if(last)h+=askNext(last,log.length);
+  if(last)h+=c.askNext(last,log.length);
   else h+='<div class="cp-sug">'+suggestFor(where()).map(function(id){
-    return '<button class="cp-chip" data-chatq="'+id+'">'+esc(t(ASK[id]))+'</button>';}).join("")+'</div>';
+    return '<button class="cp-chip" data-chatq="'+id+'">'+esc(t(c.ASK[id]))+'</button>';}).join("")+'</div>';
   h+='</div><div class="cp-f"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'
    +esc(t("Ask a question"))+'" aria-label="'+esc(t("Ask a question"))+'">'
    +'<button class="cp-send" data-chatsend="1" aria-label="'+esc(t("Ask"))+'">'+glyph("send")+'</button></div></section>';
@@ -100,18 +100,21 @@ function syncCoach(){
   document.body.classList.toggle("cfab-on",show);
   var mode=V.coach||null;
   if(!mode){if(pan.firstChild&&!pan.classList.contains("closing"))pan.textContent="";lastMode=null;pan.hidden=true;return;}
+  /* The chat loads on demand (js/ui/chatload.js): opened before it is in, the panel
+     waits for it, once, and opens as it always does. */
+  if(!chat()){loadChat().then(syncCoach);return;}
   pan.hidden=false;
   var html=panelHtml();if(rtl)html=isolateNums(html);
   var opening=lastMode===null,resized=lastMode&&lastMode!==mode;
   /* A day-old conversation is gone when the panel opens (what the person asked the coach
      to remember is kept apart, in S.context). */
-  if(opening){openKey=routeKey();if(pruneChat()){saveDB();html=panelHtml();if(rtl)html=isolateNums(html);}}
+  if(opening){openKey=routeKey();if(chat().pruneChat()){saveDB();html=panelHtml();if(rtl)html=isolateNums(html);}}
   /* Smaller or bigger: the panel grows or shrinks from where it was to where it is
      going (measured before and after, then played back), rather than jumping and
      fading in. With the keyboard up or not, it is the same two boxes. */
   /* The first exchange takes the compact box from the welcome's height to the
      conversation's: that one change glides too (flip), rather than jumping. */
-  var cp0=pan.querySelector(".cp"),grow=!opening&&!resized&&cp0&&!cp0.classList.contains("has-log")&&chatShown().length>0;
+  var cp0=pan.querySelector(".cp"),grow=!opening&&!resized&&cp0&&!cp0.classList.contains("has-log")&&chat().chatShown().length>0;
   var was=(resized||grow)&&cp0,r0=was?was.getBoundingClientRect():null;
   /* Typing when it is resized: the field, what is in it and the keyboard stay (owner,
      28 Oct: maximised with the keyboard up, the rebuild dropped the keyboard halfway
@@ -192,17 +195,18 @@ var GROW_AFTER=480,slowGrow=false,growT=0;
 function touchPhone(){try{return matchMedia("(pointer: coarse)").matches;}catch(e){return false;}}
 function bindPanel(grow){
   var pan=document.getElementById("cpanel");if(!pan)return;
-  warmCoach();
+  idleChat();
   pan.addEventListener("focusin",function(e){
     if(!grow||!e.target||e.target.id!=="chatq"||V.coach!=="compact"||!touchPhone())return;
     clearTimeout(growT);
-    var sent0=chatShown().length;
+    if(!chat())return;
+    var sent0=chat().chatShown().length;
     growT=setTimeout(function(){
       var q=document.getElementById("chatq");
       if(V.coach!=="compact"||!q||document.activeElement!==q)return;
       /* Sent already, before the keyboard was even up: the answer is the thing to see,
          and the panel stays as it is under it. */
-      if(chatShown().length!==sent0)return;
+      if(chat().chatShown().length!==sent0)return;
       /* Already sent: the message is flying into the conversation, or the answer is on
          its way. The panel does not move under it. */
       if(document.querySelector("#cpanel .chat-ghost,#cpanel .chat-typing,.chat-ghost"))return;
