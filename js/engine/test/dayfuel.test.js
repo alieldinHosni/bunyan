@@ -4,7 +4,7 @@ import {aboutTime, afterNote, beforeNote, dayFuel, hhmm, leftOf, restNote, usual
 import fs from "node:fs";
 import {FAQ, FAQ_AR} from "../../data/faq.js";
 
-var DICT=fs.readFileSync(new URL("../../i18n/dict.js",import.meta.url),"utf8");
+var DICT=fs.readFileSync(new URL("../../i18n/ar.js",import.meta.url),"utf8");
 function hasAr(k){var q=JSON.stringify(k);return !!FAQ_AR[k]||DICT.indexOf(q+":")>=0||DICT.indexOf(q.replace(/\u00a0/g,"\\u00a0")+":")>=0;}
 
 var G={kcal:2500,p:150,c:300,f:70,water:3000};
