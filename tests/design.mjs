@@ -29,7 +29,7 @@ const count={
   motion:new Set([...css.matchAll(/(--m-[a-z]+)\s*:\s*\d+ms/g)].map(m=>m[1])).size};
 
 /* Ceilings: today's counts (17 Nov, v275). Lower them as pages move; never raise them. */
-const CEIL={radius:144,duration:51,hex:382,motion:18};
+const CEIL={radius:48,duration:49,hex:382,motion:18};
 /* Where each count is headed (docs/DESIGN-SYSTEM.md). */
 const TARGET={radius:0,duration:0,hex:null,motion:4};
 
