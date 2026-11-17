@@ -19,8 +19,8 @@ const css=[...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m=>m[1]).jo
 const decls=[...css.matchAll(/([a-z-]+)\s*:\s*([^;{}]+)/g)].map(m=>[m[1],m[2].trim()]);
 
 /* Long, deliberate times that are not interface motion: the sky's drift, a pulsing dot,
-   the tour's looping ping. */
-const ALLOW=[/\b60s linear/, /wbPulse/, /tourPing/];
+   the tour's looping ping, the profile picture's slow orbit. */
+const ALLOW=[/\b60s linear/, /wbPulse/, /tourPing/, /pidTurn/];
 
 const count={
   radius:decls.filter(([p,v])=>p==="border-radius"&&/\d(px|em|rem)\b/.test(v)&&!/var\(/.test(v)).length,
@@ -29,7 +29,7 @@ const count={
   motion:new Set([...css.matchAll(/(--m-[a-z]+)\s*:\s*\d+ms/g)].map(m=>m[1])).size};
 
 /* Ceilings: today's counts (17 Nov, v275). Lower them as pages move; never raise them. */
-const CEIL={radius:146,duration:53,hex:382,motion:18};
+const CEIL={radius:144,duration:51,hex:382,motion:18};
 /* Where each count is headed (docs/DESIGN-SYSTEM.md). */
 const TARGET={radius:0,duration:0,hex:null,motion:4};
 

@@ -3430,9 +3430,9 @@ body.focus:has(.wu-foot){padding-bottom:0}
    the theme's highlight colour, not the accent; the accent is the switch that is on,
    the chosen segment, and the main button. */
 .sg{margin:22px 0 0}
-.sg-h{margin:0 0 8px;padding-inline-start:4px;font-family:inherit;font-size:11.5px;font-weight:700;
-  letter-spacing:.12em;text-transform:uppercase;color:var(--sub)}
-[dir="rtl"] .sg-h{letter-spacing:0;font-size:12.5px}
+/* A group's header (Profile, chat history): the set's section header, sentence case, 17 px,
+   display weight (WP-7), not tracked small caps. */
+.sg-h{margin:0 0 var(--s2);padding-inline-start:var(--s1);font-family:var(--display);font-size:17px;font-weight:800;color:var(--text)}
 .sg-list{border-radius:var(--r4);border:1px solid var(--border);background:var(--raised);overflow:hidden}
 /* On the page (not in a sheet) the rows are glass: the card's translucent fill under a
    lit top edge, and each icon in a glass disc of the accent. No backdrop blur: over
@@ -3457,7 +3457,7 @@ body.focus:has(.wu-foot){padding-bottom:0}
 .srow-v{flex:none;max-width:45%;font-size:14px;color:var(--dim);text-align:end;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .srow .ico-chev{flex:none;color:var(--dim)}
 .srow .tgl{flex:none}
-.srow .gtile{width:34px;height:34px;border-radius:10px}
+.srow .gtile{width:34px;height:34px;border-radius:var(--r2)}
 .gtile .gl{width:19px;height:19px}
 .gtile.warn{color:var(--warning);background:rgba(var(--warning-rgb),.12);box-shadow:inset 0 0 0 1px rgba(var(--warning-rgb),.28)}
 /* A choice among a few: the name over a full-width segmented control. */
@@ -4275,7 +4275,7 @@ textarea.afnl.warn{border-color:var(--warning)}
 .setcard .setrow.on{border-color:var(--accent);background:linear-gradient(180deg,rgba(var(--accent-rgb),.18),rgba(var(--accent-rgb),.06));
   box-shadow:0 10px 26px -14px var(--accent-glow)}
 .setcard .setrow.pend{opacity:.5}
-.setcard .cell{border-radius:12px;background:rgba(0,0,0,.35);border-color:var(--hair-hi)}
+.setcard .cell{border-radius:var(--r2);background:rgba(0,0,0,.35);border-color:var(--hair-hi)}
 /* In light mode a dark well reads as a grey box on the light glass: the cells are the
    light glass of every other field there. Focus still shows, in the accent. */
 [data-theme="light"] .setcard .cell{background:var(--glass-btn);border-color:var(--glass-btn-edge);
