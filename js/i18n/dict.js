@@ -1208,7 +1208,7 @@ var AR={"A program built for you, and rebuilt as you change": "برنامج مع
 "Training Days": "أيام التمرين",
 "Other Programs": "برامج تانية",
 "days / week": "يوم في الأسبوع",
-"Bodyweight & No Equipment": "وزن الجسم ومن غير أجهزة",
+"Bodyweight, no equipment": "وزن الجسم ومن غير أجهزة",
 "Full Body Program": "برنامج الجسم كامل",
 "Exercise Library": "مكتبة التمارين",
 "Movements": "حركة",

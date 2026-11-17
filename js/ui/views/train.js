@@ -536,7 +536,7 @@ function exercisesPage(){
   var bw={};
   LIB.forEach(function(l){if(l[2]==="Bodyweight")bw[l[1]]=(bw[l[1]]||0)+1;});
   var cats=Object.keys(bw).sort(function(a,b){return bw[b]-bw[a];}).slice(0,6);
-  h+='<div class="tsec"><h2 class="tsec-h">'+t("Bodyweight & No Equipment")+'</h2></div>'
+  h+='<div class="tsec"><h2 class="tsec-h">'+t("Bodyweight, no equipment")+'</h2></div>'
    +'<div class="tscroll tpills">'
    +cats.map(function(c){return '<button class="tpill" data-bwcat="'+esc(c)+'">'+esc(t(c))+'</button>';}).join("")
    +'<button class="tpill" data-preview="bw">'+t("Bodyweight program")+'</button></div>';
