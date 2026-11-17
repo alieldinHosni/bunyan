@@ -1481,7 +1481,7 @@ var AR={"A program built for you, and rebuilt as you change": "برنامج مع
 "Your top lifts are holding steady across this range.": "أهم تمارينك ثابتة في الفترة دي.",
 "From the estimated maxes of your most-trained lifts.": "من أقصى وزن متوقع لأكتر تمارين بتلعبها.",
 "Snacks": "سناكس",
-"Today's Meals": "وجبات النهارده",
+"Today's meals": "وجبات النهارده",
 "Meals": "الوجبات",
 "Day details": "تفاصيل اليوم",
 "Workout Plan": "خطة التمرين",
