@@ -83,3 +83,29 @@ jobs:
           for i in $(seq 1 30); do curl -sf http://localhost:8765/index.html > /dev/null && break; sleep 1; done
       - name: Coach evaluation set (fails only on a safety miss)
         run: node tests/coach-eval.mjs
+
+  # The iPhone's engine. Safari ended the page on the owner's phone (17 Nov) for what the
+  # pages cost, not for an error, so this fails on a crash, a script error, a reload, or a
+  # main page heavier than its budget (live blur layers, pictures built ahead for a swipe).
+  webkit:
+    name: App in WebKit (iPhone check)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright and WebKit (for this run only)
+        run: |
+          npm install -g playwright@1.56.1
+          npx -y playwright@1.56.1 install --with-deps webkit
+          echo "PW_PATH=$(npm root -g)/" >> "$GITHUB_ENV"
+      - name: Serve the app
+        run: |
+          (python3 -m http.server 8765 > /dev/null 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://localhost:8765/index.html > /dev/null && break; sleep 1; done
+      - name: Tabs, plan tabs and scrolling in WebKit, with a weight budget
+        run: node tests/stress-webkit.mjs
