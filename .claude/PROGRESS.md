@@ -4790,8 +4790,93 @@ docs/NEXT-PHASE.md WP-4. Finishing a workout now ends on a page, not the old "do
 - Follow-up (open): a context form for `t()` (e.g. `t(key, ctx)` looking up "ctx|key") to replace the
   trailing-space keys "Low " and "Workout " (and "Back " under `tm()`). Until then, add no more such keys.
 
+## WP-5: food and training as one plan — branch session/day-fuel (v270)
+
+docs/NEXT-PHASE.md WP-5 (findings F-C1, F-C2, F-C3). The rule first, kept: the day's calories and macros are the same
+on a training day and a rest day (Mifflin-St Jeor × activity already counts training; the knowledge base has no cycling
+method). Only timing and emphasis inside the same targets change. No formula changed; no target is written.
+- New `js/engine/dayfuel.js` (pure, in PURE in tests/architecture.mjs and in sw.js). `usualStart(weekday, sessions)`:
+  median start (local minutes) of the last six finished sessions on that weekday, else of the last six on any day,
+  else null. Read from `S.sessions[].started`, stored nowhere, never asked. A session logged afterwards (started at
+  noon, no active time) does not count. `dayFuel(now, {plan, sessions, goals, eaten, water, days, needs})` gives at
+  most three notes, each {kind, key, vars, more, source, book, at}:
+  - before (2 h before the usual start until it, a session planned and not done, a lighter week's included): the
+    sentence "Training at about 18:05 — carbs and water before it." and under it, on Food, the two paragraphs of
+    `js/data/faq.js` "pre-workout" by their own text keys (the 400–600 ml is said there only). source pre-workout,
+    "From the textbook". The time is to the nearest 5 minutes ("about").
+  - after (finishing until 2 h later, by the session's last set): "You trained — 80 g of protein left today." (or the
+    target met). The knowledge base's after-training protein guidance has no figure for training for muscle: the
+    anabolic window is "24 hours or more"; the 0.3 g/kg an hour (nutrition-principles performance.timing) is for
+    sport and several sessions a day, and the same passage says total protein over the day matters more for muscle
+    gain. So, as the doc says for that case, the note says only what is left of today's target. source post-workout,
+    "From your log and plan".
+  - rest (a rest day): "Rest day — the same targets: 2,500 kcal and 150 g of protein.", with "Your targets already
+    count your training, so they stay the same on a rest day." source app-targets.
+  - behind (any time): Food's body needs as before (needs.js bodyNeedsOf via the head's needs-today signal), its
+    headline and figures unchanged.
+  A lighter week says nothing about food. `leftOf(goals, eaten)` is the one "what is left" (never below 0, p null
+  without a protein target); `todayPlan().food` now uses it.
+- Head (`js/engine/head.js`): `todayPlan().food` (today) also carries notes, note (the lead), line (its sentence,
+  new `fuelLine(note)`) and usual. It is the one wording read by Food, the Today card, the finish page and the coach.
+- Food (`js/ui/bodyneeds.js`): the body needs card is the day's fuel card (`.ffuel`, `data-k="fuel"`): the timed note
+  or the rest day leads it (`.ffuel-l`, its sentence, the textbook's paragraphs, the source line), then what is behind
+  as before (`.fneed` only when something is behind, so "no card at 9:00" still holds on a training day).
+- Training's Today card: one line at its foot (`.tdc-fuel`, a button to Food) with `todayPlan().food.line`, on a day
+  to train, done, or rest (behind adds its "+n g to go"). Not while a workout is open.
+- Finish page: "Food today" says `food.line` (just finished: the after note). Without a protein target it keeps the
+  calories-left line it had.
+- Coach: "pre-workout" and "post-workout" in faq.js get `{mine:1}`; chat.js FAQMINE adds today's sentence (the before
+  note, or the session still ahead at the usual time; the after note, or the protein left after one done today).
+- Food's ring (item 4, F-C3): when the head keeps a plan-check calorie finding at pri ≥ 60 (kcal-up, kcal-down,
+  kcal-steep, kcal-off, deficit-volume, phase, surplus-low), a caption under the ring (`.fring-sig`) says it in at most
+  five words ("Under what building needs") with the finding's own fix button (`data-pcfix`, "Use 2,900 kcal"). Not
+  protein (not calories) and not meals-off (the plan against the targets, not the targets against the goal).
+- Words: 14 new keys with Egyptian Arabic; number and unit, and the word before a dash, bound with a no-break space.
+  No trailing-space keys.
+- Tests: `js/engine/test/dayfuel.test.js` (in tests/engine.mjs): usualStart 18:05 from 18:05/17:50/18:20 Tuesdays,
+  the fallback, no history → null, a past-logged session ignored, only the last six; 16:30 Tuesday → before, 15:30
+  and 18:10 → none; 19:30 after finishing at 19:10 → after with 150 − 70; two hours later none; rest → neither, plain
+  targets; every note's source is a faq entry and its words have Arabic; before's paragraphs are pre-workout's keys
+  and carry the 400–600 ml, the note's own sentence no figure; targets equal before and after. head.test.js: the
+  line is fuelLine's; finished five minutes ago → after with 150 g; S.goals unchanged; rest day line; another day no
+  notes. Browser (6, clock pinned to Tue 17 Nov 2026 with `clockAtTime`, seed sessions started at 18:05): before on
+  Food and the Today card, the same sentence, textbook line, 400–600 ml; after on the finish page, Today card and
+  Food, S.goals unchanged; rest day on both; the coach's pre-workout answer holds the sentence and the textbook's;
+  the ring's caption and its fix clearing it; Arabic/RTL with the time in .num.
+- Changed expectation: "Today card: every state…" counted every button in the card for "missed on a rest day: Move it,
+  log it and Skip only"; the card's food line is a button now (to Food), so the count leaves out `.tdc-fuel` as it
+  leaves out Change. No workout offer was added, which is what that check is about.
+- Open / doubts: (1) the before note's own sentence ("carbs and water before it") is the app's summary of the
+  pre-workout entry, without its "long or hard training" qualifier, which follows in the entry's own paragraph on Food
+  only; the Today card shows the sentence alone. (2) The after note shows no textbook guidance (no figure applies, see
+  above); the 20–40 g per meal (faq "meals") is not after-training guidance and was not used. (3) Rest and behind cite
+  "app-targets" (how the app sets targets), since their figures are the person's own. (4) The Today card now carries
+  one more line on most days; at 320 × 640 the main action stays in view (the Today card test passes).
+- Review of #158 (amend, still v270 unless main moved):
+  (1) The before headline keeps the textbook's qualifier: "Training at about {t} — water before it; carbs if it's long
+  or hard." / «تمرينك حوالي {t} — مية قبله، وكارب لو التمرين طويل أو جامد.», one key, the coach's answer included.
+  (2) The usual time is said to the nearest 15 minutes (`aboutTime`; the engine's value stays the median minute), and
+  there is no before note with fewer than three timed sessions behind the usual time (`usualOf` gives the count;
+  `MINTIMED`, also in the coach's fallback). Unit tests for both.
+  With that gate, usualStart now falls back to every weekday when the weekday has fewer than three timed sessions
+  (it was: only when it had none). Otherwise anyone on a rotating schedule, with one or two sessions per weekday in
+  the last weeks, would never get a before note. The doc's example (three Tuesdays → 18:05) is unchanged; the unit
+  test "Thursday has its own time" now gives Thursday three sessions.
+  (3) Food after training with protein behind shows only the behind section (no "You trained — N g of protein left"
+  above it); with protein on course the after note leads Food. Finish and the Today card keep the after line.
+  (4) The rest note is no longer at the Today card's foot (the card already says "Rest day"); it stays on Food. The
+  card's foot shows the first other note (before, after or behind) in its own sentence (fuelLine).
+  Owner's lead: the pre-workout entry's carbs paragraph (glycogen used overnight) is shown only for a usual start before
+  12:00; later sessions get the rest of the entry. Also: «سعرة» for kcal in the strings added here, «عجز السعرات كبير
+  أوي», the after note's source app-targets (its figure is the plan's). Browser tests changed to these expectations
+  (18:05 → said 18:00; the Food-after check now asserts no duplicate, plus a protein-on-course case; the rest check
+  asserts the Today card does not carry it).
+- Follow-up (open): the older behind-section food tiles (`.fneed .fsug`) are cramped in Arabic at 320 wide (three
+  tiles, names wrapping to three lines). Not changed here.
 **Rollback to v269's code, as v272 (17 Nov).** Owner, 17 Nov, on the iPhone: Safari's "A problem repeatedly occurred" on the app; "it keeps loading and restarting whenever I click on train, it restart suddenly … when I am simply swiping in the internal pages". That page is what Safari shows when the page's process has died more than once. It could not be reproduced in Chromium (memory, DOM size, idle CPU and pictures were all measured on main and are small; the owner's situation, a Mon/Wed/Sat program with missed days on a Tuesday, renders without an error), and WebKit cannot be installed in this environment (the download is blocked). The timeline is the evidence: the owner used v269 for hours on 16 Nov and reported only the swipe's bounce; the crashes were reported after v270 (#158, food and training as one plan: `js/engine/dayfuel.js`, the Today card's food line, Food's fuel card and ring caption) and v271 (#159, the tab swipe's landing: `transit.js entranceGo`) went out. Both merges are reverted here, so the code is v269's exactly, released as v272 so every phone takes it. Neither stored anything, so no data changes. Not re-landed until the cause is known: the owner is asked for the note under Settings › About (js/ui/crashnote.js keeps what was tapped last before a restart nobody asked for, and any script error), and WP-10 (WebKit in the test suite) moves to the front so this class of failure is caught before a release.
 
 **Stability: no live blur on the page, no eager neighbour pictures, no double slide (v273, 17 Nov).** Owner, 17 Nov: Safari's "A problem repeatedly occurred" on the iPhone, the app restarting on Training and while swiping inner pages, photos flashing. Driven in WebKit on GitHub (a temporary probe, PR #161: 30 rounds of tabs, plan tabs and scrolling at v269, v271 and v272), no version crashed or threw, so the code does not fail: the page is ended for what it costs the phone. The costs found: (1) every card, button, chip and field on a page blurred the ground behind it live (backdrop-filter): on Training nine layers covering about the whole screen, doubled while a swipe carried a copy of the next page beside it; on an iPhone each is an offscreen buffer at three times the pixels, redrawn whenever anything under it moves. Inside #app and its swipe copies there is no live blur now; the cards keep their tint, rim and top highlight on a thicker fill (`--card-fill`: the theme's card colour mixed 45% toward its solid surface; Sage light has its own, lighter, for its gold and green type), so they still read as glass, and the dock, the coach's button, sheets and toasts keep their blur. Screenshots before and after show the cards unchanged to the eye; the profile button keeps its fill. (2) After every paint, both neighbouring pages were built ahead for a swipe and all their pictures fetched and decoded; now the pictures are fetched and decoded only for the copy a finger is about to bring in. (3) The swipe's landing replayed the copy's finished slide (v271's fix, kept: `transit.js entranceGo` plays only what was held). Tests: "No live blur on the page" (none inside any main page; the dock still blurs) and "Main tabs, landing"; the two glass tests ("Themes: each place…", "Surfaces…") now ask for tinted glass with no live blur instead of a blur, which is the change itself. Contrast passes in every look. Not released with this: food-and-training (#158) and the first-run work stay off until this release has been on the owner's phone.
 
 **WP-10: the iPhone check on every pull request (17 Nov, no app change).** Owner, 17 Nov: v273 "working well now"; continue the roadmap "without ruining the app stability". `tests/stress-webkit.mjs` (from the probe, #161) is now a permanent job, "App in WebKit (iPhone check)", in `.github/workflows/tests.yml`. It drives the app in WebKit the way the owner uses it (20 rounds of the main tabs, Training's and Food's plan tabs, scrolling; animations on; the service worker allowed) and fails on a page crash, a script error, a full reload, or a main page heavier than its budget: more than 4 live blur layers drawn (now 2, the dock and the coach's button), any picture decoded inside a page copy that is not on the screen (the swipe's built-ahead copies; the run makes no finger swipe, so each is wasted; the ground's own picture readied for its cross-fade is not counted), or more than 6000 elements (now under 400). Proven both ways in Chromium locally (`ENGINE=chromium`; WebKit cannot be downloaded here): v272 fails (9 blur layers on Training, Coach and Progress; pictures built ahead on Food and Progress), v273 passes. Every later work package, food-and-training's re-landing first, must pass it before it merges.
+
+**Food and training as one plan, re-landed (v274, 17 Nov).** Owner, 17 Nov: v273 "working well now"; continue "without ruining the app stability". #158 (WP-5, `js/engine/dayfuel.js`: the Today card's food line, Food's fuel card, the ring's caption, the coach's eating-before-training answer, the finish page's sentence) was pulled in v272 while the crash's cause was unknown. The cause is now known and fixed (v273: live blur inside pages, pictures built ahead for a swipe), and #158 added neither: it brings no blur of its own (v273's rule removes any inside #app), no pictures, and stores nothing. Re-landed by reverting the revert (8b7d106) onto main; one change on top: `.ffuel`, Food's fuel card, joins the `--card-fill` list so without blur it reads as thick as the cards around it. The iPhone check (WP-10) passes with it locally in Chromium: blur 2, no pictures built ahead, Training 347 elements and Food 368 (from 338 and 351). #159 (the tab swipe's landing) is not re-landed: its one fix was already kept in v273.
