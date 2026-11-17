@@ -1146,9 +1146,11 @@ await test("Themes: each place stands on its own picture, under the glass, faint
   eq((await look())[0],"training","Training's plan page");
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.tab="food";V.train="days";V.fplan="plan";(await import("/js/ui/render.js")).render();});await pause(page);
   eq((await look())[0],"food","Food's plan page");
-  /* The cards frost what is behind them, the picture included. */
-  const bf=await page.$eval("#app .card,#app .sg-list,#app .ascard2,#app section",e=>getComputedStyle(e).backdropFilter||getComputedStyle(e).webkitBackdropFilter).catch(()=>"blur");
-  if(!/blur/.test(bf||""))throw new Error("the cards are not glass: "+bf);
+  /* The cards are glass without a live blur (owner, 17 Nov: the blur behind every card
+     was the memory the iPhone ended the page for): a tinted fill the picture still shows
+     a little through, with its rim. */
+  const gl=await page.$eval("#app .card,#app .sg-list,#app .ascard2,#app section",e=>{const s=getComputedStyle(e),m=s.backgroundColor.match(/[\d.]+/g)||[];return {bf:s.backdropFilter||s.webkitBackdropFilter||"none",a:m.length>3?+m[3]:1};});
+  if(gl.bf!=="none"||!(gl.a<1))throw new Error("the cards are not tinted glass with no live blur: "+JSON.stringify(gl));
   /* Every picture is there to load, and light mode keeps them faint. */
   const ok=await page.evaluate(()=>Promise.all(["home","training","workout","warmup","food","coach","progress","profile"].map(k=>new Promise(r=>{
     const i=new Image();i.onload=()=>r(i.naturalWidth>200);i.onerror=()=>r(false);i.src="img/page-"+k+".jpg";}))));
@@ -5222,6 +5224,36 @@ await test("Finish screen (WP-4): in Arabic every string is translated, figures 
   await page.reload();await pause(page,1300);
   eq(await ev(page,"[V.train,!!V.fin,!!S.active,S.sessions.length>0]"),["days",false,false,true],"a reload lands on Training, the session kept");
 },{prefs:{autorest:false}});
+await test("Main tabs, landing (owner, 16 Nov: \"it flashes, and bounce\", Training to Food and back): the page that came in stays where it landed until the real one takes its place — it never goes back to where the finger let go",async(page,env)=>{
+  const cdp=await env.ctx.newCDPSession(page);
+  const move=async(x0,y,x1,steps=10)=>{await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x0,y}]});
+    for(let i=1;i<=steps;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x0+(x1-x0)*i/steps,y}]});await page.waitForTimeout(16);}};
+  const up=async()=>{await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});};
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  await tapTab(page,"train");await pause(page,900);
+  /* Every frame: where the copy that came in stands, and whether the real page is shown. */
+  await page.evaluate(()=>{window.__lf=[];const rec=()=>{const a=document.getElementById("app"),c=document.querySelector(".stillcopy.peek");
+    window.__lf.push([c?Math.round(c.getBoundingClientRect().left):null,getComputedStyle(a).visibility==="hidden",Math.round(a.getBoundingClientRect().left)]);requestAnimationFrame(rec);};requestAnimationFrame(rec);});
+  const y=await page.evaluate(()=>{const r=document.querySelector('#app [data-k="today"] .thero2-m').getBoundingClientRect();return Math.round(r.top+r.height/2);});
+  for(const [x0,yy,x1,want] of [[330,y,120,"food"],[60,400,270,"train"]]){
+    await page.evaluate(()=>{window.__lf.length=0;});
+    await move(x0,yy,x1);await up();await page.waitForTimeout(1200);
+    eq(await ev(page,"[V.tab,document.querySelectorAll('.stillcopy').length]"),[want,0],"landed on "+want);
+    const f=await page.evaluate(()=>window.__lf.slice());
+    const at=f.findIndex(r=>r[0]!==null&&Math.abs(r[0])<=1);
+    if(at<0)throw new Error(want+": the page that came in never reached its place");
+    const after=f.slice(at).filter(r=>r[0]!==null);
+    eq(after.filter(r=>Math.abs(r[0])>1).map(r=>r[0]),[],want+": once in place, the page that came in does not move again");
+    /* The real page, whenever it is the one shown, stands at the screen's edge. */
+    eq(f.slice(at).filter(r=>r[0]===null&&!r[1]&&Math.abs(r[2])>1).length,0,want+": the real page takes its place where it stands");}
+});
+await test("No live blur on the page (owner, 17 Nov: the app restarting on Training and while swiping): no card, button or field inside a page blurs what is behind it, on any main tab; the dock still does",async page=>{
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.prefs.anim=true;(await import("/js/ui/render.js")).render();});
+  for(const tb of ["train","food","progress","coach"]){await tapTab(page,tb);await pause(page,700);
+    const r=await page.evaluate(()=>{const live=e=>{const c=getComputedStyle(e),b=c.backdropFilter||c.webkitBackdropFilter;return b&&b!=="none";};
+      return {inApp:[...document.querySelectorAll("#app *")].filter(live).map(e=>e.className.toString().split(" ")[0]).slice(0,5),dock:live(document.querySelector(".dock"))};});
+    eq(r,{inApp:[],dock:true},tb+": nothing in the page blurs; the dock does");}
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
@@ -6795,8 +6827,9 @@ await test("A weight change says its period the same way on Training, Overview a
 },{db:Object.assign(seed(),{body:[{date:iso(30),weight:85},{date:iso(9),weight:84.6},{date:iso(0),weight:84.8}]})});
 await test("Surfaces: the page is glass, glass inside glass only tints, and a sheet focused from code draws no ring",async page=>{
   await tapTab(page,"profile");await pause(page,300);
-  const b=await page.$eval("#app .sg-list",e=>{const s=getComputedStyle(e);return s.backdropFilter||s.webkitBackdropFilter||"none";});
-  if(!/blur/.test(b))throw new Error("the settings rows are not glass: "+b);
+  /* Tinted glass with no live blur on the page (owner, 17 Nov: restarts on the iPhone). */
+  const b=await page.$eval("#app .sg-list",e=>{const s=getComputedStyle(e),m=s.backgroundColor.match(/[\d.]+/g)||[];return {bf:s.backdropFilter||s.webkitBackdropFilter||"none",a:m.length>3?+m[3]:1};});
+  if(b.bf!=="none"||!(b.a<1))throw new Error("the settings rows are not tinted glass with no live blur: "+JSON.stringify(b));
   /* A second blur inside a frosted card would cost the phone and show nothing new. */
   const inner=await page.$$eval("#app :is(.card,.sg-list,.pid,.list) :is(.card,.list,.drow,.pill,.btn.g,.hbtn,.iconbtn,input,select,textarea)",
     a=>a.map(e=>{const s=getComputedStyle(e);return s.backdropFilter||s.webkitBackdropFilter||"none";}).filter(v=>v!=="none"));
