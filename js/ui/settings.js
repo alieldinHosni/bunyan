@@ -372,9 +372,16 @@ function restartNotes(){
   var L=crashNotes();if(!L.length)return "";
   return '<section class="sg"><h3 class="sg-h">'+t("Unexpected restarts")+'</h3><div class="sg-card"><span class="gtile">'+glyph("info")+'</span><p>'
    +t("The app restarted on its own. What it was doing just before is noted here, on this phone only, so the cause can be found.")
-   +L.map(function(x){var d=new Date(x.at);
-     return '<br><span class="num" dir="ltr">'+esc(d.toLocaleString())+'</span> · '+t("after")+' <code dir="ltr">'+esc(x.after||"?")+'</code>'
-       +(x.err?' · <code dir="ltr">'+esc(x.err)+'</code>':'');}).join("")+'</p></div></section>';}
+   +L.map(function(x){
+     /* When the app was last alive (its last sign of life before it stopped), the release
+        it was on, and the tap before it; notes kept before 18 Nov have only the next
+        launch's time. */
+     var d=new Date(x.seen||x.at);
+     return '<br><span class="num" dir="ltr">'+esc(d.toLocaleString())+'</span>'
+       +(x.v?' · '+esc(t("version {n}")).replace("{n}",'<span class="num">'+esc(String(x.v))+'</span>'):'')
+       +' · '+t("after")+' <code dir="ltr">'+esc(x.after||"?")+'</code>'
+       +(x.err?' · <code dir="ltr">'+esc(x.err)+'</code>':'');}).join("")+'</p>'
+   +'<button class="btn g sm" data-crashclear="1">'+t("Clear these notes")+'</button></div></section>';}
 
 /* ---- Nutrition ---------------------------------------------------------------------------
    Owner, 9 Nov: "I hate it when there is no nutrition settings, it just directs me to the

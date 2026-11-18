@@ -464,6 +464,11 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
 [data-palette="mono"][data-theme="light"] #app :is(.hgreet-t,.thead h1,.tsec-h,.pglbl h2,.dhead-t,.sg-h,.chat-head-t,.empty,.bname-t):not(:is(
   .card,.twk,.thero2,.ttile,.htile,.drow,.list,.tprog-card,.dlcard,.pgcard,.fneed,.ffuel,.pmeal,.plsum,.plstart,.pcquiet,.tgcard,.ptile,.tgoffer,.tgfold,.bsched,.pgc,.pgstat,.pgmac,.sg-list,.pid,.chat-a,
   .chatcard,.chat-topics,.coachplan,.coachhero,.ready,.exhero,.dnav-card,.wkr,.glass,.pghero,.fsug-t,.cweek2,.cfor) *){color:var(--text)}
+/* A section's count beside its header ("For you  2"), small type at the page's edge where
+   the Sage photograph is lightest: white on it fell under AA (3.8:1, seen 18 Nov). It sits
+   in a pill of the accent instead, like the badges on the cards. */
+[data-palette="mono"][data-theme="light"] #app .tsec>.libn{padding:0 var(--s2);border-radius:var(--rpill);
+  background:var(--accent);color:var(--onAccent);text-shadow:none}
 /* and the ground's drawing is drawn in the same white, like the reference's headings */
 [data-palette="mono"][data-theme="light"] #bgart{--bga:#F3F7F6; --bgb:#D6E1DF}
 /* An element that carries its own theme or mode (the rest screen, the splash, a theme

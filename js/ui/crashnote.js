@@ -7,7 +7,12 @@
    there at the next launch means the app ended without either, and what was tapped last
    (and any script error just before it) is kept here, shown under Settings › About.
    On this phone only; nothing is sent anywhere. Device-wide, like the boot note in
-   index.html: it describes the app, not a profile's data. */
+   index.html: it describes the app, not a profile's data.
+   Owner, 18 Nov: an entry did not say which release it happened on, nor when the app
+   stopped (the time shown was the next launch). Each trace now carries the version, and
+   while the app is on the screen its time is refreshed every 15 s (seen), so a restart
+   reads: when the app was last alive, on which version, after which tap. */
+import {VERSION} from "../version.js";
 var LK="bunyan:last",CK="bunyan:crash",EK="bunyan:lasterr";
 function rd(k){try{return JSON.parse(localStorage.getItem(k)||"null");}catch(e){return null;}}
 function wr(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
@@ -16,17 +21,20 @@ function rm(k){try{localStorage.removeItem(k);}catch(e){}}
 function crumb(D){
   var k=null;for(var x in (D||{})){k=x;break;}
   if(!k)return;
-  var v=D[k];wr(LK,{k:k+(v&&v!=="1"?"="+String(v).slice(0,32):""),t:Date.now()});}
+  var v=D[k],now=Date.now();wr(LK,{k:k+(v&&v!=="1"?"="+String(v).slice(0,32):""),t:now,s:now,v:VERSION});}
+/* While on the screen: the trace's last sign of life, every 15 s (one small write). */
+function beat(){if(document.visibilityState!=="visible")return;var l=rd(LK);if(l){l.s=Date.now();wr(LK,l);}}
 function clean(){rm(LK);}
 /* At launch: a trace left over is a restart nobody asked for. */
 function bootCheck(){
   var l=rd(LK),e=rd(EK);
   if(l&&l.t){
     var list=rd(CK)||[];
-    list.unshift({at:Date.now(),after:l.k,tapAt:l.t,err:e&&e.t&&e.t>=l.t-30000?e.m:""});
+    list.unshift({at:Date.now(),after:l.k,tapAt:l.t,seen:l.s||l.t,v:l.v||null,err:e&&e.t&&e.t>=l.t-30000?e.m:""});
     wr(CK,list.slice(0,3));}
   clean();
   window.addEventListener("pagehide",clean);
+  setInterval(beat,15000);
   document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")clean();});
   /* A script error after launch, kept with its first stack line in case a restart follows. */
   window.addEventListener("error",function(ev){
@@ -36,5 +44,6 @@ function bootCheck(){
   window.addEventListener("unhandledrejection",function(ev){
     wr(EK,{t:Date.now(),m:"rejection: "+String(ev&&ev.reason&&(ev.reason.stack||ev.reason.message)||ev&&ev.reason).slice(0,300)});});}
 function crashNotes(){return rd(CK)||[];}
+function clearCrashNotes(){rm(CK);rm(EK);}
 
-export {bootCheck, clean, crashNotes, crumb};
+export {bootCheck, clean, clearCrashNotes, crashNotes, crumb};

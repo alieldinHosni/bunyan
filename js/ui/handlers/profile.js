@@ -19,6 +19,7 @@ import {applySky, forgetLocation, locate} from "../sky.js";
 import {render} from "../render.js";
 import {changeLook, themeOf} from "../theme.js";
 import {tourReset} from "../tour.js";
+import {clearCrashNotes} from "../crashnote.js";
 import {alarmStart, keepAwake, toast, V} from "../view.js";
 import {fixLogsNow, readPlan, retargetNow, setDbLoad} from "./common.js";
 import {has, key} from "./registry.js";
@@ -113,6 +114,8 @@ function register(){
   key("setdb",function(D){if(/^(hand|total)$/.test(D.setdb))setDbLoad(D.setdb);return;});
   key("setunit",function(D){if(/^(kg|lb)$/.test(D.setunit)){S.prefs.unit=D.setunit;saveDB();render();}return;});
   key("setcompact",function(D){S.prefs.compact=D.setcompact==="1";saveDB();render();return;});
+  /* Settings › About: the restart notes, read and cleared so a new one stands out. */
+  key("crashclear",function(){clearCrashNotes();render();return;});
   key("setlang",function(D){if(!/^(en|ar)$/.test(D.setlang)||D.setlang===S.prefs.lang)return;
     S.prefs.lang=D.setlang;saveDB();applyLang();render();
     toast(S.prefs.lang==="ar"?"\u0627\u062a\u063a\u064a\u0631\u062a \u0644\u0644\u0639\u0631\u0628\u064a\u0629":"Switched to English");return;});
