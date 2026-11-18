@@ -3,7 +3,7 @@
 import {rulesFor} from "../../engine/conditions.js";
 import {t} from "../../i18n/dict.js";
 import {exMedia, exThumb, isBarbell, isUnilateral} from "../../data/exercises.js";
-import {fig3dHtml, hasMannequin} from "../mannequin.js";
+import {fig3dHtml, hasMannequin} from "../fig3d.js";
 import {holdState} from "../hold.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {barKg, bodyAt, bwShare, dbTotal, incrementFor, inDeload, lastWeight, prevPerf, recommend} from "../../engine/formulas.js";

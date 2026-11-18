@@ -34,7 +34,7 @@ import {vLiftSheet, vPhotoCompare, vRecapSheet} from "./views/progress.js";
 import {tiexSheet, vTImportSheet} from "./views/timport.js";
 import {warmOf} from "./views/warmup.js";
 import {settingsSheet} from "./settings.js";
-import {fig3dHtml, hasMannequin} from "./mannequin.js";
+import {fig3dHtml, hasMannequin} from "./fig3d.js";
 
 /* One figure in the exercise sheet: a label, the number (typeable), and − / + either
    side. The steps are the plan's own: a set, a rep, fifteen seconds of rest. */
