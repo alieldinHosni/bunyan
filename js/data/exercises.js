@@ -3,7 +3,7 @@
 import {esc} from "../util.js";
 import {hasPose, poseSvg} from "./poses.js";
 import {FIGS} from "./figures.js";
-import {isChecked} from "./mannequin/records.js";
+import {approved as isChecked} from "./mannequin/approved.js";
 import {ACTS, actIcon, actMuscle, isActivity} from "./activities.js";
 import {EXTRA} from "./extra.js";
 import {movementOf} from "./movement.js";

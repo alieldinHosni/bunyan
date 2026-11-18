@@ -27,7 +27,7 @@ import {navDepth} from "./nav.js";
 import {applyLook} from "./theme.js";
 import {bindExSwipe} from "./exswipe.js";
 import {bindMore} from "./more.js";
-import {syncMannequins} from "./mannequin.js";
+import {syncFigs} from "./fig3d.js";
 import {syncBgArt} from "./bgart.js";
 import {startArts} from "./art.js";
 import {PAGE} from "./transit.js";
@@ -338,7 +338,7 @@ function render(){
   paintMotion(sheetEl,"sheet:"+(V.sheet||""));
   /* The live 3D figures: new ones start, kept ones carry on, gone ones let go of the
      graphics card (js/ui/mannequin.js). */
-  syncMannequins();
+  syncFigs();
   /* The drawings: each draws in once a screen, carried on through re-renders (js/ui/art.js). */
   startArts(view,swipedIn);
 

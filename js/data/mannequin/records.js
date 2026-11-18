@@ -42,6 +42,7 @@ import {V} from "./geom.js";
 import {joints, DIM} from "./rig.js";
 import {arc} from "./motion.js";
 import {moveFor, TABLE} from "./moves.js";
+import {markApprovedForTest} from "./approved.js";
 
 var add=V.add,sub=V.sub,mul=V.mul;
 
@@ -167,8 +168,10 @@ function recordFor(name){return isChecked(name)?recordForUnchecked(name):null;}
    the renderer stays covered while nothing in the app is checked. Returns the undo. */
 function markCheckedForTest(name){
   var c={by:"test",on:"test",version:versionOf(name)};
-  if(own(RECORDS,name)){var was=RECORDS[name].checked;RECORDS[name].checked=c;return function(){RECORDS[name].checked=was;};}
-  if(own(TABLE,name)){var row=TABLE[name],old=row[2];row[2]=c;return function(){row[2]=old;};}
+  /* The pages ask approved.js (WP-9), so it is marked with it. */
+  var un=own(RECORDS,name)||own(TABLE,name)?markApprovedForTest(name):function(){};
+  if(own(RECORDS,name)){var was=RECORDS[name].checked;RECORDS[name].checked=c;return function(){RECORDS[name].checked=was;un();};}
+  if(own(TABLE,name)){var row=TABLE[name],old=row[2];row[2]=c;return function(){row[2]=old;un();};}
   return function(){};}
 
 export {RECORDS, recordFor, recordForUnchecked, checkedOf, isChecked, versionOf, markCheckedForTest, seated, along, grip, wristFor, levers};
