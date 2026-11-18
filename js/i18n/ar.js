@@ -308,6 +308,8 @@ var AR={"A program built for you, and rebuilt as you change": "برنامج مع
 "Try": "جرّب",
 "Version": "الإصدار",
 "Unexpected restarts": "إعادة تشغيل مفاجئة",
+"version {n}": "إصدار {n}",
+"Clear these notes": "امسح الملاحظات دي",
 "The app restarted on its own. What it was doing just before is noted here, on this phone only, so the cause can be found.": "الأبلكيشن اتقفل واشتغل تاني لوحده. اللي كان بيعمله قبلها متسجل هنا، على الموبايل ده بس، عشان نعرف السبب.",
 "after": "بعد",
 "Adjust the week": "عدّل الأسبوع",

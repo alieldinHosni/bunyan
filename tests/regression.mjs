@@ -4207,10 +4207,18 @@ await test("A restart nobody asked for (owner, 9 Nov: logging Football showed a 
   await p2.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("about");});await p2.waitForTimeout(600);
   const txt=await p2.textContent("#sheet");
   if(!/Unexpected restarts/.test(txt)||!/logact/.test(txt))throw new Error("not under About: "+txt.slice(0,300));
+  /* Owner, 18 Nov: which release, and when the app was last alive (not the next launch). */
+  const ver=await p2.evaluate(async()=>(await import("/js/version.js")).VERSION);
+  eq([notes[0].v,typeof notes[0].seen,notes[0].seen<=notes[0].at],[ver,"number",true],"the note keeps the version and the last sign of life, before the launch that found it");
+  if(!new RegExp("version\\s*"+ver).test(txt))throw new Error("the version is not shown: "+txt.slice(0,300));
   /* Put away and brought back: still nothing new. */
   await p2.evaluate(()=>{document.querySelector('[data-close]')&&document.querySelector('[data-close]').click();});
   await p2.reload();await p2.waitForTimeout(1000);
   eq(await p2.evaluate(()=>JSON.parse(localStorage.getItem("bunyan:crash")||"[]").length),1,"nothing more after a clean reload");
+  /* Cleared from About, so a new one stands out. */
+  await p2.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("about");});await p2.waitForTimeout(600);
+  await p2.tap('#sheet [data-crashclear]');await p2.waitForTimeout(500);
+  eq([await p2.evaluate(()=>localStorage.getItem("bunyan:crash")),await p2.$$eval("#sheet [data-crashclear]",a=>a.length)],[null,0],"cleared: no notes, no section");
   await p2.close();
 },{prefs:{autorest:false}});
 await test("Profile (owner, 9 Nov review): one door to You, weeks kept as Progress counts them, the default name offered to be set, chat history with the data, and the version",async page=>{
