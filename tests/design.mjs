@@ -13,7 +13,7 @@
    - hex:      a raw #colour (the theme blocks set colour tokens this way; everything else
                should read a token)
    - motion:   the number of distinct --m-* duration tokens defined at :root */
-import {readFileSync} from "fs";
+import {readdirSync, readFileSync} from "fs";
 const html=readFileSync(new URL("../index.html",import.meta.url),"utf8");
 const css=[...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m=>m[1]).join("\n").replace(/\/\*[\s\S]*?\*\//g,"");
 const decls=[...css.matchAll(/([a-z-]+)\s*:\s*([^;{}]+)/g)].map(m=>[m[1],m[2].trim()]);
@@ -45,5 +45,14 @@ for(const k in CEIL){
   console.log((ok?"ok  ":"FAIL")+" "+k.padEnd(8)+" "+String(count[k]).padStart(4)+" (ceiling "+CEIL[k]+(TARGET[k]!=null?", target "+TARGET[k]:"")+")");
   if(!ok){bad++;console.log("     a one-off was added: use a token from docs/DESIGN-SYSTEM.md");}
   else if(count[k]<CEIL[k])console.log("     below the ceiling: lower CEIL."+k+" to "+count[k]+" in tests/design.mjs");}
+/* The page photographs (img/page-*.jpg): a ground under a veil, at most 800 px wide (two
+   pixels to a point on a phone; WP-9 measured no visible difference) and 200 KB, so one
+   costs about 4 MB decoded on the phone rather than 6, and the first screen less to fetch. */
+for(const f of readdirSync(new URL("../img/",import.meta.url)).filter(n=>/^page-.*\.jpg$/.test(n))){
+  const b=readFileSync(new URL("../img/"+f,import.meta.url));let w=0;
+  for(let i=2;i<b.length-9;){if(b[i]!==0xFF){i++;continue;}const m=b[i+1],len=b.readUInt16BE(i+2);
+    if(m>=0xC0&&m<=0xC2){w=b.readUInt16BE(i+7);break;}i+=2+len;}
+  const kb=Math.round(b.length/1024),ok=w>0&&w<=800&&kb<=200;
+  if(!ok){bad++;console.log("FAIL img/"+f+": "+w+" px wide, "+kb+" KB (at most 800 px and 200 KB)");}}
 console.log(bad?bad+" failed":"design system: no new one-offs");
 process.exit(bad?1:0);
