@@ -477,4 +477,4 @@ function addExercise(name){
     saveDB();closeSheet();toast(exName(name)+" "+t("added to")+" "+d.name+".");return;
   }
   saveDB();closeSheet();}
-export {startActivity, swapAlt, scaleItem, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};
+export {liveEntry, startActivity, swapAlt, scaleItem, ACT, addExercise, askConfirm, askText, closeSheet, finishSession, openSheet, runAct, startDay, syncDraft, val};

@@ -28,6 +28,8 @@ import {render} from "../render.js";
 import {V} from "../view.js";
 import {LENT, setExField} from "./common.js";
 import {dispatchTap} from "./registry.js";
+import {liveEntry, startDay, syncDraft} from "../actions.js";
+import {pushNav} from "../nav.js";
 import {STEPS} from "../views/assess.js";
 
 /* A tap on a button carrying these data-* keys, as if the person had made it. */
@@ -119,6 +121,22 @@ var ACTIONS={
     confirm:true,snap:"live",
     run:function(p){if(!S.active||!S.active.entries[p.i]||S.active.entries[p.i].sets.length)return false;
       V.logIdx=p.i;S.active.idx=p.i;V.sd={swaplive:true};tap({pickex:p.name});return true;}},
+  /* "I have 30 minutes, only dumbbells" (C-5a, docs/COACH-AGENT.md 2.4): today's workout,
+     started as the time and the kit allow. The chat works out which exercises fit, in the
+     program's order, and the closest stand-in for one that needs other kit (views/chat.js
+     aFit); this starts the day and keeps those, each stand-in with the planned sets and
+     reps of the one it replaces. The program itself is not changed; Undo ends the
+     workout it started. */
+  "session.fit":{desc:"Start today's workout fitted to the time and kit said: only the exercises that fit, in order, and the closest stand-in for one that needs other kit; the program is not changed",
+    params:{day:"today's day id",keep:"the exercises kept, by name",swap:"{exercise: stand-in}, by name"},confirm:true,snap:"live",
+    run:function(p){var keep=p.keep||[],sw=p.swap||{};
+      if(S.active||!dayOf(p.day)||!keep.length)return false;
+      if(Object.keys(sw).some(function(k){return !LIB.some(function(l){return l[0]===sw[k];});}))return false;
+      pushNav();startDay(p.day);var a=S.active;if(!a)return false;
+      var kept=a.entries.filter(function(e){return keep.indexOf(e.name)>=0;});
+      if(kept.length)a.entries=kept;
+      a.entries=a.entries.map(function(e){if(!sw[e.name])return e;var f=liveEntry(sw[e.name],e);f.grp=e.grp||null;return f;});
+      a.idx=0;V.logIdx=0;syncDraft();saveDB();render();return true;}},
   /* "I can't do 20 reps": today's target for an exercise in the workout in progress, or an
      easier version of it (agent.js planFit). The program itself is not changed. */
   "live.fit":{desc:"Fit today's reps of an exercise in the workout in progress, or swap it for an easier version, for today only",
