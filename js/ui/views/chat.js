@@ -1530,11 +1530,10 @@ function aDays(a,q,it){
   else p(a,(want?fill(t("To make it {n}, the week is rebuilt for that many days."),{n:want})+" ":"")
     +t("I can't rebuild your week from the chat yet; your training days are set under Training, in your program."));
   return act(a,t("Plan my training"),{"data-csec":"train","data-ctsub":"program"});}
+/* An exercise to leave out, not said (said, it is agent.js planLeave). */
 function aAvoid(a,q,it){
-  var name=rdEx(it);
-  p(a,name?fill(t("{ex} isn't in your program, so there's nothing to take out."),{ex:exName(name)}):t("Which exercise? Say its name."));
-  n(a,t("The coach doesn't keep a list of exercises to leave out yet: when you change your program, choose another."));
-  return act(a,t("Open Training"),{"data-tab":"train"});}
+  p(a,t("Which exercise? Say its name, and I'll leave it out of your plans."));
+  return act(a,t("Open Favourites"),{"data-train":"favs"});}
 /* Away, and no kit said: what there will be, asked, with the three usual answers. */
 function aAway(a,q,it){
   var R=rd(it),ar=R.lang==="ar",next=R.entities.period==="nextweek";
@@ -1658,8 +1657,9 @@ function decide(R,text){
       if(!inProgramNamed(A0))return {id:R.topic,text:plainRequest(R,text)};
       return {id:R.topic,p:R.topic==="exswap"?(B0?{from:A0,name:B0}:{from:A0}):{name:A0}};
     case "avoid":
-      var nm=E.exercise[0]&&E.exercise[0].name;
-      if(nm&&inProgramNamed(nm))return {id:"exremove",text:"remove "+nm};
+      /* Left out for good, the family said or the one named (agent.js planLeave). */
+      var x0=E.exercise[0];
+      if(x0&&(x0.name||x0.key))return {cmd:{cmd:"exercise.avoid",key:x0.key||"",name:x0.name||"",said:x0.said||""}};
       return {id:"avoid"};
     case "away":
       var gear=["Bodyweight"],said=false;

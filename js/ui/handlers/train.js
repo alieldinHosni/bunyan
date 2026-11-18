@@ -202,6 +202,14 @@ function register(){
     saveDB();closeSheet();toast(t("Workout changed"));}
   /* From the My Training sheet, a day or the programs list replaces the sheet. */
   on(function(D){return (D.train||D.day)&&V.sheet;},function(){V.sheet=null;V.sd=null;return NEXT;});
+  /* Put back, on Favourites' Left out list: off the list, and only its row goes. */
+  key("unskip",function(D,el){
+    var k=S.skip||[],i=k.indexOf(D.unskip);if(i<0)return;
+    k.splice(i,1);saveDB();
+    var row=el&&el.closest&&el.closest("[data-skiprow]");if(row)row.remove();
+    if(!k.length&&typeof document!=="undefined"){var sec=document.getElementById("leftout"),nx=sec&&sec.nextElementSibling,ls=nx&&nx.nextElementSibling;
+      if(ls&&ls.matches("[data-leftout]"))ls.remove();if(nx&&nx.matches("p.sub"))nx.remove();if(sec)sec.remove();}
+    toast(t("{ex} put back. New plans can choose it again.").replace("{ex}",exName(D.unskip)));return;});
   key("train",function(D){pushNav();V.tab="train";V.train=D.train;render();window.scrollTo(0,0);return;});
   key("day",function(D){pushNav();V.dayId=D.day;V.train="day";render();return;});
   /* A template asks whether to start on it now (the default) or only add your copy

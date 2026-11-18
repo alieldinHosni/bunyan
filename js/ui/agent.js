@@ -570,6 +570,51 @@ function planLimit(c){
       +t("Sets, reps and rest stay. If the pain is sharp, swollen or lasting, have it seen by a professional."),
     cta:t("Swap them"),done:fill(t("Swapped. New plans keep away from your {a} too."),{a:area}),undone:t("Undone. Your program is as it was.")});}
 
+/* ---- an exercise left out for good ("I don't like lunges", C-5a) -------------------------
+   Said as a family ("lunges": the reading's key), every library exercise of it; said by
+   name, that one. They go on the leave-out list (S.skip), which new plans keep away from
+   and Training's Favourites page shows, each with Put back. Each one in the program is
+   swapped for its closest stand-in outside them (standIn); one with none stays, said so.
+   A family with more than one exercise is asked first: all of them, or only the one meant
+   (the program's own, else the plain lift: the reading's name). */
+function stem(w){return w.replace(/s$/,"").replace(/e$/,"");}
+function stems(s){return String(s||"").toLowerCase().replace(/[^a-z ]+/g," ").split(" ").filter(Boolean).map(stem);}
+function familyOf(key,name){
+  var out=[];
+  if(key){var kw=stems(key),joined=kw.join("");
+    LIB.forEach(function(l){var n=l[0];if(isActivity(n))return;var nw=stems(n);
+      if(kw.every(function(w){return nw.indexOf(w)>=0;})||nw.indexOf(joined)>=0)out.push(n);});}
+  if(name&&out.indexOf(name)<0&&LIB.some(function(l){return l[0]===name;}))out.unshift(name);
+  return out;}
+function planLeave(c){
+  var fam=c.only==="one"&&c.name?[c.name]:familyOf(c.key,c.name);
+  if(!fam.length)return say(c.said?fill(t("I couldn't find {x} in the exercise library."),{x:c.said}):t("Which exercise? Say its name."));
+  var skip=S.skip||[],add=fam.filter(function(n){return skip.indexOf(n)<0;});
+  var what=fam.length>1?c.said:exName(fam[0]);
+  var where={l:t("Open Favourites"),a:{"data-train":"favs"}};
+  if(!add.length)return say(fill(t("{x} is already left out of your plans. To put it back, open Favourites under Training's exercises."),{x:what}),[where]);
+  if(fam.length>1&&c.name&&c.only!=="all")
+    return pick("leave",fill(t("All {n} {x}, or only {ex}?"),{n:fam.length,x:c.said,ex:exName(c.name)}),
+      [{l:fill(t("All {n} {x}"),{n:fam.length,x:c.said}),v:"all"},{l:exName(c.name),sub:t("Only this one"),v:"one"}],
+      "exercise.avoid",{key:c.key,name:c.name,said:c.said},"only");
+  var lim=limitsOf(S.profile),taken={},sw=[],kept=[];
+  skip.concat(fam).forEach(function(n){taken[n]=1;});
+  split().days.forEach(function(d){d.ex.forEach(function(e){taken[e.name]=1;});});
+  split().days.forEach(function(d){d.ex.forEach(function(e){
+    if(fam.indexOf(e.name)<0)return;
+    var to=standIn(e.name,S.gear,lim,taken);
+    if(to){taken[to]=1;sw.push({day:d.id,id:e.id,from:e.name,to:to});}else kept.push(e.name);});});
+  var one=add.length===1;
+  return confirm("exercise.avoid",{names:add,sw:sw},{
+    lead:fill(t("Leave {x} out of your plans for good?"),{x:what}),
+    item:sw.length?sw.slice(0,4).map(function(x){return exName(x.from)+" → "+exName(x.to);}).join(" · ")+(sw.length>4?" …":""):t("Not in your program now"),
+    detail:fill(t(one?"It goes on your Left out list, and new plans skip it.":"{n} exercises go on your Left out list, and new plans skip them."),{n:add.length})
+      +(sw.length?" "+t("In your program, each is swapped for the closest one that works the same muscles; sets, reps and rest stay."):"")
+      +(kept.length?" "+fill(t("No close stand-in for {list}: it stays in your program."),{list:kept.map(exName).join(", ")}):""),
+    cta:t(one?"Leave it out":"Leave them out"),
+    done:t("Done. Put any back from Favourites, under Training's exercises."),
+    undone:t("Undone. Your program and your Left out list are as they were.")});}
+
 /* ---- travel mode: other kit for a few days ------------------------------------------------
    Until the date, each workout swaps what needs kit you don't have with you for its closest
    stand-in that you do (actions.js startDay); the program itself stays as it is. */
@@ -722,6 +767,7 @@ function planCommand(c){
   if(c.cmd==="ex.fit")return planFit(c);
   if(c.cmd==="act.log")return planAct(c);
   if(c.cmd==="limit.add")return planLimit(c);
+  if(c.cmd==="exercise.avoid")return planLeave(c);
   if(c.cmd==="travel.set"||c.cmd==="travel.end")return planTravel(c);
   if(c.cmd==="past.log")return planPast(c);
   if(c.cmd==="recovery.log")return planRecovery(c);
@@ -832,6 +878,7 @@ function proceed(ag,v){
       item:sw?line:exName(e.name),detail:t("Your program stays as it is."),cta:t(sw?"Swap it":"Use it"),
       done:sw?fill(t("Swapped {old} for {new} for today."),{old:exName(e.name),new:line}):fill(t("{ex}: {r} today."),{ex:exName(e.name),r:line}),
       undone:t("Undone. Today's workout is as it was.")});}
+  if(ag.act==="exercise.avoid")return planLeave(p);
   if(ag.act==="exercise.remove")return planRemove("",p);
   if(ag.act==="exercise.swap")return planSwap("",p);
   if(ag.act==="food.log")return planLog("",p);

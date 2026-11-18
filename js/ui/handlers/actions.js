@@ -57,6 +57,8 @@ var SNAP={
       else if((s.entries||[]).length>ids[s.id]){s.entries=s.entries.slice(0,ids[s.id]);saveSession(s);}});};},
   /* A sore spot: the program and the profile's limits together. */
   avoid:function(){var p=copy(S.programs),l=copy((S.profile||{}).limits||[]);return function(){S.programs=p;S.profile.limits=l;};},
+  /* An exercise left out: the program and the leave-out list together. */
+  leave:function(){var p=copy(S.programs),k=copy(S.skip||[]);return function(){S.programs=p;S.skip=k;};},
   travel:function(){var tr=copy(S.travel);return function(){if(tr)S.travel=tr;else delete S.travel;};},
   /* The next set's numbers in the logger. */
   draft:function(){var d=copy(V.draft);return function(){V.draft=d;};},
@@ -186,6 +188,18 @@ var ACTIONS={
       var lim=S.profile.limits=(S.profile.limits||[]);if(lim.indexOf(p.area)<0)lim.push(p.area);
       (p.sw||[]).forEach(function(x){var d=dayOf(x.day),e=d&&d.ex.filter(function(y){return y.id===x.id&&y.name===x.from;})[0];
         if(e&&LIB.some(function(l){return l[0]===x.to;})){e.name=x.to;e.exId=exIdOf(x.to);delete e.alt;}});
+      saveDB();render();return true;}},
+  /* "I don't like lunges" (C-5a, docs/COACH-AGENT.md 2.4): onto the leave-out list the
+     plan builder already keeps away from (S.skip; the assessment's "Lifts you won't do"),
+     and each one in the program swapped for the stand-in the chat chose (agent.js
+     planLeave). Taken back from the list with Put back (views/train.js vFavs). */
+  "exercise.avoid":{desc:"Leave exercises out for good: onto the Left out list that new plans skip, and each one in the program swapped for its closest stand-in outside them",
+    params:{names:"the exercises left out, by name",sw:"[{day, id, from, to}]"},confirm:true,snap:"leave",
+    run:function(p){var nm=(p.names||[]).filter(function(n){return LIB.some(function(l){return l[0]===n;});});
+      if(!nm.length)return false;
+      var k=S.skip=(S.skip||[]);nm.forEach(function(n){if(k.indexOf(n)<0)k.push(n);});
+      (p.sw||[]).forEach(function(x){var d=dayOf(x.day),e=d&&d.ex.filter(function(y){return y.id===x.id&&y.name===x.from;})[0];
+        if(e&&k.indexOf(x.to)<0&&LIB.some(function(l){return l[0]===x.to;})){e.name=x.to;e.exId=exIdOf(x.to);delete e.alt;}});
       saveDB();render();return true;}},
   "travel.set":{desc:"Travel mode: until a date, each workout swaps what needs other kit for the closest stand-in with this kit",
     params:{gear:"the kit at hand, e.g. [Bodyweight, Dumbbell]",until:"YYYY-MM-DD"},confirm:true,snap:"travel",
