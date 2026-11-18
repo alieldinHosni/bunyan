@@ -91,7 +91,9 @@ jobs:
   webkit:
     name: App in WebKit (iPhone check)
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # The run itself takes about 5 minutes; installing WebKit's system libraries has taken
+    # up to 17 on a slow mirror (18 Nov), so the limit leaves room for that.
+    timeout-minutes: 40
     env:
       TZ: UTC
     steps:
