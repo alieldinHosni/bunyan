@@ -5460,6 +5460,19 @@ await test("Coach chat on demand (WP-9): the first screen does not load the chat
   await page.tap("#app .cask [data-chatq]");await pause(page,1500);
   eq(await page.evaluate(()=>document.querySelectorAll("#cpanel .chat-a").length>0),true,"a chip on the Coach page asked and was answered");
 },{init:()=>{window.requestIdleCallback=()=>0;}});
+/* WP-9's budget: what a first launch fetches before the first screen, the cache empty and
+   the idle work (the chat, the Arabic table for an English app) held back. Set 10% above
+   what WP-9 reached (18 Nov, v287: 193 requests, 3,243 KB in English), so it fails only on
+   a regression; lower it when a step makes the start lighter. */
+const BUDGET={n:212,kb:3570};
+await test("Lighter start (WP-9): a first launch fetches at most "+BUDGET.n+" files and "+BUDGET.kb+" KB before the first screen",async page=>{
+  await page.waitForFunction(()=>document.querySelector("#app .tdc, #app .tsec-h"),null,{timeout:15000});
+  const r=await page.evaluate(()=>{const e=performance.getEntriesByType("resource");
+    return {n:e.length,kb:Math.round(e.reduce((a,x)=>a+(x.encodedBodySize||0),0)/1024),
+      top:e.slice().sort((a,b)=>(b.encodedBodySize||0)-(a.encodedBodySize||0)).slice(0,5).map(x=>x.name.split("/").pop()+" "+Math.round((x.encodedBodySize||0)/1024)+" KB")};});
+  console.log("    start: "+r.n+" files, "+r.kb+" KB; largest "+r.top.join(", "));
+  if(r.n>BUDGET.n||r.kb>BUDGET.kb)throw new Error("over budget: "+r.n+" files, "+r.kb+" KB (at most "+BUDGET.n+", "+BUDGET.kb+"); largest "+r.top.join(", "));
+},{init:()=>{window.requestIdleCallback=()=>0;}});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
