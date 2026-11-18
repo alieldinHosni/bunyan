@@ -715,15 +715,30 @@ function vFavs(){
   var h=backBar();
   h+=head(t("Favourites"),t("Suggested first when you add an exercise"));
   if(!S.favs.length)
-    return h+empty("star",t("No favourites yet"),
+    h+=empty("star",t("No favourites yet"),
       t("Open any exercise and tap the star at the top of the sheet. Starred lifts come first in the picker."),
       '<button class="btn" data-train="library">'+t("Exercise library")+'</button>');
-  h+='<div class="list">';
-  S.favs.forEach(function(n){
-    h+='<button class="item" data-exdetail="'+esc(n)+'">'+thumb(n,36)
+  else{
+    h+='<div class="list">';
+    S.favs.forEach(function(n){
+      h+='<button class="item" data-exdetail="'+esc(n)+'">'+thumb(n,36)
+       +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+esc(exName(n))+'</div>'
+       +'<div class="tiny">'+tm(muscleOf(n))+'</div></div>'
+       +'<span class="chev">\u203a</span></button>';});
+    h+='</div>';}
+  return h+leftOut();}
+/* The exercises left out of plans: the assessment's "Lifts you won't do" and the coach's
+   "I don't like lunges" (S.skip). New plans skip them; each has Put back, which takes
+   its row out in place (handlers/train.js unskip). */
+function leftOut(){
+  var k=S.skip||[];if(!k.length)return "";
+  var h='<div class="tsec" id="leftout"><h2 class="tsec-h">'+t("Left out")+'</h2></div>'
+   +'<p class="sub">'+t("New plans skip these. You can still add one to a day yourself.")+'</p><div class="list" data-leftout="1">';
+  k.forEach(function(n){
+    h+='<div class="item" data-skiprow="'+esc(n)+'">'+thumb(n,36)
      +'<div style="flex:1;min-width:0"><div style="font-weight:600">'+esc(exName(n))+'</div>'
      +'<div class="tiny">'+tm(muscleOf(n))+'</div></div>'
-     +'<span class="chev">\u203a</span></button>';});
+     +'<button class="btn sm g" data-unskip="'+esc(n)+'">'+t("Put back")+'</button></div>';});
   return h+'</div>';}
 
 

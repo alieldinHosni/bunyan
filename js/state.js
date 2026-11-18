@@ -69,10 +69,11 @@ function hydrate(){
   S=normalize(S);
   if(!S.prefs)S.prefs=JSON.parse(JSON.stringify(DEF.prefs));
   if(!S.favs)S.favs=[];
-  /* "Never suggest" is gone. Leaving stored exclusions behind would keep filtering
-     results with nothing on screen to say why, or to undo it. */
-  if(S.skip&&S.skip.length)S.skip=[];
-  if(!S.skip)S.skip=[];
+  /* The exercises left out of plans (the assessment's "Lifts you won't do", the coach's
+     "I don't like lunges"). Shown under Training › Exercises › Favourites, each with Put
+     back, so nothing filters plans without saying so. Names only, each once. */
+  if(!Array.isArray(S.skip))S.skip=[];
+  S.skip=S.skip.filter(function(n,i,a){return typeof n==="string"&&n&&a.indexOf(n)===i;});
   if(!S.myFoods)S.myFoods=[];
   if(!S.savedMeals)S.savedMeals=[];
   /* My Foods opens a saved meal by id; meals saved before it had none. */

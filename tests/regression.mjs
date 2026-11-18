@@ -5492,6 +5492,53 @@ await test("Coach command, fit (C-5a): \"I have 20 minutes, only dumbbells\" sho
   const a=await ask("عندي 20 دقيقة ودمبل بس");
   eq(a.ag&&a.ag.act,"session.fit","in Arabic too");
 });
+await test("Coach command, leave out (C-5a): \"I don't like lunges\" leaves every lunge out of new plans, swaps the one in the program for a stand-in that isn't a lunge, Undo puts both back; Favourites lists them with Put back, which takes only its row; the list survives a restart; Arabic the same",async page=>{
+  const ask=q=>page.evaluate(async q=>{const c=await import("/js/ui/views/chat.js");const V=(await import("/js/ui/view.js")).V;
+    const m=c.ask(q);V.coach="full";(await import("/js/ui/render.js")).render();return {at:m.at,ag:m.ag&&{act:m.ag.act,p:m.ag.p}};},q);
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),Sp=await import("/js/data/splits.js");
+    const d=st.split().days.filter(x=>x.ex.length)[0];d.ex.push(Sp.ex("Dumbbell Lunges",3,10,12));st.S.skip=[];st.saveDB();});
+  const prog0=await ev(page,"JSON.stringify(S.programs)");
+  const last=()=>ev(page,"(m=>({at:m.at,ag:m.ag&&{s:m.ag.s,act:m.ag.act,p:m.ag.p}}))(S.chat[S.chat.length-1])");
+  const choose=async(q,i)=>{const m0=await ask(q);await pause(page,400);
+    if(!m0.ag||m0.ag.act!=="exercise.avoid")return m0;
+    if(m0.ag.p&&m0.ag.p.only===undefined&&m0.ag.p.key){await page.tap('#cpanel [data-agpick="'+m0.at+'|'+i+'"]');await pause(page,500);return last();}
+    return m0;};
+  const m0=await ask("I don't like lunges");
+  const asked=await page.$$eval('#cpanel .ag-opt .ag-ol',a=>a.map(e=>e.textContent));
+  eq([m0.ag&&m0.ag.act,asked.length,/^All \d+ lunges$/.test(asked[0])],["exercise.avoid",2,true],"all of them, or only the one: "+JSON.stringify(asked));
+  await page.tap('#cpanel [data-agpick="'+m0.at+'|1"]');await pause(page,500);
+  const one=await last();
+  eq([one.ag&&one.ag.s,one.ag&&one.ag.p.names],["confirm",["Dumbbell Lunges"]],"only this one: just the one");
+  const m=await choose("I don't like lunges",0);
+  eq([m.ag&&m.ag.s,m.ag&&m.ag.act],["confirm","exercise.avoid"],"all: a change to tap");
+  eq(m.ag.p.names.length>5&&m.ag.p.names.every(n=>/lunge/i.test(n)),true,"every lunge, and only lunges: "+m.ag.p.names.join(", "));
+  eq(m.ag.p.sw.length,1,"the one in the program is swapped");
+  eq(m.ag.p.sw[0].from==="Dumbbell Lunges"&&!/lunge/i.test(m.ag.p.sw[0].to),true,"for a stand-in that isn't a lunge: "+m.ag.p.sw[0].to);
+  await pause(page,400);
+  await page.tap('#cpanel [data-agok="'+m.at+'"]');await pause(page,700);
+  eq(await ev(page,"S.skip.length"),m.ag.p.names.length,"on the leave-out list");
+  eq(await ev(page,"JSON.stringify(S.programs).indexOf('Dumbbell Lunges')<0&&JSON.stringify(S.programs).indexOf("+JSON.stringify(JSON.stringify(m.ag.p.sw[0].to)).slice(1,-1).replace(/^/,"'").replace(/$/,"'")+")>=0"),true,"the program has the stand-in");
+  await page.tap('#cpanel [data-agundo="'+m.at+'"]');await pause(page,700);
+  eq([await ev(page,"S.skip.length"),await ev(page,"JSON.stringify(S.programs)")===prog0],[0,true],"Undo: the list and the program as they were");
+  const m2=await choose("I don't like lunges",0);
+  await page.tap('#cpanel [data-agok="'+m2.at+'"]');await pause(page,700);
+  const again=await ask("I don't like lunges");
+  eq(again.ag&&again.ag.act||null,null,"said again: already left out, nothing to tap");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.coach=null;V.tab="train";V.train="favs";(await import("/js/ui/render.js")).render();});
+  await pause(page,500);
+  const rows=await page.$$eval('#app [data-skiprow]',a=>a.length);
+  eq(rows,m2.ag.p.names.length,"Favourites lists each left out");
+  await page.evaluate(()=>{document.getElementById("leftout").dataset.mark="1";});
+  const first=await page.getAttribute('#app [data-unskip]','data-unskip');
+  await page.tap('#app [data-unskip]');await pause(page,400);
+  eq([await page.$$eval('#app [data-skiprow]',a=>a.length),await ev(page,"S.skip.indexOf("+JSON.stringify(first)+")"),await page.getAttribute('#leftout','data-mark')],[rows-1,-1,"1"],"Put back: off the list, only its row gone, the page not redrawn");
+  const kept=await page.evaluate(async()=>{const st=await import("/js/state.js");st.saveDB();st.initState();return st.S.skip.length;});
+  eq(kept,rows-1,"the list survives a restart");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";});
+  const a=await choose("متدينيش بيربي تاني ابدا",0);
+  eq(a.ag&&a.ag.act,"exercise.avoid","in Arabic too");
+  eq(a.ag.p.names.every(n=>/burpee/i.test(n)),true,"burpees: "+a.ag.p.names.join(", "));
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
