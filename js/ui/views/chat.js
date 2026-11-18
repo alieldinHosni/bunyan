@@ -1501,14 +1501,27 @@ function aFit(a,q,it){
     p(a,fill(t("Today's workout takes about {f} min. In {h}, do these, in order, and skip the rest:"),{f:full,h:have+" "+t("min")}));}
   else if(have)p(a,fill(t("Today's workout takes about {f} min, so it fits in {h}."),{f:full,h:have+" "+t("min")}));
   else p(a,fill(t("Today's workout: {w}, about {f} min."),{w:planName(d.name),f:full}));
-  var lims=limitsOf(S.profile),miss=0;
+  var lims=limitsOf(S.profile),miss=0,names=[],swap={},none=0;
   l(a,keep.map(function(e){
     var nm=exName(e.name)+(isActivity(e.name)?"":" · "+doseText(e));
-    if(!gear||isActivity(e.name)||usable(e.name,gear))return nm;
+    if(!gear||isActivity(e.name)||usable(e.name,gear)){names.push(e.name);return nm;}
     var sb=standIn(e.name,gear,lims);miss++;
+    if(sb){names.push(e.name);swap[e.name]=sb;}else none++;
     return sb?fill(t("{a} → {b}, with what you have"),{a:nm,b:exName(sb)}):fill(t("{a}: nothing close with that kit; skip it"),{a:nm});}));
-  if(gear)n(a,miss?t("A guide for today: your program itself stays as it is."):t("Everything here works with what you have."));
+  var changed=names.length&&(names.length<d.ex.length||Object.keys(swap).length);
+  if(gear)n(a,miss?t("Your program itself stays as it is: this is today only."):t("Everything here works with what you have."));
   else if(have&&have<full)n(a,t("The main lifts come first in your program, so a short session still does most of the work. Rest a little less between sets if you need to."));
+  /* C-5a: not only a guide. Started like this with a tap, Undo ends it; the program is not
+     changed (handlers/actions.js session.fit). With a workout already open, the guide. */
+  if(changed&&!S.active){
+    var sws=Object.keys(swap).length;
+    a.ag={s:"confirm",act:"session.fit",p:{day:d.id,keep:names,swap:swap},
+      lead:t("Start today's workout like this?"),
+      item:fill(t(names.length===1?"{n} exercise":"{n} exercises"),{n:names.length})+(sws?" · "+fill(t(sws===1?"{n} stand-in":"{n} stand-ins"),{n:sws}):""),
+      detail:t("Today only"),cta:t("Start it like this"),
+      done:t("Started. Today's workout is as above; your program is as it was."),
+      undone:t("Undone. No workout was started.")};
+    return a;}
   return act(a,t("Start workout"),{"data-startday":d.id});}
 function aDays(a,q,it){
   var R=rd(it),days=split().days.filter(function(x){return x.ex&&x.ex.length;}).length,want=R.n||0;

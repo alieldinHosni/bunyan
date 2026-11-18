@@ -5473,6 +5473,25 @@ await test("Lighter start (WP-9): a first launch fetches at most "+BUDGET.n+" fi
   console.log("    start: "+r.n+" files, "+r.kb+" KB; largest "+r.top.join(", "));
   if(r.n>BUDGET.n||r.kb>BUDGET.kb)throw new Error("over budget: "+r.n+" files, "+r.kb+" KB (at most "+BUDGET.n+", "+BUDGET.kb+"); largest "+r.top.join(", "));
 },{init:()=>{window.requestIdleCallback=()=>0;}});
+await test("Coach command, fit (C-5a): \"I have 20 minutes, only dumbbells\" shows today's session cut and swapped, starts it like that with a tap, keeps the planned sets on each stand-in, leaves the program as it was, and Undo ends it; Arabic the same",async page=>{
+  const ask=q=>page.evaluate(async q=>{const c=await import("/js/ui/views/chat.js");const V=(await import("/js/ui/view.js")).V;
+    const m=c.ask(q);V.coach="full";(await import("/js/ui/render.js")).render();return {at:m.at,ag:m.ag&&{act:m.ag.act,p:m.ag.p}};},q);
+  const prog0=await ev(page,"JSON.stringify(S.splits||S.programs||null)");
+  const m=await ask("I have 20 minutes, only dumbbells");
+  eq(m.ag&&m.ag.act,"session.fit","a change to tap, not only a guide");
+  eq(Object.values(m.ag.p.swap).every(n=>!/Barbell|Cable|Machine|Lat Pulldown/.test(n)),true,"each stand-in uses the kit said");
+  await pause(page,400);
+  await page.tap('#cpanel [data-agok="'+m.at+'"]');await pause(page,700);
+  const live=await ev(page,"S.active&&S.active.entries.map(e=>[e.name,e.planned.sets,e.planned.lo,e.planned.hi])");
+  eq(live.map(x=>x[0]),m.ag.p.keep.map(n=>m.ag.p.swap[n]||n),"the workout is the kept exercises, each stand-in in its place");
+  eq(live.every(x=>x[1]>0&&x[2]>0&&x[3]>=x[2]),true,"each keeps a planned dose");
+  eq(await ev(page,"JSON.stringify(S.splits||S.programs||null)"),prog0,"the program is as it was");
+  await page.tap('#cpanel [data-agundo="'+m.at+'"]');await pause(page,700);
+  eq(await ev(page,"S.active"),null,"Undo: no workout");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";});
+  const a=await ask("عندي 20 دقيقة ودمبل بس");
+  eq(a.ag&&a.ag.act,"session.fit","in Arabic too");
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
@@ -5944,7 +5963,7 @@ await test("Coach actions: every action in the registry runs through a branch th
       described:Object.values(A).every(a=>a.desc&&a.params&&typeof a.confirm==="boolean"&&typeof a.run==="function"),
       domains:[...new Set(Object.keys(A).map(k=>k.split(".")[0]))].sort()};});
   eq([r.missing,r.described],[[],true],"each tap key is a registered branch; each action described");
-  eq(r.domains,["act","app","cardio","deload","exercise","food","live","meal","past","plan","profile","progress","recovery","rest","sched","set","steps","travel","water","workout"],"grouped by domain");
+  eq(r.domains,["act","app","cardio","deload","exercise","food","live","meal","past","plan","profile","progress","recovery","rest","sched","session","set","steps","travel","water","workout"],"grouped by domain");
   /* set.log, in a live workout: the logger's own Log set. */
   await startWorkout(page);
   const n0=await ev(page,"S.active.entries[V.logIdx].sets.length");
