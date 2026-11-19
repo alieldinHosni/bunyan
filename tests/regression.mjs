@@ -5615,6 +5615,25 @@ await test("Coach, the owner's own questions (19 Nov): today swapped for a rest 
   const a1=await ask("خلي النهارده يوم راحه"),a2=await ask("عامل ايه"),a3=await ask("نفسي في حاجه حلوه"),a4=await ask("مش عايز بيض دلوقتي");
   eq([a1.ag&&a1.ag.act,a2.id,a3.id,a4.ag&&a4.ag.act],["sched.skip","hello","crave","meal.swap"],"in Arabic too");
 });
+await test("Coach command, swap in the program (C-5a): \"swap Leg Press for Goblet Squat\" shows the change, applies it on a tap keeping sets, reps and rest, and Undo puts the program back; Arabic the same",async page=>{
+  const ask=q=>page.evaluate(async q=>{const c=await (await import("/js/ui/chatload.js")).loadChat();const V=(await import("/js/ui/view.js")).V;
+    const m=c.ask(q);V.coach="full";(await import("/js/ui/render.js")).render();return {at:m.at,ag:m.ag&&{s:m.ag.s,act:m.ag.act,p:m.ag.p}};},q);
+  const dose=()=>ev(page,"(()=>{for(const d of S.programs.flatMap(p=>p.days))for(const e of d.ex)if(e.name==='Leg Press'||e.name==='Goblet Squat')return [d.id,e.name,e.sets,e.lo,e.hi,e.rest];return null;})()");
+  const prog0=await ev(page,"JSON.stringify(S.programs)"),d0=await dose();
+  eq(d0&&d0[1],"Leg Press","the seeded program has Leg Press");
+  const m=await ask("swap Leg Press for Goblet Squat");
+  eq([m.ag&&m.ag.s,m.ag&&m.ag.act,m.ag&&m.ag.p.from,m.ag&&m.ag.p.name],["confirm","exercise.swap","Leg Press","Goblet Squat"],"the change shown first");
+  eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"nothing changed before the tap");
+  await pause(page,300);
+  await page.tap('#cpanel [data-agok="'+m.at+'"]');await pause(page,600);
+  const d1=await dose();
+  eq([d1[0],d1[1],d1[2],d1[3],d1[4],d1[5]],[d0[0],"Goblet Squat",d0[2],d0[3],d0[4],d0[5]],"swapped on the same day, sets, reps and rest kept");
+  await page.tap('#cpanel [data-agundo="'+m.at+'"]');await pause(page,600);
+  eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"Undo: the program as it was");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";});
+  const a=await ask("بدل الليج بريس بجوبلت سكوات");
+  eq([a.ag&&a.ag.act,a.ag&&a.ag.p.from,a.ag&&a.ag.p.name],["exercise.swap","Leg Press","Goblet Squat"],"in Arabic too");
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
