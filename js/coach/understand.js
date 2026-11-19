@@ -423,6 +423,10 @@ function understand(text,ctx){
   if(prev&&prev.topic&&prev.topic!=="correction"&&(mm&&f.split(" ").length<=5||mk)){
     var rest=(mm?f.slice(mm[0].length):f.slice(mk[0].length)).trim();
     var Ef=entitiesOf(rest,ctx);
+    /* "And the day before?", "the day after": the last day, moved by one. */
+    var shift=/^(the )?(day|one) before( that| it)?$|^(اليوم|اللي) (اللي )?قبله$|^قبلها بيوم$/.test(rest)?-1:/^(the )?(day|one) after( that| it)?$|^(اليوم|اللي) (اللي )?بعده$|^بعدها بيوم$/.test(rest)?1:0;
+    if(shift&&prev.entities&&prev.entities.day){var pd=prev.entities.day,ago=pd.when==="today"?0:pd.when==="yesterday"?1:pd.when==="daybefore"?2:pd.when==="ago"?pd.n:pd.when==="tomorrow"?-1:null;
+      if(ago!=null){var na=ago-shift;Ef.day=na===0?{when:"today"}:na===1?{when:"yesterday"}:na===2?{when:"daybefore"}:na===-1?{when:"tomorrow"}:na>2?{when:"ago",n:na}:null;}}
     var changes=Ef.exercise.length||Ef.muscle.length||Ef.day||Ef.period||Ef.numbers.length||Ef.meal||Ef.equipment.length;
     if(changes&&!readings(rest,Ef,ctx,false,false).filter(function(x){return x.score>=8;}).length){
       R.followup=true;R.kind=prev.kind;R.act=prev.act;R.topic=prev.topic;R.mode=prev.mode;

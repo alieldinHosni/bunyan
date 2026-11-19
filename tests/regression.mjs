@@ -5634,6 +5634,23 @@ await test("Coach command, swap in the program (C-5a): \"swap Leg Press for Gobl
   const a=await ask("بدل الليج بريس بجوبلت سكوات");
   eq([a.ag&&a.ag.act,a.ag&&a.ag.p.from,a.ag&&a.ag.p.name],["exercise.swap","Leg Press","Goblet Squat"],"in Arabic too");
 });
+await test("Coach conversations (C-7): 30 exchanges of two or three turns, English and Arabic — follow-ups that continue the last answer, a day moved by one, \"no wait, tomorrow\", corrections that decline a card or offer Undo, a pick then its change — each ends in the answer it should",async page=>{
+  const CV=[[["best squat","and bench?"],"record","Bench Press"],[["best bench","what about deadlift?"],"record","Deadlift"],[["what did I eat yesterday","and the day before?"],"foodday","Nov 17"],[["what did I eat yesterday","and the day before?","and the day before?"],"foodday","Nov 16"],[["اكلت ايه امبارح","واليوم اللي قبله؟"],"foodday","17"],[["skip today","no wait, tomorrow"],"app","Tomorrow"],[["skip today","yes"],"tap:agok",""],[["skip today","no"],"tap:agno",""],[["add a glass of water","you're wrong"],"correction","Not done"],[["add a glass of water","!ok","you're wrong"],"correction","Undo"],[["add a glass of water","!ok","undo that"],"app","Undo"],[["what's my workout today","make it lighter"],"lighter","Easier exercises"],[["what's my workout today","make it lighter","make one of today's exercises easier"],"act:ex.easier",""],[["what should I eat now","something else"],"swap",""],[["What should I eat now?","Yeah, but I don't feel like eating egg now"],"swap",""],[["best squat","no, I meant front squat"],"record","Front Squat"],[["I don't like lunges","!pick1"],"act:exercise.avoid","Leave"],[["Can you switch one of exercises today to a simpler one?","!pick0"],"act:session.fit",""],[["swap Leg Press for Goblet Squat","no, for Hack Squat"],"act:exercise.swap","Hack Squat"],[["how much protein do I need","and carbs?"],"faq","Carbs"],[["How are you?","what should I eat now"],"eat",""],[["what's my workout today","and tomorrow?"],"tomorrow",""],[["خلي النهارده يوم راحه","لا استني، بكره"],"app","بكره"],[["عامل ايه","اكل ايه دلوقتي"],"eat",""],[["ايه احسن سكوات عملته","والبنش؟"],"record","بنش"],[["add 2 glasses of water","no, 3"],"act:water.add","750"],[["I have 20 minutes, only dumbbells","!ok","you're wrong"],"correction","Undo"],[["log 3000 steps","!ok","undo"],"app",""],[["what should I eat now","I'm craving sugar"],"crave","kcal left"],[["what did I eat today","and yesterday?"],"foodday","yesterday"]];
+  const r=await page.evaluate(async CV=>{const c=await (await import("/js/ui/chatload.js")).loadChat();const st=await import("/js/state.js");const reg=await import("/js/ui/handlers/registry.js");
+    const N=await import("/js/engine/nutrition.js");await new Promise(res=>N.loadFoods(res));
+    const txt=m=>{if(!m||m.tap)return "";const d=document.createElement("div");d.innerHTML=c.bubble(m,true);return d.textContent.replace(/\s+/g," ");};
+    const tap=D=>{const b=document.createElement("button");reg.dispatchTap(D,b,{target:b},{});};
+    const out=[];const S0=JSON.stringify(st.S);
+    for(const [turns,want,must] of CV){const fresh=JSON.parse(S0);Object.keys(st.S).forEach(k=>{if(!(k in fresh))delete st.S[k];});Object.assign(st.S,fresh);st.S.chat=[];let m=null,last=null;
+      for(const q of turns){if(q==="!ok"){tap({agok:String(last.at)});continue;}
+        if(q.startsWith("!pick")){tap({agpick:last.at+"|"+q.slice(5)});last=m=st.S.chat[st.S.chat.length-1];continue;}
+        m=c.ask(q);if(m&&m.tap){tap(m.tap);}else last=m;}
+      const got=m&&m.tap?"tap:"+Object.keys(m.tap)[0]:m&&m.ag&&m.ag.act&&want.startsWith("act:")?"act:"+m.ag.act:m&&m.id;
+      const t=txt(m),ok=got===want&&(!must||t.indexOf(must)>=0);
+      out.push((ok?"PASS ":"FAIL ")+turns.join(" | ")+" => "+got+(ok?"":"  want "+want+" "+must+" :: "+t.slice(0,180)));}
+    return out;},CV);
+  const bad=r.filter(x=>x.startsWith("FAIL"));if(bad.length)throw new Error(bad.length+" of "+r.length+" conversations fail:\n"+bad.join("\n"));
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

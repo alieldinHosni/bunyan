@@ -250,8 +250,11 @@ function commandOf(text,unit){
     if(/(kilos|kilograms|\bkgs?\b|كيلو)/.test(fq))return {cmd:"app.unit",unit:"kg"};
     if(/(arabic|عربي|العربي)/.test(fq))return {cmd:"app.lang",lang:"ar"};
     if(/(english|انجليزي|الانجليزي)/.test(fq))return {cmd:"app.lang",lang:"en"};
-    if(/(dark|night|غامق|دارك|ليلي)/.test(fq))return {cmd:"app.look",look:"dark"};
-    if(/(light|bright|فاتح|لايت|نهاري)/.test(fq))return {cmd:"app.look",look:"light"};
+    /* The look only when the look is said ("dark mode", "light theme", "switch to dark"):
+       "make it lighter" is about a workout (owner's test, 19 Nov). */
+    var lookw=/(mode|theme|look|appearance|screen|colou?rs?|ثيم|مود|الوضع|شكل|الشاشه|الالوان)/.test(fq)||/^(switch|change|go|turn|put|make|حول|غير|خلي)( it| the app| to| it to| into| الى| ل)* (dark|light|غامق|فاتح|دارك|لايت)$/.test(fq);
+    if(lookw&&/(^| )(dark|night|غامق|دارك|ليلي)( |$)/.test(fq))return {cmd:"app.look",look:"dark"};
+    if(lookw&&/(^| )(light|bright|فاتح|لايت|نهاري)( |$)/.test(fq))return {cmd:"app.look",look:"light"};
     var pal=/(^| )(red|احمر)( |$)/.test(q)?"red":/(^| )(blue|ازرق)( |$)/.test(q)?"blue":/(^| )(mono|black and white|grey|gray|ابيض واسود|رمادي)( |$)/.test(q)?"mono":"";
     if(pal&&/(theme|colou?r|palette|ثيم|لون|الوان)/.test(fq))return {cmd:"app.palette",palette:pal};}
 
