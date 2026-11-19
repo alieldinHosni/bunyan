@@ -2174,7 +2174,19 @@ function warmCoach(){
     function(){situationOf("i had a bad day");},function(){namesExercise("bench press");},function(){namesFood("rice");}];
   var idle=typeof requestIdleCallback==="function"?function(f){requestIdleCallback(f,{timeout:300});}:function(f){setTimeout(f,30);};
   (function next(){var f=steps.shift();if(!f)return;idle(function(){try{f();}catch(e){}next();});})();}
+/* C-10 (docs/COACH-AGENT.md 2.8): what the coach could not read is kept on this phone,
+   per profile, with the "Not what I asked" ones (S.missed, newest last, 200 at most):
+   an answer of "not sure", "did you mean" or a correction keeps its question without a
+   tap. Nothing is sent anywhere; the list is copied or exported as a file from Chat
+   history, to be added to the evaluation set. */
+var MISSIDS=/^(unknown|clarify|correction)$/;
 function ask(q,id,lang){
+  var m=askIn(q,id,lang);
+  try{if(m&&!m.tap&&m.q&&!id&&MISSIDS.test(m.id||"")){
+    S.missed=(Array.isArray(S.missed)?S.missed:[]).concat([{q:String(m.q).slice(0,300),id:String(m.id),at:Date.now(),lang:m.lang==="ar"?"ar":"en",how:"auto"}]).slice(-200);
+    m.missKept=1;}}catch(e){}
+  return m;}
+function askIn(q,id,lang){
   /* A red flag is read before anything else, as said: never rewritten or split. */
   if(!id&&isSafety(q))return askOne(q,null,lang);
   /* A day told in one message is read whole, not cut in two. */
@@ -2550,6 +2562,7 @@ function histSheet(){
   if(ms0.length)h+='<section class="chh-miss"><h3 class="sg-h">'+esc(t("Questions the coach got wrong"))+' <span class="num">'+ms0.length+'</span></h3>'
     +'<p class="tiny">'+esc(t("Copy them and send them on, so the coach learns to read them."))+'</p>'
     +'<div class="sacts"><button class="btn g sm" data-misscopy="1">'+esc(t("Copy the list"))+'</button>'
+    +'<button class="btn g sm" data-missexport="1">'+esc(t("Export as a file"))+'</button>'
     +'<button class="btn g sm" data-missclear="1">'+esc(t("Clear"))+'</button></div></section>';
   if(!log.length)return h+'<p class="chh-empty">'+esc(t("Nothing here yet."))+'</p>';
   /* Search: typing hides what doesn't match, each row in place (handlers/fields.js). */
