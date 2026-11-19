@@ -5701,6 +5701,28 @@ await test("Coach why (C-6): each of the six decision kinds is answered with the
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;st.S.prefs.lang="ar";});
   const ar=await ask("ليه السكوات في برنامجي؟");eq(ar.id,"why","in Arabic");has(ar,/هاك سكوات/,"the program's own squat");
 });
+await test("Coach misses (C-10): what the coach couldn't read is kept without a tap, Not what I asked marks it rather than keeping it twice, and Chat history exports the list as a file; nothing goes over the network",async page=>{
+  const out=[];page.on("request",r=>{const u=r.url();if(!/^https?:\/\/(localhost|127\.0\.0\.1)/.test(u)&&!/^(data|blob):/.test(u))out.push(u);});
+  const ask=q=>page.evaluate(async q=>{const c=await (await import("/js/ui/chatload.js")).loadChat();const V=(await import("/js/ui/view.js")).V;
+    const m=c.ask(q);V.coach="full";(await import("/js/ui/render.js")).render();return {at:m.at,id:m.id};},q);
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.missed=[];st.S.chat=[];});
+  const a=await ask("blorp zingle wobba");
+  eq(a.id,"unknown","not read");
+  eq(await ev(page,"(S.missed||[]).map(x=>[x.q,x.how])"),[["blorp zingle wobba","auto"]],"kept without a tap");
+  await pause(page,300);
+  await page.tap('#cpanel [data-chatmiss="'+a.at+'"]');await pause(page,300);
+  eq(await ev(page,"(S.missed||[]).map(x=>[x.q,x.how])"),[["blorp zingle wobba","user"]],"Not what I asked marks it, not kept twice");
+  const b=await ask("best squat");await pause(page,300);
+  await page.tap('#cpanel [data-chatmiss="'+b.at+'"]');await pause(page,300);
+  eq(await ev(page,"(S.missed||[]).length"),2,"a good answer marked wrong is kept too");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.coach=null;V.sheet="set_chat";(await import("/js/ui/render.js")).render();});
+  await pause(page,500);
+  const [dl]=await Promise.all([page.waitForEvent("download"),page.tap('#sheet [data-missexport]')]);
+  const fs=await import("fs");const body=JSON.parse(fs.readFileSync(await dl.path(),"utf8"));
+  eq([body.kind,body.items.length,body.items[0].say,body.items[0].answeredAs,body.items[1].marked,/^bunyan-coach-misses-\d{4}-\d\d-\d\d\.json$/.test(dl.suggestedFilename())],
+    ["coach-misses",2,"blorp zingle wobba","unknown",true,true],"the file: what was said, what it was answered as, marked or not");
+  eq(out,[],"nothing sent over the network");
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

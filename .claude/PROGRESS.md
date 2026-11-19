@@ -5000,3 +5000,14 @@ Probing two- and three-turn exchanges found two bugs and four gaps. All are fixe
 - **Calories, protein, a stuck lift.** Unchanged: their answers already give the formula and the figures.
 - **Routing.** preRoute sends "why…" about these to the why answer before the router. This fixes a bug: "why is the weight for squat 80 kg today?" was offered as an 80 kg weigh-in. The card's heading is now "Why".
 - **Tests.** New browser test "Coach why (C-6)": each of the six kinds, with its rule and numbers, the weigh-in bug, and Arabic. That is the C-6 acceptance.
+
+**Coach C-10: misses kept and exported (v295, 19 Nov, session/coach-misses).** Much of 2.8's "learning from real use" was already there:
+- "Not what I asked" kept its question in S.missed: per profile, newest last, at most 200.
+- Chat history listed the kept questions, with Copy the list and Clear.
+
+What C-10 adds:
+- **Kept without a tap.** When the coach answers "not sure what you mean" (unknown), "did you mean" (clarify) or a correction, its question is kept too, marked `how:"auto"`. This is views/chat.js `ask()`, now a thin wrapper round the old body, `askIn`.
+- **No duplicates.** "Not what I asked" on such an answer marks the kept line as the person's own (`how:"user"`) instead of keeping it twice. On any other answer it keeps the question, as before.
+- **Export as a file.** Chat history's list has "Export as a file". It downloads bunyan-coach-misses-DATE.json: for each question, what was said, what it was answered as, the language, when, and whether the person marked it. A builder adds these to tests/coach-eval.json.
+- **Nothing sent anywhere.** Everything stays on the phone until the person exports it.
+- **Tests.** New browser test "Coach misses (C-10)": kept without a tap, marked not doubled, a good answer marked wrong kept, and the file's contents. Every request the page makes is recorded, and none leaves the device. The existing "Not what I asked" and Chat history tests pass.

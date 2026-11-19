@@ -22,6 +22,7 @@ import {pushNav, resetNav} from "../nav.js";
 import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
+import {VERSION} from "../../version.js";
 import {buildLine, draftFrom, FOCUS_MAX, foodPrefs, gearOf, KIT, profileOf, skipOf, stageRun, STAGES, STEPS, youBad, youOk, youWhy} from "../views/assess.js";
 import {EXTRA_MAX, EXTRA_OK, GOALS, goalsOf} from "../../data/goals.js";
 import {lastMonth, monthlyNow, monthlyOpen} from "../../engine/monthly.js";
@@ -402,10 +403,22 @@ function register(){
   /* Not what I asked: the question kept for the owner to send on (S.missed, newest last,
      200 at most); the link becomes its thanks, that element alone. */
   key("chatmiss",function(D,el){var m=findMsg(D.chatmiss);if(!m||m.miss)return;
-    S.missed=(Array.isArray(S.missed)?S.missed:[]).concat([{q:String(m.q||"").slice(0,300),id:String(m.id||""),at:Date.now(),lang:m.lang==="ar"?"ar":"en"}]).slice(-200);
+    /* Kept already, as a miss the coach knew it had (chat.js ask): marked as the
+       person's own word, not kept twice. */
+    var ls=Array.isArray(S.missed)?S.missed:[],had=m.missKept?ls.filter(function(x){return x.q===String(m.q||"").slice(0,300)&&x.how==="auto";}).pop():null;
+    if(had)had.how="user";
+    else S.missed=ls.concat([{q:String(m.q||"").slice(0,300),id:String(m.id||""),at:Date.now(),lang:m.lang==="ar"?"ar":"en",how:"user"}]).slice(-200);
     m.miss=1;saveDB();
     var p=document.createElement("p");p.className="chat-missd";p.textContent=t("Kept, thanks. Try saying it another way, or tap a question below.");
     if(el&&el.parentNode)el.parentNode.replaceChild(p,el);return;});
+  /* The kept misses as a file (C-10): what was said, what it was answered as, the
+     language, when, and whether the person marked it. Made on the phone; nothing is sent. */
+  key("missexport",function(){
+    var items=(Array.isArray(S.missed)?S.missed:[]).map(function(x){return {say:x.q,answeredAs:x.id,lang:x.lang,at:new Date(num(x.at)).toISOString(),marked:x.how!=="auto"};});
+    var blob=new Blob([JSON.stringify({app:"bunyan",kind:"coach-misses",version:VERSION,exported:new Date().toISOString(),items:items},null,1)],{type:"application/json"});
+    var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="bunyan-coach-misses-"+today()+".json";
+    document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},0);
+    toast(t("Exported. The file is on this phone; send it on when you like."));return;});
   /* The smart coach (js/ui/smartcoach.js): a question the rules missed, tried again by
      the model; the setting's buttons. */
   key("smarttry",function(D){var m0=findMsg(D.smarttry);if(!m0||!isReady()||m0.id==="safety"||isSafety(m0.qq||m0.q))return;

@@ -317,6 +317,8 @@ var AR={"A program built for you, and rebuilt as you change": "برنامج مع
 "Start it like this": "ابدأه كده",
 "Started. Today's workout is as above; your program is as it was.": "بدأ. تمرين النهارده زي اللي فوق؛ وبرنامجك زي ما كان.",
 "Undone. No workout was started.": "اتلغى. مفيش تمرين بدأ.",
+"Export as a file": "صدّرها كملف",
+"Exported. The file is on this phone; send it on when you like.": "اتصدّرت. الملف على الموبايل؛ ابعته وقت ما تحب.",
 "{ex} isn't in your program, so the app doesn't suggest a weight for it.": "{ex} مش في برنامجك، فالتطبيق مش بيقترح له وزن.",
 "Your last best set of it: {s}.": "أحسن مجموعة ليك فيه آخر مرة: {s}.",
 "Which exercise? Say its name, like “why is Leg Press in my program?”.": "أنهي تمرين؟ قول اسمه، زي «ليه الليج بريس في برنامجي؟».",
