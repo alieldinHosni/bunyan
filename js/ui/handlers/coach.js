@@ -488,6 +488,18 @@ function register(){
     if(r.ok)S.context=r.store;
     m.acts=[];m.b=[{p:r.ok||r.why==="duplicate"?t("Kept, in your words. Ask “What have I told you?” to see or delete it."):t("That couldn't be kept.")}];saveDB();render();return;});
   key("ctxno",function(D,el){var m=lastAsked(el);if(!m)return;m.acts=[];m.b=[{p:t("Not kept.")}];saveDB();render();return;});
+  /* Forget, on "What the coach remembers": off the store, and only its row goes. */
+  key("memdel",function(D,el){
+    var pr=String(D.memdel).split("|"),k=pr[0],v=pr.slice(1).join("|");
+    if(k==="fact"){var r=removeFact(S.context,v);if(!r.ok)return;S.context=r.store;}
+    else if(k==="limit"){var lim=(S.profile.limits||[]),i=lim.indexOf(v);if(i<0)return;lim.splice(i,1);}
+    else if(k==="travel"){if(!S.travel)return;delete S.travel;}
+    else return;
+    saveDB();
+    var row=el&&el.closest&&el.closest("[data-memrow]");if(row)row.remove();
+    var ls=document.querySelector("[data-memlist]"),em=document.querySelector("[data-memempty]");
+    if(ls&&em&&!ls.children.length)em.hidden=false;
+    toast(t("Forgotten."));return;});
   key("ctxdel",function(D){var r=removeFact(S.context,D.ctxdel);S.context=r.store;
     (S.chat||[]).forEach(function(m){if(m&&Array.isArray(m.acts))m.acts=m.acts.filter(function(b){return !(b.a&&b.a["data-ctxdel"]===D.ctxdel);});});
     saveDB();render();toast(t("Deleted."));return;});

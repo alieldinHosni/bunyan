@@ -4973,3 +4973,15 @@ Probing two- and three-turn exchanges found two bugs and four gaps. All are fixe
 - **"Make it lighter"** after today's workout now gets "A lighter workout", with two taps: easier exercises today (ex.easier) or start a lighter week (deload).
 - **Tests.** New browser test "Coach conversations (C-7)": 30 exchanges of two or three turns, English and Arabic, each ending in the answer it should. That is the C-7 acceptance count, and all 30 pass.
 - **Left of C-7:** the coach's memory listed in Profile with each line removable (2.7, "Memory the person can see"), and recording corrections for export (C-10).
+
+**Coach C-7: what the coach remembers, in Profile (v293, 19 Nov, session/coach-memory).** 2.7's last piece: everything the coach keeps about the person is in one place, and each line can be removed.
+
+- **Where.** Profile → Your data → "What the coach remembers", with a count on the row. It opens a sheet (settings.js `memSheet`) listing:
+  - each fact the person told it to keep (S.context), with its kind;
+  - each sore spot it keeps away from (profile limits);
+  - travel mode, if on, with its end date;
+  - the exercises left out of plans, as one row that opens Favourites, where each has Put back.
+- **Removing.** Forget (End it for travel) removes the item from its store (handlers/coach.js `memdel`) and takes out only its row; the sheet is not redrawn. Empty, the sheet says how things get there.
+- **The rule from 2.7 holds.** Nothing the coach uses is kept outside this list: facts, limits, travel, Left out.
+- **Tests.** New browser test "What the coach remembers (C-7)": every kind listed, the count, each Forget (store and row, sheet not redrawn), the empty state, Arabic. Screenshots checked in English and Arabic (RTL).
+- **C-7 status.** Done: follow-ups, the pending question, corrections, visible memory. Recording corrections for export is C-10.
