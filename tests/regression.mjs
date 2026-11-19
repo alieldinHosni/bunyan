@@ -5539,6 +5539,38 @@ await test("Coach command, leave out (C-5a): \"I don't like lunges\" leaves ever
   eq(a.ag&&a.ag.act,"exercise.avoid","in Arabic too");
   eq(a.ag.p.names.every(n=>/burpee/i.test(n)),true,"burpees: "+a.ag.p.names.join(", "));
 });
+await test("Coach live reading (C-4a): typing \"swap bench for dumbbells today\" shows swap · the bench · today before sending; a chip's alternative rewrites the field; nonsense shows no chips and the three nearest questions, and still sends; Arabic the same",async page=>{
+  await page.evaluate(async()=>{await (await import("/js/ui/chatload.js")).loadChat();const V=(await import("/js/ui/view.js")).V;V.coach="full";(await import("/js/ui/render.js")).render();});
+  await pause(page,500);
+  const chips=async()=>page.$$eval('#chatread [data-readchip]',a=>a.map(b=>[b.getAttribute("data-rk"),b.textContent]));
+  eq(await page.getAttribute('#chatq','placeholder'),"Tell the coach what you need","the field's label");
+  await page.fill('#chatq',"swap bench for dumbbells today");await pause(page,400);
+  const c=await chips();
+  eq(c.map(x=>x[0]),["act","thing","when"],"three chips: "+JSON.stringify(c));
+  eq([c[0][1],/Bench Press/.test(c[1][1]),c[2][1]],["Swap",true,"Today"],"with those meanings");
+  eq(await ev(page,"(S.chat||[]).length"),0,"nothing sent yet");
+  await page.tap('#chatread [data-rk="when"]');await pause(page,200);
+  const alts=await page.$$eval('#chatread .rd-alt',a=>a.map(b=>b.textContent));
+  eq(alts.includes("Tomorrow"),true,"the day's alternatives: "+JSON.stringify(alts));
+  await page.tap('#chatread .rd-alt:has-text("Tomorrow")');await pause(page,300);
+  eq(await page.inputValue('#chatq'),"swap bench for dumbbells tomorrow","the alternative rewrites the field");
+  eq((await chips())[2][1],"Tomorrow","and is read again");
+  await page.tap('#chatread [data-rk="act"]');await pause(page,200);
+  eq((await page.$$('#chatread .rd-alt')).length>0,true,"the act's alternatives");
+  await page.tap('#chatread [data-rk="thing"]');await pause(page,200);
+  const other=await page.textContent('#chatread .rd-alt');
+  await page.tap('#chatread .rd-alt');await pause(page,300);
+  eq((await chips())[1][1],other,"another exercise: the field names it, and it is read as that one");
+  await page.fill('#chatq',"asdfgh qwerty zxcv");await pause(page,400);
+  eq([(await chips()).length,(await page.$$('#chatread .rd-near')).length],[0,3],"nonsense: no chips, three nearest questions");
+  await page.press('#chatq','Enter');await pause(page,700);
+  eq([await ev(page,"(S.chat||[]).length>0"),await page.inputValue('#chatq'),await page.isHidden('#chatread')],[true,"",true],"Send still works, and the reading clears");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();(await import("/js/ui/render.js")).render();});
+  await pause(page,400);
+  await page.fill('#chatq',"بدل البنش بدمبل النهارده");await pause(page,400);
+  const ca=await chips();
+  eq([ca.map(x=>x[0]).join(","),ca[2]&&ca[2][1]],["act,thing,when","النهارده"],"in Arabic too: "+JSON.stringify(ca));
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

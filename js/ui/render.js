@@ -32,6 +32,7 @@ import {syncBgArt} from "./bgart.js";
 import {startArts} from "./art.js";
 import {PAGE} from "./transit.js";
 import {syncCoach} from "./coachfab.js";
+import {keepRead} from "./liveread.js";
 
 /* ============================================================ render */
 /* Motion is applied after the DOM has settled, and only to what changed.
@@ -303,6 +304,8 @@ function render(){
      focus into it the moment it opens. Sheets used to be invisible to both. */
   /* The floating Coach: the launcher where it may sit, the panel when it is open. */
   syncCoach();
+  /* The coach's live reading is drawn outside the markup: a render put it back as it was. */
+  keepRead();
   appEl.setAttribute("aria-hidden",V.sheet||V.coach?"true":"false");
   document.getElementById("nav").setAttribute("aria-hidden",V.sheet||focus?"true":"false");
   document.getElementById("wbar").setAttribute("aria-hidden",V.sheet?"true":"false");

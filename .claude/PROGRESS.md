@@ -4926,3 +4926,15 @@ How a request is handled:
 - **Routing.** The chat now routes an "avoid" with an exercise there, not to exremove. Explicit "remove X" still removes from one day.
 
 New test "Coach command, leave out (C-5a)": the question, only-this-one, all, the swap, Undo, Favourites' rows and Put back (the page not redrawn), the list surviving a restart, and Arabic («متدينيش بيربي تاني ابدا»).
+
+**Coach C-4a: the live reading, with Send kept on (v290, 19 Nov, session/coach-chips).** The owner chose (19 Nov) chips with Send still working, over the plan's version. The plan disabled Send when nothing was understood and turned off the raw-search fallback. So nothing that can be asked today stops working, and the fallback (`know`) stays.
+
+- **What it shows.** As the person types in the coach's field (panel or full screen), `js/ui/liveread.js` reads it 120 ms after the last key. `views/chat.js liveChips` returns up to three chips, what · which · when ("Swap · Barbell Bench Press · Today"). They are drawn in one row above the field (`#chatread`), under "I read:". The field's label is now "Tell the coach what you need".
+- **Correcting a chip.** A chip with alternatives opens them under the row. Picking one rewrites only the words in the field, then reads the field again:
+  - another act is a whole sentence (READAS; "avoid" added);
+  - another exercise replaces the whole words said for it, so a second pick replaces the first;
+  - another day replaces the day word. A change offers today and tomorrow; a question about the log offers today and yesterday.
+- **Nothing understood** (or read only as small talk): no chips. The three questions nearest the words appear instead, as the chat's own question buttons. Tapping one asks it and clears the field. Send works either way and clears the row.
+- **Redraws.** The panel is patched to its markup on a render, which emptied the row. `render()` now calls `keepRead()`, which draws the reading again (an open chip stays open) if the field still holds the text that was read.
+- **Understanding fix: a full name written out is that exercise.** Before, "swap Barbell Incline Bench Press …" was read as the program's bench press, because the program's own variant always won. Now `ctx.full` (views/chat.js `fullName`) passes the longest library name the words contain to `understand.js`, in English, or in Arabic as `exName` shows it. That exercise wins, and the reading carries all the words it was written with. Arabic letters are matched folded (ئ as ي).
+- **Tests.** New test "Coach live reading (C-4a)": three chips before sending; the day and exercise alternatives rewrite the field and are read again; nonsense shows no chips, three questions, and still sends; Arabic. Coach evaluation: unchanged (knowledge-001-ar still the one known miss, from before).

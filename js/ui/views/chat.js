@@ -22,7 +22,7 @@ import {KINDS, listFacts} from "../../coach/context.js";
 import {classify as safetyOf} from "../../coach/safety.js";
 import {reconcileNutrition, reconcileTraining} from "../../coach/reconcile.js";
 import {addDays as addDaysW, pinnedOn, weekDates, weekStartOf} from "../../engine/schedule.js";
-import {exSteps, muscleOf, secondaryOf} from "../../data/exercises.js";
+import {exSteps, LIB, muscleOf, secondaryOf} from "../../data/exercises.js";
 import {matchExercise} from "../../engine/splitparse.js";
 import {changeOf, gloss, retell, understand} from "../../coach/understand.js";
 import {cooldownFor, warmupFor} from "../../engine/warmup.js";
@@ -1553,12 +1553,66 @@ var READAS={record:["My best {ex}","ايه احسن {ex} عملته"],technique:
   foodday:["What did I eat yesterday?","اكلت ايه امبارح؟"],week:["How was my week?","الاسبوع كان عامل ازاي؟"],weight:["My weight trend","وزني عامل ازاي؟"],
   today:["What's my workout today?","اعمل ايه النهارده؟"],exswap:["Swap {ex} in my program","بدل {ex} في برنامجي"],exremove:["Remove {ex} from my program","شيل {ex} من برنامجي"],
   exadd:["Add {ex} to my program","ضيف {ex} لبرنامجي"],fit:["Fit today's workout to my time","ظبط تمرين النهارده على وقتي"],volume:["My sets this week","مجموعاتي الاسبوع ده"],
-  day:["What did I do yesterday?","عملت ايه امبارح؟"],why:["Why did the weight change?","ليه الوزن اتغير؟"]};
+  day:["What did I do yesterday?","عملت ايه امبارح؟"],why:["Why did the weight change?","ليه الوزن اتغير؟"],
+  avoid:["I don't like {ex}","مش بحب {ex}"]};
 function readAs(x,R){
   var tp=READAS[x.topic];if(!tp)return null;
   var e=R.entities.exercise[0],ar=R.lang==="ar",said=e?(ar?exName(e.name)||e.said:exName(e.name)||e.said):"";
   if(/\{ex\}/.test(tp[0])&&!said)return null;
   return {l:withLang(R.lang,function(){return fill(t(tp[0]),{ex:said});}),say:fill(tp[ar?1:0],{ex:e?(ar?e.said:e.said):""})};}
+/* ---- the live reading (C-4a, docs/COACH-AGENT.md) -------------------------------------
+   As the person types, what the coach understood, as up to three chips: what (act) ·
+   which (the exercise or muscle) · when. Each has alternatives that rewrite the words in
+   the field, never guess beyond them: another act is a whole sentence (READAS), another
+   exercise replaces the words said for it, another day replaces the day word. Nothing
+   understood: no chips, and the three questions nearest the words as buttons. Send works
+   either way (owner, 19 Nov): this shows the reading, it does not gate it.
+   Drawn by js/ui/liveread.js into one element above the field. */
+var ACTL={exswap:"Swap",exadd:"Add",exremove:"Remove",avoid:"Leave out",fit:"Fit today's workout",record:"Best",technique:"How to",
+  eat:"What I ate",foodday:"What I ate",week:"My week",weight:"My weight",today:"Today's workout",tomorrow:"Tomorrow's workout",volume:"My sets",
+  day:"A past day",why:"Why"};
+var KINDL={request:"A change","own-data":"From your log",knowledge:"A question"};
+var ACTALT=[["exswap","exremove","exadd","avoid"],["record","technique","volume"],["eat","foodday"],["today","day","fit"]];
+var WHEN={today:["today","النهارده"],yesterday:["yesterday","امبارح"],tomorrow:["tomorrow","بكره"]};
+var WHENRE=/(^| )(today|yesterday|tomorrow|النهارده|انهارده|امبارح|بكره|بكرة)(?= |$|[?؟.,!])/i;
+function liveChips(text){
+  var q=String(text||"").trim(),R=q.length>=2?readOf(q,null):null;
+  if(!R||(!R.kind&&!R.topic))return {chips:[],near:q.length>=3?nearAsk(q):[]};
+  var ar=R.lang==="ar",E=R.entities||{},chips=[];
+  var al=ACTL[R.topic]||KINDL[R.kind];
+  if(al){var grp=ACTALT.filter(function(g){return g.indexOf(R.topic)>=0;})[0]||[],alts=[];
+    grp.forEach(function(x){if(x===R.topic)return;var r=readAs({topic:x},R);if(r)alts.push({l:r.l,text:r.say});});
+    chips.push({k:"act",l:t(al),alts:alts});}
+  var ex=E.exercise&&E.exercise[0];
+  if(ex&&ex.name){
+    var said=ex.said||"",kw=String(ex.key||"").toLowerCase().split(" ").filter(Boolean),others=[];
+    var seen={};seen[exName(ex.name)]=1;
+    if(said&&kw.length)LIB.forEach(function(l){var n=l[0],ln=n.toLowerCase(),lb=exName(n);
+      if(n!==ex.name&&others.length<4&&!seen[lb]&&!isActivity(n)&&kw.every(function(w){return ln.indexOf(w.replace(/s$/,""))>=0;})){seen[lb]=1;others.push(n);}});
+    var re=said?new RegExp(fold(said).split(" ").map(function(w){return w.replace(/[.*+?^${}()|[\]\\-]/g,"\\$&");}).join("[^\\w\u0600-\u06ff]+"),"i"):null;
+    /* Arabic letters are matched folded (ئ as ي, ة as ه): where the words as typed differ,
+       the folded sentence is the one rewritten. */
+    var base=!re?null:re.test(q)?q:re.test(fold(q))?fold(q):null;
+    chips.push({k:"thing",l:exName(ex.name),alts:base?others.map(function(n){var nm=ar?exName(n):n;return {l:exName(n),text:base.replace(re,nm)};}):[]});}
+  else if(E.muscle&&E.muscle.length)chips.push({k:"thing",l:tm(E.muscle[0]),alts:[]});
+  var w=E.day&&WHEN[E.day.when]?E.day.when:"",m=WHENRE.exec(q);
+  if(w){var walts=[];
+    /* A change is for today or later; what was logged, today or before. */
+    if(m)Object.keys(WHEN).forEach(function(k){if(k!==w&&!(k==="yesterday"&&R.kind==="request")&&!(k==="tomorrow"&&R.kind==="own-data"))walts.push({l:t(cap(k)),text:q.slice(0,m.index+m[1].length)+WHEN[k][ar?1:0]+q.slice(m.index+m[0].length)});});
+    chips.push({k:"when",l:t(cap(w)),alts:walts});}
+  else if(R.period==="thisweek"||R.period==="lastweek"||R.period==="nextweek")chips.push({k:"when",l:t({thisweek:"This week",lastweek:"Last week",nextweek:"Next week"}[R.period]),alts:[]});
+  /* Read as something with no name to show (small talk, out of scope): as not understood. */
+  if(!chips.length)return {chips:[],near:q.length>=3?nearAsk(q):[]};
+  return {chips:chips,near:[]};}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+/* The three questions whose words are nearest the words typed, in either language. */
+function nearAsk(q){
+  var ws=fold(q).split(" ").filter(function(w){return w.length>=3;});
+  var sc=Object.keys(ASK).map(function(id){var en=fold(ASK[id]),ar=fold(t(ASK[id])),s=0;
+    ws.forEach(function(w){if((" "+en+" ").indexOf(" "+w)>=0||(" "+ar+" ").indexOf(" "+w)>=0)s++;});return {id:id,s:s};});
+  var hit=sc.filter(function(x){return x.s>0;}).sort(function(a,b){return b.s-a.s;}).map(function(x){return x.id;});
+  ["today","eat","track"].forEach(function(id){if(hit.indexOf(id)<0)hit.push(id);});
+  return hit.slice(0,3);}
 function aClarify(a,q,it){
   var R=rd(it),opts=[{topic:R.topic,mode:R.mode}].concat(R.alts||[]),seen={},shown=0;
   p(a,t("I'm not sure what you mean. Is it one of these?"));
@@ -1585,6 +1639,19 @@ function aCorrection(a,q,it){
    against this person's own program and log first. The reading picks the answer where
    it has one; where it has none, the router below (intent.js and the rules here) reads
    it as it always did, so nothing that worked before is lost. */
+/* The longest library name that the words contain, written out: the English name (three
+   words or more), or the name as the app shows it in Arabic (exName, two or more). With
+   the words it was written as, so a correction replaces all of them. */
+var FULL={};
+function fullName(f){
+  var L=uiLang()+":"+LIB.length,list=FULL[L];
+  if(!list){list=FULL[L]=[];
+    LIB.forEach(function(l){var n=l[0];if(isActivity(n))return;var en=fold(n),sh=fold(exName(n));
+      if(en.split(" ").length>=3)list.push([n,en]);
+      if(sh!==en&&sh.split(" ").length>=2)list.push([n,sh]);});
+    list.sort(function(a,b){return b[1].length-a[1].length;});}
+  var s=" "+f+" ";for(var i=0;i<list.length;i++)if(s.indexOf(" "+list[i][1]+" ")>=0)return {name:list[i][0],said:list[i][1]};
+  return null;}
 function readCtx(prevMsg){
   var prog=[],log=[],put=function(a,n){if(n&&a.indexOf(n)<0&&!isActivity(n))a.push(n);};
   try{split().days.forEach(function(d){d.ex.forEach(function(e){put(prog,e.name);});});}catch(e){}
@@ -1592,7 +1659,7 @@ function readCtx(prevMsg){
   var mine=prog.concat(log.filter(function(n){return prog.indexOf(n)<0;}));
   var ctx={mine:mine,program:prog,log:log,active:!!S.active,current:S.active?((S.active.entries||[])[S.active.idx||0]||{}).name||"":"",
     lib:function(k){try{var m=matchExercise(k,{lib:true});return m&&m.conf?m.name:"";}catch(e){return "";}},
-    food:function(f){try{return !!FOODDB&&namesFood(f);}catch(e){return false;}}};
+    food:function(f){try{return !!FOODDB&&namesFood(f);}catch(e){return false;}},full:fullName};
   if(prevMsg&&prevMsg.q){try{ctx.prev=understand(prevMsg.qq||prevMsg.q,{mine:mine,program:prog,log:log,lib:ctx.lib,food:ctx.food});ctx.prev.msg=prevMsg;}catch(e){ctx.prev=null;}}
   return ctx;}
 function readOf(text,prevMsg){try{return understand(text,readCtx(prevMsg));}catch(e){return null;}}
@@ -2301,8 +2368,8 @@ function vChat(){
   log.forEach(function(m,i){h+=bubble(m,liveAt(log,i));});
   h+='</div>';
   if(last)h+=askNext(last,log.length);
-  h+='<div class="chat-form"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'
-   +esc(t("Ask a question"))+'" aria-label="'+esc(t("Ask a question"))+'">'
+  h+='<div id="chatread" class="rd" aria-live="polite" hidden></div><div class="chat-form"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'
+   +esc(t("Tell the coach what you need"))+'" aria-label="'+esc(t("Tell the coach what you need"))+'">'
    +'<button class="chat-send" data-chatsend="1" aria-label="'+esc(t("Ask"))+'">'+glyph("send")+'</button></div>';
   return h;}
 
@@ -2354,4 +2421,4 @@ function dayWord(at){
 function liveAt(log,i){var m=log[i],n=log.length-1;
   return i===n||(i===n-1&&m&&m.pair&&log[n].pair&&m.ag&&(m.ag.s==="confirm"||m.ag.s==="pick"));}
 
-export {warmCoach, ASK, ask, isSafety, askNext, bubble, inbodyReading, liveAt, chatShown, findMsg, follow, histLink, histSheet, NEXT, pruneChat, vChat};
+export {liveChips, warmCoach, ASK, ask, isSafety, askNext, bubble, inbodyReading, liveAt, chatShown, findMsg, follow, histLink, histSheet, NEXT, pruneChat, vChat};

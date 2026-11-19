@@ -45,6 +45,7 @@ function mealPrefs(){
   var pr=S.prefs||{};
   return {meals:num(pr.meals)||4,diet:pr.diet||"any",avoid:(pr.avoid||[]).slice(),powder:!!pr.powder,style:pr.fstyle||"egy",likes:(pr.likes||[]).slice(),variant:0};}
 import {closeMenu, msgText} from "../chatgest.js";
+import {clearRead, openChip, pickAlt} from "../liveread.js";
 /* Where the clipboard API is missing or refused: a hidden field, selected and copied. */
 function copyOld(tx){try{var f=document.createElement("textarea");f.value=tx;f.setAttribute("readonly","");f.style.position="fixed";f.style.opacity="0";
   document.body.appendChild(f);f.select();document.execCommand("copy");f.remove();}catch(e){}}
@@ -429,7 +430,13 @@ function register(){
   key("coachsize",function(D){V.coach=D.coachsize==="full"?"full":"compact";render();return;});
   /* The food database loads first (from the cache, offline): swaps and food facts
      answer from it. */
+  /* The live reading's chips (js/ui/liveread.js): a chip opens its alternatives, one
+     tapped rewrites the field. Only the reading row changes. */
+  key("readchip",function(D){openChip(D.readchip);return;});
+  key("readalt",function(D){pickAlt(D.readalt);return;});
   key("chatq",function(D,el){var from=fromEl(el);if(!V.coach)V.coach="compact";
+    /* One of the nearest questions, instead of what was typed: the field is cleared. */
+    if(el&&el.classList&&el.classList.contains("rd-near")){var qf=document.getElementById("chatq");if(qf)qf.value="";clearRead();}
     loadChat().then(function(){loadFoods(function(){ask("",D.chatq,D.chatl);saveDB();render();land(from);toEnd();});});return;});
   key("chatsend",function(){chatSend();return;});
   /* A request in the chat (js/ui/agent.js): Add it runs the action the way its screen
