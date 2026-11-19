@@ -28,6 +28,7 @@ import {toEnd} from "../coachfab.js";
 import {run as runSmart} from "../smartcoach.js";
 import {withIds} from "../views/timport.js";
 import {dispatchTap} from "./registry.js";
+import {clearRead} from "../liveread.js";
 
 /* The exercise open in the edit sheet, and the one place its numbers are bounded:
    at least one set and one rep, the range never inverted, rest in whole seconds. */
@@ -129,7 +130,7 @@ function chatSend(){
   /* Emptied before the render: the field is kept across renders, value and all, and a
      question that stayed in the box after its answer read as not yet sent. */
   var from=fromEl(el);
-  el.value="";
+  el.value="";clearRead();
   sendText(q,from,"");}
 /* A request sent as if typed: from the box, or from an answer's button that asks for
    something (data-chatsay), shown as that button's words. */

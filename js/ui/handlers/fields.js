@@ -17,6 +17,7 @@ import {plateLine} from "../views/session.js";
 import {openSheet, runAct, val} from "../actions.js";
 import {addPhoto, avatarFrom} from "../photos.js";
 import {closeCoach} from "../coachfab.js";
+import {onType} from "../liveread.js";
 import {render} from "../render.js";
 import {mealNow, toast, V} from "../view.js";
 import {fitCh, pickAmount, servs} from "../views/addfood.js";
@@ -46,6 +47,7 @@ function onInput(ev){
   if(ev.target.id==="pgcmpr"){var cv=num(ev.target.value),cb=document.getElementById("pgcmpb"),cl=document.getElementById("pgcmpl");
     if(cb)cb.style.clipPath="inset(0 0 0 "+cv+"%)";if(cl)cl.style.left=cv+"%";return;}
   var id=ev.target.id||"";
+  if(id==="chatq"){onType(ev.target);return;}
   if(id==="pi_text"){V.pitext=ev.target.value;return;}
   if(id==="ti_text"){V.titext=ev.target.value;return;}
   var ptk=/^pt_(kcal|p|c|f|water|steps)$/.exec(id);

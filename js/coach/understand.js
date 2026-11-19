@@ -378,7 +378,13 @@ function readings(f,E,ctx,neg,asked){
 
 function entitiesOf(f,ctx,order){
   var tm=timeOf(f),nums=numbersIn(f),E={exercise:[],numbers:nums,minutes:minutesOf(nums),day:tm.day,period:tm.period,meal:"",muscle:[],equipment:[],weekdays:weekdaysIn(f),food:false};
-  exPhrases(f).forEach(function(p){var r=resolveEx(p.k,ctx,order);E.exercise.push({name:r.name,said:p.said,key:p.k,from:r.from});});
+  /* A library name written out in full ("swap Barbell Incline Bench Press …") is that
+     one, not the program's own of the same family (ctx.full: the longest library name
+     the words contain). */
+  var full=ctx&&typeof ctx.full==="function"?ctx.full(f):null;
+  exPhrases(f).forEach(function(p,i){var r=resolveEx(p.k,ctx,order),said=p.said;
+    if(i===0&&full&&full.said.indexOf(p.said)>=0){r={name:full.name,from:"library"};said=full.said;}
+    E.exercise.push({name:r.name,said:said,key:p.k,from:r.from});});
   if(!E.exercise.length&&ctx&&typeof ctx.named==="function"){(ctx.named(f)||[]).forEach(function(n){E.exercise.push({name:n.name||n,said:n.said||"",key:"",from:"library"});});}
   MUSCLES.forEach(function(m){if(m[1].test(" "+f+" "))E.muscle.push(m[0]);});
   /* "Leg press" is an exercise, not legs; "chest press" the same. */

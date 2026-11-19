@@ -78,8 +78,8 @@ function panelHtml(){
   if(last)h+=c.askNext(last,log.length);
   else h+='<div class="cp-sug">'+suggestFor(where()).map(function(id){
     return '<button class="cp-chip" data-chatq="'+id+'">'+esc(t(c.ASK[id]))+'</button>';}).join("")+'</div>';
-  h+='</div><div class="cp-f"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'
-   +esc(t("Ask a question"))+'" aria-label="'+esc(t("Ask a question"))+'">'
+  h+='</div><div id="chatread" class="rd" aria-live="polite" hidden></div><div class="cp-f"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'
+   +esc(t("Tell the coach what you need"))+'" aria-label="'+esc(t("Tell the coach what you need"))+'">'
    +'<button class="cp-send" data-chatsend="1" aria-label="'+esc(t("Ask"))+'">'+glyph("send")+'</button></div></section>';
   return h;}
 
