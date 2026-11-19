@@ -4960,3 +4960,16 @@ New test "Coach command, leave out (C-5a)": the question, only-this-one, all, th
 - **Tests.** New test "Coach, the owner's own questions (19 Nov)": each of the above in English and Arabic, the crash guard, and the stale-reply clean-up. 218 browser tests (coach, chat, food, meals, skip, offline, Arabic, start budget) pass. The smart-coach test passes. Coach evaluation unchanged.
 
 **C-5a, the sixth command's test (19 Nov, no app change).** New browser test "Coach command, swap in the program (C-5a)". "swap Leg Press for Goblet Squat" shows the change first and changes nothing before the tap. On the tap, the exercise is swapped on the same day with its sets, reps and rest kept. Undo restores the program exactly. Arabic «بدل الليج بريس بجوبلت سكوات» gives the same card. All six C-5a commands now have a browser test: fit, swap (today and in the program), leave out, move a workout, log food, log a set. Phase A (C-0, C-1, C-3, C-4a, C-5a) is complete; the owner tried it on 19 Nov (fixes in v291) and said to continue to Phase B.
+
+**Coach C-7, conversation, first part (v292, 19 Nov, session/coach-convo).** Phase B started with C-7, not C-2. C-2 moves 200 KB of answers out of views/chat.js with no visible change, at real risk to stability (the owner's first condition). It is put after the packages the owner will feel, to be done in small slices.
+
+Probing two- and three-turn exchanges found two bugs and four gaps. All are fixed:
+
+- **Bug: "make it lighter" after today's workout offered to switch the app to light mode.** The theme command matched "lighter". It now needs the look said: mode, theme, look, colours or screen, or "switch to dark/light".
+- **Bug: "skip today", then "no wait, tomorrow", gave a blank answer.** The reply was taken as a bare "no" to the card. A "no" that says more now declines the card, then says the request again with the change (retell; "no, bench instead", "لا استني، بكره").
+- **"You're wrong" with a card still open** used to say "say it again with the exercise you meant". It now declines the card: "Not done: nothing changed. Tell me what you meant." After an applied change, it still offers Undo, as before.
+- **"And the day before?"** after "what did I eat yesterday" was not understood. understand.js now reads a day relative to the last one (the day before or after; Arabic «اليوم اللي قبله»), and decide() says the question again with that day written out. It chains: two "and the day before?" go back two days.
+- **"Something else"** after a food answer now goes to the food swap.
+- **"Make it lighter"** after today's workout now gets "A lighter workout", with two taps: easier exercises today (ex.easier) or start a lighter week (deload).
+- **Tests.** New browser test "Coach conversations (C-7)": 30 exchanges of two or three turns, English and Arabic, each ending in the answer it should. That is the C-7 acceptance count, and all 30 pass.
+- **Left of C-7:** the coach's memory listed in Profile with each line removable (2.7, "Memory the person can see"), and recording corrections for export (C-10).

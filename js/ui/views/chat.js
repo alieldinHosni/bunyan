@@ -247,6 +247,11 @@ function aEat(a){
     act(a,t("New meal plan from my targets"),{"data-pgen":"1"});
   return a;}
 
+/* "Make it lighter" after today's workout: the two ways the app has, each a tap. */
+function aLighter(a){
+  p(a,t("Two ways to make it lighter:"));
+  act(a,t("Easier exercises today"),{"data-chatsay":uiLang()==="ar"?"خلي تمرين من تمارين النهارده اسهل":"make one of today's exercises easier"});
+  return act(a,inDeload()?t("Open Training"):t("Start a lighter week"),inDeload()?{"data-tab":"train"}:{"data-chatsay":uiLang()==="ar"?"ابدا اسبوع خفيف":"start a lighter week"});}
 /* A sweet craving (owner, 19 Nov): sweet foods from the food database, a usual portion
    each with its figures, those that fit what is left of the day's calories. */
 var SWEET=["Banana","Dates","Apple","Grapes","Mango","Greek yogurt","Honey","Dark chocolate"];
@@ -1642,7 +1647,7 @@ function aCorrection(a,q,it){
   var R=rd(it),c=R.correction||{},pv=c.prev||null,last=c.msg||pv&&pv.msg||null;
   if(last&&last.ag&&last.ag.s==="applied"&&canUndo(last.at)){
     p(a,fill(t("Undo “{d}”?"),{d:String(last.ag.done||"")}));return act(a,t("Undo it"),{"data-agundo":String(last.at)});}
-  if(last&&last.ag&&last.ag.s==="confirm"){p(a,t("Kept as it is. Say it again with the exercise you meant."));return a;}
+  if(last&&last.ag&&last.ag.s==="confirm"){last.ag.s="declined";p(a,t("Not done: nothing changed. Tell me what you meant."));return a;}
   var tp=last&&TOPIC[last.id];
   p(a,tp?fill(t("I answered that as “{t}”. What did you mean?"),{t:t(tp[0])}):t("Sorry. What did you mean?"));
   var shown=0;
@@ -1710,7 +1715,12 @@ var FOODNO=/(don t feel like|dont feel like|not in the mood for|don t want|dont 
 var CRAVE=/(craving|crave|cravings|sweet tooth|something sweet|want sweets|want sugar|need sugar|نفسي في حاجه حلوه|عايز حاجه حلوه|عاوز حاجه حلوه|نفسي في سكر|نفسي في حلو|مشتهي حاجه حلوه)/;
 var GREET=/^(hi|hello|hey|hiya|yo|good (morning|afternoon|evening)|how are you( doing| today)?|how r u|how s it going|how is it going|what s up|whats up|sup|ازيك|عامل ايه|اخبارك|ايه الاخبار|اهلا|صباح الخير|مساء الخير|السلام عليكم)( (coach|man|bro|كوتش|يا كوتش|يا باشا))?$/;
 var FOODFILL=/(^| )(yeah|yes|but|ok|okay|well|so|really|just|i|im|i m|me|eating|eat|to eat|having|have|now|right now|today|this|the|any|more|انا|اكل|النهارده|دلوقتي|ده|دي)(?= |$)/g;
+var ELSE=/^(something else|anything else|what else|other (options|foods|ideas|things)|another (one|option|idea)|حاجه تانيه|غير كده|ايه تاني|حاجه غير كده)$/;
+var LIGHTER=/^((can you |could you |please |)make (it|today|today s workout|the workout|my workout) (lighter|easier|less hard|shorter)|lighter|easier|خليه اخف|خليه اسهل|اخف شويه|اسهل شويه)$/;
 function preRoute(R,text){
+  var lx=lastExchange(),fqe=fold(text).replace(/[?؟.!]+$/,"").trim();
+  if(lx&&/^(eat|swap|crave|rest|foodday)$/.test(lx.id)&&ELSE.test(fqe))return {id:"swap"};
+  if(lx&&/^(today|tomorrow|fit|app)$/.test(lx.id)&&LIGHTER.test(fqe))return {id:"lighter"};
   var fq0=fold(text).replace(/^(yeah|yes|ok|okay|but|well|so|ايوه|طيب|بس|ماشي)( but| بس|)? /,"");
   /* A greeting alone, "how are you" too: answered as one, never the model's to guess. */
   if(GREET.test(fq0))return {id:"hello"};
@@ -1738,7 +1748,14 @@ function decide(R,text){
     return null;}
   if(R.followup){var pv2=readCtx(lastExchange()).prev;if(!pv2||!pv2.msg)return null;
     var ch2=changeOf(R.text.replace(/^\s*(and|also|plus|what about|how about|and for|and on|make it|change it to|set it to|طب و|طيب و|وكمان|و|خليها|خليه)\s*/i,""),readCtx(null));
-    var rt2=retell(pv2.msg.qq||pv2.msg.q,ch2);return rt2?{redo:rt2}:null;}
+    var rt2=retell(pv2.msg.qq||pv2.msg.q,ch2);
+    /* "And the day before?": the reading moved the day by one; the question is said again
+       with that day written out. */
+    if(!rt2&&R.change&&R.change.day){var dy=R.change.day,ar=R.lang==="ar";
+      var dw=dy.when==="today"?(ar?"النهارده":"today"):dy.when==="yesterday"?(ar?"امبارح":"yesterday"):dy.when==="daybefore"?(ar?"اول امبارح":"the day before yesterday")
+        :dy.when==="tomorrow"?(ar?"بكره":"tomorrow"):dy.when==="ago"?(ar?"من "+dy.n+" ايام":dy.n+" days ago"):"";
+      if(dw)rt2=fold(pv2.msg.qq||pv2.msg.q).replace(/(^| )(the day before yesterday|\d+ days ago|today|yesterday|tomorrow|اول امبارح|من \d+ ايام|النهارده|امبارح|بكره)(?= |$)/g," ").replace(/\s+/g," ").trim()+" "+dw;}
+    return rt2?{redo:rt2}:null;}
   if(R.confidence<0.5)return {id:"clarify"};
   switch(R.topic){
     case "record":case "technique":case "foodday":case "day":case "volume":case "why":case "fit":case "days":return {id:R.topic};
@@ -1785,7 +1802,7 @@ function decide(R,text){
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
 var ANSWER={month:aMonth,live:aLive,phase:aPhase,zones:aZones,health:aHealth,faq:aFaq,plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
-  help:aHelp,hello:aHello,crave:aCrave,thanks:aThanks,unknown:aElse,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
+  help:aHelp,hello:aHello,crave:aCrave,lighter:aLighter,thanks:aThanks,unknown:aElse,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
   scope:aScope,reassess:aReassess,situation:function(a,q,it){return aSituation(a,q,it,it.sit||{kind:"day"});},weekfood:aWeekFood,logfood:aLogFood,weektrain:aWeekTrain,letgo:aLetGo,lowday:aLowDay,
   remember:aRemember,facts:aFacts,
@@ -2101,8 +2118,16 @@ function askOne(q,id,lang){
   /* A short answer to the last question: yes or no to a change waiting for a tap is that
      tap (the caller runs it; nothing is added to the conversation). */
   var prev=id?null:lastExchange(),fq0=id?"":fold(q);
-  if(prev&&prev.ag&&prev.ag.s==="confirm"&&(YES.test(fq0)||NO.test(fq0)))
-    return {tap:YES.test(fq0)?{agok:String(prev.at)}:{agno:String(prev.at)}};
+  if(prev&&prev.ag&&prev.ag.s==="confirm"&&(YES.test(fq0)||NO.test(fq0))){
+    /* "No wait, tomorrow", "no, bench instead" (owner's test, 19 Nov): not only no. The
+       card is declined and the request said again with what changed. */
+    var more=NO.test(fq0)?fq0.replace(NO,"").replace(/^[ ,]+/,"").replace(/^((wait|sorry|actually|i meant|i mean|instead|make it|استني|قصدي|اقصد|بل)( |$))+/,"").trim():"";
+    if(!more||REDO>=2)return {tap:YES.test(fq0)?{agok:String(prev.at)}:{agno:String(prev.at)}};
+    prev.ag.s="declined";
+    var rt=null;try{rt=retell(prev.qq||prev.q,changeOf(more,readCtx(null)));}catch(e){rt=null;}
+    REDO++;var mn;try{mn=askOne(rt||more,null,lang);}finally{REDO--;}
+    if(mn&&!mn.tap){mn.qq=rt||more;mn.q=String(q).trim().slice(0,300);}
+    return mn;}
   var it=id?{id:id,ranked:[]}:intentOf(q);
   /* "yes" to a choice: the choice is still to make, so it is asked again. */
   if(prev&&prev.ag&&prev.ag.s==="pick"&&(YES.test(fq0)||NO.test(fq0))){
@@ -2274,7 +2299,7 @@ function findMsg(at){return (S.chat||[]).filter(function(x){return x&&x.at===+at
    apart, and its buttons last. Nothing is coloured by who said it; the accent is kept
    for the one button an answer leads to. */
 /* What each answer is about, and its glyph (js/ui/glyphs.js). */
-var TOPIC={live:["This workout","dumbbell"],phase:["Your phase","bars"],zones:["Cardio zones","route"],health:["Your health","target"],recap:["Your day","bowl"],plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],twice:["Two sessions in a day","dumbbell"],warmplan:["Your warm-up","flame"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],crave:["Something sweet","bowl"],
+var TOPIC={live:["This workout","dumbbell"],phase:["Your phase","bars"],zones:["Cardio zones","route"],health:["Your health","target"],recap:["Your day","bowl"],plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],twice:["Two sessions in a day","dumbbell"],warmplan:["Your warm-up","flame"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],crave:["Something sweet","bowl"],lighter:["A lighter workout","dumbbell"],
   track:["How you're doing","bars"],weight:["Weight trend","scale"],protein:["Protein","shaker"],calories:["Calories","flame"],
   sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
   goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],
