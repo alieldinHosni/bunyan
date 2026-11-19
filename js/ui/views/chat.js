@@ -22,7 +22,7 @@ import {KINDS, listFacts} from "../../coach/context.js";
 import {classify as safetyOf} from "../../coach/safety.js";
 import {reconcileNutrition, reconcileTraining} from "../../coach/reconcile.js";
 import {addDays as addDaysW, pinnedOn, weekDates, weekStartOf} from "../../engine/schedule.js";
-import {exSteps, LIB, muscleOf, secondaryOf} from "../../data/exercises.js";
+import {EXDB, exSteps, LIB, movementOfEx, muscleOf, secondaryOf} from "../../data/exercises.js";
 import {matchExercise} from "../../engine/splitparse.js";
 import {changeOf, gloss, retell, understand} from "../../coach/understand.js";
 import {cooldownFor, warmupFor} from "../../engine/warmup.js";
@@ -73,7 +73,7 @@ import {swapAdvice} from "../../engine/recovery.js";
 import {checkinOpen} from "../../engine/checkin.js";
 import {ckChange, moChange, moFacts} from "../checkin.js";
 import {lastMonth, monthlyNow} from "../../engine/monthly.js";
-import {adaptOf, avoids, limitsOf, standIn, usable} from "../../engine/plan.js";
+import {adaptOf, avoids, BUILT as BUILTID, limitsOf, standIn, usable} from "../../engine/plan.js";
 import {rangeFor} from "../../coach/landmarks.js";
 import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
 import {words} from "../coachwords.js";
@@ -1501,10 +1501,87 @@ function aTired(a){
   p(a,t("If it goes on, see a doctor: tiredness that doesn't lift can have a cause I can't check."));
   src(a,(KB.scopeRule("refer_undiagnosed")||{}).src);
   return act(a,t("Log sleep and energy"),{"data-sheet":"recovery"});}
-function aWhy(a){
+/* ---- why (C-6, docs/COACH-AGENT.md 2.5) ---------------------------------------------
+   From what the app actually decided, never a reason made up for it:
+   - a weight: the suggestion's own rule and the set it came from (engine/lifts.js
+     recommendIn, the note the workout page shows);
+   - a lighter day: the lighter week running, and until when;
+   - an exercise: what it trains, the movement, that the kit is there, and where it came
+     from (the day and program);
+   - today's day: the program's weekday or its rotation.
+   Anything else: "the app suggested it; I can't show the working for this one". */
+var WHYKIND={load:/(weight|kg|kilo|heavier|raise|raised|increase|increased|lift|load|وزن|كيلو|تقل|زود|زودت)/,
+  light:/(lighter|easier|deload|less weight|fewer sets|اخف|اسهل|خفيف)/,
+  choice:/(in my program|in the program|this exercise|that exercise|exercise|chosen|picked|choose|pick|in my plan|في برنامجي|التمرين ده|تمرين|اخترت)/,
+  day:/(today|tomorrow|this day|النهارده|بكره)/};
+/* The program's own of it: that exercise, else the one of its family the program has
+   ("squat" asked, the Hack Squat in the program). */
+function whyEntry(name,key){
+  var hit=null,kw=String(key||"").toLowerCase().split(" ").filter(Boolean);
+  split().days.forEach(function(d){d.ex.forEach(function(e){if(!hit&&e.name===name)hit={d:d,e:e};});});
+  if(!hit&&kw.length)split().days.forEach(function(d){d.ex.forEach(function(e){var ln=e.name.toLowerCase();
+    if(!hit&&!isActivity(e.name)&&kw.every(function(w){return ln.indexOf(w.replace(/s$/,""))>=0;}))hit={d:d,e:e};});});
+  return hit;}
+/* The last session's best set of an exercise, from the log: "80 × 8", or "". */
+function lastBest(name){
+  var s=(S.sessions||[]).filter(function(x){return (x.entries||[]).some(function(e){return e.name===name&&(e.sets||[]).length;});})
+    .sort(function(a,b){return a.date<b.date?1:-1;})[0];
+  if(!s)return "";var e=s.entries.filter(function(x){return x.name===name;})[0],top=null;
+  e.sets.forEach(function(x){if(!x.wu&&(!top||num(x.w)>num(top.w)))top=x;});
+  return top?(num(top.w)?fmtW(num(top.w))+" × ":"")+num(top.r):"";}
+function aWhy(a,q,it){
+  var fq=fold(q||""),name=rdEx(it),act0=S.active&&S.active.entries[S.active.idx||0],ex0=rd(it).entities.exercise[0],key=ex0&&ex0.key||"";
+  if(!name&&act0&&/(this|that|ده|دي)/.test(fq))name=act0.name;
+  /* The program's own of the family asked about, for an exercise or its weight. */
+  var own=name?whyEntry(name,key):null;
+  /* Only when the one named isn't itself logged: "the weight for squat 80 kg" is the
+     squat they logged at 80, not the program's Hack Squat. */
+  if(own&&own.e.name!==name&&!(act0&&act0.name===name)){if(WHYKIND.load.test(fq)&&lastBest(name))own=null;else name=own.e.name;}
+  /* A weight. */
+  if(name&&WHYKIND.load.test(fq)){
+    var w=own,pe=act0&&act0.name===name?act0.planned:w?{lo:w.e.lo,hi:w.e.hi,sets:w.e.sets}:null;
+    var rc=pe?recommend({name:name,planned:pe}):null;
+    if(rc&&rc.note){
+      p(a,(rc.w?fill(t("{ex}: {w} next."),{ex:exName(name),w:fmtW(rc.w)})+" ":"")+t(rc.note));
+      if(rc.last)n(a,fill(t("From your last session's best set: {s}."),{s:rc.last}));
+      return act(a,t("Open Training"),{"data-tab":"train"});}
+    if(pe&&!rc){p(a,fill(t("{ex} has nothing logged yet, so there is no suggestion to explain: find a weight you can control for the planned reps."),{ex:exName(name)}));return a;}
+    if(!pe){var lb=lastBest(name);
+      p(a,fill(t("{ex} isn't in your program, so the app doesn't suggest a weight for it."),{ex:exName(name)})+(lb?" "+fill(t("Your last best set of it: {s}."),{s:lb}):""));
+      return a;}}
+  /* A lighter day. */
+  if(WHYKIND.light.test(fq)&&!name){
+    if(inDeload()){
+      var until=S.deload&&S.deload.until;
+      p(a,t("This is a lighter week: fewer sets and about 10% less weight, so you recover and come back stronger.")+(until?" "+fill(t("It runs until {d}."),{d:pretty(until)}):" "+t("It is the planned lighter week of your training block.")));
+      return act(a,t("Open Training"),{"data-tab":"train"});}
+    var pl0=planOn(split(),today());
+    p(a,pl0.day&&!pl0.rest?fill(t("Today isn't lighter: it is {d}, as your program plans it."),{d:planName(pl0.day.name)}):t("Today is a rest day."));
+    return a;}
+  /* An exercise. */
+  if(name&&(WHYKIND.choice.test(fq)||!WHYKIND.day.test(fq))){
+    var we=own,sp=split(),v=EXDB&&EXDB[name]||{};
+    if(we){
+      p(a,fill(t("{ex} is in {d} to train your {m}, with a {mv} movement."),{ex:exName(name),d:planName(we.d.name),m:tm(muscleOf(name)).toLowerCase(),mv:t(movementName(name))}));
+      if(v.e)n(a,fill(t("It uses {k}, which your kit has."),{k:t(v.e).toLowerCase()}));
+      n(a,sp&&sp.from==="built"||sp&&sp.id===BUILTID?t("Your program was built for you from your assessment: your goal, days, time and kit."):fill(t("It came with the {p} program."),{p:planName(sp.name)}));
+      return act(a,t("Swap it"),{"data-chatsay":uiLang()==="ar"?"بدل "+exName(name):"swap "+name+" for"});}
+    p(a,fill(t("{ex} isn't in your program."),{ex:exName(name)}));return a;}
+  /* "Why this exercise?" with none on screen: which one. */
+  if(!name&&WHYKIND.choice.test(fq)){p(a,t("Which exercise? Say its name, like “why is Leg Press in my program?”."));return a;}
+  /* Today's day. */
+  if(WHYKIND.day.test(fq)){
+    var sp2=split(),pl=planOn(sp2,today());
+    if(pl.day&&!pl.rest&&pl.kind!=="done"){
+      p(a,sp2.schedule==="week"?fill(t("{d} is on {w} in your program."),{d:planName(pl.day.name),w:t(WDNAME[isoWeekdayOf(today())])})
+        :fill(t("{d} is next in your program's rotation: the days come round in order, whatever the weekday."),{d:planName(pl.day.name)}));
+      return act(a,t("Change workout"),{"data-tab":"train"});}}
   p(a,t("The app suggested it from your recent sessions, but I can't show the working for this one yet."));
   n(a,t("The weight for each set is on the workout page, next to the set."));
   return act(a,t("Open Training"),{"data-tab":"train"});}
+var WDNAME=["","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+function isoWeekdayOf(iso){return new Date(iso+"T00:00:00").getDay()||7;}
+function movementName(n){var m=movementOfEx(n)||"";return {push:"pushing",pull:"pulling",squat:"squat",hinge:"hinge",lunge:"lunge",carry:"carry",core:"core",rotation:"rotation",isolation:"single-joint"}[m]||(m||"single-joint");}
 /* What today's session is in the time and the kit said: the plan's own exercises in
    order, cut to fit, and for each that needs other kit the closest one with what there
    is (js/engine/plan.js standIn). A guide: nothing in the program is changed. */
@@ -1721,6 +1798,12 @@ function preRoute(R,text){
   var lx=lastExchange(),fqe=fold(text).replace(/[?؟.!]+$/,"").trim();
   if(lx&&/^(eat|swap|crave|rest|foodday)$/.test(lx.id)&&ELSE.test(fqe))return {id:"swap"};
   if(lx&&/^(today|tomorrow|fit|app)$/.test(lx.id)&&LIGHTER.test(fqe))return {id:"lighter"};
+  /* "Why …" about a weight, a lighter day, an exercise or today's day (C-6): the why
+     answer, never a weigh-in ("why is the weight for squat 80 kg today?"). Calories,
+     protein and a stuck lift keep their own answers. */
+  if(/^(why|how come|ليه|ليش)( |$)/.test(fqe)&&!/(calorie|kcal|protein|carb|fat|going up|stuck|plateau|not improving|سعر|بروتين|كارب|واقف|مش بيزيد)/.test(fqe)){
+    var nmd=R&&R.entities&&R.entities.exercise.some(function(e){return e.name;});
+    if(nmd||WHYKIND.light.test(fqe)||/(this exercise|that exercise|التمرين ده)/.test(fqe)||(WHYKIND.day.test(fqe)&&/(workout|training|session|day|full body|upper|lower|push|pull|legs|تمرين)/.test(fqe)))return {id:"why"};}
   var fq0=fold(text).replace(/^(yeah|yes|ok|okay|but|well|so|ايوه|طيب|بس|ماشي)( but| بس|)? /,"");
   /* A greeting alone, "how are you" too: answered as one, never the model's to guess. */
   if(GREET.test(fq0))return {id:"hello"};
@@ -2313,7 +2396,7 @@ var TOPIC={live:["This workout","dumbbell"],phase:["Your phase","bars"],zones:["
   weekfood:["The week's food","bowl"],logfood:["The week's food","bowl"],weektrain:["The week's training","dumbbell"],letgo:["The week's training","dumbbell"],
   lowday:["A low day","moon"],remember:["What you told me","person"],facts:["What you told me","person"],
   know:["Good to know","spark"],record:["Strength","medal"],tired:["Tired all the time","moon"],technique:["How to do it","dumbbell"],foodday:["What you ate","bowl"],day:["A day's training","bars"],
-  volume:["Weekly volume","balance"],why:["Why it changed","question"],fit:["Today's workout","clock"],days:["Training days","clock"],avoid:["Change your program","clipboard"],
+  volume:["Weekly volume","balance"],why:["Why","question"],fit:["Today's workout","clock"],days:["Training days","clock"],avoid:["Change your program","clipboard"],
   away:["Travel","route"],out:["Outside what I do","info"],clarify:["Did you mean","question"],correction:["Did you mean","question"],smart:["Smart coach","spark"],app:["In the app","check"],exsuggest:["Exercises for you","dumbbell"]};
 /* The opening screen: what can be asked, by what it is about. */
 var GROUPS=[["Training",["today","tomorrow","weights","sore"]],["Food",["eat","rest","swap","protein"]],

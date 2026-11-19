@@ -4985,3 +4985,18 @@ Probing two- and three-turn exchanges found two bugs and four gaps. All are fixe
 - **The rule from 2.7 holds.** Nothing the coach uses is kept outside this list: facts, limits, travel, Left out.
 - **Tests.** New browser test "What the coach remembers (C-7)": every kind listed, the count, each Forget (store and row, sheet not redrawn), the empty state, Arabic. Screenshots checked in English and Arabic (RTL).
 - **C-7 status.** Done: follow-ups, the pending question, corrections, visible memory. Recording corrections for export is C-10.
+
+**Coach C-6: "why" answered from what the app decided (v294, 19 Nov, session/coach-why).** Before, the why answer said "I can't show the working for this one yet". It now answers each of the roadmap's six decision kinds (2.5) from the decision itself, never from a reason made up for it. The answer is aWhy in views/chat.js.
+
+- **A weight** ("why did you raise my bench weight?"). It gives the suggestion recommendIn makes, with its own note and the last session's best set: "60 kg next. No gain in three sessions. Hold this weight and chase a rep…". The note is the same one the workout page shows.
+  - An exercise not in the program gets "the app doesn't suggest a weight for it", with the last best set.
+  - An exercise with nothing logged says so.
+- **Readiness** ("why is the weight lower for this exercise?" in a workout). The same note, which recommendIn writes from how the lifter said they feel: "A drained day: about 5% under last time…".
+- **A lighter day** ("why is today lighter?"). If a lighter week is on: what it does, and until when (or that it is the block's planned light week). If not, today isn't lighter, and the coach names the day.
+- **An exercise** ("why is Leg Press in my program?"). The day it is in, what it trains, the movement, that it uses kit the person has, and whether the program was built for them or came with a template. A Swap it button follows.
+  - "Squat" asked is the program's own squat (Hack Squat) when the program has one, unless the named one is itself logged.
+  - "Why this exercise?" with none on screen asks which.
+- **Today's day** ("why full body today?"). The program's rule: the weekday it is pinned to, or next in the rotation.
+- **Calories, protein, a stuck lift.** Unchanged: their answers already give the formula and the figures.
+- **Routing.** preRoute sends "why…" about these to the why answer before the router. This fixes a bug: "why is the weight for squat 80 kg today?" was offered as an 80 kg weigh-in. The card's heading is now "Why".
+- **Tests.** New browser test "Coach why (C-6)": each of the six kinds, with its rule and numbers, the weigh-in bug, and Arabic. That is the C-6 acceptance.

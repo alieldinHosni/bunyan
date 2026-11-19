@@ -5676,6 +5676,31 @@ await test("What the coach remembers (C-7): Profile lists every fact, sore spot,
   await pause(page,400);
   eq(/الكوتش فاكر ايه/.test(await page.textContent('#sheet')),true,"in Arabic");
 });
+await test("Coach why (C-6): each of the six decision kinds is answered with the rule and the numbers it used — the weight (the suggestion's own note and last best set), a lighter week (until when), readiness (a drained day), calories (Mifflin–St Jeor), an exercise (what it trains, the day, the program), today's day (the rotation); never a weigh-in; Arabic the same",async page=>{
+  const ask=q=>page.evaluate(async q=>{const c=await (await import("/js/ui/chatload.js")).loadChat();const st=await import("/js/state.js");st.S.chat=[];
+    const m=c.ask(q);const d=document.createElement("div");d.innerHTML=c.bubble(m,true);return {id:m.id,text:d.textContent.replace(/\s+/g," ")};},q);
+  const has=(r,re,what)=>{if(!re.test(r.text))throw new Error(what+": "+r.text.slice(0,300));};
+  const w=await ask("why did you raise my bench weight?");
+  eq(w.id,"why","the weight: a why answer");has(w,/kg next/,"the weight suggested");has(w,/last session's best set: \d/,"the set it came from");
+  const kc=await ask("why are my calories set like this?");has(kc,/Mifflin/,"calories: the formula named");
+  const ch=await ask("why is Leg Press in my program?");
+  eq(ch.id,"why","an exercise: a why answer");has(ch,/Leg Press is in .+ to train your quads/,"what it trains and the day");has(ch,/program/,"where it came from");
+  const dy=await ask("why full body today?");eq(dy.id,"why","today's day");has(dy,/rotation|in your program/,"the program's rule for the day");
+  const sq=await ask("why is the weight for squat 80 kg today?");
+  eq(sq.id,"why","never a weigh-in");has(sq,/80 kg × 8|isn't in your program|kg next/,"the squat's own numbers");
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),U=await import("/js/util.js");const d=new Date();d.setDate(d.getDate()+3);
+    st.S.deload={from:U.today(),until:d.toISOString().slice(0,10)};st.saveDB();});
+  const lt=await ask("why is today lighter?");eq(lt.id,"why","a lighter day");has(lt,/lighter week/,"the lighter week");has(lt,/runs until/,"until when");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.deload=null;
+    const A=await import("/js/ui/actions.js");const d=st.split().days.filter(x=>x.ex.some(e=>/Bench Press - Medium/.test(e.name)))[0];
+    A.startDay(d.id);const a=st.S.active;a.ready=1;a.idx=a.entries.findIndex(e=>/Bench Press - Medium/.test(e.name));
+    /* The range it was last logged at (a phase can start another, which is estimated instead). */
+    a.entries[a.idx].planned=Object.assign({},a.entries[a.idx].planned,{lo:6,hi:10});
+    const V=(await import("/js/ui/view.js")).V;V.logIdx=a.idx;st.saveDB();});
+  const rd=await ask("why is the weight lower for this exercise?");has(rd,/drained day/,"readiness: the day said, and what it does");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;st.S.prefs.lang="ar";});
+  const ar=await ask("ليه السكوات في برنامجي؟");eq(ar.id,"why","in Arabic");has(ar,/هاك سكوات/,"the program's own squat");
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
