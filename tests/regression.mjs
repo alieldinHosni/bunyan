@@ -5571,6 +5571,50 @@ await test("Coach live reading (C-4a): typing \"swap bench for dumbbells today\"
   const ca=await chips();
   eq([ca.map(x=>x[0]).join(","),ca[2]&&ca[2][1]],["act,thing,when","النهارده"],"in Arabic too: "+JSON.stringify(ca));
 });
+await test("Coach, the owner's own questions (19 Nov): today swapped for a rest day; one of today's exercises made simpler; how are you; a reply left thinking; a sugar craving; no egg today. Arabic the same",async page=>{
+  const ask=q=>page.evaluate(async q=>{const c=await (await import("/js/ui/chatload.js")).loadChat();const V=(await import("/js/ui/view.js")).V;
+    const m=c.ask(q);V.coach="full";(await import("/js/ui/render.js")).render();
+    const d=document.createElement("div");d.innerHTML=c.bubble(m,true);
+    return {at:m.at,id:m.id,ag:m.ag&&{s:m.ag.s,act:m.ag.act,p:m.ag.p,opts:(m.ag.opts||[]).map(o=>o.v)},text:d.textContent.replace(/\s+/g," ")};},q);
+  await page.evaluate(async()=>{const N=await import("/js/engine/nutrition.js");await new Promise(r=>N.loadFoods(r));});
+  const r1=await ask("Can you swap today's training with a rest day");
+  eq([r1.id,r1.ag&&r1.ag.act],["app","sched.skip"],"a rest day, not an exercise called “todays training”: "+r1.text.slice(0,160));
+  const r2=await ask("Can you switch one of exercises today to a simpler one?");
+  eq([r2.ag&&r2.ag.s,r2.ag&&r2.ag.act,r2.ag&&r2.ag.opts.length>0],["pick","ex.easier",true],"which of today's: "+r2.text.slice(0,200));
+  await pause(page,300);
+  await page.tap('#cpanel [data-agpick="'+r2.at+'|0"]');await pause(page,500);
+  const cf=await ev(page,"(m=>({at:m.at,ag:m.ag&&{s:m.ag.s,act:m.ag.act,p:m.ag.p}}))(S.chat[S.chat.length-1])");
+  eq([cf.ag.s,cf.ag.act,Object.keys(cf.ag.p.swap)],["confirm","session.fit",[r2.ag.opts[0]]],"then the easier one, today only");
+  const ez=cf.ag.p.swap[r2.ag.opts[0]];
+  await page.tap('#cpanel [data-agok="'+cf.at+'"]');await pause(page,700);
+  eq(await ev(page,"S.active&&S.active.entries.map(e=>e.name).indexOf("+JSON.stringify(ez)+")>=0"),true,"the workout starts with "+ez);
+  await page.tap('#cpanel [data-agundo="'+cf.at+'"]');await pause(page,500);
+  const r3=await ask("How are you?");
+  eq([r3.id,/Good, thanks/.test(r3.text)],["hello",true],"a greeting answered, never left to the model: "+r3.text.slice(0,120));
+  const stale=await page.evaluate(async()=>{const st=await import("/js/state.js"),c=(await import("/js/ui/chatload.js")).chat();
+    st.S.chat=(st.S.chat||[]).concat([{q:"x",id:"smart",at:Date.now()-120000,b:[{p:""}],acts:[],lang:"en",pending:true}]);
+    c.pruneChat();const m=st.S.chat[st.S.chat.length-1];return [m.pending,m.b[0].p];});
+  eq([stale[0],/couldn't answer/.test(stale[1])],[false,true],"a reply left thinking from before is settled, not “Thinking…” for good");
+  /* The crash loop (owner, 19 Nov): the phone closed the app while the model worked, and
+     every start loaded it again. A mark left from that: paused at boot, not loaded. */
+  const guard=await page.evaluate(async()=>{const st=await import("/js/state.js"),sc=await import("/js/ui/smartcoach.js");
+    st.S.prefs.smart={on:true,size:"small",busy:{what:"answer",at:Date.now()}};
+    st.S.chat=(st.S.chat||[]).concat([{q:"y",id:"smart",at:Date.now(),b:[{p:""}],acts:[],lang:"en",pending:true}]);
+    sc.boot();await new Promise(r=>setTimeout(r,1800));
+    const m=st.S.chat[st.S.chat.length-1];
+    return [st.S.prefs.smart.paused,st.S.prefs.smart.busy,sc.state().st,sc.isReady(),m.pending];});
+  eq(guard,[true,null,"paused",false,false],"after a crash mid-answer: paused, nothing loading, the answer settled");
+  const r4=await ask("What to eat now, I am craving sugar right now?");
+  eq([r4.id,/kcal left today/.test(r4.text),/Banana|Apple|Dates|Grapes/.test(r4.text)],["crave",true,true],"something sweet that fits: "+r4.text.slice(0,200));
+  await page.evaluate(async()=>{const N=await import("/js/engine/nutrition.js"),MP=await import("/js/engine/mealplan.js"),st=await import("/js/state.js");
+    const egg=N.searchFoods("Eggs",1)[0].f,bread=N.searchFoods("Baladi bread",1)[0].f;
+    st.S.mealSlots=[{id:"breakfast",plan:[MP.itemOf({f:egg,g:100}),MP.itemOf({f:bread,g:90})]},{id:"lunch"},{id:"dinner"}];st.saveDB();});
+  const r5=await ask("Yeah, but I don't feel like eating egg now");
+  eq([r5.id,r5.ag&&r5.ag.act,/Instead of Eggs/.test(r5.text),/Egg Whites|Egg,/.test(r5.text.split("Tap one")[1]||"")],["swap","meal.swap",true,false],"the planned eggs swapped, no egg among the stand-ins: "+r5.text.slice(0,240));
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();});
+  const a1=await ask("خلي النهارده يوم راحه"),a2=await ask("عامل ايه"),a3=await ask("نفسي في حاجه حلوه"),a4=await ask("مش عايز بيض دلوقتي");
+  eq([a1.ag&&a1.ag.act,a2.id,a3.id,a4.ag&&a4.ag.act],["sched.skip","hello","crave","meal.swap"],"in Arabic too");
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

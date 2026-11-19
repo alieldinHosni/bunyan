@@ -686,6 +686,50 @@ function planFit(c){
       sub:t(c.heavy?"Less of your body weight on the hands: the same movement, easier. Build back to the floor version.":"The same movement with less of your body weight: build back to the floor version.")});}
   return pick("fit",fill(t("{ex} is planned at {d} today. Pick what fits you; only today changes:"),{ex:exName(e.name),d:(e.planned.lo&&e.planned.hi?e.planned.lo+"–"+e.planned.hi:e.planned.hi||"")+" "+t("reps")}),
     opts,"live.fit",{i:i},"v",false);}
+/* ---- an easier version ("switch one of today's exercises to a simpler one", owner,
+   19 Nov) ------------------------------------------------------------------------------
+   The same muscle and movement, a lower difficulty (or, at the same level, a machine or
+   cable for a free weight), with the person's kit, nothing that loads a sore spot and
+   nothing they left out. In a workout: that exercise, for today (exercise.swapToday). Before
+   it: today's workout started with it in place (session.fit), the program unchanged. */
+var DIFF={Beginner:1,Intermediate:2,Advanced:3},GUIDED=/^(Machine|Cable)$/;
+function easierOf(name,taken){
+  var m=muscleOfName(name),mv=movementOfEx(name),v0=EXDB&&EXDB[name]||{},d0=DIFF[v0.d]||2,lim=limitsOf(S.profile),skip=S.skip||[];
+  var c=LIB.filter(function(l){var n=l[0],v=EXDB&&EXDB[n]||{},d=DIFF[v.d]||2;
+    if(n===name||(taken&&taken[n])||isActivity(n)||l[1]!==m||movementOfEx(n)!==mv||!pickable(n)||!usable(n,S.gear)||avoids(n,lim)||skip.indexOf(n)>=0)return false;
+    return d<d0||(d===d0&&GUIDED.test(v.e||"")&&!GUIDED.test(v0.e||""));});
+  c.sort(function(x,y){var dx=DIFF[(EXDB[x[0]]||{}).d]||2,dy=DIFF[(EXDB[y[0]]||{}).d]||2;
+    return (isCompoundName(y[0])===isCompoundName(name))-(isCompoundName(x[0])===isCompoundName(name))||dy-dx||x[0].length-y[0].length;});
+  return c[0]?c[0][0]:"";}
+function noEasier(n){return say(fill(t("{ex} has no easier version for the same muscles with your kit. Go lighter on it, or stop a couple of reps short."),{ex:exName(n)}));}
+function planEasier(c){
+  var a=S.active,q=String(c.text||"");
+  if(a){
+    var names=a.entries.map(function(e){return e.name;}),i=c.name?names.indexOf(c.name):-1;
+    if(i<0){var r=findExercise(q,names);i=r.kind==="one"?names.indexOf(r.name):(a.idx||0);}
+    var e=a.entries[i];if(!e||isActivity(e.name))return say(t("Nothing to make easier on this one."));
+    if(e.sets.length)return say(fill(t("{ex} already has sets logged, so it stays. Tell me another of today's exercises to make easier."),{ex:exName(e.name)}));
+    var tk={};names.forEach(function(n){tk[n]=1;});
+    var ez=easierOf(e.name,tk);if(!ez)return noEasier(e.name);
+    return confirm("exercise.swapToday",{i:i,name:ez},{lead:fill(t("Swap {old} for {new} for today?"),{old:exName(e.name),new:exName(ez)}),
+      item:exName(e.name)+" → "+exName(ez),detail:t("The same muscles, easier to do. Your program stays as it is."),cta:t("Swap it"),
+      done:fill(t("Swapped {old} for {new} for today."),{old:exName(e.name),new:exName(ez)}),undone:t("Undone. Today's workout is as it was.")});}
+  var pl=planOn(split(),today());
+  if(pl.kind==="done")return say(t("You've trained today already. Ask me again before your next workout."));
+  if(!pl.day||pl.rest)return say(t("Today is a rest day, so there's nothing to swap."));
+  var d=pl.day,all=d.ex.map(function(x){return x.name;}),own=all.filter(function(n){return !isActivity(n);}),taken={};
+  all.forEach(function(n){taken[n]=1;});
+  var nm=c.name&&own.indexOf(c.name)>=0?c.name:"";
+  if(!nm){var r2=findExercise(q,own);if(r2.kind==="one")nm=r2.name;}
+  if(!nm){
+    var opts=own.map(function(n){var ez=easierOf(n,taken);return ez?{v:n,l:exName(n),sub:"→ "+exName(ez)}:null;}).filter(Boolean);
+    if(!opts.length)return say(t("Nothing in today's workout has an easier version for the same muscles with your kit."));
+    return pick("exercise",t("Which of today's exercises?"),opts,"ex.easier",{},"name");}
+  var ez2=easierOf(nm,taken);if(!ez2)return noEasier(nm);
+  var sw={};sw[nm]=ez2;
+  return confirm("session.fit",{day:d.id,keep:all,swap:sw},{lead:fill(t("Start today's workout with {new} instead of {old}?"),{old:exName(nm),new:exName(ez2)}),
+    item:exName(nm)+" → "+exName(ez2),detail:t("The same muscles, easier to do; sets and reps stay. Today only: your program stays as it is."),
+    cta:t("Start it like this"),done:t("Started. Your program is as it was."),undone:t("Undone. No workout was started.")});}
 /* "How do I do this?": the steps for the exercise on screen, and its full guide. */
 function planHow(){
   var a=S.active,e=a&&a.entries[a.idx||0];
@@ -765,6 +809,7 @@ function planCommand(c){
   if(c.cmd==="ex.busy")return planBusy();
   if(c.cmd==="set.feel")return planFeel(c.dir);
   if(c.cmd==="ex.fit")return planFit(c);
+  if(c.cmd==="ex.easier")return planEasier(c);
   if(c.cmd==="act.log")return planAct(c);
   if(c.cmd==="limit.add")return planLimit(c);
   if(c.cmd==="exercise.avoid")return planLeave(c);
@@ -879,6 +924,7 @@ function proceed(ag,v){
       done:sw?fill(t("Swapped {old} for {new} for today."),{old:exName(e.name),new:line}):fill(t("{ex}: {r} today."),{ex:exName(e.name),r:line}),
       undone:t("Undone. Today's workout is as it was.")});}
   if(ag.act==="exercise.avoid")return planLeave(p);
+  if(ag.act==="ex.easier")return planEasier({name:v});
   if(ag.act==="exercise.remove")return planRemove("",p);
   if(ag.act==="exercise.swap")return planSwap("",p);
   if(ag.act==="food.log")return planLog("",p);

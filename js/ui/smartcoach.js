@@ -34,6 +34,17 @@ function state(){if(!V.smart)V.smart={st:"off",p:0,why:"",size:(S.prefs.smart&&S
 function on(){return !!(S.prefs&&S.prefs.smart&&S.prefs.smart.on);}
 function isReady(){return on()&&ready()&&state().st==="ready";}
 
+/* ---- the crash guard (owner, 19 Nov: "How are you?", and the app kept restarting) -----
+   The model needs a lot of memory. When the phone runs short it closes the app, and the
+   load at boot ran the model again on every restart. So before the model loads or
+   answers, a mark is saved (saveDB writes at once); it is cleared when that finishes,
+   however it finishes. A mark still there at boot means the phone closed the app part
+   way: the smart coach is paused, not loaded again, and an answer it was writing is
+   settled. The coach answers as it always has; Settings → Smart coach says what happened
+   and has Try again. */
+function busy(what){S.prefs.smart=Object.assign({},S.prefs.smart||{},{busy:what?{what:what,at:Date.now()}:null});saveDB();}
+function paused(){return !!(S.prefs.smart&&S.prefs.smart.paused);}
+
 var listeners=[];
 function changed(){listeners.forEach(function(f){try{f();}catch(e){}});}
 function onChange(f){listeners.push(f);}
@@ -41,22 +52,32 @@ function onChange(f){listeners.push(f);}
 /* Switch on (and download if need be), from the setting's button; or, at boot, load what
    is already on the phone. */
 function start(size,fromBoot){
-  var st=state();st.size=size||st.size||"small";st.st="checking";st.p=0;changed();
+  var st=state();st.size=size||st.size||"small";st.st="checking";st.p=0;
+  if(S.prefs.smart&&S.prefs.smart.paused){S.prefs.smart.paused=false;saveDB();}
+  changed();
   return support().then(function(s){
     if(!s.ok){st.st="unsupported";st.why=s.why;changed();return false;}
     st.f16=s.f16;var id=modelId(st.size,s.f16);
     return (fromBoot?installed(id):Promise.resolve(true)).then(function(have){
       if(!have){st.st="off";changed();return false;}
-      st.st="loading";changed();
+      st.st="loading";busy("load");changed();
       return load(id,function(p){st.p=p;changed();}).then(function(){
         st.st="ready";st.p=1;
         S.prefs.smart={on:true,size:st.size};saveDB();changed();return true;});});
-  }).catch(function(e){st.st="error";st.why=String(e&&e.message||e).slice(0,140);changed();return false;});}
+  }).catch(function(e){busy(null);st.st="error";st.why=String(e&&e.message||e).slice(0,140);changed();return false;});}
 function stop(){
   var st=state();
   return remove().then(function(){S.prefs.smart={on:false,size:st.size};st.st="off";st.p=0;saveDB();changed();});}
 /* At boot: a coach switched on before loads quietly from what is already downloaded. */
-function boot(){if(on())setTimeout(function(){start(S.prefs.smart.size,true);},1500);}
+function boot(){
+  if(!on())return;
+  if(S.prefs.smart.busy){
+    S.prefs.smart.paused=true;S.prefs.smart.busy=null;
+    (S.chat||[]).forEach(function(m){if(m&&m.pending){m.pending=false;
+      m.b=[{p:t("The phone closed the app while the smart coach was answering, so it is paused. Ask me another way, or turn it back on in Settings → Smart coach.")}];m.acts=[];}});
+    saveDB();}
+  if(paused()){state().st="paused";changed();return;}
+  setTimeout(function(){start(S.prefs.smart.size,true);},1500);}
 
 /* ---- what the model is told about the person ---------------------------------------- */
 function snapshot(){
@@ -90,7 +111,14 @@ function run(m,save,paint){
   var prev=(S.chat||[]).filter(function(x){return x&&x!==m&&x.q&&Array.isArray(x.b)&&x.b[0]&&x.b[0].p&&!x.safety&&!safetyOf(x.qq||x.q).cls;}).slice(-2)
     .map(function(x){return {q:x.qq||x.q,a:x.b[0].p};});
   var msgs=buildMessages(m.qq||m.q,snapshot(),m.lang==="ar"?"ar":"en",prev);
-  llmAsk(msgs,function(txt){var el=rowOf(m);if(el)el.textContent=readReply(txt).text||"…";}).then(function(full){
+  /* No answer within a minute (the model stalled, or the phone put it to sleep): said so,
+     never "Thinking…" for good (owner, 19 Nov). A late answer is dropped. */
+  busy("answer");
+  var done=false,give=setTimeout(function(){if(done)return;done=true;busy(null);m.pending=false;
+    m.b=[{p:t("The smart coach couldn't answer that one. Ask me another way, or try again.")}];
+    m.acts=[{l:t("What can I ask?"),a:{"data-chatq":"help"}}];save();paint();},60000);
+  llmAsk(msgs,function(txt){if(done)return;var el=rowOf(m);if(el)el.textContent=readReply(txt).text||"…";}).then(function(full){
+    if(done)return;done=true;clearTimeout(give);busy(null);
     var r=readReply(full);
     m.pending=false;m.b=[{p:r.text||t("I don't have that. Ask me about your training, food or progress.")},
       {n:t("Written by the model on this phone, from your log and the training notes. It can be wrong: check a figure against your plan before you act on it.")}];
@@ -100,7 +128,7 @@ function run(m,save,paint){
     if(r.act){var known=false;try{known=!!commandOf(r.act,S.prefs.unit)||ACTION_IDS.indexOf(intentOf(r.act).id)>=0;}catch(e){}
       if(known)m.acts.push({l:r.act.charAt(0).toUpperCase()+r.act.slice(1),a:{"data-chatsay":r.act}});}
     save();paint();
-  },function(){m.pending=false;m.b=[{p:t("The smart coach couldn't answer just now. Ask me another way, or try again in a moment.")}];save();paint();});}
+  },function(){if(done)return;done=true;clearTimeout(give);busy(null);m.pending=false;m.b=[{p:t("The smart coach couldn't answer just now. Ask me another way, or try again in a moment.")}];save();paint();});}
 
 /* ---- the setting -------------------------------------------------------------------- */
 function sheet(){
@@ -110,6 +138,9 @@ function sheet(){
   if(st.st==="unsupported")return h+'<p class="smc-st bad" role="status">'+esc(t(st.why==="nogpu"?"This browser can't run it: it has no WebGPU. On iPhone it needs iOS 26 or later.":"This phone's GPU isn't available to the browser, so it can't run here."))+'</p>';
   if(st.st==="loading"||st.st==="checking")return h+'<div class="smc-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+Math.round(st.p*100)+'"><i style="width:'+Math.round(st.p*100)+'%"></i></div>'
     +'<p class="smc-st" role="status"><span class="num">'+Math.round(st.p*100)+'%</span> · '+esc(t("Downloading and loading the model. Keep the app open; the coach answers as usual meanwhile."))+'</p>';
+  if(st.st==="paused")return h+'<p class="smc-st bad" role="alert">'+esc(t("Paused: the phone closed the app while the smart coach was working, most likely short of memory. The coach answers as it always has meanwhile."))+'</p>'
+    +'<button class="btn" data-smarton="1">'+esc(t("Try again"))+'</button>'
+    +'<button class="btn danger" data-smartoff="1">'+esc(t("Turn off and remove the download"))+'</button>';
   if(st.st==="ready")return h+'<p class="smc-st ok" role="status">✓ '+esc(t(sz==="better"?"On: the better model is ready.":"On: the small model is ready."))+'</p>'
     +'<button class="btn danger" data-smartoff="1">'+esc(t("Turn off and remove the download"))+'</button>';
   h+='<div class="smc-pick" role="radiogroup" aria-label="'+esc(t("Model size"))+'">'
