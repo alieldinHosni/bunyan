@@ -169,8 +169,8 @@ var INTENTS=[
     "مساعده|ساعدني","تقدر تعمل|تساعد","بتعمل ايه","اسال ايه|اسال"]],
   ["hello",[
     "ahlan|ahla|hii$|hey$",
-    "hi$|hello|hey|salam|yo$","good morning|evening","morning",
-    "اهلا|ازيك|ازيكم|السلام|سلام|هاي","صباح|مساء"]],
+    "hi$|hello|hey|salam|yo$","good morning|evening","morning","how are you|how r u|how s it going|how is it going|what s up|whats up",
+    "اهلا|ازيك|ازيكم|السلام|سلام|هاي","صباح|مساء","عامل ايه|اخبارك|ايه الاخبار"]],
   /* ---- things to change (js/ui/agent.js resolves what they name; nothing here
      knows the library, the split or the foods). An exercise swap is its own intent:
      "swap" above is a food swap, and which one a question is decides on what it names

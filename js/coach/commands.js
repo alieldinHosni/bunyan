@@ -100,6 +100,9 @@ function commandOf(text,unit){
   var raw=slang(String(text||"").trim(),unit),fq=spell(fold(raw)),q=" "+fq+" ";
   if(!fq)return null;
   var asks=QUESTION.test(fq)||/[?؟]\s*$/.test(raw);
+  /* "Can you skip today?" is a request said politely, not a question (owner, 19 Nov). */
+  var polite=/^(can you|could you|would you|will you|please|pls|plz|ممكن|لو سمحت|ينفع)( |$)/.test(fq);
+  var fqp=fq.replace(/^((can|could|would|will) you( please)?|please|pls|plz|ممكن|لو سمحت|ينفع) /,"");
 
   /* ---- the program for other kit: asked as a question too ("can I make my plan
      home based with no equipment?") ---- */
@@ -199,10 +202,16 @@ function commandOf(text,unit){
 
   /* ---- the week's schedule: skip a day, move a workout ---- */
   var wn=whenIn(fq);
+  /* "Swap today's training with a rest day", "make tomorrow a rest day" (owner, 19 Nov). */
+  if((!asks||polite)&&/(rest day|day off|a rest|rest instead|يوم راحه|راحه|اجازه)/.test(fq)
+     &&/(swap|switch|change|replace|turn|make|trade|instead|convert|بدل|خلي|غير|حول|اعمل)/.test(fq)
+     &&/(today|tomorrow|training|workout|session|النهارده|انهارده|بكره|تمرين)/.test(fq)
+     &&!/(between|after|before|how many|how long|بين|بعد|قبل|كام)/.test(fq))
+    return {cmd:"sched.skip",on:wn[0]||"today"};
   if(!asks&&/(^| )(move|reschedule|push|shift|postpone|swap|انقل|اجل|ودي|حرك|غير)( |$)/.test(q)&&/(workout|session|training|تمرين|التمرين|سيشن)/.test(fq)&&wn.length
      &&/( to | until |لـ| ل| ليوم | الى | يوم )/.test(" "+fq+" "))
     return {cmd:"sched.move",from:wn.length>1?wn[0]:"",to:wn[wn.length-1]};
-  if(!asks&&(/^(skip|cancel|miss|drop)( today s| todays| today| tomorrow s| tomorrows| tomorrow| my| the| this|)* ?(workout|session|training|it)?( today| tomorrow|)( |$)/.test(fq)
+  if((!asks||polite)&&(/^(skip|cancel|miss|drop)( today s| todays| today| tomorrow s| tomorrows| tomorrow| my| the| this|)* ?(workout|session|training|it)?( today| tomorrow|)( |$)/.test(fqp)
      ||/(take|taking) (today|tomorrow|the day) off|(rest|day off) (today|tomorrow)|(skip|cancel) (today|tomorrow)|(im|i m|i am) (sick|ill|unwell|not feeling well).*(skip|rest|off|cant train|can t train)/.test(fq)
      ||/(مش هتمرن|مش هقدر اتمرن|هريح|الغي تمرين|الغي التمرين|اجازه من التمرين|تعبان.*(مش هتمرن|هريح))/.test(fq)))
     return {cmd:"sched.skip",on:wn[0]||"today"};
@@ -211,6 +220,12 @@ function commandOf(text,unit){
   if(!asks&&(/^(make|change|set|update|put|switch|do|i want|let s do|lets do|use|rest|خلي|غير|اعمل|عايز|حط|راحه)( |$)/.test(fq)
      ||/(shorter|longer|less|more) (rest|rests)|(rest|rests) (shorter|longer)|(قلل|زود) (ال)?راحه/.test(fq))){
     var dz=doseOf(fq);if(dz)return Object.assign({cmd:"ex.dose",text:raw},dz);}
+
+  /* ---- "switch one of today's exercises to a simpler one" (owner, 19 Nov): an easier
+     version of the same movement (js/ui/agent.js planEasier) ---- */
+  if((!asks||polite)&&/(simpler|easier|less hard|less difficult|beginner|too hard|too difficult|اسهل|ابسط|صعب عليا|صعبه عليا)/.test(fq)
+     &&/(exercise|exercises|one|version|move|movement|variation|alternative|تمرين|تمارين|حركه|بديل)/.test(fq)&&!/( reps?| sets?| عده| عدات)( |$)/.test(fq))
+    return {cmd:"ex.easier",text:raw};
 
   /* ---- "I can't do 20 reps", "change the reps to something reasonable": today's target
      fitted, with no number given (one with numbers is ex.dose above) ---- */

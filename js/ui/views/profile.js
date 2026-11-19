@@ -21,7 +21,7 @@ import {backArrow} from "../nav.js";
 
 /* One row: its glyph in a tile, its name, what is set there now, and a chevron. */
 function smartLabel(){var st=smartState().st,on=S.prefs.smart&&S.prefs.smart.on;
-  return st==="ready"?"On, on this phone":st==="loading"||st==="checking"?"Loading…":on?"On":"Off: understands any question, on this phone";}
+  return st==="ready"?"On, on this phone":st==="paused"?"Paused":st==="loading"||st==="checking"?"Loading…":on?"On":"Off: understands any question, on this phone";}
 function prow(attr,gl,name,sub,tone){
   return '<button class="srow" '+attr+'><span class="gtile'+(tone?' '+tone:'')+'">'+glyph(gl)+'</span>'
    +'<span class="srow-t"><span class="srow-n">'+esc(name)+'</span>'

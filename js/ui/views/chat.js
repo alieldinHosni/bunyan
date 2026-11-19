@@ -247,6 +247,19 @@ function aEat(a){
     act(a,t("New meal plan from my targets"),{"data-pgen":"1"});
   return a;}
 
+/* A sweet craving (owner, 19 Nov): sweet foods from the food database, a usual portion
+   each with its figures, those that fit what is left of the day's calories. */
+var SWEET=["Banana","Dates","Apple","Grapes","Mango","Greek yogurt","Honey","Dark chocolate"];
+function aCrave(a){
+  var g=S.goals||{},e=eatenToday(today()),kl=Math.round(num(g.kcal)-e.kcal),picks=[];
+  SWEET.forEach(function(nm){if(picks.length>=4)return;var h=null;try{h=searchFoods(nm,1)[0];}catch(x){h=null;}
+    if(!h||h.score<72||picks.some(function(x){return x.f.id===h.f.id;}))return;
+    var gr=(h.f.s&&h.f.s[0]&&h.f.s[0][1])||100,nu=nutritionFor(h.f,gr);
+    if(kl>0&&nu.kcal>kl)return;picks.push({f:h.f,g:gr,n:nu});});
+  p(a,kl>0?fill(t("Something sweet that fits: you have {k} kcal left today."),{k:fmtN(kl)}):t("Today's calories are used, so if you have something sweet, keep it to a small portion."));
+  if(picks.length)l(a,picks.map(function(x){return foodName(x.f)+" "+fill(t("{n} g"),{n:x.g})+": "+fill(t("{k} kcal · {p} g protein"),{k:fmtN(x.n.kcal),p:Math.round(x.n.p)});}));
+  return act(a,t("Open Food"),{"data-tab":"food"});}
+
 function aTrack(a){
   var f=simpleFacts();
   p(a,t("Where you are, in plain words:"));
@@ -811,9 +824,9 @@ function aHelp(a){
     t("Change things: “raise my calories by 200”, “change my goal to build muscle”, “switch to pounds”, “dark mode”, “switch to Arabic”."),
     t("And your program and food: “add squats to leg day”, “swap bench press for push-ups”, “I ate 200 g of chicken”, “I weigh 82 kg”.")]);
   return a;}
-function aHello(a){
-  var nm=(S.profile.name||"").trim();
-  return p(a,(nm&&nm!=="Me"?fill(t("Hi {n}."),{n:nm}):t("Hi."))+" "+t("Ask me about today's training, your food, or how things are going."));}
+function aHello(a,q){
+  var nm=(S.profile.name||"").trim(),how=/(how are you|how r u|how s it going|how is it going|what s up|whats up|عامل ايه|اخبارك|ايه الاخبار|ازيك)/.test(fold(q||""));
+  return p(a,(how?t("Good, thanks.")+" ":"")+(nm&&nm!=="Me"?fill(t("Hi {n}."),{n:nm}):t("Hi."))+" "+t("Ask me about today's training, your food, or how things are going."));}
 function aThanks(a){return p(a,t("Any time."));}
 /* Nothing reads the message (C-4): no passage of the knowledge base is shown as if it
    were an answer. It says it is not sure, and offers the two or three nearest things
@@ -967,15 +980,18 @@ function swapsFor(f,kcal){
     if(kw.some(function(w){return used.indexOf(w)>=0;}))continue;
     used=used.concat(kw);out.push(ranked[i]);}
   return out;}
-function swapLine(it,f,kcal){
-  var sw=swapsFor(f,kcal);
+/* A food turned down ("I don't feel like eating egg"): nothing of that food among its
+   stand-ins (no egg whites for eggs). */
+function notSame(sw,f){var w=fold(f.n||"").split(" ")[0].replace(/s$/,"");return w.length<3?sw:sw.filter(function(x){return fold(x.f.n||"").indexOf(w)<0;});}
+function swapLine(it,f,kcal,declined){
+  var sw=swapsFor(f,kcal);if(declined)sw=notSame(sw,f);
   if(!sw.length)return null;
   return (it?itemName(it):foodName(f))+(it&&it.grams?" "+fill(t("{n} g"),{n:Math.round(it.grams)}):"")+" → "
     +sw.map(function(x){return foodName(x.f)+" "+fill(t("{n} g"),{n:x.g});}).join(" · ");}
 /* The food a question names, once its question words are taken out. */
 var QWORDS=/\b(how|much|many|what|whats|is|are|there|the|a|an|in|of|for|to|on|does|do|contain|contains|has|have|with|same|macros|macro|calories|calorie|kcal|protein|carbs|carb|fat|fats|fiber|fibre|sugar|grams|gram|g|nutrition|facts|info|value|values|instead|swap|replace|alternative|alternatives|other|food|foods|options|can|i|eat|my|me|you|u|give|provide|please|per|serving)\b/g;
 var QWORDS_AR=/(^| )(كام|كم|بروتين|سعر|سعره|سعرات|كارب|دهون|جرام|في|فيه|فيها|القيمه|الغذائيه|بديل|بدايل|بدائل|بدل|حاجه|تانيه|تاني|غير|نفس|الماكروز|الماكرو|عايز|عاوز|ايه|اي|انا|ممكن|اكل|للـ)(?= |$)/g;
-function foodWords(q){return spell(fold(q)).replace(QWORDS," ").replace(QWORDS_AR," ").replace(/(^| )ل(?=ل)/g," ").replace(/\s+/g," ").trim();}
+function foodWords(q){return spell(fold(q)).replace(FOODNO," ").replace(FOODFILL," ").replace(QWORDS," ").replace(QWORDS_AR," ").replace(/(^| )ل(?=ل)/g," ").replace(/\s+/g," ").trim();}
 function namedFood(q,strict){
   var rest=foodWords(q);
   if(rest.length<(strict?3:2))return null;
@@ -993,22 +1009,23 @@ function namedFood(q,strict){
    grill in my lunch"): the meal it says, or every planned meal, item by item, a word
    of the item's name within a letter or two of a word of the question. */
 function planItemNamed(q){
-  var fq=fold(q),qw=foodWords(q).split(" ").filter(function(w){return w.length>=4;});
+  /* Three letters count where they start a planned food's name ("egg", "بيض"). */
+  var fq=fold(q),qw=foodWords(q).split(" ").filter(function(w){return w.length>=3;});
   if(!qw.length)return null;
   var slots=mealSlots().filter(function(x){return (x.plan||[]).length;}),named=null;
   for(var i=0;i<MEALWORD.length;i++)if(MEALWORD[i][1].test(fq)){named=MEALWORD[i][0];break;}
   if(named)slots=slots.filter(function(x){return x.id===named;}).concat(slots.filter(function(x){return x.id!==named;}));
   var best=null;
   slots.forEach(function(m){(m.plan||[]).forEach(function(it,i){
-    var nw=fold(itemName(it)+" "+(it.n||"")).replace(/[^a-z\u0600-\u06ff ]/g," ").split(" ").filter(function(w){return w.length>=4;});
-    var hits=qw.filter(function(w){return nw.some(function(x){return x===w||(w.length>=5&&editDist(w,x)<=2)||x.indexOf(w)===0||w.indexOf(x)===0;});}).length;
+    var nw=fold(itemName(it)+" "+(it.n||"")).replace(/[^a-z\u0600-\u06ff ]/g," ").split(" ").filter(function(w){return w.length>=3;});
+    var hits=qw.filter(function(w){return nw.some(function(x){return x===w||(w.length>=5&&editDist(w,x)<=2)||x.indexOf(w)===0||(x.length>=4&&w.indexOf(x)===0);});}).length;
     if(hits&&(!best||hits>best.hits||(hits===best.hits&&m.id===named&&best.m.id!==named)))best={m:m,i:i,it:it,hits:hits};});});
   return best;}
 function aSwap(a,q){
   /* One item of a planned meal: three foods that fit its place, each a tap away from
      going into the plan instead (js/ui/agent.js swapPick, with a confirmation). */
-  var pi=null;try{pi=planItemNamed(q);}catch(e){pi=null;}
-  if(pi){var pf=foodOf(pi.it),sw=pf?swapsFor(pf,num(pi.it.kcal)):[];
+  var pi=null,no=FOODNO.test(fold(q||""));try{pi=planItemNamed(q);}catch(e){pi=null;}
+  if(pi){var pf=foodOf(pi.it),sw=pf?swapsFor(pf,num(pi.it.kcal)):[];if(no&&pf)sw=notSame(sw,pf);
     if(sw.length){a.ag=swapPick(pi.m.id,pi.i,pi.it,itemName(pi.it),sw.map(function(x){
       return {v:x.f.id+"|"+x.g,l:foodName(x.f)+" "+fill(t("{n} g"),{n:x.g}),
         sub:fill(t("{k} kcal · {p} g protein · {c} g carbs · {f} g fat"),{k:fmtN(x.n.kcal),p:Math.round(x.n.p),c:Math.round(x.n.c),f:Math.round(x.n.f)})};}));
@@ -1021,7 +1038,7 @@ function aSwap(a,q){
   if(nf){
     var meal=planMeal(""),inPlan=meal&&meal.plan.filter(function(it){var f=foodOf(it);return f&&f.id===nf.id;})[0];
     var kc=inPlan?num(inPlan.kcal):nutritionFor(nf,(nf.s&&nf.s[0]&&nf.s[0][1])||100).kcal;
-    var ln=swapLine(inPlan||null,nf,kc);
+    var ln=swapLine(inPlan||null,nf,kc,no);
     if(!ln){p(a,fill(t("I couldn't find a close match for {f} in the food database."),{f:foodName(nf)}));return act(a,t("Open Food"),{"data-tab":"food"});}
     p(a,fill(t("Instead of {f}, the same calories with protein, carbs and fat close to it:"),{f:foodName(nf)}));
     l(a,[ln]);
@@ -1685,9 +1702,29 @@ function dayWith(muscles){
       pl.day.ex.filter(function(e){return want.indexOf(muscleOf(e.name))>=0;}).length*2>pl.day.ex.length)
       return new Date(iso+"T00:00:00").getDay()||7;}
   return "";}
+/* Requests the reading took for something else (owner, 19 Nov): "swap today's training
+   with a rest day" is a day skipped, not an exercise swapped; "switch one of today's
+   exercises to a simpler one" an easier version; "I don't feel like eating egg" the
+   planned food swapped; "I'm craving sugar" something sweet that fits the day. */
+var FOODNO=/(don t feel like|dont feel like|not in the mood for|don t want|dont want|sick of|tired of|don t like|dont like|can t eat|cant eat|no more|مش عايز|مش عاوز|مش حابب|مليت من|زهقت من|مش قادر اكل|مش بحب)/;
+var CRAVE=/(craving|crave|cravings|sweet tooth|something sweet|want sweets|want sugar|need sugar|نفسي في حاجه حلوه|عايز حاجه حلوه|عاوز حاجه حلوه|نفسي في سكر|نفسي في حلو|مشتهي حاجه حلوه)/;
+var GREET=/^(hi|hello|hey|hiya|yo|good (morning|afternoon|evening)|how are you( doing| today)?|how r u|how s it going|how is it going|what s up|whats up|sup|ازيك|عامل ايه|اخبارك|ايه الاخبار|اهلا|صباح الخير|مساء الخير|السلام عليكم)( (coach|man|bro|كوتش|يا كوتش|يا باشا))?$/;
+var FOODFILL=/(^| )(yeah|yes|but|ok|okay|well|so|really|just|i|im|i m|me|eating|eat|to eat|having|have|now|right now|today|this|the|any|more|انا|اكل|النهارده|دلوقتي|ده|دي)(?= |$)/g;
+function preRoute(R,text){
+  var fq0=fold(text).replace(/^(yeah|yes|ok|okay|but|well|so|ايوه|طيب|بس|ماشي)( but| بس|)? /,"");
+  /* A greeting alone, "how are you" too: answered as one, never the model's to guess. */
+  if(GREET.test(fq0))return {id:"hello"};
+  var c=null;try{c=commandOf(text,S.prefs.unit);}catch(e){c=null;}
+  if(c&&(c.cmd==="sched.skip"||c.cmd==="ex.easier"))return {cmd:c};
+  var fq=fold(text),named=R&&R.entities&&R.entities.exercise.some(function(e){return e.name;});
+  if(FOODDB&&!named&&CRAVE.test(fq))return {id:"crave"};
+  if(FOODDB&&!named&&FOODNO.test(fq)){var nf=null,rest=fq.slice(fq.search(FOODNO)).replace(FOODNO," ").replace(FOODFILL," ").replace(/\s+/g," ").trim();
+    try{nf=rest?namedFood(rest,true)||namedFood(rest,false):null;}catch(e){nf=null;}if(nf)return {id:"swap"};}
+  return null;}
 /* What the reading decides: {id} for an answer, {cmd} for something to do, {redo} to
    ask again with the text given, or null for the router. */
 function decide(R,text){
+  var pre=preRoute(R,text);if(pre)return pre;
   /* An Arabic question no rule here reads: its training words in English, asked again
      (answered in Arabic). */
   if(R&&!R.topic&&R.lang==="ar"&&R.kind==="knowledge"){var gl=gloss(R.norm);return gl?{redo:gl,lang:"ar"}:null;}
@@ -1748,7 +1785,7 @@ function decide(R,text){
 function withTold(fn,kinds,food){return function(a,q,it){fn(a,q,it);return told(a,kinds,food);};}
 var ANSWER={month:aMonth,live:aLive,phase:aPhase,zones:aZones,health:aHealth,faq:aFaq,plateau:aPlateau,inbody:aInBody,twice:aTwice,warmplan:aWarmPlan,loadlog:aLoadLog,week:aWeek,today:aToday,weights:aWeights,eat:aEat,track:aTrack,weight:aWeight,protein:aProtein,calories:aCalories,
   sore:aSore,missed:aMissed,balance:aBalance,strong:aStrong,goal:aGoal,plan:aPlan,water:aWater,steps:aSteps,
-  help:aHelp,hello:aHello,thanks:aThanks,unknown:aElse,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
+  help:aHelp,hello:aHello,crave:aCrave,thanks:aThanks,unknown:aElse,tomorrow:aTomorrow,last:aLast,rest:aRest,swap:aSwap,foodinfo:aFoodInfo,
   kreps:aKReps,ksets:aKSets,krest:aKRest,kfreq:aKFreq,kvolume:aKVolume,ktempo:aKTempo,kwarm:aKWarm,kdur:aKDur,k1rm:aK1RM,
   scope:aScope,reassess:aReassess,situation:function(a,q,it){return aSituation(a,q,it,it.sit||{kind:"day"});},weekfood:aWeekFood,logfood:aLogFood,weektrain:aWeekTrain,letgo:aLetGo,lowday:aLowDay,
   remember:aRemember,facts:aFacts,
@@ -1808,9 +1845,13 @@ var DAY=864e5;
    older is gone. Clearing the conversation (S.chatFrom) only hides it from the chat. */
 var KEEP_MS=30*DAY;
 function pruneChat(){
-  var c=S.chat||[],now=Date.now(),kept=c.filter(function(m){return m&&typeof m==="object"&&num(m.at)>now-KEEP_MS;});
-  if(kept.length!==c.length){S.chat=kept;return true;}
+  var c=S.chat||[],now=Date.now(),kept=c.filter(function(m){return m&&typeof m==="object"&&num(m.at)>now-KEEP_MS;}),ch=false;
+  /* A smart-coach answer still "Thinking…" from before (the app closed mid-answer, or the
+     model stalled past its time): said it couldn't answer, not left waiting for good. */
+  kept.forEach(function(m){if(m.pending&&num(m.at)<now-SMART_MS){m.pending=false;m.b=[{p:t("The smart coach couldn't answer that one. Ask me another way, or try again.")}];ch=true;}});
+  if(kept.length!==c.length||ch){S.chat=kept;return true;}
   return false;}
+var SMART_MS=90000;
 /* The conversation as the chat shows it: today's day of it, since it was last cleared. */
 function chatShown(){
   var from=Math.max(Date.now()-DAY,num(S.chatFrom));
@@ -2233,7 +2274,7 @@ function findMsg(at){return (S.chat||[]).filter(function(x){return x&&x.at===+at
    apart, and its buttons last. Nothing is coloured by who said it; the accent is kept
    for the one button an answer leads to. */
 /* What each answer is about, and its glyph (js/ui/glyphs.js). */
-var TOPIC={live:["This workout","dumbbell"],phase:["Your phase","bars"],zones:["Cardio zones","route"],health:["Your health","target"],recap:["Your day","bowl"],plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],twice:["Two sessions in a day","dumbbell"],warmplan:["Your warm-up","flame"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],
+var TOPIC={live:["This workout","dumbbell"],phase:["Your phase","bars"],zones:["Cardio zones","route"],health:["Your health","target"],recap:["Your day","bowl"],plateau:["A stuck lift","medal"],inbody:["Your InBody","scale"],twice:["Two sessions in a day","dumbbell"],warmplan:["Your warm-up","flame"],loadlog:["How weights are logged","dumbbell"],week:["Your week","bars"],today:["Today's workout","dumbbell"],weights:["What to lift","dumbbell"],eat:["What to eat","bowl"],crave:["Something sweet","bowl"],
   track:["How you're doing","bars"],weight:["Weight trend","scale"],protein:["Protein","shaker"],calories:["Calories","flame"],
   sore:["Recovery","moon"],missed:["Short on time","clock"],balance:["Program balance","balance"],strong:["Strength","medal"],
   goal:["Your goal","target"],plan:["A new plan","clipboard"],water:["Water","drop"],steps:["Steps and cardio","route"],

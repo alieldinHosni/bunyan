@@ -4938,3 +4938,23 @@ New test "Coach command, leave out (C-5a)": the question, only-this-one, all, th
 - **Redraws.** The panel is patched to its markup on a render, which emptied the row. `render()` now calls `keepRead()`, which draws the reading again (an open chip stays open) if the field still holds the text that was read.
 - **Understanding fix: a full name written out is that exercise.** Before, "swap Barbell Incline Bench Press …" was read as the program's bench press, because the program's own variant always won. Now `ctx.full` (views/chat.js `fullName`) passes the longest library name the words contain to `understand.js`, in English, or in Arabic as `exName` shows it. That exercise wins, and the reading carries all the words it was written with. Arabic letters are matched folded (ئ as ي).
 - **Tests.** New test "Coach live reading (C-4a)": three chips before sending; the day and exercise alternatives rewrite the field and are read again; nonsense shows no chips, three questions, and still sends; Arabic. Coach evaluation: unchanged (knowledge-001-ar still the one known miss, from before).
+
+**Coach fixes from the owner's own questions, and the smart coach's crash loop (v291, 19 Nov, session/coach-fixes).** The owner tried Phase A on the phone (six screenshots). Each case below is fixed.
+
+- **"How are you?": the app crashed and kept restarting.** The message went to the on-device model. Its memory use made iOS close the app. The boot load (1.5 s after start) then ran the model again on every restart.
+  - Now a mark is saved before the model loads or answers (`busy`, js/ui/smartcoach.js; saveDB writes at once), and cleared however it finishes.
+  - A mark found at boot means the phone closed the app part way. The smart coach is then paused, not loaded. An answer it was writing is settled with a line that says so.
+  - Settings → Smart coach says "Paused", with Try again and Turn off. The coach answers by its rules meanwhile.
+  - Greetings ("how are you", "عامل ايه", "hi") are now answered directly ("Good, thanks."), never sent to the model.
+  - The model has a one-minute limit, and a late answer is dropped. pruneChat settles a reply left "Thinking…" for more than 90 s. Before, a pending reply could stay "Thinking…" for good.
+- **"Can you swap today's training with a rest day"** was read as swapping an exercise called "todays training". The command reader now has a rest-day rule, which goes to sched.skip with its card and Undo.
+  - Polite requests ("can you…", "please…", "ممكن…") count as requests even with a question mark ("Can you skip today?").
+  - A new `preRoute` in views/chat.js `decide()` lets such commands win over the reading's guess.
+- **"Can you switch one of exercises today to a simpler one?"** was read as an exercise called "one". There is a new command, `ex.easier`, handled by js/ui/agent.js `planEasier`. `easierOf` finds an easier version: the same muscle and movement, a lower difficulty (or, at the same level, a machine or cable for a free weight), with the person's kit, avoiding sore spots and the Left out list.
+  - Before a workout, it asks which of today's exercises (each shown with its easier one). It then starts today's workout with it in place (session.fit). The program is unchanged.
+  - In a workout, it swaps that one exercise for today (exercise.swapToday).
+- **"What to eat now, I am craving sugar"** fell to "not sure". There is a new answer, "Something sweet" (`aCrave`). It lists sweet foods from the food database, each a usual portion with its kcal and protein, and only those that fit what is left of the day.
+- **"Yeah, but I don't feel like eating egg now"** got "Eggs and cholesterol". Food turned down ("don't feel like", "don't want", "مش عايز"…) now goes to the planned-food swap, as tap-to-swap choices. Nothing of the same food is offered (no egg whites for eggs).
+  - The food reader (`foodWords`) drops these words and fillers ("yeah", "but", "eating", "now").
+  - The planned-food matcher accepts a three-letter word that starts a food's name ("egg", "بيض").
+- **Tests.** New test "Coach, the owner's own questions (19 Nov)": each of the above in English and Arabic, the crash guard, and the stale-reply clean-up. 218 browser tests (coach, chat, food, meals, skip, offline, Arabic, start budget) pass. The smart-coach test passes. Coach evaluation unchanged.
