@@ -15,7 +15,7 @@ import {themeName, themeOf} from "../theme.js";
 import {planName} from "../../i18n/exnames.js";
 import {glyph} from "../glyphs.js";
 import {state as smartState} from "../smartcoach.js";
-import {avatar, backupState} from "../settings.js";
+import {avatar, backupState, memCount} from "../settings.js";
 import {art} from "../art.js";
 import {backArrow} from "../nav.js";
 
@@ -94,7 +94,9 @@ function vProfile(){
   var bk=backupState();
   h+=group(t("Your data"),
      prow('data-sheet="set_data"',"archive",t("Backup and reset"),bk.s,bk.k==="warn"?"warn":"")
-    +prow('data-sheet="set_chat"',"clock",t("Chat history"),t("The last 30 days, to read")));
+    +prow('data-sheet="set_chat"',"clock",t("Chat history"),t("The last 30 days, to read"))
+    /* What the coach keeps about the person, each line removable (settings.js memSheet). */
+    +prow('data-sheet="coachmem"',"spark",t("What the coach remembers"),(function(n){return n?t(n===1?"1 thing":"{n} things").replace("{n}",n):t("Nothing yet");})(memCount())));
   h+=group(t("Help"),
      prow('data-tourreset="1"',"question",t("Show the guide again"),t("The tips that point out what each button does"))
     +prow('data-sheet="about"',"info",t("About and privacy"),t("Everything stays on this phone")));

@@ -24,7 +24,7 @@ import {buildSnapshot, snapStats} from "../engine/share.js";
 import {planSummary} from "../engine/planshare.js";
 import {CUR, PROFILES, S} from "../state.js";
 import {fmtW, toDisp, wUnit} from "../units.js";
-import {esc, fmtN, num, shortd} from "../util.js";
+import {esc, fmtN, num, shortd, today} from "../util.js";
 import {VERSION} from "../version.js";
 import {canBuzz, seg, V} from "./view.js";
 import {iconOf, modeOf, themeOf, THEMES} from "./theme.js";
@@ -34,6 +34,7 @@ import {mealStyle} from "../engine/meals.js";
 import {afTile} from "./views/addfood.js";
 import {chat, wanted} from "./chatload.js";
 import {sheet as smartSheet, state as smartState} from "./smartcoach.js";
+import {listFacts} from "../coach/context.js";
 
 /* ---- the grammar ------------------------------------------------------------------ */
 function group(title,rows,foot){
@@ -426,9 +427,37 @@ function mealsSheet(){
    +group(t("Meals"),pick(t("Meal names"),t(st==="named"?"Breakfast, lunch, dinner, snacks":"Meal 1, Meal 2, Meal 3…"),
       {items:[["named",t("Named")],["numbered",t("Numbered")]],value:st,attr:"mstyle",label:t("Meal names")}));}
 
+/* ---- what the coach remembers (C-7, docs/COACH-AGENT.md 2.7) --------------------------
+   Everything the coach keeps about the person, in one place, each line removable: what
+   they told it to keep (S.context), the sore spots it keeps away from (profile limits),
+   travel mode, and the exercises left out of plans (listed on Favourites, linked here).
+   Nothing is kept that is not shown here. Forget takes out only its own row
+   (handlers/coach.js memdel). */
+var MEMKIND={schedule:"Work or schedule",obstacle:"Something in the way",constraint:"Something I can't do",preference:"A preference"};
+var MEMAREA={knee:"knees",back:"lower back",shoulder:"shoulders",wrist:"wrists",ankle:"ankles"};
+function memCount(){
+  var tr=S.travel&&S.travel.until&&S.travel.until>=today();
+  return listFacts(S.context).length+((S.profile&&S.profile.limits)||[]).length+(tr?1:0)+((S.skip||[]).length?1:0);}
+function memRow(key,name,sub,cta){
+  return '<div class="srow" data-memrow="'+esc(key)+'"><span class="srow-t"><span class="srow-n">'+esc(name)+'</span>'
+   +(sub?'<span class="srow-s">'+esc(sub)+'</span>':'')+'</span>'
+   +'<button class="btn sm g" data-memdel="'+esc(key)+'">'+esc(cta||t("Forget"))+'</button></div>';}
+function memSheet(){
+  var rows="";
+  listFacts(S.context).forEach(function(x){rows+=memRow("fact|"+x.id,x.text,t(MEMKIND[x.kind]||"A preference"));});
+  ((S.profile&&S.profile.limits)||[]).forEach(function(a){rows+=memRow("limit|"+a,t("Keeps away from your {a}").replace("{a}",t(MEMAREA[a]||a)),t("A sore spot"));});
+  if(S.travel&&S.travel.until&&S.travel.until>=today())rows+=memRow("travel|1",t("Travel mode until {d}").replace("{d}",shortd(S.travel.until)),t("Workouts use the kit you have with you"),t("End it"));
+  var nk=(S.skip||[]).length;
+  if(nk)rows+='<div class="srow" data-memrow="skip"><span class="srow-t"><span class="srow-n">'+esc(t(nk===1?"1 exercise left out of plans":"{n} exercises left out of plans").replace("{n}",nk))+'</span>'
+    +'<span class="srow-s">'+esc(t("Put any back on Favourites"))+'</span></span><button class="btn sm g" data-train="favs">'+esc(t("Open"))+'</button></div>';
+  return '<h2>'+esc(t("What the coach remembers"))+'</h2>'
+   +'<p class="tiny">'+esc(t("Only what is listed here is kept, on this phone. Forget a line and the coach stops using it."))+'</p>'
+   +'<div class="sg-list" data-memlist="1">'+rows+'</div>'
+   +'<p class="tiny" data-memempty="1"'+(rows?' hidden':'')+'>'+esc(t("Nothing yet. Tell the coach things like “I train before work” or “I don't like lunges”, and they show here."))+'</p>';}
+
 var SHEETS={set_food:foodSheet,set_meals:mealsSheet,set_you:youSheet,set_avatar:avatarSheet,set_training:trainingSheet,set_app:appSheet,set_profiles:profilesSheet,
-  set_data:dataSheet,backup:backupSheet,share:shareSheet,about:aboutSheet,set_chat:function(){var c=chat();if(!c){wanted();return '<h2>'+t("Chat history")+'</h2>';}return c.histSheet();},sendplan:sendPlanSheet,recvplan:recvPlanSheet,set_smart:smartSheet};
+  set_data:dataSheet,backup:backupSheet,share:shareSheet,about:aboutSheet,set_chat:function(){var c=chat();if(!c){wanted();return '<h2>'+t("Chat history")+'</h2>';}return c.histSheet();},sendplan:sendPlanSheet,recvplan:recvPlanSheet,set_smart:smartSheet,coachmem:memSheet};
 /* The inside of a settings sheet, or null when the name is not one of these. */
 function settingsSheet(name){return SHEETS[name]?SHEETS[name]():null;}
 
-export {avatar, backupState, initials, settingsSheet};
+export {avatar, backupState, initials, memCount, settingsSheet};

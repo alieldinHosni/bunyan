@@ -4229,7 +4229,7 @@ await test("Profile (owner, 9 Nov review): one door to You, weeks kept as Progre
   eq(st[1],[String(kept),"Weeks kept"],"weeks kept, as Progress counts them");
   if(!/yrs/.test(await page.$eval('#app .pid-top',e=>e.textContent)))throw new Error("age and height not on the card");
   eq(await page.$$eval('#app .sg',a=>a.map(g=>[g.querySelector(".sg-h").textContent,g.querySelectorAll(".srow").length])),
-    [["Settings",4],["People",4],["Your data",2],["Help",2]],"the groups");
+    [["Settings",4],["People",4],["Your data",3],["Help",2]],"the groups");
   eq(await page.evaluate(()=>{const g=[...document.querySelectorAll('#app .sg')].find(x=>x.querySelector('.sg-h').textContent==="Your data");return !!(g&&g.querySelector('[data-sheet="set_chat"]'));}),true,"chat history with the data");
   const v=await page.evaluate(async()=>(await import("/js/version.js")).VERSION);
   eq(await page.$eval('#app .pver',e=>e.textContent),"Bunyan · version "+v,"the version at the foot");
@@ -5650,6 +5650,31 @@ await test("Coach conversations (C-7): 30 exchanges of two or three turns, Engli
       out.push((ok?"PASS ":"FAIL ")+turns.join(" | ")+" => "+got+(ok?"":"  want "+want+" "+must+" :: "+t.slice(0,180)));}
     return out;},CV);
   const bad=r.filter(x=>x.startsWith("FAIL"));if(bad.length)throw new Error(bad.length+" of "+r.length+" conversations fail:\n"+bad.join("\n"));
+});
+await test("What the coach remembers (C-7): Profile lists every fact, sore spot, travel mode and left-out exercises the coach keeps; Forget takes out only its row and the coach stops using it; empty, it says so; Arabic the same",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),cx=await import("/js/coach/context.js"),U=await import("/js/util.js");
+    let r=cx.addFact(st.S.context,{kind:"schedule",text:"I train before work",by:"user"},{today:U.today()});st.S.context=r.store;
+    r=cx.addFact(st.S.context,{kind:"preference",text:"No fish please",by:"user"},{today:U.today()});st.S.context=r.store;
+    st.S.profile.limits=["knee"];const d=new Date();d.setDate(d.getDate()+5);st.S.travel={gear:["Bodyweight"],until:d.toISOString().slice(0,10)};st.S.skip=["Barbell Lunge"];st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.tab="profile";V.prof=true;(await import("/js/ui/render.js")).render();});
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.sheet="coachmem";(await import("/js/ui/render.js")).render();});
+  await pause(page,500);
+  const rows=await page.$$eval('#sheet [data-memrow]',a=>a.map(r=>r.getAttribute("data-memrow")));
+  eq([rows.length,rows.filter(k=>k.startsWith("fact|")).length,rows.includes("limit|knee"),rows.includes("travel|1"),rows.includes("skip")],[5,2,true,true,true],"each kept thing listed: "+JSON.stringify(rows));
+  eq(await page.evaluate(async()=>(await import("/js/ui/settings.js")).memCount()),5,"the Profile row's count");
+  await page.evaluate(()=>{document.querySelector("#sheet [data-memlist]").dataset.mark="1";});
+  await page.tap('#sheet [data-memdel^="fact|"]');await pause(page,300);
+  eq([await page.$$eval('#sheet [data-memrow]',a=>a.length),await ev(page,"(S.context.items||[]).length"),await page.getAttribute('#sheet [data-memlist]','data-mark')],[4,1,"1"],"Forget: one fact gone from the store, only its row taken out");
+  await page.tap('#sheet [data-memdel="limit|knee"]');await pause(page,300);
+  await page.tap('#sheet [data-memdel="travel|1"]');await pause(page,300);
+  await page.tap('#sheet [data-memdel^="fact|"]');await pause(page,300);
+  eq([await ev(page,"(S.profile.limits||[]).length"),await ev(page,"!!S.travel"),await ev(page,"(S.context.items||[]).length"),await page.$$eval('#sheet [data-memrow]',a=>a.map(r=>r.getAttribute("data-memrow")))],[0,false,0,["skip"]],"sore spot, travel and the last fact forgotten; the left-out list stays, with its way to Favourites");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.skip=[];st.saveDB();const V=(await import("/js/ui/view.js")).V;V.sheet=null;(await import("/js/ui/render.js")).render();V.sheet="coachmem";(await import("/js/ui/render.js")).render();});
+  await pause(page,400);
+  eq(await page.isVisible('#sheet [data-memempty]'),true,"nothing kept: it says so");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();(await import("/js/ui/render.js")).render();});
+  await pause(page,400);
+  eq(/الكوتش فاكر ايه/.test(await page.textContent('#sheet')),true,"in Arabic");
 });
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
