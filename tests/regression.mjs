@@ -5755,6 +5755,45 @@ await test("Coach a step ahead (C-8): an empty chat opens on the head's lead, in
   await pause(page,600);
   eq(/[؀-ۿ]/.test(await page.textContent('#cpanel .cp-hi')),true,"in Arabic");
 });
+/* C-9: a stand-in model that rewords (keeping the locked figures, or trying to change
+   one), and answers a free question with a figure of its own. */
+const fakeLLM9=()=>{window.__llmCalls=[];window.__rw="keep";window.__bunyanFakeLLM={installed:false,unload(){},
+  chat:{completions:{create:async(req)=>{window.__llmCalls.push(req);const sys=req.messages[0].content,q=req.messages[req.messages.length-1].content;
+    let out=/You reword/.test(sys)?(window.__rw==="keep"?"In short: "+q:q.replace("⟦1⟧","999")):/song/.test(q)?"Do 37 squats to a fast song.":"I don't have that.";
+    const words=[out];return {[Symbol.asyncIterator](){let i=0;return {next:async()=>i<words.length?{done:false,value:{choices:[{delta:{content:words[i++]}}]}}:{done:true}};}};}}}};};
+await test("Smart coach narrowed (C-9): it may put the coach's answer another way, its figures the coach's; a rewrite that changes one is refused and the answer stands; a free answer with a figure of its own is not shown; off, nothing changes",async page=>{
+  await openChat(page);
+  await agSay(page,"How much protein do I need?");await pause(page,400);
+  eq(await page.$$eval('#cpanel [data-smartsay]',a=>a.length),0,"off: no rewording offered");
+  await page.tap('.cp [data-coachclose]');await pause(page,300);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("set_smart");});await pause(page,300);
+  await page.tap('[data-smarton]');await pause(page,600);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page);
+  await openChat(page);
+  await agSay(page,"How much protein do I need?");await pause(page,400);
+  const src=await page.evaluate(async()=>{const st=await import("/js/state.js");const m=st.S.chat[st.S.chat.length-1];return {at:m.at,p:(m.b||[]).filter(x=>x.p&&!x.if).map(x=>x.p).join("\n")};});
+  const figs=s=>(s.replace(/(\d),(\d{3})/g,"$1$2").match(/\d+(?:\.\d+)?/g)||[]).sort().join(",");
+  if(!/\d/.test(src.p))throw new Error("the protein answer has no figure: "+src.p);
+  await page.tap('#cpanel [data-smartsay="'+src.at+'"]');await pause(page,900);
+  let last=await page.evaluate(async()=>{const st=await import("/js/state.js");const m=st.S.chat[st.S.chat.length-1];return {id:m.id,re:m.re,pending:m.pending,p:m.b[0].p,n:(m.b[1]||{}).n||""};});
+  eq([last.id,last.pending,/^In short: /.test(last.p),figs(last.p)===figs(src.p),/figures are the coach's own/.test(last.n)],["smart",false,true,true,true],"reworded, every figure the coach's: "+last.p.slice(0,120));
+  const sys=await ev(page,"window.__llmCalls[window.__llmCalls.length-1].messages[1].content");
+  eq(/\d/.test(sys.replace(/⟦\d+⟧/g,"")),false,"the model is given no figure, only locked tokens");
+  eq(await page.$$eval('#cpanel [data-smartsay]',a=>a.length),0,"not offered again under its own rewrite");
+  await page.evaluate(()=>{window.__rw="change";});
+  await agSay(page,"How much protein do I need?");await pause(page,400);
+  const src2=await page.evaluate(async()=>{const st=await import("/js/state.js");const m=st.S.chat[st.S.chat.length-1];return {at:m.at,p:(m.b||[]).filter(x=>x.p&&!x.if).map(x=>x.p).join("\n")};});
+  await page.tap('#cpanel [data-smartsay="'+src2.at+'"]');await pause(page,900);
+  last=await page.evaluate(async()=>{const st=await import("/js/state.js");const m=st.S.chat[st.S.chat.length-1];return {p:m.b[0].p,all:JSON.stringify(st.S.chat.map(x=>x.b))};});
+  eq([/without changing a figure/.test(last.p),/999/.test(last.all)],[true,false],"a rewrite that changes a figure: refused, never shown or kept");
+  eq(await page.evaluate(async t0=>{const st=await import("/js/state.js");const m=st.S.chat.find(x=>x.at===t0);return m.b.filter(x=>x.p&&!x.if).map(x=>x.p).join("\n");},src2.at),src2.p,"and the coach's answer stands as it was");
+  await page.fill('#chatq',"what's a good song for leg day");await page.press('#chatq','Enter');await pause(page,1200);
+  last=await page.evaluate(async()=>{const st=await import("/js/state.js");const m=st.S.chat[st.S.chat.length-1];return {p:m.b[0].p,all:JSON.stringify(m.b)};});
+  eq([/a figure I can't check/.test(last.p),/37/.test(last.all)],[true,false],"a free answer with a figure of its own: left out");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();(await import("/js/ui/render.js")).render();});
+  await pause(page,400);await agSay(page,"محتاج بروتين قد ايه؟");await pause(page,400);
+  eq(/[؀-ۿ]/.test(await page.textContent('#cpanel [data-smartsay]')),true,"in Arabic");
+},{init:fakeLLM9});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

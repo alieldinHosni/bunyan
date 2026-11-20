@@ -61,7 +61,7 @@ import {S, split} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
 import {esc, fmtN, num, pretty, r1, setLang, shortd, today} from "../../util.js";
 import {FAT_RANGE, fatBand} from "../../engine/inbody.js";
-import {isReady} from "../smartcoach.js";
+import {isReady, proseOf} from "../smartcoach.js";
 import {backArrow} from "../nav.js";
 import {doseText} from "../dose.js";
 import {blockDay, blockNow, phaseNow} from "../../engine/blocks.js";
@@ -2506,7 +2506,10 @@ function missHtml(m,live,ro){
   if(m.id==="clarify")return "";
   if(m.miss)return '<p class="chat-missd" data-k="miss'+esc(String(m.at))+'">'+esc(t("Kept, thanks. Try saying it another way, or tap a question below."))+'</p>'
     +(m.id!=="smart"&&m.id!=="safety"&&!m.safety&&isReady()&&!isSafety(m.qq||m.q)?'<button class="chat-altb" data-smarttry="'+esc(String(m.at))+'">'+esc(t("Let the smart coach try"))+'</button>':'');
-  return '<button class="chat-miss" data-chatmiss="'+esc(String(m.at))+'" data-k="miss'+esc(String(m.at))+'">'+esc(t("Not what I asked"))+'</button>';}
+  return '<button class="chat-miss" data-chatmiss="'+esc(String(m.at))+'" data-k="miss'+esc(String(m.at))+'">'+esc(t("Not what I asked"))+'</button>'
+    /* With the smart coach on: the coach's own answer, put another way (C-9). Not for a
+       miss, a reply that is the model's already, or one with nothing to reword. */
+    +(isReady()&&!m.re&&!/^(smart|unknown|clarify|correction|safety)$/.test(m.id||"")&&!isSafety(m.qq||m.q)&&proseOf(m)?'<button class="chat-altb" data-smartsay="'+esc(String(m.at))+'">'+esc(t("Say it another way"))+'</button>':'');}
 
 /* The screen: a header that says where the answers come from, then either what can be
    asked or the conversation and what to ask next, and a box to type in that stays in

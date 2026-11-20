@@ -13,7 +13,7 @@
    notes the question reaches (js/engine/smart.js), shown as written by the model, and a
    change it suggests is a button that sends the request through the app's own parser. */
 import {ask as llmAsk, installed, load, modelId, MODELS, ready, remove, support} from "../engine/llm.js";
-import {buildMessages, readReply} from "../engine/smart.js";
+import {buildMessages, grounded, readReply, rewordMessages, unlockReword} from "../engine/smart.js";
 import {goalOf} from "../data/goals.js";
 import {lastWeight, avg7} from "../engine/formulas.js";
 import {bodyFat} from "../engine/stats.js";
@@ -102,8 +102,28 @@ function snapshot(){
 
 /* ---- an answer, written into its row as it comes ------------------------------------ */
 function rowOf(m){return document.querySelector('.chat-x[data-k="x'+m.at+'"] .chat-lead');}
+/* The coach's own answer, as the words a rewrite starts from: its paragraphs, not its
+   lists, notes or buttons. */
+function proseOf(m){return (m&&Array.isArray(m.b)?m.b:[]).filter(function(x){return x&&x.p&&!x.if;}).map(function(x){return String(x.p);}).join("\n").slice(0,700);}
+/* "Say it another way" (docs/COACH-AGENT.md 2.10, C-9): the model rewords the coach's
+   answer, its figures locked (js/engine/smart.js unlockReword). Nothing is written into
+   the row as it comes, since a rewrite is checked whole before anything is shown; one
+   that is refused is said so, and the coach's answer above stands as it was. */
+function runReword(m,save,paint){
+  var src=(S.chat||[]).filter(function(x){return x&&String(x.at)===String(m.re);})[0],text=proseOf(src);
+  var fail=function(){m.pending=false;m.b=[{p:t("The smart coach couldn't put that another way without changing a figure, so the coach's answer above stands.")}];m.acts=[];save();paint();};
+  if(!text||safetyOf(m.qq||m.q).cls||src.safety){fail();return;}
+  var R=rewordMessages(text,m.lang==="ar"?"ar":"en");
+  busy("answer");
+  var done=false,give=setTimeout(function(){if(done)return;done=true;busy(null);fail();},60000);
+  llmAsk(R.msgs,null).then(function(full){
+    if(done)return;done=true;clearTimeout(give);busy(null);
+    var out=unlockReword(full,R.lock,text);if(!out){fail();return;}
+    m.pending=false;m.b=[{p:out},{n:t("Put another way by the model on this phone. The figures are the coach's own, unchanged.")}];m.acts=[];save();paint();
+  },function(){if(done)return;done=true;clearTimeout(give);busy(null);fail();});}
 function run(m,save,paint){
   if(!m||!m.pending)return;
+  if(m.re){runReword(m,save,paint);return;}
   /* A red flag (js/coach/safety.js) never reaches the model: its answer is the coach's
      fixed text. The row the model would have written is taken away. */
   if(safetyOf(m.qq||m.q).cls){S.chat=(S.chat||[]).filter(function(x){return x!==m;});save();paint();return;}
@@ -117,9 +137,14 @@ function run(m,save,paint){
   var done=false,give=setTimeout(function(){if(done)return;done=true;busy(null);m.pending=false;
     m.b=[{p:t("The smart coach couldn't answer that one. Ask me another way, or try again.")}];
     m.acts=[{l:t("What can I ask?"),a:{"data-chatq":"help"}}];save();paint();},60000);
-  llmAsk(msgs,function(txt){if(done)return;var el=rowOf(m);if(el)el.textContent=readReply(txt).text||"…";}).then(function(full){
+  /* Written as it comes, until a figure appears: from there it waits for the check. */
+  llmAsk(msgs,function(txt){if(done)return;var el=rowOf(m),s=readReply(txt).text;if(el&&!/[0-9\u0660-\u0669]/.test(s))el.textContent=s||"…";}).then(function(full){
     if(done)return;done=true;clearTimeout(give);busy(null);
     var r=readReply(full);
+    /* A figure of its own (one the person's log, the notes and the app's text do not
+       hold) is not shown: the model never states a number (2.10). */
+    if(r.text&&!grounded(r.text,msgs)){m.pending=false;m.b=[{p:t("The smart coach's answer had a figure I can't check against your log or the training notes, so I've left it out. Ask me another way, or try again.")}];
+      m.acts=[{l:t("What can I ask?"),a:{"data-chatq":"help"}}];save();paint();return;}
     m.pending=false;m.b=[{p:r.text||t("I don't have that. Ask me about your training, food or progress.")},
       {n:t("Written by the model on this phone, from your log and the training notes. It can be wrong: check a figure against your plan before you act on it.")}];
     m.acts=[];
@@ -151,4 +176,4 @@ function sheet(){
     +'<button class="btn" data-smarton="1">'+esc(t("Download and turn on"))+'</button>';
   return h;}
 
-export {boot, isReady, onChange, run, sheet, snapshot, start, state, stop};
+export {boot, isReady, onChange, proseOf, run, sheet, snapshot, start, state, stop};
