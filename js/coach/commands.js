@@ -140,7 +140,7 @@ function commandOf(text,unit){
   /* ---- away from the usual kit: travel mode ---- */
   if(!asks&&/(i m back|im back|i am back|back home|back from (my )?(trip|travel)|end travel|stop travel|travel (mode )?(is )?over|done travel|رجعت|خلصت السفر|رجعت من السفر)/.test(fq))return {cmd:"travel.end"};
   if(!asks&&(/(travel|travelling|traveling|trip|hotel|away|vacation|holiday|مسافر|سفر|فندق|اجازه)/.test(fq)||/(only|just) (have |got |)(dumbbells?|bands?|kettlebells?|my bodyweight|bodyweight)/.test(fq))
-     &&/(dumbbell|band|kettlebell|bodyweight|body weight|no equipment|nothing|hotel gym|hotel room|دمبل|دامبل|استك|كيتل|من غير ادوات|من غير اجهزه|بوزن الجسم|جيم الفندق)/.test(fq)){
+     &&/(dumbbell|band|kettlebell|bodyweight|body weight|no equipment|no gym|nothing|hotel gym|hotel room|دمبل|دامبل|استك|كيتل|من غير ادوات|من غير اجهزه|من غير جيم|مفيش جيم|بوزن الجسم|جيم الفندق)/.test(fq)){
     var gear=["Bodyweight"];
     /* "Hotel gym": dumbbells and the usual machines, unless it is "… only". */
     if(/(hotel gym|جيم الفندق)/.test(fq)&&!/(only|just|بس)/.test(fq))gear=gear.concat(["Dumbbell","Machine","Cable"]);
@@ -151,7 +151,9 @@ function commandOf(text,unit){
     else if(/(a week|one week|7 days|اسبوع)/.test(fq))days=7;else if(/(two weeks|2 weeks|اسبوعين)/.test(fq))days=14;
     else if(/(weekend|الويك اند|الويكند)/.test(fq))days=-1;
     var tw=whenIn(fq).filter(function(x){return x!=="today";});
-    return {cmd:"travel.set",gear:gear,days:days,until:tw.length?tw[tw.length-1]:""};}
+    /* "Next week": it starts then, not today (docs/COACH-AGENT.md 2.4, program.away). */
+    var nxt=/(next week|الاسبوع الجاي|الاسبوع اللي جاي)/.test(fq);
+    return {cmd:"travel.set",gear:gear,days:days,until:tw.length?tw[tw.length-1]:"",next:nxt};}
 
   /* ---- taking the last change back ---- */
   if(/^(undo|undo that|undo it|undo the last|swap it back|put it back|change it back|switch it back|revert|revert it|revert that|take it back|take that back|رجعه|رجعها|رجع زي ما كان|الغي اللي فات|الغي اخر حاجه|تراجع)( please| pls|)$/.test(fq))return {cmd:"undo.last"};

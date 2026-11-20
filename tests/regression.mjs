@@ -5889,6 +5889,39 @@ await test("Coach command, a sore spot (C-5, 2.4): \"my knee hurts when I do jum
   await page.tap('#cpanel [data-agundo="'+c.at+'"]');await pause(page,700);
   eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"Undo: as it was");
 });
+await test("Coach command, away (C-5, 2.4): \"travelling next week, no gym\" sets a bodyweight week for next week's dates, today's workout untouched until then, the program back after; Undo; Settings says when it starts; Arabic the same",async page=>{
+  const ask=q=>page.evaluate(async q=>{const st=await import("/js/state.js");st.S.chat=[];const c=await import("/js/ui/views/chat.js");const V=(await import("/js/ui/view.js")).V;
+    const m=c.ask(q);V.coach="full";(await import("/js/ui/render.js")).render();return {at:m.at,id:m.id,b:(m.b||[]).map(x=>x.p||"").join(" "),ag:m.ag&&{act:m.ag.act,p:m.ag.p,lead:m.ag.lead,detail:m.ag.detail}};},q);
+  const wk=await page.evaluate(async()=>{const s=await import("/js/engine/schedule.js"),u=await import("/js/util.js");const f=s.weekStartOf(s.addDays(u.today(),7));return [f,s.addDays(f,6)];});
+  const prog0=await ev(page,"JSON.stringify(S.programs)");
+  const m=await ask("travelling next week, no gym");
+  eq([m.ag&&m.ag.act,m.ag&&m.ag.p],["travel.set",{gear:["Bodyweight"],from:wk[0],until:wk[1]}],"next week's dates, bodyweight: "+JSON.stringify(m));
+  eq(/after it your program is back/.test(m.ag.detail),true,"what stays: "+m.ag.detail);
+  await pause(page,400);
+  await page.tap('#cpanel [data-agok="'+m.at+'"]');await pause(page,600);
+  eq(await ev(page,"S.travel"),{gear:["Bodyweight"],until:wk[1],from:wk[0]},"set, from next week");
+  /* Today's workout, started: the program's own exercises while the trip is ahead; with
+     the trip begun (its start moved to today), the stand-ins that need no kit. */
+  const startNames=()=>page.evaluate(async()=>{const st=await import("/js/state.js"),A=await import("/js/ui/actions.js"),dp=await import("/js/engine/dayplan.js"),u=await import("/js/util.js");
+    const pl=dp.planOn(st.split(),u.today());if(!pl.day||pl.rest||pl.kind==="done")return null;
+    A.startDay(pl.day.id);const n=st.S.active.entries.map(e=>e.name);st.S.active=null;st.saveDB();return {n:n,plan:pl.day.ex.map(e=>e.name)};});
+  const before=await startNames();
+  if(!before)throw new Error("the seeded profile has no workout today");
+  eq(before.n,before.plan,"while the trip is ahead, today's workout is the program's");
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),u=await import("/js/util.js");st.S.travel.from=u.today();});
+  const during=await startNames();
+  eq(during.n.join()!==during.plan.join(),true,"once it starts, the workout uses the kit at hand");
+  await page.evaluate(async f=>{const st=await import("/js/state.js");st.S.travel.from=f;},wk[0]);
+  eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"the program as it was");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.sheet="coachmem";(await import("/js/ui/render.js")).render();});await pause(page,400);
+  eq(/Travel mode from /.test(await page.textContent('#sheet [data-memrow="travel|1"]')),true,"Settings says when it starts");
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.sheet=null;V.coach="full";(await import("/js/ui/render.js")).render();});await pause(page,400);
+  await page.tap('#cpanel [data-agundo="'+m.at+'"]');await pause(page,600);
+  eq(await ev(page,"S.travel||null"),null,"Undo: no travel mode");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");delete st.S.travel;st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();});
+  const a=await ask("مسافر الاسبوع الجاي ومفيش جيم");
+  eq([a.ag&&a.ag.act,a.ag&&a.ag.p&&a.ag.p.from,/[؀-ۿ]/.test(a.ag&&a.ag.lead||"")],["travel.set",wk[0],true],"in Arabic: "+JSON.stringify(a));
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

@@ -5112,3 +5112,25 @@ What C-10 adds:
 - **For the owner, not changed: the knee rule (plan.js AVOID.knee) covers jumps, hops, pistols, sissy squats, skaters and mountain climbers. It does not cover squats or lunges.**
   - So "my knee hurts when I squat", with a barbell squat in the program, gets "Nothing in your program loads your knees much".
   - This is the same rule the assessment applies. Widening it is a decision about the injury rules, to be taken against the knowledge base, not a coach fix.
+
+**Coach C-5 gap 3: away for given dates (v300, 20 Nov, session/coach-travel).** From 2.4's program.away: "travelling next week, no gym" gives a bodyweight week for those dates, with the normal program back after.
+- **Before:** it was explained ("turn it on when you leave"), because travel mode always started on the day it was turned on.
+- **Travel mode can now start later.**
+  - S.travel takes an optional `from`, stored only when it is after today.
+  - actions.js `travelGear` uses the travel kit only from `from` to `until`. head.js shows the day's travel line on the same dates.
+  - What the coach remembers (Settings) says "Travel mode from {a} to {b}" while the trip is ahead.
+  - actions.js `travel.set` takes `from`; one before today or after `until` is refused.
+- **Reading:**
+  - commands.js reads "no gym" / «من غير جيم» / «مفيش جيم» as bodyweight, and "next week" / «الاسبوع الجاي» as next week.
+  - chat.js decide's away case, with kit said and next week, now gives the command (before, it always fell back to the question).
+  - agent.js planTravel then sets next week's dates: its first day as Training's week starts it, for the days said, else seven.
+- **The preview:** the kit and the dates, how many exercises are swapped, and "Until then your workouts are as usual, and after it your program is back as it is". The away question's own buttons now say "travelling next week, …".
+- **Test:** new browser test "Coach command, away (C-5, 2.4)". It checks:
+  - the card's dates and kit;
+  - set from next week;
+  - today's workout is the program's while the trip is ahead, and the kit at hand once it starts;
+  - the program untouched;
+  - Settings' row;
+  - Undo;
+  - Arabic.
+- **Checks:** the coach evaluation is unchanged (433/434). With this, the C-5 gaps the audit found are closed. The open question on the knee rule stays with the owner.

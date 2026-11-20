@@ -29,7 +29,7 @@ import {t} from "../i18n/dict.js";
 import {exName, planName} from "../i18n/exnames.js";
 import {barKg, deloadDue, incrementFor, inDeload, lastWeight} from "../engine/formulas.js";
 import {macroTargetsOf} from "../engine/body.js";
-import {addDays, isoWeekday} from "../engine/schedule.js";
+import {addDays, isoWeekday, weekStartOf} from "../engine/schedule.js";
 import {S, split} from "../state.js";
 import {fmtW, toDisp, wUnit} from "../units.js";
 import {fmtN, num, pretty, today} from "../util.js";
@@ -628,6 +628,16 @@ function planTravel(c){
     if(!S.travel||!S.travel.until||S.travel.until<today())return say(t("Travel mode isn't on."));
     return confirm("travel.end",{},{lead:t("End travel mode now?"),item:t("Travel mode"),detail:t("Your workouts go back to your own kit."),
       cta:t("End it"),done:t("Travel mode is off. Welcome back."),undone:t("Undone. Travel mode is back on.")});}
+  /* Next week: from its first day (the week's start, as Training's week shows it), for
+     the days said, else the whole week. */
+  if(c.next&&!c.until){var from=weekStartOf(addDays(today(),7)),to=addDays(from,(c.days>0?c.days:7)-1);
+    var kit0=c.gear.filter(function(g){return g!=="Bodyweight";}).map(function(g){return t(KITNAME[g]||g);});
+    var kitTxt0=kit0.length?kit0.join(t(" and ")):t("your bodyweight");
+    var change0=0;split().days.forEach(function(d){d.ex.forEach(function(e){if(!isActivity(e.name)&&!usable(e.name,c.gear))change0++;});});
+    return confirm("travel.set",{gear:c.gear,from:from,until:to},{lead:fill(t("Train with {k} from {a} to {b}?"),{k:kitTxt0,a:pretty(from),b:pretty(to)}),
+      item:t("Travel mode"),detail:(change0?fill(t(change0===1?"1 exercise in your program needs other kit: each workout swaps it for the closest one with what you have.":"{n} exercises in your program need other kit: each workout swaps them for the closest ones with what you have."),{n:change0})+" ":"")
+        +t("Until then your workouts are as usual, and after it your program is back as it is."),
+      cta:t("Set travel mode"),done:fill(t("Travel mode set, from {a} to {b}."),{a:pretty(from),b:pretty(to)}),undone:t("Undone. Your kit is as it was.")});}
   var n=today(),until=c.until?whenIso(c.until):c.days>0?addDays(n,c.days-1):c.days<0?(function(){for(var i=0;i<7;i++){var d=addDays(n,i);if(isoWeekday(d)===7)return d;}return addDays(n,6);})():addDays(n,6);
   var kit=c.gear.filter(function(g){return g!=="Bodyweight";}).map(function(g){return t(KITNAME[g]||g);});
   var kitTxt=kit.length?kit.join(t(" and ")):t("your bodyweight");
