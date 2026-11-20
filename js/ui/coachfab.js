@@ -13,8 +13,12 @@
    V.coach: null (closed), "compact" or "full". */
 import {t} from "../i18n/dict.js";
 import {isolateNums} from "../i18n/bidi.js";
-import {S, saveDB} from "../state.js";
-import {esc, today} from "../util.js";
+import {S, saveDB, split} from "../state.js";
+import {esc, num, today} from "../util.js";
+import {headNow} from "../engine/head.js";
+import {planOn} from "../engine/dayplan.js";
+import {eatenToday} from "../engine/formulas.js";
+import {words} from "./coachwords.js";
 import {addDays, weekStartOf} from "../engine/schedule.js";
 import {V} from "./view.js";
 import {glyph} from "./glyphs.js";
@@ -27,7 +31,33 @@ var SUGGEST={train:["today","weights","tomorrow"],workout:["busy","weights","sor
 /* In the first two days of a new week, last week's check-in comes first until read. */
 function suggestFor(w){
   var n=today(),ws=weekStartOf(n),fresh=n<=addDays(ws,1)&&S.ckSeen!==ws&&(S.sessions||[]).length;
-  return fresh?["week"].concat(SUGGEST[w].filter(function(x){return x!=="week";}).slice(0,2)):SUGGEST[w];}
+  var base=fresh?["week"].concat(SUGGEST[w].filter(function(x){return x!=="week";}).slice(0,2)):SUGGEST[w].slice();
+  /* What is live today first (C-8): a workout planned and not done, food behind by the
+     afternoon, each where it belongs. And nothing the lead contradicts: while a lighter
+     week or a stress week leads, no "is my program balanced?" (it would point at more sets). */
+  var out=[],add=function(x){if(out.indexOf(x)<0)out.push(x);},ld=null;try{ld=headNow().lead;}catch(e){ld=null;}
+  try{var pl=planOn(split(),n);if((w==="train"||w==="coach")&&pl.day&&!pl.rest&&pl.kind!=="done"&&!S.active)add("today");}catch(e){}
+  try{var g=S.goals||{},e=eatenToday(n);if((w==="food"||w==="train"||w==="coach")&&new Date().getHours()>=14&&num(g.kcal)&&e.kcal<num(g.kcal)*0.5)add("eat");}catch(e){}
+  base.forEach(add);
+  if(ld&&/^(deload|stress)$/.test(ld.source))out=out.filter(function(x){return x!=="balance";});
+  return out.slice(0,3);}
+/* In a workout, about the exercise on screen (C-8, 2.9), each said as typed. */
+var LIVEASK=[["This machine is taken","الجهاز ده مشغول"],["This is too heavy","ده تقيل"],["Show me the form","وريني الطريقة"],["Swap this exercise","بدل التمرين ده"]];
+/* The lead (js/engine/head.js), as the chat's first line, with its one action: the same
+   words and the same button as Training's lead line (views/train.js leadLine), so the
+   chat never says something else than the page. */
+function leadChat(){
+  var s=null;try{s=headNow().lead;}catch(e){s=null;}
+  if(!s||s.pri<20)return null;
+  var b=function(attr,label){return '<button class="btn sm" '+attr+'>'+esc(label)+'</button>';};
+  if(s.id==="deload-due")return {id:s.id,line:t("Time for a lighter week"),btn:b('data-deload="start"',t("Start a lighter week"))};
+  if(s.source==="plancheck"&&s.src&&s.src.fix)return {id:s.id,line:s.src.title,btn:b('data-pcfix="'+esc(s.src.id)+'"',s.src.fix.label)};
+  if(s.source==="coach"){var w=words(s.src);if(w)return {id:s.id,line:w[0],btn:b('data-cofix="'+esc(s.src.id)+'"',w[2])};}
+  if(s.source==="stress")return {id:s.id,line:t(s.id==="stress-follow"?"How are you now?":"Kept light on purpose"),btn:b('data-tab="coach"',t("Open in Coach"))};
+  if(s.source==="checkin")return {id:s.id,line:t("Your weekly check-in is ready"),btn:b('data-tab="coach"',t("Open in Coach"))};
+  if(s.source==="monthly")return {id:s.id,line:t("Your monthly review is ready"),btn:b('data-tab="coach"',t("Open in Coach"))};
+  if(s.title)return {id:s.id,line:s.title,btn:b('data-tab="'+esc(s.page||"coach")+'"',t("Open"))};
+  return null;}
 function where(){return S.active&&V.tab==="train"&&V.train!=="hub"?"workout":(SUGGEST[V.tab]?V.tab:"train");}
 
 /* ---- where the launcher may sit ------------------------------------------------------ */
@@ -69,13 +99,18 @@ function panelHtml(){
          :'<svg class="gl" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4.5h5.5V10M10 19.5H4.5V14"/></svg>')+'</button>'
    +'<button class="cp-ib" data-coachclose="1" aria-label="'+esc(t("Close"))+'">'+glyph("close")+'</button></header>'
    +'<div class="cp-b" id="cpB" role="log" aria-live="polite">'+c.histLink();
-  if(!log.length)h+='<p class="cp-hi">'+esc(t("Ask about training, food or progress"))+'</p>';
+  /* Not in a workout: there the suggestions are about the exercise, and a plan fix waits. */
+  var ld=log.length||where()==="workout"?null:leadChat();
+  if(ld)h+='<div class="cp-lead" data-lead="'+esc(ld.id)+'"><p class="cp-hi">'+esc(ld.line)+'</p>'+ld.btn+'</div>';
+  else if(!log.length)h+='<p class="cp-hi">'+esc(t("Ask about training, food or progress"))+'</p>';
   else{
     log.forEach(function(m,i){h+=c.bubble(m,c.liveAt(log,i),i<log.length-1);});}
   /* What to ask: for where it was opened, then, after an answer, what follows from it,
      in the conversation's language. */
   var last=log[log.length-1];
   if(last)h+=c.askNext(last,log.length);
+  else if(where()==="workout")h+='<div class="cp-sug">'+LIVEASK.map(function(x){var ar=S.prefs&&S.prefs.lang==="ar";
+    return '<button class="cp-chip" data-chatsay="'+esc(ar?x[1]:x[0])+'">'+esc(ar?x[1]:t(x[0]))+'</button>';}).join("")+'</div>';
   else h+='<div class="cp-sug">'+suggestFor(where()).map(function(id){
     return '<button class="cp-chip" data-chatq="'+id+'">'+esc(t(c.ASK[id]))+'</button>';}).join("")+'</div>';
   h+='</div><div id="chatread" class="rd" aria-live="polite" hidden></div><div class="cp-f"><input id="chatq" type="text" enterkeyhint="send" autocomplete="off" maxlength="300" placeholder="'

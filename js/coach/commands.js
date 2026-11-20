@@ -186,6 +186,11 @@ function commandOf(text,unit){
   if(/^(that|it|this|the set|that set|last set)?( one)?( was| felt| is|)( way| really| a bit| a little| too| so|)* ?(too )?(easy|light|easy peasy)( |$)|^(too easy|easy|light)( |$)|(سهل|خفيف|سهله|خفيفه)( اوي| قوي| جدا|)$/.test(fq))return {cmd:"set.feel",dir:1};
   if(/^(that|it|this|the set|that set|last set)?( one)?( was| felt| is|)( way| really| a bit| a little| too| so|)* ?(too )?(heavy|hard|tough|brutal)( |$)|^(too heavy|too hard|heavy|i failed|failed|couldn t finish|could not finish|cant finish|i struggled)( |$)|(تقيل|صعب|تقيله|صعبه)( اوي| قوي| جدا|)$|^(مقدرتش|معرفتش) (اكمل|اخلص)/.test(fq))return {cmd:"set.feel",dir:-1};
   if(/^(how (do|should|can) i (do|perform|make) (this|it|that)( one| exercise|)|how to do (this|it|that)( one| exercise|)|show me how( to do (this|it))?|form( check| cues| tips|)|technique|cues)( |$)|^(ازاي|ازي) (اعمل|اعمله|اعملها|العب|العبه) ?(ده|دي|التمرين ده|)$|^(طريقه|شرح) (الاداء|التمرين ده|اللعب)/.test(fq))return {cmd:"ex.how"};
+  /* "Show me the form", the workout's own suggestion (C-8), and its Arabic. */
+  if(/^(show me |)(the |my |)(form|technique)( please| for this| on this|)$|^(وريني|ورّيني) (ال)?(طريقه|فورم|الاداء)( بتاعه| بتاعته|)$/.test(fq))return {cmd:"ex.how"};
+  /* "Swap this exercise", the other: the same muscles, other ways, for today (as a taken
+     machine is answered). */
+  if(/^(swap|change|replace|switch)( out)? (this|this one|it|the current one|this exercise|the exercise)( exercise| for today| for something else|)$|^(بدل|غير) (التمرين ده|ده|دي|التمرين)( النهارده|)$/.test(fq))return {cmd:"ex.busy"};
   /* From the words as typed: folding takes the decimal point away (87.5 is not 875). */
   var pl=raw.toLowerCase().replace(/[٠-٩]/g,function(d){return "٠١٢٣٤٥٦٧٨٩".indexOf(d);}).match(/(plates?|طارات|طاره)( do i need| for| to make| to load| on the bar for| ل| علشان| عشان|)? ?(\d{2,3}(?:[.,]\d+)?) ?(kg|kgs|lb|lbs|كيلو|)|(how (do i|to) load|load) (\d{2,3}(?:[.,]\d+)?) ?(kg|kgs|lb|lbs|)/);
   if(pl){var pw=+(pl[3]||pl[7]).replace(",","."),pu=pl[4]||pl[8]||"";return {cmd:"plates",w:pw,unit:/lb/.test(pu)?"lb":pu?"kg":""};}

@@ -3186,7 +3186,10 @@ const sheet=async(page,name)=>{await page.evaluate(async n=>{(await import("/js/
    (the tall list of twelve is gone); the field sits under the conversation. */
 await test("Coach chat: the panel opens on three questions for where it was opened; a typed question is cleared once answered, and the answer names its subject",async page=>{
   await openChat(page);
-  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["balance","track","plan"],"Coach's own questions");
+  /* C-8: what is live first (today's workout, food behind after 2 pm), then the page's own;
+     no "balanced?" while the seeded profile's lead is a lighter week. Any hour of the day. */
+  const cq=await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq));
+  eq([cq.length,cq[0],cq.includes("balance"),cq.every(x=>["today","eat","week","track","plan"].includes(x))],[3,"today",false,true],"Coach's questions, live first: "+JSON.stringify(cq));
   const f=await page.evaluate(()=>{const b=document.getElementById("cpB").getBoundingClientRect(),f=document.querySelector(".cp-f").getBoundingClientRect();return f.top>=b.bottom-1;});
   eq(f,true,"the field is under the conversation, never over it");
   await page.fill('#chatq','how much protein do I need');await page.press('#chatq','Enter');await pause(page,400);
@@ -3200,7 +3203,7 @@ await test("Coach chat: the panel opens on three questions for where it was open
   await pause(page,600);
   await tapTab(page,"food");await pause(page,300);
   await page.tap('#cfab .cfab');await pause(page,400);
-  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["rest","eat","protein"],"Food's questions");
+  eq((await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq))).sort(),["eat","protein","rest"],"Food's questions (food behind after 2 pm comes first)");
 });
 await test("Search sheets: typing, then the first tap on a result's + adds it (the title coming back used to push the list down under the finger)",async page=>{
   await tapTab(page,"food");await pause(page,300);
@@ -3664,9 +3667,9 @@ await test("Coach skills: a machine taken mid-workout gets alternatives for the 
   await startWorkout(page);
   /* From the workout's header: the Coach, where the first suggestion is this. */
   await page.tap('[data-sessmore]');await pause(page,400);await page.tap('#sheet [data-coachopen]');await pause(page,500);
-  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a[0]&&a[0].dataset.chatq),"busy","the first suggestion in a workout");
+  eq(await page.$$eval('#cpanel .cp-sug [data-chatsay]',a=>a[0]&&a[0].dataset.chatsay),"This machine is taken","the first suggestion in a workout");
   const prog=await dayEx(page,0),cur=await ev(page,"S.active.entries[S.active.idx||0].name");
-  await page.tap('#cpanel [data-chatq="busy"]');await pause(page,450);
+  await page.tap('#cpanel [data-chatsay="This machine is taken"]');await pause(page,700);
   let r=await agLast(page);
   if(!/taken\? These work the same muscles/.test(r.lead)||!r.opts.length)throw new Error("alternatives: "+JSON.stringify(r));
   const mus=await page.evaluate(async([c,o])=>{const X=await import("/js/data/exercises.js");return o.every(n=>X.LIB.some(l=>X.muscleOf(l[0])===X.muscleOf(c)&&l[0]!==c));},[cur,r.opts]);
@@ -5635,7 +5638,7 @@ await test("Coach command, swap in the program (C-5a): \"swap Leg Press for Gobl
   eq([a.ag&&a.ag.act,a.ag&&a.ag.p.from,a.ag&&a.ag.p.name],["exercise.swap","Leg Press","Goblet Squat"],"in Arabic too");
 });
 await test("Coach conversations (C-7): 30 exchanges of two or three turns, English and Arabic — follow-ups that continue the last answer, a day moved by one, \"no wait, tomorrow\", corrections that decline a card or offer Undo, a pick then its change — each ends in the answer it should",async page=>{
-  const CV=[[["best squat","and bench?"],"record","Bench Press"],[["best bench","what about deadlift?"],"record","Deadlift"],[["what did I eat yesterday","and the day before?"],"foodday","Nov 17"],[["what did I eat yesterday","and the day before?","and the day before?"],"foodday","Nov 16"],[["اكلت ايه امبارح","واليوم اللي قبله؟"],"foodday","17"],[["skip today","no wait, tomorrow"],"app","Tomorrow"],[["skip today","yes"],"tap:agok",""],[["skip today","no"],"tap:agno",""],[["add a glass of water","you're wrong"],"correction","Not done"],[["add a glass of water","!ok","you're wrong"],"correction","Undo"],[["add a glass of water","!ok","undo that"],"app","Undo"],[["what's my workout today","make it lighter"],"lighter","Easier exercises"],[["what's my workout today","make it lighter","make one of today's exercises easier"],"act:ex.easier",""],[["what should I eat now","something else"],"swap",""],[["What should I eat now?","Yeah, but I don't feel like eating egg now"],"swap",""],[["best squat","no, I meant front squat"],"record","Front Squat"],[["I don't like lunges","!pick1"],"act:exercise.avoid","Leave"],[["Can you switch one of exercises today to a simpler one?","!pick0"],"act:session.fit",""],[["swap Leg Press for Goblet Squat","no, for Hack Squat"],"act:exercise.swap","Hack Squat"],[["how much protein do I need","and carbs?"],"faq","Carbs"],[["How are you?","what should I eat now"],"eat",""],[["what's my workout today","and tomorrow?"],"tomorrow",""],[["خلي النهارده يوم راحه","لا استني، بكره"],"app","بكره"],[["عامل ايه","اكل ايه دلوقتي"],"eat",""],[["ايه احسن سكوات عملته","والبنش؟"],"record","بنش"],[["add 2 glasses of water","no, 3"],"act:water.add","750"],[["I have 20 minutes, only dumbbells","!ok","you're wrong"],"correction","Undo"],[["log 3000 steps","!ok","undo"],"app",""],[["what should I eat now","I'm craving sugar"],"crave","kcal left"],[["what did I eat today","and yesterday?"],"foodday","yesterday"]];
+  const CV=[[["best squat","and bench?"],"record","Bench Press"],[["best bench","what about deadlift?"],"record","Deadlift"],[["what did I eat yesterday","and the day before?"],"foodday","@ago:2"],[["what did I eat yesterday","and the day before?","and the day before?"],"foodday","@ago:3"],[["اكلت ايه امبارح","واليوم اللي قبله؟"],"foodday","@ago:2"],[["skip today","no wait, tomorrow"],"app","Tomorrow"],[["skip today","yes"],"tap:agok",""],[["skip today","no"],"tap:agno",""],[["add a glass of water","you're wrong"],"correction","Not done"],[["add a glass of water","!ok","you're wrong"],"correction","Undo"],[["add a glass of water","!ok","undo that"],"app","Undo"],[["what's my workout today","make it lighter"],"lighter","Easier exercises"],[["what's my workout today","make it lighter","make one of today's exercises easier"],"act:ex.easier",""],[["what should I eat now","something else"],"swap",""],[["What should I eat now?","Yeah, but I don't feel like eating egg now"],"swap",""],[["best squat","no, I meant front squat"],"record","Front Squat"],[["I don't like lunges","!pick1"],"act:exercise.avoid","Leave"],[["Can you switch one of exercises today to a simpler one?","!pick0"],"act:session.fit",""],[["swap Leg Press for Goblet Squat","no, for Hack Squat"],"act:exercise.swap","Hack Squat"],[["how much protein do I need","and carbs?"],"faq","Carbs"],[["How are you?","what should I eat now"],"eat",""],[["what's my workout today","and tomorrow?"],"tomorrow",""],[["خلي النهارده يوم راحه","لا استني، بكره"],"app","بكره"],[["عامل ايه","اكل ايه دلوقتي"],"eat",""],[["ايه احسن سكوات عملته","والبنش؟"],"record","بنش"],[["add 2 glasses of water","no, 3"],"act:water.add","750"],[["I have 20 minutes, only dumbbells","!ok","you're wrong"],"correction","Undo"],[["log 3000 steps","!ok","undo"],"app",""],[["what should I eat now","I'm craving sugar"],"crave","kcal left"],[["what did I eat today","and yesterday?"],"foodday","yesterday"]];
   const r=await page.evaluate(async CV=>{const c=await (await import("/js/ui/chatload.js")).loadChat();const st=await import("/js/state.js");const reg=await import("/js/ui/handlers/registry.js");
     const N=await import("/js/engine/nutrition.js");await new Promise(res=>N.loadFoods(res));
     const txt=m=>{if(!m||m.tap)return "";const d=document.createElement("div");d.innerHTML=c.bubble(m,true);return d.textContent.replace(/\s+/g," ");};
@@ -5646,7 +5649,9 @@ await test("Coach conversations (C-7): 30 exchanges of two or three turns, Engli
         if(q.startsWith("!pick")){tap({agpick:last.at+"|"+q.slice(5)});last=m=st.S.chat[st.S.chat.length-1];continue;}
         m=c.ask(q);if(m&&m.tap){tap(m.tap);}else last=m;}
       const got=m&&m.tap?"tap:"+Object.keys(m.tap)[0]:m&&m.ag&&m.ag.act&&want.startsWith("act:")?"act:"+m.ag.act:m&&m.id;
-      const t=txt(m),ok=got===want&&(!must||t.indexOf(must)>=0);
+      /* "@ago:n": the day of the month n days back, as the answer names it (never a fixed date). */
+      let mustS=must;if(/^@ago:\d$/.test(must||"")){const d=new Date();d.setDate(d.getDate()-(+must.slice(5)));mustS=" "+d.getDate();}
+      const t=txt(m),ok=got===want&&(!mustS||t.indexOf(mustS)>=0);
       out.push((ok?"PASS ":"FAIL ")+turns.join(" | ")+" => "+got+(ok?"":"  want "+want+" "+must+" :: "+t.slice(0,180)));}
     return out;},CV);
   const bad=r.filter(x=>x.startsWith("FAIL"));if(bad.length)throw new Error(bad.length+" of "+r.length+" conversations fail:\n"+bad.join("\n"));
@@ -5722,6 +5727,33 @@ await test("Coach misses (C-10): what the coach couldn't read is kept without a 
   eq([body.kind,body.items.length,body.items[0].say,body.items[0].answeredAs,body.items[1].marked,/^bunyan-coach-misses-\d{4}-\d\d-\d\d\.json$/.test(dl.suggestedFilename())],
     ["coach-misses",2,"blorp zingle wobba","unknown",true,true],"the file: what was said, what it was answered as, marked or not");
   eq(out,[],"nothing sent over the network");
+});
+await test("Coach a step ahead (C-8): an empty chat opens on the head's lead, in the words and with the button Training shows; nothing suggested contradicts it; in a workout the suggestions are about the exercise on screen and work; Arabic the same",async page=>{
+  const L=await page.evaluate(async()=>{const H=await import("/js/engine/head.js");H.headFresh();const l=H.headNow().lead;return l&&{id:l.id,source:l.source};});
+  eq(L&&L.id,"deload-due","the seeded profile's lead: a lighter week due");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.chat=[];const V=(await import("/js/ui/view.js")).V;V.tab="coach";V.coach="compact";(await import("/js/ui/render.js")).render();});
+  await pause(page,600);
+  eq([await page.getAttribute('#cpanel [data-lead]','data-lead'),(await page.textContent('#cpanel .cp-lead .cp-hi')).trim(),!!(await page.$('#cpanel .cp-lead [data-deload="start"]'))],
+    ["deload-due","Time for a lighter week",true],"the first line is the lead, with its one action");
+  const chips=await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.getAttribute("data-chatq")));
+  eq(chips.includes("balance"),false,"nothing that would point at more sets while a lighter week leads: "+JSON.stringify(chips));
+  await page.tap('#cpanel .cp-lead [data-deload="start"]');await pause(page,500);
+  eq(await ev(page,"!!(S.deload&&S.deload.until)"),true,"its button does what Training's does");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.deload=null;st.S.chat=[];
+    const A=await import("/js/ui/actions.js");const d=st.split().days.filter(x=>x.ex.length)[0];A.startDay(d.id);
+    const V=(await import("/js/ui/view.js")).V;V.coach=null;V.tab="train";V.train="log";(await import("/js/ui/render.js")).render();
+    V.coach="compact";(await import("/js/ui/render.js")).render();});
+  await pause(page,600);
+  const live=await page.$$eval('#cpanel .cp-sug [data-chatsay]',a=>a.map(b=>b.getAttribute("data-chatsay")));
+  eq(live,["This machine is taken","This is too heavy","Show me the form","Swap this exercise"],"in a workout, about the exercise on screen");
+  eq(await page.$('#cpanel .cp-lead'),null,"and no plan fix in the middle of a set");
+  await page.tap('#cpanel .cp-sug [data-chatsay="Show me the form"]');await pause(page,900);
+  const last=await ev(page,"(m=>m&&(m.ag&&m.ag.act||m.id))(S.chat[S.chat.length-1])");
+  eq(!!last&&last!=="unknown",true,"and each one works: "+last);
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.active=null;st.S.chat=[];st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();
+    const H=await import("/js/engine/head.js");H.headFresh();const V=(await import("/js/ui/view.js")).V;V.coach=null;V.tab="coach";(await import("/js/ui/render.js")).render();V.coach="compact";(await import("/js/ui/render.js")).render();});
+  await pause(page,600);
+  eq(/[؀-ۿ]/.test(await page.textContent('#cpanel .cp-hi')),true,"in Arabic");
 });
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
@@ -7131,7 +7163,7 @@ await test("Floating Coach: on every tab, never over a workout, a sheet or the k
   const before=await ev(page,"[V.logIdx,V.draft.w,S.active.entries[0].sets.length]");
   await page.tap('[data-sessmore]');await pause(page,400);await page.tap('#sheet [data-coachopen]');await pause(page,500);
   eq(await ev(page,"[V.coach,V.sheet]"),["compact",null],"the Coach from the workout's header");
-  eq(await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq)),["busy","weights","sore"],"the workout's own questions: a machine taken first");
+  eq(await page.$$eval('#cpanel .cp-sug [data-chatsay]',a=>a.map(b=>b.dataset.chatsay)),["This machine is taken","This is too heavy","Show me the form","Swap this exercise"],"the workout's own questions: a machine taken first");
   await page.keyboard.press("Escape");await pause(page,500);
   eq(await ev(page,"[V.coach,V.logIdx,V.draft.w,S.active.entries[0].sets.length,document.getElementById('in_r').value]"),[null,...before,"11"],"closed, the workout as it was");
 });

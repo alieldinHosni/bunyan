@@ -6369,6 +6369,9 @@ body.kb:not(.kbdown) #cpanel{padding-bottom:10px}
 .ag-os{font-size:12.5px;color:var(--dim)}
 :root:not(.tch) .ag-opt:active,.ag-opt.tapd{background:var(--surface);border-color:var(--hair-hi)}
 .cp-f{display:flex;gap:var(--s2);padding:var(--s2) var(--s3) var(--s3);border-top:1px solid var(--hair)}
+/* The lead as the chat's first line, with its one action (coachfab.js leadChat). */
+.cp-lead{display:flex;flex-direction:column;align-items:flex-start;gap:var(--s2);margin-bottom:var(--s3)}
+.cp-lead .cp-hi{margin:0}
 /* The coach's live reading (js/ui/liveread.js): what it understood, above the field. */
 .rd{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3) 0}
 .rd[hidden]{display:none}
