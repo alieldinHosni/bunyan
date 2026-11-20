@@ -14,6 +14,7 @@
    Arabic letters (or Egyptian Arabic typed in Latin letters) get Arabic, English gets
    English. A tapped suggestion follows the conversation. */
 import {loadArabic, t, tm} from "../../i18n/dict.js";
+import {A, act, fill, foods, l, list, n, noTags, p, rd, src, uiLang, withLang} from "../answers/kit.js";
 import {exName, planName} from "../../i18n/exnames.js";
 import {goalOf} from "../../data/goals.js";
 import {actInfo, isActivity} from "../../data/activities.js";
@@ -59,7 +60,7 @@ import {recapOf} from "../../coach/recap.js";
 import {nutrition, topLifts, weeklyCardio, weighIns, weightChange, weightTrend} from "../../engine/stats.js";
 import {S, split} from "../../state.js";
 import {fmtW, toDisp, wUnit} from "../../units.js";
-import {esc, fmtN, num, pretty, r1, setLang, shortd, today} from "../../util.js";
+import {esc, fmtN, num, pretty, r1, shortd, today} from "../../util.js";
 import {FAT_RANGE, fatBand} from "../../engine/inbody.js";
 import {isReady, proseOf} from "../smartcoach.js";
 import {backArrow} from "../nav.js";
@@ -107,32 +108,9 @@ var NEXT={
   lowday:["today","sore","missed"],remember:["facts","today","eat"],facts:["today","eat","track"],
   know:["today","eat","track"],smart:["today","eat","track"],app:["today","eat","track"],exsuggest:["today","balance","weights"]};
 
-function fill(s,o){Object.keys(o).forEach(function(k){s=s.split("{"+k+"}").join(o[k]);});return s;}
-function list(a){return a.join(S.prefs.lang==="ar"?"، ":", ");}
-/* A meal's foods. The database names carry their own commas ("Lentils, Cooked"), so a
-   comma between them would run two foods into one. */
-function foods(a){return a.join(" + ");}
-/* An answer: paragraphs (p), a list (l), a small note (n), and its buttons. */
-function A(){return {b:[],acts:[],src:[]};}
-function p(a,s){a.b.push({p:s});return a;}
-function l(a,items){if(items.length)a.b.push({l:items});return a;}
-function n(a,s){a.b.push({n:s});return a;}
-/* Where a technical answer comes from: the knowledge entry, by file and section. */
-var SRCNAME={"acute-variables":"Training variables","nutrition-principles":"Nutrition principles","scope":"Scope of practice"};
-function src(a,ref){if(!ref)return a;var f=ref.split(" ")[0];a.src=(a.src||[]).concat([t(SRCNAME[f]||f)+" "+ref.slice(f.length+1)]);return a;}
-function act(a,label,attrs){a.acts.push({l:label,a:attrs});return a;}
-function noTags(s){return String(s||"").replace(/<[^>]+>/g,"");}
-/* Run fn as if the app were in language l: t(), exercise and plan names and dates all
-   follow S.prefs.lang, so an Arabic question gets an Arabic answer in the English app.
-   Nothing is saved meanwhile, and the language is always put back. */
 /* An Arabic question gets an Arabic answer in the English app, so the Arabic dictionary
    (js/i18n/ar.js, WP-9) is brought in once the first screen is up, when the phone is idle. */
 (window.requestIdleCallback||function(f){return setTimeout(f,2000);})(function(){loadArabic();});
-function uiLang(){return S.prefs&&S.prefs.lang==="ar"?"ar":"en";}
-function withLang(l,fn){
-  var was=uiLang();if(!l||l===was)return fn();
-  S.prefs.lang=l;setLang(l);
-  try{return fn();}finally{S.prefs.lang=was;setLang(was);}}
 
 /* What the log measured, while the plan check still offers it (not kept as it is). */
 function liveLearned(){return checkPlans().some(function(f){return f.id==="maint-learned";})?learnedDiffers():null;}
@@ -1397,7 +1375,6 @@ function aReassess(a){
    Each reads it.reading: the exercise, the day or span, the muscle, the minutes and
    kit that were said, so "best squat" is the squat, "ate yesterday" is yesterday. Every
    figure is from the log; where the log has nothing, the answer says so. */
-function rd(it){return it&&it.reading||{entities:{exercise:[],muscle:[],equipment:[],numbers:[],weekdays:[]}};}
 function rdEx(it){var e=rd(it).entities.exercise[0];return e&&e.name?e.name:"";}
 /* A said day as a date: yesterday, the day before, or the last such weekday. */
 function rdDate(day){
