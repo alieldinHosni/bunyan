@@ -5819,6 +5819,30 @@ await test("Coach command, fit (C-5 acceptance): \"30 minutes, only dumbbells\" 
   eq(live.dose.map(d=>{const from=base.plan[d[0]]?d[0]:inv[d[0]],p=base.plan[from];return p&&p[0]===d[1]&&p[1]===d[2]&&p[2]===d[3]&&p[3]===d[4]?"same":d[0]+" "+JSON.stringify(d.slice(1))+" vs "+JSON.stringify(p);}).filter(x=>x!=="same"),
     [],"the sets, rep ranges and rest are the workout page's");
 });
+await test("Coach command, goal (C-5, 2.4): \"change my goal to fat loss\" previews what changes in numbers (calories, protein, carbs, fat, before and after) and what stays (the training); applied on tap, the targets are the ones previewed; Undo puts them back; Arabic the same",async page=>{
+  const ask=q=>page.evaluate(async q=>{const st=await import("/js/state.js");const c=await import("/js/ui/views/chat.js");const V=(await import("/js/ui/view.js")).V;
+    const m=c.ask(q);V.coach="full";(await import("/js/ui/render.js")).render();return {at:m.at,ag:m.ag&&{act:m.ag.act,item:m.ag.item,detail:m.ag.detail}};},q);
+  const before=await ev(page,"JSON.stringify([S.goals.kcal,S.goals.p,S.goals.c,S.goals.f,S.profile.goal])"),prog0=await ev(page,"JSON.stringify(S.programs)");
+  const g0=JSON.parse(before);
+  if(g0[4]==="lose")throw new Error("the seeded goal is already fat loss");
+  const m=await ask("change my goal to fat loss");
+  eq(m.ag&&m.ag.act,"plan.goal","a change to tap");
+  const want=await page.evaluate(async()=>{const st=await import("/js/state.js"),F=await import("/js/engine/body.js");
+    const r=F.macroTargetsOf(Object.assign({},st.S.profile,{goal:"lose"}),st.S.body,st.S.energy);return [r.kcal,r.p,r.c,r.f];});
+  const n=x=>Number(x).toLocaleString("en-US");
+  eq(m.ag.item,n(g0[0])+" → "+n(want[0])+" kcal · "+n(g0[1])+" → "+n(want[1])+" g protein","calories and protein, before and after");
+  eq([m.ag.detail.indexOf(n(g0[2])+" → "+n(want[2])+" g")>=0,m.ag.detail.indexOf(n(g0[3])+" → "+n(want[3])+" g")>=0,/training stays as it is/.test(m.ag.detail)],[true,true,true],"carbs and fat, and what stays: "+m.ag.detail);
+  eq(await page.$$eval('#cpanel .ag-item b .num',a=>a.length)>=4,true,"each figure in .num");
+  await pause(page,400);
+  await page.tap('#cpanel [data-agok="'+m.at+'"]');await pause(page,600);
+  eq(await ev(page,"[S.goals.kcal,S.goals.p,S.goals.c,S.goals.f,S.profile.goal]"),want.concat(["lose"]),"applied: the targets previewed");
+  eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"and the training as it was");
+  await page.tap('#cpanel [data-agundo="'+m.at+'"]');await pause(page,600);
+  eq(await ev(page,"JSON.stringify([S.goals.kcal,S.goals.p,S.goals.c,S.goals.f,S.profile.goal])"),before,"Undo: as before");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();});
+  const a=await ask("غير هدفي لتنشيف");
+  eq([a.ag&&a.ag.act,/[؀-ۿ]/.test(a.ag&&a.ag.detail||""),/←/.test(a.ag&&a.ag.item||"")&&!/→/.test(a.ag&&a.ag.item||"")],["plan.goal",true,true],"in Arabic, the arrow pointing the way it reads: "+JSON.stringify(a.ag));
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
