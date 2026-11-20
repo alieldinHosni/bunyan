@@ -15,7 +15,9 @@
       conversation cleared before each item (its `before` lines are said first, not
       judged). It passes when the answer's id is one of expect.answer, it says every
       mustSay and none of mustNotSay (case ignored), and it shows no raw knowledge-base
-      record ("Mp lunge, group: legs") and no paragraph that starts mid-sentence.
+      record ("Mp lunge, group: legs"), no paragraph that starts mid-sentence, and no
+      figure in its words without a source (a change to tap aside: its figures are the
+      person's own plan).
 
    Prints the totals, the score by kind, by language, the English–Arabic parity (pairs
    that pass in one language only), the failing ids, and any item whose result is not
@@ -92,7 +94,7 @@ if(toAsk.length){
         (g.items||[]).forEach(x=>parts.push(String(x.item||"")+" "+String(x.detail||"")));
         (g.opts||[]).forEach(x=>parts.push(String(x.l||"")));
         (m.acts||[]).concat(g.acts||[]).forEach(x=>parts.push(String(x&&x.l||"")));
-        return {id:m.id,safety:m.safety||null,prose,text:parts.join("\n")};},[it,base]);}
+        return {id:m.id,safety:m.safety||null,prose,text:parts.join("\n"),src:Array.isArray(m.src)?m.src.length:0,card:!!m.ag};},[it,base]);}
       catch(e){out={id:"threw",prose:[],text:String(e&&e.message||e)};}
       const r=res[it.id],why=r.why,low=out.text.toLowerCase();
       r.got.answer=out.id;r.text=out.text;
@@ -103,6 +105,9 @@ if(toAsk.length){
       for(const p of out.prose||[]){
         if(/\b[A-Z]?[a-z]+ [\w-]+, [\w-]+: /.test(p)){why.push("raw record: "+p.slice(0,60));break;}
         if(/^[a-z]/.test(p.trim())&&!/^(e\.g\.|i\.e\.)/.test(p.trim())){why.push("fragment: "+p.slice(0,60));break;}}
+      /* Every answer has a source (C-4): a figure said, outside a change to tap (whose
+         figures are the person's own plan), names where it comes from. */
+      if(!out.card&&!out.src&&(out.prose||[]).some(p=>/\d/.test(p)))why.push("a figure with no source");
       r.answer=why.filter(w=>!/^safety /.test(w)).length===0;}
     if(errs.length)console.log("page errors ("+pf+"): "+errs.slice(0,5).join(" | "));
     await ctx.close();}
