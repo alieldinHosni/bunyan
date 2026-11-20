@@ -5079,3 +5079,36 @@ What C-10 adds:
   - the applied targets equal the previewed ones, and the program is untouched;
   - Undo;
   - Arabic, with the arrow pointing left.
+
+**Coach C-5 gap 4: `program.days`, registered as `plan.days` beside plan.gear and plan.goal (v299, 20 Nov, session/coach-days).** From 2.4: "make my program 4 days" / "I can only train Mon Wed Fri".
+- **Before:** both were answered "I can't rebuild your week from the chat yet". The weekday sentence also said "To make it 3" to a program that already had 3 days.
+- **Now (chat.js aDays):** the card offers the plan rebuilt for that many days, or on those weekdays. It keeps the goal, kit and session length, and shows the item ("3 days: Mon, Wed, Fri") and "Now: N days".
+- **Show me (actions.js `plan.days`, as `plan.gear` does for kit):**
+  - it opens the assessment as it stands, with its days a week set and the fixed weekdays if said, at its result;
+  - nothing changes until Use this plan.
+- **Other answers:**
+  - the week it already has (the same count and, if said, the same weekdays): "That's already your week";
+  - outside 2–6 days: the range is said, with the Training link;
+  - a program by weekday: the reply names its days.
+- **Reading (understand.js DAYSW):** «عايز/عاوز/حابب اتمرن …» with two or more weekdays is now read as days. Weekday names are joined with "، " in Arabic. Checked on an RTL screenshot.
+- **Test:** new browser test "Coach command, days (C-5, 2.4)". It covers:
+  - Mon Wed Fri: the card, then the assessment at its result on [1,3,5], with the program unchanged;
+  - 4 days, none fixed;
+  - the same count;
+  - 7 days, out of range;
+  - Arabic.
+- **Checks:** the coach evaluation is unchanged (433/434).
+
+**Coach C-5 gap 2: a sore spot (in v299, session/coach-days).**
+- **What the audit missed.** "my knee hurts when I squat" already offers "Swap what loads my knee across my program" (chat.js aSituation). The audit read only the answer's text, not its buttons.
+- **The offer itself was broken.** Tapped after "… when I do jump squats", it asked "Swap Freehand Jump Squat for what?". The exercise from the message before was carried into the follow-up as a single swap.
+  - Fix: decide() no longer re-tells a sentence that is a `limit.add` command whole (commands.js). The offer now previews every exercise that loads the knee, with its stand-ins.
+- **Test:** new browser test "Coach command, a sore spot (C-5, 2.4)". It checks:
+  - the care line and one offer, with nothing changed by saying it;
+  - the plan.avoid preview with its swaps and what stays;
+  - applied: each stand-in in its place;
+  - Undo.
+  - It fails without the decide() fix.
+- **For the owner, not changed: the knee rule (plan.js AVOID.knee) covers jumps, hops, pistols, sissy squats, skaters and mountain climbers. It does not cover squats or lunges.**
+  - So "my knee hurts when I squat", with a barbell squat in the program, gets "Nothing in your program loads your knees much".
+  - This is the same rule the assessment applies. Widening it is a decision about the injury rules, to be taken against the knowledge base, not a coach fix.

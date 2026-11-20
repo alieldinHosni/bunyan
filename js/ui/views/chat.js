@@ -21,7 +21,7 @@ import {ACTION_IDS, factOf, fold, intentOf, KNOW_IDS, situationOf, skel, spell} 
 import {KINDS, listFacts} from "../../coach/context.js";
 import {classify as safetyOf} from "../../coach/safety.js";
 import {reconcileNutrition, reconcileTraining} from "../../coach/reconcile.js";
-import {addDays as addDaysW, pinnedOn, weekDates, weekStartOf} from "../../engine/schedule.js";
+import {addDays as addDaysW, pinnedOn, wdName, weekDates, weekStartOf} from "../../engine/schedule.js";
 import {EXDB, exSteps, LIB, movementOfEx, muscleOf, secondaryOf} from "../../data/exercises.js";
 import {matchExercise} from "../../engine/splitparse.js";
 import {changeOf, gloss, retell, understand} from "../../coach/understand.js";
@@ -1622,13 +1622,30 @@ function aFit(a,q,it){
       undone:t("Undone. No workout was started.")};
     return a;}
   return act(a,t("Start workout"),{"data-startday":d.id});}
+/* "Make my program 4 days" / "I can only train Mon Wed Fri" (docs/COACH-AGENT.md 2.4,
+   plan.days in the app; program.days in the plan): the assessment rebuilds the week for that many days, or on those days,
+   keeping everything else it knows, and shows the whole plan first; nothing changes
+   until Use this plan (handlers/actions.js plan.days, as plan.gear does for kit). */
+var DAYSOK=[2,6];
 function aDays(a,q,it){
-  var R=rd(it),days=split().days.filter(function(x){return x.ex&&x.ex.length;}).length,want=R.n||0;
-  p(a,fill(t(days===1?"Your program has 1 training day.":"Your program has {n} training days."),{n:days}));
-  if(want&&want===days&&!R.entities.weekdays.length)p(a,t("That's already your week."));
-  else p(a,(want?fill(t("To make it {n}, the week is rebuilt for that many days."),{n:want})+" ":"")
-    +t("I can't rebuild your week from the chat yet; your training days are set under Training, in your program."));
-  return act(a,t("Plan my training"),{"data-csec":"train","data-ctsub":"program"});}
+  var R=rd(it),sp=split(),tr=sp.days.filter(function(x){return x.ex&&x.ex.length;}),days=tr.length;
+  var wd=(R.entities.weekdays||[]).filter(function(n,i,l){return n>=1&&n<=7&&l.indexOf(n)===i;}).sort(function(x,y){return x-y;});
+  var want=wd.length>=2?wd.length:(R.n||0);
+  var now=sp.schedule==="week"?tr.map(function(d){return (d.wd||[])[0];}).filter(Boolean).sort(function(x,y){return x-y;}):[];
+  p(a,fill(t(days===1?"Your program has 1 training day.":"Your program has {n} training days."),{n:days})
+    +(now.length===days&&days?" "+fill(t("Its days: {d}."),{d:now.map(function(n){return wdName(n);}).join(R.lang==="ar"?"، ":", ")}):""));
+  if(!want)return act(a,t("Plan my training"),{"data-csec":"train","data-ctsub":"program"});
+  if(want===days&&(!wd.length||wd.join()===now.join())){p(a,t("That's already your week."));return a;}
+  if(want<DAYSOK[0]||want>DAYSOK[1]){
+    p(a,fill(t("The plan is built for {lo} to {hi} days a week."),{lo:DAYSOK[0],hi:DAYSOK[1]}));
+    return act(a,t("Plan my training"),{"data-csec":"train","data-ctsub":"program"});}
+  var on=wd.length?wd.map(function(n){return wdName(n);}).join(R.lang==="ar"?"، ":", "):"";
+  a.ag={s:"confirm",act:"plan.days",p:{n:want,wd:wd},
+    lead:t("I can rebuild your week for that, keeping your goal, kit and session length. You'll see the whole plan first: nothing changes until you tap Use this plan."),
+    item:wd.length?fill(t("{n} days: {d}"),{n:want,d:on}):fill(t(want===1?"{n} day a week":"{n} days a week"),{n:want}),
+    detail:fill(t("Now: {n} days."),{n:days}),cta:t("Show me"),
+    done:t("Opened your rebuilt plan. Tap Use this plan to keep it, or Back to leave everything as it is.")};
+  return a;}
 /* An exercise to leave out, not said (said, it is agent.js planLeave). */
 function aAvoid(a,q,it){
   p(a,t("Which exercise? Say its name, and I'll leave it out of your plans."));
@@ -1818,6 +1835,11 @@ function preRoute(R,text){
    ask again with the text given, or null for the router. */
 function decide(R,text){
   var pre=preRoute(R,text);if(pre)return pre;
+  /* A sore spot across the program ("swap exercises that load my knee", the pain
+     answer's own offer) is a command whole: no exercise from earlier in the conversation
+     ("… when I squat") is carried into it. */
+  var whole=null;try{whole=commandOf(text,S.prefs.unit);}catch(e){whole=null;}
+  if(whole&&whole.cmd==="limit.add")return null;
   /* An Arabic question no rule here reads: its training words in English, asked again
      (answered in Arabic). */
   if(R&&!R.topic&&R.lang==="ar"&&R.kind==="knowledge"){var gl=gloss(R.norm);return gl?{redo:gl,lang:"ar"}:null;}
