@@ -245,7 +245,7 @@ var ACTIONS={
   /* The program for other days (chat.js aDays): the assessment opened as it stands, its
      days a week (and the fixed weekdays, if said) set, at its result. Nothing changes
      until Use this plan. */
-  "program.days":{desc:"Show the plan rebuilt for a number of days a week, or for given weekdays, to review and use",params:{n:"days a week, 2 to 6",wd:"weekdays, 1 Monday to 7 Sunday, or none"},confirm:false,
+  "plan.days":{desc:"Show the plan rebuilt for a number of days a week, or for given weekdays, to review and use",params:{n:"days a week, 2 to 6",wd:"weekdays, 1 Monday to 7 Sunday, or none"},confirm:false,
     run:function(p){var n=+p.n,wd=(p.wd||[]).map(Number);
       if(!(n>=2&&n<=6)||wd.some(function(x){return !(x>=1&&x<=7);})||wd.length&&wd.length!==n)return false;
       tap({setup:"1"});if(!V.asd)return false;

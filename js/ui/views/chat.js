@@ -1623,9 +1623,9 @@ function aFit(a,q,it){
     return a;}
   return act(a,t("Start workout"),{"data-startday":d.id});}
 /* "Make my program 4 days" / "I can only train Mon Wed Fri" (docs/COACH-AGENT.md 2.4,
-   program.days): the assessment rebuilds the week for that many days, or on those days,
+   plan.days in the app; program.days in the plan): the assessment rebuilds the week for that many days, or on those days,
    keeping everything else it knows, and shows the whole plan first; nothing changes
-   until Use this plan (handlers/actions.js program.days, as plan.gear does for kit). */
+   until Use this plan (handlers/actions.js plan.days, as plan.gear does for kit). */
 var DAYSOK=[2,6];
 function aDays(a,q,it){
   var R=rd(it),sp=split(),tr=sp.days.filter(function(x){return x.ex&&x.ex.length;}),days=tr.length;
@@ -1640,7 +1640,7 @@ function aDays(a,q,it){
     p(a,fill(t("The plan is built for {lo} to {hi} days a week."),{lo:DAYSOK[0],hi:DAYSOK[1]}));
     return act(a,t("Plan my training"),{"data-csec":"train","data-ctsub":"program"});}
   var on=wd.length?wd.map(function(n){return wdName(n);}).join(R.lang==="ar"?"، ":", "):"";
-  a.ag={s:"confirm",act:"program.days",p:{n:want,wd:wd},
+  a.ag={s:"confirm",act:"plan.days",p:{n:want,wd:wd},
     lead:t("I can rebuild your week for that, keeping your goal, kit and session length. You'll see the whole plan first: nothing changes until you tap Use this plan."),
     item:wd.length?fill(t("{n} days: {d}"),{n:want,d:on}):fill(t(want===1?"{n} day a week":"{n} days a week"),{n:want}),
     detail:fill(t("Now: {n} days."),{n:days}),cta:t("Show me"),

@@ -5080,10 +5080,10 @@ What C-10 adds:
   - Undo;
   - Arabic, with the arrow pointing left.
 
-**Coach C-5 gap 4: `program.days` (v299, 20 Nov, session/coach-days).** From 2.4: "make my program 4 days" / "I can only train Mon Wed Fri".
+**Coach C-5 gap 4: `program.days`, registered as `plan.days` beside plan.gear and plan.goal (v299, 20 Nov, session/coach-days).** From 2.4: "make my program 4 days" / "I can only train Mon Wed Fri".
 - **Before:** both were answered "I can't rebuild your week from the chat yet". The weekday sentence also said "To make it 3" to a program that already had 3 days.
 - **Now (chat.js aDays):** the card offers the plan rebuilt for that many days, or on those weekdays. It keeps the goal, kit and session length, and shows the item ("3 days: Mon, Wed, Fri") and "Now: N days".
-- **Show me (actions.js `program.days`, as `plan.gear` does for kit):**
+- **Show me (actions.js `plan.days`, as `plan.gear` does for kit):**
   - it opens the assessment as it stands, with its days a week set and the fixed weekdays if said, at its result;
   - nothing changes until Use this plan.
 - **Other answers:**
