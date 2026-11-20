@@ -5011,3 +5011,23 @@ What C-10 adds:
 - **Export as a file.** Chat history's list has "Export as a file". It downloads bunyan-coach-misses-DATE.json: for each question, what was said, what it was answered as, the language, when, and whether the person marked it. A builder adds these to tests/coach-eval.json.
 - **Nothing sent anywhere.** Everything stays on the phone until the person exports it.
 - **Tests.** New browser test "Coach misses (C-10)": kept without a tap, marked not doubled, a good answer marked wrong kept, and the file's contents. Every request the page makes is recorded, and none leaves the device. The existing "Not what I asked" and Chat history tests pass.
+
+**Coach C-8: a step ahead (v296, 20 Nov, session/coach-ahead).** 2.9: the coach speaks first only through the head, so it can never say something else than a page. (The first version of this branch was lost when the container restarted before it was pushed; it was redone from the same edits.)
+
+- **Opening the chat.** An empty chat used to open on "Ask about training, food or progress". It now opens on the head's lead (headNow().lead), worded and actioned as Training's lead line (views/train.js leadLine). This is coachfab.js `leadChat`:
+  - a lighter week due: "Time for a lighter week", with Start a lighter week (the same data-deload button);
+  - a plan check finding: its title, with its fix;
+  - a coach insight: its words, with its fix;
+  - stress, the check-in or the monthly review: a line, with Open in Coach;
+  - housekeeping (priority under 20): no lead line.
+- **During a workout.** The suggestions are about the exercise on screen: "This machine is taken", "This is too heavy", "Show me the form", "Swap this exercise". Each is sent as typed, in English or Arabic. No lead line shows there: a plan fix waits until the set is done.
+  - commands.js now reads "show me the form" / «وريني الطريقة» as the how-to (before, "show me" was read as "open somewhere").
+  - "swap this exercise" / «بدل التمرين ده» gets the same-muscle alternatives for today.
+- **The suggestions are chosen from what is live** (suggestFor), each on the pages it belongs to:
+  - today's workout, if planned and not done, on Training and Coach;
+  - food, if behind by the afternoon (under half the calories after 2 pm), on Food, Training and Coach;
+  - then last week's check-in in its first two days, then the page's usual ones.
+- **Nothing contradicts the lead.** While a lighter week or a stress week leads, "is my program balanced?" is not offered, since it could point at more sets.
+- **Not yet done from 2.9:** the after-workout debrief line in the thread, and the weekly check-in summarised in the chat. Both are already on the finish screen and the Coach page.
+- **Tests.** New browser test "Coach a step ahead (C-8)": the lead line and its button, no contradicting suggestion, the four workout suggestions with no lead and each answered, and Arabic.
+  - Three older tests that pinned the old chips now check the new ones: Coach's questions and Food's questions (as sets, so the 2 pm rule can't make them depend on the time of day), and the workout chips sent as typed.
