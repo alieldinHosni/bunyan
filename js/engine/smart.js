@@ -88,4 +88,57 @@ function readReply(raw){
   s=s.replace(/\n{3,}/g,"\n\n");
   return {text:s,act:act};}
 
-export {answersFor, buildMessages, passagesFor, readReply};
+/* ---- the model's place, narrowed (docs/COACH-AGENT.md 2.10, C-9) ---------------------
+   It may put the coach's own answer another way, for tone; it never states a figure of
+   its own. The figures are taken out first and given as locked tokens (⟦1⟧, ⟦2⟧ …) it
+   is told to keep; what comes back is refused if a token is missing, doubled, made up
+   or out of order, if a digit or a number word appears that the answer did not have, and, last, if
+   the numbers in and out differ at all (js/coach/guard.js guardNums). A refused rewrite
+   is never shown: the coach's answer stands as it was. */
+var DIG=/[0-9\u0660-\u0669\u06F0-\u06F9]/;
+function western(s){return String(s).replace(/[\u0660-\u0669]/g,function(c){return String(c.charCodeAt(0)-0x660);})
+  .replace(/[\u06F0-\u06F9]/g,function(c){return String(c.charCodeAt(0)-0x6F0);});}
+var FIG=/[0-9\u0660-\u0669\u06F0-\u06F9]+(?:[.,][0-9\u0660-\u0669\u06F0-\u06F9]+)*/g;
+function lockFigures(text){
+  var figs=[],s=String(text||"").replace(FIG,function(x){figs.push(x);return "⟦"+figs.length+"⟧";});
+  return {text:s,figs:figs};}
+/* Number words, both languages: a rewrite may not bring one in, and a free answer may
+   not state one the grounding does not hold. */
+var WORDS={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,fifteen:15,twenty:20,
+  thirty:30,forty:40,fifty:50,hundred:100,thousand:1000,half:0.5,quarter:0.25,twice:2,double:2,triple:3,dozen:12,
+  "واحد":1,"واحده":1,"اتنين":2,"اثنين":2,"تلاته":3,"ثلاثه":3,"تلاتة":3,"ثلاثة":3,"اربعه":4,"أربعة":4,"اربعة":4,"خمسه":5,"خمسة":5,
+  "سته":6,"ستة":6,"سبعه":7,"سبعة":7,"تمانيه":8,"ثمانية":8,"تمانية":8,"تسعه":9,"تسعة":9,"عشره":10,"عشرة":10,"نص":0.5,"نصف":0.5,"ربع":0.25,"ضعف":2};
+function wordNums(s){
+  return (String(s||"").toLowerCase().match(/[a-z]+|[\u0621-\u064A]+/g)||[]).map(function(w){
+    if(Object.prototype.hasOwnProperty.call(WORDS,w))return WORDS[w];
+    var a=w.replace(/^(و|ف|ب)/,"");return Object.prototype.hasOwnProperty.call(WORDS,a)&&a!==w?WORDS[a]:null;}).filter(function(x){return x!=null;});}
+function numsOf(s){return (western(s).replace(/(\d),(\d{3})/g,"$1$2").match(/\d+(?:\.\d+)?/g)||[]).map(Number);}
+function rewordMessages(text,lang){
+  var lk=lockFigures(text);
+  var sys=["You reword a fitness coach's answer for a person using a training app.",
+    "Write it again "+(lang==="ar"?"in Egyptian Arabic, as a friend from Cairo would say it":"in plain, warm English")+", the same meaning, about as long or shorter.",
+    "The figures are locked as tokens like ⟦1⟧. Copy every token exactly once, as it is. Write no other number, in digits or in words, and add no advice, figure or fact that is not in the answer.",
+    "Write only the reworded answer."].join("\n");
+  return {msgs:[{role:"system",content:sys},{role:"user",content:lk.text}],lock:lk};}
+/* The model's rewrite → the text to show, or null (refused). orig: the answer as composed. */
+function unlockReword(raw,lock,orig){
+  var s=readReply(raw).text;if(!s||!lock)return null;
+  /* In order, too: "⟦2⟧ g a day, ⟦1⟧ g per kg" keeps the numbers and swaps what they are. */
+  var seen={},bad=false,last=0;
+  var out=s.replace(/⟦\s*(\d+)\s*⟧/g,function(_,n){n=+n;if(!(n>=1&&n<=lock.figs.length)||seen[n]||n<last)bad=true;seen[n]=1;last=n;return lock.figs[n-1]||"";});
+  if(bad||Object.keys(seen).length!==lock.figs.length)return null;
+  if(DIG.test(s.replace(/⟦\s*\d+\s*⟧/g,"")))return null;
+  var key=function(a){return a.slice().sort(function(x,y){return x-y;}).join(",");};
+  if(key(numsOf(out))!==key(numsOf(orig)))return null;
+  var had={};wordNums(orig).forEach(function(v){had[v]=1;});
+  if(wordNums(out).some(function(v){return !had[v];}))return null;
+  if(out.length>Math.max(80,String(orig).length*1.6))return null;
+  return out;}
+/* A free answer (a question no rule knows): every figure in it, digits or words, must be
+   in what the model was given (the person's figures, the notes, how the app works).
+   One that is not is the model's own, and the answer is not shown. */
+function grounded(text,msgs){
+  var have={};(msgs||[]).forEach(function(m){numsOf(m.content).concat(wordNums(m.content)).forEach(function(v){have[v]=1;});});
+  return numsOf(text).concat(wordNums(text)).every(function(v){return have[v];});}
+
+export {answersFor, buildMessages, grounded, lockFigures, numsOf, passagesFor, readReply, rewordMessages, unlockReword, wordNums};

@@ -1,4 +1,4 @@
-import {buildMessages, readReply} from "../smart.js";
+import {buildMessages, grounded, lockFigures, readReply, rewordMessages, unlockReword} from "../smart.js";
 
 /* The smart coach's words: what the on-device model is told, and what is read back. */
 function run(t){
@@ -15,6 +15,28 @@ function run(t){
     "how the app works and the person's program are in front of it, and it is told to answer for them, not in general");
   t.eq(readReply("Sure.\nDO: add face pulls to Pull day"),{text:"Sure.",act:"add face pulls to Pull day"},"a request to act, read off its last line");
   t.eq(readReply("<think>let me see</think>Rest 2–3 minutes."),{text:"Rest 2–3 minutes.",act:""},"a model's thinking is not shown");
-  t.eq(readReply("<think>unfinished"),{text:"",act:""},"thinking cut off: nothing to show");}
+  t.eq(readReply("<think>unfinished"),{text:"",act:""},"thinking cut off: nothing to show");
+  /* C-9: rewording, with the figures locked. A stub model that keeps the tokens, and
+     stubs that try to change, drop, double or add a figure. */
+  var orig="Aim for 150 g of protein a day, about 1.8 g per kg. Rest 2-3 minutes between heavy sets.";
+  var R=rewordMessages(orig,"en"),lk=R.lock;
+  t.eq([lk.figs,/⟦1⟧ g of protein/.test(R.msgs[1].content),/\d/.test(R.msgs[1].content.replace(/⟦\d+⟧/g,"")),/Copy every token exactly once/.test(R.msgs[0].content)],
+    [["150","1.8","2","3"],true,false,true],"the figures leave the text as locked tokens");
+  var stub=function(f){return f(R.msgs[1].content);};
+  t.eq(unlockReword(stub(function(x){return "Try to get "+x.replace("Aim for ","").replace("Rest","And rest");}),lk,orig),
+    "Try to get 150 g of protein a day, about 1.8 g per kg. And rest 2-3 minutes between heavy sets.","a rewrite that keeps every token: shown, the figures the coach's");
+  t.eq(unlockReword("Get ⟦1⟧ g protein, about ⟦2⟧ g per kg; rest ⟦3⟧-⟦4⟧ min. Or 160 g if you can.",lk,orig),null,"a number of its own: refused");
+  t.eq(unlockReword("Get ⟦1⟧ g protein, about ⟦2⟧ g per kg; rest ⟦3⟧ min.",lk,orig),null,"a figure dropped: refused");
+  t.eq(unlockReword("Get ⟦1⟧ g, ⟦1⟧ g, about ⟦2⟧ g per kg; rest ⟦3⟧-⟦4⟧ min.",lk,orig),null,"a figure doubled: refused");
+  t.eq(unlockReword("Get ⟦1⟧ g, about ⟦2⟧ g per kg; rest ⟦3⟧-⟦5⟧ min.",lk,orig),null,"a token made up: refused");
+  t.eq(unlockReword("Get ⟦2⟧ g, about ⟦1⟧ g per kg; rest ⟦3⟧-⟦4⟧ min.",lk,orig),null,"figures swapped (the same numbers, a different meaning): refused");
+  t.eq(unlockReword("Get ⟦1⟧ g, about ⟦2⟧ g per kg, twice a day; rest ⟦3⟧-⟦4⟧ min.",lk,orig),null,"a number word of its own: refused");
+  t.eq(unlockReword("Get ⟦1⟧ g, about ⟦2⟧ g per kg; rest ⟦3⟧-⟦4⟧ min.\nDO: log 80 kg for 8",lk,orig)!==null&&!/80/.test(unlockReword("Get ⟦1⟧ g, about ⟦2⟧ g per kg; rest ⟦3⟧-⟦4⟧ min.\nDO: log 80 kg for 8",lk,orig)),true,"no request to act from a rewrite");
+  var ar=lockFigures("محتاج ١٥٠ جرام بروتين");
+  t.eq([ar.figs,unlockReword("كُل ⟦1⟧ جرام بروتين في اليوم",ar,"محتاج ١٥٠ جرام بروتين")],[["١٥٠"],"كُل ١٥٠ جرام بروتين في اليوم"],"Arabic digits, the same");
+  t.eq(unlockReword("كُل ⟦1⟧ جرام بروتين، تلاتة وجبات",ar,"محتاج ١٥٠ جرام بروتين"),null,"an Arabic number word of its own: refused");
+  /* A free answer: no figure the model was not given. */
+  var g=buildMessages("what's a good song for leg day",{targets:"2500 kcal, 150 g protein a day"},"en",[]);
+  t.eq([grounded("Something upbeat helps.",g),grounded("Keep protein at 150 g.",g),grounded("Do 4 sets of 12 at 75%.",g)],[true,true,false],"a free answer's figures: the person's own pass, one of its own does not");}
 
 export {run};

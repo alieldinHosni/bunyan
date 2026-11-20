@@ -425,6 +425,10 @@ function register(){
     var m={q:m0.qq||m0.q,id:"smart",at:Date.now(),b:[{p:""}],acts:[],lang:m0.lang,pending:true};
     S.chat=(S.chat||[]).concat([m]);saveDB();render();toEnd();
     runSmart(m,saveDB,function(){render();toEnd();});return;});
+  key("smartsay",function(D){var m0=findMsg(D.smartsay);if(!m0||!isReady()||m0.id==="safety"||m0.safety||isSafety(m0.qq||m0.q))return;
+    var m={q:m0.qq||m0.q,id:"smart",re:m0.at,at:Date.now(),b:[{p:""}],acts:[],lang:m0.lang,pending:true};
+    S.chat=(S.chat||[]).concat([m]);saveDB();render();toEnd();
+    runSmart(m,saveDB,function(){render();toEnd();});return;});
   key("smarton",function(){smartStart(smartState().size);return;});
   key("smartsize",function(D){if(/^(small|better)$/.test(D.smartsize)){smartState().size=D.smartsize;render();}return;});
   key("smartoff",function(){askConfirm({title:t("Turn off the smart coach?"),icon:"trash",

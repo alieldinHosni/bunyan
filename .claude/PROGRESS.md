@@ -5031,3 +5031,20 @@ What C-10 adds:
 - **Not yet done from 2.9:** the after-workout debrief line in the thread, and the weekly check-in summarised in the chat. Both are already on the finish screen and the Coach page.
 - **Tests.** New browser test "Coach a step ahead (C-8)": the lead line and its button, no contradicting suggestion, the four workout suggestions with no lead and each answered, and Arabic.
   - Three older tests that pinned the old chips now check the new ones: Coach's questions and Food's questions (as sets, so the 2 pm rule can't make them depend on the time of day), and the workout chips sent as typed.
+
+**Coach C-9: the model, narrowed (v297, 20 Nov, session/coach-model).** docs/COACH-AGENT.md 2.10: the on-phone smart coach may put the coach's answer another way, but it never states a figure of its own.
+
+- **"Say it another way".** With the smart coach on and loaded, the newest answer the coach composed has this button. It is not shown under a miss, a safety reply, or the model's own row.
+  - The model rewords the answer's paragraphs (smartcoach.js `runReword`).
+  - The figures are taken out first and given to it as locked tokens ⟦1⟧ ⟦2⟧ … (smart.js `lockFigures`, `rewordMessages`), so it is never given a number.
+  - What comes back (smart.js `unlockReword`) is refused if any token is missing, doubled, made up or out of order. It is also refused if any digit or number word appears that the answer did not have, if the numbers in and out differ, or if it is much longer.
+  - A refused rewrite is never shown or kept. The row says the coach's answer above stands, and that answer is untouched.
+  - A rewrite is shown only once checked whole, not as it streams. A DO line in a rewrite is dropped.
+- **Free answers.** These are the questions no rule knows. Every figure in the model's answer, in digits or words, must appear in what it was given (smart.js `grounded`): the person's figures, the notes, and how the app works.
+  - One with a figure of its own is left out, and the row says why.
+  - While it streams, text is written into the row only until a digit appears; the rest waits for the check.
+- **Not done from 2.10:** "understanding only" (the model returning {act, topic, entities, time} as JSON for the rules to answer from). It needs a second model call per message on phones that already ran short of memory (19 Nov), so it is left for a later slice, once the crash guard has had time on the owner's phone.
+- **Tests.**
+  - Unit (engine/test/smart): a stub model that keeps the tokens, and stubs that change, drop, double, swap or add a figure, add a number word, or add a DO line. Arabic digits and words are covered too, as is the free-answer check.
+  - Browser test "Smart coach narrowed (C-9)": off, no button. On, a rewrite keeps the protein answer's figures exactly, and the model is given no digit. A rewrite that changes one is refused and the answer stands. A free answer with its own figure is left out. Arabic.
+  - The coach evaluation, with the model off, is unchanged (only knowledge-001-ar, known).
