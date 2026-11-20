@@ -5143,3 +5143,18 @@ What C-10 adds:
   - The answers still use 18 of chat.js's names (ANSWER, TOPIC, told, lifts …), imported back from it. This import cycle is allowed in the ui layer. No moved variable reads a chat.js variable while loading (checked), so the order modules load in can't leave one undefined.
 - **Size:** chat.js is 103 KB, down from 216 KB. Next slices: the routing (askOne, decide, preRoute, route, the reading's helpers) to its own module, then the answers split by topic. The target is chat.js under 40 KB, keeping only drawing.
 - **Checks:** architecture (214 modules, every rule holds), coach unit tests, design, the coach evaluation unchanged (433/434), and the Coach browser tests. Both new modules are precached in sw.js; v301.
+
+**Coach C-2, slice 3: the routing leaves chat.js (v302, 20 Nov, session/coach-split2).** Behaviour unchanged.
+- **`js/ui/answers/route.js`** takes 113 declarations: the routing and reading that turn a question into an answer, with their tables. That covers ask, askIn, askOne, decide, preRoute, route, readOf/readCtx, the follow-up and correction helpers, rewrite/splitTwo, recapMsg, safetyReply, pruneChat, findMsg, follow, liveChips, SCOPE, ANSWER, TOPIC's neighbours and the rest.
+- **What chat.js keeps:** drawing (bubble, bubbleIn, agHtml, blocks, buttons, chips, figures, missHtml, vChat, histSheet, askNext, liveAt, dayWord), plus the tables only drawing uses (TOPIC, NEXT, FAQNEXT, SAFETOPIC, GROUPS, AGSTATE, ASK).
+  - It still exports everything callers have always asked it for. The routing names are re-exported from route.js (chatload.js reads `ask`, `findMsg` … from chat.js's module).
+  - answers.js now takes the routing names from route.js, and only TOPIC from chat.js.
+- **Size:** chat.js is 24 KB (216 KB before C-2), which meets C-2's "under 40 KB". answers.js is 115 KB and route.js 79 KB. Splitting answers.js by topic, and making answers pure, is follow-on work.
+- **A mistake caught by the tests:** route.js's header comment was first left unclosed, which turned every import into comment text. tests/architecture.mjs did not notice, since it reads imports by pattern. The coach evaluation failed at once (fold is not defined), and the comment is now closed.
+- **Load order:** route.js builds SCOPE and ANSWER while it loads. SCOPE calls fold, from intent.js, which imports nothing. ANSWER refers to answers.js's functions, which are declarations and so exist before any module code runs. No module reads another's variable while loading (checked with a scratch parser).
+- **Checks:**
+  - architecture (215 modules) and coach unit tests;
+  - design;
+  - the coach evaluation, unchanged (433/434);
+  - the Coach browser tests;
+  - every module chat.js imported before is still imported by one of the three files.

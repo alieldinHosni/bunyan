@@ -52,7 +52,8 @@ import {rangeFor} from "../../coach/landmarks.js";
 import {OPL_NAME, simpleFacts, trendSays} from "../facts.js";
 import {words} from "../coachwords.js";
 import {ASK} from "../ask.js";
-import {ANSWER, ELSEWHERE, FOODNO, GENERIC, GROUPOF, KITOF, MUSCLEWORD, PAIN, TOPIC, WHYKIND, areaOf, foodWords, lifts, namedExercises, namedFood, readAs, scopeAnswer, told} from "../views/chat.js";
+import {TOPIC} from "../views/chat.js";
+import {ANSWER, ELSEWHERE, FOODNO, GENERIC, GROUPOF, KITOF, MUSCLEWORD, PAIN, WHYKIND, areaOf, foodWords, lifts, namedExercises, namedFood, readAs, scopeAnswer, told} from "./route.js";
 
 /* What the log measured, while the plan check still offers it (not kept as it is). */
 function liveLearned(){return checkPlans().some(function(f){return f.id==="maint-learned";})?learnedDiffers():null;}
