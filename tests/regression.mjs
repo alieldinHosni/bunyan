@@ -5869,6 +5869,26 @@ await test("Coach command, days (C-5, 2.4): \"I can only train Mon Wed Fri\" and
   m=await ask("عايز اتمرن الاتنين والاربع والجمعه بس");
   eq([m.ag&&m.ag.act,m.ag&&m.ag.p&&m.ag.p.wd,/[؀-ۿ]/.test(m.ag&&m.ag.item||"")],["plan.days",[1,3,5],true],"in Arabic: "+JSON.stringify(m));
 });
+await test("Coach command, a sore spot (C-5, 2.4): \"my knee hurts when I do jump squats\" gets the care line and an offer; tapped, what loads the knee is previewed with its stand-ins, applied on tap, undone; nothing changes before the tap",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),Sp=await import("/js/data/splits.js");
+    const d=st.split().days.filter(x=>x.ex.length)[0];d.ex.push(Sp.ex("Freehand Jump Squat",3,8,10));st.saveDB();});
+  const prog0=await ev(page,"JSON.stringify(S.programs)");
+  await openChat(page);
+  await page.fill('#chatq',"my knee hurts when I do jump squats");await page.press('#chatq','Enter');await pause(page,600);
+  const m=await ev(page,"(m=>({id:m.id,b:(m.b||[]).map(x=>x.p||x.n||'').join(' '),acts:(m.acts||[]).map(x=>x.a&&x.a['data-chatsay']).filter(Boolean)}))(S.chat[S.chat.length-1])");
+  eq([/see a physio or a doctor/.test(m.b),m.acts.length],[true,1],"the care line, and one offer: "+JSON.stringify(m));
+  eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"nothing changed by saying it");
+  await page.tap('#cpanel [data-chatsay="'+m.acts[0]+'"]');await pause(page,700);
+  const c=await ev(page,"(m=>m.ag&&{at:m.at,s:m.ag.s,act:m.ag.act,sw:m.ag.p&&m.ag.p.sw,detail:m.ag.detail})(S.chat[S.chat.length-1])");
+  eq([c&&c.s,c&&c.act,c&&c.sw.length>0],["confirm","plan.avoid",true],"a preview of the swaps: "+JSON.stringify(c&&c.sw));
+  eq(/Sets, reps and rest stay/.test(c.detail),true,"what stays");
+  eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"still nothing changed");
+  await page.tap('#cpanel [data-agok="'+c.at+'"]');await pause(page,700);
+  const names=await page.evaluate(async()=>{const st=await import("/js/state.js");return st.split().days.flatMap(d=>d.ex.map(e=>e.name));});
+  eq(c.sw.every(x=>names.includes(x.to)&&!names.includes(x.from)),true,"applied: each stand-in in its place");
+  await page.tap('#cpanel [data-agundo="'+c.at+'"]');await pause(page,700);
+  eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"Undo: as it was");
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

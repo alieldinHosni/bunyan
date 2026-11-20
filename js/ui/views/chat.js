@@ -1835,6 +1835,11 @@ function preRoute(R,text){
    ask again with the text given, or null for the router. */
 function decide(R,text){
   var pre=preRoute(R,text);if(pre)return pre;
+  /* A sore spot across the program ("swap exercises that load my knee", the pain
+     answer's own offer) is a command whole: no exercise from earlier in the conversation
+     ("… when I squat") is carried into it. */
+  var whole=null;try{whole=commandOf(text,S.prefs.unit);}catch(e){whole=null;}
+  if(whole&&whole.cmd==="limit.add")return null;
   /* An Arabic question no rule here reads: its training words in English, asked again
      (answered in Arabic). */
   if(R&&!R.topic&&R.lang==="ar"&&R.kind==="knowledge"){var gl=gloss(R.norm);return gl?{redo:gl,lang:"ar"}:null;}

@@ -5098,3 +5098,17 @@ What C-10 adds:
   - 7 days, out of range;
   - Arabic.
 - **Checks:** the coach evaluation is unchanged (433/434).
+
+**Coach C-5 gap 2: a sore spot (in v299, session/coach-days).**
+- **What the audit missed.** "my knee hurts when I squat" already offers "Swap what loads my knee across my program" (chat.js aSituation). The audit read only the answer's text, not its buttons.
+- **The offer itself was broken.** Tapped after "… when I do jump squats", it asked "Swap Freehand Jump Squat for what?". The exercise from the message before was carried into the follow-up as a single swap.
+  - Fix: decide() no longer re-tells a sentence that is a `limit.add` command whole (commands.js). The offer now previews every exercise that loads the knee, with its stand-ins.
+- **Test:** new browser test "Coach command, a sore spot (C-5, 2.4)". It checks:
+  - the care line and one offer, with nothing changed by saying it;
+  - the plan.avoid preview with its swaps and what stays;
+  - applied: each stand-in in its place;
+  - Undo.
+  - It fails without the decide() fix.
+- **For the owner, not changed: the knee rule (plan.js AVOID.knee) covers jumps, hops, pistols, sissy squats, skaters and mountain climbers. It does not cover squats or lunges.**
+  - So "my knee hurts when I squat", with a barbell squat in the program, gets "Nothing in your program loads your knees much".
+  - This is the same rule the assessment applies. Widening it is a decision about the injury rules, to be taken against the knowledge base, not a coach fix.
