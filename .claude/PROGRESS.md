@@ -5134,3 +5134,12 @@ What C-10 adds:
   - Undo;
   - Arabic.
 - **Checks:** the coach evaluation is unchanged (433/434). With this, the C-5 gaps the audit found are closed. The open question on the knee rule stays with the owner.
+
+**Coach C-2: splitting chat.js, slices 1 and 2 (20 Nov, session/coach-split).** Behaviour unchanged: no answer's words, figures or routing changed.
+- **Where the answers go.** The plan named `js/coach/answers/` (pure). But the answers read state (S), words (t) and the engines, and the coach layer may import none of these (tests/architecture.mjs). So they go to `js/ui/answers/`, in the ui layer, where a view may import them. Making them pure (state in, answer out) is later work, one topic at a time.
+- **Slice 1:** `js/ui/answers/kit.js` holds what every answer is made of: A, p, l, n, act, src, fill, list, foods, noTags, uiLang, withLang, rd. These were moved as they were.
+- **Slice 2:** `js/ui/answers/answers.js` holds the 73 answer functions (a…) and the 49 helpers and tables only they use (122 declarations, 109 KB).
+  - How it was done: a scratch script parsed chat.js (Node's bundled acorn), moved the declarations as written with their comments, and gave the new module exactly the imports it uses. chat.js then imports the moved names, and the imports only the answers used were pruned. Every module chat.js imported before is still imported by one of the two.
+  - The answers still use 18 of chat.js's names (ANSWER, TOPIC, told, lifts …), imported back from it. This import cycle is allowed in the ui layer. No moved variable reads a chat.js variable while loading (checked), so the order modules load in can't leave one undefined.
+- **Size:** chat.js is 103 KB, down from 216 KB. Next slices: the routing (askOne, decide, preRoute, route, the reading's helpers) to its own module, then the answers split by topic. The target is chat.js under 40 KB, keeping only drawing.
+- **Checks:** architecture (214 modules, every rule holds), coach unit tests, design, the coach evaluation unchanged (433/434), and the Coach browser tests. Both new modules are precached in sw.js. No version bump yet: it comes with the PR that ships.
