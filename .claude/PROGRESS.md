@@ -5063,3 +5063,19 @@ What C-10 adds:
   4. "make my program 4 days" and "I can only train Mon Wed Fri" are answered "I can't rebuild your week from the chat yet" (`program.days` is not built). The weekday sentence also says "To make it 3" to a program that already has 3 days.
   5. "I ate 2 eggs" said straight after opening is answered "The food list is still loading" (expected while the food list loads; the existing food-log tests cover it once loaded).
   - Next, one slice each, in this order: 1 (the goal preview's numbers), 4 (the weekday answer's wording first, then `program.days`), 2, 3.
+
+**Coach C-5 gap 1: the goal-change preview shows its numbers (v298, 20 Nov, session/coach-goal).** This is 2.4's rule: a preview shows what changes, in numbers, and what stays.
+- "change my goal to fat loss" now previews:
+  - calories and protein, before → after;
+  - carbs and fat, before → after;
+  - "Your training stays as it is; retake the assessment to rebuild it for the new goal."
+- The new figures are worked out as the change itself will (body.js macroTargetsOf on the profile with the new goal), so what is applied equals what was previewed. With no targets yet, it gives the new day's figures. With no weight, it says it won't guess.
+- **The agent card's item line now puts its figures in `.num`**, as its detail line already did (chat.js agHtml).
+- **Arrows point the way the line reads.** Every from → to in the agent's cards (swaps, stand-ins, calories, goal) is "←" in Arabic, as the Arabic strings already wrote "{a} ← {b}". Before, "2,500 → 2,050" in RTL read as a rise. Checked on a screenshot.
+- Added "g": "جم" to ar.js. It was missing, so chat.js `shownLabel` showed "g" in Arabic.
+- **Test:** new browser test "Coach command, goal (C-5, 2.4)". It checks:
+  - the preview's four before → after figures and what stays;
+  - each figure in `.num`;
+  - the applied targets equal the previewed ones, and the program is untouched;
+  - Undo;
+  - Arabic, with the arrow pointing left.

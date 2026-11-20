@@ -2457,9 +2457,9 @@ var AGSTATE={confirm:1,applied:1,undone:1,declined:1,failed:1,pick:1,say:1};
 function agHtml(m,live,ro){
   var g=m.ag,at=esc(String(m.at)),h=g.lead?'<p class="chat-lead">'+figures(String(g.lead))+'</p>':'';
   if(g.s==="confirm"||g.s==="applied"||g.s==="undone"||g.s==="declined"||g.s==="failed"){
-    if(g.item)h+='<div class="ag-item"><b>'+esc(String(g.item))+'</b>'+(g.detail?'<span>'+figures(String(g.detail))+'</span>':'')+'</div>';
+    if(g.item)h+='<div class="ag-item"><b>'+figures(String(g.item))+'</b>'+(g.detail?'<span>'+figures(String(g.detail))+'</span>':'')+'</div>';
     /* Several at once (a day told in one message). */
-    if(Array.isArray(g.items))g.items.forEach(function(x){h+='<div class="ag-item"><b>'+esc(String(x.item||""))+'</b>'+(x.detail?'<span>'+figures(String(x.detail))+'</span>':'')+'</div>';});}
+    if(Array.isArray(g.items))g.items.forEach(function(x){h+='<div class="ag-item"><b>'+figures(String(x.item||""))+'</b>'+(x.detail?'<span>'+figures(String(x.detail))+'</span>':'')+'</div>';});}
   /* What else to say with it: advice that goes with the request. */
   if(Array.isArray(g.notes)&&g.notes.length)h+='<ul class="chat-l ag-notes">'+g.notes.map(function(x){return '<li>'+figures(String(x))+'</li>';}).join("")+'</ul>';
   if(g.s==="confirm"&&live)h+='<div class="ag-acts"><button class="btn ag-ok" data-agok="'+at+'">'+esc(String(g.cta||t("Do it")))+'</button>'

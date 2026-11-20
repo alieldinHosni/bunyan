@@ -28,6 +28,7 @@ import {fold, spell} from "../coach/intent.js";
 import {t} from "../i18n/dict.js";
 import {exName, planName} from "../i18n/exnames.js";
 import {barKg, deloadDue, incrementFor, inDeload, lastWeight} from "../engine/formulas.js";
+import {macroTargetsOf} from "../engine/body.js";
 import {addDays, isoWeekday} from "../engine/schedule.js";
 import {S, split} from "../state.js";
 import {fmtW, toDisp, wUnit} from "../units.js";
@@ -149,6 +150,9 @@ function exOpts(names){
 
 /* ---- the shapes the chat shows ------------------------------------------------------- */
 function pick(what,lead,opts,act,p,slot,none){return {s:"pick",what:what,lead:lead,opts:opts,act:act,p:p,slot:slot,none:!!none};}
+/* From → to, pointing the way the line reads: in Arabic it reads right to left, so the
+   arrow does too (as the Arabic strings write it, "{a} ← {b}"). */
+function ARROW(){return S.prefs&&S.prefs.lang==="ar"?" ← ":" → ";}
 function confirm(act,p,o){return Object.assign({s:"confirm",act:act,p:p},o);}
 function say(lead,acts){return {s:"say",lead:lead,acts:acts||[]};}
 function closeOf(q,names,act,p,slot){
@@ -565,7 +569,7 @@ function planLimit(c){
   if(!sw.length&&!kept.length)return say(fill(t("Nothing in your program loads your {a} much. I'll keep new suggestions away from it too."),{a:area}));
   if(!sw.length)return say(fill(t("What loads your {a} has no close stand-in with your kit: {list}. Go lighter on it, or ask me to remove it."),{a:area,list:kept.map(exName).join(", ")}));
   return confirm("plan.avoid",{area:c.area,sw:sw},{lead:fill(t(sw.length===1?"Swap the exercise that loads your {a}?":"Swap the {n} exercises that load your {a}?"),{n:sw.length,a:area}),
-    item:sw.slice(0,4).map(function(x){return exName(x.from)+" → "+exName(x.to);}).join(" · ")+(sw.length>4?" …":""),
+    item:sw.slice(0,4).map(function(x){return exName(x.from)+ARROW()+exName(x.to);}).join(" · ")+(sw.length>4?" …":""),
     detail:(kept.length?fill(t("No close stand-in for {list}: it stays."),{list:kept.map(exName).join(", ")})+" ":"")
       +t("Sets, reps and rest stay. If the pain is sharp, swollen or lasting, have it seen by a professional."),
     cta:t("Swap them"),done:fill(t("Swapped. New plans keep away from your {a} too."),{a:area}),undone:t("Undone. Your program is as it was.")});}
@@ -607,7 +611,7 @@ function planLeave(c){
   var one=add.length===1;
   return confirm("exercise.avoid",{names:add,sw:sw},{
     lead:fill(t("Leave {x} out of your plans for good?"),{x:what}),
-    item:sw.length?sw.slice(0,4).map(function(x){return exName(x.from)+" → "+exName(x.to);}).join(" · ")+(sw.length>4?" …":""):t("Not in your program now"),
+    item:sw.length?sw.slice(0,4).map(function(x){return exName(x.from)+ARROW()+exName(x.to);}).join(" · ")+(sw.length>4?" …":""):t("Not in your program now"),
     detail:fill(t(one?"It goes on your Left out list, and new plans skip it.":"{n} exercises go on your Left out list, and new plans skip them."),{n:add.length})
       +(sw.length?" "+t("In your program, each is swapped for the closest one that works the same muscles; sets, reps and rest stay."):"")
       +(kept.length?" "+fill(t("No close stand-in for {list}: it stays in your program."),{list:kept.map(exName).join(", ")}):""),
@@ -712,7 +716,7 @@ function planEasier(c){
     var tk={};names.forEach(function(n){tk[n]=1;});
     var ez=easierOf(e.name,tk);if(!ez)return noEasier(e.name);
     return confirm("exercise.swapToday",{i:i,name:ez},{lead:fill(t("Swap {old} for {new} for today?"),{old:exName(e.name),new:exName(ez)}),
-      item:exName(e.name)+" → "+exName(ez),detail:t("The same muscles, easier to do. Your program stays as it is."),cta:t("Swap it"),
+      item:exName(e.name)+ARROW()+exName(ez),detail:t("The same muscles, easier to do. Your program stays as it is."),cta:t("Swap it"),
       done:fill(t("Swapped {old} for {new} for today."),{old:exName(e.name),new:exName(ez)}),undone:t("Undone. Today's workout is as it was.")});}
   var pl=planOn(split(),today());
   if(pl.kind==="done")return say(t("You've trained today already. Ask me again before your next workout."));
@@ -728,7 +732,7 @@ function planEasier(c){
   var ez2=easierOf(nm,taken);if(!ez2)return noEasier(nm);
   var sw={};sw[nm]=ez2;
   return confirm("session.fit",{day:d.id,keep:all,swap:sw},{lead:fill(t("Start today's workout with {new} instead of {old}?"),{old:exName(nm),new:exName(ez2)}),
-    item:exName(nm)+" → "+exName(ez2),detail:t("The same muscles, easier to do; sets and reps stay. Today only: your program stays as it is."),
+    item:exName(nm)+ARROW()+exName(ez2),detail:t("The same muscles, easier to do; sets and reps stay. Today only: your program stays as it is."),
     cta:t("Start it like this"),done:t("Started. Your program is as it was."),undone:t("Undone. No workout was started.")});}
 /* "How do I do this?": the steps for the exercise on screen, and its full guide. */
 function planHow(){
@@ -880,13 +884,23 @@ function planCommand(c){
     if(!c.kcal)return say(t("By how much? Say it like “raise my calories by 200”."),[{l:t("Targets"),a:{"data-csec":"food","data-cfsub":"targets"}}]);
     var k0=num((S.goals||{}).kcal);
     return confirm("plan.calories",{kcal:c.kcal},{lead:fill(t(c.kcal>0?"Raise your calorie target by {n} kcal?":"Lower your calorie target by {n} kcal?"),{n:fmtN(Math.abs(c.kcal))}),
-      item:fmtN(k0)+" → "+fmtN(k0+c.kcal)+" "+t("kcal"),detail:t("Carbs move with it; protein and fat stay."),cta:t("Change it"),
+      item:fmtN(k0)+ARROW()+fmtN(k0+c.kcal)+" "+t("kcal"),detail:t("Carbs move with it; protein and fat stay."),cta:t("Change it"),
       done:t("Target changed; carbs moved with it."),undone:t("Undone. Your targets are as they were.")});}
   if(c.cmd==="plan.goal"){
     if(!c.goal)return say(t("To which goal? Lose fat, build muscle, get stronger, endurance, athletic performance or mobility."));
     if(S.profile.goal===c.goal)return say(fill(t("Your goal is already {g}."),{g:t(GOALNAME[c.goal])}));
-    return confirm("plan.goal",{goal:c.goal},{lead:fill(t("Change your goal to {g}?"),{g:t(GOALNAME[c.goal])}),item:t(GOALNAME[c.goal]),
-      detail:t("Your calorie and macro targets are worked out again for it."),cta:t("Change it"),
+    /* What changes, in numbers, and what stays (docs/COACH-AGENT.md 2.4): the targets the
+       new goal gives, worked out as the change itself will (handlers/coach.js chatgoal),
+       beside today's; the training is not touched. */
+    var g0=S.goals||{},m1=null;try{m1=macroTargetsOf(Object.assign({},S.profile,{goal:c.goal}),S.body,S.energy);}catch(e){m1=null;}
+    var arrow=function(a,b,u){return fmtN(num(a))+ARROW()+fmtN(num(b))+" "+u;};
+    var gi=m1&&num(g0.kcal)?arrow(g0.kcal,m1.kcal,t("kcal"))+" · "+arrow(g0.p,m1.p,t("g protein")):t(GOALNAME[c.goal]);
+    var gd=(m1&&num(g0.kcal)?fill(t("Carbs {c}, fat {f}."),{c:arrow(g0.c,m1.c,t("g")),f:arrow(g0.f,m1.f,t("g"))})+" "
+      :m1?fill(t("Your day becomes about {k} kcal and {p} g of protein."),{k:fmtN(m1.kcal),p:fmtN(m1.p)})+" "
+      :t("Its targets need your weight, which I won't guess.")+" ")
+      +t("Your training stays as it is; retake the assessment to rebuild it for the new goal.");
+    return confirm("plan.goal",{goal:c.goal},{lead:fill(t("Change your goal to {g}?"),{g:t(GOALNAME[c.goal])}),item:gi,
+      detail:gd,cta:t("Change it"),
       done:fill(t("Goal changed to {g}, with its targets."),{g:t(GOALNAME[c.goal])}),undone:t("Undone. Your goal and targets are as they were.")});}
   return null;}
 /* A planned meal's item swapped for one of the foods offered (js/ui/views/chat.js
