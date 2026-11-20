@@ -5794,6 +5794,31 @@ await test("Smart coach narrowed (C-9): it may put the coach's answer another wa
   await pause(page,400);await agSay(page,"محتاج بروتين قد ايه؟");await pause(page,400);
   eq(/[؀-ۿ]/.test(await page.textContent('#cpanel [data-smartsay]')),true,"in Arabic");
 },{init:fakeLLM9});
+await test("Coach command, fit (C-5 acceptance): \"30 minutes, only dumbbells\" starts a session whose estimated time is at most 30 minutes, whose every exercise needs only dumbbells or bodyweight, and whose sets and rep ranges are the workout page's",async page=>{
+  /* What the workout page prescribes for today, as started from Training. */
+  const base=await page.evaluate(async()=>{const st=await import("/js/state.js"),A=await import("/js/ui/actions.js"),dp=await import("/js/engine/dayplan.js"),u=await import("/js/util.js");
+    const pl=dp.planOn(st.split(),u.today());if(!pl.day||pl.rest||pl.kind==="done")return null;
+    A.startDay(pl.day.id);const out={};st.S.active.entries.forEach(e=>{out[e.name]=[e.planned.sets,e.planned.lo,e.planned.hi,e.rest];});
+    st.S.active=null;st.saveDB();return {day:pl.day.id,full:dp.estMinutes(pl.day),plan:out};});
+  if(!base)throw new Error("the seeded profile has no workout today");
+  if(!(base.full>30))throw new Error("today's workout already fits in 30 minutes ("+base.full+"): the test proves nothing");
+  const m=await page.evaluate(async()=>{const c=await import("/js/ui/views/chat.js");const V=(await import("/js/ui/view.js")).V;
+    const m=c.ask("I have 30 minutes, only dumbbells");V.coach="full";(await import("/js/ui/render.js")).render();return {at:m.at,ag:m.ag&&{act:m.ag.act,p:m.ag.p}};});
+  eq(m.ag&&m.ag.act,"session.fit","a change to tap");
+  await pause(page,400);
+  await page.tap('#cpanel [data-agok="'+m.at+'"]');await pause(page,700);
+  const live=await page.evaluate(async()=>{const st=await import("/js/state.js"),dp=await import("/js/engine/dayplan.js"),P=await import("/js/engine/plan.js");
+    const es=st.S.active.entries;
+    return {mins:dp.estMinutes({ex:es.map(e=>({name:e.name,sets:e.planned.sets,rest:e.rest,min:e.planned.min}))}),
+      kit:es.map(e=>[e.name,P.usable(e.name,["Bodyweight","Dumbbell"])]),
+      dose:es.map(e=>[e.name,e.planned.sets,e.planned.lo,e.planned.hi,e.rest])};});
+  eq(live.mins<=30,true,"estimated at "+live.mins+" min (the full day: "+base.full+")");
+  eq(live.kit.filter(x=>!x[1]).map(x=>x[0]),[],"every exercise needs only dumbbells or bodyweight");
+  /* A kept exercise has the page's own dose; a stand-in has the dose of the one it stands in for. */
+  const inv={};Object.entries(m.ag.p.swap||{}).forEach(([a,b])=>{inv[b]=a;});
+  eq(live.dose.map(d=>{const from=base.plan[d[0]]?d[0]:inv[d[0]],p=base.plan[from];return p&&p[0]===d[1]&&p[1]===d[2]&&p[2]===d[3]&&p[3]===d[4]?"same":d[0]+" "+JSON.stringify(d.slice(1))+" vs "+JSON.stringify(p);}).filter(x=>x!=="same"),
+    [],"the sets, rep ranges and rest are the workout page's");
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");

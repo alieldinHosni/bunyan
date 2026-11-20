@@ -5048,3 +5048,18 @@ What C-10 adds:
   - Unit (engine/test/smart): a stub model that keeps the tokens, and stubs that change, drop, double, swap or add a figure, add a number word, or add a DO line. Arabic digits and words are covered too, as is the free-answer check.
   - Browser test "Smart coach narrowed (C-9)": off, no button. On, a rewrite keeps the protein answer's figures exactly, and the model is given no digit. A rewrite that changes one is refused and the answer stands. A free answer with its own figure is left out. Arabic.
   - The coach evaluation, with the model off, is unchanged (only knowledge-001-ar, known).
+
+**Coach C-4 / C-5 audit against acceptance (20 Nov, session/coach-audit).** Tests only; no app change, no version bump.
+
+- **C-4.** The evaluation now fails an answer that states a figure in its words with no source. A change to tap is exempt, since its figures are the person's own plan. No item failed it: the guard (chat.js, guard.js "no source") already refuses those at run time. Raw records and fragments were already checked, and rows 11–14 pass. The score is unchanged: 433/434, with only knowledge-001-ar failing (known).
+- **C-5, "30 minutes, only dumbbells".** New browser test "Coach command, fit (C-5 acceptance)", for the parts the C-5a test did not check:
+  - the started session is estimated at 30 minutes or less (dayplan.js estMinutes; the seeded days are 35–40);
+  - every exercise needs only dumbbells or bodyweight (plan.js usable);
+  - each exercise's sets, rep range and rest equal what Training starts for the day. A stand-in takes those of the exercise it stands in for.
+- **C-5, the commands of 2.4: gaps found, by asking each one in the seeded profile.**
+  1. "change my goal to fat loss" previews and applies. Its preview says only "targets are worked out again", without the numbers: 2.4 wants what changes, in numbers, for training and food together.
+  2. "my knee hurts when I squat" is answered as a note for the recovery log. The `limit.add` command exists (commands.js), but this sentence does not reach it. 2.4 wants: what loads the area flagged, and substitutes offered as a change.
+  3. "travelling next week, no gym" explains Travel mode, which starts the day it is turned on. 2.4 wants a bodyweight week for those dates, with the program back after.
+  4. "make my program 4 days" and "I can only train Mon Wed Fri" are answered "I can't rebuild your week from the chat yet" (`program.days` is not built). The weekday sentence also says "To make it 3" to a program that already has 3 days.
+  5. "I ate 2 eggs" said straight after opening is answered "The food list is still loading" (expected while the food list loads; the existing food-log tests cover it once loaded).
+  - Next, one slice each, in this order: 1 (the goal preview's numbers), 4 (the weekday answer's wording first, then `program.days`), 2, 3.
