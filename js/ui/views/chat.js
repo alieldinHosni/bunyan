@@ -1653,8 +1653,8 @@ function aAvoid(a,q,it){
 /* Away, and no kit said: what there will be, asked, with the three usual answers. */
 function aAway(a,q,it){
   var R=rd(it),ar=R.lang==="ar",next=R.entities.period==="nextweek";
-  p(a,next?t("Travel mode swaps your workouts for what you'll have with you. It starts the day you turn it on, so turn it on when you leave."):t("What will you have with you?"));
-  var base=ar?(next?"مسافر 7 ايام، ":"مسافر الويك اند، "):(next?"travelling for 7 days, ":"travelling this weekend, ");
+  p(a,next?t("Travel mode swaps your workouts for what you'll have with you, for next week. What will you have with you?"):t("What will you have with you?"));
+  var base=ar?(next?"مسافر الاسبوع الجاي، ":"مسافر الويك اند، "):(next?"travelling next week, ":"travelling this weekend, ");
   [["Bodyweight only",ar?"بوزن الجسم بس":"bodyweight only"],["Dumbbells",ar?"دمبل بس":"only dumbbells"],["A hotel gym",ar?"جيم الفندق":"hotel gym"]].forEach(function(o){
     act(a,t(o[0]),{"data-chatsay":base+o[1]});});
   return a;}
@@ -1890,7 +1890,9 @@ function decide(R,text){
     case "away":
       var gear=["Bodyweight"],said=false;
       E.equipment.forEach(function(k){if(KITOF[k]&&k!=="Bodyweight"){gear=gear.concat(KITOF[k]);said=true;}if(k==="Bodyweight"||k==="NoGym")said=true;});
-      if(R.entities.period==="nextweek"||!said)return {id:"away"};
+      if(!said)return {id:"away"};
+      /* Next week, kit said: that week's dates (agent.js planTravel), not from today. */
+      if(R.entities.period==="nextweek")return {cmd:{cmd:"travel.set",gear:gear,days:0,until:"",next:true}};
       return {cmd:{cmd:"travel.set",gear:gear,days:-1,until:""}};
     case "move":
       var to=E.day&&E.day.when==="weekday"?E.day.n:E.day&&E.day.when==="tomorrow"?"tomorrow":"";

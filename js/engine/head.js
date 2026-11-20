@@ -447,7 +447,7 @@ function todayPlan(iso){
   if(sp&&(r.state==="done"||r.state==="rest"))r.next=nextSession(sp,iso);
   var on=h.queue.filter(function(s){return s.id==="deload-on";})[0];
   if(on)r.light={until:on.src.until,planned:!!on.src.planned};
-  var tv=S.travel;if(tv&&tv.until&&now<=tv.until)r.travel={until:tv.until};
+  var tv=S.travel;if(tv&&tv.until&&now<=tv.until&&(!tv.from||now>=tv.from))r.travel={until:tv.until};
   if(isNow)fuelOn(r.food,r.state);
   var l=h.lead;r.lead=l&&l.pri>=LEAD&&l.id!=="deload-on"?l:null;
   /* What may be said, in order; the first is the card's line, the next its one other card. */

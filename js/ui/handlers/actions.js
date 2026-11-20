@@ -201,9 +201,11 @@ var ACTIONS={
       (p.sw||[]).forEach(function(x){var d=dayOf(x.day),e=d&&d.ex.filter(function(y){return y.id===x.id&&y.name===x.from;})[0];
         if(e&&k.indexOf(x.to)<0&&LIB.some(function(l){return l[0]===x.to;})){e.name=x.to;e.exId=exIdOf(x.to);delete e.alt;}});
       saveDB();render();return true;}},
-  "travel.set":{desc:"Travel mode: until a date, each workout swaps what needs other kit for the closest stand-in with this kit",
-    params:{gear:"the kit at hand, e.g. [Bodyweight, Dumbbell]",until:"YYYY-MM-DD"},confirm:true,snap:"travel",
-    run:function(p){if(!Array.isArray(p.gear)||!p.until||p.until<today())return false;S.travel={gear:p.gear.slice(),until:p.until};saveDB();render();return true;}},
+  "travel.set":{desc:"Travel mode: from a date (today if none) until a date, each workout swaps what needs other kit for the closest stand-in with this kit",
+    params:{gear:"the kit at hand, e.g. [Bodyweight, Dumbbell]",from:"YYYY-MM-DD, or none for today",until:"YYYY-MM-DD"},confirm:true,snap:"travel",
+    run:function(p){if(!Array.isArray(p.gear)||!p.until||p.until<today())return false;
+      if(p.from&&(p.from<today()||p.from>p.until))return false;
+      S.travel={gear:p.gear.slice(),until:p.until};if(p.from&&p.from>today())S.travel.from=p.from;saveDB();render();return true;}},
   "travel.end":{desc:"End travel mode",params:{},confirm:true,snap:"travel",run:function(){tap({travel:"end"});return true;}},
   "set.log":{desc:"Log a set of the exercise on screen in the workout in progress",params:{w:"weight, kg",r:"reps"},
     confirm:true,snap:"live",

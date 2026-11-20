@@ -446,7 +446,7 @@ function memSheet(){
   var rows="";
   listFacts(S.context).forEach(function(x){rows+=memRow("fact|"+x.id,x.text,t(MEMKIND[x.kind]||"A preference"));});
   ((S.profile&&S.profile.limits)||[]).forEach(function(a){rows+=memRow("limit|"+a,t("Keeps away from your {a}").replace("{a}",t(MEMAREA[a]||a)),t("A sore spot"));});
-  if(S.travel&&S.travel.until&&S.travel.until>=today())rows+=memRow("travel|1",t("Travel mode until {d}").replace("{d}",shortd(S.travel.until)),t("Workouts use the kit you have with you"),t("End it"));
+  if(S.travel&&S.travel.until&&S.travel.until>=today())rows+=memRow("travel|1",S.travel.from&&S.travel.from>today()?t("Travel mode from {a} to {b}").replace("{a}",shortd(S.travel.from)).replace("{b}",shortd(S.travel.until)):t("Travel mode until {d}").replace("{d}",shortd(S.travel.until)),t("Workouts use the kit you have with you"),t("End it"));
   var nk=(S.skip||[]).length;
   if(nk)rows+='<div class="srow" data-memrow="skip"><span class="srow-t"><span class="srow-n">'+esc(t(nk===1?"1 exercise left out of plans":"{n} exercises left out of plans").replace("{n}",nk))+'</span>'
     +'<span class="srow-s">'+esc(t("Put any back on Favourites"))+'</span></span><button class="btn sm g" data-train="favs">'+esc(t("Open"))+'</button></div>';

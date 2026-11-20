@@ -171,8 +171,9 @@ function programWeek(sp){
 /* An exercise kept for some weeks of a program — balance work in weeks 1–4, hops from
    week 9 — joins a workout only in those weeks. */
 function inWeek(e,wk){return !(e.wk&&wk&&(wk<e.wk[0]||wk>e.wk[1]));}
-/* The kit at hand while travel mode is on (S.travel, until its date), else null. */
-function travelGear(){var tv=S.travel;return tv&&tv.until&&today()<=tv.until&&Array.isArray(tv.gear)?tv.gear:null;}
+/* The kit at hand while travel mode is on (S.travel, from its start if it has one, until
+   its date), else null. */
+function travelGear(){var tv=S.travel,n=today();return tv&&tv.until&&n<=tv.until&&(!tv.from||n>=tv.from)&&Array.isArray(tv.gear)?tv.gear:null;}
 /* past: a date before today (owner, 4 Nov: "sometimes I train but forget to use the
    app"). The same workout screen, saved under that day: no clock, no rest timer, no
    warm-up or how-do-you-feel question, and no time recorded, since none was. */
