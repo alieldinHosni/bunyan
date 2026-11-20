@@ -5079,3 +5079,22 @@ What C-10 adds:
   - the applied targets equal the previewed ones, and the program is untouched;
   - Undo;
   - Arabic, with the arrow pointing left.
+
+**Coach C-5 gap 4: `program.days` (v299, 20 Nov, session/coach-days).** From 2.4: "make my program 4 days" / "I can only train Mon Wed Fri".
+- **Before:** both were answered "I can't rebuild your week from the chat yet". The weekday sentence also said "To make it 3" to a program that already had 3 days.
+- **Now (chat.js aDays):** the card offers the plan rebuilt for that many days, or on those weekdays. It keeps the goal, kit and session length, and shows the item ("3 days: Mon, Wed, Fri") and "Now: N days".
+- **Show me (actions.js `program.days`, as `plan.gear` does for kit):**
+  - it opens the assessment as it stands, with its days a week set and the fixed weekdays if said, at its result;
+  - nothing changes until Use this plan.
+- **Other answers:**
+  - the week it already has (the same count and, if said, the same weekdays): "That's already your week";
+  - outside 2–6 days: the range is said, with the Training link;
+  - a program by weekday: the reply names its days.
+- **Reading (understand.js DAYSW):** «عايز/عاوز/حابب اتمرن …» with two or more weekdays is now read as days. Weekday names are joined with "، " in Arabic. Checked on an RTL screenshot.
+- **Test:** new browser test "Coach command, days (C-5, 2.4)". It covers:
+  - Mon Wed Fri: the card, then the assessment at its result on [1,3,5], with the program unchanged;
+  - 4 days, none fixed;
+  - the same count;
+  - 7 days, out of range;
+  - Arabic.
+- **Checks:** the coach evaluation is unchanged (433/434).

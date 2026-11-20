@@ -242,6 +242,14 @@ var ACTIONS={
   "plan.gear":{desc:"Show the plan rebuilt for other equipment, to review and use",params:{gear:"gym, home or bw"},confirm:false,
     run:function(p){if(!/^(gym|home|bw)$/.test(p.gear))return false;tap({setup:"1"});if(!V.asd)return false;
       tap({as:"gear|"+p.gear});V.asd.step=STEPS.indexOf("result");render();return true;}},
+  /* The program for other days (chat.js aDays): the assessment opened as it stands, its
+     days a week (and the fixed weekdays, if said) set, at its result. Nothing changes
+     until Use this plan. */
+  "program.days":{desc:"Show the plan rebuilt for a number of days a week, or for given weekdays, to review and use",params:{n:"days a week, 2 to 6",wd:"weekdays, 1 Monday to 7 Sunday, or none"},confirm:false,
+    run:function(p){var n=+p.n,wd=(p.wd||[]).map(Number);
+      if(!(n>=2&&n<=6)||wd.some(function(x){return !(x>=1&&x<=7);})||wd.length&&wd.length!==n)return false;
+      tap({setup:"1"});if(!V.asd)return false;
+      tap({as:"days|"+n});V.asd.wd=wd.slice();V.asd.split=null;V.asd.step=STEPS.indexOf("result");render();return true;}},
   /* The plan's item replaced in place, as the plan screen's remove-and-add would leave
      it, the new food at the amount offered; only while the item is still the one
      the swap was offered for. */

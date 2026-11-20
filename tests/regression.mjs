@@ -5843,6 +5843,32 @@ await test("Coach command, goal (C-5, 2.4): \"change my goal to fat loss\" previ
   const a=await ask("غير هدفي لتنشيف");
   eq([a.ag&&a.ag.act,/[؀-ۿ]/.test(a.ag&&a.ag.detail||""),/←/.test(a.ag&&a.ag.item||"")&&!/→/.test(a.ag&&a.ag.item||"")],["plan.goal",true,true],"in Arabic, the arrow pointing the way it reads: "+JSON.stringify(a.ag));
 });
+await test("Coach command, days (C-5, 2.4): \"I can only train Mon Wed Fri\" and \"make my program 4 days\" open the plan rebuilt for those days to review, nothing changed until Use this plan; the week it already has is said so; out of range is said so; Arabic the same",async page=>{
+  const ask=q=>page.evaluate(async q=>{const st=await import("/js/state.js");st.S.chat=[];const c=await import("/js/ui/views/chat.js");const V=(await import("/js/ui/view.js")).V;
+    V.sheet=null;V.asd=null;const m=c.ask(q);V.coach="full";(await import("/js/ui/render.js")).render();
+    return {at:m.at,id:m.id,b:(m.b||[]).map(x=>x.p||"").join(" "),ag:m.ag&&{act:m.ag.act,p:m.ag.p,item:m.ag.item,detail:m.ag.detail}};},q);
+  const prog0=await ev(page,"JSON.stringify(S.programs)"),n0=await page.evaluate(async()=>(await import("/js/state.js")).split().days.filter(d=>d.ex.length).length);
+  let m=await ask("I can only train Mon Wed Fri");
+  eq([m.ag&&m.ag.act,m.ag&&m.ag.p],["program.days",{n:3,wd:[1,3,5]}],"the weekdays said, as a change to review: "+m.b);
+  eq(/To make it 3/.test(m.b),false,"not \"to make it 3\" to a program of "+n0);
+  await pause(page,400);
+  await page.tap('#cpanel [data-agok="'+m.at+'"]');await pause(page,700);
+  eq(await ev(page,"[!!V.asd,V.asd&&V.asd.days,V.asd&&V.asd.wd,V.asd&&V.asd.step]"),[true,3,[1,3,5],await page.evaluate(async()=>(await import("/js/ui/views/assess.js")).STEPS.indexOf("result"))],"the assessment, at its result, on those days");
+  eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"nothing changed yet");
+  m=await ask("make my program 4 days");
+  eq([m.ag&&m.ag.act,m.ag&&m.ag.p,/Now: 3 days/.test(m.ag&&m.ag.detail||"")],["program.days",{n:4,wd:[]},n0===3],"a number of days: "+JSON.stringify(m.ag));
+  await pause(page,400);
+  await page.tap('#cpanel [data-agok="'+m.at+'"]');await pause(page,700);
+  eq(await ev(page,"[V.asd&&V.asd.days,V.asd&&V.asd.wd]"),[4,[]],"four days, none fixed");
+  eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"still nothing changed");
+  m=await ask("make my program "+n0+" days");
+  eq([m.ag,/already your week/.test(m.b)],[null,true],"the week it has: said so");
+  m=await ask("make my program 7 days");
+  eq([m.ag,/2 to 6 days/.test(m.b)],[null,true],"out of range: said so");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();});
+  m=await ask("عايز اتمرن الاتنين والاربع والجمعه بس");
+  eq([m.ag&&m.ag.act,m.ag&&m.ag.p&&m.ag.p.wd,/[؀-ۿ]/.test(m.ag&&m.ag.item||"")],["program.days",[1,3,5],true],"in Arabic: "+JSON.stringify(m));
+});
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
     const st=await import("/js/state.js"),S=st.S,U=await import("/js/util.js"),Sp=await import("/js/data/splits.js"),Sc=await import("/js/engine/schedule.js");
