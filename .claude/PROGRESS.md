@@ -5176,3 +5176,16 @@ What C-10 adds:
   - The C-5 sore-spot test pinned exactly one offer. With the jump squat in today's workout, the easier-version offer is now a second, rightly, so the test checks the program offer is there.
   - The C-8 Food chips test pinned ["eat","protein","rest"]. On the week's first two days (today, Saturday, the week's start), last week's check-in takes a place, as suggestFor intends. The test now holds on any day and at any hour. This failure was a calendar matter and would have turned main red today too.
 - **A third calendar test, fixed here because it turned this PR red:** "Muscle map … Strength shades this week's sets" found no sets this week on the week's first day, since every seeded session is last week's. The test now logs one session today (a copy of the latest), so it holds on any day. Main is red on it today too.
+
+**3D figure F-4, the data half: muscles by role (21 Nov, session/figure-roles2, no app change).** From docs/FIGURE-V3.md 2.4.
+- **What it adds.** `js/data/mannequin/roles.js` gives `rolesFor(primary, secondary, refine, family)` → {figure muscle: {level, role}}:
+  - the prime mover (1) is the library's m;
+  - the synergists (.5) are its x, through the record's refinement, exactly as rig.js highlight lights them;
+  - the stabilisers (.3) come from a short fixed list per family, each with its knowledge entry.
+- **The stabiliser lists:**
+  - core in the hip-extension families: squat, hinge, lunge, bridge, kettlebell swing, pull-through, step-up and hyperextension (anatomy 7.4);
+  - hip abductors and adductors in the squat (anatomy 7.3, the squat example);
+  - the rotator cuff, drawn as the rear delt since the figure has none, in the presses: press, bench press, push-up, dip, cable press, bench dip (anatomy 7.4).
+- **What it does not do.** No muscle is invented. Where the library already names a family's stabiliser (73 times), the library's role is kept.
+- **Not read by the renderer yet,** so nothing on screen changes. The renderer half (role and action uniforms, the phase legend) is the next F-4 step, and the riskier one.
+- **Test:** new unit file data/test/roles, run for all 209 figure exercises found in the library. Prime and synergists equal highlight's, nothing else appears but the family's stabilisers, and every stabiliser is a figure muscle with a source.
