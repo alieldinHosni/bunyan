@@ -266,11 +266,14 @@ function vSheet(){
       /* What the person's limits or a health condition rule out is still there, marked, and
          asks before it goes in (handlers/train.js pickex). */
       var no=avoids(l[0],LIMS);
-      return '<button class="trow libtrow pkrow'+(no?' pkwarn':'')+'" data-k="'+k+':'+esc(l[0])+'" data-pickex="'+esc(l[0])+'">'+thumb(l[0],48)
+      /* Backlog item 5: the row adds (or swaps) as before; the ⓘ beside it, a button of its
+         own with its own 44-px target, opens the exercise first and adds nothing. */
+      return '<div class="pkline" data-k="'+k+':'+esc(l[0])+'"><button class="trow libtrow pkrow'+(no?' pkwarn':'')+'" data-pickex="'+esc(l[0])+'">'+thumb(l[0],48)
        +'<span><span class="trow-n">'+esc(exName(l[0]))+'</span><span class="trow-s">'+meta+'</span>'
        +(no?'<span class="pk-no">'+esc(t(/^floor$/.test(whyNot(l[0]))?"Lies down: not for your health":"Loads an area you're working around"))+'</span>':'')+'</span>'
        +(swapping?'<span class="pkswap">'+t("Swap")+'</span>'
-          :'<span class="pkadd" aria-hidden="true">+</span>')+'</button>';}
+          :'<span class="pkadd" aria-hidden="true">+</span>')+'</button>'
+       +'<button class="pkinfo" data-pkinfo="'+esc(l[0])+'" aria-label="'+esc(t("About {ex}").replace("{ex}",exName(l[0])))+'">'+glyph("info")+'</button></div>';}
     b+='<div class="srch-body"><p class="srch-n srch-hide">'
      +(target?t("Best alternatives first.")+' ':'')
      +(list.length+same.length)+' '+t("shown")+(S.gear&&S.gear.length&&!V.showAll?', '+t("matched to your equipment"):'')+'.</p>';
@@ -778,7 +781,7 @@ function vSheet(){
     b=(V.sd.prev&&V.sd.prev.length
         ?'<button class="btn d sm" data-exback="1" style="width:auto;margin:0 0 8px;padding-inline-start:0">\u2039 '+esc(exName(V.sd.prev[V.sd.prev.length-1]))+'</button>'
         /* Opened from the cool-down: back to the workout's summary. */
-        :V.sd.ret?'<button class="btn d sm" data-exback="1" style="width:auto;margin:0 0 8px;padding-inline-start:0">\u2039 '+esc(t("Cool down"))+'</button>':'')
+        :V.sd.ret?'<button class="btn d sm" data-exback="1" style="width:auto;margin:0 0 8px;padding-inline-start:0">\u2039 '+esc(t(V.sd.ret.s==="exercise"?"Back to the list":"Cool down"))+'</button>':'')
      +'<h2>'+esc(exName(nD))+'</h2>';
     var subD=[t(pD),exVariant(nD)?esc(exVariant(nD)):""].filter(Boolean).join(" \u00b7 ");
     b+='<p class="tiny">'+subD+'</p>';
@@ -842,7 +845,11 @@ function vSheet(){
        there is a day open to put the exercise in and no workout running. V.dayId
        survives into a live session, so the day test alone would offer "add" from the
        ⓘ mid-set — and it would add to the plan, not to the workout in front of you. */
-    if(!S.active&&dayOf(V.dayId))
+    /* Opened from the picker's ⓘ: its own Add (or Swap), which goes back to the picker as it
+       was and picks there, so every way the picker adds or swaps is the one used. */
+    if(V.sd.ret&&V.sd.ret.s==="exercise"){var rdD=V.sd.ret.d||{};
+      b+='<button class="btn exd-add" data-pkadd="'+esc(nD)+'">'+esc(t(rdD.replace||rdD.swaplive?"Swap for this":"Add to workout"))+'</button>';}
+    else if(!S.active&&dayOf(V.dayId))
       b+='<button class="btn exd-add" data-pickex="'+esc(nD)+'">'+t("Add to workout")+'</button>';
     if(prD.w)b+='<div class="exd-h">'+t("Your record")+'</div><div class="wc2-stats">'
      +'<div><b>'+fmtW(prD.w)+'</b><span>'+t("Heaviest")+'</span></div>'

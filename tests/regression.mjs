@@ -445,6 +445,42 @@ await test("picker: picking an exercise adds it and returns to the day",async pa
   eq(await ev(page,"V.sheet"),null,"back on the day");
   eq((await dayNames(page)).length,n0+1,"added");
 });
+await test("picker (backlog item 5): every row has an ⓘ of its own (44 px, never the row's tap) that opens the exercise and adds nothing; the sheet goes back to the list or adds from there; the row still adds at once; the ⓘ sits at the row's end in Arabic too",async page=>{
+  await openDay(page);
+  const n0=(await dayNames(page)).length;
+  await page.tap(".dadd");await pause(page,400);
+  const rows=await page.$$eval(".srch-body .pkline",a=>[a.length,a.filter(l=>l.querySelector(".pkrow")&&l.querySelector(".pkinfo")).length]);
+  eq(rows[0]>0&&rows[0]===rows[1],true,"each row has its ⓘ: "+JSON.stringify(rows));
+  const box=await page.$eval(".pkinfo",b=>{const r=b.getBoundingClientRect();return [r.width,r.height,!!b.closest(".pkrow")];});
+  eq([box[0]>=44,box[1]>=44,box[2]],[true,true,false],"44 px, and not inside the row's button");
+  const name=await page.getAttribute(".pkinfo >> nth=0","data-pkinfo");
+  await page.tap(".pkinfo >> nth=0");await pause(page,600);
+  eq([await ev(page,"V.sheet"),(await dayNames(page)).length],["exdetail",n0],"the exercise opens; nothing is added");
+  eq((await page.textContent("#sheet [data-exback]")).includes("Back to the list"),true,"back to the list");
+  await page.tap("#sheet [data-exback]");await pause(page,500);
+  eq(await ev(page,"V.sheet"),"exercise","the list again");
+  await page.tap(".pkinfo >> nth=0");await pause(page,600);
+  eq((await page.textContent("#sheet [data-pkadd]")).trim(),"Add to workout","Add from the sheet");
+  await page.tap("#sheet [data-pkadd]");await pause(page,600);
+  eq([await ev(page,"V.sheet"),(await dayNames(page)).length],[null,n0+1],"added from the sheet, back on the day");
+  await page.tap(".dadd");await pause(page,400);
+  await page.tap(".pkrow >> nth=0");await pause(page,400);
+  eq([await ev(page,"V.sheet"),(await dayNames(page)).length],[null,n0+2],"the row still adds at once");
+  /* Replace: the sheet's button is Swap, and it swaps in place. */
+  const before=await dayNames(page);
+  await page.tap("[data-editex] >> nth=0");await pause(page,500);
+  await page.tap("#sheet [data-replaceex]");await pause(page,600);
+  const sw=await page.getAttribute(".pkinfo >> nth=0","data-pkinfo");
+  await page.tap(".pkinfo >> nth=0");await pause(page,600);
+  eq([(await page.textContent("#sheet [data-pkadd]")).trim(),JSON.stringify(await dayNames(page))===JSON.stringify(before)],["Swap for this",true],"Replace: Swap for this, nothing changed yet");
+  await page.tap("#sheet [data-pkadd]");await pause(page,600);
+  const after=await dayNames(page);
+  eq([after.length,after[0]!==before[0]],[before.length,true],"swapped in place: "+before[0]+" → "+after[0]);
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();document.documentElement.dir="rtl";(await import("/js/ui/render.js")).render();});
+  await pause(page,300);await page.tap(".dadd");await pause(page,400);
+  const rtl=await page.$eval(".pkline",l=>{const r=l.querySelector(".pkrow").getBoundingClientRect(),i=l.querySelector(".pkinfo").getBoundingClientRect();return [i.right<=r.left+1,l.querySelector(".pkinfo").getAttribute("aria-label")];});
+  eq([rtl[0],/[؀-ۿ]/.test(rtl[1])],[true,true],"in Arabic, at the row's end (its left), named in Arabic: "+rtl[1]);
+});
 await test("split builder: build from scratch, set days, fill one, adopt, and it stays saved",async page=>{
   await coach(page,"train","programs");
   await page.tap('[data-newsplit]');await pause(page);await page.fill('#askv','Test split');await page.tap('[data-askok]');await pause(page,400);
