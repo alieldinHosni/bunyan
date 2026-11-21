@@ -7505,6 +7505,10 @@ await test("Muscle map: an exercise shows what it works, front and back; Strengt
   if(m.p<1||m.s<4)throw new Error("lit: "+JSON.stringify(m));
   if(!/Primary: Quads/.test(m.label)||!/Quads/.test(m.text))throw new Error("label: "+m.label);
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  /* This week has sets whatever day it is: on the week's first day the seeded sessions
+     are all last week's, so one is logged today (a copy of the latest). */
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),u=await import("/js/util.js");
+    const c=JSON.parse(JSON.stringify(st.S.sessions[0]));c.date=u.today();c.id="mm"+Date.now();st.S.sessions.unshift(c);st.saveDB();});
   await tapTab(page,"progress");await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.ptab="strength";(await import("/js/ui/render.js")).render();});await pause(page,400);
   const w=await page.evaluate(()=>{const s=document.querySelector(".pgbody .bmap");return s?[...s.querySelectorAll(".m.h1,.m.h2,.m.h3,.m.h4")].length:-1;});
   if(w<1)throw new Error("the week is not on the body");
