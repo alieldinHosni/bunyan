@@ -5159,6 +5159,23 @@ What C-10 adds:
   - the Coach browser tests;
   - every module chat.js imported before is still imported by one of the three files.
 
+**The knee rule, checked against the knowledge base (v303, 21 Nov, session/coach-knee).** This was the owner's open question: the knee rule (plan.js AVOID.knee) covers jumps, hops, plyometrics, pistol and sissy squats, skaters and mountain climbers, but not squats or lunges.
+- **What the knowledge base says:**
+  - injuries.js 1.4, knee: good technique, supportive footwear, "modifying exercise and activity when needed", and flexibility and strength training with a thorough warm-up.
+  - conditions.js 23.5, arthritis: no plyometrics, pain-free ranges only, no heavy repetitive joint loading, and an exercise that hurts for over an hour afterwards is modified or removed.
+  - Nothing takes squats or lunges away for a sore knee.
+- **Decision: the rule stays as it is.** It matches the books' "no plyometrics". Widening it to squats and lunges would be preference, which CLAUDE.md does not allow.
+- **What was wrong was the reply.** "Nothing in your program loads your knees much" was untrue to someone who had just said squats hurt. It now says "Nothing in your program is on the list the app keeps away from sore knees, so nothing needs swapping", and for knees adds the notes' advice (injuries 1.4) as a note.
+- **What the books do say is offered.** When the pain sentence names an exercise in today's workout, or in the one under way, the pain answer offers "An easier version of {ex}" (agent.js planEasier). Before a workout this is today's session with the easier version in its place; in a workout, a swap for today. The program is unchanged either way.
+- **Test:** new browser test "Coach, a sore knee from squats". It checks:
+  - the offer;
+  - the honest reply and its note;
+  - the easier version as a change to tap for today, with nothing changed before it;
+  - Arabic.
+- **Two tests corrected in the same branch:**
+  - The C-5 sore-spot test pinned exactly one offer. With the jump squat in today's workout, the easier-version offer is now a second, rightly, so the test checks the program offer is there.
+  - The C-8 Food chips test pinned ["eat","protein","rest"]. On the week's first two days (today, Saturday, the week's start), last week's check-in takes a place, as suggestFor intends. The test now holds on any day and at any hour. This failure was a calendar matter and would have turned main red today too.
+- **A third calendar test, fixed here because it turned this PR red:** "Muscle map … Strength shades this week's sets" found no sets this week on the week's first day, since every seeded session is last week's. The test now logs one session today (a copy of the latest), so it holds on any day. Main is red on it today too.
 **Backlog item 5: see an exercise before adding it (v304, 21 Nov, session/picker-info).** From .claude/MASTER-BACKLOG.md, still open since September. Before, a tap on a picker row added the exercise at once, with no way to look first.
 - **Every picker row has an ⓘ** (sheets.js exRow), the same picker for Add exercise and Replace. It is a button of its own beside the row's, not inside it, so a tap on it never reaches the row.
   - Its target is 44 × 44 px (`--hit`), in the accent colour, at the row's end, and mirrored in Arabic.

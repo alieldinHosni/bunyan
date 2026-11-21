@@ -1039,6 +1039,14 @@ function aSituation(a,q,it,sit){
     /* An area named: the same offer as the pain answer's, to keep the program off it. */
     var ar=areaOf(fold(q));
     if(ar)act(a,fill(t("Swap what loads my {area} across my program"),{area:t(ar[1])}),{"data-chatsay":"swap exercises that load my "+ar[0]});
+    /* An exercise named ("… when I squat") that is in today's workout: an easier version
+       of it, for today (agent.js planEasier), the books' "change an exercise when it
+       hurts". Not offered for one that isn't today's: that would only say so. */
+    var nx=namedExercises(q).filter(function(e){return !isActivity(e.name);})[0];
+    if(nx){var lv=!!(S.active&&S.active.entries.some(function(x){return x.name===nx.name;})),pl0=null;
+      try{pl0=planOn(split(),today());}catch(e){pl0=null;}
+      var td=!S.active&&pl0&&pl0.day&&!pl0.rest&&pl0.kind!=="done"&&pl0.day.ex.some(function(x){return x.name===nx.name;});
+      if(lv||td)act(a,fill(t("An easier version of {ex}"),{ex:exName(nx.name)}),{"data-chatsay":"an easier version of "+nx.name});}
     return a;}
   if(sit.kind==="food"){
     p(a,t("Sounds like today got away from you. Want me to work out what's left in the week, or just log it and move on?"));
