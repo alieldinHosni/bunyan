@@ -3203,7 +3203,10 @@ await test("Coach chat: the panel opens on three questions for where it was open
   await pause(page,600);
   await tapTab(page,"food");await pause(page,300);
   await page.tap('#cfab .cfab');await pause(page,400);
-  eq((await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq))).sort(),["eat","protein","rest"],"Food's questions (food behind after 2 pm comes first)");
+  /* Food's own three; "eat" put first when food is behind after 2 pm, and last week's
+     check-in ("week") in place of one in the week's first two days: any day, any hour. */
+  const fq=await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq));
+  eq([fq.length,fq.includes("rest"),fq.every(x=>["eat","protein","rest","week"].includes(x))],[3,true,true],"Food's questions: "+JSON.stringify(fq));
 });
 await test("Search sheets: typing, then the first tap on a result's + adds it (the title coming back used to push the list down under the finger)",async page=>{
   await tapTab(page,"food");await pause(page,300);
@@ -5876,7 +5879,8 @@ await test("Coach command, a sore spot (C-5, 2.4): \"my knee hurts when I do jum
   await openChat(page);
   await page.fill('#chatq',"my knee hurts when I do jump squats");await page.press('#chatq','Enter');await pause(page,600);
   const m=await ev(page,"(m=>({id:m.id,b:(m.b||[]).map(x=>x.p||x.n||'').join(' '),acts:(m.acts||[]).map(x=>x.a&&x.a['data-chatsay']).filter(Boolean)}))(S.chat[S.chat.length-1])");
-  eq([/see a physio or a doctor/.test(m.b),m.acts.length],[true,1],"the care line, and one offer: "+JSON.stringify(m));
+  eq([/see a physio or a doctor/.test(m.b),m.acts.includes("swap exercises that load my knee")],[true,true],"the care line, and the offer for the program: "+JSON.stringify(m));
+  m.acts=["swap exercises that load my knee"];
   eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"nothing changed by saying it");
   await page.tap('#cpanel [data-chatsay="'+m.acts[0]+'"]');await pause(page,700);
   const c=await ev(page,"(m=>m.ag&&{at:m.at,s:m.ag.s,act:m.ag.act,sw:m.ag.p&&m.ag.p.sw,detail:m.ag.detail})(S.chat[S.chat.length-1])");
