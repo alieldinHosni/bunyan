@@ -5158,3 +5158,17 @@ What C-10 adds:
   - the coach evaluation, unchanged (433/434);
   - the Coach browser tests;
   - every module chat.js imported before is still imported by one of the three files.
+
+**The knee rule, checked against the knowledge base (v303, 21 Nov, session/coach-knee).** This was the owner's open question: the knee rule (plan.js AVOID.knee) covers jumps, hops, plyometrics, pistol and sissy squats, skaters and mountain climbers, but not squats or lunges.
+- **What the knowledge base says:**
+  - injuries.js 1.4, knee: good technique, supportive footwear, "modifying exercise and activity when needed", and flexibility and strength training with a thorough warm-up.
+  - conditions.js 23.5, arthritis: no plyometrics, pain-free ranges only, no heavy repetitive joint loading, and an exercise that hurts for over an hour afterwards is modified or removed.
+  - Nothing takes squats or lunges away for a sore knee.
+- **Decision: the rule stays as it is.** It matches the books' "no plyometrics". Widening it to squats and lunges would be preference, which CLAUDE.md does not allow.
+- **What was wrong was the reply.** "Nothing in your program loads your knees much" was untrue to someone who had just said squats hurt. It now says "Nothing in your program is on the list the app keeps away from sore knees, so nothing needs swapping", and for knees adds the notes' advice (injuries 1.4) as a note.
+- **What the books do say is offered.** When the pain sentence names an exercise in today's workout, or in the one under way, the pain answer offers "An easier version of {ex}" (agent.js planEasier). Before a workout this is today's session with the easier version in its place; in a workout, a swap for today. The program is unchanged either way.
+- **Test:** new browser test "Coach, a sore knee from squats". It checks:
+  - the offer;
+  - the honest reply and its note;
+  - the easier version as a change to tap for today, with nothing changed before it;
+  - Arabic.
