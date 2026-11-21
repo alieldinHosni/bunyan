@@ -5193,3 +5193,16 @@ What C-10 adds:
   - Replace: "Swap for this", with nothing changed until tapped, then swapped in place;
   - Arabic: at the row's end, with an Arabic label.
   - Also checked on screenshots in English and Arabic.
+
+**3D figure F-4, the data half: muscles by role (21 Nov, session/figure-roles2, no app change).** From docs/FIGURE-V3.md 2.4.
+- **What it adds.** `js/data/mannequin/roles.js` gives `rolesFor(primary, secondary, refine, family)` → {figure muscle: {level, role}}:
+  - the prime mover (1) is the library's m;
+  - the synergists (.5) are its x, through the record's refinement, exactly as rig.js highlight lights them;
+  - the stabilisers (.3) come from a short fixed list per family, each with its knowledge entry.
+- **The stabiliser lists:**
+  - core in the hip-extension families: squat, hinge, lunge, bridge, kettlebell swing, pull-through, step-up and hyperextension (anatomy 7.4);
+  - hip abductors and adductors in the squat (anatomy 7.3, the squat example);
+  - the rotator cuff, drawn as the rear delt since the figure has none, in the presses: press, bench press, push-up, dip, cable press, bench dip (anatomy 7.4).
+- **What it does not do.** No muscle is invented. Where the library already names a family's stabiliser (73 times), the library's role is kept.
+- **Not read by the renderer yet,** so nothing on screen changes. The renderer half (role and action uniforms, the phase legend) is the next F-4 step, and the riskier one.
+- **Test:** new unit file data/test/roles, run for all 209 figure exercises found in the library. Prime and synergists equal highlight's, nothing else appears but the family's stabilisers, and every stabiliser is a figure muscle with a source.
