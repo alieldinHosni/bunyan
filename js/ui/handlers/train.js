@@ -319,14 +319,22 @@ function register(){
       body:t("It joins your library under the muscle you have filtered to. No illustration, everything else works."),
       cta:t("Add it"),act:"customex",data:{from:V.sd}});return;});
   /* One the person's limits or a condition rule out asks first (sheets.js marks it). */
-  key("pickex",function(D){
-    if(avoids(D.pickex,limitsOf(S.profile))&&!(V.sd&&V.sd.pkok)){var keep=V.sd;
-      askConfirm({title:t("Add {x} anyway?").replace("{x}",exName(D.pickex)),
+  /* A pick from the picker (its row, or the Add in the sheet its ⓘ opened). */
+  function pickEx(name){
+    if(avoids(name,limitsOf(S.profile))&&!(V.sd&&V.sd.pkok)){var keep=V.sd;
+      askConfirm({title:t("Add {x} anyway?").replace("{x}",exName(name)),
         body:t("It goes against what your plan works around: a health condition or a sore spot you named. The plan's other exercises keep away from it."),
-        cta:t("Add it anyway"),act:"pickforce",data:{name:D.pickex,sd:keep},mid:t("Pick another"),midact:"pickback"});return;}
-    addExercise(D.pickex);return;});
+        cta:t("Add it anyway"),act:"pickforce",data:{name:name,sd:keep},mid:t("Pick another"),midact:"pickback"});return;}
+    addExercise(name);}
+  key("pickex",function(D){pickEx(D.pickex);return;});
   ACT.pickforce=function(v,d){if(!d)return;openSheet("exercise",Object.assign({},d.sd||{},{pkok:true}));addExercise(d.name);};
   ACT.pickback=function(v,d){if(d)openSheet("exercise",d.sd||{});};
+  /* Backlog item 5: the picker's ⓘ opens the exercise and adds nothing; the picker as it
+     was is kept for Back and for the sheet's own Add or Swap. */
+  key("pkinfo",function(D){var keep=V.sd||{},nm=D.pkinfo;V.exsteps=false;V.exmiss=false;
+    loadInstructions(function(){openSheet("exdetail",{name:nm,ret:{s:"exercise",d:keep}});});return;});
+  key("pkadd",function(D){var rt=V.sd&&V.sd.ret;if(!rt||rt.s!=="exercise")return;
+    openSheet("exercise",rt.d||{});pickEx(D.pkadd);return;});
   key("replaceex",function(D){
     var dR=dayOf(V.dayId),eR2=dR?dR.ex.filter(function(x){return x.id===D.replaceex;})[0]:null;
     /* The frame opens a replacement with the current exercise's muscle already

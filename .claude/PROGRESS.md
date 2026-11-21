@@ -5158,3 +5158,21 @@ What C-10 adds:
   - the coach evaluation, unchanged (433/434);
   - the Coach browser tests;
   - every module chat.js imported before is still imported by one of the three files.
+
+**Backlog item 5: see an exercise before adding it (v304, 21 Nov, session/picker-info).** From .claude/MASTER-BACKLOG.md, still open since September. Before, a tap on a picker row added the exercise at once, with no way to look first.
+- **Every picker row has an ⓘ** (sheets.js exRow), the same picker for Add exercise and Replace. It is a button of its own beside the row's, not inside it, so a tap on it never reaches the row.
+  - Its target is 44 × 44 px (`--hit`), in the accent colour, at the row's end, and mirrored in Arabic.
+  - The row and its ⓘ sit in a `.pkline`, which carries the divider.
+- **Tapping the ⓘ** opens the exercise sheet that already exists (exdetail) and adds nothing. The sheet keeps the picker as it was (`ret:{s:"exercise",d:…}`).
+  - "‹ Back to the list" returns to the picker.
+  - The sheet's own button, "Add to workout" (or "Swap for this" when replacing), reopens the picker as it was and picks there (handlers/train.js `pickEx`, which the row's tap now shares). So the health-condition check, swap in place and live workout all behave exactly as a row tap does.
+- **Tapping the row** still adds at once.
+- **Test:** new browser test "picker (backlog item 5)". It checks:
+  - every row's ⓘ, its size, and that it is outside the row's button;
+  - that the ⓘ opens the sheet and adds nothing;
+  - Back to the list;
+  - Add from the sheet;
+  - that the row still adds;
+  - Replace: "Swap for this", with nothing changed until tapped, then swapped in place;
+  - Arabic: at the row's end, with an Arabic label.
+  - Also checked on screenshots in English and Arabic.
