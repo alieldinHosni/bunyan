@@ -5175,3 +5175,4 @@ What C-10 adds:
 - **Two tests corrected in the same branch:**
   - The C-5 sore-spot test pinned exactly one offer. With the jump squat in today's workout, the easier-version offer is now a second, rightly, so the test checks the program offer is there.
   - The C-8 Food chips test pinned ["eat","protein","rest"]. On the week's first two days (today, Saturday, the week's start), last week's check-in takes a place, as suggestFor intends. The test now holds on any day and at any hour. This failure was a calendar matter and would have turned main red today too.
+- **A third calendar test, fixed here because it turned this PR red:** "Muscle map … Strength shades this week's sets" found no sets this week on the week's first day, since every seeded session is last week's. The test now logs one session today (a copy of the latest), so it holds on any day. Main is red on it today too.
