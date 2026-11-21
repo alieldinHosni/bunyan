@@ -566,7 +566,14 @@ function planLimit(c){
     var to=standIn(e.name,S.gear,lim,taken);
     if(to){taken[to]=1;sw.push({day:d.id,id:e.id,from:e.name,to:to});}else kept.push(e.name);});});
   var area=t(AREANAME[c.area]);
-  if(!sw.length&&!kept.length)return say(fill(t("Nothing in your program loads your {a} much. I'll keep new suggestions away from it too."),{a:area}));
+  /* Nothing in the program is on the list kept away from that area (plan.js AVOID: for
+     knees, jumps, hops and other plyometrics). Said as that, not as "nothing loads it":
+     a squat loads a knee, and the person may have just said so (owner's question, 20 Nov).
+     The books do not take squats or lunges away for a sore knee; they ask for good
+     technique and a change when it hurts (js/knowledge/injuries.js 1.4), which is said. */
+  if(!sw.length&&!kept.length){var sy=say(fill(t("Nothing in your program is on the list the app keeps away from sore {a}, so nothing needs swapping. I'll keep new suggestions away from it too."),{a:area}));
+    if(c.area==="knee")sy.notes=[t("For knees the training notes say: good technique, and change an exercise when it hurts. Strength and flexibility work with a thorough warm-up helps prevent knee injuries.")];
+    return sy;}
   if(!sw.length)return say(fill(t("What loads your {a} has no close stand-in with your kit: {list}. Go lighter on it, or ask me to remove it."),{a:area,list:kept.map(exName).join(", ")}));
   return confirm("plan.avoid",{area:c.area,sw:sw},{lead:fill(t(sw.length===1?"Swap the exercise that loads your {a}?":"Swap the {n} exercises that load your {a}?"),{n:sw.length,a:area}),
     item:sw.slice(0,4).map(function(x){return exName(x.from)+ARROW()+exName(x.to);}).join(" · ")+(sw.length>4?" …":""),

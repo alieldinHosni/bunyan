@@ -3203,7 +3203,10 @@ await test("Coach chat: the panel opens on three questions for where it was open
   await pause(page,600);
   await tapTab(page,"food");await pause(page,300);
   await page.tap('#cfab .cfab');await pause(page,400);
-  eq((await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq))).sort(),["eat","protein","rest"],"Food's questions (food behind after 2 pm comes first)");
+  /* Food's own three; "eat" put first when food is behind after 2 pm, and last week's
+     check-in ("week") in place of one in the week's first two days: any day, any hour. */
+  const fq=await page.$$eval('#cpanel .cp-sug [data-chatq]',a=>a.map(b=>b.dataset.chatq));
+  eq([fq.length,fq.includes("rest"),fq.every(x=>["eat","protein","rest","week"].includes(x))],[3,true,true],"Food's questions: "+JSON.stringify(fq));
 });
 await test("Search sheets: typing, then the first tap on a result's + adds it (the title coming back used to push the list down under the finger)",async page=>{
   await tapTab(page,"food");await pause(page,300);
@@ -5876,7 +5879,8 @@ await test("Coach command, a sore spot (C-5, 2.4): \"my knee hurts when I do jum
   await openChat(page);
   await page.fill('#chatq',"my knee hurts when I do jump squats");await page.press('#chatq','Enter');await pause(page,600);
   const m=await ev(page,"(m=>({id:m.id,b:(m.b||[]).map(x=>x.p||x.n||'').join(' '),acts:(m.acts||[]).map(x=>x.a&&x.a['data-chatsay']).filter(Boolean)}))(S.chat[S.chat.length-1])");
-  eq([/see a physio or a doctor/.test(m.b),m.acts.length],[true,1],"the care line, and one offer: "+JSON.stringify(m));
+  eq([/see a physio or a doctor/.test(m.b),m.acts.includes("swap exercises that load my knee")],[true,true],"the care line, and the offer for the program: "+JSON.stringify(m));
+  m.acts=["swap exercises that load my knee"];
   eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"nothing changed by saying it");
   await page.tap('#cpanel [data-chatsay="'+m.acts[0]+'"]');await pause(page,700);
   const c=await ev(page,"(m=>m.ag&&{at:m.at,s:m.ag.s,act:m.ag.act,sw:m.ag.p&&m.ag.p.sw,detail:m.ag.detail})(S.chat[S.chat.length-1])");
@@ -5921,6 +5925,32 @@ await test("Coach command, away (C-5, 2.4): \"travelling next week, no gym\" set
   await page.evaluate(async()=>{const st=await import("/js/state.js");delete st.S.travel;st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();});
   const a=await ask("مسافر الاسبوع الجاي ومفيش جيم");
   eq([a.ag&&a.ag.act,a.ag&&a.ag.p&&a.ag.p.from,/[؀-ۿ]/.test(a.ag&&a.ag.lead||"")],["travel.set",wk[0],true],"in Arabic: "+JSON.stringify(a));
+});
+await test("Coach, a sore knee from squats (owner, 20 Nov): the coach does not say nothing loads the knee; it says nothing is on the list it keeps away from a sore knee, gives the training notes' advice, and offers an easier version of the squat in today's workout; Arabic the same",async page=>{
+  const sq=await page.evaluate(async()=>{const st=await import("/js/state.js"),dp=await import("/js/engine/dayplan.js"),u=await import("/js/util.js"),Sp=await import("/js/data/splits.js");
+    const pl=dp.planOn(st.split(),u.today());if(!pl.day||pl.rest||pl.kind==="done")return null;
+    let e=pl.day.ex.find(x=>/Squat/.test(x.name)&&!/Jump|Pistol|Sissy/.test(x.name));if(!e){pl.day.ex.push(Sp.ex("Barbell Squat",3,6,10));e=pl.day.ex[pl.day.ex.length-1];}
+    st.S.profile.limits=[];st.saveDB();return e.name;});
+  if(!sq)throw new Error("the seeded profile has no workout today");
+  const prog0=await ev(page,"JSON.stringify(S.programs)");
+  await openChat(page);
+  await page.fill('#chatq',"my knee hurts when I squat");await page.press('#chatq','Enter');await pause(page,600);
+  const m=await ev(page,"(m=>({id:m.id,acts:(m.acts||[]).map(x=>x.a&&x.a['data-chatsay']).filter(Boolean)}))(S.chat[S.chat.length-1])");
+  eq(m.acts.includes("an easier version of "+sq),true,"an easier version of the squat offered: "+JSON.stringify(m));
+  await page.tap('#cpanel [data-chatsay="swap exercises that load my knee"]');await pause(page,700);
+  const s=await ev(page,"(m=>m.ag&&{s:m.ag.s,lead:m.ag.lead,notes:m.ag.notes||[]})(S.chat[S.chat.length-1])");
+  eq([s.s,/loads your knees much/.test(s.lead),/on the list the app keeps away from sore knees/.test(s.lead),/good technique, and change an exercise when it hurts/.test(s.notes.join(" "))],["say",false,true,true],"said as it is, with the notes' advice: "+JSON.stringify(s));
+  eq(await page.$$eval('#cpanel .ag-notes li',a=>a.length)>=1,true,"the advice shown");
+  await page.fill('#chatq',"my knee hurts when I squat");await page.press('#chatq','Enter');await pause(page,600);
+  await page.tap('#cpanel [data-chatsay="an easier version of '+sq+'"]');await pause(page,700);
+  const c=await ev(page,"(m=>m.ag&&{s:m.ag.s,act:m.ag.act,p:m.ag.p})(S.chat[S.chat.length-1])");
+  /* Before the workout: today's session with the squat's easier version in its place
+     (agent.js planEasier → session.fit), the program unchanged. */
+  eq([c&&c.s,c&&c.act,!!(c&&c.p&&c.p.swap&&c.p.swap[sq])],["confirm","session.fit",true],"the easier version, for today: "+JSON.stringify(c));
+  eq(await ev(page,"JSON.stringify(S.programs)"),prog0,"nothing changed before a tap");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();});
+  const a=await page.evaluate(async()=>{const c=await import("/js/ui/views/chat.js");const m=c.ask("ركبتي بتوجعني لما بعمل سكوات");return {acts:(m.acts||[]).map(x=>x.l)};});
+  eq(a.acts.some(l=>/أسهل/.test(l)),true,"in Arabic: "+JSON.stringify(a));
 });
 await test("Change workout judges each day against the muscles: after Full A today, every full-body day is too soon tomorrow, rest is the best fit, and one picked anyway asks first",async page=>{
   const setUp=async(kind)=>page.evaluate(async kind=>{
@@ -7469,6 +7499,10 @@ await test("Muscle map: an exercise shows what it works, front and back; Strengt
   if(m.p<1||m.s<4)throw new Error("lit: "+JSON.stringify(m));
   if(!/Primary: Quads/.test(m.label)||!/Quads/.test(m.text))throw new Error("label: "+m.label);
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  /* This week has sets whatever day it is: on the week's first day the seeded sessions
+     are all last week's, so one is logged today (a copy of the latest). */
+  await page.evaluate(async()=>{const st=await import("/js/state.js"),u=await import("/js/util.js");
+    const c=JSON.parse(JSON.stringify(st.S.sessions[0]));c.date=u.today();c.id="mm"+Date.now();st.S.sessions.unshift(c);st.saveDB();});
   await tapTab(page,"progress");await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.ptab="strength";(await import("/js/ui/render.js")).render();});await pause(page,400);
   const w=await page.evaluate(()=>{const s=document.querySelector(".pgbody .bmap");return s?[...s.querySelectorAll(".m.h1,.m.h2,.m.h3,.m.h4")].length:-1;});
   if(w<1)throw new Error("the week is not on the body");
