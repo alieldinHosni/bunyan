@@ -1,7 +1,7 @@
 /* Bunyan — the figure's muscles by role (docs/FIGURE-V3.md 2.4, F-4, the data half)
    What an exercise works, and how: the prime mover, the synergists that help it, and
    the stabilisers that hold still while they work (js/knowledge/anatomy.js MUSCLE_ROLES,
-   7.4). Data only: the renderer does not read it yet, so nothing on screen changes.
+   7.4). The renderer lights each muscle at its role's level (litFor, js/ui/mannequin.js).
 
    Which muscles: the library's own (exercises.json m and x, through the record's
    refinement, as rig.js highlight). The prime mover is its m, the synergists its x. A
@@ -43,4 +43,11 @@ function rolesFor(primary,secondary,refine,family){
   tags(primary).forEach(function(t){put(t,1,"prime");});
   return out;}
 
-export {familyOf, rolesFor, STAB};
+/* What the renderer lights, {figureTag: level}: the roles' levels (prime 1, synergist .5
+   as rig.js highlight gives them; a stabiliser .3, faintest). */
+function litFor(name,primary,secondary,refine){
+  var r=rolesFor(primary,secondary,refine,familyOf(name)),out={};
+  for(var k in r)out[k]=r[k].level;
+  return out;}
+
+export {familyOf, litFor, rolesFor, STAB};

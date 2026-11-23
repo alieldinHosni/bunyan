@@ -7639,6 +7639,15 @@ await test("Live figure: the Seated Chest Press moves in 3D in the exercise shee
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,500);
   eq((await mq(page)).length,0,"nothing left running");
 },{prefs:{palette:"red"}});
+await test("Live figure, lit by role (FIGURE-V3 F-4): the Romanian deadlift lights its prime mover in full, its helpers at half and the core, which holds it, faintly; nothing else",async page=>{
+  await checkFig(page,"Romanian Deadlift");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Romanian Deadlift"});});await pause(page,600);
+  const s=await waitLive(page);
+  eq([s.length,s[0].live,s[0].err],[1,true,""],"one live figure");
+  const lit=await page.evaluate(async()=>(await import("/js/ui/mannequin.js")).mannequins()[0].state().lit);
+  const lv=Object.values(lit).sort();
+  eq([lit.abs,lv.includes(1),lv.every(v=>v===1||v===.5||v===.3)],[.3,true,true],"prime 1, helpers .5, the core .3: "+JSON.stringify(lit));
+});
 await test("Live figure: a second exercise is the same figure on other equipment — the Seated Machine Row",async page=>{
   await checkFig(page,"Seated Machine Row");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Seated Machine Row"});});await pause(page,600);

@@ -1,4 +1,4 @@
-import {familyOf, rolesFor, STAB} from "../mannequin/roles.js";
+import {familyOf, litFor, rolesFor, STAB} from "../mannequin/roles.js";
 import {MUSCLE_TAGS, highlight} from "../mannequin/rig.js";
 import {FAMILIES, TABLE} from "../mannequin/moves.js";
 import {RECORDS} from "../mannequin/records.js";
@@ -28,6 +28,14 @@ function run(t,lib){
     "a squat: quads prime; glutes synergist (and gmed with them, the library's Glutes); core and adductors hold");
   const pr=rolesFor("Chest",["Triceps","Shoulders"],{Shoulders:"Front delts"},"benchPress");
   t.eq([pr.chest.role,pr.triceps.role,pr.frontdelt.role,pr.reardelt&&pr.reardelt.role],["prime","synergist","synergist","stabiliser"],"a bench press: the cuff, as the rear delt, holds");
-  t.eq(rolesFor("Biceps",[],{},"curl"),{biceps:{level:1,role:"prime"}},"a family with no stabilisers adds none");}
+  t.eq(rolesFor("Biceps",[],{},"curl"),{biceps:{level:1,role:"prime"}},"a family with no stabilisers adds none");
+  /* What the renderer lights (litFor): the three exercises the app shows today. Each is
+     lit as before (highlight), plus its family's stabilisers at .3, and nothing else. */
+  for(const n of ["Romanian Deadlift","Pullups","Incline Dumbbell Press"]){
+    const L=lib[n],rec=RECORDS[n]||{},hl=highlight(L.m,L.x,rec.refine),lit=litFor(n,L.m,L.x,rec.refine);
+    const extra=Object.keys(lit).filter(g=>!(g in hl)),same=Object.keys(hl).every(g=>lit[g]===hl[g]);
+    t.eq([same,extra.every(g=>lit[g]===.3)],[true,true],n+": lit as before, plus "+(extra.join(", ")||"nothing")+" faintly");}
+  const rdl=lib["Romanian Deadlift"];
+  t.eq(litFor("Romanian Deadlift",rdl.m,rdl.x,(RECORDS["Romanian Deadlift"]||{}).refine).abs,.3,"the Romanian deadlift: the core holds, faintly");}
 
 export {run};
