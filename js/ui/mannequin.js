@@ -36,7 +36,7 @@
    data-mq-turn lets a drag turn the figure (the exercise sheet); the workout screen
    leaves it off, because a sideways swipe there moves between exercises. */
 import {phaseAt, sceneAt, framePoints, repCamera, arrowShape} from "../data/mannequin/motion.js";
-import {highlight} from "../data/mannequin/rig.js";
+import {litFor} from "../data/mannequin/roles.js";
 import {recordFor, recordForUnchecked} from "../data/mannequin/records.js";
 import {BODY} from "../data/mannequin/body.js";
 import {NB} from "../data/mannequin/skin.js";
@@ -254,7 +254,10 @@ function Mannequin(el){
   var name=el.getAttribute("data-mq"),rec=el.hasAttribute("data-mq-unchecked")?recordForUnchecked(name):recordFor(name);
   var canvas=el.querySelector("canvas"),btn=el.querySelector(".fig3d-play");
   var gl=null,P={},body=null,boneTex=null,shadow=null,shapes={},vaoBody=null,vaoFloor=null,vaoArrow=null,bufArrow=null;
-  var hl=highlight(muscleOf(name),secondaryOf(name),rec&&rec.refine),hlv=new Float32Array(21);
+  /* Lit by role (roles.js, FIGURE-V3 2.4): the prime mover in full, its synergists at
+     half, as before, and the family's stabilisers faintly (core in a hinge, the cuff in a
+     press). The same uniform as before: no shader change. */
+  var hl=litFor(name,muscleOf(name),secondaryOf(name),rec&&rec.refine),hlv=new Float32Array(21);
   var theme=null,look="",pts=null;
   /* the view: where it is, where it is going, and how fast it is turning */
   var view0={yaw:(rec&&rec.cam&&rec.cam.yaw!=null)?rec.cam.yaw:60,pitch:(rec&&rec.cam&&rec.cam.pitch!=null)?rec.cam.pitch:8,zoom:1};
@@ -265,7 +268,7 @@ function Mannequin(el){
   var self={el:el,name:name,sync:nothing,wake:nothing,toggle:nothing,setU:nothing,setHL:nothing,
     probe:function(){return null;},
     dispose:function(){dead=true;},
-    state:function(){return {live:!!gl&&!dead&&!!body,playing:playing,frames:frames,q:dpr,err:err,w:W,h:H,yaw:view.yaw,look:look};}};
+    state:function(){return {live:!!gl&&!dead&&!!body,playing:playing,frames:frames,q:dpr,err:err,w:W,h:H,yaw:view.yaw,look:look,lit:Object.assign({},hl)};}};
   function fail(e){
     err=String(e&&e.message||e);dead=true;el.removeAttribute("data-live");el.setAttribute("data-still","1");stop();
     try{var lc=gl&&gl.getExtension("WEBGL_lose_context");if(lc)lc.loseContext();}catch(x){}

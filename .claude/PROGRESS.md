@@ -5206,3 +5206,20 @@ What C-10 adds:
 - **What it does not do.** No muscle is invented. Where the library already names a family's stabiliser (73 times), the library's role is kept.
 - **Not read by the renderer yet,** so nothing on screen changes. The renderer half (role and action uniforms, the phase legend) is the next F-4 step, and the riskier one.
 - **Test:** new unit file data/test/roles, run for all 209 figure exercises found in the library. Prime and synergists equal highlight's, nothing else appears but the family's stabilisers, and every stabiliser is a figure muscle with a source.
+
+**3D figure F-4, renderer step 1: lit by role (v305, 23 Nov, session/figure-roles-lit).** The owner said "Continue" to the step recommended: one small renderer change, the iPhone check before merging.
+- **The change.** js/ui/mannequin.js now takes what it lights from roles.js `litFor` (new) instead of rig.js `highlight`:
+  - the prime mover is at 1 and its synergists at .5, exactly as before;
+  - the family's stabilisers are lit faintly, at .3.
+- **Same uniform (uHL), no shader change, no new WebGL call.** That is deliberate: the 3D code is what the owner's iPhone ran short on (17 Nov).
+- **What changes on screen.** Of the three exercises the app shows a figure for today:
+  - the Romanian deadlift gains a faint core (abs, obliques);
+  - Pull-ups gain nothing (no stabilisers in that family);
+  - the Incline Dumbbell Press gains nothing, since the library already lights the whole shoulder, so the cuff's .3 is outranked.
+  - The difference is slight on a screenshot, as "faint" intends.
+- **`state()` reports `lit`** (read-only), for the test.
+- **Tests:**
+  - Unit: litFor equals highlight plus the stabilisers at .3 for the three shown exercises.
+  - New browser test "Live figure, lit by role": the Romanian deadlift's live figure, prime 1, helpers .5, core .3.
+  - All 9 Live figure tests pass in Chromium. WebKit (the iPhone check) runs in CI.
+- **Still to do in F-4:** the action (lifting, lowering, hold) in the shading, and the phase legend. Both touch the shader, so each comes as a step of its own, after the owner has used this one.
