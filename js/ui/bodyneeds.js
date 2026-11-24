@@ -46,7 +46,9 @@ function fuelLead(n){
   return '<div class="ffuel-l" data-k="fuel:'+n.kind+'"><span class="fneed-i ffuel-i" aria-hidden="true">'+glyph(FGL[n.kind]||"bowl")+'</span>'
    +'<div class="fneed-t"><h2 class="ffuel-h">'+nums(fuelLine(n))+'</h2>'
    +(n.more||[]).map(function(k){return '<p class="ffuel-p">'+nums(t(k))+'</p>';}).join("")
-   +'<span class="ffuel-src" data-src="'+esc(n.source)+'">'+esc(t(n.book?"From the textbook":"From your log and plan"))+'</span></div></div>';}
+   +'<span class="ffuel-src" data-src="'+esc(n.source)+'">'+esc(t(n.book?"From the textbook":"From your log and plan"))+'</span></div>'
+   /* Hide it for today (owner, 24 Nov), with Undo; back tomorrow. */
+   +'<button class="ffuel-x" data-fuelhide="1" aria-label="'+esc(t("Hide for today"))+'"><span aria-hidden="true">\u00d7</span></button></div>';}
 function nums(x){return esc(x).replace(/&#?\w+;|[0-9][0-9.,:]*/g,function(m){return m.charAt(0)==="&"?m:'<span class="num">'+m+'</span>';});}
 function bodyNeeds(eaten){
   var g=S.goals||{},sigs=headOn("food"),of=function(id){return (sigs.filter(function(s){return s.id===id;})[0]||{}).src||null;};

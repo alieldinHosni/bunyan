@@ -274,6 +274,9 @@ function Mannequin(el){
     state:function(){return {live:!!gl&&!dead&&!!body,playing:playing,frames:frames,q:dpr,err:err,w:W,h:H,yaw:view.yaw,look:look,lit:Object.assign({},hl),phase:lastPhase};}};
   function fail(e){
     err=String(e&&e.message||e);dead=true;el.removeAttribute("data-live");el.setAttribute("data-still","1");stop();
+    /* Said on the photos, so a phone that cannot draw it tells why (owner, 24 Nov: the
+       Romanian deadlift showed its photos on the iPhone). */
+    el.setAttribute("data-why",t("The 3D figure couldn't start on this phone")+" ("+err.slice(0,60)+")");
     try{var lc=gl&&gl.getExtension("WEBGL_lose_context");if(lc)lc.loseContext();}catch(x){}
     gl=null;}
   if(!rec||!canvas){err="no record";dead=true;el.setAttribute("data-still","1");return self;}
@@ -630,7 +633,7 @@ function syncMannequins(){
   for(var j=0;j<els.length;j++){
     var el=els[j];
     if(el._mq){el._mq.sync&&el._mq.sync();continue;}
-    if(!supported()){el.setAttribute("data-still","1");continue;}
+    if(!supported()){el.setAttribute("data-still","1");el.setAttribute("data-why",t("This browser can't show the 3D figure (no WebGL2)"));continue;}
     if(el._mqq)continue;
     el._mqq=true;QUEUE.push(el);}
   if(QUEUE.length&&!queued){

@@ -85,10 +85,35 @@ for(let r=0;r<ROUNDS&&!crashed;r++){
   }catch(e){ev.push("STEP "+String(e.message).split("\n")[0].slice(0,200));}
     if(r<2)await weigh("food plan");
   if(r%5===4)console.log(LABEL,"round",r+1,"navs",navs,"events",ev.length,"nodes",await page.evaluate(()=>document.querySelectorAll("*").length).catch(()=>"?"));}
+/* The slide between Training and its plan page, tapped as the owner does (owner, 24 Nov:
+   "the next page shakes left and right, and shakes again when I try to get back"). Every
+   frame, where the page is (its own transform, and the still copy of the page it left),
+   and whether anything has moved sideways that should not: the window's scroll and
+   WebKit's visual viewport. One slide is one movement: the page's position only ever
+   goes one way, and nothing scrolls sideways. */
+const shakes=[];
+if(!crashed){
+  const rec=()=>page.evaluate(()=>{window.__xs=[];const t0=performance.now();
+    (function f(){const a=document.getElementById("app"),g=document.querySelector(".stillcopy"),vv=window.visualViewport;
+      window.__xs.push([Math.round(performance.now()-t0),Math.round(new DOMMatrix(getComputedStyle(a).transform).m41),
+        g?Math.round(new DOMMatrix(getComputedStyle(g).transform).m41):null,window.scrollX,vv?Math.round(vv.offsetLeft):0,vv?Math.round(vv.pageLeft):0]);
+      if(performance.now()-t0<1400)requestAnimationFrame(f);})();});
+  const judge=async what=>{const xs=await page.evaluate(()=>window.__xs).catch(()=>[]);
+    const xsm=xs.filter(x=>x[2]!==null).map(x=>x[1]);   /* from the slide's start: before it, the old page sits at 0 */let dir=0,turns=0;
+    for(let i=1;i<xsm.length;i++){const d=Math.sign(xsm[i]-xsm[i-1]);if(!d)continue;if(dir&&d!==dir)turns++;dir=d;}
+    const side=xs.filter(x=>x[3]||x[4]||x[5]).length;
+    if(turns||side)shakes.push(what+": "+turns+" turns, "+side+" frames moved sideways; "+JSON.stringify(xs.filter((x,i,a)=>i===0||x[1]!==a[i-1][1]||x[3]||x[4]||x[5]).slice(0,40)));};
+  try{
+    await tab("train");await page.waitForTimeout(800);
+    for(let k=0;k<5;k++){
+      await rec();await page.tap('.pgc [data-tplan="program"]',{timeout:5000});await page.waitForTimeout(1500);await judge("into the plan "+k);
+      await rec();await page.tap('#app .dhead [data-back]',{timeout:5000});await page.waitForTimeout(1500);await judge("back to Training "+k);}
+  }catch(e){ev.push("SLIDE "+String(e.message).split("\n")[0].slice(0,200));}}
+shakes.forEach(s=>console.log("  SHAKE",s));
 for(const k in seen)console.log("  weight",k.padEnd(14),"blur",seen[k].blur,"pictures built ahead",seen[k].offImgs,"elements",seen[k].nodes);
 console.log("==",LABEL,"rounds done; crashes",crashed,"reloads",navs-1,"events",ev.length,"slow taps",slow.length,"time",Math.round((Date.now()-t0)/1000)+"s");
 [...new Set(ev)].slice(0,25).forEach(e=>console.log("  ",e));
 slow.slice(0,10).forEach(s=>console.log("  slow",s));
 [...new Set(heavy)].forEach(s=>console.log("  TOO HEAVY",s));
 await browser.close();
-process.exit(crashed||navs>1||ev.length||heavy.length?1:0);
+process.exit(crashed||navs>1||ev.length||heavy.length||shakes.length?1:0);
