@@ -183,6 +183,8 @@ function normalize(o){
   if(o.logFixV!=null&&!(typeof o.logFixV==="number"&&o.logFixV>=1&&o.logFixV%1===0))delete o.logFixV;
   /* The coach chat's kept conversation (js/ui/views/chat.js): a list, or nothing. */
   if(o.chat!=null&&!Array.isArray(o.chat))delete o.chat;
+  /* The day the timed food note was hidden (owner, 24 Nov): a date, or nothing. */
+  if(o.fuelHide!=null&&!/^\d{4}-\d\d-\d\d$/.test(String(o.fuelHide)))delete o.fuelHide;
   /* The week whose check-in was last read (its first date): the coach offers the next. */
   if(o.ckSeen!=null&&!/^\d{4}-\d\d-\d\d$/.test(String(o.ckSeen)))delete o.ckSeen;
   /* The weekly check-in: the week marked done, and the changes made from it that week. */

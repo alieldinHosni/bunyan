@@ -144,6 +144,10 @@ function openBarcodePrompt(){
 /* What this module answers. app.js calls register() once, at boot, in the order
    the branches are tried in (see registry.js). */
 function register(){
+  /* The timed food note, hidden for today on Training and Food (owner, 24 Nov), with
+     Undo; it is back tomorrow (js/engine/head.js fuelOn). */
+  key("fuelhide",function(){var was=S.fuelHide||null;S.fuelHide=today();saveDB();render();
+    toast(t("Hidden for today. It's back tomorrow."),function(){if(was)S.fuelHide=was;else delete S.fuelHide;saveDB();render();});return;});
   LENT.logFood=logFood;
   /* Deleting a progress photo. Asked first: the photo is on this phone only, so there
      is nothing to undo from. */

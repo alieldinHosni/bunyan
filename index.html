@@ -5137,6 +5137,9 @@ body.noanim .art.go path,body.noanim .art.go .e,body.noanim .art.go :is(.a.c,.h1
 .hgreet-art{position:absolute;z-index:-1;inset-inline-end:-10px;top:-18px;width:190px;height:auto;opacity:.7;
   -webkit-mask-image:radial-gradient(130% 115% at 100% 0%,#000 42%,transparent 78%);mask-image:radial-gradient(130% 115% at 100% 0%,#000 42%,transparent 78%)}
 [dir="rtl"] .hgreet-art{-webkit-mask-image:radial-gradient(130% 115% at 0% 0%,#000 42%,transparent 78%);mask-image:radial-gradient(130% 115% at 0% 0%,#000 42%,transparent 78%)}
+/* The day's reminder at the foot of Training keeps the page's gap above it (owner, 24 Nov:
+   it sat on the program card). */
+.hnote{margin-top:var(--s4)}
 .hnote.gold{border-color:var(--gold)}
 .hnote.gold h3{color:var(--gold)}
 .hstack>.thero2,.hstack>.twk{margin:0}
@@ -5283,6 +5286,14 @@ body.noanim .art.go path,body.noanim .art.go .e,body.noanim .art.go :is(.a.c,.h1
 /* The day's fuel (WP-5): the timed note or the rest day leads the card, above what is behind. */
 .ffuel{margin:var(--s3) 0 0;padding:var(--s3);border-radius:var(--r4);text-align:start}
 .ffuel-l{display:flex;align-items:flex-start;gap:var(--s3)}
+/* The timed note's ×, hide for today (owner, 24 Nov): Food's card, and beside Training's
+   line, each a button of its own. */
+.ffuel-x,.tdc-fuel-x{flex:none;width:var(--hit);height:var(--hit);display:grid;place-items:center;padding:0;border:0;background:transparent;
+  color:var(--dim);font-size:22px;line-height:1;margin-inline-start:auto}
+.ffuel-l .fneed-t{flex:1;min-width:0}
+.tdc-fuelw{display:flex;align-items:center}
+.tdc-fuelw>.tdc-fuel{flex:1;min-width:0}
+.tdc-fuelw>.tdc-fuel-x{margin-top:var(--s3)}
 .fneed .ffuel-l{padding-bottom:var(--s3);margin-bottom:var(--s3);border-bottom:1px solid var(--hair-hi)}
 .ffuel-h{margin:0;font-family:var(--display);font-size:16px;line-height:1.3;color:var(--text)}
 .ffuel-p{margin:var(--s1) 0 0;font-size:13px;line-height:1.45;color:var(--sub)}
@@ -6060,6 +6071,9 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
    fallback only (data-still: no graphics, an error, or not drawn in time). */
 .fig3d:not([data-live]):not([data-still]) .fig3d-still{visibility:hidden}
 .fig3d[data-still]:not([data-live]){aspect-ratio:8/3}
+/* Why it fell back (an error, or no WebGL2), on the photos (owner, 24 Nov). */
+.fig3d[data-why]:not([data-live])::after{content:attr(data-why);position:absolute;inset-inline:var(--s2);top:var(--s2);padding:var(--s1) var(--s2);
+  border-radius:var(--r2);background:var(--surface);color:var(--text);font-size:12px;line-height:1.35;pointer-events:none}
 .fig3d-still{display:grid;grid-template-columns:1fr 1fr;gap:2px;height:100%}
 .fig3d-still figure{position:relative;margin:0;min-width:0}
 .fig3d-still img{width:100%;height:100%;object-fit:cover;display:block}

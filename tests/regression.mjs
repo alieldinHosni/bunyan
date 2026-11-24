@@ -5040,7 +5040,7 @@ await test("Today card: every state — a training day, nothing leading, a light
       const ck=await page.evaluate(()=>{const c=document.querySelector('#app [data-k="today"]');
         return {startday:!!c.querySelector("[data-startday]"),another:!!c.querySelector("[data-another]"),meta:c.querySelector(".thero2-m").textContent,
           next:!!c.querySelector(".tdc-next"),view:(c.querySelector("[data-openday]")||{}).className||"",setupLine:!!c.querySelector('[data-k="lead:setup"] [data-setup]'),
-          acts:c.querySelectorAll("button:not(.thero2-swap):not(.tdc-fuel)").length};});
+          acts:c.querySelectorAll("button:not(.thero2-swap):not(.tdc-fuel):not(.tdc-fuel-x)").length};});
       if(state==="missed")eq([ck.startday,ck.another,ck.next,ck.acts],[false,false,true,3],"missed on a rest day: Move it, log it and Skip only (and Change), Next up kept");
       if(state==="rest")eq([ck.meta,ck.next,ck.startday,ck.another],[lang==="ar"?"ارتاح.":"Recover.",true,true,false],"rest: Recover., Next up, Train anyway and no second offer");
       if(state==="done")eq([ck.view.split(" ").indexOf("g")>=0,ck.next],[true,true],"done: View session quiet, Next up the message");
@@ -5343,6 +5343,32 @@ await test("Food and training as one plan (WP-5): at 16:30 on a training day Foo
   eq(food.nums,["18:00"],"the time in .num");
   eq(food.p.some(x=>/overnight/.test(x)),false,"an evening session: the overnight-glycogen paragraph is left out");
   eq(await ev(page,"JSON.stringify(S.goals)"),g0,"no target changed");
+},{db:seedFuel(),init:clockAtTime(2026,11,17,16,30)});
+await test("Training's foot (owner, 24 Nov): the day's weigh-in reminder keeps the page's gap above it, not sitting on the program card",async page=>{
+  await page.evaluate(async()=>{const st=await import("/js/state.js");(st.S.body||[]).forEach(b=>{b.date="2026-11-01";});st.saveDB();
+    const V=(await import("/js/ui/view.js")).V;V.tab="train";(await import("/js/ui/render.js")).render();});await pause(page,800);
+  const g=await page.evaluate(()=>{const hn=document.querySelector("#app .hnote");if(!hn)return null;const a=hn.previousElementSibling.getBoundingClientRect(),b=hn.getBoundingClientRect();return Math.round(b.top-a.bottom);});
+  if(g===null)throw new Error("no weigh-in reminder on Training");
+  eq(g>=12,true,"a gap of "+g+" px above the reminder");
+});
+await test("The timed food note can be hidden for today (owner, 24 Nov): its × on Training or Food takes it off both, with Undo; what is behind for the hour stays; tomorrow it is back",async page=>{
+  let f=await fuelOf(page);
+  eq(f.kinds[0],"before","the before-training note, to begin with");
+  await tapTab(page,"train");await pause(page,400);
+  const bx=await page.$eval('#app [data-k="today"] .tdc-fuel-x',b=>{const r=b.getBoundingClientRect();return [r.width,r.height,!!b.closest(".tdc-fuel")];});
+  eq([bx[0]>=44,bx[1]>=44,bx[2]],[true,true,false],"Training's × is a 44-px button of its own, not inside the line that opens Food");
+  await page.tap('#app [data-k="today"] .tdc-fuel-x');await pause(page,500);
+  f=await fuelOf(page);
+  const row=await page.$eval('#app [data-k="today"] .tdc-fuelw',e=>[e.dataset.k,!!e.querySelector(".tdc-fuel-x")]);
+  eq([f.kinds,row,await ev(page,"S.fuelHide")],[["behind"],["fuel:behind",false],await page.evaluate(async()=>(await import("/js/util.js")).today())],
+    "gone from Training; what is behind for the hour stays, with no × (it is today's food, not a note); kept as today's date");
+  await page.tap('.toast-undo');await pause(page,500);
+  eq((await fuelOf(page)).kinds[0],"before","Undo: back");
+  await tapTab(page,"food");await pause(page,400);
+  await page.tap('#app .ffuel-x');await pause(page,500);
+  eq([(await fuelOf(page)).kinds.includes("before"),await page.$$eval('#app .ffuel-l',a=>a.length)],[false,0],"Food's × hides it too");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.fuelHide="2026-11-16";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq((await fuelOf(page)).kinds[0],"before","hidden yesterday: back today");
 },{db:seedFuel(),init:clockAtTime(2026,11,17,16,30)});
 await test("Food and training as one plan (WP-5): after finishing, the finish page, Food and the Today card read one after-training sentence, and the targets are what they were",async page=>{
   const g0=await ev(page,"JSON.stringify(S.goals)");
@@ -7744,6 +7770,8 @@ await test("Live figure: a phone without WebGL2 keeps the start and end stills",
   const st=await page.$eval("#sheet .fig3d",e=>{const s=e.querySelector(".fig3d-still");
     return [e.hasAttribute("data-live"),getComputedStyle(e.querySelector("canvas")).display,getComputedStyle(s).display,[...s.querySelectorAll("img")].map(i=>i.naturalWidth)];});
   eq(st,[false,"none","grid",[720,720]]);
+  /* And it says why, on the photos (owner, 24 Nov: on the iPhone the figure showed its photos). */
+  eq(await page.$eval("#sheet .fig3d",e=>[/no WebGL2/.test(e.getAttribute("data-why")||""),/no WebGL2/.test(getComputedStyle(e,"::after").content)]),[true,true],"the reason, said on the photos");
 },{init:()=>{try{delete window.WebGL2RenderingContext;}catch(e){}}});
 await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails, shown only once checked (the library's fall back to their photographs)",async page=>{
   eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];

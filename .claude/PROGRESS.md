@@ -5241,3 +5241,18 @@ What C-10 adds:
   - no words on the workout stage.
   - All 10 Live figure tests pass in Chromium. WebKit (the iPhone check) runs in CI.
   - Checked on a screenshot: "LOWERING" while the figure lowers into the hinge, the hamstrings' glow bluer.
+
+**Owner's phone, 24 Nov: three fixes and a diagnosis (v307, session/owner-nov24).**
+- **Training's foot: the weigh-in reminder sat on the program card.** It had a 0 px gap; the page's gap is 16 px. `.hnote{margin-top:var(--s4)}` (only that reminder uses the class).
+  - Test: "Training's foot (owner, 24 Nov)".
+- **The timed food note can be hidden for today** (owner: "skip option", and "is this message permanent?"). It is not permanent: worked out live (head.js fuelOn, dayfuel.js) from the times the person starts training. It says what to do before training, after it, or on a rest day.
+  - Now a × on Food's card, and beside Training's line (a button of its own, not inside the line that opens Food), hides it for today with Undo. `S.fuelHide`, a date, per profile, validated in schema.js.
+  - What is behind for the hour ("Your body needs more protein, +150 g to go") stays, with no ×: it is today's food, not a note.
+  - Back tomorrow.
+  - Test: "The timed food note can be hidden for today". The Today card test's button count leaves the new × out.
+- **The 3D figure on the iPhone showed the photos** (owner's screenshot of the Romanian deadlift: the wide two-photo box, the figure's fallback). From here it cannot be told whether:
+  - the figure is still loading (about 800 KB on first open over 4G, past the 4 s before the photos show; the figure replaces them when ready);
+  - the browser has no WebGL2;
+  - drawing failed.
+  - So the photos now say why when it is one of the last two: "This browser can't show the 3D figure (no WebGL2)", or "The 3D figure couldn't start on this phone (<the error>)". This is a data-why attribute shown by CSS ::after, so a repaint cannot wipe it.
+  - Test: the no-WebGL2 test checks the reason is shown. Next step: the owner's next look tells which of the three it is.

@@ -269,8 +269,11 @@ function fuelRow(tp){
   var f=tp.food,n=f&&(f.notes||[]).filter(function(x){return x.kind!=="rest";})[0];
   if(!n||!/^(train|light|done|rest)$/.test(tp.state))return "";
   var pill=n.kind==="behind"?'<span class="tdc-fuel-p num">'+esc(t("+{n} "+n.unit+" to go").replace("{n}",fmtN(n.left)))+'</span>':'';
-  return '<button class="tdc-fuel" data-tab="food" data-k="fuel:'+n.kind+'"><span class="tdc-fuel-i" aria-hidden="true">'+glyph(FUELGL[n.kind]||"bowl")+'</span>'
-   +'<span class="tdc-fuel-t">'+nums(fuelLine(n))+'</span>'+pill+'</button>';}
+  /* The line opens Food; its × (a button of its own, beside it) hides the timed note for
+     today (owner, 24 Nov). Not for what is behind: that is today's food, not a note. */
+  var x=n.kind==="behind"?'':'<button class="tdc-fuel-x" data-fuelhide="1" aria-label="'+esc(t("Hide for today"))+'"><span aria-hidden="true">\u00d7</span></button>';
+  return '<div class="tdc-fuelw" data-k="fuel:'+n.kind+'"><button class="tdc-fuel" data-tab="food"><span class="tdc-fuel-i" aria-hidden="true">'+glyph(FUELGL[n.kind]||"bowl")+'</span>'
+   +'<span class="tdc-fuel-t">'+nums(fuelLine(n))+'</span>'+pill+'</button>'+x+'</div>';}
 function vTrain(){
   /* "hub": a workout left for later, seen from its Resume card. */
   if(S.active&&V.train!=="hub")return vLogger();
