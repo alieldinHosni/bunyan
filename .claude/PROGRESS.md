@@ -73,6 +73,13 @@ false, so real `focusin`/`focusout` never fire** even though `.focus()` does mov
 
 ## Where things stand
 
+### Owner, 24 Nov: the plan page "shakes" on iPhone — under investigation
+Chromium frame recording of Training → "Built for you" → back (animations on): one clean,
+one-way slide each time, no sideways scroll. tests/stress-webkit.mjs now records the same
+slide every frame (page transform, the still copy, scrollX, visual viewport) five times each
+way and fails on a reversal or any sideways scroll, so the CI WebKit job shows whether
+Safari's engine is the cause. Next: read that job's output and fix from it.
+
 ### Round 1 (twelve issues) — done and verified
 All twelve. See README for the ones that changed architecture.
 
