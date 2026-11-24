@@ -42,7 +42,7 @@ const moments=n=>Array.from({length:n+1},(_,i)=>i/n);
 const f1=x=>x.toFixed(1),cm=x=>(x*100).toFixed(1)+" cm";
 /* Every check of the safety audit (tools/figure-audit.mjs) for one record, and the
    gate: an exercise under review is not reachable from the app. */
-function auditAll(t,name,rec){
+function auditAll(t,name,rec,o){
   const a=audit(rec,41),sp=jointSpeed(rec),sl=slide(rec).filter(x=>!x.pass);
   const say=l=>l.length?" — "+[...new Set(l.map(x=>(x.a||x.joint||x.rule)+" "+(x.b||x.what||"")))].join("; "):"";
   t.ok(!a.penetration.length,name+": nothing through anything at 41 moments"+say(a.penetration));
@@ -54,5 +54,7 @@ function auditAll(t,name,rec){
   /* Approved by the owner from its pictures (docs/figures/ex/), against this exact
      record: if the movement changes, the approval stops counting and this fails until
      the exercise is reviewed again and its version updated in moves.js TABLE. */
+  /* Ready for the owner's review, not yet approved: the app must not reach it. */
+  if(o&&o.pending){t.ok(!checkedOf(name)&&recordFor(name)===null,name+": not reachable from the app until the owner has reviewed it (no checked)");return;}
   t.ok(!!checkedOf(name)&&!!recordFor(name),name+": approved, and the approval matches this record (version "+versionOf(name)+")");}
 export {D, deg, bend, knee, elbow, hipFlex, mid, barOf, centreOfMass, footSpan, moments, f1, cm, auditAll};

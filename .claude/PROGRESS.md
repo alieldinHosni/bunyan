@@ -78,7 +78,10 @@ Chromium frame recording of Training → "Built for you" → back (animations on
 one-way slide each time, no sideways scroll. tests/stress-webkit.mjs now records the same
 slide every frame (page transform, the still copy, scrollX, visual viewport) five times each
 way and fails on a reversal or any sideways scroll, so the CI WebKit job shows whether
-Safari's engine is the cause. Next: read that job's output and fix from it.
+Safari's engine is the cause. Result (#201's CI, v307): clean in WebKit too, every slide
+one way, nothing sideways. Not reproduced in either engine. Asked the owner for a screen
+recording and the iOS version (overflow-x:clip, which keeps the page from scrolling
+sideways mid-slide, needs iOS 16). Waiting on that before any change.
 
 ### Round 1 (twelve issues) — done and verified
 All twelve. See README for the ones that changed architecture.
@@ -5263,3 +5266,11 @@ What C-10 adds:
   - drawing failed.
   - So the photos now say why when it is one of the last two: "This browser can't show the 3D figure (no WebGL2)", or "The 3D figure couldn't start on this phone (<the error>)". This is a data-why attribute shown by CSS ::after, so a repaint cannot wipe it.
   - Test: the no-WebGL2 test checks the reason is shown. Next step: the owner's next look tells which of the three it is.
+
+**3D figure F-3: Seated Leg Curl ready for the owner's review, not checked (25 Nov, session/figure-legcurl, no app change).** The owner said "Continue the road map". F-3 is the long package (one exercise at a time, FIGURE-V3 2.8); the Seated Leg Curl is next by use (tools/figure-coverage.mjs: 8 programs).
+- **Dossier** docs/figures/ex/Seated_Leg_Curl.md, from the library's entry, instructions and two photographs: ten rules, each with its source.
+- **The record** is the family's seated curl made strict (`legMachine` `strict:true`; the Leg Extension and the Lying Leg Curl unchanged). Fixed against the family's: the wrists bent 51° sideways (past the 40° limit) now hold the lap pad's handles as in the photographs; the roller no longer goes 9 mm into the shins; the back rests on its pad (was 2.5 cm off); the seat is 2 cm higher so the feet clear the floor (4.7 cm); the curl goes to 103° (was 92°); a second's hold and a slow return.
+- **Test** js/data/test/ex/Seated_Leg_Curl.test.js: the ten rules and every audit check pass. `auditAll` takes `{pending:true}` for an exercise awaiting review: it then checks the app cannot reach it.
+- **Not shown in the app** until the owner approves it from the pictures; the photographs stay.
+- Library error noted: the exercise's pattern is tagged "Elbow flexion".
+
