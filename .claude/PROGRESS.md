@@ -5223,3 +5223,21 @@ What C-10 adds:
   - New browser test "Live figure, lit by role": the Romanian deadlift's live figure, prime 1, helpers .5, core .3.
   - All 9 Live figure tests pass in Chromium. WebKit (the iPhone check) runs in CI.
 - **Still to do in F-4:** the action (lifting, lowering, hold) in the shading, and the phase legend. Both touch the shader, so each comes as a step of its own, after the owner has used this one.
+
+**3D figure F-4, step 2: the phase in words and a cooler glow on the way down (v306, 24 Nov, session/figure-phase).** The owner said "Continue" after v305.
+- **The phase in words.** In the exercise sheet only (fig3d.js, `o.turn`; never the workout stage), the figure says "Lifting", "Lowering" or "Hold" (a pause at the top or the bottom) in its top corner, in step with the movement (motion.js phaseAt's phase).
+  - Only the label's text is written, and only when it changes.
+  - Paused, whether by the button or by the figure stopping itself for slow frames, it says nothing (cleared in syncBtn).
+  - It has the "Drag to turn" tag's look, but stays and has no blur, so the phone's blur budget is untouched.
+  - Arabic: رفع / نزول / ثبات.
+- **Lowering glows a step cooler** (2.4: eccentric "the same colour a step cooler"). The glow colour uniform (uHot) gets a slightly bluer copy of the theme's colour while lowering, computed once per theme.
+  - The same uniform, no shader change, no new WebGL call.
+  - The brightness by phase (lift 1, top .9, lower .8, rest .55) was already there.
+- **Not done from 2.4:** the stripe pattern that compresses or lengthens with the action. It needs fibre directions baked into the body mesh (F-5) and a shader change.
+- **Test:** new browser test "Live figure, the phase in words". It samples the figure for 6 s and checks:
+  - Lifting and Lowering are both seen, each said in step with the figure's phase;
+  - paused, nothing is said;
+  - Arabic;
+  - no words on the workout stage.
+  - All 10 Live figure tests pass in Chromium. WebKit (the iPhone check) runs in CI.
+  - Checked on a screenshot: "LOWERING" while the figure lowers into the hinge, the hamstrings' glow bluer.

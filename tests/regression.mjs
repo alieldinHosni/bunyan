@@ -7648,6 +7648,34 @@ await test("Live figure, lit by role (FIGURE-V3 F-4): the Romanian deadlift ligh
   const lv=Object.values(lit).sort();
   eq([lit.abs,lv.includes(1),lv.every(v=>v===1||v===.5||v===.3)],[.3,true,true],"prime 1, helpers .5, the core .3: "+JSON.stringify(lit));
 });
+await test("Live figure, the phase in words (FIGURE-V3 F-4): in the sheet the figure says Lifting, Lowering or Hold as it moves, in step with the figure; paused it says nothing; the workout stage has no words; Arabic too",async page=>{
+  await checkFig(page,"Romanian Deadlift");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Romanian Deadlift"});});await pause(page,600);
+  await waitLive(page);
+  /* Animations are off in the tests: a tap on play sets it moving, as the person would. */
+  await page.tap("#sheet .fig3d-play");await pause(page,200);
+  const seen=await page.evaluate(async()=>{const m=(await import("/js/ui/mannequin.js")).mannequins()[0],el=document.querySelector("#sheet .fig3d-phase"),out=[];
+    const W={lift:"Lifting",lower:"Lowering",top:"Hold",hold:"Hold",rest:"Hold"};
+    for(let i=0;i<60;i++){await new Promise(r=>setTimeout(r,100));const p=m.state().phase;out.push([p,el.textContent,el.textContent===(W[p]||"")]);}
+    return out;});
+  const words=[...new Set(seen.map(x=>x[1]).filter(Boolean))].sort(),phases=new Set(seen.map(x=>x[0]));
+  eq([phases.has("lift"),phases.has("lower"),words.every(w=>["Hold","Lifting","Lowering"].includes(w)),seen.filter(x=>!x[2]).length<=2],[true,true,true,true],
+    "lifting and lowering seen, each said as it happens: "+JSON.stringify(words));
+  /* Paused: by the button, unless a slow machine has already paused it (frames over
+     55 ms: mannequin.js stops itself), which says nothing just the same. */
+  if(await page.evaluate(async()=>(await import("/js/ui/mannequin.js")).mannequins()[0].state().playing)){await page.tap("#sheet .fig3d-play");}
+  await pause(page,300);
+  eq(await page.$eval("#sheet .fig3d-phase",e=>[e.textContent,getComputedStyle(e).display]),["","none"],"paused: nothing said");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();const st=await import("/js/state.js");st.S.prefs.lang="ar";const d=await import("/js/i18n/dict.js");if(d.loadArabic)await d.loadArabic();
+    (await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Romanian Deadlift"});});await pause(page,600);
+  await waitLive(page);await page.tap("#sheet .fig3d-play");
+  await page.waitForFunction(()=>{const e=document.querySelector("#sheet .fig3d-phase");return e&&e.textContent;},null,{timeout:8000});
+  eq(/[؀-ۿ]/.test(await page.textContent("#sheet .fig3d-phase")),true,"in Arabic");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  await startWorkout(page);
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;S.active.entries[V.logIdx].name="Romanian Deadlift";(await import("/js/ui/render.js")).render();});await pause(page,800);
+  eq(await page.$$eval("#app .stg .fig3d-phase",a=>a.length),0,"no words on the workout stage");
+});
 await test("Live figure: a second exercise is the same figure on other equipment — the Seated Machine Row",async page=>{
   await checkFig(page,"Seated Machine Row");
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Seated Machine Row"});});await pause(page,600);

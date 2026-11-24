@@ -6076,6 +6076,10 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
 .fig3d:not([data-live]) .fig3d-tag{display:none}
 .fig3d-tag{animation:fig3dTagOut .5s 4s both}
 @keyframes fig3dTagOut{to{opacity:0;visibility:hidden}}
+/* The phase in words, top corner of the sheet's figure (FIGURE-V3 2.4): the tag's look,
+   staying, and without its blur, so the phone's blur budget is not touched. */
+.fig3d-tag.fig3d-phase{top:var(--s2);bottom:auto;animation:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.fig3d-phase:empty,.fig3d:not([data-live]) .fig3d-phase{display:none}
 .exhero .fig3d{aspect-ratio:16/10;margin:0 0 14px;border-radius:var(--r3);border-color:var(--hair)}
 .exhero .fig3d[data-still]:not([data-live]){aspect-ratio:8/3}
 .thumb.ph.posed{background:radial-gradient(120% 120% at 30% 15%,rgba(var(--accent-rgb),.16),transparent 60%),var(--raised);padding:2px}
