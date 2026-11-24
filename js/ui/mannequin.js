@@ -284,7 +284,11 @@ function Mannequin(el){
      figure cannot be drawn, or is not drawn within a few seconds (no graphics, or the
      body model not in the cache). Until then the stage is empty, at the figure's size,
      so nothing flashes and nothing jumps when it arrives. */
-  setTimeout(function(){if(el.isConnected&&!el.hasAttribute("data-live"))el.setAttribute("data-still","1");},4000);
+  /* Still not drawn by then: the photos, and they say it is loading, so a slow first
+     download is told apart from a phone that cannot draw it (owner, 24 Nov: "I see no
+     3D on the app"). A failure's reason replaces this; drawn, it is hidden. */
+  setTimeout(function(){if(el.isConnected&&!el.hasAttribute("data-live")){el.setAttribute("data-still","1");
+    if(!el.hasAttribute("data-why"))el.setAttribute("data-why",t("The 3D figure is still loading"));}},4000);
   try{
     gl=canvas.getContext("webgl2",{antialias:true,alpha:false,depth:true,stencil:false,premultipliedAlpha:true,powerPreference:"default"});
     if(!gl)throw new Error("no WebGL2");

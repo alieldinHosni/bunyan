@@ -5274,3 +5274,9 @@ What C-10 adds:
 - **Not shown in the app** until the owner approves it from the pictures; the photographs stay.
 - Library error noted: the exercise's pattern is tagged "Elbow flexion".
 
+
+**Owner, 24 Nov: "I see no 3D on the app" — the figure says when it is still loading (v308, session/figure-loading).**
+- **Why so little 3D:** of 211 figures, three are approved and shown (Romanian Deadlift, Pullups, Incline Dumbbell Press), in their exercise sheet and on the workout stage. Every other exercise shows its photographs until the owner approves its figure, one at a time (FIGURE-V3 2.8). The Seated Leg Curl awaits that review.
+- **What was missing:** after 4 s without a figure the photos showed with no word, unless WebGL2 was missing or drawing failed. A slow first download (about 800 KB) looked the same as a phone that cannot draw it. Now the photos say "The 3D figure is still loading" (Arabic: الشكل الثلاثي الأبعاد لسه بيحمّل); a failure's reason replaces it; once drawn, the figure replaces the photos as before.
+- **Test:** "Live figure: still loading after 4 s" (the body model's download held): nothing said before 4 s, then the photos and the words. All 11 Live figure tests pass in Chromium.
+- **Next:** the owner opens one of the three approved exercises after v308 and says what the photos say, if anything. Further exercise reviews wait until one figure is seen on the phone.
