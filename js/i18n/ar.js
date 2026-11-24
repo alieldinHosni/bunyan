@@ -320,6 +320,7 @@ var AR={"A program built for you, and rebuilt as you change": "برنامج مع
 "Hide for today": "اخفيها النهارده",
 "Hidden for today. It's back tomorrow.": "اتخفت النهارده. هترجع بكره.",
 "The 3D figure couldn't start on this phone": "الشكل الثلاثي الأبعاد ماقدرش يشتغل على الموبايل ده",
+"The 3D figure is still loading": "الشكل الثلاثي الأبعاد لسه بيحمّل",
 "This browser can't show the 3D figure (no WebGL2)": "المتصفح ده مايقدرش يعرض الشكل الثلاثي الأبعاد (مفيش WebGL2)",
 "Lifting": "رفع",
 "Lowering": "نزول",

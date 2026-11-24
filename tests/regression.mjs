@@ -7773,6 +7773,16 @@ await test("Live figure: a phone without WebGL2 keeps the start and end stills",
   /* And it says why, on the photos (owner, 24 Nov: on the iPhone the figure showed its photos). */
   eq(await page.$eval("#sheet .fig3d",e=>[/no WebGL2/.test(e.getAttribute("data-why")||""),/no WebGL2/.test(getComputedStyle(e,"::after").content)]),[true,true],"the reason, said on the photos");
 },{init:()=>{try{delete window.WebGL2RenderingContext;}catch(e){}}});
+await test("Live figure: still loading after 4 s, the photos say so (owner, 24 Nov: no 3D seen on the phone)",async page=>{
+  /* the body model's download never finishes, as on a slow first open */
+  await page.route("**/img/fig/body.bin",()=>{});
+  await checkFig(page,"Romanian Deadlift");
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Romanian Deadlift"});});await pause(page,800);
+  eq(await page.$eval("#sheet .fig3d",e=>[e.hasAttribute("data-still"),e.getAttribute("data-why")]),[false,null],"nothing said before 4 s");
+  await pause(page,4000);
+  eq(await page.$eval("#sheet .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-still"),e.getAttribute("data-why"),/still loading/.test(getComputedStyle(e,"::after").content)]),
+    [false,true,"The 3D figure is still loading",true],"the photos, and why");
+});
 await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails, shown only once checked (the library's fall back to their photographs)",async page=>{
   eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];
     for(const id in F){const u=["img/ex/"+id+".webp"];for(let i=0;i<F[id];i++)u.push("img/fig/"+id+"-"+i+".webp");
