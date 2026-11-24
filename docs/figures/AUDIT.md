@@ -1,6 +1,6 @@
 # The 3D figure: safety audit
 
-Written by `tools/figure-audit.mjs` (app version 265) from `js/data/mannequin/collide.js`. Do not edit by hand; run the tool again.
+Written by `tools/figure-audit.mjs` (app version 307) from `js/data/mannequin/collide.js`. Do not edit by hand; run the tool again.
 
 Every record the families' table (`moves.js` TABLE) and the hand-written records (`records.js` RECORDS) hold, checked at 41 moments of its repetition (u = 0 is the start, the stretched position; u = 1 the end of the lift). This is the work list for the per-exercise reviews of `docs/FIGURE-V3.md` 2.8. **No figure is shown in the app until its exercise has been reviewed and marked checked** (`records.js` recordFor), whatever this audit says: passing every check here is necessary, not enough.
 
@@ -18,13 +18,13 @@ Body parts: `head`, `neck`, `trunk.upper`, `trunk.lower`, `pelvis`, and per side
 
 | | Records |
 | --- | --- |
-| Checked (shown in the app) | 0 |
+| Checked (shown in the app) | 3 |
 | Audited | 211 |
-| Pass every check | 17 |
-| Fail penetration | 151 |
+| Pass every check | 18 |
+| Fail penetration | 150 |
 | Fail contacts | 61 |
 | Fail clearances | 49 of the 122 a clearance applies to |
-| Fail limits | 144 |
+| Fail limits | 143 |
 | Fail joint speed (reported) | 8 |
 | Fail slide (reported) | 37 |
 
@@ -175,7 +175,6 @@ Failing first (most checks failed, then the deepest penetration). Each cell give
 | Incline Cable Flye | fly | **FAIL** 2: forearm.l through tube:capsule 1.3 cm at u=1 | **FAIL** 2: trunk.upper off bench by 5.0 cm at u=0 | n/a | pass | pass 1.1 m/s (wr.l) | pass |
 | One-Arm Kettlebell Swings | kbSwing | **FAIL** 3: thigh.r through hand.r 1.2 cm at u=0.225 | pass | pass (feet) | **FAIL** 1: neck out of line with the spine 30° (limit ±10°) at u=0 | pass 2.8 m/s (wr.l) | **FAIL** 2: foot.l moves 2 mm by u=0.8 |
 | Leg Extensions | legMachine | **FAIL** 4: shin.l through tube:capsule 0.9 cm at u=1 | pass | n/a | **FAIL** 2: wrist.l bent sideways past its range 51° (limit ±40°) at u=0 | pass 1.0 m/s (an.l) | pass |
-| Seated Leg Curl | legMachine | **FAIL** 2: shin.l through tube:capsule 0.9 cm at u=0 | pass | n/a | **FAIL** 2: wrist.l bent sideways past its range 51° (limit ±40°) at u=0 | pass 1.1 m/s (an.l) | pass |
 | Barbell Glute Bridge | bridge | **FAIL** 2: foot.l through mat:box 0.9 cm at u=0 | pass | n/a | **FAIL** 7: wrist.l bent sideways past its range -74° (limit ±40°) at u=1 | pass 0.7 m/s (head) | **FAIL** 2: foot.l moves 4 mm by u=0.95 |
 | Cable Crossover | crossover | **FAIL** 2: forearm.l through tube:capsule 0.6 cm at u=1 | pass | **FAIL** 2: feet flat on the floor (foot.l ball off the floor), 2.4 cm (limit 0.5 cm) at u=0 | pass | pass 2.0 m/s (wr.l) | pass |
 | Dips - Chest Version | dip | **FAIL** 2: forearm.l through tube:capsule 0.5 cm at u=0 | pass | n/a | **FAIL** 6: wrist.l bent sideways past its range 71° (limit ±40°) at u=0 | pass 0.6 m/s (head) | pass |
@@ -250,6 +249,7 @@ Failing first (most checks failed, then the deepest penetration). Each cell give
 | Plank | plank | pass | pass | n/a | pass | pass 0.0 m/s | pass |
 | Pullups | pullup | pass | pass | n/a | pass | pass 1.7 m/s (an.l) | pass |
 | Romanian Deadlift | hinge | pass | pass | pass (feet) | pass | pass 1.3 m/s (head) | pass |
+| Seated Leg Curl | legMachine | pass | pass | n/a | pass | pass 1.2 m/s (an.l) | pass |
 | Side Lateral Raise | raise | pass | pass | pass (feet) | pass | pass 1.2 m/s (wr.l) | pass |
 | Smith Machine Calf Raise | calfRaise | pass | pass | n/a | pass | pass 0.2 m/s (kn.l) | pass |
 | Standing Barbell Calf Raise | calfRaise | pass | pass | n/a | pass | pass 0.2 m/s (kn.l) | pass |
@@ -2241,15 +2241,6 @@ legMachine
 - Limit: wrist.l bent sideways past its range, 51° (limit ±40°) at u=0 (from u=0 to 1)
 - Limit: wrist.r bent sideways past its range, -51° (limit ±40°) at u=0 (from u=0 to 1)
 
-### Seated Leg Curl
-
-legMachine
-
-- Penetration: shin.l through tube:capsule, 0.9 cm deep at u=0 (from u=0 to 1)
-- Penetration: shin.r through tube:capsule, 0.9 cm deep at u=0 (from u=0 to 1)
-- Limit: wrist.l bent sideways past its range, 51° (limit ±40°) at u=0 (from u=0 to 1)
-- Limit: wrist.r bent sideways past its range, -51° (limit ±40°) at u=0 (from u=0 to 1)
-
 ### Barbell Glute Bridge
 
 bridge
@@ -2830,7 +2821,7 @@ Written by `tools/figure-coverage.mjs`: every exercise with a figure record, by 
 | 1 | Pullups | 9 | 155 | passes every check |
 | 2 | Incline Dumbbell Press | 9 | 128 | passes every check |
 | 3 | Romanian Deadlift | 8 | 19 | passes every check |
-| 4 | Seated Leg Curl | 8 | 18 | fails 2 of 4 |
+| 4 | Seated Leg Curl | 8 | 18 | passes every check |
 | 5 | Triceps Pushdown - Rope Attachment | 8 | 0 | passes every check |
 | 6 | Wide-Grip Lat Pulldown | 7 | 160 | fails 3 of 4 |
 | 7 | Side Lateral Raise | 7 | 57 | passes every check |

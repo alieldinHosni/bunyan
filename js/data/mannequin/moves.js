@@ -1090,15 +1090,19 @@ function crossover(o){
 /* ---- leg extensions and curls: on a machine, the knee a hinge, the shin on a pad ----
    kind "extension" (seated, the shin lifted) | "lying" (face down, the heel drawn up) |
    "seated" (the heel drawn down under the seat) */
+var HZ=.24,RO=.09,LPY=.025;
 function legMachine(o){
   o=o||{};
   var kind=o.kind||"extension",lying=kind==="lying";
   var b0=lying?{pelvis:[.06,.72,0],pitch:88,head:-25,knees:S(0,-1,.02)}:
-    {pelvis:[-.12,.7,0],pitch:-14,head:8,knees:S(.1,1,.03)};
+    {pelvis:[-.12,o.strict?.72:.7,0],pitch:-14,head:8,knees:S(.1,1,.03)};
   /* the shin's angle: from the knee, degrees from straight down (seated) or straight
      back (lying), toward the front of the shin */
-  var th=kind==="extension"?[0,82]:kind==="seated"?[80,-8]:[2,112];
-  var rec={keys:[b0,b0],tempo:[1.0,.4,1.6,.5],cam:{yaw:lying?75:78,pitch:10},arrow:{track:"an.l"},
+  var strict=!!o.strict&&kind==="seated";
+  var th=kind==="extension"?[0,82]:kind==="seated"?(strict?[78,-19]:[80,-8]):[2,112];
+  /* Seated Leg Curl (docs/figures/ex/Seated_Leg_Curl.md): a second held at the curl, a
+     slow return (LIB). */
+  var rec={keys:[b0,b0],tempo:strict?[1.0,1.0,2.0,.4]:[1.0,.4,1.6,.5],cam:{yaw:lying?75:78,pitch:10},arrow:{track:"an.l"},
     refine:kind==="extension"?{}:{},
     drive:function(p,u){
       var J=base(p),t=num(th[0],th[1],u)*R;
@@ -1109,12 +1113,15 @@ function legMachine(o){
         var fd=lying?[-Math.sin(t),-Math.cos(t),0]:[Math.cos(t),Math.sin(t),0];
         p.feet[s]=add(K,mul(sd,DIM.shin));p.footDir[s]=fd;p.sole[s]=mul(sd,-1);});
       if(lying){p.hands=S(J.P[0]+.5,.62,.21);p.handDir=S(1,0,0);p.palm=S(0,-1,0);p.elbows=S(0,-1,.4);}
+      else if(strict){var Kx=J.hip.l[0]+DIM.thigh*Math.cos(6*R);
+        /* the hands hold the lap pad's handles, just outside the thighs (LIB photographs) */
+        p.hands=S(Kx-.1,J.hip.l[1]+.1,HZ);p.handDir=S(1,0,0);p.palm=S(0,-1,0);p.elbows=S(-1,-.3,.6);}
       else{p.hands=S(-.04,.58,.27);p.handDir=S(1,-.3,0);p.palm=S(0,0,-1);p.elbows=S(-1,0,.3);}
       p.grip="grip";},
     equip:function(J){
       var e=[],K=lerp(J.kn.l,J.kn.r,.5),A=lerp(J.an.l,J.an.r,.5),fd=norm(J.fd.l.dir),sd=norm(sub(A,K));
       /* the pad is on the front of the shins (extension) or behind the ankles (curls) */
-      var side_=kind==="extension"?fd:mul(fd,-1),roll=add(A,add(mul(side_,.075),mul(sd,-.03)));
+      var side_=kind==="extension"?fd:mul(fd,-1),roll=add(A,add(mul(side_,strict?RO:.075),mul(sd,strict?-.07:-.03)));
       e.push(["tube",[roll[0],roll[1],-.2],[roll[0],roll[1],.2],.045,3]);
       [-1,1].forEach(function(z){var pv=[K[0],K[1],z*.3];
         e.push(["hub",pv,[0,0,1],.05,.05],["beam",pv,[roll[0],roll[1],z*.3],.05,.05],["tube",[roll[0],roll[1],z*.2],[roll[0],roll[1],z*.3],.015,4]);});
@@ -1124,10 +1131,13 @@ function legMachine(o){
       else{
         var seatTop=J.P[1]-.135;
         e.push(["soft",[J.P[0]+.12,seatTop-.04,0],[1,0,0],[0,1,0],[.26,.04,.19]],
-          ["soft",add(sub(J.P,mul(J.pf.f,.15)),mul(J.pf.u,.28)),J.pf.u,J.pf.f,[.3,.045,.18]],
+          ["soft",add(sub(J.P,mul(J.pf.f,strict?.127:.15)),mul(J.pf.u,.28)),J.pf.u,J.pf.f,[.3,.045,.18]],
           ["beam",[J.P[0]+.1,seatTop-.08,0],[J.P[0]+.1,.04,0],.08,.08],["beam",[K[0],K[1],-.3],[K[0],.04,-.3],.07,.07],
           ["beam",[J.P[0]-.3,.022,0],[K[0]+.25,.022,0],.09,.044]);
-        if(kind==="seated")e.push(["tube",[K[0]-.06,K[1]+.12,-.2],[K[0]-.06,K[1]+.12,.2],.04,3]);}
+        if(kind==="seated"&&strict){var gl=J.grip.l,gr=J.grip.r;
+          /* the lap pad across the thighs above the knees, its handles where the hands close */
+          e.push(["tube",[gl[0],gl[1]-LPY,-.2],[gl[0],gl[1]-LPY,.2],.04,3],["tube",[gl[0],gl[1],gl[2]-.05],[gl[0],gl[1],gl[2]+.05],.016,4],["tube",[gr[0],gr[1],gr[2]-.05],[gr[0],gr[1],gr[2]+.05],.016,4]);}
+        else if(kind==="seated")e.push(["tube",[K[0]-.06,K[1]+.12,-.2],[K[0]-.06,K[1]+.12,.2],.04,3]);}
       return e;}};
   return rec;}
 
@@ -1592,7 +1602,7 @@ var TABLE={
   "Cable Crossover":[crossover,{}],
   "Leg Extensions":[legMachine,{kind:"extension"}],
   "Lying Leg Curls":[legMachine,{kind:"lying"}],
-  "Seated Leg Curl":[legMachine,{kind:"seated"}],
+  "Seated Leg Curl":[legMachine,{kind:"seated",strict:true}],
   "Leg Press":[legPress,{}],
   "Narrow Stance Leg Press":[legPress,{w:.08}],
   "Butterfly":[pecDeck,{}],
