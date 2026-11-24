@@ -242,6 +242,9 @@ function lights(cam){
   function L(a,b,c){return V.norm(V.add(V.add(V.mul(cam.f,a),V.mul(cam.r,b)),V.mul(cam.u,c)));}
   return {key:L(-.5,-.42,.76),fill:L(-.62,.7,.18),rim:L(.85,.25,.45)};}
 
+/* The glow a step cooler, for lowering: a little less red, a little more blue. */
+var COOL={};
+function coolOf(h){var k=h.join(",");if(!COOL[k])COOL[k]=new Float32Array([h[0]*.82,h[1]*.95,Math.min(1,h[2]*1.25+.06)]);return COOL[k];}
 /* ---- one live figure ---- */
 var LIVE=[];
 /* the floor plane's half width, metres: past the horizon's haze from any view */
@@ -258,7 +261,7 @@ function Mannequin(el){
      half, as before, and the family's stabilisers faintly (core in a hinge, the cuff in a
      press). The same uniform as before: no shader change. */
   var hl=litFor(name,muscleOf(name),secondaryOf(name),rec&&rec.refine),hlv=new Float32Array(21);
-  var theme=null,look="",pts=null;
+  var theme=null,look="",pts=null,lastPhase="";
   /* the view: where it is, where it is going, and how fast it is turning */
   var view0={yaw:(rec&&rec.cam&&rec.cam.yaw!=null)?rec.cam.yaw:60,pitch:(rec&&rec.cam&&rec.cam.pitch!=null)?rec.cam.pitch:8,zoom:1};
   var view={yaw:view0.yaw,pitch:view0.pitch,zoom:1},goal={yaw:view0.yaw,pitch:view0.pitch,zoom:1},spin=0,held=false;
@@ -268,7 +271,7 @@ function Mannequin(el){
   var self={el:el,name:name,sync:nothing,wake:nothing,toggle:nothing,setU:nothing,setHL:nothing,
     probe:function(){return null;},
     dispose:function(){dead=true;},
-    state:function(){return {live:!!gl&&!dead&&!!body,playing:playing,frames:frames,q:dpr,err:err,w:W,h:H,yaw:view.yaw,look:look,lit:Object.assign({},hl)};}};
+    state:function(){return {live:!!gl&&!dead&&!!body,playing:playing,frames:frames,q:dpr,err:err,w:W,h:H,yaw:view.yaw,look:look,lit:Object.assign({},hl),phase:lastPhase};}};
   function fail(e){
     err=String(e&&e.message||e);dead=true;el.removeAttribute("data-live");el.setAttribute("data-still","1");stop();
     try{var lc=gl&&gl.getExtension("WEBGL_lose_context");if(lc)lc.loseContext();}catch(x){}
@@ -368,6 +371,7 @@ function Mannequin(el){
       resize();
       if(!theme)retheme();
       var ph=playing?phaseAt(rec,s,tempo):{u:stillU,act:1},sc=sceneAt(rec,ph.u),c=camNow(),Ls=lights(c),th=theme;
+      sayPhase(playing?ph.phase:"");
       gl.bindTexture(gl.TEXTURE_2D,boneTex);
       gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,4,NB,gl.RGBA,gl.FLOAT,sc.M);
       var rad0=pts.radius*1.15,fog=[c.dist+rad0*1.5,c.dist+rad0*4],near=Math.max(.05,c.dist-4),far=Math.max(c.dist+6,fog[1]*1.3+1);
@@ -421,7 +425,9 @@ function Mannequin(el){
       gl.uniform1fv(bu.uHL,hlv);gl.uniform1f(bu.uAct,ph.act);
       gl.uniform3fv(bu.uSkin,th.skin);gl.uniform3fv(bu.uShorts,th.shorts);gl.uniform3fv(bu.uShoes,th.shoes);gl.uniform3fv(bu.uSoles,th.soles);gl.uniform3fv(bu.uEyes,th.eyes);
       gl.uniform1f(bu.uDbg,DEBUG.muscles?1:0);
-      gl.uniform3fv(bu.uDeep,th.deep);gl.uniform3fv(bu.uHot,th.hot);
+      /* Lowering (eccentric) glows the same colour a step cooler (FIGURE-V3 2.4); the
+         same uniform, no shader change. */
+      gl.uniform3fv(bu.uDeep,th.deep);gl.uniform3fv(bu.uHot,ph.phase==="lower"?coolOf(th.hot):th.hot);
       gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);
       gl.bindVertexArray(vaoBody);gl.drawElements(gl.TRIANGLES,body.nt*3,gl.UNSIGNED_SHORT,0);
       gl.disable(gl.CULL_FACE);
@@ -481,6 +487,8 @@ function Mannequin(el){
   function stop(){if(raf){cancelAnimationFrame(raf);raf=0;}last=0;}
   function once(){if(!dead&&!raf)requestAnimationFrame(function(){if(!raf)draw(clock/1000);});}
   function syncBtn(){
+    /* Paused (by the button, or for being slow): no phase to say. */
+    if(!playing)sayPhase("");
     if(!btn)return;
     btn.setAttribute("aria-label",t(playing?"Pause":"Play"));
     btn.setAttribute("aria-pressed",playing?"false":"true");
@@ -495,6 +503,10 @@ function Mannequin(el){
   function lookOf(){var de=document.documentElement;
     return (el.closest("[data-palette]")||de).getAttribute("data-palette")+"|"+(el.closest("[data-theme]")||de).getAttribute("data-theme");}
   function retheme(){look=lookOf();theme=readTheme(el);}
+  /* The phase, said under the figure in the sheet: Lifting, Lowering or Hold (a pause
+     at the top or the bottom). Only its text, and only when it changes. */
+  var phaseEl=el.querySelector(".fig3d-phase"),PHASEWORD={lift:"Lifting",lower:"Lowering",top:"Hold",hold:"Hold",rest:"Hold"};
+  function sayPhase(p){lastPhase=p||"";if(!phaseEl)return;var w=PHASEWORD[p]?t(PHASEWORD[p]):"";if(phaseEl.textContent!==w)phaseEl.textContent=w;}
   function setHL(h){hl=h||{};hlv=new Float32Array(21);for(var k in hl)if(MUSID[k])hlv[MUSID[k]]=hl[k];}
   setHL(hl);
   self.sync=function(){

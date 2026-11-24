@@ -23,7 +23,10 @@ function fig3dHtml(name,o){
     +'<canvas role="img" aria-label="'+esc(o.label||name)+'"></canvas>'
     +'<div class="fig3d-still">'+(o.stills||[]).slice(0,2).map(function(src,i){
       return src?'<figure><img src="'+esc(src)+'" alt="" decoding="async"><figcaption>'+t(i?"End":"Start")+'</figcaption></figure>':"";}).join("")+'</div>'
-    +(o.turn?'<span class="fig3d-tag" aria-hidden="true">'+t("Drag to turn")+'</span>':'')
+    +(o.turn?'<span class="fig3d-tag" aria-hidden="true">'+t("Drag to turn")+'</span>'
+      /* The phase in words (FIGURE-V3 2.4): the sheet only, never the workout stage.
+         Written by the figure as the phase changes (mannequin.js). */
+      +'<span class="fig3d-tag fig3d-phase" aria-hidden="true"></span>':'')
     +'<button class="fig3d-play" type="button" aria-label="'+t("Pause")+'">'+ICONS+'</button></div>';}
 var M=null,wait=null;
 function syncFigs(){
