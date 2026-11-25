@@ -42,7 +42,9 @@ function iconPal(){var c=S.prefs&&S.prefs.icon;return /^(red|blue|mono)$/.test(c
    Screen; this one is what it is given the next time. */
 var last="";
 function applyLook(){
-  var de=document.documentElement,pal=themeOf(),mode=modeOf(),icon=iconPal(),look=pal+"|"+mode+"|"+icon;
+  /* the fourth part: the intro next launch, "0" none, "b" short, "f" full (index.html) */
+  var pr=S.prefs||{},intro=pr.splash===false?"0":(pr.anim===false||isReduced())?"b":"f";
+  var de=document.documentElement,pal=themeOf(),mode=modeOf(),icon=iconPal(),look=pal+"|"+mode+"|"+icon+"|"+intro;
   if(de.getAttribute("data-palette")!==pal)de.setAttribute("data-palette",pal);
   if(de.getAttribute("data-theme")!==mode)de.setAttribute("data-theme",mode);
   if(look===last)return;

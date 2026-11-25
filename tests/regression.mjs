@@ -1096,7 +1096,7 @@ await test("Themes: the picker switches the whole app, and the choice outlives a
   eq(await page.evaluate(()=>getComputedStyle(document.body).getPropertyValue("--accent").trim().toUpperCase()),"#E7172E","Signal Red is the accent (red on navy since 26 Oct)");
   eq(await page.$$eval('link[rel="icon"],link[rel="apple-touch-icon"]',a=>a.map(l=>l.getAttribute("href"))),["icon-red-180.png","icon-red-180.png"],"the icon takes the theme");
   await page.tap('[data-lookmode="light"]');await pause(page,500);
-  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","red|light|red"],"mode and the early copy");
+  eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-theme"),localStorage.getItem("bunyan:look")]),["light","red|light|red|0"],"mode and the early copy (the fourth part: this profile has the intro off)");
   await page.reload();await page.waitForTimeout(60);
   eq(await page.evaluate(()=>[document.documentElement.getAttribute("data-palette"),document.documentElement.getAttribute("data-theme"),
     document.querySelector('link[rel="apple-touch-icon"]').getAttribute("href")]),["red","light","icon-red-180.png"],"applied before the app runs, the icon too");
@@ -1119,7 +1119,7 @@ await test("Themes: the app icon follows the theme, or stays the colour chosen i
   eq([await ev(page,"S.prefs.icon"),await icons()],["mono",["icon-mono-180.png","icon-mono-180.png"]],"Sage's icon in the Blue theme");
   await page.tap('[data-settheme="red"]');await pause(page,500);
   eq(await icons(),["icon-mono-180.png","icon-mono-180.png"],"kept when the theme changes");
-  eq(await page.evaluate(()=>localStorage.getItem("bunyan:look")),"red|dark|mono");
+  eq(await page.evaluate(()=>localStorage.getItem("bunyan:look")),"red|dark|mono|0");
   await page.reload();await page.waitForTimeout(60);
   eq(await icons(),["icon-mono-180.png","icon-mono-180.png"],"before the app runs, after a reload");
   await pause(page,1000);
@@ -7837,7 +7837,7 @@ await test("Main tabs, swiped (owner, 25 Nov: pages shook left and right): a sla
   await drag(320,420,60,425);eq(await ev(page,"V.tab"),"food","from Food, nothing further: Coach is not there");
   await drag(60,420,320,425);eq(await ev(page,"V.tab"),"train","back to Training");
 });
-await test("Plan tabs, swiped (owner, 25 Nov): what was on the screen does not go and come back — the drawings are drawn at once, the weekdays do not fade in again",async(page,env)=>{
+await test("Plan tabs, swiped (owner, 25 Nov): what was on the screen does not go and come back — the drawings draw in once, from the swipe's copy through to the page; the weekdays do not fade in again",async(page,env)=>{
   await tapTab(page,"train");await pause(page);
   await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.train="plan";V.tplan="program";(await import("/js/ui/render.js")).render();window.scrollTo(0,0);});await pause(page,1200);
   const cdp=await env.ctx.newCDPSession(page);
@@ -7855,7 +7855,11 @@ await test("Plan tabs, swiped (owner, 25 Nov): what was on the screen does not g
   eq(await ev(page,"V.tplan"),"programs","swiped to Programs & exercises");
   const arts=await page.$$eval("#app .art.go",a=>a.map(e=>e.style.getPropertyValue("--art-t")));
   if(!arts.length)throw new Error("no drawings on the page");
-  eq(arts.every(x=>x==="-4000ms"),true,"every drawing drawn at once, not again from nothing: "+arts.join(","));
+  /* one draw-in, begun on the copy the finger brought in and carried on by the page:
+     each is part-way through (a negative delay of the swipe's length), neither started
+     again from nothing (0) nor shown finished (owner, 25 Nov: both were wrong) */
+  const ms=arts.map(x=>parseInt(x,10));
+  eq(ms.every(v=>v<=-50&&v>=-1500),true,"every drawing carries on from its copy: "+arts.join(","));
   await page.waitForTimeout(900);
   /* back to My program: its schedule's weekdays */
   await page.evaluate(()=>window.scrollTo(0,0));await page.waitForTimeout(200);y=await Y();
@@ -7884,6 +7888,40 @@ await test("Simple mode's settings (owner, 25 Nov): what it turns off shows as o
   await page.tap('[data-sessmore]');await pause(page,400);
   eq(await page.$eval('#sheet .item[disabled]',e=>[e.textContent.indexOf("Ask Coach")>=0,getComputedStyle(e).opacity,e.hasAttribute("data-coachopen")]),[true,"0.45",false],"Ask Coach dimmed, does nothing");
 });
+await test("The intro (owner, 25 Nov: \"the intro sometimes glitch\"): decided before its first frame from the early key, and only opacity and transform move in it",async page=>{
+  /* this profile has the intro off: the key says so, and the next launch's page knows it before any code runs */
+  eq(await page.evaluate(()=>localStorage.getItem("bunyan:look").split("|")[3]),"0","off, in the early key");
+  await page.evaluate(()=>{try{sessionStorage.removeItem("bunyan:seen");}catch(e){}});
+  await page.reload();await page.waitForTimeout(50);
+  eq(await page.evaluate(()=>document.documentElement.classList.contains("nosplash")),true,"no intro, decided by the page before the app's code");
+  /* the full intro: its animations are all opacity and transform (nothing laid out or painted on the main thread each frame) */
+  await page.evaluate(()=>{const l=localStorage.getItem("bunyan:look").split("|");l[3]="f";localStorage.setItem("bunyan:look",l.join("|"));sessionStorage.removeItem("bunyan:seen");});
+  await page.reload();await page.waitForTimeout(50);
+  const bad=await page.evaluate(()=>{const out=[];for(const sh of document.styleSheets){let rules;try{rules=sh.cssRules;}catch(e){continue;}
+    for(const r of rules)if(r.type===CSSRule.KEYFRAMES_RULE&&/^sp/.test(r.name))for(const k of r.cssRules)for(let i=0;i<k.style.length;i++){const p=k.style[i];if(!/^(opacity|transform|visibility)$/.test(p))out.push(r.name+":"+p);}}
+    return [...new Set(out)];});
+  eq(bad,[],"the intro's keyframes move only opacity and transform");
+  eq(await page.evaluate(()=>[document.documentElement.classList.contains("nosplash"),document.documentElement.classList.contains("spbrief")]),[false,false],"the key says full: the page starts the full intro");
+});
+await test("Main tabs, swiped (owner, 25 Nov): Training's drawings (the greeting's sun, Log cardio's line) draw in once, begun on the swipe's copy and carried on by the page",async(page,env)=>{
+  await tapTab(page,"food");await pause(page,2200);
+  const cdp=await env.ctx.newCDPSession(page);
+  /* a point on the page that has no swipe of its own (the day's bar) and does not scroll sideways */
+  const Y=await page.evaluate(()=>{for(let y=200;y<760;y+=20){const e=document.elementFromPoint(200,y);if(!e||!e.closest("#app")||e.closest("[data-swipe],input,button"))continue;
+    let x=e,ok=true;while(x&&x.id!=="app"){if(x.scrollWidth>x.clientWidth+2&&/auto|scroll/.test(getComputedStyle(x).overflowX))ok=false;x=x.parentElement;}if(ok)return y;}return 600;});
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:60,y:Y}]});
+  for(let i=1;i<=12;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:60+260*i/12,y:Y+2}]});await page.waitForTimeout(16);}
+  /* the copy coming in: its drawings are drawing */
+  const peek=await page.$$eval(".stillcopy.peek .art.draw",a=>a.map(e=>e.classList.contains("go")));
+  await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});
+  for(let i=0;i<30&&(await ev(page,"V.tab"))!=="train";i++)await page.waitForTimeout(50);
+  eq(await ev(page,"V.tab"),"train","swiped to Training");
+  if(!peek.length)throw new Error("no drawings on the copy");
+  eq(peek.every(Boolean),true,"on the copy, every drawing is drawing in");
+  const ms=(await page.$$eval("#app .art.go",a=>a.map(e=>e.style.getPropertyValue("--art-t")))).map(x=>parseInt(x,10));
+  if(!ms.length)throw new Error("no drawings on Training");
+  eq(ms.every(v=>v<=-50&&v>=-1500),true,"on the page, every drawing carries on from its copy: "+ms.join(","));
+},{prefs:{anim:true}});
 await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails, shown only once checked (the library's fall back to their photographs)",async page=>{
   eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];
     for(const id in F){const u=["img/ex/"+id+".webp"];for(let i=0;i<F[id];i++)u.push("img/fig/"+id+"-"+i+".webp");

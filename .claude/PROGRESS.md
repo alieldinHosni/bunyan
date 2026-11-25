@@ -5329,3 +5329,21 @@ What C-10 adds:
   - warmup.js, blocks.js, actions.js syncDraft, the start handler and the set notes all read featOn.
   - The workout's ⋯ menu shows "Ask Coach" dimmed and not tappable in Simple mode, marked "Off in Simple mode".
   - Test "Simple mode's settings": all five off, blocks turned on for Simple mode alone, own settings back on leaving it, Simple mode's choices kept on return, Ask Coach dimmed. 77 related tests pass in normal mode.
+
+**Owner, 25 Nov: "the start of the app is very slow, the intro sometimes glitch" (v313, session/fast-start).**
+- **The start.** sw.js served every script network first (a no-cache round trip each), falling back to the cache only on failure or when the page itself took 3 s. The app loads about 190 modules in waves of imports. Measured with every request held 150 ms (a phone's connection), the app installed and the CPU slowed 4×: **5.6 s → 0.7 s** to the first screen.
+  - Now everything is cache first from the worker's own cache, which is one whole release written at install. A launch never mixes two releases (the PR #5 bug, and the boot guard's case).
+  - New versions still install in the background (app.js reg.update) and open on the next return, as before.
+  - Cache misses (a first visit before the install has finished, tools/ pages) go to the network.
+  - The offline tests, the failed-launch test and the start budget pass.
+- **The intro.**
+  - Its form (none, short, full) was decided by app.js after the modules ran, and body.noanim, toggled by render, switched the intro's animations mid-way. It is now decided before the first frame by index.html's head script from a fourth part of bunyan:look ("0", "b", "f", written by theme.js). The intro rules are keyed on html.spbrief and html.nosplash.
+  - Two of its animations were repainted on the busy main thread every frame: the name's letter-spacing and blur, and the mark's animated drop-shadow. The name now settles by scale and opacity, and the glow is steady.
+  - Test "The intro": every intro keyframe moves only opacity, transform or visibility, and the page decides the intro from the key.
+  - The two theme tests read the four-part key.
+- **Owner, 25 Nov: "a lot of times I see this page after intro"** (the background, nothing drawn, on v312). The app's code failed before its first paint. The likely cause is the one the boot guard was written for: under network first, a launch while a new release was going up took the page and some modules from two releases (many releases went up that day). v313's cache first removes it. Two safeguards, in the same PR:
+  - sw.js: an update whose install missed a file fails, and the release in use stays until the next try. A launch is served from the cache alone, so a hole would have been filled from the network, possibly from a later release. A first install still keeps what it got.
+  - index.html boot guard: nothing drawn after 6 s (was 12 s) → drop the cached releases when online and load again, once a session.
+- **Owner, 25 Nov: "to fix the reload you ruined the animation"; Log cardio's drawing "still reloading".** v312's fix finished a swiped-in drawing at once, which took away its draw-in. Before that, the swipe's copy showed it finished and the page drew it again from nothing on landing. Now the draw-in runs once, from the copy through to the page: exswipe.js takePeek calls art.js `peekArts` on the copy the finger brings in, which starts its drawings and keeps when each began. startArts, after a swipe, carries each on from that moment (a negative delay), and only then are the copy's times dropped. Tests:
+  - "Plan tabs, swiped": every drawing on the landed page is part-way, neither 0 nor finished;
+  - new "Main tabs, swiped … Training's drawings": the copy's drawings are drawing and the page carries them on. Proven both ways.

@@ -26,6 +26,7 @@
 import {isReduced} from "./motion.js";
 import {entranceAtStart, entranceGo, gestureMs, PAGE} from "./transit.js";
 import {tap} from "./view.js";
+import {peekArts} from "./art.js";
 
 var H=null,st=null,lockUntil=0,swallowUntil=0;
 var EDGE=20,SLOP=10,RATIO=1.3;
@@ -185,7 +186,10 @@ function takePeek(step,k){
   var c=pre[step],w=c&&c.k===k?c.w:null;pre[step]=null;
   if(w){w.querySelectorAll('img[loading="lazy"]').forEach(function(im){im.loading="eager";});
     w.querySelectorAll("img").forEach(function(im){if(im.decode)im.decode().catch(function(){});});}
-  return w||buildPeek(step,k,true);}
+  w=w||buildPeek(step,k,true);
+  /* its drawings start drawing as it comes in, and the page carries them on (art.js) */
+  if(w)peekArts(w);
+  return w;}
 function prepPeeks(){
   pre={};clearTimeout(preT);
   var p=pane();if(!p||!H||!H.peek)return;

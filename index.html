@@ -26,7 +26,14 @@ try{var l=(localStorage.getItem("bunyan:look")||"").split("|"),d=document.docume
   var ic=/^(red|blue|mono)$/.test(l[2])?l[2]:l[0];
   if(/^(red|mono)$/.test(ic))[].forEach.call(document.querySelectorAll('link[rel="icon"],link[rel="apple-touch-icon"]'),
     function(k){k.setAttribute("href","icon-"+ic+"-180.png");});
-  if(/^(dark|light)$/.test(l[1]))d.setAttribute("data-theme",l[1]);}catch(e){}
+  if(/^(dark|light)$/.test(l[1]))d.setAttribute("data-theme",l[1]);
+  /* The intro, decided before its first frame (owner, 25 Nov: "the intro sometimes
+     glitch"): it was chosen by js/app.js once the modules had run, and a profile with
+     the intro short or off switched its animations mid-way. The fourth part of the key:
+     "0" no intro, "b" the short one, else the full one; and none on a reload in the same
+     session (app.js coldStart). */
+  var seen=false;try{seen=!!sessionStorage.getItem("bunyan:seen");}catch(e){}
+  if(seen||l[3]==="0")d.classList.add("nosplash");else if(l[3]==="b")d.classList.add("spbrief");}catch(e){}
 </script>
 <style>
 /* ---- type: the two faces the Bunyan design is set in ---------------------------
@@ -1176,15 +1183,18 @@ html.kpad-move .sheetbox{transition:max-height var(--m-kb) var(--e-ios),height v
    frame veil, the text shadows below, and the mark's own glow. */
 #splash .sp-mark{display:block;margin:0 auto;width:112px;height:112px;
   opacity:0;transform:translateY(14px) scale(.82);
-  animation:spMark 1.2s cubic-bezier(.2,.72,.24,1) .62s forwards,
-            spMarkGlow 3.4s ease-in-out 1.6s infinite alternate}
+  /* A steady glow: an animated drop-shadow is repainted every frame on the main thread,
+     which is busy starting the app, so it stuttered (owner, 25 Nov: "the intro sometimes
+     glitch"). Only opacity and transform move in the intro now. */
+  filter:drop-shadow(0 4px 26px rgba(var(--glow-rgb),.44));
+  animation:spMark 1.2s cubic-bezier(.2,.72,.24,1) .62s forwards}
 /* The lockup's type is the Figma splash frame's (node 2:11): the wordmark in Outfit
    ExtraBold at 56px in the design's warm off-white, a split divider, and the tagline in
    Manrope SemiBold. The rider, the horse-and-sword mark, the embers and the reveal are
    Bunyan's own and stay exactly as they were — the frame's stone image is not used. */
 #splash .sp-name{font-family:var(--display);font-size:56px;font-weight:800;line-height:1;
   color:#faf6ee;margin-top:22px;letter-spacing:.04em;text-indent:.04em;opacity:0;
-  text-shadow:0 2px 26px rgba(4,4,6,.92),0 0 10px rgba(4,4,6,.7);
+  text-shadow:0 2px 26px rgba(4,4,6,.92),0 0 10px rgba(4,4,6,.7);transform:scale(1.08);
   animation:spName 1.3s cubic-bezier(.2,.7,.3,1) 1.15s forwards}
 /* The design's divider: 30px of accent, 120px of hairline grey, 30px of accent. It
    draws outward from the centre, as the old rule did. */
@@ -1211,10 +1221,9 @@ html.kpad-move .sheetbox{transition:max-height var(--m-kb) var(--e-ios),height v
                      to{transform:translate(-50%,-50%) scale(1.09)}}
 @keyframes spMark{0%{opacity:0;transform:translateY(14px) scale(.82)}
   55%{opacity:1}100%{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes spMarkGlow{from{filter:drop-shadow(0 4px 18px rgba(var(--glow-rgb),.28))}
-                      to{filter:drop-shadow(0 4px 34px rgba(var(--glow-rgb),.60))}}
-@keyframes spName{from{opacity:0;letter-spacing:.42em;text-indent:.42em;filter:blur(3px)}
-                  to{opacity:1;letter-spacing:.04em;text-indent:.04em;filter:blur(0)}}
+/* The name settles in by scale and opacity: letter-spacing and blur were laid out and
+   painted on the main thread every frame. */
+@keyframes spName{from{opacity:0;transform:scale(1.08)}to{opacity:1;transform:scale(1)}}
 @keyframes spRule{to{transform:scaleX(1)}}
 @keyframes spTag{to{opacity:1}}
 @keyframes spEm{0%{opacity:0;transform:translateY(0) scale(.7)}
@@ -1222,7 +1231,7 @@ html.kpad-move .sheetbox{transition:max-height var(--m-kb) var(--e-ios),height v
   100%{opacity:0;transform:translateY(-80vh) translateX(var(--dx,0)) scale(1.1);
        transform:translateY(-80dvh) translateX(var(--dx,0)) scale(1.1)}}
 @keyframes spOut{to{opacity:0;visibility:hidden}}
-body.nosplash #splash{display:none}
+body.nosplash #splash,html.nosplash #splash{display:none}
 /* Reduced motion keeps the composition, drops the movement. */
 @media (prefers-reduced-motion:reduce){
   #splash{animation:spOut .45s ease 1.6s forwards}
@@ -1230,21 +1239,21 @@ body.nosplash #splash{display:none}
   #splash .sp-glow{opacity:1;animation:none}
   #splash .sp-mark{opacity:1;transform:none;animation:none;
     filter:drop-shadow(0 4px 24px rgba(var(--glow-rgb),.42))}
-  #splash .sp-name{opacity:1;animation:none}
+  #splash .sp-name{opacity:1;transform:none;animation:none}
   #splash .sp-rule{transform:none;animation:none}
   #splash .sp-tag{opacity:1;animation:none}
   #splash .sp-her{opacity:.3;animation:none}
   #splash .sp-embers{display:none}}
-body.noanim #splash{animation:spOut .45s ease 1.6s forwards}
-body.noanim #splash .sp-art{opacity:.92;transform:none;animation:none}
-body.noanim #splash .sp-glow{opacity:1;animation:none}
-body.noanim #splash .sp-mark{opacity:1;transform:none;animation:none;
+html.spbrief #splash{animation:spOut .45s ease 1.6s forwards}
+html.spbrief #splash .sp-art{opacity:.92;transform:none;animation:none}
+html.spbrief #splash .sp-glow{opacity:1;animation:none}
+html.spbrief #splash .sp-mark{opacity:1;transform:none;animation:none;
   filter:drop-shadow(0 4px 24px rgba(var(--glow-rgb),.42))}
-body.noanim #splash .sp-name{opacity:1;animation:none}
-body.noanim #splash .sp-rule{transform:none;animation:none}
-body.noanim #splash .sp-tag{opacity:1;animation:none}
-body.noanim #splash .sp-her{opacity:.3;animation:none}
-body.noanim #splash .sp-embers{display:none}
+html.spbrief #splash .sp-name{opacity:1;transform:none;animation:none}
+html.spbrief #splash .sp-rule{transform:none;animation:none}
+html.spbrief #splash .sp-tag{opacity:1;animation:none}
+html.spbrief #splash .sp-her{opacity:.3;animation:none}
+html.spbrief #splash .sp-embers{display:none}
 [dir="rtl"] body{font-family:"Manrope","SF Arabic","Geeza Pro",-apple-system,BlinkMacSystemFont,
   "Segoe UI",Tahoma,sans-serif}
 [dir="rtl"] .chev{transform:scaleX(-1);display:inline-block}
@@ -6647,7 +6656,7 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
    background, "then I have to close and open"). The app's code failed before its first
    paint: most often an update arriving mid-launch on a weak signal, so the page and its
    modules came from two releases. Nothing in the modules can catch that, so this sits
-   outside them. An error before the first paint, or nothing drawn after twelve seconds:
+   outside them. An error before the first paint, or nothing drawn after six seconds:
    the cached releases are dropped when online and the app is loaded again, once a session.
    The error is kept (bunyan:booterr) so a repeat can be traced. */
 (function(){
@@ -6665,7 +6674,9 @@ body.noanim #cpanel,body.noanim #cpanel .cp,:root.reduced #cpanel,:root.reduced 
   /* A script that failed, or code that threw; a missing picture is not a failed launch. */
   window.addEventListener("error",function(ev){var tg=ev&&ev.target;if(tg&&tg!==window&&tg.tagName!=="SCRIPT")return;if(!drawn()){bad=(ev&&(ev.message||(ev.target&&ev.target.src)))||"error";setTimeout(recover,1500);}},true);
   window.addEventListener("unhandledrejection",function(ev){if(!drawn()){bad="rejection: "+(ev&&ev.reason&&ev.reason.message||ev.reason);setTimeout(recover,1500);}});
-  setTimeout(recover,12000);
+  /* Six seconds, not twelve (owner, 25 Nov: the background alone after the intro): a
+     launch served from the installed release draws in well under one. */
+  setTimeout(recover,6000);
   /* Drawn: a later failure can be recovered from again. */
   var ok=setInterval(function(){if(drawn()){clearInterval(ok);try{sessionStorage.removeItem(K);}catch(e){}}},1000);
 })();
