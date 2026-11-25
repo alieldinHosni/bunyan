@@ -287,20 +287,29 @@ function markArt(cls){return '<span class="'+cls+'" aria-hidden="true"><i class=
    per screen: the first showing starts it; a drawing rebuilt while it runs is given a
    negative delay, so it carries on from the same moment; one that came in by a swipe,
    whose copy was already drawn, is finished at once. Called after every render. */
-var ARTS={},ARTSCR=null;
+var ARTS={},ARTSCR=null,PEEK={};
+function keyOf(el){var m=/\bart-([\w-]+)/.exec(el.getAttribute("class")||""),sh=el.closest("#sheet")?"sheet:":"";return sh+(m?m[1]:"art");}
+/* The copy of the next page a swipe brings in (js/ui/exswipe.js takePeek): its drawings
+   start drawing as it comes into view, and the time each began is kept, so the real
+   page carries on from the same moment when it lands (owner, 25 Nov: shown finished,
+   they went and drew again from nothing as the page landed; then, finished at once, the
+   draw-in was gone). One draw-in, from the copy through to the page. */
+function peekArts(root){
+  var now=performance.now();
+  root.querySelectorAll(".art.draw:not(.go)").forEach(function(el){
+    var k=keyOf(el);if(PEEK[k]==null)PEEK[k]=now;
+    el.style.setProperty("--art-t",Math.round(PEEK[k]-now)+"ms");el.classList.add("go");});}
 function startArts(screen,swiped){
   if(screen!==ARTSCR){ARTSCR=screen;ARTS={};}
   var now=performance.now();
   document.querySelectorAll(".art.draw:not(.go)").forEach(function(el){
     if(el.closest(".stillcopy"))return;
-    var m=/\bart-([\w-]+)/.exec(el.getAttribute("class")||""),sh=el.closest("#sheet")?"sheet:":"";
-    var k=sh+(m?m[1]:"art");
+    var k=keyOf(el);
     if(ARTS[k]!=null)el.style.setProperty("--art-t",Math.round(ARTS[k]-now)+"ms");
-    /* Came in by a swipe, whose copy showed it drawn: drawn at once, not again from
-       nothing as the page lands (owner, 25 Nov: the library's and favourites' drawings
-       went and came back on a swipe). */
-    else if(swiped){ARTS[k]=now-4000;el.style.setProperty("--art-t","-4000ms");}
+    /* Came in by a swipe: from where its copy had got to. */
+    else if(swiped&&PEEK[k]!=null){ARTS[k]=PEEK[k];el.style.setProperty("--art-t",Math.round(PEEK[k]-now)+"ms");}
     else ARTS[k]=now;
-    el.classList.add("go");});}
-
-export {art, gaugeArt, markArt, startArts, waterArt};
+    el.classList.add("go");});
+  /* a copy's times count for the landing that follows it only */
+  if(swiped)PEEK={};}
+export {art, gaugeArt, markArt, peekArts, startArts, waterArt};
