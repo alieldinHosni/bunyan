@@ -4595,15 +4595,18 @@ await test("Drawings (owner, 10 Nov: they flashed then started, or stopped half 
      its own swipe (no tab comes in): the drag starts on the Today card's text, which has none. */
   const ty=await page.evaluate(()=>{const r=document.querySelector('#app [data-k="today"] .thero2-m').getBoundingClientRect();return Math.round(r.top+r.height/2);});
   await T("touchStart",330,ty);for(let i=1;i<=12;i++){await T("touchMove",330-i*22,ty);await page.waitForTimeout(16);}
-  /* The page coming in is held at the start of its entrance: the loaf undrawn, the figure at 0. */
-  const held=await page.evaluate(()=>{const w=document.querySelector(".stillcopy.peek");const p=w&&w.querySelector(".fthead .art path.a"),n=w&&w.querySelector(".fring2-n");
-    return [p?parseFloat(getComputedStyle(p).strokeDashoffset):null,n?n.textContent:null];});
-  eq([held[0]>0.9,held[1]],[true,"0"],"the copy comes in at the entrance's first frame");
+  /* The page coming in (owner, 25 Nov): finished, as the real page will land, except the
+     drawing, which is drawing in (and the page carries it on); the figure is its own, not a count from 0. */
+  const held=await page.evaluate(()=>{const w=document.querySelector(".stillcopy.peek");const a=w&&w.querySelector(".fthead .art"),n=w&&w.querySelector(".fring2-n");
+    return [!!a&&a.classList.contains("go"),n?n.textContent.replace(/\D/g,""):null,n?String(n.getAttribute("data-count-to")||""):null];});
+  eq([held[0],held[1]===held[2]],[true,true],"the copy: its drawing drawing in, its figure final");
   await T("touchEnd",0,0);
   const s2=await watch("#app .fthead .art path.a",2000,false);
   const v2=s2.filter(v=>v>=0);
   let back2=0;for(let i=1;i<v2.length;i++)if(v2[i]>v2[i-1]+0.02)back2++;
-  eq([v2.length>10,v2[0]>0.5,back2,v2[v2.length-1]<0.05],[true,true,0,true],"Food by a swipe: the loaf draws in as it does from the dock, once, never going back");
+  /* begun on the copy as the finger brought it, carried on by the page: part-way when it
+     lands, never going back to the start, and finished */
+  eq([v2.length>10,v2[0]<=1,back2,v2[v2.length-1]<0.05],[true,true,0,true],"Food by a swipe: the loaf draws in once, from the copy through to the page, never going back");
 });
 await test("Keyboard over a sheet (owner, 10 Nov: the search sheet bounced as the keyboard came and went, and the page showed between the sheet and the keys): Add Food keeps its place and size, its list makes room at its end; other sheets carry their ground down under the keys",async page=>{
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("addfood",{meal:"Breakfast"});});await pause(page,900);
@@ -7812,7 +7815,8 @@ await test("Simple mode (owner, 25 Nov): one switch in Profile turns the app int
   eq(await ev(page,"V.restEnd>Date.now()"),true,"the rest timer runs after a set");
   await leaveWorkout(page);
   await tapTab(page,"food");await pause(page);
-  eq(await page.$$eval("#app .fneed,#app .ffuel,#app .fpc,#app .flogplan,#app .fring-sig",a=>a.length),0,"Food: what you ate and what is left, no notes, no built plan");
+  eq(await page.$$eval("#app .fneed,#app .ffuel,#app .fring-sig",a=>a.length),0,"Food: what you ate and what is left, no notes, no advice");
+  eq(await page.$$eval("#app .fpc[data-fplan]",a=>a.length),1,"the meal plan's card stays: the person's own plan (owner, 25 Nov)");
   /* off again (the workout is still open, saved for later: Profile from its own route) */
   await page.evaluate(async()=>{(await import("/js/ui/view.js")).V.tab="profile";(await import("/js/ui/render.js")).render();});await pause(page,400);
   await page.tap('[data-toggle="simple"]');await pause(page,400);
@@ -7865,7 +7869,14 @@ await test("Plan tabs, swiped (owner, 25 Nov): what was on the screen does not g
   await page.evaluate(()=>window.scrollTo(0,0));await page.waitForTimeout(200);y=await Y();
   await drag(60,y,330,y+5);await page.waitForTimeout(80);
   eq(await ev(page,"V.tplan"),"program","swiped back");
-  eq(await page.$eval("#app .bsch-wk,#app .bsch-cy",w=>getComputedStyle(w).animationName),"none","the weekdays are not faded in again on landing");
+  eq(await page.$eval("#app .bsch-wk,#app .bsch-cy",w=>w.getAnimations().every(a=>a.playState==="finished")),true,"the weekdays are not faded in again on landing: their fade is finished");
+  /* nothing on the landed page starts over afterwards (owner: "waits a second then flashes"):
+     sampled every frame for 1.5 s, no entrance runs on it, only the drawings' draw-in */
+  const late=await page.evaluate(()=>new Promise(r=>{const seen=new Set(),t0=performance.now();(function f(){
+    document.getElementById("app").getAnimations({subtree:true}).forEach(a=>{const t=a.effect&&a.effect.target;
+      if(a.playState==="running"&&t&&!(t.closest&&t.closest(".art"))&&!(a.effect.getTiming&&a.effect.getTiming().iterations===Infinity))seen.add((t.className&&t.className.baseVal!==undefined?t.className.baseVal:t.className)+":"+(a.animationName||""));});
+    if(performance.now()-t0<1500)requestAnimationFrame(f);else r([...seen]);})();}));
+  eq(late,[],"nothing on the landed page animates in after the swipe");
 });
 await test("Simple mode's settings (owner, 25 Nov): what it turns off shows as off and can be turned back on for Simple mode alone; leaving it, your own settings are as they were; Ask Coach is dimmed in the workout",async page=>{
   const feat=k=>page.evaluate(async k=>(await import("/js/engine/feat.js")).featOn(k),k);

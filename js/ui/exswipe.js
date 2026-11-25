@@ -24,7 +24,7 @@
    whole width instead of fading. A touch that starts in something that scrolls sideways
    (templates, pills) or on a grip is that thing's, not a swipe. */
 import {isReduced} from "./motion.js";
-import {entranceAtStart, entranceGo, gestureMs, PAGE} from "./transit.js";
+import {gestureMs, PAGE, settle} from "./transit.js";
 import {tap} from "./view.js";
 import {peekArts} from "./art.js";
 
@@ -142,7 +142,8 @@ function peekFollow(s,x,toStep){
     w.style.cssText="position:fixed;left:"+s.base.left+"px;top:"+s.top+"px;width:"+s.base.width+"px;margin:0;padding:"+(tabk?getComputedStyle(s.p).padding:"0")+";max-width:none;pointer-events:none;z-index:0";
     w.style.transform="translateX("+Math.round(x+((x||s.dir)<0?s.w:-s.w))+"px)";
     document.body.appendChild(w);
-    entranceAtStart(w);
+    /* finished, as the page will land (transit.js settle) */
+    settle(w);
     /* In the page the first card's top margin merges with the gap under the tabs; drawn
        on its own it does not, and the tab came in lower than it then landed: the page
        jumped up as it arrived (owner, 4 Nov: Programs, 12 px). Placed as the page will
@@ -282,7 +283,6 @@ function slidePlan(s,step){
     /* The real tab is drawn now that nothing moves: exactly where the one that came in
        stands, so swapping one for the other cannot be seen. */
     H.go(step,s.k);
-    entranceGo(nb,true);
     /* A main tab lands as the whole page: Progress has a pane of its own views inside it,
        and lining that up with the top of the page that came in scrolled the page down by
        its height (owner, 10 Nov: "opens then shifts the whole page upwards"). */
@@ -308,8 +308,10 @@ function slidePlan(s,step){
       if(!document.querySelector(".stillcopy"))document.documentElement.classList.remove("pgmoving");};
     if(!nb||!ims.length){drop();return;}
     if(np)np.style.visibility="hidden";
+    /* Half a second at most (a fifth was too short on a phone: the picture came in after
+       the swap, a flash a moment late). */
     Promise.race([Promise.all(ims.map(function(im){return im.decode?im.decode().catch(function(){}):null;})),
-      new Promise(function(r){setTimeout(r,200);})]).then(drop);};
+      new Promise(function(r){setTimeout(r,500);})]).then(drop);};
   /* Both travel on together, edge to edge, from where the finger left them, transform
      only; nothing is drawn until they land. */
   var a=p.animate([{transform:"translateX("+dx+"px)"},{transform:"translateX("+out+"px)"}],{duration:ms,easing:SE,fill:"forwards"});

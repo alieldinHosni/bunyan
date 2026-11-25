@@ -53,4 +53,20 @@ function entranceGo(el,counts){
   if(counts)el.querySelectorAll("[data-count-to]").forEach(function(e){var dp=+e.getAttribute("data-count-dp")||0;
     countTo(e,e.getAttribute("data-count-to"),dp?{format:function(v){return Number(v).toFixed(dp);}}:undefined);});}
 
-export {entranceAtStart, entranceGo, entranceHold, gestureMs, PAGE};
+/* A page brought in by a swipe arrives finished (owner, 25 Nov: "sometimes it flashes,
+   sometimes it waits a second then flashes … I am sick of this inconsistency"). The copy
+   the finger drags and the real page that replaces it as it lands must look the same, or
+   the swap is seen: so neither plays an entrance. Every animation in it is taken to its
+   end at once, except the drawings' draw-in (.art), which runs on from the copy to the
+   page (art.js peekArts). Finished, an animation stays finished: it does not run again
+   later, as one turned off for a moment and back on did. */
+function settle(el){
+  if(!el)return;
+  anims(el).forEach(function(a){
+    var t=a.effect&&a.effect.target;
+    if(t&&t.closest&&t.closest(".art"))return;
+    /* a loop (a live dot's pulse) is not an entrance: it carries on */
+    var tm=a.effect&&a.effect.getTiming?a.effect.getTiming():null;
+    if(tm&&tm.iterations===Infinity)return;
+    try{a.finish();}catch(e){}});}
+export {entranceAtStart, entranceGo, entranceHold, gestureMs, PAGE, settle};

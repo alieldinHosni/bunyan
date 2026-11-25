@@ -167,7 +167,8 @@ function vFoodToday(dsel){
      Nothing is marked "Now": the day is the user's, not the clock's. */
   /* ---- what is behind for the time of day, right under the day's numbers, today only
      (js/ui/bodyneeds.js): one slim card, or none. */
-  /* Simple mode: no notes about the time of day, no built meal plan; you log, it adds up. */
+  /* Simple mode: no notes about the time of day. The meal plan and its card stay: they
+     are the person's own plan, not a suggestion (owner, 25 Nov). */
   var plain=simple();
   if(dsel===today()&&!plain)h+=bodyNeeds(e);
   var ids=dayMeals(dsel),next=nextMeal(dsel),n=ids.length;
@@ -187,7 +188,7 @@ function vFoodToday(dsel){
   h+='</div>';
 
   /* The coach's meal plan, one tap into the meals not logged yet today. */
-  if(!plain&&dsel===today()&&ids.some(function(id){return planOf(id).length&&!(((r.meals[id]||{}).items)||[]).length;}))
+  if(dsel===today()&&ids.some(function(id){return planOf(id).length&&!(((r.meals[id]||{}).items)||[]).length;}))
     h+='<button class="btn g flogplan" data-logday="1">'+esc(t("Log today's plan"))+'</button>';
   /* In the page, not floating: the dock is the one floating control. */
   h+='<button class="btn fadd" data-addfood="'+esc(next)+'">'
@@ -214,7 +215,7 @@ function vFoodToday(dsel){
    /* The strands are the day's water: the bright one runs as far as the goal is met. */
    +'<div class="fwater-art">'+waterArt(g.water?r.water/g.water:0)+'</div></div>';
   /* The way into planning, last: the day itself first (owner, 4 Nov). */
-  if(!plain)h+=foodPlanCard();
+  h+=foodPlanCard();
   return h;}
 
 /* ---- one meal (node 13:118). Reached from a logged row above; back returns here. */

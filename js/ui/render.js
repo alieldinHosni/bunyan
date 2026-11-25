@@ -30,7 +30,7 @@ import {bindMore} from "./more.js";
 import {syncFigs} from "./fig3d.js";
 import {syncBgArt} from "./bgart.js";
 import {startArts} from "./art.js";
-import {PAGE} from "./transit.js";
+import {PAGE, settle} from "./transit.js";
 import {syncCoach} from "./coachfab.js";
 import {keepRead} from "./liveread.js";
 import {simple} from "./simple.js";
@@ -43,7 +43,7 @@ import {simple} from "./simple.js";
    "once per view" reveal would either replay on every repaint or never fire at all.
    A node that is genuinely new has no marker, so it animates; one that survived a
    patch keeps its marker and stays still. */
-function paintMotion(root,viewKey){
+function paintMotion(root,viewKey,settled){
   if(!root)return;
   var i,els;
 
@@ -73,6 +73,8 @@ function paintMotion(root,viewKey){
   els=root.querySelectorAll("[data-count-to]");
   /* data-count-dp: its decimals (a weight to the tenth). */
   for(i=0;i<els.length;i++){var dp=+els[i].getAttribute("data-count-dp")||0;
+    /* settled: the figure as the view wrote it, final, no count from 0 */
+    if(settled)continue;
     countTo(els[i],els[i].getAttribute("data-count-to"),dp?{format:fmtDp(dp)}:undefined);}
 }
 
@@ -346,7 +348,9 @@ function render(){
      render that replaces the field being typed in destroys it without a focusout,
      which left "kb" on the body and the dock hidden on the next screen. */
   syncKeyboard();
-  paintMotion(appEl,view);
+  /* A page brought in by a swipe arrives finished: no count-up, no entrance (settle,
+     below); the copy the finger brought showed it finished. */
+  paintMotion(appEl,view,swipedIn);
   paintMotion(sheetEl,"sheet:"+(V.sheet||""));
   /* The live 3D figures: new ones start, kept ones carry on, gone ones let go of the
      graphics card (js/ui/mannequin.js). */
@@ -354,10 +358,8 @@ function render(){
   /* The drawings: each draws in once a screen, carried on through re-renders (js/ui/art.js). */
   startArts(view,swipedIn);
   /* A page that came in by a swipe was already on the screen, in the copy the finger
-     brought: what fades in when it is first built is shown as it is (index.html
-     #app.swipedin). Only for the landing; the next change animates as usual. */
-  appEl.classList.toggle("swipedin",swipedIn);
-  if(swipedIn){clearTimeout(render._sw);render._sw=setTimeout(function(){appEl.classList.remove("swipedin");},900);}
+     brought: its entrances are taken to their end now, once (transit.js settle). */
+  if(swipedIn)settle(appEl);
 
   /* No search field is focused for you. Opening the picker with the keyboard already
      up hid half the list behind it before anything was typed; browsing by muscle
