@@ -26,7 +26,7 @@ import {planSummary} from "../engine/planshare.js";
 import {CUR, PROFILES, S} from "../state.js";
 import {fmtW, toDisp, wUnit} from "../units.js";
 import {esc, fmtN, num, shortd, today} from "../util.js";
-import {VERSION} from "../version.js";
+import {versionName} from "../version.js";
 import {canBuzz, seg, V} from "./view.js";
 import {iconOf, modeOf, themeOf, THEMES} from "./theme.js";
 import {skyInfo} from "./sky.js";
@@ -378,7 +378,7 @@ function aboutSheet(){
    +'<section class="sg"><h3 class="sg-h">'+t("How the numbers work")+'</h3><div class="sg-card"><span class="gtile">'+glyph("info")+'</span><p>'
    +t("Estimated 1RM uses the Epley formula and is only meaningful up to about 12 reps. Volume is the sum of weight × reps for every set, not an average.")+'</p></div></section>'
    +'<section class="sg"><h3 class="sg-h">'+t("Version")+'</h3><div class="sg-card"><span class="gtile">'+glyph("spark")+'</span><p>'
-   +esc(t("Bunyan · version {n}")).replace("{n}",'<span class="num">'+VERSION+'</span>')+'</p></div></section>'
+   +esc(t("Bunyan · version {n}")).replace("{n}",'<span class="num">'+versionName()+'</span>')+'</p></div></section>'
    +restartNotes();}
 /* Restarts nobody asked for (js/ui/crashnote.js): when, and what was tapped just before,
    so the cause can be found. Only shown once there is one. */
@@ -392,7 +392,7 @@ function restartNotes(){
         launch's time. */
      var d=new Date(x.seen||x.at);
      return '<br><span class="num" dir="ltr">'+esc(d.toLocaleString())+'</span>'
-       +(x.v?' · '+esc(t("version {n}")).replace("{n}",'<span class="num">'+esc(String(x.v))+'</span>'):'')
+       +(x.v?' · '+esc(t("version {n}")).replace("{n}",'<span class="num">'+esc(versionName(x.v))+'</span>'):'')
        +' · '+t("after")+' <code dir="ltr">'+esc(x.after||"?")+'</code>'
        +(x.err?' · <code dir="ltr">'+esc(x.err)+'</code>':'');}).join("")+'</p>'
    +'<button class="btn g sm" data-crashclear="1">'+t("Clear these notes")+'</button></div></section>';}

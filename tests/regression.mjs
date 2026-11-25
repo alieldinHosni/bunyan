@@ -4252,7 +4252,8 @@ await test("A restart nobody asked for (owner, 9 Nov: logging Football showed a 
   /* Owner, 18 Nov: which release, and when the app was last alive (not the next launch). */
   const ver=await p2.evaluate(async()=>(await import("/js/version.js")).VERSION);
   eq([notes[0].v,typeof notes[0].seen,notes[0].seen<=notes[0].at],[ver,"number",true],"the note keeps the version and the last sign of life, before the launch that found it");
-  if(!new RegExp("version\\s*"+ver).test(txt))throw new Error("the version is not shown: "+txt.slice(0,300));
+  const vn=Math.floor(ver/100)+"."+String(ver%100).padStart(2,"0");
+  if(!new RegExp("version\\s*"+vn.replace(".","\\.")).test(txt))throw new Error("the version is not shown: "+txt.slice(0,300));
   /* Put away and brought back: still nothing new. */
   await p2.evaluate(()=>{document.querySelector('[data-close]')&&document.querySelector('[data-close]').click();});
   await p2.reload();await p2.waitForTimeout(1000);
@@ -4274,7 +4275,8 @@ await test("Profile (owner, 9 Nov review): one door to You, weeks kept as Progre
     [["Settings",5],["People",4],["Your data",3],["Help",2]],"the groups");
   eq(await page.evaluate(()=>{const g=[...document.querySelectorAll('#app .sg')].find(x=>x.querySelector('.sg-h').textContent==="Your data");return !!(g&&g.querySelector('[data-sheet="set_chat"]'));}),true,"chat history with the data");
   const v=await page.evaluate(async()=>(await import("/js/version.js")).VERSION);
-  eq(await page.$eval('#app .pver',e=>e.textContent),"Bunyan · version "+v,"the version at the foot");
+  /* shown as major.minor (owner, 25 Nov: "3.14, next V3.15"): 320 reads 3.20 */
+  eq(await page.$eval('#app .pver',e=>e.textContent),"Bunyan · version "+Math.floor(v/100)+"."+String(v%100).padStart(2,"0"),"the version at the foot, as major.minor");
   await page.tap('#app .pid-name');await pause(page,500);
   if(!(await page.$('#sheet input,#sheet textarea,.dlg input')))throw new Error("Add your name opens no name field");
 });
