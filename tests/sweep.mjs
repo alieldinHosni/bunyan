@@ -4,10 +4,12 @@
    started and left — with animations on, and watches every frame for 1.5 s after each:
      jump     the layout shifted after the move (PerformanceObserver "layout-shift"; a
               page's slide is a transform and does not count)
-     late     an animation started more than 700 ms after the move's first one (an
-              entrance playing once the page had already landed: the "waits a second
-              then flashes"). How long the app took to start moving is printed as
-              "answered in" and does not fail: it measures the machine as much as the app
+     late     an animation started more than 700 ms after the page changed (#app's
+              content swapped, or with no swap the move's first animation): an
+              entrance playing once the page had already landed, the "waits a second
+              then flashes". A page slow to build is not late: its entrance starts as
+              it lands. How long the app took to start moving is printed as "answered
+              in" and does not fail: it measures the machine as much as the app
      blank    a picture on the screen not yet drawn once the move should have settled
    Prints what it finds per move and exits 1 on any. Run against a served copy:
      BUNYAN_URL=http://localhost:8797/index.html PW_PATH=… node tests/sweep.mjs
@@ -36,7 +38,9 @@ const page=await ctx.newPage();const errs=[];page.on("pageerror",e=>errs.push(e.
 await page.goto(URL_);await page.waitForTimeout(2500);
 const cdp=ENGINE==="chromium"&&!process.env.SYNTH?await ctx.newCDPSession(page):null;
 /* the recorder, armed just before a move */
-const arm=()=>page.evaluate(()=>{const R=window.__sw={t0:performance.now(),shift:[],late:new Set(),blank:new Set()};
+const arm=()=>page.evaluate(()=>{const R=window.__sw={t0:performance.now(),shift:[],late:new Set(),blank:new Set(),cand:[]};
+  /* when the page changed: the first time #app's own children are swapped after the move */
+  try{R.mo=new MutationObserver(()=>{if(R.dom==null)R.dom=performance.now()-R.t0;});R.mo.observe(document.getElementById("app"),{childList:true});}catch(e){}
   try{R.po=new PerformanceObserver(l=>{l.getEntries().forEach(e=>{if(!e.hadRecentInput&&e.value>0.001&&!(e.sources||[]).every(s=>s.node===document.body))R.shift.push({v:+e.value.toFixed(4),t:Math.round(e.startTime-R.t0),n:(e.sources||[]).map(s=>s.node&&s.node.className&&String(s.node.className.baseVal!==undefined?s.node.className.baseVal:s.node.className).slice(0,40)).join("|")});});});
     R.po.observe({type:"layout-shift",buffered:false});}catch(e){}
   const vis=el=>{const r=el.getBoundingClientRect();return r.width>8&&r.height>8&&r.bottom>0&&r.top<innerHeight&&r.right>0&&r.left<innerWidth&&getComputedStyle(el).visibility!=="hidden";};
@@ -45,12 +49,12 @@ const arm=()=>page.evaluate(()=>{const R=window.__sw={t0:performance.now(),shift
       if(tg.closest(".art,#bgart,#splash,.stillcopy,.toast,#cfab,.sheetghost"))return;
       const tm=a.effect.getTiming&&a.effect.getTiming();if(tm&&tm.iterations===Infinity)return;
       const st=a.startTime==null?t:(a.startTime-R.t0);if(a.playState==="running"&&st>=0&&(R.first==null||st<R.first))R.first=st;
-      if(a.playState==="running"&&st-(R.first==null?0:R.first)>700){
-        R.late.add((a.animationName||a.id||"anim")+" @ "+String(tg.className&&tg.className.baseVal!==undefined?tg.className.baseVal:tg.className).slice(0,40)+" "+Math.round(st)+"ms");}});
+      if(a.playState==="running"&&!R.seen?.has(a)){(R.seen=R.seen||new Set()).add(a);R.cand.push([st,(a.animationName||a.id||"anim")+" @ "+String(tg.className&&tg.className.baseVal!==undefined?tg.className.baseVal:tg.className).slice(0,40)+" "+Math.round(st)+"ms"]);}});
     if(t>900)document.querySelectorAll("#app img,#sheet img").forEach(im=>{if(/^https?:/.test(im.getAttribute("src")||"")&&!(im.getAttribute("src")||"").startsWith(location.origin))return;if(vis(im)&&(!im.complete||!im.naturalWidth))R.blank.add((im.getAttribute("src")||"").split("/").pop()+" "+Math.round(t)+"ms");});
-    if(t<1500)requestAnimationFrame(f);else{try{R.po.disconnect();}catch(e){}R.done=true;}})();});
+    if(t<1500)requestAnimationFrame(f);else{try{R.po.disconnect();R.mo.disconnect();}catch(e){}
+      const at=R.dom!=null?R.dom:(R.first||0);R.cand.forEach(c=>{if(c[0]-at>700)R.late.add(c[1]);});R.done=true;}})();});
 const collect=async()=>{await page.waitForFunction(()=>window.__sw&&window.__sw.done,null,{timeout:8000}).catch(()=>{});
-  return page.evaluate(()=>{const R=window.__sw;return {shift:R.shift,late:[...R.late],blank:[...R.blank],first:R.first==null?null:Math.round(R.first)};});};
+  return page.evaluate(()=>{const R=window.__sw;return {shift:R.shift,late:[...R.late],blank:[...R.blank],first:R.first==null?null:Math.round(R.first),dom:R.dom==null?null:Math.round(R.dom)};});};
 const ev=e=>page.evaluate(async e=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;return eval(e);},e);
 /* A dock tap first scrolls up a little so the dock shows; that happens before the timer
    starts (see the loop), so "answered in" is the app's time, not the test's. */
@@ -126,7 +130,7 @@ for(const [name,go] of MOVES){
   if(r.late.length)issues.push("late: "+r.late.slice(0,6).join("; "));
   if(r.blank.length)issues.push("blank: "+r.blank.slice(0,6).join("; "));
   if(want&&at!==want&&!(want==="train"&&at==="train"))issues.push("did not happen: at "+at+", not "+want);
-  console.log((issues.length?"FAIL ":"ok   ")+name+(r.first!=null?"  (answered in "+r.first+" ms)":"")+(issues.length?"\n       "+issues.join("\n       "):""));
+  console.log((issues.length?"FAIL ":"ok   ")+name+(r.first!=null?"  (answered in "+r.first+" ms"+(r.dom!=null?", page changed at "+r.dom+" ms":"")+")":"")+(issues.length?"\n       "+issues.join("\n       "):""));
   if(issues.length)bad++;}
 if(errs.length){console.log("page errors:",errs.slice(0,5).join(" | "));bad++;}
 console.log("== sweep ("+ENGINE+(RTL?", Arabic":"")+(SIMPLE?", Simple mode":"")+"):",MOVES.length,"moves,",bad,"with problems");
