@@ -43,5 +43,5 @@ function run(t){
   /* 12 */
   const gw=Math.abs(top.grip.l[2]-top.grip.r[2]),sw=Math.abs(top.sh.l[2]-top.sh.r[2]);
   t.ok(gw>=sw&&gw<=1.5*sw,"12. grip "+cm(gw)+" across, the shoulders "+cm(sw)+" (1–1.5 times)");
-  auditAll(t,NAME,rec);}
+  auditAll(t,NAME,rec,{pending:true});}
 export {run};

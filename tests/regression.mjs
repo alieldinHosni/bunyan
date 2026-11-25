@@ -5110,11 +5110,11 @@ await test("WP-3 workout page: the first set of a barbell lift leaves Log set 96
 },{prefs:{autorest:false}});
 await test("WP-3 workout page: in Arabic the stage mirrors (the picture on the right) and the picture does not; a reviewed exercise's figure plays there",async page=>{
   await startWorkout(page);await pause(page,500);
-  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.active.entries[1].name="Romanian Deadlift";(await import("/js/ui/workout.js")).jumpTo(1);});await pause(page,1500);
+  await page.evaluate(async()=>{const S=(await import("/js/state.js")).S;S.active.entries[1].name="Pullups";(await import("/js/ui/workout.js")).jumpTo(1);});await pause(page,1500);
   const r=await page.evaluate(()=>{const m=document.querySelector(".stg .stg-m"),tx=document.querySelector(".stg .stg-t"),f=m.querySelector(".fig3d");
     const tf=x=>getComputedStyle(x).transform;return {right:m.getBoundingClientRect().left>tx.getBoundingClientRect().left,fig:!!f,mq:f&&f.getAttribute("data-mq"),
       flips:[m,f,f&&f.querySelector("canvas")].filter(Boolean).map(tf).filter(x=>x!=="none"&&!/^matrix\(1, 0, 0, 1,/.test(x)),ctl:!!m.querySelector(".fig3d-play:not([hidden])")&&getComputedStyle(m.querySelector(".fig3d-play")).display!=="none"};});
-  eq([r.right,r.fig,r.mq,r.flips,r.ctl],[true,true,"Romanian Deadlift",[],false],"on the right, the figure, nothing mirrored, no extra control");
+  eq([r.right,r.fig,r.mq,r.flips,r.ctl],[true,true,"Pullups",[],false],"on the right, the figure, nothing mirrored, no extra control");
 },{prefs:{autorest:false,lang:"ar"}});
 await test("WP-3 workout page: what is used every set is in the bottom half and one thumb reaches it, at 390 × 844 and 320 × 640, English and Arabic",async page=>{
   for(const [w,h,lang] of [[390,844,"en"],[320,640,"en"],[390,844,"ar"],[320,640,"ar"]]){
@@ -7785,7 +7785,7 @@ await test("Live figure: still loading after 4 s, the photos say so (owner, 24 N
 });
 await test("Live figure: when the drawing itself cannot load, the photos say why",async page=>{
   await page.route("**/js/ui/mannequin.js",r=>r.abort());
-  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Romanian Deadlift"});});await pause(page,1500);
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Pullups"});});await pause(page,1500);
   eq(await page.$eval("#sheet .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-still"),/couldn't start/.test(e.getAttribute("data-why")||""),getComputedStyle(e.querySelector(".fig3d-still")).visibility]),
     [false,true,true,"visible"],"the photos, and why");
 });
@@ -7802,7 +7802,7 @@ await test("Simple mode (owner, 25 Nov): one switch in Profile turns the app int
     eq(await ev(page,"V.tab"),"train",tab+" lands on Training");}
   eq(await page.$$eval(".cfab",a=>a.length),0,"no coach button");
   eq(await page.$$eval("#app .tdc-lead,#app .tdc-st,#app .tdc-fuelw",a=>a.length),0,"the Today card says the day, not advice");
-  eq(await ev(page,"document.documentElement.classList.contains('simple')&&document.body.classList.contains('noanim')"),true,"plain and still");
+  eq(await ev(page,"document.documentElement.classList.contains('simple')"),true,"marked, for the dock's width");
   /* Start: no question first; the first set shows last time's numbers (the seed: 60 kg × 8) */
   await page.tap('[data-startday]');await pause(page,500);
   eq([await ev(page,"!!S.active"),await ev(page,"V.sheet")],[true,null],"the workout starts at once");
@@ -7816,6 +7816,24 @@ await test("Simple mode (owner, 25 Nov): one switch in Profile turns the app int
   await page.tap('[data-toggle="simple"]');await pause(page,400);
   eq(await page.$$eval('nav .dock-b',a=>a.map(x=>x.dataset.tab)),["train","food","coach","progress"],"all four back");
   eq(await ev(page,"document.documentElement.classList.contains('simple')"),false);
+});
+await test("Main tabs, swiped (owner, 25 Nov: pages shook left and right): a slanted drag on a page does not move it; in Simple mode the swipe goes between Training and Food only",async(page,env)=>{
+  await tapTab(page,"food");await pause(page);
+  const cdp=await env.ctx.newCDPSession(page);
+  const drag=async(x0,y0,x1,y1,steps=12)=>{
+    await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x0,y:y0}]});
+    for(let i=1;i<=steps;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x0+(x1-x0)*i/steps,y:y0+(y1-y0)*i/steps}]});await page.waitForTimeout(16);}
+    await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await page.waitForTimeout(650);};
+  /* a thumb going down the page, drifting sideways: 60 across, 40 down */
+  let moved=false;
+  await page.evaluate(()=>{window.__tx=0;const a=document.getElementById("app");new MutationObserver(()=>{if(/translateX\((?!0px)/.test(a.style.transform))window.__tx++;}).observe(a,{attributes:true,attributeFilter:["style"]});});
+  await drag(300,420,240,460);
+  eq([await ev(page,"V.tab"),await ev(page,"window.__tx")],["food",0],"a slanted drag leaves the page where it is");
+  await drag(320,420,60,425);eq(await ev(page,"V.tab"),"coach","a level swipe still changes tab");
+  /* Simple mode: Training and Food only */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.simple=true;const v=await import("/js/ui/view.js");v.V.tab="food";(await import("/js/ui/render.js")).render();});await pause(page,400);
+  await drag(320,420,60,425);eq(await ev(page,"V.tab"),"food","from Food, nothing further: Coach is not there");
+  await drag(60,420,320,425);eq(await ev(page,"V.tab"),"train","back to Training");
 });
 await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails, shown only once checked (the library's fall back to their photographs)",async page=>{
   eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];

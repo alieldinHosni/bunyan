@@ -5303,3 +5303,15 @@ What C-10 adds:
   - the look: no animations, no moving sky, no page photographs, no decorative drawings (html.simple).
 - **Test:** "Simple mode (owner, 25 Nov)" walks all of it, on and off. Checked on screenshots in English and Arabic.
 - **Next steps** (owner to confirm): what Simple mode should let you bring back one by one, and a measured comparison of speed with it on and off.
+
+**Owner, 25 Nov (v310 on the phone): four things wrong (v311, session/simple-fixes).**
+- **The Romanian deadlift's bar went through the thighs.** True. The thigh capsules the safety checks and the `touch` path rule use are cones round the femur; the drawn thigh's front stands up to 4.9 cm beyond them at mid-thigh (2.3 cm near the knee; measured from body.bin against capsules.js LIMBS). "Touching" was inside the leg, and every automatic check passed.
+  - The approval is withdrawn: TABLE row, approved.js, collide test, the dossier. The exercise shows its photographs again.
+  - Pullups and the Incline Dumbbell Press stay approved: no part of either is pressed against a thigh.
+  - **Next:** capsules that match the mesh (a check of mesh against capsule for every part, then the thigh's front), the touch rule re-run, and new pictures for the owner.
+- **Pages shook left and right.** A thumb scrolling down drifts sideways, and a main tab's page took the drift as a swipe: it followed the finger a little and sprang back. Page swipes (main tabs, plan tabs) now need 16 px and a drag twice as level as it is tall, and never start once the page has scrolled under the finger. The exercise swipe is unchanged.
+  - In Simple mode the tab swipe still counted four tabs: from Food it went to Coach, which Simple mode sends back to Training. app.js now swipes between the dock's own tabs.
+  - Test "Main tabs, swiped": a slanted drag (60 across, 40 down) leaves the page still; a level one still changes tab; in Simple mode Food is the last. Proven both ways: with the old rule the slanted drag moved the page.
+- **The dock in Simple mode** was four tabs wide with two in it. It is now as wide as two (html.simple .dock).
+- **Simple mode changed the look and the motion.** It no longer does: animations, the sky and the page photographs follow the person's own settings again. Simple mode only takes things away.
+- Two browser tests that relied on the Romanian deadlift being approved now use Pullups. The iPhone check opens Pullups.

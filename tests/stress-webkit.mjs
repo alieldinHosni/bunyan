@@ -119,7 +119,7 @@ if(!crashed){try{
   /* the library's photos come from an outside host (cdn.jsdelivr.net): one it cannot
      reach here is not the app's error */
   const ev0=ev.length;
-  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Romanian Deadlift"});});
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Pullups"});});
   await page.waitForTimeout(10000);
   for(let i=ev.length-1;i>=ev0;i--)if(/^CONSOLE Failed to load resource/.test(ev[i]))ev.splice(i,1);
   const fig=await page.evaluate(async()=>{const e=document.querySelector("#sheet .fig3d");if(!e)return {none:true};

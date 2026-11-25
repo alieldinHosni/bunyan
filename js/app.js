@@ -268,8 +268,11 @@ var PTABS={tplan:["program","programs"],fplan:["plan"],ptab:["overview","strengt
 /* Each kind's tab, as V holds it; Progress's starts on Overview. */
 function ptabOf(k){return k==="tplan"?V.tplan:k==="fplan"?V.fplan:(V.ptab||"overview");}
 function ptabSet(k,v){if(k==="tplan")V.tplan=v;else if(k==="fplan")V.fplan=v;else V.ptab=v;}
-/* The dock's four tabs, swiped between on their own pages (owner, 4 Nov). */
-var MTABS=["train","food","coach","progress"];
+/* The dock's tabs, swiped between on their own pages (owner, 4 Nov): four, or in Simple
+   mode the two it shows (owner, 25 Nov: swiped from Food the page went to Coach, which
+   Simple mode sends back to Training, and the pages jumped). */
+var ALLTABS=["train","food","coach","progress"];
+function mtabs(){return S.prefs&&S.prefs.simple?["train","food"]:ALLTABS;}
 /* Each main tab's own page's picture (js/ui/render.js groundOf, at a tab's root). */
 var GROUND={train:"home",food:"food",coach:"coach",progress:"progress"};
 /* A main tab's own page: what a tap on its dock button opens. */
@@ -288,14 +291,14 @@ function ptabNow(k){var l=PTABS[k],v=ptabOf(k);return Math.max(0,l.indexOf(v));}
 initExSwipe({
   root:atRoot,
   can:function(step,k){
-    if(k==="tab"){var m=MTABS.indexOf(V.tab)+step;return atRoot()&&m>=0&&m<MTABS.length;}
+    if(k==="tab"){var m=mtabs().indexOf(V.tab)+step;return atRoot()&&m>=0&&m<mtabs().length;}
     if(k&&k!=="ex"){var n2=ptabNow(k)+step;return !V.sheet&&n2>=0&&n2<PTABS[k].length;}
     var a=S.active,n=V.logIdx+step;return !!(a&&!V.sheet&&V.tab==="train"&&n>=0&&n<a.entries.length);},
   /* The tab next door, drawn as it would be, for the swipe to bring in under the finger
      (exswipe.js peek). Nothing is changed: the tab is put back at once. */
   peek:function(step,k){
     if(k==="tab"){
-      var nt=MTABS[MTABS.indexOf(V.tab)+step];if(!nt)return null;
+      var nt=mtabs()[mtabs().indexOf(V.tab)+step];if(!nt)return null;
       var keep={},hm="";ROOTV.forEach(function(f){keep[f]=V[f];});
       asRoot(nt);
       try{hm=nt==="train"?vTrain():nt==="food"?vFood():nt==="coach"?vCoach():vProgress();}catch(e){hm="";}
@@ -311,13 +314,13 @@ initExSwipe({
     var box=document.createElement("div");box.innerHTML=h;
     var p=box.querySelector(".psec");return p?p.innerHTML:null;},
   /* The dock's highlight with a main tab's swipe (js/ui/dock.js). */
-  follow:function(step,f){var nt=MTABS[MTABS.indexOf(V.tab)+step];if(nt){dockFollow(nt,f);bgFollow(GROUND[nt],f);}},
-  land:function(step,ms){var nt=MTABS[MTABS.indexOf(V.tab)+step];if(nt){dockLand(nt,ms);bgLand(GROUND[nt],ms);}},
+  follow:function(step,f){var nt=mtabs()[mtabs().indexOf(V.tab)+step];if(nt){dockFollow(nt,f);bgFollow(GROUND[nt],f);}},
+  land:function(step,ms){var nt=mtabs()[mtabs().indexOf(V.tab)+step];if(nt){dockLand(nt,ms);bgLand(GROUND[nt],ms);}},
   back:function(ms){dockBack(ms);bgBack(ms);},
   go:function(step,k){
     /* The same move as the dock's tap, without its page entrance: the swipe brought the
        page in itself. */
-    if(k==="tab"){var gt=MTABS[MTABS.indexOf(V.tab)+step];if(!gt)return;
+    if(k==="tab"){var gt=mtabs()[mtabs().indexOf(V.tab)+step];if(!gt)return;
       resetNav();asRoot(gt);V.tswiped=true;render();return;}
     if(k&&k!=="ex"){var v=PTABS[k][ptabNow(k)+step];ptabSet(k,v);
       /* The swipe brings the tab in itself; the section's own slide stays out of it. */

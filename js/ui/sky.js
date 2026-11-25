@@ -16,7 +16,6 @@
    the photographs change: the cards, the words and the theme's ground do not, so
    nothing is harder to read at night. Off: Settings → App → Background follows the sun. */
 import {skyLook, sunTimes} from "../engine/sun.js";
-import {simple} from "./simple.js";
 import {zonePlace} from "../data/tzplaces.js";
 import {S} from "../state.js";
 
@@ -30,7 +29,7 @@ function where(){
   var l=S.prefs&&S.prefs.skyLoc;
   if(l&&isFinite(l.lat)&&isFinite(l.lon))return {name:null,lat:+l.lat,lon:+l.lon,src:"gps"};
   return zonePlace(zone(),stdOff());}
-function on(){return !(S.prefs&&S.prefs.nosky)&&!simple();}
+function on(){return !(S.prefs&&S.prefs.nosky);}
 
 var PROPS=["--sky-b","--sky-s","--sky-w","--sky-h","--sky-t","--sky-ga"];
 function applySky(instant){

@@ -121,6 +121,9 @@ audit check (penetration, contacts, clearances, limits, joint speed, slide), plu
 
 ## Review
 
+**Withdrawn on 2026-11-25** after the owner saw it on the iPhone: the bar sinks into the thighs. The thigh capsules (`capsules.js` LIMBS) are cones round the femur; the drawn thigh's front stands up to 4.9 cm beyond them at mid-thigh (2.3 cm near the knee), so the path rule `touch:thigh+shin` put the bar inside the visible leg while every automatic check passed. Back on its photographs until the capsules match the body and the owner has approved new pictures.
+
+
 **Approved by the owner on 2026-11-13** from the review pictures (start, middle and end, both sides), with the choices above as drawn. Marked `checked` in `moves.js` TABLE against the record's current version; any change to the movement withdraws the approval until it is reviewed again.
 
 Pictures (not in the repository): `review/Romanian_Deadlift/` in the session's scratch
