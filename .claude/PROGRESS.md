@@ -5388,4 +5388,8 @@ Runs in English, Arabic (drags mirrored) and Simple mode (16 moves). In WebKit, 
   - drags timed from the finger going down;
   - a drag begun on the week card, which keeps its own swipe between weeks;
   - the dock hidden after a scroll.
-- **WebKit's result comes from CI**; that is where the iPhone's own engine is tried.
+- **WebKit (CI, merged as #210): 0 problems in all three.** Getting there fixed three more faults of the harness, none of the app:
+  - WebKit refuses `new Touch()` from a page, so its drags are plain events carrying the touch fields the app reads (`SYNTH=1` tries that path in Chromium);
+  - lateness is timed from the move's first animation, not the tap: on the slow runner Food's plan took 873 ms to build, and its own entrance counted as late. The time to the first animation is printed as "answered in" and does not fail;
+  - the wait that brings the dock into view ran inside that time (dock taps read 550 ms; the app answers in under 150 ms).
+- **Result of step 1:** the sweep finds no flash, jump, late animation or blank picture in either engine. The swipe faults the owner saw were fixed in v314 before it existed; it now guards them. Step 1 is done; next is step 2, Simple mode.
