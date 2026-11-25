@@ -22,7 +22,7 @@ import {pushNav, resetNav} from "../nav.js";
 import {fromEl, land} from "../chatmotion.js";
 import {render} from "../render.js";
 import {toast, V} from "../view.js";
-import {loadChat} from "../chatload.js";
+import {langReady, loadChat} from "../chatload.js";
 import {loadFoods} from "../../engine/nutrition.js";
 import {toEnd} from "../coachfab.js";
 import {run as runSmart} from "../smartcoach.js";
@@ -135,7 +135,7 @@ function chatSend(){
 /* A request sent as if typed: from the box, or from an answer's button that asks for
    something (data-chatsay), shown as that button's words. */
 function sendText(q,from,shown){
-  loadChat().then(function(c){loadFoods(function(){
+  Promise.all([loadChat(),langReady(q)]).then(function(r){var c=r[0];loadFoods(function(){
     var m=c.ask(q);if(m&&!m.tap&&shown)m.q=shown;
     /* "yes" or "no" to a change waiting for a tap: that tap. */
     if(m&&m.tap){dispatchTap(m.tap,document.createElement("button"),{},{typingAsk:false});return;}

@@ -79,6 +79,9 @@ if(toAsk.length){
       let out;
       try{out=await page.evaluate(async([it,base])=>{
         const S=(await import("/js/state.js")).S,C=await import("/js/ui/views/chat.js");
+        /* As the app sends a question (js/ui/handlers/common.js sendText): an Arabic one
+           waits for the Arabic dictionary first. */
+        await (await import("/js/ui/chatload.js")).langReady(it.say,it.lang);
         const b=JSON.parse(base);S.chat=[];S.chatFrom=0;S.context=b.context?JSON.parse(JSON.stringify(b.context)):S.context;
         for(const q of it.before||[])C.ask(q);
         const m=C.ask(it.say);

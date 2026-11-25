@@ -5475,6 +5475,14 @@ I profiled the start (Chromium, CPU profile) before cutting anything. The bytes 
 - **Simple mode** now starts about 14% sooner and is blocked a third as long.
 - **The full app** loads less, but still warms the coach (3 s later), so its numbers are within noise.
 
+**A safety fault the coach evaluation caught on this change, fixed in it:**
+- The first Arabic question in the English app ("حاسس بألم في صدري") was answered in English, so without "طوارئ".
+- The Arabic dictionary (js/i18n/ar.js) loads when idle once chat.js is in. With the chat now loading later, a question asked at once beat it.
+- The race was there before (a question in the first moments); this change widened it.
+- **Fix:** chatload.js `langReady(q,l)`. An Arabic question (its letters, or an Arabic chip) waits for the dictionary before it is answered, in both ways in: `sendText` and the chips' `chatq`. tests/coach-eval.mjs asks the same way.
+- **Test:** "An Arabic question sent at once in the English app". It fails without the fix.
+- knowledge-001-ar ("ازاي اعمل ديدلفت صح؟", the word deadlift in Arabic) was already marked failing; it is unchanged.
+
 **Next in step 3:**
 - the full app's start: about 0.8 s of module round trips before any code runs, and the coach's index (warm it in pieces, or only when the panel opens);
 - then the Coach and Progress pages and the coach's handlers loaded on first open.
