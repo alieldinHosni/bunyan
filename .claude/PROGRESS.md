@@ -5429,4 +5429,16 @@ Runs in English, Arabic (drags mirrored) and Simple mode (16 moves). In WebKit, 
 - **Tests:**
   - "Simple mode, plainer pages" (the offers present outside Simple mode, gone in it, the plain note);
   - the Simple mode test checks there is no Suggested tag.
-- **Next in step 2:** the speed measured.
+
+**2. Finish Simple mode, step 3: the speed measured (tools/speed.mjs).** For a person with 100 workouts, in Chromium with the processor slowed 4×, with no service worker (a first visit), median of 5 fresh starts per mode:
+
+| | start (to the Today card) | JavaScript before it | dock taps (to the next frame) |
+|---|---|---|---|
+| Full, run 1 | 1705 ms | 189 modules, 2703 KB | 127–171 ms |
+| Simple, run 1 | 1549 ms | the same | 96–136 ms |
+| Full, run 2 | 1612 ms | the same | 110–184 ms |
+| Simple, run 2 | 1814 ms | the same | 128–157 ms |
+
+- **Simple mode is not faster to start.** The two runs disagree on which mode is quicker by more than the gap between them, so the difference is noise. Simple mode loads exactly the code the full app does: the coach's 23 modules, Progress, the head and the smart coach, all before the first screen, for pages it never shows.
+- **Its taps are about the same, perhaps a little quicker:** less is drawn per page.
+- **What would make it faster is step 3 (a lighter app):** the coach, Progress and what only they use loaded when first opened, not at start. Simple mode then skips them entirely. Step 3 is judged on tools/speed.mjs: start time and modules before the first screen, both modes.
