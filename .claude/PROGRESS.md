@@ -5347,3 +5347,17 @@ What C-10 adds:
 - **Owner, 25 Nov: "to fix the reload you ruined the animation"; Log cardio's drawing "still reloading".** v312's fix finished a swiped-in drawing at once, which took away its draw-in. Before that, the swipe's copy showed it finished and the page drew it again from nothing on landing. Now the draw-in runs once, from the copy through to the page: exswipe.js takePeek calls art.js `peekArts` on the copy the finger brings in, which starts its drawings and keeps when each began. startArts, after a swipe, carries each on from that moment (a negative delay), and only then are the copy's times dropped. Tests:
   - "Plan tabs, swiped": every drawing on the landed page is part-way, neither 0 nor finished;
   - new "Main tabs, swiped … Training's drawings": the copy's drawings are drawing and the page carries them on. Proven both ways.
+
+**Owner, 25 Nov: swiping between the plan page's tabs is "very inconsistent, sometimes it flashes, sometimes it waits a second then flashes, for whatever icon, drawing or any of the page content"; and the meal plan's button belongs in Simple mode (v314, session/swipe-settle).**
+- **Why it was inconsistent.** Three animations raced, and which one won changed each time:
+  - the swipe's copy held its entrance at the first frame and played it as it landed (transit.js entranceAtStart and entranceGo);
+  - the real page that replaced it played its own entrances again;
+  - v312's `#app.swipedin` turned the schedule's fade off for 900 ms and back on, so it played a second after landing (the "waits a second then flashes").
+- **One rule now: a page brought in by a swipe arrives finished.** transit.js `settle(el)` takes every animation in it to its end at once. It skips the drawings' draw-in, which runs on from the copy to the page (art.js peekArts), and loops such as a live dot. The copy is settled as it comes in (exswipe.js). The landed page is settled by render.js and its count-ups are left at their final figure. Finished, an animation does not run again.
+  - Removed: entranceAtStart/entranceGo on swipes, the swipedin class and its CSS.
+  - The swap waits up to 500 ms for the page's pictures to decode (was 200 ms).
+- **Tests.**
+  - "Plan tabs, swiped" now samples every frame for 1.5 s after landing and checks no entrance runs on the page. On the old code it catches `bsch-cy:fadeIn` starting late; on the new code nothing.
+  - "Drawings (owner, 10 Nov)" now expects the copy finished but drawing in, and the page carrying the draw-in on without going back.
+  - 59 swipe, drawing and count tests pass.
+- **Simple mode keeps the meal plan.** Food's "Your plan" card and "Log today's plan" are back in Simple mode: it is the person's own plan, not a suggestion. The time-of-day note and the "use N kcal" advice stay out. The Simple mode test checks the card is there.
