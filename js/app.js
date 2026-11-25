@@ -12,6 +12,7 @@ import {initState, loadStored, onProfileSwitch, refreshFromStorage, S, saveDB, s
 import {alarmStart, beeped, keepAwake, kbPredict, lastTick, play, restoreWorkoutState, setBeeped, setLastTick, syncViewport, syncWorkoutState, tap, toast, V} from "./ui/view.js";
 import {closeSheet, openSheet, syncDraft} from "./ui/actions.js";
 import {decodePlan} from "./engine/planshare.js";
+import {featOn} from "./engine/feat.js";
 import {boot as smartBoot, onChange as smartChanged} from "./ui/smartcoach.js";
 import {dispatchTap} from "./ui/handlers/registry.js";
 import {draftFrom} from "./ui/views/assess.js";
@@ -272,7 +273,7 @@ function ptabSet(k,v){if(k==="tplan")V.tplan=v;else if(k==="fplan")V.fplan=v;els
    mode the two it shows (owner, 25 Nov: swiped from Food the page went to Coach, which
    Simple mode sends back to Training, and the pages jumped). */
 var ALLTABS=["train","food","coach","progress"];
-function mtabs(){return S.prefs&&S.prefs.simple?["train","food"]:ALLTABS;}
+function mtabs(){return ALLTABS.filter(function(k){return k!=="coach"&&k!=="progress"||featOn(k);});}
 /* Each main tab's own page's picture (js/ui/render.js groundOf, at a tab's root). */
 var GROUND={train:"home",food:"food",coach:"coach",progress:"progress"};
 /* A main tab's own page: what a tap on its dock button opens. */

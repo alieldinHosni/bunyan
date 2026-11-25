@@ -131,7 +131,7 @@ function register(){
     var l=S.prefs.avoid=(S.prefs.avoid||[]).slice(),i=l.indexOf(D.navoid);
     if(i>=0)l.splice(i,1);else l.push(D.navoid);saveDB();render();return;});
   /* A feature turned on or off for Simple mode only (js/engine/feat.js). */
-  key("sfeat",function(D){if(!/^(warm|cool|blocks|suggest|ready)$/.test(D.sfeat))return;
+  key("sfeat",function(D){if(!/^(warm|cool|blocks|suggest|ready|coach|progress)$/.test(D.sfeat))return;
     var o=Object.assign({},S.prefs.simpleOn||{});o[D.sfeat]=!o[D.sfeat];S.prefs.simpleOn=o;
     if(D.sfeat==="blocks"&&!o.blocks)delete S.block;
     saveDB();render();return;});

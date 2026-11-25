@@ -13,7 +13,7 @@
    bar; the one thing that moves is the dock inside it, out of the way on scroll (see
    "out of the way while reading" below). */
 import {t} from "../i18n/dict.js";
-import {simple} from "./simple.js";
+import {featOn} from "../engine/feat.js";
 
 /* Icons on one grid (22), one stroke, one cut: square ends and mitred corners, the
    structural style of the brand. Training is a dumbbell, plates and bar, which says
@@ -40,18 +40,18 @@ var ICON={
    accessible name, so what is read aloud matches what is seen. Short enough for the
    open pill on a small phone, in either language. */
 function items(){
-  /* Simple mode: what you log, nothing worked out for you (js/ui/simple.js). */
-  if(simple())return [["train",t("Training"),t("Train")],["food",t("Food"),t("Food")]];
+  /* Simple mode drops Coach and Progress unless turned back on for it (js/engine/feat.js). */
   return [
   ["train",t("Training"),t("Train")],["food",t("Food"),t("Food")],["coach",t("Coach"),t("Coach")],
-  ["progress",t("Progress"),t("Progress")]];}
+  ["progress",t("Progress"),t("Progress")]].filter(function(it){return it[0]!=="coach"&&it[0]!=="progress"||featOn(it[0]);});}
 
 var built=null;   /* the label set the markup was written with */
 
 function build(el){
   var list=items();
   el.setAttribute("aria-label",t("Main navigation"));
-  el.innerHTML='<div class="dock">'
+  /* n2, n3: Simple mode's shorter dock, as wide as what it holds (index.html) */
+  el.innerHTML='<div class="dock'+(list.length<4?' n'+list.length:'')+'">'
    +list.map(function(it){
      return '<button type="button" class="dock-b" data-tab="'+it[0]+'" aria-label="'+it[1]+'">'
       +'<svg viewBox="0 0 22 22" width="24" height="24" aria-hidden="true" focusable="false">'

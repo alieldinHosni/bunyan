@@ -821,9 +821,11 @@ body.focus nav{opacity:0;visibility:hidden;pointer-events:none;
    Food sits should find it there after switching to Arabic. Inside the open pill the
    name still reads in its own direction. */
 .dock{direction:ltr}
-/* Simple mode's dock holds two tabs (js/ui/dock.js): as wide as two, not stretched
-   over the width of four with a gap between them (owner, 25 Nov). */
-html.simple .dock{max-width:calc(var(--dot) * 4.1)}
+/* Simple mode's dock holds two tabs, or three with Coach or Progress turned back on
+   (js/ui/dock.js): as wide as what it holds, not stretched over the width of four with
+   a gap between them (owner, 25 Nov). */
+.dock.n2{max-width:calc(var(--dot) * 4.1)}
+.dock.n3{max-width:calc(var(--dot) * 5.7)}
 .dock-b{position:relative;flex:0 1 auto;display:flex;align-items:center;justify-content:center;
   min-width:var(--dot);height:var(--dot);padding:0 calc((var(--dot) - 22px) / 2);margin:0;
   border:1px solid var(--dock-dot-edge);border-radius:var(--rpill);background:var(--dock-dot);
