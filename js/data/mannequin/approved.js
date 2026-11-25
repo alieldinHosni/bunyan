@@ -6,7 +6,7 @@
    (by, on, version) whose version still matches the record. An engine test
    (data/test/approved) fails when the two disagree, so a new approval, or a record
    changed after its approval, is written here in the same pull request. */
-var APPROVED={"Romanian Deadlift":1,"Pullups":1,"Incline Dumbbell Press":1};
+var APPROVED={"Pullups":1,"Incline Dumbbell Press":1};
 function approved(name){return !!name&&Object.prototype.hasOwnProperty.call(APPROVED,name);}
 /* For the browser tests only, through records.js markCheckedForTest. Returns the undo. */
 function markApprovedForTest(name){var had=approved(name);APPROVED[name]=1;return function(){if(!had)delete APPROVED[name];};}

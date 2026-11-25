@@ -29,6 +29,12 @@ import {tap} from "./view.js";
 
 var H=null,st=null,lockUntil=0,swallowUntil=0;
 var EDGE=20,SLOP=10,RATIO=1.3;
+/* A whole page (a main tab, a plan page's tab) asks for a plainer sideways drag than an
+   exercise does: further (PSLOP), more level (PRATIO), and never while the page is
+   scrolling under the finger. A thumb scrolling down drifts sideways; read as a page
+   swipe, the page followed it a little and sprang back, a shake left and right on
+   every page (owner, 25 Nov). */
+var PSLOP=16,PRATIO=2;
 
 function rtl(){return document.documentElement.getAttribute("dir")==="rtl";}
 /* The exercise a drag of dx moves to: +1 next, -1 previous. */
@@ -58,7 +64,7 @@ function onStart(ev){
      a moment before it went (owner, 4 Nov). */
   var k0=kindOf(p);
   st={p:p,k:k0,x:tt.clientX,y:tt.clientY,mode:null,dx:0,w:k0!=="ex"?(document.documentElement.clientWidth||window.innerWidth):(p.offsetWidth||window.innerWidth),
-      samples:[[Date.now(),tt.clientX]]};}
+      samples:[[Date.now(),tt.clientX]],sy:window.scrollY||0};}
 
 function onMove(ev){
   if(!st)return;
@@ -68,8 +74,11 @@ function onMove(ev){
      was not held is still a swipe. */
   if(!st.mode&&document.documentElement.classList.contains("scrubbing")){st=null;return;}
   if(!st.mode){
-    if(Math.abs(dx)<SLOP&&Math.abs(dy)<SLOP)return;
-    st.mode=Math.abs(dx)>Math.abs(dy)*RATIO?"h":"v";
+    var pg=st.k!=="ex",slop=pg?PSLOP:SLOP;
+    /* the page has scrolled since the touch began: it is a scroll, not a swipe */
+    if(pg&&Math.abs((window.scrollY||0)-st.sy)>1){st=null;return;}
+    if(Math.abs(dx)<slop&&Math.abs(dy)<slop)return;
+    st.mode=Math.abs(dx)>Math.abs(dy)*(pg?PRATIO:RATIO)?"h":"v";
     if(st.mode==="v"){st=null;return;}
     /* The way the drag set out is the only way it can go. Brought back past where it
        started, the finger has changed its mind: the pane rests there and, let go, stays.

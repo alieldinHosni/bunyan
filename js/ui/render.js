@@ -144,8 +144,6 @@ function readyImgs(imgs,cap){
    started is the workout's; planning a program is training's; Coach's sections are
    their own; the assessment is Coach's. */
 function groundOf(){
-  /* Simple mode: the plain background, no page photographs. */
-  if(simple())return "";
   if(V.assess)return "coach";
   /* The workout stands on the same picture as planning your training, framed the same
      way (owner, 27 Oct); the warm-up carries
@@ -178,10 +176,11 @@ function render(){
   applyLang();
   /* Both routes into reduced motion, re-evaluated every render so the in-app toggle
      takes effect immediately rather than on the next load. */
-  /* Simple mode is still as well: nothing moves that you did not move. */
+  /* Simple mode takes things away; it does not change the look or the motion, which
+     stay the person's own settings (owner, 25 Nov). */
   var plain=simple();
-  applyMotion(S.prefs&&S.prefs.anim===false||plain);
-  document.body.classList.toggle("noanim",S.prefs&&S.prefs.anim===false||plain);
+  applyMotion(S.prefs&&S.prefs.anim===false);
+  document.body.classList.toggle("noanim",S.prefs&&S.prefs.anim===false);
   document.documentElement.classList.toggle("simple",plain);
   document.body.classList.toggle("compact",!!(S.prefs&&S.prefs.compact));
   /* Home is gone (Training opens the app) and the plan check lives in Coach AI; an old

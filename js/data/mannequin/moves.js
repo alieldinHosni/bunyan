@@ -1477,7 +1477,11 @@ var TABLE={
   "Dumbbell Squat":[squat,{load:"db",w:.15,toe:12}],
   "Overhead Squat":[squat,{load:"overhead"}],
   "Barbell Deadlift":[hinge,{kind:"deadlift"}],
-  "Romanian Deadlift":[hinge,{kind:"rdl"},{by:"owner",on:"2026-11-13",version:"de4e8ee4"}],
+  /* Approved 13 Nov; withdrawn 25 Nov: on the iPhone the bar sank into the thighs. The
+     capsules the path rule touches are narrower than the drawn thigh (up to 5 cm at its
+     middle, in front), so "touching" put the bar inside it. Back on its photographs
+     until the capsules match the body and the owner has seen it again. */
+  "Romanian Deadlift":[hinge,{kind:"rdl"}],
   "Stiff-Legged Barbell Deadlift":[hinge,{kind:"stiff"}],
   "Sumo Deadlift":[hinge,{kind:"sumo"}],
   "Good Morning":[hinge,{kind:"goodmorning"}],
