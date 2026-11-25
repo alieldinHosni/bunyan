@@ -5393,3 +5393,21 @@ Runs in English, Arabic (drags mirrored) and Simple mode (16 moves). In WebKit, 
   - lateness is timed from the move's first animation, not the tap: on the slow runner Food's plan took 873 ms to build, and its own entrance counted as late. The time to the first animation is printed as "answered in" and does not fail;
   - the wait that brings the dock into view ran inside that time (dock taps read 550 ms; the app answers in under 150 ms).
 - **Result of step 1:** the sweep finds no flash, jump, late animation or blank picture in either engine. The swipe faults the owner saw were fixed in v314 before it existed; it now guards them. Step 1 is done; next is step 2, Simple mode.
+
+**2. Finish Simple mode, step 1 (v315): Coach and Progress back one at a time.**
+- **js/engine/feat.js** gains `coach` and `progress`: always on outside Simple mode; in it, off unless turned on (`S.prefs.simpleOn`, schema and handler accept the two keys).
+- **Every place that hid them for Simple mode now asks featOn:**
+  - the dock's tabs and `mtabs()` (swipes);
+  - the route guard in render.js (each tab on its own);
+  - the floating coach button;
+  - Ask Coach in the workout's menu;
+  - the coach's rows in Profile (Smart coach, Chat history, What the coach remembers, Friends I follow).
+- **Profile → Settings:** under Simple mode, two switches, "Coach" and "Progress", shown only while Simple mode is on. Simple mode's own line now says "Logging only. Turn any part back on below or in Training".
+- **The dock's width follows what it holds:** `.dock.n2` (two tabs) and `.dock.n3` (three tabs) replace `html.simple .dock`. Checked in English and Arabic at 360 px: no label cut. With the old cap, three tabs cut the open label to "ا.".
+- **Test:** "Simple mode, Coach and Progress back one at a time":
+  - both off, said so;
+  - the coach on: its tab, button, settings rows and Ask Coach come back, while Progress still lands on Training;
+  - both on: four tabs;
+  - the coach off alone;
+  - Simple mode off: four tabs, no Simple mode switches.
+- **Next in step 2:** plainer pages, sub-pages and buttons in Simple mode; then the speed measured.

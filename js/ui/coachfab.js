@@ -16,7 +16,7 @@ import {isolateNums} from "../i18n/bidi.js";
 import {S, saveDB, split} from "../state.js";
 import {esc, num, today} from "../util.js";
 import {headNow} from "../engine/head.js";
-import {simple} from "./simple.js";
+import {featOn} from "../engine/feat.js";
 import {planOn} from "../engine/dayplan.js";
 import {eatenToday} from "../engine/formulas.js";
 import {words} from "./coachwords.js";
@@ -63,7 +63,7 @@ function where(){return S.active&&V.tab==="train"&&V.train!=="hub"?"workout":(SU
 
 /* ---- where the launcher may sit ------------------------------------------------------ */
 function fabShown(){
-  if(simple())return false;
+  if(!featOn("coach"))return false;
   if(V.coach||V.sheet||V.chat)return false;
   /* The keyboard up hides it, as it hides the dock — but not the panel's own field's:
      closing while typing (a tap in the panel keeps the field's focus, bindPanel), the

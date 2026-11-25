@@ -172,7 +172,7 @@ function normalize(o){
   if(o.prefs.simple!=null&&typeof o.prefs.simple!=="boolean")delete o.prefs.simple;
   /* What is turned back on in Simple mode: known features, true or false. */
   if(o.prefs.simpleOn!=null&&!(o.prefs.simpleOn&&typeof o.prefs.simpleOn==="object"&&!Array.isArray(o.prefs.simpleOn)&&
-    Object.keys(o.prefs.simpleOn).every(function(k){return /^(warm|cool|blocks|suggest|ready)$/.test(k)&&typeof o.prefs.simpleOn[k]==="boolean";})))delete o.prefs.simpleOn;
+    Object.keys(o.prefs.simpleOn).every(function(k){return /^(warm|cool|blocks|suggest|ready|coach|progress)$/.test(k)&&typeof o.prefs.simpleOn[k]==="boolean";})))delete o.prefs.simpleOn;
   var tr=o.prefs.toured;
   if(tr!=null&&(typeof tr!=="object"||Array.isArray(tr)))delete o.prefs.toured;
   var ph=o.profile.photo;

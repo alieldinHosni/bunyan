@@ -13,7 +13,11 @@ var FEATS={
   cool:function(p){return !p.nocool;},
   blocks:function(p){return !p.noblocks;},
   suggest:function(){return true;},
-  ready:function(){return true;}};
+  ready:function(){return true;},
+  /* Coach (its tab, its floating button, Ask Coach) and Progress: always there outside
+     Simple mode; in it, each can be turned back on alone (owner, 25 Nov road map). */
+  coach:function(){return true;},
+  progress:function(){return true;}};
 function featOn(k){
   var p=S.prefs||{};
   if(!Object.prototype.hasOwnProperty.call(FEATS,k))return true;

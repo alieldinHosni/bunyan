@@ -34,6 +34,7 @@ import {PAGE, settle} from "./transit.js";
 import {syncCoach} from "./coachfab.js";
 import {keepRead} from "./liveread.js";
 import {simple} from "./simple.js";
+import {featOn} from "../engine/feat.js";
 
 /* ============================================================ render */
 /* Motion is applied after the DOM has settled, and only to what changed.
@@ -188,10 +189,11 @@ function render(){
   /* Home is gone (Training opens the app) and the plan check lives in Coach AI; an old
      route to either lands on its new place. */
   if(V.tab==="home"||!V.tab)V.tab="train";
-  /* Simple mode has no Coach and no Progress: a route to either lands on Training, and
-     the coach's panel stays shut. */
-  if(plain&&(V.tab==="coach"||V.tab==="progress"||V.pcheck)){V.tab="train";V.pcheck=false;}
-  if(plain)V.coach=false;
+  /* Coach or Progress off (Simple mode, unless turned back on: js/engine/feat.js): a
+     route to it lands on Training, and the coach's panel stays shut. */
+  if(!featOn("coach")&&(V.tab==="coach"||V.pcheck)){V.tab="train";V.pcheck=false;}
+  if(!featOn("progress")&&V.tab==="progress")V.tab="train";
+  if(!featOn("coach"))V.coach=false;
   /* The plan check, asked for: Coach AI with every finding open. */
   if(V.pcheck){V.pcheck=false;V.tab="coach";V.advall=true;}
   /* The chat is a Coach screen; leaving Coach leaves it (back restores it from the trail). */

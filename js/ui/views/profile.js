@@ -19,6 +19,7 @@ import {avatar, backupState, memCount} from "../settings.js";
 import {art} from "../art.js";
 import {backArrow} from "../nav.js";
 import {simple} from "../simple.js";
+import {featOn} from "../../engine/feat.js";
 
 /* One row: its glyph in a tile, its name, what is set there now, and a chevron. */
 function smartLabel(){var st=smartState().st,on=S.prefs.smart&&S.prefs.smart.on;
@@ -78,14 +79,18 @@ function vProfile(){
   var plain=simple();
   h+=group(t("Settings"),
      pswitch('data-toggle="simple"',"sliders",t("Simple mode"),
-       t(plain?"Logging only. Coach, Progress and suggestions are off":"Turn off Coach, Progress and every suggestion: a plain log"),plain)
+       t(plain?"Logging only. Turn any part back on below or in Training":"Turn off Coach, Progress and every suggestion: a plain log"),plain)
+    /* Coach and Progress, each turned back on alone for Simple mode (js/engine/feat.js);
+       the rest of what it turns off is in Training. */
+    +(plain?pswitch('data-sfeat="coach"',"spark",t("Coach"),t("Its tab, the chat button and Ask Coach"),featOn("coach"))
+      +pswitch('data-sfeat="progress"',"bars",t("Progress"),t("Its tab: your charts, records and trends"),featOn("progress")):'')
     +prow('data-sheet="set_training"',"dumbbell",t("Training"),
        t(p.prog.charAt(0).toUpperCase()+p.prog.slice(1))+" · "+t("RPE")+" "+rpeLabel.toLowerCase())
     /* Its own settings (owner, 9 Nov: not a shortcut to another page): what shapes the food. */
     +prow('data-sheet="set_food"',"bowl",t("Nutrition"),fmtN(g.kcal)+" kcal · "+g.p+"g "+t("Protein").toLowerCase()+" · "
       +t((S.prefs.meals||4)===1?"1 meal":"{n} meals").replace("{n}",S.prefs.meals||4))
     /* The on-device model (js/ui/smartcoach.js): off until asked for. */
-    +(plain?'':prow('data-sheet="set_smart"',"spark",t("Smart coach"),t(smartLabel())))
+    +(!featOn("coach")?'':prow('data-sheet="set_smart"',"spark",t("Smart coach"),t(smartLabel())))
     +prow('data-sheet="set_app"',"sliders",t("App"),
        [t(themeName(themeOf()))+" · "+(S.theme==="light"?t("Light"):t("Dark")),
         pref.lang==="ar"?"العربية":"English",wUnit()].join(" · ")));
@@ -95,7 +100,7 @@ function vProfile(){
        PROFILES.length+" "+(PROFILES.length===1?t("profile"):t("profiles")))
     +prow('data-share="1"',"share",t("Share my progress"),t("Makes a code you can send on WhatsApp"))
     +prow('data-sheet="recvplan"',"clipboard",t("Add a shared plan"),t("A program or meal plan another Bunyan user sent you"))
-    +(isOwner()&&!plain?prow('data-coach="1"',"eye",t("Friends I follow"),
+    +(isOwner()&&featOn("coach")?prow('data-coach="1"',"eye",t("Friends I follow"),
        Object.keys(friends()).length+" "+t("shared with you")):""));
 
   /* What is kept: the backup (it says how old the last one is, in the caution colour
@@ -104,9 +109,9 @@ function vProfile(){
   var bk=backupState();
   h+=group(t("Your data"),
      prow('data-sheet="set_data"',"archive",t("Backup and reset"),bk.s,bk.k==="warn"?"warn":"")
-    +(plain?'':prow('data-sheet="set_chat"',"clock",t("Chat history"),t("The last 30 days, to read")))
+    +(!featOn("coach")?'':prow('data-sheet="set_chat"',"clock",t("Chat history"),t("The last 30 days, to read")))
     /* What the coach keeps about the person, each line removable (settings.js memSheet). */
-    +(plain?'':prow('data-sheet="coachmem"',"spark",t("What the coach remembers"),(function(n){return n?t(n===1?"1 thing":"{n} things").replace("{n}",n):t("Nothing yet");})(memCount()))));
+    +(!featOn("coach")?'':prow('data-sheet="coachmem"',"spark",t("What the coach remembers"),(function(n){return n?t(n===1?"1 thing":"{n} things").replace("{n}",n):t("Nothing yet");})(memCount()))));
   h+=group(t("Help"),
      prow('data-tourreset="1"',"question",t("Show the guide again"),t("The tips that point out what each button does"))
     +prow('data-sheet="about"',"info",t("About and privacy"),t("Everything stays on this phone")));

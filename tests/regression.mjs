@@ -7899,6 +7899,30 @@ await test("Simple mode's settings (owner, 25 Nov): what it turns off shows as o
   await page.tap('[data-sessmore]');await pause(page,400);
   eq(await page.$eval('#sheet .item[disabled]',e=>[e.textContent.indexOf("Ask Coach")>=0,getComputedStyle(e).opacity,e.hasAttribute("data-coachopen")]),[true,"0.45",false],"Ask Coach dimmed, does nothing");
 });
+await test("Simple mode, Coach and Progress back one at a time (road map, 25 Nov): each its own switch under Simple mode in Profile; on, its tab, its button and its settings are back, the other stays off; leaving Simple mode, both are there",async page=>{
+  await tapTab(page,"profile");await pause(page);
+  await page.tap('[data-toggle="simple"]');await pause(page,400);
+  const sw=k=>page.$eval('#app [data-sfeat="'+k+'"]',e=>e.getAttribute("aria-checked"));
+  const dock=()=>page.$$eval('nav .dock-b',a=>a.map(x=>x.dataset.tab));
+  eq([await sw("coach"),await sw("progress"),await dock()],["false","false",["train","food"]],"in Simple mode both off, and said so");
+  await page.tap('#app [data-sfeat="coach"]');await pause(page,400);
+  eq([await sw("coach"),await sw("progress"),await dock()],["true","false",["train","food","coach"]],"the coach on: its tab back, Progress still off");
+  eq(await page.$$eval('#app [data-sheet="set_smart"],#app [data-sheet="set_chat"],#app [data-sheet="coachmem"]',a=>a.length),3,"the coach's settings back in Profile");
+  await page.evaluate(async()=>{(await import("/js/ui/view.js")).V.tab="progress";(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq(await ev(page,"V.tab"),"train","Progress, still off, lands on Training");
+  eq(await page.$$eval(".cfab",a=>a.length),1,"the coach's button back");
+  await page.tap('[data-startday]');await pause(page,500);
+  await page.tap('[data-sessmore]');await pause(page,400);
+  eq(await page.$$eval('#sheet [data-coachopen]',a=>a.length),1,"Ask Coach in the workout, tappable");
+  await page.evaluate(async()=>{const a=await import("/js/ui/actions.js");a.closeSheet();const st=await import("/js/state.js");st.S.active=null;st.saveDB();(await import("/js/ui/view.js")).V.tab="profile";(await import("/js/ui/render.js")).render();});await pause(page,400);
+  await page.tap('#app [data-sfeat="progress"]');await pause(page,400);
+  eq(await dock(),["train","food","coach","progress"],"Progress on too: all four");
+  await page.tap('#app [data-sfeat="coach"]');await pause(page,400);
+  eq([await dock(),await page.$$eval(".cfab",a=>a.length)],[["train","food","progress"],0],"the coach off again, alone");
+  /* leaving Simple mode: both there, and its switches gone */
+  await page.tap('[data-toggle="simple"]');await pause(page,400);
+  eq([await dock(),await page.$$eval('#app [data-sfeat]',a=>a.length)],[["train","food","coach","progress"],0],"Simple mode off: all four, no Simple mode switches");
+});
 await test("The intro (owner, 25 Nov: \"the intro sometimes glitch\"): decided before its first frame from the early key, and only opacity and transform move in it",async page=>{
   /* this profile has the intro off: the key says so, and the next launch's page knows it before any code runs */
   eq(await page.evaluate(()=>localStorage.getItem("bunyan:look").split("|")[3]),"0","off, in the early key");

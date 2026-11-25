@@ -1,7 +1,7 @@
 /* Bunyan — sheets
    Every bottom sheet, dispatched by vSheet(). */
 import {chat, wanted} from "./chatload.js";
-import {simple} from "./simple.js";
+import {featOn} from "../engine/feat.js";
 import {hb} from "./haptic.js";
 import {t, tm} from "../i18n/dict.js";
 import {isUnilateral, difficultyOf, empty, EQUIP, EXDB, exFigs, exImg, exMedia, exSteps, exVariant, isFav, LIB, libFind, loadable, movementOfEx, muscleOf, muscleOfEntry, MUSCLES, patternOf, pickable, secondaryOf, thumb} from "../data/exercises.js";
@@ -351,8 +351,8 @@ function vSheet(){
     b='<h2>'+t("Workout ").trim()+'</h2>'
      +'<p class="sub" style="margin:2px 0 16px">'+esc(exName(smE.name))+'</p>'
      +'<div class="list">'
-     /* Simple mode: the coach is off, so shown dimmed and not tappable (owner, 25 Nov). */
-     +(simple()?'<button class="item" disabled aria-disabled="true"><span>'+t("Ask Coach")+'</span><span class="pill">'+t("Off in Simple mode")+'</span></button>'
+     /* The coach off (Simple mode, unless turned back on): shown dimmed and not tappable (owner, 25 Nov). */
+     +(!featOn("coach")?'<button class="item" disabled aria-disabled="true"><span>'+t("Ask Coach")+'</span><span class="pill">'+t("Off in Simple mode")+'</span></button>'
        :'<button class="item" data-coachopen="1"><span>'+t("Ask Coach")+'</span><span class="chev">›</span></button>')
      +'<button class="item" data-note="1"><span>'+t("Session note")+'</span>'
      +(sm.notes?'<span class="pill a">'+t("Saved")+'</span>':'<span class="chev">›</span>')+'</button>'
