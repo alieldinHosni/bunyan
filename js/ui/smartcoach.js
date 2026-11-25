@@ -13,7 +13,6 @@
    notes the question reaches (js/engine/smart.js), shown as written by the model, and a
    change it suggests is a button that sends the request through the app's own parser. */
 import {ask as llmAsk, installed, load, modelId, MODELS, ready, remove, support} from "../engine/llm.js";
-import {buildMessages, grounded, readReply, rewordMessages, unlockReword} from "../engine/smart.js";
 import {goalOf} from "../data/goals.js";
 import {lastWeight, avg7} from "../engine/formulas.js";
 import {bodyFat} from "../engine/stats.js";
@@ -100,6 +99,13 @@ function snapshot(){
   out.facts=((S.context&&S.context.items)||[]).map(function(x){return x.text;}).slice(0,8);
   return out;}
 
+/* What turns a question and the notes into the model's prompt, and checks its answer
+   (js/engine/smart.js), with the textbook notes it searches: loaded the first time the
+   model answers, not when the app starts (road map step 3: a lighter start). It is in
+   the service worker's release like every module, so it loads offline too. */
+var SM=null;
+function smartLib(){return SM?Promise.resolve(SM):import("../engine/smart.js").then(function(m){SM=m;return m;});}
+
 /* ---- an answer, written into its row as it comes ------------------------------------ */
 function rowOf(m){return document.querySelector('.chat-x[data-k="x'+m.at+'"] .chat-lead');}
 /* The coach's own answer, as the words a rewrite starts from: its paragraphs, not its
@@ -113,14 +119,16 @@ function runReword(m,save,paint){
   var src=(S.chat||[]).filter(function(x){return x&&String(x.at)===String(m.re);})[0],text=proseOf(src);
   var fail=function(){m.pending=false;m.b=[{p:t("The smart coach couldn't put that another way without changing a figure, so the coach's answer above stands.")}];m.acts=[];save();paint();};
   if(!text||safetyOf(m.qq||m.q).cls||src.safety){fail();return;}
-  var R=rewordMessages(text,m.lang==="ar"?"ar":"en");
+  smartLib().then(function(L){
+  var R=L.rewordMessages(text,m.lang==="ar"?"ar":"en");
   busy("answer");
   var done=false,give=setTimeout(function(){if(done)return;done=true;busy(null);fail();},60000);
   llmAsk(R.msgs,null).then(function(full){
     if(done)return;done=true;clearTimeout(give);busy(null);
-    var out=unlockReword(full,R.lock,text);if(!out){fail();return;}
+    var out=L.unlockReword(full,R.lock,text);if(!out){fail();return;}
     m.pending=false;m.b=[{p:out},{n:t("Put another way by the model on this phone. The figures are the coach's own, unchanged.")}];m.acts=[];save();paint();
-  },function(){if(done)return;done=true;clearTimeout(give);busy(null);fail();});}
+  },function(){if(done)return;done=true;clearTimeout(give);busy(null);fail();});
+  },fail);}
 function run(m,save,paint){
   if(!m||!m.pending)return;
   if(m.re){runReword(m,save,paint);return;}
@@ -130,7 +138,8 @@ function run(m,save,paint){
   /* Nor does one said earlier, as the conversation it is given. */
   var prev=(S.chat||[]).filter(function(x){return x&&x!==m&&x.q&&Array.isArray(x.b)&&x.b[0]&&x.b[0].p&&!x.safety&&!safetyOf(x.qq||x.q).cls;}).slice(-2)
     .map(function(x){return {q:x.qq||x.q,a:x.b[0].p};});
-  var msgs=buildMessages(m.qq||m.q,snapshot(),m.lang==="ar"?"ar":"en",prev);
+  smartLib().then(function(L){
+  var msgs=L.buildMessages(m.qq||m.q,snapshot(),m.lang==="ar"?"ar":"en",prev);
   /* No answer within a minute (the model stalled, or the phone put it to sleep): said so,
      never "Thinking…" for good (owner, 19 Nov). A late answer is dropped. */
   busy("answer");
@@ -138,12 +147,12 @@ function run(m,save,paint){
     m.b=[{p:t("The smart coach couldn't answer that one. Ask me another way, or try again.")}];
     m.acts=[{l:t("What can I ask?"),a:{"data-chatq":"help"}}];save();paint();},60000);
   /* Written as it comes, until a figure appears: from there it waits for the check. */
-  llmAsk(msgs,function(txt){if(done)return;var el=rowOf(m),s=readReply(txt).text;if(el&&!/[0-9\u0660-\u0669]/.test(s))el.textContent=s||"…";}).then(function(full){
+  llmAsk(msgs,function(txt){if(done)return;var el=rowOf(m),s=L.readReply(txt).text;if(el&&!/[0-9\u0660-\u0669]/.test(s))el.textContent=s||"…";}).then(function(full){
     if(done)return;done=true;clearTimeout(give);busy(null);
-    var r=readReply(full);
+    var r=L.readReply(full);
     /* A figure of its own (one the person's log, the notes and the app's text do not
        hold) is not shown: the model never states a number (2.10). */
-    if(r.text&&!grounded(r.text,msgs)){m.pending=false;m.b=[{p:t("The smart coach's answer had a figure I can't check against your log or the training notes, so I've left it out. Ask me another way, or try again.")}];
+    if(r.text&&!L.grounded(r.text,msgs)){m.pending=false;m.b=[{p:t("The smart coach's answer had a figure I can't check against your log or the training notes, so I've left it out. Ask me another way, or try again.")}];
       m.acts=[{l:t("What can I ask?"),a:{"data-chatq":"help"}}];save();paint();return;}
     m.pending=false;m.b=[{p:r.text||t("I don't have that. Ask me about your training, food or progress.")},
       {n:t("Written by the model on this phone, from your log and the training notes. It can be wrong: check a figure against your plan before you act on it.")}];
@@ -153,7 +162,8 @@ function run(m,save,paint){
     if(r.act){var known=false;try{known=!!commandOf(r.act,S.prefs.unit)||ACTION_IDS.indexOf(intentOf(r.act).id)>=0;}catch(e){}
       if(known)m.acts.push({l:r.act.charAt(0).toUpperCase()+r.act.slice(1),a:{"data-chatsay":r.act}});}
     save();paint();
-  },function(){if(done)return;done=true;clearTimeout(give);busy(null);m.pending=false;m.b=[{p:t("The smart coach couldn't answer just now. Ask me another way, or try again in a moment.")}];save();paint();});}
+  },function(){if(done)return;done=true;clearTimeout(give);busy(null);m.pending=false;m.b=[{p:t("The smart coach couldn't answer just now. Ask me another way, or try again in a moment.")}];save();paint();});
+  },function(){m.pending=false;m.b=[{p:t("The smart coach couldn't answer just now. Ask me another way, or try again in a moment.")}];save();paint();});}
 
 /* ---- the setting -------------------------------------------------------------------- */
 function sheet(){

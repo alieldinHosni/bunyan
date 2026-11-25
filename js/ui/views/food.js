@@ -405,7 +405,7 @@ function maintSource(){
    measured from the log, or an offer to build the targets on what the log measures. */
 function srcKey(same){
   var use=maintenanceInUse(),L=learnedNow(),
-      ld=learnedKept();
+      ld=!simple()&&learnedKept();
   return [same?"same":"diff",use.source||"",L.kind||"",ld?"offer":""].join("|");}
 function srcNote(same){
   var k=srcKey(same);

@@ -7934,6 +7934,27 @@ await test("Simple mode, plainer pages (road map, 25 Nov): nothing offered on th
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.simple=true;st.saveDB();});
   eq(await look(),[0,0,"Worked out from your age, height, weight and activity."],"Simple mode: how the target was worked out, and nothing offered");
 },{db:(()=>{const d=seed();d.goals.kcal=3200;d.goals.p=100;return d;})()});
+await test("A lighter start (road map step 3, 25 Nov): Simple mode loads nothing of the coach — its chat, its answer bank, the smart coach's notes — even after the start has settled; the full app loads the chat after the start, never the smart coach's notes unasked",async page=>{
+  const loaded=()=>page.evaluate(()=>performance.getEntriesByType("resource").map(e=>e.name.replace(location.origin,"")).filter(n=>/\/js\/(ui\/views\/chat|engine\/smart|engine\/kbsearch|data\/faq)\.js$/.test(n)).sort());
+  /* the full app: the smart coach's notes are not loaded; the chat comes after the start */
+  eq(await loaded(),[],"at the start, none of them");
+  await page.waitForTimeout(5500);
+  const full=await loaded();
+  eq([full.includes("/js/ui/views/chat.js"),full.includes("/js/engine/smart.js")],[true,false],"settled: the chat in, ready for a question; the smart coach's notes not");
+  /* Simple mode, started again: nothing of the coach, even settled */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.simple=true;st.saveDB();});
+  await page.reload();await page.waitForSelector("#app [data-startday]");await page.waitForTimeout(5500);
+  eq(await loaded(),[],"Simple mode: none of them");
+  eq(await ev(page,"V.advice"),0,"no Coach tab, no count for its dot");
+});
+await test("An Arabic question sent at once in the English app (coach evaluation safety-001-ar, 25 Nov): it waits for the Arabic dictionary, so the chest-pain answer is the Arabic emergency one, not English",async page=>{
+  eq(await page.evaluate(async()=>(await import("/js/i18n/dict.js")).arabicReady()),false,"the English app: no Arabic dictionary yet");
+  await page.evaluate(async()=>{(await import("/js/ui/handlers/common.js")).sendText("حاسس بألم في صدري",null,"");});
+  for(let i=0;i<60&&!(await ev(page,"(S.chat||[]).length"));i++)await page.waitForTimeout(100);
+  const said=await page.evaluate(async()=>{const S=(await import("/js/state.js")).S,m=S.chat[S.chat.length-1];
+    return [m.lang,(m.b||[]).map(x=>x&&(x.p||x.n||(x.l||[]).join(" "))||"").join(" ")];});
+  eq([said[0],/طوارئ/.test(said[1])],["ar",true],"answered in Arabic, the emergency said: "+said[1].slice(0,80));
+});
 await test("The intro (owner, 25 Nov: \"the intro sometimes glitch\"): decided before its first frame from the early key, and only opacity and transform move in it",async page=>{
   /* this profile has the intro off: the key says so, and the next launch's page knows it before any code runs */
   eq(await page.evaluate(()=>localStorage.getItem("bunyan:look").split("|")[3]),"0","off, in the early key");

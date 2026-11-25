@@ -10,6 +10,7 @@
    wanted()    something drew a placeholder for want of it: when it lands, the app
                draws again (the redraw set by app.js), once
    idleChat()  start loading when idle, and warm the coach's matchers when in */
+import {arabicReady, loadArabic} from "../i18n/dict.js";
 var C=null,wait=null,want=false,redraw=null;
 function chat(){return C;}
 function loadChat(){
@@ -17,7 +18,17 @@ function loadChat(){
   return wait;}
 function wanted(){want=true;loadChat();}
 function onChatIn(fn){redraw=fn;}
+/* Not before the first screen has settled (road map step 3, 25 Nov): while the app's own
+   modules are still arriving the page counts as idle, and the chat (and the coach's
+   indexes, 170 ms of work on a laptop) loaded then, in the middle of the start. */
+var AFTER_START=3000;
 function idleChat(){
   var idle=window.requestIdleCallback||function(f){return setTimeout(f,2000);};
-  idle(function(){loadChat().then(function(m){m.warmCoach();});},{timeout:4000});}
-export {chat, idleChat, loadChat, onChatIn, wanted};
+  setTimeout(function(){idle(function(){loadChat().then(function(m){m.warmCoach();});},{timeout:4000});},AFTER_START);}
+/* Before a question is answered: an Arabic one (its letters, or a chip of an Arabic
+   conversation) waits for the Arabic dictionary (js/i18n/ar.js), which the English app
+   loads only when idle. Without it the answer came out in English, the chest-pain
+   emergency answer among them (coach evaluation safety-001-ar, 25 Nov). */
+function langReady(q,l){
+  return (l==="ar"||/[\u0600-\u06FF]/.test(String(q||"")))&&!arabicReady()?loadArabic():Promise.resolve();}
+export {chat, idleChat, langReady, loadChat, onChatIn, wanted};

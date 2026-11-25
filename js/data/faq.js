@@ -33,6 +33,7 @@
      acts    buttons: [[[en,ar], {data attributes}]]
      src, appNums  as above */
 
+import {PRE_WORKOUT} from "./faq-fuel.js";
 var E=[
 /* ================================================================ training */
 {id:"overload",group:"train",title:["Progressive overload","التحميل التدريجي"],glyph:"bars",
@@ -344,17 +345,7 @@ var E=[
     ["Higher-fibre foods in place of low-fibre, calorie-dense ones is one of the textbook's fat-loss swaps.","الأكل الغني بالألياف بدل الأكل القليل الألياف الكتير السعرات من بدائل الكتاب للتخسيس."]],
  src:["nutrition-principles:carbohydrate · fibre","nutrition-principles:goal strategies · fat loss"]},
 
-{id:"pre-workout",group:"food",title:["Eating before training","الأكل قبل التمرين"],glyph:"bowl",
- ex:["what to eat before workout","pre workout meal","should i eat before the gym","training on an empty stomach","how long before training should i eat","fasted training",
-   "اكل ايه قبل التمرين","اتمرن على معده فاضيه","قبل الجيم اكل ايه","اكل قبل التمرين بقد ايه"],
- need:/before|pre|empty|fasted|قبل|فاضي|صايم/,
- beats:["eat","rest","today"],
- a:[["Before long or hard training, carbs refill the stores used overnight; quick, easy-to-digest carbs suit the last bit before you start.",
-     "قبل التمرين الطويل أو الجامد، الكارب بيعوض المخزون اللي اتصرف بالليل؛ والكارب السريع السهل الهضم مناسب في آخر وقت قبل ما تبدأ."],
-    ["Drink too: about 400 to 600 ml in the 20 to 30 minutes before you start.","واشرب كمان: حوالي 400 لـ 600 مل في الـ 20 لـ 30 دقيقة قبل ما تبدأ."],
-    {n:["The textbooks give no exact time to eat before training, so I won't set one.","الكتب مش بتحدد وقت معين للأكل قبل التمرين، فمش هحدد."]},
-    {mine:1}],
- src:["nutrition-principles:carbohydrate · timing","nutrition-principles:carbohydrate · blood sugar","nutrition-principles:hydration · protocol"]},
+PRE_WORKOUT,
 
 {id:"post-workout",group:"food",title:["Eating after training","الأكل بعد التمرين"],glyph:"shaker",
  ex:["post workout meal","what to eat after the gym","how soon after training should i eat","is there an anabolic window","protein right after workout",

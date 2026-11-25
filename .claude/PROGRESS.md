@@ -5442,3 +5442,47 @@ Runs in English, Arabic (drags mirrored) and Simple mode (16 moves). In WebKit, 
 - **Simple mode is not faster to start.** The two runs disagree on which mode is quicker by more than the gap between them, so the difference is noise. Simple mode loads exactly the code the full app does: the coach's 23 modules, Progress, the head and the smart coach, all before the first screen, for pages it never shows.
 - **Its taps are about the same, perhaps a little quicker:** less is drawn per page.
 - **What would make it faster is step 3 (a lighter app):** the coach, Progress and what only they use loaded when first opened, not at start. Simple mode then skips them entirely. Step 3 is judged on tools/speed.mjs: start time and modules before the first screen, both modes.
+- Merged as #212.
+
+**3. Lighter app, step 1 (v317): what Simple mode never shows is no longer worked out or loaded at start.**
+
+I profiled the start (Chromium, CPU profile) before cutting anything. The bytes were not the main cost. Two things were:
+- **The coach's textbook search index was built during the start, in every mode.** `bindPanel` (always run: the panel element is always on the page) scheduled `idleChat`, and the page counts as idle while its modules are still arriving. So chat.js loaded and `warmCoach` built the index (`kbsearch.lookup`, 174 ms on a laptop, about 0.7 s with a phone's processor) in the middle of the start.
+- **The head (every signal the coach, the plan check and the food rules raise) was worked out for the first screen in Simple mode,** which draws none of it: `adviceCount` for the Coach tab's dot, `todayPlan`'s lead and other cards, and `fuelOn`'s food note.
+
+**Changes:**
+- **chatload.js `idleChat`** waits 3 s after the start before its idle wait.
+- **coachfab.js** does not call it at all with the coach off (`featOn("coach")`).
+- **render.js** counts the Coach tab's dot only when there is a Coach tab.
+- **head.js `todayPlan`**, in Simple mode: no head (NONE), no `headOn("train")`, no fuel note.
+  - On the end-of-workout screen the food line falls back to its plain sentence ("You have N g of protein left today").
+- **food.js `srcKey`** does not ask the head in Simple mode.
+- **smartcoach.js** loads js/engine/smart.js (and through it js/engine/kbsearch.js, js/engine/faq.js and 11 knowledge files) the first time the on-device model answers, not at start: 15 modules, 337 KB.
+- **js/data/faq-fuel.js (new):** "Eating before training", the one answer-bank entry the Today card's fuel note says.
+  - js/engine/dayfuel.js reads it there.
+  - js/data/faq.js imports it back into its place: one entry, written once, the bank and its order unchanged.
+  - The 134 KB bank is no longer loaded at start.
+
+**Measured (tools/speed.mjs, now also "blocked": the first 5 s's total blocking time; 4× slower processor, 100 workouts, median of 5; main and this branch back to back):**
+
+| | start | blocked | JavaScript before the first screen |
+|---|---|---|---|
+| Simple, main | 1680 ms | 1325 ms | 189 modules, 2703 KB |
+| Simple, v317 | 1453 ms | 446 ms | 174 modules, 2235 KB |
+| Full, main | 1661 ms | 1320 ms | 189 modules, 2703 KB |
+| Full, v317 | 1730 ms | 1158 ms | 174 modules, 2235 KB |
+
+- **Simple mode** now starts about 14% sooner and is blocked a third as long.
+- **The full app** loads less, but still warms the coach (3 s later), so its numbers are within noise.
+
+**A safety fault the coach evaluation caught on this change, fixed in it:**
+- The first Arabic question in the English app ("حاسس بألم في صدري") was answered in English, so without "طوارئ".
+- The Arabic dictionary (js/i18n/ar.js) loads when idle once chat.js is in. With the chat now loading later, a question asked at once beat it.
+- The race was there before (a question in the first moments); this change widened it.
+- **Fix:** chatload.js `langReady(q,l)`. An Arabic question (its letters, or an Arabic chip) waits for the dictionary before it is answered, in both ways in: `sendText` and the chips' `chatq`. tests/coach-eval.mjs asks the same way.
+- **Test:** "An Arabic question sent at once in the English app". It fails without the fix.
+- knowledge-001-ar ("ازاي اعمل ديدلفت صح؟", the word deadlift in Arabic) was already marked failing; it is unchanged.
+
+**Next in step 3:**
+- the full app's start: about 0.8 s of module round trips before any code runs, and the coach's index (warm it in pieces, or only when the panel opens);
+- then the Coach and Progress pages and the coach's handlers loaded on first open.

@@ -27,7 +27,7 @@ import {buildLine, draftFrom, FOCUS_MAX, foodPrefs, gearOf, KIT, profileOf, skip
 import {EXTRA_MAX, EXTRA_OK, GOALS, goalsOf} from "../../data/goals.js";
 import {lastMonth, monthlyNow, monthlyOpen} from "../../engine/monthly.js";
 import {focusMuscles} from "../../data/parts.js";
-import {chat, loadChat} from "../chatload.js";
+import {chat, langReady, loadChat} from "../chatload.js";
 /* The chat loads on demand (js/ui/chatload.js). A message's buttons exist only once it is
    in; a question chip on the Coach page can be tapped sooner, and waits for it. */
 function ask(q,id,l){return chat().ask(q,id,l);}
@@ -454,7 +454,7 @@ function register(){
   key("chatq",function(D,el){var from=fromEl(el);if(!V.coach)V.coach="compact";
     /* One of the nearest questions, instead of what was typed: the field is cleared. */
     if(el&&el.classList&&el.classList.contains("rd-near")){var qf=document.getElementById("chatq");if(qf)qf.value="";clearRead();}
-    loadChat().then(function(){loadFoods(function(){ask("",D.chatq,D.chatl);saveDB();render();land(from);toEnd();});});return;});
+    Promise.all([loadChat(),langReady("",D.chatl)]).then(function(){loadFoods(function(){ask("",D.chatq,D.chatl);saveDB();render();land(from);toEnd();});});return;});
   key("chatsend",function(){chatSend();return;});
   /* A request in the chat (js/ui/agent.js): Add it runs the action the way its screen
      does (js/ui/handlers/actions.js) and the row turns to done, with Undo for the
