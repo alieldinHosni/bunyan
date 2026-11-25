@@ -7835,6 +7835,32 @@ await test("Main tabs, swiped (owner, 25 Nov: pages shook left and right): a sla
   await drag(320,420,60,425);eq(await ev(page,"V.tab"),"food","from Food, nothing further: Coach is not there");
   await drag(60,420,320,425);eq(await ev(page,"V.tab"),"train","back to Training");
 });
+await test("Plan tabs, swiped (owner, 25 Nov): what was on the screen does not go and come back — the drawings are drawn at once, the weekdays do not fade in again",async(page,env)=>{
+  await tapTab(page,"train");await pause(page);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.train="plan";V.tplan="program";(await import("/js/ui/render.js")).render();window.scrollTo(0,0);});await pause(page,1200);
+  const cdp=await env.ctx.newCDPSession(page);
+  const drag=async(x0,y0,x1,y1,steps=12)=>{
+    await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x0,y:y0}]});
+    for(let i=1;i<=steps;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x0+(x1-x0)*i/steps,y:y0+(y1-y0)*i/steps}]});await page.waitForTimeout(16);}
+    await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});};
+  /* a point on the tab's page that does not scroll sideways itself (the templates do) */
+  const Y=async()=>page.evaluate(()=>{const p=document.querySelector("#app .psec"),r=p.getBoundingClientRect();
+    for(let y=Math.max(r.top+10,80);y<Math.min(r.bottom,780);y+=20){const e=document.elementFromPoint(200,y);
+      if(e&&p.contains(e)){let x=e,ok=true;while(x&&x!==p){if(x.scrollWidth>x.clientWidth+2&&/auto|scroll/.test(getComputedStyle(x).overflowX))ok=false;x=x.parentElement;}if(ok)return Math.round(y);}}
+    return 400;});
+  /* to Programs & exercises, never shown yet: its drawings (the library's, the favourites') */
+  let y=await Y();await drag(330,y,60,y+5);await page.waitForTimeout(80);
+  eq(await ev(page,"V.tplan"),"programs","swiped to Programs & exercises");
+  const arts=await page.$$eval("#app .art.go",a=>a.map(e=>e.style.getPropertyValue("--art-t")));
+  if(!arts.length)throw new Error("no drawings on the page");
+  eq(arts.every(x=>x==="-4000ms"),true,"every drawing drawn at once, not again from nothing: "+arts.join(","));
+  await page.waitForTimeout(900);
+  /* back to My program: its schedule's weekdays */
+  await page.evaluate(()=>window.scrollTo(0,0));await page.waitForTimeout(200);y=await Y();
+  await drag(60,y,330,y+5);await page.waitForTimeout(80);
+  eq(await ev(page,"V.tplan"),"program","swiped back");
+  eq(await page.$eval("#app .bsch-wk,#app .bsch-cy",w=>getComputedStyle(w).animationName),"none","the weekdays are not faded in again on landing");
+});
 await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails, shown only once checked (the library's fall back to their photographs)",async page=>{
   eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];
     for(const id in F){const u=["img/ex/"+id+".webp"];for(let i=0;i<F[id];i++)u.push("img/fig/"+id+"-"+i+".webp");

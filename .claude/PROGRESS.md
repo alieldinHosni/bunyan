@@ -5315,3 +5315,9 @@ What C-10 adds:
 - **The dock in Simple mode** was four tabs wide with two in it. It is now as wide as two (html.simple .dock).
 - **Simple mode changed the look and the motion.** It no longer does: animations, the sky and the page photographs follow the person's own settings again. Simple mode only takes things away.
 - Two browser tests that relied on the Romanian deadlift being approved now use Pullups. The iPhone check opens Pullups.
+
+**Owner, 25 Nov: on a swipe between the plan page's tabs, the schedule's weekdays and the tiles' drawings went and came back (v312, session/swipe-keep).**
+- **The drawings** (art.js startArts): a drawing draws in once per screen. One that came in by a swipe was meant to be finished at once, since the swipe's copy had already shown it drawn. But startArts took `swiped` and never used it, so on landing the drawing started again from nothing. Now a drawing that arrives by a swipe is given its draw-in as done (`--art-t: -4000ms`).
+- **The weekdays** (`.bsch-wk`/`.bsch-cy`) fade in when they are built, which is meant for a change of schedule mode. A page that lands by a swipe rebuilt them, so they faded in again. render.js marks #app `swipedin` for the landing (900 ms), and the fade is off there and in a swipe's still copy.
+- **Test** "Plan tabs, swiped": from My program to Programs & exercises, every drawing is drawn at once; back again, the weekdays do not fade. Proven both ways.
+- The 3D figure: the Romanian deadlift was withdrawn in v311 on purpose; Pullups and the Incline Dumbbell Press still show theirs.

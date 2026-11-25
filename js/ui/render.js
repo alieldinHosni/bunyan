@@ -353,6 +353,11 @@ function render(){
   syncFigs();
   /* The drawings: each draws in once a screen, carried on through re-renders (js/ui/art.js). */
   startArts(view,swipedIn);
+  /* A page that came in by a swipe was already on the screen, in the copy the finger
+     brought: what fades in when it is first built is shown as it is (index.html
+     #app.swipedin). Only for the landing; the next change animates as usual. */
+  appEl.classList.toggle("swipedin",swipedIn);
+  if(swipedIn){clearTimeout(render._sw);render._sw=setTimeout(function(){appEl.classList.remove("swipedin");},900);}
 
   /* No search field is focused for you. Opening the picker with the keyboard already
      up hid half the list behind it before anything was typed; browsing by muscle
