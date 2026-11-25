@@ -5510,3 +5510,33 @@ I profiled the start (Chromium, CPU profile) before cutting anything. The bytes 
   - Simple mode: start 1680 → about 1250–1450 ms first visit, about 1000 ms return; blocked 1325 → 259–450 ms.
   - Full app: blocked 1320 → 344–734 ms.
   - Next is step 4.
+- Merged as #215. In it, the reliability sweep's lateness rule was made exact:
+  - it is timed from when #app's content is swapped (a sheet falls back to the move's first animation);
+  - on the CI runner, WebKit built Food's plan in about 800 ms, and its entrance, starting as it landed, had been counted as late.
+  - Food's plan itself opens in 15–37 ms measured in the page. The 440 ms the sweep saw in Chromium is Playwright's tap waiting for the card to be still.
+
+**4. Coach code clean-up, step 1 (v319): js/ui/answers/answers.js split by topic, no visible change.**
+- **The 1450 lines are now seven modules,** each a section as it was:
+
+  | Module | Lines | What it answers |
+  |---|---|---|
+  | `ans-core.js` | 147 | the log as it stands |
+  | `ans-checkin.js` | 147 | the weekly check-in and the month |
+  | `ans-training.js` | 508 | why a lift is stuck, the program, tomorrow, the last workout |
+  | `ans-food.js` | 182 | the rest of today, swaps, what is in a food |
+  | `ans-know.js` | 119 | how training works, from the knowledge files |
+  | `ans-report.js` | 173 | a report, what the person told the coach, requests |
+  | `ans-named.js` | 302 | answers that take what the sentence names |
+
+- **answers.js** now only gathers them (re-exports), so route.js and every other importer is unchanged.
+- **Cut by a script,** not by hand. Each part gets only the original imports it uses, and imports from another part each name it uses from there.
+- **Why the import cycle is safe:**
+  - The file's top level was only function and var declarations. Its 14 vars are plain literals, none reassigned.
+  - So the cycle between the parts (and with route.js) has nothing to run at load.
+- **Checked:**
+  - **Every answer is word for word the same.** The coach evaluation's 404 answered items were recorded on main and on this branch: 0 differ.
+  - The evaluation passes 433 / 434, as on main. Safety 434 / 434; knowledge-001-ar is the known failure.
+  - 156 coach, chat, Arabic and answer browser tests pass.
+  - Architecture, engine (964), coach (784) and design checks pass.
+  - The new modules are in sw.js's files.
+- **What remains of step 4:** route.js (925 lines) could be cut the same way. The road map named answers.js, so it waits for the owner.
