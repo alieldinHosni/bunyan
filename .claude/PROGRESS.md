@@ -5410,4 +5410,35 @@ Runs in English, Arabic (drags mirrored) and Simple mode (16 moves). In WebKit, 
   - both on: four tabs;
   - the coach off alone;
   - Simple mode off: four tabs, no Simple mode switches.
-- **Next in step 2:** plainer pages, sub-pages and buttons in Simple mode; then the speed measured.
+- Merged as #211.
+
+**2. Finish Simple mode, step 2 (v316): plainer pages, nothing offered on the app's own initiative.** I looked at every Simple mode page and sub-page (Training, Food, the training plan, Food's plan, a workout). The look stays as it is (owner, 25 Nov); what goes is what the app raised on its own:
+- **The workout's "Suggested" tag:** hidden when the next weight is off (`featOn("suggest")`). The fields hold last time's numbers, and calling them suggested was untrue; each set's row already says "Last time".
+- **Training plan:** the "Train on fixed weekdays?" offer is gone.
+- **Food's plan:**
+  - no "The coach suggests" target offer;
+  - no macro-gap "Fix it for me";
+  - no "Build my targets on …";
+  - no "Matches the coach's suggestion".
+  - The target's note says only how it was worked out, without the promise of a check against your results.
+- **Kept,** because the person asks for them:
+  - "Make it from my goals" / "Rebuild from my goals" (a plan is built only when the person asks, and shown before anything changes);
+  - the plate helper;
+  - the schedule's tip.
+- **Already off before:** the lighter-week card, the missed-day card, the Today card's advice.
+- **Tests:**
+  - "Simple mode, plainer pages" (the offers present outside Simple mode, gone in it, the plain note);
+  - the Simple mode test checks there is no Suggested tag.
+
+**2. Finish Simple mode, step 3: the speed measured (tools/speed.mjs).** For a person with 100 workouts, in Chromium with the processor slowed 4×, with no service worker (a first visit), median of 5 fresh starts per mode:
+
+| | start (to the Today card) | JavaScript before it | dock taps (to the next frame) |
+|---|---|---|---|
+| Full, run 1 | 1705 ms | 189 modules, 2703 KB | 127–171 ms |
+| Simple, run 1 | 1549 ms | the same | 96–136 ms |
+| Full, run 2 | 1612 ms | the same | 110–184 ms |
+| Simple, run 2 | 1814 ms | the same | 128–157 ms |
+
+- **Simple mode is not faster to start.** The two runs disagree on which mode is quicker by more than the gap between them, so the difference is noise. Simple mode loads exactly the code the full app does: the coach's 23 modules, Progress, the head and the smart coach, all before the first screen, for pages it never shows.
+- **Its taps are about the same, perhaps a little quicker:** less is drawn per page.
+- **What would make it faster is step 3 (a lighter app):** the coach, Progress and what only they use loaded when first opened, not at start. Simple mode then skips them entirely. Step 3 is judged on tools/speed.mjs: start time and modules before the first screen, both modes.

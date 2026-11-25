@@ -650,6 +650,7 @@ var AR={"A program built for you, and rebuilt as you change": "برنامج مع
 "Daily goals": "أهدافك اليومية",
 "Your daily goal": "هدفك اليومي",
 "Fix it for me": "ظبطها لي",
+"Worked out from your age, height, weight and activity.": "محسوبة من سنّك وطولك ووزنك ونشاطك.",
 "Worked out from your age, height, weight and activity. After two weeks of logging food and weight, Bunyan checks it against your own results.": "محسوبة من سنّك وطولك ووزنك ونشاطك. بعد أسبوعين من تسجيل الأكل والوزن، بنيان بيراجعها على نتايجك انت.",
 "{n} kcal over your goal.": "{n} سعرة زيادة عن هدفك.",
 "Make it from my goals": "اعملها من أهدافي",

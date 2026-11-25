@@ -389,11 +389,13 @@ function foodSig(id){return headOn("food").some(function(s){return s.id===id;});
 /* Where the maintenance figure comes from, and what the log measures. */
 function maintSource(){
   var use=maintenanceInUse(),L=learnedNow(),h='<p class="pgnote tgsrc">';
-  var ld=learnedKept()?learnedDiffers():null;
+  /* Simple mode: how the target was worked out, and nothing the app checks or offers on
+     its own. */
+  var plain=simple(),ld=!plain&&learnedKept()?learnedDiffers():null;
   if(use.source==="learned")h+=esc(t("Maintenance measured from your own log (the formula says {f}).").replace("{f}",fmtN(tdeeFormula())));
   else if(L.kind==="ok")h+=esc(t("Maintenance by formula. Your own log measures about {k} ({lo}–{hi}).")
     .replace("{k}",fmtN(L.kcal)).replace("{lo}",fmtN(L.low)).replace("{hi}",fmtN(L.high)));
-  else h+=esc(t("Worked out from your age, height, weight and activity. After two weeks of logging food and weight, Bunyan checks it against your own results."));
+  else h+=esc(t(plain?"Worked out from your age, height, weight and activity.":"Worked out from your age, height, weight and activity. After two weeks of logging food and weight, Bunyan checks it against your own results."));
   h+='</p>';
   if(ld)h+='<button class="btn g sm tgsrc-b" data-pcfix="maint-learned">'+esc(t("Build my targets on {k} kcal").replace("{k}",fmtN(ld.learned.kcal)))+'</button>';
   return h;}
@@ -408,7 +410,7 @@ function srcKey(same){
 function srcNote(same){
   var k=srcKey(same);
   if((S.prefs||{}).tgsrcSeen===k)return '';
-  return '<div class="tgsrc-w">'+(same?'<p class="pgnote tgsame">'+esc(t("Matches the coach's suggestion."))+'</p>':'')+maintSource()
+  return '<div class="tgsrc-w">'+(same&&!simple()?'<p class="pgnote tgsame">'+esc(t("Matches the coach's suggestion."))+'</p>':'')+maintSource()
    +'<button class="tlink tgsrc-ok" data-tgsrcok="'+esc(k)+'">'+esc(t("Got it"))+'</button></div>';}
 /* Targets (owner, 3 Nov: "looks like a PDF", too much at once). One card says the
    target: the calories, what they are made of, water and steps, and where maintenance
@@ -428,7 +430,9 @@ function goalCard(plan){
     :'<div class="pgcard tgneed"><p class="pgnote" style="margin:0 0 12px">'+esc(t("Add your age, height and weight, and Bunyan works out a target for your goal."))+'</p>'
       +'<button class="btn g" data-sheet="set_you">'+esc(t("Add your details"))+'</button></div>';
   var same=!!sg&&sg.kcal===g.kcal&&sg.p===g.p&&sg.c===g.c&&sg.f===g.f;
-  if(sg&&!same&&!ed&&foodSig("tg-suggest"))h+='<div class="tgoffer" data-k="tg-suggest"><div><span class="klabel">'+esc(t("The coach suggests"))+'</span>'
+  /* Simple mode: no offers from the coach on the target, no "fix it for me". */
+  var plain=simple();
+  if(sg&&!same&&!ed&&!plain&&foodSig("tg-suggest"))h+='<div class="tgoffer" data-k="tg-suggest"><div><span class="klabel">'+esc(t("The coach suggests"))+'</span>'
     +'<b>'+fig(fmtN(sg.kcal)+' kcal')+' · '+fig(sg.p+' g')+' '+esc(t("protein"))+'</b>'
     +'<span class="tgoffer-s">'+esc(t("Maintenance {m} kcal, adjusted for your goal.")).replace("{m}",fig(fmtN(sg.tdee)))+'</span></div>'
     +hb('<button class="btn sm" data-usesug="1">'+esc(t("Use"))+'</button>')+'</div>';
@@ -442,7 +446,7 @@ function goalCard(plan){
         return '<div class="'+x[0]+'"><span>'+esc(t(x[1]))+'</span><b>'+fig(x[2]+' g')+'</b><em>'+fig(x[3]+'%')+'</em></div>';}).join("")+'</div>'
      +'<div class="tgmore"><span>'+esc(t("Water"))+' <b>'+fig(fmtN(g.water))+'</b> ml</span><span>'+esc(t("Steps"))+' <b>'+fig(fmtN(g.steps))+'</b></span></div>'
      +(plan||'')
-     +(Math.abs(gap)>40&&foodSig("macro-gap")?'<div class="tgwarn" data-k="macro-gap"><p>'+esc(t(gap>0?"Your macros add up to {m} kcal, {d} under your target.":"Your macros add up to {m} kcal, {d} over your target."))
+     +(Math.abs(gap)>40&&!plain&&foodSig("macro-gap")?'<div class="tgwarn" data-k="macro-gap"><p>'+esc(t(gap>0?"Your macros add up to {m} kcal, {d} under your target.":"Your macros add up to {m} kcal, {d} over your target."))
         .replace("{m}",fig(fmtN(mk))).replace("{d}",fig(fmtN(Math.abs(gap))))+'</p><button class="btn g sm" data-fitmacros="1">'+esc(t("Fix it for me"))+'</button></div>':'')
      +(sg?srcNote(same):'')
      +'</section>';}
