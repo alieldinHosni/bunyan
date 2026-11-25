@@ -5361,3 +5361,31 @@ What C-10 adds:
   - "Drawings (owner, 10 Nov)" now expects the copy finished but drawing in, and the page carrying the draw-in on without going back.
   - 59 swipe, drawing and count tests pass.
 - **Simple mode keeps the meal plan.** Food's "Your plan" card and "Log today's plan" are back in Simple mode: it is the person's own plan, not a suggestion. The time-of-day note and the "use N kcal" advice stay out. The Simple mode test checks the card is there.
+
+## The next phase (owner, 25 Nov: "do all of them in the right sequence"; the 3D figures postponed)
+The new-phase road map is done apart from the 3D figures (WP-8 / F-x), now postponed. Next, in this order:
+1. **Reliability sweep:** find every flash, jump and late animation, in Chromium and WebKit, and fix them.
+2. **Finish Simple mode:** Progress and the coach back one at a time, plainer pages, sub-pages and buttons, and the speed measured.
+3. **Lighter app:** fewer modules and less data before the first screen.
+4. **Coach code clean-up:** answers.js split by topic, answers testable alone. No visible change.
+
+**1. Reliability sweep, step 1: the sweep itself (session/sweep, no app change).** tests/sweep.mjs goes through 19 of the app's main moves with animations on:
+- the four dock tabs, and a swipe both ways;
+- the training plan opened, its tabs tapped and swiped both ways, and back;
+- Food's plan opened and closed;
+- an exercise sheet opened and closed;
+- Profile and back.
+
+It watches every frame for 1.5 s after each move and fails on:
+- a layout shift (PerformanceObserver; the body pinned for a sheet is not one: checked, nothing moves on screen);
+- an animation starting more than 700 ms after the move (a drag is timed from the finger's lift);
+- a picture of the app's own on screen and not drawn after 900 ms (remote photos are the network's);
+- a move that did not happen.
+
+Runs in English, Arabic (drags mirrored) and Simple mode (16 moves). In WebKit, drags are touch events made in the page.
+- **CI:** Chromium on shard 1; WebKit in the iPhone check job.
+- **Chromium today:** 0 problems in all three. Its first runs found only faults of the harness, all fixed:
+  - drags timed from the finger going down;
+  - a drag begun on the week card, which keeps its own swipe between weeks;
+  - the dock hidden after a scroll.
+- **WebKit's result comes from CI**; that is where the iPhone's own engine is tried.
