@@ -10,7 +10,7 @@ import {friends} from "../../engine/share.js";
 import {fmtW, wUnit} from "../../units.js";
 import {esc, fmtN} from "../../util.js";
 import {weekRun} from "../../engine/stats.js";
-import {VERSION} from "../../version.js";
+import {versionName} from "../../version.js";
 import {themeName, themeOf} from "../theme.js";
 import {planName} from "../../i18n/exnames.js";
 import {glyph} from "../glyphs.js";
@@ -116,7 +116,7 @@ function vProfile(){
      prow('data-tourreset="1"',"question",t("Show the guide again"),t("The tips that point out what each button does"))
     +prow('data-sheet="about"',"info",t("About and privacy"),t("Everything stays on this phone")));
   /* Which release this phone runs: what to read out when something looks wrong. */
-  h+='<p class="pver">'+esc(t("Bunyan · version {n}")).replace("{n}",'<span class="num">'+VERSION+'</span>')+'</p>';
+  h+='<p class="pver">'+esc(t("Bunyan · version {n}")).replace("{n}",'<span class="num">'+versionName()+'</span>')+'</p>';
   return h;}
 
 export {vProfile};

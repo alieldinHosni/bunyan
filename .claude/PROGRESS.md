@@ -5540,3 +5540,9 @@ I profiled the start (Chromium, CPU profile) before cutting anything. The bytes 
   - Architecture, engine (964), coach (784) and design checks pass.
   - The new modules are in sw.js's files.
 - **What remains of step 4:** route.js (925 lines) could be cut the same way. The road map named answers.js, so it waits for the owner.
+## Version names: 3.20, not v320 (owner, 25 Nov: "instead of V314 … 3.14, next V3.15")
+- js/version.js `versionName(v)` shows a release as major.minor: 320 is 3.20, 314 would be 3.14.
+- Profile's foot, About, and About's crash notes say it that way.
+- The whole number stays the release's id: sw.js's cache bunyan-v320, crash notes, exports. Bump it as before; the name follows.
+- This release is **3.20**. The next is 3.21.
+- The owner also said the swipes feel good now (v314 onwards).
