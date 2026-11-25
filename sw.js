@@ -5,7 +5,7 @@
    previous release's JS for one launch: markup the stylesheet no longer styles.
    Cache-first for images only.
    Bump CACHE whenever you change index.html. */
-const CACHE = "bunyan-v312";
+const CACHE = "bunyan-v313";
 /* instructions.json (595 KB) is deliberately absent: it is cached on first use by the
    catch-all handler below, so it no longer blocks first install. */
 const FILES = ["./", "./index.html", "./manifest.webmanifest",
@@ -68,8 +68,19 @@ self.addEventListener("message", e => {
   if (e.data === "skipWaiting") self.skipWaiting();
 });
 
-const NAV_TIMEOUT = 3000;
-let cacheModeUntil = 0;
+/* Cache first, from this worker's own cache (owner, 25 Nov: "the start of the app is very
+   slow"). The cache is one release, written whole at install (bunyan-v<VERSION>, every
+   file in FILES), so what it holds is exactly the files of this worker's version: there
+   is nothing to check with the network on a launch. Before, every script went to the
+   network first (no-cache, a round trip each) and the cache was used only when that
+   failed or the page itself took 3 s: on a phone's connection, 190 modules in waves of
+   imports, seconds before the first screen. It also kept a launch from mixing two
+   releases (the page from the network, a module from the cache), the old cause of a
+   launch that drew nothing (index.html, the boot guard).
+   A new version is fetched in the background (js/app.js reg.update: a new worker installs
+   its own cache) and opens the next time the app is come back to, as before. A file
+   this cache does not hold (a first visit before the install has finished, a page of
+   tools/) comes from the network, and is kept. */
 function fresh(req) {
   return fetch(req.mode === "navigate" ? new Request(req.url, {cache: "no-cache", credentials: "same-origin"})
                                      : new Request(req, {cache: "no-cache"})).then(res => {
@@ -80,22 +91,16 @@ function fresh(req) {
     return res;
   });
 }
+/* The app's own page: "/" or index.html, with or without a query or a hash. */
+function isShell(url) { return /\/(index\.html)?$/.test(url.pathname); }
 function appFetch(req) {
-  const nav = req.mode === "navigate";
-  /* index.html is only ever a stand-in for a page, never for a script or data file. */
-  const fallback = () => caches.match(req).then(hit => hit || (nav ? caches.match("./index.html") : Response.error()));
-  if (!nav && Date.now() < cacheModeUntil)
-    return caches.match(req).then(hit => hit || fresh(req).catch(fallback));
-  if (!nav) return fresh(req).catch(fallback);
-  return caches.match(req).then(h => h || caches.match("./index.html")).then(cached => {
-    const net = fresh(req).then(res => { cacheModeUntil = 0; return res; });
-    if (!cached) return net.catch(fallback);
-    const slow = new Promise(r => setTimeout(r, NAV_TIMEOUT, "slow"));
-    return Promise.race([net.catch(() => "fail"), slow]).then(v => {
-      if (v === "slow" || v === "fail") { cacheModeUntil = Date.now() + 20000; return cached; }
-      return v;
-    });
-  });
+  const url = new URL(req.url);
+  return caches.open(CACHE).then(c => c.match(req, {ignoreSearch: req.mode === "navigate"}).then(hit => {
+    if (hit) return hit;
+    if (req.mode === "navigate" && isShell(url))
+      return c.match("./index.html").then(h => h || fresh(req));
+    return fresh(req).catch(() => req.mode === "navigate" ? c.match("./index.html").then(h => h || Response.error()) : Response.error());
+  }));
 }
 
 self.addEventListener("fetch", e => {
@@ -126,12 +131,8 @@ self.addEventListener("fetch", e => {
                 (own && /(\/|\.html|\.js|\.json|\.webmanifest)$/.test(url.pathname));
 
   if (isApp) {
-    /* Network first, so a new version is picked up whole — but not forever. On a
-       weak gym signal the launch used to wait on every revalidation. If the page
-       itself does not arrive within NAV_TIMEOUT and a cached copy exists, that copy is
-       served and, for a short window, so is everything the page asks for next: the
-       page and its modules must come from the same release, or the stylesheet and the
-       screens disagree (the PR #5 bug). */
+    /* Cache first: this worker's release, whole (appFetch). The page and its modules
+       always come from the same release (the PR #5 bug). */
     e.respondWith(appFetch(req));
     return;
   }

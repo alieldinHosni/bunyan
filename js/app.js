@@ -356,6 +356,8 @@ else{
   var reduced=false;
   try{reduced=window.matchMedia("(prefers-reduced-motion:reduce)").matches;}catch(e){}
   var brief=reduced||(S.prefs&&S.prefs.anim===false);
+  /* The first launch on this phone, before the key that index.html reads exists. */
+  if(brief)document.documentElement.classList.add("spbrief");
   setTimeout(endSplash,brief?2150:3750);
   var spEl=document.getElementById("splash");
   if(spEl)spEl.addEventListener("click",endSplash);
