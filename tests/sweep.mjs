@@ -52,8 +52,9 @@ const arm=()=>page.evaluate(()=>{const R=window.__sw={t0:performance.now(),shift
 const collect=async()=>{await page.waitForFunction(()=>window.__sw&&window.__sw.done,null,{timeout:8000}).catch(()=>{});
   return page.evaluate(()=>{const R=window.__sw;return {shift:R.shift,late:[...R.late],blank:[...R.blank],first:R.first==null?null:Math.round(R.first)};});};
 const ev=e=>page.evaluate(async e=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;return eval(e);},e);
-const tapEl=async sel=>{if(/^nav /.test(sel)){await page.evaluate(()=>window.scrollBy(0,-60));await page.waitForTimeout(450);}
-  await page.waitForSelector(sel,{timeout:4000});await page.tap(sel);};
+/* A dock tap first scrolls up a little so the dock shows; that happens before the timer
+   starts (see the loop), so "answered in" is the app's time, not the test's. */
+const tapEl=async sel=>{await page.waitForSelector(sel,{timeout:4000});await page.tap(sel);};
 /* A finger's drag: the browser's own touch input where it has one (Chromium), else touch
    events made in the page (WebKit), on the element under the finger, the way
    tests/regression.mjs drives the swipes. Arabic mirrors the direction. */
@@ -112,6 +113,7 @@ if(SIMPLE)await page.evaluate(async()=>{const st=await import("/js/state.js");st
 let bad=0;
 for(const [name,go] of MOVES){
   await page.waitForTimeout(700);
+  if(/^dock:/.test(name)){await page.evaluate(()=>window.scrollBy(0,-60));await page.waitForTimeout(450);}
   await arm();
   try{await go();}catch(e){const m=String(e.message).split("\n")[0];
     if(/^skip:/.test(m)){console.log("skip "+name+" — "+m.slice(6));await page.evaluate(()=>{window.__sw.done=true;});continue;}
