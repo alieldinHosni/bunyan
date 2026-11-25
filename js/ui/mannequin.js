@@ -279,7 +279,9 @@ function Mannequin(el){
     el.setAttribute("data-why",t("The 3D figure couldn't start on this phone")+" ("+err.slice(0,60)+")");
     try{var lc=gl&&gl.getExtension("WEBGL_lose_context");if(lc)lc.loseContext();}catch(x){}
     gl=null;}
-  if(!rec||!canvas){err="no record";dead=true;el.setAttribute("data-still","1");return self;}
+  if(!rec||!canvas){err="no record";dead=true;el.setAttribute("data-still","1");
+    /* Said, never silent: this is how Safari's differing version hid every figure. */
+    el.setAttribute("data-why",t("The 3D figure couldn't start on this phone")+" (no record)");return self;}
   /* The start and end photos are the fallback, not a first frame: they show only if the
      figure cannot be drawn, or is not drawn within a few seconds (no graphics, or the
      body model not in the cache). Until then the stage is empty, at the figure's size,
