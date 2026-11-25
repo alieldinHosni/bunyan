@@ -33,6 +33,7 @@ import {startArts} from "./art.js";
 import {PAGE} from "./transit.js";
 import {syncCoach} from "./coachfab.js";
 import {keepRead} from "./liveread.js";
+import {simple} from "./simple.js";
 
 /* ============================================================ render */
 /* Motion is applied after the DOM has settled, and only to what changed.
@@ -143,6 +144,8 @@ function readyImgs(imgs,cap){
    started is the workout's; planning a program is training's; Coach's sections are
    their own; the assessment is Coach's. */
 function groundOf(){
+  /* Simple mode: the plain background, no page photographs. */
+  if(simple())return "";
   if(V.assess)return "coach";
   /* The workout stands on the same picture as planning your training, framed the same
      way (owner, 27 Oct); the warm-up carries
@@ -175,12 +178,19 @@ function render(){
   applyLang();
   /* Both routes into reduced motion, re-evaluated every render so the in-app toggle
      takes effect immediately rather than on the next load. */
-  applyMotion(S.prefs&&S.prefs.anim===false);
-  document.body.classList.toggle("noanim",S.prefs&&S.prefs.anim===false);
+  /* Simple mode is still as well: nothing moves that you did not move. */
+  var plain=simple();
+  applyMotion(S.prefs&&S.prefs.anim===false||plain);
+  document.body.classList.toggle("noanim",S.prefs&&S.prefs.anim===false||plain);
+  document.documentElement.classList.toggle("simple",plain);
   document.body.classList.toggle("compact",!!(S.prefs&&S.prefs.compact));
   /* Home is gone (Training opens the app) and the plan check lives in Coach AI; an old
      route to either lands on its new place. */
   if(V.tab==="home"||!V.tab)V.tab="train";
+  /* Simple mode has no Coach and no Progress: a route to either lands on Training, and
+     the coach's panel stays shut. */
+  if(plain&&(V.tab==="coach"||V.tab==="progress"||V.pcheck)){V.tab="train";V.pcheck=false;}
+  if(plain)V.coach=false;
   /* The plan check, asked for: Coach AI with every finding open. */
   if(V.pcheck){V.pcheck=false;V.tab="coach";V.advall=true;}
   /* The chat is a Coach screen; leaving Coach leaves it (back restores it from the trail). */

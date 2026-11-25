@@ -5290,3 +5290,16 @@ What C-10 adds:
   - The two approvals re-stamped (RDL 5f79fefb → de4e8ee4, Pullups d2acc13d → 0a1b4682) after checking the old hash still equalled the stored one, i.e. neither movement changed since the owner approved it. Only the hashing method changed.
   - New unit check in data/test/approved: every number nudged in its last digits, each approval still holds. Proven both ways: without the rounding it fails.
   - mannequin.js: the "no record" case now says why on the photos too; it had been silent, which is how this stayed hidden.
+
+**Simple mode, step 1 (v310, 25 Nov, session/simple-mode).** Owner: "an option to turn off all the smart features, including the chat bot, so the app becomes a simple logging app … no automation at all … the progress page could be removed, the chat button could be removed, the design could be simpler".
+- **The switch:** Profile → Settings, first row, "Simple mode" (`S.prefs.simple`, per profile, validated in schema.js; js/ui/simple.js `simple()`). Nothing is deleted; off again, everything is back.
+- **What goes:**
+  - the dock is Training and Food only (dock.js); a route to Coach or Progress lands on Training, and the coach's panel stays shut (render.js);
+  - the floating coach button and its suggestions (coachfab.js);
+  - in Profile, Smart coach, Chat history, What the coach remembers and Friends I follow;
+  - Training: the Today card says the day and Start, without its status lines, the lead line or the food note; no other prompt card, last-run card or reminder at the foot;
+  - the workout: no "how do you feel" before Start, the first set filled with last time's numbers (no worked-out next step: actions.js syncDraft skips recommend), no advice notes under the sets (the plan's own cue stays), no auto rest timer, no warm-up or cool-down, no training blocks;
+  - Food: no time-of-day note, no "use N kcal" advice under the ring, no built meal plan card or "Log today's plan";
+  - the look: no animations, no moving sky, no page photographs, no decorative drawings (html.simple).
+- **Test:** "Simple mode (owner, 25 Nov)" walks all of it, on and off. Checked on screenshots in English and Arabic.
+- **Next steps** (owner to confirm): what Simple mode should let you bring back one by one, and a measured comparison of speed with it on and off.

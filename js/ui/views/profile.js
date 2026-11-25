@@ -18,6 +18,7 @@ import {state as smartState} from "../smartcoach.js";
 import {avatar, backupState, memCount} from "../settings.js";
 import {art} from "../art.js";
 import {backArrow} from "../nav.js";
+import {simple} from "../simple.js";
 
 /* One row: its glyph in a tile, its name, what is set there now, and a chevron. */
 function smartLabel(){var st=smartState().st,on=S.prefs.smart&&S.prefs.smart.on;
@@ -27,6 +28,11 @@ function prow(attr,gl,name,sub,tone){
    +'<span class="srow-t"><span class="srow-n">'+esc(name)+'</span>'
    +(sub?'<span class="srow-s">'+esc(sub)+'</span>':'')+'</span>'
    +'<span class="ico ico-chev" aria-hidden="true"></span></button>';}
+/* A setting that is on or off, as a switch, on this page's rows. */
+function pswitch(attr,gl,name,sub,on){
+  return '<button class="srow" '+attr+' role="switch" aria-checked="'+(on?"true":"false")+'"><span class="gtile">'+glyph(gl)+'</span>'
+   +'<span class="srow-t"><span class="srow-n">'+esc(name)+'</span>'+(sub?'<span class="srow-s">'+esc(sub)+'</span>':'')+'</span>'
+   +'<span class="tgl'+(on?' on':'')+'" aria-hidden="true"><i></i></span></button>';}
 function group(title,rows){
   return '<section class="sg"><h2 class="sg-h">'+esc(title)+'</h2><div class="sg-list">'+rows+'</div></section>';}
 
@@ -68,14 +74,18 @@ function vProfile(){
    +'</div></section>';
 
   var rpeLabel={every:t("Every set"),last:t("Last set only"),off:t("Never")}[pref.rpe]||t("Every set");
+  /* Simple mode (js/ui/simple.js): first, so it is found. */
+  var plain=simple();
   h+=group(t("Settings"),
-     prow('data-sheet="set_training"',"dumbbell",t("Training"),
+     pswitch('data-toggle="simple"',"sliders",t("Simple mode"),
+       t(plain?"Logging only. Coach, Progress and suggestions are off":"Turn off Coach, Progress and every suggestion: a plain log"),plain)
+    +prow('data-sheet="set_training"',"dumbbell",t("Training"),
        t(p.prog.charAt(0).toUpperCase()+p.prog.slice(1))+" · "+t("RPE")+" "+rpeLabel.toLowerCase())
     /* Its own settings (owner, 9 Nov: not a shortcut to another page): what shapes the food. */
     +prow('data-sheet="set_food"',"bowl",t("Nutrition"),fmtN(g.kcal)+" kcal · "+g.p+"g "+t("Protein").toLowerCase()+" · "
       +t((S.prefs.meals||4)===1?"1 meal":"{n} meals").replace("{n}",S.prefs.meals||4))
     /* The on-device model (js/ui/smartcoach.js): off until asked for. */
-    +prow('data-sheet="set_smart"',"spark",t("Smart coach"),t(smartLabel()))
+    +(plain?'':prow('data-sheet="set_smart"',"spark",t("Smart coach"),t(smartLabel())))
     +prow('data-sheet="set_app"',"sliders",t("App"),
        [t(themeName(themeOf()))+" · "+(S.theme==="light"?t("Light"):t("Dark")),
         pref.lang==="ar"?"العربية":"English",wUnit()].join(" · ")));
@@ -85,7 +95,7 @@ function vProfile(){
        PROFILES.length+" "+(PROFILES.length===1?t("profile"):t("profiles")))
     +prow('data-share="1"',"share",t("Share my progress"),t("Makes a code you can send on WhatsApp"))
     +prow('data-sheet="recvplan"',"clipboard",t("Add a shared plan"),t("A program or meal plan another Bunyan user sent you"))
-    +(isOwner()?prow('data-coach="1"',"eye",t("Friends I follow"),
+    +(isOwner()&&!plain?prow('data-coach="1"',"eye",t("Friends I follow"),
        Object.keys(friends()).length+" "+t("shared with you")):""));
 
   /* What is kept: the backup (it says how old the last one is, in the caution colour
@@ -94,9 +104,9 @@ function vProfile(){
   var bk=backupState();
   h+=group(t("Your data"),
      prow('data-sheet="set_data"',"archive",t("Backup and reset"),bk.s,bk.k==="warn"?"warn":"")
-    +prow('data-sheet="set_chat"',"clock",t("Chat history"),t("The last 30 days, to read"))
+    +(plain?'':prow('data-sheet="set_chat"',"clock",t("Chat history"),t("The last 30 days, to read")))
     /* What the coach keeps about the person, each line removable (settings.js memSheet). */
-    +prow('data-sheet="coachmem"',"spark",t("What the coach remembers"),(function(n){return n?t(n===1?"1 thing":"{n} things").replace("{n}",n):t("Nothing yet");})(memCount())));
+    +(plain?'':prow('data-sheet="coachmem"',"spark",t("What the coach remembers"),(function(n){return n?t(n===1?"1 thing":"{n} things").replace("{n}",n):t("Nothing yet");})(memCount()))));
   h+=group(t("Help"),
      prow('data-tourreset="1"',"question",t("Show the guide again"),t("The tips that point out what each button does"))
     +prow('data-sheet="about"',"info",t("About and privacy"),t("Everything stays on this phone")));

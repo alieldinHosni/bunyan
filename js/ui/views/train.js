@@ -4,6 +4,7 @@
    programs, templates, imports, the library) is drawn here too but shown in Coach →
    Training (js/ui/views/coach.js), which calls the pieces exported at the foot. */
 import {hb} from "../haptic.js";
+import {simple} from "../simple.js";
 import {t, tm} from "../../i18n/dict.js";
 import {alsoKnown, empty, EQUIP, LIB, muscleOf, muscleOfEntry, MUSCLES, thumb} from "../../data/exercises.js";
 import {GOALS} from "../../data/goals.js";
@@ -257,9 +258,9 @@ function todayCard(sp,tp){
    +'<div class="thero2-t"><div class="thero2-k"><span class="klabel">'+esc(label)+'</span>'+swap+'</div>'
    +'<div class="thero2-n">'+esc(name)+'</div>'
    +'<div class="thero2-m">'+meta+'</div>'+ex+'</div></div>'
-   +(now?statusLines(tp):'')
+   +(now&&!simple()?statusLines(tp):'')
    +(tp.state==="done"||tp.state==="rest"?nextLine(tp.next,iso):'')
-   +cta+more+(now?leadLine(tp.line,iso):'')+(now?fuelRow(tp):'')+'</div>';}
+   +cta+more+(now&&!simple()?leadLine(tp.line,iso)+fuelRow(tp):'')+'</div>';}
 /* The day's food, in one line at the foot of the card (WP-5): the head's sentence for it
    (todayPlan().food.line), the one Food leads with; a tap opens Food. Not while a workout
    is open, nor on a day with nothing planned. */
@@ -329,10 +330,12 @@ function vTrainHome(){
   if(!S.active)h+=weekRail(sp,sel);
   h+=todayCard(sp,tp);
   h+=bodyTiles();
-  h+=otherCard(tp.other,sel);
+  /* Simple mode: no prompts, no reminders, nothing the app brings up on its own. */
+  var plain=simple();
+  if(!plain)h+=otherCard(tp.other,sel);
   /* The last outdoor session of the fortnight (a run, a walk, a ride, a hike), as the
      reference's run card: its route, how far, how fast. Opens that day. */
-  h+=lastRunCard();
+  if(!plain)h+=lastRunCard();
   /* Cardio and sports. Picking an outdoor one there (a run, a walk, a ride, a hike) is
      the way into tracking it live with the phone's GPS (js/ui/run.js): there is no
      separate button for it here. */
@@ -343,7 +346,7 @@ function vTrainHome(){
   /* The way into planning, last: today's training first (owner, 4 Nov). */
   if(!S.active)h+=programCard();
   /* Housekeeping never leads (WP-1 rule 5): the one reminder of the day, at the foot. */
-  h+=houseCard(tp.house);
+  if(!plain)h+=houseCard(tp.house);
   return h;}
 
 /* The most recent outdoor session of the last 14 days with a distance (Running,

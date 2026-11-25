@@ -49,7 +49,7 @@ function startRest(e){
   V.restDone=false;V.restOver=0;alarmStop();   /* a new rest replaces the last one's alert */
   audioOn();
   /* A workout logged afterwards has no rests to time. */
-  if(!S.prefs.autorest||(S.active&&S.active.past)){V.restEnd=0;return;}
+  if(!S.prefs.autorest||S.prefs.simple||(S.active&&S.active.past)){V.restEnd=0;return;}
   V.restTotal=e.rest||75;
   V.restEnd=Date.now()+V.restTotal*1000;
   beeped=false;lastTick=99;}
