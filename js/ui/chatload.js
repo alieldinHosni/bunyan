@@ -24,11 +24,19 @@ function onChatIn(fn){redraw=fn;}
 var AFTER_START=3000;
 function idleChat(){
   var idle=window.requestIdleCallback||function(f){return setTimeout(f,2000);};
-  setTimeout(function(){idle(function(){loadChat().then(function(m){m.warmCoach();});},{timeout:4000});},AFTER_START);}
+  setTimeout(function(){idle(function(){loadChat();},{timeout:4000});},AFTER_START);}
+/* The coach's indexes (the textbook search above all: about 0.7 s of work on a phone)
+   are built when the coach is opened, the panel or its tab, once its opening has played:
+   a question takes longer to type than they take to build. Built after every start, they
+   held the page for that long whether the coach was used or not (road map step 3). */
+var warmed=false,WARM_AFTER=600;
+function warmSoon(){
+  if(warmed)return;warmed=true;
+  setTimeout(function(){loadChat().then(function(m){m.warmCoach();});},WARM_AFTER);}
 /* Before a question is answered: an Arabic one (its letters, or a chip of an Arabic
    conversation) waits for the Arabic dictionary (js/i18n/ar.js), which the English app
    loads only when idle. Without it the answer came out in English, the chest-pain
    emergency answer among them (coach evaluation safety-001-ar, 25 Nov). */
 function langReady(q,l){
   return (l==="ar"||/[\u0600-\u06FF]/.test(String(q||"")))&&!arabicReady()?loadArabic():Promise.resolve();}
-export {chat, idleChat, langReady, loadChat, onChatIn, wanted};
+export {chat, idleChat, langReady, loadChat, onChatIn, wanted, warmSoon};

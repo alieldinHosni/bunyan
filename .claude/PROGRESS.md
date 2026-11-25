@@ -5483,6 +5483,14 @@ I profiled the start (Chromium, CPU profile) before cutting anything. The bytes 
 - **Test:** "An Arabic question sent at once in the English app". It fails without the fix.
 - knowledge-001-ar ("ازاي اعمل ديدلفت صح؟", the word deadlift in Arabic) was already marked failing; it is unchanged.
 
+- Merged as #213.
+
+**3. Lighter app, step 2 (v318): the coach's indexes built when the coach is opened, not after every start.**
+- **chatload.js `idleChat`** (3 s after the start) now only loads the chat module.
+- **`warmSoon()`** builds the indexes (`warmCoach`: the textbook search, the answer bank, the phrases, the names; about 0.7 s on a phone) 600 ms after the coach first opens, once its opening has played. render.js calls it when the panel is open or the tab is Coach.
+- **Why this is the right moment:** a question takes longer to type than the indexes take to build. A question asked within the 600 ms builds them on first use, as before WP-9.
+- **Full app, blocked in the first 5 s: 1158 → 734 ms** (tools/speed.mjs, 4× CPU, median of 5). Simple mode unchanged (450 ms): it never loads the coach.
+
 **Next in step 3:**
-- the full app's start: about 0.8 s of module round trips before any code runs, and the coach's index (warm it in pieces, or only when the panel opens);
+- the full app's start: about 0.8 s of module round trips before any code runs (measured without the service worker; to measure as a return visit, with it);
 - then the Coach and Progress pages and the coach's handlers loaded on first open.

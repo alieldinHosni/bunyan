@@ -35,6 +35,7 @@ import {syncCoach} from "./coachfab.js";
 import {keepRead} from "./liveread.js";
 import {simple} from "./simple.js";
 import {featOn} from "../engine/feat.js";
+import {warmSoon} from "./chatload.js";
 
 /* ============================================================ render */
 /* Motion is applied after the DOM has settled, and only to what changed.
@@ -194,6 +195,8 @@ function render(){
   if(!featOn("coach")&&(V.tab==="coach"||V.pcheck)){V.tab="train";V.pcheck=false;}
   if(!featOn("progress")&&V.tab==="progress")V.tab="train";
   if(!featOn("coach"))V.coach=false;
+  /* The coach open (its panel or its tab): its indexes are built now (js/ui/chatload.js). */
+  if(V.coach||V.tab==="coach")warmSoon();
   /* The plan check, asked for: Coach AI with every finding open. */
   if(V.pcheck){V.pcheck=false;V.tab="coach";V.advall=true;}
   /* The chat is a Coach screen; leaving Coach leaves it (back restores it from the trail). */
