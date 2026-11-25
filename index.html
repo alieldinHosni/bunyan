@@ -1004,6 +1004,8 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wti
 .kp-done{background:var(--accent);color:var(--onAccent,#fff);border-color:transparent}
 .kp.fn.kp-done{color:var(--onAccent)}
 .kp:disabled{opacity:.35}
+/* A list row turned off (Simple mode's Ask Coach): dimmed, not tappable. */
+.list .item:disabled{opacity:.45;cursor:default;pointer-events:none}
 .kp[hidden]{visibility:hidden;display:block}
 /* The keypad's row of four: the 0 wide under the 8 and 9. */
 .kp-zero{grid-column:span 2}
@@ -2491,6 +2493,9 @@ path.line[data-anim]{animation:drawOn var(--m-reveal) var(--e-decel) forwards}
 .bsch-q{font-size:12.5px;color:var(--dim);text-align:end}
 .bsch-seg{margin:0}
 .bsch-wk,.bsch-cy{list-style:none;margin:var(--s4) 0 0;padding:0;animation:fadeIn var(--m-comp) var(--e-standard)}
+/* Not again on a page that came in by a swipe, nor in the swipe's copy of it (owner,
+   25 Nov: the weekdays went and came back as the plan's tabs were swiped). */
+:is(#app.swipedin,.stillcopy) :is(.bsch-wk,.bsch-cy){animation:none}
 .bsch-wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:var(--s1)}
 .bsch-wk li,.bsch-cy li{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
 .bsch-wk li>span,.bsch-cy li>span{font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}

@@ -14,6 +14,7 @@
    Nothing here is a native drop-down, and no raw backup text is on screen unless
    asked for. */
 import {crashNotes} from "./crashnote.js";
+import {featOn} from "../engine/feat.js";
 import {hb} from "./haptic.js";
 import {t} from "../i18n/dict.js";
 import {exName, planName} from "../i18n/exnames.js";
@@ -104,20 +105,32 @@ function youSheet(){
    +'<button class="btn g" data-fsec="targets">'+t("See my targets")+'</button></div>';}
 
 /* ---- Training ----------------------------------------------------------------------- */
+/* A feature's switch (js/engine/feat.js): what is on now, everywhere in the app. In
+   Simple mode it says Simple mode's answer and changes Simple mode's own choice
+   (S.prefs.simpleOn); outside it, the setting itself (owner, 25 Nov: "the settings
+   synchronized everywhere … the option to turn on a specific feature during the simple
+   mode"). */
+function fsw(k,offFlag,name,sub){
+  return S.prefs.simple?sw('data-sfeat="'+k+'"',name,sub,featOn(k)):sw('data-toggle="'+offFlag+'"',name,sub,featOn(k));}
 function trainingSheet(){
-  var tp=S.prefs,pr=S.profile;
+  var tp=S.prefs,pr=S.profile,plain=!!tp.simple;
   return '<h2>'+t("Training")+'</h2>'
+   /* Said once, at the top, so a switch that is off is not taken for a fault. */
+   +(plain?'<p class="sg-f">'+esc(t("Simple mode is on. What it turns off shows as off here; turn any of it back on for Simple mode. Your settings outside Simple mode are kept."))+'</p>':'')
    +group(t("Progression"),
       pick(t("Weight increases"),t("How fast Bunyan adds weight"),{items:[["conservative",t("Conservative")],["standard",t("Standard")],["aggressive",t("Aggressive")]],
         value:pr.prog,attr:"setprog",label:t("Progression")})
      /* Stored as "off" flags, so everyone who had the app before these existed gets
         them on. */
-     +sw('data-toggle="noblocks"',t("Training blocks"),t("Effort builds for three weeks, then a lighter week"),!tp.noblocks)
+     +fsw("blocks","noblocks",t("Training blocks"),t("Effort builds for three weeks, then a lighter week"))
+     /* Always on outside Simple mode, so a switch only in it. */
+     +(plain?sw('data-sfeat="suggest"',t("Suggest the next weight"),t("Off: each set starts from last time's numbers"),featOn("suggest")):'')
      +pick(t("Ask for RPE"),t("How hard a set felt, out of 10"),{items:[["every",t("Every set")],["last",t("Last set only")],["off",t("Never")]],value:tp.rpe,attr:"setrpe",label:t("Ask for RPE")}),
      figs(t("Steps follow the equipment: 2.5 kg on a barbell (5 on the big leg lifts), 2 kg on dumbbells, never more than about a tenth of the load. Conservative halves them, aggressive doubles them. Any exercise can have its own step, set in its plan.")))
    +group(t("Workout"),
-      sw('data-toggle="nowarm"',t("Warm-up before a workout"),t("Drills for what the day trains, and ramp-up sets"),!tp.nowarm)
-     +sw('data-toggle="nocool"',t("Cool-down after a workout"),t("Stretches for what you trained"),!tp.nocool)
+      fsw("warm","nowarm",t("Warm-up before a workout"),t("Drills for what the day trains, and ramp-up sets"))
+     +fsw("cool","nocool",t("Cool-down after a workout"),t("Stretches for what you trained"))
+     +(plain?sw('data-sfeat="ready"',t("Ask how I feel before a workout"),t("A low day makes the suggestions lighter"),featOn("ready")):'')
      +sw('data-toggle="awake"',t("Keep screen awake"),t("During a workout"),!!tp.awake))
    +group(t("Rest timer"),
       sw('data-toggle="autorest"',t("Auto-start rest timer"),"",!!tp.autorest)

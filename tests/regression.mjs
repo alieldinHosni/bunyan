@@ -7807,7 +7807,9 @@ await test("Simple mode (owner, 25 Nov): one switch in Profile turns the app int
   await page.tap('[data-startday]');await pause(page,500);
   eq([await ev(page,"!!S.active"),await ev(page,"V.sheet")],[true,null],"the workout starts at once");
   eq([await ev(page,"V.draft.w"),await ev(page,"V.draft.r")],[60,8],"last time's weight and reps");
-  eq(await ev(page,"V.restEnd"),0,"no rest timer started on its own");
+  /* the rest timer stays (owner, 25 Nov: "don't remove the rest timer"): a set logged starts it */
+  await page.tap('[data-logset]');await pause(page,400);
+  eq(await ev(page,"V.restEnd>Date.now()"),true,"the rest timer runs after a set");
   await leaveWorkout(page);
   await tapTab(page,"food");await pause(page);
   eq(await page.$$eval("#app .fneed,#app .ffuel,#app .fpc,#app .flogplan,#app .fring-sig",a=>a.length),0,"Food: what you ate and what is left, no notes, no built plan");
@@ -7834,6 +7836,53 @@ await test("Main tabs, swiped (owner, 25 Nov: pages shook left and right): a sla
   await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.simple=true;const v=await import("/js/ui/view.js");v.V.tab="food";(await import("/js/ui/render.js")).render();});await pause(page,400);
   await drag(320,420,60,425);eq(await ev(page,"V.tab"),"food","from Food, nothing further: Coach is not there");
   await drag(60,420,320,425);eq(await ev(page,"V.tab"),"train","back to Training");
+});
+await test("Plan tabs, swiped (owner, 25 Nov): what was on the screen does not go and come back — the drawings are drawn at once, the weekdays do not fade in again",async(page,env)=>{
+  await tapTab(page,"train");await pause(page);
+  await page.evaluate(async()=>{const V=(await import("/js/ui/view.js")).V;V.train="plan";V.tplan="program";(await import("/js/ui/render.js")).render();window.scrollTo(0,0);});await pause(page,1200);
+  const cdp=await env.ctx.newCDPSession(page);
+  const drag=async(x0,y0,x1,y1,steps=12)=>{
+    await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x0,y:y0}]});
+    for(let i=1;i<=steps;i++){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x0+(x1-x0)*i/steps,y:y0+(y1-y0)*i/steps}]});await page.waitForTimeout(16);}
+    await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});};
+  /* a point on the tab's page that does not scroll sideways itself (the templates do) */
+  const Y=async()=>page.evaluate(()=>{const p=document.querySelector("#app .psec"),r=p.getBoundingClientRect();
+    for(let y=Math.max(r.top+10,80);y<Math.min(r.bottom,780);y+=20){const e=document.elementFromPoint(200,y);
+      if(e&&p.contains(e)){let x=e,ok=true;while(x&&x!==p){if(x.scrollWidth>x.clientWidth+2&&/auto|scroll/.test(getComputedStyle(x).overflowX))ok=false;x=x.parentElement;}if(ok)return Math.round(y);}}
+    return 400;});
+  /* to Programs & exercises, never shown yet: its drawings (the library's, the favourites') */
+  let y=await Y();await drag(330,y,60,y+5);await page.waitForTimeout(80);
+  eq(await ev(page,"V.tplan"),"programs","swiped to Programs & exercises");
+  const arts=await page.$$eval("#app .art.go",a=>a.map(e=>e.style.getPropertyValue("--art-t")));
+  if(!arts.length)throw new Error("no drawings on the page");
+  eq(arts.every(x=>x==="-4000ms"),true,"every drawing drawn at once, not again from nothing: "+arts.join(","));
+  await page.waitForTimeout(900);
+  /* back to My program: its schedule's weekdays */
+  await page.evaluate(()=>window.scrollTo(0,0));await page.waitForTimeout(200);y=await Y();
+  await drag(60,y,330,y+5);await page.waitForTimeout(80);
+  eq(await ev(page,"V.tplan"),"program","swiped back");
+  eq(await page.$eval("#app .bsch-wk,#app .bsch-cy",w=>getComputedStyle(w).animationName),"none","the weekdays are not faded in again on landing");
+});
+await test("Simple mode's settings (owner, 25 Nov): what it turns off shows as off and can be turned back on for Simple mode alone; leaving it, your own settings are as they were; Ask Coach is dimmed in the workout",async page=>{
+  const feat=k=>page.evaluate(async k=>(await import("/js/engine/feat.js")).featOn(k),k);
+  eq(await feat("blocks"),true,"blocks on outside Simple mode (the person's own setting)");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.simple=true;st.saveDB();(await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page,500);
+  const row=k=>page.$eval('#sheet [data-sfeat="'+k+'"]',e=>e.getAttribute("aria-checked"));
+  eq([await row("blocks"),await row("warm"),await row("cool"),await row("suggest"),await row("ready")],["false","false","false","false","false"],"in Simple mode every one says off, as it is");
+  await page.tap('#sheet [data-sfeat="blocks"]');await pause(page,300);
+  eq([await row("blocks"),await feat("blocks"),await ev(page,"!!S.prefs.noblocks")],["true",true,false],"turned on for Simple mode: on in the app, the own setting untouched");
+  await page.tap('#sheet [data-sfeat="suggest"]');await pause(page,300);
+  eq(await feat("suggest"),true,"the next weight can be had back too");
+  /* leaving Simple mode: the person's own settings, and the switches are the ordinary ones again */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.simple=false;st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq([await feat("blocks"),await feat("warm"),await page.$$eval('#sheet [data-sfeat]',a=>a.length)],[true,false,0],"own settings back (this profile has warm-ups off)");
+  /* back in Simple mode, its own choices are remembered */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.simple=true;(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  eq([await feat("blocks"),await feat("warm")],[true,false],"Simple mode's own choices kept");
+  /* the workout's menu: Ask Coach dimmed, not tappable */
+  await page.tap('[data-startday]');await pause(page,500);
+  await page.tap('[data-sessmore]');await pause(page,400);
+  eq(await page.$eval('#sheet .item[disabled]',e=>[e.textContent.indexOf("Ask Coach")>=0,getComputedStyle(e).opacity,e.hasAttribute("data-coachopen")]),[true,"0.45",false],"Ask Coach dimmed, does nothing");
 });
 await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails, shown only once checked (the library's fall back to their photographs)",async page=>{
   eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];

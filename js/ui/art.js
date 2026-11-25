@@ -296,6 +296,10 @@ function startArts(screen,swiped){
     var m=/\bart-([\w-]+)/.exec(el.getAttribute("class")||""),sh=el.closest("#sheet")?"sheet:":"";
     var k=sh+(m?m[1]:"art");
     if(ARTS[k]!=null)el.style.setProperty("--art-t",Math.round(ARTS[k]-now)+"ms");
+    /* Came in by a swipe, whose copy showed it drawn: drawn at once, not again from
+       nothing as the page lands (owner, 25 Nov: the library's and favourites' drawings
+       went and came back on a swipe). */
+    else if(swiped){ARTS[k]=now-4000;el.style.setProperty("--art-t","-4000ms");}
     else ARTS[k]=now;
     el.classList.add("go");});}
 

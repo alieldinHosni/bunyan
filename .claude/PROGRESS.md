@@ -5315,3 +5315,17 @@ What C-10 adds:
 - **The dock in Simple mode** was four tabs wide with two in it. It is now as wide as two (html.simple .dock).
 - **Simple mode changed the look and the motion.** It no longer does: animations, the sky and the page photographs follow the person's own settings again. Simple mode only takes things away.
 - Two browser tests that relied on the Romanian deadlift being approved now use Pullups. The iPhone check opens Pullups.
+
+**Owner, 25 Nov: on a swipe between the plan page's tabs, the schedule's weekdays and the tiles' drawings went and came back (v312, session/swipe-keep).**
+- **The drawings** (art.js startArts): a drawing draws in once per screen. One that came in by a swipe was meant to be finished at once, since the swipe's copy had already shown it drawn. But startArts took `swiped` and never used it, so on landing the drawing started again from nothing. Now a drawing that arrives by a swipe is given its draw-in as done (`--art-t: -4000ms`).
+- **The weekdays** (`.bsch-wk`/`.bsch-cy`) fade in when they are built, which is meant for a change of schedule mode. A page that lands by a swipe rebuilt them, so they faded in again. render.js marks #app `swipedin` for the landing (900 ms), and the fade is off there and in a swipe's still copy.
+- **Test** "Plan tabs, swiped": from My program to Programs & exercises, every drawing is drawn at once; back again, the weekdays do not fade. Proven both ways.
+- The 3D figure: the Romanian deadlift was withdrawn in v311 on purpose; Pullups and the Incline Dumbbell Press still show theirs.
+- **Owner, 25 Nov: "In the simple mode don't remove the rest timer."** The auto-start rest timer follows its own setting again in Simple mode (view.js); the Simple mode test now logs a set and checks the timer runs. (Corrects the step 1 entry above, which listed "no auto rest timer".)
+- **Owner, 25 Nov: Simple mode's settings in sync, each feature can be turned back on.** One answer for the whole app, `js/engine/feat.js` `featOn(k)` for warm, cool, blocks, suggest (the next weight worked out) and ready (how you feel before a workout).
+  - Outside Simple mode, each follows its own setting (or is simply on).
+  - In Simple mode, each is off unless turned on for Simple mode (`S.prefs.simpleOn`, validated in schema.js). The person's own settings are left untouched.
+  - Settings → Training in Simple mode shows each as it really is, with a line saying why. A switch there changes Simple mode's own choice. "Suggest the next weight" and "Ask how I feel before a workout" appear there, since they are always on outside it.
+  - warmup.js, blocks.js, actions.js syncDraft, the start handler and the set notes all read featOn.
+  - The workout's ⋯ menu shows "Ask Coach" dimmed and not tappable in Simple mode, marked "Off in Simple mode".
+  - Test "Simple mode's settings": all five off, blocks turned on for Simple mode alone, own settings back on leaving it, Simple mode's choices kept on return, Ask Coach dimmed. 77 related tests pass in normal mode.
