@@ -8,6 +8,8 @@
 
      bodyParts(sc)       [{n, a, b, ra, rb, c, r}]: the 17 parts at a scene {J, M}
      partVsPart(x, y)    the clearance between two capsules (negative: overlapping)
+     skinParts(sc)       the same parts with each limb as its skin (SKIN below): what
+                         equipment meets
      midfoot(sc)         the middle of the feet: halfway from the heel's back to the
                          front of the shoe, both feet averaged */
 import {V} from "./geom.js";
@@ -39,6 +41,40 @@ var FOOT={a:[-.02,.035,.215],b:[.19,.03,.215],ra:.035,rb:.03};
    where along it the part starts (the top of the thigh is inside the pelvis: its
    first 6 cm are the pelvis's) */
 var LIMBS=[["upperarm","sh","el",.058,.046,0],["forearm","el","wr",.042,.021,0],["thigh","hip","kn",.085,.058,.14],["shin","kn","an",.056,.038,0]];
+
+/* The limbs' skin, for what equipment meets (owner, 25 Nov: the Romanian deadlift's
+   bar drawn through a thigh that every check had passed). LIMBS above are the median
+   of the mesh about the bone, rounded down: right for the body against itself, where
+   soft parts press together and only a fault a person would see should be reported.
+   But a limb is not round about its bone: the thigh's front stands up to 4.4 cm off it,
+   the calf 4.5 cm behind the shin. A bar "touching" LIMBS was drawn inside the leg.
+   So against equipment (a bar, a pad, a bench, the floor) each limb is two capsules,
+   its near and far half, each with its axis moved off the joints' line and radii set
+   so that 97% of that half's vertices are inside: the smallest such capsule (the
+   thigh's upper half 3 cm forward, the shin's 2.5 cm back). Each half's offset is in
+   the rest pose's frame (left side) and is turned by the bone that carries that end.
+   tools/figures/fit.mjs measures any exercise against them.
+     [half from, to, radius there, radius there, offset] */
+var SKIN={
+  upperarm:[[0,.5,.085,.0561,[-.005,-.0066,-.0075]],[.5,1,.0675,.045,[.005,-.0033,-.0037]]],
+  forearm:[[0,.5,.0475,.0455,[.007,.005,-.0052]],[.5,1,.035,.0266,[0,0,0]]],
+  thigh:[[0,.5,.0975,.0911,[.0299,.0011,-.0151]],[.5,1,.1,.0656,[.01,.0004,-.005]]],
+  shin:[[0,.5,.0675,.0663,[-.025,.0019,.0098]],[.5,1,.065,.0475,[-.01,.002,.0149]]]};
+var SKIN_BONES={upperarm:["upperarm01","upperarm02"],forearm:["lowerarm01","lowerarm02"],thigh:["upperleg01","upperleg02"],shin:["lowerleg01","lowerleg02"]};
+/* bone i's turn applied to a rest direction v (no translation) */
+function turn(M,i,v){var o=i*16;
+  return [M[o]*v[0]+M[o+4]*v[1]+M[o+8]*v[2],M[o+1]*v[0]+M[o+5]*v[1]+M[o+9]*v[2],M[o+2]*v[0]+M[o+6]*v[1]+M[o+10]*v[2]];}
+/* The body at a scene with its limbs as their skin (SKIN): the parts equipment meets. */
+function skinParts(sc){
+  var J=sc.J,M=sc.M,out=bodyParts(sc).filter(function(p){return !SKIN[p.n.replace(/\.[lr]$/,"")];});
+  LR.forEach(function(s){
+    var S=s==="l"?"L":"R";
+    LIMBS.forEach(function(L){
+      var A=lerp(J[L[1]][s],J[L[2]][s],L[5]),B=J[L[2]][s],bn=SKIN_BONES[L[0]];
+      SKIN[L[0]].forEach(function(h){
+        var off=s==="l"?h[4]:mirror(h[4]),i=IX[bn[h[0]<.5?0:1]+"."+S],o=turn(M,i,off);
+        out.push(cap(L[0]+"."+s,add(lerp(A,B,h[0]),o),add(lerp(A,B,h[1]),o),h[2],h[3]));});});});
+  return out;}
 
 /* where bone i's matrix takes rest point q */
 function at(M,i,q){var o=i*16;
@@ -78,4 +114,4 @@ function midfoot(sc){
     var d=norm(sub(p.b,p.a));o=add(o,mul(add(sub(p.a,mul(d,p.ra)),add(p.b,mul(d,p.rb))),.5));n++;});
   return mul(o,1/n);}
 
-export {bodyParts, partVsPart, segSeg, midfoot, BONE_PARTS, LIMBS, FOOT, HANDS};
+export {bodyParts, skinParts, partVsPart, segSeg, midfoot, BONE_PARTS, LIMBS, SKIN, FOOT, HANDS};

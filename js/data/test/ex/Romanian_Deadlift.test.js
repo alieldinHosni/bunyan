@@ -14,9 +14,12 @@ function run(t){
   const neck=J.map(j=>deg(j.hu,j.cf.u));
   t.ok(rec.spine==="neutral"&&mx(neck)<=10,"1. spine neutral (one piece) and the neck in line, within 10° (worst "+f1(mx(neck))+"°)");
   /* 2, 3 */
-  const gap=S.map(s=>barGap(s.pose,["thigh","shin"])),off=S.map(s=>Math.abs(barOf(s.J)[0]-midfoot(s)[0]));
+  const gap=S.map(s=>barGap(s.pose,["thigh","shin"])),off=S.map((s,i)=>Math.abs(barOf(s.J)[0]-midfoot(s)[0]-(rec.ahead?rec.ahead(us[i]):0))),ahead=mx(us.map(u=>rec.ahead?rec.ahead(u):0));
   t.ok(mx(gap)<=TOUCH_TOL&&mn(gap)>-.003,"2. the bar on the legs: "+cm(mn(gap))+" to "+cm(mx(gap))+" from the thighs (within 1 cm, never 3 mm into them)");
-  t.ok(mx(off)<=MIDFOOT_TOL,"3. the bar over the middle of the foot, within 2 cm (worst "+cm(mx(off))+")");
+  /* through the hinge over the middle of the foot; near the top, where it rests on the
+     thighs (their skin stands well in front of the hips), up to 4 cm ahead of it: rule 9
+     holds the balance */
+  t.ok(mx(off)<=MIDFOOT_TOL&&ahead<=.04+1e-9&&us.every(u=>u>=.4||!rec.ahead||rec.ahead(u)===0),"3. the bar over the middle of the foot, within 2 cm of it, up to "+cm(ahead)+" ahead only in the upper half (worst "+cm(mx(off))+" off its place)");
   /* 4 */
   const kn=J.map(j=>Math.max(knee(j,"l"),knee(j,"r"))),shin=J.map(j=>deg(V.sub(j.kn.l,j.an.l),[0,1,0]));
   t.ok(mn(kn)>=12&&mx(kn)<=25&&mx(kn)-mn(kn)<10,"4. knees soft and held: "+f1(mn(kn))+"° to "+f1(mx(kn))+"° (12–25°, range under 10°)");

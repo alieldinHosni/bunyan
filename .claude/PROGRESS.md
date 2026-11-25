@@ -5566,3 +5566,27 @@ I profiled the start (Chromium, CPU profile) before cutting anything. The bytes 
   - route.js re-exports them.
   - Its three counters (WARM, REDO, FORCEL, the only top-level state changed at run time) live with the only code that uses them, in route-ask. No other module reads them.
   - **Checked:** all 404 answered items are word for word the same as on main; 156 coach, chat, Arabic and answer browser tests pass; architecture, engine, coach and design checks pass. The new modules are in sw.js's files.
+## 3D figures resumed (3.22, owner 25 Nov: "go ahead … if it will not make the app glitch")
+- **The gate is unchanged.** Only figures the owner approves are shown (Pullups and the Incline Dumbbell Press), and both pass every check unchanged: their approval stamps still match their records. Nothing new reaches the screen until the owner approves it.
+- **The fault behind "the bar through the leg":** the limbs' capsules (capsules.js LIMBS) are the median of the mesh about the bone, rounded down. That is right for the body against itself (soft parts press together), but a limb is not round about its bone:
+  - the thigh's front stands up to 4.4 cm off it;
+  - the calf stands 4.5 cm behind the shin bone.
+  - So a bar "touching" the capsule was drawn inside the leg.
+- **tools/figures/fit.mjs (new):** skins the mesh as the renderer does and measures, per part, how far it stands outside its capsules: at rest, and through any exercise's repetition (41 moments).
+- **capsules.js SKIN and skinParts(sc) (new):** each limb as two capsules (its near and far half). Each half has its axis moved off the joints' line and radii set so 97% of that half's vertices are inside; the offsets are in the rest frame, turned by the bone carrying that end. For example, the thigh's upper half is 3 cm forward with radii 9.8 → 9.1 cm, and the shin's upper half is 2.5 cm back.
+  - On the RDL's thigh front, the skin stands 0–1.4 cm outside the drawn surface at every moment.
+- **Which checks use the skin:**
+  - The body's own capsules stay for body against body. Fattening them all made 4,987 false belly/thigh overlaps.
+  - Everything against equipment and the floor uses the skin: collide.js penetration, resting, contact gaps and declared contacts; motion.js barGap (the touch rule); moves.js legFront and legFrontAt (where the deadlift starts against the shins, where bars hang).
+- **Records it moved:**
+  - **Barbell Deadlift:** asked-for lockout knees 4 → 14° (they end at about 5° once the hips go back over the foot); the feet are still.
+  - **Standing bar curls:** the forearms tip forward from 8° just as far as the thighs' skin needs.
+  - **Romanian Deadlift:** from halfway up, the bar's place moves up to 4 cm ahead of mid-foot (rec.ahead; motion.js overMidfoot), so the body's weight stays 4 cm inside the heels (it had come to 4 mm). Dossier rule 3 rewritten to match.
+  - **Seated Leg Curl:**
+    - roller 2.2 cm further out;
+    - lap pad 2.7 cm higher;
+    - seat 8 cm shorter of the knees;
+    - rules 5 and 6 measure against the skin.
+- **Tests:** engine 964 / 964 (collide, motion, the four exercises' dossiers, approved); 37 figure browser tests.
+- **The audit over all 209 records:** 13 pass (18 before). The five that no longer pass are drafts, never reviewed or shown, whose faults the thin capsules hid: Standing Dumbbell Calf Raise (dumbbells into the thighs), Standing One-Arm Cable Curl, and the three Triceps Pushdowns (the handle through the thighs at the bottom). Each is fixed at its own review.
+- **For the owner:** the Romanian Deadlift and the Seated Leg Curl are ready for review again. The review sheet (bottom/top and start/curl, from the figure's view and from the side) was sent in the session.

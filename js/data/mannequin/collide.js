@@ -77,7 +77,7 @@
    left. Pure: no DOM, no state beyond a cache of what each record is. */
 import {V} from "./geom.js";
 import {IX, ARM} from "./skin.js";
-import {bodyParts, partVsPart, midfoot} from "./capsules.js";
+import {bodyParts, skinParts, partVsPart, midfoot} from "./capsules.js";
 import {sceneAt, phaseAt, cycleOf} from "./motion.js";
 import {RECORDS} from "./records.js";
 import {TABLE, moveFor} from "./moves.js";
@@ -167,27 +167,36 @@ function matches(q,what){
 function partMatches(n,what){return n===what||base(n)===what||(what==="trunk"&&/^trunk\./.test(n))||(what==="back"&&/^trunk\./.test(n));}
 
 /* The scene at u, with the body as parts, the solids with the floor, and what each
-   hand holds. */
+   hand holds. The body is measured two ways (capsules.js): parts against each other,
+   skin (the limbs as their skin) against every solid and the floor, so a bar on a thigh
+   is on the thigh as drawn. */
 function world(rec,u){
-  var sc=sceneAt(rec,u),parts=bodyParts(sc),solids=sc.solids.concat([FLOOR]),held={};
+  var sc=sceneAt(rec,u),parts=bodyParts(sc),skin=skinParts(sc),solids=sc.solids.concat([FLOOR]),held={};
   LR.forEach(function(s){
     held[s]=[];
     if(!closes(sc.pose,s))return;
     var g=sc.J.grip[s];
     solids.forEach(function(q,i){if(q.k!=="floor"&&len(sub(q.c,g))<q.r+HOLD&&sdf(q,g)<HOLD)held[s].push(i);});});
-  return {sc:sc,parts:parts,solids:solids,held:held};}
+  return {sc:sc,parts:parts,skin:skin,solids:solids,held:held};}
+/* a part's capsules: its skin against a solid, its parts against the body */
+function capsOf(w,n,solid){return (solid?w.skin:w.parts).filter(function(c){return c.n===n;});}
 /* For each record, the resting contacts found at its two ends: part name -> the
    supports (solid index, or "part:<name>" for the body) it rests on at u = 0 and 1. */
 function restsAt(w){
   var out={};
-  w.parts.forEach(function(c){
+  w.skin.forEach(function(c){
     var b=base(c.n),s=sideOf(c.n);
     if(!REST_PARTS[b])return;
     if(b==="hand"&&w.held[s].length)return;
     var list=out[c.n]=out[c.n]||{};
     w.solids.forEach(function(q,i){
       if(!SUPPORT[q.tag]||(q.k!=="floor"&&!near(c,q,NEAR)))return;
-      if(partVsSolid(c,q).d<NEAR)list[i]=1;});
+      if(partVsSolid(c,q).d<NEAR)list[i]=1;});});
+  w.parts.forEach(function(c){
+    var b=base(c.n),s=sideOf(c.n);
+    if(!REST_PARTS[b])return;
+    if(b==="hand"&&w.held[s].length)return;
+    var list=out[c.n]=out[c.n]||{};
     if(b==="hand"||b==="forearm")w.parts.forEach(function(o){
       if(o===c||!ON_BODY[base(o.n)]||neighbours(c.n,o.n))return;
       if(near(c,o,BODYNEAR)&&partVsPart(c,o)<BODYNEAR)list["part:"+o.n]=1;});});
@@ -223,7 +232,7 @@ function penetrationW(rec,w,u){
     /* a hard thing that may rest on the body (a bar on the chest) presses in 2 cm */
     if(!q.part&&!isSoft(q)&&dl.length&&dl.every(function(d){return d[2];}))return MAY;
     return isSoft(q)||q.part?SOFT:TOL;}
-  w.parts.forEach(function(c){
+  w.skin.forEach(function(c){
     w.solids.forEach(function(q,i){
       if(q.k!=="floor"&&!near(c,q,0))return;
       var r=partVsSolid(c,q);
@@ -260,16 +269,17 @@ function gapsW(rec,w,u){
   var dec=declared(rec,w);
   names.forEach(function(n){
     var both=rs.both[n];if(!both||dec.some(function(d){return d[0]===n&&!d[2];}))return;
-    var cs=w.parts.filter(function(c){return c.n===n;}),best=1e9,bk=null;
+    var best=1e9,bk=null;
     Object.keys(both).forEach(function(k){
       var kk=isNaN(+k)?k:+k;
-      cs.forEach(function(c){var g=gapTo(c,kk);if(g<best){best=g;bk=k;}});});
+      capsOf(w,n,typeof kk==="number").forEach(function(c){var g=gapTo(c,kk);if(g<best){best=g;bk=k;}});});
     if(best>GAP)out.push({a:n,b:isNaN(+bk)?bk.slice(5):label(w.solids[+bk]),gap:best,u:u});});
   declared(rec,w).forEach(function(d){
     if(d[2])return;
-    var c=w.parts.filter(function(p){return p.n===d[0];}),g=1e9;
-    c.forEach(function(x){
-      w.solids.forEach(function(q){if(matches(q,d[1]))g=Math.min(g,partVsSolid(x,q).d);});
+    var g=1e9;
+    capsOf(w,d[0],true).forEach(function(x){
+      w.solids.forEach(function(q){if(matches(q,d[1]))g=Math.min(g,partVsSolid(x,q).d);});});
+    capsOf(w,d[0],false).forEach(function(x){
       w.parts.forEach(function(y){if(y!==x&&partMatches(y.n,d[1]))g=Math.min(g,partVsPart(x,y));});});
     if(g>GAP)out.push({a:d[0],b:d[1],gap:g===1e9?null:g,u:u,declared:true});});
   return out;}

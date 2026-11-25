@@ -49,7 +49,7 @@ the floor.
 |---|------|--------------------|--------|
 | 1 | Spine neutral throughout: the back never rounds, the low back never arches | `spine:"neutral"` (the five spine bones turn as one piece); neck within 10° of the chest's line at 41 moments | KB `acute-variables.js` EXERCISES deadlift ("a neutral — not rounded — spine"); KB `imbalances.js` MOVEMENT_FAULTS (low back arches); LIB ("back straight") |
 | 2 | Bar on the thighs: it slides down the legs, never swings away | bar within 1 cm of the thighs/shins and never into them by more than 3 mm, 41 moments | GEN (the load's lever arm about the low back stays shortest); LIB |
-| 3 | Bar over the middle of the foot | bar's x within ±2 cm of mid-foot, 41 moments | GEN |
+| 3 | Bar over the middle of the foot | bar's x within ±2 cm of mid-foot, 41 moments; from halfway up, where it rests on the thighs, its place moves up to 4 cm ahead of mid-foot (smoothly), and it stays within ±2 cm of that | GEN; the thighs as drawn (rule 9 holds the balance) |
 | 4 | Knees soft and constant: not locked, not squatting | knee bend 12–25° at every moment, its range under 10°; shins within 8° of upright | GEN (FIGURE-V3 2.3 family table); LIB ("bend the knees slightly and keep the shins vertical", "only slightly bending the knees, unlike when squatting") |
 | 5 | Hips back: a hinge, not a squat | hip flexion grows by at least 55° while the knees change under 10°; at the bottom the hips are behind the heels | GEN; LIB ("lower the bar by pushing the hips back") |
 | 6 | Stop where the hips stop, without rounding | hip flexion at the bottom 80–90°; the bar no lower than 4 cm below the knee joint | GEN (passive hamstring length: a straight-leg raise of about 80°, a few more with the knees soft); KB `acute-variables.js` dumbbell_chest_press (depth "only as low as is controlled without compensating", the general principle) |
@@ -109,6 +109,15 @@ legs, so the knee angle reads there.
 - The knees come out of where the path constraints put the body, so they swell from 17°
   to 23° in the middle of the repetition (the blend between two keys); the range stays
   under 10°.
+- **The bar meets the legs as drawn (3.22).** Against equipment the limbs are now their
+  skin (`capsules.js` SKIN): each limb two capsules fitted to 97% of the mesh, the
+  thigh's upper half 3 cm forward of the bone. At every moment the skin stands
+  0–1.4 cm in front of the drawn thigh's front, so the bar can rest on it and never in
+  it (`tools/figures/fit.mjs`). With the bar on the true front of the thighs, holding
+  it exactly over mid-foot at the top put the hips so far back that the body's weight
+  came to 4 mm from the heels (rule 9: 3 cm). So, from halfway up, the bar's place moves
+  up to 4 cm ahead of mid-foot (rule 3), as a lifter standing tall with a bar on the
+  thighs has it. The weight is now 4.0 cm inside the heels, and the knees 13–22°.
 - The arms hang about 20° behind upright at the bottom: the bar is held on the thighs
   over mid-foot while the shoulders are ahead of it. This is what a real lifter does
   (the lats hold the bar in), not a fault.
@@ -120,6 +129,8 @@ audit check (penetration, contacts, clearances, limits, joint speed, slide), plu
 (the record is not reachable through `recordFor`).
 
 ## Review
+
+**Ready for the owner's review again (3.22), not checked.** The bar is on the thighs as drawn (above), rule 3 is widened at the top for balance, and the knees range 13–22°. Pictures: the review sheet sent in the session on 25 Nov (bottom and top, from the record's view and from the side).
 
 **Withdrawn on 2026-11-25** after the owner saw it on the iPhone: the bar sinks into the thighs. The thigh capsules (`capsules.js` LIMBS) are cones round the femur; the drawn thigh's front stands up to 4.9 cm beyond them at mid-thigh (2.3 cm near the knee), so the path rule `touch:thigh+shin` put the bar inside the visible leg while every automatic check passed. Back on its photographs until the capsules match the body and the owner has approved new pictures.
 

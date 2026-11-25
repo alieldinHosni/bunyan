@@ -20,7 +20,7 @@
 import {V} from "./geom.js";
 import {joints, DIM} from "./rig.js";
 import {solve} from "./skin.js";
-import {midfoot, bodyParts} from "./capsules.js";
+import {midfoot, bodyParts, SKIN, LIMBS} from "./capsules.js";
 import {constrain} from "./motion.js";
 
 var add=V.add,sub=V.sub,mul=V.mul,dot=V.dot,cross=V.cross,len=V.len,norm=V.norm,lerp=V.lerp;
@@ -134,14 +134,19 @@ function padFoot(J){return sub(J.P,mul(J.pf.f,.13));}
 function benchFor(J,ang){return ang>0?["adjBench",padFoot(J),ang]:ang<0?["declineBench",sub(J.P,mul(J.pf.f,.12)),-ang]:BENCH;}
 
 /* Legs as the bar must clear them: the front of the shins and thighs at height y. */
+/* the legs' front at height y, as their skin has it (capsules.js SKIN: the thigh's
+   front stands well off its bone) */
+function skinFront(limb,ts){
+  var h=SKIN[limb].filter(function(x){return ts>=x[0]&&ts<=x[1];})[0]||SKIN[limb][ts<.5?0:1];
+  return h[2]+(h[3]-h[2])*(Math.max(h[0],Math.min(h[1],ts))-h[0])/(h[1]-h[0])+h[4][0];}
 function legFront(J,y){
   var x=-1e9;
   LR.forEach(function(s){
-    [[J.hip[s],J.kn[s],.085],[J.kn[s],J.an[s],.06]].forEach(function(sgm){
+    [[J.hip[s],J.kn[s],"thigh"],[J.kn[s],J.an[s],"shin"]].forEach(function(sgm){
       var a=sgm[0],b=sgm[1],lo=Math.min(a[1],b[1]),hi=Math.max(a[1],b[1]);
       if(y<lo-.03||y>hi+.03)return;
       var t=Math.max(0,Math.min(1,(y-a[1])/((b[1]-a[1])||1e-9)));
-      x=Math.max(x,a[0]+(b[0]-a[0])*t+sgm[2]);});});
+      x=Math.max(x,a[0]+(b[0]-a[0])*t+skinFront(sgm[2],t));});});
   return x;}
 /* Hanging arms: the bar where straight arms put it, in front of the legs. */
 function hangBar(J,w,clear){
@@ -189,6 +194,10 @@ function curl(o){
     var ua=sag(k);
     if(at==="preacher")ua=sag(45);
     var E=add(J.sh[s],mul(ua,DIM.upArm)),dz=(sg(s)*w-E[2])/(DIM.foreArm+DIM.palm);
+    /* a bar standing: it starts against the thighs, not in them (their skin, legFront):
+       the forearms tip forward from th[0] just as far as that takes */
+    if(at==="stand"&&(imp==="bb"||imp==="ez"))
+      for(var c=0;c<20;c++){var hd=add(E,mul(sag(t),DIM.foreArm+DIM.palm*.5));if(hd[0]>=legFront(J,hd[1])+.02)break;t+=1;}
     var fa=norm(add(sag(t),[0,0,dz]));
     var up=rz(sag(t),90);
     var pn=grip==="sup"?up:grip==="pro"?mul(up,-1):grip==="ham"?[0,0,-sg(s)]:norm(lerp([0,0,-sg(s)],up,Math.min(1,u*1.6)));
@@ -438,11 +447,16 @@ function pullModel(base0,phi,kap,th){
   var q=hangOn(Object.assign({},base0,{pelvis:[0,1,0],pitch:th})),J=solve(q).J,bar=lerp(J.grip.l,J.grip.r,.5);
   var P=[H[0]-J.hip.l[0],H[1]-(J.hip.l[1]-1)];
   return {pelvis:[P[0],P[1],0],pitch:th,knee:K,bar:[P[0]+bar[0],P[1]+bar[1]-1],hip:H};}
-/* the front of the shin (or the thigh) at height y, as the capsules measure it */
+/* the front of the shin (or the thigh) at height y, as the limb's skin measures it
+   (capsules.js SKIN: what a bar meets): the half it is in, that half's radius there and
+   how far its axis stands forward of the joints' line */
 function legFrontAt(m,base0,y,thigh){
   var A=base0.feet.l,a=thigh?m.knee:A,b=thigh?m.hip:m.knee,t=(y-a[1])/(b[1]-a[1]);
-  var r=thigh?.058+(.085-.058)*t:.038+(.056-.038)*t,dx=(b[0]-a[0])/(b[1]-a[1]);
-  return a[0]+dx*(y-a[1])+r*Math.sqrt(1+dx*dx);}
+  /* along the skin, from the near joint (the hip, the knee) to the far one */
+  var s0=thigh?LIMBS.filter(function(L){return L[0]==="thigh";})[0][5]:0,ts=Math.max(0,Math.min(1,(1-t-s0)/(1-s0)));
+  var h=SKIN[thigh?"thigh":"shin"].filter(function(x){return ts>=x[0]&&ts<=x[1];})[0];
+  var r=h[2]+(h[3]-h[2])*(ts-h[0])/(h[1]-h[0]),dx=(b[0]-a[0])/(b[1]-a[1]);
+  return a[0]+dx*(y-a[1])+(r+h[4][0])*Math.sqrt(1+dx*dx);}
 function pull(o){
   var rdl=o.kind==="rdl",st=stance(o.w||.13,8);
   /* neutral spine: the head is held in line by the solver (skin.js) */
@@ -466,10 +480,13 @@ function pull(o){
       return [m.bar[0]-M,m.bar[1]-(m.knee[1]+.02)];},[3,4]);
     s1=[s1[0],KNEE_MID,s1[1]];
     var km=pose(pullModel(b0,s1[0],s1[1],s1[2]));
-    /* standing tall: upright, knees just short of locked (4 degrees), over the middle of
-       the foot; the bar against the thighs is left to the path constraints */
-    var s2=solveN([0],function(x){return [pullModel(b0,x[0],4,0).bar[0]-M];},[3]);
-    var k1=pose(pullModel(b0,s2[0],4,0));
+    /* standing tall: upright, knees just short of locked, over the middle of the foot;
+       the bar against the thighs is left to the path constraints. The bar meets the
+       thighs' skin (capsules.js SKIN), well in front of their bones, so the constraints
+       move the hips back over the foot, which straightens the knees: asked for at 14
+       degrees here, they end at about 5 (the motion test holds the feet still) */
+    var s2=solveN([0],function(x){return [pullModel(b0,x[0],14,0).bar[0]-M];},[3]);
+    var k1=pose(pullModel(b0,s2[0],14,0));
     keys=[{at:0,pose:k0},{at:.45,pose:km},{at:1,pose:k1}];}
   else{
     var KNEE=17,PATH={path:[{track:"bar",rule:"touch:thigh+shin"},{track:"bar",rule:"overMidfoot"}]};
@@ -505,6 +522,14 @@ function pull(o){
     stick:rdl?[.05,.35]:[.1,.45],
     drive:function(p){hangOn(p);},
     equip:function(J){return [barIn(J)];}};
+  /* The Romanian deadlift near the top: the bar rests on the thighs, whose skin
+     (capsules.js SKIN) stands 11–13 cm in front of the hips. Held exactly over the middle
+     of the foot there, it put the hips so far back that the body's weight came to 4 mm
+     from the heels (rule 9 asks for 3 cm). Standing tall with a bar on the thighs, a
+     lifter has it a little ahead of the middle of the foot, the body over the feet: from
+     halfway up it may sit up to 4 cm ahead (docs/figures/ex/Romanian_Deadlift.md rule 3),
+     which leaves the weight 4 cm inside the heels. */
+  if(rdl){var AH=.04;rec.ahead=function(u){var x=Math.max(0,Math.min(1,(u-.4)/.6));return AH*x*x*(3-2*x);};}
   /* the knees lead, the hips follow (GEN): a gentle lead on top of the keys, which
      already hold the back's angle until the bar is past the knees */
   if(!rdl)rec.order={knees:[0,.85],hips:[.15,1]};
@@ -1090,7 +1115,7 @@ function crossover(o){
 /* ---- leg extensions and curls: on a machine, the knee a hinge, the shin on a pad ----
    kind "extension" (seated, the shin lifted) | "lying" (face down, the heel drawn up) |
    "seated" (the heel drawn down under the seat) */
-var HZ=.24,RO=.09,LPY=.025;
+var HZ=.24,RO=.112,LPY=.025;
 function legMachine(o){
   o=o||{};
   var kind=o.kind||"extension",lying=kind==="lying";
@@ -1115,7 +1140,7 @@ function legMachine(o){
       if(lying){p.hands=S(J.P[0]+.5,.62,.21);p.handDir=S(1,0,0);p.palm=S(0,-1,0);p.elbows=S(0,-1,.4);}
       else if(strict){var Kx=J.hip.l[0]+DIM.thigh*Math.cos(6*R);
         /* the hands hold the lap pad's handles, just outside the thighs (LIB photographs) */
-        p.hands=S(Kx-.1,J.hip.l[1]+.1,HZ);p.handDir=S(1,0,0);p.palm=S(0,-1,0);p.elbows=S(-1,-.3,.6);}
+        p.hands=S(Kx-.1,J.hip.l[1]+.127,HZ);p.handDir=S(1,0,0);p.palm=S(0,-1,0);p.elbows=S(-1,-.3,.6);}
       else{p.hands=S(-.04,.58,.27);p.handDir=S(1,-.3,0);p.palm=S(0,0,-1);p.elbows=S(-1,0,.3);}
       p.grip="grip";},
     equip:function(J){
@@ -1130,7 +1155,10 @@ function legMachine(o){
           ["beam",[K[0]-.1,.022,0],[J.P[0]+.85,.022,0],.09,.044],["beam",[K[0],K[1],-.3],[K[0],.04,-.3],.06,.06]);}
       else{
         var seatTop=J.P[1]-.135;
-        e.push(["soft",[J.P[0]+.12,seatTop-.04,0],[1,0,0],[0,1,0],[.26,.04,.19]],
+        /* the seat stops short of the knees (the Seated Leg Curl's: 8 cm more, so the
+           calves' skin passes under its front at the full curl, as a machine's seat lets it) */
+        var sl=strict?.22:.26,sx0=strict?.08:.12;
+        e.push(["soft",[J.P[0]+sx0,seatTop-.04,0],[1,0,0],[0,1,0],[sl,.04,.19]],
           ["soft",add(sub(J.P,mul(J.pf.f,strict?.127:.15)),mul(J.pf.u,.28)),J.pf.u,J.pf.f,[.3,.045,.18]],
           ["beam",[J.P[0]+.1,seatTop-.08,0],[J.P[0]+.1,.04,0],.08,.08],["beam",[K[0],K[1],-.3],[K[0],.04,-.3],.07,.07],
           ["beam",[J.P[0]-.3,.022,0],[K[0]+.25,.022,0],.09,.044]);

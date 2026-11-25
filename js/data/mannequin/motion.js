@@ -29,7 +29,7 @@
 import {V, camera, project} from "./geom.js";
 import {joints} from "./rig.js";
 import {solve, P0} from "./skin.js";
-import {bodyParts, partVsPart, midfoot} from "./capsules.js";
+import {bodyParts, skinParts, partVsPart, midfoot} from "./capsules.js";
 import {props} from "./kit.js";
 
 var add=V.add,sub=V.sub,mul=V.mul,dot=V.dot,cross=V.cross,len=V.len,norm=V.norm,lerp=V.lerp;
@@ -239,15 +239,19 @@ function shiftUpper(p,d){
   if(p.hands){var h={};for(var s in p.hands)h[s]=add(p.hands[s],d);p.hands=h;}
   return p;}
 function overMidfoot(p,J,ctx){
-  var m=midfoot({J:J,M:solve(p).M}),b=barOf(J),dx=m[0]-b[0];
-  ctx.band=[m[0]-MIDFOOT_TOL,m[0]+MIDFOOT_TOL];
+  /* a record may let the bar sit ahead of the middle of the foot near the top (rec.ahead(u),
+     metres), where it rests on the thighs: their skin stands well in front of the hips */
+  var ah=ctx.rec&&ctx.rec.ahead?ctx.rec.ahead(ctx.u):0;
+  var m=midfoot({J:J,M:solve(p).M}),b=barOf(J),dx=m[0]+ah-b[0];
+  ctx.band=[m[0]+ah-MIDFOOT_TOL,m[0]+ah+MIDFOOT_TOL];
   if(Math.abs(dx)<1e-9)return p;
   return shiftUpper(p,[dx,0,0]);}
 function partsNamed(spec){return spec.split("+");}
 /* the bar's clearance to the named parts (negative: into them) */
 function barGap(p,names){
   var sc=solve(p),J=sc.J,a=J.grip.l,b=J.grip.r,bar={a:a,b:b,ra:BAR_R,rb:BAR_R},best=1e9;
-  bodyParts(sc).forEach(function(c){var nm=c.n.replace(/\.[lr]$/,"");if(names.indexOf(nm)>=0)best=Math.min(best,partVsPart(bar,c));});
+  /* against the limbs' skin (capsules.js skinParts): a bar on the shins is on them as drawn */
+  skinParts(sc).forEach(function(c){var nm=c.n.replace(/\.[lr]$/,"");if(names.indexOf(nm)>=0)best=Math.min(best,partVsPart(bar,c));});
   return best;}
 /* the hands moved along the floor by d, each swung on its shoulder (J's) so it keeps
    its distance from it: the arm stays as long as it was, the hand rising a little */
