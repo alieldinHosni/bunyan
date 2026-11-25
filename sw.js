@@ -47,7 +47,13 @@ self.addEventListener("install", e => {
     caches.open(CACHE)
       /* cache:"reload" skips the browser's HTTP cache, which would otherwise hand a
          just-released worker the previous release's files for a few minutes. */
-      .then(c => Promise.all(FILES.map(f => c.add(new Request(f, {cache: "reload"})).catch(() => {}))))
+      .then(c => Promise.all(FILES.map(f => c.add(new Request(f, {cache: "reload"})).then(() => 0, () => 1))))
+      /* An update must be whole: a launch is served from this cache alone (appFetch), so
+         a file missing from it would come from the network, perhaps from a later
+         release, and the two would not fit (owner, 25 Nov: a blank screen after the
+         intro). An update with a hole fails, and the release in use stays until the next
+         try. A first install keeps what it got: something is better than nothing. */
+      .then(miss => { if (self.registration.active && miss.some(Boolean)) throw new Error("incomplete release"); })
       .then(() => self.skipWaiting())
   );
 });

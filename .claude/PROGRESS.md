@@ -5341,3 +5341,6 @@ What C-10 adds:
   - Two of its animations were repainted on the busy main thread every frame: the name's letter-spacing and blur, and the mark's animated drop-shadow. The name now settles by scale and opacity, and the glow is steady.
   - Test "The intro": every intro keyframe moves only opacity, transform or visibility, and the page decides the intro from the key.
   - The two theme tests read the four-part key.
+- **Owner, 25 Nov: "a lot of times I see this page after intro"** (the background, nothing drawn, on v312). The app's code failed before its first paint. The likely cause is the one the boot guard was written for: under network first, a launch while a new release was going up took the page and some modules from two releases (many releases went up that day). v313's cache first removes it. Two safeguards, in the same PR:
+  - sw.js: an update whose install missed a file fails, and the release in use stays until the next try. A launch is served from the cache alone, so a hole would have been filled from the network, possibly from a later release. A first install still keeps what it got.
+  - index.html boot guard: nothing drawn after 6 s (was 12 s) → drop the cached releases when online and load again, once a session.
