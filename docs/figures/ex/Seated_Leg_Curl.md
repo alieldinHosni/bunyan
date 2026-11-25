@@ -101,6 +101,13 @@ pad. The opposite side (yaw 258) shows the back against its pad.
   bottom of the arc (2.7 cm before, 4.7 cm now).
 - **The trunk is 14° back**, the back pad's angle; the photographs show the lifter a
   little more upright, on a more upright pad.
+- **The pads meet the legs as drawn (3.22).** Against equipment the limbs are now their
+  skin (`capsules.js` SKIN), thicker than the old capsules: the calf stands 4.5 cm behind
+  the shin bone, the thigh's top 4 cm above its bone when seated. The roller moved 2.2 cm
+  further behind the ankle (RO 0.112 m), the lap pad 2.7 cm higher (the hands with it),
+  and the seat stops 8 cm shorter of the knees, so at the full curl the calves pass
+  under its front rather than 4.9 cm into it. Rules 5 and 6 measure the pads against the
+  skin.
 - **The library tags this exercise's pattern "Elbow flexion"** (`exercises.json` p). That
   is a library error; nothing here reads it, and it is noted for the library's owner.
 

@@ -4,6 +4,7 @@ import {V} from "../../mannequin/geom.js";
 import {recordForUnchecked} from "../../mannequin/records.js";
 import {sceneAt} from "../../mannequin/motion.js";
 import {bodyParts, partVsPart, sdf} from "../../mannequin/collide.js";
+import {skinParts} from "../../mannequin/capsules.js";
 import {rolesFor, familyOf} from "../../mannequin/roles.js";
 import {knee, hipFlex, mid, moments, f1, cm, auditAll} from "./measure.js";
 
@@ -11,7 +12,7 @@ const NAME="Seated Leg Curl";
 /* the gap between a body part (a capsule) and a solid, sampled along the part */
 function gap(q,p){let m=9;for(let k=0;k<=10;k++){const x=V.lerp(p.a,p.b,k/10),r=p.ra+(p.rb-p.ra)*k/10;m=Math.min(m,sdf(q,x)-r);}return m;}
 function run(t){
-  const rec=recordForUnchecked(NAME),us=moments(40),S=us.map(u=>sceneAt(rec,u)),J=S.map(s=>s.J),P=S.map(bodyParts);
+  const rec=recordForUnchecked(NAME),us=moments(40),S=us.map(u=>sceneAt(rec,u)),J=S.map(s=>s.J),P=S.map(bodyParts),SK=S.map(skinParts);
   const mx=a=>Math.max(...a),mn=a=>Math.min(...a);
   const kn=J.map(j=>Math.max(knee(j,"l"),knee(j,"r")));
   /* the machine's pads: the roller nearest the ankles, the lap pad nearest the knees' tops,
@@ -29,15 +30,16 @@ function run(t){
   /* 4 */
   const back=P.map((ps,i)=>{const tr=ps.filter(p=>/^trunk\./.test(p.n));return mn(S[i].solids.filter(q=>!(q.a&&q.b)&&q.k!=="floor").map(q=>mn(tr.map(p=>gap(q,p)))).filter(g=>g>-.01));});
   t.ok(mx(back)<=.01,"4. the back against the back pad: at most "+cm(mx(back))+" from it");
+  /* 5, 6: the pads against the legs' skin (capsules.js skinParts), what they press on as drawn */
   /* 5 */
-  const lap=us.map((u,i)=>{const q=near(i,V.lerp(mid(J[i],"hip"),mid(J[i],"kn"),.8)),th=P[i].filter(p=>/^thigh\./.test(p.n));
+  const lap=us.map((u,i)=>{const q=near(i,V.lerp(mid(J[i],"hip"),mid(J[i],"kn"),.8)),th=SK[i].filter(p=>/^thigh\./.test(p.n));
     const c=V.lerp(q.a,q.b,.5),h=mid(J[i],"hip"),k=mid(J[i],"kn"),along=V.dot(V.sub(c,h),V.norm(V.sub(k,h)))/V.len(V.sub(k,h));
     return {g:mn(th.map(p=>partVsPart(q,p))),along};});
   t.ok(lap.every(x=>x.g>=-.002&&x.g<=.01),"5. the lap pad holds the thighs: "+cm(mn(lap.map(x=>x.g)))+"–"+cm(mx(lap.map(x=>x.g)))+" from them (touching, within 1 cm)");
   t.ok(lap.every(x=>x.along>=.6&&x.along<=.95),"5. the lap pad just above the knees: "+Math.round(lap[0].along*100)+"% of the way from hip to knee (60–95%)");
   /* 6 */
   const roll=us.map((u,i)=>{const A=mid(J[i],"an"),K=mid(J[i],"kn"),q=near(i,A),c=V.lerp(q.a,q.b,.5);
-    const along=V.dot(V.sub(c,A),V.norm(V.sub(K,A)))/V.len(V.sub(K,A)),sh=P[i].filter(p=>/^shin\./.test(p.n));
+    const along=V.dot(V.sub(c,A),V.norm(V.sub(K,A)))/V.len(V.sub(K,A)),sh=SK[i].filter(p=>/^shin\./.test(p.n));
     return {g:mn(sh.map(p=>partVsPart(q,p))),along};});
   t.ok(roll.every(x=>x.g>=-.002&&x.g<=.01),"6. the roller stays on the legs: "+cm(mn(roll.map(x=>x.g)))+"–"+cm(mx(roll.map(x=>x.g)))+" from the shins (touching, within 1 cm)");
   t.ok(roll.every(x=>x.along>=.05&&x.along<=.35),"6. the roller under the lower calves, above the heel: "+Math.round(roll[0].along*100)+"% of the way from ankle to knee (5–35%)");

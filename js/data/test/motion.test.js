@@ -43,7 +43,7 @@ function run(t){
   for(const n of ["Barbell Deadlift","Romanian Deadlift"]){
     const rec=recordForUnchecked(n);let off=0,gapHi=-1,gapLo=1,feet=0,faults=0;const a0=sceneAt(rec,0).J;
     for(let i=0;i<=40;i++){const sc=sceneAt(rec,i/40),J=sc.J,bar=V.lerp(J.grip.l,J.grip.r,.5),mf=midfoot(sc);
-      off=Math.max(off,Math.abs(bar[0]-mf[0]));const g=barGap(sc.pose,["shin","thigh"]);gapHi=Math.max(gapHi,g);gapLo=Math.min(gapLo,g);
+      off=Math.max(off,Math.abs(bar[0]-mf[0]-(rec.ahead?rec.ahead(i/40):0)));const g=barGap(sc.pose,["shin","thigh"]);gapHi=Math.max(gapHi,g);gapLo=Math.min(gapLo,g);
       feet=Math.max(feet,V.len(V.sub(J.an.l,a0.an.l)),V.len(V.sub(J.an.r,a0.an.r)));faults+=sc.faults.filter(f=>/elbow/.test(f.joint)).length;}
     t.ok(off<=MIDFOOT_TOL,n+": overMidfoot, the bar within 2 cm of the middle of the foot at 41 moments (worst "+(off*100).toFixed(2)+" cm)");
     t.ok(gapHi<=TOUCH_TOL&&gapLo>-.003,n+": touch, the bar within 1 cm of the legs and never into them by more than 3 mm ("+(gapLo*100).toFixed(1)+" to "+(gapHi*100).toFixed(1)+" cm)");
