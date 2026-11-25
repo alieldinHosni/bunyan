@@ -32,7 +32,7 @@ await ctx.addInitScript(db=>{if(!localStorage.getItem("t:seeded")){
   localStorage.setItem("bunyan:db:me",JSON.stringify(db));localStorage.setItem("bunyan:notour","1");localStorage.setItem("t:seeded","1");}},seed());
 const page=await ctx.newPage();const errs=[];page.on("pageerror",e=>errs.push(e.message));
 await page.goto(URL_);await page.waitForTimeout(2500);
-const cdp=ENGINE==="chromium"?await ctx.newCDPSession(page):null;
+const cdp=ENGINE==="chromium"&&!process.env.SYNTH?await ctx.newCDPSession(page):null;
 /* the recorder, armed just before a move */
 const arm=()=>page.evaluate(()=>{const R=window.__sw={t0:performance.now(),shift:[],late:new Set(),blank:new Set()};
   try{R.po=new PerformanceObserver(l=>{l.getEntries().forEach(e=>{if(!e.hadRecentInput&&e.value>0.001&&!(e.sources||[]).every(s=>s.node===document.body))R.shift.push({v:+e.value.toFixed(4),t:Math.round(e.startTime-R.t0),n:(e.sources||[]).map(s=>s.node&&s.node.className&&String(s.node.className.baseVal!==undefined?s.node.className.baseVal:s.node.className).slice(0,40)).join("|")});});});
@@ -56,10 +56,14 @@ const tapEl=async sel=>{if(/^nav /.test(sel)){await page.evaluate(()=>window.scr
    tests/regression.mjs drives the swipes. Arabic mirrors the direction. */
 const RTL=(process.env.LANG_APP||"en")==="ar";
 const drag=async(x0,y0,x1,y1)=>{if(RTL){x0=390-x0;x1=390-x1;}
-  if(!cdp){if(!(await page.evaluate(()=>typeof Touch==="function"&&typeof TouchEvent==="function")))throw new Error("skip: this engine makes no touch events");
+  if(!cdp){
+    /* WebKit will not let a page construct a Touch ("Illegal constructor"): the events
+       are plain ones carrying the same fields the app reads (touches, changedTouches). */
     await page.evaluate(async([x0,y0,x1,y1])=>{const el=document.elementFromPoint(x0,y0)||document.body;
-      const T=(x,y)=>new Touch({identifier:1,target:el,clientX:x,clientY:y});
-      const mk=(t,x,y)=>new TouchEvent(t,{bubbles:true,cancelable:true,touches:t==="touchend"?[]:[T(x,y)],changedTouches:[T(x,y)]});
+      const T=(x,y)=>({identifier:1,target:el,clientX:x,clientY:y,pageX:x,pageY:y+scrollY,screenX:x,screenY:y});
+      const mk=(t,x,y)=>{const e=new Event(t,{bubbles:true,cancelable:true});
+        Object.defineProperty(e,"touches",{value:t==="touchend"?[]:[T(x,y)]});Object.defineProperty(e,"changedTouches",{value:[T(x,y)]});
+        Object.defineProperty(e,"targetTouches",{value:t==="touchend"?[]:[T(x,y)]});return e;};
       el.dispatchEvent(mk("touchstart",x0,y0));
       for(let i=1;i<=12;i++){el.dispatchEvent(mk("touchmove",x0+(x1-x0)*i/12,y0+(y1-y0)*i/12));await new Promise(r=>setTimeout(r,16));}
       window.__dragEnd=()=>el.dispatchEvent(mk("touchend",x1,y1));},[x0,y0,x1,y1]);
