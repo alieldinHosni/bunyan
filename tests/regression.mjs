@@ -7807,7 +7807,9 @@ await test("Simple mode (owner, 25 Nov): one switch in Profile turns the app int
   await page.tap('[data-startday]');await pause(page,500);
   eq([await ev(page,"!!S.active"),await ev(page,"V.sheet")],[true,null],"the workout starts at once");
   eq([await ev(page,"V.draft.w"),await ev(page,"V.draft.r")],[60,8],"last time's weight and reps");
-  eq(await ev(page,"V.restEnd"),0,"no rest timer started on its own");
+  /* the rest timer stays (owner, 25 Nov: "don't remove the rest timer"): a set logged starts it */
+  await page.tap('[data-logset]');await pause(page,400);
+  eq(await ev(page,"V.restEnd>Date.now()"),true,"the rest timer runs after a set");
   await leaveWorkout(page);
   await tapTab(page,"food");await pause(page);
   eq(await page.$$eval("#app .fneed,#app .ffuel,#app .fpc,#app .flogplan,#app .fring-sig",a=>a.length),0,"Food: what you ate and what is left, no notes, no built plan");

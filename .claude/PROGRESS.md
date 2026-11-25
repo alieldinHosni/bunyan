@@ -5321,3 +5321,4 @@ What C-10 adds:
 - **The weekdays** (`.bsch-wk`/`.bsch-cy`) fade in when they are built, which is meant for a change of schedule mode. A page that lands by a swipe rebuilt them, so they faded in again. render.js marks #app `swipedin` for the landing (900 ms), and the fade is off there and in a swipe's still copy.
 - **Test** "Plan tabs, swiped": from My program to Programs & exercises, every drawing is drawn at once; back again, the weekdays do not fade. Proven both ways.
 - The 3D figure: the Romanian deadlift was withdrawn in v311 on purpose; Pullups and the Incline Dumbbell Press still show theirs.
+- **Owner, 25 Nov: "In the simple mode don't remove the rest timer."** The auto-start rest timer follows its own setting again in Simple mode (view.js); the Simple mode test now logs a set and checks the timer runs. (Corrects the step 1 entry above, which listed "no auto rest timer".)
