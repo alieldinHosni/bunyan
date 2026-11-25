@@ -7810,6 +7810,7 @@ await test("Simple mode (owner, 25 Nov): one switch in Profile turns the app int
   await page.tap('[data-startday]');await pause(page,500);
   eq([await ev(page,"!!S.active"),await ev(page,"V.sheet")],[true,null],"the workout starts at once");
   eq([await ev(page,"V.draft.w"),await ev(page,"V.draft.r")],[60,8],"last time's weight and reps");
+  eq(await page.$$eval("#sgTag",a=>a.length),0,"not called Suggested: nothing was worked out");
   /* the rest timer stays (owner, 25 Nov: "don't remove the rest timer"): a set logged starts it */
   await page.tap('[data-logset]');await pause(page,400);
   eq(await ev(page,"V.restEnd>Date.now()"),true,"the rest timer runs after a set");
@@ -7923,6 +7924,16 @@ await test("Simple mode, Coach and Progress back one at a time (road map, 25 Nov
   await page.tap('[data-toggle="simple"]');await pause(page,400);
   eq([await dock(),await page.$$eval('#app [data-sfeat]',a=>a.length)],[["train","food","coach","progress"],0],"Simple mode off: all four, no Simple mode switches");
 });
+await test("Simple mode, plainer pages (road map, 25 Nov): nothing offered on the app's own initiative — no fixed-weekdays offer on the training plan, no coach's target offer, no promise of a check on Food's plan; outside Simple mode they are there",async page=>{
+  const look=()=>page.evaluate(async()=>{const v=(await import("/js/ui/view.js")).V,R=(await import("/js/ui/render.js")).render,w=ms=>new Promise(r=>setTimeout(r,ms));
+    v.fplan=null;v.tab="train";v.train="plan";R();await w(600);const wk=document.querySelectorAll("#app .wkoffer").length;
+    v.tab="food";v.train="hub";v.fplan="plan";R();await w(800);
+    return [wk,document.querySelectorAll("#app .tgoffer,#app .tgwarn,#app .tgsrc-b,#app .tgsame").length,(document.querySelector("#app .tgsrc")||{}).textContent||""];});
+  const out=await look();
+  eq([out[0],out[1]>0,/checks it against/.test(out[2])],[1,true,true],"outside Simple mode: the offers and the check, as they were");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.simple=true;st.saveDB();});
+  eq(await look(),[0,0,"Worked out from your age, height, weight and activity."],"Simple mode: how the target was worked out, and nothing offered");
+},{db:(()=>{const d=seed();d.goals.kcal=3200;d.goals.p=100;return d;})()});
 await test("The intro (owner, 25 Nov: \"the intro sometimes glitch\"): decided before its first frame from the early key, and only opacity and transform move in it",async page=>{
   /* this profile has the intro off: the key says so, and the next launch's page knows it before any code runs */
   eq(await page.evaluate(()=>localStorage.getItem("bunyan:look").split("|")[3]),"0","off, in the early key");

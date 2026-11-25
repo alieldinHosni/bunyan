@@ -677,7 +677,8 @@ function schedCard(sp,week,inline){
 /* Offered once, for a program running in rotation: fixed weekdays, suggested from
    when each day has actually been trained. */
 function weekOffer(sp){
-  if(sp.schedule==="week"||S.wdOffered)return "";
+  /* Simple mode: nothing offered on the app's own initiative. */
+  if(sp.schedule==="week"||S.wdOffered||simple())return "";
   var train=sp.days.filter(function(d){return d.ex.length;});
   if(train.length<2)return "";
   var sug=suggestWd(sp);

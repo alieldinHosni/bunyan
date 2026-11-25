@@ -241,7 +241,9 @@ function vSetCard(e,row,rows,o){
      suggestion is never shown as something done. */
   var top=row.wu?'<div class="sc-wu"><span class="wub" aria-hidden="true">W</span><p>'+t("Warm-up")
     +' <span>· '+t("Not counted in volume or records")+'</span></p></div>':'';
-  if(V.draftSg)top+='<span class="sg-tag" id="sgTag">'+t("Suggested")+'</span>';
+  /* "Suggested" only when the app worked something out: with the next weight off (Simple
+     mode) the fields hold last time's numbers, which each set's row already says. */
+  if(V.draftSg&&featOn("suggest"))top+='<span class="sg-tag" id="sgTag">'+t("Suggested")+'</span>';
   /* A health condition's cue on every working set (engine/conditions.js): how to breathe,
      and to get up slowly. Quiet, one line. */
   var CR=row.wu?null:rulesFor(S.profile);
