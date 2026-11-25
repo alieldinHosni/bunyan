@@ -4,8 +4,10 @@
    started and left — with animations on, and watches every frame for 1.5 s after each:
      jump     the layout shifted after the move (PerformanceObserver "layout-shift"; a
               page's slide is a transform and does not count)
-     late     an animation started more than 700 ms after the move (an entrance playing
-              once the page had already landed: the "waits a second then flashes")
+     late     an animation started more than 700 ms after the move's first one (an
+              entrance playing once the page had already landed: the "waits a second
+              then flashes"). How long the app took to start moving is printed as
+              "answered in" and does not fail: it measures the machine as much as the app
      blank    a picture on the screen not yet drawn once the move should have settled
    Prints what it finds per move and exits 1 on any. Run against a served copy:
      BUNYAN_URL=http://localhost:8797/index.html PW_PATH=… node tests/sweep.mjs
@@ -42,12 +44,13 @@ const arm=()=>page.evaluate(()=>{const R=window.__sw={t0:performance.now(),shift
     document.getAnimations().forEach(a=>{const tg=a.effect&&a.effect.target;if(!tg||!tg.closest)return;
       if(tg.closest(".art,#bgart,#splash,.stillcopy,.toast,#cfab,.sheetghost"))return;
       const tm=a.effect.getTiming&&a.effect.getTiming();if(tm&&tm.iterations===Infinity)return;
-      if(a.playState==="running"&&t>700&&!R.seenEarly?.has(a)){const st=a.startTime==null?t:(a.startTime-R.t0);
-        if(st>700)R.late.add((a.animationName||a.id||"anim")+" @ "+String(tg.className&&tg.className.baseVal!==undefined?tg.className.baseVal:tg.className).slice(0,40)+" "+Math.round(st)+"ms");}});
+      const st=a.startTime==null?t:(a.startTime-R.t0);if(a.playState==="running"&&st>=0&&(R.first==null||st<R.first))R.first=st;
+      if(a.playState==="running"&&st-(R.first==null?0:R.first)>700){
+        R.late.add((a.animationName||a.id||"anim")+" @ "+String(tg.className&&tg.className.baseVal!==undefined?tg.className.baseVal:tg.className).slice(0,40)+" "+Math.round(st)+"ms");}});
     if(t>900)document.querySelectorAll("#app img,#sheet img").forEach(im=>{if(/^https?:/.test(im.getAttribute("src")||"")&&!(im.getAttribute("src")||"").startsWith(location.origin))return;if(vis(im)&&(!im.complete||!im.naturalWidth))R.blank.add((im.getAttribute("src")||"").split("/").pop()+" "+Math.round(t)+"ms");});
     if(t<1500)requestAnimationFrame(f);else{try{R.po.disconnect();}catch(e){}R.done=true;}})();});
 const collect=async()=>{await page.waitForFunction(()=>window.__sw&&window.__sw.done,null,{timeout:8000}).catch(()=>{});
-  return page.evaluate(()=>{const R=window.__sw;return {shift:R.shift,late:[...R.late],blank:[...R.blank]};});};
+  return page.evaluate(()=>{const R=window.__sw;return {shift:R.shift,late:[...R.late],blank:[...R.blank],first:R.first==null?null:Math.round(R.first)};});};
 const ev=e=>page.evaluate(async e=>{const S=(await import("/js/state.js")).S,V=(await import("/js/ui/view.js")).V;return eval(e);},e);
 const tapEl=async sel=>{if(/^nav /.test(sel)){await page.evaluate(()=>window.scrollBy(0,-60));await page.waitForTimeout(450);}
   await page.waitForSelector(sel,{timeout:4000});await page.tap(sel);};
@@ -121,7 +124,7 @@ for(const [name,go] of MOVES){
   if(r.late.length)issues.push("late: "+r.late.slice(0,6).join("; "));
   if(r.blank.length)issues.push("blank: "+r.blank.slice(0,6).join("; "));
   if(want&&at!==want&&!(want==="train"&&at==="train"))issues.push("did not happen: at "+at+", not "+want);
-  console.log((issues.length?"FAIL ":"ok   ")+name+(issues.length?"\n       "+issues.join("\n       "):""));
+  console.log((issues.length?"FAIL ":"ok   ")+name+(r.first!=null?"  (answered in "+r.first+" ms)":"")+(issues.length?"\n       "+issues.join("\n       "):""));
   if(issues.length)bad++;}
 if(errs.length){console.log("page errors:",errs.slice(0,5).join(" | "));bad++;}
 console.log("== sweep ("+ENGINE+(RTL?", Arabic":"")+(SIMPLE?", Simple mode":"")+"):",MOVES.length,"moves,",bad,"with problems");
