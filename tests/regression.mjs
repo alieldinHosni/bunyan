@@ -7783,6 +7783,12 @@ await test("Live figure: still loading after 4 s, the photos say so (owner, 24 N
   eq(await page.$eval("#sheet .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-still"),e.getAttribute("data-why"),/still loading/.test(getComputedStyle(e,"::after").content)]),
     [false,true,"The 3D figure is still loading",true],"the photos, and why");
 });
+await test("Live figure: when the drawing itself cannot load, the photos say why",async page=>{
+  await page.route("**/js/ui/mannequin.js",r=>r.abort());
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Romanian Deadlift"});});await pause(page,1500);
+  eq(await page.$eval("#sheet .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-still"),/couldn't start/.test(e.getAttribute("data-why")||""),getComputedStyle(e.querySelector(".fig3d-still")).visibility]),
+    [false,true,true,"visible"],"the photos, and why");
+});
 await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails, shown only once checked (the library's fall back to their photographs)",async page=>{
   eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];
     for(const id in F){const u=["img/ex/"+id+".webp"];for(let i=0;i<F[id];i++)u.push("img/fig/"+id+"-"+i+".webp");

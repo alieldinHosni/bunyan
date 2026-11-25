@@ -32,5 +32,10 @@ var M=null,wait=null;
 function syncFigs(){
   if(M){M.syncMannequins();return;}
   if(wait||!document.querySelector(".fig3d[data-mq]"))return;
-  wait=import("./mannequin.js").then(function(m){M=m;m.syncMannequins();});}
+  wait=import("./mannequin.js").then(function(m){M=m;m.syncMannequins();},function(e){
+    /* The drawing itself did not load: the photos, and why, rather than an empty stage;
+       the next render tries again. */
+    wait=null;
+    document.querySelectorAll(".fig3d[data-mq]").forEach(function(el){el.setAttribute("data-still","1");
+      el.setAttribute("data-why",t("The 3D figure couldn't start on this phone")+" ("+String(e&&e.message||e).slice(0,60)+")");});});}
 export {fig3dHtml, hasMannequin, syncFigs};
