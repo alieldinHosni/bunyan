@@ -110,6 +110,27 @@ if(!crashed){
       await rec();await page.tap('#app .dhead [data-back]',{timeout:5000});await page.waitForTimeout(1500);await judge("back to Training "+k);}
   }catch(e){ev.push("SLIDE "+String(e.message).split("\n")[0].slice(0,200));}}
 shakes.forEach(s=>console.log("  SHAKE",s));
+/* The 3D figure in Safari's engine (owner, 25 Nov: the Romanian deadlift showed its
+   photos on the iPhone, with no reason). Its sheet opened as the owner opens it; after
+   10 s, whether it drew, and if not, what it says and what the drawing reports. Logged
+   either way. A figure that neither drew nor said why fails: the owner would see
+   photos with no explanation. */
+if(!crashed){try{
+  /* the library's photos come from an outside host (cdn.jsdelivr.net): one it cannot
+     reach here is not the app's error */
+  const ev0=ev.length;
+  await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Romanian Deadlift"});});
+  await page.waitForTimeout(10000);
+  for(let i=ev.length-1;i>=ev0;i--)if(/^CONSOLE Failed to load resource/.test(ev[i]))ev.splice(i,1);
+  const fig=await page.evaluate(async()=>{const e=document.querySelector("#sheet .fig3d");if(!e)return {none:true};
+    let st=null;try{const m=(await import("/js/ui/mannequin.js")).mannequins().find(x=>x.el===e);st=m?m.state():"no instance";}catch(x){st="mannequin.js: "+x.message;}
+    let gl2=null;try{gl2=!!document.createElement("canvas").getContext("webgl2");}catch(x){gl2="threw "+x.message;}
+    return {live:e.hasAttribute("data-live"),still:e.hasAttribute("data-still"),why:e.getAttribute("data-why"),webgl2:gl2,state:st};});
+  console.log("  FIGURE",JSON.stringify(fig));
+  if(fig.none)ev.push("FIGURE no .fig3d in the Romanian deadlift's sheet");
+  else if(!fig.live&&!fig.why)ev.push("FIGURE photos with no reason: "+JSON.stringify(fig));
+}catch(e){ev.push("FIGURE "+String(e.message).split("\n")[0].slice(0,200));}}
+
 for(const k in seen)console.log("  weight",k.padEnd(14),"blur",seen[k].blur,"pictures built ahead",seen[k].offImgs,"elements",seen[k].nodes);
 console.log("==",LABEL,"rounds done; crashes",crashed,"reloads",navs-1,"events",ev.length,"slow taps",slow.length,"time",Math.round((Date.now()-t0)/1000)+"s");
 [...new Set(ev)].slice(0,25).forEach(e=>console.log("  ",e));

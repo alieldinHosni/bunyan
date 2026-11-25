@@ -153,11 +153,18 @@ function recordForUnchecked(name){return own(RECORDS,name)?RECORDS[name]:moveFor
 var VER={};
 function versionOf(name){
   if(own(VER,name))return VER[name];
-  var r=recordForUnchecked(name),v=null;
-  if(r){var s=JSON.stringify(r,function(k,x){return typeof x==="function"?"fn:"+x.toString():x;}),h=2166136261;
+  var v=hashRecord(recordForUnchecked(name));
+  VER[name]=v;return v;}
+function hashRecord(r){
+  var v=null;
+  /* Numbers to 5 decimals (0.01 mm): a record holds values worked out with Math.sin and
+     Math.cos, whose last digits differ between browser engines. Hashed in full, Safari
+     got another version than the one approved, and on the iPhone no approved figure was
+     ever shown (owner, 25 Nov). */
+  if(r){var s=JSON.stringify(r,function(k,x){return typeof x==="function"?"fn:"+x.toString():typeof x==="number"?Math.round(x*1e5)/1e5:x;}),h=2166136261;
     for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
     v=("0000000"+h.toString(16)).slice(-8);}
-  VER[name]=v;return v;}
+  return v;}
 function checkedOf(name){
   var c=own(RECORDS,name)?RECORDS[name].checked:own(TABLE,name)?TABLE[name][2]:null;
   return c&&c.by&&c.on&&c.version&&c.version===versionOf(name)?c:null;}
@@ -174,4 +181,4 @@ function markCheckedForTest(name){
   if(own(TABLE,name)){var row=TABLE[name],old=row[2];row[2]=c;return function(){row[2]=old;un();};}
   return function(){};}
 
-export {RECORDS, recordFor, recordForUnchecked, checkedOf, isChecked, versionOf, markCheckedForTest, seated, along, grip, wristFor, levers};
+export {RECORDS, recordFor, recordForUnchecked, checkedOf, isChecked, versionOf, hashRecord, markCheckedForTest, seated, along, grip, wristFor, levers};
