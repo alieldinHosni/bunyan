@@ -6,6 +6,7 @@
    each muscle worked, each with a hold timer. What they contain comes from
    js/engine/warmup.js; this file only draws it. */
 import {correctiveFor, FAULTS_ASK} from "../../engine/corrective.js";
+import {featOn} from "../../engine/feat.js";
 import {avoids, limitsOf} from "../../engine/plan.js";
 import {t, tm} from "../../i18n/dict.js";
 import {exName} from "../../i18n/exnames.js";
@@ -41,7 +42,7 @@ function warmOf(a){
 function warmShown(a){
   if(!a||!a.entries||!a.entries.length)return false;
   if(a.warm==="open")return true;
-  if(a.warm!=null||S.prefs.nowarm||S.prefs.simple)return false;
+  if(a.warm!=null||!featOn("warm"))return false;
   if(a.entries.some(function(e){return e.sets&&e.sets.length;}))return false;
   return !!warmOf(a);}
 
@@ -156,7 +157,7 @@ function vWarm(a){
 
 /* The cool-down for a finished session, worked out once, at the finish. */
 function coolFor(entries){
-  if(S.prefs.nocool||S.prefs.simple)return null;
+  if(!featOn("cool"))return null;
   return cooldownFor(entries,{});}
 
 function coolCard(c){

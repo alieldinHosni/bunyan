@@ -1004,6 +1004,8 @@ body.noanim .restwrap,body.noanim .logbtn.done.fresh,body.noanim .wsr.fresh .wti
 .kp-done{background:var(--accent);color:var(--onAccent,#fff);border-color:transparent}
 .kp.fn.kp-done{color:var(--onAccent)}
 .kp:disabled{opacity:.35}
+/* A list row turned off (Simple mode's Ask Coach): dimmed, not tappable. */
+.list .item:disabled{opacity:.45;cursor:default;pointer-events:none}
 .kp[hidden]{visibility:hidden;display:block}
 /* The keypad's row of four: the 0 wide under the 8 and 9. */
 .kp-zero{grid-column:span 2}

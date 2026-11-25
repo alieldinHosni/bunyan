@@ -130,6 +130,11 @@ function register(){
   key("navoid",function(D){if(!/^(dairy|eggs|fish|nuts|gluten)$/.test(D.navoid))return;
     var l=S.prefs.avoid=(S.prefs.avoid||[]).slice(),i=l.indexOf(D.navoid);
     if(i>=0)l.splice(i,1);else l.push(D.navoid);saveDB();render();return;});
+  /* A feature turned on or off for Simple mode only (js/engine/feat.js). */
+  key("sfeat",function(D){if(!/^(warm|cool|blocks|suggest|ready)$/.test(D.sfeat))return;
+    var o=Object.assign({},S.prefs.simpleOn||{});o[D.sfeat]=!o[D.sfeat];S.prefs.simpleOn=o;
+    if(D.sfeat==="blocks"&&!o.blocks)delete S.block;
+    saveDB();render();return;});
   key("toggle",function(D){S.prefs[D.toggle]=!S.prefs[D.toggle];
     if(D.toggle==="anim")document.body.classList.toggle("noanim",S.prefs.anim===false);
     if(D.toggle==="awake")keepAwake(S.prefs.awake&&!!S.active);

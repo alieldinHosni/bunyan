@@ -7863,6 +7863,27 @@ await test("Plan tabs, swiped (owner, 25 Nov): what was on the screen does not g
   eq(await ev(page,"V.tplan"),"program","swiped back");
   eq(await page.$eval("#app .bsch-wk,#app .bsch-cy",w=>getComputedStyle(w).animationName),"none","the weekdays are not faded in again on landing");
 });
+await test("Simple mode's settings (owner, 25 Nov): what it turns off shows as off and can be turned back on for Simple mode alone; leaving it, your own settings are as they were; Ask Coach is dimmed in the workout",async page=>{
+  const feat=k=>page.evaluate(async k=>(await import("/js/engine/feat.js")).featOn(k),k);
+  eq(await feat("blocks"),true,"blocks on outside Simple mode (the person's own setting)");
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.simple=true;st.saveDB();(await import("/js/ui/actions.js")).openSheet("set_training");});await pause(page,500);
+  const row=k=>page.$eval('#sheet [data-sfeat="'+k+'"]',e=>e.getAttribute("aria-checked"));
+  eq([await row("blocks"),await row("warm"),await row("cool"),await row("suggest"),await row("ready")],["false","false","false","false","false"],"in Simple mode every one says off, as it is");
+  await page.tap('#sheet [data-sfeat="blocks"]');await pause(page,300);
+  eq([await row("blocks"),await feat("blocks"),await ev(page,"!!S.prefs.noblocks")],["true",true,false],"turned on for Simple mode: on in the app, the own setting untouched");
+  await page.tap('#sheet [data-sfeat="suggest"]');await pause(page,300);
+  eq(await feat("suggest"),true,"the next weight can be had back too");
+  /* leaving Simple mode: the person's own settings, and the switches are the ordinary ones again */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.simple=false;st.saveDB();(await import("/js/ui/render.js")).render();});await pause(page,300);
+  eq([await feat("blocks"),await feat("warm"),await page.$$eval('#sheet [data-sfeat]',a=>a.length)],[true,false,0],"own settings back (this profile has warm-ups off)");
+  /* back in Simple mode, its own choices are remembered */
+  await page.evaluate(async()=>{const st=await import("/js/state.js");st.S.prefs.simple=true;(await import("/js/ui/actions.js")).closeSheet();});await pause(page,300);
+  eq([await feat("blocks"),await feat("warm")],[true,false],"Simple mode's own choices kept");
+  /* the workout's menu: Ask Coach dimmed, not tappable */
+  await page.tap('[data-startday]');await pause(page,500);
+  await page.tap('[data-sessmore]');await pause(page,400);
+  eq(await page.$eval('#sheet .item[disabled]',e=>[e.textContent.indexOf("Ask Coach")>=0,getComputedStyle(e).opacity,e.hasAttribute("data-coachopen")]),[true,"0.45",false],"Ask Coach dimmed, does nothing");
+});
 await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails, shown only once checked (the library's fall back to their photographs)",async page=>{
   eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];
     for(const id in F){const u=["img/ex/"+id+".webp"];for(let i=0;i<F[id];i++)u.push("img/fig/"+id+"-"+i+".webp");

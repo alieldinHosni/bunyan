@@ -13,6 +13,7 @@
    time. Ending a lighter week early starts the next block that day; an unplanned
    lighter week (started from the card) starts the next block the day after it ends. */
 import {blockAt, LIGHT_RIR, planVolume, setShift, shiftDay} from "../coach/block.js";
+import {featOn} from "./feat.js";
 import {isActivity} from "../data/activities.js";
 import {isCompound, muscleOf, secondaryOf} from "../data/exercises.js";
 import {phaseDose, phaseOf} from "./phase.js";
@@ -26,7 +27,7 @@ var INFO={muscle:muscleOf,secondary:secondaryOf,activity:isActivity};
 /* A program with its own weeks: any exercise kept for only some of them. */
 function ownWeeks(sp){
   return !!(sp&&(sp.days||[]).some(function(d){return (d.ex||[]).some(function(e){return !!e.wk;});}));}
-function blocksOn(){return !(S.prefs&&(S.prefs.noblocks||S.prefs.simple))&&!ownWeeks(split());}
+function blocksOn(){return featOn("blocks")&&!ownWeeks(split());}
 /* Where a date falls in the blocks, or null: blocks off, none started yet, or the date
    is before the current one began (an unplanned lighter week runs then). */
 function blockNow(date){
