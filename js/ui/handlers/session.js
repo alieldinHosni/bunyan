@@ -3,6 +3,7 @@
    moving between exercises, logging sets and activities, rest, swapping and adding,
    pain, plates, notes, finishing and leaving. */
 import {ms} from "../motion.js";
+import {simple} from "../simple.js";
 import * as W from "../workout.js";
 import {lastWeight} from "../../engine/formulas.js";
 import {t} from "../../i18n/dict.js";
@@ -161,7 +162,8 @@ function register(){
   /* Start asks how you feel first, in a sheet (WP-3: it was a question above the first
      set): an answer, or Skip, starts the workout. A workout already open is left as it was. */
   key("startday",function(D){if(V.sheet==="another"){V.sheet=null;V.sd=null;}
-    if(!S.active){openSheet("ready",{day:D.startday});return;}
+    /* Simple mode starts at once: no question first. */
+    if(!S.active&&!simple()){openSheet("ready",{day:D.startday});return;}
     pushNav();startDay(D.startday);return;});
   has("readygo",function(D){var id=V.sd&&V.sd.day,v=Math.max(0,Math.min(5,Math.round(+D.readygo||0)));
     V.sheet=null;V.sd=null;if(!id)return;

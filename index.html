@@ -6062,6 +6062,9 @@ body.noanim .tour-hole,body.noanim .tour-hole::after,body.noanim .tour-card.in{t
    side by side; the canvas takes over when it is live. A drag turns it in the exercise
    sheet (data-mq-turn), so the canvas lets vertical scrolls through and keeps
    sideways drags for itself. */
+/* Simple mode (js/ui/simple.js): the pages as plain lists, no drawings or photographs
+   behind them. */
+html.simple :is(.thero2-art,.fthead-art,.btn-art,.wfin-art,.pid-orbit,.pid-bg,.hgreet-art,.fwater-art,.exhero-art,.empty-art){display:none}
 .fig3d{position:relative;aspect-ratio:4/3;margin:0 0 12px;border-radius:var(--r4);overflow:hidden;
   border:1px solid var(--border);background:var(--mq-edge)}
 .fig3d canvas{display:block;width:100%;height:100%}

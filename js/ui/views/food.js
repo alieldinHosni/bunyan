@@ -4,6 +4,7 @@
    saved and the foods you made, kept and edited here) and Targets (what the day is
    measured against, with the evidence for whether it is working beside it). */
 import {hb} from "../haptic.js";
+import {simple} from "../simple.js";
 import {t} from "../../i18n/dict.js";
 import {eatenToday, energyMissing, macroKcal, macroTargets, tdee, tdeeFormula} from "../../engine/formulas.js";
 import {learnedDiffers, learnedNow, maintenanceInUse} from "../../engine/energy.js";
@@ -130,6 +131,8 @@ var RINGSIG={"kcal-up":"Over what fat loss needs","kcal-down":"Under what buildi
   "kcal-off":"Far from your maintenance","deficit-volume":"Big deficit, heavy training week","phase":"Goal and program disagree",
   "surplus-low":"Surplus, but too little training"};
 function ringSig(){
+  /* Simple mode: the day's numbers, no advice on them. */
+  if(simple())return "";
   var h=headNow(),all=(h.lead?[h.lead]:[]).concat(h.queue);
   var s=all.filter(function(x){return RINGSIG[x.id]&&x.pri>=60&&x.source==="plancheck"&&x.src&&x.src.fix;})[0];
   if(!s)return "";
@@ -164,7 +167,9 @@ function vFoodToday(dsel){
      Nothing is marked "Now": the day is the user's, not the clock's. */
   /* ---- what is behind for the time of day, right under the day's numbers, today only
      (js/ui/bodyneeds.js): one slim card, or none. */
-  if(dsel===today())h+=bodyNeeds(e);
+  /* Simple mode: no notes about the time of day, no built meal plan; you log, it adds up. */
+  var plain=simple();
+  if(dsel===today()&&!plain)h+=bodyNeeds(e);
   var ids=dayMeals(dsel),next=nextMeal(dsel),n=ids.length;
   h+='<div class="tsec"><h2 class="tsec-h">'+t(dsel===today()?"Today's meals":"Meals")+'</h2>'
    +'<button class="tlink" data-openday="'+dsel+'">'+t("Day details")+'</button></div>';
@@ -182,7 +187,7 @@ function vFoodToday(dsel){
   h+='</div>';
 
   /* The coach's meal plan, one tap into the meals not logged yet today. */
-  if(dsel===today()&&ids.some(function(id){return planOf(id).length&&!(((r.meals[id]||{}).items)||[]).length;}))
+  if(!plain&&dsel===today()&&ids.some(function(id){return planOf(id).length&&!(((r.meals[id]||{}).items)||[]).length;}))
     h+='<button class="btn g flogplan" data-logday="1">'+esc(t("Log today's plan"))+'</button>';
   /* In the page, not floating: the dock is the one floating control. */
   h+='<button class="btn fadd" data-addfood="'+esc(next)+'">'
@@ -209,7 +214,7 @@ function vFoodToday(dsel){
    /* The strands are the day's water: the bright one runs as far as the goal is met. */
    +'<div class="fwater-art">'+waterArt(g.water?r.water/g.water:0)+'</div></div>';
   /* The way into planning, last: the day itself first (owner, 4 Nov). */
-  h+=foodPlanCard();
+  if(!plain)h+=foodPlanCard();
   return h;}
 
 /* ---- one meal (node 13:118). Reached from a logged row above; back returns here. */

@@ -1,6 +1,7 @@
 /* Bunyan — session
    The live session surface and rest screen. Execution, not editing. */
 import {rulesFor} from "../../engine/conditions.js";
+import {simple} from "../simple.js";
 import {t} from "../../i18n/dict.js";
 import {exMedia, exThumb, isBarbell, isUnilateral} from "../../data/exercises.js";
 import {fig3dHtml, hasMannequin} from "../fig3d.js";
@@ -292,6 +293,8 @@ function vSetCard(e,row,rows,o){
    rule of an AMRAP set, the plan's own cue. Quiet; nothing once a working set is in. */
 function exNotes(e,row,p,timed){
   if(!row||row.wu||e.sets.some(function(x){return !x.wu;}))return "";
+  /* Simple mode: only the plan's own cue, nothing the app works out. */
+  if(simple())return e.planned&&e.planned.note?'<p class="sl-note" data-k="slnote"><span class="sc-cue">'+esc(e.planned.note)+'</span></p>':"";
   var rec=recommend(e),out=[];
   if(!p&&!timed)
     out.push(num(e.planned.w0)

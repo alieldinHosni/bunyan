@@ -13,6 +13,7 @@
    bar; the one thing that moves is the dock inside it, out of the way on scroll (see
    "out of the way while reading" below). */
 import {t} from "../i18n/dict.js";
+import {simple} from "./simple.js";
 
 /* Icons on one grid (22), one stroke, one cut: square ends and mitred corners, the
    structural style of the brand. Training is a dumbbell, plates and bar, which says
@@ -38,7 +39,10 @@ var ICON={
    The names are the sections', not the icons'; each label is the start of its
    accessible name, so what is read aloud matches what is seen. Short enough for the
    open pill on a small phone, in either language. */
-function items(){return [
+function items(){
+  /* Simple mode: what you log, nothing worked out for you (js/ui/simple.js). */
+  if(simple())return [["train",t("Training"),t("Train")],["food",t("Food"),t("Food")]];
+  return [
   ["train",t("Training"),t("Train")],["food",t("Food"),t("Food")],["coach",t("Coach"),t("Coach")],
   ["progress",t("Progress"),t("Progress")]];}
 

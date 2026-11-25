@@ -4271,7 +4271,7 @@ await test("Profile (owner, 9 Nov review): one door to You, weeks kept as Progre
   eq(st[1],[String(kept),"Weeks kept"],"weeks kept, as Progress counts them");
   if(!/yrs/.test(await page.$eval('#app .pid-top',e=>e.textContent)))throw new Error("age and height not on the card");
   eq(await page.$$eval('#app .sg',a=>a.map(g=>[g.querySelector(".sg-h").textContent,g.querySelectorAll(".srow").length])),
-    [["Settings",4],["People",4],["Your data",3],["Help",2]],"the groups");
+    [["Settings",5],["People",4],["Your data",3],["Help",2]],"the groups");
   eq(await page.evaluate(()=>{const g=[...document.querySelectorAll('#app .sg')].find(x=>x.querySelector('.sg-h').textContent==="Your data");return !!(g&&g.querySelector('[data-sheet="set_chat"]'));}),true,"chat history with the data");
   const v=await page.evaluate(async()=>(await import("/js/version.js")).VERSION);
   eq(await page.$eval('#app .pver',e=>e.textContent),"Bunyan · version "+v,"the version at the foot");
@@ -7788,6 +7788,34 @@ await test("Live figure: when the drawing itself cannot load, the photos say why
   await page.evaluate(async()=>{(await import("/js/ui/actions.js")).openSheet("exdetail",{name:"Romanian Deadlift"});});await pause(page,1500);
   eq(await page.$eval("#sheet .fig3d",e=>[e.hasAttribute("data-live"),e.hasAttribute("data-still"),/couldn't start/.test(e.getAttribute("data-why")||""),getComputedStyle(e.querySelector(".fig3d-still")).visibility]),
     [false,true,true,"visible"],"the photos, and why");
+});
+await test("Simple mode (owner, 25 Nov): one switch in Profile turns the app into a plain log — Training and Food only, no coach, no suggestions, no question before a workout, last time's numbers; off again, everything is back",async page=>{
+  await tapTab(page,"profile");await pause(page);
+  await page.tap('[data-toggle="simple"]');await pause(page,400);
+  eq(await ev(page,"S.prefs.simple"),true,"on, saved in the profile");
+  eq(await page.$eval('[data-toggle="simple"]',e=>e.getAttribute("aria-checked")),"true","said as a switch");
+  eq(await page.$$eval('nav .dock-b',a=>a.map(x=>x.dataset.tab)),["train","food"],"the dock: Training and Food");
+  eq(await page.$$eval('#app [data-sheet="set_smart"],#app [data-sheet="set_chat"],#app [data-sheet="coachmem"]',a=>a.length),0,"the coach's settings are gone from Profile");
+  /* an old way into Coach or Progress lands on Training */
+  for(const tab of ["coach","progress"]){
+    await page.evaluate(async x=>{(await import("/js/ui/view.js")).V.tab=x;(await import("/js/ui/render.js")).render();},tab);await pause(page,300);
+    eq(await ev(page,"V.tab"),"train",tab+" lands on Training");}
+  eq(await page.$$eval(".cfab",a=>a.length),0,"no coach button");
+  eq(await page.$$eval("#app .tdc-lead,#app .tdc-st,#app .tdc-fuelw",a=>a.length),0,"the Today card says the day, not advice");
+  eq(await ev(page,"document.documentElement.classList.contains('simple')&&document.body.classList.contains('noanim')"),true,"plain and still");
+  /* Start: no question first; the first set shows last time's numbers (the seed: 60 kg × 8) */
+  await page.tap('[data-startday]');await pause(page,500);
+  eq([await ev(page,"!!S.active"),await ev(page,"V.sheet")],[true,null],"the workout starts at once");
+  eq([await ev(page,"V.draft.w"),await ev(page,"V.draft.r")],[60,8],"last time's weight and reps");
+  eq(await ev(page,"V.restEnd"),0,"no rest timer started on its own");
+  await leaveWorkout(page);
+  await tapTab(page,"food");await pause(page);
+  eq(await page.$$eval("#app .fneed,#app .ffuel,#app .fpc,#app .flogplan,#app .fring-sig",a=>a.length),0,"Food: what you ate and what is left, no notes, no built plan");
+  /* off again (the workout is still open, saved for later: Profile from its own route) */
+  await page.evaluate(async()=>{(await import("/js/ui/view.js")).V.tab="profile";(await import("/js/ui/render.js")).render();});await pause(page,400);
+  await page.tap('[data-toggle="simple"]');await pause(page,400);
+  eq(await page.$$eval('nav .dock-b',a=>a.map(x=>x.dataset.tab)),["train","food","coach","progress"],"all four back");
+  eq(await ev(page,"document.documentElement.classList.contains('simple')"),false);
 });
 await test("Live figure: the two pilot exercises have their drawn stills and list thumbnails, shown only once checked (the library's fall back to their photographs)",async page=>{
   eq(await page.evaluate(async()=>{const F=(await import("/js/data/figures.js")).FIGS,out=[];

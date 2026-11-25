@@ -26,7 +26,7 @@ var INFO={muscle:muscleOf,secondary:secondaryOf,activity:isActivity};
 /* A program with its own weeks: any exercise kept for only some of them. */
 function ownWeeks(sp){
   return !!(sp&&(sp.days||[]).some(function(d){return (d.ex||[]).some(function(e){return !!e.wk;});}));}
-function blocksOn(){return !(S.prefs&&S.prefs.noblocks)&&!ownWeeks(split());}
+function blocksOn(){return !(S.prefs&&(S.prefs.noblocks||S.prefs.simple))&&!ownWeeks(split());}
 /* Where a date falls in the blocks, or null: blocks off, none started yet, or the date
    is before the current one began (an unplanned lighter week runs then). */
 function blockNow(date){

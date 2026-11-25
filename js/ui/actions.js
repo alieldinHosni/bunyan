@@ -1,6 +1,7 @@
 /* Bunyan — actions
    Sheet plumbing and the ACT registry: things that change state. */
 import {t} from "../i18n/dict.js";
+import {simple} from "./simple.js";
 import {exIdOf, isBarbell, kindOf, LIB, muscleOf, muscleOfEntry, pickable} from "../data/exercises.js";
 import {avoids, doseFor, standIn, usable, limitsOf} from "../engine/plan.js";
 import {actInfo, actMuscle, isActivity} from "../data/activities.js";
@@ -284,7 +285,8 @@ function syncDraft(){
   if(last){V.draft.w=num(last.w);V.draft.r=num(last.r);V.draft.rpe=null;return;}
   var p=prevPerf(e.name);
   var src=p?p.sets[0]:null;
-  var rec=recommend(e);
+  /* Simple mode: last time's numbers as they were, no worked-out next step. */
+  var rec=simple()?null:recommend(e);
   /* Never done before: the plan's own starting weight, if it gave one. */
   V.draft.w=rec&&rec.w?rec.w:(src?num(src.w):num(e.planned&&e.planned.w0));
   V.draft.r=src?num(src.r):e.planned.hi||8;

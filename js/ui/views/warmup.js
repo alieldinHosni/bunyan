@@ -41,7 +41,7 @@ function warmOf(a){
 function warmShown(a){
   if(!a||!a.entries||!a.entries.length)return false;
   if(a.warm==="open")return true;
-  if(a.warm!=null||S.prefs.nowarm)return false;
+  if(a.warm!=null||S.prefs.nowarm||S.prefs.simple)return false;
   if(a.entries.some(function(e){return e.sets&&e.sets.length;}))return false;
   return !!warmOf(a);}
 
@@ -156,7 +156,7 @@ function vWarm(a){
 
 /* The cool-down for a finished session, worked out once, at the finish. */
 function coolFor(entries){
-  if(S.prefs.nocool)return null;
+  if(S.prefs.nocool||S.prefs.simple)return null;
   return cooldownFor(entries,{});}
 
 function coolCard(c){
