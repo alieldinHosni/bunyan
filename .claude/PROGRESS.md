@@ -5546,3 +5546,23 @@ I profiled the start (Chromium, CPU profile) before cutting anything. The bytes 
 - The whole number stays the release's id: sw.js's cache bunyan-v320, crash notes, exports. Bump it as before; the name follows.
 - This release is **3.20**. The next is 3.21.
 - The owner also said the swipes feel good now (v314 onwards).
+
+## Coach Q&A (3.21, owner 25 Nov: "the coach q and a, go ahead if it will not make the app glitch")
+- **The Arabic deadlift item (knowledge-001-ar, "ازاي اعمل ديدلفت صح؟")** was the coach evaluation's one failure.
+  - The answer was right: it names the lift as the app does everywhere, "ديدليفت" (js/i18n/ar.js "Deadlift").
+  - The item expected the question's own spelling, without the ي.
+  - The item now expects the app's spelling, with a note saying why. The evaluation is **434 / 434**.
+- **The router split by topic (js/ui/answers/route.js, 925 lines),** by the same script as the answers:
+
+  | Module | What it holds |
+  |---|---|
+  | `route-core` | the question's words, what it names, the guard |
+  | `route-limits` | the hard limits, where to go, why |
+  | `route-live` | the live reading |
+  | `route-read` | reading the sentence |
+  | `route-follow` | what follows from the last request |
+  | `route-ask` | a day told in one message, and the asking itself |
+
+  - route.js re-exports them.
+  - Its three counters (WARM, REDO, FORCEL, the only top-level state changed at run time) live with the only code that uses them, in route-ask. No other module reads them.
+  - **Checked:** all 404 answered items are word for word the same as on main; 156 coach, chat, Arabic and answer browser tests pass; architecture, engine, coach and design checks pass. The new modules are in sw.js's files.
