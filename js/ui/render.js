@@ -218,7 +218,8 @@ function render(){
   }
   /* The head (js/engine/head.js) asked afresh once a screen; how many things the coach
      has noticed, counted once from it: the dock's dot on Coach shows it. */
-  headFresh();V.advice=adviceCount();
+  /* The dot on the Coach tab: worked out only when there is a Coach tab. */
+  headFresh();V.advice=featOn("coach")?adviceCount():0;
   var h="";
   if(V.assess)h=vAssess();
   /* A run in progress is the Training tab, as a workout is (js/ui/run.js). */

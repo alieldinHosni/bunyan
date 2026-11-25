@@ -435,7 +435,10 @@ function todayPlan(iso){
      the assessment is the card's line. */
   var setup=!S||!S.onboarded;
   if(setup&&!S.active&&!(sp&&(sp.days||[]).some(function(d){return d.ex&&d.ex.length;}))){r.state="setup";return r;}
-  var h=headNow(),train=headOn("train");
+  /* Simple mode (S.prefs.simple) draws none of what the head says on Training (its lead,
+     its status lines, its other cards: js/ui/views/train.js): it is not worked out, which
+     is most of the first screen's work (road map step 3, 25 Nov). */
+  var quiet=!!(S.prefs&&S.prefs.simple),h=quiet?NONE:headNow(),train=quiet?[]:headOn("train");
   r.house=train.filter(function(s){return s.source==="housekeeping";})[0]||null;
   var p=sp?planOn(sp,iso):{kind:"none"};r.plan=p;
   if(isNow&&S.active)r.state="resume";
@@ -451,7 +454,8 @@ function todayPlan(iso){
   var on=h.queue.filter(function(s){return s.id==="deload-on";})[0];
   if(on)r.light={until:on.src.until,planned:!!on.src.planned};
   var tv=S.travel;if(tv&&tv.until&&now<=tv.until&&(!tv.from||now>=tv.from))r.travel={until:tv.until};
-  if(isNow)fuelOn(r.food,r.state);
+  /* The day's fuel note is advice: Simple mode says what is left, not what to eat when. */
+  if(isNow&&!quiet)fuelOn(r.food,r.state);
   var l=h.lead;r.lead=l&&l.pri>=LEAD&&l.id!=="deload-on"?l:null;
   /* What may be said, in order; the first is the card's line, the next its one other card. */
   var says=[];

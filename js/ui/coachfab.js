@@ -232,7 +232,8 @@ var GROW_AFTER=480,slowGrow=false,growT=0;
 function touchPhone(){try{return matchMedia("(pointer: coarse)").matches;}catch(e){return false;}}
 function bindPanel(grow){
   var pan=document.getElementById("cpanel");if(!pan)return;
-  idleChat();
+  /* The coach off (Simple mode): nothing of it loaded ahead of time. */
+  if(featOn("coach"))idleChat();
   pan.addEventListener("focusin",function(e){
     if(!grow||!e.target||e.target.id!=="chatq"||V.coach!=="compact"||!touchPhone())return;
     clearTimeout(growT);

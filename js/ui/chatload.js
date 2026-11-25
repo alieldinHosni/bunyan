@@ -17,7 +17,11 @@ function loadChat(){
   return wait;}
 function wanted(){want=true;loadChat();}
 function onChatIn(fn){redraw=fn;}
+/* Not before the first screen has settled (road map step 3, 25 Nov): while the app's own
+   modules are still arriving the page counts as idle, and the chat (and the coach's
+   indexes, 170 ms of work on a laptop) loaded then, in the middle of the start. */
+var AFTER_START=3000;
 function idleChat(){
   var idle=window.requestIdleCallback||function(f){return setTimeout(f,2000);};
-  idle(function(){loadChat().then(function(m){m.warmCoach();});},{timeout:4000});}
+  setTimeout(function(){idle(function(){loadChat().then(function(m){m.warmCoach();});},{timeout:4000});},AFTER_START);}
 export {chat, idleChat, loadChat, onChatIn, wanted};

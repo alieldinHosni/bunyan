@@ -30,7 +30,7 @@
    head (js/engine/head.js fuelLine) says it. tests/architecture.mjs holds it to that;
    js/engine/test/dayfuel.test.js runs it in Node. */
 import {bodyNeedsOf} from "./needs.js";
-import {FAQ} from "../data/faq.js";
+import {PRE_WORKOUT} from "../data/faq-fuel.js";
 
 var WINDOW=120;
 /* A usual time needs a few sessions behind it: one session is not a habit. */
@@ -76,10 +76,12 @@ function leftOf(goals,eaten){
   var k=+goals.kcal||0,p=+goals.p||0;
   return {kcal:Math.max(0,Math.round(k-(+eaten.kcal||0))),p:p?Math.max(0,Math.round(p-(+eaten.p||0))):null};}
 
-/* The textbook's own sentences, by entry: its paragraphs' text keys. */
+/* The textbook's own sentences, by entry: its paragraphs' text keys (the English of
+   each pair, as js/data/faq.js keys them). Only "Eating before training" is said here,
+   and it is the one entry kept apart from the coach's bank (js/data/faq-fuel.js). */
 function faqKeys(id){
-  var f=FAQ.filter(function(x){return x.id===id;})[0];
-  return f?f.a.filter(function(x){return x.p&&!x.if;}).map(function(x){return x.p;}):[];}
+  if(id!==PRE_WORKOUT.id)return [];
+  return PRE_WORKOUT.a.filter(function(x){return Array.isArray(x)&&typeof x[0]==="string";}).map(function(x){return x[0];});}
 
 /* The notes, each {kind, key, vars, more (keys said under it), source (the knowledge
    entry it rests on: js/data/faq.js's id), book (it says the textbook's guidance, not
