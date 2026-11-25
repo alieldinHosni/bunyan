@@ -5491,6 +5491,22 @@ I profiled the start (Chromium, CPU profile) before cutting anything. The bytes 
 - **Why this is the right moment:** a question takes longer to type than the indexes take to build. A question asked within the 600 ms builds them on first use, as before WP-9.
 - **Full app, blocked in the first 5 s: 1158 → 734 ms** (tools/speed.mjs, 4× CPU, median of 5). Simple mode unchanged (450 ms): it never loads the coach.
 
-**Next in step 3:**
-- the full app's start: about 0.8 s of module round trips before any code runs (measured without the service worker; to measure as a return visit, with it);
-- then the Coach and Progress pages and the coach's handlers loaded on first open.
+- Merged as #214.
+
+**3. Lighter app, step 3: measured as the app is used day to day; step 3 closed.**
+- **tools/speed.mjs RETURN=1:** a return visit. The service worker installs the release and takes over, and the start measured is the next one, every file from the cache.
+- **v318, 4× CPU, median of 5:**
+  - return visit: full 1177 ms (blocked 344), Simple 1004 ms (blocked 259);
+  - first visit: full 1432 ms, Simple 1247 ms.
+- **Where a return visit's start goes:** about 0.45 s fetching the 174 modules through the service worker (the import chain is 20 deep), then about 0.2 s running them, then the first draw (first paint with content at about 0.85 s).
+- **Tried: `<link rel="modulepreload">` for all 174 start modules,** so they are fetched together rather than level by level. No consistent gain, measured back to back:
+  - first visit: full 1395 against 1432, Simple 1295 against 1247;
+  - return visit: full 1050 against 1177, Simple 1069 against 1004.
+  - Within noise in both directions, so not kept: a 174-line list to maintain for nothing measurable.
+- **Left as it is,** because the measurements say the gain is too small to be felt:
+  - the Coach and Progress pages, the coach's handlers and the assessment, loaded on first open: 50–150 KB each by the import simulation;
+  - with the coach's work already out of the start, what remains is the app's own code and the first draw.
+- **Step 3's result:**
+  - Simple mode: start 1680 → about 1250–1450 ms first visit, about 1000 ms return; blocked 1325 → 259–450 ms.
+  - Full app: blocked 1320 → 344–734 ms.
+  - Next is step 4.
